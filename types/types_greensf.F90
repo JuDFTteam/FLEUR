@@ -1033,7 +1033,7 @@ MODULE m_types_greensf
          REAL,                INTENT(IN)     :: beta
          REAL,                INTENT(IN)     :: gamma
 
-         INTEGER :: l,lp,atomType,atomTypep,nspins
+         INTEGER :: l,lp,atomType,atomTypep
          INTEGER :: ipm,ispin,iz,ilo,ilop,iLO_ind,iLOp_ind
 
          IF(ABS(alpha).LT.1e-12.AND.ABS(beta).LT.1e-12.AND.ABS(gamma).LT.1e-12) RETURN !Nothing to be done
@@ -1043,10 +1043,6 @@ MODULE m_types_greensf
          lp = this%elem%lp
          atomType = this%elem%atomType
          atomTypep = this%elem%atomTypep
-
-         nspins = 0
-         IF(ALLOCATED(this%gmmpMat)) nspins = SIZE(this%gmmpMat,4)
-         IF(ALLOCATED(this%uu)) nspins = SIZE(this%uu,4)
 
          DO ipm = 1, 2
             DO iz = 1, this%contour%nz
