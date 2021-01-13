@@ -18,6 +18,9 @@ CONTAINS
   
   !Dump status file into out file (should be done only at end of run)
   SUBROUTINE print_memory_info(io,maxmem)
+#ifdef CPP_MPI
+    USE mpi
+#endif
     IMPLICIT NONE
     INTEGER,INTENT(in)          :: io
     LOGICAL,INTENT(IN),OPTIONAL :: maxmem
@@ -25,7 +28,6 @@ CONTAINS
     INTEGER            :: err,irank
     LOGICAL :: l_mpi=.FALSE.
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     CALL mpi_initialized(l_mpi,err)
     IF (l_mpi) THEN
        CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
@@ -84,11 +86,13 @@ CONTAINS
     
    
   SUBROUTINE checkstack()
+#ifdef CPP_MPI
+    USE mpi
+#endif
     CHARACTER(LEN=10):: l1,l2,l3,l4
     INTEGER          :: err
     LOGICAL          :: unlimited,l_mpi
 #ifdef CPP_MPI
-    include 'mpif.h'
     INTEGER:: ierr,irank
 #endif    
     unlimited=.TRUE.  !set to true by default. 

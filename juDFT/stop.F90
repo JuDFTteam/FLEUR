@@ -33,6 +33,9 @@ MODULE m_juDFT_stop
   USE m_judft_time
   USE m_judft_sysinfo
   USE m_judft_args
+#ifdef CPP_MPI
+  USE mpi
+#endif
   IMPLICIT NONE
   PRIVATE
   PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable
@@ -66,7 +69,6 @@ CONTAINS
     INTEGER                       :: isize,irank,e,i
     CHARACTER(len=100),ALLOCATABLE::message_list(:)
 #ifdef CPP_MPI
-    include 'mpif.h'
     LOGICAL :: first_parallel
     CALL MPI_INITIALIZED(l_mpi,e)
     IF (l_mpi) THEN
@@ -195,7 +197,6 @@ CONTAINS
     LOGICAL l_endXML_local, is_root
     LOGICAL :: l_mpi=.false.
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     INTEGER :: ierr
     CALL MPI_INITIALIZED(l_mpi,ierr)
 #endif
@@ -262,7 +263,6 @@ CONTAINS
     LOGICAL :: l_mpi=.FALSE.
 #ifdef CPP_MPI
     INTEGER :: ierr
-    INCLUDE 'mpif.h'
     CALL mpi_initialized(l_mpi,ierr)
 #endif
     error = 0
@@ -311,7 +311,6 @@ CONTAINS
     CHARACTER(len=*),INTENT(IN)                              :: mymessage
     CHARACTER(len=100),ASYNCHRONOUS,ALLOCATABLE,INTENT(OUT)  :: message_list(:)
     LOGICAL,INTENT(OUT)                                      :: first_pe
-    INCLUDE 'mpif.h'
     INTEGER:: irank,isize,ierr,i
     LOGICAL:: completed
     INTEGER,ALLOCATABLE::ihandle(:)

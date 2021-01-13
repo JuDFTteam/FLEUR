@@ -119,6 +119,17 @@ MODULE m_greensfPostProcess
                                greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 
+      !Rotate the green's function back into the global frame in real-space
+      IF(noco%l_noco) THEN
+         DO i_gf = 1, gfinp%n
+            CALL greensFunction(i_gf)%rotate_euler_angles(atoms,nococonv%alph(atomType),nococonv%beta(atomType),0.0)
+         ENDDO
+      ELSE IF(noco%l_soc) THEN
+         DO i_gf = 1, gfinp%n
+            CALL greensFunction(i_gf)%rotate_euler_angles(atoms,nococonv%phi,nococonv%theta,0.0)
+         ENDDO
+      ENDIF
+
       !----------------------------------------------
       ! Torgue Calculations
       !----------------------------------------------

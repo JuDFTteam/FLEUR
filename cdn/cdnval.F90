@@ -308,7 +308,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
          IF(greensfImagPart%l_calc) THEN
-            CALL greensfBZint(ikpt_i,ikpt,noccbd,jspin,gfinp,sym,atoms,noco,input,kpts,&
+            CALL greensfBZint(ikpt_i,ikpt,noccbd,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
                               usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
          ENDIF
       ENDIF

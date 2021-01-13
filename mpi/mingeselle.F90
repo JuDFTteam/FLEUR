@@ -18,6 +18,7 @@ CONTAINS
     !     in_pos(n,i): where to put in the n'th element sent by pe #i  |
     !                                                                  |
     !------------------------------------------------------------------+
+    USE mpi
 #include"./cpp_double.h"
 
     IMPLICIT NONE
@@ -43,7 +44,6 @@ CONTAINS
     INTEGER, ALLOCATABLE :: in_pos(:,:)
     COMPLEX, ALLOCATABLE :: cs_el(:,:),cr_el(:),b_b(:),c_help(:,:)
 
-    INCLUDE 'mpif.h'
     INTEGER stt(MPI_STATUS_SIZE)
     ! ..
     !

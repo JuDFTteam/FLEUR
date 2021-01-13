@@ -6,6 +6,9 @@
 
       MODULE m_hdf_tools4 
       USE hdf5
+#ifdef CPP_HDFMPI
+      use mpi
+#endif
 !-----------------------------------------------                        
 !     major rewrite of hdf_tools                                        
 !     this module contains various subroutines                          
@@ -25,10 +28,6 @@
       CONTAINS
 
       SUBROUTINE  io_hdfopen(filename,access_mode,fid,hdferr,access_prp)
-      USE hdf5
-#ifdef CPP_HDFMPI
-      use mpi
-#endif
       IMPLICIT NONE
       character(len=*),intent(in)    :: filename
       INTEGER       ,INTENT(in)      :: access_mode
@@ -55,10 +54,6 @@
       end subroutine
 
       subroutine io_hdfclose(fid,hdferr)
-      USE hdf5
-#ifdef CPP_HDFMPI
-      use mpi 
-#endif
       IMPLICIT NONE
       INTEGER(HID_T),INTENT(in)    :: fid
       INTEGER,INTENT(OUT),optional :: hdferr
@@ -84,7 +79,6 @@
       end subroutine
 
       SUBROUTINE IO_gopen(fid,name,gid,hdferr)
-      USE hdf5
       IMPLICIT NONE
       INTEGER(HID_T),INTENT(in)    :: fid
       character(len=*),intent(in)  :: name
@@ -97,7 +91,6 @@
       end subroutine
 
       SUBROUTINE IO_gcreate(fid,name,gid,hdferr)
-      USE hdf5
       IMPLICIT NONE
       INTEGER(HID_T),INTENT(in)    :: fid
       character(len=*),intent(in)  :: name
@@ -110,7 +103,6 @@
       end subroutine
 
       SUBROUTINE IO_gdelete(fid,name,hdferr)
-      USE hdf5
       IMPLICIT NONE
       INTEGER(HID_T),INTENT(in)    :: fid
       character(len=*),intent(in)  :: name
@@ -123,7 +115,6 @@
 
 
       SUBROUTINE IO_gclose(gid,hdferr)
-      USE hdf5
       IMPLICIT NONE
       INTEGER(HID_T),INTENT(IN)   :: gid
       INTEGER,INTENT(OUT),optional :: hdferr
@@ -134,7 +125,6 @@
       end subroutine
 
       SUBROUTINE IO_dopen(fid,name,did,hdferr)
-      USE hdf5
       IMPLICIT NONE
       INTEGER(HID_T),INTENT(in)    :: fid
       character(len=*),intent(in)  :: name
@@ -147,7 +137,6 @@
       end subroutine
 
       SUBROUTINE IO_dclose(did,hdferr)
-      USE hdf5
       IMPLICIT NONE
       INTEGER(HID_T),INTENT(IN)   :: did
       INTEGER,INTENT(OUT),optional :: hdferr
@@ -174,8 +163,7 @@
 !-----------------------------------------------                        
 !  determine the dimesions of a hdf-dataspace                           
 !           (last modified: 2004-00-00) D. Wortmann                     
-!-----------------------------------------------                        
-      USE hdf5 
+!-----------------------------------------------
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER(HID_T),INTENT(in) :: did 
@@ -223,8 +211,7 @@
       SUBROUTINE hdf_init() 
 !*****************************************************************      
 ! DESC:Opens library    No longer needed?!                              
-!*****************************************************************      
-      USE hdf5 
+!*****************************************************************
       IMPLICIT NONE 
       INTEGER :: hdferr 
       CALL h5open_f(hdferr) 
@@ -238,8 +225,7 @@
       SUBROUTINE hdf_close() 
 !*****************************************************************      
 ! DESC:Closes library   No longer needed?!                              
-!*****************************************************************      
-      USE hdf5 
+!*****************************************************************
       IMPLICIT NONE 
       INTEGER::hdferr 
       !CALL h5close_types(hdferr)                                       
@@ -254,8 +240,7 @@
 !                                                                       
 !************************************************************           
       SUBROUTINE io_createvar(did,name,TYPE,dims,vid,chunk,fill)
-!*****************************************************************      
-      USE hdf5 
+!*****************************************************************
       IMPLICIT NONE 
       INTEGER(HID_T),INTENT(IN)  :: did 
       CHARACTER,INTENT(IN)       :: name*(*) 
@@ -297,12 +282,10 @@
       FUNCTION gettransprop()RESULT(trans) 
 !********************************************************************** 
 !  local FUNCTION to get default transfer-property                      
-!********************************************************************** 
-      USE hdf5 
+!**********************************************************************
       IMPLICIT NONE 
       INTEGER(HID_T)::trans 
 #ifdef CPP_HDFMPI
-      INCLUDE 'mpif.h' 
       INTEGER::hdferr 
       LOGICAL::l_mpi
       CALL MPI_INITIALIZED(l_mpi,hdferr)
@@ -322,13 +305,11 @@
       SUBROUTINE cleartransprop(trans) 
 !********************************************************************** 
 !  local FUNCTION to get default transfer-property                      
-!********************************************************************** 
-      USE hdf5 
+!**********************************************************************
       IMPLICIT NONE 
       INTEGER(HID_T),INTENT(INOUT)::trans 
 #ifdef CPP_HDFMPI
-      INTEGER::hdferr 
-      INCLUDE 'mpif.h' 
+      INTEGER::hdferr
       IF (trans==H5P_DEFAULT_f) RETURN 
       CALL h5pclose_f(trans,hdferr) 
 #else                                                                   
@@ -347,7 +328,6 @@
 !                                                                       
 !                                  Daniel Wortmann, Juelich, 2002       
 !***********************************************************************
-      USE hdf5 
       IMPLICIT NONE 
       INTEGER,INTENT(INOUT)              :: err 
       CHARACTER*(*),OPTIONAL             :: text 
@@ -358,8 +338,7 @@
       INTEGER (hid_t)     :: itype 
       INTEGER             :: hdferr 
       INTEGER (size_t)    :: n,nn 
-#ifdef CPP_HDFMPI                                                          
-      include 'mpif.h' 
+#ifdef CPP_HDFMPI
       INTEGER             :: irank,nerr 
       LOGICAL             :: l_mpi
       CALL MPI_INITIALIZED(l_mpi,nerr)
@@ -425,7 +404,6 @@
 !                                                                       
 !                                  Daniel Wortmann, Juelich, 2002       
 !***********************************************************************
-      USE hdf5 
       IMPLICIT NONE 
       INTEGER :: hdferr 
       INTEGER(HID_T)::fid,gid 
