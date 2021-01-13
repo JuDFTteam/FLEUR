@@ -1049,44 +1049,42 @@ MODULE m_types_greensf
          IF(ALLOCATED(this%uu)) nspins = SIZE(this%uu,4)
 
          DO ipm = 1, 2
-            DO ispin = 1, nspins
-               DO iz = 1, this%contour%nz
-                  IF(ALLOCATED(this%gmmpMat)) THEN
-                     this%gmmpMat(iz,:,:,ispin,ipm) = rotMMPmat(this%gmmpMat(iz,:,:,ispin,ipm),alpha,beta,gamma,l)
-                  ELSE IF(ALLOCATED(this%uu)) THEN
-                     this%uu(iz,:,:,ispin,ipm) = rotMMPmat(this%uu(iz,:,:,ispin,ipm),alpha,beta,gamma,l)
-                     this%ud(iz,:,:,ispin,ipm) = rotMMPmat(this%ud(iz,:,:,ispin,ipm),alpha,beta,gamma,l)
-                     this%du(iz,:,:,ispin,ipm) = rotMMPmat(this%du(iz,:,:,ispin,ipm),alpha,beta,gamma,l)
-                     this%dd(iz,:,:,ispin,ipm) = rotMMPmat(this%dd(iz,:,:,ispin,ipm),alpha,beta,gamma,l)
+            DO iz = 1, this%contour%nz
+               IF(ALLOCATED(this%gmmpMat)) THEN
+                  this%gmmpMat(iz,:,:,:,ipm) = rotMMPmat(this%gmmpMat(iz,:,:,:,ipm),alpha,beta,gamma,l)
+               ELSE IF(ALLOCATED(this%uu)) THEN
+                  this%uu(iz,:,:,:,ipm) = rotMMPmat(this%uu(iz,:,:,:,ipm),alpha,beta,gamma,l)
+                  this%ud(iz,:,:,:,ipm) = rotMMPmat(this%ud(iz,:,:,:,ipm),alpha,beta,gamma,l)
+                  this%du(iz,:,:,:,ipm) = rotMMPmat(this%du(iz,:,:,:,ipm),alpha,beta,gamma,l)
+                  this%dd(iz,:,:,:,ipm) = rotMMPmat(this%dd(iz,:,:,:,ipm),alpha,beta,gamma,l)
 
-                     IF(ALLOCATED(this%uulo)) THEN
-                        iLO_ind = 0
-                        DO ilo = 1, atoms%nlo(atomType)
-                           IF(atoms%llo(ilo,atomType).NE.l) CYCLE
-                           iLO_ind = iLO_ind + 1
-                           this%uulo(iz,:,:,iLO_ind,ispin,ipm) = rotMMPmat(this%uulo(iz,:,:,iLO_ind,ispin,ipm),alpha,beta,gamma,l)
-                           this%dulo(iz,:,:,iLO_ind,ispin,ipm) = rotMMPmat(this%dulo(iz,:,:,iLO_ind,ispin,ipm),alpha,beta,gamma,l)
+                  IF(ALLOCATED(this%uulo)) THEN
+                     iLO_ind = 0
+                     DO ilo = 1, atoms%nlo(atomType)
+                        IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                        iLO_ind = iLO_ind + 1
+                        this%uulo(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%uulo(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l)
+                        this%dulo(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%dulo(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l)
+                     ENDDO
+                     iLO_ind = 0
+                     DO ilo = 1, atoms%nlo(atomTypep)
+                        IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
+                        iLO_ind = iLO_ind + 1
+                        this%ulou(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%ulou(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l)
+                        this%ulod(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%ulod(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l)
+                     ENDDO
+                     iLO_ind = 0
+                     DO ilo = 1, atoms%nlo(atomType)
+                        IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                        iLOp_ind = 0
+                        DO ilop = 1, atoms%nlo(atomTypep)
+                           IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
+                           iLOp_ind = iLOp_ind + 1
+                           this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm) = rotMMPmat(this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm),alpha,beta,gamma,l)
                         ENDDO
-                        iLO_ind = 0
-                        DO ilo = 1, atoms%nlo(atomTypep)
-                           IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
-                           iLO_ind = iLO_ind + 1
-                           this%ulou(iz,:,:,iLO_ind,ispin,ipm) = rotMMPmat(this%ulou(iz,:,:,iLO_ind,ispin,ipm),alpha,beta,gamma,l)
-                           this%ulod(iz,:,:,iLO_ind,ispin,ipm) = rotMMPmat(this%ulod(iz,:,:,iLO_ind,ispin,ipm),alpha,beta,gamma,l)
-                        ENDDO
-                        iLO_ind = 0
-                        DO ilo = 1, atoms%nlo(atomType)
-                           IF(atoms%llo(ilo,atomType).NE.l) CYCLE
-                           iLOp_ind = 0
-                           DO ilop = 1, atoms%nlo(atomTypep)
-                              IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
-                              iLOp_ind = iLOp_ind + 1
-                              this%uloulop(iz,:,:,iLO_ind,iLOp_ind,ispin,ipm) = rotMMPmat(this%uloulop(iz,:,:,iLO_ind,iLOp_ind,ispin,ipm),alpha,beta,gamma,l)
-                           ENDDO
-                        ENDDO
-                     ENDIF
+                     ENDDO
                   ENDIF
-               ENDDO
+               ENDIF
             ENDDO
          ENDDO
          CALL timestop("Green's Function: Rotate (Angles)")
