@@ -104,7 +104,7 @@ MODULE m_hubbard1_setup
             !-------------------------------------------------------
             ! Calculate the DFT occupation of the correlated shell
             !-------------------------------------------------------
-            CALL occmtx(gdft(i_hia),gfinp,input,atoms,mmpMat(:,:,i_hia,:))
+            CALL occmtx(gdft(i_hia),gfinp,input,atoms,noco,nococonv,mmpMat(:,:,i_hia,:))
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
@@ -277,7 +277,7 @@ MODULE m_hubbard1_setup
 #endif
 
          CALL timestart("Hubbard 1: Add Selfenergy")
-         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,atoms,&
+         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,atoms,noco,nococonv,&
                          occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenergy")
 

@@ -16,13 +16,13 @@ MODULE m_crystalfield
    USE m_constants
    USE m_trapz
    USE m_sgml
-   USE m_anglso
+   USE m_rotMMPmat
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE crystal_field(atoms,gfinp,input,nococonv,greensfImagPart,v,ef,hub1data)
+   SUBROUTINE crystal_field(atoms,gfinp,input,noco,nococonv,greensfImagPart,v,ef,hub1data)
 
       !calculates the crystal-field matrix for the local hamiltonian
 
@@ -30,6 +30,7 @@ MODULE m_crystalfield
       TYPE(t_atoms),             INTENT(IN)    :: atoms
       TYPE(t_gfinp),             INTENT(IN)    :: gfinp
       TYPE(t_input),             INTENT(IN)    :: input
+      TYPE(t_noco),              INTENT(IN)    :: noco
       TYPE(t_nococonv),          INTENT(IN)    :: nococonv
       TYPE(t_potden),            INTENT(IN)    :: v !LDA+U potential (should be removed from h_loc)
       REAL,                      INTENT(IN)    :: ef
@@ -47,7 +48,10 @@ MODULE m_crystalfield
       REAL :: shift(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       REAL :: integrand(gfinp%ne), norm(gfinp%ne)
       REAL, ALLOCATABLE :: imag(:)
+      COMPLEX, ALLOCATABLE :: potmmpmat(:,:,:)
 
+
+      ALLOCATE(potmmpmat(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, input%jspins))
 
       h_loc = 0.0
       DO i_hia = 1, atoms%n_hia
@@ -92,11 +96,17 @@ MODULE m_crystalfield
 #endif
          !Remove LDA+U potential
          i_u = atoms%n_u+i_hia !position in the v%mmpmat array
+         !Rotate the occupation matrix into the global frame in real-space
+         IF(noco%l_noco) THEN
+            potmmpmat = rotMMPmat(v%mmpmat(:,:,i_u,:input%jspins),0.0,-nococonv%beta(nType),-nococonv%alph(nType),l)
+         ELSE IF(noco%l_soc) THEN
+            potmmpmat = rotMMPmat(v%mmpmat(:,:,i_u,:input%jspins),0.0,-nococonv%theta,-nococonv%phi,l)
+         ENDIF
          DO jspin = 1, input%jspins
             DO m = -l, l
                DO mp = -l, l
-                  IF(ABS(REAL(v%mmpmat(m,mp,i_u,jspin))).GT.1e-4) THEN
-                     h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
+                  IF(ABS(potmmpmat(m,mp,jspin)).GT.1e-4) THEN
+                     h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - potmmpmat(m,mp,jspin)
                   ENDIF
                ENDDO
             ENDDO
@@ -107,11 +117,7 @@ MODULE m_crystalfield
                DO m = -l, l
                   DO mp = -l, l
                      isp = 3-2*jspin !1,-1
-                     IF((ABS(nococonv%theta).LT.1e-5).AND.(ABS(nococonv%phi).LT.1e-5)) THEN
-                        vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
-                     ELSE
-                        vso = anglso(nococonv%theta,nococonv%phi,l,m,isp,l,mp,isp)
-                     ENDIF
+                     vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
                      h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(vso)/2.0 * hub1data%xi(i_hia)/hartree_to_ev_const
                   ENDDO
                ENDDO

@@ -92,7 +92,7 @@ CONTAINS
   !> This subroutine adjusts the energy parameters to the potential. In particular, it
   !! calculated them in case of qn_el>-1,qn_ello>-1
   !! Before this was done in lodpot.F
-  SUBROUTINE update(enpara,mpi_comm,atoms,vacuum,input,v,hub1data)
+  SUBROUTINE update(enpara,fmpi_comm,atoms,vacuum,input,v,hub1data)
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_input
@@ -105,7 +105,7 @@ CONTAINS
     USE mpi
 #endif
     CLASS(t_enpara),INTENT(inout):: enpara
-    INTEGER,INTENT(IN)          :: mpi_comm
+    INTEGER,INTENT(IN)          :: fmpi_comm
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
@@ -126,7 +126,7 @@ CONTAINS
 
 #ifdef CPP_MPI
     INTEGER :: ierr
-    CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
+    CALL MPI_COMM_RANK(fmpi_comm,irank,ierr)
 #else
     irank=0
 #endif
@@ -472,7 +472,7 @@ CONTAINS
 
 
 
-  SUBROUTINE mix(enpara,mpi_comm,atoms,vacuum,input,vr,vz)
+  SUBROUTINE mix(enpara,fmpi_comm,atoms,vacuum,input,vr,vz)
     !------------------------------------------------------------------
     USE m_types_atoms
     USE m_types_input
@@ -483,7 +483,7 @@ CONTAINS
 #endif
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)  :: enpara
-    INTEGER,INTENT(IN)             :: mpi_comm
+    INTEGER,INTENT(IN)             :: fmpi_comm
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_input),INTENT(IN)       :: input
@@ -497,7 +497,7 @@ CONTAINS
     LOGICAL l_enpara
 #ifdef CPP_MPI
     INTEGER :: ierr
-    CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
+    CALL MPI_COMM_RANK(fmpi_comm,irank,ierr)
 #else
     irank=0
 #endif
@@ -592,9 +592,9 @@ CONTAINS
     INQUIRE(file='enpara',exist=l_enpara)
     IF (irank==0.AND.l_enpara) CALL enpara%WRITE(atoms,input%jspins,input%film)
 #ifdef CPP_MPI
-    CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi_comm,ierr)
-    CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi_comm,ierr)
-    CALL MPI_BCAST(enpara%evac,SIZE(enpara%evac),MPI_DOUBLE_PRECISION,0,mpi_comm,ierr)
+    CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,fmpi_comm,ierr)
+    CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,fmpi_comm,ierr)
+    CALL MPI_BCAST(enpara%evac,SIZE(enpara%evac),MPI_DOUBLE_PRECISION,0,fmpi_comm,ierr)
 #endif
     RETURN
 777 FORMAT('Old:',f8.5,' new:',f8.5,' diff:',f8.5)

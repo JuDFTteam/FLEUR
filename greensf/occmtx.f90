@@ -4,12 +4,13 @@ MODULE m_occmtx
    USE m_types
    USE m_types_scalarGF
    USE m_constants
+   USE m_rotMMPmat
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE occmtx(g,gfinp,input,atoms,mmpMat,spin,usdus,denCoeffsOffDiag,scalarGF,l_write,check,occError)
+   SUBROUTINE occmtx(g,gfinp,input,atoms,noco,nococonv,mmpMat,spin,usdus,denCoeffsOffDiag,scalarGF,l_write,check,occError)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -23,6 +24,8 @@ MODULE m_occmtx
       TYPE(t_gfinp),                    INTENT(IN)    :: gfinp
       TYPE(t_input),                    INTENT(IN)    :: input
       TYPE(t_atoms),                    INTENT(IN)    :: atoms
+      TYPE(t_noco),                     INTENT(IN)    :: noco
+      TYPE(t_nococonv),                 INTENT(IN)    :: nococonv
       COMPLEX,                          INTENT(INOUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
       INTEGER,                 OPTIONAL,INTENT(IN)    :: spin
       TYPE(t_usdus),           OPTIONAL,INTENT(IN)    :: usdus
@@ -33,7 +36,7 @@ MODULE m_occmtx
       LOGICAL,                 OPTIONAL,INTENT(INOUT) :: occError
 
       INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp
-      INTEGER :: atomType,atomTypep,m,mp,i,ns,spin_start,spin_end
+      INTEGER :: atomType,atomTypep,m,mp,i,j,ns,spin_start,spin_end
       REAL    :: nup,ndwn,tr
       COMPLEX :: weight
       TYPE(t_mat) :: gmat
@@ -115,6 +118,14 @@ MODULE m_occmtx
          ENDDO
       ENDDO
 
+      !Rotate the occupation matrix into the global frame in real-space
+      IF(noco%l_noco) THEN
+         mmpmat(:,:,spin_start:spin_end) = rotMMPmat(mmpmat(:,:,spin_start:spin_end),nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
+      ELSE IF(noco%l_soc) THEN
+         mmpmat(:,:,spin_start:spin_end) = rotMMPmat(mmpmat(:,:,spin_start:spin_end),nococonv%phi,nococonv%theta,0.0,l)
+      ENDIF
+
+
       !Sanity check are the occupations reasonable?
       IF(PRESENT(check)) THEN
          IF(check) THEN
@@ -154,38 +165,36 @@ MODULE m_occmtx
          IF(l_write) THEN
             !Construct the full matrix in the |L,ml,ms> basis (real)
             ns = 2*l+1
-            CALL gmat%init(.TRUE.,2*ns,2*ns)
+            CALL gmat%init(.FALSE.,2*ns,2*ns)
             DO m = -l, l
                DO mp = -l, l
-                  gmat%data_r(m+l+1,mp+l+1) = REAL(mmpmat(m,mp,1))/(3-input%jspins)
+                  gmat%data_c(m+l+1,mp+l+1) = mmpmat(m,mp,1)/(3-input%jspins)
                   IF(input%jspins.EQ.1) THEN
-                     gmat%data_r(m+l+1+ns,mp+l+1+ns) = REAL(mmpmat(-m,-mp,MIN(2,input%jspins)))/(3-input%jspins)
+                     gmat%data_c(m+l+1+ns,mp+l+1+ns) = mmpmat(-m,-mp,1)/(3-input%jspins)
                   ELSE
-                     gmat%data_r(m+l+1+ns,mp+l+1+ns) = REAL(mmpmat(m,mp,MIN(2,input%jspins)))/(3-input%jspins)
+                     gmat%data_c(m+l+1+ns,mp+l+1+ns) = mmpmat(m,mp,2)
                   ENDIF
                ENDDO
             ENDDO
             !spin-offdiagonal
             IF(gfinp%l_mperp) THEN
-               gmat%data_r(1:ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,3))
-               gmat%data_r(ns+1:2*ns,1:ns) = REAL(transpose(mmpmat(-l:l,-l:l,3)))
+               gmat%data_c(1:ns,ns+1:2*ns) = mmpmat(-l:l,-l:l,3)
+               gmat%data_c(ns+1:2*ns,1:ns) = conjg(transpose(mmpmat(-l:l,-l:l,3)))
             ENDIF
             !Calculate the spin-up/down occupation
             nup = 0.0
             DO i = 1, ns
-               nup = nup + gmat%data_r(i,i)
+               nup = nup + REAL(gmat%data_c(i,i))
             ENDDO
             ndwn = 0.0
             DO i = ns+1, 2*ns
-               ndwn = ndwn + gmat%data_r(i,i)
+               ndwn = ndwn + REAL(gmat%data_c(i,i))
             ENDDO
             !Write to file
 9000        FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
             WRITE(oUnit,9000) atomType, l
             WRITE(oUnit,"(A)") "In the |L,S> basis:"
-            DO i = 1, 2*ns
-               WRITE(oUnit,'(14f8.4)') gmat%data_r(i,:)
-            ENDDO
+            WRITE(oUnit,'(28f8.4)') ((gmat%data_c(i,j),i=1,2*ns),j=1,2*ns)
             WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
             WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
          ENDIF

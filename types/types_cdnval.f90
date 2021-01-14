@@ -422,10 +422,13 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
    LOGICAL,INTENT(IN)             :: l_empty
 
    INTEGER,ALLOCATABLE :: compact_ev_list(:)
-   INTEGER :: nk
+   INTEGER :: nk, evlen
    logical, allocatable :: l_nonzero(:)
 
    nk=thisCdnvalJob%k_list(ikpt)
+   evlen = SIZE(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)))
+   ALLOCATE(l_nonzero(evlen))
+
    IF (l_empty) THEN
       compact_ev_list=thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk))
    ELSE
