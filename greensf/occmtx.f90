@@ -41,6 +41,8 @@ MODULE m_occmtx
       COMPLEX :: weight
       TYPE(t_mat) :: gmat
       CHARACTER(len=300) :: message
+      CHARACTER(len=2) :: l_type
+      CHARACTER(len=8) :: l_form
       TYPE(t_contourInp) :: contourInp
 
       !Get the element information
@@ -191,10 +193,12 @@ MODULE m_occmtx
                ndwn = ndwn + REAL(gmat%data_c(i,i))
             ENDDO
             !Write to file
+            WRITE (l_type,'(i2)') 4*ns
+            l_form = '('//l_type//'f8.4)'
 9000        FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
             WRITE(oUnit,9000) atomType, l
             WRITE(oUnit,"(A)") "In the |L,S> basis:"
-            WRITE(oUnit,'(28f8.4)') ((gmat%data_c(i,j),i=1,2*ns),j=1,2*ns)
+            WRITE(oUnit,l_form) ((gmat%data_c(i,j),i=1,2*ns),j=1,2*ns)
             WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
             WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
          ENDIF
