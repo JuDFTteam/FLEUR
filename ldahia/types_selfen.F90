@@ -95,6 +95,7 @@ MODULE m_types_selfen
          ns = 2*this%l+1
 
          ALLOCATE(swapMat(2*ns,2*ns),source=cmplx_0)
+         ALLOCATE(vmmp_local(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(vmmp,3)),source=cmplx_0)
 
          !Transformation matrix is a Block matrix of form
          ! | 0  I |
