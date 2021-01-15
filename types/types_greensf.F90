@@ -279,11 +279,9 @@ MODULE m_types_greensf
             CALL juDFT_error("l_scalar/l_radial only without l_sphavg", calledby="get_gf")
          ENDIF
 
-         IF(PRESENT(spin)) THEN
-            IF(spin.GT.4 .OR. spin.LT.1) THEN
-               CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
-            ENDIF
-         END IF
+         IF(spin.GT.4 .OR. spin.LT.1) THEN
+            CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
+         ENDIF
 
          matsize1 = 2*l+1
          matsize2 = 2*lp+1
@@ -367,7 +365,7 @@ MODULE m_types_greensf
                !-------------------------------------------------------------------
                ! Check wether we need to do some operation on the indices m and mp
                !-------------------------------------------------------------------
-               IF(ispin.EQ.2 .AND. nspins.EQ.1) THEN
+               IF(spin.EQ.2 .AND. nspins.EQ.1) THEN
                   !For a non-spin-polarized calculation we might still want the full
                   !matrix. Then we need to reverse the order (SOC prop m*s_z)
                   m_ind  = -m
@@ -467,7 +465,7 @@ MODULE m_types_greensf
 
             IF(ispin<3) THEN
                gmat%data_c((ispin-1)*matsize1+1:ispin*matsize1,(ispin-1)*matsize2+1:ispin*matsize2) = gmat_spin%data_c
-            ELSE IF(spin.EQ.3) THEN
+            ELSE IF(ispin.EQ.3) THEN
                gmat%data_c(1:matsize1,matsize2+1:2*matsize2) = gmat_spin%data_c
                gmat%data_c(matsize1+1:2*matsize1,1:matsize2) = conjg(transpose(gmat_spin%data_c))
             ELSE
