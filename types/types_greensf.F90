@@ -438,11 +438,14 @@ MODULE m_types_greensf
          TYPE(t_atoms),                      INTENT(IN)     :: atoms
          INTEGER,                            INTENT(IN)     :: iz
          LOGICAL,                            INTENT(IN)     :: l_conjg
-         INTEGER,                            INTENT(IN)     :: spin
          TYPE(t_mat),                        INTENT(INOUT)  :: gmat !Return matrix
          TYPE(t_usdus),            OPTIONAL, INTENT(IN)     :: usdus
          TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN)     :: denCoeffsOffDiag
          TYPE(t_scalarGF),         OPTIONAL, INTENT(IN)     :: scalarGF
+
+         INTEGER :: matsize1, matsize2, nspins, ispin
+
+         TYPE(t_mat) :: gmat_spin
 
          matsize1  = 2*this%elem%l+1
          matsize2 = 2*this%elem%l+1
