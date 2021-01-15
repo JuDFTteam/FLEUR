@@ -75,7 +75,7 @@ MODULE m_occmtx
             DO iz = 1, g%contour%nz
                !get the corresponding gf-matrix
                weight = MERGE(g%contour%de(iz),conjg(g%contour%de(iz)),ipm.EQ.1)
-               CALL g%get(atoms,iz,ipm.EQ.2,spin,gmat,usdus=usdus,&
+               CALL g%get(atoms,iz,ipm.EQ.2,ispin,gmat,usdus=usdus,&
                           denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
                ind1 = 0
                DO m = -l, l
@@ -92,7 +92,7 @@ MODULE m_occmtx
             IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND.contourInp%l_anacont) THEN
                !left tail
                weight = MERGE(g%contour%de(1),conjg(g%contour%de(1)),ipm.EQ.1)
-               CALL g%get(atoms,1,ipm.EQ.2,spin,gmat,usdus=usdus,&
+               CALL g%get(atoms,1,ipm.EQ.2,ispin,gmat,usdus=usdus,&
                           denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
                ind1 = 0
                DO m = -l, l
@@ -105,7 +105,7 @@ MODULE m_occmtx
                ENDDO
                !right tail
                weight = MERGE(g%contour%de(g%contour%nz),conjg(g%contour%de(g%contour%nz)),ipm.EQ.1)
-               CALL g%get(atoms,g%contour%nz,ipm.EQ.2,spin,gmat,usdus=usdus,&
+               CALL g%get(atoms,g%contour%nz,ipm.EQ.2,ispin,gmat,usdus=usdus,&
                           denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
                ind1 = 0
                DO m = -l, l
