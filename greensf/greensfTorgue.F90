@@ -167,7 +167,7 @@ MODULE m_greensfTorgue
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE
                   integrand = cmplx_0
                   DO ipm = 1, 2
-                     CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
+                     !CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,f,g,flo,g_ii)
                      DO iz = 1, SIZE(g_ii,4)
                         weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
 
@@ -421,7 +421,7 @@ MODULE m_greensfTorgue
                         IF(ABS(phaseFactor).LT.1e-12) CYCLE
                         integrand = cmplx_0
                         DO ipm = 1, 2
-                           CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
+                           !CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
                            DO iz = 1, SIZE(g_ii,4)
                               weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
 

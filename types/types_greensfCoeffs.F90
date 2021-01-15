@@ -94,7 +94,7 @@ MODULE m_types_greensfCoeffs
          lmax = lmaxU_const
 
          IF(gfinp%l_mperp.AND.jsp_end==2) THEN
-            maxSpin = 3
+            maxSpin = 4
          ELSE
             maxSpin = jsp_end
          ENDIF
@@ -138,7 +138,7 @@ MODULE m_types_greensfCoeffs
 
          INTEGER lmax,spin_dim,uniqueElementsSphavg,uniqueElementsRadial,uniqueElementsLO,maxLO
 
-         spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
+         spin_dim = MERGE(4,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
          this%l_calc = l_calc
