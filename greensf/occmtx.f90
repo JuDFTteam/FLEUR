@@ -70,7 +70,7 @@ MODULE m_occmtx
       ENDIF
 
       DO ispin = spin_start, spin_end
-         spin_ind = MERGE(3, ispin, ispin<=3)
+         spin_ind = MERGE(3, ispin, ispin.EQ.4)
          DO ipm = 1, 2
             !Integrate over the contour:
             DO iz = 1, g%contour%nz
