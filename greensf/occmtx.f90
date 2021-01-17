@@ -35,7 +35,7 @@ MODULE m_occmtx
       LOGICAL,                 OPTIONAL,INTENT(IN)    :: check
       LOGICAL,                 OPTIONAL,INTENT(INOUT) :: occError
 
-      INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp
+      INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp,spin_ind
       INTEGER :: atomType,atomTypep,m,mp,i,j,ns,spin_start,spin_end
       REAL    :: nup,ndwn,tr
       COMPLEX :: weight
@@ -70,6 +70,7 @@ MODULE m_occmtx
       ENDIF
 
       DO ispin = spin_start, spin_end
+         spin_ind = MERGE(3, ispin, ispin<=3)
          DO ipm = 1, 2
             !Integrate over the contour:
             DO iz = 1, g%contour%nz
@@ -83,8 +84,13 @@ MODULE m_occmtx
                   ind2 = 0
                   DO mp = -lp,lp
                      ind2 = ind2 + 1
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + ImagUnit/tpi_const * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
-                                                             * weight
+                     IF(ispin<=3) THEN
+                        mmpMat(m,mp,spin_ind) = mmpMat(m,mp,spin_ind) + ImagUnit/tpi_const * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
+                                                                       * weight
+                     ELSE
+                        mmpMat(m,mp,spin_ind) = mmpMat(m,mp,spin_ind) - 1.0/tpi_const * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
+                                                                       * weight
+                     ENDIF
                   ENDDO
                ENDDO
             ENDDO
@@ -100,7 +106,11 @@ MODULE m_occmtx
                   ind2 = 0
                   DO mp = -lp,lp
                      ind2 = ind2 + 1
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) - 1/tpi_const * gmat%data_c(ind1,ind2) * weight
+                     IF(ispin<=3) THEN
+                        mmpMat(m,mp,spin_ind) = mmpMat(m,mp,spin_ind) - 1/tpi_const * gmat%data_c(ind1,ind2) * weight
+                     ELSE
+                        mmpMat(m,mp,spin_ind) = mmpMat(m,mp,spin_ind) - ImagUnit/tpi_const * gmat%data_c(ind1,ind2) * weight
+                     ENDIF
                   ENDDO
                ENDDO
                !right tail
@@ -113,7 +123,11 @@ MODULE m_occmtx
                   ind2 = 0
                   DO mp = -lp,lp
                      ind2 = ind2 + 1
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + 1/tpi_const * gmat%data_c(ind1,ind2) * weight
+                     IF(ispin<=3) THEN
+                        mmpMat(m,mp,spin_ind) = mmpMat(m,mp,spin_ind) + 1/tpi_const * gmat%data_c(ind1,ind2) * weight
+                     ELSE
+                        mmpMat(m,mp,spin_ind) = mmpMat(m,mp,spin_ind) + ImagUnit/tpi_const * gmat%data_c(ind1,ind2) * weight
+                     ENDIF
                   ENDDO
                ENDDO
             ENDIF
