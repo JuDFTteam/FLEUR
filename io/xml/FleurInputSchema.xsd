@@ -334,7 +334,7 @@
      <xsd:attribute name="tolerance" type="xsd:double" use="optional" default="0.00001"/>
      <xsd:attribute name="lexp" type="xsd:integer" use="optional" default="16"/>
      <xsd:attribute name="ewaldlambda" type="xsd:integer" use="optional" default="3"/>
-     <xsd:attribute name="fftcut" type="xsd:double" use="optional" default="0.7"/>
+     <xsd:attribute name="fftcut" type="xsd:double" use="optional" default="1.0"/>
    </xsd:complexType>
 
    <xsd:simpleType name="XCFunctionalEnum">
