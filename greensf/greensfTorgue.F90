@@ -42,7 +42,7 @@ MODULE m_greensfTorgue
       REAL,                   INTENT(IN)  :: flo(:,:,:,:,:)
       TYPE(t_potden),         INTENT(IN)  :: vTot
 
-      INTEGER :: l,lp,iContour,iGrid,ispin,iTorgue,atomType,index_task,extra,ierr
+      INTEGER :: l,lp,iContour,iGrid,ispin,iTorgue,atomType,index_task,extra,ierr,ispin
       INTEGER :: lh,mu,m,mp,iz,ipm,jr,alpha,lhmu,index,index_start,index_end,n,i_gf
       COMPLEX :: phaseFactor, weight
       REAL    :: realIntegral
@@ -134,9 +134,9 @@ MODULE m_greensfTorgue
 
 #ifndef CPP_NOTYPEPROCINOMP
          !$OMP parallel default(none) &
-         !$OMP shared(sphhar,atoms,greensFunction,i_gf,f,g,flo,bxc) &
+         !$OMP shared(sphhar,atoms,input,greensFunction,i_gf,f,g,flo,bxc) &
          !$OMP shared(l,lp,atomType,torgue) &
-         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,weight,ipm,iz,alpha,jr) &
+         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,weight,ispin,ipm,iz,alpha,jr) &
          !$OMP private(realIntegral,integrand,g_ii,mag_ii)
 #endif
          ALLOCATE(integrand(atoms%jmtd,3),source=cmplx_0)
