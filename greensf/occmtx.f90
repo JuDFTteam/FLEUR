@@ -136,9 +136,9 @@ MODULE m_occmtx
 
       !Rotate the occupation matrix into the global frame in real-space
       IF(noco%l_noco) THEN
-         mmpmat(:,:,spin_start:spin_end) = rotMMPmat(mmpmat(:,:,spin_start:spin_end),nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
+         mmpmat(:,:,spin_start:MIN(spin_end,3)) = rotMMPmat(mmpmat(:,:,spin_start:MIN(spin_end,3)),nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
       ELSE IF(noco%l_soc) THEN
-         mmpmat(:,:,spin_start:spin_end) = rotMMPmat(mmpmat(:,:,spin_start:spin_end),nococonv%phi,nococonv%theta,0.0,l)
+         mmpmat(:,:,spin_start:MIN(spin_end,3)) = rotMMPmat(mmpmat(:,:,spin_start:MIN(spin_end,3)),nococonv%phi,nococonv%theta,0.0,l)
       ENDIF
 
 
