@@ -42,7 +42,7 @@ MODULE m_greensfTorgue
       REAL,                   INTENT(IN)  :: flo(:,:,:,:,:)
       TYPE(t_potden),         INTENT(IN)  :: vTot
 
-      INTEGER :: l,lp,iContour,iGrid,ispin,iTorgue,atomType,index_task,extra,ierr,ispin
+      INTEGER :: l,lp,iContour,iGrid,ispin,iTorgue,atomType,index_task,extra,ierr
       INTEGER :: lh,mu,m,mp,iz,ipm,jr,alpha,lhmu,index,index_start,index_end,n,i_gf
       COMPLEX :: phaseFactor, weight
       REAL    :: realIntegral
