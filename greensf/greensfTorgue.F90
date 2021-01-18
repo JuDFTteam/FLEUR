@@ -162,9 +162,11 @@ MODULE m_greensfTorgue
                         IF (alpha.EQ.1) THEN
                            !magnetization in x-direction
                            CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,3,f,g,flo,mag_ii)
+                           mag_ii = 2*mag_ii
                         ELSE IF (alpha.EQ.2) THEN
                            !magnetization in y-direction
                            CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,4,f,g,flo,mag_ii)
+                           mag_ii = 2*mag_ii
                         ELSE
                            !magnatization in z-direction
                            mag_ii = cmplx_0
@@ -231,7 +233,7 @@ MODULE m_greensfTorgue
          WRITE(oUnit,'(/,A)') '---------------------------'
          DO atomType = 1, atoms%ntype
             IF(gfinp%numTorgueElems(atomType)==0) CYCLE
-            WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue(:,atomType) * hartree_to_ev_const * 1000, ' meV'
+            WRITE(oUnit,'(A,I4,A,3f116.8,A)') '  atom: ', atomType, '   torgue: ', torgue(:,atomType) * hartree_to_ev_const * 1000, ' meV'
 
             attributes = ''
             WRITE(attributes(1),'(i0)') atomType
