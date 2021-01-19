@@ -38,7 +38,7 @@ MODULE m_occmtx
       INTEGER :: ind1,ind2,ipm,iz,ispin,l,lp,spin_ind
       INTEGER :: atomType,atomTypep,m,mp,i,j,ns,spin_start,spin_end
       REAL    :: nup,ndwn,tr
-      COMPLEX :: weight
+      COMPLEX :: weight, offd
       TYPE(t_mat) :: gmat
       CHARACTER(len=300) :: message
       CHARACTER(len=2) :: l_type
@@ -179,42 +179,42 @@ MODULE m_occmtx
       !Io-part (ATM this subroutine is only called from rank 0)
       IF(PRESENT(l_write)) THEN
          IF(l_write) THEN
-            !Construct the full matrix in the |L,ml,ms> basis (real)
-            ns = 2*l+1
-            CALL gmat%init(.FALSE.,2*ns,2*ns)
-            DO m = -l, l
-               DO mp = -l, l
-                  gmat%data_c(m+l+1,mp+l+1) = mmpmat(m,mp,1)/(3-input%jspins)
-                  IF(input%jspins.EQ.1) THEN
-                     gmat%data_c(m+l+1+ns,mp+l+1+ns) = mmpmat(-m,-mp,1)/(3-input%jspins)
-                  ELSE
-                     gmat%data_c(m+l+1+ns,mp+l+1+ns) = mmpmat(m,mp,2)
-                  ENDIF
-               ENDDO
-            ENDDO
-            !spin-offdiagonal
-            IF(gfinp%l_mperp) THEN
-               gmat%data_c(1:ns,ns+1:2*ns) = mmpmat(-l:l,-l:l,3)
-               gmat%data_c(ns+1:2*ns,1:ns) = conjg(transpose(mmpmat(-l:l,-l:l,3)))
-            ENDIF
-            !Calculate the spin-up/down occupation
-            nup = 0.0
-            DO i = 1, ns
-               nup = nup + REAL(gmat%data_c(i,i))
-            ENDDO
-            ndwn = 0.0
-            DO i = ns+1, 2*ns
-               ndwn = ndwn + REAL(gmat%data_c(i,i))
-            ENDDO
             !Write to file
-            WRITE (l_type,'(i2)') 4*ns
+            WRITE (l_type,'(i2)') 2*(2*l+1)
             l_form = '('//l_type//'f8.4)'
 9000        FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
             WRITE(oUnit,9000) atomType, l
             WRITE(oUnit,"(A)") "In the |L,S> basis:"
-            WRITE(oUnit,l_form) ((gmat%data_c(i,j),i=1,2*ns),j=1,2*ns)
-            WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
-            WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
+            DO ispin = 1, MERGE(3, input%jspins, gfinp%l_mperp)
+               WRITE(oUnit,'(A,I0)') "Spin: ", ispin
+               WRITE(oUnit,l_form) ((mmpmat(i,j,ispin),i=-l,l),j=-lp,lp)
+            ENDDO
+
+
+            IF(l.EQ.lp) THEN
+               nup = 0.0
+               DO i = -l, l
+                  nup = nup + REAL(mmpmat(i,i,1))
+               ENDDO
+               WRITE(oUnit,'(/,1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
+
+               IF(input%jspins.EQ.2) THEN
+                  ndwn = 0.0
+                  DO i = -l, l
+                     ndwn = ndwn + REAL(mmpmat(i,i,2))
+                  ENDDO
+                  WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
+               ENDIF
+
+               IF(gfinp%l_mperp) THEN
+                  offd = cmplx_0
+                  DO i = -l, l
+                     offd = offd + mmpmat(i,i,3)
+                  ENDDO
+                  WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Offd trace (x): ", REAL(offd)
+                  WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Offd trace (y): ", AIMAG(offd)
+               ENDIF
+            ENDIF
          ENDIF
       ENDIF
 
