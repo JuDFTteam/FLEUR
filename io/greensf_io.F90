@@ -154,12 +154,12 @@ MODULE m_greensf_io
       INTEGER           :: ispin,m,l,lp,atomType,atomTypep,jspinsOut,iContour
       INTEGER           :: i_elem,i,iContourOut,nLO,iLo,iLOp
       INTEGER(HSIZE_T)  :: dims(7)
-      REAL              :: trc(MERGE(3,input%jspins,gfinp%l_mperp)),atomDiff(3)
+      REAL              :: trc(MERGE(4,input%jspins,gfinp%l_mperp)),atomDiff(3)
       LOGICAL           :: l_sphavg,l_onsite,l_anyradial
       TYPE(t_greensf)   :: gfOut
 
 
-      jspinsOut = MERGE(3,input%jspins,gfinp%l_mperp)
+      jspinsOut = MERGE(4,input%jspins,gfinp%l_mperp)
 
       !Check dimensions of mmpmat and selfen
       IF(SIZE(mmpmat,3) /= SIZE(greensf)) CALL juDFT_error("Mismatch in sizes: mmpmat", calledby="writeGreensFData")
@@ -295,7 +295,11 @@ MODULE m_greensf_io
          trc=0.0
          DO ispin = 1, jspinsOut
             DO m = -l, l
-               trc(ispin) = trc(ispin) + REAL(mmpmat(m,m,i_elem,ispin))
+               IF(ispin<=3) THEN
+                  trc(ispin) = trc(ispin) + REAL(mmpmat(m,m,i_elem,ispin))
+               ELSE
+                  trc(ispin) = trc(ispin) + AIMAG(mmpmat(m,m,i_elem,3))
+               ENDIF
             ENDDO
          ENDDO
          CALL io_write_attreal0(currentelementGroupID,"SpinUpTrace",trc(1))
