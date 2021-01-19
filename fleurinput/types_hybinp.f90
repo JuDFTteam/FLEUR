@@ -15,7 +15,7 @@ MODULE m_types_hybinp
       INTEGER                ::  ewaldlambda = 3
       INTEGER                ::  lexp = 16
       INTEGER                ::  bands1 = -1 !Only read in
-      real                   ::  fftcut = 0.0 ! c. friedrich says 2/3 of excat case is good enough
+      real                   ::  fftcut = 1.0 ! c. friedrich says 2/3 of excat case is good enough
       INTEGER, ALLOCATABLE   ::  select1(:, :)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
