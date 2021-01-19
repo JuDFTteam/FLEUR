@@ -166,7 +166,7 @@ MODULE m_greensfTorgue
                         ELSE IF (alpha.EQ.2) THEN
                            !magnetization in y-direction
                            CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,4,f,g,flo,mag_ii)
-                           mag_ii = -2*mag_ii
+                           mag_ii = 2*mag_ii
                         ELSE
                            !magnatization in z-direction
                            mag_ii = cmplx_0
