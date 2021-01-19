@@ -8,7 +8,7 @@ MODULE m_rotMMPmat
    PUBLIC :: rotMMPmat
 
    INTERFACE rotMMPmat
-      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle, rotMMPmat_angle_completeMatrix
+      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle
    END INTERFACE
 
    CONTAINS

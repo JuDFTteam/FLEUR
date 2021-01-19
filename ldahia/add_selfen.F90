@@ -9,7 +9,7 @@ MODULE m_add_selfen
 
    CONTAINS
 
-   SUBROUTINE add_selfen(g0,selfen,gfinp,input,atoms,occDFT,g,mmpMat)
+   SUBROUTINE add_selfen(g0,selfen,gfinp,input,atoms,noco,nococonv,occDFT,g,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -29,6 +29,8 @@ MODULE m_add_selfen
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
       TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_atoms),    INTENT(IN)     :: atoms
+      TYPE(t_noco),     INTENT(IN)     :: noco
+      TYPE(t_nococonv), INTENT(IN)     :: nococonv
       REAL,             INTENT(IN)     :: occDFT(:)
       TYPE(t_selfen),   INTENT(INOUT)  :: selfen
       TYPE(t_greensf),  INTENT(INOUT)  :: g
@@ -65,7 +67,7 @@ MODULE m_add_selfen
 
             mu = mu + mu_step
 
-            CALL getOccupationMtx(g0,gfinp,input,atoms,selfen,mu,l_fullMatch,iMatch,&
+            CALL getOccupationMtx(g0,gfinp,input,atoms,noco,nococonv,selfen,mu,l_fullMatch,iMatch,&
                                   g,mmpMat,nocc,l_invalidElements)
 
             IF(nocc.GT.nMax) THEN
@@ -97,7 +99,7 @@ MODULE m_add_selfen
          DO WHILE (ABS(nocc-nTarget).GT.1e-8.AND.ABS((mu_b - mu_a)/2.0).GT.1e-8)
             mu = (mu_a + mu_b)/2.0
 
-            CALL getOccupationMtx(g0,gfinp,input,atoms,selfen,mu,l_fullMatch,iMatch,&
+            CALL getOccupationMtx(g0,gfinp,input,atoms,noco,nococonv,selfen,mu,l_fullMatch,iMatch,&
                                   g,mmpMat,nocc,l_invalidElements)
 
             IF((nocc - nTarget).GT.0.0) THEN
@@ -128,7 +130,7 @@ MODULE m_add_selfen
 
    END SUBROUTINE add_selfen
 
-   SUBROUTINE getOccupationMtx(g0,gfinp,input,atoms,selfen,mu,l_fullMatch,iMatch,&
+   SUBROUTINE getOccupationMtx(g0,gfinp,input,atoms,noco,nococonv,selfen,mu,l_fullMatch,iMatch,&
                                g,mmpMat,nocc,l_invalidElements)
 
       USE m_occmtx
@@ -137,6 +139,8 @@ MODULE m_add_selfen
       TYPE(t_gfinp),       INTENT(IN)    :: gfinp
       TYPE(t_input),       INTENT(IN)    :: input
       TYPE(t_atoms),       INTENT(IN)    :: atoms
+      TYPE(t_noco),        INTENT(IN)    :: noco
+      TYPE(t_nococonv),    INTENT(IN)    :: nococonv
       TYPE(t_selfen),      INTENT(IN)    :: selfen       !Atomic self-energy (with removed LDA+U potential)
       REAL,                INTENT(IN)    :: mu           !chemical potential shift
       LOGICAL,             INTENT(IN)    :: l_fullMatch  !Are spins matched individually?
@@ -173,9 +177,9 @@ MODULE m_add_selfen
 
             !Read in the DFT-Green's Function at the energy point
             IF(l_fullMatch) THEN
-               CALL g0%get(atoms,iz,ipm.EQ.2,gmat)
+               CALL g0%getFullMatrix(atoms,iz,ipm.EQ.2,gmat)
             ELSE
-               CALL g0%get(atoms,iz,ipm.EQ.2,gmat,spin=iMatch)
+               CALL g0%get(atoms,iz,ipm.EQ.2,iMatch,gmat)
             ENDIF
 
             !----------------------------------------------------
@@ -195,9 +199,9 @@ MODULE m_add_selfen
 
       !Get the occupation matrix
       IF(l_fullMatch) THEN
-         CALL occmtx(g,gfinp,input,atoms,mmpMat,check=.TRUE.,occError=l_invalidElements)
+         CALL occmtx(g,gfinp,input,atoms,noco,nococonv,mmpMat,check=.TRUE.,occError=l_invalidElements)
       ELSE
-         CALL occmtx(g,gfinp,input,atoms,mmpMat,spin=iMatch,check=.TRUE.,occError=l_invalidElements)
+         CALL occmtx(g,gfinp,input,atoms,noco,nococonv,mmpMat,spin=iMatch,check=.TRUE.,occError=l_invalidElements)
       ENDIF
 
       !Compute the trace

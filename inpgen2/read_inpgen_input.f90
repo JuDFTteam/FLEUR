@@ -45,10 +45,10 @@ CONTAINS
 
 
     !locals
-    REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),det,temp
+    REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),cart_mat(3,3),det,temp
     INTEGER             :: ios,n,i, iKpts
     CHARACTER(len=100)  :: filename
-    LOGICAL             :: l_exist
+    LOGICAL             :: l_exist,cartesian
     CHARACTER(len=16384):: line
     TYPE(t_atompar)     :: ap
 
@@ -82,9 +82,9 @@ CONTAINS
           !process the namelist
           SELECT CASE(line(2:5)) !e.g. atom
           CASE ('latt')
-             CALL process_lattice(line,a1,a2,a3,aa,scale,mat)
+             CALL process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat)
           CASE('inpu')
-             CALL process_input(line,input%film,sym%symor,hybinp%l_hybrid)
+             CALL process_input(line,input%film,sym%symor,cartesian,hybinp%l_hybrid)
           CASE('atom')
              CALL read_atom_params_old(98,ap)
              CALL add_atompar(ap)
@@ -166,17 +166,26 @@ CONTAINS
     END DO readloop
 
     IF (.NOT.ALLOCATED(atom_pos).OR.SUM(ABS(a1))==0.0) CALL judft_error("input not complete")
+
     !transform hex->trig
     IF (ABS(mat(1,1)).GT.0.0000001) THEN
-       cell%amat(:,1) = a1(:)
-       cell%amat(:,2) = a2(:)
-       cell%amat(:,3) = a3(:)
-       CALL inv3(cell%amat,cell%bmat,det)
-       DO n = 1, SIZE(atom_pos,2)
+        !unscaled matrices... (scaled setup later)
+        cell%amat(:,1) = a1(:)
+        cell%amat(:,2) = a2(:)
+        cell%amat(:,3) = a3(:)
+        CALL inv3(cell%amat,cell%bmat,det)
+        DO n = 1, SIZE(atom_pos,2)
           atom_pos(:,n) = MATMUL(cell%bmat,MATMUL(mat,atom_pos(:,n)))
+        ENDDO
+    ENDIF
+    !Transform in case of scaled cartesian input
+    IF (cartesian) THEN
+      if (all(abs(cart_mat)<0.01)) call judft_error("Cartesian='t' not possible for your lattice")
+      CALL inv3(cart_mat,cell%bmat,det)
+      DO n = 1, SIZE(atom_pos,2)
+          atom_pos(:,n) = MATMUL(cell%bmat,atom_pos(:,n))
        ENDDO
     ENDIF
-
     DO i = 1, 3
        IF (SCALE(i).LT.0.0) SCALE(i) = SQRT(-SCALE(i))
     END DO
@@ -310,7 +319,7 @@ CONTAINS
 
   END SUBROUTINE process_kpts
 
-  SUBROUTINE process_input(line,film,symor,hybinp)
+  SUBROUTINE process_input(line,film,symor,cartesian,hybinp)
     CHARACTER(len=*),INTENT(in)::line
     LOGICAL,INTENT(out)::film,symor,hybinp
 

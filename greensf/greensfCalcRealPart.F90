@@ -53,7 +53,7 @@ MODULE m_greensfCalcRealPart
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del,eb,eMesh=eMesh)
 
-      nspins = MERGE(3,input%jspins,gfinp%l_mperp)
+      nspins = MERGE(4,input%jspins,gfinp%l_mperp)
 
       IF(fmpi%irank.EQ.0) THEN
          CALL timestart("Green's Function: Integration Cutoff")

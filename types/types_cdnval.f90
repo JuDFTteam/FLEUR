@@ -417,21 +417,30 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 
  FUNCTION compact_ev_list(thiscdnvaljob,ikpt,l_empty)
    IMPLICIT NONE
-   CLASS(t_cdnvalJob),INTENT(IN)  :: thisCdnvalJob
-   INTEGER,INTENT(IN)             :: ikpt
-   LOGICAL,INTENT(IN)             :: l_empty
+   CLASS(t_cdnvalJob), INTENT(IN)  :: thisCdnvalJob
+   INTEGER, INTENT(IN)             :: ikpt
+   LOGICAL, INTENT(IN)             :: l_empty
 
-   INTEGER,ALLOCATABLE :: compact_ev_list(:)
-   INTEGER :: nk
-   logical, allocatable :: l_nonzero(:)
+   INTEGER, ALLOCATABLE :: compact_ev_list(:)
+   INTEGER              :: nk, evlen, evlen2
+   LOGICAL, ALLOCATABLE :: l_nonzero(:)
 
-   nk=thisCdnvalJob%k_list(ikpt)
+   nk    = thisCdnvalJob%k_list(ikpt)
+   evlen = SIZE(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)))
+
+   ALLOCATE(l_nonzero(evlen))
+
    IF (l_empty) THEN
+      evlen2 = SIZE(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)))
+      ALLOCATE(compact_ev_list(evlen2))
       compact_ev_list=thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk))
    ELSE
       l_nonzero = thisCdnvalJob%weights(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),nk)>1.e-8
-      compact_ev_list=PACK(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)), l_nonzero)
+      evlen2 = COUNT(l_nonzero)
+      ALLOCATE(compact_ev_list(evlen2))
+      compact_ev_list = PACK(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)), l_nonzero)
    END IF
+   DEALLOCATE(l_nonzero)
  END FUNCTION compact_ev_list
 
 
