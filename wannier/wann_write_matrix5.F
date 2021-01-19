@@ -7,7 +7,7 @@
       module m_wann_write_matrix5
       contains
       subroutine wann_write_matrix5(
-     >               mpi_comm,l_p0,filename,title,
+     >               fmpi_comm,l_p0,filename,title,
      >               num_bands1,num_bands2,
      >               num_dims1,num_dims2,fullnkpts,
      >               irank,isize,l_unformatted,
@@ -26,7 +26,7 @@ c*************************************************************
       USE mpi
 #endif
       implicit none
-      integer, intent(in)    :: mpi_comm
+      integer, intent(in)    :: fmpi_comm
       logical, intent(in)    :: l_p0
       character, intent(in)  :: filename*(*)
       character, intent(in)  :: title*(*)
@@ -65,7 +65,7 @@ c**********************************************************
      &             1:num_bands1,1:num_bands2,ikpt),
      &             num_bands1*num_bands2*num_dims1*num_dims2,
      &             CPP_MPI_COMPLEX,cpu_index,
-     &             ikpt,mpi_comm,stt,ierr(1))
+     &             ikpt,fmpi_comm,stt,ierr(1))
           endif !processors
          enddo !cpu_index
         else
@@ -75,10 +75,10 @@ c**********************************************************
      &             1:num_bands1,1:num_bands2,ikpt),
      &             num_bands1*num_bands2*num_dims1*num_dims2,
      &             CPP_MPI_COMPLEX,0,
-     &             ikpt,mpi_comm,ierr(1))
+     &             ikpt,fmpi_comm,ierr(1))
          endif !processors
         endif ! l_p0
-        call MPI_BARRIER(mpi_comm,ierr(1))
+        call MPI_BARRIER(fmpi_comm,ierr(1))
        enddo !ikpt 
       endif !isize
 #endif

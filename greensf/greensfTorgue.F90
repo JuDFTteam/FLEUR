@@ -46,13 +46,12 @@ MODULE m_greensfTorgue
       INTEGER :: lh,mu,m,mp,iz,ipm,jr,alpha,lhmu,index,index_start,index_end,n,i_gf
       COMPLEX :: phaseFactor, weight
       REAL    :: realIntegral
-      COMPLEX :: sigma(2,2,3),g_Spin(2,2)
       CHARACTER(LEN=20) :: attributes(5)
 
       REAL,    ALLOCATABLE :: torgue(:,:),rtmp(:)
       COMPLEX, ALLOCATABLE :: bxc(:,:,:)
       COMPLEX, ALLOCATABLE :: integrand(:,:)
-      COMPLEX, ALLOCATABLE :: g_ii(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: g_ii(:,:), mag_ii(:,:)
       COMPLEX, ALLOCATABLE :: vlm(:,:,:)
       INTEGER, ALLOCATABLE :: gf_indices(:)
 
@@ -99,15 +98,6 @@ MODULE m_greensfTorgue
          CALL juDFT_error("Invalid index in greensFunction mapping array", calledby="greensFunctionTorgue")
       ENDIF
 
-      ! sigma are the Pauli matrices
-      sigma=cmplx_0
-      sigma(1,2,1)=CMPLX(1.0,0.0)
-      sigma(2,1,1)=CMPLX(1.0,0.0)
-      sigma(1,2,2)=CMPLX(0.0,-1.0)
-      sigma(2,1,2)=CMPLX(0.0,1.0)
-      sigma(1,1,3)=CMPLX(1.0,0.0)
-      sigma(2,2,3)=CMPLX(-1.0,0.0)
-
 #ifdef CPP_MPI
       IF(fmpi%isize > 1) THEN
          !Just distribute the individual gf elements over the ranks
@@ -144,13 +134,14 @@ MODULE m_greensfTorgue
 
 #ifndef CPP_NOTYPEPROCINOMP
          !$OMP parallel default(none) &
-         !$OMP shared(sphhar,atoms,greensFunction,i_gf,f,g,flo,sigma,bxc) &
+         !$OMP shared(sphhar,atoms,input,greensFunction,i_gf,f,g,flo,bxc) &
          !$OMP shared(l,lp,atomType,torgue) &
-         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,weight,ipm,iz,alpha,jr) &
-         !$OMP private(realIntegral,integrand,g_ii,g_Spin)
+         !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,weight,ispin,ipm,iz,alpha,jr) &
+         !$OMP private(realIntegral,integrand,g_ii,mag_ii)
 #endif
          ALLOCATE(integrand(atoms%jmtd,3),source=cmplx_0)
-         ALLOCATE(g_ii(2,2,atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
+         ALLOCATE(g_ii(atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
+         ALLOCATE(mag_ii(atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
 #ifndef CPP_NOTYPEPROCINOMP
          !$OMP do collapse(2)
 #endif
@@ -167,27 +158,39 @@ MODULE m_greensfTorgue
                   IF(ABS(phaseFactor).LT.1e-12) CYCLE
                   integrand = cmplx_0
                   DO ipm = 1, 2
-                     CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
-                     DO iz = 1, SIZE(g_ii,4)
-                        weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
-
-                        IF(ipm == 1) THEN
-                           DO alpha = 1, 3 !(x,y,z)
-                              DO jr = 1, atoms%jri(atomType)
-                                 g_Spin = matmul(sigma(:,:,alpha),g_ii(:,:,jr,iz))
-                                 integrand(jr,alpha) = integrand(jr,alpha) + ImagUnit/tpi_const * (g_Spin(1,1) + g_Spin(2,2)) &
-                                                                            * bxc(jr,lhmu,atomType) * weight
-                              ENDDO
-                           ENDDO
+                     DO alpha = 1, 3 !(x,y,z)
+                        IF (alpha.EQ.1) THEN
+                           !magnetization in x-direction
+                           CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,3,f,g,flo,mag_ii)
+                           mag_ii = 2*mag_ii
+                        ELSE IF (alpha.EQ.2) THEN
+                           !magnetization in y-direction
+                           CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,4,f,g,flo,mag_ii)
+                           mag_ii = 2*mag_ii
                         ELSE
-                           DO alpha = 1, 3 !(x,y,z)
-                              DO jr = 1, atoms%jri(atomType)
-                                 g_Spin = matmul(conjg(sigma(:,:,alpha)),g_ii(:,:,jr,iz))
-                                 integrand(jr,alpha) = integrand(jr,alpha) - ImagUnit/tpi_const * (g_Spin(1,1) + g_Spin(2,2)) &
-                                                                            * conjg(bxc(jr,lhmu,atomType) * weight)
-                              ENDDO
+                           !magnatization in z-direction
+                           mag_ii = cmplx_0
+                           DO ispin = 1, input%jspins
+                              CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,ispin,f,g,flo,g_ii)
+                              mag_ii = mag_ii + (-1)**(ispin-1) * g_ii
                            ENDDO
                         ENDIF
+
+                        DO iz = 1, SIZE(mag_ii,2)
+                           weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
+
+                           IF(ipm == 1) THEN
+                              DO jr = 1, atoms%jri(atomType)
+                                 integrand(jr,alpha) = integrand(jr,alpha) - ImagUnit/tpi_const * mag_ii(jr,iz) &
+                                                                            * bxc(jr,lhmu,atomType) * weight
+                              ENDDO
+                           ELSE
+                              DO jr = 1, atoms%jri(atomType)
+                                 integrand(jr,alpha) = integrand(jr,alpha) + ImagUnit/tpi_const * mag_ii(jr,iz) &
+                                                                            * conjg(bxc(jr,lhmu,atomType) * weight)
+                              ENDDO
+                           ENDIF
+                        ENDDO
                      ENDDO
                   ENDDO
 
@@ -230,7 +233,7 @@ MODULE m_greensfTorgue
          WRITE(oUnit,'(/,A)') '---------------------------'
          DO atomType = 1, atoms%ntype
             IF(gfinp%numTorgueElems(atomType)==0) CYCLE
-            WRITE(oUnit,'(A,I4,A,3f14.8,A)') '  atom: ', atomType, '   torgue: ', torgue(:,atomType) * hartree_to_ev_const * 1000, ' meV'
+            WRITE(oUnit,'(A,I4,A,3f16.8,A)') '  atom: ', atomType, '   torgue: ', torgue(:,atomType) * hartree_to_ev_const * 1000, ' meV'
 
             attributes = ''
             WRITE(attributes(1),'(i0)') atomType
@@ -421,7 +424,7 @@ MODULE m_greensfTorgue
                         IF(ABS(phaseFactor).LT.1e-12) CYCLE
                         integrand = cmplx_0
                         DO ipm = 1, 2
-                           CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
+                           !CALL greensFunction(i_gf)%getRadialSpin(atoms,m,mp,ipm==2,f,g,flo,g_ii)
                            DO iz = 1, SIZE(g_ii,4)
                               weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
 
