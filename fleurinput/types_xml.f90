@@ -133,7 +133,7 @@ CONTAINS
       xml%versionNumber = nint(tempReal*100)
       IF (xml%versionNumber .NE. xml%currentversionNumber) THEN
          if (.not. l_allow_old .and. xml%versionNumber<33) CALL juDFT_error('Version number of inp.xml file is not compatible with this fleur version')
-         old_version = .true.
+         if (present(old_version)) old_version = .true.
       END IF
 
       call validate_with_Schema(versionString)
