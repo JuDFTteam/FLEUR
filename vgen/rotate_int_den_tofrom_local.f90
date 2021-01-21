@@ -222,10 +222,10 @@ CONTAINS
       END DO
     
       ! Fourier transform the matrix potential back to reciprocal space:
+      fftwork=0.0
       DO jspin = 1,input%jspins
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
-               fftwork=0.0
                IF (oneD%odi%d1) THEN
                   CALL judft_error("oneD not implemented",calledby="rhodirgen")
                   !CALL fft2d(oneD%k3,odi%M,odi%n2d,&
