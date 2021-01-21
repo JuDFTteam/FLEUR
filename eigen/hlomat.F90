@@ -97,6 +97,7 @@ CONTAINS
        !$acc & create(ax,bx,cx)&
        !$acc & copyin(lapw%index_lo(:,na),tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp),abclo(1:3,:,:,:,1:2))&
        !$acc & copyin(ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud,ud%duds(:,ntyp,isp))&
+       !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
        !$acc & default(none)
        DO lo = 1,atoms%nlo(ntyp)
           l = atoms%llo(lo,ntyp)
