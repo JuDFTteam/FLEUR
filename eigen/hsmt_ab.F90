@@ -71,7 +71,7 @@ CONTAINS
 
     !$acc data copyin(atoms,atoms%llo,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
     !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) &
-    !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,bmrot,c_ph, sym, sym%invsat) &
+    !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo) &
     !$acc present(abclo,alo1,blo1,clo1)&
     !$acc private(gkrot,k,v,ylm,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
     DO k = 1,lapw%nv(iintsp)

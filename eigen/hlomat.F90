@@ -77,6 +77,8 @@ CONTAINS
     ENDIF
     !$acc end data
 
+    !$acc update self (abclo,abcoeffs,hmat%data_c,hmat%data_r)
+
     mlo=0;mlolo=0
     DO m=1,ntyp-1
        mlo=mlo+atoms%nlo(m)
@@ -93,14 +95,14 @@ CONTAINS
        IF (sym%invsat(na) == 0) invsfct = 1
        IF (sym%invsat(na) == 1) invsfct = 2
        !
-       !$acc kernels present(hmat,hmat%data_c,hmat%data_c)&
-       !$acc & present(abcoeffs,abclo) &
-       !$acc & copyin(atoms,lapw,tlmplm,tlmplm%ulotu,tlmplm%ulotd,tlmplm%h_loc(:,:,ntyp,jsp,isp),lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
-       !$acc & create(ax,bx,cx)&
-       !$acc & copyin(lapw%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
-       !$acc & copyin(ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud,ud%duds(:,ntyp,isp))&
-       !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
-       !$acc & default(none)
+       !!$acc kernels present(hmat,hmat%data_r,hmat%data_c)&
+       !!$acc & present(abcoeffs,abclo)  &
+       !!$acc & copyin(atoms,lapw,tlmplm,tlmplm%ulotu,tlmplm%ulotd,tlmplm%h_loc(:,:,ntyp,jsp,isp),lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
+       !!$acc & create(ax,bx,cx)&
+       !!$acc & copyin(lapw%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
+       !!$acc & copyin(ud,ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud%duds(:,ntyp,isp))&
+       !!$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
+       !!$acc & default(none)
        DO lo = 1,atoms%nlo(ntyp)
           l = atoms%llo(lo,ntyp)
           !--->       calculate the hamiltonian matrix elements with the regular
@@ -294,8 +296,9 @@ CONTAINS
              ENDIF !If this lo to be calculated by fmpi rank
           END DO
        END DO ! end of lo = 1,atoms%nlo loop
-       !$acc end kernels
+       !!$acc end kernels
     END IF
     !$acc end data
+    !$acc update device(hmat%data_r,hmat%data_c)
   END SUBROUTINE hlomat
 END MODULE m_hlomat

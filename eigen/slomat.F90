@@ -72,11 +72,12 @@ CONTAINS
 
        con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
-       !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)&
-       !$acc & copyin(l,lapw,lapw%kvec(:,:,na),ud,clo1(:),dotp,cph(:,:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
-       !$acc copyin(ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
-       !$acc copyin(atoms%nlo(ntyp),lapw%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
-       !$acc default(none)
+       !$acc update self(smat%data_c,smat%data_r)
+       !!$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)&
+       !!$acc & copyin(l,lapw,lapw%kvec(:,:,na),ud,clo1(:),dotp,cph(:,:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
+       !!$acc copyin(ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
+       !!$acc copyin(atoms%nlo(ntyp),lapw%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
+       !!$acc default(none)
 
        DO lo = 1,atoms%nlo(ntyp) !loop over all LOs for this atom
 
@@ -95,7 +96,7 @@ CONTAINS
                 k = lapw%kvec(nkvec,lo,na)
                 !--->          calculate the overlap matrix elements with the regular
                 !--->          flapw basis-functions
-                !$acc loop gang private(fact2,dotp,kp)
+                !!$acc loop gang private(fact2,dotp,kp)
                 DO kp = 1,lapw%nv(iintsp)
                    fact2 = con * fl2p1 * (&
                         fjgj%fj(kp,l,isp,iintsp)* ( alo1(lo) + &
@@ -111,7 +112,7 @@ CONTAINS
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ENDIF
                 END DO
-                !$acc end loop
+                !!$acc end loop
                 !--->          calculate the overlap matrix elements with other local
                 !--->          orbitals at the same atom, if they have the same l
                 DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),iintsp==jintsp)
@@ -158,7 +159,8 @@ CONTAINS
              ENDIF ! mod(locol-1,n_size) = nrank
           END DO
        END DO
-       !$acc end kernels
+       !!$acc end kernels
+       !$acc update device(smat%data_c,smat%data_r)
     END IF
   END SUBROUTINE slomat
   !===========================================================================
