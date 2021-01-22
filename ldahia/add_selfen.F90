@@ -177,9 +177,9 @@ MODULE m_add_selfen
 
             !Read in the DFT-Green's Function at the energy point
             IF(l_fullMatch) THEN
-               CALL g0%get(atoms,iz,ipm.EQ.2,gmat)
+               CALL g0%getFullMatrix(atoms,iz,ipm.EQ.2,gmat)
             ELSE
-               CALL g0%get(atoms,iz,ipm.EQ.2,gmat,spin=iMatch)
+               CALL g0%get(atoms,iz,ipm.EQ.2,iMatch,gmat)
             ENDIF
 
             !----------------------------------------------------
