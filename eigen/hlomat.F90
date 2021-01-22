@@ -94,7 +94,7 @@ CONTAINS
        IF (sym%invsat(na) == 1) invsfct = 2
        !
        !$acc kernels present(hmat,hmat%data_c,hmat%data_c)&
-       !$acc & present(abcoeffs,abclo)
+       !$acc & present(abcoeffs,abclo) &
        !$acc & copyin(atoms,lapw,tlmplm%h_loc(:,:,ntyp,jsp,isp),tlmplm,lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
        !$acc & create(ax,bx,cx)&
        !$acc & copyin(lapw%index_lo(:,na),tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
