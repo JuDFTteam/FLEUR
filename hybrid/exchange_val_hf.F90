@@ -180,7 +180,7 @@ CONTAINS
 
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
-      !$acc enter data create(exch_vv) copyin(hybdat, hybdat%nbands, nsest, indx_sest, ik, jsp) 
+      !$acc enter data create(exch_vv) copyin(hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest, ik, jsp) 
       !$acc kernels present(exch_vv) default(none)
       exch_vv = 0
       !$acc end kernels
@@ -256,25 +256,49 @@ CONTAINS
 
             nq_idx = k_pack%q_packs(jq)%rank
             call timestart("apply prefactors carr1_v")
+
+            !$acc enter data copyin(phase_vv, psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
             if (mat_ex%l_real) then
+#ifdef _OPENACC
+               CPP_carr_r   = carr1_v%data_r 
+               CPP_cprod_r  = cprod_vv%data_r
+#endif
+               !$acc enter data copyin(CPP_carr_r, CPP_cprod_r)
+
+               !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
+               !$acc present(CPP_carr_r, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
+               !$acc present(n_q, nq_idx)
                DO iband = 1, hybdat%nbands(ik,jsp)
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
-                        carr1_v%data_r(i, iob + psize*(iband - 1)) &
-                           = real(carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx))                        
+                        CPP_carr_r(i, iob + psize*(iband - 1)) = CPP_carr_r(i, iob + psize*(iband - 1))&
+                                                  * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)                        
                      enddo
                   enddo
                enddo
+               !$acc end parallel loop
             else
+#ifdef _OPENACC
+               CPP_carr_c   = carr1_v%data_c 
+               CPP_cprod_c  = cprod_vv%data_c
+#endif
+               !$acc enter data copyin(CPP_carr_c, CPP_cprod_c)
+
+               !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
+               !$acc present(CPP_carr_c, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
+               !$acc present(n_q, nq_idx)
                DO iband = 1, hybdat%nbands(ik,jsp)
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
-                        carr1_v%data_c(i, iob + psize*(iband - 1)) &
-                           = carr1_v%data_c(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)
+                        CPP_carr_c(i, iob + psize*(iband - 1))  = CPP_carr_c(i, iob + psize*(iband - 1)) &
+                                                   * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)
                      enddo
                   enddo
                enddo
+               !$acc end parallel loop
             endif
+            !$acc exit data delete(psize, wl_iks, n_q, nq_idx, ibando)
+
             call timestop("apply prefactors carr1_v")
 
             call timestart("exch_vv dot prod")
@@ -284,16 +308,10 @@ CONTAINS
             lda = hybdat%nbasm(iq)*psize
             ldb = hybdat%nbasm(iq)*psize
             ldc = hybdat%nbands(ik,jsp)
-            !$acc enter data copyin(phase_vv)
 
             IF (mat_ex%l_real) THEN
-#ifdef _OPENACC
-               CPP_carr_r   = carr1_v%data_r 
-               CPP_cprod_r  = cprod_vv%data_r
-#endif
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
-               !$acc enter data create(CPP_dotres_r) & 
-               !$acc copyin(CPP_carr_r,CPP_cprod_r)
+               !$acc enter data create(CPP_dotres_r) 
                DO iob = 1, psize
                   !$acc host_data use_device(carr1_v_r, cprod_vv_r, CPP_dotres_r)
                   call CPP_dgemm("T", "N", m, n, k, 1.0, CPP_carr_r(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, CPP_dotres_r , ldc)
@@ -310,13 +328,8 @@ CONTAINS
                END DO
                !$acc exit data delete(CPP_carr_r,CPP_cprod_r, CPP_dotres_r)
             ELSE
-#ifdef _OPENACC
-               CPP_carr_c   = carr1_v%data_c 
-               CPP_cprod_c  = cprod_vv%data_c
-#endif
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
-               !$acc enter data create(CPP_dotres_c) &
-               !$acc copyin(CPP_carr_c,CPP_cprod_c, hybdat, phase_vv, nsest, indx_sest)
+               !$acc enter data create(CPP_dotres_c) 
                DO iob = 1, psize
                   !$acc host_data use_device(CPP_carr_c, CPP_cprod_c, CPP_dotres_c)
                   call CPP_zgemm("C", "N", m, n, k, cmplx_1, CPP_carr_c(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, CPP_dotres_c, ldc)
@@ -341,8 +354,7 @@ CONTAINS
             call carr1_v%free()
          enddo
       END DO  !jq
-      !$acc exit data copyout(exch_vv) delete(hybdat, hybdat%nbands, nsest, indx_sest, ik, jsp)
-
+      !$acc exit data copyout(exch_vv) delete(hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest, ik, jsp, ikqpt)
       call timestop("q_loop")
 
       call dot_result%free()
