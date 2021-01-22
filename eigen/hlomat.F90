@@ -75,8 +75,7 @@ CONTAINS
     ELSE
        CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
     ENDIF
-    !$acc data end
-
+    !$acc end data
 
     mlo=0;mlolo=0
     DO m=1,ntyp-1
