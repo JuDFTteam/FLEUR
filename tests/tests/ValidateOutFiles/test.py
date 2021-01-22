@@ -21,6 +21,7 @@ with open(f"{te.workdir}/xmllintErrors", "w") as f_stderr:
             te.log_info(f"Testing {file_path}")
             if not os.path.isfile(schema_path):
                te.log_info("No OutputSchema found")
+               te.errors += 1
                continue
             with open(f"{te.workdir}/last_xmllintOut", "w") as f_stdout:
                arg_list = [te.command, '--schema', f'{schema_path}', f'{file_path}']
