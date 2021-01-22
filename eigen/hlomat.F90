@@ -66,6 +66,7 @@ CONTAINS
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
 
+    !$acc data create(abcoeffs,abclo)
     CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,iintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
     IF (isp==jsp.AND.iintsp==jintsp) THEN
        CALL CPP_BLAS_ccopy(SIZE(abCoeffs,1)*SIZE(abCoeffs,2),abCoeffs(:,:,1),1,abCoeffs(:,:,2),1)
@@ -93,9 +94,10 @@ CONTAINS
        IF (sym%invsat(na) == 1) invsfct = 2
        !
        !$acc kernels present(hmat,hmat%data_c,hmat%data_c)&
-       !$acc &  copyin(atoms,lapw,abCoeffs(:,:,1),tlmplm%h_loc(:,:,ntyp,jsp,isp),tlmplm,lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
+       !$acc & present(abcoeffs,abclo)
+       !$acc & copyin(atoms,lapw,tlmplm%h_loc(:,:,ntyp,jsp,isp),tlmplm,lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
        !$acc & create(ax,bx,cx)&
-       !$acc & copyin(lapw%index_lo(:,na),tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp),abclo(1:3,:,:,:,1:2))&
+       !$acc & copyin(lapw%index_lo(:,na),tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
        !$acc & copyin(ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud,ud%duds(:,ntyp,isp))&
        !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
        !$acc & default(none)
@@ -121,7 +123,7 @@ CONTAINS
                    DO mp = -lp,lp
                       lmp = lp* (lp+1) + mp
                       s=tlmplm%h_loc2(ntyp)
-                      ax(kp) = ax(kp) + abCoeffs(lmp,kp,1)          *tlmplm%h_loc(lmp,lm,ntyp,jsp,isp) 
+                      ax(kp) = ax(kp) + abCoeffs(lmp,kp,1)          *tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
                       ax(kp) = ax(kp) + abCoeffs(ab_size/2+lmp,kp,1)*tlmplm%h_loc(s+lmp,lm,ntyp,jsp,isp)
                       bx(kp) = bx(kp) + abCoeffs(lmp,kp,1)          *tlmplm%h_loc(lmp,s+lm,ntyp,jsp,isp)
                       bx(kp) = bx(kp) + abCoeffs(ab_size/2+lmp,kp,1)*tlmplm%h_loc(s+lmp,s+lm,ntyp,jsp,isp)
@@ -294,5 +296,6 @@ CONTAINS
        END DO ! end of lo = 1,atoms%nlo loop
        !$acc end kernels
     END IF
+    !$acc end data
   END SUBROUTINE hlomat
 END MODULE m_hlomat

@@ -72,8 +72,8 @@ CONTAINS
 
        con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
-       !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)&
-       !$acc & copyin(l,lapw%kvec(:,:,na),lapw,ud,clo1(:),dotp,cph(:,:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
+       !$acc parallel loop seq present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)&
+       !$acc & copyin(l,lapw,lapw%kvec(:,:,na),ud,clo1(:),dotp,cph(:,:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
        !$acc copyin(ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
        !$acc copyin(atoms%nlo(ntyp),lapw%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
        !$acc default(none)
@@ -158,7 +158,7 @@ CONTAINS
              ENDIF ! mod(locol-1,n_size) = nrank
           END DO
        END DO
-       !$acc end kernels
+       !$acc end parallel loops
     END IF
   END SUBROUTINE slomat
   !===========================================================================
