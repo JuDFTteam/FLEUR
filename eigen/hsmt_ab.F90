@@ -66,15 +66,13 @@ CONTAINS
     !$acc kernels present(abCoeffs) default(none)
     abCoeffs(:,:)=0.0
     !$acc end kernels
-    if (l_abclo) THEN
-      !$acc enter data copyin(lapw,lapw%kvec(:,:,na),atoms,atoms%llo,atoms%nlo,cell,cell%omtil,atoms%rmt)
-    ENDIF
 #endif
 
 
+    !$acc data copyin(atoms,atoms%llo,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
     !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) &
     !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,bmrot,c_ph, sym, sym%invsat) &
-    !$acc present(abclo,alo1,blo1,clo1,atoms,atoms%llo,atoms%nlo, cell, cell%omtil)&
+    !$acc present(abclo,alo1,blo1,clo1)&
     !$acc private(gkrot,k,v,ylm,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
     DO k = 1,lapw%nv(iintsp)
        !-->  apply the rotation that brings this atom into the
@@ -127,13 +125,12 @@ CONTAINS
 
     ENDDO !k-loop
     !$acc end parallel loop
+    !$acc end data
 
 #ifndef _OPENACC
     !$OMP END PARALLEL DO
 #endif
-  if (present(abclo)) THEN
-      !$acc exit data delete(lapw%kvec(:,:,na),atoms,atoms%llo,atoms%nlo,cell,cell%omtil,atoms%rmt)
-    ENDIF
+
     IF (.NOT.l_apw) ab_size=ab_size*2
   END SUBROUTINE hsmt_ab
 END MODULE m_hsmt_ab
