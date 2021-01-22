@@ -255,25 +255,27 @@ CONTAINS
             call timestop("sparse matrix products")
 
             nq_idx = k_pack%q_packs(jq)%rank
-            DO iband = 1, hybdat%nbands(ik,jsp)
-               call timestart("apply prefactors carr1_v")
-               if (mat_ex%l_real) then
+            call timestart("apply prefactors carr1_v")
+            if (mat_ex%l_real) then
+               DO iband = 1, hybdat%nbands(ik,jsp)
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
                         carr1_v%data_r(i, iob + psize*(iband - 1)) &
                            = real(carr1_v%data_r(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx))                        
                      enddo
                   enddo
-               else
+               enddo
+            else
+               DO iband = 1, hybdat%nbands(ik,jsp)
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
                         carr1_v%data_c(i, iob + psize*(iband - 1)) &
                            = carr1_v%data_c(i, iob + psize*(iband - 1))*wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)
                      enddo
                   enddo
-               endif
-               call timestop("apply prefactors carr1_v")
-            enddo
+               enddo
+            endif
+            call timestop("apply prefactors carr1_v")
 
             call timestart("exch_vv dot prod")
             m = hybdat%nbands(ik,jsp)
