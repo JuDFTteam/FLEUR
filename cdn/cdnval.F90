@@ -330,7 +330,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       END IF
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,vacdos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
-      IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
+      IF (.FALSE..AND.(banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
          CALL sympsi(lapw,jspin,sym,noccbd,cell,eig,noco,dos%jsym(:,ikpt,jspin),zMat)
       END IF
