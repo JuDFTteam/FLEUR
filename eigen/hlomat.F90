@@ -95,13 +95,12 @@ CONTAINS
        IF (sym%invsat(na) == 0) invsfct = 1
        IF (sym%invsat(na) == 1) invsfct = 2
        !
-       !!$acc kernels present(hmat,hmat%data_r,hmat%data_c)&
-       !!$acc & present(abcoeffs,abclo)  &
+       !!$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo) &
        !!$acc & copyin(atoms,lapw,tlmplm,tlmplm%ulotu,tlmplm%ulotd,tlmplm%h_loc(:,:,ntyp,jsp,isp),lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
-       !!$acc & create(ax,bx,cx)&
        !!$acc & copyin(lapw%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
        !!$acc & copyin(ud,ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud%duds(:,ntyp,isp))&
        !!$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
+       !!$acc & create(ax,bx,cx)&
        !!$acc & default(none)
        DO lo = 1,atoms%nlo(ntyp)
           l = atoms%llo(lo,ntyp)
