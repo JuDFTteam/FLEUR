@@ -41,7 +41,7 @@ elseif (CMAKE_Fortran_COMPILER_ID MATCHES "PGI")
    set(FLEUR_OPENMP_FLAG "-mp")
    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "") #fix problem in cmake
    #CPU
-   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp")
+   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp -mavx2 -g -Werror")
    #GPU
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda=cuda9.0,cc60 -Mcudalib=cublas")
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda:kepler+ -ta:tesla:cuda7.5 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
