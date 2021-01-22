@@ -31,7 +31,8 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_noco, l_create, l_real, l_soc, l_olap
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
       !locals
-      INTEGER:: length, ierr, arraysize
+      INTEGER :: length, ierr
+      INTEGER :: elementsize
       CHARACTER(LEN=80) errorString
       TYPE(t_data_mem), POINTER:: d
       CALL priv_find_data(id, d)
@@ -57,13 +58,14 @@ CONTAINS
       !d%eig_vec
       if (l_real .and. .not. l_soc) THEN
          ALLOCATE (d%eig_vecr(nmat*neig, length*nkpts), STAT=ierr)
-         arraysize = 8 * nmat * neig * length * nkpts
+         elementsize = 8
       else
          ALLOCATE (d%eig_vecc(nmat*neig, length*nkpts), STAT=ierr)
-         arraysize = 16 * nmat * neig * length * nkpts
+         elementsize = 16
       endif
       IF (ierr.NE.0) THEN
-         WRITE(errorString,'(a,i0,a)') "Could not allocate eigenvector array of size ", arraysize, " bytes."
+         WRITE(errorString,'(a,i0,a,i0,a,i0,a,i0,a,i0,a)') "Could not allocate eigenvector array of size ", &
+                                                            elementsize, " x ", nmat, " x ", neig, " x ", length, " x ", nkpts, " bytes."
          CALL juDFT_error(TRIM(ADJUSTL(errorString)), calledby = 'eig66_mem')
       END IF
 
