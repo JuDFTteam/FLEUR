@@ -79,11 +79,9 @@ CONTAINS
       USE cublas
 #define CPP_zgemm cublaszgemm
 #define CPP_dgemm cublasdgemm
-#define CPP_zherk cublaszherk
 #else
 #define CPP_zgemm zgemm
 #define CPP_dgemm dgemm
-#define CPP_zherk zherk
 #endif
       IMPLICIT NONE
 
