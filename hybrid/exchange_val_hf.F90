@@ -135,30 +135,23 @@ CONTAINS
       COMPLEX              :: hessian(3, 3)
       COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk,jsp))
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
-      COMPLEX, ALLOCATABLE :: phase_vv(:, :)
+      COMPLEX, ALLOCATABLE :: phase_vv(:, :), c_coul_wavf(:,:), dot_result_c(:,:)
+      REAL,    ALLOCATABLE :: r_coul_wavf(:,:), dot_result_r(:,:)
       LOGICAL              :: occup(fi%input%neig), conjg_mtir
 #ifdef _OPENACC
-      real, allocatable    :: carr1_v_r(:,:), cprod_vv_r(:,:), dot_result_r(:,:)
-      complex, allocatable :: carr1_v_c(:,:), cprod_vv_c(:,:), dot_result_c(:,:)
+      real, allocatable    :: cprod_vv_r(:,:)
+      complex, allocatable :: cprod_vv_c(:,:)
 
-#define CPP_carr_r carr1_v_r
-#define CPP_carr_c carr1_v_c
 #define CPP_cprod_r cprod_vv_r 
 #define CPP_cprod_c cprod_vv_c 
-#define CPP_dotres_r dot_result_r
-#define CPP_dotres_c dot_result_c 
 
 #else 
 
-#define CPP_carr_r carr1_v%data_r
-#define CPP_carr_c carr1_v%data_c
 #define CPP_cprod_r cprod_vv%data_r
 #define CPP_cprod_c cprod_vv%data_c
-#define CPP_dotres_r dot_result%data_r
-#define CPP_dotres_c dot_result%data_c
 
 #endif
-      type(t_mat)          :: carr1_v, cprod_vv, carr3_vv, dot_result
+      type(t_mat)          :: cprod_vv, carr3_vv
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
 
@@ -175,8 +168,12 @@ CONTAINS
 
       call timestart("alloc phase_vv & dot_res")
       allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik,jsp)), stat=ok, source=cmplx_0)
-      call dot_result%alloc(mat_ex%l_real, hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp))
-      call alloc_dev_cpy(dot_result, CPP_dotres_r, CPP_dotres_c)
+      if(mat_ex%l_real) then
+         allocate(dot_result_r(hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp)), stat=ierr, source=0.0)
+      else 
+         allocate(dot_result_c(hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp)), stat=ierr, source=cmplx_0)
+      endif
+      if(ierr /= 0) call judft_error("can't alloc dot_res")
 
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
@@ -242,16 +239,22 @@ CONTAINS
             ELSE
                phase_vv(:, :) = cmplx_1
             END IF
-            call carr1_v%init(cprod_vv)            ! calculate exchange matrix at iq
+            
+            if(cprod_vv%l_real) then 
+               allocate(r_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr, source=0.0)
+            else
+               allocate(c_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr, source=cmplx_0)
+            endif
+            if(ierr /= 0) call judft_error("can't alloc coul_wavf")
+
             call timestart("exchange matrix")
             call timestart("sparse matrix products")
             IF (mat_ex%l_real) THEN
-               call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv, carr1_v)
+               call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv, r_coul_wavf)
             ELSE
                conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
-               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv, carr1_v)
+               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv, c_coul_wavf)
             END IF
-            call alloc_dev_cpy(carr1_v, CPP_carr_r, CPP_carr_c)
             call timestop("sparse matrix products")
 
             nq_idx = k_pack%q_packs(jq)%rank
@@ -260,18 +263,17 @@ CONTAINS
             !$acc enter data copyin(phase_vv, psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
             if (mat_ex%l_real) then
 #ifdef _OPENACC
-               CPP_carr_r   = carr1_v%data_r 
                CPP_cprod_r  = cprod_vv%data_r
 #endif
-               !$acc enter data copyin(CPP_carr_r, CPP_cprod_r)
+               !$acc enter data copyin(r_coul_wavf, CPP_cprod_r)
 
                !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-               !$acc present(CPP_carr_r, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
+               !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
                !$acc present(n_q, nq_idx)
                DO iband = 1, hybdat%nbands(ik,jsp)
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
-                        CPP_carr_r(i, iob + psize*(iband - 1)) = CPP_carr_r(i, iob + psize*(iband - 1))&
+                        r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1))&
                                                   * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)                        
                      enddo
                   enddo
@@ -279,18 +281,17 @@ CONTAINS
                !$acc end parallel loop
             else
 #ifdef _OPENACC
-               CPP_carr_c   = carr1_v%data_c 
                CPP_cprod_c  = cprod_vv%data_c
 #endif
-               !$acc enter data copyin(CPP_carr_c, CPP_cprod_c)
+               !$acc enter data copyin(c_coul_wavf, CPP_cprod_c)
 
                !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-               !$acc present(CPP_carr_c, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
+               !$acc present(c_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
                !$acc present(n_q, nq_idx)
                DO iband = 1, hybdat%nbands(ik,jsp)
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
-                        CPP_carr_c(i, iob + psize*(iband - 1))  = CPP_carr_c(i, iob + psize*(iband - 1)) &
+                        c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) &
                                                    * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)
                      enddo
                   enddo
@@ -311,59 +312,61 @@ CONTAINS
 
             IF (mat_ex%l_real) THEN
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
-               !$acc enter data create(CPP_dotres_r) 
+               !$acc enter data create(dot_result_r) 
                DO iob = 1, psize
                   call timestart("CPP_dgemm")
-                  !$acc host_data use_device(carr1_v_r, cprod_vv_r, CPP_dotres_r)
-                  call CPP_dgemm("T", "N", m, n, k, 1.0, CPP_carr_r(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, CPP_dotres_r , ldc)
+                  !$acc host_data use_device(r_coul_wavf, CPP_cprod_r, dot_result_r)
+                  call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
                   !$acc end host_data
                   !$acc wait
                   call timestop("CPP_dgemm")
 
-                  !$acc kernels present(exch_vv, CPP_dotres_r, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest) default(none)
+                  !$acc kernels present(exch_vv, dot_result_r, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest) default(none)
                   DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*CPP_dotres_r(iband, nn2)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_r(iband, nn2)
                      enddo
                   END DO
                   !$acc end kernels
                END DO
-               !$acc exit data delete(CPP_carr_r,CPP_cprod_r, CPP_dotres_r)
+               !$acc exit data delete(r_coul_wavf,CPP_cprod_r, dot_result_r)
             ELSE
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
-               !$acc enter data create(CPP_dotres_c) 
+               !$acc enter data create(dot_result_c) 
                DO iob = 1, psize
                   call timestart("CPP_zgemm")
-                  !$acc host_data use_device(CPP_carr_c, CPP_cprod_c, CPP_dotres_c)
-                  call CPP_zgemm("C", "N", m, n, k, cmplx_1, CPP_carr_c(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, CPP_dotres_c, ldc)
+                  !$acc host_data use_device(c_coul_wavf, CPP_cprod_c, dot_result_c)
+                  call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, dot_result_c, ldc)
                   !$acc end host_data
                   !$acc wait
                   call timestop("CPP_zgemm")
 
-                  !$acc kernels present(exch_vv, CPP_dotres_c, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest)  default(none)
+                  !$acc kernels present(exch_vv, dot_result_c, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest)  default(none)
                   DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*CPP_dotres_c(iband, nn2)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_c(iband, nn2)
                      enddo
                   END DO
                   !$acc end kernels
                enddo
-               !$acc exit data delete(CPP_carr_c,CPP_cprod_c, CPP_dotres_c)
+               !$acc exit data delete(c_coul_wavf,CPP_cprod_c, dot_result_c)
             END IF
             !$acc exit data delete(phase_vv)
             call timestop("exch_vv dot prod")
             call timestop("exchange matrix")
 
             call cprod_vv%free()
-            call carr1_v%free()
+            if(allocated(r_coul_wavf)) deallocate(r_coul_wavf)
+            if(allocated(c_coul_wavf)) deallocate(c_coul_wavf)
          enddo
       END DO  !jq
       !$acc exit data copyout(exch_vv) delete(hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest, ik, jsp, ikqpt)
       call timestop("q_loop")
 
-      call dot_result%free()
+      if(allocated(dot_result_r)) deallocate(dot_result_r)
+      if(allocated(dot_result_c)) deallocate(dot_result_c)
 
       ! add contribution of the gamma point to the different cases (exch_vv,exch_cv,exch_cc)
 
