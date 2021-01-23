@@ -18,16 +18,17 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
-      type(t_mat) :: mat_hlp
+      real, allocatable :: mat_hlp(:,:)
 
       call timestart("spmm_invs")
-      call mat_hlp%init(mat_in)
-      call mat_hlp%copy(mat_in, 1, 1)
+      allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
+      if(ierr /= 0) call judft_error("can't alloc mat_hlp")
+      mat_hlp = mat_in%data_r
       n_vec = mat_in%matsize2
 
       call timestart("reorder_forw")
       do i_vec = 1, n_vec
-         call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp%data_r(:, i_vec))
+         call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp(:, i_vec))
       enddo
       call timestop("reorder_forw")
 
@@ -66,11 +67,11 @@ contains
             indx3 = indx3 + 1
 
             n_size = mpdata%num_radbasfn(l, itype) - 1
-            call dgemm("N","N", n_size, mat_hlp%matsize2, n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
-                        mat_hlp%data_r(indx1,1), mat_hlp%matsize1, 0.0, mat_out(indx1,1), size(mat_out,1))
+            call dgemm("N","N", n_size, size(mat_hlp,2), n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
+                        mat_hlp(indx1,1), size(mat_hlp,1), 0.0, mat_out(indx1,1), size(mat_out,1))
 
             do i_vec = 1, n_vec
-               call daxpy(n_size, mat_hlp%data_r(indx3, i_vec), hybdat%coul(ikpt)%mt2_r(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
+               call daxpy(n_size, mat_hlp(indx3, i_vec), hybdat%coul(ikpt)%mt2_r(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
             enddo
 
             indx1 = indx2
@@ -105,7 +106,7 @@ contains
                      indx4 = indx3 + (ieq1 - 1)*ishift1 + 1
                      IF (iatom == iatom1) CYCLE
                      do i_vec = 1, n_vec
-                        mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt3_r(:n_size, iatom1, iatom)*mat_hlp%data_r(indx4, i_vec)
+                        mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt3_r(:n_size, iatom1, iatom)*mat_hlp(indx4, i_vec)
                      enddo
                   END DO
                   indx3 = indx3 + fi%atoms%neq(itype1)*ishift1
@@ -134,7 +135,7 @@ contains
       ! call dgemm(transa, transb, m,   n, k,  alpha,  a,          lda,                
       call dgemm("N", "N", indx1, n_vec, indx1, 1.0, hybdat%coul(ikpt)%mtir%data_r, size(hybdat%coul(ikpt)%mtir%data_r,1), &
       !          b,                           ldb,              beta, c,                           ldc)
-                 mat_hlp%data_r(ibasm + 1, 1), mat_hlp%matsize1, 0.0, mat_out(ibasm + 1, 1), size(mat_out,1))
+                 mat_hlp(ibasm + 1, 1), size(mat_hlp,1), 0.0, mat_out(ibasm + 1, 1), size(mat_out,1))
       call timestop("ibasm+1 -> dgemm")
 
       call timestart("dot prod")
@@ -151,7 +152,7 @@ contains
                   indx3 = indx3 + n - 1
 
                   do i_vec = 1, n_vec
-                     mat_out(indx1, i_vec) = mat_out(indx1, i_vec) + dot_product(hybdat%coul(ikpt)%mt2_r(:n - 1, m, l, iatom), mat_hlp%data_r(indx2:indx3, i_vec))
+                     mat_out(indx1, i_vec) = mat_out(indx1, i_vec) + dot_product(hybdat%coul(ikpt)%mt2_r(:n - 1, m, l, iatom), mat_hlp(indx2:indx3, i_vec))
                   enddo
                   indx2 = indx3
                END DO
@@ -175,7 +176,7 @@ contains
                n_size = mpdata%num_radbasfn(0, itype) - 1
                do i_vec = 1, n_vec
                   mat_out(hybdat%nbasp + 1, i_vec) = mat_out(hybdat%nbasp + 1, i_vec) &
-                                                            + dot_product(hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), mat_hlp%data_r(indx1:indx2, i_vec))
+                                                            + dot_product(hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), mat_hlp(indx1:indx2, i_vec))
                enddo
                indx0 = indx0 + ishift
             END DO
@@ -203,7 +204,7 @@ contains
                   n_size = mpdata%num_radbasfn(0, itype1) - 1
                   do i_vec = 1, n_vec
                      mat_out(indx1, i_vec) = mat_out(indx1, i_vec) &
-                                                      + dot_product(hybdat%coul(ikpt)%mt3_r(:n_size, iatom, iatom1), mat_hlp%data_r(indx3:indx4, i_vec))
+                                                      + dot_product(hybdat%coul(ikpt)%mt3_r(:n_size, iatom, iatom1), mat_hlp(indx3:indx4, i_vec))
                   enddo
                END DO
                indx2 = indx2 + fi%atoms%neq(itype1)*ishift1
@@ -228,6 +229,12 @@ contains
       use m_reorder
       use m_constants
       use m_calc_l_m_from_lm
+#ifdef _OPENACC
+      USE cublas
+#define CPP_zgemm cublaszgemm
+#else
+#define CPP_zgemm zgemm
+#endif
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -241,15 +248,16 @@ contains
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, idx1_start, idx3_start
       integer :: iat2, it2, l2, iat, ierr, irank, i
-      type(t_mat) :: mat_hlp, mtir
+      real, allocatable :: mat_hlp(:,:)
 
       call timestart("spmm_noinvs")
-      call mat_hlp%init(mat_in)
-      call mat_hlp%copy(mat_in, 1, 1)
+      allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
+      if(ierr /= 0) call judft_error("can't alloc mat_hlp")
+      mat_hlp = mat_in%data_c
       n_vec = mat_in%matsize2
 
       do i_vec = 1, n_vec
-         call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp%data_c(:, i_vec))
+         call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp(:, i_vec))
       enddo
 
       ibasm = calc_ibasm(fi, mpdata)
@@ -288,13 +296,13 @@ contains
 
             n_size = mpdata%num_radbasfn(l, itype) - 1
 
-            call zgemm("N","N", n_size, mat_hlp%matsize2, n_size, cmplx_1, hybdat%coul(ikpt)%mt1_c(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_c,dim=2),&
-                        mat_hlp%data_c(indx1,1), mat_hlp%matsize1, cmplx_0, mat_out(indx1,1), size(mat_out,1))
+            call zgemm("N","N", n_size, size(mat_hlp,2), n_size, cmplx_1, hybdat%coul(ikpt)%mt1_c(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_c,dim=2),&
+                        mat_hlp(indx1,1), size(mat_hlp,1), cmplx_0, mat_out(indx1,1), size(mat_out,1))
 
             do i_vec = 1, n_vec
-               !call zaxpy(n_size, mat_hlp%data_c(indx3, i_vec), hybdat%coul(ikpt)%mt2_c(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
-               call zaxpy(n_size, mat_hlp%data_c(indx3, i_vec), hybdat%coul(ikpt)%mt2_c(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
-               !mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt2_c(:n_size, m, l, iatom)*mat_hlp%data_c(indx3, i_vec)
+               !call zaxpy(n_size, mat_hlp(indx3, i_vec), hybdat%coul(ikpt)%mt2_c(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
+               call zaxpy(n_size, mat_hlp(indx3, i_vec), hybdat%coul(ikpt)%mt2_c(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
+               !mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt2_c(:n_size, m, l, iatom)*mat_hlp(indx3, i_vec)
             enddo
 
             indx1 = indx2
@@ -333,7 +341,7 @@ contains
                   indx4 = indx3 + (ieq1 - 1)*ishift1 + 1
                   IF (iatom == iatom1) CYCLE
                   do i_vec = 1, n_vec
-                     mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt3_c(:n_size, iatom1, iatom)*mat_hlp%data_c(indx4, i_vec)
+                     mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt3_c(:n_size, iatom1, iatom)*mat_hlp(indx4, i_vec)
                   enddo
                END DO
                indx3 = indx3 + fi%atoms%neq(itype1)*ishift1
@@ -366,7 +374,7 @@ contains
       !ZGEMM(TRANSA,TRANSB, M,    N,     K,     ALPHA,    A,          LDA,
       call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, hybdat%coul(ikpt)%mtir%data_c, size(hybdat%coul(ikpt)%mtir%data_c,1), &
       !             B,                            LDB,              BETA,    C,                            LDC )
-                    mat_hlp%data_c(ibasm + 1, 1), mat_hlp%matsize1, cmplx_0, mat_out(ibasm + 1, 1), size(mat_out,1))
+                    mat_hlp(ibasm + 1, 1), size(mat_hlp,1), cmplx_0, mat_out(ibasm + 1, 1), size(mat_out,1))
       call timestop("ibasm+1->nbasm: zgemm")
 
 
@@ -392,7 +400,7 @@ contains
                   indx3 = indx3 + n - 1
 
                   do i_vec = 1, n_vec
-                     mat_out(indx1, i_vec) = mat_out(indx1, i_vec) + dot_product(hybdat%coul(ikpt)%mt2_c(:n - 1, m, l, iatom), mat_hlp%data_c(indx2:indx3, i_vec))
+                     mat_out(indx1, i_vec) = mat_out(indx1, i_vec) + dot_product(hybdat%coul(ikpt)%mt2_c(:n - 1, m, l, iatom), mat_hlp(indx2:indx3, i_vec))
                   enddo
                   indx2 = indx3
                END DO
@@ -415,7 +423,7 @@ contains
                n_size = mpdata%num_radbasfn(0, itype) - 1
                do i_vec = 1, n_vec
                   mat_out(hybdat%nbasp + 1, i_vec) = mat_out(hybdat%nbasp + 1, i_vec) &
-                                                            + dot_product(hybdat%coul(ikpt)%mt2_c(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), mat_hlp%data_c(indx1:indx2, i_vec))
+                                                            + dot_product(hybdat%coul(ikpt)%mt2_c(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), mat_hlp(indx1:indx2, i_vec))
                enddo
                indx0 = indx0 + ishift
             END DO
@@ -440,7 +448,7 @@ contains
                   n_size = mpdata%num_radbasfn(0, itype1) - 1
                   do i_vec = 1, n_vec
                      mat_out(indx1, i_vec) = mat_out(indx1, i_vec) &
-                                                      + dot_product(hybdat%coul(ikpt)%mt3_c(:n_size, iatom, iatom1), mat_hlp%data_c(indx3:indx4, i_vec))
+                                                      + dot_product(hybdat%coul(ikpt)%mt3_c(:n_size, iatom, iatom1), mat_hlp(indx3:indx4, i_vec))
                   enddo
                END DO
                indx2 = indx2 + fi%atoms%neq(itype1)*ishift1
