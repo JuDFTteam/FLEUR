@@ -255,8 +255,8 @@ CONTAINS
             call timestop("sparse matrix products")
 
             nq_idx = k_pack%q_packs(jq)%rank
-            call timestart("apply prefactors carr1_v")
 
+            call timestart("apply prefactors carr1_v")
             !$acc enter data copyin(phase_vv, psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
             if (mat_ex%l_real) then
 #ifdef _OPENACC
@@ -313,9 +313,12 @@ CONTAINS
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
                !$acc enter data create(CPP_dotres_r) 
                DO iob = 1, psize
+                  call timestart("CPP_dgemm")
                   !$acc host_data use_device(carr1_v_r, cprod_vv_r, CPP_dotres_r)
                   call CPP_dgemm("T", "N", m, n, k, 1.0, CPP_carr_r(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, CPP_dotres_r , ldc)
                   !$acc end host_data
+                  !$acc wait
+                  call timestop("CPP_dgemm")
 
                   !$acc kernels present(exch_vv, CPP_dotres_r, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest) default(none)
                   DO iband = 1, hybdat%nbands(ik,jsp)
@@ -331,9 +334,12 @@ CONTAINS
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
                !$acc enter data create(CPP_dotres_c) 
                DO iob = 1, psize
+                  call timestart("CPP_zgemm")
                   !$acc host_data use_device(CPP_carr_c, CPP_cprod_c, CPP_dotres_c)
                   call CPP_zgemm("C", "N", m, n, k, cmplx_1, CPP_carr_c(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, CPP_dotres_c, ldc)
                   !$acc end host_data
+                  !$acc wait
+                  call timestop("CPP_zgemm")
 
                   !$acc kernels present(exch_vv, CPP_dotres_c, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest)  default(none)
                   DO iband = 1, hybdat%nbands(ik,jsp)
@@ -344,7 +350,7 @@ CONTAINS
                   END DO
                   !$acc end kernels
                enddo
-               !$acc exit data delete(CPP_carr_c,CPP_cprod_c, CPP_dotres_r, hybdat, hybdat%nbands, phase_vv, nsest, indx_sest)
+               !$acc exit data delete(CPP_carr_c,CPP_cprod_c, CPP_dotres_c)
             END IF
             !$acc exit data delete(phase_vv)
             call timestop("exch_vv dot prod")
