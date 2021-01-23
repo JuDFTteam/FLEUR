@@ -13,7 +13,7 @@ contains
       type(t_hybdat), intent(in)        :: hybdat
       integer, intent(in)               :: ikpt
       type(t_mat), intent(in)           :: mat_in
-      real, intent(inout)                  :: mat_out(:,:)
+      real, intent(inout)               :: mat_out(:,:)
 
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
@@ -248,7 +248,7 @@ contains
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, idx1_start, idx3_start
       integer :: iat2, it2, l2, iat, ierr, irank, i
-      real, allocatable :: mat_hlp(:,:)
+      complex, allocatable :: mat_hlp(:,:)
 
       call timestart("spmm_noinvs")
       allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
