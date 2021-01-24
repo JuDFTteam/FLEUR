@@ -1,4 +1,12 @@
 module m_spmm
+#ifdef _OPENACC
+   USE cublas
+#define CPP_zgemm cublaszgemm
+#define CPP_dgemm cublasdgemm
+#else
+#define CPP_zgemm zgemm
+#define CPP_dgemm dgemm
+#endif
 ! rewrite of spmvec to replace a sparse-matrix * vec multiplication by
 ! sparse-matrix * matrix
 contains
@@ -15,10 +23,10 @@ contains
       type(t_mat), intent(in)           :: mat_in
       real, intent(inout)               :: mat_out(:,:)
 
-      integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
+      integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size, sz_mtir, sz_hlp, sz_out
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
-      real, allocatable :: mat_hlp(:,:)
+      real, allocatable :: mat_hlp(:,:), mtir_tmp(:,:)
 
       call timestart("spmm_invs")
       allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
@@ -130,12 +138,21 @@ contains
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
 
       call timestart("ibasm+1 -> dgemm")
-
-      ! only work on assigned submtx
-      ! call dgemm(transa, transb, m,   n, k,  alpha,  a,          lda,                
-      call dgemm("N", "N", indx1, n_vec, indx1, 1.0, hybdat%coul(ikpt)%mtir%data_r, size(hybdat%coul(ikpt)%mtir%data_r,1), &
-      !          b,                           ldb,              beta, c,                           ldc)
-                 mat_hlp(ibasm + 1, 1), size(mat_hlp,1), 0.0, mat_out(ibasm + 1, 1), size(mat_out,1))
+      call timestart("mtir cpy")
+      mtir_tmp = hybdat%coul(ikpt)%mtir%data_r
+      call timestop("mtir cpy")
+      sz_mtir = size(mtir_tmp, 1)
+      sz_hlp  = size(mat_hlp, 1)
+      sz_out  = size(mat_out, 1)      
+      
+      !$acc enter data copyin(mtir_tmp, mat_hlp, mat_out)
+      !$acc host_data use_device(mtir_tmp, mat_hlp, mat_out)  
+      call CPP_dgemm("N", "N", indx1, n_vec, indx1, 1.0, mtir_tmp, sz_mtir, &
+                 mat_hlp(ibasm + 1, 1), sz_hlp, 0.0, mat_out(ibasm + 1, 1), sz_out)
+      !$acc end host_data
+      !$acc exit data copyout(mat_out) delete(mtir_tmp, mat_hlp)
+      !$acc wait
+      
       call timestop("ibasm+1 -> dgemm")
 
       call timestart("dot prod")
@@ -229,16 +246,11 @@ contains
       use m_reorder
       use m_constants
       use m_calc_l_m_from_lm
-#ifdef _OPENACC
-      USE cublas
-#define CPP_zgemm cublaszgemm
-#else
-#define CPP_zgemm zgemm
-#endif
+
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
-      type(t_hybdat), intent(in)        :: hybdat
+      type(t_hybdat), intent(inout)     :: hybdat
       integer, intent(in)               :: ikpt
       logical, intent(in)               :: conjg_mtir
       type(t_mat), intent(in)           :: mat_in
@@ -247,8 +259,8 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, idx1_start, idx3_start
-      integer :: iat2, it2, l2, iat, ierr, irank, i
-      complex, allocatable :: mat_hlp(:,:)
+      integer :: iat2, it2, l2, iat, ierr, irank, i, sz_mtir, sz_hlp, sz_out
+      complex, allocatable :: mat_hlp(:,:), mtir_tmp(:,:)
 
       call timestart("spmm_noinvs")
       allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
@@ -362,29 +374,29 @@ contains
 
       indx1 = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)), &
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
-      
+
+
+      call timestart("copy mtir_tmp")
+      mtir_tmp = hybdat%coul(ikpt)%mtir%data_c
+      call timestop("copy mtir_tmp")
+      !$acc enter data copyin(mtir_tmp, mat_hlp, mat_out)
       if(conjg_mtir) then
-         ! conjg and back so we don't make a copy 
-         call timestart("conjg mtir_c")
-         call zlacgv(size(hybdat%coul(ikpt)%mtir%data_c), hybdat%coul(ikpt)%mtir%data_c, 1)
-         call timestop("conjg mtir_c")
+         !$acc kernels present(mtir_tmp)
+         mtir_tmp = conjg(mtir_tmp)
+         !$acc end kernels
       endif
 
       call timestart("ibasm+1->nbasm: zgemm")
-      !ZGEMM(TRANSA,TRANSB, M,    N,     K,     ALPHA,    A,          LDA,
-      call zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, hybdat%coul(ikpt)%mtir%data_c, size(hybdat%coul(ikpt)%mtir%data_c,1), &
-      !             B,                            LDB,              BETA,    C,                            LDC )
-                    mat_hlp(ibasm + 1, 1), size(mat_hlp,1), cmplx_0, mat_out(ibasm + 1, 1), size(mat_out,1))
+      sz_mtir = size(mtir_tmp,1)
+      sz_hlp  = size(mat_hlp,1)
+      sz_out  = size(mat_out, 1)
+      !$acc host_data use_device(mtir_tmp, mat_hlp, mat_out)
+      call CPP_zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, mtir_tmp, sz_mtir, &
+                    mat_hlp(ibasm + 1, 1), sz_hlp, cmplx_0, mat_out(ibasm + 1, 1), sz_out)
+      !$acc end host_data
+      !$acc exit data copyout(mat_out) delete(mtir_tmp, mat_hlp)
+      !$acc wait
       call timestop("ibasm+1->nbasm: zgemm")
-
-
-      if(conjg_mtir) then
-         ! conjg and back so we don't make a copy 
-         call timestart("back conjg mtir_c")
-         call zlacgv(size(hybdat%coul(ikpt)%mtir%data_c), hybdat%coul(ikpt)%mtir%data_c, 1)
-         call timestop("back conjg mtir_c")
-      endif
-
 
       call timestart("dot prod")
       iatom = 0
