@@ -582,9 +582,7 @@ CONTAINS
             hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (hub1data%iter < fi%hub1inp%itmax)
             !Prevent that the scf loop terminates
             l_cont = l_cont .OR. hub1data%l_runthisiter
-            IF (hub1data%l_runthisiter) THEN
-               CALL check_time_for_next_iteration(hub1data%iter, l_cont)
-            ENDIF
+            CALL check_time_for_next_iteration(iter, l_cont)
          ELSE
             l_cont = l_cont .AND. (iter < fi%input%itmax)
             ! MetaGGAs need a at least 2 iterations
