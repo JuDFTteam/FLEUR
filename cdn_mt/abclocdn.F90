@@ -81,15 +81,19 @@ CONTAINS
                 ctmp = zMat%data_c(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
              ENDIF
           ENDIF
+          !$acc kernels present(acof,bcof)copyin(Alo1(Lo),Ctmp)
           acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)
           bcof(i,lm,na) = bcof(i,lm,na) + ctmp*blo1(lo)
+          !$acc end kernels
           ccof(m,i,lo,na) = ccof(m,i,lo,na) + ctmp*clo1(lo)
           IF (sym%invsat(na)==1.AND.noco%l_soc.AND.sym%invs) THEN
              ctmp = zMat%data_c(nbasf,i)*CONJG(term1)*ylm(ll1+m+1)*(-1)**(l-m)
              na2 = sym%invsatnr(na)
              lmp = ll1 - m
-             acof(i,lmp,na2) = acof(i,lmp,na2) +ctmp*alo1(lo)
-             bcof(i,lmp,na2) = bcof(i,lmp,na2) +ctmp*blo1(lo)
+          !$acc kernels present(acof,bcof)copyin(Alo1(Lo),Ctmp)
+          acof(i,lmp,na2) = acof(i,lmp,na2) +ctmp*alo1(lo)
+          bcof(i,lmp,na2) = bcof(i,lmp,na2) +ctmp*blo1(lo)
+          !$acc end kernels
              ccof(-m,i,lo,na2) = ccof(-m,i,lo,na2) +ctmp*clo1(lo)
           ENDIF
           IF (l_force) THEN
@@ -102,7 +106,7 @@ CONTAINS
              END DO
           END IF
        END DO
-    END DO 
-  
+    END DO
+
   END SUBROUTINE abclocdn
 END MODULE m_abclocdn
