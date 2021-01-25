@@ -32,7 +32,7 @@ CONTAINS
     !     .. Array Arguments ..
     COMPLEX, INTENT (INOUT) :: abCoeffs(:,:)
     !Optional arguments if abc coef for LOs are needed
-    COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,-atoms%llod:,:,:)
+    COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
 
     INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ll
@@ -69,7 +69,7 @@ CONTAINS
 #endif
 
 
-    !$acc data copyin(atoms,atoms%llo,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
+    !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
     !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) &
     !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo) &
     !$acc present(abclo,alo1,blo1,clo1)&
@@ -113,9 +113,9 @@ CONTAINS
                    ll1 = l*(l+1) + 1
                    DO m = -l,l
                       lm = ll1 + m
-                      abclo(1,m,nkvec,lo) = term*ylm(lm)*alo1(lo)
-                      abclo(2,m,nkvec,lo) = term*ylm(lm)*blo1(lo)
-                      abclo(3,m,nkvec,lo) = term*ylm(lm)*clo1(lo)
+                      abclo(1,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*alo1(lo)
+                      abclo(2,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*blo1(lo)
+                      abclo(3,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*clo1(lo)
                    END DO
                 END IF
              ENDDO

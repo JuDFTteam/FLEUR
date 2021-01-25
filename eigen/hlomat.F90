@@ -70,14 +70,19 @@ CONTAINS
     !$acc data copyin(alo1,blo1,clo1)
     CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,iintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
     IF (isp==jsp.AND.iintsp==jintsp) THEN
+       !$acc kernels present(abcoeffs)
+       abcoeffs(:,:,2)=abcoeffs(:,:,1)
+       abclo(:,:,:,:,2)=abclo(:,:,:,:,1)
+       !$acc end kernels
+#ifndef _OPENACC
        CALL CPP_BLAS_ccopy(SIZE(abCoeffs,1)*SIZE(abCoeffs,2),abCoeffs(:,:,1),1,abCoeffs(:,:,2),1)
        CALL CPP_BLAS_ccopy(SIZE(abclo,1)*SIZE(abclo,2)*SIZE(abclo,3)*SIZE(abclo,4),abclo(:,:,:,:,1),1,abclo(:,:,:,:,2),1)
+#endif
     ELSE
        CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
     ENDIF
     !$acc end data
 
-    !$acc update self (abclo,abcoeffs,hmat%data_c,hmat%data_r)
 
     mlo=0;mlolo=0
     DO m=1,ntyp-1
@@ -95,13 +100,13 @@ CONTAINS
        IF (sym%invsat(na) == 0) invsfct = 1
        IF (sym%invsat(na) == 1) invsfct = 2
        !
-       !!$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo) &
-       !!$acc & copyin(atoms,lapw,tlmplm,tlmplm%ulotu,tlmplm%ulotd,tlmplm%h_loc(:,:,ntyp,jsp,isp),lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
-       !!$acc & copyin(lapw%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
-       !!$acc & copyin(ud,ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud%duds(:,ntyp,isp))&
-       !!$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
-       !!$acc & create(ax,bx,cx)&
-       !!$acc & default(none)
+       !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo) &
+       !$acc & copyin(atoms,lapw,tlmplm,tlmplm%ulotu,tlmplm%ulotd,tlmplm%h_loc(:,:,ntyp,jsp,isp),lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
+       !$acc & copyin(lapw%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
+       !$acc & copyin(ud,ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud%duds(:,ntyp,isp))&
+       !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
+       !$acc & create(ax,bx,cx)&
+       !$acc & default(none)
        DO lo = 1,atoms%nlo(ntyp)
           l = atoms%llo(lo,ntyp)
           !--->       calculate the hamiltonian matrix elements with the regular
@@ -295,9 +300,8 @@ CONTAINS
              ENDIF !If this lo to be calculated by fmpi rank
           END DO
        END DO ! end of lo = 1,atoms%nlo loop
-       !!$acc end kernels
+       !$acc end kernels
     END IF
     !$acc end data
-    !$acc update device(hmat%data_r,hmat%data_c)
   END SUBROUTINE hlomat
 END MODULE m_hlomat
