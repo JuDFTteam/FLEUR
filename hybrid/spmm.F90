@@ -138,9 +138,15 @@ contains
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
 
       call timestart("ibasm+1 -> dgemm")
-      call timestart("mtir cpy")
-      mtir_tmp = hybdat%coul(ikpt)%mtir%data_r
-      call timestop("mtir cpy")
+
+      call timestart("copy mtir_tmp")
+      allocate(mtir_tmp(hybdat%coul(ikpt)%mtir%matsize1, hybdat%coul(ikpt)%mtir%matsize2), stat=ierr)
+      if(ierr /= 0) call judft_error("can't alloc mtir_tmp")
+      call dlacpy("N", size(mtir_tmp,1), size(mtir_tmp,2), hybdat%coul(ikpt)%mtir%data_r, &
+                  size(hybdat%coul(ikpt)%mtir%data_r,1), mtir_tmp, size(mtir_tmp,1))
+      call timestop("copy mtir_tmp")
+
+
       sz_mtir = size(mtir_tmp, 1)
       sz_hlp  = size(mat_hlp, 1)
       sz_out  = size(mat_out, 1)      
@@ -152,7 +158,7 @@ contains
       !$acc end host_data
       !$acc exit data copyout(mat_out) delete(mtir_tmp, mat_hlp)
       !$acc wait
-      
+      deallocate(mtir_tmp)
       call timestop("ibasm+1 -> dgemm")
 
       call timestart("dot prod")
@@ -377,8 +383,12 @@ contains
 
 
       call timestart("copy mtir_tmp")
-      mtir_tmp = hybdat%coul(ikpt)%mtir%data_c
+      allocate(mtir_tmp(hybdat%coul(ikpt)%mtir%matsize1, hybdat%coul(ikpt)%mtir%matsize2), stat=ierr)
+      if(ierr /= 0) call judft_error("can't alloc mtir_tmp")
+      call zlacpy("N", size(mtir_tmp,1), size(mtir_tmp,2), hybdat%coul(ikpt)%mtir%data_c, &
+                  size(hybdat%coul(ikpt)%mtir%data_c,1), mtir_tmp, size(mtir_tmp,1))
       call timestop("copy mtir_tmp")
+
       !$acc enter data copyin(mtir_tmp, mat_hlp, mat_out)
       if(conjg_mtir) then
          !$acc kernels present(mtir_tmp)
@@ -396,6 +406,7 @@ contains
       !$acc end host_data
       !$acc exit data copyout(mat_out) delete(mtir_tmp, mat_hlp)
       !$acc wait
+      deallocate(mtir_tmp)
       call timestop("ibasm+1->nbasm: zgemm")
 
       call timestart("dot prod")
