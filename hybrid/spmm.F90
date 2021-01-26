@@ -1,6 +1,8 @@
 module m_spmm
+   use iso_c_binding
 #ifdef _OPENACC
    USE cublas
+   use openacc
 #define CPP_zgemm cublaszgemm
 #define CPP_dgemm cublasdgemm
 #else
@@ -266,6 +268,7 @@ contains
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, idx1_start, idx3_start
       integer :: iat2, it2, l2, iat, ierr, irank, i, sz_mtir, sz_hlp, sz_out
+      integer(C_SIZE_T) :: free_mem, tot_mem
       complex, allocatable :: mat_hlp(:,:), mtir_tmp(:,:)
 
       call timestart("spmm_noinvs")
@@ -274,9 +277,11 @@ contains
       mat_hlp = mat_in%data_c
       n_vec = mat_in%matsize2
 
+      call timestart("reorder forw")
       do i_vec = 1, n_vec
          call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp(:, i_vec))
       enddo
+      call timestop("reorder forw")
 
       ibasm = calc_ibasm(fi, mpdata)
 
@@ -378,8 +383,10 @@ contains
       END IF
       ! compute vecout for the index-range from ibasm+1:nbasm
 
+      call timestart("calc indx1")
       indx1 = sum([(((2*l + 1)*fi%atoms%neq(itype), l=0, fi%hybinp%lcutm1(itype)), &
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
+      call timestop("calc indx1")
 
 
       call timestart("copy mtir_tmp")
@@ -389,17 +396,27 @@ contains
                   size(hybdat%coul(ikpt)%mtir%data_c,1), mtir_tmp, size(mtir_tmp,1))
       call timestop("copy mtir_tmp")
 
+      call timestart("acc calls")
+      write (*,*) "size(mtir_tmp, mat_hlp, mat_out)", size(mtir_tmp), size(mat_hlp), size(mat_out)
+      free_mem = acc_get_property(0, acc_device_current, acc_property_free_memory)
+      tot_mem = acc_get_property(0, acc_device_current, acc_property_memory)
+      write (*,*) "(free, total) gpu mem: (", free_mem, "/", tot_mem, ")" 
+      call timestop("acc calls")
+
+      call timestart("acc kernels")
       !$acc enter data copyin(mtir_tmp, mat_hlp, mat_out)
       if(conjg_mtir) then
          !$acc kernels present(mtir_tmp)
          mtir_tmp = conjg(mtir_tmp)
          !$acc end kernels
       endif
+      call timestop("acc kernels")
 
       call timestart("ibasm+1->nbasm: zgemm")
       sz_mtir = size(mtir_tmp,1)
       sz_hlp  = size(mat_hlp,1)
       sz_out  = size(mat_out, 1)
+
       !$acc host_data use_device(mtir_tmp, mat_hlp, mat_out)
       call CPP_zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, mtir_tmp, sz_mtir, &
                     mat_hlp(ibasm + 1, 1), sz_hlp, cmplx_0, mat_out(ibasm + 1, 1), sz_out)
@@ -481,9 +498,11 @@ contains
          call timestop("gamma point 2 noinv")
       END IF
 
+      call timestart("reorder back")
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out(:, i_vec))
       enddo
+      call timestop("reorder back")
       call timestop("spmm_noinvs")
    end subroutine spmm_noinvs
 
@@ -494,6 +513,7 @@ contains
       type(t_mpdata), intent(in)        :: mpdata
       integer :: ibasm, iatom, itype, ieq, l, m
 
+      call timestart("calc_ibasm")
       ibasm = 0
       iatom = 0
       DO itype = 1, fi%atoms%ntype
@@ -506,5 +526,6 @@ contains
             END DO
          END DO
       END DO
+      call timestop("calc_ibasm")
    end function calc_ibasm
 end module m_spmm
