@@ -2,7 +2,6 @@ module m_spmm
    use iso_c_binding
 #ifdef _OPENACC
    USE cublas
-   use openacc
 #define CPP_zgemm cublaszgemm
 #define CPP_dgemm cublasdgemm
 #else
@@ -395,13 +394,6 @@ contains
       call zlacpy("N", size(mtir_tmp,1), size(mtir_tmp,2), hybdat%coul(ikpt)%mtir%data_c, &
                   size(hybdat%coul(ikpt)%mtir%data_c,1), mtir_tmp, size(mtir_tmp,1))
       call timestop("copy mtir_tmp")
-
-      call timestart("acc calls")
-      write (*,*) "size(mtir_tmp, mat_hlp, mat_out)", size(mtir_tmp), size(mat_hlp), size(mat_out)
-      free_mem = acc_get_property(0, acc_device_current, acc_property_free_memory)
-      tot_mem = acc_get_property(0, acc_device_current, acc_property_memory)
-      write (*,*) "(free, total) gpu mem: (", free_mem, "/", tot_mem, ")" 
-      call timestop("acc calls")
 
       call timestart("acc kernels")
       !$acc enter data copyin(mtir_tmp, mat_hlp, mat_out)
