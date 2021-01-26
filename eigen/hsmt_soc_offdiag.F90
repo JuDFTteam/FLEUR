@@ -46,12 +46,14 @@ CONTAINS
 
     CALL timestart("offdiagonal soc-setup")
 
+    !$acc update self(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
+
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
        fleg2(l) = REAL(l)/REAL(l+1)
        fl2p1(l) = REAL(l+l+1)/fpi_const
     END DO
-    !$acc data copyin(td,td%soc,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)
+    !!$acc data copyin(td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)
     !$CPP_OMP PARALLEL DEFAULT(NONE)&
     !$CPP_OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
     !$CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
@@ -101,11 +103,11 @@ CONTAINS
           dplegend(:NVEC_rem,0) = 0.0
 
           !--->          update overlap and l-diagonal hamiltonian matrix
-          !$acc kernels &
-          !$acc copyin(atoms,atoms%lmax,xlegend,cph,angso)&
-          !$acc create(plegend,dplegend,fct)&
-          !$acc present(fjgj,fjgj%fj,fjgj%gj)&
-          !$acc present(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
+          !!$acc kernels &
+          !!$acc copyin(atoms,atoms%lmax,xlegend,cph,angso)&
+          !!$acc create(plegend,dplegend,fct)&
+          !!$acc present(fjgj,fjgj%fj,fjgj%gj)&
+          !!$acc present(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
           DO  l = 1,atoms%lmax(n)
              !--->       legendre polynomials
              l3 = MODULO(l, 3)
@@ -132,9 +134,9 @@ CONTAINS
                    hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
                 ENDDO
              ENDDO
-             !$acc end kernels
           !--->          end loop over l
           ENDDO
+          !!$acc end kernels
        ENDDO
     !--->    end loop over ki
     ENDDO
@@ -143,11 +145,11 @@ CONTAINS
     DEALLOCATE(xlegend,plegend,dplegend)
     DEALLOCATE(cph)
     !$CPP_OMP END PARALLEL
-    !$acc end data
+    !!$acc end data
     CALL timestop("offdiagonal soc-setup")
 
     if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
-
+    !$acc update device(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 
