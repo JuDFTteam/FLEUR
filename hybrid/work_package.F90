@@ -78,11 +78,12 @@ contains
       if(allocated(q_pack%band_packs)) deallocate(q_pack%band_packs)
    end subroutine t_q_package_free
 
-   subroutine t_work_package_init(work_pack, fi, hybdat, wp_mpi, jsp, rank, size) 
+   subroutine t_work_package_init(work_pack, fi, hybdat, mpdata, wp_mpi, jsp, rank, size) 
       implicit none 
       class(t_work_package), intent(inout) :: work_pack
       type(t_fleurinput), intent(in)       :: fi
       type(t_hybdat), intent(in)           :: hybdat 
+      type(t_mpdata), intent(in)           :: mpdata
       type(t_hybmpi), intent(in)           :: wp_mpi
       integer, intent(in)                  :: rank, size, jsp
 
@@ -91,16 +92,17 @@ contains
       work_pack%size    = size
       work_pack%submpi  = wp_mpi
 
-      call split_into_work_packages(work_pack, fi, hybdat, jsp)
+      call split_into_work_packages(work_pack, fi, hybdat, mpdata, jsp)
 
       call timestop("t_work_package_init")
    end subroutine t_work_package_init
 
-   subroutine t_k_package_init(k_pack, fi, hybdat, k_wide_mpi, jsp, nk)
+   subroutine t_k_package_init(k_pack, fi, hybdat, mpdata, k_wide_mpi, jsp, nk)
       implicit none 
       class(t_k_package), intent(inout) :: k_pack
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
+      type(t_mpdata), intent(in)        :: mpdata
       type(t_hybmpi), intent(in)        :: k_wide_mpi
       type(t_hybmpi)                    :: q_wide_mpi
 
@@ -126,15 +128,16 @@ contains
       do iq = q_rank+1,fi%kpts%EIBZ(nk)%nkpt, n_groups
          cnt = cnt + 1
          jq = fi%kpts%EIBZ(nk)%pointer(iq)
-         call k_pack%q_packs(cnt)%init(fi, hybdat, q_wide_mpi, jsp, nk, iq, jq)
+         call k_pack%q_packs(cnt)%init(fi, hybdat, mpdata, q_wide_mpi, jsp, nk, iq, jq)
       enddo
    end subroutine t_k_package_init
 
-   subroutine t_q_package_init(q_pack, fi, hybdat, q_wide_mpi, jsp, nk, rank, ptr)
+   subroutine t_q_package_init(q_pack, fi, hybdat, mpdata, q_wide_mpi, jsp, nk, rank, ptr)
       implicit none 
       class(t_q_package), intent(inout) :: q_pack 
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
+      type(t_mpdata), intent(in)        :: mpdata
       type(t_hybmpi), intent(in)        :: q_wide_mpi
       integer, intent(in)               :: rank, ptr, jsp, nk
 
@@ -149,9 +152,9 @@ contains
 
       ! arrays should be less than 5 gb
       if(fi%sym%invs) then
-         target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+         target_psize = target_memsize(fi, hybdat, mpdata%n_g)/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
       else
-         target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+         target_psize = target_memsize(fi, hybdat, mpdata%n_g)/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
       endif
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
@@ -204,7 +207,7 @@ contains
       write (*,*) "nk = ", k_pack%nk
    end subroutine t_k_package_print
 
-   subroutine split_into_work_packages(work_pack, fi, hybdat, jsp)
+   subroutine split_into_work_packages(work_pack, fi, hybdat, mpdata, jsp)
 #ifdef CPP_MPI
       use mpi 
 #endif
@@ -212,6 +215,7 @@ contains
       class(t_work_package), intent(inout) :: work_pack
       type(t_fleurinput), intent(in)       :: fi
       type(t_hybdat), intent(in)           :: hybdat
+      type(t_mpdata), intent(in)           :: mpdata
       integer, intent(in)                  :: jsp
       integer :: k_cnt, i, ierr
       
@@ -238,7 +242,7 @@ contains
          work_pack%k_packs(k_cnt)%rank = k_cnt -1
          work_pack%k_packs(k_cnt)%size = work_pack%n_kpacks
 
-         call work_pack%k_packs(k_cnt)%init(fi, hybdat, work_pack%submpi, jsp, i)
+         call work_pack%k_packs(k_cnt)%init(fi, hybdat, mpdata, work_pack%submpi, jsp, i)
          k_cnt = k_cnt + 1
       enddo
    end subroutine split_into_work_packages
@@ -298,4 +302,36 @@ contains
          end_idx = start_idx(i) + psize(i) - 1
       enddo
    end subroutine split_band_loop
+
+   real function target_memsize(fi, hybdat, n_g)
+#ifdef _OPENACC 
+      use openacc
+      use iso_c_binding
+      use m_mtir_size
+#endif
+      implicit none 
+      type(t_fleurinput), intent(in) :: fi
+      type(t_hybdat), intent(in)     :: hybdat
+      integer, intent(in)            :: n_g(:)
+
+#ifdef _OPENACC    
+      integer           :: ikpt
+      integer(C_SIZE_T) :: gpu_mem
+      real              :: coulomb_size, exch_size
+
+      coulomb_size = 0.0
+      do ikpt = 1,fi%kpts%nkpt
+         coulomb_size = max(1.0*(mtir_size(fi, n_g, ikpt)**2), coulomb_size)
+      enddo
+      ! size in byte
+      coulomb_size = coulomb_size * merge(8, 16, fi%sym%invs)
+      exch_size = maxval(hybdat%nbands)**2 * merge(8, 16, fi%sym%invs)
+
+      gpu_mem = acc_get_property(0,acc_device_current, acc_property_free_memory)
+      target_memsize = 0.5*((0.9*gpu_mem) - (coulomb_size + exch_size))
+
+#else
+      target_memsize = 10e9 ! 10 Gb
+#endif
+   end function target_memsize
 end module m_work_package
