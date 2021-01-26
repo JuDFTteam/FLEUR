@@ -174,9 +174,6 @@ CONTAINS
                END DO ! m
             END DO ! lmax
 
-            WRITE (852,*) 'atom',iatom,'(',itype,neq(itype),')'
-            WRITE (852,*) (gv(i),i=1,3)
-
             ! starsumgedoens
             ! k summation is only on IBZ. Expansion to FBZ can be achieved by
             ! applying the rotation of the k-points to the atomic positions of

@@ -128,8 +128,8 @@ CONTAINS
 
       ! local arrays
       COMPLEX              :: exchcorrect(fi%kpts%nkptf)
-      COMPLEX              :: dcprod(hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp), 3)
-      COMPLEX              :: exch_vv(hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp))
+      COMPLEX, allocatable :: dcprod(:,:,:) ! (hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp), 3)
+      COMPLEX, allocatable :: exch_vv(:,:) !(hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp))
       COMPLEX              :: hessian(3, 3)
       COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk,jsp))
       COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
@@ -166,6 +166,7 @@ CONTAINS
 
       call timestart("alloc phase_vv & dot_res")
       allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik,jsp)), stat=ok, source=cmplx_0)
+      IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
       if(mat_ex%l_real) then
          allocate(dot_result_r(hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp)), stat=ierr, source=0.0)
       else 
@@ -173,7 +174,9 @@ CONTAINS
       endif
       if(ierr /= 0) call judft_error("can't alloc dot_res")
 
-      IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
+      allocate(exch_vv(hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp)), stat=ierr, source=cmplx_0)
+      if(ierr /= 0) call judft_error("Can't alloc exch_vv")
+
 
       !$acc enter data create(exch_vv) copyin(hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest, ik, jsp) 
       !$acc kernels present(exch_vv) default(none)
