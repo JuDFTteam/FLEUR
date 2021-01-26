@@ -251,6 +251,7 @@ CONTAINS
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                        fi%input, fi%sym, fi%oneD,CDN_ARCHIVE_TYPE_CDN_const, &
                                                        CDN_INPUT_DEN_const, 0, rdummy, l_dummy, sliceDen, 'cdn_slice')
+               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, sliceDen, nococonv)
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
                               fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
             END IF
