@@ -3,7 +3,9 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
+#ifndef _OPENACC
+#define CPP_OMP OMP
+#endif
 MODULE m_hsmt_soc_offdiag
   USE m_juDFT
   IMPLICIT NONE
@@ -49,12 +51,12 @@ CONTAINS
        fleg2(l) = REAL(l)/REAL(l+1)
        fl2p1(l) = REAL(l+l+1)/fpi_const
     END DO
-
-    !$OMP PARALLEL DEFAULT(NONE)&
-    !$OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
-    !$OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
-    !$OMP PRIVATE(cph,dot,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln,NVEC_rem)&
-    !$OMP PRIVATE(kj_off,kj_vec,jv)
+    !$acc data copyin(td,td%soc,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)
+    !$CPP_OMP PARALLEL DEFAULT(NONE)&
+    !$CPP_OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
+    !$CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
+    !$CPP_OMP PRIVATE(cph,dot,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln,NVEC_rem)&
+    !$CPP_OMP PRIVATE(kj_off,kj_vec,jv)
     ALLOCATE(cph(NVEC))
     ALLOCATE(xlegend(NVEC))
     ALLOCATE(plegend(NVEC,0:2))
@@ -62,7 +64,7 @@ CONTAINS
     ALLOCATE(fct(NVEC))
     ALLOCATE(dot(NVEC))
     ALLOCATE(angso(NVEC,2,2))
-    !$OMP  DO SCHEDULE(DYNAMIC,1)
+    !$CPP_OMP  DO SCHEDULE(DYNAMIC,1)
     DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
        kii=(ki-1)/fmpi%n_size+1
 
@@ -99,8 +101,12 @@ CONTAINS
           dplegend(:NVEC_rem,0) = 0.0
 
           !--->          update overlap and l-diagonal hamiltonian matrix
+          !$acc kernels &
+          !$acc copyin(atoms,atoms%lmax,xlegend,cph,angso)&
+          !$acc create(plegend,dplegend,fct)&
+          !$acc present(fjgj,fjgj%fj,fjgj%gj)&
+          !$acc present(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
           DO  l = 1,atoms%lmax(n)
-
              !--->       legendre polynomials
              l3 = MODULO(l, 3)
              IF (l == 1) THEN
@@ -126,16 +132,18 @@ CONTAINS
                    hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
                 ENDDO
              ENDDO
+             !$acc end kernels
           !--->          end loop over l
           ENDDO
        ENDDO
     !--->    end loop over ki
     ENDDO
-    !$OMP END DO
+    !$CPP_OMP END DO
     !--->       end loop over atom types (ntype)
     DEALLOCATE(xlegend,plegend,dplegend)
     DEALLOCATE(cph)
-    !$OMP END PARALLEL
+    !$CPP_OMP END PARALLEL
+    !$acc end data
     CALL timestop("offdiagonal soc-setup")
 
     if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
