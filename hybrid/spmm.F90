@@ -161,10 +161,14 @@ contains
       call CPP_dgemm("N", "N", indx1, n_vec, indx1, 1.0, mtir_tmp, sz_mtir, &
                  mat_hlp(ibasm + 1, 1), sz_hlp, 0.0, mat_out(ibasm + 1, 1), sz_out)
       !$acc end host_data
-      !$acc exit data copyout(mat_out) delete(mtir_tmp, mat_hlp)
-      !$acc wait
+      !$acc exit data delete(mtir_tmp)
       deallocate(mtir_tmp)
       call timestop("ibasm+1 -> dgemm")
+
+      call timestart("cpy mt2_tmp")
+      mt2_tmp = hybdat%coul(ikpt)%mt2_r
+      !$acc enter data copyin(mt2_tmp)
+      call timestop("cpy mt2_tmp")
 
       call timestart("dot prod")
       iatom = 0
@@ -179,9 +183,11 @@ contains
                   indx2 = indx2 + 1
                   indx3 = indx3 + n - 1
 
-                  do i_vec = 1, n_vec
-                     mat_out(indx1, i_vec) = mat_out(indx1, i_vec) + dot_product(hybdat%coul(ikpt)%mt2_r(:n - 1, m, l, iatom), mat_hlp(indx2:indx3, i_vec))
-                  enddo
+                  !$acc host_data use_device(mat_hlp, mt2_tmp, mat_out)
+                  call CPP_dgemv("T", n-1, n_vec, 1.0, mat_hlp(indx2,1), sz_hlp, mt2_tmp(1, m, l, iatom), 1, &
+                     1.0, mat_out(indx1,1), sz_out)
+                  !$acc end host_data
+
                   indx2 = indx3
                END DO
 
@@ -189,6 +195,8 @@ contains
          END DO
       END DO
       call timestop("dot prod")
+
+      !$acc exit data copyout(mat_out) delete(mt2_tmp, mat_hlp)
 
 
       IF (ikpt == 1) THEN
@@ -421,11 +429,13 @@ contains
       deallocate(mtir_tmp)
       call timestop("ibasm+1->nbasm: zgemm")
 
+      call timestart("copy mt2_c")
       mt2_tmp = hybdat%coul(ikpt)%mt2_c
       !$acc enter data copyin(mt2_tmp)
       !$acc kernels present(mt2_tmp)
       mt2_tmp = conjg(mt2_tmp)
       !$acc end kernels
+      call timestop("copy mt2_c")
 
       call timestart("dot prod")
 
