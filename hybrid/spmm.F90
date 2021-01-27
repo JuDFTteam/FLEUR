@@ -4,9 +4,13 @@ module m_spmm
    USE cublas
 #define CPP_zgemm cublaszgemm
 #define CPP_dgemm cublasdgemm
+#define CPP_zgemv cublaszgemv
+#define CPP_dgemv cublasdgemv
 #else
 #define CPP_zgemm zgemm
 #define CPP_dgemm dgemm
+#define CPP_zgemv zgemv
+#define CPP_dgemv dgemv
 #endif
 ! rewrite of spmvec to replace a sparse-matrix * vec multiplication by
 ! sparse-matrix * matrix
@@ -27,7 +31,7 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size, sz_mtir, sz_hlp, sz_out
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
-      real, allocatable :: mat_hlp(:,:), mtir_tmp(:,:)
+      real, allocatable :: mat_hlp(:,:), mtir_tmp(:,:), mt2_tmp(:,:,:,:)
 
       call timestart("spmm_invs")
       allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
@@ -268,7 +272,7 @@ contains
       integer :: ishift1, indx4, lm, idx1_start, idx3_start
       integer :: iat2, it2, l2, iat, ierr, irank, i, sz_mtir, sz_hlp, sz_out
       integer(C_SIZE_T) :: free_mem, tot_mem
-      complex, allocatable :: mat_hlp(:,:), mtir_tmp(:,:)
+      complex, allocatable :: mat_hlp(:,:), mtir_tmp(:,:), mt2_tmp(:,:,:,:)
 
       call timestart("spmm_noinvs")
       allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
@@ -413,12 +417,18 @@ contains
       call CPP_zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, mtir_tmp, sz_mtir, &
                     mat_hlp(ibasm + 1, 1), sz_hlp, cmplx_0, mat_out(ibasm + 1, 1), sz_out)
       !$acc end host_data
-      !$acc exit data copyout(mat_out) delete(mtir_tmp, mat_hlp)
-      !$acc wait
+      !$acc exit data delete(mtir_tmp)
       deallocate(mtir_tmp)
       call timestop("ibasm+1->nbasm: zgemm")
 
+      mt2_tmp = hybdat%coul(ikpt)%mt2_c
+      !$acc enter data copyin(mt2_tmp)
+      !$acc kernels present(mt2_tmp)
+      mt2_tmp = conjg(mt2_tmp)
+      !$acc end kernels
+
       call timestart("dot prod")
+
       iatom = 0
       indx1 = ibasm; indx2 = 0; indx3 = 0
       DO itype = 1, fi%atoms%ntype
@@ -431,15 +441,20 @@ contains
                   indx2 = indx2 + 1
                   indx3 = indx3 + n - 1
 
-                  do i_vec = 1, n_vec
-                     mat_out(indx1, i_vec) = mat_out(indx1, i_vec) + dot_product(hybdat%coul(ikpt)%mt2_c(:n - 1, m, l, iatom), mat_hlp(indx2:indx3, i_vec))
-                  enddo
+                  !$acc host_data use_device(mat_hlp, mt2_tmp, mat_out)
+                  call CPP_zgemv("T", n-1, n_vec, cmplx_1, mat_hlp(indx2,1), sz_hlp, mt2_tmp(1, m, l, iatom), 1, &
+                  cmplx_1, mat_out(indx1,1), sz_out)
+                  !$acc end host_data
+
                   indx2 = indx3
                END DO
 
             END DO
          END DO
       END DO
+
+      !$acc exit data copyout(mat_out) delete(mat_hlp, mt2_tmp)
+      deallocate(mt2_tmp)
       call timestop("dot prod")
 
       IF (ikpt == 1) THEN
