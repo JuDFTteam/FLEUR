@@ -41,13 +41,14 @@ elseif (CMAKE_Fortran_COMPILER_ID MATCHES "PGI")
    set(FLEUR_OPENMP_FLAG "-mp")
    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "") #fix problem in cmake
    #CPU
-   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp -mavx2 -g -Werror")
+   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp -O1 -g ")
+   set(FLEUR_COMPILE_OPTIONS -mavx2 -Mlre -Mautoinline -Mpre -Mvect=simd -Mcache_align -Mflushz -O2 -g)
    #GPU
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda=cuda9.0,cc60 -Mcudalib=cublas")
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda:kepler+ -ta:tesla:cuda7.5 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda:cuda9.0,cc70 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
    #set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -fast -O3")
-   set(CMAKE_Fortran_FLAGS_RELEASE "-O1 ") # to prevent cmake from putting -fast which causes problems with PGI18.4
+   set(CMAKE_Fortran_FLAGS_RELEASE "") # to prevent cmake from putting -fast which causes problems with PGI18.4
    set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g -Mchkstk -Mchkptr -Ktrap=fp -DCPP_DEBUG")
 elseif (CMAKE_Fortran_COMPILER_ID MATCHES "XL")
    message("IBM/BG Fortran detected")
