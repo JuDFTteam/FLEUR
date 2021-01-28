@@ -34,7 +34,7 @@ MODULE m_rotMMPmat
       mmpmatOut = mmpmat
 
 
-      IF(spin_rotation.AND.PRESENT(su)) THEN
+      IF(spin_rotation_arg.AND.PRESENT(su)) THEN
          DO m = -lmaxU_const, lmaxU_const
             DO mp = -lmaxU_const, lmaxU_const
 
