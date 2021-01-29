@@ -151,6 +151,20 @@ def read_cmake_config(configfilepath):
                 marker_list = marker_string.split()
     return marker_list
 
+TEST_FUNCTIONS = set()
+def pytest_generate_tests(metafunc):
+
+    if 'execute_fleur' in metafunc.fixturenames or \
+       'execute_inpgen' in metafunc.fixturenames:
+        TEST_FUNCTIONS.add((metafunc.function.__name__, metafunc.module.__file__.replace(os.path.dirname(os.path.abspath(__file__))+'/','')))
+        if 'PARSER_TESTS_DONE' in TEST_FUNCTIONS:
+            metafunc.config.issue_config_time_warning(UserWarning(f"Fleur test collected after parser test. Missed: {metafunc.function.__name__.replace('test_','')}"))
+
+    if 'fleur_test_name' in metafunc.fixturenames:
+        TEST_FUNCTIONS.discard('PARSER_TESTS_DONE')
+        metafunc.parametrize('fleur_test_name, test_file', TEST_FUNCTIONS)
+        TEST_FUNCTIONS.add('PARSER_TESTS_DONE') #I cannot easily do it with a bool (would need a global statement)
+
 # To modify the collected tests AFTER collections
 def pytest_collection_modifyitems(session, config, items):
     """After test collection modify collection.
@@ -380,24 +394,28 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup):
     Write testlog.
     """
 
-    workdir = work_dir
-    faildir = failed_dir
+    if 'fleur_parser' not in request.keywords:
 
-    yield # test is running
+        workdir = work_dir
+        faildir = failed_dir
 
-    # clean up code goes here:
+        yield # test is running
 
-    method_name = request.node.name
-    if request.node.rep_call.failed or not cleanup:
-        #log('Test {} failed :('.format(method_name))
-        # if failed move test result to failed dir, will replace dir if existent
-        destination = os.path.abspath(os.path.join(faildir, method_name))
-        if os.path.isdir(destination):
-            shutil.rmtree(destination)
-        shutil.move(workdir, destination)
-        os.mkdir(workdir)
+        # clean up code goes here:
+
+        method_name = request.node.name
+        if request.node.rep_call.failed or not cleanup:
+            #log('Test {} failed :('.format(method_name))
+            # if failed move test result to failed dir, will replace dir if existent
+            destination = os.path.abspath(os.path.join(faildir, method_name))
+            if os.path.isdir(destination):
+                shutil.rmtree(destination)
+            shutil.move(workdir, destination)
+            os.mkdir(workdir)
+        else:
+            clean_workdir()
     else:
-        clean_workdir()
+        yield
 
 
 ##### other fixtures ####
@@ -785,28 +803,32 @@ def clean_workdir(work_dir):
     return _clean_workdir
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='function', autouse=True)
 def stage_for_parser_test(request, work_dir, parser_testdir):
     """
     Fixture to copy the result files of a test to the parser test folder.
     To later autogenerate tests for the fleur parsers
     """
-    
-    parsertestdir = parser_testdir
-    workdir = work_dir
 
-    yield # test is running
-    
-    # clean up code goes here:
-   
-    method_name = request.node.name
-    if RUN_PARSER_TESTS and not request.node.rep_call.failed:
-        # if not failed move test result to parsertestdir, will replace dir if existent
-        destination = os.path.abspath(os.path.join(parsertestdir, method_name))
-        if os.path.isdir(destination):
-            shutil.rmtree(destination)
-        #os.mkdir(destination)
-        shutil.copytree(workdir, destination)
+    if 'fleur_parser' not in request.keywords:
+
+        parsertestdir = parser_testdir
+        workdir = work_dir
+
+        yield # test is running
+        
+        # clean up code goes here:
+       
+        method_name = request.node.name
+        if RUN_PARSER_TESTS and not request.node.rep_call.failed:
+            # if not failed move test result to parsertestdir, will replace dir if existent
+            destination = os.path.abspath(os.path.join(parsertestdir, method_name))
+            if os.path.isdir(destination):
+                shutil.rmtree(destination)
+            #os.mkdir(destination)
+            shutil.copytree(workdir, destination)
+    else:
+        yield
 
 def get_inpgen_binary(fleur_dir):
     """
