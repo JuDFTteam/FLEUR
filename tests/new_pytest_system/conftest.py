@@ -26,42 +26,31 @@ LOGGER = logging.getLogger(__name__)
 # pytest logfile: --log-file=path
 # --log-file-level
 #TODO other optional aiida tests
-
-
-# TODO test log, and better reporting https://docs.pytest.org/en/stable/logging.html
+# test log, and better reporting https://docs.pytest.org/en/stable/logging.html
 # python test_out.py | tee myoutput.log, # maybe with capsys, capsysbinary, capfd
+# use | tee pytest_stdout to pipe output
 # TODO time out tests,
-# TODO Do we want to be able to run a whole test session with a certain parallelisation?
-# Which one would provide via the pytest command or export before the command?
-# i.e export FLEUR_TEST_MPI=2; export FLEUR_TEST_OMP=2; pytest
-# TODO MPI
-# TODO set environment i.e openmp
-
-# TODO make tests work on CI
 # TODO smoke tests, i.e early end test session if no executable, and so on...
-# TODO instead of making all functions fixtures, most of them could be put into the helpers dir, like it was with libtest.py and imported
 # TODO generate docs for devs on webside of test system. Should be done from README.txt. Ideal if possible generate also docs for all tests
 # and fixtures from docstring
-# TODO: Check what kind of fleur executable it is,  for example check configure out,
-# to only run subtest set which belongs to executable.
 # TODO: install pytest-xdist to run pytest -n=2 to execute tests in parallel
 # pytest --durations=0 for showing slowest tests
 # we could also create a timeing fixture around each test for example see
 # https://stackoverflow.com/questions/51490166/how-to-time-tests-with-pytest
 # TODO: All hdf tests do not test for values in hdf files, this is bad
-# TODO: Check in configure output or somewhere which type of executable was compiled and
-# run only tests which make sense for this executable, for example if no libxc is linked
-# running libxc tests makes no sense.
-# TODO: if tests fails should we print the fleur stderr output to pytest log?
+# Write grep so that if hdf file, reads it and greps in there
+# Speed up slowest test by staging the last cdn and running onlyone iteration
 
-# Once can also run non python tests, so we could if we want to run the old tests as they are...
+# C: maybe instead of running everything in the work dir, which is a problem, for parallel test execution
+# use the native tmp dir instead and implement something to allow to copy temp dir results of a test to a next test.
+
+# C: One can also run non python tests, so we could if we want to run the old tests as they are...
 # https://docs.pytest.org/en/stable/example/nonpython.html
+
+
+
 ######### Helpers ############
 # C: By using os.path instead of pathlib, this will prob fail on Windows
-# TODO allow User to specify some of these over the cmd line when executing pytest
-# because build dir can have different names
-# see https://stackoverflow.com/questions/36141024/how-to-pass-environment-variables-to-pytest#39162893
-# or https://adamj.eu/tech/2020/10/13/how-to-mock-environment-variables-with-pytest/
 
 # The current fleur test workflow is as follows, create Testing dir in build dir
 # there is the workdir in which the test runs, after the test is finished, they copy the work dir
@@ -92,6 +81,14 @@ def work_dir(build_dir):
     path = "./Testing/work/"
     work_dir_path = os.path.abspath(os.path.join(build_dir, path))
     return work_dir_path
+
+@pytest.fixture(scope='session')
+def stage_dir(build_dir):
+    """Return directory path where tests results can be stage in"""
+    path = "./Testing/stage_dir/"
+    work_dir_path = os.path.abspath(os.path.join(build_dir, path))
+    return work_dir_path
+
 
 @pytest.fixture(scope='session')
 def failed_dir(build_dir):
@@ -807,6 +804,44 @@ def clean_workdir(work_dir):
         
     return _clean_workdir
 
+@pytest.fixture(scope='function')
+def stage_workdir(workdir, stage_dir, request):
+    """
+    A fixture when used will cause a test to copy the workdir content to the stage folder.
+    Needed for tests which depend on other tests. Or can be used during development to shorten tests
+    """
+    def _stage_workdir(foldername=None, index=0):
+        """
+        A method causing a test to copy the workdir content to the stage folder.
+        Needed for tests which depend on other tests. Or can be used during development to shorten tests        """
+        if foldername is None:
+            method_name = request.node.name + f'_{index}'
+            foldername = os.path.abspath(os.path.join(stage_dir, method_name))
+        if not os.path.isdir(foldername):
+            os.makedirs(foldername)
+        shutil.copytree(workdir, foldername)
+
+    return _stage_workdir
+
+@pytest.fixture(scope='function')
+def load_stage(workdir, clean_workdir, stage_dir, request):
+    """
+    A fixture when used will cause a test to copy all content of a certain dir in the stage folder to the 
+    workdir. This will overwrite all files in the current workdir. Needed for tests which depend on other tests.
+    """
+    def _use_stage(foldername=None, index=0):
+        """
+        A method to copy all content of a certain dir in the stage folder to the 
+        workdir. This will overwrite all files in the current workdir. Needed for tests which depend on other tests.
+        """
+        if foldername is None:
+            method_name = request.node.name + f'_{index}'
+            foldername = os.path.abspath(os.path.join(stage_dir, method_name))
+        #if not os.path.isdir(foldername):
+        #    #throw error
+        shutil.copytree(foldername, workdir)
+
+    return _use_stage
 
 @pytest.fixture(scope='function')
 def stage_for_parser_test(request, work_dir, parser_testdir):
