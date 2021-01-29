@@ -299,7 +299,7 @@ CONTAINS
                enddo
                !$acc end parallel loop
             endif
-            !$acc exit data delete(psize, wl_iks, n_q, nq_idx, ibando)
+            !$acc exit data delete(psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
 
             call timestop("apply prefactors carr1_v")
 
@@ -363,7 +363,7 @@ CONTAINS
             if(allocated(c_coul_wavf)) deallocate(c_coul_wavf)
          enddo
       END DO  !jq
-      !$acc exit data copyout(exch_vv) delete(hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest, ik, jsp, ikqpt)
+      !$acc exit data copyout(exch_vv) delete(hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest, ik, jsp)
       call timestop("q_loop")
 
       if(allocated(dot_result_r)) deallocate(dot_result_r)
