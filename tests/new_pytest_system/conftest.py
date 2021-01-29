@@ -282,6 +282,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "wannier: test for fleur using wannier")
     config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
     config.addinivalue_line("markers", "greensfunction: test with greensfunction")
+    config.addinivalue_line("markers", "edsolver: test for fleur using the edsolver library")
     config.addinivalue_line("markers", "magnetism: test with magnetism")
     config.addinivalue_line("markers", "plot: tests testing a plot feature")
     config.addinivalue_line("markers", "eels: test with eels")
