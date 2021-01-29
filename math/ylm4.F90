@@ -4,7 +4,7 @@ MODULE m_ylm
    PUBLIC ylm4
 CONTAINS
    SUBROUTINE ylm4(lmax, v, ylm)
-!$    acc routine seq
+!$acc routine seq
 
 !************************************************************
 !     generate the spherical harmonics for the vector v
