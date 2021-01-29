@@ -4,7 +4,7 @@
         PUBLIC ylm4
       CONTAINS
         SUBROUTINE ylm4(lmax,v,ylm)
-          !$acc routine
+          !$acc routine seq
 !************************************************************
 !     generate the spherical harmonics for the vector v
 !     using a stable upward recursion in l.  (see notes
