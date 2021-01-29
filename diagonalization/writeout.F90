@@ -6,13 +6,15 @@ CONTAINS
     USE m_judft
     USE m_io_matrix
     USE m_types_mpimat
+#ifdef CPP_MPI
+    USE mpi
+#endif
     IMPLICIT NONE
     CLASS(t_mat),INTENT(INOUT) :: hmat,smat
     !small subroutine that does only wite the matrix to a file
     INTEGER:: i,ii,irank,ierr,matsize
     CHARACTER(len=20)::filename
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
 #else
     irank=0

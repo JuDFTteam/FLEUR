@@ -45,7 +45,7 @@ CONTAINS
 
     !     ..
     !     .. Local Scalars ..
-    INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip,idx,idx1
+    INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip,idx,idx1,idx_loc
     REAL    :: rhti,zro,fgz,rhmnv,d_15,rd
     !     ..
     !     .. Local Arrays ..
@@ -56,7 +56,7 @@ CONTAINS
     REAL, ALLOCATABLE :: rxydzr(:),rxydzi(:)
     REAL, ALLOCATABLE :: rxydzzr(:),rxydzzi(:),rhtxyr(:),rhtxyi(:)
     REAL, ALLOCATABLE :: rhtxc(:,:)
-    COMPLEX, ALLOCATABLE :: fgxy(:),rxydz(:,:,:),rxydzz(:,:,:),cqpw(:)
+    COMPLEX, ALLOCATABLE :: rxydz(:,:,:),rxydzz(:,:,:),cqpw(:)
 
     !     ..
     !     for the noco-case only
@@ -82,15 +82,7 @@ CONTAINS
 
     ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2-1,jspins),rxydzz(vacuum%nmzxyd,stars%ng2-1,jspins) )
     ALLOCATE ( rhtdz(vacuum%nmzd,jspins),rhtdzz(vacuum%nmzd,jspins) )
-    ALLOCATE ( rhdx(0:ifftd2-1,jspins),rhdy(0:ifftd2-1,jspins) )
-    ALLOCATE ( rhdz(0:ifftd2-1,jspins),rhdxx(0:ifftd2-1,jspins) )
-    ALLOCATE ( rhdyy(0:ifftd2-1,jspins),rhdzz(0:ifftd2-1,jspins) )
-    ALLOCATE ( rhdyz(0:ifftd2-1,jspins),rhdzx(0:ifftd2-1,jspins) )
-    ALLOCATE ( rhdxy(0:ifftd2-1,jspins))
-
-
-    ALLOCATE ( cqpw(stars%ng2-1))
-    ALLOCATE ( fgxy(stars%ng2-1) )
+    !ALLOCATE ( fgxy(stars%ng2-1) )
 
 
     IF (l_noco) THEN
@@ -98,8 +90,6 @@ CONTAINS
       ALLOCATE ( dzmagmom(0:ifftd2-1,vacuum%nmzxy) )
       ALLOCATE ( ddzmagmom(0:ifftd2-1,vacuum%nmzxy) )
       ALLOCATE ( mx(0:ifftd2-1),my(0:ifftd2-1) )
-      ALLOCATE ( dxmagmom(0:ifftd2-1),dymagmom(0:ifftd2-1) )
-      ALLOCATE ( ddxmagmom(0:ifftd2-1,2),ddymagmom(0:ifftd2-1,2) )
     ENDIF
     IF ( l_noco .OR. dograds ) THEN
       ALLOCATE ( rhtxyr(vacuum%nmzxy)  )
@@ -124,6 +114,7 @@ CONTAINS
           ! save memory.
 
           idx1=idx
+          !idx1=(ivac-1)* ( vacuum%nmzxy * ifftd2 + nmzdiff ) + 1
           DO ip=1,vacuum%nmzxy
             DO js=1,jspins
               CALL fft2d(stars, rho(idx1:,js),bf2, vacz(ip,ivac,js),0.,&
@@ -198,8 +189,26 @@ CONTAINS
 
        !       WRITE(oUnit,'('' 9990nmzxy='',2i5)') nmzxy
 
-
+       CALL timestart("warp")
        rd = 0.0
+       !$OMP PARALLEL DEFAULT(none) &
+       !$OMP SHARED(vacuum,dograds,jspins,stars,ivac,zro,cell,magmom,vacxy) &
+       !$OMP SHARED(rhtdz,rhtdzz,rxydz,rxydzz,l_noco,dzmagmom,ddzmagmom,idx) &
+       !$OMP SHARED(ifftd2,rho,grad) &
+       !$OMP PRIVATE(ip,js,iq,cqpw,bf2,rhti,rhdx,rhdy,rhdz,rhdxx,rhdyy,rhdzz) &
+       !$OMP PRIVATE(rhdxy,rhdzx,rhdyz,dxmagmom,dymagmom,ddxmagmom,ddymagmom) &
+       !$OMP PRIVATE(chdens,idx_loc)
+       ALLOCATE ( rhdx(0:ifftd2-1,jspins),rhdy(0:ifftd2-1,jspins) )
+       ALLOCATE ( rhdz(0:ifftd2-1,jspins),rhdxx(0:ifftd2-1,jspins) )
+       ALLOCATE ( rhdyy(0:ifftd2-1,jspins),rhdzz(0:ifftd2-1,jspins) )
+       ALLOCATE ( rhdyz(0:ifftd2-1,jspins),rhdzx(0:ifftd2-1,jspins) )
+       ALLOCATE ( rhdxy(0:ifftd2-1,jspins))
+       ALLOCATE ( cqpw(stars%ng2-1))
+       IF (l_noco) THEN
+          ALLOCATE ( dxmagmom(0:ifftd2-1),dymagmom(0:ifftd2-1) )
+          ALLOCATE ( ddxmagmom(0:ifftd2-1,2),ddymagmom(0:ifftd2-1,2) )
+       ENDIF
+       !$OMP DO
        DO ip = 1,vacuum%nmzxy
           ! loop over warping region
 
@@ -329,7 +338,8 @@ CONTAINS
 !!$                  &           gggr,gggru,gggrd,gzgr)
 !             CALL judft_error("OneD not implemented")
 !          ELSE
-             CALL mkgxyz3(rho(idx:idx+ifftd2-1,:),rhdx,rhdy, rhdz,rhdxx,rhdyy,rhdzz,rhdyz,rhdzx,rhdxy, idx-1,grad)
+             idx_loc = idx + (ip-1)* ifftd2
+             CALL mkgxyz3(rho(idx_loc:idx_loc+ifftd2-1,:),rhdx,rhdy, rhdz,rhdxx,rhdyy,rhdzz,rhdyz,rhdzx,rhdxy, idx_loc-1,grad)
 !          endif
 
           END IF ! vxc_is_gga
@@ -339,8 +349,20 @@ CONTAINS
 
 !          rho=max(rho,1e-13)
 
-          idx=idx+ifftd2
        END DO ! ip=1,vacuum%nmzxy
+       !$OMP END DO
+       DEALLOCATE ( rhdx,rhdy )
+       DEALLOCATE ( rhdz,rhdxx )
+       DEALLOCATE ( rhdyy,rhdzz )
+       DEALLOCATE ( rhdyz,rhdzx )
+       DEALLOCATE ( rhdxy,cqpw )
+       IF (l_noco) THEN
+          DEALLOCATE ( dxmagmom,dymagmom )
+          DEALLOCATE ( ddxmagmom,ddymagmom )
+       ENDIF
+       !$OMP END PARALLEL 
+       idx = idx + vacuum%nmzxy * ifftd2
+       CALL timestop("warp")
 
        ! now treat the non-warping region
 
@@ -354,7 +376,7 @@ CONTAINS
        WRITE(oUnit,'(/'' 9992nmzdiff='',i5)') nmzdiff
 
 
-
+       !idx = (ivac-1)* ( vacuum%nmzxy * ifftd2 + nmzdiff ) + ip*ifftd2 + 1
        DO ip=nmz0,vacuum%nmz
           IF (.not. l_noco) THEN
              DO js=1,jspins
@@ -402,7 +424,7 @@ CONTAINS
        ENDIF
 
        !       calculate vxc for z now beyond warping region
-  \
+  
 
        idx=idx+nmzdiff
     ENDDO    ! loop over vacua (ivac)

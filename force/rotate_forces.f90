@@ -11,6 +11,9 @@ MODULE m_rotate_forces
 
    ! Readded to only construct POSCAR and FORCES files in Dec 2020, Neukirchen
 
+   ! Modified to construct a file for use with phonopy instead of PHON.
+   ! Neukirchen, Dec 2020 
+
 CONTAINS
    SUBROUTINE rotate_forces(ntypd,ntype,natd,nop,tote,omtil,neq,mrot,amat,bmat,taual,tau,force)
       USE m_constants
@@ -28,20 +31,26 @@ CONTAINS
 
       REAL :: pos(3,natd),rtaual(3),forcerot(3,3),forceval(3,natd)
       CHARACTER(len=20) :: string
+      LOGICAL :: l_PHON
 
+      l_PHON = .FALSE.
       OPEN (79,file='FORCES')
-      OPEN (80,file='POSCAR')
+      IF (l_PHON) THEN
+         OPEN (80,file='POSCAR')
+      END IF
 
       WRITE (79,'(i1)') 1
-      WRITE (79,'(i1,1x,a)') 1,'#insert displacement here (also, edit number of displacement/total displacements'
-      WRITE (80,'(a)') "#insert lattice name"
-      WRITE (80,'(f20.10)') -omtil*bohr_to_angstrom_const**3
-      WRITE (80,FMT=800) amat(1,1:3)*bohr_to_angstrom_const
-      WRITE (80,FMT=800) amat(2,1:3)*bohr_to_angstrom_const
-      WRITE (80,FMT=800) amat(3,1:3)*bohr_to_angstrom_const
-      WRITE (string,'(i3)') ntype
-      WRITE (80,'('//string//'(i2,1x))') (neq(itype),itype=1,ntype)
-      WRITE (80,'(a)') 'Direct'
+      WRITE (79,'(i1,1x,a)') 1,'#'
+      IF (l_PHON) THEN
+         WRITE (80,'(a)') "#insert lattice name"
+         WRITE (80,'(f20.10)') -omtil*bohr_to_angstrom_const**3
+         WRITE (80,FMT=800) amat(1,1:3)*bohr_to_angstrom_const
+         WRITE (80,FMT=800) amat(2,1:3)*bohr_to_angstrom_const
+         WRITE (80,FMT=800) amat(3,1:3)*bohr_to_angstrom_const
+         WRITE (string,'(i3)') ntype
+         WRITE (80,'('//string//'(i2,1x))') (neq(itype),itype=1,ntype)
+         WRITE (80,'(a)') 'Direct'
+      END IF
 
       iatom  = 0
       iatom0 = 1
@@ -69,8 +78,12 @@ CONTAINS
             forcerot = matmul(amat,matmul(mrot(:,:,sym),bmat/tpi_const))
             forceval(:,iatom) = matmul(forcerot,force(:,itype))
 
-            WRITE (79,FMT=790) forceval(1:3,iatom)*hartree_to_ev_const/bohr_to_angstrom_const
-            WRITE (80,FMT=800) taual(1:3,iatom)
+            IF (l_PHON) THEN
+               WRITE (79,FMT=790) forceval(1:3,iatom)*hartree_to_ev_const/bohr_to_angstrom_const
+               WRITE (80,FMT=800) taual(1:3,iatom)
+            ELSE
+               WRITE (79,*) forceval(1:3,iatom), 'force'
+            END IF
 
          END DO
          iatom0 = iatom0 + neq(itype)
@@ -80,7 +93,10 @@ CONTAINS
 800   FORMAT (1x,3(1x,f20.10))
 810   FORMAT (1x,a4,43x,3f14.9)
 
-      CLOSE(79);CLOSE(80)
+      CLOSE(79)
+      IF (l_PHON) THEN
+         CLOSE(80)
+      END IF
 
    END SUBROUTINE rotate_forces
 

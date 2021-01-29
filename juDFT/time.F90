@@ -185,12 +185,14 @@ CONTAINS
    !>
    SUBROUTINE priv_debug_output(startstop, name)
       USE m_judft_sysinfo
+#ifdef CPP_MPI
+      USE mpi
+#endif
       IMPLICIT NONE
       CHARACTER(LEN=*), INTENT(IN):: startstop, name
 #ifdef CPP_MPI
       INTEGER::irank, ierr
       LOGICAL:: l_mpi
-      INCLUDE 'mpif.h'
 #endif
       IF (.NOT. l_debug) RETURN
       if (debugtimestart < 0) debugtimestart = cputime()

@@ -57,14 +57,17 @@ CONTAINS
       END SELECT
    END SUBROUTINE priv_find_data
    !----------------------------------------------------------------------
-   SUBROUTINE open_eig(id, mpi_comm, nmat, neig, nkpts, jspins, create, l_real, l_soc, readonly, l_olap, filename)
+   SUBROUTINE open_eig(id, fmpi_comm, nmat, neig, nkpts, jspins, create, l_real, l_soc, readonly, l_olap, filename)
 
       !*****************************************************************
       !     opens hdf-file for eigenvectors+values
       !*****************************************************************
+#ifdef CPP_HDFMPI
+      USE mpi
+#endif
       IMPLICIT NONE
 
-      INTEGER, INTENT(IN) :: id, mpi_comm
+      INTEGER, INTENT(IN) :: id, fmpi_comm
       INTEGER, INTENT(IN) :: nmat, neig, nkpts, jspins
       LOGICAL, INTENT(IN) :: create, readonly, l_real, l_soc, l_olap
       CHARACTER(LEN=*), OPTIONAL :: filename
@@ -79,15 +82,14 @@ CONTAINS
       !Set creation and access properties
 
 #ifdef CPP_HDFMPI
-      INCLUDE 'mpif.h'
       IF (readonly) THEN
          access_prp = H5P_DEFAULT_f
          creation_prp = H5P_DEFAULT_f
       ELSE
          CALL h5pcreate_f(H5P_FILE_ACCESS_F, access_prp, hdferr)
-         !      CALL h5pset_fapl_mpiposix_f(access_prp,MPI_COMM,
+         !      CALL h5pset_fapl_mpiposix_f(access_prp,fmpi_comm,
          !     +.false.,hdferr)
-         CALL h5pset_fapl_mpio_f(access_prp, MPI_COMM, MPI_INFO_NULL, hdferr)
+         CALL h5pset_fapl_mpio_f(access_prp, fmpi_comm, MPI_INFO_NULL, hdferr)
          creation_prp = H5P_DEFAULT_f !no special creation property
       ENDIF
 #else

@@ -2,13 +2,14 @@ MODULE m_judft_para
 
 CONTAINS
    subroutine juDFT_check_para()
+#ifdef CPP_MPI
+      USE mpi
+#endif
       implicit none
       logical   :: omp_para_loc, omp_root_and
       integer   :: irank, ierr
 
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
-
       call MPI_COMM_RANK(MPI_COMM_WORLD, irank, ierr)
       omp_para_loc = check_omp_para()
 

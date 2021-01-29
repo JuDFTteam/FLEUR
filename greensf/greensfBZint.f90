@@ -11,7 +11,7 @@ MODULE m_greensfBZint
 
    CONTAINS
 
-   SUBROUTINE greensfBZint(ikpt_i,ikpt,nBands,jspin,gfinp,sym,atoms,noco,input,kpts,&
+   SUBROUTINE greensfBZint(ikpt_i,ikpt,nBands,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
                            usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
 
       INTEGER,                   INTENT(IN)     :: ikpt_i,ikpt        !current k-point index in cdnvaljob%k_list and current k-point
@@ -21,6 +21,7 @@ MODULE m_greensfBZint
       TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_noco),              INTENT(IN)     :: noco
+      TYPE(t_nococonv),          INTENT(IN)     :: nococonv
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_kpts),              INTENT(IN)     :: kpts
       TYPE(t_usdus),             INTENT(IN)     :: usdus
@@ -112,8 +113,8 @@ MODULE m_greensfBZint
                   !l-offdiagonal phase
                   phase = ImagUnit**(l-lp)
 
-                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,lp,ANY(ABS(atomDiff).GT.1e-12),l_sphavg,ispin,&
-                                  sym,atomFactor,atomDiff,kpts%bk(:,ikpt),phase,im(:,:,:,:,ispin),greensfBZintCoeffs)
+                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,atomType,natom,l,lp,ANY(ABS(atomDiff).GT.1e-12),l_sphavg,ispin,&
+                                  sym,atomFactor,atomDiff,kpts%bk(:,ikpt),phase,noco,nococonv,im(:,:,:,:,ispin),greensfBZintCoeffs)
 
                ENDDO
 

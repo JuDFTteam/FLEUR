@@ -17,6 +17,7 @@ MODULE m_types_hub1data
       !Contains the information for the hubbard 1 solver,
       !which is calculated on the fly (fixed parameters are found in types_hub1inp)
       INTEGER           :: iter=0
+      INTEGER           :: overallIteration=0
       LOGICAL           :: l_runthisiter=.FALSE.   !switch which determines wether Hubbard 1 will be run in the current iteration
       LOGICAL           :: l_performSpinavg = .TRUE.
 
@@ -128,6 +129,7 @@ MODULE m_types_hub1data
          rank = 0
       END IF
       CALL mpi_bc(this%iter,rank,mpi_comm)
+      CALL mpi_bc(this%overallIteration,rank,mpi_comm)
       CALL mpi_bc(this%l_runthisiter,rank,mpi_comm)
       CALL mpi_bc(this%l_performSpinavg,rank,mpi_comm)
       CALL mpi_bc(this%mag_mom,rank,mpi_comm)
