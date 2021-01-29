@@ -12,7 +12,7 @@ def test_Fe_bcc_FlipcdnXLDA(execute_fleur, grep_number, grep_exists):
     test_file_folder = './inputfiles/Fe_bcc_FlipcdnXLDA/'
  
     # Stage 1
-    files = ['inp.xml', 'kpts.xml', 'sym.xml']
+    files = ['inp.xml', 'kpts.xml', 'sym.xml', 'JUDFT_WARN_ONLY']
     res_files = execute_fleur(test_file_folder, only_copy=files)
     should_files = ['out']
     res_file_names = list(res_files.keys())
@@ -22,7 +22,7 @@ def test_Fe_bcc_FlipcdnXLDA(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['out'], "flip")
 
     # Stage 2
-    res_files = execute_fleur(cmd_params, test_file_folder, only_copy=[['inp2.xml', 'inp.xml']])
+    res_files = execute_fleur(cmd_params, test_file_folder, only_copy=[['inp2.xml', 'inp.xml', 'JUDFT_WARN_ONLY']])
     mx = grep_number(res_files['out'], "mx=", "mx=")
     assert abs(mx - 2.116) <= 0.001
 
@@ -38,7 +38,7 @@ def test_Fe_bcc_FlipcdnYGGA(execute_fleur, grep_number, grep_exists):
     test_file_folder = './inputfiles/Fe_bcc_FlipcdnYGGA/'
 
     # Stage 1
-    files = ['inp.xml', 'kpts.xml', 'sym.xml']
+    files = ['inp.xml', 'kpts.xml', 'sym.xml', 'JUDFT_WARN_ONLY']
     res_files = execute_fleur(test_file_folder, only_copy=files)
     should_files = ['out']
     res_file_names = list(res_files.keys())
@@ -48,38 +48,13 @@ def test_Fe_bcc_FlipcdnYGGA(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['out'], "flip")
 
     # Stage 2
-    res_files = execute_fleur(test_file_folder, only_copy=[['inp2.xml', 'inp.xml']])
+    res_files = execute_fleur(test_file_folder, only_copy=[['inp2.xml', 'inp.xml'], 'JUDFT_WARN_ONLY'])
     my = grep_number(res_files['out'], "my=", "my=")
     assert abs(my - 2.180) <= 0.001
 
 @pytest.mark.bulk
-@pytest.mark.greensfunction
 @pytest.mark.magnetism
-@pytest.mark.serial
-def test_Fe_bcc_GreensFunction(execute_fleur, grep_number, grep_exists):
-    """Fleur Fe bcc Green's function
-    Simple test of the green's function calculation in FLEUR with one step:
-    1. Generate starting density, run 1 Iteration and calculate Green's function
-       for d-orbitals. Ensure that the occupations from the Green's function are
-       close to the MT-charges obtained
-    """
-    test_file_folder = './inputfiles/Fe_bcc_GreensFunction/'
-
-    res_files = execute_fleur(test_file_folder)
-    should_files = ['out']
-    res_file_names = list(res_files.keys())
-    for file1 in should_files:
-        assert file1 in res_file_names
-
-    assert grep_exists(res_files['out'], "it=  1  is completed")
-    spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
-    spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
-
-    assert abs(spinup_trace - 4.0508) <= 0.0005
-    assert abs(spindown_trace - 1.8636) <= 0.0005
-
-@pytest.mark.bulk
-@pytest.mark.magnetism
+@pytest.mark.hdf
 def test_Fe_bcc_SF_LDA(execute_fleur, grep_number, grep_exists):
     """FeBCCSFLDA: Sourcefree magnetism and magnetization scaling
 
