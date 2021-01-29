@@ -84,7 +84,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    !$acc loop gang
    DO  ki =  fmpi%n_rank+1, lapw%nv(jintsp), fmpi%n_size
       !$acc loop  vector independent&
-      !$acc &    PRIVATE(ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,dot)
+      !$acc &    PRIVATE(kj, kii,ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,dot)
       DO  kj = 1, min(ki,lapw%nv(iintsp))
          kii=(ki-1)/fmpi%n_size+1
          ski = lapw%gvec(:,ki,jintsp) + qssbti(:)
