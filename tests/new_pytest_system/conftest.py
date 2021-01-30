@@ -151,19 +151,54 @@ def read_cmake_config(configfilepath):
                 marker_list = marker_string.split()
     return marker_list
 
-TEST_FUNCTIONS = set()
-def pytest_generate_tests(metafunc):
 
-    if 'execute_fleur' in metafunc.fixturenames or \
-       'execute_inpgen' in metafunc.fixturenames:
-        TEST_FUNCTIONS.add((metafunc.function.__name__, metafunc.module.__file__.replace(os.path.dirname(os.path.abspath(__file__))+'/','')))
-        if 'PARSER_TESTS_DONE' in TEST_FUNCTIONS:
-            metafunc.config.issue_config_time_warning(UserWarning(f"Fleur test collected after parser test. Missed: {metafunc.function.__name__.replace('test_','')}"))
+_parser_tests_collected = False
+fleur_tests = set()
+inpgen_tests = set()
+
+def pytest_generate_tests(metafunc):
+    """Generate tests during collection
+
+        This is modified to be able to use parametrized tests for the parsers and automatically performing the tests
+        for all available fleur/inpgen tests
+
+        Fleur and inpgen tests are detected based on their usage of the `execute_fleur` or `execute_ingpen` fixture
+        They are added to (module level) sets and when a parser test is encountered (detection based on the fixture
+        `fleur_test_name`) the corresponding fixture is parametrized with all collected tests
+
+        Selection of tests for parsers based on markers is also possible but not yet used
+
+    """
+    #This is needed to be able to issue warnings if fleur tests are missed for the parsers
+    global _parser_tests_collected
+
+    if 'execute_fleur' in metafunc.fixturenames:
+        markers = tuple({mark.name for mark in metafunc.function.pytestmark})
+        fleur_tests.add((metafunc.function.__name__,
+                         metafunc.module.__file__.replace(os.path.dirname(os.path.abspath(__file__))+'/','')) + markers)
+        if _parser_tests_collected:
+            metafunc.config.issue_config_time_warning(UserWarning('Fleur test collected after parser test. Missed: '\
+                                                                  f"{metafunc.function.__name__}"),2)
+    if 'execute_inpgen' in metafunc.fixturenames:
+        markers = tuple({mark.name for mark in metafunc.function.pytestmark})
+        inpgen_tests.add((metafunc.function.__name__,
+                          metafunc.module.__file__.replace(os.path.dirname(os.path.abspath(__file__))+'/','')) + markers)
+        if _parser_tests_collected:
+            metafunc.config.issue_config_time_warning(UserWarning('Inpgen test collected after parser test. Missed: '\
+                                                                  f"{metafunc.function.__name__}"),2)
 
     if 'fleur_test_name' in metafunc.fixturenames:
-        TEST_FUNCTIONS.discard('PARSER_TESTS_DONE')
-        metafunc.parametrize('fleur_test_name, test_file', TEST_FUNCTIONS)
-        TEST_FUNCTIONS.add('PARSER_TESTS_DONE') #I cannot easily do it with a bool (would need a global statement)
+        _parser_tests_collected = True
+        if 'inpxml' in metafunc.function.__name__:
+            test_info = fleur_tests.union(inpgen_tests)
+        else:
+            test_info = fleur_tests
+
+        #Here we could select tests based on the markers of the Test (at the moment we just discard the marker info here)
+        #This is useful for the eventual tests of banddos parsers, nmmpmat parser, ...
+        test_info = {(info[0], info[1]) for info in test_info}
+
+        metafunc.parametrize('fleur_test_name, test_file', test_info)
 
 # To modify the collected tests AFTER collections
 def pytest_collection_modifyitems(session, config, items):
