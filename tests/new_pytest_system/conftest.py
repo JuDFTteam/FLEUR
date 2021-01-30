@@ -163,8 +163,9 @@ def pytest_generate_tests(metafunc):
         for all available fleur/inpgen tests
 
         Fleur and inpgen tests are detected based on their usage of the `execute_fleur` or `execute_ingpen` fixture
-        They are added to (module level) sets and when a parser test is encountered (detection based on the fixture
-        `fleur_test_name`) the corresponding fixture is parametrized with all collected tests
+        They are added to (module level) sets as tuples (function name, function module file, all given pytest markers)
+        and when a parser test is encountered (detection based on the fixture `fleur_test_name`) the corresponding fixture
+        is parametrized with all collected tests
 
         Selection of tests for parsers based on markers is also possible but not yet used
 
@@ -199,6 +200,7 @@ def pytest_generate_tests(metafunc):
         test_info = {(info[0], info[1]) for info in test_info}
 
         metafunc.parametrize('fleur_test_name, test_file', test_info)
+
 
 # To modify the collected tests AFTER collections
 def pytest_collection_modifyitems(session, config, items):
