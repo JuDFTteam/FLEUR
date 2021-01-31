@@ -69,8 +69,8 @@ CONTAINS
       REAL, ALLOCATABLE       ::  fprod(:, :), fprod2(:, :)
 
       COMPLEX, ALLOCATABLE    :: carr2(:, :), carr3(:, :), ctmp_vec(:)
-      type(t_mat)             :: integral, carr, tmp, dot_result, exchange
-
+      type(t_mat)             :: exchange
+      complex, allocatable    :: integral(:,:), carr(:,:), tmp(:,:), dot_result(:,:)
       call timestart("exchange_vccv1")
       ! read in mt wavefunction coefficients from file cmt
       nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
@@ -86,7 +86,8 @@ CONTAINS
       rdum = 0
 
       call timestart("atom_loop")
-      call dot_result%alloc(.False., hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
+      allocate(dot_result(hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
+      if(ierr /= 0) call judft_error("can't alloc dot_result")
       do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
          itype = fi%atoms%itype(iatom)
          DO l1 = 0, hybdat%lmaxc(itype)
@@ -124,10 +125,20 @@ CONTAINS
                   ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
                   call timestart("Eval rad. integr")
-                  call integral%alloc(.False., n,n)
-                  call carr%alloc(.False., n, hybdat%nbands(nk,jsp))
-                  call tmp%init(carr)
-                  allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n))
+                  allocate(integral(n,n), stat=ierr, source=cmplx_0)
+                  if(ierr /= 0) call judft_error("can't allocate integral")
+                  ! call integral%alloc(.False., n,n)
+
+                  allocate(carr(n,hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
+                  if(ierr /= 0) call judft_error("can't allocate carr")
+                  ! call carr%alloc(.False., n, hybdat%nbands(nk,jsp))
+                  
+                  allocate(tmp(n,hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
+                  if(ierr /= 0) call judft_error("can't allocate carr")
+                  ! call tmp%init(carr)
+
+                  allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n), stat=ierr)
+                  if(ierr /= 0) call judft_error("can't allocate something i guess")
 
                   DO i = 1, n
                      CALL primitivef(primf1, fprod(:fi%atoms%jri(itype), i)*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1),&
@@ -139,7 +150,7 @@ CONTAINS
                      primf2(:fi%atoms%jri(itype)) = primf2(:fi%atoms%jri(itype))*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1)
                      DO j = 1, n
                         integrand = fprod(:, j)*(primf1 + primf2)
-                        integral%data_c(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, fi%atoms, itype, hybdat%gridf)
+                        integral(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, fi%atoms, itype, hybdat%gridf)
                      END DO
                   END DO
                   call timestop("Eval rad. integr")
@@ -151,7 +162,7 @@ CONTAINS
                         m2 = m1 + M
 
                         call timestart("set carr")
-                        carr%data_c = 0
+                        carr = 0
                         !$OMP PARALLEL DO default(none) collapse(2)&
                         !$OMP private(n1, i, ll, lm, l2)&
                         !$OMP shared(hybdat, n, m2, mpdata, carr, cmt, larr, itype, parr, iatom)&
@@ -164,7 +175,7 @@ CONTAINS
                               lm = SUM([((2*l2 + 1)*mpdata%num_radfun_per_l(l2, itype), l2=0, ll - 1)]) &
                                     + (m2 + ll)*mpdata%num_radfun_per_l(ll, itype) + parr(i)
 
-                              carr%data_c(i, n1) = cmt(n1, lm, iatom)*gaunt(l1, ll, l, m1, m2, M, hybdat%maxfac, hybdat%fac, hybdat%sfac)
+                              carr(i, n1) = cmt(n1, lm, iatom)*gaunt(l1, ll, l, m1, m2, M, hybdat%maxfac, hybdat%fac, hybdat%sfac)
 
                            END DO
                         enddo
@@ -172,8 +183,13 @@ CONTAINS
                         call timestop("set carr")
                         
                         call timestart("zgemms")
-                        call integral%multiply(carr, res=tmp)
-                        call carr%multiply(tmp, res=dot_result, transA="C")
+                        ! call integral%multiply(carr, res=tmp)
+                        !call zgemm(transa, transb, m, n, k,                    alpha,   a,        lda,               b,    ldb,          beta,    c,   ldc)
+                        call zgemm("N",    "N",    n, hybdat%nbands(nk,jsp), n, cmplx_1, integral, size(integral, 1), carr, size(carr,1), cmplx_0, tmp, size(tmp,1))
+
+                        ! call carr%multiply(tmp, res=dot_result, transA="C")
+                        !call zgemm(transa, transb, m,              n,                     k, alpha,   a,    lda,          b,    ldb,        beta,    c,   ldc)
+                        call zgemm("C", "N", hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp), n, cmplx_1, carr, size(carr,1), tmp, size(tmp,1), cmplx_0, dot_result, size(dot_result,1))
                         call timestop("zgemms")
 
                         call timestart("add to exchange")
@@ -185,7 +201,7 @@ CONTAINS
                               DO n2 = 1, nsest(n1)!n1
                                  nn2 = indx_sest(n2, n1)
                                  if(nn2 <= n1) then
-                                    exchange%data_r(nn2, n1) = exchange%data_r(nn2, n1) + real(dot_result%data_c(n1,nn2))
+                                    exchange%data_r(nn2, n1) = exchange%data_r(nn2, n1) + real(dot_result(n1,nn2))
                                  endif
                               END DO
                            END DO
@@ -198,7 +214,7 @@ CONTAINS
                               DO n2 = 1, nsest(n1)!n1
                                  nn2 = indx_sest(n2, n1)
                                  if(nn2 <= n1) then
-                                    exchange%data_c(nn2, n1) = exchange%data_c(nn2, n1) + dot_result%data_c(n1,nn2)
+                                    exchange%data_c(nn2, n1) = exchange%data_c(nn2, n1) + dot_result(n1,nn2)
                                  endif
                               END DO
                            END DO
@@ -208,16 +224,14 @@ CONTAINS
                      END DO
                   END DO
                   call timestop("Add everything up")
-                  call integral%free()
-                  call carr%free()
-                  call tmp%free()
+                  deallocate(integral, carr, tmp)
                   deallocate(carr2, carr3, ctmp_vec)
                END DO
             END DO
          END DO
       END DO
+      deallocate(dot_result)
       call timestop("atom_loop")
-      call dot_result%free()
 
       buf_sz = hybdat%nbands(nk,jsp)**2
 
