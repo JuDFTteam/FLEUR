@@ -20,6 +20,12 @@ MODULE m_exchange_core
 #ifdef CPP_MPI 
    use mpi 
 #endif
+#ifdef _OPENACC
+   USE cublas
+#define CPP_zgemm cublaszgemm
+#else
+#define CPP_zgemm zgemm
+#endif
 
 CONTAINS
    SUBROUTINE exchange_vccv1(nk, fi, mpdata, hybdat, jsp, lapw, submpi,&
@@ -33,7 +39,7 @@ CONTAINS
       USE m_wrapper
       USE m_io_hybinp
       use m_calc_cmt
-
+      use openacc
       IMPLICIT NONE
       type(t_fleurinput), intent(in) :: fi
       TYPE(t_hybdat), INTENT(IN)     :: hybdat
@@ -63,7 +69,7 @@ CONTAINS
       INTEGER, ALLOCATABLE     ::  larr(:), larr2(:)
       INTEGER, ALLOCATABLE     ::  parr(:), parr2(:)
 
-      integer                 :: nbasfcn, ierr, buf_sz
+      integer                 ::  nbasfcn, ierr, buf_sz, ld_integral, ld_carr, ld_tmp, ld_dotres
       REAL                    ::  integrand(fi%atoms%jmtd)
       REAL                    ::  primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
       REAL, ALLOCATABLE       ::  fprod(:, :), fprod2(:, :)
@@ -71,12 +77,23 @@ CONTAINS
       COMPLEX, ALLOCATABLE    :: carr2(:, :), carr3(:, :), ctmp_vec(:)
       type(t_mat)             :: exchange
       complex, allocatable    :: integral(:,:), carr(:,:), tmp(:,:), dot_result(:,:)
+
       call timestart("exchange_vccv1")
       ! read in mt wavefunction coefficients from file cmt
       nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
       
       call exchange%alloc(mat_ex%l_real, hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
-
+      if(exchange%l_real) then
+         !$acc enter data create(exchange, exchange%data_r)
+         !$acc kernels present(exchange, exchange%data_r)
+         exchange%data_r = 0.0
+         !$acc end kernels
+      else
+         !$acc enter data create(exchange, exchange%data_c)
+         !$acc kernels present(exchange, exchange%data_c)
+         exchange%data_c = cmplx_0
+         !$acc end kernels
+      endif
       allocate(fprod(fi%atoms%jmtd, 5), stat=ierr)
       if(ierr /= 0) call judft_error("alloc fprod failed")
       
@@ -88,6 +105,9 @@ CONTAINS
       call timestart("atom_loop")
       allocate(dot_result(hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
       if(ierr /= 0) call judft_error("can't alloc dot_result")
+      ld_dotres   = size(dot_result,1)
+
+      !$acc enter data copyin(indx_sest, nsest, hybdat, hybdat%nbands) create(dot_result)
       do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
          itype = fi%atoms%itype(iatom)
          DO l1 = 0, hybdat%lmaxc(itype)
@@ -127,15 +147,15 @@ CONTAINS
                   call timestart("Eval rad. integr")
                   allocate(integral(n,n), stat=ierr, source=cmplx_0)
                   if(ierr /= 0) call judft_error("can't allocate integral")
-                  ! call integral%alloc(.False., n,n)
+                  ld_integral = size(integral, 1)
 
                   allocate(carr(n,hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
+                  ld_carr     = size(carr,1)
                   if(ierr /= 0) call judft_error("can't allocate carr")
-                  ! call carr%alloc(.False., n, hybdat%nbands(nk,jsp))
                   
                   allocate(tmp(n,hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
                   if(ierr /= 0) call judft_error("can't allocate carr")
-                  ! call tmp%init(carr)
+                  ld_tmp      = size(tmp,1)
 
                   allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n), stat=ierr)
                   if(ierr /= 0) call judft_error("can't allocate something i guess")
@@ -155,6 +175,7 @@ CONTAINS
                   END DO
                   call timestop("Eval rad. integr")
 
+                  !$acc enter data copyin(integral) create(tmp)
                   ! Add everything up
                   call timestart("Add everything up")
                   DO m1 = -l1, l1
@@ -182,21 +203,29 @@ CONTAINS
                         !$OMP END PARALLEL DO
                         call timestop("set carr")
                         
-                        call timestart("zgemms")
-                        ! call integral%multiply(carr, res=tmp)
-                        !call zgemm(transa, transb, m, n, k,                    alpha,   a,        lda,               b,    ldb,          beta,    c,   ldc)
-                        call zgemm("N",    "N",    n, hybdat%nbands(nk,jsp), n, cmplx_1, integral, size(integral, 1), carr, size(carr,1), cmplx_0, tmp, size(tmp,1))
+                        call timestart("zgemms with cpy")
+                        !$acc enter data copyin(carr)
 
-                        ! call carr%multiply(tmp, res=dot_result, transA="C")
-                        !call zgemm(transa, transb, m,              n,                     k, alpha,   a,    lda,          b,    ldb,        beta,    c,   ldc)
-                        call zgemm("C", "N", hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp), n, cmplx_1, carr, size(carr,1), tmp, size(tmp,1), cmplx_0, dot_result, size(dot_result,1))
-                        call timestop("zgemms")
+                        call timestart("zgemms without cpy")
+                        !$acc host_data use_device(integral, carr, tmp, dot_result)
+                        call CPP_zgemm("N", "N", n, hybdat%nbands(nk,jsp), n, cmplx_1, integral, ld_integral, carr, ld_carr, cmplx_0, tmp, ld_tmp)
+                        call CPP_zgemm("C", "N", hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp), n, cmplx_1, carr, ld_carr, tmp, ld_tmp, cmplx_0, dot_result, ld_dotres)
+                        !$acc end host_data
+                        !$acc wait
+                        call timestop("zgemms without cpy")
+                        !$acc exit data delete(carr)
+                        call timestop("zgemms with cpy")
 
                         call timestart("add to exchange")
                         if(exchange%l_real) then
+#ifdef _OPENACC
+                           !$acc parallel loop default(none) private(n1, n2, nn2) &
+                           !$acc present(exchange, exchange%data_r, dot_result, indx_sest, nsest, hybdat, hybdat%nbands)
+#else
                            !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
                            !$OMP private(n1, n2, nn2)&
                            !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk, jsp)
+#endif
                            DO n1 = 1, hybdat%nbands(nk,jsp)
                               DO n2 = 1, nsest(n1)!n1
                                  nn2 = indx_sest(n2, n1)
@@ -205,11 +234,20 @@ CONTAINS
                                  endif
                               END DO
                            END DO
+#ifdef _OPENACC
+                           !$acc end parallel loop
+#else
                            !$OMP END PARALLEL DO
+#endif
                         else
+#ifdef _OPENACC
+                           !$acc parallel loop default(none) private(n1, n2, nn2) &
+                           !$acc present(exchange, exchange%data_c, dot_result, indx_sest, nsest, hybdat, hybdat%nbands)
+#else
                            !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
                            !$OMP private(n1, n2, nn2)&
                            !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk, jsp)
+#endif
                            DO n1 = 1, hybdat%nbands(nk,jsp)
                               DO n2 = 1, nsest(n1)!n1
                                  nn2 = indx_sest(n2, n1)
@@ -218,11 +256,16 @@ CONTAINS
                                  endif
                               END DO
                            END DO
+#ifdef _OPENACC
+                           !$acc end parallel loop
+#else
                            !$OMP END PARALLEL DO
+#endif
                         endif
                         call timestop("add to exchange")
                      END DO
                   END DO
+                  !$acc exit data delete(integral, tmp)
                   call timestop("Add everything up")
                   deallocate(integral, carr, tmp)
                   deallocate(carr2, carr3, ctmp_vec)
@@ -230,7 +273,14 @@ CONTAINS
             END DO
          END DO
       END DO
+      if(exchange%l_real) then
+         !$acc exit data copyout(exchange%data_r)
+      else 
+         !$acc exit data copyout(exchange%data_c)
+      endif
+      !$acc exit data delete(indx_sest, nsest, hybdat, hybdat%nbands, dot_result, exchange)
       deallocate(dot_result)
+
       call timestop("atom_loop")
 
       buf_sz = hybdat%nbands(nk,jsp)**2
