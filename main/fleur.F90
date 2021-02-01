@@ -97,7 +97,7 @@ CONTAINS
       TYPE(t_mpdata)                  :: mpdata
 
       TYPE(t_potden)                  :: vTot, vx, vCoul, vxc, exc
-      TYPE(t_potden)                  :: inDen, outDen, EnergyDen
+      TYPE(t_potden)                  :: inDen, outDen, EnergyDen, sliceDen
 
       TYPE(t_hub1data)                :: hub1data
       TYPE(t_greensf), ALLOCATABLE    :: greensFunction(:)
@@ -106,8 +106,8 @@ CONTAINS
       INTEGER :: eig_id, archiveType, num_threads
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
-      LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error
-      REAL    :: fix, sfscale
+      LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
+      REAL    :: fix, sfscale, rdummy
       REAL    :: mmpmatDistancePrev,occDistancePrev
 
 #ifdef CPP_MPI
@@ -195,7 +195,7 @@ CONTAINS
       ! Initialize Green's function (end)
 
       ! Open/allocate eigenvector storage (start)
-      l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u + fi%atoms%n_hia > 0)
+      l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u>0) .AND. fi%atoms%n_hia==0 
       if (fi%noco%l_soc .and. fi%input%l_wann) then
        !! Weed up and down spinor components for SOC MLWFs.
        !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
@@ -243,8 +243,18 @@ CONTAINS
 
 !Plot inden if wanted
          IF (fi%sliceplot%iplot .NE. 0) THEN
-           CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
-                           fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+            IF (.NOT.fi%sliceplot%slice) THEN
+               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
+                              fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+            ELSE
+               CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
+               IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+                                                       fi%input, fi%sym, fi%oneD,CDN_ARCHIVE_TYPE_CDN_const, &
+                                                       CDN_INPUT_DEN_const, 0, rdummy, l_dummy, sliceDen, 'cdn_slice')
+               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, sliceDen, nococonv)
+               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
+                              fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
+            END IF
             IF ((fmpi%irank .EQ. 0) .AND. (fi%sliceplot%iplot .EQ. 2)) THEN
                CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
             END IF

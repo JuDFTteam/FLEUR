@@ -97,9 +97,10 @@ CONTAINS
          INTEGER, INTENT(OUT)          :: handle
 #ifdef CPP_MPI
          TYPE(c_ptr)::ptr
-         INTEGER:: e
+         INTEGER:: e, iError
          INTEGER(MPI_ADDRESS_KIND) :: length
          INTEGER                   :: type_size
+         CHARACTER(LEN=100)        :: errorString
 
          length = 0
          IF (PRESENT(real_data_ptr)) THEN
@@ -117,6 +118,7 @@ CONTAINS
          IF (length .NE. 1) CALL judft_error("Bug in eig66_mpi:create_memory")
          length = MAX(1, slot_size*local_slots)
 
+         iError = 0
 #ifdef CPP_MPI_ALLOC
          length = length*type_size
          CALL MPI_ALLOC_MEM(length, MPI_INFO_NULL, ptr, e)
@@ -127,25 +129,38 @@ CONTAINS
             CALL C_F_POINTER(ptr, real_data_ptr, (/length/type_size/))
             call judft_error("hmm fuck")
 #else
-            ALLOCATE (real_data_ptr(length))
+            ! In the following allocate a too large length may lead to a segmentation fault in the allocate statement
+            ! with before being able to return of an error code.
+            ALLOCATE (real_data_ptr(length), source=0.0, STAT=iError)
 #endif
-            call judft_win_create(real_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
+            IF (iError.EQ.0) call judft_win_create(real_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
          ELSEIF (PRESENT(int_data_ptr)) THEN
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, int_data_ptr, (/length/type_size/))
 #else
-            ALLOCATE (int_data_ptr(length))
+            ! In the following allocate a too large length may lead to a segmentation fault in the allocate statement
+            ! with before being able to return of an error code.
+            ALLOCATE (int_data_ptr(length), source=0, STAT=iError)
 #endif
-            call judft_win_create(int_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
+            IF (iError.EQ.0) call judft_win_create(int_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
          ELSE
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, cmplx_data_ptr, (/length/type_size/))
 #else
-            ALLOCATE (cmplx_data_ptr(length))
+            ! In the following allocate a too large length may lead to a segmentation fault in the allocate statement
+            ! with before being able to return of an error code.
+            ALLOCATE (cmplx_data_ptr(length), source=CMPLX(0.0,0.0), STAT=iError)
 #endif
-            call judft_win_create(cmplx_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
+            IF (iError.EQ.0) call judft_win_create(cmplx_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
          ENDIF
 #endif
+         IF(iError.NE.0) THEN
+            ! See comment above the related allocate statements. This error handler is not always reached.
+            WRITE(errorString,*) 'Allocation of array for communication failed. Needed number of elements:  slot_size ',&
+                                 slot_size, ' x ', local_slots, 'local slots.'
+            CALL juDFT_error(TRIM(ADJUSTL(errorString)), calledby='eig66_mpi')
+         END IF
+
       END SUBROUTINE priv_create_memory
 
 #endif

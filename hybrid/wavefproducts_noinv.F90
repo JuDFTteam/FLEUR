@@ -288,18 +288,10 @@ CONTAINS
 
          ! The default(shared) in the OMP part of the following loop is needed to avoid compilation issues on gfortran 7.5.
          DO l = 0, fi%hybinp%lcutm1(itype)
-! #ifdef _OPENACC
-!             !$acc parallel loop default(none) copyin(itype, l, iatm, atom_phase) collapse(2)&
-!             !$acc private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i) &
-!             !$acc present(cprod, cprod%data_c, hybdat, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, hybdat%prodm)&
-!             !$acc present(bandoi, bandof, lmstart, lm_0, mpdata, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2)&
-!             !$acc present(cmt_ikqpt, cmt_nk, psize, ik)
-! #else
             !$OMP PARALLEL DO default(shared) collapse(2) schedule(dynamic) & 
             !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
             !$OMP shared(hybdat, bandoi, bandof, lmstart, lm_0, mpdata, cmt_ikqpt, cmt_nk, cprod, itype, l) &
             !$OMP shared(iatm, psize, atom_phase, ik)
-! #endif
             do k = 1, hybdat%nbands(ik,jsp)
                do j = bandoi, bandof 
                   DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
