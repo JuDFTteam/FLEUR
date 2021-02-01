@@ -264,7 +264,9 @@ CONTAINS
             !$acc enter data copyin(phase_vv, psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
             if (mat_ex%l_real) then
 #ifdef _OPENACC
+               call timestart("cpy cprod")
                CPP_cprod_r  = cprod_vv%data_r
+               call timestop("cpy cprod")
 #endif
                !$acc enter data copyin(r_coul_wavf, CPP_cprod_r)
 
@@ -282,7 +284,9 @@ CONTAINS
                !$acc end parallel loop
             else
 #ifdef _OPENACC
+               call timestart("cpy cprod")
                CPP_cprod_c  = cprod_vv%data_c
+               call timestop("cpy cprod")
 #endif
                !$acc enter data copyin(c_coul_wavf, CPP_cprod_c)
 
