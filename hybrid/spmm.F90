@@ -427,6 +427,7 @@ contains
       !$acc end host_data
       !$acc exit data delete(mtir_tmp)
       deallocate(mtir_tmp)
+      !$acc wait
       call timestop("ibasm+1->nbasm: zgemm")
 
       call timestart("copy mt2_c")
