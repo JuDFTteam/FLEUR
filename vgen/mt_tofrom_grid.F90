@@ -120,7 +120,6 @@ CONTAINS
       !Calc magnetization (This is necessary only in mtNoco case)
       IF(any(noco%l_unrestrictMT)) mm(:,:)=SQRT((0.5*(den_mt(:,:,1)-den_mt(:,:,2)))**2+4*den_mt(:,:,3)**2+4*den_mt(:,:,4)**2)
 
-
       !Loop to calculate chlh and necessary gradients (if needed)
       DO lh = 0, sphhar%nlh(nd)
          !         calculates gradients of radial charge densities of l=> 0.
@@ -150,8 +149,12 @@ CONTAINS
       END DO   ! lh
 
       !The following Loop maps chlh on the k-Grid using the lattice harmonics ylh
-      kt = 0
+      !$OMP parallel do default(none)private(kt,ch_tmp,jr,js,lh,k,chdr,chdt,chdf,chdrr,chdtt,chdff)&
+      !$OMP private(chdtf,chdrt,chdrf)&
+      !$OMP shared(chlhtot,chlhdrtot,chlhdrrtot,chlh,chlhdr,chlhdrr)&
+      !$OMP  shared(n,nd,ylh,dograds,jspV,sphhar,noco,mm,drm,drrm,ylht,ylhf,ylhtt,ylhff,ylhtf,nsp,jspins,atoms,thet,grad,ch,ch_calc)
       DO jr = 1, atoms%jri(n)
+         kt=(jr-1)*nsp
          ! charge density (on extended grid for all jr)
          ! following are at points on jr-th sphere.
          ch_tmp(:, :) = 0.0
@@ -163,6 +166,7 @@ CONTAINS
                ENDDO
             ENDDO
          ENDDO
+
 
          !Initialize derivatives of ch on grid if needed.
          IF (dograds) THEN
@@ -227,13 +231,15 @@ CONTAINS
             CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
                         ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
          END IF
+
          !Set charge to minimum value
          IF (PRESENT(ch)) THEN
             WHERE (ABS(ch_tmp(:nsp,:)) < d_15) ch_tmp(:nsp,:) = d_15
             ch_calc(kt + 1:kt + nsp, :) = ch_tmp(:nsp, :)
          ENDIF
-         kt = kt + nsp
       END DO
+      !$OMP end parallel do
+
       IF (PRESENT(ch)) THEN
       !Rotation to local if needed (Indicated by rotch)
          IF (rotch.AND.any(noco%l_unrestrictMT)) THEN
@@ -277,12 +283,17 @@ CONTAINS
       nsp = atoms%nsp()
       nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
 
+      !$acc data copyin(atoms,atoms%jri,sphhar,sphhar%nlh,wt,ylh)
       DO js = 1, jspins
          !
          kt = 0
+         !$acc enter data copyin(v_in(:,js),vr(:,:,js))
+         !$acc kernels
+         !$acc loop gang private(kt,vpot)
          DO jr = 1, atoms%jri(n)
+            kt=(jr-1)*nsp
             vpot = v_in(kt + 1:kt + nsp, js)*wt(:)!  multiplicate v_in with the weights of the k-points
-
+            !$acc loop worker private(vlh)
             DO lh = 0, sphhar%nlh(nd)
                !
                ! --->        determine the corresponding potential number
@@ -291,14 +302,18 @@ CONTAINS
                vlh = dot_PRODUCT(vpot(:), ylh(:nsp, lh, nd))
                vr(jr, lh, js) = vr(jr, lh, js) + vlh
             ENDDO ! lh
-            kt = kt + nsp
+            !$acc end loop
          ENDDO   ! jr
+         !$acc end loop
+         !$acc end kernels
+         !$acc exit data delete(v_in(:,js))copyout(vr(:,:,js))
       ENDDO
+      !$acc end data
       call timestop("mt_from_grid")
    END SUBROUTINE mt_from_grid
 
    SUBROUTINE finish_mt_grid()
-      implicit NONE 
+      implicit NONE
       call timestart("finish_mt_grid")
       DEALLOCATE (ylh, wt, rx, thet, phi)
       IF (ALLOCATED(ylht)) DEALLOCATE (ylht, ylhtt, ylhf, ylhff, ylhtf)
