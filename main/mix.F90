@@ -88,9 +88,9 @@ contains
 
     CALL timestart("Reading of distances")
     CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,stars,cell,sphhar,atoms,sym)
-
+    CALL timestart("read history")
     CALL mixing_history_open(fmpi,input%maxiter)
-
+    CALL timestop("read history")
     maxiter=MERGE(1,input%maxiter,input%imix==0)
     CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
 
@@ -190,8 +190,10 @@ contains
        CALL mixvector_reset()
     endif
 
+    call timestart("qfix")
     !fix charge of the new density
     IF (fmpi%irank==0) CALL qfix(fmpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
+    call timestop("qfix")
 
 
 
@@ -204,6 +206,7 @@ contains
        END IF
     END IF
 
+    call timestart("Density output")
     !write out mixed density (but not for a plotting run)
     IF ((fmpi%irank==0).AND.(sliceplot%iplot==0)) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen)
@@ -217,7 +220,7 @@ contains
        CALL writeCoreDensity(input,atoms,inDen%mtCore,inDen%tec,inDen%qint,'cdn_last')
     END IF
 #endif
-
+    call timestop("Density output")
     inDen%iter = inDen%iter + 1
 
     IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi)
