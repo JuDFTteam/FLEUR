@@ -81,6 +81,12 @@ CONTAINS
       USE m_trafo
       use m_calc_cmt
       use m_juDFT
+#ifdef _OPENACC
+      USE cublas
+#define CPP_zgemv cublaszgemv
+#else
+#define CPP_zgemv zgemv
+#endif
 
       IMPLICIT NONE
 
@@ -110,7 +116,7 @@ CONTAINS
       INTEGER                         :: itype, ieq, iatom, ratom, ierr
       INTEGER                         ::  iband1, iband2, iatom0
       INTEGER                         :: i, j, ic, ic1, ic2
-      INTEGER                         :: ok
+      INTEGER                         :: ok, ld_olapmt, ld_cmthlp
       INTEGER                         :: l, lm
       INTEGER                         :: n1, n2, nn
       INTEGER                         :: ndb1, ndb2
@@ -262,34 +268,39 @@ CONTAINS
 
       allocate(wavefolap(hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
-      wavefolap = 0
 
       allocate(cmthlp(size(cmt,2), size(cmt,1) ), stat=ierr)
       if(ierr /= 0) call judft_error("can't alloc cmthlp")
 
       call timestart("calc wavefolap")
+      ld_olapmt = size(olapmt,1)
+      ld_cmthlp = size(cmthlp,1)
+
+      ! !$acc data copyin(olapmt, cmt) copyout(wavefolap) create(carr, cmthlp)
       do iatom = 1+submpi%rank, fi%atoms%nat, submpi%size
          itype = fi%atoms%itype(iatom)
+         ! !$acc kernels present(cmthlp, cmt) copyin(iatom)
          cmthlp = transpose(cmt(:,:,iatom))
+         ! !$acc end kernels
          lm = 0
          DO l = 0, fi%atoms%lmax(itype)
             DO M = -l, l
                nn = mpdata%num_radfun_per_l(l, itype)
-               DO iband1 = 1, hybdat%nbands(nk,jsp)
-                  !ZGEMV ( TRANS, M, N,    ALPHA,   A,                   LDA, 
-                  !          X,                  INCX,  BETA,    Y, INCY )
-                  call zgemv("N", nn, nn, cmplx_1, olapmt(1,1,l,itype), size(olapmt,1), &
-                             cmthlp(lm+1,iband1), 1,    cmplx_0, carr, 1)
-                  
-                  !ZGEMV ( TRANS, M, N,       ALPHA,   A,            LDA, 
-                  !          X,      INCX,  BETA,    Y, INCY )  
-                  call zgemv("C", nn, hybdat%nbands(nk,jsp), cmplx_1, cmthlp(lm+1, 1), size(cmthlp,1), &
-                             carr(1), 1,  cmplx_1, wavefolap(1,iband1), 1)
-               END DO
+
+               ! DO iband1 = 1, hybdat%nbands(nk,jsp)
+               !    ! !$acc host_data use_device(olapmt, cmthlp, carr, wavefolap)
+               !    call CPP_zgemv("N", nn, nn, cmplx_1, olapmt(1,1,l,itype), ld_olapmt, &
+               !               cmthlp(lm+1,iband1), 1,    cmplx_0, carr, 1)
+
+               !    call CPP_zgemv("C", nn, hybdat%nbands(nk,jsp), cmplx_1, cmthlp(lm+1, 1), ld_cmthlp, &
+               !               carr, 1,  cmplx_1, wavefolap(1,iband1), 1)
+               !    ! !$acc end host_data
+               ! END DO
                lm = lm + nn
             END DO
          END DO
       END DO
+      ! !$acc end data 
 
       deallocate(cmthlp)
 #ifdef CPP_MPI
