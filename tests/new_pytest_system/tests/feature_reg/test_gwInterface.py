@@ -1,5 +1,6 @@
 import pytest
 
+@pytest.mark.noci
 @pytest.mark.gw
 @pytest.mark.hdf
 def test_gw1Interface(execute_fleur, grep_number, grep_exists):
@@ -18,7 +19,7 @@ def test_gw1Interface(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['out'], "it=  1  is completed")
 
 
-
+@pytest.mark.noci
 @pytest.mark.gw
 @pytest.mark.hdf
 def test_gw2Interface(execute_fleur, grep_number, grep_exists):

@@ -45,8 +45,9 @@ build-gfortran-hdf5:
 #    - cd build
 #    - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/-I \1,,\2/p')"
 #    - ctest $CTEST_FLAGS -j 1
-    - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/ --testoffset=\1 --runevery=\2/p')"
-    - pytest $CTEST_FLAGS | tee $CI_PROJECT_DIR/build/Testing/pytest_session.stdout
+#    - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/ --testoffset=\1 --runevery=\2/p')"
+#    - pytest $CTEST_FLAGS | tee $CI_PROJECT_DIR/build/Testing/pytest_session.stdout
+     - pytest | tee $CI_PROJECT_DIR/build/Testing/pytest_session.stdout
   artifacts:
     when: on_failure
     paths:
@@ -59,11 +60,11 @@ build-gfortran-hdf5:
 test-gfortran-hdf5-1of3:
   <<: *test-gfortran-hdf5
 
-test-gfortran-hdf5-2of3:
-  <<: *test-gfortran-hdf5
+#test-gfortran-hdf5-2of3:
+#  <<: *test-gfortran-hdf5
 
-test-gfortran-hdf5-3of3:
-  <<: *test-gfortran-hdf5
+#test-gfortran-hdf5-3of3:
+#  <<: *test-gfortran-hdf5
 
 build-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest

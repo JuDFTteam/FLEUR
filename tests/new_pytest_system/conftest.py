@@ -304,6 +304,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "gpu: this test will a GPU capbale fleur version")
 
     config.addinivalue_line("markers", "noci: this test will not be run on CI ")
+    # the reason for this is that it is not run in the old set.
 
     # feature makers
     config.addinivalue_line("markers", "bulk: test with bulk")
