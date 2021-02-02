@@ -39,11 +39,14 @@ contains
       mat_hlp = mat_in%data_r
       n_vec = mat_in%matsize2
 
-      call timestart("reorder_forw")
+      call timestart("reorder_forw (OMP)")
+      !$OMP PARALLEL DO default(none) &
+      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_hlp)
       do i_vec = 1, n_vec
          call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp(:, i_vec))
       enddo
-      call timestop("reorder_forw")
+      !$OMP end parallel do
+      call timestop("reorder_forw (OMP)")
 
       ibasm = calc_ibasm(fi, mpdata)
 
