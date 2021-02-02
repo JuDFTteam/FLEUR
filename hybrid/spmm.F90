@@ -34,9 +34,16 @@ contains
       real, allocatable :: mat_hlp(:,:), mtir_tmp(:,:), mt2_tmp(:,:,:,:)
 
       call timestart("spmm_invs")
+
+      call timestart("alloc mathlp")
       allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
       if(ierr /= 0) call judft_error("can't alloc mat_hlp")
-      mat_hlp = mat_in%data_r
+
+      call timestart("cpy mat_hlp")
+      call dlacpy("N", mat_in%matsize1, mat_in%matsize2, mat_in%data_r, size(mat_in%data_r, 1), mat_hlp, size(mat_hlp,1))
+      call timestop("cpy mat_hlp")
+      call timestop("alloc mathlp")
+      
       n_vec = mat_in%matsize2
 
       call timestart("reorder_forw")
@@ -289,9 +296,14 @@ contains
       complex, allocatable :: mat_hlp(:,:), mtir_tmp(:,:), mt2_tmp(:,:,:,:)
 
       call timestart("spmm_noinvs")
+      call timestart("alloc mathlp")
       allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
       if(ierr /= 0) call judft_error("can't alloc mat_hlp")
-      mat_hlp = mat_in%data_c
+
+      call timestart("cpy mat_hlp")
+      call zlacpy("N", mat_in%matsize1, mat_in%matsize2, mat_in%data_c, size(mat_in%data_c, 1), mat_hlp, size(mat_hlp,1))
+      call timestop("cpy mat_hlp")
+      call timestop("alloc mathlp")
       n_vec = mat_in%matsize2
 
       
