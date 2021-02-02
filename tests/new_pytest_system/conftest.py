@@ -150,6 +150,57 @@ def read_cmake_config(configfilepath):
     marker_list.append('noci') # these tests are always ignored
     return marker_list
 
+
+_parser_tests_collected = False
+fleur_tests = set()
+inpgen_tests = set()
+
+def pytest_generate_tests(metafunc):
+    """Generate tests during collection
+
+        This is modified to be able to use parametrized tests for the parsers and automatically performing the tests
+        for all available fleur/inpgen tests
+
+        Fleur and inpgen tests are detected based on their usage of the `execute_fleur` or `execute_ingpen` fixture
+        They are added to (module level) sets as tuples (function name, function module file, all given pytest markers)
+        and when a parser test is encountered (detection based on the fixture `fleur_test_name`) the corresponding fixture
+        is parametrized with all collected tests
+
+        Selection of tests for parsers based on markers is also possible but not yet used
+
+    """
+    #This is needed to be able to issue warnings if fleur tests are missed for the parsers
+    global _parser_tests_collected
+
+    if 'execute_fleur' in metafunc.fixturenames:
+        markers = tuple({mark.name for mark in metafunc.function.pytestmark})
+        fleur_tests.add((metafunc.function.__name__,
+                         metafunc.module.__file__.replace(os.path.dirname(os.path.abspath(__file__))+'/','')) + markers)
+        if _parser_tests_collected:
+            metafunc.config.issue_config_time_warning(UserWarning('Fleur test collected after parser test. Missed: '\
+                                                                  f"{metafunc.function.__name__}"),2)
+    if 'execute_inpgen' in metafunc.fixturenames:
+        markers = tuple({mark.name for mark in metafunc.function.pytestmark})
+        inpgen_tests.add((metafunc.function.__name__,
+                          metafunc.module.__file__.replace(os.path.dirname(os.path.abspath(__file__))+'/','')) + markers)
+        if _parser_tests_collected:
+            metafunc.config.issue_config_time_warning(UserWarning('Inpgen test collected after parser test. Missed: '\
+                                                                  f"{metafunc.function.__name__}"),2)
+
+    if 'fleur_test_name' in metafunc.fixturenames:
+        _parser_tests_collected = True
+        if 'inpxml' in metafunc.function.__name__:
+            test_info = fleur_tests.union(inpgen_tests)
+        else:
+            test_info = fleur_tests
+
+        #Here we could select tests based on the markers of the Test (at the moment we just discard the marker info here)
+        #This is useful for the eventual tests of banddos parsers, nmmpmat parser, ...
+        test_info = {(info[0], info[1]) for info in test_info}
+
+        metafunc.parametrize('fleur_test_name, test_file', test_info)
+
+
 # To modify the collected tests AFTER collections
 def pytest_collection_modifyitems(session, config, items):
     """After test collection modify collection.
@@ -270,6 +321,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "non_collinear: test with non-collinear")
     config.addinivalue_line("markers", "spinspiral: test with spinspiral calculations")
     config.addinivalue_line("markers", "greensfunction: test with greensfunction")
+    config.addinivalue_line("markers", "edsolver: test for fleur using the edsolver library")
     config.addinivalue_line("markers", "magnetism: test with magnetism")
     config.addinivalue_line("markers", "plot: tests testing a plot feature")
     config.addinivalue_line("markers", "eels: test with eels")
@@ -400,24 +452,28 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup):
     Write testlog.
     """
 
-    workdir = work_dir
-    faildir = failed_dir
+    if 'fleur_parser' not in request.keywords:
 
-    yield # test is running
+        workdir = work_dir
+        faildir = failed_dir
 
-    # clean up code goes here:
+        yield # test is running
 
-    method_name = request.node.name
-    if request.node.rep_call.failed or not cleanup:
-        #log('Test {} failed :('.format(method_name))
-        # if failed move test result to failed dir, will replace dir if existent
-        destination = os.path.abspath(os.path.join(faildir, method_name))
-        if os.path.isdir(destination):
-            shutil.rmtree(destination)
-        shutil.move(workdir, destination)
-        os.mkdir(workdir)
+        # clean up code goes here:
+
+        method_name = request.node.name
+        if request.node.rep_call.failed or not cleanup:
+            #log('Test {} failed :('.format(method_name))
+            # if failed move test result to failed dir, will replace dir if existent
+            destination = os.path.abspath(os.path.join(faildir, method_name))
+            if os.path.isdir(destination):
+                shutil.rmtree(destination)
+            shutil.move(workdir, destination)
+            os.mkdir(workdir)
+        else:
+            clean_workdir()
     else:
-        clean_workdir()
+        yield
 
 
 ##### other fixtures ####
@@ -843,28 +899,32 @@ def load_stage(workdir, clean_workdir, stage_dir, request):
 
     return _use_stage
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='function', autouse=True)
 def stage_for_parser_test(request, work_dir, parser_testdir):
     """
     Fixture to copy the result files of a test to the parser test folder.
     To later autogenerate tests for the fleur parsers
     """
-    
-    parsertestdir = parser_testdir
-    workdir = work_dir
 
-    yield # test is running
-    
-    # clean up code goes here:
-   
-    method_name = request.node.name
-    if RUN_PARSER_TESTS and not request.node.rep_call.failed:
-        # if not failed move test result to parsertestdir, will replace dir if existent
-        destination = os.path.abspath(os.path.join(parsertestdir, method_name))
-        if os.path.isdir(destination):
-            shutil.rmtree(destination)
-        #os.mkdir(destination)
-        shutil.copytree(workdir, destination)
+    if 'fleur_parser' not in request.keywords:
+
+        parsertestdir = parser_testdir
+        workdir = work_dir
+
+        yield # test is running
+        
+        # clean up code goes here:
+       
+        method_name = request.node.name
+        if RUN_PARSER_TESTS and not request.node.rep_call.failed:
+            # if not failed move test result to parsertestdir, will replace dir if existent
+            destination = os.path.abspath(os.path.join(parsertestdir, method_name))
+            if os.path.isdir(destination):
+                shutil.rmtree(destination)
+            #os.mkdir(destination)
+            shutil.copytree(workdir, destination)
+    else:
+        yield
 
 def get_inpgen_binary(fleur_dir):
     """

@@ -8,27 +8,63 @@ MODULE m_rotMMPmat
    PUBLIC :: rotMMPmat
 
    INTERFACE rotMMPmat
-      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle, rotMMPmat_angle_completeMatrix
+      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle
    END INTERFACE
 
    CONTAINS
 
-   PURE FUNCTION rotMMPmat_dwgn(mmpmat,dwgn,dwgnp,su) Result(mmpmatOut)
+   PURE FUNCTION rotMMPmat_dwgn(mmpmat,dwgn,dwgnp,su, spin_rotation) Result(mmpmatOut)
 
       COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
       COMPLEX, OPTIONAL, INTENT(IN)  :: dwgn(-lmaxU_const:,-lmaxU_const:)
       COMPLEX, OPTIONAL, INTENT(IN)  :: dwgnp(-lmaxU_const:,-lmaxU_const:)
       COMPLEX, OPTIONAL, INTENT(IN)  :: su(:,:)
+      LOGICAL, OPTIONAL, INTENT(IN)  :: spin_rotation
 
       COMPLEX, ALLOCATABLE :: mmpmatOut(:,:,:)
 
       COMPLEX :: d(2,2)
       INTEGER :: ispin,m,mp
+      LOGICAL :: spin_rotation_arg
+
+      spin_rotation_arg = .FALSE.
+      IF(PRESENT(spin_rotation)) spin_rotation_arg = spin_rotation
 
       IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
       mmpmatOut = mmpmat
 
-      IF(PRESENT(dwgn)) THEN
+
+      IF(spin_rotation_arg.AND.PRESENT(su)) THEN
+         DO m = -lmaxU_const, lmaxU_const
+            DO mp = -lmaxU_const, lmaxU_const
+
+               d = cmplx_0
+               d(1,1) = mmpmatOut(m,mp,1)
+               d(2,2) = mmpmatOut(m,mp,2)
+               IF(SIZE(mmpmat,3)>=3) THEN
+                  d(2,1) = mmpmatOut(m,mp,3)
+                  IF(SIZE(mmpmat,3)==3) THEN
+                     d(1,2) = conjg(mmpmatOut(mp,m,3))
+                  ELSE
+                     d(1,2) = mmpmatOut(m,mp,4)
+                  ENDIF
+               ENDIF
+
+               d = matmul(conjg(transpose(su)),d)
+               d = matmul(d,su)
+
+               mmpmatOut(m,mp,1) = d(1,1)
+               mmpmatOut(m,mp,2) = d(2,2)
+               IF(SIZE(mmpmat,3)>=3) THEN
+                  mmpmatOut(m,mp,3) = d(2,1)
+                  IF(SIZE(mmpmat,3)==4) THEN
+                     mmpmatOut(mp,m,4) = d(1,2)
+                  ENDIF
+               ENDIF
+
+            ENDDO
+         ENDDO
+      ELSE IF(PRESENT(dwgn)) THEN
          DO ispin = 1, SIZE(mmpmat,3)
             IF(PRESENT(dwgnp)) THEN
                mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgnp)),mmpmatOut(:,:,ispin))
@@ -36,31 +72,6 @@ MODULE m_rotMMPmat
                mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgn)),mmpmatOut(:,:,ispin))
             ENDIF
             mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgn)
-         ENDDO
-      ENDIF
-
-      IF(SIZE(mmpmat,3)>=3 .AND. PRESENT(su)) THEN
-         DO m = -lmaxU_const, lmaxU_const
-            DO mp = -lmaxU_const, lmaxU_const
-               d(1,1) = mmpmatOut(m,mp,1)
-               d(2,2) = mmpmatOut(m,mp,2)
-               d(2,1) = mmpmatOut(m,mp,3)
-               IF(SIZE(mmpmat,3)==3) THEN
-                  d(1,2) = conjg(mmpmatOut(mp,m,3))
-               ELSE
-                  d(1,2) = mmpmatOut(m,mp,4)
-               ENDIF
-
-               d = matmul(su,d)
-               d = matmul(d,conjg(transpose(su)))
-
-               mmpmatOut(m,mp,1) = d(1,1)
-               mmpmatOut(m,mp,2) = d(2,2)
-               mmpmatOut(m,mp,3) = d(2,1)
-               IF(SIZE(mmpmat,3)==4) THEN
-                  mmpmatOut(mp,m,4) = d(1,2)
-               ENDIF
-            ENDDO
          ENDDO
       ENDIF
 
@@ -145,11 +156,8 @@ MODULE m_rotMMPmat
       su(1,2) = eia*si_bh
       su(2,2) = eia*co_bh
 
-      IF(spin_rotation_arg) THEN
-         mmpmatOut = rotMMPmat_dwgn(mmpmat,d,su=su)
-      ELSE
-         mmpmatOut = rotMMPmat_dwgn(mmpmat,d)
-      ENDIF
+
+      mmpmatOut = rotMMPmat_dwgn(mmpmat,d,su=su,spin_rotation=spin_rotation_arg)
 
    END FUNCTION rotMMPmat_angle
 

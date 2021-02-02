@@ -2,6 +2,7 @@
 import pytest
 
 @pytest.mark.plot
+@pytest.mark.hdf
 def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
     """Plot test which checks if density and potential plottable files set up/written out correctly. The same checks are done for the vectorplot feature.
 
@@ -63,6 +64,7 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
 
 
 @pytest.mark.plot
+@pytest.mark.hdf
 def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     """This test checks if 3D vector plots of the magnetization are generated correctly for only certain MT's.
 

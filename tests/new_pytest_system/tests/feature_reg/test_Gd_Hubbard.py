@@ -1,6 +1,7 @@
 import pytest
 
 @pytest.mark.soc
+@pytest.mark.edsolver
 def test_Gd_Hubbard1(execute_fleur, grep_number, grep_exists):
     """Fleur Gd Hubbard 1 SOC
 
@@ -34,6 +35,7 @@ def test_Gd_Hubbard1(execute_fleur, grep_number, grep_exists):
     assert abs(dist - 25.034287) <= 0.0001
 
 @pytest.mark.soc
+@pytest.mark.edsolver
 def test_Gd_Hubbard1_noSYM(execute_fleur, grep_number, grep_exists):
     """Fleur Gd Hubbard 1 no Symmetry
 

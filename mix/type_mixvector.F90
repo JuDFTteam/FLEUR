@@ -21,7 +21,7 @@ MODULE m_types_mixvector
    TYPE(t_atoms), POINTER  :: atoms => NULL()
    TYPE(t_sym), POINTER    :: sym => NULL()
    INTEGER                :: jspins, nvac
-   LOGICAL                :: l_noco, invs, invs2, l_mtnocopot, l_mperp
+   LOGICAL                :: l_noco, invs, invs2, l_mtnocopot
    INTEGER                :: pw_length !The shape of the local arrays
    INTEGER                :: pw_start(3) = 0, pw_stop(3) !First and last index for spin
    INTEGER                :: mt_length, mt_length_g
@@ -165,7 +165,7 @@ CONTAINS
                   ENDDO
                ENDIF
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_mperp)) THEN
+            IF (misc_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, j))
                vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1) = RESHAPE(REAL(den%mmpMat(:, :, 1:atoms%n_u, j)), (/mmpSize/))
                vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat(:, :, 1:atoms%n_u, j)), (/mmpSize/))
@@ -231,7 +231,7 @@ CONTAINS
                   ENDIF
                ENDDO
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_mperp)) THEN
+            IF (misc_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, js))
                den%mmpMat(:, :, 1:atoms%n_u, js) = RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1), &
                                                                  vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1)), &
@@ -286,7 +286,7 @@ CONTAINS
                   mvec%vec_vac(vac_start(js) + SIZE(g_vac):vac_stop(js)) = g_vac(:vac_stop(js) - vac_start(js) - SIZE(g_vac) + 1)*vec%vec_vac(vac_start(js) + SIZE(g_vac):vac_stop(js))
                ENDIF
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_mperp)) THEN
+            IF (misc_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                mvec%vec_misc(misc_start(js):misc_stop(js)) = g_misc*vec%vec_misc(misc_start(js):misc_stop(js))
             END IF
          ENDIF
@@ -459,7 +459,6 @@ CONTAINS
       jspins = input%jspins
       nvac = vacuum%nvac
       l_noco = noco%l_noco
-      l_mperp = noco%l_mperp
       l_mtnocopot = any(noco%l_unrestrictMT)
       stars => stars_i; cell => cell_i; sphhar => sphhar_i; atoms => atoms_i; sym => sym_i
 
@@ -512,7 +511,7 @@ CONTAINS
                vac_length = vac_length + len
                vac_stop(js) = vac_length
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_mperp)) THEN
+            IF (misc_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                len = 7*7*2*atoms%n_u
                misc_start(js) = misc_length + 1
                misc_length = misc_length + len

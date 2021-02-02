@@ -36,11 +36,13 @@
       use m_wann_uHu_int2
       use m_wann_mmkb_sph
       use m_wann_ujugaunt
+#ifdef CPP_MPI
+      use mpi
+#endif
 
       IMPLICIT NONE
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer ierr(3)
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)

@@ -8,6 +8,9 @@ module m_hdf_accessprp
     USE hdf5
     USE m_judft_stop
     USE m_juDFT_internalParams
+#ifdef CPP_HDFMPI
+    USE mpi
+#endif
     implicit none
     private
     !the hdf-access-properties
@@ -37,7 +40,6 @@ module m_hdf_accessprp
       integer :: n,i,hdferr,ierr,info
       character(len=128)::path
 #ifdef CPP_HDFMPI
-      INCLUDE 'mpif.h'
       LOGICAL :: l_mpi
       CALL MPI_INITALIZED(l_mpi,ierr)
 #endif

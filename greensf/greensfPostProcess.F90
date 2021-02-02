@@ -126,7 +126,7 @@ MODULE m_greensfPostProcess
          CALL timestart("Green's Function: Torgue")
          CALL greensfTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
                             f,g,flo,vTot)
-         IF(noco%l_soc) THEN
+         IF(.FALSE.) THEN
             CALL greensfSOTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
                                  enpara,f,g,flo,vTot)
          ENDIF
@@ -140,7 +140,7 @@ MODULE m_greensfPostProcess
          !-------------------------------------------------------------
          !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
          IF(atoms%n_hia.GT.0 .AND. ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
-           !CALL crystal_field(atoms,gfinp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
+           !CALL crystal_field(atoms,gfinp,input,noco,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
 
          !Onsite exchange Splitting from difference of center of mass of the bands
@@ -155,16 +155,16 @@ MODULE m_greensfPostProcess
             l_sphavg    = greensFunction(i_gf)%elem%l_sphavg
             l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag() !If there are SCLOs present the occupations can get bigger than 1
             IF(l_sphavg) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            l_write=.TRUE.,check=l_check)
             ELSE IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            scalarGF=scalarGF(i_gf),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            usdus=usdus,l_write=.TRUE.,check=l_check)
             ELSE
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag,&
                            l_write=.TRUE.,check=l_check)
             ENDIF

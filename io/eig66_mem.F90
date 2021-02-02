@@ -8,6 +8,7 @@ MODULE m_eig66_mem
    ! The record number is given by nrec=nk+(jspin-1)*nkpts
    USE m_eig66_data
    USE m_types
+   USE m_juDFT
    IMPLICIT NONE
 CONTAINS
 
@@ -30,7 +31,9 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_noco, l_create, l_real, l_soc, l_olap
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
       !locals
-      INTEGER:: length
+      INTEGER :: length, ierr
+      INTEGER :: elementsize
+      CHARACTER(LEN=80) errorString
       TYPE(t_data_mem), POINTER:: d
       CALL priv_find_data(id, d)
 
@@ -54,10 +57,17 @@ CONTAINS
       ALLOCATE (d%eig_eig(neig, jspins*nkpts))
       !d%eig_vec
       if (l_real .and. .not. l_soc) THEN
-         ALLOCATE (d%eig_vecr(nmat*neig, length*nkpts))
+         ALLOCATE (d%eig_vecr(nmat*neig, length*nkpts), source=0.0, STAT=ierr)
+         elementsize = 8
       else
-         ALLOCATE (d%eig_vecc(nmat*neig, length*nkpts))
+         ALLOCATE (d%eig_vecc(nmat*neig, length*nkpts), source=CMPLX(0.0,0.0), STAT=ierr)
+         elementsize = 16
       endif
+      IF (ierr.NE.0) THEN
+         WRITE(errorString,'(a,i0,a,i0,a,i0,a,i0,a,i0,a)') "Could not allocate eigenvector array of size ", &
+                                                            elementsize, " x ", nmat, " x ", neig, " x ", length, " x ", nkpts, " bytes."
+         CALL juDFT_error(TRIM(ADJUSTL(errorString)), calledby = 'eig66_mem')
+      END IF
 
       !d%olap 
       if(l_olap) then

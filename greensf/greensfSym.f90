@@ -3,18 +3,22 @@ MODULE m_greensfSym
    USE m_constants
    USE m_types
    USE m_symMMPmat
+   USE m_rotMMPmat
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE greensfSym(ikpt_i,i_elem,i_elemLO,nLO,natom,l,lp,l_intersite,l_sphavg,ispin,&
-                         sym,atomFactor,atomDiff,bk,addPhase,im,greensfBZintCoeffs)
+   SUBROUTINE greensfSym(ikpt_i,i_elem,i_elemLO,nLO,atomType,natom,l,lp,l_intersite,l_sphavg,ispin,&
+                         sym,atomFactor,atomDiff,bk,addPhase,noco,nococonv,im,greensfBZintCoeffs)
 
+      TYPE(t_noco),                 INTENT(IN)     :: noco
+      TYPE(t_nococonv),             INTENT(IN)     :: nococonv
       INTEGER,                      INTENT(IN)     :: ikpt_i
       INTEGER,                      INTENT(IN)     :: i_elem
       INTEGER,                      INTENT(IN)     :: i_elemLO
       INTEGER,                      INTENT(IN)     :: nLO
+      INTEGER,                      INTENT(IN)     :: atomType
       INTEGER,                      INTENT(IN)     :: natom
       INTEGER,                      INTENT(IN)     :: l
       INTEGER,                      INTENT(IN)     :: lp
@@ -31,12 +35,14 @@ MODULE m_greensfSym
 
       INTEGER imat,iBand,iLO
       COMPLEX, ALLOCATABLE :: imSym(:,:)
+      COMPLEX, ALLOCATABLE :: imSym_tmp(:,:,:)
 
       !$OMP parallel default(none) &
-      !$OMP shared(ikpt_i,i_elem,i_elemLO,nLO,natom,l,lp,l_intersite,l_sphavg)&
-      !$OMP shared(ispin,sym,atomFactor,addPhase,bk,atomDiff,im,greensfBZintCoeffs)&
-      !$OMP private(imat,iBand,imSym,iLO)
+      !$OMP shared(ikpt_i,i_elem,i_elemLO,nLO,atomType,natom,l,lp,l_intersite,l_sphavg)&
+      !$OMP shared(ispin,sym,atomFactor,addPhase,bk,atomDiff,im,greensfBZintCoeffs,noco,nococonv)&
+      !$OMP private(imat,iBand,imSym,imSym_tmp,iLO)
       ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
+      ALLOCATE(imSym_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1),source=cmplx_0)
       !$OMP do collapse(2)
       DO imat = 1, SIZE(im,4)
          DO iBand = 1, SIZE(im,3)
@@ -46,6 +52,18 @@ MODULE m_greensfSym
             ELSE
                imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3))
             ENDIF
+
+            !Rotate into the local real frame
+            IF(noco%l_noco) THEN
+               imSym_tmp(:,:,1) = imSym
+               imSym_tmp = rotMMPmat(imSym_tmp,0.0,-nococonv%beta(atomType),-nococonv%alph(atomType),l)
+               imSym = imSym_tmp(:,:,1)
+            ELSE IF(noco%l_soc) THEN
+               imSym_tmp(:,:,1) = imSym
+               imSym_tmp = rotMMPmat(imSym_tmp,0.0,-nococonv%theta,-nococonv%phi,l)
+               imSym = imSym_tmp(:,:,1)
+            ENDIF
+
             IF(l_sphavg) THEN
                !Spherically averaged (already multiplied with scalar products)
                greensfBZintCoeffs%sphavg(iBand,:,:,i_elem,ikpt_i,ispin) = &

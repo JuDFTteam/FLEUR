@@ -27,9 +27,6 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     INTEGER ierr
-    !     ..
-    !INCLUDE 'mpif.h'
-    !
     !
     ! -> Broadcast the arrays:
 #ifdef CPP_MPI

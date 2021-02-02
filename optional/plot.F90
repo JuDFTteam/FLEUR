@@ -749,7 +749,7 @@ CONTAINS
      CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
          CALL timestart("loop over points")
-         print*, "loop over points", fmpi%irank
+         !print*, "loop over points", fmpi%irank
          !loop over all points
          !strt=  fmpi%irank*(grid(3)-1)/fmpi%isize + 1
          !fin =   ((fmpi%irank+1)*(grid(3)-1))/fmpi%isize
