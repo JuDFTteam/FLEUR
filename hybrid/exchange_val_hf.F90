@@ -265,7 +265,7 @@ CONTAINS
             if (mat_ex%l_real) then
 #ifdef _OPENACC
                call timestart("cpy cprod")
-               CPP_cprod_r  = cprod_vv%data_r
+               call dlacpy("N", size(cprod_vv%data_r, 1), size(cprod_vv%data_r, 2), cprod_vv%data_r, size(cprod_vv%data_r, 1), CPP_cprod_r, size(CPP_cprod_r,1))
                call timestop("cpy cprod")
 #endif
                !$acc enter data copyin(r_coul_wavf, CPP_cprod_r)
@@ -285,7 +285,7 @@ CONTAINS
             else
 #ifdef _OPENACC
                call timestart("cpy cprod")
-               CPP_cprod_c  = cprod_vv%data_c
+               call zlacpy("N", size(cprod_vv%data_c, 1), size(cprod_vv%data_c, 2), cprod_vv%data_c, size(cprod_vv%data_c, 1), CPP_cprod_c, size(CPP_cprod_c,1))
                call timestop("cpy cprod")
 #endif
                !$acc enter data copyin(c_coul_wavf, CPP_cprod_c)
