@@ -35,7 +35,7 @@ build-gfortran-hdf5:
     - build-gfortran-hdf5
   before_script:
     - apt-get -yq install python3-pip
-    - pip3 install pytest, pytest-dependency
+    - pip3 install pytest pytest-dependency
   script:
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
@@ -89,7 +89,7 @@ test-gfortran-serial:
     - build-gfortran-serial
   before_script:
     - apt-get -yq install python3-pip
-    - pip3 install pytest, pytest-dependency
+    - pip3 install pytest pytest-dependency
   script:
     - ulimit -s unlimited
     - cd $CI_PROJECT_DIR
@@ -167,7 +167,7 @@ test-pgi:
     - build-pgi
   before_script:
     - apt-get -yq install python3-pip
-    - pip3 install pytest, pytest-dependency
+    - pip3 install pytest pytest-dependency
   script:
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI=time
@@ -238,7 +238,7 @@ test-intel:
      - build-intel
   before_script:
     - apt-get -yq install python3-pip
-    - pip3 install pytest, pytest-dependency
+    - pip3 install pytest pytest-dependency
   script:
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
@@ -264,7 +264,7 @@ gfortran-coverage:
   needs: []
   before_script:
     - apt-get -yq install python3-pip
-    - pip3 install pytest, pytest-dependency
+    - pip3 install pytest pytest-dependency
   script:
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
