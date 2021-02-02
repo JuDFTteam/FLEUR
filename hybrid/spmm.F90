@@ -256,7 +256,7 @@ contains
 
       call timestart("reorder_back")
       !$OMP PARALLEL DO default(none) &
-      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_hlp)
+      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_out)
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out(:, i_vec))
       enddo
@@ -528,7 +528,7 @@ contains
 
       call timestart("reorder back")
       !$OMP PARALLEL DO default(none) &
-      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_hlp)
+      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_out)
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out(:, i_vec))
       enddo
