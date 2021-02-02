@@ -390,7 +390,7 @@ contains
          !$OMP PARALLEL DO default(none) schedule(dynamic)&
          !$OMP private(iatom, itype, indx0, l, m, indx1, indx2, iatom1, indx3) &
          !$OMP private(indx4, i_vec, n_size, itype1, ishift1,ieq1) &
-         !$OMP shared(fi, n_vec, mpdata, hybdat, ibasm, mat_out, mat_hlp, ikpt, mat_in_line, mt3_tmp, max_l_cut)
+         !$OMP shared(fi, n_vec, mpdata, hybdat, ibasm, mat_out, mat_hlp, ikpt, mat_in_line, mt3_tmp, mt2_tmp, max_l_cut)
 #endif
          do iatom = 1,fi%atoms%nat
             itype = fi%atoms%itype(iatom)
