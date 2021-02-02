@@ -39,14 +39,14 @@ contains
       mat_hlp = mat_in%data_r
       n_vec = mat_in%matsize2
 
-      call timestart("reorder_forw (OMP)")
+      call timestart("reorder_forw")
       !$OMP PARALLEL DO default(none) &
       !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_hlp)
       do i_vec = 1, n_vec
          call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp(:, i_vec))
       enddo
       !$OMP end parallel do
-      call timestop("reorder_forw (OMP)")
+      call timestop("reorder_forw")
 
       ibasm = calc_ibasm(fi, mpdata)
 
@@ -255,9 +255,12 @@ contains
       END IF
 
       call timestart("reorder_back")
+      !$OMP PARALLEL DO default(none) &
+      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_hlp)
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out(:, i_vec))
       enddo
+      !$OMP END PARALLEL DO
       call timestop("reorder_back")
       call timestop("spmm_invs")
    end subroutine spmm_invs
@@ -291,10 +294,14 @@ contains
       mat_hlp = mat_in%data_c
       n_vec = mat_in%matsize2
 
+      
       call timestart("reorder forw")
+      !$OMP PARALLEL DO default(none) &
+      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_hlp)
       do i_vec = 1, n_vec
          call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp(:, i_vec))
       enddo
+      !$OMP END PARALLEL DO
       call timestop("reorder forw")
 
       ibasm = calc_ibasm(fi, mpdata)
@@ -520,9 +527,12 @@ contains
       END IF
 
       call timestart("reorder back")
+      !$OMP PARALLEL DO default(none) &
+      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_hlp)
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out(:, i_vec))
       enddo
+      !$OMP END PARALLEL DO
       call timestop("reorder back")
       call timestop("spmm_noinvs")
    end subroutine spmm_noinvs
