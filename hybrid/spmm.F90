@@ -509,7 +509,7 @@ contains
          END DO
       END DO
 
-      !$acc exit data copyout(mat_out) delete(mat_hlp)
+      
 
       call timestop("dot prod")
 
@@ -517,6 +517,8 @@ contains
          call timestart("gamma point 2 noinv")
          iatom = 0
          indx0 = 0
+
+         max_l_cut = maxval(fi%hybinp%lcutm1)
          DO itype = 1, fi%atoms%ntype
             ishift = sum([((2*l + 1)*(mpdata%num_radbasfn(l, itype) - 1), l=0, fi%hybinp%lcutm1(itype))])
             DO ieq = 1, fi%atoms%neq(itype)
@@ -525,20 +527,22 @@ contains
                indx2 = indx1 + mpdata%num_radbasfn(0, itype) - 2
                n_size = mpdata%num_radbasfn(0, itype) - 1
 
-               !call ZGEMV(TRANS, M, N,       ALPHA,   A,                LDA,             
-               call zgemv("T", n_size, n_vec, cmplx_1, mat_hlp(indx1,1), size(mat_hlp,1), &
-               !  X,                                              INCX, BETA,   Y,                        INCY )
-                  mt2_tmp(1,0,maxval(fi%hybinp%lcutm1) + 1, iatom), 1, cmplx_1, mat_out(hybdat%nbasp + 1, 1), size(mat_out,1))
+               !$acc host_data use_device(mat_hlp, mt2_tmp, mat_out)
+               call CPP_zgemv("T", n_size, n_vec, cmplx_1, mat_hlp(indx1,1), sz_hlp, &
+                  mt2_tmp(1,0,max_l_cut + 1, iatom), 1, cmplx_1, mat_out(hybdat%nbasp + 1, 1), sz_out)
+               !$acc end host_data
                indx0 = indx0 + ishift
             END DO
          END DO
 
-         !we need mt3_tmp as conjg
+         !$acc kernels present(mt3_tmp)
          mt3_tmp = conjg(mt3_tmp)
-
+         !$acc end kernels
+#ifndef _OPENACC
          !$OMP PARALLEL DO default(none) &
          !$OMP private(iatom, itype, indx1, iatom1, indx2, itype1, ishift1, indx3, indx4, n_size) &
          !$OMP shared(fi, mpdata, hybdat,mat_out, mat_hlp, ibasm, ikpt, n_vec, mt3_tmp)
+#endif
          do iatom = 1, fi%atoms%nat 
             itype = fi%atoms%itype(iatom)
             indx1 = ibasm + sum([((fi%hybinp%lcutm1(fi%atoms%itype(iat)) + 1)**2, iat=1,iatom-1)]) + 1
@@ -553,23 +557,23 @@ contains
                      indx4 = indx3 + mpdata%num_radbasfn(0, itype1) - 2
                      n_size = mpdata%num_radbasfn(0, itype1) - 1
 
-                     !call ZGEMV(TRANS, M, N,       ALPHA,   A,                LDA,             X,                        INCX,
-                     call zgemv("T", n_size, n_vec, cmplx_1, mat_hlp(indx3,1), size(mat_hlp,1), mt3_tmp(1, iatom, iatom1), 1, &
-                     !          BETA,    Y,                INCY )
-                                cmplx_1, mat_out(indx1,1), size(mat_out,1))
+                     !$acc host_data use_device(mat_hlp, mt3_tmp, mat_out)
+                     call CPP_zgemv("T", n_size, n_vec, cmplx_1, mat_hlp(indx3,1), sz_hlp, mt3_tmp(1, iatom, iatom1), 1, &
+                                cmplx_1, mat_out(indx1,1), sz_out)
+                     !$acc end host_data
                   endif
                END DO
                indx2 = indx2 + fi%atoms%neq(itype1)*ishift1
             END DO
          END DO
+#ifndef _OPENACC
          !$OMP END PARALLEL DO
-
+#endif
          !$acc exit data delete(mt3_tmp)
          deallocate(mt3_tmp) 
          call timestop("gamma point 2 noinv")
       END IF
-
-      !$acc exit data delete(mt2_tmp)
+      !$acc exit data copyout(mat_out) delete(mt2_tmp, mat_hlp)
       deallocate(mt2_tmp)
 
       call timestart("reorder back")
