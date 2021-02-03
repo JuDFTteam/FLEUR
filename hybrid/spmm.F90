@@ -541,7 +541,7 @@ contains
 #ifndef _OPENACC
          !$OMP PARALLEL DO default(none) &
          !$OMP private(iatom, itype, indx1, iatom1, indx2, itype1, ishift1, indx3, indx4, n_size) &
-         !$OMP shared(fi, mpdata, hybdat,mat_out, mat_hlp, ibasm, ikpt, n_vec, mt3_tmp)
+         !$OMP shared(fi, mpdata, hybdat,mat_out, mat_hlp, ibasm, ikpt, n_vec, mt3_tmp, sz_out, sz_hlp)
 #endif
          do iatom = 1, fi%atoms%nat 
             itype = fi%atoms%itype(iatom)
