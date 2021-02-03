@@ -187,6 +187,7 @@ CONTAINS
       
       call timestart("q_loop")
       DO jq = 1, size(k_pack%q_packs)
+         call timestart("initial setup")
          iq = k_pack%q_packs(jq)%ptr
          iq_p = fi%kpts%bkp(iq)
 
@@ -195,12 +196,15 @@ CONTAINS
          n_parts = size(k_pack%q_packs(jq)%band_packs)
          start  = k_pack%q_packs(jq)%submpi%rank + 1
          stride = k_pack%q_packs(jq)%submpi%size
+         call timestop("initial setup")
          do ipart = start, n_parts, stride
             !if (n_parts > 1) write (*, *) "Part ("//int2str(ipart)//"/"//int2str(n_parts)//") ik= "//int2str(ik)//" jq= "//int2str(jq)
             psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
             ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
+            call timestart("alloc & copy")
             call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik,jsp), mat_name="cprod_vv")
             call alloc_dev_cpy(cprod_vv, CPP_cprod_r, CPP_cprod_c)
+            call timestop("alloc & copy")
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
                                       hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
@@ -232,6 +236,7 @@ CONTAINS
             ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
             ! from IBZ to current k-point
 
+            call timestart("middle part")
             IF (fi%kpts%bkp(iq) /= iq) THEN
                call carr3_vv%init(cprod_vv, mat_name="carr_3")
                call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik,jsp), iq, psize, phase_vv, cprod_vv, carr3_vv)
@@ -247,7 +252,8 @@ CONTAINS
                allocate(c_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr, source=cmplx_0)
             endif
             if(ierr /= 0) call judft_error("can't alloc coul_wavf")
-
+            call timestop("middle part")
+            
             call timestart("exchange matrix")
             call timestart("sparse matrix products")
             IF (mat_ex%l_real) THEN
