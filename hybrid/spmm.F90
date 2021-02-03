@@ -385,7 +385,8 @@ contains
          mat_in_line = mat_in%data_c(hybdat%nbasp + 1, :)
          call timestart("gamma point 1 noinv")
 #ifdef _OPENACC
-         !$acc data copyin(mat_in_line, mt3_tmp)
+         !$acc enter data copyin(mt3_tmp)
+         !$acc data copyin(mat_in_line)
 #else
          !$OMP PARALLEL DO default(none) schedule(dynamic)&
          !$OMP private(iatom, itype, indx0, l, m, indx1, indx2, iatom1, indx3) &
@@ -437,7 +438,7 @@ contains
 #else
          !$OMP END PARALLEL DO
 #endif
-         deallocate(mt3_tmp, mat_in_line)
+         deallocate(mat_in_line)
          call timestop("gamma point 1 noinv")
       END IF
       ! compute vecout for the index-range from ibasm+1:nbasm
@@ -531,9 +532,12 @@ contains
             END DO
          END DO
 
+         !we need mt3_tmp as conjg
+         mt3_tmp = conjg(mt3_tmp)
+
          !$OMP PARALLEL DO default(none) &
          !$OMP private(iatom, itype, indx1, iatom1, indx2, itype1, ishift1, indx3, indx4, n_size) &
-         !$OMP shared(fi, mpdata, hybdat,mat_out, mat_hlp, ibasm, ikpt, n_vec)
+         !$OMP shared(fi, mpdata, hybdat,mat_out, mat_hlp, ibasm, ikpt, n_vec, mt3_tmp)
          do iatom = 1, fi%atoms%nat 
             itype = fi%atoms%itype(iatom)
             indx1 = ibasm + sum([((fi%hybinp%lcutm1(fi%atoms%itype(iat)) + 1)**2, iat=1,iatom-1)]) + 1
@@ -547,16 +551,20 @@ contains
                      indx3 = indx2 + (ieq1 - 1)*ishift1 + 1
                      indx4 = indx3 + mpdata%num_radbasfn(0, itype1) - 2
                      n_size = mpdata%num_radbasfn(0, itype1) - 1
-                     do i_vec = 1, n_vec
-                        mat_out(indx1, i_vec) = mat_out(indx1, i_vec) &
-                                                         + dot_product(hybdat%coul(ikpt)%mt3_c(:n_size, iatom, iatom1), mat_hlp(indx3:indx4, i_vec))
-                     enddo
+
+                     !call ZGEMV(TRANS, M, N,       ALPHA,   A,                LDA,             X,                        INCX,
+                     call zgemv("T", n_size, n_vec, cmplx_1, mat_hlp(indx3,1), size(mat_hlp,1), mt3_tmp(1, iatom, iatom1), 1, &
+                     !          BETA,    Y,                INCY )
+                                cmplx_1, mat_out(indx1,1), size(mat_out,1))
                   endif
                END DO
                indx2 = indx2 + fi%atoms%neq(itype1)*ishift1
             END DO
          END DO
          !$OMP END PARALLEL DO
+
+         !$acc exit data delete(mt3_tmp)
+         deallocate(mt3_tmp) 
          call timestop("gamma point 2 noinv")
       END IF
 
