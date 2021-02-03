@@ -508,9 +508,9 @@ contains
             END DO
          END DO
       END DO
+      
+      !$acc exit data copyout(mat_out) delete(mat_hlp)
 
-      !$acc exit data copyout(mat_out) delete(mat_hlp, mt2_tmp)
-      deallocate(mt2_tmp)
       call timestop("dot prod")
 
       IF (ikpt == 1) THEN
@@ -524,10 +524,11 @@ contains
                indx1 = indx0 + 1
                indx2 = indx1 + mpdata%num_radbasfn(0, itype) - 2
                n_size = mpdata%num_radbasfn(0, itype) - 1
-               do i_vec = 1, n_vec
-                  mat_out(hybdat%nbasp + 1, i_vec) = mat_out(hybdat%nbasp + 1, i_vec) &
-                                                            + dot_product(hybdat%coul(ikpt)%mt2_c(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), mat_hlp(indx1:indx2, i_vec))
-               enddo
+
+               !call ZGEMV(TRANS, M, N,       ALPHA,   A,                LDA,             
+               call zgemv("T", n_size, n_vec, cmplx_1, mat_hlp(indx1,1), size(mat_hlp,1), &
+               !  X,                                              INCX, BETA,   Y,                        INCY )
+                  mt2_mat_out(1,0,maxval(fi%hybinp%lcutm1) + 1, iatom), 1, cmplx_1, mat_out(hybdat%nbasp + 1, 1), size(mat_out,1))
                indx0 = indx0 + ishift
             END DO
          END DO
@@ -567,6 +568,9 @@ contains
          deallocate(mt3_tmp) 
          call timestop("gamma point 2 noinv")
       END IF
+
+      !$acc exit data delete(mt2_tmp)
+      deallocate(mt2_tmp)
 
       call timestart("reorder back")
       !$OMP PARALLEL DO default(none) &
