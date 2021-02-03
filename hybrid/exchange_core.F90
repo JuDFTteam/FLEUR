@@ -83,17 +83,6 @@ CONTAINS
       nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
       
       call exchange%alloc(mat_ex%l_real, hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
-      if(exchange%l_real) then
-         !$acc enter data create(exchange, exchange%data_r)
-         !$acc kernels present(exchange, exchange%data_r)
-         exchange%data_r = 0.0
-         !$acc end kernels
-      else
-         !$acc enter data create(exchange, exchange%data_c)
-         !$acc kernels present(exchange, exchange%data_c)
-         exchange%data_c = cmplx_0
-         !$acc end kernels
-      endif
       allocate(fprod(fi%atoms%jmtd, 5), stat=ierr)
       if(ierr /= 0) call judft_error("alloc fprod failed")
       
@@ -107,7 +96,16 @@ CONTAINS
       if(ierr /= 0) call judft_error("can't alloc dot_result")
       ld_dotres   = size(dot_result,1)
 
-      !$acc enter data copyin(indx_sest, nsest, hybdat, hybdat%nbands) create(dot_result)
+      !$acc data copyin(indx_sest, nsest, hybdat, hybdat%nbands) create(dot_result) copyout(exchange, exchange%data_r, exchange%data_c)
+      if(exchange%l_real) then
+         !$acc kernels present(exchange, exchange%data_r)
+         exchange%data_r = 0.0
+         !$acc end kernels
+      else 
+         !$acc kernels present(exchange, exchange%data_c)
+         exchange%data_c = cmplx_0
+         !$acc end kernels
+      endif
       do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
          itype = fi%atoms%itype(iatom)
          DO l1 = 0, hybdat%lmaxc(itype)
@@ -273,12 +271,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      if(exchange%l_real) then
-         !$acc exit data copyout(exchange%data_r)
-      else 
-         !$acc exit data copyout(exchange%data_c)
-      endif
-      !$acc exit data delete(indx_sest, nsest, hybdat, hybdat%nbands, dot_result, exchange)
+      !$acc end data
       deallocate(dot_result)
 
       call timestop("atom_loop")
