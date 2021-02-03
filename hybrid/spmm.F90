@@ -508,7 +508,7 @@ contains
             END DO
          END DO
       END DO
-      
+
       !$acc exit data copyout(mat_out) delete(mat_hlp)
 
       call timestop("dot prod")
@@ -528,7 +528,7 @@ contains
                !call ZGEMV(TRANS, M, N,       ALPHA,   A,                LDA,             
                call zgemv("T", n_size, n_vec, cmplx_1, mat_hlp(indx1,1), size(mat_hlp,1), &
                !  X,                                              INCX, BETA,   Y,                        INCY )
-                  mt2_mat_out(1,0,maxval(fi%hybinp%lcutm1) + 1, iatom), 1, cmplx_1, mat_out(hybdat%nbasp + 1, 1), size(mat_out,1))
+                  mt2_tmp(1,0,maxval(fi%hybinp%lcutm1) + 1, iatom), 1, cmplx_1, mat_out(hybdat%nbasp + 1, 1), size(mat_out,1))
                indx0 = indx0 + ishift
             END DO
          END DO
