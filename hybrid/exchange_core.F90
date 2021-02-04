@@ -96,7 +96,8 @@ CONTAINS
       if(ierr /= 0) call judft_error("can't alloc dot_result")
       ld_dotres   = size(dot_result,1)
 
-      !$acc data copyin(indx_sest, nsest, hybdat, hybdat%nbands) create(dot_result) copyout(exchange, exchange%data_r, exchange%data_c)
+      
+      !$acc data copyin(indx_sest, nsest, hybdat, hybdat%nbands, exchange) create(dot_result, exchange%data_r, exchange%data_c)
       if(exchange%l_real) then
          !$acc kernels present(exchange, exchange%data_r)
          exchange%data_r = 0.0
@@ -272,6 +273,8 @@ CONTAINS
          END DO
       END DO
       !$acc end data
+
+
       deallocate(dot_result)
 
       call timestop("atom_loop")
