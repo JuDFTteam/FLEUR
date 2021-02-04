@@ -110,7 +110,7 @@ CONTAINS
       INTEGER                         :: itype, ieq, iatom, ratom, ierr
       INTEGER                         ::  iband1, iband2, iatom0
       INTEGER                         :: i, j, ic, ic1, ic2
-      INTEGER                         :: ok
+      INTEGER                         :: ok, ld_olapmt, ld_cmthlp, ld_tmp, ld_wavefolap
       INTEGER                         :: l, lm
       INTEGER                         :: n1, n2, nn
       INTEGER                         :: ndb1, ndb2
@@ -130,7 +130,7 @@ CONTAINS
       REAL                            :: rotkpt(3), g(3)
       complex, ALLOCATABLE            :: olapmt(:, :, :, :)
 
-      COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
+      COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :), tmp(:,:), carr_tmp(:)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :)
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
@@ -267,7 +267,15 @@ CONTAINS
       allocate(cmthlp(size(cmt,2), size(cmt,1) ), stat=ierr)
       if(ierr /= 0) call judft_error("can't alloc cmthlp")
 
+      allocate(tmp(maxval(mpdata%num_radfun_per_l), hybdat%nbands(nk,jsp)), stat=ierr)
+      if(ierr /= 0 ) call judft_error("cant't alloc tmp")
+
       call timestart("calc wavefolap")
+      ld_olapmt = size(olapmt,1)
+      ld_cmthlp = size(cmthlp,1)
+      ld_tmp    = size(tmp, 1)
+      ld_wavefolap = size(wavefolap,1)
+
       do iatom = 1+submpi%rank, fi%atoms%nat, submpi%size
          itype = fi%atoms%itype(iatom)
          cmthlp = transpose(cmt(:,:,iatom))
@@ -275,22 +283,21 @@ CONTAINS
          DO l = 0, fi%atoms%lmax(itype)
             DO M = -l, l
                nn = mpdata%num_radfun_per_l(l, itype)
-               DO iband1 = 1, hybdat%nbands(nk,jsp)
-                  !ZGEMV ( TRANS, M, N,    ALPHA,   A,                   LDA, 
-                  !          X,                  INCX,  BETA,    Y, INCY )
-                  call zgemv("N", nn, nn, cmplx_1, olapmt(1,1,l,itype), size(olapmt,1), &
-                             cmthlp(lm+1,iband1), 1,    cmplx_0, carr, 1)
-                  
-                  !ZGEMV ( TRANS, M, N,       ALPHA,   A,            LDA, 
-                  !          X,      INCX,  BETA,    Y, INCY )  
-                  call zgemv("C", nn, hybdat%nbands(nk,jsp), cmplx_1, cmthlp(lm+1, 1), size(cmthlp,1), &
-                             carr(1), 1,  cmplx_1, wavefolap(1,iband1), 1)
-               END DO
+
+               !call zgemm(transa, transb, m,  n,                     k,  alpha,   a,                   lda,      
+               call zgemm("N", "N",      nn, hybdat%nbands(nk,jsp), nn, cmplx_1, olapmt(1,1,l,itype), ld_olapmt, &
+               !         b,              ldb,       beta,    c,      ldc)
+                         cmthlp(lm+1,1), ld_cmthlp, cmplx_0, tmp, ld_tmp)
+
+               !call zgemm(transa, transb, m,              n,                      k,  alpha,   a,                   lda,   
+               call zgemm("C", "N", hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp), nn, cmplx_1, cmthlp(lm+1, 1), ld_cmthlp, &
+               !         b,   ldb,    beta,    c,      ldc)
+                         tmp, ld_tmp, cmplx_1, wavefolap, ld_wavefolap)
                lm = lm + nn
             END DO
          END DO
       END DO
-
+      
       deallocate(cmthlp)
 #ifdef CPP_MPI
       call timestart("allreduce wavefolap")

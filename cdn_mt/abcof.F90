@@ -115,7 +115,7 @@ CONTAINS
        force%aveccof = CMPLX(0.0,0.0)
        force%bveccof = CMPLX(0.0,0.0)
        force%cveccof = CMPLX(0.0,0.0)
-       ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
+       ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+1,MAXVAL(lapw%nv)))
        ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
        ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
        ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
@@ -264,7 +264,7 @@ CONTAINS
              CALL timestop("local orbitals")
 
              IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
-                !$acc update self(abcoeffs,work_c) !Force part not on GPU
+                !$acc  update self(abcoeffs,work_c)
                 CALL timestart("transpose work array")
                 ! For transposing the work array an OpenMP parallelization with explicit loops is used.
                 ! This solution works fastest on all compilers. Note that this section can actually be
@@ -295,9 +295,9 @@ CONTAINS
              ! (The complementary case is treated far below)
              IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
                 CALL timestart("invsym atoms")
-                jatom = sym%invsatnr(iAtom)
                 !$acc update self(acof,bcof)
-                DO l = 0,atoms%lmax(iType)
+                jatom = sym%invsatnr(iAtom)
+                   DO l = 0,atoms%lmax(iType)
                       ll1 = l* (l+1)
                       DO m = -l,l
                          lm = ll1 + m
@@ -308,16 +308,14 @@ CONTAINS
                          !CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW),1, acof(:,lmp,jatom),1)
                          !CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
                        END DO
-                END DO
-                !$acc update device(acof,bcof)
+                   END DO
+                   !$acc update device(acof,bcof)
                 CALL timestop("invsym atoms")
-
              END IF ! IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1)
 
              ! Force contributions
              IF (atoms%l_geo(iType).AND.l_force) THEN
                 CALL timestart("force contributions")
-
                 DO iLAPW = 1,nvmax
 
                    fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
@@ -338,6 +336,7 @@ CONTAINS
                    END IF
                    fgpl(:,iLAPW) = MATMUL(fgr,cell%bmat)
                 ENDDO
+
                 helpMat_c = abCoeffs(1+abSize:,:)
                 workTrans_cf = 0.0
                 CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,size(abcoeffs),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
@@ -357,6 +356,7 @@ CONTAINS
                    CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,size(helpMat_c),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
                 ENDDO
+
                 IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
                    DO iLAPW = 1,nvmax
                       DO l = 0,atoms%lmax(iType)
@@ -382,7 +382,6 @@ CONTAINS
                 END IF
                 CALL timestop("force contributions")
              END IF
-
              IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
                 IF (zmat%l_real) THEN
                    DEALLOCATE (workTrans_r)
