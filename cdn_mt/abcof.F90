@@ -311,7 +311,7 @@ CONTAINS
                 END DO
                 !$acc update device(acof,bcof)
                 CALL timestop("invsym atoms")
-                
+
              END IF ! IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1)
 
              ! Force contributions
@@ -340,8 +340,8 @@ CONTAINS
                 ENDDO
                 helpMat_c = abCoeffs(1+abSize:,:)
                 workTrans_cf = 0.0
-                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
-                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,helpMat_c,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
+                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,size(abcoeffs),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
+                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,helpMat_c,size(helpMat_c),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
                 DO i =1,3
                    IF (zmat%l_real) THEN
                       DO iLAPW = 1,nvmax
@@ -352,9 +352,9 @@ CONTAINS
                          workTrans_cf(:,iLAPW) = workTrans_c(:,iLAPW) * fgpl(i,iLAPW)
                       ENDDO
                    ENDIF
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),helpMat_force,ne)
+                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,size(abCoeffs),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%aveccof(i,:,:,iAtom) = force%aveccof(i,:,:,iAtom) + helpMat_force(:,:)
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),helpMat_force,ne)
+                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,size(helpMat_c),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
                 ENDDO
                 IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
