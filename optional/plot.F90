@@ -224,13 +224,9 @@ CONTAINS
 
                   rho(iri,ilh,ityp,1) = cdn11 + cdn22
                   rho(iri,ilh,ityp,2) = 2.0*REAL(cdn21)
-                  !! Note: The minus sign in the following line is temporary to
-                  !!       adjust for differences in the offdiagonal part of the
-                  !!       density between this FLEUR version and ancient v0.26 .
-                  !!
-                  !! TODO: Should that still be here? It effectively amounts to a
-                  !!       conjugation of the density matrix.
-                  rho(iri,ilh,ityp,3) = -2.0*AIMAG(cdn21)
+                  ! Note: The missing minus sign in the following line is a discrepancy
+                  ! from the other regions (IR, vac). But it was like that in version v0.26.
+                  rho(iri,ilh,ityp,3) = 2.0*AIMAG(cdn21)
                   rho(iri,ilh,ityp,4) = cdn11 - cdn22
                END IF
             END DO
