@@ -53,7 +53,7 @@ CONTAINS
 
     !     .. Local Scalars ..
     COMPLEX ctmp,term1,work(ne)
-    INTEGER i,j,l,ll1,lm,nbasf,nbasf2,m,na2,lmp
+    INTEGER i,j,l,ll1,lm,nbasf,m,na2,lmp
     !     ..
     !     ..
     term1 = 2 * tpi_const/SQRT(cell%omtil) * ((atoms%rmt(ntyp)**2)/2) * phase
@@ -79,13 +79,13 @@ CONTAINS
     endif
 
     !$acc kernels default(none) present(acof,bcof,ccof,alo1,blo1,clo1,ccchi,ylm)create(ctmp) &
-    !$acc copyin(work,na,term1,l,ne,ll1,sym,sym%invsat,noco,noco%l_soc,sym%invs)
+    !$acc copyin(work,na,term1,l,ne,ll1,sym,sym%invsat,noco)
     !$acc loop seq private(i,m,lm,ctmp,na2,lmp)
     DO i = 1,ne
       !$acc loop seq
       DO m = -l,l
           lm = ll1 + m
-
+          ctmp=term1*conjg(ylm(ll1+m+1))*work(i)
           acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)
           bcof(i,lm,na) = bcof(i,lm,na) + ctmp*blo1(lo)
           ccof(m,i,lo,na) = ccof(m,i,lo,na) + ctmp*clo1(lo)

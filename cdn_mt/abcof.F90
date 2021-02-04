@@ -115,7 +115,7 @@ CONTAINS
        force%aveccof = CMPLX(0.0,0.0)
        force%bveccof = CMPLX(0.0,0.0)
        force%cveccof = CMPLX(0.0,0.0)
-       ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
+       ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+1,MAXVAL(lapw%nv)))
        ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
        ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
        ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
@@ -342,10 +342,7 @@ CONTAINS
 
                 helpMat_c = abCoeffs(1+abSize:,:)
                 workTrans_cf = 0.0
-                print *,shape(s2h_e)
-                print *,shape(abcoeffs)
-                print *,shape(force%e1cof)
-                print *,ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax
+
                 CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,size(abcoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
                 CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,helpMat_c,size(helpMat_c,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
                 DO i =1,3
