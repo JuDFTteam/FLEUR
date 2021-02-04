@@ -97,14 +97,12 @@ CONTAINS
       ld_dotres   = size(dot_result,1)
 
       
-      !$acc data copyin(indx_sest, nsest, hybdat, hybdat%nbands, exchange) create(dot_result)
+      !$acc data copyin(indx_sest, nsest, hybdat, hybdat%nbands, exchange) create(dot_result, exchange%data_r, exchange%data_c)
       if(exchange%l_real) then
-         !$acc enter data create(exchange%data_r)
          !$acc kernels present(exchange, exchange%data_r)
          exchange%data_r = 0.0
          !$acc end kernels
       else 
-         !$acc enter data create(exchange%data_c)
          !$acc kernels present(exchange, exchange%data_c)
          exchange%data_c = cmplx_0
          !$acc end kernels
@@ -276,11 +274,6 @@ CONTAINS
       END DO
       !$acc end data
 
-      if(exchange%l_real) then
-         !$acc exit data copyout(exchange%data_r)
-      else
-         !$acc exit data copyout(exchange%data_c)
-      endif
 
       deallocate(dot_result)
 
