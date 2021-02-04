@@ -99,12 +99,12 @@ CONTAINS
 
     ! Initializations
     acof_size=size(acof,1)
-    !$acc enter data create(acof,bcof,abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
-    !$acc kernels present(acof,bcof) default(none)
+    !$acc enter data create(acof,bcof,ccof,abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc kernels present(acof,bcof,ccof) default(none)
     acof(:,:,:)   = CMPLX(0.0,0.0)
     bcof(:,:,:)   = CMPLX(0.0,0.0)
-    !$acc end kernels
     ccof(:,:,:,:) = CMPLX(0.0,0.0)
+    !$acc end kernels
     l_force = .FALSE.
     IF(PRESENT(eig).AND.input%l_f) l_force = .TRUE.
     IF(l_force) THEN
@@ -115,7 +115,7 @@ CONTAINS
        force%aveccof = CMPLX(0.0,0.0)
        force%bveccof = CMPLX(0.0,0.0)
        force%cveccof = CMPLX(0.0,0.0)
-       ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+1,MAXVAL(lapw%nv)))
+       ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
        ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
        ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
        ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
@@ -235,6 +235,7 @@ CONTAINS
 
              CALL timestart("local orbitals")
              ! Treatment of local orbitals
+             !$acc data copyin(alo1,blo1,clo1,ccchi)create(ylm)
              DO lo = 1, atoms%nlo(iType)
                 DO nkvec = 1, lapw%nkvec(lo,iAtom)
                    iLAPW = lapw%kvec(nkvec,lo,iAtom)
@@ -257,10 +258,12 @@ CONTAINS
                    fgp = MATMUL(fgr,cell%bmat)
 
                    CALL ylm4(atoms%lmax(iType),fkp,ylm)
+                   !$acc update device(ylm)
                    CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,iType,iAtom,iLAPW,nkvec,&
                                  lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force)
                 END DO
              END DO ! loop over LOs
+             !$acc end data
              CALL timestop("local orbitals")
 
              IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
@@ -295,7 +298,7 @@ CONTAINS
              ! (The complementary case is treated far below)
              IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
                 CALL timestart("invsym atoms")
-                !$acc update self(acof,bcof)
+                !$acc update self(acof,bcof,work_c)
                 jatom = sym%invsatnr(iAtom)
                    DO l = 0,atoms%lmax(iType)
                       ll1 = l* (l+1)
@@ -339,8 +342,12 @@ CONTAINS
 
                 helpMat_c = abCoeffs(1+abSize:,:)
                 workTrans_cf = 0.0
-                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,size(abcoeffs),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
-                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,helpMat_c,size(helpMat_c),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
+                print *,shape(s2h_e)
+                print *,shape(abcoeffs)
+                print *,shape(force%e1cof)
+                print *,ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax
+                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,size(abcoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
+                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,helpMat_c,size(helpMat_c,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
                 DO i =1,3
                    IF (zmat%l_real) THEN
                       DO iLAPW = 1,nvmax
@@ -351,9 +358,9 @@ CONTAINS
                          workTrans_cf(:,iLAPW) = workTrans_c(:,iLAPW) * fgpl(i,iLAPW)
                       ENDDO
                    ENDIF
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,size(abCoeffs),CMPLX(0.0,0.0),helpMat_force,ne)
+                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,size(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%aveccof(i,:,:,iAtom) = force%aveccof(i,:,:,iAtom) + helpMat_force(:,:)
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,size(helpMat_c),CMPLX(0.0,0.0),helpMat_force,ne)
+                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,size(helpMat_c,1),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
                 ENDDO
 
@@ -392,7 +399,7 @@ CONTAINS
           END IF  ! invsatom == ( 0 v 1 )
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
-    !$acc exit data copyout(acof,bcof) delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc exit data copyout(acof,bcof,ccof) delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
     !$acc exit data delete(acof,bcof,abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
     !$acc exit data delete(fjgj)
     DEALLOCATE(work_c)
