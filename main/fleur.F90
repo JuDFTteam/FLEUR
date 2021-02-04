@@ -618,11 +618,14 @@ CONTAINS
             TYPE IS(t_forcetheo_ssdisp)
                l_forceTheorem = .TRUE.
          END SELECT
+         
          IF(l_forceTheorem.AND..NOT.l_cont) THEN
             IF(.NOT.l_lastIter) THEN
                l_lastIter = .TRUE.
                l_cont = .TRUE.
             END IF
+         ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
+            l_cont = .FALSE.
          END IF
 
          !CALL writeTimesXML()
