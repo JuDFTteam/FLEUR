@@ -514,6 +514,7 @@ CONTAINS
 #ifdef CPP_MPI
       USE mpi
 #endif
+      USE m_polangle
       ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
       ! plane wave representation and makes it/them into plottable .xsf file(s)
       ! according to a scheme given in plot_inp.
@@ -830,50 +831,8 @@ CONTAINS
                   END IF
 
                   IF (polar) THEN
+                     CALL pol_angle(xdnout(2),xdnout(3),xdnout(4),xdnout(6),xdnout(7))
                      xdnout(5) = SQRT(ABS(xdnout(2)**2+xdnout(3)**2+xdnout(4)**2))
-                     IF (xdnout(5)<eps) THEN
-                        xdnout(5)= 0.0
-                        xdnout(6)= -tpi_const
-                        xdnout(7)= -tpi_const
-                     ELSE
-                        DO j = 1, 3
-                           help(j) = xdnout(1+j)/xdnout(5)
-                        END DO
-                        IF (help(3)<0.5) THEN
-                           xdnout(6)= ACOS(help(3))
-                        ELSE
-                           xdnout(6)= pi_const/2.0-ASIN(help(3))
-                        END IF
-                        IF (SQRT(ABS(help(1)**2+help(2)**2)) < eps) THEN
-                           xdnout(7)= -tpi_const
-                        ELSE
-                           IF ( ABS(help(1)) > ABS(help(2)) ) THEN
-                              xdnout(7)= ABS(ATAN(help(2)/help(1)))
-                           ELSE
-                              xdnout(7)= pi_const/2.0-ABS(ATAN(help(1)/help(2)))
-                           END IF
-                           IF (help(2)<0.0) THEN
-                              xdnout(7)= -xdnout(7)
-                           END IF
-                           IF (help(1)<0.0) THEN
-                              xdnout(7)= pi_const-xdnout(7)
-                           END IF
-                           phi0=0
-                           DO WHILE (xdnout(7)-pi_const*phi0 > +pi_const)
-                              xdnout(7)= xdnout(7)-tpi_const
-                           END DO
-                           DO WHILE (xdnout(7)-pi_const*phi0 < -pi_const)
-                              xdnout(7)= xdnout(7)+tpi_const
-                           END DO
-                           IF (ABS(xdnout(2)-xdnout(3))<eps) THEN
-                              IF (xdnout(2)>0) THEN
-                                 xdnout(7)=pi_const/4.0
-                              ELSE
-                                 xdnout(7)=-3*pi_const/4.0
-                              END IF
-                           END IF
-                        END IF
-                     END IF
                      xdnout(6)= xdnout(6)/pi_const
                      xdnout(7)= xdnout(7)/pi_const
                   END IF ! (polar)
@@ -899,7 +858,6 @@ CONTAINS
          CALL timestop("loop over points")
 
          CALL timestart("output")
-         print*, "output"
          !Print out results of the different MPI processes in correct order.
          IF(fmpi%irank.EQ.0) THEN
             IF (xsf)  THEN
