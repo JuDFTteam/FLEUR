@@ -15,6 +15,7 @@ fft/types_fft_fftw.F90
 fft/types_fft_singleton.F90
 fft/types_fft_spfft.F90
 fft/types_fftGrid.f90
+fft/types_fft_cufft.F90
 
 )
 if (FLEUR_USE_FFTMKL)
