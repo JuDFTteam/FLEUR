@@ -236,7 +236,7 @@ CONTAINS
             ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
             ! from IBZ to current k-point
 
-            call timestart("middle part")
+            call timestart("bra_trafo stuff")
             IF (fi%kpts%bkp(iq) /= iq) THEN
                call carr3_vv%init(cprod_vv, mat_name="carr_3")
                call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik,jsp), iq, psize, phase_vv, cprod_vv, carr3_vv)
@@ -245,14 +245,24 @@ CONTAINS
             ELSE
                phase_vv(:, :) = cmplx_1
             END IF
+            call timestop("bra_trafo stuff")
             
+            call timestart("alloc coul_wavf")
             if(cprod_vv%l_real) then 
-               allocate(r_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr, source=0.0)
+               allocate(r_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr)
+               allocate(c_coul_wavf(0,0))
             else
-               allocate(c_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr, source=cmplx_0)
+               allocate(c_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr)
+               allocate(r_coul_wavf(0,0))
             endif
             if(ierr /= 0) call judft_error("can't alloc coul_wavf")
-            call timestop("middle part")
+            !$acc data create(c_coul_wavf, r_coul_wavf)
+            !$acc kernels present(r_coul_wavf, c_coul_wavf)
+            r_coul_wavf = 0.0
+            c_coul_wavf = cmplx_0
+            !$acc end kernels
+            !$acc wait
+            call timestop("alloc coul_wavf")
             
             call timestart("exchange matrix")
             call timestart("sparse matrix products")
@@ -267,14 +277,15 @@ CONTAINS
             nq_idx = k_pack%q_packs(jq)%rank
 
             call timestart("apply prefactors carr1_v")
-            !$acc enter data copyin(phase_vv, psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
+            !$acc enter data copyin(phase_vv)
+            !$acc data copyin(psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
             if (mat_ex%l_real) then
 #ifdef _OPENACC
                call timestart("cpy cprod")
                call dlacpy("N", size(cprod_vv%data_r, 1), size(cprod_vv%data_r, 2), cprod_vv%data_r, size(cprod_vv%data_r, 1), CPP_cprod_r, size(CPP_cprod_r,1))
                call timestop("cpy cprod")
 #endif
-               !$acc enter data copyin(r_coul_wavf, CPP_cprod_r)
+               !$acc enter data copyin(CPP_cprod_r)
 
                !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
                !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
@@ -309,7 +320,7 @@ CONTAINS
                enddo
                !$acc end parallel loop
             endif
-            !$acc exit data delete(psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
+            !$acc end data
 
             call timestop("apply prefactors carr1_v")
 
@@ -326,7 +337,7 @@ CONTAINS
                !$acc enter data create(dot_result_r) 
                DO iob = 1, psize
                   call timestart("CPP_dgemm")
-                  !$acc host_data use_device(r_coul_wavf, CPP_cprod_r, dot_result_r)
+                  !$acc host_data use_device(CPP_cprod_r, dot_result_r)
                   call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
                   !$acc end host_data
                   !$acc wait
@@ -341,7 +352,7 @@ CONTAINS
                   END DO
                   !$acc end kernels
                END DO
-               !$acc exit data delete(r_coul_wavf,CPP_cprod_r, dot_result_r)
+               !$acc exit data delete(CPP_cprod_r, dot_result_r)
             ELSE
                !calculate all dotproducts for the current iob -> need to skip intermediate iob
                !$acc enter data create(dot_result_c) 
@@ -367,6 +378,7 @@ CONTAINS
             !$acc exit data delete(phase_vv)
             call timestop("exch_vv dot prod")
             call timestop("exchange matrix")
+            !$acc end data 
 
             call cprod_vv%free()
             if(allocated(r_coul_wavf)) deallocate(r_coul_wavf)
@@ -648,9 +660,9 @@ CONTAINS
       if(allocated(arr_c)) deallocate(arr_c)
 
       if(mat%l_real) then 
-         allocate(arr_r(mat%matsize1, mat%matsize2), stat=ierr, source=0.0)
+         allocate(arr_r(mat%matsize1, mat%matsize2), stat=ierr)
       else
-         allocate(arr_c(mat%matsize1, mat%matsize2), stat=ierr, source=cmplx_0)
+         allocate(arr_c(mat%matsize1, mat%matsize2), stat=ierr)
       endif 
 
       if(ierr /= 0) call judft_error("can't alloc. prob. no mem.")
