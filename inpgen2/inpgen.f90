@@ -171,8 +171,9 @@ PROGRAM inpgen
          !not yet
          l_fullinput=.true. !will be set to false if old inp.xml is read
          l_oldinpXML=.true.
-         call Fleurinput_read_xml(0,cell,sym,atoms,input,noco,vacuum,&
-         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,kptsArray=kpts,enparaXML=enparaXML,old_version=l_oldinpXML)
+         call Fleurinput_read_xml(0,cell,sym,atoms,input,noco,vacuum,sliceplot=Sliceplot,banddos=Banddos,&
+                                  hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,&
+                                  kptsArray=kpts,enparaXML=enparaXML,old_version=l_oldinpXML)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
@@ -181,8 +182,10 @@ PROGRAM inpgen
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
          l_kptsInitialized(:) = .FALSE.
+         ALLOCATE (sliceplot%plot(1))
          CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
               input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+         IF(input%film) sliceplot%plot(1)%zero(3) = -0.5
          IF (l_addPath) THEN
             l_check = .TRUE.
             CALL add_special_points_default(kpts(numKpts),input%film,cell,l_check)
