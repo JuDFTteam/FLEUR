@@ -9,7 +9,6 @@ MODULE m_selectFFT
    !use m_types_fft_cufft
 
    IMPLICIT NONE
-   PRIVATE
    INTEGER,PARAMETER:: defaultlist(3)=[fft_mkl,fft_fftw,fft_singleton]
 
    PUBLIC selectFFT
