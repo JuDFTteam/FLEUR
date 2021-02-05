@@ -1,83 +1,59 @@
-MODULE m_selecFFT
+MODULE m_selectFFT
 
    USE m_juDFT
+   USE m_types_fft
+   use m_types_fft_mkl
+   use m_types_fft_singleton
+   use m_types_fft_spfft
+   use m_types_fft_fftw
+   !use m_types_fft_cufft
 
    IMPLICIT NONE
+   PRIVATE
+   INTEGER,PARAMETER:: defaultlist(3)=[fft_mkl,fft_fftw,fft_singleton]
 
-   INTEGER, PARAMETER :: defaultFFT_const = 0
-   INTEGER, PARAMETER :: mklFFT_const = 1
-   INTEGER, PARAMETER :: spFFT_const = 2
-   INTEGER, PARAMETER :: fftw_const = 3
-
-#ifdef CPP_FFT_MKL
-   LOGICAL, PARAMETER :: mklFFT_available = .TRUE.
-#else
-   LOGICAL, PARAMETER :: mklFFT_available = .FALSE.
-#endif
-
-#ifdef CPP_FFTW
-   LOGICAL, PARAMETER :: fftw_available = .TRUE.
-#else
-   LOGICAL, PARAMETER :: fftw_available = .FALSE.
-#endif
-
-#ifdef CPP_SPFFT
-   LOGICAL, PARAMETER :: spFFT_available = .TRUE.
-#else
-   LOGICAL, PARAMETER :: spFFT_available = .FALSE.
-#endif
-
+   PUBLIC selectFFT
    CONTAINS
 
-   FUNCTION selecFFT(l_sparse)
+   FUNCTION selectFFT(wishlist)
+     INTEGER,optional            :: wishlist(:)
+     class(t_fft),ALLOCATABLE    :: selectFFT
 
-      INTEGER             :: selecFFT
-      LOGICAL, INTENT(IN) :: l_sparse
+     INTEGER,ALLOCATABLE :: list(:)
+     INTEGER :: n
 
-      INTEGER :: fftRoutine
+      if (present(wishlist)) THEN
+        list=wishlist
+      else
+        list=defaultlist
+      endif
 
-      fftRoutine = defaultFFT_const
-#ifdef CPP_FFTW
-      fftRoutine = fftw_const
-#endif
-
-#ifdef CPP_FFT_MKL
-      fftRoutine = mklFFT_const
-#endif
-
-#ifdef CPP_SPFFT
-      IF(l_sparse) fftRoutine = spFFT_const
-#endif
-      IF (TRIM(juDFT_string_for_argument("-fft"))=="fftw") THEN
-#ifdef CPP_FFTW
-         fftRoutine = fftw_const
-#else
-         CALL juDFT_error("Selected fftw is not available!", calledby="selecFFT")
-#endif
-
-      END IF
-      IF (TRIM(juDFT_string_for_argument("-fft"))=="mkl") THEN
-#ifdef CPP_FFT_MKL
-         fftRoutine = mklFFT_const
-#else
-         CALL juDFT_error("Selected FFT (mkl) is not available!", calledby="selecFFT")
-#endif
-
-      END IF
-      IF (TRIM(juDFT_string_for_argument("-fft"))=="spfft") THEN
-#ifdef CPP_SPFFT
-         IF(l_sparse) fftRoutine = spFFT_const
-#else
-         CALL juDFT_error("Selected FFT (spfft) is not available!", calledby="selecFFT")
-#endif
-      END IF
-
-      IF (TRIM(juDFT_string_for_argument("-fft"))=="inbuilt") THEN
-         IF(l_sparse) fftRoutine = defaultFFT_const
-      END IF
-
-      selecFFT = fftRoutine
+      DO n=1,size(list)
+        select case(list(n))
+        case (fft_mkl)
+          if (fft_mkl>0) then
+            allocate(t_fft_mkl::selectFFT)
+            RETURN
+          endif
+        case (fft_singleton)
+          if (fft_singleton>0) then
+            allocate(t_fft_singleton::selectFFT)
+            RETURN
+          endif
+        case (fft_fftw)
+          if (fft_fftw>0) then
+            allocate(t_fft_fftw::selectFFT)
+            RETURN
+          endif
+        case (fft_spfft)
+          if (fft_spfft>0) then
+            allocate(t_fft_spfft::selectFFT)
+            RETURN
+          endif
+        end select
+      enddo
+      call  judft("No FFT routine found")
 
    END FUNCTION
 
-END MODULE m_selecFFT
+END MODULE m_selectFFT
