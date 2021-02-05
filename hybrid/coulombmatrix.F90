@@ -36,6 +36,7 @@ MODULE m_coulombmatrix
    use mpi
 #endif
    use m_types
+   use m_juDFT
    USE m_intgrf, ONLY: intgrf, intgrf_init
    use m_sphbes, only: sphbes
 CONTAINS
@@ -418,12 +419,12 @@ CONTAINS
                                        lm = l**2 + l + m1 - m2 + 1
                                        idum = ix*(ix - 1)/2 + iy
 
-                                       if(itype2 /= itype1 .or. ineq2 /= ineq1 .or. l2 /= l1 .or. m2 /= m1) then 
+                                       if(itype2 /= itype1 .or. ineq2 /= ineq1 .or. l2 /= l1 .or. m2 /= m1) then
                                           mtmt_term = 0.0
-                                       else 
+                                       else
                                           mtmt_term = mtmt_repl(mtmt_idx)%data_r(n1, n2)
                                        endif
-                                    
+
                                        coulomb(ikpt)%data_c(iy, ix) = mtmt_term &
                                                             + EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                                                   dot_PRODUCT(fi%kpts%bk(:, ikpt), &
@@ -440,12 +441,12 @@ CONTAINS
                END DO
             END DO
          END DO
-         
+
          call coulomb(ikpt)%u2l()
 
          IF (fi%sym%invs) THEN
-            !symmetrize makes the Coulomb matrix real symmetric     
-                          
+            !symmetrize makes the Coulomb matrix real symmetric
+
             CALL symmetrize(coulomb(ikpt)%data_c, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., &
                fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), &
                mpdata%num_radbasfn, fi%sym)
@@ -578,7 +579,7 @@ CONTAINS
                      !    m=-l..l{}
                      ! }
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm) &
-                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
+                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1)
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
                         call calc_l_m_from_lm(lm1, l1, m1)
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
@@ -632,7 +633,7 @@ CONTAINS
             call timestop("bcast itype&igpt1 loop")
 #endif
 
-            call coulomb(ikpt)%u2l() 
+            call coulomb(ikpt)%u2l()
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
@@ -668,7 +669,7 @@ CONTAINS
                      rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
                      do iatm1 = 1,fi%atoms%nat
                         itype1 = fi%atoms%itype(iatm1)
-                        do iatm2 = 1,fi%atoms%nat 
+                        do iatm2 = 1,fi%atoms%nat
                            itype2 = fi%atoms%itype(iatm2)
                            cdum = EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                     (-dot_PRODUCT(mpdata%g(:, igptp1), fi%atoms%taual(:, iatm1)) &
@@ -703,7 +704,7 @@ CONTAINS
             call timestop("bcast dblgpt loop")
 #endif
 
-            call coulomb(1)%u2l()   
+            call coulomb(1)%u2l()
 
             ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
             call timestart("igpt1=1 loop")
@@ -864,7 +865,7 @@ CONTAINS
                                     fi%hybinp, hybdat, fmpi, hybdat%nbasm, gridf, coulomb(1))
          endif
       END IF
-      
+
       ! transform Coulomb matrix to the biorthogonal set
       ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
       ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
@@ -885,7 +886,7 @@ CONTAINS
          call hybdat%coul(ikpt)%init()
       enddo
 
-      if(fmpi%n_rank == 0) then 
+      if(fmpi%n_rank == 0) then
          DO im = 1, size(fmpi%k_list)
             ikpt = fmpi%k_list(im)
             ! unpack coulomb into coulomb(ikpt)
@@ -1032,7 +1033,7 @@ CONTAINS
             ! add the residual MT contributions, i.e. those functions with an moment,
             ! to the matrix coulomb_mtir, which is fully occupied
             !
-            
+
             call timestart("residual MT contributions")
             ic = 0
             DO itype = 1, fi%atoms%ntype
@@ -1066,7 +1067,7 @@ CONTAINS
                                     IF (indx4 < indx3) CYCLE
                                     IF (fi%sym%invs) THEN
                                        hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, indx4))
-                                       hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) 
+                                       hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2)
                                     ELSE
                                        hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, indx4)
                                        hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
@@ -1082,7 +1083,7 @@ CONTAINS
                               hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt))
                               hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2)
                            ELSE
-                              hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt) 
+                              hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, hybdat%nbasp + igpt)
                               hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
                            ENDIF
 
@@ -1338,7 +1339,7 @@ CONTAINS
          i_loc = 0
          do i = fmpi%n_rank+1, nbasm, fmpi%n_size
             i_loc = i_loc + 1
-            coulomb%data_c(hybdat%nbasp + 1:,i) = coul_submtx%data_c(:,i_loc) 
+            coulomb%data_c(hybdat%nbasp + 1:,i) = coul_submtx%data_c(:,i_loc)
          enddo
       endif
 
@@ -1358,13 +1359,13 @@ CONTAINS
             i_loc = i_loc + 1
             coul_submtx%data_r(:,i_loc) = real(coulomb%data_c(i, hybdat%nbasp + 1:))
          enddo
-      else 
+      else
          i_loc = 0
          do i = fmpi%n_rank+1, nbasm, fmpi%n_size
             i_loc = i_loc + 1
             coul_submtx%data_c(:,i_loc) = conjg(coulomb%data_c(i, hybdat%nbasp + 1:))
          enddo
-      endif 
+      endif
       call timestop("copy in 2")
 
       ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
@@ -1381,23 +1382,23 @@ CONTAINS
          do i = 1, nbasm
             root = mod(i-1, fmpi%n_size)
             i_loc = ((i-1)/fmpi%n_size) + 1
-            if(root == fmpi%n_rank) tmp = coul_submtx%data_r(:,i_loc)  
+            if(root == fmpi%n_rank) tmp = coul_submtx%data_r(:,i_loc)
 #ifdef CPP_MPI
             call MPI_Bcast(tmp, mpdata%n_g(ikpt), MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm,  ierr)
-#endif 
+#endif
             coulomb%data_c(i, hybdat%nbasp + 1:) = real(tmp)
          enddo
-      else 
+      else
          do i = 1, nbasm
             root = mod(i-1, fmpi%n_size)
             i_loc = ((i-1)/fmpi%n_size) + 1
-            if(root == fmpi%n_rank) tmp = coul_submtx%data_c(:,i_loc) 
+            if(root == fmpi%n_rank) tmp = coul_submtx%data_c(:,i_loc)
 #ifdef CPP_MPI
             call MPI_Bcast(tmp, mpdata%n_g(ikpt), MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm,  ierr)
-#endif 
-            coulomb%data_c(i, hybdat%nbasp + 1:) = conjg(tmp) 
+#endif
+            coulomb%data_c(i, hybdat%nbasp + 1:) = conjg(tmp)
          enddo
-      endif 
+      endif
       call timestop("copy out 2")
 
 
@@ -1456,7 +1457,7 @@ CONTAINS
          call ylm4(fi%hybinp%lexp, q, y)
          y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
-         ! this unrolls the do ic=1,atoms%nat{do lm=1,..{}} 
+         ! this unrolls the do ic=1,atoms%nat{do lm=1,..{}}
          call collapse_ic_and_lm_loop(fi%atoms, fi%hybinp%lcutm1, niter, ic_arr, lm_arr)
 
          !$OMP PARALLEL DO default(none) &
@@ -1466,7 +1467,7 @@ CONTAINS
          !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
          !$OMP shared(igptp, niter) &
          !$OMP schedule(dynamic)
-         do i = 1,niter 
+         do i = 1,niter
             ic = ic_arr(i)
             lm = lm_arr(i)
 
@@ -1531,7 +1532,7 @@ CONTAINS
             end do
             do j_lm = 1,lm-1
                call calc_l_m_from_lm(j_lm, j_l, j_m)
-               iy_start = iy_start + mpdata%num_radbasfn(j_l, itype) 
+               iy_start = iy_start + mpdata%num_radbasfn(j_l, itype)
             enddo
 
             DO n = 1, mpdata%num_radbasfn(l, itype)
@@ -1589,7 +1590,7 @@ CONTAINS
       real    :: q1(3), q2(3)
       complex :: y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       COMPLEX :: cexp1(fi%atoms%ntype)
-      complex :: cdum, cdum1 
+      complex :: cdum, cdum1
       logical :: ldum
 
       call timestart("double g-loop")
@@ -1601,7 +1602,7 @@ CONTAINS
          iqnrm2 = pqnrm(igpt2, ikpt)
          q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
          y2 = CONJG(carr2(:, igpt2))
-         
+
          !$OMP PARALLEL DO default(none) &
          !$OMP private(igpt1, iy, igptp1, iqnrm1, q1, y1, cexp1, ic, itype, lm) &
          !$OMP private(cdum, l, cdum1, m, ldum) &
@@ -1614,7 +1615,7 @@ CONTAINS
             q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
             y1 = carr2(:, igpt1)
             cexp1 = 0
-            do ic = 1,fi%atoms%nat 
+            do ic = 1,fi%atoms%nat
                itype = fi%atoms%itype(ic)
                cexp1(itype) = cexp1(itype) + &
                               EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT( &
@@ -1656,13 +1657,13 @@ CONTAINS
 
    subroutine collapse_ic_and_lm_loop(atoms, lcutm1, niter, ic_arr, lm_arr)
       use m_types
-      implicit none 
-      type(t_atoms), intent(in) :: atoms 
+      implicit none
+      type(t_atoms), intent(in) :: atoms
       integer, intent(in)       :: lcutm1(:)
-      integer, intent(out)      :: niter 
-      integer, intent(inout), allocatable :: ic_arr(:),  lm_arr(:) 
+      integer, intent(out)      :: niter
+      integer, intent(inout), allocatable :: ic_arr(:),  lm_arr(:)
 
-      integer :: ic, lm, itype 
+      integer :: ic, lm, itype
 
       if(allocated(ic_arr)) deallocate(ic_arr)
       if(allocated(lm_arr)) deallocate(lm_arr)
@@ -1672,7 +1673,7 @@ CONTAINS
          itype = atoms%itype(ic)
          do lm = 1,(lcutm1(itype)+1)**2
             niter = niter + 1
-         enddo 
+         enddo
       enddo
 
       allocate( lm_arr(niter), ic_arr(niter))
@@ -1683,12 +1684,12 @@ CONTAINS
             niter = niter + 1
             lm_arr(niter)    = lm
             ic_arr(niter)    = ic
-         enddo 
+         enddo
       enddo
    end subroutine collapse_ic_and_lm_loop
 
    subroutine bessel_calculation(fi, fmpi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
-      implicit NONE 
+      implicit NONE
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpi), intent(in)           :: fmpi
       type(t_mpdata), intent(in)        :: mpdata
@@ -1703,7 +1704,7 @@ CONTAINS
       real    :: rdum, qnorm, rdum1
 
       call timestart("Bessel calculation")
-      
+
       do iqnrm = 1+fmpi%irank, nqnrm, fmpi%isize
          qnorm = qnrm(iqnrm)
          !$OMP parallel do default(none) &
@@ -1755,7 +1756,7 @@ CONTAINS
          END DO
       END DO
 
-#ifdef CPP_MPI 
+#ifdef CPP_MPI
       call timestart("bcast bessel")
       do iqnrm = 1, nqnrm
          root = mod(iqnrm - 1,fmpi%isize)
@@ -1774,9 +1775,9 @@ CONTAINS
    end subroutine bessel_calculation
 
    function calc_num_mtmts(fi) result(num_mtmt)
-      implicit none 
+      implicit none
       type(t_fleurinput), intent(in) :: fi
-      integer                        :: num_mtmt 
+      integer                        :: num_mtmt
 
       integer :: itype, ineq, l, m
 
@@ -1787,9 +1788,9 @@ CONTAINS
                DO M = -l, l
                   num_mtmt = num_mtmt + 1
                enddo
-            enddo 
-         enddo 
-      enddo 
+            enddo
+         enddo
+      enddo
    end function calc_num_mtmts
-   
+
 END MODULE m_coulombmatrix

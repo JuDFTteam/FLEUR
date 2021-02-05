@@ -3,13 +3,13 @@ CONTAINS
    SUBROUTINE force_a3(atoms,sym,sphhar,input,rho,vr,force)
       !--------------------------------------------------------------------------
       ! Hellman-Feynman force contribution à la Rici et al.
-      ! 
+      !
       ! Equation A3, Phys. Rev. B 43, 6411
       !--------------------------------------------------------------------------
       USE m_intgr, ONLY : intgr3
       USE m_constants
       USE m_types
-
+      USE m_juDFT
       IMPLICIT NONE
 
       TYPE(t_atoms),  INTENT(IN) :: atoms

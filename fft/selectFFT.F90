@@ -52,7 +52,7 @@ MODULE m_selectFFT
           endif
         end select
       enddo
-      call  judft("No FFT routine found")
+      call  judft_error("No FFT routine found")
 
    END FUNCTION
 

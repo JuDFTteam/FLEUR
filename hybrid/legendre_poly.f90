@@ -1,4 +1,5 @@
 module m_legendre_poly
+   use m_juDFT
    use m_types
    use m_constants
 contains
@@ -10,18 +11,18 @@ contains
       integer :: n_max, n
 
       n_max =  P%matsize2 - 1
-      if(P%matsize1 /= size(x))  then 
-         write (*,*) "P:", P%matsize1, P%matsize2 
-         write (*,*) "x:", size(x) 
-         write (*,*) "n_max+1:", n_max+1 
+      if(P%matsize1 /= size(x))  then
+         write (*,*) "P:", P%matsize1, P%matsize2
+         write (*,*) "x:", size(x)
+         write (*,*) "n_max+1:", n_max+1
 
          call judft_error("Leg dimensions don't agree")
-      endif 
- 
+      endif
+
       if (n_max >= 0) then
          if(P%l_real) then
             P%data_r(:, 1) = 1.0
-         else 
+         else
             P%data_c(:, 1) = cmplx_1
          endif
       endif
@@ -29,7 +30,7 @@ contains
       if (n_max >= 1) then
          if(P%l_real) then
             P%data_r(:, 2) = x
-         else 
+         else
             P%data_c(:, 2) = x
          endif
       endif

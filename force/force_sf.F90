@@ -7,17 +7,18 @@
 MODULE m_force_sf
    USE m_constants
    USE m_types
+   USE m_juDFT
    !-----------------------------------------------------------------------------
    ! This routine calculates a contribution to the forces stemming
    ! from the discontinuity of density and potential at the muffin-tin
    ! boundary oint n [ rho V (IS) - rho V (MT) ] dS
    ! Klueppelberg May 13
    !
-   ! The surface integral is found in the first two lines of equation (14) in 
-   ! 
+   ! The surface integral is found in the first two lines of equation (14) in
+   !
    ! Klüppelberg et al., PRB 91 035105 (2015).
-   ! 
-   ! Klueppelberg (force level 3) 
+   !
+   ! Klueppelberg (force level 3)
    !-----------------------------------------------------------------------------
 
    IMPLICIT NONE
@@ -29,9 +30,9 @@ MODULE m_force_sf
 CONTAINS
    SUBROUTINE force_sf_is(atoms_in,stars,sym,jsp,cell,qpw,vpw,excpw,vxcpw)
       !--------------------------------------------------------------------------
-      ! This subroutine calculates oint n rho V dS evaluated with quantities 
-      ! from the interstital. The Fourier transform of density and potential is 
-      ! first calculated as an expansion in spherical harmonics. Then the normal 
+      ! This subroutine calculates oint n rho V dS evaluated with quantities
+      ! from the interstital. The Fourier transform of density and potential is
+      ! first calculated as an expansion in spherical harmonics. Then the normal
       ! vector, which is proportional to Y_1t, connects the l component of rho
       ! with the l+-1 components of V. This is done up to a cutoff lmax.
       ! It is called in a spin loop at the end of vgen.F90-
@@ -119,7 +120,7 @@ CONTAINS
                rhoprep = stars%nstr(s) * bsl(l,s,itype) * qpwcalc(s,jsp)
                IF (l.eq.0) THEN
                   Vprep = stars%nstr(s) * bsl(l,s,itype) * &
-                                          (vpw(s,jsp)-vxcpw(s,jsp)+excpw(s)) 
+                                          (vpw(s,jsp)-vxcpw(s,jsp)+excpw(s))
                                           ! Switching between Veff and VCoul + exc
                END IF
                ! For l = 0 we calculate rho_00 and V_00:
@@ -170,7 +171,7 @@ CONTAINS
       !--------------------------------------------------------------------------
       ! This subroutine calculates the contribution evaluated with quantities
       ! from the Muffin Tins.
-      ! 
+      !
       ! n rho V = sum(nu,nup) rho(nu)V(nup)
       !           * sum(m,mu,mup) c_1m* Y_1m* c_lnu Y_numu c_lnup Y_nupmup
       !
@@ -187,9 +188,9 @@ CONTAINS
       TYPE(t_atoms),INTENT(IN) :: atoms
 
       INTEGER, INTENT (IN) :: jspin
-      INTEGER, INTENT (IN) :: ispin 
+      INTEGER, INTENT (IN) :: ispin
 
-      REAL   , INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) ! 
+      REAL   , INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) !
       REAL   , INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
       REAL   , INTENT (IN) :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
       REAL   , INTENT (IN) :: vxcr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
@@ -228,7 +229,7 @@ CONTAINS
          DO lh = 0,sphhar%nlh(nd)
             l = sphhar%llh(lh,nd)
 
-            ! The l=0 component of the potential array is saved with an additional 
+            ! The l=0 component of the potential array is saved with an additional
             ! factor r/sfp. For this calculation, we need the pure potential.
             pot = vr(atoms%jri(itype),lh,itype)
             IF (lh.eq.0) THEN
@@ -261,7 +262,7 @@ CONTAINS
                      ! Gaunt coefficient with the Y_1m.
                      factor = pot * den * sphhar%clnu(mem,lh,nd) * sphhar%clnu(memp,lhp,nd)&
                                   * gaunt1(1,l,lp,m+mp,m,mp,atoms%lmaxd)
-               
+
                      force_mt(:,itype) = force_mt(:,itype) + factor * conjg(coeff(:,m+mp))
 
                   END DO ! memp

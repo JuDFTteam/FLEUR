@@ -3,7 +3,7 @@ CONTAINS
    SUBROUTINE force_a4(atoms,sym,sphhar,input,vr,force)
       !--------------------------------------------------------------------------
       ! Core density force contribution à la Rici et al.
-      ! 
+      !
       ! Equation A4, Phys. Rev. B 43, 6411
       !--------------------------------------------------------------------------
       USE m_types
@@ -11,7 +11,7 @@ CONTAINS
       USE m_intgr, ONLY : intgr0,intgr3
       USE m_differentiate, ONLY: difcub
       USE m_cdn_io
-
+      USE m_juDFT
       IMPLICIT NONE
 
       TYPE(t_atoms),  INTENT(IN) :: atoms
