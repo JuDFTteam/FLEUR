@@ -290,7 +290,7 @@ contains
 
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
-      integer :: ishift1, indx4, lm, idx1_start, idx3_start
+      integer :: ishift1, indx4, lm, idx1_start, idx3_start, ld_mt1_tmp
       integer :: iat2, it2, l2, iat, ierr, irank, i, sz_mtir, sz_hlp, sz_out, max_l_cut
       integer(C_SIZE_T) :: free_mem, tot_mem
       complex, allocatable :: mat_hlp(:,:), mtir_tmp(:,:), mt1_tmp(:,:,:,:), mt2_tmp(:,:,:,:), mt3_tmp(:,:,:), mat_in_line(:)
