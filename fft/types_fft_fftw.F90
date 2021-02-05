@@ -20,21 +20,16 @@ module m_types_fft_fftw
       procedure :: init => t_fft_init
       procedure :: exec => t_fft_exec
       procedure :: free => t_fft_free
-   end type t_fft
+   end type t_fft_fftw
 contains
    subroutine t_fft_init(fft, length, forward,mode, indices)
       implicit none
-      class(t_fft)                  :: fft
+      class(t_fft_fftw)                  :: fft
       integer, intent(in)           :: length(:) !length of data in each direction
       logical, intent(in)           :: forward          !.true. for the forward transformation, .false. for the backward one
       INTEGER, OPTIONAL, INTENT(IN) :: mode,indices(:)    !array of indices of relevant/nonzero elements in the FFT mesh
 
-      fft%initialized = .True.
-      fft%forw    = merge(FFTW_FORWARD,FFTW_BACKWARD,forward)
-
-      if (mode.ne.FFT_C2C) call judft("fftw interface only for C2C")
-      ! allocate(fft%in(product(length)))
-      ! allocate(fft%out(product(length)))
+      call fft%t_fft%init(length, forward,mode, indices)
       !$OMP critical
       fft%ptr_in = fftw_alloc_complex(int(product(length), C_SIZE_T))
       call c_f_pointer(fft%ptr_in, fft%in, [product(length)])
@@ -57,9 +52,10 @@ contains
    subroutine t_fft_exec(fft, dat)
       USE m_cfft
       implicit none
-      class(t_fft), intent(inout) :: fft
+      class(t_fft_fftw), intent(inout) :: fft
       complex, intent(inout)      :: dat(:)
 
+      call fft%t_fft%exec(dat)
       fft%in = dat
       call fftw_execute_dft(fft%plan, fft%in, fft%out)
       dat = fft%out
@@ -68,7 +64,7 @@ contains
    subroutine t_fft_free(fft)
       implicit none
       integer      :: ok
-      class(t_fft) :: fft
+      class(t_fft_fftw) :: fft
 
       !$OMP critical
       call fftw_destroy_plan(fft%plan)

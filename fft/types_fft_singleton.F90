@@ -33,7 +33,7 @@ contains
       ! cfft storage
       real, allocatable :: afft(:), bfft(:)
       call fft%t_fft%exec(dat)
-
+      size_dat=product(fft%length)
       afft = real(dat)
       bfft = aimag(dat)
       isn = merge(-1, 1, fft%forw)

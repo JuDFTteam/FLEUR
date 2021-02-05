@@ -15,7 +15,7 @@ module m_types_fft_mkl
       procedure :: init => t_fft_init
       procedure :: exec => t_fft_exec
       procedure :: free => t_fft_free
-   end type t_fft
+   end type t_fft_mkl
 contains
    subroutine t_fft_init(fft, length, forward,mode, indices)
       implicit none
@@ -26,9 +26,7 @@ contains
 
       integer ::  ok
 
-      fft%initialized = .True.
-      fft%length  = product(length)
-      fft%forw    = forward
+      call fft%t_fft%init(length, forward,mode, indices)
 
 
       ok = DftiCreateDescriptor(fft%dfti_handle, dfti_double, dfti_complex, size(length), length)
@@ -45,7 +43,7 @@ contains
       complex, intent(inout)      :: dat(:)
       integer :: ok
 
-      if (size(dat)/=fft%length) call judft_error("Wrong dimension in FFT")
+      call fft%t_fft%exec(dat)
 
       if (fft%forw) then
         ok = DftiComputeForward(fft%dfti_handle, dat)
