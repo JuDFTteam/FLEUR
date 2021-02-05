@@ -90,7 +90,7 @@ contains
             indx3 = indx3 + 1
 
             n_size = mpdata%num_radbasfn(l, itype) - 1
-            call dgemm("N","N", n_size, size(mat_hlp,2), n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
+            call dgemm("N","N", n_size, n_vec, n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
                         mat_hlp(indx1,1), size(mat_hlp,1), 0.0, mat_out(indx1,1), size(mat_out,1))
 
             do i_vec = 1, n_vec
@@ -293,7 +293,7 @@ contains
       integer :: ishift1, indx4, lm, idx1_start, idx3_start
       integer :: iat2, it2, l2, iat, ierr, irank, i, sz_mtir, sz_hlp, sz_out, max_l_cut
       integer(C_SIZE_T) :: free_mem, tot_mem
-      complex, allocatable :: mat_hlp(:,:), mtir_tmp(:,:), mt2_tmp(:,:,:,:), mt3_tmp(:,:,:), mat_in_line(:)
+      complex, allocatable :: mat_hlp(:,:), mtir_tmp(:,:), mt1_tmp(:,:,:,:), mt2_tmp(:,:,:,:), mt3_tmp(:,:,:), mat_in_line(:)
 
       call timestart("spmm_noinvs")
       call timestart("alloc mathlp")
@@ -303,10 +303,13 @@ contains
       call timestart("cpy mat_hlp")
       call zlacpy("N", mat_in%matsize1, mat_in%matsize2, mat_in%data_c, size(mat_in%data_c, 1), mat_hlp, size(mat_hlp,1))
       call timestop("cpy mat_hlp")
+
+      sz_hlp  = size(mat_hlp,1)
+      sz_out  = size(mat_out, 1)
       call timestop("alloc mathlp")
+
       n_vec = mat_in%matsize2
 
-      
       call timestart("reorder forw")
       !$OMP PARALLEL DO default(none) &
       !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_hlp)
@@ -321,11 +324,21 @@ contains
       ! compute vecout for the indices from 0:ibasm
 
       call timestart("0 > ibasm: small matricies")
+
+      call timestart("alloc&cpy mt1_tmp")
+      allocate(mt1_tmp, mold=hybdat%coul(ikpt)%mt1_c, stat=ierr)
+      if(ierr /= 0) call judft_error("can't alloc mt1_tmp")
+      call zcopy(size(mt1_tmp), hybdat%coul(ikpt)%mt1_c, 1, mt1_tmp, 1)
+      ld_mt1_tmp = size(mt1_tmp,dim=2) ! special multiplication
+      call timestop("alloc&cpy mt1_tmp")
+
+#ifndef _OPENACC
       !$OMP PARALLEL DO default(none) schedule(dynamic)&
       !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
       !$OMP private(lm, l, m, n_size, i_vec)&
       !$OMP lastprivate(indx2)&
       !$OMP shared(ibasm, mat_hlp, hybdat, mat_out, fi, mpdata, n_vec, ikpt)
+#endif
       do iatom = 1, fi%atoms%nat
          itype = fi%atoms%itype(iatom)
 
@@ -352,19 +365,24 @@ contains
 
             n_size = mpdata%num_radbasfn(l, itype) - 1
 
-            call zgemm("N","N", n_size, size(mat_hlp,2), n_size, cmplx_1, hybdat%coul(ikpt)%mt1_c(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_c,dim=2),&
-                        mat_hlp(indx1,1), size(mat_hlp,1), cmplx_0, mat_out(indx1,1), size(mat_out,1))
+            !    ZGEMM(TRANSA, TRANSB, M, N,    K,     ALPHA,   A,                    LDA,
+            call zgemm("N","N", n_size, n_vec, n_size, cmplx_1, mt1_tmp(1,1,l,itype), ld_mt1_tmp,&
+            !           B,                LDB,    BETA,    C,                LDC )
+                        mat_hlp(indx1,1), sz_hlp, cmplx_0, mat_out(indx1,1), sz_out)
 
             do i_vec = 1, n_vec
-               !call zaxpy(n_size, mat_hlp(indx3, i_vec), hybdat%coul(ikpt)%mt2_c(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
-               call zaxpy(n_size, mat_hlp(indx3, i_vec), hybdat%coul(ikpt)%mt2_c(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
-               !mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt2_c(:n_size, m, l, iatom)*mat_hlp(indx3, i_vec)
+               do i = 0, indx2-indx1
+                  mat_out(indx1+i,i_vec) = mat_out(indx1+i,i_vec) + hybdat%coul(ikpt)%mt2_c(i+1, m, l, iatom) * mat_hlp(indx3, i_vec)
+               enddo
             enddo
 
             indx1 = indx2
          END DO
       END DO
+#ifndef _OPENACC
       !$OMP END PARALLEL DO
+#endif
+      deallocate(mt1_tmp)
       call timestop("0 > ibasm: small matricies")
 
       IF (indx2 /= ibasm) call judft_error('spmvec: error counting basis functions')
@@ -467,8 +485,6 @@ contains
 
       call timestart("ibasm+1->nbasm: zgemm")
       sz_mtir = size(mtir_tmp,1)
-      sz_hlp  = size(mat_hlp,1)
-      sz_out  = size(mat_out, 1)
 
       !$acc host_data use_device(mtir_tmp, mat_hlp, mat_out)
       call CPP_zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, mtir_tmp, sz_mtir, &
