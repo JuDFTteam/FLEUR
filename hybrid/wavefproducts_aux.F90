@@ -10,6 +10,7 @@ CONTAINS
       use m_fft_interface
       use m_io_hybinp
       use m_juDFT
+      use m_selectFFT
 #ifdef CPP_MPI
       use mpi
 #endif
@@ -33,7 +34,7 @@ CONTAINS
       type(t_mat)     :: z_kqpt
       type(t_lapw)    :: lapw_ikqpt
       type(t_mat)     :: psi_kqpt
-      type(t_fft)     :: fft
+      class(t_fft),allocatable     :: fft
       type(t_fftgrid) :: stepf
 
       integer :: g(3), igptm, iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
@@ -43,6 +44,7 @@ CONTAINS
 
       logical :: real_warned
 
+      fft=selectFFT()
       real_warned = .False.
 
       call timestart("wavef_IS_FFT")
@@ -153,12 +155,13 @@ CONTAINS
       real, intent(in)               :: gcutoff
       complex, intent(inout)         :: psi(0:, bandoi:) ! (nv,ne)
 
-      type(t_fft) :: fft
+      class(t_fft),allocatable :: fft
       type(t_fftgrid) :: grid
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
       integer :: iv, nu, n_threads
 
+      fft=selectFFT()
       psi = 0.0
       n_threads = 1
       !$OMP PARALLEL private(nu, iv, n_threads, fft, grid)  default(private) &

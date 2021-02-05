@@ -1,25 +1,26 @@
 module m_work_package
+   use m_juDFT
    use m_types
    use m_distribute_mpi
    implicit none
 
-   type t_band_package  
+   type t_band_package
       integer :: start_idx, psize, rank, size
-   contains 
+   contains
       procedure :: init => t_band_package_init
    end type t_band_package
 
-   type t_q_package 
+   type t_q_package
       integer :: rank, size, ptr
       type(t_hybmpi) :: submpi
       type(t_band_package), allocatable :: band_packs(:)
    contains
       procedure :: init => t_q_package_init
       procedure :: free => t_q_package_free
-   end type t_q_package 
+   end type t_q_package
 
    type t_qwps
-      type(t_q_package), allocatable :: q_packs 
+      type(t_q_package), allocatable :: q_packs
    end type t_qwps
 
    type t_k_package
@@ -27,17 +28,17 @@ module m_work_package
       type(t_hybmpi) :: submpi
       type(t_q_package), allocatable :: q_packs(:)
    contains
-      procedure :: init  => t_k_package_init 
+      procedure :: init  => t_k_package_init
       procedure :: print => t_k_package_print
       procedure :: free  => t_k_package_free
-   end type t_k_package 
+   end type t_k_package
 
-   type t_work_package 
+   type t_work_package
       integer :: rank, size, n_kpacks, max_kpacks
       type(t_k_package), allocatable :: k_packs(:)
       type(t_hybmpi) :: submpi
    contains
-      procedure :: init  => t_work_package_init 
+      procedure :: init  => t_work_package_init
       procedure :: print => t_work_package_print
       procedure :: owner_nk => t_work_package_owner_nk
       procedure :: has_nk => t_work_package_has_nk
@@ -46,43 +47,43 @@ module m_work_package
 
 contains
    subroutine t_work_package_free(work_pack)
-      implicit none 
-      class(t_work_package), intent(inout) :: work_pack 
+      implicit none
+      class(t_work_package), intent(inout) :: work_pack
       integer :: i
 
-      if(allocated(work_pack%k_packs)) then 
+      if(allocated(work_pack%k_packs)) then
          do i = 1, size(work_pack%k_packs)
-            call work_pack%k_packs(i)%free() 
+            call work_pack%k_packs(i)%free()
          enddo
          deallocate(work_pack%k_packs)
       endif
-   end subroutine t_work_package_free 
+   end subroutine t_work_package_free
 
    subroutine t_k_package_free(k_pack)
-      implicit none 
-      class(t_k_package), intent(inout) :: k_pack 
+      implicit none
+      class(t_k_package), intent(inout) :: k_pack
       integer :: i
 
-      if(allocated(k_pack%q_packs)) then 
+      if(allocated(k_pack%q_packs)) then
          do i = 1, size(k_pack%q_packs)
             call k_pack%q_packs(i)%free()
-         enddo 
+         enddo
          deallocate(k_pack%q_packs)
       endif
-   end subroutine t_k_package_free 
+   end subroutine t_k_package_free
 
-   subroutine t_q_package_free(q_pack) 
-      implicit none 
-      class(t_q_package), intent(inout) :: q_pack 
+   subroutine t_q_package_free(q_pack)
+      implicit none
+      class(t_q_package), intent(inout) :: q_pack
 
       if(allocated(q_pack%band_packs)) deallocate(q_pack%band_packs)
    end subroutine t_q_package_free
 
-   subroutine t_work_package_init(work_pack, fi, hybdat, wp_mpi, jsp, rank, size) 
-      implicit none 
+   subroutine t_work_package_init(work_pack, fi, hybdat, wp_mpi, jsp, rank, size)
+      implicit none
       class(t_work_package), intent(inout) :: work_pack
       type(t_fleurinput), intent(in)       :: fi
-      type(t_hybdat), intent(in)           :: hybdat 
+      type(t_hybdat), intent(in)           :: hybdat
       type(t_hybmpi), intent(in)           :: wp_mpi
       integer, intent(in)                  :: rank, size, jsp
 
@@ -97,7 +98,7 @@ contains
    end subroutine t_work_package_init
 
    subroutine t_k_package_init(k_pack, fi, hybdat, k_wide_mpi, jsp, nk)
-      implicit none 
+      implicit none
       class(t_k_package), intent(inout) :: k_pack
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
@@ -110,17 +111,17 @@ contains
 
       n_groups = min(k_wide_mpi%size, fi%kpts%EIBZ(nk)%nkpt)
       allocate(loc_qs(n_groups), source=0)
-      do w_cnt = 1, n_groups 
-         do i = w_cnt, fi%kpts%EIBZ(nk)%nkpt, n_groups 
-            loc_qs(w_cnt) = loc_qs(w_cnt) + 1 
+      do w_cnt = 1, n_groups
+         do i = w_cnt, fi%kpts%EIBZ(nk)%nkpt, n_groups
+            loc_qs(w_cnt) = loc_qs(w_cnt) + 1
          enddo
       enddo
 
       call distribute_mpi(loc_qs, k_wide_mpi, q_wide_mpi, q_rank)
 
       k_pack%submpi = k_wide_mpi
-      k_pack%nk = nk 
-      
+      k_pack%nk = nk
+
       allocate(k_pack%q_packs(loc_qs(q_rank+1)))
       cnt = 0
       do iq = q_rank+1,fi%kpts%EIBZ(nk)%nkpt, n_groups
@@ -131,8 +132,8 @@ contains
    end subroutine t_k_package_init
 
    subroutine t_q_package_init(q_pack, fi, hybdat, q_wide_mpi, jsp, nk, rank, ptr)
-      implicit none 
-      class(t_q_package), intent(inout) :: q_pack 
+      implicit none
+      class(t_q_package), intent(inout) :: q_pack
       type(t_fleurinput), intent(in)    :: fi
       type(t_hybdat), intent(in)        :: hybdat
       type(t_hybmpi), intent(in)        :: q_wide_mpi
@@ -143,19 +144,19 @@ contains
       integer, allocatable :: start_idx(:), psize(:)
 
       q_pack%submpi = q_wide_mpi
-      q_pack%rank   = rank 
+      q_pack%rank   = rank
       q_pack%size   = fi%kpts%EIBZ(nk)%nkpt
       q_pack%ptr    = ptr
 
       ! arrays should be less than 5 gb
       if(fi%sym%invs) then
-         target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+         target_psize = 5e9/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig))
       else
-         target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+         target_psize = 5e9/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig))
       endif
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
- 
+
       n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
       ! I can't have more parts than hybdat%nobd
       n_parts = min(hybdat%nobd(ikqpt, jsp), n_parts)
@@ -163,7 +164,7 @@ contains
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
-      
+
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
 
@@ -175,12 +176,12 @@ contains
    end subroutine t_q_package_init
 
    subroutine t_band_package_init(band_pack, start_idx, psize, rank, size)
-      implicit none 
-      class(t_band_package), intent(inout) :: band_pack 
+      implicit none
+      class(t_band_package), intent(inout) :: band_pack
       integer, intent(in)                  :: rank, size, start_idx, psize
 
       band_pack%start_idx = start_idx
-      band_pack%psize     = psize 
+      band_pack%psize     = psize
       band_pack%rank      = rank
       band_pack%size      = size
    end subroutine t_band_package_init
@@ -188,17 +189,17 @@ contains
    subroutine t_work_package_print(work_pack)
       implicit none
       class(t_work_package), intent(inout) :: work_pack
-      integer :: i 
+      integer :: i
 
       write (*,*) "WP (" // int2str(work_pack%rank) // "/" // int2str(work_pack%size) // ") has: "
       do i = 1,size(work_pack%k_packs)
          call work_pack%k_packs(i)%print()
       enddo
-   end subroutine t_work_package_print 
+   end subroutine t_work_package_print
 
    subroutine t_k_package_print(k_pack)
-      implicit none 
-      class(t_k_package), intent(in) :: k_pack 
+      implicit none
+      class(t_k_package), intent(in) :: k_pack
 
       write (*,*) "kpoint: "
       write (*,*) "nk = ", k_pack%nk
@@ -206,32 +207,32 @@ contains
 
    subroutine split_into_work_packages(work_pack, fi, hybdat, jsp)
 #ifdef CPP_MPI
-      use mpi 
+      use mpi
 #endif
-      implicit none 
+      implicit none
       class(t_work_package), intent(inout) :: work_pack
       type(t_fleurinput), intent(in)       :: fi
       type(t_hybdat), intent(in)           :: hybdat
       integer, intent(in)                  :: jsp
       integer :: k_cnt, i, ierr
-      
+
       if(work_pack%rank < modulo(fi%kpts%nkpt, work_pack%size)) then
          work_pack%n_kpacks = ceiling(1.0*fi%kpts%nkpt / work_pack%size)
-      else 
+      else
          work_pack%n_kpacks = floor(1.0*fi%kpts%nkpt / work_pack%size)
       endif
       allocate(work_pack%k_packs(work_pack%n_kpacks))
 
 #ifdef CPP_MPI
       call MPI_AllReduce(work_pack%n_kpacks, work_pack%max_kpacks, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
-#else    
+#else
       work_pack%max_kpacks = work_pack%n_kpacks
 #endif
       if(work_pack%n_kpacks /= work_pack%max_kpacks) then
          call judft_warn("Your parallization is not efficient. Make sure that nkpts%pe == 0 or nkpts <= pe")
-      endif 
+      endif
 
-      
+
       ! get my k-list
       k_cnt = 1
       do i = work_pack%rank+1, fi%kpts%nkpt, work_pack%size
@@ -244,9 +245,9 @@ contains
    end subroutine split_into_work_packages
 
 
-   function t_work_package_owner_nk(work_pack, nk) result(owner) 
+   function t_work_package_owner_nk(work_pack, nk) result(owner)
       use m_types_hybmpi
-      implicit none 
+      implicit none
       class(t_work_package), intent(in) :: work_pack
       integer, intent(in)               :: nk
       integer                           :: owner
@@ -254,15 +255,15 @@ contains
       owner = modulo(nk-1, work_pack%size)
    end function t_work_package_owner_nk
 
-   function t_work_package_has_nk(work_pack, nk) result(has_nk) 
-      implicit none 
+   function t_work_package_has_nk(work_pack, nk) result(has_nk)
+      implicit none
       class(t_work_package), intent(in) :: work_pack
       integer, intent(in)               :: nk
       logical                           :: has_nk
-      integer :: i 
+      integer :: i
 
       has_nk = .false.
-      do i = 1, work_pack%n_kpacks 
+      do i = 1, work_pack%n_kpacks
          if (work_pack%k_packs(i)%nk == nk) then
             has_nk = .True.
             exit

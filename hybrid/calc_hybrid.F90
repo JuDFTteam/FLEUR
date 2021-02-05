@@ -6,7 +6,7 @@
 
 MODULE m_calc_hybrid
    USE m_judft
-
+   USE iso_c_binding
 CONTAINS
 
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
@@ -23,11 +23,11 @@ CONTAINS
       USE m_io_hybinp
       USE m_eig66_io
       use m_eig66_mpi
-      use m_distribute_mpi 
+      use m_distribute_mpi
       use m_create_coul_comms
       use m_eigvec_setup
-#ifdef CPP_MPI 
-      use mpi 
+#ifdef CPP_MPI
+      use mpi
 #endif
 #ifdef CPP_PROG_THREAD
       use m_thread_lib
@@ -109,7 +109,7 @@ CONTAINS
                         enpara, fmpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
-         ! setup parallelization 
+         ! setup parallelization
          n_wps = min(glob_mpi%size, fi%kpts%nkpt)
          allocate(weights(n_wps), source=0)
          do j_wp = 1, n_wps
@@ -124,14 +124,14 @@ CONTAINS
             call work_pack(jsp)%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
          enddo
 
-         if(.not. allocated(hybdat%zmat))then 
+         if(.not. allocated(hybdat%zmat))then
              allocate(hybdat%zmat(fi%kpts%nkptf, fi%input%jspins))
             DO jsp = 1, fi%input%jspins
                DO nk = 1,fi%kpts%nkptf
                   CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
                   call eigvec_setup(hybdat%zmat(nk, jsp), fi, lapw, work_pack, fmpi, &
                                     hybdat%nbands(nk, jsp), nk, jsp, hybdat%eig_id)
-               enddo 
+               enddo
             enddo
          endif
          call bcast_eigvecs(hybdat, fi, nococonv, fmpi)
@@ -141,16 +141,16 @@ CONTAINS
          call create_coul_comms(hybdat, fi, fmpi)
 
          do i =1,fi%kpts%nkpt
-            if(hybdat%coul(i)%l_participate) then 
+            if(hybdat%coul(i)%l_participate) then
                call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, .false.)
-            endif 
-         enddo 
+            endif
+         enddo
 
          ! use jsp=1 for coulomb work-planning
          CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
-         
+
          do i =1,fi%kpts%nkpt
-            if(hybdat%coul(i)%l_participate) then 
+            if(hybdat%coul(i)%l_participate) then
                call hybdat%coul(i)%mpi_bcast(fi, hybdat%coul(i)%comm, 0)
             endif
          enddo
@@ -165,7 +165,7 @@ CONTAINS
          DO jsp = 1, fi%input%jspins
             CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
-             
+
             DO i = 1,work_pack(jsp)%k_packs(1)%size
                nk = work_pack(jsp)%k_packs(i)%nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
@@ -173,7 +173,7 @@ CONTAINS
                            nococonv, stars, results, xcpot, fmpi)
                if(work_pack(jsp)%k_packs(i)%submpi%root()) v_x_loc(nk, jsp) = fmpi%irank
             END DO
-   
+
             call work_pack(jsp)%free()
          END DO
 #ifdef CPP_MPI
@@ -185,9 +185,9 @@ CONTAINS
 
          call timestart("BCast v_x")
 #ifdef CPP_MPI
-         call MPI_Allreduce(MPI_IN_PLACE, v_x_loc, size(v_x_loc), MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)   
+         call MPI_Allreduce(MPI_IN_PLACE, v_x_loc, size(v_x_loc), MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
          do jsp = 1, fi%input%jspins
-            do nk = 1, fi%kpts%nkpt 
+            do nk = 1, fi%kpts%nkpt
                call hybdat%v_x(nk, jsp)%bcast(v_x_loc(nk,jsp), fmpi%mpi_comm)
             enddo
          enddo

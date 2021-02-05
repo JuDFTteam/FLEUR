@@ -8,7 +8,6 @@ types/types_dos.f90
 types/types_eigvec.F90
 types/types_enpara.F90
 types/types.F90
-types/types_fft.F90
 types/types_force.f90
 types/types_forcetheo.F90
 types/types_gpumat.F90
@@ -36,7 +35,6 @@ types/types_xcpot_data.F90
 types/types_xcpot_inbuild.F90
 types/types_xcpot_inbuild_nofunction.F90
 types/types_xcpot_libxc.F90
-types/types_fftGrid.f90
 )
 
 set(inpgen_F90 ${inpgen_F90}
