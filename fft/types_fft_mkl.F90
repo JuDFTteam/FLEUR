@@ -13,11 +13,12 @@ module m_types_fft_mkl
       type(dfti_descriptor), pointer :: dfti_handle
    contains
       procedure :: init => t_fft_init
-      procedure :: exec => t_fft_exec
+      procedure :: exec => t_fft_exec_c
       procedure :: free => t_fft_free
    end type t_fft_mkl
 contains
    subroutine t_fft_init(fft, length, forward,mode, indices)
+      use m_juDFT
       implicit none
       class(t_fft_mkl)                  :: fft
       integer, intent(in)           :: length(:) !length of data in each direction
@@ -37,7 +38,7 @@ contains
    end subroutine
 
    subroutine t_fft_exec_c(fft, dat)
-      USE m_cfft
+      USE m_juDFT
       implicit none
       class(t_fft_mkl), intent(inout) :: fft
       complex, intent(inout)      :: dat(:)

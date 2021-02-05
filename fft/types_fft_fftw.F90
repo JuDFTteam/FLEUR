@@ -1,6 +1,5 @@
 module m_types_fft_fftw
   use m_types_fft
-  PRIVATE
 #ifndef CPP_FFTW
   INTEGER,PUBLIC,PARAMETER :: fft_fftw=-4
   type,PUBLIC,extends(t_fft):: t_fft_fftw
@@ -8,10 +7,10 @@ module m_types_fft_fftw
 #else
   USE iso_c_binding
   use fftw3
+  use m_juDFT
+  PRIVATE
   INTEGER,PUBLIC,PARAMETER :: fft_fftw=4
   type,public,extends(t_fft):: t_fft_fftw
-      logical :: initialized = .False.
-      integer :: forw
       ! cfft storage
 
       type(c_ptr) :: plan, ptr_in, ptr_out
