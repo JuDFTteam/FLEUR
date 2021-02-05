@@ -38,6 +38,7 @@ CONTAINS
       ! this routine is the main PROGRAM
 
       USE m_types
+      USE m_types_forcetheo_extended
       USE m_constants
       USE m_optional
       USE m_cdn_io
@@ -97,7 +98,7 @@ CONTAINS
       TYPE(t_mpdata)                  :: mpdata
 
       TYPE(t_potden)                  :: vTot, vx, vCoul, vxc, exc
-      TYPE(t_potden)                  :: inDen, outDen, EnergyDen
+      TYPE(t_potden)                  :: inDen, outDen, EnergyDen, sliceDen
 
       TYPE(t_hub1data)                :: hub1data
       TYPE(t_greensf), ALLOCATABLE    :: greensFunction(:)
@@ -106,8 +107,9 @@ CONTAINS
       INTEGER :: eig_id, archiveType, num_threads
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
-      LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error
-      REAL    :: fix, sfscale
+      LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
+      LOGICAL :: l_forceTheorem, l_lastIter
+      REAL    :: fix, sfscale, rdummy
       REAL    :: mmpmatDistancePrev,occDistancePrev
 
 #ifdef CPP_MPI
@@ -195,7 +197,7 @@ CONTAINS
       ! Initialize Green's function (end)
 
       ! Open/allocate eigenvector storage (start)
-      l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u + fi%atoms%n_hia > 0)
+      l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u>0) .AND. fi%atoms%n_hia==0 
       if (fi%noco%l_soc .and. fi%input%l_wann) then
        !! Weed up and down spinor components for SOC MLWFs.
        !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
@@ -214,8 +216,11 @@ CONTAINS
       CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
 #endif
       ! Open/allocate eigenvector storage (end)
+      l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
          iter = iter + 1
+         l_lastIter = l_lastIter.OR.(iter.EQ.fi%input%itmax)
+         hub1data%overallIteration = hub1data%overallIteration + 1
 
          IF (fmpi%irank .EQ. 0) CALL openXMLElementFormPoly('iteration', (/'numberForCurrentRun', 'overallNumber      '/), &
                                                             (/iter, inden%iter/), RESHAPE((/19, 13, 5, 5/), (/2, 2/)))
@@ -242,8 +247,18 @@ CONTAINS
 
 !Plot inden if wanted
          IF (fi%sliceplot%iplot .NE. 0) THEN
-           CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
-                           fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+            IF (.NOT.fi%sliceplot%slice) THEN
+               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
+                              fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+            ELSE
+               CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
+               IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+                                                       fi%input, fi%sym, fi%oneD,CDN_ARCHIVE_TYPE_CDN_const, &
+                                                       CDN_INPUT_DEN_const, 0, rdummy, l_dummy, sliceDen, 'cdn_slice')
+               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, sliceDen, nococonv)
+               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
+                              fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
+            END IF
             IF ((fmpi%irank .EQ. 0) .AND. (fi%sliceplot%iplot .EQ. 2)) THEN
                CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
             END IF
@@ -323,7 +338,7 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
          CALL forcetheo%start(vtot, fmpi%irank == 0)
-         forcetheoloop: DO WHILE (forcetheo%next_job(iter == fi%input%itmax, fi%atoms, fi%noco, nococonv))
+         forcetheoloop: DO WHILE (forcetheo%next_job(l_lastIter, fi%atoms, fi%noco, nococonv))
 
             CALL timestart("gen. of hamil. and diag. (total)")
             CALL timestart("eigen")
@@ -582,15 +597,35 @@ CONTAINS
             hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (hub1data%iter < fi%hub1inp%itmax)
             !Prevent that the scf loop terminates
             l_cont = l_cont .OR. hub1data%l_runthisiter
-            IF (hub1data%l_runthisiter) THEN
-               CALL check_time_for_next_iteration(hub1data%iter, l_cont)
-            ENDIF
+            CALL check_time_for_next_iteration(hub1data%overallIteration, l_cont)
          ELSE
             l_cont = l_cont .AND. (iter < fi%input%itmax)
             ! MetaGGAs need a at least 2 iterations
             l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f &
                                    .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
             CALL check_time_for_next_iteration(iter, l_cont)
+         END IF
+
+         ! Add extra iteration for force theorem if necessary
+         l_forceTheorem = .FALSE.
+         SELECT TYPE(forcetheo)
+            TYPE IS(t_forcetheo_mae)
+               l_forceTheorem = .TRUE.
+            TYPE IS(t_forcetheo_dmi)
+               l_forceTheorem = .TRUE.
+            TYPE IS(t_forcetheo_jij)
+               l_forceTheorem = .TRUE.
+            TYPE IS(t_forcetheo_ssdisp)
+               l_forceTheorem = .TRUE.
+         END SELECT
+         
+         IF(l_forceTheorem.AND..NOT.l_cont) THEN
+            IF(.NOT.l_lastIter) THEN
+               l_lastIter = .TRUE.
+               l_cont = .TRUE.
+            END IF
+         ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
+            l_cont = .FALSE.
          END IF
 
          !CALL writeTimesXML()

@@ -57,10 +57,10 @@ CONTAINS
       ALLOCATE (d%eig_eig(neig, jspins*nkpts))
       !d%eig_vec
       if (l_real .and. .not. l_soc) THEN
-         ALLOCATE (d%eig_vecr(nmat*neig, length*nkpts), STAT=ierr)
+         ALLOCATE (d%eig_vecr(nmat*neig, length*nkpts), source=0.0, STAT=ierr)
          elementsize = 8
       else
-         ALLOCATE (d%eig_vecc(nmat*neig, length*nkpts), STAT=ierr)
+         ALLOCATE (d%eig_vecc(nmat*neig, length*nkpts), source=CMPLX(0.0,0.0), STAT=ierr)
          elementsize = 16
       endif
       IF (ierr.NE.0) THEN

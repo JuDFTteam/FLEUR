@@ -147,7 +147,7 @@ CONTAINS
       END IF
 
       WRITE (fileNum, '(a)') '   <comment>'
-      WRITE (fileNum, '(a6,10a8)') '      ', input%comment
+      WRITE (fileNum, '(a6,10a)') '      ', input%comment
       WRITE (fileNum, '(a)') '   </comment>'
 
       WRITE (fileNum, '(a)') '   <calculationSetup>'

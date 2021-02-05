@@ -144,7 +144,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                IF (iStar .EQ. 0) CYCLE
                IF (stars%sk3(iStar) .GT. gCutoffInternal) CYCLE
                xGrid = MODULO(x, this%dimensions(1))
-               field(iStar) = field(iStar) + this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid)/stars%rgphs(x, y, z)
+               field(iStar) = field(iStar) + this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) * CONJG(stars%rgphs(x, y, z))
             END DO
          END DO
       END DO
