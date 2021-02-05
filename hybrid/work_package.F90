@@ -157,6 +157,8 @@ contains
          target_psize = target_memsize(fi, hybdat, mpdata%n_g)/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
       endif
 
+      write (*,*) "Target psize", target_psize
+
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
  
       n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
@@ -166,6 +168,8 @@ contains
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
+
+      write (*,*) "final n_parts", n_parts
       
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
@@ -317,19 +321,21 @@ contains
 #ifdef _OPENACC    
       integer           :: ikpt
       integer(C_SIZE_T) :: gpu_mem
-      real              :: coulomb_size, exch_size
+      real              :: coulomb_size, exch_size, indx_sest
 
       coulomb_size = 0.0
       do ikpt = 1,fi%kpts%nkpt
          coulomb_size = max(1.0*(mtir_size(fi, n_g, ikpt)**2), coulomb_size)
       enddo
       ! size in byte
+      indx_sest = maxval(hybdat%nbands)**2 * 4
       coulomb_size = coulomb_size * merge(8, 16, fi%sym%invs)
       exch_size = maxval(hybdat%nbands)**2 * merge(8, 16, fi%sym%invs)
 
       gpu_mem = acc_get_property(0,acc_device_current, acc_property_free_memory)
-      target_memsize = 0.5*((0.9*gpu_mem) - (coulomb_size + exch_size))
+      target_memsize = 0.5*((0.85*gpu_mem) - (coulomb_size + exch_size))
 
+      write (*,*) "Target memsize:", target_memsize * 1e-9, "Gb"
 #else
       target_memsize = 10e9 ! 10 Gb
 #endif
