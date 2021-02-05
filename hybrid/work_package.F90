@@ -321,14 +321,13 @@ contains
 #ifdef _OPENACC    
       integer           :: ikpt
       integer(C_SIZE_T) :: gpu_mem
-      real              :: coulomb_size, exch_size, indx_sest
+      real              :: coulomb_size, exch_size
 
       coulomb_size = 0.0
       do ikpt = 1,fi%kpts%nkpt
          coulomb_size = max(1.0*(mtir_size(fi, n_g, ikpt)**2), coulomb_size)
       enddo
       ! size in byte
-      indx_sest = maxval(hybdat%nbands)**2 * 4
       coulomb_size = coulomb_size * merge(8, 16, fi%sym%invs)
       exch_size = maxval(hybdat%nbands)**2 * merge(8, 16, fi%sym%invs)
 
