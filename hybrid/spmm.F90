@@ -322,9 +322,7 @@ contains
       ibasm = calc_ibasm(fi, mpdata)
 
       ! compute vecout for the indices from 0:ibasm
-
       call timestart("0 > ibasm: small matricies")
-
       call timestart("alloc&cpy mt1_tmp")
       allocate(mt1_tmp, mold=hybdat%coul(ikpt)%mt1_c, stat=ierr)
       if(ierr /= 0) call judft_error("can't alloc mt1_tmp")
@@ -332,6 +330,16 @@ contains
       ld_mt1_tmp = size(mt1_tmp,dim=2) ! special multiplication
       call timestop("alloc&cpy mt1_tmp")
 
+      call timestart("copy mt2_c")
+      mt2_tmp = hybdat%coul(ikpt)%mt2_c
+      call timestop("copy mt2_c")
+
+      call timestart("copyin gpu")
+      !$acc enter data copyin(mat_hlp, mt2_tmp)
+      !$acc wait
+      call timestop("copyin gpu")
+
+      !$acc data copyin(mt1_tmp)
 #ifndef _OPENACC
       !$OMP PARALLEL DO default(none) schedule(dynamic)&
       !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
@@ -365,16 +373,18 @@ contains
 
             n_size = mpdata%num_radbasfn(l, itype) - 1
 
-            !    ZGEMM(TRANSA, TRANSB, M, N,    K,     ALPHA,   A,                    LDA,
-            call zgemm("N","N", n_size, n_vec, n_size, cmplx_1, mt1_tmp(1,1,l,itype), ld_mt1_tmp,&
-            !           B,                LDB,    BETA,    C,                LDC )
+            !$acc host_data use_device(mt1_tmp, mat_hlp, mat_out)
+            call CPP_zgemm("N","N", n_size, n_vec, n_size, cmplx_1, mt1_tmp(1,1,l,itype), ld_mt1_tmp,&
                         mat_hlp(indx1,1), sz_hlp, cmplx_0, mat_out(indx1,1), sz_out)
+            !$acc end host_data
 
+            !$acc kernels present(mat_out, mt2_tmp, mat_hlp)
             do i_vec = 1, n_vec
                do i = 0, indx2-indx1
-                  mat_out(indx1+i,i_vec) = mat_out(indx1+i,i_vec) + hybdat%coul(ikpt)%mt2_c(i+1, m, l, iatom) * mat_hlp(indx3, i_vec)
+                  mat_out(indx1+i,i_vec) = mat_out(indx1+i,i_vec) + mt2_tmp(i+1, m, l, iatom) * mat_hlp(indx3, i_vec)
                enddo
             enddo
+            !$acc end kernels
 
             indx1 = indx2
          END DO
@@ -382,17 +392,15 @@ contains
 #ifndef _OPENACC
       !$OMP END PARALLEL DO
 #endif
+      !$acc end data
+      !$acc wait
       deallocate(mt1_tmp)
       call timestop("0 > ibasm: small matricies")
 
       IF (indx2 /= ibasm) call judft_error('spmvec: error counting basis functions')
 
-      call timestart("copy mt2_c")
-      mt2_tmp = hybdat%coul(ikpt)%mt2_c
-      call timestop("copy mt2_c")
-
-      !$acc enter data copyin(mat_hlp, mat_out, mt2_tmp)
       IF (ikpt == 1) THEN
+         call timestart("gamma point 1 noinv")
          call timestart("cpy mt3_tmp")
          allocate(mt3_tmp, mold=hybdat%coul(ikpt)%mt3_c, stat=ierr)
          if(ierr /= 0 ) call judft_error("can't alloc mt3_tmp")
@@ -401,7 +409,6 @@ contains
 
          max_l_cut = maxval(fi%hybinp%lcutm1)
          mat_in_line = mat_in%data_c(hybdat%nbasp + 1, :)
-         call timestart("gamma point 1 noinv")
 #ifdef _OPENACC
          !$acc enter data copyin(mt3_tmp)
          !$acc data copyin(mat_in_line)
@@ -495,11 +502,10 @@ contains
       !$acc wait
       call timestop("ibasm+1->nbasm: zgemm")
 
+      call timestart("dot prod")
       !$acc kernels present(mt2_tmp)
       mt2_tmp = conjg(mt2_tmp)
       !$acc end kernels
-
-      call timestart("dot prod")
 
       iatom = 0
       indx1 = ibasm; indx2 = 0; indx3 = 0
@@ -524,9 +530,6 @@ contains
             END DO
          END DO
       END DO
-
-      
-
       call timestop("dot prod")
 
       IF (ikpt == 1) THEN
@@ -586,11 +589,15 @@ contains
          !$OMP END PARALLEL DO
 #endif
          !$acc exit data delete(mt3_tmp)
+         !$acc wait
          deallocate(mt3_tmp) 
          call timestop("gamma point 2 noinv")
       END IF
-      !$acc exit data copyout(mat_out) delete(mt2_tmp, mat_hlp)
+      call timestart("free mem")
+      !$acc exit data delete(mt2_tmp, mat_hlp)
       deallocate(mt2_tmp)
+      !$acc wait
+      call timestop("free mem")
 
       call timestart("reorder back")
       !$OMP PARALLEL DO default(none) &
