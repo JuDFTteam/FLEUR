@@ -595,7 +595,7 @@ CONTAINS
                call timestart("igpt1")
                !$OMP PARALLEL DO default(none) &
                !$OMP private(igpt1, iy, igptp1, iqnrm1, csum, ic, itype, lm, l, m, cdum) &
-               !$OMP shared(fi, carr2b, sphbesmoment, iqnrm1, igpt1, carr2, carr2a, coulomb)
+               !$OMP shared(fi, carr2b, sphbesmoment, igpt2, carr2, carr2a, coulomb)
                DO igpt1 = 1, igpt2
                   iy = hybdat%nbasp + igpt1
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
