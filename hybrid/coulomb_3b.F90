@@ -16,7 +16,7 @@ contains
         complex, intent(inout)            :: coulmat(:,:)
 
         integer :: igpt, igptp, iqnrm, iqnrm1, iqnrm2, ic, igpt0, igpt1, igpt2, ix, iy, igptp2
-        integer :: iatom, itype, itype2, root, ierr
+        integer :: iatom, itype, itype2
         integer :: lm, l, m, lm1, l1, m1, lm2, l2, m2, iat2
         REAL                 :: q(3)
         COMPLEX              :: y((fi%hybinp%lexp + 1)**2), cdum, cexp, csum
