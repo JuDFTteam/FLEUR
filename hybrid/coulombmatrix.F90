@@ -593,16 +593,14 @@ CONTAINS
                call timestop("itype loops")
 
                call timestart("igpt1")
+               !$OMP PARALLEL DO default(none) &
+               !$OMP private(igpt1, iy, igptp1, iqnrm1, csum, ic, itype, lm, l, m, cdum) &
+               !$OMP shared(fi, carr2b, sphbesmoment, iqnrm1, igpt1, carr2, carr2a, coulomb)
                DO igpt1 = 1, igpt2
                   iy = hybdat%nbasp + igpt1
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
                   iqnrm1 = pqnrm(igpt1, ikpt)
                   csum = 0
-                  !$OMP PARALLEL DO default(none) &
-                  !$OMP private(ic, itype, lm, l, m, cdum) &
-                  !$OMP shared(fi, carr2b, sphbesmoment, iqnrm1, igpt1, carr2, carr2a) &
-                  !$OMP reduction(+: csum) &
-                  !$OMP collapse(2)
                   do ic = 1, fi%atoms%nat
                      do lm = 1, (fi%hybinp%lexp+1)**2
                         itype = fi%atoms%itype(ic)
@@ -611,9 +609,9 @@ CONTAINS
                         csum = csum + cdum*carr2(ic, lm)*CONJG(carr2a(lm, igpt1)) ! for coulomb
                      END DO
                   END DO
-                  !$OMP end parallel do
                   coulomb(ikpt)%data_c(iy,ix) = coulomb(ikpt)%data_c(iy,ix) + csum/fi%cell%vol
                END DO
+               !$OMP end parallel do
                call timestop("igpt1")
             END DO !igpt0
             deallocate (carr2, carr2a, carr2b, structconst1)
