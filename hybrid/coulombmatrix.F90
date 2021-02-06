@@ -593,9 +593,8 @@ CONTAINS
                call timestop("itype loops")
 
                call timestart("igpt1")
-               iy = hybdat%nbasp
                DO igpt1 = 1, igpt2
-                  iy = iy + 1
+                  iy = hybdat%nbasp + igpt1
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
                   iqnrm1 = pqnrm(igpt1, ikpt)
                   csum = 0
