@@ -5,6 +5,7 @@ hybrid/calc_hybrid.F90
 hybrid/calc_l_m_from_lm.f90
 hybrid/calc_mpsmat.f90
 hybrid/checkolap.F90
+hybrid/coulomb_3b.F90
 hybrid/coulombmatrix.F90
 hybrid/create_coul_comms.F90
 hybrid/distribute_mpi.F90
