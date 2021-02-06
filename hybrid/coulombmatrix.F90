@@ -531,8 +531,11 @@ CONTAINS
          DO im = 1, size(fmpi%k_list)
             ikpt = fmpi%k_list(im)
             if (fmpi%is_root()) write (*, *) "coulomb pw-loop nk: ("//int2str(ikpt)//"/"//int2str(fi%kpts%nkpt)//")"
-            call coulomb_3b(fi, fmpi, mpdata, hybdat, structconst, sphbesmoment, gmat, pqnrm, ngptm1, pgptm1, ikpt, coulomb(ikpt)%data_c)
+            call coulomb_3b(fi, fmpi, mpdata, hybdat, structconst, sphbesmoment, gmat, &
+                              pqnrm, ngptm1, pgptm1, ikpt, coulomb(ikpt)%data_c)
             call coulomb(ikpt)%u2l() 
+            call coulomb(ikpt)%save_npy("coulomb.npy")
+            call judft_error("bla")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
 
