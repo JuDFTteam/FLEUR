@@ -7,9 +7,10 @@ module m_types_fft_spfft
 #else
    use m_judft
    USE iso_c_binding
-   USE spfft
-   integer,PARAMETER :: fft_spfft=3
-   type,extends(t_fft):: t_fft_spfft
+   USE spFFT
+   PRIVATE
+   integer,public,PARAMETER :: fft_spfft=3
+   type,public,extends(t_fft):: t_fft_spfft
       !SpFFT
       integer, allocatable :: indices(:)
       type(c_ptr)          :: transform = c_null_ptr, realSpacePtr = c_null_ptr
@@ -20,11 +21,11 @@ module m_types_fft_spfft
       procedure :: init => t_fft_init
       procedure :: exec => t_fft_exec_c
       procedure :: free => t_fft_free
-   end type t_fft
+   end type t_fft_spfft
 contains
    subroutine t_fft_init(fft, length, forward,mode, indices)
       implicit none
-      class(t_fft_spfft)                  :: fft
+      class(t_fft_spfft)            :: fft
       integer, intent(in)           :: length(:) !length of data in each direction
       logical, intent(in)           :: forward          !.true. for the forward transformation, .false. for the backward one
       INTEGER, OPTIONAL, INTENT(IN) :: mode,indices(:)    !array of indices of relevant/nonzero elements in the FFT mesh

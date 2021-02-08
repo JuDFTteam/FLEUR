@@ -9,7 +9,23 @@ MODULE m_selectFFT
    !use m_types_fft_cufft
 
    IMPLICIT NONE
+#if CPP_FFT_TYPE==t_fft_singleton
+   INTEGER,PARAMETER:: defaultlist(1)=[fft_singleton]
+#elif CPP_FFT_TYPE==t_fft_mkl
+   INTEGER,PARAMETER:: defaultlist(1)=[fft_mkl]
+#elif CPP_FFT_TYPE==t_fft_fftw
+   INTEGER,PARAMETER:: defaultlist(1)=[fft_fftw]
+#elif CPP_FFT_TYPE==t_fft_spfft
+   INTEGER,PARAMETER:: defaultlist(1)=[fft_spfft]
+#else
    INTEGER,PARAMETER:: defaultlist(3)=[fft_mkl,fft_fftw,fft_singleton]
+#endif
+
+
+
+   TYPE t_fftbox
+     class(t_fft),allocatable :: fft
+   end type
 
    PUBLIC selectFFT
    CONTAINS

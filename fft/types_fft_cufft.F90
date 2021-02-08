@@ -11,7 +11,7 @@ module m_types_fft_cufft
   INTEGER,PUBLIC,PARAMETER :: fft_cufft=6
   type,PUBLIC,extends(t_fft):: t_fft_cufft
     integer :: plan
-    complex,ALLOCATABLE:: out(:)
+
    contains
       procedure :: init => t_fft_init
       procedure :: exec => t_fft_exec
@@ -37,28 +37,27 @@ contains
         ierr=cufftPlan3D(fft%plan,length(1),length(2),length(3),CUFFT_Z2Z)
       end select
 
-      allocate(fft%out(product(length)))
-      !$acc enter data create(fft,fft%out)
+
+
       if (ierr/=0) call judft_error("CuFFT plan failed")
     end subroutine
 
    subroutine t_fft_exec(fft, dat)
-      USE m_cfft
       implicit none
       class(t_fft_cufft), intent(inout) :: fft
       complex, intent(inout)      :: dat(:)
       integer                     :: ierr
+      logical                     :: l_localcopy
 
       call fft%t_fft%exec(dat)
-      if (.not.acc_is_present(dat)) call judft_error("FFT-data must be present on GPU for cuFFT")
+      l_localcopy=.not.acc_is_present(dat)
 
+      !$acc data copy(dat) if (localcopy)
       direction=merge(CUFFT_FORWARD,CUFFT_INVERSE,fft%forw)
-      !$acc host_data use_device(dat,fft%out)
-      ierr=cufftExecZ2Z(fft%plan,dat,fft%out,direction)
+      !$acc host_data use_device(dat)
+      ierr=cufftExecZ2Z(fft%plan,dat,dat,direction)
       !$acc end host_data
-      !$acc kernels present(dat,fft,fft%out)
-      dat=fft%out
-      !$acc end kernels
+      !$acc end data
       if (ierr/=0) call judft_error("CuFFT failed")
    end subroutine t_fft_exec
 

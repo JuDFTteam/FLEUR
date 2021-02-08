@@ -1,4 +1,7 @@
 module m_wavefproducts_aux
+#ifndef CPP_FFT_TYPE
+#define CPP_FFT_TYPE t_fft_singleton
+#endif
    use m_types_fftGrid
 CONTAINS
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
@@ -34,7 +37,7 @@ CONTAINS
       type(t_mat)     :: z_kqpt
       type(t_lapw)    :: lapw_ikqpt
       type(t_mat)     :: psi_kqpt
-      class(t_fft),allocatable     :: fft
+      type(CPP_FFT_TYPE)     :: fft
       type(t_fftgrid) :: stepf
 
       integer :: g(3), igptm, iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
@@ -44,7 +47,7 @@ CONTAINS
 
       logical :: real_warned
 
-      fft=selectFFT()
+      !fft=selectFFT()
       real_warned = .False.
 
       call timestart("wavef_IS_FFT")
@@ -85,20 +88,17 @@ CONTAINS
       t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
       iob_list = -7
       iband_list = -7
-      !!$OMP PARALLEL default(private) &
-      !!$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok) &
-      !!$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, iob_list, iband_list, gcutoff)&
-      !!$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
-      BLOCK
-      class(t_fft),allocatable::fft
-      fft=selectFFT()
+      !$OMP PARALLEL default(private) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok,fft) &
+      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, iob_list, iband_list, gcutoff)&
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
       allocate (prod(0:stepf%gridLength - 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc prod")
       allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
       call fft%init(stepf%dimensions, .true.)
-      !!$OMP DO
+      !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
          call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
          psi_k(:, 1) = conjg(psi_k(:, 1))*inv_vol * stepf%grid!stars%ufft*
@@ -133,12 +133,11 @@ CONTAINS
             endif
          enddo
       enddo
-      
-      !!$OMP END DO
+
+      !$OMP END DO
       call fft%free()
-      END BLOCK
       deallocate (prod, psi_k)
-      !!$OMP END PARALLEL
+      !$OMP END PARALLEL
 
       call stepf%free()
 
@@ -160,7 +159,8 @@ CONTAINS
       real, intent(in)               :: gcutoff
       complex, intent(inout)         :: psi(0:, bandoi:) ! (nv,ne)
 
-      class(t_fft),allocatable :: fft
+      type(CPP_FFT_TYPE)::fft
+
       type(t_fftgrid) :: grid
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
@@ -168,11 +168,8 @@ CONTAINS
 
       psi = 0.0
       n_threads = 1
-      !$OMP PARALLEL private(nu, iv, n_threads, grid)  default(private) &
-      !$OMP shared(fft,fi, bandoi, bandof, zMat, psi,  ivmap, lapw, jspin, gcutoff)
-      BLOCK
-      class(t_fft),ALLOCATABLE::fft
-      fft=selectFFT()
+      !$OMP PARALLEL private(fft,nu, iv, n_threads, grid)  default(private) &
+      !$OMP shared(fi, bandoi, bandof, zMat, psi,  ivmap, lapw, jspin, gcutoff)
 
       call grid%init(fi%cell, fi%sym, gcutoff)
       call fft%init(grid%dimensions, .false.)
@@ -186,7 +183,6 @@ CONTAINS
       !$OMP ENDDO
       call grid%free()
       call fft%free()
-      END BLOCK
       !$OMP END PARALLEL
    end subroutine wavef2rs
 
