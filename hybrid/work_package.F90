@@ -179,6 +179,9 @@ contains
       do i = 1, n_parts
          call q_pack%band_packs(i)%init(start_idx(i), psize(i), i, n_parts)
       enddo
+
+      write (*,*) "min/max psize", minval(psize), maxval(psize)
+      write (*,*) "Final memsize:", merge(8.0, 16.0, fi%sym%invs) * maxval(psize) *hybdat%nbands(nk,jsp)*hybdat%nbasm(ikqpt)
    end subroutine t_q_package_init
 
    subroutine t_band_package_init(band_pack, start_idx, psize, rank, size)
