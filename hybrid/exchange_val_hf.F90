@@ -305,7 +305,7 @@ CONTAINS
                call zlacpy("N", size(cprod_vv%data_c, 1), size(cprod_vv%data_c, 2), cprod_vv%data_c, size(cprod_vv%data_c, 1), CPP_cprod_c, size(CPP_cprod_c,1))
                call timestop("cpy cprod")
 #endif
-               !$acc enter data copyin(c_coul_wavf, CPP_cprod_c)
+               !$acc enter data copyin(CPP_cprod_c)
 
                !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
                !$acc present(c_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
