@@ -56,7 +56,7 @@ CONTAINS
 
 
       call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
-                                  jsp, ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
+                                  jsp, ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod%data_c)
 
       call timestop("wavefproducts_noinv")
 
@@ -232,7 +232,7 @@ CONTAINS
       TYPE(t_mpdata), INTENT(IN)      :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
       type(t_mat), intent(in)         :: z_kqpt_p
-      type(t_mat), intent(inout)      :: cprod
+      complex, intent(inout)          :: cprod(:,:)
 
       !     - scalars -
       INTEGER, INTENT(IN)     ::  ik, iq, jsp, bandoi, bandof
@@ -274,11 +274,6 @@ CONTAINS
       ! read in cmt coefficients from direct access file cmt
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
                     fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
-
-
-      ! $acc enter data copyin(cprod, cprod%data_c,  hybdat, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, hybdat%prodm) &
-      ! $acc copyin(bandoi, bandof, lmstart, lm_0, mpdata, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2)&
-      ! $acc copyin(cmt_ikqpt, cmt_nk, psize, ik)
 
       call timestart("loop over l, l1, l2, n, n1, n2")
       lm_0 = 0
@@ -342,8 +337,8 @@ CONTAINS
 
                            lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
                            DO i = 1, mpdata%num_radbasfn(l, itype)
-                              cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
-                                 = cprod%data_c(i + lm, (j-bandoi+1) + (k-1)*psize) &
+                              cprod(i + lm, (j-bandoi+1) + (k-1)*psize) &
+                                 = cprod(i + lm, (j-bandoi+1) + (k-1)*psize) &
                                        + hybdat%prodm(i, n, l, itype)*cscal*atom_phase
                            ENDDO
                         END DO
@@ -351,17 +346,10 @@ CONTAINS
                   END DO !n
                enddo  !j
             enddo !k
-#ifdef _OPENACC
-#else
             !$OMP END PARALLEL DO
-#endif
             lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
          END DO
       END DO
-      ! $acc exit data copyout(cprod, cprod%data_c) &
-      ! $acc delete(hybdat, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, hybdat%prodm) &
-      ! $acc delete(bandoi, bandof, lmstart, lm_0, mpdata, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2) &
-      ! $acc delete(cmt_ikqpt, cmt_nk, psize, ik)
       call timestop("loop over l, l1, l2, n, n1, n2")
       call timestop("wavefproducts_noinv5 MT")
    end subroutine wavefproducts_noinv_MT
