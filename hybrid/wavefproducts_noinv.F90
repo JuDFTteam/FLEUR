@@ -120,7 +120,7 @@ CONTAINS
                     fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
       call timestart("loop over l, l1, l2, n, n1, n2")
-      !$acc data copy(cprod) copyin(mpdata, mpdata%num_radbasfn, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
+      !$acc data copy(cprod) copyin(mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
       !$acc                         hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, &
       !$acc                         lmstart, cmt_nk, cmt_ikqpt)
 
@@ -147,7 +147,7 @@ CONTAINS
             !$acc parallel loop default(none)&
             !$acc present(lmstart, cmt_ikqpt, cmt_nk, cprod,&
             !$acc         l, iatm, itype, lm_0, bandoi, bandof, psize, atom_phase, ik, jsp, &
-            !$acc         mpdata, mpdata%num_radbasfn, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
+            !$acc         mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
             !$acc         hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr)&
             !$acc private(k,j,n,i,l1, l2, n1, n2, offdiag, lm, m, cscal, lm1, m1, m2, lm2)
             do k = 1, hybdat%nbands(ik,jsp)
@@ -181,20 +181,20 @@ CONTAINS
                                  lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                  IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                     cscal = cscal + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                                               ! * cmt_ikqpt(j, lm2, iatm) &
+                                                               * cmt_ikqpt(j, lm2, iatm) &
                                                                * conjg(cmt_nk(k, lm1, iatm))
                                  END IF
                               END IF
 
                               ! m2 = m1 - m ! switch role of b1 and b2
-                              ! IF (abs(m2) <= l2 .and. offdiag) THEN
-                              !    lm2 = lmstart(l2, itype) + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
-                              !    IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
-                              !       cscal = cscal + hybdat%gauntarr(2, l1, l2, l, m1, m) &
-                              !                               * cmt_ikqpt(j, lm1, iatm) & 
-                              !                                  * conjg(cmt_nk(k, lm2, iatm))
-                              !    END IF
-                              ! END IF
+                              IF (abs(m2) <= l2 .and. offdiag) THEN
+                                 lm2 = lmstart(l2, itype) + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                 IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
+                                    cscal = cscal + hybdat%gauntarr(2, l1, l2, l, m1, m) &
+                                                               * cmt_ikqpt(j, lm1, iatm) & 
+                                                               * conjg(cmt_nk(k, lm2, iatm))
+                                 END IF
+                              END IF
 
                               lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
