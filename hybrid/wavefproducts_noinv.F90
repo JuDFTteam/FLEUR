@@ -124,6 +124,10 @@ CONTAINS
       !$acc                         hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, &
       !$acc                         lmstart, cmt_nk, cmt_ikqpt)
 
+      call acc_present_dump()
+      write (*,*) "shape cmt_ikqpt: ", shape(cmt_ikqpt)
+      write (*,*) "psize: ", psize
+
       lm_0 = 0
       do iatm = 1,fi%atoms%nat 
          itype = fi%atoms%itype(iatm)
