@@ -120,6 +120,15 @@ CONTAINS
                     fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
       call timestart("loop over l, l1, l2, n, n1, n2")
+      !$acc data copy(cprod) &
+      !$acc copyin(mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
+      !$acc        hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, &
+      !$acc        lmstart, cmt_nk, cmt_ikqpt)
+
+      call timestart("gpu cpy in")
+      !$acc wait
+      call timestop("gpu cpy in")
+
       lm_0 = 0
       do iatm = 1,fi%atoms%nat 
          itype = fi%atoms%itype(iatm)
@@ -127,19 +136,30 @@ CONTAINS
 
          ! The default(shared) in the OMP part of the following loop is needed to avoid compilation issues on gfortran 7.5.
          DO l = 0, fi%hybinp%lcutm1(itype)
+#ifdef _OPENACC
+            !$acc data copyin(l, iatm, itype, lm_0, bandoi, bandof, psize, atom_phase, ik, jsp)
+
+            !$acc parallel loop default(none) collapse(2)&
+            !$acc present(lmstart, cmt_ikqpt, cmt_nk, cprod,&
+            !$acc         l, iatm, itype, lm_0, bandoi, bandof, psize, atom_phase, ik, jsp, &
+            !$acc         mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
+            !$acc         hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr)&
+            !$acc private(k,j,n,i,l1, l2, n1, n2, offdiag, lm, m, cscal, lm1, m1, m2, lm2)
+#else            
             !$OMP PARALLEL DO default(shared) collapse(2) schedule(dynamic) & 
             !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
             !$OMP shared(hybdat, bandoi, bandof, lmstart, lm_0, mpdata, cmt_ikqpt, cmt_nk, cprod, itype, l) &
             !$OMP shared(iatm, psize, atom_phase, ik)
+#endif
             do k = 1, hybdat%nbands(ik,jsp)
                do j = bandoi, bandof 
+                  !$acc loop seq
                   DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
                      ! don't call object funcktions in acc
                      l1 = mpdata%l1(n, l, itype) !
                      l2 = mpdata%l2(n, l, itype) ! current basis-function mpdatauct
                      n1 = mpdata%n1(n, l, itype) ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
                      n2 = mpdata%n2(n, l, itype) !
-                     ! call mpdata%set_nl(n, l, itype, n1, l1, n2, l2)
 
                      IF (mod(l1 + l2 + l, 2) == 0) THEN
                         offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
@@ -149,10 +169,12 @@ CONTAINS
                         lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
 
                         lm = lm_0
+                        !$acc loop seq
                         DO m = -l, l
                            cscal = 0.0
 
                            lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
+                           !$acc loop seq
                            DO m1 = -l1, l1
                               m2 = m1 + m ! Gaunt condition -m1+m2-m=0
                               
@@ -180,6 +202,7 @@ CONTAINS
                            END DO  !m1
 
                            lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
+                           !$acc loop seq
                            DO i = 1, mpdata%num_radbasfn(l, itype)
                               cprod(i + lm, (j-bandoi+1) + (k-1)*psize) &
                                  = cprod(i + lm, (j-bandoi+1) + (k-1)*psize) &
@@ -190,10 +213,18 @@ CONTAINS
                   END DO !n
                enddo  !j
             enddo !k
+#ifdef _OPENACC
+            !$acc end parallel loop
+
+            !$acc end data 
+#else
             !$OMP END PARALLEL DO
+#endif
             lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
          END DO
       END DO
+      !$acc end data
+      deallocate(cmt_ikqpt)
       call timestop("loop over l, l1, l2, n, n1, n2")
       call timestop("wavefproducts_noinv5 MT")
    end subroutine wavefproducts_noinv_MT
