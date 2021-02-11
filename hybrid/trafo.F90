@@ -743,7 +743,8 @@ CONTAINS
       if(vecin%l_real) then 
          call bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin%data_r, vecout%data_r)
       else
-         call bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin%data_c, vecout%data_c)
+         phase = cmplx_1
+         call bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, vecin%data_c, vecout%data_c)
       endif
 
    end subroutine bra_trafo
@@ -807,7 +808,7 @@ CONTAINS
       call timestop("bra trafo real")
    end subroutine bra_trafo_real
 
-   subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin_c, vecout_c)
+   subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, vecin_c, vecout_c)
       use m_types
       use m_constants
       use m_judft
@@ -818,13 +819,11 @@ CONTAINS
       INTEGER, INTENT(IN)               :: ikpt, nbands, psize
       COMPLEX, INTENT(IN)               ::  vecin_c(:, :)
       COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :)
-      COMPLEX, INTENT(INOUT)            ::  phase(:, :)
 
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :), vecout1(:, :)
       integer :: ok
       character(len=300)     :: errmsg
 
-      phase = cmplx_0
       call timestart("bra trafo cmplx")
 
       allocate (vecin1(size(vecin_c, dim=1), size(vecin_c, dim=2)), errmsg=errmsg, stat=ok, source=cmplx_0)
@@ -840,9 +839,7 @@ CONTAINS
       call bra_trafo_core(nbands, ikpt, psize,&
                           fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
 
-      phase = cmplx_1
       vecout_c = vecout1
-
       call timestop("bra trafo cmplx")
    end subroutine bra_trafo_cmplx
 

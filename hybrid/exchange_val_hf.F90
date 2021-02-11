@@ -165,13 +165,14 @@ CONTAINS
       ! the contribution of the Gamma-point is treated separately (see below)
 
       call timestart("alloc phase_vv & dot_res")
-      allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik,jsp)), stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
       if(mat_ex%l_real) then
          allocate(dot_result_r(hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp)), stat=ierr, source=0.0)
+         allocate (phase_vv(MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(ik,jsp)), stat=ok, source=cmplx_0)
       else 
          allocate(dot_result_c(hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp)), stat=ierr, source=cmplx_0)
+         allocate (phase_vv(0,0), stat=ok, source=cmplx_0)
       endif
+      IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
       if(ierr /= 0) call judft_error("can't alloc dot_res")
 
       allocate(exch_vv(hybdat%nbands(ik,jsp), hybdat%nbands(ik,jsp)), stat=ierr, source=cmplx_0)
@@ -308,13 +309,13 @@ CONTAINS
                !$acc enter data copyin(CPP_cprod_c)
 
                !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-               !$acc present(c_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
+               !$acc present(c_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, ikqpt, ibando)&
                !$acc present(n_q, nq_idx)
                DO iband = 1, hybdat%nbands(ik,jsp)
                   DO iob = 1, psize
                      do i = 1, hybdat%nbasm(iq)
                         c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) &
-                                                   * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)
+                                                   * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
                      enddo
                   enddo
                enddo
@@ -364,11 +365,11 @@ CONTAINS
                   !$acc wait
                   call timestop("CPP_zgemm")
 
-                  !$acc kernels present(exch_vv, dot_result_c, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest)  default(none)
+                  !$acc kernels present(exch_vv, dot_result_c, hybdat, hybdat%nbands, nsest, indx_sest)  default(none)
                   DO iband = 1, hybdat%nbands(ik,jsp)
                      DO n2 = 1, nsest(iband)
                         nn2 = indx_sest(n2, iband)
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_c(iband, nn2)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + dot_result_c(iband, nn2)
                      enddo
                   END DO
                   !$acc end kernels
