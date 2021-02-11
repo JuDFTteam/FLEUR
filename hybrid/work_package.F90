@@ -141,7 +141,7 @@ contains
       type(t_hybmpi), intent(in)        :: q_wide_mpi
       integer, intent(in)               :: rank, ptr, jsp, nk
 
-      real                 :: target_psize
+      integer              :: target_psize
       integer              :: n_parts, ikqpt, i
       integer, allocatable :: start_idx(:), psize(:)
 
@@ -152,16 +152,17 @@ contains
 
       ! arrays should be less than 5 gb
       if(fi%sym%invs) then
-         target_psize = target_memsize(fi, hybdat, mpdata%n_g)/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+         target_psize = floor(target_memsize(fi, hybdat, mpdata%n_g)/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)))
       else
-         target_psize = target_memsize(fi, hybdat, mpdata%n_g)/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)) 
+         target_psize = floor(target_memsize(fi, hybdat, mpdata%n_g)/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)))
       endif
 
+      if(target_psize == 0) call judft_error("not enough memory so save waveprod")
       write (*,*) "Target psize", target_psize
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
  
-      n_parts = ceiling(hybdat%nobd(ikqpt, jsp)/target_psize)
+      n_parts = ceiling(1.0*hybdat%nobd(ikqpt, jsp)/target_psize)
       ! I can't have more parts than hybdat%nobd
       n_parts = min(hybdat%nobd(ikqpt, jsp), n_parts)
 
