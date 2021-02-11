@@ -848,7 +848,7 @@ CONTAINS
       complex, intent(inout)  :: vecout1(:, :)
 
       INTEGER                 :: nrkpt, itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
-      INTEGER                 :: igptm, igptm2, igptp, iiatom, iiop, inviop
+      INTEGER                 :: igptm, igptm2, igptp, iiop, inviop
       COMPLEX                 :: cexp, cdum
 
       INTEGER                 :: rrot(3, 3), invrot(3, 3)
@@ -902,48 +902,40 @@ CONTAINS
 
 !     Define pointer to first mixed-basis functions (with m = -l)
       i = 0
-      ic = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            ic = ic + 1
-            DO l = 0, hybinp%lcutm1(itype)
-               DO n = 1, mpdata%num_radbasfn(l, itype)
-                  i = i + 1
-                  pnt(n, l, ic) = i
-               END DO
-               i = i + mpdata%num_radbasfn(l, itype)*2*l
+      do ic = 1,atoms%nat 
+         itype = atoms%itype(ic)
+         DO l = 0, hybinp%lcutm1(itype)
+            DO n = 1, mpdata%num_radbasfn(l, itype)
+               i = i + 1
+               pnt(n, l, ic) = i
             END DO
+            i = i + mpdata%num_radbasfn(l, itype)*2*l
          END DO
       END DO
 
 !     Multiplication
       ! MT
       cexp = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
-      ic = 0
-      iiatom = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            ic = ic + 1
+      do ic = 1,atoms%nat 
+         itype = atoms%itype(ic)
 
-            cdum = cexp*exp(-ImagUnit*tpi_const*dot_product(g, atoms%taual(:, hybinp%map(ic, kpts%bksym(ikpt)))))
+         cdum = cexp*exp(-ImagUnit*tpi_const*dot_product(g, atoms%taual(:, hybinp%map(ic, kpts%bksym(ikpt)))))
 
-            DO l = 0, hybinp%lcutm1(itype)
-               nn = mpdata%num_radbasfn(l, itype)
-               DO n = 1, nn
+         DO l = 0, hybinp%lcutm1(itype)
+            nn = mpdata%num_radbasfn(l, itype)
+            DO n = 1, nn
 
-                  i1 = pnt(n, l, ic)
-                  i2 = i1 + nn*2*l
-                  j1 = pnt(n, l, hybinp%map(ic, kpts%bksym(ikpt)))
-                  j2 = j1 + nn*2*l
+               i1 = pnt(n, l, ic)
+               i2 = i1 + nn*2*l
+               j1 = pnt(n, l, hybinp%map(ic, kpts%bksym(ikpt)))
+               j2 = j1 + nn*2*l
 
-                  DO i = 1, nbands*psize
-                     vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn,i), dwgn(-l:l, -l:l, l))
-                  END DO
-
+               DO i = 1, nbands*psize
+                  vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn,i), dwgn(-l:l, -l:l, l))
                END DO
+
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
       ! PW
