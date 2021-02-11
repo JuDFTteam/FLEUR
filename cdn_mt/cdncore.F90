@@ -75,7 +75,7 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
       rh = 0.0
       tec = 0.0
       qint = 0.0
-      IF (input%frcor) THEN
+      IF (input%frcor.and.isCoreDensityPresent()) THEN
          IF (fmpi%irank==0) THEN
             CALL readCoreDensity(input,atoms,rh,tec,qint)
          END IF
