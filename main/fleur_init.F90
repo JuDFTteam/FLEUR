@@ -128,8 +128,8 @@ CONTAINS
             open(666,file="out.history",access="append",status="old")
             open(667,file="out",status="old")
             do
-              read(667,'a',end=999) line
-              write(666,'a') line
+              read(667,'(a)',end=999) line
+              write(666,'(a)') line
             end do
 999         close(667)
             close(666)
