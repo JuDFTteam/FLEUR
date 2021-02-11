@@ -820,26 +820,13 @@ CONTAINS
       COMPLEX, INTENT(IN)               ::  vecin_c(:, :)
       COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :)
 
-      COMPLEX, ALLOCATABLE    ::  vecin1(:, :), vecout1(:, :)
-      integer :: ok
-      character(len=300)     :: errmsg
 
       call timestart("bra trafo cmplx")
 
-      allocate (vecin1(size(vecin_c, dim=1), size(vecin_c, dim=2)), errmsg=errmsg, stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1. Error: ' // trim(errmsg))
-      allocate (vecout1(size(vecin_c, dim=1), size(vecin_c, dim=2)), errmsg=errmsg, stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1. Error: ' // trim(errmsg))
-
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > fi%atoms%lmaxd')   ! very improbable case
 
-!     transform back to unsymmetrized product basis in case of inversion symmetry
-      vecin1 = vecin_c
+      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin_c, vecout_c)
 
-      call bra_trafo_core(nbands, ikpt, psize,&
-                          fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
-
-      vecout_c = vecout1
       call timestop("bra trafo cmplx")
    end subroutine bra_trafo_cmplx
 
