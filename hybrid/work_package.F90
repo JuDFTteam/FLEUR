@@ -158,7 +158,6 @@ contains
       endif
 
       if(target_psize == 0) call judft_error("not enough memory so save waveprod")
-      write (*,*) "Target psize", target_psize
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
  
@@ -169,8 +168,6 @@ contains
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
-
-      write (*,*) "final n_parts", n_parts
       
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
@@ -180,9 +177,6 @@ contains
       do i = 1, n_parts
          call q_pack%band_packs(i)%init(start_idx(i), psize(i), i, n_parts)
       enddo
-
-      write (*,*) "min/max psize", minval(psize), maxval(psize)
-      write (*,*) "Final memsize:", merge(8.0, 16.0, fi%sym%invs) * maxval(psize) *hybdat%nbands(nk,jsp)*hybdat%nbasm(ikqpt)
    end subroutine t_q_package_init
 
    subroutine t_band_package_init(band_pack, start_idx, psize, rank, size)
