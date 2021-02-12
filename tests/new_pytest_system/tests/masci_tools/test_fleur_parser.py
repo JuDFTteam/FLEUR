@@ -1,6 +1,6 @@
 import pytest
 import os
-from pytest_dependency import depends
+from pytest_plugins.pytest_dependency import depends
 
 @pytest.mark.fleur_parser
 @pytest.mark.masci_tools

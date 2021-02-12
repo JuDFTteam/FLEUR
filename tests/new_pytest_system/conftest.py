@@ -16,10 +16,11 @@ import shlex
 import logging
 import shutil
 sys.path.append(os.path.join(os.path.dirname(__file__), 'helpers'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'pytest_plugins'))
 # Now we can import everything that is in helpers, but be careful about name clashing
 from helpers.utils import RUN_PARSER_TESTS
 
-#pytest_plugins = []
+pytest_plugins = ("pytest_plugins.pytest_dependency",)
 
 LOGGER = logging.getLogger(__name__)
 
