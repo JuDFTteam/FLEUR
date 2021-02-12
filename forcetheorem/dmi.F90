@@ -15,8 +15,9 @@ MODULE m_types_dmi
      REAL,ALLOCATABLE:: qvec(:,:)
      REAL,ALLOCATABLE:: theta(:)
      REAL,ALLOCATABLE:: phi(:)
-     REAL,ALLOCATABLE:: evsum(:,:)
-     REAL,ALLOCATABLE:: h_so(:,:,:)
+     real,ALLOCATABLE:: ef(:) !shifts of fermi energy
+     REAL,ALLOCATABLE:: evsum(:,:,:)
+     REAL,ALLOCATABLE:: h_so(:,:,:,:)
    CONTAINS
      PROCEDURE :: start   =>dmi_start
      PROCEDURE :: next_job=>dmi_next_job
@@ -29,17 +30,18 @@ MODULE m_types_dmi
 CONTAINS
 
 
-  SUBROUTINE dmi_init(this,q,theta,phi,ntype)
+  SUBROUTINE dmi_init(this,q,theta,phi,ef_shifts,ntype)
     USE m_calculator
     USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     REAL,INTENT(in)                     :: q(:,:)
-    REAL,INTENT(IN)                     :: theta(:),phi(:)
+    REAL,INTENT(IN)                     :: theta(:),phi(:),ef_shifts(:)
     INTEGER,INTENT(IN)                  :: ntype
 
     this%theta=theta
     this%phi=phi
+    this%ef=ef_shifts
 
     IF (SIZE(this%phi).NE.SIZE(this%theta)) CALL &
          judft_error("Lists for theta/phi must have the same length in DMI force theorem calculations")
@@ -52,8 +54,8 @@ CONTAINS
     ALLOCATE(this%qvec(3,SIZE(q,2)))
     this%qvec=q
 
-    ALLOCATE(this%evsum(0:SIZE(this%phi),SIZE(q,2)))
-    ALLOCATE(this%h_so(0:ntype,0:SIZE(this%phi),SIZE(q,2)))
+    ALLOCATE(this%evsum(size(this%ef),0:SIZE(this%phi),SIZE(q,2)))
+    ALLOCATE(this%h_so(0:ntype,size(this%ef),0:SIZE(this%phi),SIZE(q,2)))
 
     this%evsum=0;this%h_so=0.0
   END SUBROUTINE dmi_init
@@ -112,36 +114,43 @@ CONTAINS
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
 
     !Locals
-    INTEGER:: n,q,i
-    CHARACTER(LEN=12):: attributes(5)
+    INTEGER:: n,q,i,nef
+    CHARACTER(LEN=12):: attributes(6)
     CHARACTER(LEN=16) :: atom_name
     IF (this%q_done==0) RETURN
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop')
        attributes = ''
-       WRITE(attributes(1),'(i5)') SIZE(this%evsum,2)
        WRITE(attributes(2),'(i5)') SIZE(this%evsum,1)
-       WRITE(attributes(3),'(a)') 'Htr'
-       CALL openXMLElement('Forcetheorem_DMI',(/'qPoints','Angles ','units  '/),attributes(:3))
-       DO q=1,SIZE(this%evsum,2)
+       WRITE(attributes(3),'(i5)') SIZE(this%evsum,2)-1
+       WRITE(attributes(1),'(i5)') SIZE(this%evsum,3)
+       WRITE(attributes(4),'(a)') 'Htr'
+       CALL openXMLElement('Forcetheorem_DMI',(/'qPoints','ef     ','Angles ','units  '/),attributes(:4))
+       DO q=1,SIZE(this%evsum,3)
           WRITE(attributes(2),'(i5)') q
-          WRITE(attributes(3),'(f12.7)') this%evsum(0,q)
-          CALL writeXMLElementForm('Entry',(/'q     ','ev-sum'/),attributes(2:3),&
-                                   RESHAPE((/1,6,5,12/),(/2,2/)))
-          DO n=1,SIZE(this%evsum,1)-1
-             WRITE(attributes(3),'(f12.7)') this%theta(n)
-             WRITE(attributes(4),'(f12.7)') this%phi(n)
-             WRITE(attributes(5),'(f12.7)') this%evsum(n,q)
-             CALL writeXMLElementForm('Entry',(/'q     ','theta ','phi   ','ev-sum'/),attributes(2:),RESHAPE((/1,5,3,6,5,12,12,12/),(/4,2/)))
-             write(attributes(5),'(f12.7)') this%h_so(0,n,q)
-             CALL writeXMLElementForm('allAtoms',(/'q     ','theta ','phi   ','H_so  '/),attributes(2:),RESHAPE((/1,5,3,6,5,12,12,12/),(/4,2/)))
+          DO nef=1,size(this%ef,1)
+            WRITE(attributes(3),'(f10.5)') this%ef(nef)
+            WRITE(attributes(4),'(f12.7)') this%evsum(nef,0,q)
+            CALL writeXMLElementForm('Entry',(/'q       ','ef-shift','ev-sum  '/),attributes(2:4),&
+            RESHAPE((/1,8,6,5,12,12/),(/3,2/)))
+            DO n=1,SIZE(this%evsum,2)-1
+              WRITE(attributes(4),'(f12.7)') this%theta(n)
+              WRITE(attributes(5),'(f12.7)') this%phi(n)
+              WRITE(attributes(6),'(f12.7)') this%evsum(nef,n,q)
+              CALL writeXMLElementForm('Entry',(/'q       ','ef-shift','theta   ','phi     ','ev-sum  '/),&
+              attributes(2:6),RESHAPE((/1,8,5,3,6,5,12,12,12,12/),(/5,2/)))
+              write(attributes(6),'(f12.7)') this%h_so(0,nef,n,q)
+              CALL writeXMLElementForm('allAtoms',(/'q       ','ef-shift','theta   ','phi     ','H_so    '/),&
+              attributes(2:6),RESHAPE((/1,8,5,3,6,5,12,12,12,12/),(/5,2/)))
              DO i=1,size(this%h_so,1)-1
-               write(attributes(5),'(f12.7)') this%h_so(i,n,q)
+               write(attributes(6),'(f12.7)') this%h_so(i,nef,n,q)
                write(attributes(1),'(i0)') i
-               CALL writeXMLElementForm('singleAtom',(/'atomType','q       ','theta   ','phi     ','H_so    '/),attributes,RESHAPE((/8,1,5,3,6,5,5,12,12,12/),(/5,2/)))
+               CALL writeXMLElementForm('singleAtom',(/'atomType','ef-shift','q       ','theta   ','phi     ','H_so    '/)&
+               ,attributes,RESHAPE((/8,8,1,5,3,6,5,5,12,12,12,12/),(/6,2/)))
              ENDDO
           END DO
+        enddo
        ENDDO
        CALL closeXMLElement('Forcetheorem_DMI')
     ENDIF
@@ -152,7 +161,8 @@ CONTAINS
   SUBROUTINE dmi_dist(this,fmpi)
 #ifdef CPP_MPI
     USE mpi
-#endif    
+    USE m_mpi_bc_tool
+#endif
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
@@ -160,17 +170,10 @@ CONTAINS
 
     INTEGER:: i,q,ierr,n
 #ifdef CPP_MPI
-    IF (fmpi%irank==0) i=SIZE(this%theta)
-    call MPI_BCAST(i,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
-    IF (fmpi%irank==0) q=SIZE(this%qvec,2)
-    CALL MPI_BCAST(q,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
-    IF (fmpi%irank.NE.0) ALLOCATE(this%qvec(3,q),this%phi(i),this%theta(i),this%evsum(0:i,q));this%evsum=0.0
-    if (fmpi%irank==0) n=size(this%h_so,1)-1
-    call MPI_BCAST(n,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
-    IF (fmpi%irank.NE.0) ALLOCATE(this%h_so(0:n,0:i,q));this%h_so=0.0
-    CALL MPI_BCAST(this%phi,i,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-    CALL MPI_BCAST(this%theta,i,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-    CALL MPI_BCAST(this%qvec,3*q,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+    CALL mpi_bc(this%theta,0,fmpi%mpi_comm)
+    CALL mpi_bc(this%phi,0,fmpi%mpi_comm)
+    CALL mpi_bc(this%qvec,0,fmpi%mpi_comm)
+    CALL mpi_bc(this%ef,0,fmpi%mpi_comm)
 #endif
   END SUBROUTINE dmi_dist
 
@@ -199,9 +202,9 @@ CONTAINS
     skip=.FALSE.
     IF (this%q_done==0) RETURN
 
-    this%evsum(0,this%q_done)=results%seigv
-    CALL ssomat(this%evsum(1:,this%q_done),this%h_so(:,:,this%q_done),this%theta,this%phi,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)
+
+    CALL ssomat(this%evsum(:,:,this%q_done),this%h_so(:,:,:,this%q_done),this%theta,this%phi,eig_id,atoms,kpts,sym,&
+       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results,this%ef+results%ef)
     skip=.TRUE.
   END FUNCTION  dmi_eval
 
