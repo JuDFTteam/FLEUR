@@ -22,7 +22,7 @@ def test_CrystalFieldOutput(execute_fleur, grep_exists, grep_number):
         'V_66.1.dat']
 
     for file1 in should_files:
-        assert file1 in res_file_names, , f'{file1} missing'
+        assert file1 in res_file_names, f'{file1} missing'
 
     #Test that there was a second vgen call with modified potential
     #Here the big multipole moments are grepped (Maybe not the best way)
