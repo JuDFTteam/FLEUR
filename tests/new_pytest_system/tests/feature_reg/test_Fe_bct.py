@@ -16,7 +16,7 @@ def test_Fe_bct_LibXC(execute_fleur, grep_number, grep_exists):
     should_files = ['out', 'cdn1']
     res_file_names = list(res_files.keys())
     for file1 in should_files:
-        assert file1 in res_file_names
+        assert file1 in res_file_names, f'{file1} missing'
 
     assert grep_exists(res_files['out'], "total charge")
     qfix = grep_number(res_files['out'], "qfix", "qfix=")

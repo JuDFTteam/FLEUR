@@ -3,6 +3,7 @@ import pytest
 
 @pytest.mark.bulk
 @pytest.mark.magnetism
+@pytest.mark.hdf
 def test_Fe_bcc_FlipcdnXLDA(execute_fleur, grep_number, grep_exists):
     """FeBCCFlipX: Flipcdn and noco in MT test
     Simple test of Fleur with two steps:
@@ -22,13 +23,14 @@ def test_Fe_bcc_FlipcdnXLDA(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['out'], "flip")
 
     # Stage 2
-    res_files = execute_fleur(cmd_params, test_file_folder, only_copy=[['inp2.xml', 'inp.xml', 'JUDFT_WARN_ONLY']])
+    res_files = execute_fleur(test_file_folder, only_copy=[['inp2.xml', 'inp.xml', 'JUDFT_WARN_ONLY']])
     mx = grep_number(res_files['out'], "mx=", "mx=")
     assert abs(mx - 2.116) <= 0.001
 
 
 @pytest.mark.bulk
 @pytest.mark.magnetism
+@pytest.mark.hdf
 def test_Fe_bcc_FlipcdnYGGA(execute_fleur, grep_number, grep_exists):
     """FeBCCFlipY: Flipcdn and noco in MT test
     Simple test of Fleur with two steps:
@@ -71,10 +73,10 @@ def test_Fe_bcc_SF_LDA(execute_fleur, grep_number, grep_exists):
         assert file1 in res_file_names
 
     assert grep_exists(res_files['out'], "SF")
-    magmom = grep_number(res_files['out'], "Magmom before SF", "mz =")
-    bfield_before = grep_number(res_files['out'], "Bfield before SF", "Bz =")
-    bfield_after = grep_number(res_files['out'], "Bfield after SF", "Bz =")
-    mz = grep_number(res_files['out'], "local frame: mx=", "mz =")
+    magmom = grep_number(res_files['out'], "Magmom before SF", "mz=")
+    bfield_before = grep_number(res_files['out'], "Bfield before SF", "Bz=")
+    bfield_after = grep_number(res_files['out'], "Bfield after SF", "Bz=")
+    mz = grep_number(res_files['out'], "local frame: mx=", "mz=")
 
     assert abs(magmom - 2.37929) <= 0.001
     assert abs(bfield_before - -1.17291) <= 0.001

@@ -55,7 +55,7 @@ def test_Noncollinear_downward_compatible(execute_fleur, grep_number, grep_exist
         assert (file1 in res_file_names), f'{file1} missing'
 
     tenergy = grep_number(res_files['out'], "total energy=", "=")
-    assert abs(tenergy - -1270.488) <= 0.0001
+    assert abs(tenergy - -1270.4886) <= 0.0001
 
     # Stage 4
 
