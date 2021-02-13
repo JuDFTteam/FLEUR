@@ -8,7 +8,7 @@ set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
    GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM Fe_1l_Tria
    CrystalFieldOutput VO2_forces VO2_force_levels )
-   
+
 #Currently running but broken
 # NiO_ldauXML
 
@@ -59,7 +59,7 @@ endif()
 
 #Tests for LibXC
 if (FLEUR_USE_LIBXC)
-   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC)
+   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC Al_libxc_PBE)
 endif()
 
 #To be repaired: Diamond_SCAN

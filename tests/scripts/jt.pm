@@ -39,6 +39,7 @@ sub copyfile($$){
     if ($res==0) {print LOG "Done\n";}
        else {print LOG "Failed\n";}
 }
+
 sub movefile($$){
     my $from=shift;
     my $to=shift;
@@ -49,6 +50,7 @@ sub movefile($$){
     system("mv $from $to");
     print LOG "Done\n";
 }
+
 sub deletefile($){
     my $from=shift;
     use POSIX;
@@ -57,6 +59,16 @@ sub deletefile($){
 
     system("rm $from ");
     print LOG "Done\n";
+}
+
+sub subdir($){
+    my $dirname=shift;
+    use POSIX;
+    print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
+    print LOG "Making subdirectory: $dirname";
+
+    system("mkdir $dirname");
+    {print LOG "Done\n";}
 }
 
 sub testrun($$){
@@ -149,7 +161,7 @@ sub test_grepnumber($$$$$){
 
     print LOG "$1 == $value:";
 
-    if ($1=="") { 
+    if ($1=="") {
 	print LOG "failed\n";
 	return 1;
     }
@@ -181,7 +193,7 @@ sub test_grep_lastnumber($$$$$){
 
     print LOG "$1 == $value:";
 
-    if ($1=="") { 
+    if ($1=="") {
 	print LOG "failed\n";
 	return 1;
     }
@@ -193,7 +205,7 @@ sub test_grep_lastnumber($$$$$){
 	print LOG "failed\n";
         return 1;
     }
-}   
+}
 
 sub test_grep_firstnumber($$$$$){
     my $file=shift;
@@ -213,7 +225,7 @@ sub test_grep_firstnumber($$$$$){
 
     print LOG "$1 == $value:";
 
-    if ($1=="") { 
+    if ($1=="") {
 	print LOG "failed\n";
 	return 1;
     }
@@ -225,7 +237,7 @@ sub test_grep_firstnumber($$$$$){
 	print LOG "failed\n";
         return 1;
     }
-}   
+}
 
 
 sub stageresult($$$){
