@@ -3,7 +3,7 @@ enable_testing()
 set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
     Fe_bctXML  PTOXML Fe_1l_SOCXML CuBandXML CuDOSXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML H2ORelaxBFGS
-     Fe_Kerker Fe_bct_LOXML SiFilmPlotXML
+     Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO  CoMCDXML CuOrb SmAtomjDOS
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
    GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM Fe_1l_Tria
