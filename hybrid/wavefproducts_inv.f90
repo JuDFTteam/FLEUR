@@ -397,6 +397,7 @@ CONTAINS
                      !
 
                      monepm = -monepl
+                     call timestart("m loop")
                      DO m = -l, -1
                         monepm = -monepm
                         moneplm = monepl*monepm
@@ -595,7 +596,7 @@ CONTAINS
                         lm = lm + mpdata%num_radbasfn(l, itype)
 
                      END DO  ! m=-l,-1
-
+                     call timestop("m loop")
                      !
                      !case m=0
                      !
@@ -606,6 +607,7 @@ CONTAINS
 
                      monepm1 = -monepl1
 
+                     call timestart("m1 loop")
                      DO m1 = -l1, l1
                         m2 = m1
                         monepm1 = -monepm1
@@ -663,8 +665,10 @@ CONTAINS
                         ! go to lmp start index for next m1-quantum number
                         lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                      END DO  !m1
+                     call timestop("m1 loop")
 
                      ! go to lm mixed basis startindx for l and m
+                     call timestart("iband loop")
                      lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO ibando = bandoi,bandof
@@ -677,6 +681,7 @@ CONTAINS
                            END DO  !i -> loop over mixed basis functions
                         END DO  !ibando
                      END DO  !iband
+                     call timestop("iband loop")
 
                      ! go to lm start index for next m-quantum number
                      lm = lm + mpdata%num_radbasfn(l, itype)
@@ -687,11 +692,13 @@ CONTAINS
 
                      rarr2 = 0.0
                      monepm = 1
+                     call timestart("another m-loop")
                      DO m = 1, l
                         monepm = -monepm
                         moneplm = monepl*monepm
 
                         ! calculate the contributions which are identical for m>0 and m <0
+                        call timestart("idential for m gt 0 m sm 0")
                         rarr2 = 0.0
                         IF (abs(m) <= l2) THEN
                            lmp1 = lp1 + l1*mpdata%num_radfun_per_l(l1, itype)
@@ -726,7 +733,9 @@ CONTAINS
                            END IF  ! offdiag
 
                         END IF  ! abs(m) .le. l2
+                        call timestop("idential for m gt 0 m sm 0")
 
+                        call timestart("absm sm l1")
                         IF (abs(m) <= l1) THEN
                            IF (mod(l2, 2) == 0) THEN
                               lmp3 = lp1 + (m + l1)*mpdata%num_radfun_per_l(l1, itype)
@@ -760,10 +769,12 @@ CONTAINS
                            END IF  ! offdiag
 
                         END IF  ! abs(m) .le. l2
+                        call timestop("absm sm l1")
 
                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                         !go to lm index for m1=-l1
+                        call timestart("2nd m1 loop")
                         lmp1 = lp1
                         monepm1 = -monepl1
                         DO m1 = -l1, l1
@@ -870,6 +881,7 @@ CONTAINS
                            !go to lmp start index for next m1-quantum number
                            lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                         END DO  ! m1
+                        call timestop("2nd m1 loop")
 
                         ! multiply rarr2 by (-1)**(l+m+1)
                         rarr2(:, :) = (-1)*moneplm*rarr2(:, :)
@@ -877,6 +889,7 @@ CONTAINS
                         ! go to lm mixed basis startindx for l and m
                         lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
 
+                        call timestart("bottom iband")
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
                               iob = ibando + 1 - bandoi
@@ -888,12 +901,13 @@ CONTAINS
                               END DO  !i -> loop over mixed basis functions
                            END DO  !ibando
                         END DO  !iband
+                        call timestop("bottom iband")
 
                         ! go to lm start index for next m-quantum number
                         lm = lm + mpdata%num_radbasfn(l, itype)
 
                      END DO  ! m=1,l
-
+                     call timestop("another m-loop")
                   END DO !n
                   lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the m start index of the next l-quantum number
                   IF (lm /= lm_0) call juDFT_error('wavefproducts_inv5: counting of lm-index incorrect (bug?)')
