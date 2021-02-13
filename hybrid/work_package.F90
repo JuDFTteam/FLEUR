@@ -331,8 +331,6 @@ contains
 
       gpu_mem = acc_get_property(0,acc_device_current, acc_property_free_memory)
       target_memsize = 0.5*((0.85*gpu_mem) - (coulomb_size + exch_size))
-
-      write (*,*) "Target memsize:", target_memsize * 1e-9, "Gb"
 #else
       target_memsize = 10e9 ! 10 Gb
 #endif
