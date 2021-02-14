@@ -415,9 +415,9 @@ CONTAINS
                            rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
                            IF (abs(rdum) > 1e-12) THEN
                               DO iband = 1, hybdat%nbands(ik,jsp)
-                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
-                                 IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
                                  DO ibando = bandoi,bandof
+                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
+                                    IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
                                     rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                  END DO  ! ibando
                               END DO  ! iband
