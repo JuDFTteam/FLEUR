@@ -915,17 +915,17 @@ CONTAINS
                         lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
 
                         call timestart("bottom iband")
+                        !$OMP parallel do default(none) private(iband, ibando, iob, rdum) collapse(2)&
+                        !$OMP shared(hybdat, bandoi, bandof, rarr2, mpdata, cprod, psize, lm1, itype, l, n)
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
                               iob = ibando + 1 - bandoi
                               rdum = rarr2(ibando, iband)
-                              DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 j = lm1 + i
-                                 cprod%data_r(j, iob + (iband-1)*psize)&
-                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rdum
-                              END DO  !i -> loop over mixed basis functions
+                              call daxpy(mpdata%num_radbasfn(l, itype), rdum, hybdat%prodm(1,n,l,itype), 1, &
+                                         cprod%data_r(lm1+1, iob + (iband-1)*psize), 1)
                            END DO  !ibando
                         END DO  !iband
+                        !$OMP end parallel do
                         call timestop("bottom iband")
 
                         ! go to lm start index for next m-quantum number
