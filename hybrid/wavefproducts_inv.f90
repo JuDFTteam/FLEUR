@@ -661,12 +661,16 @@ CONTAINS
                               rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)*fac1
                            END IF
                            IF (abs(rdum) > 1e-12) THEN
-                              DO iband = 1, hybdat%nbands(ik,jsp)
-                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
-                                 DO ibando = bandoi,bandof
-                                    rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
-                                 END DO  ! ibando
-                              END DO  ! iband
+                              ! dgemm(TRANSA,TRANSB, M,   N,                     K, ALPHA, A, LDA,
+                              call dgemm("N", "T", psize, hybdat%nbands(ik,jsp), 1, rdum, cmt_nkqpt(bandoi, lmp2, iatom1), size(cmt_nkqpt,1),& 
+                              !          B,                       LDB,             BETA, C,     LDC)
+                                         cmt_nk(1, lmp1, iatom1), size(cmt_nk, 1), 1.0,  rarr2, size(rarr2, 1))
+                              ! DO iband = 1, hybdat%nbands(ik,jsp)
+                              !    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
+                              !    DO ibando = bandoi,bandof
+                              !       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
+                              !    END DO  ! ibando
+                              ! END DO  ! iband
                            END IF  ! rdum.ne.0
 
                            !change role of b1 and b2
