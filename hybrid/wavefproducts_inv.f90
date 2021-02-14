@@ -561,7 +561,7 @@ CONTAINS
                                  END IF
                                  rdum = moneplm*rdum/sqrt(2.0)
                                  !$OMP parallel do default(none) private(iband, rdum1) &
-                                 !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp3, m1, m2, iatom1, fac, rdum, rarr2)
+                                 !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, fac, rdum, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!moneplm*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
