@@ -416,7 +416,7 @@ CONTAINS
                            IF (abs(rdum) > 1e-12) THEN
                               !$OMP parallel do default(none) collapse(2) &
                               !$OMP private(iband, ibando, rdum1)& 
-                              !$OMP shared(hybdat, bandoi, bandof, cmt_nk, moneplm, l1, rarr2, cmt_nkqpt, lmp2, iatom)
+                              !$OMP shared(hybdat, bandoi, bandof, cmt_nk, moneplm, l1, rarr2, cmt_nkqpt, rdum, lmp1, lmp2, iatom1)
                               DO iband = 1, hybdat%nbands(ik,jsp)
                                  DO ibando = bandoi,bandof
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
