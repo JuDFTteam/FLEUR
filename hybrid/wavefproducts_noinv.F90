@@ -51,10 +51,6 @@ CONTAINS
       call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                   ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
 
-      ! call wavefproducts_noinv_IS(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, nococonv, &
-      !                             ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
-
-
       call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
                                   jsp, ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod%data_c)
 
