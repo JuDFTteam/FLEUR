@@ -513,13 +513,14 @@ CONTAINS
                                     fac = 1/2.*moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))
                                  END IF
                                  rdum = rdum/sqrt(2.0)
+                                 !$OMP parallel do default(none) private(iband, rdum1) &
+                                 !$OMP shared(hybdat, cmt_nk, rudm, fac, psize, cmt_nkqpt, lmp2, iatom1, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                    DO ibando = bandoi,bandof
-                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
-                                    END DO  ! ibando
+                                    call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp2, iatom1), 1, rarr2(bandoi, iband), 1)
                                  END DO  ! iband
+                                 !$OMP end parallel do
                               END IF  ! rdum .ne. 0
 
                               IF (offdiag) THEN
@@ -533,9 +534,11 @@ CONTAINS
                                        fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                     END IF
                                     rdum = moneplm*rdum/sqrt(2.0)
+
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
+                                       !call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp2, iatom1), 1, rarr2(bandoi, iband), 1)
                                        DO ibando = bandoi,bandof
                                           rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
                                        END DO  ! ibando
