@@ -565,7 +565,7 @@ CONTAINS
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!moneplm*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                    call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp3, iatom1), 1, rarr2(bandoi, iband), 1)
+                                    call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp2, iatom1), 1, rarr2(bandoi, iband), 1)
                                  END DO  ! iband
                                  !$OMP end parallel do
                               END IF  ! rdum .ne. 0
