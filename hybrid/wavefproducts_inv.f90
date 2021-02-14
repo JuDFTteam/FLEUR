@@ -693,17 +693,18 @@ CONTAINS
                      ! go to lm mixed basis startindx for l and m
                      call timestart("iband loop")
                      lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
+                     !$OMP parallel do default(none) private(iband, ibando, iob) collapse(2) &
+                     !$OMP shared(hybdat, bandoi, bandof, mpdata, cprod, lm1, psize, itype, l, rarr2, n)
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO ibando = bandoi,bandof
                            iob = ibando + 1 - bandoi
-                           rdum = rarr2(ibando, iband)
-                           DO i = 1, mpdata%num_radbasfn(l, itype)
-                              j = lm1 + i
-                              cprod%data_r(j, iob + (iband-1)*psize) &
-                                 = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rdum
-                           END DO  !i -> loop over mixed basis functions
+                           !call zaxpy(n,                            a,                    x,                         incx
+                           call zaxpy(mpdata%num_radbasfn(l, itype), rarr2(ibando, iband), hybdat%prodm(1,n,l,itype), 1,&
+                                    !y,                                          incy)
+                                     cprod%data_r(lm1+1, iob + (iband-1)*psize), 1)
                         END DO  !ibando
                      END DO  !iband
+                     !$OMP end parallel do
                      call timestop("iband loop")
 
                      ! go to lm start index for next m-quantum number
