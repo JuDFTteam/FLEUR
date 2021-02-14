@@ -698,9 +698,7 @@ CONTAINS
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO ibando = bandoi,bandof
                            iob = ibando + 1 - bandoi
-                           !call zaxpy(n,                            a,                    x,                         incx
-                           call zaxpy(mpdata%num_radbasfn(l, itype), rarr2(ibando, iband), hybdat%prodm(1,n,l,itype), 1,&
-                                    !y,                                          incy)
+                           call daxpy(mpdata%num_radbasfn(l, itype), rarr2(ibando, iband), hybdat%prodm(1,n,l,itype), 1,&
                                      cprod%data_r(lm1+1, iob + (iband-1)*psize), 1)
                         END DO  !ibando
                      END DO  !iband
