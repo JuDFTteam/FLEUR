@@ -493,6 +493,7 @@ CONTAINS
                         !go to lm index for m1=-l1
                         lmp1 = lp1
                         monepm1 = -monepl1
+                        call timestart("3rd m1 loop")
                         DO m1 = -l1, l1
                            monepm1 = -monepm1
                            IF (m1 == 0) THEN
@@ -593,20 +594,26 @@ CONTAINS
                            !go to lmp start index for next m1-quantum number
                            lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                         END DO  ! m1
+                        call timestop("3rd m1 loop")
 
                         ! go to lm mixed basis startindx for l and m
                         lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
+                        call timestart("tripple OMP loop")
+                        !$OMP parallel do default(none) &
+                        !$OMP private(iband, ibando, i, j, iob) &
+                        !$OMP shared(hybdat, bandoi, bandof, mpdata, cprod, psize, rarr2, l, itype, lm1, n)
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
-                              iob = ibando + 1 - bandoi
-                              rdum = rarr2(ibando, iband)
                               DO i = 1, mpdata%num_radbasfn(l, itype)
                                  j = lm1 + i
+                                 iob = ibando + 1 - bandoi
                                  cprod%data_r(j, iob + (iband-1)*psize) &
-                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rdum
+                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rarr2(ibando, iband)
                               END DO  !i -> loop over mixed basis functions
                            END DO  !ibando
                         END DO  !iband
+                        !$OMP end parallel do
+                        call timestop("tripple OMP loop")
 
                         ! go to lm start index for next m-quantum number
                         lm = lm + mpdata%num_radbasfn(l, itype)
