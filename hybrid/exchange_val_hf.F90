@@ -149,7 +149,7 @@ CONTAINS
 #define CPP_cprod_c cprod_vv%data_c
 
 #endif
-      type(t_mat)          :: cprod_vv, carr3_vv
+      type(t_mat)          :: cprod_vv, carr3_vv, tmp
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
 
@@ -209,6 +209,14 @@ CONTAINS
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
                                       hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
+
+               call tmp%alloc(.false., cprod_vv%matsize1, cprod_vv%matsize2)
+               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw,&
+                                        hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, tmp)
+
+               call tmp%save_npy("tmp.npy")
+               call cprod_vv%save_npy("cprod_vv.npy")
+               call juDFT_error("stop it here")
             ELSE
                CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw,&
                                         hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
