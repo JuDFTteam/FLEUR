@@ -514,7 +514,7 @@ CONTAINS
                                  END IF
                                  rdum = rdum/sqrt(2.0)
                                  !$OMP parallel do default(none) private(iband, rdum1) &
-                                 !$OMP shared(hybdat, cmt_nk, rudm, fac, psize, cmt_nkqpt, lmp2, iatom1, rarr2)
+                                 !$OMP shared(hybdat, cmt_nk, rdum, fac, psize, cmt_nkqpt, m1, m2, lmp1, lmp2, iatom1, rarr2, bandoi)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
@@ -534,15 +534,14 @@ CONTAINS
                                        fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                     END IF
                                     rdum = moneplm*rdum/sqrt(2.0)
-
+                                    !$OMP parallel do default(none) private(iband, rdum1) &
+                                    !$OMP shared(hybdat, lmp2, iatom1, psize, cmt_nk, cmt_nkqpt, rarr2, rdum, m1, m2, bandoi, fac, lmp3)
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                       !call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp2, iatom1), 1, rarr2(bandoi, iband), 1)
-                                       DO ibando = bandoi,bandof
-                                          rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
-                                       END DO  ! ibando
+                                       call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp3, iatom1), 1, rarr2(bandoi, iband), 1)
                                     END DO  ! iband
+                                    !$OMP end parallel do
                                  END IF  ! rdum .ne. 0
                               END IF  ! offdiag
 
