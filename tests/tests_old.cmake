@@ -3,22 +3,15 @@ enable_testing()
 set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
     Fe_bctXML  PTOXML Fe_1l_SOCXML CuBandXML CuDOSXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML H2ORelaxBFGS
-     Fe_Kerker Fe_bct_LOXML SiFilmPlotXML
+     Fe_Kerker Fe_bct_LOXML SiFilmPlotXML SiFilmSlicePlotXML
    FePt_film_SSFT FePt_film_SSFT_LO  CoMCDXML CuOrb SmAtomjDOS
    Fe_bcc_GreensFunction GreensFunction_MultiContour Fe_1l_GreensFunction
    GreensFunctionRadial GreensFunctionRadial_LO Fe_Tetra_noSYM Fe_1l_Tria
    CrystalFieldOutput VO2_forces VO2_force_levels )
-   
-#Currently running but broken
-# NiO_ldauXML
-
-#Currently broken as the feature was not tested correctly
-# SiFilmSlicePlotXML
 
 #Currently disabled Tests (Hybrid)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
 #  CoUnfold
-
 
 set(SerialOnlyTests  )
 
@@ -47,9 +40,8 @@ if (FLEUR_USE_HDF5)
 endif()
 
 #Check if all tests (including those running for a long time) should be executed
-#NiO_ldauXML used to be here as well
 if (all_tests)
-   set(SerialParallelTests ${SerialParallelTests} Bi2Te3XML ${FFNTests})
+   set(SerialParallelTests ${SerialParallelTests} ${FFNTests})
 endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
@@ -59,7 +51,7 @@ endif()
 
 #Tests for LibXC
 if (FLEUR_USE_LIBXC)
-   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC)
+   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC Al_libxc_PBE)
 endif()
 
 #To be repaired: Diamond_SCAN
@@ -68,7 +60,6 @@ endif()
 if (FLEUR_USE_EDSOLVER)
    set(SerialParallelTests ${SerialParallelTests} Gd_Hubbard1 Gd_Hubbard1_noSYM)
 endif()
-
 
 #The inpgen tests
 #if (INPGEN)

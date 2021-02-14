@@ -35,7 +35,7 @@ contains
     TYPE IS(t_forcetheo_mae)
        CALL forcetheo%init(forcetheo_data%theta,forcetheo_data%phi,cell,sym)
     TYPE IS(t_forcetheo_dmi)
-       CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta,forcetheo_data%phi,atoms%ntype)
+       CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta,forcetheo_data%phi,forcetheo_data%ef,atoms%ntype)
     TYPE IS(t_forcetheo_jij)
        CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta(1),atoms)
     TYPE IS(t_forcetheo_ssdisp)
