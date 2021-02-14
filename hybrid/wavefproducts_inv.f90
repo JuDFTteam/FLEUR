@@ -64,12 +64,12 @@ CONTAINS
                                    ikqpt, z_kqpt_p, c_phase_kqpt, ccmt_nk, cprod)
       use m_calc_cmt
       implicit NONE
-      type(t_fleurinput), intent(in):: fi
-      TYPE(t_mpdata), INTENT(IN)   :: mpdata
-      type(t_nococonv), intent(in)  :: nococonv
-      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-      type(t_mat), intent(in)       :: z_kqpt_p
-      type(t_mat), intent(inout)    :: cprod
+      type(t_fleurinput), intent(in) :: fi
+      TYPE(t_mpdata), INTENT(IN)     :: mpdata
+      type(t_nococonv), intent(in)   :: nococonv
+      TYPE(t_hybdat), INTENT(IN)     :: hybdat
+      type(t_mat), intent(in)        :: z_kqpt_p
+      type(t_mat), intent(inout)     :: cprod
 
       ! - scalars -
       INTEGER, INTENT(IN)      :: ik, iq, jsp, bandoi, bandof
