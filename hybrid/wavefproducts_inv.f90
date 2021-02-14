@@ -681,12 +681,14 @@ CONTAINS
                                  rdum = hybdat%gauntarr(2, l1, l2, l, m1, m)*fac2
                               END IF
                               IF (abs(rdum) > 1e-12) THEN
-                                 DO iband = 1, hybdat%nbands(ik,jsp)
-                                    rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
-                                    DO ibando = bandoi,bandof
-                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp4, iatom1)
-                                    END DO  ! ibando
-                                 END DO  ! iband
+                                 call dgemm("N","T",psize,hybdat%nbands(ik,jsp),1,rdum,cmt_nkqpt(bandoi,lmp4,iatom1), size(cmt_nkqpt,1),& 
+                                         cmt_nk(1, lmp3, iatom1), size(cmt_nk, 1), 1.0,  rarr2, size(rarr2, 1))
+                                 ! DO iband = 1, hybdat%nbands(ik,jsp)
+                                 !    rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
+                                 !    DO ibando = bandoi,bandof
+                                 !       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp4, iatom1)
+                                 !    END DO  ! ibando
+                                 ! END DO  ! iband
                               END IF  ! rdum.ne.0
                            END IF  ! offdiag
 
