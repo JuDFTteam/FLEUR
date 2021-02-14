@@ -414,6 +414,9 @@ CONTAINS
 
                            rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
                            IF (abs(rdum) > 1e-12) THEN
+                              !$OMP parallel do default(none) collapse(2) &
+                              !$OMP private(iband, ibando, rdum1)& 
+                              !$OMP shared(hybdat, bandoi, bandof, cmt_nk, moneplm, l1, rarr2, cmt_nkqpt, lmp2, iatom)
                               DO iband = 1, hybdat%nbands(ik,jsp)
                                  DO ibando = bandoi,bandof
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
@@ -421,6 +424,7 @@ CONTAINS
                                     rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                  END DO  ! ibando
                               END DO  ! iband
+                              !$OMP end parallel do
                            END IF  ! rdum .ne. 0
 
                            IF (offdiag) THEN
