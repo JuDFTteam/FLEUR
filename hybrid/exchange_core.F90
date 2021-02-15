@@ -22,6 +22,7 @@ MODULE m_exchange_core
 #endif
 #ifdef _OPENACC
    USE cublas
+   use openacc
 #define CPP_zgemm cublaszgemm
 #else
 #define CPP_zgemm zgemm
@@ -39,7 +40,6 @@ CONTAINS
       USE m_wrapper
       USE m_io_hybinp
       use m_calc_cmt
-      use openacc
       IMPLICIT NONE
       type(t_fleurinput), intent(in) :: fi
       TYPE(t_hybdat), INTENT(IN)     :: hybdat
