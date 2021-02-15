@@ -38,7 +38,7 @@ CONTAINS
       USE m_util
       use m_intgrf
       USE m_wrapper
-      USE m_io_hybinp
+      USE m_io_hybrid
       use m_calc_cmt
       IMPLICIT NONE
       type(t_fleurinput), intent(in) :: fi
@@ -341,7 +341,7 @@ CONTAINS
       USE m_wrapper
       USE m_gaunt
       USE m_trafo
-      USE m_io_hybinp
+      USE m_io_hybrid
       use m_juDFT
 
       IMPLICIT NONE
