@@ -31,6 +31,7 @@ def test_GreensFunction_Sphavg(execute_fleur, grep_number, grep_exists):
 
 @pytest.mark.serial
 @pytest.mark.film
+@pytest.mark.greensfunction
 def test_GreensFunction_SphavgFilm(execute_fleur, grep_number, grep_exists):
     """Fleur Fe Monolayer Green's function
     Simple test of the green's function calculation in FLEUR for films with one step:
@@ -174,3 +175,116 @@ def test_GreensFunctionRadial_LO(execute_fleur, grep_number, grep_exists):
     assert abs(cont_reg_sdown2 - 1.8776) <= 0.0005
     assert abs(cont_reg_sup1 - 3.1921) <= 0.0005
     assert abs(cont_reg_sdown1 - 3.2135) <= 0.0005
+
+
+@pytest.mark.bulk
+@pytest.mark.greensfunction
+@pytest.mark.magnetism
+@pytest.mark.serial
+@pytest.mark.ldau
+@pytest.mark.soc
+def test_GreensFunction_HoAtom_SQA_theta(execute_fleur, grep_number, grep_exists):
+    """Fleur Ho atom Green's function
+    Simple test of the green's function calculation in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals.  Make sure that occupation matrix matches the right result
+       for theta=pi/2, phi=0
+    """
+    test_file_folder = './inputfiles/GreensFunction_HoAtom_SQA_theta/'
+
+    res_files = execute_fleur(test_file_folder)
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    assert grep_exists(res_files['out'], "it=  2  is completed")
+
+    assert grep_exists(res_files['out'], '0.9929  0.0000')
+    assert grep_exists(res_files['out'], '0.9936  0.0000')
+    assert grep_exists(res_files['out'], '0.1116  0.0000')
+    assert grep_exists(res_files['out'], '0.3110  0.0000')
+    assert grep_exists(res_files['out'], '0.1893  0.0000')
+    assert grep_exists(res_files['out'], '0.2687  0.0000')
+    spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
+    spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
+
+    assert abs(spinup_trace - 6.9528) <= 0.0005
+    assert abs(spindown_trace - 1.9920) <= 0.0005
+
+
+@pytest.mark.bulk
+@pytest.mark.greensfunction
+@pytest.mark.magnetism
+@pytest.mark.serial
+@pytest.mark.ldau
+@pytest.mark.soc
+def test_GreensFunction_HoAtom_SQA_phi(execute_fleur, grep_number, grep_exists):
+    """Fleur Ho atom Green's function
+    Simple test of the green's function calculation in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals. Make sure that occupation matrix matches the right result
+       for theta=phi=pi/2
+    """
+    test_file_folder = './inputfiles/GreensFunction_HoAtom_SQA_phi/'
+
+    res_files = execute_fleur(test_file_folder)
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    assert grep_exists(res_files['out'], "it=  2  is completed")
+
+    assert grep_exists(res_files['out'], '0.9929  0.0000')
+    assert grep_exists(res_files['out'], '0.9936  0.0000')
+    assert grep_exists(res_files['out'], '0.1116  0.0000')
+    assert grep_exists(res_files['out'], '0.3110  0.0000')
+    assert grep_exists(res_files['out'], '0.0000  0.1893')
+    assert grep_exists(res_files['out'], '0.0000 -0.1893')
+    assert grep_exists(res_files['out'], '0.0000  0.2687')
+    assert grep_exists(res_files['out'], '0.0000 -0.2687')
+    spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
+    spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
+
+    assert abs(spinup_trace - 6.9528) <= 0.0005
+    assert abs(spindown_trace - 1.9920) <= 0.0005
+
+
+@pytest.mark.bulk
+@pytest.mark.greensfunction
+@pytest.mark.magnetism
+@pytest.mark.serial
+@pytest.mark.ldau
+@pytest.mark.soc
+@pytest.mark.non_collinear
+def test_GreensFunction_rotated_SQA_noco(execute_fleur, grep_number, grep_exists):
+    """Fleur Ho atom Green's function
+    Simple test of the green's function calculation in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals. Make sure that occupation matrix matches the right result
+       for theta=phi=pi/2 (same as second variation results)
+    """
+    test_file_folder = './inputfiles/GreensFunction_rotated_SQA_noco/'
+
+    res_files = execute_fleur(test_file_folder)
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    assert grep_exists(res_files['out'], "it=  2  is completed")
+
+    assert grep_exists(res_files['out'], '0.9929  0.0000')
+    assert grep_exists(res_files['out'], '0.9936  0.0000')
+    assert grep_exists(res_files['out'], '0.1116  0.0000')
+    assert grep_exists(res_files['out'], '0.3110  0.0000')
+    assert grep_exists(res_files['out'], '0.0000  0.1893')
+    assert grep_exists(res_files['out'], '0.0000 -0.1893')
+    assert grep_exists(res_files['out'], '0.0000  0.2687')
+    assert grep_exists(res_files['out'], '0.0000 -0.2687')
+    spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
+    spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
+
+    assert abs(spinup_trace - 6.9528) <= 0.0005
+    assert abs(spindown_trace - 1.9920) <= 0.0005
