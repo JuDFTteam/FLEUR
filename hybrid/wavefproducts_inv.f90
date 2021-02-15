@@ -6,10 +6,9 @@ module m_wavefproducts_inv
    USE m_types
    USE m_types_hybinp
    USE m_util
-   USE m_io_hybinp
+   USE m_io_hybrid
    USE m_wrapper
    USE m_constants
-   USE m_io_hybinp
    USE m_wavefproducts_aux
 
 CONTAINS
