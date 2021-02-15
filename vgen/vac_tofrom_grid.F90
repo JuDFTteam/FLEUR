@@ -424,8 +424,6 @@ CONTAINS
        ENDIF
 
        !       calculate vxc for z now beyond warping region
-  
-
        idx=idx+nmzdiff
     ENDDO    ! loop over vacua (ivac)
 

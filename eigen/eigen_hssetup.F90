@@ -75,15 +75,17 @@ CONTAINS
     CALL timestop("Interstitial part")
     CALL timestart("MT part")
     !MT-part of Hamiltonian. In case of fi%noco, we need an loop over the local spin of the fi%atoms
+    !$acc enter data copyin (hmat,smat)
     DO i=1,nspins;DO j=1,nspins
-      !$acc enter data copyin(hmat(i,j),smat(i,j),hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
+      !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
     ENDDO;ENDDO
     CALL hsmt(fi%atoms,fi%sym,enpara,isp,fi%input,fmpi,fi%noco,nococonv,fi%cell,lapw,ud,td,smat,hmat)
     DO i=1,nspins;DO j=1,nspins;if (hmat(1,1)%l_real) THEN
-      !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r)
+      !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c,hmat(i,j),smat(i,j))
     ELSE
-      !$acc exit data copyout(hmat(i,j)%data_c,smat(i,j)%data_c)
+      !$acc exit data copyout(hmat(i,j)%data_c,smat(i,j)%data_c) delete(hmat(i,j)%data_r,smat(i,j)%data_r)
     ENDIF;ENDDO;ENDDO
+    !$acc exit data delete(hmat,smat)
     CALL timestop("MT part")
 
     !Vacuum contributions
@@ -96,10 +98,10 @@ CONTAINS
 
     !Deal with hybrid code
     IF(fi%hybinp%l_hybrid.OR.fi%input%l_rdmft) THEN
-      if(any(shape(smat) /= 1)) then 
+      if(any(shape(smat) /= 1)) then
         call judft_error("Hybrid doesn't do noco.")
       endif
-      
+
       CALL write_eig(hybdat%eig_id, nk,isp, smat=smat(1,1), n_start=fmpi%n_size,n_end=fmpi%n_rank)
    END IF
 

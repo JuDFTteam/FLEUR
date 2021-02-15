@@ -743,7 +743,8 @@ CONTAINS
       if(vecin%l_real) then 
          call bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin%data_r, vecout%data_r)
       else
-         call bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin%data_c, vecout%data_c)
+         phase = cmplx_1
+         call bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, vecin%data_c, vecout%data_c)
       endif
 
    end subroutine bra_trafo
@@ -807,7 +808,7 @@ CONTAINS
       call timestop("bra trafo real")
    end subroutine bra_trafo_real
 
-   subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin_c, vecout_c)
+   subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, vecin_c, vecout_c)
       use m_types
       use m_constants
       use m_judft
@@ -818,30 +819,13 @@ CONTAINS
       INTEGER, INTENT(IN)               :: ikpt, nbands, psize
       COMPLEX, INTENT(IN)               ::  vecin_c(:, :)
       COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :)
-      COMPLEX, INTENT(INOUT)            ::  phase(:, :)
 
-      COMPLEX, ALLOCATABLE    ::  vecin1(:, :), vecout1(:, :)
-      integer :: ok
-      character(len=300)     :: errmsg
 
-      phase = cmplx_0
       call timestart("bra trafo cmplx")
-
-      allocate (vecin1(size(vecin_c, dim=1), size(vecin_c, dim=2)), errmsg=errmsg, stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1. Error: ' // trim(errmsg))
-      allocate (vecout1(size(vecin_c, dim=1), size(vecin_c, dim=2)), errmsg=errmsg, stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1. Error: ' // trim(errmsg))
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > fi%atoms%lmaxd')   ! very improbable case
 
-!     transform back to unsymmetrized product basis in case of inversion symmetry
-      vecin1 = vecin_c
-
-      call bra_trafo_core(nbands, ikpt, psize,&
-                          fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
-
-      phase = cmplx_1
-      vecout_c = vecout1
+      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin_c, vecout_c)
 
       call timestop("bra trafo cmplx")
    end subroutine bra_trafo_cmplx
@@ -864,7 +848,7 @@ CONTAINS
       complex, intent(inout)  :: vecout1(:, :)
 
       INTEGER                 :: nrkpt, itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
-      INTEGER                 :: igptm, igptm2, igptp, iiatom, iiop, inviop
+      INTEGER                 :: igptm, igptm2, igptp, iiop, inviop
       COMPLEX                 :: cexp, cdum
 
       INTEGER                 :: rrot(3, 3), invrot(3, 3)
@@ -918,48 +902,40 @@ CONTAINS
 
 !     Define pointer to first mixed-basis functions (with m = -l)
       i = 0
-      ic = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            ic = ic + 1
-            DO l = 0, hybinp%lcutm1(itype)
-               DO n = 1, mpdata%num_radbasfn(l, itype)
-                  i = i + 1
-                  pnt(n, l, ic) = i
-               END DO
-               i = i + mpdata%num_radbasfn(l, itype)*2*l
+      do ic = 1,atoms%nat 
+         itype = atoms%itype(ic)
+         DO l = 0, hybinp%lcutm1(itype)
+            DO n = 1, mpdata%num_radbasfn(l, itype)
+               i = i + 1
+               pnt(n, l, ic) = i
             END DO
+            i = i + mpdata%num_radbasfn(l, itype)*2*l
          END DO
       END DO
 
 !     Multiplication
       ! MT
       cexp = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
-      ic = 0
-      iiatom = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            ic = ic + 1
+      do ic = 1,atoms%nat 
+         itype = atoms%itype(ic)
 
-            cdum = cexp*exp(-ImagUnit*tpi_const*dot_product(g, atoms%taual(:, hybinp%map(ic, kpts%bksym(ikpt)))))
+         cdum = cexp*exp(-ImagUnit*tpi_const*dot_product(g, atoms%taual(:, hybinp%map(ic, kpts%bksym(ikpt)))))
 
-            DO l = 0, hybinp%lcutm1(itype)
-               nn = mpdata%num_radbasfn(l, itype)
-               DO n = 1, nn
+         DO l = 0, hybinp%lcutm1(itype)
+            nn = mpdata%num_radbasfn(l, itype)
+            DO n = 1, nn
 
-                  i1 = pnt(n, l, ic)
-                  i2 = i1 + nn*2*l
-                  j1 = pnt(n, l, hybinp%map(ic, kpts%bksym(ikpt)))
-                  j2 = j1 + nn*2*l
+               i1 = pnt(n, l, ic)
+               i2 = i1 + nn*2*l
+               j1 = pnt(n, l, hybinp%map(ic, kpts%bksym(ikpt)))
+               j2 = j1 + nn*2*l
 
-                  DO i = 1, nbands*psize
-                     vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn,i), dwgn(-l:l, -l:l, l))
-                  END DO
-
+               DO i = 1, nbands*psize
+                  vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn,i), dwgn(-l:l, -l:l, l))
                END DO
+
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
       ! PW

@@ -61,9 +61,11 @@ CONTAINS
     !
     IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
        IF (fmpi%n_size==1) THEN
-          ALLOCATE(t_mat::hmat_tmp,smat_tmp)
+          ALLOCATE(t_mat::hmat_tmp)
+          ALLOCATE(t_mat::smat_tmp)
        ELSE
-          ALLOCATE(t_mpimat::hmat_tmp,smat_tmp)
+          ALLOCATE(t_mpimat::hmat_tmp)
+          ALLOCATE(t_mpimat::smat_tmp)
        ENDIF
        CALL smat_tmp%init(hmat(1,1))
        CALL hmat_tmp%init(hmat(1,1))

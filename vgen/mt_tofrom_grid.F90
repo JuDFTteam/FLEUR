@@ -25,6 +25,7 @@ CONTAINS
       REAL, INTENT(OUT), OPTIONAL  :: thout(:)
       REAL, INTENT(OUT), OPTIONAL  :: phout(:)
 
+      call timestart("init_mt_grid")
       ! generate nspd points on a sherical shell with radius 1.0
       ! angular mesh equidistant in phi,
       ! theta are zeros of the legendre polynomials
@@ -49,7 +50,7 @@ CONTAINS
       ELSE
          CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
       END IF
-      !ENDIF
+      call timestop("init_mt_grid")
    END SUBROUTINE init_mt_grid
 
    SUBROUTINE mt_to_grid(dograds, jspins, atoms, sym,sphhar,rotch, den_mt, n, noco ,grad, ch)
@@ -80,6 +81,7 @@ CONTAINS
       REAL, ALLOCATABLE :: chlhtot(:,:),chlhdrtot(:,:),chlhdrrtot(:,:)
       INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i,jspV
 
+      call timestart("mt_to_grid")
       !This snippet is crucial to determine over which spins (Only diagonals in colinear case or also off diags in non colin case.)
       IF (any(noco%l_unrestrictMT)) THEN
          jspV=4
@@ -234,27 +236,28 @@ CONTAINS
       END DO
       IF (PRESENT(ch)) THEN
       !Rotation to local if needed (Indicated by rotch)
-      IF (rotch.AND.any(noco%l_unrestrictMT)) THEN
-          DO jr = 1,nsp*atoms%jri(n)
-             rho_11  = ch_calc(jr,1)
-             rho_22  = ch_calc(jr,2)
-             rho_21r = ch_calc(jr,3)
-             rho_21i = ch_calc(jr,4)
-             mx      =  2*rho_21r
-             my      = -2*rho_21i
-             mz      = (rho_11-rho_22)
-             magmom  = SQRT(mx**2 + my**2 + mz**2)
-             rhotot  = rho_11 + rho_22
-             rho_up  = (rhotot + magmom)/2
-             rho_down= (rhotot - magmom)/2
-             ch(jr,1) = rho_up
-             ch(jr,2) = rho_down
-         END DO
-      ELSE
-         ch(:nsp*atoms%jri(n),1:jspins)=ch_calc(:nsp*atoms%jri(n),1:jspins)
+         IF (rotch.AND.any(noco%l_unrestrictMT)) THEN
+            DO jr = 1,nsp*atoms%jri(n)
+               rho_11  = ch_calc(jr,1)
+               rho_22  = ch_calc(jr,2)
+               rho_21r = ch_calc(jr,3)
+               rho_21i = ch_calc(jr,4)
+               mx      =  2*rho_21r
+               my      = -2*rho_21i
+               mz      = (rho_11-rho_22)
+               magmom  = SQRT(mx**2 + my**2 + mz**2)
+               rhotot  = rho_11 + rho_22
+               rho_up  = (rhotot + magmom)/2
+               rho_down= (rhotot - magmom)/2
+               ch(jr,1) = rho_up
+               ch(jr,2) = rho_down
+            END DO
+         ELSE
+            ch(:nsp*atoms%jri(n),1:jspins)=ch_calc(:nsp*atoms%jri(n),1:jspins)
 
+         END IF
       END IF
-      END IF
+      call timestop("mt_to_grid")
    END SUBROUTINE mt_to_grid
 
    SUBROUTINE mt_from_grid(atoms, sym, sphhar, n, jspins, v_in, vr)
@@ -268,6 +271,8 @@ CONTAINS
 
       REAL    :: vpot(atoms%nsp()), vlh
       INTEGER :: js, kt, lh, jr, nd, nsp
+
+      call timestart("mt_from_grid")
 
       nsp = atoms%nsp()
       nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
@@ -289,12 +294,15 @@ CONTAINS
             kt = kt + nsp
          ENDDO   ! jr
       ENDDO
-
+      call timestop("mt_from_grid")
    END SUBROUTINE mt_from_grid
 
    SUBROUTINE finish_mt_grid()
+      implicit NONE 
+      call timestart("finish_mt_grid")
       DEALLOCATE (ylh, wt, rx, thet, phi)
       IF (ALLOCATED(ylht)) DEALLOCATE (ylht, ylhtt, ylhf, ylhff, ylhtf)
+      call timestop("finish_mt_grid")
    END SUBROUTINE finish_mt_grid
 
 END MODULE m_mt_tofrom_grid

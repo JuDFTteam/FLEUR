@@ -66,16 +66,16 @@ ${FLEUR_SRC}/global/sort.f90
 ${FLEUR_SRC}/math/inv3.f90
 ${FLEUR_SRC}/io/w_inpXML.f90
 ${FLEUR_SRC}/kpoints/divi.f
-${FLEUR_SRC}/kpoints/bravais.f
-${FLEUR_SRC}/kpoints/brzone2.f90
+#${FLEUR_SRC}/kpoints/bravais.f
+#${FLEUR_SRC}/kpoints/brzone2.f90
 ${FLEUR_SRC}/kpoints/kpttet.f
 ${FLEUR_SRC}/kpoints/kptmop.f
 ${FLEUR_SRC}/kpoints/ordstar.f
 ${FLEUR_SRC}/kpoints/fulstar.f
-${FLEUR_SRC}/kpoints/tetcon.f90
+#${FLEUR_SRC}/kpoints/tetcon.f90
 ${FLEUR_SRC}/kpoints/kvecon.f
 ${FLEUR_SRC}/kpoints/kprep.f
-${FLEUR_SRC}/kpoints/triang.f
+#${FLEUR_SRC}/kpoints/triang.f
 ${FLEUR_SRC}/kpoints/make_tetra.f
 
 ${FLEUR_SRC}/math/util.F
@@ -116,7 +116,7 @@ ${FLEUR_SRC}/cdn/int_21.f90
 ${FLEUR_SRC}/cdn/int_21lo.f90
 
 ${FLEUR_SRC}/xc-pot/gaunt.f90
-${FLEUR_SRC}/math/grule.f90
+#${FLEUR_SRC}/math/grule.f90
 ${FLEUR_SRC}/init/ifft235.f90
 ${FLEUR_SRC}/kpoints/gkptwgt.f90
 ${FLEUR_SRC}/init/local_sym.f
@@ -133,7 +133,7 @@ ${FLEUR_SRC}/global/soc_sym.f
 ${FLEUR_SRC}/math/inwint.f
 ${FLEUR_SRC}/math/outint.f
 ${FLEUR_SRC}/math/intgr.F90
-${FLEUR_SRC}/math/d_wigner.F90
+#${FLEUR_SRC}/math/d_wigner.F90
 ${FLEUR_SRC}/math/trapz.f90
 ${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90

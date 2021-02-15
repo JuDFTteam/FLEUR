@@ -12,7 +12,7 @@ eigen/hsmt_nonsph.F90
 eigen/hsmt_spinor.F90
 eigen/hsmt_distspin.F90
 eigen/hsmt_offdiag.F90
-eigen/hsmt_soc_offdiag.f90
+eigen/hsmt_soc_offdiag.F90
 eigen/hsmt_lo.F90
 eigen/mt_setup.F90
 eigen/eigen_hssetup.F90
