@@ -2,8 +2,8 @@ module m_structureconstant
    USE m_types
    USE m_juDFT
    USE m_constants
-   USE m_rorder, ONLY: rorderp, rorderpf
    use m_ylm
+   use m_sort
 #ifdef CPP_MPI
    use mpi
 #endif
@@ -296,7 +296,6 @@ contains
 
       USE m_juDFT
       USE m_constants
-      USE m_rorder, ONLY: rorderpf
 
       IMPLICIT NONE
 
@@ -368,7 +367,8 @@ contains
       ptsh = ihelp
       deallocate (rhelp, ihelp)
 
-      CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
+      call sort(pnt, radsh, [(1.0*i,i=1,nptsh)])
+
       radsh = radsh(pnt)
       ptsh = ptsh(:, pnt)
       nshell = 1
@@ -396,7 +396,7 @@ contains
       real, intent(inout)       :: g(0:2*hybinp%lexp), a, a1
       complex, intent(inout)    :: structconst(:,:,:,:)
       
-      integer :: ic2, ic1, i, ishell, l, m, maxl, lm, ikpt, nptsh, nshell, ierr
+      integer :: ic2, ic1, i, ishell, l, m, maxl, lm, ikpt, nptsh, nshell, ierr, s
       integer ::  conv(0:2*hybinp%lexp)
       integer, allocatable ::  pnt(:), ptsh(:,:)
       INTEGER, PARAMETER        :: ADDSHELL1 = 40
@@ -442,7 +442,7 @@ contains
                ra = ra + rc
                radsh(i) = norm2(ra)
             END DO
-            CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
+            call sort(pnt, radsh, [(1.0*s, s=1,nptsh)])
             ptsh = ptsh(:, pnt)
             radsh = radsh(pnt)
             maxl = 2*hybinp%lexp

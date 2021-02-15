@@ -7,7 +7,7 @@ contains
       USE m_constants
       use, intrinsic :: iso_c_binding
       implicit none
-#ifndef __PGI
+      
 #ifdef CPP_SCHED
       interface
          function findmycpu() bind(c)
@@ -18,6 +18,7 @@ contains
 
       integer(kind=c_int), allocatable :: cpu(:)
       integer :: me, num_threads, mycpu, i
+      logical :: l_problem
 
 
       !$omp parallel shared(cpu) private(me, num_threads, mycpu)
@@ -36,6 +37,7 @@ contains
       cpu(me+1) = mycpu
       !$omp end parallel
 
+      l_problem = .False.
       do i = 1,size(cpu)
          if(count(cpu(i) == cpu) /= 1) then
             WRITE(*,*) "The OMP parallelism seems to be weird"
@@ -44,10 +46,21 @@ contains
             WRITE(oUnit,*) "The OMP parallelism seems to be weird"
             WRITE(oUnit,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // &
                            " on cpu " // int2str(cpu(i))
+
+            l_problem = .True. 
             exit
          endif
       enddo
+
+      if(l_problem) then
+         !$omp parallel default(none) private(me, mycpu)
+!$       me = omp_get_thread_num()  
+         mycpu = findmycpu()
+         write (*,*) "me: ", me, "my cpu:", mycpu 
+         !$omp end parallel
+      endif
+
 #endif
-#endif
+
    end subroutine omp_checker
 end module m_omp_checker

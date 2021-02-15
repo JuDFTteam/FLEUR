@@ -396,7 +396,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    END DO
 
    CALL glob_mpi%copy_mpi(fmpi)
-   call work_pack%init(fi, hybdat, glob_mpi, jsp, glob_mpi%rank, glob_mpi%size)
+   call work_pack%init(fi, hybdat, mpdata, glob_mpi, jsp, glob_mpi%rank, glob_mpi%size)
 
    CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
 

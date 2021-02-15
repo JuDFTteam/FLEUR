@@ -141,7 +141,8 @@ CONTAINS
         xPathA = '/fleurInput/output/plotting/plot'
         numberNodes = xml%GetNumberOfNodes(xPathA)
         this%nplots=numberNodes
-        allocate(this%plot(numberNodes))
+        IF(ALLOCATED(this%plot)) DEALLOCATE (this%plot)
+        ALLOCATE(this%plot(numberNodes))
         do i = 1, numberNodes
           write(xPathA,'(a,i0,a)') '/fleurInput/output/plotting/plot[',i,']'
           call xml%set_basepath(xPathA)

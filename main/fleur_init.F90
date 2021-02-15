@@ -99,6 +99,7 @@ CONTAINS
     CHARACTER(len=12)             :: relcor, tempNumberString
     CHARACTER(LEN=20)             :: filename
     CHARACTER(LEN=40)             :: kptsSelection(3)
+    CHARACTER(LEN=300)            :: line
     REAL                          :: a1(3),a2(3),a3(3)
     REAL                          :: dtild, phi_add
     LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
@@ -121,6 +122,18 @@ CONTAINS
           CLOSE(oUnit)
           OPEN (oUnit,status='SCRATCH')
        ELSE
+          inquire(file="out.history",exist=l_exist)
+          inquire(file="out",exist=l_found)
+          if (l_exist.and.l_found) THEN
+            open(666,file="out.history",access="append",status="old")
+            open(667,file="out",status="old")
+            do
+              read(667,'(a)',end=999) line
+              write(666,'(a)') line
+            end do
+999         close(667)
+            close(666)
+          endif
           IF (.NOT.judft_was_argument("-no_out")) &
                OPEN (oUnit,file='out',form='formatted',status='unknown')
        ENDIF
@@ -147,7 +160,7 @@ CONTAINS
     call make_xcpot(fmpi,xcpot,atoms,input)
     CALL nococonv%init(noco)
     CALL nococonv%init_ss(noco,atoms)
-    CALL ylmnorm_init(MAX(atoms%lmaxd, 2*hybinp%lexp))
+    !CALL ylmnorm_init(MAX(atoms%lmaxd, 2*hybinp%lexp))
     CALL gaunt_init(atoms%lmaxd+1)
     CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
     CALL make_sphhar(fmpi%irank==0,atoms,sphhar,sym,cell,oneD)

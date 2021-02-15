@@ -11,9 +11,10 @@ CONTAINS
       !USE m_setcor
       USE m_differ
       USE m_types
+      USE m_cdn_io
       USE m_xmlOutput
       IMPLICIT NONE
-      
+
       TYPE(t_input),INTENT(IN)       :: input
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -45,11 +46,11 @@ CONTAINS
       CHARACTER(LEN=20) :: attributes(6)
       REAL stateEnergies(29)
       !     ..
-      
+
       c = c_light(1.0)
       seig = 0.
       !
-      IF (input%frcor) THEN
+      IF (input%frcor.and. isCoreDensityPresent()) THEN
          DO  n = 1,atoms%ntype
             rnot = atoms%rmsh(1,n) ; dxx = atoms%dx(n)
             ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/rnot ) / dxx + 1 )
@@ -84,7 +85,7 @@ CONTAINS
          !CALL setcor(jatom,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
          CALL atoms%econf(jatom)%get_core(nst,nprnc,kappa,occ_h)
 
-         
+
          IF ((bmu > 99.)) THEN
             occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
          ELSE
@@ -195,7 +196,7 @@ CONTAINS
          CALL intgr3(rhoc,atoms%rmsh(1,jatom),atoms%dx(jatom),nm,rhs)
          tec(jatom,jspin) = sume - rhs
          WRITE (oUnit,FMT=8030) jatom,jspin,tec(jatom,jspin),sume
-         
+
          !     ---> simpson integration
          rad = atoms%rmt(jatom)
          q = rad*rhoss(nm)/2.
@@ -249,4 +250,3 @@ CONTAINS
           &       e20.12)
    END SUBROUTINE cored
 END MODULE m_cored
-

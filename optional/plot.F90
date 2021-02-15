@@ -216,8 +216,8 @@ CONTAINS
                ELSE
                   cdn11 = rho(iri,ilh,ityp,1)
                   cdn22 = rho(iri,ilh,ityp,2)
-                  cdn21 = CMPLX(denmat%mt(iri,ilh,ityp,3), &
-                                denmat%mt(iri,ilh,ityp,4))
+                  cdn21 = CMPLX(denmat%mt(iri,ilh,ityp,3), denmat%mt(iri,ilh,ityp,4))
+                  IF(factor.NE.1.0) cdn21 = CMPLX(denmat%mt(iri,ilh,ityp,3), -denmat%mt(iri,ilh,ityp,4))
 
                   CALL rot_den_mat(nococonv%alph(ityp), nococonv%beta(ityp), &
                                    cdn11,cdn22,cdn21)
@@ -227,6 +227,7 @@ CONTAINS
                   ! Note: The missing minus sign in the following line is a discrepancy
                   ! from the other regions (IR, vac). But it was like that in version v0.26.
                   rho(iri,ilh,ityp,3) = 2.0*AIMAG(cdn21)
+                  IF(factor.NE.1.0) rho(iri,ilh,ityp,3) = -2.0*AIMAG(cdn21)
                   rho(iri,ilh,ityp,4) = cdn11 - cdn22
                END IF
             END DO

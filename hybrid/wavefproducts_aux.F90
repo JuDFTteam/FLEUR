@@ -18,7 +18,7 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_mpdata), intent(in)      :: mpdata
-      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
+      TYPE(t_hybdat), INTENT(IN)      :: hybdat
       type(t_stars), intent(in)       :: stars
       type(t_mat), intent(in)         :: z_k
       type(t_mat), intent(inout)      :: z_kqpt_p, cprod
@@ -58,7 +58,6 @@ CONTAINS
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
       call fft%init(stepf%dimensions, .false.)
-      write (*,*) "stepf%dim", stepf%dimensions
       call fft%exec(stepf%grid)
       call fft%free()
 

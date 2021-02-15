@@ -68,7 +68,9 @@ contains
 #endif
 
     ! Calculate multipole moments
+    call timestart("mpmom")
     call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm )
+    call timestop("mpmom")
 #ifdef CPP_MPI
     psq(:) = cmplx( 0.0, 0.0 )
     call MPI_BCAST( qpw, size(qpw), CPP_MPI_COMPLEX, 0, fmpi%mpi_comm, ierr )
@@ -114,6 +116,8 @@ contains
 
     ! q/=0 term: see (A10) (Coulomb case) or (A11) (Yukawa case)
     fpo = 1. / cell%omtil
+
+    call timestart("loop")
     !$omp parallel do default( shared ) private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
     do k = fmpi%irank+2, stars%ng3, fmpi%isize
       if ( .not. oneD%odi%d1 ) then
@@ -143,6 +147,8 @@ contains
       psq(k) = qpw(k) + fpo * sa
     end do
     !$omp end parallel do
+    
+    call timestop("loop")
 #ifdef CPP_MPI
     allocate( c_b(stars%ng3) )
     call MPI_REDUCE( psq, c_b, stars%ng3, CPP_MPI_COMPLEX, MPI_SUM, 0, fmpi%MPI_COMM, ierr )

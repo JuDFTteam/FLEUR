@@ -181,12 +181,12 @@ MODULE m_greensfTorgue
 
                            IF(ipm == 1) THEN
                               DO jr = 1, atoms%jri(atomType)
-                                 integrand(jr,alpha) = integrand(jr,alpha) - ImagUnit/tpi_const * mag_ii(jr,iz) &
+                                 integrand(jr,alpha) = integrand(jr,alpha) + ImagUnit/tpi_const * mag_ii(jr,iz) &
                                                                             * bxc(jr,lhmu,atomType) * weight
                               ENDDO
                            ELSE
                               DO jr = 1, atoms%jri(atomType)
-                                 integrand(jr,alpha) = integrand(jr,alpha) + ImagUnit/tpi_const * mag_ii(jr,iz) &
+                                 integrand(jr,alpha) = integrand(jr,alpha) - ImagUnit/tpi_const * mag_ii(jr,iz) &
                                                                             * conjg(bxc(jr,lhmu,atomType) * weight)
                               ENDDO
                            ENDIF

@@ -121,7 +121,7 @@ CONTAINS
          call hybdat%set_nobd(fi, results)
          call hybdat%set_nbands(fi, fmpi, results)
          do jsp = 1,fi%input%jspins
-            call work_pack(jsp)%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
+            call work_pack(jsp)%init(fi, hybdat, mpdata, wp_mpi, jsp, wp_rank, n_wps)
          enddo
 
          if(.not. allocated(hybdat%zmat))then 

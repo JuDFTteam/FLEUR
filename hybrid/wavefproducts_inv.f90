@@ -21,7 +21,7 @@ CONTAINS
       type(t_stars), intent(in)     :: stars
       type(t_mat), intent(in)       :: z_k  ! = z_k_p since ik < nkpt
       TYPE(t_lapw), INTENT(IN)      :: lapw
-      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
+      TYPE(t_hybdat), INTENT(IN)    :: hybdat
       type(t_mat), intent(inout)    :: cprod
 
       ! - scalars -
@@ -60,138 +60,16 @@ CONTAINS
 
    END SUBROUTINE wavefproducts_inv
 
-   subroutine wavefproducts_inv_IS(fi, jsp, lapw, ik, iq, bandoi, bandof, g_t, hybdat, mpdata, &
-                                   nococonv, ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
-
-      implicit NONE
-      type(t_fleurinput), intent(in):: fi
-      TYPE(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_nococonv), INTENT(IN)  :: nococonv
-      TYPE(t_lapw), INTENT(IN)      :: lapw
-      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-      TYPE(t_mat), intent(in)       :: z_k ! = z_k_p since ik < nkpt
-      TYPE(t_mat), intent(inout)    :: z_kqpt_p, cprod
-      ! - scalars -
-      INTEGER, INTENT(IN)      :: jsp, ik, iq, g_t(3), bandoi, bandof
-      INTEGER, INTENT(IN)      :: ikqpt
-
-      ! - arrays -
-      complex, intent(inout)   :: c_phase_kqpt(hybdat%nbands(ikqpt,jsp))
-
-      ! - local scalars -
-      INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm, psize, b_idx
-      INTEGER                 ::    ngpt0, n1, n2, nbasfcn, iband, iob
-      REAL                    ::    rdum
-      TYPE(t_lapw)            ::    lapw_nkqpt
-      type(t_mat)             ::    z_kqpt
-
-      ! - local arrays -
-      INTEGER, ALLOCATABLE    ::    pointer(:, :, :), gpt0(:, :)
-      INTEGER                 ::    g(3)
-
-      REAL                    ::    rarr1(bandoi:bandof)
-      REAL, ALLOCATABLE       ::    z0(:, :), rtmp(:, :, :), rarr2(:,:)
-
-      CALL timestart("wavefproducts_inv5 IR")
-      allocate(rarr2(bandoi:bandof, hybdat%nbands(ik,jsp)), stat=ok, source=0.0)
-      if(ok /= 0) call juDFT_error("Can't allocaten rarr2 in wavefproducts_inv_IS")
-      psize = bandof-bandoi+1
-      !
-      ! compute G's fulfilling |bk(:,ikqpt) + G| <= rkmax
-      !
-      CALL lapw_nkqpt%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ikqpt, fi%cell, fi%sym%zrfs)
-      nbasfcn = lapw_nkqpt%hyb_num_bas_fun(fi)
-      call z_kqpt%alloc(.true., nbasfcn, fi%input%neig)
-      call z_kqpt_p%init(z_kqpt)
-
-      ! read in z at k-point ikqpt
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
-                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p)
-
-      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
-          + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2) &
-          + maxval(abs(mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(iq), iq))), dim=2) + 1
-
-      call hybdat%set_stepfunction(fi%cell, fi%atoms, g, sqrt(fi%cell%omtil))
-      !
-      ! convolute phi(n,k) with the step function and store in cpw0
-      !
-
-      !(1) prepare list of G vectors
-      call prep_list_of_gvec(lapw, mpdata, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
-
-      !(2) calculate convolution
-      call timestart("calc convolution")
-      allocate (z0(bandoi:bandof, ngpt0), stat=ok, source=0.0)
-      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation z0')
-
-      call timestart("step function")
-      DO ig2 = 1, lapw_nkqpt%nv(jsp)
-         rarr1 = z_kqpt%data_r(ig2, bandoi:bandof)
-         DO ig = 1, ngpt0
-            g = gpt0(:, ig) - lapw_nkqpt%gvec(:, ig2, jsp)
-            rdum = REAL(hybdat%stepfunc(g(1), g(2), g(3)))
-            DO n2 = bandoi,bandof
-               z0(n2, ig) = z0(n2, ig) + rarr1(n2)*rdum
-            END DO
-         END DO
-      END DO
-      call timestop("step function")
-
-      call timestart("hybrid g")
-      allocate (rtmp(bandoi:bandof, hybdat%nbands(ik,jsp), mpdata%n_g(iq)), source=0.0)
-      !$OMP PARALLEL DO default(none) &
-      !$OMP private(igptm, ig1, iigptm, g, ig2, n1, n2) &
-      !$OMP shared(mpdata, lapw, pointer, hybdat, rtmp, z0, z_k, g_t, jsp, iq, ik, bandoi, bandof) &
-      !$OMP collapse(2)
-      DO igptm = 1, mpdata%n_g(iq)
-         DO ig1 = 1, lapw%nv(jsp)
-            iigptm = mpdata%gptm_ptr(igptm, iq)
-            g = lapw%gvec(:, ig1, jsp) + mpdata%g(:, iigptm) - g_t
-            ig2 = pointer(g(1), g(2), g(3))
-
-            IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')
-
-            DO n1 = 1, hybdat%nbands(ik,jsp)
-               DO n2 = bandoi,bandof
-                  rtmp(n2, n1, igptm) = rtmp(n2, n1, igptm) + z_k%data_r(ig1, n1)*z0(n2, ig2)
-               END DO
-            END DO
-         END DO
-      END DO
-      !$OMP END PARALLEL DO
-
-      call timestart("copy to cprod")
-      do igptm = 1, mpdata%n_g(iq)
-         ic = hybdat%nbasp + igptm
-         do iob = 1,psize 
-            b_idx = iob - 1 + bandoi
-            do iband = 1, hybdat%nbands(ik,jsp)
-               cprod%data_r(ic, iob + (iband-1)*psize) = rtmp(b_idx, iband, igptm)
-            enddo 
-         enddo
-      enddo
-      call timestop("copy to cprod")
-
-      deallocate (rtmp)
-      call timestop("hybrid g")
-      call timestop("calc convolution")
-
-      deallocate (z0, pointer, gpt0)
-      CALL timestop("wavefproducts_inv5 IR")
-
-   end subroutine wavefproducts_inv_IS
-
    subroutine wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
                                    ikqpt, z_kqpt_p, c_phase_kqpt, ccmt_nk, cprod)
       use m_calc_cmt
       implicit NONE
-      type(t_fleurinput), intent(in):: fi
-      TYPE(t_mpdata), INTENT(IN)   :: mpdata
-      type(t_nococonv), intent(in)  :: nococonv
-      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-      type(t_mat), intent(in)       :: z_kqpt_p
-      type(t_mat), intent(inout)    :: cprod
+      type(t_fleurinput), intent(in) :: fi
+      TYPE(t_mpdata), INTENT(IN)     :: mpdata
+      type(t_nococonv), intent(in)   :: nococonv
+      TYPE(t_hybdat), INTENT(IN)     :: hybdat
+      type(t_mat), intent(in)        :: z_kqpt_p
+      type(t_mat), intent(inout)     :: cprod
 
       ! - scalars -
       INTEGER, INTENT(IN)      :: ik, iq, jsp, bandoi, bandof
@@ -519,6 +397,7 @@ CONTAINS
                      !
 
                      monepm = -monepl
+                     call timestart("m loop")
                      DO m = -l, -1
                         monepm = -monepm
                         moneplm = monepl*monepm
@@ -535,25 +414,33 @@ CONTAINS
 
                            rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
                            IF (abs(rdum) > 1e-12) THEN
+                              !$OMP parallel do default(none) collapse(2) &
+                              !$OMP private(iband, ibando, rdum1)& 
+                              !$OMP shared(hybdat, bandoi, bandof, cmt_nk, moneplm, l1, rarr2, cmt_nkqpt, rdum, lmp1, lmp2, iatom1)
                               DO iband = 1, hybdat%nbands(ik,jsp)
-                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
-                                 IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
                                  DO ibando = bandoi,bandof
+                                    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
+                                    IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
                                     rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                  END DO  ! ibando
                               END DO  ! iband
+                              !$OMP end parallel do
                            END IF  ! rdum .ne. 0
 
                            IF (offdiag) THEN
                               rdum = hybdat%gauntarr(1, l2, l1, l, -m, m)
                               IF (abs(rdum) > 1e-12) THEN
+                                 !$OMP parallel do default(none) collapse(2) &
+                                 !$OMP private(iband, ibando, rdum1) &
+                                 !$OMP shared(hybdat, bandoi, bandof, cmt_nk, cmt_nkqpt, moneplm, rdum, l1, lmp1, lmp2, iatom1, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
-                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
-                                    IF (mod(l1, 2) == 0) rdum1 = moneplm*rdum1
                                     DO ibando = bandoi,bandof
+                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
+                                       IF (mod(l1, 2) == 0) rdum1 = moneplm*rdum1
                                        rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp1, iatom1)
                                     END DO  ! ibando
                                  END DO  ! iband
+                                 !$OMP end parallel do
                               END IF  ! rdum .ne. 0
                            END IF  ! offdiag
 
@@ -569,25 +456,33 @@ CONTAINS
 
                            rdum = hybdat%gauntarr(1, l1, l2, l, -m, m)
                            IF (abs(rdum) > 1e-12) THEN
+                              !$OMP parallel do default(none) collapse(2) &
+                              !$OMP private(iband, ibando, rdum1) &
+                              !$OMP shared(hybdat, bandoi, bandof, cmt_nk, cmt_nkqpt, l2, moneplm, rarr2, lmp2, lmp3, iatom1, rdum)
                               DO iband = 1, hybdat%nbands(ik,jsp)
-                                 rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
-                                 IF (mod(l2, 2) == 0) rdum1 = moneplm*rdum1
                                  DO ibando = bandoi,bandof
+                                    rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
+                                    IF (mod(l2, 2) == 0) rdum1 = moneplm*rdum1
                                     rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
                                  END DO  ! ibando
                               END DO  ! iband
+                              !$OMP end parallel do
                            END IF  ! rdum .ne. 0
 
                            IF (offdiag) THEN
                               rdum = hybdat%gauntarr(1, l2, l1, l, 0, m)
                               IF (abs(rdum) > 1e-12) THEN
+                                 !$OMP parallel do default(none) collapse(2) &
+                                 !$OMP private(iband, ibando, rdum1) &
+                                 !$OMP shared(hybdat, bandoi, bandof, cmt_nk, cmt_nkqpt, rdum, moneplm, rarr2, l2, lmp2, lmp3, iatom1)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
-                                    rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
-                                    IF (mod(l2, 2) /= 0) rdum1 = moneplm*rdum1
                                     DO ibando = bandoi,bandof
+                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
+                                       IF (mod(l2, 2) /= 0) rdum1 = moneplm*rdum1
                                        rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
                                     END DO  ! ibando
                                  END DO  ! iband
+                                 !$OMP end parallel do
                               END IF  ! rdum .ne. 0
                            END IF  ! offdiag
 
@@ -598,6 +493,7 @@ CONTAINS
                         !go to lm index for m1=-l1
                         lmp1 = lp1
                         monepm1 = -monepl1
+                        call timestart("3rd m1 loop")
                         DO m1 = -l1, l1
                            monepm1 = -monepm1
                            IF (m1 == 0) THEN
@@ -617,13 +513,14 @@ CONTAINS
                                     fac = 1/2.*moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))
                                  END IF
                                  rdum = rdum/sqrt(2.0)
+                                 !$OMP parallel do default(none) private(iband, rdum1) &
+                                 !$OMP shared(hybdat, cmt_nk, rdum, fac, psize, cmt_nkqpt, m1, m2, lmp1, lmp2, iatom1, rarr2, bandoi)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                    DO ibando = bandoi,bandof
-                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
-                                    END DO  ! ibando
+                                    call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp2, iatom1), 1, rarr2(bandoi, iband), 1)
                                  END DO  ! iband
+                                 !$OMP end parallel do
                               END IF  ! rdum .ne. 0
 
                               IF (offdiag) THEN
@@ -637,13 +534,14 @@ CONTAINS
                                        fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                     END IF
                                     rdum = moneplm*rdum/sqrt(2.0)
+                                    !$OMP parallel do default(none) private(iband, rdum1) &
+                                    !$OMP shared(hybdat, lmp2, iatom1, psize, cmt_nk, cmt_nkqpt, rarr2, rdum, m1, m2, bandoi, fac, lmp3)
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                       DO ibando = bandoi,bandof
-                                          rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
-                                       END DO  ! ibando
+                                       call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp3, iatom1), 1, rarr2(bandoi, iband), 1)
                                     END DO  ! iband
+                                    !$OMP end parallel do
                                  END IF  ! rdum .ne. 0
                               END IF  ! offdiag
 
@@ -662,14 +560,14 @@ CONTAINS
                                     fac = 1/2.*moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))
                                  END IF
                                  rdum = moneplm*rdum/sqrt(2.0)
+                                 !$OMP parallel do default(none) private(iband, rdum1) &
+                                 !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, fac, rdum, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!moneplm*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                    DO ibando = bandoi,bandof
-                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
-                                    END DO  ! ibando
+                                    call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp2, iatom1), 1, rarr2(bandoi, iband), 1)
                                  END DO  ! iband
-
+                                 !$OMP end parallel do
                               END IF  ! rdum .ne. 0
 
                               IF (offdiag) THEN
@@ -683,13 +581,14 @@ CONTAINS
                                        fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                     END IF
                                     rdum = rdum/sqrt(2.0)
+                                    !$OMP parallel do default(none) private(iband, rdum1) &
+                                    !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp2, lmp3, m1, m2, iatom1, rdum, fac, rarr2)
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m1) + sign(1, m2) == 0) rdum1 = fac*rdum1
-                                       DO ibando = bandoi,bandof
-                                          rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
-                                       END DO  ! ibando
+                                       call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp3, iatom1), 1, rarr2(bandoi, iband), 1)
                                     END DO  ! iband
+                                    !$OMP end parallel do
                                  END IF  ! rdum .ne. 0
                               END IF  ! offdiag
 
@@ -698,26 +597,32 @@ CONTAINS
                            !go to lmp start index for next m1-quantum number
                            lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                         END DO  ! m1
+                        call timestop("3rd m1 loop")
 
                         ! go to lm mixed basis startindx for l and m
                         lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
+                        call timestart("tripple OMP loop")
+                        !$OMP parallel do default(none) &
+                        !$OMP private(iband, ibando, i, j, iob) &
+                        !$OMP shared(hybdat, bandoi, bandof, mpdata, cprod, psize, rarr2, l, itype, lm1, n)
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
-                              iob = ibando + 1 - bandoi
-                              rdum = rarr2(ibando, iband)
                               DO i = 1, mpdata%num_radbasfn(l, itype)
                                  j = lm1 + i
+                                 iob = ibando + 1 - bandoi
                                  cprod%data_r(j, iob + (iband-1)*psize) &
-                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rdum
+                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rarr2(ibando, iband)
                               END DO  !i -> loop over mixed basis functions
                            END DO  !ibando
                         END DO  !iband
+                        !$OMP end parallel do
+                        call timestop("tripple OMP loop")
 
                         ! go to lm start index for next m-quantum number
                         lm = lm + mpdata%num_radbasfn(l, itype)
 
                      END DO  ! m=-l,-1
-
+                     call timestop("m loop")
                      !
                      !case m=0
                      !
@@ -728,6 +633,7 @@ CONTAINS
 
                      monepm1 = -monepl1
 
+                     call timestart("m1 loop")
                      DO m1 = -l1, l1
                         m2 = m1
                         monepm1 = -monepm1
@@ -755,12 +661,16 @@ CONTAINS
                               rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)*fac1
                            END IF
                            IF (abs(rdum) > 1e-12) THEN
-                              DO iband = 1, hybdat%nbands(ik,jsp)
-                                 rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
-                                 DO ibando = bandoi,bandof
-                                    rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
-                                 END DO  ! ibando
-                              END DO  ! iband
+                              ! dgemm(TRANSA,TRANSB, M,   N,                     K, ALPHA, A, LDA,
+                              call dgemm("N", "T", psize, hybdat%nbands(ik,jsp), 1, rdum, cmt_nkqpt(bandoi, lmp2, iatom1), size(cmt_nkqpt,1),& 
+                              !          B,                       LDB,             BETA, C,     LDC)
+                                         cmt_nk(1, lmp1, iatom1), size(cmt_nk, 1), 1.0,  rarr2, size(rarr2, 1))
+                              ! DO iband = 1, hybdat%nbands(ik,jsp)
+                              !    rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
+                              !    DO ibando = bandoi,bandof
+                              !       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
+                              !    END DO  ! ibando
+                              ! END DO  ! iband
                            END IF  ! rdum.ne.0
 
                            !change role of b1 and b2
@@ -771,12 +681,14 @@ CONTAINS
                                  rdum = hybdat%gauntarr(2, l1, l2, l, m1, m)*fac2
                               END IF
                               IF (abs(rdum) > 1e-12) THEN
-                                 DO iband = 1, hybdat%nbands(ik,jsp)
-                                    rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
-                                    DO ibando = bandoi,bandof
-                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp4, iatom1)
-                                    END DO  ! ibando
-                                 END DO  ! iband
+                                 call dgemm("N","T",psize,hybdat%nbands(ik,jsp),1,rdum,cmt_nkqpt(bandoi,lmp4,iatom1), size(cmt_nkqpt,1),& 
+                                         cmt_nk(1, lmp3, iatom1), size(cmt_nk, 1), 1.0,  rarr2, size(rarr2, 1))
+                                 ! DO iband = 1, hybdat%nbands(ik,jsp)
+                                 !    rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
+                                 !    DO ibando = bandoi,bandof
+                                 !       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp4, iatom1)
+                                 !    END DO  ! ibando
+                                 ! END DO  ! iband
                               END IF  ! rdum.ne.0
                            END IF  ! offdiag
 
@@ -785,20 +697,22 @@ CONTAINS
                         ! go to lmp start index for next m1-quantum number
                         lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                      END DO  !m1
+                     call timestop("m1 loop")
 
                      ! go to lm mixed basis startindx for l and m
+                     call timestart("iband loop")
                      lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
+                     !$OMP parallel do default(none) private(iband, ibando, iob) collapse(2) &
+                     !$OMP shared(hybdat, bandoi, bandof, mpdata, cprod, lm1, psize, itype, l, rarr2, n)
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO ibando = bandoi,bandof
                            iob = ibando + 1 - bandoi
-                           rdum = rarr2(ibando, iband)
-                           DO i = 1, mpdata%num_radbasfn(l, itype)
-                              j = lm1 + i
-                              cprod%data_r(j, iob + (iband-1)*psize) &
-                                 = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rdum
-                           END DO  !i -> loop over mixed basis functions
+                           call daxpy(mpdata%num_radbasfn(l, itype), rarr2(ibando, iband), hybdat%prodm(1,n,l,itype), 1,&
+                                     cprod%data_r(lm1+1, iob + (iband-1)*psize), 1)
                         END DO  !ibando
                      END DO  !iband
+                     !$OMP end parallel do
+                     call timestop("iband loop")
 
                      ! go to lm start index for next m-quantum number
                      lm = lm + mpdata%num_radbasfn(l, itype)
@@ -809,11 +723,13 @@ CONTAINS
 
                      rarr2 = 0.0
                      monepm = 1
+                     call timestart("another m-loop")
                      DO m = 1, l
                         monepm = -monepm
                         moneplm = monepl*monepm
 
                         ! calculate the contributions which are identical for m>0 and m <0
+                        call timestart("idential for m gt 0 m sm 0")
                         rarr2 = 0.0
                         IF (abs(m) <= l2) THEN
                            lmp1 = lp1 + l1*mpdata%num_radfun_per_l(l1, itype)
@@ -848,7 +764,9 @@ CONTAINS
                            END IF  ! offdiag
 
                         END IF  ! abs(m) .le. l2
+                        call timestop("idential for m gt 0 m sm 0")
 
+                        call timestart("absm sm l1")
                         IF (abs(m) <= l1) THEN
                            IF (mod(l2, 2) == 0) THEN
                               lmp3 = lp1 + (m + l1)*mpdata%num_radfun_per_l(l1, itype)
@@ -882,10 +800,12 @@ CONTAINS
                            END IF  ! offdiag
 
                         END IF  ! abs(m) .le. l2
+                        call timestop("absm sm l1")
 
                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                         !go to lm index for m1=-l1
+                        call timestart("2nd m1 loop")
                         lmp1 = lp1
                         monepm1 = -monepl1
                         DO m1 = -l1, l1
@@ -909,13 +829,15 @@ CONTAINS
                                  END IF
 
                                  rdum = -moneplm*monepl1m1*rdum/sqrt(2.0)
+
+                                 !$OMP parallel do default(none) private(iband, rdum1) &
+                                 !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, rdum, fac, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!-moneplm*monepl1m1*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                    DO ibando = bandoi,bandof
-                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
-                                    END DO  ! ibando
+                                    call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp2, iatom1), 1, rarr2(bandoi, iband), 1)
                                  END DO  ! iband
+                                 !$OMP end parallel do
 
                               END IF  ! rdum .ne. 0
 
@@ -930,14 +852,14 @@ CONTAINS
                                        fac = 1/2.*monepl1m1*(sign(1, m2) - sign(1, m1))
                                     END IF
                                     rdum = monepl1m1*moneplm*rdum/sqrt(2.0)
+                                    !$OMP parallel do default(none) private(iband, rdum1) &
+                                    !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp2, lmp3, m1, m2, iatom1, rdum, fac, rarr2)
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!monepl1m1*moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                       DO ibando = bandoi,bandof
-                                          rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
-                                       END DO  ! ibando
+                                       call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp3, iatom1), 1, rarr2(bandoi, iband), 1)
                                     END DO  ! iband
-
+                                    !$OMP end parallel do
                                  END IF  ! rdum
 
                               END IF  ! offdiag
@@ -956,13 +878,15 @@ CONTAINS
                                     fac = 1/2.*moneplm*monepl1m1*(sign(1, m1) - sign(1, m2))
                                  END IF
                                  rdum = monepl1m1*rdum/sqrt(2.0)
+
+                                 !$OMP parallel do default(none) private(iband, rdum1) &
+                                 !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, rdum, fac, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!monepl1m1*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = rdum1*fac
-                                    DO ibando = bandoi,bandof
-                                       rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp2, iatom1)
-                                    END DO  ! ibando
+                                    call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp2, iatom1), 1, rarr2(bandoi, iband), 1)
                                  END DO  ! iband
+                                 !$OMP end parallel do
                               END IF  ! rdum .ne. 0
 
                               IF (offdiag) THEN
@@ -976,13 +900,15 @@ CONTAINS
                                        fac = -monepl1m1*(sign(1, m1) - sign(1, m2))/2
                                     END IF
                                     rdum = -monepl1m1*rdum/sqrt(2.0)
+
+                                    !$OMP parallel do default(none) private(iband, rdum1) &
+                                    !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp2, lmp3, m1, m2, iatom1, rdum, fac, rarr2)
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!-monepl1m1*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
-                                       DO ibando = bandoi,bandof
-                                          rarr2(ibando, iband) = rarr2(ibando, iband) + rdum1*cmt_nkqpt(ibando, lmp3, iatom1)
-                                       END DO  ! ibando
+                                       call daxpy(psize, rdum1, cmt_nkqpt(bandoi, lmp3, iatom1), 1, rarr2(bandoi, iband), 1)
                                     END DO  ! iband
+                                    !$OMP end parallel do
 
                                  END IF  ! rdum .ne. 0
                               END IF  ! offdiag
@@ -992,6 +918,7 @@ CONTAINS
                            !go to lmp start index for next m1-quantum number
                            lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                         END DO  ! m1
+                        call timestop("2nd m1 loop")
 
                         ! multiply rarr2 by (-1)**(l+m+1)
                         rarr2(:, :) = (-1)*moneplm*rarr2(:, :)
@@ -999,23 +926,25 @@ CONTAINS
                         ! go to lm mixed basis startindx for l and m
                         lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
 
+                        call timestart("bottom iband")
+                        !$OMP parallel do default(none) private(iband, ibando, iob, rdum) collapse(2)&
+                        !$OMP shared(hybdat, bandoi, bandof, rarr2, mpdata, cprod, psize, lm1, itype, l, n)
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
                               iob = ibando + 1 - bandoi
                               rdum = rarr2(ibando, iband)
-                              DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 j = lm1 + i
-                                 cprod%data_r(j, iob + (iband-1)*psize)&
-                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rdum
-                              END DO  !i -> loop over mixed basis functions
+                              call daxpy(mpdata%num_radbasfn(l, itype), rdum, hybdat%prodm(1,n,l,itype), 1, &
+                                         cprod%data_r(lm1+1, iob + (iband-1)*psize), 1)
                            END DO  !ibando
                         END DO  !iband
+                        !$OMP end parallel do
+                        call timestop("bottom iband")
 
                         ! go to lm start index for next m-quantum number
                         lm = lm + mpdata%num_radbasfn(l, itype)
 
                      END DO  ! m=1,l
-
+                     call timestop("another m-loop")
                   END DO !n
                   lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the m start index of the next l-quantum number
                   IF (lm /= lm_0) call juDFT_error('wavefproducts_inv5: counting of lm-index incorrect (bug?)')

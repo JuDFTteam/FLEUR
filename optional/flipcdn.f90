@@ -59,6 +59,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    ! Local Arrays
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
    REAL,ALLOCATABLE          :: mt_tmp(:,:,:,:)
+   COMPLEX,ALLOCATABLE       :: mmpMat_tmp(:,:,:,:)
    zeros=0.0
 
 !Flipcdn by optional given angle if lflip is false but routine is called.
@@ -112,6 +113,13 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
      allocate(den%mt(size(mt_tmp,1),0:size(mt_tmp,2)-1,size(mt_tmp,3),4))
      den%mt(:,:,:,1:2)=mt_tmp
      den%mt(:,:,:,3:)=0.0
+
+     if (allocated(den%mmpMat)) then
+        CALL move_alloc(den%mmpMat,mmpMat_tmp)
+        allocate(den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpMat_tmp,3),3))
+        den%mmpMat(:,:,:,1:2)=mmpMat_tmp
+        den%mmpMat(:,:,:,3)=0.0
+     endif
    endif
 !$OMP parallel PRIVATE(rhodummy,rhodumms,j,rhodummyR,lh,itype) DEFAULT(none) &
 !$OMP SHARED(noco,den,zeros,atoms,sphhar,input,sym,l_flip,scalespin) &

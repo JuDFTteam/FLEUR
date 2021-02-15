@@ -29,7 +29,7 @@ hybrid/progress_thread/thread_lib.f90
 hybrid/reorder.f90
 hybrid/set_coul_participation.f90
 hybrid/sphbessel_integral.f90
-hybrid/spmm.f90
+hybrid/spmm.F90
 hybrid/spmvec.F90
 hybrid/structureconstant.F90
 hybrid/subvxc.F90
@@ -38,12 +38,11 @@ hybrid/symm_hf.F90
 hybrid/trafo.F90
 hybrid/unify_zmat.f90
 hybrid/util/intgrf.f90
-hybrid/util/rorder.f90
 hybrid/util/util.f90
 hybrid/wavefproducts_aux.F90
 hybrid/wavefproducts.f90
 hybrid/wavefproducts_inv.f90
-hybrid/wavefproducts_noinv.f90
+hybrid/wavefproducts_noinv.F90
 hybrid/work_package.F90
 hybrid/wrapper.f90
 )

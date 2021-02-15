@@ -108,8 +108,8 @@ MODULE m_umix
                END DO
             END DO
          ELSE
-            gam = 0.5 * alpha * (1.0 + spinf)
-            del = 0.5 * alpha * (1.0 - spinf)
+            gam = 0.5 * alpha * (1.0 - spinf)
+            del = 0.5 * alpha * (1.0 + spinf)
             DO i_u = 1,atoms%n_u
                DO m = -lmaxU_const,lmaxU_const
                   DO mp = -lmaxU_const,lmaxU_const
