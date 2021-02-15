@@ -18,6 +18,8 @@ def test_GreensFunction_Sphavg(execute_fleur, grep_number, grep_exists):
     res_files = execute_fleur(test_file_folder)
     should_files = ['out']
     res_file_names = list(res_files.keys())
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
     for file1 in should_files:
         assert file1 in res_file_names
 
@@ -44,6 +46,8 @@ def test_GreensFunction_SphavgFilm(execute_fleur, grep_number, grep_exists):
     res_files = execute_fleur(test_file_folder)
     should_files = ['out']
     res_file_names = list(res_files.keys())
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
     for file1 in should_files:
         assert file1 in res_file_names
 
@@ -69,6 +73,8 @@ def test_GreensFunction_MultiContour(execute_fleur, grep_number, grep_exists):
     res_files = execute_fleur(test_file_folder)
     res_file_names = list(res_files.keys())
     should_files = ['out']
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
@@ -106,6 +112,8 @@ def test_GreensFunctionRadial(execute_fleur, grep_number, grep_exists):
     res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'JUDFT_WARN_ONLY'])
     res_file_names = list(res_files.keys())
     should_files = ['out']
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
@@ -141,6 +149,8 @@ def test_GreensFunctionRadial_LO(execute_fleur, grep_number, grep_exists):
 'JUDFT_WARN_ONLY'])
     res_file_names = list(res_files.keys())
     should_files = ['out']
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
@@ -160,6 +170,8 @@ def test_GreensFunctionRadial_LO(execute_fleur, grep_number, grep_exists):
     res_files = execute_fleur(test_file_folder, only_copy=[['inp-2.xml', 'inp.xml'], 'JUDFT_WARN_ONLY'])
     res_file_names = list(res_files.keys())
     should_files = ['out']
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
@@ -195,6 +207,8 @@ def test_GreensFunction_HoAtom_SQA_theta(execute_fleur, grep_number, grep_exists
     res_files = execute_fleur(test_file_folder)
     should_files = ['out']
     res_file_names = list(res_files.keys())
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
     for file1 in should_files:
         assert file1 in res_file_names
 
@@ -231,6 +245,8 @@ def test_GreensFunction_HoAtom_SQA_phi(execute_fleur, grep_number, grep_exists):
     res_files = execute_fleur(test_file_folder)
     should_files = ['out']
     res_file_names = list(res_files.keys())
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
     for file1 in should_files:
         assert file1 in res_file_names
 
@@ -270,6 +286,8 @@ def test_GreensFunction_rotated_SQA_noco(execute_fleur, grep_number, grep_exists
     res_files = execute_fleur(test_file_folder)
     should_files = ['out']
     res_file_names = list(res_files.keys())
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
     for file1 in should_files:
         assert file1 in res_file_names
 
