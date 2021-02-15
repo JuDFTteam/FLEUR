@@ -51,7 +51,7 @@ CONTAINS
       use m_util, only: primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix
       USE m_wrapper
-      USE m_io_hybinp
+      USE m_io_hybrid
       use m_ylm
       use m_calc_l_m_from_lm
       use m_calc_mpsmat
@@ -65,8 +65,8 @@ CONTAINS
 
       ! - local scalars -
       INTEGER                    :: inviop
-      INTEGER                    :: nqnrm, iqnrm, iqnrm1, iqnrm2, iqnrmstart, iqnrmstep
-      INTEGER                    :: itype, l, ix, iy, iy0, i, j, lm, l1, l2, m1, m2, ineq, idum, ikpt
+      INTEGER                    :: nqnrm, iqnrm, iqnrm1, iqnrm2
+      INTEGER                    :: itype, l, ix, iy, iy0, i, j, lm, l1, l2, m1, m2, ineq, ikpt
       INTEGER                    :: lm1, lm2, itype1, itype2, ineq1, ineq2, n, n1, n2, iat2
       INTEGER                    :: ic, ic1, ic2, ic3, ic4
       INTEGER                    :: igpt, igpt1, igpt2, igptp, igptp1, igptp2
@@ -314,8 +314,6 @@ CONTAINS
       ! and       sphbesmoment1(r,l) = 1/r**(l-1) * INT(0..r) r'**(l+2) * j_l(qr') dr'
       !                                + r**(l+2) * INT(r..S) r'**(1-l) * j_l(qr') dr' .
 
-      iqnrmstart = fmpi%irank + 1
-      iqnrmstep = fmpi%isize
       call timestop("getnorm")
 
       call bessel_calculation(fi, fmpi, mpdata, nqnrm, gridf, qnrm, sphbesmoment, olap, integral)
@@ -416,7 +414,6 @@ CONTAINS
                                        rdum = (-1)**(l2 + m2)*moment(n1, l1, itype1)*moment(n2, l2, itype2)*gmat(lm1, lm2)
                                        l = l1 + l2
                                        lm = l**2 + l + m1 - m2 + 1
-                                       idum = ix*(ix - 1)/2 + iy
 
                                        if(itype2 /= itype1 .or. ineq2 /= ineq1 .or. l2 /= l1 .or. m2 /= m1) then 
                                           mtmt_term = 0.0
@@ -492,16 +489,14 @@ CONTAINS
                igpt2 = pgptm1(igpt0, ikpt)
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                ix = hybdat%nbasp + igpt2
-               iy = hybdat%nbasp
                q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
                rdum2 = SUM(q2**2)
                IF (abs(rdum2) > 1e-12) rdum2 = fpi_const/rdum2
 
                DO igpt1 = 1, igpt2
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
-                  iy = iy + 1
+                  iy = hybdat%nbasp + igpt1
                   q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
-                  idum = ix*(ix - 1)/2 + iy
                   rdum1 = SUM(q1**2)
                   IF (abs(rdum1) > 1e-12) rdum1 = fpi_const/rdum1
 
@@ -710,7 +705,6 @@ CONTAINS
                   iqnrm2 = pqnrm(igpt2, 1)
                   igptp2 = mpdata%gptm_ptr(igpt2, 1)
                   qnorm2 = qnrm(iqnrm2)
-                  idum = ix*(ix - 1)/2 + iy
                   DO itype1 = 1, fi%atoms%ntype
                      DO ineq1 = 1, fi%atoms%neq(itype1)
                         ic2 = 0
@@ -738,7 +732,6 @@ CONTAINS
             call timestart("igpt1=igpt2=1 loop")
             iy = hybdat%nbasp + 1
             ix = hybdat%nbasp + 1
-            idum = ix*(ix - 1)/2 + iy
             DO itype1 = 1, fi%atoms%ntype
                DO ineq1 = 1, fi%atoms%neq(itype1)
                   DO itype2 = 1, fi%atoms%ntype
