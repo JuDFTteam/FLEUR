@@ -32,7 +32,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    USE m_coulombmatrix
    USE m_hf_init
    USE m_hf_setup
-   USE m_io_hybinp
+   USE m_io_hybrid
    USE m_symm_hf
    USE m_exchange_valence_hf
    USE m_exchange_core

@@ -58,7 +58,7 @@ CONTAINS
       USE m_juDFT_time
       USE m_calc_hybrid
       USE m_rdmft
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_wann_optional
       USE m_wannier
       USE m_bs_comfort

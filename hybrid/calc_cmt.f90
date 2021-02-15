@@ -9,7 +9,7 @@ contains
       USE m_abcof
       use m_constants, only: ImagUnit
       use m_trafo, only: waveftrafo_gen_cmt
-      use m_io_hybinp
+      use m_io_hybrid
       implicit none
       type(t_atoms), intent(in)    :: atoms
       type(t_cell), intent(in)     :: cell
