@@ -20,7 +20,7 @@ CONTAINS
       USE m_hf_init
       USE m_hf_setup
       USE m_hsfock
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_eig66_io
       use m_eig66_mpi
       use m_distribute_mpi 

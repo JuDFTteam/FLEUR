@@ -53,7 +53,7 @@ CONTAINS
       USE m_symmetrizeh
       USE m_wrapper
       USE m_hsefunctional, ONLY: exchange_vccvHSE, exchange_ccccHSE
-      USE m_io_hybinp
+      USE m_io_hybrid
       use m_judft
 
       IMPLICIT NONE

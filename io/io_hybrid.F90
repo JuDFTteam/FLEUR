@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-module m_io_hybinp
+module m_io_hybrid
    use m_io_matrix
    use m_judft
    use m_types
@@ -119,4 +119,4 @@ contains
       enddo
       if(.not. succ) call judft_error("You can't cut in the middle of deg eigenvals")
    end subroutine check_p_list
-end module m_io_hybinp
+end module m_io_hybrid

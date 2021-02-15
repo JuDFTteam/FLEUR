@@ -67,7 +67,7 @@ CONTAINS
       USE m_olap
       USE m_spmvec
       USE m_hsefunctional
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_kp_perturbation
       use m_spmm
       use m_work_package

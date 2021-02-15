@@ -6,10 +6,9 @@ module m_wavefproducts_inv
    USE m_types
    USE m_types_hybinp
    USE m_util
-   USE m_io_hybinp
+   USE m_io_hybrid
    USE m_wrapper
    USE m_constants
-   USE m_io_hybinp
    USE m_wavefproducts_aux
 
 CONTAINS
@@ -266,8 +265,8 @@ CONTAINS
                               IF (abs(rdum) > 1e-12) THEN
                                  !$OMP parallel do default(none) collapse(2) &
                                  !$OMP private(iband, ibando, rdum1, rdum2) &
-                                 !$OMP shared(hybdat, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
-                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik, jsp)
+                                 !$OMP shared(hybdat, jsp, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
+                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     DO ibando = bandoi,bandof
                                        rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
@@ -292,8 +291,8 @@ CONTAINS
                               IF (abs(rdum) > 1e-12) THEN
                                  !$OMP parallel do default(none) collapse(2) &
                                  !$OMP private(iband, ibando, rdum1, rdum2) &
-                                 !$OMP shared(hybdat, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
-                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik, jsp)
+                                 !$OMP shared(hybdat, jsp, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
+                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     DO ibando = bandoi,bandof
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
@@ -416,7 +415,7 @@ CONTAINS
                            IF (abs(rdum) > 1e-12) THEN
                               !$OMP parallel do default(none) collapse(2) &
                               !$OMP private(iband, ibando, rdum1)& 
-                              !$OMP shared(hybdat, bandoi, bandof, cmt_nk, moneplm, l1, rarr2, cmt_nkqpt, rdum, lmp1, lmp2, iatom1)
+                              !$OMP shared(hybdat, ik, jsp, bandoi, bandof, cmt_nk, moneplm, l1, rarr2, cmt_nkqpt, rdum, lmp1, lmp2, iatom1)
                               DO iband = 1, hybdat%nbands(ik,jsp)
                                  DO ibando = bandoi,bandof
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
@@ -432,7 +431,7 @@ CONTAINS
                               IF (abs(rdum) > 1e-12) THEN
                                  !$OMP parallel do default(none) collapse(2) &
                                  !$OMP private(iband, ibando, rdum1) &
-                                 !$OMP shared(hybdat, bandoi, bandof, cmt_nk, cmt_nkqpt, moneplm, rdum, l1, lmp1, lmp2, iatom1, rarr2)
+                                 !$OMP shared(hybdat, ik, jsp, bandoi, bandof, cmt_nk, cmt_nkqpt, moneplm, rdum, l1, lmp1, lmp2, iatom1, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     DO ibando = bandoi,bandof
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
@@ -458,7 +457,7 @@ CONTAINS
                            IF (abs(rdum) > 1e-12) THEN
                               !$OMP parallel do default(none) collapse(2) &
                               !$OMP private(iband, ibando, rdum1) &
-                              !$OMP shared(hybdat, bandoi, bandof, cmt_nk, cmt_nkqpt, l2, moneplm, rarr2, lmp2, lmp3, iatom1, rdum)
+                              !$OMP shared(hybdat, ik, jsp, bandoi, bandof, cmt_nk, cmt_nkqpt, l2, moneplm, rarr2, lmp2, lmp3, iatom1, rdum)
                               DO iband = 1, hybdat%nbands(ik,jsp)
                                  DO ibando = bandoi,bandof
                                     rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
@@ -474,7 +473,7 @@ CONTAINS
                               IF (abs(rdum) > 1e-12) THEN
                                  !$OMP parallel do default(none) collapse(2) &
                                  !$OMP private(iband, ibando, rdum1) &
-                                 !$OMP shared(hybdat, bandoi, bandof, cmt_nk, cmt_nkqpt, rdum, moneplm, rarr2, l2, lmp2, lmp3, iatom1)
+                                 !$OMP shared(hybdat, ik, jsp, bandoi, bandof, cmt_nk, cmt_nkqpt, rdum, moneplm, rarr2, l2, lmp2, lmp3, iatom1)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     DO ibando = bandoi,bandof
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
@@ -514,7 +513,7 @@ CONTAINS
                                  END IF
                                  rdum = rdum/sqrt(2.0)
                                  !$OMP parallel do default(none) private(iband, rdum1) &
-                                 !$OMP shared(hybdat, cmt_nk, rdum, fac, psize, cmt_nkqpt, m1, m2, lmp1, lmp2, iatom1, rarr2, bandoi)
+                                 !$OMP shared(hybdat, ik, jsp, cmt_nk, rdum, fac, psize, cmt_nkqpt, m1, m2, lmp1, lmp2, iatom1, rarr2, bandoi)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
@@ -535,7 +534,7 @@ CONTAINS
                                     END IF
                                     rdum = moneplm*rdum/sqrt(2.0)
                                     !$OMP parallel do default(none) private(iband, rdum1) &
-                                    !$OMP shared(hybdat, lmp2, iatom1, psize, cmt_nk, cmt_nkqpt, rarr2, rdum, m1, m2, bandoi, fac, lmp3)
+                                    !$OMP shared(hybdat, ik, jsp, lmp2, iatom1, psize, cmt_nk, cmt_nkqpt, rarr2, rdum, m1, m2, bandoi, fac, lmp3)
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
@@ -561,7 +560,7 @@ CONTAINS
                                  END IF
                                  rdum = moneplm*rdum/sqrt(2.0)
                                  !$OMP parallel do default(none) private(iband, rdum1) &
-                                 !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, fac, rdum, rarr2)
+                                 !$OMP shared(hybdat, ik, jsp, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, fac, rdum, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!moneplm*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
@@ -582,7 +581,7 @@ CONTAINS
                                     END IF
                                     rdum = rdum/sqrt(2.0)
                                     !$OMP parallel do default(none) private(iband, rdum1) &
-                                    !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp2, lmp3, m1, m2, iatom1, rdum, fac, rarr2)
+                                    !$OMP shared(hybdat, ik, jsp, cmt_nk, cmt_nkqpt, bandoi, psize, lmp2, lmp3, m1, m2, iatom1, rdum, fac, rarr2)
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m1) + sign(1, m2) == 0) rdum1 = fac*rdum1
@@ -604,7 +603,7 @@ CONTAINS
                         call timestart("tripple OMP loop")
                         !$OMP parallel do default(none) &
                         !$OMP private(iband, ibando, i, j, iob) &
-                        !$OMP shared(hybdat, bandoi, bandof, mpdata, cprod, psize, rarr2, l, itype, lm1, n)
+                        !$OMP shared(hybdat, ik, jsp, bandoi, bandof, mpdata, cprod, psize, rarr2, l, itype, lm1, n)
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
                               DO i = 1, mpdata%num_radbasfn(l, itype)
@@ -703,7 +702,7 @@ CONTAINS
                      call timestart("iband loop")
                      lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
                      !$OMP parallel do default(none) private(iband, ibando, iob) collapse(2) &
-                     !$OMP shared(hybdat, bandoi, bandof, mpdata, cprod, lm1, psize, itype, l, rarr2, n)
+                     !$OMP shared(hybdat, ik, jsp, bandoi, bandof, mpdata, cprod, lm1, psize, itype, l, rarr2, n)
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO ibando = bandoi,bandof
                            iob = ibando + 1 - bandoi
@@ -831,7 +830,7 @@ CONTAINS
                                  rdum = -moneplm*monepl1m1*rdum/sqrt(2.0)
 
                                  !$OMP parallel do default(none) private(iband, rdum1) &
-                                 !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, rdum, fac, rarr2)
+                                 !$OMP shared(hybdat, ik, jsp, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, rdum, fac, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!-moneplm*monepl1m1*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
@@ -853,7 +852,7 @@ CONTAINS
                                     END IF
                                     rdum = monepl1m1*moneplm*rdum/sqrt(2.0)
                                     !$OMP parallel do default(none) private(iband, rdum1) &
-                                    !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp2, lmp3, m1, m2, iatom1, rdum, fac, rarr2)
+                                    !$OMP shared(hybdat, ik, jsp, cmt_nk, cmt_nkqpt, bandoi, psize, lmp2, lmp3, m1, m2, iatom1, rdum, fac, rarr2)
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!monepl1m1*moneplm*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
@@ -880,7 +879,7 @@ CONTAINS
                                  rdum = monepl1m1*rdum/sqrt(2.0)
 
                                  !$OMP parallel do default(none) private(iband, rdum1) &
-                                 !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, rdum, fac, rarr2)
+                                 !$OMP shared(hybdat, ik, jsp, cmt_nk, cmt_nkqpt, bandoi, psize, lmp1, lmp2, m1, m2, iatom1, rdum, fac, rarr2)
                                  DO iband = 1, hybdat%nbands(ik,jsp)
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)!monepl1m1*rdum*cmt_nk(iband,lmp1,iatom1)/sqrt(2.0)
                                     IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = rdum1*fac
@@ -902,7 +901,7 @@ CONTAINS
                                     rdum = -monepl1m1*rdum/sqrt(2.0)
 
                                     !$OMP parallel do default(none) private(iband, rdum1) &
-                                    !$OMP shared(hybdat, cmt_nk, cmt_nkqpt, bandoi, psize, lmp2, lmp3, m1, m2, iatom1, rdum, fac, rarr2)
+                                    !$OMP shared(hybdat, ik, jsp, cmt_nk, cmt_nkqpt, bandoi, psize, lmp2, lmp3, m1, m2, iatom1, rdum, fac, rarr2)
                                     DO iband = 1, hybdat%nbands(ik,jsp)
                                        rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)!-monepl1m1*rdum*cmt_nk(iband,lmp2,iatom1)/sqrt(2.0)
                                        IF (sign(1, m2) + sign(1, m1) == 0) rdum1 = fac*rdum1
@@ -928,7 +927,7 @@ CONTAINS
 
                         call timestart("bottom iband")
                         !$OMP parallel do default(none) private(iband, ibando, iob, rdum) collapse(2)&
-                        !$OMP shared(hybdat, bandoi, bandof, rarr2, mpdata, cprod, psize, lm1, itype, l, n)
+                        !$OMP shared(hybdat, ik, jsp, bandoi, bandof, rarr2, mpdata, cprod, psize, lm1, itype, l, n)
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
                               iob = ibando + 1 - bandoi

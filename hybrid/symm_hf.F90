@@ -17,7 +17,7 @@ MODULE m_symm_hf
    USE m_constants
    USE m_util
    USE m_intgrf
-   USE m_io_hybinp
+   USE m_io_hybrid
 #ifdef CPP_MPI 
    use mpi 
 #endif

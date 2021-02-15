@@ -8,7 +8,7 @@ CONTAINS
       use m_constants
       use m_judft
       use m_fft_interface
-      use m_io_hybinp
+      use m_io_hybrid
       use m_juDFT
 #ifdef CPP_MPI
       use mpi

@@ -51,7 +51,7 @@ CONTAINS
       USE m_types
       USE m_intgrf
       USE m_wrapper
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_hsefunctional
       USE m_symm_hf
       USE m_exchange_valence_hf

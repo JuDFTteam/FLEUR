@@ -62,7 +62,7 @@ CONTAINS
                                      z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
       use m_types
       USE m_constants
-      use m_io_hybinp
+      use m_io_hybrid
       use m_judft
       use m_wavefproducts_aux
       use m_calc_cmt
