@@ -306,3 +306,93 @@ def test_GreensFunction_rotated_SQA_noco(execute_fleur, grep_number, grep_exists
 
     assert abs(spinup_trace - 6.9528) <= 0.0005
     assert abs(spindown_trace - 1.9920) <= 0.0005
+
+
+@pytest.mark.serial
+@pytest.mark.greensfunction
+@pytest.mark.non_collinear
+@pytest.mark.bulk
+def test_GreensFunction_mperp_xdir(execute_fleur, grep_number, grep_exists):
+    """Fleur Fe bcc Green's function Radial Noco spin offdiagonal
+
+    Simple test of the green's function calculation with radial dependence in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals. Ensure that the occupations from the Green's function are
+       close to the MT-charges obtained (also spin offdiagonal components) for the
+       second atom rotated to alpha=0 beta=pi/2
+    """
+    test_file_folder = './inputfiles/GreensFunction_mperp_xdir/'
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'JUDFT_WARN_ONLY'])
+    res_file_names = list(res_files.keys())
+    should_files = ['out']
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
+    for file1 in should_files:
+        assert (file1 in res_file_names), f'{file1} missing'
+
+    assert grep_exists(res_files['out'], "it=  1  is completed")
+    spinup_trace_atom1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":", res_index=-2)
+    spindn_trace_atom1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":", res_index=-2)
+    spinoffdx_trace_atom1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(x\):", ":", res_index=-2)
+    spinoffdy_trace_atom1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(y\):", ":", res_index=-2)
+
+
+    spinup_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":")
+    spindn_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":")
+    spinoffdx_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(x\):", ":")
+    spinoffdy_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(y\):", ":")
+
+    assert abs(spinup_trace_atom1 - 4.5242) <= 0.0005
+    assert abs(spindn_trace_atom1 - 2.3679) <= 0.0005
+    assert abs(spinoffdx_trace_atom1 - 0.5994) <= 0.0005
+    assert abs(spinoffdy_trace_atom1 - 0.0000) <= 0.0005
+
+    assert abs(spinup_trace_atom2 - 4.5214) <= 0.0005
+    assert abs(spindn_trace_atom2 - 2.38) <= 0.0005
+    assert abs(spinoffdx_trace_atom2 + 0.6027) <= 0.0005
+    assert abs(spinoffdy_trace_atom2 - 0.0000) <= 0.0005
+
+
+@pytest.mark.serial
+@pytest.mark.greensfunction
+@pytest.mark.non_collinear
+@pytest.mark.bulk
+def test_GreensFunction_mperp_ydir(execute_fleur, grep_number, grep_exists):
+    """Fleur Fe bcc Green's function Radial Noco spin offdiagonal
+
+    Simple test of the green's function calculation with radial dependence in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals. Ensure that the occupations from the Green's function are
+       close to the MT-charges obtained (also spin offdiagonal components) for the
+       second atom rotated to alpha=beta=pi/2
+    """
+    test_file_folder = './inputfiles/GreensFunction_mperp_ydir/'
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'JUDFT_WARN_ONLY'])
+    res_file_names = list(res_files.keys())
+    should_files = ['out']
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
+    for file1 in should_files:
+        assert (file1 in res_file_names), f'{file1} missing'
+
+    assert grep_exists(res_files['out'], "it=  1  is completed")
+    spinup_trace_atom1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":", res_index=-2)
+    spindn_trace_atom1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":", res_index=-2)
+    spinoffdx_trace_atom1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(x\):", ":", res_index=-2)
+    spinoffdy_trace_atom1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(y\):", ":", res_index=-2)
+
+
+    spinup_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":")
+    spindn_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":")
+    spinoffdx_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(x\):", ":")
+    spinoffdy_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(y\):", ":")
+
+    assert abs(spinup_trace_atom1 - 4.5242) <= 0.0005
+    assert abs(spindn_trace_atom1 - 2.3679) <= 0.0005
+    assert abs(spinoffdx_trace_atom1 - 0.0000) <= 0.0005
+    assert abs(spinoffdy_trace_atom1 - 0.5994) <= 0.0005
+
+    assert abs(spinup_trace_atom2 - 4.5214) <= 0.0005
+    assert abs(spindn_trace_atom2 - 2.38) <= 0.0005
+    assert abs(spinoffdx_trace_atom2 + 0.6027) <= 0.0005
+    assert abs(spinoffdy_trace_atom2 - 0.0000) <= 0.0005
