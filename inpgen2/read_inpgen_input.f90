@@ -122,6 +122,7 @@ CONTAINS
        ELSE
           IF (aa.NE.0) THEN
              !cell was set already, so list of atoms follow
+             if (allocated(atom_pos)) call judft_error("Input error:"//line)
              READ(line,*,iostat=ios) n
              IF (ios.NE.0) CALL judft_error(("Surprising error in reading input:"//trim(line)))
              ALLOCATE(atom_pos(3,n),atom_label(n),atom_id(n))
