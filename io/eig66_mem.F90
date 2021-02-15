@@ -7,7 +7,7 @@ MODULE m_eig66_mem
    ! eig_vec contains the eigenvectors
    ! The record number is given by nrec=nk+(jspin-1)*nkpts
    USE m_eig66_data
-   USE m_types
+   USE m_types_mat
    USE m_juDFT
    IMPLICIT NONE
 CONTAINS
