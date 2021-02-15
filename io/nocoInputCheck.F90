@@ -11,12 +11,13 @@ MODULE m_nocoInputCheck
    SUBROUTINE nocoInputCheck(atoms,input,sym,vacuum,noco)
 
       USE m_juDFT
+      USE m_constants
       USE m_types_atoms
       USE m_types_input
       USE m_types_sym
       USE m_types_vacuum
       USE m_types_noco
-      USE m_constants
+      USE m_sssym
 
       IMPLICIT NONE
 
@@ -109,7 +110,7 @@ MODULE m_nocoInputCheck
     END IF
 
     if (noco%l_ss) then
-      call ss_sym(sym%nop,sym%mrot,noco%qss,error)
+      call ss_sym(sym%nop,sym%mrot,noco%qss_inp,error)
       if (any(error)) call judft_warn("Symmetry incompatible with Spin-Spiral")
     endif
 
