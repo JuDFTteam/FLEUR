@@ -179,16 +179,16 @@ CONTAINS
 
       integer :: fid, record, no_records, max_nbasfcn 
 #ifdef CPP_HDF
-      call timestart("store_vx")
+      ! call timestart("store_vx")
 
-      no_records = fi%kpts%nkpt*fi%input%jspins
-      record = (jsp -1) * fi%kpts%nkpt + nk
-      max_nbasfcn = lapw%dim_nvd()+fi%atoms%nlotot
+      ! no_records = fi%kpts%nkpt*fi%input%jspins
+      ! record = (jsp -1) * fi%kpts%nkpt + nk
+      ! max_nbasfcn = lapw%dim_nvd()+fi%atoms%nlotot
       
-      fid = open_matrix(v_x%l_real, max_nbasfcn, 2, no_records, "v_x")
-      call write_matrix(v_x, record, fid)
-      call close_matrix(fid)
-      call timestop("store_vx")
+      ! fid = open_matrix(v_x%l_real, max_nbasfcn, 2, no_records, "v_x")
+      ! call write_matrix(v_x, record, fid)
+      ! call close_matrix(fid)
+      ! call timestop("store_vx")
 #endif
    end subroutine store_vx
 END MODULE m_hsfock
