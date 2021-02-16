@@ -22,7 +22,7 @@ hybrid/hyb_abcrot.F90
 hybrid/hybrid_core.f90
 hybrid/kp_perturbation.f90
 hybrid/legendre_poly.f90 
-hybrid/load_Vnonlocal.f90
+hybrid/load_Vnonlocal.F90
 hybrid/mixedbasis.F90
 hybrid/mtir_size.f90
 hybrid/olap.F90

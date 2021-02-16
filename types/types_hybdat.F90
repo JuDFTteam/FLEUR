@@ -79,6 +79,7 @@ contains
       type(t_mat) :: tmp
       integer     :: fid, jsp, cnt, matsize
 
+#ifdef CPP_HDF
       call timestart("write_nbands_hybdat")
 
       matsize = max(fi%kpts%nkptf, fi%input%jspins)
@@ -99,6 +100,7 @@ contains
 
       call close_matrix(fid)
       call timestop("write_nbands_hybdat")
+#endif 
    end subroutine write_nbands_hybdat
 
    subroutine read_nbands_hybdat(hybdat, fi)

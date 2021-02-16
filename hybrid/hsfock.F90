@@ -178,7 +178,7 @@ CONTAINS
       type(t_mat), intent(in)           :: v_x
 
       integer :: fid, record, no_records, max_nbasfcn 
-
+#ifdef CPP_HDF
       call timestart("store_vx")
 
       no_records = fi%kpts%nkpt*fi%input%jspins
@@ -189,5 +189,6 @@ CONTAINS
       call write_matrix(v_x, record, fid)
       call close_matrix(fid)
       call timestop("store_vx")
+#endif
    end subroutine store_vx
 END MODULE m_hsfock

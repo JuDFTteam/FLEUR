@@ -13,6 +13,7 @@ contains
       character(len=:), allocatable :: filename
       logical                       :: files_present, l_tmp
 
+#ifdef CPP_HDF
       IF (fi%hybinp%l_hybrid .and. (.not. hybdat%l_addhf)) then
          call timestart("load_Vnonlocal")
 
@@ -47,6 +48,7 @@ contains
          end if
          call timestop("load_Vnonlocal")
       end if
+#endif
    end subroutine load_Vnonlocal
 
 end module m_load_Vnonlocal
