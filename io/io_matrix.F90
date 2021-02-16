@@ -48,7 +48,7 @@ CONTAINS
        CALL judft_error("You compiled without HDF5")
 #endif
     CASE default
-       CALL judft_error("BUG in io_matrix")
+       CALL judft_error("BUG in io_matrix: case default open mtx")
     END SELECT
   END FUNCTION OPEN_MATRIX
 
@@ -72,7 +72,7 @@ CONTAINS
        CALL judft_error("You compiled without HDF5")
 #endif
     CASE default
-       CALL judft_error("BUG in io_matrix")
+       CALL judft_error("BUG in io_matrix: case default read mtx")
     END SELECT
   END SUBROUTINE read_matrix
 
@@ -95,7 +95,7 @@ CONTAINS
        CALL judft_error("You compiled without HDF5")
 #endif
     CASE default
-       CALL judft_error("BUG in io_matrix")
+       CALL judft_error("BUG in io_matrix: case default write mtx")
     END SELECT
   END SUBROUTINE write_matrix
   
@@ -111,7 +111,7 @@ CONTAINS
        CALL judft_error("You compiled without HDF5")
 #endif
     CASE default
-       CALL judft_error("BUG in io_matrix")
+       CALL judft_error("BUG in io_matrix: case default close mtx")
     END SELECT
        fh(id)%mode=0
   END SUBROUTINE CLOSE_MATRIX
@@ -148,7 +148,7 @@ CONTAINS
   END FUNCTION open_DA
 
   SUBROUTINE read_matrix_DA(mat,rec,id)
-    TYPE(t_Mat),INTENT(OUT):: mat
+    TYPE(t_Mat),INTENT(INOUT):: mat
     INTEGER,INTENT(IN)           :: rec,id
     LOGICAL :: l_real
     INTEGER:: err,matsize1,matsize2
@@ -159,11 +159,11 @@ CONTAINS
     CALL mat%init(l_real,matsize1,matsize2)
 
     IF (mat%l_real) THEN
-       READ(id,rec=rec,iostat=err) l_real,matsize1,matsize2,mat%data_r
+      READ(id,rec=rec,iostat=err) l_real,matsize1,matsize2,mat%data_r
     ELSE
-       READ(id,rec=rec,iostat=err) l_real,matsize1,matsize2,mat%data_c
+      READ(id,rec=rec,iostat=err) l_real,matsize1,matsize2,mat%data_c
     END IF
-    IF (err.NE.0) CALL judft_error("Failed in reading of matrix")
+    IF (err.NE.0) CALL judft_error("Failed in reading of matrix: " // int2str(err))
   END SUBROUTINE read_matrix_DA
 
   SUBROUTINE write_matrix_DA(mat,rec,id)

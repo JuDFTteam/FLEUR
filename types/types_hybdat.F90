@@ -3,6 +3,8 @@ MODULE m_types_hybdat
    use m_types_mat
    use m_types_coul
    use m_types_eigvec
+   use m_io_matrix
+   use m_judft
 #ifdef CPP_MPI
    use mpi
 #endif
@@ -49,9 +51,85 @@ MODULE m_types_hybdat
       procedure :: allocate         => allocate_hybdat
       procedure :: set_nobd         => set_nobd_hybdat
       procedure :: set_nbands       => set_nbands_hybdat
+      procedure :: set_maxlmindx    => set_maxlmindx_hybdat
+      procedure :: write_nbands     => write_nbands_hybdat
+      procedure :: read_nbands      => read_nbands_hybdat
    END TYPE t_hybdat
 
 contains
+   subroutine set_maxlmindx_hybdat(hybdat, atoms, num_radfun_per_l)
+      implicit none
+      class(t_hybdat), intent(inout) :: hybdat
+      type(t_atoms), intent(in)      :: atoms
+      integer, intent(in)            :: num_radfun_per_l(:,:)
+
+      integer :: itype, l
+
+      hybdat%maxlmindx = 0
+      do itype = 1,atoms%ntype
+         hybdat%maxlmindx = max(hybdat%maxlmindx, SUM([(num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]))
+      enddo
+   end subroutine set_maxlmindx_hybdat
+
+   subroutine write_nbands_hybdat(hybdat, fi)
+      implicit none
+      class(t_hybdat), intent(inout) :: hybdat
+      type(t_fleurinput), intent(in) :: fi
+
+      type(t_mat) :: tmp
+      integer     :: fid, jsp, cnt, matsize
+
+      call timestart("write_nbands_hybdat")
+
+      matsize = max(fi%kpts%nkptf, fi%input%jspins)
+      call tmp%alloc(.True., matsize, matsize)
+      tmp%data_r = -1.0
+
+      fid = open_matrix(.True., fi%kpts%nkptf, 2, 2, "nbands")
+
+      do jsp = 1,fi%input%jspins
+         tmp%data_r(:fi%kpts%nkptf,jsp) = hybdat%nbands(:,jsp)
+      enddo 
+      call write_matrix(tmp, 1, fid)
+
+      do jsp = 1,fi%input%jspins
+         tmp%data_r(:fi%kpts%nkptf,jsp) = hybdat%nobd(:,jsp)
+      enddo 
+      call write_matrix(tmp, 2, fid)
+
+      call close_matrix(fid)
+      call timestop("write_nbands_hybdat")
+   end subroutine write_nbands_hybdat
+
+   subroutine read_nbands_hybdat(hybdat, fi)
+      implicit none
+      class(t_hybdat), intent(inout) :: hybdat
+      type(t_fleurinput), intent(in) :: fi
+
+      type(t_mat) :: tmp
+      integer     :: fid, jsp
+
+      call timestart("read_nbands_hybdat")
+
+      fid = open_matrix(.True., fi%kpts%nkptf, 2, 2, "nbands")
+
+      call read_matrix(tmp, 1, fid)
+      if(.not. allocated(hybdat%nbands)) allocate(hybdat%nbands(fi%kpts%nkptf, fi%input%jspins))
+      do jsp = 1,fi%input%jspins
+         hybdat%nbands(:,jsp) = tmp%data_r(:fi%kpts%nkptf,jsp)
+      enddo 
+
+      call read_matrix(tmp, 2, fid)
+      if(.not. allocated(hybdat%nobd)) allocate(hybdat%nobd(fi%kpts%nkptf, fi%input%jspins))
+      do jsp = 1,fi%input%jspins
+         hybdat%nobd(:,jsp) = tmp%data_r(:fi%kpts%nkptf,jsp) 
+      enddo 
+
+      call close_matrix(fid)
+      call timestop("read_nbands_hybdat")
+   end subroutine read_nbands_hybdat
+
+
    subroutine set_nobd_hybdat(hybdat, fi, results)
       use m_types_fleurinput
       use m_types_misc
@@ -90,7 +168,6 @@ contains
       use m_types_fleurinput
       use m_types_misc
       use m_constants
-      use m_judft
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_fleurinput), intent(in) :: fi
@@ -163,6 +240,7 @@ contains
             hybdat%nbands(nk,jsp) = hybdat%nbands(i,jsp)
          END DO
       enddo
+      call hybdat%write_nbands(fi)
       call timestop("degenerate treatment")
    end subroutine set_nbands_hybdat
 

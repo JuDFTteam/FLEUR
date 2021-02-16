@@ -162,7 +162,32 @@ CONTAINS
          call hybdat%v_x(nk, jsp)%u2l()
       endif
 
+      call store_vx(fi, lapw, nk, jsp, hybdat%v_x(nk, jsp))
+
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock
+
+   subroutine store_vx(fi, lapw, nk, jsp, v_x)
+      use m_juDFT
+      use m_types
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_lapw), intent(in)          :: lapw
+      integer, intent(in)               :: nk, jsp
+      type(t_mat), intent(in)           :: v_x
+
+      integer :: fid, record, no_records, max_nbasfcn 
+
+      call timestart("store_vx")
+
+      no_records = fi%kpts%nkpt*fi%input%jspins
+      record = (jsp -1) * fi%kpts%nkpt + nk
+      max_nbasfcn = lapw%dim_nvd()+fi%atoms%nlotot
+      
+      fid = open_matrix(v_x%l_real, max_nbasfcn, 2, no_records, "v_x")
+      call write_matrix(v_x, record, fid)
+      call close_matrix(fid)
+      call timestop("store_vx")
+   end subroutine store_vx
 END MODULE m_hsfock
