@@ -160,9 +160,9 @@ CONTAINS
       if(k_pack%submpi%root()) then
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
+         call store_vx(fi, lapw, nk, jsp, hybdat%v_x(nk, jsp))
       endif
 
-      call store_vx(fi, lapw, nk, jsp, hybdat%v_x(nk, jsp))
 
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")
