@@ -176,19 +176,18 @@ CONTAINS
       type(t_lapw), intent(in)          :: lapw
       integer, intent(in)               :: nk, jsp
       type(t_mat), intent(in)           :: v_x
+      character(len=:), allocatable     :: filename
 
-      integer :: fid, record, no_records, max_nbasfcn 
+      integer :: fid
 #ifdef CPP_HDF
-      ! call timestart("store_vx")
-
-      ! no_records = fi%kpts%nkpt*fi%input%jspins
-      ! record = (jsp -1) * fi%kpts%nkpt + nk
-      ! max_nbasfcn = lapw%dim_nvd()+fi%atoms%nlotot
+      call timestart("store_vx")
       
-      ! fid = open_matrix(v_x%l_real, max_nbasfcn, 2, no_records, "v_x")
-      ! call write_matrix(v_x, record, fid)
-      ! call close_matrix(fid)
-      ! call timestop("store_vx")
+      filename =  "v_x_nk=" // int2str(nk) // "_jsp=" // int2str(jsp)
+
+      fid = open_matrix(v_x%l_real, v_x%matsize1, 2, 1, filename)
+      call write_matrix(v_x, 1, fid)
+      call close_matrix(fid)
+      call timestop("store_vx")
 #endif
    end subroutine store_vx
 END MODULE m_hsfock

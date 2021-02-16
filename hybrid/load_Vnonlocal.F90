@@ -18,8 +18,14 @@ contains
          call timestart("load_Vnonlocal")
 
          INQUIRE (file="nbands.hdf", exist=files_present)
-         INQUIRE (file="v_x.hdf", exist=l_tmp)
-         files_present = files_present .and. l_tmp
+         DO jsp = 1, fi%input%jspins
+            DO nk_i = 1, size(fmpi%k_list)
+               nk = fmpi%k_list(nk_i)
+               filename =  "v_x_nk=" // int2str(nk) // "_jsp=" // int2str(jsp) // ".hdf"
+               INQUIRE (file=filename, exist=l_tmp)
+               files_present = files_present .and. l_tmp
+            enddo 
+         enddo
 
          if (files_present) then
             call hybdat%read_nbands(fi)
@@ -27,16 +33,16 @@ contains
 
             no_records = fi%kpts%nkpt*fi%input%jspins
 
-            fid = open_matrix(fi%sym%invs, -1, 2, no_records, "v_x")
 
             DO jsp = 1, fi%input%jspins
                DO nk_i = 1, size(fmpi%k_list)
                   nk = fmpi%k_list(nk_i)
-                  record = (jsp -1) * fi%kpts%nkpt + nk
-                  call read_matrix(hybdat%v_x(nk, jsp), record, fid)
+                  filename =  "v_x_nk=" // int2str(nk) // "_jsp=" // int2str(jsp)
+                  fid = open_matrix(fi%sym%invs, -1, 2, no_records, filename)
+                  call read_matrix(hybdat%v_x(nk, jsp), 1, fid)
+                  call close_matrix(fid)
                end do
             end do
-            call close_matrix(fid)
 
             ! prep for add_Vnonlocal and subvxc
             hybdat%l_addhf  = .True.
