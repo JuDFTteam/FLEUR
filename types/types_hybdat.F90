@@ -242,7 +242,7 @@ contains
             hybdat%nbands(nk,jsp) = hybdat%nbands(i,jsp)
          END DO
       enddo
-      call hybdat%write_nbands(fi)
+      if(fmpi%is_root()) call hybdat%write_nbands(fi)
       call timestop("degenerate treatment")
    end subroutine set_nbands_hybdat
 
