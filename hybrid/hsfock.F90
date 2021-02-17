@@ -180,14 +180,14 @@ CONTAINS
 
       integer :: fid
 #ifdef CPP_HDF
-      !call timestart("store_vx")
+      call timestart("store_vx")
       
-      !filename =  "v_x_nk=" // int2str(nk) // "_jsp=" // int2str(jsp)
+      filename =  "v_x_nk=" // int2str(nk) // "_jsp=" // int2str(jsp)
 
-      !fid = open_matrix(v_x%l_real, v_x%matsize1, 2, 1, filename)
-      !call write_matrix(v_x, 1, fid)
-      !call close_matrix(fid)
-      !call timestop("store_vx")
+      fid = open_matrix(v_x%l_real, v_x%matsize1, 2, 1, filename)
+      call write_matrix(v_x, 1, fid)
+      call close_matrix(fid)
+      call timestop("store_vx")
 #endif
    end subroutine store_vx
 END MODULE m_hsfock
