@@ -28,7 +28,7 @@ contains
          enddo
 
          if (files_present) then
-            call hybdat%read_nbands(fi)
+            call hybdat%read_nbands(fi, fmpi)
             if (.not. allocated(hybdat%v_x)) allocate (hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
 
             no_records = fi%kpts%nkpt*fi%input%jspins

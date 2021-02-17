@@ -103,32 +103,40 @@ contains
 #endif 
    end subroutine write_nbands_hybdat
 
-   subroutine read_nbands_hybdat(hybdat, fi)
+   subroutine read_nbands_hybdat(hybdat, fi, fmpi)
+      use m_mpi_bc_tool
+      use m_types_mpi
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_fleurinput), intent(in) :: fi
+      type(t_mpi), intent(in)       :: fmpi
 
       type(t_mat) :: tmp
       integer     :: fid, jsp
 
-      call timestart("read_nbands_hybdat")
+      if(fmpi%is_root()) then
+         call timestart("read_nbands_hybdat")
 
-      fid = open_matrix(.True., fi%kpts%nkptf, 2, 2, "nbands")
+         fid = open_matrix(.True., fi%kpts%nkptf, 2, 2, "nbands")
 
-      call read_matrix(tmp, 1, fid)
-      if(.not. allocated(hybdat%nbands)) allocate(hybdat%nbands(fi%kpts%nkptf, fi%input%jspins))
-      do jsp = 1,fi%input%jspins
-         hybdat%nbands(:,jsp) = tmp%data_r(:fi%kpts%nkptf,jsp)
-      enddo 
+         call read_matrix(tmp, 1, fid)
+         if(.not. allocated(hybdat%nbands)) allocate(hybdat%nbands(fi%kpts%nkptf, fi%input%jspins))
+         do jsp = 1,fi%input%jspins
+            hybdat%nbands(:,jsp) = tmp%data_r(:fi%kpts%nkptf,jsp)
+         enddo 
 
-      call read_matrix(tmp, 2, fid)
-      if(.not. allocated(hybdat%nobd)) allocate(hybdat%nobd(fi%kpts%nkptf, fi%input%jspins))
-      do jsp = 1,fi%input%jspins
-         hybdat%nobd(:,jsp) = tmp%data_r(:fi%kpts%nkptf,jsp) 
-      enddo 
+         call read_matrix(tmp, 2, fid)
+         if(.not. allocated(hybdat%nobd)) allocate(hybdat%nobd(fi%kpts%nkptf, fi%input%jspins))
+         do jsp = 1,fi%input%jspins
+            hybdat%nobd(:,jsp) = tmp%data_r(:fi%kpts%nkptf,jsp) 
+         enddo 
 
-      call close_matrix(fid)
-      call timestop("read_nbands_hybdat")
+         call close_matrix(fid)
+         call timestop("read_nbands_hybdat")
+      endif
+
+      call mpi_bc(hybdat%nbands,0, MPI_COMM_WORLD)
+      call mpi_bc(hybdat%nobd,  0, MPI_COMM_WORLD)
    end subroutine read_nbands_hybdat
 
 
