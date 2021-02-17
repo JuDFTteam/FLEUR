@@ -135,8 +135,10 @@ contains
          call timestop("read_nbands_hybdat")
       endif
 
+#ifdef CPP_MPI
       call mpi_bc(hybdat%nbands,0, MPI_COMM_WORLD)
       call mpi_bc(hybdat%nobd,  0, MPI_COMM_WORLD)
+#endif
    end subroutine read_nbands_hybdat
 
 
