@@ -22,7 +22,6 @@ hybrid/hyb_abcrot.F90
 hybrid/hybrid_core.f90
 hybrid/kp_perturbation.f90
 hybrid/legendre_poly.f90 
-hybrid/load_Vnonlocal.F90
 hybrid/mixedbasis.F90
 hybrid/mtir_size.f90
 hybrid/olap.F90
@@ -33,6 +32,7 @@ hybrid/sphbessel_integral.f90
 hybrid/spmm.F90
 hybrid/spmvec.F90
 hybrid/structureconstant.F90
+hybrid/store_load_hybrid.F90
 hybrid/subvxc.F90
 hybrid/symmetrizeh.F90
 hybrid/symm_hf.F90

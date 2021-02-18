@@ -52,8 +52,6 @@ MODULE m_types_hybdat
       procedure :: set_nobd         => set_nobd_hybdat
       procedure :: set_nbands       => set_nbands_hybdat
       procedure :: set_maxlmindx    => set_maxlmindx_hybdat
-      procedure :: write_nbands     => write_nbands_hybdat
-      procedure :: read_nbands      => read_nbands_hybdat
    END TYPE t_hybdat
 
 contains
@@ -70,77 +68,6 @@ contains
          hybdat%maxlmindx = max(hybdat%maxlmindx, SUM([(num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]))
       enddo
    end subroutine set_maxlmindx_hybdat
-
-   subroutine write_nbands_hybdat(hybdat, fi)
-      implicit none
-      class(t_hybdat), intent(inout) :: hybdat
-      type(t_fleurinput), intent(in) :: fi
-
-      type(t_mat) :: tmp
-      integer     :: fid, jsp, cnt, matsize
-
-#ifdef CPP_HDF
-      call timestart("write_nbands_hybdat")
-
-      matsize = max(fi%kpts%nkptf, fi%input%jspins)
-      call tmp%alloc(.True., matsize, matsize)
-      tmp%data_r = -1.0
-
-      fid = open_matrix(.True., fi%kpts%nkptf, 2, 2, "nbands")
-
-      do jsp = 1,fi%input%jspins
-         tmp%data_r(:fi%kpts%nkptf,jsp) = hybdat%nbands(:,jsp)
-      enddo 
-      call write_matrix(tmp, 1, fid)
-
-      do jsp = 1,fi%input%jspins
-         tmp%data_r(:fi%kpts%nkptf,jsp) = hybdat%nobd(:,jsp)
-      enddo 
-      call write_matrix(tmp, 2, fid)
-
-      call close_matrix(fid)
-      call timestop("write_nbands_hybdat")
-#endif 
-   end subroutine write_nbands_hybdat
-
-   subroutine read_nbands_hybdat(hybdat, fi, fmpi)
-      use m_mpi_bc_tool
-      use m_types_mpi
-      implicit none
-      class(t_hybdat), intent(inout) :: hybdat
-      type(t_fleurinput), intent(in) :: fi
-      type(t_mpi), intent(in)       :: fmpi
-
-      type(t_mat) :: tmp
-      integer     :: fid, jsp
-
-      if(fmpi%is_root()) then
-         call timestart("read_nbands_hybdat")
-
-         fid = open_matrix(.True., fi%kpts%nkptf, 2, 2, "nbands")
-
-         call read_matrix(tmp, 1, fid)
-         if(.not. allocated(hybdat%nbands)) allocate(hybdat%nbands(fi%kpts%nkptf, fi%input%jspins))
-         do jsp = 1,fi%input%jspins
-            hybdat%nbands(:,jsp) = tmp%data_r(:fi%kpts%nkptf,jsp)
-         enddo 
-
-         call read_matrix(tmp, 2, fid)
-         if(.not. allocated(hybdat%nobd)) allocate(hybdat%nobd(fi%kpts%nkptf, fi%input%jspins))
-         do jsp = 1,fi%input%jspins
-            hybdat%nobd(:,jsp) = tmp%data_r(:fi%kpts%nkptf,jsp) 
-         enddo 
-
-         call close_matrix(fid)
-         call timestop("read_nbands_hybdat")
-      endif
-
-#ifdef CPP_MPI
-      call mpi_bc(hybdat%nbands,0, MPI_COMM_WORLD)
-      call mpi_bc(hybdat%nobd,  0, MPI_COMM_WORLD)
-#endif
-   end subroutine read_nbands_hybdat
-
 
    subroutine set_nobd_hybdat(hybdat, fi, results)
       use m_types_fleurinput
@@ -252,7 +179,6 @@ contains
             hybdat%nbands(nk,jsp) = hybdat%nbands(i,jsp)
          END DO
       enddo
-      if(fmpi%is_root()) call hybdat%write_nbands(fi)
       call timestop("degenerate treatment")
    end subroutine set_nbands_hybdat
 

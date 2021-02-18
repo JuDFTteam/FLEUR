@@ -61,6 +61,7 @@ CONTAINS
       USE m_eig66_data
       use m_eig66_mpi
       use m_calc_cmt
+      use m_store_load_hybrid
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -160,34 +161,10 @@ CONTAINS
       if(k_pack%submpi%root()) then
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
-         call store_vx(fi, lapw, nk, jsp, hybdat%v_x(nk, jsp))
       endif
 
 
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock
-
-   subroutine store_vx(fi, lapw, nk, jsp, v_x)
-      use m_juDFT
-      use m_types
-      implicit none
-      type(t_fleurinput), intent(in)    :: fi
-      type(t_lapw), intent(in)          :: lapw
-      integer, intent(in)               :: nk, jsp
-      type(t_mat), intent(in)           :: v_x
-      character(len=:), allocatable     :: filename
-
-      integer :: fid
-#ifdef CPP_HDF
-      call timestart("store_vx")
-      
-      filename =  "v_x_nk=" // int2str(nk) // "_jsp=" // int2str(jsp)
-
-      fid = open_matrix(v_x%l_real, v_x%matsize1, 2, 1, filename)
-      call write_matrix(v_x, 1, fid)
-      call close_matrix(fid)
-      call timestop("store_vx")
-#endif
-   end subroutine store_vx
 END MODULE m_hsfock
