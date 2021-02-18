@@ -26,7 +26,7 @@ MODULE m_eig66_hdf
    !                          Daniel Wortmann
    !*****************************************************************
    USE m_eig66_data
-   USE m_types
+   USE m_types_mat
 #ifdef CPP_HDF
    USE hdf5
    USE m_hdf_tools

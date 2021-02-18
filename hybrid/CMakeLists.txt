@@ -32,6 +32,7 @@ hybrid/sphbessel_integral.f90
 hybrid/spmm.F90
 hybrid/spmvec.F90
 hybrid/structureconstant.F90
+hybrid/store_load_hybrid.F90
 hybrid/subvxc.F90
 hybrid/symmetrizeh.F90
 hybrid/symm_hf.F90

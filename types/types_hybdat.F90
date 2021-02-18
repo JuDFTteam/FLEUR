@@ -3,6 +3,8 @@ MODULE m_types_hybdat
    use m_types_mat
    use m_types_coul
    use m_types_eigvec
+   use m_io_matrix
+   use m_judft
 #ifdef CPP_MPI
    use mpi
 #endif
@@ -49,9 +51,24 @@ MODULE m_types_hybdat
       procedure :: allocate         => allocate_hybdat
       procedure :: set_nobd         => set_nobd_hybdat
       procedure :: set_nbands       => set_nbands_hybdat
+      procedure :: set_maxlmindx    => set_maxlmindx_hybdat
    END TYPE t_hybdat
 
 contains
+   subroutine set_maxlmindx_hybdat(hybdat, atoms, num_radfun_per_l)
+      implicit none
+      class(t_hybdat), intent(inout) :: hybdat
+      type(t_atoms), intent(in)      :: atoms
+      integer, intent(in)            :: num_radfun_per_l(:,:)
+
+      integer :: itype, l
+
+      hybdat%maxlmindx = 0
+      do itype = 1,atoms%ntype
+         hybdat%maxlmindx = max(hybdat%maxlmindx, SUM([(num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]))
+      enddo
+   end subroutine set_maxlmindx_hybdat
+
    subroutine set_nobd_hybdat(hybdat, fi, results)
       use m_types_fleurinput
       use m_types_misc
@@ -90,7 +107,6 @@ contains
       use m_types_fleurinput
       use m_types_misc
       use m_constants
-      use m_judft
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_fleurinput), intent(in) :: fi

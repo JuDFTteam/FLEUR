@@ -61,6 +61,7 @@ CONTAINS
       USE m_eig66_data
       use m_eig66_mpi
       use m_calc_cmt
+      use m_store_load_hybrid
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -161,6 +162,7 @@ CONTAINS
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, hybdat%v_x(nk, jsp))
          call hybdat%v_x(nk, jsp)%u2l()
       endif
+
 
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")

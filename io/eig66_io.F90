@@ -6,7 +6,7 @@
 
 MODULE m_eig66_io
 #include "juDFT_env.h"
-   USE m_types
+   use m_types_mat
    USE m_eig66_data
    IMPLICIT NONE
    PRIVATE

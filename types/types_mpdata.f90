@@ -622,7 +622,11 @@ contains
       type(t_atoms)   :: atoms
       integer :: itype, ilo
 
-      ! there is always at least two: u and u_dot
+      if(.not. allocated(mpdata%num_radfun_per_l)) then
+         allocate(mpdata%num_radfun_per_l(0:atoms%lmaxd, atoms%ntype))
+      endif
+
+      ! always two there are: u and u_dot
       mpdata%num_radfun_per_l = 2
       DO itype = 1, atoms%ntype
          DO ilo = 1, atoms%nlo(itype)

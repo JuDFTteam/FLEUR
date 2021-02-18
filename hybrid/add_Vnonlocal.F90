@@ -6,6 +6,8 @@
 
 MODULE m_add_vnonlocal
    USE m_judft
+   USE m_types
+   use m_judft
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 !     This module is the driver routine for the calculation of the Hartree    c
 !     Fock exchange term by using the mixed basis set.                        c
@@ -43,8 +45,6 @@ MODULE m_add_vnonlocal
 CONTAINS
    SUBROUTINE add_vnonlocal(nk, lapw, fi, hybdat, jsp, results,&
                             xcpot, fmpi, nococonv, hmat)
-
-      USE m_types
       USE m_constants
       USE m_symm_hf, ONLY: symm_hf
       USE m_intgrf, ONLY: intgrf, intgrf_init
@@ -54,7 +54,6 @@ CONTAINS
       USE m_wrapper
       USE m_hsefunctional, ONLY: exchange_vccvHSE, exchange_ccccHSE
       USE m_io_hybrid
-      use m_judft
 
       IMPLICIT NONE
 
@@ -81,8 +80,7 @@ CONTAINS
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
 
-      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)      
-      
+      nbasfcn = lapw%nv(1) + fi%atoms%nlotot          
       IF (hmat%l_real) THEN
          DO i = fmpi%n_rank+1,hybdat%v_x(nk, jsp)%matsize1,fmpi%n_size
             i0=(i-1)/fmpi%n_size+1
@@ -117,7 +115,6 @@ CONTAINS
       IF (hybdat%v_x(nk, jsp)%l_real) then
          CALL hybdat%v_x(nk, jsp)%multiply(z, tmp)
       else
-         ! used to be v_x%data_c = conjg(v_x%data_c)
          CALL hybdat%v_x(nk, jsp)%multiply(z, tmp, transA="T")
       endif
 
@@ -139,5 +136,4 @@ CONTAINS
       END DO
       call timestop("add_vnonlocal")
    END SUBROUTINE add_vnonlocal
-
 END MODULE m_add_vnonlocal

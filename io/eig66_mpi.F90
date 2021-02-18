@@ -1,7 +1,7 @@
 MODULE m_eig66_mpi
 #include "juDFT_env.h"
    USE m_eig66_data
-   USE m_types
+   USE m_types_mat
    USE m_judft
 #ifdef CPP_MPI
    USE mpi

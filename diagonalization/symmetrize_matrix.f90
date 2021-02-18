@@ -26,7 +26,6 @@ CONTAINS
           IF (ALL(ABS(kpts%bk(:,nk))<1E-10)) THEN
              max_imag=MAXVAL(ABS(AIMAG(hmat%data_c)))
              IF (max_imag>1e-10) THEN
-                PRINT *,"Testing real matrix optimization applicability: Not applicable, imaginary part is: ",max_imag
                 RETURN
              ENDIF
              

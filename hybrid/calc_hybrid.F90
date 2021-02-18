@@ -6,7 +6,7 @@
 
 MODULE m_calc_hybrid
    USE m_judft
-
+   use m_store_load_hybrid
 CONTAINS
 
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
@@ -194,6 +194,8 @@ CONTAINS
 #endif
          deallocate(v_x_loc)
          call timestop("BCast v_x")
+
+         if(fmpi%is_root()) call store_hybrid_data(fi, hybdat)
 
 #ifdef CPP_MPI
          call timestart("Hybrid imbalance")
