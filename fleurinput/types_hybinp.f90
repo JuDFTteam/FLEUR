@@ -138,7 +138,7 @@ CONTAINS
          !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
          !                  &                    calledby ="fleur")
 
-         CALL self%gen_map(atoms, sym, oneD)
+         CALL self%gen_map(atoms, sym)
 
          ! calculate d_wgn
          ALLOCATE (self%d_wgn2(-atoms%lmaxd:atoms%lmaxd, -atoms%lmaxd:atoms%lmaxd, 0:atoms%lmaxd, sym%nsym))
@@ -162,7 +162,7 @@ CONTAINS
       ENDIF
    END SUBROUTINE init_hybinp
 
-   SUBROUTINE gen_map_hybinp(hybinp, atoms, sym, oneD)
+   SUBROUTINE gen_map_hybinp(hybinp, atoms, sym)
       use m_types_atoms
       use m_types_sym
       use m_types_oneD
@@ -171,7 +171,6 @@ CONTAINS
       CLASS(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_atoms), INTENT(IN)      :: atoms
       TYPE(t_sym), INTENT(IN)        :: sym
-      TYPE(t_oneD), INTENT(IN)       :: oneD
       ! private scalars
       INTEGER                           :: iatom, first_eq_atom, itype, ieq, isym, iisym, ieq1
       INTEGER                           :: ratom, ok
