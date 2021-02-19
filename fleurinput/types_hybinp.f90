@@ -206,7 +206,9 @@ CONTAINS
                      hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
                   END IF
                END DO
-               IF (ratom == 0) call judft_error('eigen_hf: ratom not found')
+               IF (ratom == 0) call judft_error('eigen_hf: ratom not found' // new_line("A") //&
+                                                "iatom = " // int2str(iatom) // new_line("A") //&
+                                                "iisym = " // int2str(iisym) // new_line("A") )
 
             END DO
          END DO
