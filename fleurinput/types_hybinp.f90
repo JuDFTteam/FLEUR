@@ -200,7 +200,7 @@ CONTAINS
 
                ratom = 0
                DO ieq1 = 1, atoms%neq(itype)
-                  IF (all(abs(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-12, 1.0)) < 1e-10)) THEN
+                  IF (all(abs(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-8, 1.0)) < 1e-7)) THEN
                      ratom = first_eq_atom + ieq1
                      hybinp%map(iatom, isym) = ratom
                      hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
