@@ -167,6 +167,7 @@ CONTAINS
       use m_types_sym
       use m_types_oneD
       USE m_juDFT
+      use m_map_to_unit
       IMPLICIT NONE
       CLASS(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_atoms), INTENT(IN)      :: atoms
@@ -221,18 +222,4 @@ CONTAINS
       END DO
 
    END SUBROUTINE gen_map_hybinp
-
-   function map_to_unit(x) result(y)
-      implicit none 
-      real, intent(in) :: x(:)
-      real             :: y(size(x))
-
-      y = x
-
-      ! everything close to 0 or 1 get's mapped to 0 and 1
-      where (abs(y - dnint(y)) < 1e-6) y = dnint(y)
-      ! map to 0 -> 1 interval
-      y = y - floor(y)
-   end function map_to_unit
-
 END MODULE m_types_hybinp
