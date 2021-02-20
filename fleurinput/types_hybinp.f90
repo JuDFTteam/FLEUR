@@ -175,7 +175,7 @@ CONTAINS
       INTEGER                           :: iatom, first_eq_atom, itype, ieq, isym, iisym, ieq1
       INTEGER                           :: ratom, ok
       ! private arrays
-      REAL                              :: rtaual(3)
+      REAL                              :: rtaual(3), min_val, min_loc
 
       ALLOCATE (hybinp%map(atoms%nat, sym%nsym), stat=ok)
       IF (ok /= 0) call judft_error('gen_map: error during allocation of map')
@@ -199,13 +199,18 @@ CONTAINS
                rtaual(:) = matmul(sym%mrot(:, :, iisym), atoms%taual(:, iatom)) + sym%tau(:, iisym)
 
                ratom = 0
+               min_val = 1e33
+               min_loc = -1
                DO ieq1 = 1, atoms%neq(itype)
-                  IF (all(abs(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-8, 1.0)) < 1e-7)) THEN
-                     ratom = first_eq_atom + ieq1
-                     hybinp%map(iatom, isym) = ratom
-                     hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
-                  END IF
+                  if(min_val > norm2(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-8, 1.0))) then 
+                     min_loc = ieq1 
+                     min_val = norm2(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-8, 1.0))
+                  endif 
                END DO
+               if(min_val > 1e-6) call juDFT_warn("somehow this atom distance seems quite large")
+               ratom = first_eq_atom + min_loc
+               hybinp%map(iatom, isym) = ratom
+               hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
                IF (ratom == 0) call judft_error('eigen_hf: ratom not found' // new_line("A") //&
                                                 "iatom = " // int2str(iatom) // new_line("A") //&
                                                 "iisym = " // int2str(iisym) // new_line("A") )
