@@ -175,7 +175,7 @@ CONTAINS
       INTEGER                           :: iatom, first_eq_atom, itype, ieq, isym, iisym, ieq1
       INTEGER                           :: ratom, ok
       ! private arrays
-      REAL                              :: rtaual(3), min_val, min_loc
+      REAL                              :: rtaual(3), min_val, min_loc, curr_val
 
       ALLOCATE (hybinp%map(atoms%nat, sym%nsym), stat=ok)
       IF (ok /= 0) call judft_error('gen_map: error during allocation of map')
@@ -202,18 +202,18 @@ CONTAINS
                min_val = 1e33
                min_loc = -1
                DO ieq1 = 1, atoms%neq(itype)
-                  if(min_val > norm2(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-8, 1.0))) then 
+                  curr_val = norm2(map_to_unit(rtaual - atoms%taual(:, first_eq_atom + ieq1)))
+                  if(min_val > curr_val ) then 
                      min_loc = ieq1 
-                     min_val = norm2(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-8, 1.0))
+                     min_val = curr_val
                   endif 
                END DO
-               if(min_val > 1e-6) call juDFT_warn("somehow this atom distance seems quite large")
+               if(min_val > 1e-6) call judft_error('eigen_hf: ratom not found' // new_line("A") //&
+                                                   "iatom = " // int2str(iatom) // new_line("A") //&
+                                                   "iisym = " // int2str(iisym) // new_line("A") )
                ratom = first_eq_atom + min_loc
                hybinp%map(iatom, isym) = ratom
                hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
-               IF (ratom == 0) call judft_error('eigen_hf: ratom not found' // new_line("A") //&
-                                                "iatom = " // int2str(iatom) // new_line("A") //&
-                                                "iisym = " // int2str(iisym) // new_line("A") )
 
             END DO
          END DO
@@ -221,4 +221,18 @@ CONTAINS
       END DO
 
    END SUBROUTINE gen_map_hybinp
+
+   function map_to_unit(x) result(y)
+      implicit none 
+      real, intent(in) :: x(:)
+      real             :: y(size(x))
+
+      y = x
+
+      ! everything close to 0 or 1 get's mapped to 0 and 1
+      where (abs(y - dnint(y)) < 1e-6) y = dnint(y)
+      ! map to 0 -> 1 interval
+      y = y - floor(y)
+   end function map_to_unit
+
 END MODULE m_types_hybinp
