@@ -195,8 +195,12 @@ CONTAINS
             IF (fmpi%n_rank == 0) THEN
                 ! Only process 0 writes out the value of ne_all and the
                 ! eigenvalues.
+#ifdef CPP_MPI
                 call MPI_COMM_RANK(fmpi%diag_sub_comm,n_rank,err)
                 call MPI_COMM_SIZE(fmpi%diag_sub_comm,n_size,err)
+#else       
+                n_rank = 0; n_size=1;
+#endif
                 CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                            eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
