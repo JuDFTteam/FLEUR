@@ -56,8 +56,8 @@ MODULE m_types_mpimat
 
 CONTAINS
    subroutine mpimat_print_type(mat)
-      implicit none 
-      CLASS(t_mpimat), INTENT(IN)     :: mat 
+      implicit none
+      CLASS(t_mpimat), INTENT(IN)     :: mat
 
       write (*,*) "type -> t_ mpimat"
    end subroutine mpimat_print_type
@@ -312,16 +312,18 @@ CONTAINS
    END SUBROUTINE mpimat_add_transpose
 
    SUBROUTINE mpimat_copy(mat, mat1, n1, n2)
+     use mpi
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT)::mat
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
+      INTEGER :: irank,err
 
       call timestart("mpimat_copy")
 
       select type (mat1)
       type is(t_mpimat)
-          
+
       class default
          call judft_error("you can only copy a t_mpimat to a t_mpimat")
       end select
@@ -330,9 +332,9 @@ CONTAINS
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
          IF (mat%l_real) THEN
-            CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat%blacsdata%blacs_desc(2))
+           CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
          ELSE
-            CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat%blacsdata%blacs_desc(2))
+            CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
          END IF
       CLASS DEFAULT
          CALL judft_error("Wrong datatype in copy")
@@ -426,7 +428,7 @@ CONTAINS
             mat%blacsdata => null()
          ELSE
 #ifdef CPP_SCALAPACK
-            CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2), ierr)
+            if (mat%blacsdata%blacs_desc(2)/=-1) CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2), ierr)
             DEALLOCATE (mat%blacsdata)
 #endif
          END IF
@@ -451,27 +453,37 @@ CONTAINS
       character(len=*),intent(in),optional :: mat_name
 
 #ifdef CPP_SCALAPACK
-      INTEGER::nbx, nby, irank, ierr 
+      INTEGER::nbx, nby, irank, ierr
+      CALL mpi_comm_rank(MPI_COMM_WORLD,irank,ierr)
 
       call timestart("mpimat_init")
-      nbx = DEFAULT_BLOCKSIZE; nby = DEFAULT_BLOCKSIZE
-      IF (PRESENT(nb_x)) nbx = nb_x
-      IF (PRESENT(nb_y)) nby = nb_y
-      IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(l_2d))) &
-         CALL judft_error("Optional arguments must be present in mpimat_init")
-      mat%global_size1 = matsize1
-      mat%global_size2 = matsize2
-      ALLOCATE (mat%blacsdata)
-      mat%blacsdata%no_use = 1
+      ALLOCATE (mat%blacsdata,stat=ierr)
+      if (mpi_subcom==MPI_COMM_NULL) Then
+        mat%blacsdata%blacs_desc(2)=-1
+        mat%global_size1=0
+        mat%global_size2=0
+        mat%matsize1=0
+        mat%matsize2=0
+      else
+        nbx = DEFAULT_BLOCKSIZE; nby = DEFAULT_BLOCKSIZE
+        IF (PRESENT(nb_x)) nbx = nb_x
+        IF (PRESENT(nb_y)) nby = nb_y
+        IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(l_2d))) &
+        CALL judft_error("Optional arguments must be present in mpimat_init")
+        mat%global_size1 = matsize1
+        mat%global_size2 = matsize2
+        mat%blacsdata%no_use = 1
+      endif
       CALL priv_create_blacsgrid(mpi_subcom, l_2d, matsize1, matsize2, nbx, nby, &
-                                 mat%blacsdata, mat%matsize1, mat%matsize2)
+      mat%blacsdata, mat%matsize1, mat%matsize2)
+
       mat%blacsdata%mpi_com = mpi_subcom
       CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
       !check if this matrix is actually distributed over MPI_COMM_SELF
-      IF (mpi_subcom == MPI_COMM_SELF) THEN
-         CALL MPI_COMM_RANK(mpi_subcom, irank, ierr)
-         IF (irank > 0) mat%blacsdata%blacs_desc(2) = -1
-      END IF
+      !IF (mpi_subcom == MPI_COMM_SELF) THEN
+      !   CALL MPI_COMM_RANK(mpi_subcom, irank, ierr)
+      !   IF (irank > 0) mat%blacsdata%blacs_desc(2) = -1
+      !END IF
 
       call timestop("mpimat_init")
 #endif
@@ -542,25 +554,27 @@ CONTAINS
       EXTERNAL blacs_pinfo, blacs_gridinit
 
       !Determine rank and no of processors
-      CALL MPI_COMM_RANK(mpi_subcom, myid, ierr)
-      CALL MPI_COMM_SIZE(mpi_subcom, np, ierr)
+      if (mpi_subcom/=MPI_COMM_NULL) THEN
+        CALL MPI_COMM_RANK(mpi_subcom, myid, ierr)
+        CALL MPI_COMM_SIZE(mpi_subcom, np, ierr)
 
-      ! compute processor grid, as square as possible
-      ! If not square with more rows than columns
-      IF (l_2d) THEN
-         distloop: DO j = INT(SQRT(REAL(np))), 1, -1
+        ! compute processor grid, as square as possible
+        ! If not square with more rows than columns
+        IF (l_2d) THEN
+          distloop: DO j = INT(SQRT(REAL(np))), 1, -1
             IF ((np/j)*j == np) THEN
-               blacsdata%npcol = np/j
-               blacsdata%nprow = j
-               EXIT distloop
+              blacsdata%npcol = np/j
+              blacsdata%nprow = j
+              EXIT distloop
             ENDIF
-         ENDDO distloop
-      ELSE
-         nbc = 1
-         nbr = MAX(m1, m2)
-         blacsdata%npcol = np
-         blacsdata%nprow = 1
-      ENDIF
+          ENDDO distloop
+        ELSE
+          nbc = 1
+          nbr = MAX(m1, m2)
+          blacsdata%npcol = np
+          blacsdata%nprow = 1
+        ENDIF
+
       ALLOCATE (iblacsnums(np), ihelp(np), iusermap(blacsdata%nprow, blacsdata%npcol))
 
       !   A blacsdata%nprow*blacsdata%npcol processor grid will be created
@@ -585,7 +599,9 @@ CONTAINS
       iblacsnums = -2
       ihelp = -2
       ihelp(myid + 1) = iamblacs ! Get the Blacs id corresponding to the MPI id
-      CALL MPI_ALLREDUCE(ihelp, iblacsnums, np, MPI_INTEGER, MPI_MAX, mpi_subcom, ierr)
+      if (mpi_subcom/=MPI_COMM_NULL) &
+        CALL MPI_ALLREDUCE(ihelp, iblacsnums, np, MPI_INTEGER, MPI_MAX, mpi_subcom, ierr)
+
       IF (ierr /= 0) call judft_error('Error in allreduce for BLACS nums')
 
       !     iblacsnums(i) is the BLACS-process number of MPI-process i-1
@@ -596,6 +612,12 @@ CONTAINS
             k = k + 1
          ENDDO
       ENDDO
+      else
+        CALL BLACS_PINFO(iamblacs, npblacs)
+        iusermap=reshape([iamblacs],[1,1])
+        blacsdata%nprow=1; blacsdata%npcol=1;blacsdata%blacs_desc(2)=-1
+      endif
+
 !#ifdef CPP_BLACSDEFAULT
       !Get the Blacs default context
       CALL BLACS_GET(0, 0, ictextblacs)
@@ -617,12 +639,19 @@ CONTAINS
          call judft_error('Wrong number of columns in BLACS grid')
 
       ENDIF
-
       !Create the descriptors
-      CALL descinit(blacsdata%blacs_desc, m1, m2, nbr, nbc, 0, 0, ictextblacs, myrowssca, ierr)
-      IF (ierr /= 0) call judft_error('Creation of BLACS descriptor failed')
-      local_size1 = myrowssca
-      local_size2 = mycolssca
+      if (mpi_subcom==MPI_COMM_NULL) then
+        blacsdata%blacs_desc(2)=-1
+        local_size1 = 0
+        local_size2 = 0
+      else
+        CALL descinit(blacsdata%blacs_desc, m1, m2, nbr, nbc, 0, 0, ictextblacs, myrowssca, ierr)
+        IF (ierr /= 0) call judft_error('Creation of BLACS descriptor failed')
+        local_size1 = myrowssca
+        local_size2 = mycolssca
+      endif
+
+
 #endif
    END SUBROUTINE priv_create_blacsgrid
 END MODULE m_types_mpimat

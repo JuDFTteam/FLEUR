@@ -5,8 +5,8 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_setupMPI
-#ifdef CPP_MPI 
-  use mpi 
+#ifdef CPP_MPI
+  use mpi
 #endif
   use m_juDFT
   IMPLICIT NONE
@@ -23,7 +23,7 @@ CONTAINS
     INTEGER,INTENT(in)           :: nkpt,neigd
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
-    INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk 
+    INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk
     logical :: finished
 #ifdef CPP_MPI
     CALL juDFT_COMM_SPLIT_TYPE(fmpi%mpi_comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,fmpi%mpi_comm_same_node)
@@ -51,16 +51,18 @@ CONTAINS
     endif
 #ifdef _OPENACC
     gpus=acc_get_num_devices(acc_device_nvidia)
-    write(*,*) "Number of GPU per node   :",gpus
 #ifdef CPP_MPI
+    write(*,*) "Number of GPU per node   :",gpus
     CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
     if (isize>1) THEN
-      write(*,*) "Number of MPI/PE per node:",isize
+      if (fmpi%irank==0) write(*,*) "Number of MPI/PE per node:",isize
       if (gpus<isize) call judft_error("You need at least as many GPUs per node as PE running")
       CALL MPI_COMM_RANK(fmpi%mpi_comm_same_node,localrank,i)
       call acc_set_device_num(localrank,acc_device_nvidia)
       write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",localrank
     ENDIF
+#else
+    write(*,*) "Number of GPU    :",gpus
 #endif
 #endif
     IF (fmpi%isize==1) THEN
@@ -69,10 +71,11 @@ CONTAINS
        fmpi%n_rank=0
        fmpi%n_size=1
        fmpi%sub_comm=fmpi%mpi_comm
+       fmpi%diag_sub_comm=fmpi%mpi_comm
        IF (ALLOCATED(fmpi%k_list)) DEALLOCATE(fmpi%k_List)
        IF (ALLOCATED(fmpi%ev_list)) DEALLOCATE(fmpi%ev_list)
-       ALLOCATE(fmpi%k_list(nkpt))
        ALLOCATE(fmpi%ev_list(neigd))
+       ALLOCATE(fmpi%k_list(nkpt))
        fmpi%k_list=[(i,i=1,nkpt)]
        fmpi%coulomb_owner=[(0,i=1,nkpt)]
        fmpi%ev_list=[(i,i=1,neigd)]
@@ -82,28 +85,33 @@ CONTAINS
 #ifdef CPP_MPI
     !Distribute the work
     CALL priv_distribute_k(nkpt,fmpi)
-
-    !Now check if parallelization is possible
-    IF (fmpi%n_size>1.AND..NOT.parallel_solver_available()) &
-         CALL juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")
-#endif
     !generate the MPI communicators
     CALL priv_create_comm(nkpt,neigd,fmpi)
+    !Now check if parallelization is possible
+    IF (fmpi%n_size>1) THEN
+      if (judft_was_argument("-serial_diag")) THEN
+        call priv_redist_for_diag(fmpi)
+      else if (.NOT.parallel_solver_available()) then
+        call juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")
+      endif
+    endif
+#endif
+
 
     ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
-    ! this corresponds to the compact = .true. switch in priv_create_comm 
-    fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )] 
+    ! this corresponds to the compact = .true. switch in priv_create_comm
+    fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )]
 
     ! create an array with the owners of the correct coulomb matrix
     allocate(fmpi%coulomb_owner(nkpt), source=-1)
-    do nk =1,nkpt 
+    do nk =1,nkpt
       me = 0
       finished = .False.
-      do while(.not. finished) 
+      do while(.not. finished)
          if(any(nk == [(i, i=INT(me/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size)] )) then
-            fmpi%coulomb_owner(nk) = me 
+            fmpi%coulomb_owner(nk) = me
             finished = .True.
-         endif 
+         endif
          me = me + 1
          if(me > fmpi%isize .and. .not. finished) then
             call judft_error("somehow i cant lokate this k-point")
@@ -247,7 +255,7 @@ CONTAINS
     CALL MPI_COMM_RANK (fmpi%SUB_COMM,fmpi%n_rank,ierr)
     ALLOCATE(fmpi%ev_list(neigd/fmpi%n_size+1))
     fmpi%ev_list=[(i,i=fmpi%n_rank+1,neigd,fmpi%n_size)]
-
+    fmpi%diag_sub_comm=fmpi%sub_comm !default both are the same...
 #endif
   END SUBROUTINE priv_create_comm
 
@@ -274,6 +282,17 @@ CONTAINS
 #endif
   END SUBROUTINE priv_dist_info
 
+  subroutine priv_redist_for_diag(fmpi)
+    use m_types_mpi
+    type(t_mpi),intent(inout):: fmpi
+
+    IF (fmpi%n_rank==0) THEN
+      fmpi%diag_sub_comm=MPI_COMM_SELF
+    ELSE
+      fmpi%diag_sub_comm=MPI_COMM_NULL
+      fmpi%pe_diag=.false.
+    ENDIF
+  end
 
 
 END MODULE m_setupMPI
