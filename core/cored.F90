@@ -1,6 +1,6 @@
 MODULE m_cored
 CONTAINS
-   SUBROUTINE cored(input, jspin, atoms, rho,  sphhar, vr, qint, rhc, tec, seig, EnergyDen)
+   SUBROUTINE cored(input, jspin, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, EnergyDen)
       !     *******************************************************
       !     *****   set up the core densities for compounds.  *****
       !     *****                      d.d.koelling           *****
@@ -21,6 +21,7 @@ CONTAINS
       !
       !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspin
+      LOGICAL, INTENT (IN) :: l_CoreDenPresent
       REAL,    INTENT (OUT) :: seig
       !     ..
       !     .. Array Arguments ..
@@ -50,7 +51,7 @@ CONTAINS
       c = c_light(1.0)
       seig = 0.
       !
-      IF (input%frcor.and. isCoreDensityPresent()) THEN
+      IF (input%frcor.and. l_CoreDenPresent) THEN
          DO  n = 1,atoms%ntype
             rnot = atoms%rmsh(1,n) ; dxx = atoms%dx(n)
             ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/rnot ) / dxx + 1 )

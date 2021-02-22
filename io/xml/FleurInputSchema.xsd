@@ -1051,6 +1051,7 @@
      </xsd:all>
      <xsd:attribute name="theta" type="FleurDouble" use="required"/>
      <xsd:attribute name="phi" type="FleurDouble" use="required"/>
+     <xsd:attribute name="ef_shift" type="FleurDouble" use="optional"/>     
    </xsd:complexType>
 
    <xsd:complexType name="JijType">

@@ -42,7 +42,7 @@ build-gfortran-hdf5:
     - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/-I \1,,\2/p')"
     - ctest $CTEST_FLAGS -R ValidateOutFiles -U -j 1
   artifacts:
-    when: on_failure
+    when: always
     paths:
       - build/Testing
 #  only:

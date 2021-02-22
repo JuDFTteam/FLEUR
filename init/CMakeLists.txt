@@ -10,6 +10,7 @@ init/prp_xcfft_box.f
 init/ptsym.f
 init/spgrot.f
 init/strgn_dim.F
+init/ss_sym.f
 )
 set(fleur_F90 ${fleur_F90}
 init/ifft235.f90

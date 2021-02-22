@@ -80,9 +80,7 @@ CONTAINS
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
 
-      nbasfcn = lapw%nv(1) + fi%atoms%nlotot    
-      call cut_vx_to_size(nbasfcn, hybdat%v_x(nk,jsp))  
-      
+      nbasfcn = lapw%nv(1) + fi%atoms%nlotot          
       IF (hmat%l_real) THEN
          DO i = fmpi%n_rank+1,hybdat%v_x(nk, jsp)%matsize1,fmpi%n_size
             i0=(i-1)/fmpi%n_size+1
@@ -138,23 +136,4 @@ CONTAINS
       END DO
       call timestop("add_vnonlocal")
    END SUBROUTINE add_vnonlocal
-
-   subroutine cut_vx_to_size(nbasfcn, v_x)
-      implicit NONE 
-      integer, intent(in)         :: nbasfcn 
-      type(t_mat), intent(inout)  :: v_x 
-
-      call timestart("cut_vx_to_size")
-      if(v_x%matsize1 /= nbasfcn .or. v_x%matsize2 /= nbasfcn ) then
-         v_x%matsize1 = nbasfcn
-         v_x%matsize2 = nbasfcn
-         if(v_x%l_real) then 
-            v_x%data_r = v_x%data_r(:nbasfcn,:nbasfcn)
-         else
-            v_x%data_c = v_x%data_c(:nbasfcn,:nbasfcn)
-         endif
-      endif
-      call timestop("cut_vx_to_size")
-   end subroutine cut_vx_to_size
-
 END MODULE m_add_vnonlocal

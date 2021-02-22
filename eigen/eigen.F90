@@ -42,7 +42,7 @@ CONTAINS
       USE m_symmetrize_matrix
       USE m_unfold_band_kpts !used for unfolding bands
       USE m_types_mpimat
-      use m_load_Vnonlocal
+      use m_store_load_hybrid
 
       IMPLICIT NONE
 
@@ -126,7 +126,11 @@ CONTAINS
       nvBuffer = 0
       nvBufferTemp = 0
 
+<<<<<<< HEAD
       call load_Vnonlocal(fi, fmpi, mpdata, hybdat)
+=======
+      if(.not. hybdat%l_addhf) call load_hybrid_data(fi, fmpi, hybdat, mpdata)
+>>>>>>> 1e57c65a3b9005e44ff450c8485f1202178b9599
       DO jsp = 1,MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)

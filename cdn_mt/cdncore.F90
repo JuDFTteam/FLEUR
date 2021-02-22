@@ -46,15 +46,15 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
    TYPE(t_results),    INTENT(INOUT)           :: results
    TYPE(t_potden),     INTENT(INOUT), OPTIONAL :: EnergyDen
 
-   INTEGER                          :: jspin, n, iType
+   INTEGER                          :: jspin, n, iType, ierr
    REAL                             :: seig, rhoint, momint
    LOGICAL, PARAMETER               :: l_st=.FALSE.
+   LOGICAL                          :: l_coreDenPresent
 
    REAL                             :: rh(atoms%msh,atoms%ntype,input%jspins)
    REAL                             :: qint(atoms%ntype,input%jspins)
    REAL                             :: tec(atoms%ntype,input%jspins)
    REAL                             :: rhTemp(atoms%msh,atoms%ntype,input%jspins)
-
 
    results%seigc = 0.0
    IF (fmpi%irank==0) THEN
@@ -65,6 +65,7 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
       END DO
    END IF
 
+   l_CoreDenPresent = .FALSE.
    IF (input%kcrel==0) THEN
       ! Generate input file ecore for subsequent GW calculation
       ! 11.2.2004 Arno Schindlmayr
@@ -75,11 +76,15 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
       rh = 0.0
       tec = 0.0
       qint = 0.0
-      IF (input%frcor.and.isCoreDensityPresent()) THEN
+      IF (input%frcor) THEN
          IF (fmpi%irank==0) THEN
-            CALL readCoreDensity(input,atoms,rh,tec,qint)
+            IF(isCoreDensityPresent()) THEN
+               CALL readCoreDensity(input,atoms,rh,tec,qint)
+               l_coreDenPresent = .TRUE.
+            END IF
          END IF
 #ifdef CPP_MPI
+         CALL MPI_BCAST(l_CoreDenPresent,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
          CALL mpi_bc_coreDen(fmpi,atoms,input,rh,tec,qint)
 #endif
       END IF
@@ -90,9 +95,9 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
       IF (input%kcrel==0) THEN
          DO jspin = 1,input%jspins
             IF(PRESENT(EnergyDen)) THEN
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig, EnergyDen%mt)
+               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig, EnergyDen%mt)
             ELSE
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig)
+               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig)
             ENDIF
 
             rhTemp(:,:,jspin) = rh(:,:,jspin)
