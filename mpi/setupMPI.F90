@@ -285,14 +285,15 @@ CONTAINS
   subroutine priv_redist_for_diag(fmpi)
     use m_types_mpi
     type(t_mpi),intent(inout):: fmpi
-
+#ifdef CPP_MPI
     IF (fmpi%n_rank==0) THEN
       fmpi%diag_sub_comm=MPI_COMM_SELF
     ELSE
       fmpi%diag_sub_comm=MPI_COMM_NULL
       fmpi%pe_diag=.false.
     ENDIF
-  end
+#endif
+    end
 
 
 END MODULE m_setupMPI
