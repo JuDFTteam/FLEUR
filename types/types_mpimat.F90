@@ -312,7 +312,6 @@ CONTAINS
    END SUBROUTINE mpimat_add_transpose
 
    SUBROUTINE mpimat_copy(mat, mat1, n1, n2)
-     use mpi
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT)::mat
       CLASS(t_mat), INTENT(IN)      ::mat1
