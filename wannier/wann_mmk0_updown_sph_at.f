@@ -1,4 +1,5 @@
       MODULE m_wann_mmk0_updown_sph_at
+        use m_juDFT
       CONTAINS
       SUBROUTINE wann_mmk0_updown_sph_at(
      >               l_noco,alph,beta,
@@ -50,6 +51,7 @@ c**************************************************************
       integer           :: nat2
       logical           :: l_inthelist
 
+      call timestart("wann_mmk0_updown_sph_at")
       ci = cmplx(0.0,1.0)
       allocate (qlo(noccbd,noccbd,nlod,nlod,natd), 
      +          qaclo(noccbd,noccbd,nlod,natd),
@@ -241,5 +243,6 @@ c---> of the radial basis functions
       enddo !ntyp
       deallocate ( qlo,qaclo,qbclo )
 
+      call timestop("wann_mmk0_updown_sph_at")
       END SUBROUTINE wann_mmk0_updown_sph_at
       END MODULE m_wann_mmk0_updown_sph_at

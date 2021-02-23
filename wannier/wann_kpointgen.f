@@ -107,6 +107,8 @@ c***********************************************************
       integer,intent(out)::sc
       integer,intent(in)::nu
       integer k,nnu
+
+      call timestart("findkgt")
       nnu=nu
       IF(nnu==0)  CALL juDFT_error("nnu.eq.0",calledby="wann_kpointgen")
       do k=1,3
@@ -120,6 +122,7 @@ c***********************************************************
          nnu=nnu/2
       enddo
       sc=nnu
+      call timestop("findkgt")
       end subroutine findkgt
 
       end module m_wann_kpointgen
