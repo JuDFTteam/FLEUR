@@ -334,8 +334,8 @@ c         radf(j) = rads(nwf,l,j,1)*rads(nwf,l,j,1)
  
       enddo ! by twfs
 
+      call timestop("wann_rad_twf")
       return
 
-      call timestop("wann_rad_twf")
       end subroutine wann_rad_twf
       end module m_wann_rad_twf
