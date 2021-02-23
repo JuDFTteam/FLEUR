@@ -76,7 +76,10 @@ c     &                 allocate(ndegen(rvecnum_in))
         enddo !k3
        enddo !k2
       enddo !k1
-      if(l_get_rvecnum) return
+      if(l_get_rvecnum) then
+            call timestop("wann_wigner_seitz")
+            return
+      endif
 
 c------ Consistency Check.
       summa = 0.0
