@@ -34,6 +34,7 @@ c***********************************************************
       real                :: int_electronic_moment(3,2)
       real                :: tpi
 
+      call timestart("wann_dipole_takehome")
       tpi=2.0*pimach()
 
       write(666,*)"*********************************"
@@ -67,6 +68,7 @@ c***********************************************************
  777  format("spin ",i1.1,
      &          " electronic polarization = (",3f12.6,") uC/cm**2")
 
+      call timestop("wann_dipole_takehome")
       end subroutine wann_dipole_takehome
       end module m_wann_dipole_takehome
       

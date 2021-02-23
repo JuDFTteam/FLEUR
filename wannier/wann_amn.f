@@ -104,6 +104,7 @@ c...local
       data spin12/'  ', '.1', '.2'/
       character(len=6) :: filename
 
+      call timestart("wann_amn")
       spi(:) = 0
 
       l_amn2=l_amn2_in
@@ -337,6 +338,7 @@ c..local orbitals
          enddo
       enddo
 
+      call timestop("wann_amn")
       return
 
       end subroutine wann_amn
@@ -361,7 +363,7 @@ c*********************************************************************
       complex tlm(0:3,-3:3,1:7)
       real j,jm
 
-
+      call timestart("soc_tlmw")
       do nwf=1,nwfs
          l=lwf(nwf)
          IF(l<0) CALL juDFT_error("not yet implemented",calledby
@@ -381,6 +383,7 @@ c*********************************************************************
          enddo
       enddo
 
+      call timestop("soc_tlmw")
       end subroutine soc_tlmw
 
       end module m_wann_amn
