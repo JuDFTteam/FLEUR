@@ -91,7 +91,7 @@ c      real                :: kpoints(3,nkpts)
      &               num_dims_dum, fullnkpts_dum  
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
-
+      call timestart("wann_socmatvec_rs")
       tpi=2*pimach()
 
       jspins=jspins_in
@@ -419,7 +419,7 @@ c***********************************************************
 
       deallocate(lwindow,u_matrix_opt,ndimwin)
       deallocate(u_matrix,hwann,hreal)
-
+      call timestop("wann_socmatvec_rs")
       end subroutine wann_socmatvec_rs
       end module m_wann_socmatvec_rs
 
