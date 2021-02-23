@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_dipole_takehome
+      use m_judft
       contains
       subroutine wann_dipole_takehome(
      >               jspins,l_absolute,

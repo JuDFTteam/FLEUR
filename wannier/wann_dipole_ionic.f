@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_dipole_ionic
+      use m_judft
       contains
       subroutine wann_dipole_ionic(
      >               natd,pos,omtil,
