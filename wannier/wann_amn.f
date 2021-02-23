@@ -198,7 +198,7 @@ c..reading the proj.1 / proj.2 / proj file
          write (oUnit,*) 'l=',lwf(nwf),' mr=',mrwf(nwf),' r=',rwf(nwf)
          write (oUnit,*) 'zona=',zona(nwf),' region=',regio(nwf),'*Rmt'
          write (oUnit,*) 'alpha=',alpha(nwf),
-     &          ' beta=',beta(nwf),' gamma=',gamma(nwf)
+      &          ' beta=',beta(nwf),' gamma=',gamma(nwf)
          write (oUnit,*)
          enddo 
          call timestop("output trail WFs")
