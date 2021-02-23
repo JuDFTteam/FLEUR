@@ -3,6 +3,7 @@ c  routine to define Bravais  c
 c  in the auxiliary space     c
 c*****************************c
       module m_wann_gwf_auxbrav
+            use m_juDFT
       implicit none
       contains
 
@@ -15,6 +16,8 @@ c*****************************c
       logical, intent(in)  :: l_sgwf,l_socgwf,l_dim(3)
       real,    intent(out) :: amat(3,3),bmat(3,3)
       real :: tpi, omtil,kmesh_tol
+
+      call timestart("wann_gwf_auxbrav")
 
       write(*,*)'auxiliary lattice constant a=',a
 
@@ -38,6 +41,8 @@ c         amat(3,3)=amat(3,3)-kmesh_tol
 
       !write(*,*)'aux. amat',amat
       !write(*,*)'aux. bmat',bmat
+
+      call timestop("wann_gwf_auxbrav")
       end subroutine wann_gwf_auxbrav
 
       end module m_wann_gwf_auxbrav
