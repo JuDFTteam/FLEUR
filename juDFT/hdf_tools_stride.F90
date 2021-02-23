@@ -151,6 +151,7 @@ CONTAINS
   &                           did, start, count, DATA, stride, transprop)
 !*****************************************************************
       USE hdf5
+      use m_judft
       IMPLICIT NONE
 
 !arguments
