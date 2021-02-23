@@ -12,8 +12,8 @@ CONTAINS
   !! If the matrices are distributed, the copy includes a redistribution into the block-cylic form needed by
   !! the diagonalization.
   !! In the non-collinear case, the 2x2 array of matrices is combined into the final matrix. Again a redistribution will happen in the parallel case
- 
-  
+
+
   SUBROUTINE eigen_redist_matrix(fmpi,lapw,atoms,mat,mat_final,mat_final_templ)
     USE m_types
     USE m_types_mpimat
@@ -32,7 +32,7 @@ CONTAINS
     m=lapw%nv(1)+atoms%nlotot
     IF (SIZE(mat)>1) m=m+lapw%nv(2)+atoms%nlotot
     IF (.NOT.PRESENT(mat_final_templ)) THEN
-       CALL mat_final%init(mat(1,1)%l_real,m,m,fmpi%sub_comm,.TRUE.) !here the .true. creates a block-cyclic scalapack distribution
+       CALL mat_final%init(mat(1,1)%l_real,m,m,fmpi%diag_sub_comm,.TRUE.) !here the .true. creates a block-cyclic scalapack distribution
     ELSE
        CALL mat_final%init(mat_final_templ)
     ENDIF
@@ -45,7 +45,7 @@ CONTAINS
 
     CALL mat_final%copy(mat(1,1),1,1)
     CALL mat(1,1)%free()
-  
+
     !down-down component
     CALL mat_final%copy(mat(2,2),lapw%nv(1)+atoms%nlotot+1,lapw%nv(1)+atoms%nlotot+1)
     CALL mat(2,2)%free()
@@ -59,8 +59,6 @@ CONTAINS
     CALL mat_final%copy(mat(1,2),1,lapw%nv(1)+atoms%nlotot+1)
     CALL mat(1,2)%free()
     CALL mat(2,1)%free()
-    
+
   END SUBROUTINE eigen_redist_matrix
 END MODULE m_eigen_redist_matrix
-
-

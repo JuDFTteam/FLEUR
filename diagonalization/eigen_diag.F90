@@ -27,6 +27,9 @@ CONTAINS
     USE m_cusolver_diag
     USE m_judft_usage
     USE m_writeout
+#ifdef CPP_MPI
+    use mpi
+#endif    
     IMPLICIT NONE
     INTEGER,                   INTENT(INOUT) :: solver
     CLASS(t_mat),              INTENT(INOUT) :: smat,hmat
@@ -41,15 +44,18 @@ CONTAINS
     INTEGER,OPTIONAL,          INTENT(IN)    :: jsp
     INTEGER,OPTIONAL,          INTENT(IN)    :: iter
 
-    !Locals  
+    !Locals
     LOGICAL :: parallel
 
     SELECT TYPE(smat)
        CLASS IS (t_mpimat)
-       parallel=.TRUE.
+#ifdef CPP_MPI
+       parallel=smat%blacsdata%mpi_com/=MPI_COMM_SELF
+#endif
        CLASS default
        parallel=.FALSE.
     END SELECT
+
 
     solver=select_solver(solver,parallel)
 

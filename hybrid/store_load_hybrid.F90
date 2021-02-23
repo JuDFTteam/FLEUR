@@ -123,7 +123,6 @@ contains
         INTEGER(HID_T)   :: file_id
 
         call timestart("store_hybrid_data")
-
         file_id = open_file()
 
         dset_id = open_dataset(file_id, "nbands", [fi%kpts%nkptf, fi%input%jspins], H5T_NATIVE_INTEGER)
@@ -134,6 +133,13 @@ contains
         call write_int_2d(dset_id, hybdat%nobd)
         call close_dataset(dset_id)
 
+        dset_id = open_dataset(file_id, "bkf", [3, fi%kpts%nkptf], H5T_NATIVE_DOUBLE)
+        call write_dbl_2d(dset_id, fi%kpts%bkf)
+        call close_dataset(dset_id)
+
+        dset_id = open_dataset(file_id, "bkp", [fi%kpts%nkptf,1], H5T_NATIVE_INTEGER)
+        call write_int_1d(dset_id, fi%kpts%bkp)
+        call close_dataset(dset_id)
 
         ! hdf5 only knows reals
         do jsp = 1, fi%input%jspins 
@@ -158,7 +164,6 @@ contains
         enddo
 
         call close_file(file_id)
-
         call timestop("store_hybrid_data")
 #endif
     end subroutine store_hybrid_data
@@ -238,6 +243,21 @@ contains
 
         CALL h5dclose_f(dset_id, ierr)
     end subroutine close_dataset
+
+    subroutine write_int_1d(dset_id, mtx)
+        implicit none 
+        INTEGER(HID_T), intent(in)         :: dset_id
+        integer, intent(in)                :: mtx(:)
+
+        INTEGER(HSIZE_T), DIMENSION(2)     :: data_dims
+        integer                            :: ierr
+
+        data_dims(1) = size(mtx)
+        data_dims(2) = 1 
+        
+        CALL h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, mtx, data_dims, ierr)
+        if(ierr /= 0) call juDFT_error("can't write int 1d")
+    end subroutine write_int_1d
 
     subroutine write_int_2d(dset_id, mtx)
         implicit none 
