@@ -1,4 +1,5 @@
       module m_wann_plot_od_vac
+            use m_juDFT
       contains
       subroutine wann_plot_od_vac(point,
      >     z1,nmzd,nv2d,odi,nmz,delz,bmat,
@@ -39,6 +40,8 @@ c     ..local scalars..
       complex value1
 c     ..intrinsic functions..
       intrinsic aimag,cmplx,conjg,real,sqrt
+
+      call timestart("wann_plot_od_vac")
 
       allocate (kvac3(nv2d),map1(nvd))
 
@@ -110,6 +113,7 @@ c         print*,"value=",value
 c     value=(value1-value)*(r/delz+2-i) + value
     
       deallocate ( kvac3,map1 )
+      call timestop("wann_plot_od_vac")
 
       end subroutine wann_plot_od_vac
       end module m_wann_plot_od_vac

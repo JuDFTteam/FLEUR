@@ -96,6 +96,7 @@ c*************************************************
       complex,allocatable :: hwannmix(:,:,:,:)
       complex,allocatable :: perpmag(:,:,:,:)
 
+      call timestart("wann_pauli_rs")
       tpi=2*pimach()
 
       jspins=jspins_in
@@ -541,6 +542,6 @@ c***********************************************************
 
       deallocate(lwindow,u_matrix_opt,ndimwin)
       deallocate(u_matrix,hwann,hreal)
-
+      call timestop("wann_pauli_rs")
       end subroutine wann_pauli_rs
       end module m_wann_pauli_rs
