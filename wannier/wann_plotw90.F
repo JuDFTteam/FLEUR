@@ -204,7 +204,7 @@ c     ..basis wavefunctions in the vacuum
 
       TYPE(t_zmat)  :: zMat, zzMat
       TYPE(t_usdus) :: usdus
-
+      call timestart("wann_plotw90")
       l_byindex=.false.
       l_byenergy=.false.
       l_bynumber=.false.
@@ -771,6 +771,6 @@ c..end of the loop by the bands
 
       deallocate ( vr,vz,kveclo,nv,k1,k2,k3 )
       deallocate ( ff,gg )
-
+      call timestop("wann_plotw90")
       END SUBROUTINE wann_plotw90
       END MODULE m_wann_plotw90

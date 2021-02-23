@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_write_matrix4
+            use m_juDFT
       contains
       subroutine wann_write_matrix4(
      >               fmpi_comm,l_p0,filename,title,
@@ -58,6 +59,7 @@ c**********************************************************
 c     Collect contributions to the matrix4 matrix from the
 c     various processors.
 c**********************************************************
+      call timestart("wann_write_matrix4")
 	print*,"dim1=",size(matrix4,1)
 	print*,"dim2=",size(matrix4,2)
 	print*,"dim3=",size(matrix4,3)
@@ -109,6 +111,6 @@ c**********************************************************
        enddo !ikpt
        close(305)
       endif
-
+      call timestop("wann_write_matrix4")
       end subroutine wann_write_matrix4
       end module m_wann_write_matrix4
