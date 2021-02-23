@@ -3,7 +3,7 @@ c  routine to set up the  c
 c  composite matrix anglmom c
 c*************************c
       module m_wann_gwf_anglmom
-
+      use m_juDFT
       implicit none
       contains
 
@@ -23,6 +23,7 @@ c*************************c
       complex,allocatable :: anglmom(:,:,:,:)
       character(len=12) :: fending
 
+      call timestart("wann_gwf_anglmom")
       nkqpts = nkpts*nqpts
 
       ! get number of bands and wfs from proj
@@ -78,5 +79,6 @@ c*************************c
 
       deallocate(anglmom)
 
+      call timestop("wann_gwf_anglmom")
       end subroutine wann_gwf_anglmom
       end module m_wann_gwf_anglmom

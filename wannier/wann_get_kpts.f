@@ -33,6 +33,7 @@ c********************************************************
       integer          :: iter,len,num_wann,num_bands,nn,i
       logical          :: l_file
 
+      call timestart("wann_get_kpts")
       if(l_bzsym)then
          inquire(file='w90kpts',exist=l_file)
          IF(.NOT.l_file) CALL juDFT_error("where is w90kpts?",calledby
@@ -66,5 +67,6 @@ c********************************************************
          enddo
       END IF
 
+      call timestop("wann_get_kpts")
       end subroutine wann_get_kpts
       end module m_wann_get_kpts

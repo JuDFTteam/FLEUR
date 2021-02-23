@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_ioncharge_gen
+      use m_juDFT
       contains
       subroutine wann_ioncharge_gen(
      >               num_atoms,ntype,natd,
@@ -42,6 +43,8 @@ c********************************************
      +     'Lu','Hf','Ta',' W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb',
      +     'Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa',' U','Np','Pu',
      +     'Am','Cm','Bk','Cf','Es','Fm','Md','No','Lw'/
+
+      call timestart("wann_ioncharge_gen")
 
       allocate( namat(num_atoms) )
       ind=0
@@ -87,5 +90,6 @@ c********************************************
       enddo
  111  format(a2," ",f6.3," ",3f8.3)
 
+      call timestop("wann_ioncharge_gen")
       end subroutine wann_ioncharge_gen
       end module m_wann_ioncharge_gen
