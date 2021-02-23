@@ -62,6 +62,7 @@ c***************************************
      +     'Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa',' U','Np','Pu',
      +     'Am','Cm','Bk','Cf','Es','Fm','Md','No','Lw'/
 
+      call timestart("wann_dipole")
       elemchargmu=1.60217646e-13
       bohrtocm=0.529177e-8
 
@@ -237,7 +238,7 @@ c*************************************************
       write(666,*)"final polarization after shifting=",final_polari(:)
       close(666)
 
-
+      call timestop("wann_dipole")
 
       end subroutine wann_dipole
       end module m_wann_dipole

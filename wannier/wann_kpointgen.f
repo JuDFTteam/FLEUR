@@ -27,6 +27,8 @@ c***********************************************************
       real ilen1,ilen2,ilen3
       integer limit1, limit2, limit3
       real scale,shift1,shift2,shift3
+
+      call timestart("wann_kpointgen")
       
       print*,"specify dimension"
       read(*,*)dim
@@ -96,6 +98,8 @@ c***********************************************************
          enddo
       endif
       close(100)
+
+      call timestop("wann_kpointgen")
       end subroutine wann_kpointgen
 
       subroutine findkgt(nu,sc)

@@ -31,6 +31,8 @@ c***********************************************************
       integer limit1, limit2, limit3
       real scale,shift1,shift2,shift3
       
+      call timestart("wann_w90kpointgen")
+
       print*,"specify dimension"
       read(*,*)dim
       print*,"symmetric to origin?"
@@ -89,6 +91,8 @@ c***********************************************************
          enddo
       enddo
       close(100)
+
+      call timestop("wann_w90kpointgen")
       end subroutine wann_w90kpointgen
 
       subroutine findkgt(nu,sc)

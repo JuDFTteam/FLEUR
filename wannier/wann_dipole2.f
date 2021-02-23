@@ -34,6 +34,7 @@ c********************************************************
       real,allocatable   :: centers(:,:)
       real,allocatable   :: spreads(:)
 
+      call timestart("wann_dipole2")
       open(204,file='dipole_out')
       write(204,*)"*****************************************"
       write(204,*)"Calculation of the electric polarization."
@@ -106,5 +107,7 @@ c********************************************************
       endif
       write(204,*)moment(:,1),"uC/cm2"
       close(204)
+
+      call timestop("wann_dipole2")
       end subroutine wann_dipole2
       end module m_wann_dipole2

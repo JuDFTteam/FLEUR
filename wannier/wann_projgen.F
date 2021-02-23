@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_projgen
+         use juDFT
       contains
       subroutine wann_projgen(
      >               ntype,neq,natd,zatom,l_nocosoc,wann)
@@ -38,6 +39,8 @@ c*****************************************
       character*2         :: namat(0:103)
       integer             :: projections(-5:5)
       integer             :: projspin
+
+      call timestart("wann_projgen")
 
       DATA namat/'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',
      +     'Na','Mg','Al','Si',' P',' S','Cl','Ar',' K','Ca','Sc','Ti',
@@ -169,5 +172,6 @@ c*****************************************
       endif
       close(300)
 
+      call timestop("wann_projgen")
       end subroutine wann_projgen
       end module m_wann_projgen

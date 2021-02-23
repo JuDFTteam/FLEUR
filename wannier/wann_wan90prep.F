@@ -99,6 +99,8 @@ c**********************************************************
      +     'am','cm','bk','cf','es','fm','md','no','lw'/
       num_iter=100
 
+      call timestart("wann_wan90prep")
+
       call get_dimension(l_dim,arr_len)
       call get_shift(l_dim,shift)
 
@@ -546,7 +548,7 @@ c******************************************************
 
          close(911)
 
-
+         call timestop("wann_wan90prep")
       end subroutine wann_write_win
 
 
