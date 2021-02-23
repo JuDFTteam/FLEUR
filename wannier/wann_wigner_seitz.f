@@ -27,6 +27,7 @@
       real                :: eps7,eps8
       real                :: metric(3,3)
 
+      call timestart("wann_wigner_seitz")
       eps7=1.e-7
       eps8=1.e-8
       rvecnum=0
@@ -87,6 +88,7 @@ c------ Consistency Check.
      +                    calledby ="wann_wigner_seitz")
       endif
 
+      call timestop("wann_wigner_seitz")
       end subroutine wann_wigner_seitz
 
       end module m_wann_wigner_seitz

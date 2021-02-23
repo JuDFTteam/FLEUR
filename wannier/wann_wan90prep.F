@@ -356,6 +356,7 @@ c******************************************************
       deallocate(kpoints)
       deallocate(qpoints)
 
+      call timestop("wann_wan90prep")
       END SUBROUTINE wann_wan90prep
 
 
@@ -376,6 +377,7 @@ c******************************************************
       integer :: dim,nn,iter,at,i,search_shells
       logical :: l_exist
 
+      call timestart("wann_write_win")
          open(911,file=trim(win_filename)//'.win')
          write(911,*)"length_unit=Bohr"
          write(911,*)"num_wann=",num_wann
@@ -548,7 +550,7 @@ c******************************************************
 
          close(911)
 
-         call timestop("wann_wan90prep")
+         call timestop("wann_write_win")
       end subroutine wann_write_win
 
 
