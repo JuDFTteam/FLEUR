@@ -113,6 +113,7 @@ c...local
       endif
       pi=pimach()
 c..generates an array giving the atom type for each atom
+      call timestart("gen ntp")
       ntp(:) = 0
       iatom = 0
       do ntyp = 1,ntypd
@@ -121,7 +122,9 @@ c..generates an array giving the atom type for each atom
             ntp(iatom) = ntyp
          enddo
       enddo 
+      call timestop("gen ntp")
 
+      call timestart("inquire pro2")
       if(l_amn2)then
        do j=jspin,1,-1
          inquire(file=trim('pro2'//spin12(j)),exist=l_file)
@@ -140,6 +143,7 @@ c..reading the proj.1 / proj.2 / proj file
          endif
        enddo
       endif
+      call timestop("inquire pro2")
 
       if(l_file)then
         open (203,file=trim(filename),status='old')
@@ -154,6 +158,7 @@ c..reading the proj.1 / proj.2 / proj file
       endif    
 
       if(l_nocosoc)then
+       call timestart("read proj 203")
        read (203,*)nwfs,banddummy,l_oldproj
        if(.not.l_oldproj)then
         do nwf=1,nwfs
@@ -179,21 +184,24 @@ c..reading the proj.1 / proj.2 / proj file
      &            alpha(nwf),beta(nwf),gamma(nwf),zona(nwf),regio(nwf)
          if(l_amn2) read(203,*) posshifts(1:3,nwf),weights(nwf)
        enddo !nwf
+       call timestart("read proj 203")
       endif !l_nocosoc
       rewind (203)
       close (203)
 
       if (ikpt.eq.1) then
-      write (oUnit,*) 'Number of trial WFs:',nwfs
-      write (oUnit,*)
-      do nwf = 1,nwfs
-        write (oUnit,*) 'Twfs N:',nwf,' Atom N:',ind(nwf)
-        write (oUnit,*) 'l=',lwf(nwf),' mr=',mrwf(nwf),' r=',rwf(nwf)
-        write (oUnit,*) 'zona=',zona(nwf),' region=',regio(nwf),'*Rmt'
-        write (oUnit,*) 'alpha=',alpha(nwf),
-     &          ' beta=',beta(nwf),' gamma=',gamma(nwf)
-        write (oUnit,*)
-      enddo 
+         call timestart("output trail WFs")
+         write (oUnit,*) 'Number of trial WFs:',nwfs
+         write (oUnit,*)
+         do nwf = 1,nwfs
+         write (oUnit,*) 'Twfs N:',nwf,' Atom N:',ind(nwf)
+         write (oUnit,*) 'l=',lwf(nwf),' mr=',mrwf(nwf),' r=',rwf(nwf)
+         write (oUnit,*) 'zona=',zona(nwf),' region=',regio(nwf),'*Rmt'
+         write (oUnit,*) 'alpha=',alpha(nwf),
+      &          ' beta=',beta(nwf),' gamma=',gamma(nwf)
+         write (oUnit,*)
+         enddo 
+         call timestop("output trail WFs")
       endif
 
 c..generating the radial twf function
@@ -207,16 +215,19 @@ c..generating the radial twf function
      >         nlod,flo,llo,nlo, 
      <         rads)
 
+      call timestart("write rads")
       open (100,file='rads')
       do i = 1,jmtd
 c       write (100,'(i3,2x,4f10.6)') i,rads(1,0:3,i,1)
         write (100,'(f10.6,2x,4f10.6)') rmsh(i,1),rads(1,0:3,i,1)
       enddo
       close(100)
+      call timestop("write rads")
 
 c..now generate the coefficients in the expansion in lattice 
 c..harmonics of the angular part of the twf
  
+      call timestart("generate coeffs in latham")
       tlmwft(:,:,:) = cmplx(0.,0.)
       tlmwf(:,:,:)  = cmplx(0.,0.)
       
@@ -232,6 +243,7 @@ c..harmonics of the angular part of the twf
       call eulerrot(nwfs,alpha,beta,gamma,amx)
 
       imx(:,:) = 0. ; imx(1,1) = 1. ; imx(2,2) = 1. ; imx(3,3) = 1.
+      call timestop("generate coeffs in latham")
 
 c..performing the wigner rotation
 c..These rotations are specified in the proj file in terms of the 
@@ -249,6 +261,7 @@ c..3. Rotation around the z-axis by gamma again.
 
 c..now we transform the tlmwf coefficients
 
+      call timestart("transform wigner coeff")
       do nwf = 1,nwfs
          tlmwft(0,:,nwf) = tlmwf(0,:,nwf)
          do l = 1,3
@@ -260,12 +273,14 @@ c..now we transform the tlmwf coefficients
             enddo
          enddo         
       enddo
+      call timestop("transform wigner coeff")
 
 c..calculating the amn matrix
 
       vlpr(:) = 0. ; vlprd(:) = 0.
 
 c...sum by wfs, each of them is localized at a certain mt
+      call timestart("sum by wfs")
       do nwf = 1,nwfs
          if(l_amn2.and.present(bkpt))then
            arg=-bkpt(1)*posshifts(1,nwf)
@@ -337,6 +352,7 @@ c..local orbitals
 
          enddo
       enddo
+      call timestop("sum by wfs")
 
       call timestop("wann_amn")
       return
