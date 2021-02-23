@@ -501,12 +501,15 @@ CONTAINS
     IF(.NOT.wann%l_fermi)efermi=0.0
 
 #ifdef CPP_MPI
+    call timestart("Wann total barrier")
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr(1))
+    call timestop("Wann total barrier")
 #endif
 
     !**************************************************************
     !   for bzsym=.true.: determine mapping between kpts and w90kpts
     !**************************************************************
+    call timestart("bzsym io")
     IF (wann%l_bzsym) THEN
        l_file=.FALSE.
        INQUIRE(file='w90kpts',exist=l_file)
@@ -538,6 +541,7 @@ CONTAINS
        ALLOCATE(irreduc(fullnkpts),mapkoper(fullnkpts))
        ALLOCATE(shiftkpt(3,fullnkpts))
     ENDIF
+    call timestop("bzsym io")
 
 
     IF(l_gwf) fullnqpts = wann%nparampts
@@ -561,6 +565,7 @@ CONTAINS
     !cccccccccccccc   read in the bkpts file  ccccccccccccccccc
     !**********************************************************
     IF (wann%l_matrixmmn) THEN ! for Omega functional minimization
+       call timestart("read in bkpts")
        l_bkpts = .FALSE.
        INQUIRE (file='bkpts',exist=l_bkpts)
        IF (.NOT.l_bkpts)  CALL juDFT_error("need bkpts for matrixmmn"&
@@ -586,12 +591,15 @@ CONTAINS
        ENDDO
        CLOSE (202)
        ALLOCATE(kdiff(3,nntot))
+       call timestop("read in bkpts")
     ENDIF
 
     !**********************************************************
     !cccccccccccccc   read in the bqpts file  ccccccccccccccccc
     !**********************************************************
+
     IF ((wann%l_matrixmmn).AND.(l_gwf.OR.wann%l_ms)) THEN
+       call timestart("read in bqpts")
        l_bqpts = .FALSE.
        INQUIRE (file='bqpts',exist=l_bqpts)
        IF (.NOT.l_bqpts)  CALL juDFT_error("need bqpts for matrixmmn"&
@@ -619,6 +627,7 @@ CONTAINS
        ALLOCATE(qdiff(3,nntot_q))
        ALLOCATE(zero_qdiff(3,nntot_q))
        zero_qdiff=0.0
+       call timestop("read in bqpts")
     ENDIF
 
 
@@ -658,7 +667,7 @@ CONTAINS
     !*********************************************************
     !ccccccccccccccc   initialize the potential   cccccccccccc
     !*********************************************************
-
+    call timestart("init potential")
     ALLOCATE ( vz(vacuum%nmzd,2,4) )
     ALLOCATE ( vr(atoms%jmtd,atoms%ntype,input%jspins) )
     ALLOCATE ( vso(atoms%jmtd,atoms%nat,2) )
@@ -713,6 +722,7 @@ CONTAINS
        ENDDO
        CLOSE (npotmatfile)
     ENDIF
+    call timestop("init potential")
 
     !ccccccccccccccc   end of the potential part  ccccccccccc
     wannierspin=input%jspins
@@ -743,6 +753,7 @@ CONTAINS
     !   standard functionality of code for fullnqpts = nntot_q = 1    c
     !        and wann%l_ms = wann%l_sgwf = wann%l_socgwf = F          c
     !*****************************************************************c
+    call timestart("q_loop")
     DO iqpt = 1,fullnqpts  ! loop by q-points starts
 
        ALLOCATE(innerEig_idList(nntot_q))
@@ -821,6 +832,7 @@ CONTAINS
        !****************************************************
        ! cycle by spins starts!
        !****************************************************
+       call timestart("cycle by spins")
        DO doublespin=1,doublespin_max   ! cycle by spins
 
           jspin=MOD(doublespin+1,2)+1
@@ -2430,7 +2442,7 @@ CONTAINS
           !#endif
 
        ENDDO ! end of cycle by spins
-
+       call timestop("cycle by spins")
 
 #ifdef CPP_MPI
        CALL MPI_BARRIER(fmpi%mpi_comm,ierr(1))
@@ -2472,6 +2484,7 @@ CONTAINS
        DEALLOCATE(innerEig_idList)
 
     ENDDO ! iqpt, q-points
+    call timestop("q_loop")
        !************************************************c
        !               END Q LOOP                       c
        !************************************************c
