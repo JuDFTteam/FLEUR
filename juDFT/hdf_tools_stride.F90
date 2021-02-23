@@ -189,35 +189,46 @@ CONTAINS
 !     write(*,*) 'fcount', fcount
 !     write(*,*) 'fstride',fstride
 !do I/O
+      call timestart("h5dget_space_f")
       CALL h5dget_space_f(                                              &
      &                    did,                                          &
      &                    fspace, hdferr)
+
+      call timestop("h5dget_space_f")
       ! dataset_id
       ! dataspace_id & error
+      call timestart("h5sselect_hyperslab_f")
       CALL h5sselect_hyperslab_f(                                       &
      &                           fspace, H5S_SELECT_SET_F,               &
      &                           foffset, fcount,                        &
      &                           hdferr, fstride)
+      call timestop("h5sselect_hyperslab_f")
       ! dataspace_i
       ! starting po
       ! error (out)
+      call timestart("h5screate_simple_f")
       CALL h5screate_simple_f(                                          &
      &                        2, dims,                                   &
      &                        memspace, hdferr)
+      call timestop("h5screate_simple_f")
       ! rank & dimensions of
       ! memoryspace identifie
+      call timestart("h5dwrite_f")
       CALL h5dwrite_f(                                                  &
      &                did, H5T_NATIVE_DOUBLE,                            &
      &                DATA, dims, hdferr,                                 &
      &                memspace, fspace, trans)
+      call timestop("h5dwrite_f")
       ! dataset_id, datatype_
       ! data & dimensions, er
       ! memoryspace_id, file-
       ! Transfer property lis
+      call timestart("closing stuff")
       CALL h5sclose_f(                                                  &
      &                memspace, hdferr)
       CALL h5sclose_f(                                                  &
      &                fspace, hdferr)
+      call timestop("closing stuff")
       CALL cleartransprop(trans)
 
    END SUBROUTINE io_write_real2s
