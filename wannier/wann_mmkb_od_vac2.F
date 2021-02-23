@@ -1,4 +1,5 @@
       MODULE m_wann_mmkb_od_vac2
+         use m_juDFT
 c**************************************************************
 c      Determines the overlap matrix Mmn(k,k+b) in the vacuum
 c      for the wannier functions. 
@@ -94,6 +95,7 @@ c     ..local scalars..
 c     ..intrinsic functions..
       intrinsic aimag,cmplx,conjg,real,sqrt
 
+      call timestart("wann_mmkb_od_vac2")
       addnoco=0
       addnoco2=0
       if(l_noco.and.(jspin.eq.2))then
@@ -327,5 +329,6 @@ c           gbess(i) = 1.
       deallocate ( udz_b,uz_b,dudz_b,duz_b,u_b,ud_b,ddnv_b,gbess,besss )
       deallocate ( acof_b,bcof_b )
 
+      call timestop("wann_mmkb_od_vac2")
       END SUBROUTINE wann_mmkb_od_vac2
       END MODULE m_wann_mmkb_od_vac2

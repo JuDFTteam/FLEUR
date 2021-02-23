@@ -57,6 +57,7 @@ c****************************************
       integer :: absoper,jj,jsp_start,jsp_end
       integer :: testmat(3,3),nbasf
 
+      call timestart("wann_kptsrotate")
       tpi=2.0*pimach()
 
       absoper=abs(oper)
@@ -181,9 +182,7 @@ c$$$  enddo
      +        lapw%bkpt(3)*shiftnonsymm(3)  )
       
       nsfactor = cmplx(cos(arg),sin(arg))
-
-
-
+      call timestop("wann_kptsrotate")
 
       end subroutine wann_kptsrotate
       end module m_wann_kptsrotate
