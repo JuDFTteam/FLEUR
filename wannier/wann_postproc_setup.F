@@ -111,7 +111,7 @@ c******************************************************
      +       proj_s_loc
          real(kind=dp),dimension(3,num_bands_tot),optional,intent(out)::
      +       proj_s_qaxis_loc
-         end subroutine wannier_setup1
+         end subroutine wannier_setup
       end interface
 
       call timestart("wann_postproc_setup")
