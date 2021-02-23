@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_projgen
-         use juDFT
+         use m_juDFT
       contains
       subroutine wann_projgen(
      >               ntype,neq,natd,zatom,l_nocosoc,wann)
