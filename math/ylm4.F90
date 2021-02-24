@@ -31,7 +31,7 @@ CONTAINS
 
       INTEGER  :: l, lm0, m
       REAL     :: fac, x, y, z, xy, r, rxy, cth, sth, cph, sph, cph2
-      REAL     :: c(0:lmax), s(0:lmax)
+      REAL     :: c(0:max(lmax,1)), s(0:max(lmax,1))
       REAL     :: p(0:lmax, 0:lmax)
       COMPLEX  :: ylms
       REAL     :: ynorm_dev((lmax + 1)**2)
