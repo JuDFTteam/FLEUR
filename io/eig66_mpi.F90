@@ -167,10 +167,10 @@ CONTAINS
                                  slot_size, ' x ', local_slots, 'local slots.'
             CALL juDFT_error(TRIM(ADJUSTL(errorString)), calledby='eig66_mpi')
          END IF
+#endif
 
       END SUBROUTINE priv_create_memory
 
-#endif
       SUBROUTINE priv_readfromfileDA()
          USE m_eig66_DA, ONLY: open_eig_DA => open_eig, read_eig_DA => read_eig, close_eig_DA => close_eig
          IMPLICIT NONE
