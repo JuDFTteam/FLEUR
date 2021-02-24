@@ -42,8 +42,11 @@ CONTAINS
 
    SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
       use m_work_package
+      use m_glob_tofrom_loc
       use m_structureconstant
       USE m_types
+      USE m_types_mpimat
+      use m_types_mat
       USE m_types_hybdat
       USE m_juDFT
       USE m_constants
@@ -73,7 +76,7 @@ CONTAINS
       INTEGER                    :: isym, isym1, isym2, igpt0
       INTEGER                    :: iatm1, iatm2
       INTEGER                    :: m, im
-      INTEGER                    :: maxfac
+      INTEGER                    :: maxfac, ix_loc, pe
 
       LOGICAL                    :: lsym
 
@@ -114,11 +117,12 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
       COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:)
 
-      INTEGER                    :: ishift, ishift1, ierr
+      INTEGER                    :: ishift, ishift1, ierr, small_sz, my_sz
       INTEGER                    :: iatom, iatom1, mtmt_idx
       INTEGER                    :: indx1, indx2, indx3, indx4
-      TYPE(t_mat)                :: mat, smat
+      TYPE(t_mat)                :: mat, smat, tmp
       type(t_mat), allocatable   :: coulomb(:), mtmt_repl(:)
+      class(t_mat), allocatable  :: striped_coul(:)
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
@@ -154,15 +158,24 @@ CONTAINS
       call timestart("coulomb allocation")
 
       allocate(coulomb(fi%kpts%nkpt))
-      DO im = 1, size(fmpi%k_list)
-         ikpt = fmpi%k_list(im)
-         call coulomb(ikpt)%alloc(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt))
+      if(fmpi%n_size == 1) then
+         allocate(t_mat::striped_coul(fi%kpts%nkpt))
+      else
+         allocate(t_mpimat::striped_coul(fi%kpts%nkpt))
+      endif
+      do ikpt = 1, fi%kpts%nkpt 
+         if(any(ikpt == fmpi%k_list))then 
+            call striped_coul(ikpt)%init(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt), fmpi%sub_comm, .false.)
+            call coulomb(ikpt)%alloc(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt))
+         else
+            call striped_coul(ikpt)%init(.False., 1, 1, fmpi%sub_comm, .false.)
+         endif 
       enddo
-      call timestop("coulomb allocation")
+      call timestop("coulomb allocation") 
 
       IF (fmpi%irank == 0) then
          write (oUnit,*) "Size of coulomb matrix: " //&
-                            float2str(sum([(coulomb(fmpi%k_list(i))%size_mb(), i=1,size(fmpi%k_list))])) // " MB"
+                            float2str(sum([(striped_coul(fmpi%k_list(i))%size_mb(), i=1,size(fmpi%k_list))])) // " MB"
       endif
 
       !     Generate Symmetry:
@@ -398,45 +411,56 @@ CONTAINS
                      lm2 = lm2 + 1
                      DO n2 = 1, mpdata%num_radbasfn(l2, itype2)
                         ix = ix + 1
+                        call glob_to_loc(fmpi, ix, pe, ix_loc)
+                        if(fmpi%n_rank == pe) then
+                           iy = 0
+                           ic1 = 0
+                           lp2: DO itype1 = 1, itype2
+                              DO ineq1 = 1, fi%atoms%neq(itype1)
+                                 ic1 = ic1 + 1
+                                 lm1 = 0
+                                 DO l1 = 0, fi%hybinp%lcutm1(itype1)
+                                    DO m1 = -l1, l1
+                                       lm1 = lm1 + 1
+                                       DO n1 = 1, mpdata%num_radbasfn(l1, itype1)
+                                          iy = iy + 1
+                                          IF (iy > ix) EXIT lp2 ! Don't cross the diagonal!
+                                          rdum = (-1)**(l2 + m2)*moment(n1, l1, itype1)*moment(n2, l2, itype2)*gmat(lm1, lm2)
+                                          l = l1 + l2
+                                          lm = l**2 + l + m1 - m2 + 1
 
-                        iy = 0
-                        ic1 = 0
-                        lp2: DO itype1 = 1, itype2
-                           DO ineq1 = 1, fi%atoms%neq(itype1)
-                              ic1 = ic1 + 1
-                              lm1 = 0
-                              DO l1 = 0, fi%hybinp%lcutm1(itype1)
-                                 DO m1 = -l1, l1
-                                    lm1 = lm1 + 1
-                                    DO n1 = 1, mpdata%num_radbasfn(l1, itype1)
-                                       iy = iy + 1
-                                       IF (iy > ix) EXIT lp2 ! Don't cross the diagonal!
-                                       rdum = (-1)**(l2 + m2)*moment(n1, l1, itype1)*moment(n2, l2, itype2)*gmat(lm1, lm2)
-                                       l = l1 + l2
-                                       lm = l**2 + l + m1 - m2 + 1
-
-                                       if(itype2 /= itype1 .or. ineq2 /= ineq1 .or. l2 /= l1 .or. m2 /= m1) then 
-                                          mtmt_term = 0.0
-                                       else 
-                                          mtmt_term = mtmt_repl(mtmt_idx)%data_r(n1, n2)
-                                       endif
-                                    
-                                       coulomb(ikpt)%data_c(iy, ix) = mtmt_term &
-                                                            + EXP(CMPLX(0.0, 1.0)*tpi_const* &
-                                                                  dot_PRODUCT(fi%kpts%bk(:, ikpt), &
-                                                                              fi%atoms%taual(:, ic2) - fi%atoms%taual(:, ic1))) &
-                                                            *rdum*structconst(lm, ic1, ic2, ikpt)
+                                          if(itype2 /= itype1 .or. ineq2 /= ineq1 .or. l2 /= l1 .or. m2 /= m1) then 
+                                             mtmt_term = 0.0
+                                          else 
+                                             mtmt_term = mtmt_repl(mtmt_idx)%data_r(n1, n2)
+                                          endif
+                                       
+                                          striped_coul(ikpt)%data_c(iy, ix_loc) = mtmt_term + EXP(CMPLX(0.0, 1.0)*tpi_const* &
+                                                                     dot_PRODUCT(fi%kpts%bk(:, ikpt), &
+                                                                                 fi%atoms%taual(:, ic2) - fi%atoms%taual(:, ic1))) &
+                                                               *rdum*structconst(lm, ic1, ic2, ikpt)
+                                       END DO
                                     END DO
                                  END DO
                               END DO
-                           END DO
-                        END DO lp2
-
+                           END DO lp2
+                        endif ! pe = n_rank
                      END DO
                   END DO
                END DO
             END DO
          END DO
+
+
+         SELECT TYPE(striped_coul)
+         CLASS is (t_mpimat)
+            call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
+            call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
+         CLASS is (t_mat)
+            call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
+         CLASS default
+            CALL judft_error("makes no sence")
+         END SELECT
          
          call coulomb(ikpt)%u2l()
 
@@ -450,6 +474,7 @@ CONTAINS
          call timestop("MT-MT part")
 
       END DO
+      deallocate(striped_coul)
 
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
