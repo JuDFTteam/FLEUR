@@ -39,6 +39,7 @@ MODULE m_types_mpimat
       PROCEDURE   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
       PROCEDURE   :: move => mpimat_move     !<overwriten from t_mat, also performs redistribution
       PROCEDURE   :: free => mpimat_free     !<overwriten from t_mat, takes care of blacs-grids
+      procedure   :: save_npy => mpimat_save_npy
       PROCEDURE   :: multiply => mpimat_multiply  !<overwriten from t_mat, takes care of blacs-grids
       PROCEDURE   :: init_details => mpimat_init
       PROCEDURE   :: init_template => mpimat_init_template     !<overwriten from t_mat, also calls alloc in t_mat
@@ -47,6 +48,7 @@ MODULE m_types_mpimat
       PROCEDURE   :: l2u => t_mpimat_l2u
       PROCEDURE   :: print_matrix
       PROCEDURE   :: from_non_dist
+      procedure   :: to_non_dist
       PROCEDURE   :: transpose => mpimat_transpose
       procedure   :: print_type => mpimat_print_type
       FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
@@ -363,6 +365,55 @@ CONTAINS
       END IF
 #endif
    END SUBROUTINE from_non_dist
+
+   subroutine to_non_dist(mat_in, mat_out)
+      implicit none 
+      CLASS(t_mpimat), INTENT(IN)::mat_in
+      TYPE(t_mat), INTENT(INOUT)       ::mat_out
+
+      INTEGER:: blacs_desc(9), irank, ierr, umap(1, 1), np
+
+#ifdef CPP_SCALAPACK
+      blacs_desc = [1, -1, mat_out%matsize1, mat_out%matsize2, mat_out%matsize1, mat_out%matsize2, 0, 0, mat_out%matsize1]
+
+      CALL MPI_COMM_RANK(mat_in%blacsdata%mpi_com, irank, ierr)
+      umap(1, 1) = 0
+      CALL BLACS_GET(mat_in%blacsdata%blacs_desc(2), 10, blacs_desc(2))
+      CALL BLACS_GRIDMAP(blacs_desc(2), umap, 1, 1, 1)
+      IF (mat_in%l_real) THEN
+         !call pdgemr2d(m,                  n,                   a,           ia,ja,desca
+         call pdgemr2d(mat_in%global_size1, mat_in%global_size2, mat_in%data_r,1,1, mat_in%blacsdata%blacs_desc, &
+         !             b,            ib,jb,descb,      ictxt)
+                       mat_out%data_r,1,1, blacs_desc, mat_in%blacsdata%blacs_desc(2))
+      ELSE
+         !call pzgemr2d(m,                  n,                   a,           ia,ja,desca
+         call pzgemr2d(mat_in%global_size1, mat_in%global_size2, mat_in%data_c,1,1, mat_in%blacsdata%blacs_desc, &
+         !             b,            ib,jb,descb,      ictxt)
+                       mat_out%data_c,1,1, blacs_desc, mat_in%blacsdata%blacs_desc(2))
+      END IF
+#endif
+   end subroutine to_non_dist
+
+   subroutine mpimat_save_npy(mat, filename)
+      use m_judft
+      implicit NONE
+      CLASS(t_mpimat), INTENT(IN)::mat
+      character(len=*)         :: filename
+      type(t_mat) :: tmp 
+      integer :: ierr, irank
+#ifdef CPP_MPI
+      CALL MPI_COMM_RANK(mat%blacsdata%mpi_com, irank, ierr)
+      
+      if(irank == 0) call tmp%alloc(mat%l_real, mat%global_size1, mat%global_size2)
+      
+      call mat%to_non_dist(tmp)
+      
+      if(irank == 0) then 
+         call tmp%save_npy(filename)
+         call tmp%free()
+      endif
+#endif
+   end subroutine mpimat_save_npy
 
    SUBROUTINE mpimat_move(mat, mat1)
       IMPLICIT NONE
