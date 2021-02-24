@@ -14,7 +14,7 @@ hybrid/exchange_val_hf.F90
 hybrid/exponential_integral.f90
 hybrid/ex_to_vx.f90
 hybrid/gen_wavf.F90
-hybrid/glob_tofrom_loc.f90
+hybrid/glob_tofrom_loc.F90
 hybrid/HF_init.F90
 hybrid/hf_setup.F90
 hybrid/hsefunctional.F90
