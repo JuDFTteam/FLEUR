@@ -167,7 +167,6 @@ CONTAINS
                                  slot_size, ' x ', local_slots, 'local slots.'
             CALL juDFT_error(TRIM(ADJUSTL(errorString)), calledby='eig66_mpi')
          END IF
-#endif
 
       END SUBROUTINE priv_create_memory
 
@@ -191,6 +190,8 @@ CONTAINS
          ENDDO
          CALL close_eig_DA(tmp_id)
       END SUBROUTINE priv_readfromfileDA
+#endif
+
    END SUBROUTINE open_eig
    SUBROUTINE close_eig(id, delete, filename)
       INTEGER, INTENT(IN)         :: id
