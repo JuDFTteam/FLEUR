@@ -451,6 +451,8 @@ CONTAINS
             END DO
          END DO
 
+         call coulomb(ikpt)%u2l()
+         call striped_coul(ikpt)%u2l()
 
          SELECT TYPE(striped_coul)
          CLASS is (t_mpimat)
@@ -461,8 +463,6 @@ CONTAINS
          CLASS default
             CALL judft_error("makes no sence")
          END SELECT
-         
-         call coulomb(ikpt)%u2l()
 
          IF (fi%sym%invs) THEN
             !symmetrize makes the Coulomb matrix real symmetric     
@@ -474,6 +474,8 @@ CONTAINS
          call timestop("MT-MT part")
 
       END DO
+
+
       deallocate(striped_coul)
 
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
@@ -494,6 +496,7 @@ CONTAINS
 
             call coulomb(ikpt)%u2l()
          END DO
+
          call timestop("loop over interst.")
          deallocate (olap, integral)
 
