@@ -475,9 +475,6 @@ CONTAINS
 
       END DO
 
-
-      deallocate(striped_coul)
-
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
          !
