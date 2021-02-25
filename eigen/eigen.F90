@@ -173,6 +173,8 @@ CONTAINS
               CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
               CALL smat%free()
               CALL hmat%free()
+            ELSE
+              ne_all=0
             endif
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
             if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
@@ -198,7 +200,7 @@ CONTAINS
 #ifdef CPP_MPI
                 call MPI_COMM_RANK(fmpi%diag_sub_comm,n_rank,err)
                 call MPI_COMM_SIZE(fmpi%diag_sub_comm,n_size,err)
-#else       
+#else
                 n_rank = 0; n_size=1;
 #endif
                 CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
@@ -225,8 +227,10 @@ CONTAINS
                                                       hint=errmsg, calledby="eigen.F90")
             END IF
 
-            call zMat%free()
-            deallocate(zMat)
+            IF (allocated(zmat)) THEN
+              call zMat%free()
+              deallocate(zMat)
+            ENDIF
          END DO  k_loop
       END DO ! spin loop ends
 

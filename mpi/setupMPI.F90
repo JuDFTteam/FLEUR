@@ -288,6 +288,7 @@ CONTAINS
 #ifdef CPP_MPI
     IF (fmpi%n_rank==0) THEN
       fmpi%diag_sub_comm=MPI_COMM_SELF
+      fmpi%pe_diag=.true. !actually the default
     ELSE
       fmpi%diag_sub_comm=MPI_COMM_NULL
       fmpi%pe_diag=.false.
