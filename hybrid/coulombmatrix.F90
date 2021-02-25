@@ -50,7 +50,7 @@ CONTAINS
       USE m_types_hybdat
       USE m_juDFT
       USE m_constants
-      USE m_trafo, ONLY: symmetrize, bramat_trafo
+      USE m_trafo, ONLY: symmetrize_mpimat, symmetrize, bramat_trafo
       use m_util, only: primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix
       USE m_wrapper
@@ -467,9 +467,7 @@ CONTAINS
          IF (fi%sym%invs) THEN
             !symmetrize makes the Coulomb matrix real symmetric     
                           
-            CALL symmetrize(coulomb(ikpt)%data_c, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., &
-               fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), &
-               mpdata%num_radbasfn, fi%sym)
+            CALL symmetrize_mpimat(fi,coulomb(ikpt)%data_c, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., mpdata%num_radbasfn)
          ENDIF
          call timestop("MT-MT part")
 
