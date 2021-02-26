@@ -38,11 +38,11 @@ MODULE m_coulombmatrix
    use m_types
    USE m_intgrf, ONLY: intgrf, intgrf_init
    use m_sphbes, only: sphbes
+   use m_glob_tofrom_loc
 CONTAINS
 
    SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
       use m_work_package
-      use m_glob_tofrom_loc
       use m_structureconstant
       USE m_types
       USE m_types_mpimat
@@ -455,19 +455,9 @@ CONTAINS
 
          IF (fi%sym%invs) THEN
             !symmetrize makes the Coulomb matrix real symmetric     
-            CALL symmetrize_mpimat(fi, fmpi, striped_coul(ikpt)%data_c, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., mpdata%num_radbasfn)
+            CALL symmetrize_mpimat(fi, fmpi, striped_coul(ikpt)%data_c, [hybdat%nbasp, hybdat%nbasp], 3, .FALSE., mpdata%num_radbasfn)
          ENDIF
          call timestop("MT-MT part")
-
-         SELECT TYPE(striped_coul)
-         CLASS is (t_mpimat)
-            call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
-            call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
-         CLASS is (t_mat)
-            call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
-         CLASS default
-            CALL judft_error("makes no sence")
-         END SELECT
       END DO
 
       IF (maxval(mpdata%n_g) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
@@ -484,9 +474,19 @@ CONTAINS
          DO im = 1, size(fmpi%k_list)
             ikpt = fmpi%k_list(im)
             call loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
-                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulomb(ikpt))
+                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulomb(ikpt), striped_coul(ikpt))
 
-            call coulomb(ikpt)%u2l()
+            call striped_coul(ikpt)%u2l()
+            
+            SELECT TYPE(striped_coul)
+            CLASS is (t_mpimat)
+               call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
+               call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
+            CLASS is (t_mat)
+               call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
+            CLASS default
+               CALL judft_error("makes no sence")
+            END SELECT
          END DO
 
          call timestop("loop over interst.")
@@ -1415,7 +1415,7 @@ CONTAINS
    end subroutine apply_inverse_olaps
 
    subroutine loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
-                                qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat)
+                                qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat, striped_coul)
       use m_types
       use m_juDFT
       use m_ylm, only: ylm4
@@ -1432,24 +1432,33 @@ CONTAINS
       real, intent(in)                  :: integral(:, 0:, :, :), olap(:, 0:, :, :)
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:, :), pgptm1(:, :)
       complex, intent(in)               :: structconst(:, :, :, :)
-      type(t_mat), intent(inout)        :: coulmat
+      class(t_mat), intent(inout)        :: coulmat, striped_coul
 
       integer  :: igpt0, igpt, igptp, iqnrm, niter
-      integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1, ierr
-      integer  :: l2, m2, lm2, n, i, iatm, j_type, j_l, iy_start, j_m, j_lm
+      integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1, ierr, loc_from
+      integer  :: l2, m2, lm2, n, i, iatm, j_type, j_l, iy_start, j_m, j_lm, pe_ix, ix_loc
       real     :: q(3), qnorm, svol, tmp_vec(3)
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       complex  :: csum, csumf(9), cdum, cexp
       integer, allocatable :: lm_arr(:), ic_arr(:)
 
+      logical :: l_coul
+
+
+      call range_from_glob_to_loc(fmpi, hybdat%nbasp+1, loc_from)
+      striped_coul%data_c(:hybdat%nbasp,loc_from:) = 0 
       coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = 0
+
       svol = SQRT(fi%cell%vol)
       ! start to loop over interstitial plane waves
       !DO igpt0 = 1, ngptm1(ikpt)
-      do igpt0 = fmpi%n_rank + 1, ngptm1(ikpt), fmpi%n_size
+      do igpt0 = 1, ngptm1(ikpt)
+         l_coul = mod(igpt0 -1 - fmpi%n_rank, fmpi%n_size) == 0
          igpt = pgptm1(igpt0, ikpt)
          igptp = mpdata%gptm_ptr(igpt, ikpt)
          ix = hybdat%nbasp + igpt
+         call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+
          q = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%cell%bmat)
          qnorm = norm2(q)
          iqnrm = pqnrm(igpt, ikpt)
@@ -1472,7 +1481,7 @@ CONTAINS
          !$OMP private(j_m, j_type, iy_start, l1, m1) &
          !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, coulmat, svol) &
          !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
-         !$OMP shared(igptp, niter) &
+         !$OMP shared(igptp, niter, l_coul, fmpi, pe_ix, striped_coul, ix_loc) &
          !$OMP schedule(dynamic)
          do i = 1,niter 
             ic = ic_arr(i)
@@ -1546,17 +1555,31 @@ CONTAINS
                iy = iy_start + n
 
                IF (ikpt == 1 .AND. igpt == 1) THEN
-                  IF (l == 0) coulmat%data_c(iy, ix) = &
-                     -cdum*moment2(n, itype)/6/svol         ! (2a)
-                  coulmat%data_c(iy, ix) = coulmat%data_c(iy, ix) &
-                                                   + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
-                                                      + csum*moment(n, l, itype))/svol          ! (2c)
+                  if(l_coul) then
+                     IF (l == 0) coulmat%data_c(iy, ix) = -cdum*moment2(n, itype)/6/svol         ! (2a)
+                     coulmat%data_c(iy, ix) = coulmat%data_c(iy, ix) &
+                                                      + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
+                                                         + csum*moment(n, l, itype))/svol          ! (2c)
+                  endif
+                  if(pe_ix == fmpi%n_rank) then 
+                     IF (l == 0) striped_coul%data_c(iy, ix_loc) = -cdum*moment2(n, itype)/6/svol 
+                     striped_coul%data_c(iy, ix_loc) = striped_coul%data_c(iy, ix_loc) &
+                                                      + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
+                                                         + csum*moment(n, l, itype))/svol          ! (2c)
+                  endif
                ELSE
-                  coulmat%data_c(iy, ix) = &
-                     (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
-                        - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
-                        + csum*moment(n, l, itype))/svol          ! (2c)
-
+                  if(l_coul) then
+                     coulmat%data_c(iy, ix) = &
+                        (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
+                           - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
+                           + csum*moment(n, l, itype))/svol          ! (2c)
+                  endif
+                  if(pe_ix == fmpi%n_rank) then 
+                     striped_coul%data_c(iy, ix_loc) = &
+                        (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
+                           - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
+                           + csum*moment(n, l, itype))/svol          ! (2c)
+                  endif
                END IF
             END DO
          END DO ! collapsed atom & lm loop (ic)
@@ -1571,7 +1594,9 @@ CONTAINS
                             MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%sub_comm,ierr)
       enddo
 #endif
+
       IF (fi%sym%invs) THEN
+         call juDFT_error("stop !")
          CALL symmetrize(coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:), hybdat%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
                          fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       ENDIF
