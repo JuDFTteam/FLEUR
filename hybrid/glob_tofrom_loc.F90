@@ -19,4 +19,21 @@ contains
 
         g = fmpi%n_size * (idx-1) + fmpi%n_rank + 1 
     end subroutine glob_from_loc 
+
+    subroutine range_glob_to_loc(fmpi, glob_range, loc_range)
+        implicit none 
+        type(t_mpi), intent(in) :: fmpi
+        integer, intent(in)     :: glob_range
+        integer, intent(inout)  :: loc_range 
+
+        integer  :: idx, pe
+
+        idx = glob_range + 1
+        pe = -1
+        do while(pe /= fmpi%n_rank)
+            idx = idx -1
+            call glob_to_loc(fmpi, idx, pe, loc_range)
+        enddo
+    end subroutine range_glob_to_loc
+        
 end module m_glob_tofrom_loc
