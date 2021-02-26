@@ -622,8 +622,8 @@ CONTAINS
                                  call MPI_Recv(mpicarr, dims(1), MPI_DOUBLE_COMPLEX, i_pe, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
                                  call MPI_Send(mpimat(1,j_loc), dims(1), MPI_DOUBLE_COMPLEX, i_pe, j, fmpi%sub_comm, ierr)
                                  mpimat(:dims(1),j_loc) = (mpicarr(:dims(1))       - ifac*mpimat(:dims(1), j_loc))*cfac
-#endif
                               endif
+#endif
                            endif
                         END IF
                      ELSE IF (m == 0 .and. ifac == -1) THEN
