@@ -544,7 +544,7 @@ CONTAINS
    ! These functions have the property f(-r)=f(r)* which makes the output matrix real symmetric.
    ! (Array mat is overwritten! )
 
-   SUBROUTINE symmetrize_mpimat(fi, fmpi, mpimat, dim1, dim2, imode, lreal, nindxm)
+   SUBROUTINE symmetrize_mpimat(fi, fmpi, mpimat, dims, imode, lreal, nindxm)
       USE m_types
       use m_constants
       IMPLICIT NONE
@@ -552,7 +552,7 @@ CONTAINS
       type(t_mpi), intent(in)         :: fmpi
 
 !     - scalars -
-      INTEGER, INTENT(IN)    :: imode, dim1, dim2
+      INTEGER, INTENT(IN)    :: imode, dims(2)
       LOGICAL, INTENT(IN)    ::  lreal
 
 !     - arrays -
@@ -565,7 +565,7 @@ CONTAINS
       REAL                  :: rfac
 
 !     - local arrays -
-      COMPLEX               ::  mpicarr(max(dim1, dim2)), carr(max(dim1, dim2)), cfac
+      COMPLEX               ::  mpicarr(maxval(dims)), carr(maxval(dims)), cfac
 
       rfac = sqrt(0.5)
       cfac = sqrt(0.5)*ImagUnit
@@ -602,37 +602,37 @@ CONTAINS
                      call glob_to_loc(fmpi, j, j_pe, j_loc)
                      IF (ic1 /= ic .or. m < 0) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           call range_to_glob_to_loc(fmpi, dim2, dim2_loc)
+                           call range_to_glob_to_loc(fmpi, dims(2), dim2_loc)
                            mpicarr(:dim2_loc) = mpimat(i,:dim2_loc)
                            mpimat(i, :dim2_loc) = (mpicarr(:dim2_loc) + ifac*mpimat(j, :dim2_loc))*rfac
                            mpimat(j, :dim2_loc) = (mpicarr(:dim2_loc) - ifac*mpimat(j, :dim2_loc))*(-cfac)
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
                            if(i_pe == j_pe .and. fmpi%n_rank == i_pe) then 
-                              mpicarr(:dim1) = mpimat(:dim1, i_loc)
-                              mpimat(:dim1,i_loc) = (mpimat(:dim1, i_loc) + ifac*mpimat(:dim1, j_loc))*rfac
-                              mpimat(:dim1,j_loc) = (mpicarr(:dim1)       - ifac*mpimat(:dim1, j_loc))*cfac
+                              mpicarr(:dims(1)) = mpimat(:dims(1), i_loc)
+                              mpimat(:dims(1),i_loc) = (mpimat(:dims(1), i_loc) + ifac*mpimat(:dims(1), j_loc))*rfac
+                              mpimat(:dims(1),j_loc) = (mpicarr(:dims(1))       - ifac*mpimat(:dims(1), j_loc))*cfac
 #ifdef CPP_MPI
                            else
                               if(fmpi%n_rank == i_pe) then 
-                                 call MPI_Send(mpimat(1,i_loc), dim1, MPI_DOUBLE_COMPLEX, j_pe, i, fmpi%sub_comm, ierr)
-                                 call MPI_Recv(mpicarr, dim1, MPI_DOUBLE_COMPLEX, j_pe, j, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-                                 mpimat(:dim1,i_loc) = (mpimat(:dim1, i_loc) + ifac*mpicarr(:dim1))*rfac
+                                 call MPI_Send(mpimat(1,i_loc), dims(1), MPI_DOUBLE_COMPLEX, j_pe, i, fmpi%sub_comm, ierr)
+                                 call MPI_Recv(mpicarr, dims(1), MPI_DOUBLE_COMPLEX, j_pe, j, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+                                 mpimat(:dims(1),i_loc) = (mpimat(:dims(1), i_loc) + ifac*mpicarr(:dims(1)))*rfac
                               elseif(fmpi%n_rank == j_pe) then 
-                                 call MPI_Recv(mpicarr, dim1, MPI_DOUBLE_COMPLEX, i_pe, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-                                 call MPI_Send(mpimat(1,j_loc), dim1, MPI_DOUBLE_COMPLEX, i_pe, j, fmpi%sub_comm, ierr)
-                                 mpimat(:dim1,j_loc) = (mpicarr(:dim1)       - ifac*mpimat(:dim1, j_loc))*cfac
+                                 call MPI_Recv(mpicarr, dims(1), MPI_DOUBLE_COMPLEX, i_pe, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+                                 call MPI_Send(mpimat(1,j_loc), dims(1), MPI_DOUBLE_COMPLEX, i_pe, j, fmpi%sub_comm, ierr)
+                                 mpimat(:dims(1),j_loc) = (mpicarr(:dims(1))       - ifac*mpimat(:dims(1), j_loc))*cfac
 #endif
                               endif
                            endif
                         END IF
                      ELSE IF (m == 0 .and. ifac == -1) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           call range_to_glob_to_loc(fmpi, dim2, dim2_loc)
+                           call range_to_glob_to_loc(fmpi, dims(2), dim2_loc)
                            mpimat(i,:dim2_loc) = -ImagUnit*mpimat(i, :dim2_loc)
                         END IF
                         IF (iand(imode, 2) /= 0 .and. fmpi%n_rank == i_pe) THEN
-                           mpimat(:dim1, i_loc) = ImagUnit*mpimat(:dim1, i_loc)
+                           mpimat(:dims(1), i_loc) = ImagUnit*mpimat(:dims(1), i_loc)
                         END IF
                      END IF
                   END DO
@@ -644,9 +644,9 @@ CONTAINS
       IF (lreal) THEN
          call juDFT_error("this isn't impemented for mpimat")
 ! Determine common phase factor and divide by it to make the output matrix real.
-         ! cfac = commonphase_mtx(mat, dim1, dim2)
-         ! do i = 1, dim1
-         ! do j = 1, dim2
+         ! cfac = commonphase_mtx(mat, dims(1), dims(2))
+         ! do i = 1, dims(1)
+         ! do j = 1, dims(2)
          !    mat(i, j) = mat(i, j)/cfac
          !    if (abs(aimag(mat(i, j))) > 1e-8) then
          !       call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
