@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_eulerrot
+      use m_judft
 c************************************
 c     Perform Euler rotations.
 c     Y. Mokrousov 
@@ -30,12 +31,15 @@ c************************************************************************
 
       integer :: nwf
 
+      call timestart("eulerrot")
+
       do nwf = 1,nwfs
          call eulerrot1(
      >                  alpha(nwf),beta(nwf),gamma(nwf),
      <                  amx(1,1,nwf) )
       enddo 
 
+      call timestop("eulerrot")
       end subroutine eulerrot
 
       subroutine eulerrot1(
@@ -61,6 +65,7 @@ c***********************************************************************
 
       real    :: bmx(3,3),cmx(3,3),dmx(3,3),hmx(3,3)
 
+      call timestart("eulerrot1")
       dmx(1,1) = cos(alpha) ; dmx(1,2) = sin(alpha) ; dmx(1,3) = 0. 
       dmx(2,1) =-sin(alpha) ; dmx(2,2) = cos(alpha) ; dmx(2,3) = 0. 
       dmx(3,1) = 0.         ; dmx(3,2) = 0.         ; dmx(3,3) = 1. 
@@ -76,6 +81,7 @@ c***********************************************************************
       hmx = matmul(cmx,dmx)
       amx = matmul(bmx,hmx)
 
+      call timestop("eulerrot1")
       end subroutine eulerrot1
 
 

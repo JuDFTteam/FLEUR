@@ -37,6 +37,8 @@
       real :: mmn_r,mmn_i,tau,tpi,a_arti,b_arti
       character(len=20) :: filename
 
+      call timestart("wann_gwf_commat")
+
       l_debug = .false.
       tpi = 2.0*pimach()
       a_arti = latt_const_q
@@ -245,6 +247,7 @@ c     >                                     * mmn_arti(nn_arti,iqpt)
       deallocate(amn_comp,eig_comp)
       deallocate(gb_kq,bpt_kq)
 
+      call timestop("wann_gwf_commat")
       end subroutine wann_gwf_commat    
 
 

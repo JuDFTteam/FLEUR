@@ -95,6 +95,7 @@ c*************************************************
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
 
+      call timestart("wann_fft5")
       tpi=2*pimach()
 
       write(oUnit,*)"nkpts=",nkpts
@@ -282,5 +283,6 @@ c***********************************************************
 c      deallocate(lwindow,u_matrix_opt,ndimwin)
 c      deallocate(u_matrix,hwann,hreal)
 
+      call timestop("wann_fft5")
       end subroutine wann_fft5
       end module m_wann_fft5

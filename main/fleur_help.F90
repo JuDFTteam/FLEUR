@@ -83,14 +83,14 @@ CONTAINS
   SUBROUTINE add_fleur_arguments()
     USE m_check_arguments
 
-    CALL new_argument(0,"-toXML","Convert an old 'inp' file into the new XML format","") 
-    CALL new_argument(1,"-xmlXPath","modify the xml-xpath of the inp.xml file","") 
+    CALL new_argument(0,"-toXML","Convert an old 'inp' file into the new XML format","")
+    CALL new_argument(1,"-xmlXPath","modify the xml-xpath of the inp.xml file","")
     !Control the job
-    CALL new_argument(0,"-check","run in check mode, i.e. stop after init","") 
-    CALL new_argument(0,"-info","Print out information on recommended parallelization and available charge densities","") 
-    CALL new_argument(2,"-wtime","run for # minutes (used to estimate if another iteration is started)","") 
-    CALL new_argument(1,"-j","Distribute MPI ranks to run subjobs (Format PE:DIR meaning run with PE in directory DIR)","") 
-    CALL new_argument(1,"-f","Obtain info on subjobs from file","") 
+    CALL new_argument(0,"-check","run in check mode, i.e. stop after init","")
+    CALL new_argument(0,"-info","Print out information on recommended parallelization and available charge densities","")
+    CALL new_argument(2,"-wtime","run for # minutes (used to estimate if another iteration is started)","")
+    CALL new_argument(1,"-j","Distribute MPI ranks to run subjobs (Format PE:DIR meaning run with PE in directory DIR)","")
+    CALL new_argument(1,"-f","Obtain info on subjobs from file","")
     CALL new_argument(2,"-n_min_size","Try to use at least specified number of PE in eigenvalue parallelization","")
     CALL new_argument(1,"-fft","library used for Fast Fourier Transformations","inbuilt"&
 #ifdef CPP_FFTW
@@ -131,8 +131,8 @@ CONTAINS
          //",hdf"&
 #endif
          )
-
-    CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","") 
+    CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","") 
+    CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","")
     !Debugging
     CALL new_argument(0,"-warn_only","Continue execution after a warning message","")
     CALL new_argument(0,"-trace","Try to generate a stacktrace in case of an error","")

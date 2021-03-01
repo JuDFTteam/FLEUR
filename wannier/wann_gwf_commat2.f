@@ -48,6 +48,8 @@ c*************************c
 
       integer :: ncpu
 
+      call timestart("wann_gwf_commat2")
+
       ncpu = 8
 
       write(*,*)'create HDWFs input for w90...'
@@ -334,6 +336,8 @@ c*****************************c
  200  continue
       deallocate(feig,famn,fmmn,fmmn2)
 
+
+      call timestop("wann_gwf_commat2")
       end subroutine wann_gwf_commat2  
 
 
@@ -343,6 +347,8 @@ c*****************************c
       integer, intent(out) :: counts,displs
 
       integer :: ratio, remainder, i
+
+      call timestart("split_array")
 
       ratio = numpoints / ncpu
       remainder = mod(numpoints,ncpu)
@@ -355,6 +361,7 @@ c*****************************c
          displs = remainder*(ratio+1)+(i-remainder)*ratio
       endif   
       
+      call timestop("split_array")
       end subroutine split_array
 
       end module m_wann_gwf_commat2

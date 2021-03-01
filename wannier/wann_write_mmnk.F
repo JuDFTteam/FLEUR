@@ -62,6 +62,7 @@ c******************************************************
 c     Collect contributions to the mmnk matrix from the
 c     various processors.
 c******************************************************
+      call timestart("wann_write_mmnk")
       if(isize.ne.1)then
       do ikpt=1,fullnkpts
        if(l_p0)then
@@ -150,6 +151,6 @@ c           write (305,'(2f18.12)')
        close (305)
        endif
       endif !l_p0
-
+      call timestop("wann_write_mmnk")
       end subroutine wann_write_mmnk
       end module m_wann_write_mmnk

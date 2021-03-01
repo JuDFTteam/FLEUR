@@ -208,6 +208,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       TYPE(t_mat)   :: zzMat, zMat
       TYPE(t_usdus) :: usdus
 
+      call timestart("wannier_to_lapw")
 c specify number of unit-cells that are calculated
       cell1=3
       cell2=3
@@ -713,5 +714,6 @@ c****************************************************************
       call MPI_BARRIER(mpi_communicatior,mpiierr(2))
 #endif
 
+      call timestop("wannier_to_lapw")
       end subroutine wannier_to_lapw
       end module m_wannier_to_lapw

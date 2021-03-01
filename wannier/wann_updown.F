@@ -283,6 +283,8 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
 !     +     ,calledby ="wann_updown")
 
 c-----initializations
+      
+      call timestart("wann_updown")
       time_interstitial=0.0
       time_mmn=0.0
       time_total=0.0
@@ -1414,7 +1416,7 @@ c******************************************************
 #ifdef CPP_MPI
       call MPI_BARRIER(mpi_communicatior,ierr)
 #endif
-
+      call timestop("wann_updown")
 
       END SUBROUTINE wann_updown
       END MODULE m_wann_updown

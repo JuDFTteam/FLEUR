@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_plot_symm
+         use m_juDFT
       CONTAINS
       SUBROUTINE wann_plot_symm(jspin,mrot,ikpt,kplot,l_conjugate)
 
@@ -22,6 +23,7 @@
       real::rotpoint(3)
       integer::opoint1,opoint2,opoint3
 
+      call timestart("wann_plot_symm")
       WRITE (vandernameold,201) ikpt,jspin
       write (vandernamenew,201) kplot,jspin
  201  FORMAT ('UNK',i5.5,'.',i1)      
@@ -68,5 +70,6 @@
       enddo
       close(666)
 
+      call timestop("wann_plot_symm")
       END SUBROUTINE wann_plot_symm
       END MODULE m_wann_plot_symm

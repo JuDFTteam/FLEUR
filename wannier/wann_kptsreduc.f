@@ -46,6 +46,8 @@ c*****************************************************************
       logical             :: l_onlysymor
       TYPE(t_kpts)     :: kpts
       integer :: count
+
+      call timestart("wann_kptsreduc")
       
       inquire(file='onlysymor',exist=l_onlysymor)
 
@@ -232,6 +234,8 @@ c****************************************************
      +     ="wann_kptsreduc")
       deallocate(kpoints,mapk,mapkoper,weight,irreduc)
 
+
+      call timestop("wann_kptsreduc")
       contains
       real elemental function axmintx(x)
       implicit none

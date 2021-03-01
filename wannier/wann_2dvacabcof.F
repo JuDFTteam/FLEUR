@@ -58,6 +58,8 @@ c********************************************************
       integer kvac1(nv2d),kvac2(nv2d),map2(nvd),i,j
       real :: qss1,qss2
 
+      call timestart("wann_2dvacabcof")
+
          wronk = 2.0
          const = 1.0 / ( sqrt(omtil)*wronk )
          allocate (dt(nv2d),dte(nv2d),t(nv2d),te(nv2d),tei(nv2d))
@@ -173,5 +175,7 @@ c-----> loop over basis functions
             enddo !symvac    
          enddo               !loop over ivac
       deallocate (dt,dte,t,te,tei)
+
+      call timestop("wann_2dvacabcof")
       END SUBROUTINE
       END MODULE m_wann_2dvacabcof

@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_postproc_setup
+        use m_juDFT
 #ifdef CPP_WANN
       CONTAINS
       SUBROUTINE wann_postproc_setup(
@@ -113,6 +114,8 @@ c******************************************************
      +       proj_s_qaxis_loc
          end subroutine wannier_setup
       end interface
+
+      call timestart("wann_postproc_setup")
       do j=1,natd
          pos(:,j)=matmul(amat(:,:),taual(:,j))
       enddo
@@ -161,7 +164,7 @@ c     &     ikpt,bpt(nn,ikpt),(gb(i,nn,ikpt),i=1,3)
       enddo
       close(202)
 
-
+      call timestop("wann_postproc_setup")
       END SUBROUTINE wann_postproc_setup
 #endif
       END MODULE m_wann_postproc_setup

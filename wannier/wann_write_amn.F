@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_write_amn
+            use m_juDFT
       contains
       subroutine wann_write_amn(
      >               fmpi_comm,l_p0,filename,title,
@@ -58,6 +59,8 @@ c******************************************************
 c     Collect contributions to the amn matrix from the
 c     various processors.
 c******************************************************
+
+      call timestart("wann_write_amn")
       if(isize.ne.1)then
        do ikpt=1,fullnkpts
         if(l_p0)then
@@ -123,6 +126,7 @@ c******************************************************
        endif
        close(305)
       endif
+      call timestop("wann_write_amn")
 
       end subroutine wann_write_amn
       end module m_wann_write_amn

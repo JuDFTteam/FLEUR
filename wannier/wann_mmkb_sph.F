@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_mmkb_sph
+        use m_juDFT
       contains
       subroutine wann_mmkb_sph(
 c***********************************************************************
@@ -99,6 +100,7 @@ C     ..
 C     .. intrinsic functions ..
       intrinsic conjg,cmplx,sqrt,cos,sin
 
+      call timestart("wann_mmkb_sph")
       ic = cmplx(0.,1.)
       tpi = 2* pimach()
       lmd2 = lmd+1
@@ -250,5 +252,6 @@ c             if(fac1.ne.0)write(*,*)'fac1',lop,lo,mp,m
       enddo  ! atom type   
 
 
+      call timestop("wann_mmkb_sph")
       end subroutine wann_mmkb_sph
       end module m_wann_mmkb_sph

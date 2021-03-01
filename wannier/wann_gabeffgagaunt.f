@@ -77,6 +77,7 @@ c*************************************************************************
       logical :: l_doit
       real,allocatable :: beff(:,:,:)
 
+      call timestart("wann_gabeffgagaunt")
       ic = cmplx(0.,1.)
 
       allocate( beff(jmtd,0:nlhd,ntype) )
@@ -436,6 +437,7 @@ c*************************************************************
       
       deallocate(ujulo,djulo,ulojulo,loju,lojd)
 
+      call timestop("wann_gabeffgagaunt")
       end subroutine wann_gabeffgagaunt
 
       end module m_wann_gabeffgagaunt

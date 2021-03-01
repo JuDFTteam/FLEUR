@@ -59,13 +59,17 @@ contains
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_atoms), intent(in)      :: atoms
-      integer, intent(in)            :: num_radfun_per_l(:,:)
+      integer, intent(in)            :: num_radfun_per_l(0:,:)
 
-      integer :: itype, l
+      integer :: itype, l, summe
 
       hybdat%maxlmindx = 0
       do itype = 1,atoms%ntype
-         hybdat%maxlmindx = max(hybdat%maxlmindx, SUM([(num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]))
+         summe = 0 
+         do l = 0, atoms%lmax(itype)
+            summe = summe + (2*l + 1) * num_radfun_per_l(l, itype)
+         enddo
+         hybdat%maxlmindx = max(hybdat%maxlmindx, summe)
       enddo
    end subroutine set_maxlmindx_hybdat
 

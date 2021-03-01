@@ -27,6 +27,8 @@ c***********************************************************
       real ilen1,ilen2,ilen3
       integer limit1, limit2, limit3
       real scale,shift1,shift2,shift3
+
+      call timestart("wann_kpointgen")
       
       print*,"specify dimension"
       read(*,*)dim
@@ -96,6 +98,8 @@ c***********************************************************
          enddo
       endif
       close(100)
+
+      call timestop("wann_kpointgen")
       end subroutine wann_kpointgen
 
       subroutine findkgt(nu,sc)
@@ -103,6 +107,8 @@ c***********************************************************
       integer,intent(out)::sc
       integer,intent(in)::nu
       integer k,nnu
+
+      call timestart("findkgt")
       nnu=nu
       IF(nnu==0)  CALL juDFT_error("nnu.eq.0",calledby="wann_kpointgen")
       do k=1,3
@@ -116,6 +122,7 @@ c***********************************************************
          nnu=nnu/2
       enddo
       sc=nnu
+      call timestop("findkgt")
       end subroutine findkgt
 
       end module m_wann_kpointgen

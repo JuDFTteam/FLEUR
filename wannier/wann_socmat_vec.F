@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_socmat_vec
+         use m_juDFT
       contains
       subroutine wann_socmat_vec(
      >               fmpi,enpara,input,noco,nococonv,atoms,
@@ -66,6 +67,7 @@ c***********************************************************************
       TYPE(t_rsoc)::rsoc
       TYPE(t_usdus):: usdus
 
+      call timestart("wann_socmat_vec")
       nwdd=1
       nw=1
       nsz=neigd
@@ -129,6 +131,6 @@ c***********************************************************************
         enddo
 
       enddo !compo
-
+      call timestart("wann_socmat_vec")
       end subroutine wann_socmat_vec
       end module m_wann_socmat_vec
