@@ -455,7 +455,8 @@ CONTAINS
 
          IF (fi%sym%invs) THEN
             !symmetrize makes the Coulomb matrix real symmetric     
-            CALL symmetrize_mpimat(fi, fmpi, striped_coul(ikpt)%data_c, [hybdat%nbasp, hybdat%nbasp], 3, .FALSE., mpdata%num_radbasfn)
+            CALL symmetrize_mpimat(fi, fmpi, striped_coul(ikpt)%data_c, [1,1],[hybdat%nbasp, hybdat%nbasp], &
+                                   3, .FALSE., mpdata%num_radbasfn)
          ENDIF
          call timestop("MT-MT part")
       END DO

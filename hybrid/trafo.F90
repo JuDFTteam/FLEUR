@@ -544,7 +544,7 @@ CONTAINS
    ! These functions have the property f(-r)=f(r)* which makes the output matrix real symmetric.
    ! (Array mat is overwritten! )
 
-   SUBROUTINE symmetrize_mpimat(fi, fmpi, mpimat, dims, imode, lreal, nindxm)
+   SUBROUTINE symmetrize_mpimat(fi, fmpi, mpimat, start_dim, end_dim, imode, lreal, nindxm)
       USE m_types
       use m_constants
       IMPLICIT NONE
@@ -552,7 +552,7 @@ CONTAINS
       type(t_mpi), intent(in)         :: fmpi
 
 !     - scalars -
-      INTEGER, INTENT(IN)    :: imode, dims(2)
+      INTEGER, INTENT(IN)    :: imode, start_dim(2), end_dim(2)
       LOGICAL, INTENT(IN)    ::  lreal
 
 !     - arrays -
@@ -560,13 +560,14 @@ CONTAINS
       COMPLEX, INTENT(INOUT) ::  mpimat(:, :)
 
 !     -local scalars -
-      INTEGER               :: i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift, dim2_loc
-      integer               :: i_loc, j_loc, i_pe, j_pe, ierr
+      INTEGER               :: i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift, start_loc, end_loc
+      integer               :: i_loc, j_loc, i_pe, j_pe, ierr, len_dim(2)
       REAL                  :: rfac
 
 !     - local arrays -
-      COMPLEX               ::  mpicarr(maxval(dims)), carr(maxval(dims)), cfac
+      COMPLEX               ::  mpicarr(maxval(end_dim)), carr(maxval(end_dim)), cfac
 
+      len_dim = end_dim - start_dim + 1
       rfac = sqrt(0.5)
       cfac = sqrt(0.5)*ImagUnit
       ic = 0
@@ -602,37 +603,41 @@ CONTAINS
                      call glob_to_loc(fmpi, j, j_pe, j_loc)
                      IF (ic1 /= ic .or. m < 0) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           call range_to_glob_to_loc(fmpi, dims(2), dim2_loc)
-                           mpicarr(:dim2_loc) = mpimat(i,:dim2_loc)
-                           mpimat(i, :dim2_loc) = (mpicarr(:dim2_loc) + ifac*mpimat(j, :dim2_loc))*rfac
-                           mpimat(j, :dim2_loc) = (mpicarr(:dim2_loc) - ifac*mpimat(j, :dim2_loc))*(-cfac)
+                           call range_from_glob_to_loc(fmpi, start_dim(2), start_loc)
+                           call range_to_glob_to_loc(fmpi, end_dim(2), end_loc)
+                           mpicarr(start_loc:end_loc)  = mpimat(i,start_loc:end_loc)
+                           mpimat(i,start_loc:end_loc) = (mpicarr(start_loc:end_loc) + ifac*mpimat(j,start_loc:end_loc))*rfac
+                           mpimat(j,start_loc:end_loc) = (mpicarr(start_loc:end_loc) - ifac*mpimat(j,start_loc:end_loc))*(-cfac)
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
                            if(i_pe == j_pe .and. fmpi%n_rank == i_pe) then 
-                              mpicarr(:dims(1)) = mpimat(:dims(1), i_loc)
-                              mpimat(:dims(1),i_loc) = (mpimat(:dims(1), i_loc) + ifac*mpimat(:dims(1), j_loc))*rfac
-                              mpimat(:dims(1),j_loc) = (mpicarr(:dims(1))       - ifac*mpimat(:dims(1), j_loc))*cfac
+                              mpicarr(start_dim(1):end_dim(1)) = mpimat(start_dim(1):end_dim(1), i_loc)
+                              mpimat(start_dim(1):end_dim(1),i_loc) &
+                                 = (mpimat(start_dim(1):end_dim(1), i_loc) + ifac*mpimat(start_dim(1):end_dim(1), j_loc))*rfac
+                              mpimat(start_dim(1):end_dim(1),j_loc) &
+                                 = (mpicarr(start_dim(1):end_dim(1)) - ifac*mpimat(start_dim(1):end_dim(1), j_loc))*cfac
 #ifdef CPP_MPI
                            else
                               if(fmpi%n_rank == i_pe) then 
-                                 call MPI_Send(mpimat(1,i_loc), dims(1), MPI_DOUBLE_COMPLEX, j_pe, i, fmpi%sub_comm, ierr)
-                                 call MPI_Recv(mpicarr, dims(1), MPI_DOUBLE_COMPLEX, j_pe, j, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-                                 mpimat(:dims(1),i_loc) = (mpimat(:dims(1), i_loc) + ifac*mpicarr(:dims(1)))*rfac
+                                 call MPI_Send(mpimat(start_dim(1),i_loc), len_dim(1), MPI_DOUBLE_COMPLEX, j_pe, i, fmpi%sub_comm, ierr)
+                                 call MPI_Recv(mpicarr(start_dim(1)), len_dim(1), MPI_DOUBLE_COMPLEX, j_pe, j, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+                                 mpimat(start_dim(1):end_dim(1),i_loc) = (mpimat(start_dim(1):end_dim(1), i_loc) + ifac*mpicarr(start_dim(1):end_dim(1)))*rfac
                               elseif(fmpi%n_rank == j_pe) then 
-                                 call MPI_Recv(mpicarr, dims(1), MPI_DOUBLE_COMPLEX, i_pe, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-                                 call MPI_Send(mpimat(1,j_loc), dims(1), MPI_DOUBLE_COMPLEX, i_pe, j, fmpi%sub_comm, ierr)
-                                 mpimat(:dims(1),j_loc) = (mpicarr(:dims(1))       - ifac*mpimat(:dims(1), j_loc))*cfac
+                                 call MPI_Recv(mpicarr(start_dim(1)), len_dim(1), MPI_DOUBLE_COMPLEX, i_pe, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+                                 call MPI_Send(mpimat(start_dim(1),j_loc), len_dim(1), MPI_DOUBLE_COMPLEX, i_pe, j, fmpi%sub_comm, ierr)
+                                 mpimat(start_dim(1):end_dim(1),j_loc) = (mpicarr(start_dim(1):end_dim(1)) - ifac*mpimat(start_dim(1):end_dim(1), j_loc))*cfac
                               endif
 #endif
                            endif
                         END IF
                      ELSE IF (m == 0 .and. ifac == -1) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           call range_to_glob_to_loc(fmpi, dims(2), dim2_loc)
-                           mpimat(i,:dim2_loc) = -ImagUnit*mpimat(i, :dim2_loc)
+                           call range_from_glob_to_loc(fmpi, start_dim(2), start_loc)
+                           call range_to_glob_to_loc(fmpi, end_dim(2), end_loc)
+                           mpimat(i,start_loc:end_loc) = -ImagUnit*mpimat(i,start_loc:end_loc)
                         END IF
                         IF (iand(imode, 2) /= 0 .and. fmpi%n_rank == i_pe) THEN
-                           mpimat(:dims(1), i_loc) = ImagUnit*mpimat(:dims(1), i_loc)
+                           mpimat(start_dim(1):end_dim(1), i_loc) = ImagUnit*mpimat(start_dim(1):end_dim(1), i_loc)
                         END IF
                      END IF
                   END DO
