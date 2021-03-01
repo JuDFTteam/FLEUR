@@ -39,6 +39,7 @@ MODULE m_coulombmatrix
    USE m_intgrf, ONLY: intgrf, intgrf_init
    use m_sphbes, only: sphbes
    use m_glob_tofrom_loc
+   USE m_trafo, ONLY: symmetrize_mpimat, symmetrize, bramat_trafo
 CONTAINS
 
    SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
@@ -50,7 +51,6 @@ CONTAINS
       USE m_types_hybdat
       USE m_juDFT
       USE m_constants
-      USE m_trafo, ONLY: symmetrize_mpimat, symmetrize, bramat_trafo
       use m_util, only: primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix
       USE m_wrapper
@@ -1598,7 +1598,7 @@ CONTAINS
 
       IF (fi%sym%invs) THEN
          call symmetrize_mpimat(fi, fmpi, striped_coul%data_c, [1,hybdat%nbasp+1], [hybdat%nbasp, hybdat%nbasp+mpdata%n_g(ikpt)],&
-                                1, false, mpdata%num_radbasfn)
+                                1, .false., mpdata%num_radbasfn)
          CALL symmetrize(coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:), hybdat%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
                          fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       ENDIF
