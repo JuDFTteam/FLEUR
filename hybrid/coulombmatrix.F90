@@ -775,18 +775,7 @@ CONTAINS
             call timestop("harmonics setup")
             call perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
                                        pqnrm,qnrm, nqnrm, ikpt, striped_coul(ikpt))
-
-                                                           
-            SELECT TYPE(striped_coul)
-            CLASS is (t_mpimat)
-               call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
-               call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
-            CLASS is (t_mat)
-               call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
-            CLASS default
-               CALL judft_error("makes no sence")
-            END SELECT
-            call coulomb(ikpt)%u2l()
+            call striped_coul(ikpt)%u2l()
          END DO
          call timestop("loop 2")
          deallocate (carr2)
@@ -809,7 +798,16 @@ CONTAINS
             DO igpt0 = 1, ngptm1(ikpt)
                lsym = (1 <= igpt0) .AND. (ngptm1(ikpt) >= igpt0)
                igpt2 = pgptm1(igpt0, ikpt)
-               carr2(:hybdat%nbasm(ikpt),2) = coulomb(ikpt)%data_c(:hybdat%nbasm(ikpt),hybdat%nbasp + igpt2)
+               ix = hybdat%nbasp + igpt2
+               call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+               if(pe_ix == fmpi%n_rank) then 
+                  carr2(:hybdat%nbasm(ikpt),2) = striped_coul(ikpt)%data_c(:hybdat%nbasm(ikpt),ix_loc)
+               endif
+#ifdef CPP_MPI
+               call timestart("bcast carr2")
+               call MPI_Bcast(carr2(1,2), hybdat%nbasm(ikpt), MPI_DOUBLE_COMPLEX, pe_ix, fmpi%sub_comm, ierr)
+               call timestop("bcast carr2")
+#endif
 
                IF (lsym) THEN
                   ic = 1
@@ -829,8 +827,16 @@ CONTAINS
                                        mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), &
                                        dwgn(:, :, :, isym), hybdat%nbasp, hybdat%nbasm, carr2(:, 1), igpt1)
                      l = (hybdat%nbasp + igpt1 - 1)*(hybdat%nbasp + igpt1)/2
-                     coulomb(ikpt)%data_c(:hybdat%nbasp + igpt1,hybdat%nbasp + igpt1) = carr2(:hybdat%nbasp + igpt1, 1)
-                     coulomb(ikpt)%data_c(hybdat%nbasp + igpt1,:hybdat%nbasp + igpt1) = conjg(carr2(:hybdat%nbasp + igpt1, 1))
+                     ix = hybdat%nbasp + igpt1
+                     call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+                     if(pe_ix == fmpi%n_rank) then
+                        striped_coul(ikpt)%data_c(:hybdat%nbasp + igpt1,ix_loc) = carr2(:hybdat%nbasp + igpt1, 1)
+                     endif 
+
+                     do ix = 1,hybdat%nbasp + igpt1
+                        call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+                        if(pe_ix == fmpi%n_rank) striped_coul(ikpt)%data_c(hybdat%nbasp + igpt1, ix_loc) = conjg(carr2(ix, 1))
+                     enddo
 
                      iarr(igpt1) = 1
                      IF (lsym) THEN
@@ -841,7 +847,17 @@ CONTAINS
                END DO
                nsym_gpt(igpt0, ikpt) = ic
             END DO ! igpt0
-            call coulomb(ikpt)%u2l()
+            call striped_coul(ikpt)%u2l()
+                                                                       
+            SELECT TYPE(striped_coul)
+            CLASS is (t_mpimat)
+               call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
+               call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
+            CLASS is (t_mat)
+               call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
+            CLASS default
+               CALL judft_error("makes no sence")
+            END SELECT
          END DO ! ikpt
          call timestop("loop 3")
          call timestart("gap 1:")
