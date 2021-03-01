@@ -501,45 +501,36 @@ CONTAINS
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                ix = hybdat%nbasp + igpt2
                call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
-               q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
-               rdum2 = SUM(q2**2)
-               IF (abs(rdum2) > 1e-12) rdum2 = fpi_const/rdum2
+               if(fmpi%n_rank == pe_ix) then
+                  q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
+                  rdum2 = SUM(q2**2)
+                  IF (abs(rdum2) > 1e-12) rdum2 = fpi_const/rdum2
 
-               DO igpt1 = 1, igpt2
-                  igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
-                  iy = hybdat%nbasp + igpt1
-                  q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
-                  rdum1 = SUM(q1**2)
-                  IF (abs(rdum1) > 1e-12) rdum1 = fpi_const/rdum1
+                  DO igpt1 = 1, igpt2
+                     igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
+                     iy = hybdat%nbasp + igpt1
+                     q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
+                     rdum1 = SUM(q1**2)
+                     IF (abs(rdum1) > 1e-12) rdum1 = fpi_const/rdum1
 
-                  IF (ikpt == 1) THEN
-                     IF (igpt1 /= 1) THEN
-                        coulomb(1)%data_c(iy,ix) = -smat%data_c(igptp1, igptp2)*rdum1/fi%cell%vol
-                        if(fmpi%n_rank == pe_ix) then
+                     IF (ikpt == 1) THEN
+                        IF (igpt1 /= 1) THEN
                            striped_coul(1)%data_c(iy,ix_loc) = -smat%data_c(igptp1, igptp2)*rdum1/fi%cell%vol 
-                        endif
-                     END IF
-                     IF (igpt2 /= 1) THEN
-                        coulomb(1)%data_c(iy,ix) = coulomb(1)%data_c(iy,ix) - smat%data_c(igptp1, igptp2)*rdum2/fi%cell%vol
-                        if(fmpi%n_rank == pe_ix) then
+                        END IF
+                        IF (igpt2 /= 1) THEN
                            striped_coul(1)%data_c(iy,ix_loc) &
                               = striped_coul(1)%data_c(iy,ix_loc) - smat%data_c(igptp1, igptp2)*rdum2/fi%cell%vol
-                        endif
-                     END IF
-                  ELSE
-                     coulomb(ikpt)%data_c(iy,ix) = -smat%data_c(igptp1, igptp2)*(rdum1 + rdum2)/fi%cell%vol
-                     if(fmpi%n_rank == pe_ix) then
+                        END IF
+                     ELSE
                         striped_coul(ikpt)%data_c(iy,ix_loc) = -smat%data_c(igptp1, igptp2)*(rdum1 + rdum2)/fi%cell%vol
-                     endif
-                  END IF
-               END DO
-               IF (ikpt /= 1 .OR. igpt2 /= 1) THEN                  !
-                  coulomb(ikpt)%data_c(iy,ix) = coulomb(ikpt)%data_c(iy,ix) + rdum2
-                  if(fmpi%n_rank == pe_ix) then
+                     END IF
+                  END DO
+                  IF (ikpt /= 1 .OR. igpt2 /= 1) THEN
                      striped_coul(ikpt)%data_c(iy,ix_loc) = striped_coul(ikpt)%data_c(iy,ix_loc)  + rdum2
-                  endif
-               END IF
+                  END IF
+               endif
             END DO
+            call striped_coul(ikpt)%u2l()
                                                
             SELECT TYPE(striped_coul)
             CLASS is (t_mpimat)
@@ -550,7 +541,6 @@ CONTAINS
             CLASS default
                CALL judft_error("makes no sence")
             END SELECT
-            call coulomb(ikpt)%u2l()
          END DO
          call smat%free()
          call timestop("coulomb matrix 3a")
