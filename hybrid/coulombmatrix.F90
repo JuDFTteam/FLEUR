@@ -475,7 +475,7 @@ CONTAINS
          DO im = 1, size(fmpi%k_list)
             ikpt = fmpi%k_list(im)
             call loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
-                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulomb(ikpt), striped_coul(ikpt))
+                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, striped_coul(ikpt))
 
             call striped_coul(ikpt)%u2l()
             
@@ -1416,7 +1416,7 @@ CONTAINS
    end subroutine apply_inverse_olaps
 
    subroutine loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
-                                qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coulmat, striped_coul)
+                                qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, striped_coul)
       use m_types
       use m_juDFT
       use m_ylm, only: ylm4
@@ -1433,7 +1433,7 @@ CONTAINS
       real, intent(in)                  :: integral(:, 0:, :, :), olap(:, 0:, :, :)
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:, :), pgptm1(:, :)
       complex, intent(in)               :: structconst(:, :, :, :)
-      class(t_mat), intent(inout)        :: coulmat, striped_coul
+      class(t_mat), intent(inout)       :: striped_coul
 
       integer  :: igpt0, igpt, igptp, iqnrm, niter
       integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1, ierr, loc_from
@@ -1443,18 +1443,14 @@ CONTAINS
       complex  :: csum, csumf(9), cdum, cexp
       integer, allocatable :: lm_arr(:), ic_arr(:)
 
-      logical :: l_coul
-
 
       call range_from_glob_to_loc(fmpi, hybdat%nbasp+1, loc_from)
       striped_coul%data_c(:hybdat%nbasp,loc_from:) = 0 
-      coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:) = 0
 
       svol = SQRT(fi%cell%vol)
       ! start to loop over interstitial plane waves
       !DO igpt0 = 1, ngptm1(ikpt)
       do igpt0 = 1, ngptm1(ikpt)
-         l_coul = mod(igpt0 -1 - fmpi%n_rank, fmpi%n_size) == 0
          igpt = pgptm1(igpt0, ikpt)
          igptp = mpdata%gptm_ptr(igpt, ikpt)
          ix = hybdat%nbasp + igpt
@@ -1480,9 +1476,9 @@ CONTAINS
          !$OMP PARALLEL DO default(none) &
          !$OMP private(ic, lm, itype, l, m, csum, csumf, ic1, itype1, cexp, lm1, l2, cdum, m2, lm2, iy) &
          !$OMP private(j_m, j_type, iy_start, l1, m1) &
-         !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, coulmat, svol) &
+         !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, svol) &
          !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
-         !$OMP shared(igptp, niter, l_coul, fmpi, pe_ix, striped_coul, ix_loc) &
+         !$OMP shared(igptp, niter, fmpi, pe_ix, striped_coul, ix_loc) &
          !$OMP schedule(dynamic)
          do i = 1,niter 
             ic = ic_arr(i)
@@ -1556,12 +1552,6 @@ CONTAINS
                iy = iy_start + n
 
                IF (ikpt == 1 .AND. igpt == 1) THEN
-                  if(l_coul) then
-                     IF (l == 0) coulmat%data_c(iy, ix) = -cdum*moment2(n, itype)/6/svol         ! (2a)
-                     coulmat%data_c(iy, ix) = coulmat%data_c(iy, ix) &
-                                                      + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
-                                                         + csum*moment(n, l, itype))/svol          ! (2c)
-                  endif
                   if(pe_ix == fmpi%n_rank) then 
                      IF (l == 0) striped_coul%data_c(iy, ix_loc) = -cdum*moment2(n, itype)/6/svol 
                      striped_coul%data_c(iy, ix_loc) = striped_coul%data_c(iy, ix_loc) &
@@ -1569,12 +1559,6 @@ CONTAINS
                                                          + csum*moment(n, l, itype))/svol          ! (2c)
                   endif
                ELSE
-                  if(l_coul) then
-                     coulmat%data_c(iy, ix) = &
-                        (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
-                           - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
-                           + csum*moment(n, l, itype))/svol          ! (2c)
-                  endif
                   if(pe_ix == fmpi%n_rank) then 
                      striped_coul%data_c(iy, ix_loc) = &
                         (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
@@ -1587,20 +1571,9 @@ CONTAINS
          !$OMP END PARALLEL DO
       END DO
 
-#ifdef CPP_MPI
-      DO igpt0 = 1, ngptm1(ikpt)
-         igpt = pgptm1(igpt0, ikpt)
-         ix = hybdat%nbasp + igpt
-         CALL MPI_ALLREDUCE(MPI_IN_PLACE, coulmat%data_c(:,ix), hybdat%nbasp,&
-                            MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%sub_comm,ierr)
-      enddo
-#endif
-
       IF (fi%sym%invs) THEN
          call symmetrize_mpimat(fi, fmpi, striped_coul%data_c, [1,hybdat%nbasp+1], [hybdat%nbasp, hybdat%nbasp+mpdata%n_g(ikpt)],&
                                 1, .false., mpdata%num_radbasfn)
-         CALL symmetrize(coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:), hybdat%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
-                         fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       ENDIF
    endsubroutine loop_over_interst
 
