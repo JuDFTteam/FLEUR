@@ -698,6 +698,41 @@ CONTAINS
                endif
             END DO
             call timestop("double gpt loop")
+            call striped_coul(1)%u2l()   
+
+            ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
+            call timestart("igpt1=1 loop")
+            iy = hybdat%nbasp + 1
+            DO igpt0 = 1, ngptm1(1)
+               igpt2 = pgptm1(igpt0, 1)
+               IF (igpt2 /= 1) then
+                  ix = hybdat%nbasp + igpt2
+                  call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+                  if(fmpi%n_rank == pe_ix) then
+                     iqnrm2 = pqnrm(igpt2, 1)
+                     igptp2 = mpdata%gptm_ptr(igpt2, 1)
+                     qnorm2 = qnrm(iqnrm2)
+                     DO itype1 = 1, fi%atoms%ntype
+                        DO ineq1 = 1, fi%atoms%neq(itype1)
+                           ic2 = 0
+                           DO itype2 = 1, fi%atoms%ntype
+                              DO ineq2 = 1, fi%atoms%neq(itype2)
+                                 ic2 = ic2 + 1
+                                 cdum = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2)))
+                                 striped_coul(1)%data_c(iy, ix_loc) = striped_coul(1)%data_c(iy, ix_loc) &
+                                                   + rdum*cdum*fi%atoms%rmt(itype1)**3*( &
+                                                   +sphbesmoment(0, itype2, iqnrm2)/30*fi%atoms%rmt(itype1)**2 &
+                                                   - sphbesmoment(2, itype2, iqnrm2)/18 &
+                                                   + sphbesmoment(1, itype2, iqnrm2)/6/qnorm2)
+                              END DO
+                           END DO
+                        END DO
+                     END DO
+                  endif !pe_ix
+               endif
+            END DO
+            call timestop("igpt1=1 loop")
+            call striped_coul(1)%u2l()
 
             SELECT TYPE(striped_coul)
             CLASS is (t_mpimat)
@@ -709,38 +744,6 @@ CONTAINS
                CALL judft_error("makes no sence")
             END SELECT
 
-            call coulomb(1)%u2l()   
-
-            ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
-            call timestart("igpt1=1 loop")
-            iy = hybdat%nbasp + 1
-            DO igpt0 = 1, ngptm1(1)
-               igpt2 = pgptm1(igpt0, 1)
-               IF (igpt2 /= 1) then
-                  ix = hybdat%nbasp + igpt2
-                  iqnrm2 = pqnrm(igpt2, 1)
-                  igptp2 = mpdata%gptm_ptr(igpt2, 1)
-                  qnorm2 = qnrm(iqnrm2)
-                  DO itype1 = 1, fi%atoms%ntype
-                     DO ineq1 = 1, fi%atoms%neq(itype1)
-                        ic2 = 0
-                        DO itype2 = 1, fi%atoms%ntype
-                           DO ineq2 = 1, fi%atoms%neq(itype2)
-                              ic2 = ic2 + 1
-                              cdum = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2)))
-                              coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) &
-                                                + rdum*cdum*fi%atoms%rmt(itype1)**3*( &
-                                                +sphbesmoment(0, itype2, iqnrm2)/30*fi%atoms%rmt(itype1)**2 &
-                                                - sphbesmoment(2, itype2, iqnrm2)/18 &
-                                                + sphbesmoment(1, itype2, iqnrm2)/6/qnorm2)
-                           END DO
-                        END DO
-                     END DO
-                  END DO
-               endif
-            END DO
-            call timestop("igpt1=1 loop")
-            call coulomb(1)%u2l()
 
 
             ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
