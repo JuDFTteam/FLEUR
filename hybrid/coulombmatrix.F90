@@ -1597,7 +1597,8 @@ CONTAINS
 #endif
 
       IF (fi%sym%invs) THEN
-         call juDFT_error("stop !")
+         call symmetrize_mpimat(fi, fmpi, striped_coul%data_c, [1,hybdat%nbasp+1], [hybdat%nbasp, hybdat%nbasp+mpdata%n_g(ikpt)],&
+                                1, false, mpdata%num_radbasfn)
          CALL symmetrize(coulmat%data_c(:hybdat%nbasp,hybdat%nbasp+1:), hybdat%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
                          fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       ENDIF
