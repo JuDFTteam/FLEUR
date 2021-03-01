@@ -529,16 +529,6 @@ CONTAINS
                endif
             END DO
             call striped_coul(ikpt)%u2l()
-                                               
-            SELECT TYPE(striped_coul)
-            CLASS is (t_mpimat)
-               call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
-               call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
-            CLASS is (t_mat)
-               call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
-            CLASS default
-               CALL judft_error("makes no sence")
-            END SELECT
          END DO
          call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
@@ -576,73 +566,75 @@ CONTAINS
             allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), &
                       structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2), source=cmplx_0)
                
-            DO igpt0 = 1+fmpi%n_rank, ngptm1(ikpt), fmpi%n_size !1,ngptm1(ikpt)
+            DO igpt0 = fmpi%n_rank, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
-               igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
-               iqnrm2 = pqnrm(igpt2, ikpt)
+               call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+               if(fmpi%n_rank == pe_ix) then
+                  igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
+                  iqnrm2 = pqnrm(igpt2, ikpt)
 
-               carr2 = 0
+                  carr2 = 0
 
-               call timestart("itype loops")
-               do iatom = 1,fi%atoms%nat
-                  itype2 = fi%atoms%itype(iatom)
-                  cexp = CONJG(carr2b(iatom, igpt2))
-                  structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
-                  
-                  !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm, iat2) &
-                  !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
-                  DO lm1 = 1, (fi%hybinp%lexp+1)**2
-                     call calc_l_m_from_lm(lm1, l1, m1)
-                     do lm2 = 1, (fi%hybinp%lexp+1)**2
-                        call calc_l_m_from_lm(lm2, l2, m2)
-                        cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)*gmat(lm1, lm2)
-                        l = l1 + l2
-                        lm = l**2 + l - l1 - m2 + (m1 + l1) + 1
-                        do iat2 =1,fi%atoms%nat
-                           carr2(iat2, lm1) = carr2(iat2,lm1) + cdum*structconst1(iat2, lm)
+                  call timestart("itype loops")
+                  do iatom = 1,fi%atoms%nat
+                     itype2 = fi%atoms%itype(iatom)
+                     cexp = CONJG(carr2b(iatom, igpt2))
+                     structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
+                     
+                     !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm, iat2) &
+                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
+                     DO lm1 = 1, (fi%hybinp%lexp+1)**2
+                        call calc_l_m_from_lm(lm1, l1, m1)
+                        do lm2 = 1, (fi%hybinp%lexp+1)**2
+                           call calc_l_m_from_lm(lm2, l2, m2)
+                           cdum = (-1)**(l2 + m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)*gmat(lm1, lm2)
+                           l = l1 + l2
+                           lm = l**2 + l - l1 - m2 + (m1 + l1) + 1
+                           do iat2 =1,fi%atoms%nat
+                              carr2(iat2, lm1) = carr2(iat2,lm1) + cdum*structconst1(iat2, lm)
+                           enddo
                         enddo
                      enddo
-                  enddo
-                  !$OMP end parallel do
-               end do ! iatom
+                     !$OMP end parallel do
+                  end do ! iatom
 
-               call timestop("itype loops")
+                  call timestop("itype loops")
 
-               call timestart("igpt1")
-               !$OMP PARALLEL DO default(none) &
-               !$OMP private(igpt1, iy, igptp1, iqnrm1, csum, ic, itype, lm, l, m, cdum) &
-               !$OMP shared(fi, carr2b, sphbesmoment, igpt2, ix, carr2, carr2a, coulomb, hybdat, mpdata, ikpt, pqnrm)
-               DO igpt1 = 1, igpt2
-                  iy = hybdat%nbasp + igpt1
-                  igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
-                  iqnrm1 = pqnrm(igpt1, ikpt)
-                  csum = 0
-                  do ic = 1, fi%atoms%nat
-                     do lm = 1, (fi%hybinp%lexp+1)**2
-                        itype = fi%atoms%itype(ic)
-                        call calc_l_m_from_lm(lm, l, m)
-                        cdum = carr2b(ic, igpt1)*sphbesmoment(l, itype, iqnrm1)
-                        csum = csum + cdum*carr2(ic, lm)*CONJG(carr2a(lm, igpt1)) ! for coulomb
+                  call timestart("igpt1")
+                  !$OMP PARALLEL DO default(none) &
+                  !$OMP private(igpt1, iy, igptp1, iqnrm1, csum, ic, itype, lm, l, m, cdum) &
+                  !$OMP shared(fi, carr2b, sphbesmoment, igpt2, ix_loc, carr2, carr2a, striped_coul, hybdat, mpdata, ikpt, pqnrm)
+                  DO igpt1 = 1, igpt2
+                     iy = hybdat%nbasp + igpt1
+                     igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
+                     iqnrm1 = pqnrm(igpt1, ikpt)
+                     csum = 0
+                     do ic = 1, fi%atoms%nat
+                        do lm = 1, (fi%hybinp%lexp+1)**2
+                           itype = fi%atoms%itype(ic)
+                           call calc_l_m_from_lm(lm, l, m)
+                           cdum = carr2b(ic, igpt1)*sphbesmoment(l, itype, iqnrm1)
+                           csum = csum + cdum*carr2(ic, lm)*CONJG(carr2a(lm, igpt1)) ! for coulomb
+                        END DO
                      END DO
+                     striped_coul(ikpt)%data_c(iy,ix_loc) = striped_coul(ikpt)%data_c(iy,ix_loc) + csum/fi%cell%vol
                   END DO
-                  coulomb(ikpt)%data_c(iy,ix) = coulomb(ikpt)%data_c(iy,ix) + csum/fi%cell%vol
-               END DO
-               !$OMP end parallel do
-               call timestop("igpt1")
+                  !$OMP end parallel do
+                  call timestop("igpt1")
+               endif ! pe_ix
             END DO !igpt0
             deallocate (carr2, carr2a, carr2b, structconst1)
-
-#ifdef CPP_MPI
-            call timestart("bcast itype&igpt1 loop")
-            do igpt0 = 1, ngptm1(ikpt)
-               root = mod(igpt0 - 1,fmpi%n_size)
-               igpt2 = pgptm1(igpt0, ikpt)
-               ix = hybdat%nbasp + igpt2
-               call MPI_Bcast(coulomb(ikpt)%data_c(hybdat%nbasp+1,ix), igpt2, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
-            enddo
-            call timestop("bcast itype&igpt1 loop")
-#endif
+                                               
+            SELECT TYPE(striped_coul)
+            CLASS is (t_mpimat)
+               call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
+               call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
+            CLASS is (t_mat)
+               call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
+            CLASS default
+               CALL judft_error("makes no sence")
+            END SELECT
 
             call coulomb(ikpt)%u2l() 
             call timestop("loop over plane waves")
