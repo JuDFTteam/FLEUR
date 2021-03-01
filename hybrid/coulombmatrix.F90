@@ -734,6 +734,27 @@ CONTAINS
             call timestop("igpt1=1 loop")
             call striped_coul(1)%u2l()
 
+            ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
+            call timestart("igpt1=igpt2=1 loop")
+            iy = hybdat%nbasp + 1
+            ix = hybdat%nbasp + 1
+            call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+            if(pe_ix == fmpi%n_rank) then
+               DO itype1 = 1, fi%atoms%ntype
+                  DO ineq1 = 1, fi%atoms%neq(itype1)
+                     DO itype2 = 1, fi%atoms%ntype
+                        DO ineq2 = 1, fi%atoms%neq(itype2)
+                           striped_coul(1)%data_c(iy, ix_loc) = striped_coul(1)%data_c(iy, ix_loc) &
+                                             + rdum*fi%atoms%rmt(itype1)**3*fi%atoms%rmt(itype2)**3* &
+                                             (fi%atoms%rmt(itype1)**2 + fi%atoms%rmt(itype2)**2)/90
+                        END DO
+                     END DO
+                  END DO
+               END DO
+            endif ! pe_ix
+            call timestop("igpt1=igpt2=1 loop")
+            call striped_coul(1)%u2l()
+
             SELECT TYPE(striped_coul)
             CLASS is (t_mpimat)
                call striped_coul(1)%to_non_dist(coulomb(1))
@@ -743,27 +764,6 @@ CONTAINS
             CLASS default
                CALL judft_error("makes no sence")
             END SELECT
-
-
-
-            ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
-
-            call timestart("igpt1=igpt2=1 loop")
-            iy = hybdat%nbasp + 1
-            ix = hybdat%nbasp + 1
-            DO itype1 = 1, fi%atoms%ntype
-               DO ineq1 = 1, fi%atoms%neq(itype1)
-                  DO itype2 = 1, fi%atoms%ntype
-                     DO ineq2 = 1, fi%atoms%neq(itype2)
-                        coulomb(1)%data_c(iy, ix) = coulomb(1)%data_c(iy, ix) &
-                                          + rdum*fi%atoms%rmt(itype1)**3*fi%atoms%rmt(itype2)**3* &
-                                          (fi%atoms%rmt(itype1)**2 + fi%atoms%rmt(itype2)**2)/90
-                     END DO
-                  END DO
-               END DO
-            END DO
-            call timestop("igpt1=igpt2=1 loop")
-            call coulomb(1)%u2l()
             call timestop("add corrections from higher orders")
          endif
 
