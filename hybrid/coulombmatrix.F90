@@ -566,7 +566,7 @@ CONTAINS
             allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), &
                       structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2), source=cmplx_0)
                
-            DO igpt0 = fmpi%n_rank, ngptm1(ikpt)
+            DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
                call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
