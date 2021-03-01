@@ -625,18 +625,7 @@ CONTAINS
                endif ! pe_ix
             END DO !igpt0
             deallocate (carr2, carr2a, carr2b, structconst1)
-                                               
-            SELECT TYPE(striped_coul)
-            CLASS is (t_mpimat)
-               call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
-               call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
-            CLASS is (t_mat)
-               call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
-            CLASS default
-               CALL judft_error("makes no sence")
-            END SELECT
-
-            call coulomb(ikpt)%u2l() 
+            call striped_coul(ikpt)%u2l() 
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
@@ -755,15 +744,6 @@ CONTAINS
             call timestop("igpt1=igpt2=1 loop")
             call striped_coul(1)%u2l()
 
-            SELECT TYPE(striped_coul)
-            CLASS is (t_mpimat)
-               call striped_coul(1)%to_non_dist(coulomb(1))
-               call coulomb(1)%bcast(0, fmpi%sub_comm)
-            CLASS is (t_mat)
-               call coulomb(1)%copy(striped_coul(1), 1,1)
-            CLASS default
-               CALL judft_error("makes no sence")
-            END SELECT
             call timestop("add corrections from higher orders")
          endif
 
@@ -794,7 +774,18 @@ CONTAINS
             END DO
             call timestop("harmonics setup")
             call perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
-                                       pqnrm,qnrm, nqnrm, ikpt, coulomb(ikpt))
+                                       pqnrm,qnrm, nqnrm, ikpt, striped_coul(ikpt))
+
+                                                           
+            SELECT TYPE(striped_coul)
+            CLASS is (t_mpimat)
+               call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
+               call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
+            CLASS is (t_mat)
+               call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
+            CLASS default
+               CALL judft_error("makes no sence")
+            END SELECT
             call coulomb(ikpt)%u2l()
          END DO
          call timestop("loop 2")
@@ -1588,10 +1579,10 @@ CONTAINS
       real, intent(in)                  :: qnrm(:), sphbes0(:, :, :)
       complex, intent(in)               :: carr2(:, :)
       !complex, intent(inout)            :: coulomb(:) ! only at ikpt
-      type(t_mat), intent(inout)        :: coulomb
+      class(t_mat), intent(inout)        :: coulomb
 
       integer :: igpt0, igpt1, igpt2, ix, iy, igptp1, igptp2, iqnrm1, iqnrm2
-      integer :: ic, itype, lm, m, l, ierr, root
+      integer :: ic, itype, lm, m, l, ierr, pe_ix, ix_loc
       real    :: q1(3), q2(3)
       complex :: y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       COMPLEX :: cexp1(fi%atoms%ntype)
@@ -1600,63 +1591,55 @@ CONTAINS
 
       call timestart("double g-loop")
 
-      DO igpt0 = 1+fmpi%n_rank, ngptm1(ikpt), fmpi%n_size
-         igpt2 = pgptm1(igpt0, ikpt)
-         ix = hybdat%nbasp + igpt2
-         igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
-         iqnrm2 = pqnrm(igpt2, ikpt)
-         q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
-         y2 = CONJG(carr2(:, igpt2))
-         
-         !$OMP PARALLEL DO default(none) &
-         !$OMP private(igpt1, iy, igptp1, iqnrm1, q1, y1, cexp1, ic, itype, lm) &
-         !$OMP private(cdum, l, cdum1, m, ldum) &
-         !$OMP shared(igpt2, coulomb, hybdat, mpdata, ikpt, fi, carr2, pqnrm, igptp2)&
-         !$OMP shared(qnrm, sphbes0, iqnrm2, nqnrm, y2, ix)
-         DO igpt1 = 1, igpt2
-            iy = hybdat%nbasp + igpt1
-            igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
-            iqnrm1 = pqnrm(igpt1, ikpt)
-            q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
-            y1 = carr2(:, igpt1)
-            cexp1 = 0
-            do ic = 1,fi%atoms%nat 
-               itype = fi%atoms%itype(ic)
-               cexp1(itype) = cexp1(itype) + &
-                              EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT( &
-                                    (mpdata%g(:, igptp2) - mpdata%g(:, igptp1)), fi%atoms%taual(:, ic)))
-            ENDDO
-            lm = 0
-            cdum = 0
-            DO l = 0, fi%hybinp%lexp
-               cdum1 = 0
-               DO itype = 1, fi%atoms%ntype
-                  cdum1 = cdum1 + cexp1(itype)*sphbessel_integral( &
-                           fi%atoms, itype, qnrm, nqnrm, &
-                           iqnrm1, iqnrm2, l, fi%hybinp, &
-                           sphbes0, .False., ldum) &
-                           /(2*l + 1)
-               END DO
-               DO M = -l, l
-                  lm = lm + 1
-                  cdum = cdum + cdum1*y1(lm)*y2(lm)
-               ENDDO
-            ENDDO
-            coulomb%data_c(iy,ix) = coulomb%data_c(iy,ix) + (fpi_const)**3*cdum/fi%cell%vol
-         END DO
-         !$OMP end parallel do
-      END DO
-
-#ifdef CPP_MPI
-      call timestart("double g-loop bcast")
       DO igpt0 = 1, ngptm1(ikpt)
          igpt2 = pgptm1(igpt0, ikpt)
          ix = hybdat%nbasp + igpt2
-         root = mod(igpt0-1, fmpi%n_size)
-         call MPI_Bcast(coulomb%data_c(hybdat%nbasp+1,ix), igpt2, MPI_DOUBLE_COMPLEX, root, fmpi%sub_comm, ierr)
-      ENDDO
-      call timestop("double g-loop bcast")
-#endif
+         call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+         if(pe_ix == fmpi%n_rank) then
+            igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
+            iqnrm2 = pqnrm(igpt2, ikpt)
+            q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
+            y2 = CONJG(carr2(:, igpt2))
+            
+            !$OMP PARALLEL DO default(none) &
+            !$OMP private(igpt1, iy, igptp1, iqnrm1, q1, y1, cexp1, ic, itype, lm) &
+            !$OMP private(cdum, l, cdum1, m, ldum) &
+            !$OMP shared(igpt2, coulomb, hybdat, mpdata, ikpt, fi, carr2, pqnrm, igptp2)&
+            !$OMP shared(qnrm, sphbes0, iqnrm2, nqnrm, y2, ix_loc)
+            DO igpt1 = 1, igpt2
+               iy = hybdat%nbasp + igpt1
+               igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
+               iqnrm1 = pqnrm(igpt1, ikpt)
+               q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
+               y1 = carr2(:, igpt1)
+               cexp1 = 0
+               do ic = 1,fi%atoms%nat 
+                  itype = fi%atoms%itype(ic)
+                  cexp1(itype) = cexp1(itype) + &
+                                 EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT( &
+                                       (mpdata%g(:, igptp2) - mpdata%g(:, igptp1)), fi%atoms%taual(:, ic)))
+               ENDDO
+               lm = 0
+               cdum = 0
+               DO l = 0, fi%hybinp%lexp
+                  cdum1 = 0
+                  DO itype = 1, fi%atoms%ntype
+                     cdum1 = cdum1 + cexp1(itype)*sphbessel_integral( &
+                              fi%atoms, itype, qnrm, nqnrm, &
+                              iqnrm1, iqnrm2, l, fi%hybinp, &
+                              sphbes0, .False., ldum) &
+                              /(2*l + 1)
+                  END DO
+                  DO M = -l, l
+                     lm = lm + 1
+                     cdum = cdum + cdum1*y1(lm)*y2(lm)
+                  ENDDO
+               ENDDO
+               coulomb%data_c(iy,ix_loc) = coulomb%data_c(iy,ix_loc) + (fpi_const)**3*cdum/fi%cell%vol
+            END DO
+            !$OMP end parallel do
+         endif !pe_ix
+      END DO
       call timestop("double g-loop")
    end subroutine perform_double_g_loop
 
