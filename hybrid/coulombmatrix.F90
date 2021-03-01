@@ -651,8 +651,8 @@ CONTAINS
             call timestart("double gpt loop")
             DO igpt0 = 1+fmpi%n_rank, ngptm1(1), fmpi%n_size
                igpt2 = pgptm1(igpt0, 1)
-               ix = hybdat%nbasp + igpt2
                if(igpt2 /= 1) then
+                  ix = hybdat%nbasp + igpt2
                   iqnrm2 = pqnrm(igpt2, 1)
                   igptp2 = mpdata%gptm_ptr(igpt2, 1)
                   q2 = MATMUL(mpdata%g(:, igptp2), fi%cell%bmat)
