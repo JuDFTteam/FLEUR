@@ -875,7 +875,16 @@ CONTAINS
          ! check for gamma
          if(any(fmpi%k_list == 1)) then
             CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
-                                    fi%hybinp, hybdat, fmpi, hybdat%nbasm, gridf, coulomb(1))
+                                    fi%hybinp, hybdat, fmpi, hybdat%nbasm, gridf, striped_coul(1))
+            SELECT TYPE(striped_coul)
+            CLASS is (t_mpimat)
+               call striped_coul(1)%to_non_dist(coulomb(1))
+               call coulomb(1)%bcast(0, fmpi%sub_comm)
+            CLASS is (t_mat)
+               call coulomb(1)%copy(striped_coul(1), 1,1)
+            CLASS default
+               CALL judft_error("makes no sence")
+            END SELECT
          endif
       END IF
       
@@ -1155,10 +1164,10 @@ CONTAINS
 
       INTEGER, INTENT(IN)    :: nbasm1(:)
       REAL, INTENT(IN)    :: gridf(:, :)
-      type(t_mat), intent(inout) :: coulomb
+      class(t_mat), intent(inout) :: coulomb
 
       ! - local scalars -
-      INTEGER               :: l, i, j, n, nn, itype, ieq, M
+      INTEGER               :: l, ix, iy, ix_loc, pe_ix, i, j, n, nn, itype, ieq, M
 
       ! - local arrays -
       TYPE(t_mat) :: olap
@@ -1229,14 +1238,17 @@ CONTAINS
       ENDIF
       ! Subtract head contributions from coulomb(:nn,1) to obtain the body
       l = 0
-      DO j = 1, n
-         DO i = 1, j
-            l = l + 1
-            coulomb%data_c(i,j) = coulomb%data_c(i,j) - fpi_const/3 &
-                                       *(dot_PRODUCT(cderiv(:,i), cderiv(:,j)) &
-                                       + (CONJG(coeff(1,i))*claplace(1,j) &
-                                          + CONJG(claplace(1,i))*coeff(1,j))/2)
-         END DO
+      DO ix = 1, n
+         call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+         if(fmpi%n_rank == pe_ix) then
+            DO iy = 1, ix
+               l = l + 1
+               coulomb%data_c(iy,ix_loc) = coulomb%data_c(iy,ix_loc) - fpi_const/3 &
+                                          *(dot_PRODUCT(cderiv(:,iy), cderiv(:,ix)) &
+                                          + (CONJG(coeff(1,iy))*claplace(1,ix) &
+                                             + CONJG(claplace(1,iy))*coeff(1,ix))/2)
+            END DO
+         endif
       END DO
 
       call coulomb%u2l()
