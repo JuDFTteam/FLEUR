@@ -112,7 +112,7 @@ CONTAINS
       REAL    :: sphbes_var(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
       REAL    :: sphbesmoment1(fi%atoms%jmtd, 0:maxval(fi%hybinp%lcutm1))
 
-      COMPLEX     :: y((fi%hybinp%lexp + 1)**2)
+      COMPLEX     :: y((fi%hybinp%lexp + 1)**2), smat
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
       COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:)
@@ -120,7 +120,7 @@ CONTAINS
       INTEGER                    :: ishift, ishift1, ierr, small_sz, my_sz
       INTEGER                    :: iatom, iatom1, mtmt_idx
       INTEGER                    :: indx1, indx2, indx3, indx4
-      TYPE(t_mat)                :: mat, smat, tmp
+      TYPE(t_mat)                :: mat, tmp
       type(t_mat), allocatable   :: coulomb(:), mtmt_repl(:)
       class(t_mat), allocatable  :: striped_coul(:)
 
@@ -487,9 +487,6 @@ CONTAINS
          !     (3) Case < PW | v | PW >
          !
          !     (3a) r,r' everywhere; r everywhere, r' in MT; r in MT, r' everywhere
-         ! Calculate the hermitian matrix smat(i,j) = sum(a) integral(MT(a)) exp[i(Gj-Gi)r] dr
-
-         call calc_mpsmat(fi, mpdata, smat)
 
          ! Coulomb matrix, contribution (3a)
          call timestart("coulomb matrix 3a")
@@ -512,17 +509,18 @@ CONTAINS
                      q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
                      rdum1 = SUM(q1**2)
                      IF (abs(rdum1) > 1e-12) rdum1 = fpi_const/rdum1
+                     smat = calc_smat_elem(fi, mpdata, igptp1, igptp2)
 
                      IF (ikpt == 1) THEN
                         IF (igpt1 /= 1) THEN
-                           striped_coul(1)%data_c(iy,ix_loc) = -smat%data_c(igptp1, igptp2)*rdum1/fi%cell%vol 
+                           striped_coul(1)%data_c(iy,ix_loc) = -smat*rdum1/fi%cell%vol 
                         END IF
                         IF (igpt2 /= 1) THEN
                            striped_coul(1)%data_c(iy,ix_loc) &
-                              = striped_coul(1)%data_c(iy,ix_loc) - smat%data_c(igptp1, igptp2)*rdum2/fi%cell%vol
+                              = striped_coul(1)%data_c(iy,ix_loc) - smat*rdum2/fi%cell%vol
                         END IF
                      ELSE
-                        striped_coul(ikpt)%data_c(iy,ix_loc) = -smat%data_c(igptp1, igptp2)*(rdum1 + rdum2)/fi%cell%vol
+                        striped_coul(ikpt)%data_c(iy,ix_loc) = -smat*(rdum1 + rdum2)/fi%cell%vol
                      END IF
                   END DO
                   IF (ikpt /= 1 .OR. igpt2 /= 1) THEN
@@ -542,7 +540,6 @@ CONTAINS
                CALL judft_error("makes no sence")
             END SELECT
          END DO
-         call smat%free()
          call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
 

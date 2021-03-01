@@ -17,17 +17,18 @@ contains
       !$OMP private(igpt2,igpt1)&
       !$OMP shared(mpdata, fi, smat)
       DO igpt2 = 1, mpdata%num_gpts()
-         DO igpt1 = 1, igpt2
+         DO igpt1 = 1, mpdata%num_gpts() !igpt2
             smat%data_c(igpt1, igpt2) = calc_smat_elem(fi, mpdata, igpt1, igpt2)
          END DO
       END DO
       !$OMP END PARALLEL DO
 
-      call smat%u2l()
+      ! call smat%u2l()
       call timestop("calc smat")
    end subroutine calc_mpsmat
 
    function calc_smat_elem(fi, mpdata, igpt1, igpt2) result(elem)
+         ! Calculate the hermitian matrix smat(i,j) = sum(a) integral(MT(a)) exp[i(Gj-Gi)r] dr
       implicit none
       type(t_fleurinput), intent(in)  :: fi
       TYPE(t_mpdata), intent(in)      :: mpdata 
