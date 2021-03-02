@@ -6,7 +6,7 @@ module m_copy_coul
    use mpi 
 #endif
 contains
-   subroutine copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat )
+   subroutine copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -75,4 +75,93 @@ contains
 
       call timestop("m-indep. part of coulomb mtx")
    end subroutine copy_mt1_from_striped_to_sparse
+
+
+   subroutine copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      class(t_mat), intent(in)          :: coulomb(:)
+      integer, intent(in)               :: ikpt
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+
+      integer :: indx1, itype, l, m, iatom, ic, ierr, info, ix, ix_loc, pe_ix, n
+      real, allocatable    :: tmp_r(:,:,:,:)
+      complex, allocatable :: tmp_c(:,:,:,:)
+
+      if(fi%sym%invs) then
+         allocate (tmp_r(maxval(mpdata%num_radbasfn) - 1, &
+                        -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
+                        0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info, source=0.0)
+      else
+         allocate (tmp_c(maxval(mpdata%num_radbasfn) - 1, &
+                        -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
+                        0:maxval(fi%hybinp%lcutm1) + 1, fi%atoms%nat), stat=info, source=cmplx_0)
+      endif
+      if(info /= 0) call judft_error("can't alloc mt2_tmp")
+
+      call timestart("m-dep. part of coulomb mtx")
+      indx1 = 0
+      do iatom = 1, fi%atoms%nat
+         itype = fi%atoms%itype(iatom)
+         DO l = 0, fi%hybinp%lcutm1(itype)
+            DO M = -l, l
+               ix = indx1 + mpdata%num_radbasfn(l, itype)
+               call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+               if(pe_ix == fmpi%n_rank) then
+                  if (fi%sym%invs) THEN
+                     tmp_r(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
+                        = real(coulomb(ikpt)%data_c(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, ix_loc))
+                  else
+                     tmp_c(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
+                        = coulomb(ikpt)%data_c(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, ix_loc)
+                  endif
+               endif
+
+               indx1 = indx1 + mpdata%num_radbasfn(l, itype)
+            END DO
+         END DO
+      END DO
+      call timestop("m-dep. part of coulomb mtx")
+
+      call timestart("gamma point treatment")
+      ix = hybdat%nbasp + 1
+      call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+      IF (ikpt == 1 .and. pe_ix == fmpi%n_rank) THEN
+         !
+         ! store the contribution of the G=0 plane wave with the MT l=0 functions in
+         ! coulomb_mt2(:mpdata%num_radbasfn(l=0,itype),0,maxval(fi%hybinp%lcutm1)+1,iatom)
+         !
+         ic = 0
+         do iatom = 1,fi%atoms%nat 
+            itype = fi%atoms%itype(iatom)
+            DO n = 1, mpdata%num_radbasfn(0, itype) - 1
+               if (fi%sym%invs) THEN
+                  tmp_r(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) =  real(coulomb(ikpt)%data_c(ic + n, ix_loc))
+               else
+                  tmp_c(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) = coulomb(ikpt)%data_c(ic + n, ix_loc)
+               endif
+            END DO
+            ic = ic + SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
+         END DO
+      endif 
+      call timestop("gamma point treatment")
+
+      if (fi%sym%invs) THEN
+#ifdef CPP_MPI
+         call MPI_Reduce(tmp_r, hybdat%coul(ikpt)%mt2_r, size(tmp_r), MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%sub_comm, ierr)
+#else
+         hybdat%coul(ikpt)%mt2_r = tmp_r
+#endif
+         deallocate (tmp_r)
+      else
+#ifdef CPP_MPI
+         call MPI_Reduce(tmp_c, hybdat%coul(ikpt)%mt2_c, size(tmp_c), MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%sub_comm, ierr)
+#else
+         hybdat%coul(ikpt)%mt2_c = tmp_c
+#endif
+         deallocate (tmp_c)
+      end if
+   end subroutine copy_mt2_from_striped_to_sparse
 end module m_copy_coul

@@ -904,35 +904,9 @@ CONTAINS
          ikpt = fmpi%k_list(im)
          ! unpack coulomb into coulomb(ikpt)
          call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
+         call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
 
          if(fmpi%n_rank == 0 ) then
-            !
-            ! store m-dependent and atom-dependent part of Coulomb matrix in MT spheres
-            ! in coulomb_mt2(:mpdata%num_radbasfn(l,itype)-1,-l:l,l,iatom)
-            !
-            call timestart("m-dep. part of coulomb mtx")
-            indx1 = 0
-            iatom = 0
-            DO itype = 1, fi%atoms%ntype
-               DO ineq = 1, fi%atoms%neq(itype)
-                  iatom = iatom + 1
-                  DO l = 0, fi%hybinp%lcutm1(itype)
-                     DO M = -l, l
-                        if (fi%sym%invs) THEN
-                           hybdat%coul(ikpt)%mt2_r(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
-                              = real(coulomb(ikpt)%data_c(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, indx1 + mpdata%num_radbasfn(l, itype)))
-                        else
-                           hybdat%coul(ikpt)%mt2_c(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom) &
-                              = coulomb(ikpt)%data_c(indx1 + 1:indx1 + mpdata%num_radbasfn(l, itype) - 1, indx1 + mpdata%num_radbasfn(l, itype))
-                        endif
-
-                        indx1 = indx1 + mpdata%num_radbasfn(l, itype)
-
-                     END DO
-                  END DO
-               END DO
-            END DO
-            call timestop("m-dep. part of coulomb mtx")
 
             !
             ! due to the subtraction of the divergent part at the Gamma point
@@ -940,26 +914,6 @@ CONTAINS
             !
             call timestart("gamma point treatment")
             IF (ikpt == 1) THEN
-               !
-               ! store the contribution of the G=0 plane wave with the MT l=0 functions in
-               ! coulomb_mt2(:mpdata%num_radbasfn(l=0,itype),0,maxval(fi%hybinp%lcutm1)+1,iatom)
-               !
-               ic = 0
-               iatom = 0
-               DO itype = 1, fi%atoms%ntype
-                  DO ineq = 1, fi%atoms%neq(itype)
-                     iatom = iatom + 1
-                     DO n = 1, mpdata%num_radbasfn(0, itype) - 1
-                        if (fi%sym%invs) THEN
-                           hybdat%coul(ikpt)%mt2_r(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) =  real(coulomb(ikpt)%data_c(ic + n, hybdat%nbasp + 1))
-                        else
-                           hybdat%coul(ikpt)%mt2_c(n, 0, maxval(fi%hybinp%lcutm1) + 1, iatom) = coulomb(ikpt)%data_c(ic + n, hybdat%nbasp + 1)
-                        endif
-                     END DO
-                     ic = ic + SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
-                  END DO
-               END DO
-
                !
                ! store the contributions between the MT s-like functions at atom1 and
                ! and the constant function at a different atom2
