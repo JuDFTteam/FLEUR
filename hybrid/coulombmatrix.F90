@@ -58,6 +58,7 @@ CONTAINS
       use m_ylm
       use m_calc_l_m_from_lm
       use m_calc_mpsmat
+      use m_copy_coul
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
@@ -105,7 +106,7 @@ CONTAINS
       REAL, ALLOCATABLE   :: sphbesmoment(:, :, :)
       REAL, ALLOCATABLE   :: sphbes0(:, :, :)
       REAL, ALLOCATABLE   :: olap(:, :, :, :), integral(:, :, :, :)
-      REAL, ALLOCATABLE   :: gridf(:, :), tmp_4r(:,:,:,:)
+      REAL, ALLOCATABLE   :: gridf(:, :)
       REAL                       :: facA(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL                       :: facB(0:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
       REAL                       :: facC(-1:MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1))
@@ -115,7 +116,7 @@ CONTAINS
       COMPLEX     :: y((fi%hybinp%lexp + 1)**2), smat
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
-      COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:), tmp_4c(:,:,:,:)
+      COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:)
 
       INTEGER                    :: ishift, ishift1, ierr, small_sz, my_sz
       INTEGER                    :: iatom, iatom1, mtmt_idx, sz
@@ -902,62 +903,7 @@ CONTAINS
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          ! unpack coulomb into coulomb(ikpt)
-
-         ! only one processor per k-point calculates MT convolution
-         !
-         ! store m-independent part of Coulomb matrix in MT spheres
-         ! in coulomb_mt1(:mpdata%num_radbasfn(l,itype)-1,:mpdata%num_radbasfn(l,itype)-1,l,itype)
-         !
-         sz = maxval(mpdata%num_radbasfn) - 1
-         if (fi%sym%invs) THEN
-            allocate(tmp_4r(sz, sz, 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), source=0.0)
-         else 
-            allocate(tmp_4c(sz, sz, 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), source=cmplx_0)
-         endif
-         call timestart("m-indep. part of coulomb mtx")
-         indx1 = 0
-         DO itype = 1, fi%atoms%ntype
-            DO ineq = 1, fi%atoms%neq(itype)
-               DO l = 0, fi%hybinp%lcutm1(itype)
-                  IF (ineq == 1) THEN
-                     DO n = 1, mpdata%num_radbasfn(l, itype) - 1
-                        do i = 1, mpdata%num_radbasfn(l, itype) - 1
-                           call glob_to_loc(fmpi, indx1+i, pe_ix, ix_loc)
-                           if(fmpi%n_rank == pe_ix) then
-                              if (fi%sym%invs) THEN
-                                 tmp_4r(n, i, l, itype) = real(striped_coul(ikpt)%data_c(indx1 + n, ix_loc))
-                              else 
-                                 tmp_4c(n, i, l, itype) = real(striped_coul(ikpt)%data_c(indx1 + n, ix_loc))
-                              endif
-                           endif
-                        enddo
-                     END DO
-                  END IF
-
-                  indx1 = indx1 + (2*l + 1)*mpdata%num_radbasfn(l, itype)
-               END DO
-            END DO
-         END do
-
-         if (fi%sym%invs) THEN
-#ifdef CPP_MPI             
-               call MPI_Reduce(tmp_4r, hybdat%coul(ikpt)%mt1_r, size(tmp_4r), MPI_DOUBLE_PRECISION,&
-                              MPI_SUM, 0, fmpi%sub_comm, ierr)
-#else
-            hybdat%coul(ikpt)%mt1_r = tmp_4r
-#endif
-            deallocate(tmp_4r)
-         else 
-#ifdef CPP_MPI
-            call MPI_Reduce(tmp_4c, hybdat%coul(ikpt)%mt1_c, size(tmp_4c), MPI_DOUBLE_COMPLEX,&
-                              MPI_SUM, 0, fmpi%sub_comm, ierr) 
-#else
-            hybdat%coul(ikpt)%mt1_c = tmp_4c 
-#endif
-            deallocate(tmp_4c)
-         endif
-
-         call timestop("m-indep. part of coulomb mtx")
+         call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
 
          if(fmpi%n_rank == 0 ) then
             !
