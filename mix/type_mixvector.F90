@@ -109,12 +109,12 @@ CONTAINS
       IF (ALLOCATED(g_vac)) DEALLOCATE (g_vac)
       IF (ALLOCATED(g_misc)) DEALLOCATE (g_misc)
       !restore defaults
-      pw_start(3) = 0
-      mt_start(3) = 0
-      vac_start(3) = 0
+      pw_start = 0
+      mt_start = 0
+      vac_start = 0
       misc_length = 0
-      misc_start(3) = 0
-      spin_here(3) = .TRUE.
+      misc_start = 0
+      spin_here = .TRUE.
       pw_here = .TRUE.
       mt_here = .TRUE.
       vac_here = .TRUE.
