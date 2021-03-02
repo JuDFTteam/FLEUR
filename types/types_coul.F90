@@ -20,6 +20,7 @@ module m_types_coul
    contains
       procedure :: init => t_coul_init
       procedure :: alloc => t_coul_alloc
+      procedure :: mini_alloc => t_coul_mini_alloc
       procedure :: free => t_coul_free
       procedure :: mpi_bcast => t_coul_mpi_bc
    end type t_coul
@@ -158,4 +159,30 @@ contains
          if (.not. coul%mtir%allocated()) call coul%mtir%alloc(.False., isize, isize)
       endif
    end subroutine t_coul_alloc
+
+   subroutine t_coul_mini_alloc(coul)
+      implicit NONE
+      class(t_coul), intent(inout) :: coul
+
+      if (.not. allocated(coul%mt1_r)) then
+         allocate (coul%mt1_r(1,1,1,1))
+      endif
+      if (.not. allocated(coul%mt2_r)) then
+         allocate (coul%mt2_r(1, 1, 1, 1))
+      endif
+
+      if (.not. allocated(coul%mt3_r)) then
+         allocate (coul%mt3_r(1, 1, 1))
+      endif
+      if (.not. allocated(coul%mt1_c)) then
+         allocate (coul%mt1_c(1, 1, 1, 1))
+      endif
+      if (.not. allocated(coul%mt2_c)) then
+         allocate (coul%mt2_c(1, 1, 1, 1))
+      endif
+
+      if (.not. allocated(coul%mt3_c)) then
+         allocate (coul%mt3_c(1, 1, 1))
+      endif
+   end subroutine t_coul_mini_alloc
 end module m_types_coul
