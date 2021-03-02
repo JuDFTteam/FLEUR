@@ -905,50 +905,12 @@ CONTAINS
          ! unpack coulomb into coulomb(ikpt)
          call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
          call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
+         call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
 
          if(fmpi%n_rank == 0 ) then
-
-            !
-            ! due to the subtraction of the divergent part at the Gamma point
-            ! additional contributions occur
-            !
             call timestart("gamma point treatment")
+
             IF (ikpt == 1) THEN
-               !
-               ! store the contributions between the MT s-like functions at atom1 and
-               ! and the constant function at a different atom2
-               !
-               iatom = 0
-               ic = 0
-               DO itype = 1, fi%atoms%ntype
-                  ishift = SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
-                  DO ineq = 1, fi%atoms%neq(itype)
-                     iatom = iatom + 1
-                     ic1 = ic + mpdata%num_radbasfn(0, itype)
-
-                     iatom1 = 0
-                     ic2 = 0
-                     DO itype1 = 1, fi%atoms%ntype
-                        ishift1 = SUM([((2*l1 + 1)*mpdata%num_radbasfn(l1, itype1), l1=0, fi%hybinp%lcutm1(itype1))])
-                        DO ineq1 = 1, fi%atoms%neq(itype1)
-                           iatom1 = iatom1 + 1
-                           ic3 = ic2 + 1
-                           ic4 = ic3 + mpdata%num_radbasfn(0, itype1) - 2
-
-                           IF (fi%sym%invs) THEN
-                              hybdat%coul(ikpt)%mt3_r(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) = real(coulomb(ikpt)%data_c(ic1, ic3:ic4))
-                           ELSE
-                              hybdat%coul(ikpt)%mt3_c(:mpdata%num_radbasfn(0, itype1) - 1, iatom, iatom1) &
-                                 = CONJG(coulomb(ikpt)%data_c(ic1, ic3:ic4))
-                           ENDIF
-                           ic2 = ic2 + ishift1
-                        END DO
-                     END DO
-
-                     ic = ic + ishift
-                  END DO
-               END DO
-
                !test
                iatom = 0
                DO itype = 1, fi%atoms%ntype

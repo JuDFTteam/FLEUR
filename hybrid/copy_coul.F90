@@ -19,6 +19,8 @@ contains
       complex, allocatable :: tmp_4c(:, :, :, :)
       integer :: indx1, sz, itype, ineq, l, i, ierr, ix_loc, n, pe_ix
 
+      call timestart("copy_mt1")
+
       ! only one processor per k-point calculates MT convolution
       !
       ! store m-independent part of Coulomb matrix in MT spheres
@@ -30,7 +32,6 @@ contains
       else
          allocate (tmp_4c(sz, sz, 0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype), source=cmplx_0)
       end if
-      call timestart("m-indep. part of coulomb mtx")
       indx1 = 0
       DO itype = 1, fi%atoms%ntype
          DO ineq = 1, fi%atoms%neq(itype)
@@ -72,8 +73,7 @@ contains
 #endif
          deallocate (tmp_4c)
       end if
-
-      call timestop("m-indep. part of coulomb mtx")
+      call timestop("copy_mt1")
    end subroutine copy_mt1_from_striped_to_sparse
 
 
@@ -90,6 +90,7 @@ contains
       real, allocatable    :: tmp_r(:,:,:,:)
       complex, allocatable :: tmp_c(:,:,:,:)
 
+      call timestart("copy_mt2")
       if(fi%sym%invs) then
          allocate (tmp_r(maxval(mpdata%num_radbasfn) - 1, &
                         -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), &
@@ -101,7 +102,6 @@ contains
       endif
       if(info /= 0) call judft_error("can't alloc mt2_tmp")
 
-      call timestart("m-dep. part of coulomb mtx")
       indx1 = 0
       do iatom = 1, fi%atoms%nat
          itype = fi%atoms%itype(iatom)
@@ -123,9 +123,7 @@ contains
             END DO
          END DO
       END DO
-      call timestop("m-dep. part of coulomb mtx")
 
-      call timestart("gamma point treatment")
       ix = hybdat%nbasp + 1
       call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
       IF (ikpt == 1 .and. pe_ix == fmpi%n_rank) THEN
@@ -146,8 +144,7 @@ contains
             ic = ic + SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
          END DO
       endif 
-      call timestop("gamma point treatment")
-
+      
       if (fi%sym%invs) THEN
 #ifdef CPP_MPI
          call MPI_Reduce(tmp_r, hybdat%coul(ikpt)%mt2_r, size(tmp_r), MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%sub_comm, ierr)
@@ -163,5 +160,76 @@ contains
 #endif
          deallocate (tmp_c)
       end if
+      call timestop("copy_mt2")
    end subroutine copy_mt2_from_striped_to_sparse
+
+   subroutine copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      !
+      ! store the contributions between the MT s-like functions at atom1 and
+      ! and the constant function at a different atom2
+      !
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      class(t_mat), intent(in)          :: coulomb(:)
+      integer, intent(in)               :: ikpt
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+
+      integer :: ic, iatom, itype, ishift, iatom1, ic1, ic2, itype1, ishift1, pe, loc, i, ierr, l, l1
+      real, allocatable    :: tmp_r(:,:,:)
+      complex, allocatable :: tmp_c(:,:,:)
+
+      IF (ikpt == 1) THEN
+         call timestart("copy_mt3")
+         if(fi%sym%invs) then
+            allocate(tmp_r(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat), source=0.0)
+         else
+            allocate(tmp_c(maxval(mpdata%num_radbasfn) - 1, fi%atoms%nat, fi%atoms%nat), source=cmplx_0)
+         endif
+
+         ic = 0
+         do iatom = 1, fi%atoms%nat 
+            itype = fi%atoms%itype(iatom)
+            ishift = SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))])
+            ic1 = ic + mpdata%num_radbasfn(0, itype)
+
+            ic2 = 0
+            do iatom1 = 1,fi%atoms%nat
+               itype1 = fi%atoms%itype(iatom1)
+               ishift1 = SUM([((2*l1 + 1)*mpdata%num_radbasfn(l1, itype1), l1=0, fi%hybinp%lcutm1(itype1))])
+
+               do i = 1,mpdata%num_radbasfn(0, itype1) - 1
+                  call glob_to_loc(fmpi, ic2+i, pe, loc)
+                  if(fmpi%n_rank == pe) then
+                     IF (fi%sym%invs) THEN
+                        tmp_r(i, iatom, iatom1) = real(coulomb(ikpt)%data_c(ic1, loc))
+                     ELSE
+                        tmp_c(i, iatom, iatom1) = CONJG(coulomb(ikpt)%data_c(ic1, loc))
+                     ENDIF
+                  endif
+               enddo
+               ic2 = ic2 + ishift1
+            END DO
+            ic = ic + ishift
+         END DO
+
+         if (fi%sym%invs) THEN
+#ifdef CPP_MPI
+            call MPI_Reduce(tmp_r, hybdat%coul(ikpt)%mt3_r, size(tmp_r), MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%sub_comm, ierr)
+#else
+            hybdat%coul(ikpt)%mt2_r = tmp_r
+#endif
+            deallocate (tmp_r)
+         else
+#ifdef CPP_MPI
+            call MPI_Reduce(tmp_c, hybdat%coul(ikpt)%mt3_c, size(tmp_c), MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%sub_comm, ierr)
+#else
+            hybdat%coul(ikpt)%mt2_c = tmp_c
+#endif
+            deallocate (tmp_c)
+         end if
+         call timestop("copy_mt3")
+      endif ! ikpt == 1
+   end subroutine copy_mt3_from_striped_to_sparse
 end module m_copy_coul
