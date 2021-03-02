@@ -218,14 +218,14 @@ contains
 #ifdef CPP_MPI
             call MPI_Reduce(tmp_r, hybdat%coul(ikpt)%mt3_r, size(tmp_r), MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%sub_comm, ierr)
 #else
-            hybdat%coul(ikpt)%mt2_r = tmp_r
+            hybdat%coul(ikpt)%mt3_r = tmp_r
 #endif
             deallocate (tmp_r)
          else
 #ifdef CPP_MPI
             call MPI_Reduce(tmp_c, hybdat%coul(ikpt)%mt3_c, size(tmp_c), MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%sub_comm, ierr)
 #else
-            hybdat%coul(ikpt)%mt2_c = tmp_c
+            hybdat%coul(ikpt)%mt3_c = tmp_c
 #endif
             deallocate (tmp_c)
          end if
