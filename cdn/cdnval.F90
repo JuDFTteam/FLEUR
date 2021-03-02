@@ -134,7 +134,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    CALL timestart("cdnval")
 
    call timestart("init")
-   l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
+   l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco).AND.atoms%n_hia==0
 
    ! Klueppelberg (force level 3)
    IF (input%l_f.AND.(input%f_level.GE.3)) THEN
