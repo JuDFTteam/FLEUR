@@ -1358,6 +1358,7 @@ CONTAINS
                else  
                   coul_submtx%data_c(j,recv_loc) = conjg(coulomb%data_c(i,send_loc))
                endif
+#ifdef CPP_MPI
             elseif(pe_send == fmpi%n_rank) then
                call MPI_Send(coulomb%data_c(i,send_loc), 1, MPI_DOUBLE_COMPLEX, pe_recv, j + 10000*i, fmpi%sub_comm, ierr)
             elseif(pe_recv == fmpi%n_rank) then 
@@ -1367,6 +1368,7 @@ CONTAINS
                else 
                   coul_submtx%data_c(j, recv_loc) = conjg(cdum) 
                endif
+#endif
             endif
          enddo
       enddo 
@@ -1392,6 +1394,7 @@ CONTAINS
                else  
                   coulomb%data_c(i,recv_loc) = conjg(coul_submtx%data_c(j,send_loc))
                endif
+#ifdef CPP_MPI
             elseif(pe_send == fmpi%n_rank) then
                if(coul_submtx%l_real) then
                   cdum = coul_submtx%data_r(j,send_loc)
@@ -1401,6 +1404,7 @@ CONTAINS
                call MPI_Send(cdum, 1, MPI_DOUBLE_COMPLEX, pe_recv, j + 10000*i, fmpi%sub_comm, ierr)
             elseif(pe_recv == fmpi%n_rank) then
                call MPI_Recv(coulomb%data_c(i,recv_loc), 1, MPI_DOUBLE_COMPLEX, pe_send, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE,ierr)
+#endif
             endif
          enddo
       enddo
