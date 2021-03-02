@@ -173,6 +173,8 @@ CONTAINS
               CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
               CALL smat%free()
               CALL hmat%free()
+            else
+              ne_all=0
             endif
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
             if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
@@ -225,8 +227,10 @@ CONTAINS
                                                       hint=errmsg, calledby="eigen.F90")
             END IF
 
-            call zMat%free()
-            deallocate(zMat)
+            if (allocated(zMat)) THEN
+               CALL zMat%free()
+               DEALLOCATE(zMat)
+            endif   
          END DO  k_loop
       END DO ! spin loop ends
 
