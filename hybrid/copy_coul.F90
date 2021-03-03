@@ -232,4 +232,33 @@ contains
          call timestop("copy_mt3")
       endif ! ikpt == 1
    end subroutine copy_mt3_from_striped_to_sparse
+
+   subroutine test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      integer, intent(in)               :: ikpt
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+
+      integer :: iatom, itype
+      call timestart("test_mt2_mt3")
+      if (fmpi%n_rank == 0 .and. ikpt == 1) then
+         !test
+         do iatom =1,fi%atoms%nat 
+            itype = fi%atoms%itype(iatom)
+            if (fi%sym%invs) THEN
+               IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_r(:mpdata%num_radbasfn(0, itype) - 1, 0, 0, iatom) &
+                              - hybdat%coul(ikpt)%mt3_r(:mpdata%num_radbasfn(0, itype) - 1, iatom, iatom))) > 1E-08) &
+                  call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
+
+            else
+               IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_c(:mpdata%num_radbasfn(0, itype) - 1, 0, 0, iatom) &
+                              - hybdat%coul(ikpt)%mt3_c(:mpdata%num_radbasfn(0, itype) - 1, iatom, iatom))) > 1E-08) &
+                  call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
+            end if
+         END DO
+      END IF
+      call timestop("test_mt2_mt3")
+   end subroutine test_mt2_mt3 
 end module m_copy_coul

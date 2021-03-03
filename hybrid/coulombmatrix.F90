@@ -906,30 +906,8 @@ CONTAINS
          call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
          call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
          call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
-
+         call test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
          if(fmpi%n_rank == 0 ) then
-            call timestart("gamma point treatment")
-
-            IF (ikpt == 1) THEN
-               !test
-               iatom = 0
-               DO itype = 1, fi%atoms%ntype
-                  DO ineq = 1, fi%atoms%neq(itype)
-                     iatom = iatom + 1
-                     if (fi%sym%invs) THEN
-                        IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_r(:mpdata%num_radbasfn(0, itype) - 1, 0, 0, iatom) &
-                                       - hybdat%coul(ikpt)%mt3_r(:mpdata%num_radbasfn(0, itype) - 1, iatom, iatom))) > 1E-08) &
-                           call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
-
-                     else
-                        IF (MAXVAL(ABS(hybdat%coul(ikpt)%mt2_c(:mpdata%num_radbasfn(0, itype) - 1, 0, 0,iatom) &
-                                       - hybdat%coul(ikpt)%mt3_c(:mpdata%num_radbasfn(0, itype) - 1, iatom,iatom))) > 1E-08) &
-                           call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
-                     endif
-                  END DO
-               END DO
-            END IF
-            call timestop("gamma point treatment")
 
             !
             ! add the residual MT contributions, i.e. those functions with an moment,
