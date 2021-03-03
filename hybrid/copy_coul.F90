@@ -395,6 +395,7 @@ contains
       integer :: ic, iatom, l, m, ix, ix_loc, pe_ix, i, itype, ierr
       real, allocatable    :: tmp(:)
 
+      call timestart("copy_ir")
       !
       ! add ir part to the matrix coulomb_mtir
       !
@@ -444,5 +445,6 @@ contains
             endif
          enddo
       end if
+      call timestop("copy_ir")
    end subroutine copy_ir
 end module m_copy_coul
