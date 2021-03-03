@@ -123,7 +123,7 @@ CONTAINS
       INTEGER                    :: indx1, indx2, indx3, indx4
       TYPE(t_mat)                :: mat, tmp
       type(t_mat), allocatable   :: mtmt_repl(:)
-      class(t_mat), allocatable  :: striped_coul(:)
+      class(t_mat), allocatable  :: coul(:)
 
       CALL timestart("Coulomb matrix setup")
       call timestart("prep in coulomb")
@@ -159,22 +159,22 @@ CONTAINS
       call timestart("coulomb allocation")
 
       if(fmpi%n_size == 1) then
-         allocate(t_mat::striped_coul(fi%kpts%nkpt))
+         allocate(t_mat::coul(fi%kpts%nkpt))
       else
-         allocate(t_mpimat::striped_coul(fi%kpts%nkpt))
+         allocate(t_mpimat::coul(fi%kpts%nkpt))
       endif
       do ikpt = 1, fi%kpts%nkpt 
          if(any(ikpt == fmpi%k_list))then 
-            call striped_coul(ikpt)%init(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt), fmpi%sub_comm, .false.)
+            call coul(ikpt)%init(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt), fmpi%sub_comm, .false.)
          else
-            call striped_coul(ikpt)%init(.False., 1, 1, fmpi%sub_comm, .false.)
+            call coul(ikpt)%init(.False., 1, 1, fmpi%sub_comm, .false.)
          endif 
       enddo
       call timestop("coulomb allocation") 
 
       IF (fmpi%irank == 0) then
          write (oUnit,*) "Size of coulomb matrix: " //&
-                            float2str(sum([(striped_coul(fmpi%k_list(i))%size_mb(), i=1,size(fmpi%k_list))])) // " MB"
+                            float2str(sum([(coul(fmpi%k_list(i))%size_mb(), i=1,size(fmpi%k_list))])) // " MB"
       endif
 
       !     Generate Symmetry:
@@ -433,7 +433,7 @@ CONTAINS
                                              mtmt_term = mtmt_repl(mtmt_idx)%data_r(n1, n2)
                                           endif
                                        
-                                          striped_coul(ikpt)%data_c(iy, ix_loc) = mtmt_term + EXP(CMPLX(0.0, 1.0)*tpi_const* &
+                                          coul(ikpt)%data_c(iy, ix_loc) = mtmt_term + EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                                                      dot_PRODUCT(fi%kpts%bk(:, ikpt), &
                                                                                  fi%atoms%taual(:, ic2) - fi%atoms%taual(:, ic1))) &
                                                                *rdum*structconst(lm, ic1, ic2, ikpt)
@@ -449,11 +449,11 @@ CONTAINS
             END DO
          END DO
 
-         call striped_coul(ikpt)%u2l()
+         call coul(ikpt)%u2l()
 
          IF (fi%sym%invs) THEN
             !symmetrize makes the Coulomb matrix real symmetric     
-            CALL symmetrize_mpimat(fi, fmpi, striped_coul(ikpt)%data_c, [1,1],[hybdat%nbasp, hybdat%nbasp], &
+            CALL symmetrize_mpimat(fi, fmpi, coul(ikpt)%data_c, [1,1],[hybdat%nbasp, hybdat%nbasp], &
                                    3, .FALSE., mpdata%num_radbasfn)
          ENDIF
          call timestop("MT-MT part")
@@ -473,9 +473,9 @@ CONTAINS
          DO im = 1, size(fmpi%k_list)
             ikpt = fmpi%k_list(im)
             call loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
-                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, striped_coul(ikpt))
+                                   qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coul(ikpt))
 
-            call striped_coul(ikpt)%u2l()
+            call coul(ikpt)%u2l()
          END DO
 
          call timestop("loop over interst.")
@@ -511,22 +511,22 @@ CONTAINS
 
                      IF (ikpt == 1) THEN
                         IF (igpt1 /= 1) THEN
-                           striped_coul(1)%data_c(iy,ix_loc) = -smat*rdum1/fi%cell%vol 
+                           coul(1)%data_c(iy,ix_loc) = -smat*rdum1/fi%cell%vol 
                         END IF
                         IF (igpt2 /= 1) THEN
-                           striped_coul(1)%data_c(iy,ix_loc) &
-                              = striped_coul(1)%data_c(iy,ix_loc) - smat*rdum2/fi%cell%vol
+                           coul(1)%data_c(iy,ix_loc) &
+                              = coul(1)%data_c(iy,ix_loc) - smat*rdum2/fi%cell%vol
                         END IF
                      ELSE
-                        striped_coul(ikpt)%data_c(iy,ix_loc) = -smat*(rdum1 + rdum2)/fi%cell%vol
+                        coul(ikpt)%data_c(iy,ix_loc) = -smat*(rdum1 + rdum2)/fi%cell%vol
                      END IF
                   END DO
                   IF (ikpt /= 1 .OR. igpt2 /= 1) THEN
-                     striped_coul(ikpt)%data_c(iy,ix_loc) = striped_coul(ikpt)%data_c(iy,ix_loc)  + rdum2
+                     coul(ikpt)%data_c(iy,ix_loc) = coul(ikpt)%data_c(iy,ix_loc)  + rdum2
                   END IF
                endif
             END DO
-            call striped_coul(ikpt)%u2l()
+            call coul(ikpt)%u2l()
          END DO
          call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
@@ -602,7 +602,7 @@ CONTAINS
                   call timestart("igpt1")
                   !$OMP PARALLEL DO default(none) &
                   !$OMP private(igpt1, iy, igptp1, iqnrm1, csum, ic, itype, lm, l, m, cdum) &
-                  !$OMP shared(fi, carr2b, sphbesmoment, igpt2, ix_loc, carr2, carr2a, striped_coul, hybdat, mpdata, ikpt, pqnrm)
+                  !$OMP shared(fi, carr2b, sphbesmoment, igpt2, ix_loc, carr2, carr2a, coul, hybdat, mpdata, ikpt, pqnrm)
                   DO igpt1 = 1, igpt2
                      iy = hybdat%nbasp + igpt1
                      igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -616,14 +616,14 @@ CONTAINS
                            csum = csum + cdum*carr2(ic, lm)*CONJG(carr2a(lm, igpt1)) ! for coulomb
                         END DO
                      END DO
-                     striped_coul(ikpt)%data_c(iy,ix_loc) = striped_coul(ikpt)%data_c(iy,ix_loc) + csum/fi%cell%vol
+                     coul(ikpt)%data_c(iy,ix_loc) = coul(ikpt)%data_c(iy,ix_loc) + csum/fi%cell%vol
                   END DO
                   !$OMP end parallel do
                   call timestop("igpt1")
                endif ! pe_ix
             END DO !igpt0
             deallocate (carr2, carr2a, carr2b, structconst1)
-            call striped_coul(ikpt)%u2l() 
+            call coul(ikpt)%u2l() 
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
@@ -649,7 +649,7 @@ CONTAINS
 
                      !$OMP PARALLEL DO default(none) schedule(dynamic) &
                      !$OMP shared(igpt2, hybdat, fi, pqnrm, mpdata, q2, qnorm2, igptp2) &
-                     !$OMP shared(striped_coul, ix_loc, rdum, sphbesmoment, iqnrm2)&
+                     !$OMP shared(coul, ix_loc, rdum, sphbesmoment, iqnrm2)&
                      !$OMP private(igpt1, iy, iqnrm1, igptp1, q1, qnorm1, rdum1, iatm1) &
                      !$OMP private(itype1, iatm2, itype2, cdum)
                      DO igpt1 = 2, igpt2
@@ -666,7 +666,7 @@ CONTAINS
                               cdum = EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                        (-dot_PRODUCT(mpdata%g(:, igptp1), fi%atoms%taual(:, iatm1)) &
                                           + dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, iatm2))))
-                              striped_coul(1)%data_c(iy, ix_loc) = striped_coul(1)%data_c(iy, ix_loc) + rdum*cdum*( &
+                              coul(1)%data_c(iy, ix_loc) = coul(1)%data_c(iy, ix_loc) + rdum*cdum*( &
                                                 -sphbesmoment(1, itype1, iqnrm1) &
                                                 *sphbesmoment(1, itype2, iqnrm2)*rdum1/3 &
                                                 - sphbesmoment(0, itype1, iqnrm1) &
@@ -685,7 +685,7 @@ CONTAINS
                endif
             END DO
             call timestop("double gpt loop")
-            call striped_coul(1)%u2l()   
+            call coul(1)%u2l()   
 
             ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
             call timestart("igpt1=1 loop")
@@ -706,7 +706,7 @@ CONTAINS
                               DO ineq2 = 1, fi%atoms%neq(itype2)
                                  ic2 = ic2 + 1
                                  cdum = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, ic2)))
-                                 striped_coul(1)%data_c(iy, ix_loc) = striped_coul(1)%data_c(iy, ix_loc) &
+                                 coul(1)%data_c(iy, ix_loc) = coul(1)%data_c(iy, ix_loc) &
                                                    + rdum*cdum*fi%atoms%rmt(itype1)**3*( &
                                                    +sphbesmoment(0, itype2, iqnrm2)/30*fi%atoms%rmt(itype1)**2 &
                                                    - sphbesmoment(2, itype2, iqnrm2)/18 &
@@ -719,7 +719,7 @@ CONTAINS
                endif
             END DO
             call timestop("igpt1=1 loop")
-            call striped_coul(1)%u2l()
+            call coul(1)%u2l()
 
             ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
             call timestart("igpt1=igpt2=1 loop")
@@ -731,7 +731,7 @@ CONTAINS
                   DO ineq1 = 1, fi%atoms%neq(itype1)
                      DO itype2 = 1, fi%atoms%ntype
                         DO ineq2 = 1, fi%atoms%neq(itype2)
-                           striped_coul(1)%data_c(iy, ix_loc) = striped_coul(1)%data_c(iy, ix_loc) &
+                           coul(1)%data_c(iy, ix_loc) = coul(1)%data_c(iy, ix_loc) &
                                              + rdum*fi%atoms%rmt(itype1)**3*fi%atoms%rmt(itype2)**3* &
                                              (fi%atoms%rmt(itype1)**2 + fi%atoms%rmt(itype2)**2)/90
                         END DO
@@ -740,7 +740,7 @@ CONTAINS
                END DO
             endif ! pe_ix
             call timestop("igpt1=igpt2=1 loop")
-            call striped_coul(1)%u2l()
+            call coul(1)%u2l()
 
             call timestop("add corrections from higher orders")
          endif
@@ -772,8 +772,8 @@ CONTAINS
             END DO
             call timestop("harmonics setup")
             call perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
-                                       pqnrm,qnrm, nqnrm, ikpt, striped_coul(ikpt))
-            call striped_coul(ikpt)%u2l()
+                                       pqnrm,qnrm, nqnrm, ikpt, coul(ikpt))
+            call coul(ikpt)%u2l()
          END DO
          call timestop("loop 2")
          deallocate (carr2)
@@ -799,7 +799,7 @@ CONTAINS
                ix = hybdat%nbasp + igpt2
                call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
                if(pe_ix == fmpi%n_rank) then 
-                  carr2(:hybdat%nbasm(ikpt),2) = striped_coul(ikpt)%data_c(:hybdat%nbasm(ikpt),ix_loc)
+                  carr2(:hybdat%nbasm(ikpt),2) = coul(ikpt)%data_c(:hybdat%nbasm(ikpt),ix_loc)
                endif
 #ifdef CPP_MPI
                call timestart("bcast carr2")
@@ -828,12 +828,12 @@ CONTAINS
                      ix = hybdat%nbasp + igpt1
                      call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
                      if(pe_ix == fmpi%n_rank) then
-                        striped_coul(ikpt)%data_c(:hybdat%nbasp + igpt1,ix_loc) = carr2(:hybdat%nbasp + igpt1, 1)
+                        coul(ikpt)%data_c(:hybdat%nbasp + igpt1,ix_loc) = carr2(:hybdat%nbasp + igpt1, 1)
                      endif 
 
                      do ix = 1,hybdat%nbasp + igpt1
                         call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
-                        if(pe_ix == fmpi%n_rank) striped_coul(ikpt)%data_c(hybdat%nbasp + igpt1, ix_loc) = conjg(carr2(ix, 1))
+                        if(pe_ix == fmpi%n_rank) coul(ikpt)%data_c(hybdat%nbasp + igpt1, ix_loc) = conjg(carr2(ix, 1))
                      enddo
 
                      iarr(igpt1) = 1
@@ -845,7 +845,7 @@ CONTAINS
                END DO
                nsym_gpt(igpt0, ikpt) = ic
             END DO ! igpt0
-            call striped_coul(ikpt)%u2l()
+            call coul(ikpt)%u2l()
          END DO ! ikpt
          call timestop("loop 3")
          call timestart("gap 1:")
@@ -863,7 +863,7 @@ CONTAINS
          ! check for gamma
          if(any(fmpi%k_list == 1)) then
             CALL subtract_sphaverage(fi%sym, fi%cell, fi%atoms, mpdata, &
-                                    fi%hybinp, hybdat, fmpi, hybdat%nbasm, gridf, striped_coul(1))
+                                    fi%hybinp, hybdat, fmpi, hybdat%nbasm, gridf, coul(1))
          endif
       END IF
       
@@ -873,8 +873,8 @@ CONTAINS
       call timestop("gap 1:")
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
-         call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, ikpt, striped_coul(ikpt))
-         call striped_coul(ikpt)%u2l()
+         call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, ikpt, coul(ikpt))
+         call coul(ikpt)%u2l()
       enddo
 
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
@@ -890,12 +890,12 @@ CONTAINS
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          ! unpack coulomb into coulomb(ikpt)
-         call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
-         call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
-         call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
+         call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
+         call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
+         call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
          call test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
-         call copy_residual_mt_contrib(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
-         call copy_ir(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
+         call copy_residual_mt_contrib(fi, fmpi, mpdata, coul, ikpt, hybdat)
+         call copy_ir(fi, fmpi, mpdata, coul, ikpt, hybdat)
       END DO ! ikpt
       call timestop("loop bla")
       CALL timestop("Coulomb matrix setup")
@@ -1189,7 +1189,7 @@ CONTAINS
    end subroutine apply_inverse_olaps
 
    subroutine loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
-                                qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, striped_coul)
+                                qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coul)
       use m_types
       use m_juDFT
       use m_ylm, only: ylm4
@@ -1206,7 +1206,7 @@ CONTAINS
       real, intent(in)                  :: integral(:, 0:, :, :), olap(:, 0:, :, :)
       integer, intent(in)               :: ikpt, ngptm1(:), pqnrm(:, :), pgptm1(:, :)
       complex, intent(in)               :: structconst(:, :, :, :)
-      class(t_mat), intent(inout)       :: striped_coul
+      class(t_mat), intent(inout)       :: coul
 
       integer  :: igpt0, igpt, igptp, iqnrm, niter
       integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1, ierr, loc_from
@@ -1218,7 +1218,7 @@ CONTAINS
 
 
       call range_from_glob_to_loc(fmpi, hybdat%nbasp+1, loc_from)
-      striped_coul%data_c(:hybdat%nbasp,loc_from:) = 0 
+      coul%data_c(:hybdat%nbasp,loc_from:) = 0 
 
       svol = SQRT(fi%cell%vol)
       ! start to loop over interstitial plane waves
@@ -1251,7 +1251,7 @@ CONTAINS
          !$OMP private(j_m, j_type, iy_start, l1, m1) &
          !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, svol) &
          !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
-         !$OMP shared(igptp, niter, fmpi, pe_ix, striped_coul, ix_loc) &
+         !$OMP shared(igptp, niter, fmpi, pe_ix, coul, ix_loc) &
          !$OMP schedule(dynamic)
          do i = 1,niter 
             ic = ic_arr(i)
@@ -1326,14 +1326,14 @@ CONTAINS
 
                IF (ikpt == 1 .AND. igpt == 1) THEN
                   if(pe_ix == fmpi%n_rank) then 
-                     IF (l == 0) striped_coul%data_c(iy, ix_loc) = -cdum*moment2(n, itype)/6/svol 
-                     striped_coul%data_c(iy, ix_loc) = striped_coul%data_c(iy, ix_loc) &
+                     IF (l == 0) coul%data_c(iy, ix_loc) = -cdum*moment2(n, itype)/6/svol 
+                     coul%data_c(iy, ix_loc) = coul%data_c(iy, ix_loc) &
                                                       + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
                                                          + csum*moment(n, l, itype))/svol          ! (2c)
                   endif
                ELSE
                   if(pe_ix == fmpi%n_rank) then 
-                     striped_coul%data_c(iy, ix_loc) = &
+                     coul%data_c(iy, ix_loc) = &
                         (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
                            - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
                            + csum*moment(n, l, itype))/svol          ! (2c)
@@ -1345,7 +1345,7 @@ CONTAINS
       END DO
 
       IF (fi%sym%invs) THEN
-         call symmetrize_mpimat(fi, fmpi, striped_coul%data_c, [1,hybdat%nbasp+1], [hybdat%nbasp, hybdat%nbasp+mpdata%n_g(ikpt)],&
+         call symmetrize_mpimat(fi, fmpi, coul%data_c, [1,hybdat%nbasp+1], [hybdat%nbasp, hybdat%nbasp+mpdata%n_g(ikpt)],&
                                 1, .false., mpdata%num_radbasfn)
       ENDIF
    endsubroutine loop_over_interst
