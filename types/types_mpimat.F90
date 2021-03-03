@@ -213,6 +213,8 @@ CONTAINS
 #ifdef CPP_SCALAPACK
       INTEGER, EXTERNAL    :: numroc, indxl2g  !SCALAPACK functions
 
+      call timestart("t_mpimat_u2l")
+
       CALL MPI_COMM_RANK(mat%blacsdata%mpi_com, myid, err)
       CALL MPI_COMM_SIZE(mat%blacsdata%mpi_com, np, err)
       !Set lower part of matrix to zero
@@ -258,6 +260,7 @@ CONTAINS
 #endif
       END IF
 #endif
+      call timestop("t_mpimat_u2l")
    END SUBROUTINE t_mpimat_u2l
 
    SUBROUTINE mpimat_add_transpose(mat, mat1)
