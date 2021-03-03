@@ -122,7 +122,7 @@ CONTAINS
       INTEGER                    :: iatom, iatom1, mtmt_idx, sz
       INTEGER                    :: indx1, indx2, indx3, indx4
       TYPE(t_mat)                :: mat, tmp
-      type(t_mat), allocatable   :: coulomb(:), mtmt_repl(:)
+      type(t_mat), allocatable   :: mtmt_repl(:)
       class(t_mat), allocatable  :: striped_coul(:)
 
       CALL timestart("Coulomb matrix setup")
@@ -158,7 +158,6 @@ CONTAINS
 
       call timestart("coulomb allocation")
 
-      allocate(coulomb(fi%kpts%nkpt))
       if(fmpi%n_size == 1) then
          allocate(t_mat::striped_coul(fi%kpts%nkpt))
       else
@@ -167,7 +166,6 @@ CONTAINS
       do ikpt = 1, fi%kpts%nkpt 
          if(any(ikpt == fmpi%k_list))then 
             call striped_coul(ikpt)%init(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt), fmpi%sub_comm, .false.)
-            call coulomb(ikpt)%alloc(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt))
          else
             call striped_coul(ikpt)%init(.False., 1, 1, fmpi%sub_comm, .false.)
          endif 
@@ -398,7 +396,6 @@ CONTAINS
 
          ! only the first rank handles the MT-MT part
          call timestart("MT-MT part")
-         coulomb(ikpt)%data_c = 0.0
          ix = 0
          ic2 = 0
          mtmt_idx = 0
@@ -878,16 +875,6 @@ CONTAINS
          ikpt = fmpi%k_list(im)
          call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, ikpt, striped_coul(ikpt))
          call striped_coul(ikpt)%u2l()
-
-         SELECT TYPE(striped_coul)
-         CLASS is (t_mpimat)
-            call striped_coul(ikpt)%to_non_dist(coulomb(ikpt))
-            call coulomb(ikpt)%bcast(0, fmpi%sub_comm)
-         CLASS is (t_mat)
-            call coulomb(ikpt)%copy(striped_coul(ikpt), 1,1)
-         CLASS default
-            CALL judft_error("makes no sence")
-         END SELECT
       enddo
 
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
@@ -909,7 +896,6 @@ CONTAINS
          call test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
          call copy_residual_mt_contrib(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
          call copy_ir(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
-         call coulomb(ikpt)%free()
       END DO ! ikpt
       call timestop("loop bla")
       CALL timestop("Coulomb matrix setup")
