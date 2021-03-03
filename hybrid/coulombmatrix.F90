@@ -907,19 +907,8 @@ CONTAINS
          call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
          call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
          call test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
-         call copy_residual_mt_contrib(fi, fmpi, mpdata, striped_coul, ikpt, hybdat, ic)
-         if(fmpi%n_rank == 0 ) then
-            !
-            ! add ir part to the matrix coulomb_mtir
-            !
-            if (fi%sym%invs) THEN
-               hybdat%coul(ikpt)%mtir%data_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
-                  = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt)))
-            else
-               hybdat%coul(ikpt)%mtir%data_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt)) &
-                  = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), hybdat%nbasp + 1:hybdat%nbasm(ikpt))
-            end if
-         endif
+         call copy_residual_mt_contrib(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
+         call copy_ir(fi, fmpi, mpdata, striped_coul, ikpt, hybdat)
          call coulomb(ikpt)%free()
       END DO ! ikpt
       call timestop("loop bla")

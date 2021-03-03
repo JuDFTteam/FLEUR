@@ -262,7 +262,7 @@ contains
       call timestop("test_mt2_mt3")
    end subroutine test_mt2_mt3 
 
-   subroutine copy_residual_mt_contrib(fi, fmpi, mpdata, coulomb, ikpt, hybdat, ic)
+   subroutine copy_residual_mt_contrib(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       !
       ! add the residual MT contributions, i.e. those functions with an moment,
       ! to the matrix coulomb_mtir, which is fully occupied
@@ -274,10 +274,9 @@ contains
       class(t_mat), intent(in)          :: coulomb(:)
       integer, intent(in)               :: ikpt
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
-      integer, intent(inout)            :: ic
 
       integer :: igpt, indx1, indx2, indx3, indx4, ineq, ineq1, itype, itype1, l, m, l1, m1
-      integer :: iatom, iatom1, ierr, loc_4, pe_4, pe_ix, ix, ix_loc
+      integer :: iatom, iatom1, ierr, loc_4, pe_4, pe_ix, ix, ix_loc, ic
       complex :: tmp
 
       call timestart("residual MT contributions")
@@ -317,6 +316,7 @@ contains
                               ELSE
                                  hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, loc_4)
                               ENDIF
+#ifdef CPP_MPI
                            elseif(fmpi%n_rank == pe_4) then
                               call MPI_Send(coulomb(ikpt)%data_c(indx3, loc_4), 1, MPI_DOUBLE_COMPLEX, &
                                              0, indx3+100000*indx4, fmpi%sub_comm, ierr)
@@ -327,6 +327,7 @@ contains
                               ELSE
                                  hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = tmp
                               ENDIF
+#endif
                            endif
 
                            if(fmpi%n_rank == 0) then
@@ -351,6 +352,7 @@ contains
                      ELSE
                         hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, ix_loc) 
                      ENDIF
+#ifdef CPP_MPI
                   elseif(fmpi%n_rank == pe_ix) then
                      call MPI_Send(coulomb(ikpt)%data_c(indx3, ix_loc), 1, MPI_DOUBLE_COMPLEX, &
                                     0, indx3+1000*ix, fmpi%sub_comm, ierr)
@@ -361,6 +363,7 @@ contains
                      else
                         hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = tmp
                      endif
+#endif
                   endif
 
                   if(fmpi%n_rank == 0) then
@@ -379,4 +382,67 @@ contains
 
       IF (indx1 /= ic) call judft_error('coulombmatrix: error index counting')
    end subroutine copy_residual_mt_contrib
+
+   subroutine copy_ir(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      class(t_mat), intent(in)          :: coulomb(:)
+      integer, intent(in)               :: ikpt
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+
+      integer :: ic, iatom, l, m, ix, ix_loc, pe_ix, i, itype, ierr
+      real, allocatable    :: tmp(:)
+
+      !
+      ! add ir part to the matrix coulomb_mtir
+      !
+
+      ic = 0
+      do iatom = 1,fi%atoms%nat 
+         itype = fi%atoms%itype(iatom)
+         DO l = 0, fi%hybinp%lcutm1(itype)
+            ic = ic + 2*l+1
+         END DO
+      END DO
+
+      if (fi%sym%invs) THEN
+         allocate(tmp(mpdata%n_g(ikpt)))
+         do i = 1, mpdata%n_g(ikpt)
+            ix = hybdat%nbasp + i
+            call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+            if(fmpi%n_rank == 0 .and. pe_ix == 0) then
+               hybdat%coul(ikpt)%mtir%data_r(ic + 1:ic + mpdata%n_g(ikpt), ic + i) &
+                  = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), ix_loc))
+#ifdef CPP_MPI
+            elseif(fmpi%n_rank == pe_ix) then 
+               tmp = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), ix_loc))
+               call MPI_Send(tmp, mpdata%n_g(ikpt), MPI_DOUBLE_PRECISION, 0, i, fmpi%sub_comm, ierr)
+            elseif(fmpi%n_rank == 0) then
+               call MPI_Recv(hybdat%coul(ikpt)%mtir%data_r(ic + 1, ic + i), mpdata%n_g(ikpt), &
+                             MPI_DOUBLE_PRECISION, pe_ix, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+#endif
+            endif
+         enddo
+         deallocate(tmp)
+      else
+         do i = 1, mpdata%n_g(ikpt)
+            ix = hybdat%nbasp + i
+            call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+            if(fmpi%n_rank == 0 .and. pe_ix == 0) then
+               hybdat%coul(ikpt)%mtir%data_c(ic + 1:ic + mpdata%n_g(ikpt), ic + i) &
+                  = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), ix_loc)
+#ifdef CPP_MPI
+            elseif(fmpi%n_rank == pe_ix) then 
+               call MPI_Send(coulomb(ikpt)%data_c(hybdat%nbasp + 1, ix_loc), mpdata%n_g(ikpt), &
+                               MPI_DOUBLE_COMPLEX, 0, i, fmpi%sub_comm, ierr)
+            elseif(fmpi%n_rank == 0) then
+               call MPI_Recv(hybdat%coul(ikpt)%mtir%data_c(ic + 1, ic + i), mpdata%n_g(ikpt), &
+                             MPI_DOUBLE_COMPLEX, pe_ix, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+#endif
+            endif
+         enddo
+      end if
+   end subroutine copy_ir
 end module m_copy_coul
