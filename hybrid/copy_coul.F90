@@ -261,4 +261,122 @@ contains
       END IF
       call timestop("test_mt2_mt3")
    end subroutine test_mt2_mt3 
+
+   subroutine copy_residual_mt_contrib(fi, fmpi, mpdata, coulomb, ikpt, hybdat, ic)
+      !
+      ! add the residual MT contributions, i.e. those functions with an moment,
+      ! to the matrix coulomb_mtir, which is fully occupied
+      !
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      class(t_mat), intent(in)          :: coulomb(:)
+      integer, intent(in)               :: ikpt
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+      integer, intent(inout)            :: ic
+
+      integer :: igpt, indx1, indx2, indx3, indx4, ineq, ineq1, itype, itype1, l, m, l1, m1
+      integer :: iatom, iatom1, ierr, loc_4, pe_4, pe_ix, ix, ix_loc
+      complex :: tmp
+
+      call timestart("residual MT contributions")
+      ic = 0
+      do iatom = 1,fi%atoms%nat 
+         itype = fi%atoms%itype(iatom)
+         DO l = 0, fi%hybinp%lcutm1(itype)
+            DO M = -l, l
+               ic = ic + 1
+            END DO
+         END DO
+      END DO
+
+      indx1 = 0; indx2 = 0; indx3 = 0; indx4 = 0
+
+      do iatom = 1, fi%atoms%nat 
+         itype = fi%atoms%itype(iatom)
+         DO l = 0, fi%hybinp%lcutm1(itype)
+            DO M = -l, l
+               indx1 = indx1 + 1
+               indx3 = indx3 + mpdata%num_radbasfn(l, itype)
+
+               indx2 = 0
+               indx4 = 0
+
+               do iatom1 = 1,fi%atoms%nat 
+                  itype1 = fi%atoms%itype(iatom1)
+                  DO l1 = 0, fi%hybinp%lcutm1(itype1)
+                     DO m1 = -l1, l1
+                        indx2 = indx2 + 1
+                        indx4 = indx4 + mpdata%num_radbasfn(l1, itype1)
+                        IF (indx4 >= indx3) then
+                           call glob_to_loc(fmpi, indx4, pe_4, loc_4)
+                           if(fmpi%n_rank == 0 .and. pe_4 == 0) then
+                              IF (fi%sym%invs) THEN
+                                 hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, loc_4))
+                              ELSE
+                                 hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, loc_4)
+                              ENDIF
+                           elseif(fmpi%n_rank == pe_4) then
+                              call MPI_Send(coulomb(ikpt)%data_c(indx3, loc_4), 1, MPI_DOUBLE_COMPLEX, &
+                                             0, indx3+100000*indx4, fmpi%sub_comm, ierr)
+                           elseif(fmpi%n_rank == 0) then
+                              call MPI_Recv(tmp, 1, MPI_DOUBLE_COMPLEX, pe_4, indx3+100000*indx4, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+                              IF (fi%sym%invs) THEN
+                                 hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(tmp)
+                              ELSE
+                                 hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = tmp
+                              ENDIF
+                           endif
+
+                           if(fmpi%n_rank == 0) then
+                              if(fi%sym%invs) then
+                                 hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) 
+                              else 
+                                 hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
+                              endif
+                           endif
+                        endif
+                     END DO
+                  END DO
+               END DO
+
+               DO igpt = 1, mpdata%n_g(ikpt)
+                  indx2 = indx2 + 1
+                  ix =  hybdat%nbasp + igpt
+                  call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+                  if(fmpi%n_rank == 0 .and. pe_ix == 0) then
+                     IF (fi%sym%invs) THEN
+                        hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, ix_loc))
+                     ELSE
+                        hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, ix_loc) 
+                     ENDIF
+                  elseif(fmpi%n_rank == pe_ix) then
+                     call MPI_Send(coulomb(ikpt)%data_c(indx3, ix_loc), 1, MPI_DOUBLE_COMPLEX, &
+                                    0, indx3+1000*ix, fmpi%sub_comm, ierr)
+                  elseif(fmpi%n_rank == 0) then
+                     call MPI_Recv(tmp, 1, MPI_DOUBLE_COMPLEX, pe_ix, indx3+1000*ix, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+                     if(fi%sym%invs) then
+                        hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(tmp)
+                     else
+                        hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = tmp
+                     endif
+                  endif
+
+                  if(fmpi%n_rank == 0) then
+                     IF (fi%sym%invs) THEN
+                        hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2)
+                     else
+                        hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
+                     endif
+                  endif
+               END DO
+
+            END DO
+         END DO
+      END do
+      call timestop("residual MT contributions")
+
+      IF (indx1 /= ic) call judft_error('coulombmatrix: error index counting')
+   end subroutine copy_residual_mt_contrib
 end module m_copy_coul
