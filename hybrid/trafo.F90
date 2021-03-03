@@ -6,6 +6,7 @@
 
 MODULE m_trafo
    use m_judft
+   use m_glob_tofrom_loc
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
@@ -69,7 +70,7 @@ CONTAINS
             invrrot = -transpose(1.0*sym%mrot(:, :, iiop))
             trans = sym%tau(:, iiop)
          END IF
-      endif
+      end if
 
       rkpt = matmul(rrot, kpts%bkf(:, nk))
       rkpthlp = rkpt
@@ -106,9 +107,9 @@ CONTAINS
                            cmthlp(:2*l + 1) = CONJG(cmt(bandi + i - 1, lm1:lm2:nn, iatom))
                         ELSE
                            cmthlp(:2*l + 1) = cmt(bandi + i - 1, lm1:lm2:nn, iatom)
-                        ENDIF
+                        END IF
                         cmt_out(lm1:lm2:nn, iatom1, i) = cdum*matmul(cmthlp(:2*l + 1), sym%d_wgn(-l:l, -l:l, l, iop))
-                     endif
+                     end if
                   END DO
                END DO
                lm0 = lm2
@@ -142,7 +143,7 @@ CONTAINS
             ELSE
                z_out(igpt, 1:ndb) = cdum*z_c(igpt1, bandi:bandi + ndb - 1)
             END IF
-         endif
+         end if
       END DO
 
    END SUBROUTINE waveftrafo_symm
@@ -204,7 +205,7 @@ CONTAINS
             invrrot = -transpose(sym%mrot(:, :, iiop))
             trans = sym%tau(:, iiop)
          END IF
-      endif
+      end if
 
       rkpt = matmul(rrot, kpts%bkf(:, nk))
       rkpthlp = rkpt
@@ -243,7 +244,7 @@ CONTAINS
                            cmthlp(:2*l + 1) = cmt(i, lm1:lm2:nn, iatom)
                         END IF
                         cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmthlp(:2*l + 1), hybinp%d_wgn2(-l:l, -l:l, l, iop))
-                     endif
+                     end if
 
                   END DO
                END DO
@@ -259,7 +260,7 @@ CONTAINS
          DO i = 1, nbands
             cmt_out(i, :, :) = cmt_out(i, :, :)/c_phase(i)
          END DO
-      endif
+      end if
       call timestop("gen_cmt")
    END SUBROUTINE waveftrafo_gen_cmt
 
@@ -326,7 +327,7 @@ CONTAINS
             invrrot = -transpose(sym%mrot(:, :, iiop))
             trans = sym%tau(:, iiop)
          END IF
-      endif
+      end if
 
       rkpt = matmul(rrot, kpts%bkf(:, nk))
       rkpthlp = rkpt
@@ -365,7 +366,7 @@ CONTAINS
                            cmthlp(:2*l + 1) = cmt(i, lm1:lm2:nn, iatom)
                         END IF
                         cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmthlp(:2*l + 1), hybinp%d_wgn2(-l:l, -l:l, l, iop))
-                     endif
+                     end if
 
                   END DO
                END DO
@@ -398,7 +399,7 @@ CONTAINS
             ELSE
                zhlp(igpt, :nbands) = cdum*z_in%data_c(igpt1, :nbands)
             END IF
-         endif
+         end if
       END DO
 
       ! If phase and inversion-sym. is true,
@@ -417,7 +418,7 @@ CONTAINS
             cmt_out(i, :, :) = cmt_out(i, :, :)/cdum
          else
             z_out%data_c(:, i) = zhlp(:, i)
-         endif
+         end if
       END DO
       call timestop("genwavf")
    END SUBROUTINE waveftrafo_genwavf
@@ -476,7 +477,7 @@ CONTAINS
             invrrot = -transpose(sym%mrot(:, :, iiop))
             trans = sym%tau(:, iiop)
          END IF
-      endif
+      end if
 
       rkpt = matmul(rrot, kpts%bkf(:, nk))
       rkpthlp = rkpt
@@ -506,7 +507,7 @@ CONTAINS
             ELSE
                zhlp(igpt, :nbands) = cdum*z_in%data_c(igpt1, :nbands)
             END IF
-         endif
+         end if
       END DO
 
       ! If phase and inversion-sym. is true,
@@ -518,7 +519,7 @@ CONTAINS
             if (present(c_phase)) c_phase(i) = cdum
             if (abs(cdum) < 1e-30) THEN
                call juDFT_error("commonphase can't be 0.")
-            endif
+            end if
             IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
                call judft_error('waveftrafo1: Residual imaginary part.')
@@ -526,10 +527,141 @@ CONTAINS
             z_out%data_r(:, i) = real(zhlp(:, i)/cdum)
          else
             z_out%data_c(:, i) = zhlp(:, i)
-         endif
+         end if
       END DO
       call timestop("gen_zmat")
    END SUBROUTINE waveftrafo_gen_zmat
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   ! Symmetrizes MT part of input matrix according to inversion symmetry.
+   ! This is achieved by a transformation to
+   !        1/sqrt(2) * ( exp(ikR) Y_lm(r-R) + (-1)**(l+m) exp(-ikR) Y_l,-m(r+R) )
+   ! and                                                                                 if R /=0 or m<0
+   !        i/sqrt(2) * ( exp(ikR) Y_lm(r-R) - (-1)**(l+m) exp(-ikR) Y_l,-m(r+R) ) .
+   !
+   !  or
+   !        i*Y_l,0(r)                                                                   if R=0,m=0 and l odd
+   ! These functions have the property f(-r)=f(r)* which makes the output matrix real symmetric.
+   ! (Array mat is overwritten! )
+
+   SUBROUTINE symmetrize_mpimat(fi, fmpi, mpimat, start_dim, end_dim, imode, lreal, nindxm)
+      USE m_types
+      use m_constants
+      IMPLICIT NONE
+      type(t_fleurinput), intent(in)  :: fi
+      type(t_mpi), intent(in)         :: fmpi
+
+!     - scalars -
+      INTEGER, INTENT(IN)    :: imode, start_dim(2), end_dim(2)
+      LOGICAL, INTENT(IN)    ::  lreal
+
+!     - arrays -
+      INTEGER, INTENT(IN)    ::  nindxm(0:maxval(fi%hybinp%lcutm1), fi%atoms%ntype)
+      COMPLEX, INTENT(INOUT) ::  mpimat(:, :)
+
+!     -local scalars -
+      INTEGER               :: i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift, start_loc, end_loc
+      integer               :: i_loc, j_loc, i_pe, j_pe, ierr, len_dim(2)
+      REAL                  :: rfac
+
+!     - local arrays -
+      COMPLEX               ::  mpicarr(maxval(end_dim)), cfac
+
+      len_dim = end_dim - start_dim + 1
+      rfac = sqrt(0.5)
+      cfac = sqrt(0.5)*ImagUnit
+      ic = 0
+      i = 0
+
+      DO itype = 1, fi%atoms%ntype
+         nn = sum([((2*l + 1)*nindxm(l, itype), l=0, fi%hybinp%lcutm1(itype))])
+         DO ieq = 1, fi%atoms%neq(itype)
+            ic = ic + 1
+            IF (fi%sym%invsat(ic) == 0) THEN
+! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
+! invsat(atom) = 0, invsatnr(atom) = 0
+! but we need invsatnr(atom) = natom
+               ic1 = ic
+            ELSE
+               ic1 = fi%sym%invsatnr(ic)
+            END IF
+!ic1 = invsatnr(ic)
+            IF (ic1 < ic) THEN
+               i = i + nn
+               CYCLE
+            END IF
+!     IF( ic1 .lt. ic ) cycle
+            DO l = 0, fi%hybinp%lcutm1(itype)
+               ifac = -1
+               DO m = -l, l
+                  ifac = -ifac
+                  ishift = (ic1 - ic)*nn - 2*m*nindxm(l, itype)
+                  DO n = 1, nindxm(l, itype)
+                     i = i + 1
+                     j = i + ishift
+                     call glob_to_loc(fmpi, i, i_pe, i_loc)
+                     call glob_to_loc(fmpi, j, j_pe, j_loc)
+                     IF (ic1 /= ic .or. m < 0) THEN
+                        IF (iand(imode, 1) /= 0) THEN
+                           call range_from_glob_to_loc(fmpi, start_dim(2), start_loc)
+                           call range_to_glob_to_loc(fmpi, end_dim(2), end_loc)
+                           mpicarr(start_loc:end_loc)  = mpimat(i,start_loc:end_loc)
+                           mpimat(i,start_loc:end_loc) = (mpicarr(start_loc:end_loc) + ifac*mpimat(j,start_loc:end_loc))*rfac
+                           mpimat(j,start_loc:end_loc) = (mpicarr(start_loc:end_loc) - ifac*mpimat(j,start_loc:end_loc))*(-cfac)
+                        END IF
+                        IF (iand(imode, 2) /= 0) THEN
+                           if(i_pe == j_pe .and. fmpi%n_rank == i_pe) then 
+                              mpicarr(start_dim(1):end_dim(1)) = mpimat(start_dim(1):end_dim(1), i_loc)
+                              mpimat(start_dim(1):end_dim(1),i_loc) &
+                                 = (mpimat(start_dim(1):end_dim(1), i_loc) + ifac*mpimat(start_dim(1):end_dim(1), j_loc))*rfac
+                              mpimat(start_dim(1):end_dim(1),j_loc) &
+                                 = (mpicarr(start_dim(1):end_dim(1)) - ifac*mpimat(start_dim(1):end_dim(1), j_loc))*cfac
+#ifdef CPP_MPI
+                           else
+                              if(fmpi%n_rank == i_pe) then 
+                                 call MPI_Send(mpimat(start_dim(1),i_loc), len_dim(1), MPI_DOUBLE_COMPLEX, j_pe, i, fmpi%sub_comm, ierr)
+                                 call MPI_Recv(mpicarr(start_dim(1)), len_dim(1), MPI_DOUBLE_COMPLEX, j_pe, j, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+                                 mpimat(start_dim(1):end_dim(1),i_loc) = (mpimat(start_dim(1):end_dim(1), i_loc) + ifac*mpicarr(start_dim(1):end_dim(1)))*rfac
+                              elseif(fmpi%n_rank == j_pe) then 
+                                 call MPI_Recv(mpicarr(start_dim(1)), len_dim(1), MPI_DOUBLE_COMPLEX, i_pe, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+                                 call MPI_Send(mpimat(start_dim(1),j_loc), len_dim(1), MPI_DOUBLE_COMPLEX, i_pe, j, fmpi%sub_comm, ierr)
+                                 mpimat(start_dim(1):end_dim(1),j_loc) = (mpicarr(start_dim(1):end_dim(1)) - ifac*mpimat(start_dim(1):end_dim(1), j_loc))*cfac
+                              endif
+#endif
+                           endif
+                        END IF
+                     ELSE IF (m == 0 .and. ifac == -1) THEN
+                        IF (iand(imode, 1) /= 0) THEN
+                           call range_from_glob_to_loc(fmpi, start_dim(2), start_loc)
+                           call range_to_glob_to_loc(fmpi, end_dim(2), end_loc)
+                           mpimat(i,start_loc:end_loc) = -ImagUnit*mpimat(i,start_loc:end_loc)
+                        END IF
+                        IF (iand(imode, 2) /= 0 .and. fmpi%n_rank == i_pe) THEN
+                           mpimat(start_dim(1):end_dim(1), i_loc) = ImagUnit*mpimat(start_dim(1):end_dim(1), i_loc)
+                        END IF
+                     END IF
+                  END DO
+               END DO
+            END DO
+         END DO
+      END DO
+
+      IF (lreal) THEN
+         call juDFT_error("this isn't impemented for mpimat")
+! Determine common phase factor and divide by it to make the output matrix real.
+         ! cfac = commonphase_mtx(mat, dims(1), dims(2))
+         ! do i = 1, dims(1)
+         ! do j = 1, dims(2)
+         !    mat(i, j) = mat(i, j)/cfac
+         !    if (abs(aimag(mat(i, j))) > 1e-8) then
+         !       call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
+         !    end if
+         ! end do
+         ! end do
+      END IF
+
+   END SUBROUTINE symmetrize_mpimat
+
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    ! Symmetrizes MT part of input matrix according to inversion symmetry.
@@ -559,7 +691,7 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    ::  nindxm(0:maxlcutm, atoms%ntype)
-      COMPLEX, INTENT(INOUT) ::  mat(:,:)
+      COMPLEX, INTENT(INOUT) ::  mat(:, :)
 
 !     -local scalars -
       INTEGER               ::  i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift
@@ -627,14 +759,14 @@ CONTAINS
       IF (lreal) THEN
 ! Determine common phase factor and divide by it to make the output matrix real.
          cfac = commonphase_mtx(mat, dim1, dim2)
-         do i = 1,dim1 
-            do j = 1,dim2 
-               mat(i,j) = mat(i,j) / cfac 
-               if(abs(aimag(mat(i,j))) > 1e-8 ) then
+         do i = 1, dim1
+            do j = 1, dim2
+               mat(i, j) = mat(i, j)/cfac
+               if (abs(aimag(mat(i, j))) > 1e-8) then
                   call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
-               endif 
-            enddo
-         enddo
+               end if
+            end do
+         end do
       END IF
 
    END SUBROUTINE symmetrize
@@ -727,7 +859,7 @@ CONTAINS
    ! symmetrie equivalent one
    ! isym maps kpts%bkp(ikpt) on ikpt
 
-   subroutine bra_trafo(fi, mpdata, hybdat, nbands, ikpt, psize,  phase, vecin, vecout)
+   subroutine bra_trafo(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin, vecout)
       use m_types
       use m_constants
       use m_judft
@@ -740,12 +872,12 @@ CONTAINS
       type(t_mat), INTENT(INOUT)        :: vecout
       COMPLEX, INTENT(INOUT)            :: phase(:, :)
 
-      if(vecin%l_real) then 
+      if (vecin%l_real) then
          call bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin%data_r, vecout%data_r)
       else
          phase = cmplx_1
          call bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, vecin%data_c, vecout%data_c)
-      endif
+      end if
 
    end subroutine bra_trafo
 
@@ -758,8 +890,8 @@ CONTAINS
       type(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
       INTEGER, INTENT(IN)               :: ikpt, nbands, psize
-      REAL, INTENT(IN)                  ::  vecin_r(:,:)
-      REAL, INTENT(INOUT)               ::  vecout_r(:,:)
+      REAL, INTENT(IN)                  ::  vecin_r(:, :)
+      REAL, INTENT(INOUT)               ::  vecout_r(:, :)
       COMPLEX, INTENT(INOUT)            ::  phase(:, :)
 
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :), vecout1(:, :)
@@ -767,17 +899,17 @@ CONTAINS
 
       phase = cmplx_0
       call timestart("bra trafo real")
-      allocate(vecin1(size(vecin_r,dim=1), size(vecin_r,dim=2)), stat=ok, source=cmplx_0)
+      allocate (vecin1(size(vecin_r, dim=1), size(vecin_r, dim=2)), stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1')
 
-      allocate (vecout1(size(vecin_r,dim=1), size(vecin_r,dim=2)), stat=ok, source=cmplx_0)
+      allocate (vecout1(size(vecin_r, dim=1), size(vecin_r, dim=2)), stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1')
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       vecin1 = vecin_r
-      DO i = 1, nbands * psize
+      DO i = 1, nbands*psize
          CALL desymmetrize(vecin1(:hybdat%nbasp, i), hybdat%nbasp, 1, 1, &
                            fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
       END DO
@@ -790,13 +922,13 @@ CONTAINS
       DO i = 1, nbands
          DO j = 1, psize
             cnt = cnt + 1
-            CALL symmetrize(vecout1(:,cnt:cnt), hybdat%nbasm(ikpt), 1, 1, .false., &
+            CALL symmetrize(vecout1(:, cnt:cnt), hybdat%nbasm(ikpt), 1, 1, .false., &
                             fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
-            phase(j, i) = commonphase(vecout1(:,cnt), hybdat%nbasm(ikpt))
-            vecout1(:,cnt) = vecout1(:,cnt)/phase(j, i)
-            IF (any(abs(aimag(vecout1(:,cnt))) > 1e-8)) THEN
-               WRITE (*, *) vecout1(:,cnt)
+            phase(j, i) = commonphase(vecout1(:, cnt), hybdat%nbasm(ikpt))
+            vecout1(:, cnt) = vecout1(:, cnt)/phase(j, i)
+            IF (any(abs(aimag(vecout1(:, cnt))) > 1e-8)) THEN
+               WRITE (*, *) vecout1(:, cnt)
                call judft_error('bra_trafo: Residual imaginary part.')
             END IF
 
@@ -819,7 +951,6 @@ CONTAINS
       INTEGER, INTENT(IN)               :: ikpt, nbands, psize
       COMPLEX, INTENT(IN)               ::  vecin_c(:, :)
       COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :)
-
 
       call timestart("bra trafo cmplx")
 
@@ -847,7 +978,7 @@ CONTAINS
       COMPLEX, intent(in)     :: vecin1(:, :)
       complex, intent(inout)  :: vecout1(:, :)
 
-      INTEGER                 :: nrkpt, itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
+      INTEGER                 :: nrkpt, itype, ic, l, n, i, nn, i1, i2, j1, j2
       INTEGER                 :: igptm, igptm2, igptp, iiop, inviop
       COMPLEX                 :: cexp, cdum
 
@@ -898,11 +1029,11 @@ CONTAINS
          PRINT *, rkpt
 
          call judft_error('bra_trafo: rotation failed')
-      ENDIF
+      END IF
 
 !     Define pointer to first mixed-basis functions (with m = -l)
       i = 0
-      do ic = 1,atoms%nat 
+      do ic = 1, atoms%nat
          itype = atoms%itype(ic)
          DO l = 0, hybinp%lcutm1(itype)
             DO n = 1, mpdata%num_radbasfn(l, itype)
@@ -916,7 +1047,7 @@ CONTAINS
 !     Multiplication
       ! MT
       cexp = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
-      do ic = 1,atoms%nat 
+      do ic = 1, atoms%nat
          itype = atoms%itype(ic)
 
          cdum = cexp*exp(-ImagUnit*tpi_const*dot_product(g, atoms%taual(:, hybinp%map(ic, kpts%bksym(ikpt)))))
@@ -931,7 +1062,7 @@ CONTAINS
                j2 = j1 + nn*2*l
 
                DO i = 1, nbands*psize
-                  vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn,i), dwgn(-l:l, -l:l, l))
+                  vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn, i), dwgn(-l:l, -l:l, l))
                END DO
 
             END DO
@@ -959,7 +1090,7 @@ CONTAINS
             WRITE (*, *) "Failed tests:", g1
             DO i = 1, mpdata%n_g(ikpt)
                WRITE (*, *) mpdata%g(:, mpdata%gptm_ptr(i, ikpt))
-            ENDDO
+            END DO
             call judft_error('bra_trafo: G-point not found in G-point set.')
          END IF
          cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
@@ -997,29 +1128,29 @@ CONTAINS
    END function commonphase
 
    function commonphase_mtx(mtx, dim1, dim2) result(cfac)
-      implicit none 
+      implicit none
 
-      COMPLEX, INTENT(IN)      :: mtx(:,:)
+      COMPLEX, INTENT(IN)      :: mtx(:, :)
       integer, intent(in)      :: dim1, dim2
       COMPLEX                  :: cfac
       REAL                     :: rdum, rmax
-      INTEGER                  :: i,j
+      INTEGER                  :: i, j
 
-      do j = 1,dim2 
-         do i = 1,dim1
-            rdum = abs(mtx(i,j))
+      do j = 1, dim2
+         do i = 1, dim1
+            rdum = abs(mtx(i, j))
             IF (rdum > 1e-6) THEN
-               cfac = mtx(i,j)/rdum
+               cfac = mtx(i, j)/rdum
                EXIT
             ELSE IF (rdum > rmax) THEN
-               cfac = mtx(i,j)/rdum
+               cfac = mtx(i, j)/rdum
                rmax = rdum
             END IF
-         enddo 
-      enddo
+         end do
+      end do
 
-      IF (abs(cfac) < 1e-10 .and. all(abs(mtx(:dim1,:dim2)) > 1e-10)) THEN
-         WRITE (999, *) mtx(:dim1,:dim2)
+      IF (abs(cfac) < 1e-10 .and. all(abs(mtx(:dim1, :dim2)) > 1e-10)) THEN
+         WRITE (999, *) mtx(:dim1, :dim2)
          call judft_error('commonphase: Could not determine common phase factor. (Wrote carr to fort.999)')
       END IF
    END function commonphase_mtx
@@ -1058,7 +1189,7 @@ CONTAINS
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm, &
                                         -maxlcutm:maxlcutm, &
                                         0:maxlcutm)
-      COMPLEX, INTENT(INOUT)     ::  vecout(maxval(nbasm),1)
+      COMPLEX, INTENT(INOUT)     ::  vecout(maxval(nbasm), 1)
 
 !     - private scalars -
       INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
@@ -1116,14 +1247,14 @@ CONTAINS
 
       if (.not. touch) call judft_error("g-point could not be found.")
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
-      vecout(:nbasm(ikpt0),1) = vecin(:nbasm(ikpt0))
+      vecout(:nbasm(ikpt0), 1) = vecin(:nbasm(ikpt0))
       if (sym%invs) CALL desymmetrize(vecout, nbasp, 1, 1, &
                                       atoms, lcutm, maxlcutm, nindxm, sym)
 
 !     Right-multiplication
       ! PW
-      IF (trs) THEN; vecin1(:nbasm(ikpt0)) = cdum*conjg(vecout(:nbasm(ikpt0),1))
-      ELSE; vecin1(:nbasm(ikpt0)) = cdum*vecout(:nbasm(ikpt0),1)
+      IF (trs) THEN; vecin1(:nbasm(ikpt0)) = cdum*conjg(vecout(:nbasm(ikpt0), 1))
+      ELSE; vecin1(:nbasm(ikpt0)) = cdum*vecout(:nbasm(ikpt0), 1)
       END IF
 
 !     Define pointer to first mixed-basis functions (with m = -l)
@@ -1160,7 +1291,7 @@ CONTAINS
                   j1 = pnt(n, l, hybinp%map(ic, sym%invtab(isym)))
                   j2 = j1 + nn*2*l
 
-                  vecout(i1:i2:nn,1) = cdum*matmul(dwgn(-l:l, -l:l, l), vecin1(j1:j2:nn))
+                  vecout(i1:i2:nn, 1) = cdum*matmul(dwgn(-l:l, -l:l, l), vecin1(j1:j2:nn))
 
                END DO
             END DO
@@ -1175,7 +1306,7 @@ CONTAINS
          carr(igptm) = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
       END DO
       DO i1 = 1, mpdata%n_g(ikpt1)
-         vecout(nbasp + i1,1) = carr(i1)*vecin1(nbasp + iarr(i1))
+         vecout(nbasp + i1, 1) = carr(i1)*vecin1(nbasp + iarr(i1))
       END DO
 
       ! If inversion symmetry is applicable, symmetrize to make the values real.
