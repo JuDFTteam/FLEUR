@@ -71,8 +71,8 @@ CONTAINS
       INTEGER                    :: inviop
       INTEGER                    :: nqnrm, iqnrm, iqnrm1, iqnrm2
       INTEGER                    :: itype, l, ix, iy, iy0, i, j, lm, l1, l2, m1, m2, ineq, ikpt
-      INTEGER                    :: lm1, lm2, itype1, itype2, ineq1, ineq2, n, n1, n2, iat2
-      INTEGER                    :: ic, ic1, ic2, ic3, ic4
+      INTEGER                    :: lm1, lm2, itype1, itype2, ineq1, ineq2, n1, n2, iat2
+      INTEGER                    :: ic, ic1, ic2
       INTEGER                    :: igpt, igpt1, igpt2, igptp, igptp1, igptp2
       INTEGER                    :: isym, isym1, isym2, igpt0
       INTEGER                    :: iatm1, iatm2
@@ -88,7 +88,7 @@ CONTAINS
       COMPLEX                    :: cdum, cexp, csum
 
       ! - local arrays -
-      INTEGER                    :: g(3), root
+      INTEGER                    :: g(3)
       INTEGER, ALLOCATABLE   :: pqnrm(:, :)
       INTEGER                    :: rrot(3, 3, fi%sym%nsym), invrrot(3, 3, fi%sym%nsym)
       INTEGER, ALLOCATABLE   :: iarr(:), POINTER(:, :, :, :)!,pointer(:,:,:)
@@ -118,10 +118,9 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
       COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:)
 
-      INTEGER                    :: ishift, ishift1, ierr, small_sz, my_sz
-      INTEGER                    :: iatom, iatom1, mtmt_idx, sz
-      INTEGER                    :: indx1, indx2, indx3, indx4
-      TYPE(t_mat)                :: mat, tmp
+      INTEGER                    :: ierr
+      INTEGER                    :: iatom, mtmt_idx
+      TYPE(t_mat)                :: mat
       type(t_mat), allocatable   :: mtmt_repl(:)
       class(t_mat), allocatable  :: coul(:)
 
@@ -1081,9 +1080,8 @@ CONTAINS
       integer, intent(in)        :: ikpt
 
       type(t_mat)     :: olap, coul_submtx
-      integer         :: nbasm, loc_size, i, j, i_loc, root, ierr, pe_i, pe_recv, pe_send, recv_loc, send_loc
+      integer         :: nbasm, loc_size, i, j, i_loc, ierr, pe_i, pe_recv, pe_send, recv_loc, send_loc
       complex         :: cdum
-      complex, allocatable :: tmp(:)
 
       call timestart("solve olap linear eq. sys")
       nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
@@ -1209,7 +1207,7 @@ CONTAINS
       class(t_mat), intent(inout)       :: coul
 
       integer  :: igpt0, igpt, igptp, iqnrm, niter
-      integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1, ierr, loc_from
+      integer  :: ix, iy, ic, itype, lm, l, m, itype1, ic1, l1, m1, lm1, loc_from
       integer  :: l2, m2, lm2, n, i, iatm, j_type, j_l, iy_start, j_m, j_lm, pe_ix, ix_loc
       real     :: q(3), qnorm, svol, tmp_vec(3)
       COMPLEX  :: y((fi%hybinp%lexp + 1)**2), y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
@@ -1366,7 +1364,7 @@ CONTAINS
       class(t_mat), intent(inout)        :: coulomb
 
       integer :: igpt0, igpt1, igpt2, ix, iy, igptp1, igptp2, iqnrm1, iqnrm2
-      integer :: ic, itype, lm, m, l, ierr, pe_ix, ix_loc
+      integer :: ic, itype, lm, m, l, pe_ix, ix_loc
       real    :: q1(3), q2(3)
       complex :: y1((fi%hybinp%lexp + 1)**2), y2((fi%hybinp%lexp + 1)**2)
       COMPLEX :: cexp1(fi%atoms%ntype)

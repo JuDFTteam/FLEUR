@@ -275,7 +275,7 @@ contains
       integer, intent(in)               :: ikpt
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
-      integer :: igpt, indx1, indx2, indx3, indx4, ineq, ineq1, itype, itype1, l, m, l1, m1
+      integer :: igpt, indx1, indx2, indx3, indx4, itype, itype1, l, m, l1, m1
       integer :: iatom, iatom1, ierr, loc_4, pe_4, pe_ix, ix, ix_loc, ic
       complex :: tmp
 
@@ -392,7 +392,7 @@ contains
       integer, intent(in)               :: ikpt
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
-      integer :: ic, iatom, l, m, ix, ix_loc, pe_ix, i, itype, ierr
+      integer :: ic, iatom, l, ix, ix_loc, pe_ix, i, itype, ierr
       real, allocatable    :: tmp(:)
 
       call timestart("copy_ir")

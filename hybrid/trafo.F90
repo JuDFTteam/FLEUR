@@ -565,7 +565,7 @@ CONTAINS
       REAL                  :: rfac
 
 !     - local arrays -
-      COMPLEX               ::  mpicarr(maxval(end_dim)), carr(maxval(end_dim)), cfac
+      COMPLEX               ::  mpicarr(maxval(end_dim)), cfac
 
       len_dim = end_dim - start_dim + 1
       rfac = sqrt(0.5)
@@ -978,7 +978,7 @@ CONTAINS
       COMPLEX, intent(in)     :: vecin1(:, :)
       complex, intent(inout)  :: vecout1(:, :)
 
-      INTEGER                 :: nrkpt, itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
+      INTEGER                 :: nrkpt, itype, ic, l, n, i, nn, i1, i2, j1, j2
       INTEGER                 :: igptm, igptm2, igptp, iiop, inviop
       COMPLEX                 :: cexp, cdum
 

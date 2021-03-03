@@ -95,7 +95,7 @@ contains
       type(t_fleurinput), intent(in)    :: fi
       integer, intent(in) :: num_radbasfn(:, :), n_g(:), ikpt
       logical, intent(in), optional :: l_print
-      integer :: info, isize, l, itype
+      integer :: info, isize
 
       isize = mtir_size(fi, n_g, ikpt)
 
