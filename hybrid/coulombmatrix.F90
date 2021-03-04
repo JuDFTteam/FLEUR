@@ -1081,7 +1081,7 @@ CONTAINS
       integer, intent(in)        :: ikpt
 
       type(t_mat)     :: olap, coul_submtx
-      integer         :: nbasm, loc_size, i, j, i_loc, ierr, pe_i, pe_recv, pe_send, recv_loc, send_loc
+      integer         :: nbasm, loc_size, i, j, i_loc, ierr, pe_i, pe_j, pe_recv, pe_send, recv_loc, send_loc, j_loc
       complex         :: cdum
 
       call timestart("solve olap linear eq. sys")
@@ -1119,24 +1119,24 @@ CONTAINS
 
       call timestart("copy in 2")
       do j = 1, mpdata%n_g(ikpt)
-         call glob_to_loc(fmpi, hybdat%nbasp + j, pe_send, send_loc)
+         call glob_to_loc(fmpi, hybdat%nbasp + j, pe_j, j_loc)
          do i = hybdat%nbasp + 1,nbasm    
-            call glob_to_loc(fmpi, i, pe_recv, recv_loc)
-            if(pe_send == pe_recv .and. fmpi%n_rank == pe_recv) then
+            call glob_to_loc(fmpi, i, pe_i, i_loc)
+            if(pe_j == pe_i .and. fmpi%n_rank == pe_i) then
                if(coul_submtx%l_real) then
-                  coul_submtx%data_r(j,recv_loc) = real(coulomb%data_c(i,send_loc))
+                  coul_submtx%data_r(j,i_loc) = real(coulomb%data_c(i,j_loc))
                else  
-                  coul_submtx%data_c(j,recv_loc) = conjg(coulomb%data_c(i,send_loc))
+                  coul_submtx%data_c(j,i_loc) = conjg(coulomb%data_c(i,j_loc))
                endif
 #ifdef CPP_MPI
-            elseif(pe_send == fmpi%n_rank) then
-               call MPI_Send(coulomb%data_c(i,send_loc), 1, MPI_DOUBLE_COMPLEX, pe_recv, j + 10000*i, fmpi%sub_comm, ierr)
-            elseif(pe_recv == fmpi%n_rank) then 
-               call MPI_Recv(cdum, 1, MPI_DOUBLE_COMPLEX, pe_send, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+            elseif(pe_j == fmpi%n_rank) then
+               call MPI_Send(coulomb%data_c(i,j_loc), 1, MPI_DOUBLE_COMPLEX, pe_i, j + 10000*i, fmpi%sub_comm, ierr)
+            elseif(pe_i == fmpi%n_rank) then 
+               call MPI_Recv(cdum, 1, MPI_DOUBLE_COMPLEX, pe_j, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
                if(coul_submtx%l_real) then
-                  coul_submtx%data_r(j, recv_loc) = real(cdum) 
+                  coul_submtx%data_r(j, i_loc) = real(cdum) 
                else 
-                  coul_submtx%data_c(j, recv_loc) = conjg(cdum) 
+                  coul_submtx%data_c(j, i_loc) = conjg(cdum) 
                endif
 #endif
             endif
