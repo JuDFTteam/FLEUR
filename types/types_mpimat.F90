@@ -34,7 +34,7 @@ MODULE m_types_mpimat
 
    TYPE, EXTENDS(t_mat):: t_mpimat
       INTEGER                   :: global_size1, global_size2        !> this is the size of the full-matrix
-      TYPE(t_blacsdata), POINTER :: blacsdata
+      TYPE(t_blacsdata), POINTER :: blacsdata =>null()
    CONTAINS
       PROCEDURE   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
       PROCEDURE   :: move => mpimat_move     !<overwriten from t_mat, also performs redistribution
@@ -51,12 +51,47 @@ MODULE m_types_mpimat
       procedure   :: to_non_dist
       PROCEDURE   :: transpose => mpimat_transpose
       procedure   :: print_type => mpimat_print_type
+      PROCEDURE   :: linear_problem => t_mpimat_lproblem 
       FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
    END TYPE t_mpimat
 
    PUBLIC t_mpimat
 
 CONTAINS
+   SUBROUTINE t_mpimat_lproblem(mat, vec)
+      IMPLICIT NONE
+      CLASS(t_mpimat), INTENT(IN)   :: mat
+      class(t_mat), INTENT(INOUT)   :: vec
+
+      integer :: ipiv(mat%global_size1), info
+#ifdef CPP_SCALAPACK
+      if(mat%l_real .neqv. vec%l_real) call judft_error("mat and vec need to be same kind")
+
+      select type (vec) 
+      class is (t_mat)
+         call judft_error("lproblem can only be solved if vec and mat are the same class")
+      class is (t_mpimat)
+         if(mat%l_real) then 
+            !call pdgesv(n,               nrhs,             a,         ia,ja,desca,                    ipiv
+            call pdgesv(mat%global_size1, vec%global_size2, mat%data_r, 1,1, mat%blacsdata%blacs_desc, ipiv,&
+                     !  b,ib,jb,descb,info)
+                        vec%data_r, 1,1, vec%blacsdata%blacs_desc, info)
+            if (info /= 0) call judft_error("Error in pdgesv for lproblem")
+         else
+            !call pzgesv(n,               nrhs,             a,          ia,ja,desca,                    ipiv,
+            call pzgesv(mat%global_size1, vec%global_size2, mat%data_c, 1, 1, mat%blacsdata%blacs_desc, ipiv,&
+            !           b,         ib,jb, descb,info)
+                        vec%data_c, 1, 1, vec%blacsdata%blacs_desc, info)
+                        
+            if (info /= 0) call judft_error("Error in pzgesv for lproblem: " // int2str(info))
+         endif
+      end select
+#else
+      call judft_error("no scala")
+#endif
+   end subroutine t_mpimat_lproblem
+
+
    subroutine mpimat_print_type(mat)
       implicit none
       CLASS(t_mpimat), INTENT(IN)     :: mat
@@ -194,10 +229,62 @@ CONTAINS
    END SUBROUTINE print_matrix
 
    subroutine t_mpimat_l2u(mat)
+#ifdef CPP_SCALAPACK
+      USE mpi
+#endif
       implicit none
-      class(t_mpimat), intent(inout) :: mat
+      CLASS(t_mpimat), INTENT(INOUT) ::mat
 
-      call judft_error("l2u not yet implemented for t_mpimat")
+      INTEGER :: i, j, i_glob, j_glob, myid, err, np
+      COMPLEX, ALLOCATABLE:: tmp_c(:, :)
+      REAL, ALLOCATABLE   :: tmp_r(:, :)
+#ifdef CPP_SCALAPACK
+      INTEGER, EXTERNAL    :: numroc, indxl2g  !SCALAPACK functions
+
+      call timestart("t_mpimat_l2u")
+
+      CALL MPI_COMM_RANK(mat%blacsdata%mpi_com, myid, err)
+      CALL MPI_COMM_SIZE(mat%blacsdata%mpi_com, np, err)
+      !Set lower part of matrix to zero
+
+      DO i = 1, mat%matsize1
+         DO j = 1, mat%matsize2
+            ! Get global column corresponding to i and number of local rows up to
+            ! and including the diagonal, these are unchanged in A
+            i_glob = indxl2g(i, mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, 0, mat%blacsdata%nprow)
+            j_glob = indxl2g(j, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, 0, mat%blacsdata%npcol)
+
+            IF (i_glob < j_glob) THEN
+               IF (mat%l_real) THEN
+                  mat%data_r(i, j) = 0.0
+               ELSE
+                  mat%data_c(i, j) = 0.0
+               ENDIF
+            elseif (i_glob == j_glob) THEN
+               IF (mat%l_real) THEN
+                  mat%data_r(i, j) = mat%data_r(i, j)*0.5
+               ELSE
+                  mat%data_c(i, j) = mat%data_c(i, j)*0.5
+               ENDIF
+            ENDIF
+         ENDDO
+      ENDDO
+
+      IF (mat%l_real) THEN
+         ALLOCATE (tmp_r(mat%matsize1, mat%matsize2))
+         tmp_r = mat%data_r
+      ELSE
+         ALLOCATE (tmp_c(mat%matsize1, mat%matsize2))
+         tmp_c = mat%data_c
+      END IF
+      CALL MPI_BARRIER(mat%blacsdata%mpi_com, i)
+      IF (mat%l_real) THEN
+         CALL pdgeadd('t', mat%global_size1, mat%global_size2, 1.0, tmp_r, 1, 1, mat%blacsdata%blacs_desc, 1.0, mat%data_r, 1, 1, mat%blacsdata%blacs_desc)
+      ELSE
+         CALL pzgeadd('c', mat%global_size1, mat%global_size2, CMPLX(1.0, 0.0), tmp_c, 1, 1, mat%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat%blacsdata%blacs_desc)
+      END IF
+#endif
+      call timestop("t_mpimat_l2u")
    end subroutine t_mpimat_l2u
 
    SUBROUTINE t_mpimat_u2l(mat)
@@ -212,6 +299,8 @@ CONTAINS
       REAL, ALLOCATABLE   :: tmp_r(:, :)
 #ifdef CPP_SCALAPACK
       INTEGER, EXTERNAL    :: numroc, indxl2g  !SCALAPACK functions
+
+      call timestart("t_mpimat_u2l")
 
       CALL MPI_COMM_RANK(mat%blacsdata%mpi_com, myid, err)
       CALL MPI_COMM_SIZE(mat%blacsdata%mpi_com, np, err)
@@ -250,14 +339,12 @@ CONTAINS
       END IF
       CALL MPI_BARRIER(mat%blacsdata%mpi_com, i)
       IF (mat%l_real) THEN
-#ifdef CPP_SCALAPACK
-
          CALL pdgeadd('t', mat%global_size1, mat%global_size2, 1.0, tmp_r, 1, 1, mat%blacsdata%blacs_desc, 1.0, mat%data_r, 1, 1, mat%blacsdata%blacs_desc)
       ELSE
          CALL pzgeadd('c', mat%global_size1, mat%global_size2, CMPLX(1.0, 0.0), tmp_c, 1, 1, mat%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat%blacsdata%blacs_desc)
-#endif
       END IF
 #endif
+      call timestop("t_mpimat_u2l")
    END SUBROUTINE t_mpimat_u2l
 
    SUBROUTINE mpimat_add_transpose(mat, mat1)
@@ -562,7 +649,7 @@ CONTAINS
             mat%global_size2 = global_size2
 #ifdef CPP_SCALAPACK
             mat%matsize1 = NUMROC(global_size1, mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow)
-            mat%matsize1 = NUMROC(global_size2, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol)
+            mat%matsize2 = NUMROC(global_size2, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol)
 #endif
          ELSE
             mat%matsize1 = templ%matsize1

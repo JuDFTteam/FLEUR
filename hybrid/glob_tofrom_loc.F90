@@ -1,5 +1,6 @@
 module m_glob_tofrom_loc
     use m_types
+    use m_juDFT
 contains
     subroutine glob_to_loc(fmpi, glob_idx, pe, loc_idx)
         implicit none 
@@ -44,6 +45,7 @@ contains
         integer, intent(inout)  :: loc_from 
 
         integer :: idx, pe
+
         idx = glob_from -1
         pe = -1 
         do while(pe /= fmpi%n_rank)
@@ -51,5 +53,4 @@ contains
             call glob_to_loc(fmpi, idx, pe, loc_from)
         enddo 
     end subroutine range_from_glob_to_loc
-        
 end module m_glob_tofrom_loc

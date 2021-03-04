@@ -59,6 +59,7 @@ CONTAINS
       use m_calc_l_m_from_lm
       use m_calc_mpsmat
       use m_copy_coul
+      use m_apply_inverse_olap
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
@@ -873,7 +874,8 @@ CONTAINS
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, ikpt, coul(ikpt))
-         call coul(ikpt)%u2l()
+         ! lower to upper, because the lower half is better in memory
+         call coul(ikpt)%l2u()
       enddo
 
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
@@ -1065,127 +1067,6 @@ CONTAINS
 
    END SUBROUTINE getnorm
 
-   subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, fmpi, sym, ikpt, coulomb)
-      USE m_olap, ONLY: olap_pw
-      USE m_types
-      use m_judft
-      implicit none
-      type(t_mpdata), intent(in) :: mpdata
-      type(t_atoms), intent(in)  :: atoms
-      type(t_cell), intent(in)   :: cell
-      type(t_hybdat), intent(in) :: hybdat
-      type(t_mpi), intent(in)    :: fmpi
-      type(t_sym), intent(in)    :: sym
-      type(t_mat), intent(inout) :: coulomb
-      integer, intent(in)        :: ikpt
-
-      type(t_mat)     :: olap, coul_submtx
-      integer         :: nbasm, loc_size, i, j, i_loc, ierr, pe_i, pe_recv, pe_send, recv_loc, send_loc
-      complex         :: cdum
-
-      call timestart("solve olap linear eq. sys")
-      nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
-      CALL olap%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
-      !calculate IR overlap-matrix
-      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell, fmpi)
-
-      ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
-      ! rewritten as O * x = C
-
-      loc_size = 0
-      do i = 1,nbasm 
-         call glob_to_loc(fmpi, i, pe_i, i_loc)
-         if(fmpi%n_rank == pe_i) loc_size = loc_size + 1
-      enddo
-
-      call timestart("copy in 1")
-      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
-      if(coul_submtx%l_real) then
-         coul_submtx%data_r(:,:) = real(coulomb%data_c(hybdat%nbasp + 1:,:loc_size))
-      else 
-         coul_submtx%data_c(:,:) = coulomb%data_c(hybdat%nbasp + 1:,:loc_size)
-      endif
-      call timestop("copy in 1")
-
-      call olap%linear_problem(coul_submtx)
-
-      call timestart("copy out 1")
-      if(coul_submtx%l_real) then 
-         coulomb%data_c(hybdat%nbasp + 1:,:loc_size) = coul_submtx%data_r
-      else 
-         coulomb%data_c(hybdat%nbasp + 1:,:loc_size) = coul_submtx%data_c
-      endif
-      call timestop("copy out 1")
-
-      call timestart("copy in 2")
-      do j = 1, mpdata%n_g(ikpt)
-         call glob_to_loc(fmpi, hybdat%nbasp + j, pe_send, send_loc)
-         do i = 1,nbasm    
-            call glob_to_loc(fmpi, i, pe_recv, recv_loc)
-            if(pe_send == pe_recv .and. fmpi%n_rank == pe_recv) then
-               if(coul_submtx%l_real) then
-                  coul_submtx%data_r(j,recv_loc) = real(coulomb%data_c(i,send_loc))
-               else  
-                  coul_submtx%data_c(j,recv_loc) = conjg(coulomb%data_c(i,send_loc))
-               endif
-#ifdef CPP_MPI
-            elseif(pe_send == fmpi%n_rank) then
-               call MPI_Send(coulomb%data_c(i,send_loc), 1, MPI_DOUBLE_COMPLEX, pe_recv, j + 10000*i, fmpi%sub_comm, ierr)
-            elseif(pe_recv == fmpi%n_rank) then 
-               call MPI_Recv(cdum, 1, MPI_DOUBLE_COMPLEX, pe_send, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-               if(coul_submtx%l_real) then
-                  coul_submtx%data_r(j, recv_loc) = real(cdum) 
-               else 
-                  coul_submtx%data_c(j, recv_loc) = conjg(cdum) 
-               endif
-#endif
-            endif
-         enddo
-      enddo 
-
-      call timestop("copy in 2")
-
-      ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
-      ! rewritten as O^T * x^T = C^T
-
-      ! reload O, since the solver destroys it.
-      CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell, fmpi)
-      ! Notice O = O^T since it's symmetric
-      call olap%linear_problem(coul_submtx)
-
-      call timestart("copy out 2")
-      do j = 1, mpdata%n_g(ikpt)
-         call glob_to_loc(fmpi, hybdat%nbasp + j, pe_recv, recv_loc)
-         do i = 1,nbasm    
-            call glob_to_loc(fmpi, i, pe_send, send_loc)
-            if(pe_send == pe_recv .and. fmpi%n_rank == pe_recv) then
-               if(coul_submtx%l_real) then
-                  coulomb%data_c(i,recv_loc) = coul_submtx%data_r(j,send_loc)
-               else  
-                  coulomb%data_c(i,recv_loc) = conjg(coul_submtx%data_c(j,send_loc))
-               endif
-#ifdef CPP_MPI
-            elseif(pe_send == fmpi%n_rank) then
-               if(coul_submtx%l_real) then
-                  cdum = coul_submtx%data_r(j,send_loc)
-               else 
-                  cdum = conjg(coul_submtx%data_c(j,send_loc))
-               endif 
-               call MPI_Send(cdum, 1, MPI_DOUBLE_COMPLEX, pe_recv, j + 10000*i, fmpi%sub_comm, ierr)
-            elseif(pe_recv == fmpi%n_rank) then
-               call MPI_Recv(coulomb%data_c(i,recv_loc), 1, MPI_DOUBLE_COMPLEX, pe_send, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE,ierr)
-#endif
-            endif
-         enddo
-      enddo
-      call timestop("copy out 2")
-
-
-      call coul_submtx%free()
-      call olap%free()
-      call timestop("solve olap linear eq. sys")
-   end subroutine apply_inverse_olaps
-
    subroutine loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
                                 qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coul)
       use m_types
@@ -1226,120 +1107,116 @@ CONTAINS
          igptp = mpdata%gptm_ptr(igpt, ikpt)
          ix = hybdat%nbasp + igpt
          call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+         if(pe_ix == fmpi%n_rank) then 
+            q = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%cell%bmat)
+            qnorm = norm2(q)
+            iqnrm = pqnrm(igpt, ikpt)
+            IF (ABS(qnrm(iqnrm) - qnorm) > 1e-12) then
+               call judft_error('coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)') ! We shouldn't st op here!
+            endif
 
-         q = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%cell%bmat)
-         qnorm = norm2(q)
-         iqnrm = pqnrm(igpt, ikpt)
-         IF (ABS(qnrm(iqnrm) - qnorm) > 1e-12) then
-            call judft_error('coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)') ! We shouldn't st op here!
-         endif
+            tmp_vec = MATMUL(fi%kpts%bk(:, fi%kpts%nkpt), fi%cell%bmat)
+            call ylm4(2, tmp_vec, y1)
+            tmp_vec = MATMUL(mpdata%g(:, igptp), fi%cell%bmat)
+            call ylm4(2, tmp_vec, y2)
+            call ylm4(fi%hybinp%lexp, q, y)
+            y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
-         tmp_vec = MATMUL(fi%kpts%bk(:, fi%kpts%nkpt), fi%cell%bmat)
-         call ylm4(2, tmp_vec, y1)
-         tmp_vec = MATMUL(mpdata%g(:, igptp), fi%cell%bmat)
-         call ylm4(2, tmp_vec, y2)
-         call ylm4(fi%hybinp%lexp, q, y)
-         y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
+            ! this unrolls the do ic=1,atoms%nat{do lm=1,..{}} 
+            call collapse_ic_and_lm_loop(fi%atoms, fi%hybinp%lcutm1, niter, ic_arr, lm_arr)
 
-         ! this unrolls the do ic=1,atoms%nat{do lm=1,..{}} 
-         call collapse_ic_and_lm_loop(fi%atoms, fi%hybinp%lcutm1, niter, ic_arr, lm_arr)
+            !$OMP PARALLEL DO default(none) &
+            !$OMP private(ic, lm, itype, l, m, csum, csumf, ic1, itype1, cexp, lm1, l2, cdum, m2, lm2, iy) &
+            !$OMP private(j_m, j_type, iy_start, l1, m1) &
+            !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, svol) &
+            !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
+            !$OMP shared(igptp, niter, fmpi, pe_ix, coul, ix_loc) &
+            !$OMP schedule(dynamic)
+            do i = 1,niter 
+               ic = ic_arr(i)
+               lm = lm_arr(i)
 
-         !$OMP PARALLEL DO default(none) &
-         !$OMP private(ic, lm, itype, l, m, csum, csumf, ic1, itype1, cexp, lm1, l2, cdum, m2, lm2, iy) &
-         !$OMP private(j_m, j_type, iy_start, l1, m1) &
-         !$OMP shared(ic_arr, lm_arr, fi, mpdata, olap, qnorm, moment, integral, hybdat, svol) &
-         !$OMP shared(moment2, ix, igpt, facc, structconst, y, y1, y2, gmat, iqnrm, sphbesmoment, ikpt) &
-         !$OMP shared(igptp, niter, fmpi, pe_ix, coul, ix_loc) &
-         !$OMP schedule(dynamic)
-         do i = 1,niter 
-            ic = ic_arr(i)
-            lm = lm_arr(i)
+               itype = fi%atoms%itype(ic)
+               call calc_l_m_from_lm(lm, l, m)
 
-            itype = fi%atoms%itype(ic)
-            call calc_l_m_from_lm(lm, l, m)
+               ! calculate sum over lm and centers for (2c) -> csum, csumf
+               csum = 0
+               csumf = 0
+               do ic1 = 1, fi%atoms%nat
+                  itype1 = fi%atoms%itype(ic1)
+                  cexp = fpi_const*EXP(CMPLX(0.0, 1.0)*tpi_const &
+                                       *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
+                                          - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
 
-            ! calculate sum over lm and centers for (2c) -> csum, csumf
-            csum = 0
-            csumf = 0
-            do ic1 = 1, fi%atoms%nat
-               itype1 = fi%atoms%itype(ic1)
-               cexp = fpi_const*EXP(CMPLX(0.0, 1.0)*tpi_const &
-                                    *(dot_PRODUCT(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%atoms%taual(:, ic1)) &
-                                       - dot_PRODUCT(fi%kpts%bk(:, ikpt), fi%atoms%taual(:, ic))))
+                  do lm1 = 1, (fi%hybinp%lexp+1)**2
+                     call calc_l_m_from_lm(lm1, l1, m1)
+                     l2 = l + l1 ! for structconst
+                     cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
+                     m2 = M - m1              ! for structconst
+                     lm2 = l2**2 + l2 + m2 + 1 !
+                     csum = csum - (-1)**(m1 + l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
+                  END DO
 
-               do lm1 = 1, (fi%hybinp%lexp+1)**2
-                  call calc_l_m_from_lm(lm1, l1, m1)
-                  l2 = l + l1 ! for structconst
-                  cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
-                  m2 = M - m1              ! for structconst
-                  lm2 = l2**2 + l2 + m2 + 1 !
-                  csum = csum - (-1)**(m1 + l1)*gmat(lm1, lm)*y(lm1)*cdum*structconst(lm2, ic, ic1, ikpt)
+                  ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
+                  IF (ikpt == 1 .AND. l <= 2) THEN
+                     cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic1))) &
+                              *gmat(lm, 1)*fpi_const/fi%cell%vol
+                     csumf(lm) = csumf(lm) - cexp*SQRT(fpi_const)* &
+                                 CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
+                     IF (l == 0) THEN
+                        IF (igpt /= 1) THEN
+                           csum = csum - cexp*(sphbesmoment(0, itype1, iqnrm)*fi%atoms%rmt(itype1)**2 - &
+                                                sphbesmoment(2, itype1, iqnrm)*2.0/3)/10
+                        ELSE
+                           csum = csum - cexp*fi%atoms%rmt(itype1)**5/30
+                        END IF
+                     ELSE IF (l == 1) THEN
+                        csum = csum + cexp*CMPLX(0.0, 1.0)*SQRT(fpi_const) &
+                                 *sphbesmoment(1, itype1, iqnrm)*y(lm)/3
+                     END IF
+                  END IF
                END DO
 
-               ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
-               IF (ikpt == 1 .AND. l <= 2) THEN
-                  cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic1))) &
-                           *gmat(lm, 1)*fpi_const/fi%cell%vol
-                  csumf(lm) = csumf(lm) - cexp*SQRT(fpi_const)* &
-                              CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
-                  IF (l == 0) THEN
-                     IF (igpt /= 1) THEN
-                        csum = csum - cexp*(sphbesmoment(0, itype1, iqnrm)*fi%atoms%rmt(itype1)**2 - &
-                                             sphbesmoment(2, itype1, iqnrm)*2.0/3)/10
-                     ELSE
-                        csum = csum - cexp*fi%atoms%rmt(itype1)**5/30
-                     END IF
-                  ELSE IF (l == 1) THEN
-                     csum = csum + cexp*CMPLX(0.0, 1.0)*SQRT(fpi_const) &
-                              *sphbesmoment(1, itype1, iqnrm)*y(lm)/3
-                  END IF
+               ! add contribution of (2a) to csumf
+               IF (ikpt == 1 .AND. igpt == 1 .AND. l <= 2) THEN
+                  csumf(lm) = csumf(lm) + (fpi_const)**2*CMPLX(0.0, 1.0)**l/facC(l)
                END IF
-            END DO
 
-            ! add contribution of (2a) to csumf
-            IF (ikpt == 1 .AND. igpt == 1 .AND. l <= 2) THEN
-               csumf(lm) = csumf(lm) + (fpi_const)**2*CMPLX(0.0, 1.0)**l/facC(l)
-            END IF
+               ! finally define coulomb
+               cdum = (fpi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
+                        *EXP(CMPLX(0.0, 1.0)*tpi_const &
+                           *dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic)))
 
-            ! finally define coulomb
-            cdum = (fpi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
-                     *EXP(CMPLX(0.0, 1.0)*tpi_const &
-                        *dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic)))
-
-            !calclate iy_start on the fly for OpenMP
-            iy_start = 0
-            do iatm = 1, ic-1
-               j_type = fi%atoms%itype(iatm)
-               do j_l = 0,fi%hybinp%lcutm1(j_type)
-                  iy_start = iy_start + mpdata%num_radbasfn(j_l, j_type) * (2*j_l+1)
+               !calclate iy_start on the fly for OpenMP
+               iy_start = 0
+               do iatm = 1, ic-1
+                  j_type = fi%atoms%itype(iatm)
+                  do j_l = 0,fi%hybinp%lcutm1(j_type)
+                     iy_start = iy_start + mpdata%num_radbasfn(j_l, j_type) * (2*j_l+1)
+                  end do
                end do
-            end do
-            do j_lm = 1,lm-1
-               call calc_l_m_from_lm(j_lm, j_l, j_m)
-               iy_start = iy_start + mpdata%num_radbasfn(j_l, itype) 
-            enddo
+               do j_lm = 1,lm-1
+                  call calc_l_m_from_lm(j_lm, j_l, j_m)
+                  iy_start = iy_start + mpdata%num_radbasfn(j_l, itype) 
+               enddo
 
-            DO n = 1, mpdata%num_radbasfn(l, itype)
-               iy = iy_start + n
+               DO n = 1, mpdata%num_radbasfn(l, itype)
+                  iy = iy_start + n
 
-               IF (ikpt == 1 .AND. igpt == 1) THEN
-                  if(pe_ix == fmpi%n_rank) then 
+                  IF (ikpt == 1 .AND. igpt == 1) THEN
                      IF (l == 0) coul%data_c(iy, ix_loc) = -cdum*moment2(n, itype)/6/svol 
                      coul%data_c(iy, ix_loc) = coul%data_c(iy, ix_loc) &
                                                       + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
                                                          + csum*moment(n, l, itype))/svol          ! (2c)
+                  ELSE
+                     coul%data_c(iy, ix_loc) = (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
+                                                - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
+                                                + csum*moment(n, l, itype))/svol          ! (2c)
                   endif
-               ELSE
-                  if(pe_ix == fmpi%n_rank) then 
-                     coul%data_c(iy, ix_loc) = &
-                        (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
-                           - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
-                           + csum*moment(n, l, itype))/svol          ! (2c)
-                  endif
-               END IF
-            END DO
-         END DO ! collapsed atom & lm loop (ic)
-         !$OMP END PARALLEL DO
+               END DO
+            END DO ! collapsed atom & lm loop (ic)
+            !$OMP END PARALLEL DO
+         endif !pe_ix
       END DO
 
       IF (fi%sym%invs) THEN

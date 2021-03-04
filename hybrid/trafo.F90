@@ -567,6 +567,7 @@ CONTAINS
 !     - local arrays -
       COMPLEX               ::  mpicarr(maxval(end_dim)), cfac
 
+      call timestart("symmetrize_mpimat")
       len_dim = end_dim - start_dim + 1
       rfac = sqrt(0.5)
       cfac = sqrt(0.5)*ImagUnit
@@ -660,6 +661,7 @@ CONTAINS
          ! end do
       END IF
 
+      call timestop("symmetrize_mpimat")
    END SUBROUTINE symmetrize_mpimat
 
 
