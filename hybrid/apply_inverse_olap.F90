@@ -50,22 +50,32 @@ contains
       else
          coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
       end if
+      call coul_submtx%free()
       call timestop("copy out 1")
+
+
+      loc_size = 0
+      do i = 1, mpdata%n_g(ikpt)
+         call glob_to_loc(fmpi, i, pe_i, i_loc)
+         if (fmpi%n_rank == pe_i) loc_size = loc_size + 1
+      end do
+
+      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
 
       call timestart("copy in 2")
       do j = 1, mpdata%n_g(ikpt)
          call glob_to_loc(fmpi, hybdat%nbasp + j, pe_j, j_loc)
-         do i = hybdat%nbasp + 1, nbasm
+         do i = 1, mpdata%n_g(ikpt)
             call glob_to_loc(fmpi, i, pe_i, i_loc)
             if (pe_j == pe_i .and. fmpi%n_rank == pe_i) then
                if (coul_submtx%l_real) then
-                  coul_submtx%data_r(j, i_loc) = real(coulomb%data_c(i, j_loc))
+                  coul_submtx%data_r(j, i_loc) = real(coulomb%data_c(hybdat%nbasp+i, j_loc))
                else
-                  coul_submtx%data_c(j, i_loc) = conjg(coulomb%data_c(i, j_loc))
+                  coul_submtx%data_c(j, i_loc) = conjg(coulomb%data_c(hybdat%nbasp+i, j_loc))
                end if
 #ifdef CPP_MPI
             elseif (pe_j == fmpi%n_rank) then
-               call MPI_Send(coulomb%data_c(i, j_loc), 1, MPI_DOUBLE_COMPLEX, pe_i, j + 10000*i, fmpi%sub_comm, ierr)
+               call MPI_Send(coulomb%data_c(hybdat%nbasp+i, j_loc), 1, MPI_DOUBLE_COMPLEX, pe_i, j + 10000*i, fmpi%sub_comm, ierr)
             elseif (pe_i == fmpi%n_rank) then
                call MPI_Recv(cdum, 1, MPI_DOUBLE_COMPLEX, pe_j, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
                if (coul_submtx%l_real) then
@@ -90,13 +100,13 @@ contains
       call timestart("copy out 2")
       do j = 1, mpdata%n_g(ikpt)
          call glob_to_loc(fmpi, hybdat%nbasp + j, pe_recv, recv_loc)
-         do i = hybdat%nbasp + 1, nbasm
+         do i = 1, mpdata%n_g(ikpt)
             call glob_to_loc(fmpi, i, pe_send, send_loc)
             if (pe_send == pe_recv .and. fmpi%n_rank == pe_recv) then
                if (coul_submtx%l_real) then
-                  coulomb%data_c(i, recv_loc) = coul_submtx%data_r(j, send_loc)
+                  coulomb%data_c(hybdat%nbasp +i, recv_loc) = coul_submtx%data_r(j, send_loc)
                else
-                  coulomb%data_c(i, recv_loc) = conjg(coul_submtx%data_c(j, send_loc))
+                  coulomb%data_c(hybdat%nbasp +i, recv_loc) = conjg(coul_submtx%data_c(j, send_loc))
                end if
 #ifdef CPP_MPI
             elseif (pe_send == fmpi%n_rank) then
@@ -107,7 +117,7 @@ contains
                end if
                call MPI_Send(cdum, 1, MPI_DOUBLE_COMPLEX, pe_recv, j + 10000*i, fmpi%sub_comm, ierr)
             elseif (pe_recv == fmpi%n_rank) then
-               call MPI_Recv(coulomb%data_c(i, recv_loc), 1, MPI_DOUBLE_COMPLEX, pe_send, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+               call MPI_Recv(coulomb%data_c(hybdat%nbasp +i, recv_loc), 1, MPI_DOUBLE_COMPLEX, pe_send, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
 #endif
             end if
          end do
