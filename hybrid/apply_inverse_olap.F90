@@ -1,5 +1,6 @@
 module m_apply_inverse_olap
    use m_glob_tofrom_loc
+   USE m_types_mpimat
 contains
    subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, fmpi, sym, ikpt, coulomb)
       USE m_olap, ONLY: olap_pw
@@ -17,6 +18,7 @@ contains
 
       type(t_mat)               :: olap
       class(t_mat), allocatable :: coul_submtx
+      type(t_mpimat)            :: olap_mpi
 
       integer         :: nbasm, loc_size, i, j, i_loc, ierr, pe_i, pe_j, pe_recv, pe_send, recv_loc, send_loc, j_loc
       complex         :: cdum
@@ -49,46 +51,28 @@ contains
       deallocate(coul_submtx)
       call timestop("copy out 1")
 
-      call copy_in_2(fmpi, sym, mpdata, hybdat, coulomb, ikpt, coul_submtx)
 
       ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
       ! rewritten as O^T * x^T = C^T
+      call copy_in_2(fmpi, sym, mpdata, hybdat, coulomb, ikpt, coul_submtx)
 
       ! reload O, since the solver destroys it.
       CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell, fmpi)
       ! Notice O = O^T since it's symmetric
-      call olap%linear_problem(coul_submtx)
 
-      call timestart("copy out 2")
-      do j = 1, mpdata%n_g(ikpt)
-         call glob_to_loc(fmpi, hybdat%nbasp + j, pe_recv, recv_loc)
-         do i = 1, mpdata%n_g(ikpt)
-            call glob_to_loc(fmpi, i, pe_send, send_loc)
-            if (pe_send == pe_recv .and. fmpi%n_rank == pe_recv) then
-               if (coul_submtx%l_real) then
-                  coulomb%data_c(hybdat%nbasp +i, recv_loc) = coul_submtx%data_r(j, send_loc)
-               else
-                  coulomb%data_c(hybdat%nbasp +i, recv_loc) = conjg(coul_submtx%data_c(j, send_loc))
-               end if
-#ifdef CPP_MPI
-            elseif (pe_send == fmpi%n_rank) then
-               if (coul_submtx%l_real) then
-                  cdum = coul_submtx%data_r(j, send_loc)
-               else
-                  cdum = conjg(coul_submtx%data_c(j, send_loc))
-               end if
-               call MPI_Send(cdum, 1, MPI_DOUBLE_COMPLEX, pe_recv, j + 10000*i, fmpi%sub_comm, ierr)
-            elseif (pe_recv == fmpi%n_rank) then
-               call MPI_Recv(coulomb%data_c(hybdat%nbasp +i, recv_loc), 1, MPI_DOUBLE_COMPLEX, pe_send, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-#endif
-            end if
-         end do
-      end do
-      call timestop("copy out 2")
+      SELECT TYPE(coul_submtx)
+      CLASS is (t_mat)
+         call olap%linear_problem(coul_submtx)
+         call olap%free()
+      class is (t_mpimat)
+         call olap_mpi%init(coul_submtx,  olap%matsize1, olap%matsize2)
+         call olap_mpi%from_non_dist(olap)
+         call olap_mpi%linear_problem(coul_submtx)
+         call olap_mpi%free()
+      end select
 
-      call coul_submtx%free()
+      call copy_out_2(fmpi, sym, mpdata, hybdat, ikpt, coul_submtx, coulomb)
       deallocate(coul_submtx)
-      call olap%free()
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
 
@@ -102,17 +86,13 @@ contains
       class(t_mat), intent(in)     :: coulomb 
       class(t_mat), intent(inout), allocatable  :: coul_submtx
 
-      integer :: loc_size, i, j, ierr, i_loc, j_loc, pe_i, pe_j
+      integer :: i, j, ierr, i_loc, j_loc, pe_i, pe_j
       complex :: cdum
 
       call timestart("copy in 2")
-      loc_size = 0
-      do i = 1, mpdata%n_g(ikpt)
-         call glob_to_loc(fmpi, i, pe_i, i_loc)
-         if (fmpi%n_rank == pe_i) loc_size = loc_size + 1
-      end do
 
-      if(fmpi%n_size == 1) then
+      SELECT TYPE(coulomb)
+      CLASS is (t_mat)
          allocate(t_mat::coul_submtx)
          call coul_submtx%alloc(.false., mpdata%n_g(ikpt), mpdata%n_g(ikpt))
          do j = 1, mpdata%n_g(ikpt)
@@ -120,27 +100,60 @@ contains
                coul_submtx%data_c(j, i) = conjg(coulomb%data_c(hybdat%nbasp+i, hybdat%nbasp + j))
             enddo 
          enddo
-      else
-         allocate(t_mat::coul_submtx)
-         call coul_submtx%alloc(.false., mpdata%n_g(ikpt), loc_size)
-
-         do j = 1, mpdata%n_g(ikpt)
-            call glob_to_loc(fmpi, hybdat%nbasp + j, pe_j, j_loc)
-            do i = 1, mpdata%n_g(ikpt)
-               call glob_to_loc(fmpi, i, pe_i, i_loc)
-               if (pe_j == pe_i .and. fmpi%n_rank == pe_i) then
-                  coul_submtx%data_c(j, i_loc) = conjg(coulomb%data_c(hybdat%nbasp+i, j_loc))
-#ifdef CPP_MPI
-               elseif (pe_j == fmpi%n_rank) then
-                  call MPI_Send(coulomb%data_c(hybdat%nbasp+i, j_loc), 1, MPI_DOUBLE_COMPLEX, pe_i, j + 10000*i, fmpi%sub_comm, ierr)
-               elseif (pe_i == fmpi%n_rank) then
-                  call MPI_Recv(cdum, 1, MPI_DOUBLE_COMPLEX, pe_j, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-                  coul_submtx%data_c(j, i_loc) = conjg(cdum)
+      class is (t_mpimat)
+#ifdef CPP_SCALAPACK
+         allocate(t_mpimat::coul_submtx)
+         call coul_submtx%init(.False., mpdata%n_g(ikpt), mpdata%n_g(ikpt), fmpi%sub_comm, .True.)
+         select type(coul_submtx)
+         class is (t_mpimat)
+            ! copy bottom right corner of coulomb to coul_submtx
+            !call pzgemr2d(m,              n,               a,                ia,           ja,             desca, 
+            call pzgemr2d(mpdata%n_g(ikpt),mpdata%n_g(ikpt),coulomb%data_c, hybdat%nbasp+1, hybdat%nbasp+1, coulomb%blacsdata%blacs_desc,&
+            !             b, ib, jb,             descb, ictxt)
+                        coul_submtx%data_c, 1, 1, coul_submtx%blacsdata%blacs_desc, coulomb%blacsdata%blacs_desc(2))
+            call coul_submtx%transpose()
+         class default
+            call judft_error("coul_submtx should also be mpimat")
+         end select
+      END SELECT
 #endif
-               end if
-            end do
-         end do
-      endif
       call timestop("copy in 2")
    end subroutine copy_in_2
+
+   subroutine copy_out_2(fmpi, sym, mpdata, hybdat, ikpt, coul_submtx, coulomb)
+      implicit none 
+      type(t_mpi), intent(in)      :: fmpi 
+      integer, intent(in)          :: ikpt
+      type(t_sym), intent(in)      :: sym
+      type(t_mpdata), intent(in)   :: mpdata 
+      type(t_hybdat), intent(in)   :: hybdat
+      class(t_mat), intent(inout)  :: coulomb 
+      class(t_mat), intent(inout)  :: coul_submtx
+
+      integer :: i, j
+
+      call timestart("copy out 2")
+
+      SELECT TYPE(coulomb)
+      CLASS is (t_mat)
+         do j = 1, mpdata%n_g(ikpt)
+            do i = 1, mpdata%n_g(ikpt)
+               coulomb%data_c(hybdat%nbasp+i, hybdat%nbasp + j) = conjg(coul_submtx%data_c(j, i))
+            enddo 
+         enddo
+      class is (t_mpimat)
+         select type(coul_submtx)
+         class is (t_mpimat)
+            call coul_submtx%transpose()
+            ! copy coul_submtx to bottom right corner of coulomb
+            !call pzgemr2d(m,              n,               a,                  ia, ja,             desca, 
+            call pzgemr2d(mpdata%n_g(ikpt),mpdata%n_g(ikpt),coul_submtx%data_c, 1, 1, coul_submtx%blacsdata%blacs_desc,&
+            !             b,             ib,            jb,             descb, ictxt)
+                        coulomb%data_c, hybdat%nbasp+1, hybdat%nbasp+1, coulomb%blacsdata%blacs_desc, coulomb%blacsdata%blacs_desc(2))
+         class default
+            call judft_error("coul_submtx should also be mpimat")
+         end select
+      end select
+      call timestop("copy out 2")
+   end subroutine copy_out_2
 end module m_apply_inverse_olap
