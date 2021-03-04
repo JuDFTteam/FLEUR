@@ -115,8 +115,8 @@ contains
          class default
             call judft_error("coul_submtx should also be mpimat")
          end select
-      END SELECT
 #endif
+      END SELECT
       call timestop("copy in 2")
    end subroutine copy_in_2
 
@@ -142,6 +142,7 @@ contains
             enddo 
          enddo
       class is (t_mpimat)
+#ifdef CPP_SCALAPACK
          select type(coul_submtx)
          class is (t_mpimat)
             call coul_submtx%transpose()
@@ -153,6 +154,7 @@ contains
          class default
             call judft_error("coul_submtx should also be mpimat")
          end select
+#endif
       end select
       call timestop("copy out 2")
    end subroutine copy_out_2
