@@ -166,7 +166,6 @@ CONTAINS
             call judft_error("BUG in t_mpimat%transpose, wrong matrix type")
          end select
       ENDIF
-
       IF (mat1%l_real) THEN
          allocate (rd(size(mat1%data_r, 1), size(mat1%data_r, 2)))
          call pdtran(mat1%global_size1, mat1%global_size2, 1.0, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, 0.0, rd, 1, 1, mat1%blacsdata%blacs_desc)
@@ -642,7 +641,7 @@ CONTAINS
          IF (PRESENT(global_size1) .AND. PRESENT(global_size2)) THEN
             ALLOCATE (mat%blacsdata)
             mat%blacsdata = templ%blacsdata
-            mat%blacsdata%no_use = 1
+            mat%blacsdata%no_use = mat%blacsdata%no_use + 1
             mat%blacsdata%blacs_desc(3) = global_size1
             mat%blacsdata%blacs_desc(4) = global_size2
             mat%global_size1 = global_size1
