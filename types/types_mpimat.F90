@@ -64,7 +64,7 @@ CONTAINS
       class(t_mat), INTENT(INOUT)   :: vec
 
       integer :: ipiv(mat%global_size1), info
-
+#ifdef CPP_SCALAPACK
       if(mat%l_real .neqv. vec%l_real) call judft_error("mat and vec need to be same kind")
 
       select type (vec) 
@@ -86,6 +86,9 @@ CONTAINS
             if (info /= 0) call judft_error("Error in pzgesv for lproblem: " // int2str(info))
          endif
       end select
+#else
+      call judft_error("no scala")
+#endif
    end subroutine t_mpimat_lproblem
 
 
