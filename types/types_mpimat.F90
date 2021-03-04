@@ -65,6 +65,7 @@ CONTAINS
 
       integer :: ipiv(mat%global_size1), info
 #ifdef CPP_SCALAPACK
+      call timestart("mpimat_lproblem")
       if(mat%l_real .neqv. vec%l_real) call judft_error("mat and vec need to be same kind")
 
       select type (vec)
@@ -86,6 +87,7 @@ CONTAINS
             if (info /= 0) call judft_error("Error in pzgesv for lproblem: " // int2str(info))
          endif
       end select
+      call timestop("mpimat_lproblem")
 #else
       call judft_error("no scala")
 #endif
@@ -166,7 +168,6 @@ CONTAINS
             call judft_error("BUG in t_mpimat%transpose, wrong matrix type")
          end select
       ENDIF
-
       IF (mat1%l_real) THEN
          allocate (rd(size(mat1%data_r, 1), size(mat1%data_r, 2)))
          call pdtran(mat1%global_size1, mat1%global_size2, 1.0, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, 0.0, rd, 1, 1, mat1%blacsdata%blacs_desc)
