@@ -15,13 +15,15 @@ contains
       class(t_mat), intent(inout) :: coulomb
       integer, intent(in)         :: ikpt
 
-      type(t_mat)     :: olap, coul_submtx
+      type(t_mat)               :: olap
+      class(t_mat), allocatable :: coul_submtx
+
       integer         :: nbasm, loc_size, i, j, i_loc, ierr, pe_i, pe_j, pe_recv, pe_send, recv_loc, send_loc, j_loc
       complex         :: cdum
 
       call timestart("solve olap linear eq. sys")
       nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
-      CALL olap%alloc(sym%invs, mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
+      CALL olap%alloc(.false., mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
       !calculate IR overlap-matrix
       CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell, fmpi)
 
@@ -35,22 +37,16 @@ contains
       end do
 
       call timestart("copy in 1")
-      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
-      if (coul_submtx%l_real) then
-         coul_submtx%data_r(:, :) = real(coulomb%data_c(hybdat%nbasp + 1:, :))
-      else
-         coul_submtx%data_c(:, :) = coulomb%data_c(hybdat%nbasp + 1:, :)
-      end if
+      allocate(t_mat::coul_submtx)
+      call coul_submtx%alloc(.false., mpdata%n_g(ikpt), loc_size)
+      coul_submtx%data_c(:, :) = coulomb%data_c(hybdat%nbasp + 1:, :)
       call timestop("copy in 1")
 
       call olap%linear_problem(coul_submtx)
       call timestart("copy out 1")
-      if (coul_submtx%l_real) then
-         coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_r
-      else
-         coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
-      end if
+      coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
       call coul_submtx%free()
+      deallocate(coul_submtx)
       call timestop("copy out 1")
 
       call copy_in_2(fmpi, sym, mpdata, hybdat, coulomb, ikpt, coul_submtx)
@@ -91,6 +87,7 @@ contains
       call timestop("copy out 2")
 
       call coul_submtx%free()
+      deallocate(coul_submtx)
       call olap%free()
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
@@ -103,44 +100,47 @@ contains
       type(t_mpdata), intent(in)   :: mpdata 
       type(t_hybdat), intent(in)   :: hybdat
       class(t_mat), intent(in)     :: coulomb 
-      class(t_mat), intent(inout)  :: coul_submtx
+      class(t_mat), intent(inout), allocatable  :: coul_submtx
 
       integer :: loc_size, i, j, ierr, i_loc, j_loc, pe_i, pe_j
       complex :: cdum
 
+      call timestart("copy in 2")
       loc_size = 0
       do i = 1, mpdata%n_g(ikpt)
          call glob_to_loc(fmpi, i, pe_i, i_loc)
          if (fmpi%n_rank == pe_i) loc_size = loc_size + 1
       end do
 
-      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
+      if(fmpi%n_size == 1) then
+         allocate(t_mat::coul_submtx)
+         call coul_submtx%alloc(.false., mpdata%n_g(ikpt), mpdata%n_g(ikpt))
+         do j = 1, mpdata%n_g(ikpt)
+            do i = 1, mpdata%n_g(ikpt)
+               coul_submtx%data_c(j, i) = conjg(coulomb%data_c(hybdat%nbasp+i, hybdat%nbasp + j))
+            enddo 
+         enddo
+      else
+         allocate(t_mat::coul_submtx)
+         call coul_submtx%alloc(.false., mpdata%n_g(ikpt), loc_size)
 
-      call timestart("copy in 2")
-      do j = 1, mpdata%n_g(ikpt)
-         call glob_to_loc(fmpi, hybdat%nbasp + j, pe_j, j_loc)
-         do i = 1, mpdata%n_g(ikpt)
-            call glob_to_loc(fmpi, i, pe_i, i_loc)
-            if (pe_j == pe_i .and. fmpi%n_rank == pe_i) then
-               if (coul_submtx%l_real) then
-                  coul_submtx%data_r(j, i_loc) = real(coulomb%data_c(hybdat%nbasp+i, j_loc))
-               else
+         do j = 1, mpdata%n_g(ikpt)
+            call glob_to_loc(fmpi, hybdat%nbasp + j, pe_j, j_loc)
+            do i = 1, mpdata%n_g(ikpt)
+               call glob_to_loc(fmpi, i, pe_i, i_loc)
+               if (pe_j == pe_i .and. fmpi%n_rank == pe_i) then
                   coul_submtx%data_c(j, i_loc) = conjg(coulomb%data_c(hybdat%nbasp+i, j_loc))
-               end if
 #ifdef CPP_MPI
-            elseif (pe_j == fmpi%n_rank) then
-               call MPI_Send(coulomb%data_c(hybdat%nbasp+i, j_loc), 1, MPI_DOUBLE_COMPLEX, pe_i, j + 10000*i, fmpi%sub_comm, ierr)
-            elseif (pe_i == fmpi%n_rank) then
-               call MPI_Recv(cdum, 1, MPI_DOUBLE_COMPLEX, pe_j, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-               if (coul_submtx%l_real) then
-                  coul_submtx%data_r(j, i_loc) = real(cdum)
-               else
+               elseif (pe_j == fmpi%n_rank) then
+                  call MPI_Send(coulomb%data_c(hybdat%nbasp+i, j_loc), 1, MPI_DOUBLE_COMPLEX, pe_i, j + 10000*i, fmpi%sub_comm, ierr)
+               elseif (pe_i == fmpi%n_rank) then
+                  call MPI_Recv(cdum, 1, MPI_DOUBLE_COMPLEX, pe_j, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
                   coul_submtx%data_c(j, i_loc) = conjg(cdum)
-               end if
 #endif
-            end if
+               end if
+            end do
          end do
-      end do
+      endif
       call timestop("copy in 2")
    end subroutine copy_in_2
 end module m_apply_inverse_olap
