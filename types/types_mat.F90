@@ -315,11 +315,17 @@ CONTAINS
    SUBROUTINE t_mat_lproblem(mat, vec)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(IN)     :: mat
-      TYPE(t_mat), INTENT(INOUT)   :: vec
+      class(t_mat), INTENT(INOUT)   :: vec
 
       INTEGER:: lwork, info
       REAL, ALLOCATABLE:: work(:)
       INTEGER, allocatable::ipiv(:)
+
+      select type (vec) 
+      class is (t_mat)
+      class default
+         call judft_error("lproblem can only be solved if vec and mat are the same class")
+      end select
 
       IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) &
           .OR. (mat%matsize1 .NE. vec%matsize1)) &
