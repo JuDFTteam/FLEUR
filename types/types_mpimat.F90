@@ -34,7 +34,7 @@ MODULE m_types_mpimat
 
    TYPE, EXTENDS(t_mat):: t_mpimat
       INTEGER                   :: global_size1, global_size2        !> this is the size of the full-matrix
-      TYPE(t_blacsdata), POINTER :: blacsdata
+      TYPE(t_blacsdata), POINTER :: blacsdata =>null()
    CONTAINS
       PROCEDURE   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
       PROCEDURE   :: move => mpimat_move     !<overwriten from t_mat, also performs redistribution
@@ -51,12 +51,44 @@ MODULE m_types_mpimat
       procedure   :: to_non_dist
       PROCEDURE   :: transpose => mpimat_transpose
       procedure   :: print_type => mpimat_print_type
+      PROCEDURE   :: linear_problem => t_mpimat_lproblem 
       FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
    END TYPE t_mpimat
 
    PUBLIC t_mpimat
 
 CONTAINS
+   SUBROUTINE t_mpimat_lproblem(mat, vec)
+      IMPLICIT NONE
+      CLASS(t_mpimat), INTENT(IN)   :: mat
+      class(t_mat), INTENT(INOUT)   :: vec
+
+      integer :: ipiv(mat%global_size1), info
+
+      if(mat%l_real .neqv. vec%l_real) call judft_error("mat and vec need to be same kind")
+
+      select type (vec) 
+      class is (t_mat)
+         call judft_error("lproblem can only be solved if vec and mat are the same class")
+      class is (t_mpimat)
+         if(mat%l_real) then 
+            !call pdgesv(n,               nrhs,             a,         ia,ja,desca,                    ipiv
+            call pdgesv(mat%global_size1, vec%global_size2, mat%data_r, 1,1, mat%blacsdata%blacs_desc, ipiv,&
+                     !  b,ib,jb,descb,info)
+                        vec%data_r, 1,1, vec%blacsdata%blacs_desc, info)
+            if (info /= 0) call judft_error("Error in pdgesv for lproblem")
+         else
+            !call pzgesv(n,               nrhs,             a,          ia,ja,desca,                    ipiv,
+            call pzgesv(mat%global_size1, vec%global_size2, mat%data_c, 1, 1, mat%blacsdata%blacs_desc, ipiv,&
+            !           b,         ib,jb, descb,info)
+                        vec%data_c, 1, 1, vec%blacsdata%blacs_desc, info)
+                        
+            if (info /= 0) call judft_error("Error in pzgesv for lproblem: " // int2str(info))
+         endif
+      end select
+   end subroutine t_mpimat_lproblem
+
+
    subroutine mpimat_print_type(mat)
       implicit none
       CLASS(t_mpimat), INTENT(IN)     :: mat
@@ -614,7 +646,7 @@ CONTAINS
             mat%global_size2 = global_size2
 #ifdef CPP_SCALAPACK
             mat%matsize1 = NUMROC(global_size1, mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow)
-            mat%matsize1 = NUMROC(global_size2, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol)
+            mat%matsize2 = NUMROC(global_size2, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol)
 #endif
          ELSE
             mat%matsize1 = templ%matsize1
