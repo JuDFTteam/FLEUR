@@ -873,7 +873,8 @@ CONTAINS
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, ikpt, coul(ikpt))
-         call coul(ikpt)%u2l()
+         ! lower to upper, because the lower half is better in memory
+         call coul(ikpt)%l2u()
       enddo
 
       !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
@@ -1101,26 +1102,25 @@ CONTAINS
       call timestart("copy in 1")
       call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
       if(coul_submtx%l_real) then
-         coul_submtx%data_r(:,:) = real(coulomb%data_c(hybdat%nbasp + 1:,:loc_size))
+         coul_submtx%data_r(:,:) = real(coulomb%data_c(hybdat%nbasp + 1:,:))
       else 
-         coul_submtx%data_c(:,:) = coulomb%data_c(hybdat%nbasp + 1:,:loc_size)
+         coul_submtx%data_c(:,:) = coulomb%data_c(hybdat%nbasp + 1:,:)
       endif
       call timestop("copy in 1")
 
       call olap%linear_problem(coul_submtx)
-
       call timestart("copy out 1")
       if(coul_submtx%l_real) then 
-         coulomb%data_c(hybdat%nbasp + 1:,:loc_size) = coul_submtx%data_r
+         coulomb%data_c(hybdat%nbasp + 1:,:) = coul_submtx%data_r
       else 
-         coulomb%data_c(hybdat%nbasp + 1:,:loc_size) = coul_submtx%data_c
+         coulomb%data_c(hybdat%nbasp + 1:,:) = coul_submtx%data_c
       endif
       call timestop("copy out 1")
 
       call timestart("copy in 2")
       do j = 1, mpdata%n_g(ikpt)
          call glob_to_loc(fmpi, hybdat%nbasp + j, pe_send, send_loc)
-         do i = 1,nbasm    
+         do i = hybdat%nbasp + 1,nbasm    
             call glob_to_loc(fmpi, i, pe_recv, recv_loc)
             if(pe_send == pe_recv .and. fmpi%n_rank == pe_recv) then
                if(coul_submtx%l_real) then
@@ -1142,7 +1142,6 @@ CONTAINS
             endif
          enddo
       enddo 
-
       call timestop("copy in 2")
 
       ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
@@ -1156,7 +1155,7 @@ CONTAINS
       call timestart("copy out 2")
       do j = 1, mpdata%n_g(ikpt)
          call glob_to_loc(fmpi, hybdat%nbasp + j, pe_recv, recv_loc)
-         do i = 1,nbasm    
+         do i = hybdat%nbasp + 1,nbasm    
             call glob_to_loc(fmpi, i, pe_send, send_loc)
             if(pe_send == pe_recv .and. fmpi%n_rank == pe_recv) then
                if(coul_submtx%l_real) then
@@ -1179,7 +1178,6 @@ CONTAINS
          enddo
       enddo
       call timestop("copy out 2")
-
 
       call coul_submtx%free()
       call olap%free()

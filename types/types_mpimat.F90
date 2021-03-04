@@ -194,10 +194,62 @@ CONTAINS
    END SUBROUTINE print_matrix
 
    subroutine t_mpimat_l2u(mat)
+#ifdef CPP_SCALAPACK
+      USE mpi
+#endif
       implicit none
-      class(t_mpimat), intent(inout) :: mat
+      CLASS(t_mpimat), INTENT(INOUT) ::mat
 
-      call judft_error("l2u not yet implemented for t_mpimat")
+      INTEGER :: i, j, i_glob, j_glob, myid, err, np
+      COMPLEX, ALLOCATABLE:: tmp_c(:, :)
+      REAL, ALLOCATABLE   :: tmp_r(:, :)
+#ifdef CPP_SCALAPACK
+      INTEGER, EXTERNAL    :: numroc, indxl2g  !SCALAPACK functions
+
+      call timestart("t_mpimat_l2u")
+
+      CALL MPI_COMM_RANK(mat%blacsdata%mpi_com, myid, err)
+      CALL MPI_COMM_SIZE(mat%blacsdata%mpi_com, np, err)
+      !Set lower part of matrix to zero
+
+      DO i = 1, mat%matsize1
+         DO j = 1, mat%matsize2
+            ! Get global column corresponding to i and number of local rows up to
+            ! and including the diagonal, these are unchanged in A
+            i_glob = indxl2g(i, mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, 0, mat%blacsdata%nprow)
+            j_glob = indxl2g(j, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, 0, mat%blacsdata%npcol)
+
+            IF (i_glob < j_glob) THEN
+               IF (mat%l_real) THEN
+                  mat%data_r(i, j) = 0.0
+               ELSE
+                  mat%data_c(i, j) = 0.0
+               ENDIF
+            elseif (i_glob == j_glob) THEN
+               IF (mat%l_real) THEN
+                  mat%data_r(i, j) = mat%data_r(i, j)*0.5
+               ELSE
+                  mat%data_c(i, j) = mat%data_c(i, j)*0.5
+               ENDIF
+            ENDIF
+         ENDDO
+      ENDDO
+
+      IF (mat%l_real) THEN
+         ALLOCATE (tmp_r(mat%matsize1, mat%matsize2))
+         tmp_r = mat%data_r
+      ELSE
+         ALLOCATE (tmp_c(mat%matsize1, mat%matsize2))
+         tmp_c = mat%data_c
+      END IF
+      CALL MPI_BARRIER(mat%blacsdata%mpi_com, i)
+      IF (mat%l_real) THEN
+         CALL pdgeadd('t', mat%global_size1, mat%global_size2, 1.0, tmp_r, 1, 1, mat%blacsdata%blacs_desc, 1.0, mat%data_r, 1, 1, mat%blacsdata%blacs_desc)
+      ELSE
+         CALL pzgeadd('c', mat%global_size1, mat%global_size2, CMPLX(1.0, 0.0), tmp_c, 1, 1, mat%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat%blacsdata%blacs_desc)
+      END IF
+#endif
+      call timestop("t_mpimat_l2u")
    end subroutine t_mpimat_l2u
 
    SUBROUTINE t_mpimat_u2l(mat)
@@ -252,12 +304,9 @@ CONTAINS
       END IF
       CALL MPI_BARRIER(mat%blacsdata%mpi_com, i)
       IF (mat%l_real) THEN
-#ifdef CPP_SCALAPACK
-
          CALL pdgeadd('t', mat%global_size1, mat%global_size2, 1.0, tmp_r, 1, 1, mat%blacsdata%blacs_desc, 1.0, mat%data_r, 1, 1, mat%blacsdata%blacs_desc)
       ELSE
          CALL pzgeadd('c', mat%global_size1, mat%global_size2, CMPLX(1.0, 0.0), tmp_c, 1, 1, mat%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat%blacsdata%blacs_desc)
-#endif
       END IF
 #endif
       call timestop("t_mpimat_u2l")
