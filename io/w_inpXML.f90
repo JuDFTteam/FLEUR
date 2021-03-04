@@ -621,7 +621,7 @@ CONTAINS
 
       WRITE (fileNum, '(a)') '   </output>'
       IF (present(filename)) THEN
-         WRITE (fileNum, '(a)') '  <!-- We include the file relax.inp here to enable relaxations (see documentation) -->'
+         WRITE (fileNum, '(a)') '  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->'
          WRITE (fileNum, '(a)') '  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>'
          WRITE (fileNum, '(a)') '</fleurInput>'
          CLOSE (fileNum)
