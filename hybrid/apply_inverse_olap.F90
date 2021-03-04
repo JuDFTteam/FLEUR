@@ -6,14 +6,14 @@ contains
       USE m_types
       use m_judft
       implicit none
-      type(t_mpdata), intent(in) :: mpdata
-      type(t_atoms), intent(in)  :: atoms
-      type(t_cell), intent(in)   :: cell
-      type(t_hybdat), intent(in) :: hybdat
-      type(t_mpi), intent(in)    :: fmpi
-      type(t_sym), intent(in)    :: sym
-      type(t_mat), intent(inout) :: coulomb
-      integer, intent(in)        :: ikpt
+      type(t_mpdata), intent(in)  :: mpdata
+      type(t_atoms), intent(in)   :: atoms
+      type(t_cell), intent(in)    :: cell
+      type(t_hybdat), intent(in)  :: hybdat
+      type(t_mpi), intent(in)     :: fmpi
+      type(t_sym), intent(in)     :: sym
+      class(t_mat), intent(inout) :: coulomb
+      integer, intent(in)         :: ikpt
 
       type(t_mat)     :: olap, coul_submtx
       integer         :: nbasm, loc_size, i, j, i_loc, ierr, pe_i, pe_j, pe_recv, pe_send, recv_loc, send_loc, j_loc
@@ -53,41 +53,7 @@ contains
       call coul_submtx%free()
       call timestop("copy out 1")
 
-
-      loc_size = 0
-      do i = 1, mpdata%n_g(ikpt)
-         call glob_to_loc(fmpi, i, pe_i, i_loc)
-         if (fmpi%n_rank == pe_i) loc_size = loc_size + 1
-      end do
-
-      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
-
-      call timestart("copy in 2")
-      do j = 1, mpdata%n_g(ikpt)
-         call glob_to_loc(fmpi, hybdat%nbasp + j, pe_j, j_loc)
-         do i = 1, mpdata%n_g(ikpt)
-            call glob_to_loc(fmpi, i, pe_i, i_loc)
-            if (pe_j == pe_i .and. fmpi%n_rank == pe_i) then
-               if (coul_submtx%l_real) then
-                  coul_submtx%data_r(j, i_loc) = real(coulomb%data_c(hybdat%nbasp+i, j_loc))
-               else
-                  coul_submtx%data_c(j, i_loc) = conjg(coulomb%data_c(hybdat%nbasp+i, j_loc))
-               end if
-#ifdef CPP_MPI
-            elseif (pe_j == fmpi%n_rank) then
-               call MPI_Send(coulomb%data_c(hybdat%nbasp+i, j_loc), 1, MPI_DOUBLE_COMPLEX, pe_i, j + 10000*i, fmpi%sub_comm, ierr)
-            elseif (pe_i == fmpi%n_rank) then
-               call MPI_Recv(cdum, 1, MPI_DOUBLE_COMPLEX, pe_j, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-               if (coul_submtx%l_real) then
-                  coul_submtx%data_r(j, i_loc) = real(cdum)
-               else
-                  coul_submtx%data_c(j, i_loc) = conjg(cdum)
-               end if
-#endif
-            end if
-         end do
-      end do
-      call timestop("copy in 2")
+      call copy_in_2(fmpi, sym, mpdata, hybdat, coulomb, ikpt, coul_submtx)
 
       ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
       ! rewritten as O^T * x^T = C^T
@@ -128,4 +94,53 @@ contains
       call olap%free()
       call timestop("solve olap linear eq. sys")
    end subroutine apply_inverse_olaps
+
+   subroutine copy_in_2(fmpi, sym, mpdata, hybdat, coulomb, ikpt, coul_submtx)
+      implicit none 
+      type(t_mpi), intent(in)      :: fmpi 
+      integer, intent(in)          :: ikpt
+      type(t_sym), intent(in)      :: sym
+      type(t_mpdata), intent(in)   :: mpdata 
+      type(t_hybdat), intent(in)   :: hybdat
+      class(t_mat), intent(in)     :: coulomb 
+      class(t_mat), intent(inout)  :: coul_submtx
+
+      integer :: loc_size, i, j, ierr, i_loc, j_loc, pe_i, pe_j
+      complex :: cdum
+
+      loc_size = 0
+      do i = 1, mpdata%n_g(ikpt)
+         call glob_to_loc(fmpi, i, pe_i, i_loc)
+         if (fmpi%n_rank == pe_i) loc_size = loc_size + 1
+      end do
+
+      call coul_submtx%alloc(sym%invs, mpdata%n_g(ikpt), loc_size)
+
+      call timestart("copy in 2")
+      do j = 1, mpdata%n_g(ikpt)
+         call glob_to_loc(fmpi, hybdat%nbasp + j, pe_j, j_loc)
+         do i = 1, mpdata%n_g(ikpt)
+            call glob_to_loc(fmpi, i, pe_i, i_loc)
+            if (pe_j == pe_i .and. fmpi%n_rank == pe_i) then
+               if (coul_submtx%l_real) then
+                  coul_submtx%data_r(j, i_loc) = real(coulomb%data_c(hybdat%nbasp+i, j_loc))
+               else
+                  coul_submtx%data_c(j, i_loc) = conjg(coulomb%data_c(hybdat%nbasp+i, j_loc))
+               end if
+#ifdef CPP_MPI
+            elseif (pe_j == fmpi%n_rank) then
+               call MPI_Send(coulomb%data_c(hybdat%nbasp+i, j_loc), 1, MPI_DOUBLE_COMPLEX, pe_i, j + 10000*i, fmpi%sub_comm, ierr)
+            elseif (pe_i == fmpi%n_rank) then
+               call MPI_Recv(cdum, 1, MPI_DOUBLE_COMPLEX, pe_j, j + 10000*i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+               if (coul_submtx%l_real) then
+                  coul_submtx%data_r(j, i_loc) = real(cdum)
+               else
+                  coul_submtx%data_c(j, i_loc) = conjg(cdum)
+               end if
+#endif
+            end if
+         end do
+      end do
+      call timestop("copy in 2")
+   end subroutine copy_in_2
 end module m_apply_inverse_olap
