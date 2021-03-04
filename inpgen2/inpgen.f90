@@ -337,7 +337,7 @@ PROGRAM inpgen
          ios = 0
          DO WHILE(ios==0)
             READ(inpgenIUnit,'(a)',iostat=ios) line
-            WRITE(inpOldUnit,'(a)') TRIM(line)
+            IF (ios.EQ.0) WRITE(inpOldUnit,'(a)') TRIM(line)
          END DO
          WRITE(inpOldUnit,'(a)') '-->'
          CLOSE (inpOldUnit)
