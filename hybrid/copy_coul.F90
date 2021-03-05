@@ -284,9 +284,7 @@ contains
       do iatom = 1,fi%atoms%nat 
          itype = fi%atoms%itype(iatom)
          DO l = 0, fi%hybinp%lcutm1(itype)
-            DO M = -l, l
-               ic = ic + 1
-            END DO
+            ic = ic + 2*l + 1
          END DO
       END DO
 
