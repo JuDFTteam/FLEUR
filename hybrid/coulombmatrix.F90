@@ -422,7 +422,6 @@ CONTAINS
                                        lm1 = lm1 + 1
                                        DO n1 = 1, mpdata%num_radbasfn(l1, itype1)
                                           iy = iy + 1
-                                          IF (iy > ix) EXIT lp2 ! Don't cross the diagonal!
                                           rdum = (-1)**(l2 + m2)*moment(n1, l1, itype1)*moment(n2, l2, itype2)*gmat(lm1, lm2)
                                           l = l1 + l2
                                           lm = l**2 + l + m1 - m2 + 1
@@ -448,8 +447,6 @@ CONTAINS
                END DO
             END DO
          END DO
-
-         call coul(ikpt)%u2l()
 
          IF (fi%sym%invs) THEN
             !symmetrize makes the Coulomb matrix real symmetric     
@@ -769,6 +766,7 @@ CONTAINS
             call timestop("harmonics setup")
             call perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
                                        pqnrm,qnrm, nqnrm, ikpt, coul(ikpt))
+            ! this one is needed
             call coul(ikpt)%u2l()
          END DO
          call timestop("loop 2")
