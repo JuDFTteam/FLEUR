@@ -618,7 +618,6 @@ CONTAINS
                endif ! pe_ix
             END DO !igpt0
             deallocate (carr2, carr2a, carr2b, structconst1)
-            call coul(ikpt)%u2l() 
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
