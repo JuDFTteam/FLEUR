@@ -276,9 +276,10 @@ contains
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
       integer :: igpt, indx1, indx2, indx3, indx4, itype, itype1, l, m, l1, m1
-      integer :: iatom, iatom1, ierr, loc_4, pe_4, pe_ix, ix, ix_loc, ic
+      integer :: iatom, iatom1, ierr, loc_4, pe_4, pe_ix, ix, ix_loc, ic, loc_from, i, tmp_idx
       complex :: tmp
-
+      complex, allocatable :: tmp_arr(:), sendbuf(:)
+      integer, allocatable :: loc_sizes(:), displs(:), loc_froms(:)
       call timestart("residual MT contributions")
       call timestart("dbl iatom loop")
       ic = 0
@@ -337,8 +338,15 @@ contains
       enddo
       call timestop("dbl iatom loop")
 
+      allocate(loc_sizes(0:fmpi%n_size-1), displs(0:fmpi%n_size-1), loc_froms(0:fmpi%n_size-1))
+      loc_sizes = calc_loc_size(fmpi, hybdat, mpdata, ikpt)
+      displs = calc_disp(loc_sizes)
+      loc_froms = collect_loc_froms(fmpi, hybdat)
+      allocate(sendbuf(loc_sizes(fmpi%n_rank)))
+
+      allocate(tmp_arr(mpdata%n_g(ikpt)))
       call timestart("iatom igpt loop")
-      indx1 = 0; indx2 = 0; indx3 = 0; indx4 = 0
+      indx1 = 0; indx3 = 0
       do iatom = 1, fi%atoms%nat 
          itype = fi%atoms%itype(iatom)
          DO l = 0, fi%hybinp%lcutm1(itype)
@@ -346,40 +354,26 @@ contains
                indx1 = indx1 + 1
                indx3 = indx3 + mpdata%num_radbasfn(l, itype)
 
-               indx2 = 0
-               indx4 = 0
-
-               !calculate indx2 to be at end of previous block
-               do iatom1 = 1,fi%atoms%nat 
-                  itype1 = fi%atoms%itype(iatom1)
-                  !algeb. expression for sum(2*l+1, 0, fi%hybinp%lcutm1(itype1))
-                  indx2 = indx2 + (fi%hybinp%lcutm1(itype1) + 1)**2
-               enddo
-
-               DO igpt = 1, mpdata%n_g(ikpt)
-                  indx2 = indx2 + 1
-                  ix =  hybdat%nbasp + igpt
-                  call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
-                  if(fmpi%n_rank == 0 .and. pe_ix == 0) then
-                     IF (fi%sym%invs) THEN
-                        hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(coulomb(ikpt)%data_c(indx3, ix_loc))
-                     ELSE
-                        hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = coulomb(ikpt)%data_c(indx3, ix_loc) 
-                     ENDIF
 #ifdef CPP_MPI
-                  elseif(fmpi%n_rank == pe_ix) then
-                     call MPI_Send(coulomb(ikpt)%data_c(indx3, ix_loc), 1, MPI_DOUBLE_COMPLEX, &
-                                    0, indx3+1000*ix, fmpi%sub_comm, ierr)
-                  elseif(fmpi%n_rank == 0) then
-                     call MPI_Recv(tmp, 1, MPI_DOUBLE_COMPLEX, pe_ix, indx3+1000*ix, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-                     if(fi%sym%invs) then
-                        hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(tmp)
-                     else
-                        hybdat%coul(ikpt)%mtir%data_c(indx1, indx2) = tmp
-                     endif
+               sendbuf = coulomb(ikpt)%data_c(indx3, loc_froms(fmpi%n_rank):)
+               call MPI_Gatherv(sendbuf, loc_sizes(fmpi%n_rank), MPI_DOUBLE_COMPLEX, &
+                               tmp_arr, loc_sizes, displs, MPI_DOUBLE_COMPLEX, 0, fmpi%sub_comm, ierr)
+#else
+               tmp_arr = coulomb(ikpt)%data_c(indx3, loc_froms(fmpi%n_rank):)
 #endif
-                  endif
-               END DO
+
+               if(fmpi%n_rank == 0) then
+                  DO igpt = 1, mpdata%n_g(ikpt)
+                     ix =  hybdat%nbasp + igpt
+                     call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+                     tmp_idx = ix_loc - loc_froms(pe_ix) + 1 + displs(pe_ix)
+                     IF (fi%sym%invs) THEN
+                        hybdat%coul(ikpt)%mtir%data_r(indx1, ic + igpt) = real(tmp_arr(tmp_idx))
+                     ELSE
+                        hybdat%coul(ikpt)%mtir%data_c(indx1, ic + igpt) = tmp_arr(tmp_idx)
+                     ENDIF
+                  END DO
+               endif
 
             END DO
          END DO
@@ -456,4 +450,51 @@ contains
       end if
       call timestop("copy_ir")
    end subroutine copy_ir
+
+   function calc_loc_size(fmpi, hybdat, mpdata, ikpt) result(loc_sizes)
+      implicit none 
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      TYPE(t_hybdat), INTENT(IN)        :: hybdat
+      integer, intent(in)               :: ikpt
+      integer :: loc_sizes(fmpi%n_size)
+      integer :: loc_from, loc_to, my_size, ierr
+
+      call range_from_glob_to_loc(fmpi, hybdat%nbasp + 1, loc_from)
+      call range_to_glob_to_loc(fmpi, hybdat%nbasp + mpdata%n_g(ikpt), loc_to)
+
+      my_size = loc_to - loc_from + 1
+#ifdef CPP_MPI
+      call MPI_Allgather(my_size, 1, MPI_INTEGER, loc_sizes, 1, MPI_INTEGER, fmpi%sub_comm, ierr)
+#else 
+      loc_sizes(1) = my_size 
+#endif   
+   end function calc_loc_size 
+
+   function calc_disp(loc_sizes) result(displs)
+      implicit NONE
+      integer :: loc_sizes(:)
+      integer :: displs(size(loc_sizes))
+      integer :: i 
+
+      displs = 0 
+      do i = 2,size(loc_sizes)
+         displs(i) = displs(i-1) + loc_sizes(i-1)
+      end do
+   end function calc_disp
+
+   function collect_loc_froms(fmpi, hybdat) result(loc_froms)
+      implicit none 
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      TYPE(t_hybdat), INTENT(IN)        :: hybdat
+      integer :: loc_froms(fmpi%n_size), ierr, loc_from
+
+      call range_from_glob_to_loc(fmpi, hybdat%nbasp + 1, loc_from)
+
+#ifdef CPP_MPI
+      call MPI_Allgather(loc_from, 1, MPI_INTEGER, loc_froms, 1, MPI_INTEGER, fmpi%sub_comm, ierr)
+#else 
+      loc_froms(1) = loc_from 
+#endif
+   end function collect_loc_froms
 end module m_copy_coul
