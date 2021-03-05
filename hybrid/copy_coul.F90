@@ -280,6 +280,7 @@ contains
       complex :: tmp
 
       call timestart("residual MT contributions")
+      call timestart("dbl iatom loop")
       ic = 0
       do iatom = 1,fi%atoms%nat 
          itype = fi%atoms%itype(iatom)
@@ -339,6 +340,29 @@ contains
                      END DO
                   END DO
                END DO
+            enddo
+         enddo
+      enddo
+      call timestop("dbl iatom loop")
+
+      call timestart("iatom igpt loop")
+      indx1 = 0; indx2 = 0; indx3 = 0; indx4 = 0
+      do iatom = 1, fi%atoms%nat 
+         itype = fi%atoms%itype(iatom)
+         DO l = 0, fi%hybinp%lcutm1(itype)
+            DO M = -l, l
+               indx1 = indx1 + 1
+               indx3 = indx3 + mpdata%num_radbasfn(l, itype)
+
+               indx2 = 0
+               indx4 = 0
+
+               !calculate indx2 to be at end of previous block
+               do iatom1 = 1,fi%atoms%nat 
+                  itype1 = fi%atoms%itype(iatom1)
+                  !algeb. expression for sum(2*l+1, 0, fi%hybinp%lcutm1(itype1))
+                  indx2 = indx2 + (fi%hybinp%lcutm1(itype1) + 1)**2
+               enddo
 
                DO igpt = 1, mpdata%n_g(ikpt)
                   indx2 = indx2 + 1
@@ -376,6 +400,7 @@ contains
             END DO
          END DO
       END do
+      call timestop("iatom igpt loop")
       call timestop("residual MT contributions")
 
       IF (indx1 /= ic) call judft_error('coulombmatrix: error index counting')
