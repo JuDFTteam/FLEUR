@@ -1004,6 +1004,7 @@ CONTAINS
          endif
       END DO
 
+      !needed bc apply inverse uses lower half 
       call coulomb%u2l()
       call timestop("subtract_sphaverage")
    END SUBROUTINE subtract_sphaverage
