@@ -683,7 +683,6 @@ CONTAINS
                endif
             END DO
             call timestop("double gpt loop")
-            call coul(1)%u2l()   
 
             ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
             call timestart("igpt1=1 loop")
@@ -717,7 +716,6 @@ CONTAINS
                endif
             END DO
             call timestop("igpt1=1 loop")
-            call coul(1)%u2l()
 
             ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
             call timestart("igpt1=igpt2=1 loop")
