@@ -319,9 +319,9 @@ contains
 #ifdef CPP_MPI
                            elseif(fmpi%n_rank == pe_4) then
                               call MPI_Send(coulomb(ikpt)%data_c(indx3, loc_4), 1, MPI_DOUBLE_COMPLEX, &
-                                             0, indx3+100000*indx4, fmpi%sub_comm, ierr)
+                                             0, indx4, fmpi%sub_comm, ierr)
                            elseif(fmpi%n_rank == 0) then
-                              call MPI_Recv(tmp, 1, MPI_DOUBLE_COMPLEX, pe_4, indx3+100000*indx4, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
+                              call MPI_Recv(tmp, 1, MPI_DOUBLE_COMPLEX, pe_4, indx4, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
                               IF (fi%sym%invs) THEN
                                  hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) = real(tmp)
                               ELSE
