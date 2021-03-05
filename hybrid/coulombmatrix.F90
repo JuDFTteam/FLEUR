@@ -475,7 +475,6 @@ CONTAINS
             call loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
                                    qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coul(ikpt))
 
-            call coul(ikpt)%u2l()
          END DO
 
          call timestop("loop over interst.")
