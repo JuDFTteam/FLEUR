@@ -525,7 +525,6 @@ CONTAINS
                   END IF
                endif
             END DO
-            call coul(ikpt)%u2l()
          END DO
          call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
