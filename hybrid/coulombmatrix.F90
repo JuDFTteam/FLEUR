@@ -732,8 +732,6 @@ CONTAINS
                END DO
             endif ! pe_ix
             call timestop("igpt1=igpt2=1 loop")
-            call coul(1)%u2l()
-
             call timestop("add corrections from higher orders")
          endif
 
