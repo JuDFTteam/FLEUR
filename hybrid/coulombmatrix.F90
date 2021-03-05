@@ -836,7 +836,6 @@ CONTAINS
                END DO
                nsym_gpt(igpt0, ikpt) = ic
             END DO ! igpt0
-            call coul(ikpt)%u2l()
          END DO ! ikpt
          call timestop("loop 3")
          call timestart("gap 1:")
