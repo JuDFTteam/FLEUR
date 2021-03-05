@@ -328,14 +328,6 @@ contains
                               ENDIF
 #endif
                            endif
-
-                           if(fmpi%n_rank == 0) then
-                              if(fi%sym%invs) then
-                                 hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2) 
-                              else 
-                                 hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
-                              endif
-                           endif
                         endif
                      END DO
                   END DO
@@ -387,20 +379,14 @@ contains
                      endif
 #endif
                   endif
-
-                  if(fmpi%n_rank == 0) then
-                     IF (fi%sym%invs) THEN
-                        hybdat%coul(ikpt)%mtir%data_r(indx2, indx1) = hybdat%coul(ikpt)%mtir%data_r(indx1, indx2)
-                     else
-                        hybdat%coul(ikpt)%mtir%data_c(indx2, indx1) = conjg(hybdat%coul(ikpt)%mtir%data_c(indx1, indx2))
-                     endif
-                  endif
                END DO
 
             END DO
          END DO
       END do
       call timestop("iatom igpt loop")
+
+      call hybdat%coul(ikpt)%mtir%u2l()
       call timestop("residual MT contributions")
 
       IF (indx1 /= ic) call judft_error('coulombmatrix: error index counting')
