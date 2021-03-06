@@ -128,6 +128,7 @@ CONTAINS
    end subroutine t_mat_pos_eigvec_sum
 
    subroutine t_mat_bcast(mat, root, comm)
+      use m_divide_most_evenly 
 #ifdef CPP_MPI
       use mpi
 #endif
@@ -135,7 +136,8 @@ CONTAINS
       CLASS(t_mat), INTENT(INOUT)   :: mat
       integer, intent(in)           :: root, comm
 
-      integer    :: ierr, full_shape(2), me
+      integer              :: ierr, full_shape(2), me, n_parts, i
+      integer, allocatable :: start_idx(:), psize(:)
       integer(8) :: sz_in_byte
 
 #ifdef CPP_MPI
@@ -157,16 +159,17 @@ CONTAINS
       sz_in_byte = full_shape(1)
       sz_in_byte = sz_in_byte * full_shape(2) 
       sz_in_byte = sz_in_byte * merge(8, 16, mat%l_real)
+      !make sure everything is smaller than 4 GB
+      n_parts = ceiling(sz_in_byte / 4e9) 
+      call divide_most_evenly(mat%matsize2, n_parts, start_idx, psize)
 
-      if(sz_in_byte > 1e8 .and. me == root) then
-         write (*,*) "bcast size =", sz_in_byte * 1e-9, "Gb"
-      endif
-
-      if(mat%l_real) then
-         call MPI_bcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, ierr)
-      else
-         call MPI_bcast(mat%data_c, product(full_shape), MPI_DOUBLE_COMPLEX, root, comm, ierr)
-      endif
+      do i = 1,n_parts 
+         if(mat%l_real) then
+            call MPI_bcast(mat%data_r(:,start_idx(i)), full_shape(1)*psize(i), MPI_DOUBLE_PRECISION, root, comm, ierr)
+         else
+            call MPI_bcast(mat%data_c(:,start_idx(i)), full_shape(1)*psize(i), MPI_DOUBLE_COMPLEX, root, comm, ierr)
+         endif
+      enddo
 #endif
    end subroutine t_mat_bcast
 

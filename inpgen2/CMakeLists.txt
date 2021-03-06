@@ -104,7 +104,7 @@ ${FLEUR_SRC}/types/types_enpara.F90
 ${FLEUR_SRC}/types/types_setup.F90
 ${FLEUR_SRC}/types/types_hub1data.f90
 
-
+${FLEUR_SRC}/hybrid/divide_most_evenly.f90
 ${FLEUR_SRC}/kpoints/kptgen_hybrid.f90
 ${FLEUR_SRC}/io/nocoInputCheck.F90
 ${FLEUR_SRC}/eigen/orthoglo.F90

@@ -1,6 +1,7 @@
 module m_work_package
    use m_types
    use m_distribute_mpi
+   use m_divide_most_evenly
    implicit none
 
    type t_band_package  
@@ -172,7 +173,7 @@ contains
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
 
-      call split_band_loop(hybdat%nobd(ikqpt, jsp), n_parts, start_idx, psize)
+      call divide_most_evenly(hybdat%nobd(ikqpt, jsp), n_parts, start_idx, psize)
 
       do i = 1, n_parts
          call q_pack%band_packs(i)%init(start_idx(i), psize(i), i, n_parts)
@@ -275,35 +276,6 @@ contains
          endif
       enddo
    end function t_work_package_has_nk
-
-   subroutine split_band_loop(n_total, n_parts, start_idx, psize)
-      use m_types
-      implicit none
-      integer, intent(in)                 :: n_total, n_parts
-      integer, allocatable, intent(inout) :: start_idx(:), psize(:)
-
-      integer             :: i, big_size, small_size, end_idx
-
-      if(allocated(start_idx)) deallocate(start_idx)
-      if(allocated(psize)) deallocate(psize)
-      allocate(start_idx(n_parts), psize(n_parts))
-
-      if(n_parts == 0) call judft_error("You need more than 0 parts")
-
-      small_size = floor((1.0*n_total)/n_parts)
-      big_size = small_size +1
-
-      end_idx = 0
-      do i = 1,n_parts
-         psize(i) = merge(big_size, small_size,i <= mod(n_total, n_parts))
-         if(psize(i) == 0) then
-            write (*,*) "n_total, n_parts", n_total, n_parts
-            call judft_warn("some band_packs have 0 bands")
-         endif
-         start_idx(i) = end_idx + 1
-         end_idx = start_idx(i) + psize(i) - 1
-      enddo
-   end subroutine split_band_loop
 
    real function target_memsize(fi, hybdat, n_g)
 #ifdef _OPENACC 
