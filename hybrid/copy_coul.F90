@@ -572,7 +572,7 @@ contains
 
 
             if(fmpi%n_rank == 0) then
-               !$OMP parallel do default(none) shared(mpdata, hybdat, loc_cpy, ic, ikpt) private(ix, iy) collapse(2)
+               !$OMP parallel do default(none) shared(mpdata, hybdat, loc_cpy, ic, ikpt, coulomb) private(ix, iy) collapse(2)
                do ix = 1, mpdata%n_g(ikpt)
                   do iy = 1, mpdata%n_g(ikpt) 
                         hybdat%coul(ikpt)%mtir%data_r(ic + iy, ic + ix) = real(loc_cpy%data_c(iy, ix))
@@ -593,7 +593,7 @@ contains
 
          endif
       class is (t_mat)
-         !$OMP parallel do default(none) shared(mpdata, hybdat, loc_cpy, ic, fi, ikpt) private(ix, iy) collapse(2)
+         !$OMP parallel do default(none) shared(mpdata, hybdat, loc_cpy, ic, fi, ikpt, coulomb) private(ix, iy) collapse(2)
          do ix = 1, mpdata%n_g(ikpt)
             do iy = 1, mpdata%n_g(ikpt) 
                if(fi%sym%invs) then
