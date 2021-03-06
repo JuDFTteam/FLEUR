@@ -21,7 +21,8 @@ contains
       call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       call test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
-      call copy_residual_mt_contrib(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      call copy_residual_mt_contrib_atm(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      call copy_residual_mt_contrib_gpt(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       call copy_ir(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
    end subroutine copy_from_dense_to_sparse
 
@@ -281,7 +282,7 @@ contains
       call timestop("test_mt2_mt3")
    end subroutine test_mt2_mt3 
 
-   subroutine copy_residual_mt_contrib(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+   subroutine copy_residual_mt_contrib_atm(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       !
       ! add the residual MT contributions, i.e. those functions with an moment,
       ! to the matrix coulomb_mtir, which is fully occupied
@@ -297,9 +298,7 @@ contains
       integer :: igpt, indx1, indx2, indx3, indx4, itype, itype1, l, m, l1, m1
       integer :: iatom, iatom1, ierr, loc_4, pe_4, pe_ix, ix, ix_loc, ic, loc_from, i, tmp_idx
       complex :: tmp
-      complex, allocatable :: tmp_arr(:), sendbuf(:)
-      integer, allocatable :: loc_sizes(:), displs(:), loc_froms(:)
-      call timestart("residual MT contributions")
+      
       call timestart("dbl iatom loop")
       ic = calc_ic(fi)
       indx1 = 0; indx2 = 0; indx3 = 0; indx4 = 0
@@ -349,6 +348,24 @@ contains
          enddo
       enddo
       call timestop("dbl iatom loop")
+   end subroutine copy_residual_mt_contrib_atm
+
+   subroutine copy_residual_mt_contrib_gpt(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      class(t_mat), intent(in)          :: coulomb(:)
+      integer, intent(in)               :: ikpt
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+
+      integer :: igpt, indx1, indx2, indx3, indx4, itype, itype1, l, m, l1, m1
+      integer :: iatom, iatom1, ierr, loc_4, pe_4, pe_ix, ix, ix_loc, ic, loc_from, i, tmp_idx
+      complex :: tmp
+      complex, allocatable :: tmp_arr(:), sendbuf(:)
+      integer, allocatable :: loc_sizes(:), displs(:), loc_froms(:)
+
+      ic = calc_ic(fi)
 
       allocate(loc_sizes(0:fmpi%n_size-1), displs(0:fmpi%n_size-1), loc_froms(0:fmpi%n_size-1))
       loc_sizes = calc_loc_size(fmpi, hybdat, mpdata, ikpt)
@@ -393,10 +410,8 @@ contains
       call timestop("iatom igpt loop")
 
       call hybdat%coul(ikpt)%mtir%u2l()
-      call timestop("residual MT contributions")
-
       IF (indx1 /= ic) call judft_error('coulombmatrix: error index counting')
-   end subroutine copy_residual_mt_contrib
+   end subroutine copy_residual_mt_contrib_gpt
 
    subroutine copy_ir(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       implicit none
