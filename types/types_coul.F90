@@ -54,6 +54,7 @@ contains
       integer :: ierr
 
       call timestart("Bcast coulomb_mtx")
+      call timestart("Bcast small stuff")
       if (fi%sym%invs) THEN
          call MPI_Bcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
          call MPI_Bcast(coul%mt2_r, size(coul%mt2_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
@@ -63,6 +64,7 @@ contains
          call MPI_Bcast(coul%mt2_c, size(coul%mt2_c), MPI_DOUBLE_COMPLEX, root, communicator, ierr)
          call MPI_Bcast(coul%mt3_c, size(coul%mt3_c), MPI_DOUBLE_COMPLEX, root, communicator, ierr)
       endif
+      call timestop("Bcast small stuff")
 
       call coul%mtir%bcast(root, communicator)
       call timestop("Bcast coulomb_mtx")
