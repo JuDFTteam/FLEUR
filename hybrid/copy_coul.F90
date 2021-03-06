@@ -559,6 +559,7 @@ contains
       call timestart("copy_ir")
       select type(coulomb)
       class is(t_mpimat)
+#ifdef CPP_SCALAPACK
          if(fi%sym%invs) then
             call loc_cpy%alloc(.false., mpdata%n_g(ikpt), mpdata%n_g(ikpt))
             blacs_desc = [1, -1, loc_cpy%matsize1, loc_cpy%matsize2, loc_cpy%matsize1, loc_cpy%matsize2, 0, 0, loc_cpy%matsize1]
@@ -572,7 +573,7 @@ contains
 
 
             if(fmpi%n_rank == 0) then
-               !$OMP parallel do default(none) shared(mpdata, hybdat, loc_cpy, ic, ikpt, coulomb) private(ix, iy) collapse(2)
+               !$OMP parallel do default(shared) shared(mpdata, hybdat, loc_cpy, ic, ikpt) private(ix, iy) collapse(2)
                do ix = 1, mpdata%n_g(ikpt)
                   do iy = 1, mpdata%n_g(ikpt) 
                         hybdat%coul(ikpt)%mtir%data_r(ic + iy, ic + ix) = real(loc_cpy%data_c(iy, ix))
@@ -592,8 +593,9 @@ contains
                         hybdat%coul(ikpt)%mtir%data_c, ic+1, ic+1,  blacs_desc, coulomb%blacsdata%blacs_desc(2))
 
          endif
+#endif
       class is (t_mat)
-         !$OMP parallel do default(none) shared(mpdata, hybdat, loc_cpy, ic, fi, ikpt, coulomb) private(ix, iy) collapse(2)
+         !$OMP parallel do default(shared) shared(mpdata, hybdat, loc_cpy, ic, fi, ikpt) private(ix, iy) collapse(2)
          do ix = 1, mpdata%n_g(ikpt)
             do iy = 1, mpdata%n_g(ikpt) 
                if(fi%sym%invs) then
