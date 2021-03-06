@@ -18,6 +18,8 @@ contains
       integer, intent(in)               :: ikpt
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
+      call timestart("copy_from_dense_to_sparse")
+
       call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
@@ -25,6 +27,8 @@ contains
       call copy_residual_mt_contrib_atm(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       call copy_residual_mt_contrib_gpt(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       call copy_ir(fi, fmpi, mpdata, coulomb(ikpt), ikpt, hybdat)
+      
+      call timestop("copy_from_dense_to_sparse")
    end subroutine copy_from_dense_to_sparse
 
    subroutine copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
