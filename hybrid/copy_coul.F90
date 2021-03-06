@@ -2,6 +2,7 @@ module m_copy_coul
    use m_types
    use m_constants
    use m_glob_tofrom_loc
+   USE m_types_mpimat
 #ifdef CPP_MPI 
    use mpi 
 #endif
@@ -23,7 +24,7 @@ contains
       call test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
       call copy_residual_mt_contrib_atm(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       call copy_residual_mt_contrib_gpt(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
-      call copy_ir(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      call copy_ir(fi, fmpi, mpdata, coulomb(ikpt), ikpt, hybdat)
    end subroutine copy_from_dense_to_sparse
 
    subroutine copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
@@ -452,65 +453,6 @@ contains
       IF (indx1 /= ic) call judft_error('coulombmatrix: error index counting')
    end subroutine copy_residual_mt_contrib_gpt
 
-   subroutine copy_ir(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
-      implicit none
-      type(t_fleurinput), intent(in)    :: fi
-      type(t_mpdata), intent(in)        :: mpdata
-      TYPE(t_mpi), INTENT(IN)           :: fmpi
-      class(t_mat), intent(in)          :: coulomb(:)
-      integer, intent(in)               :: ikpt
-      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
-
-      integer :: ic, iatom, l, ix, ix_loc, pe_ix, i, itype, ierr
-      real, allocatable    :: tmp(:)
-
-      call timestart("copy_ir")
-      !
-      ! add ir part to the matrix coulomb_mtir
-      !
-
-      ic = calc_ic(fi)
-
-      if (fi%sym%invs) THEN
-         allocate(tmp(mpdata%n_g(ikpt)))
-         do i = 1, mpdata%n_g(ikpt)
-            ix = hybdat%nbasp + i
-            call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
-            if(fmpi%n_rank == 0 .and. pe_ix == 0) then
-               hybdat%coul(ikpt)%mtir%data_r(ic + 1:ic + mpdata%n_g(ikpt), ic + i) &
-                  = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), ix_loc))
-#ifdef CPP_MPI
-            elseif(fmpi%n_rank == pe_ix) then 
-               tmp = real(coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), ix_loc))
-               call MPI_Send(tmp, mpdata%n_g(ikpt), MPI_DOUBLE_PRECISION, 0, i, fmpi%sub_comm, ierr)
-            elseif(fmpi%n_rank == 0) then
-               call MPI_Recv(hybdat%coul(ikpt)%mtir%data_r(ic + 1, ic + i), mpdata%n_g(ikpt), &
-                             MPI_DOUBLE_PRECISION, pe_ix, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-#endif
-            endif
-         enddo
-         deallocate(tmp)
-      else
-         do i = 1, mpdata%n_g(ikpt)
-            ix = hybdat%nbasp + i
-            call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
-            if(fmpi%n_rank == 0 .and. pe_ix == 0) then
-               hybdat%coul(ikpt)%mtir%data_c(ic + 1:ic + mpdata%n_g(ikpt), ic + i) &
-                  = coulomb(ikpt)%data_c(hybdat%nbasp + 1:hybdat%nbasm(ikpt), ix_loc)
-#ifdef CPP_MPI
-            elseif(fmpi%n_rank == pe_ix) then 
-               call MPI_Send(coulomb(ikpt)%data_c(hybdat%nbasp + 1, ix_loc), mpdata%n_g(ikpt), &
-                               MPI_DOUBLE_COMPLEX, 0, i, fmpi%sub_comm, ierr)
-            elseif(fmpi%n_rank == 0) then
-               call MPI_Recv(hybdat%coul(ikpt)%mtir%data_c(ic + 1, ic + i), mpdata%n_g(ikpt), &
-                             MPI_DOUBLE_COMPLEX, pe_ix, i, fmpi%sub_comm, MPI_STATUS_IGNORE, ierr)
-#endif
-            endif
-         enddo
-      end if
-      call timestop("copy_ir")
-   end subroutine copy_ir
-
    function calc_loc_size_gpt(fmpi, hybdat, mpdata, ikpt) result(loc_sizes)
       implicit none 
       type(t_mpdata), intent(in)        :: mpdata
@@ -595,4 +537,75 @@ contains
          ic = ic + (fi%hybinp%lcutm1(itype) + 1)**2
       END DO
    end function calc_ic
+
+   subroutine copy_ir(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      class(t_mat), intent(in)          :: coulomb
+      integer, intent(in)               :: ikpt
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+
+      integer :: ic, iatom, l, ix, iy, ix_loc, pe_ix, i, itype, ierr
+      INTEGER:: blacs_desc(9), umap(1, 1), np
+      real, allocatable    :: tmp(:)
+      type(t_mat)          :: loc_cpy
+      !
+      ! add ir part to the matrix coulomb_mtir
+      !
+
+      ic = calc_ic(fi)
+      call timestart("copy_ir")
+      select type(coulomb)
+      class is(t_mpimat)
+         if(fi%sym%invs) then
+            call loc_cpy%alloc(.false., mpdata%n_g(ikpt), mpdata%n_g(ikpt))
+            blacs_desc = [1, -1, loc_cpy%matsize1, loc_cpy%matsize2, loc_cpy%matsize1, loc_cpy%matsize2, 0, 0, loc_cpy%matsize1]
+            umap(1, 1) = 0
+            CALL BLACS_GET(coulomb%blacsdata%blacs_desc(2), 10, blacs_desc(2))
+            CALL BLACS_GRIDMAP(blacs_desc(2), umap, 1, 1, 1)
+            
+            call pzgemr2d(mpdata%n_g(ikpt), mpdata%n_g(ikpt), &
+                        coulomb%data_c, hybdat%nbasp + 1, hybdat%nbasp + 1, coulomb%blacsdata%blacs_desc, &
+                        loc_cpy%data_c,1,  1,  blacs_desc, coulomb%blacsdata%blacs_desc(2))
+
+
+            if(fmpi%n_rank == 0) then
+               !$OMP parallel do default(none) shared(mpdata, hybdat, loc_cpy, ic, ikpt) private(ix, iy) collapse(2)
+               do ix = 1, mpdata%n_g(ikpt)
+                  do iy = 1, mpdata%n_g(ikpt) 
+                        hybdat%coul(ikpt)%mtir%data_r(ic + iy, ic + ix) = real(loc_cpy%data_c(iy, ix))
+                  enddo 
+               enddo
+               !$OMP end parallel do
+            endif
+         else 
+            blacs_desc = [1, -1, hybdat%coul(ikpt)%mtir%matsize1, hybdat%coul(ikpt)%mtir%matsize2, &
+                        hybdat%coul(ikpt)%mtir%matsize1, hybdat%coul(ikpt)%mtir%matsize2, 0, 0, hybdat%coul(ikpt)%mtir%matsize1]
+            umap(1, 1) = 0
+            CALL BLACS_GET(coulomb%blacsdata%blacs_desc(2), 10, blacs_desc(2))
+            CALL BLACS_GRIDMAP(blacs_desc(2), umap, 1, 1, 1)
+
+            call pzgemr2d(mpdata%n_g(ikpt), mpdata%n_g(ikpt), &
+                        coulomb%data_c, hybdat%nbasp + 1, hybdat%nbasp + 1, coulomb%blacsdata%blacs_desc, &
+                        hybdat%coul(ikpt)%mtir%data_c, ic+1, ic+1,  blacs_desc, coulomb%blacsdata%blacs_desc(2))
+
+         endif
+      class is (t_mat)
+         !$OMP parallel do default(none) shared(mpdata, hybdat, loc_cpy, ic, fi, ikpt) private(ix, iy) collapse(2)
+         do ix = 1, mpdata%n_g(ikpt)
+            do iy = 1, mpdata%n_g(ikpt) 
+               if(fi%sym%invs) then
+                  hybdat%coul(ikpt)%mtir%data_r(ic + iy, ic + ix) = real(coulomb%data_c(hybdat%nbasp + iy, hybdat%nbasp + ix))
+               else
+                  hybdat%coul(ikpt)%mtir%data_c(ic + iy, ic + ix) = coulomb%data_c(hybdat%nbasp + iy, hybdat%nbasp + ix)
+               endif
+            enddo 
+         enddo
+         !$OMP end parallel do
+      end select
+
+      call timestop("copy_ir")
+   end subroutine copy_ir
 end module m_copy_coul
