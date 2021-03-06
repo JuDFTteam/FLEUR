@@ -18,7 +18,6 @@ module m_types_coul
 #endif
       logical                :: l_participate = .False. ! am i somehow involved with this coulomb mtx
    contains
-      procedure :: init => t_coul_init
       procedure :: alloc => t_coul_alloc
       procedure :: mini_alloc => t_coul_mini_alloc
       procedure :: free => t_coul_free
@@ -26,20 +25,6 @@ module m_types_coul
    end type t_coul
 
 contains
-
-   subroutine t_coul_init(coul)
-      implicit none
-      class(t_coul), intent(inout) :: coul
-
-      if (allocated(coul%mt1_r)) coul%mt1_r = 0
-      if (allocated(coul%mt1_c)) coul%mt1_c = 0
-
-      if (allocated(coul%mt2_r)) coul%mt2_r = 0
-      if (allocated(coul%mt3_r)) coul%mt3_r = 0
-
-      if (allocated(coul%mt2_c)) coul%mt2_c = 0
-      if (allocated(coul%mt3_c)) coul%mt3_c = 0
-   end subroutine t_coul_init
 
    subroutine t_coul_mpi_bc(coul, fi, communicator, root)
       use m_types_fleurinput
