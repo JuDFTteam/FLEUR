@@ -881,12 +881,7 @@ CONTAINS
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          ! unpack coulomb into coulomb(ikpt)
-         call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
-         call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
-         call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
-         call test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
-         call copy_residual_mt_contrib(fi, fmpi, mpdata, coul, ikpt, hybdat)
-         call copy_ir(fi, fmpi, mpdata, coul, ikpt, hybdat)
+         call copy_from_dense_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
       END DO ! ikpt
       call timestop("loop bla")
       CALL timestop("Coulomb matrix setup")

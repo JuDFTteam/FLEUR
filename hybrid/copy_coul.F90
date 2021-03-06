@@ -5,7 +5,26 @@ module m_copy_coul
 #ifdef CPP_MPI 
    use mpi 
 #endif
+   private 
+   public :: copy_from_dense_to_sparse
 contains
+   subroutine copy_from_dense_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      implicit none
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_mpdata), intent(in)        :: mpdata
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      class(t_mat), intent(in)          :: coulomb(:)
+      integer, intent(in)               :: ikpt
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
+
+      call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      call test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
+      call copy_residual_mt_contrib(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+      call copy_ir(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
+   end subroutine copy_from_dense_to_sparse
+
    subroutine copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coulomb, ikpt, hybdat)
       implicit none
       type(t_fleurinput), intent(in)    :: fi
