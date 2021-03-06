@@ -117,7 +117,7 @@ CONTAINS
       COMPLEX     :: y((fi%hybinp%lexp + 1)**2), smat
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
-      COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:)
+      COMPLEX, ALLOCATABLE   :: structconst(:,:,:,:)
 
       INTEGER                    :: ierr
       INTEGER                    :: iatom, mtmt_idx
@@ -556,8 +556,7 @@ CONTAINS
 
             !finally we can loop over the plane waves (G: igpt1,igpt2)
             call timestart("loop over plane waves")
-            allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), &
-                      structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2), source=cmplx_0)
+            allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), source=cmplx_0)
                
             DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
@@ -573,12 +572,9 @@ CONTAINS
                   do iatom = 1,fi%atoms%nat
                      itype2 = fi%atoms%itype(iatom)
                      cexp = CONJG(carr2b(iatom, igpt2))
-                     call timestart("transp struct const")
-                     structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
-                     call timestop("transp struct const")
                      
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm, iat2) &
-                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
+                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst, iatom, ikpt) 
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
                         call calc_l_m_from_lm(lm1, l1, m1)
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
@@ -587,7 +583,7 @@ CONTAINS
                            l = l1 + l2
                            lm = l**2 + l - l1 - m2 + (m1 + l1) + 1
                            do iat2 =1,fi%atoms%nat
-                              carr2(iat2, lm1) = carr2(iat2,lm1) + cdum*structconst1(iat2, lm)
+                              carr2(iat2, lm1) = carr2(iat2,lm1) + cdum*structconst(lm, iat2, iatom, ikpt)
                            enddo
                         enddo
                      enddo
@@ -619,7 +615,7 @@ CONTAINS
                   call timestop("igpt1")
                endif ! pe_ix
             END DO !igpt0
-            deallocate (carr2, carr2a, carr2b, structconst1)
+            deallocate (carr2, carr2a, carr2b)
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
