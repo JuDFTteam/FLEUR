@@ -573,7 +573,9 @@ CONTAINS
                   do iatom = 1,fi%atoms%nat
                      itype2 = fi%atoms%itype(iatom)
                      cexp = CONJG(carr2b(iatom, igpt2))
+                     call timestart("transp struct const")
                      structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
+                     call timestop("transp struct const")
                      
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm, iat2) &
                      !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
