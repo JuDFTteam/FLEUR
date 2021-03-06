@@ -871,17 +871,12 @@ CONTAINS
       ! rearrange coulomb matrix
       !
       if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
-      call timestart("loop bla")
-      DO ikpt = 1, fi%kpts%nkpt
-         call hybdat%coul(ikpt)%init()
-      enddo
 
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          ! unpack coulomb into coulomb(ikpt)
          call copy_from_dense_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
       END DO ! ikpt
-      call timestop("loop bla")
       CALL timestop("Coulomb matrix setup")
 
    END SUBROUTINE coulombmatrix
