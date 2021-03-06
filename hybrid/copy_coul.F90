@@ -282,14 +282,7 @@ contains
       integer, allocatable :: loc_sizes(:), displs(:), loc_froms(:)
       call timestart("residual MT contributions")
       call timestart("dbl iatom loop")
-      ic = 0
-      do iatom = 1,fi%atoms%nat 
-         itype = fi%atoms%itype(iatom)
-         DO l = 0, fi%hybinp%lcutm1(itype)
-            ic = ic + 2*l + 1
-         END DO
-      END DO
-
+      ic = calc_ic(fi)
       indx1 = 0; indx2 = 0; indx3 = 0; indx4 = 0
 
       do iatom = 1, fi%atoms%nat 
@@ -403,13 +396,7 @@ contains
       ! add ir part to the matrix coulomb_mtir
       !
 
-      ic = 0
-      do iatom = 1,fi%atoms%nat 
-         itype = fi%atoms%itype(iatom)
-         DO l = 0, fi%hybinp%lcutm1(itype)
-            ic = ic + 2*l+1
-         END DO
-      END DO
+      ic = calc_ic(fi)
 
       if (fi%sym%invs) THEN
          allocate(tmp(mpdata%n_g(ikpt)))
@@ -497,4 +484,16 @@ contains
       loc_froms(1) = loc_from 
 #endif
    end function collect_loc_froms
+
+   function calc_ic(fi) result(ic)
+      implicit none 
+      type(t_fleurinput), intent(in)    :: fi
+      integer :: ic, iatom, itype, l
+
+      ic = 0
+      do iatom = 1,fi%atoms%nat 
+         itype = fi%atoms%itype(iatom)
+         ic = ic + (fi%hybinp%lcutm1(itype) + 1)**2
+      END DO
+   end function calc_ic
 end module m_copy_coul
