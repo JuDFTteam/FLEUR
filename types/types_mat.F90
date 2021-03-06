@@ -136,7 +136,7 @@ CONTAINS
       integer, intent(in)           :: root, comm
 
       integer    :: ierr, full_shape(2), me
-      integer(8) :: test
+      integer(8) :: sz_in_byte
 
 #ifdef CPP_MPI
       call MPI_Comm_rank(comm, me, ierr)
@@ -154,16 +154,13 @@ CONTAINS
       call MPI_Bcast(mat%matsize1, 1, MPI_INTEGER, root, comm, ierr)
       call MPI_Bcast(mat%matsize2, 1, MPI_INTEGER, root, comm, ierr)
 
-      test = full_shape(1)
-      test = test * full_shape(2) 
+      sz_in_byte = full_shape(1)
+      sz_in_byte = sz_in_byte * full_shape(2) 
+      sz_in_byte = sz_in_byte * merge(8, 16, mat%l_real)
 
-      call timestart("32bit test")
-      if(test /= product(full_shape)) then
-         write (*,*) "test = ", test 
-         write (*,*) "product", product(full_shape)
-         call judft_error("test failed")
+      if(sz_in_byte > 1e8 .and. me == root) then
+         write (*,*) "bcast size =", sz_in_byte * 1e-9, "Gb"
       endif
-      call timestop("32bit test")
 
       if(mat%l_real) then
          call MPI_bcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, ierr)
