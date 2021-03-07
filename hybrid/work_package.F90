@@ -157,18 +157,23 @@ contains
       else
          target_psize = floor(target_memsize(fi, hybdat, mpdata%n_g)/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)))
       endif
+      write (*,*) "target_psize", target_psize
 
       if(target_psize == 0) call judft_error("not enough memory so save waveprod")
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
  
       n_parts = ceiling(1.0*hybdat%nobd(ikqpt, jsp)/target_psize)
+      write (*,*) "n_parts after ceil", n_parts
+
       ! I can't have more parts than hybdat%nobd
       n_parts = min(hybdat%nobd(ikqpt, jsp), n_parts)
+      write (*,*) "n_parts after min nobd", n_parts, hybdat%nobd(ikqpt, jsp)
 
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
+      write (*,*) "n_parts after mod_qpack", n_parts, q_pack%submpi%size
       
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
