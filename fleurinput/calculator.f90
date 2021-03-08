@@ -95,7 +95,7 @@ CONTAINS
       var_names(8) = 'eV'
       var_values(8) = 1.0 / 27.211386245988
       var_names(9) = 'Ry'
-      var_values(9) = 2.0
+      var_values(9) = 0.5
    END subroutine priv_init
 
 !<-- S: priv_increase_storage()
