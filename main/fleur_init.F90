@@ -96,7 +96,7 @@ CONTAINS
       COMPLEX    :: cdum
       CHARACTER(len=4)              :: namex
       CHARACTER(len=12)             :: relcor, tempNumberString
-      CHARACTER(LEN=20)             :: filename
+      CHARACTER(LEN=20)             :: filename, tempFilename
       CHARACTER(LEN=40)             :: kptsSelection(3)
       CHARACTER(LEN=300)            :: line
       REAL                          :: a1(3), a2(3), a3(3)
@@ -115,6 +115,22 @@ CONTAINS
       CALL hdf_init()
 #endif
       IF (fmpi%irank .EQ. 0) THEN
+         INQUIRE(file="out.xml", exist=l_exist)
+         IF (l_exist) THEN
+            tempFilename = "outHistError.xml"
+            DO i = 1, 99
+               WRITE (tempFilename,'(a,i2.2,a)') 'out-', i, '.xml'
+               INQUIRE(file=TRIM(ADJUSTL(tempFilename)), exist=l_found)
+               IF (.NOT.l_found) EXIT
+            END DO
+            IF(.NOT.l_found) THEN
+               WRITE(line,'(2a)') 'mv out.xml ', TRIM(ADJUSTL(tempFilename))
+               CALL system(TRIM(ADJUSTL(line)))
+               WRITE (*,*) 'Moving old out.xml to ', TRIM(ADJUSTL(tempFilename)), '.'
+            ELSE
+               CALL juDFT_warn("No free out-??.xml file places for storing old out.xml files!")
+            END IF
+         END IF
          CALL startFleur_XMLOutput()
          outxmlFileID = getXMLOutputUnitNumber()
          IF (judft_was_argument("-info")) THEN
