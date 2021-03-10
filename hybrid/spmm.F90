@@ -35,12 +35,13 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size, sz_mtir, sz_hlp, sz_out
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
-      real, allocatable :: mat_hlp(:,:), mt2_tmp(:,:,:,:)
+      real, allocatable :: mat_hlp(:,:), mt2_tmp(:,:,:,:), mat_in_line(:)
 #ifdef _OPENACC 
       real, allocatable :: mtir_tmp(:,:)
 #endif
 
       call timestart("spmm_invs")
+      mat_in_line = mat_in%data_r(hybdat%nbasp + 1, :)
 
       call timestart("alloc mathlp")
       allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
@@ -146,7 +147,8 @@ contains
 
                n_size = mpdata%num_radbasfn(l, itype) - 1
                do i_vec = 1, n_vec
-                  mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in%data_r(indx3 + 1, i_vec)
+                  mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) &
+                     + hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in_line(i_vec)
                enddo
                indx0 = indx0 + ishift
             END DO
