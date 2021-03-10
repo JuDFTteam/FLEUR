@@ -6,11 +6,13 @@ module m_spmm
 #define CPP_dgemm cublasdgemm
 #define CPP_zgemv cublaszgemv
 #define CPP_dgemv cublasdgemv
+#define CPP_mtir_c mtir_tmp
 #else
 #define CPP_zgemm zgemm
 #define CPP_dgemm dgemm
 #define CPP_zgemv zgemv
 #define CPP_dgemv dgemv
+#define CPP_mtir_c hybdat%coul(ikpt)%mtir%data_c
 #endif
 ! rewrite of spmvec to replace a sparse-matrix * vec multiplication by
 ! sparse-matrix * matrix
@@ -293,7 +295,10 @@ contains
       integer :: ishift1, indx4, lm, idx1_start, idx3_start, ld_mt1_tmp
       integer :: iat2, it2, l2, iat, ierr, irank, i, sz_mtir, sz_in, sz_out, max_l_cut
       integer(C_SIZE_T) :: free_mem, tot_mem
-      complex, allocatable :: mtir_tmp(:,:), mt1_tmp(:,:,:,:), mt2_tmp(:,:,:,:), mt3_tmp(:,:,:), mat_in_line(:)
+      complex, allocatable :: mt1_tmp(:,:,:,:), mt2_tmp(:,:,:,:), mt3_tmp(:,:,:), mat_in_line(:)
+#ifdef _OPENACC
+      complex, allocatable :: mtir_tmp(:,:)
+#endif
 
       call timestart("spmm_noinvs")
       mat_in_line = mat_in%data_c(hybdat%nbasp + 1, :)
@@ -464,32 +469,39 @@ contains
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
       call timestop("calc indx1")
 
-
+#ifdef _OPENACC
       call timestart("copy mtir_tmp")
       allocate(mtir_tmp(hybdat%coul(ikpt)%mtir%matsize1, hybdat%coul(ikpt)%mtir%matsize2), stat=ierr)
       if(ierr /= 0) call judft_error("can't alloc mtir_tmp")
       call zlacpy("N", size(mtir_tmp,1), size(mtir_tmp,2), hybdat%coul(ikpt)%mtir%data_c, &
                   size(hybdat%coul(ikpt)%mtir%data_c,1), mtir_tmp, size(mtir_tmp,1))
       call timestop("copy mtir_tmp")
+#endif
 
       call timestart("acc kernels")
       !$acc enter data copyin(mtir_tmp)
       if(conjg_mtir) then
          !$acc kernels present(mtir_tmp)
-         mtir_tmp = conjg(mtir_tmp)
+         CPP_mtir_c = conjg(CPP_mtir_c)
          !$acc end kernels
       endif
       call timestop("acc kernels")
 
       call timestart("ibasm+1->nbasm: zgemm")
-      sz_mtir = size(mtir_tmp,1)
+      sz_mtir = size(CPP_mtir_c,1)
 
-      !$acc host_data use_device(mtir_tmp, mat_in, mat_in%data_c, mat_out)
-      call CPP_zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, mtir_tmp, sz_mtir, &
+      !$acc host_data use_device(CPP_mtir_c, mat_in, mat_in%data_c, mat_out)
+      call CPP_zgemm("N", "N", indx1, n_vec, indx1, cmplx_1, CPP_mtir_c, sz_mtir, &
                     mat_in%data_c(ibasm + 1, 1), sz_in, cmplx_0, mat_out(ibasm + 1, 1), sz_out)
       !$acc end host_data
-      !$acc exit data delete(mtir_tmp)
+      !$acc exit data delete(CPP_mtir_c)
+#ifdef _OPENACC
       deallocate(mtir_tmp)
+#else       
+      if(conjg_mtir) then
+         CPP_mtir_c = conjg(CPP_mtir_c)
+      endif
+#endif
       !$acc wait
       call timestop("ibasm+1->nbasm: zgemm")
 
