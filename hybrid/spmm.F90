@@ -7,12 +7,14 @@ module m_spmm
 #define CPP_zgemv cublaszgemv
 #define CPP_dgemv cublasdgemv
 #define CPP_mtir_c mtir_tmp
+#define CPP_mtir_r mtir_tmp
 #else
 #define CPP_zgemm zgemm
 #define CPP_dgemm dgemm
 #define CPP_zgemv zgemv
 #define CPP_dgemv dgemv
 #define CPP_mtir_c hybdat%coul(ikpt)%mtir%data_c
+#define CPP_mtir_r hybdat%coul(ikpt)%mtir%data_r
 #endif
 ! rewrite of spmvec to replace a sparse-matrix * vec multiplication by
 ! sparse-matrix * matrix
@@ -33,7 +35,10 @@ contains
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size, sz_mtir, sz_hlp, sz_out
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
-      real, allocatable :: mat_hlp(:,:), mtir_tmp(:,:), mt2_tmp(:,:,:,:)
+      real, allocatable :: mat_hlp(:,:), mt2_tmp(:,:,:,:)
+#ifdef _OPENACC 
+      real, allocatable :: mtir_tmp(:,:)
+#endif
 
       call timestart("spmm_invs")
 
@@ -155,26 +160,29 @@ contains
                     itype=1, fi%atoms%ntype)]) + mpdata%n_g(ikpt)
 
       call timestart("ibasm+1 -> dgemm")
-
+#ifdef _OPENACC
       call timestart("copy mtir_tmp")
       allocate(mtir_tmp(hybdat%coul(ikpt)%mtir%matsize1, hybdat%coul(ikpt)%mtir%matsize2), stat=ierr)
       if(ierr /= 0) call judft_error("can't alloc mtir_tmp")
       call dlacpy("N", size(mtir_tmp,1), size(mtir_tmp,2), hybdat%coul(ikpt)%mtir%data_r, &
                   size(hybdat%coul(ikpt)%mtir%data_r,1), mtir_tmp, size(mtir_tmp,1))
       call timestop("copy mtir_tmp")
+#endif
 
 
-      sz_mtir = size(mtir_tmp, 1)
+      sz_mtir = size(CPP_mtir_r, 1)
       sz_hlp  = size(mat_hlp, 1)
       sz_out  = size(mat_out, 1)      
       
-      !$acc enter data copyin(mtir_tmp, mat_hlp, mat_out)
-      !$acc host_data use_device(mtir_tmp, mat_hlp, mat_out)  
-      call CPP_dgemm("N", "N", indx1, n_vec, indx1, 1.0, mtir_tmp, sz_mtir, &
+      !$acc enter data copyin(CPP_mtir_r, mat_hlp, mat_out)
+      !$acc host_data use_device(CPP_mtir_r, mat_hlp, mat_out)  
+      call CPP_dgemm("N", "N", indx1, n_vec, indx1, 1.0, CPP_mtir_r, sz_mtir, &
                  mat_hlp(ibasm + 1, 1), sz_hlp, 0.0, mat_out(ibasm + 1, 1), sz_out)
       !$acc end host_data
-      !$acc exit data delete(mtir_tmp)
+      !$acc exit data delete(CPP_mtir_r)
+#ifdef _OPENACC
       deallocate(mtir_tmp)
+#endif
       call timestop("ibasm+1 -> dgemm")
 
       call timestart("cpy mt2_tmp")
