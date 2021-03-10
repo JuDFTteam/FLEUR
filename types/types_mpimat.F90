@@ -51,7 +51,7 @@ MODULE m_types_mpimat
       procedure   :: to_non_dist
       PROCEDURE   :: transpose => mpimat_transpose
       procedure   :: print_type => mpimat_print_type
-      PROCEDURE   :: linear_problem => t_mpimat_lproblem 
+      PROCEDURE   :: linear_problem => t_mpimat_lproblem
       FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
    END TYPE t_mpimat
 
@@ -68,11 +68,11 @@ CONTAINS
       call timestart("mpimat_lproblem")
       if(mat%l_real .neqv. vec%l_real) call judft_error("mat and vec need to be same kind")
 
-      select type (vec) 
+      select type (vec)
       class is (t_mat)
          call judft_error("lproblem can only be solved if vec and mat are the same class")
       class is (t_mpimat)
-         if(mat%l_real) then 
+         if(mat%l_real) then
             !call pdgesv(n,               nrhs,             a,         ia,ja,desca,                    ipiv
             call pdgesv(mat%global_size1, vec%global_size2, mat%data_r, 1,1, mat%blacsdata%blacs_desc, ipiv,&
                      !  b,ib,jb,descb,info)
@@ -83,7 +83,7 @@ CONTAINS
             call pzgesv(mat%global_size1, vec%global_size2, mat%data_c, 1, 1, mat%blacsdata%blacs_desc, ipiv,&
             !           b,         ib,jb, descb,info)
                         vec%data_c, 1, 1, vec%blacsdata%blacs_desc, info)
-                        
+
             if (info /= 0) call judft_error("Error in pzgesv for lproblem: " // int2str(info))
          endif
       end select
@@ -455,7 +455,7 @@ CONTAINS
    END SUBROUTINE from_non_dist
 
    subroutine to_non_dist(mat_in, mat_out)
-      implicit none 
+      implicit none
       CLASS(t_mpimat), INTENT(IN)::mat_in
       TYPE(t_mat), INTENT(INOUT)       ::mat_out
 
@@ -487,16 +487,16 @@ CONTAINS
       implicit NONE
       CLASS(t_mpimat), INTENT(IN)::mat
       character(len=*)         :: filename
-      type(t_mat) :: tmp 
+      type(t_mat) :: tmp
       integer :: ierr, irank
 #ifdef CPP_MPI
       CALL MPI_COMM_RANK(mat%blacsdata%mpi_com, irank, ierr)
-      
+
       if(irank == 0) call tmp%alloc(mat%l_real, mat%global_size1, mat%global_size2)
-      
+
       call mat%to_non_dist(tmp)
-      
-      if(irank == 0) then 
+
+      if(irank == 0) then
          call tmp%save_npy(filename)
          call tmp%free()
       endif

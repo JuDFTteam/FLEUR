@@ -106,7 +106,7 @@ MODULE m_writeCFOutput
                   inDenCF%mt(:,0,iType,ispin) = inDenCF%mt(:,0,iType,ispin) - hub1data%cdn_atomic(:,lcf,iType,ispin)
                ENDDO
                !Remove the same amount of protons from the core to keep everything charge neutral for vgen
-               atoms_dummy%zatom(iType) = atoms_dummy%zatom(iType) - NINT(n_0Norm*sfp_const*atoms_dummy%neq(iType))
+               atoms_dummy%zatom(iType) = atoms_dummy%zatom(iType) - n_0Norm*sfp_const*atoms_dummy%neq(iType)
             ENDIF
 
             nococonv_dummy = nococonv

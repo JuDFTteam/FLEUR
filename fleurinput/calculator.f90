@@ -20,7 +20,7 @@ MODULE m_calculator
    CHARACTER(len=10), SAVE, ALLOCATABLE  :: var_names(:)
    REAL, ALLOCATABLE, SAVE               :: var_values(:)
    INTEGER, SAVE                         :: n_vars
-   INTEGER, PARAMETER                    :: num_predef = 6
+   INTEGER, PARAMETER                    :: num_predef = 9
    LOGICAL, SAVE                         :: initialized = .false.
 
 CONTAINS
@@ -90,6 +90,12 @@ CONTAINS
       var_values(5) = 0.018897261247728981
       var_names(6) = 'Bohr'
       var_values(6) = 1.0
+      var_names(7) = 'Htr'
+      var_values(7) = 1.0
+      var_names(8) = 'eV'
+      var_values(8) = 1.0 / 27.211386245988
+      var_names(9) = 'Ry'
+      var_values(9) = 0.5
    END subroutine priv_init
 
 !<-- S: priv_increase_storage()
