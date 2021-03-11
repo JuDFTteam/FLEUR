@@ -88,6 +88,10 @@ CONTAINS
        ENDIF
     END DO
 
+    IF (judft_was_argument("-nosym")) THEN
+       l_soc_or_ss=.TRUE. ! keep only identity operation
+    END IF
+
     l_gamma = l_gamma .or. hybinp%l_hybrid
 
     IF (INDEX(str,'den=')==1) THEN
