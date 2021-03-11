@@ -20,6 +20,7 @@ MODULE m_vmmp
 !     ************************************************************
    USE m_types
    USE m_constants
+   USE m_doubleCounting
 
    IMPLICIT NONE
 
@@ -40,7 +41,7 @@ MODULE m_vmmp
       ! ..  Local Variables ..
       INTEGER :: ispin,jspin,l ,mp,p,q,itype,m,i_u
       REAL    :: rho_tot,u_htr,j_htr,e_ee,ns_sum,spin_deg,e_dc,e_dcc
-      REAL    :: rho_sig(jspins),v_diag(jspins),eta(0:jspins)
+      REAL    :: rho_sig(jspins),v_diag(jspins)
 
       !
       ! Loop over atoms
@@ -75,24 +76,6 @@ MODULE m_vmmp
             rho_tot = rho_tot + rho_sig(ispin)
          END DO
          rho_sig(1) = rho_sig(1) * spin_deg  ! if jspins = 1, divide by 2
-
-
-         !
-         ! Use around-mean-field limit (true) of atomic limit (false)
-         !
-         IF(jspins.EQ.2 .AND.i_u>atoms%n_u.AND.l_performSpinavg) THEN
-            rho_sig(1)      = rho_tot/jspins
-            rho_sig(jspins) = rho_tot/jspins
-         ENDIF
-         IF(atoms%lda_u(i_u)%l_amf) THEN
-            eta(1) = rho_sig(1) / (2*l + 1) 
-            eta(jspins) = rho_sig(jspins) / (2*l + 1)
-            eta(0) = (eta(1) + eta(jspins) )
-         ELSE
-            eta(0) = 1.0
-            eta(1) = 0.5
-            eta(jspins) = 0.5
-         ENDIF
 
          !
          !--------------------------------------------------------------------------------------------+
@@ -134,13 +117,15 @@ MODULE m_vmmp
          !
          !  set diagonal terms and correct for non-spin-polarised case
          !
+         v_diag = doubleCountingPot(u_htr,j_htr,l,atoms%lda_u(i_u)%l_amf,&
+                                    jspins.EQ.2 .AND.i_u>atoms%n_u.AND.l_performSpinavg,&
+                                    rho_sig)
          DO ispin = 1,jspins
-            v_diag(ispin) = - u_htr * ( rho_tot - 0.5*eta(0) ) + j_htr * ( rho_sig(ispin) - eta(ispin) )
             DO m = -l,l
                DO mp = -l,l
                   vs_mmp(m,mp,i_u,ispin) = vs_mmp(m,mp,i_u,ispin) * spin_deg
                END DO
-               vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) + v_diag(ispin)
+               vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) - v_diag(ispin)
             END DO
          END DO
 
@@ -158,7 +143,7 @@ MODULE m_vmmp
                DO mp =-l,l
                   e_ee=e_ee+REAL(vs_mmp(m,mp,i_u,ispin)*ns_mmp(m,mp,i_u,ispin))
                END DO
-               e_ee = e_ee - v_diag(ispin) * REAL( ns_mmp(m,m,i_u,ispin) )
+               e_ee = e_ee + v_diag(ispin) * REAL( ns_mmp(m,m,i_u,ispin) )
             END DO
          END DO
 
@@ -169,19 +154,10 @@ MODULE m_vmmp
          !                                    s                                 |
          !----------------------------------------------------------------------+
 
-         ns_sum = 0.0
-         DO ispin = 1,jspins
-            ns_sum = ns_sum + rho_sig(ispin) * (rho_sig(ispin) - 2.0*eta(ispin))
-         END DO
-         e_dc = u_htr * rho_tot * ( rho_tot - eta(0) ) - j_htr * ns_sum
+         e_dc = 2.0 * doubleCountingEnergy(u_htr,j_htr,l,atoms%lda_u(i_u)%l_amf,&
+                                           jspins.EQ.2 .AND.i_u>atoms%n_u.AND.l_performSpinavg,rho_sig)
          e_dcc = (u_htr - j_htr) * rho_tot
-
-         ns_sum = ns_sum / spin_deg
-         !       e_ldau = e_ldau + (e_ee -  u_htr * rho_tot * ( rho_tot - 1. )
-         !    +    + j_htr * ns_sum  - (u_htr - j_htr) * rho_tot) * neq(itype)
-         !       write(*,*) e_ldau
          e_ldau = e_ldau + ( e_ee - e_dc - e_dcc) * atoms%neq(itype)
-         !       write(*,*) e_ldau
 
       END DO ! loop over U parameters
 

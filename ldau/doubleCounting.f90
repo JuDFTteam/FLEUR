@@ -79,7 +79,7 @@ MODULE m_doubleCounting
    END FUNCTION doubleCountingPot
 
 
-   FUNCTION doubleCountingEnergy(U,J,l,l_amf,rho) RESULT(Edc)
+   FUNCTION doubleCountingEnergy(U,J,l,l_amf,l_spinAvg,rho) RESULT(Edc)
 
       !------------------------------------------------------------
       ! Calculate the Double Counting Correction Energy in either
@@ -90,6 +90,7 @@ MODULE m_doubleCounting
       REAL,                INTENT(IN)  :: J
       INTEGER,             INTENT(IN)  :: l
       LOGICAL,             INTENT(IN)  :: l_amf      !Which doubleCounting is used (FLL/AMF)
+      LOGICAL,             INTENT(IN)  :: l_spinAvg
       REAL,                INTENT(IN)  :: rho(:)     !Trace of the density matrix for each spin
 
       REAL :: Edc
@@ -101,6 +102,11 @@ MODULE m_doubleCounting
          ndn = rho(2)
       ELSE
          ndn = rho(1)
+      ENDIF
+
+      IF(l_spinAvg) THEN
+         nup = (nup+ndn)/2.0
+         ndn = nup
       ENDIF
 
       IF(l_amf) THEN
