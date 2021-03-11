@@ -288,9 +288,10 @@ PROGRAM inpgen
               hub1inp,l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
+
+      inpOldUnit = 39
       IF (.NOT.l_include(1)) THEN
          kptsUnit = 38
-         inpOldUnit = 39
          INQUIRE(file='kpts.xml',exist=l_exist)
          IF((.NOT.l_exist).AND.judft_was_argument("-inp.xml")) THEN
             CALL system('mv inp.xml inp_old.xml')
@@ -328,6 +329,7 @@ PROGRAM inpgen
          CLOSE (kptsUnit)
       END IF
 
+      inpgenIUnit = 57
       IF(judft_was_argument("-f").AND..NOT.juDFT_was_argument("-noInpgenComment")) THEN
          filename = juDFT_string_for_argument("-f")
          OPEN (inpgenIUnit,file=TRIM(filename),action="read")
