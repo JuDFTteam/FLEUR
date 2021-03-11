@@ -117,7 +117,7 @@ CONTAINS
       COMPLEX     :: y((fi%hybinp%lexp + 1)**2), smat
       COMPLEX     :: dwgn(-maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), -maxval(fi%hybinp%lcutm1):maxval(fi%hybinp%lcutm1), 0:maxval(fi%hybinp%lcutm1), fi%sym%nsym)
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
-      COMPLEX, ALLOCATABLE   :: structconst1(:, :),structconst(:,:,:,:)
+      COMPLEX, ALLOCATABLE   :: structconst(:,:,:,:)
 
       INTEGER                    :: ierr
       INTEGER                    :: iatom, mtmt_idx
@@ -422,7 +422,6 @@ CONTAINS
                                        lm1 = lm1 + 1
                                        DO n1 = 1, mpdata%num_radbasfn(l1, itype1)
                                           iy = iy + 1
-                                          IF (iy > ix) EXIT lp2 ! Don't cross the diagonal!
                                           rdum = (-1)**(l2 + m2)*moment(n1, l1, itype1)*moment(n2, l2, itype2)*gmat(lm1, lm2)
                                           l = l1 + l2
                                           lm = l**2 + l + m1 - m2 + 1
@@ -449,8 +448,6 @@ CONTAINS
             END DO
          END DO
 
-         call coul(ikpt)%u2l()
-
          IF (fi%sym%invs) THEN
             !symmetrize makes the Coulomb matrix real symmetric     
             CALL symmetrize_mpimat(fi, fmpi, coul(ikpt)%data_c, [1,1],[hybdat%nbasp, hybdat%nbasp], &
@@ -475,7 +472,6 @@ CONTAINS
             call loop_over_interst(fi, hybdat, mpdata, fmpi, structconst, sphbesmoment, moment, moment2, &
                                    qnrm, facc, gmat, integral, olap, pqnrm, pgptm1, ngptm1, ikpt, coul(ikpt))
 
-            call coul(ikpt)%u2l()
          END DO
 
          call timestop("loop over interst.")
@@ -526,7 +522,6 @@ CONTAINS
                   END IF
                endif
             END DO
-            call coul(ikpt)%u2l()
          END DO
          call timestop("coulomb matrix 3a")
          !     (3b) r,r' in different MT
@@ -561,8 +556,7 @@ CONTAINS
 
             !finally we can loop over the plane waves (G: igpt1,igpt2)
             call timestart("loop over plane waves")
-            allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), &
-                      structconst1(fi%atoms%nat, (2*fi%hybinp%lexp + 1)**2), source=cmplx_0)
+            allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), source=cmplx_0)
                
             DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
@@ -578,10 +572,9 @@ CONTAINS
                   do iatom = 1,fi%atoms%nat
                      itype2 = fi%atoms%itype(iatom)
                      cexp = CONJG(carr2b(iatom, igpt2))
-                     structconst1(:, :) = transpose(structconst(:, :, iatom, ikpt))
                      
                      !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm, iat2) &
-                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst1) 
+                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst, iatom, ikpt) 
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
                         call calc_l_m_from_lm(lm1, l1, m1)
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
@@ -590,7 +583,7 @@ CONTAINS
                            l = l1 + l2
                            lm = l**2 + l - l1 - m2 + (m1 + l1) + 1
                            do iat2 =1,fi%atoms%nat
-                              carr2(iat2, lm1) = carr2(iat2,lm1) + cdum*structconst1(iat2, lm)
+                              carr2(iat2, lm1) = carr2(iat2,lm1) + cdum*structconst(lm, iat2, iatom, ikpt)
                            enddo
                         enddo
                      enddo
@@ -622,8 +615,7 @@ CONTAINS
                   call timestop("igpt1")
                endif ! pe_ix
             END DO !igpt0
-            deallocate (carr2, carr2a, carr2b, structconst1)
-            call coul(ikpt)%u2l() 
+            deallocate (carr2, carr2a, carr2b)
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
@@ -685,7 +677,6 @@ CONTAINS
                endif
             END DO
             call timestop("double gpt loop")
-            call coul(1)%u2l()   
 
             ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
             call timestart("igpt1=1 loop")
@@ -719,7 +710,6 @@ CONTAINS
                endif
             END DO
             call timestop("igpt1=1 loop")
-            call coul(1)%u2l()
 
             ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
             call timestart("igpt1=igpt2=1 loop")
@@ -740,8 +730,6 @@ CONTAINS
                END DO
             endif ! pe_ix
             call timestop("igpt1=igpt2=1 loop")
-            call coul(1)%u2l()
-
             call timestop("add corrections from higher orders")
          endif
 
@@ -773,6 +761,7 @@ CONTAINS
             call timestop("harmonics setup")
             call perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
                                        pqnrm,qnrm, nqnrm, ikpt, coul(ikpt))
+            ! this one is needed
             call coul(ikpt)%u2l()
          END DO
          call timestop("loop 2")
@@ -845,7 +834,6 @@ CONTAINS
                END DO
                nsym_gpt(igpt0, ikpt) = ic
             END DO ! igpt0
-            call coul(ikpt)%u2l()
          END DO ! ikpt
          call timestop("loop 3")
          call timestart("gap 1:")
@@ -883,22 +871,12 @@ CONTAINS
       ! rearrange coulomb matrix
       !
       if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
-      call timestart("loop bla")
-      DO ikpt = 1, fi%kpts%nkpt
-         call hybdat%coul(ikpt)%init()
-      enddo
 
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          ! unpack coulomb into coulomb(ikpt)
-         call copy_mt1_from_striped_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
-         call copy_mt2_from_striped_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
-         call copy_mt3_from_striped_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
-         call test_mt2_mt3(fi, fmpi, mpdata, ikpt, hybdat)
-         call copy_residual_mt_contrib(fi, fmpi, mpdata, coul, ikpt, hybdat)
-         call copy_ir(fi, fmpi, mpdata, coul, ikpt, hybdat)
+         call copy_from_dense_to_sparse(fi, fmpi, mpdata, coul, ikpt, hybdat)
       END DO ! ikpt
-      call timestop("loop bla")
       CALL timestop("Coulomb matrix setup")
 
    END SUBROUTINE coulombmatrix
@@ -1014,6 +992,7 @@ CONTAINS
          endif
       END DO
 
+      !needed bc apply inverse uses lower half 
       call coulomb%u2l()
       call timestop("subtract_sphaverage")
    END SUBROUTINE subtract_sphaverage

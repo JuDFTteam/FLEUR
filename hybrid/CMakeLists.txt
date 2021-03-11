@@ -10,6 +10,7 @@ hybrid/coulombmatrix.F90
 hybrid/copy_coul.F90
 hybrid/create_coul_comms.F90
 hybrid/distribute_mpi.F90
+hybrid/divide_most_evenly.f90
 hybrid/eigvec_setup.F90 
 hybrid/exchange_core.F90
 hybrid/exchange_val_hf.F90
