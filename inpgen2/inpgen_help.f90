@@ -41,7 +41,8 @@ CONTAINS
     CALL new_argument(0,"-debugtime","Write the start/stop of all timers to the console","")
     CALL new_argument(0,"-all_times","Write json files of timing for all PE, not only for PE=0","")
 
-    CALL new_argument(0,"-nosym","Only use identity as symmetry operation","")
+    CALL new_argument(0,"-nosym","In general: Only use identity as symmetry operation","")
+    CALL new_argument(0,"-noKsym","For the generation of the k-point set: Only use identity as symmetry operation","")
     CALL new_argument(0,"-noInpgenComment","Disable printing inpgen input as a comment to the inp.xml file","")
 
     IF (.NOT.check_arguments()) CALL judft_warn("Invalid command line arguments",hint="Use -h option to see valid choices")
@@ -71,6 +72,8 @@ CONTAINS
     CALL print_argument("-greensf")
     CALL print_argument("-warn_only")
     CALL print_argument("-kptsPath")
+    CALL print_argument("-nosym")
+    CALL print_argument("-noKsym")
     CALL print_argument("-trace")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"
