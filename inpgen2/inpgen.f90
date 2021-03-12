@@ -255,7 +255,7 @@ PROGRAM inpgen
          if(hybinp%l_hybrid .and. kpts(iKpts)%kptsKind == KPTS_KIND_MESH) then
             call timestart("Hybrid setup BZ")
             CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
-            call kpts(ikpts)%init(sym, input%film,.true.)
+            call kpts(ikpts)%init(sym, input%film,.true.,.FALSE.)
             call timestop("Hybrid setup BZ")
          endif
       END DO
