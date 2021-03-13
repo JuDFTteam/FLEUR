@@ -186,7 +186,15 @@ CONTAINS
                this%kptsKind = KPTS_KIND_TRIA
             CASE ('tria-bulk')
                this%kptsKind = KPTS_KIND_TRIA_BULK
-            CASE ('SPEX-mesh')
+            CASE ('SPEX-mesh') ! (this is deprecated)
+               this%kptsKind = KPTS_KIND_SPEX_MESH
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
+               IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
+               IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
+               IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
+            CASE ('spex-mesh') ! (same as 'SPEX-mesh')
                this%kptsKind = KPTS_KIND_SPEX_MESH
                numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
                IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))

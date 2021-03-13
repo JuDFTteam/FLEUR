@@ -391,7 +391,7 @@ CONTAINS
                                   results, eig_id, fi%oneD, sphhar, stars, fi%vacuum)
                END IF
                IF (fi%input%gw .EQ. 2) THEN
-                  CALL juDFT_end("GW data written. Fleur ends.", fmpi%irank)
+                  CALL juDFT_end("SPEX data written. Fleur ends.", fmpi%irank)
                END IF
             END IF
 

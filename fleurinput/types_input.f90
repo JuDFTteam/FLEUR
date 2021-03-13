@@ -166,8 +166,8 @@ SUBROUTINE read_xml_input(this,xml)
    CLASS(t_input),INTENT(inout):: this
    TYPE(t_xml),INTENT(INOUT)  ::xml
 
-   CHARACTER(len=100):: valueString,xpathA,xpathB
-   INTEGER:: numberNodes,nodeSum, i
+   CHARACTER(len=100):: valueString,xpathA,xpathB,xPathC
+   INTEGER:: numberNodes,nodeSum, i, numberNodesB,numberNodesC
 
    !TODO! these switches should be in the inp-file
    !this%l_core_confpot=.TRUE. !former CPP_CORE !Done (A.N.).
@@ -240,7 +240,15 @@ SUBROUTINE read_xml_input(this,xml)
    ! Read in optional expert modes switches
    xPathA = '/fleurInput/calculationSetup/expertModes'
    IF (xml%GetNumberOfNodes(xPathA)==1) THEN
-      this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
+      xPathB = TRIM(ADJUSTL(xPathA))//'/@gw'
+      xPathC = TRIM(ADJUSTL(xPathA))//'/@spex'
+      numberNodesB = xml%GetNumberOfNodes(xPathB)
+      numberNodesC = xml%GetNumberOfNodes(xPathC)
+      IF((numberNodesB.EQ.1).AND.(numberNodesC.EQ.1)) THEN
+         CALL juDFT_error("@gw and @spex specified. Choose only one!", calledby='types_input%read_xml_input')
+      END IF
+      IF (numberNodesB.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))))
+      IF (numberNodesC.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))))
       this%secvar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
    END IF
    ! Read in Brillouin zone integration parameters
