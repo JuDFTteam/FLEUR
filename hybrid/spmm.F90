@@ -29,36 +29,27 @@ contains
       type(t_mpdata), intent(in)        :: mpdata
       type(t_hybdat), intent(in)        :: hybdat
       integer, intent(in)               :: ikpt
-      type(t_mat), intent(in)           :: mat_in
+      type(t_mat), intent(inout)        :: mat_in
       real, intent(inout)               :: mat_out(:,:)
 
       integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size, sz_mtir, sz_hlp, sz_out
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
-      real, allocatable :: mat_hlp(:,:), mt2_tmp(:,:,:,:), mat_in_line(:)
+      real, allocatable :: mt2_tmp(:,:,:,:), mat_in_line(:)
 #ifdef _OPENACC 
       real, allocatable :: mtir_tmp(:,:)
 #endif
 
       call timestart("spmm_invs")
       mat_in_line = mat_in%data_r(hybdat%nbasp + 1, :)
-
-      call timestart("alloc mathlp")
-      allocate(mat_hlp(mat_in%matsize1, mat_in%matsize2), stat=ierr)
-      if(ierr /= 0) call judft_error("can't alloc mat_hlp")
-
-      call timestart("cpy mat_hlp")
-      call dlacpy("N", mat_in%matsize1, mat_in%matsize2, mat_in%data_r, size(mat_in%data_r, 1), mat_hlp, size(mat_hlp,1))
-      call timestop("cpy mat_hlp")
-      call timestop("alloc mathlp")
       
       n_vec = mat_in%matsize2
 
       call timestart("reorder_forw")
       !$OMP PARALLEL DO default(none) &
-      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_hlp)
+      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_in)
       do i_vec = 1, n_vec
-         call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_hlp(:, i_vec))
+         call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_in%data_r(:, i_vec))
       enddo
       !$OMP end parallel do
       call timestop("reorder_forw")
@@ -71,7 +62,7 @@ contains
       !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
       !$OMP private(lm, l, m, n_size, i_vec)&
       !$OMP lastprivate(indx2)&
-      !$OMP shared(ibasm, mat_hlp, hybdat, mat_out, fi, mpdata, n_vec, ikpt)
+      !$OMP shared(ibasm, mat_in, hybdat, mat_out, fi, mpdata, n_vec, ikpt)
       do iatom = 1,fi%atoms%nat 
          itype = fi%atoms%itype(iatom)
 
@@ -99,10 +90,10 @@ contains
 
             n_size = mpdata%num_radbasfn(l, itype) - 1
             call dgemm("N","N", n_size, n_vec, n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
-                        mat_hlp(indx1,1), size(mat_hlp,1), 0.0, mat_out(indx1,1), size(mat_out,1))
+                        mat_in%data_r(indx1,1), size(mat_in%data_r,1), 0.0, mat_out(indx1,1), size(mat_out,1))
 
             do i_vec = 1, n_vec
-               call daxpy(n_size, mat_hlp(indx3, i_vec), hybdat%coul(ikpt)%mt2_r(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
+               call daxpy(n_size, mat_in%data_r(indx3, i_vec), hybdat%coul(ikpt)%mt2_r(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
             enddo
 
             indx1 = indx2
@@ -137,7 +128,8 @@ contains
                      indx4 = indx3 + (ieq1 - 1)*ishift1 + 1
                      IF (iatom == iatom1) CYCLE
                      do i_vec = 1, n_vec
-                        mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) + hybdat%coul(ikpt)%mt3_r(:n_size, iatom1, iatom)*mat_hlp(indx4, i_vec)
+                        mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) &
+                           + hybdat%coul(ikpt)%mt3_r(:n_size, iatom1, iatom)*mat_in%data_r(indx4, i_vec)
                      enddo
                   END DO
                   indx3 = indx3 + fi%atoms%neq(itype1)*ishift1
@@ -173,13 +165,13 @@ contains
 
 
       sz_mtir = size(CPP_mtir_r, 1)
-      sz_hlp  = size(mat_hlp, 1)
+      sz_hlp  = size(mat_in%data_r, 1)
       sz_out  = size(mat_out, 1)      
       
-      !$acc enter data copyin(CPP_mtir_r, mat_hlp, mat_out)
-      !$acc host_data use_device(CPP_mtir_r, mat_hlp, mat_out)  
+      !$acc enter data copyin(CPP_mtir_r, mat_in, mat_in%data_r, mat_out)
+      !$acc host_data use_device(CPP_mtir_r, mat_in%data_r, mat_out)  
       call CPP_dgemm("N", "N", indx1, n_vec, indx1, 1.0, CPP_mtir_r, sz_mtir, &
-                 mat_hlp(ibasm + 1, 1), sz_hlp, 0.0, mat_out(ibasm + 1, 1), sz_out)
+                 mat_in%data_r(ibasm + 1, 1), sz_hlp, 0.0, mat_out(ibasm + 1, 1), sz_out)
       !$acc end host_data
       !$acc exit data delete(CPP_mtir_r)
 #ifdef _OPENACC
@@ -205,8 +197,8 @@ contains
                   indx2 = indx2 + 1
                   indx3 = indx3 + n - 1
 
-                  !$acc host_data use_device(mat_hlp, mt2_tmp, mat_out)
-                  call CPP_dgemv("T", n-1, n_vec, 1.0, mat_hlp(indx2,1), sz_hlp, mt2_tmp(1, m, l, iatom), 1, &
+                  !$acc host_data use_device(mat_in%data_r, mt2_tmp, mat_out)
+                  call CPP_dgemv("T", n-1, n_vec, 1.0, mat_in%data_r(indx2,1), sz_hlp, mt2_tmp(1, m, l, iatom), 1, &
                      1.0, mat_out(indx1,1), sz_out)
                   !$acc end host_data
 
@@ -218,7 +210,7 @@ contains
       END DO
       call timestop("dot prod")
 
-      !$acc exit data copyout(mat_out) delete(mt2_tmp, mat_hlp)
+      !$acc exit data copyout(mat_out) delete(mt2_tmp, mat_in, mat_in%data_r)
 
 
       IF (ikpt == 1) THEN
@@ -234,7 +226,8 @@ contains
                n_size = mpdata%num_radbasfn(0, itype) - 1
                do i_vec = 1, n_vec
                   mat_out(hybdat%nbasp + 1, i_vec) = mat_out(hybdat%nbasp + 1, i_vec) &
-                                                            + dot_product(hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), mat_hlp(indx1:indx2, i_vec))
+                                                     + dot_product(hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), &
+                                                                   mat_in%data_r(indx1:indx2, i_vec))
                enddo
                indx0 = indx0 + ishift
             END DO
@@ -243,7 +236,7 @@ contains
          !$OMP PARALLEL DO default(none) schedule(dynamic)&
          !$OMP private(iatom, itype, indx1, indx2, itype1, ishift1) &
          !$OMP private(ieq1, iatom1, indx3, indx4, n_size, i_vec) &
-         !$OMP shared(fi, n_vec, mat_out, ibasm, mpdata, mat_hlp, hybdat, ikpt)
+         !$OMP shared(fi, n_vec, mat_out, ibasm, mpdata, mat_in, hybdat, ikpt)
          do iatom = 1, fi%atoms%nat 
             itype = fi%atoms%itype(iatom)
             indx1 = ibasm + sum([((fi%hybinp%lcutm1(fi%atoms%itype(iat)) + 1)**2, iat=1,iatom-1)]) + 1
@@ -262,7 +255,8 @@ contains
                   n_size = mpdata%num_radbasfn(0, itype1) - 1
                   do i_vec = 1, n_vec
                      mat_out(indx1, i_vec) = mat_out(indx1, i_vec) &
-                                                      + dot_product(hybdat%coul(ikpt)%mt3_r(:n_size, iatom, iatom1), mat_hlp(indx3:indx4, i_vec))
+                                            + dot_product(hybdat%coul(ikpt)%mt3_r(:n_size, iatom, iatom1), &
+                                                          mat_in%data_r(indx3:indx4, i_vec))
                   enddo
                END DO
                indx2 = indx2 + fi%atoms%neq(itype1)*ishift1
@@ -275,9 +269,10 @@ contains
 
       call timestart("reorder_back")
       !$OMP PARALLEL DO default(none) &
-      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_out)
+      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_out, mat_in)
       do i_vec = 1, n_vec
          call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out(:, i_vec))
+         call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_in%data_r(:, i_vec))
       enddo
       !$OMP END PARALLEL DO
       call timestop("reorder_back")
