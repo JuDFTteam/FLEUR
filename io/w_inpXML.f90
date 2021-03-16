@@ -343,13 +343,13 @@ CONTAINS
       !         <bravaisMatrix>
       WRITE (fileNum, '(a)') '         <bravaisMatrix>'
       !            <row-1>0.00000 5.13000 5.13000</row-1>
-250   FORMAT('            <row-1>', f16.10, ' ', f16.10, ' ', f16.10, '</row-1>')
+250   FORMAT('            <row-1>', f22.16, ' ', f22.16, ' ', f22.16, '</row-1>')
       WRITE (fileNum, 250) cell%amat(:, 1)
       !            <row-2>5.13000 0.00000 5.13000</row-2>
-260   FORMAT('            <row-2>', f16.10, ' ', f16.10, ' ', f16.10, '</row-2>')
+260   FORMAT('            <row-2>', f22.16, ' ', f22.16, ' ', f22.16, '</row-2>')
       WRITE (fileNum, 260) cell%amat(:, 2)
       !            <row-3>5.13000 5.13000 0.00000</row-3>
-270   FORMAT('            <row-3>', f16.10, ' ', f16.10, ' ', f16.10, '</row-3>')
+270   FORMAT('            <row-3>', f22.16, ' ', f22.16, ' ', f22.16, '</row-3>')
       WRITE (fileNum, 270) cell%amat(:, 3)
       WRITE (fileNum, '(a)') '         </bravaisMatrix>'
 
