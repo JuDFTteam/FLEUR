@@ -108,6 +108,9 @@ contains
          call timestart("gamma point 1 inv")
          iatom = 0
          indx0 = 0
+         !$OMP parallel do default(none) &
+         !$OMP private(iatom, itype, ishift, l, indx0, indx1, indx2, indx3, indx4, iatom1, itype1, ishift1, i_vec, n_size)&
+         !$OMP shared(fi, mpdata, hybdat, mat_out, ibasm, n_vec, ikpt, mat_in, mat_in_line)
          do iatom = 1, fi%atoms%nat 
             itype = fi%atoms%itype(iatom)
             ishift = sum([((2*l + 1)*(mpdata%num_radbasfn(l, itype) - 1), l=0, fi%hybinp%lcutm1(itype))])
@@ -121,7 +124,6 @@ contains
             indx1 = indx0 + 1
             indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
 
-            iatom1 = 0
             indx3 = ibasm
             n_size = mpdata%num_radbasfn(l, itype) - 1
             do iatom1 = 1,fi%atoms%nat 
@@ -145,6 +147,7 @@ contains
                   + hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in_line(i_vec)
             enddo
          END DO
+         !$OMP end parallel do
          call timestop("gamma point 1 inv")
       END IF
 
