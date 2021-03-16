@@ -108,42 +108,39 @@ contains
          call timestart("gamma point 1 inv")
          iatom = 0
          indx0 = 0
-         DO itype = 1, fi%atoms%ntype
+         do iatom = 1, fi%atoms%nat 
+            itype = fi%atoms%itype(iatom)
             ishift = sum([((2*l + 1)*(mpdata%num_radbasfn(l, itype) - 1), l=0, fi%hybinp%lcutm1(itype))])
-            DO ieq = 1, fi%atoms%neq(itype)
-               iatom = iatom + 1
-               l = 0
-               m = 0
+            l = 0
 
-               indx1 = indx0 + 1
-               indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
+            indx1 = indx0 + 1
+            indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
 
-               iatom1 = 0
-               indx3 = ibasm
-               n_size = mpdata%num_radbasfn(l, itype) - 1
-               DO itype1 = 1, fi%atoms%ntype
-                  ishift1 = (fi%hybinp%lcutm1(itype1) + 1)**2
-                  DO ieq1 = 1, fi%atoms%neq(itype1)
-                     iatom1 = iatom1 + 1
-                     indx4 = indx3 + (ieq1 - 1)*ishift1 + 1
-                     IF (iatom == iatom1) CYCLE
-                     do i_vec = 1, n_vec
-                        mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) &
-                           + hybdat%coul(ikpt)%mt3_r(:n_size, iatom1, iatom)*mat_in%data_r(indx4, i_vec)
-                     enddo
-                  END DO
-                  indx3 = indx3 + fi%atoms%neq(itype1)*ishift1
+            iatom1 = 0
+            indx3 = ibasm
+            n_size = mpdata%num_radbasfn(l, itype) - 1
+            DO itype1 = 1, fi%atoms%ntype
+               ishift1 = (fi%hybinp%lcutm1(itype1) + 1)**2
+               DO ieq1 = 1, fi%atoms%neq(itype1)
+                  iatom1 = iatom1 + 1
+                  indx4 = indx3 + (ieq1 - 1)*ishift1 + 1
+                  IF (iatom == iatom1) CYCLE
+                  do i_vec = 1, n_vec
+                     mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) &
+                        + hybdat%coul(ikpt)%mt3_r(:n_size, iatom1, iatom)*mat_in%data_r(indx4, i_vec)
+                  enddo
                END DO
-
-               IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
-
-               n_size = mpdata%num_radbasfn(l, itype) - 1
-               do i_vec = 1, n_vec
-                  mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) &
-                     + hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in_line(i_vec)
-               enddo
-               indx0 = indx0 + ishift
+               indx3 = indx3 + fi%atoms%neq(itype1)*ishift1
             END DO
+
+            IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
+
+            n_size = mpdata%num_radbasfn(l, itype) - 1
+            do i_vec = 1, n_vec
+               mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) &
+                  + hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in_line(i_vec)
+            enddo
+            indx0 = indx0 + ishift
          END DO
          call timestop("gamma point 1 inv")
       END IF
