@@ -253,12 +253,12 @@
             ALLOCATE (g(ned,3*atoms%ntype*ncored))
          ENDIF
 
-         IF ( (input%bz_integration.EQ.2 .OR. input%bz_integration.EQ.3) .and. &
+         IF ( (input%bz_integration.EQ.BZINT_METHOD_TRIA .OR. input%bz_integration.EQ.BZINT_METHOD_TETRA) .and. &
              .not.l_mcd .and. banddos%ndir.NE.-3 .and. .not.l_jDOS) THEN
             !
             ! DOS calculation: use triangular method!!
             !
-            IF(input%bz_integration.EQ.2) THEN
+            IF(input%bz_integration.EQ.BZINT_METHOD_TRIA) THEN
                IF ( input%film ) THEN
                   CALL ptdos(input%jspins,ned,qdim,ntb,kpts,ev,qal,e, g)
                ELSE
@@ -266,7 +266,7 @@
                   CALL tetra_dos(qdim,input%neig,ned,kpts,efermi,e,results%neig(:,jsp),ev,qal,g)
                   IF (input%jspins.EQ.1) g = 2.0 * g
                ENDIF
-            ELSEIF(input%bz_integration.EQ.3) THEN
+            ELSEIF(input%bz_integration.EQ.BZINT_METHOD_TETRA) THEN
                !Alternative tetrahedron method
                CALL dostetra(kpts,input,qdim,ned,e,results%neig(:,jsp),ev,qal,g)
             ENDIF
