@@ -40,8 +40,6 @@ CONTAINS
     TYPE(t_jDOS), OPTIONAL, INTENT(IN) :: jDOS
     TYPE(t_hub1data), OPTIONAL, INTENT(INOUT) :: hub1data
 
-
-    INTEGER, PARAMETER :: lcf=3
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
 
@@ -51,6 +49,8 @@ CONTAINS
     TYPE (t_orb),              INTENT(IN) :: orb
     TYPE (t_denCoeffs),        INTENT(IN) :: denCoeffs
     TYPE (t_denCoeffsOffdiag), INTENT(IN) :: denCoeffsOffdiag
+
+    INTEGER, PARAMETER :: lcf=3
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj,n_dos

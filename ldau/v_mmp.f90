@@ -39,8 +39,10 @@ MODULE m_vmmp
       REAL,             INTENT(INOUT)  :: e_ldau
 
       ! ..  Local Variables ..
+      LOGICAL, PARAMETER :: l_mix = .FALSE.
+
       INTEGER :: ispin,jspin,l ,mp,p,q,itype,m,i_u
-      REAL    :: rho_tot,u_htr,j_htr,e_ee,ns_sum,spin_deg,e_dc,e_dcc
+      REAL    :: rho_tot,u_htr,j_htr,e_ee,ns_sum,spin_deg,e_dc,e_dcc,alpha
       REAL    :: rho_sig(jspins),v_diag(jspins)
 
       !
@@ -117,9 +119,12 @@ MODULE m_vmmp
          !
          !  set diagonal terms and correct for non-spin-polarised case
          !
-         v_diag = doubleCountingPot(u_htr,j_htr,l,atoms%lda_u(i_u)%l_amf,&
+
+         IF(l_mix) alpha = doubleCountingMixFactor(ns_mmp(:,:,i_u,:), l, rho_sig)
+
+         v_diag = doubleCountingPot(u_htr,j_htr,l,atoms%lda_u(i_u)%l_amf,l_mix,&
                                     jspins.EQ.2 .AND.i_u>atoms%n_u.AND.l_performSpinavg,&
-                                    rho_sig)
+                                    rho_sig, alpha)
          DO ispin = 1,jspins
             DO m = -l,l
                DO mp = -l,l
@@ -154,8 +159,9 @@ MODULE m_vmmp
          !                                    s                                 |
          !----------------------------------------------------------------------+
 
-         e_dc = 2.0 * doubleCountingEnergy(u_htr,j_htr,l,atoms%lda_u(i_u)%l_amf,&
-                                           jspins.EQ.2 .AND.i_u>atoms%n_u.AND.l_performSpinavg,rho_sig)
+         e_dc = 2.0 * doubleCountingEnergy(u_htr,j_htr,l,atoms%lda_u(i_u)%l_amf,l_mix,&
+                                           jspins.EQ.2 .AND.i_u>atoms%n_u.AND.l_performSpinavg,&
+                                           rho_sig, alpha)
          e_dcc = (u_htr - j_htr) * rho_tot
          e_ldau = e_ldau + ( e_ee - e_dc - e_dcc) * atoms%neq(itype)
 
