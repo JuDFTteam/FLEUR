@@ -368,7 +368,7 @@ CONTAINS
       INTEGER :: n, iSpecialPoint, i, nkq_pairs
       REAL :: commonFractions(3)
       LOGICAL :: l_exist
-      CHARACTER(LEN=17) :: posString(3)
+      CHARACTER(LEN=20) :: posString(3)
       CHARACTER(LEN=50) :: label
 
       label = ''
@@ -417,9 +417,9 @@ CONTAINS
             WRITE(posString(2),'(f7.2,a,f0.2)') commonFractions(2)*kpts%bk(2, n), '/' , commonFractions(2)
             WRITE(posString(3),'(f7.2,a,f0.2)') commonFractions(3)*kpts%bk(3, n), '/' , commonFractions(3)
          ELSE
-            WRITE(posString(1),'(f16.13)') kpts%bk(1, n)
-            WRITE(posString(2),'(f16.13)') kpts%bk(2, n)
-            WRITE(posString(3),'(f16.13)') kpts%bk(3, n)
+            WRITE(posString(1),'(f19.16)') kpts%bk(1, n)
+            WRITE(posString(2),'(f19.16)') kpts%bk(2, n)
+            WRITE(posString(3),'(f19.16)') kpts%bk(3, n)
          END IF
 
 206      FORMAT('               <kPoint weight="', f20.13, '">', a, ' ', a, ' ', a, '</kPoint>')

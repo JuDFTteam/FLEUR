@@ -39,7 +39,7 @@ CONTAINS
        CALL set_special_points(kpts,kptsPath)
     ENDIF
 
-    PRINT *,"Processing k-point string",str
+    PRINT *,"Processing k-point string: ",str
     !set name
     IF (INDEX(str,"#")>0) THEN
        name=str(:INDEX(str,"#")-1)
