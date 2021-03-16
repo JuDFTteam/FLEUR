@@ -425,11 +425,6 @@ CONTAINS
 
     kpts%kptsKind = KPTS_KIND_MESH
 
-    IF (ANY(grid==0)) THEN
-       PRINT *,"Warning, k-point grid dimension increased to 1"
-       WHERE(grid==0) grid=1
-    END IF
-
     IF (l_gamma) THEN
        IF (bz_integration==BZINT_METHOD_TRIA) CALL judft_error("tria and l_gamma incompatible")
        CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss,l_OnlyIdentitySym)
@@ -495,6 +490,8 @@ CONTAINS
                bz%rltv,bz%bltv,0,idimens,bz%xvec,bz%fnorm,bz%fdist,bz%ncorn,bz%nface,&
                bz%nedge,bz%cpoint,bz%nsym,bz%ccr,bz%rlsymr,bz%talfa,mkpt,mface_const,mdir,&
                kpts%nkpt,vkxyz,wghtkp)
+
+          WHERE(grid==0) grid=1
        END IF
 
        DO j=1,kpts%nkpt
