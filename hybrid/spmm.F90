@@ -113,6 +113,11 @@ contains
             ishift = sum([((2*l + 1)*(mpdata%num_radbasfn(l, itype) - 1), l=0, fi%hybinp%lcutm1(itype))])
             l = 0
 
+            indx0 = 0
+            do iat = 1,iatom-1
+               indx0 = indx0 + sum([((2*l + 1)*(mpdata%num_radbasfn(l, fi%atoms%itype(iat)) - 1), l=0, fi%hybinp%lcutm1(fi%atoms%itype(iat)))])
+            enddo
+
             indx1 = indx0 + 1
             indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
 
@@ -139,7 +144,6 @@ contains
                mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) &
                   + hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in_line(i_vec)
             enddo
-            indx0 = indx0 + ishift
          END DO
          call timestop("gamma point 1 inv")
       END IF
