@@ -916,7 +916,7 @@ CONTAINS
       class(t_mat), intent(inout) :: coulomb
 
       ! - local scalars -
-      INTEGER               :: l, ix, iy, ix_loc, pe_ix, i, j, n, nn, itype, ieq, M
+      INTEGER               :: l, ix, iy, ix_loc, pe_ix, i, j, n, nn, itype, ieq, M, ierr
 
       ! - local arrays -
       TYPE(t_mat) :: olap
