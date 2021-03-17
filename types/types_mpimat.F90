@@ -865,20 +865,6 @@ CONTAINS
             CALL MPI_COMM_RANK(mat_out%blacsdata%mpi_com, n_rank, ierr)
             CALL MPI_COMM_SIZE(mat_out%blacsdata%mpi_com, n_size, ierr)
             SUB_COMM = mat_out%blacsdata%mpi_com
-            !Set lower part of matrix to zero...
-            ! ii = 0
-            ! DO i = n_rank + 1, MIN(mat_out%global_size1, mat_out%global_size2), n_size
-            !   ii = ii + 1
-            !   IF (mat_out%l_real) THEN
-            !      mat_out%data_r(i + 1:, ii) = 0.0
-            !      mat_in%data_r(i + 1:, ii) = 0.0
-            !      mat_in%data_r(i, ii) = 0.0
-            !   ELSE
-            !      mat_out%data_c(i + 1:, ii) = 0.0
-            !      mat_in%data_c(i + 1:, ii) = 0.0
-            !      mat_in%data_c(i, ii) = 0.0
-            !   ENDIF
-            ! ENDDO
 
             ALLOCATE (n_send(0:n_size - 1), n_recv(0:n_size - 1), n_r(0:n_size - 1), nsr(0:n_size - 1))
             ALLOCATE (c_help_size(2, 0:n_size - 1), nsl(0:n_size - 1))
