@@ -762,9 +762,11 @@ CONTAINS
             call perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
                                        pqnrm,qnrm, nqnrm, ikpt, coul(ikpt))
             ! this one is needed
+#ifdef CPP_MPI
             call timestart("post dblgloop barrier")
             call MPI_Barrier(fmpi%sub_comm, ierr)
             call timestop("post dblgloop barrier")
+#endif
             call coul(ikpt)%u2l()
          END DO
          call timestop("loop 2")
@@ -859,13 +861,16 @@ CONTAINS
       END IF
       
       ! transform Coulomb matrix to the biorthogonal set
-      ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
-      ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       call timestop("gap 1:")
       DO im = 1, size(fmpi%k_list)
          ikpt = fmpi%k_list(im)
          call apply_inverse_olaps(mpdata, fi%atoms, fi%cell, hybdat, fmpi, fi%sym, ikpt, coul(ikpt))
          ! lower to upper, because the lower half is better in memory
+#ifdef CPP_MPI
+         call timestart("post inverse barrier")
+         call MPI_BARRIER(fmpi%sub_comm, ierr)
+         call timestop("post inverse barrier")
+#endif
          call coul(ikpt)%l2u()
       enddo
 
@@ -996,6 +1001,11 @@ CONTAINS
       END DO
 
       !needed bc apply inverse uses lower half 
+#ifdef CPP_MPI
+      call timestart("post subtr avg barrier")
+      call MPI_Barrier(fmpi%sub_comm, ierr)
+      call timestop("post subtr avg barrier")
+#endif
       call coulomb%u2l()
       call timestop("subtract_sphaverage")
    END SUBROUTINE subtract_sphaverage
