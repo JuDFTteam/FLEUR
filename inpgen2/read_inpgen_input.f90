@@ -275,7 +275,7 @@ CONTAINS
     REAL,INTENT(inout):: tkb
 
     LOGICAL :: tria
-    INTEGER :: div1,div2,div3,nkpt
+    INTEGER :: div1,div2,div3,nkpt, numSpecifications
     CHARACTER(len=5) :: bz_integration
     CHARACTER(len=40) :: name
     CHARACTER(len=500) :: path
@@ -288,6 +288,18 @@ CONTAINS
     tria=.FALSE.
     READ(line,kpt)
     kpts_str=''
+
+    numSpecifications = 0
+    IF (den.GT.0.0) numSpecifications = numSpecifications + 1
+    IF (nkpt.NE.0) numSpecifications = numSpecifications + 1
+    IF (ALL([div1,div2,div3]>0)) numSpecifications = numSpecifications + 1
+    IF (numSpecifications.GT.1) THEN
+       WRITE(*,'(a)') "Ambiguous specification of k-point set:"
+       WRITE(*,'(a)') TRIM(line)
+       CALL juDFT_error("Ambiguous specification of k-point set.", calledby="read_inpgen_input",&
+                        hint="Use only one of nkpt, den, (div1,div2,div3)!")
+    END IF
+
     IF (den>0.0) THEN
        WRITE(kpts_str,"(a,f0.6)") "den=",den
     ELSEIF((nkpt>0).AND.(path.EQ.'')) THEN
