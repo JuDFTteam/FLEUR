@@ -853,6 +853,7 @@ CONTAINS
 #ifdef CPP_MPI
       INTEGER stt(MPI_STATUS_SIZE)
 
+      call timestart("mingeselle")
       IF (mat_out%l_real .OR. mat_in%l_real) CALL juDFT_error("Matrices should be complex", calledby="mingeselle")
 
       SELECT TYPE (mat_in)
@@ -1017,6 +1018,7 @@ CONTAINS
          call judft_error("Wrong type (2) in mingeselle")
       END SELECT
 
+      call timestop("mingeselle")
 #endif
    END SUBROUTINE mingeselle
    !

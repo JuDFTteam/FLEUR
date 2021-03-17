@@ -762,6 +762,9 @@ CONTAINS
             call perform_double_g_loop(fi, hybdat, fmpi, mpdata, sphbes0, carr2, ngptm1,pgptm1,&
                                        pqnrm,qnrm, nqnrm, ikpt, coul(ikpt))
             ! this one is needed
+            call timestart("post dblgloop barrier")
+            call MPI_Barrier(fmpi%sub_comm, ierr)
+            call timestop("post dblgloop barrier")
             call coul(ikpt)%u2l()
          END DO
          call timestop("loop 2")
