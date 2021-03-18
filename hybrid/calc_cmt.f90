@@ -65,6 +65,8 @@ contains
       CALL hyb_abcrot(hybinp, atoms, nbands, sym, acof, bcof, ccof)
 
       call timestart("copy to cmt")
+      !$OMP parallel do default(none) private(iatom, itype, indx, l, ll, cdum, idum, map_lo, j, m, lm, i) &
+      !$OMP shared(atoms, mpdata, cmt, acof, bcof, ccof)
       do iatom = 1,atoms%nat 
          itype = atoms%itype(iatom)
          indx = 0
@@ -102,6 +104,7 @@ contains
             END DO
          END DO
       END DO
+      !$OMP end parallel do
       call timestop("copy to cmt")
 
       ! write cmt at irreducible k-points in direct-access file cmt
