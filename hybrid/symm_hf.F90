@@ -268,7 +268,9 @@ CONTAINS
 
       do iatom = 1+submpi%rank, fi%atoms%nat, submpi%size
          itype = fi%atoms%itype(iatom)
+         call timestart("transp cmthlp")
          cmthlp = transpose(cmt(:,:,iatom))
+         call timestop("transp cmthpl")
          lm = 0
          DO l = 0, fi%atoms%lmax(itype)
             DO M = -l, l
@@ -298,10 +300,11 @@ CONTAINS
 
       call timestart("calc symmequivalent")
 
-      allocate(symequivalent(nddb, nddb), stat=ok)
+      allocate(symequivalent(nddb, nddb), stat=ok, source=.False.)
       IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')
-      symequivalent = .false.
 
+      !$OMP PARALLEL DO default(none) private(iband1, ndb1, ic1, iband2, ndb2, ic2) &
+      !$OMP shared(submpi, hybdat, degenerat, wavefolap, symequivalent, nk, jsp)
       DO iband1 = submpi%rank + 1, hybdat%nbands(nk,jsp), submpi%size
          ndb1 = degenerat(iband1)
          IF(ndb1 /= 0) then
@@ -318,6 +321,7 @@ CONTAINS
             END DO
          endif
       END DO
+      !$OMP end parallel do
 #ifdef CPP_MPI
       call timestart("allreduce symequivalent")
       call MPI_ALLREDUCE(MPI_IN_PLACE, symequivalent, size(symequivalent), MPI_LOGICAL, MPI_LOR, submpi%comm, ierr)
