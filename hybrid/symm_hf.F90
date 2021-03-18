@@ -301,16 +301,15 @@ CONTAINS
       allocate(symequivalent(nddb, nddb), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')
       symequivalent = .false.
-      ic1 = 0
+
       DO iband1 = 1, hybdat%nbands(nk,jsp)
          ndb1 = degenerat(iband1)
          IF(ndb1 == 0) CYCLE
-         ic1 = ic1 + 1
-         ic2 = 0
+         ic1 = count(degenerat(:iband1) /= 0)
          DO iband2 = 1, hybdat%nbands(nk,jsp)
             ndb2 = degenerat(iband2)
             IF(ndb2 == 0) CYCLE
-            ic2 = ic2 + 1
+            ic2 = count(degenerat(:iband2) /= 0)
             IF(any(abs(wavefolap(iband1:iband1 + ndb1 - 1, &
                                  iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
 !                .and. ndb1 .eq. ndb2 ) THEN
