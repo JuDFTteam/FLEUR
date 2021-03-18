@@ -302,7 +302,7 @@ CONTAINS
       IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')
       symequivalent = .false.
 
-      DO iband1 = 1, hybdat%nbands(nk,jsp)
+      DO iband1 = submpi%rank + 1, hybdat%nbands(nk,jsp), submpi%size
          ndb1 = degenerat(iband1)
          IF(ndb1 /= 0) then
             ic1 = count(degenerat(:iband1) /= 0)
@@ -312,13 +312,17 @@ CONTAINS
                   ic2 = count(degenerat(:iband2) /= 0)
                   IF(any(abs(wavefolap(iband1:iband1 + ndb1 - 1, &
                                        iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
-      !                .and. ndb1 .eq. ndb2 ) THEN
                      symequivalent(ic2, ic1) = .true.
                   END IF
                endif
             END DO
          endif
       END DO
+#ifdef CPP_MPI
+      call timestart("allreduce symequivalent")
+      call MPI_ALLREDUCE(MPI_IN_PLACE, symequivalent, size(symequivalent), MPI_LOGICAL, MPI_LOR, submpi%comm, ierr)
+      call timestop("allreduce symequivalent")
+#endif
       call timestop("calc symmequivalent")
       !
       ! generate index field which contain the band combinations (n1,n2),
