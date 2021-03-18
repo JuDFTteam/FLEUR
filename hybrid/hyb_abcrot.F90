@@ -31,7 +31,7 @@ CONTAINS
 !     .. Local Arrays ..
 !***** COMPLEX, ALLOCATABLE :: d_wgn(:,:,:,:) !put into module m_savewigner
 !
-
+      call timestart("hyb_abcrot")
       IF (.NOT. ALLOCATED(hybinp%d_wgn2)) THEN    !calculate sym%d_wgn only once
          PRINT *, "calculate wigner-matrix"
          call judft_error('WIGNER MATRIX should be available in hybinp part')
@@ -78,6 +78,6 @@ CONTAINS
             ENDDO
          ENDDO
       ENDDO
-
+      call timestop("hyb_abcrot")
    END SUBROUTINE hyb_abcrot
 END MODULE m_hyb_abcrot

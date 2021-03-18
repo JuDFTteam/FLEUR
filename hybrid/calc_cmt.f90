@@ -7,7 +7,7 @@ contains
       use m_judft
       USE m_hyb_abcrot
       USE m_abcof
-      use m_constants, only: ImagUnit
+      use m_constants
       use m_trafo, only: waveftrafo_gen_cmt
       use m_io_hybrid
       implicit none
@@ -45,15 +45,15 @@ contains
       ikp = kpts%bkp(ik)
       nbands = zmat_ikp%matsize2
 
-      allocate(acof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(1))
-      allocate(bcof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(2))
-      allocate(ccof(-atoms%llod:atoms%llod, nbands, atoms%nlod, atoms%nat), stat=ok(3))
-      allocate(cmt(nbands, hybdat%maxlmindx, atoms%nat), stat=ok(4))
-
+      call timestart("alloc abccof")
+      allocate(acof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(1), source=cmplx_0)
+      allocate(bcof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(2), source=cmplx_0)
+      allocate(ccof(-atoms%llod:atoms%llod, nbands, atoms%nlod, atoms%nat), stat=ok(3), source=cmplx_0)
+      allocate(cmt(nbands, hybdat%maxlmindx, atoms%nat), stat=ok(4), source=cmplx_0)
       if(any(ok /= 0)) then
          call judft_error("Error in allocating abcof arrays")
       endif
-      acof = 0; bcof = 0; ccof = 0
+      call timestop("alloc abccof")
 
       CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
       CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
@@ -64,51 +64,51 @@ contains
                  jsp, oneD, acof, bcof, ccof, zmat_ikp)
       CALL hyb_abcrot(hybinp, atoms, nbands, sym, acof, bcof, ccof)
 
-      cmt = 0
-      iatom = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            iatom = iatom + 1
-            indx = 0
-            DO l = 0, atoms%lmax(itype)
-               ll = l*(l + 1)
-               cdum = ImagUnit**l
+      call timestart("copy to cmt")
+      do iatom = 1,atoms%nat 
+         itype = atoms%itype(iatom)
+         indx = 0
+         DO l = 0, atoms%lmax(itype)
+            ll = l*(l + 1)
+            cdum = ImagUnit**l
 
-               ! determine number of local orbitals with quantum number l
-               ! map returns the number of the local orbital of quantum
-               ! number l in the list of all local orbitals of the atom type
-               idum = 0
-               map_lo = 0
-               IF (mpdata%num_radfun_per_l(l, itype) > 2) THEN
-                  DO j = 1, atoms%nlo(itype)
-                     IF (atoms%llo(j, itype) == l) THEN
-                        idum = idum + 1
-                        map_lo(idum) = j
-                     END IF
-                  END DO
-               END IF
+            ! determine number of local orbitals with quantum number l
+            ! map returns the number of the local orbital of quantum
+            ! number l in the list of all local orbitals of the atom type
+            idum = 0
+            map_lo = 0
+            IF (mpdata%num_radfun_per_l(l, itype) > 2) THEN
+               DO j = 1, atoms%nlo(itype)
+                  IF (atoms%llo(j, itype) == l) THEN
+                     idum = idum + 1
+                     map_lo(idum) = j
+                  END IF
+               END DO
+            END IF
 
-               DO M = -l, l
-                  lm = ll + M
-                  DO i = 1, mpdata%num_radfun_per_l(l, itype)
-                     indx = indx + 1
-                     IF (i == 1) THEN
-                        cmt(:, indx, iatom) = cdum*acof(:, lm, iatom)
-                     ELSE IF (i == 2) THEN
-                        cmt(:, indx, iatom) = cdum*bcof(:, lm, iatom)
-                     ELSE
-                        idum = i - 2
-                        cmt(:, indx, iatom) = cdum*ccof(M, :, map_lo(idum), iatom)
-                     END IF
-                  END DO
+            DO M = -l, l
+               lm = ll + M
+               DO i = 1, mpdata%num_radfun_per_l(l, itype)
+                  indx = indx + 1
+                  IF (i == 1) THEN
+                     cmt(:, indx, iatom) = cdum*acof(:, lm, iatom)
+                  ELSE IF (i == 2) THEN
+                     cmt(:, indx, iatom) = cdum*bcof(:, lm, iatom)
+                  ELSE
+                     idum = i - 2
+                     cmt(:, indx, iatom) = cdum*ccof(M, :, map_lo(idum), iatom)
+                  END IF
                END DO
             END DO
          END DO
       END DO
+      call timestop("copy to cmt")
 
       ! write cmt at irreducible k-points in direct-access file cmt
       if(ik <= kpts%nkpt) then
+         call timestart("copy out")
          cmt_out = cmt
+         call timestop("copy out")
       else
          iop = kpts%bksym(ik)
 
