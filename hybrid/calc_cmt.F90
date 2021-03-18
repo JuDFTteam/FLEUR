@@ -139,7 +139,7 @@ contains
                if(allocated(tmp_c)) then 
                   if(size(tmp_c,1) /= psize(pe+1)) deallocate(tmp_c)
                endif
-               allocate(tmp_c(psize(pe+1),size(cmt,2)))
+               if(.not. allocated(tmp_c)) allocate(tmp_c(psize(pe+1),size(cmt,2)))
                
                end_idx = start_idx(pe+1)+psize(pe+1)-1
                if(pe == submpi%rank) tmp_c = cmt(start_idx(pe+1):end_idx, :, iatom)
