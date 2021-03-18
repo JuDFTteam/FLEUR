@@ -32,13 +32,13 @@ contains
       complex, intent(inout)       :: cmt_out(:,:,:)
       type(t_hybmpi), intent(in), optional :: submpi
       complex, allocatable :: acof(:,:,:), bcof(:,:,:), ccof(:,:,:,:)
-      complex, allocatable :: cmt(:,:,:)
+      complex, allocatable :: cmt(:,:,:), tmp_c(:,:)
 
       integer :: ikp, nbands, ok(4) ! index of parent k-point
       integer :: iatom, itype, ieq, indx, i, j, idum, iop, l, ll, lm, m
       integer :: map_lo(atoms%nlod)
       integer, allocatable :: start_idx(:), psize(:)
-      integer :: my_psz, my_start, ierr, pe
+      integer :: my_psz, my_start, ierr, pe, end_idx
 
       complex :: cdum
       type(t_lapw)  :: lapw_ik, lapw_ikp
@@ -135,13 +135,20 @@ contains
       if(my_psz /= nbands) then
          call timestart("allreduce cmt")
          do iatom = 1,atoms%nat 
-            do indx = 1,size(cmt, 2) 
-               do pe = 1,submpi%size
-                  call MPI_Bcast(cmt(start_idx(pe), indx, iatom), psize(pe), MPI_DOUBLE_COMPLEX, pe-1, submpi%comm, ierr )
-               enddo
+            do pe = 0,submpi%size-1
+               if(allocated(tmp_c)) then 
+                  if(size(tmp_c,1) /= psize(pe+1)) deallocate(tmp_c)
+               endif
+               allocate(tmp_c(psize(pe+1),size(cmt,2)))
+               
+               end_idx = start_idx(pe+1)+psize(pe+1)-1
+               if(pe == submpi%rank) tmp_c = cmt(start_idx(pe+1):end_idx, :, iatom)
+               call MPI_Bcast(tmp_c, size(tmp_c), MPI_DOUBLE_COMPLEX, pe, submpi%comm, ierr )
+               if(pe /= submpi%rank) cmt(start_idx(pe+1):end_idx, :, iatom) = tmp_c
+               
             enddo
          enddo
-
+         deallocate(tmp_c)
          ! call MPI_Allreduce(MPI_IN_PLACE, cmt, size(cmt), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
          call timestop("allreduce cmt")
       endif
