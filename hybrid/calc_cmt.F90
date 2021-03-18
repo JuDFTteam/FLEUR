@@ -2,7 +2,7 @@ module m_calc_cmt
 
 contains
    subroutine calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
-                       sym, oneD, zmat_ikp, jsp, ik, c_phase, cmt_out)
+                       sym, oneD, zmat_ikp, jsp, ik, c_phase, cmt_out, submpi)
       use m_types
       use m_judft
       USE m_hyb_abcrot
@@ -10,6 +10,7 @@ contains
       use m_constants
       use m_trafo, only: waveftrafo_gen_cmt
       use m_io_hybrid
+      use m_divide_most_evenly 
       implicit none
       type(t_atoms), intent(in)    :: atoms
       type(t_cell), intent(in)     :: cell
@@ -29,26 +30,37 @@ contains
       complex, intent(in)          :: c_phase(:)
 
       complex, intent(inout)       :: cmt_out(:,:,:)
-
+      type(t_hybmpi), intent(in), optional :: submpi
       complex, allocatable :: acof(:,:,:), bcof(:,:,:), ccof(:,:,:,:)
       complex, allocatable :: cmt(:,:,:)
 
       integer :: ikp, nbands, ok(4) ! index of parent k-point
       integer :: iatom, itype, ieq, indx, i, j, idum, iop, l, ll, lm, m
       integer :: map_lo(atoms%nlod)
+      integer, allocatable :: start_idx(:), psize(:)
+      integer :: my_psz, my_start, ierr
 
       complex :: cdum
       type(t_lapw)  :: lapw_ik, lapw_ikp
+      type(t_mat)   :: tmp
 
       call timestart("calc_cmt")
-
       ikp = kpts%bkp(ik)
       nbands = zmat_ikp%matsize2
 
+      if(present(submpi)) then
+         call divide_most_evenly(nbands, submpi%size, start_idx, psize)
+         my_psz = psize(submpi%rank+1)
+         my_start = start_idx(submpi%rank+1)
+      else
+         my_psz = nbands
+         my_start = 1
+      endif
+
       call timestart("alloc abccof")
-      allocate(acof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(1), source=cmplx_0)
-      allocate(bcof(nbands, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(2), source=cmplx_0)
-      allocate(ccof(-atoms%llod:atoms%llod, nbands, atoms%nlod, atoms%nat), stat=ok(3), source=cmplx_0)
+      allocate(acof(my_psz, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(1), source=cmplx_0)
+      allocate(bcof(my_psz, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(2), source=cmplx_0)
+      allocate(ccof(-atoms%llod:atoms%llod, my_psz, atoms%nlod, atoms%nat), stat=ok(3), source=cmplx_0)
       allocate(cmt(nbands, hybdat%maxlmindx, atoms%nat), stat=ok(4), source=cmplx_0)
       if(any(ok /= 0)) then
          call judft_error("Error in allocating abcof arrays")
@@ -59,14 +71,20 @@ contains
       CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
 
       lapw_ikp%nmat = lapw_ikp%nv(jsp) + atoms%nlotot
+      call tmp%init(zmat_ikp%l_real, zmat_ikp%matsize1, my_psz)
+      if(tmp%l_real) then 
+         tmp%data_r = zmat_ikp%data_r(:,my_start:my_start+my_psz-1)
+      else
+         tmp%data_c = zmat_ikp%data_c(:,my_start:my_start+my_psz-1)
+      endif
 
-      CALL abcof(input, atoms, sym, cell, lapw_ikp, nbands, hybdat%usdus, noco, nococonv,&
-                 jsp, oneD, acof, bcof, ccof, zmat_ikp)
-      CALL hyb_abcrot(hybinp, atoms, nbands, sym, acof, bcof, ccof)
+      CALL abcof(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, noco, nococonv,&
+                 jsp, oneD, acof, bcof, ccof, tmp)
+      CALL hyb_abcrot(hybinp, atoms, my_psz, sym, acof, bcof, ccof)
 
       call timestart("copy to cmt")
       !$OMP parallel do default(none) private(iatom, itype, indx, l, ll, cdum, idum, map_lo, j, m, lm, i) &
-      !$OMP shared(atoms, mpdata, cmt, acof, bcof, ccof)
+      !$OMP shared(atoms, mpdata, cmt, acof, bcof, ccof, my_start, my_psz)
       do iatom = 1,atoms%nat 
          itype = atoms%itype(iatom)
          indx = 0
@@ -93,12 +111,12 @@ contains
                DO i = 1, mpdata%num_radfun_per_l(l, itype)
                   indx = indx + 1
                   IF (i == 1) THEN
-                     cmt(:, indx, iatom) = cdum*acof(:, lm, iatom)
+                     cmt(my_start:my_start+my_psz-1, indx, iatom) = cdum*acof(:, lm, iatom)
                   ELSE IF (i == 2) THEN
-                     cmt(:, indx, iatom) = cdum*bcof(:, lm, iatom)
+                     cmt(my_start:my_start+my_psz-1, indx, iatom) = cdum*bcof(:, lm, iatom)
                   ELSE
                      idum = i - 2
-                     cmt(:, indx, iatom) = cdum*ccof(M, :, map_lo(idum), iatom)
+                     cmt(my_start:my_start+my_psz-1, indx, iatom) = cdum*ccof(M, :, map_lo(idum), iatom)
                   END IF
                END DO
             END DO
@@ -106,6 +124,14 @@ contains
       END DO
       !$OMP end parallel do
       call timestop("copy to cmt")
+
+#ifdef CPP_MPI
+      if(present(submpi)) then
+         call timestart("allreduce cmt")
+         call MPI_Allreduce(MPI_IN_PLACE, cmt, size(cmt), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
+         call timestop("allreduce cmt")
+      endif
+#endif
 
       ! write cmt at irreducible k-points in direct-access file cmt
       if(ik <= kpts%nkpt) then

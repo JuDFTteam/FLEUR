@@ -1,7 +1,7 @@
 set(fleur_F90 ${fleur_F90}
 hybrid/add_Vnonlocal.F90
 hybrid/apply_inverse_olap.F90
-hybrid/calc_cmt.f90
+hybrid/calc_cmt.F90
 hybrid/calc_hybrid.F90
 hybrid/calc_l_m_from_lm.f90
 hybrid/calc_mpsmat.f90

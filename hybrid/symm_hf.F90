@@ -270,7 +270,7 @@ CONTAINS
          itype = fi%atoms%itype(iatom)
          call timestart("transp cmthlp")
          cmthlp = transpose(cmt(:,:,iatom))
-         call timestop("transp cmthpl")
+         call timestop("transp cmthlp")
          lm = 0
          DO l = 0, fi%atoms%lmax(itype)
             DO M = -l, l
