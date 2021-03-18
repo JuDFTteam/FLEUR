@@ -107,7 +107,7 @@ contains
       ! write cmt at irreducible k-points in direct-access file cmt
       if(ik <= kpts%nkpt) then
          call timestart("copy out")
-         cmt_out = cmt
+         call zcopy(size(cmt), cmt, 1, cmt_out, 1)
          call timestop("copy out")
       else
          iop = kpts%bksym(ik)
