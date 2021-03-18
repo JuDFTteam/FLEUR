@@ -522,6 +522,12 @@ CONTAINS
       endif
       call timestop("alloc mat_ex")
 
+#ifdef CPP_MPI 
+      call timestart("pre exchmat reduce barrier")
+      call MPI_Barrier(k_pack%submpi%comm, ierr)
+      call timestop("pre exchmat reduce barrier")
+#endif
+
       call timestart("reduce exch_vv>mat_ex")
       IF (mat_ex%l_real) THEN
 #ifdef CPP_MPI

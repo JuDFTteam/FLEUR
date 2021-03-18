@@ -36,7 +36,7 @@ CONTAINS
       type(t_mat) ::  z_kqpt_p
       complex, allocatable :: c_phase_kqpt(:)
 
-      CALL timestart("wavefproducts_inv5")
+      CALL timestart("wavefproducts_inv")
       cprod%data_r = 0.0
       ikqpt = -1
       kqpthlp = fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)
@@ -55,7 +55,7 @@ CONTAINS
       call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
                                 ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
 
-      CALL timestop("wavefproducts_inv5")
+      CALL timestop("wavefproducts_inv")
 
    END SUBROUTINE wavefproducts_inv
 
@@ -103,6 +103,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE    ::    ccmt_nk2(:, :, :)
       COMPLEX, ALLOCATABLE    ::    ccmt_nkqpt(:, :, :)
 
+      call timestart("wavefproducts_inv_MT")
 
       allocate(rarr2(bandoi:bandof, hybdat%nbands(ik,jsp)), stat=ok, source=0.0)
       if(ok /= 0) call juDFT_error("Can't alloc rarr2 in wavefproducts_inv_MT")
@@ -957,5 +958,6 @@ CONTAINS
          iiatom = iiatom + fi%atoms%neq(itype)
          lm_00 = lm_00 + fi%atoms%neq(itype)*ioffset
       END DO  !itype
+      call timestop("wavefproducts_inv_MT")
    end subroutine wavefproducts_inv_MT
 end module m_wavefproducts_inv

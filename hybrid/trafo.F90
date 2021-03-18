@@ -1206,6 +1206,7 @@ CONTAINS
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
       COMPLEX                 ::  carr(maxval(mpdata%n_g))
 
+      call timestart("bramat_trafo")
       igptm_out = -1; vecout = CMPLX_NOT_INITALIZED; touch = .false.
 
       IF (iop <= sym%nop) THEN
@@ -1224,13 +1225,16 @@ CONTAINS
       !
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
       !
+      call timestart("det. kpoint")
       DO i = 1, kpts%nkpt
          IF (maxval(abs(rkpt - kpts%bkf(:, i))) <= 1E-06) THEN
             ikpt1 = i
             EXIT
          END IF
       END DO
+      call timestop("det. kpoint")
 
+      call timestart("calc igptm_out")
       DO igptm = 1, mpdata%n_g(ikpt1)
          igptp = mpdata%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpdata%g(:, igptp) - g)
@@ -1242,24 +1246,33 @@ CONTAINS
                cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
                EXIT
             ELSE
+               call timestop("calc igptm_out")
+               call timestop("bramat_trafo")
                RETURN
             END IF
          END IF
       END DO
+      call timestop("calc igptm_out")
 
       if (.not. touch) call judft_error("g-point could not be found.")
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
+
+      call timestart("desymm")
       vecout(:nbasm(ikpt0), 1) = vecin(:nbasm(ikpt0))
       if (sym%invs) CALL desymmetrize(vecout, nbasp, 1, 1, &
                                       atoms, lcutm, maxlcutm, nindxm, sym)
+      call timestop("desymm")
 
 !     Right-multiplication
       ! PW
+      call timestart("right-multiply")
       IF (trs) THEN; vecin1(:nbasm(ikpt0)) = cdum*conjg(vecout(:nbasm(ikpt0), 1))
       ELSE; vecin1(:nbasm(ikpt0)) = cdum*vecout(:nbasm(ikpt0), 1)
       END IF
+      call timestop("right-multiply")
 
 !     Define pointer to first mixed-basis functions (with m = -l)
+      call timestart("def pointer")
       i = 0
       ic = 0
       DO itype = 1, atoms%ntype
@@ -1274,9 +1287,11 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("def pointer")
 
 !     Left-multiplication
       ! MT
+      call timestart("left multi MT")
       cexp = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g, trans))
       ic = 0
       DO itype = 1, atoms%ntype
@@ -1299,8 +1314,10 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("left multi MT")
 
       ! PW
+      call timestart("left multi pw")
       DO igptm = 1, mpdata%n_g(ikpt1)
          igptp = mpdata%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpdata%g(:, igptp) - g)
@@ -1310,11 +1327,14 @@ CONTAINS
       DO i1 = 1, mpdata%n_g(ikpt1)
          vecout(nbasp + i1, 1) = carr(i1)*vecin1(nbasp + iarr(i1))
       END DO
+      call timestop("left multi pw")
 
       ! If inversion symmetry is applicable, symmetrize to make the values real.
+      call timestart("symmetrize")
       if (sym%invs) CALL symmetrize(vecout, nbasp, 1, 1, .false., &
                                     atoms, lcutm, maxlcutm, nindxm, sym)
-
+      call timestop("symmetrize")
+      call timestop("bramat_trafo")
    END SUBROUTINE bramat_trafo
 
 END MODULE m_trafo
