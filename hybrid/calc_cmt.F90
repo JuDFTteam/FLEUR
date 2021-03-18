@@ -35,10 +35,10 @@ contains
       complex, allocatable :: cmt(:,:,:)
 
       integer :: ikp, nbands, ok(4) ! index of parent k-point
-      integer :: iatom, itype, ieq, indx, i, j, idum, iop, l, ll, lm, m
+      integer :: iatom, itype, indx, i, j, idum, iop, l, ll, lm, m
       integer :: map_lo(atoms%nlod)
       integer, allocatable :: start_idx(:), psize(:)
-      integer :: my_psz, my_start, ierr, pe
+      integer :: my_psz, my_start, ierr
 
       complex :: cdum
       type(t_lapw)  :: lapw_ik, lapw_ikp
