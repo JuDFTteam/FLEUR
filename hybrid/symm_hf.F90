@@ -136,7 +136,6 @@ CONTAINS
 
       CALL timestart("symm_hf")
       parent = 0; nsest = 0; indx_sest = 0;
-      WRITE(oUnit, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
       ! those k-points, which can generate the whole BZ by
@@ -170,8 +169,6 @@ CONTAINS
       ! for the Gamma-point holds:
       parent(1) = 1
       neqvkpt(1) = 1
-
-      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', fi%kpts%EIBZ(nk)%nkpt
       call timestop("calc EIBZ")
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
@@ -206,12 +203,10 @@ CONTAINS
       ! degenerat(i) = 1 state i  is not degenerat,
       ! degenerat(i) = j state i has j-1 degenerat states at {i+1,...,i+j-1}
       ! degenerat(i) = 0 state i is degenerat
-
+      call timestart("calculate degeneracy")
       tolerance = 1E-07 !0.00001
 
       degenerat = 1
-
-      WRITE(oUnit, '(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
 
       DO i = 1, hybdat%nbands(nk,jsp)
          DO j = i + 1, hybdat%nbands(nk,jsp)
@@ -232,19 +227,14 @@ CONTAINS
 
       ! number of different degenerate bands/states
       nddb = count(degenerat >= 1)
-#ifdef CPP_EXPLICIT_HYB
-      WRITE(oUnit, *) ' Degenerate states:'
-      DO iband = 1, hybdat%nbands(nk,jsp)/5 + 1
-         WRITE(oUnit, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk,jsp)))
-      END DO
-#endif
+      call timestop("calculate degeneracy")
 
+      call timestart("calc olapmt")
       IF(allocated(olapmt)) deallocate(olapmt)
       allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:fi%atoms%lmaxd, fi%atoms%ntype), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation olapmt')
       olapmt = 0
 
-      call timestart("calc olapmt")
       DO itype = 1, fi%atoms%ntype
          DO l = 0, fi%atoms%lmax(itype)
             nn = mpdata%num_radfun_per_l(l, itype)
@@ -306,6 +296,8 @@ CONTAINS
 #endif
       call timestop("calc wavefolap")
 
+      call timestart("calc symmequivalent")
+
       allocate(symequivalent(nddb, nddb), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')
       symequivalent = .false.
@@ -326,7 +318,7 @@ CONTAINS
             END IF
          END DO
       END DO
-
+      call timestop("calc symmequivalent")
       !
       ! generate index field which contain the band combinations (n1,n2),
       ! which are non zero
