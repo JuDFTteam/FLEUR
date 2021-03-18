@@ -38,7 +38,7 @@ contains
       integer :: iatom, itype, ieq, indx, i, j, idum, iop, l, ll, lm, m
       integer :: map_lo(atoms%nlod)
       integer, allocatable :: start_idx(:), psize(:)
-      integer :: my_psz, my_start, ierr
+      integer :: my_psz, my_start, ierr, pe
 
       complex :: cdum
       type(t_lapw)  :: lapw_ik, lapw_ikp
@@ -132,9 +132,17 @@ contains
       call timestop("copy to cmt")
 
 #ifdef CPP_MPI
-      if(present(submpi)) then
+      if(my_psz /= nbands) then
          call timestart("allreduce cmt")
-         call MPI_Allreduce(MPI_IN_PLACE, cmt, size(cmt), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
+         do iatom = 1,atoms%nat 
+            do indx = 1,size(cmt, 2) 
+               do pe = 1,submpi%size
+                  call MPI_Bcast(cmt(start_idx(pe), indx, iatom), psize(pe), MPI_DOUBLE_COMPLEX, pe-1, submpi%comm, ierr )
+               enddo
+            enddo
+         enddo
+
+         ! call MPI_Allreduce(MPI_IN_PLACE, cmt, size(cmt), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
          call timestop("allreduce cmt")
       endif
 #endif
