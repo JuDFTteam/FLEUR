@@ -518,6 +518,9 @@ CONTAINS
           complete=.FALSE.
        END IF
     END DO loop
+    IF(LEN_TRIM(buffer).NE.0) THEN
+       WRITE(outfh,'(a)'), TRIM(buffer)
+    END IF
 
   END SUBROUTINE normalize_file
 
