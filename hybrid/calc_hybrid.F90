@@ -59,6 +59,7 @@ CONTAINS
       REAL, ALLOCATABLE    :: eig_irr(:, :)
       integer, allocatable :: v_x_loc(:,:), weights(:)
       type(c_ptr)          :: threadId
+      type(t_mat)          :: vx_tmp
 
       CALL timestart("hybrid code")
 
@@ -172,8 +173,12 @@ CONTAINS
                nk = work_pack(jsp)%k_packs(i)%nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
                CALL hsfock(fi, work_pack(jsp)%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
-                           nococonv, stars, results, xcpot, fmpi)
-               if(work_pack(jsp)%k_packs(i)%submpi%root()) v_x_loc(nk, jsp) = fmpi%irank
+                           nococonv, stars, results, xcpot, fmpi, vx_tmp)
+               if(work_pack(jsp)%k_packs(i)%submpi%root())then 
+                  v_x_loc(nk, jsp) = fmpi%irank
+                  call hybdat%v_x(nk, jsp)%copy(vx_tmp, 1, 1)
+                  call vx_tmp%free()
+               endif
             END DO
    
             call work_pack(jsp)%free()

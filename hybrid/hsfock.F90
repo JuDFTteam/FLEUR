@@ -44,7 +44,7 @@ CONTAINS
 
    SUBROUTINE hsfock(fi, k_pack, mpdata, lapw, jsp, hybdat, &
                      eig_irr, nococonv, stars, &
-                     results, xcpot, fmpi)
+                     results, xcpot, fmpi, vx_tmp)
 
       use m_ex_to_vx
       USE m_judft
@@ -74,6 +74,7 @@ CONTAINS
       TYPE(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
       TYPE(t_results), INTENT(INOUT)    :: results
+      type(t_mat), intent(inout)        :: vx_tmp
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
@@ -159,8 +160,8 @@ CONTAINS
 
       CALL timestop("core exchange calculation")
       if(k_pack%submpi%root()) then
-         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, hybdat%v_x(nk, jsp))
-         call hybdat%v_x(nk, jsp)%u2l()
+         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, vx_tmp)
+         call vx_tmp%u2l()
       endif
 
 
