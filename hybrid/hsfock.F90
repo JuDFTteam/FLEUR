@@ -141,9 +141,6 @@ CONTAINS
       ex%l_real = fi%sym%invs
       CALL exchange_valence_hf(k_pack, fi, fmpi, hybdat%zmat(nk,jsp)%mat, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, ex)
-
-      if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
-
       
       ! calculate contribution from the core states to the HF exchange
       CALL timestart("core exchange calculation")

@@ -82,17 +82,17 @@ CONTAINS
 
       nbasfcn = lapw%nv(1) + fi%atoms%nlotot          
       IF (hmat%l_real) THEN
-         DO i = fmpi%n_rank+1,hybdat%v_x(nk, jsp)%matsize1,fmpi%n_size
+         DO i = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
             i0=(i-1)/fmpi%n_size+1
-            DO  j = 1,MIN(i,hybdat%v_x(nk, jsp)%matsize1) 
-               hmat%data_r(j,i0) = hmat%data_r(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_r(j, i)
+            DO  j = 1,MIN(i,hmat%matsize1) 
+               hmat%data_r(j,i0) = hmat%data_r(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_r(j, i0)
             enddo
          enddo
       else         
-         DO i = fmpi%n_rank+1,hybdat%v_x(nk, jsp)%matsize1,fmpi%n_size
+         DO i = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
             i0=(i-1)/fmpi%n_size+1
-            DO  j = 1,MIN(i,hybdat%v_x(nk, jsp)%matsize1) 
-               hmat%data_c(j,i0) = hmat%data_c(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_c(j, i)
+            DO  j = 1,MIN(i,hmat%matsize1) 
+               hmat%data_c(j,i0) = hmat%data_c(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_c(j, i0)
             enddo
          enddo
       endif
