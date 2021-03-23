@@ -1,6 +1,8 @@
 module m_distrib_vx
    use m_types
+#ifdef CPP_MPI
    use mpi
+#endif
    use m_types_mpimat
    use m_glob_tofrom_loc
 contains
@@ -78,7 +80,9 @@ contains
          else
             recver = -1
          endif
+#ifdef CPP_MPI
          call MPI_Allreduce(MPI_IN_PLACE, recver, 1, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
+#endif
 
          if(fmpi%irank == sender .and. sender == recver) then
             if(vx_den%l_real) then
@@ -86,6 +90,7 @@ contains
             else
                vx_distr%data_c(:,i_loc) = vx_den%data_c(:,i)
             endif
+#ifdef CPP_MPI
          elseif(fmpi%irank == sender) then
             if(vx_den%l_real) then
                call MPI_Send(vx_den%data_r(:,i), vx_den%matsize1, MPI_DOUBLE_PRECISION, recver, i, fmpi%mpi_comm, ierr)
@@ -97,7 +102,8 @@ contains
                call MPI_Recv(vx_distr%data_r(:,i_loc), vx_distr%matsize1, MPI_DOUBLE_PRECISION, sender, i, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
             else
                call MPI_Recv(vx_distr%data_c(:,i_loc), vx_distr%matsize1, MPI_DOUBLE_COMPLEX, sender, i, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
-            endif 
+            endif
+#endif 
          endif
       enddo
    end subroutine copy_vx_to_distr

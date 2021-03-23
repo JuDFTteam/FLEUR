@@ -143,7 +143,9 @@ CONTAINS
                exch(iband) = dot_product(z%data_c(:z%matsize1, iband_loc), tmp%data_c(:, iband_loc))
             END IF
          endif
+#ifdef CPP_MPI
          call MPI_Bcast(exch(iband), 1, MPI_DOUBLE_COMPLEX, pe_iband, fmpi%sub_comm, ierr)
+#endif 
          IF (iband <= hybdat%nobd(nk,jsp)) THEN
             results%te_hfex%valence = results%te_hfex%valence - real(a_ex*results%w_iks(iband, nk, jsp)*exch(iband))
          END IF
