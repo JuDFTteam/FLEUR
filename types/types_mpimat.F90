@@ -118,7 +118,6 @@ CONTAINS
       if (present(transA)) transA_i = transA
       transB_i = "N"
       if (present(transB)) transB_i = transB
-      if (transA /= "N" .or. transB /= "N") call judft_error("trans /= 'N' not yet implemented for MPI")
 
       IF (.NOT. PRESENT(res)) CALL judft_error("BUG: in mpicase the multiply requires the optional result argument")
       SELECT TYPE (mat2)
