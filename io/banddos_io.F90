@@ -112,6 +112,10 @@ MODULE m_banddos_io
 
       CALL h5gcreate_f(fileID, '/cell', cellGroupID, hdfError)
 
+      CALL io_write_attint0(cellGroupID,'nop',sym%nop)
+      CALL io_write_attint0(cellGroupID,'nop2',sym%nop2)
+      CALL io_write_attlog0(cellGroupID,'film',input%film)
+
       dims(:2)=(/3,3/)
       dimsInt=dims
       CALL h5screate_simple_f(2,dims(:2),bravaisMatrixSpaceID,hdfError)
