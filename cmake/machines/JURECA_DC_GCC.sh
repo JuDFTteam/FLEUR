@@ -7,7 +7,15 @@ module_list=$(module --terse list 2>&1)
 
 if echo "$module_list" |grep -q -i GCC
 then
-    echo "GCC toolchain used."
+    echo "GCC toolchain used. Be careful with your environment. The tested one is:"
+    echo ""
+    echo "ml use $OTHERSTAGES"
+    echo "ml Stages/Devel-2020"
+    echo "ml GCC"
+    echo "ml ParaStationMPI"
+    echo "ml BLIS/2.2-amd"
+    echo "ml libFLAME/2.2-amd"
+    echo "ml ScaLAPACK/2.2-amd"
 
     #check if all modules are loaded
     error=0
