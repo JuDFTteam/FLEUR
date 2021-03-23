@@ -409,7 +409,7 @@ CONTAINS
 320      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '"/>')
          WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
 
-         WRITE (fileNum, '(a)') '         <electronConfig>'
+         WRITE (fileNum, '(a)') '         <electronConfig flipSpins="F">'
 !         <coreConfig>[He] (2s1/2) (2p1/2) (2p3/2)</coreConfig>
 322      FORMAT('            <coreConfig>', a, '</coreConfig>')
          WRITE (fileNum, 322) TRIM(ADJUSTL(atoms%econf(iAtomType)%coreconfig))

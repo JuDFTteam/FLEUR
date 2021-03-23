@@ -1109,6 +1109,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="valenceConfig" type="ValenceStateListType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="stateOccupation" type="ElectronStateOccupationType"/>
       </xsd:sequence>
+      <xsd:attribute default="F" name="flipSpins" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:simpleType name="ValenceStateListType">
