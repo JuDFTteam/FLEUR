@@ -146,7 +146,7 @@ CONTAINS
             if(hybdat%coul(i)%l_participate) then 
                call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, .false.)
             else 
-               call hybdat%coul(i)%mini_alloc()
+               call hybdat%coul(i)%mini_alloc(fi)
             endif 
          enddo 
 
