@@ -36,6 +36,7 @@ do
 	-warn_only) CLI_WARN_ONLY=1;;
   -d) debug=1;;
   -amd) CLI_PATCH_INTEL=1;;
+  -gnuamd) CLI_PATCH_GNU=1;;
 	-*) error="Unknown argument";;
 	*)  break;;	# terminate while loop
     esac
@@ -85,6 +86,7 @@ General options:
   -cmake #      : cmake executable to use
   -cmake_opts # : additional options for cmake can be specified here directly
   -amd          : apply some patches to the Intel MKL to run on AMD (very experiemental)
+  -gnuamd       : apply some flags to the GNU compiler to run on AMD 
 
 Command line options to switch on/off features. These options overwrite the results of
 the test and might lead to the configuration to fail.

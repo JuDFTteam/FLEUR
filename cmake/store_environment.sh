@@ -133,3 +133,8 @@ if [ "$CLI_PATCH_INTEL" ]
 then
     echo "set(CLI_PATCH_INTEL 1)"  >>config.cmake
 fi
+
+if [ "$CLI_PATCH_GNU" ]
+then
+    echo "set(CLI_PATCH_GNU 1)"  >>config.cmake
+fi
