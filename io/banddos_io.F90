@@ -27,12 +27,13 @@ MODULE m_banddos_io
 
    CONTAINS
 
-   SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts, banddos,eFermiPrev)
+   SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts, sym, banddos, eFermiPrev)
 
       USE m_types_input
       USE m_types_atoms
       USE m_types_cell
       USE m_types_kpts
+      USE m_types_sym
       USE m_types_banddos
 
       USE hdf5
@@ -42,6 +43,7 @@ MODULE m_banddos_io
       TYPE(t_atoms),   INTENT(IN)  :: atoms
       TYPE(t_cell),    INTENT(IN)  :: cell
       TYPE(t_kpts),    INTENT(IN)  :: kpts
+      TYPE(t_sym),     INTENT(IN)  :: sym
       TYPE(t_banddos), INTENT(IN)  :: banddos
 
       INTEGER(HID_T),       INTENT(OUT) :: fileID
@@ -61,6 +63,8 @@ MODULE m_banddos_io
 
       INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
       INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
+      INTEGER(HID_T)    :: rotMatricesSpaceID, rotMatricesSetID
+      INTEGER(HID_T)    :: transVecsSpaceID, transVecsSetID
 
       INTEGER(HID_T)    :: atomPosSpaceID, atomPosSetID
       INTEGER(HID_T)    :: atomicNumbersSpaceID, atomicNumbersSetID
@@ -83,7 +87,7 @@ MODULE m_banddos_io
 
       INTEGER(HSIZE_T)  :: dims(7)
 
-      version = 1
+      version = 2
       filename = 'banddos.hdf'
 
       INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
@@ -102,6 +106,7 @@ MODULE m_banddos_io
       CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)
       CALL io_write_attreal0(generalGroupID,'lastFermiEnergy',eFermiPrev)
+      CALL io_write_attreal0(generalGroupID,'valenceCharge',input%zelec)
       CALL io_write_attlog0(generalGroupID,'bandUnfolding',banddos%unfoldband)
       CALL h5gclose_f(generalGroupID, hdfError)
 
@@ -122,6 +127,22 @@ MODULE m_banddos_io
       CALL h5sclose_f(reciprocalCellSpaceID,hdfError)
       CALL io_write_real2(reciprocalCellSetID,(/1,1/),dimsInt(:2),cell%bmat)
       CALL h5dclose_f(reciprocalCellSetID, hdfError)
+
+      dims(:3)=(/3,3,sym%nop/)
+      dimsInt=dims
+      CALL h5screate_simple_f(3,dims(:3),rotMatricesSpaceID,hdfError)
+      CALL h5dcreate_f(cellGroupID, "symRotMatrices", H5T_NATIVE_INTEGER, rotMatricesSpaceID, rotMatricesSetID, hdfError)
+      CALL h5sclose_f(rotMatricesSpaceID,hdfError)
+      CALL io_write_integer3(rotMatricesSetID,(/1,1,1/),dimsInt(:3),sym%mrot(:,:,:sym%nop))
+      CALL h5dclose_f(rotMatricesSetID, hdfError)
+
+      dims(:2)=(/3,sym%nop/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),transVecsSpaceID,hdfError)
+      CALL h5dcreate_f(cellGroupID, "symTransVecs", H5T_NATIVE_DOUBLE, transVecsSpaceID, transVecsSetID, hdfError)
+      CALL h5sclose_f(transVecsSpaceID,hdfError)
+      CALL io_write_real2(transVecsSetID,(/1,1/),dimsInt(:2),sym%tau(:,:sym%nop))
+      CALL h5dclose_f(transVecsSetID, hdfError)
 
       CALL h5gclose_f(cellGroupID, hdfError)
 
@@ -247,38 +268,13 @@ MODULE m_banddos_io
       ELSE
         CALL h5gcreate_f(GroupID, "BS", BSGroupID, hdfError)
       endif
-      if (.not.io_dataexists(BSGroupID,"kpts")) call io_write_var(BSGroupID,"kpts",kpts%bk)
       if (.not.io_dataexists(BSGroupID,"eigenvalues")) call io_write_var(BSGroupID,"eigenvalues",eig)
       call io_write_var(BSGroupID,weight_name,weight_eig(:,:,:))
       CALL h5gclose_f(BSGroupID, hdfError)
       CALL h5gclose_f(GroupID, hdfError)
-
-
-#if 1==2
-      IF (banddos%unfoldband) THEN
-         CALL h5gcreate_f(fileID, '/bandUnfolding', bandUnfoldingGroupID, hdfError)
-
-         dims(:1)=(/3/)
-         dimsInt = dims
-         CALL h5screate_simple_f(1,dims(:1),supercellSpaceID,hdfError)
-         CALL h5dcreate_f(bandUnfoldingGroupID, "supercell", H5T_NATIVE_INTEGER, supercellSpaceID, supercellSetID, hdfError)
-         CALL h5sclose_f(supercellSpaceID,hdfError)
-         CALL io_write_integer1(supercellSetID,(/1/),dimsInt(:1),(/banddos%s_cell_x,banddos%s_cell_y,banddos%s_cell_z/))
-         CALL h5dclose_f(supercellSetID, hdfError)
-
-         dims(:3)=(/neigd,kpts%nkpt,input%jspins/)
-         dimsInt = dims
-         CALL h5screate_simple_f(3,dims(:3),bUWeightsSpaceID,hdfError)
-         CALL h5dcreate_f(bandUnfoldingGroupID, "weights", H5T_NATIVE_DOUBLE, bUWeightsSpaceID, buWeightsSetID, hdfError)
-         CALL h5sclose_f(bUWeightsSpaceID,hdfError)
-         CALL io_write_real3(bUWeightsSetID,(/1,1,1/),dimsInt(:3), REAL(results%unfolding_weights(:neigd,:,:)))
-         CALL h5dclose_f(bUWeightsSetID, hdfError)
-
-         CALL h5gclose_f(bandUnfoldingGroupID, hdfError)
-      END IF
-#endif
    END SUBROUTINE
-SUBROUTINE writedosData(fileID,name_of_dos,e_grid,weight_name,dos)
+
+   SUBROUTINE writedosData(fileID,name_of_dos,e_grid,weight_name,dos)
      character(len=*),intent(in) :: name_of_dos
      character(len=*),intent(in) :: weight_name
      real,intent(in):: e_grid(:),dos(:,:)
@@ -305,6 +301,33 @@ SUBROUTINE writedosData(fileID,name_of_dos,e_grid,weight_name,dos)
       CALL h5gclose_f(DOSGroupID, hdfError)
       CALL h5gclose_f(GroupID, hdfError)
 
+   END SUBROUTINE
+
+   SUBROUTINE writeEVData(fileID,name_of_dos,weight_name,eig,weight_eig)
+      character(len=*),intent(in) :: name_of_dos
+      character(len=*),intent(in) :: weight_name
+      real,intent(in)             :: eig(:,:,:),weight_eig(:,:,:)
+
+      INTEGER(HID_T),  INTENT(IN) :: fileID
+      INTEGER                     :: n
+
+      INTEGER(HID_T)    :: EVGroupID,groupID
+      INTEGER           :: hdfError
+
+      if (io_groupexists(fileID,name_of_dos)) THEN
+        call io_gopen(fileID,name_of_dos,groupID)
+      ELSE
+        call h5gcreate_f(fileID, name_of_dos, GroupID, hdfError)
+      endif
+      if (io_groupexists(GroupID,"EV")) THEN
+        call io_gopen(GroupID,"EV",EVgroupID)
+      ELSE
+        CALL h5gcreate_f(GroupID, "EV", EVGroupID, hdfError)
+      endif
+      if (.not.io_dataexists(EVGroupID,"eigenvalues")) call io_write_var(EVGroupID,"eigenvalues",eig)
+      call io_write_var(EVGroupID,weight_name,weight_eig(:,:,:))
+      CALL h5gclose_f(EVGroupID, hdfError)
+      CALL h5gclose_f(GroupID, hdfError)
    END SUBROUTINE
 
    SUBROUTINE io_write_string1(datasetID,dims,stringLength,dataArray)

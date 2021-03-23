@@ -587,8 +587,8 @@ CONTAINS
 !      <densityOfStates ndir="0" minEnergy="-0.50000" maxEnergy="0.50000" sigma="0.01500"/>
       WRITE(tempStringA,'(f0.8,a)') banddos%e2_dos, '*Htr'
       WRITE(tempStringB,'(f0.8,a)') banddos%e1_dos, '*Htr'
-380   FORMAT('      <bandDOS minEnergy="', a, '" maxEnergy="', a, '" sigma="', f0.8, '"/>')
-      WRITE (fileNum, 380)  TRIM(ADJUSTL(tempStringA)), TRIM(ADJUSTL(tempStringB)), banddos%sig_dos
+380   FORMAT('      <bandDOS minEnergy="', a, '" maxEnergy="', a, '" sigma="', f0.8, '" storeEVData="', l1, '"/>')
+      WRITE (fileNum, 380)  TRIM(ADJUSTL(tempStringA)), TRIM(ADJUSTL(tempStringB)), banddos%sig_dos, banddos%l_storeEVData
 
 !      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1="0.00" locy1="0.00" locx2="0.00" locy2="0.00" nstm="0" tworkf="0.000000"/>
 390   FORMAT('      <vacuumDOS vacdos="', l1, '" integ="', l1, '" star="', l1, '" nstars="', i0, '" locx1="', f0.5, '" locy1="', f0.5, '" locx2="', f0.5, '" locy2="', f0.5, '" nstm="', i0, '" tworkf="', f0.5, '"/>')

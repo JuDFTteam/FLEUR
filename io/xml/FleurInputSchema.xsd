@@ -851,6 +851,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="DOSOutputType">
+      <xsd:attribute name="storeEVData" type="FleurBool" use="optional" default="T"/>
       <xsd:attribute name="all_atoms" type="FleurBool" use="optional" default="T"/>
       <xsd:attribute name="orbcomp" type="FleurBool" use="optional" default="F"/>
       <xsd:attribute name="jDOS" type="FleurBool" use="optional" default="F"/>

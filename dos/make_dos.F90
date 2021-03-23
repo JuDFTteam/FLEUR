@@ -78,7 +78,7 @@ CONTAINS
     END IF
 
 #ifdef CPP_HDF
-      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos,eFermi)
+      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,sym,banddos,eFermi)
 #endif
 
     IF (banddos%band) THEN
@@ -96,15 +96,20 @@ CONTAINS
     endif
 
     IF (banddos%dos) THEN
-      DO n=1,size(eigdos)
-         print *,"Makedos:",n
-         call eigdos(n)%p%make_dos(kpts,input,banddos,eFermi)
-         print *,"Smooth:",n
-         call eigdos(n)%p%smooth(banddos)
-         print *,"WriteDos:",n
-         call eigdos(n)%p%write_dos(banddosFile_id)
-       enddo
-    endif
+       DO n=1,size(eigdos)
+          print *,"Makedos:",n
+          call eigdos(n)%p%make_dos(kpts,input,banddos,eFermi)
+          print *,"Smooth:",n
+          call eigdos(n)%p%smooth(banddos)
+          print *,"WriteDos:",n
+          call eigdos(n)%p%write_dos(banddosFile_id)
+       END DO
+       IF (banddos%l_storeEVData) THEN
+          DO n=1,size(eigdos)
+             call eigdos(n)%p%write_EVData(banddosFile_id)
+          END DO
+       END IF
+    END IF
 #ifdef CPP_HDF
       CALL closeBandDOSFile(banddosFile_id)
 #endif
