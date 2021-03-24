@@ -911,19 +911,16 @@ CONTAINS
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       vecin1 = vecin_r
-      DO i = 1, nbands*psize
-         CALL desymmetrize(vecin1(:hybdat%nbasp, i), hybdat%nbasp, 1, 1, &
-                           fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
-      END DO
-
-      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, &
-                          fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1, vecout1)
-      deallocate (vecin1)
-
       cnt = 0
       DO i = 1, nbands
          DO j = 1, psize
             cnt = cnt + 1
+            CALL desymmetrize(vecin1(:hybdat%nbasp, cnt), hybdat%nbasp, 1, 1, &
+                              fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
+
+            call bra_trafo_core(1, ikpt, 1, fi%sym, mpdata, &
+                              fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1(:,cnt:cnt), vecout1(:,cnt:cnt))
+                              
             CALL symmetrize(vecout1(:, cnt:cnt), hybdat%nbasm(ikpt), 1, 1, .false., &
                             fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
