@@ -923,8 +923,8 @@ CONTAINS
 
             phase(j, i) = commonphase(vecout(:, 1), hybdat%nbasm(ikpt))
             matout_r(:, cnt) = real(vecout(:, 1)/phase(j, i))
-            IF (any(abs(aimag(vecout(:, 1))) > 1e-8)) THEN
-               WRITE (*, *) vecout(:, 1)
+            IF (any(abs(aimag(vecout(:, 1)/phase(j, i))) > 1e-8)) THEN
+               WRITE (*, *) vecout(:, 1)/phase(j, i)
                call judft_error('bra_trafo: Residual imaginary part.')
             END IF
 
