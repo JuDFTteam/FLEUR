@@ -883,7 +883,7 @@ CONTAINS
 
    end subroutine bra_trafo
 
-   subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin_r, vecout_r)
+   subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, matin_r, matout_r)
       use m_types
       use m_constants
       use m_judft
@@ -892,50 +892,46 @@ CONTAINS
       type(t_mpdata), intent(in)        :: mpdata
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
       INTEGER, INTENT(IN)               :: ikpt, nbands, psize
-      REAL, INTENT(IN)                  ::  vecin_r(:, :)
-      REAL, INTENT(INOUT)               ::  vecout_r(:, :)
+      REAL, INTENT(IN)                  ::  matin_r(:, :)
+      REAL, INTENT(INOUT)               ::  matout_r(:, :)
       COMPLEX, INTENT(INOUT)            ::  phase(:, :)
 
-      COMPLEX, ALLOCATABLE    ::  vecin1(:, :), vecout1(:, :)
+      COMPLEX, ALLOCATABLE    ::  vecin(:, :), vecout(:, :)
       integer :: ok, i, j, cnt
 
       phase = cmplx_0
       call timestart("bra trafo real")
-      allocate (vecin1(size(vecin_r, dim=1), size(vecin_r, dim=2)), stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin1')
-
-      allocate (vecout1(size(vecin_r, dim=1), size(vecin_r, dim=2)), stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecout1')
+      allocate (vecin(size(matin_r, dim=1), 1), vecout(size(matin_r, dim=1), 1),  stat=ok, source=cmplx_0)
+      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin or vecout')
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
-      vecin1 = vecin_r
       cnt = 0
       DO i = 1, nbands
          DO j = 1, psize
             cnt = cnt + 1
-            CALL desymmetrize(vecin1(:hybdat%nbasp, cnt), hybdat%nbasp, 1, 1, &
+            vecin(:,1) = matin_r(:,cnt)
+            CALL desymmetrize(vecin(:hybdat%nbasp, 1), hybdat%nbasp, 1, 1, &
                               fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
             call bra_trafo_core(1, ikpt, 1, fi%sym, mpdata, &
-                              fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin1(:,cnt:cnt), vecout1(:,cnt:cnt))
-                              
-            CALL symmetrize(vecout1(:, cnt:cnt), hybdat%nbasm(ikpt), 1, 1, .false., &
+                              fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin(:,1:1), vecout(:,1:1))
+
+            CALL symmetrize(vecout(:, 1:1), hybdat%nbasm(ikpt), 1, 1, .false., &
                             fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
-            phase(j, i) = commonphase(vecout1(:, cnt), hybdat%nbasm(ikpt))
-            vecout1(:, cnt) = vecout1(:, cnt)/phase(j, i)
-            IF (any(abs(aimag(vecout1(:, cnt))) > 1e-8)) THEN
-               WRITE (*, *) vecout1(:, cnt)
+            phase(j, i) = commonphase(vecout(:, 1), hybdat%nbasm(ikpt))
+            matout_r(:, cnt) = real(vecout(:, 1)/phase(j, i))
+            IF (any(abs(aimag(vecout(:, 1))) > 1e-8)) THEN
+               WRITE (*, *) vecout(:, 1)
                call judft_error('bra_trafo: Residual imaginary part.')
             END IF
 
          END DO
       END DO
 
-      vecout_r = real(vecout1)
-      deallocate (vecout1)
+      deallocate (vecout, vecin)
       call timestop("bra trafo real")
    end subroutine bra_trafo_real
 
