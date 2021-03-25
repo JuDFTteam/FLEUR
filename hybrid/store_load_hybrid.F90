@@ -17,6 +17,7 @@ module m_store_load_hybrid
 contains
    subroutine load_hybrid_data(fi, fmpi, hybdat, mpdata)
       use m_constants
+      use m_mixing_history
       implicit none
       type(t_fleurinput), intent(in)     :: fi
       type(t_mpi), intent(in)            :: fmpi
@@ -39,22 +40,18 @@ contains
       if (fmpi%is_root()) INQUIRE (file='hybrid.h5', exist=l_exist)
       call mpi_bc(l_exist, 0, fmpi%mpi_comm)
 
-      if (.not. allocated(hybdat%v_x)) then
+
+      if(l_exist .and. (.not. allocated(hybdat%v_x))) then
+#ifdef CPP_MPI
+         call MPI_Barrier(fmpi%mpi_comm, ierr)
+#endif
+         call mixing_history_reset(fmpi)
+
          IF (fmpi%n_size == 1) THEN
             ALLOCATE (t_mat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
          ELSE
             ALLOCATE (t_mpimat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
          END IF
-      end if
-
-      if (l_exist) then
-         if(.not. allocated(hybdat%v_x)) then
-            IF (fmpi%n_size == 1) THEN
-               ALLOCATE (t_mat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
-            ELSE
-               ALLOCATE (t_mpimat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
-            END IF
-         endif
 
          if (fmpi%is_root()) then
             call timestart("read part")
@@ -214,84 +211,49 @@ contains
       sender = merge(fmpi%irank, -1, any(fmpi%k_list == nk) .and. fmpi%n_rank == 0)
 #ifdef CPP_MPI
       call MPI_Allreduce(MPI_IN_PLACE, sender, 1, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
-#endif
-      select type(vx => hybdat%v_x(nk,jsp)) 
-      class is (t_mat)
-         l_mpimat = .False.
+
+      select type(vx_origin => hybdat%v_x(nk,jsp)) 
       class is(t_mpimat) 
-         l_mpimat = .True. 
-      end select
-      call MPI_Bcast(l_mpimat, 1, MPI_LOGICAL, sender, fmpi%mpi_comm, ierr)
-
-      if(l_mpimat) then 
-#ifdef CPP_MPI
-         select type(vx_origin => hybdat%v_x(nk,jsp)) 
-         class is(t_mpimat) 
-            if(sender == fmpi%irank) then
-               buff = [vx_origin%global_size1, vx_origin%global_size2]
-            endif
-
-            call MPI_Bcast(buff, 2, MPI_INTEGER, sender, fmpi%mpi_comm, ierr)
-            if(fmpi%irank == recver) then
-               call vx_tmp%init(fi%sym%invs, buff(1), buff(2))
-            endif
-
-            do i = 1, buff(2)
-               call glob_to_loc(fmpi, i, pe_i, i_loc)
-               sender = merge(fmpi%irank, -1, pe_i == fmpi%n_rank .and. any(fmpi%k_list == nk))
-               call MPI_Allreduce(MPI_IN_PLACE, sender, 1, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
-
-               if(sender == recver .and. fmpi%irank == recver) then
-                  if(vx_tmp%l_real) then
-                     vx_tmp%data_r(:,i) = vx_origin%data_r(:,i_loc)
-                  else
-                     vx_tmp%data_c(:,i) = vx_origin%data_c(:,i_loc)
-                  endif
-               elseif(sender == fmpi%irank) then
-                  if(fi%sym%invs) then
-                     call MPI_Send(vx_origin%data_r(:,i_loc), buff(1), MPI_DOUBLE_PRECISION, recver, 100+i, fmpi%mpi_comm,ierr)
-                  else
-                     call MPI_Send(vx_origin%data_c(:,i_loc), buff(1), MPI_DOUBLE_COMPLEX, recver, 100+i, fmpi%mpi_comm,ierr)
-                  endif
-               elseif(fmpi%irank == recver) then
-                  if(vx_tmp%l_real) then
-                     call MPI_Recv(vx_tmp%data_r(:,i), buff(1), MPI_DOUBLE_PRECISION, sender, 100+i, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
-                  else
-                     call MPI_Recv(vx_tmp%data_c(:,i), buff(1), MPI_DOUBLE_COMPLEX, sender, 100+i, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
-                  endif
-               endif
-            enddo
-         end select
-#endif
-      else
-         if(sender == recver) then
-            call vx_tmp%copy(hybdat%v_x(nk,jsp), 1, 1)
-#ifdef CPP_MPI
-         else 
-            if(fmpi%irank == sender) then
-               buff = [hybdat%v_x(nk,jsp)%matsize1, hybdat%v_x(nk,jsp)%matsize2]
-               call MPI_Send(buff, 2, MPI_INTEGER, recver, 7, fmpi%mpi_comm, ierr)
-               if(hybdat%v_x(nk,jsp)%l_real) then
-                  call MPI_Send(hybdat%v_x(nk,jsp)%data_r, size(hybdat%v_x(nk,jsp)%data_r), MPI_DOUBLE_PRECISION, &
-                              recver, 8, fmpi%mpi_comm, ierr)
-               else
-                  call MPI_Send(hybdat%v_x(nk,jsp)%data_c, size(hybdat%v_x(nk,jsp)%data_c), MPI_DOUBLE_COMPLEX, &
-                              recver, 9, fmpi%mpi_comm, ierr)
-               endif
-            elseif(fmpi%irank == recver) then 
-               call MPI_Recv(buff, 2, MPI_INTEGER, sender, 7, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
-               call vx_tmp%init(fi%sym%invs, buff(1), buff(2))
-               if(vx_tmp%l_real) then
-                  call MPI_Recv(vx_tmp%data_r, size(vx_tmp%data_r), MPI_DOUBLE_PRECISION, &
-                                sender, 8, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
-               else
-                  call MPI_Recv(vx_tmp%data_c, size(vx_tmp%data_c), MPI_DOUBLE_COMPLEX, &
-                                sender, 9, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
-               endif
-            endif
-#endif
+         if(sender == fmpi%irank) then
+            buff = [vx_origin%global_size1, vx_origin%global_size2]
          endif
+      class is(t_mat)
+         if(sender == fmpi%irank) then
+            buff = [vx_origin%matsize1, vx_origin%matsize2]
+         endif
+      end select
+      call MPI_Bcast(buff, 2, MPI_INTEGER, sender, fmpi%mpi_comm, ierr)
+
+      if(fmpi%irank == recver) then
+         call vx_tmp%init(fi%sym%invs, buff(1), buff(2))
       endif
+
+      do i = 1, buff(2)
+         call glob_to_loc(fmpi, i, pe_i, i_loc)
+         sender = merge(fmpi%irank, -1, pe_i == fmpi%n_rank .and. any(fmpi%k_list == nk))
+         call MPI_Allreduce(MPI_IN_PLACE, sender, 1, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
+
+         if(sender == recver .and. fmpi%irank == recver) then
+            if(vx_tmp%l_real) then
+               vx_tmp%data_r(:,i) = hybdat%v_x(nk,jsp)%data_r(:,i_loc)
+            else
+               vx_tmp%data_c(:,i) = hybdat%v_x(nk,jsp)%data_c(:,i_loc)
+            endif
+         elseif(sender == fmpi%irank) then
+            if(fi%sym%invs) then
+               call MPI_Send(hybdat%v_x(nk,jsp)%data_r(:,i_loc), buff(1), MPI_DOUBLE_PRECISION, recver, 100+i, fmpi%mpi_comm,ierr)
+            else
+               call MPI_Send(hybdat%v_x(nk,jsp)%data_c(:,i_loc), buff(1), MPI_DOUBLE_COMPLEX, recver, 100+i, fmpi%mpi_comm,ierr)
+            endif
+         elseif(fmpi%irank == recver) then
+            if(vx_tmp%l_real) then
+               call MPI_Recv(vx_tmp%data_r(:,i), buff(1), MPI_DOUBLE_PRECISION, sender, 100+i, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
+            else
+               call MPI_Recv(vx_tmp%data_c(:,i), buff(1), MPI_DOUBLE_COMPLEX, sender, 100+i, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
+            endif
+         endif
+      enddo
+#endif
    end subroutine collect_vx
 
 #ifdef CPP_HDF
