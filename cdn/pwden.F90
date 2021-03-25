@@ -221,7 +221,7 @@ CONTAINS
             ! total charge does not need to be one in each spin-
             ! channel. Thus it has to be calculated explicitly, if
             ! it is needed.
-            IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)) THEN
+            IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf.OR.banddos%band) THEN
                DO ir = 0, state%gridLength - 1
                   state%grid(ir) = ABS(state%grid(ir))**2
                   stateB%grid(ir) = ABS(stateB%grid(ir))**2
@@ -289,6 +289,27 @@ CONTAINS
                      ekinGrid%grid(ir) = ekinGrid%grid(ir) + wtf(nu) * 0.5 * ABS(stateDeriv%grid(ir))**2
                   END DO
                END DO
+            END IF
+
+            IF (noco%l_soc.AND.input%jspins.EQ.2.AND..FALSE.) THEN
+               IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf.OR.banddos%band) THEN
+                  DO ir = 0, state%gridLength - 1
+                     state%grid(ir) = ABS(state%grid(ir))**2
+                  END DO
+
+                  forw = .TRUE.
+                  CALL fft_interface(3, state%dimensions(:), state%grid, forw, fieldSphereIndices)
+
+                  CALL state%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
+!                  DO istr = 1, stars%ng3
+!                     cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
+!                  END DO
+                  DO istr = 1, stars%ng3_fft
+                     CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
+                     dos%qis(ev_list(nu), ikpt, 1) = dos%qis(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
+                     dos%qTot(ev_list(nu), ikpt, 1) = dos%qTot(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
+                  ENDDO
+               END IF
             END IF
          END IF
       END DO

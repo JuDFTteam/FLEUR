@@ -59,6 +59,9 @@ CONTAINS
 
     if (id==1) THEN
        get_weight_eig=this%qTot
+       if (all(this%qis==0.0))  then
+          get_weight_eig= 1.0
+       END IF
     END IF
     if (id==2) THEN
       get_weight_eig=this%qis
