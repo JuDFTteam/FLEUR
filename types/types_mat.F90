@@ -763,6 +763,8 @@ CONTAINS
 
       call timestart("t_mat_copy")
 
+      if(.not. mat%allocated()) call mat%init(mat1)
+
       select type (mat1)
       type is(t_mat)
 

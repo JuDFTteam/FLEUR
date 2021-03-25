@@ -12,18 +12,18 @@ contains
       use m_io_hybrid
       use m_divide_most_evenly 
       implicit none
-      type(t_atoms), intent(in)    :: atoms
-      type(t_cell), intent(in)     :: cell
-      type(t_input), intent(in)    :: input
-      type(t_noco), intent(in)     :: noco
-      type(t_nococonv), intent(in) :: nococonv
-      type(t_hybinp), intent(in)   :: hybinp
-      type(t_hybdat), intent(in)   :: hybdat
-      type(t_mpdata), intent(in)   :: mpdata
-      type(t_kpts), intent(in)     :: kpts
-      type(t_sym), intent(in)      :: sym
-      type(t_oneD), intent(in)     :: oneD
-      type(t_mat), intent(in)      :: zmat_ikp ! zmat of parent k-point
+      type(t_atoms), intent(in)       :: atoms
+      type(t_cell), intent(in)        :: cell
+      type(t_input), intent(in)       :: input
+      type(t_noco), intent(in)        :: noco
+      type(t_nococonv), intent(in)    :: nococonv
+      type(t_hybinp), intent(in)      :: hybinp
+      type(t_hybdat), intent(in)      :: hybdat
+      type(t_mpdata), intent(in)      :: mpdata
+      type(t_kpts), intent(in)        :: kpts
+      type(t_sym), intent(in)         :: sym
+      type(t_oneD), intent(in)        :: oneD
+      type(t_mat), intent(in), target :: zmat_ikp ! zmat of parent k-point
                                                ! not sure wether zmat works aswell
       integer, intent(in)          :: jsp
       integer, intent(in)          :: ik       ! k-point
@@ -35,14 +35,15 @@ contains
       complex, allocatable :: cmt(:,:,:)
 
       integer :: ikp, nbands, ok(4) ! index of parent k-point
-      integer :: iatom, itype, ieq, indx, i, j, idum, iop, l, ll, lm, m
+      integer :: iatom, itype, indx, i, j, idum, iop, l, ll, lm, m
       integer :: map_lo(atoms%nlod)
       integer, allocatable :: start_idx(:), psize(:)
       integer :: my_psz, my_start, ierr
 
       complex :: cdum
       type(t_lapw)  :: lapw_ik, lapw_ikp
-      type(t_mat)   :: tmp
+      type(t_mat), target   :: tmp
+      type(t_mat), pointer  :: mat_ptr
 
       call timestart("calc_cmt")
       ikp = kpts%bkp(ik)
@@ -71,15 +72,20 @@ contains
       CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
 
       lapw_ikp%nmat = lapw_ikp%nv(jsp) + atoms%nlotot
-      call tmp%init(zmat_ikp%l_real, zmat_ikp%matsize1, my_psz)
-      if(tmp%l_real) then 
-         tmp%data_r = zmat_ikp%data_r(:,my_start:my_start+my_psz-1)
-      else
-         tmp%data_c = zmat_ikp%data_c(:,my_start:my_start+my_psz-1)
+      if(my_psz /= nbands) then
+         call tmp%init(zmat_ikp%l_real, zmat_ikp%matsize1, my_psz)
+         if(tmp%l_real) then 
+            tmp%data_r = zmat_ikp%data_r(:,my_start:my_start+my_psz-1)
+         else
+            tmp%data_c = zmat_ikp%data_c(:,my_start:my_start+my_psz-1)
+         endif
+         mat_ptr => tmp 
+      else 
+         mat_ptr => zmat_ikp
       endif
 
       CALL abcof(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, noco, nococonv,&
-                 jsp, oneD, acof, bcof, ccof, tmp)
+                 jsp, oneD, acof, bcof, ccof, mat_ptr)
       CALL hyb_abcrot(hybinp, atoms, my_psz, sym, acof, bcof, ccof)
 
       call timestart("copy to cmt")
@@ -126,7 +132,7 @@ contains
       call timestop("copy to cmt")
 
 #ifdef CPP_MPI
-      if(present(submpi)) then
+      if(my_psz /= nbands) then
          call timestart("allreduce cmt")
          call MPI_Allreduce(MPI_IN_PLACE, cmt, size(cmt), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
          call timestop("allreduce cmt")

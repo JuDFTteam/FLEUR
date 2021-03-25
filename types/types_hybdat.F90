@@ -43,7 +43,7 @@ MODULE m_types_hybdat
       type(t_coul), allocatable   :: coul(:)
 
       type(t_usdus)               :: usdus
-      type(t_mat), allocatable    :: v_x(:, :) ! nkpt, jsp
+      class(t_mat), allocatable    :: v_x(:, :) ! nkpt, jsp
       type(t_eigvec), allocatable :: zmat(:, :) ! nkpt, jsp
    contains
       procedure :: set_stepfunction => set_stepfunction

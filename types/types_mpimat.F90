@@ -118,7 +118,6 @@ CONTAINS
       if (present(transA)) transA_i = transA
       transB_i = "N"
       if (present(transB)) transB_i = transB
-      if (transA /= "N" .or. transB /= "N") call judft_error("trans /= 'N' not yet implemented for MPI")
 
       IF (.NOT. PRESENT(res)) CALL judft_error("BUG: in mpicase the multiply requires the optional result argument")
       SELECT TYPE (mat2)
@@ -498,14 +497,18 @@ CONTAINS
 #ifdef CPP_MPI
       CALL MPI_COMM_RANK(mat%blacsdata%mpi_com, irank, ierr)
 
-      if (irank == 0) call tmp%alloc(mat%l_real, mat%global_size1, mat%global_size2)
+      if (irank == 0) then
+         call tmp%alloc(mat%l_real, mat%global_size1, mat%global_size2)
+      else
+         call tmp%alloc(mat%l_real,1,1)
+      endif 
 
       call mat%to_non_dist(tmp)
 
       if (irank == 0) then
          call tmp%save_npy(filename)
-         call tmp%free()
       end if
+      call tmp%free()
 #endif
    end subroutine mpimat_save_npy
 

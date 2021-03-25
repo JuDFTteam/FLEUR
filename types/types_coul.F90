@@ -1,6 +1,8 @@
 module m_types_coul
    use m_types_mat
    use m_mtir_size
+   use m_types_fleurinput
+   use m_judft
 #ifdef CPP_MPI
    use mpi
 #endif
@@ -75,8 +77,6 @@ contains
    end subroutine t_coul_free
 
    subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt, l_print)
-      use m_types_fleurinput
-      use m_judft
       implicit NONE
       class(t_coul), intent(inout) :: coul
       type(t_fleurinput), intent(in)    :: fi
@@ -147,9 +147,10 @@ contains
       endif
    end subroutine t_coul_alloc
 
-   subroutine t_coul_mini_alloc(coul)
+   subroutine t_coul_mini_alloc(coul, fi)
       implicit NONE
-      class(t_coul), intent(inout) :: coul
+      type(t_fleurinput), intent(in)  :: fi
+      class(t_coul), intent(inout)    :: coul
 
       if (.not. allocated(coul%mt1_r)) then
          allocate (coul%mt1_r(1,1,1,1))
@@ -171,5 +172,7 @@ contains
       if (.not. allocated(coul%mt3_c)) then
          allocate (coul%mt3_c(1, 1, 1))
       endif
+
+      call coul%mtir%alloc(fi%sym%invs, 1, 1)
    end subroutine t_coul_mini_alloc
 end module m_types_coul
