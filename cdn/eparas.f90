@@ -58,6 +58,7 @@ CONTAINS
     !     .. Local Arrays ..
     REAL qlo(noccbd,atoms%nlod,atoms%nlod,atoms%ntype)
     REAL qaclo(noccbd,atoms%nlod,atoms%ntype),qbclo(noccbd,atoms%nlod,atoms%ntype)
+    LOGICAL atomTypeCovered(atoms%ntype)
     !     ..
     !
     !---> initialize ener, sqal, enerlo and sqlo on first call
@@ -71,6 +72,7 @@ CONTAINS
        dos%qal(:,:,:,ikpt,jsp) = 0.0
     END IF
 
+    atomTypeCovered(:) = .FALSE.
     !--->    l-decomposed density for each occupied state
     !
     !         DO 140 i = (skip_t+1),ne    ! this I need for all states
@@ -78,6 +80,7 @@ CONTAINS
        nt1 = 1
        DO n_dos = 1,size(banddos%dos_typelist)
          n=banddos%dos_typelist(n_dos)
+         atomTypeCovered(n) = .TRUE.
          fac = 1./atoms%neq(n)
          nt2 = nt1 + atoms%neq(n) - 1
          DO l = 0,3
@@ -113,10 +116,53 @@ CONTAINS
              ENDIF     ! end MCD
            ENDDO
            dos%qal(l,n_dos,ev_list(i),ikpt,jsp) = (suma+sumb*usdus%ddn(l,n,jsp))/atoms%neq(n)
+           dos%qTot(ev_list(i),ikpt,jsp) = dos%qTot(ev_list(i),ikpt,jsp) + (suma+sumb*usdus%ddn(l,n,jsp))
          ENDDO
+
+         DO l = 4, atoms%lmax(n)
+           suma = CMPLX(0.,0.)
+           sumb = CMPLX(0.,0.)
+           ll1 = l* (l+1)
+           DO m = -l,l
+             lm = ll1 + m
+             DO natom = nt1,nt2
+                suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
+                sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
+             ENDDO
+           ENDDO
+           dos%qTot(ev_list(i),ikpt,jsp) = dos%qTot(ev_list(i),ikpt,jsp) + (suma+sumb*usdus%ddn(l,n,jsp))
+         ENDDO
+
          nt1 = nt1 + atoms%neq(n)
        ENDDO
-     ENDDO
+    ENDDO
+
+    nt1 = 1
+    DO n = 1, atoms%ntype
+       IF(atomTypeCovered(n)) THEN
+          nt1 = nt1 + atoms%neq(n)
+          CYCLE
+       END IF
+       nt2 = nt1 + atoms%neq(n) - 1
+       DO i = 1,ne              ! skip in next loop
+         DO l = 0, atoms%lmax(n)
+           suma = CMPLX(0.,0.)
+           sumb = CMPLX(0.,0.)
+           ll1 = l* (l+1)
+           DO m = -l,l
+             lm = ll1 + m
+             DO natom = nt1,nt2
+                suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
+                sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
+             ENDDO
+           ENDDO
+           dos%qTot(ev_list(i),ikpt,jsp) = dos%qTot(ev_list(i),ikpt,jsp) + (suma+sumb*usdus%ddn(l,n,jsp))
+         ENDDO
+       ENDDO
+       nt1 = nt1 + atoms%neq(n)
+    ENDDO
+
+
      !
     !--->    perform Brillouin zone integration and summation over the
     !--->    bands in order to determine the energy parameters for each
@@ -189,27 +235,45 @@ CONTAINS
     !---> perform brillouin zone integration and sum over bands
 
     DO ntyp = 1,atoms%ntype
+       n_dos=banddos%map_atomtype(ntyp)
        DO lo = 1,atoms%nlo(ntyp)
           l = atoms%llo(lo,ntyp)
           ! llo > 3 used for unoccupied states only
-          IF( l .GT. 3 ) CYCLE
-          n_dos=banddos%map_atomtype(ntyp)
-          if (n_dos>0)THEN
-            DO i = 1,ne
-              dos%qal(l,n_dos,ev_list(i),ikpt,jsp)= dos%qal(l,n_dos,ev_list(i),ikpt,jsp)  + ( 1.0/atoms%neq(ntyp) )* (&
-              qaclo(i,lo,ntyp)*usdus%uulon(lo,ntyp,jsp)+qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp)     )
-            END DO
-          ENDIF
-          DO lop = 1,atoms%nlo(ntyp)
-             IF (atoms%llo(lop,ntyp).EQ.l) THEN
-                DO i = 1,ne
-                   regCharges%enerlo(lo,ntyp,jsp) = regCharges%enerlo(lo,ntyp,jsp) +qlo(i,lop,lo,ntyp)*we(i)*eig(i)
-                   regCharges%sqlo(lo,ntyp,jsp) = regCharges%sqlo(lo,ntyp,jsp) + qlo(i,lop,lo,ntyp)*we(i)
-                   if (n_dos>0) dos%qal(l,n_dos,ev_list(i),ikpt,jsp)= dos%qal(l,n_dos,ev_list(i),ikpt,jsp)  + ( 1.0/atoms%neq(ntyp) ) *&
-                        qlo(i,lop,lo,ntyp)*usdus%uloulopn(lop,lo,ntyp,jsp)
-                ENDDO
-             ENDIF
-          ENDDO
+          IF(l.LE.3) THEN
+             DO i = 1,ne
+                IF (n_dos>0) THEN
+                  dos%qal(l,n_dos,ev_list(i),ikpt,jsp)= dos%qal(l,n_dos,ev_list(i),ikpt,jsp)  + ( 1.0/atoms%neq(ntyp) ) * &
+                     (qaclo(i,lo,ntyp)*usdus%uulon(lo,ntyp,jsp)+qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp))
+                ENDIF
+                dos%qTot(ev_list(i),ikpt,jsp) = dos%qTot(ev_list(i),ikpt,jsp) + &
+                   qaclo(i,lo,ntyp)*usdus%uulon(lo,ntyp,jsp)+qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp)
+             END DO
+             DO lop = 1,atoms%nlo(ntyp)
+                IF (atoms%llo(lop,ntyp).EQ.l) THEN
+                   DO i = 1,ne
+                      regCharges%enerlo(lo,ntyp,jsp) = regCharges%enerlo(lo,ntyp,jsp) +qlo(i,lop,lo,ntyp)*we(i)*eig(i)
+                      regCharges%sqlo(lo,ntyp,jsp) = regCharges%sqlo(lo,ntyp,jsp) + qlo(i,lop,lo,ntyp)*we(i)
+                      IF (n_dos>0) THEN
+                         dos%qal(l,n_dos,ev_list(i),ikpt,jsp)= dos%qal(l,n_dos,ev_list(i),ikpt,jsp)  + ( 1.0/atoms%neq(ntyp) ) *&
+                           qlo(i,lop,lo,ntyp)*usdus%uloulopn(lop,lo,ntyp,jsp)
+                      END IF
+                      dos%qTot(ev_list(i),ikpt,jsp) = dos%qTot(ev_list(i),ikpt,jsp) + qlo(i,lop,lo,ntyp)*usdus%uloulopn(lop,lo,ntyp,jsp)
+                   ENDDO
+                ENDIF
+             ENDDO
+          ELSE
+             DO i = 1,ne
+                dos%qTot(ev_list(i),ikpt,jsp) = dos%qTot(ev_list(i),ikpt,jsp) + &
+                   qaclo(i,lo,ntyp)*usdus%uulon(lo,ntyp,jsp)+qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp)
+             END DO
+             DO lop = 1,atoms%nlo(ntyp)
+                IF (atoms%llo(lop,ntyp).EQ.l) THEN
+                   DO i = 1,ne
+                      dos%qTot(ev_list(i),ikpt,jsp) = dos%qTot(ev_list(i),ikpt,jsp) + qlo(i,lop,lo,ntyp)*usdus%uloulopn(lop,lo,ntyp,jsp)
+                   ENDDO
+                ENDIF
+             ENDDO
+          END IF
        END DO
     END DO
 

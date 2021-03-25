@@ -238,6 +238,7 @@ CONTAINS
                DO istr = 1, stars%ng3_fft
                   CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
                   dos%qis(ev_list(nu), ikpt, 1) = dos%qis(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
+                  dos%qTot(ev_list(nu), ikpt, 1) = dos%qTot(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
                ENDDO
 
                CALL stateB%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
@@ -247,6 +248,7 @@ CONTAINS
                DO istr = 1, stars%ng3_fft
                   CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
                   dos%qis(ev_list(nu), ikpt, input%jspins) = dos%qis(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil
+                  dos%qTot(ev_list(nu), ikpt, input%jspins) = dos%qTot(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil
                ENDDO
             ENDIF
 
