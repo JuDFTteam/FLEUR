@@ -305,7 +305,7 @@ CONTAINS
                END DO
             END IF
 
-            IF (noco%l_soc.AND.input%jspins.EQ.2.AND..FALSE.) THEN
+            IF (noco%l_soc.AND.input%jspins.EQ.2) THEN
                IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf.OR.banddos%band) THEN
                   DO ir = 0, state%gridLength - 1
                      state%grid(ir) = conjg(state%grid(ir)) * stepFct%grid(ir) * state%grid(ir)
@@ -315,13 +315,10 @@ CONTAINS
                   CALL fft_interface(3, state%dimensions(:), state%grid, forw, fieldSphereIndices)
 
                   CALL state%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
-!                  DO istr = 1, stars%ng3
-!                     cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
-!                  END DO
                   DO istr = 1, stars%ng3_fft
                      CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
-                     dos%qis(ev_list(nu), ikpt, 1) = dos%qis(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
-                     dos%qTot(ev_list(nu), ikpt, 1) = dos%qTot(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
+                     dos%qis(ev_list(nu), ikpt, jSpin) = dos%qis(ev_list(nu), ikpt, jSpin) + REAL(cwk(istr)*x)*stars%nstr(istr)/cell%omtil
+                     dos%qTot(ev_list(nu), ikpt, jSpin) = dos%qTot(ev_list(nu), ikpt, jSpin) + REAL(cwk(istr)*x)*stars%nstr(istr)/cell%omtil
                   ENDDO
                END IF
             END IF
