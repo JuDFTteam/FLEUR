@@ -16,8 +16,7 @@ contains
       type(t_hybdat), intent(inout)     :: hybdat
 
 
-      type(t_lapw)       :: lapw
-      integer            :: jsp, nk, mat_sz
+      integer            :: jsp, nk
 
       call timestart("distrib_vx")
 
@@ -31,36 +30,53 @@ contains
 
       do jsp = 1,fi%input%jspins
          do nk = 1,fi%kpts%nkpt
-            CALL lapw%init(fi, nococonv, nk) 
-            mat_sz = lapw%nv(jsp) + fi%atoms%nlotot
-            if(any(nk == fmpi%k_list)) then 
-               CALL hybdat%v_x(nk, jsp)%init(fi%sym%invs, mat_sz, mat_sz, fmpi%sub_comm, .false.)
-            else
-               call hybdat%v_x(nk, jsp)%init(fi%sym%invs, 1,1, fmpi%sub_comm, .false.)
-            endif
-
-            if(fmpi%n_size == 1) then 
-               if(any(nk == fmpi%k_list)) then 
-                  if(vx_loc(nk,jsp) == fmpi%irank) then
-                     call hybdat%v_x(nk, jsp)%copy(vx_tmp(nk,jsp), 1, 1)
-                  else 
-                     call juDFT_error("vx_tmp is not on the same rank as hybdat%vx")   
-                  endif
-               endif
-            else 
-               select type(vx_mat => hybdat%v_x(nk, jsp))
-               class is(t_mpimat)
-                  call copy_vx_to_distr(fmpi, vx_loc(nk,jsp), nk, mat_sz, vx_tmp(nk,jsp), vx_mat)
-               class default
-                  call juDFT_error("hybdat%vx needs to be t_mpimat")
-               end select
-            endif
-            call vx_tmp(nk,jsp)%free()
+            call distrib_single_vx(fi, fmpi, jsp, nk, nococonv, vx_loc, vx_tmp, hybdat)
          enddo
       enddo
 
       call timestop("distrib_vx")
    end subroutine distrib_vx
+
+   subroutine distrib_single_vx(fi, fmpi, jsp, nk, nococonv, vx_loc, vx_tmp, hybdat)
+      implicit none 
+      type(t_fleurinput), intent(in)    :: fi
+      type(t_nococonv), intent(in)      :: nococonv
+      TYPE(t_mpi), INTENT(IN)           :: fmpi
+      integer, intent(in)               :: vx_loc(:,:), jsp, nk
+      type(t_mat), intent(inout)        :: vx_tmp(:,:)
+      type(t_hybdat), intent(inout)     :: hybdat
+   
+
+      type(t_lapw)       :: lapw
+      integer            :: mat_sz
+
+      CALL lapw%init(fi, nococonv, nk) 
+      mat_sz = lapw%nv(jsp) + fi%atoms%nlotot
+      if(any(nk == fmpi%k_list)) then 
+         CALL hybdat%v_x(nk, jsp)%init(fi%sym%invs, mat_sz, mat_sz, fmpi%sub_comm, .false.)
+      else
+         call hybdat%v_x(nk, jsp)%init(fi%sym%invs, 1,1, fmpi%sub_comm, .false.)
+      endif
+
+      if(fmpi%n_size == 1) then 
+         if(any(nk == fmpi%k_list)) then 
+            if(vx_loc(nk,jsp) == fmpi%irank) then
+               call hybdat%v_x(nk, jsp)%copy(vx_tmp(nk,jsp), 1, 1)
+            else 
+               call juDFT_error("vx_tmp is not on the same rank as hybdat%vx")   
+            endif
+         endif
+      else 
+         select type(vx_mat => hybdat%v_x(nk, jsp))
+         class is(t_mpimat)
+            call copy_vx_to_distr(fmpi, vx_loc(nk,jsp), nk, mat_sz, vx_tmp(nk,jsp), vx_mat)
+         class default
+            call juDFT_error("hybdat%vx needs to be t_mpimat")
+         end select
+      endif
+      call vx_tmp(nk,jsp)%free()
+
+   end subroutine distrib_single_vx
 
    subroutine copy_vx_to_distr(fmpi, sender, nk, mat_sz, vx_den, vx_distr)
       implicit none
