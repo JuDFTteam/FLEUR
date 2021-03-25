@@ -7,6 +7,7 @@ module m_store_load_hybrid
    use m_mpi_bc_tool
    use m_juDFT
    use m_types_mpimat
+   use m_distrib_vx
 
    character(len=*), parameter :: hybstore_fname = "hybrid.h5"
    public store_hybrid_data, load_hybrid_data
@@ -27,6 +28,7 @@ contains
       character(len=:), allocatable :: dset_name
       integer                       :: ierr, nk, jsp
       real, allocatable             :: tmp(:, :)
+      type(t_mat)                   :: vx_tmp
 
 #ifdef CPP_HDF
       integer(HID_T)   :: dset_id
@@ -46,6 +48,14 @@ contains
       end if
 
       if (l_exist) then
+         if(.not. allocated(hybdat%v_x)) then
+            IF (fmpi%n_size == 1) THEN
+               ALLOCATE (t_mat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
+            ELSE
+               ALLOCATE (t_mpimat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
+            END IF
+         endif
+
          if (fmpi%is_root()) then
             call timestart("read part")
             file_id = open_file()
@@ -59,15 +69,19 @@ contains
             if (.not. allocated(hybdat%nobd)) allocate (hybdat%nobd(fi%kpts%nkptf, fi%input%jspins))
             call read_int_2d(dset_id, hybdat%nobd)
             call close_dataset(dset_id)
+            call timestop("read part")
+         end if
 
-            do jsp = 1, fi%input%jspins
-               do nk = 1, fi%kpts%nkpt
+         do jsp = 1, fi%input%jspins
+            do nk = 1, fi%kpts%nkpt
+               if(fmpi%is_root()) then
+                  call timestart("read part")
                   if (fi%sym%invs) then
                      dset_name = "vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
                      dset_id = open_dataset(file_id, dset_name)
                      dims = get_dims(dset_id)
-                     call hybdat%v_x(nk, jsp)%alloc(fi%sym%invs, dims(1), dims(2))
-                     call read_dbl_2d(dset_id, hybdat%v_x(nk, jsp)%data_r)
+                     call vx_tmp%alloc(fi%sym%invs, dims(1), dims(2))
+                     call read_dbl_2d(dset_id, vx_tmp%data_r)
                      call close_dataset(dset_id)
                   else
                      dset_name = "r_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
@@ -75,36 +89,35 @@ contains
 
                      ! get dimensions and alloc space
                      dims = get_dims(dset_id)
-                     call hybdat%v_x(nk, jsp)%alloc(fi%sym%invs, dims(1), dims(2))
+                     call vx_tmp%alloc(fi%sym%invs, dims(1), dims(2))
                      allocate (tmp(dims(1), dims(2)), stat=ierr)
                      if (ierr /= 0) call juDFT_error("can't alloc tmp")
 
                      ! get real part
                      call read_dbl_2d(dset_id, tmp)
-                     hybdat%v_x(nk, jsp)%data_c = tmp
+                     vx_tmp%data_c = tmp
                      call close_dataset(dset_id)
 
                      ! get complex part
                      dset_name = "c_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
                      dset_id = open_dataset(file_id, dset_name)
                      call read_dbl_2d(dset_id, tmp)
-                     hybdat%v_x(nk, jsp)%data_c = hybdat%v_x(nk, jsp)%data_c + ImagUnit*tmp
+                     vx_tmp%data_c = vx_tmp%data_c + ImagUnit*tmp
                      call close_dataset(dset_id)
                      deallocate (tmp)
                   end if
-               end do
+                  call timestop("read part")
+               endif
+
+               call mpi_bc(dims, 0, fmpi%mpi_comm)
+               call distrib_single_vx(fi, fmpi, jsp, nk, 0, vx_tmp, hybdat, dims=dims)
+               call vx_tmp%free()
             end do
-            call timestop("read part")
-         end if
+         end do
 
          call timestart("bcast part")
          call mpi_bc(hybdat%nbands, 0, fmpi%mpi_comm)
-         call mpi_bc(hybdat%nobd, 0, fmpi%mpi_comm)
-         do jsp = 1, fi%input%jspins
-            do nk = 1, fi%kpts%nkpt
-               call hybdat%v_x(nk, jsp)%bcast(0, fmpi%mpi_comm)
-            end do
-         end do
+         call mpi_bc(hybdat%nobd, 0, fmpi%mpi_comm)      
          call timestop("bcast part")
 
          call mpdata%set_num_radfun_per_l(fi%atoms)
