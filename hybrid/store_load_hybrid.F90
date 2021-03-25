@@ -118,62 +118,168 @@ contains
 #endif
    end subroutine load_hybrid_data
 
-   subroutine store_hybrid_data(fi, hybdat)
+   subroutine store_hybrid_data(fi, fmpi, hybdat)
       implicit none
       type(t_fleurinput), intent(in)     :: fi
+      type(t_mpi), intent(in)            :: fmpi
       type(t_hybdat), intent(in)         :: hybdat
 
       integer                       :: error, nk, jsp
       character(len=:), allocatable :: dset_name
+      type(t_mat) :: vx_tmp
 #ifdef CPP_HDF
       integer(HID_T)   :: dset_id
       INTEGER(HID_T)   :: file_id
 
       call timestart("store_hybrid_data")
-      file_id = open_file()
 
-      dset_id = open_dataset(file_id, "nbands", [fi%kpts%nkptf, fi%input%jspins], H5T_NATIVE_INTEGER)
-      call write_int_2d(dset_id, hybdat%nbands)
-      call close_dataset(dset_id)
+      if(fmpi%irank == 0) then
+         file_id = open_file()
 
-      dset_id = open_dataset(file_id, "nobd", [fi%kpts%nkptf, fi%input%jspins], H5T_NATIVE_INTEGER)
-      call write_int_2d(dset_id, hybdat%nobd)
-      call close_dataset(dset_id)
+         dset_id = open_dataset(file_id, "nbands", [fi%kpts%nkptf, fi%input%jspins], H5T_NATIVE_INTEGER)
+         call write_int_2d(dset_id, hybdat%nbands)
+         call close_dataset(dset_id)
 
-      dset_id = open_dataset(file_id, "bkf", [3, fi%kpts%nkptf], H5T_NATIVE_DOUBLE)
-      call write_dbl_2d(dset_id, fi%kpts%bkf)
-      call close_dataset(dset_id)
+         dset_id = open_dataset(file_id, "nobd", [fi%kpts%nkptf, fi%input%jspins], H5T_NATIVE_INTEGER)
+         call write_int_2d(dset_id, hybdat%nobd)
+         call close_dataset(dset_id)
 
-      dset_id = open_dataset(file_id, "bkp", [fi%kpts%nkptf, 1], H5T_NATIVE_INTEGER)
-      call write_int_1d(dset_id, fi%kpts%bkp)
-      call close_dataset(dset_id)
+         dset_id = open_dataset(file_id, "bkf", [3, fi%kpts%nkptf], H5T_NATIVE_DOUBLE)
+         call write_dbl_2d(dset_id, fi%kpts%bkf)
+         call close_dataset(dset_id)
+
+         dset_id = open_dataset(file_id, "bkp", [fi%kpts%nkptf, 1], H5T_NATIVE_INTEGER)
+         call write_int_1d(dset_id, fi%kpts%bkp)
+         call close_dataset(dset_id)
+      endif
 
       ! hdf5 only knows reals
       do jsp = 1, fi%input%jspins
          do nk = 1, fi%kpts%nkpt
-            if (fi%sym%invs) then
-               dset_name = "vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
-               dset_id = open_dataset(file_id, dset_name, shape(hybdat%v_x(nk, jsp)%data_r), H5T_NATIVE_DOUBLE)
-               call write_dbl_2d(dset_id, hybdat%v_x(nk, jsp)%data_r)
-               call close_dataset(dset_id)
-            else
-               dset_name = "r_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
-               dset_id = open_dataset(file_id, dset_name, shape(hybdat%v_x(nk, jsp)%data_c), H5T_NATIVE_DOUBLE)
-               call write_dbl_2d(dset_id, real(hybdat%v_x(nk, jsp)%data_c))
-               call close_dataset(dset_id)
+            call collect_vx(fi, fmpi, hybdat, nk, jsp, vx_tmp)
+            if(fmpi%irank == 0 ) then
+               if (fi%sym%invs) then
+                  dset_name = "vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
+                  dset_id = open_dataset(file_id, dset_name, shape(vx_tmp%data_r), H5T_NATIVE_DOUBLE)
+                  call write_dbl_2d(dset_id, vx_tmp%data_r)
+                  call close_dataset(dset_id)
+               else
+                  dset_name = "r_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
+                  dset_id = open_dataset(file_id, dset_name, shape(vx_tmp%data_c), H5T_NATIVE_DOUBLE)
+                  call write_dbl_2d(dset_id, real(vx_tmp%data_c))
+                  call close_dataset(dset_id)
 
-               dset_name = "c_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
-               dset_id = open_dataset(file_id, dset_name, shape(hybdat%v_x(nk, jsp)%data_c), H5T_NATIVE_DOUBLE)
-               call write_dbl_2d(dset_id, aimag(hybdat%v_x(nk, jsp)%data_c))
-               call close_dataset(dset_id)
-            end if
+                  dset_name = "c_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
+                  dset_id = open_dataset(file_id, dset_name, shape(vx_tmp%data_c), H5T_NATIVE_DOUBLE)
+                  call write_dbl_2d(dset_id, aimag(vx_tmp%data_c))
+                  call close_dataset(dset_id)
+               end if
+               call vx_tmp%free()
+            endif
          end do
       end do
 
-      call close_file(file_id)
+      if(fmpi%irank == 0) call close_file(file_id)
       call timestop("store_hybrid_data")
 #endif
    end subroutine store_hybrid_data
+
+   subroutine collect_vx(fi, fmpi, hybdat, nk, jsp, vx_tmp)
+      use m_glob_tofrom_loc
+      implicit none 
+      type(t_fleurinput), intent(in)     :: fi
+      type(t_mpi), intent(in)            :: fmpi
+      type(t_hybdat), intent(in)         :: hybdat
+      integer, intent(in)                :: nk, jsp 
+      type(t_mat), intent(inout)         :: vx_tmp
+      
+      integer, parameter :: recver = 0 ! HDF is node on global root
+      integer :: sender, ierr, buff(2), i, pe_i, i_loc
+      logical :: l_mpimat
+
+      ! find out and bcast what kind of matrix we are using
+      sender = merge(fmpi%irank, -1, any(fmpi%k_list == nk) .and. fmpi%n_rank == 0)
+#ifdef CPP_MPI
+      call MPI_Allreduce(MPI_IN_PLACE, sender, 1, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
+#endif
+      select type(vx => hybdat%v_x(nk,jsp)) 
+      class is (t_mat)
+         l_mpimat = .False.
+      class is(t_mpimat) 
+         l_mpimat = .True. 
+      end select
+      call MPI_Bcast(l_mpimat, 1, MPI_LOGICAL, sender, fmpi%mpi_comm, ierr)
+
+      if(l_mpimat) then 
+#ifdef CPP_MPI
+         select type(vx_origin => hybdat%v_x(nk,jsp)) 
+         class is(t_mpimat) 
+            if(sender == fmpi%irank) then
+               buff = [vx_origin%global_size1, vx_origin%global_size2]
+            endif
+
+            call MPI_Bcast(buff, 2, MPI_INTEGER, sender, fmpi%mpi_comm, ierr)
+            if(fmpi%irank == recver) then
+               call vx_tmp%init(fi%sym%invs, buff(1), buff(2))
+            endif
+
+            do i = 1, buff(2)
+               call glob_to_loc(fmpi, i, pe_i, i_loc)
+               sender = merge(fmpi%irank, -1, pe_i == fmpi%n_rank .and. any(fmpi%k_list == nk))
+               call MPI_Allreduce(MPI_IN_PLACE, sender, 1, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
+
+               if(sender == recver .and. fmpi%irank == recver) then
+                  if(vx_tmp%l_real) then
+                     vx_tmp%data_r(:,i) = vx_origin%data_r(:,i_loc)
+                  else
+                     vx_tmp%data_c(:,i) = vx_origin%data_c(:,i_loc)
+                  endif
+               elseif(sender == fmpi%irank) then
+                  if(fi%sym%invs) then
+                     call MPI_Send(vx_origin%data_r(:,i_loc), buff(1), MPI_DOUBLE_PRECISION, recver, 100+i, fmpi%mpi_comm,ierr)
+                  else
+                     call MPI_Send(vx_origin%data_c(:,i_loc), buff(1), MPI_DOUBLE_COMPLEX, recver, 100+i, fmpi%mpi_comm,ierr)
+                  endif
+               elseif(fmpi%irank == recver) then
+                  if(vx_tmp%l_real) then
+                     call MPI_Recv(vx_tmp%data_r(:,i), buff(1), MPI_DOUBLE_PRECISION, sender, 100+i, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
+                  else
+                     call MPI_Recv(vx_tmp%data_c(:,i), buff(1), MPI_DOUBLE_COMPLEX, sender, 100+i, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
+                  endif
+               endif
+            enddo
+         end select
+#endif
+      else
+         if(sender == recver) then
+            call vx_tmp%copy(hybdat%v_x(nk,jsp), 1, 1)
+#ifdef CPP_MPI
+         else 
+            if(fmpi%irank == sender) then
+               buff = [hybdat%v_x(nk,jsp)%matsize1, hybdat%v_x(nk,jsp)%matsize2]
+               call MPI_Send(buff, 2, MPI_INTEGER, recver, 7, fmpi%mpi_comm, ierr)
+               if(hybdat%v_x(nk,jsp)%l_real) then
+                  call MPI_Send(hybdat%v_x(nk,jsp)%data_r, size(hybdat%v_x(nk,jsp)%data_r), MPI_DOUBLE_PRECISION, &
+                              recver, 8, fmpi%mpi_comm, ierr)
+               else
+                  call MPI_Send(hybdat%v_x(nk,jsp)%data_c, size(hybdat%v_x(nk,jsp)%data_c), MPI_DOUBLE_COMPLEX, &
+                              recver, 9, fmpi%mpi_comm, ierr)
+               endif
+            elseif(fmpi%irank == recver) then 
+               call MPI_Recv(buff, 2, MPI_INTEGER, sender, 7, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
+               call vx_tmp%init(fi%sym%invs, buff(1), buff(2))
+               if(vx_tmp%l_real) then
+                  call MPI_Recv(vx_tmp%data_r, size(vx_tmp%data_r), MPI_DOUBLE_PRECISION, &
+                                sender, 8, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
+               else
+                  call MPI_Recv(vx_tmp%data_c, size(vx_tmp%data_c), MPI_DOUBLE_COMPLEX, &
+                                sender, 9, fmpi%mpi_comm, MPI_STATUS_IGNORE, ierr)
+               endif
+            endif
+#endif
+         endif
+      endif
+   end subroutine collect_vx
 
 #ifdef CPP_HDF
    function open_file() result(file_id)

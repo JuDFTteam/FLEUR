@@ -191,7 +191,7 @@ CONTAINS
          call MPI_Allreduce(MPI_IN_PLACE, vx_loc, size(vx_loc), MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)   
 #endif
          call distrib_vx(fi, fmpi, nococonv, vx_loc, vx_tmp, hybdat)
-         ! if(fmpi%is_root()) call store_hybrid_data(fi, hybdat)
+         call store_hybrid_data(fi, fmpi, hybdat)
 
 #ifdef CPP_MPI
          call timestart("Hybrid imbalance")
