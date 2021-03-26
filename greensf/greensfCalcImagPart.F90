@@ -259,7 +259,7 @@ MODULE m_greensfCalcImagPart
                   IF(spin_ind<=3) THEN
                      imagReal = AIMAG(imag)
                   ELSE
-                     imagReal = -REAL(imag) !Imaginary part of spin-offdiagonal part
+                     imagReal = REAL(imag) !Imaginary part of spin-offdiagonal part
                   ENDIF
                   IF(l_sphavg) THEN
                      CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,1),1,greensfImagPart%sphavg(:,m,mp,i_elem,spin_ind),1)
