@@ -91,7 +91,7 @@ CONTAINS
       INTEGER, ALLOCATABLE :: stateBIndices(:)
       INTEGER, ALLOCATABLE :: fieldSphereIndices(:)
       REAL wtf(ne)
-      COMPLEX tempState(lapw%nv(jspin))
+      COMPLEX tempState(lapw%nv(jspin)), starCharges(stars%ng3)
       COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
 
       ! subroutines
@@ -314,12 +314,13 @@ CONTAINS
                   forw = .TRUE.
                   CALL fft_interface(3, state%dimensions(:), state%grid, forw, fieldSphereIndices)
 
+                  cwk = CMPLX(0.0,0.0)
                   CALL state%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
-                  DO istr = 1, stars%ng3_fft
-                     CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
-                     dos%qis(ev_list(nu), ikpt, jSpin) = dos%qis(ev_list(nu), ikpt, jSpin) + REAL(cwk(istr)*x)*stars%nstr(istr)/cell%omtil
-                     dos%qTot(ev_list(nu), ikpt, jSpin) = dos%qTot(ev_list(nu), ikpt, jSpin) + REAL(cwk(istr)*x)*stars%nstr(istr)/cell%omtil
-                  ENDDO
+                  starCharges = CMPLX(0.0,0.0)
+                  CALL pwint_all(stars,atoms,sym,oneD,cell,1,stars%ng3,starCharges)
+                  starCharges(:) = starCharges(:) * cwk(:) * stars%nstr(:) / cell%omtil
+                  dos%qis(ev_list(nu), ikpt, jSpin) = dos%qis(ev_list(nu), ikpt, jSpin) + REAL(SUM(starCharges(:)))
+                  dos%qTot(ev_list(nu), ikpt, jSpin) = dos%qTot(ev_list(nu), ikpt, jSpin) + REAL(SUM(starCharges(:)))
                END IF
             END IF
          END IF
