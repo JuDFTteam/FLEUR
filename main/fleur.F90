@@ -139,7 +139,7 @@ CONTAINS
       IF(fi%atoms%n_hia>0 .AND. fmpi%irank.EQ.0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
       CALL hub1data%init(fi%atoms, fi%input, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
       CALL hub1data%mpi_bc(fmpi%mpi_comm)
-      IF(fi%atoms%n_hia>0 .AND. .NOT.l_error) THEN
+      IF(fi%atoms%n_hia>0 .AND. .NOT.l_error .AND. .NOT.fi%hub1inp%l_forceHIAiteration) THEN
          !Set the current HIA distance to the read in value
          !Prevents too many HIA iterations after restart
          results%last_mmpmatDistance = mmpmatDistancePrev

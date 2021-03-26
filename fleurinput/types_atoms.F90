@@ -373,7 +373,10 @@ SUBROUTINE read_xml_atoms(this,xml)
     END DO
     !electron config
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/electronConfig')==1) THEN
-       l_flipElectronConfigSpins = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/electronConfig/@flipSpins'))
+       l_flipElectronConfigSpins = .FALSE.
+       IF (xml%versionNumber>=34) THEN
+           l_flipElectronConfigSpins = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/electronConfig/@flipSpins'))
+       ENDIF
        core=xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/electronConfig/coreConfig')
        valence=xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/electronConfig/valenceConfig')
        CALL this%econf(n)%init(core,valence)

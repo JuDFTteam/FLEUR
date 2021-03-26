@@ -22,7 +22,7 @@ MODULE m_types_xml
       INTEGER:: id
       character(len=200):: basepath = ""
       integer           :: versionNumber = 0
-      INTEGER           :: currentversionNumber = 33 !parameters are not allowed here
+      INTEGER           :: currentversionNumber = 34 !parameters are not allowed here
    CONTAINS
       PROCEDURE        :: init
       PROCEDURE        :: GetNumberOfNodes
@@ -55,9 +55,10 @@ CONTAINS
       xml%basepath = xpath
    end subroutine
 
-   subroutine validate_with_schema(version)
+   subroutine validate_with_schema(version, output_version)
       USE iso_c_binding
       character(len=4, kind=c_char), intent(in):: version
+      character(len=4, kind=c_char), intent(in):: output_version
       integer :: errorStatus
       character(len=200, KIND=c_char):: schemaFilename
       INTERFACE
@@ -85,7 +86,7 @@ CONTAINS
       END IF
 
       errorStatus = 0
-      errorStatus = dropOutputSchema(version//C_NULL_CHAR)
+      errorStatus = dropOutputSchema(output_version//C_NULL_CHAR)
 
       IF (errorStatus .NE. 0) THEN
          WRITE (*, *) 'Cannot print out FleurOutputSchema.xsd for version '//version
@@ -105,7 +106,7 @@ CONTAINS
 
       LOGICAL                        :: l_allow_old
       INTEGER                        :: errorStatus
-      CHARACTER(LEN=200, KIND=c_char) :: docFilename, versionString
+      CHARACTER(LEN=200, KIND=c_char) :: docFilename, versionString, outputVersionString
       INTEGER                        :: i, numberNodes
       CHARACTER(LEN=255)             :: xPathA, xPathB, valueString
       REAL                           :: tempReal
@@ -130,13 +131,14 @@ CONTAINS
       ! Check version of inp.xml
       versionString = adjustl(xml%GetAttributeValue('/fleurInput/@fleurInputVersion'))
       read (versionString, *) tempReal
+      write(outputVersionString,'(a,i0)') '0.', xml%currentversionNumber
       xml%versionNumber = nint(tempReal*100)
       IF (xml%versionNumber .NE. xml%currentversionNumber) THEN
-         if (.not. l_allow_old) CALL juDFT_error('Version number of inp.xml file is not compatible with this fleur version')
-         old_version = .true.
+         if (.not. l_allow_old .and. xml%versionNumber<33) CALL juDFT_error('Version number of inp.xml file is not compatible with this fleur version')
+         if (present(old_version)) old_version = .true.
       END IF
 
-      call validate_with_Schema(versionString)
+      call validate_with_Schema(versionString, outputVersionString)
 
       ! Read in constants
       xPathA = '/fleurInput/constants/constant'
