@@ -6,7 +6,7 @@
 
 MODULE m_eig66_io
 #include "juDFT_env.h"
-   USE m_types
+   use m_types_mat
    USE m_eig66_data
    IMPLICIT NONE
    PRIVATE
@@ -28,6 +28,7 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL :: n_size, mode_in
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
       INTEGER:: id, mode
+      CHARACTER(LEN=20) :: arg
 
       INTEGER:: neig_local, isize, err
       if (l_soc) THEN
@@ -51,10 +52,12 @@ CONTAINS
          mode = MEM_mode
 #endif
          !check if default was given on command-line
-         IF (TRIM(juDFT_string_for_argument("-eig")) == "mpi") mode = MPI_mode
-         IF (TRIM(juDFT_string_for_argument("-eig")) == "mem") mode = MEM_mode
-         IF (TRIM(juDFT_string_for_argument("-eig")) == "da") mode = DA_mode
-         IF (TRIM(juDFT_string_for_argument("-eig")) == "hdf") mode = HDF_mode
+         arg=TRIM(juDFT_string_for_argument("-eig"))
+
+         IF (index(arg,"mpi")>0) mode = MPI_mode
+         IF (index(arg,"mem")>0) mode = MEM_mode
+         IF (index(arg,"da")>0) mode = DA_mode
+         IF (index(arg,"hdf")>0) mode = HDF_mode
       ENDIF
       !Check if mode is available
 #ifndef CPP_MPI

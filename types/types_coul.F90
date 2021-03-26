@@ -1,6 +1,8 @@
 module m_types_coul
    use m_types_mat
    use m_mtir_size
+   use m_types_fleurinput
+   use m_judft
 #ifdef CPP_MPI
    use mpi
 #endif
@@ -18,27 +20,13 @@ module m_types_coul
 #endif
       logical                :: l_participate = .False. ! am i somehow involved with this coulomb mtx
    contains
-      procedure :: init => t_coul_init
       procedure :: alloc => t_coul_alloc
+      procedure :: mini_alloc => t_coul_mini_alloc
       procedure :: free => t_coul_free
       procedure :: mpi_bcast => t_coul_mpi_bc
    end type t_coul
 
 contains
-
-   subroutine t_coul_init(coul)
-      implicit none
-      class(t_coul), intent(inout) :: coul
-
-      if (allocated(coul%mt1_r)) coul%mt1_r = 0
-      if (allocated(coul%mt1_c)) coul%mt1_c = 0
-
-      if (allocated(coul%mt2_r)) coul%mt2_r = 0
-      if (allocated(coul%mt3_r)) coul%mt3_r = 0
-
-      if (allocated(coul%mt2_c)) coul%mt2_c = 0
-      if (allocated(coul%mt3_c)) coul%mt3_c = 0
-   end subroutine t_coul_init
 
    subroutine t_coul_mpi_bc(coul, fi, communicator, root)
       use m_types_fleurinput
@@ -53,6 +41,7 @@ contains
       integer :: ierr
 
       call timestart("Bcast coulomb_mtx")
+      call timestart("Bcast small stuff")
       if (fi%sym%invs) THEN
          call MPI_Bcast(coul%mt1_r, size(coul%mt1_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
          call MPI_Bcast(coul%mt2_r, size(coul%mt2_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
@@ -62,6 +51,7 @@ contains
          call MPI_Bcast(coul%mt2_c, size(coul%mt2_c), MPI_DOUBLE_COMPLEX, root, communicator, ierr)
          call MPI_Bcast(coul%mt3_c, size(coul%mt3_c), MPI_DOUBLE_COMPLEX, root, communicator, ierr)
       endif
+      call timestop("Bcast small stuff")
 
       call coul%mtir%bcast(root, communicator)
       call timestop("Bcast coulomb_mtx")
@@ -87,14 +77,12 @@ contains
    end subroutine t_coul_free
 
    subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt, l_print)
-      use m_types_fleurinput
-      use m_judft
       implicit NONE
       class(t_coul), intent(inout) :: coul
       type(t_fleurinput), intent(in)    :: fi
       integer, intent(in) :: num_radbasfn(:, :), n_g(:), ikpt
       logical, intent(in), optional :: l_print
-      integer :: info, isize, l, itype
+      integer :: info, isize
 
       isize = mtir_size(fi, n_g, ikpt)
 
@@ -158,4 +146,33 @@ contains
          if (.not. coul%mtir%allocated()) call coul%mtir%alloc(.False., isize, isize)
       endif
    end subroutine t_coul_alloc
+
+   subroutine t_coul_mini_alloc(coul, fi)
+      implicit NONE
+      type(t_fleurinput), intent(in)  :: fi
+      class(t_coul), intent(inout)    :: coul
+
+      if (.not. allocated(coul%mt1_r)) then
+         allocate (coul%mt1_r(1,1,1,1))
+      endif
+      if (.not. allocated(coul%mt2_r)) then
+         allocate (coul%mt2_r(1, 1, 1, 1))
+      endif
+
+      if (.not. allocated(coul%mt3_r)) then
+         allocate (coul%mt3_r(1, 1, 1))
+      endif
+      if (.not. allocated(coul%mt1_c)) then
+         allocate (coul%mt1_c(1, 1, 1, 1))
+      endif
+      if (.not. allocated(coul%mt2_c)) then
+         allocate (coul%mt2_c(1, 1, 1, 1))
+      endif
+
+      if (.not. allocated(coul%mt3_c)) then
+         allocate (coul%mt3_c(1, 1, 1))
+      endif
+
+      call coul%mtir%alloc(fi%sym%invs, 1, 1)
+   end subroutine t_coul_mini_alloc
 end module m_types_coul

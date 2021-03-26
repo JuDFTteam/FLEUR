@@ -67,7 +67,7 @@ CONTAINS
       USE m_olap
       USE m_spmvec
       USE m_hsefunctional
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_kp_perturbation
       use m_spmm
       use m_work_package
@@ -521,6 +521,12 @@ CONTAINS
          endif
       endif
       call timestop("alloc mat_ex")
+
+#ifdef CPP_MPI 
+      call timestart("pre exchmat reduce barrier")
+      call MPI_Barrier(k_pack%submpi%comm, ierr)
+      call timestop("pre exchmat reduce barrier")
+#endif
 
       call timestart("reduce exch_vv>mat_ex")
       IF (mat_ex%l_real) THEN

@@ -40,7 +40,7 @@ MODULE m_types_brZone
 
    CONTAINS
 
-   SUBROUTINE initBZone(bz, cell, sym, l_soc_or_ss, film)
+   SUBROUTINE initBZone(bz, cell, sym, l_soc_or_ss, film, l_onlyIdentitySym)
 
       USE m_constants
       USE m_types_cell
@@ -55,6 +55,7 @@ MODULE m_types_brZone
       TYPE(t_sym),     INTENT(IN)    :: sym
       LOGICAL,         INTENT(IN)    :: l_soc_or_ss
       LOGICAL,         INTENT(IN)    :: film
+      LOGICAL,         INTENT(IN)    :: l_onlyIdentitySym
 
       INTEGER :: addSym, i
       REAL    :: binv(3,3)
@@ -62,6 +63,7 @@ MODULE m_types_brZone
       CALL bravais(cell%amat,bz%idsyst,bz%idtype)
 
       bz%nsym = MERGE(sym%nop2,sym%nop,film)
+      IF(l_onlyIdentitySym) bz%nsym = 1
 
       ! Lattice information
       bz%bltv=TRANSPOSE(cell%amat)
@@ -74,7 +76,7 @@ MODULE m_types_brZone
          bz%ccr(:,:,i) = TRANSPOSE(MATMUL(MATMUL(binv(:,:),TRANSPOSE(bz%rlsymr(:,:,i))),bz%bltv(:,:)))
       END DO
 
-      IF ((.NOT.l_soc_or_ss).AND.(2*bz%nsym<nop48_const)) THEN
+      IF (.NOT.l_OnlyIdentitySym.AND..NOT.l_soc_or_ss.AND.(2*bz%nsym<nop48_const)) THEN
          IF ((film.AND.(.NOT.sym%invs2)).OR.((.NOT.film).AND.(.NOT.sym%invs))) THEN
             addSym = 0
             ! Note: We have to add the negative of each symmetry operation

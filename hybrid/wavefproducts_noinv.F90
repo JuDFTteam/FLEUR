@@ -27,12 +27,9 @@ CONTAINS
       INTEGER              :: g_t(3)
       REAL                 :: kqpt(3), kqpthlp(3)
       complex, allocatable :: c_phase_kqpt(:)
-      type(t_mat)          :: z_kqpt_p, cprod_tmp
+      type(t_mat)          :: z_kqpt_p
 
       call timestart("wavefproducts_noinv")
-      cprod%data_c = cmplx_0
-      ikqpt = 0
-
       ! calculate ikqpt
       kqpthlp = fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)
       kqpt = fi%kpts%to_first_bz(kqpthlp)
@@ -41,8 +38,9 @@ CONTAINS
       g_t = nint(kqpt - kqpthlp)
       ! determine number of kqpt
       ikqpt = fi%kpts%get_nk(kqpt)
-      allocate (c_phase_kqpt(hybdat%nbands(ikqpt,jsp)))
-      call cprod_tmp%init(cprod)
+      call timestart("alloc c_phase_kqpt")
+      allocate (c_phase_kqpt(hybdat%nbands(ikqpt,jsp)), source=cmplx_0)
+      call timestop("alloc c_phase_kqpt")
 
       IF (.not. fi%kpts%is_kpt(kqpt)) then
          call juDFT_error('wavefproducts: k-point not found')
@@ -62,7 +60,7 @@ CONTAINS
                                      z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
       use m_types
       USE m_constants
-      use m_io_hybinp
+      use m_io_hybrid
       use m_judft
       use m_wavefproducts_aux
       use m_calc_cmt

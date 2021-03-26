@@ -21,6 +21,9 @@ MODULE m_types_mpi
       logical :: l_set_root_comm = .false. ! only create root comm once
       logical :: l_mpi_multithreaded = .false.
       integer :: root_comm ! communicator between all n_rank = 0
+      !Communicator for diagonalization
+      INTEGER :: diag_sub_comm
+      LOGICAL :: pe_diag=.true.
    CONTAINS
       procedure :: set_errhandler    => t_mpi_set_errhandler
       procedure :: is_root => mpi_is_root
@@ -36,19 +39,19 @@ MODULE m_types_mpi
    PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi, set_root_comm
 contains
    subroutine t_mpi_set_root_comm(fmpi)
-      implicit none 
-      class(t_mpi), intent(inout) :: fmpi 
+      implicit none
+      class(t_mpi), intent(inout) :: fmpi
 
-      if(.not. fmpi%l_set_root_comm ) then 
+      if(.not. fmpi%l_set_root_comm ) then
             call judft_comm_split(fmpi%mpi_comm, fmpi%n_rank, 0, fmpi%root_comm)
             fmpi%l_set_root_comm = .True.
       endif
    end subroutine t_mpi_set_root_comm
 
    function mpi_is_root(mpi) result(is_root)
-      implicit none 
+      implicit none
       class(t_mpi), intent(in) :: mpi
-      logical :: is_root 
+      logical :: is_root
       is_root = mpi%irank == 0
    end function mpi_is_root
 
@@ -57,13 +60,13 @@ contains
 #ifdef CPP_MPI
       use mpi
 #endif
-      implicit none 
+      implicit none
       real, POINTER, ASYNCHRONOUS, intent(inout) :: base(:)
       integer, intent(in)      :: disp_unit, info, comm
       integer, intent(inout)   :: win
 
 #ifdef CPP_MPI
-      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE
       integer                  :: err, err_handler
 
       call timestart("MPI_WIN_CREATE")
@@ -80,8 +83,8 @@ contains
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
       call timestop("MPI_WIN_SET_ERRHANDLER")
-#else 
-   INTEGER :: SIZE 
+#else
+   INTEGER :: SIZE
 #endif
    end subroutine juDFT_win_create_real
 
@@ -90,13 +93,13 @@ contains
 #ifdef CPP_MPI
       use mpi
 #endif
-      implicit none 
+      implicit none
       real, POINTER, ASYNCHRONOUS, intent(inout) :: base(:,:,:)
       integer, intent(in)      :: disp_unit, info, comm
       integer, intent(inout)   :: win
 
 #ifdef CPP_MPI
-      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE
       integer                  :: err, err_handler
 
       call timestart("MPI_WIN_CREATE")
@@ -113,8 +116,8 @@ contains
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
       call timestop("MPI_WIN_SET_ERRHANDLER")
-#else 
-   INTEGER :: SIZE 
+#else
+   INTEGER :: SIZE
 #endif
    end subroutine juDFT_win_create_real_3D
 
@@ -123,13 +126,13 @@ contains
 #ifdef CPP_MPI
       use mpi
 #endif
-      implicit none 
+      implicit none
       complex, POINTER, ASYNCHRONOUS, intent(inout):: base(:)
       integer, intent(in)      :: disp_unit, info, comm
       integer, intent(inout)   :: win
 
 #ifdef CPP_MPI
-      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE
       integer                  :: err, err_handler
 
       CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
@@ -140,8 +143,8 @@ contains
 
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
-#else 
-   INTEGER :: SIZE 
+#else
+   INTEGER :: SIZE
 #endif
    end subroutine juDFT_win_create_cmplx
 
@@ -150,13 +153,13 @@ contains
 #ifdef CPP_MPI
       use mpi
 #endif
-      implicit none 
+      implicit none
       complex, POINTER, ASYNCHRONOUS, intent(inout):: base(:,:,:)
       integer, intent(in)      :: disp_unit, info, comm
       integer, intent(inout)   :: win
 
 #ifdef CPP_MPI
-      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE
       integer                  :: err, err_handler
 
       CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
@@ -167,8 +170,8 @@ contains
 
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
-#else 
-   INTEGER :: SIZE 
+#else
+   INTEGER :: SIZE
 #endif
    end subroutine juDFT_win_create_cmplx_3D
 
@@ -177,13 +180,13 @@ contains
 #ifdef CPP_MPI
       use mpi
 #endif
-      implicit none 
+      implicit none
       integer, POINTER, ASYNCHRONOUS, intent(inout) :: base(:)
       integer, intent(in)      :: disp_unit, info, comm
       integer, intent(inout)   :: win
 
 #ifdef CPP_MPI
-      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE 
+      INTEGER(KIND=MPI_ADDRESS_KIND) :: SIZE
       integer                  :: err, err_handler
 
       CALL MPI_WIN_CREATE(base, size, disp_unit, info, comm, win, err)
@@ -194,8 +197,8 @@ contains
 
       CALL MPI_WIN_SET_ERRHANDLER(win, err_handler, err)
       if(err /= 0) call judft_error("Can't assign Error handler to Win")
-#else 
-   INTEGER :: SIZE 
+#else
+   INTEGER :: SIZE
 #endif
    end subroutine juDFT_win_create_int
 
@@ -205,13 +208,13 @@ contains
       use mpi
 #endif
       implicit none
-      integer, intent(in)    :: comm, color, key 
-      integer, intent(inout) :: new_comm 
+      integer, intent(in)    :: comm, color, key
+      integer, intent(inout) :: new_comm
 #ifdef CPP_MPI
       integer                :: ierr, err_handler
 
       CALL MPI_COMM_SPLIT(comm,color,key,new_comm,ierr)
-      if(ierr /= 0) call judft_error("Can't split comm") 
+      if(ierr /= 0) call judft_error("Can't split comm")
 
       call MPI_Comm_create_errhandler(judft_mpi_error_handler, err_handler, ierr)
       if(ierr /= 0) call judft_error("Can't create Error handler")
@@ -228,12 +231,12 @@ contains
 #endif
       implicit none
       integer, intent(in)    :: comm, split_type, key, info
-      integer, intent(inout) :: new_comm 
+      integer, intent(inout) :: new_comm
       integer                :: ierr, err_handler
 
 #ifdef CPP_MPI
       call MPI_comm_split_type(comm, split_type, key, info, new_comm, ierr)
-      if(ierr /= 0) call judft_error("Can't split comm") 
+      if(ierr /= 0) call judft_error("Can't split comm")
 
       call MPI_Comm_create_errhandler(judft_mpi_error_handler, err_handler, ierr)
       if(ierr /= 0) call judft_error("Can't create Error handler")
@@ -248,11 +251,11 @@ contains
 #ifdef CPP_MPI
       use mpi
 #endif
-      implicit none 
+      implicit none
       class(t_mpi), intent(in) :: self
 
 #ifdef CPP_MPI
-      integer                  :: err_handler, ierr 
+      integer                  :: err_handler, ierr
 
       call MPI_Comm_create_errhandler(judft_mpi_error_handler, err_handler, ierr)
       if(ierr /= 0) call judft_error("Can't create Error handler")
@@ -268,17 +271,17 @@ contains
 #endif
    end subroutine t_mpi_set_errhandler
 
-   subroutine judft_mpi_error_handler(comm, error_code) 
+   subroutine judft_mpi_error_handler(comm, error_code)
 #ifdef CPP_MPI
       use mpi
 #endif
       use m_judft
-      implicit none 
-      integer  :: comm, error_code 
+      implicit none
+      integer  :: comm, error_code
       integer             :: str_len, ierr
       character(len=3000) :: error_str
 
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
       call MPI_ERROR_STRING(error_code, error_str, str_len, ierr)
       call judft_error("MPI failed with Error_code = " // int2str(error_code) // new_line("A") // &
                        error_str(1:str_len))

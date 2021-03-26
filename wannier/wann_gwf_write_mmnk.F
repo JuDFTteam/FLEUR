@@ -3,6 +3,7 @@ c  routine to write the  c
 c  composite overlaps    c
 c************************c
       module m_wann_gwf_write_mmnk
+        use m_juDFT
       contains
       subroutine wann_gwf_write_mmnk(mmnk_filename,
      >               nkpts,nntot,
@@ -17,6 +18,8 @@ c************************c
 
       integer :: ikpt,i,j
       integer :: ikpt_b
+
+      call timestart("wann_gwf_write_mmnk")
 
       if(.not.l_unformat)then
 
@@ -54,6 +57,7 @@ c************************c
       endif !l_unformat
 
 
+      call timestop("wann_gwf_write_mmnk")
       end subroutine wann_gwf_write_mmnk
 
       end module m_wann_gwf_write_mmnk

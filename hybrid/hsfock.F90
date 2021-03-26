@@ -44,14 +44,14 @@ CONTAINS
 
    SUBROUTINE hsfock(fi, k_pack, mpdata, lapw, jsp, hybdat, &
                      eig_irr, nococonv, stars, &
-                     results, xcpot, fmpi)
+                     results, xcpot, fmpi, vx_tmp)
 
       use m_ex_to_vx
       USE m_judft
       USE m_types
       USE m_intgrf
       USE m_wrapper
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_hsefunctional
       USE m_symm_hf
       USE m_exchange_valence_hf
@@ -61,6 +61,7 @@ CONTAINS
       USE m_eig66_data
       use m_eig66_mpi
       use m_calc_cmt
+      use m_store_load_hybrid
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -73,6 +74,7 @@ CONTAINS
       TYPE(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
       TYPE(t_results), INTENT(INOUT)    :: results
+      type(t_mat), intent(inout)        :: vx_tmp
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
@@ -118,7 +120,7 @@ CONTAINS
       allocate(cmt_nk(hybdat%nbands(nk,jsp), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
       if(ierr  /= 0) call judft_error("can't allocate cmt_nk")
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                   fi%sym, fi%oneD, hybdat%zmat(nk,jsp)%mat, jsp, nk, c_phase_k, cmt_nk)
+                   fi%sym, fi%oneD, hybdat%zmat(nk,jsp)%mat, jsp, nk, c_phase_k, cmt_nk, k_pack%submpi)
 
 
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
@@ -139,9 +141,6 @@ CONTAINS
       ex%l_real = fi%sym%invs
       CALL exchange_valence_hf(k_pack, fi, fmpi, hybdat%zmat(nk,jsp)%mat, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, ex)
-
-      if(.not. allocated(hybdat%v_x)) allocate(hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
-
       
       ! calculate contribution from the core states to the HF exchange
       CALL timestart("core exchange calculation")
@@ -158,9 +157,10 @@ CONTAINS
 
       CALL timestop("core exchange calculation")
       if(k_pack%submpi%root()) then
-         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, hybdat%v_x(nk, jsp))
-         call hybdat%v_x(nk, jsp)%u2l()
+         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, vx_tmp)
+         call vx_tmp%u2l()
       endif
+
 
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")

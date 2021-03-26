@@ -102,7 +102,7 @@ CONTAINS
       n_maxaddArgs = 5 !Maximum allowed number of additional arguments (excluding xiSOC and ccf)
 
       ALLOCATE(this%init_occ(4*ntype),source=0.0)
-      ALLOCATE(this%ccf(4*ntype),source=-1.0)
+      ALLOCATE(this%ccf(4*ntype),source=1.0)
       ALLOCATE(this%cfCoeffs(4*ntype,0:6,-6:6),source=0.0)
       ALLOCATE(this%xi_par(4*ntype),source=0.001)
       ALLOCATE(this%n_exc(4*ntype),source=0)

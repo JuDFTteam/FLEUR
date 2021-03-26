@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_ujugaunt
+        use m_juDFT
       contains     
       SUBROUTINE wann_ujugaunt(
 c***********************************************************************
@@ -75,6 +76,7 @@ c***********************************************************************
       complex           :: ylmpp((lmaxd+1)**2),factor,ic
       complex           :: factor2
 
+      call timestart("wann_ujugaunt")
       ic = cmplx(0.,1.)
 
       allocate( djd(0:lmaxd,0:lmaxd,0:lmaxd) )
@@ -365,5 +367,6 @@ c*************************************************************
       deallocate(djd,ujd,uju,ujulo,djulo,ulojulo)
       deallocate(dju,uloju,ulojd)
 
+      call timestop("wann_ujugaunt")
       end subroutine wann_ujugaunt
       end module m_wann_ujugaunt

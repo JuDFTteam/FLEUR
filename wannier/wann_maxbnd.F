@@ -1,4 +1,5 @@
       MODULE m_wann_maxbnd
+         use m_juDFT
 
 c****************************************************************
 c    determine maximum of number of bands
@@ -44,6 +45,8 @@ c****************************************************************
 
       TYPE(t_mat)      :: zMat
 
+      call timestart("wann_maxbnd")
+
       zMat%l_real = l_real
       zMat%matsize1 = nbasfcn
       zMat%matsize2 = neigd
@@ -81,5 +84,6 @@ c****************************************************************
 
       enddo !ikpt
 
+      call timestop("wann_maxbnd")
       end subroutine wann_maxbnd
       END MODULE m_wann_maxbnd

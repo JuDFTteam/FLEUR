@@ -35,8 +35,8 @@ MODULE m_tetra_dos
       REAL, OPTIONAL, INTENT(IN)   :: energyShift
 
       INTEGER :: i,j,iBand,ikpt,ie,idim,itet,icorn,jcorn,ispin
-      REAL    :: ener,w,sfac, shift
-      REAL    :: weight(4),eval(4),ecmax(SIZE(eig,1),jspins),term(SIZE(eGrid))
+      REAL    :: ener,w,sfac, shift, term
+      REAL    :: weight(4),eval(4),ecmax(SIZE(eig,1),jspins)
       REAL, ALLOCATABLE :: wpar(:,:,:)
       REAL, ALLOCATABLE :: eig_nondeg(:,:,:)
 
@@ -121,13 +121,15 @@ MODULE m_tetra_dos
          DO ikpt = 1,kpts%nkpt
             DO iBand = 1,neig(ikpt,ispin)
 
+               IF(MINVAL(eGrid).GT.ecmax(iband,ispin)) cycle
+
                ener = eig_nondeg(iBand,ikpt,ispin)
                w  = 0.5*wpar(iBand,ikpt,ispin)
                DO ie = 1,SIZE(eGrid)
-                  term(ie) = eGrid(ie) - ener
-                  IF(eGrid(ie).GT.ecmax(iBand,ispin)) term(ie) = ecmax(iBand,ispin) - ener
-                  IF(term(ie).LT.0.0e0)         term(ie) = 0.0e0
-                  g(ie,ispin) = g(ie,ispin) + w * term(ie)**2
+                  term = eGrid(ie) - ener
+                  IF(eGrid(ie).GT.ecmax(iBand,ispin)) cycle
+                  IF(term.LT.0.0e0) cycle
+                  g(ie,ispin) = g(ie,ispin) + w * term**2
                ENDDO
 
             ENDDO

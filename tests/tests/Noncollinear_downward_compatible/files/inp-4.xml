@@ -20,7 +20,7 @@
    <cell>
       <bzIntegration valenceElectrons="16.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <!-- k-points included here -->
-         <kPointListSelection listName="default" />
+         <kPointListSelection listName="default-2" />
          <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
       </bzIntegration>
       <!-- symmetry operations included here -->

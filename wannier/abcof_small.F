@@ -1,4 +1,5 @@
       MODULE m_abcof_small
+            use m_juDFT
       CONTAINS
       SUBROUTINE abcof_small(
      >                 input,sym,atoms,usdus,lapw,noco,zMat,
@@ -90,7 +91,7 @@ C     .. Local Arrays ..
       REAL,    ALLOCATABLE :: work(:)
 #endif
 C     ..
-
+      call timestart("abcof_small")
       tpi = 2 * pimach()
       const = 2 * tpi/sqrt(omtil)
 c
@@ -337,5 +338,6 @@ c     ----> loop over bands
 #endif
       DEALLOCATE ( work )
 c
+      call timestop("abcof_small")
       END SUBROUTINE abcof_small
       END MODULE m_abcof_small

@@ -852,6 +852,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="DOSOutputType">
+      <xsd:attribute name="storeEVData" type="FleurBool" use="optional" default="T"/>
       <xsd:attribute name="all_atoms" type="FleurBool" use="optional" default="T"/>
       <xsd:attribute name="orbcomp" type="FleurBool" use="optional" default="F"/>
       <xsd:attribute name="jDOS" type="FleurBool" use="optional" default="F"/>
@@ -895,7 +896,8 @@
          <xsd:enumeration value="path"/>
          <xsd:enumeration value="tria-bulk"/>
          <xsd:enumeration value="tria"/>
-         <xsd:enumeration value="SPEX-mesh"/>
+         <xsd:enumeration value="SPEX-mesh"/> <!-- This is deprecated. Use 'spex-mesh' -->
+         <xsd:enumeration value="spex-mesh"/>
          <xsd:enumeration value="unspecified"/>
       </xsd:restriction>
    </xsd:simpleType>
@@ -932,7 +934,8 @@
    </xsd:complexType>
 
    <xsd:complexType name="ExpertModeType">
-      <xsd:attribute default="0" name="gw" type="xsd:integer" use="optional"/>
+      <xsd:attribute name="gw" type="xsd:integer" use="optional"/>
+      <xsd:attribute name="spex" type="xsd:integer" use="optional"/>
       <xsd:attribute default="F" name="pot8" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="eig66" type="FleurBool" use="optional"/>
       <xsd:attribute default="0" name="lpr" type="xsd:integer" use="optional"/>
@@ -1052,6 +1055,7 @@
      </xsd:all>
      <xsd:attribute name="theta" type="FleurDouble" use="required"/>
      <xsd:attribute name="phi" type="FleurDouble" use="required"/>
+     <xsd:attribute name="ef_shift" type="FleurDouble" use="optional"/>     
    </xsd:complexType>
 
    <xsd:complexType name="JijType">
@@ -1107,6 +1111,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="valenceConfig" type="ValenceStateListType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="stateOccupation" type="ElectronStateOccupationType"/>
       </xsd:sequence>
+      <xsd:attribute default="F" name="flipSpins" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:simpleType name="ValenceStateListType">

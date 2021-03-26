@@ -28,6 +28,8 @@ c**************************************
       integer :: dim,iter
       real    :: maxi,mini,increm,compare
 
+      call timestart("wann_get_mp")
+
       IF(SIZE(kpoints,1)/=3)      CALL juDFT_error("wann_get_mp: 1"
      +     ,calledby ="wann_get_mp")
       IF(SIZE(kpoints,2)/=nkpts)  CALL juDFT_error("wann_get_mp: 2"
@@ -58,5 +60,6 @@ c**************************************
       IF(num(1)*num(2)*num(3)/=nkpts)  CALL juDFT_error
      +     ("mysterious kpoints",calledby ="wann_get_mp")
 
+      call timestop("wann_get_mp")
       end subroutine wann_get_mp
       end module m_wann_get_mp

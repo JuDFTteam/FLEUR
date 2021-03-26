@@ -45,6 +45,8 @@ c*********************************************************************
       real    :: rr,alpha,const,fact,wronk,radi
       real    :: acft,bcft,aa,bb,a1,b1,rho,radf(jmtd)
 
+      call timestart("wann_rad_twf")
+
       do nwf = 1,nwfs
 
        if (abs(regio(nwf)-1.00000).ge.0.00001) then
@@ -332,6 +334,7 @@ c         radf(j) = rads(nwf,l,j,1)*rads(nwf,l,j,1)
  
       enddo ! by twfs
 
+      call timestop("wann_rad_twf")
       return
 
       end subroutine wann_rad_twf

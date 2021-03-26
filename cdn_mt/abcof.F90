@@ -134,10 +134,10 @@ CONTAINS
 
        IF(noco%l_noco) THEN
           ! generate the spinors (chi)
-          ccchi(1,1) =  EXP(ImagUnit*nococonv%alph(iType)/2)*COS(nococonv%beta(iType)/2)
-          ccchi(1,2) = -EXP(ImagUnit*nococonv%alph(iType)/2)*SIN(nococonv%beta(iType)/2)
-          ccchi(2,1) =  EXP(-ImagUnit*nococonv%alph(iType)/2)*SIN(nococonv%beta(iType)/2)
-          ccchi(2,2) =  EXP(-ImagUnit*nococonv%alph(iType)/2)*COS(nococonv%beta(iType)/2)
+          ccchi(1,1) =  exp(-ImagUnit*nococonv%alph(itype)/2)*cos(nococonv%beta(itype)/2)
+          ccchi(2,1) = EXP(ImagUnit*nococonv%alph(itype)/2)*SIN(nococonv%beta(itype)/2)
+          ccchi(1,2) = -EXP(-ImagUnit*nococonv%alph(itype)/2)*SIN(nococonv%beta(itype)/2)
+          ccchi(2,2) =  EXP(ImagUnit*nococonv%alph(itype)/2)*COS(nococonv%beta(itype)/2)
        END IF
 
        nintsp = 1

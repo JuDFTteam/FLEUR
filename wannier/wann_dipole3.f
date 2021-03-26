@@ -65,7 +65,7 @@ c***************************************
       integer                      :: yesorno
 
       data spin12/'  ', '.1', '.2'/
-
+      call timestart("wann_dipole3")
       jspins=jspins_in
       yesorno=1
       if(l_nocosoc)then
@@ -140,5 +140,6 @@ c-----sum up terms
  555  format("final moment = (",3f12.6,")a.u.")
  777  format("final polarization = (",3f12.6,")uC/cm**2")
 
+      call timestop("wann_dipole3")
       end subroutine wann_dipole3
       end module m_wann_dipole3

@@ -6,6 +6,7 @@
 
 
       module m_wann_perpmag
+            use m_juDFT
       contains
       SUBROUTINE wann_perpmag(
      >               nbnd,neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
@@ -74,6 +75,7 @@ c*************************************************************************
 
       integer :: nat,n,nn,l,m,lm,lp,mp,lpmp,i,j,lo,lop
 
+      call timestart("wann_perpmag")
       nat=0
       do n=1,ntype
        do nn=1,neq(n)
@@ -161,6 +163,7 @@ c*************************************************************************
        enddo !nn 
       enddo !n
 
+      call timestop("wann_perpmag")
       end subroutine wann_perpmag
 
       end module m_wann_perpmag

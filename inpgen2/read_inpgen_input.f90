@@ -122,12 +122,13 @@ CONTAINS
        ELSE
           IF (aa.NE.0) THEN
              !cell was set already, so list of atoms follow
+             if (allocated(atom_pos)) call judft_error("Input error: "//TRIM(line))
              READ(line,*,iostat=ios) n
-             IF (ios.NE.0) CALL judft_error(("Surprising error in reading input:"//trim(line)))
+             IF (ios.NE.0) CALL judft_error(("Surprising error in reading input: "//trim(line)))
              ALLOCATE(atom_pos(3,n),atom_label(n),atom_id(n))
              DO i=1,n
                 READ(98,"(a)",iostat=ios) line
-                IF (ios.NE.0) CALL judft_error(("List of atoms not complete:"//trim(line)))
+                IF (ios.NE.0) CALL judft_error(("List of atoms not complete: "//trim(line)))
                 atom_id(i)=evaluatefirst(line)
                 atom_pos(1,i)=evaluatefirst(line)
                 atom_pos(2,i)=evaluatefirst(line)
@@ -274,7 +275,7 @@ CONTAINS
     REAL,INTENT(inout):: tkb
 
     LOGICAL :: tria
-    INTEGER :: div1,div2,div3,nkpt
+    INTEGER :: div1,div2,div3,nkpt, numSpecifications
     CHARACTER(len=5) :: bz_integration
     CHARACTER(len=40) :: name
     CHARACTER(len=500) :: path
@@ -287,6 +288,18 @@ CONTAINS
     tria=.FALSE.
     READ(line,kpt)
     kpts_str=''
+
+    numSpecifications = 0
+    IF (den.GT.0.0) numSpecifications = numSpecifications + 1
+    IF (nkpt.NE.0) numSpecifications = numSpecifications + 1
+    IF (ALL([div1,div2,div3]>0)) numSpecifications = numSpecifications + 1
+    IF (numSpecifications.GT.1) THEN
+       WRITE(*,'(a)') "Ambiguous specification of k-point set:"
+       WRITE(*,'(a)') TRIM(line)
+       CALL juDFT_error("Ambiguous specification of k-point set.", calledby="read_inpgen_input",&
+                        hint="Use only one of nkpt, den, (div1,div2,div3)!")
+    END IF
+
     IF (den>0.0) THEN
        WRITE(kpts_str,"(a,f0.6)") "den=",den
     ELSEIF((nkpt>0).AND.(path.EQ.'')) THEN
@@ -505,6 +518,9 @@ CONTAINS
           complete=.FALSE.
        END IF
     END DO loop
+    IF(LEN_TRIM(buffer).NE.0) THEN
+       WRITE(outfh,'(a)'), TRIM(buffer)
+    END IF
 
   END SUBROUTINE normalize_file
 

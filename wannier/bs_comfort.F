@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_bs_comfort
-
+         use m_juDFT
       CONTAINS
 
       SUBROUTINE bs_comfort(eig_id,input,noco,nkpt,param)
@@ -31,6 +31,7 @@ C     .. Local Arrays ..
       REAL,    ALLOCATABLE :: eig(:,:,:)
       INTEGER, ALLOCATABLE :: ne(:,:)
 
+      call timestart("bs_comfort")
 c---> pk non-collinear
       IF (noco%l_noco) THEN
          nspins = 1
@@ -63,6 +64,8 @@ c---> pk non-collinear
       END DO ! jsp = 1,nspins
 
       DEALLOCATE (ne,eig)
+
+      call timestop("bs_comfort")
 
       END SUBROUTINE bs_comfort
       END MODULE m_bs_comfort

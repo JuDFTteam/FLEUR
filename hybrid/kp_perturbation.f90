@@ -15,7 +15,7 @@ CONTAINS
       USE m_util
       use m_intgrf
       USE m_types
-      USE m_io_hybinp
+      USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpdata), intent(inout) :: mpdata
@@ -788,7 +788,7 @@ CONTAINS
       USE m_dr2fdr
       USE m_constants
       USE m_types
-      USE m_io_hybinp
+      USE m_io_hybrid
       use m_calc_cmt
       IMPLICIT NONE
       TYPE(t_input), INTENT(IN)     :: input

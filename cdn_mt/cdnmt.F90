@@ -40,8 +40,6 @@ CONTAINS
     TYPE(t_jDOS), OPTIONAL, INTENT(IN) :: jDOS
     TYPE(t_hub1data), OPTIONAL, INTENT(INOUT) :: hub1data
 
-
-    INTEGER, PARAMETER :: lcf=3
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
 
@@ -51,6 +49,8 @@ CONTAINS
     TYPE (t_orb),              INTENT(IN) :: orb
     TYPE (t_denCoeffs),        INTENT(IN) :: denCoeffs
     TYPE (t_denCoeffsOffdiag), INTENT(IN) :: denCoeffsOffdiag
+
+    INTEGER, PARAMETER :: lcf=3
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj,n_dos
@@ -193,7 +193,7 @@ CONTAINS
                 DO lp = 0,l
                    llp = (l* (l+1))/2 + lp
                    IF(atoms%l_outputCFpot(itype).AND.atoms%l_outputCFremove4f(itype)&
-                      .AND.(l.EQ.lcf.OR.lp.EQ.lcf)) CYCLE !Exclude non-spherical contributions for CF
+                      .AND.(l.EQ.lcf.AND.lp.EQ.lcf)) CYCLE !Exclude non-spherical contributions for CF
                    DO j = 1,atoms%jri(itype)
                       s = denCoeffs%uunmt(llp,lh,itype,ispin)*( &
                            f(j,1,l,ispin)*f(j,1,lp,ispin)+ f(j,2,l,ispin)*f(j,2,lp,ispin) )&

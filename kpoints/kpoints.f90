@@ -41,14 +41,14 @@ contains
              sym_hlp=sym
              sym_hlp%nop=1
              sym_hlp%nop2=1
-             CALL kptgen_hybrid(input,cell,sym_hlp,kpts,noco%l_soc)
+             CALL kptgen_hybrid(input,cell,sym_hlp,kpts,noco%l_soc,.FALSE.)
           ELSE IF (.FALSE.) THEN !this was used to generate q-points in jij case
              sym_hlp=sym
              sym_hlp%nop=1
              sym_hlp%nop2=1
              CALL julia(sym_hlp,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
           ELSE IF (kpts%l_gamma.and.(banddos%ndir.eq.0)) THEN
-             CALL kptgen_hybrid(input,cell,sym,kpts,noco%l_soc)
+             CALL kptgen_hybrid(input,cell,sym,kpts,noco%l_soc,.FALSE.)
           ELSE
              IF (banddos%unfoldband) THEN
                CALL unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)

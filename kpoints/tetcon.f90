@@ -43,7 +43,7 @@ CONTAINS
 
 !*************************************************************************
 
-      data eps/1e-10/
+      data eps/1e-9/
       data eps1/1e-5/
 
 ! CONSTRUCT THE FIRST TETRAHEDRON
@@ -369,6 +369,7 @@ CONTAINS
 2300     END DO
          ntetra(j, nt) = ik
          voltet(nt) = abs(volnew)
+
 1100  END DO
       if (it < nt) goto 1000
       IF (nt > ndiv3) CALL juDFT_error(" nt>ndiv3", calledby="tetcon")

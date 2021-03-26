@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_postproc_setup4
+        use m_juDFT
 #ifdef CPP_WANN4
       CONTAINS
       SUBROUTINE wann_postproc_setup4(

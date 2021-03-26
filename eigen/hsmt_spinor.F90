@@ -24,10 +24,11 @@ CONTAINS
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-    chi(1,1) =  exp(ImagUnit*nococonv%alph(n)/2)*cos(nococonv%beta(n)/2)
-    chi(1,2) = -EXP(ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
-    chi(2,1) =  EXP(-ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
-    chi(2,2) =  EXP(-ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
+
+    chi(1,1) =  exp(-ImagUnit*nococonv%alph(n)/2)*cos(nococonv%beta(n)/2)
+    chi(2,1) = EXP(ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+    chi(1,2) = -EXP(-ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+    chi(2,2) =  EXP(ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
     !--->       and determine the prefactors for the Hamitonian- and
     !--->       overlapp-matrix elements
     IF (isp<3) THEN
@@ -78,20 +79,20 @@ CONTAINS
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-    chi(1,1) =  exp(ImagUnit*nococonv%alph(n)/2)*cos(nococonv%beta(n)/2)
-    chi(1,2) = -EXP(ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
-    chi(2,1) =  EXP(-ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
-    chi(2,2) =  EXP(-ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
+    chi(1,1) =  exp(-ImagUnit*nococonv%alph(n)/2)*cos(nococonv%beta(n)/2)
+    chi(2,1) = EXP(ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+    chi(1,2) = -EXP(-ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+    chi(2,2) =  EXP(ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
 
-    isigma_x=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(isigma(:,:,1),chi))
-    isigma_y=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(isigma(:,:,2),chi))
-    isigma_z=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(isigma(:,:,3),chi))
+    isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),((chi)))) !T-C best?
+    isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),((chi))))
+    isigma_z=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,3),((chi))))
     DO j1=1,2
        DO j2=1,2
-          chi_so(1,1,j1,j2)=chi(1,j2)*CONJG(chi(1,j1))
-          chi_so(2,1,j1,j2)=chi(2,j2)*CONJG(chi(1,j1))
-          chi_so(2,2,j1,j2)=chi(2,j2)*CONJG(chi(2,j1))
-          chi_so(1,2,j1,j2)=chi(1,j2)*CONJG(chi(2,j1))
+          chi_so(1,1,j1,j2)=chi(1,j1)*CONJG(chi(1,j2))
+          chi_so(2,1,j1,j2)=chi(2,j1)*CONJG(chi(1,j2))
+          chi_so(2,2,j1,j2)=chi(2,j1)*CONJG(chi(2,j2))
+          chi_so(1,2,j1,j2)=chi(1,j1)*CONJG(chi(2,j2))
        ENDDO
     ENDDO
     IF (.not.present(angso)) RETURN !only chis are needed

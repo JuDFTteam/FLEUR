@@ -57,7 +57,7 @@ contains
       USE m_eig66_io
       use m_eig66_mpi, only: priv_find_data
       use m_judft
-      use m_io_hybinp
+      use m_io_hybrid
       implicit none
       type(t_hybdat), intent(inout)     :: hybdat
       type(t_fleurinput), intent(in)    :: fi

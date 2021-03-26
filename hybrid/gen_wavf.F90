@@ -27,7 +27,7 @@ CONTAINS
       USE m_trafo!, ONLY: waveftrafo_genwavf
       USE m_olap
       USE m_hyb_abcrot
-      USE m_io_hybinp
+      USE m_io_hybrid
 
       IMPLICIT NONE
 

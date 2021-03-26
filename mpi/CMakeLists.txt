@@ -3,7 +3,6 @@ set(fleur_F90 ${fleur_F90}
    mpi/setupMPI.F90
    mpi/omp_checker.F90
    mpi/mpi_bc_potden.F90
-   mpi/mingeselle2.F90
 )
 
 if (FLEUR_USE_MPI)

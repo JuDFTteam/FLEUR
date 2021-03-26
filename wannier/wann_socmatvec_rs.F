@@ -91,7 +91,7 @@ c      real                :: kpoints(3,nkpts)
      &               num_dims_dum, fullnkpts_dum  
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
-
+      call timestart("wann_socmatvec_rs")
       tpi=2*pimach()
 
       jspins=jspins_in
@@ -153,6 +153,7 @@ c     Read the file "WF1.hsomtxvec".
 c**************************************************** 
       allocate( hsomtx(2,2,num_bands2,num_bands2,3,nkpts) )
       if(l_unformatted)then
+
         open(304,file='WF1.hsomtxvec_unf',form='unformatted')
         read(304)spin2_dum,spin1_dum,num_bands1_dum,num_bands2_dum,
      &                   num_dims_dum, fullnkpts_dum           
@@ -162,7 +163,12 @@ c****************************************************
         close(304)
         hsomtx=conjg(hsomtx)
       else
+
        open(304,file='WF1.hsomtxvec',form='formatted')
+
+       read(304,*)
+       read(304,*)
+
        do nkp=1,num_kpts
         do dir=1,3  
          do i=1,num_bands2
@@ -178,6 +184,7 @@ c****************************************************
         enddo !dir
        enddo !nkp
        close(304)
+
       endif
 c****************************************************************
 c        Calculate matrix elements of SOC in the basis of
@@ -419,7 +426,7 @@ c***********************************************************
 
       deallocate(lwindow,u_matrix_opt,ndimwin)
       deallocate(u_matrix,hwann,hreal)
-
+      call timestop("wann_socmatvec_rs")
       end subroutine wann_socmatvec_rs
       end module m_wann_socmatvec_rs
 

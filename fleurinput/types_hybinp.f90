@@ -15,7 +15,7 @@ MODULE m_types_hybinp
       INTEGER                ::  ewaldlambda = 3
       INTEGER                ::  lexp = 16
       INTEGER                ::  bands1 = -1 !Only read in
-      real                   ::  fftcut = 1.0 ! c. friedrich says 2/3 of excat case is good enough
+      real                   ::  fftcut = 1.0 ! 1.0 is the exact crit (2./3. seem also ok, but less stable)
       INTEGER, ALLOCATABLE   ::  select1(:, :)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
@@ -140,7 +140,7 @@ CONTAINS
          !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
          !                  &                    calledby ="fleur")
 
-         CALL self%gen_map(atoms, sym, oneD)
+         CALL self%gen_map(atoms, sym)
 
          ! calculate d_wgn
          ALLOCATE (self%d_wgn2(-atoms%lmaxd:atoms%lmaxd, -atoms%lmaxd:atoms%lmaxd, 0:atoms%lmaxd, sym%nsym))
@@ -164,21 +164,21 @@ CONTAINS
       ENDIF
    END SUBROUTINE init_hybinp
 
-   SUBROUTINE gen_map_hybinp(hybinp, atoms, sym, oneD)
+   SUBROUTINE gen_map_hybinp(hybinp, atoms, sym)
       use m_types_atoms
       use m_types_sym
       use m_types_oneD
       USE m_juDFT
+      use m_map_to_unit
       IMPLICIT NONE
       CLASS(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_atoms), INTENT(IN)      :: atoms
       TYPE(t_sym), INTENT(IN)        :: sym
-      TYPE(t_oneD), INTENT(IN)       :: oneD
       ! private scalars
       INTEGER                           :: iatom, first_eq_atom, itype, ieq, isym, iisym, ieq1
       INTEGER                           :: ratom, ok
       ! private arrays
-      REAL                              :: rtaual(3)
+      REAL                              :: rtaual(3), min_val, min_loc, curr_val
 
       ALLOCATE (hybinp%map(atoms%nat, sym%nsym), stat=ok)
       IF (ok /= 0) call judft_error('gen_map: error during allocation of map')
@@ -202,14 +202,21 @@ CONTAINS
                rtaual(:) = matmul(sym%mrot(:, :, iisym), atoms%taual(:, iatom)) + sym%tau(:, iisym)
 
                ratom = 0
+               min_val = 1e33
+               min_loc = -1
                DO ieq1 = 1, atoms%neq(itype)
-                  IF (all(abs(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-12, 1.0)) < 1e-10)) THEN
-                     ratom = first_eq_atom + ieq1
-                     hybinp%map(iatom, isym) = ratom
-                     hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
-                  END IF
+                  curr_val = norm2(map_to_unit(rtaual - atoms%taual(:, first_eq_atom + ieq1)))
+                  if(min_val > curr_val ) then 
+                     min_loc = ieq1 
+                     min_val = curr_val
+                  endif 
                END DO
-               IF (ratom == 0) call judft_error('eigen_hf: ratom not found')
+               if(min_val > 1e-6) call judft_error('eigen_hf: ratom not found' // new_line("A") //&
+                                                   "iatom = " // int2str(iatom) // new_line("A") //&
+                                                   "iisym = " // int2str(iisym) // new_line("A") )
+               ratom = first_eq_atom + min_loc
+               hybinp%map(iatom, isym) = ratom
+               hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
 
             END DO
          END DO

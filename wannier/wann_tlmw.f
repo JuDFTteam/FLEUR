@@ -34,6 +34,7 @@ c*********************************************************************
       complex   :: ic
       intrinsic :: cmplx,sqrt,cos,sin
 
+      call timestart("wann_tlmw")
       ic = cmplx(0.,1.)
 
 c..in this part the 'primary' matrices for the basic non-hybridized
@@ -237,5 +238,6 @@ c..sp3d2-5
 
       enddo
 
+      call timestop("wann_tlmw")
       end subroutine wann_tlmw
       end module m_wann_tlmw

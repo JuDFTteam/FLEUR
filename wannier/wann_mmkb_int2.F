@@ -42,6 +42,8 @@
       integer i,j1,j2,j3,i1,i2,i3,j,in,m,n
       real phase
 
+      call timestart("wann_mmkb_int2")
+
       allocate(stepf(nv_b,nv))
       allocate(phasusbmat(nv,nslibd_b))
 #if (!defined(CPP_INVERSION)||defined(CPP_SOC))
@@ -100,5 +102,6 @@ c     &            z,nbasfcn,phasusbmat,nv,real(0.0),
 #else
       deallocate(mmnk_tmp)
 #endif
+      call timestop("wann_mmkb_int2")
       end subroutine
       end module m_wann_mmkb_int2

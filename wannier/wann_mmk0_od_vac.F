@@ -83,6 +83,8 @@ c     ..local scalars..
 c     ..intrinsic functions..
       intrinsic aimag,cmplx,conjg,real,sqrt
 
+      call timestart("wann_mmk0_od_vac")
+
       allocate ( udz(nv2d,-vM:vM),uz(nv2d,-vM:vM),
      +           dudz(nv2d,-vM:vM),
      +           duz(nv2d,-vM:vM),u(nmzd,nv2d,-vM:vM),
@@ -194,6 +196,7 @@ c  now actually computing the Mmn matrix
       enddo
 
       deallocate ( udz,uz,dudz,duz,u,ud,ddnv,bess,dbss,acof,bcof )
+      call timestop("wann_mmk0_od_vac")
 
       END SUBROUTINE wann_mmk0_od_vac
       END MODULE m_wann_mmk0_od_vac

@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_write_matrix5
+            use m_juDFT
       contains
       subroutine wann_write_matrix5(
      >               fmpi_comm,l_p0,filename,title,
@@ -55,6 +56,7 @@ c**********************************************************
 c     Collect contributions to the matrix5 matrix from the
 c     various processors.
 c**********************************************************
+      call timestart("wann_write_matrix5")
       if(isize.ne.1)then
        do ikpt=1,fullnkpts
         if(l_p0)then
@@ -112,6 +114,7 @@ c**********************************************************
        endif
        close(305)
       endif
+      call timestop("wann_write_matrix5")
 
       end subroutine wann_write_matrix5
       end module m_wann_write_matrix5
