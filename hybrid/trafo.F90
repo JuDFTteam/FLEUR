@@ -838,18 +838,21 @@ CONTAINS
                      j = i + ishift
                      IF (ic1 /= ic .or. m < 0) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           carr(:dim2) = mat(i, :)
+                           ! carr(:dim2) = mat(i, :)
+                           call zcopy(dim2, mat(i,1), size(mat,1), carr, 1)
                            mat(i, :) = (carr(:dim2) + ImagUnit*mat(j, :))*rfac1
                            mat(j, :) = (carr(:dim2) - ImagUnit*mat(j, :))*rfac2
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
-                           carr(:dim1) = mat(:, i)
+                           ! carr(:dim1) = mat(:, i)
+                           call zcopy(dim1, mat(1,i), 1, carr, 1)
                            mat(:, i) = (carr(:dim1) - ImagUnit*mat(:, j))*rfac1
                            mat(:, j) = (carr(:dim1) + ImagUnit*mat(:, j))*rfac2
                         END IF
                      ELSE IF (m == 0 .and. ifac == -1) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           mat(i, :) = ImagUnit*mat(i, :)
+                           ! mat(i, :) = ImagUnit*mat(i, :)
+                           call zscal(size(mat,2), ImagUnit, mat(i,1), size(mat,1))
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
                            mat(:, i) = -ImagUnit*mat(:, i)
@@ -907,16 +910,19 @@ CONTAINS
 
       phase = cmplx_0
       call timestart("bra trafo real")
-      allocate (vecin(size(matin_r, dim=1), 1), vecout(size(matin_r, dim=1), 1),  stat=ok, source=cmplx_0)
-      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin or vecout')
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
-      cnt = 0
+      !$OMP parallel default(none) private(i,j, cnt, vecin, vecout, ok) &
+      !$OMP shared(nbands, psize, fi, hybdat, mpdata, phase, matin_r, matout_r, ikpt) 
+      allocate (vecin(size(matin_r, dim=1), 1), vecout(size(matin_r, dim=1), 1),  stat=ok, source=cmplx_0)
+      IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin or vecout')
+
+      !$OMP do collapse(2)
       DO i = 1, nbands
          DO j = 1, psize
-            cnt = cnt + 1
+            cnt = (i-1) * psize + j
             vecin(:,1) = matin_r(:,cnt)
             CALL desymmetrize(vecin(:hybdat%nbasp, 1), hybdat%nbasp, 1, 1, &
                               fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
@@ -936,8 +942,11 @@ CONTAINS
 
          END DO
       END DO
+      !$OMP end do
 
       deallocate (vecout, vecin)
+      !$OMP end parallel
+
       call timestop("bra trafo real")
    end subroutine bra_trafo_real
 
