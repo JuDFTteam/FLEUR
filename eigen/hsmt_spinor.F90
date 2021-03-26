@@ -68,14 +68,14 @@ CONTAINS
     COMPLEX  :: chi(2,2)
     COMPLEX  :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2)
 
-    !     isigma= -i * sigma, where sigma is Pauli matrix
+    !     isigma= i * sigma, where sigma is Pauli matrix
     isigma=CMPLX(0.0,0.0)
-    isigma(1,2,1)=CMPLX(0.0,-1.0)
-    isigma(2,1,1)=CMPLX(0.0,-1.0)
-    isigma(1,2,2)=CMPLX(-1.0,0.0)
-    isigma(2,1,2)=CMPLX(1.0,0.0)
-    isigma(1,1,3)=CMPLX(0.0,-1.0)
-    isigma(2,2,3)=CMPLX(0.0,1.0)
+    isigma(1,2,1)=CMPLX(0.0,1.0)
+    isigma(2,1,1)=CMPLX(0.0,1.0)
+    isigma(1,2,2)=CMPLX(1.0,0.0)
+    isigma(2,1,2)=CMPLX(-1.0,0.0)
+    isigma(1,1,3)=CMPLX(0.0,1.0)
+    isigma(2,2,3)=CMPLX(0.0,-1.0)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
@@ -106,8 +106,8 @@ CONTAINS
        cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)- lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
        DO j1=1,2
           DO j2=1,2
-             angso(kj-kj_start+1,j1,j2)= isigma_x(j1,j2)*cross_k(1)+&
-                     isigma_y(j1,j2)*cross_k(2)+ isigma_z(j1,j2)*cross_k(3)
+             angso(kj-kj_start+1,j1,j2)= conjg(isigma_x(j1,j2)*cross_k(1)+&
+                     isigma_y(j1,j2)*cross_k(2)+ isigma_z(j1,j2)*cross_k(3))
           ENDDO
        ENDDO
     ENDDO
