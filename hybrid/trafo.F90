@@ -839,13 +839,13 @@ CONTAINS
                      IF (ic1 /= ic .or. m < 0) THEN
                         IF (iand(imode, 1) /= 0) THEN
                            ! carr(:dim2) = mat(i, :)
-                           call zcopy(dim2, mat(i,1), size(mat,1), carr, 1)
+                           call zcopy(dim2, mat(i,1), size(mat,1), carr(1), 1)
                            mat(i, :) = (carr(:dim2) + ImagUnit*mat(j, :))*rfac1
                            mat(j, :) = (carr(:dim2) - ImagUnit*mat(j, :))*rfac2
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
                            ! carr(:dim1) = mat(:, i)
-                           call zcopy(dim1, mat(1,i), 1, carr, 1)
+                           call zcopy(dim1, mat(1,i), 1, carr(1), 1)
                            mat(:, i) = (carr(:dim1) - ImagUnit*mat(:, j))*rfac1
                            mat(:, j) = (carr(:dim1) + ImagUnit*mat(:, j))*rfac2
                         END IF
@@ -1086,7 +1086,7 @@ CONTAINS
 
       ! PW
       !$OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
-      !$OMP shared(vecout1, vecin1, mpdata, ikpt, kpts, rrot, g, hybdat, trans)
+      !$OMP shared(vecout1, vecin1, mpdata, ikpt, kpts, rrot, g, hybdat, trans, nbands, psize)
       DO igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
          igptp = mpdata%gptm_ptr(igptm, kpts%bkp(ikpt))
          g1 = matmul(rrot, mpdata%g(:, igptp)) + g
@@ -1112,7 +1112,9 @@ CONTAINS
          END IF
          cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
 
-         vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
+         ! vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
+         call zcopy(nbands*psize, vecin1(hybdat%nbasp + igptm2,1), size(vecin1,1), vecout1(hybdat%nbasp + igptm,1), size(vecout1,1))
+         call zscal(nbands*psize, cdum, vecout1(hybdat%nbasp + igptm,1), size(vecout1,1))
       END DO
       !$OMP end parallel do
       call timestop("bra_trafo_core")
