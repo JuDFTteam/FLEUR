@@ -39,7 +39,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
       slymom = clmom(2,iType,1)+clmom(2,iType,2)
       slmom =  clmom(3,iType,1)+clmom(3,iType,2)
 
-      IF (any(noco%l_unrestrictMT)) THEN 
+      IF (any(noco%l_unrestrictMT)) THEN
          szglobal=clmom(3,iType,1)+clmom(3,iType,2)
          sxglobal=clmom(1,iType,1)+clmom(1,iType,2)
          syglobal=clmom(2,iType,1)+clmom(2,iType,2)
@@ -51,7 +51,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
 
          !Fix of sign of moment in first variation calculations. Perhaps it would be better to understand this :-(
          !slxmom=-1*slxmom
-         slymom=-1*slymom
+         !slymom=-1*slymom
          !slmom=-1*slmom
       END IF
       ! rotation: orbital moment || spin moment (extended to incude phi - hopefully)
@@ -72,7 +72,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
       CALL writeXMLElementFormPoly('orbMagMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
                                                     'spinDownCharge'/),&
                                    attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
-      IF (any(noco%l_unrestrictMT)) THEN 
+      IF (any(noco%l_unrestrictMT)) THEN
          WRITE(oUnit,FMT=8032) iType, sxglobal,syglobal,szglobal,sqrt(sxglobal**2+syglobal**2+szglobal**2)
       END IF
    END DO
@@ -81,7 +81,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,nococonv,clmom)
    9020 FORMAT (/,/,10x,'orb. magnetic moments in the spheres:',/,10x,&
                 'type',t22,'moment',t33,'spin-up',t43,'spin-down')
    8030 FORMAT (2x,'--> mm',i8,2x,3f12.5)
-   IF (any(noco%l_unrestrictMT)) THEN 
+   IF (any(noco%l_unrestrictMT)) THEN
       8032 FORMAT (2x,'Atom: ',i8,' --> Orbital moment in global frame:', ' mx=',f9.5, ' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
    END IF
 END SUBROUTINE orbMagMoms
