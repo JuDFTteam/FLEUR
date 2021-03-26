@@ -702,6 +702,8 @@ CONTAINS
 !     - local arrays -
       COMPLEX               ::  carr(max(dim1, dim2)), cfac
 
+      call timestart("symmetrize")
+
       rfac = sqrt(0.5)
       cfac = sqrt(0.5)*ImagUnit
       ic = 0
@@ -761,16 +763,18 @@ CONTAINS
       IF (lreal) THEN
 ! Determine common phase factor and divide by it to make the output matrix real.
          cfac = commonphase_mtx(mat, dim1, dim2)
-         do i = 1, dim1
-            do j = 1, dim2
+         !$OMP parallel do default(none) collapse(2) private(i,j) shared(cfac, mat)
+         do j = 1, dim2
+            do i = 1, dim1
                mat(i, j) = mat(i, j)/cfac
                if (abs(aimag(mat(i, j))) > 1e-8) then
                   call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
                end if
             end do
          end do
+         !$OMP end parallel do
       END IF
-
+      call timestop("symmetrize")
    END SUBROUTINE symmetrize
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -799,6 +803,8 @@ CONTAINS
       COMPLEX                 ::  ImagUnit = (0.0, 1.0)
 !     - local arrays -
       COMPLEX                 ::  carr(max(dim1, dim2))
+
+      call timestart("desymmetrize")
 
       rfac1 = sqrt(0.5)
       ic = 0
@@ -854,7 +860,7 @@ CONTAINS
             END DO
          END DO
       END DO
-
+      call timestop("desymmetrize")
    END SUBROUTINE desymmetrize
 
    ! bra_trafo1 rotates cprod at kpts%bkp(ikpt)(<=> not irreducible k-point) to cprod at ikpt (bkp(kpts%bkp(ikpt))), which is the
@@ -983,6 +989,8 @@ CONTAINS
       REAL                    :: rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 :: dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), &
                                       -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
+
+      call timestart("bra_trafo_core")
       IF (kpts%bksym(ikpt) <= sym%nop) THEN
          inviop = sym%invtab(kpts%bksym(ikpt))
          rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
@@ -1056,15 +1064,20 @@ CONTAINS
                j1 = pnt(n, l, hybinp%map(ic, kpts%bksym(ikpt)))
                j2 = j1 + nn*2*l
 
+               !$OMP parallel do default(none) private(i) &
+               !$OMP shared(nbands, psize, cdum, vecout1, vecin1, i1, i2, nn, dwgn, l, j1,j2)
                DO i = 1, nbands*psize
                   vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn, i), dwgn(-l:l, -l:l, l))
                END DO
+               !$OMP end parallel do
 
             END DO
          END DO
       END DO
 
       ! PW
+      !$OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
+      !$OMP shared(vecout1, vecin1, mpdata, ikpt, kpts, rrot, g, hybdat, trans)
       DO igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
          igptp = mpdata%gptm_ptr(igptm, kpts%bkp(ikpt))
          g1 = matmul(rrot, mpdata%g(:, igptp)) + g
@@ -1092,6 +1105,8 @@ CONTAINS
 
          vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
       END DO
+      !$OMP end parallel do
+      call timestop("bra_trafo_core")
    end subroutine bra_trafo_core
 
    ! Determines common phase factor (with unit norm)
