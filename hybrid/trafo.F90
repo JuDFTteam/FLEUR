@@ -763,7 +763,7 @@ CONTAINS
       IF (lreal) THEN
 ! Determine common phase factor and divide by it to make the output matrix real.
          cfac = commonphase_mtx(mat, dim1, dim2)
-         !$OMP parallel do default(none) collapse(2) private(i,j) shared(cfac, mat)
+         !$OMP parallel do default(none) collapse(2) private(i,j) shared(cfac, mat, dim1, dim2)
          do j = 1, dim2
             do i = 1, dim1
                mat(i, j) = mat(i, j)/cfac
