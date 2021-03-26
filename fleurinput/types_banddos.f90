@@ -125,7 +125,9 @@ CONTAINS
     all_atoms=.true.
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/bandDOS')
     IF (numberNodes.EQ.1) THEN
-       this%l_storeEVData=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@storeEVData'))
+       IF(xml%versionNumber>=34) THEN
+          this%l_storeEVData=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@storeEVData'))
+       ENDIF
        this%l_orb=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@orbcomp'))
        this%l_jDOS=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@jDOS'))
        all_atoms=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@all_atoms'))
