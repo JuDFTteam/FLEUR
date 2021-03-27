@@ -118,8 +118,8 @@ CONTAINS
          INQUIRE(file="out.xml", exist=l_exist)
          IF (l_exist) THEN
             tempFilename = "outHistError.xml"
-            DO i = 1, 99
-               WRITE (tempFilename,'(a,i2.2,a)') 'out-', i, '.xml'
+            DO i = 1, 999
+               WRITE (tempFilename,'(a,i3.3,a)') 'out-', i, '.xml'
                INQUIRE(file=TRIM(ADJUSTL(tempFilename)), exist=l_found)
                IF (.NOT.l_found) EXIT
             END DO
@@ -128,7 +128,7 @@ CONTAINS
                CALL system(TRIM(ADJUSTL(line)))
                WRITE (*,*) 'Moving old out.xml to ', TRIM(ADJUSTL(tempFilename)), '.'
             ELSE
-               CALL juDFT_warn("No free out-??.xml file places for storing old out.xml files!")
+               CALL juDFT_warn("No free out-???.xml file places for storing old out.xml files!")
             END IF
          END IF
          CALL startFleur_XMLOutput()
