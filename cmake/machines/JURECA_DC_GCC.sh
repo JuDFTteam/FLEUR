@@ -37,6 +37,7 @@ then
     export CC=${CC:=mpicc}
     export CXX=${CXX:=mpicxx}
     export CMAKE_Fortran_FLAGS="$CMAKE_Fortran_FLAGS -march=znver1"
+    FLEUR_LIBRARIES="-lxml2;-lblis-mt;-lflame"
     #ELPA
     CLI_ELPA_OPENMP=1
     FLEUR_LIBDIR="$FLEUR_LIBDIR $ELPA_LIB"
