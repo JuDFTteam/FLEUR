@@ -1000,6 +1000,7 @@ CONTAINS
                                       -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
 
       call timestart("bra_trafo_core")
+      call timestart("setup")
       IF (kpts%bksym(ikpt) <= sym%nop) THEN
          inviop = sym%invtab(kpts%bksym(ikpt))
          rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
@@ -1018,15 +1019,16 @@ CONTAINS
 
          dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1)) &
             = conjg(hybinp%d_wgn2(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1), inviop))
-
       END IF
 
       rkpt = matmul(rrot, kpts%bkf(:, kpts%bkp(ikpt)))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g = nint(rkpthlp - rkpt)
+      call timestop("setup")
 
       !test
+      call timestart("test")
       nrkpt = 0
       DO i = 1, kpts%nkptf
          IF (maxval(abs(rkpt - kpts%bkf(:, i))) <= 1E-06) THEN
@@ -1042,8 +1044,10 @@ CONTAINS
 
          call judft_error('bra_trafo: rotation failed')
       END IF
+      call timestop("test")
 
 !     Define pointer to first mixed-basis functions (with m = -l)
+      call timestart("def pointer to first mpb")
       i = 0
       do ic = 1, atoms%nat
          itype = atoms%itype(ic)
@@ -1055,9 +1059,11 @@ CONTAINS
             i = i + mpdata%num_radbasfn(l, itype)*2*l
          END DO
       END DO
+      call timestop("def pointer to first mpb")
 
 !     Multiplication
       ! MT
+      call timestart("MT part")
       cexp = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
       do ic = 1, atoms%nat
          itype = atoms%itype(ic)
@@ -1083,8 +1089,10 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("MT part")
 
       ! PW
+      call timestart("PW part")
       !$OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
       !$OMP shared(vecout1, vecin1, mpdata, ikpt, kpts, rrot, g, hybdat, trans, nbands, psize)
       DO igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
@@ -1117,6 +1125,7 @@ CONTAINS
          call zscal(nbands*psize, cdum, vecout1(hybdat%nbasp + igptm,1), size(vecout1,1))
       END DO
       !$OMP end parallel do
+      call timestop("PW part")
       call timestop("bra_trafo_core")
    end subroutine bra_trafo_core
 
