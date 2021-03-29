@@ -177,6 +177,7 @@ CONTAINS
       if(thread_id == 0) then
 
          IF (.NOT. TRIM(ttimer) == TRIM(current_timer%name)) THEN
+            write (*, *) "tried to stop:", TRIM(ttimer)
             WRITE (*, *) "Current timer:", trim(current_timer%name), " could not stop:"
             STOP "BUG:timestop"
          ENDIF
