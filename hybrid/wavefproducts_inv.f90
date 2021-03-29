@@ -256,6 +256,7 @@ CONTAINS
                         ! go to lm index for m1=-l1
                         lmp1 = lm1_0 + p1
 
+                        call timestart("m1 loop")
                         DO m1 = -l1, l1
                            ! Gaunt condition -m1+m2-m=0
                            m2 = m1 + m
@@ -313,6 +314,7 @@ CONTAINS
                            lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
 
                         END DO  !m1
+                        call timestop("m1 loop")
 
                         ishift = -2*m*mpdata%num_radbasfn(l, itype)
 
@@ -323,18 +325,19 @@ CONTAINS
                         rdum = tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatom1))
                         rfac1 = sin(rdum)/sqrt(2.0)
                         rfac2 = cos(rdum)/sqrt(2.0)
-                        !$OMP PARALLEL DO default(none) collapse(3) &
+                        call timestart("ibandibando loop")
+                        !$OMP PARALLEL DO default(none) collapse(2) &
                         !$OMP private(iband, ibando, i, iob, rdum1, rdum2, add1, add2, j) &
                         !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
                         !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, jsp, mpdata)
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
+                              iob = ibando + 1 - bandoi
+                              rdum1 = rarr3(1, ibando, iband)
+                              rdum2 = rarr3(2, ibando, iband)
+                              add1 = rdum1*rfac2 + rdum2*rfac1
+                              add2 = rdum2*rfac2 - rdum1*rfac1
                               DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 iob = ibando + 1 - bandoi
-                                 rdum1 = rarr3(1, ibando, iband)
-                                 rdum2 = rarr3(2, ibando, iband)
-                                 add1 = rdum1*rfac2 + rdum2*rfac1
-                                 add2 = rdum2*rfac2 - rdum1*rfac1
                                  j = lm1 + i
                                  cprod%data_r(j, iob + (iband-1)*psize) &
                                     = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add1
@@ -346,6 +349,7 @@ CONTAINS
                            END DO  !ibando
                         END DO  !iband
                         !$OMP end parallel do
+                        call timestop("ibandibando loop")
 
                         ! go to lm start index for next m-quantum number
                         lm = lm + mpdata%num_radbasfn(l, itype)
