@@ -66,11 +66,6 @@ CONTAINS
             psym(nsymop) = i
          END IF
       END DO
-
-      WRITE(oUnit, '(A,i3)') 'current nk: ', nk
-      WRITE(oUnit, '(A,3f10.5)') ' fi%kpts%bkf(:,nk):', fi%kpts%bkf(:, nk)
-      WRITE(oUnit, '(A,i3)') ' Number of elements in the little group:', nsymop
-
       CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
