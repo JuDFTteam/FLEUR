@@ -40,6 +40,7 @@ CONTAINS
       integer :: ok, nbasfcn, psize, iband, ierr, i
       integer, allocatable :: band_list(:)
       real    :: inv_vol, gcutoff
+      complex :: inv_gridlen
 
       logical :: real_warned
 
@@ -58,7 +59,8 @@ CONTAINS
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
       stepf%grid = stepf%grid * inv_vol
-      
+      inv_gridlen = 1.0/stepf%gridLength
+
       call fft%init(stepf%dimensions, .false.)
       call fft%exec(stepf%grid)
       call fft%free()
@@ -80,9 +82,9 @@ CONTAINS
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
-      !$OMP PARALLEL default(private) &
+      !$OMP PARALLEL default(none) &
       !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff)&
+      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, inv_gridlen)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
 
       allocate (prod(0:stepf%gridLength - 1), stat=ok)
@@ -93,7 +95,9 @@ CONTAINS
       call fft%init(stepf%dimensions, .true.)
       !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
+         ! call timestart("loop wavef2rs")
          call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+         ! call timestop("loop wavef2rs")
          psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
 
          do iob = 1, psize
@@ -108,7 +112,7 @@ CONTAINS
             endif
 
             ! we still have to devide by the number of mesh points
-            prod = prod/stepf%gridLength
+            call zscal(stepf%gridLength, inv_gridlen, prod, 1)
 
             if (cprod%l_real) then
                DO igptm = 1, mpdata%n_g(iq)
