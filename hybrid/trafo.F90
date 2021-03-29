@@ -7,6 +7,7 @@
 MODULE m_trafo
    use m_judft
    use m_glob_tofrom_loc
+   use m_types
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
@@ -907,15 +908,17 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE    ::  vecin(:, :), vecout(:, :)
       integer :: ok, i, j, cnt
+      integer :: igptm2_list(mpdata%n_g(ikpt))
 
       phase = cmplx_0
       call timestart("bra trafo real")
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
+      call find_corresponding_g(fi%sym, fi%kpts, mpdata, ikpt, igptm2_list)
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       !$OMP parallel default(none) private(i,j, cnt, vecin, vecout, ok) &
-      !$OMP shared(nbands, psize, fi, hybdat, mpdata, phase, matin_r, matout_r, ikpt) 
+      !$OMP shared(nbands, psize, fi, hybdat, mpdata, phase, matin_r, matout_r, ikpt, igptm2_list) 
       allocate (vecin(size(matin_r, dim=1), 1), vecout(size(matin_r, dim=1), 1),  stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin or vecout')
 
@@ -928,7 +931,7 @@ CONTAINS
                               fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
             call bra_trafo_core(1, ikpt, 1, fi%sym, mpdata, &
-                              fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin(:,1:1), vecout(:,1:1))
+                              fi%hybinp, hybdat, fi%kpts, fi%atoms, igptm2_list, vecin(:,1:1), vecout(:,1:1))
 
             CALL symmetrize(vecout(:, 1:1), hybdat%nbasm(ikpt), 1, 1, .false., &
                             fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
@@ -962,26 +965,29 @@ CONTAINS
       COMPLEX, INTENT(IN)               ::  vecin_c(:, :)
       COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :)
 
+      integer :: igptm2_list(mpdata%n_g(ikpt))
+
       call timestart("bra trafo cmplx")
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > fi%atoms%lmaxd')   ! very improbable case
+      call find_corresponding_g(fi%sym, fi%kpts, mpdata, ikpt, igptm2_list)
 
-      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin_c, vecout_c)
+      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, igptm2_list, vecin_c, vecout_c)
 
       call timestop("bra trafo cmplx")
    end subroutine bra_trafo_cmplx
 
    subroutine bra_trafo_core(nbands, ikpt, psize, sym, &
-                             mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1)
-      use m_types
+                             mpdata, hybinp, hybdat, kpts, atoms, igptm2_list, vecin1, vecout1)
       use m_constants
       implicit none
       type(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_hybinp), INTENT(IN)   :: hybinp
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
-      TYPE(t_sym), INTENT(IN)   :: sym
-      TYPE(t_kpts), INTENT(IN)   :: kpts
+      TYPE(t_hybinp), INTENT(IN)  :: hybinp
+      TYPE(t_hybdat), INTENT(IN)  :: hybdat
+      TYPE(t_sym), INTENT(IN)     :: sym
+      TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
+      integer, intent(in)         :: igptm2_list(:)
 
       INTEGER, INTENT(IN)      ::  ikpt, nbands, psize
 
@@ -1093,13 +1099,54 @@ CONTAINS
 
       ! PW
       call timestart("PW part")
-      ! $OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
-      ! $OMP shared(vecout1, vecin1, mpdata, ikpt, kpts, rrot, g, hybdat, trans, nbands, psize)
+      !$OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
+      !$OMP shared(vecout1, vecin1, mpdata, ikpt, igptm2_list, kpts, rrot, g, hybdat, trans, nbands, psize)
       DO igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
          igptp = mpdata%gptm_ptr(igptm, kpts%bkp(ikpt))
          g1 = matmul(rrot, mpdata%g(:, igptp)) + g
+         igptm2 = igptm2_list(igptm)                 
 
-         call timestart("find correpsonding g")
+         cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
+         vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
+      END DO
+      !$OMP end parallel do
+      call timestop("PW part")
+      call timestop("bra_trafo_core")
+   end subroutine bra_trafo_core
+
+   subroutine find_corresponding_g(sym, kpts, mpdata, ikpt, igptm2_list)
+      implicit none
+      type(t_sym), intent(in)    :: sym
+      type(t_kpts), intent(in)   :: kpts
+      type(t_mpdata), intent(in) :: mpdata
+      integer, intent(in)        :: ikpt
+      integer, intent(inout)     :: igptm2_list(:)
+
+      integer :: igptm, igptp, g1(3), igptm2, i, iiop
+      integer :: g(3), rrot(3, 3)
+      REAL    :: rkpt(3), rkpthlp(3)
+
+      call timestart("find correpsonding g")
+      call timestart("setup")
+      IF (kpts%bksym(ikpt) <= sym%nop) THEN
+         rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
+      ELSE
+         iiop = kpts%bksym(ikpt) - sym%nop
+         rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
+     END IF
+
+      rkpt = matmul(rrot, kpts%bkf(:, kpts%bkp(ikpt)))
+      rkpthlp = rkpt
+      rkpt = kpts%to_first_bz(rkpt)
+      g = nint(rkpthlp - rkpt)
+      call timestop("setup")
+
+      !$OMP parallel do default(none) schedule(dynamic, 10) private(igptm, igptp, g1, igptm2) &
+      !$OMP shared(kpts, mpdata, ikpt, rrot, g, igptm2_list)
+      do igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
+         igptp = mpdata%gptm_ptr(igptm, kpts%bkp(ikpt))
+         g1 = matmul(rrot, mpdata%g(:, igptp)) + g
+
          igptm2 = 0
          DO i = 1, mpdata%n_g(ikpt)
             IF (maxval(abs(g1 - mpdata%g(:, mpdata%gptm_ptr(i, ikpt)))) <= 1E-06) THEN
@@ -1120,20 +1167,12 @@ CONTAINS
             END DO
             call judft_error('bra_trafo: G-point not found in G-point set.')
          END IF
-         call timestop("find correpsonding g")
-         
 
-         call timestart("apply to all bands")
-         cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
-         ! vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
-         call zcopy(nbands*psize, vecin1(hybdat%nbasp + igptm2,1), size(vecin1,1), vecout1(hybdat%nbasp + igptm,1), size(vecout1,1))
-         call zscal(nbands*psize, cdum, vecout1(hybdat%nbasp + igptm,1), size(vecout1,1))
-         call timestop("apply to all bands")
-      END DO
-      ! $OMP end parallel do
-      call timestop("PW part")
-      call timestop("bra_trafo_core")
-   end subroutine bra_trafo_core
+         igptm2_list(igptm) = igptm2
+      enddo
+      !$OMP end parallel do
+      call timestop("find correpsonding g")
+   end subroutine find_corresponding_g
 
    ! Determines common phase factor (with unit norm)
    function commonphase(carr, n) result(cfac)
