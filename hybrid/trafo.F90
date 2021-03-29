@@ -1071,6 +1071,8 @@ CONTAINS
       ! MT
       call timestart("MT part")
       cexp = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
+      !$OMP parallel do default(none) private(ic, itype, cdum, l, nn, n, i1, i2, j1, j2, i)&
+      !$OMP shared(atoms, cexp, hybinp, kpts, mpdata, pnt, dwgn, vecin1, vecout1, ikpt, g, nbands, psize)
       do ic = 1, atoms%nat
          itype = atoms%itype(ic)
 
@@ -1085,16 +1087,13 @@ CONTAINS
                j1 = pnt(n, l, hybinp%map(ic, kpts%bksym(ikpt)))
                j2 = j1 + nn*2*l
 
-               !$OMP parallel do default(none) private(i) &
-               !$OMP shared(nbands, psize, cdum, vecout1, vecin1, i1, i2, nn, dwgn, l, j1,j2)
                DO i = 1, nbands*psize
                   vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn, i), dwgn(-l:l, -l:l, l))
                END DO
-               !$OMP end parallel do
-
             END DO
          END DO
       END DO
+      !$OMP end parallel do
       call timestop("MT part")
 
       ! PW
