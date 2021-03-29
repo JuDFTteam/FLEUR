@@ -87,24 +87,33 @@ CONTAINS
       !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, inv_gridlen)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
 
+      call timestart("alloc&init")
       allocate (prod(0:stepf%gridLength - 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc prod")
       allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
       call fft%init(stepf%dimensions, .true.)
+      call timestop("alloc&init")
+
       !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
          call timestart("loop wavef2rs")
          call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
          call timestop("loop wavef2rs")
+         call timestart("apply step")
          psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
+         call timestop("apply step")
 
          do iob = 1, psize
+            call timestart("psi_prod")
             prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
+            call timestop("psi_prod")
             call timestart("inner FFT")
             call fft%exec(prod)
             call timestop("inner FFT")
+
+            call timestart("real check")
             if (cprod%l_real) then
                if (any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
                   write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
@@ -112,9 +121,12 @@ CONTAINS
                   real_warned = .True.
                endif
             endif
+            call timestop("real check")
 
             ! we still have to devide by the number of mesh points
+            call timestart("divide by gridlen")
             call zscal(stepf%gridLength, inv_gridlen, prod, 1)
+            call timestop("divide by gridlen")
 
             call timestart("sort into cprod")
             if (cprod%l_real) then
