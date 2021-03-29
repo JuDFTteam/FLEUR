@@ -57,6 +57,8 @@ CONTAINS
 
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
+      stepf%grid = stepf%grid * inv_vol
+      
       call fft%init(stepf%dimensions, .false.)
       call fft%exec(stepf%grid)
       call fft%free()
@@ -92,7 +94,7 @@ CONTAINS
       !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
          call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-         psi_k(:, 1) = conjg(psi_k(:, 1))*inv_vol * stepf%grid!stars%ufft*
+         psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
 
          do iob = 1, psize
             prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
