@@ -95,14 +95,16 @@ CONTAINS
       call fft%init(stepf%dimensions, .true.)
       !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
-         ! call timestart("loop wavef2rs")
+         call timestart("loop wavef2rs")
          call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-         ! call timestop("loop wavef2rs")
+         call timestop("loop wavef2rs")
          psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
 
          do iob = 1, psize
             prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
+            call timestart("inner FFT")
             call fft%exec(prod)
+            call timestop("inner FFT")
             if (cprod%l_real) then
                if (any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
                   write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
@@ -114,6 +116,7 @@ CONTAINS
             ! we still have to devide by the number of mesh points
             call zscal(stepf%gridLength, inv_gridlen, prod, 1)
 
+            call timestart("sort into cprod")
             if (cprod%l_real) then
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
@@ -125,6 +128,7 @@ CONTAINS
                   cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g))
                enddo
             endif
+            call timestop("sort into cprod")
          enddo
       enddo
       !$OMP END DO
