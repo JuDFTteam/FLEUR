@@ -1093,11 +1093,13 @@ CONTAINS
 
       ! PW
       call timestart("PW part")
-      !$OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
-      !$OMP shared(vecout1, vecin1, mpdata, ikpt, kpts, rrot, g, hybdat, trans, nbands, psize)
+      ! $OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
+      ! $OMP shared(vecout1, vecin1, mpdata, ikpt, kpts, rrot, g, hybdat, trans, nbands, psize)
       DO igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
          igptp = mpdata%gptm_ptr(igptm, kpts%bkp(ikpt))
          g1 = matmul(rrot, mpdata%g(:, igptp)) + g
+
+         call timestart("find correpsonding g")
          igptm2 = 0
          DO i = 1, mpdata%n_g(ikpt)
             IF (maxval(abs(g1 - mpdata%g(:, mpdata%gptm_ptr(i, ikpt)))) <= 1E-06) THEN
@@ -1118,13 +1120,17 @@ CONTAINS
             END DO
             call judft_error('bra_trafo: G-point not found in G-point set.')
          END IF
-         cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
+         call timestop("find correpsonding g")
+         
 
+         call timestart("apply to all bands")
+         cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
          ! vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
          call zcopy(nbands*psize, vecin1(hybdat%nbasp + igptm2,1), size(vecin1,1), vecout1(hybdat%nbasp + igptm,1), size(vecout1,1))
          call zscal(nbands*psize, cdum, vecout1(hybdat%nbasp + igptm,1), size(vecout1,1))
+         call timestop("apply to all bands")
       END DO
-      !$OMP end parallel do
+      ! $OMP end parallel do
       call timestop("PW part")
       call timestop("bra_trafo_core")
    end subroutine bra_trafo_core
