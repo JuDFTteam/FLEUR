@@ -92,6 +92,7 @@ CONTAINS
 #endif
           CALL write_band_sc(banddos,cell,kpts,results,eFermi)
        END IF
+       WRITE(*,*) ""
        WRITE(*,*) "Note: Band structure data (together with different weights) is also stored in the banddos.hdf file."
        WRITE(*,*) "      A convenient way of extracting and plotting the data from that file is by making use of the"
        WRITE(*,*) "      masci-tools (https://pypi.org/project/masci-tools/)."
@@ -115,6 +116,7 @@ CONTAINS
              call eigdos(n)%p%write_EVData(banddosFile_id)
           END DO
        END IF
+       WRITE(*,*) ""
        WRITE(*,*) "Note: DOS data (together with different weights) is also stored in the banddos.hdf file."
        WRITE(*,*) "      A convenient way of extracting and plotting the data from that file is by making use of the"
        WRITE(*,*) "      masci-tools (https://pypi.org/project/masci-tools/)."
