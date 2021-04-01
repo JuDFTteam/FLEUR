@@ -8,6 +8,7 @@ MODULE m_hsmt_spinor
   IMPLICIT NONE
 CONTAINS
 
+
   !The spinors are calculated both in hssphn_sph & hssphn_nonsph, hence this is a
   !common subroutine
   SUBROUTINE hsmt_spinor(isp,n,nococonv,chi_mat)
@@ -24,11 +25,7 @@ CONTAINS
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-
-    chi(1,1) =  exp(-ImagUnit*nococonv%alph(n)/2)*cos(nococonv%beta(n)/2)
-    chi(2,1) = EXP(ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
-    chi(1,2) = -EXP(-ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
-    chi(2,2) =  EXP(ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
+    chi=nococonv%chi(n)
     !--->       and determine the prefactors for the Hamitonian- and
     !--->       overlapp-matrix elements
     IF (isp<3) THEN
@@ -66,25 +63,24 @@ CONTAINS
     INTEGER  :: j1,j2,kj
     COMPLEX  :: isigma(2,2,3)
     COMPLEX  :: chi(2,2)
-    COMPLEX  :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2)
+    COMPLEX  :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2),d(2,2)
 
     !     isigma= i * sigma, where sigma is Pauli matrix
     isigma=CMPLX(0.0,0.0)
     isigma(1,2,1)=CMPLX(0.0,1.0)
     isigma(2,1,1)=CMPLX(0.0,1.0)
-    isigma(1,2,2)=CMPLX(1.0,0.0)
-    isigma(2,1,2)=CMPLX(-1.0,0.0)
+    isigma(1,2,2)=CMPLX(-1.0,0.0)
+    isigma(2,1,2)=CMPLX(1.0,0.0)
     isigma(1,1,3)=CMPLX(0.0,1.0)
     isigma(2,2,3)=CMPLX(0.0,-1.0)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-    chi(1,1) =  exp(-ImagUnit*nococonv%alph(n)/2)*cos(nococonv%beta(n)/2)
-    chi(2,1) = EXP(ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
-    chi(1,2) = -EXP(-ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
-    chi(2,2) =  EXP(ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
+    chi=nococonv%chi(n)
+    chi(1,2)=-1*chi(1,2)
+    chi(2,1)=-1*chi(2,1)
 
-    isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),((chi)))) !T-C best?
+    isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),((chi))))
     isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),((chi))))
     isigma_z=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,3),((chi))))
     DO j1=1,2
@@ -106,11 +102,12 @@ CONTAINS
        cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)- lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
        DO j1=1,2
           DO j2=1,2
-             angso(kj-kj_start+1,j1,j2)= conjg(isigma_x(j1,j2)*cross_k(1)+&
+             angso(kj-kj_start+1,j1,j2)= (isigma_x(j1,j2)*cross_k(1)+&
                      isigma_y(j1,j2)*cross_k(2)+ isigma_z(j1,j2)*cross_k(3))
           ENDDO
        ENDDO
     ENDDO
+
   END SUBROUTINE hsmt_spinor_soc
 
 

@@ -132,13 +132,9 @@ CONTAINS
 
        CALL setabc1lo(atoms,iType,usdus,jspin,alo1,blo1,clo1)
 
-       IF(noco%l_noco) THEN
           ! generate the spinors (chi)
-          ccchi(1,1) =  exp(-ImagUnit*nococonv%alph(itype)/2)*cos(nococonv%beta(itype)/2)
-          ccchi(2,1) = EXP(ImagUnit*nococonv%alph(itype)/2)*SIN(nococonv%beta(itype)/2)
-          ccchi(1,2) = -EXP(-ImagUnit*nococonv%alph(itype)/2)*SIN(nococonv%beta(itype)/2)
-          ccchi(2,2) =  EXP(ImagUnit*nococonv%alph(itype)/2)*COS(nococonv%beta(itype)/2)
-       END IF
+       IF(noco%l_noco) ccchi=nococonv%chi(itype)
+
 
        nintsp = 1
        IF (noco%l_ss) nintsp = 2
