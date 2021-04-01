@@ -100,6 +100,8 @@ CONTAINS
              CALL process_exco(line,xcpot)
           CASE('comp')
              CALL process_comp(line,input%jspins,input%frcor,input%ctail,input%kcrel,stars%gmax,xcpot%gmaxxc,input%rkmax)
+          CASE('expe')
+             CALL process_expert(line,input%gw)
           CASE('kpt ')
              iKpts = iKpts + 1
              CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),input%tkb)
@@ -452,6 +454,20 @@ CONTAINS
     IF (ios.NE.0) CALL judft_error(("Error reading:" //TRIM(line)))
   END SUBROUTINE process_comp
 
+  SUBROUTINE process_expert(line,gw)
+    USE m_types_xcpot_inbuild_nofunction
+    CHARACTER(len=*),INTENT(in)::line
+    INTEGER, INTENT(INOUT) :: gw
+    INTEGER :: spex
+    NAMELIST /expert/ spex
+    INTEGER :: ios
+
+    spex = 0
+    READ(line,expert,iostat=ios)
+    IF (ios.NE.0) CALL judft_error(("Error reading:" //TRIM(line)))
+
+    gw = spex
+  END SUBROUTINE process_expert
 
   SUBROUTINE normalize_file(infh,outfh)
     !***********************************************************************
