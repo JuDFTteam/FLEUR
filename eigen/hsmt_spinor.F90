@@ -71,14 +71,13 @@ CONTAINS
     isigma(2,1,1)=CMPLX(0.0,1.0)
     isigma(1,2,2)=CMPLX(-1.0,0.0)
     isigma(2,1,2)=CMPLX(1.0,0.0)
-    isigma(1,1,3)=CMPLX(0.0,1.0)
-    isigma(2,2,3)=CMPLX(0.0,-1.0)
+    isigma(1,1,3)=CMPLX(0.0,-1.0)
+    isigma(2,2,3)=CMPLX(0.0,1.0)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
     chi=nococonv%chi(n)
-    chi(1,2)=-1*chi(1,2)
-    chi(2,1)=-1*chi(2,1)
+    
 
     isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),((chi))))
     isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),((chi))))
