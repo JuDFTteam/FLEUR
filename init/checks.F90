@@ -83,7 +83,7 @@ MODULE m_checks
      END IF
 
      IF((input%gw.EQ.2).AND.(kpts%kptsKind.NE.KPTS_KIND_SPEX_MESH)) THEN
-        CALL juDFT_warn('Chosen k-point set is not eligible for this GW step.', calledby='check_input_switches')
+        CALL juDFT_warn('Chosen k-point set is not compatible to this GW step.', calledby='check_input_switches')
      END IF
 
      IF (noco%l_noco) CALL nocoInputCheck(atoms,input,sym,vacuum,noco)

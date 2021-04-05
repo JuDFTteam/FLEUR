@@ -350,11 +350,11 @@ CONTAINS
 
       IF (l_band) THEN
          IF (.NOT.this%kptsKind.EQ.KPTS_KIND_PATH) THEN
-            CALL juDFT_warn('Chosen k-point list is not eligible for band structure calculations.', calledby='read_xml_kpts')
+            CALL juDFT_warn('Chosen k-point list is not compatible to band structure calculations.', calledby='read_xml_kpts')
          END IF
       ELSE
          IF (this%kptsKind.EQ.KPTS_KIND_PATH) THEN
-            CALL juDFT_warn('Chosen k-point list is only eligible for band structure calculations.', calledby='read_xml_kpts')
+            CALL juDFT_warn('Chosen k-point list is only compatible to band structure calculations.', calledby='read_xml_kpts')
          END IF
       END IF
 
