@@ -36,10 +36,11 @@ CONTAINS
       type(t_fft)     :: fft
       type(t_fftgrid) :: stepf
 
-      integer :: g(3), igptm, iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
+      integer :: g(3), igptm, iob, n_omp
       integer :: ok, nbasfcn, psize, iband, ierr, i
       integer, allocatable :: band_list(:)
-      real    :: inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start, gcutoff
+      real    :: inv_vol, gcutoff
+      complex :: inv_gridlen
 
       logical :: real_warned
 
@@ -57,6 +58,9 @@ CONTAINS
 
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
+      stepf%grid = stepf%grid * inv_vol
+      inv_gridlen = 1.0/stepf%gridLength
+
       call fft%init(stepf%dimensions, .false.)
       call fft%exec(stepf%grid)
       call fft%free()
@@ -78,32 +82,38 @@ CONTAINS
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
-
-      t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
-      iob_list = -7
-      iband_list = -7
-      !$OMP PARALLEL default(private) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, iob_list, iband_list, gcutoff)&
+      !$OMP PARALLEL default(none) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
+      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, inv_gridlen)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
 
+      call timestart("alloc&init")
       allocate (prod(0:stepf%gridLength - 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc prod")
       allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
       call fft%init(stepf%dimensions, .true.)
+      call timestop("alloc&init")
+
       !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
+         call timestart("loop wavef2rs")
          call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-         psi_k(:, 1) = conjg(psi_k(:, 1))*inv_vol * stepf%grid!stars%ufft*
+         call timestop("loop wavef2rs")
+         call timestart("apply step")
+         psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
+         call timestop("apply step")
 
          do iob = 1, psize
-            iob_list(iob + (iband - 1)*psize) = iob + bandoi - 1
-            iband_list(iob + (iband - 1)*psize) = iband
-            ! t_start = cputime()
+            call timestart("psi_prod")
             prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
+            call timestop("psi_prod")
+            call timestart("inner FFT")
             call fft%exec(prod)
+            call timestop("inner FFT")
+
+            call timestart("real check")
             if (cprod%l_real) then
                if (any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
                   write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
@@ -111,10 +121,14 @@ CONTAINS
                   real_warned = .True.
                endif
             endif
+            call timestop("real check")
 
             ! we still have to devide by the number of mesh points
-            prod = prod/stepf%gridLength
+            call timestart("divide by gridlen")
+            call zscal(stepf%gridLength, inv_gridlen, prod, 1)
+            call timestop("divide by gridlen")
 
+            call timestart("sort into cprod")
             if (cprod%l_real) then
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
@@ -126,6 +140,7 @@ CONTAINS
                   cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g))
                enddo
             endif
+            call timestop("sort into cprod")
          enddo
       enddo
       !$OMP END DO

@@ -7,6 +7,7 @@
 MODULE m_trafo
    use m_judft
    use m_glob_tofrom_loc
+   use m_types
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
@@ -702,6 +703,8 @@ CONTAINS
 !     - local arrays -
       COMPLEX               ::  carr(max(dim1, dim2)), cfac
 
+      call timestart("symmetrize")
+
       rfac = sqrt(0.5)
       cfac = sqrt(0.5)*ImagUnit
       ic = 0
@@ -761,16 +764,18 @@ CONTAINS
       IF (lreal) THEN
 ! Determine common phase factor and divide by it to make the output matrix real.
          cfac = commonphase_mtx(mat, dim1, dim2)
-         do i = 1, dim1
-            do j = 1, dim2
+         !$OMP parallel do default(none) collapse(2) private(i,j) shared(cfac, mat, dim1, dim2)
+         do j = 1, dim2
+            do i = 1, dim1
                mat(i, j) = mat(i, j)/cfac
                if (abs(aimag(mat(i, j))) > 1e-8) then
                   call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
                end if
             end do
          end do
+         !$OMP end parallel do
       END IF
-
+      call timestop("symmetrize")
    END SUBROUTINE symmetrize
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -799,6 +804,8 @@ CONTAINS
       COMPLEX                 ::  ImagUnit = (0.0, 1.0)
 !     - local arrays -
       COMPLEX                 ::  carr(max(dim1, dim2))
+
+      call timestart("desymmetrize")
 
       rfac1 = sqrt(0.5)
       ic = 0
@@ -832,18 +839,21 @@ CONTAINS
                      j = i + ishift
                      IF (ic1 /= ic .or. m < 0) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           carr(:dim2) = mat(i, :)
+                           ! carr(:dim2) = mat(i, :)
+                           call zcopy(dim2, mat(i,1), size(mat,1), carr(1), 1)
                            mat(i, :) = (carr(:dim2) + ImagUnit*mat(j, :))*rfac1
                            mat(j, :) = (carr(:dim2) - ImagUnit*mat(j, :))*rfac2
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
-                           carr(:dim1) = mat(:, i)
+                           ! carr(:dim1) = mat(:, i)
+                           call zcopy(dim1, mat(1,i), 1, carr(1), 1)
                            mat(:, i) = (carr(:dim1) - ImagUnit*mat(:, j))*rfac1
                            mat(:, j) = (carr(:dim1) + ImagUnit*mat(:, j))*rfac2
                         END IF
                      ELSE IF (m == 0 .and. ifac == -1) THEN
                         IF (iand(imode, 1) /= 0) THEN
-                           mat(i, :) = ImagUnit*mat(i, :)
+                           ! mat(i, :) = ImagUnit*mat(i, :)
+                           call zscal(size(mat,2), ImagUnit, mat(i,1), size(mat,1))
                         END IF
                         IF (iand(imode, 2) /= 0) THEN
                            mat(:, i) = -ImagUnit*mat(:, i)
@@ -854,7 +864,7 @@ CONTAINS
             END DO
          END DO
       END DO
-
+      call timestop("desymmetrize")
    END SUBROUTINE desymmetrize
 
    ! bra_trafo1 rotates cprod at kpts%bkp(ikpt)(<=> not irreducible k-point) to cprod at ikpt (bkp(kpts%bkp(ikpt))), which is the
@@ -898,25 +908,30 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE    ::  vecin(:, :), vecout(:, :)
       integer :: ok, i, j, cnt
+      integer :: igptm2_list(mpdata%n_g(ikpt))
 
       phase = cmplx_0
       call timestart("bra trafo real")
+
+      IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
+      call find_corresponding_g(fi%sym, fi%kpts, mpdata, ikpt, igptm2_list)
+
+!     transform back to unsymmetrized product basis in case of inversion symmetry
+      !$OMP parallel default(none) private(i,j, cnt, vecin, vecout, ok) &
+      !$OMP shared(nbands, psize, fi, hybdat, mpdata, phase, matin_r, matout_r, ikpt, igptm2_list) 
       allocate (vecin(size(matin_r, dim=1), 1), vecout(size(matin_r, dim=1), 1),  stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin or vecout')
 
-      IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
-
-!     transform back to unsymmetrized product basis in case of inversion symmetry
-      cnt = 0
+      !$OMP do collapse(2)
       DO i = 1, nbands
          DO j = 1, psize
-            cnt = cnt + 1
+            cnt = (i-1) * psize + j
             vecin(:,1) = matin_r(:,cnt)
             CALL desymmetrize(vecin(:hybdat%nbasp, 1), hybdat%nbasp, 1, 1, &
                               fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
             call bra_trafo_core(1, ikpt, 1, fi%sym, mpdata, &
-                              fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin(:,1:1), vecout(:,1:1))
+                              fi%hybinp, hybdat, fi%kpts, fi%atoms, igptm2_list, vecin(:,1:1), vecout(:,1:1))
 
             CALL symmetrize(vecout(:, 1:1), hybdat%nbasm(ikpt), 1, 1, .false., &
                             fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
@@ -930,8 +945,11 @@ CONTAINS
 
          END DO
       END DO
+      !$OMP end do
 
       deallocate (vecout, vecin)
+      !$OMP end parallel
+
       call timestop("bra trafo real")
    end subroutine bra_trafo_real
 
@@ -947,26 +965,29 @@ CONTAINS
       COMPLEX, INTENT(IN)               ::  vecin_c(:, :)
       COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :)
 
+      integer :: igptm2_list(mpdata%n_g(ikpt))
+
       call timestart("bra trafo cmplx")
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > fi%atoms%lmaxd')   ! very improbable case
+      call find_corresponding_g(fi%sym, fi%kpts, mpdata, ikpt, igptm2_list)
 
-      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, vecin_c, vecout_c)
+      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, igptm2_list, vecin_c, vecout_c)
 
       call timestop("bra trafo cmplx")
    end subroutine bra_trafo_cmplx
 
    subroutine bra_trafo_core(nbands, ikpt, psize, sym, &
-                             mpdata, hybinp, hybdat, kpts, atoms, vecin1, vecout1)
-      use m_types
+                             mpdata, hybinp, hybdat, kpts, atoms, igptm2_list, vecin1, vecout1)
       use m_constants
       implicit none
       type(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_hybinp), INTENT(IN)   :: hybinp
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
-      TYPE(t_sym), INTENT(IN)   :: sym
-      TYPE(t_kpts), INTENT(IN)   :: kpts
+      TYPE(t_hybinp), INTENT(IN)  :: hybinp
+      TYPE(t_hybdat), INTENT(IN)  :: hybdat
+      TYPE(t_sym), INTENT(IN)     :: sym
+      TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
+      integer, intent(in)         :: igptm2_list(:)
 
       INTEGER, INTENT(IN)      ::  ikpt, nbands, psize
 
@@ -983,6 +1004,9 @@ CONTAINS
       REAL                    :: rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 :: dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), &
                                       -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
+
+      call timestart("bra_trafo_core")
+      call timestart("setup")
       IF (kpts%bksym(ikpt) <= sym%nop) THEN
          inviop = sym%invtab(kpts%bksym(ikpt))
          rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
@@ -1001,15 +1025,16 @@ CONTAINS
 
          dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1)) &
             = conjg(hybinp%d_wgn2(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1), inviop))
-
       END IF
 
       rkpt = matmul(rrot, kpts%bkf(:, kpts%bkp(ikpt)))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g = nint(rkpthlp - rkpt)
+      call timestop("setup")
 
       !test
+      call timestart("test")
       nrkpt = 0
       DO i = 1, kpts%nkptf
          IF (maxval(abs(rkpt - kpts%bkf(:, i))) <= 1E-06) THEN
@@ -1025,8 +1050,10 @@ CONTAINS
 
          call judft_error('bra_trafo: rotation failed')
       END IF
+      call timestop("test")
 
 !     Define pointer to first mixed-basis functions (with m = -l)
+      call timestart("def pointer to first mpb")
       i = 0
       do ic = 1, atoms%nat
          itype = atoms%itype(ic)
@@ -1038,10 +1065,14 @@ CONTAINS
             i = i + mpdata%num_radbasfn(l, itype)*2*l
          END DO
       END DO
+      call timestop("def pointer to first mpb")
 
 !     Multiplication
       ! MT
+      call timestart("MT part")
       cexp = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
+      !$OMP parallel do default(none) private(ic, itype, cdum, l, nn, n, i1, i2, j1, j2, i)&
+      !$OMP shared(atoms, cexp, hybinp, kpts, mpdata, pnt, dwgn, vecin1, vecout1, ikpt, g, nbands, psize)
       do ic = 1, atoms%nat
          itype = atoms%itype(ic)
 
@@ -1059,15 +1090,62 @@ CONTAINS
                DO i = 1, nbands*psize
                   vecout1(i1:i2:nn, i) = cdum*matmul(vecin1(j1:j2:nn, i), dwgn(-l:l, -l:l, l))
                END DO
-
             END DO
          END DO
       END DO
+      !$OMP end parallel do
+      call timestop("MT part")
 
       ! PW
+      call timestart("PW part")
+      !$OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
+      !$OMP shared(vecout1, vecin1, mpdata, ikpt, igptm2_list, kpts, rrot, g, hybdat, trans, nbands, psize)
       DO igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
          igptp = mpdata%gptm_ptr(igptm, kpts%bkp(ikpt))
          g1 = matmul(rrot, mpdata%g(:, igptp)) + g
+         igptm2 = igptm2_list(igptm)                 
+
+         cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
+         vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
+      END DO
+      !$OMP end parallel do
+      call timestop("PW part")
+      call timestop("bra_trafo_core")
+   end subroutine bra_trafo_core
+
+   subroutine find_corresponding_g(sym, kpts, mpdata, ikpt, igptm2_list)
+      implicit none
+      type(t_sym), intent(in)    :: sym
+      type(t_kpts), intent(in)   :: kpts
+      type(t_mpdata), intent(in) :: mpdata
+      integer, intent(in)        :: ikpt
+      integer, intent(inout)     :: igptm2_list(:)
+
+      integer :: igptm, igptp, g1(3), igptm2, i, iiop
+      integer :: g(3), rrot(3, 3)
+      REAL    :: rkpt(3), rkpthlp(3)
+
+      call timestart("find correpsonding g")
+      call timestart("setup")
+      IF (kpts%bksym(ikpt) <= sym%nop) THEN
+         rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
+      ELSE
+         iiop = kpts%bksym(ikpt) - sym%nop
+         rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
+     END IF
+
+      rkpt = matmul(rrot, kpts%bkf(:, kpts%bkp(ikpt)))
+      rkpthlp = rkpt
+      rkpt = kpts%to_first_bz(rkpt)
+      g = nint(rkpthlp - rkpt)
+      call timestop("setup")
+
+      !$OMP parallel do default(none) schedule(dynamic, 10) private(igptm, igptp, g1, igptm2) &
+      !$OMP shared(kpts, mpdata, ikpt, rrot, g, igptm2_list)
+      do igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
+         igptp = mpdata%gptm_ptr(igptm, kpts%bkp(ikpt))
+         g1 = matmul(rrot, mpdata%g(:, igptp)) + g
+
          igptm2 = 0
          DO i = 1, mpdata%n_g(ikpt)
             IF (maxval(abs(g1 - mpdata%g(:, mpdata%gptm_ptr(i, ikpt)))) <= 1E-06) THEN
@@ -1088,11 +1166,12 @@ CONTAINS
             END DO
             call judft_error('bra_trafo: G-point not found in G-point set.')
          END IF
-         cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
 
-         vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
-      END DO
-   end subroutine bra_trafo_core
+         igptm2_list(igptm) = igptm2
+      enddo
+      !$OMP end parallel do
+      call timestop("find correpsonding g")
+   end subroutine find_corresponding_g
 
    ! Determines common phase factor (with unit norm)
    function commonphase(carr, n) result(cfac)
