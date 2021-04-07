@@ -82,7 +82,7 @@ CONTAINS
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
-      !$OMP PARALLEL default(none) &
+      !$OMP PARALLEL default(shared) &
       !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
       !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, inv_gridlen)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)

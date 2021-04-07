@@ -23,8 +23,10 @@ MODULE m_checks
 #endif
 #ifdef CPP_MPI
 #ifndef CPP_HDFMPI
-         CALL judft_error("HDF5 cannot be used in parallel mode for Eigenvector IO",&
-              hint="Your HDF5 library does not support parallel IO" )
+         IF (mpi%irank.GT.1) THEN
+            CALL judft_error("HDF5 cannot be used in parallel mode for Eigenvector IO",&
+                 hint="Your HDF5 library does not support parallel IO" )
+         END IF
 #endif
 #endif
       ENDIF
