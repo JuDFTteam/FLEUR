@@ -110,7 +110,7 @@ CONTAINS
 #else
       fmpi%irank = 0; fmpi%isize = 1; fmpi%mpi_comm = 1
 #endif
-      CALL check_command_line()
+      CALL check_command_line(fmpi)
 #ifdef CPP_HDF
       CALL hdf_init()
 #endif
