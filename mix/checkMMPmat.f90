@@ -7,6 +7,7 @@ MODULE m_checkMMPmat
    USE m_constants
    use m_types_mixvector
    use m_mixing_history
+   use m_mpi_bc_tool
 
    IMPLICIT NONE
 
@@ -49,6 +50,8 @@ MODULE m_checkMMPmat
             ENDDO
          ENDDO
       ENDDO
+
+      CALL mpi_bc(changed_elements, 0, fmpi%mpi_comm)
 
       IF(changed_elements .AND. l_denmat_in_mixer) THEN
          IF(fmpi%irank.EQ.0) THEN
