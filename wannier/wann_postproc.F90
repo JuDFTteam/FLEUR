@@ -303,18 +303,17 @@ CONTAINS
             'WF1.anglmom',&
             'anglmomrs.1',.FALSE.,&
             rvecnum,rvec,kpoints,&
-            input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
+            1,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             noco%l_soc,wann%band_min,wann%band_max,input%neig,&
             .FALSE.,wann%wan90version)
 
        IF( input%jspins.EQ.2 )THEN
-          spinspin=2
-          IF(noco%l_soc.OR.noco%l_noco)spinspin=1
+          IF(.not.(noco%l_soc.OR.noco%l_noco))&
           CALL wann_fft4(&
             'WF2.anglmom',&
             'anglmomrs.2',.FALSE.,&
             rvecnum,rvec,kpoints,&
-            spinspin,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
+            2,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             noco%l_soc,wann%band_min,wann%band_max,input%neig,&
             .FALSE.,wann%wan90version)
         ENDIF
