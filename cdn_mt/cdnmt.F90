@@ -253,10 +253,10 @@ CONTAINS
                         + denCoeffsOffdiag%dd21(l,itype)*( g(j,1,l,2)*g(j,1,l,1) +g(j,2,l,2)*g(j,2,l,1) )
                    !rho21(j,0,itype) = rho21(j,0,itype)+ conjg(cs)/(atoms%neq(itype)*sfp_const)
                    rho21=CONJG(cs)/(atoms%neq(itype)*sfp_const)
-                   rho(j,0,itype,3)=rho(j,0,itype,3)+REAL(rho21)
+                   rho(j,0,itype,3)=rho(j,0,itype,3)-REAL(rho21)
                    rho(j,0,itype,4)=rho(j,0,itype,4)+aimag(rho21)
                    IF (l.LE.input%lResMax) THEN
-                      moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3)+ REAL(conjg(cs)/(atoms%neq(itype)*sfp_const))
+                      moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3)- REAL(conjg(cs)/(atoms%neq(itype)*sfp_const))
                       moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4)+ AIMAG(conjg(cs)/(atoms%neq(itype)*sfp_const))
                    END IF
                 ENDDO
