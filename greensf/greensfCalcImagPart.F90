@@ -256,8 +256,10 @@ MODULE m_greensfCalcImagPart
 
                      ENDDO!ib
                   ENDIF
-                  IF(spin_ind<=3) THEN
+                  IF(spin_ind<3) THEN
                      imagReal = AIMAG(imag)
+                  ELSE IF(spin_ind==3) THEN
+                     imagReal = -AIMAG(imag)
                   ELSE
                      imagReal = REAL(imag) !Imaginary part of spin-offdiagonal part
                   ENDIF
