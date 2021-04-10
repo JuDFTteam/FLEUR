@@ -105,7 +105,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      !rotation angle
      CALL gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,outden,dPhi,dtheta)
      print *,"delta-angles:",dphi,dtheta
-     dphi   = dphi  *(noco%mix_RelaxWeightOffD-1.0)
+     !dphi   = dphi  *(noco%mix_RelaxWeightOffD-1.0)
      dtheta = dtheta *(noco%mix_RelaxWeightOffD-1.0)
 
      !if (any(abs(dphi)>2.0).or.any(abs(dtheta)>2.0)) THEN
@@ -122,7 +122,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
 
      !CALL cureTooSmallAngles(atoms,dphi,dtheta)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,dtheta,outden)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dphi,zeros,outden)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dphi,zeros,outden)
      !Rotate back in global frame
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%betaPrev,outden)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alphPrev,zeros,outden)
@@ -235,16 +235,32 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
    TYPE(t_potden),INTENT(INOUT)          :: den
    LOGICAL,OPTIONAL,INTENT(IN)           :: l_update_nococonv
 
-   REAL                                  :: zeros(atoms%ntype)
-
+   REAL                                  :: zeros(atoms%ntype),alph_old(atoms%ntype),dalph
+   integer :: n
    if (.not.any(noco%l_alignMT)) RETURN
    if (fmpi%irank==0) THEN
      zeros(:) = 0.0
 
+     alph_old=nococonv%alphprev
      if (l_adjust) then
        !if (.not.allocated(nococonv%alphPrev)) allocate(nococonv%alphprev(atoms%ntype),nococonv%betaprev(atoms%ntype))
        call Gimmeangles(input,atoms,noco,vacuum,sphhar,stars,den,nococonv%alphPrev,nococonv%betaPrev)
      endif
+     !Now try to minimize difference to previous angles
+     DO n=1,atoms%ntype
+       dalph=abs(alph_old(n)-nococonv%alphPrev(n))
+       if (abs(nococonv%alph(n)-nococonv%alphprev(n)-Pi_const)<dalph) THEN
+         nococonv%alphprev(n)=nococonv%alphprev(n)+pi_const
+         nococonv%betaprev(n)=-1*nococonv%betaprev(n)
+       elseif (abs(nococonv%alph(n)-nococonv%alphprev(n)+Pi_const)<dalph) THEN
+         nococonv%alphprev(n)=nococonv%alphprev(n)-pi_const
+         nococonv%betaprev(n)=-1*nococonv%betaprev(n)
+       endif
+     enddo
+
+     write(6,*) "toLocalSpin: alpha=",-nococonv%alphprev
+     write(6,*) "toLocalSpin: beta=",-nococonv%betaprev
+
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(-nococonv%alphPrev,zeros,noco%l_alignMT),zeros,den)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(-nococonv%betaPreV,zeros,noco%l_alignMT),den)
      if (present(l_update_nococonv)) then
@@ -289,6 +305,9 @@ SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
 
    if (l_irank0) then
      zeros(:)=0.0
+     write(6,*) "toGlobalSpin: alpha=",nococonv%alph
+     write(6,*) "toGlobalSpin: beta=",nococonv%beta
+
      CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
      ! Nococonv is zero now since rotation has been reverted.

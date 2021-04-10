@@ -80,6 +80,8 @@ c***********************************************************************
       TYPE(t_rsoc)::rsoc
       TYPE(t_usdus):: usdus
 
+      call timestart("wann_socmat")
+
       nwdd=1
       nw=1
       nsz=neigd
@@ -139,5 +141,6 @@ c***********************************************************************
      >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
      <            hsomtx)
 
+      call timestop("wann_socmat")
       end subroutine wann_socmat
       end module m_wann_socmat

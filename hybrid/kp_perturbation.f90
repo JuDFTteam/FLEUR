@@ -15,7 +15,7 @@ CONTAINS
       USE m_util
       use m_intgrf
       USE m_types
-      USE m_io_hybinp
+      USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpdata), intent(inout) :: mpdata
@@ -37,7 +37,7 @@ CONTAINS
       ! - arrays -
 
       COMPLEX, INTENT(INOUT)::  olap_ibsc(:, :, :, :)
-      COMPLEX, INTENT(INOUT)::  proj_ibsc(:, :, :)!(3,mnobd,hybdat%nbands(nk))
+      COMPLEX, INTENT(INOUT)::  proj_ibsc(:, :, :)!(3,mnobd,hybdat%nbands(nk,jsp))
       ! - local scalars -
       INTEGER               ::  i, itype, ieq, iatom, iatom1, iband, iband1
       INTEGER               ::  iband2, ilo, ibas, ic, ikpt, ikvec, invsfct
@@ -76,7 +76,7 @@ CONTAINS
                                integrand(atoms%jmtd)
 
       COMPLEX               ::  f(atoms%jmtd, mnobd)
-      COMPLEX               ::  carr(3), carr2(3, hybdat%nbands(nk))
+      COMPLEX               ::  carr(3), carr2(3, hybdat%nbands(nk,jsp))
       COMPLEX               ::  ylm((atoms%lmaxd + 2)**2)
       COMPLEX, ALLOCATABLE   ::  u1(:, :, :, :, :), u2(:, :, :, :, :)
       COMPLEX, ALLOCATABLE   ::  cmt_lo(:, :, :, :)
@@ -180,7 +180,7 @@ CONTAINS
                         cdum2 = cdum1*conjg(ylm(lm))
                         if(z%l_real) THEN
                            work_r = z%data_r(ibas, :)
-                           DO iband = 1, hybdat%nbands(nk)
+                           DO iband = 1, hybdat%nbands(nk,jsp)
                               cmt_lo(iband, M, ilo, iatom) = cmt_lo(iband, M, ilo, iatom) + cdum2*work_r(iband)
                               IF(invsfct == 2) THEN
                                  ! the factor (-1)**l is necessary as we do not calculate
@@ -190,7 +190,7 @@ CONTAINS
                            END DO
                         else
                            work_c = z%data_c(ibas, :)
-                           DO iband = 1, hybdat%nbands(nk)
+                           DO iband = 1, hybdat%nbands(nk,jsp)
                               cmt_lo(iband, M, ilo, iatom) = cmt_lo(iband, M, ilo, iatom) + cdum2*work_c(iband)
                               IF(invsfct == 2) THEN
                                  ! the factor (-1)**l is necessary as we do not calculate
@@ -264,12 +264,12 @@ CONTAINS
                         cdum = (-1)**(p + 1)*var_enum/denom
                         if(z%l_real) THEN
                            work_r = z%data_r(i, :)
-                           DO iband = 1, hybdat%nbands(nk)
+                           DO iband = 1, hybdat%nbands(nk,jsp)
                               cmt_apw(iband, lmp, iatom) = cmt_apw(iband, lmp, iatom) + cdum*work_r(iband)
                            END DO
                         else
                            work_c = z%data_c(i, :)
-                           DO iband = 1, hybdat%nbands(nk)
+                           DO iband = 1, hybdat%nbands(nk,jsp)
                               cmt_apw(iband, lmp, iatom) = cmt_apw(iband, lmp, iatom) + cdum*work_c(iband)
                            END DO
                         end if
@@ -506,7 +506,7 @@ CONTAINS
                         END DO
                      END DO
 
-                     DO iband1 = 1, hybdat%nbands(nk)
+                     DO iband1 = 1, hybdat%nbands(nk,jsp)
                         cdum = conjg(cmt_apw(iband1, lmp, iatom))
                         DO iband2 = 1, mnobd! hybdat%nbands
                            proj_ibsc(1:3, iband2, iband1) = proj_ibsc(1:3, iband2, iband1) + cdum*carr2(1:3, iband2)
@@ -547,7 +547,7 @@ CONTAINS
                      END DO
                   END DO
 
-                  DO iband1 = 1, hybdat%nbands(nk)
+                  DO iband1 = 1, hybdat%nbands(nk,jsp)
                      cdum = conjg(cmt_lo(iband1, M, ilo, iatom))
                      DO iband2 = 1, mnobd! hybdat%nbands
                         proj_ibsc(1:3, iband2, iband1) = proj_ibsc(1:3, iband2, iband1) + cdum*carr2(1:3, iband2)
@@ -788,7 +788,7 @@ CONTAINS
       USE m_dr2fdr
       USE m_constants
       USE m_types
-      USE m_io_hybinp
+      USE m_io_hybrid
       use m_calc_cmt
       IMPLICIT NONE
       TYPE(t_input), INTENT(IN)     :: input
@@ -837,7 +837,7 @@ CONTAINS
       COMPLEX                 ::  olap_c(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
       REAL                    ::  vec1_r(lapw%nv(jsp)), vec2_r(lapw%nv(jsp)), vec3_r(lapw%nv(jsp))
       COMPLEX                 ::  vec1_c(lapw%nv(jsp)), vec2_c(lapw%nv(jsp)), vec3_c(lapw%nv(jsp))
-      COMPLEX                 :: c_phase(hybdat%nbands(nk))
+      COMPLEX                 :: c_phase(hybdat%nbands(nk,jsp))
 
       ! read in cmt coefficients from direct access file cmt at kpoint nk
       momentum = cmplx_0

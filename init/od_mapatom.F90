@@ -13,7 +13,10 @@
 !      to the operations, transforming atoms into each other,
 !      for more details look in mapatom.F.    year 2004 
 
-      USE m_types
+      USE m_types_oneD 
+      use m_types_atoms
+      use m_types_sym 
+      use m_types_cell
       USE m_constants
 
       IMPLICIT NONE

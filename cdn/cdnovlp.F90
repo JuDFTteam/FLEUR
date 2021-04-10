@@ -184,7 +184,9 @@ CONTAINS
                                                                     ! Klueppelberg (force level 1)
           IF (l_f2) THEN
           ! Allocate the force arrays in the routine force_a4_add.f90
-             CALL alloc_fa4_arrays(atoms,input)
+             IF (.NOT.ALLOCATED(force_a4_mt)) THEN
+                CALL alloc_fa4_arrays(atoms,input)
+             END IF
              ALLOCATE(force_a4_mt_loc,mold=force_a4_mt(:,:,jspin))
              force_a4_mt(:,:,jspin) =  zero
              force_a4_mt_loc(:,:) =  zero
@@ -787,7 +789,7 @@ CONTAINS
        END IF
 #endif
        IF (l_f2) THEN
-       force_a4_mt(:,:,jspin)=force_a4_mt(:,:,jspin)+force_a4_mt_loc(:,:)
+          force_a4_mt(:,:,jspin)=force_a4_mt(:,:,jspin)+force_a4_mt_loc(:,:)
        END IF
       end subroutine ft_of_CorePseudocharge
 
@@ -968,7 +970,7 @@ CONTAINS
             !           (do numerical integration of tails)
 
             IF ( method2 .EQ. 1) THEN
-               DO ir = 1 , n_out_p
+               DO ir = -6 , n_out_p
                   j = jri+ir-1
                   rhohelp(mshc+1-j) =  rat(j) * rat(j) * rat(j) *  rh(j)
                END DO
@@ -999,7 +1001,7 @@ CONTAINS
             !           (do numerical integration of tails)
 
             IF ( method2 .EQ. 1) THEN
-               DO ir = 1 , n_out_p 
+               DO ir = -6 , n_out_p
                   j  = jri+ir-1
                   rhohelp(mshc-jri+2-ir) =  rat(j)*rat(j) * rh(j) * SIN( g*rat(j) )
                END DO

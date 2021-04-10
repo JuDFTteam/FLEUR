@@ -6,13 +6,13 @@
 
 MODULE m_calc_hybrid
    USE m_judft
-
+   use m_store_load_hybrid
 CONTAINS
 
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
                           results,xcpot,v,iterHF)
       use m_work_package
-
+      use m_set_coul_participation
       USE m_types_hybdat
       USE m_types
       USE m_mixedbasis
@@ -20,10 +20,13 @@ CONTAINS
       USE m_hf_init
       USE m_hf_setup
       USE m_hsfock
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_eig66_io
       use m_eig66_mpi
       use m_distribute_mpi 
+      use m_create_coul_comms
+      use m_eigvec_setup
+      use m_distrib_vx
 #ifdef CPP_MPI 
       use mpi 
 #endif
@@ -46,17 +49,18 @@ CONTAINS
       INTEGER, INTENT(INOUT)            :: iterHF
 
       ! local variables
-      type(t_hybmpi)    :: glob_mpi, wp_mpi
-      type(t_work_package) :: work_pack
-      INTEGER           :: jsp, nk, err, i, wp_rank, ierr, ik
-      integer           :: j_wp, n_wps, root_comm
-      type(t_lapw)      :: lapw
-      LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
-      LOGICAL           :: l_zref
-      character(len=999):: msg
-      REAL, ALLOCATABLE :: eig_irr(:, :)
-      integer, allocatable :: v_x_loc(:,:), weights(:)
-      type(c_ptr)       :: threadId
+      type(t_hybmpi)           :: glob_mpi, wp_mpi
+      type(t_work_package)     :: work_pack(fi%input%jspins)
+      INTEGER                  :: jsp, nk, err, i, wp_rank, ierr, ik
+      integer                  :: j_wp, n_wps, root_comm
+      type(t_lapw)             :: lapw
+      LOGICAL                  :: init_vex = .TRUE. !In first call we have to init v_nonlocal
+      LOGICAL                  :: l_zref
+      character(len=999)       :: msg
+      REAL, ALLOCATABLE        :: eig_irr(:, :)
+      integer, allocatable     :: vx_loc(:,:), weights(:)
+      type(c_ptr)              :: threadId
+      type(t_mat), allocatable :: vx_tmp(:,:)
 
       CALL timestart("hybrid code")
 
@@ -107,22 +111,7 @@ CONTAINS
                         enpara, fmpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
-
-         if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
-         do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, fmpi%irank == 0)
-         enddo
-
-         ! use jsp=1 for coulomb work-planning
-         CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
-
-         do i =1,fi%kpts%nkpt
-            call hybdat%coul(i)%mpi_bc(fi, fmpi%mpi_comm, fmpi%coulomb_owner(i))
-         enddo
-
-         CALL hf_init(mpdata, fi, hybdat)
-         CALL timestop("Preparation for hybrid functionals")
-
+         ! setup parallelization 
          n_wps = min(glob_mpi%size, fi%kpts%nkpt)
          allocate(weights(n_wps), source=0)
          do j_wp = 1, n_wps
@@ -131,25 +120,66 @@ CONTAINS
             enddo
          enddo
          call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
+         call hybdat%set_nobd(fi, results)
+         call hybdat%set_nbands(fi, fmpi, results)
+         do jsp = 1,fi%input%jspins
+            call work_pack(jsp)%init(fi, hybdat, mpdata, wp_mpi, jsp, wp_rank, n_wps)
+         enddo
+
+         if(.not. allocated(hybdat%zmat))then 
+             allocate(hybdat%zmat(fi%kpts%nkptf, fi%input%jspins))
+            DO jsp = 1, fi%input%jspins
+               DO nk = 1,fi%kpts%nkptf
+                  CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
+                  call eigvec_setup(hybdat%zmat(nk, jsp), fi, lapw, work_pack, fmpi, &
+                                    hybdat%nbands(nk, jsp), nk, jsp, hybdat%eig_id)
+               enddo 
+            enddo
+         endif
+         call bcast_eigvecs(hybdat, fi, nococonv, fmpi)
+
+         if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
+         call set_coul_participation(hybdat, fi, fmpi, work_pack)
+         call create_coul_comms(hybdat, fi, fmpi)
+
+         do i =1,fi%kpts%nkpt
+            if(hybdat%coul(i)%l_participate) then 
+               call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, .false.)
+            else 
+               call hybdat%coul(i)%mini_alloc(fi)
+            endif 
+         enddo 
+
+         ! use jsp=1 for coulomb work-planning
+         CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
+         
+         do i =1,fi%kpts%nkpt
+            if(hybdat%coul(i)%l_participate) then 
+               call hybdat%coul(i)%mpi_bcast(fi, hybdat%coul(i)%comm, 0)
+            endif
+         enddo
+
+         CALL hf_init(mpdata, fi, hybdat)
+         CALL timestop("Preparation for hybrid functionals")
+
          call judft_comm_split(glob_mpi%comm, wp_mpi%rank, 0, root_comm)
 
          CALL timestart("Calculation of non-local HF potential")
-         allocate(v_x_loc(fi%kpts%nkpt,fi%input%jspins), source=-1)
+         allocate(vx_loc(fi%kpts%nkpt,fi%input%jspins), source=-1)
+         allocate(vx_tmp(fi%kpts%nkpt, fi%input%jspins))
          DO jsp = 1, fi%input%jspins
             CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
-
-            call work_pack%init(fi, hybdat, wp_mpi, jsp, wp_rank, n_wps)
-            
-            DO i = 1,work_pack%k_packs(1)%size
-               nk = work_pack%k_packs(i)%nk
+             
+            DO i = 1,work_pack(jsp)%k_packs(1)%size
+               nk = work_pack(jsp)%k_packs(i)%nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
-               CALL hsfock(fi, work_pack%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
-                           nococonv, stars, results, xcpot, fmpi)
-               if(work_pack%k_packs(i)%submpi%root()) v_x_loc(nk, jsp) = fmpi%irank
+               CALL hsfock(fi, work_pack(jsp)%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
+                           nococonv, stars, results, xcpot, fmpi, vx_tmp(nk, jsp))
+               if(work_pack(jsp)%k_packs(i)%submpi%root()) vx_loc(nk, jsp) = fmpi%irank
             END DO
-            
-            call work_pack%free()
+   
+            call work_pack(jsp)%free()
          END DO
 #ifdef CPP_MPI
          call timestart("MPI_Allred te_hfex%core")
@@ -157,18 +187,11 @@ CONTAINS
          call timestop("MPI_Allred te_hfex%core")
 #endif
          CALL timestop("Calculation of non-local HF potential")
-
-         call timestart("BCast v_x")
 #ifdef CPP_MPI
-         call MPI_Allreduce(MPI_IN_PLACE, v_x_loc, size(v_x_loc), MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)   
-         do jsp = 1, fi%input%jspins
-            do nk = 1, fi%kpts%nkpt 
-               call hybdat%v_x(nk, jsp)%bcast(v_x_loc(nk,jsp), fmpi%mpi_comm)
-            enddo
-         enddo
+         call MPI_Allreduce(MPI_IN_PLACE, vx_loc, size(vx_loc), MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)   
 #endif
-         deallocate(v_x_loc)
-         call timestop("BCast v_x")
+         call distrib_vx(fi, fmpi, nococonv, vx_loc, vx_tmp, hybdat)
+         call store_hybrid_data(fi, fmpi, hybdat)
 
 #ifdef CPP_MPI
          call timestart("Hybrid imbalance")
@@ -187,9 +210,6 @@ CONTAINS
          type(t_fleurinput), intent(in)    :: fi
          TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
-         if(allocated(hybdat%ne_eig)) deallocate(hybdat%ne_eig)
-         allocate(hybdat%ne_eig(fi%kpts%nkpt), source=0)
-
          if(allocated(hybdat%nbands)) then
             deallocate(hybdat%nbands, stat=err, errmsg=msg)
             if(err /= 0) THEN
@@ -198,10 +218,7 @@ CONTAINS
             endif
          endif
 
-         allocate(hybdat%nbands(fi%kpts%nkptf), source=0)
-
-         if(allocated(hybdat%nobd)) deallocate(hybdat%nobd)
-         allocate(hybdat%nobd(fi%kpts%nkptf, fi%input%jspins), source=0)
+         allocate(hybdat%nbands(fi%kpts%nkptf, fi%input%jspins), source=0)
 
          if(allocated(hybdat%nbasm)) deallocate(hybdat%nbasm)
          allocate(hybdat%nbasm(fi%kpts%nkptf), source=0)

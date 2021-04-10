@@ -65,7 +65,7 @@ CONTAINS
       COMPLEX               ::  rc, rr
 
       ! Local Arrays
-      INTEGER               ::  gg(3), x, x_loc, y
+      INTEGER               ::  gg(3), x, x_loc, y, iband
       INTEGER               ::  pointer_lo(atoms%nlod, atoms%ntype)
 
       REAL                  ::  integ(0:sphhar%nlhd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd)
@@ -136,20 +136,23 @@ CONTAINS
 
       ! Calculate bascof
       call timestart("Calculate bascof")
-      ALLOCATE (ahlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bhlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'subvxc: error in allocation of ahlp/bhlp'
-#ifndef CPP_OLDINTEL
-      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, ahlp, bhlp, bascof_lo)
-#endif
+      ALLOCATE(ahlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
+      IF (ok /= 0) call judft_error('subvxc: error in allocation of ahlp')
+      allocate(bhlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
+      IF (ok /= 0) call judft_error('subvxc: error in allocation of bhlp')  
+      
       allocate(bascof(atoms%nat))
       do ic = 1, atoms%nat 
          call bascof(ic)%alloc(.false., lapw%dim_nvd(), 2*(atoms%lmaxd*(atoms%lmaxd+2) + 1))
       enddo
+      
+      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, &
+                  1,lapw%nv(jsp), ahlp, bhlp, bascof_lo)
 
-      ic = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            ic = ic + 1
+   
+      do iband = 1,lapw%nv(jsp)
+         do ic = 1,atoms%nat
+            itype = atoms%itype(ic)
             indx = 0
             DO l = 0, atoms%lmax(itype)
                ll = l*(l + 1)
@@ -158,18 +161,19 @@ CONTAINS
                   DO i = 1, 2
                      indx = indx + 1
                      IF (i == 1) THEN
-                        bascof(ic)%data_c(:, indx) = ahlp(:, lm, ic)
+                        bascof(ic)%data_c(iband, indx) = ahlp(iband, lm, ic)
                      ELSE IF (i == 2) THEN
-                        bascof(ic)%data_c(:, indx) = bhlp(:, lm, ic)
+                        bascof(ic)%data_c(iband, indx) = bhlp(iband, lm, ic)
                      END IF
                   END DO
                END DO
             END DO
          END DO
-      END DO
-      call timestop("Calculate bascof")
+      enddo
 
       deallocate(ahlp, bhlp)
+      call timestop("Calculate bascof")
+
 
       ! Loop over atom types
       call vrmat%alloc(.false., hybdat%maxlmindx, hybdat%maxlmindx)
@@ -343,6 +347,7 @@ CONTAINS
             nlharm = sphhar%nlh(typsym)
 
             ! Calculate vxc = vtot - vcoul
+            call timestart("calc vxc=vtotvcoul")
             DO l = 0, nlharm
                DO i = 1, atoms%jri(itype)
                   IF (l == 0) THEN
@@ -354,8 +359,10 @@ CONTAINS
                   END IF
                END DO
             END DO
+            call timestop("calc vxc=vtotvcoul")
 
             ! Precompute auxiliary radial integrals
+            call timestart("Precompute aux. rad. integ.")
             DO ilharm = 0, nlharm
                i = 0
                DO l1 = 0, atoms%lmax(itype)
@@ -378,6 +385,7 @@ CONTAINS
                   END DO
                END DO
             END DO
+            call timestop("Precompute aux. rad. integ.")
 
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
@@ -405,6 +413,7 @@ CONTAINS
                               lm = 0
 
                               !loop over APW
+                              call timestart("loop over APW")
                               DO l2 = 0, atoms%lmax(itype)
                                  DO m2 = -l2, l2
                                     DO p2 = 1, 2
@@ -440,12 +449,13 @@ CONTAINS
                                     END DO  !p2
                                  END DO  ! m2
                               END DO ! l2 ->  loop over APW
+                              call timestop("loop over APW")
 
                               ! calcualte matrix-elements with local orbitals at the same atom
+                              call timestart("calc. matelem with LO at same atm")
                               IF (ic /= icentry + lapw%nv(jsp)) call judft_error('subvxc: error counting ic')
 
                               ic = ic + ikvecprevat
-
                               DO ilop = 1, ilo - 1
                                  lp = atoms%llo(ilop, itype)
                                  DO ikvecp = 1, invsfct*(2*lp + 1)
@@ -487,8 +497,10 @@ CONTAINS
                                     endif
                                  END DO !ikvecp
                               END DO ! ilop
+                              call timestop("calc. matelem with LO at same atm")
 
                               ! calculate matrix-elements of one local orbital with itself
+                              call timestart("calc. matelem of LO with itself")
                               DO ikvecp = 1, ikvec
                                  ic = ic + 1
                                  call packed_to_cart(ic, x,y)
@@ -529,6 +541,7 @@ CONTAINS
                                     END DO ! mp
                                  endif
                               END DO ! ikvecp
+                              call timestop("calc. matelem of LO with itself")
                            END DO  ! p1
                         END DO  ! m1
                         icentry = ic

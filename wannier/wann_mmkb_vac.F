@@ -83,7 +83,7 @@ c     ..local scalars..
       integer, allocatable :: kvac1(:),kvac2(:),map2(:)
       integer, allocatable :: kvac1_b(:),kvac2_b(:),map2_b(:)
       integer symvac,symvacvac
-
+      call timestart("wann_mmkb_vac")
       allocate ( ac(nv2d,nslibd),bc(nv2d,nslibd),
      +           ac_b(nv2d,nslibd_b),bc_b(nv2d,nslibd_b),
      +           dt(nv2d),dte(nv2d),t(nv2d),te(nv2d),
@@ -359,5 +359,6 @@ c... cycle by the vacua finishes
       deallocate ( ac_b,bc_b,dt_b,dte_b,t_b,te_b,tei_b,u_b,ue_b,
      +             kvac1_b,kvac2_b,map2_b )
 
+      call timestop("wann_mmkb_vac")
       END SUBROUTINE wann_mmkb_vac
       END MODULE m_wann_mmkb_vac

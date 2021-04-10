@@ -1,6 +1,198 @@
 module m_wavefproducts_aux
-
+   use m_types_fftGrid
 CONTAINS
+   subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+                                   ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+      !$ use omp_lib
+      use m_types
+      use m_constants
+      use m_judft
+      use m_fft_interface
+      use m_io_hybrid
+      use m_juDFT
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit NONE
+      type(t_fleurinput), intent(in)  :: fi
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
+      TYPE(t_lapw), INTENT(IN)        :: lapw
+      TYPE(t_mpdata), intent(in)      :: mpdata
+      TYPE(t_hybdat), INTENT(IN)      :: hybdat
+      type(t_stars), intent(in)       :: stars
+      type(t_mat), intent(in)         :: z_k
+      type(t_mat), intent(inout)      :: z_kqpt_p, cprod
+      !     - scalars -
+      INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3), bandoi, bandof
+      INTEGER, INTENT(IN)      ::  ikqpt
+      !     - arrays -
+      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt,jsp))
+
+      complex, allocatable  :: prod(:), psi_k(:, :)
+
+      type(t_mat)     :: z_kqpt
+      type(t_lapw)    :: lapw_ikqpt
+      type(t_mat)     :: psi_kqpt
+      type(t_fft)     :: fft
+      type(t_fftgrid) :: stepf
+
+      integer :: g(3), igptm, iob, n_omp
+      integer :: ok, nbasfcn, psize, iband, ierr, i
+      integer, allocatable :: band_list(:)
+      real    :: inv_vol, gcutoff
+      complex :: inv_gridlen
+
+      logical :: real_warned
+
+      real_warned = .False.
+
+      call timestart("wavef_IS_FFT")
+      gcutoff = (2*fi%input%rkmax + fi%mpinp%g_cutoff) * fi%hybinp%fftcut
+      inv_vol = 1/sqrt(fi%cell%omtil)
+      psize = bandof - bandoi + 1
+      !this is for the exact result. Christoph recommend 2*gmax+gcutm for later
+      if (2*fi%input%rkmax + fi%mpinp%g_cutoff > fi%input%gmax) then
+         write (*, *) "WARNING: not accurate enough: 2*kmax+gcutm >= fi%input%gmax"
+         !call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
+      endif
+
+      call stepf%init(fi%cell, fi%sym, gcutoff)
+      call stepf%putFieldOnGrid(stars, stars%ustep)
+      stepf%grid = stepf%grid * inv_vol
+      inv_gridlen = 1.0/stepf%gridLength
+
+      call fft%init(stepf%dimensions, .false.)
+      call fft%exec(stepf%grid)
+      call fft%free()
+
+      CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
+
+      nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
+      call z_kqpt%alloc(z_k%l_real, nbasfcn, psize)
+      call z_kqpt_p%init(z_kqpt)
+
+      band_list = [(i, i=bandoi, bandof)]
+      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
+                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p, list=band_list)
+
+      call psi_kqpt%alloc(.false., stepf%gridLength, psize)
+
+      call timestart("1st wavef2rs")
+      call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, psi_kqpt%data_c)
+      call timestop("1st wavef2rs")
+
+      call timestart("Big OMP loop")
+      !$OMP PARALLEL default(shared) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
+      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, inv_gridlen)&
+      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
+
+      call timestart("alloc&init")
+      allocate (prod(0:stepf%gridLength - 1), stat=ok)
+      if (ok /= 0) call juDFT_error("can't alloc prod")
+      allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
+      if (ok /= 0) call juDFT_error("can't alloc psi_k")
+
+      call fft%init(stepf%dimensions, .true.)
+      call timestop("alloc&init")
+
+      !$OMP DO
+      do iband = 1, hybdat%nbands(ik,jsp)
+         call timestart("loop wavef2rs")
+         call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+         call timestop("loop wavef2rs")
+         call timestart("apply step")
+         psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
+         call timestop("apply step")
+
+         do iob = 1, psize
+            call timestart("psi_prod")
+            prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
+            call timestop("psi_prod")
+            call timestart("inner FFT")
+            call fft%exec(prod)
+            call timestop("inner FFT")
+
+            call timestart("real check")
+            if (cprod%l_real) then
+               if (any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
+                  write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
+                     float2str(maxval(abs(aimag(prod))))
+                  real_warned = .True.
+               endif
+            endif
+            call timestop("real check")
+
+            ! we still have to devide by the number of mesh points
+            call timestart("divide by gridlen")
+            call zscal(stepf%gridLength, inv_gridlen, prod, 1)
+            call timestop("divide by gridlen")
+
+            call timestart("sort into cprod")
+            if (cprod%l_real) then
+               DO igptm = 1, mpdata%n_g(iq)
+                  g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
+                  cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(stepf%g2fft(g)))
+               enddo
+            else
+               DO igptm = 1, mpdata%n_g(iq)
+                  g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
+                  cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g))
+               enddo
+            endif
+            call timestop("sort into cprod")
+         enddo
+      enddo
+      !$OMP END DO
+      deallocate (prod, psi_k)
+      call fft%free()
+      !$OMP END PARALLEL
+
+      call stepf%free()
+
+      call timestop("Big OMP loop")
+      call psi_kqpt%free()
+      call timestop("wavef_IS_FFT")
+   end subroutine wavefproducts_IS_FFT
+
+   subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, psi)
+!$    use omp_lib
+      use m_types
+      use m_fft_interface
+      implicit none
+      type(t_fleurinput), intent(in) :: fi
+      type(t_lapw), intent(in)       :: lapw
+      type(t_mat), intent(in)        :: zmat
+      integer, intent(in)            :: jspin, bandoi, bandof
+      real, intent(in)               :: gcutoff
+      complex, intent(inout)         :: psi(0:, bandoi:) ! (nv,ne)
+
+      type(t_fft) :: fft
+      type(t_fftgrid) :: grid
+
+      integer :: ivmap(SIZE(lapw%gvec, 2))
+      integer :: iv, nu, n_threads
+
+      psi = 0.0
+      n_threads = 1
+      !$OMP PARALLEL private(nu, iv, n_threads, fft, grid)  default(private) &
+      !$OMP shared(fi, bandoi, bandof, zMat, psi,  ivmap, lapw, jspin, gcutoff)
+
+      call grid%init(fi%cell, fi%sym, gcutoff)
+      call fft%init(grid%dimensions, .false.)
+
+      !$OMP DO
+      do nu = bandoi, bandof
+         call grid%putStateOnGrid(lapw, jspin, zMat, nu)
+         psi(:,nu) = grid%grid
+         call fft%exec(psi(:, nu))
+      enddo
+      !$OMP ENDDO
+      call grid%free()
+      call fft%free()
+      !$OMP END PARALLEL
+   end subroutine wavef2rs
+
    subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)
       use m_types
       use m_juDFT
@@ -65,183 +257,4 @@ CONTAINS
          enddo
       enddo
    end function outer_prod
-
-   subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-                                   ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
-      !$ use omp_lib
-      use m_types
-      use m_constants
-      use m_judft
-      use m_fft_interface
-      use m_io_hybinp
-      use m_juDFT
-#ifdef CPP_MPI
-      use mpi
-#endif
-      implicit NONE
-      type(t_fleurinput), intent(in)  :: fi
-      TYPE(t_nococonv), INTENT(IN)    :: nococonv
-      TYPE(t_lapw), INTENT(IN)        :: lapw
-      TYPE(t_mpdata), intent(in)      :: mpdata
-      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
-      type(t_stars), intent(in)       :: stars
-      type(t_mat), intent(in)         :: z_k
-      type(t_mat), intent(inout)      :: z_kqpt_p, cprod
-      !     - scalars -
-      INTEGER, INTENT(IN)      ::  ik, iq, jsp, g_t(3), bandoi, bandof
-      INTEGER, INTENT(IN)      ::  ikqpt
-      !     - arrays -
-      complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt))
-
-      complex, allocatable  :: prod(:), psi_k(:, :)
-
-      type(t_mat)               :: z_kqpt
-      type(t_lapw)              :: lapw_ikqpt
-      integer :: length_zfft(3), g(3), igptm, iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
-      integer :: ok, nbasfcn, fftd, psize, iband, ierr, i
-      integer, allocatable :: band_list(:)
-      real    :: inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start
-      type(t_mat)  :: psi_kqpt
-      type(t_fft)  :: fft
-      logical :: real_warned
-      real_warned = .False.
-
-      call timestart("wavef_IS_FFT")
-      inv_vol = 1/sqrt(fi%cell%omtil)
-      length_zfft = [3*stars%mx1, 3*stars%mx2, 3*stars%mx3]
-      fftd = product(length_zfft)
-      psize = bandof - bandoi + 1
-      !this is for the exact result. Christoph recommend 2*gmax+gcutm for later
-      if (2*fi%input%rkmax + fi%mpinp%g_cutoff > fi%input%gmax) then
-         write (*, *) "WARNING: not accurate enough: 2*kmax+gcutm >= fi%input%gmax"
-         !call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
-      endif
-
-      CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
-
-      nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
-      call z_kqpt%alloc(z_k%l_real, nbasfcn, psize)
-      call z_kqpt_p%init(z_kqpt)
-
-      band_list = [(i, i=bandoi, bandof)]
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
-                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p, list=band_list)
-
-#if defined(CPP_MPI)
-      ! call timestart("Post read_z Barrier: is_fft")
-      ! call MPI_Barrier(MPI_COMM_WORLD, ierr)
-      ! call timestop("Post read_z Barrier: is_fft")
-#endif
-
-      call psi_kqpt%alloc(.false., fftd, psize)
-
-      call timestart("1st wavef2rs")
-      call wavef2rs(lapw_ikqpt, z_kqpt, length_zfft, 1, psize, jsp, psi_kqpt%data_c)
-      call timestop("1st wavef2rs")
-
-      call timestart("Big OMP loop")
-
-      t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
-      iob_list = -7
-      iband_list = -7
-      !$OMP PARALLEL default(private) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod, length_zfft, mpdata, iq, g_t, psize, iob_list, iband_list)&
-      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, fftd, ik, real_warned, n_omp, bandoi)
-
-      allocate (prod(0:fftd - 1), stat=ok)
-      if (ok /= 0) call juDFT_error("can't alloc prod")
-      allocate (psi_k(0:fftd - 1, 1), stat=ok)
-      if (ok /= 0) call juDFT_error("can't alloc psi_k")
-
-      call fft%init(length_zfft, .true.)
-      !$OMP DO
-      do iband = 1, hybdat%nbands(ik)
-         call wavef2rs(lapw, z_k, length_zfft, iband, iband, jsp, psi_k)
-         psi_k(:, 1) = conjg(psi_k(:, 1))*stars%ufft*inv_vol
-
-         do iob = 1, psize
-            iob_list(iob + (iband - 1)*psize) = iob + bandoi - 1
-            iband_list(iob + (iband - 1)*psize) = iband
-            ! t_start = cputime()
-            prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
-            call fft%exec(prod)
-            if (cprod%l_real) then
-               if (any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
-                  write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
-                     float2str(maxval(abs(aimag(prod))))
-                  real_warned = .True.
-               endif
-            endif
-
-            ! we still have to devide by the number of mesh points
-            prod = prod/product(length_zfft)
-
-            if (cprod%l_real) then
-               DO igptm = 1, mpdata%n_g(iq)
-                  g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
-                  cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(g2fft(length_zfft, g)))
-               enddo
-            else
-               DO igptm = 1, mpdata%n_g(iq)
-                  g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
-                  cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(g2fft(length_zfft, g))
-               enddo
-            endif
-         enddo
-      enddo
-      !$OMP END DO
-      deallocate (prod, psi_k)
-      call fft%free()
-      !$OMP END PARALLEL
-
-      call timestop("Big OMP loop")
-      call psi_kqpt%free()
-      call timestop("wavef_IS_FFT")
-   end subroutine wavefproducts_IS_FFT
-
-   subroutine wavef2rs(lapw, zmat, length_zfft, bandoi, bandof, jspin, psi)
-!$    use omp_lib
-      use m_types
-      use m_fft_interface
-      implicit none
-      type(t_lapw), intent(in)       :: lapw
-      type(t_mat), intent(in)        :: zmat
-      integer, intent(in)            :: jspin, bandoi, bandof, length_zfft(3)
-      complex, intent(inout)         :: psi(0:, bandoi:) ! (nv,ne)
-
-      type(t_fft) :: fft
-
-      integer :: ivmap(SIZE(lapw%gvec, 2))
-      integer :: iv, nu, n_threads, me
-
-      DO iv = 1, lapw%nv(jspin)
-         ivmap(iv) = g2fft(length_zfft, lapw%gvec(:, iv, jspin))
-      ENDDO
-
-      psi = 0.0
-      n_threads = 1
-      me = 1
-      !$OMP PARALLEL private(nu, iv, n_threads, me, fft)  default(private) &
-      !$OMP shared(bandoi, bandof, zMat, psi, length_zfft, ivmap, lapw, jspin)
-
-      call fft%init(length_zfft, .false.)
-
-      !$OMP DO
-      do nu = bandoi, bandof
-         !------> map WF into FFTbox
-         DO iv = 1, lapw%nv(jspin)
-            if (zMat%l_real) then
-               psi(ivmap(iv), nu) = zMat%data_r(iv, nu)
-            else
-               psi(ivmap(iv), nu) = zMat%data_c(iv, nu)
-            endif
-         ENDDO
-         call fft%exec(psi(:, nu))
-      enddo
-      !$OMP ENDDO
-      call fft%free()
-      !$OMP END PARALLEL
-   end subroutine wavef2rs
-
 end module m_wavefproducts_aux

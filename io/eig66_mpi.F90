@@ -1,7 +1,7 @@
 MODULE m_eig66_mpi
 #include "juDFT_env.h"
    USE m_eig66_data
-   USE m_types
+   USE m_types_mat
    USE m_judft
 #ifdef CPP_MPI
    USE mpi
@@ -33,6 +33,7 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL:: n_size_opt
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
 #ifdef CPP_MPI
+      CHARACTER(len=20):: arg
       INTEGER:: isize, e, slot_size, local_slots
       INTEGER, PARAMETER::mcored = 27 !there should not be more that 27 core states
       TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
@@ -86,6 +87,12 @@ CONTAINS
       IF (PRESENT(filename) .AND. .NOT. create) CALL judft_error("Storing of data not implemented for MPI case", calledby="eig66_mpi.F")
       CALL MPI_BARRIER(MPI_COMM, e)
       CALL timestop("create data spaces in ei66_mpi")
+
+      if (d%irank==0) then
+        arg=TRIM(juDFT_string_for_argument("-eig"))
+        IF (index(arg,"init")>0) CALL priv_readfromfileDA()
+      endif
+
    CONTAINS
       SUBROUTINE priv_create_memory(slot_size, local_slots, handle, int_data_ptr, real_data_ptr, cmplx_data_ptr)
          use m_types_mpi, only: judft_win_create
@@ -97,9 +104,10 @@ CONTAINS
          INTEGER, INTENT(OUT)          :: handle
 #ifdef CPP_MPI
          TYPE(c_ptr)::ptr
-         INTEGER:: e
+         INTEGER:: e, iError
          INTEGER(MPI_ADDRESS_KIND) :: length
          INTEGER                   :: type_size
+         CHARACTER(LEN=100)        :: errorString
 
          length = 0
          IF (PRESENT(real_data_ptr)) THEN
@@ -117,6 +125,7 @@ CONTAINS
          IF (length .NE. 1) CALL judft_error("Bug in eig66_mpi:create_memory")
          length = MAX(1, slot_size*local_slots)
 
+         iError = 0
 #ifdef CPP_MPI_ALLOC
          length = length*type_size
          CALL MPI_ALLOC_MEM(length, MPI_INFO_NULL, ptr, e)
@@ -127,40 +136,101 @@ CONTAINS
             CALL C_F_POINTER(ptr, real_data_ptr, (/length/type_size/))
             call judft_error("hmm fuck")
 #else
-            ALLOCATE (real_data_ptr(length))
+            ! In the following allocate a too large length may lead to a segmentation fault in the allocate statement
+            ! with before being able to return of an error code.
+            ALLOCATE (real_data_ptr(length), source=0.0, STAT=iError)
 #endif
-            call judft_win_create(real_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
+            IF (iError.EQ.0) call judft_win_create(real_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
          ELSEIF (PRESENT(int_data_ptr)) THEN
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, int_data_ptr, (/length/type_size/))
 #else
-            ALLOCATE (int_data_ptr(length))
+            ! In the following allocate a too large length may lead to a segmentation fault in the allocate statement
+            ! with before being able to return of an error code.
+            ALLOCATE (int_data_ptr(length), source=0, STAT=iError)
 #endif
-            call judft_win_create(int_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
+            IF (iError.EQ.0) call judft_win_create(int_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
          ELSE
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, cmplx_data_ptr, (/length/type_size/))
 #else
-            ALLOCATE (cmplx_data_ptr(length))
+            ! In the following allocate a too large length may lead to a segmentation fault in the allocate statement
+            ! with before being able to return of an error code.
+            ALLOCATE (cmplx_data_ptr(length), source=CMPLX(0.0,0.0), STAT=iError)
 #endif
-            call judft_win_create(cmplx_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
+            IF (iError.EQ.0) call judft_win_create(cmplx_data_ptr, length*type_size, slot_size*type_size, Mpi_INFO_NULL, MPI_COMM, handle)
          ENDIF
 #endif
+         IF(iError.NE.0) THEN
+            ! See comment above the related allocate statements. This error handler is not always reached.
+            WRITE(errorString,*) 'Allocation of array for communication failed. Needed number of elements:  slot_size ',&
+                                 slot_size, ' x ', local_slots, 'local slots.'
+            CALL juDFT_error(TRIM(ADJUSTL(errorString)), calledby='eig66_mpi')
+         END IF
+
       END SUBROUTINE priv_create_memory
 
+      SUBROUTINE priv_readfromfileDA()
+         USE m_eig66_DA, ONLY: open_eig_DA => open_eig, read_eig_DA => read_eig, close_eig_DA => close_eig
+         IMPLICIT NONE
+
+         INTEGER:: nk, jspin, neig, tmp_id
+         REAL    :: eig(d%size_eig)
+         TYPE(t_mat)::zmat
+
+         call zmat%alloc(d%l_real,d%nmat,d%size_eig)
+
+         tmp_id = eig66_data_newid(DA_mode)
+         CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, .false., filename)
+         DO jspin = 1, d%jspins
+            DO nk = 1, d%nkpts
+               CALL read_eig_DA(id,nk,jspin,neig,eig,zmat=zmat)
+               CALL write_eig(tmp_id,nk,jspin,neig,eig=eig,zmat=zmat)
+            ENDDO
+         ENDDO
+         CALL close_eig_DA(tmp_id)
+      END SUBROUTINE priv_readfromfileDA
 #endif
+
    END SUBROUTINE open_eig
    SUBROUTINE close_eig(id, delete, filename)
       INTEGER, INTENT(IN)         :: id
       LOGICAL, INTENT(IN), OPTIONAL:: delete
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL::filename
       TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
+
+      character(len=20):: arg
       CALL priv_find_data(id, d)
 
       IF (PRESENT(delete)) THEN
          IF (delete) WRITE (*, *) "No deallocation of memory implemented in eig66_mpi"
       ENDIF
-      IF (PRESENT(filename)) CALL judft_error("Storing of data not implemented for MPI case", calledby="eig66_mpi.F")
+
+      if (d%irank==0) then
+        arg=TRIM(juDFT_string_for_argument("-eig"))
+        IF (index(arg,"save")>0) CALL priv_writetofileDA()
+      endif
+      CONTAINS
+      SUBROUTINE priv_writetofileDA()
+         USE m_eig66_DA, ONLY: open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig
+         IMPLICIT NONE
+
+         INTEGER:: nk, jspin, neig, tmp_id
+         REAL    :: eig(d%size_eig)
+         TYPE(t_mat)::zmat
+
+         call zmat%alloc(d%l_real,d%nmat,d%size_eig)
+
+         tmp_id = eig66_data_newid(DA_mode)
+         CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, .false.)
+         DO jspin = 1, d%jspins
+            DO nk = 1, d%nkpts
+               CALL read_eig(id,nk,jspin,neig,eig,zmat=zmat)
+               CALL write_eig_DA(tmp_id,nk,jspin,neig,eig=eig,zmat=zmat)
+            ENDDO
+         ENDDO
+         CALL close_eig_DA(tmp_id)
+      END SUBROUTINE priv_writetofileDA
    END SUBROUTINE close_eig
 
    SUBROUTINE read_eig(id, nk, jspin, neig, eig, list, zmat, smat)
@@ -376,7 +446,7 @@ CONTAINS
          ALLOCATE (tmp_cmplx(tmp_size))
          DO n = 1, smat%matsize2
             n1 = n - 1
-            if((.not. present(n_size)) .and. (.not. present(n_rank)) ) then 
+            if((.not. present(n_size)) .and. (.not. present(n_rank)) ) then
                call juDFT_error("smat needs n_size & n_rank")
             endif
             IF (PRESENT(n_size)) n1 = n_size*n1

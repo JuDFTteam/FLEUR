@@ -69,6 +69,8 @@ c     ..local scalars..
       complex av,bv,ic,c_1
       integer, allocatable :: kvac1(:),kvac2(:),map2(:)
 
+      call timestart("wann_mmk0_vac")
+
       allocate ( ac(nv2d,neigd),bc(nv2d,neigd),dt(nv2d),
      +           dte(nv2d),t(nv2d),te(nv2d),tei(nv2d),
      +           u(nmzd,nv2d),ue(nmzd,nv2d),
@@ -200,5 +202,6 @@ c... cycle by the vacua finishes
       deallocate ( ac,bc,dt,dte,t,te,tei,u,ue,
      +             v,kvac1,kvac2,map2 )
 
+      call timestop("wann_mmk0_vac")
       end subroutine wann_mmk0_vac
       end module m_wann_mmk0_vac

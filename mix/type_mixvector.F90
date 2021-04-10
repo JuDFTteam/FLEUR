@@ -21,7 +21,7 @@ MODULE m_types_mixvector
    TYPE(t_atoms), POINTER  :: atoms => NULL()
    TYPE(t_sym), POINTER    :: sym => NULL()
    INTEGER                :: jspins, nvac
-   LOGICAL                :: l_noco, invs, invs2, l_mtnocopot, l_mperp
+   LOGICAL                :: l_noco, invs, invs2, l_mtnocopot
    INTEGER                :: pw_length !The shape of the local arrays
    INTEGER                :: pw_start(3) = 0, pw_stop(3) !First and last index for spin
    INTEGER                :: mt_length, mt_length_g
@@ -80,22 +80,25 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(INOUT)::this
       INTEGER, INTENT(IN)::unit
-
+      call timestart("read_mixing")
       CALL this%alloc()
       IF (pw_here) READ (unit) this%vec_pw
       IF (mt_here) READ (unit) this%vec_mt
       IF (vac_here) READ (unit) this%vec_vac
       IF (misc_here) READ (unit) this%vec_misc
+      call timestop("read_mixing")
    END SUBROUTINE READ_unformatted
 
    SUBROUTINE write_unformatted(this, unit)
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN)::this
       INTEGER, INTENT(IN)::unit
+      call timestart("write_mixing")
       IF (pw_here) WRITE (unit) this%vec_pw
       IF (mt_here) WRITE (unit) this%vec_mt
       IF (vac_here) WRITE (unit) this%vec_vac
       IF (misc_here) WRITE (unit) this%vec_misc
+      call timestop("write_mixing")
    END SUBROUTINE write_unformatted
 
    SUBROUTINE mixvector_reset()
@@ -105,6 +108,20 @@ CONTAINS
       IF (ALLOCATED(g_mt)) DEALLOCATE (g_mt)
       IF (ALLOCATED(g_vac)) DEALLOCATE (g_vac)
       IF (ALLOCATED(g_misc)) DEALLOCATE (g_misc)
+      !restore defaults
+      pw_start = 0
+      mt_start = 0
+      vac_start = 0
+      misc_length = 0
+      misc_start = 0
+      spin_here = .TRUE.
+      pw_here = .TRUE.
+      mt_here = .TRUE.
+      vac_here = .TRUE.
+      misc_here = .TRUE.
+      mt_rank = 0
+      mt_size = 1
+      l_pot = .FALSE. !Is this a potential?
    END SUBROUTINE mixvector_reset
 
    SUBROUTINE mixvector_from_density(vec, den, swapspin)
@@ -165,7 +182,7 @@ CONTAINS
                   ENDDO
                ENDIF
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_mperp)) THEN
+            IF (misc_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, j))
                vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1) = RESHAPE(REAL(den%mmpMat(:, :, 1:atoms%n_u, j)), (/mmpSize/))
                vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat(:, :, 1:atoms%n_u, j)), (/mmpSize/))
@@ -231,7 +248,7 @@ CONTAINS
                   ENDIF
                ENDDO
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_mperp)) THEN
+            IF (misc_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, js))
                den%mmpMat(:, :, 1:atoms%n_u, js) = RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1), &
                                                                  vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1)), &
@@ -252,6 +269,7 @@ CONTAINS
 
       INTEGER:: js, ii, n, l, iv
       COMPLEX, ALLOCATABLE::pw(:), pw_w(:)
+      call timestart("metric")
       mvec = vec
       IF (pw_here) ALLOCATE (pw(stars%ng3), pw_w(stars%ng3))
 
@@ -286,12 +304,12 @@ CONTAINS
                   mvec%vec_vac(vac_start(js) + SIZE(g_vac):vac_stop(js)) = g_vac(:vac_stop(js) - vac_start(js) - SIZE(g_vac) + 1)*vec%vec_vac(vac_start(js) + SIZE(g_vac):vac_stop(js))
                ENDIF
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_mperp)) THEN
+            IF (misc_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                mvec%vec_misc(misc_start(js):misc_stop(js)) = g_misc*vec%vec_misc(misc_start(js):misc_stop(js))
             END IF
          ENDIF
       END DO
-
+      call timestop("metric")
    END FUNCTION mixvector_metric
 
    SUBROUTINE init_metric(vacuum, stars)
@@ -459,7 +477,6 @@ CONTAINS
       jspins = input%jspins
       nvac = vacuum%nvac
       l_noco = noco%l_noco
-      l_mperp = noco%l_mperp
       l_mtnocopot = any(noco%l_unrestrictMT)
       stars => stars_i; cell => cell_i; sphhar => sphhar_i; atoms => atoms_i; sym => sym_i
 
@@ -512,7 +529,7 @@ CONTAINS
                vac_length = vac_length + len
                vac_stop(js) = vac_length
             ENDIF
-            IF (misc_here .AND. (js < 3 .OR. l_mperp)) THEN
+            IF (misc_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                len = 7*7*2*atoms%n_u
                misc_start(js) = misc_length + 1
                misc_length = misc_length + len

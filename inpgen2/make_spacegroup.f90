@@ -67,13 +67,29 @@ CONTAINS
     eps7= 1.0e-7 ; istep0 = 0
 
     !---> determine the point group of the Bravais lattice
-    CALL bravais_symm(cell, mops,mmrot)
+    CALL bravais_symm(cell, nops,mmrot,eps7*1000)
+    CALL bravais_symm(cell, mops,mmrot,eps7)
+    if (mops.ne.nops) then
+      write(*,*) "********** WARNING ***********"
+      write(*,*) "Your Bravais lattice 'misses' some symmetry by a small number,"
+      write(*,*) "e.g. with small modifications of your Bravais lattice you might be able"
+      write(*,*) "to exploit more symmetry."
+      write(*,*) "You might want to specify your lattice vectors more precise."
+      write(*,*) "Hint: the internal 'epsilon' for comparisons is 10^-7."
+      write(*,*) "********** END: WARNING ***********"
+    endif
+
     !reduce symmetry in special setups
     ALLOCATE ( error(mops) ); error=.FALSE.
     ! reduce symmetry if SSDW calculation
     IF (noco%l_ss) CALL ss_sym(mops,mmrot,noco%qss_inp,error)
     IF (noco%l_soc) CALL soc_sym(mops,mmrot,noco%theta_inp,noco%phi_inp,cell%amat, error)
     IF (film) CALL film_sym(mops,mmrot,error)
+
+    IF (judft_was_argument("-nosym")) THEN
+       error(2:) = .TRUE. ! keep only identity operation
+    END IF
+
     n=0 !Keep only operations without error
     DO i=1,mops
        IF (.NOT.error(i)) THEN

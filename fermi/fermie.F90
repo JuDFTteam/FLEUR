@@ -74,7 +74,7 @@ CONTAINS
 
 #ifdef CPP_MPI
     INTEGER, PARAMETER :: comm = MPI_COMM_SELF
-    INTEGER*4 :: nv_mpi(2),idum1d(0),idum2d(0,0)
+    INTEGER*4 :: nv_mpi(2)
     INTEGER ierr
 #endif
 
@@ -273,12 +273,12 @@ CONTAINS
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&
-         &       10x,'first approx. to ef    (T=0)  :',f10.6,' htr',&
+         &       10x,'first approx. to ef    (T=0)  :',f11.6,' htr',&
          &       '   (energy of the highest occ. eigenvalue)',/,&
-         &       10x,'number of occ. states  (T=0)  :',i10,/,&
-         &       10x,'first approx. to seigv (T=0)  :',f10.6,' htr',/,&
-         &       10x,'sum of weights of occ. states :',f10.6,/,&
-         &       10x,'sum of semicore eigenvalues   :',f10.6,' htr',/,&
-         &       10x,'sum of semicore charge        :',f10.6,' e',/)
+         &       10x,'number of occ. states  (T=0)  :',i11,/,&
+         &       10x,'first approx. to seigv (T=0)  :',f11.6,' htr',/,&
+         &       10x,'sum of weights of occ. states :',f11.6,/,&
+         &       10x,'sum of semicore eigenvalues   :',f11.6,' htr',/,&
+         &       10x,'sum of semicore charge        :',f11.6,' e',/)
   END SUBROUTINE fermie
 END MODULE m_fermie

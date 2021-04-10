@@ -17,6 +17,7 @@ MODULE m_types_hub1data
       !Contains the information for the hubbard 1 solver,
       !which is calculated on the fly (fixed parameters are found in types_hub1inp)
       INTEGER           :: iter=0
+      INTEGER           :: overallIteration=0
       LOGICAL           :: l_runthisiter=.FALSE.   !switch which determines wether Hubbard 1 will be run in the current iteration
       LOGICAL           :: l_performSpinavg = .TRUE.
 
@@ -66,7 +67,7 @@ MODULE m_types_hub1data
          IF(fmpi%irank == 0) THEN
             this%l_performSpinavg = .NOT.hub1inp%l_dftSpinpol
 
-            IF(.NOT.l_error) THEN
+            IF(.NOT.l_error.AND..NOT.hub1inp%l_forceHIAiteration) THEN
                IF(hub1inp%l_correctEtot.AND..NOT.hub1inp%l_dftSpinpol.AND.&
                   mmpmatDistancePrev<hub1inp%minmatDistance.AND.&
                   occDistancePrev<hub1inp%minoccDistance) THEN
@@ -77,8 +78,13 @@ MODULE m_types_hub1data
                ENDIF
             ELSE
                IF(hub1inp%l_correctEtot) THEN
-                  WRITE(*,*) "No previous density matrix distances found"
-                  WRITE(*,*) "setting spin averaging according to dftSpinpol"
+                  IF(l_error) THEN
+                     WRITE(*,*) "No previous density matrix distances found"
+                     WRITE(*,*) "setting spin averaging according to dftSpinpol"
+                  ELSE IF(hub1inp%l_forceHIAiteration) THEN
+                     WRITE(*,*) "Previous density matrix distances are ignored"
+                     WRITE(*,*) "setting spin averaging according to dftSpinpol"
+                  ENDIF
                ENDIF
             ENDIF
          ENDIF
@@ -128,6 +134,7 @@ MODULE m_types_hub1data
          rank = 0
       END IF
       CALL mpi_bc(this%iter,rank,mpi_comm)
+      CALL mpi_bc(this%overallIteration,rank,mpi_comm)
       CALL mpi_bc(this%l_runthisiter,rank,mpi_comm)
       CALL mpi_bc(this%l_performSpinavg,rank,mpi_comm)
       CALL mpi_bc(this%mag_mom,rank,mpi_comm)

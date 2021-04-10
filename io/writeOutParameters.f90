@@ -83,7 +83,7 @@ SUBROUTINE writeOutParameters(fmpi,input,sym,stars,atoms,vacuum,kpts,&
    WRITE(attributes(1),'(f0.8)') sumWeight
    WRITE(attributes(2),'(i0)') kpts%nkpt
    CALL openXMLElementFormPoly('kPointList',(/ 'weightScale', 'count      '/),&
-                               attributes(:2),reshape((/8,11,10,10/),(/2,2/)))
+                               attributes(:2),reshape((/11,5,10,10/),(/2,2/)))
    DO i = 1, kpts%nkpt
       WRITE(attributes(1),'(f12.6)') kpts%wtkpt(i)
       WRITE(attributes(2),'(f12.6)') kpts%bk(1,i)

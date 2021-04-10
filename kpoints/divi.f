@@ -2,7 +2,7 @@
       CONTAINS
       SUBROUTINE divi(
      >                nkpt,rltv,film,nop,nop2,
-     <                n)
+     <                div)
 
       IMPLICIT NONE
 
@@ -10,7 +10,7 @@
       INTEGER, INTENT (IN) :: nop,nop2  ! number of symmetry operations (3D,2D)
       REAL,    INTENT (IN) :: rltv(3,3) ! reciprocal lattice axes
       LOGICAL, INTENT (IN) :: film      ! .true. -> 2D k-points
-      INTEGER, INTENT(OUT) :: n(3)      ! # of k-points in each direction
+      INTEGER, INTENT(OUT) :: div(3)      ! # of k-points in each direction
 
       INTEGER ntes,i,ntot
       REAL    b(3)
@@ -27,52 +27,52 @@
 
       IF (film) THEN
         ntes = ntot
-  5     n(1) = nint( sqrt( ntes*b(1)/b(2) ) )
-        n(2) = nint( n(1)*b(2)/b(1) )
-        IF (n(1)*n(2).GT.ntot) THEN
-          n(2) = nint(  sqrt( ntes*b(2)/b(1) ) )
-          n(1) = nint( n(2)*b(1)/b(2) )
-          IF (n(1)*n(2).GT.ntot) THEN
+  5     div(1) = nint( sqrt( ntes*b(1)/b(2) ) )
+        div(2) = nint( div(1)*b(2)/b(1) )
+        IF (div(1)*div(2).GT.ntot) THEN
+          div(2) = nint(  sqrt( ntes*b(2)/b(1) ) )
+          div(1) = nint( div(2)*b(1)/b(2) )
+          IF (div(1)*div(2).GT.ntot) THEN
             ntes = ntes - 1
             GOTO 5
           ENDIF
         ENDIF
-        n(3) = 0
+        div(3) = 0
         IF (nop2.GE.4) THEN
-          n(1) = MAX(2*NINT(n(1)/2.0+0.1),1)
-          n(2) = MAX(2*NINT(n(2)/2.0+0.1),1)
+          div(1) = MAX(2*NINT(div(1)/2.0+0.1),1)
+          div(2) = MAX(2*NINT(div(2)/2.0+0.1),1)
         ENDIF
-        n(1) = MAX(n(1),1)
-        n(2) = MAX(n(2),1)
-        WRITE (*,*) n(1),n(2),n(1)*n(2)
+        div(1) = MAX(div(1),1)
+        div(2) = MAX(div(2),1)
+        WRITE (*,*) div(1),div(2),div(1)*div(2)
       ELSE
         ntes = ntot
- 10     n(1) = nint( (ntes*b(1)**2/(b(2)*b(3)))**(1./3.) ) 
-        n(2) = nint( n(1)*b(2)/b(1) )
-        n(3) = nint( n(1)*b(3)/b(1) )
-        IF (n(1)*n(2)*n(3).GT.ntot) THEN
-          n(2) = nint( (ntes*b(2)**2/(b(1)*b(3)))**(1./3.) )
-          n(1) = nint( n(2)*b(1)/b(2) )
-          n(3) = nint( n(2)*b(3)/b(2) )
-          IF (n(1)*n(2)*n(3).GT.ntot) THEN
-            n(3) = nint( (ntes*b(3)**2/(b(1)*b(2)))**(1./3.) )
-            n(2) = nint( n(3)*b(2)/b(3) )
-            n(1) = nint( n(3)*b(1)/b(3) )
-            IF (n(1)*n(2)*n(3).GT.ntot) THEN
+ 10     div(1) = nint( (ntes*b(1)**2/(b(2)*b(3)))**(1./3.) ) 
+        div(2) = nint( div(1)*b(2)/b(1) )
+        div(3) = nint( div(1)*b(3)/b(1) )
+        IF (div(1)*div(2)*div(3).GT.ntot) THEN
+          div(2) = nint( (ntes*b(2)**2/(b(1)*b(3)))**(1./3.) )
+          div(1) = nint( div(2)*b(1)/b(2) )
+          div(3) = nint( div(2)*b(3)/b(2) )
+          IF (div(1)*div(2)*div(3).GT.ntot) THEN
+            div(3) = nint( (ntes*b(3)**2/(b(1)*b(2)))**(1./3.) )
+            div(2) = nint( div(3)*b(2)/b(3) )
+            div(1) = nint( div(3)*b(1)/b(3) )
+            IF (div(1)*div(2)*div(3).GT.ntot) THEN
               ntes = ntes - 1
               GOTO 10
             ENDIF
           ENDIF
         ENDIF
         IF (nop.GE.8) THEN
-          n(1) = MAX(2*NINT(n(1)/2.0-0.1),1)
-          n(2) = MAX(2*NINT(n(2)/2.0-0.1),1)
-          n(3) = MAX(2*NINT(n(3)/2.0-0.1),1)
+          div(1) = MAX(2*NINT(div(1)/2.0-0.1),1)
+          div(2) = MAX(2*NINT(div(2)/2.0-0.1),1)
+          div(3) = MAX(2*NINT(div(3)/2.0-0.1),1)
         ENDIF
-        n(1) = MAX(n(1),1)
-        n(2) = MAX(n(2),1)
-        n(3) = MAX(n(3),1)
-        WRITE (*,*) n(1),n(2),n(3),n(1)*n(2)*n(3)
+        div(1) = MAX(div(1),1)
+        div(2) = MAX(div(2),1)
+        div(3) = MAX(div(3),1)
+        WRITE (*,*) div(1),div(2),div(3),div(1)*div(2)*div(3)
       ENDIF
 
       RETURN

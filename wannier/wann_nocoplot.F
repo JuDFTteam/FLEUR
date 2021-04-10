@@ -54,6 +54,7 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
     
       intrinsic real,aimag,conjg,exp,cmplx
 
+      call timestart("wann_nocoplot")
       pi = pimach()
       nkqpts = nkpts*nqpts
 
@@ -296,6 +297,7 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
     7 FORMAT (5i4)
     8 FORMAT (f20.12,1x,f20.12)
 
+      call timestop("wann_nocoplot")
       END SUBROUTINE wann_nocoplot
 !------------------------------------------
       

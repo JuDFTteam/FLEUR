@@ -3,7 +3,7 @@ MODULE m_ssomat
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE ssomat(seigvso,h_so,theta,phi,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,mpi, oneD,enpara,v,results )
+       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results,ef )
     USE m_types_nococonv
     USE m_types_mat
     USE m_types_setup
@@ -19,9 +19,13 @@ CONTAINS
     USE m_eig66_io
     USE m_spnorb
     USE m_abcof
+    USE m_fermifct
+#ifdef CPP_MPI
+    USE mpi
+#endif
     IMPLICIT NONE
 
-    TYPE(t_mpi),INTENT(IN)         :: mpi
+    TYPE(t_mpi),INTENT(IN)         :: fmpi
 
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
@@ -36,23 +40,23 @@ CONTAINS
     TYPE(t_results),INTENT(IN)     :: results
     INTEGER,INTENT(IN)             :: eig_id
     REAL,INTENT(in)                :: theta(:),phi(:) ! more than a single angle at once...
-    REAL,INTENT(OUT)               :: seigvso(:)
-    REAL,INTENT(OUT)               :: h_so(0:,:)
+    REAL,INTENT(IN)                :: ef(:) !Multiple Fermi energies (bandfillings)
+    REAL,INTENT(OUT)               :: seigvso(:,0:)
+    REAL,INTENT(OUT)               :: h_so(0:,:,:)
     !     ..
     !     .. Locals ..
 #ifdef CPP_MPI
     INTEGER:: ierr
-    include 'mpif.h'
 #endif
     INTEGER :: neigf=1  !not full-matrix
     INTEGER :: ilo,js,jsloc,nk,n,l ,lm,band,nr,ne,nat,m
-    INTEGER :: na
+    INTEGER :: na,nef
     REAL    :: r1,r2
     COMPLEX :: c1,c2
 
     COMPLEX, ALLOCATABLE :: matel(:,:,:)
     REAL,    ALLOCATABLE :: eig_shift(:,:,:,:)
-
+    Real,    allocatable :: w_iks(:)
     COMPLEX, ALLOCATABLE :: acof(:,:,:,:,:), bcof(:,:,:,:,:)
     COMPLEX, ALLOCATABLE :: ccof(:,:,:,:,:,:)
     COMPLEX,ALLOCATABLE  :: soangl(:,:,:,:,:,:,:)
@@ -83,16 +87,16 @@ CONTAINS
 
     !Calculate radial and angular matrix elements of SOC
     !many directions of SOC at once...
-    CALL spnorb(atoms,noco,nococonv,input,mpi, enpara, v%mt, usdus, rsoc,.FALSE.)
+    CALL spnorb(atoms,noco,nococonv,input,fmpi, enpara, v%mt, usdus, rsoc,.FALSE.)
 
     ALLOCATE(soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,&
          atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,SIZE(theta)))
     soangl=0.0
     DO nr=1,SIZE(theta)
-       CALL spnorb_angles(atoms,mpi,theta(nr),phi(nr),soangl(:,:,:,:,:,:,nr))
+       CALL spnorb_angles(atoms,fmpi,theta(nr),phi(nr),soangl(:,:,:,:,:,:,nr))
     ENDDO
 
-    DO nk=mpi%irank+1,kpts%nkpt,mpi%isize
+    DO nk=fmpi%irank+1,kpts%nkpt,fmpi%isize
        CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,nk,cell,.false.)
        zMat%matsize1=lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot
        zmat%matsize2=input%neig
@@ -161,24 +165,29 @@ CONTAINS
 
     !Collect data from distributed k-loop
 #ifdef CPP_MPI
-    IF (mpi%irank==0) THEN
-       CALL MPI_REDUCE(MPI_IN_PLACE,eig_shift,SIZE(eig_shift),MPI_DOUBLE_PRECISION,MPI_SUM,0,mpi%mpi_comm,ierr)
+    IF (fmpi%irank==0) THEN
+       CALL MPI_REDUCE(MPI_IN_PLACE,eig_shift,SIZE(eig_shift),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi%mpi_comm,ierr)
     ELSE
-       CALL MPI_REDUCE(eig_shift,eig_shift,SIZE(eig_shift),MPI_DOUBLE_PRECISION,MPI_SUM,0,mpi%mpi_comm,ierr)
+       CALL MPI_REDUCE(eig_shift,eig_shift,SIZE(eig_shift),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi%mpi_comm,ierr)
     ENDIF
 #endif
     h_so=0.0
-    IF (mpi%irank==0) THEN
+    IF (fmpi%irank==0) THEN
        !Sum all shift using weights
        DO nr=1,SIZE(theta)
           DO nk=1,kpts%nkpt
-             seigvso(nr)=seigvso(nr)+dot_PRODUCT(results%w_iks(:,nk,1),eig_shift(:,0,nk,nr))
-             DO n=0,atoms%ntype
-               H_so(n,nr)=H_so(n,nr)+dot_PRODUCT(results%w_iks(:,nk,1),eig_shift(:,n,nk,nr))
-             enddo
+            DO nef=1,size(ef)
+              w_iks=kpts%wtkpt(nk)*fermifct(results%eig(:,nk,1),ef(n),input%tkb)
+              !for first angle, also add unmodified eigenvalue sum
+              if (nr==1) seigvso(nef,0)=seigvso(nef,nr)+dot_PRODUCT(w_iks,eig_shift(:,0,nk,nr)+results%eig(:,nk,1))
+              seigvso(nef,nr)=seigvso(nef,nr)+dot_PRODUCT(w_iks,eig_shift(:,0,nk,nr)+results%eig(:,nk,1))
+              DO n=0,atoms%ntype
+                H_so(n,nef,nr)=H_so(n,nef,nr)+dot_PRODUCT(w_iks,eig_shift(:,n,nk,nr))
+              enddo
+            enddo
           ENDDO
        ENDDO
-       seigvso= results%seigv+seigvso
+       !seigvso= results%seigv+seigvso !now included in sum above
     ENDIF
   END SUBROUTINE ssomat
 

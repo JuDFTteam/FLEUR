@@ -1,5 +1,6 @@
       MODULE m_wann_orbmag
       USE m_fleurenv
+      use m_juDFT
       CONTAINS
       SUBROUTINE wann_orbmag(
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -36,11 +37,13 @@
       use m_wann_uHu_int2
       use m_wann_mmkb_sph
       use m_wann_ujugaunt
+#ifdef CPP_MPI
+      use mpi
+#endif
 
       IMPLICIT NONE
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer ierr(3)
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
@@ -208,6 +211,7 @@
       real :: diff,mdiff
       character(len=20)::fn
 
+      call timestart("wann_orbmag")
       info=0
       addnoco =0
       addnoco2=0
@@ -917,6 +921,7 @@
       deallocate(tmp_mat2)
       deallocate(ham)
 
+      call timestop("wann_orbmag")
       END SUBROUTINE wann_orbmag
 
  

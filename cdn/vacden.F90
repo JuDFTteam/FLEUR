@@ -6,7 +6,7 @@ MODULE m_vacden
   !     *************************************************************
 CONTAINS
   SUBROUTINE vacden(vacuum,stars,oneD,kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
-                    gVacMap,we,ikpt,jspin,vz,ne,ev_list,lapw,evac,eig,den,zMat,vacdos)
+                    gVacMap,we,ikpt,jspin,vz,ne,ev_list,lapw,evac,eig,den,zMat,vacdos,dos)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
@@ -47,6 +47,7 @@ CONTAINS
     USE m_vacudz
     USE m_types
     USE m_types_vacdos
+    USE m_types_dos
     IMPLICIT NONE
     TYPE(t_lapw),INTENT(INOUT)    :: lapw !for some reason the second spin data is reset in noco case
 
@@ -65,6 +66,7 @@ CONTAINS
     TYPE(t_gVacMap),INTENT(IN)    :: gVacMap
     TYPE(t_potden),INTENT(INOUT)  :: den
     TYPE(t_vacdos),   INTENT(INOUT)  :: vacdos
+    TYPE(t_dos),   INTENT(INOUT)  :: dos
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin
     INTEGER, INTENT (IN) :: ne
@@ -399,6 +401,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                 ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
                 qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
                 vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
+                dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
              END DO
              aae=-aa*banddos%tworkf*2/3
              bbe=-bb*banddos%tworkf*2/3
@@ -447,6 +450,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                                  tei_1(l,m,ispin)*CONJG(bc_1(l,m,n,ispin))*&
                                  bc_1(l,m,n,ispin))
                             vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin)+qout*cell%area
+                            dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin)+qout*cell%area
                          END DO
                          DO  jz = 1,vacuum%nmz
                             ui = u_1(jz,l,m,ispin)
@@ -468,6 +472,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                          ba=ba + we(n)*CONJG(bc(l,n,ispin))*ac(l,n,ispin)
                          qout = REAL(CONJG(ac(l,n,ispin))*ac(l,n,ispin)+tei(l,ispin)*CONJG(bc(l,n,ispin))*bc(l,n,ispin))
                          vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
+                         dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin) + qout*cell%area
                       END DO
                       DO jz = 1,vacuum%nmz
                          ui = u(jz,l,ispin)
@@ -493,6 +498,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                          qout = REAL(CONJG(ac_1(l,m,n,jspin))*ac_1(l,m,n,jspin)+&
                               tei_1(l,m,jspin)*CONJG(bc_1(l,m,n,jspin))*bc_1(l,m,n,jspin))
                          vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin)+qout*cell%area
+                         dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin)+qout*cell%area
                       END DO
                       DO  jz = 1,vacuum%nmz
                          ui = u_1(jz,l,m,jspin)
@@ -514,6 +520,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                       ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
                       qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
                       vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
+                      dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
                    END DO
                    DO  jz = 1,vacuum%nmz
                       ui = u(jz,l,jspin)

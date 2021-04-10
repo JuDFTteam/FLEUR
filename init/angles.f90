@@ -1,6 +1,6 @@
 MODULE m_angles
 
-   USE m_types
+   USE m_types_sym
    USE m_constants
 
    IMPLICIT NONE

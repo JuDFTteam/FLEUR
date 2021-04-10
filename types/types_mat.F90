@@ -52,9 +52,9 @@ MODULE m_types_mat
 CONTAINS
    subroutine t_mat_leastsq(A, b)
       use m_constants
-      implicit none 
+      implicit none
       class(t_mat), intent(inout) :: A
-      type(t_mat), intent(inout)  :: b 
+      type(t_mat), intent(inout)  :: b
 
       type(t_mat) :: tmp
       integer              :: m, n, nrhs, lda, ldb, info, lwork
@@ -69,9 +69,9 @@ CONTAINS
       if(A%l_real .neqv. b%l_real) call judft_error("least-squares kind problem")
 
       m = A%matsize1
-      n = A%matsize2 
+      n = A%matsize2
       nrhs = b%matsize2
-      if(A%l_real) then 
+      if(A%l_real) then
          lda = size(A%data_r,1)
          ldb = size(b%data_r,1)
 
@@ -108,7 +108,7 @@ CONTAINS
    end subroutine t_mat_leastsq
 
    subroutine t_mat_pos_eigvec_sum(mat)
-      implicit none 
+      implicit none
       CLASS(t_mat), INTENT(INOUT)   :: mat
       integer :: ne, i
       real    :: sum_sign_r
@@ -128,73 +128,85 @@ CONTAINS
    end subroutine t_mat_pos_eigvec_sum
 
    subroutine t_mat_bcast(mat, root, comm)
+      use m_divide_most_evenly 
 #ifdef CPP_MPI
       use mpi
 #endif
-      implicit none 
+      implicit none
       CLASS(t_mat), INTENT(INOUT)   :: mat
-      integer, intent(in)           :: root, comm 
-      
-      integer :: ierr, full_shape(2), me
+      integer, intent(in)           :: root, comm
 
-#ifdef CPP_MPI 
+      integer              :: ierr, full_shape(2), me, n_parts, i
+      integer, allocatable :: start_idx(:), psize(:)
+      integer(8) :: sz_in_byte
+
+#ifdef CPP_MPI
       call MPI_Comm_rank(comm, me, ierr)
       call MPI_Bcast(mat%l_real, 1, MPI_LOGICAL, root, comm, ierr)
       !alloc mat same as root
       if(me == root) then
          full_shape = merge(shape(mat%data_r), shape(mat%data_c), mat%l_real)
          call MPI_Bcast(full_shape, 2, MPI_INTEGER, root, comm, ierr)
-      else 
+      else
          call MPI_Bcast(full_shape, 2, MPI_INTEGER, root, comm, ierr)
-         call mat%alloc(mat%l_real, full_shape(1), full_shape(2))         
+         call mat%alloc(mat%l_real, full_shape(1), full_shape(2))
       endif
 
       ! overwrite matsize as needed
       call MPI_Bcast(mat%matsize1, 1, MPI_INTEGER, root, comm, ierr)
       call MPI_Bcast(mat%matsize2, 1, MPI_INTEGER, root, comm, ierr)
 
-      if(mat%l_real) then
-         call MPI_Bcast(mat%data_r, product(full_shape), MPI_DOUBLE_PRECISION, root, comm, ierr)
-      else 
-         call MPI_Bcast(mat%data_c, product(full_shape), MPI_DOUBLE_COMPLEX, root, comm, ierr)
-      endif
+      sz_in_byte = full_shape(1)
+      sz_in_byte = sz_in_byte * full_shape(2) 
+      sz_in_byte = sz_in_byte * merge(8, 16, mat%l_real)
+      !make sure everything is smaller than 4 GB
+      n_parts = ceiling(sz_in_byte / 4e9) 
+      call divide_most_evenly(mat%matsize2, n_parts, start_idx, psize)
+
+      do i = 1,n_parts 
+         if(mat%l_real) then
+            call MPI_bcast(mat%data_r(:,start_idx(i)), full_shape(1)*psize(i), MPI_DOUBLE_PRECISION, root, comm, ierr)
+         else
+            call MPI_bcast(mat%data_c(:,start_idx(i)), full_shape(1)*psize(i), MPI_DOUBLE_COMPLEX, root, comm, ierr)
+         endif
+      enddo
 #endif
    end subroutine t_mat_bcast
 
    subroutine t_mat_reset(mat, val)
-      implicit none  
+      implicit none
       CLASS(t_mat), INTENT(INOUT)   :: mat
       complex, intent(in)           :: val
 
-      if(mat%l_real) then 
+      if(mat%l_real) then
          mat%data_r = real(val)
-      else 
+      else
          mat%data_c = val
       endif
    end subroutine t_mat_reset
 
    subroutine t_mat_conjg(mat)
-      implicit none 
+      implicit none
       CLASS(t_mat), INTENT(INOUT) :: mat
       integer :: i,j
-      
+
       if(.not. mat%l_real) then
-         if(mat%matsize1 == size(mat%data_c,1) .and. mat%matsize2 == size(mat%data_c,2)) then 
+         if(mat%matsize1 == size(mat%data_c,1) .and. mat%matsize2 == size(mat%data_c,2)) then
             call zlacgv(mat%matsize1 * mat%matsize2, mat%data_c, 1)
-         else 
+         else
             !$OMP parallel do default(none) private(i) shared(mat)
-            do i =1,mat%matsize2 
+            do i =1,mat%matsize2
                call zlacgv(mat%matsize1, mat%data_c(1,i), 1)
             enddo
             !$OMP end parallel do
          endif
-      endif 
+      endif
    end subroutine t_mat_conjg
 
 
    subroutine t_mat_print_type(mat)
-      implicit none 
-      CLASS(t_mat), INTENT(IN)     :: mat 
+      implicit none
+      CLASS(t_mat), INTENT(IN)     :: mat
 
       write (*,*) "type -> t_mat"
    end subroutine t_mat_print_type
@@ -315,11 +327,17 @@ CONTAINS
    SUBROUTINE t_mat_lproblem(mat, vec)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(IN)     :: mat
-      TYPE(t_mat), INTENT(INOUT)   :: vec
+      class(t_mat), INTENT(INOUT)   :: vec
 
       INTEGER:: lwork, info
       REAL, ALLOCATABLE:: work(:)
       INTEGER, allocatable::ipiv(:)
+
+      select type (vec) 
+      class is (t_mat)
+      class default
+         call judft_error("lproblem can only be solved if vec and mat are the same class")
+      end select
 
       IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) &
           .OR. (mat%matsize1 .NE. vec%matsize1)) &
@@ -363,8 +381,8 @@ CONTAINS
       call timestart("t_mat_free")
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
       IF (ALLOCATED(mat%data_r)) DEALLOCATE (mat%data_r)
-      mat%matsize1 = -1 
-      mat%matsize2 = -1 
+      mat%matsize1 = -1
+      mat%matsize2 = -1
       call timestop("t_mat_free")
    END SUBROUTINE t_mat_free
 
@@ -391,20 +409,24 @@ CONTAINS
       END IF
    END SUBROUTINE t_mat_add_transpose
 
-   SUBROUTINE t_mat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y)
+   SUBROUTINE t_mat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y, mat_name)
       CLASS(t_mat) :: mat
-      LOGICAL, INTENT(IN), OPTIONAL:: l_real
-      INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
-      INTEGER, INTENT(IN), OPTIONAL:: mpi_subcom, nb_x, nb_y !not needed here, only for allowing overloading this in t_mpimat
-      LOGICAL, INTENT(IN), OPTIONAL:: l_2d                 !not needed here either
+      LOGICAL, INTENT(IN), OPTIONAL        :: l_real
+      INTEGER, INTENT(IN), OPTIONAL        :: matsize1, matsize2
+      INTEGER, INTENT(IN), OPTIONAL        :: mpi_subcom, nb_x, nb_y !not needed here, only for allowing overloading this in t_mpimat
+      LOGICAL, INTENT(IN), OPTIONAL        :: l_2d                 !not needed here either
+      character(len=*),intent(in),optional :: mat_name
 
-      CALL mat%alloc(l_real, matsize1, matsize2)
+      CALL mat%alloc(l_real, matsize1, matsize2, mat_name=mat_name)
    END SUBROUTINE t_mat_init
-   SUBROUTINE t_mat_init_template(mat, templ, global_size1, global_size2)
+   SUBROUTINE t_mat_init_template(mat, templ, global_size1, global_size2, mat_name)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT) :: mat
       CLASS(t_mat), INTENT(IN)    :: templ
       INTEGER, INTENT(IN), OPTIONAL:: global_size1, global_size2
+      character(len=*),intent(in),optional :: mat_name
+
+      integer :: ierr
 
       IF (PRESENT(global_size1) .AND. PRESENT(global_size2)) THEN
          IF ((global_size1 .NE. templ%matsize1) .OR. (global_size2 .NE. templ%matsize2)) CALL judft_error("BUG:Invalid change of size in init by template")
@@ -413,22 +435,30 @@ CONTAINS
       mat%matsize1 = templ%matsize1
       mat%matsize2 = templ%matsize2
       IF (mat%l_real) THEN
-         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2))
+         ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), source=0.0, stat=ierr)
          ALLOCATE (mat%data_c(1, 1))
-         mat%data_r = 0.0
       ELSE
-         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2))
+         ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), source=(0.0,0.0), stat=ierr)
          ALLOCATE (mat%data_r(1, 1))
-         mat%data_c = 0.0
       END IF
+      if(ierr /= 0) then
+         if(present(mat_name)) then
+            call judft_error("can't alloc matrix of size: [" // &
+               int2str(mat%matsize1) // ", " // int2str(mat%matsize2) // "]. Name: " // trim(mat_name))
+         else
+            call judft_error("can't alloc matrix of size: [" // &
+               int2str(mat%matsize1) // ", " // int2str(mat%matsize2) // "].")
+         endif
+      endif
    END SUBROUTINE t_mat_init_template
 
-   SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init)
+   SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init, mat_name)
       use m_judft
       CLASS(t_mat) :: mat
       LOGICAL, INTENT(IN), OPTIONAL:: l_real
       INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
       REAL, INTENT(IN), OPTIONAL   :: init
+      character(len=*), intent(in), optional :: mat_name
       character(len=300)           :: errmsg
 
       INTEGER:: err
@@ -447,8 +477,17 @@ CONTAINS
       IF (mat%l_real) THEN
          ALLOCATE (mat%data_r(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
          ALLOCATE (mat%data_c(0, 0))
-         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
-                                        hint="Errormessage: " // trim(errmsg))
+         IF (err /= 0) then
+            write (*,*) "Failed to allocate mem of shape: [" &
+                       // int2str(mat%matsize1) // ", " //  int2str(mat%matsize2) // "]"
+            if(present(mat_name)) then
+               CALL judft_error("Allocation of memmory failed for mat datatype. Name:" // trim(mat_name), &
+                                       hint="Errormessage: " // trim(errmsg))
+            else
+               CALL judft_error("Allocation of memmory failed for mat datatype", &
+                                       hint="Errormessage: " // trim(errmsg))
+            endif
+         endif
          mat%data_r = 0.0
          if (present(init)) mat%data_r = init
       ELSE
@@ -476,8 +515,8 @@ CONTAINS
 
       call timestart("t_mat_multiply")
 
-      if(mat1%matsize1 == -1 .and. mat1%matsize2 == -1) call judft_error("mat1 not initialized")
-      if(mat2%matsize1 == -1 .and. mat2%matsize2 == -1) call judft_error("mat2 not initialized")
+      if(mat1%matsize1 == -1 .or. mat1%matsize2 == -1) call judft_error("mat1 not initialized")
+      if(mat2%matsize1 == -1 .or. mat2%matsize2 == -1) call judft_error("mat2 not initialized")
 
       transA_i = "N"
       if(present(transA)) transA_i = transA
@@ -502,14 +541,14 @@ CONTAINS
       endif
 
       lda = merge(size(mat1%data_r, dim=1), size(mat1%data_c, dim=1), mat1%l_real)
-      if(transA_i == "N") then 
+      if(transA_i == "N") then
          if(lda < max(1,m)) call judft_error("problem with lda")
       else
          if(lda < max(1,k)) call judft_error("problem with lda")
       endif
 
       ldb = merge(size(mat2%data_r, dim=1), size(mat2%data_c, dim=1), mat2%l_real)
-      if(transB_i == "N") then 
+      if(transB_i == "N") then
          if(ldb < max(1,k)) call judft_error("problem with ldb")
       else
          if(ldb < max(1,n)) call judft_error("problem with ldb")
@@ -544,7 +583,7 @@ CONTAINS
 
          ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
-         
+
          IF (mat1%l_real) THEN
             call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
          ELSE
@@ -557,7 +596,7 @@ CONTAINS
          call tmp%alloc(mat1%l_real, n,n)
          ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
-         
+
          if (mat1%l_real) THEN
             call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
          ELSE
@@ -724,9 +763,11 @@ CONTAINS
 
       call timestart("t_mat_copy")
 
+      if(.not. mat%allocated()) call mat%init(mat1)
+
       select type (mat1)
       type is(t_mat)
-          
+
       class default
          call judft_error("you can only copy a t_mat to a t_mat")
       end select
@@ -745,15 +786,33 @@ CONTAINS
    END SUBROUTINE t_mat_copy
 
    SUBROUTINE t_mat_clear(mat)
+#ifdef _OPENACC
+    use openacc
+#endif
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
       INTEGER :: i
 
       IF (mat%l_real) THEN
-         call CPP_LAPACK_slaset("A",mat%matsize1,mat%matsize2,0.0,0.0,mat%data_r,mat%matsize1) 
+         call CPP_LAPACK_slaset("A",mat%matsize1,mat%matsize2,0.0,0.0,mat%data_r,mat%matsize1)
       ELSE
-         call CPP_LAPACK_claset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1) 
+         call CPP_LAPACK_claset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1)
       ENDIF
+#ifdef _OPENACC
+      IF (mat%l_real) THEN
+        if (acc_is_present(mat%data_r)) Then
+          !$acc kernels present(mat%data_r)
+          mat%data_r=0.0
+          !$acc end kernels
+        endif
+      ELSE
+        if (acc_is_present(mat%data_c)) Then
+          !$acc kernels present(mat%data_c)
+          mat%data_c=0.0
+          !$acc end kernels
+        endif
+      ENDIF
+#endif
    END SUBROUTINE t_mat_clear
 
    subroutine t_mat_save_npy(mat, filename)

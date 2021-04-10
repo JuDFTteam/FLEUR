@@ -2,6 +2,7 @@ module m_calc_l_m_from_lm
 
 contains
    pure subroutine calc_l_m_from_lm(lm, l, m)
+      !$acc routine seq
       use m_juDFT
       implicit none
       integer, intent(in)   :: lm

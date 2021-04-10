@@ -94,6 +94,7 @@ c      integer,allocatable :: rvec(:,:)
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
 
+      call timestart("wann_nabla_pauli_rs")
       tpi=2*pimach()
 
       jspins=jspins_in
@@ -372,5 +373,6 @@ c$$$       endif
          deallocate(u_matrix,hwann,hreal)
       enddo !jspin
 
+      call timestop("wann_nabla_pauli_rs")
       end subroutine wann_nabla_pauli_rs
       end module m_wann_nabla_pauli_rs

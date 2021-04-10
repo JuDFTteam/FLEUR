@@ -78,6 +78,8 @@ c****************************************************************
       complex,allocatable::wannint(:,:,:,:)
       real delta1,delta2,plot_time_int,plot_read_data_time
       real plot_time_sph,time_sqrt
+
+      call timestart("wann_plot_from_lapw")
       plot_time_sph=0.0
       plot_time_int=0.0
       plot_read_data_time=0.0
@@ -381,5 +383,6 @@ c..end of the loop by the bands
       print*,"plot_read_data_time=",plot_read_data_time
       print*,"time_sqrt=",time_sqrt
 
+      call timestop("wann_plot_from_lapw")
       END SUBROUTINE wann_plot_from_lapw
       END MODULE m_wann_plot_from_lapw

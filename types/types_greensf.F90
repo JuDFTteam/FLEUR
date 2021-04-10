@@ -59,13 +59,14 @@ MODULE m_types_greensf
          PROCEDURE       :: mpi_bc              => mpi_bc_greensf
          PROCEDURE       :: collect             => collect_greensf
          PROCEDURE       :: get                 => get_gf
+         PROCEDURE       :: getFullMatrix       => getFullMatrix_gf
          PROCEDURE       :: getRadial           => getRadial_gf
-         PROCEDURE       :: getRadialSpin       => getRadialSpin_gf
          PROCEDURE       :: getRadialRadial     => getRadialRadial_gf!(Full Radial dependence for intersite)
-         PROCEDURE       :: getRadialRadialSpin => getRadialRadialSpin_gf
          PROCEDURE       :: integrateOverMT     => integrateOverMT_greensf
          PROCEDURE       :: set                 => set_gf
+         PROCEDURE       :: set_gfdata          => set_gfdata
          PROCEDURE       :: rotate              => rotate_gf
+         PROCEDURE       :: rotate_euler_angles => rotate_euler_angles_gf
          PROCEDURE       :: reset               => reset_gf
          PROCEDURE       :: resetSingleElem     => resetSingleElem_gf
          PROCEDURE       :: checkEmpty          => checkEmpty_greensf
@@ -97,7 +98,7 @@ MODULE m_types_greensf
          !Initialize the contour
          CALL this%contour%init(gfinp%contour(this%elem%iContour),contour_in=contour_in)
 
-         spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
+         spin_dim = MERGE(4,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
          l_sphavg = this%elem%l_sphavg
@@ -221,7 +222,7 @@ MODULE m_types_greensf
       !               certain energy point with an input matrix
       !----------------------------------------------------------------------------------
 
-      SUBROUTINE get_gf(this,atoms,iz,l_conjg,gmat,spin,usdus,denCoeffsOffDiag,scalarGF)
+      SUBROUTINE get_gf(this,atoms,iz,l_conjg,spin,gmat,usdus,denCoeffsOffDiag,scalarGF)
 
          USE m_types_mat
          USE m_types_usdus
@@ -235,16 +236,16 @@ MODULE m_types_greensf
          TYPE(t_atoms),                      INTENT(IN)     :: atoms
          INTEGER,                            INTENT(IN)     :: iz
          LOGICAL,                            INTENT(IN)     :: l_conjg
+         INTEGER,                            INTENT(IN)     :: spin
          TYPE(t_mat),                        INTENT(INOUT)  :: gmat !Return matrix
-         INTEGER,                  OPTIONAL, INTENT(IN)     :: spin
          TYPE(t_usdus),            OPTIONAL, INTENT(IN)     :: usdus
          TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN)     :: denCoeffsOffDiag
          TYPE(t_scalarGF),         OPTIONAL, INTENT(IN)     :: scalarGF
 
-         INTEGER matsize1,matsize2,ind1,ind2,ind1_start,ind2_start
-         INTEGER m,mp,spin1,spin2,ipm,ispin,spin_start,spin_end,spin_ind,m_ind,mp_ind
+         INTEGER matsize1,matsize2,ind1,ind2
+         INTEGER m,mp,spin1,spin2,ipm,spin_start,spin_end,spin_ind,m_ind,mp_ind
          INTEGER l,lp,atomType,atomTypep,nspins,ilo,ilop,iLO_ind,iLOp_ind
-         LOGICAL l_full,l_scalar,l_scalarGF
+         LOGICAL l_scalar,l_scalarGF
 
          REAL :: uun,dun,udn,ddn
          REAL :: uulon(atoms%nlod),dulon(atoms%nlod),ulodn(atoms%nlod),uloun(atoms%nlod)
@@ -278,16 +279,12 @@ MODULE m_types_greensf
             CALL juDFT_error("l_scalar/l_radial only without l_sphavg", calledby="get_gf")
          ENDIF
 
-         IF(PRESENT(spin)) THEN
-            IF(spin.GT.4 .OR. spin.LT.1) THEN
-               CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
-            ENDIF
-         END IF
+         IF(spin.GT.4 .OR. spin.LT.1) THEN
+            CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
+         ENDIF
 
-         !Determine matsize for the result gmat (if spin is given only return this diagonal element)
-         l_full = .NOT.PRESENT(spin)
-         matsize1 = (2*l+1) * MERGE(2,1,l_full)
-         matsize2 = (2*lp+1) * MERGE(2,1,l_full)
+         matsize1 = 2*l+1
+         matsize2 = 2*lp+1
 
          IF(.NOT.ALLOCATED(gmat%data_c)) THEN
             CALL gmat%init(.FALSE.,matsize1,matsize2)
@@ -299,166 +296,188 @@ MODULE m_types_greensf
 
          gmat%data_c = cmplx_0
 
-         IF(l_full) THEN
-            spin_start = 1
-            spin_end   = MERGE(4,2,nspins.EQ.3)
+         IF(spin < 3) THEN
+            spin1 = spin
+            spin2 = spin
          ELSE
-            spin_start = spin
-            spin_end   = spin
+            spin1 = 2
+            spin2 = 1
          ENDIF
 
-         DO ispin = spin_start, spin_end
-            !Find the corresponding physical spin indices
-            IF(ispin < 3) THEN
-               spin1 = ispin
-               spin2 = ispin
-            ELSE IF(ispin.EQ.3) THEN
-               spin1 = 2
-               spin2 = 1
+         !Find the correct spin index in gmmpMat arrays
+         spin_ind = MERGE(1,spin,nspins.EQ.1)
+
+         IF(l_scalar.OR.l_scalarGF) THEN
+            !Select the correct scalar products or integrals (So we do not have to repeat the actual combination)
+            IF(l_scalarGF) THEN
+               uun = scalarGF%uun(spin1,spin2)
+               dun = scalarGF%dun(spin1,spin2)
+               udn = scalarGF%udn(spin1,spin2)
+               ddn = scalarGF%ddn(spin1,spin2)
+
+               IF(ALLOCATED(this%uulo)) THEN
+                  uulon(:) = scalarGF%uulon(:,spin1,spin2)
+                  uloun(:) = scalarGF%uloun(:,spin1,spin2)
+                  dulon(:) = scalarGF%dulon(:,spin1,spin2)
+                  ulodn(:) = scalarGF%ulodn(:,spin1,spin2)
+
+                  uloulopn(:,:) = scalarGF%uloulopn(:,:,spin1,spin2)
+               ENDIF
+            ELSE IF(spin_ind<3) THEN
+               uun = 1.0
+               dun = 0.0
+               udn = 0.0
+               ddn = usdus%ddn(l,atomType,spin_ind)
+
+               IF(ALLOCATED(this%uulo)) THEN
+                  uulon(:) = usdus%uulon(:,atomType,spin_ind)
+                  uloun(:) = usdus%uulon(:,atomType,spin_ind)
+                  dulon(:) = usdus%dulon(:,atomType,spin_ind)
+                  ulodn(:) = usdus%dulon(:,atomType,spin_ind)
+
+                  uloulopn(:,:) = usdus%uloulopn(:,:,atomType,spin_ind)
+               ENDIF
             ELSE
-               spin1 = 1
-               spin2 = 2
+               uun = denCoeffsOffDiag%uu21n(l,atomType)
+               dun = denCoeffsOffDiag%du21n(l,atomType)
+               udn = denCoeffsOffDiag%ud21n(l,atomType)
+               ddn = denCoeffsOffDiag%dd21n(l,atomType)
+
+               IF(ALLOCATED(this%uulo)) THEN
+                  uulon(:) = denCoeffsOffDiag%uulo21n(:,atomType)
+                  uloun(:) = denCoeffsOffDiag%ulou21n(:,atomType)
+                  dulon(:) = denCoeffsOffDiag%dulo21n(:,atomType)
+                  ulodn(:) = denCoeffsOffDiag%ulod21n(:,atomType)
+
+                  uloulopn(:,:) = denCoeffsOffDiag%uloulop21n(:,:,atomType)
+               ENDIF
             ENDIF
-            !Find the correct spin index in gmmpMat arrays
-            spin_ind = MERGE(1,ispin,nspins.EQ.1)
-            spin_ind = MERGE(3,spin_ind,ispin.EQ.4)
-            !Find the right quadrant in gmat
-            IF(l_full) THEN
-               ind1_start = (spin1-1)*(2*l+1)
-               ind2_start = (spin2-1)*(2*lp+1)
-            ELSE
-               ind1_start = 0
-               ind2_start = 0
-            ENDIF
 
-            IF(l_scalar.OR.l_scalarGF) THEN
-               !Select the correct scalar products or integrals (So we do not have to repeat the actual combination)
-               IF(l_scalarGF) THEN
-                  uun = scalarGF%uun(spin1,spin2)
-                  dun = scalarGF%dun(spin1,spin2)
-                  udn = scalarGF%udn(spin1,spin2)
-                  ddn = scalarGF%ddn(spin1,spin2)
+         ENDIF
 
+         ind1 = 0
+         DO m = -l,l
+            ind1 = ind1 + 1
+            ind2 = 0
+            DO mp = -lp,lp
+               ind2 = ind2 + 1
+
+               !-------------------------------------------------------------------
+               ! Check wether we need to do some operation on the indices m and mp
+               !-------------------------------------------------------------------
+               IF(spin.EQ.2 .AND. nspins.EQ.1) THEN
+                  !For a non-spin-polarized calculation we might still want the full
+                  !matrix. Then we need to reverse the order (SOC prop m*s_z)
+                  m_ind  = -m
+                  mp_ind = -mp
+               ELSE
+                  !Do nothing
+                  m_ind  = m
+                  mp_ind = mp
+               ENDIF
+               !-------------------
+               ! Fetch the values
+               !-------------------
+               IF(l_scalar.OR.l_scalarGF) THEN
+                  gmat%data_c(ind1,ind2) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * uun &
+                                           + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn &
+                                           + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * dun &
+                                           + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * udn
                   IF(ALLOCATED(this%uulo)) THEN
-                     uulon(:) = scalarGF%uulon(:,spin1,spin2)
-                     uloun(:) = scalarGF%uloun(:,spin1,spin2)
-                     dulon(:) = scalarGF%dulon(:,spin1,spin2)
-                     ulodn(:) = scalarGF%ulodn(:,spin1,spin2)
-
-                     uloulopn(:,:) = scalarGF%uloulopn(:,:,spin1,spin2)
-                  ENDIF
-               ELSE IF(spin_ind<3) THEN
-                  uun = 1.0
-                  dun = 0.0
-                  udn = 0.0
-                  ddn = usdus%ddn(l,atomType,spin_ind)
-
-                  IF(ALLOCATED(this%uulo)) THEN
-                     uulon(:) = usdus%uulon(:,atomType,spin_ind)
-                     uloun(:) = usdus%uulon(:,atomType,spin_ind)
-                     dulon(:) = usdus%dulon(:,atomType,spin_ind)
-                     ulodn(:) = usdus%dulon(:,atomType,spin_ind)
-
-                     uloulopn(:,:) = usdus%uloulopn(:,:,atomType,spin_ind)
+                     iLO_ind = 0
+                     DO ilo = 1, atoms%nlo(atomType)
+                        IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                        iLO_ind = iLO_ind + 1
+                        gmat%data_c(ind1,ind2) =   gmat%data_c(ind1,ind2) &
+                                                 + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * uulon(ilo) &
+                                                 + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * dulon(ilo)
+                     ENDDO
+                     iLO_ind = 0
+                     DO ilo = 1, atoms%nlo(atomTypep)
+                        IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
+                        iLO_ind = iLO_ind + 1
+                        gmat%data_c(ind1,ind2) =   gmat%data_c(ind1,ind2) &
+                                                 + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * uloun(ilo) &
+                                                 + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ulodn(ilo)
+                     ENDDO
+                     iLO_ind = 0
+                     DO ilo = 1,atoms%nlo(atomType)
+                        IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                        iLO_ind = iLO_ind + 1
+                        iLOp_ind = 0
+                        DO ilop = 1, atoms%nlo(atomTypep)
+                           IF(atoms%llo(ilop,atomTypep).NE.lp) CYCLE
+                           iLOp_ind = iLOp_ind + 1
+                           gmat%data_c(ind1,ind2) =   gmat%data_c(ind1,ind2) &
+                                                    + this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) &
+                                                     * uloulopn(ilo,ilop)
+                        ENDDO
+                     ENDDO
                   ENDIF
                ELSE
-                  uun = denCoeffsOffDiag%uu21n(l,atomType)
-                  dun = denCoeffsOffDiag%du21n(l,atomType)
-                  udn = denCoeffsOffDiag%ud21n(l,atomType)
-                  ddn = denCoeffsOffDiag%dd21n(l,atomType)
-
-                  IF(ALLOCATED(this%uulo)) THEN
-                     uulon(:) = denCoeffsOffDiag%uulo21n(:,atomType)
-                     uloun(:) = denCoeffsOffDiag%ulou21n(:,atomType)
-                     dulon(:) = denCoeffsOffDiag%dulo21n(:,atomType)
-                     ulodn(:) = denCoeffsOffDiag%ulod21n(:,atomType)
-
-                     uloulopn(:,:) = denCoeffsOffDiag%uloulop21n(:,:,atomType)
-                  ENDIF
+                  gmat%data_c(ind1,ind2) = this%gmmpMat(iz,m_ind,mp_ind,spin_ind,ipm)
                ENDIF
 
-            ENDIF
-
-            ind1 = ind1_start
-            DO m = -l,l
-               ind1 = ind1 + 1
-               ind2 = ind2_start
-               DO mp = -lp,lp
-                  ind2 = ind2 + 1
-
-                  !-------------------------------------------------------------------
-                  ! Check wether we need to do some operation on the indices m and mp
-                  !-------------------------------------------------------------------
-                  IF(ispin.EQ.2 .AND. nspins.EQ.1) THEN
-                     !For a non-spin-polarized calculation we might still want the full
-                     !matrix. Then we need to reverse the order (SOC prop m*s_z)
-                     m_ind  = -m
-                     mp_ind = -mp
-                  ELSE IF(ispin.EQ.4) THEN
-                     !We only calculate spin21. spin12 is obtained as hermitian conjugate
-                     !(Complex conjugation happens afterwards)
-                     m_ind  = mp
-                     mp_ind = m
-                  ELSE
-                     !Do nothing
-                     m_ind  = m
-                     mp_ind = mp
-                  ENDIF
-                  !-------------------
-                  ! Fetch the values
-                  !-------------------
-                  IF(l_scalar.OR.l_scalarGF) THEN
-                     gmat%data_c(ind1,ind2) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * uun &
-                                              + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn &
-                                              + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * dun &
-                                              + this%ud(iz,m_ind,mp_ind,spin_ind,ipm) * udn
-                     IF(ALLOCATED(this%uulo)) THEN
-                        iLO_ind = 0
-                        DO ilo = 1, atoms%nlo(atomType)
-                           IF(atoms%llo(ilo,atomType).NE.l) CYCLE
-                           iLO_ind = iLO_ind + 1
-                           gmat%data_c(ind1,ind2) =   gmat%data_c(ind1,ind2) &
-                                                    + this%uulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * uulon(ilo) &
-                                                    + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * dulon(ilo)
-                        ENDDO
-                        iLO_ind = 0
-                        DO ilo = 1, atoms%nlo(atomTypep)
-                           IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
-                           iLO_ind = iLO_ind + 1
-                           gmat%data_c(ind1,ind2) =   gmat%data_c(ind1,ind2) &
-                                                    + this%ulou(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * uloun(ilo) &
-                                                    + this%dulo(iz,m_ind,mp_ind,iLO_ind,spin_ind,ipm) * ulodn(ilo)
-                        ENDDO
-                        iLO_ind = 0
-                        DO ilo = 1,atoms%nlo(atomType)
-                           IF(atoms%llo(ilo,atomType).NE.l) CYCLE
-                           iLO_ind = iLO_ind + 1
-                           iLOp_ind = 0
-                           DO ilop = 1, atoms%nlo(atomTypep)
-                              IF(atoms%llo(ilop,atomTypep).NE.lp) CYCLE
-                              iLOp_ind = iLOp_ind + 1
-                              gmat%data_c(ind1,ind2) =   gmat%data_c(ind1,ind2) &
-                                                       + this%uloulop(iz,m_ind,mp_ind,iLO_ind,iLOp_ind,spin_ind,ipm) &
-                                                        * uloulopn(ilo,ilop)
-                           ENDDO
-                        ENDDO
-                     ENDIF
-                  ELSE
-                     gmat%data_c(ind1,ind2) = this%gmmpMat(iz,m_ind,mp_ind,spin_ind,ipm)
-                  ENDIF
-                  !------------------------
-                  ! Additional operations
-                  !------------------------
-                  !Spin-degeneracy when using a full matrix and having input%jspins.EQ.1
-                  IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2) * MERGE(0.5,1.0,nspins.EQ.1)
-                  !Complex conjugate for spin 4
-                  IF(ispin.EQ.4) gmat%data_c(ind1,ind2) = conjg(gmat%data_c(ind1,ind2))
-
-               ENDDO!mp
-            ENDDO!m
-         ENDDO!ispin
+            ENDDO!mp
+         ENDDO!m
 
       END SUBROUTINE get_gf
+
+      SUBROUTINE getFullMatrix_gf(this,atoms,iz,l_conjg,gmat,usdus,denCoeffsOffDiag,scalarGF)
+
+         USE m_types_mat
+         USE m_types_usdus
+         USE m_types_denCoeffsOffDiag
+         USE m_types_scalarGF
+
+         !Return the full matrix with all spin blocks for the given energy point
+
+         CLASS(t_greensf),                   INTENT(IN)     :: this
+         TYPE(t_atoms),                      INTENT(IN)     :: atoms
+         INTEGER,                            INTENT(IN)     :: iz
+         LOGICAL,                            INTENT(IN)     :: l_conjg
+         TYPE(t_mat),                        INTENT(INOUT)  :: gmat !Return matrix
+         TYPE(t_usdus),            OPTIONAL, INTENT(IN)     :: usdus
+         TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN)     :: denCoeffsOffDiag
+         TYPE(t_scalarGF),         OPTIONAL, INTENT(IN)     :: scalarGF
+
+         INTEGER :: matsize1, matsize2, nspins, ispin
+
+         TYPE(t_mat) :: gmat_spin
+
+         matsize1  = 2*this%elem%l+1
+         matsize2 = 2*this%elem%l+1
+
+         IF(.NOT.ALLOCATED(gmat%data_c)) THEN
+            CALL gmat%init(.FALSE.,2*matsize1,2*matsize2)
+         ELSE IF(2*matsize1.NE.gmat%matsize1.OR.2*matsize2.NE.gmat%matsize2) THEN
+            CALL juDFT_error("Mismatch in matsizes", calledby="getFullMatrix_gf")
+         ENDIF
+
+         IF(ALLOCATED(this%gmmpMat)) THEN
+            nspins = SIZE(this%gmmpMat,4)
+         ELSE
+            nspins = SIZE(this%uu,4)
+         ENDIF
+
+         DO ispin = 1, MAX(nspins,2)
+            CALL this%get(atoms,iz,l_conjg,ispin,gmat_spin,usdus,denCoeffsOffDiag,scalarGF)
+
+            IF(ispin<3) THEN
+               gmat%data_c((ispin-1)*matsize1+1:ispin*matsize1,(ispin-1)*matsize2+1:ispin*matsize2) = gmat_spin%data_c
+            ELSE IF(ispin.EQ.3) THEN
+               gmat%data_c(1:matsize1,matsize2+1:2*matsize2) = gmat_spin%data_c
+               gmat%data_c(matsize1+1:2*matsize1,1:matsize2) = conjg(transpose(gmat_spin%data_c))
+            ELSE
+               gmat%data_c(1:matsize1,matsize2+1:2*matsize2) = ImagUnit*conjg(gmat_spin%data_c)
+               gmat%data_c(matsize1+1:2*matsize1,1:matsize2) = -ImagUnit*transpose(gmat_spin%data_c)
+            ENDIF
+         ENDDO
+
+         IF(nspins==1) gmat%data_c = gmat%data_c * 0.5
+
+
+      END SUBROUTINE getFullMatrix_gf
 
       SUBROUTINE getRadial_gf(this,atoms,m,mp,l_conjg,spin,f,g,flo,gmat)
 
@@ -505,16 +524,12 @@ MODULE m_types_greensf
          IF(spin < 3) THEN
             spin1 = spin
             spin2 = spin
-         ELSE IF(spin.EQ.3) THEN
+         ELSE
             spin1 = 2
             spin2 = 1
-         ELSE
-            spin1 = 1
-            spin2 = 2
          ENDIF
          !Find the correct spin index in gmmpMat arrays
          spin_ind = MERGE(1,spin,nspins.EQ.1)
-         spin_ind = MERGE(3,spin_ind,spin.EQ.4)
 
          !-------------------------------------------------------------------
          ! Check wether we need to do some operation on the indices m and mp
@@ -524,11 +539,6 @@ MODULE m_types_greensf
             !matrix. Then we need to reverse the order (SOC prop m*s_z)
             m_ind  = -m
             mp_ind = -mp
-         ELSE IF(spin.EQ.4) THEN
-            !We only calculate spin21. spin12 is obtained as hermitian conjugate
-            !(Complex conjugation happens afterwards)
-            m_ind  = mp
-            mp_ind = m
          ELSE
             !Do nothing
             m_ind  = m
@@ -572,6 +582,7 @@ MODULE m_types_greensf
                DO ilo = 1, atoms%nlo(atomType)
                   IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                   iLOp_ind = 0
+                  iLO_ind = iLO_ind + 1
                   DO ilop = 1, atoms%nlo(atomTypep)
                      IF(atoms%llo(ilop,atomTypep).NE.lp) CYCLE
                      iLOp_ind = iLOp_ind + 1
@@ -582,11 +593,6 @@ MODULE m_types_greensf
                ENDDO
             ENDIF
          ENDDO
-         !------------------------
-         ! Additional operations
-         !------------------------
-         !Complex conjugate for spin 4
-         IF(spin.EQ.4) gmat = conjg(gmat)
 
       END SUBROUTINE getRadial_gf
 
@@ -635,16 +641,12 @@ MODULE m_types_greensf
          IF(spin < 3) THEN
             spin1 = spin
             spin2 = spin
-         ELSE IF(spin.EQ.3) THEN
+         ELSE
             spin1 = 2
             spin2 = 1
-         ELSE
-            spin1 = 1
-            spin2 = 2
          ENDIF
          !Find the correct spin index in gmmpMat arrays
          spin_ind = MERGE(1,spin,nspins.EQ.1)
-         spin_ind = MERGE(3,spin_ind,spin.EQ.4)
 
          !-------------------------------------------------------------------
          ! Check wether we need to do some operation on the indices m and mp
@@ -654,11 +656,6 @@ MODULE m_types_greensf
             !matrix. Then we need to reverse the order (SOC prop m*s_z)
             m_ind  = -m
             mp_ind = -mp
-         ELSE IF(spin.EQ.4) THEN
-            !We only calculate spin21. spin12 is obtained as hermitian conjugate
-            !(Complex conjugation happens afterwards)
-            m_ind  = mp
-            mp_ind = m
          ELSE
             !Do nothing
             m_ind  = m
@@ -705,6 +702,7 @@ MODULE m_types_greensf
                DO ilo = 1, atoms%nlo(atomType)
                   IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                   iLOp_ind = 0
+                  iLO_ind = iLO_ind + 1
                   DO ilop = 1, atoms%nlo(atomTypep)
                      IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
                      iLOp_ind = iLOp_ind + 1
@@ -719,94 +717,7 @@ MODULE m_types_greensf
          ENDDO
          !$OMP end parallel do
 
-         !------------------------
-         ! Additional operations
-         !------------------------
-         !Complex conjugate for spin 4
-         IF(spin.EQ.4) gmat = conjg(gmat)
-
       END SUBROUTINE getRadialRadial_gf
-
-      SUBROUTINE getRadialSpin_gf(this,atoms,m,mp,l_conjg,f,g,flo,gmat)
-
-         !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
-         !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
-
-         CLASS(t_greensf),    INTENT(IN)     :: this
-         TYPE(t_atoms),       INTENT(IN)     :: atoms
-         INTEGER,             INTENT(IN)     :: m,mp
-         LOGICAL,             INTENT(IN)     :: l_conjg
-         REAL   ,             INTENT(IN)     :: f(:,:,0:,:,:)
-         REAL   ,             INTENT(IN)     :: g(:,:,0:,:,:)
-         REAL   ,             INTENT(IN)     :: flo(:,:,:,:,:)
-         COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:,:,:) !Return matrix
-
-         INTEGER :: spin,spin1,spin2
-         COMPLEX,ALLOCATABLE :: temp(:,:)
-
-         IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(2,2,SIZE(f,1),this%contour%nz),source=cmplx_0)
-
-         DO spin = 1, 4
-            IF(spin < 3) THEN
-               spin1 = spin
-               spin2 = spin
-            ELSE IF(spin.EQ.3) THEN
-               spin1 = 2
-               spin2 = 1
-            ELSE
-               spin1 = 1
-               spin2 = 2
-            ENDIF
-            IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
-               gmat(spin1,spin2,:,:) = cmplx_0
-               CYCLE
-            ENDIF
-            CALL this%getRadial(atoms,m,mp,l_conjg,spin,f,g,flo,temp)
-            gmat(spin1,spin2,:,:) = temp(:,:)
-         ENDDO
-
-      END SUBROUTINE getRadialSpin_gf
-
-      SUBROUTINE getRadialRadialSpin_gf(this,atoms,iz,m,mp,l_conjg,f,g,flo,gmat)
-
-         !Returns the green's function on the radial and energy mesh and in a 2x2 spin matrix
-         !for a certain m,mp,spin combination. Attention: The correct radial functions have to be provided
-
-         CLASS(t_greensf),    INTENT(IN)     :: this
-         TYPE(t_atoms),       INTENT(IN)     :: atoms
-         INTEGER,             INTENT(IN)     :: iz
-         INTEGER,             INTENT(IN)     :: m,mp
-         LOGICAL,             INTENT(IN)     :: l_conjg
-         REAL   ,             INTENT(IN)     :: f(:,:,0:,:,:)
-         REAL   ,             INTENT(IN)     :: g(:,:,0:,:,:)
-         REAL   ,             INTENT(IN)     :: flo(:,:,:,:,:)
-         COMPLEX, ALLOCATABLE,INTENT(INOUT)  :: gmat(:,:,:,:) !Return matrix
-
-         INTEGER :: spin,spin1,spin2
-         COMPLEX,ALLOCATABLE :: temp(:,:)
-
-         IF(.NOT.ALLOCATED(gmat)) ALLOCATE(gmat(2,2,SIZE(f,1),SIZE(f,1)),source=cmplx_0)
-
-         DO spin = 1, 4
-            IF(spin < 3) THEN
-               spin1 = spin
-               spin2 = spin
-            ELSE IF(spin.EQ.3) THEN
-               spin1 = 2
-               spin2 = 1
-            ELSE
-               spin1 = 1
-               spin2 = 2
-            ENDIF
-            IF(spin>=3 .AND.SIZE(this%uu,4)<3) THEN
-               gmat(spin1,spin2,:,:) = cmplx_0
-               CYCLE
-            ENDIF
-            CALL this%getRadialRadial(atoms,iz,m,mp,l_conjg,spin,f,g,flo,temp)
-            gmat(spin1,spin2,:,:) = temp(:,:)
-         ENDDO
-
-      END SUBROUTINE getRadialRadialSpin_gf
 
       SUBROUTINE set_gf(this,iz,l_conjg,gmat,spin)
 
@@ -840,11 +751,12 @@ MODULE m_types_greensf
 
          IF(PRESENT(spin)) THEN
             IF(spin.GT.4 .OR. spin.LT.1) THEN
-               CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
+               CALL juDFT_error("Invalid argument for spin",calledby="set_gf")
             ENDIF
          ENDIF
 
          l_full = .NOT.PRESENT(spin)
+         IF(l_full.AND.SIZE(this%gmmpMat,4)>=3) CALL juDFT_error("Not implemented", calledby="set_gf")
          !Determine matsize for the result gmat (if spin is given only return this digonal element)
          matsize1 = (2*l+1) * MERGE(2,1,l_full)
          matsize2 = (2*lp+1) * MERGE(2,1,l_full)
@@ -878,8 +790,8 @@ MODULE m_types_greensf
                   spin1 = 1
                   spin2 = 2
                ENDIF
-               ind1_start = (spin1-1)*(2*l+1)
-               ind2_start = (spin2-1)*(2*lp+1)
+               ind1_start = (spin2-1)*(2*l+1)
+               ind2_start = (spin1-1)*(2*lp+1)
             ELSE
                ind1_start = 0
                ind2_start = 0
@@ -899,6 +811,28 @@ MODULE m_types_greensf
 
       END SUBROUTINE set_gf
 
+      SUBROUTINE set_gfdata(this,repr_gf)
+
+         !Sets all arrays equal to the data from another greensfunction
+
+         CLASS(t_greensf),    INTENT(INOUT)  :: this
+         TYPE(t_greensf),     INTENT(IN)     :: repr_gf
+
+         !TODO check array sizes before
+
+         IF(ALLOCATED(repr_gf%gmmpMat)) this%gmmpMat = repr_gf%gmmpMat
+         IF(ALLOCATED(repr_gf%uu)) this%uu = repr_gf%uu
+         IF(ALLOCATED(repr_gf%ud)) this%ud = repr_gf%ud
+         IF(ALLOCATED(repr_gf%du)) this%du = repr_gf%du
+         IF(ALLOCATED(repr_gf%dd)) this%dd = repr_gf%dd
+         IF(ALLOCATED(repr_gf%uulo)) this%uulo = repr_gf%uulo
+         IF(ALLOCATED(repr_gf%ulou)) this%ulou = repr_gf%ulou
+         IF(ALLOCATED(repr_gf%ulod)) this%ulod = repr_gf%ulod
+         IF(ALLOCATED(repr_gf%dulo)) this%dulo = repr_gf%dulo
+         IF(ALLOCATED(repr_gf%uloulop)) this%uloulop = repr_gf%uloulop
+
+      END SUBROUTINE set_gfdata
+
       SUBROUTINE rotate_gf(this,sym,atoms)
 
          !Applies the given symmetry operation to the greens function
@@ -911,7 +845,7 @@ MODULE m_types_greensf
 
          IF(this%elem%representative_elem<0) RETURN !Nothing to be done
 
-         CALL timestart("Green's Function: Rotate")
+         CALL timestart("Green's Function: Rotate (Symmetry)")
          l  = this%elem%l
          lp = this%elem%lp
          atomType = this%elem%atomType
@@ -993,8 +927,73 @@ MODULE m_types_greensf
                ENDDO
             ENDDO
          ENDDO
-         CALL timestart("Green's Function: Rotate")
+         CALL timestop("Green's Function: Rotate (Symmetry)")
       END SUBROUTINE rotate_gf
+
+      SUBROUTINE rotate_euler_angles_gf(this,atoms,alpha,beta,gamma,spin_rotation)
+
+         USE m_rotMMPmat
+
+         !Applies the given symmetry operation to the greens function
+         CLASS(t_greensf),    INTENT(INOUT)  :: this
+         TYPE(t_atoms),       INTENT(IN)     :: atoms
+         REAL,                INTENT(IN)     :: alpha
+         REAL,                INTENT(IN)     :: beta
+         REAL,                INTENT(IN)     :: gamma
+         LOGICAL, OPTIONAL,   INTENT(IN)     :: spin_rotation
+
+         INTEGER :: l,lp,atomType,atomTypep
+         INTEGER :: ipm,ispin,iz,ilo,ilop,iLO_ind,iLOp_ind
+
+         IF(ABS(alpha).LT.1e-12.AND.ABS(beta).LT.1e-12.AND.ABS(gamma).LT.1e-12) RETURN !Nothing to be done
+
+         CALL timestart("Green's Function: Rotate (Angles)")
+         l  = this%elem%l
+         lp = this%elem%lp
+         atomType = this%elem%atomType
+         atomTypep = this%elem%atomTypep
+
+         DO ipm = 1, 2
+            DO iz = 1, this%contour%nz
+               IF(ALLOCATED(this%gmmpMat)) THEN
+                  this%gmmpMat(iz,:,:,:,ipm) = rotMMPmat(this%gmmpMat(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+               ELSE IF(ALLOCATED(this%uu)) THEN
+                  this%uu(iz,:,:,:,ipm) = rotMMPmat(this%uu(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                  this%ud(iz,:,:,:,ipm) = rotMMPmat(this%ud(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                  this%du(iz,:,:,:,ipm) = rotMMPmat(this%du(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                  this%dd(iz,:,:,:,ipm) = rotMMPmat(this%dd(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+
+                  IF(ALLOCATED(this%uulo)) THEN
+                     iLO_ind = 0
+                     DO ilo = 1, atoms%nlo(atomType)
+                        IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                        iLO_ind = iLO_ind + 1
+                        this%uulo(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%uulo(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                        this%dulo(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%dulo(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                     ENDDO
+                     iLO_ind = 0
+                     DO ilo = 1, atoms%nlo(atomTypep)
+                        IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
+                        iLO_ind = iLO_ind + 1
+                        this%ulou(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%ulou(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                        this%ulod(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%ulod(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                     ENDDO
+                     iLO_ind = 0
+                     DO ilo = 1, atoms%nlo(atomType)
+                        IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                        iLOp_ind = 0
+                        DO ilop = 1, atoms%nlo(atomTypep)
+                           IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
+                           iLOp_ind = iLOp_ind + 1
+                           this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm) = rotMMPmat(this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                        ENDDO
+                     ENDDO
+                  ENDIF
+               ENDIF
+            ENDDO
+         ENDDO
+         CALL timestop("Green's Function: Rotate (Angles)")
+      END SUBROUTINE rotate_euler_angles_gf
 
       SUBROUTINE reset_gf(this)
 
@@ -1138,7 +1137,7 @@ MODULE m_types_greensf
             DO spin = 1 , SIZE(this%uu,4)
                IF(.NOT.l_explicit) THEN
                   DO iz = 1, this%contour%nz
-                     CALL this%get(atoms,iz,ipm==2,gmatTmp,spin=spin,usdus=usdus,&
+                     CALL this%get(atoms,iz,ipm==2,spin,gmatTmp,usdus=usdus,&
                                    denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
                      CALL gIntegrated%set(iz,ipm==2,gmatTmp,spin=spin)
                   ENDDO

@@ -1,6 +1,5 @@
 set(fleur_F77 ${fleur_F77}
 global/fitchk.f
-global/nmat_rot.f
 global/od_cylbes.f
 global/od_phasy.f
 global/radsra.f
@@ -33,6 +32,6 @@ global/symMMPmat.f90
 )
 if (FLEUR_USE_GPU)
   set(fleur_F90 ${fleur_F90}
-  global/nvtx.F90
+#  global/nvtx.F90
   )
 endif()

@@ -7,6 +7,7 @@ MODULE m_hubbard1_setup
    USE m_doubleCounting
    USE m_hubbard1Distance
    USE m_occmtx
+   USE m_polangle
    USE m_hubbard1_io
    USE m_types_selfen
    USE m_add_selfen
@@ -27,9 +28,10 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,gfinp,hub1inp,input,fmpi,noco,nococonv,pot,gdft,hub1data,results,den)
+   SUBROUTINE hubbard1_setup(atoms,cell,gfinp,hub1inp,input,fmpi,noco,nococonv,pot,gdft,hub1data,results,den)
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
+      TYPE(t_cell),     INTENT(IN)     :: cell
       TYPE(t_gfinp),    INTENT(IN)     :: gfinp
       TYPE(t_hub1inp),  INTENT(IN)     :: hub1inp
       TYPE(t_input),    INTENT(IN)     :: input
@@ -42,12 +44,15 @@ MODULE m_hubbard1_setup
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_potden),   INTENT(INOUT)  :: den
 
+      LOGICAL, PARAMETER :: l_mix = .FALSE.
+
       INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
       INTEGER :: n_hia_task,extra,i_hia_start,i_hia_end
-      REAL    :: U,J
+      REAL    :: U,J,mx,my,mz,alpha_mix
+      COMPLEX :: offdtrace
       LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,l_amf
 
       CHARACTER(len=300) :: folder
@@ -61,6 +66,7 @@ MODULE m_hubbard1_setup
       REAL    :: mu_dc(input%jspins)
       REAL    :: f0(atoms%n_hia),f2(atoms%n_hia)
       REAL    :: f4(atoms%n_hia),f6(atoms%n_hia)
+      REAL    :: alpha(atoms%n_hia), beta(atoms%n_hia)
       REAL    :: occDFT(atoms%n_hia,input%jspins)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
       COMPLEX, ALLOCATABLE :: e(:)
@@ -103,7 +109,7 @@ MODULE m_hubbard1_setup
             !-------------------------------------------------------
             ! Calculate the DFT occupation of the correlated shell
             !-------------------------------------------------------
-            CALL occmtx(gdft(i_hia),gfinp,input,atoms,mmpMat(:,:,i_hia,:))
+            CALL occmtx(gdft(i_hia),gfinp,input,atoms,noco,nococonv,mmpMat(:,:,i_hia,:))
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
@@ -133,6 +139,21 @@ MODULE m_hubbard1_setup
                   ENDDO
                ENDDO
             ENDIF
+
+            IF (noco%l_unrestrictMT(nType) .and. gfinp%l_mperp) then
+               !Calculate local magnetization vector from greens function
+               mz = occDFT(i_hia,1) - occDFT(i_hia,2)
+               offdtrace = cmplx_0
+               DO m = -l, l
+                  offdtrace = offdtrace + mmpMat(m,m,i_hia,3)
+               ENDDO
+               mx = 2.0 * REAL(offdtrace)
+               my = 2.0 * AIMAG(offdtrace)
+               CALL pol_angle(mx,my,mz,beta(i_hia),alpha(i_hia))
+
+               !TODO: ROTATE GREENS FUNCTION SPINFRAME TO ALIGN WITH CURRENT MAGNETIZATION
+            ENDIF
+
             !Nearest Integer occupation
             occDFT_INT = ANINT(SUM(occDFT(i_hia,:)))
 
@@ -153,8 +174,9 @@ MODULE m_hubbard1_setup
             ! V_FLL = U (n - 1/2) - J (n - 1) / 2
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
-            mu_dc = doubleCountingPot(U,J,l,l_amf,hub1data%l_performSpinavg,occDFT(i_hia,:),&
-                                      l_write=fmpi%irank==0)
+            IF(l_mix) alpha_mix = doubleCountingMixFactor(mmpMat(:,:,i_hia,:), l, occDFT(i_hia,:))
+            mu_dc = doubleCountingPot(U,J,l,l_amf,l_mix,hub1data%l_performSpinavg,occDFT(i_hia,:),&
+                                      alpha_mix, l_write=fmpi%irank==0)
 
             !-------------------------------------------------------
             ! Check for additional input files
@@ -276,7 +298,7 @@ MODULE m_hubbard1_setup
 #endif
 
          CALL timestart("Hubbard 1: Add Selfenergy")
-         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,atoms,&
+         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,atoms,noco,nococonv,&
                          occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenergy")
 
@@ -308,7 +330,7 @@ MODULE m_hubbard1_setup
          !------------------------------
          CALL timestart("Hubbard 1: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_DFT.hdf")
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                                GREENSF_HUBBARD_CONST, gdft, mmpmat)
          CALL closeGreensFFile(greensf_fileID)
 
@@ -316,7 +338,7 @@ MODULE m_hubbard1_setup
          !Write out correlated Green's Function
          !-------------------------------------
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_IMP.hdf")
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                               GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Hubbard 1: IO/Write")
@@ -341,6 +363,11 @@ MODULE m_hubbard1_setup
 
       IF(fmpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
+            nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+            IF (noco%l_unrestrictMT(nType) .and. gfinp%l_mperp) then
+               !TODO: ROTATE GREENS FUNCTION AND mmpmat SPINFRAME TO LOCAL FRAME
+            ENDIF
+
             CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
             DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
                den%mmpMat(-lmaxU_const:,-lmaxU_const:,atoms%n_u+i_hia,ispin) = mmpMat(-lmaxU_const:,-lmaxU_const:,i_hia,ispin)

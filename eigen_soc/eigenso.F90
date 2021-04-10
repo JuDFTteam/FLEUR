@@ -159,10 +159,18 @@ CONTAINS
              CALL zmat%alloc(.FALSE.,SIZE(zso,1),nsz)
              DO jspin = 1,wannierspin
                 CALL timestart("eigenso: write_eig")
+
+                call timestart("cpy zmat")
                 zmat%data_c=zso(:,:nsz,jspin)
+                call timestop("cpy zmat")
+                
                 CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz),zmat=zmat)
+
+                call timestart("cpy buffers")
                 eigBuffer(:nsz,nk,jspin) = eig_so(:nsz)
                 neigBuffer(nk,jspin) = nsz
+                call timestop("cpy buffers")
+
                 CALL timestop("eigenso: write_eig")
              ENDDO
           ENDIF ! (input%eonly) ELSE

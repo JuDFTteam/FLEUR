@@ -13,7 +13,6 @@ set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
 #  CoUnfold
 
-
 set(SerialOnlyTests  )
 
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
@@ -30,7 +29,7 @@ set(HybridTests
 )
 
 set(FFNTests
-   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
+   Fe_bcc_FlipcdnXLDA  FeFFNLOsSOC
    PlotDenandPot PlotOnlyMT Noncollinear_downward_compatible
    RelaxMTFeature Fe_bcc_SF_LDA
 )
@@ -42,7 +41,7 @@ endif()
 
 #Check if all tests (including those running for a long time) should be executed
 if (all_tests)
-   set(SerialParallelTests ${SerialParallelTests} Bi2Te3 Bi2Te3XML NiO_ldauXML ${FFNTests})
+   set(SerialParallelTests ${SerialParallelTests} ${FFNTests})
 endif()
 
 #Add Wannier tests if fleur is compiled with Wannier support
@@ -52,7 +51,7 @@ endif()
 
 #Tests for LibXC
 if (FLEUR_USE_LIBXC)
-   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC)
+   set(SerialParallelTests ${SerialParallelTests} CuBulkLibXC Fe_bct_LibXC Al_libxc_PBE)
 endif()
 
 #To be repaired: Diamond_SCAN
@@ -61,7 +60,6 @@ endif()
 if (FLEUR_USE_EDSOLVER)
    set(SerialParallelTests ${SerialParallelTests} Gd_Hubbard1 Gd_Hubbard1_noSYM)
 endif()
-
 
 #The inpgen tests
 #if (INPGEN)
@@ -99,4 +97,10 @@ if (FLEUR_USE_MPI)
    foreach(test ${HybridTests})
       add_test("${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/${test}/test.py --bindir ${CMAKE_BINARY_DIR} --testdir ${CMAKE_BINARY_DIR}/Testing/${test})
    endforeach()
+endif()
+
+#Add OutputSchema Test if xmllint is available
+find_program(XMLLINT_PROG xmllint)
+if (XMLLINT_PROG)
+   add_test("ValidateOutFiles" ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests/ValidateOutFiles/test.py --command ${XMLLINT_PROG} --testdir ${CMAKE_BINARY_DIR}/Testing/ValidateOutFiles)
 endif()

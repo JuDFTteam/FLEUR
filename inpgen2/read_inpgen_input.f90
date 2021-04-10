@@ -45,10 +45,10 @@ CONTAINS
 
 
     !locals
-    REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),det,temp
+    REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),cart_mat(3,3),det,temp
     INTEGER             :: ios,n,i, iKpts
     CHARACTER(len=100)  :: filename
-    LOGICAL             :: l_exist
+    LOGICAL             :: l_exist,cartesian
     CHARACTER(len=16384):: line
     TYPE(t_atompar)     :: ap
 
@@ -82,9 +82,9 @@ CONTAINS
           !process the namelist
           SELECT CASE(line(2:5)) !e.g. atom
           CASE ('latt')
-             CALL process_lattice(line,a1,a2,a3,aa,scale,mat)
+             CALL process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat)
           CASE('inpu')
-             CALL process_input(line,input%film,sym%symor,hybinp%l_hybrid)
+             CALL process_input(line,input%film,sym%symor,cartesian,hybinp%l_hybrid)
           CASE('atom')
              CALL read_atom_params_old(98,ap)
              CALL add_atompar(ap)
@@ -100,6 +100,8 @@ CONTAINS
              CALL process_exco(line,xcpot)
           CASE('comp')
              CALL process_comp(line,input%jspins,input%frcor,input%ctail,input%kcrel,stars%gmax,xcpot%gmaxxc,input%rkmax)
+          CASE('expe')
+             CALL process_expert(line,input%gw)
           CASE('kpt ')
              iKpts = iKpts + 1
              CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),input%tkb)
@@ -122,12 +124,13 @@ CONTAINS
        ELSE
           IF (aa.NE.0) THEN
              !cell was set already, so list of atoms follow
+             if (allocated(atom_pos)) call judft_error("Input error: "//TRIM(line))
              READ(line,*,iostat=ios) n
-             IF (ios.NE.0) CALL judft_error(("Surprising error in reading input:"//trim(line)))
+             IF (ios.NE.0) CALL judft_error(("Surprising error in reading input: "//trim(line)))
              ALLOCATE(atom_pos(3,n),atom_label(n),atom_id(n))
              DO i=1,n
                 READ(98,"(a)",iostat=ios) line
-                IF (ios.NE.0) CALL judft_error(("List of atoms not complete:"//trim(line)))
+                IF (ios.NE.0) CALL judft_error(("List of atoms not complete: "//trim(line)))
                 atom_id(i)=evaluatefirst(line)
                 atom_pos(1,i)=evaluatefirst(line)
                 atom_pos(2,i)=evaluatefirst(line)
@@ -166,17 +169,26 @@ CONTAINS
     END DO readloop
 
     IF (.NOT.ALLOCATED(atom_pos).OR.SUM(ABS(a1))==0.0) CALL judft_error("input not complete")
+
     !transform hex->trig
     IF (ABS(mat(1,1)).GT.0.0000001) THEN
-       cell%amat(:,1) = a1(:)
-       cell%amat(:,2) = a2(:)
-       cell%amat(:,3) = a3(:)
-       CALL inv3(cell%amat,cell%bmat,det)
-       DO n = 1, SIZE(atom_pos,2)
+        !unscaled matrices... (scaled setup later)
+        cell%amat(:,1) = a1(:)
+        cell%amat(:,2) = a2(:)
+        cell%amat(:,3) = a3(:)
+        CALL inv3(cell%amat,cell%bmat,det)
+        DO n = 1, SIZE(atom_pos,2)
           atom_pos(:,n) = MATMUL(cell%bmat,MATMUL(mat,atom_pos(:,n)))
+        ENDDO
+    ENDIF
+    !Transform in case of scaled cartesian input
+    IF (cartesian) THEN
+      if (all(abs(cart_mat)<0.01)) call judft_error("Cartesian='t' not possible for your lattice")
+      CALL inv3(cart_mat,cell%bmat,det)
+      DO n = 1, SIZE(atom_pos,2)
+          atom_pos(:,n) = MATMUL(cell%bmat,atom_pos(:,n))
        ENDDO
     ENDIF
-
     DO i = 1, 3
        IF (SCALE(i).LT.0.0) SCALE(i) = SQRT(-SCALE(i))
     END DO
@@ -265,7 +277,7 @@ CONTAINS
     REAL,INTENT(inout):: tkb
 
     LOGICAL :: tria
-    INTEGER :: div1,div2,div3,nkpt
+    INTEGER :: div1,div2,div3,nkpt, numSpecifications
     CHARACTER(len=5) :: bz_integration
     CHARACTER(len=40) :: name
     CHARACTER(len=500) :: path
@@ -278,6 +290,18 @@ CONTAINS
     tria=.FALSE.
     READ(line,kpt)
     kpts_str=''
+
+    numSpecifications = 0
+    IF (den.GT.0.0) numSpecifications = numSpecifications + 1
+    IF (nkpt.NE.0) numSpecifications = numSpecifications + 1
+    IF (ALL([div1,div2,div3]>0)) numSpecifications = numSpecifications + 1
+    IF (numSpecifications.GT.1) THEN
+       WRITE(*,'(a)') "Ambiguous specification of k-point set:"
+       WRITE(*,'(a)') TRIM(line)
+       CALL juDFT_error("Ambiguous specification of k-point set.", calledby="read_inpgen_input",&
+                        hint="Use only one of nkpt, den, (div1,div2,div3)!")
+    END IF
+
     IF (den>0.0) THEN
        WRITE(kpts_str,"(a,f0.6)") "den=",den
     ELSEIF((nkpt>0).AND.(path.EQ.'')) THEN
@@ -310,7 +334,7 @@ CONTAINS
 
   END SUBROUTINE process_kpts
 
-  SUBROUTINE process_input(line,film,symor,hybinp)
+  SUBROUTINE process_input(line,film,symor,cartesian,hybinp)
     CHARACTER(len=*),INTENT(in)::line
     LOGICAL,INTENT(out)::film,symor,hybinp
 
@@ -430,6 +454,20 @@ CONTAINS
     IF (ios.NE.0) CALL judft_error(("Error reading:" //TRIM(line)))
   END SUBROUTINE process_comp
 
+  SUBROUTINE process_expert(line,gw)
+    USE m_types_xcpot_inbuild_nofunction
+    CHARACTER(len=*),INTENT(in)::line
+    INTEGER, INTENT(INOUT) :: gw
+    INTEGER :: spex
+    NAMELIST /expert/ spex
+    INTEGER :: ios
+
+    spex = 0
+    READ(line,expert,iostat=ios)
+    IF (ios.NE.0) CALL judft_error(("Error reading:" //TRIM(line)))
+
+    gw = spex
+  END SUBROUTINE process_expert
 
   SUBROUTINE normalize_file(infh,outfh)
     !***********************************************************************
@@ -496,6 +534,9 @@ CONTAINS
           complete=.FALSE.
        END IF
     END DO loop
+    IF(LEN_TRIM(buffer).NE.0) THEN
+       WRITE(outfh,'(a)') TRIM(buffer)
+    END IF
 
   END SUBROUTINE normalize_file
 

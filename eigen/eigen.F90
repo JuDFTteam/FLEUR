@@ -42,6 +42,7 @@ CONTAINS
       USE m_symmetrize_matrix
       USE m_unfold_band_kpts !used for unfolding bands
       USE m_types_mpimat
+      use m_store_load_hybrid
 
       IMPLICIT NONE
 
@@ -70,7 +71,7 @@ CONTAINS
 
       ! Local Scalars
       INTEGER jsp,nk,nred,ne_all,ne_found,neigd2
-      INTEGER ne, nk_i
+      INTEGER ne, nk_i,n_size,n_rank
       INTEGER isp,i,j,err
       LOGICAL l_wu,l_file,l_real,l_zref
       INTEGER :: solver=0
@@ -103,7 +104,7 @@ CONTAINS
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
-      l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u+fi%atoms%n_hia>0)
+      l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u>0).AND.fi%atoms%n_hia==0
 
       ! check if z-reflection trick can be used
       l_zref=(fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
@@ -125,6 +126,7 @@ CONTAINS
       nvBuffer = 0
       nvBufferTemp = 0
 
+      if(.not. hybdat%l_addhf) call load_hybrid_data(fi, fmpi, hybdat, mpdata)
       DO jsp = 1,MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)
@@ -167,37 +169,45 @@ CONTAINS
             !                on output, local number of eigenpairs found
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
-            CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
-
-            CALL smat%free()
-            CALL hmat%free()
+            if (fmpi%pe_diag) THEN
+              CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
+              CALL smat%free()
+              CALL hmat%free()
+            ELSE
+              ne_all=0
+            endif
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
             if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
                                                    hint=errmsg, calledby="eigen.F90")
 
             ! Output results
             CALL timestart("EV output")
+            ne_found=ne_all
+            if (fmpi%pe_diag) THEN
 #if defined(CPP_MPI)
-            ! Collect number of all eigenvalues
-            ne_found=ne_all
-            CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, fmpi%sub_comm,ierr)
-            ne_all=MIN(fi%input%neig,ne_all)
-#else
-            ne_found=ne_all
+              ! Collect number of all eigenvalues
+              CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, fmpi%diag_sub_comm,ierr)
+              ne_all=MIN(fi%input%neig,ne_all)
 #endif
-            IF (.NOT.zMat%l_real) THEN
-               zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
-            END IF
-
+              IF (.NOT.zMat%l_real) THEN
+                zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
+              END IF
+            endif
 
             IF (fmpi%n_rank == 0) THEN
                 ! Only process 0 writes out the value of ne_all and the
                 ! eigenvalues.
+#ifdef CPP_MPI
+                call MPI_COMM_RANK(fmpi%diag_sub_comm,n_rank,err)
+                call MPI_COMM_SIZE(fmpi%diag_sub_comm,n_size,err)
+#else
+                n_rank = 0; n_size=1;
+#endif
                 CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
-                           eig(:ne_all),n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
+                           eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
-                CALL write_eig(eig_id, nk,jsp,ne_found,&
+                if (fmpi%pe_diag) CALL write_eig(eig_id, nk,jsp,ne_found,&
                            n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
             ENDIF
             neigBuffer(nk,jsp) = ne_found
@@ -217,8 +227,10 @@ CONTAINS
                                                       hint=errmsg, calledby="eigen.F90")
             END IF
 
-            call zMat%free()
-            deallocate(zMat)
+            IF (allocated(zmat)) THEN
+              call zMat%free()
+              deallocate(zMat)
+            ENDIF
          END DO  k_loop
       END DO ! spin loop ends
 

@@ -17,12 +17,13 @@ MODULE m_greensfPostProcess
 
    CONTAINS
 
-   SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,gfinp,input,sym,noco,mpi,&
+   SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,cell,gfinp,input,sym,noco,mpi,&
                                  nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
 
       !contains all the modules for calculating properties from the greens function
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
+      TYPE(t_cell),              INTENT(IN)     :: cell
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_sym),               INTENT(IN)     :: sym
@@ -42,7 +43,6 @@ MODULE m_greensfPostProcess
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
       LOGICAL  l_sphavg,l_check
 
-      REAL :: torgue(3)
       REAL, ALLOCATABLE :: f(:,:,:,:,:),g(:,:,:,:,:), flo(:,:,:,:,:)
 
       TYPE(t_usdus)            :: usdus
@@ -52,66 +52,64 @@ MODULE m_greensfPostProcess
       INTEGER(HID_T) :: greensf_fileID
 #endif
 
-      IF(mpi%irank==0) THEN
-         IF(gfinp%checkRadial()) THEN
-            !-----------------------------------------------------------
-            ! Calculate the needed radial functions and scalar products
-            !-----------------------------------------------------------
-            CALL timestart("Green's Function: Radial Functions")
-            ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
-            ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
-            ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins,atoms%nType),source=0.0)
+      IF(gfinp%checkRadial()) THEN
+         !-----------------------------------------------------------
+         ! Calculate the needed radial functions and scalar products
+         !-----------------------------------------------------------
+         CALL timestart("Green's Function: Radial Functions")
+         ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
+         ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
+         ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins,atoms%nType),source=0.0)
 
-            ! Initializations
-            CALL usdus%init(atoms,input%jspins)
-            CALL denCoeffsOffDiag%init(atoms,noco,sphhar,.FALSE.,.FALSE.)
+         ! Initializations
+         CALL usdus%init(atoms,input%jspins)
+         CALL denCoeffsOffDiag%init(atoms,noco,sphhar,.FALSE.,.FALSE.)
 
-            !Generate the scalar products we need
-            DO i_gf = 1, gfinp%n
-               l  = gfinp%elem(i_gf)%l
-               lp = gfinp%elem(i_gf)%lp
-               atomType  = gfinp%elem(i_gf)%atomType
-               atomTypep = gfinp%elem(i_gf)%atomTypep
+         !Generate the scalar products we need
+         DO i_gf = 1, gfinp%n
+            l  = gfinp%elem(i_gf)%l
+            lp = gfinp%elem(i_gf)%lp
+            atomType  = gfinp%elem(i_gf)%atomType
+            atomTypep = gfinp%elem(i_gf)%atomTypep
 
-               l_sphavg  = gfinp%elem(i_gf)%l_sphavg
+            l_sphavg  = gfinp%elem(i_gf)%l_sphavg
+            IF(gfinp%elem(i_gf)%isOffDiag()) THEN
+               CALL scalarGF(i_gf)%init(atoms,input)
+            ENDIF
+            IF(l_sphavg) CYCLE
+
+            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+
+            IF(i_gf/=indUnique) THEN
                IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-                  CALL scalarGF(i_gf)%init(atoms,input)
+                  scalarGF(i_gf) = scalarGF(indUnique)
                ENDIF
-               IF(l_sphavg) CYCLE
-
-               i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
-
-               IF(i_gf/=indUnique) THEN
-                  IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-                     scalarGF(i_gf) = scalarGF(indUnique)
-                  ENDIF
-                  CYCLE
-               ENDIF
-               DO jspin = 1, input%jspins
-                  CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
-                                  f(:,:,:,jspin,atomType),g(:,:,:,jspin,atomType),flo(:,:,:,jspin,atomType),&
+               CYCLE
+            ENDIF
+            DO jspin = 1, input%jspins
+               CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
+                               f(:,:,:,jspin,atomType),g(:,:,:,jspin,atomType),flo(:,:,:,jspin,atomType),&
+                               hub1data=hub1data,l_writeArg=.FALSE.)
+               IF(atomType/=atomTypep) THEN
+                  CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
+                                  f(:,:,:,jspin,atomTypep),g(:,:,:,jspin,atomTypep),flo(:,:,:,jspin,atomTypep),&
                                   hub1data=hub1data,l_writeArg=.FALSE.)
-                  IF(atomType/=atomTypep) THEN
-                     CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
-                                     f(:,:,:,jspin,atomTypep),g(:,:,:,jspin,atomTypep),flo(:,:,:,jspin,atomTypep),&
-                                     hub1data=hub1data,l_writeArg=.FALSE.)
-                  ENDIF
-               ENDDO
-               IF(gfinp%l_mperp) THEN
-                  CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
-                                                                flo(:,:,:,:,atomType),atomType)
-                  IF(atomType/=atomTypep) THEN
-                     CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomTypep),g(:,:,:,:,atomTypep),&
-                                                                   flo(:,:,:,:,atomTypep),atomTypep)
-                  ENDIF
-               ENDIF
-               IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-                  CALL scalarGF(i_gf)%addScalarProduct(l,lp,atomType,atomTypep,ANY(ABS(gfinp%elem(i_gf)%atomDiff).GT.1e-12),&
-                                                       gfinp%l_mperp,atoms,input,f,g,flo)
                ENDIF
             ENDDO
-            CALL timestop("Green's Function: Radial Functions")
-         ENDIF
+            IF(gfinp%l_mperp) THEN
+               CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
+                                                             flo(:,:,:,:,atomType),atomType)
+               IF(atomType/=atomTypep) THEN
+                  CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomTypep),g(:,:,:,:,atomTypep),&
+                                                                flo(:,:,:,:,atomTypep),atomTypep)
+               ENDIF
+            ENDIF
+            IF(gfinp%elem(i_gf)%isOffDiag()) THEN
+               CALL scalarGF(i_gf)%addScalarProduct(l,lp,atomType,atomTypep,ANY(ABS(gfinp%elem(i_gf)%atomDiff).GT.1e-12),&
+                                                    gfinp%l_mperp,atoms,input,f,g,flo)
+            ENDIF
+         ENDDO
+         CALL timestop("Green's Function: Radial Functions")
       ENDIF
       !--------------------------------------------------------------------------------
       ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
@@ -121,6 +119,20 @@ MODULE m_greensfPostProcess
                                greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 
+      !----------------------------------------------
+      ! Torgue Calculations
+      !----------------------------------------------
+      IF(ANY(gfinp%numTorgueElems>0)) THEN
+         CALL timestart("Green's Function: Torgue")
+         CALL greensfTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
+                            f,g,flo,vTot)
+         IF(.FALSE.) THEN
+            CALL greensfSOTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
+                                 enpara,f,g,flo,vTot)
+         ENDIF
+         CALL timestop("Green's Function: Torgue")
+      ENDIF
+
       IF(mpi%irank==0) THEN
          CALL timestart("Green's Function: Postprocess")
          !-------------------------------------------------------------
@@ -128,7 +140,7 @@ MODULE m_greensfPostProcess
          !-------------------------------------------------------------
          !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
          IF(atoms%n_hia.GT.0 .AND. ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
-           !CALL crystal_field(atoms,gfinp,input,nococonv,greensfImagPart,vTot,results%ef,hub1data)
+           !CALL crystal_field(atoms,gfinp,input,noco,nococonv,greensfImagPart,vTot,results%ef,hub1data)
          ENDIF
 
          !Onsite exchange Splitting from difference of center of mass of the bands
@@ -143,54 +155,26 @@ MODULE m_greensfPostProcess
             l_sphavg    = greensFunction(i_gf)%elem%l_sphavg
             l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag() !If there are SCLOs present the occupations can get bigger than 1
             IF(l_sphavg) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            l_write=.TRUE.,check=l_check)
             ELSE IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            scalarGF=scalarGF(i_gf),l_write=.TRUE.,check=l_check)
             ELSE IF(.NOT.gfinp%l_mperp) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            usdus=usdus,l_write=.TRUE.,check=l_check)
             ELSE
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,mmpmat(:,:,i_gf,:),&
+               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
                            usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag,&
                            l_write=.TRUE.,check=l_check)
             ENDIF
          ENDDO
          CALL timestop("Green's Function: Occupation")
 
-         !----------------------------------------------
-         ! Torgue Calculations
-         !----------------------------------------------
-         IF(ANY(gfinp%numTorgueElems>0)) THEN
-            CALL timestart("Green's Function: Torgue")
-            CALL openXMLElementNoAttributes('noncollinearTorgue')
-            WRITE(oUnit,'(/,A)') 'Torgue Calculation (noco):'
-            WRITE(oUnit,'(/,A)') '---------------------------'
-            DO atomType = 1, atoms%nType
-               IF(gfinp%numTorgueElems(atomType)==0) CYCLE
-               CALL greensfTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),&
-                                  sphhar,atoms,sym,noco,nococonv,input,f,g,flo,atomType,torgue,vTot)
-            ENDDO
-            CALL closeXMLElement('noncollinearTorgue')
-            IF(noco%l_soc) THEN
-               CALL openXMLElementNoAttributes('spinorbitTorgue')
-               WRITE(oUnit,'(/,A)') 'Torgue Calculation (spin-orbit):'
-               WRITE(oUnit,'(/,A)') '---------------------------------'
-               DO atomType = 1, atoms%nType
-                  IF(gfinp%numTorgueElems(atomType)==0) CYCLE
-                  CALL greensfSOTorgue(greensFunction(gfinp%torgueElem(atomType,:gfinp%numTorgueElems(atomType))),&
-                                       sphhar,atoms,sym,noco,nococonv,input,enpara,mpi,f,g,flo,atomType,torgue,vTot)
-               ENDDO
-               CALL closeXMLElement('spinorbitTorgue')
-            ENDIF
-            CALL timestop("Green's Function: Torgue")
-         ENDIF
-
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, &
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
                                u=f,udot=g,ulo=flo,usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag,&
                                scalarGF=scalarGF)

@@ -51,7 +51,7 @@ module m_eig66_data
       COMPLEX, ALLOCATABLE :: eig_vecc(:, :)
       REAL, ALLOCATABLE    :: olap_r(:, :)
       COMPLEX, ALLOCATABLE :: olap_c(:, :)
-   END TYPE
+   END TYPE t_data_mem
 
    TYPE t_list
       INTEGER               :: id

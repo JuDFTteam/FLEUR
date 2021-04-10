@@ -40,6 +40,9 @@ c******************************************************************
       use m_wann_real
       use m_xsf_io
       use m_wann_plot_vac
+#ifdef CPP_MPI
+      use mpi
+#endif
 !      USE m_wann_plot_wannier
       IMPLICIT NONE
 
@@ -106,7 +109,6 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 
 #include "cpp_double.h"
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer ierr(3)
       integer cpu_index
       integer stt(MPI_STATUS_SIZE)
@@ -202,7 +204,7 @@ c     ..basis wavefunctions in the vacuum
 
       TYPE(t_zmat)  :: zMat, zzMat
       TYPE(t_usdus) :: usdus
-
+      call timestart("wann_plotw90")
       l_byindex=.false.
       l_byenergy=.false.
       l_bynumber=.false.
@@ -769,6 +771,6 @@ c..end of the loop by the bands
 
       deallocate ( vr,vz,kveclo,nv,k1,k2,k3 )
       deallocate ( ff,gg )
-
+      call timestop("wann_plotw90")
       END SUBROUTINE wann_plotw90
       END MODULE m_wann_plotw90

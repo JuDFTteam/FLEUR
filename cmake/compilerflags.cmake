@@ -41,13 +41,14 @@ elseif (CMAKE_Fortran_COMPILER_ID MATCHES "PGI")
    set(FLEUR_OPENMP_FLAG "-mp")
    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "") #fix problem in cmake
    #CPU
-   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp")
+   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp -O1 -g ")
+   set(FLEUR_COMPILE_OPTIONS -mavx2 -Mlre -Mautoinline -Mpre -Mvect=simd -Mcache_align -Mflushz -O2 -g)
    #GPU
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda=cuda9.0,cc60 -Mcudalib=cublas")
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda:kepler+ -ta:tesla:cuda7.5 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Mcuda:cuda9.0,cc70 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")
    #set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -fast -O3")
-   set(CMAKE_Fortran_FLAGS_RELEASE "-O1 ") # to prevent cmake from putting -fast which causes problems with PGI18.4
+   set(CMAKE_Fortran_FLAGS_RELEASE "") # to prevent cmake from putting -fast which causes problems with PGI18.4
    set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g -Mchkstk -Mchkptr -Ktrap=fp -DCPP_DEBUG")
 elseif (CMAKE_Fortran_COMPILER_ID MATCHES "XL")
    message("IBM/BG Fortran detected")
@@ -65,6 +66,11 @@ elseif (CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
    set(FLEUR_OPENMP_FLAG "-fopenmp")
    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "6.1.0")
       message(FATAL_ERROR "Only modern versions of gfortran >6.3 will be able to compile FLEUR\nYou need to specify a different compiler.\nSee the docs at www.flapw.de.\n")
+   endif()
+   if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "9.0.0")
+      #Older compilers cant handle type bound procedure inside OMP parallel
+      set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_NOTYPEPROCINOMP")
+      set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_NOTYPEPROCINOMP")
    endif()
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none -Wno-missing-include-dirs -DCPP_IRAPPROX")
    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero")

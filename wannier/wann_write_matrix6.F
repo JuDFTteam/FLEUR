@@ -5,9 +5,10 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_write_matrix6
+            use m_juDFT
       contains
       subroutine wann_write_matrix6(
-     >               mpi_comm,l_p0,filename,title,
+     >               fmpi_comm,l_p0,filename,title,
      >               spin1,spin2,num_bands1,num_bands2,
      >               num_dims,fullnkpts,
      >               irank,isize,l_unformatted,
@@ -24,10 +25,13 @@ c     Frank Freimuth
 c*************************************************************
 
       USE m_constants
+#ifdef CPP_MPI
+      USE mpi
+#endif
 
       implicit none
 
-      integer, intent(in)    :: mpi_comm
+      integer, intent(in)    :: fmpi_comm
       logical, intent(in)    :: l_p0
       character, intent(in)  :: filename*(*)
       character, intent(in)  :: title*(*)
@@ -48,7 +52,6 @@ c*************************************************************
       integer :: ikpt,i,j,ii,jj
       integer :: cpu_index,dir
 #ifdef CPP_MPI
-      include 'mpif.h'
       integer :: ierr(3)
       integer :: stt(MPI_STATUS_SIZE)
 #include "cpp_double.h"
@@ -59,6 +62,9 @@ c**********************************************************
 c     Collect contributions to the matrix6 matrix from the
 c     various processors.
 c**********************************************************
+
+      call timestart("wann_write_matrix6")
+
       if(isize.ne.1)then
        do ikpt=1,fullnkpts
         if(l_p0)then
@@ -69,7 +75,7 @@ c**********************************************************
      &             1:num_bands2,1:num_dims,ikpt),
      &             spin1*spin2*num_bands1*num_bands2*num_dims,
      &             CPP_MPI_COMPLEX,cpu_index,
-     &             ikpt,mpi_comm,stt,ierr)
+     &             ikpt,fmpi_comm,stt,ierr(1))
           endif !processors
          enddo !cpu_index
         else
@@ -79,10 +85,10 @@ c**********************************************************
      &             1:num_bands2,1:num_dims,ikpt),
      &             spin1*spin2*num_bands1*num_bands2*num_dims,
      &             CPP_MPI_COMPLEX,0,
-     &             ikpt,mpi_comm,ierr)
+     &             ikpt,fmpi_comm,ierr(1))
          endif !processors
         endif ! l_p0
-        call MPI_BARRIER(mpi_comm,ierr)
+        call MPI_BARRIER(fmpi_comm,ierr(1))
        enddo !ikpt 
       endif !isize
 #endif
@@ -120,6 +126,6 @@ c**********************************************************
        endif 
        close(305)
       endif
-
+      call timestop("wann_write_matrix6")
       end subroutine wann_write_matrix6
       end module m_wann_write_matrix6

@@ -80,6 +80,9 @@ CONTAINS
    END SUBROUTINE add_usage_data_l
 
    SUBROUTINE send_usage_data()
+#ifdef CPP_MPI
+      use mpi
+#endif
       use m_juDFT_args
       use m_juDFT_string
       IMPLICIT NONE
@@ -87,11 +90,10 @@ CONTAINS
       CHARACTER(len=200) :: model, modelname, VmPeak, VmSize, VmHWM, VmData, VmStk, VmExe, VmSwap
       INTEGER(8)         :: r
 #ifdef CPP_MPI
-      INCLUDE 'mpif.h'
-      LOGICAL MPI_init
-      CALL MPI_INITIALIZED(mpi_init,ierr)
-      IF (mpi_init) THEN
-         CALL MPI_COMM_RANK(MPI_COMM_WORLD,i,ierr)
+      LOGICAL l_mpi_init
+      CALL MPI_INITIALIZED(l_mpi_init,ierr(1))
+      IF (l_mpi_init) THEN
+         CALL MPI_COMM_RANK(MPI_COMM_WORLD,i,ierr(1))
          IF (i.NE.0) RETURN
       ENDIF
 #endif

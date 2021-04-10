@@ -1,4 +1,5 @@
       module m_wann_torque_rs
+        use m_juDFT
       contains 
       subroutine wann_torque_rs(
      >          ntype,neq,rvecnum,rvec,kpoints,
@@ -102,6 +103,7 @@ c*************************************************
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
 
+      call timestart("wann_torque_rs")
 
       tpi=2*pimach()
 
@@ -431,5 +433,6 @@ c***********************************************************
        enddo !nn  
       enddo !itype
 
+      call timestop("wann_torque_rs")
       end subroutine wann_torque_rs
       end module m_wann_torque_rs

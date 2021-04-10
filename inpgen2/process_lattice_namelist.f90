@@ -7,7 +7,7 @@ MODULE m_process_lattice_namelist
   ! table 2.1.1, ( page13 in 3rd Ed. )                                  !
   !---------------------------------------------------------------------!
 CONTAINS
-  SUBROUTINE process_lattice(line,a1,a2,a3,aa,scale,mat)
+  SUBROUTINE process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat)
 
     USE m_constants
     IMPLICIT NONE
@@ -17,6 +17,7 @@ CONTAINS
     REAL,    INTENT (OUT) :: a1(3),a2(3),a3(3)
     REAL,    INTENT (OUT) :: aa                ! overall scaling constant
     REAL,    INTENT (OUT) :: scale(3),mat(3,3) ! for trigonal lattices
+    REAL,    INTENT(OUT) ::  cart_mat(3,3)
 
     !==> Local Variables
     CHARACTER(len=40) :: latsys
@@ -91,7 +92,7 @@ CONTAINS
     scale(1) = a
     scale(2) = b
     scale(3) = c
-
+    cart_mat=0.0
     latsys = ADJUSTL(latsys)
 
     !===>  1: cubic-P          (cP) sc
@@ -101,6 +102,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 1
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -116,6 +118,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 2
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -130,6 +133,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 3
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -144,6 +148,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 4
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -157,6 +162,8 @@ CONTAINS
 
        noangles=.true.
        i_c = 4
+       cart_mat(:,1:2)=lmat((/2,1,3/),1:2,i_c)
+       cart_mat(:,3)=lmat(:,3,i_c)
        a1 =  lmat((/2,1,3/),1,i_c) * scale(:)
        a2 = -lmat((/2,1,3/),2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -173,6 +180,7 @@ CONTAINS
 
        noangles=.false.
        i_c = 5
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c)
        a2 = lmat(:,2,i_c)
        a3 = lmat(:,3,i_c)
@@ -198,6 +206,7 @@ CONTAINS
 
        noangles=.false.
        i_c = 5
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c)
        a2 = lmat(:,2,i_c)
        a3 = lmat(:,3,i_c)
@@ -235,6 +244,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 1
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -250,6 +260,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 3
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -260,10 +271,11 @@ CONTAINS
        !===>  8: orthorhombic-P   (oP)
 
     ELSEIF ( latsys =='orthorhombic-P'.OR.latsys =='oP'.OR.&
-         latsys =='simple-orthorhombic' ) THEN
+         latsys =='orP'.OR.latsys =='simple-orthorhombic' ) THEN
 
        noangles=.true.
        i_c = 1
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -276,6 +288,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 2
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -288,6 +301,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 3
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -301,6 +315,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 6
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -313,6 +328,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 8
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)
@@ -325,6 +341,7 @@ CONTAINS
 
        noangles=.true.
        i_c = 7
+       cart_mat=lmat(:,:,i_c)
        a1 = lmat(:,1,i_c) * scale(:)
        a2 = lmat(:,2,i_c) * scale(:)
        a3 = lmat(:,3,i_c) * scale(:)

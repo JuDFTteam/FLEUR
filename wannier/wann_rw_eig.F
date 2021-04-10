@@ -81,6 +81,7 @@ c****************************************************************
       TYPE(t_lapw)  :: lapw
 
 
+      call timestart("wann_write_eig")
 !      zMat%l_real = l_real
 !      zMat%matsize1 = nbasfcn
 !      zMat%matsize2 = neigd
@@ -223,6 +224,8 @@ c****************************************************************
          enddo   
       endif
       close (306)
+
+      call timestop("wann_write_eig")
       end subroutine wann_write_eig
  
 c*****************************************************************
@@ -253,6 +256,8 @@ c*****************************************************************
 
       integer :: n_start,n_end
 
+      call timestart("wann_read_eig")
+
       n_start=1
       n_end=neigd
 
@@ -262,5 +267,7 @@ c*****************************************************************
      >              l_ss,l_noco,neigd,n_start,n_end,
      <              nbands,eig,zMat)
 !      CALL judft_error("BUG: wann_read in wann_rw_eig not implemented")
+
+      call timestop("wann_read_eig")
       END SUBROUTINE wann_read_eig  
       END MODULE m_wann_rw_eig

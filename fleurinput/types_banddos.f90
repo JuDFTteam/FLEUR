@@ -16,6 +16,7 @@ MODULE m_types_banddos
      REAL    :: e2_dos=-0.5
      REAL    :: sig_dos=0.015
      INTEGER :: ndos_points=1301
+     LOGICAL :: l_storeEVData = .TRUE.
 
 
      LOGICAL :: vacdos =.FALSE.
@@ -124,6 +125,9 @@ CONTAINS
     all_atoms=.true.
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/bandDOS')
     IF (numberNodes.EQ.1) THEN
+       IF(xml%versionNumber>=34) THEN
+          this%l_storeEVData=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@storeEVData'))
+       ENDIF
        this%l_orb=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@orbcomp'))
        this%l_jDOS=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@jDOS'))
        all_atoms=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@all_atoms'))

@@ -12,14 +12,15 @@ module m_judft_info
   public judft_info,judft_write_infos
 contains
   subroutine judft_info(message,group)
-
+#ifdef CPP_MPI
+    USE mpi
+#endif
     implicit none
 
     character(len=*),intent(in)::message,group
 
     integer:: irank=0,ierr
 #ifdef CPP_MPI
-    include 'mpif.h'
     LOGICAL:: l_mpi
     CALL mpi_initialized(l_mpi,ierr)
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)

@@ -98,7 +98,7 @@ CONTAINS
          if (abs(ap(n)%bmu)>1E-8.and.input%jspins.ne.1) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
          !atoms%ncst(n)=econfig_count_core(econfig)
      ! rounding
-         atoms%dx(:)   = REAL(NINT(atoms%dx(:)   * 1000) / 1000.)
+         atoms%dx(n)   = REAL(NINT(atoms%dx(n)   * 1000) / 1000.)
          !Generate species-names
          DO nn=1,n
             if (atoms%same_species(n,nn)) atoms%speciesname(n)=atoms%speciesname(nn)

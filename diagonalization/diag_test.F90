@@ -10,6 +10,9 @@ PROGRAM diag_test
   USE m_eigen_diag
   USE m_io_matrix
   USE m_hdf_tools
+#ifdef CPP_MPI
+  USE mpi
+#endif
   IMPLICIT NONE
 
   INTEGER            :: matsize,ne,mode,fid
@@ -20,7 +23,6 @@ PROGRAM diag_test
   LOGICAL            :: l_exist,l_real
   REAL               :: t1,t2
 #ifdef CPP_MPI
-  Include 'mpif.h'
   CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,isize,err)
   CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,err)
   IF (isize>1) THEN

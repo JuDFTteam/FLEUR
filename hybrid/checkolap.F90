@@ -9,7 +9,7 @@ CONTAINS
       use m_calc_cmt
       USE m_constants
       USE m_types
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_types_hybdat
       use m_calc_l_m_from_lm
 #ifdef CPP_MPI
@@ -91,7 +91,7 @@ CONTAINS
       ! read in cmt
       DO ikpt = 1, nkpti
          if(allocated(c_phase)) deallocate(c_phase)
-         allocate(c_phase(hybdat%nbands(ikpt)))
+         allocate(c_phase(hybdat%nbands(ikpt, jsp)))
 
          if(ikpt /= kpts%bkp(ikpt)) call juDFT_error("We should be reading the parent z-mat here!")
          call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv, input, ikpt, &
@@ -103,7 +103,7 @@ CONTAINS
 #endif
          call calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
                        sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
-                       cmt(:hybdat%nbands(ikpt), :, :, ikpt))
+                       cmt(:hybdat%nbands(ikpt,jsp), :, :, ikpt))
       END DO
 
       IF(fmpi%irank == 0) WRITE(oUnit, '(/A)') ' Overlap <core|core>'
@@ -167,7 +167,7 @@ CONTAINS
                   rdum1 = maxval(abs(olapcv(:, :)))
                   iarr = maxloc(abs(olapcv(:, :)))
                   olapcv_avg(m, i, l, itype) = &
-                     sqrt(rdum/nkpti/sum(hybdat%nbands(:nkpti))*nkpti)
+                     sqrt(rdum/nkpti/sum(hybdat%nbands(:nkpti,jsp))*nkpti)
                   olapcv_max(m, i, l, itype) = rdum1
                   olapcv_loc(:, m, i, l, itype) = iarr
                END DO
@@ -277,7 +277,7 @@ CONTAINS
                      if(z(1)%l_real) THEN
                         do lm = 1, (atoms%lmax(itype)+1)**2
                            call calc_l_m_from_lm(lm, l, m)
-                           DO iband = 1, hybdat%nbands(ikpt)
+                           DO iband = 1, hybdat%nbands(ikpt,jsp)
                               cdum = pre_fac * ImagUnit**l * sphbes(l)
                               carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
                            enddo
@@ -285,7 +285,7 @@ CONTAINS
                      else
                         do lm = 1, (atoms%lmax(itype)+1)**2
                            call calc_l_m_from_lm(lm, l, m)
-                           DO iband = 1, hybdat%nbands(ikpt)
+                           DO iband = 1, hybdat%nbands(ikpt,jsp)
                               cdum = pre_fac * ImagUnit**l * sphbes(l)
                               carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_c(igpt, iband)*y(lm)
                            end DO
@@ -303,7 +303,7 @@ CONTAINS
                      DO n = 1, mpdata%num_radfun_per_l(l, itype)
                         lm1 = lm1 + 1
                         rdum = hybdat%bas1(atoms%jri(itype), n, l, itype)/atoms%rmt(itype)
-                        DO iband = 1, hybdat%nbands(ikpt)
+                        DO iband = 1, hybdat%nbands(ikpt,jsp)
                            carr3(iband, lm) = carr3(iband, lm) + cmt(iband, lm1, iatom, ikpt)*rdum
                         END DO
                      END DO
@@ -322,7 +322,7 @@ CONTAINS
                   END DO
                   rarr = sqrt(rarr/(4*pi_const))
 
-                  write (oUnit, '(I6,4X,F14.12,''  ('',F14.12,'')'')') ikpt,sum(rarr(:1)**2/hybdat%nbands(ikpt)),maxval(rarr(:1))
+                  write (oUnit, '(I6,4X,F14.12,''  ('',F14.12,'')'')') ikpt,sum(rarr(:1)**2/hybdat%nbands(ikpt,jsp)),maxval(rarr(:1))
                END DO
             END DO
          END DO

@@ -48,9 +48,10 @@ CONTAINS
       INTEGER i,j,jp3,jr,k,lh,mem,nd,nopa,ivac,ll1,lm ,gzi,m
 
       ! Local arrays
-      COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2)
+      COMPLEX, ALLOCATABLE :: sf2(:),sf3(:),ylm(:)
       REAL rcc(3),x(3)
       
+      ALLOCATE( sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2))
       ivac=iv
      
       IF (iflag.NE.1) THEN
@@ -107,7 +108,7 @@ CONTAINS
                p(3) = abs(p(3))
             END IF
             rcc=matmul(cell%bmat,p)/tpi_const
-            CALL starf2(sym%nop2, stars%ng2, stars%kv3, sym%mrot, sym%symor, &
+            CALL starf2(sym%nop2, stars%ng2, stars%kv2, sym%mrot, sym%symor, &
                         sym%tau,rcc,sym%invtab,sf2)
 
             jp3 = (p(3)-cell%z1)/vacuum%delz

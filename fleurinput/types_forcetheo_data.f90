@@ -31,6 +31,7 @@ MODULE m_types_forcetheo_data
      REAL,ALLOCATABLE:: qvec(:,:) !DMI,Jij,ssdisp
      REAL,ALLOCATABLE:: theta(:)  !DMI,MAE,jij(1st only)
      REAL,ALLOCATABLE:: phi(:)    !MAE
+     REAL,ALLOCATABLE :: ef(:)  !DMI
 
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_forcetheo_data
@@ -52,6 +53,7 @@ CONTAINS
     CALL mpi_bc(this%qvec,rank,mpi_comm)
     CALL mpi_bc(this%theta,rank,mpi_comm)
     CALL mpi_bc(this%phi ,rank,mpi_comm)
+    CALL mpi_bc(this%ef ,rank,mpi_comm)
 
   END SUBROUTINE mpi_bc_forcetheo_data
 
@@ -64,7 +66,7 @@ CONTAINS
     allocate(this%qvec(0,0))
     allocate(this%theta(0))
     allocate(this%phi(0))
-
+    allocate(this%ef(0))
     IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/MAE')==1) THEN
        this%mode=1
        str=xml%GetAttributeValue('/fleurInput/forceTheorem/MAE/@theta')
@@ -79,6 +81,16 @@ CONTAINS
        CALL evaluateList(this%theta,str)
        str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@phi')
        CALL evaluateList(this%phi,str)
+       if (xml%versionNumber>=34) THEN
+         if (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI/@ef_shift')==1) THEN
+           str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@ef_shift')
+           CALL evaluateList(this%ef,str)
+         ELSE
+           this%ef=(/0.0/)
+         ENDIF
+       else
+         this%ef=(/0.0/)
+       endif
     ENDIF
     IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/Jij')==1) THEN
        this%mode=3

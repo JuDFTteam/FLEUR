@@ -52,7 +52,7 @@ CONTAINS
     REAL,    OPTIONAL, INTENT (IN)    :: fgp(3)
 
     !     .. Local Scalars ..
-    COMPLEX ctmp,term1
+    COMPLEX ctmp,term1,work(ne)
     INTEGER i,j,l,ll1,lm,nbasf,m,na2,lmp
     !     ..
     !     ..
@@ -64,45 +64,59 @@ CONTAINS
     l = atoms%llo(lo,ntyp)
     ll1 = l* (l+1)
     nbasf=lapw%nv(iintsp)+lapw%index_lo(lo,na)+nkvec
+    if (noco%l_noco) Then
+      if (noco%l_ss) THEN
+        work = ccchi(iintsp)*zMat%data_c((iintsp-1)*(lapw%nv(1)+atoms%nlotot)+nbasf,:ne)
+      else
+        work= ccchi(1)*zMat%data_c(nbasf,:ne)+ccchi(2)*zMat%data_c(lapw%nv(1)+atoms%nlotot+nbasf,:ne)
+      ENDIF
+    ELSE
+      if (zmat%l_real) Then
+          work=zmat%data_r(nbasf,:ne)
+        else
+          work=zmat%data_c(nbasf,:ne)
+        endif
+    endif
+
+    !$acc kernels default(none) present(acof,bcof,ccof,alo1,blo1,clo1,ccchi,ylm)create(ctmp) &
+    !$acc copyin(work,na,term1,l,ne,ll1,sym,sym%invsat,noco)
+    !$acc loop seq private(i,m,lm,ctmp,na2,lmp)
     DO i = 1,ne
-       DO m = -l,l
+      !$acc loop seq
+      DO m = -l,l
           lm = ll1 + m
-          !+gu_con
-          IF (noco%l_noco) THEN
-             IF (noco%l_ss) THEN
-                ctmp = term1*CONJG(ylm(ll1+m+1))*ccchi(iintsp)*zMat%data_c((iintsp-1)*(lapw%nv(1)+atoms%nlotot)+nbasf,i)
-             ELSE
-                ctmp = term1*CONJG(ylm(ll1+m+1))*( ccchi(1)*zMat%data_c(nbasf,i)+ccchi(2)*zMat%data_c(lapw%nv(1)+atoms%nlotot+nbasf,i) )
-             ENDIF
-          ELSE
-             IF (zMat%l_real) THEN
-                ctmp = zMat%data_r(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
-             ELSE
-                ctmp = zMat%data_c(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
-             ENDIF
-          ENDIF
+          ctmp=term1*conjg(ylm(ll1+m+1))*work(i)
           acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)
           bcof(i,lm,na) = bcof(i,lm,na) + ctmp*blo1(lo)
           ccof(m,i,lo,na) = ccof(m,i,lo,na) + ctmp*clo1(lo)
           IF (sym%invsat(na)==1.AND.noco%l_soc.AND.sym%invs) THEN
-             ctmp = zMat%data_c(nbasf,i)*CONJG(term1)*ylm(ll1+m+1)*(-1)**(l-m)
+             ctmp = work(i)*CONJG(term1)*ylm(ll1+m+1)*(-1)**(l-m)
              na2 = sym%invsatnr(na)
              lmp = ll1 - m
              acof(i,lmp,na2) = acof(i,lmp,na2) +ctmp*alo1(lo)
              bcof(i,lmp,na2) = bcof(i,lmp,na2) +ctmp*blo1(lo)
              ccof(-m,i,lo,na2) = ccof(-m,i,lo,na2) +ctmp*clo1(lo)
           ENDIF
-          IF (l_force) THEN
-             force%acoflo(m,i,lo,na) = force%acoflo(m,i,lo,na) + ctmp*alo1(lo)
-             force%bcoflo(m,i,lo,na) = force%bcoflo(m,i,lo,na) + ctmp*blo1(lo)
-             DO j = 1,3
-                force%aveccof(j,i,lm,na)   = force%aveccof(j,i,lm,na)   + fgp(j)*ctmp*alo1(lo)
-                force%bveccof(j,i,lm,na)   = force%bveccof(j,i,lm,na)   + fgp(j)*ctmp*blo1(lo)
-                force%cveccof(j,m,i,lo,na) = force%cveccof(j,m,i,lo,na) + fgp(j)*ctmp*clo1(lo)
-             END DO
-          END IF
-       END DO
-    END DO 
-  
+        END DO
+        !$acc end loop
+    END DO
+    !$acc end loop
+    !$acc end kernels
+
+    IF (l_force) THEN
+      DO i = 1,ne
+        DO m = -l,l
+          lm = ll1 + m
+          ctmp=term1*conjg(ylm(ll1+m+1))*work(i)
+          force%acoflo(m,i,lo,na) = force%acoflo(m,i,lo,na) + ctmp*alo1(lo)
+          force%bcoflo(m,i,lo,na) = force%bcoflo(m,i,lo,na) + ctmp*blo1(lo)
+          DO j = 1,3
+            force%aveccof(j,i,lm,na)   = force%aveccof(j,i,lm,na)   + fgp(j)*ctmp*alo1(lo)
+            force%bveccof(j,i,lm,na)   = force%bveccof(j,i,lm,na)   + fgp(j)*ctmp*blo1(lo)
+            force%cveccof(j,m,i,lo,na) = force%cveccof(j,m,i,lo,na) + fgp(j)*ctmp*clo1(lo)
+          END DO
+        END DO
+      END DO
+    END IF
   END SUBROUTINE abclocdn
 END MODULE m_abclocdn

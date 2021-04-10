@@ -31,6 +31,8 @@ CONTAINS
 
     !===> Local Variables
     INTEGER :: i,j,k,n,m,na,nt,inversionOp
+    LOGICAL :: l_posCorrected(3)
+    REAL    :: rest
     REAL,PARAMETER :: eps7 = 1.0e-7
     INTEGER,PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
 
@@ -59,6 +61,30 @@ CONTAINS
         atompos(:,n) = atompos(:,n) - ANINT( atompos(:,n) - eps7 )
       ENDDO
     ENDIF
+
+    DO na = 1, SIZE(atompos,2)
+       l_posCorrected(:) = .FALSE.
+       DO i = 2, 40
+          rest = ABS(i*atompos(1, na) - NINT(i*atompos(1, na)))
+          IF (.NOT.l_posCorrected(1) .AND. (rest .LT. (i*0.000001))) THEN
+             l_posCorrected(1) = .TRUE.
+             atompos(1, na) = NINT(i*atompos(1, na)) / REAL(i)
+          END IF
+          rest = ABS(i*atompos(2, na) - NINT(i*atompos(2, na)))
+          IF (.NOT.l_posCorrected(2) .AND. (rest .LT. (i*0.000001))) THEN
+             l_posCorrected(2) = .TRUE.
+             atompos(2, na) = NINT(i*atompos(2, na)) / REAL(i)
+          END IF
+          IF (.NOT.film) THEN
+             rest = ABS(i*atompos(3, na) - NINT(i*atompos(3, na)))
+             IF (.NOT.l_posCorrected(3) .AND. (rest .LT. (i*0.000001))) THEN
+                l_posCorrected(3) = .TRUE.
+                atompos(3, na) = NINT(i*atompos(3, na)) / REAL(i)
+             END IF
+          END IF
+       END DO
+    END DO
+
     !--->    calculate space group symmetry
     CALL make_spacegroup(film,noco,cell,atompos,atomid,sym)
     ! Check whether there is an inversion center that is not at the

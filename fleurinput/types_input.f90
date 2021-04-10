@@ -23,8 +23,9 @@ MODULE m_types_input
   LOGICAL :: cdinf =.FALSE.
   LOGICAL :: vchk =.FALSE.
   LOGICAL :: l_f =.FALSE.
-  INTEGER :: f_level = 0
-  !     f_level == 0: Original force calculation
+  INTEGER :: f_level = -1
+  !     f_level ==-1: Original force calculation
+  !     f_level == 0: Original force calculation with FORCES and POSCAR printout
   !     f_level == 1: Forces from coretails calculated over whole unit cell
   !     f_level == 2: Kinetic energy surface term evaluated with IR functions
   !     f_level == 3: Surface term for density and potential discontinuity at the MT boundaries
@@ -165,8 +166,8 @@ SUBROUTINE read_xml_input(this,xml)
    CLASS(t_input),INTENT(inout):: this
    TYPE(t_xml),INTENT(INOUT)  ::xml
 
-   CHARACTER(len=100):: valueString,xpathA,xpathB
-   INTEGER:: numberNodes,nodeSum, i
+   CHARACTER(len=100):: valueString,xpathA,xpathB,xPathC
+   INTEGER:: numberNodes,nodeSum, i, numberNodesB,numberNodesC
 
    !TODO! these switches should be in the inp-file
    !this%l_core_confpot=.TRUE. !former CPP_CORE !Done (A.N.).
@@ -239,7 +240,15 @@ SUBROUTINE read_xml_input(this,xml)
    ! Read in optional expert modes switches
    xPathA = '/fleurInput/calculationSetup/expertModes'
    IF (xml%GetNumberOfNodes(xPathA)==1) THEN
-      this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
+      xPathB = TRIM(ADJUSTL(xPathA))//'/@gw'
+      xPathC = TRIM(ADJUSTL(xPathA))//'/@spex'
+      numberNodesB = xml%GetNumberOfNodes(xPathB)
+      numberNodesC = xml%GetNumberOfNodes(xPathC)
+      IF((numberNodesB.EQ.1).AND.(numberNodesC.EQ.1)) THEN
+         CALL juDFT_error("@gw and @spex specified. Choose only one!", calledby='types_input%read_xml_input')
+      END IF
+      IF (numberNodesB.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))))
+      IF (numberNodesC.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))))
       this%secvar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
    END IF
    ! Read in Brillouin zone integration parameters

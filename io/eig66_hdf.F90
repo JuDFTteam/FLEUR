@@ -26,7 +26,7 @@ MODULE m_eig66_hdf
    !                          Daniel Wortmann
    !*****************************************************************
    USE m_eig66_data
-   USE m_types
+   USE m_types_mat
 #ifdef CPP_HDF
    USE hdf5
    USE m_hdf_tools
@@ -57,14 +57,17 @@ CONTAINS
       END SELECT
    END SUBROUTINE priv_find_data
    !----------------------------------------------------------------------
-   SUBROUTINE open_eig(id, mpi_comm, nmat, neig, nkpts, jspins, create, l_real, l_soc, readonly, l_olap, filename)
+   SUBROUTINE open_eig(id, fmpi_comm, nmat, neig, nkpts, jspins, create, l_real, l_soc, readonly, l_olap, filename)
 
       !*****************************************************************
       !     opens hdf-file for eigenvectors+values
       !*****************************************************************
+#ifdef CPP_HDFMPI
+      USE mpi
+#endif
       IMPLICIT NONE
 
-      INTEGER, INTENT(IN) :: id, mpi_comm
+      INTEGER, INTENT(IN) :: id, fmpi_comm
       INTEGER, INTENT(IN) :: nmat, neig, nkpts, jspins
       LOGICAL, INTENT(IN) :: create, readonly, l_real, l_soc, l_olap
       CHARACTER(LEN=*), OPTIONAL :: filename
@@ -79,15 +82,14 @@ CONTAINS
       !Set creation and access properties
 
 #ifdef CPP_HDFMPI
-      INCLUDE 'mpif.h'
       IF (readonly) THEN
          access_prp = H5P_DEFAULT_f
          creation_prp = H5P_DEFAULT_f
       ELSE
          CALL h5pcreate_f(H5P_FILE_ACCESS_F, access_prp, hdferr)
-         !      CALL h5pset_fapl_mpiposix_f(access_prp,MPI_COMM,
+         !      CALL h5pset_fapl_mpiposix_f(access_prp,fmpi_comm,
          !     +.false.,hdferr)
-         CALL h5pset_fapl_mpio_f(access_prp, MPI_COMM, MPI_INFO_NULL, hdferr)
+         CALL h5pset_fapl_mpio_f(access_prp, fmpi_comm, MPI_INFO_NULL, hdferr)
          creation_prp = H5P_DEFAULT_f !no special creation property
       ENDIF
 #else
@@ -224,6 +226,7 @@ CONTAINS
 
       INTEGER i, j, k, nv_local, n1, n2, ne
       TYPE(t_data_HDF), POINTER::d
+      call timestart("write_eig: HDF")
       CALL priv_find_data(id, d)
 
       if(present(smat)) call juDFT_error("writing smat in HDF not supported yet")
@@ -237,10 +240,13 @@ CONTAINS
       !write eigenvalues
       !
 
+      call timestart("write neig_total")
       IF (PRESENT(neig_total)) THEN
          CALL io_write_integer0(d%neigsetid, (/nk, jspin/), (/1, 1/), neig_total)
       ENDIF
+      call timestop("write neig_total")
 
+      call timestart("write eig")
       IF (PRESENT(n_rank) .AND. PRESENT(n_size) .AND.&
            &        PRESENT(eig) .AND. PRESENT(neig)) THEN
          CALL io_write_real1s(&
@@ -255,6 +261,9 @@ CONTAINS
       ELSE
          IF (PRESENT(eig)) CALL juDFT_error("BUG in calling write_eig")
       ENDIF
+      call timestop("write eig")
+
+      call timestart("write zmat")
       IF (PRESENT(zmat) .AND. .NOT. PRESENT(neig))&
            &    CALL juDFT_error("BUG in calling write_eig with eigenvector")
 
@@ -276,8 +285,9 @@ CONTAINS
                  &           (/1, 1, n1, 1, 1/))
          ENDIF
       ENDIF
-
+      call timestop("write zmat")
 #endif
+      call timestop("write_eig: HDF")
    END SUBROUTINE write_eig
 
 #ifdef CPP_HDF

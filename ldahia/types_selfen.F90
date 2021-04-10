@@ -90,10 +90,12 @@ MODULE m_types_selfen
 
          INTEGER :: i,j,iz,ipm,m,mp,ispin,ns
          COMPLEX,ALLOCATABLE :: swapMat(:,:)
+         COMPLEX,ALLOCATABLE :: vmmp_local(:,:,:)
 
          ns = 2*this%l+1
 
          ALLOCATE(swapMat(2*ns,2*ns),source=cmplx_0)
+         ALLOCATE(vmmp_local(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(vmmp,3)),source=cmplx_0)
 
          !Transformation matrix is a Block matrix of form
          ! | 0  I |
@@ -105,8 +107,18 @@ MODULE m_types_selfen
             swapMat(ns+i,i) = 1.0
          ENDDO
 
-         DO iz = 1, SIZE(this%data,3)
-            DO ipm = 1, 2
+         !The DFT+U correction is in the global frame of real space
+         !For the calculation of the impurity greens function we shift into the local frame
+         IF(noco%l_noco) THEN
+            vmmp_local = rotMMPmat(vmmp,0.0,-nococonv%beta(atomType),-nococonv%alph(atomType),l)
+         ELSE IF(noco%l_soc) THEN
+            vmmp_local = rotMMPmat(vmmp,0.0,-nococonv%theta,-nococonv%phi,l)
+         ELSE
+            vmmp_local = vmmp
+         ENDIF
+
+         DO ipm = 1, 2
+            DO iz = 1, SIZE(this%data,3)
                !---------------------------------------------
                ! Convert the selfenergy to hartree
                !---------------------------------------------
@@ -116,17 +128,6 @@ MODULE m_types_selfen
                !---------------------------------------------
                this%data(:,:,iz,ipm) = matmul(this%data(:,:,iz,ipm),swapMat)
                this%data(:,:,iz,ipm) = matmul(swapMat,this%data(:,:,iz,ipm))
-               !---------------------------------------------
-               ! Rotate the selfenergy in real space to the
-               ! correct orientation in the SOC case
-               !---------------------------------------------
-               IF(noco%l_soc) THEN
-                  IF(noco%l_noco) THEN
-                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%beta(atomType),nococonv%alph(atomType),l)
-                  ELSE
-                     this%data(:,:,iz,ipm) = rotMMPmat(this%data(:,:,iz,ipm),0.0,nococonv%theta,nococonv%phi,l)
-                  ENDIF
-               ENDIF
                !---------------------------------------------------------------------
                ! The DFT green's function also includes the previous DFT+U correction
                ! This is removed by substracting it from the selfenergy
@@ -135,18 +136,18 @@ MODULE m_types_selfen
                   m  = i-1-this%l
                   DO j = 1, ns
                      mp = j-1-this%l
-                     DO ispin = 1, SIZE(vmmp,3)
+                     DO ispin = 1, SIZE(vmmp_local,3)
                         IF(ispin < 3) THEN
                            this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) = this%data(i+(ispin-1)*ns,j+(ispin-1)*ns,iz,ipm) &
-                                                                             - vmmp(m,mp,ispin)/(3.0-jspins)
-                           IF(jspins.EQ.1) this%data(i+ns,j+ns,iz,ipm) = this%data(i+ns,j+ns,iz,ipm) - vmmp(-m,-mp,ispin)/(3.0-jspins)
+                                                                             - vmmp_local(m,mp,ispin)/(3.0-jspins)
+                           IF(jspins.EQ.1) this%data(i+ns,j+ns,iz,ipm) = this%data(i+ns,j+ns,iz,ipm) - vmmp_local(-m,-mp,ispin)/(3.0-jspins)
                         ELSE
                            !----------------------------------------------------------------------------
                            ! The offdiagonal elements only have to be removed if they are actually added
                            ! to the hamiltonian (so noco%l_mperp and any(noco%l_unrestrictMT))
                            !----------------------------------------------------------------------------
-                           this%data(i+ns,j,iz,ipm) = this%data(i+ns,j,iz,ipm) - vmmp(m,mp,ispin)
-                           this%data(i,j+ns,iz,ipm) = this%data(i,j+ns,iz,ipm) - conjg(vmmp(mp,m,ispin))
+                           this%data(i+ns,j,iz,ipm) = this%data(i+ns,j,iz,ipm) - vmmp_local(m,mp,ispin)
+                           this%data(i,j+ns,iz,ipm) = this%data(i,j+ns,iz,ipm) - conjg(vmmp_local(mp,m,ispin))
                         ENDIF
                      ENDDO
                   ENDDO
