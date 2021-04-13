@@ -134,7 +134,6 @@ CONTAINS
                prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
                call fft%exec(prod)
 
-
                ! we still have to devide by the number of mesh points
                prod = prod * inv_gridlen
                DO igptm = 1, mpdata%n_g(iq)
