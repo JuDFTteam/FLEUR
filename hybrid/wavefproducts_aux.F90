@@ -96,40 +96,56 @@ CONTAINS
       call fft%init(stepf%dimensions, .true.)
       call timestop("alloc&init")
 
-      !$OMP DO
-      do iband = 1, hybdat%nbands(ik,jsp)
-         call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-         psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
 
-         do iob = 1, psize
-            prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
-            call fft%exec(prod)
+      if (cprod%l_real) then
+         !$OMP DO
+         do iband = 1, hybdat%nbands(ik,jsp)
+            call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+            psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
 
-            if (cprod%l_real) then
-               if (any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
-                  write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
-                     float2str(maxval(abs(aimag(prod))))
-                  real_warned = .True.
+            do iob = 1, psize
+               prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
+               call fft%exec(prod)
+
+               if (cprod%l_real .and. (.not. real_warned)) then
+                  if (any(abs(aimag(prod)) > 1e-8)) then
+                     write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
+                        float2str(maxval(abs(aimag(prod))))
+                     real_warned = .True.
+                  endif
                endif
-            endif
+               ! we still have to devide by the number of mesh points
+               prod = prod * inv_gridlen
 
-            ! we still have to devide by the number of mesh points
-            call zscal(stepf%gridLength, inv_gridlen, prod, 1)
-
-            if (cprod%l_real) then
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
                   cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(stepf%g2fft(g)))
                enddo
-            else
+            enddo
+         enddo
+         !$OMP END DO
+      else
+         !$OMP DO
+         do iband = 1, hybdat%nbands(ik,jsp)
+            call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+            psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
+
+            do iob = 1, psize
+               prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
+               call fft%exec(prod)
+
+
+               ! we still have to devide by the number of mesh points
+               prod = prod * inv_gridlen
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
                   cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g))
                enddo
-            endif
+            enddo
          enddo
-      enddo
-      !$OMP END DO
+         !$OMP END DO
+      endif
+
       deallocate (prod, psi_k)
       call fft%free()
       !$OMP END PARALLEL
