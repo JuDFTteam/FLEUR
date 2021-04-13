@@ -157,6 +157,7 @@ CONTAINS
    end subroutine wavefproducts_IS_FFT
 
    subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, psi)
+      ! put block of wave functions through FFT
 !$    use omp_lib
       use m_types
       use m_fft_interface
