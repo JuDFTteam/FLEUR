@@ -98,22 +98,13 @@ CONTAINS
 
       !$OMP DO
       do iband = 1, hybdat%nbands(ik,jsp)
-         call timestart("loop wavef2rs")
          call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-         call timestop("loop wavef2rs")
-         call timestart("apply step")
          psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
-         call timestop("apply step")
 
          do iob = 1, psize
-            call timestart("psi_prod")
             prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
-            call timestop("psi_prod")
-            call timestart("inner FFT")
             call fft%exec(prod)
-            call timestop("inner FFT")
 
-            call timestart("real check")
             if (cprod%l_real) then
                if (any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
                   write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
@@ -121,14 +112,10 @@ CONTAINS
                   real_warned = .True.
                endif
             endif
-            call timestop("real check")
 
             ! we still have to devide by the number of mesh points
-            call timestart("divide by gridlen")
             call zscal(stepf%gridLength, inv_gridlen, prod, 1)
-            call timestop("divide by gridlen")
 
-            call timestart("sort into cprod")
             if (cprod%l_real) then
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
@@ -140,7 +127,6 @@ CONTAINS
                   cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g))
                enddo
             endif
-            call timestop("sort into cprod")
          enddo
       enddo
       !$OMP END DO
