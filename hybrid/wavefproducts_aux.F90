@@ -173,11 +173,10 @@ CONTAINS
       type(t_fftgrid) :: grid
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
-      integer :: iv, nu, n_threads
+      integer :: iv, nu
 
       psi = 0.0
-      n_threads = 1
-      !$OMP PARALLEL private(nu, iv, n_threads, fft, grid)  default(private) &
+      !$OMP PARALLEL private(nu, iv, fft, grid)  default(private) &
       !$OMP shared(fi, bandoi, bandof, zMat, psi,  ivmap, lapw, jspin, gcutoff)
 
       call grid%init(fi%cell, fi%sym, gcutoff)
