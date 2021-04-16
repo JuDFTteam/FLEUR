@@ -36,9 +36,9 @@ contains
     ap_d=find_atompar(ap%nucnumber,ap%rmt)
 
     if (ap%jri==0) ap%jri=ap_d%jri
-    if (ap%dx==0) ap%jri=ap_d%dx
-    if (ap%lmax==0) ap%jri=ap_d%lmax
-    if (ap%lnonsph==0) ap%jri=ap_d%lnonsph
+    if (ap%dx==0) ap%dx=ap_d%dx
+    if (ap%lmax==0) ap%lmax=ap_d%lmax
+    if (ap%lnonsph==0) ap%lnonsph=ap_d%lnonsph
     if (ap%lo=="") ap%lo=ap_d%lo
     IF (ap%econfig=="") ap%econfig=ap_d%econfig
 
