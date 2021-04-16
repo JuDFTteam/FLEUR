@@ -268,10 +268,10 @@ CONTAINS
             call timestart("exchange matrix")
             call timestart("sparse matrix products")
             IF (mat_ex%l_real) THEN
-               call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv, r_coul_wavf)
+               call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv%data_r, r_coul_wavf)
             ELSE
                conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
-               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv, c_coul_wavf)
+               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv%data_c, c_coul_wavf)
             END IF
             call timestop("sparse matrix products")
 
