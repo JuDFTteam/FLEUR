@@ -67,12 +67,14 @@ CONTAINS
 
   END SUBROUTINE  ssdisp_start
 
-  LOGICAL FUNCTION ssdisp_next_job(this,lastiter,atoms,noco,nococonv)
+  LOGICAL FUNCTION ssdisp_next_job(this,fmpi,lastiter,atoms,noco,nococonv)
     USE m_types_setup
     USE m_xmlOutput
     USE m_constants
+    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
+    TYPE(t_mpi), INTENT(IN)                :: fmpi
     LOGICAL,INTENT(IN)                  :: lastiter
     TYPE(t_atoms),INTENT(IN)            :: atoms
     TYPE(t_noco),INTENT(IN)             :: noco
@@ -81,7 +83,7 @@ CONTAINS
     CHARACTER(LEN=12):: attributes(2)
     INTEGER                    :: itype
     IF (.NOT.lastiter) THEN
-       ssdisp_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco,nococonv)
+       ssdisp_next_job=this%t_forcetheo%next_job(fmpi,lastiter,atoms,noco,nococonv)
        RETURN
     ENDIF
     !OK, now we start the SSDISP-loop
@@ -96,10 +98,12 @@ CONTAINS
        nococonv%alph(iType) = noco%alph_inp(iType) + tpi_const*dot_PRODUCT(nococonv%qss,atoms%taual(:,SUM(atoms%neq(:itype-1))+1))
     END DO
     IF (.NOT.this%l_io) RETURN
-    IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop')
-    WRITE(attributes(1),'(a)') 'SSDISP'
-    WRITE(attributes(2),'(i5)') this%q_done
-    CALL openXMLElementPoly('Forcetheorem_Loop',(/'calculationType','No             '/),attributes)
+    IF (fmpi%irank .EQ. 0) THEN
+       IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop')
+       WRITE(attributes(1),'(a)') 'SSDISP'
+       WRITE(attributes(2),'(i5)') this%q_done
+       CALL openXMLElementPoly('Forcetheorem_Loop',(/'calculationType','No             '/),attributes)
+    END IF
   END FUNCTION ssdisp_next_job
 
   SUBROUTINE ssdisp_postprocess(this)

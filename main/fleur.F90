@@ -338,7 +338,7 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
          CALL forcetheo%start(vtot, fmpi%irank == 0)
-         forcetheoloop: DO WHILE (forcetheo%next_job(l_lastIter, fi%atoms, fi%noco, nococonv))
+         forcetheoloop: DO WHILE (forcetheo%next_job(fmpi,l_lastIter, fi%atoms, fi%noco, nococonv))
 
             CALL timestart("gen. of hamil. and diag. (total)")
             CALL timestart("eigen")
