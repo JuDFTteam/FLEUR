@@ -86,6 +86,7 @@ PROGRAM inpgen
       CHARACTER(len=40), ALLOCATABLE  :: kptsName(:)
       CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
       INTEGER, ALLOCATABLE :: kptsBZintegration(:)
+      LOGICAL, ALLOCATABLE :: kptsGamma(:)
       LOGICAL, ALLOCATABLE :: l_kptsInitialized(:)
       LOGICAL            :: l_exist, l_addPath, l_check, l_oldinpXML
 
@@ -153,6 +154,7 @@ PROGRAM inpgen
       ALLOCATE(kpts_str(numKpts))
       ALLOCATE(kptsName(numKpts))
       ALLOCATE(kptsPath(numKpts))
+      ALLOCATE(kptsGamma(numKpts))
       ALLOCATE(l_kptsInitialized(numKpts))
       ALLOCATE(kptsBZintegration(numKpts))
       kpts_str(:)=""
@@ -161,6 +163,7 @@ PROGRAM inpgen
       kptsSelection(:) = ''
       l_kptsInitialized(:) = .TRUE.
       kptsBZintegration = BZINT_METHOD_HIST
+      kptsGamma = .FALSE.
 
       IF (judft_was_argument("-inp")) THEN
          l_kptsInitialized(:) = .FALSE.
@@ -184,7 +187,7 @@ PROGRAM inpgen
          l_kptsInitialized(:) = .FALSE.
          ALLOCATE (sliceplot%plot(1))
          CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
-              input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+              kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
          IF(input%film) sliceplot%plot(1)%zero(3) = -0.5
          IF (l_addPath) THEN
             l_check = .TRUE.
@@ -251,7 +254,7 @@ PROGRAM inpgen
       DO iKpts = 1, numKpts
          IF (l_kptsInitialized(iKpts)) CYCLE
          CALL make_kpoints(kpts(iKpts),cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
-                           kptsBZintegration(iKpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
+                           kptsBZintegration(iKpts),kptsGamma(ikpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
          if(hybinp%l_hybrid .and. kpts(iKpts)%kptsKind == KPTS_KIND_MESH) then
             call timestart("Hybrid setup BZ")
             CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
