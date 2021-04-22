@@ -40,7 +40,6 @@ CONTAINS
       integer :: ok, nbasfcn, psize, iband, ierr, i
       integer, allocatable :: band_list(:)
       real    :: inv_vol, gcutoff
-      complex :: inv_gridlen
 
       logical :: real_warned
 
@@ -59,7 +58,9 @@ CONTAINS
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
       stepf%grid = stepf%grid * inv_vol
-      inv_gridlen = 1.0/stepf%gridLength
+      ! after we transform psi_k*stepf*psi_kqpt back  to 
+      ! G-space we have to divide by stepf%gridLength. We do this now
+      stepf%grid = stepf%grid /stepf%gridLength
 
       call fft%init(stepf%dimensions, .false.)
       call fft%exec(stepf%grid)
@@ -84,7 +85,7 @@ CONTAINS
       call timestart("Big OMP loop")
       !$OMP PARALLEL default(shared) &
       !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, inv_gridlen)&
+      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
 
       call timestart("alloc&init")
@@ -114,8 +115,6 @@ CONTAINS
                      real_warned = .True.
                   endif
                endif
-               ! we still have to devide by the number of mesh points
-               prod = prod * inv_gridlen
 
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
@@ -134,8 +133,6 @@ CONTAINS
                prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
                call fft%exec(prod)
 
-               ! we still have to devide by the number of mesh points
-               prod = prod * inv_gridlen
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
                   cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g))
