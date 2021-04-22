@@ -11,7 +11,7 @@ MODULE m_make_kpoints
   private
   public :: make_kpoints, add_special_points_default
 CONTAINS
-  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,str,kptsName,kptsPath)
+  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,l_gamma,str,kptsName,kptsPath)
     USE m_types_kpts
     USE m_types_cell
     USE m_types_sym
@@ -23,17 +23,17 @@ CONTAINS
     TYPE(t_hybinp), intent(in) :: hybinp
     LOGICAL,INTENT(in)::l_socorss,film
     INTEGER,INTENT(inout)::bz_integration
+    LOGICAL,INTENT(inout)::l_gamma
     CHARACTER(len=*),INTENT(inout)::str
     CHARACTER(len=*),INTENT(inout)::kptsName
     CHARACTER(len=*),INTENT(inout)::kptsPath
 
-    LOGICAL:: l_gamma,l_soc_or_ss, l_bzset, l_onlyIdentitySym
+    LOGICAL:: l_soc_or_ss, l_bzset, l_onlyIdentitySym
     REAL   :: den
     INTEGER:: nk,grid(3)
     character(len=40)::name=""
     !defaults
     l_soc_or_ss=l_socorss
-    l_gamma=.false.
 
     IF (kptsPath.NE.''.AND.kptsPath.NE.'default') THEN
        CALL set_special_points(kpts,kptsPath)

@@ -13,7 +13,7 @@ MODULE m_read_inpgen_input
 CONTAINS
 
   SUBROUTINE read_inpgen_input(atom_pos,atom_id,atom_label,kpts_str,kptsName,kptsPath,kptsBZintegration,&
-       input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+       kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
     !Subroutine reads the old-style input for inpgen
     USE m_atompar
     USE m_types_input
@@ -34,6 +34,7 @@ CONTAINS
     CHARACTER(len=40),INTENT(out)  :: kptsName(:)
     CHARACTER(len=500),INTENT(out) :: kptsPath(:)
     INTEGER,INTENT(OUT)            :: kptsBZintegration(:)
+    LOGICAL,INTENT(OUT)            :: kptsGamma(:)
     TYPE(t_input),INTENT(out)      :: input
     TYPE(t_sym),INTENT(OUT)        :: sym
     TYPE(t_noco),INTENT(OUT)       :: noco
@@ -104,7 +105,7 @@ CONTAINS
              CALL process_expert(line,input%gw)
           CASE('kpt ')
              iKpts = iKpts + 1
-             CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),input%tkb)
+             CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),kptsGamma(ikpts),input%tkb)
              IF(TRIM(ADJUSTL(kptsName(iKpts))).EQ.'') THEN
                 IF(TRIM(ADJUSTL(kptsPath(iKpts))).EQ.'') THEN
                    WRITE(kptsName(iKpts),'(a,i0)') "default-", iKpts
@@ -224,7 +225,7 @@ CONTAINS
     INTEGER, INTENT(INOUT) :: numKptsPath
 
     INTEGER             :: ios
-    LOGICAL             :: l_exist
+    LOGICAL             :: l_exist,gamma
     CHARACTER(len=100)  :: filename
     CHARACTER(len=16384):: line
 
@@ -256,7 +257,7 @@ CONTAINS
           SELECT CASE(line(2:5)) !e.g. atom
           CASE('kpt ')
              numKpts = numKpts + 1
-             CALL process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,tkb)
+             CALL process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,gamma,tkb)
              IF(kptsPath.NE.'') numKptsPath = numKptsPath + 1
           END SELECT
        END IF
@@ -267,27 +268,29 @@ CONTAINS
   END SUBROUTINE peekInpgenInput
 
 
-  SUBROUTINE process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,tkb)
+  SUBROUTINE process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,kptsGamma,tkb)
     USE m_constants
     CHARACTER(len=*),INTENT(in)::line
     CHARACTER(len=40),INTENT(out)::kpts_str
     CHARACTER(len=40),INTENT(out)::kptsName
     CHARACTER(len=500),INTENT(out)::kptsPath
     INTEGER,INTENT(inout)::bz_integration_out
+    LOGICAL,INTENT(out)::kptsGamma
     REAL,INTENT(inout):: tkb
 
-    LOGICAL :: tria
+    LOGICAL :: tria, gamma
     INTEGER :: div1,div2,div3,nkpt, numSpecifications
     CHARACTER(len=5) :: bz_integration
     CHARACTER(len=40) :: name
     CHARACTER(len=500) :: path
     REAL    :: den
-    NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,tria,den,path,name
+    NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,gamma,tria,den,path,name
     div1=0;div2=0;div3=0;nkpt=0;den=0.0
     bz_integration = 'hist'
     name = ''
     path = ''
     tria=.FALSE.
+    gamma=.FALSE.
     READ(line,kpt)
     kpts_str=''
 
@@ -331,6 +334,7 @@ CONTAINS
     ENDIF
     kptsName = name
     kptsPath = path
+    kptsGamma = gamma
 
   END SUBROUTINE process_kpts
 
