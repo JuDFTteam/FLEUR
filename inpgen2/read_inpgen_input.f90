@@ -13,7 +13,7 @@ MODULE m_read_inpgen_input
 CONTAINS
 
   SUBROUTINE read_inpgen_input(atom_pos,atom_id,atom_label,kpts_str,kptsName,kptsPath,kptsBZintegration,&
-       input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+       kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
     !Subroutine reads the old-style input for inpgen
     USE m_atompar
     USE m_types_input
@@ -34,6 +34,7 @@ CONTAINS
     CHARACTER(len=40),INTENT(out)  :: kptsName(:)
     CHARACTER(len=500),INTENT(out) :: kptsPath(:)
     INTEGER,INTENT(OUT)            :: kptsBZintegration(:)
+    LOGICAL,INTENT(OUT)            :: kptsGamma(:)
     TYPE(t_input),INTENT(out)      :: input
     TYPE(t_sym),INTENT(OUT)        :: sym
     TYPE(t_noco),INTENT(OUT)       :: noco
@@ -100,9 +101,11 @@ CONTAINS
              CALL process_exco(line,xcpot)
           CASE('comp')
              CALL process_comp(line,input%jspins,input%frcor,input%ctail,input%kcrel,stars%gmax,xcpot%gmaxxc,input%rkmax)
+          CASE('expe')
+             CALL process_expert(line,input%gw)
           CASE('kpt ')
              iKpts = iKpts + 1
-             CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),input%tkb)
+             CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),kptsGamma(ikpts),input%tkb)
              IF(TRIM(ADJUSTL(kptsName(iKpts))).EQ.'') THEN
                 IF(TRIM(ADJUSTL(kptsPath(iKpts))).EQ.'') THEN
                    WRITE(kptsName(iKpts),'(a,i0)') "default-", iKpts
@@ -122,12 +125,13 @@ CONTAINS
        ELSE
           IF (aa.NE.0) THEN
              !cell was set already, so list of atoms follow
+             if (allocated(atom_pos)) call judft_error("Input error: "//TRIM(line))
              READ(line,*,iostat=ios) n
-             IF (ios.NE.0) CALL judft_error(("Surprising error in reading input:"//trim(line)))
+             IF (ios.NE.0) CALL judft_error(("Surprising error in reading input: "//trim(line)))
              ALLOCATE(atom_pos(3,n),atom_label(n),atom_id(n))
              DO i=1,n
                 READ(98,"(a)",iostat=ios) line
-                IF (ios.NE.0) CALL judft_error(("List of atoms not complete:"//trim(line)))
+                IF (ios.NE.0) CALL judft_error(("List of atoms not complete: "//trim(line)))
                 atom_id(i)=evaluatefirst(line)
                 atom_pos(1,i)=evaluatefirst(line)
                 atom_pos(2,i)=evaluatefirst(line)
@@ -221,7 +225,7 @@ CONTAINS
     INTEGER, INTENT(INOUT) :: numKptsPath
 
     INTEGER             :: ios
-    LOGICAL             :: l_exist
+    LOGICAL             :: l_exist,gamma
     CHARACTER(len=100)  :: filename
     CHARACTER(len=16384):: line
 
@@ -253,7 +257,7 @@ CONTAINS
           SELECT CASE(line(2:5)) !e.g. atom
           CASE('kpt ')
              numKpts = numKpts + 1
-             CALL process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,tkb)
+             CALL process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,gamma,tkb)
              IF(kptsPath.NE.'') numKptsPath = numKptsPath + 1
           END SELECT
        END IF
@@ -264,29 +268,43 @@ CONTAINS
   END SUBROUTINE peekInpgenInput
 
 
-  SUBROUTINE process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,tkb)
+  SUBROUTINE process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,kptsGamma,tkb)
     USE m_constants
     CHARACTER(len=*),INTENT(in)::line
     CHARACTER(len=40),INTENT(out)::kpts_str
     CHARACTER(len=40),INTENT(out)::kptsName
     CHARACTER(len=500),INTENT(out)::kptsPath
     INTEGER,INTENT(inout)::bz_integration_out
+    LOGICAL,INTENT(out)::kptsGamma
     REAL,INTENT(inout):: tkb
 
-    LOGICAL :: tria
-    INTEGER :: div1,div2,div3,nkpt
+    LOGICAL :: tria, gamma
+    INTEGER :: div1,div2,div3,nkpt, numSpecifications
     CHARACTER(len=5) :: bz_integration
     CHARACTER(len=40) :: name
     CHARACTER(len=500) :: path
     REAL    :: den
-    NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,tria,den,path,name
+    NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,gamma,tria,den,path,name
     div1=0;div2=0;div3=0;nkpt=0;den=0.0
     bz_integration = 'hist'
     name = ''
     path = ''
     tria=.FALSE.
+    gamma=.FALSE.
     READ(line,kpt)
     kpts_str=''
+
+    numSpecifications = 0
+    IF (den.GT.0.0) numSpecifications = numSpecifications + 1
+    IF (nkpt.NE.0) numSpecifications = numSpecifications + 1
+    IF (ALL([div1,div2,div3]>0)) numSpecifications = numSpecifications + 1
+    IF (numSpecifications.GT.1) THEN
+       WRITE(*,'(a)') "Ambiguous specification of k-point set:"
+       WRITE(*,'(a)') TRIM(line)
+       CALL juDFT_error("Ambiguous specification of k-point set.", calledby="read_inpgen_input",&
+                        hint="Use only one of nkpt, den, (div1,div2,div3)!")
+    END IF
+
     IF (den>0.0) THEN
        WRITE(kpts_str,"(a,f0.6)") "den=",den
     ELSEIF((nkpt>0).AND.(path.EQ.'')) THEN
@@ -316,6 +334,7 @@ CONTAINS
     ENDIF
     kptsName = name
     kptsPath = path
+    kptsGamma = gamma
 
   END SUBROUTINE process_kpts
 
@@ -439,6 +458,20 @@ CONTAINS
     IF (ios.NE.0) CALL judft_error(("Error reading:" //TRIM(line)))
   END SUBROUTINE process_comp
 
+  SUBROUTINE process_expert(line,gw)
+    USE m_types_xcpot_inbuild_nofunction
+    CHARACTER(len=*),INTENT(in)::line
+    INTEGER, INTENT(INOUT) :: gw
+    INTEGER :: spex
+    NAMELIST /expert/ spex
+    INTEGER :: ios
+
+    spex = 0
+    READ(line,expert,iostat=ios)
+    IF (ios.NE.0) CALL judft_error(("Error reading:" //TRIM(line)))
+
+    gw = spex
+  END SUBROUTINE process_expert
 
   SUBROUTINE normalize_file(infh,outfh)
     !***********************************************************************
@@ -505,6 +538,9 @@ CONTAINS
           complete=.FALSE.
        END IF
     END DO loop
+    IF(LEN_TRIM(buffer).NE.0) THEN
+       WRITE(outfh,'(a)') TRIM(buffer)
+    END IF
 
   END SUBROUTINE normalize_file
 

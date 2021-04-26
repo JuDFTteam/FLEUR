@@ -1,4 +1,5 @@
       module m_wann_torque
+            use m_judft
       private
       public :: wann_torque
       contains
@@ -76,6 +77,8 @@ c      use m_wann_gfactor
       integer             :: dir,list_ind
       logical             :: l_inthelist
 
+
+      call timestart("wann_torque")
       allocate ( surfcof(noccbd,0:lmd,nat,2) )
       allocate ( surfder(noccbd,0:lmd,nat,2) )  
 
@@ -236,7 +239,7 @@ c-------( 0 -1 )
 c      write(*,*)torque
 
 c      stop 'ok till here'
-
+      call timestop("wann_torque")
       end subroutine wann_torque
       
       end module m_wann_torque

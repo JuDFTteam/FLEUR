@@ -26,7 +26,7 @@ MODULE m_eig66_hdf
    !                          Daniel Wortmann
    !*****************************************************************
    USE m_eig66_data
-   USE m_types
+   USE m_types_mat
 #ifdef CPP_HDF
    USE hdf5
    USE m_hdf_tools
@@ -226,6 +226,7 @@ CONTAINS
 
       INTEGER i, j, k, nv_local, n1, n2, ne
       TYPE(t_data_HDF), POINTER::d
+      call timestart("write_eig: HDF")
       CALL priv_find_data(id, d)
 
       if(present(smat)) call juDFT_error("writing smat in HDF not supported yet")
@@ -239,10 +240,13 @@ CONTAINS
       !write eigenvalues
       !
 
+      call timestart("write neig_total")
       IF (PRESENT(neig_total)) THEN
          CALL io_write_integer0(d%neigsetid, (/nk, jspin/), (/1, 1/), neig_total)
       ENDIF
+      call timestop("write neig_total")
 
+      call timestart("write eig")
       IF (PRESENT(n_rank) .AND. PRESENT(n_size) .AND.&
            &        PRESENT(eig) .AND. PRESENT(neig)) THEN
          CALL io_write_real1s(&
@@ -257,6 +261,9 @@ CONTAINS
       ELSE
          IF (PRESENT(eig)) CALL juDFT_error("BUG in calling write_eig")
       ENDIF
+      call timestop("write eig")
+
+      call timestart("write zmat")
       IF (PRESENT(zmat) .AND. .NOT. PRESENT(neig))&
            &    CALL juDFT_error("BUG in calling write_eig with eigenvector")
 
@@ -278,8 +285,9 @@ CONTAINS
                  &           (/1, 1, n1, 1, 1/))
          ENDIF
       ENDIF
-
+      call timestop("write zmat")
 #endif
+      call timestop("write_eig: HDF")
    END SUBROUTINE write_eig
 
 #ifdef CPP_HDF

@@ -17,7 +17,7 @@ MODULE m_symm_hf
    USE m_constants
    USE m_util
    USE m_intgrf
-   USE m_io_hybinp
+   USE m_io_hybrid
 #ifdef CPP_MPI 
    use mpi 
 #endif
@@ -66,11 +66,6 @@ CONTAINS
             psym(nsymop) = i
          END IF
       END DO
-
-      WRITE(oUnit, '(A,i3)') 'current nk: ', nk
-      WRITE(oUnit, '(A,3f10.5)') ' fi%kpts%bkf(:,nk):', fi%kpts%bkf(:, nk)
-      WRITE(oUnit, '(A,i3)') ' Number of elements in the little group:', nsymop
-
       CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
@@ -110,7 +105,7 @@ CONTAINS
       INTEGER                         :: itype, ieq, iatom, ratom, ierr
       INTEGER                         ::  iband1, iband2, iatom0
       INTEGER                         :: i, j, ic, ic1, ic2
-      INTEGER                         :: ok
+      INTEGER                         :: ok, ld_olapmt, ld_cmthlp, ld_tmp, ld_wavefolap
       INTEGER                         :: l, lm
       INTEGER                         :: n1, n2, nn
       INTEGER                         :: ndb1, ndb2
@@ -130,13 +125,12 @@ CONTAINS
       REAL                            :: rotkpt(3), g(3)
       complex, ALLOCATABLE            :: olapmt(:, :, :, :)
 
-      COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
+      COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :), tmp(:,:), carr_tmp(:)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :)
       LOGICAL, ALLOCATABLE             :: symequivalent(:, :)
 
       CALL timestart("symm_hf")
       parent = 0; nsest = 0; indx_sest = 0;
-      WRITE(oUnit, '(A)') new_line('n')//new_line('n')//'### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
       ! those k-points, which can generate the whole BZ by
@@ -170,8 +164,6 @@ CONTAINS
       ! for the Gamma-point holds:
       parent(1) = 1
       neqvkpt(1) = 1
-
-      WRITE(oUnit, '(A,i5)') ' Number of k-points in the EIBZ', fi%kpts%EIBZ(nk)%nkpt
       call timestop("calc EIBZ")
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
@@ -206,12 +198,10 @@ CONTAINS
       ! degenerat(i) = 1 state i  is not degenerat,
       ! degenerat(i) = j state i has j-1 degenerat states at {i+1,...,i+j-1}
       ! degenerat(i) = 0 state i is degenerat
-
+      call timestart("calculate degeneracy")
       tolerance = 1E-07 !0.00001
 
       degenerat = 1
-
-      WRITE(oUnit, '(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
 
       DO i = 1, hybdat%nbands(nk,jsp)
          DO j = i + 1, hybdat%nbands(nk,jsp)
@@ -232,19 +222,14 @@ CONTAINS
 
       ! number of different degenerate bands/states
       nddb = count(degenerat >= 1)
-#ifdef CPP_EXPLICIT_HYB
-      WRITE(oUnit, *) ' Degenerate states:'
-      DO iband = 1, hybdat%nbands(nk,jsp)/5 + 1
-         WRITE(oUnit, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk,jsp)))
-      END DO
-#endif
+      call timestop("calculate degeneracy")
 
+      call timestart("calc olapmt")
       IF(allocated(olapmt)) deallocate(olapmt)
       allocate(olapmt(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:fi%atoms%lmaxd, fi%atoms%ntype), stat=ok)
       IF(ok /= 0) call judft_error('symm: failure allocation olapmt')
       olapmt = 0
 
-      call timestart("calc olapmt")
       DO itype = 1, fi%atoms%ntype
          DO l = 0, fi%atoms%lmax(itype)
             nn = mpdata%num_radfun_per_l(l, itype)
@@ -267,30 +252,39 @@ CONTAINS
       allocate(cmthlp(size(cmt,2), size(cmt,1) ), stat=ierr)
       if(ierr /= 0) call judft_error("can't alloc cmthlp")
 
+      allocate(tmp(maxval(mpdata%num_radfun_per_l), hybdat%nbands(nk,jsp)), stat=ierr)
+      if(ierr /= 0 ) call judft_error("cant't alloc tmp")
+
       call timestart("calc wavefolap")
+      ld_olapmt = size(olapmt,1)
+      ld_cmthlp = size(cmthlp,1)
+      ld_tmp    = size(tmp, 1)
+      ld_wavefolap = size(wavefolap,1)
+
       do iatom = 1+submpi%rank, fi%atoms%nat, submpi%size
          itype = fi%atoms%itype(iatom)
+         call timestart("transp cmthlp")
          cmthlp = transpose(cmt(:,:,iatom))
+         call timestop("transp cmthlp")
          lm = 0
          DO l = 0, fi%atoms%lmax(itype)
             DO M = -l, l
                nn = mpdata%num_radfun_per_l(l, itype)
-               DO iband1 = 1, hybdat%nbands(nk,jsp)
-                  !ZGEMV ( TRANS, M, N,    ALPHA,   A,                   LDA, 
-                  !          X,                  INCX,  BETA,    Y, INCY )
-                  call zgemv("N", nn, nn, cmplx_1, olapmt(1,1,l,itype), size(olapmt,1), &
-                             cmthlp(lm+1,iband1), 1,    cmplx_0, carr, 1)
-                  
-                  !ZGEMV ( TRANS, M, N,       ALPHA,   A,            LDA, 
-                  !          X,      INCX,  BETA,    Y, INCY )  
-                  call zgemv("C", nn, hybdat%nbands(nk,jsp), cmplx_1, cmthlp(lm+1, 1), size(cmthlp,1), &
-                             carr(1), 1,  cmplx_1, wavefolap(1,iband1), 1)
-               END DO
+
+               !call zgemm(transa, transb, m,  n,                     k,  alpha,   a,                   lda,      
+               call zgemm("N", "N",      nn, hybdat%nbands(nk,jsp), nn, cmplx_1, olapmt(1,1,l,itype), ld_olapmt, &
+               !         b,              ldb,       beta,    c,      ldc)
+                         cmthlp(lm+1,1), ld_cmthlp, cmplx_0, tmp, ld_tmp)
+
+               !call zgemm(transa, transb, m,              n,                      k,  alpha,   a,                   lda,   
+               call zgemm("C", "N", hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp), nn, cmplx_1, cmthlp(lm+1, 1), ld_cmthlp, &
+               !         b,   ldb,    beta,    c,      ldc)
+                         tmp, ld_tmp, cmplx_1, wavefolap, ld_wavefolap)
                lm = lm + nn
             END DO
          END DO
       END DO
-
+      
       deallocate(cmthlp)
 #ifdef CPP_MPI
       call timestart("allreduce wavefolap")
@@ -299,27 +293,36 @@ CONTAINS
 #endif
       call timestop("calc wavefolap")
 
-      allocate(symequivalent(nddb, nddb), stat=ok)
-      IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')
-      symequivalent = .false.
-      ic1 = 0
-      DO iband1 = 1, hybdat%nbands(nk,jsp)
-         ndb1 = degenerat(iband1)
-         IF(ndb1 == 0) CYCLE
-         ic1 = ic1 + 1
-         ic2 = 0
-         DO iband2 = 1, hybdat%nbands(nk,jsp)
-            ndb2 = degenerat(iband2)
-            IF(ndb2 == 0) CYCLE
-            ic2 = ic2 + 1
-            IF(any(abs(wavefolap(iband1:iband1 + ndb1 - 1, &
-                                 iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
-!                .and. ndb1 .eq. ndb2 ) THEN
-               symequivalent(ic2, ic1) = .true.
-            END IF
-         END DO
-      END DO
+      call timestart("calc symmequivalent")
 
+      allocate(symequivalent(nddb, nddb), stat=ok, source=.False.)
+      IF(ok /= 0) call judft_error('symm: failure allocation symequivalent')
+
+      !$OMP PARALLEL DO default(none) private(iband1, ndb1, ic1, iband2, ndb2, ic2) &
+      !$OMP shared(submpi, hybdat, degenerat, wavefolap, symequivalent, nk, jsp)
+      DO iband1 = submpi%rank + 1, hybdat%nbands(nk,jsp), submpi%size
+         ndb1 = degenerat(iband1)
+         IF(ndb1 /= 0) then
+            ic1 = count(degenerat(:iband1) /= 0)
+            DO iband2 = 1, hybdat%nbands(nk,jsp)
+               ndb2 = degenerat(iband2)
+               IF(ndb2 /= 0) then
+                  ic2 = count(degenerat(:iband2) /= 0)
+                  IF(any(abs(wavefolap(iband1:iband1 + ndb1 - 1, &
+                                       iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
+                     symequivalent(ic2, ic1) = .true.
+                  END IF
+               endif
+            END DO
+         endif
+      END DO
+      !$OMP end parallel do
+#ifdef CPP_MPI
+      call timestart("allreduce symequivalent")
+      call MPI_ALLREDUCE(MPI_IN_PLACE, symequivalent, size(symequivalent), MPI_LOGICAL, MPI_LOR, submpi%comm, ierr)
+      call timestop("allreduce symequivalent")
+#endif
+      call timestop("calc symmequivalent")
       !
       ! generate index field which contain the band combinations (n1,n2),
       ! which are non zero

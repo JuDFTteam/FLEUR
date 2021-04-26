@@ -12,6 +12,7 @@ c   a modification of the eparas.F routine, so go there
 c   and to wannier.F for more information on variables
 c                                Y.Mokrousov 15.6.06
 c***********************************************************************
+      use m_juDFT
       CONTAINS
       SUBROUTINE wann_mmk0_sph(
      >                  llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
@@ -44,6 +45,9 @@ C     .. local arrays ..
 C     ..
 C     .. intrinsic functions ..
       intrinsic conjg
+
+      call timestart("wann_mmk0_sph")
+
       allocate (qlo(noccbd,noccbd,nlod,nlod,ntypd), 
      +          qaclo(noccbd,noccbd,nlod,ntypd),
      +          qbclo(noccbd,noccbd,nlod,ntypd) )
@@ -140,5 +144,6 @@ c---> of the radial basis functions
       enddo 
       deallocate ( qlo,qaclo,qbclo )
 
+      call timestop("wann_mmk0_sph")
       END SUBROUTINE wann_mmk0_sph
       END MODULE m_wann_mmk0_sph

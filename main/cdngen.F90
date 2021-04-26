@@ -200,16 +200,17 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    endif
 
    IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
-     IF (fmpi%irank == 0) THEN
-       CALL timestart("cdngen: dos")
-       call make_dos(kpts,atoms,vacuum,input,banddos,&
+      IF (fmpi%irank == 0) THEN
+         CALL timestart("cdngen: dos")
+         CALL make_dos(kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,sym,cell,results,eigdos,oneD)
-       CALL timestop("cdngen: dos")
-     END IF
-     CALL juDFT_end("DOS OK",fmpi%irank)
+         CALL timestop("cdngen: dos")
+      END IF
    END IF
 
-   IF ((banddos%dos.OR.banddos%vacdos)) CALL juDFT_end("DOS OK",fmpi%irank)
+   IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf) THEN
+      CALL juDFT_end("Charge density postprocessing done.",fmpi%irank)
+   END IF
 
    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,fmpi,.TRUE.)
    IF (fmpi%irank.EQ.0) THEN

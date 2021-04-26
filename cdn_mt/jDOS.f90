@@ -103,8 +103,8 @@ MODULE m_jDOS
                            IF(ABS(mdown) <= l) THEN
                               lmdown = l*(l+1) + INT(mdown)
                               facdown = clebsch(REAL(l),0.5,mdown,-0.5,j,mj)
-                              adown = facdown * eigVecCoeffs%acof(iBand,lmdown,natom,spin)
-                              bdown = facdown * eigVecCoeffs%bcof(iBand,lmdown,natom,spin)
+                              adown = - facdown * eigVecCoeffs%acof(iBand,lmdown,natom,spin)
+                              bdown = - facdown * eigVecCoeffs%bcof(iBand,lmdown,natom,spin)
                            ELSE
                               adown = 0.0
                               bdown = 0.0
@@ -134,7 +134,7 @@ MODULE m_jDOS
                               ENDIF
 
                               IF(ABS(mdown) <= l) THEN
-                                 cdown = facdown  * eigVecCoeffs%ccof(INT(mdown),iBand,ilo,natom,spin)
+                                 cdown = - facdown  * eigVecCoeffs%ccof(INT(mdown),iBand,ilo,natom,spin)
                               ELSE
                                  cdown = 0.0
                               ENDIF
@@ -161,7 +161,7 @@ MODULE m_jDOS
                                  ENDIF
 
                                  IF(ABS(mdown) <= l) THEN
-                                    cdownp = facdown  * eigVecCoeffs%ccof(INT(mdown),iBand,ilop,natom,spin)
+                                    cdownp = - facdown  * eigVecCoeffs%ccof(INT(mdown),iBand,ilop,natom,spin)
                                  ELSE
                                     cdownp = 0.0
                                  ENDIF

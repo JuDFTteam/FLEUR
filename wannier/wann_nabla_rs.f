@@ -91,6 +91,7 @@ c      real                :: kpoints(3,nkpts)
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
 
+      call timestart("wann_nabla_rs")
       inquire(file='she',exist=l_she)
 
       tpi=2*pimach()
@@ -390,5 +391,6 @@ c$$$         enddo !r3
          deallocate(nablamat,nablamat2)
       enddo !jspin
 
+      call timestop("wann_nabla_rs")
       end subroutine wann_nabla_rs
       end module m_wann_nabla_rs

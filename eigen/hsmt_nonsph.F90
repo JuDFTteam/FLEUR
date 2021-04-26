@@ -140,7 +140,7 @@ CONTAINS
              ELSE !This is the case of a local off-diagonal contribution.
                 !It is not Hermitian, so we need to USE zgemm CALL
                 CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.)
-                !$acc update device(abCoeffs)
+                !!$acc update device(abCoeffs)
                 !$acc kernels default(none) present(abCoeffs)
                 abCoeffs(:,:)=conjg(abCoeffs(:,:))
                 !$acc end kernels
@@ -153,7 +153,7 @@ CONTAINS
              !Second set of abCoeffs is needed
              CALL hsmt_ab(sym,atoms,noco,nococonv,isp,iintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.)
              if (isp==jsp) Then
-                !$acc update device (abCoeffs)
+                !!$acc update device (abCoeffs)
                 !$acc host_data use_device(abCoeffs,h_loc,ab2)
                 CALL CPP_zgemm("T","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),abCoeffs,SIZE(abCoeffs,1),&
                      h_loc,size(td%h_loc_nonsph,1),CMPLX(0.,0.),ab2,size_ab2)
@@ -185,8 +185,8 @@ CONTAINS
           hmat%data_r=hmat%data_r+real(data_c)
           !$acc end kernels
        else
-          !$acc kernels present(hmat,hmat%data_r,data_c) default(none)
-          hmat%data_r=hmat%data_r+real(data_c)
+          !$acc kernels present(hmat,hmat%data_c,data_c) default(none)
+          hmat%data_c=hmat%data_c+data_c
           !$acc end kernels
        endif
 #else

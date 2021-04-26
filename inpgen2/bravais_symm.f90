@@ -8,7 +8,7 @@ MODULE m_bravaissymm
   !     these rotation matrices are in lattice coordinates.    mw 12-99
   !********************************************************************
 CONTAINS
-  SUBROUTINE bravais_symm(cell,nops,mrot)
+  SUBROUTINE bravais_symm(cell,nops,mrot,eps)
 
     USE m_types_cell
     USE m_constants
@@ -17,19 +17,18 @@ CONTAINS
 
     !==> Arguments
     TYPE(t_cell),INTENT(in) :: cell
+    real,intent(in)         :: eps
     INTEGER, INTENT(OUT) :: nops, mrot(:,:,:)    ! point group operations
 
     !==> Locals
     REAL    amet(3,3),b1,b2,b3,d1,d2,d3,dmax,dt
     INTEGER i,k,k1,k2,k3,m1,m2,m3,n1,n2,n3
     INTEGER irot(3,3)
-    
+
     INTEGER,PARAMETER::neig12=12! max. number of lattice vectors with same length
     ! (max occurs for close-packed fcc: 12)
     INTEGER lv1(3,neig12),lv2(3,neig12),lv3(3,neig12)
 
-    REAL, PARAMETER :: eps=1.0e-7
- 
 
     !---> distances for the lattice vectors
     d1 = cell%aamat(1,1)
@@ -113,7 +112,7 @@ CONTAINS
              IF ( abs(mdet(k1,k2,k3)) .NE. 1 ) CYCLE
 
              !--->          check whether this maintains lengths correctly
-             !--->          if M is the metric, then must have R^T M R = M 
+             !--->          if M is the metric, then must have R^T M R = M
              irot = reshape( (/ lv1(:,k1),lv2(:,k2),lv3(:,k3) /) , (/ 3,3 /) )
              IF ( any( abs(matmul( transpose(irot), matmul(cell%aamat,irot) ) - cell%aamat) > eps ) ) CYCLE
 

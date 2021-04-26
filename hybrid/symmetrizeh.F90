@@ -11,7 +11,7 @@ MODULE m_symmetrizeh
 CONTAINS
 
    SUBROUTINE symmetrizeh(atoms, bk, jsp, lapw, sym, cell, nsymop, psym, hmat)
-
+      use m_map_to_unit
       USE m_juDFT
       USE m_types
       USE m_constants
@@ -105,7 +105,7 @@ CONTAINS
                rtaual = MATMUL(rot(:, :, isym), atoms%taual(:, iatom)) + trans(:, isym)
                iatom1 = 0
                DO ieq1 = 1, atoms%neq(itype)
-                  IF (ALL(ABS(MODULO(rtaual - atoms%taual(:, iiatom + ieq1) + 1e-12, 1.0)) < 1e-10)) THEN  !The 1e-12 is a dirty fix.
+                  IF (norm2(map_to_unit(rtaual - atoms%taual(:, iiatom + ieq1))) < 1e-6) THEN
                      iatom1 = iiatom + ieq1
                   END IF
                END DO

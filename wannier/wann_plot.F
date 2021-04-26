@@ -137,6 +137,8 @@ c     ..basis wavefunctions in the vacuum
       intrinsic real,aimag,conjg
 c      external dotirp
 c      real dotirp  !module now
+
+      call timestart("wann_plot")
       IF (slice) THEN
         nbmin = nnne
         nbmax = nnne
@@ -425,6 +427,7 @@ c..end of the loop by the bands
       deallocate ( ac,bc,u,ue)
       endif
 
+      call timestop("wann_plot")
       RETURN
       END SUBROUTINE wann_plot
 !------------------------------------------

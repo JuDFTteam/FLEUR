@@ -21,9 +21,23 @@ MODULE m_types_nococonv
   CONTAINS
     procedure:: init=>t_nococonv_init
     procedure:: init_ss=>t_nococonv_initss
+    procedure:: chi
   end TYPE
   public :: t_nococonv
 CONTAINS
+  function chi(nococonv,n)
+    use m_constants
+    IMPLICIT NONE
+    CLASS(t_nococonv),INTENT(IN)  :: nococonv
+    INTEGER,INTENT(IN)           :: n
+    COMPLEX                      :: chi(2,2)
+
+    chi(1,1) =  exp(ImagUnit*nococonv%alph(n)/2)*cos(nococonv%beta(n)/2)
+    chi(2,1) = -EXP(-ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+    chi(1,2) = EXP(ImagUnit*nococonv%alph(n)/2)*SIN(nococonv%beta(n)/2)
+    chi(2,2) =  EXP(-ImagUnit*nococonv%alph(n)/2)*COS(nococonv%beta(n)/2)
+  end function
+
   subroutine t_nococonv_init(this,noco)
     use m_types_noco
     class(t_nococonv),INTENT(OUT):: This

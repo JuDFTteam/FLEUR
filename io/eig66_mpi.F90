@@ -1,7 +1,7 @@
 MODULE m_eig66_mpi
 #include "juDFT_env.h"
    USE m_eig66_data
-   USE m_types
+   USE m_types_mat
    USE m_judft
 #ifdef CPP_MPI
    USE mpi
@@ -33,6 +33,7 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL:: n_size_opt
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
 #ifdef CPP_MPI
+      CHARACTER(len=20):: arg
       INTEGER:: isize, e, slot_size, local_slots
       INTEGER, PARAMETER::mcored = 27 !there should not be more that 27 core states
       TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
@@ -86,6 +87,12 @@ CONTAINS
       IF (PRESENT(filename) .AND. .NOT. create) CALL judft_error("Storing of data not implemented for MPI case", calledby="eig66_mpi.F")
       CALL MPI_BARRIER(MPI_COMM, e)
       CALL timestop("create data spaces in ei66_mpi")
+
+      if (d%irank==0) then
+        arg=TRIM(juDFT_string_for_argument("-eig"))
+        IF (index(arg,"init")>0) CALL priv_readfromfileDA()
+      endif
+
    CONTAINS
       SUBROUTINE priv_create_memory(slot_size, local_slots, handle, int_data_ptr, real_data_ptr, cmplx_data_ptr)
          use m_types_mpi, only: judft_win_create
@@ -163,19 +170,67 @@ CONTAINS
 
       END SUBROUTINE priv_create_memory
 
+      SUBROUTINE priv_readfromfileDA()
+         USE m_eig66_DA, ONLY: open_eig_DA => open_eig, read_eig_DA => read_eig, close_eig_DA => close_eig
+         IMPLICIT NONE
+
+         INTEGER:: nk, jspin, neig, tmp_id
+         REAL    :: eig(d%size_eig)
+         TYPE(t_mat)::zmat
+
+         call zmat%alloc(d%l_real,d%nmat,d%size_eig)
+
+         tmp_id = eig66_data_newid(DA_mode)
+         CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, .false., filename)
+         DO jspin = 1, d%jspins
+            DO nk = 1, d%nkpts
+               CALL read_eig_DA(id,nk,jspin,neig,eig,zmat=zmat)
+               CALL write_eig(tmp_id,nk,jspin,neig,eig=eig,zmat=zmat)
+            ENDDO
+         ENDDO
+         CALL close_eig_DA(tmp_id)
+      END SUBROUTINE priv_readfromfileDA
 #endif
+
    END SUBROUTINE open_eig
    SUBROUTINE close_eig(id, delete, filename)
       INTEGER, INTENT(IN)         :: id
       LOGICAL, INTENT(IN), OPTIONAL:: delete
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL::filename
       TYPE(t_data_MPI), POINTER, ASYNCHRONOUS :: d
+
+      character(len=20):: arg
       CALL priv_find_data(id, d)
 
       IF (PRESENT(delete)) THEN
          IF (delete) WRITE (*, *) "No deallocation of memory implemented in eig66_mpi"
       ENDIF
-      IF (PRESENT(filename)) CALL judft_error("Storing of data not implemented for MPI case", calledby="eig66_mpi.F")
+
+      if (d%irank==0) then
+        arg=TRIM(juDFT_string_for_argument("-eig"))
+        IF (index(arg,"save")>0) CALL priv_writetofileDA()
+      endif
+      CONTAINS
+      SUBROUTINE priv_writetofileDA()
+         USE m_eig66_DA, ONLY: open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig
+         IMPLICIT NONE
+
+         INTEGER:: nk, jspin, neig, tmp_id
+         REAL    :: eig(d%size_eig)
+         TYPE(t_mat)::zmat
+
+         call zmat%alloc(d%l_real,d%nmat,d%size_eig)
+
+         tmp_id = eig66_data_newid(DA_mode)
+         CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, .false.)
+         DO jspin = 1, d%jspins
+            DO nk = 1, d%nkpts
+               CALL read_eig(id,nk,jspin,neig,eig,zmat=zmat)
+               CALL write_eig_DA(tmp_id,nk,jspin,neig,eig=eig,zmat=zmat)
+            ENDDO
+         ENDDO
+         CALL close_eig_DA(tmp_id)
+      END SUBROUTINE priv_writetofileDA
    END SUBROUTINE close_eig
 
    SUBROUTINE read_eig(id, nk, jspin, neig, eig, list, zmat, smat)
@@ -391,7 +446,7 @@ CONTAINS
          ALLOCATE (tmp_cmplx(tmp_size))
          DO n = 1, smat%matsize2
             n1 = n - 1
-            if((.not. present(n_size)) .and. (.not. present(n_rank)) ) then 
+            if((.not. present(n_size)) .and. (.not. present(n_rank)) ) then
                call juDFT_error("smat needs n_size & n_rank")
             endif
             IF (PRESENT(n_size)) n1 = n_size*n1

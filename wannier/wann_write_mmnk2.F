@@ -43,6 +43,7 @@ c******************************************************
 c     Collect contributions to the mmnk matrix from the
 c     various processors.
 c******************************************************
+      call timestart("wann_write_mmnk2")
       if(isize.ne.1)then
       do ikpt=1,fullnkpts
        if(l_p0)then
@@ -103,6 +104,6 @@ c******************************************************
          close(305)
         endif
       endif !l_p0
-
+      call timestop("wann_write_mmnk2")
       end subroutine wann_write_mmnk2
       end module m_wann_write_mmnk2

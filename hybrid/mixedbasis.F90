@@ -46,7 +46,6 @@ CONTAINS
       USE m_constants
       USE m_loddop, ONLY: loddop
       USE m_intgrf, ONLY: intgrf_init, intgrf
-      use m_rorder, only: rorderpf
       USE m_hybrid_core
       USE m_wrapper
       USE m_eig66_io

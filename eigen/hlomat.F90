@@ -66,14 +66,22 @@ CONTAINS
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
 
+    !$acc data create(abcoeffs,abclo)
+    !$acc data copyin(alo1,blo1,clo1)
     CALL hsmt_ab(sym,atoms,noco,nococonv,jsp,iintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,isp),blo1(:,isp),clo1(:,isp))
     IF (isp==jsp.AND.iintsp==jintsp) THEN
+       !$acc kernels present(abcoeffs)
+       abcoeffs(:,:,2)=abcoeffs(:,:,1)
+       abclo(:,:,:,:,2)=abclo(:,:,:,:,1)
+       !$acc end kernels
+#ifndef _OPENACC
        CALL CPP_BLAS_ccopy(SIZE(abCoeffs,1)*SIZE(abCoeffs,2),abCoeffs(:,:,1),1,abCoeffs(:,:,2),1)
        CALL CPP_BLAS_ccopy(SIZE(abclo,1)*SIZE(abclo,2)*SIZE(abclo,3)*SIZE(abclo,4),abclo(:,:,:,:,1),1,abclo(:,:,:,:,2),1)
+#endif
     ELSE
        CALL hsmt_ab(sym,atoms,noco,nococonv,isp,jintsp,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,jsp),blo1(:,jsp),clo1(:,jsp))
     ENDIF
-
+    !$acc end data
 
 
     mlo=0;mlolo=0
@@ -92,11 +100,12 @@ CONTAINS
        IF (sym%invsat(na) == 0) invsfct = 1
        IF (sym%invsat(na) == 1) invsfct = 2
        !
-       !$acc kernels present(hmat,hmat%data_c,hmat%data_c)&
-       !$acc &  copyin(atoms,lapw,abCoeffs(:,:,1),tlmplm%h_loc(:,ntyp,jsp,isp),tlmplm,lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
+       !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo) &
+       !$acc & copyin(atoms,lapw,tlmplm,tlmplm%ulotu,tlmplm%ulotd,tlmplm%h_loc(:,:,ntyp,jsp,isp),lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
+       !$acc & copyin(lapw%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
+       !$acc & copyin(ud,ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud%duds(:,ntyp,isp))&
+       !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
        !$acc & create(ax,bx,cx)&
-       !$acc & copyin(lapw%index_lo(:,na),tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp),abclo(1:3,:,:,:,1:2))&
-       !$acc & copyin(ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud,ud%duds(:,ntyp,isp))&
        !$acc & default(none)
        DO lo = 1,atoms%nlo(ntyp)
           l = atoms%llo(lo,ntyp)
@@ -109,7 +118,7 @@ CONTAINS
                 bx(kp) = CMPLX(0.0,0.0)
                 cx(kp) = CMPLX(0.0,0.0)
              END DO
-             CALL timestart("hlomat11")
+             !CALL timestart("hlomat11")
              !CPP_OMP PARALLEL DO DEFAULT(none) &
              !CPP_OMP& SHARED(ax,bx,cx,ntyp,isp,jsp,m,lm,lo,mlo) &
              !CPP_OMP& SHARED(lapw,abCoeffs,ab_size,iintsp) &
@@ -120,7 +129,7 @@ CONTAINS
                    DO mp = -lp,lp
                       lmp = lp* (lp+1) + mp
                       s=tlmplm%h_loc2(ntyp)
-                      ax(kp) = ax(kp) + abCoeffs(lmp,kp,1)          *tlmplm%h_loc(lmp,lm,ntyp,jsp,isp) 
+                      ax(kp) = ax(kp) + abCoeffs(lmp,kp,1)          *tlmplm%h_loc(lmp,lm,ntyp,jsp,isp)
                       ax(kp) = ax(kp) + abCoeffs(ab_size/2+lmp,kp,1)*tlmplm%h_loc(s+lmp,lm,ntyp,jsp,isp)
                       bx(kp) = bx(kp) + abCoeffs(lmp,kp,1)          *tlmplm%h_loc(lmp,s+lm,ntyp,jsp,isp)
                       bx(kp) = bx(kp) + abCoeffs(ab_size/2+lmp,kp,1)*tlmplm%h_loc(s+lmp,s+lm,ntyp,jsp,isp)
@@ -130,7 +139,7 @@ CONTAINS
                 END DO
              END DO
              !CPP_OMP END PARALLEL DO
-             CALL timestop("hlomat11")
+             !CALL timestop("hlomat11")
              !+t3e
              DO nkvec = 1,invsfct* (2*l+1)
                 locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
@@ -293,5 +302,6 @@ CONTAINS
        END DO ! end of lo = 1,atoms%nlo loop
        !$acc end kernels
     END IF
+    !$acc end data
   END SUBROUTINE hlomat
 END MODULE m_hlomat

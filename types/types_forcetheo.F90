@@ -46,12 +46,14 @@ CONTAINS
     this%l_io=l_io
   END SUBROUTINE forcetheo_start
 
-  LOGICAL FUNCTION forcetheo_next_job(this,lastiter,atoms,noco,nococonv)
+  LOGICAL FUNCTION forcetheo_next_job(this,fmpi,lastiter,atoms,noco,nococonv)
     USE m_types_atoms
     USE m_types_noco
     USE m_types_nococonv
+    USE m_types_mpi
     IMPLICIT NONE
-    CLASS(t_forcetheo),INTENT(INOUT):: this
+    CLASS(t_forcetheo),INTENT(INOUT)    :: this
+    TYPE(t_mpi), INTENT(IN)             :: fmpi
     LOGICAL,INTENT(IN)                  :: lastiter
     TYPE(t_atoms),INTENT(IN)            :: atoms
     TYPE(t_noco),INTENT(IN)             :: noco

@@ -11,7 +11,7 @@ MODULE m_doubleCounting
 
    CONTAINS
 
-   FUNCTION doubleCountingPot(U,J,l,l_amf,l_spinAvg,rho,l_write) RESULT(Vdc)
+   FUNCTION doubleCountingPot(U,J,l,l_amf,l_mix,l_spinAvg,rho, alpha, l_write) RESULT(Vdc)
 
       !------------------------------------------------------
       ! Calculate the Double Counting Correction in either
@@ -24,12 +24,15 @@ MODULE m_doubleCounting
       REAL,                INTENT(IN)  :: J
       INTEGER,             INTENT(IN)  :: l
       LOGICAL,             INTENT(IN)  :: l_amf      !Which doubleCounting is used (FLL/AMF)
+      LOGICAL,             INTENT(IN)  :: l_mix      !Mix between FLL and AMF
       LOGICAL,             INTENT(IN)  :: l_spinAvg  !Do we want a spin averaged double counting
       REAL,                INTENT(IN)  :: rho(:)     !Trace of the density matrix for each spin
+      REAL,                INTENT(IN)  :: alpha
       LOGICAL, OPTIONAL,   INTENT(IN)  :: l_write
 
       REAL :: Vdc(SIZE(rho))
       REAL :: nup, ndn, Vdcup, Vdcdn
+      REAL :: Vdcup_AMF, Vdcdn_AMF, Vdcup_FLL, Vdcdn_FLL
 
 
       nup = rho(1)
@@ -39,12 +42,18 @@ MODULE m_doubleCounting
          ndn = rho(1)
       ENDIF
 
+      Vdcup_AMF = U*ndn+2.0*l/(2.0*l+1)*(U-J)*nup
+      Vdcdn_AMF = U*nup+2.0*l/(2.0*l+1)*(U-J)*ndn
+
+      Vdcup_FLL = U*(nup+ndn - 0.5) - J*(nup - 0.5)
+      Vdcdn_FLL = U*(nup+ndn - 0.5) - J*(ndn - 0.5)
+
       IF(l_amf) THEN
-         Vdcup = U*ndn+2.0*l/(2.0*l+1)*(U-J)*nup
-         Vdcdn = U*nup+2.0*l/(2.0*l+1)*(U-J)*ndn
+         Vdcup = Vdcup_AMF
+         Vdcdn = Vdcdn_AMF
       ELSE
-         Vdcup = U*(nup+ndn - 0.5) - J*(nup - 0.5)
-         Vdcdn = U*(nup+ndn - 0.5) - J*(ndn - 0.5)
+         Vdcup = Vdcup_FLL
+         Vdcdn = Vdcdn_FLL
       ENDIF
 
       IF(PRESENT(l_write)) THEN
@@ -79,7 +88,7 @@ MODULE m_doubleCounting
    END FUNCTION doubleCountingPot
 
 
-   FUNCTION doubleCountingEnergy(U,J,l,l_amf,rho) RESULT(Edc)
+   FUNCTION doubleCountingEnergy(U,J,l,l_amf,l_mix,l_spinAvg,rho, alpha) RESULT(Edc)
 
       !------------------------------------------------------------
       ! Calculate the Double Counting Correction Energy in either
@@ -90,9 +99,12 @@ MODULE m_doubleCounting
       REAL,                INTENT(IN)  :: J
       INTEGER,             INTENT(IN)  :: l
       LOGICAL,             INTENT(IN)  :: l_amf      !Which doubleCounting is used (FLL/AMF)
+      LOGICAL,             INTENT(IN)  :: l_mix      !Mix between FLL/AMF
+      LOGICAL,             INTENT(IN)  :: l_spinAvg
       REAL,                INTENT(IN)  :: rho(:)     !Trace of the density matrix for each spin
+      REAL,                INTENT(IN)  :: alpha
 
-      REAL :: Edc
+      REAL :: Edc, Edc_AMF, Edc_FLL
       REAL :: nup, ndn
 
 
@@ -103,14 +115,40 @@ MODULE m_doubleCounting
          ndn = rho(1)
       ENDIF
 
+      IF(l_spinAvg) THEN
+         nup = (nup+ndn)/2.0
+         ndn = nup
+      ENDIF
+
+      Edc_AMF = U*nup*ndn + (U-J) *l*(nup**2+ndn**2)/(2.0*l+1)
+
+      Edc_FLL =   U/2.0 * (nup+ndn) * (nup+ndn - 1.0) &
+                - J/2.0 * nup       * (nup     - 1.0) &
+                - J/2.0 * ndn       * (ndn     - 1.0)
+
+
       IF(l_amf) THEN
-         Edc = U*nup*ndn + (U-J) *l*(nup**2+ndn**2)/(2.0*l+1)
+         Edc = Edc_AMF
       ELSE
-         Edc =   U/2.0 * (nup+ndn) * (nup+ndn - 1.0) &
-               - J/2.0 * nup       * (nup     - 1.0) &
-               - J/2.0 * ndn       * (ndn     - 1.0)
+         Edc = Edc_FLL
       ENDIF
 
    END FUNCTION doubleCountingEnergy
+
+   FUNCTION doubleCountingMixFactor(mmpmat, l, rho) Result(alpha)
+
+      !---------------------------------------------
+      ! Calculate the mixing factor between FLL/AMF
+      !---------------------------------------------
+
+      COMPLEX,        INTENT(IN) :: mmpmat(-lmaxU_const:, -lmaxU_const:, :)
+      INTEGER,        INTENT(IN) :: l
+      REAL,           INTENT(IN) :: rho(:)
+
+      REAL :: alpha
+
+      alpha = 0.0
+
+   END FUNCTION
 
 END MODULE m_doubleCounting

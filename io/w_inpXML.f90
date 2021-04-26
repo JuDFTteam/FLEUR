@@ -79,6 +79,7 @@ CONTAINS
       INTEGER          :: numSpecies
       INTEGER          :: speciesRepAtomType(atoms%ntype)
       CHARACTER(len=20):: speciesNames(atoms%ntype)
+      CHARACTER(LEN=50):: tempStringA, tempStringB
       LOGICAL          :: known_species
 
 !+lda+u
@@ -140,14 +141,14 @@ CONTAINS
          filenum = 98
          OPEN (fileNum, file=TRIM(ADJUSTL(filename)), form='formatted', status='replace')
          WRITE (fileNum, '(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="0.33">'
+         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="0.34">'
       ELSE
          fileNum = getXMLOutputUnitNumber()
          CALL openXMLElementNoAttributes('inputData')
       END IF
 
       WRITE (fileNum, '(a)') '   <comment>'
-      WRITE (fileNum, '(a6,10a8)') '      ', input%comment
+      WRITE (fileNum, '(a6,10a)') '      ', input%comment
       WRITE (fileNum, '(a)') '   </comment>'
 
       WRITE (fileNum, '(a)') '   <calculationSetup>'
@@ -213,8 +214,8 @@ CONTAINS
          WRITE (fileNum, 170) oneD%odd%d1, oneD%odd%M, oneD%odd%mb, oneD%odd%m_cyl, oneD%odd%chi, oneD%odd%rot, oneD%odd%invs, oneD%odd%zrfs
       END IF
 
-!      <expertModes gw="0"  eig66="F" lpr="0" secvar="F" />
-180   FORMAT('      <expertModes gw="', i0, '" secvar="', l1, '"/>')
+!      <expertModes spex="0"  eig66="F" lpr="0" secvar="F" />
+180   FORMAT('      <expertModes spex="', i0, '" secvar="', l1, '"/>')
       WRITE (fileNum, 180) input%gw, input%secvar
 
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
@@ -342,13 +343,13 @@ CONTAINS
       !         <bravaisMatrix>
       WRITE (fileNum, '(a)') '         <bravaisMatrix>'
       !            <row-1>0.00000 5.13000 5.13000</row-1>
-250   FORMAT('            <row-1>', f16.10, ' ', f16.10, ' ', f16.10, '</row-1>')
+250   FORMAT('            <row-1>', f22.16, ' ', f22.16, ' ', f22.16, '</row-1>')
       WRITE (fileNum, 250) cell%amat(:, 1)
       !            <row-2>5.13000 0.00000 5.13000</row-2>
-260   FORMAT('            <row-2>', f16.10, ' ', f16.10, ' ', f16.10, '</row-2>')
+260   FORMAT('            <row-2>', f22.16, ' ', f22.16, ' ', f22.16, '</row-2>')
       WRITE (fileNum, 260) cell%amat(:, 2)
       !            <row-3>5.13000 5.13000 0.00000</row-3>
-270   FORMAT('            <row-3>', f16.10, ' ', f16.10, ' ', f16.10, '</row-3>')
+270   FORMAT('            <row-3>', f22.16, ' ', f22.16, ' ', f22.16, '</row-3>')
       WRITE (fileNum, 270) cell%amat(:, 3)
       WRITE (fileNum, '(a)') '         </bravaisMatrix>'
 
@@ -408,7 +409,7 @@ CONTAINS
 320      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '"/>')
          WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
 
-         WRITE (fileNum, '(a)') '         <electronConfig>'
+         WRITE (fileNum, '(a)') '         <electronConfig flipSpins="F">'
 !         <coreConfig>[He] (2s1/2) (2p1/2) (2p3/2)</coreConfig>
 322      FORMAT('            <coreConfig>', a, '</coreConfig>')
          WRITE (fileNum, 322) TRIM(ADJUSTL(atoms%econf(iAtomType)%coreconfig))
@@ -584,8 +585,10 @@ CONTAINS
       WRITE (fileNum, 370) input%vchk, input%cdinf
 
 !      <densityOfStates ndir="0" minEnergy="-0.50000" maxEnergy="0.50000" sigma="0.01500"/>
-380   FORMAT('      <bandDOS minEnergy="', f0.8, '" maxEnergy="', f0.8, '" sigma="', f0.8, '"/>')
-      WRITE (fileNum, 380)  banddos%e2_dos, banddos%e1_dos, banddos%sig_dos
+      WRITE(tempStringA,'(f0.8,a)') banddos%e2_dos, '*Htr'
+      WRITE(tempStringB,'(f0.8,a)') banddos%e1_dos, '*Htr'
+380   FORMAT('      <bandDOS minEnergy="', a, '" maxEnergy="', a, '" sigma="', f0.8, '" storeEVData="', l1, '"/>')
+      WRITE (fileNum, 380)  TRIM(ADJUSTL(tempStringA)), TRIM(ADJUSTL(tempStringB)), banddos%sig_dos, banddos%l_storeEVData
 
 !      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1="0.00" locy1="0.00" locx2="0.00" locy2="0.00" nstm="0" tworkf="0.000000"/>
 390   FORMAT('      <vacuumDOS vacdos="', l1, '" integ="', l1, '" star="', l1, '" nstars="', i0, '" locx1="', f0.5, '" locy1="', f0.5, '" locx2="', f0.5, '" locy2="', f0.5, '" nstm="', i0, '" tworkf="', f0.5, '"/>')
@@ -600,8 +603,12 @@ CONTAINS
 !      WRITE (fileNum, 396) juPhon%l_potout, juPhon%l_eigout
 
 !      <plotting iplot="0" />
-400   FORMAT('      <plotting iplot="', i0, '"/>')
-      WRITE (fileNum, 400) sliceplot%iplot
+400   FORMAT('      <plotting iplot="', i0, '" polar="', l1, '">')
+      WRITE (fileNum, 400) sliceplot%iplot, sliceplot%polar
+401   FORMAT('         <plot TwoD="', l1, '" vec1="', 3f5.1,  '" vec2="', 3f5.1, '" vec3="', 3f5.1, '" zero="', 3f5.1, '" file="', a, '"/>')
+      WRITE (fileNum, 401) sliceplot%plot(1)%twodim, sliceplot%plot(1)%vec1(:), sliceplot%plot(1)%vec2(:), sliceplot%plot(1)%vec3(:),&
+                           sliceplot%plot(1)%zero(:), TRIM(ADJUSTL(sliceplot%plot(1)%filename))
+      WRITE (fileNum, '(a)') '      </plotting>'
 
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
 410   FORMAT('      <chargeDensitySlicing numkpt="', i0, '" minEigenval="', f0.8, '" maxEigenval="', f0.8, '" nnne="', i0, '" pallst="', l1, '"/>')
@@ -617,7 +624,7 @@ CONTAINS
 
       WRITE (fileNum, '(a)') '   </output>'
       IF (present(filename)) THEN
-         WRITE (fileNum, '(a)') '  <!-- We include the file relax.inp here to enable relaxations (see documentation) -->'
+         WRITE (fileNum, '(a)') '  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->'
          WRITE (fileNum, '(a)') '  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>'
          WRITE (fileNum, '(a)') '</fleurInput>'
          CLOSE (fileNum)

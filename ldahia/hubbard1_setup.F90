@@ -44,12 +44,14 @@ MODULE m_hubbard1_setup
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_potden),   INTENT(INOUT)  :: den
 
+      LOGICAL, PARAMETER :: l_mix = .FALSE.
+
       INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
       INTEGER :: n_hia_task,extra,i_hia_start,i_hia_end
-      REAL    :: U,J,mx,my,mz
+      REAL    :: U,J,mx,my,mz,alpha_mix
       COMPLEX :: offdtrace
       LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,l_amf
 
@@ -172,8 +174,9 @@ MODULE m_hubbard1_setup
             ! V_FLL = U (n - 1/2) - J (n - 1) / 2
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
-            mu_dc = doubleCountingPot(U,J,l,l_amf,hub1data%l_performSpinavg,occDFT(i_hia,:),&
-                                      l_write=fmpi%irank==0)
+            IF(l_mix) alpha_mix = doubleCountingMixFactor(mmpMat(:,:,i_hia,:), l, occDFT(i_hia,:))
+            mu_dc = doubleCountingPot(U,J,l,l_amf,l_mix,hub1data%l_performSpinavg,occDFT(i_hia,:),&
+                                      alpha_mix, l_write=fmpi%irank==0)
 
             !-------------------------------------------------------
             ! Check for additional input files

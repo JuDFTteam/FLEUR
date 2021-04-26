@@ -25,6 +25,8 @@ c********************************************************
       integer          :: iter!,len,num_wann,num_bands,nn,i
       logical          :: l_file
 
+      call timestart("wann_get_qpts")
+
       if(l_bzsym)then
          inquire(file='w90qpts',exist=l_file)
          IF(.NOT.l_file) CALL juDFT_error("where is w90qpts?",calledby
@@ -74,5 +76,6 @@ c********************************************************
          enddo
       endif
 
+      call timestop("wann_get_qpts")
       end subroutine wann_get_qpts
       end module m_wann_get_qpts

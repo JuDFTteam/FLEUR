@@ -9,7 +9,7 @@ CONTAINS
       use m_calc_cmt
       USE m_constants
       USE m_types
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_types_hybdat
       use m_calc_l_m_from_lm
 #ifdef CPP_MPI

@@ -26,7 +26,7 @@ MODULE m_juDFT_init
          juDFT_outUnit = outUnit
          IF (.NOT.judft_was_argument("-debugtime")) CALL signal_handler()
          IF (l_checkStack) CALL checkstack()
-#ifdef CPP_PATCH_INTEL
+#if defined(CPP_PATCH_INTEL)&&defined(__INTEL_COMPILER)
        call patch_intel()
 #endif
 
@@ -45,7 +45,7 @@ MODULE m_juDFT_init
 #endif
       END SUBROUTINE signal_handler
 
-#ifdef CPP_PATCH_INTEL
+#if defined(CPP_PATCH_INTEL)&&defined(__INTEL_COMPILER)
       subroutine patch_intel()
         !we try to patch the intel libraries to overwrite determination of 'INTEL' brand
         !otherwise performance on AMD CPUs is bad.

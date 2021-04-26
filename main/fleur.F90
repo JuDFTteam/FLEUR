@@ -38,6 +38,7 @@ CONTAINS
       ! this routine is the main PROGRAM
 
       USE m_types
+      USE m_types_forcetheo_extended
       USE m_constants
       USE m_optional
       USE m_cdn_io
@@ -57,7 +58,7 @@ CONTAINS
       USE m_juDFT_time
       USE m_calc_hybrid
       USE m_rdmft
-      USE m_io_hybinp
+      USE m_io_hybrid
       USE m_wann_optional
       USE m_wannier
       USE m_bs_comfort
@@ -107,6 +108,7 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
+      LOGICAL :: l_forceTheorem, l_lastIter
       REAL    :: fix, sfscale, rdummy
       REAL    :: mmpmatDistancePrev,occDistancePrev
 
@@ -137,7 +139,7 @@ CONTAINS
       IF(fi%atoms%n_hia>0 .AND. fmpi%irank.EQ.0) CALL readPrevmmpDistances(mmpmatDistancePrev,occDistancePrev,l_error)
       CALL hub1data%init(fi%atoms, fi%input, fi%hub1inp, fmpi, mmpmatDistancePrev, occDistancePrev, l_error)
       CALL hub1data%mpi_bc(fmpi%mpi_comm)
-      IF(fi%atoms%n_hia>0 .AND. .NOT.l_error) THEN
+      IF(fi%atoms%n_hia>0 .AND. .NOT.l_error .AND. .NOT.fi%hub1inp%l_forceHIAiteration) THEN
          !Set the current HIA distance to the read in value
          !Prevents too many HIA iterations after restart
          results%last_mmpmatDistance = mmpmatDistancePrev
@@ -214,8 +216,10 @@ CONTAINS
       CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
 #endif
       ! Open/allocate eigenvector storage (end)
+      l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
          iter = iter + 1
+         l_lastIter = l_lastIter.OR.(iter.EQ.fi%input%itmax)
          hub1data%overallIteration = hub1data%overallIteration + 1
 
          IF (fmpi%irank .EQ. 0) CALL openXMLElementFormPoly('iteration', (/'numberForCurrentRun', 'overallNumber      '/), &
@@ -334,7 +338,7 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
          CALL forcetheo%start(vtot, fmpi%irank == 0)
-         forcetheoloop: DO WHILE (forcetheo%next_job(iter == fi%input%itmax, fi%atoms, fi%noco, nococonv))
+         forcetheoloop: DO WHILE (forcetheo%next_job(fmpi,l_lastIter, fi%atoms, fi%noco, nococonv))
 
             CALL timestart("gen. of hamil. and diag. (total)")
             CALL timestart("eigen")
@@ -387,7 +391,7 @@ CONTAINS
                                   results, eig_id, fi%oneD, sphhar, stars, fi%vacuum)
                END IF
                IF (fi%input%gw .EQ. 2) THEN
-                  CALL juDFT_end("GW data written. Fleur ends.", fmpi%irank)
+                  CALL juDFT_end("SPEX data written. Fleur ends.", fmpi%irank)
                END IF
             END IF
 
@@ -600,6 +604,28 @@ CONTAINS
             l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f &
                                    .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
             CALL check_time_for_next_iteration(iter, l_cont)
+         END IF
+
+         ! Add extra iteration for force theorem if necessary
+         l_forceTheorem = .FALSE.
+         SELECT TYPE(forcetheo)
+            TYPE IS(t_forcetheo_mae)
+               l_forceTheorem = .TRUE.
+            TYPE IS(t_forcetheo_dmi)
+               l_forceTheorem = .TRUE.
+            TYPE IS(t_forcetheo_jij)
+               l_forceTheorem = .TRUE.
+            TYPE IS(t_forcetheo_ssdisp)
+               l_forceTheorem = .TRUE.
+         END SELECT
+         
+         IF(l_forceTheorem.AND..NOT.l_cont) THEN
+            IF(.NOT.l_lastIter) THEN
+               l_lastIter = .TRUE.
+               l_cont = .TRUE.
+            END IF
+         ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
+            l_cont = .FALSE.
          END IF
 
          !CALL writeTimesXML()

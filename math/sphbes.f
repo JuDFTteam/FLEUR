@@ -1,5 +1,6 @@
       MODULE m_sphbes
       use m_juDFT
+      IMPLICIT NONE
 c********************************************************************
 c calculate spherical Bessel functions and derivatives of sqrt(e)*r
 c                                   P. Marksteiner and E. Badralexe
@@ -8,8 +9,8 @@ c********************************************************************
       SUBROUTINE sphbes(
      >                  lmax,x,
      <                  fj)
-!$acc routine 
-      IMPLICIT NONE
+!$acc routine
+
 !     ..
 !     .. Arguments ..
       INTEGER, INTENT  (IN) :: lmax

@@ -115,13 +115,13 @@ MODULE m_umix
                   DO mp = -lmaxU_const,lmaxU_const
 
                      n_mmp(m,mp,i_u,1) =       gam * n_mmp_out(m,mp,i_u,1) + &
-                                         (1.0-gam) * n_mmp_in (m,mp,i_u,1) + &
-                                               del * n_mmp_out(m,mp,i_u,2) - &
+                                         (1.0-gam) * n_mmp_in (m,mp,i_u,1) - &
+                                               del * n_mmp_out(m,mp,i_u,2) + &
                                                del * n_mmp_in (m,mp,i_u,2)
 
                      n_mmp(m,mp,i_u,2) =       gam * n_mmp_out(m,mp,i_u,2) + &
-                                         (1.0-gam) * n_mmp_in (m,mp,i_u,2) + &
-                                               del * n_mmp_out(m,mp,i_u,1) - &
+                                         (1.0-gam) * n_mmp_in (m,mp,i_u,2) - &
+                                               del * n_mmp_out(m,mp,i_u,1) + &
                                                del * n_mmp_in (m,mp,i_u,1)
                      IF(noco%l_mperp) THEN
                         n_mmp(m,mp,i_u,3) =       alpha * n_mmp_out(m,mp,i_u,3) + &

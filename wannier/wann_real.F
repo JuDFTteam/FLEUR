@@ -25,6 +25,7 @@ c     ********************************************************
       USE m_types
       USE m_ylm
       USE m_constants
+      use m_juDFT
 
       IMPLICIT NONE
 
@@ -71,7 +72,7 @@ C     .. Local Arrays ..
       REAL rcc(3),x(3),rcc2(3)
       REAL bqpt(3)
 
-
+      call timestart("wann_real")
       tpi   = 2 * pimach()
       const = 1./(sqrt(omtil))
 
@@ -134,10 +135,12 @@ c              write (oUnit,*) 'val=',z(k,iband)*cmplx(cos(arg),sin(arg))
          END DO
       END IF
 c     write (oUnit,*) 'ir:p(i)',p(:)
+      call timestop("wann_real")
       RETURN
 c     ---> vacuum part
    20 CONTINUE
       xdnout = cmplx(0.,0.)
+      call timestop("wann_real")
       return
 c     ----> m.t. part
    40 CONTINUE
@@ -230,6 +233,7 @@ c..contributions from the local orbitals
 c     write (oUnit,*) 'mt:p(i)',p(:)
  8000 FORMAT (2f10.6)
 c
+      call timestop("wann_real")
       RETURN
       END SUBROUTINE wann_real
       END MODULE m_wann_real

@@ -49,7 +49,7 @@ contains
       use m_types_mpinp
       USE m_constants
       use m_intgrf, only: intgrf_init, intgrf
-      use m_rorder, only: rorderpf
+      use m_sort
       implicit NONE
       class(t_mpdata), intent(inout) :: mpdata
       type(t_mpinp), intent(in)      :: mpinp
@@ -161,10 +161,8 @@ contains
       ! Sort pointers in array, so that shortest |k+G| comes first
       do ikpt = 1, kpts%nkptf
          allocate(ptr(mpdata%n_g(ikpt)))
-         ! Divide and conquer algorithm for arrays > 1000 entries
-         divconq = MAX(0, INT(1.443*LOG(0.001*mpdata%n_g(ikpt))))
-         ! create pointers which correspond to a sorted array
-         CALL rorderpf(ptr, length_kG(1:mpdata%n_g(ikpt), ikpt), mpdata%n_g(ikpt), divconq)
+         ! create pointers which correspond to a sorted array (make algo stable)
+         call sort(ptr, length_kG(1:mpdata%n_g(ikpt), ikpt), [(1.0*i, i=1,mpdata%n_g(ikpt))])
          ! rearrange old pointers
          do igpt = 1, mpdata%n_g(ikpt)
             mpdata%gptm_ptr(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
@@ -624,7 +622,11 @@ contains
       type(t_atoms)   :: atoms
       integer :: itype, ilo
 
-      ! there is always at least two: u and u_dot
+      if(.not. allocated(mpdata%num_radfun_per_l)) then
+         allocate(mpdata%num_radfun_per_l(0:atoms%lmaxd, atoms%ntype))
+      endif
+
+      ! always two there are: u and u_dot
       mpdata%num_radfun_per_l = 2
       DO itype = 1, atoms%ntype
          DO ilo = 1, atoms%nlo(itype)

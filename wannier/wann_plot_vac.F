@@ -55,7 +55,7 @@ c     ..local scalars..
 c     ..intrinsic functions..
       intrinsic aimag,cmplx,conjg,real,sqrt
 
-
+      call timestart("wann_plot_vac")
       allocate (kvac1(nv2d),kvac2(nv2d),map2(nvd))
 
       tpi = 2 * pimach() ; ic = cmplx(0.,1.)
@@ -137,6 +137,6 @@ c            print*,"value=",value
       value=(value1-value)*((abs(point(3))-z1)/delz+2-i)+value
     
       deallocate (kvac1,kvac2,map2 )
-
+      call timestop("wann_plot_vac")
       END SUBROUTINE wann_plot_vac
       END MODULE m_wann_plot_vac

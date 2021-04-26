@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_radovlp_integrals
+         use m_juDFT
       contains
       subroutine wann_radovlp_integrals(
      >               rmsh,jri,dx,radial1,radial2,
@@ -30,6 +31,7 @@ c*************************************************
 
       REAL     :: difcub
       EXTERNAL :: difcub
+      call timestart("wann_radovlp_integrals")
 
       integrand=0.0
       do slc=1,2
@@ -40,7 +42,7 @@ c*************************************************
       enddo !slc
 
       CALL intgr3(
-     &  integrand,rmsh(:),dx,jri,integral)      
-
+     &  integrand,rmsh(:),dx,jri,integral)         
+      call timestop("wann_radovlp_integrals")
       end subroutine wann_radovlp_integrals
       end module m_wann_radovlp_integrals

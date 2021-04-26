@@ -15,7 +15,7 @@ CONTAINS
 
 ! odified for types D.W.
 
-   SUBROUTINE kptgen_hybrid(film, grid, cell, sym, kpts, l_soc)
+   SUBROUTINE kptgen_hybrid(film, grid, cell, sym, kpts, l_soc, l_onlyIdentitySym)
 
       USE m_types_cell
       USE m_types_sym
@@ -31,10 +31,11 @@ CONTAINS
       TYPE(t_kpts), INTENT(INOUT)   :: kpts
 ! - scalars -
       LOGICAL, INTENT(IN)   ::  l_soc
+      LOGICAL, INTENT(IN)   ::  l_OnlyIdentitySym
 ! - local scalars -
       INTEGER                  ::  i, j, k, nkpt
       INTEGER                  ::  ikpt, ikpt0, nkpti
-      INTEGER                  ::  nsym
+      INTEGER                  ::  nsym, nop
 ! - local arrays -
       INTEGER, ALLOCATABLE   ::  rot(:, :, :), rrot(:, :, :)
       INTEGER, ALLOCATABLE   ::  invtab(:)
@@ -68,17 +69,22 @@ CONTAINS
       ELSE
          nsym = 2*sym%nop
       END IF
+      nop = sym%nop
+      IF(l_OnlyIdentitySym) THEN
+         nop = 1
+         nsym = 1
+      END IF
 
       ALLOCATE(rot(3, 3, nsym), rtau(3, nsym))
 
-      DO i = 1, sym%nop
+      DO i = 1, nop
          rot(:, :, i) = sym%mrot(:, :, i)
          rtau(:, i) = sym%tau(:, i)
       END DO
 
-      DO i = sym%nop + 1, nsym
-         rot(:, :, i) = rot(:, :, i - sym%nop)
-         rtau(:, i) = rtau(:, i - sym%nop)
+      DO i = nop + 1, nsym
+         rot(:, :, i) = rot(:, :, i - nop)
+         rtau(:, i) = rtau(:, i - nop)
       END DO
 
       IF(any(rot(:, :, 1) - reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/),(/3, 3/)) /= 0)) &
@@ -88,8 +94,8 @@ CONTAINS
 
       invtab = 0
 
-      DO i = 1, sym%nop
-         DO j = 1, sym%nop
+      DO i = 1, nop
+         DO j = 1, nop
 
             IF(all(matmul(rot(:, :, i), rot(:, :, j)) &
                    == reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/),(/3, 3/))) &
@@ -105,8 +111,8 @@ CONTAINS
 
       END DO
 
-      DO i = sym%nop + 1, nsym
-         rrot(:, :, i) = -rrot(:, :, i - sym%nop)
+      DO i = nop + 1, nsym
+         rrot(:, :, i) = -rrot(:, :, i - nop)
       END DO
 
       ALLOCATE(kptp(nkpt), symkpt(nkpt), rarr(3), iarr2(3), iarr(nkpt))

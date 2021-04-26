@@ -39,7 +39,7 @@ CONTAINS
     REAL b_xavh,scale,b_con_outx,b_con_outy,mx,my,mz,&
          &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix,absmag
     REAL    rho11,rho22, alphdiff
-    COMPLEX rho21
+    COMPLEX rho21,d(2,2),chi(2,2)
     !     ..
     !     .. Local Arrays ..
     REAL b_xc_h(atoms%jmtd),b_xav(atoms%ntype)
@@ -60,11 +60,32 @@ CONTAINS
     absmag=SQRT(mx*mx+my*my+mz*mz)
     WRITE  (oUnit,8025) itype,mx,my,mz,absmag
     !---> determine the polar angles of the moment vector in the local frame
-    CALL pol_angle(mx,my,mz,betah,alphh)
+    CALL pol_angle(mx,my,mz,betah,alphh,.true.)
     WRITE  (oUnit,8026) itype,betah,alphh
 8025 FORMAT(2x,'Atom:',I9.1,' --> local frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
 8026 FORMAT(2x,'Atom:',I9.1,' -->',10x,' local beta=',f9.5,&
          &                   '  local alpha=',f9.5)
+
+     !now also give output in global frame
+     d(1,1)=mz/2
+     d(2,2)=-mz/2
+     d(1,2)=cmplx(mx,-my)/2
+     d(2,1)=cmplx(mx,-my)/2
+
+     chi=transpose(conjg(nococonv%chi(itype)))
+     !transform to global frame
+     d=MATMUL(conjg(transpose(chi)), MATMUL(d,((chi))))
+
+     mx=2*real(d(2,1))
+     my=2*aimag(d(2,1))
+     mz=d(1,1)-d(2,2)
+     CALL pol_angle(mx,my,mz,betah,alphh,.true.)
+     WRITE  (oUnit,8125) itype,mx,my,mz
+     WRITE  (oUnit,8126) itype,betah,alphh
+8125 FORMAT(2x,'Atom:',I9.1,' --> global frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5)
+8126 FORMAT(2x,'Atom:',I9.1,' -->',10x,' global beta=',f9.5,&
+         &                   '  global alpha=',f9.5)
+
 
     IF(noco%l_alignMT(itype)) THEN
       WRITE  (oUnit,8400) itype,nococonv%beta(itype),nococonv%alph(itype)
@@ -87,7 +108,7 @@ CONTAINS
           my = (-1.0) * my_mix
           mz = (-1.0) * mz_mix
        ENDIF
-       CALL pol_angle(mx,my,mz,betah,alphh)
+       CALL pol_angle(mx,my,mz,betah,alphh,.true.)
        WRITE  (oUnit,8027) nococonv%beta(itype),nococonv%alph(itype)-alphdiff
        WRITE  (oUnit,8028) betah,alphh-alphdiff
 8027   FORMAT(2x,'-->',10x,' input nococonv%beta=',f9.5, '  input nococonv%alpha=',f9.5)

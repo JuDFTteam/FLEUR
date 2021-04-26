@@ -101,6 +101,7 @@ c*************************************************
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
 
+      call timestart("wann_perpmag_rs")
       tpi=2*pimach()
 
       jspins=jspins_in
@@ -500,5 +501,6 @@ c       close(321)
        deallocate(lwindow,u_matrix_opt,ndimwin)
        deallocate(u_matrix,hwann,hreal)
 
+       call timestop("wann_perpmag_rs")
       end subroutine wann_perpmag_rs
       end module m_wann_perpmag_rs

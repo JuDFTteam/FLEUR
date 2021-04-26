@@ -229,6 +229,7 @@ c      real dotirp
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)   :: zzMat, zMat
 
+      call timestart("wann_plot_um_dat")
       um_format=.false.
       l_byindex=.false.
       l_byenergy=.false.
@@ -1054,6 +1055,6 @@ c*****************************************************************
 #ifdef CPP_MPI
       call MPI_BARRIER(mpi_communicator,mpiierr)
 #endif
-
+      call timestop("wann_plot_um_dat")
       END SUBROUTINE wann_plot_um_dat
       END MODULE m_wann_plot_um_dat

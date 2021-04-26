@@ -34,8 +34,8 @@ do
 	-cmake_opts) shift;CMAKE_OPTIONS=$1;;
 	-make) make_directly=1;;
 	-warn_only) CLI_WARN_ONLY=1;;
-  -d) debug=1;;
-  -amd) CLI_PATCH_INTEL=1;;
+        -d) debug=1;;
+        -amd) CLI_PATCH_INTEL=1;;
 	-*) error="Unknown argument";;
 	*)  break;;	# terminate while loop
     esac

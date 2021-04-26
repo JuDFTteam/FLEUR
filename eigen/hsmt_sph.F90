@@ -77,14 +77,14 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    !$acc&   copyin(fmpi%n_size,fmpi%n_rank)&
    !$acc&   copyin(input%l_useapw)&
    !$acc&   copyin(usdus%dus,usdus%uds,usdus%us,usdus%ddn,usdus%duds)&
-   !$acc&   present(fjgj,fjgj%fj,fjgj%gj)&
+   !$acc&   present(fjgj)&
    !$acc&   present(hmat,smat,hmat%data_c,hmat%data_r,smat%data_r,smat%data_c)
 
-   !$acc parallel
+   !$acc parallel default(none)
    !$acc loop gang
    DO  ki =  fmpi%n_rank+1, lapw%nv(jintsp), fmpi%n_size
       !$acc loop  vector independent&
-      !$acc &    PRIVATE(ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,dot)
+      !$acc &    PRIVATE(kj, kii,ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,dot)
       DO  kj = 1, min(ki,lapw%nv(iintsp))
          kii=(ki-1)/fmpi%n_size+1
          ski = lapw%gvec(:,ki,jintsp) + qssbti(:)
@@ -117,9 +117,8 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
             ELSE
                plegend(l3) = fleg1(l-1)*xlegend*plegend(modulo(l-1,3)) - fleg2(l-1)*plegend(modulo(l-2,3))
             END IF ! l
-
-            fct  = plegend(l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj,l,isp,iintsp) + gjkiln*fjgj%gj(l,kj,isp,iintsp)*ddnln )
-            fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj,l,isp,iintsp) + fjkiln*fjgj%gj(l,kj,isp,iintsp) )
+            fct  = plegend(l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj,l,isp,iintsp) + gjkiln*fjgj%gj(kj,l,isp,iintsp)*ddnln )
+            fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj,l,isp,iintsp) + fjkiln*fjgj%gj(kj,l,isp,iintsp) )
 
             VecHelpS = VecHelpS + fct
             VecHelpH = VecHelpH + fct*elall + fct2

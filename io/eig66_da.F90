@@ -16,7 +16,7 @@ MODULE m_eig66_da
    ! eig.vec: ne,eig,z**
    !**: real or complex depending on calculation type
    USE m_eig66_data
-   USE m_types
+   USE m_types_mat
    IMPLICIT NONE
 
 CONTAINS

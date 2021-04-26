@@ -32,7 +32,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    USE m_coulombmatrix
    USE m_hf_init
    USE m_hf_setup
-   USE m_io_hybinp
+   USE m_io_hybrid
    USE m_symm_hf
    USE m_exchange_valence_hf
    USE m_exchange_core
@@ -396,7 +396,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    END DO
 
    CALL glob_mpi%copy_mpi(fmpi)
-   call work_pack%init(fi, hybdat, glob_mpi, jsp, glob_mpi%rank, glob_mpi%size)
+   call work_pack%init(fi, hybdat, mpdata, glob_mpi, jsp, glob_mpi%rank, glob_mpi%size)
 
    CALL coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
 

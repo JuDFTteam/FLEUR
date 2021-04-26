@@ -12,4 +12,5 @@ fermi/tetra_ef.f90
 fermi/dosint.f90
 fermi/dosef.f90
 fermi/doswt.f90
+fermi/fermifct.f90
 )

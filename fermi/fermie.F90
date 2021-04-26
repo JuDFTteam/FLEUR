@@ -74,7 +74,7 @@ CONTAINS
 
 #ifdef CPP_MPI
     INTEGER, PARAMETER :: comm = MPI_COMM_SELF
-    INTEGER*4 :: nv_mpi(2),idum1d(0),idum2d(0,0)
+    INTEGER*4 :: nv_mpi(2)
     INTEGER ierr
 #endif
 

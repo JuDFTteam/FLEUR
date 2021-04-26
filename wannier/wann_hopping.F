@@ -21,6 +21,7 @@ c     Frank Freimuth
 c****************************************************
       use m_constants
       use m_wann_read_umatrix
+      use m_juDFT
 c      use m_wann_get_mp
 c      use m_wann_get_kpts
 c      use m_wann_wigner_seitz
@@ -96,6 +97,7 @@ c      real                :: kpoints(3,nkpts)
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
 
+      call timestart("wann_hopping")
       um_format=.false.   !if you would like to get a formatted um_dat
       repro_eig=.false.   !if you would like to check unitarity of u_matrix
 
@@ -574,6 +576,7 @@ c$$$      endif
       enddo !jspin
 
 
+      call timestop("wann_hopping")
 
       end subroutine wann_hopping
       end module m_wann_hopping

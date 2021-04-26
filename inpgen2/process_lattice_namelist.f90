@@ -271,7 +271,7 @@ CONTAINS
        !===>  8: orthorhombic-P   (oP)
 
     ELSEIF ( latsys =='orthorhombic-P'.OR.latsys =='oP'.OR.&
-         latsys =='simple-orthorhombic' ) THEN
+         latsys =='orP'.OR.latsys =='simple-orthorhombic' ) THEN
 
        noangles=.true.
        i_c = 1

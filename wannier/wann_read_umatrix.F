@@ -53,6 +53,7 @@ c************************************************************
 c**************************************************************
 c     read in chk
 c**************************************************************
+      call timestart("wann_read_umatrix2")
 
       write(oUnit,*)"read in chk"
       l_chk=.false.
@@ -206,7 +207,9 @@ c$$$                enddo
 c$$$             enddo
 c$$$          enddo
 c$$$          close(222)
-c$$$      endif !um_format       
+c$$$      endif !um_format     
+
+      call timestop("wann_read_umatrix2")  
       END SUBROUTINE wann_read_umatrix2
 
       SUBROUTINE wann_read_umatrix(
@@ -234,6 +237,7 @@ c$$$      endif !um_format
       character(len=3)    :: spin12(2)
       data spin12/'WF1' , 'WF2'/
 
+      call timestart("wann_read_umatrix")
       call wann_read_umatrix2(
      >         fullnkpts,num_wann,num_bands,
      >         um_format,jspin,wan90version,
@@ -281,6 +285,7 @@ c          write(222,*)num_wann,num_kpts,num_nnmax
           close(222)
       endif !um_format       
 
+      call timestop("wann_read_umatrix")
 
       END SUBROUTINE wann_read_umatrix
       END MODULE m_wann_read_umatrix

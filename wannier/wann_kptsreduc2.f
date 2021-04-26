@@ -50,7 +50,7 @@ c*****************************************************************
       real,allocatable    :: kptslen(:)
       integer             :: i,kk1,kk2,kk3
 
-
+      call timestart("wann_kptsreduc2")
       bbmat=matmul(bmat,transpose(bmat))
       write(oUnit,*) "Apply the symmetries to w90kpts"
 c**************************************************************
@@ -253,6 +253,7 @@ c            write(oUnit,'(a19,3f9.6)')"rotated internal: ",brot(:)/scale
      +     ="wann_kptsreduc2")
       deallocate(mapk,mapkoper,weight,irreduc)
 
+      call timestop("wann_kptsreduc2")
       contains
       real elemental function axmintx(x)
       implicit none

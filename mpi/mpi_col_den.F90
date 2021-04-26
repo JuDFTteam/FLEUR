@@ -155,6 +155,12 @@ CONTAINS
     IF (fmpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, dos%qis(:,:,jspin), 1)
     DEALLOCATE (r_b)
 
+    n = SIZE(dos%qTot,1)*SIZE(dos%qTot,2)
+    ALLOCATE(r_b(n))
+    CALL MPI_REDUCE(dos%qTot(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+    IF (fmpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, dos%qTot(:,:,jspin), 1)
+    DEALLOCATE (r_b)
+
     n = SIZE(dos%qal,1)*SIZE(dos%qal,2)*SIZE(dos%qal,3)*SIZE(dos%qal,4)
     ALLOCATE(r_b(n))
     CALL MPI_REDUCE(dos%qal(0:,:,:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)

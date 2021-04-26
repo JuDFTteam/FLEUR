@@ -49,7 +49,7 @@ build-gfortran-hdf5:
 #    - pytest $CTEST_FLAGS | tee $CI_PROJECT_DIR/build/Testing/pytest_session.stdout
     - pytest | tee $CI_PROJECT_DIR/build/Testing/pytest_session.stdout
   artifacts:
-    when: on_failure
+    when: always
     paths:
       - build/Testing
 #  only:

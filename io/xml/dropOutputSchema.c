@@ -11,7 +11,7 @@ int dropOutputSchema(char* version)
 {
   char * xsd_txt;
   int xsd_len;
-   if (strcmp(version,"0.33")==0){
+   if (strcmp(version,"0.34")==0){
      xsd_len=FleurOutputSchema_xsd_len;
      xsd_txt = FleurOutputSchema_xsd;
    }else{

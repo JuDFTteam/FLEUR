@@ -20,6 +20,7 @@ MODULE m_types_hub1inp
       LOGICAL :: l_fullMatch=.TRUE.       !Determines whether two chemical potentials are used to match (if possible)
       LOGICAL :: l_nonsphDC=.TRUE.        !Determines whether to remove the nonspherical contributions to the Hamiltonian (in the HIA orbital)
       LOGICAL :: l_correctEtot = .TRUE.   !Perform additional scf cycle without spin averaging of the correlated shell in DFT with frozen density matrix
+      LOGICAL :: l_forceHIAiteration = .FALSE.
 
       !Parameters for the solver
       REAL     :: beta = 100.0 !inverse temperature
@@ -69,6 +70,7 @@ CONTAINS
       CALL mpi_bc(this%l_dftspinpol,rank,mpi_comm)
       CALL mpi_bc(this%l_fullMatch,rank,mpi_comm)
       CALL mpi_bc(this%l_nonsphDC,rank,mpi_comm)
+      CALL mpi_bc(this%l_forceHIAiteration,rank,mpi_comm)
       CALL mpi_bc(this%beta,rank,mpi_comm)
       CALL mpi_bc(this%n_occpm,rank,mpi_comm)
       CALL mpi_bc(this%init_occ,rank,mpi_comm)
@@ -100,7 +102,7 @@ CONTAINS
       n_maxaddArgs = 5 !Maximum allowed number of additional arguments (excluding xiSOC and ccf)
 
       ALLOCATE(this%init_occ(4*ntype),source=0.0)
-      ALLOCATE(this%ccf(4*ntype),source=-1.0)
+      ALLOCATE(this%ccf(4*ntype),source=1.0)
       ALLOCATE(this%cfCoeffs(4*ntype,0:6,-6:6),source=0.0)
       ALLOCATE(this%xi_par(4*ntype),source=0.001)
       ALLOCATE(this%n_exc(4*ntype),source=0)
@@ -127,6 +129,9 @@ CONTAINS
          this%l_fullMatch = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fullMatch'))
          this%l_nonsphDC = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_nonsphDC'))
          this%l_correctEtot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_correctEtot'))
+         IF(xml%versionNumber>=34) THEN
+            this%l_forceHIAiteration = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_forceHIAiteration'))
+         ENDIF
       ENDIF
 
       !Read in the additional information given in the ldaHIA tags (exchange splitting and additional keywords)
