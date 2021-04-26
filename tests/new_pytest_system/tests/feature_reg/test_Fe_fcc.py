@@ -18,7 +18,7 @@ def test_Fe_fccXML(execute_fleur, grep_number, grep_exists):
     res_files = execute_fleur(test_file_folder)
     should_files = ['out']
     res_file_names = list(res_files.keys())
-    if 'cdn_hdf' not in res_file_names:
+    if 'cdn.hdf' not in res_file_names:
         should_files.append('cdn1')
     for file1 in should_files:
         assert file1 in res_file_names

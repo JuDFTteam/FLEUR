@@ -52,7 +52,7 @@ def test_Fe_bcc_FlipcdnYGGA(execute_fleur, grep_number, grep_exists):
     # Stage 2
     res_files = execute_fleur(test_file_folder, only_copy=[['inp2.xml', 'inp.xml'], 'JUDFT_WARN_ONLY'])
     my = grep_number(res_files['out'], "my=", "my=")
-    assert abs(my - 2.180) <= 0.001
+    assert abs(my + 2.180) <= 0.001
 
 @pytest.mark.bulk
 @pytest.mark.magnetism

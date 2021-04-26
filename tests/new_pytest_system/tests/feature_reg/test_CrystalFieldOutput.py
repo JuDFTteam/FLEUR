@@ -10,7 +10,7 @@ def test_CrystalFieldOutput(execute_fleur, grep_exists, grep_number):
     crystalfield calculations and check that the CFdata.hdf file was created
     """
     test_file_folder = './inputfiles/CrystalFieldOutput/'
-    res_files = execute_fleur(test_file_folder, 
+    res_files = execute_fleur(test_file_folder,
                               only_copy=['inp.xml', 'sym.xml'])
     res_file_names = list(res_files.keys())
     should_files = ['out']
@@ -27,7 +27,7 @@ def test_CrystalFieldOutput(execute_fleur, grep_exists, grep_number):
     #Test that there was a second vgen call with modified potential
     #Here the big multipole moments are grepped (Maybe not the best way)
     # The python grep has interprets the E+01 as some expression
-    assert grep_exists(res_files['out'], "0.14208E")#+01")
-    assert grep_exists(res_files['out'], "0.58864E")#+00")
-    assert grep_exists(res_files['out'], "0.72534E")#+00")
-    assert grep_exists(res_files['out'], "0.61349E")#+01")
+    assert grep_exists(res_files['out'], "0.14060E")#+01")
+    assert grep_exists(res_files['out'], "0.82207E")#+00")
+    assert grep_exists(res_files['out'], "0.89945E")#+00")
+    assert grep_exists(res_files['out'], "0.65772E")#+01")
