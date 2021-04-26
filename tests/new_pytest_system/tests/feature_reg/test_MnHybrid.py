@@ -13,7 +13,7 @@ def test_MnHybridNoinv(execute_fleur, check_value_outfile, fleur_binary):
     # special for this hybrid test:
     fleur, parallel = fleur_binary
     if parallel:
-        env = {'judft_MPI': "mpirun -n 3 --allow-run-as-root --mca btl vader,self"}
+        env = {'juDFT_MPI': "mpirun -n 3 --allow-run-as-root --mca btl vader,self"}
     else:
         env = {}
 
@@ -51,7 +51,7 @@ def test_MnHybridNoinv_eigpar(execute_fleur, check_value_outfile, fleur_binary):
     # special for this hybrid test:
     fleur, parallel = fleur_binary
     if parallel:
-        env = {'judft_MPI': "mpirun -n 3 --allow-run-as-root --mca btl vader,self"}
+        env = {'juDFT_MPI': "mpirun -n 3 --allow-run-as-root --mca btl vader,self"}
     else:
         env = {}
 
