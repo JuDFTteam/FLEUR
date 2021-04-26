@@ -34,6 +34,7 @@ build-gfortran-hdf5:
   dependencies:
     - build-gfortran-hdf5
   before_script:
+    - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest
   script:
@@ -89,6 +90,7 @@ test-gfortran-serial:
   dependencies:
     - build-gfortran-serial
   before_script:
+    - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest
   script:
@@ -167,6 +169,7 @@ test-pgi:
   dependencies:
     - build-pgi
   before_script:
+    - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest
   script:
@@ -238,6 +241,7 @@ test-intel:
   dependencies:
      - build-intel
   before_script:
+    - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest
   script:
@@ -264,6 +268,7 @@ gfortran-coverage:
   stage: html
   needs: []
   before_script:
+    - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest
   script:
