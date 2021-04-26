@@ -39,7 +39,7 @@ CONTAINS
     COMPLEX :: term,tempA,tempB
     REAL    :: v(3),bmrot(3,3),gkrot(3)
     COMPLEX :: ylm((atoms%lmaxd+1)**2),facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
-    COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT)))
+    COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT).or.any(noco%l_spinoffd_ldau)))
     LOGICAL :: l_apw,l_abclo
 
     l_abclo=present(abclo)

@@ -37,7 +37,7 @@ CONTAINS
     REAL temp
     INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp,j1,j2
     INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax
-    LOGICAL OK, isRoot
+    LOGICAL OK, isRoot, l_call_tlmplm
     COMPLEX :: one
     !     ..
     !     .. Local Arrays ..
@@ -72,15 +72,16 @@ CONTAINS
        one=MERGE(CMPLX(1.,0.),CMPLX(0.,1.),jsp<4)
        one=MERGE(CONJG(one),one,j1<j2)
 
+       l_call_tlmplm = j1.EQ.j2.OR.any(noco%l_unrestrictMT)
 
        !$OMP PARALLEL DO DEFAULT(NONE)&
        !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
        !$OMP PRIVATE(lmplm,lp,m,mp,n)&
        !$OMP PRIVATE(OK,s,in,info)&
-       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,isRoot)&
+       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,isRoot,l_call_tlmplm)&
        !$OMP SHARED(fmpi,input,hub1inp,hub1data,uun21,udn21,dun21,ddn21,j1,j2)
        DO  n = 1,atoms%ntype
-          CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,input,hub1inp,hub1data,td,ud)
+          IF(l_call_tlmplm) CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,input,hub1inp,hub1data,td,ud)
           OK=.FALSE.
           cholesky_loop:DO WHILE(.NOT.OK)
              OK=.TRUE.

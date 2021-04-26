@@ -70,7 +70,9 @@ MODULE m_usetup
          ! calculate potential matrix and total energy correction
          CALL v_mmp(atoms,input%jspins,hub1data%l_performSpinavg,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
          !spin off-diagonal elements
-         IF(any(noco%l_unrestrictMT)) CALL v_mmp_21(atoms,n_mmp(:,:,:,3),u,pot%mmpMat(:,:,:,3),results%e_ldau)
+         IF(any(noco%l_unrestrictMT).OR.input%ldauSpinoffd) THEN
+            CALL v_mmp_21(atoms,n_mmp(:,:,:,3),u,pot%mmpMat(:,:,:,3),results%e_ldau)
+         ENDIF
 
          IF (mpi%irank.EQ.0) THEN
             DO ispin = 1,SIZE(pot%mmpMat,4)
