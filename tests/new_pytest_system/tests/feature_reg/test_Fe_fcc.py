@@ -34,7 +34,7 @@ def test_Fe_fccXML(execute_fleur, grep_number, grep_exists):
 
     assert abs(qfix - 1.0) <= 0.00001
     assert abs(fermi - 0.322013) <= 0.01
-    assert abs(tenergy - -1273.0878841822) <= 0.00001
+    assert abs(tenergy - -1273.0878841822) <= 0.00002
     assert abs(dist - 0.0001) <= 0.01
     assert abs(mm - 3.93483) <= 0.001
 

@@ -65,6 +65,6 @@ def test_Noncollinear_downward_compatible(execute_fleur, grep_number, grep_exist
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
-    dist = grep_number(res_files['out'], "distance of charge densities for it=  4", ":")
+    dist = grep_number(res_files['out'], "distance of charge densities for it=    4", ":")
 
     assert abs(dist - 130.55) <= 0.01

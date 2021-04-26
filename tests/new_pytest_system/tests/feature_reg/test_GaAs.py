@@ -109,7 +109,7 @@ def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
-    assert grep_exists(res_files['relax.xml'], "4204.714")
+    assert grep_exists(res_files['relax.xml'], "4205.364")
     assert grep_exists(res_files['relax.xml'], "1.3806000000   -0.0179")
 
 
