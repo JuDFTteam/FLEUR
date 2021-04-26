@@ -185,6 +185,7 @@ CONTAINS
       CALL make_forcetheo(forcetheo_data, cell, sym, atoms, forcetheo)
       CALL lapw_dim(kpts, cell, input, noco, nococonv, oneD, forcetheo, atoms)
       CALL input%init(noco, hybinp%l_hybrid, lapw_dim_nbasfcn)
+      CALL noco%init(atoms,input%ldauSpinoffd)
       CALL oned%init(atoms) !call again, because make_stars modified it :-)
       CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
       l_timeReversalCheck = .FALSE.
