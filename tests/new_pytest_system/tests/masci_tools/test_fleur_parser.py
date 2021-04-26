@@ -18,7 +18,7 @@ def test_fleur_mt_inpxml_parser(request, fleur_test_name, test_file, parser_test
     inpxmlfilepath = os.path.abspath(os.path.join(parser_testdir, f'./{fleur_test_name}/', 'inp.xml'))
     assert os.path.isfile(inpxmlfilepath)
 
-    parser_info = {'parser_warnings': []}
+    parser_info = {}
     inp_dict = inpxml_parser(inpxmlfilepath, parser_info_out=parser_info)
 
     assert inp_dict is not None
@@ -44,7 +44,9 @@ def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, parser_test
     #           - bandgap output only in hist mode
 
     #These warnings are expected to appear at the moment
-    KNOWN_WARNINGS = {'No text found for tag targetStructureClass'} #Will be removed in the future
+    KNOWN_WARNINGS = {'No values found for attribute potential',
+                      'No values found for attribute chargeDensity',
+                      'No values found for attribute l_f'}
 
     pytest.importorskip('masci_tools',minversion='0.4.0-dev3')
     from masci_tools.io.parsers.fleur import outxml_parser
@@ -54,7 +56,7 @@ def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, parser_test
 
     assert os.path.isfile(outxmlfilepath)
 
-    parser_info = {'parser_warnings': []}
+    parser_info = {}
     out_dict = outxml_parser(outxmlfilepath, parser_info_out=parser_info)
 
     assert out_dict is not None
