@@ -804,7 +804,7 @@ def check_value_outfile():
                     value_string = line.split(before_str)[-1]
                     value_string = value_string.split(after_str)
                     # remove empty strings
-                    value_string = [i for i in value_string if i is not ""][0]
+                    value_string = [i for i in value_string if i != ""][0]
                     value = float(value_string)
                     if (expected[exp_idx] is not None):
                         if(abs(value - expected[exp_idx]) < delta):
