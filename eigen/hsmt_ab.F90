@@ -70,7 +70,7 @@ CONTAINS
 
 
     !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
-    !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) &
+    !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
     !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo) &
     !$acc present(abclo,alo1,blo1,clo1)&
     !$acc private(gkrot,k,v,ylm,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
@@ -97,10 +97,10 @@ CONTAINS
           facB(lmMin:lmMax) = tempB
        END DO
        !$acc end loop
-       !!$acc loop vector private(ll)
+
        abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
        abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
-       !!$acc end loop
+       
        IF (l_abclo) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
