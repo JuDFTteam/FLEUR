@@ -5,11 +5,13 @@
 !--------------------------------------------------------------------------------
 MODULE m_hsmt_ab
   use m_juDFT
+  use openacc
+  use cudafor
   implicit none
 
 CONTAINS
 
-  SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
+  SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1,p_async_num)
 !Calculate overlap matrix, CPU vesion
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
@@ -26,8 +28,10 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin,n,na,iintsp
+    integer, intent(in), optional :: p_async_num
+
     LOGICAL,INTENT(IN)   :: l_nonsph
-    INTEGER,INTENT(OUT)  :: ab_size
+    INTEGER,INTENT(OUT)  :: ab_size    
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (INOUT) :: abCoeffs(:,:)
@@ -36,12 +40,29 @@ CONTAINS
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
 
     INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ll
+    integer(acc_handle_kind) :: async_num
     COMPLEX :: term,tempA,tempB
     REAL    :: v(3),bmrot(3,3),gkrot(3)
     COMPLEX :: ylm((atoms%lmaxd+1)**2),facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
     COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT)))
     LOGICAL :: l_apw,l_abclo
+      REAL     :: ynorm_dev((lmax + 1)**2)
+      REAL     :: p(0:lmax, 0:lmax)
+      REAL     :: c(0:lmax), s(0:lmax)
+      REAL     :: fac, x, y, z, xy, r, rxy, cth, sth, cph, sph, cph2
+      REAL a, cd, fpi
+      integer :: lm0
+      REAL, PARAMETER   :: small = 1.0e-12
+      COMPLEX  :: ylms
 
+
+    if(present(p_async_num))then
+       async_num = p_async_num
+    else
+       async_num = 0
+    endif
+   
+    write (*,*) "Flag 3", async_num
     l_abclo=present(abclo)
     lmax = MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
     ab_size = lmax*(lmax+2)+1
@@ -63,70 +84,86 @@ CONTAINS
     !$OMP& PRIVATE(k,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB,v) &
     !$OMP& PRIVATE(gkrot,lmMin,lmMax,tempA,tempB)
 #else
-    !$acc kernels present(abCoeffs) default(none)
+    !$acc kernels present(abCoeffs) default(none) async(async_num)
     abCoeffs(:,:)=0.0
     !$acc end kernels
 #endif
 
 
-    !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
-    !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
-    !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo) &
-    !$acc present(abclo,alo1,blo1,clo1)&
-    !$acc private(gkrot,k,v,ylm,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
-    DO k = 1,lapw%nv(iintsp)
-       !-->  apply the rotation that brings this atom into the
-       !-->  representative (this is the definition of ngopr(na)
-       !-->  and transform to cartesian coordinates
-       v=lapw%vk(:,k,iintsp)
-       !gkrot(:) = MATMUL(bmrot,v)
-       gkrot(1) = bmrot(1,1)*v(1)+bmrot(1,2)*v(2)+bmrot(1,3)*v(3)
-       gkrot(2) = bmrot(2,1)*v(1)+bmrot(2,2)*v(2)+bmrot(2,3)*v(3)
-       gkrot(3) = bmrot(3,1)*v(1)+bmrot(3,2)*v(2)+bmrot(3,3)*v(3)
+    !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo) async(async_num)
 
-       !-->    generate spherical harmonics
-       CALL ylm4(lmax,gkrot,ylm)
+    !$acc data create(ylm, facA, facB, ynorm_dev, p, s, c) async(async_num)
+
+    !$acc host_data use_device(abcoeffs)
+    write (*,*) "async_num, ptr", async_num, "  ", c_devloc(abcoeffs)
+    !$acc end host_data
+
+    !$omp barrier
+
+    if(present(p_async_num)) then
+     !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32) async(async_num)&
+     !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo) &
+     !$acc present(abclo,alo1,blo1,clo1) &
+     !$acc private(gkrot,k,v,ylm,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
+     DO k = 1,lapw%nv(iintsp)
+        !-->  apply the rotation that brings this atom into the
+        !-->  representative (this is the definition of ngopr(na)
+        !-->  and transform to cartesian coordinates
+        v=lapw%vk(:,k,iintsp)
+        !gkrot(:) = MATMUL(bmrot,v)
+        gkrot(1) = bmrot(1,1)*v(1)+bmrot(1,2)*v(2)+bmrot(1,3)*v(3)
+        gkrot(2) = bmrot(2,1)*v(1)+bmrot(2,2)*v(2)+bmrot(2,3)*v(3)
+        gkrot(3) = bmrot(3,1)*v(1)+bmrot(3,2)*v(2)+bmrot(3,3)*v(3)
+   
+        !-->    generate spherical harmonics
+   !   CALL ylm4(lmax,gkrot,ylm)
+
        !-->  synthesize the complex conjugates of a and b
-       !$acc  loop vector private(l,tempA,tempB,lmMin,lmMax)
-       DO l = 0,lmax
-          tempA = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp)
-          tempB = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp)
-          lmMin = l*(l+1) + 1 - l
-          lmMax = l*(l+1) + 1 + l
-          facA(lmMin:lmMax) = tempA
-          facB(lmMin:lmMax) = tempB
-       END DO
-       !$acc end loop
+      !$acc  loop vector private(l,tempA,tempB,lmMin,lmMax)
+      DO l = 0,lmax
+         tempA = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp)
+         tempB = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp)
+         lmMin = l*(l+1) + 1 - l
+         lmMax = l*(l+1) + 1 + l
+         facA(lmMin:lmMax) = tempA
+         facB(lmMin:lmMax) = tempB
+      END DO
+      !$acc end loop
 
-       abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
-       abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
-       
-       IF (l_abclo) THEN
-          !determine also the abc coeffs for LOs
-          invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
-          term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
-          !!$acc loop vector private(lo,l,nkvec,ll1,m,lm)
-          DO lo = 1,atoms%nlo(n)
-             l = atoms%llo(lo,n)
-             DO nkvec=1,invsfct*(2*l+1)
-                IF (lapw%kvec(nkvec,lo,na)==k) THEN !This k-vector is used in LO
-                   ll1 = l*(l+1) + 1
-                   DO m = -l,l
-                      lm = ll1 + m
-                      abclo(1,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*alo1(lo)
-                      abclo(2,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*blo1(lo)
-                      abclo(3,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*clo1(lo)
-                   END DO
-                END IF
-             ENDDO
-          ENDDO
-          !!$acc end loop
-       ENDIF
-
+      abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
+      abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
+!       
+!       IF (l_abclo) THEN
+!          !determine also the abc coeffs for LOs
+!          invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
+!          term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
+!          !!$acc loop vector private(lo,l,nkvec,ll1,m,lm)
+!          DO lo = 1,atoms%nlo(n)
+!             l = atoms%llo(lo,n)
+!             DO nkvec=1,invsfct*(2*l+1)
+!                IF (lapw%kvec(nkvec,lo,na)==k) THEN !This k-vector is used in LO
+!                   ll1 = l*(l+1) + 1
+!                   DO m = -l,l
+!                      lm = ll1 + m
+!                      abclo(1,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*alo1(lo)
+!                      abclo(2,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*blo1(lo)
+!                      abclo(3,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*clo1(lo)
+!                   END DO
+!                END IF
+!             ENDDO
+!          ENDDO
+!          !!$acc end loop
+!       ENDIF
+!
     ENDDO !k-loop
     !$acc end parallel loop
+    endif
+    !$acc end data
     !$acc end data
 
+    if(.not. present(p_async_num)) then
+      !$acc wait(0)
+    endif
 #ifndef _OPENACC
     !$OMP END PARALLEL DO
 #endif

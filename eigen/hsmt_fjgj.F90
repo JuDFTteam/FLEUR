@@ -13,10 +13,19 @@ MODULE m_hsmt_fjgj
   CONTAINS
     procedure :: alloc
     procedure :: calculate => hsmt_fjgj_cpu
+    procedure :: free
   END TYPE
   PUBLIC t_fjgj
 
 CONTAINS
+  subroutine free(fjgj)
+     implicit none 
+
+     CLASS(t_fjgj),INTENT(OUT) :: fjgj
+     deallocate(fjgj%fj)
+     deallocate(fjgj%gj)
+  end subroutine free
+
   subroutine alloc(fjgj,nvd,lmaxd,isp,noco)
     USE m_types
     CLASS(t_fjgj),INTENT(OUT) :: fjgj

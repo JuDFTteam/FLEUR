@@ -68,12 +68,12 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:),ccof(:,:,:,:)
 
     REAL,    ALLOCATABLE :: help_r(:),h_r(:,:),s_r(:,:)
-    REAL     CPP_BLAS_sdot
+    !REAL     CPP_BLAS_sdot
     EXTERNAL CPP_BLAS_sdot,CPP_BLAS_sspmv
 
     COMPLEX,   PARAMETER :: one_c=(1.0,0.0), zro_c=(0.0,0.0)
     COMPLEX, ALLOCATABLE :: help_c(:),h_c(:,:),s_c(:,:)
-    COMPLEX  CPP_BLAS_cdotc
+    !COMPLEX  CPP_BLAS_cdotc
     EXTERNAL CPP_BLAS_cdotc,CPP_BLAS_chpmv
     REAL,    ALLOCATABLE :: rwork(:)
 
