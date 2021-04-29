@@ -22,7 +22,7 @@ module m_types_fft
       real, allocatable :: afft(:), bfft(:)
 #ifdef CPP_FFT_MKL
       ! mkl
-      type(dfti_descriptor), pointer :: dfti_handle
+      type(dfti_descriptor), pointer, allocatable :: dfti_handle(:)
 #endif
 #ifdef CPP_SPFFT
       !SpFFT
@@ -106,6 +106,17 @@ contains
             !$omp end critical
          enddo
 #endif
+      case(mklFFT_const)
+#ifdef CPP_FFT_MKL
+         n_plans = min(max_threads, batch_size)
+         allocate(fft%dfti_handle(n_plans))
+         do i = 1,n_plans
+            ok = DftiCreateDescriptor(fft%dfti_handle(i), dfti_double, dfti_complex, 3, length)
+            if (ok /= 0) call juDFT_error("cant create descriptor", calledby="fft_interface")
+            ok = DftiCommitDescriptor(fft%dfti_handle(i))
+            if (ok /= 0) call juDFT_error("can't commit descriptor", calledby="fft_interface")
+         enddo
+#endif
 
 #ifdef CPP_SPFFT
       case(spFFT_const)
@@ -163,13 +174,6 @@ contains
             IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in obtaining spFFT space domain! (2)")
          END IF
 #endif
-      case(mklFFT_const)
-#ifdef CPP_FFT_MKL
-         ok = DftiCreateDescriptor(fft%dfti_handle, dfti_double, dfti_complex, 3, length)
-         if (ok /= 0) call juDFT_error("cant create descriptor", calledby="fft_interface")
-         ok = DftiCommitDescriptor(fft%dfti_handle)
-         if (ok /= 0) call juDFT_error("can't commit descriptor", calledby="fft_interface")
-#endif
       case default 
          size_dat = product(length)
          allocate (fft%afft(size_dat), fft%bfft(size_dat), stat=ok)
@@ -198,6 +202,20 @@ contains
             fft%in(:,me) = dat(:,i)
             call fftw_execute_dft(fft%plan(me), fft%in(:,me), fft%out(:,me))
             dat(:,i) = fft%out(:,me)
+         enddo
+         !$omp end parallel do
+#endif
+      case(mklFFT_const)
+#ifdef CPP_FFT_MKL
+         me = 1
+         !$omp parallel do default(none) private(me, i) shared(fft, dat)
+         do i = 1,size(dat,2)
+            !$ me = omp_get_thread_num() + 1
+            if (fft%forw) then
+               ok = DftiComputeForward(fft%dfti_handle(me), dat(:,i))
+            else
+               ok = DftiComputeBackward(fft%dfti_handle(me), dat(:,i))
+            end if
          enddo
          !$omp end parallel do
 #endif
@@ -241,14 +259,6 @@ contains
                END DO
             END DO
          END IF
-#endif
-      case(mklFFT_const)
-#ifdef CPP_FFT_MKL
-         if (fft%forw) then
-            ok = DftiComputeForward(fft%dfti_handle, dat)
-         else
-            ok = DftiComputeBackward(fft%dfti_handle, dat)
-         end if
 #endif
       case default
          do i = 1,size(dat,2)
@@ -295,7 +305,7 @@ contains
          call fftw_free(fft%ptr_in)
          call fftw_free(fft%ptr_out)
 
-         do i=1,size(fft%plan,1)
+         do i=1,size(fft%plan)
             !$omp critical
             call fftw_destroy_plan(fft%plan(i))
             !$omp end critical
@@ -303,16 +313,19 @@ contains
          enddo     
          deallocate(fft%plan)
 #endif
+      case(mklFFT_const)
+#ifdef CPP_FFT_MKL
+         do i=1,size(fft%dfti_handle)
+            ok = DftiFreeDescriptor(fft%dfti_handle(i))
+         enddo
+         deallocate(fft%dfti_handle)
+#endif
 #ifdef CPP_SPFFT
       case(spFFT_const)
          ok = spfft_transform_destroy(fft%transform)
          IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in destroying spFFT fft%transform! (1)")
          fft%transform    = c_null_ptr
          fft%realSpacePtr = c_null_ptr
-#endif
-      case(mklFFT_const)
-#ifdef CPP_FFT_MKL
-         ok = DftiFreeDescriptor(fft%dfti_handle)
 #endif
       case default
          
