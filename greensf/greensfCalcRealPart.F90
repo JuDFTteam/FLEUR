@@ -134,48 +134,8 @@ MODULE m_greensfCalcRealPart
       !Broadcast cutoffs and modified imaginary parts
       CALL greensfImagPart%mpi_bc(fmpi%mpi_comm)
 
-
       !Distribute the Calculations
-#ifdef CPP_MPI
-      IF(fmpi%isize>1) THEN
-         IF(gfinp%n>=fmpi%isize) THEN
-            !Just distribute the individual gf elements over the ranks
-            n_gf_task = FLOOR(REAL(gfinp%n)/(fmpi%isize))
-            extra = gfinp%n - n_gf_task*fmpi%isize
-            i_gf_start = fmpi%irank*n_gf_task + 1 + extra
-            i_gf_end = (fmpi%irank+1)*n_gf_task   + extra
-            IF(fmpi%irank < extra) THEN
-               i_gf_start = i_gf_start - (extra - fmpi%irank)
-               i_gf_end = i_gf_end - (extra - fmpi%irank - 1)
-            ENDIF
-            spin_start = 1
-            spin_end   = nspins
-         ELSE IF(gfinp%n*nspins>fmpi%isize) THEN
-            !Just fill up the ranks
-            i_gf_start = fmpi%irank + 1
-            i_gf_end   = fmpi%irank + 1
-            spin_start = 1
-            spin_end   = nspins
-         ELSE
-            !If there are few enough gf elements then distribute the spins
-            spin_start = MOD(fmpi%irank,nspins) + 1
-            spin_end   = MOD(fmpi%irank,nspins) + 1
-            i_gf_start = 1 + FLOOR(REAL(fmpi%irank)/nspins)
-            i_gf_end   = 1 + FLOOR(REAL(fmpi%irank)/nspins)
-         ENDIF
-      ELSE
-         !Distribute nothing
-         i_gf_start = 1
-         i_gf_end = gfinp%n
-         spin_start = 1
-         spin_end   = nspins
-      ENDIF
-#else
-      i_gf_start = 1
-      i_gf_end = gfinp%n
-      spin_start = 1
-      spin_end   = nspins
-#endif
+      CALL gfinp%distribute_elements(fmpi%irank, fmpi%isize, nspins, i_gf_start, i_gf_end, spin_start, spin_end)
 
       DO i_gf = i_gf_start, i_gf_end
 

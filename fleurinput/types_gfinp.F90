@@ -96,6 +96,7 @@ MODULE m_types_gfinp
    CONTAINS
       PROCEDURE :: read_xml             => read_xml_gfinp
       PROCEDURE :: mpi_bc               => mpi_bc_gfinp
+      PROCEDURE :: distribute_elements  => distribute_elements_gfinp
       PROCEDURE :: init                 => init_gfinp
       PROCEDURE :: find                 => find_gfelem
       PROCEDURE :: find_contour         => find_contour
@@ -185,6 +186,75 @@ CONTAINS
 #endif
 
    END SUBROUTINE mpi_bc_gfinp
+
+   SUBROUTINE distribute_elements_gfinp(this, rank, size, nspins, i_gf_start, i_gf_end, spin_start, spin_end)
+      !Distribute the Greens function elements that are not kresolved for the Kramers Kronig
+      !integration
+      CLASS(t_gfinp), INTENT(IN)  :: this
+      INTEGER,        INTENT(IN)  :: rank, size, nspins
+      INTEGER,        INTENT(OUT) :: i_gf_start, i_gf_end, spin_start, spin_end
+
+      INTEGER :: n_elems, i_gf, currentIndex, n_gf_task, extra
+
+      n_elems = COUNT(.NOT.this%elem(:)%l_kresolved_int)
+
+#ifdef CPP_MPI
+      IF(size>1) THEN
+         IF(n_elems>=size) THEN
+            !Just distribute the individual gf elements over the ranks
+            n_gf_task = FLOOR(REAL(n_elems)/(size))
+            extra = n_elems - n_gf_task*size
+            i_gf_start = rank*n_gf_task + 1 + extra
+            i_gf_end = (rank+1)*n_gf_task   + extra
+            IF(rank < extra) THEN
+               i_gf_start = i_gf_start - (extra - rank)
+               i_gf_end = i_gf_end - (extra - rank - 1)
+            ENDIF
+            spin_start = 1
+            spin_end   = nspins
+         ELSE IF(n_elems*nspins>size) THEN
+            !Just fill up the ranks
+            i_gf_start = rank + 1
+            i_gf_end   = rank + 1
+            spin_start = 1
+            spin_end   = nspins
+         ELSE
+            !If there are few enough gf elements then distribute the spins
+            spin_start = MOD(rank,nspins) + 1
+            spin_end   = MOD(rank,nspins) + 1
+            i_gf_start = 1 + FLOOR(REAL(rank)/nspins)
+            i_gf_end   = 1 + FLOOR(REAL(rank)/nspins)
+         ENDIF
+      ELSE
+         !Distribute nothing
+         i_gf_start = 1
+         i_gf_end = n_elems
+         spin_start = 1
+         spin_end   = nspins
+      ENDIF
+#else
+      i_gf_start = 1
+      i_gf_end = n_elems
+      spin_start = 1
+      spin_end   = nspins
+#endif
+
+      currentIndex = 0
+      DO i_gf = 1, this%n
+         IF(this%elem(i_gf)%l_kresolved_int) CYCLE
+         currentIndex = currentIndex + 1
+         IF(currentIndex.EQ.i_gf_start) THEN
+            i_gf_start = i_gf
+         ENDIF
+         IF(currentIndex.EQ.i_gf_end) THEN
+            i_gf_end = i_gf
+            EXIT
+         ELSE IF(i_gf.EQ.this%n) THEN
+            CALL juDFT_error('Distribution of Greens functions elements failed', calledby='distribute_elements_gfinp')
+         ENDIF
+      ENDDO
+
+   END SUBROUTINE distribute_elements_gfinp
 
    SUBROUTINE read_xml_gfinp(this, xml)
       USE m_types_xml
