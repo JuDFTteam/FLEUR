@@ -22,7 +22,7 @@ module m_types_fft
       real, allocatable :: afft(:), bfft(:)
 #ifdef CPP_FFT_MKL
       ! mkl
-      type(dfti_descriptor), pointer, allocatable :: dfti_handle(:)
+      type(dfti_descriptor), allocatable :: dfti_handle(:)
 #endif
 #ifdef CPP_SPFFT
       !SpFFT
