@@ -212,7 +212,7 @@ contains
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
          me = 1
-         !$omp parallel do default(none) private(me, i) shared(fft, dat)
+         !$omp parallel do default(none) private(me, i, ok) shared(fft, dat)
          do i = 1,size(dat,2)
             !$ me = omp_get_thread_num() + 1
             if (fft%forw) then
@@ -220,6 +220,7 @@ contains
             else
                ok = DftiComputeBackward(fft%container(me)%dfti_handle, dat(:,i))
             end if
+            if(ok /= 0) juDFT_error("problem executing dft")
          enddo
          !$omp end parallel do
 #endif
