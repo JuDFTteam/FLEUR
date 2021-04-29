@@ -143,7 +143,6 @@ CONTAINS
     CALL new_argument(0,"-no_out","Do not open the 'out' file but write to stdout","")
     CALL new_argument(0,"-minimalOutput","Reduce the amount of output in the out.xml file","")
     CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","")
-    CALL new_argument(0,"-gw","Add alternative k point set for GW in all outputs for the XML input file","")
     CALL new_argument(0,"-noco","write out noco parameters in all outputs for inp.xml","")
     CALL new_argument(0,"-greensf","write out green's function parameters in all outputs for inp.xml","")
     CALL new_argument(0,"-h","Print this message","")

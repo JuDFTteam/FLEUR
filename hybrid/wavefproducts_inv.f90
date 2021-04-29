@@ -36,7 +36,7 @@ CONTAINS
       type(t_mat) ::  z_kqpt_p
       complex, allocatable :: c_phase_kqpt(:)
 
-      CALL timestart("wavefproducts_inv5")
+      CALL timestart("wavefproducts_inv")
       cprod%data_r = 0.0
       ikqpt = -1
       kqpthlp = fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)
@@ -55,7 +55,7 @@ CONTAINS
       call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
                                 ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
 
-      CALL timestop("wavefproducts_inv5")
+      CALL timestop("wavefproducts_inv")
 
    END SUBROUTINE wavefproducts_inv
 
@@ -103,6 +103,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE    ::    ccmt_nk2(:, :, :)
       COMPLEX, ALLOCATABLE    ::    ccmt_nkqpt(:, :, :)
 
+      call timestart("wavefproducts_inv_MT")
 
       allocate(rarr2(bandoi:bandof, hybdat%nbands(ik,jsp)), stat=ok, source=0.0)
       if(ok /= 0) call juDFT_error("Can't alloc rarr2 in wavefproducts_inv_MT")
@@ -255,6 +256,7 @@ CONTAINS
                         ! go to lm index for m1=-l1
                         lmp1 = lm1_0 + p1
 
+                        call timestart("m1 loop")
                         DO m1 = -l1, l1
                            ! Gaunt condition -m1+m2-m=0
                            m2 = m1 + m
@@ -312,6 +314,7 @@ CONTAINS
                            lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
 
                         END DO  !m1
+                        call timestop("m1 loop")
 
                         ishift = -2*m*mpdata%num_radbasfn(l, itype)
 
@@ -322,29 +325,26 @@ CONTAINS
                         rdum = tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatom1))
                         rfac1 = sin(rdum)/sqrt(2.0)
                         rfac2 = cos(rdum)/sqrt(2.0)
-                        !$OMP PARALLEL DO default(none) collapse(3) &
+                        call timestart("ibandibando loop")
+                        !$OMP PARALLEL DO default(none) collapse(2) &
                         !$OMP private(iband, ibando, i, iob, rdum1, rdum2, add1, add2, j) &
                         !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
                         !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, jsp, mpdata)
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
-                              DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 iob = ibando + 1 - bandoi
-                                 rdum1 = rarr3(1, ibando, iband)
-                                 rdum2 = rarr3(2, ibando, iband)
-                                 add1 = rdum1*rfac2 + rdum2*rfac1
-                                 add2 = rdum2*rfac2 - rdum1*rfac1
-                                 j = lm1 + i
-                                 cprod%data_r(j, iob + (iband-1)*psize) &
-                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add1
-                                 j = lm2 + i
-                                 cprod%data_r(j, iob + (iband-1)*psize) &
-                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add2
-
-                              END DO  !i -> loop over mixed basis functions
+                              iob = ibando + 1 - bandoi
+                              rdum1 = rarr3(1, ibando, iband)
+                              rdum2 = rarr3(2, ibando, iband)
+                              add1 = rdum1*rfac2 + rdum2*rfac1
+                              add2 = rdum2*rfac2 - rdum1*rfac1
+                              call daxpy(mpdata%num_radbasfn(l, itype), add1, hybdat%prodm(1, n, l, itype), 1, &
+                                         cprod%data_r(lm1+1, iob + (iband-1)*psize), 1)
+                              call daxpy(mpdata%num_radbasfn(l, itype), add2, hybdat%prodm(1, n, l, itype), 1, &
+                                         cprod%data_r(lm2+1, iob + (iband-1)*psize), 1)
                            END DO  !ibando
                         END DO  !iband
                         !$OMP end parallel do
+                        call timestop("ibandibando loop")
 
                         ! go to lm start index for next m-quantum number
                         lm = lm + mpdata%num_radbasfn(l, itype)
@@ -957,5 +957,6 @@ CONTAINS
          iiatom = iiatom + fi%atoms%neq(itype)
          lm_00 = lm_00 + fi%atoms%neq(itype)*ioffset
       END DO  !itype
+      call timestop("wavefproducts_inv_MT")
    end subroutine wavefproducts_inv_MT
 end module m_wavefproducts_inv

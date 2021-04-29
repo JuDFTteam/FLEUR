@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.33">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.34">
 
    <!--Here the FleurInputSchema is included since the out.xml contains a complete dump of the inp.xml!-->
    <xsd:include schemaLocation="FleurInputSchema.xsd"/>
@@ -16,8 +16,14 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="ERROR" type="ErrorType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="endDateAndTime" type="DateAndTimeType"/>
       </xsd:all>
-      <xsd:attribute name="fleurOutputVersion" type="FleurVersionType" use="required"/>
+      <xsd:attribute name="fleurOutputVersion" type="FleurOutputVersionType" use="required"/>
    </xsd:complexType>
+
+   <xsd:simpleType name="FleurOutputVersionType">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="0.34"/>
+      </xsd:restriction>
+   </xsd:simpleType>
 
    <xsd:complexType name="ProgramVersionType">
       <xsd:all>
@@ -211,6 +217,7 @@
       </xsd:sequence>
       <xsd:attribute name="Angles" type="xsd:integer" use="required"/>
       <xsd:attribute name="qpoints" type="xsd:integer" use="required"/>
+      <xsd:attribute name="ef" type="xsd:integer" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="required"/>
    </xsd:complexType>
 
@@ -260,6 +267,7 @@
 
    <xsd:complexType name="Entry_DMI_Type">
       <xsd:attribute name="q" type="xsd:integer" use="required"/>
+      <xsd:attribute name="ef-shift" type="xsd:double" use="required"/>
       <xsd:attribute name="phi" type="xsd:double" use="optional"/>
       <xsd:attribute name="theta" type="xsd:double" use="optional"/>
       <xsd:attribute name="ev-sum" type="xsd:double" use="required"/>
@@ -267,6 +275,7 @@
 
    <xsd:complexType name="Entry_DMIATOMS_Type">
       <xsd:attribute name="atomType" type="xsd:integer" use="optional"/>
+      <xsd:attribute name="ef-shift" type="xsd:double" use="required"/>
       <xsd:attribute name="q" type="xsd:integer" use="required"/>
       <xsd:attribute name="phi" type="xsd:double" use="required"/>
       <xsd:attribute name="theta" type="xsd:double" use="required"/>

@@ -81,12 +81,16 @@ CONTAINS
        CALL evaluateList(this%theta,str)
        str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@phi')
        CALL evaluateList(this%phi,str)
-       if (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI/@ef_shift')==1) THEN
-         str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@ef_shift')
-         CALL evaluateList(this%ef,str)
-       ELSE
+       if (xml%versionNumber>=34) THEN
+         if (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI/@ef_shift')==1) THEN
+           str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@ef_shift')
+           CALL evaluateList(this%ef,str)
+         ELSE
+           this%ef=(/0.0/)
+         ENDIF
+       else
          this%ef=(/0.0/)
-       ENDIF
+       endif
     ENDIF
     IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/Jij')==1) THEN
        this%mode=3

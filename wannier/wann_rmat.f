@@ -96,6 +96,8 @@ c***********************************************************
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
 
+      call timestart("wann_rmat")
+
       tpi=2*pimach()
 
       jspins=jspins_in
@@ -382,5 +384,6 @@ c********************************************
          deallocate( gb,bpt,wb,bpunkt )
       enddo !jspin
 
+      call timestop("wann_rmat")
       end subroutine wann_rmat
       end module m_wann_rmat

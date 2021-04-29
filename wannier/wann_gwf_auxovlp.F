@@ -1,4 +1,5 @@
       module m_wann_gwf_auxovlp
+         use m_juDFT
       implicit none
       contains
 
@@ -13,6 +14,7 @@
       real :: pi, a_aux, b_aux, tau(3)
       complex :: ov(3)
 
+      call timestart("wann_gwf_auxovlp")
       pi = pimach()
       a_aux = a
       b_aux = 0.98*a
@@ -32,6 +34,7 @@
       write(*,*)'ov(3) =',ov(3)
       write(*,*)'mmnaux=',mmnaux
 
+      call timestop("wann_gwf_auxovlp")
       end subroutine wann_gwf_auxovlp
 
       end module m_wann_gwf_auxovlp

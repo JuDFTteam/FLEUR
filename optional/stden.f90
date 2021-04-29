@@ -62,6 +62,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    LOGICAL l_found(0:3),llo_found(atoms%nlod),l_st
    REAL,ALLOCATABLE   :: occ(:,:)
    COMPLEX,ALLOCATABLE :: pw_tmp(:,:)
+   COMPLEX,ALLOCATABLE :: mmpmat_tmp(:,:,:,:)
 
    TYPE(t_nococonv) :: nococonv
    ! Data statements
@@ -214,6 +215,12 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
      pw_tmp=0.0
      pw_tmp(:,:size(den%pw,2))=den%pw
      call move_alloc(pw_tmp,den%pw)
+   ENDIF
+   IF(input%ldauSpinoffd) THEN
+      allocate(mmpmat_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(den%mmpmat,3),3))
+      mmpmat_tmp = cmplx_0
+      mmpmat_tmp(:,:,:,:size(den%mmpmat,4)) = den%mmpmat
+      call move_alloc(mmpmat_tmp,den%mmpmat)
    ENDIF
    IF (fmpi%irank == 0) THEN
       z=SUM(atoms%neq(:)*atoms%zatom(:))

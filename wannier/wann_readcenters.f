@@ -27,6 +27,8 @@ c******************************************************
       integer                   :: wanind,wanindtmp
       character(len=30)         :: task
 
+      call timestart("wann_readcenters")
+
       line=0
       linefinal=0
       l_readspread=.false.
@@ -70,6 +72,9 @@ c      do wanind=1,wanindtmp
 c         print*,centres(:,wanind),spreads(wanind)
 c      enddo   
 1000  format(22x,i5,3x,f10.6,1x,f10.6,1x,f10.6,2x,f15.8)
-2000  format(22x,i5,3x,f10.6,1x,f10.6,1x,f10.6)      
+2000  format(22x,i5,3x,f10.6,1x,f10.6,1x,f10.6) 
+
+
+      call timestop("wann_readcenters")
       end subroutine wann_readcenters
       end module m_wann_readcenters

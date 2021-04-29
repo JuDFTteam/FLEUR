@@ -4,6 +4,7 @@ c      a) find index of (k,q) point  c
 c      b) write plot template file   c
 c************************************c
       module m_wann_gwf_tools
+      use m_juDFT
       implicit none
       contains
 
@@ -13,11 +14,13 @@ c************************************c
       integer,intent(inout) :: dim
       integer :: i
 
+      call timestart("get_dimension")
       dim=3
       do i=1,3
          if(l_dim(i))dim=dim+1
       enddo
 
+      call timestop("get_dimension")
       end subroutine get_dimension
 
 
@@ -26,6 +29,7 @@ c************************************c
       logical,intent(in) :: l_dim(3)
       integer,intent(inout) :: shift(3)
 
+      call timestart("get_shift")
       shift=0
       if(l_dim(1))then
          shift(2)=shift(2)+1
@@ -36,6 +40,7 @@ c************************************c
          shift(3)=shift(3)+1
       endif
 
+      call timestop("get_shift")
       end subroutine get_shift
 
 
@@ -138,6 +143,8 @@ c       write(*,*)'nn not found!'
       integer :: i,nwfs,numbands
       logical :: l_exist
 
+      call timestart("gwf_plottemplate")
+
       inquire(file='proj',exist=l_exist)
       if(.not.l_exist) then
          call juDFT_error('Where is proj?',
@@ -160,6 +167,7 @@ c       write(*,*)'nn not found!'
       write(*,*)'* created printhdwf template *'
       write(*,*)'******************************'
 
+      call timestop("gwf_plottemplate")
       end subroutine gwf_plottemplate
 
 

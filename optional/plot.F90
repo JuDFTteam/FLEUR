@@ -840,9 +840,8 @@ CONTAINS
                      IF ((size(xdnout).GE.4).AND.sliceplot%plot(nplo)%vecField) THEN
                         tempVecs(ix,iy,iz,1:3)=point(:)/1.8897269
                         tempVecs(ix,iy,iz,4:6)=xdnout(2:4)
-                     ELSE IF (sliceplot%plot(nplo)%vecField) THEN
-                        CALL juDFT_warn("l_noco=F and making vector plots is not compatible [yet]. Do a regular plot for a spin-polarized system please!",calledby="plot.f90")
-                        ! TODO: Make it possible for spin-polarized calculations.
+                     ELSE IF (sliceplot%plot(nplo)%vecField.AND.(.NOT.noco%l_noco)) THEN
+                        CALL juDFT_warn("l_noco=F and making vector plots is not compatible. Do a regular plot for a spin-polarized system please, because vectors pointing only into z are not that interesting!",calledby="plot.f90")
                      END IF
                   ELSE
                      tempResults(ix,iy,iz,:)=xdnout(:)
@@ -1166,7 +1165,7 @@ CONTAINS
       ! No core subtraction done!
       ! Additive term for iplot: 4
       IF (plot_const.EQ.2) THEN
-         IF(any(noco%l_alignMT)) CALL juDFT_warn("l_alignMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
+         IF(any(noco%l_alignMT)) CALL juDFT_warn("l_RelaxMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
          denName = 'vTot'
          score = .FALSE.

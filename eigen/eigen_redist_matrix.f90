@@ -17,7 +17,6 @@ CONTAINS
   SUBROUTINE eigen_redist_matrix(fmpi,lapw,atoms,mat,mat_final,mat_final_templ)
     USE m_types
     USE m_types_mpimat
-    USE m_mingeselle
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)    :: fmpi
     TYPE(t_lapw),INTENT(IN)   :: lapw

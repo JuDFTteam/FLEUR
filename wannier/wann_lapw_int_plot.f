@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_lapw_int_plot
-
+        use m_juDFT
 c***************************************************************
 c         plot wannierfunction in interstitial
 c         Frank Freimuth, November 2006
@@ -28,6 +28,8 @@ c***************************************************************
       complex factor1,factor2,factor3
       complex factor1p,factor2p,factor3p,factor
       integer pw1,pw2,pw3
+
+      call timestart("wann_lapw_int_plot")
 
       tpi=2*pimach()
       xiiu=matmul(bmat,point)/tpi_const
@@ -74,6 +76,7 @@ c***************************************************************
       enddo 
 
 
-      endif   
+      endif  
+      call timestop("wann_lapw_int_plot") 
       END SUBROUTINE wann_lapw_int_plot
       END MODULE m_wann_lapw_int_plot

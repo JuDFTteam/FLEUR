@@ -14,6 +14,7 @@ MODULE m_types_dos
      INTEGER, ALLOCATABLE :: jsym(:,:,:)
      REAL,    ALLOCATABLE :: qis(:,:,:)
      REAL,    ALLOCATABLE :: qal(:,:,:,:,:)
+     REAL,    ALLOCATABLE :: qTot(:,:,:)
      CHARACTER(len=20),ALLOCATABLE:: weight_names(:)!This must be allocated in init of derived type
 
    CONTAINS
@@ -56,7 +57,12 @@ CONTAINS
     INTEGER :: ind,l,ntype,i
     allocate(get_weight_eig,mold=this%qis)
 
-    if (id==1) get_weight_eig=1.0
+    if (id==1) THEN
+       get_weight_eig=this%qTot
+       if (all(this%qis==0.0))  then
+          get_weight_eig= 1.0
+       END IF
+    END IF
     if (id==2) THEN
       get_weight_eig=this%qis
       if (all(get_weight_eig==0.0))  then
@@ -100,10 +106,12 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,banddos,eig)
   ALLOCATE(thisDOS%jsym(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qis(input%neig,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qal(0:3,size(banddos%dos_typelist),input%neig,kpts%nkpt,input%jspins))
+  ALLOCATE(thisDOS%qTot(input%neig,kpts%nkpt,input%jspins))
 
   thisDOS%jsym = 0
   thisDOS%qis = 0.0
   thisDOS%qal = 0.0
+  thisDOS%qTot = 0.0
 
   allocate(thisDOS%weight_names(3+4*size(banddos%dos_typelist)))
   thisDOS%weight_names(1)="Total"

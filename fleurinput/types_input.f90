@@ -75,6 +75,7 @@ MODULE m_types_input
   REAL    :: ldauMixParam=0.05
   REAL    :: ldauSpinf=1.0
   LOGICAL :: ldauAdjEnpara=.FALSE.
+  LOGICAL :: ldauSpinoffd=.FALSE.
   LOGICAL :: l_rdmft=.FALSE.
   REAL    :: rdmftOccEps=0.0
   INTEGER :: rdmftStatesBelow=0
@@ -153,6 +154,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%ldauMixParam,rank,mpi_comm)
    CALL mpi_bc(this%ldauSpinf,rank,mpi_comm)
    CALL mpi_bc(this%ldauAdjEnpara,rank,mpi_comm)
+   CALL mpi_bc(this%ldauSpinoffd,rank,mpi_comm)
    CALL mpi_bc(this%l_rdmft,rank,mpi_comm)
    CALL mpi_bc(this%rdmftOccEps,rank,mpi_comm)
    CALL mpi_bc(this%rdmftStatesBelow,rank,mpi_comm)
@@ -166,8 +168,8 @@ SUBROUTINE read_xml_input(this,xml)
    CLASS(t_input),INTENT(inout):: this
    TYPE(t_xml),INTENT(INOUT)  ::xml
 
-   CHARACTER(len=100):: valueString,xpathA,xpathB
-   INTEGER:: numberNodes,nodeSum, i
+   CHARACTER(len=100):: valueString,xpathA,xpathB,xPathC
+   INTEGER:: numberNodes,nodeSum, i, numberNodesB,numberNodesC
 
    !TODO! these switches should be in the inp-file
    !this%l_core_confpot=.TRUE. !former CPP_CORE !Done (A.N.).
@@ -240,7 +242,15 @@ SUBROUTINE read_xml_input(this,xml)
    ! Read in optional expert modes switches
    xPathA = '/fleurInput/calculationSetup/expertModes'
    IF (xml%GetNumberOfNodes(xPathA)==1) THEN
-      this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
+      xPathB = TRIM(ADJUSTL(xPathA))//'/@gw'
+      xPathC = TRIM(ADJUSTL(xPathA))//'/@spex'
+      numberNodesB = xml%GetNumberOfNodes(xPathB)
+      numberNodesC = xml%GetNumberOfNodes(xPathC)
+      IF((numberNodesB.EQ.1).AND.(numberNodesC.EQ.1)) THEN
+         CALL juDFT_error("@gw and @spex specified. Choose only one!", calledby='types_input%read_xml_input')
+      END IF
+      IF (numberNodesB.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))))
+      IF (numberNodesC.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))))
       this%secvar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
    END IF
    ! Read in Brillouin zone integration parameters
@@ -325,6 +335,7 @@ SUBROUTINE read_xml_input(this,xml)
       this%ldauMixParam = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
       this%ldauSpinf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
       this%ldauAdjEnpara = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_adjEnpara'))
+      this%ldauSpinoffd = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_spinoffd'))
    END IF
    ! Read in RDMFT parameters
    xPathA = '/fleurInput/calculationSetup/rdmft'

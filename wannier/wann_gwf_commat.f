@@ -53,6 +53,7 @@ c*************************c
       character(len=20) :: fq
       character(len=32) :: fmt,fmt2
 
+      call timestart("wann_gwf_commat")
       write(*,*)'create HDWFs input for w90...'
 
 !      arr_len=3; shifty=0; shiftz=0
@@ -415,6 +416,7 @@ c*****************************c
       deallocate(feig,famn,fmmn,fmmn2)
       deallocate(amn_arti2)
 
+      call timestop("wann_gwf_commat")
       contains
 
 

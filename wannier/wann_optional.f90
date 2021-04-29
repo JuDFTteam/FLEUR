@@ -40,6 +40,7 @@ CONTAINS
     INTEGER       :: num_wann(2)
     LOGICAL       :: l_nocosoc,l_stopopt,l_file
 
+    call timestart("wann_optional")
     l_nocosoc=noco%l_noco.OR.noco%l_soc
     l_stopopt=wann%l_stopopt
     !-----read the input file to determine what to do
@@ -155,5 +156,6 @@ CONTAINS
 
     IF(l_stopopt)  CALL juDFT_end("wann_optional done",fmpi%irank) 
 
+    call timestop("wann_optional")
   END SUBROUTINE wann_optional
 END MODULE m_wann_optional

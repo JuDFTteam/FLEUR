@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_mmkb_int
+         use m_juDFT
       contains
       subroutine wann_mmkb_int(
      >               interchi,addnoco,addnoco2,nvd,k1d,k2d,k3d,
@@ -41,6 +42,8 @@
       real,allocatable::mmnk_tmp(:,:)
       integer i,j1,j2,j3,i1,i2,i3,j,in,m,n
       real phase
+
+      call timestart("wann_mmkb_int")
 
       IF(zMat%l_real) THEN
          allocate(mmnk_tmp(nslibd,nslibd_b))
@@ -103,5 +106,6 @@ c     &               zMat%data_c,nbasfcn,phasusbmat_c,nv,
          deallocate(phasusbmat_c,stepf_c)
       END IF
 
+      call timestop("wann_mmkb_int")
       end subroutine
       end module m_wann_mmkb_int

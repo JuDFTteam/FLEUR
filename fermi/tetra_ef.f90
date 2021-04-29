@@ -30,7 +30,7 @@ MODULE m_tetraef
       INTEGER :: i,j,jspin,iBand,ikpt,nelec,ncr,itet,it,icorn,jcorn
       REAL    :: elow,dlow,eup,dup,ttt,dfermi,wgs
       REAL    :: weight(4),ecmax(2,size(w,1))
-      REAL    :: wght(2,kpts%nkpt,size(w,1)),eval(4)
+      REAL    :: wght(2,kpts%nkpt,size(w,1)),eval(4), tetra_weight(kpts%nkpt)
 
       DO iBand = 1,size(w,1)
          DO jspin = 1,jspins
@@ -64,7 +64,11 @@ MODULE m_tetraef
       !
       ! calculate weight factors
       !
+      tetra_weight = 0.0
       DO itet=1,kpts%ntet
+         DO i=1, 4
+            tetra_weight(kpts%ntetra(i,itet)) = tetra_weight(kpts%ntetra(i,itet)) + kpts%voltet(itet)/(4.0*kpts%ntet)
+         ENDDO
          DO iBand=1,size(w,1)
             DO jspin=1,jspins
 
@@ -89,13 +93,8 @@ MODULE m_tetraef
       ENDDO
       !
       !xfac = 2.0/jspins
-      DO iBand = 1,size(w,1)
-         DO ikpt = 1,kpts%nkpt
-            DO jspin = 1,jspins
-               wght(jspin,ikpt,iBand)=xfac*wght(jspin,ikpt,iBand)
-            ENDDO
-         ENDDO
-      ENDDO
+      tetra_weight = xfac*tetra_weight
+      wght = xfac*wght
       !
       !---------------------------------------------------
       ! determine fermi energy
@@ -110,8 +109,11 @@ MODULE m_tetraef
          DO iBand = 1,size(w,1)
             DO jspin = 1,jspins
                ttt = elow - eig(iBand,ikpt,jspin)
-               IF ( elow.GT.ecmax(jspin,iBand) ) ttt = ecmax(jspin,iBand) - eig(iBand,ikpt,jspin)
-               IF (ttt.LT.0.0e0)                ttt = 0.0e0
+               IF ( elow.GT.ecmax(jspin,iBand) ) THEN
+                  dlow = dlow + tetra_weight(ikpt)
+                  cycle
+               endif
+               IF (ttt.LT.0.0e0) cycle
                dlow = dlow + wght(jspin,ikpt,iBand)*ttt*ttt*ttt/6
             ENDDO
          ENDDO
@@ -132,8 +134,11 @@ MODULE m_tetraef
             DO iBand = 1,size(w,1)
                DO jspin = 1,jspins
                   ttt = eup - eig(iBand,ikpt,jspin)
-                  IF ( eup.GT.ecmax(jspin,iBand) ) ttt = ecmax(jspin,iBand) - eig(iBand,ikpt,jspin)
-                  IF (ttt.LT.0.0e0)               ttt = 0.0e0
+                  IF ( eup.GT.ecmax(jspin,iBand) ) THEN
+                     dup = dup + tetra_weight(ikpt)
+                     cycle
+                  endif
+                  IF (ttt.LT.0.0e0) cycle
                   dup = dup + wght(jspin,ikpt,iBand)*ttt*ttt*ttt/6
                ENDDO
             ENDDO
@@ -159,8 +164,11 @@ MODULE m_tetraef
             DO iBand = 1,size(w,1)
                DO jspin = 1,jspins
                   ttt  =efermi-eig(iBand,ikpt,jspin)
-                  IF ( efermi.GT.ecmax(jspin,iBand) ) ttt = ecmax(jspin,iBand) - eig(iBand,ikpt,jspin)
-                  IF (ttt.LT.0.0e0)                   ttt = 0.0e0
+                  IF ( efermi.GT.ecmax(jspin,iBand) ) THEN
+                     dfermi = dfermi + tetra_weight(ikpt)
+                     cycle
+                  endif
+                  IF (ttt.LT.0.0e0) cycle
                   dfermi = dfermi + wght(jspin,ikpt,iBand)*ttt*ttt*ttt/6
                ENDDO
             ENDDO
@@ -196,14 +204,17 @@ MODULE m_tetraef
                   weight(i) = 6.0 * kpts%voltet(itet)/(weight(i)*kpts%ntet)
                ENDDO
 
-               wgs = 0.0e0
-               DO i = 1,4
-                  ttt = efermi - eval(i)
-                  IF(efermi.GT.ecmax(jspin,iBand)) ttt = ecmax(jspin,iBand) - eval(i)
-                  IF( ttt.LT.0.0e0 )               ttt = 0.0e0
-                  wgs = wgs + ttt**3*weight(i)
-               ENDDO
-               wgs = wgs / 24.0
+               IF ( efermi.GT.ecmax(jspin,iBand) ) THEN
+                  wgs = kpts%voltet(itet)/(4.0* kpts%ntet)
+               else
+                  wgs = 0.0e0
+                  DO i = 1,4
+                     ttt = efermi - eval(i)
+                     IF( ttt.LT.0.0e0 ) cycle
+                     wgs = wgs + ttt**3*weight(i)
+                  ENDDO
+                  wgs = wgs / 24.0
+               endif
 
                w(iBand,kpts%ntetra(:,itet),jspin) = w(iBand,kpts%ntetra(:,itet),jspin) + wgs
 

@@ -6,16 +6,18 @@
 
 MODULE m_checks
   USE m_juDFT
+  USE m_types
   IMPLICIT NONE
   private
   public :: check_command_line,check_input_switches
   CONTAINS
-    SUBROUTINE check_command_line()
+    SUBROUTINE check_command_line(fmpi)
       !Here we check is command line arguments are OK
 #ifdef CPP_MPI
       USE mpi
       INTEGER:: isize,ierr,irank
 #endif
+      TYPE(t_mpi), INTENT(INOUT):: fmpi
       IF (TRIM(juDFT_string_for_argument("-eig"))=="hdf") THEN
 #ifndef CPP_HDF
          CALL judft_error("HDF5 cannot be used for Eigenvector IO",&
@@ -23,8 +25,10 @@ MODULE m_checks
 #endif
 #ifdef CPP_MPI
 #ifndef CPP_HDFMPI
-         CALL judft_error("HDF5 cannot be used in parallel mode for Eigenvector IO",&
-              hint="Your HDF5 library does not support parallel IO" )
+         IF (fmpi%irank.GT.1) THEN
+            CALL judft_error("HDF5 cannot be used in parallel mode for Eigenvector IO",&
+                 hint="Your HDF5 library does not support parallel IO" )
+         END IF
 #endif
 #endif
       ENDIF
@@ -83,7 +87,7 @@ MODULE m_checks
      END IF
 
      IF((input%gw.EQ.2).AND.(kpts%kptsKind.NE.KPTS_KIND_SPEX_MESH)) THEN
-        CALL juDFT_warn('Chosen k-point set is not eligible for this GW step.', calledby='check_input_switches')
+        CALL juDFT_warn('Chosen k-point set is not compatible to this GW step.', calledby='check_input_switches')
      END IF
 
      IF (noco%l_noco) CALL nocoInputCheck(atoms,input,sym,vacuum,noco)

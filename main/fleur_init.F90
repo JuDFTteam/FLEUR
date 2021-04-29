@@ -96,12 +96,12 @@ CONTAINS
       COMPLEX    :: cdum
       CHARACTER(len=4)              :: namex
       CHARACTER(len=12)             :: relcor, tempNumberString
-      CHARACTER(LEN=20)             :: filename
+      CHARACTER(LEN=20)             :: filename, tempFilename
       CHARACTER(LEN=40)             :: kptsSelection(3)
       CHARACTER(LEN=300)            :: line
       REAL                          :: a1(3), a2(3), a3(3)
       REAL                          :: dtild, phi_add
-      LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
+      LOGICAL                       :: l_found, l_kpts, l_exist, l_krla, l_timeReversalCheck
 
 #ifdef CPP_MPI
       INTEGER ierr(3)
@@ -110,11 +110,27 @@ CONTAINS
 #else
       fmpi%irank = 0; fmpi%isize = 1; fmpi%mpi_comm = 1
 #endif
-      CALL check_command_line()
+      CALL check_command_line(fmpi)
 #ifdef CPP_HDF
       CALL hdf_init()
 #endif
       IF (fmpi%irank .EQ. 0) THEN
+         INQUIRE(file="out.xml", exist=l_exist)
+         IF (l_exist) THEN
+            tempFilename = "outHistError.xml"
+            DO i = 1, 999
+               WRITE (tempFilename,'(a,i3.3,a)') 'out-', i, '.xml'
+               INQUIRE(file=TRIM(ADJUSTL(tempFilename)), exist=l_found)
+               IF (.NOT.l_found) EXIT
+            END DO
+            IF(.NOT.l_found) THEN
+               WRITE(line,'(2a)') 'mv out.xml ', TRIM(ADJUSTL(tempFilename))
+               CALL system(TRIM(ADJUSTL(line)))
+               WRITE (*,*) 'Moving old out.xml to ', TRIM(ADJUSTL(tempFilename)), '.'
+            ELSE
+               CALL juDFT_warn("No free out-???.xml file places for storing old out.xml files!")
+            END IF
+         END IF
          CALL startFleur_XMLOutput()
          outxmlFileID = getXMLOutputUnitNumber()
          IF (judft_was_argument("-info")) THEN
@@ -169,9 +185,14 @@ CONTAINS
       CALL make_forcetheo(forcetheo_data, cell, sym, atoms, forcetheo)
       CALL lapw_dim(kpts, cell, input, noco, nococonv, oneD, forcetheo, atoms)
       CALL input%init(noco, hybinp%l_hybrid, lapw_dim_nbasfcn)
+      CALL noco%init(atoms,input%ldauSpinoffd)
       CALL oned%init(atoms) !call again, because make_stars modified it :-)
       CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
-      CALL kpts%init(sym, input%film, hybinp%l_hybrid .or. input%l_rdmft)
+      l_timeReversalCheck = .FALSE.
+      IF(.NOT.banddos%band.AND..NOT.banddos%dos) THEN
+         IF(noco%l_soc.OR.noco%l_ss) l_timeReversalCheck = .TRUE.
+      END IF
+      CALL kpts%init(sym, input%film, hybinp%l_hybrid .or. input%l_rdmft, l_timeReversalCheck)
       CALL kpts%initTetra(input, cell, sym, noco%l_soc .OR. noco%l_ss)
       IF (fmpi%irank == 0) CALL gfinp%init(atoms, sym, noco, cell, input)
       CALL gfinp%mpi_bc(fmpi%mpi_comm) !THis has to be rebroadcasted because there could be new gf elements after init_gfinp

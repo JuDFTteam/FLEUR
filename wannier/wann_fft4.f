@@ -90,6 +90,7 @@ c      real                :: kpoints(3,nkpts)
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/
 
+      call timestart("wann_fft4")
       tpi=2*pimach()
 
       jspins=jspins_in
@@ -126,23 +127,25 @@ c****************************************************************
       allocate( lwindow(num_bands,nkpts,2) )
       allocate( ndimwin(nkpts,2) )
 
-      do jspin=1,jspins  !spin loop
+!      do jspin=1,jspins  !spin loop
+       jspin=1
          call wann_read_umatrix2(
      >       nkpts,num_wann,num_bands,
-     >       um_format,jspin,wan90version,
+     >       um_format,jspins,  !jspin,
+     >       wan90version,
      <       have_disentangled,
      <       lwindow(:,:,jspin),
      <       ndimwin(:,jspin),
      <       u_matrix_opt(:,:,:,jspin),
      <       u_matrix(:,:,:,jspin))
          num_bands2=num_bands
-      enddo !jspin   
-      if(jspins.eq.1)then
-         lwindow(:,:,2)        = lwindow(:,:,1)
-         ndimwin(:,2)          = ndimwin(:,1)
-         u_matrix_opt(:,:,:,2) = u_matrix_opt(:,:,:,1)
-         u_matrix(:,:,:,2)     = u_matrix(:,:,:,1)
-      endif
+!      enddo !jspin   
+!      if(jspins.eq.1)then
+!         lwindow(:,:,2)        = lwindow(:,:,1)
+!         ndimwin(:,2)          = ndimwin(:,1)
+!         u_matrix_opt(:,:,:,2) = u_matrix_opt(:,:,:,1)
+!         u_matrix(:,:,:,2)     = u_matrix(:,:,:,1)
+!      endif
 
 c****************************************************
 c        Read the file "WF1.socspicom".
@@ -277,5 +280,6 @@ c***********************************************************
       deallocate(lwindow,u_matrix_opt,ndimwin)
       deallocate(u_matrix,hwann,hreal)
 
+      call timestop("wann_fft4")
       end subroutine wann_fft4
       end module m_wann_fft4

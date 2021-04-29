@@ -29,6 +29,7 @@ MODULE m_types_eigdos
     procedure          :: write_raw   !should be implemented later to allow eig66 functionality
     procedure          :: write_dos
     procedure          :: write_band
+    procedure          :: write_EVData
   END TYPE
 
   type::t_eigdos_list
@@ -225,6 +226,26 @@ subroutine write_dos(eigdos,hdf_id)
     enddo
     call gnuplot_bs(kpts,title,cell,eigdos%get_spins())
     IF (banddos%unfoldband) call write_gnu_sc(banddos,kpts,title,cell,eigdos%get_spins())
+  end subroutine
+
+  subroutine write_EVData(eigdos,hdf_id)
+#ifdef CPP_HDF
+     use HDF5
+     use m_banddos_io
+#endif
+     class(t_eigdos),INTENT(INOUT):: eigdos
+#ifdef CPP_HDF
+     integer(HID_T),intent(in) ::hdf_id
+     INTEGER::n
+#else
+     integer,intent(in):: hdf_id !not used
+#endif
+
+#ifdef CPP_HDF
+     DO n = 1, eigdos%get_num_weights()
+        CALL writeEVData(hdf_id,eigdos%name_of_dos,eigdos%get_weight_name(n),eigdos%get_eig(),eigdos%get_weight_eig(n))
+     END DO
+#endif
   end subroutine
 
   subroutine t_eigdos_make_dos(eigdos,kpts,input,banddos,efermi)

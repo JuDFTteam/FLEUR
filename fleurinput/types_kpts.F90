@@ -186,7 +186,15 @@ CONTAINS
                this%kptsKind = KPTS_KIND_TRIA
             CASE ('tria-bulk')
                this%kptsKind = KPTS_KIND_TRIA_BULK
-            CASE ('SPEX-mesh')
+            CASE ('SPEX-mesh') ! (this is deprecated)
+               this%kptsKind = KPTS_KIND_SPEX_MESH
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
+               IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@ny')
+               IF(numNodes.EQ.1) this%nkpt3(2) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@ny'))
+               numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nz')
+               IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
+            CASE ('spex-mesh') ! (same as 'SPEX-mesh')
                this%kptsKind = KPTS_KIND_SPEX_MESH
                numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@nx')
                IF(numNodes.EQ.1) this%nkpt3(1) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nx'))
@@ -342,11 +350,11 @@ CONTAINS
 
       IF (l_band) THEN
          IF (.NOT.this%kptsKind.EQ.KPTS_KIND_PATH) THEN
-            CALL juDFT_warn('Chosen k-point list is not eligible for band structure calculations.', calledby='read_xml_kpts')
+            CALL juDFT_warn('Chosen k-point list is not compatible to band structure calculations.', calledby='read_xml_kpts')
          END IF
       ELSE
          IF (this%kptsKind.EQ.KPTS_KIND_PATH) THEN
-            CALL juDFT_warn('Chosen k-point list is only eligible for band structure calculations.', calledby='read_xml_kpts')
+            CALL juDFT_warn('Chosen k-point list is only compatible to band structure calculations.', calledby='read_xml_kpts')
          END IF
       END IF
 
@@ -360,7 +368,7 @@ CONTAINS
       INTEGER :: n, iSpecialPoint, i, nkq_pairs
       REAL :: commonFractions(3)
       LOGICAL :: l_exist
-      CHARACTER(LEN=17) :: posString(3)
+      CHARACTER(LEN=20) :: posString(3)
       CHARACTER(LEN=50) :: label
 
       label = ''
@@ -409,9 +417,9 @@ CONTAINS
             WRITE(posString(2),'(f7.2,a,f0.2)') commonFractions(2)*kpts%bk(2, n), '/' , commonFractions(2)
             WRITE(posString(3),'(f7.2,a,f0.2)') commonFractions(3)*kpts%bk(3, n), '/' , commonFractions(3)
          ELSE
-            WRITE(posString(1),'(f16.13)') kpts%bk(1, n)
-            WRITE(posString(2),'(f16.13)') kpts%bk(2, n)
-            WRITE(posString(3),'(f16.13)') kpts%bk(3, n)
+            WRITE(posString(1),'(f19.16)') kpts%bk(1, n)
+            WRITE(posString(2),'(f19.16)') kpts%bk(2, n)
+            WRITE(posString(3),'(f19.16)') kpts%bk(3, n)
          END IF
 
 206      FORMAT('               <kPoint weight="', f20.13, '">', a, ' ', a, ' ', a, '</kPoint>')
@@ -897,17 +905,18 @@ CONTAINS
    END FUNCTION det
 
 
-   SUBROUTINE init_kpts(kpts, sym, film, l_eibz)
+   SUBROUTINE init_kpts(kpts, sym, film, l_eibz, l_timeReversalCheck)
       use m_juDFT
       USE m_types_sym
       CLASS(t_kpts), INTENT(inout):: kpts
       TYPE(t_sym), INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)         :: film, l_eibz
+      LOGICAL, INTENT(IN)         :: l_timeReversalCheck
 
       INTEGER :: n,itet,ntet
       call timestart("init_kpts")
       call kpts%find_gamma()
-      IF (kpts%nkptf == 0) CALL gen_bz(kpts, sym)
+      IF (kpts%nkptf == 0) CALL gen_bz(kpts, sym, l_timeReversalCheck)
 
       if(l_eibz) then
          kpts%l_set_eibz = .True.
@@ -934,7 +943,7 @@ CONTAINS
       ENDDO
    end subroutine find_gamma_kpts
 
-   SUBROUTINE gen_bz(kpts, sym)
+   SUBROUTINE gen_bz(kpts, sym, l_timeReversalCheck)
       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! gen_bz generates the (whole) Brillouin zone from the          !
       ! (irreducible) k-points given                                  !
@@ -952,8 +961,9 @@ CONTAINS
       USE m_types_sym
       TYPE(t_kpts), INTENT(INOUT) :: kpts
       TYPE(t_sym), INTENT(IN)     :: sym
+      LOGICAL, INTENT(IN)         :: l_timeReversalCheck
       !  - local scalars -
-      INTEGER                 ::  ic, iop, ikpt, ikpt1
+      INTEGER                 ::  ic, iop, ikpt, ikpt1, nkptfCheck
       LOGICAL                 ::  l_found
 
       !  - local arrays -
@@ -966,6 +976,47 @@ CONTAINS
       call timestart("gen_bz")
 
       nsym = sym%nop
+      id_mat = 0
+      id_mat(1, 1) = 1; id_mat(2, 2) = 1; id_mat(3, 3) = 1
+      IF (ANY(sym%mrot(:, :, 1) .NE. id_mat)) CALL judft_error("Identity must be first symmetry operation", calledby="gen_bz")
+
+      IF(l_timeReversalCheck) THEN
+         ALLOCATE (kpts%bkf(3, nsym*kpts%nkpt))
+         ALLOCATE (kpts%bkp(nsym*kpts%nkpt))
+         ALLOCATE (kpts%bksym(nsym*kpts%nkpt))
+
+         ! Generate symmetry operations in reciprocal space
+         DO iop = 1, nsym
+            rrot(:, :, iop) = TRANSPOSE(sym%mrot(:, :, sym%invtab(iop)))
+         END DO
+
+         !Add existing vectors to list of full vectors
+         ic = 0
+         DO iop = 1, nsym
+            DO ikpt = 1, kpts%nkpt
+               rotkpt = MATMUL(rrot(:, :, iop), kpts%to_first_bz(kpts%bk(:, ikpt)))
+               !transform back into 1st-BZ (Do not use nint to deal properly with inaccuracies)
+               rotkpt = kpts%to_first_bz(rotkpt)
+               DO ikpt1 = 1, ic
+                  IF (all(abs(kpts%bkf(:, ikpt1) - rotkpt) < 1e-06)) EXIT
+               END DO
+
+               IF (ikpt1 > ic) THEN !new point
+                  ic = ic + 1
+                  kpts%bkf(:, ic) = rotkpt
+                  kpts%bkp(ic) = ikpt
+                  kpts%bksym(ic) = iop
+               END IF
+            END DO
+         END DO
+
+         nkptfCheck = ic
+
+         DEALLOCATE (kpts%bksym)
+         DEALLOCATE (kpts%bkp)
+         DEALLOCATE (kpts%bkf)
+      END IF
+
       IF (.NOT. sym%invs) nsym = 2*sym%nop
 
       ALLOCATE (kpts%bkf(3, nsym*kpts%nkpt))
@@ -982,14 +1033,10 @@ CONTAINS
       END DO
 
       !Add existing vectors to list of full vectors
-      id_mat = 0
-      ID_mat(1, 1) = 1; ID_mat(2, 2) = 1; ID_mat(3, 3) = 1
-      IF (ANY(sym%mrot(:, :, 1) .NE. ID_mat)) CALL judft_error("Identity must be first symmetry operation", calledby="gen_bz")
-
       ic = 0
       DO iop = 1, nsym
          DO ikpt = 1, kpts%nkpt
-            rotkpt = MATMUL(rrot(:, :, iop), kpts%bk(:, ikpt))
+            rotkpt = MATMUL(rrot(:, :, iop), kpts%to_first_bz(kpts%bk(:, ikpt)))
             !transform back into 1st-BZ (Do not use nint to deal properly with inaccuracies)
             rotkpt = kpts%to_first_bz(rotkpt)
             DO ikpt1 = 1, ic
@@ -1006,6 +1053,11 @@ CONTAINS
       END DO
 
       kpts%nkptf = ic
+      IF(l_timeReversalCheck) THEN
+         IF(nkptfCheck.NE.kpts%nkptf) THEN
+            CALL juDFT_error("k-point set is not compatible to missing time-reversal symmetry in calculation.",calledby="gen_bz")
+         END IF
+      END IF
       ! Reallocate bkf, bkp, bksym
       ALLOCATE (iarr(kpts%nkptf))
       iarr = kpts%bkp(:kpts%nkptf)

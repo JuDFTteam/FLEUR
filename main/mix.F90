@@ -172,7 +172,7 @@ contains
        !it can become unstable
        !Check whether the mixed density matrix makes sense
        !And correct invalid elements
-       CALL checkMMPmat(1,atoms%n_u,atoms,input,outden,inden)
+       CALL checkMMPmat(1,atoms%n_u,l_densitymatrix,fmpi,atoms,input,outden,inden)
     ENDIF
 
     IF(atoms%n_hia>0) THEN

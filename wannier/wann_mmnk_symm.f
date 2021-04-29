@@ -64,6 +64,7 @@ c******************************************************************
       real    :: brot(3)
       logical :: l_testnosymm,l_nosymm1,l_nosymm2
 
+      call timestart("wann_mmnk_symm")
       index(:,:)=0
       num_pair=0
       num_rot=0
@@ -290,6 +291,8 @@ c*****************************************************************
 
          enddo
       enddo
+
+      call timestop("wann_mmnk_symm")
       end subroutine
 
       SUBROUTINE close_pt(
@@ -305,6 +308,7 @@ c*****************************************************************
 
       INTEGER              :: i,j,k,mp(3,3),map(nops)
 
+      call timestart("close_pt")
 !---> loop over all operations
       DO j=1,nops
 
@@ -338,6 +342,7 @@ c*****************************************************************
          mtable(j,1:nops) = map(1:nops)
       ENDDO
 
+      call timestop("close_pt")
       END SUBROUTINE close_pt
 
       end module m_wann_mmnk_symm

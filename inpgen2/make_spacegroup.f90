@@ -85,6 +85,11 @@ CONTAINS
     IF (noco%l_ss) CALL ss_sym(mops,mmrot,noco%qss_inp,error)
     IF (noco%l_soc) CALL soc_sym(mops,mmrot,noco%theta_inp,noco%phi_inp,cell%amat, error)
     IF (film) CALL film_sym(mops,mmrot,error)
+
+    IF (judft_was_argument("-nosym")) THEN
+       error(2:) = .TRUE. ! keep only identity operation
+    END IF
+
     n=0 !Keep only operations without error
     DO i=1,mops
        IF (.NOT.error(i)) THEN

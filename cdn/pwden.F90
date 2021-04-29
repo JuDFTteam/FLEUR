@@ -77,10 +77,11 @@ CONTAINS
 
       ! local variables
       TYPE(t_fftGrid) :: state, stateB, StateDeriv, ekinGrid, chargeDen, rhomatGrid(4)
+      TYPE(t_fftGrid) :: stepFct
       INTEGER nu, iv, ir, istr, i, j
       INTEGER idens, ndens, ispin
       REAL q0, q0_11, q0_22, norm, xk(3)
-      REAL s, stateRadius
+      REAL s, stateRadius, stateFFTRadius, stateFFTExtendedRadius
       COMPLEX x
       REAL, PARAMETER:: tol_3 = 1.0e-3
       LOGICAL forw
@@ -90,7 +91,7 @@ CONTAINS
       INTEGER, ALLOCATABLE :: stateBIndices(:)
       INTEGER, ALLOCATABLE :: fieldSphereIndices(:)
       REAL wtf(ne)
-      COMPLEX tempState(lapw%nv(jspin))
+      COMPLEX tempState(lapw%nv(jspin)), starCharges(stars%ng3)
       COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
 
       ! subroutines
@@ -113,20 +114,33 @@ CONTAINS
 
       CALL timestart("pwden")
 
-      ALLOCATE (cwk(stars%ng3), ecwk(stars%ng3))
-
       stateRadius = MAXVAL(ABS(lapw%rk(:,:)))
       stateRadius = stateRadius + SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt)))
       IF (noco%l_noco) stateRadius = stateRadius + SQRT(DOT_PRODUCT(nococonv%qss(:),nococonv%qss(:)))
 
+      stateFFTRadius = 2.0*stateRadius
+      stateFFTExtendedRadius = 2.0*stateRadius
+
+      IF (noco%l_noco.OR.noco%l_soc) THEN
+         IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf.OR.banddos%band) THEN
+            stateFFTExtendedRadius = 3.0*stateRadius+0.1
+            CALL stepFct%init(cell,sym,stateFFTExtendedRadius+0.001)
+            CALL stepFct%putFieldOnGrid(stars, stars%ustep, stateFFTRadius+0.0005)
+            CALL stepFct%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
+            CALL fft_interface(3, stepFct%dimensions(:), stepFct%grid, .FALSE., fieldSphereIndices)
+         END IF
+      END IF
+
+      ALLOCATE (cwk(stars%ng3), ecwk(stars%ng3))
+
       IF (noco%l_noco) THEN
-         CALL state%init(cell,sym,(2.0*stateRadius)+0.001)
-         CALL stateB%init(cell,sym,(2.0*stateRadius)+0.001)
+         CALL state%init(cell,sym,stateFFTExtendedRadius+0.001)
+         CALL stateB%init(cell,sym,stateFFTExtendedRadius+0.001)
          DO i = 1, 4
-            CALL rhomatGrid(i)%init(cell,sym,(2.0*stateRadius)+0.001)
+            CALL rhomatGrid(i)%init(cell,sym,stateFFTExtendedRadius+0.001)
             rhomatGrid(i)%grid(:) = CMPLX(0.0,0.0)
          END DO
-         CALL rhomatGrid(1)%fillFieldSphereIndexArray(stars, (2.0*stateRadius)+0.0008, fieldSphereIndices)
+         CALL rhomatGrid(1)%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
          IF (noco%l_ss) THEN
             ALLOCATE(stateIndices(lapw%nv(1)))
             ALLOCATE(stateBIndices(lapw%nv(2)))
@@ -139,13 +153,13 @@ CONTAINS
             CALL stateB%fillStateIndexArray(lapw,jspin,stateBIndices)
          ENDIF
       ELSE
-         CALL state%init(cell,sym,(2.0*stateRadius)+0.001)
-         CALL chargeDen%init(cell,sym,(2.0*stateRadius)+0.001)
+         CALL state%init(cell,sym,stateFFTExtendedRadius+0.001)
+         CALL chargeDen%init(cell,sym,stateFFTExtendedRadius+0.001)
          chargeDen%grid(:) = CMPLX(0.0,0.0)
-         CALL chargeDen%fillFieldSphereIndexArray(stars, (2.0*stateRadius)+0.0008, fieldSphereIndices)
+         CALL chargeDen%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
          IF (input%l_f) THEN
-            CALL stateDeriv%init(cell,sym,(2.0*stateRadius)+0.001)
-            CALL ekinGrid%init(cell,sym,(2.0*stateRadius)+0.001)
+            CALL stateDeriv%init(cell,sym,stateFFTExtendedRadius+0.001)
+            CALL ekinGrid%init(cell,sym,stateFFTExtendedRadius+0.001)
             ekinGrid%grid(:) = CMPLX(0.0,0.0)
          END IF
          ALLOCATE(stateIndices(lapw%nv(jspin)))
@@ -221,7 +235,7 @@ CONTAINS
             ! total charge does not need to be one in each spin-
             ! channel. Thus it has to be calculated explicitly, if
             ! it is needed.
-            IF ((banddos%dos .OR. banddos%vacdos .OR. input%cdinf)) THEN
+            IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf.OR.banddos%band) THEN
                DO ir = 0, state%gridLength - 1
                   state%grid(ir) = ABS(state%grid(ir))**2
                   stateB%grid(ir) = ABS(stateB%grid(ir))**2
@@ -231,22 +245,24 @@ CONTAINS
                CALL fft_interface(3, state%dimensions(:), state%grid, forw, fieldSphereIndices)
                CALL fft_interface(3, stateB%dimensions(:), stateB%grid, forw, fieldSphereIndices)
 
-               CALL state%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
+               CALL state%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
                DO istr = 1, stars%ng3
                   cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
                END DO
                DO istr = 1, stars%ng3_fft
                   CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
                   dos%qis(ev_list(nu), ikpt, 1) = dos%qis(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
+                  dos%qTot(ev_list(nu), ikpt, 1) = dos%qTot(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
                ENDDO
 
-               CALL stateB%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
+               CALL stateB%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
                DO istr = 1, stars%ng3
                   cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
                END DO
                DO istr = 1, stars%ng3_fft
                   CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
                   dos%qis(ev_list(nu), ikpt, input%jspins) = dos%qis(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil
+                  dos%qTot(ev_list(nu), ikpt, input%jspins) = dos%qTot(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil
                ENDDO
             ENDIF
 
@@ -288,6 +304,25 @@ CONTAINS
                   END DO
                END DO
             END IF
+
+            IF (noco%l_soc.AND.input%jspins.EQ.2) THEN
+               IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf.OR.banddos%band) THEN
+                  DO ir = 0, state%gridLength - 1
+                     state%grid(ir) = conjg(state%grid(ir)) * stepFct%grid(ir) * state%grid(ir)
+                  END DO
+
+                  forw = .TRUE.
+                  CALL fft_interface(3, state%dimensions(:), state%grid, forw, fieldSphereIndices)
+
+                  cwk = CMPLX(0.0,0.0)
+                  CALL state%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
+                  starCharges = CMPLX(0.0,0.0)
+                  CALL pwint_all(stars,atoms,sym,oneD,cell,1,stars%ng3,starCharges)
+                  starCharges(:) = starCharges(:) * cwk(:) * stars%nstr(:) / cell%omtil
+                  dos%qis(ev_list(nu), ikpt, jSpin) = dos%qis(ev_list(nu), ikpt, jSpin) + REAL(SUM(starCharges(:)))
+                  dos%qTot(ev_list(nu), ikpt, jSpin) = dos%qTot(ev_list(nu), ikpt, jSpin) + REAL(SUM(starCharges(:)))
+               END IF
+            END IF
          END IF
       END DO
       ! END OUTER LOOP OVER STATES NU
@@ -318,11 +353,11 @@ CONTAINS
          cwk = 0.0
          ecwk = 0.0
          IF (noco%l_noco) THEN
-            CALL rhomatGrid(idens)%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
+            CALL rhomatGrid(idens)%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
          ELSE
-            CALL chargeDen%takeFieldFromGrid(stars, cwk, (2.0*stateRadius)+0.0005)
+            CALL chargeDen%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
             IF (input%l_f) THEN
-               CALL ekinGrid%takeFieldFromGrid(stars, ecwk, (2.0*stateRadius)+0.0005)
+               CALL ekinGrid%takeFieldFromGrid(stars, ecwk, stateFFTRadius+0.0005)
             END IF
          ENDIF
 

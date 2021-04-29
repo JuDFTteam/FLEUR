@@ -239,7 +239,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  CHARACTER(len=200):: xpaths,xpathg,xpath,valueString,lstring,nstring,core,valence
  INTEGER           :: i,j,numberNodes,ilo,lNumCount,nNumCount,l,n,itype,na,jrc,numU
  INTEGER,ALLOCATABLE::lNumbers(:),nNumbers(:)
- LOGICAL           :: relaxx,relaxy,relaxz
+ LOGICAL           :: relaxx,relaxy,relaxz,l_flipElectronConfigSpins
  INTEGER,ALLOCATABLE :: itmp(:,:)
  REAL                :: down,up,dr,radius
  CHARACTER(len=20)   :: state
@@ -373,6 +373,10 @@ SUBROUTINE read_xml_atoms(this,xml)
     END DO
     !electron config
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/electronConfig')==1) THEN
+       l_flipElectronConfigSpins = .FALSE.
+       IF (xml%versionNumber>=34) THEN
+           l_flipElectronConfigSpins = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/electronConfig/@flipSpins'))
+       ENDIF
        core=xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/electronConfig/coreConfig')
        valence=xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/electronConfig/valenceConfig')
        CALL this%econf(n)%init(core,valence)
@@ -383,7 +387,11 @@ SUBROUTINE read_xml_atoms(this,xml)
              state=xml%getAttributeValue(TRIM(xpath)//'/@state')
              up=evaluateFirstOnly(xml%getAttributeValue(TRIM(xpath)//'/@spinUp'))
              down=evaluateFirstOnly(xml%getAttributeValue(TRIM(xpath)//'/@spinDown'))
-             CALL this%econf(n)%set_occupation(state,up,down)
+             IF(.NOT.l_flipElectronConfigSpins) THEN
+                CALL this%econf(n)%set_occupation(state,up,down)
+             ELSE
+                CALL this%econf(n)%set_occupation(state,down,up)
+             END IF
           END DO
        END IF
     ELSE IF (xml%versionNumber<32) then

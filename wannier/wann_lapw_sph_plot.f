@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_lapw_sph_plot
-
+         use m_juDFT
 c*****************************************************************
 c            plot wannierfunction in muffin tins
 c            Frank Freimuth, November 2006
@@ -34,6 +34,8 @@ c*****************************************************************
       real sx
       integer i,j,jr,l,m,lm
       complex ylm((lmaxd+1)**2),xd1,xd2,s
+
+      call timestart("wann_lapw_sph_plot")
 
       sx = 0.0
       DO 50 i = 1,3
@@ -91,5 +93,6 @@ c..contributions from the local orbitals
          
       END IF
 
+      call timestop("wann_lapw_sph_plot")
       END SUBROUTINE wann_lapw_sph_plot
       END MODULE m_wann_lapw_sph_plot

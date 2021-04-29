@@ -11,7 +11,7 @@ MODULE m_make_kpoints
   private
   public :: make_kpoints, add_special_points_default
 CONTAINS
-  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,str,kptsName,kptsPath)
+  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,l_gamma,str,kptsName,kptsPath)
     USE m_types_kpts
     USE m_types_cell
     USE m_types_sym
@@ -23,23 +23,23 @@ CONTAINS
     TYPE(t_hybinp), intent(in) :: hybinp
     LOGICAL,INTENT(in)::l_socorss,film
     INTEGER,INTENT(inout)::bz_integration
+    LOGICAL,INTENT(inout)::l_gamma
     CHARACTER(len=*),INTENT(inout)::str
     CHARACTER(len=*),INTENT(inout)::kptsName
     CHARACTER(len=*),INTENT(inout)::kptsPath
 
-    LOGICAL:: l_gamma,l_soc_or_ss, l_bzset
+    LOGICAL:: l_soc_or_ss, l_bzset, l_onlyIdentitySym
     REAL   :: den
     INTEGER:: nk,grid(3)
     character(len=40)::name=""
     !defaults
     l_soc_or_ss=l_socorss
-    l_gamma=.false.
 
     IF (kptsPath.NE.''.AND.kptsPath.NE.'default') THEN
        CALL set_special_points(kpts,kptsPath)
     ENDIF
 
-    PRINT *,"Processing k-point string",str
+    PRINT *,"Processing k-point string: ",str
     !set name
     IF (INDEX(str,"#")>0) THEN
        name=str(:INDEX(str,"#")-1)
@@ -88,18 +88,23 @@ CONTAINS
        ENDIF
     END DO
 
+    l_onlyIdentitySym = .FALSE.
+    IF (judft_was_argument("-nosym").OR.judft_was_argument("-noKsym")) THEN
+       l_onlyIdentitySym = .TRUE.
+    END IF
+
     l_gamma = l_gamma .or. hybinp%l_hybrid
 
     IF (INDEX(str,'den=')==1) THEN
        str=str(5:)
        READ(str,*) den
        PRINT *,"Generating a k-point set with density:",den
-       CALL init_by_density(kpts,den,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+       CALL init_by_density(kpts,den,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
     ELSEIF(INDEX(str,'nk=')==1) THEN
        str=str(4:)
        READ(str,*) nk
        PRINT *,"Generating a k-point set with ",nk," k-points"
-       CALL init_by_number(kpts,nk,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+       CALL init_by_number(kpts,nk,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
     ELSEIF(INDEX(str,'band=')==1) THEN
        str=str(6:)
        READ(str,*) kpts%nkpt
@@ -110,7 +115,7 @@ CONTAINS
        str=str(6:)
        READ(str,*) grid
        PRINT *,"Generating a k-point grid:",grid
-       CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+       CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
     ELSEIF(INDEX(str,'file')==1) THEN
        CALL init_by_kptsfile(kpts,film)
        PRINT *,"Reading old kpts file"
@@ -120,7 +125,7 @@ CONTAINS
        CALL kpts_kplib(cell,sym,kpts)
     ELSEIF(LEN_TRIM(str)<1.OR.INDEX(ADJUSTL(str),'#')==1) THEN
        PRINT *,"Generating default k-point set"
-       CALL init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+       CALL init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
     ELSE
        CALL judft_error(("Could not process -k argument:"//str))
     ENDIF
@@ -257,25 +262,35 @@ CONTAINS
   END SUBROUTINE init_special
 
 
-  SUBROUTINE init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+  SUBROUTINE init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
     USE m_types_cell
     USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
     LOGICAL,INTENT(in)       :: film,l_soc_or_ss,l_gamma
+    LOGICAL,INTENT(IN)       :: l_OnlyIdentitySym
     INTEGER,INTENT(in)       :: bz_integration
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
 
-    INTEGER:: nkpt
+    INTEGER:: nkpt, nop, nop2
+
+    nop = sym%nop
+    nop2 = sym%nop2
+    IF(l_OnlyIdentitySym) THEN
+       nop = 1
+       nop2 = 1
+    END IF
+
     IF (film) THEN
-       nkpt = MAX(NINT((3600/cell%area)/sym%nop2),1)
+       nkpt = MAX(NINT((3600/cell%area)/nop2),1)
     ELSE
-       nkpt = MAX(NINT((216000/cell%omtil)/sym%nop),1)
+       nkpt = MAX(NINT((216000/cell%omtil)/nop),1)
     ENDIF
-    CALL init_by_number(kpts,nkpt,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+
+    CALL init_by_number(kpts,nkpt,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
   END SUBROUTINE init_defaults
 
-  SUBROUTINE init_by_density(kpts,density,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+  SUBROUTINE init_by_density(kpts,density,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
     USE m_types_cell
     USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
@@ -283,6 +298,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
     LOGICAL,INTENT(IN)       :: film,l_soc_or_ss,l_gamma
+    LOGICAL,INTENT(IN)       :: l_OnlyIdentitySym
     INTEGER,INTENT(IN)       :: bz_integration
     REAL    :: length
     INTEGER :: n,grid(3)
@@ -291,11 +307,11 @@ CONTAINS
        length=SQRT(DOT_PRODUCT(cell%bmat(n,:),cell%bmat(n,:)))  !TODO why not bmat(:,n)???
        grid(n)=CEILING(density*length)
     END DO
-    CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+    CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
 
   END SUBROUTINE init_by_density
 
-  SUBROUTINE init_by_number(kpts,nkpt,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+  SUBROUTINE init_by_number(kpts,nkpt,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
     USE m_constants
     USE m_types_cell
     USE m_types_sym
@@ -310,6 +326,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
     LOGICAL,INTENT(IN)       :: film,l_soc_or_ss,l_gamma
+    LOGICAL,INTENT(IN)       :: l_OnlyIdentitySym
     INTEGER,INTENT(IN)       :: bz_integration
 
     TYPE(t_brZone)       :: bz
@@ -326,7 +343,7 @@ CONTAINS
        WRITE (oUnit,'(3x,'' in irred wedge of 1. Brillouin zone'')')
        WRITE (oUnit,'(3x,'' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'')')
 
-       CALL bz%initBZone(cell, sym, l_soc_or_ss, film)
+       CALL bz%initBZone(cell, sym, l_soc_or_ss, film,l_OnlyIdentitySym)
 
        CALL kvecon(kpts%nkpt,mface_const,bz%ncorn,bz%nsym,bz%nface,bz%rltv,bz%fdist,bz%fnorm,bz%cpoint,&
                    kpts%bk)
@@ -344,13 +361,16 @@ CONTAINS
 
        RETURN
     END IF
-
-    CALL divi(nkpt,cell%bmat,film,sym%nop,sym%nop2,grid)
-    CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+    IF (l_OnlyIdentitySym) THEN
+       CALL divi(nkpt,cell%bmat,film,1,1,grid)
+    ELSE
+       CALL divi(nkpt,cell%bmat,film,sym%nop,sym%nop2,grid)
+    END IF
+    CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
 
   END SUBROUTINE init_by_number
 
-  SUBROUTINE init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma)
+  SUBROUTINE init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
     !----------------------------------------------------------------------+
     ! Generate a k-point file with approx. nkpt k-pts or a Monkhorst-Pack  |
     ! set with nmod(i) divisions in i=x,y,z direction. Interface to kptmop |
@@ -373,6 +393,7 @@ CONTAINS
     TYPE(t_cell),    INTENT(IN)    :: cell
     INTEGER,INTENT(INout)          :: grid(3)
     LOGICAL,INTENT(IN)             :: film,l_soc_or_ss,l_gamma
+    LOGICAL,INTENT(IN)             :: l_OnlyIdentitySym
     INTEGER,INTENT(IN)             :: bz_integration
 
     INTEGER, PARAMETER :: mdir   = 10
@@ -404,14 +425,9 @@ CONTAINS
 
     kpts%kptsKind = KPTS_KIND_MESH
 
-    IF (ANY(grid==0)) THEN
-       PRINT *,"Warning, k-point grid dimension increased to 1"
-       WHERE(grid==0) grid=1
-    END IF
-
     IF (l_gamma) THEN
        IF (bz_integration==BZINT_METHOD_TRIA) CALL judft_error("tria and l_gamma incompatible")
-       CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss)
+       CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss,l_OnlyIdentitySym)
     ELSE
        !------------------------------------------------------------
        !
@@ -437,7 +453,7 @@ CONTAINS
        !------------------------------------------------------------
 
 
-       CALL bz%initBZone(cell, sym, l_soc_or_ss, film)
+       CALL bz%initBZone(cell, sym, l_soc_or_ss, film,l_OnlyIdentitySym)
 
        random  = bz_integration==BZINT_METHOD_TRIA.AND..NOT.film
 
@@ -474,6 +490,8 @@ CONTAINS
                bz%rltv,bz%bltv,0,idimens,bz%xvec,bz%fnorm,bz%fdist,bz%ncorn,bz%nface,&
                bz%nedge,bz%cpoint,bz%nsym,bz%ccr,bz%rlsymr,bz%talfa,mkpt,mface_const,mdir,&
                kpts%nkpt,vkxyz,wghtkp)
+
+          WHERE(grid==0) grid=1
        END IF
 
        DO j=1,kpts%nkpt

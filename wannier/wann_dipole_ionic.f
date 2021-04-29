@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_dipole_ionic
+      use m_judft
       contains
       subroutine wann_dipole_ionic(
      >               natd,pos,omtil,
@@ -41,6 +42,7 @@
       real                         :: coordinate
       real                         :: ionchargesum
 
+      call timestart("wann_dipole_ionic")
       write(666,*)"*****************************"
       write(666,*)" Ionic terms                 "
       write(666,*)"*****************************"
@@ -123,6 +125,7 @@ c-----compute the ionic moment
  555  format("ionic moment = (",3f12.6,")a.u.")
  777  format("ionic polarization = (",3f12.6,")uC/cm**2")
 
+      call timestop("wann_dipole_ionic")
       end subroutine wann_dipole_ionic
       end module m_wann_dipole_ionic
 

@@ -1,6 +1,7 @@
 module m_work_package
    use m_types
    use m_distribute_mpi
+   use m_divide_most_evenly
    implicit none
 
    type t_band_package  
@@ -150,29 +151,32 @@ contains
       q_pack%size   = fi%kpts%EIBZ(nk)%nkpt
       q_pack%ptr    = ptr
 
-      ! arrays should be less than 5 gb
+      ! arrays should be less than 15 gb
       if(fi%sym%invs) then
          target_psize = floor(target_memsize(fi, hybdat, mpdata%n_g)/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)))
       else
          target_psize = floor(target_memsize(fi, hybdat, mpdata%n_g)/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)))
       endif
 
-      if(target_psize == 0) call judft_error("not enough memory so save waveprod")
+      if(target_psize == 0) then
+         write(*,*) "Can't keep mem requirement. Setting target_psize = 1"
+      endif
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
  
       n_parts = ceiling(1.0*hybdat%nobd(ikqpt, jsp)/target_psize)
-      ! I can't have more parts than hybdat%nobd
-      n_parts = min(hybdat%nobd(ikqpt, jsp), n_parts)
 
       if(mod(n_parts, q_pack%submpi%size) /= 0) then
          n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
       endif
+
+      ! I can't have more parts than hybdat%nobd
+      n_parts = min(hybdat%nobd(ikqpt, jsp), n_parts)
       
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
 
-      call split_band_loop(hybdat%nobd(ikqpt, jsp), n_parts, start_idx, psize)
+      call divide_most_evenly(hybdat%nobd(ikqpt, jsp), n_parts, start_idx, psize)
 
       do i = 1, n_parts
          call q_pack%band_packs(i)%init(start_idx(i), psize(i), i, n_parts)
@@ -276,35 +280,6 @@ contains
       enddo
    end function t_work_package_has_nk
 
-   subroutine split_band_loop(n_total, n_parts, start_idx, psize)
-      use m_types
-      implicit none
-      integer, intent(in)                 :: n_total, n_parts
-      integer, allocatable, intent(inout) :: start_idx(:), psize(:)
-
-      integer             :: i, big_size, small_size, end_idx
-
-      if(allocated(start_idx)) deallocate(start_idx)
-      if(allocated(psize)) deallocate(psize)
-      allocate(start_idx(n_parts), psize(n_parts))
-
-      if(n_parts == 0) call judft_error("You need more than 0 parts")
-
-      small_size = floor((1.0*n_total)/n_parts)
-      big_size = small_size +1
-
-      end_idx = 0
-      do i = 1,n_parts
-         psize(i) = merge(big_size, small_size,i <= mod(n_total, n_parts))
-         if(psize(i) == 0) then
-            write (*,*) "n_total, n_parts", n_total, n_parts
-            call judft_warn("some band_packs have 0 bands")
-         endif
-         start_idx(i) = end_idx + 1
-         end_idx = start_idx(i) + psize(i) - 1
-      enddo
-   end subroutine split_band_loop
-
    real function target_memsize(fi, hybdat, n_g)
 #ifdef _OPENACC 
       use openacc
@@ -332,7 +307,7 @@ contains
       gpu_mem = acc_get_property(0,acc_device_current, acc_property_free_memory)
       target_memsize = 0.5*((0.85*gpu_mem) - (coulomb_size + exch_size))
 #else
-      target_memsize = 10e9 ! 10 Gb
+      target_memsize = 15e9 ! 10 Gb
 #endif
    end function target_memsize
 end module m_work_package

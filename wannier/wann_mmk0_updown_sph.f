@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_wann_mmk0_updown_sph
+         use m_judft
       CONTAINS
       SUBROUTINE wann_mmk0_updown_sph(
      >               l_noco,alph,beta,
@@ -59,6 +60,7 @@ c************************************************************
       complex, allocatable :: qcloa(:,:,:,:),qclob(:,:,:,:)
       COMPLEX           :: ccchi(2,2)
 
+      call timestart("wann_mmk0_updown_sph")
       allocate (qlo(noccbd,noccbd,nlod,nlod,ntypd), 
      +          qaclo(noccbd,noccbd,nlod,ntypd),
      +          qbclo(noccbd,noccbd,nlod,ntypd),
@@ -234,6 +236,7 @@ c---> of the radial basis functions
       enddo 
       deallocate ( qlo,qaclo,qbclo,qcloa,qclob )
 
+      call timestop("wann_mmk0_updown_sph")
       END SUBROUTINE wann_mmk0_updown_sph
       END MODULE m_wann_mmk0_updown_sph
 

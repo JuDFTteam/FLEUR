@@ -35,6 +35,8 @@
       integer :: write_bands,firstband
       integer :: map3(3)
       
+      call timestart("wann_convert_fleur_w90")
+
       do ik=1,3
          map3(ik)=ik
       enddo   
@@ -737,5 +739,6 @@
          close(spn_in)
       endif !  wann%l_mmn0_to_spn2
 
+      call timestop("wann_convert_fleur_w90")
       end subroutine wann_convert_fleur_w90
       END MODULE m_wann_convert_fleur_w90

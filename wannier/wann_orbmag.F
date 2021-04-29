@@ -1,5 +1,6 @@
       MODULE m_wann_orbmag
       USE m_fleurenv
+      use m_juDFT
       CONTAINS
       SUBROUTINE wann_orbmag(
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -210,6 +211,7 @@
       real :: diff,mdiff
       character(len=20)::fn
 
+      call timestart("wann_orbmag")
       info=0
       addnoco =0
       addnoco2=0
@@ -919,6 +921,7 @@
       deallocate(tmp_mat2)
       deallocate(ham)
 
+      call timestop("wann_orbmag")
       END SUBROUTINE wann_orbmag
 
  

@@ -29,7 +29,7 @@ set(HybridTests
 )
 
 set(FFNTests
-   Fe_bcc_FlipcdnXLDA Fe_bcc_FlipcdnYGGA FeFFNLOsSOC
+   Fe_bcc_FlipcdnXLDA  FeFFNLOsSOC
    PlotDenandPot PlotOnlyMT Noncollinear_downward_compatible
    RelaxMTFeature Fe_bcc_SF_LDA
 )

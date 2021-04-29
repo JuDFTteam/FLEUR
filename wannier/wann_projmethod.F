@@ -58,6 +58,7 @@ c**********************************************************************
       integer                :: ldu,ldv,m
       complex                :: hwfk(nwfs,nwfs)
 
+      call timestart("wann_projmethod")
       if(l_projmethod) then
          omn=cmplx(0.0,0.0)
 c..      now we determine the Omn matrix, PRB 71,125119, Eq.(13)
@@ -246,7 +247,7 @@ c..   purpose of testing
       enddo
 
       deallocate (work,rwork,iwork)
-
+      call timestop("wann_projmethod")
 
       end subroutine wann_projmethod
       end module m_wann_projmethod

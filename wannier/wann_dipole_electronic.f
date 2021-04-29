@@ -56,6 +56,7 @@ c*********************************************
 
       data spin12/'  ', '.1', '.2'/
 
+      call timestart("wann_dipole_electronic")
       write(666,*)"*****************************"
       write(666,*)" Electronic terms            "
       write(666,*)"*****************************"
@@ -126,5 +127,7 @@ c--------reading the proj.1 / proj.2 / proj file
  555  format("spin ",i1.1," electronic moment = (",3f12.6,") a.u.")
  777  format("spin ",i1.1,
      &          " electronic polarization = (",3f12.6,") uC/cm**2")
+
+      call timestop("wann_dipole_electronic")
       end subroutine wann_dipole_electronic
       end module m_wann_dipole_electronic

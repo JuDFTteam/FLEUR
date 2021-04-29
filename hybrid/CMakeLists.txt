@@ -1,19 +1,24 @@
 set(fleur_F90 ${fleur_F90}
 hybrid/add_Vnonlocal.F90
-hybrid/calc_cmt.f90
+hybrid/apply_inverse_olap.F90
+hybrid/calc_cmt.F90
 hybrid/calc_hybrid.F90
 hybrid/calc_l_m_from_lm.f90
 hybrid/calc_mpsmat.f90
 hybrid/checkolap.F90
 hybrid/coulombmatrix.F90
+hybrid/copy_coul.F90
 hybrid/create_coul_comms.F90
+hybrid/distrib_vx.F90
 hybrid/distribute_mpi.F90
+hybrid/divide_most_evenly.f90
 hybrid/eigvec_setup.F90 
 hybrid/exchange_core.F90
 hybrid/exchange_val_hf.F90
 hybrid/exponential_integral.f90
 hybrid/ex_to_vx.f90
 hybrid/gen_wavf.F90
+hybrid/glob_tofrom_loc.F90
 hybrid/HF_init.F90
 hybrid/hf_setup.F90
 hybrid/hsefunctional.F90

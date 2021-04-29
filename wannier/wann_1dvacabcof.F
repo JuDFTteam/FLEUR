@@ -3,6 +3,7 @@ c     calculate a-, and b-coefficients of 1d-vacuum
 c     Y. Mokrousov from Frank's routine, January 2007
 c********************************************************
       module m_wann_1dvacabcof
+         use m_juDFT
       contains
       subroutine wann_1dvacabcof(
      >    oneD,vacuum,stars,cell,
@@ -69,6 +70,9 @@ c********************************************************
       integer kvac3(nv2d),map1(nvd),i,j,irec3,irec2,m,nvac
       real bess(-odi%mb:odi%mb),dbss(-odi%mb:odi%mb)
       real qssbti(3,2)
+
+      call timestart("wann_1dvacabcof")
+
          ic = cmplx(0.,1.)
          tpi = 2.*pimach()
          wronk = 2.0
@@ -153,5 +157,6 @@ c********************************************************
 
          deallocate (dt,dte,t,te,tei)
 
+         call timestop("wann_1dvacabcof")
       end subroutine
       end module m_wann_1dvacabcof

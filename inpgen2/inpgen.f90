@@ -75,9 +75,9 @@ PROGRAM inpgen
       TYPE(t_enparaXML):: enparaxml
       TYPE(t_juPhon)  :: juPhon
 
-      INTEGER            :: idum, kptsUnit, inpOldUnit, ios
+      INTEGER            :: idum, kptsUnit, inpOldUnit, ios, inpgenIUnit
       INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
-      CHARACTER(len=40)  :: filename
+      CHARACTER(len=100) :: filename
       CHARACTER(len=200) :: xPath
       CHARACTER(len=800) :: line
       CHARACTER(LEN=40)  :: kptsSelection(3)
@@ -86,6 +86,7 @@ PROGRAM inpgen
       CHARACTER(len=40), ALLOCATABLE  :: kptsName(:)
       CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
       INTEGER, ALLOCATABLE :: kptsBZintegration(:)
+      LOGICAL, ALLOCATABLE :: kptsGamma(:)
       LOGICAL, ALLOCATABLE :: l_kptsInitialized(:)
       LOGICAL            :: l_exist, l_addPath, l_check, l_oldinpXML
 
@@ -153,6 +154,7 @@ PROGRAM inpgen
       ALLOCATE(kpts_str(numKpts))
       ALLOCATE(kptsName(numKpts))
       ALLOCATE(kptsPath(numKpts))
+      ALLOCATE(kptsGamma(numKpts))
       ALLOCATE(l_kptsInitialized(numKpts))
       ALLOCATE(kptsBZintegration(numKpts))
       kpts_str(:)=""
@@ -161,6 +163,7 @@ PROGRAM inpgen
       kptsSelection(:) = ''
       l_kptsInitialized(:) = .TRUE.
       kptsBZintegration = BZINT_METHOD_HIST
+      kptsGamma = .FALSE.
 
       IF (judft_was_argument("-inp")) THEN
          l_kptsInitialized(:) = .FALSE.
@@ -184,7 +187,7 @@ PROGRAM inpgen
          l_kptsInitialized(:) = .FALSE.
          ALLOCATE (sliceplot%plot(1))
          CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
-              input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+              kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
          IF(input%film) sliceplot%plot(1)%zero(3) = -0.5
          IF (l_addPath) THEN
             l_check = .TRUE.
@@ -251,11 +254,11 @@ PROGRAM inpgen
       DO iKpts = 1, numKpts
          IF (l_kptsInitialized(iKpts)) CYCLE
          CALL make_kpoints(kpts(iKpts),cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
-                           kptsBZintegration(iKpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
+                           kptsBZintegration(iKpts),kptsGamma(ikpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
          if(hybinp%l_hybrid .and. kpts(iKpts)%kptsKind == KPTS_KIND_MESH) then
             call timestart("Hybrid setup BZ")
             CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
-            call kpts(ikpts)%init(sym, input%film,.true.)
+            call kpts(ikpts)%init(sym, input%film,.true.,.FALSE.)
             call timestop("Hybrid setup BZ")
          endif
       END DO
@@ -288,9 +291,10 @@ PROGRAM inpgen
               hub1inp,l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
+
+      inpOldUnit = 39
       IF (.NOT.l_include(1)) THEN
          kptsUnit = 38
-         inpOldUnit = 39
          INQUIRE(file='kpts.xml',exist=l_exist)
          IF((.NOT.l_exist).AND.judft_was_argument("-inp.xml")) THEN
             CALL system('mv inp.xml inp_old.xml')
@@ -326,6 +330,23 @@ PROGRAM inpgen
          END IF
 
          CLOSE (kptsUnit)
+      END IF
+
+      inpgenIUnit = 57
+      IF(judft_was_argument("-f").AND..NOT.juDFT_was_argument("-noInpgenComment")) THEN
+         filename = juDFT_string_for_argument("-f")
+         OPEN (inpgenIUnit,file=TRIM(filename),action="read")
+         OPEN (inpOldUnit, file="inp.xml", action="write", status='old', access='append')
+         WRITE(inpOldUnit,'(a)') ''
+         WRITE(inpOldUnit,'(a)') '<!-- Initial (original) inpgen input (only for documentation purposes):'
+         ios = 0
+         DO WHILE(ios==0)
+            READ(inpgenIUnit,'(a)',iostat=ios) line
+            IF (ios.EQ.0) WRITE(inpOldUnit,'(a)') TRIM(line)
+         END DO
+         WRITE(inpOldUnit,'(a)') '-->'
+         CLOSE (inpOldUnit)
+         CLOSE (inpgenIUnit)
       END IF
 
 100   FORMAT (a20,a15,i10,3x,a)
@@ -364,7 +385,7 @@ PROGRAM inpgen
       OPEN (55,file="struct.xsf")
       CALL xsf_WRITE_atoms(55,atoms,input%film,.FALSE.,cell%amat)
       CLOSE (55)
-      CLOSE(6)
+      CLOSE(oUnit)
 
       CALL juDFT_end("All done")
 

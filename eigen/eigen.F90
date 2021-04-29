@@ -200,7 +200,7 @@ CONTAINS
 #ifdef CPP_MPI
                 call MPI_COMM_RANK(fmpi%diag_sub_comm,n_rank,err)
                 call MPI_COMM_SIZE(fmpi%diag_sub_comm,n_size,err)
-#else       
+#else
                 n_rank = 0; n_size=1;
 #endif
                 CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&

@@ -36,10 +36,10 @@ CONTAINS
       type(t_fft)     :: fft
       type(t_fftgrid) :: stepf
 
-      integer :: g(3), igptm, iob, n_omp, iob_list(cprod%matsize2), iband_list(cprod%matsize2)
+      integer :: g(3), igptm, iob, n_omp
       integer :: ok, nbasfcn, psize, iband, ierr, i
       integer, allocatable :: band_list(:)
-      real    :: inv_vol, t_2ndwavef2rs, time_fft, t_sort, t_start, gcutoff
+      real    :: inv_vol, gcutoff
 
       logical :: real_warned
 
@@ -57,6 +57,11 @@ CONTAINS
 
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
+      stepf%grid = stepf%grid * inv_vol
+      ! after we transform psi_k*stepf*psi_kqpt back  to 
+      ! G-space we have to divide by stepf%gridLength. We do this now
+      stepf%grid = stepf%grid /stepf%gridLength
+
       call fft%init(stepf%dimensions, .false.)
       call fft%exec(stepf%grid)
       call fft%free()
@@ -78,57 +83,65 @@ CONTAINS
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
-
-      t_2ndwavef2rs = 0.0; time_fft = 0.0; t_sort = 0.0; n_omp = 1
-      iob_list = -7
-      iband_list = -7
-      !$OMP PARALLEL default(private) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k,  t_start, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, iob_list, iband_list, gcutoff)&
+      !$OMP PARALLEL default(shared) &
+      !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
+      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff)&
       !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
 
+      call timestart("alloc&init")
       allocate (prod(0:stepf%gridLength - 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc prod")
       allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
       call fft%init(stepf%dimensions, .true.)
-      !$OMP DO
-      do iband = 1, hybdat%nbands(ik,jsp)
-         call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-         psi_k(:, 1) = conjg(psi_k(:, 1))*inv_vol * stepf%grid!stars%ufft*
+      call timestop("alloc&init")
 
-         do iob = 1, psize
-            iob_list(iob + (iband - 1)*psize) = iob + bandoi - 1
-            iband_list(iob + (iband - 1)*psize) = iband
-            ! t_start = cputime()
-            prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
-            call fft%exec(prod)
-            if (cprod%l_real) then
-               if (any(abs(aimag(prod)) > 1e-8) .and. (.not. real_warned)) then
-                  write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
-                     float2str(maxval(abs(aimag(prod))))
-                  real_warned = .True.
+
+      if (cprod%l_real) then
+         !$OMP DO
+         do iband = 1, hybdat%nbands(ik,jsp)
+            call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+            psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
+
+            do iob = 1, psize
+               prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
+               call fft%exec(prod)
+
+               if (cprod%l_real .and. (.not. real_warned)) then
+                  if (any(abs(aimag(prod)) > 1e-8)) then
+                     write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
+                        float2str(maxval(abs(aimag(prod))))
+                     real_warned = .True.
+                  endif
                endif
-            endif
 
-            ! we still have to devide by the number of mesh points
-            prod = prod/stepf%gridLength
-
-            if (cprod%l_real) then
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
                   cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(stepf%g2fft(g)))
                enddo
-            else
+            enddo
+         enddo
+         !$OMP END DO
+      else
+         !$OMP DO
+         do iband = 1, hybdat%nbands(ik,jsp)
+            call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+            psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
+
+            do iob = 1, psize
+               prod = psi_k(:, 1)*psi_kqpt%data_c(:, iob)
+               call fft%exec(prod)
+
                DO igptm = 1, mpdata%n_g(iq)
                   g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
                   cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g))
                enddo
-            endif
+            enddo
          enddo
-      enddo
-      !$OMP END DO
+         !$OMP END DO
+      endif
+
       deallocate (prod, psi_k)
       call fft%free()
       !$OMP END PARALLEL
@@ -141,6 +154,7 @@ CONTAINS
    end subroutine wavefproducts_IS_FFT
 
    subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, psi)
+      ! put block of wave functions through FFT
 !$    use omp_lib
       use m_types
       use m_fft_interface
@@ -156,11 +170,10 @@ CONTAINS
       type(t_fftgrid) :: grid
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
-      integer :: iv, nu, n_threads
+      integer :: iv, nu
 
       psi = 0.0
-      n_threads = 1
-      !$OMP PARALLEL private(nu, iv, n_threads, fft, grid)  default(private) &
+      !$OMP PARALLEL private(nu, iv, fft, grid)  default(private) &
       !$OMP shared(fi, bandoi, bandof, zMat, psi,  ivmap, lapw, jspin, gcutoff)
 
       call grid%init(fi%cell, fi%sym, gcutoff)

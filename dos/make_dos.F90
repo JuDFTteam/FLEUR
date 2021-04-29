@@ -78,7 +78,7 @@ CONTAINS
     END IF
 
 #ifdef CPP_HDF
-      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos,eFermi)
+      CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,sym,banddos,eFermi)
 #endif
 
     IF (banddos%band) THEN
@@ -86,9 +86,16 @@ CONTAINS
        DO n=1,size(eigdos)
           call eigdos(n)%p%write_band(kpts,input%comment,cell,banddosFile_id,eFermi,banddos)
        enddo
-      IF (banddos%unfoldband) THEN
-         CALL write_band_sc(banddos,cell,kpts,results,eFermi)
-      END IF
+       IF (banddos%unfoldband) THEN
+#ifdef CPP_HDF
+          CALL writeBandData(banddosFile_id,'Local','unfolding',eigdos(1)%p%get_eig(),REAL(results%unfolding_weights),kpts)
+#endif
+          CALL write_band_sc(banddos,cell,kpts,results,eFermi)
+       END IF
+       WRITE(*,*) ""
+       WRITE(*,*) "Note: Band structure data (together with different weights) is also stored in the banddos.hdf file."
+       WRITE(*,*) "      A convenient way of extracting and plotting the data from that file is by making use of the"
+       WRITE(*,*) "      masci-tools (https://pypi.org/project/masci-tools/)."
     ENDIF
 
     IF (input%cdinf) then
@@ -96,15 +103,24 @@ CONTAINS
     endif
 
     IF (banddos%dos) THEN
-      DO n=1,size(eigdos)
-         print *,"Makedos:",n
-         call eigdos(n)%p%make_dos(kpts,input,banddos,eFermi)
-         print *,"Smooth:",n
-         call eigdos(n)%p%smooth(banddos)
-         print *,"WriteDos:",n
-         call eigdos(n)%p%write_dos(banddosFile_id)
-       enddo
-    endif
+       DO n=1,size(eigdos)
+          print *,"Makedos:",n
+          call eigdos(n)%p%make_dos(kpts,input,banddos,eFermi)
+          print *,"Smooth:",n
+          call eigdos(n)%p%smooth(banddos)
+          print *,"WriteDos:",n
+          call eigdos(n)%p%write_dos(banddosFile_id)
+       END DO
+       IF (banddos%l_storeEVData) THEN
+          DO n=1,size(eigdos)
+             call eigdos(n)%p%write_EVData(banddosFile_id)
+          END DO
+       END IF
+       WRITE(*,*) ""
+       WRITE(*,*) "Note: DOS data (together with different weights) is also stored in the banddos.hdf file."
+       WRITE(*,*) "      A convenient way of extracting and plotting the data from that file is by making use of the"
+       WRITE(*,*) "      masci-tools (https://pypi.org/project/masci-tools/)."
+    END IF
 #ifdef CPP_HDF
       CALL closeBandDOSFile(banddosFile_id)
 #endif
