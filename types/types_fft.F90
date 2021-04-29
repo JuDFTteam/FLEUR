@@ -39,7 +39,8 @@ module m_types_fft
 #endif
    contains 
       procedure :: init => t_fft_init
-      procedure :: exec => t_fft_exec_single, t_fft_exec_batched
+      procedure :: exec => t_fft_exec_single
+      procedure :: exec_batch => t_fft_exec_batched
       procedure :: free => t_fft_free
    end type t_fft
 contains
