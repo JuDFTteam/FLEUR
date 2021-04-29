@@ -11,10 +11,11 @@ module m_types_fft
 #ifdef CPP_FFTW 
    use fftw3
 #endif
-
+   !$ use omp_lib
    type t_fft 
       logical :: initialized = .False.
       integer :: backend = -1
+      integer :: batch_size = 1
       integer :: length(3) = [-1,-1,-1]
       logical :: forw
       ! cfft storage
@@ -32,21 +33,23 @@ module m_types_fft
       COMPLEX(C_DOUBLE_COMPLEX), POINTER     :: externalRealSpaceMesh(:, :, :)
 #endif
 #ifdef CPP_FFTW
-      type(c_ptr) :: plan, ptr_in, ptr_out
-      complex(C_DOUBLE_COMPLEX), pointer :: in(:), out(:)       
+      type(c_ptr), allocatable :: plan(:)
+      type(c_ptr)              :: ptr_in, ptr_out
+      complex(C_DOUBLE_COMPLEX), pointer :: in(:,:), out(:,:)       
 #endif
    contains 
       procedure :: init => t_fft_init
-      procedure :: exec => t_fft_exec
+      procedure :: exec => t_fft_exec_single, t_fft_exec_batched
       procedure :: free => t_fft_free
    end type t_fft
 contains
-   subroutine t_fft_init(fft, length, forw, indices)
+   subroutine t_fft_init(fft, length, forw, indices, batch_size)
       implicit none       
       class(t_fft)                  :: fft
       integer, intent(in)           :: length(3) !length of data in each direction
       logical, intent(in)           :: forw          !.true. for the forward transformation, .false. for the backward one
       INTEGER, OPTIONAL, INTENT(IN) :: indices(:)    !array of indices of relevant/nonzero elements in the FFT mesh
+      integer, optional, intent(in) :: batch_size
 
       INTEGER, PARAMETER :: numOMPThreads = 1
       integer :: size_dat, ok, fftMeshIndex, maxNumLocalZColumns
@@ -54,7 +57,22 @@ contains
       INTEGER, ALLOCATABLE :: sparseCoords(:)
       LOGICAL, ALLOCATABLE :: nonzeroArea(:, :)
       type(c_ptr)          :: grid = c_null_ptr
+      logical :: in_openmp = .false.
+      integer :: max_threads = 1, thread_id = 0
+      integer :: n_plans
 
+      !$ thread_id   = omp_get_thread_num()
+      !$ max_threads = omp_get_max_threads()
+      !$ in_openmp   = omp_in_parallel()
+      if(in_openmp) then
+         call juDFT_error("can't create FFTs inside OpenMP")
+      endif
+
+      if(present(batch_size)) then
+         fft%batch_size = batch_size
+      else
+         fft%batch_size = 1
+      endif
       fft%initialized = .True.
       fft%backend = defaultFFT_const
       fft%backend = selecFFT(PRESENT(indices))
@@ -64,21 +82,26 @@ contains
       select case(fft%backend)
 #ifdef CPP_FFTW
       case(FFTW_const)
-         ! allocate(fft%in(product(length)))
-         ! allocate(fft%out(product(length)))
-         !$OMP critical
-         fft%ptr_in = fftw_alloc_complex(int(product(length), C_SIZE_T))
-         call c_f_pointer(fft%ptr_in, fft%in, [product(length)])
-         fft%ptr_out = fftw_alloc_complex(int(product(length), C_SIZE_T))
-         call c_f_pointer(fft%ptr_out, fft%out, [product(length)])
-         if(fft%forw) then
-            fft%plan = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
-                                        fft%in, fft%out, FFTW_FORWARD,FFTW_MEASURE) 
-         else
-            fft%plan = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
-                                        fft%in, fft%out, FFTW_BACKWARD,FFTW_MEASURE) 
+         if(thread_id == 0) then
+            n_plans = min(max_threads, batch_size)
+            allocate(fft%plan(n_plans))
+
+            fft%ptr_in = fftw_alloc_complex(int(n_plans * product(length), C_SIZE_T))
+            call c_f_pointer(fft%ptr_in, fft%in, [product(length), n_plans])
+
+            fft%ptr_out = fftw_alloc_complex(int(n_plans * product(length), C_SIZE_T))
+            call c_f_pointer(fft%ptr_out, fft%out, [product(length), n_plans])
+
+            do i = 1,n_plans
+               if(fft%forw) then
+                  fft%plan(i) = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
+                                                fft%in(:,i), fft%out(:,i), FFTW_FORWARD,FFTW_MEASURE) 
+               else
+                  fft%plan(i) = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
+                                                fft%in(:,i), fft%out(:,i), FFTW_BACKWARD,FFTW_MEASURE) 
+               endif
+            enddo
          endif
-         !$OMP end critical
 #endif
 
 #ifdef CPP_SPFFT
@@ -151,22 +174,29 @@ contains
       end select
    end subroutine
 
-   subroutine t_fft_exec(fft, dat)
+
+   subroutine t_fft_exec_batched(fft, dat)
       USE m_cfft
       implicit none 
       class(t_fft), intent(inout) :: fft
-      complex, intent(inout)      :: dat(:) 
+      complex, intent(inout)      :: dat(:,:) 
       integer      :: isn, size_dat 
-      INTEGER      ::  i, x, y, z, fftMeshIndex, ok
+      INTEGER      ::  i, x, y, z, fftMeshIndex, ok, me
 
       size_dat = product(fft%length)
 
       select case(fft%backend)
 #ifdef CPP_FFTW
       case(fftw_const)
-         fft%in = dat
-         call fftw_execute_dft(fft%plan, fft%in, fft%out)
-         dat = fft%out
+         me = 1
+         !$omp parallel do default(none) private(me, i) shared(fft, dat)
+         do i = 1,size(dat,2)
+            !$ me = omp_get_thread_num() + 1
+            fft%in(:,me) = dat(:,i)
+            call fftw_execute_dft(fft%plan(me), fft%in(:,me), fft%out(:,me))
+            dat(:,i) = fft%out(:,me)
+         enddo
+         !$omp end parallel do
 #endif
 #ifdef CPP_SPFFT
       case(spFFT_const)
@@ -218,33 +248,56 @@ contains
          end if
 #endif
       case default
-         fft%afft = real(dat)
-         fft%bfft = aimag(dat)
-   
-         isn = merge(-1, 1, fft%forw)
-         CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(1),fft% length(1), isn)
-         CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(2), fft%length(1)*fft%length(2), isn)
-         CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(3), size_dat, isn)
-         dat = cmplx(fft%afft, fft%bfft)
+         do i = 1,size(dat,2)
+            fft%afft = real(dat(:,i))
+            fft%bfft = aimag(dat(:,i))
+      
+            isn = merge(-1, 1, fft%forw)
+            CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(1),fft% length(1), isn)
+            CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(2), fft%length(1)*fft%length(2), isn)
+            CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(3), size_dat, isn)
+            dat(:,i) = cmplx(fft%afft, fft%bfft)
+         enddo
       end select
-   end subroutine t_fft_exec
+   end subroutine t_fft_exec_batched
+
+   subroutine t_fft_exec_single(fft, dat)
+      implicit none
+      class(t_fft), intent(inout)   :: fft
+      complex, intent(inout),target :: dat(:) 
+      integer :: i
+      type(c_ptr)      :: ptr
+      complex, pointer :: tmp_2d(:,:) 
+
+      ! if an array is 1D just pretend it's 2d
+      ptr = c_loc(dat)
+      call c_f_pointer(ptr, tmp_2d, [size(dat), 1])
+
+      call t_fft_exec_batched(fft, tmp_2d)
+   end subroutine t_fft_exec_single
 
    subroutine t_fft_free(fft)
       implicit none 
       integer      :: ok
       class(t_fft) :: fft 
+      logical :: in_openmp = .false.
+      integer :: i
+      !$ in_openmp   = omp_in_parallel()
 
       if(allocated(fft%afft)) deallocate(fft%afft)
       if(allocated(fft%bfft)) deallocate(fft%bfft)
       select case(fft%backend)
 #ifdef CPP_FFTW
       case(FFTW_const)
-         !$OMP critical
-         call fftw_destroy_plan(fft%plan)
+         if(in_openmp) call juDFT_error("can't call fft%free() in openmp")
          call fftw_free(fft%ptr_in)
          call fftw_free(fft%ptr_out)
-         !$OMP end critical
-         fft%plan  = c_null_ptr     
+
+         do i=1,size(fft%plan,1)
+            call fftw_destroy_plan(fft%plan(i))
+            fft%plan(i)  = c_null_ptr
+         enddo     
+         deallocate(fft%plan)
 #endif
 #ifdef CPP_SPFFT
       case(spFFT_const)
@@ -264,5 +317,6 @@ contains
       fft%initialized = .False.
       fft%backend    = -1
       fft%length     = [-1,-1,-1]
+      fft%batch_size = -1
    end subroutine t_fft_free
 end module m_types_fft
