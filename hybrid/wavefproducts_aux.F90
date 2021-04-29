@@ -171,31 +171,21 @@ CONTAINS
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
       integer :: iv, nu, psize, dims(3)
-
-      psi = 0.0      
-
-      !$OMP PARALLEL private(nu, iv, grid)  default(none) &
-      !$OMP shared(fi, bandoi, bandof, zMat, psi,  ivmap, lapw, jspin, gcutoff, dims)
+     
       call grid%init(fi%cell, fi%sym, gcutoff)
 
-      !$OMP single 
-      dims = grid%dimensions
-      !$OMP end single nowait
-
-      !$OMP DO
+      !$OMP parallel do default(none) private(nu) shared(bandoi, bandof, grid, lapw, jspin, zMat, psi)
       do nu = bandoi, bandof
-         call grid%putStateOnGrid(lapw, jspin, zMat, nu)
-         psi(:,nu) = grid%grid
+         call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu))
       enddo
-      !$OMP enddo
-      call grid%free()
-      !$OMP END PARALLEL
+      !$OMP end parallel do
 
       psize = bandof - bandoi + 1
 
-      call fft%init(dims, .false., batch_size=psize)
+      call fft%init(grid%dimensions, .false., batch_size=psize)
       call fft%exec_batch(psi)
       call fft%free()
+      call grid%free()
    end subroutine wavef2rs
 
    subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)

@@ -20,6 +20,7 @@ MODULE m_types_fftGrid
       PROCEDURE :: takeFieldFromGrid
       PROCEDURE :: getRealPartOfGrid
       PROCEDURE :: putStateOnGrid
+      procedure :: put_state_on_external_grid
       PROCEDURE :: putRealStateOnGrid
       PROCEDURE :: putComplexStateOnGrid
       PROCEDURE :: fillStateIndexArray
@@ -172,6 +173,24 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       END IF
    END SUBROUTINE putStateOnGrid
 
+   SUBROUTINE put_state_on_external_grid(this, lapw, iSpin, zMat, iState, ext_grid)
+      USE m_types_lapw
+      USE m_types_mat
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      TYPE(t_lapw), INTENT(IN)    :: lapw
+      TYPE(t_mat), INTENT(IN)    :: zMat
+      INTEGER, INTENT(IN)    :: iSpin
+      INTEGER, INTENT(IN)    :: iState
+      complex, intent(inout) :: ext_grid(0:)
+
+      if (zMat%l_real) then
+         call put_real_on_external_grid(this, lapw, ispin, zMat%data_r(:, iState), ext_grid)
+      else
+         call put_cmplx_on_external_grid(this, lapw, ispin, zMat%data_c(:, iState), ext_grid)
+      endif
+   end subroutine put_state_on_external_grid
+
    SUBROUTINE putRealStateOnGrid(this, lapw, iSpin, state)
       USE m_types_lapw
       IMPLICIT NONE
@@ -180,19 +199,31 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       REAL, INTENT(IN)    :: state(:)
       INTEGER, INTENT(IN)    :: iSpin
 
+      call put_real_on_external_grid(this, lapw, ispin, state, this%grid)
+   END SUBROUTINE putRealStateOnGrid
+
+   subroutine put_real_on_external_grid(this, lapw, ispin, state, ext_grid)      
+      USE m_types_lapw
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      TYPE(t_lapw), INTENT(IN)    :: lapw
+      REAL, INTENT(IN)       :: state(:)
+      complex, intent(inout) :: ext_grid(0:)
+      INTEGER, INTENT(IN)    :: iSpin
+
       INTEGER :: xGrid, yGrid, zGrid, layerDim, iLAPW
 
       layerDim = this%dimensions(1)*this%dimensions(2)
 
-      this%grid(:) = CMPLX(0.0, 0.0)
+      ext_grid = CMPLX(0.0, 0.0)
 
       DO iLAPW = 1, lapw%nv(iSpin)
          xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
          yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
          zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
-         this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
+         ext_grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
       END DO
-   END SUBROUTINE putRealStateOnGrid
+   end subroutine put_real_on_external_grid
 
    SUBROUTINE putComplexStateOnGrid(this, lapw, iSpin, state)
       USE m_types_lapw
@@ -202,19 +233,30 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       COMPLEX, INTENT(IN)    :: state(:)
       INTEGER, INTENT(IN)    :: iSpin
 
+      call put_cmplx_on_external_grid(this, lapw, ispin, state, this%grid)
+   END SUBROUTINE putComplexStateOnGrid
+
+   SUBROUTINE put_cmplx_on_external_grid(this, lapw, iSpin, state, ext_grid)
+      USE m_types_lapw
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      TYPE(t_lapw), INTENT(IN)    :: lapw
+      COMPLEX, INTENT(IN)    :: state(:)
+      complex, intent(inout) :: ext_grid(0:)
+      INTEGER, INTENT(IN)    :: iSpin
       INTEGER :: xGrid, yGrid, zGrid, layerDim, iLAPW
 
       layerDim = this%dimensions(1)*this%dimensions(2)
 
-      this%grid(:) = CMPLX(0.0, 0.0)
+      ext_grid = CMPLX(0.0, 0.0)
 
       DO iLAPW = 1, lapw%nv(iSpin)
          xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
          yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
          zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
-         this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
+         ext_grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
       END DO
-   END SUBROUTINE putComplexStateOnGrid
+   end SUBROUTINE put_cmplx_on_external_grid
 
    SUBROUTINE fillStateIndexArray(this, lapw, ispin, indexArray)
       USE m_types_lapw
@@ -234,7 +276,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
          zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
          indexArray(iLAPW) = xGrid + this%dimensions(1)*yGrid + layerDim*zGrid
       END DO
-
    END SUBROUTINE fillStateIndexArray
 
    SUBROUTINE fillFieldSphereIndexArray(this, stars, gCutoff, indexArray)
