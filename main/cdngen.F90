@@ -169,7 +169,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          greensFunction(i_gf)%contour = contour(iContour)
          CALL greensFunction(i_gf)%reset()
       ENDDO
-      CALL greensfImagPart%init(gfinp,atoms,input,noco,ANY(greensFunction(:)%l_calc))
+      CALL greensfImagPart%init(gfinp,atoms,input,noco,ANY(greensFunction(:)%l_calc),SIZE(fmpi%k_list))
    ENDIF
 
    IF(fmpi%irank==0 .AND.PRESENT(hub1data)) THEN

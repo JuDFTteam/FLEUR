@@ -46,7 +46,7 @@ MODULE m_greensfCalcRealPart
       INTEGER :: contourShape
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: n_gf_task,extra
-      LOGICAL :: l_onsite,l_fixedCutoffset,l_sphavg
+      LOGICAL :: l_onsite,l_fixedCutoffset,l_sphavg,l_kresolved_int
       REAL    :: del,eb,fixedCutoff,atomDiff(3)
       REAL,    ALLOCATABLE :: eMesh(:),imag(:)
 
@@ -69,8 +69,9 @@ MODULE m_greensfCalcRealPart
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
             refCutoff        = g(i_gf)%elem%refCutoff
             atomDiff(:) = g(i_gf)%elem%atomDiff(:)
+            l_kresolved_int = g(i_gf)%elem%l_kresolved_int
 
-            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
+            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,indUnique=indUnique)
 
             IF(i_gf /= indUnique.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1&
                .AND..NOT.g(indUnique)%elem%l_fixedCutoffset.AND.g(indUnique)%elem%refCutoff==-1) THEN
@@ -115,16 +116,17 @@ MODULE m_greensfCalcRealPart
             l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
             refCutoff        = g(i_gf)%elem%refCutoff
+            l_kresolved_int = g(i_gf)%elem%l_kresolved_int
             l_sphavg = g(i_gf)%elem%l_sphavg
-            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
-            i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique,lo=.TRUE.)
+            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,indUnique=indUnique)
+            i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,indUnique=indUnique,lo=.TRUE.)
             nLO = g(i_gf)%elem%countLOs(atoms)
 
             IF(refCutoff/=-1) THEN
                !Overwrite cutoff with reference from other elements
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(refCutoff,:,:)
             ENDIF
-            CALL greensfImagPart%scale(i_elem,i_elemLO,l_sphavg,nLO)
+            CALL greensfImagPart%scale(i_elem,i_elemLO,l_sphavg,nLO,k_resolved=l_kresolved_int)
          ENDDO
          CALL timestop("Green's Function: Integration Cutoff")
       ENDIF
@@ -188,9 +190,10 @@ MODULE m_greensfCalcRealPart
          contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
          nLO = g(i_gf)%elem%countLOs(atoms)
          IF(g(i_gf)%elem%representative_elem > 0) CYCLE
+         IF(g(i_gf)%elem%l_kresolved_int) CYCLE
 
-         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg)
-         i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,lo=.TRUE.)
+         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=.FALSE.)
+         i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved_int=.FALSE.)
 
          CALL timestart("Green's Function: Kramer-Kronigs-Integration")
          DO jspin = spin_start, spin_end

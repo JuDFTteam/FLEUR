@@ -35,7 +35,7 @@ MODULE m_greensfBZint
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
       REAL    :: atomFactor,atomDiff(3)
-      LOGICAL :: l_sphavg,l_intersite
+      LOGICAL :: l_sphavg,l_intersite,l_kresolved_int
       COMPLEX, ALLOCATABLE :: im(:,:,:,:,:)
 
       spin_start = MERGE(1,jspin,gfinp%l_mperp)
@@ -55,6 +55,7 @@ MODULE m_greensfBZint
          atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg  = gfinp%elem(i_gf)%l_sphavg
          atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
+         l_kresolved_int = gfinp%elem(i_gf)%l_kresolved_int
          atomFactor = 1.0/atoms%neq(atomType)
 
          i_elem   = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
