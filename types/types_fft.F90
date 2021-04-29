@@ -64,15 +64,17 @@ contains
       !$ thread_id   = omp_get_thread_num()
       !$ max_threads = omp_get_max_threads()
       !$ in_openmp   = omp_in_parallel()
-      if(in_openmp) then
-         call juDFT_error("can't create FFTs inside OpenMP")
-      endif
 
       if(present(batch_size)) then
          fft%batch_size = batch_size
       else
          fft%batch_size = 1
       endif
+
+      if(in_openmp .and. fft%batch_size > 1) then
+         call juDFT_error("Can't create FFTs inside OpenMP and use batch at the same time")
+      endif
+
       fft%initialized = .True.
       fft%backend = defaultFFT_const
       fft%backend = selecFFT(PRESENT(indices))
@@ -82,26 +84,26 @@ contains
       select case(fft%backend)
 #ifdef CPP_FFTW
       case(FFTW_const)
-         if(thread_id == 0) then
-            n_plans = min(max_threads, batch_size)
-            allocate(fft%plan(n_plans))
+         n_plans = min(max_threads, batch_size)
+         allocate(fft%plan(n_plans))
 
-            fft%ptr_in = fftw_alloc_complex(int(n_plans * product(length), C_SIZE_T))
-            call c_f_pointer(fft%ptr_in, fft%in, [product(length), n_plans])
+         fft%ptr_in = fftw_alloc_complex(int(n_plans * product(length), C_SIZE_T))
+         call c_f_pointer(fft%ptr_in, fft%in, [product(length), n_plans])
 
-            fft%ptr_out = fftw_alloc_complex(int(n_plans * product(length), C_SIZE_T))
-            call c_f_pointer(fft%ptr_out, fft%out, [product(length), n_plans])
+         fft%ptr_out = fftw_alloc_complex(int(n_plans * product(length), C_SIZE_T))
+         call c_f_pointer(fft%ptr_out, fft%out, [product(length), n_plans])
 
-            do i = 1,n_plans
-               if(fft%forw) then
-                  fft%plan(i) = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
-                                                fft%in(:,i), fft%out(:,i), FFTW_FORWARD,FFTW_MEASURE) 
-               else
-                  fft%plan(i) = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
-                                                fft%in(:,i), fft%out(:,i), FFTW_BACKWARD,FFTW_MEASURE) 
-               endif
-            enddo
-         endif
+         do i = 1,n_plans
+            !$omp critical
+            if(fft%forw) then
+               fft%plan(i) = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
+                                             fft%in(:,i), fft%out(:,i), FFTW_FORWARD,FFTW_MEASURE) 
+            else
+               fft%plan(i) = fftw_plan_dft_3d(fft%length(3), fft%length(2), fft%length(1),&
+                                             fft%in(:,i), fft%out(:,i), FFTW_BACKWARD,FFTW_MEASURE) 
+            endif
+            !$omp end critical
+         enddo
 #endif
 
 #ifdef CPP_SPFFT
@@ -289,12 +291,13 @@ contains
       select case(fft%backend)
 #ifdef CPP_FFTW
       case(FFTW_const)
-         if(in_openmp) call juDFT_error("can't call fft%free() in openmp")
          call fftw_free(fft%ptr_in)
          call fftw_free(fft%ptr_out)
 
          do i=1,size(fft%plan,1)
+            !$omp critical
             call fftw_destroy_plan(fft%plan(i))
+            !$omp end critical
             fft%plan(i)  = c_null_ptr
          enddo     
          deallocate(fft%plan)
