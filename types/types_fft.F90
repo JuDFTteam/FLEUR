@@ -223,7 +223,7 @@ contains
             else
                ok = DftiComputeBackward(fft%container(me)%dfti_handle, dat(:,i))
             end if
-            if(ok /= 0) juDFT_error("problem executing dft")
+            if(ok /= 0) call juDFT_error("problem executing dft")
          enddo
          !$omp end parallel do
 #endif
