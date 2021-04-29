@@ -12,6 +12,10 @@ module m_types_fft
    use fftw3
 #endif
    !$ use omp_lib
+   type ptr_container
+      type(dfti_descriptor), pointer :: dfti_handle
+   endtype ptr_container
+
    type t_fft 
       logical :: initialized = .False.
       integer :: backend = -1
@@ -22,7 +26,7 @@ module m_types_fft
       real, allocatable :: afft(:), bfft(:)
 #ifdef CPP_FFT_MKL
       ! mkl
-      type(dfti_descriptor), allocatable :: dfti_handle(:)
+      type(ptr_container), allocatable :: container(:)
 #endif
 #ifdef CPP_SPFFT
       !SpFFT
@@ -109,11 +113,11 @@ contains
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
          n_plans = min(max_threads, batch_size)
-         allocate(fft%dfti_handle(n_plans))
+         allocate(fft%container(n_plans))
          do i = 1,n_plans
-            ok = DftiCreateDescriptor(fft%dfti_handle(i), dfti_double, dfti_complex, 3, length)
+            ok = DftiCreateDescriptor(fft%container(i)%dfti_handle, dfti_double, dfti_complex, 3, length)
             if (ok /= 0) call juDFT_error("cant create descriptor", calledby="fft_interface")
-            ok = DftiCommitDescriptor(fft%dfti_handle(i))
+            ok = DftiCommitDescriptor(fft%container(i)%dfti_handle)
             if (ok /= 0) call juDFT_error("can't commit descriptor", calledby="fft_interface")
          enddo
 #endif
@@ -212,9 +216,9 @@ contains
          do i = 1,size(dat,2)
             !$ me = omp_get_thread_num() + 1
             if (fft%forw) then
-               ok = DftiComputeForward(fft%dfti_handle(me), dat(:,i))
+               ok = DftiComputeForward(fft%container(me)%dfti_handle, dat(:,i))
             else
-               ok = DftiComputeBackward(fft%dfti_handle(me), dat(:,i))
+               ok = DftiComputeBackward(fft%container(me)%dfti_handle, dat(:,i))
             end if
          enddo
          !$omp end parallel do
@@ -315,10 +319,10 @@ contains
 #endif
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
-         do i=1,size(fft%dfti_handle)
-            ok = DftiFreeDescriptor(fft%dfti_handle(i))
+         do i=1,size(fft%container)
+            ok = DftiFreeDescriptor(fft%container(i)%dfti_handle)
          enddo
-         deallocate(fft%dfti_handle)
+         deallocate(fft%container)
 #endif
 #ifdef CPP_SPFFT
       case(spFFT_const)
