@@ -12,9 +12,12 @@ module m_types_fft
    use fftw3
 #endif
    !$ use omp_lib
+
+#ifdef CPP_FFT_MKL
    type ptr_container
       type(dfti_descriptor), pointer :: dfti_handle
    endtype ptr_container
+#endif
 
    type t_fft 
       logical :: initialized = .False.
