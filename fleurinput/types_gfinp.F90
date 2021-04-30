@@ -594,7 +594,7 @@ CONTAINS
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour,refCutoff
       INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref
-      LOGICAL :: l_inter,l_offd,l_sphavg,l_interAvg,l_offdAvg, l_all_kresolved, l_kresolved_radial
+      LOGICAL :: l_inter,l_offd,l_sphavg, l_all_kresolved, l_kresolved_radial
       INTEGER :: hiaElem(atoms%n_hia)
       LOGICAL :: written(atoms%nType)
       REAL    :: atomDiff(3)
@@ -612,13 +612,15 @@ CONTAINS
          atomTypep = this%elem(i_gf)%atomTypep
          iContour = this%elem(i_gf)%iContour
          refCutoff = this%elem(i_gf)%refCutoff
+         l_sphavg = this%elem(i_gf)%l_sphavg
+
          refCutoff = MERGE(i_gf,refCutoff,refCutoff==-1) !If no refCutoff is set for the intersite element
                                                          !we take the onsite element as reference
 
          IF(atomTypep<0) THEN !This indicates that the nshells argument was written here
             !Replace the current element by the onsite one
             this%elem(i_gf)%atomTypep = atomType
-            CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+            CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
                                            this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,&
                                            .NOT.written(atomType),nOtherAtoms,atomTypepList)
             written(atomType) = .TRUE.
@@ -628,12 +630,12 @@ CONTAINS
                atomType = atomTypepList(iOtherAtom)
                !First add the reference cutoff element
                lref = this%elem(refCutoff)%l
-               refCutoff1 =  this%add(lref,atomType,iContour,.FALSE.,l_fixedCutoffset=this%elem(i_gf)%l_fixedCutoffset,&
+               refCutoff1 =  this%add(lref,atomType,iContour,l_sphavg,l_fixedCutoffset=this%elem(i_gf)%l_fixedCutoffset,&
                                       fixedCutoff=this%elem(i_gf)%fixedCutoff)
 
                WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
 
-               CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+               CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
                                               this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,&
                                               .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
 
@@ -663,8 +665,6 @@ CONTAINS
 
       l_inter = .FALSE.
       l_offd = .FALSE.
-      l_interAvg = .FALSE.
-      l_offdAvg = .FALSE.
       l_all_kresolved = .FALSE.
       l_kresolved_radial = .FALSE.
       DO i_gf = 1, this%n
@@ -676,11 +676,9 @@ CONTAINS
          atomDiff  = this%elem(i_gf)%atomDiff
          IF(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12)) THEN
             l_inter = .TRUE.
-            IF(l_sphavg) l_interAvg = .TRUE.
          ENDIF
          IF(l.NE.lp) THEN
             l_offd = .TRUE.
-            IF(l_sphavg) l_offdAvg = .TRUE.
          ENDIF
          IF(this%elem(i_gf)%l_kresolved) THEN
             l_all_kresolved = .TRUE.
@@ -695,18 +693,12 @@ CONTAINS
          IF(sym%nop>1) THEN
                CALL juDFT_warn("Symmetries and intersite Green's Function not correctly implemented",&
                                 calledby="init_gfinp")
-         ELSE IF(l_interAvg) THEN
-            CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
-                             calledby="init_gfinp")
          ENDIF
       ENDIF
 
       IF(l_offd) THEN
          IF(sym%nop>1) THEN
             CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
-                             calledby="init_gfinp")
-         ELSE IF(l_offdAvg) THEN
-            CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
                              calledby="init_gfinp")
          ENDIF
       ENDIF
@@ -881,7 +873,7 @@ CONTAINS
 
    END FUNCTION add_gfelem
 
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,&
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_fixedCutoffset,fixedCutoff,&
                                           refCutoff,atoms,cell,sym,l_write,nOtherAtoms,atomTypepList)
 
       USE m_types_atoms
@@ -898,6 +890,7 @@ CONTAINS
       INTEGER,             INTENT(IN)     :: l
       INTEGER,             INTENT(IN)     :: lp
       INTEGER,             INTENT(IN)     :: refAtom !which is the reference atom
+      LOGICAL,             INTENT(IN)     :: l_sphavg
       INTEGER,             INTENT(IN)     :: iContour
       LOGICAL,             INTENT(IN)     :: l_fixedCutoffset
       REAL,                INTENT(IN)     :: fixedCutoff
@@ -1172,7 +1165,7 @@ CONTAINS
             !Transform representative element to lattice coordinates
             diff = MATMUL(invAmatAux,shellDiff(:,ishellAtom,ishell))
             !l_sphavg has to be false
-            i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,atomTypep=shellAtom(ishell),&
+            i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=shellAtom(ishell),&
                              atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff)
             IF(repr == 0) repr = i_gf
@@ -1472,9 +1465,6 @@ CONTAINS
       IF(this%atomType.NE.other%atomType) RETURN
       IF(this%atomTypep.NE.other%atomTypep) RETURN
       IF(this%l_sphavg .neqv. other%l_sphavg) RETURN
-      IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
-         ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
-         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) RETURN
       IF(this%l_kresolved .neqv. other%l_kresolved) RETURN
       IF(distinct_k_resolved_arg) then
          IF(this%l_kresolved_int .neqv. other%l_kresolved_int) RETURN
@@ -1492,6 +1482,9 @@ CONTAINS
 
       equals_gfelem = .FALSE.
       IF(.NOT.this%equals_coefficients(other)) RETURN
+      IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
+         ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
+         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) RETURN
       IF(this%iContour.NE.other%iContour) RETURN
       equals_gfelem = .TRUE.
 
