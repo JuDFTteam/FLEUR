@@ -18,8 +18,8 @@ MODULE m_excSplitting
       TYPE(t_greensfImagPart),   INTENT(IN)  :: greensfImagPart
       REAL,                      INTENT(IN)  :: ef
 
-      INTEGER :: i_gf,i_elem,i_elemLO,indUnique,ispin,m,l,lp,atomType,atomTypep,nLO,iLO,iLOp
-      LOGICAL :: l_sphavg
+      INTEGER :: i_gf,i_elem,i_elemLO,ispin,m,l,lp,atomType,atomTypep,nLO,iLO,iLOp
+      LOGICAL :: l_sphavg, l_kresolved_int
       REAL    :: excSplit,del,atomDiff(3)
       REAL, ALLOCATABLE :: eMesh(:), imag(:)
       REAL, ALLOCATABLE :: intCOM(:,:), intNorm(:,:)
@@ -47,16 +47,18 @@ MODULE m_excSplitting
          atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg = gfinp%elem(i_gf)%l_sphavg
          atomDiff = gfinp%elem(i_gf)%atomDiff
+         l_kresolved_int = gfinp%elem(i_gf)%l_kresolved_int
          nLO = gfinp%elem(i_gf)%countLOs(atoms)
          !Only onsite exchange splitting
          IF(l /= lp) CYCLE
          IF(atomType /= atomTypep) CYCLE
          IF(ANY(ABS(atomDiff).GT.1e-12)) CYCLE
+         IF(l_kresolved_int) CYCLE
+         IF(.NOT.gfinp%isUnique(i_gf, distinct_kresolved_int=.TRUE.)) CYCLE
 
-         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
-         i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,lo=.TRUE.)
+         i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg)
+         i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,lo=.TRUE.)
 
-         IF(i_gf /= indUnique) CYCLE
          !-------------------------------------------------
          ! Evaluate center of mass of the bands in question
          ! and take the difference between spin up/down

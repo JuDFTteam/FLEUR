@@ -29,13 +29,13 @@ MODULE m_greensfBZint
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
 
-      INTEGER :: i_gf,l,lp,atomType,atomTypep,indUnique
+      INTEGER :: i_gf,l,lp,atomType,atomTypep
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
       INTEGER :: i_elem,i_elemLO,nLO,imatSize
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
       REAL    :: atomFactor,atomDiff(3)
-      LOGICAL :: l_sphavg,l_intersite,l_kresolved_int
+      LOGICAL :: l_sphavg,l_intersite
       COMPLEX, ALLOCATABLE :: im(:,:,:,:,:)
 
       spin_start = MERGE(1,jspin,gfinp%l_mperp)
@@ -55,13 +55,12 @@ MODULE m_greensfBZint
          atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg  = gfinp%elem(i_gf)%l_sphavg
          atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
-         l_kresolved_int = gfinp%elem(i_gf)%l_kresolved_int
          atomFactor = 1.0/atoms%neq(atomType)
 
-         i_elem   = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
-         i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,indUnique=indUnique)
+         IF(.NOT.gfinp%isUnique(i_gf)) CYCLE
 
-         IF(i_gf/=indUnique) CYCLE
+         i_elem   = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg)
+         i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,lo=.TRUE.,l_sphavg=l_sphavg)
 
          nLO = 0
          imatSize = 1

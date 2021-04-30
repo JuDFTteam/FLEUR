@@ -40,7 +40,7 @@ MODULE m_greensfPostProcess
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),           INTENT(INOUT)  :: greensFunction(:)
 
-      INTEGER  i_gf,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr,i
+      INTEGER  i_gf,l,lp,atomType,atomTypep,i_elem,jspin,ierr,i,indUnique
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
       LOGICAL  l_sphavg,l_check
 
@@ -79,10 +79,9 @@ MODULE m_greensfPostProcess
             ENDIF
             IF(l_sphavg) CYCLE
 
-            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
-
-            IF(i_gf/=indUnique) THEN
+            IF(.NOT.gfinp%isUnique(i_gf)) THEN
                IF(gfinp%elem(i_gf)%isOffDiag()) THEN
+                  indUnique = gfinp%getuniqueElement(i_gf)
                   scalarGF(i_gf) = scalarGF(indUnique)
                ENDIF
                CYCLE

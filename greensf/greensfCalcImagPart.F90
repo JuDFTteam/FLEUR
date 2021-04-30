@@ -89,13 +89,13 @@ MODULE m_greensfCalcImagPart
             l_sphavg = gfinp%elem(i_gf)%l_sphavg
             l_kresolved_int = gfinp%elem(i_gf)%l_kresolved_int
 
-            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
-            i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,indUnique=indUnique)
+            IF(.NOT.gfinp%isUnique(i_gf, distinct_kresolved_int=.TRUE.)) CYCLE
 
-            i_elem_imag = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,indUnique=indUnique)
-            i_elemLO_imag = gfinp%uniqueElements(atoms,ind=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,indUnique=indUnique)
+            i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg)
+            i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,lo=.TRUE.,l_sphavg=l_sphavg)
 
-            IF(i_gf/=indUnique) CYCLE
+            i_elem_imag = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
+            i_elemLO_imag = gfinp%uniqueElements(atoms,max_index=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
 
             nLO = 0
             imatSize = 1

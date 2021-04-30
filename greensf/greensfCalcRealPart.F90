@@ -73,16 +73,24 @@ MODULE m_greensfCalcRealPart
             atomDiff(:) = g(i_gf)%elem%atomDiff(:)
             l_kresolved_int = g(i_gf)%elem%l_kresolved_int
 
-            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,indUnique=indUnique)
 
-            IF(i_gf /= indUnique.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1&
-               .AND..NOT.g(indUnique)%elem%l_fixedCutoffset.AND.g(indUnique)%elem%refCutoff==-1) THEN
+            IF(refCutoff /= -1) CYCLE
+
+            IF(l_fixedCutoffset) THEN
+               greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
+               greensfImagPart%kkintgr_cutoff(i_gf,:,2) = INT((fixedCutoff+ef-eb)/del)+1
+               CYCLE
+            ENDIF
+
+            IF(.NOT.gfinp%isUnique(i_gf,distinct_kresolved_int=.TRUE.)) THEN
+               indUnique = gfinp%getUniqueElement(i_gf,distinct_kresolved_int=.TRUE.)
                !This cutoff was already calculated
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(indUnique,:,:)
             ELSE
+               i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
                !Is the current element suitable for automatic finding of the cutoff
                l_onsite = nType.EQ.nTypep.AND.l.EQ.lp.AND.ALL(ABS(atomDiff(:)).LT.1e-12)
-               IF(l_onsite.AND..NOT.l_fixedCutoffset.AND.refCutoff==-1 .AND. g(i_gf)%elem%countLOs(atoms)==0) THEN
+               IF(l_onsite.AND.g(i_gf)%elem%countLOs(atoms)==0 .AND..NOT. l_kresolved_int) THEN
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
                   ! with LOs I just use a fixed cutoff or reference otherwise I would need to check whether
@@ -97,9 +105,6 @@ MODULE m_greensfCalcRealPart
                                           noco,usdus,denCoeffsOffDiag,gfinp%l_mperp,l,nType,input,eMesh,&
                                           greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorRadial(i_elem,:))
                   ENDIF
-               ELSE IF (l_fixedCutoffset) THEN
-                  greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
-                  greensfImagPart%kkintgr_cutoff(i_gf,:,2) = INT((fixedCutoff+ef-eb)/del)+1
                ELSE
                   !For all other elements we just use ef+elup as a hard cutoff
                   greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
@@ -111,17 +116,11 @@ MODULE m_greensfCalcRealPart
 
          !Getting reference Cutoffs and perform scaling
          DO i_gf = 1, gfinp%n
-            l  = g(i_gf)%elem%l
-            lp = g(i_gf)%elem%lp
-            nType  = g(i_gf)%elem%atomType
-            nTypep = g(i_gf)%elem%atomTypep
-            l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
-            fixedCutoff      = g(i_gf)%elem%fixedCutoff
-            refCutoff        = g(i_gf)%elem%refCutoff
+            refCutoff       = g(i_gf)%elem%refCutoff
             l_kresolved_int = g(i_gf)%elem%l_kresolved_int
             l_sphavg = g(i_gf)%elem%l_sphavg
-            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,indUnique=indUnique)
-            i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,indUnique=indUnique,lo=.TRUE.)
+            i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
+            i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,lo=.TRUE.)
             nLO = g(i_gf)%elem%countLOs(atoms)
 
             IF(refCutoff/=-1) THEN
@@ -154,8 +153,8 @@ MODULE m_greensfCalcRealPart
          IF(g(i_gf)%elem%representative_elem > 0) CYCLE
          IF(g(i_gf)%elem%l_kresolved_int) CYCLE
 
-         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=.FALSE.)
-         i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved_int=.FALSE.)
+         i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=.FALSE.)
+         i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved_int=.FALSE.)
 
          CALL timestart("Green's Function: Kramer-Kronigs-Integration")
          DO jspin = spin_start, spin_end
@@ -242,8 +241,8 @@ MODULE m_greensfCalcRealPart
                IF(g(i_gf)%elem%representative_elem > 0) CYCLE
                IF(.NOT.g(i_gf)%elem%l_kresolved_int) CYCLE
 
-               i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=.TRUE.)
-               i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved_int=.TRUE.)
+               i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=.TRUE.)
+               i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved_int=.TRUE.)
 
                ALLOCATE(gmat(SIZE(g(i_gf)%contour%e)), source=cmplx_0)
 
