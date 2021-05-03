@@ -97,10 +97,10 @@ CONTAINS
           facB(lmMin:lmMax) = tempB
        END DO
        !$acc end loop
-       !!$acc loop vector private(ll)
+
        abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
        abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
-       !!$acc end loop
+       
        IF (l_abclo) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)

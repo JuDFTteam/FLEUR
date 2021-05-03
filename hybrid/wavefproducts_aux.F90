@@ -83,10 +83,10 @@ CONTAINS
       call timestop("1st wavef2rs")
 
       call timestart("Big OMP loop")
-      !$OMP PARALLEL default(shared) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff)&
-      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
+      ! $OMP PARALLEL default(shared) &
+      ! $OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
+      ! $OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff)&
+      ! $OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
 
       call timestart("alloc&init")
       allocate (prod(0:stepf%gridLength - 1), stat=ok)
@@ -99,7 +99,7 @@ CONTAINS
 
 
       if (cprod%l_real) then
-         !$OMP DO
+         ! $OMP DO
          do iband = 1, hybdat%nbands(ik,jsp)
             call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
             psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
@@ -122,9 +122,9 @@ CONTAINS
                enddo
             enddo
          enddo
-         !$OMP END DO
+         ! $OMP END DO
       else
-         !$OMP DO
+         ! $OMP DO
          do iband = 1, hybdat%nbands(ik,jsp)
             call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
             psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
@@ -139,12 +139,12 @@ CONTAINS
                enddo
             enddo
          enddo
-         !$OMP END DO
+         ! $OMP END DO
       endif
 
       deallocate (prod, psi_k)
       call fft%free()
-      !$OMP END PARALLEL
+      ! $OMP END PARALLEL
 
       call stepf%free()
 
@@ -170,25 +170,22 @@ CONTAINS
       type(t_fftgrid) :: grid
 
       integer :: ivmap(SIZE(lapw%gvec, 2))
-      integer :: iv, nu
-
-      psi = 0.0
-      !$OMP PARALLEL private(nu, iv, fft, grid)  default(private) &
-      !$OMP shared(fi, bandoi, bandof, zMat, psi,  ivmap, lapw, jspin, gcutoff)
-
+      integer :: iv, nu, psize, dims(3)
+     
       call grid%init(fi%cell, fi%sym, gcutoff)
-      call fft%init(grid%dimensions, .false.)
 
-      !$OMP DO
+      !$OMP parallel do default(none) private(nu) shared(bandoi, bandof, grid, lapw, jspin, zMat, psi)
       do nu = bandoi, bandof
-         call grid%putStateOnGrid(lapw, jspin, zMat, nu)
-         psi(:,nu) = grid%grid
-         call fft%exec(psi(:, nu))
+         call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu))
       enddo
-      !$OMP ENDDO
-      call grid%free()
+      !$OMP end parallel do
+
+      psize = bandof - bandoi + 1
+
+      call fft%init(grid%dimensions, .false., batch_size=psize)
+      call fft%exec_batch(psi)
       call fft%free()
-      !$OMP END PARALLEL
+      call grid%free()
    end subroutine wavef2rs
 
    subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)
