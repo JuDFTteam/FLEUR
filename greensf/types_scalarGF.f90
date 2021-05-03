@@ -30,7 +30,7 @@ MODULE m_types_scalarGF
 
    CONTAINS
       PROCEDURE, PASS :: init             => init_scalarGF
-      PROCEDURE       :: addScalarProduct => addScalarProduct_scalarGF
+      PROCEDURE       :: addOffdScalarProduct
    END TYPE t_scalarGF
 
    PUBLIC t_scalarGF
@@ -39,9 +39,9 @@ MODULE m_types_scalarGF
 
    SUBROUTINE init_scalarGF(this,atoms,input)
 
-      CLASS(t_scalarGF),   INTENT(INOUT) :: this
-      TYPE(t_atoms),       INTENT(IN)    :: atoms
-      TYPE(t_input),       INTENT(IN)    :: input
+      CLASS(t_scalarGF),         INTENT(INOUT) :: this
+      TYPE(t_atoms),             INTENT(IN)    :: atoms
+      TYPE(t_input),             INTENT(IN)    :: input
 
       this%done =.FALSE.
       IF(ALLOCATED(this%uun)) DEALLOCATE(this%uun)
@@ -70,7 +70,7 @@ MODULE m_types_scalarGF
 
    END SUBROUTINE init_scalarGF
 
-   SUBROUTINE addScalarProduct_scalarGF(this,l,lp,atomType,atomTypep,l_phase,l_mperp,atoms,input,f,g,flo)
+   SUBROUTINE addOffdScalarProduct(this,l,lp,atomType,atomTypep,l_phase,l_mperp,atoms,input,f,g,flo)
 
       USE m_intgr
 
@@ -245,6 +245,6 @@ MODULE m_types_scalarGF
       this%done = .TRUE.
       CALL timestop("Offdiagonal Scalar Product")
 
-   END SUBROUTINE addScalarProduct_scalarGF
+   END SUBROUTINE addOffdScalarProduct
 
 END MODULE m_types_scalarGF

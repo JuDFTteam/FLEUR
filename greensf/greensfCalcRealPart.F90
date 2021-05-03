@@ -17,6 +17,7 @@ MODULE m_greensfCalcRealPart
 
    USE m_juDFT
    USE m_types
+   USE m_types_scalarGF
    USE m_constants
    USE m_kkintgr
    USE m_kk_cutoff
@@ -27,15 +28,13 @@ MODULE m_greensfCalcRealPart
 
    CONTAINS
 
-   SUBROUTINE greensfCalcRealPart(atoms,gfinp,sym,input,noco,kpts,usdus,denCoeffsOffDiag,fmpi,ef,greensfImagPart,g)
+   SUBROUTINE greensfCalcRealPart(atoms,gfinp,sym,input,noco,kpts,fmpi,ef,greensfImagPart,g)
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
       TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_noco),              INTENT(IN)     :: noco
       TYPE(t_kpts),              INTENT(IN)     :: kpts
-      TYPE(t_usdus),             INTENT(IN)     :: usdus
-      TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_mpi),               INTENT(IN)     :: fmpi
       REAL,                      INTENT(IN)     :: ef
@@ -102,7 +101,7 @@ MODULE m_greensfCalcRealPart
                      !Onsite element with radial dependence
                      CALL kk_cutoffRadial(greensfImagPart%uu(:,:,:,i_elem,:),greensfImagPart%ud(:,:,:,i_elem,:),&
                                           greensfImagPart%du(:,:,:,i_elem,:),greensfImagPart%dd(:,:,:,i_elem,:),&
-                                          noco,usdus,denCoeffsOffDiag,gfinp%l_mperp,l,nType,input,eMesh,&
+                                          noco,g(i_gf)%scalarProducts,gfinp%l_mperp,l,nType,input,eMesh,&
                                           greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorRadial(i_elem,:))
                   ENDIF
                ELSE

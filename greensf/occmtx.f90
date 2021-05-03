@@ -2,7 +2,6 @@ MODULE m_occmtx
 
    USE m_juDFT
    USE m_types
-   USE m_types_scalarGF
    USE m_constants
    USE m_rotMMPmat
 
@@ -10,7 +9,7 @@ MODULE m_occmtx
 
    CONTAINS
 
-   SUBROUTINE occmtx(g,gfinp,input,atoms,noco,nococonv,mmpMat,spin,usdus,denCoeffsOffDiag,scalarGF,l_write,check,occError)
+   SUBROUTINE occmtx(g,gfinp,input,atoms,noco,nococonv,mmpMat,spin,l_write,check,occError)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -28,9 +27,6 @@ MODULE m_occmtx
       TYPE(t_nococonv),                 INTENT(IN)    :: nococonv
       COMPLEX,                          INTENT(INOUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
       INTEGER,                 OPTIONAL,INTENT(IN)    :: spin
-      TYPE(t_usdus),           OPTIONAL,INTENT(IN)    :: usdus
-      TYPE(t_denCoeffsOffDiag),OPTIONAL,INTENT(IN)    :: denCoeffsOffDiag
-      TYPE(t_scalarGF),        OPTIONAL,INTENT(IN)    :: scalarGF
       LOGICAL,                 OPTIONAL,INTENT(IN)    :: l_write !write the occupation matrix to out file
       LOGICAL,                 OPTIONAL,INTENT(IN)    :: check
       LOGICAL,                 OPTIONAL,INTENT(INOUT) :: occError
@@ -76,8 +72,7 @@ MODULE m_occmtx
             DO iz = 1, g%contour%nz
                !get the corresponding gf-matrix
                weight = MERGE(g%contour%de(iz),conjg(g%contour%de(iz)),ipm.EQ.1)
-               CALL g%get(atoms,iz,ipm.EQ.2,ispin,gmat,usdus=usdus,&
-                          denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
+               CALL g%get(atoms,iz,ipm.EQ.2,ispin,gmat)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -98,8 +93,7 @@ MODULE m_occmtx
             IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND.contourInp%l_anacont) THEN
                !left tail
                weight = MERGE(g%contour%de(1),conjg(g%contour%de(1)),ipm.EQ.1)
-               CALL g%get(atoms,1,ipm.EQ.2,ispin,gmat,usdus=usdus,&
-                          denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
+               CALL g%get(atoms,1,ipm.EQ.2,ispin,gmat)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -115,8 +109,7 @@ MODULE m_occmtx
                ENDDO
                !right tail
                weight = MERGE(g%contour%de(g%contour%nz),conjg(g%contour%de(g%contour%nz)),ipm.EQ.1)
-               CALL g%get(atoms,g%contour%nz,ipm.EQ.2,ispin,gmat,usdus=usdus,&
-                          denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
+               CALL g%get(atoms,g%contour%nz,ipm.EQ.2,ispin,gmat)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1

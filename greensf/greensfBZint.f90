@@ -3,16 +3,16 @@ MODULE m_greensfBZint
    USE m_types
    USE m_juDFT
    USE m_constants
-   USE m_greensfSpinDiag
-   USE m_greensfSpinOffDiag
+   USE m_greensfEigVecCoeffs
    USE m_greensfSym
+   USE m_types_scalarGF
 
    IMPLICIT NONE
 
    CONTAINS
 
    SUBROUTINE greensfBZint(ikpt_i,ikpt,nBands,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
-                           usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
+                           scalarGF,eigVecCoeffs,greensfBZintCoeffs)
 
       INTEGER,                   INTENT(IN)     :: ikpt_i,ikpt        !current k-point index in cdnvaljob%k_list and current k-point
       INTEGER,                   INTENT(IN)     :: nBands             !Bands handled on this rank
@@ -24,8 +24,7 @@ MODULE m_greensfBZint
       TYPE(t_nococonv),          INTENT(IN)     :: nococonv
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_kpts),              INTENT(IN)     :: kpts
-      TYPE(t_usdus),             INTENT(IN)     :: usdus
-      TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffdiag
+      TYPE(t_scalarGF),          INTENT(IN)     :: scalarGF(:)
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
 
@@ -95,14 +94,10 @@ MODULE m_greensfBZint
                   ENDIF
                   !which scalar products for intersite and l offdiagonal(IF l_sphavg)
                   !Spin diagonal elements
-                  IF(spin1==spin2) THEN
-                     CALL greensfSpinDiag(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,&
-                                          l_sphavg,atoms,usdus,eigVecCoeffs,im(:,:,:,:,ispin))
-                  ELSE
-                     !Spin offdiagonal elements
-                     CALL greensfSpinOffDiag(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
-                                             l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
-                  ENDIF
+
+                  CALL greensfEigVecCoeffs(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
+                                           l_sphavg,atoms,scalarGF(i_gf),eigVecCoeffs,im(:,:,:,:,ispin))
+
 
                   !The eigenvector coefficients already contain part of the interstitial phase
                   !but not necessarily the right one

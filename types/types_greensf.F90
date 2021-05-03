@@ -23,6 +23,7 @@ MODULE m_types_greensf
    USE m_constants
    USE m_types_setup
    USE m_types_greensfContourData
+   USE m_types_scalarGF
 
    IMPLICIT NONE
 
@@ -31,12 +32,14 @@ MODULE m_types_greensf
    TYPE t_greensf
 
       LOGICAL :: l_calc = .FALSE.
+      LOGICAL :: l_sphavg
 
       !Energy contour parameters
       TYPE(t_greensfContourData) :: contour
 
       !Pointer to the element type in gfinp
       TYPE(t_gfelementtype), POINTER :: elem => NULL()
+      TYPE(t_scalarGF) :: scalarProducts
 
       !Arrays for Green's function
       COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:)
@@ -55,21 +58,21 @@ MODULE m_types_greensf
       COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
 
       CONTAINS
-         PROCEDURE, PASS :: init                => init_greensf
-         PROCEDURE       :: mpi_bc              => mpi_bc_greensf
-         PROCEDURE       :: collect             => collect_greensf
-         PROCEDURE       :: get                 => get_gf
-         PROCEDURE       :: getFullMatrix       => getFullMatrix_gf
-         PROCEDURE       :: getRadial           => getRadial_gf
-         PROCEDURE       :: getRadialRadial     => getRadialRadial_gf!(Full Radial dependence for intersite)
-         PROCEDURE       :: integrateOverMT     => integrateOverMT_greensf
-         PROCEDURE       :: set                 => set_gf
-         PROCEDURE       :: set_gfdata          => set_gfdata
-         PROCEDURE       :: rotate              => rotate_gf
-         PROCEDURE       :: rotate_euler_angles => rotate_euler_angles_gf
-         PROCEDURE       :: reset               => reset_gf
-         PROCEDURE       :: resetSingleElem     => resetSingleElem_gf
-         PROCEDURE       :: checkEmpty          => checkEmpty_greensf
+         PROCEDURE, PASS :: init                   => init_greensf
+         PROCEDURE       :: mpi_bc                 => mpi_bc_greensf
+         PROCEDURE       :: collect                => collect_greensf
+         PROCEDURE       :: get                    => get_gf
+         PROCEDURE       :: getFullMatrix          => getFullMatrix_gf
+         PROCEDURE       :: getRadial              => getRadial_gf
+         PROCEDURE       :: getRadialRadial        => getRadialRadial_gf!(Full Radial dependence for intersite)
+         PROCEDURE       :: integrateOverMT        => integrateOverMT_greensf
+         PROCEDURE       :: set                    => set_gf
+         PROCEDURE       :: set_gfdata             => set_gfdata
+         PROCEDURE       :: rotate                 => rotate_gf
+         PROCEDURE       :: rotate_euler_angles    => rotate_euler_angles_gf
+         PROCEDURE       :: reset                  => reset_gf
+         PROCEDURE       :: resetSingleElem        => resetSingleElem_gf
+         PROCEDURE       :: checkEmpty             => checkEmpty_greensf
    END TYPE t_greensf
 
    PUBLIC t_greensf
@@ -101,10 +104,10 @@ MODULE m_types_greensf
          spin_dim = MERGE(4,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
-         l_sphavg = this%elem%l_sphavg
-         IF(PRESENT(l_sphavg_in)) l_sphavg = l_sphavg_in
+         this%l_sphavg = this%elem%l_sphavg
+         IF(PRESENT(l_sphavg_in)) this%l_sphavg = l_sphavg_in
 
-         IF(l_sphavg) THEN
+         IF(this%l_sphavg) THEN
             ALLOCATE(this%gmmpMat(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
          ELSE
             ALLOCATE(this%uu(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
@@ -222,12 +225,9 @@ MODULE m_types_greensf
       !               certain energy point with an input matrix
       !----------------------------------------------------------------------------------
 
-      SUBROUTINE get_gf(this,atoms,iz,l_conjg,spin,gmat,usdus,denCoeffsOffDiag,scalarGF)
+      SUBROUTINE get_gf(this,atoms,iz,l_conjg,spin,gmat)
 
          USE m_types_mat
-         USE m_types_usdus
-         USE m_types_denCoeffsOffDiag
-         USE m_types_scalarGF
 
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
          !can also return the spherically averaged GF with the given scalar products
@@ -238,14 +238,10 @@ MODULE m_types_greensf
          LOGICAL,                            INTENT(IN)     :: l_conjg
          INTEGER,                            INTENT(IN)     :: spin
          TYPE(t_mat),                        INTENT(INOUT)  :: gmat !Return matrix
-         TYPE(t_usdus),            OPTIONAL, INTENT(IN)     :: usdus
-         TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN)     :: denCoeffsOffDiag
-         TYPE(t_scalarGF),         OPTIONAL, INTENT(IN)     :: scalarGF
 
          INTEGER matsize1,matsize2,ind1,ind2
          INTEGER m,mp,spin1,spin2,ipm,spin_start,spin_end,spin_ind,m_ind,mp_ind
          INTEGER l,lp,atomType,atomTypep,nspins,ilo,ilop,iLO_ind,iLOp_ind
-         LOGICAL l_scalar,l_scalarGF
 
          REAL :: uun,dun,udn,ddn
          REAL :: uulon(atoms%nlod),dulon(atoms%nlod),ulodn(atoms%nlod),uloun(atoms%nlod)
@@ -264,19 +260,6 @@ MODULE m_types_greensf
             nspins = SIZE(this%gmmpMat,4)
          ELSE
             nspins = SIZE(this%uu,4)
-         ENDIF
-
-         l_scalarGF = PRESENT(scalarGF)
-         IF(l_scalarGF) l_scalarGF = scalarGF%done.AND.this%elem%isOffDiag()
-         l_scalar = PRESENT(usdus).OR.PRESENT(denCoeffsOffDiag)
-         IF(l_scalar.AND.nspins==3) THEN
-            IF(.NOT.PRESENT(denCoeffsOffDiag)) THEN
-                  CALL juDFT_error("Offdiagonal Scalar products missing", calledby="get_gf")
-            ENDIF
-         ENDIF
-
-         IF(l_scalar.AND. .NOT.ALLOCATED(this%uu)) THEN
-            CALL juDFT_error("l_scalar/l_radial only without l_sphavg", calledby="get_gf")
          ENDIF
 
          IF(spin.GT.4 .OR. spin.LT.1) THEN
@@ -307,52 +290,23 @@ MODULE m_types_greensf
          !Find the correct spin index in gmmpMat arrays
          spin_ind = MERGE(1,spin,nspins.EQ.1)
 
-         IF(l_scalar.OR.l_scalarGF) THEN
-            !Select the correct scalar products or integrals (So we do not have to repeat the actual combination)
-            IF(l_scalarGF) THEN
-               uun = scalarGF%uun(spin1,spin2)
-               dun = scalarGF%dun(spin1,spin2)
-               udn = scalarGF%udn(spin1,spin2)
-               ddn = scalarGF%ddn(spin1,spin2)
-
-               IF(ALLOCATED(this%uulo)) THEN
-                  uulon(:) = scalarGF%uulon(:,spin1,spin2)
-                  uloun(:) = scalarGF%uloun(:,spin1,spin2)
-                  dulon(:) = scalarGF%dulon(:,spin1,spin2)
-                  ulodn(:) = scalarGF%ulodn(:,spin1,spin2)
-
-                  uloulopn(:,:) = scalarGF%uloulopn(:,:,spin1,spin2)
-               ENDIF
-            ELSE IF(spin_ind<3) THEN
-               uun = 1.0
-               dun = 0.0
-               udn = 0.0
-               ddn = usdus%ddn(l,atomType,spin_ind)
-
-               IF(ALLOCATED(this%uulo)) THEN
-                  uulon(:) = usdus%uulon(:,atomType,spin_ind)
-                  uloun(:) = usdus%uulon(:,atomType,spin_ind)
-                  dulon(:) = usdus%dulon(:,atomType,spin_ind)
-                  ulodn(:) = usdus%dulon(:,atomType,spin_ind)
-
-                  uloulopn(:,:) = usdus%uloulopn(:,:,atomType,spin_ind)
-               ENDIF
-            ELSE
-               uun = denCoeffsOffDiag%uu21n(l,atomType)
-               dun = denCoeffsOffDiag%du21n(l,atomType)
-               udn = denCoeffsOffDiag%ud21n(l,atomType)
-               ddn = denCoeffsOffDiag%dd21n(l,atomType)
-
-               IF(ALLOCATED(this%uulo)) THEN
-                  uulon(:) = denCoeffsOffDiag%uulo21n(:,atomType)
-                  uloun(:) = denCoeffsOffDiag%ulou21n(:,atomType)
-                  dulon(:) = denCoeffsOffDiag%dulo21n(:,atomType)
-                  ulodn(:) = denCoeffsOffDiag%ulod21n(:,atomType)
-
-                  uloulopn(:,:) = denCoeffsOffDiag%uloulop21n(:,:,atomType)
-               ENDIF
+         IF(.NOT.this%l_sphavg) THEN
+            IF(.NOT.ALLOCATED(this%scalarProducts%uun)) THEN
+               CALL juDFT_error('Scalar products not available')
             ENDIF
+            uun = this%scalarProducts%uun(spin1,spin2)
+            dun = this%scalarProducts%dun(spin1,spin2)
+            udn = this%scalarProducts%udn(spin1,spin2)
+            ddn = this%scalarProducts%ddn(spin1,spin2)
 
+            IF(ALLOCATED(this%uulo)) THEN
+               uulon(:) = this%scalarProducts%uulon(:,spin1,spin2)
+               uloun(:) = this%scalarProducts%uloun(:,spin1,spin2)
+               dulon(:) = this%scalarProducts%dulon(:,spin1,spin2)
+               ulodn(:) = this%scalarProducts%ulodn(:,spin1,spin2)
+
+               uloulopn(:,:) = this%scalarProducts%uloulopn(:,:,spin1,spin2)
+            ENDIF
          ENDIF
 
          ind1 = 0
@@ -378,7 +332,7 @@ MODULE m_types_greensf
                !-------------------
                ! Fetch the values
                !-------------------
-               IF(l_scalar.OR.l_scalarGF) THEN
+               IF(.NOT.this%l_sphavg) THEN
                   gmat%data_c(ind1,ind2) =   this%uu(iz,m_ind,mp_ind,spin_ind,ipm) * uun &
                                            + this%dd(iz,m_ind,mp_ind,spin_ind,ipm) * ddn &
                                            + this%du(iz,m_ind,mp_ind,spin_ind,ipm) * dun &
@@ -423,12 +377,9 @@ MODULE m_types_greensf
 
       END SUBROUTINE get_gf
 
-      SUBROUTINE getFullMatrix_gf(this,atoms,iz,l_conjg,gmat,usdus,denCoeffsOffDiag,scalarGF)
+      SUBROUTINE getFullMatrix_gf(this,atoms,iz,l_conjg,gmat)
 
          USE m_types_mat
-         USE m_types_usdus
-         USE m_types_denCoeffsOffDiag
-         USE m_types_scalarGF
 
          !Return the full matrix with all spin blocks for the given energy point
 
@@ -437,9 +388,6 @@ MODULE m_types_greensf
          INTEGER,                            INTENT(IN)     :: iz
          LOGICAL,                            INTENT(IN)     :: l_conjg
          TYPE(t_mat),                        INTENT(INOUT)  :: gmat !Return matrix
-         TYPE(t_usdus),            OPTIONAL, INTENT(IN)     :: usdus
-         TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN)     :: denCoeffsOffDiag
-         TYPE(t_scalarGF),         OPTIONAL, INTENT(IN)     :: scalarGF
 
          INTEGER :: matsize1, matsize2, nspins, ispin
 
@@ -461,7 +409,7 @@ MODULE m_types_greensf
          ENDIF
 
          DO ispin = 1, MAX(nspins,2)
-            CALL this%get(atoms,iz,l_conjg,ispin,gmat_spin,usdus,denCoeffsOffDiag,scalarGF)
+            CALL this%get(atoms,iz,l_conjg,ispin,gmat_spin)
 
             IF(ispin<3) THEN
                gmat%data_c((ispin-1)*matsize1+1:ispin*matsize1,(ispin-1)*matsize2+1:ispin*matsize2) = gmat_spin%data_c
@@ -1079,7 +1027,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE resetSingleElem_gf
 
-      FUNCTION integrateOverMT_greensf(this,atoms,input,gfinp,f,g,flo,usdus,denCoeffsOffDiag,scalarGF,l_fullRadial) Result(gIntegrated)
+      FUNCTION integrateOverMT_greensf(this,atoms,input,gfinp,f,g,flo,l_fullRadial) Result(gIntegrated)
 
          USE m_intgr
          USE m_types_scalarGF
@@ -1094,9 +1042,6 @@ MODULE m_types_greensf
          REAL,                               INTENT(IN) :: f(:,:,0:,:,:)
          REAL,                               INTENT(IN) :: g(:,:,0:,:,:)
          REAL,                               INTENT(IN) :: flo(:,:,:,:,:)
-         TYPE(t_usdus),            OPTIONAL, INTENT(IN) :: usdus
-         TYPE(t_denCoeffsOffDiag), OPTIONAL, INTENT(IN) :: denCoeffsOffDiag
-         TYPE(t_scalarGF),         OPTIONAL, INTENT(IN) :: scalarGF
          LOGICAL,                  OPTIONAL, INTENT(IN) :: l_fullRadial
 
          TYPE(t_greensf) :: gIntegrated
@@ -1125,10 +1070,7 @@ MODULE m_types_greensf
          atomDiff  = this%elem%atomDiff
          !Do we have the offdiagonal scalar products
          l_explicit = .TRUE.
-         IF(PRESENT(scalarGF)) THEN
-            IF(scalarGF%done.AND.this%elem%isOffDiag()) l_explicit = .FALSE.
-         ENDIF
-         IF(PRESENT(usdus).OR.PRESENT(denCoeffsOffDiag).AND..NOT.this%elem%isOffDiag()) l_explicit = .FALSE.
+         IF(ALLOCATED(this%scalarProducts%uun)) l_explicit = .FALSE.
 
          !only intersite arguments have independent radial arguments ??
          l_fullRadialArg = l_fullRadialArg.AND.(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12))
@@ -1137,8 +1079,7 @@ MODULE m_types_greensf
             DO spin = 1 , SIZE(this%uu,4)
                IF(.NOT.l_explicit) THEN
                   DO iz = 1, this%contour%nz
-                     CALL this%get(atoms,iz,ipm==2,spin,gmatTmp,usdus=usdus,&
-                                   denCoeffsOffDiag=denCoeffsOffDiag,scalarGF=scalarGF)
+                     CALL this%get(atoms,iz,ipm==2,spin,gmatTmp)
                      CALL gIntegrated%set(iz,ipm==2,gmatTmp,spin=spin)
                   ENDDO
                ELSE

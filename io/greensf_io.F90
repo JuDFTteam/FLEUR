@@ -86,11 +86,10 @@ MODULE m_greensf_io
    END SUBROUTINE closeGreensFFile
 
    SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, cell, archiveType, greensf, mmpmat, selfen,&
-                               u, udot, ulo, usdus, denCoeffsOffDiag, scalarGF)
+                               u, udot, ulo)
 
       USE m_types
       USE m_types_selfen
-      USE m_types_scalarGF
       USE m_constants
       USE m_juDFT
 
@@ -107,9 +106,6 @@ MODULE m_greensf_io
       REAL,                      OPTIONAL, INTENT(IN) :: u(:,:,0:,:,:)      !Radial Functions for IO
       REAL,                      OPTIONAL, INTENT(IN) :: udot(:,:,0:,:,:)
       REAL,                      OPTIONAL, INTENT(IN) :: ulo(:,:,:,:,:)
-      TYPE(t_usdus),             OPTIONAL, INTENT(IN) :: usdus
-      TYPE(t_denCoeffsOffDiag),  OPTIONAL, INTENT(IN) :: denCoeffsOffDiag
-      TYPE(t_scalarGF),          OPTIONAL, INTENT(IN) :: scalarGF(:)
 
       INTEGER(HID_T)    :: elementsGroupID,contoursGroupID,radialGroupID
       INTEGER(HID_T)    :: currentelementGroupID,currentcontourGroupID
@@ -133,19 +129,15 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: uloulopDataSpaceID,uloulopDataSetID
       INTEGER(HID_T)    :: nLODataSpaceID,nLODataSetID
       INTEGER(HID_T)    :: lLODataSpaceID,lLODataSetID
+      INTEGER(HID_T)    :: uunDataSpaceID,uunDataSetID
+      INTEGER(HID_T)    :: udnDataSpaceID,udnDataSetID
+      INTEGER(HID_T)    :: dunDataSpaceID,dunDataSetID
       INTEGER(HID_T)    :: ddnDataSpaceID,ddnDataSetID
       INTEGER(HID_T)    :: uulonDataSpaceID,uulonDataSetID
+      INTEGER(HID_T)    :: ulounDataSpaceID,ulounDataSetID
       INTEGER(HID_T)    :: dulonDataSpaceID,dulonDataSetID
+      INTEGER(HID_T)    :: ulodnDataSpaceID,ulodnDataSetID
       INTEGER(HID_T)    :: uloulopnDataSpaceID,uloulopnDataSetID
-      INTEGER(HID_T)    :: uu21nDataSpaceID,uu21nDataSetID
-      INTEGER(HID_T)    :: du21nDataSpaceID,du21nDataSetID
-      INTEGER(HID_T)    :: ud21nDataSpaceID,ud21nDataSetID
-      INTEGER(HID_T)    :: dd21nDataSpaceID,dd21nDataSetID
-      INTEGER(HID_T)    :: uulo21nDataSpaceID,uulo21nDataSetID
-      INTEGER(HID_T)    :: ulou21nDataSpaceID,ulou21nDataSetID
-      INTEGER(HID_T)    :: dulo21nDataSpaceID,dulo21nDataSetID
-      INTEGER(HID_T)    :: ulod21nDataSpaceID,ulod21nDataSetID
-      INTEGER(HID_T)    :: uloulop21nDataSpaceID,uloulop21nDataSetID
 
 
       CHARACTER(len=30) :: elementName, groupName, shapeStr
@@ -266,8 +258,7 @@ MODULE m_greensf_io
          iContour  = greensf(i_elem)%elem%iContour
 
          IF(.NOT.l_sphavg.AND.gfinp%l_outputSphavg) THEN
-            gfOut = greensf(i_elem)%integrateoverMT(atoms,input,gfinp,u,udot,ulo,usdus=usdus,denCoeffsOffdiag=denCoeffsOffDiag,&
-                                                    scalarGF=scalarGF(i_elem),l_fullRadial=gfinp%l_intFullRadial)
+            gfOut = greensf(i_elem)%integrateoverMT(atoms,input,gfinp,u,udot,ulo,l_fullRadial=gfinp%l_intFullRadial)
             l_sphavg = .TRUE.
          ELSE
             gfOut = greensf(i_elem)
@@ -494,116 +485,6 @@ MODULE m_greensf_io
             CALL io_write_real5(uloDataSetID,[1,1,1,1,1],dimsInt(:5),ulo)
             CALL h5dclose_f(uloDataSetID, hdfError)
          ENDIF
-
-         !--> Start: Scalar products
-         IF(PRESENT(usdus)) THEN
-            dims(:3) = [atoms%lmaxd+1,atoms%ntype,input%jspins]
-            dimsInt=dims
-            CALL h5screate_simple_f(3,dims(:3),ddnDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "ddn", H5T_NATIVE_DOUBLE, ddnDataSpaceID, ddnDataSetID, hdfError)
-            CALL h5sclose_f(ddnDataSpaceID,hdfError)
-            CALL io_write_real3(ddnDataSetID,[1,1,1],dimsInt(:3),usdus%ddn)
-            CALL h5dclose_f(ddnDataSetID, hdfError)
-
-            dims(:3) = [atoms%nlod,atoms%ntype,input%jspins]
-            dimsInt=dims
-            CALL h5screate_simple_f(3,dims(:3),uulonDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "uulon", H5T_NATIVE_DOUBLE, uulonDataSpaceID, uulonDataSetID, hdfError)
-            CALL h5sclose_f(uulonDataSpaceID,hdfError)
-            CALL io_write_real3(uulonDataSetID,[1,1,1],dimsInt(:3),usdus%uulon)
-            CALL h5dclose_f(uulonDataSetID, hdfError)
-
-            dims(:3) = [atoms%nlod,atoms%ntype,input%jspins]
-            dimsInt=dims
-            CALL h5screate_simple_f(3,dims(:3),dulonDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "dulon", H5T_NATIVE_DOUBLE, dulonDataSpaceID, dulonDataSetID, hdfError)
-            CALL h5sclose_f(dulonDataSpaceID,hdfError)
-            CALL io_write_real3(dulonDataSetID,[1,1,1],dimsInt(:3),usdus%dulon)
-            CALL h5dclose_f(dulonDataSetID, hdfError)
-
-            dims(:4) = [atoms%nlod,atoms%nlod,atoms%ntype,input%jspins]
-            dimsInt=dims
-            CALL h5screate_simple_f(4,dims(:4),uloulopnDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "uloulopn", H5T_NATIVE_DOUBLE, uloulopnDataSpaceID, uloulopnDataSetID, hdfError)
-            CALL h5sclose_f(uloulopnDataSpaceID,hdfError)
-            CALL io_write_real4(uloulopnDataSetID,[1,1,1,1],dimsInt(:4),usdus%uloulopn)
-            CALL h5dclose_f(uloulopnDataSetID, hdfError)
-         ENDIF
-
-         IF(PRESENT(denCoeffsOffDiag).AND.gfinp%l_mperp) THEN
-            dims(:2) = [atoms%lmaxd+1,atoms%ntype]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),uu21nDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "uu21n", H5T_NATIVE_DOUBLE, uu21nDataSpaceID, uu21nDataSetID, hdfError)
-            CALL h5sclose_f(uu21nDataSpaceID,hdfError)
-            CALL io_write_real2(uu21nDataSetID,[1,1],dimsInt(:2),denCoeffsOffDiag%uu21n)
-            CALL h5dclose_f(uu21nDataSetID, hdfError)
-
-            dims(:2) = [atoms%lmaxd+1,atoms%ntype]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),ud21nDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "ud21n", H5T_NATIVE_DOUBLE, ud21nDataSpaceID, ud21nDataSetID, hdfError)
-            CALL h5sclose_f(ud21nDataSpaceID,hdfError)
-            CALL io_write_real2(ud21nDataSetID,[1,1],dimsInt(:2),denCoeffsOffDiag%ud21n)
-            CALL h5dclose_f(ud21nDataSetID, hdfError)
-
-            dims(:2) = [atoms%lmaxd+1,atoms%ntype]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),du21nDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "du21n", H5T_NATIVE_DOUBLE, du21nDataSpaceID, du21nDataSetID, hdfError)
-            CALL h5sclose_f(du21nDataSpaceID,hdfError)
-            CALL io_write_real2(du21nDataSetID,[1,1],dimsInt(:2),denCoeffsOffDiag%du21n)
-            CALL h5dclose_f(du21nDataSetID, hdfError)
-
-            dims(:2) = [atoms%lmaxd+1,atoms%ntype]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),dd21nDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "dd21n", H5T_NATIVE_DOUBLE, dd21nDataSpaceID, dd21nDataSetID, hdfError)
-            CALL h5sclose_f(dd21nDataSpaceID,hdfError)
-            CALL io_write_real2(dd21nDataSetID,[1,1],dimsInt(:2),denCoeffsOffDiag%dd21n)
-            CALL h5dclose_f(dd21nDataSetID, hdfError)
-
-            dims(:2) = [atoms%nlod,atoms%ntype]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),uulo21nDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "uulo21n", H5T_NATIVE_DOUBLE, uulo21nDataSpaceID, uulo21nDataSetID, hdfError)
-            CALL h5sclose_f(uulo21nDataSpaceID,hdfError)
-            CALL io_write_real2(uulo21nDataSetID,[1,1],dimsInt(:2),denCoeffsOffDiag%uulo21n)
-            CALL h5dclose_f(uulo21nDataSetID, hdfError)
-
-            dims(:2) = [atoms%nlod,atoms%ntype]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),ulou21nDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "ulou21n", H5T_NATIVE_DOUBLE, ulou21nDataSpaceID, ulou21nDataSetID, hdfError)
-            CALL h5sclose_f(ulou21nDataSpaceID,hdfError)
-            CALL io_write_real2(ulou21nDataSetID,[1,1],dimsInt(:2),denCoeffsOffDiag%ulou21n)
-            CALL h5dclose_f(ulou21nDataSetID, hdfError)
-
-            dims(:2) = [atoms%nlod,atoms%ntype]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),dulo21nDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "dulo21n", H5T_NATIVE_DOUBLE, dulo21nDataSpaceID, dulo21nDataSetID, hdfError)
-            CALL h5sclose_f(dulo21nDataSpaceID,hdfError)
-            CALL io_write_real2(dulo21nDataSetID,[1,1],dimsInt(:2),denCoeffsOffDiag%dulo21n)
-            CALL h5dclose_f(dulo21nDataSetID, hdfError)
-
-            dims(:2) = [atoms%nlod,atoms%ntype]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),ulod21nDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "ulod21n", H5T_NATIVE_DOUBLE, ulod21nDataSpaceID, ulod21nDataSetID, hdfError)
-            CALL h5sclose_f(ulod21nDataSpaceID,hdfError)
-            CALL io_write_real2(ulod21nDataSetID,[1,1],dimsInt(:2),denCoeffsOffDiag%ulod21n)
-            CALL h5dclose_f(ulod21nDataSetID, hdfError)
-
-            dims(:3) = [atoms%nlod,atoms%nlod,atoms%ntype]
-            dimsInt=dims
-            CALL h5screate_simple_f(3,dims(:3),uloulop21nDataSpaceID,hdfError)
-            CALL h5dcreate_f(radialGroupID, "uloulop21n", H5T_NATIVE_DOUBLE, uloulop21nDataSpaceID, uloulop21nDataSetID, hdfError)
-            CALL h5sclose_f(uloulop21nDataSpaceID,hdfError)
-            CALL io_write_real3(uloulop21nDataSetID,[1,1,1],dimsInt(:3),denCoeffsOffDiag%uloulop21n)
-            CALL h5dclose_f(uloulop21nDataSetID, hdfError)
-         ENDIF
-         !--> End: Scalar products
 
          CALL h5gclose_f(radialGroupID, hdfError)
       ENDIF

@@ -2,6 +2,7 @@ MODULE m_kk_cutoff
 
    USE m_trapz
    USE m_types
+   USE m_types_scalarGF
    USE m_juDFT
    USE m_constants
 
@@ -118,7 +119,7 @@ MODULE m_kk_cutoff
 
    END SUBROUTINE kk_cutoff
 
-   SUBROUTINE kk_cutoffRadial(uu,ud,du,dd,noco,usdus,denCoeffsOffDiag,l_mperp,&
+   SUBROUTINE kk_cutoffRadial(uu,ud,du,dd,noco,scalarGF,l_mperp,&
                               l,atomType,input,eMesh,cutoff,scalingFactor)
 
       REAL,                      INTENT(IN)     :: uu(:,-lmaxU_const:,-lmaxU_const:,:)
@@ -126,8 +127,7 @@ MODULE m_kk_cutoff
       REAL,                      INTENT(IN)     :: du(:,-lmaxU_const:,-lmaxU_const:,:)
       REAL,                      INTENT(IN)     :: dd(:,-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_noco),              INTENT(IN)     :: noco
-      TYPE(t_usdus),             INTENT(IN)     :: usdus
-      TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
+      TYPE(t_scalarGF),          INTENT(IN)     :: scalarGF
       LOGICAL,                   INTENT(IN)     :: l_mperp
       INTEGER,                   INTENT(IN)     :: l
       INTEGER,                   INTENT(IN)     :: atomType
@@ -138,25 +138,27 @@ MODULE m_kk_cutoff
 
       REAL, ALLOCATABLE :: im(:,:,:,:)
 
-      INTEGER :: jspin,m,mp
+      INTEGER :: jspin,m,mp,spin1,spin2
 
       !calculate the spherical average from the original greens function
       ALLOCATE(im(SIZE(uu,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(uu,4)),source=0.0)
       DO jspin = 1, SIZE(im,4)
+         IF(jspin < 3) THEN
+            spin1 = jspin
+            spin2 = jspin
+         ELSE
+            spin1 = 2
+            spin2 = 1
+         ENDIF
          !$OMP parallel do default(none) &
-         !$OMP shared(usdus,denCoeffsOffDiag,jspin,l,atomType,im,uu,ud,du,dd) &
+         !$OMP shared(scalarGF,jspin,spin1,spin2,l,atomType,im,uu,ud,du,dd) &
          !$OMP private(m,mp) collapse(2)
          DO m = -l,l
             DO mp = -l,l
-               IF(jspin < 3) THEN
-                  im(:,m,mp,jspin) =  uu(:,m,mp,jspin) &
-                                    + dd(:,m,mp,jspin) * usdus%ddn(l,atomType,jspin)
-               ELSE
-                  im(:,m,mp,jspin) =  uu(:,m,mp,jspin) * denCoeffsOffDiag%uu21n(l,atomType) &
-                                    + ud(:,m,mp,jspin) * denCoeffsOffDiag%ud21n(l,atomType) &
-                                    + du(:,m,mp,jspin) * denCoeffsOffDiag%du21n(l,atomType) &
-                                    + dd(:,m,mp,jspin) * denCoeffsOffDiag%dd21n(l,atomType)
-               ENDIF
+               im(:,m,mp,jspin) =     uu(:,m,mp,jspin) * scalarGF%uun(spin1,spin2) &
+                                    + ud(:,m,mp,jspin) * scalarGF%udn(spin1,spin2) &
+                                    + du(:,m,mp,jspin) * scalarGF%dun(spin1,spin2) &
+                                    + dd(:,m,mp,jspin) * scalarGF%ddn(spin1,spin2)
             ENDDO
          ENDDO
          !$OMP end parallel do

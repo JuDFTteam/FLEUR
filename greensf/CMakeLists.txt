@@ -1,10 +1,10 @@
 set(fleur_F90 ${fleur_F90}
-greensf/greensfSpinDiag.f90
-greensf/greensfSpinOffDiag.f90
+greensf/greensfEigVecCoeffs.f90
 greensf/greensfBZint.f90
 greensf/greensfSym.f90
 greensf/greensfCalcImagPart.F90
 greensf/greensfCalcRealPart.F90
+greensf/greensfCalcScalarProducts.f90
 greensf/greensfPostProcess.F90
 greensf/kkintgr.f90
 greensf/lorentzian_smooth.f90

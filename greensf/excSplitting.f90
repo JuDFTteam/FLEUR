@@ -1,6 +1,7 @@
 MODULE m_excSplitting
 
    USE m_types
+   USE m_types_scalarGF
    USE m_constants
    USE m_trapz
    USE m_xmlOutput
@@ -9,12 +10,12 @@ MODULE m_excSplitting
 
    CONTAINS
 
-   SUBROUTINE excSplitting(gfinp,atoms,input,usdus,greensfImagPart,ef)
+   SUBROUTINE excSplitting(gfinp,atoms,input,scalarGF,greensfImagPart,ef)
 
       TYPE(t_gfinp),             INTENT(IN)  :: gfinp
       TYPE(t_atoms),             INTENT(IN)  :: atoms
       TYPE(t_input),             INTENT(IN)  :: input
-      TYPE(t_usdus),             INTENT(IN)  :: usdus
+      TYPE(t_scalarGF),          INTENT(IN)  :: scalarGF(:)
       TYPE(t_greensfImagPart),   INTENT(IN)  :: greensfImagPart
       REAL,                      INTENT(IN)  :: ef
 
@@ -75,15 +76,15 @@ MODULE m_excSplitting
                   imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg)
                ELSE
                   imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg,imat=1)
-                  imag = imag + greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg,imat=2) * usdus%ddn(l,atomType,ispin)
+                  imag = imag + greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg,imat=2) * scalarGF(i_gf)%ddn(ispin,ispin)
                   IF(nLO>0) THEN
                      DO iLO = 1, nLO
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=1,iLO=iLO) * usdus%uulon(ilo,atomType,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=2,iLO=iLO) * usdus%uulon(ilo,atomType,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=3,iLO=iLO) * usdus%dulon(ilo,atomType,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=4,iLO=iLO) * usdus%dulon(ilo,atomType,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=1,iLO=iLO) * scalarGF(i_gf)%uulon(ilo,ispin,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=2,iLO=iLO) * scalarGF(i_gf)%uloun(ilo,ispin,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=3,iLO=iLO) * scalarGF(i_gf)%dulon(ilo,ispin,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=4,iLO=iLO) * scalarGF(i_gf)%ulodn(ilo,ispin,ispin)
                         DO iLOp = 1, nLO
-                           imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,iLO=iLO,iLOp=iLOp) * usdus%uloulopn(ilo,ilop,atomType,ispin)
+                           imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,iLO=iLO,iLOp=iLOp) * scalarGF(i_gf)%uloulopn(ilo,ilop,ispin,ispin)
                         ENDDO
                      ENDDO
                   ENDIF
