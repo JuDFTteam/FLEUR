@@ -92,7 +92,7 @@ contains
       select case(fft%backend)
 #ifdef CPP_FFTW
       case(FFTW_const)
-         n_plans = min(max_threads, batch_size)
+         n_plans = min(max_threads, fft%batch_size)
          allocate(fft%plan(n_plans))
 
          fft%ptr_in = fftw_alloc_complex(int(n_plans * product(length), C_SIZE_T))
@@ -115,7 +115,7 @@ contains
 #endif
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
-         n_plans = min(max_threads, batch_size)
+         n_plans = min(max_threads, fft%batch_size)
          allocate(fft%container(n_plans))
          do i = 1,n_plans
             ok = DftiCreateDescriptor(fft%container(i)%dfti_handle, dfti_double, dfti_complex, 3, length)
