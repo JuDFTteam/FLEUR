@@ -35,7 +35,7 @@ CONTAINS
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
 
-    INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ll,ierr
+    INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ierr
     COMPLEX :: term
     REAL    :: bmrot(3,3)
     COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT).or.any(noco%l_spinoffd_ldau)))
@@ -66,6 +66,7 @@ CONTAINS
 
     ! !-->    generate spherical harmonics
     !gkrot = matmul(bmrot, lapw%vk(:,:,iintsp))
+    ! these two lines should eventually move to the GPU
     call dgemm("N","N", 3, lapw%nv(iintsp), 3, 1.0, bmrot, 3, lapw%vk(:,:,iintsp), 3, 0.0, gkrot, 3)
     CALL ylm4_batched(lmax,gkrot,ylm)
 
@@ -86,7 +87,7 @@ CONTAINS
     !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
     !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
     !$acc present(abclo,alo1,blo1,clo1)&
-    !$acc private(k,v,l,lm,invsfct,lo,term,invsfct,lmMin,lmMax,ll)  default(none)
+    !$acc private(k,l,lm,invsfct,lo,term,lmMin,lmMax)  default(none)
     DO k = 1,lapw%nv(iintsp)
        !-->  synthesize the complex conjugates of a and b
        !$acc  loop vector private(l,lmMin,lmMax)
