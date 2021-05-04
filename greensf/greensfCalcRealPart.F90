@@ -48,8 +48,8 @@ MODULE m_greensfCalcRealPart
       INTEGER :: ikpt, ikpt_i
       LOGICAL :: l_onsite,l_fixedCutoffset,l_sphavg,l_kresolved_int, l_inter
       REAL    :: del,eb,fixedCutoff,atomDiff(3),bk(3)
-      REAL,    ALLOCATABLE :: eMesh(:),imag(:)
-      COMPLEX, ALLOCATABLE :: gmat(:)
+      REAL,    ALLOCATABLE :: eMesh(:)
+      COMPLEX, ALLOCATABLE :: gmat(:),imag(:)
 
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del,eb,eMesh=eMesh)

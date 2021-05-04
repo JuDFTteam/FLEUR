@@ -50,28 +50,28 @@ MODULE m_types_greensfCoeffs
          REAL   , ALLOCATABLE :: scalingFactorSphavgKres(:,:)
          LOGICAL :: l_calc = .FALSE.
 
-         REAL, ALLOCATABLE :: sphavg(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: sphavg(:,:,:,:,:)
 
          ! These arrays are only used in the case we want the green's function with radial dependence
-         REAL, ALLOCATABLE :: uu(:,:,:,:,:)
-         REAL, ALLOCATABLE :: dd(:,:,:,:,:)
-         REAL, ALLOCATABLE :: du(:,:,:,:,:)
-         REAL, ALLOCATABLE :: ud(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: uu(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: dd(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: du(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:)
 
          !LO-Valence Contribution
-         REAL, ALLOCATABLE :: uulo(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: ulou(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: dulo(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: ulod(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: uulo(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ulou(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: dulo(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ulod(:,:,:,:,:,:)
 
          !LO-LO contribution
          !Here the (lo,lop) index pair is explicit again
-         REAL, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
 
 
          !K-resolved greens functions
          !(Radially resolved not yet implemented since we hit the indices limit on PGI)
-         REAL, ALLOCATABLE :: sphavg_k(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: sphavg_k(:,:,:,:,:,:)
 
          CONTAINS
             PROCEDURE, PASS :: init        =>  greensfImagPart_init
@@ -159,28 +159,28 @@ MODULE m_types_greensfCoeffs
 
          ALLOCATE (this%kkintgr_cutoff(gfinp%n,input%jspins,2),source=0)
          IF(uniqueElementsSphavg>0) THEN
-            ALLOCATE (this%sphavg(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsSphavg,spin_dim),source=0.0)
+            ALLOCATE (this%sphavg(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsSphavg,spin_dim),source=cmplx_0)
             ALLOCATE (this%scalingFactorSphavg(uniqueElementsSphavg,input%jspins),source=1.0)
          ENDIF
          IF(uniqueElementsRadial>0) THEN
-            ALLOCATE (this%uu(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=0.0)
-            ALLOCATE (this%dd(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=0.0)
-            ALLOCATE (this%du(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=0.0)
-            ALLOCATE (this%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=0.0)
+            ALLOCATE (this%uu(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=cmplx_0)
+            ALLOCATE (this%dd(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=cmplx_0)
+            ALLOCATE (this%du(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=cmplx_0)
+            ALLOCATE (this%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=cmplx_0)
             ALLOCATE (this%scalingFactorRadial(uniqueElementsRadial,input%jspins),source=1.0)
 
             uniqueElementsLO = gfinp%uniqueElements(atoms,lo=.TRUE.,l_sphavg=.FALSE.,maxLO=maxLO, l_kresolved_int=.FALSE.)
             IF(uniqueElementsLO>0) THEN
-               ALLOCATE (this%uulo(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=0.0)
-               ALLOCATE (this%ulou(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=0.0)
-               ALLOCATE (this%dulo(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=0.0)
-               ALLOCATE (this%ulod(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=0.0)
+               ALLOCATE (this%uulo(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=cmplx_0)
+               ALLOCATE (this%ulou(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=cmplx_0)
+               ALLOCATE (this%dulo(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=cmplx_0)
+               ALLOCATE (this%ulod(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=cmplx_0)
 
-               ALLOCATE (this%uloulop(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,maxLO,uniqueElementsLO,spin_dim),source=0.0)
+               ALLOCATE (this%uloulop(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,maxLO,uniqueElementsLO,spin_dim),source=cmplx_0)
             ENDIF
          ENDIF
          IF(uniqueElementsSphavg_kres>0) THEN
-            ALLOCATE (this%sphavg_k(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsSphavg_kres,spin_dim,nkpts),source=0.0)
+            ALLOCATE (this%sphavg_k(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsSphavg_kres,spin_dim,nkpts),source=cmplx_0)
             ALLOCATE (this%scalingFactorSphavgKres(uniqueElementsSphavg_kres,input%jspins),source=1.0)
          ENDIF
 
@@ -198,48 +198,48 @@ MODULE m_types_greensfCoeffs
 #ifdef CPP_MPI
 #include"cpp_double.h"
          INTEGER:: ierr,n
-         REAL,ALLOCATABLE::rtmp(:)
+         COMPLEX,ALLOCATABLE::ctmp(:)
 
          IF(ALLOCATED(this%sphavg)) THEN
             n = SIZE(this%sphavg,1)*SIZE(this%sphavg,2)*SIZE(this%sphavg,3)*SIZE(this%sphavg,4)
-            ALLOCATE(rtmp(n))
-            CALL MPI_ALLREDUCE(this%sphavg(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%sphavg(:,:,:,:,spin_ind),1)
-            DEALLOCATE(rtmp)
+            ALLOCATE(ctmp(n))
+            CALL MPI_ALLREDUCE(this%sphavg(:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%sphavg(:,:,:,:,spin_ind),1)
+            DEALLOCATE(ctmp)
          ENDIF
          IF(ALLOCATED(this%uu)) THEN
             n = SIZE(this%uu,1)*SIZE(this%uu,2)*SIZE(this%uu,3)*SIZE(this%uu,4)
-            ALLOCATE(rtmp(n))
-            CALL MPI_ALLREDUCE(this%uu(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%uu(:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%ud(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%ud(:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%du(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%du(:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%dd(:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%dd(:,:,:,:,spin_ind),1)
-            DEALLOCATE(rtmp)
+            ALLOCATE(ctmp(n))
+            CALL MPI_ALLREDUCE(this%uu(:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%uu(:,:,:,:,spin_ind),1)
+            CALL MPI_ALLREDUCE(this%ud(:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%ud(:,:,:,:,spin_ind),1)
+            CALL MPI_ALLREDUCE(this%du(:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%du(:,:,:,:,spin_ind),1)
+            CALL MPI_ALLREDUCE(this%dd(:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd(:,:,:,:,spin_ind),1)
+            DEALLOCATE(ctmp)
          ENDIF
          IF(ALLOCATED(this%uulo)) THEN
             n = SIZE(this%uulo,1)*SIZE(this%uulo,2)*SIZE(this%uulo,3)*SIZE(this%uulo,4)*SIZE(this%uulo,5)
-            ALLOCATE(rtmp(n))
-            CALL MPI_ALLREDUCE(this%uulo(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%uulo(:,:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%ulou(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%ulou(:,:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%dulo(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%dulo(:,:,:,:,:,spin_ind),1)
-            CALL MPI_ALLREDUCE(this%ulod(:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%ulod(:,:,:,:,:,spin_ind),1)
-            DEALLOCATE(rtmp)
+            ALLOCATE(ctmp(n))
+            CALL MPI_ALLREDUCE(this%uulo(:,:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%uulo(:,:,:,:,:,spin_ind),1)
+            CALL MPI_ALLREDUCE(this%ulou(:,:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%ulou(:,:,:,:,:,spin_ind),1)
+            CALL MPI_ALLREDUCE(this%dulo(:,:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%dulo(:,:,:,:,:,spin_ind),1)
+            CALL MPI_ALLREDUCE(this%ulod(:,:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%ulod(:,:,:,:,:,spin_ind),1)
+            DEALLOCATE(ctmp)
          ENDIF
          IF(ALLOCATED(this%uloulop)) THEN
             n = SIZE(this%uloulop,1)*SIZE(this%uloulop,2)*SIZE(this%uloulop,3)*SIZE(this%uloulop,4)&
                *SIZE(this%uloulop,5)*SIZE(this%uloulop,6)
-            ALLOCATE(rtmp(n))
-            CALL MPI_ALLREDUCE(this%uloulop(:,:,:,:,:,:,spin_ind),rtmp,n,CPP_MPI_REAL,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_scopy(n,rtmp,1,this%uloulop(:,:,:,:,:,:,spin_ind),1)
-            DEALLOCATE(rtmp)
+            ALLOCATE(ctmp(n))
+            CALL MPI_ALLREDUCE(this%uloulop(:,:,:,:,:,:,spin_ind),ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%uloulop(:,:,:,:,:,:,spin_ind),1)
+            DEALLOCATE(ctmp)
          ENDIF
 #endif
 
@@ -360,24 +360,24 @@ MODULE m_types_greensfCoeffs
          INTEGER, OPTIONAL,        INTENT(IN)   :: iLO,iLOp !which local orbitals
          INTEGER, OPTIONAL,        INTENT(IN)   :: ikpt
 
-         REAL, ALLOCATABLE :: imagpartCut(:)
+         COMPLEX, ALLOCATABLE :: imagpartCut(:)
 
          INTEGER :: spin_ind, kkcut
 
          IF(PRESENT(ikpt)) THEN
             IF(ALLOCATED(this%sphavg_k)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg_k,1)),source=0.0)
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg_k,1)),source=cmplx_0)
                imagpartCut = this%sphavg_k(:,m,mp,i_elem,spin,ikpt)
             ENDIF
          ELSE IF(l_sphavg) THEN
             IF(ALLOCATED(this%sphavg)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=0.0)
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=cmplx_0)
                imagpartCut = this%sphavg(:,m,mp,i_elem,spin)
             ENDIF
          ELSE IF(.NOT.PRESENT(iLO).AND..NOT.PRESENT(iLOp)) THEN
             !Valence-Valence arrays
             IF(ALLOCATED(this%uu)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uu,1)),source=0.0)
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uu,1)),source=cmplx_0)
                IF(PRESENT(imat)) THEN
                   IF(imat.EQ.1) THEN
                      imagpartCut = this%uu(:,m,mp,i_elem,spin)
@@ -393,7 +393,7 @@ MODULE m_types_greensfCoeffs
          ELSE IF(.NOT.PRESENT(iLOp)) THEN
             !LO-Valence arrays
             IF(ALLOCATED(this%uulo)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uulo,1)),source=0.0)
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uulo,1)),source=cmplx_0)
                IF(PRESENT(imat)) THEN
                   IF(imat.EQ.1) THEN
                      imagpartCut = this%uulo(:,m,mp,iLO,i_elem,spin)
@@ -409,7 +409,7 @@ MODULE m_types_greensfCoeffs
          ELSE
             !LO-LO arrays
             IF(ALLOCATED(this%uloulop)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uloulop,1)),source=0.0)
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uloulop,1)),source=cmplx_0)
                imagpartCut = this%uloulop(:,m,mp,iLO,iLOp,i_elem,spin)
             ENDIF
          ENDIF
@@ -419,7 +419,7 @@ MODULE m_types_greensfCoeffs
             spin_ind = MERGE(1,spin,spin>2)
             kkcut = this%kkintgr_cutoff(i_gf,spin_ind,2)
 
-            IF(kkcut.ne.SIZE(imagpartCut)) imagpartCut(kkcut+1:) = 0.0
+            IF(kkcut.ne.SIZE(imagpartCut)) imagpartCut(kkcut+1:) = cmplx_0
          ENDIF
 
       END FUNCTION greensfImagPart_applyCutoff

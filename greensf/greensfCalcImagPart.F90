@@ -71,7 +71,7 @@ MODULE m_greensfCalcImagPart
                                     dosWeights,bounds=indBound,dos=.TRUE.)
             ENDIF
             ALLOCATE(weights(SIZE(eMesh),nBands),source=cmplx_0)
-            weights = fac * (resWeights - ImagUnit * pi_const * dosWeights)
+            weights = fac * (ImagUnit * resWeights - pi_const * dosWeights)
             DEALLOCATE(dosWeights,resWeights)
             CALL timestop("Green's Function: TetrahedronWeights")
          CASE DEFAULT
@@ -189,7 +189,7 @@ MODULE m_greensfCalcImagPart
 
                            SELECT CASE(input%bz_integration)
                            CASE(0) !Histogram Method
-                              weight = -fac * ImagUnit * pi_const * wtkpt/del
+                              weight = -fac * pi_const * wtkpt/del
                            CASE(3) !Tetrahedron method
                               weight = weights(ie,iBand)
                            CASE DEFAULT
@@ -260,40 +260,34 @@ MODULE m_greensfCalcImagPart
 
                      ENDDO!ib
                   ENDIF
-                  IF(spin_ind<3) THEN
-                     imagReal = AIMAG(imag)
-                  ELSE IF(spin_ind==3) THEN
-                     imagReal = -AIMAG(imag)
-                  ELSE
-                     imagReal = REAL(imag) !Imaginary part of spin-offdiagonal part
-                  ENDIF
+
                   IF(l_sphavg.AND..NOT.l_kresolved_int) THEN
-                     CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,1),1,greensfImagPart%sphavg(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%sphavg(:,m,mp,i_elem_imag,spin_ind),1)
                   ELSE IF(.NOT.l_kresolved_int) THEN
-                     CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,1),1,greensfImagPart%uu(:,m,mp,i_elem_imag,spin_ind),1)
-                     CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,2),1,greensfImagPart%dd(:,m,mp,i_elem_imag,spin_ind),1)
-                     CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,3),1,greensfImagPart%ud(:,m,mp,i_elem_imag,spin_ind),1)
-                     CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,4),1,greensfImagPart%du(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%uu(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,2),1,greensfImagPart%dd(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,3),1,greensfImagPart%ud(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,4),1,greensfImagPart%du(:,m,mp,i_elem_imag,spin_ind),1)
 
                      IF(nLO>0) THEN
                         imat = 0
                         DO iLO = 1, nLO
                            imat = imat + 4
-                           CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,imat+1),1,greensfImagPart%uulo(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
-                           CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,imat+2),1,greensfImagPart%ulou(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
-                           CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,imat+3),1,greensfImagPart%dulo(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
-                           CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,imat+4),1,greensfImagPart%ulod(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
+                           CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,imat+1),1,greensfImagPart%uulo(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
+                           CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,imat+2),1,greensfImagPart%ulou(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
+                           CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,imat+3),1,greensfImagPart%dulo(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
+                           CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,imat+4),1,greensfImagPart%ulod(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
                         ENDDO
                         imat = 0
                         DO iLO = 1, nLO
                            DO iLOp = 1, nLO
                               imat = imat + 1
-                              CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,4 + 4*nLO+imat),1,greensfImagPart%uloulop(:,m,mp,iLO,iLOp,i_elemLO_imag,spin_ind),1)
+                              CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,4 + 4*nLO+imat),1,greensfImagPart%uloulop(:,m,mp,iLO,iLOp,i_elemLO_imag,spin_ind),1)
                            ENDDO
                         ENDDO
                      ENDIF
                   ELSE
-                     CALL CPP_BLAS_saxpy(SIZE(eMesh),1.0,imagReal(:,1),1,greensfImagPart%sphavg_k(:,m,mp,i_elem_imag,spin_ind,ikpt_i),1)
+                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%sphavg_k(:,m,mp,i_elem_imag,spin_ind,ikpt_i),1)
                   ENDIF
 
                ENDDO!m

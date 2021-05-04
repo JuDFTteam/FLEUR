@@ -7,18 +7,37 @@ MODULE m_lorentzian_smooth
    !PARAMETER FOR LORENTZIAN SMOOTHING
    REAL,    PARAMETER :: cut              = 1e-8
 
+   INTERFACE lorentzian_smooth
+      PROCEDURE lorentzian_smooth_r, lorentzian_smooth_c
+   END INTERFACE
+
    CONTAINS
 
-   !This is essentially smooth out of m_smooth but with a lorentzian distribution
-   SUBROUTINE lorentzian_smooth(e,f,sigma,n)
+   SUBROUTINE lorentzian_smooth_r(e,f,sigma,n)
 
       INTEGER, INTENT(IN)    :: n
       REAL,    INTENT(INOUT) :: f(:)
+      REAL,    INTENT(IN)    :: sigma , e(:)
+
+      COMPLEX, ALLOCATABLE :: f_c(:)
+
+      f_c = f
+      CALL lorentzian_smooth_c(e,f_c,sigma,n)
+      f = REAL(f_c)
+
+   END SUBROUTINE lorentzian_smooth_r
+
+   !This is essentially smooth out of m_smooth but with a lorentzian distribution
+   SUBROUTINE lorentzian_smooth_c(e,f,sigma,n)
+
+      INTEGER, INTENT(IN)    :: n
+      COMPLEX, INTENT(INOUT) :: f(:)
       REAL,    INTENT(IN)    :: sigma
       REAL,    INTENT(IN)    :: e(:)
 
       REAL :: dx
-      REAL :: f0(n), ee(n)
+      COMPLEX :: f0(n)
+      REAL :: ee(n)
       INTEGER :: ie , je , j1 , j2 , numPoints
 
       f0 = f
@@ -46,6 +65,6 @@ MODULE m_lorentzian_smooth
 
       ENDDO
 
-   END SUBROUTINE lorentzian_smooth
+   END SUBROUTINE lorentzian_smooth_c
 
 END MODULE m_lorentzian_smooth
