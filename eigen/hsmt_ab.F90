@@ -35,12 +35,15 @@ CONTAINS
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
 
-    INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ll
+    INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ll,ierr
     COMPLEX :: term,tempA,tempB
-    REAL    :: v(3),bmrot(3,3),gkrot(3)
-    COMPLEX :: ylm((atoms%lmaxd+1)**2),facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
+    REAL    :: v(3),bmrot(3,3)
+    COMPLEX :: facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
     COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT).or.any(noco%l_spinoffd_ldau)))
     LOGICAL :: l_apw,l_abclo
+    
+    real, allocatable    :: gkrot(:,:)
+    COMPLEX, allocatable :: ylm(:,:)
 
     l_abclo=present(abclo)
     lmax = MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
@@ -55,6 +58,26 @@ CONTAINS
     np = sym%invtab(sym%ngopr(na))
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),nococonv%qss,c_ph(:,iintsp))
     bmrot = transpose(MATMUL(1.*sym%mrot(:,:,np),cell%bmat))
+
+    allocate(ylm((atoms%lmaxd+1)**2, lapw%nv(iintsp)), stat=ierr)
+    if(ierr /= 0) call juDFT_error("can't allocate ylm")
+    allocate(gkrot(3,lapw%nv(iintsp)), stat=ierr)
+    if(ierr /= 0) call juDFT_error("can't allocate gkrot")
+
+    DO k = 1,lapw%nv(iintsp)
+        !-->  apply the rotation that brings this atom into the
+        !-->  representative (this is the definition of ngopr(na)
+        !-->  and transform to cartesian coordinates
+        v=lapw%vk(:,k,iintsp)
+        !gkrot(:) = MATMUL(bmrot,v)
+
+        gkrot(1,k) = bmrot(1,1)*v(1)+bmrot(1,2)*v(2)+bmrot(1,3)*v(3)
+        gkrot(2,k) = bmrot(2,1)*v(1)+bmrot(2,2)*v(2)+bmrot(2,3)*v(3)
+        gkrot(3,k) = bmrot(3,1)*v(1)+bmrot(3,2)*v(2)+bmrot(3,3)*v(3)
+    enddo
+    !-->    generate spherical harmonics
+    CALL ylm4_batched(lmax,gkrot,ylm)
+
 
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
@@ -71,21 +94,10 @@ CONTAINS
 
     !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
     !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
-    !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo) &
+    !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
     !$acc present(abclo,alo1,blo1,clo1)&
-    !$acc private(gkrot,k,v,ylm,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
+    !$acc private(gkrot,k,v,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
     DO k = 1,lapw%nv(iintsp)
-       !-->  apply the rotation that brings this atom into the
-       !-->  representative (this is the definition of ngopr(na)
-       !-->  and transform to cartesian coordinates
-       v=lapw%vk(:,k,iintsp)
-       !gkrot(:) = MATMUL(bmrot,v)
-       gkrot(1) = bmrot(1,1)*v(1)+bmrot(1,2)*v(2)+bmrot(1,3)*v(3)
-       gkrot(2) = bmrot(2,1)*v(1)+bmrot(2,2)*v(2)+bmrot(2,3)*v(3)
-       gkrot(3) = bmrot(3,1)*v(1)+bmrot(3,2)*v(2)+bmrot(3,3)*v(3)
-
-       !-->    generate spherical harmonics
-       CALL ylm4(lmax,gkrot,ylm)
        !-->  synthesize the complex conjugates of a and b
        !$acc  loop vector private(l,tempA,tempB,lmMin,lmMax)
        DO l = 0,lmax
@@ -98,8 +110,8 @@ CONTAINS
        END DO
        !$acc end loop
 
-       abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
-       abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
+       abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size, k)
+       abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size, k)
        
        IF (l_abclo) THEN
           !determine also the abc coeffs for LOs
@@ -113,9 +125,9 @@ CONTAINS
                    ll1 = l*(l+1) + 1
                    DO m = -l,l
                       lm = ll1 + m
-                      abclo(1,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*alo1(lo)
-                      abclo(2,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*blo1(lo)
-                      abclo(3,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*clo1(lo)
+                      abclo(1,m+atoms%llod+1,nkvec,lo) = term*ylm(lm,k)*alo1(lo)
+                      abclo(2,m+atoms%llod+1,nkvec,lo) = term*ylm(lm,k)*blo1(lo)
+                      abclo(3,m+atoms%llod+1,nkvec,lo) = term*ylm(lm,k)*clo1(lo)
                    END DO
                 END IF
              ENDDO
