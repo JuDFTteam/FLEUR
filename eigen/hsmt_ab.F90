@@ -38,7 +38,6 @@ CONTAINS
     INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ll,ierr
     COMPLEX :: term
     REAL    :: bmrot(3,3)
-    COMPLEX :: facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
     COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT).or.any(noco%l_spinoffd_ldau)))
     LOGICAL :: l_apw,l_abclo
     
@@ -74,7 +73,7 @@ CONTAINS
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP& SHARED(lapw,lmax,c_ph,iintsp,abCoeffs,fjgj,abclo,cell,atoms,sym) &
     !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ispin,bmrot, ylm) &
-    !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB) &
+    !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec) &
     !$OMP& PRIVATE(lmMin,lmMax)
 #else
     !$acc kernels present(abCoeffs) default(none)
@@ -87,20 +86,17 @@ CONTAINS
     !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
     !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
     !$acc present(abclo,alo1,blo1,clo1)&
-    !$acc private(k,v,l,lm,invsfct,lo,facA,facB,term,invsfct,lmMin,lmMax,ll)  default(none)
+    !$acc private(k,v,l,lm,invsfct,lo,term,invsfct,lmMin,lmMax,ll)  default(none)
     DO k = 1,lapw%nv(iintsp)
        !-->  synthesize the complex conjugates of a and b
        !$acc  loop vector private(l,lmMin,lmMax)
        DO l = 0,lmax
           lmMin = l*(l+1) + 1 - l
           lmMax = l*(l+1) + 1 + l
-          facA(lmMin:lmMax) = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp)
-          facB(lmMin:lmMax) = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp)
+          abCoeffs(lmMin:lmMax, k)                = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp) * ylm(lmMin:lmMax, k)
+          abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp) * ylm(lmMin:lmMax, k)
        END DO
        !$acc end loop
-
-       abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size, k)
-       abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size, k)
        
        IF (l_abclo) THEN
           !determine also the abc coeffs for LOs
