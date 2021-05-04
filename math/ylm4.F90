@@ -38,9 +38,7 @@ CONTAINS
       implicit none
       INTEGER, VALUE, INTENT(IN) :: lmax
       REAL, INTENT(IN) :: v(:,:)
-      COMPLEX, INTENT(OUT):: ylm((lmax + 1)**2,size(v,2))
-
-      REAL, PARAMETER   :: small = 1.0e-12
+      COMPLEX, INTENT(OUT):: ylm(:,:)
 
       INTEGER  :: l, lm0, m, i
       REAL     :: fac, x, y, z, xy, r, rxy, cth, sth, cph, sph, cph2
@@ -49,7 +47,7 @@ CONTAINS
       COMPLEX  :: ylms
       REAL     :: ynorm_dev((lmax + 1)**2)
       REAL     :: a, cd
-      real, parameter :: fpi = 4.0*3.1415926535897932
+      real, parameter :: fpi = 4.0*3.1415926535897932, small = 1.0e-12
 
       !--->    calculate norm
       DO l = 0, lmax
@@ -66,6 +64,9 @@ CONTAINS
 
 
 !--->    calculate sin and cos of theta and phi
+      !$OMP parallel do default(none) &
+      !$OMP private(i, x, y, z, xy, r, rxy, cth, sth, fac, m, l, p, c ,s, ylms, lm0, cph, sph, cph2)&
+      !$OMP shared(ylm, ynorm_dev, lmax, v)
       do i = 1,size(v,2)
          x = v(1,i)
          y = v(2,i)
@@ -128,5 +129,6 @@ CONTAINS
             ENDDO
          ENDDO
       enddo
+      !$OMP end parallel do
    end subroutine ylm4_batched
 END MODULE m_ylm
