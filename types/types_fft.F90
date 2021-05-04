@@ -11,6 +11,9 @@ module m_types_fft
 #ifdef CPP_FFTW 
    use fftw3
 #endif
+#ifdef _OPENACC
+   use cufft
+#endif
    !$ use omp_lib
 
 #ifdef CPP_FFT_MKL
@@ -27,6 +30,9 @@ module m_types_fft
       logical :: forw
       ! cfft storage
       real, allocatable :: afft(:), bfft(:)
+#ifdef _OPENACC 
+      integer(4) :: cufft_plan
+#endif
 #ifdef CPP_FFT_MKL
       ! mkl
       type(ptr_container), allocatable :: container(:)
@@ -51,16 +57,17 @@ module m_types_fft
       procedure :: free => t_fft_free
    end type t_fft
 contains
-   subroutine t_fft_init(fft, length, forw, indices, batch_size)
+   subroutine t_fft_init(fft, length, forw, indices, batch_size, l_gpu)
       implicit none       
       class(t_fft)                  :: fft
       integer, intent(in)           :: length(3) !length of data in each direction
       logical, intent(in)           :: forw          !.true. for the forward transformation, .false. for the backward one
       INTEGER, OPTIONAL, INTENT(IN) :: indices(:)    !array of indices of relevant/nonzero elements in the FFT mesh
       integer, optional, intent(in) :: batch_size
+      logical, optional, intent(in) :: l_gpu
 
       INTEGER, PARAMETER :: numOMPThreads = 1
-      integer :: size_dat, ok, fftMeshIndex, maxNumLocalZColumns
+      integer :: size_dat, ierr, fftMeshIndex, maxNumLocalZColumns
       integer :: temp, x, y, z, xCoord, yCoord, zCoord, i
       INTEGER, ALLOCATABLE :: sparseCoords(:)
       LOGICAL, ALLOCATABLE :: nonzeroArea(:, :)
@@ -68,6 +75,7 @@ contains
       logical :: in_openmp = .false.
       integer :: max_threads = 1, thread_id = 0
       integer :: n_plans
+      integer, pointer :: null_ptr => null()
 
       !$ thread_id   = omp_get_thread_num()
       !$ max_threads = omp_get_max_threads()
@@ -85,7 +93,7 @@ contains
 
       fft%initialized = .True.
       fft%backend = defaultFFT_const
-      fft%backend = selecFFT(PRESENT(indices))
+      fft%backend = selecFFT(PRESENT(indices), l_gpu)
       fft%length  = length
       fft%forw    = forw
 
@@ -113,15 +121,22 @@ contains
             !$omp end critical
          enddo
 #endif
+#ifdef _OPENACC
+      case(cuFFT_const)
+         ierr = cufftPlanMany(fft%cufft_plan, 3_4, [fft%length(3), fft%length(2), fft%length(1)], &
+                              null_ptr, null_ptr, null_ptr, null_ptr, null_ptr, null_ptr, CUFFT_Z2Z, fft%batch_size)
+
+         if(ierr /= 0) call juDFT_error("cuFFT Plan many failed.")
+#endif
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
          n_plans = min(max_threads, fft%batch_size)
          allocate(fft%container(n_plans))
          do i = 1,n_plans
-            ok = DftiCreateDescriptor(fft%container(i)%dfti_handle, dfti_double, dfti_complex, 3, length)
-            if (ok /= 0) call juDFT_error("cant create descriptor", calledby="fft_interface")
-            ok = DftiCommitDescriptor(fft%container(i)%dfti_handle)
-            if (ok /= 0) call juDFT_error("can't commit descriptor", calledby="fft_interface")
+            ierr = DftiCreateDescriptor(fft%container(i)%dfti_handle, dfti_double, dfti_complex, 3, length)
+            if (ierr /= 0) call juDFT_error("cant create descriptor", calledby="fft_interface")
+            ierr = DftiCommitDescriptor(fft%container(i)%dfti_handle)
+            if (ierr /= 0) call juDFT_error("can't commit descriptor", calledby="fft_interface")
          enddo
 #endif
 
@@ -148,43 +163,43 @@ contains
 
          maxNumLocalZColumns = COUNT(nonzeroArea)
          IF (fft%forw) THEN
-            ok = spfft_grid_create(grid, length(1), length(2), length(3), &
+            ierr = spfft_grid_create(grid, length(1), length(2), length(3), &
                                           maxNumLocalZColumns, SPFFT_PU_HOST, numOMPThreads); 
-            IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in creating spFFT grid! (1)")
+            IF (ierr /= SPFFT_SUCCESS) CALL juDFT_error("Error in creating spFFT grid! (1)")
 
-            ok = spfft_transform_create(fft%transform, grid, SPFFT_PU_HOST, SPFFT_TRANS_C2C, &
+            ierr = spfft_transform_create(fft%transform, grid, SPFFT_PU_HOST, SPFFT_TRANS_C2C, &
                                                length(1), length(2), length(3), length(3), &
                                                size(fft%recSpaceFunction), SPFFT_INDEX_TRIPLETS, sparseCoords)
-            IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in creating spFFT transform! (1)")
+            IF (ierr /= SPFFT_SUCCESS) CALL juDFT_error("Error in creating spFFT transform! (1)")
 
-            ok = spfft_grid_destroy(grid)
-            IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in destroying spFFT grid! (1)")
+            ierr = spfft_grid_destroy(grid)
+            IF (ierr /= SPFFT_SUCCESS) CALL juDFT_error("Error in destroying spFFT grid! (1)")
 
-            ok = spfft_transform_get_space_domain(fft%transform, SPFFT_PU_HOST, fft%realSpacePtr)
-            IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in obtaining spFFT space domain! (1)")
+            ierr = spfft_transform_get_space_domain(fft%transform, SPFFT_PU_HOST, fft%realSpacePtr)
+            IF (ierr /= SPFFT_SUCCESS) CALL juDFT_error("Error in obtaining spFFT space domain! (1)")
 
             CALL C_F_POINTER(fft%realSpacePtr, fft%externalRealSpaceMesh, [length(1), length(2), length(3)])
          ELSE
-            ok = spfft_grid_create(grid, length(1), length(2), length(3), &
+            ierr = spfft_grid_create(grid, length(1), length(2), length(3), &
                                           maxNumLocalZColumns, SPFFT_PU_HOST, numOMPThreads); 
-            IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in creating spFFT grid! (2)")
+            IF (ierr /= SPFFT_SUCCESS) CALL juDFT_error("Error in creating spFFT grid! (2)")
 
-            ok = spfft_transform_create(fft%transform, grid, SPFFT_PU_HOST, SPFFT_TRANS_C2C, &
+            ierr = spfft_transform_create(fft%transform, grid, SPFFT_PU_HOST, SPFFT_TRANS_C2C, &
                                                length(1), length(2), length(3), length(3), &
                                                size(fft%recSpaceFunction), SPFFT_INDEX_TRIPLETS, sparseCoords)
-            IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in creating spFFT transform! (2)")
+            IF (ierr /= SPFFT_SUCCESS) CALL juDFT_error("Error in creating spFFT transform! (2)")
 
-            ok = spfft_grid_destroy(grid)
-            IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in destroying spFFT grid! (2)")
+            ierr = spfft_grid_destroy(grid)
+            IF (ierr /= SPFFT_SUCCESS) CALL juDFT_error("Error in destroying spFFT grid! (2)")
 
-            ok = spfft_transform_get_space_domain(fft%transform, SPFFT_PU_HOST, fft%realSpacePtr)
-            IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in obtaining spFFT space domain! (2)")
+            ierr = spfft_transform_get_space_domain(fft%transform, SPFFT_PU_HOST, fft%realSpacePtr)
+            IF (ierr /= SPFFT_SUCCESS) CALL juDFT_error("Error in obtaining spFFT space domain! (2)")
          END IF
 #endif
       case default 
          size_dat = product(length)
-         allocate (fft%afft(size_dat), fft%bfft(size_dat), stat=ok)
-         if (ok /= 0) call juDFT_error("can't alloc afft & bfft", calledby="fft_interface")
+         allocate (fft%afft(size_dat), fft%bfft(size_dat), stat=ierr)
+         if (ierr /= 0) call juDFT_error("can't alloc afft & bfft", calledby="fft_interface")
       end select
    end subroutine
 
@@ -195,7 +210,8 @@ contains
       class(t_fft), intent(inout) :: fft
       complex, intent(inout)      :: dat(:,:) 
       integer      :: isn, size_dat 
-      INTEGER      ::  i, x, y, z, fftMeshIndex, ok, me
+      INTEGER      :: i, x, y, z, fftMeshIndex, ierr, me, direction
+      logical      :: in_omp
 
       size_dat = product(fft%length)
 
@@ -215,17 +231,28 @@ contains
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
          me = 1
-         !$omp parallel do default(none) private(me, i, ok) shared(fft, dat)
+         !$omp parallel do default(none) private(me, i, ierr) shared(fft, dat)
          do i = 1,size(dat,2)
             !$ me = omp_get_thread_num() + 1
             if (fft%forw) then
-               ok = DftiComputeForward(fft%container(me)%dfti_handle, dat(:,i))
+               ierr = DftiComputeForward(fft%container(me)%dfti_handle, dat(:,i))
             else
-               ok = DftiComputeBackward(fft%container(me)%dfti_handle, dat(:,i))
+               ierr = DftiComputeBackward(fft%container(me)%dfti_handle, dat(:,i))
             end if
-            if(ok /= 0) call juDFT_error("problem executing dft")
+            if(ierr /= 0) call juDFT_error("problem executing dft")
          enddo
          !$omp end parallel do
+#endif
+#ifdef _OPENACC 
+      case(cufft_const)
+         in_omp = .False. 
+         !$ in_omp = omp_in_parallel() 
+         if(in_omp) call juDFT_error("calling cuFFT from within OMP")
+
+         !$acc host_data use_device(dat)
+         ierr = cufftExecZ2z(fft%cufft_plan, dat, dat, merge(CUFFT_FORWARD, CUFFT_INVERSE, fft%forw))
+         !$acc end host_data
+         if(ierr /= 0) call juDFT_error("executing cufft failed.")
 #endif
 #ifdef CPP_SPFFT
       case(spFFT_const)
@@ -238,8 +265,8 @@ contains
                   END DO
                END DO
             END DO
-            ok = spfft_transform_forward(fft%transform, SPFFT_PU_HOST, fft%recSpaceFunction, SPFFT_NO_SCALING)!SPFFT_FULL_SCALING)
-            IF (ok /= SPFFT_SUCCESS) THEN
+            ierr = spfft_transform_forward(fft%transform, SPFFT_PU_HOST, fft%recSpaceFunction, SPFFT_NO_SCALING)!SPFFT_FULL_SCALING)
+            IF (ierr /= SPFFT_SUCCESS) THEN
                CALL juDFT_error("Error in spFFT forward fft%transform! (1)", calledby="fft_interface")
             END IF
             dat(:) = CMPLX(0.0, 0.0)
@@ -251,8 +278,8 @@ contains
             DO i = 1, SIZE(fft%indices)
                fft%recSpaceFunction(i) = dat(fft%indices(i) + 1)
             END DO
-            ok = spfft_transform_backward(fft%transform, fft%recSpaceFunction, SPFFT_PU_HOST)
-            IF (ok /= SPFFT_SUCCESS) THEN
+            ierr = spfft_transform_backward(fft%transform, fft%recSpaceFunction, SPFFT_PU_HOST)
+            IF (ierr /= SPFFT_SUCCESS) THEN
                CALL juDFT_error("Error in spFFT backward fft%transform! (2)", calledby="fft_interface")
             END IF
 
@@ -299,7 +326,7 @@ contains
 
    subroutine t_fft_free(fft)
       implicit none 
-      integer      :: ok
+      integer      :: ierr
       class(t_fft) :: fft 
       logical :: in_openmp = .false.
       integer :: i
@@ -321,17 +348,22 @@ contains
          enddo     
          deallocate(fft%plan)
 #endif
+#ifdef _OPENACC 
+      case(cufft_const)
+         ierr = cufftDestroy(fft%cufft_plan)
+         if(ierr /= 0) call juDFT_error("cufftdestroy failed")
+#endif
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
          do i=1,size(fft%container)
-            ok = DftiFreeDescriptor(fft%container(i)%dfti_handle)
+            ierr = DftiFreeDescriptor(fft%container(i)%dfti_handle)
          enddo
          deallocate(fft%container)
 #endif
 #ifdef CPP_SPFFT
       case(spFFT_const)
-         ok = spfft_transform_destroy(fft%transform)
-         IF (ok /= SPFFT_SUCCESS) CALL juDFT_error("Error in destroying spFFT fft%transform! (1)")
+         ierr = spfft_transform_destroy(fft%transform)
+         IF (ierr /= SPFFT_SUCCESS) CALL juDFT_error("Error in destroying spFFT fft%transform! (1)")
          fft%transform    = c_null_ptr
          fft%realSpacePtr = c_null_ptr
 #endif
