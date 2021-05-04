@@ -36,8 +36,8 @@ CONTAINS
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
 
     INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ll,ierr
-    COMPLEX :: term,tempA,tempB
-    REAL    :: v(3),bmrot(3,3)
+    COMPLEX :: term
+    REAL    :: bmrot(3,3)
     COMPLEX :: facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
     COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT).or.any(noco%l_spinoffd_ldau)))
     LOGICAL :: l_apw,l_abclo
@@ -59,32 +59,24 @@ CONTAINS
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),nococonv%qss,c_ph(:,iintsp))
     bmrot = transpose(MATMUL(1.*sym%mrot(:,:,np),cell%bmat))
 
-    allocate(ylm((atoms%lmaxd+1)**2, lapw%nv(iintsp)), stat=ierr)
+    allocate(ylm((lmax+1)**2, lapw%nv(iintsp)), stat=ierr)
     if(ierr /= 0) call juDFT_error("can't allocate ylm")
     allocate(gkrot(3,lapw%nv(iintsp)), stat=ierr)
     if(ierr /= 0) call juDFT_error("can't allocate gkrot")
 
-    DO k = 1,lapw%nv(iintsp)
-        !-->  apply the rotation that brings this atom into the
-        !-->  representative (this is the definition of ngopr(na)
-        !-->  and transform to cartesian coordinates
-        v=lapw%vk(:,k,iintsp)
-        !gkrot(:) = MATMUL(bmrot,v)
 
-        gkrot(1,k) = bmrot(1,1)*v(1)+bmrot(1,2)*v(2)+bmrot(1,3)*v(3)
-        gkrot(2,k) = bmrot(2,1)*v(1)+bmrot(2,2)*v(2)+bmrot(2,3)*v(3)
-        gkrot(3,k) = bmrot(3,1)*v(1)+bmrot(3,2)*v(2)+bmrot(3,3)*v(3)
-    enddo
     !-->    generate spherical harmonics
+    gkrot(1,:) =  bmrot(1,1)*lapw%vk(1,:,iintsp) + bmrot(1,2)*lapw%vk(2,:,iintsp) + bmrot(1,3)*lapw%vk(3,:,iintsp)
+    gkrot(2,:) =  bmrot(2,1)*lapw%vk(1,:,iintsp) + bmrot(2,2)*lapw%vk(2,:,iintsp) + bmrot(2,3)*lapw%vk(3,:,iintsp)
+    gkrot(3,:) =  bmrot(3,1)*lapw%vk(1,:,iintsp) + bmrot(3,2)*lapw%vk(2,:,iintsp) + bmrot(3,3)*lapw%vk(3,:,iintsp)
     CALL ylm4_batched(lmax,gkrot,ylm)
-
 
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP& SHARED(lapw,lmax,c_ph,iintsp,abCoeffs,fjgj,abclo,cell,atoms,sym) &
     !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ispin,bmrot, ylm) &
-    !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB,v) &
-    !$OMP& PRIVATE(gkrot,lmMin,lmMax,tempA,tempB)
+    !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB) &
+    !$OMP& PRIVATE(lmMin,lmMax)
 #else
     !$acc kernels present(abCoeffs) default(none)
     abCoeffs(:,:)=0.0
@@ -96,17 +88,15 @@ CONTAINS
     !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
     !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
     !$acc present(abclo,alo1,blo1,clo1)&
-    !$acc private(gkrot,k,v,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
+    !$acc private(k,v,l,lm,invsfct,lo,facA,facB,term,invsfct,lmMin,lmMax,ll)  default(none)
     DO k = 1,lapw%nv(iintsp)
        !-->  synthesize the complex conjugates of a and b
-       !$acc  loop vector private(l,tempA,tempB,lmMin,lmMax)
+       !$acc  loop vector private(l,lmMin,lmMax)
        DO l = 0,lmax
-          tempA = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp)
-          tempB = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp)
           lmMin = l*(l+1) + 1 - l
           lmMax = l*(l+1) + 1 + l
-          facA(lmMin:lmMax) = tempA
-          facB(lmMin:lmMax) = tempB
+          facA(lmMin:lmMax) = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp)
+          facB(lmMin:lmMax) = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp)
        END DO
        !$acc end loop
 
