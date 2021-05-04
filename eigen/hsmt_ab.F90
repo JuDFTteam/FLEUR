@@ -82,8 +82,8 @@ CONTAINS
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP& SHARED(lapw,lmax,c_ph,iintsp,abCoeffs,fjgj,abclo,cell,atoms,sym) &
-    !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ispin,bmrot) &
-    !$OMP& PRIVATE(k,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB,v) &
+    !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ispin,bmrot, ylm) &
+    !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB,v) &
     !$OMP& PRIVATE(gkrot,lmMin,lmMax,tempA,tempB)
 #else
     !$acc kernels present(abCoeffs) default(none)
