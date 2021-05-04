@@ -65,10 +65,9 @@ CONTAINS
     if(ierr /= 0) call juDFT_error("can't allocate gkrot")
 
 
-    !-->    generate spherical harmonics
-    gkrot(1,:) =  bmrot(1,1)*lapw%vk(1,:,iintsp) + bmrot(1,2)*lapw%vk(2,:,iintsp) + bmrot(1,3)*lapw%vk(3,:,iintsp)
-    gkrot(2,:) =  bmrot(2,1)*lapw%vk(1,:,iintsp) + bmrot(2,2)*lapw%vk(2,:,iintsp) + bmrot(2,3)*lapw%vk(3,:,iintsp)
-    gkrot(3,:) =  bmrot(3,1)*lapw%vk(1,:,iintsp) + bmrot(3,2)*lapw%vk(2,:,iintsp) + bmrot(3,3)*lapw%vk(3,:,iintsp)
+    ! !-->    generate spherical harmonics
+    !gkrot = matmul(bmrot, lapw%vk(:,:,iintsp))
+    call dgemm("N","N", 3, lapw%nv(iintsp), 3, 1.0, bmrot, 3, lapw%vk(:,:,iintsp), 3, 0.0, gkrot, 3)
     CALL ylm4_batched(lmax,gkrot,ylm)
 
 #ifndef _OPENACC
