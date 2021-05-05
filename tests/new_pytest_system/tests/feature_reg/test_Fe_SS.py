@@ -3,6 +3,7 @@ import pytest
 @pytest.mark.bulk
 @pytest.mark.magnetism
 @pytest.mark.spinspiral
+@pytest.mark.skip('Test is probably outdated (Was not used in long time)')
 def test_fe_bulk_SS_conv(execute_fleur, grep_number, grep_exists):
     """Fe monolayer fcc (110): spin spiral energy
 
@@ -29,6 +30,7 @@ def test_fe_bulk_SS_conv(execute_fleur, grep_number, grep_exists):
 @pytest.mark.bulk
 @pytest.mark.magnetism
 @pytest.mark.spinspiral
+@pytest.mark.skip('Test is probably outdated (Was not used in long time)')
 def test_Fe_film_SS_conv(execute_fleur, grep_number, grep_exists):
     """Fe monolayer fcc (110): spin spiral energy
     
@@ -53,6 +55,7 @@ def test_Fe_film_SS_conv(execute_fleur, grep_number, grep_exists):
 @pytest.mark.bulk
 @pytest.mark.magnetism
 @pytest.mark.spinspiral
+@pytest.mark.skip('Test is probably outdated (Was not used in long time)')
 def test_Fe_film_SSFT(execute_fleur, grep_number, grep_exists, validate_out_xml_file):
     """Fe monolayer fcc (110): spin spiral energy
     
