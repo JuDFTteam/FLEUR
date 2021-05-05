@@ -27,7 +27,7 @@ pytest -m <markername>
 
 # example markers are:
 bulk,film,xml,collinear,soc,lo,ldau,non-collinear,spinspiral,inversion,forces,...
- 
+
 
 # –duration=N
 ##################
@@ -47,7 +47,7 @@ This is a central pytest file, here all fixtures i.e helpers go (what former has
 
 https://docs.pytest.org/en/stable/
 
-pytest automaticly discovers all tests, as long as they are in a python file starting with 'test' and have a function or class defined inside starting with 'test'
+pytest automatically discovers all tests, as long as they are in a python file starting with 'test' and have a function or class defined inside starting with 'test'
 
 fixtures are helper functions, which can be put in the .py file of the tests to be available there or in the conftest.py file to be available globally.
 We use them for prepartion or teardown code, also basicly to make anything availble we need throughout the different tests
@@ -80,12 +80,8 @@ example test function:
 def test_foo_bar():                     # what fixures you want to include
     """Describe what you test
     """
-    
+
 
 
 # TODO: How to do coverage of fortan, enable what we had before
 # TODO?: if wanted we can move also the inputfiles of the tests in the tests sub folders, I made it like this, because pytest will create there data subfolder and to be very clear what is autogerated and what has the developer put in
-
-
-
-

@@ -55,7 +55,7 @@ LOGGER = logging.getLogger(__name__)
 
 # The current fleur test workflow is as follows, create Testing dir in build dir
 # there is the workdir in which the test runs, after the test is finished, they copy the work dir
-# they create logs there. 
+# they create logs there.
 
 
 def test_dir():
@@ -206,7 +206,7 @@ def pytest_generate_tests(metafunc):
 def pytest_collection_modifyitems(session, config, items):
     """After test collection modify collection.
 
-    Depending on how fleur was compiled we mark some tests 
+    Depending on how fleur was compiled we mark some tests
     with certain markers to be skiped.
 
     """
@@ -214,7 +214,7 @@ def pytest_collection_modifyitems(session, config, items):
     # I have not found any other way, but to import from a protective method...
     deselect_by_keyword(items, config)
     deselect_by_mark(items, config)
-    
+
     filename = 'pytest_incl.py'
     path = config.getoption("build_dir")
     test_dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -249,8 +249,8 @@ def pytest_collection_modifyitems(session, config, items):
     skip_libxc = pytest.mark.skip(reason='Fleur not compiled with libxc.')
     skip_hdf = pytest.mark.skip(reason='Fleur not compiled with hdf5.')
     skip_inpgen = pytest.mark.skip(reason='Inpgen binary was not compiled.')
-    
-   
+
+
     skip_markers = {'libxc' : skip_libxc,
                    'hdf': skip_hdf,
                    'inpgen' : skip_inpgen
@@ -263,7 +263,7 @@ def pytest_collection_modifyitems(session, config, items):
     # only left with selected items.
     deselection_items = []
     for i, item in enumerate(items):
-        # be careful with this because it also applies for test classes, 
+        # be careful with this because it also applies for test classes,
         # and tests which might depend on each other
         mod = (i+int(testoffset))%int(run_every)
         if mod !=0:
@@ -570,7 +570,7 @@ def execute_fleur(fleur_binary, work_dir):
     """
     Fixture which returns an execute_fleur function
     """
-    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}, stderr='stderr', stdout='stdout'):
+    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}, stderr='stderr', stdout='stdout', sub_dir=None):
         """
         Function which copies the input files
         executes fleur with the given cmdline_param
@@ -587,7 +587,10 @@ def execute_fleur(fleur_binary, work_dir):
         """
         import subprocess
 
-        workdir = work_dir
+        if sub_dir is not None:
+            workdir = os.path.abspath(os.path.join(work_dir, sub_dir))
+        else:
+            workdir = work_dir
         testdir = test_dir()
         if cmdline_param is None:
             cmdline_param = []
@@ -639,7 +642,7 @@ def execute_fleur(fleur_binary, work_dir):
             mpiruncmd = mpiruncmd.split()
         else:
             mpiruncmd = []
-        
+
         arg_list = mpiruncmd + [fleur] + cmdline_param
         arg_string = ''
         for entry in arg_list:
@@ -659,7 +662,7 @@ def execute_fleur(fleur_binary, work_dir):
             with open(f"{workdir}/{stderr}", "r") as f_stderr:
                 print(f_stderr.read())
             p1.check_returncode() # This throws error
-        
+
         #t1 = time.perf_counter()
         #print(f'Executing Fleur took {t1 - t0:0.4f} seconds')
 
@@ -752,7 +755,7 @@ def grep_number():
         :param expression (str): a python expression to look for in lines (everything that is can be used by re.search())
         :param split (str, optional): if the expression is in line, split for this expression. if
 None then the given expression will be used.
-        :param line_index (int, optional): After the split where to look for the number, Default 1, therefore the first number ofter the split string 
+        :param line_index (int, optional): After the split where to look for the number, Default 1, therefore the first number ofter the split string
         :param res_index (int, optional): If expression matches several lines, which one to use. Defaults to -1, last number only
         if res_index=None a list of all numbers is returned
 
@@ -859,7 +862,7 @@ def clean_workdir(work_dir):
         else:
             for files in filelist:
                 os.remove(os.path.abspath(os.path.join(workdir, files)))
-        
+
     return _clean_workdir
 
 @pytest.fixture(scope='function')
@@ -884,12 +887,12 @@ def stage_workdir(workdir, stage_dir, request):
 @pytest.fixture(scope='function')
 def load_stage(workdir, clean_workdir, stage_dir, request):
     """
-    A fixture when used will cause a test to copy all content of a certain dir in the stage folder to the 
+    A fixture when used will cause a test to copy all content of a certain dir in the stage folder to the
     workdir. This will overwrite all files in the current workdir. Needed for tests which depend on other tests.
     """
     def _use_stage(foldername=None, index=0):
         """
-        A method to copy all content of a certain dir in the stage folder to the 
+        A method to copy all content of a certain dir in the stage folder to the
         workdir. This will overwrite all files in the current workdir. Needed for tests which depend on other tests.
         """
         if foldername is None:
@@ -914,9 +917,9 @@ def stage_for_parser_test(request, work_dir, parser_testdir):
         workdir = work_dir
 
         yield # test is running
-        
+
         # clean up code goes here:
-       
+
         method_name = request.node.name
         if RUN_PARSER_TESTS and not request.node.rep_call.failed:
             # if not failed move test result to parsertestdir, will replace dir if existent
@@ -934,7 +937,7 @@ def get_inpgen_binary(fleur_dir):
     """
     if(fleur_dir[-1] == "/"):
         fleur_dir = fleur_dir[:-1]
-    
+
     if(os.path.isfile(f"{fleur_dir}/inpgen")):
         binary = f"{fleur_dir}/inpgen"
         #logging.info(f"Use {self.binary} as executable")
@@ -971,7 +974,7 @@ def get_fleur_binary(fleur_dir):
         #logging.info(f"Use {self.binary} as executable")
     else:
         binary = None
-        
+
 
     #else:
     #   logging.warning("Can not find any executables")
@@ -1003,7 +1006,7 @@ def collect_all_judft_messages_f():
     return collect_all_judft_messages
 
 def collect_all_judft_messages():
-    """Helper function, to create a list of all judft messages within the fleur source code, 
+    """Helper function, to create a list of all judft messages within the fleur source code,
     by grepping for them.
     """
     testdir = test_dir()
@@ -1011,10 +1014,10 @@ def collect_all_judft_messages():
     fleur_source_dir = os.path.abspath(os.path.join(testdir, rel_fleur_source))
     # source code is top dir, to much other stuff in there, thats why hardcode source dirs for speed
     # and to avoid problems with binaries and so on.
-    src_folders = ['cdn', 'cdn_mt', 'core', 'diagonalization', 'dos', 'eels', 'eigen', 
-    'eigen_secvar', 'eigen_soc', 'external', 'fermi', 'fft', 'fleurinput', 'force', 
-    'forcetheorem', 'global', 'greensf', 'hybrid', 'include', 'init', 'inpgen2', 
-    'io', 'juDFT', 'kpoints', 'ldahia', 'ldau', 'main', 'math', 'mix', 'mpi', 'optional', 'orbdep', 
+    src_folders = ['cdn', 'cdn_mt', 'core', 'diagonalization', 'dos', 'eels', 'eigen',
+    'eigen_secvar', 'eigen_soc', 'external', 'fermi', 'fft', 'fleurinput', 'force',
+    'forcetheorem', 'global', 'greensf', 'hybrid', 'include', 'init', 'inpgen2',
+    'io', 'juDFT', 'kpoints', 'ldahia', 'ldau', 'main', 'math', 'mix', 'mpi', 'optional', 'orbdep',
     'rdmft', 'tetra', 'types', 'vgen', 'wannier', 'xc-pot'
      ]
 

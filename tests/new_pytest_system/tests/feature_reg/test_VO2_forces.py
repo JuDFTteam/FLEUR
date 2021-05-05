@@ -5,7 +5,7 @@ import pytest
 def test_VO2_forces(execute_fleur, grep_number, grep_exists):
     """Check the computation of normal Fleur forces for the starting density.
 
-    Simple test of Fleur with one steps:
+    Simple test of Fleur with one step:
     1.Generate a starting density.
     2.Calculate the resulting forces.
     """
