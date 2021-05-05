@@ -2,29 +2,6 @@
 
 import pytest
 
-@pytest.mark.fleur
-@pytest.mark.bulk
-@pytest.mark.hybrid
-def test_CoHybridPBE0(execute_fleur, grep_exists, grep_number):
-    """Fleur Co Hybrid PBE0
-    Simple test of Fleur with XML input with one step:
-    1.Generate a starting density and run 1 HF iterations and compare total energies and other quantities
-    """
-    test_file_folder = './inputfiles/CoHybridPBE0/'
-    cmd_params = []
-    res_files = execute_fleur(test_file_folder)
-    res_file_names = list(res_files.keys())
-    should_files = ['out']
-    for file1 in should_files:
-        assert file1 in res_file_names
-    
-    tenergy = grep_number(res_files['out'], "HF total energy=", "= ")
-    mm = grep_number(res_files['out'], "mm       1", "mm       1")
-
-    assert abs(tenergy - -2786.7235930101) <= 0.000001
-    assert abs(mm - 1.64918) <= 0.001
-
-
 @pytest.mark.serial
 @pytest.mark.fleur
 @pytest.mark.bulk
