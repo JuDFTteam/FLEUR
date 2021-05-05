@@ -32,14 +32,13 @@ def test_AlLibxcPbe(execute_fleur, stage_workdir, grep_number, grep_exists):
     stage_workdir(foldername='lib')
 
     # Stage 2.1 [inbuilt, 2nd iteration]
-    # def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}, stderr='stderr', stdout='stdout')
     res_files = execute_fleur(test_file_folder, sub_dir='inb')
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
-    assert grep_exists(res_files['out'], "it=  2  is completed")
+    assert grep_exists(res_files['out'], "it=  1  is completed")
     efermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "    total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for spin  1                 it=    2", ":")
@@ -55,7 +54,7 @@ def test_AlLibxcPbe(execute_fleur, stage_workdir, grep_number, grep_exists):
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
-    assert grep_exists(res_files['out'], "it=  2  is completed")
+    assert grep_exists(res_files['out'], "it=  1  is completed")
     efermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "    total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for spin  1                 it=    2", ":")
