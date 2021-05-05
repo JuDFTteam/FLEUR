@@ -257,130 +257,127 @@ CONTAINS
                allocate(r_coul_wavf(0,0))
             endif
             if(ierr /= 0) call judft_error("can't alloc coul_wavf")
-            !$acc data create(c_coul_wavf, r_coul_wavf)
-               !$acc kernels present(r_coul_wavf, c_coul_wavf)
-               r_coul_wavf = 0.0
-               c_coul_wavf = cmplx_0
-               !$acc end kernels
-               !$acc wait
-               call timestop("alloc coul_wavf")
-               
-               call timestart("exchange matrix")
-               call timestart("sparse matrix products")
-               IF (mat_ex%l_real) THEN
-                  call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv%data_r, r_coul_wavf)
-               ELSE
-                  conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
-                  call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv%data_c, c_coul_wavf)
-               END IF
-               call timestop("sparse matrix products")
+            r_coul_wavf = 0.0
+            c_coul_wavf = cmplx_0
+            call timestop("alloc coul_wavf")
+            
+            call timestart("exchange matrix")
+            call timestart("sparse matrix products")
+            IF (mat_ex%l_real) THEN
+               call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv%data_r, r_coul_wavf)
+            ELSE
+               conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
+               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv%data_c, c_coul_wavf)
+            END IF
+            call timestop("sparse matrix products")
 
-               nq_idx = k_pack%q_packs(jq)%rank
+            nq_idx = k_pack%q_packs(jq)%rank
 
-               call timestart("apply prefactors carr1_v")
-               !$acc enter data copyin(phase_vv)
-               !$acc data copyin(psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
-                  if (mat_ex%l_real) then
+
+            call timestart("apply prefactors carr1_v")
+            !$acc enter data copyin(phase_vv, r_coul_wavf, c_coul_wavf)
+            !$acc data copyin(psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
+               if (mat_ex%l_real) then
 #ifdef _OPENACC
-                     call timestart("cpy cprod")
-                     call dlacpy("N", size(cprod_vv%data_r, 1), size(cprod_vv%data_r, 2), cprod_vv%data_r, size(cprod_vv%data_r, 1), CPP_cprod_r, size(CPP_cprod_r,1))
-                     call timestop("cpy cprod")
+                  call timestart("cpy cprod")
+                  call dlacpy("N", size(cprod_vv%data_r, 1), size(cprod_vv%data_r, 2), cprod_vv%data_r, size(cprod_vv%data_r, 1), CPP_cprod_r, size(CPP_cprod_r,1))
+                  call timestop("cpy cprod")
 #endif
-                     !$acc enter data copyin(CPP_cprod_r)
+                  !$acc enter data copyin(CPP_cprod_r)
 
-                     !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-                     !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
-                     !$acc present(n_q, nq_idx)
-                     DO iband = 1, hybdat%nbands(ik,jsp)
-                        DO iob = 1, psize
-                           do i = 1, hybdat%nbasm(iq)
-                              r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1))&
-                                                      * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)                        
-                           enddo
+                  !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
+                  !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
+                  !$acc present(n_q, nq_idx)
+                  DO iband = 1, hybdat%nbands(ik,jsp)
+                     DO iob = 1, psize
+                        do i = 1, hybdat%nbasm(iq)
+                           r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1))&
+                                                   * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)                        
                         enddo
                      enddo
-                     !$acc end parallel loop
-                  else
-#ifdef _OPENACC
-                     call timestart("cpy cprod")
-                     call zlacpy("N", size(cprod_vv%data_c, 1), size(cprod_vv%data_c, 2), cprod_vv%data_c, size(cprod_vv%data_c, 1), CPP_cprod_c, size(CPP_cprod_c,1))
-                     call timestop("cpy cprod")
-#endif
-                     !$acc enter data copyin(CPP_cprod_c)
-
-                     !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-                     !$acc present(c_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, ikqpt, ibando)&
-                     !$acc present(n_q, nq_idx)
-                     DO iband = 1, hybdat%nbands(ik,jsp)
-                        DO iob = 1, psize
-                           do i = 1, hybdat%nbasm(iq)
-                              c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) &
-                                                         * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
-                           enddo
-                        enddo
-                     enddo
-                     !$acc end parallel loop
-                  endif
-               !$acc end data ! (psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
-
-               call timestop("apply prefactors carr1_v")
-
-               call timestart("exch_vv dot prod")
-               m = hybdat%nbands(ik,jsp)
-               n = hybdat%nbands(ik,jsp)
-               k = hybdat%nbasm(iq)
-               lda = hybdat%nbasm(iq)*psize
-               ldb = hybdat%nbasm(iq)*psize
-               ldc = hybdat%nbands(ik,jsp)
-
-               IF (mat_ex%l_real) THEN
-                  !calculate all dotproducts for the current iob -> need to skip intermediate iob
-                  !$acc enter data create(dot_result_r) 
-                  DO iob = 1, psize
-                     call timestart("CPP_dgemm")
-                     !$acc host_data use_device(CPP_cprod_r, dot_result_r)
-                     call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
-                     !$acc end host_data
-                     !$acc wait
-                     call timestop("CPP_dgemm")
-
-                     !$acc kernels present(exch_vv, dot_result_r, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest) default(none)
-                     DO iband = 1, hybdat%nbands(ik,jsp)
-                        DO n2 = 1, nsest(iband)
-                           nn2 = indx_sest(n2, iband)
-                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_r(iband, nn2)
-                        enddo
-                     END DO
-                     !$acc end kernels
-                  END DO
-                  !$acc exit data delete(CPP_cprod_r, dot_result_r)
-               ELSE
-                  !calculate all dotproducts for the current iob -> need to skip intermediate iob
-                  !$acc enter data create(dot_result_c) 
-                  DO iob = 1, psize
-                     call timestart("CPP_zgemm")
-                     !$acc host_data use_device(c_coul_wavf, CPP_cprod_c, dot_result_c)
-                     call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, dot_result_c, ldc)
-                     !$acc end host_data
-                     !$acc wait
-                     call timestop("CPP_zgemm")
-
-                     !$acc kernels present(exch_vv, dot_result_c, hybdat, hybdat%nbands, nsest, indx_sest)  default(none)
-                     DO iband = 1, hybdat%nbands(ik,jsp)
-                        DO n2 = 1, nsest(iband)
-                           nn2 = indx_sest(n2, iband)
-                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + dot_result_c(iband, nn2)
-                        enddo
-                     END DO
-                     !$acc end kernels
                   enddo
-                  !$acc exit data delete(CPP_cprod_c, dot_result_c)
-               END IF
-               !$acc exit data delete(phase_vv)
-               call timestop("exch_vv dot prod")
-               call timestop("exchange matrix")
-            !$acc end data ! (c_coul_wavf, r_coul_wavf)
+                  !$acc end parallel loop
 
+               else
+#ifdef _OPENACC
+                  call timestart("cpy cprod")
+                  call zlacpy("N", size(cprod_vv%data_c, 1), size(cprod_vv%data_c, 2), cprod_vv%data_c, size(cprod_vv%data_c, 1), CPP_cprod_c, size(CPP_cprod_c,1))
+                  call timestop("cpy cprod")
+#endif
+                  !$acc enter data copyin(CPP_cprod_c)
+
+                  !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
+                  !$acc present(c_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, ikqpt, ibando)&
+                  !$acc present(n_q, nq_idx)
+                  DO iband = 1, hybdat%nbands(ik,jsp)
+                     DO iob = 1, psize
+                        do i = 1, hybdat%nbasm(iq)
+                           c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) &
+                                                      * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
+                        enddo
+                     enddo
+                  enddo
+                  !$acc end parallel loop
+               endif
+            !$acc end data ! (psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
+
+            call timestop("apply prefactors carr1_v")
+
+            call timestart("exch_vv dot prod")
+            m = hybdat%nbands(ik,jsp)
+            n = hybdat%nbands(ik,jsp)
+            k = hybdat%nbasm(iq)
+            lda = hybdat%nbasm(iq)*psize
+            ldb = hybdat%nbasm(iq)*psize
+            ldc = hybdat%nbands(ik,jsp)
+
+            IF (mat_ex%l_real) THEN
+               !calculate all dotproducts for the current iob -> need to skip intermediate iob
+               !$acc enter data create(dot_result_r) 
+               DO iob = 1, psize
+                  call timestart("CPP_dgemm")
+                  !$acc host_data use_device(r_coul_wavf, CPP_cprod_r, dot_result_r)
+                  call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
+                  !$acc end host_data
+                  !$acc wait
+                  call timestop("CPP_dgemm")
+
+                  !$acc kernels present(exch_vv, dot_result_r, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest) default(none)
+                  DO iband = 1, hybdat%nbands(ik,jsp)
+                     DO n2 = 1, nsest(iband)
+                        nn2 = indx_sest(n2, iband)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_r(iband, nn2)
+                     enddo
+                  END DO
+                  !$acc end kernels
+               END DO
+               !$acc exit data delete(CPP_cprod_r, dot_result_r)
+            ELSE
+               !calculate all dotproducts for the current iob -> need to skip intermediate iob
+               !$acc enter data create(dot_result_c) 
+               DO iob = 1, psize
+                  call timestart("CPP_zgemm")
+                  !$acc host_data use_device(c_coul_wavf, CPP_cprod_c, dot_result_c)
+                  call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, dot_result_c, ldc)
+                  !$acc end host_data
+                  !$acc wait
+                  call timestop("CPP_zgemm")
+
+                  !$acc kernels present(exch_vv, dot_result_c, hybdat, hybdat%nbands, nsest, indx_sest)  default(none)
+                  DO iband = 1, hybdat%nbands(ik,jsp)
+                     DO n2 = 1, nsest(iband)
+                        nn2 = indx_sest(n2, iband)
+                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + dot_result_c(iband, nn2)
+                     enddo
+                  END DO
+                  !$acc end kernels
+               enddo
+               !$acc exit data delete(CPP_cprod_c, dot_result_c)
+            END IF
+            !$acc exit data delete(phase_vv, r_coul_wavf, c_coul_wavf)
+            call timestop("exch_vv dot prod")
+            call timestop("exchange matrix")
+            
             call cprod_vv%free()
             if(allocated(r_coul_wavf)) deallocate(r_coul_wavf)
             if(allocated(c_coul_wavf)) deallocate(c_coul_wavf)
@@ -544,7 +541,6 @@ CONTAINS
       END IF
       call timestop("reduce exch_vv>mat_ex")
       CALL timestop("valence exchange calculation")
-
    END SUBROUTINE exchange_valence_hf
 
    SUBROUTINE calc_divergence(cell, kpts, divergence)
