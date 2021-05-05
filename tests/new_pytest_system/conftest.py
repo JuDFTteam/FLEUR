@@ -880,8 +880,8 @@ def stage_workdir(work_dir, stage_dir, request):
             foldername = os.path.abspath(os.path.join(stage_dir, method_name))
         else:
             foldername = os.path.abspath(os.path.join(work_dir, foldername))
-        if not os.path.isdir(foldername):
-            os.makedirs(foldername)
+        if os.path.isdir(foldername):
+            shutil.rmtree(foldername)
         shutil.copytree(work_dir, foldername)
 
     return _stage_workdir
