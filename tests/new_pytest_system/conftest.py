@@ -878,6 +878,8 @@ def stage_workdir(work_dir, stage_dir, request):
         if foldername is None:
             method_name = request.node.name + f'_{index}'
             foldername = os.path.abspath(os.path.join(stage_dir, method_name))
+        else:
+            foldername = os.path.abspath(os.path.join(work_dir, foldername))
         if not os.path.isdir(foldername):
             os.makedirs(foldername)
         shutil.copytree(work_dir, foldername)
