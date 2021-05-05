@@ -2,7 +2,7 @@ import pytest
 
 @pytest.mark.serial
 @pytest.mark.libxc
-def test_AlLibxcPbe(execute_fleur, grep_number, grep_exists):
+def test_AlLibxcPbe(execute_fleur, stage_workdir, grep_number, grep_exists):
     """Fleur Al Bulk libxc PBE
 
     Simple test of Fleur with XML input in two steps:
@@ -59,7 +59,7 @@ def test_AlLibxcPbe(execute_fleur, grep_number, grep_exists):
     efermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "    total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for spin  1                 it=    2", ":")
-    
+
     assert abs(efermi - 0.2849) <= 0.0001
     assert abs(tenergy - -242.820) <= 0.001
     assert abs(dist - 3.660) <= 0.001
