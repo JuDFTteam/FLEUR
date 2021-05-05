@@ -2,7 +2,7 @@
 import pytest
 
 @pytest.mark.libxc
-@pytest.skip('We have to investigate LibXC Meta-GGAs before we reenable this.')
+@pytest.mark.skip('We have to investigate LibXC Meta-GGAs before we reenable this.')
 def test_diamond_SCAN(execute_fleur, grep_number, grep_exists):
     """Fleur Diamond SCAN
     Converge diamond for one k-point with scan
