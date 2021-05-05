@@ -217,14 +217,14 @@ CONTAINS
 
                            call timestart("add to exchange")
                            if(exchange%l_real) then
-   #ifdef _OPENACC
+#ifdef _OPENACC
                               !$acc parallel loop default(none) private(n1, n2, nn2) &
                               !$acc present(exchange, exchange%data_r, dot_result, indx_sest, nsest, hybdat, hybdat%nbands)
-   #else
+#else
                               !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
                               !$OMP private(n1, n2, nn2)&
                               !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk, jsp)
-   #endif
+#endif
                               DO n1 = 1, hybdat%nbands(nk,jsp)
                                  DO n2 = 1, nsest(n1)!n1
                                     nn2 = indx_sest(n2, n1)
@@ -233,20 +233,20 @@ CONTAINS
                                     endif
                                  END DO
                               END DO
-   #ifdef _OPENACC
+#ifdef _OPENACC
                               !$acc end parallel loop
-   #else
+#else
                               !$OMP END PARALLEL DO
-   #endif
+#endif
                            else
-   #ifdef _OPENACC
+#ifdef _OPENACC
                               !$acc parallel loop default(none) private(n1, n2, nn2) &
                               !$acc present(exchange, exchange%data_c, dot_result, indx_sest, nsest, hybdat, hybdat%nbands)
-   #else
+#else
                               !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
                               !$OMP private(n1, n2, nn2)&
                               !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk, jsp)
-   #endif
+#endif
                               DO n1 = 1, hybdat%nbands(nk,jsp)
                                  DO n2 = 1, nsest(n1)!n1
                                     nn2 = indx_sest(n2, n1)
@@ -255,11 +255,11 @@ CONTAINS
                                     endif
                                  END DO
                               END DO
-   #ifdef _OPENACC
+#ifdef _OPENACC
                               !$acc end parallel loop
-   #else
+#else
                               !$OMP END PARALLEL DO
-   #endif
+#endif
                            endif
                            call timestop("add to exchange")
                         END DO
