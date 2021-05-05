@@ -866,7 +866,7 @@ def clean_workdir(work_dir):
     return _clean_workdir
 
 @pytest.fixture(scope='function')
-def stage_workdir(workdir, stage_dir, request):
+def stage_workdir(work_dir, stage_dir, request):
     """
     A fixture when used will cause a test to copy the workdir content to the stage folder.
     Needed for tests which depend on other tests. Or can be used during development to shorten tests
@@ -880,7 +880,7 @@ def stage_workdir(workdir, stage_dir, request):
             foldername = os.path.abspath(os.path.join(stage_dir, method_name))
         if not os.path.isdir(foldername):
             os.makedirs(foldername)
-        shutil.copytree(workdir, foldername)
+        shutil.copytree(work_dir, foldername)
 
     return _stage_workdir
 
