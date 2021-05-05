@@ -6,7 +6,7 @@ while [ $# -gt 0 ]
 do
     case "$1" in
         -h) help=1;;
-	-help|--help) help=1;;
+	-help|--help) help=1;; 
         -b) backup=1;;
         -backup) backup=1;;
         -g) gitupdate=1;;
@@ -33,6 +33,7 @@ do
 	-elpa_openmp) CLI_ELPA_OPENMP=1;;
 	-cmake_opts) shift;CMAKE_OPTIONS=$1;;
 	-make) make_directly=1;;
+  -ninja) use_ninja=1;;
 	-warn_only) CLI_WARN_ONLY=1;;
         -d) debug=1;;
         -amd) CLI_PATCH_INTEL=1;;
@@ -85,6 +86,7 @@ General options:
   -cmake #      : cmake executable to use
   -cmake_opts # : additional options for cmake can be specified here directly
   -amd          : apply some patches to the Intel MKL to run on AMD (very experiemental)
+  -ninja        : use Ninja bild system instead of GNU make
 
 Command line options to switch on/off features. These options overwrite the results of
 the test and might lead to the configuration to fail.

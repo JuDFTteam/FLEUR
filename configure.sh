@@ -158,6 +158,14 @@ else
     cmake="cmake"
 fi
 
+if [ "$use_ninja" ]
+then
+    echo "Using Ninja to build"
+    NINJAARG="-G Ninja"
+else
+    NINJAARG=""
+fi
+
 # compile external libraries if needed
 for library in ${external_lib}
 do
@@ -167,7 +175,7 @@ done
 . $DIR/cmake/store_environment.sh
 
 
-${cmake} $CMAKE_OPTIONS -Dall_tests=$all_tests -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
+${cmake} $CMAKE_OPTIONS -Dall_tests=$all_tests $NINJAARG -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
 
 cd -
 
