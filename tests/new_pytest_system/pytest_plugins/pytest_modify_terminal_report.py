@@ -42,7 +42,7 @@ class FleurTestsTerminalReporter(TerminalReporter):
         if long_test_summary_file is None:
             self._summary_tw = self._tw
         else:
-            long_test_summary_file = open(long_test_summary_file, 'w')
+            long_test_summary_file = open(long_test_summary_file, 'w+')
             self._summary_tw = create_terminal_writer(config, long_test_summary_file)
             self._summary_tw.hasmarkup = False
             self._summary_tw.code_highlight = False
