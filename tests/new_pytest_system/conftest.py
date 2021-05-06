@@ -20,7 +20,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'pytest_plugins'))
 # Now we can import everything that is in helpers, but be careful about name clashing
 from helpers.utils import RUN_PARSER_TESTS
 
-pytest_plugins = ("pytest_plugins.pytest_dependency",)
+pytest_plugins = ("pytest_plugins.pytest_dependency",
+                  "pytest_plugins.pytest_modify_terminal_report")
 
 LOGGER = logging.getLogger(__name__)
 
@@ -548,6 +549,7 @@ def execute_inpgen(inpgen_binary, work_dir):
 
         result_files = {}
         #Replace os.walk here for now since otherwise the inpgen test fail
+        #TODO: Fix
         source = os.listdir(workdir) # Notice this is simple and not recursive,
         # source = []
         # for (dirpath, dirname, filenames) in os.walk(workdir):
