@@ -42,6 +42,7 @@ build-gfortran-hdf5:
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
     - cd $CI_PROJECT_DIR
+    - mkdir -p build/Testing
     - cd tests/new_pytest_system
 #    - cd build
 #    - CTEST_FLAGS="$(echo "$CI_JOB_NAME" | sed -rn 's/.*-([0-9]+)of([0-9]+)$/-I \1,,\2/p')"
@@ -98,6 +99,7 @@ test-gfortran-serial:
     - ulimit -s unlimited
     - cd $CI_PROJECT_DIR
     - cd tests/new_pytest_system
+    - mkdir -p build.serial/Testing
     - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.serial/Testing/pytest_summary.log"
     - pytest -m serial --build_dir="../../build.serial" | tee $CI_PROJECT_DIR/build.serial/Testing/pytest_session.stdout
 #    - cd build.serial
@@ -178,6 +180,7 @@ test-pgi:
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI=time
     - cd /builds/fleur/fleur/
+    - mkdir -p /builds/fleur/fleur/build.pgi/Testing
     - cd /builds/fleur/fleur/tests/new_pytest_system
     - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.pgi/Testing/pytest_summary.log"
     - pytest --build_dir="../../build.pgi" | tee $CI_PROJECT_DIR/build.pgi/Testing/pytest_session.stdout
@@ -253,6 +256,7 @@ test-intel:
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI=time
     - cd /builds/fleur/fleur/tests/new_pytest_system
+    - mkdir -p /builds/fleur/fleur/build.intel/Testing
     - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.intel/Testing/pytest_summary.log"
     - pytest --build_dir="../../build.intel" | tee $CI_PROJECT_DIR/build.intel/Testing/pytest_session.stdout
 #/build.intel;ctest
@@ -280,6 +284,7 @@ gfortran-coverage:
       - lcov --capture --initial -d CMakeFiles -o baseline.info
       - ulimit -s unlimited
       - export juDFT_MPI="mpirun -n 2 --allow-run-as-root "
+      - mkdir -p Testing
       - cd ../tests/new_pytest_system
       - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.coverage/Testing/pytest_summary.log"
       - pytest --build_dir="../../build.coverage" | tee $CI_PROJECT_DIR/build.coverage/Testing/pytest_session.stdout
