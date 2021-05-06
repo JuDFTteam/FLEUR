@@ -17,7 +17,7 @@ def replace_attribute(obj, attr_name, attr_value):
 
 
 def pytest_runtest_logreport(report):
-    report.nodeid = 'test_' + report.nodeid.split('::')[-1]
+    report.nodeid = report.nodeid.split('::')[-1]
 
 
 def pytest_addoption(parser):

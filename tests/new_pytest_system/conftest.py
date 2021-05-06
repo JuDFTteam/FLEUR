@@ -351,12 +351,14 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "chase: test needing the chase")
     config.addinivalue_line("markers", "scalapack: test needing the scalapack")
 
-def pytest_runtest_logreport(report):
-    """
-    Short path names in report
-    """
-    # remove the tests/ in all paths printed
-    report.nodeid = report.nodeid[5:]
+
+# Replace for now with an even shorter version in pytest_plugins/pytest_modify_terminal_report.py
+# def pytest_runtest_logreport(report):
+#     """
+#     Short path names in report
+#     """
+#     # remove the tests/ in all paths printed
+#     report.nodeid = report.nodeid[5:]
 
 ####################################
 ########### fixtures
