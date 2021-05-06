@@ -44,9 +44,7 @@ def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, parser_test
     #           - bandgap output only in hist mode
 
     #These warnings are expected to appear at the moment
-    KNOWN_WARNINGS = {'No values found for attribute potential',
-                      'No values found for attribute chargeDensity',
-                      'No values found for attribute l_f'}
+    KNOWN_WARNINGS = {'No values found for attribute l_f'}
 
     pytest.importorskip('masci_tools',minversion='0.4.0-dev3')
     from masci_tools.io.parsers.fleur import outxml_parser

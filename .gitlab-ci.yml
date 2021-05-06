@@ -36,7 +36,7 @@ build-gfortran-hdf5:
   before_script:
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest masci-tools
+    - pip3 install pytest 'masci-tools==0.4.8-dev3'
   script:
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
@@ -94,7 +94,7 @@ test-gfortran-serial:
   before_script:
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest masci-tools
+    - pip3 install pytest 'masci-tools==0.4.8-dev3'
   script:
     - ulimit -s unlimited
     - cd $CI_PROJECT_DIR
@@ -175,7 +175,7 @@ test-pgi:
   before_script:
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest masci-tools
+    - pip3 install pytest 'masci-tools==0.4.8-dev3'
   script:
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI=time
@@ -249,7 +249,7 @@ test-intel:
   before_script:
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest masci-tools
+    - pip3 install pytest 'masci-tools==0.4.8-dev3'
   script:
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
@@ -278,7 +278,7 @@ gfortran-coverage:
   before_script:
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest masci-tools
+    - pip3 install pytest 'masci-tools==0.4.8-dev3'
   script:
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
