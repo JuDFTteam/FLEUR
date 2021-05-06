@@ -1,6 +1,7 @@
 
 import pytest
 from _pytest.terminal import TerminalReporter
+from _pytest.config import create_terminal_writer
 from contextlib import contextmanager
 
 @contextmanager
@@ -33,6 +34,8 @@ class FleurTestsTerminalReporter(TerminalReporter):
         long_test_summary_file = config.getoption('test_summary_file', default=None)
         if long_test_summary_file is None:
             self._summary_tw = self._tw
+        else:
+            self._summary_tw = create_terminal_writer(config, file)
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_terminal_summary(self):
