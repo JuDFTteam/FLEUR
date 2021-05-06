@@ -3,6 +3,7 @@ import pytest
 @pytest.mark.serial
 @pytest.mark.magnetism
 @pytest.mark.dos
+@pytest.mark.jdos
 def test_SmAtomjDOS(execute_fleur, grep_number, grep_exists):
     """Fleur Sm Atom jDOS
 

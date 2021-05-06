@@ -137,6 +137,7 @@ def test_CuDOSXML(execute_fleur, grep_exists, grep_number, stage_for_parser_test
 @pytest.mark.bulk
 @pytest.mark.xml
 @pytest.mark.dos
+@pytest.mark.orbcomp
 @pytest.mark.fast
 @pytest.mark.serial
 def test_CuOrb(execute_fleur, grep_exists, grep_number):

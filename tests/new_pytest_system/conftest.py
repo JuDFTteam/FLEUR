@@ -196,9 +196,14 @@ def pytest_generate_tests(metafunc):
         else:
             test_info = fleur_tests
 
+        default_markers = set(['fleur_parser', 'masci_tools', 'hdf']) #These markers should be ignored for selection
+
+        markers = {mark.name for mark in metafunc.function.pytestmark}
+
+        required_markers = markers - default_markers
         #Here we could select tests based on the markers of the Test (at the moment we just discard the marker info here)
         #This is useful for the eventual tests of banddos parsers, nmmpmat parser, ...
-        test_info = {(info[0], info[1]) for info in test_info}
+        test_info = {(info[0], info[1]) for info in test_info if all(marker in info[2:] for marker in required_markers)}
 
         metafunc.parametrize('fleur_test_name, test_file', test_info, ids=[info[0] for info in test_info])
 
@@ -272,6 +277,7 @@ def pytest_collection_modifyitems(session, config, items):
         for marker in marker_list:
             if marker in item.keywords:
                 deselection_items.append(item)
+
         '''
         for marker in marker_to_skip:
             if marker in item.keywords:
@@ -313,6 +319,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "film: test with film")
     config.addinivalue_line("markers", "band: testing bandstructure")
     config.addinivalue_line("markers", "dos: testing DOS")
+    config.addinivalue_line("markers", "jdos: testing jDOS")
+    config.addinivalue_line("markers", "orbcomp: testing orbcomp")
+    config.addinivalue_line("markers", "mcd: testing mcd")
     config.addinivalue_line("markers", "hybrid: testing hybrid functionals")
     config.addinivalue_line("markers", "eigpara: test testing eig para")
     config.addinivalue_line("markers", "soc: tests with soc")

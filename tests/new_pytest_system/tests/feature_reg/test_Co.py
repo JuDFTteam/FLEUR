@@ -6,7 +6,8 @@ import pytest
 @pytest.mark.fleur
 @pytest.mark.bulk
 @pytest.mark.xml
-@pytest.mark.band
+@pytest.mark.dos
+@pytest.mark.mcd
 def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
     """Fleur Co MCD XML
     Simple test of Fleur with two steps:
