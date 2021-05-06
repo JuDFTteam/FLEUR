@@ -35,7 +35,7 @@ class FleurTestsTerminalReporter(TerminalReporter):
         if long_test_summary_file is None:
             self._summary_tw = self._tw
         else:
-            self._summary_tw = create_terminal_writer(config, file)
+            self._summary_tw = create_terminal_writer(config, long_test_summary_file)
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_terminal_summary(self):
