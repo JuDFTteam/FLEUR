@@ -547,13 +547,15 @@ def execute_inpgen(inpgen_binary, work_dir):
             p1.check_returncode() # This throws error
 
         result_files = {}
-        source = []
-        for (dirpath, dirname, filenames) in os.walk(workdir):
-            # We ignore hidden files and dirs, i.e .__pycache__ and so on
-            filenames = [f for f in filenames if not f[0] == '.']
-            dirname[:] = [d for d in dirname if not d[0] == '.']
-            for file1 in filenames:
-                source.append(os.path.join(dirpath, file1))
+        #Replace os.walk here for now since otherwise the inpgen test fail
+        source = os.listdir(workdir) # Notice this is simple and not recursive,
+        # source = []
+        # for (dirpath, dirname, filenames) in os.walk(workdir):
+        #     # We ignore hidden files and dirs, i.e .__pycache__ and so on
+        #     filenames = [f for f in filenames if not f[0] == '.']
+        #     dirname[:] = [d for d in dirname if not d[0] == '.']
+        #     for file1 in filenames:
+        #         source.append(os.path.join(dirpath, file1))
 
         # We want to be able to address file with '/subpath/filename'
         for files in source:
