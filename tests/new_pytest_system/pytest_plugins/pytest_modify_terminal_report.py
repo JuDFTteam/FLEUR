@@ -59,6 +59,7 @@ class FleurTestsTerminalReporter(TerminalReporter):
             self.summary_failures()
             self.summary_warnings()
             self.summary_passes()
+            self.flush()
         yield
         self.short_test_summary()
         # Display any extra warnings from teardown here (if any).
