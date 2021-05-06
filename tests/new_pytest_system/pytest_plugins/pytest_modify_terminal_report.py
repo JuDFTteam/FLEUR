@@ -17,7 +17,7 @@ def replace_attribute(obj, attr_name, attr_value):
 
 
 def pytest_runtest_logreport(report):
-    report.nodeid = "..." + report.nodeid[-30:]
+    report.nodeid = 'test_' + report.nodeid.split('::')[-1]
 
 
 def pytest_addoption(parser):
@@ -31,11 +31,16 @@ class FleurTestsTerminalReporter(TerminalReporter):
 
         super().__init__(config, file=file)
 
-        long_test_summary_file = config.getoption('test_summary_file', default=None)
+        long_test_summary_file = config.getoption("--test-summary-file")
         if long_test_summary_file is None:
             self._summary_tw = self._tw
         else:
+            long_test_summary_file = open(long_test_summary_file, 'w')
             self._summary_tw = create_terminal_writer(config, long_test_summary_file)
+            self._summary_tw.hasmarkup = False
+            self._summary_tw.code_highlight = False
+            self._summary_tw.fullwidth = 120
+
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_terminal_summary(self):

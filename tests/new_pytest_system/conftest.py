@@ -200,7 +200,7 @@ def pytest_generate_tests(metafunc):
         #This is useful for the eventual tests of banddos parsers, nmmpmat parser, ...
         test_info = {(info[0], info[1]) for info in test_info}
 
-        metafunc.parametrize('fleur_test_name, test_file', test_info)
+        metafunc.parametrize('fleur_test_name, test_file', test_info, ids=[info[0] for info in test_info])
 
 
 # To modify the collected tests AFTER collections
