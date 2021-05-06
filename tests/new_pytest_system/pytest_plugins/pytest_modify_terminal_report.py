@@ -24,12 +24,19 @@ def pytest_addoption(parser):
     parser.addoption("--test-summary-file",
                      help="Redirect the long test summary to this file",
                      default=None, action="store")
+    parser.addoption("--overwrite-terminal-width",
+                     help="Overwrite the automatic terminal width for the TerminalWriter",
+                     default=None, action="store")
 
 class FleurTestsTerminalReporter(TerminalReporter):
 
     def __init__(self, config, file=None):
 
         super().__init__(config, file=file)
+
+        force_width = config.getoption("--overwrite-terminal-width")
+        if force_width is not None:
+            self._tw.fullwidth = int(force_width)
 
         long_test_summary_file = config.getoption("--test-summary-file")
         if long_test_summary_file is None:
