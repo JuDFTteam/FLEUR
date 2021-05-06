@@ -1,5 +1,6 @@
 
 import pytest
+import os
 from _pytest.terminal import TerminalReporter
 from _pytest.config import create_terminal_writer
 from contextlib import contextmanager
@@ -42,7 +43,9 @@ class FleurTestsTerminalReporter(TerminalReporter):
         if long_test_summary_file is None:
             self._summary_tw = self._tw
         else:
-            long_test_summary_file = open(long_test_summary_file, 'w+')
+            filepath = os.path.abspath(long_test_summary_file)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            long_test_summary_file = open(filepath, 'w+')
             self._summary_tw = create_terminal_writer(config, long_test_summary_file)
             self._summary_tw.hasmarkup = False
             self._summary_tw.code_highlight = False
