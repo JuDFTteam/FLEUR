@@ -22,7 +22,7 @@ def pytest_runtest_logreport(report):
 
 def pytest_addoption(parser):
     parser.addoption("--test-summary-file",
-                     "Redirect the long test summary to this file",
+                     help="Redirect the long test summary to this file",
                      default=None, action="store")
 
 class FleurTestsTerminalReporter(TerminalReporter):
