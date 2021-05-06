@@ -170,7 +170,7 @@ def test_banddos_parser_mcd(request, fleur_test_name, test_file, parser_testdir)
 
 @pytest.mark.fleur_parser
 @pytest.mark.masci_tools
-@pytest.mark.dos
+@pytest.mark.band
 @pytest.mark.hdf
 def test_banddos_parser_default_band(request, fleur_test_name, test_file, parser_testdir):
     pytest.importorskip('masci_tools',minversion='0.4.0')
