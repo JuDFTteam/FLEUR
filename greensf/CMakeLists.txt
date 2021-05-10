@@ -12,7 +12,5 @@ greensf/kk_cutoff.F90
 greensf/occmtx.f90
 greensf/excSplitting.f90
 greensf/greensfTorgue.F90
-greensf/lstojmj.f90
 greensf/types_scalarGF.f90
-greensf/fourProduct.f90
 )

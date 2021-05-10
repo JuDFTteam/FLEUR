@@ -69,10 +69,6 @@ MODULE m_greensfPostProcess
          CALL timestart("Green's Function: Torgue")
          CALL greensfTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
                             f,g,flo,vTot)
-         IF(.FALSE.) THEN
-            CALL greensfSOTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
-                                 enpara,f,g,flo,vTot)
-         ENDIF
          CALL timestop("Green's Function: Torgue")
       ENDIF
 
