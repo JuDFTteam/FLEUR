@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_fftGrid
+   use m_constants
    TYPE t_fftGrid
 
       INTEGER :: extend(3) = [-1, -1, -1]
@@ -202,7 +203,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       call put_real_on_external_grid(this, lapw, ispin, state, this%grid)
    END SUBROUTINE putRealStateOnGrid
 
-   subroutine put_real_on_external_grid(this, lapw, ispin, state, ext_grid)      
+   subroutine put_real_on_external_grid(this, lapw, ispin, state, ext_grid)   
       USE m_types_lapw
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
@@ -214,8 +215,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       INTEGER :: xGrid, yGrid, zGrid, layerDim, iLAPW
 
       layerDim = this%dimensions(1)*this%dimensions(2)
-
-      ext_grid = CMPLX(0.0, 0.0)
+      ext_grid = cmplx_0
 
       DO iLAPW = 1, lapw%nv(iSpin)
          xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
@@ -248,7 +248,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
       layerDim = this%dimensions(1)*this%dimensions(2)
 
-      ext_grid = CMPLX(0.0, 0.0)
+      ext_grid = cmplx_0
 
       DO iLAPW = 1, lapw%nv(iSpin)
          xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
