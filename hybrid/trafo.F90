@@ -8,6 +8,7 @@ MODULE m_trafo
    use m_judft
    use m_glob_tofrom_loc
    use m_types
+   use m_constants
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
@@ -801,7 +802,6 @@ CONTAINS
 !     - local scalars -
       INTEGER                 ::  ifac, i, j, itype, ieq, ic, ic1, l, m, n, nn, ishift
       REAL                    ::  rfac1, rfac2
-      COMPLEX                 ::  ImagUnit = (0.0, 1.0)
 !     - local arrays -
       COMPLEX                 ::  carr(max(dim1, dim2))
 
