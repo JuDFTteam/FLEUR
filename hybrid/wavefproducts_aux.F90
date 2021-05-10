@@ -62,8 +62,11 @@ CONTAINS
       ! G-space we have to divide by stepf%gridLength. We do this now
       stepf%grid = stepf%grid /stepf%gridLength
 
-      call fft%init(stepf%dimensions, .false.)
+      call fft%init(stepf%dimensions, .false., batch_size=1, l_gpu=.True.)
+      !$acc data copyin(stepf) copy(stepf%grid)
       call fft%exec(stepf%grid)
+      !$acc end data 
+      !$acc wait
       call fft%free()
 
       CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
