@@ -35,7 +35,7 @@ MODULE m_types_fftGrid
 CONTAINS
 function map_g_to_fft_grid(grid, g_in) result(g_idx)
    implicit none 
-   CLASS(t_fftGrid), INTENT(INOUT) :: grid
+   CLASS(t_fftGrid), INTENT(IN)    :: grid
    integer, intent(in)             :: g_in(3)
    integer                         :: g_idx
 

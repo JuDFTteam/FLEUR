@@ -1,10 +1,10 @@
 module m_wavefproducts_aux
    use m_types_fftGrid
+   use m_types
 CONTAINS
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
       !$ use omp_lib
-      use m_types
       use m_constants
       use m_judft
       use m_fft_interface
@@ -39,7 +39,7 @@ CONTAINS
       integer, parameter :: blocksize = 512
       integer :: g(3), igptm, iob, n_omp, j, jstart, loop_length
       integer :: ok, nbasfcn, psize, iband, ierr, i
-      integer, allocatable :: band_list(:)
+      integer, allocatable :: band_list(:), g_ptr(:)
       real    :: inv_vol, gcutoff
 
       logical :: real_warned
@@ -56,6 +56,7 @@ CONTAINS
          !call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
       endif
 
+
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
       stepf%grid = stepf%grid * inv_vol
@@ -69,7 +70,9 @@ CONTAINS
       !$acc end data 
       !$acc wait
       call fft%free()
-
+      
+      call setup_g_ptr(mpdata, stepf, g_t, iq, g_ptr)
+      
       CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
 
       nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
@@ -131,8 +134,8 @@ CONTAINS
             !$acc end data
 
          
-            do iob = 1, psize
-               if (cprod%l_real) then
+            if (cprod%l_real) then
+               do iob = 1, psize
                   if (.not. real_warned) then
                      if (any(abs(aimag(prod(:,iob))) > 1e-8)) then
                         write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
@@ -140,18 +143,20 @@ CONTAINS
                         real_warned = .True.
                      endif
                   endif
-
+               enddo 
+               
+               do iob = 1, psize
                   DO igptm = 1, mpdata%n_g(iq)
-                     g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
-                     cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(stepf%g2fft(g), iob))
+                     cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(g_ptr(igptm), iob))
                   enddo
-               else
+               enddo
+            else
+               do iob = 1, psize
                   DO igptm = 1, mpdata%n_g(iq)
-                     g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
-                     cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g), iob)
+                     cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(g_ptr(igptm), iob)
                   enddo
-               endif
-            enddo
+               enddo
+            endif
          enddo
          ! $OMP END DO
       !$acc end data
@@ -166,6 +171,24 @@ CONTAINS
       deallocate(psi_kqpt)
       call timestop("wavef_IS_FFT")
    end subroutine wavefproducts_IS_FFT
+
+   subroutine setup_g_ptr(mpdata, stepf, g_t, iq, g_out)
+      implicit none
+      type(t_mpdata), intent(in)          :: mpdata 
+      type(t_fftgrid), intent(in)         :: stepf 
+      integer, intent(in)                 :: g_t(:), iq
+      integer, allocatable, intent(inout) :: g_out(:)
+
+      integer :: igptm, g(3)
+
+      if(allocated(g_out)) deallocate(g_out)
+      allocate(g_out(mpdata%n_g(iq)))
+
+      DO igptm = 1, mpdata%n_g(iq)
+         g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
+         g_out(igptm) = stepf%g2fft(g)
+      enddo
+   end subroutine setup_g_ptr
 
    subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, psi)
       ! put block of wave functions through FFT
