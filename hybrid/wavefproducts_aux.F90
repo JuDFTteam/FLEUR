@@ -177,17 +177,26 @@ CONTAINS
      
       call grid%init(fi%cell, fi%sym, gcutoff)
 
+
       !$acc data copyin(zmat, zmat%l_real, zmat%data_r, zmat%data_c, lapw, lapw%nv, lapw%gvec, jspin, grid, grid%dimensions,&
       !$acc             bandoi, bandof) copyout(psi) 
+
+#ifndef _OPENACC 
+         !$omp parallel do default(none) private(nu) shared(grid, bandoi, bandof, lapw, jspin, zMat, psi)
+#endif
          do nu = bandoi, bandof
             call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu), l_gpu=.True.)
          enddo
+#ifndef _OPENACC 
+         !$omp end parallel do
+#endif
+
+         psize = bandof - bandoi + 1
+
+         call fft%init(grid%dimensions, .false., batch_size=psize, l_gpu=.True.)
+         call fft%exec_batch(psi)
       !$acc end data
-
-      psize = bandof - bandoi + 1
-
-      call fft%init(grid%dimensions, .false., batch_size=psize)
-      call fft%exec_batch(psi)
+         
       call fft%free()
       call grid%free()
    end subroutine wavef2rs
