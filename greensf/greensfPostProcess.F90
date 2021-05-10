@@ -6,7 +6,6 @@ MODULE m_greensfPostProcess
    USE m_greensfCalcRealPart
    USE m_greensfCalcScalarProducts
    USE m_greensf_io
-   USE m_occmtx
    USE m_greensfTorgue
    USE m_excSplitting
    USE m_crystalfield
@@ -92,8 +91,8 @@ MODULE m_greensfPostProcess
          mmpmat = cmplx_0
          DO i_gf = 1, gfinp%n
             l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag() !If there are SCLOs present the occupations can get bigger than 1
-            CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
-                        l_write=.TRUE.,check=l_check)
+            mmpmat(:,:,i_gf,:) = greensFunction(i_gf)%occupationMatrix(gfinp,input,atoms,noco,nococonv,&
+                                                                       l_write=.TRUE.,check=l_check)
          ENDDO
          CALL timestop("Green's Function: Occupation")
 

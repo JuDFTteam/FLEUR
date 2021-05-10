@@ -24,6 +24,7 @@ MODULE m_types_greensf
    USE m_types_setup
    USE m_types_greensfContourData
    USE m_types_scalarGF
+   USE m_types_nococonv
 
    IMPLICIT NONE
 
@@ -62,6 +63,9 @@ MODULE m_types_greensf
          PROCEDURE       :: mpi_bc                 => mpi_bc_greensf
          PROCEDURE       :: collect                => collect_greensf
          PROCEDURE       :: get                    => get_gf
+         PROCEDURE       :: occmtx_greensf_spin
+         PROCEDURE       :: occmtx_greensf_complete
+         GENERIC         :: occupationMatrix       => occmtx_greensf_spin, occmtx_greensf_complete
          PROCEDURE       :: getFullMatrix          => getFullMatrix_gf
          PROCEDURE       :: getRadial              => getRadial_gf
          PROCEDURE       :: getRadialRadial        => getRadialRadial_gf!(Full Radial dependence for intersite)
@@ -210,6 +214,234 @@ MODULE m_types_greensf
          ENDIF
 #endif
       END SUBROUTINE collect_greensf
+
+
+      FUNCTION occmtx_greensf_complete(this,gfinp,input,atoms,noco,nococonv,l_write,check,occError) Result(occmtx)
+
+         !calculates the occupation of the greens function
+         !The Greens-function should already be prepared on a energy contour ending at e_fermi
+         !The occupation is calculated with:
+         !
+         ! n^sigma_mm' = -1/2pi int^Ef dz (G^+(z)^sigma_mm'-G^-(z)^sigma_mm')
+         !
+         ! If l_write is given the density matrix together with the spin up/down trace is written to the out files
+
+         CLASS(t_greensf),                 INTENT(IN)    :: this
+         TYPE(t_gfinp),                    INTENT(IN)    :: gfinp
+         TYPE(t_input),                    INTENT(IN)    :: input
+         TYPE(t_atoms),                    INTENT(IN)    :: atoms
+         TYPE(t_noco),                     INTENT(IN)    :: noco
+         TYPE(t_nococonv),                 INTENT(IN)    :: nococonv
+         LOGICAL,                 OPTIONAL,INTENT(IN)    :: l_write !write the occupation matrix to out file
+         LOGICAL,                 OPTIONAL,INTENT(IN)    :: check
+         LOGICAL,                 OPTIONAL,INTENT(INOUT) :: occError
+
+         COMPLEX, ALLOCATABLE :: occmtx(:,:,:)
+
+         INTEGER :: nspins, ispin, m, mp
+         LOGICAL :: all_occError, single_occError
+         REAL    :: nup, ndwn
+         COMPLEX :: offd
+         CHARACTER(len=2) :: l_type
+         CHARACTER(len=8) :: l_form
+         TYPE(t_contourInp) :: contourInp
+
+         contourInp = gfinp%contour(this%elem%iContour)
+
+         IF(ALLOCATED(this%gmmpMat)) nspins = SIZE(this%gmmpMat,4)
+         IF(ALLOCATED(this%uu)) nspins = SIZE(this%uu,4)
+
+         ALLOCATE(occmtx(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const, nspins), source=cmplx_0)
+
+         all_occError = .FALSE.
+         DO ispin = 1, nspins
+            occmtx(:,:,ispin) = this%occmtx_greensf_spin(ispin,gfinp,input,atoms,noco,nococonv,&
+                                                         check=check,occError=single_occError)
+            all_occError = all_occError.OR.single_occError
+         ENDDO
+         IF(PRESENT(occError)) occError = all_occError
+
+         !Io-part (ATM this subroutine is only called from rank 0)
+         IF(PRESENT(l_write)) THEN
+            IF(l_write) THEN
+               !Write to file
+               WRITE (l_type,'(i2)') 2*(2*this%elem%l+1)
+               l_form = '('//l_type//'f8.4)'
+9000           FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
+               WRITE(oUnit,9000) this%elem%atomType, this%elem%l
+               WRITE(oUnit,"(A)") "In the |L,S> basis:"
+               DO ispin = 1, MERGE(3, input%jspins, gfinp%l_mperp)
+                  WRITE(oUnit,'(A,I0)') "Spin: ", ispin
+                  WRITE(oUnit,l_form) ((occmtx(m,mp,ispin),m=-this%elem%l, this%elem%l),mp=-this%elem%lp, this%elem%lp)
+               ENDDO
+
+               IF(this%elem%l.EQ.this%elem%lp) THEN
+                  nup = 0.0
+                  DO m = -this%elem%l, this%elem%l
+                     nup = nup + REAL(occmtx(m,m,1))
+                  ENDDO
+                  WRITE(oUnit,'(/,1x,A,I0,A,A,A,f8.4)') "l--> ",this%elem%l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Up trace: ", nup
+
+                  IF(input%jspins.EQ.2) THEN
+                     ndwn = 0.0
+                     DO m = -this%elem%l, this%elem%l
+                        ndwn = ndwn + REAL(occmtx(m,m,2))
+                     ENDDO
+                     WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",this%elem%l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Down trace: ", ndwn
+                  ENDIF
+
+                  IF(gfinp%l_mperp) THEN
+                     offd = cmplx_0
+                     DO m = -this%elem%l, this%elem%l
+                        offd = offd + occmtx(m,m,3)
+                     ENDDO
+                     WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",this%elem%l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Offd trace (x): ", REAL(offd)
+                     WRITE(oUnit,'(1x,A,I0,A,A,A,f8.4)') "l--> ",this%elem%l, " Contour(",TRIM(ADJUSTL(contourInp%label)),")    Spin-Offd trace (y): ", AIMAG(offd)
+                  ENDIF
+               ENDIF
+            ENDIF
+         ENDIF
+
+      END FUNCTION occmtx_greensf_complete
+
+      FUNCTION occmtx_greensf_spin(this,spin,gfinp,input,atoms,noco,nococonv,check,occError) Result(occmtx)
+
+         USE m_rotMMPmat
+         USE m_types_mat
+
+         !calculates the occupation of the greens function for a given spin
+         !The Greens-function should already be prepared on a energy contour ending at e_fermi
+         !The occupation is calculated with:
+         !
+         ! n^sigma_mm' = -1/2pi int^Ef dz (G^+(z)^sigma_mm'-G^-(z)^sigma_mm')
+
+         CLASS(t_greensf),                 INTENT(IN)    :: this
+         INTEGER,                          INTENT(IN)    :: spin
+         TYPE(t_gfinp),                    INTENT(IN)    :: gfinp
+         TYPE(t_input),                    INTENT(IN)    :: input
+         TYPE(t_atoms),                    INTENT(IN)    :: atoms
+         TYPE(t_noco),                     INTENT(IN)    :: noco
+         TYPE(t_nococonv),                 INTENT(IN)    :: nococonv
+         LOGICAL,                 OPTIONAL,INTENT(IN)    :: check
+         LOGICAL,                 OPTIONAL,INTENT(INOUT) :: occError
+
+         COMPLEX :: occmtx(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+
+         COMPLEX :: occmtx_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1)
+         INTEGER :: ind1,ind2,ipm,iz
+         INTEGER :: l,lp,atomType,atomTypep,m,mp
+         REAL    :: tr
+         COMPLEX :: weight
+         TYPE(t_mat) :: gmat
+         CHARACTER(len=300) :: message
+         TYPE(t_contourInp) :: contourInp
+
+         contourInp = gfinp%contour(this%elem%iContour)
+         IF(PRESENT(occError)) occError = .FALSE.
+
+         l = this%elem%l
+         lp = this%elem%lp
+         atomType = this%elem%atomType
+         atomTypep = this%elem%atomTypep
+
+         !Check for Contours not reproducing occupations
+         IF(contourInp%shape.EQ.CONTOUR_SEMICIRCLE_CONST.AND.ABS(contourInp%et).GT.1e-12) &
+            WRITE(oUnit,*) "Energy contour not ending at efermi: These are not the actual occupations"
+         IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND..NOT.contourInp%l_dosfermi) &
+            WRITE(oUnit,*) "Energy contour not weighted for occupations: These are not the actual occupations"
+
+         occmtx = cmplx_0
+
+         DO ipm = 1, 2
+            !Integrate over the contour:
+            DO iz = 1, this%contour%nz
+               !get the corresponding gf-matrix
+               weight = MERGE(this%contour%de(iz),conjg(this%contour%de(iz)),ipm.EQ.1)
+               CALL this%get(atoms,iz,ipm.EQ.2,spin,gmat)
+               ind1 = 0
+               DO m = -l, l
+                  ind1 = ind1 + 1
+                  ind2 = 0
+                  DO mp = -lp,lp
+                     ind2 = ind2 + 1
+                     occmtx(m,mp) = occmtx(m,mp) + ImagUnit/tpi_const * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
+                                                  * weight
+                  ENDDO
+               ENDDO
+            ENDDO
+            !For the contour 3 (real Axis just shifted with sigma) we can add the tails on both ends
+            IF(contourInp%shape.EQ.CONTOUR_DOS_CONST.AND.contourInp%l_anacont) THEN
+               !left tail
+               weight = MERGE(this%contour%de(1),conjg(this%contour%de(1)),ipm.EQ.1)
+               CALL this%get(atoms,1,ipm.EQ.2,spin,gmat)
+               ind1 = 0
+               DO m = -l, l
+                  ind1 = ind1 + 1
+                  ind2 = 0
+                  DO mp = -lp,lp
+                     ind2 = ind2 + 1
+                     occmtx(m,mp) = occmtx(m,mp) - 1/tpi_const * gmat%data_c(ind1,ind2) * weight
+                  ENDDO
+               ENDDO
+               !right tail
+               weight = MERGE(this%contour%de(this%contour%nz),conjg(this%contour%de(this%contour%nz)),ipm.EQ.1)
+               CALL this%get(atoms,this%contour%nz,ipm.EQ.2,spin,gmat)
+               ind1 = 0
+               DO m = -l, l
+                  ind1 = ind1 + 1
+                  ind2 = 0
+                  DO mp = -lp,lp
+                     ind2 = ind2 + 1
+                     occmtx(m,mp) = occmtx(m,mp) + 1/tpi_const * gmat%data_c(ind1,ind2) * weight
+                  ENDDO
+               ENDDO
+            ENDIF
+         ENDDO
+
+         !Rotate the occupation matrix into the global frame in real-space
+         IF(noco%l_noco) THEN
+            occmtx_tmp(:,:,1) = occmtx
+            occmtx_tmp = rotMMPmat(occmtx_tmp,nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
+            occmtx = occmtx_tmp(:,:,1)
+         ELSE IF(noco%l_soc) THEN
+            occmtx_tmp(:,:,1) = occmtx
+            occmtx_tmp = rotMMPmat(occmtx_tmp,nococonv%phi,nococonv%theta,0.0,l)
+            occmtx = occmtx_tmp(:,:,1)
+         ENDIF
+
+         !Sanity check are the occupations reasonable?
+         IF(PRESENT(check)) THEN
+            IF(check) THEN
+               IF(spin<=input%jspins) THEN !Only the spin-diagonal parts
+                  tr = 0.0
+                  DO m = -l,l
+                     tr = tr + REAL(occmtx(m,m))/(3.0-input%jspins)
+                     IF(REAL(occmtx(m,m))/(3.0-input%jspins).GT. 1.05 .OR.&
+                        REAL(occmtx(m,m))/(3.0-input%jspins).LT.-0.01) THEN
+
+                        IF(PRESENT(occError)) THEN
+                           occError = .TRUE.
+                        ELSE
+                           WRITE(message,9100) spin,m,REAL(occmtx(m,m))
+9100                       FORMAT("Invalid element in mmpmat (spin ",I1,",m ",I2"): ",f14.8)
+                           CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occupationMatrix")
+                        ENDIF
+                     ENDIF
+                  ENDDO
+                  IF(tr.LT.-0.01.OR.tr.GT.2*l+1.1) THEN
+                     IF(PRESENT(occError)) THEN
+                        occError = .TRUE.
+                     ELSE
+                        WRITE(message,9110) spin,tr
+9110                    FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
+                        CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occupationMatrix")
+                     ENDIF
+                  ENDIF
+               ENDIF
+            ENDIF
+         ENDIF
+
+      END FUNCTION occmtx_greensf_spin
 
       !----------------------------------------------------------------------------------
       ! Following this comment there are multiple definitions for functions

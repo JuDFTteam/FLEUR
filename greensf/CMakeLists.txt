@@ -9,7 +9,6 @@ greensf/greensfPostProcess.F90
 greensf/kkintgr.f90
 greensf/lorentzian_smooth.f90
 greensf/kk_cutoff.F90
-greensf/occmtx.f90
 greensf/excSplitting.f90
 greensf/greensfTorgue.F90
 greensf/types_scalarGF.f90
