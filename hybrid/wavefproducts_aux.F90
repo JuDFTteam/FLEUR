@@ -40,7 +40,7 @@ CONTAINS
       integer :: g(3), igptm, iob, n_omp, j, jstart, loop_length
       integer :: ok, nbasfcn, psize, iband, ierr, i, max_igptm
       integer, allocatable :: band_list(:), g_ptr(:)
-      real    :: inv_vol, gcutoff
+      real    :: inv_vol, gcutoff, max_imag
 
       logical :: real_warned
 
@@ -135,15 +135,20 @@ CONTAINS
             call fft%exec_batch(prod)
       
             if (cprod%l_real) then
-               ! do iob = 1, psize
-               !    if (.not. real_warned) then
-               !       if (any(abs(aimag(prod(:,iob))) > 1e-8)) then
-               !          write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
-               !             float2str(maxval(abs(aimag(prod(:,iob)))))
-               !          real_warned = .True.
-               !       endif
-               !    endif
-               ! enddo 
+               if (.not. real_warned) then
+                  max_imag = 0.0 
+                  !$acc parallel loop default(none) present(stepf, stepf%gridlength, prod) copy(max_imag) reduction(max:max_imag)
+                  do iob = 1, psize
+                     do j = 0, stepf%gridlength-1 
+                        max_imag = max(max_imag, abs(aimag(prod(j,iob))))
+                     enddo 
+                  enddo
+                  !$acc end parallel loop
+                  if(max_imag > 1e-8) then
+                     write (*, *) "Imag part non-zero in too large"
+                     real_warned = .True.
+                  endif
+               endif
                   
                !$acc kernels default(none) present(cprod, cprod%data_r, prod, g_ptr)
                !$acc loop independent
