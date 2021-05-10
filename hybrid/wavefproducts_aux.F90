@@ -177,11 +177,12 @@ CONTAINS
      
       call grid%init(fi%cell, fi%sym, gcutoff)
 
-      !$OMP parallel do default(none) private(nu) shared(bandoi, bandof, grid, lapw, jspin, zMat, psi)
-      do nu = bandoi, bandof
-         call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu))
-      enddo
-      !$OMP end parallel do
+      !$acc data copyin(zmat, zmat%l_real, zmat%data_r, zmat%data_c, lapw, lapw%nv, lapw%gvec, jspin, grid, grid%dimensions,&
+      !$acc             bandoi, bandof) copyout(psi) 
+         do nu = bandoi, bandof
+            call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu), l_gpu=.True.)
+         enddo
+      !$acc end data
 
       psize = bandof - bandoi + 1
 
