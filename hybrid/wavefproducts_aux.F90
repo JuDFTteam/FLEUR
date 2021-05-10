@@ -28,7 +28,7 @@ CONTAINS
       !     - arrays -
       complex, intent(inout)    :: c_phase_kqpt(hybdat%nbands(ikqpt,jsp))
 
-      complex, allocatable  :: prod(:), psi_k(:, :), psi_kqpt(:,:)
+      complex, allocatable  :: prod(:,:), psi_k(:, :), psi_kqpt(:,:)
 
       type(t_mat)     :: z_kqpt
       type(t_lapw)    :: lapw_ikqpt
@@ -95,7 +95,7 @@ CONTAINS
       ! $OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
 
       call timestart("alloc&init")
-      allocate (prod(0:stepf%gridLength - 1), stat=ok)
+      allocate (prod(0:stepf%gridLength - 1, psize), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc prod")
       allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
@@ -113,20 +113,20 @@ CONTAINS
                psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
 
                do iob = 1, psize
-                  prod = psi_k(:, 1)*psi_kqpt(:, iob)
-                  call fft%exec(prod)
+                  prod(:,iob) = psi_k(:, 1)*psi_kqpt(:, iob)
+                  call fft%exec(prod(:,iob))
 
                   if (cprod%l_real .and. (.not. real_warned)) then
-                     if (any(abs(aimag(prod)) > 1e-8)) then
+                     if (any(abs(aimag(prod(:,iob))) > 1e-8)) then
                         write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
-                           float2str(maxval(abs(aimag(prod))))
+                           float2str(maxval(abs(aimag(prod(:,iob)))))
                         real_warned = .True.
                      endif
                   endif
 
                   DO igptm = 1, mpdata%n_g(iq)
                      g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
-                     cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(stepf%g2fft(g)))
+                     cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(stepf%g2fft(g), iob))
                   enddo
                enddo
             enddo
@@ -138,12 +138,12 @@ CONTAINS
                psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
 
                do iob = 1, psize
-                  prod = psi_k(:, 1)*psi_kqpt(:, iob)
-                  call fft%exec(prod)
+                  prod(:,iob) = psi_k(:, 1)*psi_kqpt(:, iob)
+                  call fft%exec(prod(:,iob))
 
                   DO igptm = 1, mpdata%n_g(iq)
                      g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
-                     cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g))
+                     cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g), iob)
                   enddo
                enddo
             enddo
