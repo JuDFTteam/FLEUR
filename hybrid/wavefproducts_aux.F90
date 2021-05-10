@@ -119,14 +119,11 @@ CONTAINS
             !$acc end data
 
             ! try to keep stepf in cache
-            do jstart = 0, stepf%gridlength-1, blocksize
-               loop_length = min(blocksize-1, stepf%gridlength - 1 - jstart)
-               do iob = 1, psize
-                  do j = 0, stepf%gridlength-1
-                     prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
-                  enddo 
-               enddo
-            enddo 
+            do iob = 1, psize
+               do j = 0, stepf%gridlength-1
+                  prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
+               enddo 
+            enddo
 
             do iob = 1, psize
                call fft%exec(prod(:,iob))
