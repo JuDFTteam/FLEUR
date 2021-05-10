@@ -108,26 +108,27 @@ CONTAINS
       allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
-      call fft%init(stepf%dimensions, .true.)
+      call fft%init(stepf%dimensions, .true., batch_size=psize, l_gpu=.False.)
       call timestop("alloc&init")
 
-      !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec, jsp)
+      !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec, jsp)&
+      !$acc      copyin(psi_kqpt, stepf, stepf%gridlength) &
+      !$acc      create(psi_k)
          ! $OMP DO
          do iband = 1, hybdat%nbands(ik,jsp)
-            !$acc data copyin(iband) copyout(psi_k) 
+            !$acc data copyin(iband) copyout(prod)
                call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+               
+               !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)               
+               do iob = 1, psize
+                  do j = 0, stepf%gridlength-1
+                     prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
+                  enddo
+               enddo
+               !$acc end kernels
             !$acc end data
 
-            ! try to keep stepf in cache
-            do iob = 1, psize
-               do j = 0, stepf%gridlength-1
-                  prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
-               enddo 
-            enddo
-
-            do iob = 1, psize
-               call fft%exec(prod(:,iob))
-            enddo
+            call fft%exec_batch(prod)
          
             do iob = 1, psize
                if (cprod%l_real) then
