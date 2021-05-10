@@ -84,10 +84,16 @@ CONTAINS
       if(ierr /= 0) call juDFT_error("can't alloc psi_kqpt")
 
       !$acc data copyin(z_kqpt, z_kqpt%l_real, z_kqpt%data_r, z_kqpt%data_c, lapw_ikqpt, lapw_ikqpt%nv, lapw_ikqpt%gvec,&
-      !$acc             jsp, bandoi, bandof) copyout(psi_kqpt) 
-      call timestart("1st wavef2rs")
-      call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, psi_kqpt)
-      call timestop("1st wavef2rs")
+      !$acc             jsp, bandoi, bandof, stepf, stepf%grid, psize) copyout(psi_kqpt) 
+         call timestart("1st wavef2rs")
+         call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, psi_kqpt)
+         call timestop("1st wavef2rs")
+
+         !$acc kernels default(none) present(psi_kqpt, stepf, stepf%grid)
+         do iob = 1, psize 
+            psi_kqpt(:,iob) = psi_kqpt(:,iob) * stepf%grid
+         enddo
+         !$acc end kernels
       !$acc end data
 
       call timestart("Big OMP loop")
@@ -117,7 +123,7 @@ CONTAINS
                loop_length = min(blocksize-1, stepf%gridlength - 1 - jstart)
                do iob = 1, psize
                   do j = 0, stepf%gridlength-1
-                     prod(j,iob) = conjg(psi_k(j, 1)) * stepf%grid(j) * psi_kqpt(j, iob)
+                     prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
                   enddo 
                enddo
             enddo 
