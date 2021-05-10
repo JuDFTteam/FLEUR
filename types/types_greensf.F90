@@ -101,7 +101,7 @@ MODULE m_types_greensf
          !Initialize the contour
          CALL this%contour%init(gfinp%contour(this%elem%iContour),contour_in=contour_in)
 
-         spin_dim = MERGE(4,input%jspins,gfinp%l_mperp)
+         spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
          this%l_sphavg = this%elem%l_sphavg
@@ -262,7 +262,7 @@ MODULE m_types_greensf
             nspins = SIZE(this%uu,4)
          ENDIF
 
-         IF(spin.GT.4 .OR. spin.LT.1) THEN
+         IF(spin.GT.3 .OR. spin.LT.1) THEN
             CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
          ENDIF
 
@@ -460,7 +460,7 @@ MODULE m_types_greensf
 
          nspins = SIZE(this%uu,4)
 
-         IF(spin.GT.4 .OR. spin.LT.1) THEN
+         IF(spin.GT.3 .OR. spin.LT.1) THEN
             CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
          ENDIF
 
@@ -578,7 +578,7 @@ MODULE m_types_greensf
 
          nspins = SIZE(this%uu,4)
 
-         IF(spin.GT.4 .OR. spin.LT.1) THEN
+         IF(spin.GT.3 .OR. spin.LT.1) THEN
             CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
          ENDIF
 
@@ -698,7 +698,7 @@ MODULE m_types_greensf
          ENDIF
 
          IF(PRESENT(spin)) THEN
-            IF(spin.GT.4 .OR. spin.LT.1) THEN
+            IF(spin.GT.3 .OR. spin.LT.1) THEN
                CALL juDFT_error("Invalid argument for spin",calledby="set_gf")
             ENDIF
          ENDIF

@@ -352,7 +352,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
       IF(greensfImagPart%l_calc) THEN
          !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
-         DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(4,jsp_end,gfinp%l_mperp)
+         DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
             CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,fmpi,&
                                      results,greensfBZintCoeffs,greensfImagPart)
          ENDDO

@@ -146,7 +146,7 @@ MODULE m_types_greensfCoeffs
          INTEGER lmax,spin_dim,uniqueElementsSphavg,uniqueElementsRadial,uniqueElementsLO,maxLO
          INTEGER uniqueElementsSphavg_kres
 
-         spin_dim = MERGE(4,input%jspins,gfinp%l_mperp)
+         spin_dim = MERGE(3,input%jspins,gfinp%l_mperp)
          lmax = lmaxU_const
 
          this%l_calc = l_calc

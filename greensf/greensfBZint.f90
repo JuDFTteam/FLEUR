@@ -98,6 +98,9 @@ MODULE m_greensfBZint
                   CALL greensfEigVecCoeffs(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
                                            l_sphavg,atoms,scalarGF(i_gf),eigVecCoeffs,im(:,:,:,:,ispin))
 
+                  IF(ispin==3) THEN
+                     im(:,:,:,:,ispin) = CMPLX(-REAL(im(:,:,:,:,ispin)), AIMAG(im(:,:,:,:,ispin)))
+                  ENDIF
 
                   !The eigenvector coefficients already contain part of the interstitial phase
                   !but not necessarily the right one

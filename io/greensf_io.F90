@@ -151,7 +151,7 @@ MODULE m_greensf_io
       TYPE(t_greensf)   :: gfOut
 
 
-      jspinsOut = MERGE(4,input%jspins,gfinp%l_mperp)
+      jspinsOut = MERGE(3,input%jspins,gfinp%l_mperp)
 
       !Check dimensions of mmpmat and selfen
       IF(SIZE(mmpmat,3) /= SIZE(greensf)) CALL juDFT_error("Mismatch in sizes: mmpmat", calledby="writeGreensFData")

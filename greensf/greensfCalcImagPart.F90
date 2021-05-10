@@ -26,7 +26,7 @@ MODULE m_greensfCalcImagPart
 
 #include"cpp_double.h"
 
-      INTEGER  :: ikpt_i,ikpt,nBands,jsp,i_gf,nLO,imatSize,coeff_spin
+      INTEGER  :: ikpt_i,ikpt,nBands,jsp,i_gf,nLO,imatSize
       INTEGER  :: l,lp,m,mp,iBand,ie,j,eGrid_start,eGrid_end
       INTEGER  :: indUnique,i_elem,imat,iLO,iLOp,i_elemLO,i_elem_imag,i_elemLO_imag
       LOGICAL  :: l_zero,l_sphavg,l_kresolved_int
@@ -46,7 +46,6 @@ MODULE m_greensfCalcImagPart
 
       !Spin degeneracy factors
       fac = 2.0/input%jspins
-      coeff_spin = MERGE(3, spin_ind, spin_ind==4)
 
       DO ikpt_i = 1, SIZE(cdnvalJob%k_list)
          ikpt    = cdnvalJob%k_list(ikpt_i)
@@ -71,7 +70,7 @@ MODULE m_greensfCalcImagPart
                                     dosWeights,bounds=indBound,dos=.TRUE.)
             ENDIF
             ALLOCATE(weights(SIZE(eMesh),nBands),source=cmplx_0)
-            weights = fac * (ImagUnit * resWeights - pi_const * dosWeights)
+            weights = fac * (resWeights/ImagUnit - pi_const * dosWeights)
             DEALLOCATE(dosWeights,resWeights)
             CALL timestop("Green's Function: TetrahedronWeights")
          CASE DEFAULT
@@ -110,7 +109,7 @@ MODULE m_greensfCalcImagPart
             !$OMP parallel default(none) &
             !$OMP shared(input,gfinp,greensfBZintCoeffs,greensfImagPart) &
             !$OMP shared(i_elem,i_elemLO,i_elem_imag,i_elemLO_imag,nLO,l,lp,ikpt_i,nBands,eMesh,l_sphavg,imatSize,l_kresolved_int)&
-            !$OMP shared(del,eb,eig,weights,indBound,fac,wtkpt,spin_ind,coeff_spin) &
+            !$OMP shared(del,eb,eig,weights,indBound,fac,wtkpt,spin_ind) &
             !$OMP private(ie,iLO,iLOp,imat,m,mp,iBand,j,eGrid_start,eGrid_end,weight,imag,imagReal,l_zero)
             ALLOCATE(imag(SIZE(eMesh),imatSize),source=cmplx_0)
             ALLOCATE(imagReal(SIZE(eMesh),imatSize),source=0.0)
@@ -121,36 +120,36 @@ MODULE m_greensfCalcImagPart
                   IF(gfinp%l_resolvent) THEN
                      IF(l_sphavg) THEN
                         CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                            greensfBZintCoeffs%sphavg(:nBands,m,mp,i_elem,ikpt_i,coeff_spin),nBands,&
+                                            greensfBZintCoeffs%sphavg(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
                                             cmplx_0,imag(:,1),SIZE(eMesh))
                      ELSE
                         CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                            greensfBZintCoeffs%uu(:nBands,m,mp,i_elem,ikpt_i,coeff_spin),nBands,&
+                                            greensfBZintCoeffs%uu(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
                                             cmplx_0,imag(:,1),SIZE(eMesh))
                         CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                            greensfBZintCoeffs%dd(:nBands,m,mp,i_elem,ikpt_i,coeff_spin),nBands,&
+                                            greensfBZintCoeffs%dd(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
                                             cmplx_0,imag(:,2),SIZE(eMesh))
                         CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                            greensfBZintCoeffs%ud(:nBands,m,mp,i_elem,ikpt_i,coeff_spin),nBands,&
+                                            greensfBZintCoeffs%ud(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
                                             cmplx_0,imag(:,3),SIZE(eMesh))
                         CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                            greensfBZintCoeffs%du(:nBands,m,mp,i_elem,ikpt_i,coeff_spin),nBands,&
+                                            greensfBZintCoeffs%du(:nBands,m,mp,i_elem,ikpt_i,spin_ind),nBands,&
                                             cmplx_0,imag(:,4),SIZE(eMesh))
                         IF(nLO>0) THEN
                            imat = 0
                            DO iLO = 1, nLO
                               imat = imat + 4
                               CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                                  greensfBZintCoeffs%uulo(:nBands,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin),nBands,&
+                                                  greensfBZintCoeffs%uulo(:nBands,m,mp,iLO,i_elemLO,ikpt_i,spin_ind),nBands,&
                                                   cmplx_0,imag(:,imat+1),SIZE(eMesh))
                               CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                                  greensfBZintCoeffs%ulou(:nBands,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin),nBands,&
+                                                  greensfBZintCoeffs%ulou(:nBands,m,mp,iLO,i_elemLO,ikpt_i,spin_ind),nBands,&
                                                   cmplx_0,imag(:,imat+2),SIZE(eMesh))
                               CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                                  greensfBZintCoeffs%dulo(:nBands,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin),nBands,&
+                                                  greensfBZintCoeffs%dulo(:nBands,m,mp,iLO,i_elemLO,ikpt_i,spin_ind),nBands,&
                                                   cmplx_0,imag(:,imat+3),SIZE(eMesh))
                               CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                                  greensfBZintCoeffs%ulod(:nBands,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin),nBands,&
+                                                  greensfBZintCoeffs%ulod(:nBands,m,mp,iLO,i_elemLO,ikpt_i,spin_ind),nBands,&
                                                   cmplx_0,imag(:,imat+4),SIZE(eMesh))
                            ENDDO
                            imat = 0
@@ -158,7 +157,7 @@ MODULE m_greensfCalcImagPart
                               DO iLOp = 1, nLO
                                  imat = imat + 1
                                  CALL CPP_BLAS_cgemm('N','N',SIZE(eMesh),1,nBands,cmplx_1,weights,SIZE(eMesh),&
-                                                     greensfBZintCoeffs%uloulop(:nBands,m,mp,imat,i_elemLO,ikpt_i,coeff_spin),nBands,&
+                                                     greensfBZintCoeffs%uloulop(:nBands,m,mp,imat,i_elemLO,ikpt_i,spin_ind),nBands,&
                                                      cmplx_0,imag(:,4+4*nLO+imat),SIZE(eMesh))
                               ENDDO
                            ENDDO
@@ -196,26 +195,26 @@ MODULE m_greensfCalcImagPart
                            END SELECT
 
                            IF(l_sphavg) THEN
-                              imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
+                              imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                            ELSE
-                              imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%uu(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
-                              imag(ie,2) = imag(ie,2) + weight * greensfBZintCoeffs%dd(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
-                              imag(ie,3) = imag(ie,3) + weight * greensfBZintCoeffs%ud(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
-                              imag(ie,4) = imag(ie,4) + weight * greensfBZintCoeffs%du(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
+                              imag(ie,1) = imag(ie,1) + weight * greensfBZintCoeffs%uu(iBand,m,mp,i_elem,ikpt_i,spin_ind)
+                              imag(ie,2) = imag(ie,2) + weight * greensfBZintCoeffs%dd(iBand,m,mp,i_elem,ikpt_i,spin_ind)
+                              imag(ie,3) = imag(ie,3) + weight * greensfBZintCoeffs%ud(iBand,m,mp,i_elem,ikpt_i,spin_ind)
+                              imag(ie,4) = imag(ie,4) + weight * greensfBZintCoeffs%du(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                               IF(nLO>0) THEN
                                  imat = 0
                                  DO iLO = 1, nLO
                                     imat = imat + 4
-                                    imag(ie,imat+1) = imag(ie,imat+1) + weight * greensfBZintCoeffs%uulo(iBand,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin)
-                                    imag(ie,imat+2) = imag(ie,imat+2) + weight * greensfBZintCoeffs%ulou(iBand,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin)
-                                    imag(ie,imat+3) = imag(ie,imat+3) + weight * greensfBZintCoeffs%dulo(iBand,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin)
-                                    imag(ie,imat+4) = imag(ie,imat+4) + weight * greensfBZintCoeffs%ulod(iBand,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin)
+                                    imag(ie,imat+1) = imag(ie,imat+1) + weight * greensfBZintCoeffs%uulo(iBand,m,mp,iLO,i_elemLO,ikpt_i,spin_ind)
+                                    imag(ie,imat+2) = imag(ie,imat+2) + weight * greensfBZintCoeffs%ulou(iBand,m,mp,iLO,i_elemLO,ikpt_i,spin_ind)
+                                    imag(ie,imat+3) = imag(ie,imat+3) + weight * greensfBZintCoeffs%dulo(iBand,m,mp,iLO,i_elemLO,ikpt_i,spin_ind)
+                                    imag(ie,imat+4) = imag(ie,imat+4) + weight * greensfBZintCoeffs%ulod(iBand,m,mp,iLO,i_elemLO,ikpt_i,spin_ind)
                                  ENDDO
                                  imat = 0
                                  DO iLO = 1, nLO
                                     DO iLOp = 1, nLO
                                        imat = imat + 1
-                                       imag(ie,4 + 4*nLO+imat) = imag(ie,4 + 4*nLO+imat) + weight * greensfBZintCoeffs%uloulop(iBand,m,mp,imat,i_elemLO,ikpt_i,coeff_spin)
+                                       imag(ie,4 + 4*nLO+imat) = imag(ie,4 + 4*nLO+imat) + weight * greensfBZintCoeffs%uloulop(iBand,m,mp,imat,i_elemLO,ikpt_i,spin_ind)
                                     ENDDO
                                  ENDDO
                               ENDIF
@@ -223,35 +222,35 @@ MODULE m_greensfCalcImagPart
                         ELSE
                            IF(l_sphavg) THEN
                               imag(eGrid_start:eGrid_end,1) = imag(eGrid_start:eGrid_end,1) + weights(eGrid_start:eGrid_end,iBand)&
-                                                             * greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
+                                                             * greensfBZintCoeffs%sphavg(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                            ELSE
                               imag(eGrid_start:eGrid_end,1) = imag(eGrid_start:eGrid_end,1) + weights(eGrid_start:eGrid_end,iBand)&
-                                                             * greensfBZintCoeffs%uu(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
+                                                             * greensfBZintCoeffs%uu(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                               imag(eGrid_start:eGrid_end,2) = imag(eGrid_start:eGrid_end,2) + weights(eGrid_start:eGrid_end,iBand)&
-                                                             * greensfBZintCoeffs%dd(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
+                                                             * greensfBZintCoeffs%dd(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                               imag(eGrid_start:eGrid_end,3) = imag(eGrid_start:eGrid_end,3) + weights(eGrid_start:eGrid_end,iBand)&
-                                                             * greensfBZintCoeffs%ud(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
+                                                             * greensfBZintCoeffs%ud(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                               imag(eGrid_start:eGrid_end,4) = imag(eGrid_start:eGrid_end,4) + weights(eGrid_start:eGrid_end,iBand)&
-                                                             * greensfBZintCoeffs%du(iBand,m,mp,i_elem,ikpt_i,coeff_spin)
+                                                             * greensfBZintCoeffs%du(iBand,m,mp,i_elem,ikpt_i,spin_ind)
                               IF(nLO>0) THEN
                                  imat = 0
                                  DO iLO = 1, nLO
                                     imat = imat + 4
                                     imag(eGrid_start:eGrid_end,imat+1) = imag(eGrid_start:eGrid_end,imat+1) + weights(eGrid_start:eGrid_end,iBand) &
-                                                                        * greensfBZintCoeffs%uulo(iBand,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin)
+                                                                        * greensfBZintCoeffs%uulo(iBand,m,mp,iLO,i_elemLO,ikpt_i,spin_ind)
                                     imag(eGrid_start:eGrid_end,imat+2) = imag(eGrid_start:eGrid_end,imat+2) + weights(eGrid_start:eGrid_end,iBand) &
-                                                                        * greensfBZintCoeffs%ulou(iBand,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin)
+                                                                        * greensfBZintCoeffs%ulou(iBand,m,mp,iLO,i_elemLO,ikpt_i,spin_ind)
                                     imag(eGrid_start:eGrid_end,imat+3) = imag(eGrid_start:eGrid_end,imat+3) + weights(eGrid_start:eGrid_end,iBand) &
-                                                                        * greensfBZintCoeffs%dulo(iBand,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin)
+                                                                        * greensfBZintCoeffs%dulo(iBand,m,mp,iLO,i_elemLO,ikpt_i,spin_ind)
                                     imag(eGrid_start:eGrid_end,imat+4) = imag(eGrid_start:eGrid_end,imat+4) + weights(eGrid_start:eGrid_end,iBand) &
-                                                                        * greensfBZintCoeffs%ulod(iBand,m,mp,iLO,i_elemLO,ikpt_i,coeff_spin)
+                                                                        * greensfBZintCoeffs%ulod(iBand,m,mp,iLO,i_elemLO,ikpt_i,spin_ind)
                                  ENDDO
                                  imat = 0
                                  DO iLO = 1, nLO
                                     DO iLOp = 1, nLO
                                        imat = imat + 1
                                        imag(eGrid_start:eGrid_end,4 + 4*nLO+imat) = imag(eGrid_start:eGrid_end,4 + 4*nLO+imat) + weights(eGrid_start:eGrid_end,iBand) &
-                                                                                   * greensfBZintCoeffs%uloulop(iBand,m,mp,imat,i_elemLO,ikpt_i,coeff_spin)
+                                                                                   * greensfBZintCoeffs%uloulop(iBand,m,mp,imat,i_elemLO,ikpt_i,spin_ind)
                                     ENDDO
                                  ENDDO
                               ENDIF
@@ -260,7 +259,9 @@ MODULE m_greensfCalcImagPart
 
                      ENDDO!ib
                   ENDIF
-
+                  IF(spin_ind==3) THEN
+                     imag = CMPLX(REAL(imag), -AIMAG(imag))
+                  ENDIF
                   IF(l_sphavg.AND..NOT.l_kresolved_int) THEN
                      CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%sphavg(:,m,mp,i_elem_imag,spin_ind),1)
                   ELSE IF(.NOT.l_kresolved_int) THEN
