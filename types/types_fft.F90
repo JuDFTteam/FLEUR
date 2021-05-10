@@ -88,10 +88,6 @@ contains
          fft%batch_size = 1
       endif
 
-      if(in_openmp .and. fft%batch_size > 1) then
-         call juDFT_error("Can't create FFTs inside OpenMP and use batch at the same time")
-      endif
-
       fft%initialized = .True.
       fft%backend = defaultFFT_const
       fft%backend = selecFFT(PRESENT(indices), l_gpu)
