@@ -108,7 +108,7 @@ CONTAINS
       allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
       if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
-      call fft%init(stepf%dimensions, .true., batch_size=psize, l_gpu=.False.)
+      call fft%init(stepf%dimensions, .true., batch_size=psize, l_gpu=.True.)
       call timestop("alloc&init")
 
       !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec, jsp)&
@@ -126,9 +126,10 @@ CONTAINS
                   enddo
                enddo
                !$acc end kernels
+
+               call fft%exec_batch(prod)
             !$acc end data
 
-            call fft%exec_batch(prod)
          
             do iob = 1, psize
                if (cprod%l_real) then
