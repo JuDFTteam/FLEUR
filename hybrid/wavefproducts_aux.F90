@@ -38,7 +38,7 @@ CONTAINS
 
       integer, parameter :: blocksize = 512
       integer :: g(3), igptm, iob, n_omp, j, jstart, loop_length
-      integer :: ok, nbasfcn, psize, iband, ierr, i
+      integer :: ok, nbasfcn, psize, iband, ierr, i, max_igptm
       integer, allocatable :: band_list(:), g_ptr(:)
       real    :: inv_vol, gcutoff
 
@@ -47,6 +47,8 @@ CONTAINS
       real_warned = .False.
 
       call timestart("wavef_IS_FFT")
+      max_igptm = mpdata%n_g(iq)
+
       gcutoff = (2*fi%input%rkmax + fi%mpinp%g_cutoff) * fi%hybinp%fftcut
       inv_vol = 1/sqrt(fi%cell%omtil)
       psize = bandof - bandoi + 1
@@ -115,47 +117,53 @@ CONTAINS
       call timestop("alloc&init")
 
       !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec, jsp)&
-      !$acc      copyin(psi_kqpt, stepf, stepf%gridlength) &
-      !$acc      create(psi_k)
+      !$acc      copyin(psi_kqpt, stepf, stepf%gridlength, hybdat, hybdat%nbasp, g_ptr, cprod) &
+      !$acc      copy(cprod%data_r, cprod%data_c) &
+      !$acc      create(psi_k, prod)
          ! $OMP DO
          do iband = 1, hybdat%nbands(ik,jsp)
-            !$acc data copyin(iband) copyout(prod)
-               call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-               
-               !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)               
-               do iob = 1, psize
-                  do j = 0, stepf%gridlength-1
-                     prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
-                  enddo
+            call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+            
+            !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)               
+            do iob = 1, psize
+               do j = 0, stepf%gridlength-1
+                  prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
                enddo
-               !$acc end kernels
+            enddo
+            !$acc end kernels
 
-               call fft%exec_batch(prod)
-            !$acc end data
-
-         
+            call fft%exec_batch(prod)
+      
             if (cprod%l_real) then
+               ! do iob = 1, psize
+               !    if (.not. real_warned) then
+               !       if (any(abs(aimag(prod(:,iob))) > 1e-8)) then
+               !          write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
+               !             float2str(maxval(abs(aimag(prod(:,iob)))))
+               !          real_warned = .True.
+               !       endif
+               !    endif
+               ! enddo 
+                  
+               !$acc kernels default(none) present(cprod, cprod%data_r, prod, g_ptr)
+               !$acc loop independent
                do iob = 1, psize
-                  if (.not. real_warned) then
-                     if (any(abs(aimag(prod(:,iob))) > 1e-8)) then
-                        write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
-                           float2str(maxval(abs(aimag(prod(:,iob)))))
-                        real_warned = .True.
-                     endif
-                  endif
-               enddo 
-               
-               do iob = 1, psize
-                  DO igptm = 1, mpdata%n_g(iq)
+                  !$acc loop independent
+                  DO igptm = 1, max_igptm
                      cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(g_ptr(igptm), iob))
                   enddo
                enddo
+               !$acc end kernels
             else
+               !$acc kernels default(none) present(cprod, cprod%data_c, prod, g_ptr)
+               !$acc loop independent
                do iob = 1, psize
-                  DO igptm = 1, mpdata%n_g(iq)
+                  !$acc loop independent
+                  DO igptm = 1, max_igptm
                      cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(g_ptr(igptm), iob)
                   enddo
                enddo
+               !$acc end kernels
             endif
          enddo
          ! $OMP END DO
