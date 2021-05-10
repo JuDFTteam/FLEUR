@@ -35,7 +35,9 @@ CONTAINS
       type(t_fft)     :: fft
       type(t_fftgrid) :: stepf
 
-      integer :: g(3), igptm, iob, n_omp
+
+      integer, parameter :: blocksize = 512
+      integer :: g(3), igptm, iob, n_omp, j, jstart, loop_length
       integer :: ok, nbasfcn, psize, iband, ierr, i
       integer, allocatable :: band_list(:)
       real    :: inv_vol, gcutoff
@@ -78,7 +80,7 @@ CONTAINS
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                   c_phase=c_phase_kqpt, parent_z=z_kqpt_p, list=band_list)
 
-      allocate(psi_kqpt(stepf%gridLength, psize), stat=ierr)
+      allocate(psi_kqpt(0:stepf%gridLength-1, psize), stat=ierr)
       if(ierr /= 0) call juDFT_error("can't alloc psi_kqpt")
 
       !$acc data copyin(z_kqpt, z_kqpt%l_real, z_kqpt%data_r, z_kqpt%data_c, lapw_ikqpt, lapw_ikqpt%nv, lapw_ikqpt%gvec,&
@@ -109,12 +111,22 @@ CONTAINS
             !$acc data copyin(iband) copyout(psi_k) 
                call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
             !$acc end data
-            psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
+
+            ! try to keep stepf in cache
+            do jstart = 0, stepf%gridlength-1, blocksize
+               loop_length = min(blocksize-1, stepf%gridlength - 1 - jstart)
+               do iob = 1, psize
+                  do j = 0, stepf%gridlength-1
+                     prod(j,iob) = conjg(psi_k(j, 1)) * stepf%grid(j) * psi_kqpt(j, iob)
+                  enddo 
+               enddo
+            enddo 
 
             do iob = 1, psize
-               prod(:,iob) = psi_k(:, 1)*psi_kqpt(:, iob)
                call fft%exec(prod(:,iob))
-
+            enddo
+         
+            do iob = 1, psize
                if (cprod%l_real) then
                   if (.not. real_warned) then
                      if (any(abs(aimag(prod(:,iob))) > 1e-8)) then
