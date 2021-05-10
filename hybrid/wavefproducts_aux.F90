@@ -104,19 +104,19 @@ CONTAINS
       call timestop("alloc&init")
 
       !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec, jsp)
-         if (cprod%l_real) then
-            ! $OMP DO
-            do iband = 1, hybdat%nbands(ik,jsp)
-               !$acc data copyin(iband) copyout(psi_k) 
-                  call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-               !$acc end data
-               psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
+         ! $OMP DO
+         do iband = 1, hybdat%nbands(ik,jsp)
+            !$acc data copyin(iband) copyout(psi_k) 
+               call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+            !$acc end data
+            psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
 
-               do iob = 1, psize
-                  prod(:,iob) = psi_k(:, 1)*psi_kqpt(:, iob)
-                  call fft%exec(prod(:,iob))
+            do iob = 1, psize
+               prod(:,iob) = psi_k(:, 1)*psi_kqpt(:, iob)
+               call fft%exec(prod(:,iob))
 
-                  if (cprod%l_real .and. (.not. real_warned)) then
+               if (cprod%l_real) then
+                  if (.not. real_warned) then
                      if (any(abs(aimag(prod(:,iob))) > 1e-8)) then
                         write (*, *) "Imag part non-zero in is_fft maxval(abs(aimag(prod)))) = "// &
                            float2str(maxval(abs(aimag(prod(:,iob)))))
@@ -128,27 +128,15 @@ CONTAINS
                      g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
                      cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(stepf%g2fft(g), iob))
                   enddo
-               enddo
-            enddo
-            ! $OMP END DO
-         else
-            ! $OMP DO
-            do iband = 1, hybdat%nbands(ik,jsp)
-               call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-               psi_k(:, 1) = conjg(psi_k(:, 1)) * stepf%grid
-
-               do iob = 1, psize
-                  prod(:,iob) = psi_k(:, 1)*psi_kqpt(:, iob)
-                  call fft%exec(prod(:,iob))
-
+               else
                   DO igptm = 1, mpdata%n_g(iq)
                      g = mpdata%g(:, mpdata%gptm_ptr(igptm, iq)) - g_t
                      cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(stepf%g2fft(g), iob)
                   enddo
-               enddo
+               endif
             enddo
-            ! $OMP END DO
-         endif
+         enddo
+         ! $OMP END DO
       !$acc end data
 
       deallocate (prod, psi_k)
