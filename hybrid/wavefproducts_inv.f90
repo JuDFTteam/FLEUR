@@ -339,11 +339,11 @@ CONTAINS
                               add2 = rdum2*rfac2 - rdum1*rfac1
                               DO i = 1, mpdata%num_radbasfn(l, itype)
                                  j = lm1 + i
-                                 cprod%data_r(j, iob + (iband-1)*psize) &
-                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add1
+                                 cprod(j, iob + (iband-1)*psize) &
+                                    = cprod(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add1
                                  j = lm2 + i
-                                 cprod%data_r(j, iob + (iband-1)*psize) &
-                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add2
+                                 cprod(j, iob + (iband-1)*psize) &
+                                    = cprod(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add2
                               enddo
                            END DO  !ibando
                         END DO  !iband
