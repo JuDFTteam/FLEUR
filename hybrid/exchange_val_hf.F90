@@ -278,11 +278,11 @@ CONTAINS
                call timestart("apply prefactors carr1_v")
                !$acc data copyin(psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
                   if (mat_ex%l_real) then
-   #ifdef _OPENACC
+#ifdef _OPENACC
                      call timestart("cpy cprod")
                      call dlacpy("N", size(cprod_vv%data_r, 1), size(cprod_vv%data_r, 2), cprod_vv%data_r, size(cprod_vv%data_r, 1), CPP_cprod_r, size(CPP_cprod_r,1))
                      call timestop("cpy cprod")
-   #endif
+#endif
                      !$acc enter data copyin(CPP_cprod_r)
 
                      !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
@@ -299,11 +299,11 @@ CONTAINS
                      !$acc end parallel loop
 
                   else
-   #ifdef _OPENACC
+#ifdef _OPENACC
                      call timestart("cpy cprod")
                      call zlacpy("N", size(cprod_vv%data_c, 1), size(cprod_vv%data_c, 2), cprod_vv%data_c, size(cprod_vv%data_c, 1), CPP_cprod_c, size(CPP_cprod_c,1))
                      call timestop("cpy cprod")
-   #endif
+#endif
                      !$acc enter data copyin(CPP_cprod_c)
 
                      !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
