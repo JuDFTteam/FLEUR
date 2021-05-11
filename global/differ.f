@@ -30,6 +30,7 @@ C     .. Local Scalars ..
      +     qcoef,qqqq,r,ra,rb,rg,rj,s,w,wmin
       INTEGER k,ki,kj,n,nodes,nqnt,ntimes
       LOGICAL dbl
+      CHARACTER(LEN=150) hintString
 
 C     .. Local Arrays ..
       REAL a0(5),b0(5)
@@ -65,8 +66,11 @@ c**** too many nodes
       WRITE (oUnit,FMT=8010) nodes,fn,fl,fj,emin,e,emax
       WRITE (oUnit,FMT=8030) vr
       WRITE (oUnit,FMT=8030) a
+      WRITE (hintString,'(a,i0,a,i0,a,i0,a)') "The n=",NINT(fn)," l=",
+     +      NINT(fl), " state of an atom with Z=", NINT(z),
+     +      " seems to be below the reasonable energy range."
       CALL juDFT_error("differ 1: problems with solving dirac equation"
-     +     ,calledby ="differ")
+     +     ,calledby ="differ", hint=TRIM(hintString))
 c**** correct number of nodes
    30 ra = a(ki)
       rb = b(ki)
@@ -153,8 +157,11 @@ c**** too few nodes
       WRITE (oUnit,FMT=8020) nodes,fn,fl,fj,emin,e,emax
       WRITE (oUnit,FMT=8030) vr
       WRITE (oUnit,FMT=8030) a
+      WRITE (hintString,'(a,i0,a,i0,a,i0,a)') "The n=",NINT(fn)," l=",
+     +      NINT(fl), " state of an atom with Z=", NINT(z),
+     +      " seems to be above the reasonable energy range."
       CALL juDFT_error("differ 2: problems with solving dirac equation"
-     +     ,calledby ="differ")
+     +     ,calledby ="differ", hint=TRIM(hintString))
   140 WRITE (oUnit,FMT=8000)
       WRITE (oUnit,FMT=8030) fn,fl,fj,emin,emax
       WRITE (oUnit,FMT=8030) e,de
