@@ -333,9 +333,12 @@ CONTAINS
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
                               iob = ibando + 1 - bandoi
-                              DO j = lm1+1, lm1+mpdata%num_radbasfn(l, itype)
-                                 cprod(j, iob + (iband-1)*psize) = cprod(j, iob + (iband-1)*psize) &
-                                       + hybdat%prodm(i, n, l, itype) * (rarr3(1, ibando, iband)*rfac2 + rarr3(2, ibando, iband)*rfac1)
+                              rdum1 = rarr3(1, ibando, iband)
+                              rdum2 = rarr3(2, ibando, iband)
+                              DO i = 1, mpdata%num_radbasfn(l, itype)
+                                 j = lm1 + i
+                                 cprod(j, iob + (iband-1)*psize) &
+                                    = cprod(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*(rdum1*rfac2 + rdum2*rfac1)
                               enddo
                            END DO  !ibando
                         END DO  !iband
@@ -348,7 +351,8 @@ CONTAINS
                         DO iband = 1, hybdat%nbands(ik,jsp)
                            DO ibando = bandoi,bandof
                               iob = ibando + 1 - bandoi
-                              DO j = lm2+1, lm2+mpdata%num_radbasfn(l, itype)
+                              DO i = 1, mpdata%num_radbasfn(l, itype)
+                                 j = lm2 + i
                                  cprod(j, iob + (iband-1)*psize) = cprod(j, iob + (iband-1)*psize) &
                                        + hybdat%prodm(i, n, l, itype) * (rarr3(2, ibando, iband)*rfac2 - rarr3(1, ibando, iband)*rfac1)
                               enddo
