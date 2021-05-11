@@ -61,13 +61,15 @@ CONTAINS
 
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
-      stepf%grid = stepf%grid * inv_vol
-      ! after we transform psi_k*stepf*psi_kqpt back  to 
-      ! G-space we have to divide by stepf%gridLength. We do this now
-      stepf%grid = stepf%grid /stepf%gridLength
 
       call fft%init(stepf%dimensions, .false., batch_size=1, l_gpu=.True.)
       !$acc data copyin(stepf, stepf%grid, stepf%gridlength)
+         ! after we transform psi_k*stepf*psi_kqpt back  to 
+         ! G-space we have to divide by stepf%gridLength. We do this now
+         !$acc kernels default(none) present(stepf, stepf%grid, stepf%gridLength)
+         stepf%grid = stepf%grid * inv_vol / stepf%gridLength
+         !$acc end kernels
+
          call fft%exec(stepf%grid)
          call fft%free()
          
