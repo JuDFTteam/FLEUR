@@ -75,7 +75,8 @@ contains
       logical :: in_openmp = .false.
       integer :: max_threads = 1, thread_id = 0
       integer :: n_plans
-      integer, pointer :: null_ptr => null()
+      integer :: n(3), dist
+      integer, parameter :: stride = 1
 
       !$ thread_id   = omp_get_thread_num()
       !$ max_threads = omp_get_max_threads()
@@ -85,10 +86,6 @@ contains
          fft%batch_size = batch_size
       else
          fft%batch_size = 1
-      endif
-
-      if(in_openmp .and. fft%batch_size > 1) then
-         call juDFT_error("Can't create FFTs inside OpenMP and use batch at the same time")
       endif
 
       fft%initialized = .True.
@@ -123,8 +120,10 @@ contains
 #endif
 #ifdef _OPENACC
       case(cuFFT_const)
-         ierr = cufftPlanMany(fft%cufft_plan, 3_4, [fft%length(3), fft%length(2), fft%length(1)], &
-                              null_ptr, null_ptr, null_ptr, null_ptr, null_ptr, null_ptr, CUFFT_Z2Z, fft%batch_size)
+         n = [fft%length(3), fft%length(2), fft%length(1)]
+         dist   = product(fft%length)
+         ierr = cufftPlanMany(fft%cufft_plan, 3_4, n, &
+                              n, stride, dist, n, stride, dist, CUFFT_Z2Z, fft%batch_size)
 
          if(ierr /= 0) call juDFT_error("cuFFT Plan many failed.")
 #endif

@@ -38,8 +38,6 @@ c     ..local scalars..
       complex c_1
       integer, allocatable :: kvac3(:),map1(:)
       complex value1
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
 
       call timestart("wann_plot_od_vac")
 
