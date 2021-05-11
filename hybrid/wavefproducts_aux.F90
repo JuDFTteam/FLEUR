@@ -174,7 +174,7 @@ CONTAINS
      
       call grid%init(fi%cell, fi%sym, gcutoff)
 
-      !$OMP parallel do default(none) private(nu) shared(bandoi, bandof, grid, lapw, jspin, zMat, psi)
+      !$OMP parallel do default(shared) private(nu) shared(bandoi, bandof, grid, lapw, jspin, zMat, psi)
       do nu = bandoi, bandof
          call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu))
       enddo
