@@ -335,19 +335,31 @@ CONTAINS
                               iob = ibando + 1 - bandoi
                               rdum1 = rarr3(1, ibando, iband)
                               rdum2 = rarr3(2, ibando, iband)
-                              add1 = rdum1*rfac2 + rdum2*rfac1
-                              add2 = rdum2*rfac2 - rdum1*rfac1
                               DO i = 1, mpdata%num_radbasfn(l, itype)
                                  j = lm1 + i
                                  cprod(j, iob + (iband-1)*psize) &
-                                    = cprod(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add1
-                                 j = lm2 + i
-                                 cprod(j, iob + (iband-1)*psize) &
-                                    = cprod(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add2
+                                    = cprod(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*(rdum1*rfac2 + rdum2*rfac1)
                               enddo
                            END DO  !ibando
                         END DO  !iband
                         !$OMP end parallel do
+
+                        !$OMP PARALLEL DO default(none) collapse(2) &
+                        !$OMP private(iband, ibando, i, iob, rdum1, rdum2, add1, add2, j) &
+                        !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
+                        !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, jsp, mpdata)
+                        DO iband = 1, hybdat%nbands(ik,jsp)
+                           DO ibando = bandoi,bandof
+                              iob = ibando + 1 - bandoi
+                              DO i = 1, mpdata%num_radbasfn(l, itype)
+                                 j = lm2 + i
+                                 cprod(j, iob + (iband-1)*psize) = cprod(j, iob + (iband-1)*psize) &
+                                       + hybdat%prodm(i, n, l, itype) * (rarr3(2, ibando, iband)*rfac2 - rarr3(1, ibando, iband)*rfac1)
+                              enddo
+                           END DO  !ibando
+                        END DO  !iband
+                        !$OMP end parallel do
+
                         call timestop("ibandibando loop")
 
                         ! go to lm start index for next m-quantum number
