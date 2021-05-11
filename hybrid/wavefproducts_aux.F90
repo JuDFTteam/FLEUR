@@ -67,118 +67,120 @@ CONTAINS
       stepf%grid = stepf%grid /stepf%gridLength
 
       call fft%init(stepf%dimensions, .false., batch_size=1, l_gpu=.True.)
-      !$acc data copyin(stepf) copy(stepf%grid)
-      call fft%exec(stepf%grid)
-      !$acc end data 
-      !$acc wait
-      call fft%free()
-      
-      call setup_g_ptr(mpdata, stepf, g_t, iq, g_ptr)
-      
-      CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
+      !$acc data copyin(stepf, stepf%grid, stepf%gridlength)
+         call fft%exec(stepf%grid)
+         call fft%free()
+         
+         call setup_g_ptr(mpdata, stepf, g_t, iq, g_ptr)
+         
+         CALL lapw_ikqpt%init(fi, nococonv, ikqpt)
 
-      nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
-      call z_kqpt%alloc(z_k%l_real, nbasfcn, psize)
-      call z_kqpt_p%init(z_kqpt)
+         nbasfcn = lapw_ikqpt%hyb_num_bas_fun(fi)
+         call z_kqpt%alloc(z_k%l_real, nbasfcn, psize)
+         call z_kqpt_p%init(z_kqpt)
 
-      band_list = [(i, i=bandoi, bandof)]
-      call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
-                  c_phase=c_phase_kqpt, parent_z=z_kqpt_p, list=band_list)
+         band_list = [(i, i=bandoi, bandof)]
+         call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
+                     c_phase=c_phase_kqpt, parent_z=z_kqpt_p, list=band_list)
 
-      allocate(psi_kqpt(0:stepf%gridLength-1, psize), stat=ierr)
-      if(ierr /= 0) call juDFT_error("can't alloc psi_kqpt")
+         allocate(psi_kqpt(0:stepf%gridLength-1, psize), stat=ierr)
+         if(ierr /= 0) call juDFT_error("can't alloc psi_kqpt")
 
-      !$acc data copyin(z_kqpt, z_kqpt%l_real, z_kqpt%data_r, z_kqpt%data_c, lapw_ikqpt, lapw_ikqpt%nv, lapw_ikqpt%gvec,&
-      !$acc             jsp, bandoi, bandof, stepf, stepf%grid, psize) copyout(psi_kqpt) 
-         call timestart("1st wavef2rs")
-         call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, psi_kqpt)
-         call timestop("1st wavef2rs")
+         !$acc data create(psi_kqpt)
+            !$acc data copyin(z_kqpt, z_kqpt%l_real, z_kqpt%data_r, z_kqpt%data_c, lapw_ikqpt, lapw_ikqpt%nv, lapw_ikqpt%gvec,&
+            !$acc             jsp, bandoi, bandof, psize)
+               call timestart("1st wavef2rs")
+               call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, psi_kqpt)
+               call timestop("1st wavef2rs")
 
-         !$acc kernels default(none) present(psi_kqpt, stepf, stepf%grid)
-         do iob = 1, psize 
-            psi_kqpt(:,iob) = psi_kqpt(:,iob) * stepf%grid
-         enddo
-         !$acc end kernels
-      !$acc end data
-
-      call timestart("Big OMP loop")
-#ifndef _OPENACC
-      !$OMP PARALLEL default(shared) &
-      !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
-      !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff)&
-      !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
-#endif
-
-      call timestart("alloc&init")
-      allocate (prod(0:stepf%gridLength - 1, psize), stat=ok)
-      if (ok /= 0) call juDFT_error("can't alloc prod")
-      allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
-      if (ok /= 0) call juDFT_error("can't alloc psi_k")
-
-      call fft%init(stepf%dimensions, .true., batch_size=psize, l_gpu=.True.)
-      call timestop("alloc&init")
-
-      !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec, jsp)&
-      !$acc      copyin(psi_kqpt, stepf, stepf%gridlength, hybdat, hybdat%nbasp, g_ptr, cprod) &
-      !$acc      copy(cprod%data_r, cprod%data_c) &
-      !$acc      create(psi_k, prod)
-#ifndef _OPENACC
-         !$OMP DO
-#endif
-         do iband = 1, hybdat%nbands(ik,jsp)
-            call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
-            
-            !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)               
-            do iob = 1, psize
-               do j = 0, stepf%gridlength-1
-                  prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
+               !$acc kernels default(none) present(psi_kqpt, stepf, stepf%grid)
+               do iob = 1, psize 
+                  psi_kqpt(:,iob) = psi_kqpt(:,iob) * stepf%grid
                enddo
-            enddo
-            !$acc end kernels
+               !$acc end kernels
+            !$acc end data
 
-            call fft%exec_batch(prod)
-      
-            if (cprod%l_real) then
-               if (.not. real_warned) then
-                  max_imag = 0.0 
-                  !$acc parallel loop default(none) present(stepf, stepf%gridlength, prod) copy(max_imag) reduction(max:max_imag)
-                  do iob = 1, psize
-                     do j = 0, stepf%gridlength-1 
-                        max_imag = max(max_imag, abs(aimag(prod(j,iob))))
-                     enddo 
-                  enddo
-                  !$acc end parallel loop
-                  if(max_imag > 1e-8) then
-                     write (*, *) "Imag part non-zero in too large"
-                     real_warned = .True.
-                  endif
-               endif
+            call timestart("Big OMP loop")
+#ifndef _OPENACC
+            !$OMP PARALLEL default(shared) &
+            !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
+            !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff)&
+            !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
+#endif
+
+            call timestart("alloc&init")
+            allocate (prod(0:stepf%gridLength - 1, psize), stat=ok)
+            if (ok /= 0) call juDFT_error("can't alloc prod")
+            allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
+            if (ok /= 0) call juDFT_error("can't alloc psi_k")
+
+            call fft%init(stepf%dimensions, .true., batch_size=psize, l_gpu=.True.)
+            call timestop("alloc&init")
+
+            !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec)&
+            !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, cprod) &
+            !$acc      copy(cprod%data_r, cprod%data_c) &
+            !$acc      create(psi_k, prod)
+#ifndef _OPENACC
+               !$OMP DO
+#endif
+               do iband = 1, hybdat%nbands(ik,jsp)
+                  call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
                   
-               !$acc kernels default(none) present(cprod, cprod%data_r, prod, g_ptr)
-               !$acc loop independent
-               do iob = 1, psize
-                  !$acc loop independent
-                  DO igptm = 1, max_igptm
-                     cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(g_ptr(igptm), iob))
+                  !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)               
+                  do iob = 1, psize
+                     do j = 0, stepf%gridlength-1
+                        prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
+                     enddo
                   enddo
+                  !$acc end kernels
+
+                  call fft%exec_batch(prod)
+            
+                  if (cprod%l_real) then
+                     if (.not. real_warned) then
+                        max_imag = 0.0 
+                        !$acc parallel loop default(none) present(stepf, stepf%gridlength, prod) copy(max_imag) reduction(max:max_imag)
+                        do iob = 1, psize
+                           do j = 0, stepf%gridlength-1 
+                              max_imag = max(max_imag, abs(aimag(prod(j,iob))))
+                           enddo 
+                        enddo
+                        !$acc end parallel loop
+                        if(max_imag > 1e-8) then
+                           write (*, *) "Imag part non-zero in too large"
+                           real_warned = .True.
+                        endif
+                     endif
+                        
+                     !$acc kernels default(none) present(cprod, cprod%data_r, prod, g_ptr)
+                     !$acc loop independent
+                     do iob = 1, psize
+                        !$acc loop independent
+                        DO igptm = 1, max_igptm
+                           cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(g_ptr(igptm), iob))
+                        enddo
+                     enddo
+                     !$acc end kernels
+                  else
+                     !$acc kernels default(none) present(cprod, cprod%data_c, prod, g_ptr)
+                     !$acc loop independent
+                     do iob = 1, psize
+                        !$acc loop independent
+                        DO igptm = 1, max_igptm
+                           cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(g_ptr(igptm), iob)
+                        enddo
+                     enddo
+                     !$acc end kernels
+                  endif
                enddo
-               !$acc end kernels
-            else
-               !$acc kernels default(none) present(cprod, cprod%data_c, prod, g_ptr)
-               !$acc loop independent
-               do iob = 1, psize
-                  !$acc loop independent
-                  DO igptm = 1, max_igptm
-                     cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(g_ptr(igptm), iob)
-                  enddo
-               enddo
-               !$acc end kernels
-            endif
-         enddo
 #ifndef _OPENACC
-         !$OMP END DO
+               !$OMP END DO
 #endif
-      !$acc end data
+            !$acc end data 
+         !$acc end data ! psi_kqpt
+
+      !$acc end data ! stepf, stepf%grid
 
       deallocate (prod, psi_k)
       call fft%free()
