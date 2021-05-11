@@ -337,10 +337,14 @@ CONTAINS
                               rdum2 = rarr3(2, ibando, iband)
                               add1 = rdum1*rfac2 + rdum2*rfac1
                               add2 = rdum2*rfac2 - rdum1*rfac1
-                              call daxpy(mpdata%num_radbasfn(l, itype), add1, hybdat%prodm(1, n, l, itype), 1, &
-                                         cprod(lm1+1, iob + (iband-1)*psize), 1)
-                              call daxpy(mpdata%num_radbasfn(l, itype), add2, hybdat%prodm(1, n, l, itype), 1, &
-                                         cprod(lm2+1, iob + (iband-1)*psize), 1)
+                              DO i = 1, mpdata%num_radbasfn(l, itype)
+                                 j = lm1 + i
+                                 cprod%data_r(j, iob + (iband-1)*psize) &
+                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add1
+                                 j = lm2 + i
+                                 cprod%data_r(j, iob + (iband-1)*psize) &
+                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*add2
+                              enddo
                            END DO  !ibando
                         END DO  !iband
                         !$OMP end parallel do
