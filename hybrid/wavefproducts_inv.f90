@@ -53,7 +53,7 @@ CONTAINS
                                  ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
 
       call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
-                                ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
+                                ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod%data_r)
 
       CALL timestop("wavefproducts_inv")
 
@@ -68,7 +68,7 @@ CONTAINS
       type(t_nococonv), intent(in)   :: nococonv
       TYPE(t_hybdat), INTENT(IN)     :: hybdat
       type(t_mat), intent(in)        :: z_kqpt_p
-      type(t_mat), intent(inout)     :: cprod
+      real, intent(inout)            :: cprod(:,:)
 
       ! - scalars -
       INTEGER, INTENT(IN)      :: ik, iq, jsp, bandoi, bandof
@@ -338,9 +338,9 @@ CONTAINS
                               add1 = rdum1*rfac2 + rdum2*rfac1
                               add2 = rdum2*rfac2 - rdum1*rfac1
                               call daxpy(mpdata%num_radbasfn(l, itype), add1, hybdat%prodm(1, n, l, itype), 1, &
-                                         cprod%data_r(lm1+1, iob + (iband-1)*psize), 1)
+                                         cprod(lm1+1, iob + (iband-1)*psize), 1)
                               call daxpy(mpdata%num_radbasfn(l, itype), add2, hybdat%prodm(1, n, l, itype), 1, &
-                                         cprod%data_r(lm2+1, iob + (iband-1)*psize), 1)
+                                         cprod(lm2+1, iob + (iband-1)*psize), 1)
                            END DO  !ibando
                         END DO  !iband
                         !$OMP end parallel do
@@ -609,8 +609,8 @@ CONTAINS
                               DO i = 1, mpdata%num_radbasfn(l, itype)
                                  j = lm1 + i
                                  iob = ibando + 1 - bandoi
-                                 cprod%data_r(j, iob + (iband-1)*psize) &
-                                    = cprod%data_r(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rarr2(ibando, iband)
+                                 cprod(j, iob + (iband-1)*psize) &
+                                    = cprod(j, iob + (iband-1)*psize) + hybdat%prodm(i, n, l, itype)*rarr2(ibando, iband)
                               END DO  !i -> loop over mixed basis functions
                            END DO  !ibando
                         END DO  !iband
@@ -707,7 +707,7 @@ CONTAINS
                         DO ibando = bandoi,bandof
                            iob = ibando + 1 - bandoi
                            call daxpy(mpdata%num_radbasfn(l, itype), rarr2(ibando, iband), hybdat%prodm(1,n,l,itype), 1,&
-                                     cprod%data_r(lm1+1, iob + (iband-1)*psize), 1)
+                                     cprod(lm1+1, iob + (iband-1)*psize), 1)
                         END DO  !ibando
                      END DO  !iband
                      !$OMP end parallel do
@@ -933,7 +933,7 @@ CONTAINS
                               iob = ibando + 1 - bandoi
                               rdum = rarr2(ibando, iband)
                               call daxpy(mpdata%num_radbasfn(l, itype), rdum, hybdat%prodm(1,n,l,itype), 1, &
-                                         cprod%data_r(lm1+1, iob + (iband-1)*psize), 1)
+                                         cprod(lm1+1, iob + (iband-1)*psize), 1)
                            END DO  !ibando
                         END DO  !iband
                         !$OMP end parallel do
