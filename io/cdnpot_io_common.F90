@@ -94,6 +94,7 @@ MODULE m_cdnpot_io_common
       IF(atoms%jmtd.NE.refAtoms%jmtd) l_same = .FALSE.
       IF(atoms%n_u.NE.refAtoms%n_u) l_same = .FALSE.
       IF(atoms%n_hia.NE.refAtoms%n_hia) l_same = .FALSE.
+      IF(input%ldauSpinoffd.NEQV.refInput%ldauSpinoffd) l_same = .FALSE.
       IF(vacuum%dvac.NE.refVacuum%dvac) l_same = .FALSE.
       IF(sym%nop.NE.refSym%nop) l_same = .FALSE.
       IF(sym%nop2.NE.refSym%nop2) l_same = .FALSE.

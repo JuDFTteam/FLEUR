@@ -75,6 +75,7 @@ MODULE m_types_input
   REAL    :: ldauMixParam=0.05
   REAL    :: ldauSpinf=1.0
   LOGICAL :: ldauAdjEnpara=.FALSE.
+  LOGICAL :: ldauSpinoffd=.FALSE.
   LOGICAL :: l_rdmft=.FALSE.
   REAL    :: rdmftOccEps=0.0
   INTEGER :: rdmftStatesBelow=0
@@ -153,6 +154,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%ldauMixParam,rank,mpi_comm)
    CALL mpi_bc(this%ldauSpinf,rank,mpi_comm)
    CALL mpi_bc(this%ldauAdjEnpara,rank,mpi_comm)
+   CALL mpi_bc(this%ldauSpinoffd,rank,mpi_comm)
    CALL mpi_bc(this%l_rdmft,rank,mpi_comm)
    CALL mpi_bc(this%rdmftOccEps,rank,mpi_comm)
    CALL mpi_bc(this%rdmftStatesBelow,rank,mpi_comm)
@@ -333,6 +335,9 @@ SUBROUTINE read_xml_input(this,xml)
       this%ldauMixParam = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
       this%ldauSpinf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
       this%ldauAdjEnpara = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_adjEnpara'))
+      IF(xml%versionNumber>=35) THEN
+        this%ldauSpinoffd = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_spinoffd'))
+      ENDIF
    END IF
    ! Read in RDMFT parameters
    xPathA = '/fleurInput/calculationSetup/rdmft'

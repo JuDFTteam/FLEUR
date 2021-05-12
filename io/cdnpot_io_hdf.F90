@@ -50,7 +50,7 @@ MODULE m_cdnpot_io_hdf
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_IN_const = 1
    INTEGER,          PARAMETER :: POTENTIAL_TYPE_OUT_const = 2
 
-   INTEGER,          PARAMETER :: FILE_FORMAT_VERSION_const = 32
+   INTEGER,          PARAMETER :: FILE_FORMAT_VERSION_const = 33
 
    CONTAINS
 
@@ -1056,6 +1056,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(groupID,'lmaxd',atoms%lmaxd)
       CALL io_write_attint0(groupID,'jmtd',atoms%jmtd)
       CALL io_write_attint0(groupID,'n_u',atoms%n_u+atoms%n_hia)
+      CALL io_write_attlog0(groupID,'ldau_spinoffd',input%ldauSpinoffd)
 
       CALL io_write_attint0(groupID,'nmz',vacuum%nmz)
       CALL io_write_attint0(groupID,'nmzd',vacuum%nmzd)
@@ -1395,6 +1396,10 @@ MODULE m_cdnpot_io_hdf
          ALLOCATE(atoms%lda_u(atoms%n_u))
       END IF
 
+      IF(fileFormatVersion.GE.33) THEN
+         CALL io_read_attlog0(groupID,'ldau_spinoffd',input%ldauSpinoffd)
+      END IF
+
       IF(ALLOCATED(atoms%nz)) DEALLOCATE(atoms%nz)
       IF(ALLOCATED(atoms%neq)) DEALLOCATE(atoms%neq)
       IF(ALLOCATED(atoms%jri)) DEALLOCATE(atoms%jri)
@@ -1589,7 +1594,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz,nvac,od_nq2,nmzxy,n_u
       INTEGER                      :: hdfError, fileFormatVersion
-      LOGICAL                      :: l_film,l_exist,l_delete
+      LOGICAL                      :: l_film,l_exist,l_delete,l_spinoffd_ldau
       INTEGER(HID_T)               :: archiveID, groupID, generalGroupID
       CHARACTER(LEN=30)            :: groupName, densityTypeName
       INTEGER(HSIZE_T)             :: dims(7)
@@ -1634,6 +1639,11 @@ MODULE m_cdnpot_io_hdf
       n_u = 0
       IF(fileFormatVersion.GE.29) THEN
          CALL io_read_attint0(groupID,'n_u',n_u)
+      END IF
+
+      l_spinoffd_ldau = .false.
+      IF(fileFormatVersion.GE.33) THEN
+         CALL io_read_attlog0(groupID,'ldau_spinoffd',l_spinoffd_ldau)
       END IF
 
       CALL h5gclose_f(groupID, hdfError)
@@ -1796,7 +1806,8 @@ MODULE m_cdnpot_io_hdf
 
             IF ((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
                IF((densityType.EQ.DENSITY_TYPE_FFN_IN_const).OR.&
-                  (densityType.EQ.DENSITY_TYPE_FFN_OUT_const)) THEN
+                  (densityType.EQ.DENSITY_TYPE_FFN_OUT_const).OR.&
+                  l_spinoffd_ldau) THEN
                   dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,3/)
                   CALL h5dopen_f(groupID, 'mmpMat', mmpMatSetID, hdfError)
                   CALL io_write_complex4(mmpMatSetID,(/-1,1,1,1,1/),dimsInt(:5),den%mmpMat)
@@ -1902,7 +1913,8 @@ MODULE m_cdnpot_io_hdf
 
             IF((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
                IF ((densityType.EQ.DENSITY_TYPE_FFN_IN_const).OR.&
-                  (densityType.EQ.DENSITY_TYPE_FFN_OUT_const)) THEN
+                  (densityType.EQ.DENSITY_TYPE_FFN_OUT_const).OR.&
+                   l_spinoffd_ldau) THEN
                   dims(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,3/)
                   dimsInt = dims
                   CALL h5screate_simple_f(5,dims(:5),mmpMatSpaceID,hdfError)
@@ -2038,7 +2050,8 @@ MODULE m_cdnpot_io_hdf
 
          IF((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
             IF ((densityType.EQ.DENSITY_TYPE_FFN_IN_const).OR.&
-               (densityType.EQ.DENSITY_TYPE_FFN_OUT_const)) THEN
+               (densityType.EQ.DENSITY_TYPE_FFN_OUT_const).OR.&
+               l_spinoffd_ldau) THEN
                dims(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,3/)
                dimsInt = dims
                CALL h5screate_simple_f(5,dims(:5),mmpMatSpaceID,hdfError)
@@ -2355,7 +2368,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER               :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER               :: nmz, nvac, od_nq2, nmzxy, n_u, i, j
       INTEGER               :: localDensityType
-      LOGICAL               :: l_film, l_exist, l_mmpMatDimEquals, l_amf_Temp, FFNBool
+      LOGICAL               :: l_film, l_exist, l_mmpMatDimEquals, l_amf_Temp, FFNBool, l_spinoffd_ldau
       INTEGER(HID_T)        :: archiveID, groupID, groupBID, generalGroupID
       INTEGER               :: hdfError, fileFormatVersion
       CHARACTER(LEN=30)     :: groupName, groupBName, densityTypeName
@@ -2491,6 +2504,10 @@ MODULE m_cdnpot_io_hdf
       END IF
       IF(fileFormatVersion.GE.29) THEN
          CALL io_read_attint0(groupBID,'n_u',n_u)
+         l_spinoffd_ldau = .false.
+         IF(fileFormatVersion.GE.33) THEN
+            CALL io_read_attlog0(groupBID,'ldau_spinoffd',l_spinoffd_ldau)
+         ENDIF
          IF(n_u.GT.0) THEN
             ALLOCATE(ldau_AtomType(n_u), ldau_l(n_u), ldau_l_amf(n_u))
             ALLOCATE(ldau_U(n_u), ldau_J(n_u))
@@ -2582,6 +2599,9 @@ MODULE m_cdnpot_io_hdf
             l_mmpMatDimEquals = .FALSE.
          ELSE IF ((densityType.EQ.DENSITY_TYPE_FFN_IN_const.OR.densityType.EQ.DENSITY_TYPE_FFN_OUT_const).AND.&
                   (localDensityType.NE.DENSITY_TYPE_FFN_IN_const.AND.localDensityType.NE.DENSITY_TYPE_FFN_OUT_const)) THEN
+            l_DimChange = .TRUE.
+            l_mmpMatDimEquals = .FALSE.
+         ELSE IF (input%ldauSpinoffd .NEQV. l_spinoffd_ldau) THEN
             l_DimChange = .TRUE.
             l_mmpMatDimEquals = .FALSE.
          ELSE
@@ -2689,7 +2709,8 @@ MODULE m_cdnpot_io_hdf
 
       IF((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
          IF((localDensityType.EQ.DENSITY_TYPE_FFN_IN_const).OR.&
-            (localDensityType.EQ.DENSITY_TYPE_FFN_OUT_const)) THEN
+            (localDensityType.EQ.DENSITY_TYPE_FFN_OUT_const).OR.&
+            l_spinoffd_ldau) THEN
             ALLOCATE (mmpMatTemp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,3))
             dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_u,3/)
             jspinsmmp = 3

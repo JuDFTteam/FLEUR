@@ -80,9 +80,6 @@ c     ..local scalars..
       real, allocatable :: bess(:),dbss(:)
       real :: qssbti(3,2)
 
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
-
       call timestart("wann_mmk0_od_vac")
 
       allocate ( udz(nv2d,-vM:vM),uz(nv2d,-vM:vM),

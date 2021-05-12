@@ -173,7 +173,7 @@ CONTAINS
               CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
               CALL smat%free()
               CALL hmat%free()
-            ELSE
+            else
               ne_all=0
             endif
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
@@ -227,10 +227,10 @@ CONTAINS
                                                       hint=errmsg, calledby="eigen.F90")
             END IF
 
-            IF (allocated(zmat)) THEN
-              call zMat%free()
-              deallocate(zMat)
-            ENDIF
+            if (allocated(zMat)) THEN
+               CALL zMat%free()
+               DEALLOCATE(zMat)
+            endif   
          END DO  k_loop
       END DO ! spin loop ends
 

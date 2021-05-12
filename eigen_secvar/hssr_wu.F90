@@ -44,9 +44,6 @@ CONTAINS
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: a(:,:),b(:,:),ax(:),bx(:)
     !     ..
-    !     .. Intrinsic Functions ..
-    INTRINSIC cmplx,conjg,exp,REAL,sqrt
-    !     ..
 
     l_real=PRESENT(h_r)
 
