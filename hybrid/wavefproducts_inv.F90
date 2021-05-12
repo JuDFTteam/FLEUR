@@ -226,151 +226,172 @@ CONTAINS
             IF (iatom1 /= iatom2) THEN
                call timestart("iatom1 neq iatom2")
                ! loop over l of mixed basis
-               DO l = 0, fi%hybinp%lcutm1(itype)
-                  ! loop over basis functions products, which belong to l
-                  DO n = 1, hybdat%nindxp1(l, itype)
+               !$acc data copy(cprod) copyin(hybdat, hybdat%nbands, hybdat%prodm, mpdata, mpdata%num_radbasfn)
+                  DO l = 0, fi%hybinp%lcutm1(itype)
+                     ! loop over basis functions products, which belong to l
+                     DO n = 1, hybdat%nindxp1(l, itype)
 
-                     ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
-                     l1 = mpdata%l1(n, l, itype)
-                     l2 = mpdata%l2(n, l, itype)
-                     p1 = mpdata%n1(n, l, itype)
-                     p2 = mpdata%n2(n, l, itype)
+                        ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
+                        l1 = mpdata%l1(n, l, itype)
+                        l2 = mpdata%l2(n, l, itype)
+                        p1 = mpdata%n1(n, l, itype)
+                        p2 = mpdata%n2(n, l, itype)
 
-                     ! condition for Gaunt coefficients
-                     IF (mod(l + l1 + l2, 2) /= 0) CYCLE
+                        ! condition for Gaunt coefficients
+                        IF (mod(l + l1 + l2, 2) /= 0) CYCLE
 
-                     offdiag = l1 /= l2 .or. p1 /= p2 ! offdiag=true means that b1*b2 and b2*b1 are different combinations
-                     !(leading to the same basis-function product)
+                        offdiag = l1 /= l2 .or. p1 /= p2 ! offdiag=true means that b1*b2 and b2*b1 are different combinations
+                        !(leading to the same basis-function product)
 
-                     lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
-                     lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
+                        lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
+                        lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
 
-                     lm = lm_0
-                     lp1 = lm1_0 + p1
-                     lp2 = lm2_0 + p2
+                        lm = lm_0
+                        lp1 = lm1_0 + p1
+                        lp2 = lm2_0 + p2
 
-                     ! sum over different m of mixed basis functions with qn l
-                     DO m = -l, l
-                        rarr3 = 0.0
+                        ! sum over different m of mixed basis functions with qn l
+                        DO m = -l, l
+                           rarr3 = 0.0
 
-                        ! go to lm index for m1=-l1
-                        lmp1 = lm1_0 + p1
+                           ! go to lm index for m1=-l1
+                           lmp1 = lm1_0 + p1
 
-                        call timestart("m1 loop")
-                        DO m1 = -l1, l1
-                           ! Gaunt condition -m1+m2-m=0
-                           m2 = m1 + m
-                           IF (abs(m2) <= l2) THEN
-                              lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
-                              ! precalculated Gaunt coefficient
-                              rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
-                              IF (abs(rdum) > 1e-12) THEN
-                                 !$OMP parallel do default(none) collapse(2) &
-                                 !$OMP private(iband, ibando, rdum1, rdum2) &
-                                 !$OMP shared(hybdat, jsp, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
-                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
-                                 DO iband = 1, hybdat%nbands(ik,jsp)
-                                    DO ibando = bandoi,bandof
-                                       rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
-                                       rdum2 = rdum*cmt_nk(iband, lmp1, iatom2)
+                           call timestart("m1 loop")
+                           DO m1 = -l1, l1
+                              ! Gaunt condition -m1+m2-m=0
+                              m2 = m1 + m
+                              IF (abs(m2) <= l2) THEN
+                                 lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                 ! precalculated Gaunt coefficient
+                                 rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
+                                 IF (abs(rdum) > 1e-12) THEN
+                                    !$OMP parallel do default(none) collapse(2) &
+                                    !$OMP private(iband, ibando, rdum1, rdum2) &
+                                    !$OMP shared(hybdat, jsp, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
+                                    !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
+                                    DO iband = 1, hybdat%nbands(ik,jsp)
+                                       DO ibando = bandoi,bandof
+                                          rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
+                                          rdum2 = rdum*cmt_nk(iband, lmp1, iatom2)
 
-                                       rarr3(1, ibando, iband) = rarr3(1, ibando, iband) &
-                                                                 + rdum1*cmt_nkqpt(ibando, lmp2, iatom1) + rdum2*cmt_nkqpt(ibando, lmp2, iatom2)
+                                          rarr3(1, ibando, iband) = rarr3(1, ibando, iband) &
+                                                                  + rdum1*cmt_nkqpt(ibando, lmp2, iatom1) + rdum2*cmt_nkqpt(ibando, lmp2, iatom2)
 
-                                       rarr3(2, ibando, iband) = rarr3(2, ibando, iband) &
-                                                                 + rdum1*cmt_nkqpt(ibando, lmp2, iatom2) - rdum2*cmt_nkqpt(ibando, lmp2, iatom1)
+                                          rarr3(2, ibando, iband) = rarr3(2, ibando, iband) &
+                                                                  + rdum1*cmt_nkqpt(ibando, lmp2, iatom2) - rdum2*cmt_nkqpt(ibando, lmp2, iatom1)
 
-                                    END DO  !ibando
-                                 END DO  !iband
-                                 !$OMP END parallel DO
-                              END IF  ! rdum
-                           END IF  ! abs(m2) .le. l2
+                                       END DO  !ibando
+                                    END DO  !iband
+                                    !$OMP END parallel DO
+                                 END IF  ! rdum
+                              END IF  ! abs(m2) .le. l2
 
-                           m2 = m1 - m ! switch role of b1 and b2
-                           IF (abs(m2) <= l2 .and. offdiag) THEN
-                              lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
-                              rdum = hybdat%gauntarr(2, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
-                              IF (abs(rdum) > 1e-12) THEN
-                                 !$OMP parallel do default(none) collapse(2) &
-                                 !$OMP private(iband, ibando, rdum1, rdum2) &
-                                 !$OMP shared(hybdat, jsp, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
-                                 !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
-                                 DO iband = 1, hybdat%nbands(ik,jsp)
-                                    DO ibando = bandoi,bandof
-                                       rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
-                                       rdum2 = rdum*cmt_nk(iband, lmp2, iatom2)
-                                       rarr3(1, ibando, iband) = rarr3(1, ibando, iband) &
-                                                                 + rdum1*cmt_nkqpt(ibando, lmp1, iatom1) + rdum2*cmt_nkqpt(ibando, lmp1, iatom2)
+                              m2 = m1 - m ! switch role of b1 and b2
+                              IF (abs(m2) <= l2 .and. offdiag) THEN
+                                 lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                 rdum = hybdat%gauntarr(2, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
+                                 IF (abs(rdum) > 1e-12) THEN
+                                    !$OMP parallel do default(none) collapse(2) &
+                                    !$OMP private(iband, ibando, rdum1, rdum2) &
+                                    !$OMP shared(hybdat, jsp, bandoi, bandof, rdum, rarr3, cmt_nkqpt,cmt_nk) &
+                                    !$OMP shared(iatom1, iatom2,lmp1,lmp2, ik)
+                                    DO iband = 1, hybdat%nbands(ik,jsp)
+                                       DO ibando = bandoi,bandof
+                                          rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
+                                          rdum2 = rdum*cmt_nk(iband, lmp2, iatom2)
+                                          rarr3(1, ibando, iband) = rarr3(1, ibando, iband) &
+                                                                  + rdum1*cmt_nkqpt(ibando, lmp1, iatom1) + rdum2*cmt_nkqpt(ibando, lmp1, iatom2)
 
-                                       rarr3(2, ibando, iband) = rarr3(2, ibando, iband) &
-                                                                 + rdum1*cmt_nkqpt(ibando, lmp1, iatom2) - rdum2*cmt_nkqpt(ibando, lmp1, iatom1)
-                                    END DO  !ibando
-                                 END DO  !iband
-                                 !$OMP END parallel DO
-                              END IF  ! rdum .ne. 0
-                           END IF  ! abs(m2) .le. l2 .and. offdiag
+                                          rarr3(2, ibando, iband) = rarr3(2, ibando, iband) &
+                                                                  + rdum1*cmt_nkqpt(ibando, lmp1, iatom2) - rdum2*cmt_nkqpt(ibando, lmp1, iatom1)
+                                       END DO  !ibando
+                                    END DO  !iband
+                                    !$OMP END parallel DO
+                                 END IF  ! rdum .ne. 0
+                              END IF  ! abs(m2) .le. l2 .and. offdiag
 
-                           ! go to lmp start index for next m1-quantum number
-                           lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
+                              ! go to lmp start index for next m1-quantum number
+                              lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
 
-                        END DO  !m1
-                        call timestop("m1 loop")
+                           END DO  !m1
+                           call timestop("m1 loop")
 
-                        ishift = -2*m*mpdata%num_radbasfn(l, itype)
+                           ishift = -2*m*mpdata%num_radbasfn(l, itype)
 
-                        ! go to lm mixed basis startindx for l and m
-                        lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
-                        lm2 = lm + (iatom2 - 1 - iiatom)*ioffset + ishift
+                           ! go to lm mixed basis startindx for l and m
+                           lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
+                           lm2 = lm + (iatom2 - 1 - iiatom)*ioffset + ishift
 
-                        rdum = tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatom1))
-                        rfac1 = sin(rdum)/sqrt(2.0)
-                        rfac2 = cos(rdum)/sqrt(2.0)
-                        call timestart("ibandibando loop")
-                        !$OMP PARALLEL DO default(none) collapse(2) &
-                        !$OMP private(iband, ibando, i, iob, j, rdum) &
-                        !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
-                        !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, jsp, mpdata)
-                        DO iband = 1, hybdat%nbands(ik,jsp)
-                           DO ibando = bandoi,bandof
-                              iob  = ibando + 1 - bandoi
-                              rdum = rarr3(1, ibando, iband)*rfac2 + rarr3(2, ibando, iband)*rfac1
-                              DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 j = lm1 + i
-                                 cprod(j, iob + (iband-1)*psize)  = cprod(j, iob + (iband-1)*psize) &
-                                       + hybdat%prodm(i, n, l, itype) * rdum
-                              enddo
-                           END DO  !ibando
-                        END DO  !iband
-                        !$OMP end parallel do
+                           rdum = tpi_const*dot_product(fi%kpts%bkf(:, iq), fi%atoms%taual(:, iatom1))
+                           rfac1 = sin(rdum)/sqrt(2.0)
+                           rfac2 = cos(rdum)/sqrt(2.0)
+                           call timestart("ibandibando loop")
+   #ifdef _OPENACC
+                           !$acc data copyin(rarr3)
 
-                        !$OMP PARALLEL DO default(none) collapse(2) &
-                        !$OMP private(iband, ibando, i, iob, j, rdum) &
-                        !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
-                        !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, jsp, mpdata)
-                        DO iband = 1, hybdat%nbands(ik,jsp)
-                           DO ibando = bandoi,bandof
-                              iob  = ibando + 1 - bandoi
-                              rdum = rarr3(2, ibando, iband)*rfac2 - rarr3(1, ibando, iband)*rfac1
-                              DO i = 1, mpdata%num_radbasfn(l, itype)
-                                 j = lm2 + i
-                                 cprod(j, iob + (iband-1)*psize) = cprod(j, iob + (iband-1)*psize) &
-                                       + hybdat%prodm(i, n, l, itype) * rdum
-                              enddo
-                           END DO  !ibando
-                        END DO  !iband
-                        !$OMP end parallel do
+                              !$acc parallel loop default(none) private(iob, rdum, j) independent collapse(2)&
+                              !$acc present(hybdat, hybdat%nbands, hybdat%prodm, rarr3, mpdata, mpdata%num_radbasfn, cprod)
+   #else
+                              !$OMP PARALLEL DO default(none) collapse(2) &
+                              !$OMP private(iband, ibando, i, iob, j, rdum) &
+                              !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
+                              !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, jsp, mpdata)
+   #endif
+                              DO iband = 1, hybdat%nbands(ik,jsp)
+                                 DO ibando = bandoi,bandof
+                                    iob  = ibando + 1 - bandoi
+                                    rdum = rarr3(1, ibando, iband)*rfac2 + rarr3(2, ibando, iband)*rfac1
+                                    DO i = 1, mpdata%num_radbasfn(l, itype)
+                                       j = lm1 + i
+                                       cprod(j, iob + (iband-1)*psize)  = cprod(j, iob + (iband-1)*psize) &
+                                             + hybdat%prodm(i, n, l, itype) * rdum
+                                    enddo
+                                 END DO  !ibando
+                              END DO  !iband
+   #ifdef _OPENACC
+                              !$acc end parallel loop
 
-                        call timestop("ibandibando loop")
+                              !$acc parallel loop default(none) private(iob, rdum, j) independent collapse(2)&
+                              !$acc present(hybdat, hybdat%nbands, hybdat%prodm, rarr3, mpdata, mpdata%num_radbasfn, cprod)
+   #else 
+                              !$OMP end parallel do
+                           
+                              !$OMP PARALLEL DO default(none) collapse(2) &
+                              !$OMP private(iband, ibando, i, iob, j, rdum) &
+                              !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
+                              !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, jsp, mpdata)
+   #endif
+                              DO iband = 1, hybdat%nbands(ik,jsp)
+                                 DO ibando = bandoi,bandof
+                                    iob  = ibando + 1 - bandoi
+                                    rdum = rarr3(2, ibando, iband)*rfac2 - rarr3(1, ibando, iband)*rfac1
+                                    DO i = 1, mpdata%num_radbasfn(l, itype)
+                                       j = lm2 + i
+                                       cprod(j, iob + (iband-1)*psize) = cprod(j, iob + (iband-1)*psize) &
+                                             + hybdat%prodm(i, n, l, itype) * rdum
+                                    enddo
+                                 END DO  !ibando
+                              END DO  !iband
+   #ifdef _OPENACC
+                              !$acc end parallel loop
+                           !$acc end data !rarr3
+   #else
+                           !$OMP end parallel do
+   #endif
 
-                        ! go to lm start index for next m-quantum number
-                        lm = lm + mpdata%num_radbasfn(l, itype)
+                           call timestop("ibandibando loop")
 
-                     END DO  !m
+                           ! go to lm start index for next m-quantum number
+                           lm = lm + mpdata%num_radbasfn(l, itype)
 
-                  END DO !n
-                  lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
-                  IF (lm /= lm_0) call juDFT_error('wavefproducts_inv5: counting of lm-index incorrect (bug?)')
-               END DO !l
+                        END DO  !m
+
+                     END DO !n
+                     lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+                     IF (lm /= lm_0) call juDFT_error('wavefproducts_inv5: counting of lm-index incorrect (bug?)')
+                  END DO !l
+               !$acc end data ! cprod, hybdat, hybdat%nbands, hybdat%prodm, mpdata, mpdata%num_radbasfn
                call timestop("iatom1 neq iatom2")
             ELSE !case: iatom1==iatom2
                call timestart("iatom1 eq iatom2")
