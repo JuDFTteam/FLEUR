@@ -327,17 +327,17 @@ CONTAINS
                            rfac1 = sin(rdum)/sqrt(2.0)
                            rfac2 = cos(rdum)/sqrt(2.0)
                            call timestart("ibandibando loop")
-   #ifdef _OPENACC
+#ifdef _OPENACC
                            !$acc data copyin(rarr3)
 
                               !$acc parallel loop default(none) private(iob, rdum, j) independent collapse(2)&
                               !$acc present(hybdat, hybdat%nbands, hybdat%prodm, rarr3, mpdata, mpdata%num_radbasfn, cprod)
-   #else
+#else
                               !$OMP PARALLEL DO default(none) collapse(2) &
                               !$OMP private(iband, ibando, i, iob, j, rdum) &
                               !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
                               !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, jsp, mpdata)
-   #endif
+#endif
                               DO iband = 1, hybdat%nbands(ik,jsp)
                                  DO ibando = bandoi,bandof
                                     iob  = ibando + 1 - bandoi
@@ -349,19 +349,19 @@ CONTAINS
                                     enddo
                                  END DO  !ibando
                               END DO  !iband
-   #ifdef _OPENACC
+#ifdef _OPENACC
                               !$acc end parallel loop
 
                               !$acc parallel loop default(none) private(iob, rdum, j) independent collapse(2)&
                               !$acc present(hybdat, hybdat%nbands, hybdat%prodm, rarr3, mpdata, mpdata%num_radbasfn, cprod)
-   #else 
+#else 
                               !$OMP end parallel do
                            
                               !$OMP PARALLEL DO default(none) collapse(2) &
                               !$OMP private(iband, ibando, i, iob, j, rdum) &
                               !$OMP shared(cprod, hybdat, psize, lm1, lm2, l, n, itype, rarr3)&
                               !$OMP shared(bandoi,bandof,rfac1,rfac2, ik, jsp, mpdata)
-   #endif
+#endif
                               DO iband = 1, hybdat%nbands(ik,jsp)
                                  DO ibando = bandoi,bandof
                                     iob  = ibando + 1 - bandoi
@@ -373,12 +373,12 @@ CONTAINS
                                     enddo
                                  END DO  !ibando
                               END DO  !iband
-   #ifdef _OPENACC
+#ifdef _OPENACC
                               !$acc end parallel loop
                            !$acc end data !rarr3
-   #else
+#else
                            !$OMP end parallel do
-   #endif
+#endif
 
                            call timestop("ibandibando loop")
 
