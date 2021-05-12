@@ -21,9 +21,18 @@ def test_fleur_mt_inpxml_parser(request, fleur_test_name, test_file, parser_test
     parser_info = {}
     inp_dict = inpxml_parser(inpxmlfilepath, parser_info_out=parser_info)
 
+    if any("Schema available for version" in warning for warning in parser_info['parser_warnings']):
+        for warning in parser_info['parser_warnings'].copy():
+            if 'Input file does not validate against the schema' in warning:
+                parser_info['parser_warnings'].remove(warning)
+            if 'Schema available for version' in warning:
+                parser_info['parser_warnings'].remove(warning)
+
     assert inp_dict is not None
     assert isinstance(inp_dict, dict)
     assert inp_dict != {}
+    assert parser_info['parser_errors'] == []
+    assert parser_info['parser_critical'] == []
     assert parser_info['parser_warnings'] == []
 
 
@@ -57,7 +66,16 @@ def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, parser_test
     parser_info = {}
     out_dict = outxml_parser(outxmlfilepath, parser_info_out=parser_info)
 
+    if any("Schema available for version" in warning for warning in parser_info['parser_warnings']):
+        for warning in parser_info['parser_warnings'].copy():
+            if 'Output file does not validate against the schema' in warning:
+                parser_info['parser_warnings'].remove(warning)
+            if 'Schema available for version' in warning:
+                parser_info['parser_warnings'].remove(warning)
+
     assert out_dict is not None
     assert isinstance(out_dict, dict)
     assert out_dict != {}
+    assert parser_info['parser_errors'] == []
+    assert parser_info['parser_critical'] == []
     assert set(parser_info['parser_warnings']).difference(KNOWN_WARNINGS) == set() #At the moment there is always at least one warning
