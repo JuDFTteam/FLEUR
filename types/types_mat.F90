@@ -644,6 +644,7 @@ CONTAINS
       integer           :: m,n,k, lda, ldb, ldc
       character(len=1)  :: transA_i, transB_i
       type(t_mat)       :: tmp
+      logical           :: run_on_gpu 
 
       call timestart("t_mat_multiply")
 
@@ -664,6 +665,19 @@ CONTAINS
       endif
 
       if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricies of the same type")
+
+      if(mat1%lreal) then
+         run_on_gpu = acc_is_present(mat1%data_r) .and. acc_is_present(mat2%data_r)
+         if(present(res)) then
+            run_on_gpu = run_on_gpu .and. acc_is_present(res%data_r)
+         endif 
+      else
+         run_on_gpu = acc_is_present(mat1%data_c) .and. acc_is_present(mat2%data_c)
+         if(present(res)) then
+            run_on_gpu = run_on_gpu .and. acc_is_present(res%data_c)
+         endif 
+      endif
+
       if(transB_i == "N" ) then
          if(k /= mat2%matsize1) call judft_error("dimensions don't agree for matmul")
          n = mat2%matsize2
@@ -690,28 +704,21 @@ CONTAINS
          ! prepare res matrix
          if(res%allocated()) then
             if(res%l_real .neqv. mat1%l_real) then
-               call res%free()
+               call juDFT_error("res must be of the correct type")
             else
                if(res%l_real) then
-                  if(any(shape(res%data_r) < [m,n])) then
-                     call res%free()
-                  else
-                     res%data_r = 0.0
-                     res%matsize1 = m
-                     res%matsize2 = n
+                  if(any(shape(res%data_r) /= [m,n])) then
+                     call juDFT_error("res must be of the correct size!")
                   endif
                else
-                  if(any(shape(res%data_c) < [m,n])) then
-                     call res%free()
-                  else
-                     res%data_c = cmplx_0
-                     res%matsize1 = m
-                     res%matsize2 = n
+                  if(any(shape(res%data_c) /= [m,n])) then
+                     call juDFT_error("res must be of the correct size!")
                   endif
                endif
             endif
+         else
+            call juDFT_error("res must be allocated")
          endif
-         if(.not. res%allocated()) call res%alloc(mat1%l_real, m,n)
 
          ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
