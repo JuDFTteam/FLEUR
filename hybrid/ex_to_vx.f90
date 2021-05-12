@@ -34,8 +34,13 @@ contains
       call olap%u2l()
       call olap%conjugate()
 
+      call trafo%init(z%l_real, olap%matsize1, z%matsize2)
       call olap%multiply(z, res=trafo)
+
+      call tmp%init(z%l_real, ex%matsize1, trafo%matsize1)
       CALL ex%multiply(trafo, res=tmp, transB="C")
+
+      call v_x%init(z%l_real, trafo%matsize1, v_x%matsize2)
       CALL trafo%multiply(tmp, res=v_x)
 
       CALL timestop("T^-1*mat_ex*T^-1*")

@@ -666,16 +666,24 @@ CONTAINS
 
       if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricies of the same type")
 
-      if(mat1%lreal) then
+      if(mat1%l_real) then
+#ifdef _OPENACC
          run_on_gpu = acc_is_present(mat1%data_r) .and. acc_is_present(mat2%data_r)
          if(present(res)) then
             run_on_gpu = run_on_gpu .and. acc_is_present(res%data_r)
          endif 
+#else
+         run_on_gpu = .False.
+#endif
       else
+#ifdef _OPENACC
          run_on_gpu = acc_is_present(mat1%data_c) .and. acc_is_present(mat2%data_c)
          if(present(res)) then
             run_on_gpu = run_on_gpu .and. acc_is_present(res%data_c)
          endif 
+#else
+         run_on_gpu = .False.
+#endif
       endif
 
       if(transB_i == "N" ) then
