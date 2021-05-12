@@ -946,11 +946,17 @@ CONTAINS
       INTEGER, INTENT(IN)        :: n1, n2
 
       INTEGER:: i1, i2, j1, j2
-      logical:: both_on_gpu 
+      logical:: both_on_gpu, tmp
 
       call timestart("t_mat_copy")
+
       if(.not. mat%allocated()) then
-         if(acc_is_present(mat1%data_c)) then
+#ifdef _OPENACC
+         tmp = acc_is_present(mat1%data_c)
+#else 
+         tmp = .False.
+#endif
+         if(tmp) then
             call judft_error("can't use copy alloc on GPU")
          else
             call mat%init(mat1)
