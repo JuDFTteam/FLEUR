@@ -1,4 +1,8 @@
 MODULE m_types_mat
+#ifdef _OPENACC
+   use openacc
+   use cusolverDn
+#endif
 #include"cpp_double.h"
    USE m_judft
    IMPLICIT NONE
@@ -332,6 +336,12 @@ CONTAINS
       INTEGER:: lwork, info
       REAL, ALLOCATABLE:: work(:)
       INTEGER, allocatable::ipiv(:)
+      logical :: both_on_gpu
+#ifdef _OPENACC 
+      integer :: ierr, sz
+      real(8), dimension(100,100) :: A
+      type(cusolverDnHandle) :: handle
+#endif
 
       select type (vec) 
       class is (t_mat)
@@ -339,41 +349,163 @@ CONTAINS
          call judft_error("lproblem can only be solved if vec and mat are the same class")
       end select
 
-      IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) &
-          .OR. (mat%matsize1 .NE. vec%matsize1)) &
+      IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) .OR. (mat%matsize1 .NE. vec%matsize1)) then
          CALL judft_error("Invalid matices in t_mat_lproblem")
-      IF (mat%l_real) THEN
-         call timestart("solve real linear problem")
-         IF (mat%unsymmetry() < 1E-8) THEN
-            !Matrix is symmetric
-            CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, &
-                       vec%data_r, vec%matsize1, INFO)
-            IF (INFO > 0) THEN
-               !Matrix was not positive definite
-               lwork = -1; ALLOCATE (work(1))
-               CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
-                          vec%data_r, vec%matsize1, WORK, LWORK, INFO)
-               lwork = INT(work(1))
-               DEALLOCATE (work); ALLOCATE (ipiv(mat%matsize1), work(lwork))
-               CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
-                          vec%data_r, vec%matsize1, WORK, LWORK, INFO)
-               IF (info .NE. 0) CALL judft_error("Could not solve linear equation, matrix singular")
+      endif 
+
+#ifdef _OPENACC
+      if(mat%l_real) then
+         both_on_gpu = acc_is_present(mat%data_r) .and. acc_is_present(vec%data_r)
+      else
+         both_on_gpu = acc_is_present(mat%data_c) .and. acc_is_present(vec%data_c)
+      endif
+#else 
+      both_on_gpu = .False.
+#endif
+
+      if(both_on_gpu) then
+#ifdef _OPENACC       
+         allocate(ipiv(mat%matsize1))
+         sz = mat%matsize1
+         ierr = cusolverDnCreate(handle)
+         if(ierr /= 0) call juDFT_error("can't create handle")
+         
+         !$acc data create(ipiv)
+            call perform_LU_cusolver(handle, mat%l_real, mat%data_r, mat%data_c, ipiv)
+            call calc_rhs(handle, mat%l_real, mat%data_r, mat%data_c, vec%data_r, vec%data_c, ipiv)
+         !$acc end data
+         
+         ierr = cusolverDnDestroy(handle)
+         deallocate(ipiv)
+         if(ierr /= 0) call juDFT_error("can't destroy handle")
+#endif
+      else
+         IF (mat%l_real) THEN
+            call timestart("solve real linear problem")
+            IF (mat%unsymmetry() < 1E-8) THEN
+               !Matrix is symmetric
+               CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, &
+                        vec%data_r, vec%matsize1, INFO)
+               IF (INFO > 0) THEN
+                  !Matrix was not positive definite
+                  lwork = -1; ALLOCATE (work(1))
+                  CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
+                           vec%data_r, vec%matsize1, WORK, LWORK, INFO)
+                  lwork = INT(work(1))
+                  DEALLOCATE (work); ALLOCATE (ipiv(mat%matsize1), work(lwork))
+                  CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
+                           vec%data_r, vec%matsize1, WORK, LWORK, INFO)
+                  IF (info .NE. 0) CALL judft_error("Could not solve linear equation, matrix singular")
+               END IF
+            ELSE
+               allocate (ipiv(mat%matsize1))
+               call dgesv(mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, ipiv, vec%data_r, vec%matsize1, info)
+               if (info /= 0) call judft_error("Error in dgesv for lproblem")
             END IF
+            call timestop("solve real linear problem")
          ELSE
+            call timestart("solve cmplx linear problem")
+            ! I don't to do the whole testing for symmetry:
             allocate (ipiv(mat%matsize1))
-            call dgesv(mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, ipiv, vec%data_r, vec%matsize1, info)
-            if (info /= 0) call judft_error("Error in dgesv for lproblem")
-         END IF
-         call timestop("solve real linear problem")
-      ELSE
-         call timestart("solve cmplx linear problem")
-         ! I don't to do the whole testing for symmetry:
-         allocate (ipiv(mat%matsize1))
-         call zgesv(mat%matsize1, vec%matsize2, mat%data_c, mat%matsize1, ipiv, vec%data_c, vec%matsize1, info)
-         if (info /= 0) call judft_error("Error in zgesv for lproblem")
-         call timestop("solve cmplx linear problem")
-      ENDIF
+            call zgesv(mat%matsize1, vec%matsize2, mat%data_c, mat%matsize1, ipiv, vec%data_c, vec%matsize1, info)
+            if (info /= 0) call judft_error("Error in zgesv for lproblem")
+            call timestop("solve cmplx linear problem")
+         ENDIF
+      endif
    END SUBROUTINE t_mat_lproblem
+
+#ifdef _OPENACC  
+   subroutine perform_LU_cusolver(handle, l_real, data_r, data_c, ipiv)
+      implicit none
+      type(cusolverDnHandle), intent(in) :: handle
+      logical, intent(in)                :: l_real 
+      real, intent(inout)                :: data_r(:,:)
+      complex, intent(inout)             :: data_c(:,:)
+      integer, intent(inout)             :: ipiv(:)
+
+      real, allocatable    :: r_work(:)
+      complex, allocatable :: c_work(:)
+      integer :: lwork, devinfo, sz, ierr
+
+      lwork = get_lwork_cusolver(handle, l_real, data_r, data_c) 
+      if(l_real) then 
+         sz = size(data_r,1)
+         allocate(r_work(lwork), stat=ierr)
+         if(ierr /= 0) call juDFT_error("cant' alloc r_work")
+
+         !$acc data create(r_work) copyout(devinfo)
+            !$acc host_data use_device(data_r, r_work, ipiv, devinfo)
+            ierr = cusolverDnDgetrf(handle, sz, sz, data_r, sz, r_work, ipiv, devinfo)
+            !$acc end host_data 
+         !$acc end data
+         if(ierr /= 0) call juDFT_error("cusolver failed R")
+         deallocate(r_work)
+      else
+         sz = size(data_c,1)
+         allocate(c_work(lwork), stat=ierr)
+         if(ierr /= 0) call juDFT_error("cant' alloc c_work")
+
+         !$acc data create(c_work) copyout(devinfo)
+            !$acc host_data use_device(data_c, c_work, ipiv, devinfo)
+            ierr = cusolverDnZgetrf(handle, sz, sz, data_c, sz, c_work, ipiv, devinfo)
+            !$acc end host_data 
+         !$acc end data
+         if(ierr /= 0) call juDFT_error("cusolver failed C")
+         deallocate(c_work)
+      endif 
+   end subroutine perform_LU_cusolver
+   
+   subroutine calc_rhs(handle, l_real, mat_r, mat_c, vec_r, vec_c, ipiv)
+      implicit none
+      type(cusolverDnHandle), intent(in) :: handle
+      logical, intent(in)                :: l_real 
+      real, intent(inout)                :: mat_r(:,:), vec_r(:,:)
+      complex, intent(inout)             :: mat_c(:,:), vec_c(:,:)
+      integer, intent(in)                :: ipiv(:)
+
+      integer :: ierr, n, nrhs, devinfo
+
+      !$acc data copyout(devinfo)
+         if(l_real) then 
+            n = size(mat_r, 1) 
+            nrhs = size(vec_r, 2)
+            !$acc host_data use_device(mat_r, vec_r, ipiv, devinfo)
+            ierr = cusolverDnDgetrs(handle, CUBLAS_OP_N, n, nrhs, mat_r, n, ipiv, vec_r, n, devinfo)
+            !$acc end host_data
+         else 
+            n = size(mat_c, 1) 
+            nrhs = size(vec_c, 2)
+            !$acc host_data use_device(mat_c, vec_c, ipiv, devinfo)
+            ierr = cusolverDnZgetrs(handle, CUBLAS_OP_N, n, nrhs, mat_c, n, ipiv, vec_c, n, devinfo)
+            !$acc end host_data
+         endif
+      !$acc end data
+      if(ierr /= 0) call judft_error("rhs failed")
+   end subroutine calc_rhs 
+      
+   function get_lwork_cusolver(handle, l_real, data_r, data_c) result(lwork)
+      implicit none 
+      type(cusolverDnHandle), intent(in) :: handle
+      logical, intent(in)                :: l_real 
+      real, intent(in)                   :: data_r(:,:)
+      complex, intent(in)                :: data_c(:,:)
+      integer :: lwork, sz, ierr
+
+      if(l_real) then
+         sz = size(data_r,1)
+         !$acc host_data use_device(data_r)
+         ierr = cusolverDnDgetrf_buffersize(handle, sz, sz, data_r, sz, lwork)
+         !$acc end host_data
+      else
+         sz = size(data_c,1)
+         !$acc host_data use_device(data_c)
+         ierr = cusolverDnZgetrf_buffersize(handle, sz, sz, data_c, sz, lwork)
+         !$acc end host_data
+      endif
+
+      if(ierr /= 0) call juDFT_error("can't get lwork")
+   end function get_lwork_cusolver
+#endif
 
    SUBROUTINE t_mat_free(mat)
       use m_judft
@@ -786,9 +918,6 @@ CONTAINS
    END SUBROUTINE t_mat_copy
 
    SUBROUTINE t_mat_clear(mat)
-#ifdef _OPENACC
-    use openacc
-#endif
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
       INTEGER :: i
