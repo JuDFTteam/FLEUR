@@ -2,9 +2,11 @@ MODULE m_types_mat
 #ifdef _OPENACC
    use openacc
    use cusolverDn
+   use cublas
 #endif
 #include"cpp_double.h"
    USE m_judft
+   use m_constants
    IMPLICIT NONE
    PRIVATE
    !<This is the basic type to store and manipulate real/complex rank-2 matrices
@@ -635,7 +637,6 @@ CONTAINS
 
    SUBROUTINE t_mat_multiply(mat1, mat2, res, transA, transB)
       use m_judft
-      use m_constants
       CLASS(t_mat), INTENT(INOUT)            :: mat1
       CLASS(t_mat), INTENT(IN)               :: mat2
       CLASS(t_mat), INTENT(INOUT), OPTIONAL    :: res
@@ -731,11 +732,16 @@ CONTAINS
          ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
-         IF (mat1%l_real) THEN
-            call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
-         ELSE
-            call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0,res%data_c, ldc)
-         ENDIF
+         if(run_on_gpu) then
+            call perform_cublas_gemm(mat1%l_real, transA_i,transB_i,m,n,k, lda, ldb, ldc,&
+                                    mat1%data_r, mat1%data_c, mat2%data_r, mat2%data_c, res%data_r, res%data_c)
+         else
+            IF (mat1%l_real) THEN
+               call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
+            ELSE
+               call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0,res%data_c, ldc)
+            ENDIF
+         endif
       else
          if (mat1%matsize1  /= mat1%matsize2 .or. mat2%matsize2 /= mat2%matsize1)&
             CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
@@ -744,16 +750,49 @@ CONTAINS
          ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
-         if (mat1%l_real) THEN
-            call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
-         ELSE
-            call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
-         ENDIF
-         call mat1%copy(tmp,1,1)
+         if(run_on_gpu) then
+            !$acc data create(tmp, tmp%data_r, tmp%data_c)
+            call perform_cublas_gemm(mat1%l_real, transA_i, transB_i, m,n,k, lda, ldb, ldc,& 
+                                     mat1%data_r, mat1%data_c, mat2%data_r, mat2%data_c, tmp%data_r, tmp%data_c)
+            call mat1%copy(tmp,1,1)
+            !$acc end data
+         else
+            if (mat1%l_real) THEN
+               call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
+            ELSE
+               call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
+            ENDIF
+            call mat1%copy(tmp,1,1)
+         endif
          call tmp%free()
       end IF
       call timestop("t_mat_multiply")
    end SUBROUTINE t_mat_multiply
+
+   subroutine perform_cublas_gemm(l_real, transA, transB, m,n,k, lda, ldb, ldc,& 
+                                  mat1_data_r, mat1_data_c, mat2_data_r, mat2_data_c, res_data_r, res_data_c)
+      implicit none 
+      logical, intent(in)           :: l_real
+      character(len=*), intent(in)  :: transA, transB 
+      integer, intent(in)           :: m, n, k, lda, ldb, ldc
+      real, intent(in)              :: mat1_data_r(:,:), mat2_data_r(:,:)
+      complex, intent(in)           :: mat1_data_c(:,:), mat2_data_c(:,:)
+      real, intent(inout)           :: res_data_r(:,:)
+      complex, intent(inout)        :: res_data_c(:,:)
+
+#ifdef _OPENACC
+      if(l_real) then
+         !$acc host_data use_device(mat1_data_r, mat2_data_r, res_data_r)
+         call cublasDgemm(transA, transB, m, n, k, 1.0, mat1_data_r, lda, mat2_data_r, ldb, 0.0, res_data_r, ldc)
+         !$acc end host_data
+      else
+         !$acc host_data use_device(mat1_data_c, mat2_data_c, res_data_c)
+         call cublasZgemm(transA, transB, m, n, k, cmplx_1, mat1_data_c, lda, mat2_data_c, ldb, cmplx_0, res_data_c, ldc)
+         !$acc end host_data
+      endif
+#endif
+   end subroutine perform_cublas_gemm
+
 
    SUBROUTINE t_mat_transpose(mat1, res)
       CLASS(t_mat), INTENT(INOUT)       ::mat1
@@ -906,11 +945,27 @@ CONTAINS
       class(t_mat), INTENT(IN)   :: mat1
       INTEGER, INTENT(IN)        :: n1, n2
 
-      INTEGER:: i1, i2
+      INTEGER:: i1, i2, j1, j2
+      logical:: both_on_gpu 
 
       call timestart("t_mat_copy")
+      if(.not. mat%allocated()) then
+         if(acc_is_present(mat1%data_c)) then
+            call judft_error("can't use copy alloc on GPU")
+         else
+            call mat%init(mat1)
+         endif
+      endif
 
-      if(.not. mat%allocated()) call mat%init(mat1)
+#ifdef _OPENACC
+      if(mat1%l_real) then
+         both_on_gpu = acc_is_present(mat%data_r) .and. acc_is_present(mat1%data_r)
+      else
+         both_on_gpu = acc_is_present(mat%data_c) .and. acc_is_present(mat1%data_c)
+      endif
+#else 
+      both_on_GPU = .False.
+#endif 
 
       select type (mat1)
       type is(t_mat)
@@ -923,11 +978,32 @@ CONTAINS
       i2 = mat%matsize2 - n2 + 1
       i1 = MIN(i1, mat1%matsize1)
       i2 = MIN(i2, mat1%matsize2)
-      IF (mat%l_real) THEN
-         call dlacpy("N", i1, i2, mat1%data_r, size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
-      ELSE
-         call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
-      END IF
+
+      if(both_on_GPU )then
+         if(mat%l_real) then
+            !$acc kernels present(mat, mat%data_r, mat1, mat1%data_r)
+            do j1 = 1,i1 
+               do j2 = 1,i2 
+                  mat%data_r(n1+j1-1, n2+j2-1) = mat1%data_r(j1,j2)
+               enddo
+            enddo
+            !$acc end kernels
+         else 
+            !$acc kernels present(mat, mat%data_c, mat1, mat1%data_c)
+            do j1 = 1,i1 
+               do j2 = 1,i2 
+                  mat%data_c(n1+j1-1, n2+j2-1) = mat1%data_c(j1,j2)
+               enddo
+            enddo
+            !$acc end kernels
+         endif
+      else
+         IF (mat%l_real) THEN
+            call dlacpy("N", i1, i2, mat1%data_r, size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
+         ELSE
+            call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
+         END IF
+      endif
 
       call timestop("t_mat_copy")
    END SUBROUTINE t_mat_copy
