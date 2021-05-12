@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "outputSchema.h"
-//#include "outputSchema_old.h"
+#include "outputSchema_old.h"
 #include <string.h>
 /*
  * This method together with the variables defined in outputSchema.h
@@ -11,9 +11,12 @@ int dropOutputSchema(char* version)
 {
   char * xsd_txt;
   int xsd_len;
-   if (strcmp(version,"0.34")==0){
+   if (strcmp(version,"0.35")==0){
      xsd_len=FleurOutputSchema_xsd_len;
      xsd_txt = FleurOutputSchema_xsd;
+   }else if (strcmp(version,"0.34")==0){
+     xsd_len=FleurOutputSchema0_34_xsd_len;
+     xsd_txt = FleurOutputSchema0_34_xsd;
    }else{
      return 1;
    }

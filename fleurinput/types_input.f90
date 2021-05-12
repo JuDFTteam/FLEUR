@@ -335,7 +335,9 @@ SUBROUTINE read_xml_input(this,xml)
       this%ldauMixParam = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
       this%ldauSpinf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
       this%ldauAdjEnpara = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_adjEnpara'))
-      this%ldauSpinoffd = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_spinoffd'))
+      IF(xml%versionNumber>=35) THEN
+        this%ldauSpinoffd = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_spinoffd'))
+      ENDIF
    END IF
    ! Read in RDMFT parameters
    xPathA = '/fleurInput/calculationSetup/rdmft'
