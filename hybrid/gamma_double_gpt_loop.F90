@@ -17,11 +17,17 @@ contains
       real        :: rdum
       integer     :: igpt0, igpt2, igptp2, iqnrm1, iqnrm2, igpt1, igptp1
       integer     :: ix, iy, ix_loc, iatm1, iatm2, itype1, itype2, pe_ix
-      REAL        :: q1(3), q2(3), qnorm, qnorm1, qnorm2, rdum1
+      REAL        :: qnorm, rdum1
       complex     :: cdum
+      
+      real, allocatable :: qs(:,:), qnorms(:)
+
+      call timestart("double gpt loop")
+
+      call setup_q_and_qnorm(fi, mpdata, qs, qnorms)
+
 
       rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
-      call timestart("double gpt loop")
       DO igpt0 = 1, ngptm1(1)
          igpt2 = pgptm1(igpt0, 1)
          if(igpt2 /= 1) then
@@ -30,21 +36,17 @@ contains
             if(pe_ix == fmpi%n_rank) then
                iqnrm2 = pqnrm(igpt2, 1)
                igptp2 = mpdata%gptm_ptr(igpt2, 1)
-               q2 = MATMUL(mpdata%g(:, igptp2), fi%cell%bmat)
-               qnorm2 = norm2(q2)
 
                !$OMP PARALLEL DO default(none) schedule(dynamic) &
-               !$OMP shared(igpt2, hybdat, fi, pqnrm, mpdata, q2, qnorm2, igptp2) &
+               !$OMP shared(igpt2, hybdat, fi, pqnrm, mpdata, igptp2) &
                !$OMP shared(coul, ix_loc, rdum, sphbesmoment, iqnrm2)&
-               !$OMP private(igpt1, iy, iqnrm1, igptp1, q1, qnorm1, rdum1, iatm1) &
+               !$OMP private(igpt1, iy, iqnrm1, igptp1, q1, rdum1, iatm1) &
                !$OMP private(itype1, iatm2, itype2, cdum)
                DO igpt1 = 2, igpt2
                   iy = hybdat%nbasp + igpt1
                   iqnrm1 = pqnrm(igpt1, 1)
                   igptp1 = mpdata%gptm_ptr(igpt1, 1)
-                  q1 = MATMUL(mpdata%g(:, igptp1), fi%cell%bmat)
-                  qnorm1 = norm2(q1)
-                  rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
+                  rdum1 = dot_PRODUCT(qs(igptp1), qs(igptp2))/(qnorms(igptp1)*qnorms(igptp2))
                   do iatm1 = 1,fi%atoms%nat
                      itype1 = fi%atoms%itype(iatm1)
                      do iatm2 = 1,fi%atoms%nat 
@@ -60,9 +62,9 @@ contains
                                           - sphbesmoment(2, itype1, iqnrm1) &
                                           *sphbesmoment(0, itype2, iqnrm2)/6 &
                                           + sphbesmoment(0, itype1, iqnrm1) &
-                                          *sphbesmoment(1, itype2, iqnrm2)/qnorm2/2 &
+                                          *sphbesmoment(1, itype2, iqnrm2)/qnorms(igptp2)/2 &
                                           + sphbesmoment(1, itype1, iqnrm1) &
-                                          *sphbesmoment(0, itype2, iqnrm2)/qnorm1/2)
+                                          *sphbesmoment(0, itype2, iqnrm2)/qnorms(igptp1)/2)
                      END DO
                   END DO
                END DO
@@ -72,4 +74,21 @@ contains
       END DO
       call timestop("double gpt loop")
    end subroutine gamma_double_gpt_loop 
+
+   subroutine setup_q_and_qnorm(fi, mpdata, qs, qnorms)
+      implicit none 
+      type(t_fleurinput), intent(in)    :: fi
+      TYPE(t_mpdata), intent(in)        :: mpdata
+      real, intent(inout), allocatable  :: qs(:,:), qnorms(:)
+
+      real, allocatable :: g(:,:), tmp(:,:)
+      integer :: i, num_gs
+
+      num_gs = size(mpdata%g,2)
+      allocate(qs(3,num_gs), source=0.0)
+
+      g = real(mpdata%g)
+      call dgemm("T", "N", 3,num_gs,3, 1.0,   fi%cell%bmat, 3,   g, 3, 0.0,  qs, 3)
+      qnorms = norm2(qs, dim=1)
+   end subroutine setup_q_and_qnorm
 end module m_gamma_double_gpt_loop
