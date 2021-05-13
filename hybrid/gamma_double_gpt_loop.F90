@@ -12,7 +12,7 @@ contains
       TYPE(t_mpdata), intent(in)        :: mpdata
       real, intent(in)                  :: sphbesmoment(0:, :, :), gmat(:,:)
       integer, intent(in)               :: ngptm1(:), pgptm1(:,:), pqnrm(:,:)
-      type(t_mat), intent(inout)        :: coul
+      complex, intent(inout)            :: coul(:,:)
 
       real        :: rdum
       integer     :: igpt0, igpt2, igptp2, iqnrm1, iqnrm2, igpt1, igptp1
@@ -40,13 +40,13 @@ contains
                !$OMP PARALLEL DO default(none) schedule(dynamic) &
                !$OMP shared(igpt2, hybdat, fi, pqnrm, mpdata, igptp2) &
                !$OMP shared(coul, ix_loc, rdum, sphbesmoment, iqnrm2)&
-               !$OMP private(igpt1, iy, iqnrm1, igptp1, q1, rdum1, iatm1) &
+               !$OMP private(igpt1, iy, iqnrm1, igptp1, rdum1, iatm1) &
                !$OMP private(itype1, iatm2, itype2, cdum)
                DO igpt1 = 2, igpt2
                   iy = hybdat%nbasp + igpt1
                   iqnrm1 = pqnrm(igpt1, 1)
                   igptp1 = mpdata%gptm_ptr(igpt1, 1)
-                  rdum1 = dot_PRODUCT(qs(igptp1), qs(igptp2))/(qnorms(igptp1)*qnorms(igptp2))
+                  rdum1 = dot_PRODUCT(qs(:,igptp1), qs(:,igptp2))/(qnorms(igptp1)*qnorms(igptp2))
                   do iatm1 = 1,fi%atoms%nat
                      itype1 = fi%atoms%itype(iatm1)
                      do iatm2 = 1,fi%atoms%nat 
@@ -54,7 +54,7 @@ contains
                         cdum = EXP(CMPLX(0.0, 1.0)*tpi_const* &
                                  (-dot_PRODUCT(mpdata%g(:, igptp1), fi%atoms%taual(:, iatm1)) &
                                     + dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, iatm2))))
-                        coul%data_c(iy, ix_loc) = coul%data_c(iy, ix_loc) + rdum*cdum*( &
+                        coul(iy, ix_loc) = coul(iy, ix_loc) + rdum*cdum*( &
                                           -sphbesmoment(1, itype1, iqnrm1) &
                                           *sphbesmoment(1, itype2, iqnrm2)*rdum1/3 &
                                           - sphbesmoment(0, itype1, iqnrm1) &

@@ -626,7 +626,7 @@ CONTAINS
             !     Add corrections from higher orders in (3b) to coulomb(:,1)
             ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
             call timestart("add corrections from higher orders")
-            call gamma_double_gpt_loop(fi, fmpi, hybdat, mpdata, sphbesmoment, gmat,  ngptm1, pgptm1, pqnrm, coul(1)) 
+            call gamma_double_gpt_loop(fi, fmpi, hybdat, mpdata, sphbesmoment, gmat,  ngptm1, pgptm1, pqnrm, coul(1)%data_c) 
 
             rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
 
