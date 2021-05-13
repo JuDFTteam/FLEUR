@@ -66,7 +66,7 @@ contains
       !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
       !$OMP private(lm, l, m, n_size, i_vec)&
       !$OMP lastprivate(indx2)&
-      !$OMP shared(ibasm, mat_in, hybdat, mat_out, fi, mpdata, n_vec, ikpt)
+      !$OMP shared(ibasm, mat_in, hybdat, mat_out, fi, mpdata, n_vec, ikpt, mt2_tmp)
       do iatom = 1,fi%atoms%nat 
          itype = fi%atoms%itype(iatom)
 
@@ -114,7 +114,7 @@ contains
          indx0 = 0
          !$OMP parallel do default(none) &
          !$OMP private(iatom, itype, ishift, l, indx0, indx1, indx2, indx3, indx4, iatom1, itype1, ishift1, i_vec, n_size)&
-         !$OMP shared(fi, mpdata, hybdat, mat_out, ibasm, n_vec, ikpt, mat_in, mat_in_line)
+         !$OMP shared(fi, mpdata, hybdat, mat_out, ibasm, n_vec, ikpt, mat_in, mat_in_line, mt2_tmp)
          do iatom = 1, fi%atoms%nat 
             itype = fi%atoms%itype(iatom)
             ishift = sum([((2*l + 1)*(mpdata%num_radbasfn(l, itype) - 1), l=0, fi%hybinp%lcutm1(itype))])
