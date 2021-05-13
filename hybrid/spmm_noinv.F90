@@ -1,6 +1,6 @@
 module m_spmm_noinv
    use iso_c_binding
-   use spmm
+   use m_spmm
 #ifdef _OPENACC
    USE cublas
 #define CPP_zgemm cublaszgemm
