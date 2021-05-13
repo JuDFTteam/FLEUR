@@ -69,7 +69,8 @@ CONTAINS
       USE m_hsefunctional
       USE m_io_hybrid
       USE m_kp_perturbation
-      use m_spmm
+      use m_spmm_invs
+      use m_spmm_noinv
       use m_work_package
       use m_judft 
 #ifdef CPP_MPI
