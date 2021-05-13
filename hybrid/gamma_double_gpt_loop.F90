@@ -10,7 +10,7 @@ contains
       TYPE(t_mpi), INTENT(IN)           :: fmpi
       type(t_hybdat), intent(in)        :: hybdat
       TYPE(t_mpdata), intent(in)        :: mpdata
-      real, intent(in)                  :: sphbesmoment(:, :, :), gmat(:,:)
+      real, intent(in)                  :: sphbesmoment(0:, :, :), gmat(:,:)
       integer, intent(in)               :: ngptm1(:), pgptm1(:,:), pqnrm(:,:)
       type(t_mat), intent(inout)        :: coul
 
