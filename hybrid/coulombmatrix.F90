@@ -557,8 +557,13 @@ CONTAINS
 
             !finally we can loop over the plane waves (G: igpt1,igpt2)
             call timestart("loop over plane waves")
-            allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), source=cmplx_0)
-               
+
+            !$OMP parallel default(none) private(carr2, igpt0, igpt1, igpt2, ix, iy, ix_loc, pe_ix, iatom, lm1, l1, m1)&
+            !$OMP private(lm2, l2, m2, cdum, ic, lm, l, m, itype, itype2, igptp1, csum, igptp2, iqnrm1, iqnrm2, cexp)&
+            !$OMP shared(fmpi, fi, ikpt, ngptm1, pgptm1, pqnrm, coul, gmat, structconst, sphbesmoment, hybdat, mpdata)&
+            !$OMP shared(carr2a, carr2b)
+            allocate(carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2))               
+            !$OMP do schedule(dynamic)
             DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
@@ -574,8 +579,6 @@ CONTAINS
                      itype2 = fi%atoms%itype(iatom)
                      cexp = CONJG(carr2b(iatom, igpt2))
                      
-                     !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm, iat2) &
-                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst, iatom, ikpt) 
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
                         call calc_l_m_from_lm(lm1, l1, m1)
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
@@ -588,15 +591,11 @@ CONTAINS
                            enddo
                         enddo
                      enddo
-                     !$OMP end parallel do
                   end do ! iatom
 
                   call timestop("itype loops")
 
                   call timestart("igpt1")
-                  !$OMP PARALLEL DO default(none) &
-                  !$OMP private(igpt1, iy, igptp1, iqnrm1, csum, ic, itype, lm, l, m, cdum) &
-                  !$OMP shared(fi, carr2b, sphbesmoment, igpt2, ix_loc, carr2, carr2a, coul, hybdat, mpdata, ikpt, pqnrm)
                   DO igpt1 = 1, igpt2
                      iy = hybdat%nbasp + igpt1
                      igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -612,11 +611,14 @@ CONTAINS
                      END DO
                      coul(ikpt)%data_c(iy,ix_loc) = coul(ikpt)%data_c(iy,ix_loc) + csum/fi%cell%vol
                   END DO
-                  !$OMP end parallel do
                   call timestop("igpt1")
                endif ! pe_ix
             END DO !igpt0
-            deallocate (carr2, carr2a, carr2b)
+            !$omp end do
+            deallocate (carr2) 
+            !$OMP end parallel
+            deallocate(carr2a, carr2b)
+
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
