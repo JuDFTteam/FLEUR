@@ -39,7 +39,7 @@ contains
 
                !$OMP PARALLEL DO default(none) schedule(dynamic) &
                !$OMP shared(igpt2, hybdat, fi, pqnrm, mpdata, igptp2) &
-               !$OMP shared(coul, ix_loc, rdum, sphbesmoment, iqnrm2)&
+               !$OMP shared(coul, ix_loc, rdum, sphbesmoment, iqnrm2, qs, qnorms)&
                !$OMP private(igpt1, iy, iqnrm1, igptp1, rdum1, iatm1) &
                !$OMP private(itype1, iatm2, itype2, cdum)
                DO igpt1 = 2, igpt2
