@@ -55,6 +55,11 @@ contains
 
       ibasm = calc_ibasm(fi, mpdata)
 
+
+      call timestart("cpy mt2_tmp")
+      mt2_tmp = hybdat%coul(ikpt)%mt2_r
+      call timestart("cpy mt2_tmp")
+
       call timestart("0 > ibasm: small matricies")
       ! compute vecout for the indices from 0:ibasm
       !$OMP PARALLEL DO default(none) schedule(dynamic)&
@@ -92,7 +97,7 @@ contains
                         mat_in(indx1,1), size(mat_in,1), 0.0, mat_out(indx1,1), size(mat_out,1))
 
             do i_vec = 1, n_vec
-               call daxpy(n_size, mat_in(indx3, i_vec), hybdat%coul(ikpt)%mt2_r(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
+               call daxpy(n_size, mat_in(indx3, i_vec), mt2_tmp(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
             enddo
 
             indx1 = indx2
@@ -143,7 +148,7 @@ contains
             n_size = mpdata%num_radbasfn(l, itype) - 1
             do i_vec = 1, n_vec
                mat_out(indx1:indx2, i_vec) = mat_out(indx1:indx2, i_vec) &
-                  + hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in_line(i_vec)
+                  + mt2_tmp(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom)*mat_in_line(i_vec)
             enddo
          END DO
          !$OMP end parallel do
@@ -182,11 +187,7 @@ contains
 #endif
          call timestop("ibasm+1 -> dgemm")
 
-         call timestart("cpy mt2_tmp")
-         mt2_tmp = hybdat%coul(ikpt)%mt2_r
          !$acc data copyin(mt2_tmp)
-            call timestop("cpy mt2_tmp")
-
             call timestart("dot prod")
             iatom = 0
             indx1 = ibasm; indx2 = 0; indx3 = 0
@@ -230,7 +231,7 @@ contains
                n_size = mpdata%num_radbasfn(0, itype) - 1
                do i_vec = 1, n_vec
                   mat_out(hybdat%nbasp + 1, i_vec) = mat_out(hybdat%nbasp + 1, i_vec) &
-                                                   + dot_product(hybdat%coul(ikpt)%mt2_r(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), &
+                                                   + dot_product(mt2_tmp(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), &
                                                                   mat_in(indx1:indx2, i_vec))
                enddo
                indx0 = indx0 + ishift
