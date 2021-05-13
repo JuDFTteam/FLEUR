@@ -1396,7 +1396,7 @@ MODULE m_cdnpot_io_hdf
          ALLOCATE(atoms%lda_u(atoms%n_u))
       END IF
 
-      IF(fileFormatVersion.GE.33) THEN
+      IF(io_attexists(groupID,'ldau_spinoffd')) THEN
          CALL io_read_attlog0(groupID,'ldau_spinoffd',input%ldauSpinoffd)
       END IF
 
@@ -1642,7 +1642,7 @@ MODULE m_cdnpot_io_hdf
       END IF
 
       l_spinoffd_ldau = .false.
-      IF(fileFormatVersion.GE.33) THEN
+      IF(io_attexists(groupID,'ldau_spinoffd')) THEN
          CALL io_read_attlog0(groupID,'ldau_spinoffd',l_spinoffd_ldau)
       END IF
 
@@ -2505,7 +2505,7 @@ MODULE m_cdnpot_io_hdf
       IF(fileFormatVersion.GE.29) THEN
          CALL io_read_attint0(groupBID,'n_u',n_u)
          l_spinoffd_ldau = .false.
-         IF(fileFormatVersion.GE.33) THEN
+         IF(io_attexists(groupBID,'ldau_spinoffd')) THEN
             CALL io_read_attlog0(groupBID,'ldau_spinoffd',l_spinoffd_ldau)
          ENDIF
          IF(n_u.GT.0) THEN
