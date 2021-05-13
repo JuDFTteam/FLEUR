@@ -58,7 +58,7 @@ contains
 
       call timestart("cpy mt2_tmp")
       mt2_tmp = hybdat%coul(ikpt)%mt2_r
-      call timestart("cpy mt2_tmp")
+      call timestop("cpy mt2_tmp")
 
       call timestart("0 > ibasm: small matricies")
       ! compute vecout for the indices from 0:ibasm
