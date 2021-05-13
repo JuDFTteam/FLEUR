@@ -26,22 +26,22 @@ contains
 
       call setup_q_and_qnorm(fi, mpdata, qs, qnorms)
 
-
       rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
+
+      !$OMP PARALLEL DO default(none) schedule(dynamic) &
+      !$OMP shared(fmpi, pgptm1, ngptm1, hybdat, fi, pqnrm, mpdata) &
+      !$OMP shared(coul, rdum, sphbesmoment, qs, qnorms)&
+      !$OMP private(igpt1, igpt2, iy, iqnrm1, igptp1, rdum1, iatm1, iqnrm2) &
+      !$OMP private(itype1, iatm2, itype2, cdum, ix, pe_ix, ix_loc, igptp2)
       DO igpt0 = 1, ngptm1(1)
          igpt2 = pgptm1(igpt0, 1)
          if(igpt2 /= 1) then
             ix = hybdat%nbasp + igpt2
-            call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
+            pe_ix = mod((ix-1), fmpi%n_size)
+            ix_loc = ((ix-1)/fmpi%n_size) +1
             if(pe_ix == fmpi%n_rank) then
                iqnrm2 = pqnrm(igpt2, 1)
                igptp2 = mpdata%gptm_ptr(igpt2, 1)
-
-               !$OMP PARALLEL DO default(none) schedule(dynamic) &
-               !$OMP shared(igpt2, hybdat, fi, pqnrm, mpdata, igptp2) &
-               !$OMP shared(coul, ix_loc, rdum, sphbesmoment, iqnrm2, qs, qnorms)&
-               !$OMP private(igpt1, iy, iqnrm1, igptp1, rdum1, iatm1) &
-               !$OMP private(itype1, iatm2, itype2, cdum)
                DO igpt1 = 2, igpt2
                   iy = hybdat%nbasp + igpt1
                   iqnrm1 = pqnrm(igpt1, 1)
@@ -68,10 +68,10 @@ contains
                      END DO
                   END DO
                END DO
-               !$OMP END PARALLEL DO
             endif !pe_ix
          endif
       END DO
+      !$OMP end parallel do
       call timestop("double gpt loop")
    end subroutine gamma_double_gpt_loop 
 
