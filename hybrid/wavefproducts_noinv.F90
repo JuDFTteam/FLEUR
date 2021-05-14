@@ -46,8 +46,13 @@ CONTAINS
          call juDFT_error('wavefproducts: k-point not found')
       endif
 
-      call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-                                  ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+      !$acc data copyin(cprod) create(cprod%data_r) copyout(cprod%data_c)
+         !$acc kernels 
+         cprod%data_c = 0.0
+         !$acc end kernels
+         call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+      !$acc end data ! cprod
 
       call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
                                   jsp, ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod%data_c)

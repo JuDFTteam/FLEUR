@@ -37,7 +37,6 @@ CONTAINS
       complex, allocatable :: c_phase_kqpt(:)
 
       CALL timestart("wavefproducts_inv")
-      cprod%data_r = 0.0
       ikqpt = -1
       kqpthlp = fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)
       ! kqpt can lie outside the first BZ, transfer it back
@@ -49,8 +48,13 @@ CONTAINS
       allocate (c_phase_kqpt(hybdat%nbands(fi%kpts%bkp(ikqpt),jsp)))
       IF (.not. fi%kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
-      call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-                                 ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+      !$acc data copyin(cprod) create(cprod%data_c) copyout(cprod%data_r)
+         !$acc kernels present(cprod, cprod%data_r)
+         cprod%data_r = 0.0
+         !$acc end kernels
+         call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+      !$acc end data ! cprod
 
       call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
                                 ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod%data_r)

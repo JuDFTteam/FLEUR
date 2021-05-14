@@ -120,8 +120,7 @@ CONTAINS
             call timestop("alloc&init")
 
             !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec)&
-            !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, cprod) &
-            !$acc      copy(cprod%data_r, cprod%data_c) &
+            !$acc      copyin(hybdat, hybdat%nbasp, g_ptr)&
             !$acc      create(psi_k, prod)
 #ifndef _OPENACC
                !$OMP DO
