@@ -103,8 +103,7 @@ contains
                         mat_in(indx1,1), size(mat_in,1), 0.0, mat_out(indx1,1), size(mat_out,1))
 
             do i_vec = 1, n_vec
-               !mat_out(indx1:indx2,i_vec) = mat_out(indx1,i_vec) + mat_in(indx3, i_vec) * mt2_tmp(:n_size,m,l,iatom) 
-               call daxpy(n_size, mat_in(indx3, i_vec), mt2_tmp(1,m,l,iatom), 1, mat_out(indx1,i_vec), 1)
+               mat_out(indx1:indx2,i_vec) = mat_out(indx1,i_vec) + mat_in(indx3, i_vec) * mt2_tmp(:n_size,m,l,iatom) 
             enddo
 
             indx1 = indx2
