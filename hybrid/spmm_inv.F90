@@ -31,10 +31,10 @@ contains
       real, intent(inout)               :: mat_in(:,:)
       real, intent(inout)               :: mat_out(:,:)
 
-      integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size, sz_mtir, sz_hlp, sz_out
+      integer :: n_vec, i_vec, ibasm, iatom, itype, ieq, l, m, n_size, sz_mtir, sz_hlp, sz_out, sz_mt1
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1, max_lcut_plus_1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
-      real, allocatable :: mt2_tmp(:,:,:,:), mat_in_line(:), mt3_tmp(:,:,:)
+      real, allocatable :: mt1_tmp(:,:,:,:), mt2_tmp(:,:,:,:), mat_in_line(:), mt3_tmp(:,:,:)
 #ifdef _OPENACC 
       real, allocatable :: mtir_tmp(:,:)
 #endif
@@ -56,66 +56,77 @@ contains
       ibasm = calc_ibasm(fi, mpdata)
 
 
-      call timestart("cpy mt2_tmp")
+      call timestart("copies out of hydat")
+      mt1_tmp = hybdat%coul(ikpt)%mt1_r
       mt2_tmp = hybdat%coul(ikpt)%mt2_r
-      call timestop("cpy mt2_tmp")
       if(ikpt == 1 ) then
-         call timestart("copy mt3")
          mt3_tmp = hybdat%coul(ikpt)%mt3_r
-         call timestop("copy mt3")
       endif
+      sz_mt1 = size(mt1_tmp,dim=2)
+      sz_hlp  = size(mat_in, 1)
+      sz_out  = size(mat_out, 1)     
+      call timestop("copies out of hydat")
 
-
-      call timestart("0 > ibasm: small matricies")
-      ! compute vecout for the indices from 0:ibasm
-      !$OMP PARALLEL DO default(none) schedule(dynamic)&
-      !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
-      !$OMP private(lm, l, m, n_size, i_vec)&
-      !$OMP lastprivate(indx2)&
-      !$OMP shared(ibasm, mat_in, hybdat, mat_out, fi, mpdata, n_vec, ikpt, mt2_tmp)
-      do iatom = 1,fi%atoms%nat 
-         itype = fi%atoms%itype(iatom)
-
-         idx1_start = 0
-         do iat2 =1,iatom-1
-            it2 = fi%atoms%itype(iat2)
-            do l2 = 0, fi%hybinp%lcutm1(it2)
-               idx1_start = idx1_start + (mpdata%num_radbasfn(l2, it2)-1) * (2*l2+1)
-            enddo
-         enddo
-         indx1 = idx1_start
-
-         idx3_start = ibasm
-         do iat2 = 1,iatom-1
-            it2 = fi%atoms%itype(iat2)
-            idx3_start = idx3_start + (fi%hybinp%lcutm1(it2)+1)**2
-         enddo
-         indx3 = idx3_start 
-
-         do lm = 1,(fi%hybinp%lcutm1(itype)+1)**2
-            call calc_l_m_from_lm(lm, l, m)
-            indx1 = indx1 + 1
-            indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
-            indx3 = indx3 + 1
-
-            n_size = mpdata%num_radbasfn(l, itype) - 1
-            call dgemm("N","N", n_size, n_vec, n_size, 1.0, hybdat%coul(ikpt)%mt1_r(1,1,l,itype), size(hybdat%coul(ikpt)%mt1_r,dim=2),&
-                        mat_in(indx1,1), size(mat_in,1), 0.0, mat_out(indx1,1), size(mat_out,1))
-
-            do i_vec = 1, n_vec
-               mat_out(indx1:indx2,i_vec) = mat_out(indx1,i_vec) + mat_in(indx3, i_vec) * mt2_tmp(:n_size,m,l,iatom) 
-            enddo
-
-            indx1 = indx2
-         END DO
-      END DO
-      !$OMP END PARALLEL DO
-      call timestop("0 > ibasm: small matricies")
-
-      IF (indx2 /= ibasm) call judft_error('spmm: error counting basis functions')
 
       !$acc data copyin(mat_in) copy(mat_out)
          !$acc data copyin(mt2_tmp)
+            call timestart("0 > ibasm: small matricies")
+            ! compute vecout for the indices from 0:ibasm
+#ifndef _OPENACC
+            !$OMP PARALLEL DO default(none) schedule(dynamic)&
+            !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
+            !$OMP private(lm, l, m, n_size, i_vec)&
+            !$OMP lastprivate(indx2)&
+            !$OMP shared(ibasm, mat_in, hybdat, mat_out, fi, mpdata, n_vec, ikpt, mt2_tmp)
+#endif
+            !$acc data copyin(mt1_tmp)
+               do iatom = 1,fi%atoms%nat 
+                  itype = fi%atoms%itype(iatom)
+
+                  idx1_start = 0
+                  do iat2 =1,iatom-1
+                     it2 = fi%atoms%itype(iat2)
+                     do l2 = 0, fi%hybinp%lcutm1(it2)
+                        idx1_start = idx1_start + (mpdata%num_radbasfn(l2, it2)-1) * (2*l2+1)
+                     enddo
+                  enddo
+                  indx1 = idx1_start
+
+                  idx3_start = ibasm
+                  do iat2 = 1,iatom-1
+                     it2 = fi%atoms%itype(iat2)
+                     idx3_start = idx3_start + (fi%hybinp%lcutm1(it2)+1)**2
+                  enddo
+                  indx3 = idx3_start 
+
+                  do lm = 1,(fi%hybinp%lcutm1(itype)+1)**2
+                     call calc_l_m_from_lm(lm, l, m)
+                     indx1 = indx1 + 1
+                     indx2 = indx1 + mpdata%num_radbasfn(l, itype) - 2
+                     indx3 = indx3 + 1
+
+                     n_size = mpdata%num_radbasfn(l, itype) - 1
+                     !$acc host_data use_device(mt1_tmp, mat_in, mat_out)  
+                     call CPP_dgemm("N","N", n_size, n_vec, n_size, 1.0, mt1_tmp(1,1,l,itype), sz_mt1,&
+                                 mat_in(indx1,1), sz_hlp, 0.0, mat_out(indx1,1), sz_out)
+                     !$acc end host_data
+
+                     !$acc kernels present(mat_out, mat_in, mt2_tmp)
+                     do i_vec = 1, n_vec
+                        mat_out(indx1:indx2,i_vec) = mat_out(indx1,i_vec) + mat_in(indx3, i_vec) * mt2_tmp(:n_size,m,l,iatom) 
+                     enddo
+                     !$acc end kernels
+                     indx1 = indx2
+                  END DO
+               END DO
+            !$acc end data
+#ifndef _OPENACC
+            !$OMP END PARALLEL DO
+#endif
+            call timestop("0 > ibasm: small matricies")
+
+            IF (indx2 /= ibasm) call judft_error('spmm: error counting basis functions')
+
             IF (ikpt == 1) THEN
                !$acc data copyin(mt3_tmp, mat_in_line)
                   call timestart("gamma point 1 inv")
@@ -124,7 +135,7 @@ contains
 #ifndef _OPENACC
                   !$OMP parallel do default(none) &
                   !$OMP private(iatom, itype, ishift, l, indx0, indx1, indx2, indx3, indx4, iatom1, itype1, ishift1, i_vec, n_size)&
-                  !$OMP private(max_lcut_plus_1) shared(fi, mpdata, hybdat, mat_out, ibasm, n_vec, ikpt, mat_in, mat_in_line, mt2_tmp)
+                  !$OMP private(max_lcut_plus_1) shared(fi, mpdata, hybdat, mat_out, ibasm, n_vec, ikpt, mat_in, mat_in_line, mt2_tmp, mt3_tmp)
 #endif
                   do iatom = 1, fi%atoms%nat 
                      itype = fi%atoms%itype(iatom)
@@ -191,10 +202,7 @@ contains
 #endif
 
 
-            sz_mtir = size(CPP_mtir_r, 1)
-            sz_hlp  = size(mat_in, 1)
-            sz_out  = size(mat_out, 1)      
-         
+            sz_mtir = size(CPP_mtir_r, 1)         
             !$acc data copyin(CPP_mtir_r)
                !$acc host_data use_device(CPP_mtir_r, mat_in, mat_out)  
                call CPP_dgemm("N", "N", indx1, n_vec, indx1, 1.0, CPP_mtir_r, sz_mtir, &
