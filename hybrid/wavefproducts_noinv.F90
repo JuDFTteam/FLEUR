@@ -134,7 +134,7 @@ CONTAINS
 
             ! The default(shared) in the OMP part of the following loop is needed to avoid compilation issues on gfortran 7.5.
             DO l = 0, fi%hybinp%lcutm1(itype)
-   #ifdef _OPENACC
+#ifdef _OPENACC
                !$acc data copyin(l, iatm, itype, lm_0, bandoi, bandof, psize, atom_phase, ik, jsp)
 
                !$acc parallel loop default(none) collapse(2)&
@@ -143,12 +143,12 @@ CONTAINS
                !$acc         mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
                !$acc         hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr)&
                !$acc private(k,j,n,i,l1, l2, n1, n2, offdiag, lm, m, cscal, lm1, m1, m2, lm2)
-   #else            
+#else            
                !$OMP PARALLEL DO default(shared) collapse(2) schedule(dynamic) & 
                !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
                !$OMP shared(hybdat, bandoi, bandof, lmstart, lm_0, mpdata, cmt_ikqpt, cmt_nk, cprod, itype, l) &
                !$OMP shared(iatm, psize, atom_phase, ik)
-   #endif
+#endif
                do k = 1, hybdat%nbands(ik,jsp)
                   do j = bandoi, bandof 
                      !$acc loop seq
@@ -211,13 +211,13 @@ CONTAINS
                      END DO !n
                   enddo  !j
                enddo !k
-   #ifdef _OPENACC
+#ifdef _OPENACC
                !$acc end parallel loop
 
                !$acc end data 
-   #else
+#else
                !$OMP END PARALLEL DO
-   #endif
+#endif
                lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
             END DO
          END DO
