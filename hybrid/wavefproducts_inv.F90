@@ -54,10 +54,10 @@ CONTAINS
          !$acc end kernels
          call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                     ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
-      !$acc end data ! cprod
 
-      call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
-                                ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod%data_r)
+         call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
+                                    ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod%data_r)
+      !$acc end data ! cprod
 
       CALL timestop("wavefproducts_inv")
 
@@ -217,7 +217,7 @@ CONTAINS
       iatom1 = 0
       iiatom = 0
 
-      !$acc data copy(cprod, hybdat, hybdat%nbands, hybdat%prodm, mpdata, mpdata%num_radbasfn)
+      !$acc data copy(hybdat, hybdat%nbands, hybdat%prodm, mpdata, mpdata%num_radbasfn)
          DO itype = 1, fi%atoms%ntype
             ioffset = sum([((2*ll + 1)*mpdata%num_radbasfn(ll, itype), ll=0, fi%hybinp%lcutm1(itype))])
             lm_0 = lm_00
