@@ -77,7 +77,7 @@ contains
             !$OMP private(iatom, itype, idx1_start, iat2, it2, l2, indx1, idx3_start, indx3)&
             !$OMP private(lm, l, m, n_size, i_vec)&
             !$OMP lastprivate(indx2)&
-            !$OMP shared(ibasm, mat_in, hybdat, mat_out, fi, mpdata, n_vec, ikpt, mt2_tmp)
+            !$OMP shared(ibasm, mat_in, hybdat, mat_out, fi, mpdata, n_vec, ikpt, mt2_tmp, sz_out, sz_hlp, sz_mt1, mt1_tmp)
 #endif
             !$acc data copyin(mt1_tmp)
                do iatom = 1,fi%atoms%nat 
