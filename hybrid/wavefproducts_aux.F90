@@ -140,14 +140,9 @@ CONTAINS
             
                   if (cprod%l_real) then
                      if (.not. real_warned) then
-                        max_imag = 0.0 
-                        !$acc parallel loop default(none) present(stepf, stepf%gridlength, prod) copy(max_imag) reduction(max:max_imag)
-                        do iob = 1, psize
-                           do j = 0, stepf%gridlength-1 
-                              max_imag = max(max_imag, abs(aimag(prod(j,iob))))
-                           enddo 
-                        enddo
-                        !$acc end parallel loop
+                        !$acc kernels present(prod) copyout(max_imag)
+                        max_imag = maxval(abs(aimag(prod)))
+                        !$acc end kernels
                         if(max_imag > 1e-8) then
                            write (*, *) "Imag part non-zero in too large"
                            real_warned = .True.
