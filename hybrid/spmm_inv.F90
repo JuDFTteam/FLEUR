@@ -113,7 +113,7 @@ contains
 
                      !$acc kernels present(mat_out, mat_in, mt2_tmp)
                      do i_vec = 1, n_vec
-                        mat_out(indx1:indx2,i_vec) = mat_out(indx1,i_vec) + mat_in(indx3, i_vec) * mt2_tmp(:n_size,m,l,iatom) 
+                        mat_out(indx1:indx2,i_vec) = mat_out(indx1:indx2,i_vec) + mat_in(indx3, i_vec) * mt2_tmp(:n_size,m,l,iatom) 
                      enddo
                      !$acc end kernels
                      indx1 = indx2
