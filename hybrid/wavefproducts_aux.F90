@@ -1,7 +1,6 @@
 module m_wavefproducts_aux
    use m_types_fftGrid
    use m_types
-   use nvtx
 CONTAINS
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
