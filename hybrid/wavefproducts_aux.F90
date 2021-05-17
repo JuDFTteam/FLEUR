@@ -58,27 +58,20 @@ CONTAINS
          !call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
       endif
 
-
-      call nvtxStartRange("setup stepf", __LINE__)
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
-      call nvtxEndRange
-
 
       call fft%init(stepf%dimensions, .false., batch_size=1, l_gpu=.True.)
       !$acc data copyin(stepf, stepf%grid, stepf%gridlength)
          ! after we transform psi_k*stepf*psi_kqpt back  to 
          ! G-space we have to divide by stepf%gridLength. We do this now
 
-
-         call nvtxStartRange("stepf FFT", __LINE__)
          !$acc kernels default(none) present(stepf, stepf%grid, stepf%gridLength)
          stepf%grid = stepf%grid * inv_vol / stepf%gridLength
          !$acc end kernels
 
          call fft%exec(stepf%grid)
          call fft%free()
-         call nvtxEndRange
          
          call setup_g_ptr(mpdata, stepf, g_t, iq, g_ptr)
          
@@ -104,13 +97,11 @@ CONTAINS
                call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, grid, wavef2rs_fft, psi_kqpt)
                call timestop("1st wavef2rs")
 
-               call nvtxStartRange("apply stepf", __LINE__)
                !$acc kernels default(none) present(psi_kqpt, stepf, stepf%grid)
                do iob = 1, psize 
                   psi_kqpt(:,iob) = psi_kqpt(:,iob) * stepf%grid
                enddo
                !$acc end kernels
-               call nvtxEndRange
             !$acc end data
             call wavef2rs_fft%free()
             call grid%free()
@@ -143,7 +134,6 @@ CONTAINS
                do iband = 1, hybdat%nbands(ik,jsp)
                   call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, grid, wavef2rs_fft, psi_k)
                   
-                  call nvtxStartRange("marry wavef", __LINE__)
                   !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)               
                   do iob = 1, psize
                      do j = 0, stepf%gridlength-1
@@ -151,15 +141,10 @@ CONTAINS
                      enddo
                   enddo
                   !$acc end kernels
-                  call nvtxEndRange
 
-                  call nvtxStartRange("return to G-Space", __LINE__)
                   call fft%exec_batch(prod)
-                  !$acc wait
-                  call nvtxEndRange
             
                   if (cprod%l_real) then
-                     call nvtxStartRange("real warning", __LINE__)
                      if (.not. real_warned) then
                         !$acc kernels present(prod) copyout(max_imag)
                         max_imag = maxval(abs(aimag(prod)))
@@ -169,9 +154,7 @@ CONTAINS
                            real_warned = .True.
                         endif
                      endif
-                     call nvtxEndRange
                         
-                     call nvtxStartRange("sort to cprod", __LINE__)
                      !$acc kernels default(none) present(cprod, cprod%data_r, prod, g_ptr)
                      !$acc loop independent
                      do iob = 1, psize
@@ -181,9 +164,7 @@ CONTAINS
                         enddo
                      enddo
                      !$acc end kernels
-                     call nvtxEndRange
                   else
-                     call nvtxStartRange("sort to cprod", __LINE__)
                      !$acc kernels default(none) present(cprod, cprod%data_c, prod, g_ptr)
                      !$acc loop independent
                      do iob = 1, psize
@@ -193,7 +174,6 @@ CONTAINS
                         enddo
                      enddo
                      !$acc end kernels
-                     call nvtxEndRange
                   endif
                enddo
 #ifndef _OPENACC
@@ -252,7 +232,6 @@ CONTAINS
 
       integer :: iv, nu, psize, dims(3)
 
-      call nvtxStartRange("wavef2rs put state on grid", __LINE__)
 #ifndef _OPENACC 
       !$omp parallel do default(none) private(nu) shared(grid, bandoi, bandof, lapw, jspin, zMat, psi)
 #endif
@@ -262,12 +241,8 @@ CONTAINS
 #ifndef _OPENACC 
       !$omp end parallel do
 #endif   
-      !$acc wait
-      call nvtxEndRange
 
-      call nvtxStartRange("wavef2rs fft exec", __LINE__)
       call fft%exec_batch(psi)
-      call nvtxEndRange
    end subroutine wavef2rs
 
    subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)
