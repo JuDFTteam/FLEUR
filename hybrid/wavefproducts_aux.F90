@@ -108,10 +108,10 @@ CONTAINS
 
             call timestart("Big OMP loop")
 #ifndef _OPENACC
-            !$OMP PARALLEL default(shared) &
-            !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
-            !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff)&
-            !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
+            !$OMP PARALLEL default(none) &
+            !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft, wavef2rs_fft, max_imag, grid) &
+            !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, max_igptm)&
+            !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf, g_ptr)
 #endif
 
             call timestart("alloc&init")
