@@ -1,6 +1,7 @@
 module m_wavefproducts_aux
    use m_types_fftGrid
    use m_types
+   use nvtx
 CONTAINS
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
@@ -32,8 +33,8 @@ CONTAINS
 
       type(t_mat)     :: z_kqpt
       type(t_lapw)    :: lapw_ikqpt
-      type(t_fft)     :: fft
-      type(t_fftgrid) :: stepf
+      type(t_fft)     :: fft, wavef2rs_fft
+      type(t_fftgrid) :: stepf, grid
 
 
       integer, parameter :: blocksize = 512
@@ -59,19 +60,26 @@ CONTAINS
       endif
 
 
+      call nvtxStartRange("setup stepf", __LINE__)
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
+      call nvtxEndRange
+
 
       call fft%init(stepf%dimensions, .false., batch_size=1, l_gpu=.True.)
       !$acc data copyin(stepf, stepf%grid, stepf%gridlength)
          ! after we transform psi_k*stepf*psi_kqpt back  to 
          ! G-space we have to divide by stepf%gridLength. We do this now
+
+
+         call nvtxStartRange("stepf FFT", __LINE__)
          !$acc kernels default(none) present(stepf, stepf%grid, stepf%gridLength)
          stepf%grid = stepf%grid * inv_vol / stepf%gridLength
          !$acc end kernels
 
          call fft%exec(stepf%grid)
          call fft%free()
+         call nvtxEndRange
          
          call setup_g_ptr(mpdata, stepf, g_t, iq, g_ptr)
          
@@ -89,18 +97,24 @@ CONTAINS
          if(ierr /= 0) call juDFT_error("can't alloc psi_kqpt")
 
          !$acc data create(psi_kqpt)
+            call grid%init(fi%cell, fi%sym, gcutoff)
+            call wavef2rs_fft%init(grid%dimensions, .false., batch_size=psize, l_gpu=.True.)
             !$acc data copyin(z_kqpt, z_kqpt%l_real, z_kqpt%data_r, z_kqpt%data_c, lapw_ikqpt, lapw_ikqpt%nv, lapw_ikqpt%gvec,&
-            !$acc             jsp, bandoi, bandof, psize)
+            !$acc             jsp, bandoi, bandof, psize, grid, grid%dimensions)
                call timestart("1st wavef2rs")
-               call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, psi_kqpt)
+               call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, grid, wavef2rs_fft, psi_kqpt)
                call timestop("1st wavef2rs")
 
+               call nvtxStartRange("apply stepf", __LINE__)
                !$acc kernels default(none) present(psi_kqpt, stepf, stepf%grid)
                do iob = 1, psize 
                   psi_kqpt(:,iob) = psi_kqpt(:,iob) * stepf%grid
                enddo
                !$acc end kernels
+               call nvtxEndRange
             !$acc end data
+            call wavef2rs_fft%free()
+            call grid%free()
 
             call timestart("Big OMP loop")
 #ifndef _OPENACC
@@ -117,17 +131,20 @@ CONTAINS
             if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
             call fft%init(stepf%dimensions, .true., batch_size=psize, l_gpu=.True.)
+            call grid%init(fi%cell, fi%sym, gcutoff)
+            call wavef2rs_fft%init(grid%dimensions, .false., batch_size=1, l_gpu=.True.)
             call timestop("alloc&init")
 
             !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec)&
-            !$acc      copyin(hybdat, hybdat%nbasp, g_ptr)&
+            !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, grid, grid%dimensions, jsp)&
             !$acc      create(psi_k, prod)
 #ifndef _OPENACC
                !$OMP DO
 #endif
                do iband = 1, hybdat%nbands(ik,jsp)
-                  call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+                  call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, grid, wavef2rs_fft, psi_k)
                   
+                  call nvtxStartRange("marry wavef", __LINE__)
                   !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)               
                   do iob = 1, psize
                      do j = 0, stepf%gridlength-1
@@ -135,10 +152,15 @@ CONTAINS
                      enddo
                   enddo
                   !$acc end kernels
+                  call nvtxEndRange
 
+                  call nvtxStartRange("return to G-Space", __LINE__)
                   call fft%exec_batch(prod)
+                  !$acc wait
+                  call nvtxEndRange
             
                   if (cprod%l_real) then
+                     call nvtxStartRange("real warning", __LINE__)
                      if (.not. real_warned) then
                         !$acc kernels present(prod) copyout(max_imag)
                         max_imag = maxval(abs(aimag(prod)))
@@ -148,7 +170,9 @@ CONTAINS
                            real_warned = .True.
                         endif
                      endif
+                     call nvtxEndRange
                         
+                     call nvtxStartRange("sort to cprod", __LINE__)
                      !$acc kernels default(none) present(cprod, cprod%data_r, prod, g_ptr)
                      !$acc loop independent
                      do iob = 1, psize
@@ -158,7 +182,9 @@ CONTAINS
                         enddo
                      enddo
                      !$acc end kernels
+                     call nvtxEndRange
                   else
+                     call nvtxStartRange("sort to cprod", __LINE__)
                      !$acc kernels default(none) present(cprod, cprod%data_c, prod, g_ptr)
                      !$acc loop independent
                      do iob = 1, psize
@@ -168,18 +194,20 @@ CONTAINS
                         enddo
                      enddo
                      !$acc end kernels
+                     call nvtxEndRange
                   endif
                enddo
 #ifndef _OPENACC
                !$OMP END DO
 #endif
             !$acc end data 
+            call fft%free()
+            call grid%free()
+            call wavef2rs_fft%free()
          !$acc end data ! psi_kqpt
-
+         deallocate (prod, psi_k)
       !$acc end data ! stepf, stepf%grid
 
-      deallocate (prod, psi_k)
-      call fft%free()
 #ifndef _OPENACC
       !$OMP END PARALLEL
 #endif
@@ -208,7 +236,7 @@ CONTAINS
       enddo
    end subroutine setup_g_ptr
 
-   subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, psi)
+   subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, grid, fft, psi)
       ! put block of wave functions through FFT
 !$    use omp_lib
       use m_types
@@ -219,34 +247,28 @@ CONTAINS
       type(t_mat), intent(in)        :: zmat
       integer, intent(in)            :: jspin, bandoi, bandof
       real, intent(in)               :: gcutoff
+      type(t_fftgrid), intent(inout) :: grid
+      type(t_fft), intent(inout)     :: fft
       complex, intent(inout)         :: psi(0:, bandoi:) ! (nv,ne)
 
-      type(t_fft) :: fft
-      type(t_fftgrid) :: grid
-
-      integer :: ivmap(SIZE(lapw%gvec, 2))
       integer :: iv, nu, psize, dims(3)
-     
-      call grid%init(fi%cell, fi%sym, gcutoff)
 
-      !$acc data copyin(grid, grid%dimensions)
+      call nvtxStartRange("wavef2rs put state on grid", __LINE__)
 #ifndef _OPENACC 
-         !$omp parallel do default(none) private(nu) shared(grid, bandoi, bandof, lapw, jspin, zMat, psi)
+      !$omp parallel do default(none) private(nu) shared(grid, bandoi, bandof, lapw, jspin, zMat, psi)
 #endif
-         do nu = bandoi, bandof
-            call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu), l_gpu=.True.)
-         enddo
+      do nu = bandoi, bandof
+         call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu), l_gpu=.True.)
+      enddo
 #ifndef _OPENACC 
-         !$omp end parallel do
-#endif
+      !$omp end parallel do
+#endif   
+      !$acc wait
+      call nvtxEndRange
 
-         psize = bandof - bandoi + 1
-         call fft%init(grid%dimensions, .false., batch_size=psize, l_gpu=.True.)
-         call fft%exec_batch(psi)
-      !$acc end data
-
-      call fft%free()
-      call grid%free()
+      call nvtxStartRange("wavef2rs fft exec", __LINE__)
+      call fft%exec_batch(psi)
+      call nvtxEndRange
    end subroutine wavef2rs
 
    subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)
