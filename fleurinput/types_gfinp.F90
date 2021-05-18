@@ -187,16 +187,26 @@ CONTAINS
 
    END SUBROUTINE mpi_bc_gfinp
 
-   SUBROUTINE distribute_elements_gfinp(this, rank, size, nspins, i_gf_start, i_gf_end, spin_start, spin_end)
+   SUBROUTINE distribute_elements_gfinp(this, rank, size, nspins, i_gf_start, i_gf_end, spin_start, spin_end, k_resolved)
       !Distribute the Greens function elements that are not kresolved for the Kramers Kronig
       !integration
-      CLASS(t_gfinp), INTENT(IN)  :: this
-      INTEGER,        INTENT(IN)  :: rank, size, nspins
-      INTEGER,        INTENT(OUT) :: i_gf_start, i_gf_end, spin_start, spin_end
+      CLASS(t_gfinp),    INTENT(IN)  :: this
+      INTEGER,           INTENT(IN)  :: rank, size, nspins
+      INTEGER,           INTENT(OUT) :: i_gf_start, i_gf_end, spin_start, spin_end
+      LOGICAL, OPTIONAL, INTENT(IN)  :: k_resolved
 
       INTEGER :: n_elems, i_gf, currentIndex, n_gf_task, extra
+      INTEGER :: i_elem_start, i_elem_end
+      LOGICAL :: k_resolved_arg
+
+      k_resolved_arg = .FALSE.
+      IF(PRESENT(k_resolved)) k_resolved_arg = k_resolved
+
 
       n_elems = COUNT(.NOT.this%elem(:)%l_kresolved_int)
+      IF(k_resolved_arg) THEN
+         n_elems = this%n - n_elems
+      ENDIF
 
 #ifdef CPP_MPI
       IF(size>1) THEN
@@ -204,49 +214,60 @@ CONTAINS
             !Just distribute the individual gf elements over the ranks
             n_gf_task = FLOOR(REAL(n_elems)/(size))
             extra = n_elems - n_gf_task*size
-            i_gf_start = rank*n_gf_task + 1 + extra
-            i_gf_end = (rank+1)*n_gf_task   + extra
+            i_elem_start = rank*n_gf_task + 1 + extra
+            i_elem_end = (rank+1)*n_gf_task   + extra
             IF(rank < extra) THEN
-               i_gf_start = i_gf_start - (extra - rank)
-               i_gf_end = i_gf_end - (extra - rank - 1)
+               i_elem_start = i_elem_start - (extra - rank)
+               i_elem_end = i_elem_end - (extra - rank - 1)
             ENDIF
             spin_start = 1
             spin_end   = nspins
          ELSE IF(n_elems*nspins>size) THEN
             !Just fill up the ranks
-            i_gf_start = rank + 1
-            i_gf_end   = rank + 1
+            i_elem_start = rank + 1
+            i_elem_end   = rank + 1
             spin_start = 1
             spin_end   = nspins
          ELSE
             !If there are few enough gf elements then distribute the spins
             spin_start = MOD(rank,nspins) + 1
             spin_end   = MOD(rank,nspins) + 1
-            i_gf_start = 1 + FLOOR(REAL(rank)/nspins)
-            i_gf_end   = 1 + FLOOR(REAL(rank)/nspins)
+            i_elem_start = 1 + FLOOR(REAL(rank)/nspins)
+            i_elem_end   = 1 + FLOOR(REAL(rank)/nspins)
          ENDIF
       ELSE
          !Distribute nothing
-         i_gf_start = 1
-         i_gf_end = n_elems
+         i_elem_start = 1
+         i_elem_end = n_elems
          spin_start = 1
          spin_end   = nspins
       ENDIF
 #else
-      i_gf_start = 1
-      i_gf_end = n_elems
+      i_elem_start = 1
+      i_elem_end = n_elems
       spin_start = 1
       spin_end   = nspins
 #endif
 
+      IF(i_elem_start.LT.1 .OR. i_elem_start.GT.n_elems.OR.&
+         i_elem_end.LT.1 .OR. i_elem_end.GT.n_elems) THEN
+         i_gf_start = -1
+         i_gf_end = -1
+         RETURN
+      ENDIF
+
       currentIndex = 0
       DO i_gf = 1, this%n
-         IF(this%elem(i_gf)%l_kresolved_int) CYCLE
+         IF(k_resolved_arg) THEN
+            IF(.NOT.this%elem(i_gf)%l_kresolved_int) CYCLE
+         ELSE
+            IF(this%elem(i_gf)%l_kresolved_int) CYCLE
+         ENDIF
          currentIndex = currentIndex + 1
-         IF(currentIndex.EQ.i_gf_start) THEN
+         IF(currentIndex.EQ.i_elem_start) THEN
             i_gf_start = i_gf
          ENDIF
-         IF(currentIndex.EQ.i_gf_end) THEN
+         IF(currentIndex.EQ.i_elem_end) THEN
             i_gf_end = i_gf
             EXIT
          ELSE IF(i_gf.EQ.this%n) THEN
@@ -266,7 +287,7 @@ CONTAINS
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str
       CHARACTER(len=1),PARAMETER :: spdf(0:3) = ['s','p','d','f']
-      LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg,l_kresolved,l_kresolved_int
+      LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg,l_kresolved,l_kresolved_int, l_found
       LOGICAL :: lp_calc(0:3,0:3)
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'
@@ -435,7 +456,10 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1 .AND.ANY(lp_calc)) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,l_sphavg,nTypep=-nshells)
+               refGF = this%find(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.,k_resolved_int=.FALSE.,l_found=l_found)
+               IF(.NOT.l_found) THEN
+                  refGF = this%add(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.)
+               ENDIF
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
@@ -463,7 +487,7 @@ CONTAINS
             ENDIF
             !Hubbard 1 GF has to be spherically averaged
             i_gf =  this%add(l,itype,iContour,.TRUE.,l_fixedCutoffset=l_fixedCutoffset,&
-                             fixedCutoff=fixedCutoff)
+                             fixedCutoff=fixedCutoff,k_resolved=.FALSE.)
             n_hia = n_hia + 1
             this%hiaElem(n_hia) = i_gf
          ENDDO
@@ -501,7 +525,7 @@ CONTAINS
                   IF(.NOT.lp_calc(lp,l)) CYCLE
                   !Torgue GF has to have radial dependence
                   i_gf =  this%add(l,itype,iContour,.FALSE.,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
-                                   fixedCutoff=fixedCutoff)
+                                   fixedCutoff=fixedCutoff,k_resolved=.FALSE.)
                   this%numTorgueElems(itype) = this%numTorgueElems(itype) + 1
                   this%torgueElem(itype,this%numTorgueElems(itype)) = i_gf
                ENDDO
@@ -510,11 +534,14 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1 .AND.ANY(lp_calc)) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,.FALSE.)
+               refGF = this%find(refL,itype,iContour,.FALSE.,k_resolved=.FALSE.,k_resolved_int=.FALSE., l_found=l_found)
+               IF(.NOT.l_found) THEN
+                  refGF = this%add(refL,itype,iContour,.FALSE.,k_resolved=.FALSE.)
+               ENDIF
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf = this%find(l,itype,iContour,.FALSE.,lp=lp)
+                     i_gf = this%find(l,itype,iContour,.FALSE.,lp=lp,k_resolved=.FALSE.,k_resolved_int=.FALSE.)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -706,12 +733,12 @@ CONTAINS
 
 #ifdef CPP_DEBUG
       WRITE(oUnit,*) "Green's Function Elements: "
-      WRITE(oUnit,'(10(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","repr_elem","repr_op","atomDiff"
+      WRITE(oUnit,'(12(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","repr_elem","repr_op","atomDiff", 'k_resolved', 'k_resolved_int'
       DO i_gf = 1, this%n
-         WRITE(oUnit,'(5I10,1l5,3I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
+         WRITE(oUnit,'(5I10,1l5,3I10,3f14.8, 2l5)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
                                           this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
                                           this%elem(i_gf)%representative_elem,this%elem(i_gf)%representative_op, &
-                                          this%elem(i_gf)%atomDiff(:)
+                                          this%elem(i_gf)%atomDiff(:), this%elem(i_gf)%l_kresolved, this%elem(i_gf)%l_kresolved_int
       ENDDO
 #endif
 
@@ -848,10 +875,10 @@ CONTAINS
       l_found = .FALSE.
       !Check if this job has already been added
       IF(PRESENT(nTypep).OR..NOT.PRESENT(nshells)) THEN
-         i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=nTypep,atomDiff=atomDiff,l_found=l_found)
+         i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=nTypep,atomDiff=atomDiff,k_resolved=k_resolved,l_found=l_found)
       ELSE IF(PRESENT(nshells)) THEN
          !Make sure we have not added the reference element for intersite elements
-         i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=-nshells,atomDiff=atomDiff,l_found=l_found)
+         i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=-nshells,atomDiff=atomDiff,k_resolved=k_resolved,l_found=l_found)
       ENDIF
       IF(l_found) RETURN !Element was found
 

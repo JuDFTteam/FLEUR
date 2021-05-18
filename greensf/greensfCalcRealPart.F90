@@ -27,12 +27,13 @@ MODULE m_greensfCalcRealPart
 
    CONTAINS
 
-   SUBROUTINE greensfCalcRealPart(atoms,gfinp,sym,input,noco,usdus,denCoeffsOffDiag,fmpi,ef,greensfImagPart,g)
+   SUBROUTINE greensfCalcRealPart(atoms,gfinp,sym,input,noco,kpts,usdus,denCoeffsOffDiag,fmpi,ef,greensfImagPart,g)
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
       TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_noco),              INTENT(IN)     :: noco
+      TYPE(t_kpts),              INTENT(IN)     :: kpts
       TYPE(t_usdus),             INTENT(IN)     :: usdus
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
       TYPE(t_input),             INTENT(IN)     :: input
@@ -45,10 +46,11 @@ MODULE m_greensfCalcRealPart
       INTEGER :: jspin,nspins,ipm,lp,nTypep,refCutoff
       INTEGER :: contourShape
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
-      INTEGER :: n_gf_task,extra
-      LOGICAL :: l_onsite,l_fixedCutoffset,l_sphavg,l_kresolved_int
-      REAL    :: del,eb,fixedCutoff,atomDiff(3)
+      INTEGER :: ikpt, ikpt_i
+      LOGICAL :: l_onsite,l_fixedCutoffset,l_sphavg,l_kresolved_int, l_inter
+      REAL    :: del,eb,fixedCutoff,atomDiff(3),bk(3)
       REAL,    ALLOCATABLE :: eMesh(:),imag(:)
+      COMPLEX, ALLOCATABLE :: gmat(:)
 
       !Get the information on the real axis energy mesh
       CALL gfinp%eMesh(ef,del,eb,eMesh=eMesh)
@@ -216,6 +218,69 @@ MODULE m_greensfCalcRealPart
          ENDDO
          CALL timestop("Green's Function: Kramer-Kronigs-Integration")
       ENDDO
+
+      IF(ANY(gfinp%elem(:)%l_kresolved_int)) THEN
+         CALL gfinp%distribute_elements(fmpi%n_rank, fmpi%n_size, nspins, i_gf_start, i_gf_end, spin_start, spin_end, k_resolved=.TRUE.)
+         CALL timestart("Green's Function: K-Resolved Kramer-Kronigs-Integration")
+         DO ikpt_i = 1, SIZE(fmpi%k_list)
+            ikpt = fmpi%k_list(ikpt_i)
+            bk = kpts%bk(:,ikpt)
+            DO i_gf = i_gf_start, i_gf_end
+
+               IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
+
+               !Get the information of ith current element
+               l  = g(i_gf)%elem%l
+               lp = g(i_gf)%elem%lp
+               nType  = g(i_gf)%elem%atomType
+               nTypep = g(i_gf)%elem%atomTypep
+               l_sphavg = g(i_gf)%elem%l_sphavg
+               contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
+               nLO = g(i_gf)%elem%countLOs(atoms)
+               atomDiff(:) = g(i_gf)%elem%atomDiff(:)
+               l_inter = ANY(ABS(atomDiff) > 1e-12)
+               IF(g(i_gf)%elem%representative_elem > 0) CYCLE
+               IF(.NOT.g(i_gf)%elem%l_kresolved_int) CYCLE
+
+               i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,l_kresolved_int=.TRUE.)
+               i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved_int=.TRUE.)
+
+               ALLOCATE(gmat(SIZE(g(i_gf)%contour%e)), source=cmplx_0)
+
+               CALL timestart("Green's Function: Kramer-Kronigs-Integration")
+               DO jspin = spin_start, spin_end
+                  DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
+                     DO m= -l,l
+                        DO mp= -lp,lp
+
+                           IF(greensfImagPart%checkEmpty(i_elem,i_elemLO,nLO,m,mp,jspin,l_sphavg, ikpt=ikpt_i)) THEN
+                              CYCLE
+                           ENDIF
+
+                           IF(l_sphavg) THEN
+                              imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,l_sphavg, ikpt=ikpt_i)
+                              CALL kkintgr(imag,eMesh,g(i_gf)%contour%e,(ipm.EQ.2),&
+                                           gmat,int_method(contourShape))
+                           ELSE
+                              CALL juDFT_error("No Green's function with k-resolution and radial dependence implemented")
+                           ENDIF
+
+                           IF(l_inter) THEN
+                              g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) = g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) + exp(-tpi_const*ImagUnit*dot_product(bk,atomDiff)) * gmat(:)
+                           ELSE
+                              g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) = g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) + gmat(:)
+                           ENDIF
+                        ENDDO
+                     ENDDO
+                  ENDDO
+               ENDDO
+               CALL timestop("Green's Function: Kramer-Kronigs-Integration")
+               DEALLOCATE(gmat)
+            ENDDO
+         ENDDO
+         CALL timestop("Green's Function: K-Resolved Kramer-Kronigs-Integration")
+      ENDIF
+
 
 #ifdef CPP_MPI
       CALL timestart("Green's Function: Collect")

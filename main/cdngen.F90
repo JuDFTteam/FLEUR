@@ -235,7 +235,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
       IF(greensfImagPart%l_calc) THEN
-         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,cell,gfinp,input,sym,noco,fmpi,&
+         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,kpts,cell,gfinp,input,sym,noco,fmpi,&
                                  nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
       ELSE
          IF(fmpi%irank.EQ.0) THEN

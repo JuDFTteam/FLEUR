@@ -17,12 +17,13 @@ MODULE m_greensfPostProcess
 
    CONTAINS
 
-   SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,cell,gfinp,input,sym,noco,mpi,&
+   SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,kpts,cell,gfinp,input,sym,noco,mpi,&
                                  nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
 
       !contains all the modules for calculating properties from the greens function
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
+      TYPE(t_kpts),              INTENT(IN)     :: kpts
       TYPE(t_cell),              INTENT(IN)     :: cell
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
       TYPE(t_input),             INTENT(IN)     :: input
@@ -115,7 +116,7 @@ MODULE m_greensfPostProcess
       ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
       !--------------------------------------------------------------------------------
       CALL timestart("Green's Function: Real Part")
-      CALL greensfCalcRealPart(atoms,gfinp,sym,input,noco,usdus,denCoeffsOffDiag,mpi,results%ef,&
+      CALL greensfCalcRealPart(atoms,gfinp,sym,input,noco,kpts,usdus,denCoeffsOffDiag,mpi,results%ef,&
                                greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 
