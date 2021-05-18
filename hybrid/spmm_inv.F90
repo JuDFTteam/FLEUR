@@ -35,6 +35,7 @@ contains
       integer :: indx0, indx1, indx2, indx3, n, iatom1, ieq1, ishift, itype1, max_lcut_plus_1
       integer :: ishift1, indx4, lm, iat2, it2, l2, idx1_start, idx3_start, iat, irank, ierr
       real, allocatable :: mt1_tmp(:,:,:,:), mt2_tmp(:,:,:,:), mat_in_line(:), mt3_tmp(:,:,:)
+      integer, allocatable :: new_order(:)
 #ifdef _OPENACC 
       real, allocatable :: mtir_tmp(:,:)
 #endif
@@ -45,12 +46,9 @@ contains
       n_vec = size(mat_in, 2)
 
       call timestart("reorder_forw")
-      !$OMP PARALLEL DO default(none) &
-      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_in)
-      do i_vec = 1, n_vec
-         call reorder_forw(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_in(:, i_vec))
-      enddo
-      !$OMP end parallel do
+      allocate(new_order(size(mat_in,1)))
+      call forw_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
+      call reorder_forw(new_order, mat_in)
       call timestop("reorder_forw")
 
       ibasm = calc_ibasm(fi, mpdata)
