@@ -45,11 +45,11 @@ contains
       
       n_vec = size(mat_in, 2)
 
-      call timestart("reorder_forw")
+      call timestart("reorder")
       allocate(new_order(size(mat_in,1)))
       call forw_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
-      call reorder_forw(new_order, mat_in)
-      call timestop("reorder_forw")
+      call reorder(new_order, mat_in)
+      call timestop("reorder")
 
       ibasm = calc_ibasm(fi, mpdata)
 
@@ -296,15 +296,11 @@ contains
 
       END IF
 
-      call timestart("reorder_back")
-      !$OMP PARALLEL DO default(none) &
-      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_out, mat_in)
-      do i_vec = 1, n_vec
-         call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out(:, i_vec))
-         call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_in(:, i_vec))
-      enddo
-      !$OMP END PARALLEL DO
-      call timestop("reorder_back")
+      call timestart("reorder") 
+      call back_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
+      call reorder(new_order, mat_in)
+      call reorder(new_order, mat_out)
+      call timestop("reorder")
       call timestop("spmm_invs")
    end subroutine spmm_invs
 end module m_spmm_inv

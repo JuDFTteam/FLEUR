@@ -55,7 +55,7 @@ contains
       call timestart("reorder forw")
       allocate(new_order(size(mat_in,1)))
       call forw_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
-      call reorder_forw(new_order, mat_in)
+      call reorder(new_order, mat_in)
       call timestop("reorder forw")
 
       ibasm = calc_ibasm(fi, mpdata)
@@ -345,13 +345,9 @@ contains
       call timestop("free mem")
 
       call timestart("reorder back")
-      !$OMP PARALLEL DO default(none) &
-      !$OMP private(i_vec) shared(n_vec, hybdat, ikpt, fi, mpdata, mat_out, mat_in)
-      do i_vec = 1, n_vec
-         call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_out(:, i_vec))
-         call reorder_back(hybdat%nbasm(ikpt), fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, mat_in(:, i_vec))
-      enddo
-      !$OMP END PARALLEL DO
+      call back_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
+      call reorder(new_order, mat_in)
+      call reorder(new_order, mat_out)
       call timestop("reorder back")
       call timestop("spmm_noinvs")
    end subroutine spmm_noinvs
