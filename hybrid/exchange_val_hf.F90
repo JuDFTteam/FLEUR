@@ -65,7 +65,6 @@ CONTAINS
       USE m_trafo
       USE m_wavefproducts
       USE m_olap
-      USE m_spmvec
       USE m_hsefunctional
       USE m_io_hybrid
       USE m_kp_perturbation
