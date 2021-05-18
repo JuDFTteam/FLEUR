@@ -55,7 +55,9 @@ contains
       call timestart("reorder forw")
       allocate(new_order(size(mat_in,1)))
       call forw_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
-      call reorder(new_order, mat_in)
+      !$acc data copy(mat_in)
+         call reorder(new_order, mat_in)
+      !$acc end data
       call timestop("reorder forw")
 
       ibasm = calc_ibasm(fi, mpdata)
@@ -346,8 +348,10 @@ contains
 
       call timestart("reorder back")
       call back_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
-      call reorder(new_order, mat_in)
-      call reorder(new_order, mat_out)
+      !$acc data copy(mat_in, mat_out)
+         call reorder(new_order, mat_in)
+         call reorder(new_order, mat_out)
+      !$acc end data
       call timestop("reorder back")
       call timestop("spmm_noinvs")
    end subroutine spmm_noinvs
