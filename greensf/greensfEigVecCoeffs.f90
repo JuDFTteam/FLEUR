@@ -40,14 +40,14 @@ MODULE m_greensfEigVecCoeffs
             !-------------------------
             IF(l_sphavg) THEN
                im(m,mp,:,1) = im(m,mp,:,1) &
-                             + scalarGF%uun(spin1,spin2) * conjg(eigVecCoeffs%acof(:nBands,lmp,natom,spin1))&
-                                                         *       eigVecCoeffs%acof(:nBands,lm ,natom,spin2) &
-                             + scalarGF%udn(spin1,spin2) * conjg(eigVecCoeffs%acof(:nBands,lmp,natom,spin1))&
-                                                         *       eigVecCoeffs%bcof(:nBands,lm ,natom,spin2) &
-                             + scalarGF%dun(spin1,spin2) * conjg(eigVecCoeffs%bcof(:nBands,lmp,natom,spin1))&
-                                                         *       eigVecCoeffs%acof(:nBands,lm ,natom,spin2) &
-                             + scalarGF%ddn(spin1,spin2) * conjg(eigVecCoeffs%bcof(:nBands,lmp,natom,spin1))&
-                                                         *       eigVecCoeffs%bcof(:nBands,lm ,natom,spin2)
+                             + scalarGF%uun(spin1,spin2) * conjg(eigVecCoeffs%acof(:nBands,lmp,natomp,spin1))&
+                                                         *       eigVecCoeffs%acof(:nBands,lm ,natom ,spin2) &
+                             + scalarGF%udn(spin1,spin2) * conjg(eigVecCoeffs%acof(:nBands,lmp,natomp,spin1))&
+                                                         *       eigVecCoeffs%bcof(:nBands,lm ,natom ,spin2) &
+                             + scalarGF%dun(spin1,spin2) * conjg(eigVecCoeffs%bcof(:nBands,lmp,natomp,spin1))&
+                                                         *       eigVecCoeffs%acof(:nBands,lm ,natom ,spin2) &
+                             + scalarGF%ddn(spin1,spin2) * conjg(eigVecCoeffs%bcof(:nBands,lmp,natomp,spin1))&
+                                                         *       eigVecCoeffs%bcof(:nBands,lm ,natom ,spin2)
             ELSE
                im(m,mp,:,1) = im(m,mp,:,1) + conjg(eigVecCoeffs%acof(:nBands,lmp,natomp,spin1))&
                                                  * eigVecCoeffs%acof(:nBands,lm ,natom ,spin2)
@@ -65,15 +65,11 @@ MODULE m_greensfEigVecCoeffs
             DO ilo = 1, atoms%nlo(atomType)
                IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                IF(l_sphavg) THEN
-                   im(m,mp,:,1) = im(m,mp,:,1) &
-                                 + scalarGF%uulon(ilo,spin1,spin2) * conjg(eigVecCoeffs%acof(   :nBands,lmp,natom,spin1))&
-                                                                   *       eigVecCoeffs%ccof(m ,:nBands,ilo,natom,spin2) &
-                                 + scalarGF%uloun(ilo,spin1,spin2) * conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natom,spin1))&
-                                                                   *       eigVecCoeffs%acof(   :nBands,lm ,natom,spin2) &
-                                 + scalarGF%dulon(ilo,spin1,spin2) * conjg(eigVecCoeffs%bcof(   :nBands,lmp,natom,spin1))&
-                                                                   *       eigVecCoeffs%ccof(m ,:nBands,ilo,natom,spin2) &
-                                 + scalarGF%ulodn(ilo,spin1,spin2) * conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natom,spin1))&
-                                                                   *       eigVecCoeffs%bcof(   :nBands,lm ,natom,spin2)
+                  im(m,mp,:,1) = im(m,mp,:,1) &
+                                + scalarGF%uulon(ilo,spin1,spin2) * conjg(eigVecCoeffs%acof(   :nBands,lmp,natomp,spin1))&
+                                                                  *       eigVecCoeffs%ccof(m ,:nBands,ilo,natom ,spin2) &
+                                + scalarGF%dulon(ilo,spin1,spin2) * conjg(eigVecCoeffs%bcof(   :nBands,lmp,natomp,spin1))&
+                                                                  *       eigVecCoeffs%ccof(m ,:nBands,ilo,natom ,spin2)
                ELSE
                   nLO_ind = nLO_ind + 1
                   imat    = 4+(nLO_ind-1)*2
@@ -83,25 +79,32 @@ MODULE m_greensfEigVecCoeffs
                                                               * eigVecCoeffs%ccof(m,:nBands,ilo,natom ,spin2)
                ENDIF
             ENDDO
-            IF(.NOT.l_sphavg) THEN
-               DO ilo = 1, atoms%nlo(atomTypep)
-                  IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
+            DO ilo = 1, atoms%nlo(atomTypep)
+               IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
+               IF(l_sphavg) THEN
+                  im(m,mp,:,1) = im(m,mp,:,1) &
+                                + scalarGF%uloun(ilo,spin1,spin2) * conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natomp,spin1))&
+                                                                  *       eigVecCoeffs%acof(   :nBands,lm ,natom ,spin2) &
+                                + scalarGF%ulodn(ilo,spin1,spin2) * conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natomp,spin1))&
+                                                                  *       eigVecCoeffs%bcof(   :nBands,lm ,natom ,spin2)
+               ELSE
                   nLO_ind = nLO_ind + 1
                   imat    = 4+(nLO_ind-1)*2
                   im(m,mp,:,imat+1) = im(m,mp,:,imat+1) + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natomp,spin1))&
                                                               * eigVecCoeffs%acof(   :nBands,lm ,natom ,spin2)
                   im(m,mp,:,imat+2) = im(m,mp,:,imat+2) + conjg(eigVecCoeffs%ccof(mp,:nBands,ilo,natomp,spin1))&
                                                               * eigVecCoeffs%bcof(   :nBands,lm ,natom ,spin2)
-               ENDDO
-            ENDIF
+               ENDIF
+            ENDDO
+
             DO ilo = 1, atoms%nlo(atomType)
                IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                DO ilop = 1, atoms%nlo(atomTypep)
                   IF (atoms%llo(ilop,atomTypep).NE.lp) CYCLE
                   IF(l_sphavg) THEN
                      im(m,mp,:,1) = im(m,mp,:,1) &
-                                   + scalarGF%uloulopn(ilo,ilop,spin1,spin2) * conjg(eigVecCoeffs%ccof(mp,:nBands,ilop,natom,spin1))&
-                                                                             *       eigVecCoeffs%ccof(m ,:nBands,ilo ,natom,spin2)
+                                   + scalarGF%uloulopn(ilo,ilop,spin1,spin2) * conjg(eigVecCoeffs%ccof(mp,:nBands,ilop,natomp,spin1))&
+                                                                             *       eigVecCoeffs%ccof(m ,:nBands,ilo ,natom ,spin2)
                   ELSE
                      nLOp_ind = nLOp_ind + 1
                      imat = 4+nLO_ind*2+nLOp_ind
