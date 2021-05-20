@@ -111,7 +111,12 @@ contains
             endif 
          enddo 
 
-         M%data_r(:,k) = M%data_r(:,k) / norm2(M%data_r(:,k))
+
+         if(M%l_real) then
+            M%data_r(:,k) = M%data_r(:,k) / norm2(M%data_r(:,k))
+         else 
+            M%data_c(:,k) = M%data_c(:,k) / norm2(abs(M%data_c(:,k)))
+         endif
       enddo 
    end subroutine mod_gram_schmidt
 
