@@ -116,7 +116,8 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,fmpi,results,td,ud)
+      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,results,td,ud,&
+           MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc))
 
       neigBuffer = 0
       results%neig = 0
@@ -173,7 +174,7 @@ CONTAINS
               CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
               CALL smat%free()
               CALL hmat%free()
-            else
+            ELSE
               ne_all=0
             endif
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
@@ -227,10 +228,10 @@ CONTAINS
                                                       hint=errmsg, calledby="eigen.F90")
             END IF
 
-            if (allocated(zMat)) THEN
-               CALL zMat%free()
-               DEALLOCATE(zMat)
-            endif   
+            IF (allocated(zmat)) THEN
+              call zMat%free()
+              deallocate(zMat)
+            ENDIF
          END DO  k_loop
       END DO ! spin loop ends
 
