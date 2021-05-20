@@ -44,17 +44,7 @@ CONTAINS
     REAL, ALLOCATABLE :: xlegend(:), dot(:)
     COMPLEX, ALLOCATABLE :: cph(:),fct(:),angso(:,:,:)
 
-
-
-
     CALL timestart("offdiagonal soc-setup")
-
-    call dump("nosoc")
-
-!    open(999,file="rsopp")
-!    write(999,*) td%rsoc%rsopp(1,2,:,1)
-!    write(999,*) td%rsoc%rsopp(1,2,:,2)
-!    close(999)
 
     !$acc update self(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
 
@@ -129,12 +119,14 @@ CONTAINS
                 dplegend(:NVEC_rem,l3)=REAL(l)*plegend(:NVEC_rem,MODULO(l-1,3))+xlegend(:NVEC_rem)*dplegend(:NVEC_rem,MODULO(l-1,3))
              END IF ! l
              DO j1=1,2
+                fjkiln = fjgj%fj(ki,l,j1,1)
+                gjkiln = fjgj%gj(ki,l,j1,1)
                 DO j2=1,2
                    fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
-                        fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                        fjgj%fj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                        fjgj%gj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                        fjgj%gj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                        fjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
+                        fjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                        gjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                        gjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
                         * angso(:NVEC_rem,j1,j2)
                    hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
                    hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
@@ -158,41 +150,7 @@ CONTAINS
 
     if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
     !$acc update device(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
-    call dump("soc")
-    !stop "debug"
     RETURN
-    contains
-    subroutine dump(name)
-    character(len=*)::name
-    character(len=20)::file
-    integer :: i,j,k
-    return
-    hmat(1,2)%data_c=hmat(1,2)%data_c+conjg(transpose(hmat(2,1)%data_c))
-    hmat(2,1)%data_c=conjg(transpose(hmat(1,2)%data_c))
-    hmat(1,1)%data_c=hmat(1,1)%data_c+conjg(transpose(hmat(1,1)%data_c))
-    hmat(2,2)%data_c=hmat(2,2)%data_c+conjg(transpose(hmat(2,2)%data_c))
-    do k=1,size(hmat(1,1)%data_c,1)
-       hmat(1,1)%data_c(k,k)=hmat(1,1)%data_c(k,k)/2
-       hmat(2,2)%data_c(k,k)=hmat(2,2)%data_c(k,k)/2
-    enddo
-    open(999,file=name)
-    write(999,*) lapw%gk(:,4+3,1)
-    write(999,*) lapw%gk(:,3+3,1)
-    write(999,*) lapw%gk(:,2+3,1)
-    DO i=1,2
-    !write(file,"(a,i1,i1)") trim(name),i,j
-    !open(999,file=file)
-    DO k=4,2,-1
-    write(999,"(6(2f10.6,2x))") hmat(i,1)%data_c(4+3:2+3:-1,k+3),hmat(i,2)%data_c(4+3:2+3:-1,k+3)
-    enddo
-    enddo
-    close(99)
-    hmat(1,1)%data_c=0.0
-    hmat(1,2)%data_c=0.0
-    hmat(2,1)%data_c=0.0
-    hmat(2,2)%data_c=0.0
-  end subroutine
-
   END SUBROUTINE hsmt_soc_offdiag
 
   SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,ud,fjgj,hmat)

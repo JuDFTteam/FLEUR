@@ -258,11 +258,11 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
        endif
      enddo
 
-  
-     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),merge(nococonv%beta,zeros,noco%l_alignMT),Den,toGlobal=.false.)
-     
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(-nococonv%alphPrev,zeros,noco%l_alignMT),zeros,den)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(-nococonv%betaPreV,zeros,noco%l_alignMT),den)
+     write(6,*) "toLocalSpin: alpha=",-nococonv%alphprev
+     write(6,*) "toLocalSpin: beta=",-nococonv%betaprev
+
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(-nococonv%alphPrev,zeros,noco%l_alignMT),zeros,den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(-nococonv%betaPreV,zeros,noco%l_alignMT),den)
      if (present(l_update_nococonv)) then
        if (l_update_nococonv) THEN
          nococonv%alph=merge(nococonv%alphPrev,nococonv%alph,noco%l_alignMT)
@@ -305,9 +305,11 @@ SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
 
    if (l_irank0) then
      zeros(:)=0.0
-     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),merge(nococonv%beta,zeros,noco%l_alignMT),Den,toGlobal=.true.)
-     !CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
+     write(6,*) "toGlobalSpin: alpha=",nococonv%alph
+     write(6,*) "toGlobalSpin: beta=",nococonv%beta
+
+     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
      ! Nococonv is zero now since rotation has been reverted.
      if (present(l_update_nococonv)) THEN
        if (l_update_nococonv) THEN
