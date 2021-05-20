@@ -171,7 +171,7 @@ CONTAINS
     !--->   set up the t-matrices for the local orbitals,
     !--->   if there are any
     IF (atoms%nlo(n).GE.1) THEN
-       CALL tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,n,enpara,MERGE(1,0,jsp<3),input,v%mt(1,0,n,jsp),&
+       CALL tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,n,enpara,MERGE(1,0,jsp<3.and.alpha_hybrid==0),input,vr0,&
             na,flo,f,g,ud, td)
     ENDIF
   END SUBROUTINE tlmplm
