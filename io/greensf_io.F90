@@ -124,12 +124,14 @@ MODULE m_greensf_io
       INTEGER           :: dimsInt(7)
       INTEGER           :: ispin,m,jspinsOut,iContour
       INTEGER           :: i_elem,i,iContourOut,nLO
+      INTEGER           :: contour_mapping(gfinp%numberContours)
       INTEGER(HSIZE_T)  :: dims(7)
       COMPLEX           :: trc(3),atomDiff(3)
       LOGICAL           :: l_anyradial
       TYPE(t_greensf)   :: gfOut
 
 
+      contour_mapping = -1
       jspinsOut = MERGE(3,input%jspins,gfinp%l_mperp)
 
       !Check dimensions of mmpmat and selfen
@@ -163,11 +165,11 @@ MODULE m_greensf_io
          iContourOut = iContourOut + 1
          WRITE(elementName,100) iContourOut
 100      FORMAT('contour-',i0)
+         contour_mapping(iContour) = iContourOut
 
          CALL h5gcreate_f(contoursGroupID, elementName, currentcontourGroupID, hdfError)
 
          CALL io_write_attint0(currentcontourGroupID,'nz',greensf(i_elem)%contour%nz)
-         CALL io_write_attint0(currentcontourGroupID,'iContour',iContour)
 
          SELECT CASE (gfinp%contour(iContour)%shape)
 
@@ -256,7 +258,7 @@ MODULE m_greensf_io
             CALL io_write_attreal0(currentelementGroupID,"OffDTrace-y",AIMAG(trc(3)))
          ENDIF
 
-         CALL writeGreensFElement(currentelementGroupID, gfOut, atoms, jspinsOut)
+         CALL writeGreensFElement(currentelementGroupID, gfOut, atoms, jspinsOut, contour_mapping)
 
          !Occupation matrix
          dims(:4)=[2,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut]
@@ -353,12 +355,13 @@ MODULE m_greensf_io
 
    END SUBROUTINE writeGreensFData
 
-   SUBROUTINE writeGreensFElement(groupID, g, atoms, jspins)
+   SUBROUTINE writeGreensFElement(groupID, g, atoms, jspins, contour_mapping)
 
       INTEGER(HID_T),   INTENT(IN)  :: groupID
       TYPE(t_greensf),  INTENT(IN)  :: g
       TYPE(t_atoms),    INTENT(IN)  :: atoms
       INTEGER,          INTENT(IN)  :: jspins
+      INTEGER,          INTENT(IN)  :: contour_mapping(:)
 
 
       CHARACTER(len=30) :: groupName, datasetName
@@ -373,7 +376,7 @@ MODULE m_greensf_io
       CALL io_write_attint0(groupID,"lp",g%elem%lp)
       CALL io_write_attint0(groupID,"atomType",g%elem%atomType)
       CALL io_write_attint0(groupID,"atomTypep",g%elem%atomTypep)
-      CALL io_write_attint0(groupID,'iContour',g%elem%iContour)
+      CALL io_write_attint0(groupID,'iContour',contour_mapping(g%elem%iContour))
       CALL io_write_attlog0(groupID,'l_onsite',.NOT.g%elem%isOffDiag())
       CALL io_write_attlog0(groupID,'l_sphavg',g%l_sphavg)
       CALL io_write_attreal1(groupID,'atomDiff',g%elem%atomDiff)
