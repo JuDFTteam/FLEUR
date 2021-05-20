@@ -47,7 +47,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_greensfBZint
    USE m_greensfCalcImagPart
    USE m_greensfCalcScalarProducts
-   USE m_types_scalarGF
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers

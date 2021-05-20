@@ -17,7 +17,6 @@ MODULE m_greensfCalcRealPart
 
    USE m_juDFT
    USE m_types
-   USE m_types_scalarGF
    USE m_constants
    USE m_kkintgr
    USE m_kk_cutoff

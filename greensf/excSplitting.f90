@@ -1,7 +1,6 @@
 MODULE m_excSplitting
 
    USE m_types
-   USE m_types_scalarGF
    USE m_constants
    USE m_trapz
    USE m_xmlOutput

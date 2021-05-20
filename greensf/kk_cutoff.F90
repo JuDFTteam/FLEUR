@@ -2,7 +2,6 @@ MODULE m_kk_cutoff
 
    USE m_trapz
    USE m_types
-   USE m_types_scalarGF
    USE m_juDFT
    USE m_constants
 

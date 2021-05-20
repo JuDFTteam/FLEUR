@@ -5,7 +5,6 @@ MODULE m_greensfBZint
    USE m_constants
    USE m_greensfEigVecCoeffs
    USE m_greensfSym
-   USE m_types_scalarGF
 
    IMPLICIT NONE
 

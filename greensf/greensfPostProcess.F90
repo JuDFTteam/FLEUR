@@ -11,7 +11,6 @@ MODULE m_greensfPostProcess
    USE m_crystalfield
    USE m_genMTBasis
    USE m_sointg
-   USE m_types_scalarGF
 
    IMPLICIT NONE
 

@@ -2,7 +2,6 @@ MODULE m_greensfEigVecCoeffs
 
    USE m_juDFT
    USE m_types
-   USE m_types_scalarGF
    USE m_constants
 
    IMPLICIT NONE

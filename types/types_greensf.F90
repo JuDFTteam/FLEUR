@@ -1262,7 +1262,6 @@ MODULE m_types_greensf
       FUNCTION integrateOverMT_greensf(this,atoms,input,gfinp,f,g,flo,l_fullRadial) Result(gIntegrated)
 
          USE m_intgr
-         USE m_types_scalarGF
          USE m_types_usdus
          USE m_types_denCoeffsOffDiag
          USE m_types_mat
