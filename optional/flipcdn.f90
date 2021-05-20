@@ -26,7 +26,7 @@ MODULE m_flipcdn
 !     *******************************************************
 CONTAINS
 
-SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,optDen)
+SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,optDen,toGlobal)
    USE m_rotdenmat
    USE m_constants
    USE m_cdn_io
@@ -46,9 +46,11 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    REAL, OPTIONAL, INTENT(IN)  :: phi(atoms%ntype)
    REAL, OPTIONAL, INTENT(IN)  :: theta(atoms%ntype)
    TYPE(t_potden), OPTIONAL,INTENT(INOUT) :: optDen
+   LOGICAL,OPTIONAL,INTENT(IN)            :: toGlobal
 
    ! Local type instance
    TYPE(t_potden)            :: den
+   TYPE(t_nococonv)          :: nococonv
 
    ! Local Scalars
    COMPLEX                   :: rhodummy, imPart12, realPart12
@@ -69,7 +71,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
          rotAngleTheta(k)=theta(k)
          scaleSpin(k)=.FALSE.
       ELSE IF (input%lflip) THEN
-!Rotation triggerd by lflip.
+         !Rotation triggerd by lflip.
          rotAnglePhi(k)=atoms%flipSpinPhi(k)
          rotAngleTheta(k)=atoms%flipSpinTheta(k)
          scaleSpin(k)=atoms%flipSpinScale(k)
@@ -122,7 +124,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
      endif
    endif
 !$OMP parallel PRIVATE(rhodummy,rhodumms,j,rhodummyR,lh,itype) DEFAULT(none) &
-!$OMP SHARED(noco,den,zeros,atoms,sphhar,input,sym,l_flip,scalespin) &
+!$OMP SHARED(noco,den,zeros,atoms,sphhar,input,sym,l_flip,scalespin,toGlobal) &
 !$OMP FIRSTPRIVATE(na,rotAngleTheta,rotAnglePhi)
 !$OMP do
    DO itype = 1, atoms%ntype
@@ -132,10 +134,11 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
             DO j = 1,atoms%jri(itype)
                 IF (any(noco%l_unrestrictMT)) THEN
                    rhodummy=CMPLX(den%mt(j,lh,itype,3),den%mt(j,lh,itype,4))
-                   CALL rot_den_mat(zeros(itype),rotAngleTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
-                   CALL rot_den_mat(rotAnglePhi(itype),zeros(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
+                   !CALL rot_den_mat(zeros(itype),rotAngleTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
+                   !CALL rot_den_mat(rotAnglePhi(itype),zeros(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
+                   call nococonv%rotdenmat(rotAngleTheta(itype),rotAnglePhi(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy, toGlobal=toGlobal)
                    den%mt(j,lh,itype,3)=REAL(rhodummy)
-		   den%mt(j,lh,itype,4)=AIMAG(rhodummy)
+		             den%mt(j,lh,itype,4)=AIMAG(rhodummy)
                 ELSE
                    IF (rotAngleTheta(itype).EQ.(pimach()).AND.rotAnglePhi(itype).EQ.0) THEN
                       rhodummyR = den%mt(j,lh,itype,1)
@@ -182,7 +185,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
             DO m = -3,3
                DO mp = -3,3
                   IF (any(noco%l_unrestrictMT)) THEN
-! Since den%mmpMat is complex but rot_den_mat can only handle real values as diagonals of den_mat a splitting of den%mmpMat in real and imaginary part is performed. Rotations are performed seperatly and added up afterwards.
+                    ! Since den%mmpMat is complex but rot_den_mat can only handle real values as diagonals of den_mat a splitting of den%mmpMat in real and imaginary part is performed. Rotations are performed seperatly and added up afterwards.
                     realPart1=REAL(den%mmpMat(m,mp,i_u,1))
                     realPart2=REAL(den%mmpMat(m,mp,i_u,2))
                     realPart12=CMPLX(REAL(den%mmpMat(m,mp,i_u,3)),0)
@@ -208,7 +211,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
                     END IF
                  END IF
 
-END DO
+               END DO
             END DO
           ELSE IF (l_flip(itype).AND.(scaleSpin(itype))) THEN
             DO m = -3,3

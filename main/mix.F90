@@ -98,7 +98,7 @@ contains
     CALL timestop("Reading of distances")
 
     ! Preconditioner for relaxation of Magnetic moments
-    call precond_noco(it,vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm(it))
+    !call precond_noco(it,vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm(it))
 
 
     ! KERKER PRECONDITIONER

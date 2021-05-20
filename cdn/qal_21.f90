@@ -142,6 +142,7 @@ CONTAINS
        !
        ! rotate into global frame
        !
+       chi=nococonv%chi(ntyp)
        chi(1,1) =  EXP(-ImagUnit*nococonv%alph(ntyp)/2)*COS(nococonv%beta(ntyp)/2)
        chi(1,2) = -EXP(-ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
        chi(2,1) =  EXP( ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
