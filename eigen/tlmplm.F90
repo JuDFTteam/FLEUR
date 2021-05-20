@@ -131,7 +131,7 @@ CONTAINS
           lmp = lp* (lp+1) + mp
           lmpl = (lmp* (lmp+1))/2
           !--->    loop over lattice harmonics
-          DO lh = MERGE(1,0,jsp<3), nh
+          DO lh = MERGE(1,0,jsp<3.and.alpha_hybrid==0), nh
              lamda = sphhar%llh(lh,nsym)
              lmin0 = ABS(lp-lamda)
              IF (lmin0.GT.lp) CYCLE
