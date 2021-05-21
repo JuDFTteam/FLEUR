@@ -46,39 +46,42 @@ contains
 #endif
 
       call timestart("spmm_noinvs")
-      mat_in_line = mat_in(hybdat%nbasp + 1, :)
+      call timestart("copy mt2_c")
+      mt2_tmp = hybdat%coul(ikpt)%mt2_c
+      call timestop("copy mt2_c")
 
       sz_in  = size(mat_in, 1)
       sz_out  = size(mat_out, 1)
       n_vec = size(mat_in, 2)
 
-      call timestart("reorder forw")
-      allocate(new_order(size(mat_in,1)))
-      call forw_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
-      !$acc data copy(mat_in)
-         call reorder(new_order, mat_in)
-      !$acc end data
-      call timestop("reorder forw")
-
-      ibasm = calc_ibasm(fi, mpdata)
-
-      ! compute vecout for the indices from 0:ibasm
-      call timestart("0 > ibasm: small matricies")
-      call timestart("alloc&cpy mt1_tmp")
-      allocate(mt1_tmp, mold=hybdat%coul(ikpt)%mt1_c, stat=ierr)
-      if(ierr /= 0) call judft_error("can't alloc mt1_tmp")
-      call zcopy(size(mt1_tmp), hybdat%coul(ikpt)%mt1_c, 1, mt1_tmp, 1)
-      ld_mt1_tmp = size(mt1_tmp,dim=2) ! special multiplication
-      call timestop("alloc&cpy mt1_tmp")
-
-      call timestart("copy mt2_c")
-      mt2_tmp = hybdat%coul(ikpt)%mt2_c
-      call timestop("copy mt2_c")
+      allocate(mat_in_line(size(mat_in,2)))
 
       call timestart("copyin gpu")
-      !$acc data copyin(mt2_tmp) copy(mat_in) copyout(mat_out)
+      !$acc data copyin(mt2_tmp) copy(mat_in) copyout(mat_out) create(mat_in_line)
          !$acc wait
          call timestop("copyin gpu")
+
+         !$acc kernels present(mat_in_line, mat_in)
+         mat_in_line = mat_in(hybdat%nbasp + 1, :)
+         !$acc end kernels
+         
+         call timestart("reorder forw")
+         allocate(new_order(size(mat_in,1)))
+         call forw_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
+         call reorder(new_order, mat_in)
+         call timestop("reorder forw")
+
+         ibasm = calc_ibasm(fi, mpdata)
+
+         ! compute vecout for the indices from 0:ibasm
+         call timestart("0 > ibasm: small matricies")
+         call timestart("alloc&cpy mt1_tmp")
+         allocate(mt1_tmp, mold=hybdat%coul(ikpt)%mt1_c, stat=ierr)
+         ld_mt1_tmp = size(mt1_tmp,dim=2) ! special multiplication
+         if(ierr /= 0) call judft_error("can't alloc mt1_tmp")
+         call zcopy(size(mt1_tmp), hybdat%coul(ikpt)%mt1_c, 1, mt1_tmp, 1)
+         call timestop("alloc&cpy mt1_tmp")
+
 
          !$acc kernels present(mat_out)
          mat_out = cmplx_0
@@ -154,7 +157,7 @@ contains
 
             max_l_cut = maxval(fi%hybinp%lcutm1)
 #ifdef _OPENACC
-            !$acc data copyin(mat_in_line,mt3_tmp)
+            !$acc data copyin(mt3_tmp)
 #else
             !$OMP PARALLEL DO default(none) schedule(dynamic)&
             !$OMP private(iatom, itype, indx0, l, m, indx1, indx2, iatom1, indx3) &
@@ -201,11 +204,10 @@ contains
                   !$acc end kernels
                END DO
 #ifdef _OPENACC
-            !$acc end data !(mat_in_line,mt3_tmp)
+            !$acc end data !(mt3_tmp)
 #else
             !$OMP END PARALLEL DO
 #endif
-            deallocate(mat_in_line)
             call timestop("gamma point 1 noinv")
          END IF
          ! compute vecout for the index-range from ibasm+1:nbasm
@@ -348,7 +350,11 @@ contains
          call reorder(new_order, mat_in)
          call reorder(new_order, mat_out)
          call timestop("reorder back")
+      
+         call timestart("copyout")
       !$acc end data !mt2_tmp, mat_in, mat_out
+      !$acc wait
+      call timestop("copyout")
       call timestop("spmm_noinvs")
    end subroutine spmm_noinvs
 end module m_spmm_noinv
