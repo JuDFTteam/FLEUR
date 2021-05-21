@@ -258,7 +258,6 @@ CONTAINS
                endif
                if(ierr /= 0) call judft_error("can't alloc coul_wavf")
                r_coul_wavf = 0.0
-               c_coul_wavf = cmplx_0
                call timestop("alloc coul_wavf")
                
                call timestart("exchange matrix")

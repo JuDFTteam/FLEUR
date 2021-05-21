@@ -76,9 +76,13 @@ contains
       call timestop("copy mt2_c")
 
       call timestart("copyin gpu")
-      !$acc data copyin(mat_in, mat_out, mt2_tmp)
+      !$acc data copyin(mat_in, mt2_tmp) copyout(mat_out)
          !$acc wait
          call timestop("copyin gpu")
+
+         !$acc kernels present(mat_out)
+         mat_out = cmplx_0
+         !$acc end kernels
 
          !$acc data copyin(mt1_tmp)
 #ifndef _OPENACC
@@ -345,6 +349,11 @@ contains
       deallocate(mt2_tmp)
       !$acc wait
       call timestop("free mem")
+
+
+      ! call save_npy("mat_out.npy", mat_out)
+      ! call save_npy("mat_in.npy", mat_in)
+      ! call judft_error("stopit")
 
       call timestart("reorder back")
       call back_order(fi%atoms, fi%hybinp%lcutm1, mpdata%num_radbasfn, new_order)
