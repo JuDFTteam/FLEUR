@@ -76,7 +76,6 @@ MODULE m_types_gfinp
    TYPE, EXTENDS(t_fleurinput_base):: t_gfinp
       !General logical switches
       LOGICAL :: l_mperp         = .FALSE.
-      LOGICAL :: l_resolvent     = .FALSE.
       LOGICAL :: l_outputSphavg  = .FALSE.
       LOGICAL :: l_intFullRadial = .FALSE.
       REAL    :: minCalcDistance = -1.0 !This distance has to be reached before green's functions are calculated
@@ -136,7 +135,6 @@ CONTAINS
          rank = 0
       END IF
       CALL mpi_bc(this%l_mperp,rank,mpi_comm)
-      CALL mpi_bc(this%l_resolvent,rank,mpi_comm)
       CALL mpi_bc(this%minCalcDistance,rank,mpi_comm)
       CALL mpi_bc(this%l_outputSphavg,rank,mpi_comm)
       CALL mpi_bc(this%l_intFullRadial,rank,mpi_comm)
@@ -303,7 +301,6 @@ CONTAINS
 
       IF (l_gfinfo_given) THEN
          this%l_mperp=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
-         this%l_resolvent=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_resolvent'))
          this%minCalcDistance=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minCalcDistance'))
          this%l_outputSphavg=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@outputSphavg'))
          this%l_intFullRadial=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@intFullRadial'))
@@ -736,11 +733,6 @@ CONTAINS
          IF(input%jspins.NE.2) CALL juDFT_error("Torgue calculation only for magnetic systems", calledby="init_gfinp")
          IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="init_gfinp")
       ENDIF
-
-      IF(this%l_resolvent .AND. input%bz_integration.NE.BZINT_METHOD_TETRA) THEN
-         CALL juDFT_error('For l_resolvent=T the tetra brillouin-zone integration method has to be used', calledby='init_gfinp')
-      ENDIF
-
 
       WRITE(oUnit,*) "Green's Function Elements: "
       WRITE(oUnit,'(12(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","repr_elem","repr_op","atomDiff", 'k_resolved', 'k_resolved_int'
