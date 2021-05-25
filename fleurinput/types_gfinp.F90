@@ -414,8 +414,11 @@ CONTAINS
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
             nshells = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nshells'))
-            l_kresolved = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@k_resolved'))
-
+            IF(xml%versionNumber>=35) THEN
+               l_kresolved = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@k_resolved'))
+            ELSE
+               l_kresolved = .FALSE.
+            ENDIF
             refL = -1
             SELECT CASE(TRIM(ADJUSTL(cutoffArg)))
             CASE('calc')
