@@ -235,7 +235,7 @@ MODULE m_greensfCalcImagPart
                ENDDO!m
             ENDDO!mp
             !$OMP end do
-            DEALLOCATE(imagReal,imag)
+            DEALLOCATE(imag)
             !$OMP end parallel
          ENDDO!i_gf
          CALL timestop("Green's Function: Imaginary Part")
