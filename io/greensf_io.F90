@@ -126,7 +126,7 @@ MODULE m_greensf_io
       INTEGER           :: i_elem,i,iContourOut,nLO
       INTEGER           :: contour_mapping(gfinp%numberContours)
       INTEGER(HSIZE_T)  :: dims(7)
-      COMPLEX           :: trc(3),atomDiff(3)
+      COMPLEX           :: trc(3)
       LOGICAL           :: l_anyradial
       TYPE(t_greensf)   :: gfOut
 

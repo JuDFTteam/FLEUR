@@ -262,11 +262,7 @@ MODULE m_greensfCalcRealPart
                               CALL juDFT_error("No Green's function with k-resolution and radial dependence implemented")
                            ENDIF
 
-                           IF(l_inter) THEN
-                              g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) = g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) + exp(-tpi_const*ImagUnit*dot_product(bk,atomDiff)) * gmat(:)
-                           ELSE
-                              g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) = g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) + gmat(:)
-                           ENDIF
+                           g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) = g(i_gf)%gmmpMat(:,m,mp,jspin,ipm) + gmat(:)
                         ENDDO
                      ENDDO
                   ENDDO

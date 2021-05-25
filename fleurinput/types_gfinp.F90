@@ -1439,7 +1439,6 @@ CONTAINS
       ENDIF
       IF(PRESENT(atomDiff)) THEN
          this%atomDiff(:) = atomDiff(:)
-         this%l_kresolved_int = .TRUE.
       ELSE
          this%atomDiff(:) = 0.0
       ENDIF
@@ -1477,6 +1476,9 @@ CONTAINS
       IF(distinct_k_resolved_arg) then
          IF(this%l_kresolved_int .neqv. other%l_kresolved_int) RETURN
       ENDIF
+      IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
+         ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
+         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) RETURN
       equals_coefficients_gfelem = .TRUE.
 
    END FUNCTION equals_coefficients_gfelem
@@ -1490,9 +1492,6 @@ CONTAINS
 
       equals_gfelem = .FALSE.
       IF(.NOT.this%equals_coefficients(other, distinct_k_resolved)) RETURN
-      IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
-         ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
-         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) RETURN
       IF(this%iContour.NE.other%iContour) RETURN
       equals_gfelem = .TRUE.
 
