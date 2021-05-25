@@ -100,7 +100,7 @@ MODULE m_greensfCalcImagPart
             !$OMP shared(input,gfinp,greensfBZintCoeffs,greensfImagPart) &
             !$OMP shared(i_elem,i_elemLO,i_elem_imag,i_elemLO_imag,nLO,l,lp,ikpt_i,nBands,eMesh,l_sphavg,imatSize,l_kresolved_int)&
             !$OMP shared(del,eb,eig,weights,indBound,fac,wtkpt,spin_ind) &
-            !$OMP private(ie,iLO,iLOp,imat,m,mp,iBand,j,eGrid_start,eGrid_end,weight,imag,imagReal,l_zero)
+            !$OMP private(ie,iLO,iLOp,imat,m,mp,iBand,j,eGrid_start,eGrid_end,weight,imag,l_zero)
             ALLOCATE(imag(SIZE(eMesh),imatSize),source=cmplx_0)
             !$OMP do collapse(2)
             DO mp = -lp, lp
