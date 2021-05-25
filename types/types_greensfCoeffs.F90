@@ -366,7 +366,7 @@ MODULE m_types_greensfCoeffs
 
          IF(PRESENT(ikpt)) THEN
             IF(ALLOCATED(this%sphavg_k)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=0.0)
+               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg_k,1)),source=0.0)
                imagpartCut = this%sphavg_k(:,m,mp,i_elem,spin,ikpt)
             ENDIF
          ELSE IF(l_sphavg) THEN

@@ -51,11 +51,9 @@ MODULE m_greensfPostProcess
       INTEGER(HID_T) :: greensf_fileID
 #endif
 
-      IF(gfinp%checkRadial()) THEN
-         CALL greensfCalcScalarProducts(gfinp,atoms,input,enpara,noco,sphhar,vTot,mpi,hub1data,&
-                                        greensFunctions=greensFunction,scalarProducts=scalarGF,&
-                                        fout=f,gout=g,floout=flo)
-      ENDIF
+      CALL greensfCalcScalarProducts(gfinp,atoms,input,enpara,noco,sphhar,vTot,mpi,hub1data,&
+                                     greensFunctions=greensFunction,scalarProducts=scalarGF,&
+                                     fout=f,gout=g,floout=flo)
       !--------------------------------------------------------------------------------
       ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
       !--------------------------------------------------------------------------------
