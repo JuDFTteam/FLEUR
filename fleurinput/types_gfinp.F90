@@ -36,6 +36,7 @@ MODULE m_types_gfinp
       !Symmetry relations to other gf element (only intersite)
       INTEGER :: representative_elem = -1
       INTEGER :: representative_op = -1
+      REAL    :: representative_diff(3)  = [0.0,0.0,0.0] !Distance between atoms of representative element (lattice coordinates) for intersite phase
 
       !K-resolved switches
       LOGICAL :: l_kresolved = .FALSE. !Should the Greens function be calculated k-resolved
@@ -168,6 +169,7 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%l_sphavg,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%representative_elem,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%representative_op,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%representative_diff,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_kresolved,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_kresolved_int,rank,mpi_comm)
       ENDDO
@@ -912,7 +914,7 @@ CONTAINS
       REAL :: currentDist,minDist,amatAuxDet,lastDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
-      REAL :: refPos(3),point(3),pos(3),diff(3)
+      REAL :: refPos(3),point(3),pos(3),diff(3), repr_diff(3)
       REAL :: currentDiff(3),offsetPos(3),diffRot(3)
 
       INTEGER, ALLOCATABLE :: nearestNeighbors(:)
@@ -1170,12 +1172,16 @@ CONTAINS
             i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=shellAtom(ishell),&
                              atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff)
-            IF(repr == 0) repr = i_gf
+            IF(repr == 0) THEN
+               repr = i_gf
+               repr_diff = diff
+            ENDIF
 
             this%elem(i_gf)%refCutoff = refCutoff
             IF(ishellAtom > 1) THEN
                this%elem(i_gf)%representative_elem = repr
                this%elem(i_gf)%representative_op = shellop(ishellAtom,ishell)
+               this%elem(i_gf)%representative_diff = repr_diff
             ENDIF
 
             IF(shellAtom(ishell).NE.refAtom.AND..NOT.ANY(atomTypepList(:nOtherAtoms).EQ.shellAtom(ishell))) THEN
@@ -1472,7 +1478,22 @@ CONTAINS
       ENDIF
       IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
          ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
-         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) RETURN
+         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) THEN
+         IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
+         IF(this%representative_elem > 0 .AND. other%representative_elem > 0) THEN
+            IF(ABS(this%representative_diff(1)-other%representative_diff(1)).GT.1e-12.OR.&
+               ABS(this%representative_diff(2)-other%representative_diff(2)).GT.1e-12.OR.&
+               ABS(this%representative_diff(3)-other%representative_diff(3)).GT.1e-12) RETURN
+         ELSE IF(this%representative_elem > 0) THEN
+            IF(ABS(this%representative_diff(1)-other%atomDiff(1)).GT.1e-12.OR.&
+               ABS(this%representative_diff(2)-other%atomDiff(2)).GT.1e-12.OR.&
+               ABS(this%representative_diff(3)-other%atomDiff(3)).GT.1e-12) RETURN
+         ELSE IF(other%representative_elem > 0) THEN
+            IF(ABS(other%representative_diff(1)-this%atomDiff(1)).GT.1e-12.OR.&
+               ABS(other%representative_diff(2)-this%atomDiff(2)).GT.1e-12.OR.&
+               ABS(other%representative_diff(3)-this%atomDiff(3)).GT.1e-12) RETURN
+         ENDIF)
+      ENDIF
       equals_coefficients_gfelem = .TRUE.
 
    END FUNCTION equals_coefficients_gfelem
@@ -1483,9 +1504,15 @@ CONTAINS
       TYPE(t_gfelementtype),  INTENT(IN)  :: other
       LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_k_resolved
 
-
       equals_gfelem = .FALSE.
       IF(.NOT.this%equals_coefficients(other, distinct_k_resolved)) RETURN
+      !We need to check the atomDiff again here, since the deduplication
+      !on the coefficient level has some extra symmetry considerations
+      !that should not influence the deduplication. It just influences how
+      !many brillouin zone integegrations need to be performed
+      IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
+         ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
+         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) RETURN
       IF(this%iContour.NE.other%iContour) RETURN
       equals_gfelem = .TRUE.
 
