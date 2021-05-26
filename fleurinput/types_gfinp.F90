@@ -169,7 +169,7 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%l_sphavg,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%representative_elem,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%representative_op,rank,mpi_comm)
-         CALL mpi_bc(this%elem(n)%representative_diff,rank,mpi_comm)
+         CALL mpi_bc(rank,mpi_comm,this%elem(n)%representative_diff)
          CALL mpi_bc(this%elem(n)%l_kresolved,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_kresolved_int,rank,mpi_comm)
       ENDDO
@@ -1492,7 +1492,7 @@ CONTAINS
             IF(ABS(other%representative_diff(1)-this%atomDiff(1)).GT.1e-12.OR.&
                ABS(other%representative_diff(2)-this%atomDiff(2)).GT.1e-12.OR.&
                ABS(other%representative_diff(3)-this%atomDiff(3)).GT.1e-12) RETURN
-         ENDIF)
+         ENDIF
       ENDIF
       equals_coefficients_gfelem = .TRUE.
 
