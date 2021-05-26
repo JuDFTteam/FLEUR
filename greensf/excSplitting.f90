@@ -46,7 +46,7 @@ MODULE m_excSplitting
          l_sphavg = gfinp%elem(i_gf)%l_sphavg
          nLO = gfinp%elem(i_gf)%countLOs(atoms)
          !Only onsite exchange splitting
-         IF(gfinp%isOffDiag()) CYCLE
+         IF(gfinp%elem(i_gf)%isOffDiag()) CYCLE
          IF(gfinp%elem(i_gf)%l_kresolved_int) CYCLE
          IF(.NOT.gfinp%isUnique(i_gf, distinct_kresolved_int=.TRUE.)) CYCLE
 
