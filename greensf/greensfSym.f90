@@ -47,8 +47,8 @@ MODULE m_greensfSym
       DO imat = 1, SIZE(im,4)
          DO iBand = 1, SIZE(im,3)
             IF(l_intersite) THEN
-               imSym = atomFactor * addPhase * conjg(im(:,:,iBand,imat)) &
-                      * exp(-tpi_const*ImagUnit*dot_product(bk,atomDiff))
+               imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3),&
+                                                         bk=bk, atomDiff=atomDiff)
             ELSE
                imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3))
             ENDIF

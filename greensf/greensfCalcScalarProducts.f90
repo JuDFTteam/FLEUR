@@ -59,10 +59,8 @@ MODULE m_greensfCalcScalarProducts
          CALL scalarGF(i_gf)%init(atoms,input)
 
          IF(.NOT.gfinp%isUnique(i_gf)) THEN
-            IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-               indUnique = gfinp%getuniqueElement(i_gf)
-               scalarGF(i_gf) = scalarGF(indUnique)
-            ENDIF
+            indUnique = gfinp%getuniqueElement(i_gf)
+            scalarGF(i_gf) = scalarGF(indUnique)
             CYCLE
          ENDIF
          DO jspin = 1, input%jspins

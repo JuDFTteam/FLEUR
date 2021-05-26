@@ -768,6 +768,8 @@ CONTAINS
       LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_kresolved_int
 
       DO uniqueIndex = 1, index
+         !If the element has a representative element set it can not be unique
+         IF(this%elem(uniqueIndex)%representative_elem>0) CYCLE
          IF(this%elem(uniqueIndex)%equals_coefficients(this%elem(index), distinct_kresolved_int)) THEN
             RETURN
          ENDIF
@@ -820,9 +822,6 @@ CONTAINS
          IF(distinct_kresolved_int) THEN
             IF(l_kresolved_int_elem .neqv. l_kresolved_int) CYCLE
          ENDIF
-
-         !If the element has a representative element set it can not be unique
-         IF(this%elem(i_gf)%representative_elem>0) CYCLE
 
          IF(.NOT.this%isUnique(i_gf,distinct_kresolved_int)) CYCLE
 

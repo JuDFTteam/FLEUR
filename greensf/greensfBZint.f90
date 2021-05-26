@@ -78,8 +78,8 @@ MODULE m_greensfBZint
          DO natom = natom_start , natom_end
 
             !Only perform the second atom loop if we calculate intersite elements
-            natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(atomDiff.LT.1e-12))
-            natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep))      ,atomType==atomTypep.AND.ALL(atomDiff.LT.1e-12))
+            natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
+            natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
 
             DO natomp = natomp_start, natomp_end
 
