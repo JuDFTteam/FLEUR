@@ -7,7 +7,7 @@ sys.path.insert(0, f"{test_loc}/../../")
 from libtest import TestEnv
 from shutil import copyfile
 
-try:
+try: 
    te = TestEnv()
    te.log_info("MnHybridNoinv test")
    copyfile(f"{test_loc}/files/inp.xml", f"{te.workdir}/inp.xml")
