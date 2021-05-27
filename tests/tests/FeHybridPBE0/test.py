@@ -25,7 +25,7 @@ try:
 
    exp_mm1 = 27*[None]
    exp_mm1[14] = 3.40037
-   exp_mm1[-1] = 3.42075
+   exp_mm1[-1] = 3.42074
    te.check_value_outfile("--> mm       1", " ", exp_mm1, 0.00001)
 
    sys.exit(te.errors)
