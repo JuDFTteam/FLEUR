@@ -9,18 +9,18 @@ MODULE m_excSplitting
 
    CONTAINS
 
-   SUBROUTINE excSplitting(gfinp,atoms,input,usdus,greensfImagPart,ef)
+   SUBROUTINE excSplitting(gfinp,atoms,input,scalarGF,greensfImagPart,ef)
 
       TYPE(t_gfinp),             INTENT(IN)  :: gfinp
       TYPE(t_atoms),             INTENT(IN)  :: atoms
       TYPE(t_input),             INTENT(IN)  :: input
-      TYPE(t_usdus),             INTENT(IN)  :: usdus
+      TYPE(t_scalarGF),          INTENT(IN)  :: scalarGF(:)
       TYPE(t_greensfImagPart),   INTENT(IN)  :: greensfImagPart
       REAL,                      INTENT(IN)  :: ef
 
-      INTEGER :: i_gf,i_elem,i_elemLO,indUnique,ispin,m,l,lp,atomType,atomTypep,nLO,iLO,iLOp
+      INTEGER :: i_gf,i_elem,i_elemLO,ispin,m,l,atomType,nLO,iLO,iLOp
       LOGICAL :: l_sphavg
-      REAL    :: excSplit,del,atomDiff(3)
+      REAL    :: excSplit,del
       REAL, ALLOCATABLE :: eMesh(:), imag(:)
       REAL, ALLOCATABLE :: intCOM(:,:), intNorm(:,:)
       CHARACTER(LEN=20) :: attributes(4)
@@ -42,21 +42,17 @@ MODULE m_excSplitting
       DO i_gf = 1, gfinp%n
 
          l  = gfinp%elem(i_gf)%l
-         lp = gfinp%elem(i_gf)%lp
          atomType = gfinp%elem(i_gf)%atomType
-         atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg = gfinp%elem(i_gf)%l_sphavg
-         atomDiff = gfinp%elem(i_gf)%atomDiff
          nLO = gfinp%elem(i_gf)%countLOs(atoms)
          !Only onsite exchange splitting
-         IF(l /= lp) CYCLE
-         IF(atomType /= atomTypep) CYCLE
-         IF(ANY(ABS(atomDiff).GT.1e-12)) CYCLE
+         IF(gfinp%elem(i_gf)%isOffDiag()) CYCLE
+         IF(gfinp%elem(i_gf)%l_kresolved_int) CYCLE
+         IF(.NOT.gfinp%isUnique(i_gf, distinct_kresolved_int=.TRUE.)) CYCLE
 
-         i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
-         i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,lo=.TRUE.)
+         i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg)
+         i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,lo=.TRUE.)
 
-         IF(i_gf /= indUnique) CYCLE
          !-------------------------------------------------
          ! Evaluate center of mass of the bands in question
          ! and take the difference between spin up/down
@@ -73,15 +69,15 @@ MODULE m_excSplitting
                   imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg)
                ELSE
                   imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg,imat=1)
-                  imag = imag + greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg,imat=2) * usdus%ddn(l,atomType,ispin)
+                  imag = imag + greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg,imat=2) * scalarGF(i_gf)%ddn(ispin,ispin)
                   IF(nLO>0) THEN
                      DO iLO = 1, nLO
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=1,iLO=iLO) * usdus%uulon(ilo,atomType,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=2,iLO=iLO) * usdus%uulon(ilo,atomType,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=3,iLO=iLO) * usdus%dulon(ilo,atomType,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=4,iLO=iLO) * usdus%dulon(ilo,atomType,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=1,iLO=iLO) * scalarGF(i_gf)%uulon(ilo,ispin,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=2,iLO=iLO) * scalarGF(i_gf)%uloun(ilo,ispin,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=3,iLO=iLO) * scalarGF(i_gf)%dulon(ilo,ispin,ispin)
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=4,iLO=iLO) * scalarGF(i_gf)%ulodn(ilo,ispin,ispin)
                         DO iLOp = 1, nLO
-                           imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,iLO=iLO,iLOp=iLOp) * usdus%uloulopn(ilo,ilop,atomType,ispin)
+                           imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,iLO=iLO,iLOp=iLOp) * scalarGF(i_gf)%uloulopn(ilo,ilop,ispin,ispin)
                         ENDDO
                      ENDDO
                   ENDIF

@@ -55,8 +55,8 @@ MODULE m_symMMPmat
 
          !The complex conjugation is taken from n_mat
          !It seems there is an inconsistency here that should be resolved at aome point
-         mmpmatSym = mmpmatSym + symFac * symPhase * conjg(rotMMPmat(mmpmat,dwgn =sym%d_wgn(:,:,l    ,isi),&
-                                                                            dwgnp=sym%d_wgn(:,:,lpArg,isi)))
+         mmpmatSym = mmpmatSym + symFac * symPhase * conjg(rotMMPmat(mmpmat,dwgn =sym%d_wgn(:,:,lpArg,isi),&
+                                                                            dwgnp=sym%d_wgn(:,:,l    ,isi)))
 
       ENDDO
 

@@ -7,7 +7,7 @@ MODULE m_tlmplm
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,nococonv,&
-       jspin1,jspin2,jsp,fmpi,v,input,hub1inp,hub1data,td,ud)
+       jspin1,jspin2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid)
     USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_genMTBasis
@@ -23,14 +23,14 @@ CONTAINS
     TYPE(t_enpara),INTENT(IN)    :: enpara
     TYPE(t_nococonv),INTENT(IN)  :: nococonv
     TYPE(t_mpi),INTENT(IN)       :: fmpi
-    TYPE(t_potden),INTENT(IN)    :: v
+    TYPE(t_potden),INTENT(IN)    :: v,vx
     TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
     TYPE(t_hub1data),INTENT(IN)  :: hub1data
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
     INTEGER, INTENT (IN) :: n,jspin1,jspin2,jsp !atom index,physical spin&spin index for data
-
+    REAL,INTENT(IN)      :: alpha_hybrid
     REAL, ALLOCATABLE   :: dvd(:,:),dvu(:,:),uvd(:,:),uvu(:,:),f(:,:,:,:),g(:,:,:,:),x(:),flo(:,:,:,:)
     REAL,ALLOCATABLE    :: vr0(:,:)
 
@@ -55,6 +55,7 @@ CONTAINS
     vr0=v%mt(:,:,n,jsp)
     IF (jsp<3) THEN
        vr0(:,0)=0.0
+       if (alpha_hybrid.ne.0) vr0=vr0-alpha_hybrid*vx%mt(:,:,n,jsp)
     ELSE
        vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(jsp-2,n) !Add constraining field
     ENDIF
@@ -85,7 +86,7 @@ CONTAINS
           !--->    loop over non-spherical components of the potential: must
           !--->    satisfy the triangular conditions and that l'+l+lamda even
           !--->    (conditions from the gaunt coefficient)
-          DO lh = MERGE(1,0,jsp<3), nh
+          DO lh = MERGE(1,0,jsp<3.and.alpha_hybrid==0), nh
              lamda = sphhar%llh(lh,nsym)
              lmin = lp - l
              lmx = lp + l
@@ -130,7 +131,7 @@ CONTAINS
           lmp = lp* (lp+1) + mp
           lmpl = (lmp* (lmp+1))/2
           !--->    loop over lattice harmonics
-          DO lh = MERGE(1,0,jsp<3), nh
+          DO lh = MERGE(1,0,jsp<3.and.alpha_hybrid==0), nh
              lamda = sphhar%llh(lh,nsym)
              lmin0 = ABS(lp-lamda)
              IF (lmin0.GT.lp) CYCLE
@@ -170,7 +171,7 @@ CONTAINS
     !--->   set up the t-matrices for the local orbitals,
     !--->   if there are any
     IF (atoms%nlo(n).GE.1) THEN
-       CALL tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,n,enpara,MERGE(1,0,jsp<3),input,v%mt(1,0,n,jsp),&
+       CALL tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,n,enpara,MERGE(1,0,jsp<3.and.alpha_hybrid==0),input,vr0,&
             na,flo,f,g,ud, td)
     ENDIF
   END SUBROUTINE tlmplm

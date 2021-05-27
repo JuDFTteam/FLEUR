@@ -93,6 +93,7 @@ CONTAINS
       LOGICAL, ALLOCATABLE          :: xmlPrintCoreStates(:, :)
       !     .. Local Scalars ..
       INTEGER    :: i, n, l, m1, m2, isym, iisym, numSpecies, pc, iAtom, iType, minneigd, outxmlFileID
+      INTEGER    :: nbasfcn
       COMPLEX    :: cdum
       CHARACTER(len=4)              :: namex
       CHARACTER(len=12)             :: relcor, tempNumberString
@@ -183,7 +184,7 @@ CONTAINS
       CALL storeStructureIfNew(input, stars, atoms, cell, vacuum, oneD, sym, fmpi, sphhar, noco)
       CALL make_stars(stars, sym, atoms, vacuum, sphhar, input, cell, xcpot, oneD, noco, fmpi)
       CALL make_forcetheo(forcetheo_data, cell, sym, atoms, forcetheo)
-      CALL lapw_dim(kpts, cell, input, noco, nococonv, oneD, forcetheo, atoms)
+      CALL lapw_dim(kpts, cell, input, noco, nococonv, oneD, forcetheo, atoms, nbasfcn)
       CALL input%init(noco, hybinp%l_hybrid, lapw_dim_nbasfcn)
       CALL noco%init(atoms,input%ldauSpinoffd)
       CALL oned%init(atoms) !call again, because make_stars modified it :-)
@@ -218,7 +219,7 @@ CONTAINS
       END IF
 
       !Finalize the fmpi setup
-      CALL setupMPI(kpts%nkpt, input%neig, fmpi)
+      CALL setupMPI(kpts%nkpt, input%neig, nbasfcn, fmpi)
 
       !Collect some usage info
       CALL add_usage_data("A-Types", atoms%ntype)

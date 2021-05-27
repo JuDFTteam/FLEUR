@@ -3,8 +3,7 @@ MODULE m_greensfBZint
    USE m_types
    USE m_juDFT
    USE m_constants
-   USE m_greensfSpinDiag
-   USE m_greensfSpinOffDiag
+   USE m_greensfEigVecCoeffs
    USE m_greensfSym
 
    IMPLICIT NONE
@@ -12,7 +11,7 @@ MODULE m_greensfBZint
    CONTAINS
 
    SUBROUTINE greensfBZint(ikpt_i,ikpt,nBands,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
-                           usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
+                           scalarGF,eigVecCoeffs,greensfBZintCoeffs)
 
       INTEGER,                   INTENT(IN)     :: ikpt_i,ikpt        !current k-point index in cdnvaljob%k_list and current k-point
       INTEGER,                   INTENT(IN)     :: nBands             !Bands handled on this rank
@@ -24,12 +23,11 @@ MODULE m_greensfBZint
       TYPE(t_nococonv),          INTENT(IN)     :: nococonv
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_kpts),              INTENT(IN)     :: kpts
-      TYPE(t_usdus),             INTENT(IN)     :: usdus
-      TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffdiag
+      TYPE(t_scalarGF),          INTENT(IN)     :: scalarGF(:)
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
 
-      INTEGER :: i_gf,l,lp,atomType,atomTypep,indUnique
+      INTEGER :: i_gf,l,lp,atomType,atomTypep
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
       INTEGER :: i_elem,i_elemLO,nLO,imatSize
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
@@ -57,10 +55,10 @@ MODULE m_greensfBZint
          atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
          atomFactor = 1.0/atoms%neq(atomType)
 
-         i_elem   = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
-         i_elemLO = gfinp%uniqueElements(atoms,ind=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,indUnique=indUnique)
+         IF(.NOT.gfinp%isUnique(i_gf)) CYCLE
 
-         IF(i_gf/=indUnique) CYCLE
+         i_elem   = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg)
+         i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,lo=.TRUE.,l_sphavg=l_sphavg)
 
          nLO = 0
          imatSize = 1
@@ -80,8 +78,8 @@ MODULE m_greensfBZint
          DO natom = natom_start , natom_end
 
             !Only perform the second atom loop if we calculate intersite elements
-            natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(atomDiff.LT.1e-12))
-            natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep))      ,atomType==atomTypep.AND.ALL(atomDiff.LT.1e-12))
+            natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
+            natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
 
             DO natomp = natomp_start, natomp_end
 
@@ -95,20 +93,19 @@ MODULE m_greensfBZint
                   ENDIF
                   !which scalar products for intersite and l offdiagonal(IF l_sphavg)
                   !Spin diagonal elements
-                  IF(spin1==spin2) THEN
-                     CALL greensfSpinDiag(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,&
-                                          l_sphavg,atoms,usdus,eigVecCoeffs,im(:,:,:,:,ispin))
-                  ELSE
-                     !Spin offdiagonal elements
-                     CALL greensfSpinOffDiag(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
-                                             l_sphavg,atoms,denCoeffsOffdiag,eigVecCoeffs,im(:,:,:,:,ispin))
-                  ENDIF
+
+                  CALL greensfEigVecCoeffs(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
+                                           l_sphavg,atoms,scalarGF(i_gf),eigVecCoeffs,im(:,:,:,:,ispin))
 
                   !The eigenvector coefficients already contain part of the interstitial phase
                   !but not necessarily the right one
                   im(:,:,:,:,ispin) = im(:,:,:,:,ispin) &
-                                     * exp(-tpi_const*ImagUnit*dot_product(kpts%bk(:,ikpt),  atoms%taual(:,natom) &
-                                                                                           - atoms%taual(:,natomp)))
+                                    * exp(-tpi_const*ImagUnit*dot_product(kpts%bk(:,ikpt),  atoms%taual(:,natom) &
+                                                                                          - atoms%taual(:,natomp)))
+
+                  IF(ispin==3) THEN
+                     im(:,:,:,:,ispin) = CMPLX(-REAL(im(:,:,:,:,ispin)), AIMAG(im(:,:,:,:,ispin)))
+                  ENDIF
 
                   !l-offdiagonal phase
                   phase = ImagUnit**(l-lp)

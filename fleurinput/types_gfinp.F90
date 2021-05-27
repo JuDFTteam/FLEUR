@@ -36,9 +36,18 @@ MODULE m_types_gfinp
       !Symmetry relations to other gf element (only intersite)
       INTEGER :: representative_elem = -1
       INTEGER :: representative_op = -1
+      REAL    :: representative_diff(3)  = [0.0,0.0,0.0] !Distance between atoms of representative element (lattice coordinates) for intersite phase
+
+      !K-resolved switches
+      LOGICAL :: l_kresolved = .FALSE. !Should the Greens function be calculated k-resolved
+      LOGICAL :: l_kresolved_int = .FALSE. !Should the Greens function be calculated k-resolved up after the Kramers-Kronig
+                                           !Transformation (Intersite elements)
    CONTAINS
+      PROCEDURE :: init => init_gfelem
       PROCEDURE :: countLOs   => countLOs_gfelem !Count the local orbitals attached to the element
       PROCEDURE :: isoffDiag  => isOffDiag_gfelem !Is this element offdiagonal (i.e either l/=lp or intersite)
+      PROCEDURE :: equals => equals_gfelem !Is the element equal to another (For deduplicating added elements)
+      PROCEDURE :: equals_coefficients => equals_coefficients_gfelem !Is the element equal to another from the perspective of the BZ Coefficients
    END TYPE t_gfelementtype
 
    TYPE t_contourInp
@@ -68,7 +77,6 @@ MODULE m_types_gfinp
    TYPE, EXTENDS(t_fleurinput_base):: t_gfinp
       !General logical switches
       LOGICAL :: l_mperp         = .FALSE.
-      LOGICAL :: l_resolvent     = .FALSE.
       LOGICAL :: l_outputSphavg  = .FALSE.
       LOGICAL :: l_intFullRadial = .FALSE.
       REAL    :: minCalcDistance = -1.0 !This distance has to be reached before green's functions are calculated
@@ -91,11 +99,16 @@ MODULE m_types_gfinp
    CONTAINS
       PROCEDURE :: read_xml             => read_xml_gfinp
       PROCEDURE :: mpi_bc               => mpi_bc_gfinp
+      PROCEDURE :: distribute_elements  => distribute_elements_gfinp
       PROCEDURE :: init                 => init_gfinp
-      PROCEDURE :: find                 => find_gfelem
+      PROCEDURE :: find_gfelem_simple
+      PROCEDURE :: find_gfelem_type
+      GENERIC   :: find                 => find_gfelem_simple, find_gfelem_type
       PROCEDURE :: find_contour         => find_contour
       PROCEDURE :: add                  => add_gfelem
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
+      PROCEDURE :: getuniqueElement     => getuniqueElement_gfinp
+      PROCEDURE :: isUnique             => isUnique_gfinp
       PROCEDURE :: uniqueElements       => uniqueElements_gfinp
       PROCEDURE :: eMesh                => eMesh_gfinp
 
@@ -123,7 +136,6 @@ CONTAINS
          rank = 0
       END IF
       CALL mpi_bc(this%l_mperp,rank,mpi_comm)
-      CALL mpi_bc(this%l_resolvent,rank,mpi_comm)
       CALL mpi_bc(this%minCalcDistance,rank,mpi_comm)
       CALL mpi_bc(this%l_outputSphavg,rank,mpi_comm)
       CALL mpi_bc(this%l_intFullRadial,rank,mpi_comm)
@@ -157,6 +169,9 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%l_sphavg,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%representative_elem,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%representative_op,rank,mpi_comm)
+         CALL mpi_bc(rank,mpi_comm,this%elem(n)%representative_diff)
+         CALL mpi_bc(this%elem(n)%l_kresolved,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%l_kresolved_int,rank,mpi_comm)
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
@@ -179,6 +194,96 @@ CONTAINS
 
    END SUBROUTINE mpi_bc_gfinp
 
+   SUBROUTINE distribute_elements_gfinp(this, rank, size, nspins, i_gf_start, i_gf_end, spin_start, spin_end, k_resolved)
+      !Distribute the Greens function elements that are not kresolved for the Kramers Kronig
+      !integration
+      CLASS(t_gfinp),    INTENT(IN)  :: this
+      INTEGER,           INTENT(IN)  :: rank, size, nspins
+      INTEGER,           INTENT(OUT) :: i_gf_start, i_gf_end, spin_start, spin_end
+      LOGICAL, OPTIONAL, INTENT(IN)  :: k_resolved
+
+      INTEGER :: n_elems, i_gf, currentIndex, n_gf_task, extra
+      INTEGER :: i_elem_start, i_elem_end
+      LOGICAL :: k_resolved_arg
+
+      k_resolved_arg = .FALSE.
+      IF(PRESENT(k_resolved)) k_resolved_arg = k_resolved
+
+
+      n_elems = COUNT(.NOT.this%elem(:)%l_kresolved_int)
+      IF(k_resolved_arg) THEN
+         n_elems = this%n - n_elems
+      ENDIF
+
+#ifdef CPP_MPI
+      IF(size>1) THEN
+         IF(n_elems>=size) THEN
+            !Just distribute the individual gf elements over the ranks
+            n_gf_task = FLOOR(REAL(n_elems)/(size))
+            extra = n_elems - n_gf_task*size
+            i_elem_start = rank*n_gf_task + 1 + extra
+            i_elem_end = (rank+1)*n_gf_task   + extra
+            IF(rank < extra) THEN
+               i_elem_start = i_elem_start - (extra - rank)
+               i_elem_end = i_elem_end - (extra - rank - 1)
+            ENDIF
+            spin_start = 1
+            spin_end   = nspins
+         ELSE IF(n_elems*nspins>size) THEN
+            !Just fill up the ranks
+            i_elem_start = rank + 1
+            i_elem_end   = rank + 1
+            spin_start = 1
+            spin_end   = nspins
+         ELSE
+            !If there are few enough gf elements then distribute the spins
+            spin_start = MOD(rank,nspins) + 1
+            spin_end   = MOD(rank,nspins) + 1
+            i_elem_start = 1 + FLOOR(REAL(rank)/nspins)
+            i_elem_end   = 1 + FLOOR(REAL(rank)/nspins)
+         ENDIF
+      ELSE
+         !Distribute nothing
+         i_elem_start = 1
+         i_elem_end = n_elems
+         spin_start = 1
+         spin_end   = nspins
+      ENDIF
+#else
+      i_elem_start = 1
+      i_elem_end = n_elems
+      spin_start = 1
+      spin_end   = nspins
+#endif
+
+      IF(i_elem_start.LT.1 .OR. i_elem_start.GT.n_elems.OR.&
+         i_elem_end.LT.1 .OR. i_elem_end.GT.n_elems) THEN
+         i_gf_start = -1
+         i_gf_end = -1
+         RETURN
+      ENDIF
+
+      currentIndex = 0
+      DO i_gf = 1, this%n
+         IF(k_resolved_arg) THEN
+            IF(.NOT.this%elem(i_gf)%l_kresolved_int) CYCLE
+         ELSE
+            IF(this%elem(i_gf)%l_kresolved_int) CYCLE
+         ENDIF
+         currentIndex = currentIndex + 1
+         IF(currentIndex.EQ.i_elem_start) THEN
+            i_gf_start = i_gf
+         ENDIF
+         IF(currentIndex.EQ.i_elem_end) THEN
+            i_gf_end = i_gf
+            EXIT
+         ELSE IF(i_gf.EQ.this%n) THEN
+            CALL juDFT_error('Distribution of Greens functions elements failed', calledby='distribute_elements_gfinp')
+         ENDIF
+      ENDDO
+
+   END SUBROUTINE distribute_elements_gfinp
+
    SUBROUTINE read_xml_gfinp(this, xml)
       USE m_types_xml
       CLASS(t_gfinp), INTENT(INOUT):: this
@@ -189,7 +294,7 @@ CONTAINS
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str
       CHARACTER(len=1),PARAMETER :: spdf(0:3) = ['s','p','d','f']
-      LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg
+      LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg,l_kresolved,l_kresolved_int, l_found
       LOGICAL :: lp_calc(0:3,0:3)
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'
@@ -198,7 +303,6 @@ CONTAINS
 
       IF (l_gfinfo_given) THEN
          this%l_mperp=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
-         this%l_resolvent=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_resolvent'))
          this%minCalcDistance=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minCalcDistance'))
          this%l_outputSphavg=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@outputSphavg'))
          this%l_intFullRadial=evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@intFullRadial'))
@@ -309,7 +413,11 @@ CONTAINS
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
             nshells = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nshells'))
-
+            IF(xml%versionNumber>=35) THEN
+               l_kresolved = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@k_resolved'))
+            ELSE
+               l_kresolved = .FALSE.
+            ENDIF
             refL = -1
             SELECT CASE(TRIM(ADJUSTL(cutoffArg)))
             CASE('calc')
@@ -337,7 +445,7 @@ CONTAINS
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
                      i_gf =  this%add(l,itype,iContour,l_sphavg,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
-                                   fixedCutoff=fixedCutoff,nshells=nshells)
+                                      fixedCutoff=fixedCutoff,nshells=nshells,k_resolved=l_kresolved)
                   ENDDO
                ENDDO
             ENDIF
@@ -350,18 +458,21 @@ CONTAINS
                   lp_calc(l,l) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@'//spdf(l)))
                   IF(.NOT.lp_calc(l,l)) CYCLE
                   i_gf =  this%add(l,itype,iContour,l_sphavg,l_fixedCutoffset=l_fixedCutoffset,&
-                                   fixedCutoff=fixedCutoff,nshells=nshells)
+                                   fixedCutoff=fixedCutoff,nshells=nshells,k_resolved=l_kresolved)
                ENDDO
             ENDIF
 
             !Find the reference element
             IF(refL /= -1 .AND.ANY(lp_calc)) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,l_sphavg,nTypep=-nshells)
+               refGF = this%find(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.,k_resolved_int=.FALSE.,nshells=nshells,l_found=l_found)
+               IF(.NOT.l_found) THEN
+                  refGF = this%add(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.)
+               ENDIF
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp,nTypep=-nshells)
+                     i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp,nshells=nshells,k_resolved=l_kresolved)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -385,7 +496,7 @@ CONTAINS
             ENDIF
             !Hubbard 1 GF has to be spherically averaged
             i_gf =  this%add(l,itype,iContour,.TRUE.,l_fixedCutoffset=l_fixedCutoffset,&
-                             fixedCutoff=fixedCutoff)
+                             fixedCutoff=fixedCutoff,k_resolved=.FALSE.)
             n_hia = n_hia + 1
             this%hiaElem(n_hia) = i_gf
          ENDDO
@@ -423,7 +534,7 @@ CONTAINS
                   IF(.NOT.lp_calc(lp,l)) CYCLE
                   !Torgue GF has to have radial dependence
                   i_gf =  this%add(l,itype,iContour,.FALSE.,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
-                                   fixedCutoff=fixedCutoff)
+                                   fixedCutoff=fixedCutoff,k_resolved=.FALSE.)
                   this%numTorgueElems(itype) = this%numTorgueElems(itype) + 1
                   this%torgueElem(itype,this%numTorgueElems(itype)) = i_gf
                ENDDO
@@ -432,11 +543,14 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1 .AND.ANY(lp_calc)) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,.FALSE.)
+               refGF = this%find(refL,itype,iContour,.FALSE.,k_resolved=.FALSE.,k_resolved_int=.FALSE., l_found=l_found)
+               IF(.NOT.l_found) THEN
+                  refGF = this%add(refL,itype,iContour,.FALSE.,k_resolved=.FALSE.)
+               ENDIF
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf = this%find(l,itype,iContour,.FALSE.,lp=lp)
+                     i_gf = this%find(l,itype,iContour,.FALSE.,lp=lp,k_resolved=.FALSE.,k_resolved_int=.FALSE.)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -481,9 +595,9 @@ CONTAINS
       TYPE(t_input),    INTENT(IN)     :: input
 
       INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour,refCutoff
-      INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref
-      LOGICAL :: l_inter,l_offd,l_sphavg,l_interAvg,l_offdAvg
-      INTEGER :: hiaElem(atoms%n_hia)
+      INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref,n_intersite, i_inter
+      LOGICAL :: l_inter,l_offd,l_sphavg, l_all_kresolved, l_kresolved_radial
+      INTEGER :: hiaElem(atoms%n_hia), intersite_elems(this%n), shells(this%n)
       LOGICAL :: written(atoms%nType)
       REAL    :: atomDiff(3)
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
@@ -491,42 +605,52 @@ CONTAINS
 
       IF(this%n==0) RETURN !Nothing to do here
 
+      n_intersite = 0
+      shells = 0
+      intersite_elems = -1
       written = .FALSE.
       !Find the elements for which we need to compute the nearest neighbours
       DO i_gf = 1, this%n
+         IF(this%elem(i_gf)%atomTypep<0) THEN
+            n_intersite = n_intersite + 1
+            intersite_elems(n_intersite) = i_gf
+            shells(n_intersite) = ABS(this%elem(i_gf)%atomTypep)
+            this%elem(i_gf)%atomTypep = this%elem(i_gf)%atomType
+         ENDIF
+      ENDDO
+      DO i_inter = 1, n_intersite
+         i_gf = intersite_elems(i_inter)
          l  = this%elem(i_gf)%l
          lp = this%elem(i_gf)%lp
          atomType  = this%elem(i_gf)%atomType
-         atomTypep = this%elem(i_gf)%atomTypep
          iContour = this%elem(i_gf)%iContour
          refCutoff = this%elem(i_gf)%refCutoff
+         l_sphavg = this%elem(i_gf)%l_sphavg
+
          refCutoff = MERGE(i_gf,refCutoff,refCutoff==-1) !If no refCutoff is set for the intersite element
                                                          !we take the onsite element as reference
 
-         IF(atomTypep<0) THEN !This indicates that the nshells argument was written here
-            !Replace the current element by the onsite one
-            this%elem(i_gf)%atomTypep = atomType
-            CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
-                                           this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,&
-                                           .NOT.written(atomType),nOtherAtoms,atomTypepList)
-            written(atomType) = .TRUE.
+         CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+                                        this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,&
+                                        .NOT.written(atomType),nOtherAtoms,atomTypepList)
+         written(atomType) = .TRUE.
 
-            !Add the other atomtypes (i,j) -> (j,i)
-            DO iOtherAtom = 1, nOtherAtoms
-               atomType = atomTypepList(iOtherAtom)
-               !First add the reference cutoff element
-               lref = this%elem(refCutoff)%l
-               refCutoff1 =  this%add(lref,atomType,iContour,.FALSE.,l_fixedCutoffset=this%elem(i_gf)%l_fixedCutoffset,&
-                                      fixedCutoff=this%elem(i_gf)%fixedCutoff)
+         !Add the other atomtypes (i,j) -> (j,i)
+         DO iOtherAtom = 1, nOtherAtoms
+            atomType = atomTypepList(iOtherAtom)
+            !First add the reference cutoff element
+            lref = this%elem(refCutoff)%l
+            refCutoff1 =  this%add(lref,atomType,iContour,l_sphavg,k_resolved=.FALSE.,&
+                                   l_fixedCutoffset=this%elem(i_gf)%l_fixedCutoffset,&
+                                   fixedCutoff=this%elem(i_gf)%fixedCutoff)
 
-               WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
+            WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
 
-               CALL this%addNearestNeighbours(ABS(atomTypep),l,lp,atomType,iContour,this%elem(i_gf)%l_fixedCutoffset,&
-                                              this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,&
-                                              .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
+            CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+                                           this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,&
+                                           .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
 
-            ENDDO
-         ENDIF
+         ENDDO
       ENDDO
 
       !After this point there are no new green's function elements to be added
@@ -551,8 +675,8 @@ CONTAINS
 
       l_inter = .FALSE.
       l_offd = .FALSE.
-      l_interAvg = .FALSE.
-      l_offdAvg = .FALSE.
+      l_all_kresolved = .FALSE.
+      l_kresolved_radial = .FALSE.
       DO i_gf = 1, this%n
          l  = this%elem(i_gf)%l
          lp = this%elem(i_gf)%lp
@@ -562,11 +686,15 @@ CONTAINS
          atomDiff  = this%elem(i_gf)%atomDiff
          IF(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12)) THEN
             l_inter = .TRUE.
-            IF(l_sphavg) l_interAvg = .TRUE.
          ENDIF
          IF(l.NE.lp) THEN
             l_offd = .TRUE.
-            IF(l_sphavg) l_offdAvg = .TRUE.
+         ENDIF
+         IF(this%elem(i_gf)%l_kresolved) THEN
+            l_all_kresolved = .TRUE.
+            IF(.NOT.l_sphavg) THEN
+               l_kresolved_radial = .TRUE.
+            ENDIF
          ENDIF
 
       ENDDO
@@ -575,18 +703,12 @@ CONTAINS
          IF(sym%nop>1) THEN
                CALL juDFT_warn("Symmetries and intersite Green's Function not correctly implemented",&
                                 calledby="init_gfinp")
-         ELSE IF(l_interAvg) THEN
-            CALL juDFT_error("Spherical average and intersite Green's Function not implemented",&
-                             calledby="init_gfinp")
          ENDIF
       ENDIF
 
       IF(l_offd) THEN
          IF(sym%nop>1) THEN
             CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
-                             calledby="init_gfinp")
-         ELSE IF(l_offdAvg) THEN
-            CALL juDFT_error("Spherical average and l-offdiagonal Green's Function not implemented",&
                              calledby="init_gfinp")
          ENDIF
       ENDIF
@@ -599,46 +721,82 @@ CONTAINS
          ENDIF
       ENDIF
 
+      IF(l_all_kresolved) THEN
+         CALL juDFT_error("Completely k-resolved Greens functions not implemented",&
+                          calledby="init_gfinp")
+      ENDIF
+
+      IF(l_kresolved_radial) THEN
+         CALL juDFT_error("k-resolved Greens functions + Radial dependence not implemented",&
+                          calledby="init_gfinp")
+      ENDIF
+
       IF(ANY(this%numTorgueElems(:)>0)) THEN
          IF(input%jspins.NE.2) CALL juDFT_error("Torgue calculation only for magnetic systems", calledby="init_gfinp")
          IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="init_gfinp")
       ENDIF
 
-      IF(this%l_resolvent .AND. input%bz_integration.NE.BZINT_METHOD_TETRA) THEN
-         CALL juDFT_error('For l_resolvent=T the tetra brillouin-zone integration method has to be used', calledby='init_gfinp')
-      ENDIF
-
-#ifdef CPP_DEBUG
       WRITE(oUnit,*) "Green's Function Elements: "
-      WRITE(oUnit,'(10(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","repr_elem","repr_op","atomDiff"
+      WRITE(oUnit,'(12(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","repr_elem","repr_op","atomDiff", 'k_resolved', 'k_resolved_int'
       DO i_gf = 1, this%n
-         WRITE(oUnit,'(5I10,1l5,3I10,3f14.8)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
+         WRITE(oUnit,'(5I10,1l5,3I10,3f14.8, 2l5)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
                                           this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
                                           this%elem(i_gf)%representative_elem,this%elem(i_gf)%representative_op, &
-                                          this%elem(i_gf)%atomDiff(:)
+                                          this%elem(i_gf)%atomDiff(:), this%elem(i_gf)%l_kresolved, this%elem(i_gf)%l_kresolved_int
       ENDDO
-#endif
+
 
    END SUBROUTINE init_gfinp
 
-   FUNCTION uniqueElements_gfinp(this,atoms,ind,l_sphavg,lo,indUnique,maxLO) Result(uniqueElements)
+   PURE LOGICAL FUNCTION isUnique_gfinp(this,index, distinct_kresolved_int)
+      !Return whether the given element is the first with the combination
+      !of l lp, atomType, atomTypep, l_sphavg, l_kresolved
+
+      CLASS(t_gfinp),   INTENT(IN)  :: this
+      INTEGER,          INTENT(IN)  :: index
+      LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_kresolved_int
+
+      INTEGER :: i_gf, uniqueIndex
+
+      uniqueIndex = this%getuniqueElement(index, distinct_kresolved_int)
+      isunique_gfinp = uniqueIndex == index
+
+   END FUNCTION isUnique_gfinp
+
+   PURE INTEGER FUNCTION getuniqueElement_gfinp(this, index, distinct_kresolved_int) Result(uniqueIndex)
+
+      CLASS(t_gfinp),   INTENT(IN)  :: this
+      INTEGER,          INTENT(IN)  :: index
+      LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_kresolved_int
+
+      DO uniqueIndex = 1, index
+         !If the element has a representative element set it can not be unique
+         IF(this%elem(uniqueIndex)%representative_elem>0) CYCLE
+         IF(this%elem(uniqueIndex)%equals_coefficients(this%elem(index), distinct_kresolved_int)) THEN
+            RETURN
+         ENDIF
+      ENDDO
+
+   END FUNCTION getuniqueElement_gfinp
+
+   INTEGER FUNCTION uniqueElements_gfinp(this,atoms, max_index, l_sphavg, lo, l_kresolved_int,maxLO) Result(uniqueElements)
 
       USE m_types_atoms
 
       CLASS(t_gfinp),   INTENT(IN)     :: this
       TYPE(t_atoms),    INTENT(IN)     :: atoms
-      INTEGER, OPTIONAL,INTENT(IN)     :: ind
+      INTEGER, OPTIONAL,INTENT(IN)     :: max_index
       LOGICAL, OPTIONAL,INTENT(IN)     :: l_sphavg !uniqueElements are determined separately for radial dependence and spherically averaging
       LOGICAL, OPTIONAL,INTENT(IN)     :: lo       !We are interested in unique LO elems (radial dependence)
-      INTEGER, OPTIONAL,INTENT(INOUT)  :: indUnique !Position of the corresponding unique Element for a given ind
+      LOGICAL, OPTIONAL,INTENT(IN)     :: l_kresolved_int !K-resolved until the Kramers Kronig Integration
       INTEGER, OPTIONAL,INTENT(INOUT)  :: maxLO    !Maximum number of Elements associated with a GF element
 
-      INTEGER :: uniqueElements !Number of unique elements before ind or in the whole array (if ind is not present)
-
       INTEGER :: maxGF,nLO
-      INTEGER :: l,lp,atomType,atomTypep,iUnique,iContour,i_gf
-      LOGICAL :: l_sphavgArg, l_sphavgElem,loArg
-      REAL    :: atomDiff(3)
+      INTEGER :: i_gf
+      LOGICAL :: l_sphavgArg, l_sphavgElem,loArg, resolvedArg, l_kresolved_int_elem
+      LOGICAL :: distinct_kresolved_int
+
+      distinct_kresolved_int = PRESENT(l_kresolved_int)
 
       !Process optional switches and arguments
       l_sphavgArg = .TRUE.
@@ -650,142 +808,76 @@ CONTAINS
       uniqueElements = 0
       IF(PRESENT(maxLO)) maxLO = 0
 
-      IF(PRESENT(ind)) THEN
-         maxGF = ind
+      IF(PRESENT(max_index)) THEN
+         maxGF = max_index
       ELSE
          maxGF = this%n
       ENDIF
 
       !Count the unique Elements before maxGF
       DO i_gf = 1, maxGF
-         l  = this%elem(i_gf)%l
-         lp = this%elem(i_gf)%lp
-         atomType  = this%elem(i_gf)%atomType
-         atomTypep = this%elem(i_gf)%atomTypep
-         iContour  = this%elem(i_gf)%iContour
          l_sphavgElem  = this%elem(i_gf)%l_sphavg
-         atomDiff(:) = this%elem(i_gf)%atomDiff(:)
+         l_kresolved_int_elem  = this%elem(i_gf)%l_kresolved_int
 
          IF(l_sphavgElem .neqv. l_sphavgArg) CYCLE
 
-         !If the element has a representative element set it can not be unique
-         IF(this%elem(i_gf)%representative_elem>0) CYCLE
-         iUnique   = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
-                               atomDiff=atomDiff,uniqueMax=i_gf)
+         IF(distinct_kresolved_int) THEN
+            IF(l_kresolved_int_elem .neqv. l_kresolved_int) CYCLE
+         ENDIF
 
-         IF(iUnique == i_gf) THEN
-            IF(loArg) THEN
-               IF(.NOT.l_sphavgElem) THEN
-                  nLO = this%elem(i_gf)%countLOs(atoms)
-                  IF(nLO/=0) uniqueElements = uniqueElements +1
-                  IF(PRESENT(maxLO)) THEN
-                     IF(nLO>maxLO) maxLO = nLO
-                  ENDIF
+         IF(.NOT.this%isUnique(i_gf,distinct_kresolved_int)) CYCLE
+
+         IF(loArg) THEN
+            IF(.NOT.l_sphavgElem) THEN
+               nLO = this%elem(i_gf)%countLOs(atoms)
+               IF(nLO/=0) uniqueElements = uniqueElements +1
+               IF(PRESENT(maxLO)) THEN
+                  IF(nLO>maxLO) maxLO = nLO
                ENDIF
-            ELSE
-               uniqueElements = uniqueElements +1
             ENDIF
-         ENDIF
-      ENDDO
-
-      !Get the index of the unque element associated with the ind-th element
-      IF(PRESENT(indUnique)) THEN
-         IF(.NOT.PRESENT(ind)) CALL juDFT_error("ind and indUnique have to be provided at the same time",&
-                                                calledby="uniqueElements_gfinp")
-         l  = this%elem(ind)%l
-         lp = this%elem(ind)%lp
-         atomType  = this%elem(ind)%atomType
-         atomTypep = this%elem(ind)%atomTypep
-         iContour  = this%elem(ind)%iContour
-         l_sphavgElem = this%elem(ind)%l_sphavg
-         atomDiff(:) = this%elem(ind)%atomDiff(:)
-
-         IF(this%elem(ind)%representative_elem>0) THEN
-            !The given element is related to a representative_elem by Symmetry
-            !Therefore the unique element is given in representative_elem
-            indUnique = this%elem(ind)%representative_elem
          ELSE
-            indUnique = this%find(l,atomType,iContour,l_sphavgElem,lp=lp,nTypep=atomTypep,&
-                                  atomDiff=atomDiff,uniqueMax=ind)
+            uniqueElements = uniqueElements +1
          ENDIF
-      ENDIF
+
+      ENDDO
 
    END FUNCTION uniqueElements_gfinp
 
-   INTEGER FUNCTION add_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,atomDiff,l_fixedCutoffset,fixedCutoff,nshells) Result(i_gf)
+   INTEGER FUNCTION add_gfelem(this,l,atomType,iContour,l_sphavg,lp,atomTypep,atomDiff,&
+                               l_fixedCutoffset,fixedCutoff,nshells,k_resolved) Result(i_gf)
 
       CLASS(t_gfinp),      INTENT(INOUT)  :: this
       INTEGER,             INTENT(IN)     :: l
-      INTEGER,             INTENT(IN)     :: nType
+      INTEGER,             INTENT(IN)     :: atomType
       INTEGER,             INTENT(IN)     :: iContour
       LOGICAL,             INTENT(IN)     :: l_sphavg
       INTEGER, OPTIONAL,   INTENT(IN)     :: lp
-      INTEGER, OPTIONAL,   INTENT(IN)     :: nTypep !Specify the second atom
+      INTEGER, OPTIONAL,   INTENT(IN)     :: atomTypep !Specify the second atom
       REAL,    OPTIONAL,   INTENT(IN)     :: atomDiff(:)
       LOGICAL, OPTIONAL,   INTENT(IN)     :: l_fixedCutoffset
       REAL,    OPTIONAL,   INTENT(IN)     :: fixedCutoff
       INTEGER, OPTIONAL,   INTENT(IN)     :: nshells
+      LOGICAL, OPTIONAL,   INTENT(IN)     :: k_resolved
 
 
       LOGICAL l_found
+      TYPE(t_gfelementtype) :: new_element
 
-      IF(PRESENT(nshells).AND.PRESENT(nTypep)) CALL juDFT_error("Conflicting arguments: nshells and nTypep given",&
-                                                                hint="This is a bug in FLEUR, please report",&
-                                                                calledby="add_gfelem")
+      CALL new_element%init(l,atomType,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
+                            nshells=nshells,atomDiff=atomDiff,k_resolved=k_resolved,&
+                            l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
 
-      l_found = .FALSE.
       !Check if this job has already been added
-      IF(PRESENT(nTypep).OR..NOT.PRESENT(nshells)) THEN
-         i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=nTypep,atomDiff=atomDiff,l_found=l_found)
-      ELSE IF(PRESENT(nshells)) THEN
-         !Make sure we have not added the reference element for intersite elements
-         i_gf = this%find(l,nType,iContour,l_sphavg,lp=lp,nTypep=-nshells,atomDiff=atomDiff,l_found=l_found)
-      ENDIF
-      IF(l_found) RETURN !Element was found
+      i_gf = this%find(new_element,l_found=l_found)
+      IF(l_found) RETURN
 
       this%n = this%n + 1
+      this%elem(this%n) = new_element
       i_gf = this%n
-      this%elem(this%n)%l = l
-      this%elem(this%n)%atomType = nType
-      this%elem(this%n)%iContour = iContour
-      this%elem(this%n)%l_sphavg = l_sphavg
-      IF(PRESENT(lp)) THEN
-         this%elem(this%n)%lp = lp
-      ELSE
-         this%elem(this%n)%lp = l
-      ENDIF
-      IF(PRESENT(nshells)) THEN
-         IF(nshells/=0) THEN
-            !Temporary index to mark later in gfinp%init
-            this%elem(this%n)%atomTypep = -nshells
-         ELSE
-            this%elem(this%n)%atomTypep = nType
-         ENDIF
-      ELSE IF(PRESENT(nTypep)) THEN
-         !Explicit declaration of element
-         this%elem(this%n)%atomTypep = nTypep
-      ELSE
-         !No intersite element
-         this%elem(this%n)%atomTypep = nType
-      ENDIF
-      IF(PRESENT(atomDiff)) THEN
-         this%elem(this%n)%atomDiff(:) = atomDiff(:)
-      ELSE
-         this%elem(this%n)%atomDiff(:) = 0.0
-      ENDIF
-      IF(PRESENT(l_fixedCutoffset)) THEN
-         IF(.NOT.PRESENT(fixedCutoff)) CALL juDFT_error("l_fixedCutoffset Present without fixedCutoff", &
-                                                        hint="This is a bug in FLEUR please report",&
-                                                        calledby="add_gfelem")
-         this%elem(this%n)%l_fixedCutoffset = l_fixedCutoffset
-         IF(l_fixedCutoffset) THEN
-            this%elem(this%n)%fixedCutoff = fixedCutoff
-         ENDIF
-      ENDIF
 
    END FUNCTION add_gfelem
 
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,iContour,l_fixedCutoffset,fixedCutoff,&
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_fixedCutoffset,fixedCutoff,&
                                           refCutoff,atoms,cell,sym,l_write,nOtherAtoms,atomTypepList)
 
       USE m_types_atoms
@@ -802,6 +894,7 @@ CONTAINS
       INTEGER,             INTENT(IN)     :: l
       INTEGER,             INTENT(IN)     :: lp
       INTEGER,             INTENT(IN)     :: refAtom !which is the reference atom
+      LOGICAL,             INTENT(IN)     :: l_sphavg
       INTEGER,             INTENT(IN)     :: iContour
       LOGICAL,             INTENT(IN)     :: l_fixedCutoffset
       REAL,                INTENT(IN)     :: fixedCutoff
@@ -821,7 +914,7 @@ CONTAINS
       REAL :: currentDist,minDist,amatAuxDet,lastDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
-      REAL :: refPos(3),point(3),pos(3),diff(3)
+      REAL :: refPos(3),point(3),pos(3),diff(3), repr_diff(3)
       REAL :: currentDiff(3),offsetPos(3),diffRot(3)
 
       INTEGER, ALLOCATABLE :: nearestNeighbors(:)
@@ -1076,15 +1169,19 @@ CONTAINS
             !Transform representative element to lattice coordinates
             diff = MATMUL(invAmatAux,shellDiff(:,ishellAtom,ishell))
             !l_sphavg has to be false
-            i_gf =  this%add(l,refAtom,iContour,.FALSE.,lp=lp,nTypep=shellAtom(ishell),&
+            i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=shellAtom(ishell),&
                              atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff)
-            IF(repr == 0) repr = i_gf
+            IF(repr == 0) THEN
+               repr = i_gf
+               repr_diff = diff
+            ENDIF
 
             this%elem(i_gf)%refCutoff = refCutoff
             IF(ishellAtom > 1) THEN
                this%elem(i_gf)%representative_elem = repr
                this%elem(i_gf)%representative_op = shellop(ishellAtom,ishell)
+               this%elem(i_gf)%representative_diff = repr_diff
             ENDIF
 
             IF(shellAtom(ishell).NE.refAtom.AND..NOT.ANY(atomTypepList(:nOtherAtoms).EQ.shellAtom(ishell))) THEN
@@ -1108,33 +1205,62 @@ CONTAINS
 
    END SUBROUTINE addNearestNeighbours_gfelem
 
-   INTEGER FUNCTION find_gfelem(this,l,nType,iContour,l_sphavg,lp,nTypep,atomDiff,uniqueMax,l_found) result(i_gf)
+   INTEGER FUNCTION find_gfelem_simple(this,l,atomType,iContour,l_sphavg,lp,atomTypep,&
+                                       nshells,atomDiff,k_resolved,k_resolved_int,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
 
       CLASS(t_gfinp),      INTENT(IN)    :: this
       INTEGER,             INTENT(IN)    :: l
-      INTEGER,             INTENT(IN)    :: nType
+      INTEGER,             INTENT(IN)    :: atomType
       INTEGER,             INTENT(IN)    :: iContour
       LOGICAL,             INTENT(IN)    :: l_sphavg
       INTEGER, OPTIONAL,   INTENT(IN)    :: lp
-      INTEGER, OPTIONAL,   INTENT(IN)    :: nTypep
+      INTEGER, OPTIONAL,   INTENT(IN)    :: atomTypep
+      INTEGER, OPTIONAL,   INTENT(IN)    :: nshells
       REAL,    OPTIONAL,   INTENT(IN)    :: atomDiff(:)
-      INTEGER, OPTIONAL,   INTENT(IN)    :: uniqueMax  !If uniqueMax is present it will return the
-                                                       !index of the unique element, meaning
-                                                       !the same (l,lp,type,typep) but different contours
-
+      LOGICAL, OPTIONAL,   INTENT(IN)    :: k_resolved
+      LOGICAL, OPTIONAL,   INTENT(IN)    :: k_resolved_int
       LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_found    !If this switch is not provided the program
                                                        !will assume that the element has to be present and
                                                        !terminate with an error message if the
                                                        !element is not found (for adding elements)
 
+      LOGICAL :: search, distinct_kresolved_int
+      TYPE(t_gfelementtype) :: elem_to_find
+
+      distinct_kresolved_int = PRESENT(k_resolved_int)
+
+      CALL elem_to_find%init(l,atomType,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
+                             nshells=nshells,atomDiff=atomDiff,k_resolved=k_resolved)
+      IF(distinct_kresolved_int) THEN
+         elem_to_find%l_kresolved_int = k_resolved_int
+      ENDIF
+
+      i_gf = this%find(elem_to_find, l_found=l_found, &
+                       distinct_kresolved_int=distinct_kresolved_int)
+
+   END FUNCTION find_gfelem_simple
+
+   INTEGER FUNCTION find_gfelem_type(this,elem,l_found, distinct_kresolved_int) result(i_gf)
+
+      !Maps between the four indices (l,lp,nType,nTypep) and the position in the
+      !gf arrays
+
+      CLASS(t_gfinp),         INTENT(IN)    :: this
+      TYPE(t_gfelementtype),  INTENT(IN)    :: elem
+      LOGICAL, OPTIONAL,      INTENT(INOUT) :: l_found    !If this switch is not provided the program
+                                                          !will assume that the element has to be present and
+                                                          !terminate with an error message if the
+                                                          !element is not found (for adding elements)
+      LOGICAL, OPTIONAL,      INTENT(IN)    :: distinct_kresolved_int
+
       LOGICAL :: search
 
+      IF(PRESENT(l_found)) l_found = .FALSE.
       search = .TRUE.
       i_gf = 0
-
       DO WHILE(search)
          i_gf = i_gf + 1
 
@@ -1151,49 +1277,13 @@ CONTAINS
                                 calledby="find_gfelem")
             ENDIF
          ENDIF
-         !--------------------------------------------
-         ! Check the current element
-         !--------------------------------------------
-         IF(this%elem(i_gf)%l.NE.l) CYCLE
-         IF(this%elem(i_gf)%atomType.NE.nType) CYCLE
-         IF(PRESENT(lp)) THEN
-            IF(this%elem(i_gf)%lp.NE.lp) CYCLE
-         ELSE
-            IF(this%elem(i_gf)%lp.NE.l) CYCLE
-         ENDIF
-         IF(PRESENT(nTypep)) THEN
-            IF(nTypep/=0) THEN
-               IF(this%elem(i_gf)%atomTypep.NE.nTypep) CYCLE
-            ELSE
-               IF(this%elem(i_gf)%atomTypep.NE.nType) CYCLE
-            ENDIF
-         ELSE
-            IF(this%elem(i_gf)%atomTypep.NE.nType) CYCLE
-         ENDIF
-         IF(this%elem(i_gf)%l_sphavg .neqv. l_sphavg) CYCLE
-         !Check the phasefactor
-         IF(PRESENT(atomDiff)) THEN
-            IF(ABS(this%elem(i_gf)%atomDiff(1)-atomDiff(1)).GT.1e-12.OR.&
-               ABS(this%elem(i_gf)%atomDiff(2)-atomDiff(2)).GT.1e-12.OR.&
-               ABS(this%elem(i_gf)%atomDiff(3)-atomDiff(3)).GT.1e-12) CYCLE
-         ELSE
-            IF(ABS(this%elem(i_gf)%atomDiff(1)).GT.1e-12.OR.&
-               ABS(this%elem(i_gf)%atomDiff(2)).GT.1e-12.OR.&
-               ABS(this%elem(i_gf)%atomDiff(3)).GT.1e-12) CYCLE
-         ENDIF
-         !If we are here and smaller than uniqueMax the element is not unique
-         !i.e they only differ in the choice of the energy contour
-         IF(PRESENT(uniqueMax)) THEN
-            IF(i_gf>uniqueMax) CALL juDFT_error('i_gf>uniqueMax',calledby="find_gfelem")
-            RETURN
-         ENDIF
-         IF(this%elem(i_gf)%iContour.NE.iContour) CYCLE
+         IF(.NOT.elem%equals(this%elem(i_gf), distinct_k_resolved=distinct_kresolved_int)) CYCLE
 
          !If we are here we found the element
          IF(PRESENT(l_found)) l_found=.TRUE.
          search = .FALSE.
       ENDDO
-   END FUNCTION find_gfelem
+   END FUNCTION find_gfelem_type
 
    FUNCTION find_contour(this,label) result(iContour)
 
@@ -1298,6 +1388,136 @@ CONTAINS
          checkOnsite_gfinp = .TRUE.
       ENDDO
    END FUNCTION checkOnsite_gfinp
+
+   SUBROUTINE init_gfelem(this,l,atomType,iContour,l_sphavg,lp,nshells,atomTypep,k_resolved,atomDiff,l_fixedCutoffset,fixedCutoff)
+
+      CLASS(t_gfelementtype), INTENT(INOUT)  :: this
+      INTEGER,                INTENT(IN)     :: l
+      INTEGER,                INTENT(IN)     :: atomType
+      INTEGER,                INTENT(IN)     :: iContour
+      LOGICAL,                INTENT(IN)     :: l_sphavg
+      INTEGER, OPTIONAL,      INTENT(IN)     :: lp
+      INTEGER, OPTIONAL,      INTENT(IN)     :: atomTypep !Specify the second atom
+      REAL,    OPTIONAL,      INTENT(IN)     :: atomDiff(:)
+      LOGICAL, OPTIONAL,      INTENT(IN)     :: l_fixedCutoffset
+      REAL,    OPTIONAL,      INTENT(IN)     :: fixedCutoff
+      INTEGER, OPTIONAL,      INTENT(IN)     :: nshells
+      LOGICAL, OPTIONAL,      INTENT(IN)     :: k_resolved
+
+      IF(PRESENT(nshells).AND.PRESENT(atomTypep)) THEN
+         CALL juDFT_error("Conflicting arguments: nshells and nTypep given",&
+                          hint="This is a bug in FLEUR, please report",&
+                          calledby="init_gfelem")
+      ENDIF
+
+      this%l = l
+      this%atomType = atomType
+      this%iContour = iContour
+      this%l_sphavg = l_sphavg
+      IF(PRESENT(lp)) THEN
+         this%lp = lp
+      ELSE
+         this%lp = l
+      ENDIF
+      IF(PRESENT(nshells)) THEN
+         IF(nshells/=0) THEN
+            !Temporary index to mark later in gfinp%init
+            this%atomTypep = -nshells
+         ELSE
+            this%atomTypep = atomType
+         ENDIF
+      ELSE IF(PRESENT(atomTypep)) THEN
+         !Explicit declaration of element
+         this%atomTypep = atomTypep
+      ELSE
+         !No intersite element
+         this%atomTypep = atomType
+      ENDIF
+      IF(PRESENT(k_resolved)) THEN
+         this%l_kresolved = k_resolved
+         this%l_kresolved_int = k_resolved
+      ENDIF
+      IF(PRESENT(atomDiff)) THEN
+         this%atomDiff(:) = atomDiff(:)
+      ELSE
+         this%atomDiff(:) = 0.0
+      ENDIF
+      IF(PRESENT(l_fixedCutoffset)) THEN
+         IF(.NOT.PRESENT(fixedCutoff)) CALL juDFT_error("l_fixedCutoffset Present without fixedCutoff", &
+                                                        hint="This is a bug in FLEUR please report",&
+                                                        calledby="init_gfelem")
+         this%l_fixedCutoffset = l_fixedCutoffset
+         IF(l_fixedCutoffset) THEN
+            this%fixedCutoff = fixedCutoff
+         ENDIF
+      ENDIF
+
+   END SUBROUTINE init_gfelem
+
+   PURE LOGICAL FUNCTION equals_coefficients_gfelem(this, other, distinct_k_resolved)
+
+      CLASS(t_gfelementtype), INTENT(IN)  :: this
+      TYPE(t_gfelementtype),  INTENT(IN)  :: other
+      LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_k_resolved
+
+      LOGICAL distinct_k_resolved_arg
+
+      distinct_k_resolved_arg = .TRUE.
+      IF(PRESENT(distinct_k_resolved)) distinct_k_resolved_arg = distinct_k_resolved
+
+      equals_coefficients_gfelem = .FALSE.
+
+      IF(this%l.NE.other%l) RETURN
+      IF(this%lp.NE.other%lp) RETURN
+      IF(this%atomType.NE.other%atomType) RETURN
+      IF(this%atomTypep.NE.other%atomTypep) RETURN
+      IF(this%l_sphavg .neqv. other%l_sphavg) RETURN
+      IF(this%l_kresolved .neqv. other%l_kresolved) RETURN
+      IF(distinct_k_resolved_arg) then
+         IF(this%l_kresolved_int .neqv. other%l_kresolved_int) RETURN
+      ENDIF
+      IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
+         ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
+         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) THEN
+         IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
+         IF(this%representative_elem > 0 .AND. other%representative_elem > 0) THEN
+            IF(ABS(this%representative_diff(1)-other%representative_diff(1)).GT.1e-12.OR.&
+               ABS(this%representative_diff(2)-other%representative_diff(2)).GT.1e-12.OR.&
+               ABS(this%representative_diff(3)-other%representative_diff(3)).GT.1e-12) RETURN
+         ELSE IF(this%representative_elem > 0) THEN
+            IF(ABS(this%representative_diff(1)-other%atomDiff(1)).GT.1e-12.OR.&
+               ABS(this%representative_diff(2)-other%atomDiff(2)).GT.1e-12.OR.&
+               ABS(this%representative_diff(3)-other%atomDiff(3)).GT.1e-12) RETURN
+         ELSE IF(other%representative_elem > 0) THEN
+            IF(ABS(other%representative_diff(1)-this%atomDiff(1)).GT.1e-12.OR.&
+               ABS(other%representative_diff(2)-this%atomDiff(2)).GT.1e-12.OR.&
+               ABS(other%representative_diff(3)-this%atomDiff(3)).GT.1e-12) RETURN
+         ENDIF
+      ENDIF
+      equals_coefficients_gfelem = .TRUE.
+
+   END FUNCTION equals_coefficients_gfelem
+
+   PURE LOGICAL FUNCTION equals_gfelem(this, other, distinct_k_resolved)
+
+      CLASS(t_gfelementtype), INTENT(IN)  :: this
+      TYPE(t_gfelementtype),  INTENT(IN)  :: other
+      LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_k_resolved
+
+      equals_gfelem = .FALSE.
+      IF(.NOT.this%equals_coefficients(other, distinct_k_resolved)) RETURN
+      !We need to check the atomDiff again here, since the deduplication
+      !on the coefficient level has some extra symmetry considerations
+      !that should not influence the deduplication. It just influences how
+      !many brillouin zone integegrations need to be performed
+      IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
+         ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
+         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) RETURN
+      IF(this%iContour.NE.other%iContour) RETURN
+      equals_gfelem = .TRUE.
+
+   END FUNCTION equals_gfelem
+
 
    PURE LOGICAL FUNCTION checkOffdiagonal_gfinp(this)
 

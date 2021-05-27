@@ -46,6 +46,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_checkdopall
    USE m_greensfBZint
    USE m_greensfCalcImagPart
+   USE m_greensfCalcScalarProducts
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers
@@ -130,6 +131,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    TYPE (t_gVacMap)           :: gVacMap
    TYPE (t_tlmplm)            :: tlmplm
    TYPE (t_greensfBZintCoeffs):: greensfBZintCoeffs
+   TYPE(t_scalarGF), ALLOCATABLE :: scalarGF(:)
 
    CALL timestart("cdnval")
 
@@ -174,9 +176,12 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    !Greens function always considers the empty states
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
-      IF(greensfImagPart%l_calc) &
+      IF(greensfImagPart%l_calc) THEN
          CALL greensfBZintCoeffs%init(gfinp,atoms,noco,jsp_start,jsp_end,&
                                       SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
+         CALL greensfCalcScalarProducts(gfinp,atoms,input,enpara,noco,sphhar,vTot,fmpi,hub1data=hub1data,&
+                                        scalarProducts=scalarGF)
+      ENDIF
    ENDIF
 
 
@@ -293,7 +298,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) THEN
            CALL tlmplm%init(atoms,input%jspins,.FALSE.)
-           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,input,hub1inp,hub1data,tlmplm,usdus)
+           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,vtot,input,hub1inp,hub1data,tlmplm,usdus,0.0)
            CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
            usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,lapw%gvec(1,:,:),lapw%gvec(2,:,:),lapw%gvec(3,:,:),bkpt)
          ENDIF
@@ -309,7 +314,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
          IF(greensfImagPart%l_calc) THEN
             CALL greensfBZint(ikpt_i,ikpt,noccbd,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
-                              usdus,denCoeffsOffDiag,eigVecCoeffs,greensfBZintCoeffs)
+                              scalarGF,eigVecCoeffs,greensfBZintCoeffs)
          ENDIF
       ENDIF
 
@@ -346,7 +351,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
       IF(greensfImagPart%l_calc) THEN
          !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
-         DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(4,jsp_end,gfinp%l_mperp)
+         DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
             CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,fmpi,&
                                      results,greensfBZintCoeffs,greensfImagPart)
          ENDDO
