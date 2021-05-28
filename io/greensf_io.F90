@@ -258,7 +258,7 @@ MODULE m_greensf_io
             CALL io_write_attreal0(currentelementGroupID,"OffDTrace-y",AIMAG(trc(3)))
          ENDIF
 
-         CALL writeGreensFElement(currentelementGroupID, gfOut, atoms, jspinsOut, contour_mapping)
+         CALL writeGreensFElement(currentelementGroupID, gfOut, atoms, cell, jspinsOut, contour_mapping)
 
          !Occupation matrix
          dims(:4)=[2,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut]
@@ -355,11 +355,12 @@ MODULE m_greensf_io
 
    END SUBROUTINE writeGreensFData
 
-   SUBROUTINE writeGreensFElement(groupID, g, atoms, jspins, contour_mapping)
+   SUBROUTINE writeGreensFElement(groupID, g, atoms, cell, jspins, contour_mapping)
 
       INTEGER(HID_T),   INTENT(IN)  :: groupID
       TYPE(t_greensf),  INTENT(IN)  :: g
       TYPE(t_atoms),    INTENT(IN)  :: atoms
+      TYPE(t_cell),     INTENT(IN)  :: cell
       INTEGER,          INTENT(IN)  :: jspins
       INTEGER,          INTENT(IN)  :: contour_mapping(:)
 
@@ -379,7 +380,7 @@ MODULE m_greensf_io
       CALL io_write_attint0(groupID,'iContour',contour_mapping(g%elem%iContour))
       CALL io_write_attlog0(groupID,'l_onsite',.NOT.g%elem%isOffDiag())
       CALL io_write_attlog0(groupID,'l_sphavg',g%l_sphavg)
-      CALL io_write_attreal1(groupID,'atomDiff',g%elem%atomDiff)
+      CALL io_write_attreal1(groupID,'atomDiff',matmul(cell%amat,g%elem%atomDiff))
       nLO = g%elem%countLOs(atoms)
       CALL io_write_attint0(groupID,'numLOs',nLO)
 
