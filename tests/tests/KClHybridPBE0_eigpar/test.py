@@ -22,7 +22,7 @@ try:
       te.run([te.binary, "-trace"])
 
 
-   te.check_value_outfile("HF total energy=", "htr", [-1063.8587731477, -1063.8383730939], 0.000001)
+   te.check_value_outfile("HF total energy=", "htr", [-1063.8587724009, -1063.838372081], 0.000001)
 
    # only check the last bandgap
    exp_bandgap = 28 * [None]

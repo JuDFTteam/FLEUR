@@ -1,6 +1,6 @@
 module m_wavefproducts_inv
    USE m_types_hybdat
-
+   use m_wavefproducts_noinv
    USE m_constants
    USE m_judft
    USE m_types
@@ -34,7 +34,7 @@ CONTAINS
       REAL                    ::    kqpt(3), kqpthlp(3)
 
       type(t_mat) ::  z_kqpt_p
-      complex, allocatable :: c_phase_kqpt(:)
+      complex, allocatable :: c_phase_kqpt(:), tmp(:,:)
 
       CALL timestart("wavefproducts_inv")
       ikqpt = -1
@@ -55,13 +55,55 @@ CONTAINS
          call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                     ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
 
-         call wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
-                                    ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod%data_r)
+         allocate(tmp(hybdat%nbasp, cprod%matsize2), source=cmplx_0)
+         call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
+                                      jsp, ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, tmp)
+         
+         call transform_to_realsph(fi, mpdata, tmp)
+         cprod%data_r(:hybdat%nbasp,:) = real(tmp)
       !$acc end data ! cprod
 
       CALL timestop("wavefproducts_inv")
 
    END SUBROUTINE wavefproducts_inv
+
+   subroutine transform_to_realsph(fi, mpdata, cprod)
+      implicit none 
+      type(t_fleurinput), intent(in):: fi
+      TYPE(t_mpdata), intent(in)    :: mpdata
+      complex, intent(inout)        :: cprod(:,:)
+
+      integer :: lm_0, lm, iatm, itype, l, m, partner
+
+      lm_0 = 0
+      do iatm = 1,fi%atoms%nat 
+         itype = fi%atoms%itype(iatm)
+
+         ! The default(shared) in the OMP part of the following loop is needed to avoid compilation issues on gfortran 7.5.
+         DO l = 0, fi%hybinp%lcutm1(itype)
+            DO m = -l, l
+               lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
+               if(m == 0) then
+                  if(mod(l,2) == 1) then
+                     cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :) &
+                        = -ImagUnit * cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :)
+                  endif
+               else
+                  if(m < 0) then
+                     partner = lm + 2*abs(m)*mpdata%num_radbasfn(l,itype)
+                     cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :) &
+                        = (-1.0)**l * sqrt(2.0) * (-1.0)**m  * real(cprod(partner+1:partner+mpdata%num_radbasfn(l, itype), :))
+                  else 
+                     cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :) &
+                        = -(-1.0)**l * sqrt(2.0) * (-1.0)**m  * aimag(cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :))
+                  endif 
+               endif
+            enddo 
+            lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+         enddo
+      enddo
+
+   end subroutine transform_to_realsph
 
    subroutine wavefproducts_inv_MT(fi, nococonv, jsp, bandoi, bandof, ik, iq, hybdat, mpdata, &
                                    ikqpt, z_kqpt_p, c_phase_kqpt, ccmt_nk, cprod)
