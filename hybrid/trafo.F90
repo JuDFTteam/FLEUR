@@ -834,19 +834,23 @@ CONTAINS
                   ifac = -ifac
                   rfac2 = rfac1*ifac
                   ishift = (ic1 - ic)*nn - 2*m*nindxm(l, itype)
-                  DO n = 1, nindxm(l, itype)
-                     i = i + 1
-                     j = i + ishift
-                     IF (ic1 /= ic .or. m < 0) THEN
-                        ! carr(:dim2) = mat(i, :)
-                        call zcopy(dim2, mat(i,1), size(mat,1), carr(1), 1)
+                  IF (ic1 /= ic .or. m < 0) THEN
+                     DO n = 1, nindxm(l, itype)
+                        i = i + 1
+                        j = i + ishift
+                        carr(:dim2) = mat(i, :)
                         mat(i, :) = (carr(:dim2) + ImagUnit*mat(j, :))*rfac1
                         mat(j, :) = (carr(:dim2) - ImagUnit*mat(j, :))*rfac2
-                     ELSE IF (m == 0 .and. ifac == -1) THEN
-                        ! mat(i, :) = ImagUnit*mat(i, :)
-                        call zscal(size(mat,2), ImagUnit, mat(i,1), size(mat,1))
-                     END IF
-                  END DO
+                     enddo
+                  ELSE IF (m == 0 .and. ifac == -1) THEN
+                     DO n = 1, nindxm(l, itype)
+                        i = i + 1
+                        j = i + ishift
+                        mat(i, :) = ImagUnit*mat(i, :)
+                     enddo
+                  else
+                     i = i +  nindxm(l, itype)
+                  endif
                END DO
             END DO
          END DO
