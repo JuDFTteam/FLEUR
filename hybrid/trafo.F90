@@ -800,59 +800,52 @@ CONTAINS
       COMPLEX, INTENT(INOUT)   ::  mat(dim1, dim2)
 
 !     - local scalars -
-      INTEGER                 ::  ifac, i, j, itype, ieq, ic, ic1, l, m, n, nn, ishift
-      REAL                    ::  rfac1, rfac2
+      INTEGER                 ::  ifac, i, istart, j, itype, ieq, ic, ic1, l, m, n, nn, ishift
+      REAL, parameter         ::  rfac1 = sqrt(0.5)
+      real                    ::  rfac2
 !     - local arrays -
       COMPLEX                 ::  carr(max(dim1, dim2))
 
       call timestart("desymmetrize")
-      
-      rfac1 = sqrt(0.5)
       ic = 0
-      i = 0
+      istart = 0
       DO itype = 1, atoms%ntype
          nn = sum([((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))])
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            IF (sym%invsat(ic) == 0) THEN
-               ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
-               ! invsat(atom) = 0, invsatnr(atom) =0
-               ! but we need invsatnr(atom) = natom
-               ic1 = ic
-            ELSE
-               ic1 = sym%invsatnr(ic)
-            END IF
+            ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
+            ! invsat(atom) = 0, invsatnr(atom) =0
+            ! but we need invsatnr(atom) = natom
+            ic1 = merge(ic, sym%invsatnr(ic), sym%invsat(ic) == 0)
             !ic1 = invsatnr(ic)
             !IF( ic1 .lt. ic ) cycle
             IF (ic1 < ic) THEN
-               i = i + nn
-               CYCLE
-            END IF
-            DO l = 0, lcutm(itype)
-               ifac = -1
-               DO m = -l, l
-                  ifac = -ifac
-                  rfac2 = rfac1*ifac
-                  ishift = (ic1 - ic)*nn - 2*m*nindxm(l, itype)
-                  IF (ic1 /= ic .or. m < 0) THEN
-                     DO n = 1, nindxm(l, itype)
-                        i = i + 1
-                        j = i + ishift
-                        carr(:dim2) = mat(i, :)
-                        mat(i, :) = (carr(:dim2) + ImagUnit*mat(j, :))*rfac1
-                        mat(j, :) = (carr(:dim2) - ImagUnit*mat(j, :))*rfac2
-                     enddo
-                  ELSE IF (m == 0 .and. ifac == -1) THEN
-                     DO n = 1, nindxm(l, itype)
-                        i = i + 1
-                        j = i + ishift
-                        mat(i, :) = ImagUnit*mat(i, :)
-                     enddo
-                  else
-                     i = i +  nindxm(l, itype)
-                  endif
+               istart = istart + nn
+            else
+               DO l = 0, lcutm(itype)
+                  ifac = -1
+                  DO m = -l, l
+                     ifac = -ifac
+                     rfac2 = rfac1*ifac
+                     ishift = (ic1 - ic)*nn - 2*m*nindxm(l, itype)
+                     IF (ic1 /= ic .or. m < 0) THEN
+                        if (ishift <= nindxm(l, itype)) call juDFT_error("if ishift is zero the parallelization is wrong")
+                        DO n = 1, nindxm(l, itype)
+                           i = istart + n
+                           j = i + ishift
+                           carr(:dim2) = mat(i, :)
+                           mat(i, :) = (carr(:dim2) + ImagUnit*mat(j, :))*rfac1
+                           mat(j, :) = (carr(:dim2) - ImagUnit*mat(j, :))*rfac2
+                        enddo
+                     ELSE IF (m == 0 .and. ifac == -1) THEN
+                        DO n = 1, nindxm(l, itype)
+                           mat(istart + n, :) = ImagUnit*mat(istart + n, :)
+                        enddo
+                     endif
+                     istart = istart +  nindxm(l, itype)
+                  END DO
                END DO
-            END DO
+            endif
          END DO
       END DO
       call timestop("desymmetrize")
