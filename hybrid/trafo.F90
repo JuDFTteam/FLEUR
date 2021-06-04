@@ -782,7 +782,7 @@ CONTAINS
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
    ! Undoes symmetrization with routine symmetrize.
-   SUBROUTINE desymmetrize(mat, dim1, dim2, imode, &
+   SUBROUTINE desymmetrize(mat, dim1, dim2, &
                            atoms, lcutm, maxlcutm, nindxm, sym)
 
       USE m_types
@@ -791,7 +791,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
 !     - scalars -
-      INTEGER, INTENT(IN)      ::  imode, dim1, dim2
+      INTEGER, INTENT(IN)      :: dim1, dim2
       INTEGER, INTENT(IN)      :: maxlcutm
 
 !     - arrays -
@@ -806,7 +806,7 @@ CONTAINS
       COMPLEX                 ::  carr(max(dim1, dim2))
 
       call timestart("desymmetrize")
-
+      
       rfac1 = sqrt(0.5)
       ic = 0
       i = 0
@@ -838,26 +838,13 @@ CONTAINS
                      i = i + 1
                      j = i + ishift
                      IF (ic1 /= ic .or. m < 0) THEN
-                        IF (iand(imode, 1) /= 0) THEN
-                           ! carr(:dim2) = mat(i, :)
-                           call zcopy(dim2, mat(i,1), size(mat,1), carr(1), 1)
-                           mat(i, :) = (carr(:dim2) + ImagUnit*mat(j, :))*rfac1
-                           mat(j, :) = (carr(:dim2) - ImagUnit*mat(j, :))*rfac2
-                        END IF
-                        IF (iand(imode, 2) /= 0) THEN
-                           ! carr(:dim1) = mat(:, i)
-                           call zcopy(dim1, mat(1,i), 1, carr(1), 1)
-                           mat(:, i) = (carr(:dim1) - ImagUnit*mat(:, j))*rfac1
-                           mat(:, j) = (carr(:dim1) + ImagUnit*mat(:, j))*rfac2
-                        END IF
+                        ! carr(:dim2) = mat(i, :)
+                        call zcopy(dim2, mat(i,1), size(mat,1), carr(1), 1)
+                        mat(i, :) = (carr(:dim2) + ImagUnit*mat(j, :))*rfac1
+                        mat(j, :) = (carr(:dim2) - ImagUnit*mat(j, :))*rfac2
                      ELSE IF (m == 0 .and. ifac == -1) THEN
-                        IF (iand(imode, 1) /= 0) THEN
-                           ! mat(i, :) = ImagUnit*mat(i, :)
-                           call zscal(size(mat,2), ImagUnit, mat(i,1), size(mat,1))
-                        END IF
-                        IF (iand(imode, 2) /= 0) THEN
-                           mat(:, i) = -ImagUnit*mat(:, i)
-                        END IF
+                        ! mat(i, :) = ImagUnit*mat(i, :)
+                        call zscal(size(mat,2), ImagUnit, mat(i,1), size(mat,1))
                      END IF
                   END DO
                END DO
@@ -927,7 +914,7 @@ CONTAINS
          DO j = 1, psize
             cnt = (i-1) * psize + j
             vecin(:,1) = matin_r(:,cnt)
-            CALL desymmetrize(vecin(:hybdat%nbasp, 1), hybdat%nbasp, 1, 1, &
+            CALL desymmetrize(vecin(:hybdat%nbasp, 1), hybdat%nbasp, 1, &
                               fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
             call bra_trafo_core(1, ikpt, 1, fi%sym, mpdata, &
@@ -1331,7 +1318,7 @@ CONTAINS
 
       call timestart("desymm")
       vecout(:nbasm(ikpt0), 1) = vecin(:nbasm(ikpt0))
-      if (sym%invs) CALL desymmetrize(vecout, nbasp, 1, 1, &
+      if (sym%invs) CALL desymmetrize(vecout, nbasp, 1, &
                                       atoms, lcutm, maxlcutm, nindxm, sym)
       call timestop("desymm")
 
