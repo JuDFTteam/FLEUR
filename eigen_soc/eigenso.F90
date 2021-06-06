@@ -33,9 +33,6 @@ CONTAINS
     USE m_spnorb
     USE m_alineso
     USE m_judft
-#ifdef CPP_MPI
-    USE m_mpi_bc_pot
-#endif
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)        :: fmpi

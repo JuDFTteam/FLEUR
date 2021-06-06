@@ -444,17 +444,53 @@ CONTAINS
     IF ( atoms%n_u.GT.0 ) THEN
        n = 49*atoms%n_u
        ALLOCATE(c_b(n))
-       CALL MPI_REDUCE(den%mmpMat(:,:,1:atoms%n_u,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(den%mmpMat_uu(:,:,1:atoms%n_u,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (fmpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat(:,:,1:atoms%n_u,jspin), 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat_uu(:,:,1:atoms%n_u,jspin), 1)
+       ENDIF
+       DEALLOCATE (c_b)
+       ALLOCATE(c_b(n))
+       CALL MPI_REDUCE(den%mmpMat_dd(:,:,1:atoms%n_u,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       IF (fmpi%irank.EQ.0) THEN
+          CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat_dd(:,:,1:atoms%n_u,jspin), 1)
+       ENDIF
+       DEALLOCATE (c_b)
+       ALLOCATE(c_b(n))
+       CALL MPI_REDUCE(den%mmpMat_du(:,:,1:atoms%n_u,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       IF (fmpi%irank.EQ.0) THEN
+          CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat_du(:,:,1:atoms%n_u,jspin), 1)
+       ENDIF
+       DEALLOCATE (c_b)
+       ALLOCATE(c_b(n))
+       CALL MPI_REDUCE(den%mmpMat_ud(:,:,1:atoms%n_u,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       IF (fmpi%irank.EQ.0) THEN
+          CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat_ud(:,:,1:atoms%n_u,jspin), 1)
        ENDIF
        DEALLOCATE (c_b)
        IF(noco%l_mperp.AND.jspin.EQ.1) THEN
          n = 49*atoms%n_u
          ALLOCATE(c_b(n))
-         CALL MPI_REDUCE(den%mmpMat(:,:,1:atoms%n_u,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+         CALL MPI_REDUCE(den%mmpMat_uu(:,:,1:atoms%n_u,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
          IF (fmpi%irank.EQ.0) THEN
-            CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat(:,:,1:atoms%n_u,3), 1)
+            CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat_uu(:,:,1:atoms%n_u,3), 1)
+         ENDIF
+         DEALLOCATE (c_b)
+         ALLOCATE(c_b(n))
+         CALL MPI_REDUCE(den%mmpMat_dd(:,:,1:atoms%n_u,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+         IF (fmpi%irank.EQ.0) THEN
+            CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat_dd(:,:,1:atoms%n_u,3), 1)
+         ENDIF
+         DEALLOCATE (c_b)
+         ALLOCATE(c_b(n))
+         CALL MPI_REDUCE(den%mmpMat_ud(:,:,1:atoms%n_u,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+         IF (fmpi%irank.EQ.0) THEN
+            CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat_ud(:,:,1:atoms%n_u,3), 1)
+         ENDIF
+         DEALLOCATE (c_b)
+         ALLOCATE(c_b(n))
+         CALL MPI_REDUCE(den%mmpMat_du(:,:,1:atoms%n_u,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+         IF (fmpi%irank.EQ.0) THEN
+            CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat_du(:,:,1:atoms%n_u,3), 1)
          ENDIF
          DEALLOCATE (c_b)
        ENDIF

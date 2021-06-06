@@ -31,6 +31,10 @@ MODULE m_types_potden
 
      ! For density matrix and associated potential matrix
      COMPLEX, ALLOCATABLE :: mmpMat(:,:,:,:)
+     COMPLEX, ALLOCATABLE :: mmpMat_uu(:,:,:,:)
+     COMPLEX, ALLOCATABLE :: mmpMat_dd(:,:,:,:)
+     COMPLEX, ALLOCATABLE :: mmpMat_du(:,:,:,:)
+     COMPLEX, ALLOCATABLE :: mmpMat_ud(:,:,:,:)
 
      !this type contains two init routines that should be used to allocate
      !memory. You can either specify the datatypes or give the dimensions as integers
@@ -93,6 +97,30 @@ CONTAINS
        if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
        deallocate(ctmp)
     endif
+    if (allocated(this%mmpMat_uu)) then
+       ALLOCATE(ctmp(size(this%mmpMat_uu)))
+       CALL MPI_REDUCE(this%mmpMat_uu,ctmp,size(this%mmpMat_uu),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       if (irank==0) this%mmpMat_uu=reshape(ctmp,shape(this%mmpMat_uu))
+       deallocate(ctmp)
+    endif
+    if (allocated(this%mmpMat_dd)) then
+       ALLOCATE(ctmp(size(this%mmpMat_dd)))
+       CALL MPI_REDUCE(this%mmpMat_dd,ctmp,size(this%mmpMat_dd),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       if (irank==0) this%mmpMat_dd=reshape(ctmp,shape(this%mmpMat_dd))
+       deallocate(ctmp)
+    endif
+    if (allocated(this%mmpMat_du)) then
+       ALLOCATE(ctmp(size(this%mmpMat_du)))
+       CALL MPI_REDUCE(this%mmpMat_du,ctmp,size(this%mmpMat_du),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       if (irank==0) this%mmpMat_du=reshape(ctmp,shape(this%mmpMat_du))
+       deallocate(ctmp)
+    endif
+    if (allocated(this%mmpMat_ud)) then
+       ALLOCATE(ctmp(size(this%mmpMat_ud)))
+       CALL MPI_REDUCE(this%mmpMat_ud,ctmp,size(this%mmpMat_ud),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       if (irank==0) this%mmpMat_ud=reshape(ctmp,shape(this%mmpMat_ud))
+       deallocate(ctmp)
+    endif
 #endif
   end subroutine collect
 
@@ -113,6 +141,10 @@ CONTAINS
     IF (ALLOCATED(this%vacz)) call mpi_bc(this%vacz,0,fmpi_comm)
     IF (ALLOCATED(this%vacxy)) CALL mpi_bc(this%vacxy,0,fmpi_comm)
     IF (ALLOCATED(this%mmpMat)) CALL mpi_bc(this%mmpMat,0,fmpi_comm)
+    IF (ALLOCATED(this%mmpMat_uu)) CALL mpi_bc(this%mmpMat_uu,0,fmpi_comm)
+    IF (ALLOCATED(this%mmpMat_dd)) CALL mpi_bc(this%mmpMat_dd,0,fmpi_comm)
+    IF (ALLOCATED(this%mmpMat_du)) CALL mpi_bc(this%mmpMat_du,0,fmpi_comm)
+    IF (ALLOCATED(this%mmpMat_ud)) CALL mpi_bc(this%mmpMat_ud,0,fmpi_comm)
 #endif
   end subroutine distribute
 
@@ -261,6 +293,11 @@ CONTAINS
 
     ! implicit allocation would break the bounds staring at 0
     if(.not. allocated(PotDenCopy%mt)) allocate(PotDenCopy%mt, mold=PotDen%mt)
+    if(.not. allocated(PotDenCopy%mmpMat)) allocate(PotDenCopy%mmpMat, mold=PotDen%mmpMat)
+    if(.not. allocated(PotDenCopy%mmpMat_uu)) allocate(PotDenCopy%mmpMat_uu, mold=PotDen%mmpMat_uu)
+    if(.not. allocated(PotDenCopy%mmpMat_du)) allocate(PotDenCopy%mmpMat_du, mold=PotDen%mmpMat_du)
+    if(.not. allocated(PotDenCopy%mmpMat_ud)) allocate(PotDenCopy%mmpMat_ud, mold=PotDen%mmpMat_ud)
+    if(.not. allocated(PotDenCopy%mmpMat_dd)) allocate(PotDenCopy%mmpMat_dd, mold=PotDen%mmpMat_dd)
 
     PotDenCopy%mt         = PotDen%mt
     PotDenCopy%pw         = PotDen%pw
@@ -270,6 +307,10 @@ CONTAINS
     PotDenCopy%tec        = PotDen%tec
     PotDenCopy%mtCore     = PotDen%mtCore
     PotDenCopy%mmpMat     = PotDen%mmpMat
+    PotDenCopy%mmpMat_uu  = PotDen%mmpMat_uu
+    PotDenCopy%mmpMat_dd  = PotDen%mmpMat_dd
+    PotDenCopy%mmpMat_du  = PotDen%mmpMat_du
+    PotDenCopy%mmpMat_ud  = PotDen%mmpMat_ud
 
   end subroutine copyPotDen
 
@@ -317,6 +358,10 @@ CONTAINS
     IF(ALLOCATED(pd%tec)) DEALLOCATE (pd%tec)
     IF(ALLOCATED(pd%mtCore)) DEALLOCATE (pd%mtCore)
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
+    IF(ALLOCATED(pd%mmpMat_uu)) DEALLOCATE (pd%mmpMat_uu)
+    IF(ALLOCATED(pd%mmpMat_dd)) DEALLOCATE (pd%mmpMat_dd)
+    IF(ALLOCATED(pd%mmpMat_du)) DEALLOCATE (pd%mmpMat_du)
+    IF(ALLOCATED(pd%mmpMat_ud)) DEALLOCATE (pd%mmpMat_ud)
     ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
     ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
@@ -327,6 +372,10 @@ CONTAINS
     ALLOCATE (pd%mtCore(coreMsh,ntype,jspins))
 
     ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraMTDim)))
+    ALLOCATE (pd%mmpMat_uu(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraMTDim)))
+    ALLOCATE (pd%mmpMat_dd(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraMTDim)))
+    ALLOCATE (pd%mmpMat_du(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraMTDim)))
+    ALLOCATE (pd%mmpMat_ud(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraMTDim)))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
@@ -337,7 +386,13 @@ CONTAINS
     pd%tec = 0.0
     pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
+    pd%mmpMat_uu = CMPLX(0.0,0.0)
+    pd%mmpMat_dd = CMPLX(0.0,0.0)
+    pd%mmpMat_du = CMPLX(0.0,0.0)
+    pd%mmpMat_ud = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
+
+
 !!$#CPP_TODO_copy !code from brysh1,brysh2...
 !!$  SUBROUTINE get_combined_vector(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
 !!$                    den,nmap,nmaph,mapmt,mapvac2,sout)
@@ -526,6 +581,10 @@ CONTAINS
     pd%tec = 0.0
     pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
+    pd%mmpMat_uu = CMPLX(0.0,0.0)
+    pd%mmpMat_dd = CMPLX(0.0,0.0)
+    pd%mmpMat_du = CMPLX(0.0,0.0)
+    pd%mmpMat_ud = CMPLX(0.0,0.0)
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE resetPotDen
 

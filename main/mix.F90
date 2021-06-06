@@ -17,7 +17,8 @@ contains
 
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
-       oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot)
+       oneD, enpara, vTot, hub1data, archiveType, xcpot, iteration, &
+       inDen, outDen, results, sliceplot, ldau_inden)
 
     use m_juDFT
     use m_constants
@@ -49,6 +50,8 @@ contains
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
     type(t_field),     intent(inout) :: field
     TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
+    TYPE(t_enpara),    INTENT(IN)    :: enpara
+    TYPE(t_hub1data),  INTENT(IN)    :: hub1data
 
     type(t_mpi),       intent(in)    :: fmpi
     TYPE(t_atoms),TARGET,INTENT(in)  :: atoms
@@ -56,16 +59,17 @@ contains
     type(t_potden),    intent(inout) :: outDen
     type(t_results),   intent(inout) :: results
     type(t_potden),    intent(inout) :: inDen
+    type(t_potden),    intent(in)    :: vTot
+    type(t_potden),    intent(inout) :: ldau_inDen
     integer,           intent(in)    :: archiveType
     integer,           intent(inout) :: iteration
     LOGICAL,           INTENT(IN)    :: l_writehistory
-    LOGICAL,           INTENT(IN)    :: l_runhia
 
     real                             :: fix
-    type(t_potden)                   :: resDen, vYukawa
+    type(t_potden)                   :: resDen, vYukawa, ldau_outDen, inden_added
     TYPE(t_mixvector),ALLOCATABLE    :: sm(:), fsm(:)
     TYPE(t_mixvector)                :: fsm_mag
-    LOGICAL                          :: l_densitymatrix,l_firstItU
+    LOGICAL                          :: l_densitymatrix,l_firstItU,l_readdldau
     INTEGER                          :: it,maxiter
     INTEGER                          :: indStartHIA, indEndHIA
 
@@ -81,9 +85,12 @@ contains
     indEndHIA = atoms%n_u + atoms%n_hia
 
     IF (atoms%n_u>0) THEN
-       l_firstItU = ALL(inDen%mmpMat(:,:,1:atoms%n_u,:)==0.0)
+       l_firstItU = .NOT.ANY(ABS(inden%mmpmat(:,:,1:atoms%n_u,:)).GT.1e-12)
        l_densitymatrix=.NOT.input%ldaulinmix.AND..NOT.l_firstItU
-       IF (fmpi%irank==0) CALL u_mix(input,atoms,noco,inDen%mmpMat,outDen%mmpMat)
+       l_readdldau = .FALSE.
+       CALL u_mix(input,atoms,noco,l_densitymatrix,sphhar,&
+                  vacuum,enpara,vTot,fmpi,hub1data,&
+                  inden,outden,ldau_outDen)
     ENDIF
 
     CALL timestart("Reading of distances")
@@ -100,6 +107,10 @@ contains
     ! Preconditioner for relaxation of Magnetic moments
     call precond_noco(it,vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm(it))
 
+    IF(l_densitymatrix) THEN
+       call precond_ldau(input%imix,inDen,outDen,ldau_inDen,ldau_outden,l_readdldau,sm(it),fsm(it))
+       CALL mixing_history_store(fsm(it), sm=sm(it))
+    ENDIF
 
     ! KERKER PRECONDITIONER
     IF( input%preconditioning_param /= 0 )  THEN
@@ -155,11 +166,19 @@ contains
     IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
     IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
+    IF (ALLOCATED(inDen%mmpMat_uu).AND.l_densitymatrix) inden%mmpMat_uu(:,:,:atoms%n_u,:)=0.0
+    IF (ALLOCATED(inDen%mmpMat_du).AND.l_densitymatrix) inden%mmpMat_du(:,:,:atoms%n_u,:)=0.0
+    IF (ALLOCATED(inDen%mmpMat_ud).AND.l_densitymatrix) inden%mmpMat_ud(:,:,:atoms%n_u,:)=0.0
+    IF (ALLOCATED(inDen%mmpMat_dd).AND.l_densitymatrix) inden%mmpMat_dd(:,:,:atoms%n_u,:)=0.0
     CALL sm(it)%to_density(inDen)
+    WRITE(*,*) 'HERE'
     IF (atoms%n_u>0.AND.l_firstItU) THEN
        !No density matrix was present
        !but is now created...
-       inden%mmpMAT(:,:,:atoms%n_u,:)=outden%mmpMat(:,:,:atoms%n_u,:)
+       inden%mmpMAT_uu(:,:,:atoms%n_u,:)=outden%mmpMat_uu(:,:,:atoms%n_u,:)
+       inden%mmpMAT_ud(:,:,:atoms%n_u,:)=outden%mmpMat_ud(:,:,:atoms%n_u,:)
+       inden%mmpMAT_du(:,:,:atoms%n_u,:)=outden%mmpMat_du(:,:,:atoms%n_u,:)
+       inden%mmpMAT_dd(:,:,:atoms%n_u,:)=outden%mmpMat_dd(:,:,:atoms%n_u,:)
        !Delete the history without U
        CALL mixing_history_reset(fmpi)
        CALL mixvector_reset()
@@ -172,13 +191,19 @@ contains
        !it can become unstable
        !Check whether the mixed density matrix makes sense
        !And correct invalid elements
-       CALL checkMMPmat(1,atoms%n_u,l_densitymatrix,fmpi,atoms,input,outden,inden)
+       !CALL checkMMPmat(1,atoms%n_u,l_densitymatrix,fmpi,atoms,input,outden,inden)
+       CALL density_from_mmpmat_coeffs(inden, atoms, input, noco, sphhar, enpara,&
+                                       vTot, hub1data, fmpi, ldau_inDen, inden%mmpmat)
+       IF(l_readdldau) THEN
+         WRITE(*,*) MAXVAL(outden%mt(:,0,:,:)),MAXVAL(inden%mt(:,0,:,:)), MAXVAL(ldau_inden%mt(:,0,:,:))
+         inden%mt = inden%mt + ldau_inDen%mt
+       ENDIF
     ENDIF
 
     IF(atoms%n_hia>0) THEN
        !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
        inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
-       IF(l_runhia) THEN
+       IF(hub1data%l_runthisiter) THEN
           iteration = 1
           CALL mixing_history_reset(fmpi)
           CALL mixvector_reset()

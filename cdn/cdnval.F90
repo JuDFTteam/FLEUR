@@ -257,10 +257,10 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
                     eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
 
-         IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))
+         IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den)
          IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) THEN
             call timestart("n_mat21")
-            CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
+            CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den)
             call timestop("n_mat21")
 
          ENDIF

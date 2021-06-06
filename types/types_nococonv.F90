@@ -22,6 +22,7 @@ MODULE m_types_nococonv
     procedure:: init=>t_nococonv_init
     procedure:: init_ss=>t_nococonv_initss
     procedure:: chi
+    procedure:: mpi_bc => nococonv_mpi_bc
   end TYPE
   public :: t_nococonv
 CONTAINS
@@ -94,4 +95,29 @@ CONTAINS
          END IF
       END IF
     end subroutine
+
+    SUBROUTINE nococonv_mpi_bc(this, mpi_comm, irank)
+      USE m_mpi_bc_tool
+      CLASS(t_nococonv), INTENT(INOUT)::this
+      INTEGER, INTENT(IN):: mpi_comm
+      INTEGER, INTENT(IN), OPTIONAL::irank
+      INTEGER ::rank,myrank,n,ierr
+      IF (PRESENT(irank)) THEN
+         rank = irank
+      ELSE
+         rank = 0
+      END IF
+      CALL mpi_bc(this%theta,rank,mpi_comm)
+      CALL mpi_bc(this%phi,rank,mpi_comm)
+      CALL mpi_bc(rank,mpi_comm,this%qss)
+      CALL mpi_bc(this%alph,rank,mpi_comm)
+      CALL mpi_bc(this%beta,rank,mpi_comm)
+      CALL mpi_bc(this%alphRlx,rank,mpi_comm)
+      CALL mpi_bc(this%betaRlx,rank,mpi_comm)
+      CALL mpi_bc(this%alphPrev,rank,mpi_comm)
+      CALL mpi_bc(this%betaPrev,rank,mpi_comm)
+      CALL mpi_bc(this%b_con,rank,mpi_comm)
+
+   END SUBROUTINE nococonv_mpi_bc
+
 end module

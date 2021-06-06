@@ -130,9 +130,13 @@ CONTAINS
     end if
   end subroutine mixing_history_limit
 
-  SUBROUTINE mixing_history_store(fsm)
+  SUBROUTINE mixing_history_store(fsm,sm)
     IMPLICIT NONE
     TYPE(t_mixvector),INTENT(IN)::fsm
-    IF (iter_stored>0) fsm_store(iter_stored)=fsm
+    TYPE(t_mixvector),OPTIONAL,INTENT(IN)::sm
+    IF (iter_stored>0) THEN
+      fsm_store(iter_stored)=fsm
+      IF(PRESENT(sm)) sm_store(iter_stored) = sm
+    ENDIF
   END SUBROUTINE mixing_history_store
 end MODULE m_mixing_history

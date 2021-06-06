@@ -182,9 +182,15 @@ CONTAINS
                ENDIF
             ENDIF
             IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
-               mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, j))
-               vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1) = RESHAPE(REAL(den%mmpMat(:, :, 1:atoms%n_u, j)), (/mmpSize/))
-               vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat(:, :, 1:atoms%n_u, j)), (/mmpSize/))
+               mmpSize = 7*7*atoms%n_u
+               vec%vec_misc(misc_start(js)            :misc_start(js) +   mmpSize - 1) = RESHAPE(REAL (den%mmpMat_uu(:, :, 1:atoms%n_u, j)), (/mmpSize/))
+               vec%vec_misc(misc_start(js) +   mmpSize:misc_start(js) + 2*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat_uu(:, :, 1:atoms%n_u, j)), (/mmpSize/))
+               vec%vec_misc(misc_start(js) + 2*mmpSize:misc_start(js) + 3*mmpSize - 1) = RESHAPE(REAL (den%mmpMat_ud(:, :, 1:atoms%n_u, j)), (/mmpSize/))
+               vec%vec_misc(misc_start(js) + 3*mmpSize:misc_start(js) + 4*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat_ud(:, :, 1:atoms%n_u, j)), (/mmpSize/))
+               vec%vec_misc(misc_start(js) + 4*mmpSize:misc_start(js) + 5*mmpSize - 1) = RESHAPE(REAL (den%mmpMat_du(:, :, 1:atoms%n_u, j)), (/mmpSize/))
+               vec%vec_misc(misc_start(js) + 5*mmpSize:misc_start(js) + 6*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat_du(:, :, 1:atoms%n_u, j)), (/mmpSize/))
+               vec%vec_misc(misc_start(js) + 6*mmpSize:misc_start(js) + 7*mmpSize - 1) = RESHAPE(REAL (den%mmpMat_dd(:, :, 1:atoms%n_u, j)), (/mmpSize/))
+               vec%vec_misc(misc_start(js) + 7*mmpSize:misc_start(js) + 8*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat_dd(:, :, 1:atoms%n_u, j)), (/mmpSize/))
             END IF
          END IF
       END DO
@@ -248,10 +254,19 @@ CONTAINS
                ENDDO
             ENDIF
             IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
-               mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, js))
-               den%mmpMat(:, :, 1:atoms%n_u, js) = RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1), &
-                                                                 vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1)), &
-                                                           SHAPE(den%mmpMat(:, :, 1:atoms%n_u, js)))
+               mmpSize = 7*7*atoms%n_u
+               den%mmpMat_uu(:, :, 1:atoms%n_u, js) = RESHAPE(CMPLX(vec%vec_misc(misc_start(js)            :misc_start(js) +   mmpSize - 1), &
+                                                                    vec%vec_misc(misc_start(js) +   mmpSize:misc_start(js) + 2*mmpSize - 1)), &
+                                                              SHAPE(den%mmpMat_uu(:, :, 1:atoms%n_u, js)))
+               den%mmpMat_ud(:, :, 1:atoms%n_u, js) = RESHAPE(CMPLX(vec%vec_misc(misc_start(js) + 2*mmpSize:misc_start(js) + 3*mmpSize - 1), &
+                                                                    vec%vec_misc(misc_start(js) + 3*mmpSize:misc_start(js) + 4*mmpSize - 1)), &
+                                                              SHAPE(den%mmpMat_ud(:, :, 1:atoms%n_u, js)))
+               den%mmpMat_du(:, :, 1:atoms%n_u, js) = RESHAPE(CMPLX(vec%vec_misc(misc_start(js) + 4*mmpSize:misc_start(js) + 5*mmpSize - 1), &
+                                                                    vec%vec_misc(misc_start(js) + 5*mmpSize:misc_start(js) + 6*mmpSize - 1)), &
+                                                              SHAPE(den%mmpMat_du(:, :, 1:atoms%n_u, js)))
+               den%mmpMat_dd(:, :, 1:atoms%n_u, js) = RESHAPE(CMPLX(vec%vec_misc(misc_start(js) + 6*mmpSize:misc_start(js) + 7*mmpSize - 1), &
+                                                                    vec%vec_misc(misc_start(js) + 7*mmpSize:misc_start(js) + 8*mmpSize - 1)), &
+                                                              SHAPE(den%mmpMat_dd(:, :, 1:atoms%n_u, js)))
             END IF
          END IF
       ENDDO
@@ -530,7 +545,7 @@ CONTAINS
                vac_stop(js) = vac_length
             ENDIF
             IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
-               len = 7*7*2*atoms%n_u
+               len = 7*7*2*atoms%n_u*4
                misc_start(js) = misc_length + 1
                misc_length = misc_length + len
                misc_stop(js) = misc_length

@@ -69,7 +69,6 @@ CONTAINS
       USE m_usetup
       USE m_hubbard1_setup
       USE m_writeCFOutput
-      USE m_mpi_bc_potden
       USE m_mpi_bc_tool
       USE m_eig66_io
       USE m_chase_diag
@@ -97,8 +96,9 @@ CONTAINS
       TYPE(t_hybdat)                  :: hybdat
       TYPE(t_mpdata)                  :: mpdata
 
+      TYPE(t_enpara)                  :: enpara_copy
       TYPE(t_potden)                  :: vTot, vx, vCoul, vxc, exc
-      TYPE(t_potden)                  :: inDen, outDen, EnergyDen, sliceDen
+      TYPE(t_potden)                  :: inDen, outDen, EnergyDen, sliceDen, ldau_inDen
 
       TYPE(t_hub1data)                :: hub1data
       TYPE(t_greensf), ALLOCATABLE    :: greensFunction(:)
@@ -243,7 +243,8 @@ CONTAINS
          CALL chase_distance(results%last_distance)
 #endif
 
-         CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen,nococonv)
+         CALL inDen%distribute(fmpi%mpi_comm)
+         CALL nococonv%mpi_bc(fmpi%mpi_comm,0)
 
 !Plot inden if wanted
          IF (fi%sliceplot%iplot .NE. 0) THEN
@@ -255,7 +256,8 @@ CONTAINS
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                        fi%input, fi%sym, fi%oneD,CDN_ARCHIVE_TYPE_CDN_const, &
                                                        CDN_INPUT_DEN_const, 0, rdummy, l_dummy, sliceDen, 'cdn_slice')
-               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, sliceDen, nococonv)
+               CALL sliceDen%distribute(fmpi%mpi_comm)
+               CALL nococonv%mpi_bc(fmpi%mpi_comm,0)
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
                               fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
             END IF
@@ -472,7 +474,6 @@ CONTAINS
                         archiveType, xcpot, outDen, EnergyDen, greensFunction, hub1data,vxc,exc)
             !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
-
             IF (fi%sliceplot%iplot .NE. 0) THEN
                !               CDN including core charge
 
@@ -547,12 +548,15 @@ CONTAINS
 
          CALL forcetheo%postprocess()
 
+         enpara_copy = enpara
+
          CALL enpara%mix(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vTot%mt(:, 0, :, :), vtot%vacz)
          field2 = fi%field
          ! mix fi%input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), &
-         stars, fi%atoms, sphhar, fi%vacuum, fi%input, &
-         fi%sym, fi%cell, fi%noco,nococonv, fi%oneD, archiveType, xcpot, iter, inDen, outDen, results, hub1data%l_runthisiter, fi%sliceplot)
+                         stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, &
+                         nococonv, fi%oneD, enpara_copy, vTot, hub1data, archiveType, xcpot, iter, &
+                         inDen, outDen, results, fi%sliceplot, ldau_inden)
 
          !Rotating in local MT frame
          CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars &

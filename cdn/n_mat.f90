@@ -14,7 +14,7 @@ MODULE m_nmat
    !     Extension to multiple U per atom type by G.M. 2017
    !     ************************************************************
    CONTAINS
-   SUBROUTINE n_mat(atoms,sym,ne,usdus,jspin,we,eigVecCoeffs,n_mmp)
+   SUBROUTINE n_mat(atoms,sym,ne,usdus,jspin,we,eigVecCoeffs,den)
 
       USE m_types
       USE m_constants
@@ -28,13 +28,14 @@ MODULE m_nmat
       TYPE(t_eigVecCoeffs),INTENT(IN)     :: eigVecCoeffs
       INTEGER,             INTENT(IN)     :: ne,jspin
       REAL,                INTENT(IN)     :: we(:)!(input%neig)
-      COMPLEX,             INTENT(INOUT)  :: n_mmp(-lmaxU_const:,-lmaxU_const:,:)
+      TYPE(t_potden),      INTENT(INOUT)  :: den
 
-      INTEGER i,l,m,lp,mp,n,natom,i_u
+      INTEGER iBand,l,m,lp,mp,n,natom,i_u
       INTEGER ilo,ilop,ll1,lmp,lm
-      COMPLEX c_0
 
-      COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      COMPLEX uu(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      COMPLEX dd(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      COMPLEX du(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       !
       ! calculate n_mat:
       !
@@ -43,7 +44,9 @@ MODULE m_nmat
          l = atoms%lda_u(i_u)%l
          ll1 = (l+1)*l
          DO natom = SUM(atoms%neq(:n-1))+1, SUM(atoms%neq(:n))
-            n_tmp = cmplx_0
+            uu = cmplx_0
+            dd = cmplx_0
+            du = cmplx_0
             !
             !  prepare n_mat in local frame (in noco-calculations this depends
             !                                also on alpha(n) and beta(n) )
@@ -52,50 +55,51 @@ MODULE m_nmat
                lm = ll1+m
                DO mp = -l,l
                   lmp = ll1+mp
-                  c_0 = cmplx_0
-                  DO i = 1,ne
-                     c_0 = c_0 +  we(i) * ( usdus%ddn(l,n,jspin) *&
-                                 conjg(eigVecCoeffs%bcof(i,lmp,natom,jspin))*eigVecCoeffs%bcof(i,lm,natom,jspin) &
-                               + conjg(eigVecCoeffs%acof(i,lmp,natom,jspin))*eigVecCoeffs%acof(i,lm,natom,jspin) )
+                  DO iBand = 1,ne
+                     uu(m,mp) = uu(m,mp) + we(iBand) * conjg(eigVecCoeffs%acof(iBand,lmp,natom,jspin))*eigVecCoeffs%acof(iBand,lm,natom,jspin)
+                     dd(m,mp) = dd(m,mp) + we(iBand) * conjg(eigVecCoeffs%bcof(iBand,lmp,natom,jspin))*eigVecCoeffs%bcof(iBand,lm,natom,jspin)
+                     du(m,mp) = du(m,mp) + we(iBand) * conjg(eigVecCoeffs%bcof(iBand,lmp,natom,jspin))*eigVecCoeffs%acof(iBand,lm,natom,jspin)
                   ENDDO
-                  n_tmp(m,mp) = c_0
                ENDDO
             ENDDO
             !
             !  add local orbital contribution (if there is one) (untested so far)
             !
-            DO ilo = 1, atoms%nlo(n)
-               IF (atoms%llo(ilo,n).EQ.l) THEN
-                  DO m = -l,l
-                     lm = ll1+m
-                     DO mp = -l,l
-                        lmp = ll1+mp
-                        c_0 = cmplx_0
-                        DO i = 1,ne
-                           c_0 = c_0 +  we(i) * ( usdus%uulon(ilo,n,jspin) * (&
-                                       conjg(eigVecCoeffs%acof(i,lmp,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
-                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%acof(i,lm,natom,jspin) )&
-                                     + usdus%dulon(ilo,n,jspin) * (&
-                                       conjg(eigVecCoeffs%bcof(i,lmp,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
-                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%bcof(i,lm,natom,jspin)))
-                        ENDDO
-                        DO ilop = 1, atoms%nlo(n)
-                           IF (atoms%llo(ilop,n).EQ.l) THEN
-                              DO i = 1,ne
-                                 c_0 = c_0 +  we(i) * usdus%uloulopn(ilo,ilop,n,jspin) *&
-                                             conjg(eigVecCoeffs%ccof(mp,i,ilop,natom,jspin)) *eigVecCoeffs%ccof(m,i,ilo,natom,jspin)
-                              ENDDO
-                           ENDIF
-                        ENDDO
-                        n_tmp(m,mp) = n_tmp(m,mp) + c_0
-                     ENDDO
-                  ENDDO
-               ENDIF
-            ENDDO
+            ! DO ilo = 1, atoms%nlo(n)
+            !    IF (atoms%llo(ilo,n).EQ.l) THEN
+            !       DO m = -l,l
+            !          lm = ll1+m
+            !          DO mp = -l,l
+            !             lmp = ll1+mp
+            !             c_0 = cmplx_0
+            !             DO i = 1,ne
+            !                c_0 = c_0 +  we(i) * ( usdus%uulon(ilo,n,jspin) * (&
+            !                            conjg(eigVecCoeffs%acof(i,lmp,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
+            !                          + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%acof(i,lm,natom,jspin) )&
+            !                          + usdus%dulon(ilo,n,jspin) * (&
+            !                            conjg(eigVecCoeffs%bcof(i,lmp,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
+            !                          + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%bcof(i,lm,natom,jspin)))
+            !             ENDDO
+            !             DO ilop = 1, atoms%nlo(n)
+            !                IF (atoms%llo(ilop,n).EQ.l) THEN
+            !                   DO i = 1,ne
+            !                      c_0 = c_0 +  we(i) * usdus%uloulopn(ilo,ilop,n,jspin) *&
+            !                                  conjg(eigVecCoeffs%ccof(mp,i,ilop,natom,jspin)) *eigVecCoeffs%ccof(m,i,ilo,natom,jspin)
+            !                   ENDDO
+            !                ENDIF
+            !             ENDDO
+            !             n_tmp(m,mp) = n_tmp(m,mp) + c_0
+            !          ENDDO
+            !       ENDDO
+            !    ENDIF
+            ! ENDDO
             !
             !  n_mmp should be rotated by D_mm' ; compare force_a21
             !
-            n_mmp(:,:,i_u) = n_mmp(:,:,i_u) + symMMPmat(n_tmp,sym,natom,l) * 1.0/atoms%neq(n)
+            den%mmpMat_uu(:,:,i_u,jspin) = den%mmpMat_uu(:,:,i_u,jspin) + symMMPmat(uu,sym,natom,l) * 1.0/atoms%neq(n)
+            den%mmpMat_dd(:,:,i_u,jspin) = den%mmpMat_dd(:,:,i_u,jspin) + symMMPmat(dd,sym,natom,l) * 1.0/atoms%neq(n)
+            den%mmpMat_du(:,:,i_u,jspin) = den%mmpMat_du(:,:,i_u,jspin) + symMMPmat(du,sym,natom,l) * 1.0/atoms%neq(n)
+            den%mmpMat_ud(:,:,i_u,jspin) = den%mmpMat_ud(:,:,i_u,jspin) + symMMPmat(du,sym,natom,l) * 1.0/atoms%neq(n)
          ENDDO ! sum  over equivalent atoms
       END DO !loop over u parameters
 
