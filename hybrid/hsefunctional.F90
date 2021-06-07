@@ -1569,7 +1569,7 @@ CONTAINS
             sym_muffintin(ci, :noGPts) = muffintin(:, ptrN(ci), ptrLM(ci), ptrType(ci), ptrEq(ci))
          END DO
          DO cg = 1, noGPts
-            CALL symmetrize(sym_muffintin(:, cg), 1, nbasp, 2, .FALSE., &
+            CALL symmetrize(sym_muffintin(:, cg), 1, nbasp, 2, &
                             ntype, ntype, neq, lcutm, maxlcutm, &
                             nindxm, natd, invsat, invsatnr)
          END DO
@@ -1789,7 +1789,7 @@ CONTAINS
 
 #ifdef CPP_INVERSION
          ! symmetrize matrix if system has inversion symmetry
-         CALL symmetrize(coulmat, nbasm(ikpt), nbasm(ikpt), 3, .FALSE., &
+         CALL symmetrize(coulmat, nbasm(ikpt), nbasm(ikpt), 3, &
                          ntype, ntype, neq, lcutm, maxlcutm, &
                          nindxm, natd, invsat, invsatnr)
 #endif
@@ -2553,7 +2553,7 @@ CONTAINS
       END DO  !itype
 
 # ifdef CPP_INVERSION
-      CALL symmetrize(exch, ncstd, ncstd, 3, .FALSE., &
+      CALL symmetrize(exch, ncstd, ncstd, 3, &
                       ntype, ntype, neq, lmaxc, lmaxcd, &
                       nindxc, natd, invsat, invsatnr)
       IF (ANY(ABS(aimag(exch)) > 1E-6)) call juDFT_error( 'exchange_cccc: exch possesses significant imaginary part')

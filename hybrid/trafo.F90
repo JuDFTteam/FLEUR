@@ -679,7 +679,7 @@ CONTAINS
    ! These functions have the property f(-r)=f(r)* which makes the output matrix real symmetric.
    ! (Array mat is overwritten! )
 
-   SUBROUTINE symmetrize(mat, dim1, dim2, imode, lreal, &
+   SUBROUTINE symmetrize(mat, dim1, dim2, imode,&
                          atoms, lcutm, maxlcutm, nindxm, sym)
       USE m_types
       use m_constants
@@ -690,7 +690,6 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)    ::  imode, dim1, dim2
       INTEGER, INTENT(IN)    :: maxlcutm
-      LOGICAL, INTENT(IN)    ::  lreal
 
 !     - arrays -
       INTEGER, INTENT(IN)    :: lcutm(:)
@@ -699,15 +698,12 @@ CONTAINS
 
 !     -local scalars -
       INTEGER               ::  i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift
-      REAL                  ::  rfac
+      REAL, parameter       ::  rfac = sqrt(0.5)
 
 !     - local arrays -
-      COMPLEX               ::  carr(max(dim1, dim2)), cfac
+      COMPLEX               ::  carr(max(dim1, dim2)), cfac = sqrt(0.5)*ImagUnit
 
       call timestart("symmetrize")
-
-      rfac = sqrt(0.5)
-      cfac = sqrt(0.5)*ImagUnit
       ic = 0
       i = 0
 
@@ -761,21 +757,6 @@ CONTAINS
             END DO
          END DO
       END DO
-
-      IF (lreal) THEN
-! Determine common phase factor and divide by it to make the output matrix real.
-         cfac = commonphase_mtx(mat, dim1, dim2)
-         !$OMP parallel do default(none) collapse(2) private(i,j) shared(cfac, mat, dim1, dim2)
-         do j = 1, dim2
-            do i = 1, dim1
-               mat(i, j) = mat(i, j)/cfac
-               if (abs(aimag(mat(i, j))) > 1e-8) then
-                  call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
-               end if
-            end do
-         end do
-         !$OMP end parallel do
-      END IF
       call timestop("symmetrize")
    END SUBROUTINE symmetrize
 
@@ -917,7 +898,7 @@ CONTAINS
             call bra_trafo_core(1, ikpt, 1, fi%sym, mpdata, &
                               fi%hybinp, hybdat, fi%kpts, fi%atoms, igptm2_list, vecin(:,1:1), vecout(:,1:1))
 
-            CALL symmetrize(vecout(:, 1:1), hybdat%nbasm(ikpt), 1, 1, .false., &
+            CALL symmetrize(vecout(:, 1:1), hybdat%nbasm(ikpt), 1, 1, &
                             fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
             phase(j, i) = commonphase(vecout(:, 1), hybdat%nbasm(ikpt))
@@ -1387,7 +1368,7 @@ CONTAINS
 
       ! If inversion symmetry is applicable, symmetrize to make the values real.
       call timestart("symmetrize")
-      if (sym%invs) CALL symmetrize(vecout, nbasp, 1, 1, .false., &
+      if (sym%invs) CALL symmetrize(vecout, nbasp, 1, 1, &
                                     atoms, lcutm, maxlcutm, nindxm, sym)
       call timestop("symmetrize")
       call timestop("bramat_trafo")

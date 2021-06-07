@@ -466,7 +466,7 @@ CONTAINS
       !$OMP END PARALLEL DO
 
       IF (sym%invs) THEN
-         CALL symmetrize(exch, ncstd, ncstd, 3, .FALSE., atoms, hybdat%lmaxc, hybdat%lmaxcd, hybdat%nindxc, sym)
+         CALL symmetrize(exch, ncstd, ncstd, 3, atoms, hybdat%lmaxc, hybdat%lmaxcd, hybdat%nindxc, sym)
          IF (ANY(ABS(AIMAG(exch)) > 1E-6)) call judft_error('exchange_cccc: exch possesses significant imaginary part')
       ENDIF
       !       DO icst = 1,ncstd
