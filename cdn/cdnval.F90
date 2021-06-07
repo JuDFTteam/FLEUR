@@ -53,7 +53,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_qintsl      ! (slabs) and intergate the DOS in these banddos%layers
    USE m_orbcomp     ! calculate orbital composition (like p_x,p_y,p_z)
    USE m_jDOS
-   USE m_abcrot2
    USE m_corespec, only : l_cs    ! calculation of core spectra (EELS)
    USE m_corespec_io, only : corespec_init
    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
