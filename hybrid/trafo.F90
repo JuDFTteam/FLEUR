@@ -716,7 +716,9 @@ CONTAINS
             ! invsat(atom) = 0, invsatnr(atom) = 0
             ! but we need invsatnr(atom) = natom
             ic1 = merge(ic, sym%invsatnr(ic), sym%invsatnr(ic) == 0)
-            IF (ic1 >= ic) THEN
+            IF (ic1 < ic) THEN
+               istart = istart + nn
+            else
                DO l = 0, lcutm(itype)
                   ifac = -1
                   DO m = -l, l
@@ -747,8 +749,6 @@ CONTAINS
                      istart = istart + nindxm(l, itype)
                   END DO
                END DO
-            else
-               istart = istart + nn
             END IF
          END DO
       END DO
