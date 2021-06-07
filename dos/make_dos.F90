@@ -88,7 +88,7 @@ CONTAINS
        enddo
        IF (banddos%unfoldband) THEN
 #ifdef CPP_HDF
-          CALL writeBandData(banddosFile_id,'Local','unfolding',eigdos(1)%p%get_eig(),REAL(results%unfolding_weights),kpts)
+          CALL writeBandData(banddosFile_id,kpts,'Local','unfolding',REAL(results%unfolding_weights))
 #endif
           CALL write_band_sc(banddos,cell,kpts,results,eFermi)
        END IF

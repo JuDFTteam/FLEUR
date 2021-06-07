@@ -35,7 +35,7 @@ MODULE m_types_input
   INTEGER :: coretail_lmax =0
   INTEGER :: itmax =15
   REAL    :: minDistance=1.0e-5
-  INTEGER :: maxiter=99
+  INTEGER :: maxiter=15
   INTEGER :: imix=7
   INTEGER :: gw=0
   INTEGER :: gw_neigd=0
