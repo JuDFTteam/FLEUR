@@ -10,7 +10,7 @@ MODULE m_greensfSym
    CONTAINS
 
    SUBROUTINE greensfSym(ikpt_i,i_elem,i_elemLO,nLO,atomType,natom,l,lp,l_intersite,l_sphavg,ispin,&
-                         sym,atomFactor,atomDiff,bk,addPhase,noco,nococonv,im,greensfBZintCoeffs)
+                         sym,atomFactor,atomDiff,bk,addPhase,sym_op_list,noco,nococonv,im,greensfBZintCoeffs)
 
       TYPE(t_noco),                 INTENT(IN)     :: noco
       TYPE(t_nococonv),             INTENT(IN)     :: nococonv
@@ -30,6 +30,7 @@ MODULE m_greensfSym
       REAL,                         INTENT(IN)     :: atomDiff(:)
       REAL,                         INTENT(IN)     :: bk(:)
       COMPLEX,                      INTENT(IN)     :: addPhase
+      INTEGER,                      INTENT(IN)     :: sym_op_list(:)
       COMPLEX,                      INTENT(IN)     :: im(-lmaxU_const:,-lmaxU_const:,:,:)
       TYPE(t_greensfBZintCoeffs),   INTENT(INOUT)  :: greensfBZintCoeffs
 
@@ -39,7 +40,7 @@ MODULE m_greensfSym
 
       !$OMP parallel default(none) &
       !$OMP shared(ikpt_i,i_elem,i_elemLO,nLO,atomType,natom,l,lp,l_intersite,l_sphavg)&
-      !$OMP shared(ispin,sym,atomFactor,addPhase,bk,atomDiff,im,greensfBZintCoeffs,noco,nococonv)&
+      !$OMP shared(ispin,sym,atomFactor,addPhase,bk,atomDiff,im,greensfBZintCoeffs,noco,nococonv,sym_op_list)&
       !$OMP private(imat,iBand,imSym,imSym_tmp,iLO)
       ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
       ALLOCATE(imSym_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1),source=cmplx_0)
@@ -48,7 +49,7 @@ MODULE m_greensfSym
          DO iBand = 1, SIZE(im,3)
             IF(l_intersite) THEN
                imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3),&
-                                                         bk=bk, atomDiff=atomDiff)
+                                                         bk=bk, atomDiff=atomDiff, sym_op_list=sym_op_list)
             ELSE
                imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3))
             ENDIF

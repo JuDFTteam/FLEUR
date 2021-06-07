@@ -27,7 +27,7 @@ MODULE m_greensfBZint
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
 
-      INTEGER :: i_gf,l,lp,atomType,atomTypep
+      INTEGER :: i_gf,i_gf_p,l,lp,atomType,atomTypep,n_op
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
       INTEGER :: i_elem,i_elemLO,nLO,imatSize
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
@@ -35,6 +35,7 @@ MODULE m_greensfBZint
       REAL    :: atomFactor,atomDiff(3)
       LOGICAL :: l_sphavg,l_intersite
       COMPLEX, ALLOCATABLE :: im(:,:,:,:,:)
+      INTEGER :: repr_ops(gfinp%n)
 
       spin_start = MERGE(1,jspin,gfinp%l_mperp)
       spin_end   = MERGE(3,jspin,gfinp%l_mperp)
@@ -69,6 +70,18 @@ MODULE m_greensfBZint
                imatSize = 4+4*nLO+nLO**2
             ENDIF
          ENDIF
+
+         IF(ANY(ABS(atomDiff).GT.1e-12)) THEN
+            n_op = 1
+            repr_ops(1) = 1
+            DO i_gf_p = 1, gfinp%n
+               IF(gfinp%elem(i_gf_p)%representative_elem==i_gf) THEN
+                  n_op = n_op + 1
+                  repr_ops(n_op) = gfinp%elem(i_gf_p)%representative_op
+               ENDIF
+            ENDDO
+         ENDIF
+
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
                      imatSize,spin_start:spin_end),source=cmplx_0)
 
@@ -111,7 +124,7 @@ MODULE m_greensfBZint
                   phase = ImagUnit**(l-lp)
 
                   CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,atomType,natom,l,lp,ANY(ABS(atomDiff).GT.1e-12),l_sphavg,ispin,&
-                                  sym,atomFactor,atomDiff,kpts%bk(:,ikpt),phase,noco,nococonv,im(:,:,:,:,ispin),greensfBZintCoeffs)
+                                  sym,atomFactor,atomDiff,kpts%bk(:,ikpt),phase,repr_ops(:n_op),noco,nococonv,im(:,:,:,:,ispin),greensfBZintCoeffs)
 
                ENDDO
 
