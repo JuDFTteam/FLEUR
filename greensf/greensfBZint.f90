@@ -123,8 +123,8 @@ MODULE m_greensfBZint
                   !l-offdiagonal phase
                   phase = ImagUnit**(l-lp)
 
-                  CALL greensfSym(ikpt_i,i_elem,i_elemLO,nLO,atomType,natom,l,lp,ANY(ABS(atomDiff).GT.1e-12),l_sphavg,ispin,&
-                                  sym,atomFactor,atomDiff,kpts%bk(:,ikpt),phase,repr_ops(:n_op),noco,nococonv,im(:,:,:,:,ispin),greensfBZintCoeffs)
+                  CALL greensfSym(ikpt_i,ikpt,i_elem,i_elemLO,nLO,atomType,natom,l,lp,ANY(ABS(atomDiff).GT.1e-12),l_sphavg,ispin,&
+                                  sym,kpts,atomFactor,atomDiff,phase,repr_ops(:n_op),noco,nococonv,im(:,:,:,:,ispin),greensfBZintCoeffs)
 
                ENDDO
 
