@@ -712,50 +712,44 @@ CONTAINS
          nn = sum([((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))])
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            IF (sym%invsat(ic) == 0) THEN
-! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
-! invsat(atom) = 0, invsatnr(atom) = 0
-! but we need invsatnr(atom) = natom
-               ic1 = ic
-            ELSE
-               ic1 = sym%invsatnr(ic)
-            END IF
-!ic1 = invsatnr(ic)
-            IF (ic1 < ic) THEN
-               istart = istart + nn
-               CYCLE
-            END IF
-!     IF( ic1 .lt. ic ) cycle
-            DO l = 0, lcutm(itype)
-               ifac = -1
-               DO m = -l, l
-                  ifac = -ifac
-                  ishift = (ic1 - ic)*nn - 2*m*nindxm(l, itype)
-         
-                  IF (ic1 /= ic .or. m < 0) THEN
-                     IF (iand(imode, 1) /= 0) THEN
-                        tarr(:nindxm(l, itype),:dim2) = mat(istart+1:istart+nindxm(l, itype), :dim2)
-                        mat(istart+1:istart+nindxm(l, itype), :dim2) &
-                           = (tarr(:nindxm(l, itype),:dim2) + ifac*mat(istart+ishift+1:istart+ishift+nindxm(l, itype), :dim2))*rfac
-                        mat(istart+ishift+1:istart+ishift+nindxm(l, itype), :dim2) &
-                           = (tarr(:nindxm(l, itype),:dim2) - ifac*mat(istart+ishift+1:istart+ishift+nindxm(l, itype), :dim2))*(-cfac)
+            ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
+            ! invsat(atom) = 0, invsatnr(atom) = 0
+            ! but we need invsatnr(atom) = natom
+            ic1 = merge(ic, sym%invsatnr(ic), sym%invsatnr(ic) == 0)
+            IF (ic1 >= ic) THEN
+               DO l = 0, lcutm(itype)
+                  ifac = -1
+                  DO m = -l, l
+                     ifac = -ifac
+                     ishift = (ic1 - ic)*nn - 2*m*nindxm(l, itype)
+            
+                     IF (ic1 /= ic .or. m < 0) THEN
+                        IF (iand(imode, 1) /= 0) THEN
+                           tarr(:nindxm(l, itype),:dim2) = mat(istart+1:istart+nindxm(l, itype), :dim2)
+                           mat(istart+1:istart+nindxm(l, itype), :dim2) &
+                              = (tarr(:nindxm(l, itype),:dim2) + ifac*mat(istart+ishift+1:istart+ishift+nindxm(l, itype), :dim2))*rfac
+                           mat(istart+ishift+1:istart+ishift+nindxm(l, itype), :dim2) &
+                              = (tarr(:nindxm(l, itype),:dim2) - ifac*mat(istart+ishift+1:istart+ishift+nindxm(l, itype), :dim2))*(-cfac)
+                        END IF
+                        IF (iand(imode, 2) /= 0) THEN
+                           carr(:dim1,:nindxm(l, itype)) = mat(:dim1, istart+1:istart+nindxm(l, itype))
+                           mat(:dim1, istart+1:istart+nindxm(l, itype)) = (carr(:dim1,:nindxm(l, itype)) + ifac*mat(:dim1, istart+ishift+1:istart+ishift+nindxm(l, itype)))*rfac
+                           mat(:dim1, istart+ishift+1:istart+ishift+nindxm(l, itype)) = (carr(:dim1,:nindxm(l, itype)) - ifac*mat(:dim1, istart+ishift+1:istart+ishift+nindxm(l, itype)))*cfac
+                        END IF
+                     ELSE IF (m == 0 .and. ifac == -1) THEN
+                        IF (iand(imode, 1) /= 0) THEN
+                           mat(istart+1:istart+nindxm(l, itype), :dim2) = -ImagUnit*mat(istart+1:istart+nindxm(l, itype), :dim2)
+                        END IF
+                        IF (iand(imode, 2) /= 0) THEN
+                           mat(:dim1, istart+1:istart+nindxm(l, itype)) = ImagUnit*mat(:dim1, istart+1:istart+nindxm(l, itype))
+                        END IF
                      END IF
-                     IF (iand(imode, 2) /= 0) THEN
-                        carr(:dim1,:nindxm(l, itype)) = mat(:dim1, istart+1:istart+nindxm(l, itype))
-                        mat(:dim1, istart+1:istart+nindxm(l, itype)) = (carr(:dim1,:nindxm(l, itype)) + ifac*mat(:dim1, istart+ishift+1:istart+ishift+nindxm(l, itype)))*rfac
-                        mat(:dim1, istart+ishift+1:istart+ishift+nindxm(l, itype)) = (carr(:dim1,:nindxm(l, itype)) - ifac*mat(:dim1, istart+ishift+1:istart+ishift+nindxm(l, itype)))*cfac
-                     END IF
-                  ELSE IF (m == 0 .and. ifac == -1) THEN
-                     IF (iand(imode, 1) /= 0) THEN
-                        mat(istart+1:istart+nindxm(l, itype), :dim2) = -ImagUnit*mat(istart+1:istart+nindxm(l, itype), :dim2)
-                     END IF
-                     IF (iand(imode, 2) /= 0) THEN
-                        mat(:dim1, istart+1:istart+nindxm(l, itype)) = ImagUnit*mat(:dim1, istart+1:istart+nindxm(l, itype))
-                     END IF
-                  END IF
-                  istart = istart + nindxm(l, itype)
+                     istart = istart + nindxm(l, itype)
+                  END DO
                END DO
-            END DO
+            else
+               istart = istart + nn
+            END IF
          END DO
       END DO
       call timestop("symmetrize")
