@@ -61,7 +61,7 @@ MODULE m_greensfSym
                imSym = cmplx_0
                DO ikpt_f = 1, nkpt
                   imSym = imSym + atomFactor/REAL(nkpt) * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3),&
-                                                                               bk=kpts%bk(:,iks(ikpt_f)), atomDiff=atomDiff, sym_op_list=sym_op_list)
+                                                                               bk=kpts%bkf(:,iks(ikpt_f)), atomDiff=atomDiff, sym_op_list=sym_op_list)
                ENDDO
             ELSE
                imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3))
