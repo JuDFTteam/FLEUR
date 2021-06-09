@@ -697,16 +697,15 @@ CONTAINS
       COMPLEX, INTENT(INOUT) ::  mat(:, :)
 
 !     -local scalars -
-      INTEGER               ::  istart, i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift
+      INTEGER               ::  i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift
       REAL, parameter       ::  rfac = sqrt(0.5)
 
 !     - local arrays -
-      COMPLEX               :: carr(max(dim1, dim2))
-      complex, parameter    :: cfac = sqrt(0.5)*ImagUnit
+      COMPLEX               ::  carr(max(dim1, dim2)), cfac = sqrt(0.5)*ImagUnit
 
       call timestart("symmetrize")
       ic = 0
-      istart = 0
+      i = 0
 
       DO itype = 1, atoms%ntype
          nn = sum([((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))])
@@ -722,7 +721,7 @@ CONTAINS
             END IF
 !ic1 = invsatnr(ic)
             IF (ic1 < ic) THEN
-               istart = istart + nn
+               i = i + nn
                CYCLE
             END IF
 !     IF( ic1 .lt. ic ) cycle
@@ -732,7 +731,7 @@ CONTAINS
                   ifac = -ifac
                   ishift = (ic1 - ic)*nn - 2*m*nindxm(l, itype)
                   DO n = 1, nindxm(l, itype)
-                     i = istart + n
+                     i = i + 1
                      j = i + ishift
                      IF (ic1 /= ic .or. m < 0) THEN
                         IF (iand(imode, 1) /= 0) THEN
@@ -754,7 +753,6 @@ CONTAINS
                         END IF
                      END IF
                   END DO
-                  istart = istart + nindxm(l, itype)
                END DO
             END DO
          END DO
