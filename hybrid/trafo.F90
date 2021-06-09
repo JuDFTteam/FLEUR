@@ -994,7 +994,7 @@ CONTAINS
       call timestop("setup")
 
       !test
-      call timestart("map kpts")
+      call timestart("test")
       nrkpt = 0
       DO i = 1, kpts%nkptf
          IF (maxval(abs(rkpt - kpts%bkf(:, i))) <= 1E-06) THEN
@@ -1010,7 +1010,7 @@ CONTAINS
 
          call judft_error('bra_trafo: rotation failed')
       END IF
-      call timestop("map kpts")
+      call timestop("test")
 
 !     Define pointer to first mixed-basis functions (with m = -l)
       call timestart("def pointer to first mpb")
