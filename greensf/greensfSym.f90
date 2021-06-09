@@ -51,18 +51,15 @@ MODULE m_greensfSym
       !$OMP parallel default(none) &
       !$OMP shared(ikpt_i,ikpt,nkpt,iks,i_elem,i_elemLO,nLO,atomType,natom,l,lp,l_intersite,l_sphavg)&
       !$OMP shared(ispin,sym,kpts,atomFactor,addPhase,atomDiff,im,greensfBZintCoeffs,noco,nococonv,sym_op_list)&
-      !$OMP private(imat,iBand,imSym,imSym_tmp,iLO, ikpt_f)
+      !$OMP private(imat,iBand,imSym,imSym_tmp,iLO)
       ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
       ALLOCATE(imSym_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1),source=cmplx_0)
       !$OMP do collapse(2)
       DO imat = 1, SIZE(im,4)
          DO iBand = 1, SIZE(im,3)
             IF(l_intersite) THEN
-               imSym = cmplx_0
-               DO ikpt_f = 1, nkpt
-                  imSym = imSym + atomFactor/REAL(nkpt) * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3),&
-                                                                               bk=kpts%bkf(:,iks(ikpt_f)), atomDiff=atomDiff, sym_op_list=sym_op_list)
-               ENDDO
+               imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3),&
+                                                         kpt_indices=iks(:nkpt),atomDiff=atomDiff,sym_op_list=sym_op_list,kpts=kpts)
             ELSE
                imSym = atomFactor * addPhase * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3))
             ENDIF
