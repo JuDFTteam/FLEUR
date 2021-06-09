@@ -701,7 +701,7 @@ CONTAINS
       REAL, parameter       ::  rfac = sqrt(0.5)
 
 !     - local arrays -
-      COMPLEX               :: carr(max(dim1, dim2), maxval(nindxm)), tarr(maxval(nindxm), max(dim1, dim2))
+      COMPLEX               :: carr(max(dim1, dim2))
       complex, parameter    :: cfac = sqrt(0.5)*ImagUnit
 
       call timestart("symmetrize")
@@ -731,28 +731,29 @@ CONTAINS
                DO m = -l, l
                   ifac = -ifac
                   ishift = (ic1 - ic)*nn - 2*m*nindxm(l, itype)
-         
-                  IF (ic1 /= ic .or. m < 0) THEN
-                     IF (iand(imode, 1) /= 0) THEN
-                        tarr(:nindxm(l, itype),:dim2) = mat(istart+1:istart+nindxm(l, itype), :dim2)
-                        mat(istart+1:istart+nindxm(l, itype), :dim2) &
-                           = (tarr(:nindxm(l, itype),:dim2) + ifac*mat(istart+ishift+1:istart+ishift+nindxm(l, itype), :dim2))*rfac
-                        mat(istart+ishift+1:istart+ishift+nindxm(l, itype), :dim2) &
-                           = (tarr(:nindxm(l, itype),:dim2) - ifac*mat(istart+ishift+1:istart+ishift+nindxm(l, itype), :dim2))*(-cfac)
+                  DO n = 1, nindxm(l, itype)
+                     i = istart + n
+                     j = i + ishift
+                     IF (ic1 /= ic .or. m < 0) THEN
+                        IF (iand(imode, 1) /= 0) THEN
+                           carr(:dim2) = mat(i, :dim2)
+                           mat(i, :dim2) = (carr(:dim2) + ifac*mat(j, :dim2))*rfac
+                           mat(j, :dim2) = (carr(:dim2) - ifac*mat(j, :dim2))*(-cfac)
+                        END IF
+                        IF (iand(imode, 2) /= 0) THEN
+                           carr(:dim1) = mat(:dim1, i)
+                           mat(:dim1, i) = (carr(:dim1) + ifac*mat(:dim1, j))*rfac
+                           mat(:dim1, j) = (carr(:dim1) - ifac*mat(:dim1, j))*cfac
+                        END IF
+                     ELSE IF (m == 0 .and. ifac == -1) THEN
+                        IF (iand(imode, 1) /= 0) THEN
+                           mat(i, :dim2) = -ImagUnit*mat(i, :dim2)
+                        END IF
+                        IF (iand(imode, 2) /= 0) THEN
+                           mat(:dim1, i) = ImagUnit*mat(:dim1, i)
+                        END IF
                      END IF
-                     IF (iand(imode, 2) /= 0) THEN
-                        carr(:dim1,:nindxm(l, itype)) = mat(:dim1, istart+1:istart+nindxm(l, itype))
-                        mat(:dim1, istart+1:istart+nindxm(l, itype)) = (carr(:dim1,:nindxm(l, itype)) + ifac*mat(:dim1, istart+ishift+1:istart+ishift+nindxm(l, itype)))*rfac
-                        mat(:dim1, istart+ishift+1:istart+ishift+nindxm(l, itype)) = (carr(:dim1,:nindxm(l, itype)) - ifac*mat(:dim1, istart+ishift+1:istart+ishift+nindxm(l, itype)))*cfac
-                     END IF
-                  ELSE IF (m == 0 .and. ifac == -1) THEN
-                     IF (iand(imode, 1) /= 0) THEN
-                        mat(istart+1:istart+nindxm(l, itype), :dim2) = -ImagUnit*mat(istart+1:istart+nindxm(l, itype), :dim2)
-                     END IF
-                     IF (iand(imode, 2) /= 0) THEN
-                        mat(:dim1, istart+1:istart+nindxm(l, itype)) = ImagUnit*mat(:dim1, istart+1:istart+nindxm(l, itype))
-                     END IF
-                  END IF
+                  END DO
                   istart = istart + nindxm(l, itype)
                END DO
             END DO
