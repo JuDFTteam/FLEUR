@@ -26,7 +26,7 @@ def test_KClHybridPBE0(execute_fleur, check_value_outfile, fleur_binary):
     for file1 in should_files:
         assert file1 in res_file_names
     
-    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-1063.8587731477, -1063.8383730939], 0.000001)
+    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-1063.8587724009, -1063.838372081], 0.000001)
     # only check the last bandgap
     exp_bandgap = 28 * [None]
     exp_bandgap[27] = 0.2771
@@ -56,7 +56,7 @@ def test_KClHybridPBE0_eigpar(execute_fleur, check_value_outfile, fleur_binary):
     for file1 in should_files:
         assert file1 in res_file_names
     
-    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-1063.8587731477, -1063.8383730939], 0.000001)
+    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-1063.8587724009, -1063.838372081], 0.000001)
     # only check the last bandgap
     exp_bandgap = 28 * [None]
     exp_bandgap[27] = 0.2771

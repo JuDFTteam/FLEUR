@@ -24,10 +24,10 @@ def test_FeHybridPBE0(execute_fleur, check_value_outfile, fleur_binary):
     for file1 in should_files:
         assert file1 in res_file_names
     
-    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-1272.72894, -1272.7324763242], 0.000001)
+    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-1272.7289531184, -1272.7324870224], 0.000001)
     exp_mm1 = 27*[None]
     exp_mm1[14] = 3.40037
-    exp_mm1[-1] = 3.42075
+    exp_mm1[-1] = 3.42074
     check_value_outfile(res_files['out'], "--> mm       1", " ", exp_mm1, 0.00001)
 
 
@@ -58,8 +58,8 @@ def test_FeHybridPBE0_eigpar(execute_fleur, check_value_outfile, fleur_binary):
     for file1 in should_files:
         assert file1 in res_file_names
     
-    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-1272.72894, -1272.7324763242], 0.000001)
+    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-1272.7289531184, -1272.7324870224], 0.000001)
     exp_mm1 = 27*[None]
     exp_mm1[14] = 3.40037
-    exp_mm1[-1] = 3.42075
+    exp_mm1[-1] = 3.42074
     check_value_outfile(res_files['out'], "--> mm       1", " ", exp_mm1, 0.00001)

@@ -23,7 +23,7 @@ def test_MnHybridNoinv(execute_fleur, check_value_outfile, fleur_binary):
     for file1 in should_files:
         assert file1 in res_file_names
     
-    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-2317.16697943, -2317.1756358345], 0.000001)
+    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-2317.1670995071, -2317.1757499769], 0.000001)
     exp_mm1 = 32*[None]
     exp_mm1[-1] = 2.47449
     assert check_value_outfile(res_files['out'], "--> mm       1", " ", exp_mm1, 0.00001)
@@ -61,7 +61,7 @@ def test_MnHybridNoinv_eigpar(execute_fleur, check_value_outfile, fleur_binary):
     for file1 in should_files:
         assert file1 in res_file_names
     
-    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-2317.16697943, -2317.1756358345], 0.000001)
+    assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-2317.1670995071, -2317.1757499769], 0.000001)
     exp_mm1 = 32*[None]
     exp_mm1[-1] = 2.47449
     assert check_value_outfile(res_files['out'], "--> mm       1", " ", exp_mm1, 0.00001)
