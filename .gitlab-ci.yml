@@ -37,9 +37,11 @@ build-gfortran-hdf5:
   dependencies:
     - build-gfortran-hdf5
   before_script:
+    - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
@@ -95,9 +97,11 @@ test-gfortran-serial:
   dependencies:
     - build-gfortran-serial
   before_script:
+    - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - ulimit -s unlimited
     - cd $CI_PROJECT_DIR
@@ -122,7 +126,7 @@ pages:
   needs: ["doxygen","gfortran-coverage"]
   script:
     - echo "HTML should be ready from cache..."
-    - mv /builds/fleur/fleur/docs/Docu_main.html /builds/fleur/fleur/public/index.html
+    - mv $CI_PROJECT_DIR/docs/Docu_main.html $CI_PROJECT_DIR/public/index.html
   environment:
      name: HTML-Pages
      url: https://fleur.iffgit.fz-juelich.de/fleur
@@ -138,7 +142,7 @@ doxygen:
   stage: html
   needs: ["build-gfortran-hdf5"]
   script:
-    - cd /builds/fleur/fleur/build ; make doc
+    - cd $CI_PROJECT_DIR/build ; make doc
     - mkdir ../public
     - mv docs/html/ ../public/doxygen
   artifacts:
@@ -162,7 +166,7 @@ build-pgi:
   script:
     - export FC=/opt/nvidia/hpc_sdk/Linux_x86_64/20.9/compilers/bin/nvfortran
     - export CC=/opt/nvidia/hpc_sdk/Linux_x86_64/20.9/compilers/bin/nvc
-    - cd /builds/fleur/fleur; ./configure.sh -l pgi -cmake cmake3 ; cd build.pgi; make
+    - cd $CI_PROJECT_DIR; ./configure.sh -l pgi -cmake cmake3 ; cd build.pgi; make
   allow_failure: true
   only:
     - schedules
@@ -176,15 +180,17 @@ test-pgi:
   dependencies:
     - build-pgi
   before_script:
+    - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI=time
-    - cd /builds/fleur/fleur/
-    - mkdir -p /builds/fleur/fleur/build.pgi/Testing
-    - cd /builds/fleur/fleur/tests/new_pytest_system
+    - cd $CI_PROJECT_DIR
+    - mkdir -p build.pgi/Testing
+    - cd $CI_PROJECT_DIR/tests/new_pytest_system
     - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.pgi/Testing/pytest_summary.out"
     - pytest --build_dir="../../build.pgi" | tee $CI_PROJECT_DIR/build.pgi/Testing/pytest_session.stdout
 #build.pgi;ctest
@@ -233,7 +239,7 @@ build-intel:
   script:
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
-    - cd /builds/fleur/fleur
+    - cd $CI_PROJECT_DIR
     - CC=gcc FC=mpiifort CXX=mpicxx ./configure.sh -l intel
     - cd build.intel
     - make -j 2
@@ -250,16 +256,18 @@ test-intel:
   dependencies:
      - build-intel
   before_script:
+    - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - set +e && source compilervars.sh intel64 && set -e
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI=time
-    - cd /builds/fleur/fleur/tests/new_pytest_system
-    - mkdir -p /builds/fleur/fleur/build.intel/Testing
+    - cd $CI_PROJECT_DIR/tests/new_pytest_system
+    - mkdir -p $CI_PROJECT_DIR/build.intel/Testing
     - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.intel/Testing/pytest_summary.out"
     - pytest --build_dir="../../build.intel" | tee $CI_PROJECT_DIR/build.intel/Testing/pytest_session.stdout
 #/build.intel;ctest
@@ -279,11 +287,13 @@ gfortran-coverage:
   stage: html
   needs: []
   before_script:
+    - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
     - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
-      - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
+      - cd $CI_PROJECT_DIR; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
       - ulimit -s unlimited
       - export juDFT_MPI="mpirun -n 2 --allow-run-as-root "
