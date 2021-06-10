@@ -32,8 +32,8 @@ CONTAINS
 
       type(t_mat)     :: z_kqpt
       type(t_lapw)    :: lapw_ikqpt
-      type(t_fft)     :: fft
-      type(t_fftgrid) :: stepf
+      type(t_fft)     :: fft, wavef2rs_fft
+      type(t_fftgrid) :: stepf, grid
 
 
       integer, parameter :: blocksize = 512
@@ -58,7 +58,6 @@ CONTAINS
          !call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
       endif
 
-
       call stepf%init(fi%cell, fi%sym, gcutoff)
       call stepf%putFieldOnGrid(stars, stars%ustep)
 
@@ -66,6 +65,7 @@ CONTAINS
       !$acc data copyin(stepf, stepf%grid, stepf%gridlength)
          ! after we transform psi_k*stepf*psi_kqpt back  to 
          ! G-space we have to divide by stepf%gridLength. We do this now
+
          !$acc kernels default(none) present(stepf, stepf%grid, stepf%gridLength)
          stepf%grid = stepf%grid * inv_vol / stepf%gridLength
          !$acc end kernels
@@ -89,10 +89,12 @@ CONTAINS
          if(ierr /= 0) call juDFT_error("can't alloc psi_kqpt")
 
          !$acc data create(psi_kqpt)
+            call grid%init(fi%cell, fi%sym, gcutoff)
+            call wavef2rs_fft%init(grid%dimensions, .false., batch_size=psize, l_gpu=.True.)
             !$acc data copyin(z_kqpt, z_kqpt%l_real, z_kqpt%data_r, z_kqpt%data_c, lapw_ikqpt, lapw_ikqpt%nv, lapw_ikqpt%gvec,&
-            !$acc             jsp, bandoi, bandof, psize)
+            !$acc             jsp, bandoi, bandof, psize, grid, grid%dimensions)
                call timestart("1st wavef2rs")
-               call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, psi_kqpt)
+               call wavef2rs(fi, lapw_ikqpt, z_kqpt, gcutoff, 1, psize, jsp, grid, wavef2rs_fft, psi_kqpt)
                call timestop("1st wavef2rs")
 
                !$acc kernels default(none) present(psi_kqpt, stepf, stepf%grid)
@@ -101,13 +103,15 @@ CONTAINS
                enddo
                !$acc end kernels
             !$acc end data
+            call wavef2rs_fft%free()
+            call grid%free()
 
             call timestart("Big OMP loop")
 #ifndef _OPENACC
-            !$OMP PARALLEL default(shared) &
-            !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft) &
-            !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff)&
-            !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf)
+            !$OMP PARALLEL default(none) &
+            !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft, wavef2rs_fft, max_imag, grid) &
+            !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, max_igptm)&
+            !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf, g_ptr)
 #endif
 
             call timestart("alloc&init")
@@ -117,17 +121,18 @@ CONTAINS
             if (ok /= 0) call juDFT_error("can't alloc psi_k")
 
             call fft%init(stepf%dimensions, .true., batch_size=psize, l_gpu=.True.)
+            call grid%init(fi%cell, fi%sym, gcutoff)
+            call wavef2rs_fft%init(grid%dimensions, .false., batch_size=1, l_gpu=.True.)
             call timestop("alloc&init")
 
             !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec)&
-            !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, cprod) &
-            !$acc      copy(cprod%data_r, cprod%data_c) &
+            !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, grid, grid%dimensions, jsp)&
             !$acc      create(psi_k, prod)
 #ifndef _OPENACC
                !$OMP DO
 #endif
                do iband = 1, hybdat%nbands(ik,jsp)
-                  call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, psi_k)
+                  call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, grid, wavef2rs_fft, psi_k)
                   
                   !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)               
                   do iob = 1, psize
@@ -141,14 +146,9 @@ CONTAINS
             
                   if (cprod%l_real) then
                      if (.not. real_warned) then
-                        max_imag = 0.0 
-                        !$acc parallel loop default(none) present(stepf, stepf%gridlength, prod) copy(max_imag) reduction(max:max_imag)
-                        do iob = 1, psize
-                           do j = 0, stepf%gridlength-1 
-                              max_imag = max(max_imag, abs(aimag(prod(j,iob))))
-                           enddo 
-                        enddo
-                        !$acc end parallel loop
+                        !$acc kernels present(prod) copyout(max_imag)
+                        max_imag = maxval(abs(aimag(prod)))
+                        !$acc end kernels
                         if(max_imag > 1e-8) then
                            write (*, *) "Imag part non-zero in too large"
                            real_warned = .True.
@@ -180,12 +180,13 @@ CONTAINS
                !$OMP END DO
 #endif
             !$acc end data 
+            call fft%free()
+            call grid%free()
+            call wavef2rs_fft%free()
          !$acc end data ! psi_kqpt
-
+         deallocate (prod, psi_k)
       !$acc end data ! stepf, stepf%grid
 
-      deallocate (prod, psi_k)
-      call fft%free()
 #ifndef _OPENACC
       !$OMP END PARALLEL
 #endif
@@ -214,7 +215,7 @@ CONTAINS
       enddo
    end subroutine setup_g_ptr
 
-   subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, psi)
+   subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, grid, fft, psi)
       ! put block of wave functions through FFT
 !$    use omp_lib
       use m_types
@@ -225,34 +226,23 @@ CONTAINS
       type(t_mat), intent(in)        :: zmat
       integer, intent(in)            :: jspin, bandoi, bandof
       real, intent(in)               :: gcutoff
+      type(t_fftgrid), intent(inout) :: grid
+      type(t_fft), intent(inout)     :: fft
       complex, intent(inout)         :: psi(0:, bandoi:) ! (nv,ne)
 
-      type(t_fft) :: fft
-      type(t_fftgrid) :: grid
-
-      integer :: ivmap(SIZE(lapw%gvec, 2))
       integer :: iv, nu, psize, dims(3)
-     
-      call grid%init(fi%cell, fi%sym, gcutoff)
 
-      !$acc data copyin(grid, grid%dimensions)
 #ifndef _OPENACC 
-         !$omp parallel do default(none) private(nu) shared(grid, bandoi, bandof, lapw, jspin, zMat, psi)
+      !$omp parallel do default(none) private(nu) shared(grid, bandoi, bandof, lapw, jspin, zMat, psi)
 #endif
-         do nu = bandoi, bandof
-            call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu), l_gpu=.True.)
-         enddo
+      do nu = bandoi, bandof
+         call grid%put_state_on_external_grid(lapw, jspin, zMat, nu, psi(:,nu), l_gpu=.True.)
+      enddo
 #ifndef _OPENACC 
-         !$omp end parallel do
-#endif
+      !$omp end parallel do
+#endif   
 
-         psize = bandof - bandoi + 1
-         call fft%init(grid%dimensions, .false., batch_size=psize, l_gpu=.True.)
-         call fft%exec_batch(psi)
-      !$acc end data
-
-      call fft%free()
-      call grid%free()
+      call fft%exec_batch(psi)
    end subroutine wavef2rs
 
    subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)

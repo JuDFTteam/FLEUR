@@ -38,7 +38,7 @@ MODULE m_kkintgr
       USE m_smooth
       USE m_lorentzian_smooth
 
-      REAL,          INTENT(IN)     :: im(:)       !Imaginary part of the green's function on the real axis
+      COMPLEX,       INTENT(IN)     :: im(:)       !Imaginary part of the green's function on the real axis
       REAL,          INTENT(IN)     :: eMesh(:)    !Energy grid on the real axis
       COMPLEX,       INTENT(IN)     :: ez(:)       !Complex energy contour
       LOGICAL,       INTENT(IN)     :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
@@ -48,10 +48,10 @@ MODULE m_kkintgr
       INTEGER  :: iz,izp,n1,n2,ne,nz
       INTEGER  :: ismooth,nsmooth
       REAL     :: eb,del
-      REAL     :: re_n1,re_n2,im_n1,im_n2
+      COMPLEX  :: re_n1,re_n2,im_n1,im_n2
       INTEGER, ALLOCATABLE :: smoothInd(:)
-      REAL, ALLOCATABLE    :: sigma(:)
-      REAL, ALLOCATABLE    :: smoothed(:,:)
+      REAL,    ALLOCATABLE :: sigma(:)
+      COMPLEX, ALLOCATABLE :: smoothed(:,:)
 
       nz  = SIZE(ez)
       ne  = SIZE(eMesh)
@@ -77,7 +77,7 @@ MODULE m_kkintgr
             smoothInd(iz) = nsmooth
             sigma(nsmooth) = AIMAG(ez(iz))
          ENDDO outer
-         ALLOCATE(smoothed(ne,nsmooth), source=0.0)
+         ALLOCATE(smoothed(ne,nsmooth), source=cmplx_0)
          !$OMP parallel do default(none) &
          !$OMP shared(nsmooth,smoothed,sigma,ne,eMesh,im) &
          !$OMP private(ismooth)
@@ -154,7 +154,7 @@ MODULE m_kkintgr
 
       USE m_trapz
 
-      REAL,    INTENT(IN) :: im(:)
+      COMPLEX, INTENT(IN) :: im(:)
       REAL,    INTENT(IN) :: eMesh(:)
       COMPLEX, INTENT(IN) :: z
 
@@ -164,20 +164,21 @@ MODULE m_kkintgr
       kk_direct = -1/pi_const *trapz(integrand,eMesh(2)-eMesh(1),SIZE(eMesh))
    END FUNCTION kk_direct
 
-   PURE REAL FUNCTION kk_num(im,ne,ire,method)
+   PURE COMPLEX FUNCTION kk_num(im,ne,ire,method)
 
-      REAL,    INTENT(IN)  :: im(:) !Imaginary part
+      COMPLEX, INTENT(IN)  :: im(:) !Imaginary part
       INTEGER, INTENT(IN)  :: ne     !Dimension of the energy grid
       INTEGER, INTENT(IN)  :: ire    !Position where to calculate the real part
       INTEGER, INTENT(IN)  :: method !Method to be used
       INTEGER i,j
-      REAL    y,im_ire
+      COMPLEX y
+      COMPLEX im_ire
 
-      kk_num = 0.0
+      kk_num = cmplx_0
       IF(ire.LE.ne.AND.ire.GE.1) THEN
          im_ire = im(ire)
       ELSE
-         im_ire = 0.0
+         im_ire = cmplx_0
       ENDIF
 
       SELECT CASE(method)

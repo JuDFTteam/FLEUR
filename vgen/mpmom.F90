@@ -219,7 +219,7 @@ contains
 
     ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
     od = oneD%odi%d1
-    !$omp parallel do default( shared ) private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, &
+    !$omp parallel do if(atoms%ntype < 600) default( shared ) private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, &
     !$omp& l, cil, ll1, m, lm, k ) reduction( +:qlmp )
     do k = fmpi%irank+2, stars%ng3, fmpi%isize
       if ( od ) then
@@ -255,7 +255,7 @@ contains
         end do                  ! l = 0, atoms%lmax(n)
       end do                    ! n = 1, atoms%ntype
     end do                      ! k = 2, stars%ng3
-    !$omp end parallel do
+    !$omp end parallel do 
 #ifdef CPP_MPI
     CALL MPI_REDUCE( qlmp, qlmp_out, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, fmpi%mpi_comm, ierr )
 #else

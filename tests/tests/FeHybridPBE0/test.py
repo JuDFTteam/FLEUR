@@ -21,11 +21,11 @@ try:
       te.run([te.binary, "-trace"])
 
 
-   te.check_value_outfile("HF total energy=", "htr", [-1272.72894, -1272.7324763242], 0.000001)
+   te.check_value_outfile("HF total energy=", "htr", [-1272.7289531184, -1272.7324870224], 0.000001)
 
    exp_mm1 = 27*[None]
    exp_mm1[14] = 3.40037
-   exp_mm1[-1] = 3.42075
+   exp_mm1[-1] = 3.42074
    te.check_value_outfile("--> mm       1", " ", exp_mm1, 0.00001)
 
    sys.exit(te.errors)

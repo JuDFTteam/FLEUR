@@ -275,7 +275,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       logical, intent(in), optional :: l_gpu
 
       logical :: use_gpu
-      INTEGER :: xGrid, yGrid, zGrid, layerDim, iLAPW
+      INTEGER :: xGrid, yGrid, zGrid, iLAPW
 
       if(present(l_gpu)) then 
          use_gpu = l_gpu 
@@ -283,21 +283,18 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
          use_gpu = .False. 
       endif 
 
-      layerDim = this%dimensions(1)*this%dimensions(2)
-
       if(use_gpu) then
          !$acc kernels
          ext_grid = cmplx_0
          !$acc end kernels
 
          !$acc parallel loop default(none) private(xGrid, yGrid, zGrid) &
-         !$acc present(lapw, lapw%nv, lapw%gvec, this, this%dimensions, ext_grid, state) &
-         !$acc copyin(layerDim, iSpin)
+         !$acc present(lapw, lapw%nv, lapw%gvec, this, this%dimensions, ext_grid, state, iSpin) 
          DO iLAPW = 1, lapw%nv(iSpin)
             xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
             yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
             zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
-            ext_grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
+            ext_grid(xGrid + this%dimensions(1)*yGrid + (this%dimensions(1)*this%dimensions(2))*zGrid) = state(iLAPW)
          END DO
          !$acc end parallel loop
       else
@@ -307,7 +304,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
             xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
             yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
             zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
-            ext_grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
+            ext_grid(xGrid + this%dimensions(1)*yGrid + (this%dimensions(1)*this%dimensions(2))*zGrid) = state(iLAPW)
          END DO
       endif
    end SUBROUTINE put_cmplx_on_external_grid

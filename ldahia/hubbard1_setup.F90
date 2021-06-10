@@ -6,7 +6,6 @@ MODULE m_hubbard1_setup
    USE m_uj2f
    USE m_doubleCounting
    USE m_hubbard1Distance
-   USE m_occmtx
    USE m_polangle
    USE m_hubbard1_io
    USE m_types_selfen
@@ -109,7 +108,7 @@ MODULE m_hubbard1_setup
             !-------------------------------------------------------
             ! Calculate the DFT occupation of the correlated shell
             !-------------------------------------------------------
-            CALL occmtx(gdft(i_hia),gfinp,input,atoms,noco,nococonv,mmpMat(:,:,i_hia,:))
+            mmpMat(:,:,i_hia,:) = gdft(i_hia)%occupationMatrix(gfinp,input,atoms,noco,nococonv)
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)

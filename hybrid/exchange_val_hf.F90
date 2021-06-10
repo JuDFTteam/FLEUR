@@ -65,11 +65,11 @@ CONTAINS
       USE m_trafo
       USE m_wavefproducts
       USE m_olap
-      USE m_spmvec
       USE m_hsefunctional
       USE m_io_hybrid
       USE m_kp_perturbation
-      use m_spmm
+      use m_spmm_inv
+      use m_spmm_noinv
       use m_work_package
       use m_judft 
 #ifdef CPP_MPI
@@ -258,7 +258,6 @@ CONTAINS
                endif
                if(ierr /= 0) call judft_error("can't alloc coul_wavf")
                r_coul_wavf = 0.0
-               c_coul_wavf = cmplx_0
                call timestop("alloc coul_wavf")
                
                call timestart("exchange matrix")

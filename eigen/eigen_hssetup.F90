@@ -68,7 +68,7 @@ CONTAINS
 
       CALL timestart("Interstitial part")
       !Generate interstitial part of Hamiltonian
-      CALL hs_int(fi%input, fi%noco, stars, lapw, fmpi, fi%cell, isp, v%pw_w, smat, hmat)
+      CALL hs_int(fi%input, fi%noco, stars, lapw, fmpi, fi%cell, isp, merge(v%pw_w-xcpot%get_exchange_weight()*vx%pw_w,v%pw_w,hybdat%l_subvxc), smat, hmat)
       CALL timestop("Interstitial part")
       CALL timestart("MT part")
       !MT-part of Hamiltonian. In case of fi%noco, we need an loop over the local spin of the fi%atoms
@@ -105,11 +105,11 @@ CONTAINS
       IF (fi%hybinp%l_hybrid) THEN
          IF (hybdat%l_addhf) CALL add_Vnonlocal(nk, lapw, fi, hybdat, isp, results, xcpot, fmpi, nococonv, hmat(1, 1))
 
-         IF (hybdat%l_subvxc) THEN
-            CALL subvxc(lapw, fi%kpts%bk(:, nk), fi%input, isp, v%mt(:, 0, :, :), fi%atoms, ud, &
-                        mpdata, hybdat, enpara%el0, enpara%ello0, fi%sym, &
-                        fi%cell, sphhar, stars, xcpot, fmpi, fi%oneD, hmat(1, 1), vx)
-         END IF
+         !IF (hybdat%l_subvxc) THEN
+         !   CALL subvxc(lapw, fi%kpts%bk(:, nk), fi%input, isp, v%mt(:, 0, :, :), fi%atoms, ud, &
+         !               mpdata, hybdat, enpara%el0, enpara%ello0, fi%sym, &
+         !               fi%cell, sphhar, stars, xcpot, fmpi, fi%oneD, hmat(1, 1), vx)
+         !END IF
       END IF ! fi%hybinp%l_hybrid
 
       !Now copy the data into final matrix

@@ -34,11 +34,17 @@ contains
       call olap%u2l()
       call olap%conjugate()
 
-      !call judft_error("stop after olap")
+      call trafo%init(z%l_real, olap%matsize1, z%matsize2)
+      call tmp%init(z%l_real, ex%matsize1, trafo%matsize1)
+      call v_x%init(z%l_real, trafo%matsize1, tmp%matsize2)
 
-      call olap%multiply(z, res=trafo)
-      CALL ex%multiply(trafo, res=tmp, transB="C")
-      CALL trafo%multiply(tmp, res=v_x)
+      !$acc data copyin(olap, olap%data_r, olap%data_c, z, z%data_r, z%data_c, ex, ex%data_r, ex%data_c, trafo, tmp, v_x) &
+      !$acc      create(trafo%data_r, trafo%data_c, tmp%data_r, tmp%data_c)&
+      !$acc      copyout(v_x%data_r, v_x%data_c)
+         call olap%multiply(z, res=trafo)
+         CALL ex%multiply(trafo, res=tmp, transB="C")
+         CALL trafo%multiply(tmp, res=v_x)
+      !$acc end data
 
       CALL timestop("T^-1*mat_ex*T^-1*")
 

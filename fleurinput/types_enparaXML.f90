@@ -49,35 +49,49 @@ CONTAINS
     TYPE(t_xml),INTENT(INOUT)   ::xml
 
     LOGICAL :: l_enpara,film
-    INTEGER :: jspins,ntype,lmaxd,n,lo,i
-    CHARACTER(len=100)::xpath,xpath2
-    INTEGER, ALLOCATABLE :: nlo(:),neq(:)
+    INTEGER :: jspins,ntype,n,iLO,i, nLOLocal, lNumCount, nNumCount
+    CHARACTER(len=200) :: xPath, xPathB
+    CHARACTER(LEN=200) :: lString, nString
+    INTEGER, ALLOCATABLE :: nlo(:)
+    INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:)
 
     ntype=xml%get_ntype()
     nlo=xml%get_nlo()
-    lmaxd=xml%get_lmaxd()
     jspins=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
     film=xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
 
     CALL this%init(ntype,MAXVAL(nlo),jspins)
 
     DO n=1,ntype
-       xPath=TRIM(xml%speciesPath(n))//'/energyParameters'
-       this%qn_el(0,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@s'))
-       this%qn_el(1,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@p'))
-       this%qn_el(2,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@d'))
-       this%qn_el(3,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@f'))
-       DO lo=1,nlo(n)
-          WRITE(xpath2,"(a,a,i0,a)") TRIM(xml%speciesPath(n)),'/lo[',lo,']'
-          this%qn_ello(lo,n,:)=evaluateFirstINTOnly(xml%GetAttributeValue(TRIM(xpath2)//'/@n'))
-          IF (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPath2))//'/@type')))=='HELO') &
-               this%qn_ello(lo,n,:)=-1*this%qn_ello(lo,n,:)
+       xPath = TRIM(xml%speciesPath(n))//'/energyParameters'
+       this%qn_el(0,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xPath)//'/@s'))
+       this%qn_el(1,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xPath)//'/@p'))
+       this%qn_el(2,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xPath)//'/@d'))
+       this%qn_el(3,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xPath)//'/@f'))
+       nLOLocal = 0
+       DO iLO = 1, xml%getNumberOfNodes(TRIM(ADJUSTL(xml%speciesPath(n))//'/lo'))
+          WRITE(xPathB,"(a,a,i0,a)") TRIM(xml%speciesPath(n)),'/lo[',iLO,']'
+          lString = xml%getAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l')
+          nString = xml%getAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n')
+          CALL xml%getIntegerSequenceFromString(TRIM(ADJUSTL(lString)), lNumbers, lNumCount)
+          CALL xml%getIntegerSequenceFromString(TRIM(ADJUSTL(nString)), nNumbers, nNumCount)
+          IF(lNumCount.NE.nNumCount) THEN
+             CALL judft_error('Error in LO input: l quantum number count does not equal n quantum number count')
+          END IF
+          DO i = 1, lNumCount
+             this%qn_ello(nLOLocal+i,n,:) = nNumbers(i)
+             IF (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathB))//'/@type')))=='HELO') THEN
+                this%qn_ello(nLOLocal+i,n,:)=-1*this%qn_ello(nLOLocal+i,n,:)
+             END IF
+          END DO
+          nLOLocal = nLOLocal +lnumcount
+          DEALLOCATE (lNumbers, nNumbers)
        END DO
     END DO
     !Read vacuum
     IF (xml%GetNumberOfNodes("/fleurInput/cell/filmLattice")==1) THEN
        DO i=1,xml%GetNumberOfNodes("/fleurInput/cell/filmLattice/vacuumEnergyParameters")
-          WRITE(xpath,"(a,i0,a)") '/fleurInput/cell/filmLattice/vacuumEnergyParameters[',i,']'
+          WRITE(xPath,"(a,i0,a)") '/fleurInput/cell/filmLattice/vacuumEnergyParameters[',i,']'
           n = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))//'/@vacuum'))
           this%evac0(n,:) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))//'/@spinUp'))
           IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPath))//'/@spinDown').GE.1) THEN

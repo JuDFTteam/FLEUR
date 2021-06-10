@@ -196,7 +196,7 @@ subroutine write_dos(eigdos,hdf_id)
     allocate(kx(kpts%nkpt))
 #ifdef CPP_HDF
     DO n=1,eigdos%get_num_weights()
-      call writebandData(hdf_id,eigdos%name_of_dos,eigdos%get_weight_name(n),eigdos%get_eig(),eigdos%get_weight_eig(n),kpts)
+      call writebandData(hdf_id,kpts,eigdos%name_of_dos,eigdos%get_weight_name(n),eigdos%get_weight_eig(n),eigdos%get_eig())
     enddo
 #endif
     if (eigdos%name_of_dos.ne."Local") then

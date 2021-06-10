@@ -27,6 +27,7 @@ types/types_mpimat.F90
 types/types_nococonv.F90
 types/types_potden.F90
 types/types_regionCharges.f90
+types/types_scalarGF.f90
 types/types_setup.F90
 types/types_sphhar.f90
 types/types_stars.f90

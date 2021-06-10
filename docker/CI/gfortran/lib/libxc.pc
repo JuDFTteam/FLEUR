@@ -1,0 +1,11 @@
+prefix=/usr/local
+exec_prefix=/usr/local
+libdir=/usr/local/lib
+includedir=/usr/local/include
+
+Name: libxc
+Description: Library of exchange and correlation functionals to be used in DFT codes
+Requires:
+Version: 5.0.0
+Libs: -L${libdir} -lxc
+Cflags: -I${includedir}

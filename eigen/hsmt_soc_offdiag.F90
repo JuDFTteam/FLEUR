@@ -3,8 +3,10 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-#ifndef _OPENACC
-#define CPP_OMP OMP
+#ifdef _OPENACC
+#define CPP_OMP not_used
+#else
+#define CPP_OMP $OMP
 #endif
 MODULE m_hsmt_soc_offdiag
   USE m_juDFT
@@ -54,11 +56,11 @@ CONTAINS
        fl2p1(l) = REAL(l+l+1)/fpi_const
     END DO
     !!$acc data copyin(td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)
-    !$CPP_OMP PARALLEL DEFAULT(NONE)&
-    !$CPP_OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
-    !$CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
-    !$CPP_OMP PRIVATE(cph,dot,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln,NVEC_rem)&
-    !$CPP_OMP PRIVATE(kj_off,kj_vec,jv)
+    !CPP_OMP PARALLEL DEFAULT(NONE)&
+    !CPP_OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
+    !CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
+    !CPP_OMP PRIVATE(cph,dot,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln,NVEC_rem)&
+    !CPP_OMP PRIVATE(kj_off,kj_vec,jv)
     ALLOCATE(cph(NVEC))
     ALLOCATE(xlegend(NVEC))
     ALLOCATE(plegend(NVEC,0:2))
@@ -66,7 +68,7 @@ CONTAINS
     ALLOCATE(fct(NVEC))
     ALLOCATE(dot(NVEC))
     ALLOCATE(angso(NVEC,2,2))
-    !$CPP_OMP  DO SCHEDULE(DYNAMIC,1)
+    !CPP_OMP DO SCHEDULE(DYNAMIC,1)
     DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
        kii=(ki-1)/fmpi%n_size+1
 
@@ -140,11 +142,11 @@ CONTAINS
        ENDDO
     !--->    end loop over ki
     ENDDO
-    !$CPP_OMP END DO
+    !CPP_OMP END DO
     !--->       end loop over atom types (ntype)
     DEALLOCATE(xlegend,plegend,dplegend)
     DEALLOCATE(cph)
-    !$CPP_OMP END PARALLEL
+    !CPP_OMP END PARALLEL
     !!$acc end data
     CALL timestop("offdiagonal soc-setup")
 

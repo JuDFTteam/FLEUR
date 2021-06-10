@@ -575,6 +575,7 @@
       <xsd:attribute default="0"       name="nshells" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualKKintgrCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
+      <xsd:attribute default="F"       name="k_resolved" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="TorgueGFType">
@@ -804,7 +805,6 @@
          </xsd:sequence>
       </xsd:sequence>
       <xsd:attribute default="F"    name="l_mperp" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F"    name="l_resolvent" type="FleurBool" use="optional"/>
       <xsd:attribute default="-1.0" name="minCalcDistance" type="xsd:double" use="optional"/>
       <xsd:attribute default="F"    name="outputSphavg" type="FleurBool" use="optional"/>
       <xsd:attribute default="F"    name="intFullRadial" type="FleurBool" use="optional"/>
