@@ -2,6 +2,7 @@ import pytest
 
 @pytest.mark.eels
 @pytest.mark.xml
+@pytest.mark.skip('Test needs to be updated. Outdated input file')
 def test_TiO2eelsXML(execute_fleur, grep_number, grep_exists):
     """Fleur TiO2 EELS spectrum XML
 

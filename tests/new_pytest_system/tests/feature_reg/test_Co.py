@@ -57,6 +57,7 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
 @pytest.mark.fleur
 @pytest.mark.bulk
 @pytest.mark.band
+@pytest.mark.skip('Test needs to be updated. Outdated input file')
 def test_CoUnfold(execute_fleur, grep_exists, grep_number):
     """Co band unfolding test
     Simple test of Fleur with one step:
