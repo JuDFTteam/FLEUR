@@ -79,6 +79,7 @@ ${FLEUR_SRC}/kpoints/kprep.f
 ${FLEUR_SRC}/kpoints/make_tetra.f
 
 ${FLEUR_SRC}/math/util.F
+${FLEUR_SRC}/math/pol_angle.f90
 ${FLEUR_SRC}/math/matmul.f
 ${FLEUR_SRC}/init/strgn_dim.F
 ${FLEUR_SRC}/init/spgrot.f
