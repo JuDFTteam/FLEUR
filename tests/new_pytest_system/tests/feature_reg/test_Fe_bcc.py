@@ -4,7 +4,7 @@ import pytest
 @pytest.mark.bulk
 @pytest.mark.magnetism
 @pytest.mark.hdf
-def test_Fe_bcc_FlipcdnXLDA(execute_fleur, grep_number, grep_exists):
+def DEACTIVATED_test_Fe_bcc_FlipcdnXLDA(execute_fleur, grep_number, grep_exists):
     """FeBCCFlipX: Flipcdn and noco in MT test
     Simple test of Fleur with two steps:
     1.Generate a rotated starting density and run 1 iteration
@@ -31,7 +31,7 @@ def test_Fe_bcc_FlipcdnXLDA(execute_fleur, grep_number, grep_exists):
 @pytest.mark.bulk
 @pytest.mark.magnetism
 @pytest.mark.hdf
-def test_Fe_bcc_FlipcdnYGGA(execute_fleur, grep_number, grep_exists):
+def DEACTIVATED_test_Fe_bcc_FlipcdnYGGA(execute_fleur, grep_number, grep_exists):
     """FeBCCFlipY: Flipcdn and noco in MT test
     Simple test of Fleur with two steps:
     1.Generate a rotated starting density and run 1 iteration
