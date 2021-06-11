@@ -318,7 +318,7 @@ gfortran-coverage:
       - schedules
 
 
-test-ctest-system-gfortran-hdf5: &test-gfortran-hdf5
+test-ctest-system-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
   dependencies:

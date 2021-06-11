@@ -432,6 +432,7 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     yield # now all the tests run
 
     # put session tear down code here
+
     #print("Fleur test session ended.")
 
 @pytest.fixture
@@ -460,7 +461,7 @@ def pytest_runtest_makereport(item, call):
 
 
 @pytest.fixture(scope='function', autouse=True)
-def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup):
+def base_test_case(request, work_dir, parser_testdir, failed_dir, clean_workdir, cleanup):
     """
     Base fixture for every test case to execute cleanup code after a test
     Write testlog.
@@ -486,11 +487,31 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup):
             os.mkdir(workdir)
         else:
             clean_workdir()
-    else:
-        yield
+
+    else: # this is for parser tests
+        parsertestdir = parser_testdir
+        faildir = failed_dir
+
+        yield # test is running
+
+        # clean up code goes here:
+
+        base_name = request.node.name.split('[')[1][:-1]
+        method_name = base_name + '_parser_test'
+        test_dir = os.path.abspath(os.path.join(parsertestdir, base_name))
+        if request.node.rep_call.failed or not cleanup:
+            # if failed, move test result to failed dir, will replace dir if existent
+            destination = os.path.abspath(os.path.join(faildir, method_name))
+            if os.path.isdir(destination):
+                shutil.rmtree(destination)
+            shutil.move(test_dir, destination)
+        else:
+            shutil.rmtree(test_dir)
+
 
 
 ##### other fixtures ####
+
 
 @pytest.fixture
 def execute_inpgen(inpgen_binary, work_dir):
