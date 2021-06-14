@@ -106,7 +106,7 @@ test-gfortran-serial:
     - ulimit -s unlimited
     - cd $CI_PROJECT_DIR
     - cd tests/new_pytest_system
-    - mkdir -p build.serial/Testing
+    - mkdir -p $CI_PROJECT_DIR/build.serial/Testing
     - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.serial/Testing/pytest_summary.out"
     - pytest -m serial --build_dir="../../build.serial" | tee $CI_PROJECT_DIR/build.serial/Testing/pytest_session.stdout
 #    - cd build.serial
