@@ -1055,7 +1055,7 @@ CONTAINS
                CALL juDFT_error("Found inequivalent atoms at same distance (not yet implemented)"&
                                 ,calledby ="addNearestNeighbours_gfelem")
             ENDIF
-            shellDiff(:,numshellAtoms(ishell),ishell) = nearestNeighborDiffs(:,iAtom)
+            shellDiff(:,numshellAtoms(ishell),ishell) = MATMUL(invAmatAux,nearestNeighborDiffs(:,iAtom))
          ENDDO
 
          IF (lastIndex<numNearestNeighbors) THEN
@@ -1154,7 +1154,7 @@ CONTAINS
 
          ELSE
             shellop(:,ishell) = shellopAux(:)
-            shellDiff(:,:,ishell) = shellAux(:,:,ishell)
+            shellDiff(:,:,ishell) = shellAux(:,:)
          ENDIF
 
       ENDDO
@@ -1178,7 +1178,7 @@ CONTAINS
          repr = 0
          DO ishellAtom = 1, numshellAtoms(ishell)
             !Transform representative element to lattice coordinates
-            diff = MATMUL(invAmatAux,shellDiff(:,ishellAtom,ishell))
+            diff = shellDiff(:,ishellAtom,ishell)
             !l_sphavg has to be false
             i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=shellAtom(ishell),&
                              atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
