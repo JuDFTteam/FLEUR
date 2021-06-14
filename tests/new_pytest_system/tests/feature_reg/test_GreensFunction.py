@@ -214,12 +214,13 @@ def test_GreensFunction_HoAtom_SQA_theta(execute_fleur, grep_number, grep_exists
 
     assert grep_exists(res_files['out'], "it=  2  is completed")
 
-    assert grep_exists(res_files['out'], '0.9929  0.0000')
-    assert grep_exists(res_files['out'], '0.9936  0.0000')
-    assert grep_exists(res_files['out'], '0.1116  0.0000')
-    assert grep_exists(res_files['out'], '0.3110  0.0000')
-    assert grep_exists(res_files['out'], '0.1893  0.0000')
-    assert grep_exists(res_files['out'], '0.2687  0.0000')
+
+    assert grep_exists(res_files['out'], r'0\.9929 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.9936 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.1116 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.3110 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.1893 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.2687 [\s\-]0\.0000')
     spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
 
@@ -252,14 +253,14 @@ def test_GreensFunction_HoAtom_SQA_phi(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['out'], "it=  2  is completed")
 
-    assert grep_exists(res_files['out'], '0.9929  0.0000')
-    assert grep_exists(res_files['out'], '0.9936  0.0000')
-    assert grep_exists(res_files['out'], '0.1116  0.0000')
-    assert grep_exists(res_files['out'], '0.3110  0.0000')
-    assert grep_exists(res_files['out'], '0.0000  0.1893')
-    assert grep_exists(res_files['out'], '0.0000 -0.1893')
-    assert grep_exists(res_files['out'], '0.0000  0.2687')
-    assert grep_exists(res_files['out'], '0.0000 -0.2687')
+    assert grep_exists(res_files['out'], r'0\.9929 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.9936 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.1116 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.3110 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.1893')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.1893')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.2687')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.2687')
     spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
 
@@ -293,14 +294,14 @@ def test_GreensFunction_rotated_SQA_noco(execute_fleur, grep_number, grep_exists
 
     assert grep_exists(res_files['out'], "it=  2  is completed")
 
-    assert grep_exists(res_files['out'], '0.9929  0.0000')
-    assert grep_exists(res_files['out'], '0.9936  0.0000')
-    assert grep_exists(res_files['out'], '0.1116  0.0000')
-    assert grep_exists(res_files['out'], '0.3110  0.0000')
-    assert grep_exists(res_files['out'], '0.0000  0.1893')
-    assert grep_exists(res_files['out'], '0.0000 -0.1893')
-    assert grep_exists(res_files['out'], '0.0000  0.2687')
-    assert grep_exists(res_files['out'], '0.0000 -0.2687')
+    assert grep_exists(res_files['out'], r'0\.9929 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.9936 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.1116 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.3110 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.1893')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.1893')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.2687')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.2687')
     spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
 
