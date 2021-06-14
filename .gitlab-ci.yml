@@ -40,7 +40,7 @@ build-gfortran-hdf5:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - pip3 install pytest masci-tools
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - ulimit -s unlimited
@@ -100,7 +100,7 @@ test-gfortran-serial:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - pip3 install pytest masci-tools
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - ulimit -s unlimited
@@ -183,7 +183,7 @@ test-pgi:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - pip3 install pytest masci-tools
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - export OMP_NUM_THREADS=2
@@ -259,7 +259,7 @@ test-intel:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - pip3 install pytest masci-tools
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - set +e && source compilervars.sh intel64 && set -e
@@ -290,7 +290,7 @@ gfortran-coverage:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Test system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
-    - pip3 install pytest 'masci-tools==0.4.8-dev5'
+    - pip3 install pytest masci-tools
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
       - cd $CI_PROJECT_DIR; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
