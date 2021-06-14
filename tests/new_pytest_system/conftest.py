@@ -379,7 +379,7 @@ def pytest_configure(config):
 ##### fixtures for whole test session ####
 
 @pytest.fixture(scope='session', autouse=True)
-def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleur_binary, capsys):
+def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleur_binary, request):
     """
     Setup a fleur test session
     - cleanup directories
@@ -394,6 +394,7 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     failed_dir_path = failed_dir
     work_dir_path = work_dir
     libs = []
+    capmanager = request.config.pluginmanager.getplugin("capturemanager")
 
     # First we print out some info, which will show at the end of session:
     path_fleur, para = fleur_binary
@@ -408,7 +409,7 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     add_header_string += "Cleaning now work, failed and parser_test directories...\n"
     add_header_string += "#########################################\n"
     #LOGGER.info(add_header_string)
-    with capsys.disabled():
+    with capmanager.global_and_fixture_disabled():
         print(add_header_string)
 
     # We clean before and not after test session, because that way
