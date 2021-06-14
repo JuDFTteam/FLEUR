@@ -1,6 +1,7 @@
 MODULE m_rotMMPmat
 
    USE m_constants
+   USE m_types_sym
 
    IMPLICIT NONE
 
@@ -8,7 +9,8 @@ MODULE m_rotMMPmat
    PUBLIC :: rotMMPmat
 
    INTERFACE rotMMPmat
-      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle, rotMMPmat_angle_one_spin, rotMMPmat_dwgn_one_spin
+      PROCEDURE :: rotMMPmat_dwgn, rotMMPmat_angle, rotMMPmat_sym_op
+      PROCEDURE :: rotMMPmat_angle_one_spin, rotMMPmat_dwgn_one_spin, rotMMPmat_sym_op_one_spin
    END INTERFACE
 
    CONTAINS
@@ -123,6 +125,60 @@ MODULE m_rotMMPmat
       ENDIF
 
    END FUNCTION rotMMPmat_angle
+
+   PURE FUNCTION rotMMPmat_sym_op(mmpmat,sym,iop,l,lp,inverse,spin_rotation) Result(mmpmatOut)
+
+      COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
+      TYPE(t_sym),       INTENT(IN)  :: sym
+      INTEGER,           INTENT(IN)  :: iop
+      INTEGER,           INTENT(IN)  :: l
+      INTEGER, OPTIONAL, INTENT(IN)  :: lp
+      LOGICAL, OPTIONAL, INTENT(IN)  :: inverse, spin_rotation
+
+      COMPLEX, ALLOCATABLE :: mmpmatOut(:,:,:)
+      COMPLEX :: dwgn(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      COMPLEX :: dwgnp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      INTEGER :: iopArg
+
+      IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
+      mmpmatOut = mmpmat
+
+      IF(iop==1) RETURN
+
+      iopArg = iop
+      IF(PRESENT(inverse)) THEN
+         IF(inverse) iopArg = sym%invtab(iop)
+      ENDIF
+
+      dwgn = sym%d_wgn(:,:,l,iopArg)
+      IF(PRESENT(lp)) THEN
+         dwgnp = sym%d_wgn(:,:,lp,iopArg)
+      ELSE
+         dwgnp = dwgn
+      ENDIF
+
+      mmpmatOut = rotMMPmat_dwgn(mmpmat,dwgn=dwgn,dwgnp=dwgnp,spin_rotation=spin_rotation)
+
+   END FUNCTION rotMMPmat_sym_op
+
+   PURE FUNCTION rotMMPmat_sym_op_one_spin(mmpmat,sym,iop,l,lp,inverse,spin_rotation) Result(mmpmatOut)
+
+      COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:)
+      TYPE(t_sym),       INTENT(IN)  :: sym
+      INTEGER,           INTENT(IN)  :: iop
+      INTEGER,           INTENT(IN)  :: l
+      INTEGER, OPTIONAL, INTENT(IN)  :: lp
+      LOGICAL, OPTIONAL, INTENT(IN)  :: inverse, spin_rotation
+
+      COMPLEX, ALLOCATABLE :: mmpmatOut(:,:), mmpmatOutsplit(:,:,:)
+      COMPLEX :: mmpmatsplit(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1)
+
+      ALLOCATE(mmpmatOut,mold=mmpMat)
+      mmpmatsplit(:,:,1) = mmpmat
+      mmpmatOutsplit = rotMMPmat_sym_op(mmpmatsplit,sym,iop,l,lp=lp,inverse=inverse,spin_rotation=spin_rotation)
+      mmpmatOut = mmpmatOutsplit(:,:,1)
+
+   END FUNCTION rotMMPmat_sym_op_one_spin
 
    PURE FUNCTION rotMMPmat_angle_one_spin(mmpmat,alpha,beta,gamma,l,lp) Result(mmpmatOut)
 

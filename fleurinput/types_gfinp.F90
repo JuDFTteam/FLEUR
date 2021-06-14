@@ -43,10 +43,10 @@ MODULE m_types_gfinp
       LOGICAL :: l_kresolved_int = .FALSE. !Should the Greens function be calculated k-resolved up after the Kramers-Kronig
                                            !Transformation (Intersite elements)
    CONTAINS
-      PROCEDURE :: init => init_gfelem
-      PROCEDURE :: countLOs   => countLOs_gfelem !Count the local orbitals attached to the element
-      PROCEDURE :: isoffDiag  => isOffDiag_gfelem !Is this element offdiagonal (i.e either l/=lp or intersite)
-      PROCEDURE :: equals => equals_gfelem !Is the element equal to another (For deduplicating added elements)
+      PROCEDURE :: init                => init_gfelem
+      PROCEDURE :: countLOs            => countLOs_gfelem !Count the local orbitals attached to the element
+      PROCEDURE :: isOffDiag           => isOffDiag_gfelem !Is this element offdiagonal (i.e either l/=lp or intersite)
+      PROCEDURE :: equals              => equals_gfelem !Is the element equal to another (For deduplicating added elements)
       PROCEDURE :: equals_coefficients => equals_coefficients_gfelem !Is the element equal to another from the perspective of the BZ Coefficients
    END TYPE t_gfelementtype
 
@@ -1393,12 +1393,22 @@ CONTAINS
 
       checkOnsite_gfinp = .FALSE.
       DO i_gf = 1, this%n
-         IF(this%elem(i_gf)%l.NE.this%elem(i_gf)%lp) CYCLE
-         IF(this%elem(i_gf)%atomType.NE.this%elem(i_gf)%atomTypep) CYCLE
-         IF(ANY(ABS(this%elem(i_gf)%atomDiff).GT.1e-12)) CYCLE
-         checkOnsite_gfinp = .TRUE.
+         IF(.NOT.this%elem(i_gf)%isOffDiag()) checkOnsite_gfinp = .TRUE.
       ENDDO
    END FUNCTION checkOnsite_gfinp
+
+   PURE LOGICAL FUNCTION checkOffdiagonal_gfinp(this)
+
+      !Check if there are any oniste elements
+      CLASS(t_gfinp),               INTENT(IN)    :: this
+
+      INTEGER :: i_gf
+
+      checkOffdiagonal_gfinp = .FALSE.
+      DO i_gf = 1, this%n
+         IF(this%elem(i_gf)%isOffDiag()) checkOffdiagonal_gfinp = .TRUE.
+      ENDDO
+   END FUNCTION checkOffdiagonal_gfinp
 
    SUBROUTINE init_gfelem(this,l,atomType,iContour,l_sphavg,lp,nshells,atomTypep,k_resolved,atomDiff,l_fixedCutoffset,fixedCutoff)
 
@@ -1528,23 +1538,6 @@ CONTAINS
       equals_gfelem = .TRUE.
 
    END FUNCTION equals_gfelem
-
-
-   PURE LOGICAL FUNCTION checkOffdiagonal_gfinp(this)
-
-      !Check if there are any oniste elements
-      CLASS(t_gfinp),               INTENT(IN)    :: this
-
-      INTEGER :: i_gf
-
-      checkOffdiagonal_gfinp = .FALSE.
-      DO i_gf = 1, this%n
-         IF(this%elem(i_gf)%l.EQ.this%elem(i_gf)%lp.AND. &
-            this%elem(i_gf)%atomType.EQ.this%elem(i_gf)%atomTypep.AND. &
-            ALL(ABS(this%elem(i_gf)%atomDiff).LT.1e-12)) CYCLE
-         checkOffdiagonal_gfinp = .TRUE.
-      ENDDO
-   END FUNCTION checkOffdiagonal_gfinp
 
    PURE INTEGER FUNCTION countLOs_gfelem(this,atoms)
 
