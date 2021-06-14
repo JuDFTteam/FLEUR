@@ -327,7 +327,6 @@ MODULE m_types_greensf
 
          COMPLEX :: occmtx(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
-         COMPLEX :: occmtx_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1)
          INTEGER :: ind1,ind2,ipm,iz
          INTEGER :: l,lp,atomType,atomTypep,m,mp
          REAL    :: tr

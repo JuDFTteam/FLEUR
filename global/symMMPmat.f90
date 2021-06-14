@@ -68,7 +68,11 @@ MODULE m_symMMPmat
 
       DO i_op = 1, n_ops
          is  = sym_ops(i_op)
-         isi = sym%invtab(is)
+         IF(PRESENT(sym_op_list)) THEN
+            isi = is
+         ELSE
+            isi = sym%invtab(is)
+         ENDIF
 
          symPhase = cmplx_1
          IF(PRESENT(phase)) THEN
