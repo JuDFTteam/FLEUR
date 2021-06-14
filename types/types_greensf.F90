@@ -400,13 +400,9 @@ MODULE m_types_greensf
 
          !Rotate the occupation matrix into the global frame in real-space
          IF(noco%l_noco) THEN
-            occmtx_tmp(:,:,1) = occmtx
-            occmtx_tmp = rotMMPmat(occmtx_tmp,nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
-            occmtx = occmtx_tmp(:,:,1)
+            occmtx = rotMMPmat(occmtx,nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
          ELSE IF(noco%l_soc) THEN
-            occmtx_tmp(:,:,1) = occmtx
-            occmtx_tmp = rotMMPmat(occmtx_tmp,nococonv%phi,nococonv%theta,0.0,l)
-            occmtx = occmtx_tmp(:,:,1)
+            occmtx = rotMMPmat(occmtx,nococonv%phi,nococonv%theta,0.0,l)
          ENDIF
 
          !Sanity check are the occupations reasonable?

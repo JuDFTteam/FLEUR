@@ -66,13 +66,9 @@ MODULE m_greensfSym
 
             !Rotate into the local real frame
             IF(noco%l_noco) THEN
-               imSym_tmp(:,:,1) = imSym
-               imSym_tmp = rotMMPmat(imSym_tmp,0.0,-nococonv%beta(atomType),-nococonv%alph(atomType),l)
-               imSym = imSym_tmp(:,:,1)
+               imSym = rotMMPmat(imSym,0.0,-nococonv%beta(atomType),-nococonv%alph(atomType),l)
             ELSE IF(noco%l_soc) THEN
-               imSym_tmp(:,:,1) = imSym
-               imSym_tmp = rotMMPmat(imSym_tmp,0.0,-nococonv%theta,-nococonv%phi,l)
-               imSym = imSym_tmp(:,:,1)
+               imSym = rotMMPmat(imSym,0.0,-nococonv%theta,-nococonv%phi,l)
             ENDIF
 
             IF(l_sphavg) THEN
