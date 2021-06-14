@@ -911,6 +911,7 @@ CONTAINS
       INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist,cubeStartIndex,cubeEndIndex
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
       INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,repr
+      LOGICAL :: l_diff_in_shell
       REAL :: currentDist,minDist,amatAuxDet,lastDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
@@ -1094,6 +1095,15 @@ CONTAINS
                IF(ALL(ABS(diffRot-shellAux(:,ishellAtom)).LT.tol)) CYCLE symLoop
             ENDDO
 
+            l_diff_in_shell = .FALSE.
+            DO ishellAtom = 1, numshellAtoms(ishell)
+               !Is the atom equivalent to any other atom in the previously found shell
+               IF(ALL(ABS(diffRot-shellDiff(:,ishellAtom,ishell)).LT.tol)) THEN
+                  l_diff_in_shell = .TRUE.
+               ENDIF
+            ENDDO
+            IF(.NOT.l_diff_in_shell) CYCLE symLoop
+
             nshellAtom = nshellAtom + 1
             shellAux(:,nshellAtom) = diffRot
             shellopAux(nshellAtom) = iop
@@ -1144,6 +1154,7 @@ CONTAINS
 
          ELSE
             shellop(:,ishell) = shellopAux(:)
+            shellDiff(:,:,ishell) = shellAux(:,:,ishell)
          ENDIF
 
       ENDDO
