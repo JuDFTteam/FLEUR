@@ -57,7 +57,6 @@ CONTAINS
    SUBROUTINE calc_kinEnergyDen_mt(EnergyDen_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
                                    kinEnergyDen_RS)
       USE m_juDFT_stop
-      USE m_juDFT_string
       implicit none
       REAL, INTENT(in)                 :: EnergyDen_RS(:,:), vTot_rs(:,:), vTot0_rs(:,:), core_den_rs(:,:), val_den_rs(:,:)
       REAL, INTENT(inout)              :: kinEnergyDen_RS(:,:)
