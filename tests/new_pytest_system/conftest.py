@@ -155,7 +155,7 @@ def pytest_report_header(config):#libs):
     try:
         import masci_tools
         version_str = masci_tools.__version__
-        version = tuple(int(val) for val in version_str.split('.')[:3])
+        version = tuple(int(val) for val in version_str.replace('-','.').split('.')[:3])
     except ImportError:
         parser_tests = False
     else:
