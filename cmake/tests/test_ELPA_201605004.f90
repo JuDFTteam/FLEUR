@@ -7,4 +7,4 @@
       ok= elpa_mult_at_b_real('U', 'L',m, m,bsca,myrowssca,mycolssca,asca,SIZE(asca,1),SIZE(asca,2),nb,&
          mpi_comm_rows, mpi_comm_cols,eigvec,myrowssca,mycolssca)
       !ok=CHOLESKY_real (m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.)      
-      end
+      end program

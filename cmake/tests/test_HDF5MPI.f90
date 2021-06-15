@@ -6,4 +6,4 @@
       CALL h5pset_fapl_mpio_f(access_prp, 1,1,error)
       CALL h5close_f(error)
 
-      end
+      end program
