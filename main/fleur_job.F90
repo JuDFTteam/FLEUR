@@ -307,4 +307,4 @@ PROGRAM fleurjob
     CALL fleur_job_arguments(jobs)
     CALL fleur_job_distribute(jobs)
     CALL fleur_job_execute(jobs, l_mpi_multithreaded)
-END
+END PROGRAM fleurjob
