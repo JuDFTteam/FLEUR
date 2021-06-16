@@ -55,6 +55,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    ! Local Scalars
    COMPLEX                   :: rhodummy, imPart12, realPart12
    REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, imPart1,imPart2, rhodummyR, rotAnglePhi(atoms%ntype),rotAngleTheta(atoms%ntype),zeros(atoms%ntype)
+   REAL                      :: tempDistance
    INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u,k
    INTEGER                   :: archiveType
    LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype), scaleSpin(atoms%ntype),opt
@@ -101,7 +102,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
       CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       ! read the charge density
       CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
+                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,den)
    ELSE
       den=optDen
       opt=.TRUE.
