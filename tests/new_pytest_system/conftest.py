@@ -749,6 +749,9 @@ def validate_out_xml_file(execute_fleur):
         Which is probably faster.
         So far we stay to the validatation test. Still one should test the fleur validatation feature at least once
         """
+        import subprocess
+        import shutil
+
         if 'out.xml' not in file_path:
             raise ValueError('No out.xml file given for validation.')
         root = file_path.split('out.xml')[0]
@@ -762,7 +765,18 @@ def validate_out_xml_file(execute_fleur):
             return True
             #raise ValueError(msg)
         # this fails as validation fails
-        execute_fleur(cmdline_param=['--schema', f'{schema_path}', f'{file_path}'], stderr='xmllintErrors', stdout='last_xmllintOut')
+        xmllint = shutil.which('xmllint')
+        if xmllint is None:
+            msg = "No xmllint executable found"
+            # the original test just continued
+            print(msg)
+            return True
+
+        try:
+            subprocess.run([xmllint, '--schema', f'{schema_path}', f'{file_path}'], stderr='xmllintErrors', stdout='last_xmllintOut', check=True)
+        except Exception as e:
+            print(f"Failed validating outputfile: {e}")
+            return False
         return True
 
     return _validate_out_xml_file
