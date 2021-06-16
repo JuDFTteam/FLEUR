@@ -772,11 +772,14 @@ def validate_out_xml_file(execute_fleur):
             print(msg)
             return True
 
-        try:
-            subprocess.run([xmllint, '--schema', f'{schema_path}', f'{file_path}'], stderr='xmllintErrors', stdout='last_xmllintOut', check=True)
-        except Exception as e:
-            print(f"Failed validating outputfile: {e}")
-            return False
+            with open(f"{root}/xmllintOut", "bw") as f_stdout:
+                with open(f"{root}/xmllintErrors", "bw") as f_stderr:
+                    try:
+                        subprocess.run([xmllint, '--schema', f'{schema_path}', f'{file_path}'],
+                                       stderr=f_stderr, stdout=f_stdout, check=True)
+                    except Exception as e:
+                        print(f"Failed validating outputfile: {e}")
+                        return False
         return True
 
     return _validate_out_xml_file
