@@ -264,7 +264,7 @@ CONTAINS
 
       LOGICAL :: perform_MetaGGA
       TYPE(t_potden)    :: core_den, val_den
-      real :: rdum
+      real :: rdum, tempDistance
       logical :: ldum
       perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
                       .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
@@ -274,7 +274,7 @@ CONTAINS
       CALL core_den%resetPotDen
       call readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
                           CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                           0,rdum,ldum,core_den,'cdnc')
+                           0,rdum,tempDistance,ldum,core_den,'cdnc')
       call val_den%subPotDen(den,core_den)
 
       call vTot_corrected%copyPotDen(vTot)
