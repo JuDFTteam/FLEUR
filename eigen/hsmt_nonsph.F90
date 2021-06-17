@@ -10,7 +10,7 @@ MODULE m_hsmt_nonsph
   PUBLIC hsmt_nonsph
 
 CONTAINS
-  SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,isp,jsp,iintsp,jintsp,chi,noco,nococonv,cell,lapw,td,fjgj,hmat)
+  SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,isp,jsp,iintsp,jintsp,chi,noco,nococonv,cell,lapw,td,fjgj,hmat,set0)
     USE m_hsmt_fjgj
     USE m_types
     USE m_hsmt_ab
@@ -37,6 +37,7 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)          :: n,isp,jsp,iintsp,jintsp
     COMPLEX,INTENT(IN)            :: chi
+    LOGICAL                       :: set0  !if true, initialize the hmat matrix with zeros 
     !     .. Array Arguments ..
     CLASS(t_mat),INTENT(INOUT)     ::hmat
 

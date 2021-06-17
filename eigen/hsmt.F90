@@ -87,7 +87,7 @@ CONTAINS
               !that is needed and allocated
 
               CALL hsmt_sph(n,atoms,fmpi,ispin,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),usdus,fjgj,smat(1,1),hmat(1,1))
-              CALL hsmt_nonsph(n,fmpi,sym,atoms,ispin,jspin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat(1,1))
+              CALL hsmt_nonsph(n,fmpi,sym,atoms,ispin,jspin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat(1,1),.FALSE.)
               CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ispin,jspin,iintsp,jintsp,hmat(1,1),smat(1,1))
             ELSEIF(noco%l_noco.AND..NOT.noco%l_ss) THEN
               !The NOCO but non-spinspiral setup follows:
@@ -95,8 +95,9 @@ CONTAINS
               !stored in tmp-variables. Then these are distributed (rotated) into the 2x2
               !global spin-matrices.
               IF (ispin==jspin) THEN !local spin-diagonal contribution
+                !initialize the hmat_tmp matrix with zeros 
                 CALL hmat_tmp%clear()
-                CALL hsmt_nonsph(n,fmpi,sym,atoms,ispin,ispin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp)
+                CALL hsmt_nonsph(n,fmpi,sym,atoms,ispin,ispin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
                 CALL smat_tmp%clear()
                 CALL hsmt_sph(n,atoms,fmpi,ispin,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),usdus,fjgj,smat_tmp,hmat_tmp)
                 CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ispin,jspin,iintsp,jintsp,hmat_tmp,smat_tmp)
@@ -123,7 +124,7 @@ CONTAINS
                     CALL hsmt_sph(n,atoms,fmpi,ispin,input,nococonv,iintsp,jintsp,chi(iintsp,jintsp),&
                     lapw,enpara%el0,td%e_shift(n,ispin),usdus,fjgj,smat(iintsp,jintsp),hmat(iintsp,jintsp))
                     CALL hsmt_nonsph(n,fmpi,sym,atoms,ispin,jspin,iintsp,jintsp,chi(iintsp,jintsp),noco,nococonv,cell,&
-                    lapw,td,fjgj,hmat(iintsp,jintsp))
+                    lapw,td,fjgj,hmat(iintsp,jintsp),.FALSE.)
                     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,&
                     n,chi(iintsp,jintsp),ispin,jspin,iintsp,jintsp,hmat(iintsp,jintsp),smat(iintsp,jintsp))
                   ELSE
