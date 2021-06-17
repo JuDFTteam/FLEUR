@@ -66,7 +66,7 @@ get_filename_component(BUILD_DIR ${CMAKE_BINARY_DIR} NAME)
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/run_tests.sh CONTENT
 "#!/usr/bin/env bash
 ADDOPTS_ENV=\${PYTEST_ADDOPTS}
-PYTEST_ADDOPTS=\"../tests/new_pytest_system --build_dir=../../${BUILD_DIR} \${ADD_OPTSENV}\"
+PYTEST_ADDOPTS=\"../tests/new_pytest_system --build_dir=../../${BUILD_DIR} \${ADDOPTS_ENV}\"
 if [[ -z \"\${juDFT_PYTHON}\" ]]; then
   PYTEST_ADDOPTS=$PYTEST_ADDOPTS pytest \"$@\"
 else
