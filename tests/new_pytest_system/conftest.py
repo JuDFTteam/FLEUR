@@ -714,18 +714,19 @@ def execute_fleur(fleur_binary, work_dir):
             mpiruncmd = 'mpirun -n {mpi_procs} '
 
         if mpiruncmd is not None:
-            if len(string.Formatter().parse(mpiruncmd)) != 0:
-                try:
-                    mpiruncmd.format(mpi_procs=mpi_procs)
-                except (ValueError, KeyError) as exc:
-                    raise KeyError("mpirun command could not be constructed: {}".format(exc))
+            if mpiruncmd.strip() != 'time':
+                if len(string.Formatter().parse(mpiruncmd)) != 0:
+                    try:
+                        mpiruncmd.format(mpi_procs=mpi_procs)
+                    except (ValueError, KeyError) as exc:
+                        raise KeyError("mpirun command could not be constructed: {}".format(exc))
 
-            else:
-                warnings.warn('The number of mpi processes will be appended to the mpicommand:\n {}'
-                              'If this should not happen enter the text {{mpi_procs}} into the'
-                              'command at the right place. For overriding the number of mpi processes use "juDFT_NPROCS"'.format(mpiruncmd))
+                else:
+                    warnings.warn('The number of mpi processes will be appended to the mpicommand:\n {}'
+                                  'If this should not happen enter the text {{mpi_procs}} into the'
+                                  'command at the right place. For overriding the number of mpi processes use "juDFT_NPROCS"'.format(mpiruncmd))
 
-                mpiruncmd += ' {} '.format(mpi_procs)
+                    mpiruncmd += ' {} '.format(mpi_procs)
 
             mpiruncmd = mpiruncmd.split()
         else:
