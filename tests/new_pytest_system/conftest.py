@@ -717,7 +717,7 @@ def execute_fleur(fleur_binary, work_dir):
             if mpiruncmd.strip() != 'time':
                 if len([val[0] for val in string.Formatter().parse(mpiruncmd)]) != 0:
                     try:
-                        mpiruncmd.format(mpi_procs=mpi_procs)
+                        mpiruncmd = mpiruncmd.format(mpi_procs=mpi_procs)
                     except (ValueError, KeyError) as exc:
                         raise KeyError("mpirun command could not be constructed: {}".format(exc))
 
