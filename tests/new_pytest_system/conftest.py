@@ -715,7 +715,7 @@ def execute_fleur(fleur_binary, work_dir):
 
         if mpiruncmd is not None:
             if mpiruncmd.strip() != 'time':
-                if len(string.Formatter().parse(mpiruncmd)) != 0:
+                if len([val[0] for val in string.Formatter().parse(mpiruncmd)]) != 0:
                     try:
                         mpiruncmd.format(mpi_procs=mpi_procs)
                     except (ValueError, KeyError) as exc:
