@@ -910,8 +910,8 @@ CONTAINS
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist,cubeStartIndex,cubeEndIndex
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
-      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,repr
-      LOGICAL :: l_diff_in_shell
+      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,repr, shells_at_distance
+      LOGICAL :: l_diff_in_shell, l_found_shell
       REAL :: currentDist,minDist,amatAuxDet,lastDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
@@ -1028,6 +1028,7 @@ CONTAINS
          nearestNeighborDists(i) = SQRT(sqrDistances(distIndexList(i)))
          nearestNeighborDiffs(:,i) = neighborAtomsDiff(:,distIndexList(i))
       END DO
+
       DEALLOCATE(sqrDistances,distIndexList,neighborAtomsDiff,neighborAtoms)
 
       !Maximum number of shells is number of atoms
@@ -1045,21 +1046,33 @@ CONTAINS
          minDist = MINVAL(nearestNeighborDists(lastIndex:numNearestNeighbors))
          shellDistance(ishell) = minDist
          numshellAtoms(ishell) = 0
+         shells_at_distance = 0
          DO iAtom = lastIndex, numNearestNeighbors
             lastIndex = iAtom
             IF(ABS(nearestNeighborDists(iAtom)-minDist).GT.1e-12) EXIT !List is sorted
-            numshellAtoms(ishell) = numshellAtoms(ishell) + 1
-            IF(shellAtom(ishell) == 0) THEN
-               shellAtom(ishell) = nearestNeighbors(iAtom)
-            ELSE IF(shellAtom(ishell) .NE. nearestNeighbors(iAtom)) THEN
-               CALL juDFT_error("Found inequivalent atoms at same distance (not yet implemented)"&
-                                ,calledby ="addNearestNeighbours_gfelem")
+
+            l_found_shell = .FALSE.
+            DO ishell1 = ishell, ishell + shells_at_distance
+               IF(shellAtom(ishell1)/=nearestNeighbors(iAtom).AND.shellAtom(ishell1)/=0) CYCLE
+               numshellAtoms(ishell1) = numshellAtoms(ishell1) + 1
+               shellAtom(ishell1) = nearestNeighbors(iAtom)
+               shellDiff(:,numshellAtoms(ishell1),ishell1) = MATMUL(invAmatAux,nearestNeighborDiffs(:,iAtom))
+               l_found_shell = .TRUE.
+            ENDDO
+
+            IF(.NOT.l_found_shell) THEN
+               shells_at_distance = shells_at_distance + 1
+
+               ishell1 = ishell + shells_at_distance
+               numshellAtoms(ishell1) = numshellAtoms(ishell1) + 1
+               shellAtom(ishell1) = nearestNeighbors(iAtom)
+               shellDiff(:,numshellAtoms(ishell_p),ishell1) = MATMUL(invAmatAux,nearestNeighborDiffs(:,iAtom))
             ENDIF
-            shellDiff(:,numshellAtoms(ishell),ishell) = MATMUL(invAmatAux,nearestNeighborDiffs(:,iAtom))
+
          ENDDO
 
          IF (lastIndex<numNearestNeighbors) THEN
-            ishell = ishell + 1
+            ishell = ishell + shells_at_distance
          ELSE
             EXIT
          ENDIF
