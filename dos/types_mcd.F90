@@ -39,7 +39,6 @@ end function
 subroutine make_dos(eigdos,kpts,input,banddos,efermi)
     use m_types_banddos
     use m_types_input
-    use m_dosbin
     use m_types_kpts
 
     class(t_mcd),intent(inout)   :: eigdos

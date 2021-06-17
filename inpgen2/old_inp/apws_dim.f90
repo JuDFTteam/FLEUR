@@ -149,4 +149,4 @@
 
       RETURN
       END SUBROUTINE
-      END program
+      END module

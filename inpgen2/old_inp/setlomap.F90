@@ -82,4 +82,4 @@
 
           RETURN
         END SUBROUTINE setlomap
-      END program
+      END module

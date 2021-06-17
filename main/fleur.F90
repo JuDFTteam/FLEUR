@@ -109,7 +109,7 @@ CONTAINS
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
       LOGICAL :: l_forceTheorem, l_lastIter
-      REAL    :: fix, sfscale, rdummy
+      REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev,occDistancePrev
 
 #ifdef CPP_MPI
@@ -163,7 +163,7 @@ CONTAINS
       IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
       IF (any(fi%noco%l_unrestrictMT)) archiveType = CDN_ARCHIVE_TYPE_FFN_const
       IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%oneD, archiveType, CDN_INPUT_DEN_const, &
-                                              0, results%ef, l_qfix, inDen)
+                                              0, results%ef, results%last_distance, l_qfix, inDen)
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
       !   CALL initRelax(fi%noco, nococonv, fi%atoms, fi%input, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, inDen)
          !CALL doRelax(fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
@@ -216,6 +216,15 @@ CONTAINS
       CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
 #endif
       ! Open/allocate eigenvector storage (end)
+
+      ! Perform some pre-scf-loop checks (start)
+      IF (fi%input%gw .EQ. 2) THEN
+         IF (ABS(results%last_distance).GT.fi%input%mindistance) THEN
+            CALL juDFT_warn('Performing spex="2" step without a selfconsistent density!')
+         END IF
+      END IF
+      ! Perform some pre-scf-loop checks (end)
+
       l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
          iter = iter + 1
@@ -254,7 +263,7 @@ CONTAINS
                CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                        fi%input, fi%sym, fi%oneD,CDN_ARCHIVE_TYPE_CDN_const, &
-                                                       CDN_INPUT_DEN_const, 0, rdummy, l_dummy, sliceDen, 'cdn_slice')
+                                                       CDN_INPUT_DEN_const, 0, rdummy, tempDistance, l_dummy, sliceDen, 'cdn_slice')
                CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, sliceDen, nococonv)
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
                               fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)

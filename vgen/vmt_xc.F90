@@ -34,7 +34,6 @@ MODULE m_vmt_xc
          USE m_types_xcpot_inbuild
          USE m_types
          USE m_metagga
-         USE m_juDFT_string
          IMPLICIT NONE
 
          CLASS(t_xcpot),INTENT(IN)      :: xcpot

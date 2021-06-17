@@ -60,3 +60,20 @@ if (NOT FLEUR_USE_OPENMP)
 endif()
 #write file
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/pytest_incl.py CONTENT "sourcedir=${CMAKE_SOURCE_DIR}\nbuilddir=${CMAKE_BINARY_DIR}\nexcl_flags=\"${PYTEST_TEST_EXCL_FLAGS}\"\n")
+
+get_filename_component(BUILD_DIR ${CMAKE_BINARY_DIR} NAME)
+#write build script
+file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/run_tests.sh CONTENT
+"#!/usr/bin/env bash
+PYTEST_ADDOPTS=\"../tests/new_pytest_system --build_dir=../../${BUILD_DIR} $PYTEST_ADD_OPTS\"
+if [[ -z \"\${juDFT_PYTHON}\" ]]; then
+  PYTEST_ADDOPTS=$PYTEST_ADDOPTS pytest \"$@\"
+else
+  PYTEST_ADDOPTS=$PYTEST_ADDOPTS $juDFT_PYTHON -m pytest \"$@\"
+fi")
+add_custom_target(pytest ALL
+                  COMMAND chmod +x run_tests.sh
+                  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                  COMMENT "Making test script executable")
+
+

@@ -83,7 +83,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    INTEGER                              :: iState, jState, iStep, numStates, numRelevantStates, convIter
    INTEGER                              :: maxHistoryLength
    INTEGER                              :: lastGroupEnd, currentGroupEnd
-   REAL                                 :: fix, potDenInt, fermiEnergyTemp, spinDegenFac
+   REAL                                 :: fix, potDenInt, fermiEnergyTemp, tempDistance, spinDegenFac
    REAL                                 :: rdmftFunctionalValue, occStateI, gradSum
    REAL                                 :: exchangeTerm, lagrangeMultiplier, equalityCriterion
    REAL                                 :: mixParam, rdmftEnergy, occSum
@@ -485,7 +485,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
                IF (fmpi%irank.EQ.0) THEN
                   CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,&
-                                   CDN_input_DEN_const,0,fermiEnergyTemp,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
+                                   CDN_input_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
                   CALL singleStateDen%sum_both_spin()!workden)
                END IF
 #ifdef CPP_MPI

@@ -2339,7 +2339,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePotentialHDF
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum, oneD,&
-                             archiveName, densityType,fermiEnergy,l_qfix,l_DimChange,den)
+                             archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den)
       use m_types_input
       use m_types_stars
       use m_types_sphhar
@@ -2361,6 +2361,7 @@ MODULE m_cdnpot_io_hdf
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
       REAL,    INTENT (OUT)        :: fermiEnergy
+      REAL,    INTENT (INOUT)      :: lastDistance
       LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
 
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
@@ -2564,6 +2565,8 @@ MODULE m_cdnpot_io_hdf
 
       CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
       CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
+
+      CALL io_read_attreal0(archiveID,'distance',lastDistance)
 
       jmtdOut = MIN(jmtd,atoms%jmtd)
       ntypeOut = MIN(ntype,atoms%ntype)
