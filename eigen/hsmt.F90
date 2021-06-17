@@ -96,7 +96,7 @@ CONTAINS
               !global spin-matrices.
               IF (ispin==jspin) THEN !local spin-diagonal contribution
                 !initialize the hmat_tmp matrix with zeros 
-                !CALL hmat_tmp%clear()
+                CALL hmat_tmp%clear()
                 CALL hsmt_nonsph(n,fmpi,sym,atoms,ispin,ispin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
                 CALL smat_tmp%clear()
                 CALL hsmt_sph(n,atoms,fmpi,ispin,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),usdus,fjgj,smat_tmp,hmat_tmp)
