@@ -131,19 +131,19 @@ CONTAINS
 #endif
                IF (fmpi%n_size==1) THEN !use z-herk trick on single PE
                  !$acc host_data use_device(data_c,ab1)
-                 IF (set0 .and. nn == 1) THEN
-                   CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab,0.0,CPP_data_c,size_data_c)
-                 ELSE               
+                 !IF (set0 .and. nn == 1) THEN
+                 !  CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab,0.0,CPP_data_c,size_data_c)
+                 !ELSE               
                    CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab,1.0,CPP_data_c,size_data_c)
-                 ENDIF
+                 !ENDIF
                  !$acc end host_data
                ELSE
                  !$acc host_data use_device(data_c,ab1,ab_select)
-                 IF (set0 .and. nn == 1) THEN
-                   CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,size_ab,ab_select,lapw%num_local_cols(iintsp),CMPLX(0.0,0.0),CPP_data_c,size_data_c)
-                 ELSE
+                 !IF (set0 .and. nn == 1) THEN
+                 !  CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,size_ab,ab_select,lapw%num_local_cols(iintsp),CMPLX(0.0,0.0),CPP_data_c,size_data_c)
+                 !ELSE
                    CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,size_ab,ab_select,lapw%num_local_cols(iintsp),CMPLX(1.0,0.0),CPP_data_c,size_data_c)
-                 ENDIF
+                 !ENDIF
                  !$acc end host_data
                ENDIF
              ELSE !This is the case of a local off-diagonal contribution.
@@ -154,13 +154,13 @@ CONTAINS
                 abCoeffs(:,:)=conjg(abCoeffs(:,:))
                 !$acc end kernels
                 !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
-                IF (nn == 1) THEN
-                   CALL CPP_zgemm("T","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,abCoeffs,SIZE(abCoeffs,1),&
-                       ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
-                ELSE
+                !IF (nn == 1) THEN
+                !   CALL CPP_zgemm("T","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,abCoeffs,SIZE(abCoeffs,1),&
+                !       ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
+                !ELSE
                    CALL CPP_zgemm("T","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,abCoeffs,SIZE(abCoeffs,1),&
                        ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
-                ENDIF
+                !ENDIF
                 !$acc end host_data
              ENDIF
           ELSE  !here the l_ss off-diagonal part starts
@@ -185,13 +185,13 @@ CONTAINS
                 abCoeffs(:,:)=conjg(abCoeffs(:,:))
                 !$acc end kernels
                 !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
-                IF (nn == 1) THEN
-                   CALL CPP_zgemm("T","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,abCoeffs,SIZE(abCoeffs,1),&
-                       ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
-                ELSE  
+                !IF (nn == 1) THEN
+                !   CALL CPP_zgemm("T","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,abCoeffs,SIZE(abCoeffs,1),&
+                !       ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
+                !ELSE  
                    CALL CPP_zgemm("T","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,abCoeffs,SIZE(abCoeffs,1),&
                        ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
-                ENDIF
+                !ENDIF
                 !$acc end host_data
              ENDIF
           ENDIF
