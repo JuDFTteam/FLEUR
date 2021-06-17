@@ -1064,7 +1064,8 @@ CONTAINS
                shells_at_distance = shells_at_distance + 1
 
                ishell1 = ishell + shells_at_distance
-               numshellAtoms(ishell1) = numshellAtoms(ishell1) + 1
+               numshellAtoms(ishell1) = 1
+               shellDistance(ishell1) = minDist
                shellAtom(ishell1) = nearestNeighbors(iAtom)
                shellDiff(:,numshellAtoms(ishell1),ishell1) = MATMUL(invAmatAux,nearestNeighborDiffs(:,iAtom))
             ENDIF
