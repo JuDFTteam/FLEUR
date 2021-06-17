@@ -1073,7 +1073,7 @@ CONTAINS
          ENDDO
 
          IF (lastIndex<numNearestNeighbors) THEN
-            ishell = ishell + shells_at_distance
+            ishell = ishell + shells_at_distance + 1
          ELSE
             EXIT
          ENDIF
