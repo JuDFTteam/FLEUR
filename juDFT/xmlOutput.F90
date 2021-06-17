@@ -115,7 +115,6 @@ MODULE m_judft_xmlOutput
    END SUBROUTINE endXMLOutput
 
    SUBROUTINE writeXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths,contentList)
-      use m_judft_string
       IMPLICIT NONE
 
       CHARACTER(LEN=*), INTENT(IN)           :: elementName
@@ -310,7 +309,6 @@ MODULE m_judft_xmlOutput
    END SUBROUTINE writeXMLElementMatrixPoly
 
    SUBROUTINE writeXMLElementMatrixFormPoly(elementName,attributeNames,attributeValues,lengths,matrix)
-      use m_judft_string
       IMPLICIT NONE
 
       CHARACTER(LEN=*), INTENT(IN)           :: elementName
@@ -561,7 +559,6 @@ MODULE m_judft_xmlOutput
    END SUBROUTINE openXMLElementPoly
 
    SUBROUTINE openXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths)
-      use m_judft_string
       IMPLICIT NONE
 
       CHARACTER(LEN=*)             :: elementName

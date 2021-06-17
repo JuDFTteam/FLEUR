@@ -43,10 +43,10 @@ MODULE m_types_gfinp
       LOGICAL :: l_kresolved_int = .FALSE. !Should the Greens function be calculated k-resolved up after the Kramers-Kronig
                                            !Transformation (Intersite elements)
    CONTAINS
-      PROCEDURE :: init => init_gfelem
-      PROCEDURE :: countLOs   => countLOs_gfelem !Count the local orbitals attached to the element
-      PROCEDURE :: isoffDiag  => isOffDiag_gfelem !Is this element offdiagonal (i.e either l/=lp or intersite)
-      PROCEDURE :: equals => equals_gfelem !Is the element equal to another (For deduplicating added elements)
+      PROCEDURE :: init                => init_gfelem
+      PROCEDURE :: countLOs            => countLOs_gfelem !Count the local orbitals attached to the element
+      PROCEDURE :: isOffDiag           => isOffDiag_gfelem !Is this element offdiagonal (i.e either l/=lp or intersite)
+      PROCEDURE :: equals              => equals_gfelem !Is the element equal to another (For deduplicating added elements)
       PROCEDURE :: equals_coefficients => equals_coefficients_gfelem !Is the element equal to another from the perspective of the BZ Coefficients
    END TYPE t_gfelementtype
 
@@ -910,7 +910,8 @@ CONTAINS
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist,cubeStartIndex,cubeEndIndex
       INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
-      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,repr
+      INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,repr, shells_at_distance
+      LOGICAL :: l_diff_in_shell, l_found_shell
       REAL :: currentDist,minDist,amatAuxDet,lastDist
       REAL :: amatAux(3,3), invAmatAux(3,3)
       REAL :: taualAux(3,atoms%nat), posAux(3,atoms%nat)
@@ -1027,6 +1028,7 @@ CONTAINS
          nearestNeighborDists(i) = SQRT(sqrDistances(distIndexList(i)))
          nearestNeighborDiffs(:,i) = neighborAtomsDiff(:,distIndexList(i))
       END DO
+
       DEALLOCATE(sqrDistances,distIndexList,neighborAtomsDiff,neighborAtoms)
 
       !Maximum number of shells is number of atoms
@@ -1044,21 +1046,33 @@ CONTAINS
          minDist = MINVAL(nearestNeighborDists(lastIndex:numNearestNeighbors))
          shellDistance(ishell) = minDist
          numshellAtoms(ishell) = 0
+         shells_at_distance = 0
          DO iAtom = lastIndex, numNearestNeighbors
             lastIndex = iAtom
             IF(ABS(nearestNeighborDists(iAtom)-minDist).GT.1e-12) EXIT !List is sorted
-            numshellAtoms(ishell) = numshellAtoms(ishell) + 1
-            IF(shellAtom(ishell) == 0) THEN
-               shellAtom(ishell) = nearestNeighbors(iAtom)
-            ELSE IF(shellAtom(ishell) .NE. nearestNeighbors(iAtom)) THEN
-               CALL juDFT_error("Found inequivalent atoms at same distance (not yet implemented)"&
-                                ,calledby ="addNearestNeighbours_gfelem")
+
+            l_found_shell = .FALSE.
+            DO ishell1 = ishell, ishell + shells_at_distance
+               IF(shellAtom(ishell1)/=nearestNeighbors(iAtom).AND.shellAtom(ishell1)/=0) CYCLE
+               numshellAtoms(ishell1) = numshellAtoms(ishell1) + 1
+               shellAtom(ishell1) = nearestNeighbors(iAtom)
+               shellDiff(:,numshellAtoms(ishell1),ishell1) = MATMUL(invAmatAux,nearestNeighborDiffs(:,iAtom))
+               l_found_shell = .TRUE.
+            ENDDO
+
+            IF(.NOT.l_found_shell) THEN
+               shells_at_distance = shells_at_distance + 1
+
+               ishell1 = ishell + shells_at_distance
+               numshellAtoms(ishell1) = numshellAtoms(ishell1) + 1
+               shellAtom(ishell1) = nearestNeighbors(iAtom)
+               shellDiff(:,numshellAtoms(ishell1),ishell1) = MATMUL(invAmatAux,nearestNeighborDiffs(:,iAtom))
             ENDIF
-            shellDiff(:,numshellAtoms(ishell),ishell) = nearestNeighborDiffs(:,iAtom)
+
          ENDDO
 
          IF (lastIndex<numNearestNeighbors) THEN
-            ishell = ishell + 1
+            ishell = ishell + shells_at_distance
          ELSE
             EXIT
          ENDIF
@@ -1093,6 +1107,15 @@ CONTAINS
                !Is the atom equivalent to another atom already in the shell
                IF(ALL(ABS(diffRot-shellAux(:,ishellAtom)).LT.tol)) CYCLE symLoop
             ENDDO
+
+            l_diff_in_shell = .FALSE.
+            DO ishellAtom = 1, numshellAtoms(ishell)
+               !Is the atom equivalent to any other atom in the previously found shell
+               IF(ALL(ABS(diffRot-shellDiff(:,ishellAtom,ishell)).LT.tol)) THEN
+                  l_diff_in_shell = .TRUE.
+               ENDIF
+            ENDDO
+            IF(.NOT.l_diff_in_shell) CYCLE symLoop
 
             nshellAtom = nshellAtom + 1
             shellAux(:,nshellAtom) = diffRot
@@ -1144,6 +1167,7 @@ CONTAINS
 
          ELSE
             shellop(:,ishell) = shellopAux(:)
+            shellDiff(:,:,ishell) = shellAux(:,:)
          ENDIF
 
       ENDDO
@@ -1167,7 +1191,7 @@ CONTAINS
          repr = 0
          DO ishellAtom = 1, numshellAtoms(ishell)
             !Transform representative element to lattice coordinates
-            diff = MATMUL(invAmatAux,shellDiff(:,ishellAtom,ishell))
+            diff = shellDiff(:,ishellAtom,ishell)
             !l_sphavg has to be false
             i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=shellAtom(ishell),&
                              atomDiff=diff,l_fixedCutoffset=l_fixedCutoffset,&
@@ -1382,12 +1406,22 @@ CONTAINS
 
       checkOnsite_gfinp = .FALSE.
       DO i_gf = 1, this%n
-         IF(this%elem(i_gf)%l.NE.this%elem(i_gf)%lp) CYCLE
-         IF(this%elem(i_gf)%atomType.NE.this%elem(i_gf)%atomTypep) CYCLE
-         IF(ANY(ABS(this%elem(i_gf)%atomDiff).GT.1e-12)) CYCLE
-         checkOnsite_gfinp = .TRUE.
+         IF(.NOT.this%elem(i_gf)%isOffDiag()) checkOnsite_gfinp = .TRUE.
       ENDDO
    END FUNCTION checkOnsite_gfinp
+
+   PURE LOGICAL FUNCTION checkOffdiagonal_gfinp(this)
+
+      !Check if there are any oniste elements
+      CLASS(t_gfinp),               INTENT(IN)    :: this
+
+      INTEGER :: i_gf
+
+      checkOffdiagonal_gfinp = .FALSE.
+      DO i_gf = 1, this%n
+         IF(this%elem(i_gf)%isOffDiag()) checkOffdiagonal_gfinp = .TRUE.
+      ENDDO
+   END FUNCTION checkOffdiagonal_gfinp
 
    SUBROUTINE init_gfelem(this,l,atomType,iContour,l_sphavg,lp,nshells,atomTypep,k_resolved,atomDiff,l_fixedCutoffset,fixedCutoff)
 
@@ -1517,23 +1551,6 @@ CONTAINS
       equals_gfelem = .TRUE.
 
    END FUNCTION equals_gfelem
-
-
-   PURE LOGICAL FUNCTION checkOffdiagonal_gfinp(this)
-
-      !Check if there are any oniste elements
-      CLASS(t_gfinp),               INTENT(IN)    :: this
-
-      INTEGER :: i_gf
-
-      checkOffdiagonal_gfinp = .FALSE.
-      DO i_gf = 1, this%n
-         IF(this%elem(i_gf)%l.EQ.this%elem(i_gf)%lp.AND. &
-            this%elem(i_gf)%atomType.EQ.this%elem(i_gf)%atomTypep.AND. &
-            ALL(ABS(this%elem(i_gf)%atomDiff).LT.1e-12)) CYCLE
-         checkOffdiagonal_gfinp = .TRUE.
-      ENDDO
-   END FUNCTION checkOffdiagonal_gfinp
 
    PURE INTEGER FUNCTION countLOs_gfelem(this,atoms)
 

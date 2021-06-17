@@ -5,4 +5,4 @@
       logical ::ok
       real :: bsca(10,10)
       CALL CHOLESKY_real (m,bsca,SIZE(bsca,1),nb,mycolssca,mpi_comm_rows,mpi_comm_cols,.false.,ok)      
-      end
+      end program

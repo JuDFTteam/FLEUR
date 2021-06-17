@@ -68,5 +68,5 @@ MODULE m_radovlp
     ENDDO
 
   END SUBROUTINE rad_ovlp
-END
+END module
 

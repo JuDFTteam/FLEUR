@@ -10,7 +10,6 @@ set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML
    CrystalFieldOutput VO2_forces VO2_force_levels )
 
 #Currently disabled Tests (Hybrid)
-# SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
 #  CoUnfold
 
 set(SerialOnlyTests  )

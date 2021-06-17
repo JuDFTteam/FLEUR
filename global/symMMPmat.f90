@@ -3,6 +3,7 @@ MODULE m_symMMPmat
    USE m_rotMMPmat
    USE m_types
    USE m_constants
+   USE m_juDFT
 
    IMPLICIT NONE
 
@@ -16,62 +17,118 @@ MODULE m_symMMPmat
 
    CONTAINS
 
-   PURE FUNCTION symMMPmatFull(mmpmat,sym,natom,l,lp,atomDiff,bk,phase) Result(mmpmatSym)
+   FUNCTION symMMPmatFull(mmpmat,sym,natom,l,lp,phase,atomDiff,kpt_indices,sym_op_list,kpts) Result(mmpmatSym)
 
-      COMPLEX,          INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
-      TYPE(t_sym),      INTENT(IN)  :: sym
-      INTEGER,          INTENT(IN)  :: natom
-      INTEGER,          INTENT(IN)  :: l
-      INTEGER,OPTIONAL, INTENT(IN)  :: lp
-      REAL   ,OPTIONAL, INTENT(IN)  :: atomDiff(:)
-      REAL   ,OPTIONAL, INTENT(IN)  :: bk(:)
-      LOGICAL,OPTIONAL, INTENT(IN)  :: phase !multiply spin-offdiagonal phase
-                                             !(if the full matrix is not given)
+      COMPLEX,                INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
+      TYPE(t_sym),            INTENT(IN)  :: sym
+      INTEGER,                INTENT(IN)  :: natom
+      INTEGER,                INTENT(IN)  :: l
+      INTEGER,OPTIONAL,       INTENT(IN)  :: lp
+      LOGICAL,OPTIONAL,       INTENT(IN)  :: phase !multiply spin-offdiagonal phase
+                                                   !(if the full matrix is not given)
+      REAL   ,OPTIONAL,       INTENT(IN)  :: atomDiff(:)
+      INTEGER,OPTIONAL,       INTENT(IN)  :: kpt_indices(:)
+      INTEGER,OPTIONAL,       INTENT(IN)  :: sym_op_list(:)
+      TYPE(t_kpts), OPTIONAL, INTENT(IN)  :: kpts
 
       COMPLEX :: mmpmatSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
-      REAL    :: symFac
-      INTEGER :: it,is,isi,lpArg
-      COMPLEX :: symPhase
+      COMPLEX :: mmpmat_kpt(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
+      INTEGER :: i_op,n_ops,is,isi,lpArg,nkpts,ikpt,kpt,sym_kpt
+      INTEGER, ALLOCATABLE :: sym_ops(:)
+      COMPLEX :: symPhase, intersite_phase
+      INTEGER :: rrot(3,3)
+      COMPLEX :: rrot_dwgn_l(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const)
+      COMPLEX :: rrot_dwgn_lp(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const)
+      REAL    :: symFac,rotbk(3),kpt_parent(3)
 
       mmpmatSym = cmplx_0
 
       lpArg=l
       IF(PRESENT(lp)) lpArg = lp
 
-      symFac = 1.0/sym%invarind(natom)
+      IF(PRESENT(sym_op_list)) THEN
+         sym_ops = sym_op_list
+         n_ops = SIZE(sym_op_list)
+      ELSE
+         n_ops = sym%invarind(natom)
+         sym_ops = sym%invarop(natom,:)
+      ENDIF
 
-      DO it = 1, sym%invarind(natom)
-         is  = sym%invarop(natom,it)
-         isi = sym%invtab(is)
+      IF(PRESENT(kpt_indices)) THEN
+         IF(.NOT.PRESENT(kpts).OR..NOT.PRESENT(atomDiff)) THEN
+            CALL juDFT_error('Not all arguments available for intersite phases',&
+                             hint='This is BUG in FLEUR, please report')
+         ENDIF
+         nkpts = SIZE(kpt_indices)
+      ELSE
+         nkpts = 1
+      ENDIF
+
+      symFac = 1.0/(REAL(n_ops)*REAL(nkpts))
+
+      DO i_op = 1, n_ops
+         is  = sym_ops(i_op)
+         IF(PRESENT(sym_op_list)) THEN
+            isi = is
+         ELSE
+            isi = sym%invtab(is)
+         ENDIF
 
          symPhase = cmplx_1
          IF(PRESENT(phase)) THEN
             IF(phase) symPhase = exp(ImagUnit*sym%phase(isi))
          ENDIF
 
-         IF(PRESENT(atomDiff).AND.PRESENT(bk)) THEN
-            symPhase = symPhase * exp(-tpi_const*ImagUnit*dot_product(bk,matmul(TRANSPOSE(sym%mrot(:,:,isi)),atomDiff)))
-         ENDIF
+         DO ikpt = 1, nkpts
 
-         !The complex conjugation is taken from n_mat
-         !It seems there is an inconsistency here that should be resolved at aome point
-         mmpmatSym = mmpmatSym + symFac * symPhase * conjg(rotMMPmat(mmpmat,dwgn =sym%d_wgn(:,:,lpArg,isi),&
-                                                                            dwgnp=sym%d_wgn(:,:,l    ,isi)))
+            intersite_phase = cmplx_1
+            IF(PRESENT(kpt_indices)) THEN
+               kpt = kpt_indices(ikpt)
+               kpt_parent = kpts%bk(:,kpts%bkp(kpt))
+               sym_kpt = sym%invtab(kpts%bksym(kpt))
+
+               IF(sym_kpt.LE.sym%nop) THEN
+                  rrot = transpose(sym%mrot(:,:,sym_kpt))
+                  rrot_dwgn_l = transpose(sym%d_wgn(:,:,l,sym_kpt))
+                  rrot_dwgn_lp = transpose(sym%d_wgn(:,:,lpArg,sym_kpt))
+               ELSE
+                  rrot = -transpose(sym%mrot(:,:,sym%invtab(sym_kpt-sym%nop)))
+                  rrot_dwgn_l = -transpose(sym%d_wgn(:,:,l,sym%invtab(sym_kpt-sym%nop)))
+                  rrot_dwgn_lp = -transpose(sym%d_wgn(:,:,lpArg,sym%invtab(sym_kpt-sym%nop)))
+               ENDIF
+
+               rotbk = matmul(rrot,kpt_parent)
+               mmpmat_kpt = rotMMPmat(mmpmat,dwgn =rrot_dwgn_lp,&
+                                             dwgnp=rrot_dwgn_l)
+
+               intersite_phase = exp(-tpi_const*ImagUnit*dot_product(rotbk,matmul(sym%mrot(:,:,isi),atomDiff)))
+            ELSE
+               mmpmat_kpt = mmpmat
+            ENDIF
+
+            !The complex conjugation is taken from n_mat
+            !It seems there is an inconsistency here that should be resolved at aome point
+            mmpmatSym = mmpmatSym + symFac * symPhase * intersite_phase &
+                                   * conjg(rotMMPmat(mmpmat_kpt,dwgn =sym%d_wgn(:,:,lpArg,isi),&
+                                                                dwgnp=sym%d_wgn(:,:,l    ,isi)))
+         ENDDO
 
       ENDDO
 
    END FUNCTION symMMPmatFull
 
-   PURE FUNCTION symMMPmatoneSpin(mmpmat,sym,natom,l,lp,atomDiff,bk,phase) Result(mmpmatSym)
+   FUNCTION symMMPmatoneSpin(mmpmat,sym,natom,l,lp,phase,atomDiff,kpt_indices,sym_op_list,kpts) Result(mmpmatSym)
 
-      COMPLEX,          INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:)
-      TYPE(t_sym),      INTENT(IN)  :: sym
-      INTEGER,          INTENT(IN)  :: natom
-      INTEGER,          INTENT(IN)  :: l
-      INTEGER,OPTIONAL, INTENT(IN)  :: lp
-      REAL   ,OPTIONAL, INTENT(IN)  :: atomDiff(:)
-      REAL   ,OPTIONAL, INTENT(IN)  :: bk(:)
-      LOGICAL,OPTIONAL, INTENT(IN)  :: phase
+      COMPLEX,                INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:)
+      TYPE(t_sym),            INTENT(IN)  :: sym
+      INTEGER,                INTENT(IN)  :: natom
+      INTEGER,                INTENT(IN)  :: l
+      INTEGER,OPTIONAL,       INTENT(IN)  :: lp
+      REAL   ,OPTIONAL,       INTENT(IN)  :: atomDiff(:)
+      INTEGER,OPTIONAL,       INTENT(IN)  :: kpt_indices(:)
+      LOGICAL,OPTIONAL,       INTENT(IN)  :: phase
+      INTEGER,OPTIONAL,       INTENT(IN)  :: sym_op_list(:)
+      TYPE(t_kpts), OPTIONAL, INTENT(IN)  :: kpts
 
       INTEGER :: ilow(2),iup(2)
       COMPLEX :: mmpmatSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -84,7 +141,9 @@ MODULE m_symMMPmat
       mmpmatIn(:,:,1) = mmpmat
 
       ALLOCATE(mmpmatOut2,mold=mmpMatIn)
-      mmpmatOut2 = symMMPmatFull(mmpmatIn,sym,natom,l,lp=lp,atomDiff=atomDiff,bk=bk,phase=phase)
+      mmpmatOut2 = symMMPmatFull(mmpmatIn,sym,natom,l,lp=lp,atomDiff=atomDiff,&
+                                 kpt_indices=kpt_indices,phase=phase,sym_op_list=sym_op_list,&
+                                 kpts=kpts)
 
       mmpmatSym = mmpmatOut2(:,:,1)
 

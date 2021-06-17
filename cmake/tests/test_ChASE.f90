@@ -26,4 +26,4 @@ PROGRAM test
 
   CALL chase_r( h, n, v, ritzv, nev, nex, deg, tol, mode, opt )
 
-END
+END program

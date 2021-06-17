@@ -7,4 +7,4 @@
       call magmaf_zhegvdx_2stage_m(1,1,'V','I','L',5,a,5,b,5,&
            0.0,0.0,1,2,mout,eigTemp,work,5,rwork,5,iwork,5,err)
 
-      end
+      end program

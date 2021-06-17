@@ -283,7 +283,7 @@ c
             orient = orient + xvec(ii)*fnorm(ii,ifac)
          ENDDO
          orient = orient - fdist(ifac)
-         IF (orient .LT. 0) iside(ifac) = iminus
+         IF (orient < 0) iside(ifac) = iminus
          WRITE (oUnit,'(1x,2(i4,2x),f10.7,10x,''ifac,iside,orient'',
      +'' for xvec'')') ifac,iside(ifac),orient
       ENDDO
