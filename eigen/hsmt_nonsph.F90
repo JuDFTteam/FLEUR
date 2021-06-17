@@ -154,13 +154,13 @@ CONTAINS
                 abCoeffs(:,:)=conjg(abCoeffs(:,:))
                 !$acc end kernels
                 !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
-                !IF (nn == 1) THEN
-                !   CALL CPP_zgemm("T","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,abCoeffs,SIZE(abCoeffs,1),&
-                !       ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
-                !ELSE
+                IF (nn == 1) THEN
+                   CALL CPP_zgemm("T","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,abCoeffs,SIZE(abCoeffs,1),&
+                       ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
+                ELSE
                    CALL CPP_zgemm("T","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,abCoeffs,SIZE(abCoeffs,1),&
                        ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
-                !ENDIF
+                ENDIF
                 !$acc end host_data
              ENDIF
           ELSE  !here the l_ss off-diagonal part starts
@@ -185,13 +185,13 @@ CONTAINS
                 abCoeffs(:,:)=conjg(abCoeffs(:,:))
                 !$acc end kernels
                 !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
-                !IF (nn == 1) THEN
-                !   CALL CPP_zgemm("T","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,abCoeffs,SIZE(abCoeffs,1),&
-                !       ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
-                !ELSE  
+                IF (nn == 1) THEN
+                   CALL CPP_zgemm("T","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,abCoeffs,SIZE(abCoeffs,1),&
+                       ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
+                ELSE  
                    CALL CPP_zgemm("T","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,abCoeffs,SIZE(abCoeffs,1),&
                        ab_select,size_ab_select,CMPLX(1.0,0.0),CPP_data_c,SIZE_data_c)
-                !ENDIF
+                ENDIF
                 !$acc end host_data
              ENDIF
           ENDIF
