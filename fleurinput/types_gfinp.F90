@@ -985,9 +985,9 @@ CONTAINS
       !Collect the Distances between the refAtom and all other atoms
       neighborAtoms = 0
       iNeighborAtom = 0
-      identicalAtoms = 0
       DO refAt = SUM(atoms%neq(:refAtom-1)) + 1, SUM(atoms%neq(:refAtom))
          refPos(:) = posAux(:,refAt)
+         identicalAtoms = 0
          DO i = cubeStartIndex, cubeEndIndex
             DO j = cubeStartIndex, cubeEndIndex
                DO k = cubeStartIndex, cubeEndIndex
@@ -1016,11 +1016,11 @@ CONTAINS
                END DO
             END DO
          END DO
+         IF (identicalAtoms.GT.1) THEN
+            WRITE(*,*) 'Position: ', refPos(:)
+            CALL juDFT_error("Too many atoms at same position.",calledby ="addNearestNeighbours_gfelem")
+         END IF
       ENDDO
-      IF (identicalAtoms.GT.1) THEN
-         WRITE(*,*) 'Position: ', refPos(:)
-         CALL juDFT_error("Too many atoms at same position.",calledby ="addNearestNeighbours_gfelem")
-      END IF
 
       !Sort the atoms according to distance
       numNearestNeighbors = iNeighborAtom
