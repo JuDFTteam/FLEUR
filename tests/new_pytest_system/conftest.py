@@ -68,7 +68,10 @@ def test_dir():
 def get_build_dir(pytestconfig):
     """Return directory path where to look for executables, some other paths are relative to this"""
     path = pytestconfig.getoption("build_dir")
-    build_path = os.path.abspath(os.path.join(test_dir(), path))
+    if os.path.isabs(path):
+        build_path = path
+    else:
+        build_path = os.path.abspath(os.path.join(test_dir(), path))
     return build_path
 
 def get_work_dir(build_dir):
