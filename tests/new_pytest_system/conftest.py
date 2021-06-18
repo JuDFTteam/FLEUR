@@ -133,11 +133,13 @@ def parser_testdir(build_dir):
 def pytest_addoption(parser):
     """We add an option to pytest to parse the build dir
     """
-    parser.addoption("--build_dir", action="store", default="../../build/")
-    parser.addoption("--cleanup", action="store", default=True)
-    parser.addoption("--runevery", action="store", default=None)
-    parser.addoption("--testoffset", action="store", default=None)
-
+    parser.addoption("--build_dir", action="store", default="../../build/", 
+                    help='Path to the build dir with fleur exe')
+    parser.addoption("--cleanup", action="store", default=True, help='Clean faild dir at session start?')
+    parser.addoption("--runevery", action="store", default=None, help='Run every x test')
+    parser.addoption("--testoffset", action="store", default=None, help='Do not run first x tests')
+    parser.addoption("--skipmarkers", action="store_true",
+                     default="", help="skip tests with these markers")
     #parser.addoption("--testing_dir", action="store", default="")
 
 
@@ -266,6 +268,7 @@ def pytest_collection_modifyitems(session, config, items):
     deselect_by_keyword(items, config)
     deselect_by_mark(items, config)
 
+    markers_cmd_to_skip = config.getoption("--skipmarkers").split(',')
     filename = 'pytest_incl.py'
     path = config.getoption("build_dir")
     test_dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -273,6 +276,7 @@ def pytest_collection_modifyitems(session, config, items):
     confile = os.path.abspath(os.path.join(test_dir_path, path))
     confile = os.path.join(confile, filename)
     marker_list = read_cmake_config(confile)
+    makerr_list = marker_list + markers_cmd_to_skip
     marker_list = sorted(list(set(marker_list)))
     print("\nExcluding tests with the following markers in 'pytest_incl.py': ", marker_list)
     run_every = config.getoption("runevery")
@@ -283,30 +287,7 @@ def pytest_collection_modifyitems(session, config, items):
     if testoffset is None:
         testoffset = 0
     print(f'Running every {run_every}st test with offset {testoffset}, others will be skiped.')
-    '''
-    # TODO get these from config, i.e what cmake has written out
-    libxc = True
-    inpgen = True
-    hdf = True
-
-    marker_to_skip = []
-    if not hdf:
-        marker_to_skip.append('hdf')
-    if not libxc:
-        marker_to_skip.append('libxc')
-    if not inpgen:
-        marker_to_skip.append('inpgen')
-
-    skip_libxc = pytest.mark.skip(reason='Fleur not compiled with libxc.')
-    skip_hdf = pytest.mark.skip(reason='Fleur not compiled with hdf5.')
-    skip_inpgen = pytest.mark.skip(reason='Inpgen binary was not compiled.')
-
-
-    skip_markers = {'libxc' : skip_libxc,
-                   'hdf': skip_hdf,
-                   'inpgen' : skip_inpgen
-                   }
-    '''
+    
     skip_unselected = pytest.mark.skip(reason='This test was unselected by commandline arguments given.')
     #Add to all tests marked with masci_tools
     #pytest.importorskip("masci_tools")
