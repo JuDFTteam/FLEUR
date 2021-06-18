@@ -84,10 +84,12 @@ CONTAINS
          band_list = [(i, i=bandoi, bandof)]
          call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                      c_phase=c_phase_kqpt, parent_z=z_kqpt_p, list=band_list)
+#ifdef CPP_MPI
          call timestart("read_z barrier")
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
          hybdat%max_q = hybdat%max_q - 1
          call timestop("read_z barrier")
+#ifdef CPP_MPI
 
          allocate(psi_kqpt(0:stepf%gridLength-1, psize), stat=ierr)
          if(ierr /= 0) call juDFT_error("can't alloc psi_kqpt")
