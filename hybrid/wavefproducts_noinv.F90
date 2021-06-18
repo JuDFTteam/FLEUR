@@ -13,7 +13,7 @@ CONTAINS
       type(t_nococonv), intent(in)    :: nococonv
       TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_mpdata), intent(in)      :: mpdata
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
+      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
       type(t_mat), intent(in)         :: z_k ! z_k is also z_k_p since ik < nkpt
       type(t_stars), intent(in)       :: stars
       type(t_mat), intent(inout)      :: cprod

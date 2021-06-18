@@ -187,6 +187,8 @@ CONTAINS
          call timestop("alloc phase_vv & dot_res")
          
          call timestart("q_loop")
+         hybdat%max_q = size(k_pack%q_packs)
+         call MPI_Allreduce(MPI_IN_PLACE, hybdat%max_q, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
          DO jq = 1, size(k_pack%q_packs)
             call timestart("initial setup")
             iq = k_pack%q_packs(jq)%ptr
@@ -384,6 +386,13 @@ CONTAINS
          END DO  !jq
       !$acc end data ! exch_vv hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest
       call timestop("q_loop")
+
+      call timestart("balanicing MPI_Barriers")
+      do while (hybdat%max_q > 0)
+         call MPI_Barrier(MPI_COMM_WORLD, ierr)
+         hybdat%max_q = hybdat%max_q - 1
+      enddo
+      call timestop("balanicing MPI_Barriers")
 
       if(allocated(dot_result_r)) deallocate(dot_result_r)
       if(allocated(dot_result_c)) deallocate(dot_result_c)

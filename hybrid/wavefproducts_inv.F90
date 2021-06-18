@@ -20,7 +20,7 @@ CONTAINS
       type(t_stars), intent(in)     :: stars
       type(t_mat), intent(in)       :: z_k  ! = z_k_p since ik < nkpt
       TYPE(t_lapw), INTENT(IN)      :: lapw
-      TYPE(t_hybdat), INTENT(IN)    :: hybdat
+      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       type(t_mat), intent(inout)    :: cprod
 
       ! - scalars -
