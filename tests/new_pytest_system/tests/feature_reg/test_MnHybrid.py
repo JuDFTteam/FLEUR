@@ -10,14 +10,7 @@ def test_MnHybridNoinv(execute_fleur, check_value_outfile, fleur_binary):
     test_file_folder = './inputfiles/MnHybridNoinv/'
     cmd_params = ['-trace']
 
-    # special for this hybrid test:
-    fleur, parallel = fleur_binary
-    if parallel:
-        env = {'juDFT_MPI': "mpirun -n 3 --allow-run-as-root --mca btl vader,self"}
-    else:
-        env = {}
-
-    res_files = execute_fleur(test_file_folder, cmdline_param=cmd_params, env=env)
+    res_files = execute_fleur(test_file_folder, cmdline_param=cmd_params, mpi_procs=3)
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
@@ -48,14 +41,7 @@ def test_MnHybridNoinv_eigpar(execute_fleur, check_value_outfile, fleur_binary):
     test_file_folder = './inputfiles/MnHybridNoinv_eigpar/'
     cmd_params = ['-trace']
 
-    # special for this hybrid test:
-    fleur, parallel = fleur_binary
-    if parallel:
-        env = {'juDFT_MPI': "mpirun -n 3 --allow-run-as-root --mca btl vader,self"}
-    else:
-        env = {}
-
-    res_files = execute_fleur(test_file_folder, cmdline_param=cmd_params, env=env)
+    res_files = execute_fleur(test_file_folder, cmdline_param=cmd_params, mpi_procs=6)
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:

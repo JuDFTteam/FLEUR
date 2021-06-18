@@ -68,7 +68,10 @@ def test_dir():
 def get_build_dir(pytestconfig):
     """Return directory path where to look for executables, some other paths are relative to this"""
     path = pytestconfig.getoption("build_dir")
-    build_path = os.path.abspath(os.path.join(test_dir(), path))
+    if os.path.isabs(path):
+        build_path = path
+    else:
+        build_path = os.path.abspath(os.path.join(test_dir(), path))
     return build_path
 
 def get_work_dir(build_dir):
@@ -460,6 +463,9 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     # create work dir if not existent
     if not os.path.isdir(work_dir_path):
         os.makedirs(work_dir_path)  # Will create also Testing dir if not existent
+    else:
+        shutil.rmtree(work_dir_path)
+        os.mkdir(work_dir_path)
 
     # clean parser_testdir
     if os.path.isdir(parser_testdir_path):
@@ -587,6 +593,9 @@ def execute_inpgen(inpgen_binary, work_dir):
                     else:
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
         #print(inpgen_binary)
+        if inpgen_binary is None:
+            print('No Inpgen binary found')
+            return {}
         arg_list = [inpgen_binary] + cmdline_param
         #print(arg_list)
 
@@ -629,7 +638,7 @@ def execute_fleur(fleur_binary, work_dir):
     """
     Fixture which returns an execute_fleur function
     """
-    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}, stderr='stderr', stdout='stdout', sub_dir=None):
+    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}, stderr='stderr', stdout='stdout', sub_dir=None, mpi_procs=2):
         """
         Function which copies the input files
         executes fleur with the given cmdline_param
@@ -645,6 +654,8 @@ def execute_fleur(fleur_binary, work_dir):
         :return: a dictionary of the form 'filename :filepath'
         """
         import subprocess
+        import string
+        import warnings
 
         if sub_dir is not None:
             workdir = os.path.abspath(os.path.join(work_dir, sub_dir))
@@ -695,9 +706,34 @@ def execute_fleur(fleur_binary, work_dir):
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
 
         fleur, parallel = fleur_binary
+        if fleur is None:
+            print('No Fleur binary found')
+            return {}
+
         #args have to be splited, otherwise it will be executed as one command
         mpiruncmd = run_env.get('juDFT_MPI', None)
+
+        if run_env.get('juDFT_NPROCS', None) is not None:
+            mpi_procs = run_env.get('juDFT_NPROCS', None)
+
+        if mpiruncmd is None and parallel:
+            mpiruncmd = 'mpirun -n {mpi_procs} '
+
         if mpiruncmd is not None:
+            if mpiruncmd.strip() != 'time':
+                if len([val[0] for val in string.Formatter().parse(mpiruncmd)]) != 0:
+                    try:
+                        mpiruncmd = mpiruncmd.format(mpi_procs=mpi_procs)
+                    except (ValueError, KeyError) as exc:
+                        raise KeyError("mpirun command could not be constructed: {}".format(exc))
+
+                else:
+                    warnings.warn('The number of mpi processes will be appended to the mpicommand:\n {}'
+                                  'If this should not happen enter the text {{mpi_procs}} into the'
+                                  'command at the right place. For overriding the number of mpi processes use "juDFT_NPROCS"'.format(mpiruncmd))
+
+                    mpiruncmd += ' {} '.format(mpi_procs)
+
             mpiruncmd = mpiruncmd.split()
         else:
             mpiruncmd = []

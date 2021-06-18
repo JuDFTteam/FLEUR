@@ -289,7 +289,7 @@ CONTAINS
       CLASS(t_gfinp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
-      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF,nshells,maxIntersiteElem
+      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF,nshells
       INTEGER :: i,l,lp,iContour,iContourp
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str
@@ -392,9 +392,6 @@ CONTAINS
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
       n_hia = 0
 
-      !Maximum number of intersite elements (number of unit cells in a 7x7x7 block) (will be reallocated later with actual size)
-      maxIntersiteElem = 343
-      ALLOCATE(this%elem((lmaxU_const+1)**2*maxIntersiteElem*ntype)) !ntype shoul be nat ??
       ALLOCATE(this%hiaElem(4*ntype))
       ALLOCATE(this%numTorgueElems(ntype),source=0)
       ALLOCATE(this%torgueElem(ntype,(lmaxU_const+1)**2),source=-1)
@@ -862,6 +859,7 @@ CONTAINS
 
       LOGICAL l_found
       TYPE(t_gfelementtype) :: new_element
+      TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
 
       CALL new_element%init(l,atomType,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
                             nshells=nshells,atomDiff=atomDiff,k_resolved=k_resolved,&
@@ -871,7 +869,19 @@ CONTAINS
       i_gf = this%find(new_element,l_found=l_found)
       IF(l_found) RETURN
 
+      IF(.NOT.ALLOCATED(this%elem)) THEN
+         ALLOCATE(this%elem((lmaxU_const+1)**2))
+      ENDIF
+
       this%n = this%n + 1
+
+      IF(this%n>SIZE(this%elem)) THEN
+         !Reallocate with doubled size
+         ALLOCATE(gfelem(2*this%n))
+         gfelem(:this%n-1) = this%elem(:this%n-1)
+         CALL move_alloc(gfelem,this%elem)
+      ENDIF
+
       this%elem(this%n) = new_element
       i_gf = this%n
 
@@ -1064,7 +1074,8 @@ CONTAINS
                shells_at_distance = shells_at_distance + 1
 
                ishell1 = ishell + shells_at_distance
-               numshellAtoms(ishell1) = numshellAtoms(ishell1) + 1
+               numshellAtoms(ishell1) = 1
+               shellDistance(ishell1) = minDist
                shellAtom(ishell1) = nearestNeighbors(iAtom)
                shellDiff(:,numshellAtoms(ishell1),ishell1) = MATMUL(invAmatAux,nearestNeighborDiffs(:,iAtom))
             ENDIF
@@ -1072,7 +1083,7 @@ CONTAINS
          ENDDO
 
          IF (lastIndex<numNearestNeighbors) THEN
-            ishell = ishell + shells_at_distance
+            ishell = ishell + shells_at_distance + 1
          ELSE
             EXIT
          ENDIF

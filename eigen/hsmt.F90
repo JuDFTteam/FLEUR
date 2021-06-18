@@ -108,7 +108,6 @@ CONTAINS
                 CALL timestop("hsmt_distspins")
               ELSE !Add off-diagonal contributions to Hamiltonian if needed
                 IF (noco%l_unrestrictMT(n).OR.noco%l_spinoffd_ldau(n)) THEN
-                  CALL hmat_tmp%clear()
                   CALL hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,iintsp,jintsp,hmat_tmp,hmat)
                 ENDIF
                 IF (noco%l_constrained(n)) CALL hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
