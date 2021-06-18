@@ -25,20 +25,20 @@ MODULE m_types_nococonv
     procedure:: init_ss=>t_nococonv_initss
     !Routines to obtain chi transformation matrix
     procedure:: chi_pass
-    procedure,NOPASS:: chi_explicit
+    procedure:: chi_explicit
     generic :: chi=>chi_pass,chi_explicit
     !Routines to rotate density matrix
     procedure:: rotdenmat_mat,rotdenmat_denmat
-    procedure,NOPASS:: rotdenmat_explicit_mat,rotdenmat_explicit_denmat
-    generic :: rotdenmat=>rotdenmat_mat,rotdenmat_denmat,rotdenmat_explicit_mat,rotdenmat_explicit_denmat
+    procedure:: rotdenmat_explicit_mat,rotdenmat_explicit_denmat
+    generic  :: rotdenmat=>rotdenmat_mat,rotdenmat_denmat,rotdenmat_explicit_mat,rotdenmat_explicit_denmat
     !Functions to get magnetiszation vector from density matrix
     procedure :: denmat_to_mag_mat,denmat_to_mag_denmat
     generic   :: denmat_to_mag=>denmat_to_mag_mat,denmat_to_mag_denmat
     !function to construct density matrix from magnetisaztion vector
-    procedure,nopass:: mag_to_denmat
+    procedure:: mag_to_denmat
     !Rotate magnetisation vector
     procedure :: rot_magvec
-    procedure,nopass:: avg_moments
+    procedure :: avg_moments
   end TYPE
   public :: t_nococonv
 CONTAINS
@@ -46,10 +46,11 @@ CONTAINS
     CLASS(t_nococonv),INTENT(IN)  :: nococonv
     INTEGER,INTENT(IN)           :: n
     COMPLEX                      :: chi_pass(2,2)
-    chi_pass=chi_explicit(nococonv%alph(n),nococonv%beta(n))
+    chi_pass=nococonv%chi_explicit(nococonv%alph(n),nococonv%beta(n))
   end function
 
-  function chi_explicit(alpha,beta)result(chi)
+  function chi_explicit(nococonv, alpha,beta)result(chi)
+    class(t_nococonv), intent(in) :: nococonv
     REAL,INTENT(IN) :: alpha,beta
     COMPLEX         :: chi(2,2)
     chi(1,1) =  exp(ImagUnit*alpha/2)*cos(beta/2)
@@ -66,7 +67,8 @@ CONTAINS
     mag=nococonv%denmat_to_mag_denmat(real(mat(1,1)),real(mat(2,2)),mat(2,1))
   end function
 
-  function mag_to_denmat(mag)result(mat)
+  function mag_to_denmat(nococonv, mag)result(mat)
+      class(t_nococonv), intent(in) :: nococonv
   complex:: mat(2,2)
   real,intent(in) :: mag(0:3)
   mat(1,1)=0.5*(mag(3)+mag(0))
@@ -109,7 +111,7 @@ CONTAINS
 
     real :: r11,r22
     r11=real(mat(1,1));r22=real(mat(2,2))
-    call rotdenmat_explicit_denmat(nococonv%alph(n),nococonv%beta(n),r11,r22,mat(2,1),toGlobal)
+    call nococonv%rotdenmat_explicit_denmat(nococonv%alph(n),nococonv%beta(n),r11,r22,mat(2,1),toGlobal)
     mat(1,1)=r11
     mat(2,2)=r22
     mat(1,2)=conjg(mat(2,1))
@@ -122,26 +124,28 @@ CONTAINS
     REAL, INTENT    (INOUT) :: rho22
     COMPLEX, INTENT (INOUT) :: rho21
     LOGICAL,INTENT(IN),OPTIONAL:: toGlobal
-    call rotdenmat_explicit_denmat(nococonv%alph(n),nococonv%beta(n),rho11,rho22,rho21,toGlobal)
+    call nococonv%rotdenmat_explicit_denmat(nococonv%alph(n),nococonv%beta(n),rho11,rho22,rho21,toGlobal)
   end subroutine
 
 
-  subroutine rotdenmat_explicit_mat(alph,beta,mat,toGlobal)
+  subroutine rotdenmat_explicit_mat(nococonv,alph,beta,mat,toGlobal)
+    CLASS(t_nococonv),INTENT(IN) :: nococonv
     REAL, INTENT    (IN) :: alph,beta
     COMPLEX, INTENT (INOUT) :: mat(2,2)
     LOGICAL,INTENT(IN),OPTIONAL:: toGlobal
     real :: r11,r22
     r11=real(mat(1,1));r22=real(mat(2,2))
-    call rotdenmat_explicit_denmat(alph,beta,r11,r22,mat(2,1),toGlobal)
+    call nococonv%rotdenmat_explicit_denmat(alph,beta,r11,r22,mat(2,1),toGlobal)
     mat(1,1)=r11
     mat(2,2)=r22
     mat(1,2)=conjg(mat(2,1))
   end subroutine
 
-  SUBROUTINE rotdenmat_explicit_denmat(alph,beta,rho11,rho22,rho21,toGlobal)
+  SUBROUTINE rotdenmat_explicit_denmat(nococonv, alph,beta,rho11,rho22,rho21,toGlobal)
           use m_constants   
           IMPLICIT NONE 
     
+          CLASS(t_nococonv),INTENT(IN) :: nococonv
           REAL, INTENT    (IN) :: alph,beta
           REAL, INTENT    (INOUT) :: rho11
           REAL, INTENT    (INOUT) :: rho22
@@ -232,11 +236,12 @@ CONTAINS
       END IF
     end subroutine
 
-    subroutine avg_moments(den,atoms,magm,theta,phi)
+    subroutine avg_moments(nococonv, den,atoms,magm,theta,phi)
       use m_types_atoms
       use m_types_potden
       use m_polangle
       use m_intgr
+      class(t_nococonv), intent(in) :: nococonv
       class(t_potden),INTENT(IN):: den
       type(t_atoms),INTENT(IN)  :: atoms 
       real,INTENT(OUT)          :: magm(3,atoms%ntype)
