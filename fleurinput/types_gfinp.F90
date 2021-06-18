@@ -919,7 +919,7 @@ CONTAINS
       REAL,    PARAMETER :: tol = 1e-7
 
       INTEGER :: i,j,k,m,n,na,iAtom,maxAtoms,identicalAtoms,nshellDist,cubeStartIndex,cubeEndIndex
-      INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf
+      INTEGER :: numNearestNeighbors,ishell,lastIndex,iNeighborAtom,i_gf,refAt
       INTEGER :: iop,ishell1,ishellAtom,nshellAtom,nshellAtom1,nshellsFound,repr, shells_at_distance
       LOGICAL :: l_diff_in_shell, l_found_shell
       REAL :: currentDist,minDist,amatAuxDet,lastDist
@@ -982,49 +982,41 @@ CONTAINS
       ALLOCATE (nearestNeighborDists(maxAtoms))
       ALLOCATE (nearestNeighborDiffs(3,maxAtoms))
 
-      !Find the reference atom
-      iAtom = 0
-      DO n = 1, atoms%ntype
-         DO na = 1, atoms%neq(n)
-            iAtom = iAtom + 1
-            IF((n.EQ.refAtom).AND.na.EQ.1) THEN
-               refPos(:) = posAux(:,iAtom)
-            ENDIF
-         ENDDO
-      ENDDO
-
       !Collect the Distances between the refAtom and all other atoms
       neighborAtoms = 0
       iNeighborAtom = 0
       identicalAtoms = 0
-      DO i = cubeStartIndex, cubeEndIndex
-         DO j = cubeStartIndex, cubeEndIndex
-            DO k = cubeStartIndex, cubeEndIndex
-               DO m = 1, 3
-                  offsetPos(m) = i*amatAux(m,1) + j*amatAux(m,2) + k*amatAux(m,3)
-               END DO
-               iAtom = 0
-               DO n = 1, atoms%ntype
-                  DO na = 1, atoms%neq(n)
-                     iAtom = iAtom + 1
-                     pos(:) = posAux(:,iAtom) + offsetPos(:)
-                     currentDist = (refPos(1) - pos(1))**2 + &
-                                   (refPos(2) - pos(2))**2 + &
-                                   (refPos(3) - pos(3))**2
-                     currentDiff = refPos(:) - pos(:)
-                     IF (currentDist.LT.0.000001) THEN
-                        identicalAtoms = identicalAtoms + 1
-                     ELSE
-                        iNeighborAtom = iNeighborAtom + 1
-                        neighborAtoms(iNeighborAtom) = n
-                        neighborAtomsDiff(:,iNeighborAtom) = currentDiff(:)
-                        sqrDistances(iNeighborAtom) = currentDist
-                     END IF
-                  ENDDO
+      DO refAt = SUM(atoms%neq(:refAtom-1)) + 1, SUM(atoms%neq(:refAtom))
+         refPos(:) = posAux(:,refAt)
+         DO i = cubeStartIndex, cubeEndIndex
+            DO j = cubeStartIndex, cubeEndIndex
+               DO k = cubeStartIndex, cubeEndIndex
+                  DO m = 1, 3
+                     offsetPos(m) = i*amatAux(m,1) + j*amatAux(m,2) + k*amatAux(m,3)
+                  END DO
+                  iAtom = 0
+                  DO n = 1, atoms%ntype
+                     DO na = 1, atoms%neq(n)
+                        iAtom = iAtom + 1
+                        pos(:) = posAux(:,iAtom) + offsetPos(:)
+                        currentDist = (refPos(1) - pos(1))**2 + &
+                                      (refPos(2) - pos(2))**2 + &
+                                      (refPos(3) - pos(3))**2
+                        currentDiff = refPos(:) - pos(:)
+                        IF (currentDist.LT.0.000001) THEN
+                           identicalAtoms = identicalAtoms + 1
+                        ELSE
+                           iNeighborAtom = iNeighborAtom + 1
+                           neighborAtoms(iNeighborAtom) = n
+                           neighborAtomsDiff(:,iNeighborAtom) = currentDiff(:)
+                           sqrDistances(iNeighborAtom) = currentDist
+                        END IF
+                     ENDDO
+                  END DO
                END DO
             END DO
          END DO
-      END DO
+      ENDDO
       IF (identicalAtoms.GT.1) THEN
          WRITE(*,*) 'Position: ', refPos(:)
          CALL juDFT_error("Too many atoms at same position.",calledby ="addNearestNeighbours_gfelem")
