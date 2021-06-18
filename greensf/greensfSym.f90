@@ -37,7 +37,6 @@ MODULE m_greensfSym
 
       INTEGER imat,iBand,iLO,ikpt_f,nkpt
       COMPLEX, ALLOCATABLE :: imSym(:,:)
-      COMPLEX, ALLOCATABLE :: imSym_tmp(:,:,:)
       INTEGER, ALLOCATABLE :: iks(:)
 
       ALLOCATE(iks(kpts%nkptf), source=0)
@@ -51,9 +50,8 @@ MODULE m_greensfSym
       !$OMP parallel default(none) &
       !$OMP shared(ikpt_i,ikpt,nkpt,iks,i_elem,i_elemLO,nLO,atomType,natom,l,lp,l_intersite,l_sphavg)&
       !$OMP shared(ispin,sym,kpts,atomFactor,addPhase,atomDiff,im,greensfBZintCoeffs,noco,nococonv,sym_op_list)&
-      !$OMP private(imat,iBand,imSym,imSym_tmp,iLO)
+      !$OMP private(imat,iBand,imSym,iLO)
       ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
-      ALLOCATE(imSym_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1),source=cmplx_0)
       !$OMP do collapse(2)
       DO imat = 1, SIZE(im,4)
          DO iBand = 1, SIZE(im,3)
@@ -66,13 +64,9 @@ MODULE m_greensfSym
 
             !Rotate into the local real frame
             IF(noco%l_noco) THEN
-               imSym_tmp(:,:,1) = imSym
-               imSym_tmp = rotMMPmat(imSym_tmp,0.0,-nococonv%beta(atomType),-nococonv%alph(atomType),l)
-               imSym = imSym_tmp(:,:,1)
+               imSym = rotMMPmat(imSym,0.0,-nococonv%beta(atomType),-nococonv%alph(atomType),l)
             ELSE IF(noco%l_soc) THEN
-               imSym_tmp(:,:,1) = imSym
-               imSym_tmp = rotMMPmat(imSym_tmp,0.0,-nococonv%theta,-nococonv%phi,l)
-               imSym = imSym_tmp(:,:,1)
+               imSym = rotMMPmat(imSym,0.0,-nococonv%theta,-nococonv%phi,l)
             ENDIF
 
             IF(l_sphavg) THEN

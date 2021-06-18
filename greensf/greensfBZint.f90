@@ -74,12 +74,12 @@ MODULE m_greensfBZint
          IF(ANY(ABS(atomDiff).GT.1e-12)) THEN
             n_op = 1
             repr_ops(1) = 1
-            DO i_gf_p = 1, gfinp%n
-               IF(gfinp%elem(i_gf_p)%representative_elem==i_gf) THEN
-                  n_op = n_op + 1
-                  repr_ops(n_op) = gfinp%elem(i_gf_p)%representative_op
-               ENDIF
-            ENDDO
+            ! DO i_gf_p = 1, gfinp%n
+            !    IF(gfinp%elem(i_gf_p)%representative_elem==i_gf) THEN
+            !       n_op = n_op + 1
+            !       repr_ops(n_op) = gfinp%elem(i_gf_p)%representative_op
+            !    ENDIF
+            ! ENDDO
          ENDIF
 
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&

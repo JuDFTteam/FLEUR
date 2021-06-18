@@ -18,4 +18,4 @@ CONTAINS
       qranf = qranf - aint(qranf)
       RETURN
    END FUNCTION
-END
+END MODULE m_qranf

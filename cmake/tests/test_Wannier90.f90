@@ -110,4 +110,4 @@ PROGRAM test
                       proj_radial,proj_z,&
                       proj_x,proj_zona,exclude_bands)
 
-END
+END program

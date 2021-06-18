@@ -9,7 +9,6 @@ CONTAINS
    SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_xc,grad, atom_num)
       USE m_mt_tofrom_grid
       USE m_types
-      use m_judft_string
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot

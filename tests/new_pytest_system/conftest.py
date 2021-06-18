@@ -65,12 +65,43 @@ def test_dir():
     test_dir_path = os.path.dirname(os.path.abspath(__file__))
     return test_dir_path
 
+def get_build_dir(pytestconfig):
+    """Return directory path where to look for executables, some other paths are relative to this"""
+    path = pytestconfig.getoption("build_dir")
+    if os.path.isabs(path):
+        build_path = path
+    else:
+        build_path = os.path.abspath(os.path.join(test_dir(), path))
+    return build_path
+
+def get_work_dir(build_dir):
+    """Return directory path where execute tests in"""
+    path = "./Testing/work/"
+    work_dir_path = os.path.abspath(os.path.join(build_dir, path))
+    return work_dir_path
+
+def get_stage_dir(build_dir):
+    """Return directory path where tests results can be stage in"""
+    path = "./Testing/stage_dir/"
+    work_dir_path = os.path.abspath(os.path.join(build_dir, path))
+    return work_dir_path
+
+def get_failed_dir(build_dir):
+    """Return directory path where execute tests in"""
+    path = "./Testing/failed_test_results/"
+    failed_dir_path = os.path.abspath(os.path.join(build_dir, path))
+    return failed_dir_path
+
+def get_parser_testdir(build_dir):
+    """Return directory path where execute tests in"""
+    path = "./Testing/parser_testdir/"
+    parser_testdir_path = os.path.abspath(os.path.join(build_dir, path))
+    return parser_testdir_path
+
 @pytest.fixture(scope='session')
 def build_dir(pytestconfig):
     """Return directory path where to look for executables, some other paths are relative to this"""
-    path = pytestconfig.getoption("build_dir")
-    build_path = os.path.abspath(os.path.join(test_dir(), path))
-    return build_path
+    return get_build_dir(pytestconfig)
 
 @pytest.fixture(scope='session')
 def cleanup(pytestconfig):
@@ -80,31 +111,22 @@ def cleanup(pytestconfig):
 @pytest.fixture(scope='session')
 def work_dir(build_dir):
     """Return directory path where execute tests in"""
-    path = "./Testing/work/"
-    work_dir_path = os.path.abspath(os.path.join(build_dir, path))
-    return work_dir_path
+    return get_work_dir(build_dir)
 
 @pytest.fixture(scope='session')
 def stage_dir(build_dir):
     """Return directory path where tests results can be stage in"""
-    path = "./Testing/stage_dir/"
-    work_dir_path = os.path.abspath(os.path.join(build_dir, path))
-    return work_dir_path
-
+    return get_stage_dir(build_dir)
 
 @pytest.fixture(scope='session')
 def failed_dir(build_dir):
     """Return directory path where execute tests in"""
-    path = "./Testing/failed_test_results/"
-    failed_dir_path = os.path.abspath(os.path.join(build_dir, path))
-    return failed_dir_path
+    return get_failed_dir(build_dir)
 
 @pytest.fixture(scope='session')
 def parser_testdir(build_dir):
     """Return directory path where execute tests in"""
-    path = "./Testing/parser_testdir/"
-    parser_testdir_path = os.path.abspath(os.path.join(build_dir, path))
-    return parser_testdir_path
+    return get_parser_testdir(build_dir)
 
 ##### change pytest configuration and execution:
 
@@ -118,20 +140,43 @@ def pytest_addoption(parser):
 
     #parser.addoption("--testing_dir", action="store", default="")
 
-'''
+
 # Does not work with the fixtures
+@pytest.mark.trylast
 def pytest_report_header(config):#libs):
     """Add further information to header"""
     # ggf add version info
-    path_fleur, para = get_fleur_binary()
-    path_inp = get_inpgen_binary()
-    workdir = work_dir()
-    add_header_string = "Fleur exe: {} \n".format(path_fleur)
-    add_header_string += "Inpgen exe: {} \n".format(path_inp)
-    add_header_string += "Linked libraries: \n"
-    add_header_string += "Running tests in {} \n".format(workdir)
-    return add_header_string
-'''
+
+    build_dir = get_build_dir(config)
+    work_dir = get_work_dir(build_dir)
+    failed_dir = get_failed_dir(build_dir)
+    path_fleur, para = get_fleur_binary(build_dir)
+    path_inp = get_inpgen_binary(build_dir)
+    libs = []
+
+    version_str = 'Not installed'
+    try:
+        import masci_tools
+        version_str = masci_tools.__version__
+        version = tuple(int(val) for val in version_str.replace('-','.').split('.')[:3])
+    except ImportError:
+        parser_tests = False
+    else:
+        if version >= (0,4,0):
+            parser_tests = True
+
+    reporter = config.pluginmanager.getplugin("terminalreporter")
+    reporter.write_sep('-',title='Fleur test session')
+    add_header_strings = [f"Fleur exe: {path_fleur}",
+                          f"Inpgen exe: {path_inp}",
+                          f"NOT linked libraries: {libs}",
+                          f"Running tests in: {work_dir}",
+                          f"Failed tests will be copied to: {failed_dir}",
+                          f"Parser tests {'will' if parser_tests else 'will not'} be run (masci-tools version {version_str})",
+                           "Now cleaning work, failed and parser_test directories...\n"]
+
+    return add_header_strings
+
 def read_cmake_config(configfilepath):
     """
     reads build path
@@ -379,7 +424,7 @@ def pytest_configure(config):
 ##### fixtures for whole test session ####
 
 @pytest.fixture(scope='session', autouse=True)
-def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleur_binary):
+def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleur_binary, request):
     """
     Setup a fleur test session
     - cleanup directories
@@ -394,6 +439,7 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     failed_dir_path = failed_dir
     work_dir_path = work_dir
     libs = []
+    capmanager = request.config.pluginmanager.getplugin("capturemanager")
 
     # First we print out some info, which will show at the end of session:
     path_fleur, para = fleur_binary
@@ -408,7 +454,8 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     add_header_string += "Cleaning now work, failed and parser_test directories...\n"
     add_header_string += "#########################################\n"
     #LOGGER.info(add_header_string)
-    print(add_header_string)
+    #with capmanager.global_and_fixture_disabled():
+        #print(add_header_string)
 
     # We clean before and not after test session, because that way
     # people can investigate the files
@@ -416,6 +463,9 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     # create work dir if not existent
     if not os.path.isdir(work_dir_path):
         os.makedirs(work_dir_path)  # Will create also Testing dir if not existent
+    else:
+        shutil.rmtree(work_dir_path)
+        os.mkdir(work_dir_path)
 
     # clean parser_testdir
     if os.path.isdir(parser_testdir_path):
@@ -564,6 +614,9 @@ def execute_inpgen(inpgen_binary, work_dir):
                     else:
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
         #print(inpgen_binary)
+        if inpgen_binary is None:
+            print('No Inpgen binary found')
+            return {}
         arg_list = [inpgen_binary] + cmdline_param
         #print(arg_list)
 
@@ -606,7 +659,7 @@ def execute_fleur(fleur_binary, work_dir):
     """
     Fixture which returns an execute_fleur function
     """
-    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}, stderr='stderr', stdout='stdout', sub_dir=None):
+    def _execute_fleur(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[], env={}, stderr='stderr', stdout='stdout', sub_dir=None, mpi_procs=2):
         """
         Function which copies the input files
         executes fleur with the given cmdline_param
@@ -622,6 +675,8 @@ def execute_fleur(fleur_binary, work_dir):
         :return: a dictionary of the form 'filename :filepath'
         """
         import subprocess
+        import string
+        import warnings
 
         if sub_dir is not None:
             workdir = os.path.abspath(os.path.join(work_dir, sub_dir))
@@ -672,9 +727,34 @@ def execute_fleur(fleur_binary, work_dir):
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
 
         fleur, parallel = fleur_binary
+        if fleur is None:
+            print('No Fleur binary found')
+            return {}
+
         #args have to be splited, otherwise it will be executed as one command
         mpiruncmd = run_env.get('juDFT_MPI', None)
+
+        if run_env.get('juDFT_NPROCS', None) is not None:
+            mpi_procs = run_env.get('juDFT_NPROCS', None)
+
+        if mpiruncmd is None and parallel:
+            mpiruncmd = 'mpirun -n {mpi_procs} '
+
         if mpiruncmd is not None:
+            if mpiruncmd.strip() != 'time':
+                if len([val[0] for val in string.Formatter().parse(mpiruncmd)]) != 0:
+                    try:
+                        mpiruncmd = mpiruncmd.format(mpi_procs=mpi_procs)
+                    except (ValueError, KeyError) as exc:
+                        raise KeyError("mpirun command could not be constructed: {}".format(exc))
+
+                else:
+                    warnings.warn('The number of mpi processes will be appended to the mpicommand:\n {}'
+                                  'If this should not happen enter the text {{mpi_procs}} into the'
+                                  'command at the right place. For overriding the number of mpi processes use "juDFT_NPROCS"'.format(mpiruncmd))
+
+                    mpiruncmd += ' {} '.format(mpi_procs)
+
             mpiruncmd = mpiruncmd.split()
         else:
             mpiruncmd = []
@@ -726,6 +806,9 @@ def validate_out_xml_file(execute_fleur):
         Which is probably faster.
         So far we stay to the validatation test. Still one should test the fleur validatation feature at least once
         """
+        import subprocess
+        import shutil
+
         if 'out.xml' not in file_path:
             raise ValueError('No out.xml file given for validation.')
         root = file_path.split('out.xml')[0]
@@ -739,7 +822,21 @@ def validate_out_xml_file(execute_fleur):
             return True
             #raise ValueError(msg)
         # this fails as validation fails
-        execute_fleur(cmdline_param=['--schema', f'{schema_path}', f'{file_path}'], stderr='xmllintErrors', stdout='last_xmllintOut')
+        xmllint = shutil.which('xmllint')
+        if xmllint is None:
+            msg = "No xmllint executable found"
+            # the original test just continued
+            print(msg)
+            return True
+
+        with open(f"{root}/xmllintOut", "bw") as f_stdout:
+            with open(f"{root}/xmllintErrors", "bw") as f_stderr:
+                try:
+                    subprocess.run([xmllint, '--schema', f'{schema_path}', f'{file_path}'],
+                                   stderr=f_stderr, stdout=f_stdout, check=True)
+                except Exception as e:
+                    print(f"Failed validating outputfile: {e}")
+                    return False
         return True
 
     return _validate_out_xml_file

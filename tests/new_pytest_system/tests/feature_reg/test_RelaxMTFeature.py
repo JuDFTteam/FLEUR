@@ -4,7 +4,7 @@ import pytest
 @pytest.mark.relaxation
 @pytest.mark.magnetism
 @pytest.mark.hdf
-def test_RelaxMTFeature(execute_fleur, grep_number, grep_exists):
+def DEACTIVATED_test_RelaxMTFeature(execute_fleur, grep_number, grep_exists):
     """Tests relaxation feature of FFN in the MT
 
     Simple test of Fleur with one step:

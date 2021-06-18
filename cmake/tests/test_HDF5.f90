@@ -4,4 +4,4 @@
       CALL h5open_f(error)
       CALL h5close_f(error)
 
-      end
+      end program
