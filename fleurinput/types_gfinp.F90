@@ -953,7 +953,7 @@ CONTAINS
       cubeEndIndex   =  1
       cubeStartIndex = -cubeEndIndex
       !How many atoms are there in total (in all of the copies)
-      maxAtoms = atoms%nat * (cubeEndIndex-cubeStartIndex+1)**3
+      maxAtoms = atoms%nat * (cubeEndIndex-cubeStartIndex+1)**3 * atoms%neq(refAtom)
 
       DO i = 1, 3
          DO j = 1, 3
