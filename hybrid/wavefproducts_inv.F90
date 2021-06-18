@@ -30,7 +30,7 @@ CONTAINS
 
 
       ! - local scalars -
-      INTEGER                 ::    g_t(3)
+      INTEGER                 ::    g_t(3), i, j
       REAL                    ::    kqpt(3), kqpthlp(3)
 
       type(t_mat) ::  z_kqpt_p
@@ -46,24 +46,39 @@ CONTAINS
       ! determine number of kqpt
       ikqpt = fi%kpts%get_nk(kqpt)
       allocate (c_phase_kqpt(hybdat%nbands(fi%kpts%bkp(ikqpt),jsp)))
-      allocate(tmp(hybdat%nbasp, cprod%matsize2))
       IF (.not. fi%kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
-      !$acc data copyin(cprod, hybdat, hybdat%nbasp) create(cprod%data_c, tmp) copyout(cprod%data_r)
-         !$acc kernels present(cprod, cprod%data_r, tmp)
-         cprod%data_r = 0.0
-         tmp = 0.0
-         !$acc end kernels
-         call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+      !$acc data copyin(hybdat, hybdat%nbasp)
+         !$acc data copyin(cprod) create(cprod%data_c) copyout(cprod%data_r)
+            !$acc kernels present(cprod, cprod%data_r)
+            cprod%data_r = 0.0
+            !$acc end kernels
+            call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+                                       ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+         !$acc end data ! cprod
 
-         call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
-                                      jsp, ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, tmp)
-         call transform_to_realsph(fi, mpdata, tmp)
-         !$acc kernels present(cprod, cprod%data_r, tmp, hybdat, hybdat%nbasp)
-         cprod%data_r(:hybdat%nbasp,:) = real(tmp)
-         !$acc end kernels
-      !$acc end data ! cprod
+         
+         allocate(tmp(hybdat%nbasp, cprod%matsize2))
+         !$acc data copyout(tmp)
+            !$acc kernels present(tmp)
+            tmp = cmplx_0
+            !$acc end kernels
+            call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
+                                       jsp, ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, tmp)
+            call transform_to_realsph(fi, mpdata, tmp)
+         !$acc end data
+            
+         call timestart("cpu cmplx2real copy")
+         !$omp parallel do default(none) collapse(2) private(i,j) shared(cprod, hybdat, tmp)
+         do i = 1,cprod%matsize2
+            do j = 1,hybdat%nbasp
+               cprod%data_r(j,i) = real(tmp(j,i))
+            enddo 
+         enddo
+         !$omp end parallel do
+         call timestop("cpu cmplx2real copy")
+         deallocate(tmp)
+      !$acc end data ! hybdat
       CALL timestop("wavefproducts_inv")
    END SUBROUTINE wavefproducts_inv
 
