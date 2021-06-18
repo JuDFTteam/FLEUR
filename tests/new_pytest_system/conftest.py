@@ -444,6 +444,9 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     # create work dir if not existent
     if not os.path.isdir(work_dir_path):
         os.makedirs(work_dir_path)  # Will create also Testing dir if not existent
+    else:
+        shutil.rmtree(work_dir_path)
+        os.mkdir(work_dir_path)
 
     # clean parser_testdir
     if os.path.isdir(parser_testdir_path):

@@ -61,12 +61,11 @@ endif()
 #write file
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/pytest_incl.py CONTENT "sourcedir=${CMAKE_SOURCE_DIR}\nbuilddir=${CMAKE_BINARY_DIR}\nexcl_flags=\"${PYTEST_TEST_EXCL_FLAGS}\"\n")
 
-get_filename_component(BUILD_DIR ${CMAKE_BINARY_DIR} NAME)
 #write build script
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/run_tests.sh CONTENT
 "#!/usr/bin/env bash
 ADDOPTS_ENV=\${PYTEST_ADDOPTS}
-PYTEST_ADDOPTS=\"../tests/new_pytest_system --build_dir=../../${BUILD_DIR} \${ADDOPTS_ENV}\"
+PYTEST_ADDOPTS=\"${CMAKE_SOURCE_DIR}/tests/new_pytest_system --build_dir=${CMAKE_BINARY_DIR} \${ADDOPTS_ENV}\"
 if [[ -z \"\${juDFT_PYTHON}\" ]]; then
   PYTEST_ADDOPTS=$PYTEST_ADDOPTS pytest \"$@\"
 else
