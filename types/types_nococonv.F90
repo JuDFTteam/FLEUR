@@ -32,8 +32,8 @@ MODULE m_types_nococonv
     procedure,NOPASS:: rotdenmat_explicit_mat,rotdenmat_explicit_denmat
     generic :: rotdenmat=>rotdenmat_mat,rotdenmat_denmat,rotdenmat_explicit_mat,rotdenmat_explicit_denmat
     !Functions to get magnetiszation vector from density matrix
-    procedure,nopass:: denmat_to_mag_mat,denmat_to_mag_denmat
-    generic :: denmat_to_mag=>denmat_to_mag_mat,denmat_to_mag_denmat
+    procedure :: denmat_to_mag_mat,denmat_to_mag_denmat
+    generic   :: denmat_to_mag=>denmat_to_mag_mat,denmat_to_mag_denmat
     !function to construct density matrix from magnetisaztion vector
     procedure,nopass:: mag_to_denmat
     !Rotate magnetisation vector
@@ -59,10 +59,11 @@ CONTAINS
   end function
 
 
-  function denmat_to_mag_mat(mat)result(mag)
+  function denmat_to_mag_mat(nococonv, mat)result(mag)
+    class(t_nococonv), intent(in) :: nococonv
     complex,intent(in):: mat(2,2)
     real :: mag(0:3)
-    mag=denmat_to_mag_denmat(real(mat(1,1)),real(mat(2,2)),mat(2,1))
+    mag=nococonv%denmat_to_mag_denmat(real(mat(1,1)),real(mat(2,2)),mat(2,1))
   end function
 
   function mag_to_denmat(mag)result(mat)
@@ -74,7 +75,8 @@ CONTAINS
   mat(1,2)=cmplx(mag(1),-mag(2))*0.5
   end function  
 
-  function denmat_to_mag_denmat(r11,r22,r21)result(mag)
+  function denmat_to_mag_denmat(nococonv, r11,r22,r21)result(mag)
+    class(t_nococonv), intent(in) :: nococonv
     real,INTENT(IN)   :: r11,r22
     complex,intent(in):: r21
     real :: mag(0:3)
