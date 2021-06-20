@@ -51,7 +51,7 @@ CONTAINS
       !$acc data copyin(hybdat, hybdat%nbasp)
          !$acc data copyin(cprod) create(cprod%data_c) copyout(cprod%data_r)
             !$acc kernels present(cprod, cprod%data_r)
-            cprod%data_r = 0.0
+            cprod%data_r(:,:) = 0.0
             !$acc end kernels
             call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                        ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)

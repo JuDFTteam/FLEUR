@@ -100,11 +100,11 @@ CONTAINS
       !$acc data copyin(indx_sest, nsest, hybdat, hybdat%nbands, exchange) create(dot_result) copyout(exchange%data_r, exchange%data_c)
          if(exchange%l_real) then
             !$acc kernels present(exchange, exchange%data_r)
-            exchange%data_r = 0.0
+            exchange%data_r(:,:) = 0.0
             !$acc end kernels
          else 
             !$acc kernels present(exchange, exchange%data_c)
-            exchange%data_c = cmplx_0
+            exchange%data_c(:,:) = cmplx_0
             !$acc end kernels
          endif
          do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
