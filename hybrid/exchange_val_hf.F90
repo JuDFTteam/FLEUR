@@ -217,7 +217,6 @@ CONTAINS
                   CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw,&
                                           hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
                END IF
-               write (*,*) fmpi%irank, "Post wavef"
                ! The sparse matrix technique is not feasible for the HSE
                ! functional. Thus, a dynamic adjustment is implemented
                ! The mixed basis functions and the potential difference
@@ -250,7 +249,6 @@ CONTAINS
                ELSE
                   phase_vv(:, :) = cmplx_1
                END IF
-               write (*,*) fmpi%irank, "Post bratra"
                call timestop("bra_trafo stuff")
                
                call timestart("alloc coul_wavf")
@@ -264,7 +262,6 @@ CONTAINS
                if(ierr /= 0) call judft_error("can't alloc coul_wavf")
                r_coul_wavf = 0.0
                call timestop("alloc coul_wavf")
-               write (*,*) fmpi%irank, "alloc"
                
                call timestart("exchange matrix")
                call timestart("sparse matrix products")
@@ -274,7 +271,6 @@ CONTAINS
                   conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
                   call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv%data_c, c_coul_wavf)
                END IF
-               write (*,*) fmpi%irank, "Post spmm"
                call timestop("sparse matrix products")
 
                !$acc enter data copyin(phase_vv, r_coul_wavf, c_coul_wavf)
@@ -326,8 +322,6 @@ CONTAINS
                      !$acc end parallel loop
                   endif
                !$acc end data ! (psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
-
-               write (*,*) fmpi%irank, "Post applypref"
                call timestop("apply prefactors carr1_v")
 
                call timestart("exch_vv dot prod")
@@ -384,7 +378,6 @@ CONTAINS
                !$acc exit data delete(phase_vv, r_coul_wavf, c_coul_wavf)
                call timestop("exch_vv dot prod")
                call timestop("exchange matrix")
-               write (*,*) fmpi%irank, "Post sortcpy"
                
                call cprod_vv%free()
                if(allocated(r_coul_wavf)) deallocate(r_coul_wavf)
