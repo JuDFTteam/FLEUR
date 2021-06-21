@@ -386,6 +386,8 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "hdf: tests needing hdf")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
     config.addinivalue_line("markers", "wannier: test for fleur using wannier") # TODO account for differnet wannier versions?
+    config.addinivalue_line("markers", "wannier4: test for fleur using wannier 4D calculations")
+    config.addinivalue_line("markers", "wannier5: test for fleur using wannier 5D calculations")
     config.addinivalue_line("markers", "masci_tools: tests which use functions from masci-tools repo")
     config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
 
