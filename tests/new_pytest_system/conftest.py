@@ -163,6 +163,9 @@ def pytest_report_header(config):#libs):
         version = tuple(int(val) for val in version_str.replace('-','.').split('.')[:3])
     except ImportError:
         parser_tests = False
+    except AttributeError:
+        version_str = 'too old'
+        parser_tests = False
     else:
         if version >= (0,4,0):
             parser_tests = True
