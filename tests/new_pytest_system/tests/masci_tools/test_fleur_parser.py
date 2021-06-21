@@ -1,5 +1,6 @@
 import pytest
 import os
+import warnings
 from pytest_plugins.pytest_dependency import depends
 
 @pytest.mark.fleur_parser
@@ -78,4 +79,7 @@ def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, parser_test
     assert out_dict != {}
     assert parser_info['parser_errors'] == []
     assert parser_info['parser_critical'] == []
-    assert set(parser_info['parser_warnings']).difference(KNOWN_WARNINGS) == set() #At the moment there is always at least one warning
+    warning_set = set(parser_info['parser_warnings']).difference(KNOWN_WARNINGS)
+    if warning_set != set():
+        print(warning_set)#Maybe better to write to a file
+        warnings.warn(f'The outxml_parser encountered {len(warning_set)} unexpected warning(s) for test {fleur_test_name}')

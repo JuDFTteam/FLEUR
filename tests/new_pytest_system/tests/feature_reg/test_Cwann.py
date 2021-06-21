@@ -35,11 +35,11 @@ def test_CwannXML(execute_fleur, grep_number, grep_exists):
     should_files = ['WF1.amn', 'WF1.mmn', 'WF1.eig', 'WF1.win', 'WF1.wout']
     for file1 in should_files:
         assert (file1 in res_file_names), file1
-    
+
     # These eigenvalues differ from the wann test without xml above
-    assert grep_exists(res_files['WF1.eig'], "           1           1   -10.236815")
-    assert grep_exists(res_files['WF1.eig'], "           8           1   16.700987")
-    assert grep_exists(res_files['WF1.eig'], "           8           8   19.833238")
+    assert grep_exists(res_files['WF1.eig'], "           1           1  -10.236815")
+    assert grep_exists(res_files['WF1.eig'], "           7           1   16.700987")
+    assert grep_exists(res_files['WF1.eig'], "           7           8   19.833238")
     assert grep_exists(res_files['WF1.eig'], "           5           6   16.235248")
     assert grep_exists(res_files['WF1.mmn0'], "    8    8      8       1.000000000000")
     assert grep_exists(res_files['WF1.mmn0'], "    1    1      1       1.000000000000")

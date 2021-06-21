@@ -57,7 +57,6 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
 @pytest.mark.fleur
 @pytest.mark.bulk
 @pytest.mark.band
-@pytest.mark.skip('Test needs to be updated. Outdated input file')
 def test_CoUnfold(execute_fleur, grep_exists, grep_number):
     """Co band unfolding test
     Simple test of Fleur with one step:
@@ -65,14 +64,14 @@ def test_CoUnfold(execute_fleur, grep_exists, grep_number):
     """
     test_file_folder = './inputfiles/CoUnfold/'
 
-    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.xml'])
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.xml'], mpi_procs=3)
     res_file_names = list(res_files.keys())
     should_files = ['out', 'bands_sc.1', 'bands_sc.2']
     for file1 in should_files:
         assert file1 in res_file_names
 
-    assert grep_exists(res_files['out'], "it=  1  is completed")
+#    assert grep_exists(res_files['out'], "it=  1  is completed")
     assert grep_exists(res_files['bands_sc.1'], "0.91625.*0.94323")
-    assert grep_exists(res_files['bands_sc.1'], "14.16776.*0.034036")
-    assert grep_exists(res_files['bands_sc.1'], "18.195862.*0.622318")
-    assert grep_exists(res_files['bands_sc.1'], "27.134829.*0.009426")
+    assert grep_exists(res_files['bands_sc.1'], "14.03436.*0.039764")
+    assert grep_exists(res_files['bands_sc.2'], "18.195862.*0.622318")
+    assert grep_exists(res_files['bands_sc.2'], "27.134829.*0.009426")
