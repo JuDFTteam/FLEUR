@@ -315,7 +315,7 @@ contains
       endif
 
       call MPI_COMM_RANK(MPI_COMM_WORLD, me, ierr)
-      if(me == 0) write (*,*) "psize:", psize, "max_peak", max_peak, "nparts", n_parts
+      if(me == 0) write (*,*) "psize: " // int2str(psize) // " max_peak: " // int2str(max_peak) // " nparts: " // int2str(n_parts)
    end function calc_n_parts
 
    integer(8) function target_memsize(fi, hybdat)
@@ -334,7 +334,7 @@ contains
       real              :: coulomb_size, exch_size
 
       gpu_mem = acc_get_property(0,acc_device_current, acc_property_free_memory)
-      target_memsize = int(0.65*gpu_mem, kind=8)
+      target_memsize = int(0.75*gpu_mem, kind=8)
 #else
       target_memsize = int(15e9, kind=8) ! 15 Gb
 #endif
