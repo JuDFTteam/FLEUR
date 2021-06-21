@@ -154,6 +154,8 @@ def pytest_report_header(config):#libs):
     failed_dir = get_failed_dir(build_dir)
     path_fleur, para = get_fleur_binary(build_dir)
     path_inp = get_inpgen_binary(build_dir)
+    mpiruncmd = get_mpi_command(dict(os.environ), '{mpi_procs}', para)
+    mpiruncmd = ' '.join(mpiruncmd)
     libs = []
 
     version_str = 'Not installed'
@@ -178,7 +180,8 @@ def pytest_report_header(config):#libs):
                           f"Running tests in: {work_dir}",
                           f"Failed tests will be copied to: {failed_dir}",
                           f"Parser tests {'will' if parser_tests else 'will not'} be run (masci-tools version {version_str})",
-                           "Now cleaning work, failed and parser_test directories...\n"]
+                          f"Default MPI command: {mpiruncmd if para else 'None (serial build)'}",
+                           "Now cleaning work, failed and parser_test directories...\n",]
 
     return add_header_strings
 
@@ -616,9 +619,82 @@ def execute_inpgen(inpgen_binary, work_dir):
 
     return _execute_inpgen
 
+def get_mpi_command(env, mpi_procs, parallel):
+    """
+    Function returning the mpirun command for fleur with the given number of processes.
+    The environment variables ``juDFT_MPI`` and ``juDFT_NPROCS`` can be used to customize it
+    to the environment
+
+    ``juDFT_MPI`` should not define the number of mpi processes. Either the task should be
+    added at the end without inserting the number or the text ``{mpi_procs}`` should be added instead
+    of the number
+
+    :param env: dictionary with the defined environment variables
+    :param mpi_procs: number of mpi processes to run
+    :param parallel: boolean, if True the fleur executable is assumed to be fleur_MPI
+
+    :returns: list of string with the mpi command to prepend the fleur call
+    """
+    import string
+    import warnings
+
+    mpiruncmd = env.get('juDFT_MPI', None)
+
+    if env.get('juDFT_NPROCS', None) is not None:
+        mpi_procs = env.get('juDFT_NPROCS', None)
+
+    if mpiruncmd is None and parallel:
+        mpiruncmd = 'mpirun -n {mpi_procs} '
+
+    if mpiruncmd is not None:
+        if mpiruncmd.strip() != 'time':
+            if len([val[0] for val in string.Formatter().parse(mpiruncmd)]) != 0:
+                try:
+                    mpiruncmd = mpiruncmd.format(mpi_procs=mpi_procs)
+                except (ValueError, KeyError) as exc:
+                    raise KeyError("mpirun command could not be constructed: {}".format(exc))
+
+            else:
+                warnings.warn('The number of mpi processes will be appended to the mpicommand:\n {}'
+                              'If this should not happen enter the text {{mpi_procs}} into the'
+                              'command at the right place. For overriding the number of mpi processes use "juDFT_NPROCS"'.format(mpiruncmd))
+
+                mpiruncmd += ' {} '.format(mpi_procs)
+
+        mpiruncmd = mpiruncmd.split()
+    else:
+        mpiruncmd = []
+
+    return mpiruncmd
+
 
 @pytest.fixture
-def execute_fleur(fleur_binary, work_dir):
+def mpi_command():
+    """
+    Fixture which returns the mpi commadn to run fleur
+    """
+    def _mpi_command(env, mpi_procs, parallel):
+        """
+        Function returning the mpirun command for fleur with the given number of processes
+        The environment variables ``juDFT_MPI`` and ``juDFT_NPROCS`` can be used to customize it
+        to the environment
+
+        ``juDFT_MPI`` should not define the number of mpi processes. Either the task should be
+        added at the end without inserting the number or the text ``{mpi_procs}`` should be added instead
+        of the number
+
+        :param env: dictionary with the defined environment variables
+        :param mpi_procs: number of mpi processes to run
+        :param parallel: boolean, if True the fleur executable is assumed to be fleur_MPI
+
+        :returns: list of string with the mpi command to prepend the fleur call
+        """
+        return get_mpi_command(env, mpi_procs, parallel)
+
+    return _mpi_command
+
+@pytest.fixture
+def execute_fleur(fleur_binary, work_dir, mpi_command):
     """
     Fixture which returns an execute_fleur function
     """
@@ -638,8 +714,6 @@ def execute_fleur(fleur_binary, work_dir):
         :return: a dictionary of the form 'filename :filepath'
         """
         import subprocess
-        import string
-        import warnings
 
         if sub_dir is not None:
             workdir = os.path.abspath(os.path.join(work_dir, sub_dir))
@@ -693,34 +767,7 @@ def execute_fleur(fleur_binary, work_dir):
         if fleur is None:
             print('No Fleur binary found')
             return {}
-
-        #args have to be splited, otherwise it will be executed as one command
-        mpiruncmd = run_env.get('juDFT_MPI', None)
-
-        if run_env.get('juDFT_NPROCS', None) is not None:
-            mpi_procs = run_env.get('juDFT_NPROCS', None)
-
-        if mpiruncmd is None and parallel:
-            mpiruncmd = 'mpirun -n {mpi_procs} '
-
-        if mpiruncmd is not None:
-            if mpiruncmd.strip() != 'time':
-                if len([val[0] for val in string.Formatter().parse(mpiruncmd)]) != 0:
-                    try:
-                        mpiruncmd = mpiruncmd.format(mpi_procs=mpi_procs)
-                    except (ValueError, KeyError) as exc:
-                        raise KeyError("mpirun command could not be constructed: {}".format(exc))
-
-                else:
-                    warnings.warn('The number of mpi processes will be appended to the mpicommand:\n {}'
-                                  'If this should not happen enter the text {{mpi_procs}} into the'
-                                  'command at the right place. For overriding the number of mpi processes use "juDFT_NPROCS"'.format(mpiruncmd))
-
-                    mpiruncmd += ' {} '.format(mpi_procs)
-
-            mpiruncmd = mpiruncmd.split()
-        else:
-            mpiruncmd = []
+        mpiruncmd = mpi_command(run_env, mpi_procs, parallel)
 
         arg_list = mpiruncmd + [fleur] + cmdline_param
         arg_string = ''
