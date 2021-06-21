@@ -1,3 +1,5 @@
+**Notice:** This only works with **python version >3.5** and **NOT with python2**. If run with python2 you get an error message stating that you pytest version is prior 5.0.
+
 # The (python) test system explained
 The python test system relies on pytest (https://docs.pytest.org/en/stable/), which is a standard for python and per default installed on most our machines.
 Also looking at:
@@ -82,6 +84,165 @@ Under `Testing/` a test session run will create several folders:
 - (only on CI) `pytest_session.stdout`, `pytest_summmary.out`: On the CI we also write the pytest report and the short summary to files (using tee, check the ci.yml file)
 
 Also cmake writes out a file for pytests with information on the fleur build, to automaticly exclude tests for specific fleur build, i.e specifc libraries like magma, libxc, ...
+
+# How to read the test log:
+
+Pytest writes a log for each test session, which is usually outputed into the terminal. We also pipe (via `| tee <filepath>`) it to the `pytest_session.stdout` file on the CI.
+
+A example (shorted) log from a test session run with line numbers may look like this (usually colored):
+```
+ 0 $ ./run_tests.sh | tee $CI_PROJECT_DIR/build/Testing/pytest_session.stdout
+ 1 ============================= test session starts ==============================
+ 2 platform linux -- Python 3.8.5, pytest-6.2.4, py-1.10.0, pluggy-0.13.1
+ 3 ------------------------------ Fleur test session ------------------------------
+ 4 Fleur exe: /builds/fleur/build/fleur_MPI
+ 5 Inpgen exe: /builds/fleur/build/inpgen
+ 6 NOT linked libraries: []
+ 7 Running tests in: /builds/fleur/build/Testing/work
+ 8 Failed tests will be copied to: /builds/fleur/build/Testing/failed_test_results
+ 9 Parser tests will be run (masci-tools version 0.4.8)
+10 Default MPI command: mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self
+11 Now cleaning work, failed and parser_test directories...
+12 rootdir: /builds/fleur/tests/new_pytest_system, configfile: setup.cfg
+13 Excluding tests with the following markers in 'pytest_incl.py':  ['chase', 'cusolver', 'edsolver', 'elpa', 'elpaonenode', 'fftmkl', 'gpu', 'magma', 'noci', 'progthread', 'spfft', 'wannier4', 'wannier5']
+14 Running every 1st test with offset 0, others will be skiped.
+15 collected 210 items / 4 deselected / 206 selected
+16 ../tests/feature_reg/test_AlLibxcPbe.py .         [  0%]
+17 ../tests/feature_reg/test_Co.py ..                [  1%]
+18 ../tests/feature_reg/test_CrystalFieldOutput.py . [  1%]
+19 ../tests/feature_reg/test_CuBulk.py .....         [  4%]
+20-80.....
+81 ../tests/libxc/test_libx.py s                     [ 31%]
+82../tests/masci_tools/test_banddos_parser.py ....   [ 33%]
+83 ../tests/masci_tools/test_fleur_parser.py ..s... [ 38%]
+84 s...s..........s.......s............s...s...........s...ss.....s..s....s [ 73%]
+85 ........s.......s............s...s.........F.s...ss...                   [ 99%]
+86 ../tests/new_pytest_system/tests/masci_tools/test_judft_errors.py .      [100%]
+87 =========================== short test summary info ============================
+88 FAILED ../test_fleur_mt_outxml_parser[test_CwannXML]
+89 ===== 1 failed, 178 passed, 27 skipped, 4 deselected in 1408.04s (0:23:28) =====
+```
+## Log: Test session header
+The log starts with a session header, going in this case from line 1 to 15.
+In this header contains default pytest output of versions (line 1), and the output of how many tests pytest has discovered, selected and deselected (line 15).
+Further the session header contains information we put there. I.e which fleur executable used (line 4), inpgen executable used (line 5), libraries not linked (line 6), in which folder the tests will run (line 7), where files from failed tests will be copied to (line 8), if parser tests will be run, and for which masci-tools version (line 9), the default mpi command to execute fleur (line 10), at the start of the sessions these folders are cleared and/or created (mentioned on line 11), the rootdir (all other paths below are relative to this) and the pytest configfile (line 12).  Line 13 list all markers cmake has written into `pytest_incl.py` within the build dir for compilation related test deselection. Line 14 states if only every x test is run and if the test session has an offset.
+
+## Log: Running tests
+Then in the lines 16-86 information on the running tests is outputed. Each line contains information on tests from which file are run, followed by a '.' (dot) for each passed test. Skipped tests are marked with an 's', failed tests with and 'F' and tests which had unexpected errors with an 'E'.
+The line ends with a procentage, for how far we are into the test session.
+
+## Log: Stacktraces, understanding what failed
+After the running tests (not shown in this example) follow long stack traces containing information on were the test failed, and what was recorded in stderr.
+This starts after a line containing ```=========== FAILURES ========```.
+Further some examples of stack traces explained (also from different test session):
+### Example 1
+A full long stackstrace of a parser test failure:
+```
+______________________________________ test_fleur_mt_outxml_parser[test_CwannXML] ______________________________________
+
+request = <FixtureRequest for <Function test_fleur_mt_outxml_parser[test_CwannXML]>>, fleur_test_name = 'test_CwannXML'
+test_file = 'tests/feature_reg/test_Cwann.py', parser_testdir = '/builds/fleur/build/Testing/parser_testdir'
+
+    @pytest.mark.fleur_parser
+    @pytest.mark.masci_tools
+    def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, parser_testdir):
+        """
+        For each folder (parametrization happens in conftest.py) in parser test,
+        try if the fleur parser in masci-tools can handle the parsing without
+        crashing, successful and an empty parser log
+        """
+        #Note:
+        #   You might notice that a lot of the output parser tests fail either because the out file does not validate
+        #   Or there are warnings
+        #   1. The validation errors occur since the schemas in fleur (develop) and masci-tools are slightly out of sync
+        #      at the moment (fixed in the raise_fleur_file_version branch)
+        #   2. There are a couple of output differences not yet accounted for in the output parser (Some could be solved in fleur)
+        #           - bandgap output only in hist mode
+    
+        #These warnings are expected to appear at the moment
+        KNOWN_WARNINGS = {'No values found for attribute l_f'}
+    
+        pytest.importorskip('masci_tools',minversion='0.4.0-dev3')
+        from masci_tools.io.parsers.fleur import outxml_parser
+        depends(request, [f'{test_file}::{fleur_test_name}'], scope='session')
+    
+        outxmlfilepath = os.path.abspath(os.path.join(parser_testdir, f'./{fleur_test_name}/', 'out.xml'))
+    
+        assert os.path.isfile(outxmlfilepath)
+    
+        parser_info = {}
+        out_dict = outxml_parser(outxmlfilepath, parser_info_out=parser_info)
+    
+        if any("Schema available for version" in warning for warning in parser_info['parser_warnings']):
+            for warning in parser_info['parser_warnings'].copy():
+                if 'Output file does not validate against the schema' in warning:
+                    parser_info['parser_warnings'].remove(warning)
+                if 'Schema available for version' in warning:
+                    parser_info['parser_warnings'].remove(warning)
+    
+        assert out_dict is not None
+        assert isinstance(out_dict, dict)
+        assert out_dict != {}
+        assert parser_info['parser_errors'] == []
+        assert parser_info['parser_critical'] == []
+>       assert set(parser_info['parser_warnings']).difference(KNOWN_WARNINGS) == set() #At the moment there is always at least one warning
+E       assert {"[Iteration ...tribute", ...} == set()
+E         Extra items in the left set:
+E         '[Iteration 1] No values found for attribute distance'
+E         '[Iteration 1] No values found for attribute interstitial at tag spinDependentCharge'
+E         '[Iteration 1] No values found for attribute value at tag sumOfEigenvalues'
+E         "[Iteration 1] Failed to evaluate singleValue from tag chargeDenXCDenIntegral: Has no 'value' attribute"
+E         '[Iteration 1] No values found for attribute value at tag valenceElectrons'
+E         '[Iteration 1] No values found for attribute mtSpheres at tag spinDependentCharge'
+E         "[Iteration 1] Failed to evaluate singleValue from tag totalCharge: Has no 'value' attribute"
+E         '[Iteration 1] No values found for attribute total at tag spinDependentCharge'
+E         '[Iteration 1] convert_total_energy cannot convert None to eV'
+E         "[Iteration 1] Failed to evaluate singleValue from tag totalEnergy: Has no 'units' attribute"
+E         '[Iteration 1] No values found for attribute value at tag totalCharge'
+E         "[Iteration 1] Failed to evaluate singleValue from tag totalEnergy: Has no 'value' attribute"
+E         '[Iteration 1] No values found for attribute value at tag chargeDenXCDenIntegral'
+E         Use -v to get the full diff
+
+/builds/fleur/tests/new_pytest_system/tests/masci_tools/test_fleur_parser.py:81: AssertionError
+-------------------------------------------------- Captured log call ---------------------------------------------------
+INFO     masci_tools.io.parsers.fleur.fleur_outxml_parser:fleur_outxml_parser.py:97 Masci-Tools Fleur out.xml Parser v0.5.0
+WARNING  masci_tools.io.parsers.fleur.fleur_outxml_parser:schema_dict.py:395 No Output Schema available for version '0.35'; falling back to '0.34'
+INFO     masci_tools.io.parsers.fleur.fleur_outxml_parser:fleur_outxml_parser.py:201 Found fleur out file with the versions out: 0.34; inp: 0.34
+WARNING  masci_tools.io.parsers.fleur.fleur_outxml_parser:fleur_outxml_parser.py:212 Output file does not validate against the schema: 
+Line 2: Element 'fleurOutput', attribute 'fleurOutputVersion': [facet 'enumeration'] The value '0.35' is not an element of the set {'0.34'}.
+...
+```
+The first lines tells you from which test this is, below is information for which previous run test case this parser test is from (in this case `test_CwannXML`). This information is followed by a print of the complete python code of the test until the line, where the first exception was thrown (indicated by the `>` on the start of the line). This way one sees, what is run, what parsed already.
+In the lines following the line starting with the `>` comes the probably most important information often telling us what exactly went wrong. In this case we tested that `assert set(parser_info['parser_warnings']).difference(KNOWN_WARNINGS) == set()`, i.e we throw an `AssertionError` if there are any unsupected parser warnings. The next line shows us what the values on each side of the `==` were. Then at the end of the report any caputered output or captured logging is also printed.
+### Example 2
+Most important lines of a stacktrace of a tests which failed due to a value not beeing as tested for:
+```
+ tenergy = grep_number(res_files['out'], "total energy=", "=")
+>       assert abs(tenergy - -1270.4886) <= 0.0001
+E       assert 7.6435286517000804 <= 0.0001
+E        +  where 7.6435286517000804 = abs((-1278.1321286517 - -1270.4886))
+/builds/fleur/tests/new_pytest_system/tests/feature_reg/test_Noncollinear_downward_comp.py:28: AssertionError
+```
+This means we tested for that the total energy is -1270.4886 but instead it turned out to be -1278.1321286517.
+
+### Example 3
+Often we grep in files and expect a certain expression to be there, if it is not this will look in a stack trace like that:
+```
+>       assert grep_exists(res_files['out'], "it=  1  is completed")
+E       AssertionError: assert False
+E        +  where False = <function grep_exists.<locals>._grep_exists at 0x7f3b7aba21f0>('/home/build/Testing/work/out', 'it=  1  is completed')
+
+/tests/new_pytest_system/tests/feature_reg/test_CuBulk.py:26: AssertionError
+```
+here "it=  1  is completed" is not in the "out" file.
+
+### Example 4
+A failure of a fleur execution.
+
+## Log: Test session Summary
+At the end of the test session, a short summary of the test session is outputed (line 87-89).
+It contains a single line (line 88 in this case) for each failed tests with the error message (truncated to terminal width).
+And a line summing up how many tests failed, passed, where skipped, deselected, errored and how long the full session was.
 
 # Tests (source) folder layout:
 
