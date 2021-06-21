@@ -57,7 +57,6 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
 @pytest.mark.fleur
 @pytest.mark.bulk
 @pytest.mark.band
-@pytest.mark.skip('Test needs to be updated. Outdated input file')
 def test_CoUnfold(execute_fleur, grep_exists, grep_number):
     """Co band unfolding test
     Simple test of Fleur with one step:
@@ -65,7 +64,7 @@ def test_CoUnfold(execute_fleur, grep_exists, grep_number):
     """
     test_file_folder = './inputfiles/CoUnfold/'
 
-    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.xml'])
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.xml'], mpi_procs=3)
     res_file_names = list(res_files.keys())
     should_files = ['out', 'bands_sc.1', 'bands_sc.2']
     for file1 in should_files:
