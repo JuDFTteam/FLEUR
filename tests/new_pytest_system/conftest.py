@@ -106,7 +106,17 @@ def build_dir(pytestconfig):
 @pytest.fixture(scope='session')
 def cleanup(pytestconfig):
     """Flag if only failed test results are stored or all tests"""
-    return pytestconfig.getoption("cleanup")
+    cleanup_val = pytestconfig.getoption("cleanup")
+    if isinstance(cleanup_val, str):
+        if cleanup_val.lower() in ('true', 't', 'y'):
+            return True
+        elif cleanup_val.lower() in ('false', 'f', 'n'):
+            return False
+        else:
+            raise ValueError(f'Invalid value for cleanup {cleanup_val}')
+    else:
+        return cleanup_val
+
 
 @pytest.fixture(scope='session')
 def work_dir(build_dir):
