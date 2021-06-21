@@ -782,9 +782,6 @@ def execute_fleur(fleur_binary, work_dir, mpi_command):
         mpiruncmd = mpi_command(run_env, mpi_procs, parallel)
 
         arg_list = mpiruncmd + [fleur] + cmdline_param
-        arg_string = ''
-        for entry in arg_list:
-            arg_string += entry + ' '
         #print(arg_string)
         os.chdir(workdir)
         #t0 = time.perf_counter()
@@ -792,7 +789,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command):
             with open(f"{workdir}/{stderr}", "bw") as f_stderr:
                 # we parse the whole string and execute in shell,
                 # otherwise popen thinks 'mpirun -np 2 /path/fleur' is the path to the executable...
-                p1 = subprocess.run(arg_string, env=run_env, stdout=f_stdout, stderr=f_stderr, shell=True)#check=True
+                p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr)#check=True
         # Check per hand if successful:
         if p1.returncode != 0:
             # failure
@@ -1012,11 +1009,11 @@ def clean_workdir(work_dir):
         """
         workdir = work_dir
         if 'all' in filelist:
-            shutil.rmtree(workdir) # this removes the work dir too.
-            os.mkdir(workdir)
+            for file in os.listdir(workdir):
+                os.remove(os.path.abspath(os.path.join(workdir, file)))
         else:
-            for files in filelist:
-                os.remove(os.path.abspath(os.path.join(workdir, files)))
+            for file in filelist:
+                os.remove(os.path.abspath(os.path.join(workdir, file)))
 
     return _clean_workdir
 
