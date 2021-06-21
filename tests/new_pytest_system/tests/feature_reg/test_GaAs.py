@@ -101,6 +101,7 @@ def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
 
 @pytest.mark.soc
 @pytest.mark.wannier
+@pytest.mark.skip('Test was also deactivated in the old test system. This has to be investigated')
 def test_GaAsWannSOC(execute_fleur, grep_number, grep_exists):
     """GaAs: simple test for the Wannier code with inp.xml and SOC=T
 
