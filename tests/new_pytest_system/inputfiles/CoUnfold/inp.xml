@@ -19,7 +19,7 @@
          <kPointListSelection listName="default"/>
          <kPointLists>
             <kPointList name="default" count="   15" type="path">
-               <kPoint weight="0.066667">0.000000            0.000000            0.000000</kPoint>
+               <kPoint weight="0.066667" label="g">0.000000            0.000000            0.000000</kPoint>
                <kPoint weight="0.066667">0.000000            0.500000            0.000000</kPoint>
                <kPoint weight="0.066667">0.000000            1.000000            0.000000</kPoint>
                <kPoint weight="0.066667">0.333333            0.833333            0.000000</kPoint>
@@ -33,7 +33,7 @@
                <kPoint weight="0.066667">0.333333            0.833333            0.500000</kPoint>
                <kPoint weight="0.066667">0.666667            0.666667            0.500000</kPoint>
                <kPoint weight="0.066667">0.333333            0.333333            0.500000</kPoint>
-               <kPoint weight="0.066667">0.000000            0.000000            0.500000</kPoint>
+               <kPoint weight="0.066667" label="somePoint">0.000000            0.000000            0.500000</kPoint>
             </kPointList>
          </kPointLists>
       </bzIntegration>
