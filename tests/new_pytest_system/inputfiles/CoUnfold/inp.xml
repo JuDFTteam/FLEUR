@@ -12,27 +12,31 @@
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
-      <bzIntegration valenceElectrons="105.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-        <kPointList name="default" count="   15">
-         <kPoint weight="0.066667">0.000000            0.000000            0.000000</kPoint>
-         <kPoint weight="0.066667">0.000000            0.500000            0.000000</kPoint>
-         <kPoint weight="0.066667">0.000000            1.000000            0.000000</kPoint>
-         <kPoint weight="0.066667">0.333333            0.833333            0.000000</kPoint>
-         <kPoint weight="0.066667">0.666667            0.666667            0.000000</kPoint>
-         <kPoint weight="0.066667">0.333333            0.333333            0.000000</kPoint>
-         <kPoint weight="0.066667">0.000000            0.000000            0.000000</kPoint>
-         <kPoint weight="0.066667">0.000000            0.000000            0.250000</kPoint>
-         <kPoint weight="0.066667">0.000000            0.000000            0.500000</kPoint>
-         <kPoint weight="0.066667">0.000000            0.500000            0.500000</kPoint>
-         <kPoint weight="0.066667">0.000000            1.000000            0.500000</kPoint>
-         <kPoint weight="0.066667">0.333333            0.833333            0.500000</kPoint>
-         <kPoint weight="0.066667">0.666667            0.666667            0.500000</kPoint>
-         <kPoint weight="0.066667">0.333333            0.333333            0.500000</kPoint>
-         <kPoint weight="0.066667">0.000000            0.000000            0.500000</kPoint>
-     	</kPointList>
-      </bzIntegration>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
    </calculationSetup>
    <cell>
+      <bzIntegration valenceElectrons="105.00000000" mode="hist" fermiSmearingEnergy=".00100000">
+         <kPointListSelection listName="default"/>
+         <kPointLists>
+            <kPointList name="default" count="   15" type="path">
+               <kPoint weight="0.066667" label="g">0.000000            0.000000            0.000000</kPoint>
+               <kPoint weight="0.066667">0.000000            0.500000            0.000000</kPoint>
+               <kPoint weight="0.066667">0.000000            1.000000            0.000000</kPoint>
+               <kPoint weight="0.066667">0.333333            0.833333            0.000000</kPoint>
+               <kPoint weight="0.066667">0.666667            0.666667            0.000000</kPoint>
+               <kPoint weight="0.066667">0.333333            0.333333            0.000000</kPoint>
+               <kPoint weight="0.066667">0.000000            0.000000            0.000000</kPoint>
+               <kPoint weight="0.066667">0.000000            0.000000            0.250000</kPoint>
+               <kPoint weight="0.066667">0.000000            0.000000            0.500000</kPoint>
+               <kPoint weight="0.066667">0.000000            0.500000            0.500000</kPoint>
+               <kPoint weight="0.066667">0.000000            1.000000            0.500000</kPoint>
+               <kPoint weight="0.066667">0.333333            0.833333            0.500000</kPoint>
+               <kPoint weight="0.066667">0.666667            0.666667            0.500000</kPoint>
+               <kPoint weight="0.066667">0.333333            0.333333            0.500000</kPoint>
+               <kPoint weight="0.066667" label="somePoint">0.000000            0.000000            0.500000</kPoint>
+            </kPointList>
+         </kPointLists>
+      </bzIntegration>
       <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"/> 
       <bulkLattice scale="1.0000000000">
 	<bravaisMatrix>
@@ -42,9 +46,8 @@
          </bravaisMatrix>
        </bulkLattice>
    </cell>
-   <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Co-1" element="Co" atomicNumber="27"  flipSpinPhi="0.0" flipSpinTheta="Pi" flipSpinScale="F">
+      <species name="Co-1" element="Co" atomicNumber="27">
          <mtSphere radius="2.30000000" gridPoints="761" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
 	 <electronConfig>
