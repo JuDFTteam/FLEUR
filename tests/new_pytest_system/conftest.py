@@ -1009,8 +1009,12 @@ def clean_workdir(work_dir):
         """
         workdir = work_dir
         if 'all' in filelist:
-            for file in os.listdir(workdir):
-                os.remove(os.path.abspath(os.path.join(workdir, file)))
+            for entry in os.listdir(workdir):
+                path = os.path.abspath(os.path.join(workdir, entry))
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
         else:
             for file in filelist:
                 os.remove(os.path.abspath(os.path.join(workdir, file)))
