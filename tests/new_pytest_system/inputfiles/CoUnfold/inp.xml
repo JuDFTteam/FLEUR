@@ -4,7 +4,7 @@
       Cobalt bulk in hcp structure exp:a=b=250.71pm,c=406.95pm 2x2x1 super-cell C defe
    </comment>
    <calculationSetup>
-      <cutoffs Kmax="3.00000000" Gmax="9.40000000" GmaxXC="7.70000000" numbands="60"/>
+      <cutoffs Kmax="3.00000000" Gmax="9.40000000" GmaxXC="7.70000000" numbands="0"/>
       <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
