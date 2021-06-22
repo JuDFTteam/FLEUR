@@ -313,8 +313,11 @@ contains
          write (*,*) "too many parts... reducing to nobd"
          n_parts = hybdat%nobd(ikqpt, jsp)
       endif
-
+#ifdef CPP_MPI
       call MPI_COMM_RANK(MPI_COMM_WORLD, me, ierr)
+#else
+      me = 0
+#endif
       if(me == 0) write (*,*) "psize: " // int2str(psize) // " max_peak: " // int2str(max_peak) // " nparts: " // int2str(n_parts)
    end function calc_n_parts
 
