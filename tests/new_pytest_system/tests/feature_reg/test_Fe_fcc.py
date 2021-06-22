@@ -24,7 +24,7 @@ def test_Fe_fccXML(execute_fleur, grep_number, grep_exists):
         assert file1 in res_file_names
 
     assert grep_exists(res_files['out'], "total charge")
-    qfix = grep_number(res_files['out'], "qfix", "qfix=")
+    qfix = grep_number(res_files['out'], "qfix=", "qfix=")
     assert grep_exists(res_files['out'], "it= 20  is completed")
 
     fermi = grep_number(res_files['out'], "to ef", ":")

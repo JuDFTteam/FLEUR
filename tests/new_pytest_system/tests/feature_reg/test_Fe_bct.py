@@ -21,7 +21,7 @@ def test_Fe_bct_LibXC(execute_fleur, grep_number, grep_exists):
         assert file1 in res_file_names, f'{file1} missing'
 
     assert grep_exists(res_files['out'], "total charge")
-    qfix = grep_number(res_files['out'], "qfix", "qfix=")
+    qfix = grep_number(res_files['out'], "qfix=", "qfix=")
     assert grep_exists(res_files['out'], "it=  3  is completed")
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
@@ -55,7 +55,7 @@ def test_Fe_bct_LOXML(execute_fleur, grep_number, grep_exists):
         assert file1 in res_file_names
 
     assert grep_exists(res_files['out'], "total charge")
-    qfix = grep_number(res_files['out'], "qfix", "qfix=")
+    qfix = grep_number(res_files['out'], "qfix=", "qfix=")
     assert grep_exists(res_files['out'], "it=  4  is completed")
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
@@ -89,7 +89,7 @@ def test_Fe_bct_SOCXML(execute_fleur, grep_number, grep_exists):
         assert file1 in res_file_names
 
     assert grep_exists(res_files['out'], "total charge")
-    qfix = grep_number(res_files['out'], "qfix", "qfix=", res_index=-1)
+    qfix = grep_number(res_files['out'], "qfix=", "qfix=", res_index=-1)
     assert grep_exists(res_files['out'], "it= 20  is completed")
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
@@ -124,7 +124,7 @@ def test_Fe_bctXML(execute_fleur, grep_number, grep_exists):
         assert file1 in res_file_names
 
     assert grep_exists(res_files['out'], "total charge")
-    qfix = grep_number(res_files['out'], "qfix", "qfix=")
+    qfix = grep_number(res_files['out'], "qfix=", "qfix=")
     assert grep_exists(res_files['out'], "it= 20  is completed")
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")

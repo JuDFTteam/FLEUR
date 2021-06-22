@@ -22,7 +22,7 @@ def test_Fe_1l_SOCXML(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['out'], "it=  1  is completed")
     mm = grep_number(res_files['out'], "mm       1", " 1 ")
-    qfix = grep_number(res_files['out'], "qfix", "x=")
+    qfix = grep_number(res_files['out'], "qfix=", "x=")
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
 
