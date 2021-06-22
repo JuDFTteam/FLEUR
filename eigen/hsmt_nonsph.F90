@@ -50,6 +50,7 @@ CONTAINS
     complex :: cchi
     CALL timestart("non-spherical setup")
 
+    if (set0) CALL hmat%clear()
     size_ab=maxval(lapw%nv)
     if (fmpi%n_size==1) Then
        size_ab_select=size_ab
