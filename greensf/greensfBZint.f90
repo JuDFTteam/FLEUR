@@ -54,7 +54,7 @@ MODULE m_greensfBZint
          atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg  = gfinp%elem(i_gf)%l_sphavg
          atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
-         atomFactor = 1.0/atoms%neq(atomType)
+         atomFactor = MERGE(1.0/atoms%neq(atomType),1.0,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
 
          IF(.NOT.gfinp%isUnique(i_gf)) CYCLE
 
@@ -85,8 +85,8 @@ MODULE m_greensfBZint
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
                      imatSize,spin_start:spin_end),source=cmplx_0)
 
-         natom_start = SUM(atoms%neq(:atomType-1)) + 1
-         natom_end   = SUM(atoms%neq(:atomType))
+         natom_start = MERGE(SUM(atoms%neq(:atomType-1)) + 1,SUM(atoms%neq(:atomType-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
+         natom_end   = MERGE(SUM(atoms%neq(:atomType))      ,SUM(atoms%neq(:atomType-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
          !Loop over equivalent atoms
          DO natom = natom_start , natom_end
 
