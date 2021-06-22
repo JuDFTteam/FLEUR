@@ -67,9 +67,9 @@ file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/run_tests.sh CONTENT
 ADDOPTS_ENV=\${PYTEST_ADDOPTS}
 PYTEST_ADDOPTS=\"${CMAKE_SOURCE_DIR}/tests/new_pytest_system --build_dir=${CMAKE_BINARY_DIR} \${ADDOPTS_ENV}\"
 if [[ -z \"\${juDFT_PYTHON}\" ]]; then
-  PYTEST_ADDOPTS=$PYTEST_ADDOPTS pytest \"$@\"
+  PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS pytest \"$@\"
 else
-  PYTEST_ADDOPTS=$PYTEST_ADDOPTS $juDFT_PYTHON -m pytest \"$@\"
+  PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $juDFT_PYTHON -m pytest \"$@\"
 fi")
 add_custom_target(pytest ALL
                   COMMAND chmod +x run_tests.sh
