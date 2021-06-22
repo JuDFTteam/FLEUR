@@ -531,10 +531,8 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup):
             destination = os.path.abspath(os.path.join(faildir, method_name))
             if os.path.isdir(destination):
                 shutil.rmtree(destination)
-            shutil.move(workdir, destination)
-            os.mkdir(workdir)
-        else:
-            clean_workdir()
+            shutil.copytree(workdir, destination)
+        clean_workdir()
     else:
         yield
 
