@@ -50,7 +50,6 @@ CONTAINS
     complex :: cchi
     CALL timestart("non-spherical setup")
 
-    if (set0) CALL hmat%clear()
     size_ab=maxval(lapw%nv)
     if (fmpi%n_size==1) Then
        size_ab_select=size_ab
@@ -97,6 +96,7 @@ CONTAINS
     data_c(:,:)=0.0
     !$acc end kernels
 #endif
+    if (set0) CPP_data_c = CMPLX(0.0,0.0) 
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
        IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
