@@ -116,8 +116,7 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn_A_vec_plotOnlyMT.xsf'], "2.86600")
     assert grep_exists(res_files['denIn_A_vec_plotOnlyMT.xsf'], "1.43300")
 
-    # Grep density values
-    assert grep_exists(res_files['denIn_A_vec_plotOnlyMT.xsf'], "0.0000000000000000        0.0000000000000000        0.0000000000000000        0.0000000000000000")
+    assert grep_exists(res_files['denIn_A_vec_plotOnlyMT.xsf'], r"0\.00000000.*0\.00000000.*0\.00000000.*0\.00000000")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "5.7472348")
