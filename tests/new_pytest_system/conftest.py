@@ -18,7 +18,7 @@ import shutil
 sys.path.append(os.path.join(os.path.dirname(__file__), 'helpers'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'pytest_plugins'))
 # Now we can import everything that is in helpers, but be careful about name clashing
-from helpers.utils import RUN_PARSER_TESTS
+from helpers.utils import RUN_PARSER_TESTS, MASCI_TOOLS_VERSION_STR
 
 pytest_plugins = ("pytest_plugins.pytest_dependency",
                   "pytest_plugins.pytest_modify_terminal_report")
@@ -168,20 +168,6 @@ def pytest_report_header(config):#libs):
     mpiruncmd = ' '.join(mpiruncmd)
     libs = []
 
-    version_str = 'Not installed'
-    try:
-        import masci_tools
-        version_str = masci_tools.__version__
-        version = tuple(int(val) for val in version_str.replace('-','.').split('.')[:3])
-    except ImportError:
-        parser_tests = False
-    except AttributeError:
-        version_str = 'too old'
-        parser_tests = False
-    else:
-        if version >= (0,4,0):
-            parser_tests = True
-
     reporter = config.pluginmanager.getplugin("terminalreporter")
     reporter.write_sep('-',title='Fleur test session')
     add_header_strings = [f"Fleur exe: {path_fleur}",
@@ -189,7 +175,7 @@ def pytest_report_header(config):#libs):
                           f"NOT linked libraries: {libs}",
                           f"Running tests in: {work_dir}",
                           f"Failed tests will be copied to: {failed_dir}",
-                          f"Parser tests {'will' if parser_tests else 'will not'} be run (masci-tools version {version_str})",
+                          f"Parser tests {'will' if RUN_PARSER_TESTS else 'will not'} be run (masci-tools version {MASCI_TOOLS_VERSION_STR})",
                           f"Default MPI command: {mpiruncmd if para else 'None (serial build)'}",
                            "Now cleaning work, failed and parser_test directories...\n",]
 
@@ -292,7 +278,7 @@ def pytest_collection_modifyitems(session, config, items):
     confile = os.path.abspath(os.path.join(test_dir_path, path))
     confile = os.path.join(confile, filename)
     marker_list = read_cmake_config(confile)
-    makerr_list = marker_list + markers_cmd_to_skip
+    marker_list = marker_list + markers_cmd_to_skip
     marker_list = sorted(list(set(marker_list)))
     print("\nExcluding tests with the following markers in 'pytest_incl.py': ", marker_list)
     run_every = config.getoption("runevery")
@@ -303,7 +289,10 @@ def pytest_collection_modifyitems(session, config, items):
     if testoffset is None:
         testoffset = 0
     print(f'Running every {run_every}st test with offset {testoffset}, others will be skiped.')
-    
+
+    if not RUN_PARSER_TESTS:
+        marker_list = marker_list + ['masci_tools']
+
     skip_unselected = pytest.mark.skip(reason='This test was unselected by commandline arguments given.')
     #Add to all tests marked with masci_tools
     #pytest.importorskip("masci_tools")

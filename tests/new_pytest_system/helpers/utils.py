@@ -1,8 +1,14 @@
-RUN_PARSER_TESTS = True
+# -*- coding: utf-8 -*-
+MASCI_TOOLS_VERSION_STR = 'Not installed'
 try:
     import masci_tools
-    from masci_tools.io.parsers.fleur import inpxml_parser, outxml_parser
-    # from masci_tools.parser import parse_fleur_banddos, parse_fleur_nnm_mat
+    MASCI_TOOLS_VERSION_STR = masci_tools.__version__
+    version = tuple(int(val) for val in MASCI_TOOLS_VERSION_STR.replace('-','.').split('.')[:3])
 except ImportError:
-    print('Required masci-tools version not installed (>=0.4.0). Skipping all parser tests and other test requiring it.')
     RUN_PARSER_TESTS = False
+except AttributeError:
+    MASCI_TOOLS_VERSION_STR = 'too old'
+    RUN_PARSER_TESTS = False
+else:
+    if version >= (0,4,0):
+        RUN_PARSER_TESTS = True
