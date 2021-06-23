@@ -39,7 +39,7 @@ MODULE m_hubbard1_setup
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_nococonv), INTENT(IN)     :: nococonv
       TYPE(t_potden),   INTENT(IN)     :: pot
-      TYPE(t_greensf),  INTENT(IN)     :: gdft(:) !green's function calculated from the Kohn-Sham system
+      TYPE(t_greensf),  INTENT(INOUT)  :: gdft(:) !green's function calculated from the Kohn-Sham system
       TYPE(t_hub1data), INTENT(INOUT)  :: hub1data
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_potden),   INTENT(INOUT)  :: den
@@ -151,8 +151,8 @@ MODULE m_hubbard1_setup
                my = 2.0 * AIMAG(offdtrace)
                CALL pol_angle(mx,my,mz,beta,alpha)
 
-               diffbeta(i_hia) = nococonv%beta(atomType) - beta(i_hia)
-               diffalpha(i_hia) = nococonv%alph(atomType) - alpha(i_hia)
+               diffbeta(i_hia) = nococonv%beta(nType) - beta(i_hia)
+               diffalpha(i_hia) = nococonv%alph(nType) - alpha(i_hia)
 
                !TODO: ROTATE GREENS FUNCTION SPINFRAME TO ALIGN WITH CURRENT MAGNETIZATION
                CALL gdft(i_hia)%rotate_euler_angles(atoms,diffalpha(i_hia),diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
@@ -344,11 +344,12 @@ MODULE m_hubbard1_setup
       IF(fmpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+            l = atoms%lda_u(atoms%n_u+i_hia)%l
             IF (noco%l_unrestrictMT(nType) .OR. noco%l_spinoffd_ldau(ntype) .and. gfinp%l_mperp) then
                !TODO: ROTATE GREENS FUNCTION AND mmpmat SPINFRAME TO LOCAL FRAME
                CALL gu(i_hia)%rotate_euler_angles(atoms,-diffalpha(i_hia),-diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
                CALL gdft(i_hia)%rotate_euler_angles(atoms,-diffalpha(i_hia),-diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
-               CALL rotMMPmat(mmpMat(:,:,i_hia,:),-diffalpha(i_hia),-diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
+               CALL rotMMPmat(mmpMat(:,:,i_hia,:),-diffalpha(i_hia),-diffbeta(i_hia),0.0,l,spin_rotation=.TRUE.)
             ENDIF
 
             CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
