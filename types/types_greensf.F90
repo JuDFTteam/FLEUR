@@ -267,8 +267,16 @@ MODULE m_types_greensf
                !Write to file
                WRITE (l_type,'(i2)') 2*(2*this%elem%l+1)
                l_form = '('//l_type//'f8.4)'
-9000           FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
-               WRITE(oUnit,9000) this%elem%atomType, this%elem%l
+               IF(this%elem%isIntersite()) THEN
+8998              FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," atomp: ",I3," atomDiff: ", 3f8.4," l: ",I3," lp: ",I3)
+                  WRITE(oUnit,8998) this%elem%atomType, this%elem%atomTypep, this%elem%atomDiff, this%elem%l, this%elem%lp
+               ELSE IF (this%elem%isOffDiag()) THEN
+8999              FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3," lp: ",I3)
+                  WRITE(oUnit,8999) this%elem%atomType, this%elem%l, this%elem%lp
+               ELSE
+9000              FORMAT(/,"Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
+                  WRITE(oUnit,9000) this%elem%atomType, this%elem%l
+               ENDIF
                WRITE(oUnit,"(A)") "In the |L,S> basis:"
                DO ispin = 1, MERGE(3, input%jspins, gfinp%l_mperp)
                   WRITE(oUnit,'(A,I0)') "Spin: ", ispin

@@ -1560,22 +1560,14 @@ CONTAINS
       IF(distinct_k_resolved_arg) then
          IF(this%l_kresolved_int .neqv. other%l_kresolved_int) RETURN
       ENDIF
-      IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
-         ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
-         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) THEN
+      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.1e-12)) THEN
          IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
          IF(this%representative_elem > 0 .AND. other%representative_elem > 0) THEN
-            IF(ABS(this%representative_diff(1)-other%representative_diff(1)).GT.1e-12.OR.&
-               ABS(this%representative_diff(2)-other%representative_diff(2)).GT.1e-12.OR.&
-               ABS(this%representative_diff(3)-other%representative_diff(3)).GT.1e-12) RETURN
+            IF(ANY(ABS(this%representative_diff(:)-other%representative_diff(:)).GT.1e-12)) RETURN
          ELSE IF(this%representative_elem > 0) THEN
-            IF(ABS(this%representative_diff(1)-other%atomDiff(1)).GT.1e-12.OR.&
-               ABS(this%representative_diff(2)-other%atomDiff(2)).GT.1e-12.OR.&
-               ABS(this%representative_diff(3)-other%atomDiff(3)).GT.1e-12) RETURN
+            IF(ANY(ABS(this%representative_diff(:)-other%atomDiff(:)).GT.1e-12)) RETURN
          ELSE IF(other%representative_elem > 0) THEN
-            IF(ABS(other%representative_diff(1)-this%atomDiff(1)).GT.1e-12.OR.&
-               ABS(other%representative_diff(2)-this%atomDiff(2)).GT.1e-12.OR.&
-               ABS(other%representative_diff(3)-this%atomDiff(3)).GT.1e-12) RETURN
+            IF(ANY(ABS(other%representative_diff(:)-this%atomDiff(:)).GT.1e-12)) RETURN
          ENDIF
       ENDIF
       equals_coefficients_gfelem = .TRUE.
@@ -1594,9 +1586,7 @@ CONTAINS
       !on the coefficient level has some extra symmetry considerations
       !that should not influence the deduplication. It just influences how
       !many brillouin zone integegrations need to be performed
-      IF(ABS(this%atomDiff(1)-other%atomDiff(1)).GT.1e-12.OR.&
-         ABS(this%atomDiff(2)-other%atomDiff(2)).GT.1e-12.OR.&
-         ABS(this%atomDiff(3)-other%atomDiff(3)).GT.1e-12) RETURN
+      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.1e-12)) RETURN
       IF(this%iContour.NE.other%iContour) RETURN
       equals_gfelem = .TRUE.
 
