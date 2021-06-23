@@ -134,16 +134,18 @@ contains
 #ifdef CPP_MPI
       if(my_psz /= nbands) then
          call timestart("allreduce cmt")
-         call MPI_Allreduce(MPI_IN_PLACE, cmt, size(cmt), MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
+         do i = 1,atoms%nat
+            call MPI_Allreduce(MPI_IN_PLACE, cmt(1,1,i), nbands*hybdat%maxlmindx, MPI_DOUBLE_COMPLEX, MPI_SUM, submpi%comm, ierr)
+         enddo
          call timestop("allreduce cmt")
       endif
 #endif
 
       ! write cmt at irreducible k-points in direct-access file cmt
       if(ik <= kpts%nkpt) then
-         call timestart("copy out")
+         call timestart("copy out cmt")
          call zcopy(size(cmt), cmt, 1, cmt_out, 1)
-         call timestop("copy out")
+         call timestop("copy out cmt")
       else
          iop = kpts%bksym(ik)
 

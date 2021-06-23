@@ -26,6 +26,7 @@ MODULE m_constants
   REAL,             PARAMETER :: tpi_const=2.*3.1415926535897932
   REAL,             PARAMETER :: fpi_const=4.*3.1415926535897932
   REAL,             PARAMETER :: sfp_const=SQRT(4.*3.1415926535897932)
+  real,             parameter :: sqrt_2=sqrt(2.0)
   COMPLEX,          PARAMETER :: ImagUnit=(0.0,1.0)
   REAL,             PARAMETER :: hartree_to_ev_const=27.211386245988 ! value from  https://physics.nist.gov/cgi-bin/cuu/Value?hrev
                                                                      ! 27.211386245988(53)
