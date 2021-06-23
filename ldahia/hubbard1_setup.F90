@@ -151,8 +151,8 @@ MODULE m_hubbard1_setup
                my = 2.0 * AIMAG(offdtrace)
                CALL pol_angle(mx,my,mz,beta,alpha)
 
-               diffbeta(i_hia) = nococonv%beta(nType) - beta(i_hia)
-               diffalpha(i_hia) = nococonv%alph(nType) - alpha(i_hia)
+               diffbeta(i_hia) = nococonv%beta(nType) - beta
+               diffalpha(i_hia) = nococonv%alph(nType) - alpha
 
                !TODO: ROTATE GREENS FUNCTION SPINFRAME TO ALIGN WITH CURRENT MAGNETIZATION
                CALL gdft(i_hia)%rotate_euler_angles(atoms,diffalpha(i_hia),diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
@@ -349,7 +349,7 @@ MODULE m_hubbard1_setup
                !TODO: ROTATE GREENS FUNCTION AND mmpmat SPINFRAME TO LOCAL FRAME
                CALL gu(i_hia)%rotate_euler_angles(atoms,-diffalpha(i_hia),-diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
                CALL gdft(i_hia)%rotate_euler_angles(atoms,-diffalpha(i_hia),-diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
-               CALL rotMMPmat(mmpMat(:,:,i_hia,:),-diffalpha(i_hia),-diffbeta(i_hia),0.0,l,spin_rotation=.TRUE.)
+               mmpMat(:,:,i_hia,:) = rotMMPmat(mmpMat(:,:,i_hia,:),-diffalpha(i_hia),-diffbeta(i_hia),0.0,l,spin_rotation=.TRUE.)
             ENDIF
 
             CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
