@@ -148,7 +148,7 @@ def pytest_addoption(parser):
     parser.addoption("--cleanup", action="store", default=True, help='Clean faild dir at session start?')
     parser.addoption("--runevery", action="store", default=None, help='Run every x test')
     parser.addoption("--testoffset", action="store", default=None, help='Do not run first x tests')
-    parser.addoption("--skipmarkers", action="store_true",
+    parser.addoption("--skipmarkers", action="store",
                      default="", help="skip tests with these markers")
     #parser.addoption("--testing_dir", action="store", default="")
 
