@@ -771,12 +771,12 @@ def execute_fleur(fleur_binary, work_dir, mpi_command):
                 # otherwise popen thinks 'mpirun -np 2 /path/fleur' is the path to the executable...
                 p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr)#check=True
         # Check per hand if successful:
-        if p1.returncode != 0:
-            # failure
-            print('Fleur execution failed.')
-            with open(f"{workdir}/{stderr}", "r") as f_stderr:
-                print(f_stderr.read())
-            p1.check_returncode() # This throws error
+#        if p1.returncode != 0:
+#            # failure
+#            print('Fleur execution failed.')
+#            with open(f"{workdir}/{stderr}", "r") as f_stderr:
+#                print(f_stderr.read())
+#            p1.check_returncode() # This throws error
 
         #t1 = time.perf_counter()
         #print(f'Executing Fleur took {t1 - t0:0.4f} seconds')
