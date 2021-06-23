@@ -923,19 +923,19 @@ CONTAINS
          coeff(1,hybdat%nbasp + 1:n) = olap%data_c(1, 1:n - hybdat%nbasp)
       END IF
       IF (sym%invs) THEN
-         CALL symmetrize(coeff, 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(coeff, 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(claplace, 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(claplace, 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(-1:-1,:), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(-1:-1,:), 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(0:0,:), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(0:0,:), 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(1:1,:), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(1:1,:), 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
       ENDIF

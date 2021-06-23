@@ -1028,13 +1028,13 @@ CONTAINS
       IF (mat%l_real) THEN
         if (acc_is_present(mat%data_r)) Then
           !$acc kernels present(mat%data_r)
-          mat%data_r=0.0
+          mat%data_r(:,:)=0.0
           !$acc end kernels
         endif
       ELSE
         if (acc_is_present(mat%data_c)) Then
           !$acc kernels present(mat%data_c)
-          mat%data_c=0.0
+          mat%data_c(:,:)=0.0
           !$acc end kernels
         endif
       ENDIF

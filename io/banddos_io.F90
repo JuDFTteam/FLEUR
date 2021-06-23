@@ -248,12 +248,11 @@ MODULE m_banddos_io
 
    END SUBROUTINE
 
-   SUBROUTINE writeBandData(fileID,kpts,name_of_dos,weight_name,weight_eig,eig)
+   SUBROUTINE writeBandData(fileID,name_of_dos,weight_name,eig,weight_eig,kpts)
       USE m_types_kpts
       character(len=*),intent(in) :: name_of_dos
       character(len=*),intent(in) :: weight_name
-      real,intent(in)             :: weight_eig(:,:,:)
-      real,OPTIONAL,intent(in)    :: eig(:,:,:)
+      real,intent(in)             :: eig(:,:,:),weight_eig(:,:,:)
       type(t_kpts),intent(in)     :: kpts
 
 
@@ -273,10 +272,8 @@ MODULE m_banddos_io
       ELSE
         CALL h5gcreate_f(GroupID, "BS", BSGroupID, hdfError)
       endif
-      IF(PRESENT(eig)) THEN
-         if (.not.io_dataexists(BSGroupID,"eigenvalues")) call io_write_var(BSGroupID,"eigenvalues",eig)
-         call io_write_var(BSGroupID,weight_name,weight_eig(:,:,:))
-      END IF
+      if (.not.io_dataexists(BSGroupID,"eigenvalues")) call io_write_var(BSGroupID,"eigenvalues",eig)
+      call io_write_var(BSGroupID,weight_name,weight_eig(:,:,:))
       CALL h5gclose_f(BSGroupID, hdfError)
       CALL h5gclose_f(GroupID, hdfError)
    END SUBROUTINE
