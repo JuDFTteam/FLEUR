@@ -63,7 +63,7 @@ message("HDF5 Library found:${FLEUR_USE_HDF5}")
 if (DEFINED CLI_FLEUR_USE_HDF5)
    if (CLI_FLEUR_USE_HDF5)
        if (NOT FLEUR_USE_HDF5)
-           if (NOT EXISTS {PROJECT_SOURCE_DIR}/.git")
+           if (NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
                 message(FATAL_ERROR "You asked for HDF5 to be used, but it cannot be found.\n"
                 "Please either provide correct include and link directories for HDF5 manually, or use a git-version of FLEUR to download HDF5 automatically")
            endif()     
