@@ -39,7 +39,7 @@ MODULE m_hubbard1_setup
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_nococonv), INTENT(IN)     :: nococonv
       TYPE(t_potden),   INTENT(IN)     :: pot
-      TYPE(t_greensf),  INTENT(INOUT)  :: gdft(:) !green's function calculated from the Kohn-Sham system
+      TYPE(t_greensf),  INTENT(IN)     :: gdft(:) !green's function calculated from the Kohn-Sham system
       TYPE(t_hub1data), INTENT(INOUT)  :: hub1data
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_potden),   INTENT(INOUT)  :: den
@@ -56,6 +56,7 @@ MODULE m_hubbard1_setup
       LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,l_amf
 
       CHARACTER(len=300) :: folder
+      TYPE(t_greensf),ALLOCATABLE :: gdft_rot(:)
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
       TYPE(t_selfen), ALLOCATABLE :: selfen(:)
 
@@ -76,6 +77,13 @@ MODULE m_hubbard1_setup
 #ifndef CPP_EDSOLVER
       CALL juDFT_error("No solver linked for Hubbard 1", hint="Link the edsolver library",calledby="hubbard1_setup")
 #endif
+
+      ALLOCATE(gdft_rot(atoms%n_hia))
+      DO i_hia = 1, atoms%n_hia
+         CALL gdft_rot(i_hia)%init(gdft(i_hia)%elem,gfinp,atoms,input,contour_in=gdft(i_hia)%contour)
+         gdft_rot(i_hia) = gdft(i_hia)
+      ENDDO
+
 
       IF(fmpi%irank.EQ.0) THEN
          !-------------------------------------------
@@ -155,7 +163,7 @@ MODULE m_hubbard1_setup
                diffalpha(i_hia) = nococonv%alph(nType) - alpha
 
                !TODO: ROTATE GREENS FUNCTION SPINFRAME TO ALIGN WITH CURRENT MAGNETIZATION
-               CALL gdft(i_hia)%rotate_euler_angles(atoms,diffalpha(i_hia),diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
+               CALL gdft_rot(i_hia)%rotate_euler_angles(atoms,diffalpha(i_hia),diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
             ENDIF
 
             !Nearest Integer occupation
@@ -213,6 +221,7 @@ MODULE m_hubbard1_setup
       ALLOCATE(selfen(atoms%n_hia))
       DO i_hia = 1, atoms%n_hia
          CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,atoms,input,contour_in=gdft(i_hia)%contour)
+         CALL gdft_rot(i_hia)%mpi_bc(fmpi%mpi_comm)
          CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz,input%jspins,&
                                  noco%l_noco.AND.(noco%l_soc.OR.gfinp%l_mperp).OR.hub1inp%l_fullmatch)
       ENDDO
@@ -302,7 +311,7 @@ MODULE m_hubbard1_setup
 #endif
 
          CALL timestart("Hubbard 1: Add Selfenergy")
-         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,atoms,noco,nococonv,&
+         CALL add_selfen(gdft_rot(i_hia),selfen(i_hia),gfinp,input,atoms,noco,nococonv,&
                          occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenergy")
 
@@ -348,7 +357,6 @@ MODULE m_hubbard1_setup
             IF (noco%l_unrestrictMT(nType) .OR. noco%l_spinoffd_ldau(ntype) .and. gfinp%l_mperp) then
                !TODO: ROTATE GREENS FUNCTION AND mmpmat SPINFRAME TO LOCAL FRAME
                CALL gu(i_hia)%rotate_euler_angles(atoms,-diffalpha(i_hia),-diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
-               CALL gdft(i_hia)%rotate_euler_angles(atoms,-diffalpha(i_hia),-diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
                mmpMat(:,:,i_hia,:) = rotMMPmat(mmpMat(:,:,i_hia,:),-diffalpha(i_hia),-diffbeta(i_hia),0.0,l,spin_rotation=.TRUE.)
             ENDIF
 
