@@ -40,13 +40,13 @@ MODULE m_greensfCalcRealPart
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),           INTENT(INOUT)  :: g(:)
 
-      INTEGER :: i_gf,i_elem,l,m,mp,nType,indUnique,nLO,iLO,iLOp,i_elemLO
-      INTEGER :: jspin,nspins,ipm,lp,nTypep,refCutoff
+      INTEGER :: i_gf,i_elem,l,m,mp,indUnique,nLO,iLO,iLOp,i_elemLO
+      INTEGER :: jspin,nspins,ipm,lp,refCutoff
       INTEGER :: contourShape
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: ikpt, ikpt_i
-      LOGICAL :: l_onsite,l_fixedCutoffset,l_sphavg,l_kresolved_int, l_inter
-      REAL    :: del,eb,fixedCutoff,atomDiff(3),bk(3)
+      LOGICAL :: l_fixedCutoffset,l_sphavg,l_kresolved_int
+      REAL    :: del,eb,fixedCutoff,bk(3)
       REAL,    ALLOCATABLE :: eMesh(:)
       COMPLEX, ALLOCATABLE :: gmat(:),imag(:)
 
@@ -62,15 +62,11 @@ MODULE m_greensfCalcRealPart
             !Get the information of ith current element
             l  = g(i_gf)%elem%l
             lp = g(i_gf)%elem%lp
-            nType  = g(i_gf)%elem%atomType
-            nTypep = g(i_gf)%elem%atomTypep
             l_sphavg = g(i_gf)%elem%l_sphavg
             l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
             refCutoff        = g(i_gf)%elem%refCutoff
-            atomDiff(:) = g(i_gf)%elem%atomDiff(:)
             l_kresolved_int = g(i_gf)%elem%l_kresolved_int
-
 
             IF(refCutoff /= -1) CYCLE
 
@@ -86,9 +82,7 @@ MODULE m_greensfCalcRealPart
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(indUnique,:,:)
             ELSE
                i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
-               !Is the current element suitable for automatic finding of the cutoff
-               l_onsite = nType.EQ.nTypep.AND.l.EQ.lp.AND.ALL(ABS(atomDiff(:)).LT.1e-12)
-               IF(l_onsite.AND.g(i_gf)%elem%countLOs(atoms)==0 .AND..NOT. l_kresolved_int) THEN
+               IF(.NOT.g(i_gf)%elem%isOffDiag().AND.g(i_gf)%elem%countLOs(atoms)==0 .AND..NOT. l_kresolved_int) THEN
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
                   ! with LOs I just use a fixed cutoff or reference otherwise I would need to check whether
@@ -100,7 +94,7 @@ MODULE m_greensfCalcRealPart
                      !Onsite element with radial dependence
                      CALL kk_cutoffRadial(greensfImagPart%uu(:,:,:,i_elem,:),greensfImagPart%ud(:,:,:,i_elem,:),&
                                           greensfImagPart%du(:,:,:,i_elem,:),greensfImagPart%dd(:,:,:,i_elem,:),&
-                                          noco,g(i_gf)%scalarProducts,gfinp%l_mperp,l,nType,input,eMesh,&
+                                          noco,g(i_gf)%scalarProducts,gfinp%l_mperp,l,input,eMesh,&
                                           greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorRadial(i_elem,:))
                   ENDIF
                ELSE
@@ -143,8 +137,6 @@ MODULE m_greensfCalcRealPart
          !Get the information of ith current element
          l  = g(i_gf)%elem%l
          lp = g(i_gf)%elem%lp
-         nType  = g(i_gf)%elem%atomType
-         nTypep = g(i_gf)%elem%atomTypep
          l_sphavg = g(i_gf)%elem%l_sphavg
          contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
          nLO = g(i_gf)%elem%countLOs(atoms)
@@ -229,13 +221,9 @@ MODULE m_greensfCalcRealPart
                !Get the information of ith current element
                l  = g(i_gf)%elem%l
                lp = g(i_gf)%elem%lp
-               nType  = g(i_gf)%elem%atomType
-               nTypep = g(i_gf)%elem%atomTypep
                l_sphavg = g(i_gf)%elem%l_sphavg
                contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
                nLO = g(i_gf)%elem%countLOs(atoms)
-               atomDiff(:) = g(i_gf)%elem%atomDiff(:)
-               l_inter = ANY(ABS(atomDiff) > 1e-12)
                IF(g(i_gf)%elem%representative_elem > 0) CYCLE
                IF(.NOT.g(i_gf)%elem%l_kresolved_int) CYCLE
 
