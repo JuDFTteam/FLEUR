@@ -1071,7 +1071,7 @@ MODULE m_types_greensf
          CALL timestop("Green's Function: Rotate (Symmetry)")
       END SUBROUTINE rotate_gf
 
-      SUBROUTINE rotate_euler_angles_gf(this,atoms,alpha,beta,gamma,spin_rotation)
+      SUBROUTINE rotate_euler_angles_gf(this,atoms,alpha,beta,gamma,spin_rotation,real_space_rotation)
 
          USE m_rotMMPmat
 
@@ -1082,6 +1082,7 @@ MODULE m_types_greensf
          REAL,                INTENT(IN)     :: beta
          REAL,                INTENT(IN)     :: gamma
          LOGICAL, OPTIONAL,   INTENT(IN)     :: spin_rotation
+         LOGICAL, OPTIONAL,   INTENT(IN)     :: real_space_rotation
 
          INTEGER :: l,lp,atomType,atomTypep
          INTEGER :: ipm,ispin,iz,ilo,ilop,iLO_ind,iLOp_ind
@@ -1097,27 +1098,36 @@ MODULE m_types_greensf
          DO ipm = 1, 2
             DO iz = 1, this%contour%nz
                IF(ALLOCATED(this%gmmpMat)) THEN
-                  this%gmmpMat(iz,:,:,:,ipm) = rotMMPmat(this%gmmpMat(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                  this%gmmpMat(iz,:,:,:,ipm) = rotMMPmat(this%gmmpMat(iz,:,:,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                         spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
                ELSE IF(ALLOCATED(this%uu)) THEN
-                  this%uu(iz,:,:,:,ipm) = rotMMPmat(this%uu(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
-                  this%ud(iz,:,:,:,ipm) = rotMMPmat(this%ud(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
-                  this%du(iz,:,:,:,ipm) = rotMMPmat(this%du(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
-                  this%dd(iz,:,:,:,ipm) = rotMMPmat(this%dd(iz,:,:,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                  this%uu(iz,:,:,:,ipm) = rotMMPmat(this%uu(iz,:,:,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
+                  this%ud(iz,:,:,:,ipm) = rotMMPmat(this%ud(iz,:,:,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
+                  this%du(iz,:,:,:,ipm) = rotMMPmat(this%du(iz,:,:,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
+                  this%dd(iz,:,:,:,ipm) = rotMMPmat(this%dd(iz,:,:,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
 
                   IF(ALLOCATED(this%uulo)) THEN
                      iLO_ind = 0
                      DO ilo = 1, atoms%nlo(atomType)
                         IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                         iLO_ind = iLO_ind + 1
-                        this%uulo(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%uulo(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
-                        this%dulo(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%dulo(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                        this%uulo(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%uulo(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
+                        this%dulo(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%dulo(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
                      ENDDO
                      iLO_ind = 0
                      DO ilo = 1, atoms%nlo(atomTypep)
                         IF(atoms%llo(ilo,atomTypep).NE.lp) CYCLE
                         iLO_ind = iLO_ind + 1
-                        this%ulou(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%ulou(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
-                        this%ulod(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%ulod(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                        this%ulou(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%ulou(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
+                        this%ulod(iz,:,:,iLO_ind,:,ipm) = rotMMPmat(this%ulod(iz,:,:,iLO_ind,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
                      ENDDO
                      iLO_ind = 0
                      DO ilo = 1, atoms%nlo(atomType)
@@ -1126,7 +1136,8 @@ MODULE m_types_greensf
                         DO ilop = 1, atoms%nlo(atomTypep)
                            IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
                            iLOp_ind = iLOp_ind + 1
-                           this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm) = rotMMPmat(this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm),alpha,beta,gamma,l,spin_rotation=spin_rotation)
+                           this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm) = rotMMPmat(this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm),alpha,beta,gamma,l,lp=lp,&
+                                                                                   spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
                         ENDDO
                      ENDDO
                   ENDIF
