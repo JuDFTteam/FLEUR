@@ -72,16 +72,19 @@ MODULE m_greensfBZint
             ENDIF
          ENDIF
 
-         IF(l_intersite) THEN
-            n_op = 1
-            repr_ops(1) = 1
-            ! DO i_gf_p = 1, gfinp%n
-            !    IF(gfinp%elem(i_gf_p)%representative_elem==i_gf) THEN
-            !       n_op = n_op + 1
-            !       repr_ops(n_op) = gfinp%elem(i_gf_p)%representative_op
-            !    ENDIF
-            ! ENDDO
-         ENDIF
+
+         n_op = 1
+         repr_ops(1) = 1
+         ! IF(l_intersite) THEN
+         !    n_op = 1
+         !    repr_ops(1) = 1
+         !    DO i_gf_p = 1, gfinp%n
+         !       IF(gfinp%elem(i_gf_p)%representative_elem==i_gf) THEN
+         !          n_op = n_op + 1
+         !          repr_ops(n_op) = gfinp%elem(i_gf_p)%representative_op
+         !       ENDIF
+         !    ENDDO
+         ! ENDIF
 
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
                      imatSize,spin_start:spin_end),source=cmplx_0)
