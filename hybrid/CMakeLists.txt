@@ -16,7 +16,7 @@ hybrid/eigvec_setup.F90
 hybrid/exchange_core.F90
 hybrid/exchange_val_hf.F90
 hybrid/exponential_integral.f90
-hybrid/ex_to_vx.f90
+hybrid/ex_to_vx.F90
 hybrid/gamma_double_gpt_loop.F90
 hybrid/gen_wavf.F90
 hybrid/glob_tofrom_loc.F90
