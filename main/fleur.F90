@@ -278,7 +278,7 @@ CONTAINS
             SELECT TYPE (xcpot)
             TYPE IS (t_xcpot_inbuild)
                CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
-                                results, xcpot, vTot, iterHF)
+                                results, xcpot, vTot, iter, iterHF)
             END SELECT
 #ifdef CPP_MPI
             call MPI_Barrier(fmpi%mpi_comm, ierr)
