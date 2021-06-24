@@ -891,7 +891,7 @@ CONTAINS
                      DO iz = strt, fin
                         DO iy = 0, grid(2)-1
                            DO ix = 0, grid(1)-1
-                              WRITE(nfile+10,*) 'X', tempVecs(ix,iy,iz,:)
+                              WRITE(nfile+10,'(a,6f20.11)') 'X', tempVecs(ix,iy,iz,:)
                            END DO
                         END DO
                      END DO
