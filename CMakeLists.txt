@@ -27,7 +27,6 @@ include("cmake/ReportConfig.txt")
 include("cmake/pytest_setup.cmake")
 
 #install(TARGETS fleur inpgen DESTINATION bin)
-install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur
-        CONFIGURATIONS Debug
-        DESTINATION bin
-        RENAME fleur_dbg)
+install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur DESTINATION bin OPTIONAL)
+install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur_MPI DESTINATION bin OPTIONAL)
+install(PROGRAMS ${CMAKE_BINARY_DIR}/inpgen DESTINATION bin)
