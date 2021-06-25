@@ -346,16 +346,18 @@ test-aiida-fleur-dev-gfortran-hdf5:
   stage: test
   dependencies:
     - build-gfortran-hdf5
-  services:
-    - postgres:12.2-alpine
-    - rabbitmq:latest
   variables:
-    POSTGRES_DB: test_django
-    POSTGRES_USER: runner
+    POSTGRES_DB: postgres
+    POSTGRES_USER: postgres
     POSTGRES_PASSWORD: ''
     POSTGRES_HOST_AUTH_METHOD: trust
     RABBITMQ_DEFAULT_USER: guest
     RABBITMQ_DEFAULT_PASS: guest
+  services:
+    - postgres
+    #:12.2-alpine
+    - rabbitmq:latest
+
     #AMQP_URL: 'amqp://guest:guest@rabbitmq:5672'
   before_script:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Aiida-fleur system dependencies"
@@ -381,6 +383,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
     # we are in aiida-fleur dir
     - pwd
+    - psql -h "postgres" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 'OK' AS status;"
     - cd ./tests/
     # Maybe also copy all current input files from fleur tests to run them through
     # the auto generated tests
