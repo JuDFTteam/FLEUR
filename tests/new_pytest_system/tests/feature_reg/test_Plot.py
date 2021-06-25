@@ -52,15 +52,15 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444")
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "5.7472348")
+    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.0000057472")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.4258351")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555")
 
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "2.86600")
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "1.43300")
     
-    assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "4.834025")
-    assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "1.74449")
+    assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.004834025")
+    assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.000174449")
 
 
 @pytest.mark.plot
@@ -101,7 +101,7 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444")
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "5.7472348")
+    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.0000057472")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.4258351")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555")
 
@@ -119,7 +119,7 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn_A_vec_plotOnlyMT.xsf'], r"0\.00000000.*0\.00000000.*0\.00000000.*0\.00000000")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444")
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "5.7472348")
+    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.0000057472")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.4258351")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555")
 
