@@ -351,7 +351,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - rabbitmq:latest
   variables:
     POSTGRES_DB: test_django
-    POSTGRES_SUER: runner
+    POSTGRES_USER: runner
     POSTGRES_PASSWORD: ''
     POSTGRES_HOST_AUTH_METHOD: trust
     RABBITMQ_DEFAULT_USER: guest
@@ -362,7 +362,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - apt-get update
     - apt-get -yq install python3-pip
     # because aiida needs psql commands
-    - apt-get -yq install postgresql-12
+    #- apt-get -yq install postgresql-12
     - pip3 install --upgrade wheel setuptools
     - pip3 install pytest masci-tools
     - pip3 install aiida-core
@@ -398,3 +398,4 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - schedules
     - triggers
     - web
+    # Add slack or mattermost message in aiida channel to notice this.
