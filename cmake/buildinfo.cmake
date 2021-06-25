@@ -10,11 +10,11 @@ set(git_describe unknown)
 set(git_branch unknown)
 if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
    execute_process(COMMAND git describe --tags --match "MaX*" --dirty
-                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_describe)
+                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_describe ERROR_QUIET)
    execute_process(COMMAND git rev-parse --abbrev-ref HEAD
-                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_branch)
+                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_branch ERROR_QUIET)
    execute_process(COMMAND git rev-parse HEAD
-                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_hash)
+                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE git_hash ERROR_QUIET)
 elseif (EXISTS "${CMAKE_SOURCE_DIR}/version")
    file(READ ${CMAKE_SOURCE_DIR}/version git_describe)
 endif()
