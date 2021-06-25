@@ -347,8 +347,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
   dependencies:
     - build-gfortran-hdf5
   variables:
-    POSTGRES_DB: postgres
-    POSTGRES_USER: postgres
+    POSTGRES_DB: "postgres"
+    POSTGRES_USER: "postgres"
     POSTGRES_PASSWORD: ''
     POSTGRES_HOST_AUTH_METHOD: trust
     RABBITMQ_DEFAULT_USER: guest
@@ -397,8 +397,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
 #    when: on_failure
 #    paths:
 #      - build/Testing
-  only:
-    - schedules
-    - triggers
-    - web
-    # Add slack or mattermost message in aiida channel to notice this.
+#  only:
+#    - schedules
+#    - triggers
+#    - web
+#    # Add slack or mattermost message in aiida channel to notice this.
