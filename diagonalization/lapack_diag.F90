@@ -6,6 +6,7 @@
 MODULE m_lapack_diag
   USE m_types_mat
   USE m_judft
+  use m_unique_eigvec
 IMPLICIT NONE
   CONTAINS
   SUBROUTINE lapack_diag(hmat,smat,ne,eig,zmat)
@@ -16,7 +17,7 @@ IMPLICIT NONE
     CLASS(t_mat),ALLOCATABLE,INTENT(OUT)    :: zmat
     REAL,INTENT(OUT)           :: eig(:)
 
-    INTEGER            :: lwork,info,m
+    INTEGER            :: lwork,info,m, ierr
     INTEGER,ALLOCATABLE:: ifail(:),iwork(:)
     COMPLEX,ALLOCATABLE:: work(:)
     REAL,ALLOCATABLE   :: rwork(:)
@@ -38,6 +39,9 @@ IMPLICIT NONE
        IF (info.NE.0) CALL judft_error("Diagonalization via LAPACK failed (Workspace)",no=info)
        CALL dsygvx(1,'V','I','U', hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,SIZE(smat%data_r,1),&
             0.0,0.0,1,ne,abstol,m,eigTemp,zmat%data_r,SIZE(zmat%data_r,1),rwork, lwork, iwork, ifail, info)
+
+       call unique_eigvec(eigTemp, zmat%data_r, ierr)
+       if(ierr /= 0) call judft_error("unification of zmat failed.")
     ELSE
        ALLOCATE(rwork(7*hmat%matsize1),iwork(5*hmat%matsize1),ifail(hmat%matsize1))
        !Do a workspace query
