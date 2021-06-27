@@ -39,9 +39,6 @@ IMPLICIT NONE
        IF (info.NE.0) CALL judft_error("Diagonalization via LAPACK failed (Workspace)",no=info)
        CALL dsygvx(1,'V','I','U', hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,SIZE(smat%data_r,1),&
             0.0,0.0,1,ne,abstol,m,eigTemp,zmat%data_r,SIZE(zmat%data_r,1),rwork, lwork, iwork, ifail, info)
-
-       call unique_eigvec(eigTemp, zmat%data_r, ierr)
-       if(ierr /= 0) call judft_error("unification of zmat failed.")
     ELSE
        ALLOCATE(rwork(7*hmat%matsize1),iwork(5*hmat%matsize1),ifail(hmat%matsize1))
        !Do a workspace query
@@ -55,6 +52,14 @@ IMPLICIT NONE
             0.0,0.0,1,ne,abstol,m,eigTemp,zmat%data_c,SIZE(zmat%data_c,1),work,lwork,rwork,iwork,ifail,info)
     ENDIF
     eig(:MIN(SIZE(eig),SIZE(eigTemp))) = eigTemp(:MIN(SIZE(eig),SIZE(eigTemp)))
+
+    if(hmat%l_real) then
+     call unique_eigvec(eig(:MIN(SIZE(eig),SIZE(eigTemp))), zmat%data_r, ierr)
+     if(ierr /= 0) call judft_error("unification of zmat failed.")
+    endif
+
+
+    write (*,*) "eig(:MIN(SIZE(eig),SIZE(eigTemp)))", eig(:MIN(SIZE(eig),SIZE(eigTemp)))
     IF (info.NE.0) CALL judft_error("Diagonalization via LAPACK failed(zhegvx/dsygvx)",no=info)
     IF (m.NE.ne) CALL judft_error("Diagonalization via LAPACK failed failed without explicit errorcode.")
   END SUBROUTINE lapack_diag
