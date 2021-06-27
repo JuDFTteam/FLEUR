@@ -58,8 +58,6 @@ IMPLICIT NONE
      if(ierr /= 0) call judft_error("unification of zmat failed.")
     endif
 
-
-    write (*,*) "eig(:MIN(SIZE(eig),SIZE(eigTemp)))", eig(:MIN(SIZE(eig),SIZE(eigTemp)))
     IF (info.NE.0) CALL judft_error("Diagonalization via LAPACK failed(zhegvx/dsygvx)",no=info)
     IF (m.NE.ne) CALL judft_error("Diagonalization via LAPACK failed failed without explicit errorcode.")
   END SUBROUTINE lapack_diag

@@ -167,6 +167,7 @@ contains
          write (*,*) "RQ matrix seems linear dependent", lindep
          ierr = 1
       else
+         write (*,*) "lindep", lindep
          ierr = 0
       endif
    end subroutine make_rq_mat
