@@ -1,7 +1,6 @@
 MODULE m_symMMPmat
 
    USE m_rotMMPmat
-   USE m_dwigner
    USE m_types
    USE m_constants
    USE m_juDFT
@@ -34,18 +33,15 @@ MODULE m_symMMPmat
 
       COMPLEX :: mmpmatSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
       COMPLEX :: mmpmat_kpt(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
-      COMPLEX :: dwgn(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,lmaxU_const)
       INTEGER :: i_op,n_ops,is,isi,lpArg,nkpts,ikpt,kpt,sym_kpt
       INTEGER, ALLOCATABLE :: sym_ops(:)
       COMPLEX :: symPhase, intersite_phase
       INTEGER :: rrot(3,3)
       COMPLEX :: rrot_dwgn_l(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const)
       COMPLEX :: rrot_dwgn_lp(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const)
-      REAL    :: symFac,rotbk(3),kpt_parent(3),idmat(3,3)
+      REAL    :: symFac,rotbk(3),kpt_parent(3)
 
       mmpmatSym = cmplx_0
-      idmat = 0.0
-      idmat(1,1) = 1.0; idmat(2,2) = 1.0; idmat(3,3) = 1.0
 
       lpArg=l
       IF(PRESENT(lp)) lpArg = lp
@@ -92,16 +88,14 @@ MODULE m_symMMPmat
                sym_kpt = sym%invtab(kpts%bksym(kpt))
 
                IF(sym_kpt.LE.sym%nop) THEN
-                  rrot = sym%mrot(:,:,sym_kpt)
+                  rrot = transpose(sym%mrot(:,:,sym_kpt))
+                  rrot_dwgn_l = transpose(sym%d_wgn(:,:,l,sym_kpt))
+                  rrot_dwgn_lp = transpose(sym%d_wgn(:,:,lpArg,sym_kpt))
                ELSE
-                  rrot = -sym%mrot(:,:,sym%invtab(sym_kpt-sym%nop))
+                  rrot = -transpose(sym%mrot(:,:,sym%invtab(sym_kpt-sym%nop)))
+                  rrot_dwgn_l = -transpose(sym%d_wgn(:,:,l,sym%invtab(sym_kpt-sym%nop)))
+                  rrot_dwgn_lp = -transpose(sym%d_wgn(:,:,lpArg,sym%invtab(sym_kpt-sym%nop)))
                ENDIF
-
-               CALL d_wigner(rrot,idmat,lmaxU_const,dwgn)
-
-               rrot = transpose(rrot)
-               rrot_dwgn_l = transpose(dwgn(:,:,l))
-               rrot_dwgn_lp = transpose(dwgn(:,:,lpArg))
 
                rotbk = matmul(rrot,kpt_parent)
                mmpmat_kpt = rotMMPmat(mmpmat,dwgn =rrot_dwgn_lp,&
