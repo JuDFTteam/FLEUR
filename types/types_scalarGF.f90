@@ -70,7 +70,7 @@ MODULE m_types_scalarGF
 
    END SUBROUTINE init_scalarGF
 
-   SUBROUTINE addOffdScalarProduct(this,l,lp,atomType,atomTypep,l_phase,l_mperp,atoms,input,f,g,flo)
+   SUBROUTINE addOffdScalarProduct(this,l,lp,atomType,atomTypep,l_intersite,l_mperp,atoms,input,f,g,flo)
 
       USE m_intgr
 
@@ -78,8 +78,8 @@ MODULE m_types_scalarGF
       INTEGER,             INTENT(IN)    :: l,lp
       INTEGER,             INTENT(IN)    :: atomType,atomTypep
       LOGICAL,             INTENT(IN)    :: l_mperp
-      LOGICAL,             INTENT(IN)    :: l_phase !Is there a non-zero interstitial phase
-                                                    !(meaning we have to treat r and r' independently)
+      LOGICAL,             INTENT(IN)    :: l_intersite !Is there a non-zero interstitial phase
+                                                        !(meaning we have to treat r and r' independently)
       TYPE(t_atoms),       INTENT(IN)    :: atoms
       TYPE(t_input),       INTENT(IN)    :: input
       REAL,                INTENT(IN)    :: f(:,:,0:,:,:)
@@ -96,7 +96,7 @@ MODULE m_types_scalarGF
          j2_start = MERGE(1,j1,l_mperp)
          j2_end   = MERGE(input%jspins,j1,l_mperp)
          DO j2 = j2_start, j2_end
-            IF(atomType.EQ.atomTypep.AND..NOT.l_phase) THEN
+            IF(.NOT.l_intersite) THEN
                !Only l/=lp
                uu_tmp(:atoms%jri(atomType)) = f(:atoms%jri(atomType),1,lp,j1,atomTypep)*f(:atoms%jri(atomType),1,l,j2,atomType)&
                                             + f(:atoms%jri(atomType),2,lp,j1,atomTypep)*f(:atoms%jri(atomType),2,l,j2,atomType)
