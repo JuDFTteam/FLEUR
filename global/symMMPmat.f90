@@ -97,7 +97,7 @@ MODULE m_symMMPmat
                   rrot_dwgn_lp = -transpose(sym%d_wgn(:,:,lpArg,sym%invtab(sym_kpt-sym%nop)))
                ENDIF
 
-               rotbk = matmul(rrot,kpt_parent)
+               rotbk = kpts%to_first_bz(matmul(rrot,kpt_parent))
                mmpmat_kpt = rotMMPmat(mmpmat,dwgn =rrot_dwgn_lp,&
                                              dwgnp=rrot_dwgn_l)
 
