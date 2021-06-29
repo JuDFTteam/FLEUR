@@ -35,7 +35,10 @@ class FleurTestsTerminalReporter(TerminalReporter):
 
         super().__init__(config, file=file)
 
-        self.startpath = self.config.rootpath
+        try:
+            self.startpath = self.config.rootpath
+        except AttributeError:
+            self.startpath = self.config.rootdir
 
         force_width = config.getoption("--overwrite-terminal-width")
         if force_width is not None:
