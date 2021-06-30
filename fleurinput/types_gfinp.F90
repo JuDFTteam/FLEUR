@@ -596,12 +596,11 @@ CONTAINS
       TYPE(t_cell),     INTENT(IN)     :: cell
       TYPE(t_input),    INTENT(IN)     :: input
 
-      INTEGER :: i_gf,l,lp,atomType,atomTypep,iContour,refCutoff
+      INTEGER :: i_gf,l,lp,atomType,iContour,refCutoff
       INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref,n_intersite, i_inter
-      LOGICAL :: l_inter,l_offd,l_sphavg, l_all_kresolved, l_kresolved_radial
+      LOGICAL :: l_offd,l_sphavg, l_all_kresolved, l_kresolved_radial
       INTEGER :: hiaElem(atoms%n_hia), intersite_elems(this%n), shells(this%n)
       LOGICAL :: written(atoms%nType)
-      REAL    :: atomDiff(3)
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
       INTEGER, ALLOCATABLE :: atomTypepList(:),atomTypepList1(:)
 
@@ -675,20 +674,13 @@ CONTAINS
                           calledby="init_gfinp")
       ENDIF
 
-      l_inter = .FALSE.
       l_offd = .FALSE.
       l_all_kresolved = .FALSE.
       l_kresolved_radial = .FALSE.
       DO i_gf = 1, this%n
          l  = this%elem(i_gf)%l
          lp = this%elem(i_gf)%lp
-         atomType  = this%elem(i_gf)%atomType
-         atomTypep = this%elem(i_gf)%atomTypep
          l_sphavg  = this%elem(i_gf)%l_sphavg
-         atomDiff  = this%elem(i_gf)%atomDiff
-         IF(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12)) THEN
-            l_inter = .TRUE.
-         ENDIF
          IF(l.NE.lp) THEN
             l_offd = .TRUE.
          ENDIF
@@ -700,13 +692,6 @@ CONTAINS
          ENDIF
 
       ENDDO
-
-      IF(l_inter) THEN
-         IF(sym%nop>1) THEN
-               CALL juDFT_warn("Symmetries and intersite Green's Function not correctly implemented",&
-                                calledby="init_gfinp")
-         ENDIF
-      ENDIF
 
       IF(l_offd) THEN
          IF(sym%nop>1) THEN
