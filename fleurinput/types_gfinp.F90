@@ -723,7 +723,7 @@ CONTAINS
          IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="init_gfinp")
       ENDIF
 
-      WRITE(oUnit,*) "Green's Function Elements: "
+      WRITE(oUnit,'(A,I0)') "Green's Function Elements: ", this%n
       WRITE(oUnit,'(12(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","repr_elem","repr_op","atomDiff", 'k_resolved', 'k_resolved_int'
       DO i_gf = 1, this%n
          WRITE(oUnit,'(5I10,1l5,3I10,3f14.8, 2l5)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
