@@ -723,15 +723,19 @@ CONTAINS
          IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="init_gfinp")
       ENDIF
 
-      WRITE(oUnit,'(A,I0)') "Green's Function Elements: ", this%n
-      WRITE(oUnit,'(12(A,tr5))') "l","lp","atomType","atomTypep","iContour","l_sphavg","refCutoff","repr_elem","repr_op","atomDiff", 'k_resolved', 'k_resolved_int'
-      DO i_gf = 1, this%n
-         WRITE(oUnit,'(5I10,1l5,3I10,3f14.8, 2l5)') this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
-                                          this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
-                                          this%elem(i_gf)%representative_elem,this%elem(i_gf)%representative_op, &
-                                          this%elem(i_gf)%atomDiff(:), this%elem(i_gf)%l_kresolved, this%elem(i_gf)%l_kresolved_int
-      ENDDO
 
+      WRITE(oUnit,'(/,A,I0)') "Green's Function Elements: ", this%n
+      WRITE(oUnit,'(A)') "Index | l/lp | atom/atomp | contour | sphavg | refCutoff | repr_elem(repr_op) | k_resolved | atomDiff"
+      WRITE(oUnit,'(A)') "-----------------------------------------------------------------------------------------------------------------"
+      DO i_gf = 1, this%n
+         WRITE(oUnit,9000) i_gf, this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
+                           this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
+                           this%elem(i_gf)%representative_elem,this%elem(i_gf)%representative_op, &
+                           this%elem(i_gf)%l_kresolved, this%elem(i_gf)%l_kresolved_int, &
+                           this%elem(i_gf)%atomDiff(:)
+      ENDDO
+      WRITE(oUnit,'(/)')
+9000  FORMAT(I5, " | ",I1,"/",I1,"  |",I5,"/",I5," | ",I7," | ",l6," | ", I9," | ", I9,"(",I2,")      | ",l6,"(",l1,")  |",3f7.3)
 
    END SUBROUTINE init_gfinp
 
