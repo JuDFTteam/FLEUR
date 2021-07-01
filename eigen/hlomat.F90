@@ -92,10 +92,6 @@ CONTAINS
        mlolo=mlolo+atoms%nlo(m)*(atoms%nlo(m)+1)/2
     ENDDO
 
-    !-----------------------------------------------------
-    !-----------------------------------------------------
-    ! setting the LO-margin of the matrix to 0
-
     SELECT TYPE (hmat)
     TYPE IS (t_mpimat)
       m = hmat%global_size2
@@ -104,13 +100,6 @@ CONTAINS
     END SELECT
 
     IF (hmat_set0) THEN
-       IF (hmat%matsize1 > lapw%nv(iintsp)) THEN
-          IF (hmat%l_real) THEN
-             hmat%data_r(lapw%nv(iintsp)+1:,:) = 0.0
-          ELSE
-             hmat%data_c(lapw%nv(iintsp)+1:,:) = CMPLX(0.0,0.0)
-          ENDIF
-       ENDIF
        DO  nkvec =  fmpi%n_rank+1, m, fmpi%n_size
          IF( nkvec > lapw%nv(iintsp)) THEN
              kp=(nkvec-1)/fmpi%n_size+1
@@ -122,8 +111,6 @@ CONTAINS
          ENDIF
        ENDDO
     ENDIF
-    !-----------------------------------------------------
-    !-----------------------------------------------------
 
     IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,

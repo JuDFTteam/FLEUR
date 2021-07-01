@@ -62,7 +62,6 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    REAL :: dot, fct, fct2
 
    CALL timestart("spherical setup")
-   IF (set0) CALL smat%clear()
    !call nvtxStartRange("hsmt_sph",1)
    DO l = 0,atoms%lmaxd
       fleg1(l) = REAL(l+l+1)/REAL(l+1)
@@ -226,7 +225,6 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    INTEGER :: NVEC_rem  !remainder
 
    CALL timestart("spherical setup")
-   IF (set0) CALL smat%clear()
    !call nvtxStartRange("hsmt_sph",1)
    DO l = 0,atoms%lmaxd
       fleg1(l) = REAL(l+l+1)/REAL(l+1)
