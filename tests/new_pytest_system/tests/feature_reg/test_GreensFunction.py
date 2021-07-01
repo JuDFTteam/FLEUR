@@ -316,7 +316,7 @@ def test_GreensFunction_rotated_SQA_noco(execute_fleur, grep_number, grep_exists
 def test_GreensFunction_mperp_xdir(execute_fleur, grep_number, grep_exists):
     """Fleur Fe bcc Green's function Radial Noco spin offdiagonal
 
-    Simple test of the green's function calculation with radial dependence in FLEUR with one step:
+    Simple test of the green's function calculation for spin-offdiagonal components in FLEUR with one step:
     1. Generate starting density, run 1 Iteration and calculate Green's function
        for d-orbitals. Ensure that the occupations from the Green's function are
        close to the MT-charges obtained (also spin offdiagonal components) for the
@@ -361,7 +361,7 @@ def test_GreensFunction_mperp_xdir(execute_fleur, grep_number, grep_exists):
 def test_GreensFunction_mperp_ydir(execute_fleur, grep_number, grep_exists):
     """Fleur Fe bcc Green's function Radial Noco spin offdiagonal
 
-    Simple test of the green's function calculation with radial dependence in FLEUR with one step:
+    Simple test of the green's function calculation for spin-offdiagonal components in FLEUR with one step:
     1. Generate starting density, run 1 Iteration and calculate Green's function
        for d-orbitals. Ensure that the occupations from the Green's function are
        close to the MT-charges obtained (also spin offdiagonal components) for the
@@ -422,7 +422,7 @@ def test_GreensFunction_IntersiteSingleShell(execute_fleur, grep_number, grep_ex
     assert grep_exists(res_files['out'], "it=  1  is completed")
 
     #Check for the right shell being selected
-    assert grep_exists(res_files['out'], "Green's Function Elements: 9")
+    assert grep_exists(res_files['out'], "Green's Function Elements: 9 ")
     #These are entries in the table of generated GF elements
     assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
     assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
@@ -477,7 +477,7 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
     assert grep_exists(res_files['out'], "it=  1  is completed")
 
     #Check for the right shell being selected
-    assert grep_exists(res_files['out'], "Green's Function Elements: 59")
+    assert grep_exists(res_files['out'], "Green's Function Elements: 59 ")
     #These are entries in the table of generated GF elements
     assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
     assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
