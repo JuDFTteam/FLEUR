@@ -14,7 +14,7 @@ CONTAINS
   SUBROUTINE slomat(&
        input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
        isp,ud, alo1,blo1,clo1,fjgj,&
-       iintsp,jintsp,chi,smat)
+       iintsp,jintsp,chi,smat,set0)
     !***********************************************************************
     ! locol stores the number of columns already processed; on parallel
     !       computers this decides, whether the LO-contribution is
@@ -23,6 +23,7 @@ CONTAINS
     ! function legpol() at end of module
     !***********************************************************************
     USE m_constants,ONLY: fpi_const
+    USE m_types_mpimat
     USE m_types
     USE m_hsmt_fjgj
     IMPLICIT NONE
@@ -34,6 +35,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_fjgj),INTENT(IN)   :: fjgj
+    LOGICAL,INTENT(IN)        :: set0  !if true, initialize the LO-part of the hmat matrix with zeros
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)      :: na,ntyp
@@ -59,6 +61,26 @@ CONTAINS
     DO i=MIN(jintsp,iintsp),MAX(jintsp,iintsp)
        CALL lapw%phase_factors(i,atoms%taual(:,na),nococonv%qss,cph(:,i))
     ENDDO
+
+    SELECT TYPE (smat)
+    TYPE IS (t_mpimat)
+      l = smat%global_size2
+    CLASS DEFAULT
+      l = smat%matsize2
+    END SELECT
+
+    IF (set0) THEN
+       DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
+         IF( nkvec > lapw%nv(iintsp)) THEN
+             kp=(nkvec-1)/fmpi%n_size+1
+             IF (smat%l_real) THEN
+                smat%data_r(:,kp) = 0.0
+             ELSE
+                smat%data_c(:,kp) = CMPLX(0.0,0.0)
+             ENDIF
+         ENDIF
+       ENDDO
+    ENDIF
 
     IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,

@@ -37,7 +37,7 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)          :: n,isp,jsp,iintsp,jintsp
     COMPLEX,INTENT(IN)            :: chi
-    LOGICAL                       :: set0  !if true, initialize the hmat matrix with zeros, done in zherk/zgemm and margin0
+    LOGICAL                       :: set0  !if true, initialize the hmat matrix with zeros
     !     .. Array Arguments ..
     CLASS(t_mat),INTENT(INOUT)     ::hmat
 

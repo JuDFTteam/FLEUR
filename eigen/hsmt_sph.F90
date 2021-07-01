@@ -18,7 +18,7 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
-SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat)
+SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    USE m_hsmt_fjgj
@@ -34,6 +34,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    TYPE(t_usdus),INTENT(IN)      :: usdus
    TYPE(t_fjgj),INTENT(IN)       :: fjgj
    CLASS(t_mat),INTENT(INOUT)    :: smat,hmat
+   LOGICAL,INTENT(IN)            :: set0  !if true, initialize the smat matrix with zeros
     !     ..
    !     .. Scalar Arguments ..
    INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
@@ -144,13 +145,21 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
          END DO ! nn
 
          IF (smat%l_real) THEN
-            smat%data_r(kj,kii) = &
-            smat%data_r(kj,kii) + cph_re * VecHelpS
+            IF (set0) THEN
+               smat%data_r(kj,kii) = cph_re * VecHelpS
+            ELSE
+               smat%data_r(kj,kii) = &
+               smat%data_r(kj,kii) + cph_re * VecHelpS
+            ENDIF
             hmat%data_r(kj,kii) = &
             hmat%data_r(kj,kii) + cph_re * VecHelpH
          ELSE  ! real
-            smat%data_c(kj,kii) = &
-            smat%data_c(kj,kii) + chi*cmplx(cph_re,cph_im) * VecHelpS
+            IF (set0) THEN
+               smat%data_c(kj,kii) = chi*cmplx(cph_re,cph_im) * VecHelpS
+            ELSE
+               smat%data_c(kj,kii) = &
+               smat%data_c(kj,kii) + chi*cmplx(cph_re,cph_im) * VecHelpS
+            ENDIF
             hmat%data_c(kj,kii) = &
             hmat%data_c(kj,kii) + chi*cmplx(cph_re,cph_im) * VecHelpH
          ENDIF ! real
@@ -170,7 +179,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    RETURN
 END SUBROUTINE hsmt_sph_acc
 
-SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat)
+SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    USE m_hsmt_fjgj
@@ -186,6 +195,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    TYPE(t_usdus),INTENT(IN)      :: usdus
    TYPE(t_fjgj),INTENT(IN)       :: fjgj
    CLASS(t_mat),INTENT(INOUT)    :: smat,hmat
+   LOGICAL,INTENT(IN)            :: set0  !if true, initialize the smat matrix with zeros
     !     ..
    !     .. Scalar Arguments ..
    INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
@@ -223,7 +233,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    END DO ! l
   !$OMP     PARALLEL DEFAULT(NONE)&
   !$OMP     SHARED(lapw,atoms,nococonv,fmpi,input,usdus,smat,hmat)&
-  !$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi)&
+  !$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi,set0)&
   !$OMP     PRIVATE(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)&
   !$OMP     PRIVATE(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln)&
   !$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
@@ -309,13 +319,21 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
          END DO ! nn
 
          IF (smat%l_real) THEN
-            smat%data_r(kj_off:kj_vec,kii) = &
-            smat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
+            IF (set0) THEN
+               smat%data_r(kj_off:kj_vec,kii) = cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
+            ELSE
+               smat%data_r(kj_off:kj_vec,kii) = &
+               smat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
+            ENDIF
             hmat%data_r(kj_off:kj_vec,kii) = &
             hmat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpH(:NVEC_REM)
          ELSE  ! real
-            smat%data_c(kj_off:kj_vec,kii) = &
-            smat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM)
+            IF (set0) THEN
+               smat%data_c(kj_off:kj_vec,kii) = chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM)
+            ELSE
+               smat%data_c(kj_off:kj_vec,kii) = &
+               smat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM)
+            ENDIF
             hmat%data_c(kj_off:kj_vec,kii) = &
             hmat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpH(:NVEC_REM)
          ENDIF ! real

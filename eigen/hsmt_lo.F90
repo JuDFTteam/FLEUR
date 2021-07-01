@@ -10,7 +10,7 @@ MODULE m_hsmt_lo
   PRIVATE
   PUBLIC hsmt_lo
 CONTAINS
-  SUBROUTINE Hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,Isp,jsp,Iintsp,Jintsp,Hmat,Hmat_set0,Smat)
+  SUBROUTINE Hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,Isp,jsp,Iintsp,Jintsp,Hmat,set0,Smat)
     USE m_hlomat
     USE m_slomat
     USE m_setabc1lo
@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)    :: ud
     TYPE(t_tlmplm),INTENT(IN)   :: tlmplm
     TYPE(t_fjgj),INTENT(IN)     :: fjgj
-    LOGICAL,INTENT(IN)          :: hmat_set0  !if true, initialize the LO-part of the hmat matrix with zeros
+    LOGICAL,INTENT(IN)          :: set0  !if true, initialize the LO-part of the matrices with zeros
 
     CLASS(t_mat),INTENT(INOUT)::hmat
     CLASS(t_mat),INTENT(INOUT),OPTIONAL::smat
@@ -70,11 +70,11 @@ CONTAINS
                 CALL slomat(&
                      input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
                      isp,ud, alo1(:,isp),blo1(:,isp),clo1(:,isp),fjgj,&
-                     iintsp,jintsp,chi,smat)
+                     iintsp,jintsp,chi,smat,set0)
              ENDIF
              CALL timestart("hlomat")
              CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
-                  n,na,fjgj,alo1,blo1,clo1,iintsp,jintsp,chi,hmat,hmat_set0)
+                  n,na,fjgj,alo1,blo1,clo1,iintsp,jintsp,chi,hmat,set0)
 
              CALL timestop("hlomat")
           ENDIF
