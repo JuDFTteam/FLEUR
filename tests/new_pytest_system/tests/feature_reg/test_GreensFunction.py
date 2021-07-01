@@ -548,7 +548,7 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
     assert grep_exists(res_files['out'], "-0.0147 -0.0147")
 
     assert grep_exists(res_files['out'], r"\-0\.0024 [\-\s]0\.0000")
-    assert grep_exists(res_files['out'], r"\-0\.0157 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r" 0\.0157 [\-\s]0\.0000")
     assert grep_exists(res_files['out'], r"\-0\.0371 [\-\s]0\.0000")
     assert grep_exists(res_files['out'], r"\-0\.0172 [\-\s]0\.0000")
 
