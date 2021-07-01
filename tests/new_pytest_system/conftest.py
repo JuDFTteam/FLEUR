@@ -632,8 +632,8 @@ def get_mpi_command(env, mpi_procs, parallel):
 
     mpiruncmd = env.get('juDFT_MPI', None)
 
-    if env.get('juDFT_NPROCS', None) is not None:
-        mpi_procs = env.get('juDFT_NPROCS', None)
+    if env.get('juDFT_NPROCS', ''):
+        mpi_procs = env.get('juDFT_NPROCS', '')
 
     if mpiruncmd is None and parallel:
         mpiruncmd = 'mpirun -n {mpi_procs} '
