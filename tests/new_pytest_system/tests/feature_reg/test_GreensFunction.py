@@ -397,3 +397,136 @@ def test_GreensFunction_mperp_ydir(execute_fleur, grep_number, grep_exists):
     assert abs(spindn_trace_atom2 - 2.38) <= 0.0005
     assert abs(spinoffdx_trace_atom2 + 0.6027) <= 0.0005
     assert abs(spinoffdy_trace_atom2 - 0.0000) <= 0.0005
+
+@pytest.mark.bulk
+@pytest.mark.greensfunction
+@pytest.mark.magnetism
+@pytest.mark.serial
+def test_GreensFunction_IntersiteSingleShell(execute_fleur, grep_number, grep_exists):
+    """Fleur Fe bcc Green's function
+    Simple test of the green's function calculation in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals. Ensure that the occupations from the Green's function are
+       close to the MT-charges obtained
+    """
+    test_file_folder = './inputfiles/GreensFunction_IntersiteSingleShell/'
+
+    res_files = execute_fleur(test_file_folder)
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    assert grep_exists(res_files['out'], "it=  1  is completed")
+
+    #Check for the right shell being selected
+    assert grep_exists(res_files['out'], "Green's Function Elements: 9")
+    #These are entries in the table of generated GF elements
+    assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
+    assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
+
+
+    #Check trace of representative element
+    spinup_trace_element1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":", res_index=-8)
+    spindn_trace_element1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":", res_index=-8)
+    #Check trace of a symmetry equivalent element
+    spinup_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":")
+    spindn_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":")
+
+    assert abs(spinup_trace_element1 - 0.0220) <= 0.0005
+    assert abs(spindn_trace_element1 - -0.0641) <= 0.0005
+
+    assert abs(spinup_trace_element2 - 0.0220) <= 0.0005
+    assert abs(spindn_trace_element2 - -0.0641) <= 0.0005
+
+    #Check some matrix elements of the occupation matrix
+    assert grep_exists(res_files['out'], "-0.1951  0.0000")
+    assert grep_exists(res_files['out'], " 0.1097 -0.0094")
+    assert grep_exists(res_files['out'], " 0.0544 -0.0544")
+    assert grep_exists(res_files['out'], " 0.1809 -0.1859")
+    assert grep_exists(res_files['out'], "-0.0544 -0.0544")
+    assert grep_exists(res_files['out'], "-0.1870 -0.1860")
+    assert grep_exists(res_files['out'], " 0.0544  0.0544")
+    assert grep_exists(res_files['out'], " 0.1809  0.1871")
+
+
+@pytest.mark.bulk
+@pytest.mark.greensfunction
+@pytest.mark.magnetism
+@pytest.mark.serial
+def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep_exists):
+    """Fleur Fe bcc Green's function
+    Simple test of the green's function calculation in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals. Ensure that the occupations from the Green's function are
+       close to the MT-charges obtained
+    """
+    test_file_folder = './inputfiles/GreensFunction_IntersiteMultipleShells/'
+
+    res_files = execute_fleur(test_file_folder)
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    assert grep_exists(res_files['out'], "it=  1  is completed")
+
+    #Check for the right shell being selected
+    assert grep_exists(res_files['out'], "Green's Function Elements: 59")
+    #These are entries in the table of generated GF elements
+    assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
+    assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
+    assert grep_exists(res_files['out'], "52 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  2.000  2.000  2.000")
+    assert grep_exists(res_files['out'], "59 | 2/2  |    1/    1 |       1 |      T |         1 |        52(22)      |      F(F)  |  0.000  0.000  2.000")
+
+    #Check first shell again
+    #Check trace of representative element
+    spinup_trace_element1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":", res_index=-58)
+    spindn_trace_element1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":", res_index=-58)
+    #Check trace of a symmetry equivalent element
+    spinup_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":",res_index=-51)
+    spindn_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":",res_index=-51)
+
+    assert abs(spinup_trace_element1 - 0.0220) <= 0.0005
+    assert abs(spindn_trace_element1 - -0.0641) <= 0.0005
+
+    assert abs(spinup_trace_element2 - 0.0220) <= 0.0005
+    assert abs(spindn_trace_element2 - -0.0641) <= 0.0005
+
+    #Check some matrix elements of the occupation matrix
+    assert grep_exists(res_files['out'], "-0.1951  0.0000")
+    assert grep_exists(res_files['out'], " 0.1097 -0.0094")
+    assert grep_exists(res_files['out'], " 0.0544 -0.0544")
+    assert grep_exists(res_files['out'], " 0.1809 -0.1859")
+    assert grep_exists(res_files['out'], "-0.0544 -0.0544")
+    assert grep_exists(res_files['out'], "-0.1870 -0.1860")
+    assert grep_exists(res_files['out'], " 0.0544  0.0544")
+    assert grep_exists(res_files['out'], " 0.1809  0.1871")
+
+    #Check outermost shell
+    #Check trace of representative element
+    spinup_trace_element1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":", res_index=-8)
+    spindn_trace_element1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":", res_index=-8)
+    #Check trace of a symmetry equivalent element
+    spinup_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":")
+    spindn_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":")
+
+    assert abs(spinup_trace_element1 - -0.0126) <= 0.0005
+    assert abs(spindn_trace_element1 - -0.0291) <= 0.0005
+
+    assert abs(spinup_trace_element2 - -0.0126) <= 0.0005
+    assert abs(spindn_trace_element2 - -0.0291) <= 0.0005
+
+    #Check some matrix elements of the occupation matrix
+    assert grep_exists(res_files['out'], "-0.0372  0.0000")
+    assert grep_exists(res_files['out'], " 0.0067 -0.0045")
+    assert grep_exists(res_files['out'], "-0.0132 -0.0131")
+    assert grep_exists(res_files['out'], " 0.0151 -0.0200")
+    assert grep_exists(res_files['out'], " 0.0132  0.0132")
+    assert grep_exists(res_files['out'], "-0.0213 -0.0201")
+    assert grep_exists(res_files['out'], "-0.0131  0.0132")
+    assert grep_exists(res_files['out'], " 0.0201  0.0215")
