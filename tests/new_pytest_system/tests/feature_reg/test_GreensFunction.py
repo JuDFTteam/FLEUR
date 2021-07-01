@@ -403,11 +403,11 @@ def test_GreensFunction_mperp_ydir(execute_fleur, grep_number, grep_exists):
 @pytest.mark.magnetism
 @pytest.mark.serial
 def test_GreensFunction_IntersiteSingleShell(execute_fleur, grep_number, grep_exists):
-    """Fleur Fe bcc Green's function
-    Simple test of the green's function calculation in FLEUR with one step:
+    """Fleur Greens Function intersite single shell
+    Simple test of the intersite green's function calculation in FLEUR with one step:
     1. Generate starting density, run 1 Iteration and calculate Green's function
-       for d-orbitals. Ensure that the occupations from the Green's function are
-       close to the MT-charges obtained
+       for d-orbitals for the nearest neighbours. Ensure that the obtained occupation matrices
+       look as expected
     """
     test_file_folder = './inputfiles/GreensFunction_IntersiteSingleShell/'
 
@@ -457,11 +457,12 @@ def test_GreensFunction_IntersiteSingleShell(execute_fleur, grep_number, grep_ex
 @pytest.mark.magnetism
 @pytest.mark.serial
 def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep_exists):
-    """Fleur Fe bcc Green's function
-    Simple test of the green's function calculation in FLEUR with one step:
+    """Fleur Greens Function intersite multiple shells
+    Simple test of the intersite green's function calculation in FLEUR with one step:
     1. Generate starting density, run 1 Iteration and calculate Green's function
-       for d-orbitals. Ensure that the occupations from the Green's function are
-       close to the MT-charges obtained
+       for d-orbitals for the 5 nearest neighbours. This forces the shell construction algorithm to
+       do a bit more work. Ensure that the obtained occupation matrices
+       look as expected
     """
     test_file_folder = './inputfiles/GreensFunction_IntersiteMultipleShells/'
 
