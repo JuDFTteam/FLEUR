@@ -422,7 +422,7 @@ def test_GreensFunction_IntersiteSingleShell(execute_fleur, grep_number, grep_ex
     assert grep_exists(res_files['out'], "it=  1  is completed")
 
     #Check for the right shell being selected
-    assert grep_exists(res_files['out'], "Green's Function Elements: 9 ")
+    assert grep_exists(res_files['out'], r"Green's Function Elements: 9\s")
     #These are entries in the table of generated GF elements
     assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
     assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
@@ -435,21 +435,28 @@ def test_GreensFunction_IntersiteSingleShell(execute_fleur, grep_number, grep_ex
     spinup_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":")
     spindn_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":")
 
-    assert abs(spinup_trace_element1 - 0.0220) <= 0.0005
-    assert abs(spindn_trace_element1 - -0.0641) <= 0.0005
+    assert abs(spinup_trace_element1 - 0.1484) <= 0.0005
+    assert abs(spindn_trace_element1 - -0.0285) <= 0.0005
 
-    assert abs(spinup_trace_element2 - 0.0220) <= 0.0005
-    assert abs(spindn_trace_element2 - -0.0641) <= 0.0005
+    assert abs(spinup_trace_element2 - 0.1484) <= 0.0005
+    assert abs(spindn_trace_element2 - -0.0285) <= 0.0005
 
     #Check some matrix elements of the occupation matrix
-    assert grep_exists(res_files['out'], "-0.1951  0.0000")
-    assert grep_exists(res_files['out'], " 0.1097 -0.0094")
-    assert grep_exists(res_files['out'], " 0.0544 -0.0544")
-    assert grep_exists(res_files['out'], " 0.1809 -0.1859")
-    assert grep_exists(res_files['out'], "-0.0544 -0.0544")
-    assert grep_exists(res_files['out'], "-0.1870 -0.1860")
-    assert grep_exists(res_files['out'], " 0.0544  0.0544")
-    assert grep_exists(res_files['out'], " 0.1809  0.1871")
+    assert grep_exists(res_files['out'], " 0.1884 -0.1884")
+    assert grep_exists(res_files['out'], " 0.1884  0.1884")
+    assert grep_exists(res_files['out'], "-0.1884  0.1884")
+    assert grep_exists(res_files['out'], "-0.1884 -0.1884")
+
+    assert grep_exists(res_files['out'], " 0.0717 -0.0717")
+    assert grep_exists(res_files['out'], " 0.0717  0.0717")
+    assert grep_exists(res_files['out'], "-0.0717  0.0717")
+    assert grep_exists(res_files['out'], "-0.0717 -0.0717")
+
+    assert grep_exists(res_files['out'], r" 0\.0015 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r" 0\.0485 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r"\-0\.1951 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r" 0\.1206 [\-\s]0\.0000")
+
 
 
 @pytest.mark.bulk
@@ -477,7 +484,7 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
     assert grep_exists(res_files['out'], "it=  1  is completed")
 
     #Check for the right shell being selected
-    assert grep_exists(res_files['out'], "Green's Function Elements: 59 ")
+    assert grep_exists(res_files['out'], r"Green's Function Elements: 59\s")
     #These are entries in the table of generated GF elements
     assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
     assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
@@ -492,21 +499,27 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
     spinup_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":",res_index=-51)
     spindn_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":",res_index=-51)
 
-    assert abs(spinup_trace_element1 - 0.0220) <= 0.0005
-    assert abs(spindn_trace_element1 - -0.0641) <= 0.0005
+    assert abs(spinup_trace_element1 - 0.1484) <= 0.0005
+    assert abs(spindn_trace_element1 - -0.0285) <= 0.0005
 
-    assert abs(spinup_trace_element2 - 0.0220) <= 0.0005
-    assert abs(spindn_trace_element2 - -0.0641) <= 0.0005
+    assert abs(spinup_trace_element2 - 0.1484) <= 0.0005
+    assert abs(spindn_trace_element2 - -0.0285) <= 0.0005
 
-    #Check some matrix elements of the occupation matrix
-    assert grep_exists(res_files['out'], "-0.1951  0.0000")
-    assert grep_exists(res_files['out'], " 0.1097 -0.0094")
-    assert grep_exists(res_files['out'], " 0.0544 -0.0544")
-    assert grep_exists(res_files['out'], " 0.1809 -0.1859")
-    assert grep_exists(res_files['out'], "-0.0544 -0.0544")
-    assert grep_exists(res_files['out'], "-0.1870 -0.1860")
-    assert grep_exists(res_files['out'], " 0.0544  0.0544")
-    assert grep_exists(res_files['out'], " 0.1809  0.1871")
+    #Check some matrix elements of the occupation matrix (Next to the corner m=3 mp=2 and diagonal elements)
+    assert grep_exists(res_files['out'], " 0.0717 -0.0717")
+    assert grep_exists(res_files['out'], " 0.0717  0.0717")
+    assert grep_exists(res_files['out'], "-0.0717  0.0717")
+    assert grep_exists(res_files['out'], "-0.0717 -0.0717")
+
+    assert grep_exists(res_files['out'], " 0.1884 -0.1884")
+    assert grep_exists(res_files['out'], " 0.1884  0.1884")
+    assert grep_exists(res_files['out'], "-0.1884  0.1884")
+    assert grep_exists(res_files['out'], "-0.1884 -0.1884")
+
+    assert grep_exists(res_files['out'], r" 0\.0015 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r" 0\.0485 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r"\-0\.1951 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r" 0\.1206 [\-\s]0\.0000")
 
     #Check outermost shell
     #Check trace of representative element
@@ -516,18 +529,26 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
     spinup_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":")
     spindn_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":")
 
-    assert abs(spinup_trace_element1 - -0.0126) <= 0.0005
-    assert abs(spindn_trace_element1 - -0.0291) <= 0.0005
+    assert abs(spinup_trace_element1 -  0.0242) <= 0.0005
+    assert abs(spindn_trace_element1 - -0.1257) <= 0.0005
 
-    assert abs(spinup_trace_element2 - -0.0126) <= 0.0005
-    assert abs(spindn_trace_element2 - -0.0291) <= 0.0005
+    assert abs(spinup_trace_element2 -  0.0242) <= 0.0005
+    assert abs(spindn_trace_element2 - -0.1257) <= 0.0005
 
     #Check some matrix elements of the occupation matrix
-    assert grep_exists(res_files['out'], "-0.0372  0.0000")
-    assert grep_exists(res_files['out'], " 0.0067 -0.0045")
-    assert grep_exists(res_files['out'], "-0.0132 -0.0131")
-    assert grep_exists(res_files['out'], " 0.0151 -0.0200")
-    assert grep_exists(res_files['out'], " 0.0132  0.0132")
-    assert grep_exists(res_files['out'], "-0.0213 -0.0201")
-    assert grep_exists(res_files['out'], "-0.0131  0.0132")
-    assert grep_exists(res_files['out'], " 0.0201  0.0215")
+    #Check some matrix elements of the occupation matrix (Next to the corner m=3 mp=2 and diagonal elements)
+    assert grep_exists(res_files['out'], " 0.0296 -0.0296")
+    assert grep_exists(res_files['out'], " 0.0296  0.0296")
+    assert grep_exists(res_files['out'], "-0.0296  0.0296")
+    assert grep_exists(res_files['out'], "-0.0296 -0.0296")
+
+    assert grep_exists(res_files['out'], " 0.0147 -0.0147")
+    assert grep_exists(res_files['out'], " 0.0147  0.0147")
+    assert grep_exists(res_files['out'], "-0.0147  0.0147")
+    assert grep_exists(res_files['out'], "-0.0147 -0.0147")
+
+    assert grep_exists(res_files['out'], r"\-0\.0024 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r"\-0\.0157 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r"\-0\.0371 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r"\-0\.0172 [\-\s]0\.0000")
+
