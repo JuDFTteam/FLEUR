@@ -367,7 +367,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - apt-get -yq install postgresql-12
     - useradd -d /builds/${GITLAB_USER_LOGIN} -g users -M -N builder
     - chown -R builder:users .. /root
-    - export PATH=$PATH:/root/.local/bin
+    - su -p builder -c "export PATH=$PATH:/root/.local/bin && printenv PATH"
     - su -p builder -c "pip3 install --upgrade wheel setuptools"
     - su -p builder -c "pip3 install pytest masci-tools"
     - su -p builder -c "pip3 install aiida-core"
