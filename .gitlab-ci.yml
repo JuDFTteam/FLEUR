@@ -366,9 +366,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
     # because aiida needs psql commands
     - apt-get -yq install postgresql-12
     - useradd -d /builds/${GITLAB_USER_LOGIN} -g users -M -N builder
+    - mkdir -p $CI_PROJECT_DIR/.aiida
     - chown -R builder:users .. /root $CI_PROJECT_DIR
-    - su -p builder -c "mkdir -p ~/.aiida"
-    - chown -R builder:users -R  ~/.aiida
     - su -p builder -c "pip3 install --upgrade wheel setuptools"
     - su -p builder -c "pip3 install pytest masci-tools"
     - su -p builder -c "pip3 install aiida-core"
@@ -394,7 +393,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - cp $CI_PROJECT_DIR/build/inpgen local_exe/inpgen && chmod +x local_exe/inpgen
     - cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur
     # run tests
-    - su -p builder -c "export PATH=$PATH:/root/.local/bin && printenv PATH && reentry scan && ./run_all_cov.sh"
+    - su -p builder -c "export AIIDA_PATH="$CI_PROJECT_DIR/.aiida" && export PATH=$PATH:/root/.local/bin && printenv PATH && reentry scan && ./run_all_cov.sh"
   allow_failure: true
 #  artifacts:
 #    when: on_failure
