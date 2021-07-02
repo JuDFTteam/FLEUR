@@ -381,6 +381,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - cd ..
     - useradd -d /builds/${GITLAB_USER_LOGIN} -g users -M -N builder
     - chown -R builder:users ..
+    - cd aiida-fleur
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
@@ -394,7 +395,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - cp $CI_PROJECT_DIR/build/inpgen local_exe/inpgen && chmod +x local_exe/inpgen
     - cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur
     # run tests
-    - sudo -u builder ./run_all_cov.sh
+    - su builder ./run_all_cov.sh
   allow_failure: true
 #  artifacts:
 #    when: on_failure
