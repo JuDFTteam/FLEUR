@@ -375,6 +375,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - cd aiida-fleur
     - git checkout develop
     - pip3 install .[testing]
+    - reentry scan
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - cd ..
