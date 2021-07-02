@@ -365,6 +365,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - apt-get -yq install python3-pip
     # because aiida needs psql commands
     - apt-get -yq install postgresql-12
+    - useradd -d /builds/${GITLAB_USER_LOGIN} -g users -M -N builder
+    - chown -R builder:users ..
     - pip3 install --upgrade wheel setuptools
     - pip3 install pytest masci-tools
     - pip3 install aiida-core
@@ -375,13 +377,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - cd aiida-fleur
     - git checkout develop
     - pip3 install .[testing]
-    - reentry scan
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
-    - cd ..
-    - useradd -d /builds/${GITLAB_USER_LOGIN} -g users -M -N builder
-    - chown -R builder:users ..
-    - cd aiida-fleur
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
@@ -395,7 +392,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - cp $CI_PROJECT_DIR/build/inpgen local_exe/inpgen && chmod +x local_exe/inpgen
     - cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur
     # run tests
-    - su -p builder ./run_all_cov.sh
+    - su -p builder -c "umask 0077 && reentry scan && ./run_all_cov.sh"
   allow_failure: true
 #  artifacts:
 #    when: on_failure
