@@ -364,11 +364,10 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - apt-get update
     - apt-get -yq install python3-pip
     # because aiida needs psql commands
-    - apt-get -yq install postgresql-12 systemd
+    - apt-get -yq install postgresql-12
     - useradd -d /builds/${GITLAB_USER_LOGIN} -g users -M -N builder
     - chown -R builder:users .. /root $CI_PROJECT_DIR
     - locale-gen en_US.UTF-8
-    - systemctl restart postgresql
     - su -p builder -c "pip3 install --upgrade wheel setuptools"
     - su -p builder -c "pip3 install pytest masci-tools"
     - su -p builder -c "pip3 install aiida-core"
