@@ -50,6 +50,7 @@ CONTAINS
 
       CLASS(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
       INTEGER :: i, j, nspins
+      real    :: non_hybrid_part 
 
       !Matrices for Hamiltonian and Overlapp
       !In fi%noco case we need 4-matrices for each spin channel
@@ -68,7 +69,8 @@ CONTAINS
 
       CALL timestart("Interstitial part")
       !Generate interstitial part of Hamiltonian
-      CALL hs_int(fi%input, fi%noco, stars, lapw, fmpi, fi%cell, isp, merge(v%pw_w-xcpot%get_exchange_weight()*vx%pw_w,v%pw_w,hybdat%l_subvxc), smat, hmat)
+      non_hybrid_part = merge(1.0, 1.0 - xcpot%get_exchange_weight(), hybdat%l_subvxc)
+      CALL hs_int(fi%input, fi%noco, stars, lapw, fmpi, fi%cell, isp, non_hybrid_part*v%pw_w, smat, hmat)
       CALL timestop("Interstitial part")
       CALL timestart("MT part")
       !MT-part of Hamiltonian. In case of fi%noco, we need an loop over the local spin of the fi%atoms
