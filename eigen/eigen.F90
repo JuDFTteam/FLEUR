@@ -129,7 +129,6 @@ CONTAINS
       nvBuffer = 0
       nvBufferTemp = 0
 
-      if(.not. hybdat%l_addhf) call load_hybrid_data(fi, fmpi, hybdat, mpdata)
       DO jsp = 1,MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)

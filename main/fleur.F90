@@ -7,7 +7,7 @@ MODULE m_fleur
    IMPLICIT NONE
 CONTAINS
    SUBROUTINE fleur_execute(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, results, &
-                            xcpot, wann, hybdat)
+                            xcpot, wann, hybdat, mpdata)
 
       !     ***************************************************************
       !
@@ -94,8 +94,8 @@ CONTAINS
 
       TYPE(t_input) :: input_soc !same as fi%input with neig=2*neig !should be refactored out
 
-      TYPE(t_field)                   :: field2
-      TYPE(t_mpdata)                  :: mpdata
+      TYPE(t_field)                    :: field2
+      TYPE(t_mpdata), intent(inout)    :: mpdata
 
       TYPE(t_potden)                  :: vTot, vx, vCoul, vxc, exc
       TYPE(t_potden)                  :: inDen, outDen, EnergyDen, sliceDen

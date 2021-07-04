@@ -35,96 +35,97 @@ contains
       integer(HID_T)   :: dset_id
       INTEGER(HID_T)   :: file_id
 
-      call timestart("load_hybrid_data")
 
-      if (fmpi%is_root()) INQUIRE (file='hybrid.h5', exist=l_exist)
-      call mpi_bc(l_exist, 0, fmpi%mpi_comm)
+      if(.not. hybdat%l_subvxc) then
+         call timestart("load_hybrid_data")
+         if (fmpi%is_root()) INQUIRE (file='hybrid.h5', exist=l_exist)
+         call mpi_bc(l_exist, 0, fmpi%mpi_comm)
 
 
-      if(l_exist .and. (.not. allocated(hybdat%v_x))) then
+         if(l_exist .and. (.not. allocated(hybdat%v_x))) then
 #ifdef CPP_MPI
-         call MPI_Barrier(fmpi%mpi_comm, ierr)
+            call MPI_Barrier(fmpi%mpi_comm, ierr)
 #endif
-         call mixing_history_reset(fmpi)
+            call mixing_history_reset(fmpi)
 
-         IF (fmpi%n_size == 1) THEN
-            ALLOCATE (t_mat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
-         ELSE
-            ALLOCATE (t_mpimat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
-         END IF
+            IF (fmpi%n_size == 1) THEN
+               ALLOCATE (t_mat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
+            ELSE
+               ALLOCATE (t_mpimat::hybdat%v_x(fi%kpts%nkpt, fi%input%jspins))
+            END IF
 
-         if (fmpi%is_root()) then
-            call timestart("read part")
-            file_id = open_file()
+            if (fmpi%is_root()) then
+               call timestart("read part")
+               file_id = open_file()
 
-            dset_id = open_dataset(file_id, "nbands")
-            if (.not. allocated(hybdat%nbands)) allocate (hybdat%nbands(fi%kpts%nkptf, fi%input%jspins))
-            call read_int_2d(dset_id, hybdat%nbands)
-            call close_dataset(dset_id)
+               dset_id = open_dataset(file_id, "nbands")
+               if (.not. allocated(hybdat%nbands)) allocate (hybdat%nbands(fi%kpts%nkptf, fi%input%jspins))
+               call read_int_2d(dset_id, hybdat%nbands)
+               call close_dataset(dset_id)
 
-            dset_id = open_dataset(file_id, "nobd")
-            if (.not. allocated(hybdat%nobd)) allocate (hybdat%nobd(fi%kpts%nkptf, fi%input%jspins))
-            call read_int_2d(dset_id, hybdat%nobd)
-            call close_dataset(dset_id)
-            call timestop("read part")
-         end if
+               dset_id = open_dataset(file_id, "nobd")
+               if (.not. allocated(hybdat%nobd)) allocate (hybdat%nobd(fi%kpts%nkptf, fi%input%jspins))
+               call read_int_2d(dset_id, hybdat%nobd)
+               call close_dataset(dset_id)
+               call timestop("read part")
+            end if
 
-         do jsp = 1, fi%input%jspins
-            do nk = 1, fi%kpts%nkpt
-               if(fmpi%is_root()) then
-                  call timestart("read part")
-                  if (fi%sym%invs) then
-                     dset_name = "vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
-                     dset_id = open_dataset(file_id, dset_name)
-                     dims = get_dims(dset_id)
-                     call vx_tmp%alloc(fi%sym%invs, dims(1), dims(2))
-                     call read_dbl_2d(dset_id, vx_tmp%data_r)
-                     call close_dataset(dset_id)
-                  else
-                     dset_name = "r_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
-                     dset_id = open_dataset(file_id, dset_name)
+            do jsp = 1, fi%input%jspins
+               do nk = 1, fi%kpts%nkpt
+                  if(fmpi%is_root()) then
+                     call timestart("read part")
+                     if (fi%sym%invs) then
+                        dset_name = "vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
+                        dset_id = open_dataset(file_id, dset_name)
+                        dims = get_dims(dset_id)
+                        call vx_tmp%alloc(fi%sym%invs, dims(1), dims(2))
+                        call read_dbl_2d(dset_id, vx_tmp%data_r)
+                        call close_dataset(dset_id)
+                     else
+                        dset_name = "r_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
+                        dset_id = open_dataset(file_id, dset_name)
 
-                     ! get dimensions and alloc space
-                     dims = get_dims(dset_id)
-                     call vx_tmp%alloc(fi%sym%invs, dims(1), dims(2))
-                     allocate (tmp(dims(1), dims(2)), stat=ierr)
-                     if (ierr /= 0) call juDFT_error("can't alloc tmp")
+                        ! get dimensions and alloc space
+                        dims = get_dims(dset_id)
+                        call vx_tmp%alloc(fi%sym%invs, dims(1), dims(2))
+                        allocate (tmp(dims(1), dims(2)), stat=ierr)
+                        if (ierr /= 0) call juDFT_error("can't alloc tmp")
 
-                     ! get real part
-                     call read_dbl_2d(dset_id, tmp)
-                     vx_tmp%data_c = tmp
-                     call close_dataset(dset_id)
+                        ! get real part
+                        call read_dbl_2d(dset_id, tmp)
+                        vx_tmp%data_c = tmp
+                        call close_dataset(dset_id)
 
-                     ! get complex part
-                     dset_name = "c_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
-                     dset_id = open_dataset(file_id, dset_name)
-                     call read_dbl_2d(dset_id, tmp)
-                     vx_tmp%data_c = vx_tmp%data_c + ImagUnit*tmp
-                     call close_dataset(dset_id)
-                     deallocate (tmp)
-                  end if
-                  call timestop("read part")
-               endif
+                        ! get complex part
+                        dset_name = "c_vx_nk="//int2str(nk)//"_jsp="//int2str(jsp)
+                        dset_id = open_dataset(file_id, dset_name)
+                        call read_dbl_2d(dset_id, tmp)
+                        vx_tmp%data_c = vx_tmp%data_c + ImagUnit*tmp
+                        call close_dataset(dset_id)
+                        deallocate (tmp)
+                     end if
+                     call timestop("read part")
+                  endif
 
-               call mpi_bc(dims, 0, fmpi%mpi_comm)
-               call distrib_single_vx(fi, fmpi, jsp, nk, 0, vx_tmp, hybdat, dims=dims)
-               call vx_tmp%free()
+                  call mpi_bc(dims, 0, fmpi%mpi_comm)
+                  call distrib_single_vx(fi, fmpi, jsp, nk, 0, vx_tmp, hybdat, dims=dims)
+                  call vx_tmp%free()
+               end do
             end do
-         end do
 
-         call timestart("bcast part")
-         call mpi_bc(hybdat%nbands, 0, fmpi%mpi_comm)
-         call mpi_bc(hybdat%nobd, 0, fmpi%mpi_comm)      
-         call timestop("bcast part")
+            call timestart("bcast part")
+            call mpi_bc(hybdat%nbands, 0, fmpi%mpi_comm)
+            call mpi_bc(hybdat%nobd, 0, fmpi%mpi_comm)      
+            call timestop("bcast part")
 
-         call mpdata%set_num_radfun_per_l(fi%atoms)
-         call hybdat%set_maxlmindx(fi%atoms, mpdata%num_radfun_per_l)
+            call mpdata%set_num_radfun_per_l(fi%atoms)
+            call hybdat%set_maxlmindx(fi%atoms, mpdata%num_radfun_per_l)
 
-         hybdat%l_addhf = .True.
-         hybdat%l_subvxc = .True.
-      end if
-
-      call timestop("load_hybrid_data")
+            hybdat%l_addhf = .True.
+            hybdat%l_subvxc = .True.
+         end if
+         call timestop("load_hybrid_data")
+      endif
 #endif
    end subroutine load_hybrid_data
 
