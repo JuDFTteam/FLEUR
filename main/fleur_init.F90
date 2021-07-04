@@ -9,7 +9,7 @@ MODULE m_fleur_init
 #endif
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann)
+   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat)
       USE m_types
       USE m_fleurinput_read_xml
       USE m_fleurinput_mpi_bc
@@ -64,6 +64,8 @@ CONTAINS
       TYPE(t_wann), INTENT(OUT):: wann
       CLASS(t_forcetheo), ALLOCATABLE, INTENT(OUT)::forcetheo
       TYPE(t_nococonv), INTENT(OUT):: nococonv
+      type(t_hybdat), intent(inout):: hybdat
+
       TYPE(t_enparaXML)::enparaXML
       TYPE(t_forcetheo_data)::forcetheo_data
 
@@ -228,6 +230,8 @@ CONTAINS
          IF (fi%input%gw .NE. 0) CALL mixing_history_reset(fmpi)
          CALL setStartingDensity(fi%noco%l_noco)
       END IF
+
+      ! if(fi%hybinp%l_hybrid) call load_hybrid_data(fi, fmpi, hybdat, mpdata)
 
       !new check mode will only run the init-part of FLEUR
       IF (judft_was_argument("-check")) CALL judft_end("Check-mode done", fmpi%irank)
