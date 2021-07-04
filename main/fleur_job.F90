@@ -230,9 +230,7 @@ CONTAINS
         fmpi%l_mpi_multithreaded = l_mpi_multithreaded
         fmpi%mpi_comm = jobs(njob)%mpi_comm
         CALL timestart("Initialization")
-        call fleur_init(fmpi,fi%input,fi%field,fi%atoms,sphhar,fi%cell,stars,fi%sym,fi%noco,nococonv,fi%vacuum,forcetheo,fi%sliceplot,&
-           fi%banddos,enpara,xcpot,results,fi%kpts,fi%mpinp,fi%hybinp,fi%oneD,fi%coreSpecInput,fi%gfinp,&
-           fi%hub1inp,wann)
+        call fleur_init(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,xcpot,results,wann)
         CALL timestop("Initialization")
 
         CALL fleur_execute(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&
