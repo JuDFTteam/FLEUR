@@ -348,7 +348,7 @@ MODULE m_atom_shells
 
          !Take the representative element of the shell
          shellDiffAux = 0.0
-         refAt = SUM(atoms%neq(:shellAtoms(2,1,current_shell)-1)) + 1
+         refAt = SUM(atoms%neq(:atoms%itype(shellAtoms(2,1,current_shell))-1)) + 1
          DO ishellAtom = 1, numAtomsShell(current_shell)
             IF(shellAtoms(2,ishellAtom,current_shell) == refAt) THEN
                shellDiffAux(:,1) = shellDiffs(:,ishellAtom,current_shell)
