@@ -598,7 +598,7 @@ CONTAINS
 
       INTEGER :: i_gf,l,lp,atomType,iContour,refCutoff
       INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref,n_intersite, i_inter
-      LOGICAL :: l_offd,l_sphavg, l_all_kresolved, l_kresolved_radial
+      LOGICAL :: l_sphavg, l_all_kresolved, l_kresolved_radial
       INTEGER :: hiaElem(atoms%n_hia), intersite_elems(this%n), shells(this%n)
       LOGICAL :: written(atoms%nType)
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
@@ -674,16 +674,10 @@ CONTAINS
                           calledby="init_gfinp")
       ENDIF
 
-      l_offd = .FALSE.
       l_all_kresolved = .FALSE.
       l_kresolved_radial = .FALSE.
       DO i_gf = 1, this%n
-         l  = this%elem(i_gf)%l
-         lp = this%elem(i_gf)%lp
          l_sphavg  = this%elem(i_gf)%l_sphavg
-         IF(l.NE.lp) THEN
-            l_offd = .TRUE.
-         ENDIF
          IF(this%elem(i_gf)%l_kresolved) THEN
             l_all_kresolved = .TRUE.
             IF(.NOT.l_sphavg) THEN
@@ -692,13 +686,6 @@ CONTAINS
          ENDIF
 
       ENDDO
-
-      IF(l_offd) THEN
-         IF(sym%nop>1) THEN
-            CALL juDFT_warn("Symmetries and l-offdiagonal Green's Function not correctly implemented",&
-                             calledby="init_gfinp")
-         ENDIF
-      ENDIF
 
       IF(this%minCalcDistance>=0.0) THEN
          IF(input%mindistance>this%minCalcDistance) THEN
