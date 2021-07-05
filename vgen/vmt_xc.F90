@@ -74,10 +74,10 @@ MODULE m_vmt_xc
                IF((.NOT.xcpot%is_name("pw91"))) &
                   CALL judft_warn("Using locally LDA only possible with pw91 functional")
                !TODO: check this code and the functionality
-               !xcpot_tmp%inbuild_name="l91"
-               !xcpot_tmp%l_relativistic=.FALSE.
+               xcpot_tmp%l_inbuild = .TRUE.
+               xcpot_tmp%inbuild_name="l91"
+               xcpot_tmp%l_relativistic=.FALSE.
                CALL xcpot_tmp%init(atoms%ntype)
-               ALLOCATE(xcl(SIZE(v_xc,1),SIZE(v_xc,2)))
             ENDIF
          CLASS DEFAULT
             l_libxc=.true. !libxc!!
@@ -126,6 +126,7 @@ MODULE m_vmt_xc
                   , v_x,grad)
 #endif
             IF (lda_atom(n)) THEN
+               ALLOCATE(xcl(nsp*atoms%jri(n),input%jspins))
                ! Use local part of pw91 for this atom
                CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
                !Mix the potentials
@@ -182,6 +183,7 @@ MODULE m_vmt_xc
                ENDIF
                CALL mt_from_grid(atoms,sym,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
             ENDIF
+            IF (lda_atom(n)) DEALLOCATE(xcl)
             DEALLOCATE (ch,v_x,v_xc,e_xc)
          ENDDO
 

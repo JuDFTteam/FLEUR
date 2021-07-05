@@ -39,8 +39,6 @@ MODULE m_types_xcpot_inbuild_nofunction
       INTEGER          :: icorr = 0
       TYPE(t_xcpot_data) :: data
 
-      LOGICAL, ALLOCATABLE :: lda_atom(:)
-
    CONTAINS
       !overloading t_xcpot:
       PROCEDURE        :: vx_is_LDA => xcpot_vx_is_LDA
