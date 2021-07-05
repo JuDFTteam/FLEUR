@@ -193,10 +193,6 @@ MODULE m_atom_shells
          ENDIF
       ENDDO
 
-      ALLOCATE(shellOps(SIZE(shellDistances),SIZE(shellDistances)), source=0)
-      !Symmetry reduction (modernized and modified version of nshell.f from v26)
-      CALL apply_sym_to_shell(actualShells, atoms, sym, shellAtoms, shellDiffs, shellDistances, numAtomsShell, shellOps)
-
       !Calculate how many shells correspond to the requested nshells
       lastDist = 0.0
       atomShells1 = 0
@@ -211,6 +207,10 @@ MODULE m_atom_shells
             EXIT
          ENDIF
       ENDDO
+
+      ALLOCATE(shellOps(SIZE(shellDistances),SIZE(shellDistances)), source=0)
+      !Symmetry reduction (modernized and modified version of nshell.f from v26)
+      CALL apply_sym_to_shell(generatedShells, atoms, sym, shellAtoms, shellDiffs, shellDistances, numAtomsShell, shellOps)
 
       CALL timestop('Atom shells')
 
@@ -330,7 +330,7 @@ MODULE m_atom_shells
 
       REAL,    PARAMETER :: sym_tol = 1e-7
 
-      INTEGER :: current_shell,refAt,ishellAtom,nshellAtom,nshellAtom1
+      INTEGER :: current_shell,refAtom,refAtomp,ishellAtom,nshellAtom,nshellAtom1
       INTEGER :: iop, iAtom,found_index
       LOGICAL :: l_diff_in_shell
 
@@ -348,9 +348,11 @@ MODULE m_atom_shells
 
          !Take the representative element of the shell
          shellDiffAux = 0.0
-         refAt = SUM(atoms%neq(:atoms%itype(shellAtoms(2,1,current_shell))-1)) + 1
+         refAtom = SUM(atoms%neq(:atoms%itype(shellAtoms(1,1,current_shell))-1)) + 1
+         refAtomp = SUM(atoms%neq(:atoms%itype(shellAtoms(2,1,current_shell))-1)) + 1
          DO ishellAtom = 1, numAtomsShell(current_shell)
-            IF(shellAtoms(2,ishellAtom,current_shell) == refAt) THEN
+            IF(shellAtoms(1,ishellAtom,current_shell) == refAtom.AND.&
+               shellAtoms(2,ishellAtom,current_shell) == refAtomp) THEN
                shellDiffAux(:,1) = shellDiffs(:,ishellAtom,current_shell)
                shellOpsAux(1) = 1 !Identity operation
                shellAtomsAux(:,1) = shellAtoms(:,ishellAtom,current_shell)
