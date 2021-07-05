@@ -398,6 +398,38 @@ def test_GreensFunction_mperp_ydir(execute_fleur, grep_number, grep_exists):
     assert abs(spinoffdx_trace_atom2 + 0.6027) <= 0.0005
     assert abs(spinoffdy_trace_atom2 - 0.0000) <= 0.0005
 
+
+@pytest.mark.serial
+@pytest.mark.greensfunction
+@pytest.mark.bulk
+def test_GreensFunction_InterOrbital(execute_fleur, grep_number, grep_exists):
+    """Fleur GdCu Green's function interorbital elements
+
+    Simple test of the green's function calculation for l-offdiagonal components in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals. Ensure that the obtained occupation matrices look as expected
+    """
+    test_file_folder = './inputfiles/GreensFunction_InterOrbital/'
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'JUDFT_WARN_ONLY'])
+    res_file_names = list(res_files.keys())
+    should_files = ['out']
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
+    for file1 in should_files:
+        assert (file1 in res_file_names), f'{file1} missing'
+
+    assert grep_exists(res_files['out'], "it=  1  is completed")
+    assert grep_exists(res_files['out'], r"Green's Function Elements: 9\s")
+
+    #Check some matrix elements of the occupation matrix (f-p)
+    assert grep_exists(res_files['out'], r" 0\.0008 [\s\-]0\.0000")
+    assert grep_exists(res_files['out'], r"-0\.0013 [\s\-]0\.0000")
+    assert grep_exists(res_files['out'], r" 0\.0010 [\s\-]0\.0000")
+    assert grep_exists(res_files['out'], r"-0\.0021 [\s\-]0\.0000")
+    assert grep_exists(res_files['out'], r" 0\.0034 [\s\-]0\.0000")
+    assert grep_exists(res_files['out'], r"-0\.0027 [\s\-]0\.0000")
+
+
 @pytest.mark.bulk
 @pytest.mark.greensfunction
 @pytest.mark.magnetism
