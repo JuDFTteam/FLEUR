@@ -99,7 +99,7 @@ CONTAINS
                 CALL hsmt_nonsph(n,fmpi,sym,atoms,ispin,ispin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
                 !initialize the smat_tmp matrix with zeros 
                 CALL hsmt_sph(n,atoms,fmpi,ispin,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),usdus,fjgj,smat_tmp,hmat_tmp,.TRUE.)
-                !initialize the LO part of hmat_tmp matrix with zeros 
+                !initialize the LO part of the matrices with zeros 
                 CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ispin,jspin,iintsp,jintsp,hmat_tmp,.TRUE.,smat_tmp)
                 CALL hsmt_spinor(ispin,n,nococonv,chi)
                 CALL timestart("hsmt_distspins")
