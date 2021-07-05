@@ -17,12 +17,12 @@ MODULE m_hlomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,isp,jsp,&
-       ntyp,na,fjgj,alo1,blo1,clo1, iintsp,jintsp,chi,hmat,hmat_set0)
+       ntyp,na,fjgj,alo1,blo1,clo1, iintsp,jintsp,chi,hmat)
     !
 #include"cpp_double.h"
     USE m_hsmt_ab
     USE m_types
-    USE m_types_mpimat
+!    USE m_types_mpimat
     USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
@@ -36,7 +36,6 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
     TYPE(t_fjgj),INTENT(IN)   :: fjgj
-    LOGICAL,INTENT(IN)        :: hmat_set0  !if true, initialize the LO-part of the hmat matrix with zeros
 
 
     !     ..
@@ -91,26 +90,6 @@ CONTAINS
        mlo=mlo+atoms%nlo(m)
        mlolo=mlolo+atoms%nlo(m)*(atoms%nlo(m)+1)/2
     ENDDO
-
-    SELECT TYPE (hmat)
-    TYPE IS (t_mpimat)
-      m = hmat%global_size2
-    CLASS DEFAULT
-      m = hmat%matsize2
-    END SELECT
-
-    IF (hmat_set0) THEN
-       DO  nkvec =  fmpi%n_rank+1, m, fmpi%n_size
-         IF( nkvec > lapw%nv(iintsp)) THEN
-             kp=(nkvec-1)/fmpi%n_size+1
-             IF (hmat%l_real) THEN
-                hmat%data_r(:,kp) = 0.0
-             ELSE
-                hmat%data_c(:,kp) = CMPLX(0.0,0.0)
-             ENDIF
-         ENDIF
-       ENDDO
-    ENDIF
 
     IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,
