@@ -89,7 +89,6 @@ CONTAINS
 
       ! Bcasts for derived class t_xcpot_inbuild
       CALL mpi_bc(this%icorr, rank, mpi_comm)
-      CALL mpi_bc(this%lda_atom, rank, mpi_comm)
       call this%data%mpi_bc(rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_xcpot_ib
@@ -118,8 +117,6 @@ CONTAINS
 
       IF (.NOT. xcpot%l_inbuild) CALL judft_error("Could not initialize inbuild xcpot")
 
-      ALLOCATE (xcpot%lda_atom(ntype))
-      xcpot%lda_atom = .FALSE.
       xcpot%icorr = 0
       DO n = 1, SIZE(xc_names)
          IF (TRIM(ADJUSTL(xcpot%inbuild_name)) == TRIM(xc_names(n))) THEN

@@ -69,7 +69,7 @@ MODULE m_vmt_xc
          lda_atom=.FALSE.; l_libxc=.FALSE.
          SELECT TYPE(xcpot)
          TYPE IS(t_xcpot_inbuild)
-            lda_atom=xcpot%lda_atom
+            lda_atom=atoms%lda_atom
             IF (ANY(lda_atom)) THEN
                IF((.NOT.xcpot%is_name("pw91"))) &
                   CALL judft_warn("Using locally LDA only possible with pw91 functional")
