@@ -50,7 +50,7 @@ MODULE m_atom_shells
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: numAtomsShell(:)
       INTEGER,             INTENT(OUT)  :: generatedShells
 
-      REAL, PARAMETER :: eps = 1e-10
+      REAL, PARAMETER :: eps = 1e-7
 
       INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells
       INTEGER :: ishell,i,iAtom,atomTypep,refAt
@@ -170,7 +170,7 @@ MODULE m_atom_shells
                IF(shellDistances(ishell)-lastDist > eps) atomShells1 = atomShells1 + 1
                lastDist = shellDistances(ishell)
                IF(atomShells1==nshells) THEN
-                  distance = shellDistances(ishell)
+                  distance = SQRT(shellDistances(ishell))
 
                   min_distance_to_border = 9e99
                   DO refAt = SUM(atoms%neq(:referenceAtom-1)) + 1, SUM(atoms%neq(:referenceAtom))
@@ -198,6 +198,7 @@ MODULE m_atom_shells
             CALL timestop('Checking completeness of shell')
          ENDIF
       ENDDO
+      shellDistances(:actualShells) = SQRT(shellDistances(:actualShells))
 
       !Calculate how many shells correspond to the requested nshells
       lastDist = 0.0
@@ -301,7 +302,7 @@ MODULE m_atom_shells
                            neighbourAtoms(1,neighboursFound) = refAt
                            neighbourAtoms(2,neighboursFound) = iAtom
                            neighbourDiffs(:,neighboursFound) = MATMUL(invAmat,currentDiff(:))
-                           neighbourDistances(neighboursFound) = SQRT(currentDist)
+                           neighbourDistances(neighboursFound) = currentDist
                         END IF
                      ENDDO
                   END DO
