@@ -7,6 +7,7 @@ MODULE m_atom_shells
    USE m_types_sym
    USE m_types_cell
    USE m_juDFT
+   USE m_constants
    USE m_sort
    USE m_inv3
 
@@ -67,17 +68,23 @@ MODULE m_atom_shells
       CALL alloc_shells(shellAtoms, shellDiffs, shellDistances, numAtomsShell,&
                         array_size = atoms%nat * atoms%neq(referenceAtom) * 27)
 
+      WRITE(oUnit,'(/,/,A,I0,A,I0)') "Generating ", nshells, " shells for atomType: ", referenceAtom
+
       atomShells = 0
       actualShells = 0
       num_cells = 0
       l_unfinished_shell = .TRUE.
       DO WHILE(l_unfinished_shell)
 
+         WRITE(oUnit,'(A,I0)') "Number of unit cells in each direction: ", num_cells + 1
          !Calculate the vectors and distances to neighbours in the next
          !extension of unit cells
          CALL calculate_next_neighbours(referenceAtom, atoms, cell%amat, newNeighbours, newAtoms,&
                                         newDiffs, newDistances, num_cells)
 
+         WRITE(oUnit,'(A,I0)') "New neighbours found: ", newNeighbours
+
+         CALL timestart('Sorting')
          IF(ALLOCATED(distIndexList)) DEALLOCATE(distIndexList)
          IF(ALLOCATED(sortedDiffs)) DEALLOCATE(sortedDiffs)
          IF(ALLOCATED(sortedDistances)) DEALLOCATE(sortedDistances)
@@ -93,7 +100,9 @@ MODULE m_atom_shells
             sortedDistances(i) = newDistances(distIndexList(i))
             sortedAtoms(:,i) = newAtoms(:,distIndexList(i))
          END DO
+         CALL timestop('Sorting')
 
+         CALL timestart('Grouping Elements into Shells')
          !Sort the nearestNeighbours into shells
          DO iAtom = 1, newNeighbours
             IF(ABS(sortedDistances(iAtom))<1e-12) CYCLE
@@ -146,8 +155,12 @@ MODULE m_atom_shells
             ENDIF
 
          ENDDO
+         CALL timestop('Grouping Elements into Shells')
+
+         WRITE(oUnit,'(A,I0)') "Shells found: ", atomShells
 
          IF(atomShells>=nshells) THEN
+            CALL timestart('Checking completeness of shell')
             !Calculate how many shells correspond to the requested nshells
             !We look if there can possibly be more elements outside the currently
             !chosen quadrant of cells
@@ -176,11 +189,13 @@ MODULE m_atom_shells
 
                   !-1e-12 to avoid uneccesary calculations where both are equla to numerical precision
                   IF(ALL(min_distance_to_border(:)-distance > -eps)) THEN
+                     WRITE(oUnit,'(A)') "Shells finished."
                      l_unfinished_shell = .FALSE.
                   ENDIF
                   EXIT
                ENDIF
             ENDDO
+            CALL timestop('Checking completeness of shell')
          ENDIF
       ENDDO
 
