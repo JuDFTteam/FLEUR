@@ -73,7 +73,7 @@ CONTAINS
 
     ! needed directly for calculating matrix elements
     seigvso=0.0
-    ALLOCATE(eig_shift(input%neig,kpts%nkpt,0:atoms%ntype,SIZE(theta)));eig_shift=0.0
+    ALLOCATE(eig_shift(input%neig,0:atoms%ntype,kpts%nkpt,SIZE(theta)));eig_shift=0.0
     ALLOCATE( acof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,2,2),&
          bcof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,2,2) )
     ALLOCATE( ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat,2,2) )
