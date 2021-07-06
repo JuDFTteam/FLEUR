@@ -74,12 +74,12 @@
 &atom desc="Europium (Eu)" z=63 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f7" lo="5p" /
 &atom desc="Gadolinium (Gd)" z=64 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f7 5d1" lo="5p" /
 &atom desc="Terbium (Tb)" z=65 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f9" lo="5p" /
-&atom desc="Dysprosium (Dy)" z=66 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6|6s2 4f10" lo="" /
-&atom desc="Holmium (Ho)" z=67 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6|6s2 4f11" lo="" /
-&atom desc="Erbium (Er)" z=68 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6|6s2 4f12" lo="" /
-&atom desc="Thulium (Tm)" z=69 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6|6s2 4f13" lo="" /
-&atom desc="Ytterbium (Yb)" z=70 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6|6s2 4f14" lo="" /
-&atom desc="Lutetium (Lu)" z=71 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6|6s2 4f14 5d1" lo="" /
+&atom desc="Dysprosium (Dy)" z=66 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f10" lo="5p" /
+&atom desc="Holmium (Ho)" z=67 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f11" lo="5p" /
+&atom desc="Erbium (Er)" z=68 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f12" lo="5p" /
+&atom desc="Thulium (Tm)" z=69 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f13" lo="5p" /
+&atom desc="Ytterbium (Yb)" z=70 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f14" lo="5p" /
+&atom desc="Lutetium (Lu)" z=71 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f14 5d1" lo="5p" /
 
 &atom desc="Hafnium (Hf)" z=72 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2 4f14 5d2" lo="5s 5p 4f" /
 &atom desc="Tantalum (Ta)" z=73 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2 4f14 5d3" lo="5s 5p 4f" /
