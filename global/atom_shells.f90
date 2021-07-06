@@ -277,7 +277,7 @@ MODULE m_atom_shells
 
                   IF(ALL(ABS([i,j,k]) < lastBorder).AND.lastBorder/=1) CYCLE
 
-                  offsetPos = matmul([i,j,k], amat)
+                  offsetPos = matmul(amat, [i,j,k])
 
                   iAtom = 0
                   DO n = 1, atoms%ntype
