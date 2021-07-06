@@ -53,8 +53,9 @@ MODULE m_greensfBZint
          atomType  = gfinp%elem(i_gf)%atomType
          atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg  = gfinp%elem(i_gf)%l_sphavg
+         l_intersite = gfinp%elem(i_gf)%isIntersite()
          atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
-         atomFactor = MERGE(1.0/atoms%neq(atomType),1.0,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
+         atomFactor = MERGE(1.0/atoms%neq(atomType),1.0,.NOT.l_intersite)
 
          IF(.NOT.gfinp%isUnique(i_gf)) CYCLE
 
@@ -71,28 +72,31 @@ MODULE m_greensfBZint
             ENDIF
          ENDIF
 
-         IF(ANY(ABS(atomDiff).GT.1e-12)) THEN
-            n_op = 1
-            repr_ops(1) = 1
-            ! DO i_gf_p = 1, gfinp%n
-            !    IF(gfinp%elem(i_gf_p)%representative_elem==i_gf) THEN
-            !       n_op = n_op + 1
-            !       repr_ops(n_op) = gfinp%elem(i_gf_p)%representative_op
-            !    ENDIF
-            ! ENDDO
-         ENDIF
+
+         n_op = 1
+         repr_ops(1) = 1
+         ! IF(l_intersite) THEN
+         !    n_op = 1
+         !    repr_ops(1) = 1
+         !    DO i_gf_p = 1, gfinp%n
+         !       IF(gfinp%elem(i_gf_p)%representative_elem==i_gf) THEN
+         !          n_op = n_op + 1
+         !          repr_ops(n_op) = gfinp%elem(i_gf_p)%representative_op
+         !       ENDIF
+         !    ENDDO
+         ! ENDIF
 
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
                      imatSize,spin_start:spin_end),source=cmplx_0)
 
-         natom_start = MERGE(SUM(atoms%neq(:atomType-1)) + 1,SUM(atoms%neq(:atomType-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
-         natom_end   = MERGE(SUM(atoms%neq(:atomType))      ,SUM(atoms%neq(:atomType-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
+         natom_start = MERGE(SUM(atoms%neq(:atomType-1)) + 1,gfinp%elem(i_gf)%inter_atom,.NOT.l_intersite)
+         natom_end   = MERGE(SUM(atoms%neq(:atomType))      ,gfinp%elem(i_gf)%inter_atom,.NOT.l_intersite)
          !Loop over equivalent atoms
          DO natom = natom_start , natom_end
 
             !Only perform the second atom loop if we calculate intersite elements
-            natomp_start = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
-            natomp_end   = MERGE(natom,SUM(atoms%neq(:atomTypep-1)) + 1,atomType==atomTypep.AND.ALL(ABS(atomDiff).LT.1e-12))
+            natomp_start = MERGE(natom,gfinp%elem(i_gf)%inter_atomp,.NOT.l_intersite)
+            natomp_end   = MERGE(natom,gfinp%elem(i_gf)%inter_atomp,.NOT.l_intersite)
 
             DO natomp = natomp_start, natomp_end
 
@@ -112,9 +116,11 @@ MODULE m_greensfBZint
 
                   !The eigenvector coefficients already contain part of the interstitial phase
                   !but not necessarily the right one
-                  im(:,:,:,:,ispin) = im(:,:,:,:,ispin) &
-                                    * exp(-tpi_const*ImagUnit*dot_product(kpts%bk(:,ikpt),  atoms%taual(:,natom) &
-                                                                                          - atoms%taual(:,natomp)))
+                  IF(natom/=natomp) THEN
+                     im(:,:,:,:,ispin) = im(:,:,:,:,ispin) &
+                                       * exp(-tpi_const*ImagUnit*dot_product(kpts%bk(:,ikpt),  atoms%taual(:,natom) &
+                                                                                             - atoms%taual(:,natomp)))
+                  ENDIF
 
                   IF(ispin==3) THEN
                      im(:,:,:,:,ispin) = CMPLX(-REAL(im(:,:,:,:,ispin)), AIMAG(im(:,:,:,:,ispin)))
@@ -123,7 +129,7 @@ MODULE m_greensfBZint
                   !l-offdiagonal phase
                   phase = ImagUnit**(l-lp)
 
-                  CALL greensfSym(ikpt_i,ikpt,i_elem,i_elemLO,nLO,atomType,natom,l,lp,ANY(ABS(atomDiff).GT.1e-12),l_sphavg,ispin,&
+                  CALL greensfSym(ikpt_i,ikpt,i_elem,i_elemLO,nLO,atomType,natom,l,lp,l_intersite,l_sphavg,ispin,&
                                   sym,kpts,atomFactor,atomDiff,phase,repr_ops(:n_op),noco,nococonv,im(:,:,:,:,ispin),greensfBZintCoeffs)
 
                ENDDO

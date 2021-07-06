@@ -89,7 +89,8 @@ MODULE m_greensfPostProcess
          CALL timestart("Green's Function: Occupation")
          mmpmat = cmplx_0
          DO i_gf = 1, gfinp%n
-            l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag() !If there are SCLOs present the occupations can get bigger than 1
+            !If there are SCLOs present the occupations can get bigger than 1
+            l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag()
             mmpmat(:,:,i_gf,:) = greensFunction(i_gf)%occupationMatrix(gfinp,input,atoms,noco,nococonv,&
                                                                        l_write=.TRUE.,check=l_check)
          ENDDO

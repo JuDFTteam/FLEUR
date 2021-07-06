@@ -12,6 +12,7 @@ MODULE m_hubbard1_setup
    USE m_add_selfen
    USE m_mpi_bc_tool
    USE m_greensf_io
+   USE m_rotMMPmat
 #ifdef CPP_EDSOLVER
    USE EDsolver, only: EDsolver_from_cfg
 #endif
@@ -50,11 +51,12 @@ MODULE m_hubbard1_setup
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
       INTEGER :: n_hia_task,extra,i_hia_start,i_hia_end
-      REAL    :: U,J,mx,my,mz,alpha_mix
+      REAL    :: U,J,mx,my,mz,alpha_mix,beta,alpha
       COMPLEX :: offdtrace
       LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,l_amf
 
       CHARACTER(len=300) :: folder
+      TYPE(t_greensf),ALLOCATABLE :: gdft_rot(:)
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
       TYPE(t_selfen), ALLOCATABLE :: selfen(:)
 
@@ -65,7 +67,7 @@ MODULE m_hubbard1_setup
       REAL    :: mu_dc(input%jspins)
       REAL    :: f0(atoms%n_hia),f2(atoms%n_hia)
       REAL    :: f4(atoms%n_hia),f6(atoms%n_hia)
-      REAL    :: alpha(atoms%n_hia), beta(atoms%n_hia)
+      REAL    :: diffalpha(atoms%n_hia), diffbeta(atoms%n_hia)
       REAL    :: occDFT(atoms%n_hia,input%jspins)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
       COMPLEX, ALLOCATABLE :: e(:)
@@ -75,6 +77,13 @@ MODULE m_hubbard1_setup
 #ifndef CPP_EDSOLVER
       CALL juDFT_error("No solver linked for Hubbard 1", hint="Link the edsolver library",calledby="hubbard1_setup")
 #endif
+
+      ALLOCATE(gdft_rot(atoms%n_hia))
+      DO i_hia = 1, atoms%n_hia
+         CALL gdft_rot(i_hia)%init(gdft(i_hia)%elem,gfinp,atoms,input,contour_in=gdft(i_hia)%contour)
+         gdft_rot(i_hia) = gdft(i_hia)
+      ENDDO
+
 
       IF(fmpi%irank.EQ.0) THEN
          !-------------------------------------------
@@ -139,7 +148,7 @@ MODULE m_hubbard1_setup
                ENDDO
             ENDIF
 
-            IF (noco%l_unrestrictMT(nType) .and. gfinp%l_mperp) then
+            IF (noco%l_unrestrictMT(nType).OR.noco%l_spinoffd_ldau(ntype) .and. gfinp%l_mperp) then
                !Calculate local magnetization vector from greens function
                mz = occDFT(i_hia,1) - occDFT(i_hia,2)
                offdtrace = cmplx_0
@@ -148,9 +157,13 @@ MODULE m_hubbard1_setup
                ENDDO
                mx = 2.0 * REAL(offdtrace)
                my = 2.0 * AIMAG(offdtrace)
-               CALL pol_angle(mx,my,mz,beta(i_hia),alpha(i_hia))
+               CALL pol_angle(mx,my,mz,beta,alpha)
+
+               diffbeta(i_hia) = nococonv%beta(nType) - beta
+               diffalpha(i_hia) = nococonv%alph(nType) - alpha
 
                !TODO: ROTATE GREENS FUNCTION SPINFRAME TO ALIGN WITH CURRENT MAGNETIZATION
+               CALL gdft_rot(i_hia)%rotate_euler_angles(atoms,diffalpha(i_hia),diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
             ENDIF
 
             !Nearest Integer occupation
@@ -208,6 +221,7 @@ MODULE m_hubbard1_setup
       ALLOCATE(selfen(atoms%n_hia))
       DO i_hia = 1, atoms%n_hia
          CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,atoms,input,contour_in=gdft(i_hia)%contour)
+         CALL gdft_rot(i_hia)%mpi_bc(fmpi%mpi_comm)
          CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz,input%jspins,&
                                  noco%l_noco.AND.(noco%l_soc.OR.gfinp%l_mperp).OR.hub1inp%l_fullmatch)
       ENDDO
@@ -297,7 +311,7 @@ MODULE m_hubbard1_setup
 #endif
 
          CALL timestart("Hubbard 1: Add Selfenergy")
-         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,atoms,noco,nococonv,&
+         CALL add_selfen(gdft_rot(i_hia),selfen(i_hia),gfinp,input,atoms,noco,nococonv,&
                          occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenergy")
 
@@ -321,6 +335,37 @@ MODULE m_hubbard1_setup
          ENDIF
       ENDDO
 
+#ifdef CPP_MPI
+      !Collect the density matrix to rank 0
+      n = SIZE(mmpMat)
+      ALLOCATE(ctmp(n))
+      CALL MPI_REDUCE(mmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+      IF(fmpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
+      DEALLOCATE(ctmp)
+#endif
+
+      !--------------------------------------------------------------------
+      ! Calculate Distances from last density matrix and update den%mmpmat
+      !--------------------------------------------------------------------
+      results%last_mmpMatdistance = 0.0
+      results%last_occdistance = 0.0
+
+      IF(fmpi%irank.EQ.0) THEN
+         DO i_hia = 1, atoms%n_hia
+            nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+            l = atoms%lda_u(atoms%n_u+i_hia)%l
+            IF (noco%l_unrestrictMT(nType) .OR. noco%l_spinoffd_ldau(ntype) .and. gfinp%l_mperp) then
+               !TODO: ROTATE GREENS FUNCTION AND mmpmat SPINFRAME TO LOCAL FRAME
+               CALL gu(i_hia)%rotate_euler_angles(atoms,-diffalpha(i_hia),-diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
+               mmpMat(:,:,i_hia,:) = rotMMPmat(mmpMat(:,:,i_hia,:),-diffalpha(i_hia),-diffbeta(i_hia),0.0,l,spin_rotation=.TRUE.)
+            ENDIF
+
+            CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
+            DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
+               den%mmpMat(-lmaxU_const:,-lmaxU_const:,atoms%n_u+i_hia,ispin) = mmpMat(-lmaxU_const:,-lmaxU_const:,i_hia,ispin)
+            ENDDO
+         ENDDO
+      ENDIF
 
 #ifdef CPP_HDF
       IF(fmpi%irank.EQ.0) THEN
@@ -343,36 +388,6 @@ MODULE m_hubbard1_setup
          CALL timestop("Hubbard 1: IO/Write")
       ENDIF
 #endif
-
-
-#ifdef CPP_MPI
-      !Collect the density matrix to rank 0
-      n = SIZE(mmpMat)
-      ALLOCATE(ctmp(n))
-      CALL MPI_REDUCE(mmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-      IF(fmpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
-      DEALLOCATE(ctmp)
-#endif
-
-      !--------------------------------------------------------------------
-      ! Calculate Distances from last density matrix and update den%mmpmat
-      !--------------------------------------------------------------------
-      results%last_mmpMatdistance = 0.0
-      results%last_occdistance = 0.0
-
-      IF(fmpi%irank.EQ.0) THEN
-         DO i_hia = 1, atoms%n_hia
-            nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-            IF (noco%l_unrestrictMT(nType) .and. gfinp%l_mperp) then
-               !TODO: ROTATE GREENS FUNCTION AND mmpmat SPINFRAME TO LOCAL FRAME
-            ENDIF
-
-            CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
-            DO ispin = 1, MERGE(3,input%jspins,gfinp%l_mperp)
-               den%mmpMat(-lmaxU_const:,-lmaxU_const:,atoms%n_u+i_hia,ispin) = mmpMat(-lmaxU_const:,-lmaxU_const:,i_hia,ispin)
-            ENDDO
-         ENDDO
-      ENDIF
 
       !Broadcast the density matrix
       CALL mpi_bc(den%mmpMat,0,fmpi%mpi_comm)

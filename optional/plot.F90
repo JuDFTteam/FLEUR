@@ -155,6 +155,7 @@ CONTAINS
       REAL,    ALLOCATABLE        :: rho(:,:,:,:), rht(:,:,:)
       COMPLEX, ALLOCATABLE        :: qpw(:,:), qpww(:,:), rhtxy(:,:,:,:)
       COMPLEX, ALLOCATABLE        :: cdom(:), cdomw(:), cdomvz(:,:), cdomvxy(:,:,:)
+      complex :: mat(2,2)
 
       zero  = 0.0; czero = CMPLX(0.0,0.0)
       ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
@@ -203,6 +204,21 @@ CONTAINS
 !$OMP parallel private(iri,cdnup,cdndown,chden,mgden,cdn11,cdn21,cdn22)
 !$OMP do
             DO iri = 1,atoms%jri(ityp)
+#if 1==1
+              mat(1,1)=rho(iri,ilh,ityp,1)
+              mat(2,2)=rho(iri,ilh,ityp,2)
+              if (size(denmat%mt,4)>2) Then
+                mat(1,2)=CMPLX(denmat%mt(iri,ilh,ityp,3), denmat%mt(iri,ilh,ityp,4))
+                mat(2,1)=conjg(mat(1,2))
+              else
+                mat(1,2)=0;mat(2,1)=0
+              endif
+
+              call nococonv%rotdenmat(ityp,mat,toGlobal=.true.)
+
+              rho(iri,ilh,ityp,:) =nococonv%denmat_to_mag(mat)
+#endif
+#if 1==2
                IF (SIZE(denmat%mt,4).LE.2) THEN
                   cdnup   = rho(iri,ilh,ityp,1)
                   cdndown = rho(iri,ilh,ityp,2)
@@ -230,6 +246,7 @@ CONTAINS
                   IF(factor.NE.1.0) rho(iri,ilh,ityp,3) = -2.0*AIMAG(cdn21)
                   rho(iri,ilh,ityp,4) = cdn11 - cdn22
                END IF
+#endif
             END DO
 !$OMP end do
 !$OMP end parallel
@@ -891,7 +908,7 @@ CONTAINS
                      DO iz = strt, fin
                         DO iy = 0, grid(2)-1
                            DO ix = 0, grid(1)-1
-                              WRITE(nfile+10,*) 'X', tempVecs(ix,iy,iz,:)
+                              WRITE(nfile+10,'(a,6f20.11)') 'X', tempVecs(ix,iy,iz,:)
                            END DO
                         END DO
                      END DO

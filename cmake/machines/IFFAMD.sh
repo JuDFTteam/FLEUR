@@ -6,8 +6,8 @@ export CC=mpiicc
 export CXX=mpiicpc
 
 FLEUR_LIBRARIES="-lxml2;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-mt_mpi"
-echo "Wannier is switched off-manually"
-CLI_USE_WANNIER=FALSE
+#echo "Wannier is switched off-manually"
+#CLI_USE_WANNIER=FALSE
 echo "ChASE is switched off-manually"
 CLI_USE_CHASE=FALSE
 echo "Broken linker can be used"

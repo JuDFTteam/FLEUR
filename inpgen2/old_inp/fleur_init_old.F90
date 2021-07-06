@@ -164,7 +164,6 @@ CONTAINS
     banddos%l_orb = .FALSE.
 
     ALLOCATE(noco%socscale(atoms%ntype))
-    xcpot%lda_atom(:) = .FALSE.
     noco%socscale(:) = 1.0
 
   END SUBROUTINE fleur_init_old

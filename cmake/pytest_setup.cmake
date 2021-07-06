@@ -76,4 +76,9 @@ add_custom_target(pytest ALL
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                   COMMENT "Making test script executable")
 
+add_custom_target(test_new 
+                  COMMAND sh run_tests.sh 
+                  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                  COMMENT "Making 'make test' run the python script executable")                  
+
 

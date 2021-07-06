@@ -37,7 +37,7 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)          :: n,isp,jsp,iintsp,jintsp
     COMPLEX,INTENT(IN)            :: chi
-    LOGICAL                       :: set0  !if true, initialize the hmat matrix with zeros 
+    LOGICAL                       :: set0  !if true, initialize the hmat matrix with zeros
     !     .. Array Arguments ..
     CLASS(t_mat),INTENT(INOUT)     ::hmat
 
@@ -132,7 +132,7 @@ CONTAINS
                IF (fmpi%n_size==1) THEN !use z-herk trick on single PE
                  !$acc host_data use_device(data_c,ab1)
                  IF (set0 .and. nn == 1) THEN
-                   CPP_data_c = CMPLX(0.0,0.0) 
+                   !CPP_data_c = CMPLX(0.0,0.0) 
                    CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab,0.0,CPP_data_c,size_data_c)
                  ELSE               
                    CALL CPP_zherk("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1,size_ab,1.0,CPP_data_c,size_data_c)
@@ -141,7 +141,7 @@ CONTAINS
                ELSE
                  !$acc host_data use_device(data_c,ab1,ab_select)
                  IF (set0 .and. nn == 1) THEN
-                   CPP_data_c = CMPLX(0.0,0.0) 
+                   !CPP_data_c = CMPLX(0.0,0.0) 
                    CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,size_ab,ab_select,lapw%num_local_cols(iintsp),CMPLX(0.0,0.0),CPP_data_c,size_data_c)
                  ELSE
                    CALL CPP_zgemm("N","T",lapw%nv(iintsp),size_ab_select,ab_size,cchi,ab1,size_ab,ab_select,lapw%num_local_cols(iintsp),CMPLX(1.0,0.0),CPP_data_c,size_data_c)
@@ -157,7 +157,7 @@ CONTAINS
                 !$acc end kernels
                 !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
                 IF (set0 .and. nn == 1) THEN
-                   CPP_data_c = CMPLX(0.0,0.0) 
+                   !CPP_data_c = CMPLX(0.0,0.0) 
                    CALL CPP_zgemm("T","T",lapw%nv(iintsp),size_ab_select,ab_size,chi,abCoeffs,SIZE(abCoeffs,1),&
                        ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
                 ELSE
@@ -189,7 +189,7 @@ CONTAINS
                 !$acc end kernels
                 !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
                 IF (set0 .and. nn == 1) THEN
-                   CPP_data_c = CMPLX(0.0,0.0) 
+                   !CPP_data_c = CMPLX(0.0,0.0) 
                    CALL CPP_zgemm("T","T",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,cchi,abCoeffs,SIZE(abCoeffs,1),&
                        ab_select,size_ab_select,CMPLX(0.0,0.0),CPP_data_c,SIZE_data_c)
                 ELSE  
@@ -225,6 +225,5 @@ CONTAINS
 
     CALL timestop("non-spherical setup")
   END SUBROUTINE hsmt_nonsph
-
 
 END MODULE m_hsmt_nonsph
