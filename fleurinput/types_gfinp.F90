@@ -953,9 +953,10 @@ CONTAINS
 
 
             IF(l_write) THEN
-               WRITE(oUnit,'(A,I6,I6,3f14.8,i10)') 'GF Element: ', refAtom, atomTypep,&
+               WRITE(oUnit,'(A,I6,I6,3f14.8,3i10)') 'GF Element: ', refAtom, atomTypep,&
                                                shellDiffs(:,ishellAtom,ishell), &
-                                               shellops(ishellAtom,ishell)
+                                               shellops(ishellAtom,ishell), &
+                                               shellAtoms(:,ishellAtom,ishell)
             ENDIF
          ENDDO
 

@@ -358,7 +358,10 @@ MODULE m_atom_shells
                shellAtomsAux(:,1) = shellAtoms(:,ishellAtom,current_shell)
                EXIT
             ELSE IF(ishellAtom == numAtomsShell(current_shell)) THEN
-               CALL juDFT_error("No representative element found", calledby="addNearestNeighbours_gfelem")
+               shellDiffAux(:,1) = shellDiffs(:,1,current_shell)
+               shellOpsAux(1) = 1 !Identity operation
+               shellAtomsAux(:,1) = shellAtoms(:,1,current_shell)
+               !CALL juDFT_error("No representative element found", calledby="addNearestNeighbours_gfelem")
             ENDIF
          ENDDO
 
