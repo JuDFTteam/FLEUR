@@ -50,7 +50,7 @@ MODULE m_atom_shells
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: numAtomsShell(:)
       INTEGER,             INTENT(OUT)  :: generatedShells
 
-      REAL, PARAMETER :: eps = 1e-7
+      REAL, PARAMETER :: eps = 1e-5
 
       INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells
       INTEGER :: ishell,i,iAtom,atomTypep,refAt
