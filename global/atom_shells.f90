@@ -49,11 +49,12 @@ MODULE m_atom_shells
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: numAtomsShell(:)
       INTEGER,             INTENT(OUT)  :: generatedShells
 
+      REAL, PARAMETER :: eps = 1e-10
 
       INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells
-      INTEGER :: lastIndex,ishell,i,iAtom,atomTypep,refAt
-      LOGICAL :: l_unfinished_shell,l_added_dist_shell,l_found_shell,l_add
-      REAL :: min_distance_to_border(3), distance,distance_to_border, lastDist, minDist
+      INTEGER :: ishell,i,iAtom,atomTypep,refAt
+      LOGICAL :: l_unfinished_shell,l_found_shell,l_add
+      REAL :: min_distance_to_border(3), distance,distance_to_border, lastDist
       REAL :: leftBorder(3),rightBorder(3),refPos(3)
 
       INTEGER, ALLOCATABLE :: newAtoms(:,:), distIndexList(:)
@@ -94,66 +95,56 @@ MODULE m_atom_shells
          END DO
 
          !Sort the nearestNeighbours into shells
-         lastIndex = 1
-         DO
-            minDist = MINVAL(sortedDistances(lastIndex:newNeighbours))
-            l_added_dist_shell = .FALSE.
-            DO iAtom = lastIndex, newNeighbours
-               lastIndex = iAtom
-               IF(ABS(sortedDistances(iAtom)-minDist).GT.1e-12) EXIT !List is sorted
-               IF(ABS(minDist)<1e-12) CYCLE
+         DO iAtom = 1, newNeighbours
+            IF(ABS(sortedDistances(iAtom))<1e-12) CYCLE
 
-               l_found_shell = .FALSE.
-               !Search for the same shell
-               DO ishell = 1, actualShells
-                  IF(ABS(shellDistances(ishell)-minDist).GT.1e-12) CYCLE
-                  atomTypep = atoms%itype(sortedAtoms(2,iAtom))
-                  IF(atoms%itype(shellAtoms(2,1,ishell))/=atomTypep) CYCLE
+            l_found_shell = .FALSE.
+            !Search for the same shell
+            DO ishell = 1, actualShells
+               IF(ABS(shellDistances(ishell)-sortedDistances(iAtom)).GT.eps) CYCLE
+               atomTypep = atoms%itype(sortedAtoms(2,iAtom))
+               IF(atoms%itype(shellAtoms(2,1,ishell))/=atomTypep) CYCLE
 
-                  numAtomsShell(ishell) = numAtomsShell(ishell) + 1
-                  shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
-                  shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
-                  l_found_shell = .TRUE.
-               ENDDO
-
-               !Search for shells with the same distance
-               IF(.NOT.l_found_shell) THEN
-                  l_add = .FALSE.
-                  DO ishell = 1, actualShells
-                     IF(shellDistances(ishell)-minDist.GT.1e-12) THEN
-                        !Here we are at the first shell with a larger distance
-                        l_add = .TRUE.
-                        EXIT
-                     ENDIF
-                  ENDDO
-
-                  IF(l_add) THEN
-                     CALL insert_new_shell(ishell, actualShells, shellAtoms, shellDiffs, shellDistances, numAtomsShell)
-
-                     IF(.NOT.ANY(ABS(shellDistances-minDist)<1e-12)) l_added_dist_shell = .TRUE.
-                     numAtomsShell(ishell) = numAtomsShell(ishell) + 1
-                     shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
-                     shellDistances(ishell) = minDist
-                     shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
-                     l_found_shell = .TRUE.
-                  ENDIF
-               ENDIF
-
-               !Add shell with new distance
-               IF(.NOT.l_found_shell) THEN
-                  CALL insert_new_shell(actualShells+1, actualShells, shellAtoms, shellDiffs, shellDistances, numAtomsShell)
-
-                  l_added_dist_shell = .TRUE.
-                  numAtomsShell(ishell) = numAtomsShell(ishell) + 1
-                  shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
-                  shellDistances(ishell) = minDist
-                  shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
-               ENDIF
-
+               numAtomsShell(ishell) = numAtomsShell(ishell) + 1
+               shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
+               shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
+               l_found_shell = .TRUE.
             ENDDO
 
-            IF(l_added_dist_shell) atomShells = atomShells + 1
-            IF(lastIndex>=newNeighbours) EXIT
+            !Search for shells with the same distance
+            IF(.NOT.l_found_shell) THEN
+               l_add = .FALSE.
+               DO ishell = 1, actualShells
+                  IF(shellDistances(ishell)-sortedDistances(iAtom).GT.eps) THEN
+                     !Here we are at the first shell with a larger distance
+                     l_add = .TRUE.
+                     EXIT
+                  ENDIF
+               ENDDO
+
+               IF(l_add) THEN
+                  CALL insert_new_shell(ishell, actualShells, shellAtoms, shellDiffs, shellDistances, numAtomsShell)
+
+                  IF(.NOT.ANY(ABS(shellDistances-sortedDistances(iAtom))<eps)) atomShells = atomShells + 1
+                  numAtomsShell(ishell) = numAtomsShell(ishell) + 1
+                  shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
+                  shellDistances(ishell) = sortedDistances(iAtom)
+                  shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
+                  l_found_shell = .TRUE.
+               ENDIF
+            ENDIF
+
+            !Add shell with new distance
+            IF(.NOT.l_found_shell) THEN
+               CALL insert_new_shell(actualShells+1, actualShells, shellAtoms, shellDiffs, shellDistances, numAtomsShell)
+
+               atomShells = atomShells + 1
+               numAtomsShell(ishell) = numAtomsShell(ishell) + 1
+               shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
+               shellDistances(ishell) = sortedDistances(iAtom)
+               shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
+            ENDIF
+
          ENDDO
 
          IF(atomShells>=nshells) THEN
@@ -163,7 +154,7 @@ MODULE m_atom_shells
             lastDist = 0.0
             atomShells1 = 0
             DO ishell = 1, actualShells
-               IF(shellDistances(ishell)-lastDist > 1e-12) atomShells1 = atomShells1 + 1
+               IF(shellDistances(ishell)-lastDist > eps) atomShells1 = atomShells1 + 1
                lastDist = shellDistances(ishell)
                IF(atomShells1==nshells) THEN
                   distance = shellDistances(ishell)
@@ -184,7 +175,7 @@ MODULE m_atom_shells
                   ENDDO
 
                   !-1e-12 to avoid uneccesary calculations where both are equla to numerical precision
-                  IF(ALL(min_distance_to_border(:)-distance > -1e-12)) THEN
+                  IF(ALL(min_distance_to_border(:)-distance > -eps)) THEN
                      l_unfinished_shell = .FALSE.
                   ENDIF
                   EXIT
@@ -197,7 +188,7 @@ MODULE m_atom_shells
       lastDist = 0.0
       atomShells1 = 0
       DO ishell = 1, actualShells
-         IF(shellDistances(ishell)-lastDist > 1e-12) atomShells1 = atomShells1 + 1
+         IF(shellDistances(ishell)-lastDist > eps) atomShells1 = atomShells1 + 1
          lastDist = shellDistances(ishell)
          IF(atomShells1>nshells) THEN
             generatedShells = ishell - 1
