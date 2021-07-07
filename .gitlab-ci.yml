@@ -377,6 +377,13 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - git clone https://github.com/JuDFTteam/aiida-fleur.git
     - chown -R builder:users aiida-fleur
     - cd aiida-fleur
+    # Remove cache dirs
+    - rm -rf tests/workflows/calc_data_dir tests/workflows/caches
+    - rm -rf tests/calculations/data_dir
+    - mkdir -p tests/workflows/calc_data_dir
+    - mkdir -p tests/workflows/caches
+    - mkdir -p tests/calculations/data_dir
+    - chown -R builder:users tests
     - git checkout develop
     - su -p builder -c "pip3 install .[testing]"
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
@@ -394,12 +401,6 @@ test-aiida-fleur-dev-gfortran-hdf5:
     # For the regression tests to use the fleur executable for now it needs to be in these folders
     - cp $CI_PROJECT_DIR/build/inpgen local_exe/inpgen && chmod +x local_exe/inpgen
     - cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur
-    # Remove cache dirs
-    - rm -rf workflows/calc_data_dir workflows/caches
-    - rm -rf calculations/data_dir
-    - mkdir -p workflows/calc_data_dir
-    - mkdir -p workflows/caches
-    - mkdir -p calculations/data_dir
     # run tests
     - su -p builder -c "export PATH=$PATH:/root/.local/bin && printenv PATH && reentry scan && ./run_all_cov.sh"
   allow_failure: true
