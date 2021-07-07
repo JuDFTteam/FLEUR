@@ -381,6 +381,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - su -p builder -c "pip3 install .[testing]"
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
+    - git log --pretty=oneline --abbrev-commit -n 1
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
