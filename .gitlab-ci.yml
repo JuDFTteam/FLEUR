@@ -415,8 +415,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
 #    when: on_failure
 #    paths:
 #      - build/Testing
-#  only:
-#    - schedules
-#    - triggers
-#    - web
-#    # Add slack or mattermost message in aiida channel to notice this.
+  only:
+    - schedules
+    - triggers
+    - web
+    # Add slack or mattermost message in aiida channel to notice this.
