@@ -15,3 +15,8 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
       set_source_files_properties(vgen/vmtxcg.F90 PROPERTIES COMPILE_FLAGS -no-openmp)
    endif()
 endif()
+
+if (CMAKE_Fortran_COMPILER_ID MATCHES "PGI")
+set_source_files_properties(vgen/mkgylm.f90 PROPERTIES COMPILE_FLAGS "-O0 -Mvect=nosimd")
+set_source_files_properties(eigen/hsmt_nonsph.F90 PROPERTIES COMPILE_FLAGS "-O1 -Mvect=nosimd -nomp")
+endif()    

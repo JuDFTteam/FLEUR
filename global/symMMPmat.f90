@@ -33,13 +33,10 @@ MODULE m_symMMPmat
 
       COMPLEX :: mmpmatSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
       COMPLEX :: mmpmat_kpt(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
-      INTEGER :: i_op,n_ops,is,isi,lpArg,nkpts,ikpt,kpt,sym_kpt
+      INTEGER :: i_op,n_ops,is,isi,lpArg,nkpts,ikpt,kpt
       INTEGER, ALLOCATABLE :: sym_ops(:)
       COMPLEX :: symPhase, intersite_phase
-      INTEGER :: rrot(3,3)
-      COMPLEX :: rrot_dwgn_l(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const)
-      COMPLEX :: rrot_dwgn_lp(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const)
-      REAL    :: symFac,rotbk(3),kpt_parent(3)
+      REAL    :: symFac,rotbk(3),rotdiff(3)
 
       mmpmatSym = cmplx_0
 
@@ -84,24 +81,11 @@ MODULE m_symMMPmat
             intersite_phase = cmplx_1
             IF(PRESENT(kpt_indices)) THEN
                kpt = kpt_indices(ikpt)
-               kpt_parent = kpts%bk(:,kpts%bkp(kpt))
-               sym_kpt = sym%invtab(kpts%bksym(kpt))
-
-               IF(sym_kpt.LE.sym%nop) THEN
-                  rrot = transpose(sym%mrot(:,:,sym_kpt))
-                  rrot_dwgn_l = transpose(sym%d_wgn(:,:,l,sym_kpt))
-                  rrot_dwgn_lp = transpose(sym%d_wgn(:,:,lpArg,sym_kpt))
-               ELSE
-                  rrot = -transpose(sym%mrot(:,:,sym%invtab(sym_kpt-sym%nop)))
-                  rrot_dwgn_l = -transpose(sym%d_wgn(:,:,l,sym%invtab(sym_kpt-sym%nop)))
-                  rrot_dwgn_lp = -transpose(sym%d_wgn(:,:,lpArg,sym%invtab(sym_kpt-sym%nop)))
-               ENDIF
-
-               rotbk = matmul(rrot,kpt_parent)
-               mmpmat_kpt = rotMMPmat(mmpmat,dwgn =rrot_dwgn_lp,&
-                                             dwgnp=rrot_dwgn_l)
-
-               intersite_phase = exp(-tpi_const*ImagUnit*dot_product(rotbk,matmul(sym%mrot(:,:,isi),atomDiff)))
+               !I have no idea why kpts%to_first_bz produces different results but it does
+               rotbk = kpts%bkf(:,kpt) - CEILING(kpts%bkf(:,kpt)-[0.5,0.5,0.5])
+               rotdiff = matmul(sym%mrot(:,:,isi),atomDiff)
+               mmpmat_kpt = rotMMPmat(mmpmat,sym,kpts%bksym(kpt),l,lp=lp,reciprocal=.TRUE.)
+               intersite_phase = exp(-tpi_const*ImagUnit*dot_product(rotbk,rotdiff))
             ELSE
                mmpmat_kpt = mmpmat
             ENDIF
@@ -109,8 +93,7 @@ MODULE m_symMMPmat
             !The complex conjugation is taken from n_mat
             !It seems there is an inconsistency here that should be resolved at aome point
             mmpmatSym = mmpmatSym + symFac * symPhase * intersite_phase &
-                                   * conjg(rotMMPmat(mmpmat_kpt,dwgn =sym%d_wgn(:,:,lpArg,isi),&
-                                                                dwgnp=sym%d_wgn(:,:,l    ,isi)))
+                                   * conjg(rotMMPmat(mmpmat_kpt,sym,isi,l,lp=lp))
          ENDDO
 
       ENDDO

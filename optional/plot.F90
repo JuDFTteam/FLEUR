@@ -155,6 +155,7 @@ CONTAINS
       REAL,    ALLOCATABLE        :: rho(:,:,:,:), rht(:,:,:)
       COMPLEX, ALLOCATABLE        :: qpw(:,:), qpww(:,:), rhtxy(:,:,:,:)
       COMPLEX, ALLOCATABLE        :: cdom(:), cdomw(:), cdomvz(:,:), cdomvxy(:,:,:)
+      complex :: mat(2,2)
 
       zero  = 0.0; czero = CMPLX(0.0,0.0)
       ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
@@ -200,9 +201,25 @@ CONTAINS
          theta   = nococonv%beta(ityp)
          phi     = nococonv%alph(ityp)
          DO ilh = 0,sphhar%nlh(sym%ntypsy(ityp))
-!$OMP parallel private(iri,cdnup,cdndown,chden,mgden,cdn11,cdn21,cdn22)
-!$OMP do
+!$OMP PARALLEL DO DEFAULT(shared)& !Note: The default(shared) is because explicitly defining nococonv as shared is problematic for some compilers
+!$OMP SHARED(rho,ityp,ilh,denmat)&
+!$OMP PRIVATE(iri,cdnup,cdndown,chden,mgden,cdn11,cdn21,cdn22,mat)
             DO iri = 1,atoms%jri(ityp)
+#if 1==1
+              mat(1,1)=rho(iri,ilh,ityp,1)
+              mat(2,2)=rho(iri,ilh,ityp,2)
+              if (size(denmat%mt,4)>2) Then
+                mat(1,2)=CMPLX(denmat%mt(iri,ilh,ityp,3), denmat%mt(iri,ilh,ityp,4))
+                mat(2,1)=conjg(mat(1,2))
+              else
+                mat(1,2)=0;mat(2,1)=0
+              endif
+
+              call nococonv%rotdenmat(ityp,mat,toGlobal=.true.)
+
+              rho(iri,ilh,ityp,:) =nococonv%denmat_to_mag(mat)
+#endif
+#if 1==2
                IF (SIZE(denmat%mt,4).LE.2) THEN
                   cdnup   = rho(iri,ilh,ityp,1)
                   cdndown = rho(iri,ilh,ityp,2)
@@ -230,9 +247,9 @@ CONTAINS
                   IF(factor.NE.1.0) rho(iri,ilh,ityp,3) = -2.0*AIMAG(cdn21)
                   rho(iri,ilh,ityp,4) = cdn11 - cdn22
                END IF
+#endif
             END DO
-!$OMP end do
-!$OMP end parallel
+!$OMP END PARALLEL DO
          END DO
       END DO
 
@@ -253,8 +270,9 @@ CONTAINS
       END IF
 
       ! Calculate the charge and magnetization densities in the interstitial.
-!$OMP parallel private(imesh,rho_11,rho_22,rho_21r,rhotot,rho_21i,mx,my,mz)
-!$OMP do
+!$OMP PARALLEL DO DEFAULT(none)&
+!$OMP SHARED(ris,ris2,denmat)&
+!$OMP PRIVATE(imesh,rho_11,rho_22,rho_21r,rhotot,rho_21i,mx,my,mz)
       DO imesh = 0,ifft3-1
          rho_11  = ris(imesh,1)
          rho_22  = ris(imesh,2)
@@ -284,8 +302,7 @@ CONTAINS
             ris2(imesh,4) = mz
          END IF
       END DO
-!$OMP end do
-!$OMP end parallel
+!$OMP END PARALLEL DO
 
       ! Invert the transformation to put the four densities back into
       ! reciprocal space.
@@ -323,8 +340,9 @@ CONTAINS
 
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
-              !$OMP parallel private(imesh,rho_11,rho_22,rhotot,rho_21r,rho_21i,mx,my,mz)
-              !$OMP do
+              !$OMP PARALLEL DO DEFAULT(none)&
+              !$OMP SHARED(rvacxy,ivac,imz)&
+              !$OMP PRIVATE(imesh,rho_11,rho_22,rhotot,rho_21r,rho_21i,mx,my,mz)
                DO imesh = 0,ifft2-1
                   rho_11  = rvacxy(imesh,imz,ivac,1)
                   rho_22  = rvacxy(imesh,imz,ivac,2)
@@ -340,12 +358,12 @@ CONTAINS
                   rvacxy(imesh,imz,ivac,3) = my
                   rvacxy(imesh,imz,ivac,4) = mz
                END DO
-               !$OMP end do
-               !$OMP end parallel
+               !$OMP END PARALLEL DO
 
             END DO
-            !$OMP parallel private(imz,rho_11,rho_22,rho_21r,rho_21i,mx,my,mz)
-            !$OMP do
+            !$OMP PARALLEL DO DEFAULT(none)&
+            !$OMP SHARED(rht,ivac,cdomvz,vacuum)&
+            !$OMP PRIVATE(imz,rho_11,rho_22,rho_21r,rho_21i,mx,my,mz,rhotot)
             DO imz = vacuum%nmzxyd+1,vacuum%nmzd
                rho_11  = rht(imz,ivac,1)
                rho_22  = rht(imz,ivac,2)
@@ -361,8 +379,7 @@ CONTAINS
                rht(imz,ivac,3) = my
                rht(imz,ivac,4) = mz
             END DO
-            !$OMP end do
-            !$OMP end parallel
+            !$OMP END PARALLEL DO
          END DO
 
          DO iden = 1,4
@@ -849,7 +866,7 @@ CONTAINS
                   END IF
                END DO !x-loop
             END DO !y-loop
-            !END PARALLEL DO
+            !$OMP END PARALLEL DO
          END DO !z-loop
          CALL timestop("loop over points")
 

@@ -22,6 +22,7 @@ CONTAINS
 #include"cpp_double.h"
     USE m_hsmt_ab
     USE m_types
+!    USE m_types_mpimat
     USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input

@@ -115,7 +115,7 @@ CONTAINS
       INTEGER                 ::  iband, jq, iq, nq_idx
       INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p, start, stride
-      INTEGER                 ::  n1, n2, nn2, me
+      INTEGER                 ::  n1, n2, nn2, me, max_band_pack
       INTEGER                 ::  ikqpt, iob, m, n, k, lda, ldb, ldc
       INTEGER                 ::  ok, psize, n_parts, ipart, ibando
 
@@ -187,10 +187,18 @@ CONTAINS
          call timestop("alloc phase_vv & dot_res")
          
          call timestart("q_loop")
-         hybdat%max_q = size(k_pack%q_packs)
+
+         call timestart("get max_q")
+         max_band_pack = 0 
+         DO jq = 1, size(k_pack%q_packs)
+            max_band_pack = max(max_band_pack, k_pack%q_packs(jq)%submpi%size)
+         enddo
+         hybdat%max_q = size(k_pack%q_packs) * fi%kpts%nkptf  * max_band_pack
 #ifdef CPP_MPI
          call MPI_Allreduce(MPI_IN_PLACE, hybdat%max_q, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
 #endif
+         call timestop("get max_q")
+
          DO jq = 1, size(k_pack%q_packs)
             call timestart("initial setup")
             iq = k_pack%q_packs(jq)%ptr

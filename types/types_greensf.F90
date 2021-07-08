@@ -1260,7 +1260,7 @@ MODULE m_types_greensf
 
          LOGICAL :: l_fullRadialArg,l_explicit
          INTEGER :: l,lp,atomType,atomTypep,ipm,spin,m,mp,iz,jr,jrp
-         REAL    :: realPart, imagPart, atomDiff(3)
+         REAL    :: realPart, imagPart
          COMPLEX, ALLOCATABLE :: gmatR(:,:)
          COMPLEX :: gmat(atoms%jmtd)
          TYPE(t_mat) :: gmatTmp
@@ -1279,13 +1279,12 @@ MODULE m_types_greensf
          lp = this%elem%lp
          atomType  = this%elem%atomType
          atomTypep = this%elem%atomTypep
-         atomDiff  = this%elem%atomDiff
          !Do we have the offdiagonal scalar products
          l_explicit = .TRUE.
          IF(ALLOCATED(this%scalarProducts%uun)) l_explicit = .FALSE.
 
          !only intersite arguments have independent radial arguments ??
-         l_fullRadialArg = l_fullRadialArg.AND.(atomType.NE.atomTypep.OR.ANY(ABS(atomDiff).GT.1e-12))
+         l_fullRadialArg = l_fullRadialArg.AND.this%elem%isIntersite()
 
          DO ipm = 1, 2
             DO spin = 1 , SIZE(this%uu,4)

@@ -110,9 +110,8 @@ CONTAINS
           ENDIF
           vacuum%dvac = round_to_deci(vacuum%dvac, 2)
           atoms%taual(3,:)=atoms%taual(3,:)*cell%amat(3,3)/(vacuum%dvac+2.5)
-          cell%amat(3,3)=vacuum%dvac+2.5
        ENDIF
-
+       cell%amat(3,3)=vacuum%dvac+2.5
     ENDIF
     vacuum%nvac = 2
     IF (sym%zrfs .OR. sym%invs) vacuum%nvac = 1
