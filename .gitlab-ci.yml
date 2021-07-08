@@ -401,8 +401,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
     # For the regression tests to use the fleur executable for now it needs to be in these folders
     - su -p builder -c "cp $CI_PROJECT_DIR/build/inpgen local_exe/inpgen && chmod +x local_exe/inpgen"
     - su -p builder -c "cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur"
-    - sed "s/./${CI_PROJECT_DIR//\//\\/}\/aiida-fleur\/tests/g" $file
-    - cat aiida-testing-config.yml
+    - sed "s/./${CI_PROJECT_DIR//\//\\/}\/aiida-fleur\/tests/g" .aiida-testing-config.yml
+    - cat .aiida-testing-config.yml
     # run tests
     - su -p builder -c "export PATH=$PATH:/root/.local/bin && printenv PATH && reentry scan && ./run_all_cov.sh"
   allow_failure: true
