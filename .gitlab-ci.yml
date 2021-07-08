@@ -381,10 +381,10 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - git checkout develop
     - su -p builder -c "pip3 install .[testing]"
     - rm -rf tests/workflows/calc_data_dir tests/workflows/caches
-    - rm -rf tests/calculations/data_dir
+    - rm -rf tests/calculation/data_dir
     - mkdir -p tests/workflows/calc_data_dir
     - mkdir -p tests/workflows/caches
-    - mkdir -p tests/calculations/data_dir
+    - mkdir -p tests/calculation/data_dir
     - chown -R builder:users tests
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
