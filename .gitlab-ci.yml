@@ -382,9 +382,11 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - su -p builder -c "pip3 install .[testing]"
     - rm -rf tests/workflows/calc_data_dir tests/workflows/caches
     - rm -rf tests/calculation/data_dir
+    - rm -rf tests/data_dir
     - mkdir -p tests/workflows/calc_data_dir
     - mkdir -p tests/workflows/caches
     - mkdir -p tests/calculation/data_dir
+    - mkdir -p tests/data_dir
     - chown -R builder:users tests
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
@@ -404,6 +406,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - sed -i "s/\./${CI_PROJECT_DIR//\//\\/}\/aiida-fleur\/tests/g" .aiida-testing-config.yml
     - cat .aiida-testing-config.yml
     - ls -la local_exe/
+    #Copy testfile for SCF workchain from fleur tests
+    - su -p builder -c "cp files/workflow_test_files/inp_scf.xml files/inpxml/Si/inp.xml"
     # run tests
     - su -p builder -c "export PATH=$PATH:/root/.local/bin && printenv PATH && reentry scan && ./run_all_cov.sh"
   allow_failure: true
