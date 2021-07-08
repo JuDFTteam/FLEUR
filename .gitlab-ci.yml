@@ -403,6 +403,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - su -p builder -c "cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur"
     - sed -i "s/\./${CI_PROJECT_DIR//\//\\/}\/aiida-fleur\/tests/g" .aiida-testing-config.yml
     - cat .aiida-testing-config.yml
+    - ls -la local_exe/
     # run tests
     - su -p builder -c "export PATH=$PATH:/root/.local/bin && printenv PATH && reentry scan && ./run_all_cov.sh"
   allow_failure: true
