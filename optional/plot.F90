@@ -271,7 +271,7 @@ CONTAINS
 
       ! Calculate the charge and magnetization densities in the interstitial.
 !$OMP PARALLEL DO DEFAULT(none)&
-!$OMP SHARED(ris,ris2,denmat)&
+!$OMP SHARED(ris,ris2,denmat,ifft3)&
 !$OMP PRIVATE(imesh,rho_11,rho_22,rho_21r,rhotot,rho_21i,mx,my,mz)
       DO imesh = 0,ifft3-1
          rho_11  = ris(imesh,1)
@@ -341,7 +341,7 @@ CONTAINS
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
               !$OMP PARALLEL DO DEFAULT(none)&
-              !$OMP SHARED(rvacxy,ivac,imz)&
+              !$OMP SHARED(rvacxy,ivac,imz,ifft2)&
               !$OMP PRIVATE(imesh,rho_11,rho_22,rhotot,rho_21r,rho_21i,mx,my,mz)
                DO imesh = 0,ifft2-1
                   rho_11  = rvacxy(imesh,imz,ivac,1)
