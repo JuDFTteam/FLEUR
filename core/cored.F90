@@ -87,11 +87,8 @@ CONTAINS
          CALL atoms%econf(jatom)%get_core(nst,nprnc,kappa,occ_h)
 
 
-         IF ((bmu > 99.)) THEN
-            occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
-         ELSE
-            occ(1:nst) = occ_h(1:nst,1)
-         ENDIF
+         occ(1:nst) = occ_h(1:nst,jspin)
+         
          rnot = atoms%rmsh(1,jatom)
          d = EXP(atoms%dx(jatom))
          ncmsh = NINT( LOG( (atoms%rmt(jatom)+10.0)/rnot ) / dxx + 1 )
@@ -140,8 +137,9 @@ CONTAINS
                fn = nprnc(korb)
                fj = iabs(kappa(korb)) - .5e0
 
-               weight = 2*fj + 1.e0
-               IF (bmu > 99.) weight = occ(korb)
+!               weight = 2*fj + 1.e0
+!               IF (bmu > 99.) weight = occ(korb)
+               weight = 2*occ(korb)
 
                fl = fj + (.5e0)*isign(1,kappa(korb))
 
@@ -224,8 +222,9 @@ CONTAINS
                                  attributes,RESHAPE((/8,12,4,9,9,13,6,3,1,18,18,9/),(/6,2/)))
          DO korb = 1, atoms%econf(jatom)%num_core_states
             fj = iabs(kappa(korb)) - .5e0
-            weight = 2*fj + 1.e0
-            IF (bmu > 99.) weight = occ(korb)
+!            weight = 2*fj + 1.e0
+!            IF (bmu > 99.) weight = occ(korb)
+            weight = occ(korb)
             fl = fj + (.5e0)*isign(1,kappa(korb))
             attributes = ''
             WRITE(attributes(1),'(i0)') nprnc(korb)
