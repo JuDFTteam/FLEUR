@@ -67,7 +67,7 @@ CONTAINS
 #ifdef _OPENACC
     gpus=acc_get_num_devices(acc_device_nvidia)
 #ifdef CPP_MPI
-    write(*,*) "Number of GPU per node   :",gpus
+    if(fmpi%irank == 0) write(*,*) "Number of GPU per node   :",gpus
     CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
     if (isize>1) THEN
       if (fmpi%irank==0) write(*,*) "Number of MPI/PE per node:",isize
