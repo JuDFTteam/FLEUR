@@ -1,6 +1,8 @@
 How to contribute to the development of FLEUR
 ================
 
+*** Please check the FLEUR developers guide at https://www.flapw.de/MaX-5.1/develop-main/
+
 Please consider the following points to contribute to the development of FLEUR:
 
 * Your contributions should agree with our LICENCE. Hence, you have to put your contributions under 
