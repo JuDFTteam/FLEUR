@@ -66,7 +66,7 @@ CONTAINS
       COMPLEX, PARAMETER :: czero=CMPLX(0.,0.)
       COMPLEX dtd, dtu, utd, utu
       INTEGER lo
-      INTEGER i, ie, im, l1, l2, ll1, ll2, lm1, lm2, m1, m2, n, natom, m, i_u
+      INTEGER i, ie, im, l1, l2, ll1, ll2, lm1, lm2, m1, m2, n, natom, m
       INTEGER natrun, is, isinv, j, irinv, it, lmplmd
 
       REAL, ALLOCATABLE :: a21(:,:), b4(:,:)
@@ -80,7 +80,6 @@ CONTAINS
 
       ALLOCATE(a21(3,atoms%nat),b4(3,atoms%nat) )
 
-      i_u = 1
       natom = 1
       DO  n = 1,atoms%ntype
          IF (atoms%l_geo(n)) THEN
@@ -140,8 +139,8 @@ CONTAINS
 
             CALL force_a21_lo(atoms,jsp,n,we,eig,ne,eigVecCoeffs,aveccof,bveccof,cveccof,tlmplm,usdus,a21)
 
-            IF ((atoms%n_u+atoms%n_hia.GT.0).AND.(i_u.LE.atoms%n_u+atoms%n_hia)) THEN
-               CALL force_a21_U(atoms,i_u,n,jsp,we,ne,usdus,vTot%mmpMat(:,:,:,jsp),eigVecCoeffs,aveccof,bveccof,cveccof,a21)
+            IF (atoms%n_u+atoms%n_hia>0) THEN
+               CALL force_a21_U(atoms,n,jsp,we,ne,usdus,vTot%mmpMat(:,:,:,jsp),eigVecCoeffs,aveccof,bveccof,cveccof,a21)
             END IF
 
             IF (input%l_useapw) THEN

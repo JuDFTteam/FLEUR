@@ -34,7 +34,7 @@ MODULE m_rotMMPmat
       IF(PRESENT(spin_rotation)) spin_rotation_arg = spin_rotation
 
       real_space_rotation_arg = .TRUE.
-      IF(PRESENT(spin_rotation)) real_space_rotation_arg = spin_rotation
+      IF(PRESENT(real_space_rotation)) real_space_rotation_arg = real_space_rotation
 
       IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
       mmpmatOut = mmpmat
