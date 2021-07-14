@@ -106,16 +106,7 @@ def build_dir(pytestconfig):
 @pytest.fixture(scope='session')
 def cleanup(pytestconfig):
     """Flag if only failed test results are stored or all tests"""
-    cleanup_val = pytestconfig.getoption("cleanup")
-    if isinstance(cleanup_val, str):
-        if cleanup_val.lower() in ('true', 't', 'y'):
-            return True
-        elif cleanup_val.lower() in ('false', 'f', 'n'):
-            return False
-        else:
-            raise ValueError(f'Invalid value for cleanup {cleanup_val}')
-    else:
-        return cleanup_val
+    return not pytestconfig.getoption("--no-cleanup")
 
 
 @pytest.fixture(scope='session')
@@ -143,9 +134,10 @@ def parser_testdir(build_dir):
 def pytest_addoption(parser):
     """We add an option to pytest to parse the build dir
     """
-    parser.addoption("--build_dir", action="store", default="../../build/", 
+    parser.addoption("--build_dir", action="store", default="../../build/",
                     help='Path to the build dir with fleur exe')
-    parser.addoption("--cleanup", action="store", default=True, help='Clean faild dir at session start?')
+    parser.addoption("--no-cleanup", action="store_true",
+                     help='Move every test result to failed dir and not delete any data')
     parser.addoption("--runevery", action="store", default=None, help='Run every x test')
     parser.addoption("--testoffset", action="store", default=None, help='Do not run first x tests')
     parser.addoption("--skipmarkers", action="store",
