@@ -169,6 +169,8 @@ def pytest_report_header(config):#libs):
                           f"Failed tests will be copied to: {failed_dir}",
                           f"Parser tests {'will' if RUN_PARSER_TESTS else 'will not'} be run (masci-tools version {MASCI_TOOLS_VERSION_STR})",
                           f"Default MPI command: {mpiruncmd if para else 'None (serial build)'}",
+                           "Documentation for the test system can be found here:",
+                           "    https://iffgit.fz-juelich.de/fleur/fleur/-/wikis/Testing/Pytest-test-system\n",
                            "Now cleaning work, failed and parser_test directories...\n",]
 
     return add_header_strings
