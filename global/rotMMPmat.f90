@@ -85,7 +85,7 @@ MODULE m_rotMMPmat
 
    END FUNCTION rotMMPmat_dwgn
 
-   PURE FUNCTION rotMMPmat_angle(mmpmat,alpha,beta,gamma,l,lp,spin_rotation,real_space_rotation) Result(mmpmatOut)
+   PURE FUNCTION rotMMPmat_angle(mmpmat,alpha,beta,gamma,l,lp,spin_rotation,real_space_rotation,inverse) Result(mmpmatOut)
 
       COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
       REAL,              INTENT(IN)  :: alpha,beta,gamma !Euler angles
@@ -93,27 +93,37 @@ MODULE m_rotMMPmat
       INTEGER, OPTIONAL, INTENT(IN)  :: lp
       LOGICAL, OPTIONAL, INTENT(IN)  :: spin_rotation
       LOGICAL, OPTIONAL, INTENT(IN)  :: real_space_rotation
+      LOGICAL, OPTIONAL, INTENT(IN)  :: inverse
 
       COMPLEX, ALLOCATABLE :: mmpmatOut(:,:,:)
       COMPLEX :: su(2,2), eia
-      REAL    :: co_bh,si_bh
+      REAL    :: co_bh,si_bh, alphaArg, betaArg, gammaArg
       COMPLEX :: d(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       COMPLEX :: dp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      LOGICAL :: spin_rotation_arg
+      LOGICAL :: spin_rotation_arg, inverseArg
 
       IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
       mmpmatOut = mmpmat
 
       IF(ABS(alpha)<1e-10.AND.ABS(beta)<1e-10.AND.ABS(gamma)<1e-10) RETURN
 
-      d = d_wigner_mat(alpha,beta,gamma,l)
-      IF(PRESENT(lp)) THEN
-         dp = d_wigner_mat(alpha,beta,gamma,lp)
+      inverseArg = .FALSE.
+      IF(PRESENT(inverse)) inverseArg = inverse
+
+      IF(inverseArg) THEN
+         alphaArg = -alpha; betaArg = -beta; gammaArg = -gamma
+      ELSE
+         alphaArg = alpha; betaArg = beta; gammaArg = gamma
       ENDIF
 
-      co_bh = cos(beta*0.5)
-      si_bh = sin(beta*0.5)
-      eia = exp( ImagUnit * alpha/2.0 )
+      d = d_wigner_mat(alphaArg,betaArg,gammaArg,l)
+      IF(PRESENT(lp)) THEN
+         dp = d_wigner_mat(alphaArg,betaArg,gammaArg,lp)
+      ENDIF
+
+      co_bh = cos(betaArg*0.5)
+      si_bh = sin(betaArg*0.5)
+      eia = exp( ImagUnit * gammaArg/2.0 )
       su(1,1) =  conjg(eia)*co_bh
       su(2,1) = -conjg(eia)*si_bh
       su(1,2) = eia*si_bh

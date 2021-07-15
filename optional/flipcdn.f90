@@ -27,7 +27,8 @@ MODULE m_flipcdn
    CONTAINS
 
    SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,optDen,toGlobal)
-      USE m_rotdenmat
+      !USE m_rotdenmat
+      USE m_rotMMPmat
       USE m_constants
       USE m_cdn_io
       USE m_types
@@ -56,7 +57,7 @@ MODULE m_flipcdn
       COMPLEX                   :: rhodummy, imPart12, realPart12
       REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, imPart1,imPart2, rhodummyR, rotAnglePhi(atoms%ntype),rotAngleTheta(atoms%ntype),zeros(atoms%ntype)
       REAL                      :: tempDistance
-      INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u,k
+      INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u,k,l
       INTEGER                   :: archiveType
       LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype), scaleSpin(atoms%ntype),opt
       ! Local Arrays
@@ -180,44 +181,32 @@ MODULE m_flipcdn
 
 
       ! for LDA+U: flip density matrix
-      IF (ANY(den%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u+atoms%n_hia>0) THEN
+      IF (ANY(ABS(den%mmpMat) > 1e-12).AND.atoms%n_u+atoms%n_hia>0) THEN
          DO i_u = 1, atoms%n_u+atoms%n_hia
             itype = atoms%lda_u(i_u)%atomType
+            l = atoms%lda_u(i_u)%l
             IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
-               DO m = -3,3
-                  DO mp = -3,3
-                     IF (any(noco%l_unrestrictMT)) THEN
-                       ! Since den%mmpMat is complex but rot_den_mat can only handle real values as diagonals of den_mat a splitting of den%mmpMat in real and imaginary part is performed. Rotations are performed seperatly and added up afterwards.
-                       realPart1=REAL(den%mmpMat(m,mp,i_u,1))
-                       realPart2=REAL(den%mmpMat(m,mp,i_u,2))
-                       realPart12=CMPLX(REAL(den%mmpMat(m,mp,i_u,3)),0)
-                       imPart1=AIMAG(den%mmpMat(m,mp,i_u,1))
-                       imPart2=AIMAG(den%mmpMat(m,mp,i_u,2))
-                       imPart12=CMPLX(0,AIMAG(den%mmpMat(m,mp,i_u,3)))
-                       CALL rot_den_mat(rotAnglePhi(itype),rotAngleTheta(itype),realPart1,realPart2,&
-                         realPart12)
-                       CALL rot_den_mat(rotAnglePhi(itype),rotAngleTheta(itype),imPart1,imPart2,&
-                         imPart12)
-                       den%mmpMat(m,mp,i_u,1)=CMPLX(realPart1,imPart1)
-                       den%mmpMat(m,mp,i_u,2)=CMPLX(realPart2,imPart2)
-                       den%mmpMat(m,mp,i_u,3)=realPart12+imPart12
-                    ELSE
-                       IF (rotAngleTheta(itype).EQ.(pimach()).AND.rotAnglePhi(itype).EQ.0) THEN
-                          rhodummyR = den%mmpMat(m,mp,i_u,1)
-                          den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
-                          den%mmpMat(m,mp,i_u,input%jspins) = rhodummyR
-                       ELSE
-                          !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by Pi degrees are allowed.
-                          CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi, flipSpinPhi=0 is currently not supported.",&
-                            calledby="flipcdn")
-                       END IF
-                    END IF
-
-                  END DO
-               END DO
+               IF (any(noco%l_unrestrictMT)) THEN
+                  den%mmpMat(:,:,i_u,:) = rotMMPmat(den%mmpMat(:,:,i_u,:),0.0,rotAnglePhi(itype),rotAngleTheta(itype),&
+                                                    l,inverse=toGlobal,real_space_rotation=.FALSE., spin_rotation=.TRUE.)
+               ELSE
+                  IF (rotAngleTheta(itype).EQ.(pimach()).AND.rotAnglePhi(itype).EQ.0) THEN
+                     DO m = -lmaxU_const,lmaxU_const
+                        DO mp = -lmaxU_const,lmaxU_const
+                           rhodummyR = den%mmpMat(m,mp,i_u,1)
+                           den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
+                           den%mmpMat(m,mp,i_u,input%jspins) = rhodummyR
+                        ENDDO
+                     ENDDO
+                  ELSE
+                        !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by Pi degrees are allowed.
+                        CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi, flipSpinPhi=0 is currently not supported.",&
+                                         calledby="flipcdn")
+                  END IF
+               END IF
             ELSE IF (l_flip(itype).AND.(scaleSpin(itype))) THEN
-               DO m = -3,3
-                  DO mp = -3,3
+               DO m = -lmaxU_const,lmaxU_const
+                  DO mp = -lmaxU_const,lmaxU_const
                      IF((rotAngleTheta(itype).NE.pimach() .OR.rotAnglePhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0",calledby="flipcdn")
                      rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
                      rhodumms = den%mmpMat(m,mp,i_u,1) - den%mmpMat(m,mp,i_u,input%jspins)
