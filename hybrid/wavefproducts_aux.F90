@@ -113,13 +113,6 @@ CONTAINS
             call grid%free()
 
             call timestart("Big OMP loop")
-#ifndef _OPENACC
-            !$OMP PARALLEL default(none) &
-            !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft, wavef2rs_fft, max_imag, grid) &
-            !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, max_igptm)&
-            !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf, g_ptr)
-#endif
-
             call timestart("alloc&init")
             allocate (prod(0:stepf%gridLength - 1, psize), stat=ok)
             if (ok /= 0) call juDFT_error("can't alloc prod")
@@ -135,21 +128,37 @@ CONTAINS
             !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, grid, grid%dimensions, jsp)&
             !$acc      create(psi_k, prod)
 #ifndef _OPENACC
-               !$OMP DO
+               ! $OMP parallel DO
 #endif
                do iband = 1, hybdat%nbands(ik,jsp)
+                  call timestart("wavef2rs")
                   call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, grid, wavef2rs_fft, psi_k)
+                  call timestop("wavef2rs")
                   
-                  !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)               
+
+                  call timestart("prod")
+#ifdef _OPENACC
+                  !$acc kernels default(none) present(prod, psi_k, psi_kqpt, stepf, stepf%gridlength)
+#else
+                  !$OMP parallel do default(none) collapse(2) private(iob, j) shared(psize, stepf, prod, psi_k, psi_kqpt)  
+#endif             
                   do iob = 1, psize
                      do j = 0, stepf%gridlength-1
                         prod(j,iob) = conjg(psi_k(j, 1)) * psi_kqpt(j, iob)
                      enddo
                   enddo
+#ifdef _OPENACC
                   !$acc end kernels
+#else 
+                  !$OMP end parallel do
+#endif
+                  call timestop("prod")
 
+                  call timestart("fft")
                   call fft%exec_batch(prod)
-            
+                  call timestop("fft")
+
+                  call timestart("sort")
                   if (cprod%l_real) then
                      if (.not. real_warned) then
                         !$acc kernels present(prod) copyout(max_imag)
@@ -181,10 +190,8 @@ CONTAINS
                      enddo
                      !$acc end kernels
                   endif
+                  call timestop("sort")
                enddo
-#ifndef _OPENACC
-               !$OMP END DO
-#endif
             !$acc end data 
             call fft%free()
             call grid%free()
@@ -192,10 +199,6 @@ CONTAINS
          !$acc end data ! psi_kqpt
          deallocate (prod, psi_k)
       !$acc end data ! stepf, stepf%grid
-
-#ifndef _OPENACC
-      !$OMP END PARALLEL
-#endif
       call stepf%free()
 
       call timestop("Big OMP loop")
