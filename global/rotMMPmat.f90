@@ -111,7 +111,7 @@ MODULE m_rotMMPmat
       IF(PRESENT(inverse)) inverseArg = inverse
 
       IF(inverseArg) THEN
-         alphaArg = -alpha; betaArg = -beta; gammaArg = -gamma
+         alphaArg = -gamma; betaArg = -beta; gammaArg = -alpha
       ELSE
          alphaArg = alpha; betaArg = beta; gammaArg = gamma
       ENDIF
@@ -123,7 +123,7 @@ MODULE m_rotMMPmat
 
       co_bh = cos(betaArg*0.5)
       si_bh = sin(betaArg*0.5)
-      eia = exp( ImagUnit * gammaArg/2.0 )
+      eia = exp( ImagUnit * alphaArg/2.0 )
       su(1,1) =  conjg(eia)*co_bh
       su(2,1) = -conjg(eia)*si_bh
       su(1,2) = eia*si_bh

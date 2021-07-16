@@ -187,7 +187,7 @@ MODULE m_flipcdn
             l = atoms%lda_u(i_u)%l
             IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
                IF (any(noco%l_unrestrictMT)) THEN
-                  den%mmpMat(:,:,i_u,:) = rotMMPmat(den%mmpMat(:,:,i_u,:),0.0,rotAnglePhi(itype),rotAngleTheta(itype),&
+                  den%mmpMat(:,:,i_u,:) = rotMMPmat(den%mmpMat(:,:,i_u,:),rotAnglePhi(itype),rotAngleTheta(itype),0.0,&
                                                     l,inverse=toGlobal,real_space_rotation=.FALSE., spin_rotation=.TRUE.)
                ELSE
                   IF (rotAngleTheta(itype).EQ.(pimach()).AND.rotAnglePhi(itype).EQ.0) THEN
