@@ -181,7 +181,7 @@ MODULE m_flipcdn
 
 
       ! for LDA+U: flip density matrix
-      IF (ANY(ABS(den%mmpMat) > 1e-12).AND.atoms%n_u+atoms%n_hia>0) THEN
+      IF (input%lflip.AND.ANY(ABS(den%mmpMat) > 1e-12).AND.atoms%n_u+atoms%n_hia>0) THEN
          DO i_u = 1, atoms%n_u+atoms%n_hia
             itype = atoms%lda_u(i_u)%atomType
             l = atoms%lda_u(i_u)%l

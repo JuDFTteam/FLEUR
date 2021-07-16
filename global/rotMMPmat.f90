@@ -56,8 +56,8 @@ MODULE m_rotMMPmat
                   ENDIF
                ENDIF
 
-               d = matmul(conjg(transpose(su)),d)
-               d = matmul(d,su)
+               d = matmul(su,d)
+               d = matmul(d,conjg(transpose(su)))
 
                mmpmatOut(m,mp,1) = d(1,1)
                mmpmatOut(m,mp,2) = d(2,2)
@@ -124,10 +124,10 @@ MODULE m_rotMMPmat
       co_bh = cos(betaArg*0.5)
       si_bh = sin(betaArg*0.5)
       eia = exp( ImagUnit * alphaArg/2.0 )
-      su(1,1) =  conjg(eia)*co_bh
+      su(1,1) = eia*co_bh
       su(2,1) = -conjg(eia)*si_bh
       su(1,2) = eia*si_bh
-      su(2,2) = eia*co_bh
+      su(2,2) = conjg(eia)*co_bh
 
       IF(PRESENT(lp)) THEN
          mmpmatOut = rotMMPmat_dwgn(mmpmat,d,dwgnp=dp,su=su,spin_rotation=spin_rotation,&
