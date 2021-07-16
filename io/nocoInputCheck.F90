@@ -102,7 +102,7 @@ MODULE m_nocoInputCheck
     END IF
 
     IF(any(noco%l_unrestrictMT).AND.atoms%n_hia+atoms%n_u>0.AND.(.NOT.any(noco%l_alignMT))) THEN
-         CALL juDFT_warn("LDA+U and FullyFullyNoco should only be used together with the l_RelaxAlpha/Beta=T setting to achieve reasonable results.",calledby="nocoInputCheck")
+         CALL juDFT_warn("LDA+U and FullyFullyNoco should only be used together with the l_RelaxSQA=T setting to achieve reasonable results.",calledby="nocoInputCheck")
       ENDIF
 
           !Warning on strange choice of switches
