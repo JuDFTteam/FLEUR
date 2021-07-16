@@ -70,7 +70,7 @@ CONTAINS
       CALL timestart("Interstitial part")
       !Generate interstitial part of Hamiltonian
       ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
-      vpw_wTemp = merge((1.0-xcpot%get_exchange_weight()) * vx%pw_w, v%pw_w, hybdat%l_subvxc)
+      vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
       CALL hs_int(fi%input, fi%noco, stars, lapw, fmpi, fi%cell, isp, vpw_wTemp, smat, hmat)
       DEALLOCATE(vpw_wTemp)
 
