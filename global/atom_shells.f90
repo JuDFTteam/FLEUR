@@ -215,6 +215,12 @@ MODULE m_atom_shells
          ENDIF
       ENDDO
 
+      IF(ANY(numAtomsShell(:generatedShells)==0)) THEN
+         CALL juDFT_error("Empty shells were generated",&
+                          hint="This is bug in FLEUR,please report",&
+                          calledby="atom_shells")
+      ENDIF
+
       ALLOCATE(shellOps(SIZE(shellDistances),SIZE(shellDistances)), source=0)
       !Symmetry reduction (modernized and modified version of nshell.f from v26)
       CALL apply_sym_to_shell(generatedShells, atoms, sym, shellAtoms, shellDiffs, shellDistances, numAtomsShell, shellOps)
