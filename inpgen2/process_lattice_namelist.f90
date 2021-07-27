@@ -7,7 +7,7 @@ MODULE m_process_lattice_namelist
   ! table 2.1.1, ( page13 in 3rd Ed. )                                  !
   !---------------------------------------------------------------------!
 CONTAINS
-  SUBROUTINE process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat)
+  SUBROUTINE process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat,primCellZ)
 
     USE m_constants
     IMPLICIT NONE
@@ -17,7 +17,8 @@ CONTAINS
     REAL,    INTENT (OUT) :: a1(3),a2(3),a3(3)
     REAL,    INTENT (OUT) :: aa                ! overall scaling constant
     REAL,    INTENT (OUT) :: scale(3),mat(3,3) ! for trigonal lattices
-    REAL,    INTENT(OUT) ::  cart_mat(3,3)
+    REAL,    INTENT (OUT) :: cart_mat(3,3)
+    REAL,    INTENT (OUT) :: primCellZ
 
     !==> Local Variables
     CHARACTER(len=40) :: latsys
@@ -60,13 +61,13 @@ CONTAINS
          0.0, -0.5,  0.5/
 
     !===> namelists
-    NAMELIST /lattice/ latsys,a0,a,b,c,alpha,beta,gamma
+    NAMELIST /lattice/ latsys,a0,a,b,c,alpha,beta,gamma,primCellZ
 
     noangles = .false.
     latsys = ' ' ; a0 = 0.0
     a = 0.0      ; b = 0.0    ; c = 0.0
     alpha = 0.0  ; beta = 0.0 ; gamma = 0.0
-    scale = 0.0  ; mat = 0.0
+    scale = 0.0  ; mat = 0.0 ; primCellZ = 0.0
 
     READ (line,lattice,iostat=ios)
     if (ios.ne.0) call judft_error("Error reading lattice:"//trim(line), hint="Maybe add '' around the lattice type")

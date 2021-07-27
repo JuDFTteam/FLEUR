@@ -15,7 +15,7 @@ MODULE m_make_defaults
 CONTAINS
 
   SUBROUTINE make_defaults(atoms, sym, cell, vacuum, input, stars, &
-       xcpot, noco, mpinp, hybinp)
+       xcpot, noco, banddos, mpinp, hybinp)
     USE m_types_atoms
     USE m_types_cell
     USE m_types_sym
@@ -24,6 +24,7 @@ CONTAINS
     USE m_types_input
     USE m_types_stars
     USE m_types_noco
+    USE m_types_banddos
     USE m_types_mpinp
     USE m_types_hybinp
     USE m_juDFT
@@ -37,6 +38,7 @@ CONTAINS
     TYPE(t_stars), INTENT(INOUT) ::stars
     TYPE(t_xcpot_inbuild_nf), INTENT(INOUT) ::xcpot
     TYPE(t_noco), INTENT(INOUT)  ::noco
+    TYPE(t_banddos), INTENT(INOUT) :: banddos
     TYPE(t_mpinp), INTENT(INOUT) ::mpinp
     TYPE(t_hybinp), INTENT(INOUT)::hybinp
 
@@ -97,6 +99,12 @@ CONTAINS
     !
     IF (.NOT. input%film) THEN
        vacuum%dvac = cell%amat(3, 3)
+       IF (cell%primCellZ.NE.0.0) THEN
+          IF(cell%amat(3,3) - (cell%primCellZ * NINT(cell%amat(3,3) / cell%primCellZ)).GT.1.0e-5) THEN
+             CALL juDFT_warn("supercell and primitive cell z dimensions are inconsistent.", calledby="make_defaults")
+          END IF
+          banddos%s_cell_z = NINT(cell%amat(3,3) / cell%primCellZ)
+       END IF
     ELSE
        IF (vacuum%dvac<=abs(cell%amat(3,3))) THEN
           min_dtild=0.0
@@ -112,6 +120,10 @@ CONTAINS
           atoms%taual(3,:)=atoms%taual(3,:)*cell%amat(3,3)/(vacuum%dvac+2.5)
        ENDIF
        cell%amat(3,3)=vacuum%dvac+2.5
+       IF(cell%primCellZ.NE.0.0) THEN
+          cell%amat(3,3) = cell%primCellZ * CEILING(cell%amat(3,3) / cell%primCellZ)
+          banddos%s_cell_z = NINT(cell%amat(3,3) / cell%primCellZ)
+       END IF
     ENDIF
     vacuum%nvac = 2
     IF (sym%zrfs .OR. sym%invs) vacuum%nvac = 1

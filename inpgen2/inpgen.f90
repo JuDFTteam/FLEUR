@@ -216,8 +216,7 @@ PROGRAM inpgen
          CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms,enpara)
 
          !Set all defaults that have not been specified before or can not be specified in inpgen
-         CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
-                   xcpot,noco,mpinp,hybinp)
+         CALL make_defaults(atoms,sym,cell,vacuum,input,stars,xcpot,noco,banddos,mpinp,hybinp)
       ENDIF
 
       IF (numAddKptsSets.EQ.1) THEN

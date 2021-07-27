@@ -83,7 +83,7 @@ CONTAINS
           !process the namelist
           SELECT CASE(line(2:5)) !e.g. atom
           CASE ('latt')
-             CALL process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat)
+             CALL process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat,cell%primCellZ)
           CASE('inpu')
              CALL process_input(line,input%film,sym%symor,cartesian,hybinp%l_hybrid)
           CASE('atom')

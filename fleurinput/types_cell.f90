@@ -29,6 +29,7 @@ MODULE m_types_cell
      REAL::vol= REAL_NOT_INITALIZED
      !volume of interstitial
      REAL::volint= REAL_NOT_INITALIZED
+     REAL::primCellZ = 0.0
    CONTAINS
      PROCEDURE :: init
      PROCEDURE :: read_xml=>read_xml_cell
@@ -57,6 +58,7 @@ CONTAINS
     call mpi_bc(this%z1,rank,mpi_comm)
     call mpi_bc(this%vol,rank,mpi_comm)
     call mpi_bc(this%volint,rank,mpi_comm)
+    call mpi_bc(this%primCellZ,rank,mpi_comm)
   end subroutine mpi_bc_cell
 
   SUBROUTINE init(cell,volmts)
@@ -84,7 +86,7 @@ CONTAINS
      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
      cell%aamat=matmul(transpose(cell%amat),cell%amat)
      cell%volint = cell%vol
-  cell%volint = cell%volint-volmts
+     cell%volint = cell%volint-volmts
    CONTAINS
      !This is a copy of the code in math/inv3
      !Put here to make library independent
