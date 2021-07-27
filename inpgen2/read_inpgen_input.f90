@@ -83,7 +83,7 @@ CONTAINS
           !process the namelist
           SELECT CASE(line(2:5)) !e.g. atom
           CASE ('latt')
-             CALL process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat,cell%primCellZ)
+             CALL process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat)
           CASE('inpu')
              CALL process_input(line,input%film,sym%symor,cartesian,hybinp%l_hybrid)
           CASE('atom')
@@ -102,7 +102,7 @@ CONTAINS
           CASE('comp')
              CALL process_comp(line,input%jspins,input%frcor,input%ctail,input%kcrel,stars%gmax,xcpot%gmaxxc,input%rkmax)
           CASE('expe')
-             CALL process_expert(line,input%gw)
+             CALL process_expert(line,input%gw,cell%primCellZ)
           CASE('kpt ')
              iKpts = iKpts + 1
              CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),kptsGamma(ikpts),input%tkb)
@@ -342,6 +342,7 @@ CONTAINS
     CHARACTER(len=*),INTENT(in)::line
     LOGICAL,INTENT(out)::film,symor,hybinp
 
+
     INTEGER :: ios
     LOGICAL :: cartesian, cal_symm, checkinp,inistop,oldfleur
     NAMELIST /input/ film, cartesian, cal_symm, checkinp, inistop,&
@@ -458,13 +459,16 @@ CONTAINS
     IF (ios.NE.0) CALL judft_error(("Error reading:" //TRIM(line)))
   END SUBROUTINE process_comp
 
-  SUBROUTINE process_expert(line,gw)
+  SUBROUTINE process_expert(line,gw,primCellZ)
     USE m_types_xcpot_inbuild_nofunction
     CHARACTER(len=*),INTENT(in)::line
     INTEGER, INTENT(INOUT) :: gw
+    REAL, INTENT(OUT) :: primCellZ
     INTEGER :: spex
-    NAMELIST /expert/ spex
     INTEGER :: ios
+    NAMELIST /expert/ spex, primCellZ
+    primCellZ = 0.0
+
 
     spex = 0
     READ(line,expert,iostat=ios)
