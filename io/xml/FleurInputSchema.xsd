@@ -1077,6 +1077,7 @@
       <xsd:attribute name="supercellX" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="supercellY" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="supercellZ" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute default="T" name="useOlap" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="JuPhonType">
