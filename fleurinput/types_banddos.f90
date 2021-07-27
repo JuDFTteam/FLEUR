@@ -189,7 +189,9 @@ CONTAINS
        this%s_cell_x = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellX'))
        this%s_cell_y = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellY'))
        this%s_cell_z = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellZ'))
-       this%unfoldUseOlap = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@useOlap'))
+       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/unfoldingBand/@useOlap')
+       this%unfoldUseOlap = .TRUE.
+       IF (numberNodes.EQ.1) this%unfoldUseOlap = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@useOlap'))
     END IF
     if (xml%versionNumber <32) return
     xPathA = '/fleurInput/output/vacuumDOS'
