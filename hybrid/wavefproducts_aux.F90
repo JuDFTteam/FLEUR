@@ -127,9 +127,6 @@ CONTAINS
             !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec)&
             !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, grid, grid%dimensions, jsp)&
             !$acc      create(psi_k, prod)
-#ifndef _OPENACC
-               ! $OMP parallel DO
-#endif
                do iband = 1, hybdat%nbands(ik,jsp)
                   call timestart("wavef2rs")
                   call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, grid, wavef2rs_fft, psi_k)
