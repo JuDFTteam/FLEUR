@@ -344,7 +344,7 @@ MODULE m_atom_shells
       REAL,    PARAMETER :: sym_tol = 1e-7
 
       INTEGER :: current_shell,refAtom,refAtomp,ishellAtom,nshellAtom,nshellAtom1
-      INTEGER :: iop, iAtom,found_index
+      INTEGER :: iop, iAtom,found_index,atom_alpha,atom_beta
       LOGICAL :: l_diff_in_shell
 
       REAL :: diffRot(3)
@@ -381,16 +381,26 @@ MODULE m_atom_shells
          nshellAtom = 1
          symLoop: DO iop = 1, sym%nop
             diffRot = matmul(sym%mrot(:,:,iop),shellDiffAux(:,1))
+            atom_alpha = sym%mapped_atom(iop,shellAtomsAux(1,1))
+            atom_beta = sym%mapped_atom(iop,shellAtomsAux(2,1))
+
+            IF(atom_alpha == 0 .OR. atom_beta == 0) CALL juDFT_error("No mapped atom available",&
+                                                                     hint="This is a bug in FLEUR, please report",&
+                                                                     calledby='apply_sym_to_shell')
 
             DO ishellAtom = 1, nshellAtom
                !Is the atom equivalent to another atom already in the shell
-               IF(ALL(ABS(diffRot-shellDiffAux(:,ishellAtom)).LT.sym_tol)) CYCLE symLoop
+               IF(ALL(ABS(diffRot-shellDiffAux(:,ishellAtom)).LT.sym_tol).AND.&
+                  atom_alpha == shellAtomsAux(1,ishellAtom).AND.&
+                  atom_beta == shellAtomsAux(2,ishellAtom)) CYCLE symLoop
             ENDDO
 
             l_diff_in_shell = .FALSE.
             DO ishellAtom = 1, numAtomsShell(current_shell)
                !Is the atom equivalent to any other atom in the previously found shell
-               IF(ALL(ABS(diffRot-shellDiffs(:,ishellAtom,current_shell)).LT.sym_tol)) THEN
+               IF(ALL(ABS(diffRot-shellDiffs(:,ishellAtom,current_shell)).LT.sym_tol).AND.&
+                  atom_alpha == shellAtoms(1,ishellAtom,current_shell).AND.&
+                  atom_beta == shellAtoms(2,ishellAtom,current_shell)) THEN
                   l_diff_in_shell = .TRUE.
                   found_index = ishellAtom
                   EXIT
@@ -413,7 +423,9 @@ MODULE m_atom_shells
             nshellAtom1 = 0
             atomLoop: DO iAtom = 1, numAtomsShell(current_shell)
                DO ishellAtom = 1, nshellAtom
-                  IF(ALL(ABS(shellDiffs(:,iAtom,current_shell)-shellDiffAux(:,ishellAtom)).LT.sym_tol)) CYCLE atomLoop!.OR.&
+                  IF(ALL(ABS(shellDiffs(:,iAtom,current_shell)-shellDiffAux(:,ishellAtom)).LT.sym_tol).AND.&
+                     shellAtomsAux(1,ishellAtom) == shellAtoms(1,iAtom,current_shell).AND.&
+                     shellAtomsAux(2,ishellAtom) == shellAtoms(2,iAtom,current_shell)) CYCLE atomLoop!.OR.&
                      !ALL(ABS(shellDiffs(:,iAtom,current_shell)+shellAux(:,ishellAtom)).LT.sym_tol)) CYCLE atomLoop
                ENDDO
 
