@@ -17,7 +17,7 @@ CONTAINS
     REAL,    INTENT (OUT) :: a1(3),a2(3),a3(3)
     REAL,    INTENT (OUT) :: aa                ! overall scaling constant
     REAL,    INTENT (OUT) :: scale(3),mat(3,3) ! for trigonal lattices
-    REAL,    INTENT(OUT) ::  cart_mat(3,3)
+    REAL,    INTENT (OUT) :: cart_mat(3,3)
 
     !==> Local Variables
     CHARACTER(len=40) :: latsys

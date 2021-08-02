@@ -199,9 +199,13 @@ CONTAINS
 	COMPLEX, ALLOCATABLE    ::w_n_c(:)
 	REAL, ALLOCATABLE	::w_n_sum(:)
 	COMPLEX, ALLOCATABLE    ::w_n_c_sum(:)
-        LOGICAL :: method_rubel=.false.
-        LOGICAL :: write_to_file=.false.
+        LOGICAL :: method_rubel = .FALSE. 
+        LOGICAL :: write_to_file = .false.
+
         CLASS(t_mat), ALLOCATABLE :: zMat_s
+
+        method_rubel = .NOT.banddos%unfoldUseOlap
+
 	CALL build_primitive_cell(banddos,p_cell,cell)
 
 	IF (.not. method_rubel) THEN

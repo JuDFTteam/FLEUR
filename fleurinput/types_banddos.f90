@@ -32,6 +32,7 @@ MODULE m_types_banddos
 
      LOGICAL :: band =.FALSE.
      LOGICAL :: unfoldband =.FALSE.
+     LOGICAL :: unfoldUseOlap = .TRUE.
      INTEGER :: s_cell_x=1
      INTEGER :: s_cell_y=1
      INTEGER :: s_cell_z=1
@@ -84,6 +85,7 @@ CONTAINS
     CALL mpi_bc(this%e_mcd_lo ,rank,mpi_comm)
     CALL mpi_bc(this%e_mcd_up,rank,mpi_comm)
     CALL mpi_bc(this%unfoldband ,rank,mpi_comm)
+    CALL mpi_bc(this%unfoldUseOlap ,rank,mpi_comm)
     CALL mpi_bc(this%s_cell_x,rank,mpi_comm)
     CALL mpi_bc(this%s_cell_y,rank,mpi_comm)
     CALL mpi_bc(this%s_cell_z,rank,mpi_comm)
@@ -187,6 +189,9 @@ CONTAINS
        this%s_cell_x = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellX'))
        this%s_cell_y = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellY'))
        this%s_cell_z = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellZ'))
+       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/unfoldingBand/@useOlap')
+       this%unfoldUseOlap = .TRUE.
+       IF (numberNodes.EQ.1) this%unfoldUseOlap = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@useOlap'))
     END IF
     if (xml%versionNumber <32) return
     xPathA = '/fleurInput/output/vacuumDOS'
