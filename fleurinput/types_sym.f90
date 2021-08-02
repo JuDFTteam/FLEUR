@@ -106,7 +106,7 @@ CONTAINS
       CLASS(t_sym), INTENT(inout):: this
       TYPE(t_xml), INTENT(INOUT)::xml
 
-      INTEGER:: number_sets, n
+      INTEGER:: n
       CHARACTER(len=200)::str, path, path2
 
       IF (xml%GetNumberOfNodes("/fleurInput/cell/symmetryFile") > 0) THEN
