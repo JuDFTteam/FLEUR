@@ -16,12 +16,32 @@ CONTAINS
     TYPE(t_banddos),INTENT(IN)  :: banddos
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_cell),INTENT(INOUT)  :: p_cell
+	REAL    :: unfold(3,3)  !this variable should be given in the input xml
+	REAL    :: inv_unfold(3,3)
+    REAL    :: inv_unfold_det
+	INTEGER :: i
+	!this is just a temporary initialization
+	unfold(1,1)=1
+	unfold(1,2)=0
+	unfold(1,3)=0
+	unfold(2,1)=0
+	unfold(2,2)=1
+	unfold(2,3)=0
+	unfold(3,1)=0
+	unfold(3,2)=0
+	unfold(3,3)=1
+	!can be replaced once input is written
+	unfold(1,1)=unfold(1,1)*banddos%s_cell_x
+	unfold(2,2)=unfold(2,2)*banddos%s_cell_y
+	unfold(3,3)=unfold(3,3)*banddos%s_cell_z
+	
+	CALL inv3(unfold,inv_unfold,inv_unfold_det)
 
-    INTEGER :: i
     DO i =1,3
-	p_cell%amat(1,i)=cell%amat(1,i)/banddos%s_cell_x
-	p_cell%amat(2,i)=cell%amat(2,i)/banddos%s_cell_y
-	p_cell%amat(3,i)=cell%amat(3,i)/banddos%s_cell_z
+	p_cell%amat(:,i)=matmul(inv_unfold,cell%amat(:,i))
+	!p_cell%amat(1,i)=cell%amat(1,i)/banddos%s_cell_x
+	!p_cell%amat(2,i)=cell%amat(2,i)/banddos%s_cell_y
+	!p_cell%amat(3,i)=cell%amat(3,i)/banddos%s_cell_z
     END DO
     CALL inv3(p_cell%amat,p_cell%bmat,p_cell%omtil)
     p_cell%bmat=p_cell%bmat*tpi_const
@@ -203,7 +223,26 @@ CONTAINS
         LOGICAL :: write_to_file = .false.
 
         CLASS(t_mat), ALLOCATABLE :: zMat_s
-
+	
+	REAL    :: unfold(3,3)  !this variable should be given in the input xml
+	REAL    :: multiple(3)
+	REAL    :: inv_unfold(3,3)
+    REAL    :: inv_unfold_det
+	!this is just a temporary initialization
+	unfold(1,1)=1
+	unfold(1,2)=0
+	unfold(1,3)=0
+	unfold(2,1)=0
+	unfold(2,2)=1
+	unfold(2,3)=0
+	unfold(3,1)=0
+	unfold(3,2)=0
+	unfold(3,3)=1
+	!can be replaced once input is written
+	unfold(1,1)=unfold(1,1)*banddos%s_cell_x
+	unfold(2,2)=unfold(2,2)*banddos%s_cell_y
+	unfold(3,3)=unfold(3,3)*banddos%s_cell_z
+    CALL inv3(unfold,inv_unfold,inv_unfold_det)
         method_rubel = .NOT.banddos%unfoldUseOlap
 
 	CALL build_primitive_cell(banddos,p_cell,cell)
@@ -288,9 +327,13 @@ CONTAINS
 ! with moving     IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
 !				     &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
 !					 &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
-			IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
-				&(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
-				&(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
+			multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
+			IF ((modulo(multiple(1),1.0)==0).AND.&
+				&(modulo(multiple(2),1.0)==0).AND.&
+				&(modulo(multiple(3),1.0)==0)) THEN      
+		!	IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
+		!		&(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
+		!		&(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN      
 					IF (zmat%l_real) THEN
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
 !							write(*,*) 'zMat is real'
@@ -315,9 +358,13 @@ CONTAINS
 							ELSE
 								w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 							END IF
-							IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
-							   &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
-							   &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
+							multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
+							IF ((modulo(multiple(1),1.0)==0).AND.&
+								&(modulo(multiple(2),1.0)==0).AND.&
+								&(modulo(multiple(3),1.0)==0)) THEN  
+						!	IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
+						!	   &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
+						!	   &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
 !								IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
 !								&(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
 !								&(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
@@ -354,9 +401,13 @@ CONTAINS
 !				write (*,*) kpts%sc_list(:,i_kpt)
 !				write (*,*) banddos%s_cell_x,banddos%s_cell_y,banddos%s_cell_z
 				!CALL juDFT_error('debugging stop, unfolding')
-				IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
-					&(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
-					&(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
+				multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
+				IF ((modulo(multiple(1),1.0)==0).AND.&
+					&(modulo(multiple(2),1.0)==0).AND.&
+					&(modulo(multiple(3),1.0)==0)) THEN  
+			!	IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
+			!		&(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
+			!		&(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
 !					DO k=1,zMat%matsize1
 					IF (zmat%l_real) THEN
 !						write (*,*) 'weight sum real if'
@@ -392,9 +443,13 @@ CONTAINS
 									w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
 								END IF
 				!			END DO
-							IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
-							   &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
-							   &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
+							multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
+							IF ((modulo(multiple(1),1.0)==0).AND.&
+								&(modulo(multiple(2),1.0)==0).AND.&
+								&(modulo(multiple(3),1.0)==0)) THEN  
+						!	IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
+						!	   &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
+						!	   &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
 			!					DO k=1,zMat%matsize1
 									IF (zmat%l_real) THEN
 			!							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
