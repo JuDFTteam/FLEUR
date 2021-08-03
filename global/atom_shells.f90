@@ -341,7 +341,7 @@ MODULE m_atom_shells
       INTEGER, ALLOCATABLE, INTENT(INOUT) :: numAtomsShell(:)
       INTEGER, ALLOCATABLE, INTENT(INOUT) :: shellOps(:,:)
 
-      REAL,    PARAMETER :: sym_tol = 1e-7
+      REAL,    PARAMETER :: sym_tol = 1e-5
 
       INTEGER :: current_shell,refAtom,refAtomp,ishellAtom,nshellAtom,nshellAtom1
       INTEGER :: iop, iAtom,found_index,atom_alpha,atom_beta
