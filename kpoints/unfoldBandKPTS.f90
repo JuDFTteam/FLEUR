@@ -338,7 +338,7 @@ CONTAINS
 							ELSE
 								w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 							END IF
-							multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
+							multiple=matmul(inv_unfold,lapw%gvec(:,gi,jsp))
 							IF ((modulo(multiple(1),1.0)==0).AND.&
 								&(modulo(multiple(2),1.0)==0).AND.&
 								&(modulo(multiple(3),1.0)==0)) THEN  
@@ -423,7 +423,7 @@ CONTAINS
 									w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
 								END IF
 				!			END DO
-							multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
+							multiple=matmul(inv_unfold,lapw%gvec(:,gi,jsp))
 							IF ((modulo(multiple(1),1.0)==0).AND.&
 								&(modulo(multiple(2),1.0)==0).AND.&
 								&(modulo(multiple(3),1.0)==0)) THEN  
