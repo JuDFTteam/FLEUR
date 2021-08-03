@@ -16,6 +16,8 @@ MODULE m_types_gfinp
    INTEGER, PARAMETER :: CONTOUR_SEMICIRCLE_CONST = 2
    INTEGER, PARAMETER :: CONTOUR_DOS_CONST        = 3
 
+   REAL,    PARAMETER :: ATOMDIFF_EPS = 1e-7
+
    TYPE t_gfelementtype
       !defines the l and atomType elements for given greens function element
       !(used for mapping index in gfinp%elem)
@@ -1248,14 +1250,14 @@ CONTAINS
       IF(distinct_k_resolved_arg) then
          IF(this%l_kresolved_int .neqv. other%l_kresolved_int) RETURN
       ENDIF
-      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.1e-12)) THEN
+      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) THEN
          IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
          IF(this%representative_elem > 0 .AND. other%representative_elem > 0) THEN
-            IF(ANY(ABS(this%representative_diff(:)-other%representative_diff(:)).GT.1e-12)) RETURN
+            IF(ANY(ABS(this%representative_diff(:)-other%representative_diff(:)).GT.ATOMDIFF_EPS)) RETURN
          ELSE IF(this%representative_elem > 0) THEN
-            IF(ANY(ABS(this%representative_diff(:)-other%atomDiff(:)).GT.1e-12)) RETURN
+            IF(ANY(ABS(this%representative_diff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
          ELSE IF(other%representative_elem > 0) THEN
-            IF(ANY(ABS(other%representative_diff(:)-this%atomDiff(:)).GT.1e-12)) RETURN
+            IF(ANY(ABS(other%representative_diff(:)-this%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
          ENDIF
       ENDIF
       equals_coefficients_gfelem = .TRUE.
@@ -1274,7 +1276,7 @@ CONTAINS
       !on the coefficient level has some extra symmetry considerations
       !that should not influence the deduplication. It just influences how
       !many brillouin zone integegrations need to be performed
-      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.1e-12)) RETURN
+      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
       IF(this%iContour.NE.other%iContour) RETURN
       equals_gfelem = .TRUE.
 
@@ -1323,7 +1325,7 @@ CONTAINS
       CLASS(t_gfelementtype),   INTENT(IN)  :: this
 
       isIntersite_gfelem = this%atomType.NE.this%atomTypep&
-                           .OR.ANY(ABS(this%atomDiff).GT.1e-12)
+                           .OR.ANY(ABS(this%atomDiff).GT.ATOMDIFF_EPS)
 
    END FUNCTION isIntersite_gfelem
 
