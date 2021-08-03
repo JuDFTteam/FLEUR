@@ -164,7 +164,7 @@
                <xsd:element name="row-2" type="FleurDouble2DVecType"/>
                <xsd:element name="c" type="LatticeParameterType"/>
             </xsd:sequence>
-            <xsd:element name="bravaisMatrix" type="BravaisMatrixType"/>
+            <xsd:element name="bravaisMatrix" type="Matrix3Type"/>
          </xsd:choice>
       </xsd:sequence>
       <xsd:attribute name="scale" type="FleurDouble" use="required"/>
@@ -181,7 +181,7 @@
                <xsd:element name="row-1" type="FleurDouble2DVecType"/>
                <xsd:element name="row-2" type="FleurDouble2DVecType"/>
             </xsd:sequence>
-            <xsd:element name="bravaisMatrix" type="BravaisMatrixType"/>
+            <xsd:element name="bravaisMatrix" type="Matrix3Type"/>
          </xsd:choice>
          <xsd:element minOccurs="0" maxOccurs="2" name="vacuumEnergyParameters" type="VacuumEnergyParameterType"/>
       </xsd:sequence>
@@ -204,7 +204,7 @@
       <xsd:attribute name="spinDown" type="FleurDouble" use="optional"/>
    </xsd:complexType>
 
-   <xsd:complexType name="BravaisMatrixType">
+   <xsd:complexType name="Matrix3Type">
       <xsd:sequence>
          <xsd:element name="row-1" type="FleurDouble3DVecType"/>
          <xsd:element name="row-2" type="FleurDouble3DVecType"/>
@@ -1073,6 +1073,9 @@
    </xsd:complexType>
 
    <xsd:complexType name="UnfoldingBandType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="1" minOccurs="0" name="transMat" type="Matrix3Type"/>
+      </xsd:sequence>
       <xsd:attribute name="unfoldBand" type="FleurBool" use="required"/>
       <xsd:attribute name="supercellX" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="supercellY" type="xsd:positiveInteger" use="required"/>

@@ -36,6 +36,7 @@ MODULE m_types_banddos
      INTEGER :: s_cell_x=1
      INTEGER :: s_cell_y=1
      INTEGER :: s_cell_z=1
+     INTEGER, ALLOCATABLE :: unfoldTransMat(:,:)
 
 
      LOGICAL :: l_mcd =.FALSE.
@@ -89,6 +90,7 @@ CONTAINS
     CALL mpi_bc(this%s_cell_x,rank,mpi_comm)
     CALL mpi_bc(this%s_cell_y,rank,mpi_comm)
     CALL mpi_bc(this%s_cell_z,rank,mpi_comm)
+    CALL mpi_bc(this%unfoldTransMat, rank, mpi_comm)
     CALL mpi_bc(this%alpha,rank,mpi_comm)
     CALL mpi_bc(this%beta,rank,mpi_comm)
     CALL mpi_bc(this%gamma,rank,mpi_comm)
@@ -116,7 +118,7 @@ CONTAINS
     CLASS(t_banddos),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(INOUT)::xml
 
-    CHARACTER(len=300) :: xPathA, xPathB,str
+    CHARACTER(len=200) :: xPathA, xPathB, valueString
     INTEGER::numberNodes,iType,i,na,n,n_dos_atom,n_dos_type
     LOGICAL::all_atoms,dos_atom_found
     integer,allocatable:: dos_atomlist(:),dos_typelist(:),neq(:)
@@ -152,6 +154,7 @@ CONTAINS
     allocate(this%beta(size(this%dos_atom)));this%beta=0.0
     allocate(this%gamma(size(this%dos_atom)));this%gamma=0.0
     allocate(neq(xml%get_ntype()), source=0)
+    ALLOCATE(this%unfoldTransMat(3,3))
 
     this%dos_atom=(all_atoms.and.(this%dos.or.this%band))
     na = 0
@@ -192,6 +195,26 @@ CONTAINS
        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/unfoldingBand/@useOlap')
        this%unfoldUseOlap = .TRUE.
        IF (numberNodes.EQ.1) this%unfoldUseOlap = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@useOlap'))
+       this%unfoldTransMat(:,:) = 0
+       this%unfoldTransMat(1,1) = 1
+       this%unfoldTransMat(2,2) = 1
+       this%unfoldTransMat(3,3) = 1
+       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/unfoldingBand/transMat')
+       IF (numberNodes.EQ.1) THEN
+          xPathB = '/fleurInput/output/unfoldingBand/transMat'
+          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/row-1')))
+          this%unfoldTransMat(1,1) = NINT(evaluateFirst(valueString))
+          this%unfoldTransMat(2,1) = NINT(evaluateFirst(valueString))
+          this%unfoldTransMat(3,1) = NINT(evaluateFirst(valueString))
+          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/row-2')))
+          this%unfoldTransMat(1,2) = NINT(evaluateFirst(valueString))
+          this%unfoldTransMat(2,2) = NINT(evaluateFirst(valueString))
+          this%unfoldTransMat(3,2) = NINT(evaluateFirst(valueString))
+          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/row-3')))
+          this%unfoldTransMat(1,3) = NINT(evaluateFirst(valueString))
+          this%unfoldTransMat(2,3) = NINT(evaluateFirst(valueString))
+          this%unfoldTransMat(3,3) = NINT(evaluateFirst(valueString))
+       END IF
     END IF
     if (xml%versionNumber <32) return
     xPathA = '/fleurInput/output/vacuumDOS'
@@ -210,9 +233,9 @@ CONTAINS
        ALLOCATE(this%izlay(this%layers,2))
        DO n=1,this%layers
          write(xPathA,'(a,i0,a)') '/fleurInput/output/vacuumDOS/layer[',n,']'
-         str=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))
-         this%izlay(n,1)=evaluateFirst(str)
-         this%izlay(n,2)=evaluateFirst(str)
+         valueString = xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))
+         this%izlay(n,1)=evaluateFirst(valueString)
+         this%izlay(n,2)=evaluateFirst(valueString)
        ENDDO
      ELSE
        allocate(this%izlay(0,2))
