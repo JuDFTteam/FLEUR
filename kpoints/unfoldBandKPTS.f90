@@ -20,20 +20,10 @@ CONTAINS
 	REAL    :: inv_unfold(3,3)
     REAL    :: inv_unfold_det
 	INTEGER :: i
-	!this is just a temporary initialization
-	unfold(1,1)=1
-	unfold(1,2)=0
-	unfold(1,3)=0
-	unfold(2,1)=0
-	unfold(2,2)=1
-	unfold(2,3)=0
-	unfold(3,1)=0
-	unfold(3,2)=0
-	unfold(3,3)=1
-	!can be replaced once input is written
-	unfold(1,1)=unfold(1,1)*banddos%s_cell_x
-	unfold(2,2)=unfold(2,2)*banddos%s_cell_y
-	unfold(3,3)=unfold(3,3)*banddos%s_cell_z
+	unfold=banddos%unfoldTransMat
+	unfold(1,1)=banddos%unfoldTransMat(1,1)*banddos%s_cell_x
+	unfold(2,2)=banddos%unfoldTransMat(2,2)*banddos%s_cell_y
+	unfold(3,3)=banddos%unfoldTransMat(3,3)*banddos%s_cell_z
 	
 	CALL inv3(unfold,inv_unfold,inv_unfold_det)
 
@@ -228,20 +218,10 @@ CONTAINS
 	REAL    :: multiple(3)
 	REAL    :: inv_unfold(3,3)
     REAL    :: inv_unfold_det
-	!this is just a temporary initialization
-	unfold(1,1)=1
-	unfold(1,2)=0
-	unfold(1,3)=0
-	unfold(2,1)=0
-	unfold(2,2)=1
-	unfold(2,3)=0
-	unfold(3,1)=0
-	unfold(3,2)=0
-	unfold(3,3)=1
-	!can be replaced once input is written
-	unfold(1,1)=unfold(1,1)*banddos%s_cell_x
-	unfold(2,2)=unfold(2,2)*banddos%s_cell_y
-	unfold(3,3)=unfold(3,3)*banddos%s_cell_z
+	unfold=banddos%unfoldTransMat
+	unfold(1,1)=banddos%unfoldTransMat(1,1)*banddos%s_cell_x
+	unfold(2,2)=banddos%unfoldTransMat(2,2)*banddos%s_cell_y
+	unfold(3,3)=banddos%unfoldTransMat(3,3)*banddos%s_cell_z
     CALL inv3(unfold,inv_unfold,inv_unfold_det)
         method_rubel = .NOT.banddos%unfoldUseOlap
 
