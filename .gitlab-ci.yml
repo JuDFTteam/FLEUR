@@ -356,7 +356,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
   services:
     - postgres
     #:12.2-alpine
-    - rabbitmq:latest
+    - rabbitmq:3.8
 
     #AMQP_URL: 'amqp://guest:guest@rabbitmq:5672'
   before_script:
