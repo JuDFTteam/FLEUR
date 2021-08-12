@@ -218,6 +218,7 @@ CONTAINS
 	REAL    :: multiple(3)
 	REAL    :: inv_unfold(3,3)
     REAL    :: inv_unfold_det
+    REAL    :: eps_r=0.000000001
 	unfold=banddos%unfoldTransMat
 	unfold(1,1)=banddos%unfoldTransMat(1,1)*banddos%s_cell_x
 	unfold(2,2)=banddos%unfoldTransMat(2,2)*banddos%s_cell_y
@@ -382,9 +383,9 @@ CONTAINS
 !				write (*,*) banddos%s_cell_x,banddos%s_cell_y,banddos%s_cell_z
 				!CALL juDFT_error('debugging stop, unfolding')
 				multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
-				IF ((modulo(multiple(1),1.0)==0).AND.&
-					&(modulo(multiple(2),1.0)==0).AND.&
-					&(modulo(multiple(3),1.0)==0)) THEN  
+				IF ((abs(modulo(multiple(1),1.0))<eps_r).AND.&
+					&(abs(modulo(multiple(2),1.0))<eps_r).AND.&
+					&(abs(modulo(multiple(3),1.0))<eps_r)) THEN  
 			!	IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
 			!		&(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
 			!		&(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
@@ -424,9 +425,9 @@ CONTAINS
 								END IF
 				!			END DO
 							multiple=matmul(inv_unfold,lapw%gvec(:,gi,jsp))
-							IF ((modulo(multiple(1),1.0)==0).AND.&
-								&(modulo(multiple(2),1.0)==0).AND.&
-								&(modulo(multiple(3),1.0)==0)) THEN  
+							IF ((abs(modulo(multiple(1),1.0))<eps_r).AND.&
+								&(abs(modulo(multiple(2),1.0))<eps_r).AND.&
+								&(abs(modulo(multiple(3),1.0))<eps_r)) THEN 
 						!	IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
 						!	   &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
 						!	   &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
