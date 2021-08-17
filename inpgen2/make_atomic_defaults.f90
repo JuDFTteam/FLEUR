@@ -75,10 +75,11 @@ CONTAINS
          IF (id>0) THEN
             ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),id)
             !This specific atom also has a rmt given?
-            IF (ap(n)%id==id.AND.ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
+!            IF (ap(n)%id==id.AND.ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          ELSE
-            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n))
+            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n))   
          ENDIF
+         IF (ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          CALL ap(n)%add_defaults()
          atoms%speciesName(n)=ap(n)%desc
          atoms%jri(n)=ap(n)%jri
