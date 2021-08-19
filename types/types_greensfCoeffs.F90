@@ -37,7 +37,8 @@ MODULE m_types_greensfCoeffs
          COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
 
          CONTAINS
-            PROCEDURE, PASS :: init    =>  greensfBZintCoeffs_init
+            PROCEDURE, PASS :: init             => greensfBZintCoeffs_init
+            PROCEDURE, PASS :: add_contribution => greensfBZintCoeffs_add_contribution
       END TYPE t_greensfBZintCoeffs
 
 
@@ -132,6 +133,60 @@ MODULE m_types_greensfCoeffs
 
       END SUBROUTINE greensfBZintCoeffs_init
 
+      SUBROUTINE greensfBZintCoeffs_add_contribution(this, i_elem, i_elemLO, ikpt_i, iBand, ispin, nLO, imat, l_sphavg, contribution)
+
+         CLASS(t_greensfBZintCoeffs),  INTENT(INOUT)   :: this
+         INTEGER,                      INTENT(IN)      :: i_elem,i_elemLO,ikpt_i,ispin,nLO,iBand,imat
+         LOGICAL,                      INTENT(IN)      :: l_sphavg
+         COMPLEX,                      INTENT(IN)      :: contribution(-lmaxU_const:,-lmaxU_const:)
+
+         INTEGER :: iLO
+
+         IF(l_sphavg) THEN
+            !Spherically averaged (already multiplied with scalar products)
+            this%sphavg(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%sphavg(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF(imat.EQ.1) THEN
+            !imat 1-4: coefficients for Valence-Valence contribution
+            this%uu(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%uu(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF(imat.EQ.2) THEN
+            this%dd(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%dd(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF(imat.EQ.3) THEN
+            this%ud(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%ud(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF(imat.EQ.4) THEN
+            this%du(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%du(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF((imat-4.0)/2.0<=nLO) THEN
+            !imat 5 - 4+2*numberofLOs: coefficients for Valence-LO contribution
+            iLO = CEILING(REAL(imat-4.0)/2.0)
+            IF(MOD(imat-4,2)==1) THEN
+               this%uulo(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%uulo(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+            ELSE IF(MOD(imat-4,2)==0) THEN
+               this%dulo(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%dulo(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+            ENDIF
+         ELSE IF((imat-4.0)/2.0<=2.0*nLO) THEN
+            !imat 4+2*numberofLOs+1 - 4+4*numberofLOs: coefficients for LO-Valence contribution
+            iLO = CEILING(REAL(imat-4.0-2*nLO)/2.0)
+            IF(MOD(imat-4-2*nLO,2)==1) THEN
+               this%ulou(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%ulou(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+            ELSE IF(MOD(imat-4-2*nLO,2)==0) THEN
+               this%ulod(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%ulod(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+            ENDIF
+         ELSE
+            !imat 4+4*numberofLOs+1 - 4+4*numberofLOs+numberofLOs**2: coefficients for LO-LO contribution
+            iLO = imat - 4 - 4*nLO
+            this%uloulop(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%uloulop(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+         ENDIF
+
+      END SUBROUTINE greensfBZintCoeffs_add_contribution
 
       SUBROUTINE greensfImagPart_init(this,gfinp,atoms,input,noco,l_calc,nkpts)
 
