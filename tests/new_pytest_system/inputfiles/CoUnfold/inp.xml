@@ -18,22 +18,19 @@
       <bzIntegration valenceElectrons="105.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default"/>
          <kPointLists>
-            <kPointList name="default" count="   15" type="path">
-               <kPoint weight="0.066667" label="g">0.000000            0.000000            0.000000</kPoint>
-               <kPoint weight="0.066667">0.000000           0.500000           0.000000</kPoint>
-               <kPoint weight="0.066667">0.000000           1.000000           0.000000</kPoint>
-               <kPoint weight="0.066667">1.0/3.0            5.0/6.0            0.000000</kPoint>
-               <kPoint weight="0.066667">2.0/3.0            2.0/3.0            0.000000</kPoint>
-               <kPoint weight="0.066667">1.0/3.0            1.0/3.0            0.000000</kPoint>
-               <kPoint weight="0.066667">0.000000           0.000000           0.000000</kPoint>
-               <kPoint weight="0.066667">0.000000           0.000000           0.250000</kPoint>
-               <kPoint weight="0.066667">0.000000           0.000000           0.500000</kPoint>
-               <kPoint weight="0.066667">0.000000           0.500000           0.500000</kPoint>
-               <kPoint weight="0.066667">0.000000           1.000000           0.500000</kPoint>
-               <kPoint weight="0.066667">1.0/3.0            5.0/6.0            0.500000</kPoint>
-               <kPoint weight="0.066667">2.0/3.0            2.0/3.0            0.500000</kPoint>
-               <kPoint weight="0.066667">1.0/3.0            1.0/3.0            0.500000</kPoint>
-               <kPoint weight="0.066667" label="somePoint">0.000000            0.000000            0.500000</kPoint>
+            <kPointList name="default" count="   12" type="path">
+               <kPoint weight="0.083333" label="g">0.000000            0.000000            0.000000</kPoint>
+               <kPoint weight="0.083333">0.000000           0.500000           0.000000</kPoint>
+               <kPoint weight="0.083333">0.000000           1.000000           0.000000</kPoint>
+               <kPoint weight="0.083333">1.0/3.0            5.0/6.0            0.000000</kPoint>
+               <kPoint weight="0.083333">2.0/3.0            2.0/3.0            0.000000</kPoint>
+               <kPoint weight="0.083333">1.0/3.0            1.0/3.0            0.000000</kPoint>
+               <kPoint weight="0.083333">0.000000           0.000000           0.000000</kPoint>
+               <kPoint weight="0.083333">0.000000           0.000000           0.250000</kPoint>
+               <kPoint weight="0.083333">0.000000           0.000000           0.500000</kPoint>
+               <kPoint weight="0.083333">0.000000           0.500000           0.500000</kPoint>
+               <kPoint weight="0.083333">0.000000           1.000000           0.500000</kPoint>
+               <kPoint weight="0.083333" label="somePoint">0.000000            0.000000            0.500000</kPoint>
             </kPointList>
          </kPointLists>
       </bzIntegration>
