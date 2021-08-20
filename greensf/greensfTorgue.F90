@@ -138,7 +138,7 @@ MODULE m_greensfTorgue
          !Rotate the greens function into the global real space frame
          IF(noco%l_noco) THEN
             CALL gf_rot%rotate_euler_angles(atoms,nococonv%alph(atomType),nococonv%beta(atomType),0.0)
-         ELSE IF(noco%l_soc)
+         ELSE IF(noco%l_soc) THEN
             CALL gf_rot%rotate_euler_angles(atoms,nococonv%phi,nococonv%theta,0.0)
          ENDIF
 
