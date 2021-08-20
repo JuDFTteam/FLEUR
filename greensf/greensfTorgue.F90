@@ -48,6 +48,8 @@ MODULE m_greensfTorgue
       REAL    :: realIntegral
       CHARACTER(LEN=20) :: attributes(5)
 
+      TYPE(t_greensf) :: gf_rot
+
       REAL,    ALLOCATABLE :: torgue(:,:),rtmp(:)
       COMPLEX, ALLOCATABLE :: bxc(:,:,:)
       COMPLEX, ALLOCATABLE :: integrand(:,:)
@@ -128,20 +130,28 @@ MODULE m_greensfTorgue
          IF(index.LT.1 .OR. index.GT.SIZE(gf_indices)) CYCLE
          i_gf = gf_indices(index)
 
-         l  = greensFunction(i_gf)%elem%l
-         lp = greensFunction(i_gf)%elem%lp
-         atomType = greensFunction(i_gf)%elem%atomType
+         gf_rot = greensFunction(i_gf)
+         l  = gf_rot%elem%l
+         lp = gf_rot%elem%lp
+         atomType = gf_rot%elem%atomType
+
+         !Rotate the greens function into the global real space frame
+         IF(noco%l_noco) THEN
+            CALL gf_rot%rotate_euler_angles(atoms,nococonv%alph(atomType),nococonv%beta(atomType),0.0)
+         ELSE IF(noco%l_soc)
+            CALL gf_rot%rotate_euler_angles(atoms,nococonv%phi,nococonv%theta,0.0)
+         ENDIF
 
 #ifndef CPP_NOTYPEPROCINOMP
          !$OMP parallel default(none) &
-         !$OMP shared(sphhar,atoms,input,greensFunction,i_gf,f,g,flo,bxc) &
+         !$OMP shared(sphhar,atoms,input,gf_rot,f,g,flo,bxc) &
          !$OMP shared(l,lp,atomType,torgue) &
          !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,weight,ispin,ipm,iz,alpha,jr) &
          !$OMP private(realIntegral,integrand,g_ii,mag_ii)
 #endif
          ALLOCATE(integrand(atoms%jmtd,3),source=cmplx_0)
-         ALLOCATE(g_ii(atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
-         ALLOCATE(mag_ii(atoms%jmtd,greensFunction(i_gf)%contour%nz),source=cmplx_0)
+         ALLOCATE(g_ii(atoms%jmtd,gf_rot%contour%nz),source=cmplx_0)
+         ALLOCATE(mag_ii(atoms%jmtd,gf_rot%contour%nz),source=cmplx_0)
 #ifndef CPP_NOTYPEPROCINOMP
          !$OMP do collapse(2)
 #endif
@@ -161,35 +171,31 @@ MODULE m_greensfTorgue
                      DO alpha = 1, 3 !(x,y,z)
                         IF (alpha.EQ.1) THEN
                            !magnetization in x-direction
-                           CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,3,f,g,flo,mag_ii)
-                           mag_ii = 2*REAL(mag_ii)
+                           CALL gf_rot%getRadial(atoms,m,mp,ipm==2,3,f,g,flo,mag_ii)
+                           CALL gf_rot%getRadial(atoms,mp,m,ipm==2,3,f,g,flo,g_ii)
+                           mag_ii = mag_ii + conjg(g_ii)
                         ELSE IF (alpha.EQ.2) THEN
                            !magnetization in y-direction
-                           CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,3,f,g,flo,mag_ii)
-                           mag_ii = 2*AIMAG(mag_ii)
+                           CALL gf_rot%getRadial(atoms,m,mp,ipm==2,3,f,g,flo,mag_ii)
+                           CALL gf_rot%getRadial(atoms,mp,m,ipm==2,3,f,g,flo,g_ii)
+                           mag_ii = ImagUnit * (mag_ii - conjg(g_ii))
                         ELSE
-                           !magnatization in z-direction
+                           !magnetization in z-direction
                            mag_ii = cmplx_0
                            DO ispin = 1, input%jspins
-                              CALL greensFunction(i_gf)%getRadial(atoms,m,mp,ipm==2,ispin,f,g,flo,g_ii)
+                              CALL gf_rot%getRadial(atoms,m,mp,ipm==2,ispin,f,g,flo,g_ii)
                               mag_ii = mag_ii + (-1)**(ispin-1) * g_ii
                            ENDDO
                         ENDIF
 
                         DO iz = 1, SIZE(mag_ii,2)
-                           weight = greensFunction(i_gf)%contour%de(iz) * phaseFactor
+                           weight = gf_rot%contour%de(iz) * phaseFactor
+                           weight = MERGE(weight, conjg(weight), ipm==1)
 
-                           IF(ipm == 1) THEN
-                              DO jr = 1, atoms%jri(atomType)
-                                 integrand(jr,alpha) = integrand(jr,alpha) + ImagUnit/tpi_const * mag_ii(jr,iz) &
-                                                                            * bxc(jr,lhmu,atomType) * weight
-                              ENDDO
-                           ELSE
-                              DO jr = 1, atoms%jri(atomType)
-                                 integrand(jr,alpha) = integrand(jr,alpha) - ImagUnit/tpi_const * mag_ii(jr,iz) &
-                                                                            * conjg(bxc(jr,lhmu,atomType) * weight)
-                              ENDDO
-                           ENDIF
+                           DO jr = 1, atoms%jri(atomType)
+                              integrand(jr,alpha) = integrand(jr,alpha) + ImagUnit/tpi_const * (-1)**(ipm-1) * mag_ii(jr,iz) &
+                                                                         * MERGE(bxc(jr,lhmu,atomType),conjg(bxc(jr,lhmu,atomType))) * weight
+                           ENDDO
                         ENDDO
                      ENDDO
                   ENDDO
@@ -209,10 +215,10 @@ MODULE m_greensfTorgue
          ENDDO
 #ifndef CPP_NOTYPEPROCINOMP
          !$OMP end do
-         DEALLOCATE(integrand,g_ii)
+         DEALLOCATE(integrand,g_ii,mag_ii)
          !$OMP end parallel
 #else
-         DEALLOCATE(integrand,g_ii)
+         DEALLOCATE(integrand,g_ii,mag_ii)
 #endif
 
       ENDDO
