@@ -1066,6 +1066,7 @@ MODULE m_types_greensf
                      DO ilo = 1, atoms%nlo(atomType)
                         IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                         iLOp_ind = 0
+                        iLO_ind = iLO_ind + 1
                         DO ilop = 1, atoms%nlo(atomTypep)
                            IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
                            iLOp_ind = iLOp_ind + 1
@@ -1141,8 +1142,9 @@ MODULE m_types_greensf
                      DO ilo = 1, atoms%nlo(atomType)
                         IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                         iLOp_ind = 0
+                        iLO_ind = iLO_ind + 1
                         DO ilop = 1, atoms%nlo(atomTypep)
-                           IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
+                           IF(atoms%llo(ilop,atomTypep).NE.lp) CYCLE
                            iLOp_ind = iLOp_ind + 1
                            this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm) = rotMMPmat(this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm),alpha,beta,gamma,l,lp=lp,&
                                                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
