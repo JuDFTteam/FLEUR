@@ -194,7 +194,7 @@ MODULE m_greensfTorgue
 
                            DO jr = 1, atoms%jri(atomType)
                               integrand(jr,alpha) = integrand(jr,alpha) + ImagUnit/tpi_const * (-1)**(ipm-1) * mag_ii(jr,iz) &
-                                                                         * MERGE(bxc(jr,lhmu,atomType),conjg(bxc(jr,lhmu,atomType))) * weight
+                                                                         * MERGE(bxc(jr,lhmu,atomType),conjg(bxc(jr,lhmu,atomType)), ipm==1) * weight
                            ENDDO
                         ENDDO
                      ENDDO
