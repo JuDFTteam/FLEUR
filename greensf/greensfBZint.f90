@@ -89,14 +89,14 @@ MODULE m_greensfBZint
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
                      imatSize,spin_start:spin_end),source=cmplx_0)
 
-         natom_start = MERGE(SUM(atoms%neq(:atomType-1)) + 1,gfinp%elem(i_gf)%inter_atom,.NOT.l_intersite)
-         natom_end   = MERGE(SUM(atoms%neq(:atomType))      ,gfinp%elem(i_gf)%inter_atom,.NOT.l_intersite)
+         natom_start = MERGE(SUM(atoms%neq(:atomType-1)) + 1,gfinp%elem(i_gf)%atom,.NOT.l_intersite)
+         natom_end   = MERGE(SUM(atoms%neq(:atomType))      ,gfinp%elem(i_gf)%atom,.NOT.l_intersite)
          !Loop over equivalent atoms
          DO natom = natom_start , natom_end
 
             !Only perform the second atom loop if we calculate intersite elements
-            natomp_start = MERGE(natom,gfinp%elem(i_gf)%inter_atomp,.NOT.l_intersite)
-            natomp_end   = MERGE(natom,gfinp%elem(i_gf)%inter_atomp,.NOT.l_intersite)
+            natomp_start = MERGE(natom,gfinp%elem(i_gf)%atomp,.NOT.l_intersite)
+            natomp_end   = MERGE(natom,gfinp%elem(i_gf)%atomp,.NOT.l_intersite)
 
             DO natomp = natomp_start, natomp_end
 
