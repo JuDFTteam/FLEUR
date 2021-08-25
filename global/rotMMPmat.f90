@@ -15,7 +15,7 @@ MODULE m_rotMMPmat
 
    CONTAINS
 
-   PURE FUNCTION rotMMPmat_dwgn(mmpmat,dwgn,dwgnp,su, spin_rotation, real_space_rotation) Result(mmpmatOut)
+   PURE FUNCTION rotMMPmat_dwgn(mmpmat,dwgn,dwgnp,su, spin_rotation, real_space_rotation, inverse) Result(mmpmatOut)
 
       COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
       COMPLEX, OPTIONAL, INTENT(IN)  :: dwgn(-lmaxU_const:,-lmaxU_const:)
@@ -23,18 +23,22 @@ MODULE m_rotMMPmat
       COMPLEX, OPTIONAL, INTENT(IN)  :: su(:,:)
       LOGICAL, OPTIONAL, INTENT(IN)  :: spin_rotation
       LOGICAL, OPTIONAL, INTENT(IN)  :: real_space_rotation
+      LOGICAL, OPTIONAL, INTENT(IN)  :: inverse
 
       COMPLEX, ALLOCATABLE :: mmpmatOut(:,:,:)
 
       COMPLEX :: d(2,2)
       INTEGER :: ispin,m,mp
-      LOGICAL :: spin_rotation_arg, real_space_rotation_arg
+      LOGICAL :: spin_rotation_arg, real_space_rotation_arg, inverseArg
 
       spin_rotation_arg = .FALSE.
       IF(PRESENT(spin_rotation)) spin_rotation_arg = spin_rotation
 
       real_space_rotation_arg = .TRUE.
       IF(PRESENT(real_space_rotation)) real_space_rotation_arg = real_space_rotation
+
+      inverseArg = .FALSE.
+      IF(PRESENT(inverse)) inverseArg = inverse
 
       IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
       mmpmatOut = mmpmat
@@ -56,8 +60,13 @@ MODULE m_rotMMPmat
                   ENDIF
                ENDIF
 
-               d = matmul(su,d)
-               d = matmul(d,conjg(transpose(su)))
+               IF(inverseArg) THEN
+                  d = matmul(conjg(transpose(su)),d)
+                  d = matmul(d,su)
+               ELSE
+                  d = matmul(su,d)
+                  d = matmul(d,conjg(transpose(su)))
+               ENDIF
 
                mmpmatOut(m,mp,1) = d(1,1)
                mmpmatOut(m,mp,2) = d(2,2)
@@ -74,11 +83,20 @@ MODULE m_rotMMPmat
 
       IF(real_space_rotation_arg.AND.PRESENT(dwgn)) THEN
          DO ispin = 1, SIZE(mmpmat,3)
-            mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgn)),mmpmatOut(:,:,ispin))
-            IF(PRESENT(dwgnp)) THEN
-               mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgnp)
+            IF(inverseArg) THEN
+               mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgn)),mmpmatOut(:,:,ispin))
+               IF(PRESENT(dwgnp)) THEN
+                  mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgnp)
+               ELSE
+                  mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgn)
+               ENDIF
             ELSE
-               mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgn)
+               mmpmatOut(:,:,ispin) = matmul(dwgn,mmpmatOut(:,:,ispin))
+               IF(PRESENT(dwgnp)) THEN
+                  mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),conjg(transpose(dwgnp)))
+               ELSE
+                  mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),conjg(transpose(dwgn)))
+               ENDIF
             ENDIF
          ENDDO
       ENDIF
@@ -168,10 +186,8 @@ MODULE m_rotMMPmat
 
       iopArg = iop
       IF(reciprocalArg) THEN
-         IF(iop <= sym%nop) THEN
-            iopArg = sym%invtab(iop)
-         ELSE
-            iopArg = sym%invtab(iop-sym%nop)
+         IF(iop > sym%nop) THEN
+            iopArg = iop-sym%nop
          ENDIF
       ELSE IF(inverseArg) THEN
          iopArg = sym%invtab(iop)
@@ -236,18 +252,19 @@ MODULE m_rotMMPmat
 
    END FUNCTION rotMMPmat_angle_one_spin
 
-   PURE FUNCTION rotMMPmat_dwgn_one_spin(mmpmat,dwgn,dwgnp) Result(mmpmatOut)
+   PURE FUNCTION rotMMPmat_dwgn_one_spin(mmpmat,dwgn,dwgnp,inverse) Result(mmpmatOut)
 
       COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:)
       COMPLEX,           INTENT(IN)  :: dwgn(-lmaxU_const:,-lmaxU_const:)
       COMPLEX, OPTIONAL, INTENT(IN)  :: dwgnp(-lmaxU_const:,-lmaxU_const:)
+      LOGICAL, OPTIONAL, INTENT(IN)  :: inverse
 
       COMPLEX, ALLOCATABLE :: mmpmatOut(:,:), mmpmatOutsplit(:,:,:)
       COMPLEX :: mmpmatsplit(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1)
 
       ALLOCATE(mmpmatOut,mold=mmpMat)
       mmpmatsplit(:,:,1) = mmpmat
-      mmpmatOutsplit = rotMMPmat_dwgn(mmpmatsplit,dwgn=dwgn,dwgnp=dwgnp)
+      mmpmatOutsplit = rotMMPmat_dwgn(mmpmatsplit,dwgn=dwgn,dwgnp=dwgnp,inverse=inverse)
       mmpmatOut = mmpmatOutsplit(:,:,1)
 
    END FUNCTION rotMMPmat_dwgn_one_spin

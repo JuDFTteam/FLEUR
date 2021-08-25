@@ -93,7 +93,7 @@ MODULE m_symMMPmat
             !The complex conjugation is taken from n_mat
             !It seems there is an inconsistency here that should be resolved at aome point
             mmpmatSym = mmpmatSym + symFac * symPhase * intersite_phase &
-                                   * conjg(rotMMPmat(mmpmat_kpt,sym,isi,l,lp=lp))
+                                   * rotMMPmat(mmpmat_kpt,sym,isi,l,lp=lp)
          ENDDO
 
       ENDDO
