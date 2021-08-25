@@ -235,19 +235,20 @@ MODULE m_rotMMPmat
 
    END FUNCTION rotMMPmat_sym_op_one_spin
 
-   PURE FUNCTION rotMMPmat_angle_one_spin(mmpmat,alpha,beta,gamma,l,lp) Result(mmpmatOut)
+   PURE FUNCTION rotMMPmat_angle_one_spin(mmpmat,alpha,beta,gamma,l,lp,inverse) Result(mmpmatOut)
 
       COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:)
       REAL,              INTENT(IN)  :: alpha,beta,gamma !Euler angles
       INTEGER,           INTENT(IN)  :: l
       INTEGER, OPTIONAL, INTENT(IN)  :: lp
+      LOGICAL, OPTIONAL, INTENT(IN)  :: inverse
 
       COMPLEX, ALLOCATABLE :: mmpmatOut(:,:), mmpmatOutsplit(:,:,:)
       COMPLEX :: mmpmatsplit(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1)
 
       ALLOCATE(mmpmatOut,mold=mmpMat)
       mmpmatsplit(:,:,1) = mmpmat
-      mmpmatOutsplit = rotMMPmat_angle(mmpmatsplit,alpha,beta,gamma,l,lp=lp)
+      mmpmatOutsplit = rotMMPmat_angle(mmpmatsplit,alpha,beta,gamma,l,lp=lp, inverse=inverse)
       mmpmatOut = mmpmatOutsplit(:,:,1)
 
    END FUNCTION rotMMPmat_angle_one_spin
