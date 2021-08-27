@@ -752,7 +752,7 @@ CONTAINS
 
       DO uniqueIndex = 1, index
          !If the element has a representative element set it can not be unique
-         IF(this%elem(uniqueIndex)%representative_elem>0) CYCLE
+         !IF(this%elem(uniqueIndex)%representative_elem>0) CYCLE
          IF(this%elem(uniqueIndex)%equals_coefficients(this%elem(index), distinct_kresolved_int)) THEN
             RETURN
          ENDIF
@@ -1307,16 +1307,17 @@ CONTAINS
       IF(distinct_k_resolved_arg) then
          IF(this%l_kresolved_int .neqv. other%l_kresolved_int) RETURN
       ENDIF
-      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) THEN
-         IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
-         IF(this%representative_elem > 0 .AND. other%representative_elem > 0) THEN
-            IF(ANY(ABS(this%representative_diff(:)-other%representative_diff(:)).GT.ATOMDIFF_EPS)) RETURN
-         ELSE IF(this%representative_elem > 0) THEN
-            IF(ANY(ABS(this%representative_diff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
-         ELSE IF(other%representative_elem > 0) THEN
-            IF(ANY(ABS(other%representative_diff(:)-this%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
-         ENDIF
-      ENDIF
+      ! IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) THEN
+      !    IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
+      !    IF(this%representative_elem > 0 .AND. other%representative_elem > 0) THEN
+      !       IF(ANY(ABS(this%representative_diff(:)-other%representative_diff(:)).GT.ATOMDIFF_EPS)) RETURN
+      !    ELSE IF(this%representative_elem > 0) THEN
+      !       IF(ANY(ABS(this%representative_diff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
+      !    ELSE IF(other%representative_elem > 0) THEN
+      !       IF(ANY(ABS(other%representative_diff(:)-this%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
+      !    ENDIF
+      ! ENDIF
+      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
       IF(this%atom /= other%atom) RETURN
       IF(this%atomp /= other%atomp) RETURN
       equals_coefficients_gfelem = .TRUE.

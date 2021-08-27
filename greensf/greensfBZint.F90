@@ -4,7 +4,8 @@ MODULE m_greensfBZint
    USE m_juDFT
    USE m_constants
    USE m_greensfEigVecCoeffs
-   USE m_greensfSym
+   USE m_symMMPmat
+   USE m_rotMMPmat
 
    IMPLICIT NONE
 
@@ -27,15 +28,16 @@ MODULE m_greensfBZint
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
 
-      INTEGER :: i_gf,i_gf_p,l,lp,atomType,atomTypep,n_op
+      INTEGER :: i_gf,l,lp,atomType,atomTypep
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
-      INTEGER :: i_elem,i_elemLO,nLO,imatSize
+      INTEGER :: i_elem,i_elemLO,nLO,imatSize,imat,iBand,iop
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end
       COMPLEX :: phase
-      REAL    :: atomFactor,atomDiff(3)
+      REAL    :: atomDiff(3)
       LOGICAL :: l_sphavg,l_intersite
-      COMPLEX, ALLOCATABLE :: im(:,:,:,:,:)
-      INTEGER :: repr_ops(gfinp%n)
+      COMPLEX, ALLOCATABLE :: im(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: imSym(:,:)
+      TYPE(t_eigVecCoeffs) :: eigVecCoeffs_rot
 
       spin_start = MERGE(1,jspin,gfinp%l_mperp)
       spin_end   = MERGE(3,jspin,gfinp%l_mperp)
@@ -43,6 +45,8 @@ MODULE m_greensfBZint
       spin_start = MERGE(1           ,spin_start,noco%l_mperp.AND..NOT.gfinp%l_mperp)
       spin_end   = MERGE(input%jspins,spin_end  ,noco%l_mperp.AND..NOT.gfinp%l_mperp)
 
+
+      eigVecCoeffs_rot = eigVecCoeffs%rotate_to_rep_atom(atoms,sym,lmaxU_const)
 
       CALL timestart("Green's Function: Brillouin-Zone-Integration")
       DO i_gf = 1, gfinp%n
@@ -55,7 +59,6 @@ MODULE m_greensfBZint
          l_sphavg  = gfinp%elem(i_gf)%l_sphavg
          l_intersite = gfinp%elem(i_gf)%isIntersite()
          atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
-         atomFactor = MERGE(1.0/atoms%neq(atomType),1.0,.NOT.l_intersite)
 
          IF(.NOT.gfinp%isUnique(i_gf)) CYCLE
 
@@ -72,22 +75,8 @@ MODULE m_greensfBZint
             ENDIF
          ENDIF
 
-
-         n_op = 1
-         repr_ops(1) = 1
-         ! IF(l_intersite) THEN
-         !    n_op = 1
-         !    repr_ops(1) = 1
-         !    DO i_gf_p = 1, gfinp%n
-         !       IF(gfinp%elem(i_gf_p)%representative_elem==i_gf) THEN
-         !          n_op = n_op + 1
-         !          repr_ops(n_op) = gfinp%elem(i_gf_p)%representative_op
-         !       ENDIF
-         !    ENDDO
-         ! ENDIF
-
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
-                     imatSize,spin_start:spin_end),source=cmplx_0)
+                     imatSize),source=cmplx_0)
 
          natom_start = MERGE(SUM(atoms%neq(:atomType-1)) + 1,gfinp%elem(i_gf)%atom,.NOT.l_intersite)
          natom_end   = MERGE(SUM(atoms%neq(:atomType))      ,gfinp%elem(i_gf)%atom,.NOT.l_intersite)
@@ -100,40 +89,86 @@ MODULE m_greensfBZint
 
             DO natomp = natomp_start, natomp_end
 
-               DO ispin = spin_start, spin_end
-                  IF(ispin==3) THEN
-                     spin1 = 2
-                     spin2 = 1
-                  ELSE
-                     spin1 = ispin
-                     spin2 = ispin
-                  ENDIF
-                  !which scalar products for intersite and l offdiagonal(IF l_sphavg)
-                  !Spin diagonal elements
+               DO iop = 1, MERGE(1, sym%nop, .NOT.l_intersite)
 
-                  CALL greensfEigVecCoeffs(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
-                                           l_sphavg,atoms,scalarGF(i_gf),eigVecCoeffs,im(:,:,:,:,ispin))
+                  ! natom_rot = sym%mapped_atom(iop,natom)
+                  ! natomp_rot = sym%mapped_atom(iop,natomp)
 
-                  !The eigenvector coefficients already contain part of the interstitial phase
-                  !but not necessarily the right one
-                  IF(natom/=natomp) THEN
-                     im(:,:,:,:,ispin) = im(:,:,:,:,ispin) &
-                                       * exp(-tpi_const*ImagUnit*dot_product(kpts%bk(:,ikpt),  atoms%taual(:,natom) &
-                                                                                             - atoms%taual(:,natomp)))
+                  IF(l_intersite) THEN
+                     i_elem = gfinp%find_symmetry_rotated_bzcoeffs(atoms,sym,i_gf,iop,l_sphavg)
+                     i_elemLO = gfinp%find_symmetry_rotated_bzcoeffs(atoms,sym,i_gf,iop,l_sphavg,lo=.TRUE.)
                   ENDIF
 
-                  IF(ispin==3) THEN
-                     im(:,:,:,:,ispin) = CMPLX(-REAL(im(:,:,:,:,ispin)), AIMAG(im(:,:,:,:,ispin)))
-                  ENDIF
+                  DO ispin = spin_start, spin_end
+                     IF(ispin==3) THEN
+                        spin1 = 2
+                        spin2 = 1
+                     ELSE
+                        spin1 = ispin
+                        spin2 = ispin
+                     ENDIF
+                     !which scalar products for intersite and l offdiagonal(IF l_sphavg)
+                     !Spin diagonal elements
 
-                  !l-offdiagonal phase
-                  phase = ImagUnit**(l-lp)
+                     CALL greensfEigVecCoeffs(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
+                                              l_sphavg,atoms,scalarGF(i_gf),eigVecCoeffs_rot,im)
 
-                  CALL greensfSym(ikpt_i,ikpt,i_elem,i_elemLO,nLO,atomType,natom,l,lp,l_intersite,l_sphavg,ispin,&
-                                  sym,kpts,atomFactor,atomDiff,phase,repr_ops(:n_op),noco,nococonv,im(:,:,:,:,ispin),greensfBZintCoeffs)
 
+                     !The eigenvector coefficients already contain part of the interstitial phase
+                     !but not necessarily the right one
+                     IF(natom/=natomp) THEN
+                        im = im * exp(-tpi_const*ImagUnit*dot_product(kpts%bk(:,ikpt),  atoms%taual(:,natom) &
+                                                                                      - atoms%taual(:,natomp)))
+                     ENDIF
+
+                     IF(ispin==3) im = -im
+
+#ifndef CPP_NOTYPEPROCINOMP
+                     !$omp parallel default(none) &
+                     !$omp shared(sym,kpts,atoms,greensfBZintCoeffs,im,nococonv,noco,atomType,imatSize,nBands) &
+                     !$omp shared(l_intersite,l,lp,natom,ispin,iop,atomDiff,i_elem,i_elemLO,ikpt,ikpt_i,nLO,l_sphavg) &
+                     !$omp private(imat,iBand,imSym)
+#endif
+                     ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
+#ifndef CPP_NOTYPEPROCINOMP
+                     !$omp do collapse(2)
+#endif
+                     DO imat = 1, imatSize
+                        DO iBand = 1, nBands
+
+                           IF(l_intersite) THEN
+                              imSym = ImagUnit**(l-lp)/REAL(sym%nop) * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3),&
+                                                                                 bk=kpts%bk(:,ikpt),atomDiff=atomDiff,sym_op_list=[iop])
+                           ELSE
+                              imSym = ImagUnit**(l-lp)/atoms%neq(atomType) * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(ispin.EQ.3))
+                           ENDIF
+
+                           !Rotate into the local real frame
+                           IF(noco%l_noco) THEN
+                              imSym = rotMMPmat(imSym,nococonv%alph(atomType),nococonv%beta(atomType),0.0,l,lp=lp,inverse=.TRUE.)
+                           ELSE IF(noco%l_soc) THEN
+                              imSym = rotMMPmat(imSym,nococonv%phi,nococonv%theta,0.0,l,lp=lp,inverse=.TRUE.)
+                           ENDIF
+
+#ifndef CPP_NOTYPEPROCINOMP
+                           !$omp critical
+                           CALL greensfBZintCoeffs%add_contribution(i_elem, i_elemLO, ikpt_i, iBand, ispin, nLO, imat, l_sphavg, imSym)
+                           !$omp end critical
+#else
+                           CALL greensfBZintCoeffs%add_contribution(i_elem, i_elemLO, ikpt_i, iBand, ispin, nLO, imat, l_sphavg, imSym)
+#endif
+                        ENDDO
+                     ENDDO
+#ifndef CPP_NOTYPEPROCINOMP
+                     !$omp end do
+                     DEALLOCATE(imSym)
+                     !$omp end parallel
+#else
+                     DEALLOCATE(imSym)
+#endif
+
+                  ENDDO
                ENDDO
-
             ENDDO !natomp
          ENDDO !natom
          DEALLOCATE(im)

@@ -1,7 +1,6 @@
 set(fleur_F90 ${fleur_F90}
 greensf/greensfEigVecCoeffs.f90
 greensf/greensfBZint.F90
-greensf/greensfSym.F90
 greensf/greensfCalcImagPart.F90
 greensf/greensfCalcRealPart.F90
 greensf/greensfCalcScalarProducts.f90
