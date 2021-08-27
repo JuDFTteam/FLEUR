@@ -14,10 +14,9 @@ MODULE m_symMMPmat
       PROCEDURE :: symMMPmatFull, symMMPmatoneSpin
    END INTERFACE
 
-
    CONTAINS
 
-   FUNCTION symMMPmatFull(mmpmat,sym,natom,l,lp,phase,atomDiff,kpt_indices,sym_op_list,kpts) Result(mmpmatSym)
+   FUNCTION symMMPmatFull(mmpmat,sym,natom,l,lp,phase,bk,atomDiff,sym_op_list) Result(mmpmatSym)
 
       COMPLEX,                INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_sym),            INTENT(IN)  :: sym
@@ -26,17 +25,15 @@ MODULE m_symMMPmat
       INTEGER,OPTIONAL,       INTENT(IN)  :: lp
       LOGICAL,OPTIONAL,       INTENT(IN)  :: phase !multiply spin-offdiagonal phase
                                                    !(if the full matrix is not given)
+      REAL   ,OPTIONAL,       INTENT(IN)  :: bk(:)
       REAL   ,OPTIONAL,       INTENT(IN)  :: atomDiff(:)
-      INTEGER,OPTIONAL,       INTENT(IN)  :: kpt_indices(:)
       INTEGER,OPTIONAL,       INTENT(IN)  :: sym_op_list(:)
-      TYPE(t_kpts), OPTIONAL, INTENT(IN)  :: kpts
 
       COMPLEX :: mmpmatSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
-      COMPLEX :: mmpmat_kpt(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(mmpmat,3))
-      INTEGER :: i_op,n_ops,is,isi,lpArg,nkpts,ikpt,kpt
+      INTEGER :: i_op,n_ops,is,isi,lpArg
       INTEGER, ALLOCATABLE :: sym_ops(:)
       COMPLEX :: symPhase, intersite_phase
-      REAL    :: symFac,rotbk(3),rotdiff(3)
+      REAL    :: symFac,rotbk(3),rotdiff(3),rrot_rec(3,3),rrot(3,3)
 
       mmpmatSym = cmplx_0
 
@@ -51,56 +48,49 @@ MODULE m_symMMPmat
          sym_ops = sym%invarop(natom,:)
       ENDIF
 
-      IF(PRESENT(kpt_indices)) THEN
-         IF(.NOT.PRESENT(kpts).OR..NOT.PRESENT(atomDiff)) THEN
+      IF(PRESENT(atomDiff).OR.PRESENT(bk)) THEN
+         IF(.NOT.(PRESENT(atomDiff).AND.PRESENT(bk))) THEN
             CALL juDFT_error('Not all arguments available for intersite phases',&
                              hint='This is BUG in FLEUR, please report')
          ENDIF
-         nkpts = SIZE(kpt_indices)
-      ELSE
-         nkpts = 1
       ENDIF
 
-      symFac = 1.0/(REAL(n_ops)*REAL(nkpts))
+      symFac = 1.0/REAL(n_ops)
 
       DO i_op = 1, n_ops
          is  = sym_ops(i_op)
-         IF(PRESENT(sym_op_list)) THEN
-            isi = is
-         ELSE
-            isi = sym%invtab(is)
-         ENDIF
 
          symPhase = cmplx_1
          IF(PRESENT(phase)) THEN
-            IF(phase) symPhase = exp(ImagUnit*sym%phase(isi))
+            IF(phase) symPhase = exp(ImagUnit*sym%phase(sym%invtab(is)))
          ENDIF
 
-         DO ikpt = 1, nkpts
-
-            intersite_phase = cmplx_1
-            IF(PRESENT(kpt_indices)) THEN
-               kpt = kpt_indices(ikpt)
-               !I have no idea why kpts%to_first_bz produces different results but it does
-               rotbk = kpts%bkf(:,kpt) - CEILING(kpts%bkf(:,kpt)-[0.5,0.5,0.5])
-               rotdiff = matmul(sym%mrot(:,:,isi),atomDiff)
-               mmpmat_kpt = rotMMPmat(mmpmat,sym,kpts%bksym(kpt),l,lp=lp,reciprocal=.TRUE.)
-               intersite_phase = exp(-tpi_const*ImagUnit*dot_product(rotbk,rotdiff))
+         intersite_phase = cmplx_1
+         IF(PRESENT(atomDiff)) THEN
+            IF(is <= sym%nop) THEN
+               rrot_rec = transpose(sym%mrot(:,:,sym%invtab(is)))
+               rrot = sym%mrot(:,:,is)
             ELSE
-               mmpmat_kpt = mmpmat
+               rrot_rec = -transpose(sym%mrot(:,:,sym%invtab(is-sym%nop)))
+               rrot = sym%mrot(:,:,is-sym%nop)
             ENDIF
 
-            !The complex conjugation is taken from n_mat
-            !It seems there is an inconsistency here that should be resolved at aome point
-            mmpmatSym = mmpmatSym + symFac * symPhase * intersite_phase &
-                                   * conjg(rotMMPmat(mmpmat_kpt,sym,isi,l,lp=lp))
-         ENDDO
+            !TODO: Add phases from non-symorphic symmetries
+            rotbk = matmul(rrot_rec,bk)
+            rotdiff = matmul(rrot, atomDiff)
+            !TODO: Add phases from backfolding the kpoints
+            rotbk = rotbk - CEILING(rotbk-[0.5,0.5,0.5])
+            intersite_phase = exp(tpi_const*ImagUnit*dot_product(rotbk,rotdiff))
+         ENDIF
+
+         mmpmatSym = mmpmatSym + symFac * symPhase * intersite_phase &
+                                   * rotMMPmat(mmpmat,sym,is,l,lp=lp,reciprocal=.TRUE.)
 
       ENDDO
 
    END FUNCTION symMMPmatFull
 
-   FUNCTION symMMPmatoneSpin(mmpmat,sym,natom,l,lp,phase,atomDiff,kpt_indices,sym_op_list,kpts) Result(mmpmatSym)
+   FUNCTION symMMPmatoneSpin(mmpmat,sym,natom,l,lp,phase,bk,atomDiff,sym_op_list) Result(mmpmatSym)
 
       COMPLEX,                INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:)
       TYPE(t_sym),            INTENT(IN)  :: sym
@@ -108,10 +98,9 @@ MODULE m_symMMPmat
       INTEGER,                INTENT(IN)  :: l
       INTEGER,OPTIONAL,       INTENT(IN)  :: lp
       REAL   ,OPTIONAL,       INTENT(IN)  :: atomDiff(:)
-      INTEGER,OPTIONAL,       INTENT(IN)  :: kpt_indices(:)
+      REAL   ,OPTIONAL,       INTENT(IN)  :: bk(:)
       LOGICAL,OPTIONAL,       INTENT(IN)  :: phase
       INTEGER,OPTIONAL,       INTENT(IN)  :: sym_op_list(:)
-      TYPE(t_kpts), OPTIONAL, INTENT(IN)  :: kpts
 
       INTEGER :: ilow(2),iup(2)
       COMPLEX :: mmpmatSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -124,9 +113,8 @@ MODULE m_symMMPmat
       mmpmatIn(:,:,1) = mmpmat
 
       ALLOCATE(mmpmatOut2,mold=mmpMatIn)
-      mmpmatOut2 = symMMPmatFull(mmpmatIn,sym,natom,l,lp=lp,atomDiff=atomDiff,&
-                                 kpt_indices=kpt_indices,phase=phase,sym_op_list=sym_op_list,&
-                                 kpts=kpts)
+      mmpmatOut2 = symMMPmatFull(mmpmatIn,sym,natom,l,lp=lp,bk=bk,atomDiff=atomDiff,&
+                                 phase=phase,sym_op_list=sym_op_list)
 
       mmpmatSym = mmpmatOut2(:,:,1)
 

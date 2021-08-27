@@ -200,9 +200,6 @@ MODULE m_greensfCalcImagPart
                      ENDIF
 
                   ENDDO!ib
-                  IF(spin_ind==3) THEN
-                     imag = CMPLX(REAL(imag), -AIMAG(imag))
-                  ENDIF
                   IF(l_sphavg.AND..NOT.l_kresolved_int) THEN
                      CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%sphavg(:,m,mp,i_elem_imag,spin_ind),1)
                   ELSE IF(.NOT.l_kresolved_int) THEN
