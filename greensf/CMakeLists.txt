@@ -5,7 +5,7 @@ greensf/greensfCalcImagPart.F90
 greensf/greensfCalcRealPart.F90
 greensf/greensfCalcScalarProducts.f90
 greensf/greensfPostProcess.F90
-greensf/kkintgr.f90
+greensf/kkintgr.F90
 greensf/lorentzian_smooth.f90
 greensf/kk_cutoff.F90
 greensf/excSplitting.f90
