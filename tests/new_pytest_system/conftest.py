@@ -633,7 +633,7 @@ def get_mpi_command(env, mpi_procs, parallel):
         mpiruncmd = 'mpirun -n {mpi_procs} '
 
     if mpiruncmd is not None:
-        if mpiruncmd.strip() != 'time':
+        if mpiruncmd.strip() != 'time' and len(mpiruncmd.strip()) > 0:
             if len([val[0] for val in string.Formatter().parse(mpiruncmd)]) != 0:
                 try:
                     mpiruncmd = mpiruncmd.format(mpi_procs=mpi_procs)
