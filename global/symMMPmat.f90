@@ -33,7 +33,7 @@ MODULE m_symMMPmat
       INTEGER :: i_op,n_ops,is,isi,lpArg
       INTEGER, ALLOCATABLE :: sym_ops(:)
       COMPLEX :: symPhase, intersite_phase
-      REAL    :: symFac,rotbk(3),rotdiff(3),rrot_rec(3,3),rrot(3,3)
+      REAL    :: symFac,rotbk(3),rotdiff(3),rrot_rec(3,3)
 
       mmpmatSym = cmplx_0
 
@@ -69,18 +69,15 @@ MODULE m_symMMPmat
          IF(PRESENT(atomDiff)) THEN
             IF(is <= sym%nop) THEN
                rrot_rec = transpose(sym%mrot(:,:,sym%invtab(is)))
-               rrot = sym%mrot(:,:,is)
             ELSE
                rrot_rec = -transpose(sym%mrot(:,:,sym%invtab(is-sym%nop)))
-               rrot = sym%mrot(:,:,is-sym%nop)
             ENDIF
 
             !TODO: Add phases from non-symorphic symmetries
             rotbk = matmul(rrot_rec,bk)
-            rotdiff = matmul(rrot, atomDiff)
             !TODO: Add phases from backfolding the kpoints
             rotbk = rotbk - CEILING(rotbk-[0.5,0.5,0.5])
-            intersite_phase = exp(tpi_const*ImagUnit*dot_product(rotbk,rotdiff))
+            intersite_phase = exp(tpi_const*ImagUnit*dot_product(rotbk,atomDiff))
          ENDIF
 
          mmpmatSym = mmpmatSym + symFac * symPhase * intersite_phase &

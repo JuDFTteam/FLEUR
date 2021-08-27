@@ -31,13 +31,14 @@ MODULE m_greensfBZint
       INTEGER :: i_gf,l,lp,atomType,atomTypep
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
       INTEGER :: i_elem,i_elemLO,nLO,imatSize,imat,iBand,iop
-      INTEGER :: spin1,spin2,ispin,spin_start,spin_end
+      INTEGER :: spin1,spin2,ispin,spin_start,spin_end,atom,atomp
       COMPLEX :: phase
       REAL    :: atomDiff(3)
       LOGICAL :: l_sphavg,l_intersite
       COMPLEX, ALLOCATABLE :: im(:,:,:,:)
       COMPLEX, ALLOCATABLE :: imSym(:,:)
       TYPE(t_eigVecCoeffs) :: eigVecCoeffs_rot
+      TYPE(t_gfelementtype) :: rep_elem
 
       spin_start = MERGE(1,jspin,gfinp%l_mperp)
       spin_end   = MERGE(3,jspin,gfinp%l_mperp)
@@ -58,9 +59,15 @@ MODULE m_greensfBZint
          atomTypep = gfinp%elem(i_gf)%atomTypep
          l_sphavg  = gfinp%elem(i_gf)%l_sphavg
          l_intersite = gfinp%elem(i_gf)%isIntersite()
-         atomDiff(:) = gfinp%elem(i_gf)%atomDiff(:)
+         atomDiff = gfinp%elem(i_gf)%atomDiff
+         atom = gfinp%elem(i_gf)%atom
+         atomp = gfinp%elem(i_gf)%atomp
 
-         IF(.NOT.gfinp%isUnique(i_gf)) CYCLE
+         IF(.NOT.gfinp%isUnique(i_gf, distinct_symmetry_equivalent_diffs=.TRUE.)) CYCLE
+         IF(gfinp%elem(i_gf)%representative_elem>0) THEN
+            rep_elem = gfinp%elem(gfinp%elem(i_gf)%representative_elem)
+            IF(rep_elem%atom==atom.AND.rep_elem%atomp==atomp) CYCLE
+         ENDIF
 
          i_elem   = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg)
          i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,lo=.TRUE.,l_sphavg=l_sphavg)
@@ -78,14 +85,14 @@ MODULE m_greensfBZint
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
                      imatSize),source=cmplx_0)
 
-         natom_start = MERGE(SUM(atoms%neq(:atomType-1)) + 1,gfinp%elem(i_gf)%atom,.NOT.l_intersite)
-         natom_end   = MERGE(SUM(atoms%neq(:atomType))      ,gfinp%elem(i_gf)%atom,.NOT.l_intersite)
+         natom_start = MERGE(SUM(atoms%neq(:atomType-1)) + 1,atom,.NOT.l_intersite)
+         natom_end   = MERGE(SUM(atoms%neq(:atomType))      ,atom,.NOT.l_intersite)
          !Loop over equivalent atoms
          DO natom = natom_start , natom_end
 
             !Only perform the second atom loop if we calculate intersite elements
-            natomp_start = MERGE(natom,gfinp%elem(i_gf)%atomp,.NOT.l_intersite)
-            natomp_end   = MERGE(natom,gfinp%elem(i_gf)%atomp,.NOT.l_intersite)
+            natomp_start = MERGE(natom,atomp,.NOT.l_intersite)
+            natomp_end   = MERGE(natom,atomp,.NOT.l_intersite)
 
             DO natomp = natomp_start, natomp_end
 

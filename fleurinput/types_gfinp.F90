@@ -729,31 +729,33 @@ CONTAINS
 
    END SUBROUTINE init_gfinp
 
-   PURE LOGICAL FUNCTION isUnique_gfinp(this,index, distinct_kresolved_int)
+   PURE LOGICAL FUNCTION isUnique_gfinp(this,index, distinct_kresolved_int, distinct_symmetry_equivalent_diffs)
       !Return whether the given element is the first with the combination
       !of l lp, atomType, atomTypep, l_sphavg, l_kresolved
 
       CLASS(t_gfinp),   INTENT(IN)  :: this
       INTEGER,          INTENT(IN)  :: index
       LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_kresolved_int
+      LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_symmetry_equivalent_diffs
 
       INTEGER :: i_gf, uniqueIndex
 
-      uniqueIndex = this%getuniqueElement(index, distinct_kresolved_int)
+      uniqueIndex = this%getuniqueElement(index, distinct_kresolved_int, distinct_symmetry_equivalent_diffs)
       isunique_gfinp = uniqueIndex == index
 
    END FUNCTION isUnique_gfinp
 
-   PURE INTEGER FUNCTION getuniqueElement_gfinp(this, index, distinct_kresolved_int) Result(uniqueIndex)
+   PURE INTEGER FUNCTION getuniqueElement_gfinp(this, index, distinct_kresolved_int, distinct_symmetry_equivalent_diffs) Result(uniqueIndex)
 
       CLASS(t_gfinp),   INTENT(IN)  :: this
       INTEGER,          INTENT(IN)  :: index
       LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_kresolved_int
+      LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_symmetry_equivalent_diffs
 
       DO uniqueIndex = 1, index
          !If the element has a representative element set it can not be unique
          !IF(this%elem(uniqueIndex)%representative_elem>0) CYCLE
-         IF(this%elem(uniqueIndex)%equals_coefficients(this%elem(index), distinct_kresolved_int)) THEN
+         IF(this%elem(uniqueIndex)%equals_coefficients(this%elem(index), distinct_kresolved_int, distinct_symmetry_equivalent_diffs)) THEN
             RETURN
          ENDIF
       ENDDO
@@ -1285,16 +1287,20 @@ CONTAINS
 
    END SUBROUTINE init_gfelem
 
-   PURE LOGICAL FUNCTION equals_coefficients_gfelem(this, other, distinct_k_resolved)
+   PURE LOGICAL FUNCTION equals_coefficients_gfelem(this, other, distinct_k_resolved, distinct_symmetry_equivalent_diffs)
 
       CLASS(t_gfelementtype), INTENT(IN)  :: this
       TYPE(t_gfelementtype),  INTENT(IN)  :: other
       LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_k_resolved
+      LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_symmetry_equivalent_diffs
 
-      LOGICAL distinct_k_resolved_arg
+      LOGICAL distinct_k_resolved_arg, distinct_symmetry_equivalent_diffs_arg
 
       distinct_k_resolved_arg = .TRUE.
       IF(PRESENT(distinct_k_resolved)) distinct_k_resolved_arg = distinct_k_resolved
+
+      distinct_symmetry_equivalent_diffs_arg = .FALSE.
+      IF(PRESENT(distinct_symmetry_equivalent_diffs)) distinct_symmetry_equivalent_diffs_arg = distinct_symmetry_equivalent_diffs
 
       equals_coefficients_gfelem = .FALSE.
 
@@ -1307,17 +1313,17 @@ CONTAINS
       IF(distinct_k_resolved_arg) then
          IF(this%l_kresolved_int .neqv. other%l_kresolved_int) RETURN
       ENDIF
-      ! IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) THEN
-      !    IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
-      !    IF(this%representative_elem > 0 .AND. other%representative_elem > 0) THEN
-      !       IF(ANY(ABS(this%representative_diff(:)-other%representative_diff(:)).GT.ATOMDIFF_EPS)) RETURN
-      !    ELSE IF(this%representative_elem > 0) THEN
-      !       IF(ANY(ABS(this%representative_diff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
-      !    ELSE IF(other%representative_elem > 0) THEN
-      !       IF(ANY(ABS(other%representative_diff(:)-this%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
-      !    ENDIF
-      ! ENDIF
-      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
+      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) THEN
+         IF(distinct_symmetry_equivalent_diffs_arg) RETURN
+         IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
+         IF(this%representative_elem > 0 .AND. other%representative_elem > 0) THEN
+            IF(ANY(ABS(this%representative_diff(:)-other%representative_diff(:)).GT.ATOMDIFF_EPS)) RETURN
+         ELSE IF(this%representative_elem > 0) THEN
+            IF(ANY(ABS(this%representative_diff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
+         ELSE IF(other%representative_elem > 0) THEN
+            IF(ANY(ABS(other%representative_diff(:)-this%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
+         ENDIF
+      ENDIF
       IF(this%atom /= other%atom) RETURN
       IF(this%atomp /= other%atomp) RETURN
       equals_coefficients_gfelem = .TRUE.
@@ -1331,12 +1337,11 @@ CONTAINS
       LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_k_resolved
 
       equals_gfelem = .FALSE.
-      IF(.NOT.this%equals_coefficients(other, distinct_k_resolved)) RETURN
-      !We need to check the atomDiff again here, since the deduplication
+      !We need to check the atomDiff explicitly, since the deduplication
       !on the coefficient level has some extra symmetry considerations
       !that should not influence the deduplication. It just influences how
       !many brillouin zone integegrations need to be performed
-      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
+      IF(.NOT.this%equals_coefficients(other, distinct_k_resolved, distinct_symmetry_equivalent_diffs=.TRUE.)) RETURN
       IF(this%iContour.NE.other%iContour) RETURN
       equals_gfelem = .TRUE.
 
