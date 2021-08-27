@@ -603,13 +603,18 @@ CONTAINS
 !      WRITE (fileNum, 396) juPhon%l_potout, juPhon%l_eigout
 
 !      <plotting iplot="0" />
-400   FORMAT('      <plotting iplot="', i0, '" polar="', l1, '">')
-      WRITE (fileNum, 400) sliceplot%iplot, sliceplot%polar
-401   FORMAT('         <plot TwoD="', l1, '" vec1="', 3f5.1,  '" vec2="', 3f5.1, '" vec3="', 3f5.1, '" zero="', 3f5.1, '" file="', a, '"/>')
-      WRITE (fileNum, 401) sliceplot%plot(1)%twodim, sliceplot%plot(1)%vec1(:), sliceplot%plot(1)%vec2(:), sliceplot%plot(1)%vec3(:),&
-                           sliceplot%plot(1)%zero(:), TRIM(ADJUSTL(sliceplot%plot(1)%filename))
-      WRITE (fileNum, '(a)') '      </plotting>'
-
+      IF(SIZE(sliceplot%plot)>0) THEN
+400      FORMAT('      <plotting iplot="', i0, '" polar="', l1, '">')
+         WRITE (fileNum, 400) sliceplot%iplot, sliceplot%polar
+401      FORMAT('         <plot TwoD="', l1, '" vec1="', 3f5.1,  '" vec2="', 3f5.1, '" vec3="', 3f5.1, '" zero="', 3f5.1, '" file="', a, '"/>')
+         WRITE (fileNum, 401) sliceplot%plot(1)%twodim, sliceplot%plot(1)%vec1(:), sliceplot%plot(1)%vec2(:), sliceplot%plot(1)%vec3(:),&
+                              sliceplot%plot(1)%zero(:), TRIM(ADJUSTL(sliceplot%plot(1)%filename))
+         WRITE (fileNum, '(a)') '      </plotting>'
+      ELSE
+402      FORMAT('      <plotting iplot="', i0, '" polar="', l1, '"/>')
+         WRITE (fileNum, 402) sliceplot%iplot, sliceplot%polar
+      ENDIF
+      
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
 410   FORMAT('      <chargeDensitySlicing numkpt="', i0, '" minEigenval="', f0.8, '" maxEigenval="', f0.8, '" nnne="', i0, '" pallst="', l1, '"/>')
       WRITE (fileNum, 410) sliceplot%kk, sliceplot%e1s, sliceplot%e2s, sliceplot%nnne, input%pallst
