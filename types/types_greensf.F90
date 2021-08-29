@@ -158,6 +158,8 @@ MODULE m_types_greensf
          END IF
 
          CALL mpi_bc(this%l_calc,rank,mpi_comm)
+         CALL mpi_bc(this%l_sphavg,rank,mpi_comm)
+         CALL mpi_bc(this%l_kresolved,rank,mpi_comm)
 
          CALL this%contour%mpi_bc(mpi_comm,rank)
 
