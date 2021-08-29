@@ -33,6 +33,7 @@ MODULE m_greensf_io
       TYPE(t_input),                INTENT(IN)  :: input
       TYPE(t_gfinp),                INTENT(IN)  :: gfinp
       TYPE(t_atoms),                INTENT(IN)  :: atoms
+      TYPE(t_kpts),                 INTENT(IN)  :: kpts
       CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: inFilename
       INTEGER(HID_T),               INTENT(OUT) :: fileID
 
@@ -424,7 +425,7 @@ MODULE m_greensf_io
          dims(:6)=[2,g%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspins,2]
          dimsInt=dims
          DO ikpt = 1, SIZE(g%gmmpmat_k)
-            WRITE(groupName,200) ikpt
+            WRITE(groupName,201) ikpt
 201         FORMAT('kresolved-',i0)
             CALL h5screate_simple_f(6,dims(:6),DataSpaceID,hdfError)
             CALL h5dcreate_f(groupID, groupName, H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
