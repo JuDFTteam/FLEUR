@@ -698,8 +698,8 @@ CONTAINS
          ENDIF
       ENDIF
 
-      IF(l_all_kresolved) THEN
-         CALL juDFT_error("Completely k-resolved Greens functions not implemented",&
+      IF(l_all_kresolved.AND.input%bz_integration/=BZINT_METHOD_HIST) THEN
+         CALL juDFT_error("Completely k-resolved Greens functions only implemented for histogram method",&
                           calledby="init_gfinp")
       ENDIF
 

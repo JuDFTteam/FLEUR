@@ -29,7 +29,7 @@ MODULE m_greensfCalcImagPart
       INTEGER  :: ikpt_i,ikpt,nBands,jsp,i_gf,nLO,imatSize
       INTEGER  :: l,lp,m,mp,iBand,ie,j,eGrid_start,eGrid_end
       INTEGER  :: indUnique,i_elem,imat,iLO,iLOp,i_elemLO,i_elem_imag,i_elemLO_imag
-      LOGICAL  :: l_zero,l_sphavg,l_kresolved_int
+      LOGICAL  :: l_zero,l_sphavg,l_kresolved_int,l_kresolved
       REAL     :: del,eb,wtkpt
       COMPLEX  :: fac,weight
       INTEGER, ALLOCATABLE :: ev_list(:)
@@ -77,6 +77,8 @@ MODULE m_greensfCalcImagPart
             lp = gfinp%elem(i_gf)%lp
             l_sphavg = gfinp%elem(i_gf)%l_sphavg
             l_kresolved_int = gfinp%elem(i_gf)%l_kresolved_int
+            l_kresolved = gfinp%elem(i_gf)%l_kresolved
+
 
             IF(.NOT.gfinp%isUnique(i_gf, distinct_kresolved_int=.TRUE.)) CYCLE
 
@@ -98,7 +100,7 @@ MODULE m_greensfCalcImagPart
 
             !$OMP parallel default(none) &
             !$OMP shared(input,gfinp,greensfBZintCoeffs,greensfImagPart) &
-            !$OMP shared(i_elem,i_elemLO,i_elem_imag,i_elemLO_imag,nLO,l,lp,ikpt_i,nBands,eMesh,l_sphavg,imatSize,l_kresolved_int)&
+            !$OMP shared(i_elem,i_elemLO,i_elem_imag,i_elemLO_imag,nLO,l,lp,ikpt_i,nBands,eMesh,l_sphavg,imatSize,l_kresolved_int,l_kresolved)&
             !$OMP shared(del,eb,eig,weights,indBound,fac,wtkpt,spin_ind) &
             !$OMP private(ie,iLO,iLOp,imat,m,mp,iBand,j,eGrid_start,eGrid_end,weight,imag,l_zero)
             ALLOCATE(imag(SIZE(eMesh),imatSize),source=cmplx_0)
@@ -129,9 +131,13 @@ MODULE m_greensfCalcImagPart
                         ie = eGrid_start
 
                         SELECT CASE(input%bz_integration)
-                        CASE(0) !Histogram Method
-                           weight = -fac * pi_const * wtkpt/del
-                        CASE(3) !Tetrahedron method
+                        CASE(BZINT_METHOD_HIST) !Histogram Method
+                           IF(l_kresolved) THEN
+                              weight = -fac * pi_const/del
+                           ELSE
+                              weight = -fac * pi_const * wtkpt/del
+                           ENDIF
+                        CASE(BZINT_METHOD_TETRA) !Tetrahedron method
                            weight = weights(ie,iBand)
                         CASE DEFAULT
                         END SELECT

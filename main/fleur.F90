@@ -191,7 +191,7 @@ CONTAINS
       ALLOCATE (greensFunction(MAX(1, fi%gfinp%n)))
       IF (fi%gfinp%n > 0) THEN
          DO i_gf = 1, fi%gfinp%n
-            CALL greensFunction(i_gf)%init(fi%gfinp%elem(i_gf), fi%gfinp, fi%atoms, fi%input)
+            CALL greensFunction(i_gf)%init(fi%gfinp%elem(i_gf), fi%gfinp, fi%atoms, fi%input, nkpt=fi%kpts%nkpt)
          ENDDO
       ENDIF
       ! Initialize Green's function (end)
@@ -331,7 +331,7 @@ CONTAINS
             ENDDO
             IF (ALL(greensFunction(fi%gfinp%hiaElem)%l_calc)) THEN
                hub1data%iter = hub1data%iter + 1
-               CALL hubbard1_setup(fi%atoms, fi%cell, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, nococonv, vTot, &
+               CALL hubbard1_setup(fi%atoms, fi%cell, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, fi%kpts, nococonv, vTot, &
                                    greensFunction(fi%gfinp%hiaElem), hub1data, results, inDen)
             ELSE
                IF (fmpi%irank .EQ. 0) WRITE (*, *) 'Not all Greens Functions available: Running additional iteration'

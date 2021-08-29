@@ -43,7 +43,7 @@ MODULE m_greensfCalcRealPart
       INTEGER :: contourShape, iContour
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: ikpt, ikpt_i
-      LOGICAL :: l_fixedCutoffset,l_sphavg,l_kresolved_int
+      LOGICAL :: l_fixedCutoffset,l_sphavg,l_kresolved_int,l_kresolved
       REAL    :: del,eb,fixedCutoff,bk(3)
       REAL,    ALLOCATABLE :: eMesh(:)
       COMPLEX, ALLOCATABLE :: gmat(:,:,:),imag(:,:,:)
@@ -216,7 +216,7 @@ MODULE m_greensfCalcRealPart
                l  = g(i_gf)%elem%l
                lp = g(i_gf)%elem%lp
                l_sphavg = g(i_gf)%elem%l_sphavg
-               contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
+               l_kresolved = g(i_gf)%elem%l_kresolved
                nLO = g(i_gf)%elem%countLOs(atoms)
                IF(g(i_gf)%elem%representative_elem > 0) CYCLE
                IF(.NOT.g(i_gf)%elem%l_kresolved_int) CYCLE
@@ -224,7 +224,7 @@ MODULE m_greensfCalcRealPart
                i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=.TRUE.)
                i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved_int=.TRUE.)
 
-               ALLOCATE(gmat(SIZE(g(i_gf)%contour%e),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), source=cmplx_0)
+               IF(.NOT.l_kresolved) ALLOCATE(gmat(SIZE(g(i_gf)%contour%e),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), source=cmplx_0)
 
                CALL timestart("Green's Function: Kramer-Kronigs-Integration")
                DO jspin = spin_start, spin_end
@@ -232,17 +232,20 @@ MODULE m_greensfCalcRealPart
 
                      IF(l_sphavg) THEN
                         imag = greensfImagPart%applyCutoff(i_elem,i_gf,jspin,l_sphavg,ikpt=ikpt_i)
-                        CALL kkintgr(imag,ipm==2,gmat,iContour)
+                        IF(l_kresolved) THEN
+                           CALL kkintgr(imag,ipm==2,g(i_gf)%gmmpMat_k(:,:,:,jspin,ipm,ikpt),iContour)
+                        ELSE
+                           CALL kkintgr(imag,ipm==2,gmat,iContour)
+                           g(i_gf)%gmmpMat(:,:,:,jspin,ipm) = g(i_gf)%gmmpMat(:,:,:,jspin,ipm) + gmat
+                        ENDIF
                      ELSE
                         CALL juDFT_error("No Green's function with k-resolution and radial dependence implemented")
                      ENDIF
 
-                     g(i_gf)%gmmpMat(:,:,:,jspin,ipm) = g(i_gf)%gmmpMat(:,:,:,jspin,ipm) + gmat
-
                   ENDDO
                ENDDO
                CALL timestop("Green's Function: Kramer-Kronigs-Integration")
-               DEALLOCATE(gmat)
+               IF(.NOT.l_kresolved) DEALLOCATE(gmat)
             ENDDO
          ENDDO
          CALL timestop("Green's Function: K-Resolved Kramer-Kronigs-Integration")
