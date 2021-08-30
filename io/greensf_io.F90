@@ -403,8 +403,13 @@ MODULE m_greensf_io
       CALL io_write_attint0(groupID,"lp",g%elem%lp)
       CALL io_write_attint0(groupID,"atomType",g%elem%atomType)
       CALL io_write_attint0(groupID,"atomTypep",g%elem%atomTypep)
-      CALL io_write_attchar0(groupID,"atom",TRIM(ADJUSTL(atoms%label(g%elem%atom))))
-      CALL io_write_attchar0(groupID,"atomp",TRIM(ADJUSTL(atoms%label(g%elem%atomp))))
+      IF(g%elem%atom/=0) THEN
+         CALL io_write_attchar0(groupID,"atom",TRIM(ADJUSTL(atoms%label(g%elem%atom))))
+         CALL io_write_attchar0(groupID,"atomp",TRIM(ADJUSTL(atoms%label(g%elem%atomp))))
+      ELSE
+         CALL io_write_attchar0(groupID,"atom",'0')
+         CALL io_write_attchar0(groupID,"atomp",'0')
+      ENDIF
       CALL io_write_attint0(groupID,'iContour',contour_mapping(g%elem%iContour))
       CALL io_write_attlog0(groupID,'l_onsite',.NOT.g%elem%isOffDiag())
       CALL io_write_attlog0(groupID,'l_sphavg',g%l_sphavg)
