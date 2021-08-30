@@ -71,8 +71,8 @@ def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densitie", "1:")
 
-    assert abs(tenergy - -4205.143) <= 0.001
-    assert abs(dist - 7.609001) <= 0.0001
+    assert abs(tenergy - -4205.211) <= 0.001
+    assert abs(dist - 6.981977) <= 0.0001
 
     # Stage 2
     res_files = execute_fleur(test_file_folder, only_copy=[['inp-2.xml', 'inp.xml'], 'n_mmp_mat'], rm_files=['mixing_history'])
@@ -85,8 +85,8 @@ def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
     efermi = grep_number(res_files['out'], "first approx. to ef", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
 
-    assert abs(efermi - 0.125) <= 0.001
-    assert abs(tenergy - -4205.3645) <= 0.0001
+    assert abs(efermi - 0.1917) <= 0.001
+    assert abs(tenergy - -4205.4319) <= 0.0001
 
     # Stage 3
     res_files = execute_fleur(test_file_folder, only_copy=[['inp-3.xml', 'inp.xml']], rm_files=['mixing_history'])
@@ -95,8 +95,8 @@ def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
 
-    assert grep_exists(res_files['relax.xml'], "4205.364")
-    assert grep_exists(res_files['relax.xml'], "1.3806000000   -0.0179")
+    assert grep_exists(res_files['relax.xml'], "4205.431")
+    assert grep_exists(res_files['relax.xml'], "1.3806000000   -0.0094")
 
 
 @pytest.mark.soc

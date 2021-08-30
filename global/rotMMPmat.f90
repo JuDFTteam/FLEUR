@@ -84,18 +84,18 @@ MODULE m_rotMMPmat
       IF(real_space_rotation_arg.AND.PRESENT(dwgn)) THEN
          DO ispin = 1, SIZE(mmpmat,3)
             IF(inverseArg) THEN
-               mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgn)),mmpmatOut(:,:,ispin))
-               IF(PRESENT(dwgnp)) THEN
-                  mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgnp)
-               ELSE
-                  mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgn)
-               ENDIF
-            ELSE
                mmpmatOut(:,:,ispin) = matmul(dwgn,mmpmatOut(:,:,ispin))
                IF(PRESENT(dwgnp)) THEN
                   mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),conjg(transpose(dwgnp)))
                ELSE
                   mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),conjg(transpose(dwgn)))
+               ENDIF
+            ELSE
+               mmpmatOut(:,:,ispin) = matmul(conjg(transpose(dwgn)),mmpmatOut(:,:,ispin))
+               IF(PRESENT(dwgnp)) THEN
+                  mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgnp)
+               ELSE
+                  mmpmatOut(:,:,ispin) = matmul(mmpmatOut(:,:,ispin),dwgn)
                ENDIF
             ENDIF
          ENDDO
@@ -170,7 +170,7 @@ MODULE m_rotMMPmat
       COMPLEX, ALLOCATABLE :: mmpmatOut(:,:,:)
       COMPLEX :: dwgn(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       COMPLEX :: dwgnp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      INTEGER :: iopArg
+      INTEGER :: iopArg, lpArg
       LOGICAL :: reciprocalArg, inverseArg
 
       IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
@@ -184,21 +184,22 @@ MODULE m_rotMMPmat
       inverseArg = .FALSE.
       IF(PRESENT(inverse)) inverseArg = inverse
 
+      lpArg = l
+      IF(PRESENT(lp)) lpArg = lp
+
       iopArg = iop
       IF(reciprocalArg) THEN
-         IF(iop > sym%nop) THEN
-            iopArg = iop-sym%nop
+         IF(iop <= sym%nop) THEN
+            iopArg = sym%invtab(iop)
+         ELSE
+            iopArg = sym%invtab(iop-sym%nop)
          ENDIF
       ELSE IF(inverseArg) THEN
          iopArg = sym%invtab(iop)
       ENDIF
 
       dwgn = sym%d_wgn(:,:,l,iopArg)
-      IF(PRESENT(lp)) THEN
-         dwgnp = sym%d_wgn(:,:,lp,iopArg)
-      ELSE
-         dwgnp = dwgn
-      ENDIF
+      dwgnp = sym%d_wgn(:,:,lpArg,iopArg)
 
       IF(reciprocalArg) THEN
          IF(iop <= sym%nop) THEN

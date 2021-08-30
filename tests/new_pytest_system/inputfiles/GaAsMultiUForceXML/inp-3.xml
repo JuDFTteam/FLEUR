@@ -17,9 +17,14 @@
       <bzIntegration valenceElectrons="28.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default" />
          <kPointLists>
-         <kPointList name="default" count="1">
-             <kPoint weight="    8.000000">    0.375000     0.375000     0.250000</kPoint>
-         </kPointList>
+         <kPointList name="default" count="6" nx="3" ny="3" nz="3" type="mesh">
+               <kPoint weight="     2.0000000000000">   1.00/3.00    1.00/3.00    1.00/3.00</kPoint>
+               <kPoint weight="     6.0000000000000">   0.00/3.00    1.00/3.00    1.00/3.00</kPoint>
+               <kPoint weight="     6.0000000000000">   1.00/3.00    1.00/3.00    2.00/3.00</kPoint>
+               <kPoint weight="     6.0000000000000">   0.00/3.00    0.00/3.00    1.00/3.00</kPoint>
+               <kPoint weight="     6.0000000000000">  -1.00/3.00    0.00/3.00    1.00/3.00</kPoint>
+               <kPoint weight="     1.0000000000000">   0.00/3.00    0.00/3.00    0.00/3.00</kPoint>
+            </kPointList>
          </kPointLists>
       </bzIntegration>
       <symmetryOperations>
@@ -28,27 +33,27 @@
             <row-2>0 1 0 .0000000000</row-2>
             <row-3>0 0 1 .0000000000</row-3>
          </symOp>
-	 <symOp>
+         <symOp>
            <row-1>0 1 0 .0000000000</row-1>
            <row-2>1 0 0 .0000000000</row-2>
            <row-3>0 0 1 .0000000000</row-3>
          </symOp>
-	 <symOp>
+    <symOp>
            <row-1>0 0 1 .0000000000</row-1>
            <row-2>0 1 0 .0000000000</row-2>
            <row-3>1 0 0 .0000000000</row-3>
          </symOp>
-	 <symOp>
+    <symOp>
            <row-1>0 0 1 .0000000000</row-1>
            <row-2>1 0 0 .0000000000</row-2>
            <row-3>0 1 0 .0000000000</row-3>
          </symOp>
-	 <symOp>
+    <symOp>
            <row-1>0 1 0 .0000000000</row-1>
            <row-2>0 0 1 .0000000000</row-2>
            <row-3>1 0 0 .0000000000</row-3>
          </symOp>
-	 <symOp>
+    <symOp>
            <row-1>1 0 0 .0000000000</row-1>
            <row-2>0 0 1 .0000000000</row-2>
            <row-3>0 1 0 .0000000000</row-3>

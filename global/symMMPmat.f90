@@ -77,7 +77,7 @@ MODULE m_symMMPmat
             rotbk = matmul(rrot_rec,bk)
             !TODO: Add phases from backfolding the kpoints
             rotbk = rotbk - CEILING(rotbk-[0.5,0.5,0.5])
-            intersite_phase = exp(tpi_const*ImagUnit*dot_product(rotbk,atomDiff))
+            intersite_phase = exp(-tpi_const*ImagUnit*dot_product(rotbk,atomDiff))
          ENDIF
 
          mmpmatSym = mmpmatSym + symFac * symPhase * intersite_phase &
