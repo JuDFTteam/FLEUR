@@ -401,8 +401,8 @@ MODULE m_greensf_io
 
       CALL io_write_attint0(groupID,"l",g%elem%l)
       CALL io_write_attint0(groupID,"lp",g%elem%lp)
-      CALL io_write_attchar0(groupID,"atomType",TRIM(ADJUSTL(atoms%speciesName(g%elem%atomType))))
-      CALL io_write_attchar0(groupID,"atomTypep",TRIM(ADJUSTL(atoms%speciesName(g%elem%atomTypep))))
+      CALL io_write_attint0(groupID,"atomType",g%elem%atomType)
+      CALL io_write_attint0(groupID,"atomTypep",g%elem%atomTypep)
       CALL io_write_attchar0(groupID,"atom",TRIM(ADJUSTL(atoms%label(g%elem%atom))))
       CALL io_write_attchar0(groupID,"atomp",TRIM(ADJUSTL(atoms%label(g%elem%atomp))))
       CALL io_write_attint0(groupID,'iContour',contour_mapping(g%elem%iContour))
