@@ -635,7 +635,7 @@ CONTAINS
                                                          !we take the onsite element as reference
 
          CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
-                                        this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,&
+                                        this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,input,&
                                         .NOT.written(atomType),nOtherAtoms,atomTypepList)
          written(atomType) = .TRUE.
 
@@ -651,7 +651,7 @@ CONTAINS
             WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
 
             CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
-                                           this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,&
+                                           this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
                                            .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
 
          ENDDO
@@ -914,11 +914,12 @@ CONTAINS
    END FUNCTION find_symmetry_rotated_bzcoeffs_gfinp
 
    SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_fixedCutoffset,fixedCutoff,&
-                                          refCutoff,atoms,cell,sym,l_write,nOtherAtoms,atomTypepList)
+                                          refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList)
 
       USE m_types_atoms
       USE m_types_cell
       USE m_types_sym
+      USE m_types_input
       USE m_atom_shells
 
       !This is essentially a simplified version of chkmt, because we have a given
@@ -937,6 +938,7 @@ CONTAINS
       TYPE(t_atoms),       INTENT(IN)     :: atoms
       TYPE(t_cell),        INTENT(IN)     :: cell
       TYPE(t_sym),         INTENT(IN)     :: sym
+      TYPE(t_input),       INTENT(IN)     :: input
       LOGICAL,             INTENT(IN)     :: l_write
       INTEGER,             INTENT(OUT)    :: nOtherAtoms
       INTEGER,ALLOCATABLE, INTENT(OUT)    :: atomTypepList(:) !Which other atomtypes were added (not equal to refAtom)
@@ -952,7 +954,7 @@ CONTAINS
 
       CALL timestart("Green's Function: Add nearest Neighbors")
 
-      CALL construct_atom_shells(refAtom, nshells, atoms, cell, sym, shellDistances,&
+      CALL construct_atom_shells(refAtom, nshells, atoms, cell, sym, input%film, shellDistances,&
                                  shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells)
 
       ALLOCATE(atomTypepList(atoms%ntype),source=0)

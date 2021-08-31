@@ -18,7 +18,7 @@ MODULE m_atom_shells
 
    CONTAINS
 
-   SUBROUTINE construct_atom_shells(referenceAtom, nshells, atoms, cell, sym, shellDistances,&
+   SUBROUTINE construct_atom_shells(referenceAtom, nshells, atoms, cell, sym, film, shellDistances,&
                                     shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells)
 
       !----------------------------------------------------------------------------------------------
@@ -43,6 +43,7 @@ MODULE m_atom_shells
       TYPE(t_atoms),       INTENT(IN)   :: atoms
       TYPE(t_cell),        INTENT(IN)   :: cell
       TYPE(t_sym),         INTENT(IN)   :: sym
+      LOGICAL,             INTENT(IN)   :: film
       REAL, ALLOCATABLE,   INTENT(OUT)  :: shellDistances(:)
       REAL, ALLOCATABLE,   INTENT(OUT)  :: shellDiffs(:,:,:)
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: shellAtoms(:,:,:)
@@ -79,7 +80,7 @@ MODULE m_atom_shells
          WRITE(oUnit,'(A,I0)') "Number of unit cells in each direction: ", num_cells + 1
          !Calculate the vectors and distances to neighbours in the next
          !extension of unit cells
-         CALL calculate_next_neighbours(referenceAtom, atoms, cell%amat, newNeighbours, newAtoms,&
+         CALL calculate_next_neighbours(referenceAtom, atoms, cell%amat, film, newNeighbours, newAtoms,&
                                         newDiffs, newDistances, num_cells)
 
          WRITE(oUnit,'(A,I0)') "New neighbours found: ", newNeighbours
@@ -230,7 +231,7 @@ MODULE m_atom_shells
    END SUBROUTINE construct_atom_shells
 
 
-   SUBROUTINE calculate_next_neighbours(referenceAtom, atoms, amat, neighboursFound, neighbourAtoms,&
+   SUBROUTINE calculate_next_neighbours(referenceAtom, atoms, amat, film, neighboursFound, neighbourAtoms,&
                                         neighbourDiffs, neighbourDistances, lastBorder)
 
       !Calculate the distances and vectors to neighbour atoms to a reference atom in a
@@ -244,13 +245,14 @@ MODULE m_atom_shells
       INTEGER,              INTENT(IN)    :: referenceAtom
       TYPE(t_atoms),        INTENT(IN)    :: atoms
       REAL,                 INTENT(IN)    :: amat(:,:)
+      LOGICAL,              INTENT(IN)    :: film
       INTEGER,              INTENT(OUT)   :: neighboursFound
       INTEGER, ALLOCATABLE, INTENT(OUT)   :: neighbourAtoms(:,:)
       REAL,    ALLOCATABLE, INTENT(OUT)   :: neighbourDiffs(:,:)
       REAL,    ALLOCATABLE, INTENT(OUT)   :: neighbourDistances(:)
       INTEGER,              INTENT(INOUT) :: lastBorder
 
-      INTEGER :: maxNeighbours,iAtom,refAt,identicalAtoms,i,j,k,n,na
+      INTEGER :: maxNeighbours,iAtom,refAt,identicalAtoms,i,j,k,n,na,zmax
       REAL :: amatDet, currentDist
       REAL :: tau(3),refPos(3),offsetPos(3),currentDiff(3),pos(3)
       REAL :: invAmat(3,3),posCart(3,atoms%nat)
@@ -270,6 +272,9 @@ MODULE m_atom_shells
          maxNeighbours = atoms%nat * atoms%neq(referenceAtom) * ((2*lastBorder+1)**3 - (2*lastBorder-1)**3)
       ENDIF
 
+      zmax = lastBorder
+      IF(film) zmax = 0
+
       ALLOCATE(neighbourAtoms(2,maxNeighbours), source=0)
       ALLOCATE(neighbourDiffs(3,maxNeighbours), source=0.0)
       ALLOCATE(neighbourDistances(maxNeighbours), source=0.0)
@@ -286,7 +291,7 @@ MODULE m_atom_shells
          identicalAtoms = 0
          DO i = -lastBorder, lastBorder
             DO j = -lastBorder, lastBorder
-               DO k = -lastBorder, lastBorder
+               DO k = -zmax, zmax
 
                   IF(ALL(ABS([i,j,k]) < lastBorder).AND.lastBorder/=1) CYCLE
 
