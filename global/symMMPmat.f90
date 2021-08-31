@@ -81,7 +81,7 @@ MODULE m_symMMPmat
          ENDIF
 
          mmpmatSym = mmpmatSym + symFac * symPhase * intersite_phase &
-                                   * rotMMPmat(mmpmat,sym,is,l,lp=lp,reciprocal=.TRUE.)
+                                   * rotMMPmat(mmpmat,sym,is,l,lp=lp)
 
       ENDDO
 

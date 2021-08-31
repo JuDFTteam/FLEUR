@@ -30,6 +30,8 @@ CONTAINS
   !***************************************************
   SUBROUTINE integer_wigner_1op(mrot,bmat,lmax, d_wgn, write)
 
+    IMPLICIT NONE
+
     INTEGER, INTENT(IN)  :: lmax
     INTEGER, INTENT(IN)  :: mrot(3,3)
     REAL,    INTENT(IN)  :: bmat(3,3)
@@ -46,6 +48,8 @@ CONTAINS
   !        private routine for integer rotation
   !***************************************************
   SUBROUTINE integer_wigner(nop,mrot,bmat,lmax, d_wgn, write)
+
+    IMPLICIT NONE
 
     INTEGER, INTENT(IN)  :: nop,lmax
     INTEGER, INTENT(IN)  :: mrot(3,3,nop)

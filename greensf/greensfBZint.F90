@@ -128,7 +128,11 @@ MODULE m_greensfBZint
                                                                                       - atoms%taual(:,natomp)))
                      ENDIF
 
-                     IF(ispin==3) im = -im
+                     IF(ispin<3) THEN
+                        im = conjg(im)
+                     ELSE
+                        im = -im
+                     ENDIF
 
 #ifndef CPP_NOTYPEPROCINOMP
                      !$omp parallel default(none) &
