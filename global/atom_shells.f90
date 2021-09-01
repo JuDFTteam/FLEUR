@@ -54,7 +54,7 @@ MODULE m_atom_shells
       REAL, PARAMETER :: eps = 1e-5
 
       INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells
-      INTEGER :: ishell,i,iAtom,atomTypep,refAt
+      INTEGER :: ishell,i,iAtom,atomTypep,refAt,completed_atom_shells
       LOGICAL :: l_unfinished_shell,l_found_shell,l_add
       REAL :: min_distance_to_border(3), distance,distance_to_border, lastDist
       REAL :: leftBorder(3),rightBorder(3),refPos(3)
@@ -169,37 +169,43 @@ MODULE m_atom_shells
             !Calculate how many shells correspond to the requested nshells
             !We look if there can possibly be more elements outside the currently
             !chosen quadrant of cells
+
+            min_distance_to_border = 9e99
+            DO refAt = SUM(atoms%neq(:referenceAtom-1)) + 1, SUM(atoms%neq(:referenceAtom))
+               refPos(:) = atoms%taual(:,refAt)
+
+               DO i = 1, 3
+                  !Distance to border in direction of lattice vector
+                  leftBorder  = cell%amat(:,i) * (num_cells + refPos(i))
+                  rightBorder = cell%amat(:,i) * (num_cells + 1 - refPos(i))
+                  distance_to_border = MIN(norm2(leftBorder),norm2(rightBorder))
+                  IF(distance_to_border<min_distance_to_border(i)) THEN
+                     min_distance_to_border(i) = distance_to_border
+                  ENDIF
+               ENDDO
+            ENDDO
+
             lastDist = 0.0
             atomShells1 = 0
+            completed_atom_shells = 0
             DO ishell = 1, actualShells
-               IF(shellDistances(ishell)-lastDist > eps) atomShells1 = atomShells1 + 1
-               lastDist = shellDistances(ishell)
-               IF(atomShells1==nshells) THEN
-                  distance = SQRT(shellDistances(ishell))
-
-                  min_distance_to_border = 9e99
-                  DO refAt = SUM(atoms%neq(:referenceAtom-1)) + 1, SUM(atoms%neq(:referenceAtom))
-                     refPos(:) = atoms%taual(:,refAt)
-
-                     DO i = 1, 3
-                        !Distance to border in direction of lattice vector
-                        leftBorder  = cell%amat(:,i) * (num_cells + refPos(i))
-                        rightBorder = cell%amat(:,i) * (num_cells + 1 - refPos(i))
-                        distance_to_border = MIN(norm2(leftBorder),norm2(rightBorder))
-                        IF(distance_to_border<min_distance_to_border(i)) THEN
-                           min_distance_to_border(i) = distance_to_border
-                        ENDIF
-                     ENDDO
-                  ENDDO
-
-                  !-1e-12 to avoid uneccesary calculations where both are equla to numerical precision
-                  IF(ALL(min_distance_to_border(:)-distance > -eps)) THEN
-                     WRITE(oUnit,'(A)') "Shells finished."
-                     l_unfinished_shell = .FALSE.
+               IF(shellDistances(ishell)-lastDist > eps) THEN
+                  atomShells1 = atomShells1 + 1
+                  IF(ALL(min_distance_to_border(:)-SQRT(shellDistances(ishell)) > eps)) THEN
+                     completed_atom_shells = completed_atom_shells + 1
+                  ENDIF 
+                  IF(atomShells1==nshells) THEN
+                     !-1e-12 to avoid uneccesary calculations where both are equla to numerical precision
+                     IF(ALL(min_distance_to_border(:)-SQRT(shellDistances(ishell)) > eps)) THEN
+                        WRITE(oUnit,'(A)') "Shells finished."
+                        l_unfinished_shell = .FALSE.
+                     ENDIF
+                     EXIT
                   ENDIF
-                  EXIT
                ENDIF
+               lastDist = shellDistances(ishell)  
             ENDDO
+            WRITE(oUnit,'(A,I0)') 'Distance shells complete: ', completed_atom_shells
             CALL timestop('Checking completeness of shell')
          ENDIF
       ENDDO

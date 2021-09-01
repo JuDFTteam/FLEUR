@@ -16,7 +16,7 @@ MODULE m_types_gfinp
    INTEGER, PARAMETER :: CONTOUR_SEMICIRCLE_CONST = 2
    INTEGER, PARAMETER :: CONTOUR_DOS_CONST        = 3
 
-   REAL,    PARAMETER :: ATOMDIFF_EPS = 1e-7
+   REAL,    PARAMETER :: ATOMDIFF_EPS = 1e-5
 
    TYPE t_gfelementtype
       !defines the l and atomType elements for given greens function element
