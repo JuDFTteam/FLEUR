@@ -115,6 +115,10 @@ MODULE m_atom_shells
                atomTypep = atoms%itype(sortedAtoms(2,iAtom))
                IF(atoms%itype(shellAtoms(2,1,ishell))/=atomTypep) CYCLE
 
+               IF(numAtomsShell(ishell)+1>SIZE(shellDistances)) THEN
+                  CALL alloc_shells(shellAtoms, shellDiffs, shellDistances, numAtomsShell)
+               ENDIF
+
                numAtomsShell(ishell) = numAtomsShell(ishell) + 1
                shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
                shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
@@ -146,15 +150,15 @@ MODULE m_atom_shells
 
             !Add shell with new distance
             IF(.NOT.l_found_shell) THEN
-               CALL insert_new_shell(actualShells+1, actualShells, shellAtoms, shellDiffs, shellDistances, numAtomsShell)
-
+               ishell = actualShells + 1
+               CALL insert_new_shell(ishell, actualShells, shellAtoms, shellDiffs, shellDistances, numAtomsShell)
+               
                atomShells = atomShells + 1
                numAtomsShell(ishell) = numAtomsShell(ishell) + 1
                shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
                shellDistances(ishell) = sortedDistances(iAtom)
                shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
             ENDIF
-
          ENDDO
          CALL timestop('Grouping Elements into Shells')
 
