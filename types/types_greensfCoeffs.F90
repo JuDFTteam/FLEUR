@@ -37,7 +37,8 @@ MODULE m_types_greensfCoeffs
          COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
 
          CONTAINS
-            PROCEDURE, PASS :: init    =>  greensfBZintCoeffs_init
+            PROCEDURE, PASS :: init             => greensfBZintCoeffs_init
+            PROCEDURE, PASS :: add_contribution => greensfBZintCoeffs_add_contribution
       END TYPE t_greensfBZintCoeffs
 
 
@@ -132,6 +133,60 @@ MODULE m_types_greensfCoeffs
 
       END SUBROUTINE greensfBZintCoeffs_init
 
+      SUBROUTINE greensfBZintCoeffs_add_contribution(this, i_elem, i_elemLO, ikpt_i, iBand, ispin, nLO, imat, l_sphavg, contribution)
+
+         CLASS(t_greensfBZintCoeffs),  INTENT(INOUT)   :: this
+         INTEGER,                      INTENT(IN)      :: i_elem,i_elemLO,ikpt_i,ispin,nLO,iBand,imat
+         LOGICAL,                      INTENT(IN)      :: l_sphavg
+         COMPLEX,                      INTENT(IN)      :: contribution(-lmaxU_const:,-lmaxU_const:)
+
+         INTEGER :: iLO
+
+         IF(l_sphavg) THEN
+            !Spherically averaged (already multiplied with scalar products)
+            this%sphavg(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%sphavg(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF(imat.EQ.1) THEN
+            !imat 1-4: coefficients for Valence-Valence contribution
+            this%uu(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%uu(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF(imat.EQ.2) THEN
+            this%dd(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%dd(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF(imat.EQ.3) THEN
+            this%ud(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%ud(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF(imat.EQ.4) THEN
+            this%du(iBand,:,:,i_elem,ikpt_i,ispin) = &
+               this%du(iBand,:,:,i_elem,ikpt_i,ispin) + contribution
+         ELSE IF((imat-4.0)/2.0<=nLO) THEN
+            !imat 5 - 4+2*numberofLOs: coefficients for Valence-LO contribution
+            iLO = CEILING(REAL(imat-4.0)/2.0)
+            IF(MOD(imat-4,2)==1) THEN
+               this%uulo(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%uulo(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+            ELSE IF(MOD(imat-4,2)==0) THEN
+               this%dulo(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%dulo(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+            ENDIF
+         ELSE IF((imat-4.0)/2.0<=2.0*nLO) THEN
+            !imat 4+2*numberofLOs+1 - 4+4*numberofLOs: coefficients for LO-Valence contribution
+            iLO = CEILING(REAL(imat-4.0-2*nLO)/2.0)
+            IF(MOD(imat-4-2*nLO,2)==1) THEN
+               this%ulou(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%ulou(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+            ELSE IF(MOD(imat-4-2*nLO,2)==0) THEN
+               this%ulod(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%ulod(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+            ENDIF
+         ELSE
+            !imat 4+4*numberofLOs+1 - 4+4*numberofLOs+numberofLOs**2: coefficients for LO-LO contribution
+            iLO = imat - 4 - 4*nLO
+            this%uloulop(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) = &
+                  this%uloulop(iBand,:,:,iLO,i_elemLO,ikpt_i,ispin) + contribution
+         ENDIF
+
+      END SUBROUTINE greensfBZintCoeffs_add_contribution
 
       SUBROUTINE greensfImagPart_init(this,gfinp,atoms,input,noco,l_calc,nkpts)
 
@@ -347,70 +402,76 @@ MODULE m_types_greensfCoeffs
 
       END SUBROUTINE greensfImagPart_scale
 
-      PURE FUNCTION greensfImagPart_applyCutoff(this,i_elem,i_gf,m,mp,spin,l_sphavg,imat,iLO,iLOp,ikpt) Result(imagpartCut)
+      PURE FUNCTION greensfImagPart_applyCutoff(this,i_elem,i_gf,spin,l_sphavg,imat,iLO,iLOp,ikpt) Result(imagpartCut)
 
          CLASS(t_greensfImagPart), INTENT(IN)   :: this
          INTEGER,                  INTENT(IN)   :: i_elem
          INTEGER,                  INTENT(IN)   :: i_gf
-         INTEGER,                  INTENT(IN)   :: m
-         INTEGER,                  INTENT(IN)   :: mp
          INTEGER,                  INTENT(IN)   :: spin
          LOGICAL,                  INTENT(IN)   :: l_sphavg
          INTEGER, OPTIONAL,        INTENT(IN)   :: imat !which radial dependence array
          INTEGER, OPTIONAL,        INTENT(IN)   :: iLO,iLOp !which local orbitals
          INTEGER, OPTIONAL,        INTENT(IN)   :: ikpt
 
-         COMPLEX, ALLOCATABLE :: imagpartCut(:)
+         COMPLEX, ALLOCATABLE :: imagpartCut(:,:,:)
 
-         INTEGER :: spin_ind, kkcut
+         INTEGER :: spin_ind, kkcut, ne
+
+         ne = -1
+         IF(ALLOCATED(this%sphavg)) THEN
+            ne = SIZE(this%sphavg,1)
+         ELSE IF(ALLOCATED(this%uu)) THEN
+            ne = SIZE(this%uu,1)
+         ELSE IF(ALLOCATED(this%sphavg_k)) THEN
+            ne = SIZE(this%sphavg_k,1)
+         ENDIF
+         IF(ne<0) RETURN
+
+         IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
+
 
          IF(PRESENT(ikpt)) THEN
             IF(ALLOCATED(this%sphavg_k)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg_k,1)),source=cmplx_0)
-               imagpartCut = this%sphavg_k(:,m,mp,i_elem,spin,ikpt)
+               imagpartCut = this%sphavg_k(:,:,:,i_elem,spin,ikpt)
             ENDIF
          ELSE IF(l_sphavg) THEN
             IF(ALLOCATED(this%sphavg)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%sphavg,1)),source=cmplx_0)
-               imagpartCut = this%sphavg(:,m,mp,i_elem,spin)
+               imagpartCut = this%sphavg(:,:,:,i_elem,spin)
             ENDIF
          ELSE IF(.NOT.PRESENT(iLO).AND..NOT.PRESENT(iLOp)) THEN
             !Valence-Valence arrays
             IF(ALLOCATED(this%uu)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uu,1)),source=cmplx_0)
                IF(PRESENT(imat)) THEN
                   IF(imat.EQ.1) THEN
-                     imagpartCut = this%uu(:,m,mp,i_elem,spin)
+                     imagpartCut = this%uu(:,:,:,i_elem,spin)
                   ELSE IF(imat.EQ.2) THEN
-                     imagpartCut = this%dd(:,m,mp,i_elem,spin)
+                     imagpartCut = this%dd(:,:,:,i_elem,spin)
                   ELSE IF(imat.EQ.3) THEN
-                     imagpartCut = this%ud(:,m,mp,i_elem,spin)
+                     imagpartCut = this%ud(:,:,:,i_elem,spin)
                   ELSE IF(imat.EQ.4) THEN
-                     imagpartCut = this%du(:,m,mp,i_elem,spin)
+                     imagpartCut = this%du(:,:,:,i_elem,spin)
                   ENDIF
                ENDIF
             ENDIF
          ELSE IF(.NOT.PRESENT(iLOp)) THEN
             !LO-Valence arrays
             IF(ALLOCATED(this%uulo)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uulo,1)),source=cmplx_0)
                IF(PRESENT(imat)) THEN
                   IF(imat.EQ.1) THEN
-                     imagpartCut = this%uulo(:,m,mp,iLO,i_elem,spin)
+                     imagpartCut = this%uulo(:,:,:,iLO,i_elem,spin)
                   ELSE IF(imat.EQ.2) THEN
-                     imagpartCut = this%ulou(:,m,mp,iLO,i_elem,spin)
+                     imagpartCut = this%ulou(:,:,:,iLO,i_elem,spin)
                   ELSE IF(imat.EQ.3) THEN
-                     imagpartCut = this%dulo(:,m,mp,iLO,i_elem,spin)
+                     imagpartCut = this%dulo(:,:,:,iLO,i_elem,spin)
                   ELSE IF(imat.EQ.4) THEN
-                     imagpartCut = this%ulod(:,m,mp,iLO,i_elem,spin)
+                     imagpartCut = this%ulod(:,:,:,iLO,i_elem,spin)
                   ENDIF
                ENDIF
             ENDIF
          ELSE
             !LO-LO arrays
             IF(ALLOCATED(this%uloulop)) THEN
-               IF(.NOT.ALLOCATED(imagpartCut)) ALLOCATE(imagpartCut(SIZE(this%uloulop,1)),source=cmplx_0)
-               imagpartCut = this%uloulop(:,m,mp,iLO,iLOp,i_elem,spin)
+               imagpartCut = this%uloulop(:,:,:,iLO,iLOp,i_elem,spin)
             ENDIF
          ENDIF
 
@@ -418,20 +479,17 @@ MODULE m_types_greensfCoeffs
             !Apply Cutoff
             spin_ind = MERGE(1,spin,spin>2)
             kkcut = this%kkintgr_cutoff(i_gf,spin_ind,2)
-
-            IF(kkcut.ne.SIZE(imagpartCut)) imagpartCut(kkcut+1:) = cmplx_0
+            IF(kkcut.ne.SIZE(imagpartCut,1)) imagpartCut(kkcut+1:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const) = cmplx_0
          ENDIF
 
       END FUNCTION greensfImagPart_applyCutoff
 
-      PURE FUNCTION greensfImagPart_checkEmpty(this,i_elem,i_elemLO,nLO,m,mp,spin,l_sphavg,ikpt) Result(l_empty)
+      PURE FUNCTION greensfImagPart_checkEmpty(this,i_elem,i_elemLO,nLO,spin,l_sphavg,ikpt) Result(l_empty)
 
          CLASS(t_greensfImagPart), INTENT(IN)   :: this
          INTEGER,                  INTENT(IN)   :: i_elem
          INTEGER,                  INTENT(IN)   :: i_elemLO
          INTEGER,                  INTENT(IN)   :: nLO
-         INTEGER,                  INTENT(IN)   :: m
-         INTEGER,                  INTENT(IN)   :: mp
          INTEGER,                  INTENT(IN)   :: spin
          LOGICAL,                  INTENT(IN)   :: l_sphavg
          INTEGER, OPTIONAL,        INTENT(IN)   :: ikpt
@@ -440,24 +498,24 @@ MODULE m_types_greensfCoeffs
 
          IF(PRESENT(ikpt)) THEN
             IF(ALLOCATED(this%sphavg_k)) THEN
-               l_empty = ALL(ABS(this%sphavg_k(:,m,mp,i_elem,spin,ikpt)).LT.1e-12)
+               l_empty = ALL(ABS(this%sphavg_k(:,:,:,i_elem,spin,ikpt)).LT.1e-12)
             ENDIF
          ELSE IF(l_sphavg) THEN
             IF(ALLOCATED(this%sphavg)) THEN
-               l_empty = ALL(ABS(this%sphavg(:,m,mp,i_elem,spin)).LT.1e-12)
+               l_empty = ALL(ABS(this%sphavg(:,:,:,i_elem,spin)).LT.1e-12)
             ENDIF
          ELSE
             IF(ALLOCATED(this%uu)) THEN
-               l_empty =     ALL(ABS(this%uu(:,m,mp,i_elem,spin)).LT.1e-12) &
-                        .AND.ALL(ABS(this%dd(:,m,mp,i_elem,spin)).LT.1e-12) &
-                        .AND.ALL(ABS(this%ud(:,m,mp,i_elem,spin)).LT.1e-12) &
-                        .AND.ALL(ABS(this%du(:,m,mp,i_elem,spin)).LT.1e-12)
+               l_empty =     ALL(ABS(this%uu(:,:,:,i_elem,spin)).LT.1e-12) &
+                        .AND.ALL(ABS(this%dd(:,:,:,i_elem,spin)).LT.1e-12) &
+                        .AND.ALL(ABS(this%ud(:,:,:,i_elem,spin)).LT.1e-12) &
+                        .AND.ALL(ABS(this%du(:,:,:,i_elem,spin)).LT.1e-12)
                IF(ALLOCATED(this%uulo).AND.nLO>0) THEN
-                  l_empty = l_empty .AND. ALL(ABS(this%uulo(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
-                           .AND.ALL(ABS(this%ulou(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
-                           .AND.ALL(ABS(this%dulo(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
-                           .AND.ALL(ABS(this%dulo(:,m,mp,:nLO,i_elemLO,spin)).LT.1e-12) &
-                           .AND.ALL(ABS(this%uloulop(:,m,mp,:nLO,:nLO,i_elemLO,spin)).LT.1e-12)
+                  l_empty = l_empty .AND. ALL(ABS(this%uulo(:,:,:,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%ulou(:,:,:,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%dulo(:,:,:,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%dulo(:,:,:,:nLO,i_elemLO,spin)).LT.1e-12) &
+                           .AND.ALL(ABS(this%uloulop(:,:,:,:nLO,:nLO,i_elemLO,spin)).LT.1e-12)
                ENDIF
             ENDIF
          ENDIF

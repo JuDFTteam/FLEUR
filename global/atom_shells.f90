@@ -18,7 +18,7 @@ MODULE m_atom_shells
 
    CONTAINS
 
-   SUBROUTINE construct_atom_shells(referenceAtom, nshells, atoms, cell, sym, shellDistances,&
+   SUBROUTINE construct_atom_shells(referenceAtom, nshells, atoms, cell, sym, film, shellDistances,&
                                     shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells)
 
       !----------------------------------------------------------------------------------------------
@@ -43,6 +43,7 @@ MODULE m_atom_shells
       TYPE(t_atoms),       INTENT(IN)   :: atoms
       TYPE(t_cell),        INTENT(IN)   :: cell
       TYPE(t_sym),         INTENT(IN)   :: sym
+      LOGICAL,             INTENT(IN)   :: film
       REAL, ALLOCATABLE,   INTENT(OUT)  :: shellDistances(:)
       REAL, ALLOCATABLE,   INTENT(OUT)  :: shellDiffs(:,:,:)
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: shellAtoms(:,:,:)
@@ -53,7 +54,7 @@ MODULE m_atom_shells
       REAL, PARAMETER :: eps = 1e-5
 
       INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells
-      INTEGER :: ishell,i,iAtom,atomTypep,refAt
+      INTEGER :: ishell,i,iAtom,atomTypep,refAt,completed_atom_shells
       LOGICAL :: l_unfinished_shell,l_found_shell,l_add
       REAL :: min_distance_to_border(3), distance,distance_to_border, lastDist
       REAL :: leftBorder(3),rightBorder(3),refPos(3)
@@ -79,7 +80,7 @@ MODULE m_atom_shells
          WRITE(oUnit,'(A,I0)') "Number of unit cells in each direction: ", num_cells + 1
          !Calculate the vectors and distances to neighbours in the next
          !extension of unit cells
-         CALL calculate_next_neighbours(referenceAtom, atoms, cell%amat, newNeighbours, newAtoms,&
+         CALL calculate_next_neighbours(referenceAtom, atoms, cell%amat, film, newNeighbours, newAtoms,&
                                         newDiffs, newDistances, num_cells)
 
          WRITE(oUnit,'(A,I0)') "New neighbours found: ", newNeighbours
@@ -114,6 +115,10 @@ MODULE m_atom_shells
                atomTypep = atoms%itype(sortedAtoms(2,iAtom))
                IF(atoms%itype(shellAtoms(2,1,ishell))/=atomTypep) CYCLE
 
+               IF(numAtomsShell(ishell)+1>SIZE(shellDistances)) THEN
+                  CALL alloc_shells(shellAtoms, shellDiffs, shellDistances, numAtomsShell)
+               ENDIF
+
                numAtomsShell(ishell) = numAtomsShell(ishell) + 1
                shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
                shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
@@ -145,15 +150,15 @@ MODULE m_atom_shells
 
             !Add shell with new distance
             IF(.NOT.l_found_shell) THEN
-               CALL insert_new_shell(actualShells+1, actualShells, shellAtoms, shellDiffs, shellDistances, numAtomsShell)
-
+               ishell = actualShells + 1
+               CALL insert_new_shell(ishell, actualShells, shellAtoms, shellDiffs, shellDistances, numAtomsShell)
+               
                atomShells = atomShells + 1
                numAtomsShell(ishell) = numAtomsShell(ishell) + 1
                shellAtoms(:,numAtomsShell(ishell),ishell) = sortedAtoms(:,iAtom)
                shellDistances(ishell) = sortedDistances(iAtom)
                shellDiffs(:,numAtomsShell(ishell),ishell) = sortedDiffs(:,iAtom)
             ENDIF
-
          ENDDO
          CALL timestop('Grouping Elements into Shells')
 
@@ -164,37 +169,43 @@ MODULE m_atom_shells
             !Calculate how many shells correspond to the requested nshells
             !We look if there can possibly be more elements outside the currently
             !chosen quadrant of cells
+
+            min_distance_to_border = 9e99
+            DO refAt = SUM(atoms%neq(:referenceAtom-1)) + 1, SUM(atoms%neq(:referenceAtom))
+               refPos(:) = atoms%taual(:,refAt)
+
+               DO i = 1, 3
+                  !Distance to border in direction of lattice vector
+                  leftBorder  = cell%amat(:,i) * (num_cells + refPos(i))
+                  rightBorder = cell%amat(:,i) * (num_cells + 1 - refPos(i))
+                  distance_to_border = MIN(norm2(leftBorder),norm2(rightBorder))
+                  IF(distance_to_border<min_distance_to_border(i)) THEN
+                     min_distance_to_border(i) = distance_to_border
+                  ENDIF
+               ENDDO
+            ENDDO
+
             lastDist = 0.0
             atomShells1 = 0
+            completed_atom_shells = 0
             DO ishell = 1, actualShells
-               IF(shellDistances(ishell)-lastDist > eps) atomShells1 = atomShells1 + 1
-               lastDist = shellDistances(ishell)
-               IF(atomShells1==nshells) THEN
-                  distance = SQRT(shellDistances(ishell))
-
-                  min_distance_to_border = 9e99
-                  DO refAt = SUM(atoms%neq(:referenceAtom-1)) + 1, SUM(atoms%neq(:referenceAtom))
-                     refPos(:) = atoms%taual(:,refAt)
-
-                     DO i = 1, 3
-                        !Distance to border in direction of lattice vector
-                        leftBorder  = cell%amat(:,i) * (num_cells + refPos(i))
-                        rightBorder = cell%amat(:,i) * (num_cells + 1 - refPos(i))
-                        distance_to_border = MIN(norm2(leftBorder),norm2(rightBorder))
-                        IF(distance_to_border<min_distance_to_border(i)) THEN
-                           min_distance_to_border(i) = distance_to_border
-                        ENDIF
-                     ENDDO
-                  ENDDO
-
-                  !-1e-12 to avoid uneccesary calculations where both are equla to numerical precision
-                  IF(ALL(min_distance_to_border(:)-distance > -eps)) THEN
-                     WRITE(oUnit,'(A)') "Shells finished."
-                     l_unfinished_shell = .FALSE.
+               IF(shellDistances(ishell)-lastDist > eps) THEN
+                  atomShells1 = atomShells1 + 1
+                  IF(ALL(min_distance_to_border(:)-SQRT(shellDistances(ishell)) > eps)) THEN
+                     completed_atom_shells = completed_atom_shells + 1
+                  ENDIF 
+                  IF(atomShells1==nshells) THEN
+                     !-1e-12 to avoid uneccesary calculations where both are equla to numerical precision
+                     IF(ALL(min_distance_to_border(:)-SQRT(shellDistances(ishell)) > eps)) THEN
+                        WRITE(oUnit,'(A)') "Shells finished."
+                        l_unfinished_shell = .FALSE.
+                     ENDIF
+                     EXIT
                   ENDIF
-                  EXIT
                ENDIF
+               lastDist = shellDistances(ishell)  
             ENDDO
+            WRITE(oUnit,'(A,I0)') 'Distance shells complete: ', completed_atom_shells
             CALL timestop('Checking completeness of shell')
          ENDIF
       ENDDO
@@ -230,7 +241,7 @@ MODULE m_atom_shells
    END SUBROUTINE construct_atom_shells
 
 
-   SUBROUTINE calculate_next_neighbours(referenceAtom, atoms, amat, neighboursFound, neighbourAtoms,&
+   SUBROUTINE calculate_next_neighbours(referenceAtom, atoms, amat, film, neighboursFound, neighbourAtoms,&
                                         neighbourDiffs, neighbourDistances, lastBorder)
 
       !Calculate the distances and vectors to neighbour atoms to a reference atom in a
@@ -244,13 +255,14 @@ MODULE m_atom_shells
       INTEGER,              INTENT(IN)    :: referenceAtom
       TYPE(t_atoms),        INTENT(IN)    :: atoms
       REAL,                 INTENT(IN)    :: amat(:,:)
+      LOGICAL,              INTENT(IN)    :: film
       INTEGER,              INTENT(OUT)   :: neighboursFound
       INTEGER, ALLOCATABLE, INTENT(OUT)   :: neighbourAtoms(:,:)
       REAL,    ALLOCATABLE, INTENT(OUT)   :: neighbourDiffs(:,:)
       REAL,    ALLOCATABLE, INTENT(OUT)   :: neighbourDistances(:)
       INTEGER,              INTENT(INOUT) :: lastBorder
 
-      INTEGER :: maxNeighbours,iAtom,refAt,identicalAtoms,i,j,k,n,na
+      INTEGER :: maxNeighbours,iAtom,refAt,identicalAtoms,i,j,k,n,na,zmax
       REAL :: amatDet, currentDist
       REAL :: tau(3),refPos(3),offsetPos(3),currentDiff(3),pos(3)
       REAL :: invAmat(3,3),posCart(3,atoms%nat)
@@ -270,6 +282,9 @@ MODULE m_atom_shells
          maxNeighbours = atoms%nat * atoms%neq(referenceAtom) * ((2*lastBorder+1)**3 - (2*lastBorder-1)**3)
       ENDIF
 
+      zmax = lastBorder
+      IF(film) zmax = 0
+
       ALLOCATE(neighbourAtoms(2,maxNeighbours), source=0)
       ALLOCATE(neighbourDiffs(3,maxNeighbours), source=0.0)
       ALLOCATE(neighbourDistances(maxNeighbours), source=0.0)
@@ -286,7 +301,7 @@ MODULE m_atom_shells
          identicalAtoms = 0
          DO i = -lastBorder, lastBorder
             DO j = -lastBorder, lastBorder
-               DO k = -lastBorder, lastBorder
+               DO k = -zmax, zmax
 
                   IF(ALL(ABS([i,j,k]) < lastBorder).AND.lastBorder/=1) CYCLE
 

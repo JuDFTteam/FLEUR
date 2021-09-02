@@ -582,14 +582,22 @@ def execute_inpgen(inpgen_binary, work_dir):
         os.chdir(workdir)
         with open(f"{workdir}/stdout", "w") as f_stdout:
             with open(f"{workdir}/stderr", "w") as f_stderr:
-                p1 = subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr)#, check=True)
+                p1 = subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr)
         # Check per hand if successful:
-        if p1.returncode != 0:
+        with open(f"{workdir}/stderr", "r") as f_stderr:
+                error_content= f_stderr.read()
+
+        if 'Run finished successfully' not in error_content:
             # failure
             print('Inpgen execution failed.')
-            with open(f"{workdir}/stderr", "r") as f_stderr:
-                print(f_stderr.read())
-            p1.check_returncode() # This throws error
+            print('======================================')
+            print('The following was printed to stdout:')
+            with open(f"{workdir}/stdout", "r") as f_stdout:
+                print(f_stdout.read())
+            print('======================================')
+            print('The following was printed to stderr:')
+            print(error_content)
+            raise RuntimeError('Inpgen Execution failed')
 
         result_files = {}
         for root, dirs, files in os.walk(workdir):
@@ -633,7 +641,7 @@ def get_mpi_command(env, mpi_procs, parallel):
         mpiruncmd = 'mpirun -n {mpi_procs} '
 
     if mpiruncmd is not None:
-        if mpiruncmd.strip() != 'time':
+        if mpiruncmd.strip() != 'time' and len(mpiruncmd.strip()) > 0:
             if len([val[0] for val in string.Formatter().parse(mpiruncmd)]) != 0:
                 try:
                     mpiruncmd = mpiruncmd.format(mpi_procs=mpi_procs)
@@ -764,16 +772,22 @@ def execute_fleur(fleur_binary, work_dir, mpi_command):
                 # we parse the whole string and execute in shell,
                 # otherwise popen thinks 'mpirun -np 2 /path/fleur' is the path to the executable...
                 p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr)#check=True
+        
         # Check per hand if successful:
-#        if p1.returncode != 0:
-#            # failure
-#            print('Fleur execution failed.')
-#            with open(f"{workdir}/{stderr}", "r") as f_stderr:
-#                print(f_stderr.read())
-#            p1.check_returncode() # This throws error
+        with open(f"{workdir}/stderr", "r") as f_stderr:
+                error_content= f_stderr.read()
 
-        #t1 = time.perf_counter()
-        #print(f'Executing Fleur took {t1 - t0:0.4f} seconds')
+        if 'Run finished successfully' not in error_content:
+            # failure
+            print('Fleur execution failed.')
+            print('======================================')
+            print('The following was printed to stdout:')
+            with open(f"{workdir}/stdout", "r") as f_stdout:
+                print(f_stdout.read())
+            print('======================================')
+            print('The following was printed to stderr:')
+            print(error_content)
+            raise RuntimeError('Fleur Execution failed')
 
         result_files = {}
         for root, dirs, files in os.walk(workdir):

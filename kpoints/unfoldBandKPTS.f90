@@ -243,7 +243,7 @@ CONTAINS
 !          ENDIF
 	   call smat_unfold%multiply(zMat,zMat_s)
     END IF
-   !$omp parallel private(j,n_i,nn,na,lo,nk,nki,gi)
+   !$omp parallel default(none) private(j,n_i,nn,na,lo,nk,nki,gi,multiple) shared(zmat,method_rubel,jsp,lapw,w_n_sum, w_n_c_sum,inv_unfold,eps_r,w_n,w_n_c,atoms,zmat_s,write_to_file,i_kpt,kpts,eig,results,unfoldingBuffer)
    !$omp do
 	DO i=1,zMat%matsize2
 !	        write (*,*) 'here i work 1 -', i

@@ -94,7 +94,7 @@ MODULE m_nmat21
             !
             !Note: This can be done only if the correct magnetic symmetries are
             !present. This is not the case at the moment (Jan 2020).
-            n_mmp(:,:,i_u) = n_mmp(:,:,i_u) + symMMPmat(n_tmp,sym,natom,l,phase=.TRUE.) * 1.0/atoms%neq(n)
+            n_mmp(:,:,i_u) = n_mmp(:,:,i_u) + conjg(symMMPmat(n_tmp,sym,natom,l,phase=.TRUE.)) * 1.0/atoms%neq(n)
          ENDDO ! sum  over equivalent
       ENDDO     ! loop over u parameters
 

@@ -16,7 +16,7 @@ MODULE m_types_gfinp
    INTEGER, PARAMETER :: CONTOUR_SEMICIRCLE_CONST = 2
    INTEGER, PARAMETER :: CONTOUR_DOS_CONST        = 3
 
-   REAL,    PARAMETER :: ATOMDIFF_EPS = 1e-7
+   REAL,    PARAMETER :: ATOMDIFF_EPS = 1e-5
 
    TYPE t_gfelementtype
       !defines the l and atomType elements for given greens function element
@@ -39,8 +39,8 @@ MODULE m_types_gfinp
       INTEGER :: representative_elem = -1
       INTEGER :: representative_op = -1
       REAL    :: representative_diff(3)  = [0.0,0.0,0.0] !Distance between atoms of representative element (lattice coordinates) for intersite phase
-      INTEGER :: inter_atom = 0
-      INTEGER :: inter_atomp = 0
+      INTEGER :: atom = 0   !Specific atom for this element (Used for intersite elements)
+      INTEGER :: atomp = 0  !Specific atom for this element (Used for intersite elements)
 
       !K-resolved switches
       LOGICAL :: l_kresolved = .FALSE. !Should the Greens function be calculated k-resolved
@@ -109,6 +109,7 @@ MODULE m_types_gfinp
       PROCEDURE :: find_gfelem_simple
       PROCEDURE :: find_gfelem_type
       GENERIC   :: find                 => find_gfelem_simple, find_gfelem_type
+      PROCEDURE :: find_symmetry_rotated_bzcoeffs => find_symmetry_rotated_bzcoeffs_gfinp
       PROCEDURE :: find_contour         => find_contour
       PROCEDURE :: add                  => add_gfelem
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
@@ -175,8 +176,8 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%representative_elem,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%representative_op,rank,mpi_comm)
          CALL mpi_bc(rank,mpi_comm,this%elem(n)%representative_diff)
-         CALL mpi_bc(this%elem(n)%inter_atom,rank,mpi_comm)
-         CALL mpi_bc(this%elem(n)%inter_atomp,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%atom,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%atomp,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_kresolved,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_kresolved_int,rank,mpi_comm)
       ENDDO
@@ -634,7 +635,7 @@ CONTAINS
                                                          !we take the onsite element as reference
 
          CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
-                                        this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,&
+                                        this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,input,&
                                         .NOT.written(atomType),nOtherAtoms,atomTypepList)
          written(atomType) = .TRUE.
 
@@ -650,7 +651,7 @@ CONTAINS
             WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
 
             CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
-                                           this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,&
+                                           this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
                                            .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
 
          ENDDO
@@ -697,8 +698,8 @@ CONTAINS
          ENDIF
       ENDIF
 
-      IF(l_all_kresolved) THEN
-         CALL juDFT_error("Completely k-resolved Greens functions not implemented",&
+      IF(l_all_kresolved.AND.input%bz_integration/=BZINT_METHOD_HIST) THEN
+         CALL juDFT_error("Completely k-resolved Greens functions only implemented for histogram method",&
                           calledby="init_gfinp")
       ENDIF
 
@@ -728,31 +729,33 @@ CONTAINS
 
    END SUBROUTINE init_gfinp
 
-   PURE LOGICAL FUNCTION isUnique_gfinp(this,index, distinct_kresolved_int)
+   PURE LOGICAL FUNCTION isUnique_gfinp(this,index, distinct_kresolved_int, distinct_symmetry_equivalent_diffs)
       !Return whether the given element is the first with the combination
       !of l lp, atomType, atomTypep, l_sphavg, l_kresolved
 
       CLASS(t_gfinp),   INTENT(IN)  :: this
       INTEGER,          INTENT(IN)  :: index
       LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_kresolved_int
+      LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_symmetry_equivalent_diffs
 
       INTEGER :: i_gf, uniqueIndex
 
-      uniqueIndex = this%getuniqueElement(index, distinct_kresolved_int)
+      uniqueIndex = this%getuniqueElement(index, distinct_kresolved_int, distinct_symmetry_equivalent_diffs)
       isunique_gfinp = uniqueIndex == index
 
    END FUNCTION isUnique_gfinp
 
-   PURE INTEGER FUNCTION getuniqueElement_gfinp(this, index, distinct_kresolved_int) Result(uniqueIndex)
+   PURE INTEGER FUNCTION getuniqueElement_gfinp(this, index, distinct_kresolved_int, distinct_symmetry_equivalent_diffs) Result(uniqueIndex)
 
       CLASS(t_gfinp),   INTENT(IN)  :: this
       INTEGER,          INTENT(IN)  :: index
       LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_kresolved_int
+      LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_symmetry_equivalent_diffs
 
       DO uniqueIndex = 1, index
          !If the element has a representative element set it can not be unique
-         IF(this%elem(uniqueIndex)%representative_elem>0) CYCLE
-         IF(this%elem(uniqueIndex)%equals_coefficients(this%elem(index), distinct_kresolved_int)) THEN
+         !IF(this%elem(uniqueIndex)%representative_elem>0) CYCLE
+         IF(this%elem(uniqueIndex)%equals_coefficients(this%elem(index), distinct_kresolved_int, distinct_symmetry_equivalent_diffs)) THEN
             RETURN
          ENDIF
       ENDDO
@@ -824,7 +827,7 @@ CONTAINS
    END FUNCTION uniqueElements_gfinp
 
    INTEGER FUNCTION add_gfelem(this,l,atomType,iContour,l_sphavg,lp,atomTypep,atomDiff,&
-                               l_fixedCutoffset,fixedCutoff,nshells,k_resolved) Result(i_gf)
+                               l_fixedCutoffset,fixedCutoff,nshells,k_resolved,atom,atomp) Result(i_gf)
 
       CLASS(t_gfinp),      INTENT(INOUT)  :: this
       INTEGER,             INTENT(IN)     :: l
@@ -838,7 +841,7 @@ CONTAINS
       REAL,    OPTIONAL,   INTENT(IN)     :: fixedCutoff
       INTEGER, OPTIONAL,   INTENT(IN)     :: nshells
       LOGICAL, OPTIONAL,   INTENT(IN)     :: k_resolved
-
+      INTEGER, OPTIONAL,   INTENT(IN)     :: atom, atomp
 
       LOGICAL l_found
       TYPE(t_gfelementtype) :: new_element
@@ -846,7 +849,8 @@ CONTAINS
 
       CALL new_element%init(l,atomType,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
                             nshells=nshells,atomDiff=atomDiff,k_resolved=k_resolved,&
-                            l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff)
+                            l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff,&
+                            atom=atom,atomp=atomp)
 
       !Check if this job has already been added
       i_gf = this%find(new_element,l_found=l_found)
@@ -870,12 +874,52 @@ CONTAINS
 
    END FUNCTION add_gfelem
 
+   INTEGER FUNCTION find_symmetry_rotated_bzcoeffs_gfinp(this, atoms, sym, i_gf, iop, l_sphavg, lo) RESULT(i_elem_rot)
+
+      USE m_types_sym
+      USE m_types_atoms
+
+      CLASS(t_gfinp),         INTENT(IN)  :: this
+      TYPE(t_atoms),          INTENT(IN)  :: atoms
+      TYPE(t_sym),            INTENT(IN)  :: sym
+      INTEGER,                INTENT(IN)  :: i_gf, iop
+      LOGICAL,                INTENT(IN)  :: l_sphavg
+      LOGICAL, OPTIONAL,      INTENT(IN)  :: lo
+
+      TYPE(t_gfelementtype) :: gfelem_rot
+      LOGICAL :: loArg
+      REAL    :: diff(3)
+      INTEGER :: atom_rot, atom_rotp, i_gf_rot, iop_arg
+
+
+      IF(.NOT.this%elem(i_gf)%isIntersite()) CALL juDFT_error("find_symmetry_rotated_bzcoeffs should only be used"&
+                                                              "for Intersite Green's functions", calledby='find_symmetry_rotated_bzcoeffs')
+
+      iop_arg = iop
+      IF(iop_arg > sym%nop) iop_arg = iop_arg - sym%nop
+
+      gfelem_rot = this%elem(i_gf)
+
+      diff = matmul(sym%mrot(:,:,iop_arg),this%elem(i_gf)%atomDiff)
+      atom_rot = sym%mapped_atom(iop_arg, this%elem(i_gf)%atom)
+      atom_rotp = sym%mapped_atom(iop_arg, this%elem(i_gf)%atomp)
+
+      gfelem_rot%atomDiff = diff
+      gfelem_rot%atom = atom_rot
+      gfelem_rot%atomp = atom_rotp
+
+      i_gf_rot = this%find(gfelem_rot,distinct_kresolved_int=.FALSE.)
+      i_elem_rot = this%uniqueElements(atoms,max_index=i_gf_rot,l_sphavg=l_sphavg, lo=lo)
+
+   END FUNCTION find_symmetry_rotated_bzcoeffs_gfinp
+
    SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_fixedCutoffset,fixedCutoff,&
-                                          refCutoff,atoms,cell,sym,l_write,nOtherAtoms,atomTypepList)
+                                          refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList)
 
       USE m_types_atoms
       USE m_types_cell
       USE m_types_sym
+      USE m_types_input
       USE m_atom_shells
 
       !This is essentially a simplified version of chkmt, because we have a given
@@ -894,6 +938,7 @@ CONTAINS
       TYPE(t_atoms),       INTENT(IN)     :: atoms
       TYPE(t_cell),        INTENT(IN)     :: cell
       TYPE(t_sym),         INTENT(IN)     :: sym
+      TYPE(t_input),       INTENT(IN)     :: input
       LOGICAL,             INTENT(IN)     :: l_write
       INTEGER,             INTENT(OUT)    :: nOtherAtoms
       INTEGER,ALLOCATABLE, INTENT(OUT)    :: atomTypepList(:) !Which other atomtypes were added (not equal to refAtom)
@@ -909,7 +954,7 @@ CONTAINS
 
       CALL timestart("Green's Function: Add nearest Neighbors")
 
-      CALL construct_atom_shells(refAtom, nshells, atoms, cell, sym, shellDistances,&
+      CALL construct_atom_shells(refAtom, nshells, atoms, cell, sym, input%film, shellDistances,&
                                  shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells)
 
       ALLOCATE(atomTypepList(atoms%ntype),source=0)
@@ -931,15 +976,13 @@ CONTAINS
             atomTypep = atoms%itype(shellAtoms(2,ishellAtom,ishell))
             i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
                              atomDiff=shellDiffs(:,ishellAtom,ishell),l_fixedCutoffset=l_fixedCutoffset,&
-                             fixedCutoff=fixedCutoff)
+                             fixedCutoff=fixedCutoff,atom=shellAtoms(1,ishellAtom,ishell),atomp = shellAtoms(2,ishellAtom,ishell))
             IF(repr == 0) THEN
                repr = i_gf
                repr_diff = shellDiffs(:,ishellAtom,ishell)
             ENDIF
 
             this%elem(i_gf)%refCutoff = refCutoff
-            this%elem(i_gf)%inter_atom = shellAtoms(1,ishellAtom,ishell)
-            this%elem(i_gf)%inter_atomp = shellAtoms(2,ishellAtom,ishell)
 
             IF(ishellAtom > 1) THEN
                this%elem(i_gf)%representative_elem = repr
@@ -1163,7 +1206,7 @@ CONTAINS
       ENDDO
    END FUNCTION checkOffdiagonal_gfinp
 
-   SUBROUTINE init_gfelem(this,l,atomType,iContour,l_sphavg,lp,nshells,atomTypep,k_resolved,atomDiff,l_fixedCutoffset,fixedCutoff)
+   SUBROUTINE init_gfelem(this,l,atomType,iContour,l_sphavg,lp,nshells,atomTypep,k_resolved,atomDiff,l_fixedCutoffset,fixedCutoff,atom,atomp)
 
       CLASS(t_gfelementtype), INTENT(INOUT)  :: this
       INTEGER,                INTENT(IN)     :: l
@@ -1177,11 +1220,20 @@ CONTAINS
       REAL,    OPTIONAL,      INTENT(IN)     :: fixedCutoff
       INTEGER, OPTIONAL,      INTENT(IN)     :: nshells
       LOGICAL, OPTIONAL,      INTENT(IN)     :: k_resolved
+      INTEGER, OPTIONAL,      INTENT(IN)     :: atom, atomp
 
       IF(PRESENT(nshells).AND.PRESENT(atomTypep)) THEN
          CALL juDFT_error("Conflicting arguments: nshells and nTypep given",&
                           hint="This is a bug in FLEUR, please report",&
                           calledby="init_gfelem")
+      ENDIF
+
+      IF(PRESENT(atom).OR.PRESENT(atomp)) THEN
+         IF(.NOT.(PRESENT(atom).AND.PRESENT(atomp))) THEN
+            CALL juDFT_error("Invalid arguments: Either both atom and atomp need to be given or none of them",&
+                             hint="This is a bug in FLEUR, please report",&
+                             calledby="init_gfelem")
+         ENDIF
       ENDIF
 
       this%l = l
@@ -1216,6 +1268,15 @@ CONTAINS
       ELSE
          this%atomDiff(:) = 0.0
       ENDIF
+
+      IF(PRESENT(atom)) THEN
+         this%atom = atom
+         this%atomp = atomp
+      ELSE
+         this%atom = 0
+         this%atomp = 0
+      ENDIF
+
       IF(PRESENT(l_fixedCutoffset)) THEN
          IF(.NOT.PRESENT(fixedCutoff)) CALL juDFT_error("l_fixedCutoffset Present without fixedCutoff", &
                                                         hint="This is a bug in FLEUR please report",&
@@ -1228,16 +1289,20 @@ CONTAINS
 
    END SUBROUTINE init_gfelem
 
-   PURE LOGICAL FUNCTION equals_coefficients_gfelem(this, other, distinct_k_resolved)
+   PURE LOGICAL FUNCTION equals_coefficients_gfelem(this, other, distinct_k_resolved, distinct_symmetry_equivalent_diffs)
 
       CLASS(t_gfelementtype), INTENT(IN)  :: this
       TYPE(t_gfelementtype),  INTENT(IN)  :: other
       LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_k_resolved
+      LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_symmetry_equivalent_diffs
 
-      LOGICAL distinct_k_resolved_arg
+      LOGICAL distinct_k_resolved_arg, distinct_symmetry_equivalent_diffs_arg
 
       distinct_k_resolved_arg = .TRUE.
       IF(PRESENT(distinct_k_resolved)) distinct_k_resolved_arg = distinct_k_resolved
+
+      distinct_symmetry_equivalent_diffs_arg = .FALSE.
+      IF(PRESENT(distinct_symmetry_equivalent_diffs)) distinct_symmetry_equivalent_diffs_arg = distinct_symmetry_equivalent_diffs
 
       equals_coefficients_gfelem = .FALSE.
 
@@ -1251,6 +1316,7 @@ CONTAINS
          IF(this%l_kresolved_int .neqv. other%l_kresolved_int) RETURN
       ENDIF
       IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) THEN
+         IF(distinct_symmetry_equivalent_diffs_arg) RETURN
          IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
          IF(this%representative_elem > 0 .AND. other%representative_elem > 0) THEN
             IF(ANY(ABS(this%representative_diff(:)-other%representative_diff(:)).GT.ATOMDIFF_EPS)) RETURN
@@ -1260,6 +1326,8 @@ CONTAINS
             IF(ANY(ABS(other%representative_diff(:)-this%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
          ENDIF
       ENDIF
+      IF(this%atom /= other%atom) RETURN
+      IF(this%atomp /= other%atomp) RETURN
       equals_coefficients_gfelem = .TRUE.
 
    END FUNCTION equals_coefficients_gfelem
@@ -1271,12 +1339,11 @@ CONTAINS
       LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_k_resolved
 
       equals_gfelem = .FALSE.
-      IF(.NOT.this%equals_coefficients(other, distinct_k_resolved)) RETURN
-      !We need to check the atomDiff again here, since the deduplication
+      !We need to check the atomDiff explicitly, since the deduplication
       !on the coefficient level has some extra symmetry considerations
       !that should not influence the deduplication. It just influences how
       !many brillouin zone integegrations need to be performed
-      IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) RETURN
+      IF(.NOT.this%equals_coefficients(other, distinct_k_resolved, distinct_symmetry_equivalent_diffs=.TRUE.)) RETURN
       IF(this%iContour.NE.other%iContour) RETURN
       equals_gfelem = .TRUE.
 

@@ -61,24 +61,40 @@ endif()
 #write file
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/pytest_incl.py CONTENT "sourcedir=${CMAKE_SOURCE_DIR}\nbuilddir=${CMAKE_BINARY_DIR}\nexcl_flags=\"${PYTEST_TEST_EXCL_FLAGS}\"\n")
 
+set(Python3_FIND_VIRTUALENV FIRST)
+#This option prevents cmake finding a newer global python version
+#if a virtualenv with a older version is explicitely activated
+set(Python3_FIND_STRATEGY LOCATION)
+find_package(Python3)
+message("Python3 found:${Python3_FOUND}")
+message("Python3 path:${Python3_EXECUTABLE}")
+message("The python executable used for the tests"
+        "can be overwritten with the juDFT_PYTHON environment variable")
+
+if( Python3_FOUND )
+    set(FLEUR_PYTHON ${Python3_EXECUTABLE})
+else()
+    set(FLEUR_PYTHON "python3")
+endif()
+
 #write build script
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/run_tests.sh CONTENT
 "#!/usr/bin/env bash
 ADDOPTS_ENV=\${PYTEST_ADDOPTS}
 PYTEST_ADDOPTS=\"${CMAKE_SOURCE_DIR}/tests/new_pytest_system --build_dir=${CMAKE_BINARY_DIR} \${ADDOPTS_ENV}\"
-if [[ -z \"\${juDFT_PYTHON}\" ]]; then
-  PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS pytest \"$@\"
-else
-  PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $juDFT_PYTHON -m pytest \"$@\"
-fi")
+PYTHON_EXECUTABLE=\"${FLEUR_PYTHON}\"
+if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
+  PYTHON_EXECUTABLE=\${juDFT_PYTHON}
+fi
+PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $PYTHON_EXECUTABLE -m pytest \"$@\"")
 add_custom_target(pytest ALL
                   COMMAND chmod +x run_tests.sh
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                   COMMENT "Making test script executable")
 
-add_custom_target(test_new 
-                  COMMAND sh run_tests.sh 
+add_custom_target(test_new
+                  COMMAND sh run_tests.sh
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                  COMMENT "Making 'make test' run the python script executable")                  
+                  COMMENT "Making 'make test' run the python script executable")
 
 

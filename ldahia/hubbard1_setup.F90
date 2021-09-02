@@ -28,7 +28,7 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,cell,gfinp,hub1inp,input,fmpi,noco,nococonv,pot,gdft,hub1data,results,den)
+   SUBROUTINE hubbard1_setup(atoms,cell,gfinp,hub1inp,input,fmpi,noco,kpts,nococonv,pot,gdft,hub1data,results,den)
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_cell),     INTENT(IN)     :: cell
@@ -37,6 +37,7 @@ MODULE m_hubbard1_setup
       TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_mpi),      INTENT(IN)     :: fmpi
       TYPE(t_noco),     INTENT(IN)     :: noco
+      TYPE(t_kpts),     INTENT(IN)     :: kpts
       TYPE(t_nococonv), INTENT(IN)     :: nococonv
       TYPE(t_potden),   INTENT(IN)     :: pot
       TYPE(t_greensf),  INTENT(IN)     :: gdft(:) !green's function calculated from the Kohn-Sham system
@@ -373,7 +374,7 @@ MODULE m_hubbard1_setup
          !Write out DFT Green's Function
          !------------------------------
          CALL timestart("Hubbard 1: IO/Write")
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_DFT.hdf")
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, kpts, inFilename="greensf_DFT.hdf")
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                                GREENSF_HUBBARD_CONST, gdft, mmpmat)
          CALL closeGreensFFile(greensf_fileID)
@@ -381,7 +382,7 @@ MODULE m_hubbard1_setup
          !-------------------------------------
          !Write out correlated Green's Function
          !-------------------------------------
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_IMP.hdf")
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, kpts, inFilename="greensf_IMP.hdf")
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                               GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
          CALL closeGreensFFile(greensf_fileID)

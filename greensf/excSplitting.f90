@@ -21,7 +21,8 @@ MODULE m_excSplitting
       INTEGER :: i_gf,i_elem,i_elemLO,ispin,m,l,atomType,nLO,iLO,iLOp
       LOGICAL :: l_sphavg
       REAL    :: excSplit,del
-      REAL, ALLOCATABLE :: eMesh(:), imag(:)
+      REAL, ALLOCATABLE :: eMesh(:)
+      COMPLEX, ALLOCATABLE :: imag(:,:,:)
       REAL, ALLOCATABLE :: intCOM(:,:), intNorm(:,:)
       CHARACTER(LEN=20) :: attributes(4)
 
@@ -29,6 +30,7 @@ MODULE m_excSplitting
 
       CALL gfinp%eMesh(ef,del=del,eMesh=eMesh)
 
+      ALLOCATE(imag(SIZE(eMesh),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
       ALLOCATE(intNorm(SIZE(eMesh),input%jspins),source=0.0)
       ALLOCATE(intCOM(SIZE(eMesh),input%jspins),source=0.0)
 
@@ -64,26 +66,26 @@ MODULE m_excSplitting
          DO ispin = 1, input%jspins
             intCOM = 0.0
             intNorm = 0.0
-            DO m = -l, l
-               IF(l_sphavg) THEN
-                  imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg)
-               ELSE
-                  imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg,imat=1)
-                  imag = imag + greensfImagPart%applyCutoff(i_elem,i_gf,m,m,ispin,l_sphavg,imat=2) * scalarGF(i_gf)%ddn(ispin,ispin)
-                  IF(nLO>0) THEN
-                     DO iLO = 1, nLO
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=1,iLO=iLO) * scalarGF(i_gf)%uulon(ilo,ispin,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=2,iLO=iLO) * scalarGF(i_gf)%uloun(ilo,ispin,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=3,iLO=iLO) * scalarGF(i_gf)%dulon(ilo,ispin,ispin)
-                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,imat=4,iLO=iLO) * scalarGF(i_gf)%ulodn(ilo,ispin,ispin)
-                        DO iLOp = 1, nLO
-                           imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,m,m,ispin,l_sphavg,iLO=iLO,iLOp=iLOp) * scalarGF(i_gf)%uloulopn(ilo,ilop,ispin,ispin)
-                        ENDDO
+            IF(l_sphavg) THEN
+               imag = greensfImagPart%applyCutoff(i_elem,i_gf,ispin,l_sphavg)
+            ELSE
+               imag = greensfImagPart%applyCutoff(i_elem,i_gf,ispin,l_sphavg,imat=1)
+               imag = imag + greensfImagPart%applyCutoff(i_elem,i_gf,ispin,l_sphavg,imat=2) * scalarGF(i_gf)%ddn(ispin,ispin)
+               IF(nLO>0) THEN
+                  DO iLO = 1, nLO
+                     imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,ispin,l_sphavg,imat=1,iLO=iLO) * scalarGF(i_gf)%uulon(ilo,ispin,ispin)
+                     imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,ispin,l_sphavg,imat=2,iLO=iLO) * scalarGF(i_gf)%uloun(ilo,ispin,ispin)
+                     imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,ispin,l_sphavg,imat=3,iLO=iLO) * scalarGF(i_gf)%dulon(ilo,ispin,ispin)
+                     imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,ispin,l_sphavg,imat=4,iLO=iLO) * scalarGF(i_gf)%ulodn(ilo,ispin,ispin)
+                     DO iLOp = 1, nLO
+                        imag = imag + greensfImagPart%applyCutoff(i_elemLO,i_gf,ispin,l_sphavg,iLO=iLO,iLOp=iLOp) * scalarGF(i_gf)%uloulopn(ilo,ilop,ispin,ispin)
                      ENDDO
-                  ENDIF
+                  ENDDO
                ENDIF
-               intCOM(:,ispin) = intCOM(:,ispin) + eMesh*imag
-               intNorm(:,ispin) = intNorm(:,ispin) + imag
+            ENDIF
+            DO m = -l, l
+               intCOM(:,ispin) = intCOM(:,ispin) + eMesh*REAL(imag(:,m,m))
+               intNorm(:,ispin) = intNorm(:,ispin) + REAL(imag(:,m,m))
             ENDDO
             excSplit = excSplit + (-1)**(ispin) * 1.0/(trapz(intNorm(:,ispin),del,SIZE(eMesh))) &
                                                      * trapz(intCOM(:,ispin),del,SIZE(eMesh))

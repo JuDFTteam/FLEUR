@@ -64,7 +64,8 @@ class FleurTestsTerminalReporter(TerminalReporter):
             self.summary_failures()
             self.summary_warnings()
             self.summary_passes()
-            self.flush()
+            if getattr(self, 'flush', None) is not None:
+                self.flush()
         yield
         self.short_test_summary()
         # Display any extra warnings from teardown here (if any).

@@ -25,7 +25,7 @@ MODULE m_greensf_io
 
    CONTAINS
 
-   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, inFilename)
+   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, kpts, inFilename)
 
       USE m_types
       USE m_cdn_io
@@ -33,20 +33,25 @@ MODULE m_greensf_io
       TYPE(t_input),                INTENT(IN)  :: input
       TYPE(t_gfinp),                INTENT(IN)  :: gfinp
       TYPE(t_atoms),                INTENT(IN)  :: atoms
+      TYPE(t_kpts),                 INTENT(IN)  :: kpts
       CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: inFilename
       INTEGER(HID_T),               INTENT(OUT) :: fileID
 
       LOGICAL           :: l_exist
       CHARACTER(LEN=30) :: filename
       INTEGER(HID_T)    :: metaGroupID
-      INTEGER(HID_T)    :: generalGroupID
+      INTEGER(HID_T)    :: generalGroupID, kptsGroupID
+      INTEGER(HID_T)    :: kptCoordSpaceID, kptCoordSetID
+      INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
 
       LOGICAL           :: l_error
       INTEGER           :: hdfError
       INTEGER           :: version
       REAL              :: eFermiPrev
+      INTEGER           :: dimsInt(7)
+      INTEGER(HSIZE_T)  :: dims(7)
 
-      version = 2
+      version = 3
       IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
@@ -75,6 +80,27 @@ MODULE m_greensf_io
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)
       CALL io_write_attreal0(generalGroupID,'FermiEnergy',eFermiPrev)
       CALL io_write_attlog0(generalGroupID,'mperp',gfinp%l_mperp)
+
+      CALL h5gcreate_f(generalGroupID, 'kpts', kptsGroupID, hdfError)
+      CALL io_write_attint0(kptsGroupID,'nkpt',kpts%nkpt)
+
+      dims(:2)=(/3,kpts%nkpt/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),kptCoordSpaceID,hdfError)
+      CALL h5dcreate_f(kptsGroupID, "coordinates", H5T_NATIVE_DOUBLE, kptCoordSpaceID, kptCoordSetID, hdfError)
+      CALL h5sclose_f(kptCoordSpaceID,hdfError)
+      CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),kpts%bk)
+      CALL h5dclose_f(kptCoordSetID, hdfError)
+
+      dims(:1)=(/kpts%nkpt/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),kptWeightSpaceID,hdfError)
+      CALL h5dcreate_f(kptsGroupID, "weights", H5T_NATIVE_DOUBLE, kptWeightSpaceID, kptWeightSetID, hdfError)
+      CALL h5sclose_f(kptWeightSpaceID,hdfError)
+      CALL io_write_real1(kptWeightSetID,(/1/),dimsInt(:1),kpts%wtkpt)
+      CALL h5dclose_f(kptWeightSetID, hdfError)
+
+      CALL h5gclose_f(kptsGroupID, hdfError)
       CALL h5gclose_f(generalGroupID, hdfError)
 
    END SUBROUTINE openGreensFFile
@@ -370,13 +396,20 @@ MODULE m_greensf_io
       INTEGER(HSIZE_T)  :: dims(7)
       INTEGER(HID_T) :: DataSpaceID, DataSetID
       INTEGER(HID_T)    :: loGroupID,currentloGroupID, scalarGroupID
-      INTEGER :: hdfError
+      INTEGER :: hdfError,ikpt
       INTEGER :: nLO, iLO, iLOp
 
       CALL io_write_attint0(groupID,"l",g%elem%l)
       CALL io_write_attint0(groupID,"lp",g%elem%lp)
       CALL io_write_attint0(groupID,"atomType",g%elem%atomType)
       CALL io_write_attint0(groupID,"atomTypep",g%elem%atomTypep)
+      IF(g%elem%atom/=0) THEN
+         CALL io_write_attchar0(groupID,"atom",TRIM(ADJUSTL(atoms%label(g%elem%atom))))
+         CALL io_write_attchar0(groupID,"atomp",TRIM(ADJUSTL(atoms%label(g%elem%atomp))))
+      ELSE
+         CALL io_write_attchar0(groupID,"atom",'0')
+         CALL io_write_attchar0(groupID,"atomp",'0')
+      ENDIF
       CALL io_write_attint0(groupID,'iContour',contour_mapping(g%elem%iContour))
       CALL io_write_attlog0(groupID,'l_onsite',.NOT.g%elem%isOffDiag())
       CALL io_write_attlog0(groupID,'l_sphavg',g%l_sphavg)
@@ -394,6 +427,18 @@ MODULE m_greensf_io
          CALL io_write_complex5(DataSetID,[-1,1,1,1,1,1],dimsInt(:6),g%gmmpmat)
          CALL h5dclose_f(DataSetID, hdfError)
 
+      ELSE IF(g%l_kresolved) THEN
+         dims(:6)=[2,g%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspins,2]
+         dimsInt=dims
+         DO ikpt = 1, SIZE(g%gmmpmat_k)
+            WRITE(datasetName,201) ikpt
+201         FORMAT('kresolved-',i0)
+            CALL h5screate_simple_f(6,dims(:6),DataSpaceID,hdfError)
+            CALL h5dcreate_f(groupID, TRIM(ADJUSTL(datasetName)), H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+            CALL h5sclose_f(DataSpaceID,hdfError)
+            CALL io_write_complex5(DataSetID,[-1,1,1,1,1,1],dimsInt(:6),g%gmmpmat_k(:,:,:,:,:,ikpt))
+            CALL h5dclose_f(DataSetID, hdfError)
+         ENDDO
       ELSE
 
          !--> Start: Radial Coefficients

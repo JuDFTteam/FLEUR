@@ -34,6 +34,7 @@ MODULE m_types_greensf
 
       LOGICAL :: l_calc = .FALSE.
       LOGICAL :: l_sphavg
+      LOGICAL :: l_kresolved
 
       !Energy contour parameters
       TYPE(t_greensfContourData) :: contour
@@ -57,6 +58,8 @@ MODULE m_types_greensf
       COMPLEX, ALLOCATABLE :: ulod(:,:,:,:,:,:)
 
       COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:,:)
+
+      COMPLEX, ALLOCATABLE :: gmmpMat_k(:,:,:,:,:,:)
 
       CONTAINS
          PROCEDURE, PASS :: init                   => init_greensf
@@ -83,7 +86,7 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE init_greensf(this,gfelem,gfinp,atoms,input,contour_in,l_sphavg_in)
+      SUBROUTINE init_greensf(this,gfelem,gfinp,atoms,input,contour_in,l_sphavg_in,l_kresolved_in,nkpt)
 
          CLASS(t_greensf),                     INTENT(INOUT)  :: this
          TYPE(t_gfelementtype),      TARGET,   INTENT(IN)     :: gfelem
@@ -93,6 +96,8 @@ MODULE m_types_greensf
          !Pass a already calculated energy contour to the type
          TYPE(t_greensfContourData), OPTIONAL, INTENT(IN)     :: contour_in
          LOGICAL,                    OPTIONAL, INTENT(IN)     :: l_sphavg_in !To overwrite the allocation for integrateOverMT_greensf
+         LOGICAL,                    OPTIONAL, INTENT(IN)     :: l_kresolved_in !To overwrite the allocation for integrateOverBZ_greensf
+         INTEGER,                    OPTIONAL, INTENT(IN)     :: nkpt
 
          INTEGER spin_dim,lmax,nLO
          LOGICAL l_sphavg
@@ -110,9 +115,18 @@ MODULE m_types_greensf
 
          this%l_sphavg = this%elem%l_sphavg
          IF(PRESENT(l_sphavg_in)) this%l_sphavg = l_sphavg_in
+      
+         this%l_kresolved = this%elem%l_kresolved
+         IF(PRESENT(l_kresolved_in)) this%l_kresolved = l_kresolved_in
+
+         IF(this%l_kresolved.AND. .NOT.PRESENT(nkpt)) CALL juDFT_error("Missing argument nkpt for k-resolved green's function", calledby='init_greensf')
 
          IF(this%l_sphavg) THEN
-            ALLOCATE(this%gmmpMat(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
+            IF(this%l_kresolved) THEN
+               ALLOCATE(this%gmmpMat_k(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,nkpt),source=cmplx_0)
+            ELSE
+               ALLOCATE(this%gmmpMat(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
+            ENDIF
          ELSE
             ALLOCATE(this%uu(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
             ALLOCATE(this%dd(this%contour%nz,-lmax:lmax,-lmax:lmax,spin_dim,2),source=cmplx_0)
@@ -144,10 +158,13 @@ MODULE m_types_greensf
          END IF
 
          CALL mpi_bc(this%l_calc,rank,mpi_comm)
+         CALL mpi_bc(this%l_sphavg,rank,mpi_comm)
+         CALL mpi_bc(this%l_kresolved,rank,mpi_comm)
 
          CALL this%contour%mpi_bc(mpi_comm,rank)
 
          IF(ALLOCATED(this%gmmpMat)) CALL mpi_bc(this%gmmpMat,rank,mpi_comm)
+         IF(ALLOCATED(this%gmmpMat_k)) CALL mpi_bc(this%gmmpMat_k,rank,mpi_comm)
          IF(ALLOCATED(this%uu)) CALL mpi_bc(this%uu,rank,mpi_comm)
          IF(ALLOCATED(this%ud)) CALL mpi_bc(this%ud,rank,mpi_comm)
          IF(ALLOCATED(this%du)) CALL mpi_bc(this%du,rank,mpi_comm)
@@ -178,6 +195,12 @@ MODULE m_types_greensf
             ALLOCATE(ctmp(n))
             CALL MPI_ALLREDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
             CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat,1)
+            DEALLOCATE(ctmp)
+         ELSE IF(ALLOCATED(this%gmmpMat_k)) THEN
+            n = SIZE(this%gmmpMat_k)
+            ALLOCATE(ctmp(n))
+            CALL MPI_ALLREDUCE(this%gmmpMat_k,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat_k,1)
             DEALLOCATE(ctmp)
          ELSE
             n = SIZE(this%uu)
@@ -1025,7 +1048,7 @@ MODULE m_types_greensf
          TYPE(t_sym),         INTENT(IN)     :: sym
          TYPE(t_atoms),       INTENT(IN)     :: atoms
 
-         INTEGER :: l,lp,iop,atomType,atomTypep
+         INTEGER :: l,lp,iop,atomType,atomTypep,ikpt
          INTEGER :: ipm,ispin,iz,ilo,ilop,iLO_ind,iLOp_ind
 
          IF(this%elem%representative_elem<0) RETURN !Nothing to be done
@@ -1066,6 +1089,7 @@ MODULE m_types_greensf
                      DO ilo = 1, atoms%nlo(atomType)
                         IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                         iLOp_ind = 0
+                        iLO_ind = iLO_ind + 1
                         DO ilop = 1, atoms%nlo(atomTypep)
                            IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
                            iLOp_ind = iLOp_ind + 1
@@ -1073,6 +1097,10 @@ MODULE m_types_greensf
                         ENDDO
                      ENDDO
                   ENDIF
+               ELSE IF(ALLOCATED(this%gmmpMat_k)) THEN
+                  DO ikpt = 1, SIZE(this%gmmpMat_k,6)
+                     this%gmmpMat_k(iz,:,:,:,ipm,ikpt) = rotMMPmat(this%gmmpMat_k(iz,:,:,:,ipm,ikpt),sym,iop,l,lp=lp)
+                  ENDDO
                ENDIF
             ENDDO
          ENDDO
@@ -1092,7 +1120,7 @@ MODULE m_types_greensf
          LOGICAL, OPTIONAL,   INTENT(IN)     :: spin_rotation
          LOGICAL, OPTIONAL,   INTENT(IN)     :: real_space_rotation
 
-         INTEGER :: l,lp,atomType,atomTypep
+         INTEGER :: l,lp,atomType,atomTypep,ikpt
          INTEGER :: ipm,ispin,iz,ilo,ilop,iLO_ind,iLOp_ind
 
          IF(ABS(alpha).LT.1e-12.AND.ABS(beta).LT.1e-12.AND.ABS(gamma).LT.1e-12) RETURN !Nothing to be done
@@ -1141,14 +1169,20 @@ MODULE m_types_greensf
                      DO ilo = 1, atoms%nlo(atomType)
                         IF(atoms%llo(ilo,atomType).NE.l) CYCLE
                         iLOp_ind = 0
+                        iLO_ind = iLO_ind + 1
                         DO ilop = 1, atoms%nlo(atomTypep)
-                           IF(atoms%llo(ilop,atomType).NE.lp) CYCLE
+                           IF(atoms%llo(ilop,atomTypep).NE.lp) CYCLE
                            iLOp_ind = iLOp_ind + 1
                            this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm) = rotMMPmat(this%uloulop(iz,:,:,iLO_ind,iLOp_ind,:,ipm),alpha,beta,gamma,l,lp=lp,&
                                                                                    spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
                         ENDDO
                      ENDDO
                   ENDIF
+               ELSE IF(ALLOCATED(this%gmmpMat_k)) THEN
+                  DO ikpt = 1, SIZE(this%gmmpMat_k,6)
+                     this%gmmpMat_k(iz,:,:,:,ipm,ikpt) = rotMMPmat(this%gmmpMat_k(iz,:,:,:,ipm,ikpt),alpha,beta,gamma,l,lp=lp,&
+                                                                   spin_rotation=spin_rotation,real_space_rotation=real_space_rotation)
+                  ENDDO
                ENDIF
             ENDDO
          ENDDO
@@ -1167,7 +1201,7 @@ MODULE m_types_greensf
 
          IF(ALLOCATED(this%gmmpMat)) THEN
             l_empty = ALL(ABS(this%gmmpMat(:,m,mp,spin,ipm)).LT.1e-12)
-         ELSE
+         ELSE IF(ALLOCATED(this%uu)) THEN
             l_empty =      ALL(ABS(this%uu(:,m,mp,spin,ipm)).LT.1e-12) &
                      .AND. ALL(ABS(this%dd(:,m,mp,spin,ipm)).LT.1e-12) &
                      .AND. ALL(ABS(this%ud(:,m,mp,spin,ipm)).LT.1e-12) &
@@ -1179,6 +1213,8 @@ MODULE m_types_greensf
                                  .AND. ALL(ABS(this%dulo(:,m,mp,:,spin,ipm)).LT.1e-12) &
                                  .AND. ALL(ABS(this%uloulop(:,m,mp,:,:,spin,ipm)).LT.1e-12)
             ENDIF
+         ELSE IF(ALLOCATED(this%gmmpMat_k)) THEN
+            l_empty = ALL(ABS(this%gmmpMat_k(:,m,mp,spin,ipm,:)).LT.1e-12)
          ENDIF
 
       END FUNCTION checkEmpty_greensf
@@ -1206,6 +1242,7 @@ MODULE m_types_greensf
 
             this%uloulop = cmplx_0
          ENDIF
+         IF(ALLOCATED(this%gmmpMat_k)) this%gmmpMat_k = cmplx_0
 
       END SUBROUTINE reset_gf
 
@@ -1237,6 +1274,7 @@ MODULE m_types_greensf
 
             this%uloulop(:,m,mp,:,:,spin,ipm) = cmplx_0
          ENDIF
+         IF(ALLOCATED(this%gmmpMat_k)) this%gmmpMat_k(:,m,mp,spin,ipm,:) = cmplx_0
 
       END SUBROUTINE resetSingleElem_gf
 

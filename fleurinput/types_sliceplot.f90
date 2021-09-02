@@ -141,14 +141,18 @@ CONTAINS
         xPathA = '/fleurInput/output/plotting/plot'
         numberNodes = xml%GetNumberOfNodes(xPathA)
         this%nplots=numberNodes
+
         IF(ALLOCATED(this%plot)) DEALLOCATE (this%plot)
         ALLOCATE(this%plot(numberNodes))
-        do i = 1, numberNodes
-          write(xPathA,'(a,i0,a)') '/fleurInput/output/plotting/plot[',i,']'
-          call xml%set_basepath(xPathA)
-          call this%plot(i)%read_xml(xml)
-          call xml%set_basepath('')
-        end do
+
+        IF(numberNodes>0) THEN 
+          do i = 1, numberNodes
+            write(xPathA,'(a,i0,a)') '/fleurInput/output/plotting/plot[',i,']'
+            call xml%set_basepath(xPathA)
+            call this%plot(i)%read_xml(xml)
+            call xml%set_basepath('')
+          end do
+        ENDIF
       ELSE
         call judft_warn("Plotting output switches not read. Too old xml version")
       ENDIF

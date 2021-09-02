@@ -65,13 +65,13 @@
 
 &atom desc="Cesium (Cs)" z=55 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s1" lo="5s 5p" /
 &atom desc="Barium (Ba)" z=56 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2" lo="5s 5p" /
-&atom desc="Lanthanum (La)" z=57 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 5d1" lo="5p" /
-&atom desc="Cerium (Ce)" z=58 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 5d1 4f1" lo="5p" /
-&atom desc="Praseodymium (Pr)" z=59 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f3" lo="5p" /
-&atom desc="Neodymium (Nd)" z=60 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f4" lo="5p" /
-&atom desc="Promethium (Pm)" z=61 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f5" lo="5p" /
-&atom desc="Samarium (Sm)" z=62 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f6" lo="5p" /
-&atom desc="Europium (Eu)" z=63 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f7" lo="5p" /
+&atom desc="Lanthanum (La)" z=57 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2 5d1" lo="5s 5p" /
+&atom desc="Cerium (Ce)" z=58 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2 5d1 4f1" lo="5s 5p" /
+&atom desc="Praseodymium (Pr)" z=59 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2 4f3" lo="5s 5p" /
+&atom desc="Neodymium (Nd)" z=60 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2 4f4" lo="5s 5p" /
+&atom desc="Promethium (Pm)" z=61 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2 4f5" lo="5s 5p" /
+&atom desc="Samarium (Sm)" z=62 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2 4f6" lo="5s 5p" /
+&atom desc="Europium (Eu)" z=63 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|5s2 5p6 6s2 4f7" lo="5s 5p" /
 &atom desc="Gadolinium (Gd)" z=64 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f7 5d1" lo="5p" /
 &atom desc="Terbium (Tb)" z=65 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f9" lo="5p" /
 &atom desc="Dysprosium (Dy)" z=66 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10|5p6 6s2 4f10" lo="5p" /

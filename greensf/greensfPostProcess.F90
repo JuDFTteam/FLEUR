@@ -89,6 +89,7 @@ MODULE m_greensfPostProcess
          CALL timestart("Green's Function: Occupation")
          mmpmat = cmplx_0
          DO i_gf = 1, gfinp%n
+            IF(gfinp%elem(i_gf)%l_kresolved) CYCLE
             !If there are SCLOs present the occupations can get bigger than 1
             l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag()
             mmpmat(:,:,i_gf,:) = greensFunction(i_gf)%occupationMatrix(gfinp,input,atoms,noco,nococonv,&
@@ -98,7 +99,7 @@ MODULE m_greensfPostProcess
 
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, kpts)
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
                                u=f,udot=g,ulo=flo)
