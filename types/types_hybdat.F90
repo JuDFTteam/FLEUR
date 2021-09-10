@@ -52,9 +52,27 @@ MODULE m_types_hybdat
       procedure :: set_nobd         => set_nobd_hybdat
       procedure :: set_nbands       => set_nbands_hybdat
       procedure :: set_maxlmindx    => set_maxlmindx_hybdat
+      procedure :: free_zmat        => free_zmat_hybdat
    END TYPE t_hybdat
 
 contains
+   subroutine free_zmat_hybdat(hybdat)
+      implicit none 
+      class(t_hybdat), intent(inout) :: hybdat 
+
+      integer :: i,j
+
+      if(allocated(hybdat%zmat)) then
+         do i = 1,size(hybdat%zmat, 1) 
+            do j = 1, size(hybdat%zmat, 2)
+               call hybdat%zmat(i,j)%free() 
+            enddo 
+         enddo
+
+         deallocate(hybdat%zmat)
+      endif
+   end subroutine free_zmat_hybdat
+
    subroutine set_maxlmindx_hybdat(hybdat, atoms, num_radfun_per_l)
       implicit none
       class(t_hybdat), intent(inout) :: hybdat

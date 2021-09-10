@@ -21,7 +21,26 @@ module m_types_eigvec
 #endif
       type(t_mat) :: mat
    contains 
+      procedure :: free => free_eigvec
    end type t_eigvec 
 contains 
+   subroutine free_eigvec(eigvec)
+      implicit NONE
+      class(t_eigvec) :: eigvec 
 
+      integer :: ierr 
+
+      eigvec%l_participate = .False.
+      eigvec%l_recv = .false.
+
+      if(allocated(eigvec%root_pe)) deallocate(eigvec%root_pe) 
+
+      eigvec%nk  = -1 
+      eigvec%jsp = -1 
+
+#ifdef CPP_MPI
+      if(eigvec%comm /= MPI_COMM_NULL) call MPI_Comm_free(eigvec%comm, ierr)
+#endif
+      call eigvec%mat%free()
+   end subroutine free_eigvec
 end module m_types_eigvec
