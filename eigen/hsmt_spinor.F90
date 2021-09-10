@@ -69,8 +69,8 @@ CONTAINS
     isigma=CMPLX(0.0,0.0)
     isigma(1,2,1)=CMPLX(0.0,1.0)
     isigma(2,1,1)=CMPLX(0.0,1.0)
-    isigma(1,2,2)=CMPLX(-1.0,0.0)
-    isigma(2,1,2)=CMPLX(1.0,0.0)
+    isigma(1,2,2)=CMPLX(1.0,0.0)
+    isigma(2,1,2)=CMPLX(-1.0,0.0)
     isigma(1,1,3)=CMPLX(0.0,-1.0)
     isigma(2,2,3)=CMPLX(0.0,1.0)
 

@@ -53,10 +53,10 @@ CONTAINS
       class(t_nococonv), intent(in) :: nococonv
       REAL, INTENT(IN) :: alpha, beta
       COMPLEX         :: chi(2, 2)
-      chi(1, 1) = exp(ImagUnit*alpha/2)*cos(beta/2)
-      chi(2, 1) = -EXP(-ImagUnit*alpha/2)*SIN(beta/2)
-      chi(1, 2) = EXP(ImagUnit*alpha/2)*SIN(beta/2)
-      chi(2, 2) = EXP(-ImagUnit*alpha/2)*COS(beta/2)
+      chi(1, 1) = exp(-ImagUnit*alpha/2)*cos(beta/2)
+      chi(2, 1) = EXP(ImagUnit*alpha/2)*SIN(beta/2)
+      chi(1, 2) = -EXP(-ImagUnit*alpha/2)*SIN(beta/2)
+      chi(2, 2) = EXP(ImagUnit*alpha/2)*COS(beta/2)
    end function
 
    function denmat_to_mag_mat(nococonv, mat) result(mag)
@@ -151,9 +151,9 @@ CONTAINS
       COMPLEX r21n
       if (present(toGlobal)) THEN
          if (toGlobal) THEN
-            r11n = 0.5*(1.0 + cos(beta))*rho11 + sin(beta)*real(rho21) + 0.5*(1.0 - cos(beta))*rho22
-            r22n = 0.5*(1.0 - cos(beta))*rho11 - sin(beta)*real(rho21) + 0.5*(1.0 + cos(beta))*rho22
-            r21n = CMPLX(cos(alph), -sin(alph))*(-0.5*sin(beta)*(rho11 - rho22) + cos(beta)*real(rho21) + cmplx(0.0, aimag(rho21)))
+            r11n = 0.5*(1.0 + cos(beta))*rho11 - sin(beta)*real(rho21) + 0.5*(1.0 - cos(beta))*rho22
+            r22n = 0.5*(1.0 - cos(beta))*rho11 + sin(beta)*real(rho21) + 0.5*(1.0 + cos(beta))*rho22
+            r21n = CMPLX(cos(alph), sin(alph))*(0.5*sin(beta)*(rho11 - rho22) + cos(beta)*real(rho21) + cmplx(0.0, aimag(rho21)))
             rho11 = r11n
             rho22 = r22n
             rho21 = r21n
@@ -161,9 +161,9 @@ CONTAINS
             RETURN
          end if
       end if
-      r11n = -sin(beta)*(cos(alph)*real(rho21) - sin(alph)*AIMAG(rho21)) + (rho11 - rho22)*0.5*(1 + cos(beta)) + rho22
-      r22n = sin(beta)*(cos(alph)*real(rho21) - sin(alph)*AIMAG(rho21)) + (rho22 - rho11)*0.5*(1 + cos(beta)) + rho11
-      r21n = (cos(alph)*real(rho21) - sin(alph)*AIMAG(rho21))*(1 + cos(beta)) + 0.5*sin(beta)*(rho11 - rho22) - cmplx(cos(alph), -sin(alph))*conjg(rho21)
+      r11n = sin(beta)*(cos(alph)*real(rho21) + sin(alph)*AIMAG(rho21)) + (rho11 - rho22)*0.5*(1 + cos(beta)) + rho22
+      r22n = -sin(beta)*(cos(alph)*real(rho21) + sin(alph)*AIMAG(rho21)) + (rho22 - rho11)*0.5*(1 + cos(beta)) + rho11
+      r21n = (cos(alph)*real(rho21) + sin(alph)*AIMAG(rho21))*(1 + cos(beta)) - 0.5*sin(beta)*(rho11 - rho22) - cmplx(cos(alph), sin(alph))*conjg(rho21)
       rho11 = r11n
       rho22 = r22n
       rho21 = r21n
