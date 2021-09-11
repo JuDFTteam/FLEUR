@@ -25,7 +25,7 @@ CONTAINS
       REAL drx,drx0,drx1,drx2,drx3,drxx,drxx0,drxx1,drxx2,drxx3
       INTEGER i,i1,i2,i3,i4,i5,i6,j,nred,ndvgrd
 
-      call timestart("grdchlh")
+      !call timestart("grdchlh")
 
       ndvgrd=6
       if (present(order)) ndvgrd=order
@@ -210,7 +210,7 @@ CONTAINS
          ddrr(size(ro)) = drxx0
       ENDIF
 
-      call timestop("grdchlh")
+      !call timestop("grdchlh")
    END SUBROUTINE grdchlh
 !--------------------------------------------------------------------
 ! Functions: 3 point formula :
