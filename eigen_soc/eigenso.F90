@@ -24,8 +24,7 @@ MODULE m_eigenso
     use mpi 
 #endif
 CONTAINS
-  SUBROUTINE eigenso(eig_id,fmpi,stars,vacuum,atoms,sphhar,&
-                     sym,cell,noco,nococonv,input,kpts,oneD,vTot,enpara,results,hub1inp,hub1data)
+  SUBROUTINE eigenso(eig_id,fmpi,stars,sphhar,nococonv,vTot,enpara,results,hub1inp,hub1data,fi)
 
     USE m_types
     USE m_constants
@@ -33,24 +32,17 @@ CONTAINS
     USE m_spnorb
     USE m_alineso
     USE m_judft
+    USE m_unfold_band_kpts
 #ifdef CPP_MPI
     USE m_mpi_bc_pot
 #endif
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)        :: fmpi
-
-    TYPE(t_oneD),INTENT(IN)       :: oneD
-    TYPE(t_input),INTENT(IN)      :: input
-    TYPE(t_vacuum),INTENT(IN)     :: vacuum
-    TYPE(t_noco),INTENT(IN)       :: noco
+    type(t_fleurinput), intent(in) :: fi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
-    TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_stars),INTENT(IN)      :: stars
-    TYPE(t_cell),INTENT(IN)       :: cell
-    TYPE(t_kpts),INTENT(IN)       :: kpts
     TYPE(t_sphhar),INTENT(IN)     :: sphhar
-    TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_potden),INTENT(IN)     :: vTot
     TYPE(t_enpara),INTENT(IN)     :: enpara
     TYPE(t_results),INTENT(INOUT) :: results
@@ -75,13 +67,16 @@ CONTAINS
 
     TYPE(t_rsoc) :: rsoc
     INTEGER, ALLOCATABLE :: neigBuffer(:,:)
+
+    COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),fi%kpts%nkpt,fi%input%jspins) ! needed for unfolding bandstructure fmpi case
+
     REAL,    ALLOCATABLE :: eig_so(:), eigBuffer(:,:,:)
     COMPLEX, ALLOCATABLE :: zso(:,:,:)
 
     TYPE(t_mat)::zmat
     TYPE(t_lapw)::lapw
 
-    INTEGER :: ierr
+    INTEGER :: ierr, jsp
 
     !  ..
 
@@ -93,16 +88,16 @@ CONTAINS
     ! now the definition of rotation matrices
     ! is equivalent to the def in the noco-routines
 
-    ALLOCATE(  usdus%us(0:atoms%lmaxd,atoms%ntype,input%jspins), usdus%dus(0:atoms%lmaxd,atoms%ntype,input%jspins),&
-         usdus%uds(0:atoms%lmaxd,atoms%ntype,input%jspins),usdus%duds(0:atoms%lmaxd,atoms%ntype,input%jspins),&
-         usdus%ddn(0:atoms%lmaxd,atoms%ntype,input%jspins),&
-         usdus%ulos(atoms%nlod,atoms%ntype,input%jspins),usdus%dulos(atoms%nlod,atoms%ntype,input%jspins),&
-         usdus%uulon(atoms%nlod,atoms%ntype,input%jspins),usdus%dulon(atoms%nlod,atoms%ntype,input%jspins))
+    ALLOCATE(  usdus%us(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins), usdus%dus(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins),&
+         usdus%uds(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins),usdus%duds(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins),&
+         usdus%ddn(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins),&
+         usdus%ulos(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins),usdus%dulos(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins),&
+         usdus%uulon(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins),usdus%dulon(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins))
 
-    IF (input%l_wann.OR.l_socvec) THEN
+    IF (fi%input%l_wann.OR.l_socvec) THEN
        wannierspin = 2
     ELSE
-       wannierspin = input%jspins
+       wannierspin = fi%input%jspins
     ENDIF
 
     !
@@ -117,15 +112,16 @@ CONTAINS
     !  ..
 
     !Get spin-orbit coupling matrix elements
-    CALL spnorb( atoms,noco,nococonv,input,fmpi, enpara,vTot%mt,usdus,rsoc,.TRUE.,hub1inp,hub1data)
+    CALL spnorb( fi%atoms,fi%noco,nococonv,fi%input,fmpi, enpara,vTot%mt,usdus,rsoc,.TRUE.,hub1inp,hub1data)
     !
 
 
-    ALLOCATE (eig_so(2*input%neig))
-    ALLOCATE (eigBuffer(2*input%neig,kpts%nkpt,wannierspin))
-    ALLOCATE (neigBuffer(kpts%nkpt,wannierspin))
+    ALLOCATE (eig_so(2*fi%input%neig))
+    ALLOCATE (eigBuffer(2*fi%input%neig,fi%kpts%nkpt,wannierspin))
+    ALLOCATE (neigBuffer(fi%kpts%nkpt,wannierspin))
     results%eig = 1.0e300
     eigBuffer = 1.0e300
+    unfoldingBuffer = CMPLX(0.0,0.0)
     results%neig = 0
     neigBuffer = 0
     rsoc%soangl(:,:,:,:,:,:) = CONJG(rsoc%soangl(:,:,:,:,:,:))
@@ -135,12 +131,30 @@ CONTAINS
     DO nk_i=1,SIZE(fmpi%k_list)
         nk=fmpi%k_list(nk_i)
      !DO nk = fmpi%n_start,n_end,n_stride
-       CALL lapw%init(input,noco, nococonv,kpts,atoms,sym,nk,cell,.FALSE., fmpi)
-       ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*input%neig,wannierspin))
+       CALL lapw%init(fi%input,fi%noco, nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell,.FALSE., fmpi)
+       ALLOCATE( zso(lapw%nv(1)+fi%atoms%nlotot,2*fi%input%neig,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
+
+       !IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
+        !select type(smat)
+        !type is (t_mat)
+        !   allocate(t_mat::smat_unfold)
+        !   select type(smat_unfold)
+        !   type is (t_mat)
+        !      smat_unfold=smat
+        !   end select
+        !type is (t_mpimat)
+        !   allocate(t_mpimat::smat_unfold)
+        !   select type(smat_unfold)
+        !   type is (t_mpimat)
+        !      smat_unfold=smat
+        !   end select
+        !end select
+        !END IF
+
        CALL timestart("eigenso: alineso")
-       CALL alineso(eig_id,lapw, fmpi,atoms,sym,kpts,&
-            input,noco,cell,oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
+       CALL alineso(eig_id,lapw, fmpi,fi%atoms,fi%sym,fi%kpts,&
+       fi%input,fi%noco,fi%cell,fi%oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (fmpi%irank.EQ.0) THEN
           WRITE (oUnit,FMT=8010) nk,nsz
@@ -150,7 +164,7 @@ CONTAINS
 8020   FORMAT (5x,5f12.6)
 
        IF (fmpi%n_rank==0) THEN
-          IF (input%eonly) THEN
+          IF (fi%input%eonly) THEN
              CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz))
              STOP 'jspin is undefined here (eigenso - eonly branch)'
              eigBuffer(:nsz,nk,jspin) = eig_so(:nsz)
@@ -175,17 +189,38 @@ CONTAINS
              ENDDO
           ENDIF ! (input%eonly) ELSE
        ENDIF ! n_rank == 0
-       DEALLOCATE (zso)
+      !hier vllt ein barrier oder so etwas da nur rank 0 zMat schreibt
+      IF (fi%banddos%unfoldband) THEN
+        !IF(modulo (fi%kpts%nkpt,fmpi%n_size).NE.0) call !juDFT_error("number fi%kpts needs to be multiple of number fmpi threads", &
+        !                hint=errmsg, calledby="eigenso.F90")
+        jsp=1
+        CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig_so(:nsz),results,fi%input,fi%atoms,unfoldingBuffer,fmpi)
+        IF (fi%input%jspins==2) THEN
+        !  jsp=2
+        !  CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig_so(:nsz),results,fi%input,fi%atoms,unfoldingBuffer,fmpi)
+          unfoldingBuffer(:,nk,2)=unfoldingBuffer(:,nk,1)
+        ENDIF
+        !CALL smat_unfold%free()
+        !DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
+        !if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
+        !                                       hint=errmsg, calledby="eigen.F90")
+      END IF
+      DEALLOCATE (zso)
     ENDDO ! DO nk
 
 #ifdef CPP_MPI
-    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,fmpi%mpi_comm,ierr)
-    CALL MPI_ALLREDUCE(eigBuffer(:2*input%neig,:,:),results%eig(:2*input%neig,:,:),&
-                       2*input%neig*kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)
+    IF (fi%banddos%unfoldband) THEN
+        results%unfolding_weights = CMPLX(0.0,0.0)
+        CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+    END IF
+    CALL MPI_ALLREDUCE(neigBuffer,results%neig,fi%kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,fmpi%mpi_comm,ierr)
+    CALL MPI_ALLREDUCE(eigBuffer(:2*fi%input%neig,:,:),results%eig(:2*fi%input%neig,:,:),&
+                       2*fi%input%neig*fi%kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)
     CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #else
+    results%unfolding_weights(:,:,:) = unfoldingBuffer(:,:,:)
     results%neig(:,:) = neigBuffer(:,:)
-    results%eig(:2*input%neig,:,:) = eigBuffer(:2*input%neig,:,:)
+    results%eig(:2*fi%input%neig,:,:) = eigBuffer(:2*fi%input%neig,:,:)
 #endif
 
     RETURN

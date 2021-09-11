@@ -148,7 +148,7 @@ CONTAINS
             !Try to symmetrize matrix
             CALL symmetrize_matrix(fmpi,fi%noco,fi%kpts,nk,hmat,smat)
 
-            IF (fi%banddos%unfoldband) THEN
+            IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                select type(smat)
                type is (t_mat)
                   allocate(t_mat::smat_unfold)
@@ -219,10 +219,10 @@ CONTAINS
 #endif
             CALL timestop("EV output")
 
-            IF (fi%banddos%unfoldband) THEN
+            IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                IF(modulo (fi%kpts%nkpt,fmpi%n_size).NE.0) call juDFT_error("number fi%kpts needs to be multiple of number fmpi threads",&
                    hint=errmsg, calledby="eigen.F90")
-               CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,fi%input,fi%atoms,unfoldingBuffer,fmpi)
+               CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig,results,fi%input,fi%atoms,unfoldingBuffer,fmpi,smat_unfold)
                CALL smat_unfold%free()
                DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
                if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
@@ -238,7 +238,7 @@ CONTAINS
 
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
-      IF (fi%banddos%unfoldband) THEN
+      IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
          results%unfolding_weights = CMPLX(0.0,0.0)
        CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),CPP_MPI_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       END IF

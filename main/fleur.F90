@@ -379,8 +379,7 @@ CONTAINS
 
             ! WRITE(oUnit,fmt='(A)') 'Starting 2nd variation ...'
             IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) &
-               CALL eigenso(eig_id, fmpi, stars, fi%vacuum, fi%atoms, sphhar, &
-                            fi%sym, fi%cell, fi%noco, nococonv, fi%input, fi%kpts, fi%oneD, vTot, enpara, results, fi%hub1inp, hub1data)
+               CALL eigenso(eig_id, fmpi, stars, sphhar, nococonv, vTot, enpara, results, fi%hub1inp, hub1data,fi)
             CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI
