@@ -51,7 +51,7 @@ MODULE m_greensf_io
       INTEGER           :: dimsInt(7)
       INTEGER(HSIZE_T)  :: dims(7)
 
-      version = 3
+      version = 4
       IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
@@ -413,6 +413,7 @@ MODULE m_greensf_io
       CALL io_write_attint0(groupID,'iContour',contour_mapping(g%elem%iContour))
       CALL io_write_attlog0(groupID,'l_onsite',.NOT.g%elem%isOffDiag())
       CALL io_write_attlog0(groupID,'l_sphavg',g%l_sphavg)
+      CALL io_write_attlog0(groupID,'l_kresolved',g%elem%l_kresolved)
       CALL io_write_attreal1(groupID,'atomDiff',matmul(cell%amat,g%elem%atomDiff))
       nLO = g%elem%countLOs(atoms)
       CALL io_write_attint0(groupID,'numLOs',nLO)
