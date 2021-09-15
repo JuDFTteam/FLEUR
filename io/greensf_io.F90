@@ -33,6 +33,7 @@ MODULE m_greensf_io
       TYPE(t_input),                INTENT(IN)  :: input
       TYPE(t_gfinp),                INTENT(IN)  :: gfinp
       TYPE(t_atoms),                INTENT(IN)  :: atoms
+      TYPE(t_cell),                 INTENT(IN)  :: cell
       TYPE(t_kpts),                 INTENT(IN)  :: kpts
       CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: inFilename
       INTEGER(HID_T),               INTENT(OUT) :: fileID
