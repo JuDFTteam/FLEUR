@@ -16,9 +16,9 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)           :: atoms
     TYPE(t_banddos),INTENT(IN)         :: banddos
     TYPE(t_eigVecCoeffs),INTENT(IN)   :: eigVecCoeffs
-    COMPLEX, ALLOCATABLE,INTENT(OUT) :: acof(:,:)
-    COMPLEX, ALLOCATABLE,INTENT(OUT) :: bcof(:,:)
-    COMPLEX, ALLOCATABLE,INTENT(OUT) :: ccof(:,:,:)
+    COMPLEX, ALLOCATABLE,INTENT(INOUT) :: acof(:,:)
+    COMPLEX, ALLOCATABLE,INTENT(INOUT) :: bcof(:,:)
+    COMPLEX, ALLOCATABLE,INTENT(INOUT) :: ccof(:,:,:)
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp

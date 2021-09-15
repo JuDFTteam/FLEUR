@@ -207,6 +207,10 @@ PROGRAM inpgen
          CALL judft_error("You should either specify -inp,-inp.xml or -f command line options. Check -h if unsure")
       ENDIF
       IF (.NOT.l_fullinput) THEN
+         IF (judft_was_argument("-precise")) THEN
+            WRITE(*,*) 'NOTE: right now the "-precise" option is only a dummy that does not affect anything.'
+         END IF
+
          !First we determine the spacegoup and map the atoms to groups
          CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,&
               cell,sym,atoms)
