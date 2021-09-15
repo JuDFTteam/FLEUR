@@ -651,6 +651,52 @@ MODULE m_greensf_io
 
    END SUBROUTINE writeGreensFElement
 
+   SUBROUTINE io_write_string1(datasetID,dims,stringLength,dataArray)
+
+      USE hdf5
+      USE m_hdf_tools4
+
+      IMPLICIT NONE
+
+      INTEGER(HID_T),              INTENT(IN) :: datasetID
+      INTEGER,                     INTENT(IN) :: dims(1)
+      INTEGER,                     INTENT(IN) :: stringLength
+      CHARACTER(LEN=stringLength), INTENT(IN) :: dataArray(:)
+
+      INTEGER          :: hdfError
+      INTEGER(HID_T)   :: dataspaceID, memSpaceID
+      INTEGER(HID_T)   :: stringTypeID
+      INTEGER(HID_t)   :: trans
+      INTEGER(HSIZE_t) :: memOffset(1), fncount(1)
+      INTEGER(HSIZE_t) :: dimsHDF(1)
+      INTEGER(SIZE_T)  :: stringLengthHDF
+
+      stringLengthHDF = stringLength
+      dimsHDF(:) = dims(:)
+      memOffset(:) = 0
+      fnCount(:) = dims(:)
+
+      trans = gettransprop()
+
+      CALL h5tcopy_f(H5T_NATIVE_CHARACTER, stringTypeID, hdfError)
+      CALL h5tset_size_f(stringTypeID, stringLengthHDF, hdfError)
+      CALL h5tset_strpad_f(stringTypeID, H5T_STR_SPACEPAD_F, hdfError)
+      CALL h5tset_cset_f(stringTypeID, H5T_CSET_ASCII_F, hdfError)
+
+      CALL h5dget_space_f(datasetID,dataspaceID,hdfError)
+      CALL h5sselect_hyperslab_f(dataspaceID,H5S_SELECT_SET_F,memOffset,fncount,hdfError)
+      CALL h5screate_simple_f(1,dimsHDF,memSpaceID,hdfError)
+      CALL h5dwrite_f(datasetID,stringTypeID,dataArray,dimsHDF,hdfError,memSpaceID,dataspaceID,trans)
+      CALL h5sclose_f(memSpaceID,hdfError)
+      CALL h5sclose_f(dataspaceID,hdfError)
+      CALL cleartransprop(trans)
+
+      CALL h5tclose_f(stringTypeID,hdfError)
+
+      CALL io_check("io_write_string1 !",hdfError)
+
+   END SUBROUTINE io_write_string1
+
 #endif
 
 END MODULE m_greensf_io
