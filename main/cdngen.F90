@@ -199,6 +199,19 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                              vacuum,  sphhar, sym, gfinp, hub1inp, vTot, oneD, results, EnergyDen)
    endif
 
+   IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
+      IF(greensfImagPart%l_calc) THEN
+         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,kpts,cell,gfinp,input,sym,noco,fmpi,&
+                                 nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
+      ELSE
+         IF(fmpi%irank.EQ.0) THEN
+            WRITE(oUnit,'(/,A)') "Green's Functions are not calculated: "
+            WRITE(oUnit,'(A,f12.7,TR5,A,f12.7/)') "lastDistance: ", results%last_distance,&
+                                                  "minCalcDistance: ", gfinp%minCalcDistance
+         ENDIF
+      ENDIF
+   ENDIF
+
    IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
       IF (fmpi%irank == 0) THEN
          CALL timestart("cdngen: dos")
@@ -232,19 +245,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !IF (sliceplot%iplot.NE.0) THEN
    !   CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi,oneD, sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
    !END IF
-
-   IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
-      IF(greensfImagPart%l_calc) THEN
-         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,kpts,cell,gfinp,input,sym,noco,fmpi,&
-                                 nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
-      ELSE
-         IF(fmpi%irank.EQ.0) THEN
-            WRITE(oUnit,'(/,A)') "Green's Functions are not calculated: "
-            WRITE(oUnit,'(A,f12.7,TR5,A,f12.7/)') "lastDistance: ", results%last_distance,&
-                                                  "minCalcDistance: ", gfinp%minCalcDistance
-         ENDIF
-      ENDIF
-   ENDIF
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then

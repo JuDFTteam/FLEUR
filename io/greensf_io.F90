@@ -470,7 +470,7 @@ MODULE m_greensf_io
       nLO = g%elem%countLOs(atoms)
       CALL io_write_attint0(groupID,'numLOs',nLO)
 
-      IF(g%l_sphavg) THEN
+      IF(g%l_sphavg.AND..NOT.g%l_kresolved) THEN
 
          dims(:6)=[2,g%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspins,2]
          dimsInt=dims
