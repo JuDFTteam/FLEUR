@@ -483,7 +483,7 @@ MODULE m_greensf_io
       ELSE IF(g%l_kresolved) THEN
          dims(:6)=[2,g%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspins,2]
          dimsInt=dims
-         DO ikpt = 1, SIZE(g%gmmpmat_k)
+         DO ikpt = 1, SIZE(g%gmmpmat_k,6)
             WRITE(datasetName,201) ikpt
 201         FORMAT('kresolved-',i0)
             CALL h5screate_simple_f(6,dims(:6),DataSpaceID,hdfError)
