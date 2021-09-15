@@ -49,7 +49,8 @@ CONTAINS
     REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),cart_mat(3,3),det,temp
     INTEGER             :: ios,n,i, iKpts
     CHARACTER(len=100)  :: filename
-    LOGICAL             :: l_exist,cartesian
+    LOGICAL             :: l_exist
+    LOGICAL             :: cartesian=.false.
     CHARACTER(len=16384):: line
     TYPE(t_atompar)     :: ap
 
