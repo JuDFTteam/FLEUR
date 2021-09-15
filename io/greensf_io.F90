@@ -25,7 +25,7 @@ MODULE m_greensf_io
 
    CONTAINS
 
-   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, kpts, inFilename)
+   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, cell, kpts, inFilename)
 
       USE m_types
       USE m_cdn_io
@@ -45,6 +45,8 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
       INTEGER(HID_T)    :: kptsSPLabelsSpaceID, kptsSPLabelsSetID
       INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
+      INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
+      INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
 
       INTEGER(HID_T)    :: stringTypeID
       INTEGER(SIZE_T)   :: stringLength
@@ -56,7 +58,7 @@ MODULE m_greensf_io
       INTEGER           :: dimsInt(7)
       INTEGER(HSIZE_T)  :: dims(7)
 
-      version = 5
+      version = 6
       IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
@@ -85,6 +87,23 @@ MODULE m_greensf_io
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)
       CALL io_write_attreal0(generalGroupID,'FermiEnergy',eFermiPrev)
       CALL io_write_attlog0(generalGroupID,'mperp',gfinp%l_mperp)
+
+      dims(:2)=(/3,3/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),bravaisMatrixSpaceID,hdfError)
+      CALL h5dcreate_f(generalGroupID, "bravaisMatrix", H5T_NATIVE_DOUBLE, bravaisMatrixSpaceID, bravaisMatrixSetID, hdfError)
+      CALL h5sclose_f(bravaisMatrixSpaceID,hdfError)
+      CALL io_write_real2(bravaisMatrixSetID,(/1,1/),dimsInt(:2),cell%amat)
+      CALL h5dclose_f(bravaisMatrixSetID, hdfError)
+
+      dims(:2)=(/3,3/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),reciprocalCellSpaceID,hdfError)
+      CALL h5dcreate_f(generalGroupID, "reciprocalCell", H5T_NATIVE_DOUBLE, reciprocalCellSpaceID, reciprocalCellSetID, hdfError)
+      CALL h5sclose_f(reciprocalCellSpaceID,hdfError)
+      CALL io_write_real2(reciprocalCellSetID,(/1,1/),dimsInt(:2),cell%bmat)
+      CALL h5dclose_f(reciprocalCellSetID, hdfError)
+
 
       CALL h5gcreate_f(generalGroupID, 'kpts', kptsGroupID, hdfError)
 
