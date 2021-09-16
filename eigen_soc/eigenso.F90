@@ -135,23 +135,6 @@ CONTAINS
        ALLOCATE( zso(lapw%nv(1)+fi%atoms%nlotot,2*fi%input%neig,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
 
-       !IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
-        !select type(smat)
-        !type is (t_mat)
-        !   allocate(t_mat::smat_unfold)
-        !   select type(smat_unfold)
-        !   type is (t_mat)
-        !      smat_unfold=smat
-        !   end select
-        !type is (t_mpimat)
-        !   allocate(t_mpimat::smat_unfold)
-        !   select type(smat_unfold)
-        !   type is (t_mpimat)
-        !      smat_unfold=smat
-        !   end select
-        !end select
-        !END IF
-
        CALL timestart("eigenso: alineso")
        CALL alineso(eig_id,lapw, fmpi,fi%atoms,fi%sym,fi%kpts,&
        fi%input,fi%noco,fi%cell,fi%oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
@@ -189,22 +172,17 @@ CONTAINS
              ENDDO
           ENDIF ! (input%eonly) ELSE
        ENDIF ! n_rank == 0
-      !hier vllt ein barrier oder so etwas da nur rank 0 zMat schreibt
       IF (fi%banddos%unfoldband) THEN
         !IF(modulo (fi%kpts%nkpt,fmpi%n_size).NE.0) call !juDFT_error("number fi%kpts needs to be multiple of number fmpi threads", &
         !                hint=errmsg, calledby="eigenso.F90")
-        jsp=1
-        CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig_so(:nsz),results,fi%input,fi%atoms,unfoldingBuffer,fmpi)
+        jsp=1  
+        CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig_so(:nsz),results,fi%input,fi%atoms,unfoldingBuffer,fmpi,fi%noco%l_soc,zso=zso)
         IF (fi%input%jspins==2) THEN
-        !  jsp=2
-        !  CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig_so(:nsz),results,fi%input,fi%atoms,unfoldingBuffer,fmpi)
-          unfoldingBuffer(:,nk,2)=unfoldingBuffer(:,nk,1)
+          jsp=2
+          CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig_so(:nsz),results,fi%input,fi%atoms,unfoldingBuffer,fmpi,fi%noco%l_soc,zso=zso)
+        !  unfoldingBuffer(:,nk,2)=unfoldingBuffer(:,nk,1)
         ENDIF
-        !CALL smat_unfold%free()
-        !DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
-        !if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
-        !                                       hint=errmsg, calledby="eigen.F90")
-      END IF
+       END IF
       DEALLOCATE (zso)
     ENDDO ! DO nk
 

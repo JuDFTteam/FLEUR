@@ -136,7 +136,7 @@ CONTAINS
     write(90,'(10f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
 !----------------------------------------------------------------
- SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,fmpi,smat_unfold)
+ SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,fmpi,l_soc,smat_unfold,zso)
 	USE m_types
 	USE m_juDFT
 	USE m_inv3
@@ -155,8 +155,10 @@ CONTAINS
 	TYPE(t_lapw),INTENT(IN)     :: lapw
     TYPE(t_mpi),INTENT(IN)      :: fmpi
 	TYPE(t_cell)            :: p_cell
+	LOGICAL, INTENT(IN)     :: l_soc
 	INTEGER, INTENT(IN)	    :: i_kpt,jsp
 	REAL, INTENT(IN)	    :: eig(:)
+	COMPLEX, INTENT(IN), OPTIONAL     ::zso(:,:,:)
     COMPLEX, INTENT(INOUT)  :: unfoldingBuffer(:,:,:)
 	INTEGER :: i,j,k,l,n
 	INTEGER :: na,n_i,nn,nk,nki,gi,lo
@@ -171,7 +173,7 @@ CONTAINS
 	REAL    :: multiple(3)
 	REAL    :: inv_unfold(3,3)
     REAL    :: inv_unfold_det
-    REAL    :: eps_r=0.000000000001
+    REAL    :: eps_r=0.0000000001
 !---------combining matrix input and unfolding factor input-----------	
 	unfold=banddos%unfoldTransMat
 	unfold(1,1)=banddos%unfoldTransMat(1,1)*banddos%s_cell_x
@@ -243,7 +245,7 @@ CONTAINS
 !          ENDIF
 	   call smat_unfold%multiply(zMat,zMat_s)
     END IF
-   !$omp parallel default(none) private(j,n_i,nn,na,lo,nk,nki,gi,multiple) shared(zmat,method_rubel,jsp,lapw,w_n_sum, w_n_c_sum,inv_unfold,eps_r,w_n,w_n_c,atoms,zmat_s,write_to_file,i_kpt,kpts,eig,results,unfoldingBuffer)
+   !$omp parallel default(none) private(j,n_i,nn,na,lo,nk,nki,gi,multiple) shared(zmat,method_rubel,jsp,lapw,w_n_sum, w_n_c_sum,inv_unfold,eps_r,w_n,w_n_c,atoms,zmat_s,write_to_file,i_kpt,kpts,eig,results,unfoldingBuffer,zso,l_soc)
    !$omp do
 	DO i=1,zMat%matsize2
 !	        write (*,*) 'here i work 1 -', i
@@ -253,7 +255,11 @@ CONTAINS
 					w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
 				!	write(*,*) 'zMat is real'
 				ELSE
-					w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+					IF (l_soc) THEN
+						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zso(j,i,1))*zso(j,i,1)+CONJG(zso(j,i,2))*zso(j,i,2)
+					ELSE 
+						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+					END IF
 				!	write(*,*) 'zMat is complex', j,i
 				END IF
 				multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
@@ -264,7 +270,11 @@ CONTAINS
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
 						!write(*,*) 'zMat is real'
 					ELSE
-						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+						IF (l_soc) THEN
+							w_n_c(i)=w_n_c(i)+CONJG(zso(j,i,1))*zso(j,i,1)+CONJG(zso(j,i,2))*zso(j,i,2)
+						ELSE
+							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+						END IF
 						!write(*,*) 'zMat is complex - restricted sum'
 					END IF
 				END IF

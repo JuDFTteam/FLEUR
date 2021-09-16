@@ -222,7 +222,7 @@ CONTAINS
             IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                IF(modulo (fi%kpts%nkpt,fmpi%n_size).NE.0) call juDFT_error("number fi%kpts needs to be multiple of number fmpi threads",&
                    hint=errmsg, calledby="eigen.F90")
-               CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig,results,fi%input,fi%atoms,unfoldingBuffer,fmpi,smat_unfold)
+               CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig,results,fi%input,fi%atoms,unfoldingBuffer,fmpi,fi%noco%l_soc,smat_unfold=smat_unfold)
                CALL smat_unfold%free()
                DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
                if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
