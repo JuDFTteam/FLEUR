@@ -1027,6 +1027,7 @@ MODULE m_types_greensf
          !TODO check array sizes before
 
          IF(ALLOCATED(repr_gf%gmmpMat)) this%gmmpMat = repr_gf%gmmpMat
+         IF(ALLOCATED(repr_gf%gmmpMat_k)) this%gmmpMat_k = repr_gf%gmmpMat_k
          IF(ALLOCATED(repr_gf%uu)) this%uu = repr_gf%uu
          IF(ALLOCATED(repr_gf%ud)) this%ud = repr_gf%ud
          IF(ALLOCATED(repr_gf%du)) this%du = repr_gf%du
