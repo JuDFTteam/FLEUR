@@ -277,7 +277,8 @@ MODULE m_kkintgr
 
          nz  = INT(integration_weights(iContour)%matsize2/2)
 
-         ALLOCATE(smoothed, source=im)
+         ALLOCATE(smoothed, mold=im)
+         smoothed = im
          IF(ABS(sigma(iContour)).GT.1e-12) THEN
             CALL timestart('kkintgr: smoothing')
             SELECT CASE (TRIM(ADJUSTL(smooth_method)))
@@ -372,7 +373,8 @@ MODULE m_kkintgr
 
          nz  = INT(integration_weights(iContour)%matsize2/2)
 
-         ALLOCATE(smoothed, source=im)
+         ALLOCATE(smoothed, mold=im)
+         smoothed = im
          IF(ABS(sigma(iContour)).GT.1e-12) THEN
             CALL timestart('kkintgr: smoothing')
             SELECT CASE (TRIM(ADJUSTL(smooth_method)))
