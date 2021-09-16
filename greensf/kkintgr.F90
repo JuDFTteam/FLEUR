@@ -277,7 +277,7 @@ MODULE m_kkintgr
 
          nz  = INT(integration_weights(iContour)%matsize2/2)
 
-         ALLOCATE(smoothed, mold=im)
+         ALLOCATE(smoothed(SIZE(im,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
          smoothed = im
          IF(ABS(sigma(iContour)).GT.1e-12) THEN
             CALL timestart('kkintgr: smoothing')
@@ -373,7 +373,7 @@ MODULE m_kkintgr
 
          nz  = INT(integration_weights(iContour)%matsize2/2)
 
-         ALLOCATE(smoothed, mold=im)
+         ALLOCATE(smoothed(SIZE(im,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(im,4)))
          smoothed = im
          IF(ABS(sigma(iContour)).GT.1e-12) THEN
             CALL timestart('kkintgr: smoothing')
