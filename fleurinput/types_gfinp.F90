@@ -603,7 +603,7 @@ CONTAINS
       INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref,n_intersite, i_inter
       LOGICAL :: l_sphavg, l_all_kresolved, l_kresolved_radial
       INTEGER :: hiaElem(atoms%n_hia), intersite_elems(this%n), shells(this%n)
-      LOGICAL :: written(atoms%nType)
+      LOGICAL :: written(atoms%nType), l_kresolved
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
       INTEGER, ALLOCATABLE :: atomTypepList(:),atomTypepList1(:)
 
@@ -630,11 +630,12 @@ CONTAINS
          iContour = this%elem(i_gf)%iContour
          refCutoff = this%elem(i_gf)%refCutoff
          l_sphavg = this%elem(i_gf)%l_sphavg
+         l_kresolved = this%elem(i_gf)%l_kresolved
 
          refCutoff = MERGE(i_gf,refCutoff,refCutoff==-1) !If no refCutoff is set for the intersite element
                                                          !we take the onsite element as reference
 
-         CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+         CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
                                         this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,input,&
                                         .NOT.written(atomType),nOtherAtoms,atomTypepList)
          written(atomType) = .TRUE.
@@ -650,7 +651,7 @@ CONTAINS
 
             WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
 
-            CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+            CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
                                            this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
                                            .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
 
@@ -913,7 +914,7 @@ CONTAINS
 
    END FUNCTION find_symmetry_rotated_bzcoeffs_gfinp
 
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_fixedCutoffset,fixedCutoff,&
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_kresolved,l_fixedCutoffset,fixedCutoff,&
                                           refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList)
 
       USE m_types_atoms
@@ -932,6 +933,7 @@ CONTAINS
       INTEGER,             INTENT(IN)     :: refAtom !which is the reference atom
       LOGICAL,             INTENT(IN)     :: l_sphavg
       INTEGER,             INTENT(IN)     :: iContour
+      LOGICAL,             INTENT(IN)     :: l_kresolved
       LOGICAL,             INTENT(IN)     :: l_fixedCutoffset
       REAL,                INTENT(IN)     :: fixedCutoff
       INTEGER,             INTENT(IN)     :: refCutoff
@@ -974,7 +976,7 @@ CONTAINS
          DO ishellAtom = 1, numAtomsShell(ishell)
 
             atomTypep = atoms%itype(shellAtoms(2,ishellAtom,ishell))
-            i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
+            i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,k_resolved=l_kresolved,&
                              atomDiff=shellDiffs(:,ishellAtom,ishell),l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff,atom=shellAtoms(1,ishellAtom,ishell),atomp = shellAtoms(2,ishellAtom,ishell))
             IF(repr == 0) THEN
