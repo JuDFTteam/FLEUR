@@ -47,6 +47,7 @@ PROGRAM inpgen
   USE m_types_xml
   USE m_types_juPhon
   use m_make_sym
+  USE m_types_profile
 
       IMPLICIT NONE
 
@@ -73,7 +74,8 @@ PROGRAM inpgen
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_hub1inp)  :: hub1inp
       TYPE(t_enparaXML):: enparaxml
-      TYPE(t_juPhon)  :: juPhon
+      TYPE(t_juPhon)   :: juPhon
+      TYPE(t_profile)  :: profile
 
       INTEGER            :: idum, kptsUnit, inpOldUnit, ios, inpgenIUnit
       INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
@@ -97,6 +99,11 @@ PROGRAM inpgen
          USE iso_c_binding
          INTEGER(c_int) dropDefaultEConfig
        END FUNCTION dropDefaultEConfig
+
+       FUNCTION dropProfiles() BIND(C, name="dropProfiles")
+         USE iso_c_binding
+         INTEGER(c_int) dropProfiles
+       END FUNCTION dropProfiles
       END INTERFACE
 
       CALL judft_init(oUnit,.FALSE.)
@@ -107,6 +114,8 @@ PROGRAM inpgen
 
       INQUIRE(file='default.econfig',exist=l_exist)
       IF (.NOT.l_exist) idum=dropDefaultEconfig()
+      INQUIRE(file='profile.config',exist=l_exist)
+      IF (.NOT.l_exist) idum=dropProfiles()
 
       OPEN(oUnit,file='out')
 
@@ -207,8 +216,12 @@ PROGRAM inpgen
          CALL judft_error("You should either specify -inp,-inp.xml or -f command line options. Check -h if unsure")
       ENDIF
       IF (.NOT.l_fullinput) THEN
+
+         CALL profile%init()
          IF (judft_was_argument("-precise")) THEN
             WRITE(*,*) 'NOTE: right now the "-precise" option is only a dummy that does not affect anything.'
+
+            CALL profile%load("precise")
          END IF
 
          !First we determine the spacegoup and map the atoms to groups

@@ -22,7 +22,10 @@ endif()
 
 add_executable(inpgen2 ${externallibs}
 dropDefaults.c
+dropProfiles.c
 default_econfig.h
+profileConfig.h
+
 inpgen_help.f90
 inpgen.f90
 bravais_symm.f90
@@ -39,6 +42,7 @@ read_inpgen_input.f90
 super_check.f90
 make_kpoints.f90
 read_old_inp.f90
+types_Profile.f90
 mod_symdata.f
 old_inp/apws_dim.f90
 old_inp/dimen7.F90
@@ -169,10 +173,24 @@ if (XXD_PROG)
     DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/default.econfig
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
     COMMENT "Putting current default.econfig into default_econfig.h")
+
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
+    COMMAND ${XXD_PROG} -i profile.config ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/profile.config
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
+    COMMENT "Putting current profile.config into profileConfig.h")
 else()
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
     COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of default_econfig.h")
+
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
+    COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/profileConfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
+    COMMENT "No xxd found using backup")
+    message("No xxd command found! Using backup of profileConfig.h")
+
 endif()
