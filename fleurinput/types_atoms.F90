@@ -244,7 +244,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  INTEGER,ALLOCATABLE::lNumbers(:),nNumbers(:)
  LOGICAL           :: relaxx,relaxy,relaxz,l_flipElectronConfigSpins
  INTEGER,ALLOCATABLE :: itmp(:,:)
- REAL                :: down,up,dr,radius
+ REAL                :: down,up,dr,radius,vca_charge
  CHARACTER(len=20)   :: state
  this%ntype= xml%get_ntype()
  this%nat =  xml%get_nat()
@@ -297,7 +297,8 @@ SUBROUTINE read_xml_atoms(this,xml)
     xpaths=xml%speciesPath(n)
     this%speciesname(n)=TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/@species')))
     this%nz(n)=evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@atomicNumber'))
-    this%zatom(n) = this%nz(n)
+    call readAtomAttribute(xml,n,'/special/@vca_charge',vca_charge)
+    this%zatom(n) = this%nz(n)+vca_charge
     IF (this%nz(n).EQ.0) THEN
        WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', n
        this%zatom(n) = 1.0e-10
