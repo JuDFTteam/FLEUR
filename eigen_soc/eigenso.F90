@@ -175,12 +175,12 @@ CONTAINS
       IF (fi%banddos%unfoldband) THEN
         !IF(modulo (fi%kpts%nkpt,fmpi%n_size).NE.0) call !juDFT_error("number fi%kpts needs to be multiple of number fmpi threads", &
         !                hint=errmsg, calledby="eigenso.F90")
+        !write(*,*) 'unfodling for SOC - remember to use useOlap=F'
         jsp=1  
         CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig_so(:nsz),results,fi%input,fi%atoms,unfoldingBuffer,fmpi,fi%noco%l_soc,zso=zso)
         IF (fi%input%jspins==2) THEN
           jsp=2
           CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig_so(:nsz),results,fi%input,fi%atoms,unfoldingBuffer,fmpi,fi%noco%l_soc,zso=zso)
-        !  unfoldingBuffer(:,nk,2)=unfoldingBuffer(:,nk,1)
         ENDIF
        END IF
       DEALLOCATE (zso)

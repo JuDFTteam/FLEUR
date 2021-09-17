@@ -256,7 +256,7 @@ CONTAINS
 				!	write(*,*) 'zMat is real'
 				ELSE
 					IF (l_soc) THEN
-						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zso(j,i,1))*zso(j,i,1)+CONJG(zso(j,i,2))*zso(j,i,2)
+						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zso(j,i,jsp))*zso(j,i,jsp)
 					ELSE 
 						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 					END IF
@@ -271,7 +271,7 @@ CONTAINS
 						!write(*,*) 'zMat is real'
 					ELSE
 						IF (l_soc) THEN
-							w_n_c(i)=w_n_c(i)+CONJG(zso(j,i,1))*zso(j,i,1)+CONJG(zso(j,i,2))*zso(j,i,2)
+							w_n_c(i)=w_n_c(i)+CONJG(zso(j,i,jsp))*zso(j,i,jsp)
 						ELSE
 							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 						END IF
