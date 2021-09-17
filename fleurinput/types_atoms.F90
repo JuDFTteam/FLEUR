@@ -297,7 +297,7 @@ SUBROUTINE read_xml_atoms(this,xml)
     xpaths=xml%speciesPath(n)
     this%speciesname(n)=TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/@species')))
     this%nz(n)=evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@atomicNumber'))
-    call readAtomAttribute(xml,n,'/special/@vca_charge',vca_charge)
+    vca_charge=0.0;call readAtomAttribute(xml,n,'/special/@vca_charge',vca_charge)
     this%zatom(n) = this%nz(n)+vca_charge
     IF (this%nz(n).EQ.0) THEN
        WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', n
