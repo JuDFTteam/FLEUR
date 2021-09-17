@@ -101,6 +101,9 @@ CONTAINS
        vacuum%dvac = cell%amat(3, 3)
        IF (cell%primCellZ.NE.0.0) THEN
           IF(cell%amat(3,3) - (cell%primCellZ * NINT(cell%amat(3,3) / cell%primCellZ)).GT.1.0e-5) THEN
+             WRITE(*,'(a,f15.8)') 'Supercell z: ', cell%amat(3,3)
+             WRITE(*,'(a,f15.8)') 'primitive cell z: ', cell%primCellZ
+             WRITE(*,'(a,f15.8)') 'Factor between supercell z and primitive cell z: ', cell%amat(3,3) / cell%primCellZ
              CALL juDFT_warn("supercell and primitive cell z dimensions are inconsistent.", calledby="make_defaults")
           END IF
           banddos%s_cell_z = NINT(cell%amat(3,3) / cell%primCellZ)
