@@ -13,6 +13,7 @@ build.*
 *.x
 *.swp
 *.pyc
+*.mod
 tags
 .DS_Store
 .vscode

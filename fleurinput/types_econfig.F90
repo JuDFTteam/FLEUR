@@ -28,6 +28,7 @@ MODULE m_types_econfig
      PROCEDURE :: set_initial_moment
      PROCEDURE :: broadcast
      PROCEDURE :: get_state_string
+     PROCEDURE :: get_states_for_orbital
      PROCEDURE :: get_core
   END TYPE t_econfig
   PUBLIC :: t_econfig
@@ -52,7 +53,33 @@ CONTAINS
     if (size(occupation,2)==1) occupation=occupation*2
   END SUBROUTINE get_core
 
+  function get_states_for_orbital(econf,l,l_core) Result(indices)
+      CLASS(t_econfig),INTENT(IN):: econf
+      INTEGER,INTENT(in)         :: l
+      LOGICAL,OPTIONAL,INTENT(IN)::l_core
+      INTEGER,ALLOCATABLE ::indices(:)
+      INTEGER :: found_states,i,nstart
+      CHARACTER(len=7)::state
+      CHARACTER(len=1),PARAMETER :: spdfg(0:4) = ['s','p','d','f','g']
+      CHARACTER(len=1)::orbital
+      
+      IF(ALLOCATED(indices)) DEALLOCATE(indices)
+      ALLOCATE(indices(econf%num_states), source=-1)
+      orbital = spdfg(l)
+      nstart=econf%num_core_states + 1
+      if (present(l_core)) then
+         if (l_core) nstart=1
+      endif
 
+      found_states = 0
+      do i = nstart, econf%num_states
+         state = econf%get_state_string(i)
+         if(index(state,orbital)/=0) then
+            found_states = found_states + 1
+            indices(found_states) = i
+         endif
+      enddo
+  end function
 
   FUNCTION get_state_string(econf,i)RESULT(str)
     CLASS(t_econfig),INTENT(IN):: econf
