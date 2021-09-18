@@ -28,6 +28,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    USE m_qfix
    USE m_atom2
    USE m_clebsch
+   USE m_rotMMPmat
    USE m_RelaxSpinAxisMagn
    IMPLICIT NONE
 
@@ -265,6 +266,16 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                enddo
             enddo
          endif
+         !Rotate into the global real frame
+         IF(noco%l_noco) THEN
+            do ispin =1, input%jspins
+               den%mmpMat(:,:,i_u,ispin) = rotMMPmat(den%mmpMat(:,:,i_u,ispin),noco%alph_inp(atomType),noco%beta_inp(atomType),0.0,l)
+            enddo
+         ELSE IF(noco%l_soc) THEN
+            do ispin =1, input%jspins
+               den%mmpMat(:,:,i_u,ispin) = rotMMPmat(den%mmpMat(:,:,i_u,ispin),noco%phi_inp,noco%theta_inp,0.0,l)
+            enddo
+         ENDIF
       enddo
    ENDIF
 
