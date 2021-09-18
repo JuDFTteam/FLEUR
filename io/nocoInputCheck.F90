@@ -115,8 +115,12 @@ MODULE m_nocoInputCheck
       if (any(error)) call judft_warn("Symmetry incompatible with Spin-Spiral")
     endif
 
-    IF (input%ldauSpinoffd.AND..NOT.noco%l_mperp) THEN
+    IF (any(noco%l_spinoffd_ldau).AND..NOT.noco%l_mperp) THEN
       CALL juDFT_error("l_spinoffd='T' for ldaU and l_mperp='F' makes no sense.",calledby='nocoInputCheck')
+    END IF
+
+    IF (any(noco%l_spinoffd_ldau).AND..NOT.noco%l_noco) THEN
+      CALL juDFT_error("l_spinoffd='T' for ldaU and l_noco='F' makes no sense.",calledby='nocoInputCheck')
     END IF
 
    END SUBROUTINE nocoInputCheck

@@ -172,7 +172,6 @@ CONTAINS
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv, fi%oneD, forcetheo, fi%atoms, nbasfcn)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid, lapw_dim_nbasfcn)
-      CALL fi%noco%init(fi%atoms,fi%input%ldauSpinoffd)
       CALL fi%oneD%init(fi%atoms) !call again, because make_stars modified it :-)
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input, fi%oneD, fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
