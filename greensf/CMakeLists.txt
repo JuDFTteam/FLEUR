@@ -9,5 +9,5 @@ greensf/kkintgr.F90
 greensf/lorentzian_smooth.f90
 greensf/kk_cutoff.F90
 greensf/excSplitting.f90
-greensf/greensfTorgue.F90
+greensf/greensfTorque.F90
 )
