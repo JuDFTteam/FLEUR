@@ -49,7 +49,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    TYPE(t_potden)   :: den
    TYPE(t_enpara)   :: enpara
    ! Local Scalars
-   REAL d,del,fix,h,r,rnot,z,bm,qdel,va,cl,j_state,mj,mj_state
+   REAL d,del,fix,h,r,rnot,z,bm,qdel,va,cl,j_state,mj,mj_state,ms
    REAL denz1(1,1),vacxpot(1,1),vacpot(1,1)
    INTEGER i,ivac,iza,j,jr,k,n,n1,ispin
    INTEGER nw,ilo,natot,nat,l,atomType,istate,i_u,kappa,m
@@ -246,10 +246,11 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                j_state = abs(kappa)-0.5
                mj_state = -j_state
                DO WHILE(mj_state <= MERGE(l,l+1,kappa>0))
-                  mj = MERGE(-mj_state,mj_state,ispin==1)
-                  m  = mj + MERGE(-0.5,0.5,ispin==1)
+                  ms = MERGE(0.5,-0.5,ispin==1)
+                  mj = mj_state * SIGN(1.,ms)
+                  m  = mj - ms
                   IF(ABS(m)<=l) then
-                     cl = clebsch(REAL(l),0.5,REAL(m),MERGE(0.5,-0.5,ispin==1),j_state,mj)**2   
+                     cl = clebsch(REAL(l),0.5,REAL(m),ms,j_state,mj)**2   
                      den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) = den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) +  MIN(cl,occ_state(ispin))
                      occ_state(ispin) = MAX(occ_state(ispin)-cl,0.0)
                   endif

@@ -215,17 +215,17 @@ def test_GreensFunction_HoAtom_SQA_theta(execute_fleur, grep_number, grep_exists
     assert grep_exists(res_files['out'], "it=  2  is completed")
 
 
-    assert grep_exists(res_files['out'], r'0\.9925 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'0\.9915 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'0\.4193 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'0\.6792 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'-0\.1897 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'-0\.3413 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.9918 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.9907 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.4191 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.6784 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.1895 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.3421 [\s\-]0\.0000')
     spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
 
-    assert abs(spinup_trace - 6.9410) <= 0.0005
-    assert abs(spindown_trace - 3.9604) <= 0.0005
+    assert abs(spinup_trace - 6.9375) <= 0.0005
+    assert abs(spindown_trace - 3.9556) <= 0.0005
 
 
 @pytest.mark.bulk
@@ -253,19 +253,19 @@ def test_GreensFunction_HoAtom_SQA_phi(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['out'], "it=  2  is completed")
 
-    assert grep_exists(res_files['out'], r'0\.9925 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'0\.9915 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'0\.4193 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'0\.6792 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.1897')
-    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.1897')
-    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.3413')
-    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.3413')
+    assert grep_exists(res_files['out'], r'0\.9918 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.9907 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.4191 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.6784 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.1895')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.1895')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.3421')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.3421')
     spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
 
-    assert abs(spinup_trace - 6.9410) <= 0.0005
-    assert abs(spindown_trace - 3.9604) <= 0.0005
+    assert abs(spinup_trace - 6.9375) <= 0.0005
+    assert abs(spindown_trace - 3.9556) <= 0.0005
 
 
 @pytest.mark.bulk
@@ -294,19 +294,19 @@ def test_GreensFunction_rotated_SQA_noco(execute_fleur, grep_number, grep_exists
 
     assert grep_exists(res_files['out'], "it=  2  is completed")
 
-    assert grep_exists(res_files['out'], r'0\.9926 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'0\.9915 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'0\.4194 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'0\.6802 [\s\-]0\.0000')
-    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.1886')
-    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.1886')
-    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.3416')
-    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.3416')
+    assert grep_exists(res_files['out'], r'0\.9918 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.9907 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.4191 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'0\.6794 [\s\-]0\.0000')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.1885')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.1885')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000  0\.3424')
+    assert grep_exists(res_files['out'], r'[\s\-]0\.0000 -0\.3424')
     spinup_trace = grep_number(res_files['out'], "Spin-Up trace:", ": ")
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ": ")
 
-    assert abs(spinup_trace - 6.9412) <= 0.0005
-    assert abs(spindown_trace - 3.9659) <= 0.0005
+    assert abs(spinup_trace - 6.9375) <= 0.0005
+    assert abs(spindown_trace - 3.9609) <= 0.0005
 
 
 @pytest.mark.serial
