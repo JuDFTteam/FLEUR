@@ -432,7 +432,7 @@
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaHIA" type="LdaHubbard1Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="greensfCalculation" type="GFcalcType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="torgueCalculation" type="TorgueGFType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="torqueCalculation" type="TorqueGFType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>
@@ -462,7 +462,7 @@
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaHIA" type="LdaHubbard1Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="greensfCalculation" type="GFcalcType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="torgueCalculation" type="TorgueGFType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="torqueCalculation" type="TorqueGFType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbcomprot" type="Double3DVecType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="cFCoeffs" type="cFCoeffsOutputType"/>
@@ -578,7 +578,7 @@
       <xsd:attribute default="F"       name="k_resolved" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
-   <xsd:complexType name="TorgueGFType">
+   <xsd:complexType name="TorqueGFType">
       <xsd:sequence>
          <xsd:element name="greensfElements" type="GFElementChoiceType"/>
       </xsd:sequence>

@@ -99,8 +99,8 @@ MODULE m_types_gfinp
 
       !Arrays to indicate that certain Green's Functions are used for special calculations
       INTEGER, ALLOCATABLE :: hiaElem(:)
-      INTEGER, ALLOCATABLE :: torgueElem(:,:)
-      INTEGER, ALLOCATABLE :: numTorgueElems(:)
+      INTEGER, ALLOCATABLE :: torqueElem(:,:)
+      INTEGER, ALLOCATABLE :: numTorqueElems(:)
    CONTAINS
       PROCEDURE :: read_xml             => read_xml_gfinp
       PROCEDURE :: mpi_bc               => mpi_bc_gfinp
@@ -151,8 +151,8 @@ CONTAINS
       CALL mpi_bc(this%elup,rank,mpi_comm)
       CALL mpi_bc(this%numberContours,rank,mpi_comm)
       CALL mpi_bc(this%hiaElem,rank,mpi_comm)
-      CALL mpi_bc(this%torgueElem,rank,mpi_comm)
-      CALL mpi_bc(this%numTorgueElems,rank,mpi_comm)
+      CALL mpi_bc(this%torqueElem,rank,mpi_comm)
+      CALL mpi_bc(this%numTorqueElems,rank,mpi_comm)
 
 #ifdef CPP_MPI
       CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -401,8 +401,8 @@ CONTAINS
       n_hia = 0
 
       ALLOCATE(this%hiaElem(4*ntype))
-      ALLOCATE(this%numTorgueElems(ntype),source=0)
-      ALLOCATE(this%torgueElem(ntype,(lmaxU_const+1)**2),source=-1)
+      ALLOCATE(this%numTorqueElems(ntype),source=0)
+      ALLOCATE(this%torqueElem(ntype,(lmaxU_const+1)**2),source=-1)
 
       DO itype = 1, ntype
          xPathS=xml%speciesPath(itype)
@@ -506,7 +506,7 @@ CONTAINS
             this%hiaElem(n_hia) = i_gf
          ENDDO
 
-         WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation'
+         WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torqueCalculation'
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
          IF(numberNodes==1) THEN
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
@@ -531,17 +531,17 @@ CONTAINS
                l_fixedCutoffset = .TRUE.
             END SELECT
 
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation/greensfElements'
+            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torqueCalculation/greensfElements'
             DO l = 0,lmaxU_const
                str = xml%GetAttributeValue(TRIM(xPathA)//'/'//spdf(l))
                READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
                DO lp = 0,lmaxU_const
                   IF(.NOT.lp_calc(lp,l)) CYCLE
-                  !Torgue GF has to have radial dependence
+                  !Torque GF has to have radial dependence
                   i_gf =  this%add(l,itype,iContour,.FALSE.,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
                                    fixedCutoff=fixedCutoff,k_resolved=.FALSE.)
-                  this%numTorgueElems(itype) = this%numTorgueElems(itype) + 1
-                  this%torgueElem(itype,this%numTorgueElems(itype)) = i_gf
+                  this%numTorqueElems(itype) = this%numTorqueElems(itype) + 1
+                  this%torqueElem(itype,this%numTorqueElems(itype)) = i_gf
                ENDDO
             ENDDO
 
@@ -709,9 +709,9 @@ CONTAINS
                           calledby="init_gfinp")
       ENDIF
 
-      IF(ANY(this%numTorgueElems(:)>0)) THEN
-         IF(input%jspins.NE.2) CALL juDFT_error("Torgue calculation only for magnetic systems", calledby="init_gfinp")
-         IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="init_gfinp")
+      IF(ANY(this%numTorqueElems(:)>0)) THEN
+         IF(input%jspins.NE.2) CALL juDFT_error("Torque calculation only for magnetic systems", calledby="init_gfinp")
+         IF(sym%nop>1) CALL juDFT_warn("Torque calculation only without symmetries", calledby="init_gfinp")
       ENDIF
 
 

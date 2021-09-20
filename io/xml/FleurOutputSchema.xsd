@@ -168,8 +168,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="FermiEnergy" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="valenceDensity" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="onSiteExchangeSplitting" type="OnSiteExchangeSplittingType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="noncollinearTorgue" type="GFTorgueType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="spinorbitTorgue" type="GFTorgueType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="noncollinearTorque" type="GFTorqueType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="coreStates" type="OutCoreStatesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
@@ -462,13 +461,13 @@
       </xsd:sequence>
    </xsd:complexType>
 
-   <xsd:complexType name="GFTorgueType">
+   <xsd:complexType name="GFTorqueType">
       <xsd:sequence>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="torgue" type="TorgueType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="torque" type="TorqueType"/>
       </xsd:sequence>
    </xsd:complexType>
 
-   <xsd:complexType name="TorgueType">
+   <xsd:complexType name="TorqueType">
       <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
       <xsd:attribute name="sigma_x" type="xsd:double" use="required"/>
       <xsd:attribute name="sigma_y" type="xsd:double" use="required"/>
