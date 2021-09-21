@@ -51,9 +51,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
-#ifdef CPP_MPI
-   USE m_mpi_bc_potden
-#endif
+
    USE m_force_sf ! Klueppelberg (force level 3)
 
    IMPLICIT NONE
@@ -236,9 +234,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,-1.0,-1.0,.FALSE.,outDen,'cdn_slice')
       END IF
-#ifdef CPP_MPI
-               CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
-#endif
+      call outDen%distribute(fmpi%mpi_comm)
       CALL juDFT_end("slice OK",fmpi%irank)
    END IF
 
@@ -294,9 +290,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL MPI_BCAST(nococonv%beta,atoms%ntype,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
    CALL MPI_BCAST(nococonv%b_con,atoms%ntype*2,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
    CALL MPI_BCAST(nococonv%qss,3,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-
-   CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif
+   CALL outDen%distribute(fmpi%mpi_comm)
 
    ! Klueppelberg (force level 3)
    IF (input%l_f.AND.(input%f_level.GE.3).AND.(fmpi%irank.EQ.0)) THEN

@@ -39,9 +39,36 @@ MODULE m_types_nococonv
       !Rotate magnetisation vector
       procedure :: rot_magvec
       procedure :: avg_moments
+      procedure :: mpi_bc => mpi_bc_nococonv
    end TYPE
    public :: t_nococonv
 CONTAINS
+
+SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
+   USE m_mpi_bc_tool
+   CLASS(t_nococonv),INTENT(INOUT)::this
+   INTEGER,INTENT(IN):: mpi_comm
+   INTEGER,INTENT(IN),OPTIONAL::irank
+   INTEGER ::rank
+   IF (PRESENT(irank)) THEN
+      rank=irank
+   ELSE
+      rank=0
+   END IF
+
+   CALL mpi_bc(this%theta,rank,mpi_comm)
+   CALL mpi_bc(this%phi,rank,mpi_comm)
+   CALL mpi_bc(rank,mpi_comm,this%qss)
+   CALL mpi_bc(this%alph,rank,mpi_comm)
+   CALL mpi_bc(this%beta,rank,mpi_comm)
+   CALL mpi_bc(this%alphRlx,rank,mpi_comm)
+   CALL mpi_bc(this%betaRlx,rank,mpi_comm)
+   CALL mpi_bc(this%alphPrev,rank,mpi_comm)
+   CALL mpi_bc(this%betaPrev,rank,mpi_comm)
+   CALL mpi_bc(this%b_con,rank,mpi_comm)
+
+ END SUBROUTINE mpi_bc_nococonv
+
    function chi_pass(nococonv, n)
       CLASS(t_nococonv), INTENT(IN)  :: nococonv
       INTEGER, INTENT(IN)           :: n

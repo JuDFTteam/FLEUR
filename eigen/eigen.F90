@@ -36,9 +36,7 @@ CONTAINS
       !USE m_icorrkeys
       USE m_eig66_io, ONLY : open_eig, write_eig, read_eig
       USE m_xmlOutput
-#ifdef CPP_MPI
-      USE m_mpi_bc_potden
-#endif
+
       USE m_symmetrize_matrix
       USE m_unfold_band_kpts !used for unfolding bands
       USE m_types_mpimat

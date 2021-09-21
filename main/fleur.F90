@@ -69,7 +69,6 @@ CONTAINS
       USE m_usetup
       USE m_hubbard1_setup
       USE m_writeCFOutput
-      USE m_mpi_bc_potden
       USE m_mpi_bc_tool
       USE m_eig66_io
       USE m_chase_diag
@@ -252,7 +251,8 @@ CONTAINS
          CALL chase_distance(results%last_distance)
 #endif
 
-         CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen,nococonv)
+         CALL inDen%distribute(fmpi%mpi_comm)
+         call nococonv%mpi_bc(fmpi%mpi_comm)
 
 !Plot inden if wanted
          IF (fi%sliceplot%iplot .NE. 0) THEN
@@ -264,7 +264,8 @@ CONTAINS
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                        fi%input, fi%sym, fi%oneD,CDN_ARCHIVE_TYPE_CDN_const, &
                                                        CDN_INPUT_DEN_const, 0, rdummy, tempDistance, l_dummy, sliceDen, 'cdn_slice')
-               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, sliceDen, nococonv)
+               CALL sliceden%distribute(fmpi%mpi_comm)
+               call nococonv%mpi_bc(fmpi%mpi_comm)
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
                               fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
             END IF
