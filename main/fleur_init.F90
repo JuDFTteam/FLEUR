@@ -32,7 +32,6 @@ CONTAINS
       USE m_writeOutHeader
       !USE m_fleur_init_old
       USE m_types_xcpot_inbuild
-      USE m_mpi_bc_xcpot
       USE m_prpxcfft
       USE m_make_stars
       USE m_make_sphhar
@@ -43,12 +42,6 @@ CONTAINS
       USE m_lapwdim
       use m_make_xcpot
       USE m_gaunt, ONLY: gaunt_init
-#ifdef CPP_MPI
-      !USE m_mpi_bc_all,  ONLY : mpi_bc_all
-#ifndef CPP_OLDINTEL
-      USE m_mpi_dist_forcetheorem
-#endif
-#endif
 #ifdef CPP_HDF
       USE m_hdf_tools
 #endif
