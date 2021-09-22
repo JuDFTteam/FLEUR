@@ -1293,9 +1293,9 @@ MODULE m_cdnpot_io_hdf
       !LDA+OP data (start)
       IF(atoms%n_opc.GT.0) THEN
          DO i = 1, atoms%n_opc
-            ldaopc_AtomType(i) = atoms%lda_u(i)%atomType
-            ldaopc_l(i) = atoms%lda_u(i)%l
-            ldaopc_n(i) = atoms%lda_u(i)%u
+            ldaopc_AtomType(i) = atoms%lda_opc(i)%atomType
+            ldaopc_l(i) = atoms%lda_opc(i)%l
+            ldaopc_n(i) = atoms%lda_opc(i)%u
          END DO
 
          dims(:1)=(/atoms%n_opc/)
@@ -1357,6 +1357,10 @@ MODULE m_cdnpot_io_hdf
       INTEGER, ALLOCATABLE             :: ldau_l_amf(:) ! 1 = true, 0 = false
       REAL, ALLOCATABLE                :: ldau_U(:)
       REAL, ALLOCATABLE                :: ldau_J(:)
+
+      INTEGER, ALLOCATABLE             :: ldaopc_AtomType(:)
+      INTEGER, ALLOCATABLE             :: ldaopc_l(:)
+      INTEGER, ALLOCATABLE             :: ldaopc_n(:)
 
       INTEGER(HID_T)                   :: amatSetID
       INTEGER(HID_T)                   :: nzSetID
@@ -1647,9 +1651,9 @@ MODULE m_cdnpot_io_hdf
          CALL h5dclose_f(ldaopc_nSetID, hdfError)
 
          DO i = 1, atoms%n_opc
-            atoms%lda_u(i)%atomType = ldaopc_AtomType(i)
-            atoms%lda_u(i)%l = ldaopc_l(i)
-            atoms%lda_u(i)%n = ldaopc_n(i)
+            atoms%lda_opc(i)%atomType = ldaopc_AtomType(i)
+            atoms%lda_opc(i)%l = ldaopc_l(i)
+            atoms%lda_opc(i)%n = ldaopc_n(i)
          END DO
          DEALLOCATE(ldaopc_AtomType,ldaopc_l,ldaopc_n)
       END IF
