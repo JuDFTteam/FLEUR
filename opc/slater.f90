@@ -49,7 +49,7 @@ contains
          l = atoms%lda_opc(i_opc)%l
          n = atoms%lda_opc(i_opc)%n
          atomType = atoms%lda_opc(i_opc)%atomType
-         lambda = atoms%lda_opc(i_opc)%lambda
+         lambda = 0.0  !Set for OPC since it does not matter there
 
          z = atoms%zatom(atomType)
          dxx = atoms%dx(atomType)

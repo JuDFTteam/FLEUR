@@ -536,7 +536,6 @@
    <xsd:complexType name="LdaOPCType">
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="n" type="xsd:nonNegativeInteger" use="required"/>
-      <xsd:attribute name="lambda" type="FleurDouble" use="optional" default="0.0"/>
    </xsd:complexType>
 
    <xsd:complexType name="LdaHubbard1Type">

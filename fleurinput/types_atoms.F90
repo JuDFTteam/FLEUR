@@ -25,7 +25,6 @@ MODULE m_types_atoms
       SEQUENCE
       INTEGER :: l=-1,n=-1
       INTEGER :: atomType=0 ! The atom type to which this U parameter belongs
-      REAL :: lambda=0.0
   END TYPE t_opctype
   TYPE,EXTENDS(t_fleurinput_base):: t_atoms
      !<no of types
@@ -215,7 +214,6 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
    CALL mpi_bc(this%lda_opc(n)%n,rank,mpi_comm)
    CALL mpi_bc(this%lda_opc(n)%l,rank,mpi_comm)
    CALL mpi_bc(this%lda_opc(n)%atomType,rank,mpi_comm)
-   CALL mpi_bc(this%lda_opc(n)%lambda,rank,mpi_comm)
 ENDDO
 #endif
 END SUBROUTINE mpi_bc_atoms
@@ -406,7 +404,6 @@ SUBROUTINE read_xml_atoms(this,xml)
       this%n_opc = this%n_opc + 1
       this%lda_opc(this%n_opc)%l = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l'))
       this%lda_opc(this%n_opc)%n =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@n'))
-      this%lda_opc(this%n_opc)%lambda =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@lambda'))
       this%lda_opc(this%n_opc)%atomType = n
    END DO
     !electron config

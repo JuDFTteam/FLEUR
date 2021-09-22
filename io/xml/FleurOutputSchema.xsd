@@ -110,6 +110,7 @@
       <xsd:attribute name="jmtd" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="n_u" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="n_hia" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="n_opc" type="xsd:nonNegativeInteger" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="BasisType">
