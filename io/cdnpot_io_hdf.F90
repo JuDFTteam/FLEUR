@@ -1295,7 +1295,7 @@ MODULE m_cdnpot_io_hdf
          DO i = 1, atoms%n_opc
             ldaopc_AtomType(i) = atoms%lda_opc(i)%atomType
             ldaopc_l(i) = atoms%lda_opc(i)%l
-            ldaopc_n(i) = atoms%lda_opc(i)%u
+            ldaopc_n(i) = atoms%lda_opc(i)%n
          END DO
 
          dims(:1)=(/atoms%n_opc/)
@@ -1646,7 +1646,7 @@ MODULE m_cdnpot_io_hdf
          CALL h5dclose_f(ldaopc_lSetID, hdfError)
 
          dimsInt(:1)=(/atoms%n_opc/)
-         CALL h5dopen_f(groupID, 'ldaopc_n', ldaopc_l_amfSetID, hdfError)
+         CALL h5dopen_f(groupID, 'ldaopc_n', ldaopc_nSetID, hdfError)
          CALL io_read_integer1(ldaopc_nSetID,(/1/),dimsInt(:1),ldaopc_n)
          CALL h5dclose_f(ldaopc_nSetID, hdfError)
 
@@ -2490,7 +2490,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)        :: mmpMatSetID
 
       INTEGER, ALLOCATABLE  :: ldau_AtomType(:), ldau_l(:), ldau_l_amf(:)
-      INTEGER, ALLOCATABLE  :: ldauopc_AtomType(:), ldaopc_l(:), ldaopc_n(:)
+      INTEGER, ALLOCATABLE  :: ldaopc_AtomType(:), ldaopc_l(:), ldaopc_n(:)
       REAL,    ALLOCATABLE  :: ldau_U(:), ldau_J(:)
       REAL,    ALLOCATABLE  :: frTemp(:,:,:,:)
       REAL,    ALLOCATABLE  :: fzTemp(:,:,:)
