@@ -164,7 +164,7 @@ CONTAINS
       CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, xcpot, fi%oneD, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv, fi%oneD, forcetheo, fi%atoms, nbasfcn)
-      CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_u,fi%atoms%n_hia,lapw_dim_nbasfcn)
+      CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
       CALL fi%oneD%init(fi%atoms) !call again, because make_stars modified it :-)
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input, fi%oneD, fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.

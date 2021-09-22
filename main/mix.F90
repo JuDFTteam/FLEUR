@@ -67,7 +67,7 @@ contains
     TYPE(t_mixvector)                :: fsm_mag
     LOGICAL                          :: l_densitymatrix,l_firstItU
     INTEGER                          :: it,maxiter
-    INTEGER                          :: indStartHIA, indEndHIA
+    INTEGER                          :: indStart_noDenmatmixing, indEnd_noDenmatmixing
 
 
     CALL timestart("Charge Density Mixing")
@@ -76,9 +76,10 @@ contains
     !The density/potential matrices for DFT+U are split into two parts
     ! 1:atoms%n_u Are the elements for normal DFT+U
     ! atoms%n_u+1:atoms%n_u+atoms%n_hia are the elements for DFT+Hubbard 1
+    ! atoms%n_u+atoms%n_hia+1:atoms%n_u+atoms%n_hia+atoms%n_opc are the elements fro DFT+OPC
     !The latter are never mixed and held constant
-    indStartHIA = atoms%n_u + 1
-    indEndHIA = atoms%n_u + atoms%n_hia
+    indStart_noDenmatmixing = atoms%n_u + 1
+    indEnd_noDenmatmixing = atoms%n_u + atoms%n_hia + atoms%n_opc
 
     IF (atoms%n_u>0) THEN
        l_firstItU = ALL(inDen%mmpMat(:,:,1:atoms%n_u,:)==0.0)
@@ -175,9 +176,10 @@ contains
        CALL checkMMPmat(1,atoms%n_u,l_densitymatrix,fmpi,atoms,input,outden,inden)
     ENDIF
 
-    IF(atoms%n_hia>0) THEN
+    IF(atoms%n_hia+atoms%n_opc>0) THEN
        !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
-       inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
+       inDen%mmpMat(:,:,indStart_noDenmatmixing:indEnd_noDenmatmixing,:) = &
+               outDen%mmpMat(:,:,indStart_noDenmatmixing:indEnd_noDenmatmixing,:)
        IF(l_runhia) THEN
           iteration = 1
           CALL mixing_history_reset(fmpi)
