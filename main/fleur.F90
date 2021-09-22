@@ -196,7 +196,6 @@ CONTAINS
       ! Initialize Green's function (end)
 
       ! Open/allocate eigenvector storage (start)
-      l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u>0) .AND. fi%atoms%n_hia==0 
       if (fi%noco%l_soc .and. fi%input%l_wann) then
        !! Weed up and down spinor components for SOC MLWFs.
        !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
@@ -207,7 +206,7 @@ CONTAINS
       endif
       l_olap = fi%hybinp%l_hybrid .OR. fi%input%l_rdmft
       eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, wannierspin, &
-                        fi%noco%l_noco,.NOT. fi%INPUT%eig66(1), l_real, fi%noco%l_soc, fi%INPUT%eig66(1), l_olap, fmpi%n_size)
+                        fi%noco%l_noco,.NOT. fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%INPUT%eig66(1), l_olap, fmpi%n_size)
       hybdat%eig_id = eig_id
 !Rotate cdn to local frame if specified.
 

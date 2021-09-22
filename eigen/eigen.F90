@@ -103,8 +103,6 @@ CONTAINS
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
-      l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u>0).AND.fi%atoms%n_hia==0
-
       ! check if z-reflection trick can be used
       l_zref=(fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
       IF (fmpi%n_size > 1) l_zref = .FALSE.
@@ -133,7 +131,7 @@ CONTAINS
             ! Set up lapw list
             CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts,fi%atoms,fi%sym,nk,fi%cell,l_zref, fmpi)
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,l_real,nk,smat,hmat)
+            CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             nvBuffer(nk,jsp) = lapw%nv(jsp)

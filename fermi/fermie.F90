@@ -32,9 +32,6 @@ CONTAINS
     USE m_types
     USE m_constants
     USE m_eig66_io, ONLY : read_eig,write_eig
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-    USE m_mpi_col_eigJ
-#endif
     USE m_sort
     USE m_fertri
     USE m_ferhis

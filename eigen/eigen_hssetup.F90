@@ -16,7 +16,7 @@ CONTAINS
   !! 5. The matrices are copied to the final matrix, in the fi%noco-case the full matrix is constructed from the 4-parts.
 
    SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
-                            ud, td, v, lapw, l_real, nk, smat_final, hmat_final)
+                            ud, td, v, lapw, nk, smat_final, hmat_final)
       USE m_types
       USE m_types_mpimat
       USE m_types_gpumat
@@ -46,7 +46,6 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)    :: v, vx
       integer, intent(in)          :: nk
       CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
-      LOGICAL, INTENT(IN)           :: l_real
 
       CLASS(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
       INTEGER :: i, j, nspins
@@ -62,7 +61,7 @@ CONTAINS
       END IF
       DO i = 1, nspins
          DO j = 1, nspins
-            CALL smat(i, j)%init(l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
             CALL hmat(i, j)%init(smat(i, j))
          END DO
       END DO
