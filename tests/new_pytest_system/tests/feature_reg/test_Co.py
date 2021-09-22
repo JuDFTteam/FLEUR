@@ -1,5 +1,4 @@
 
-
 import pytest
 
 @pytest.mark.serial
@@ -51,7 +50,7 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
     
     if not with_hdf:
         assert grep_exists(res_files['MCD.1'], "0.95976")
-        assert grep_exists(res_files['MCD.1'], "0.36559906")
+        assert grep_exists(res_files['MCD.1'], "0.36559")
 
 
 @pytest.mark.fleur
