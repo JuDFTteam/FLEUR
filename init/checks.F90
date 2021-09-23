@@ -69,6 +69,11 @@ MODULE m_checks
                          hint="If you need this feature please create an issue on the fleur git")
      ENDIF
 
+      IF(atoms%n_opc>0.AND..NOT.noco%l_soc) THEN
+         CALL juDFT_error("Orbital polarization corrections without spin-orbit coupling have no effect",&
+                          calledby="check_input_switches")
+      ENDIF
+
      IF (banddos%vacdos) THEN
         IF (.NOT.banddos%dos) THEN
            CALL juDFT_error("STOP DOS: only set vacdos = .true. if dos = .true.",calledby ="check_input_switches")

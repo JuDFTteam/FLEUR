@@ -164,7 +164,7 @@ CONTAINS
     hybinp%select1(4, :) = 2
     mpinp%g_cutoff = round_to_deci(input%rkmax - 0.5, 1)
     mpinp%linear_dep_tol = 1e-4
-    CALL input%init(noco,hybinp%l_hybrid,sym%invs,atoms%n_u,atoms%n_hia)
+    CALL input%init(noco,hybinp%l_hybrid,sym%invs,atoms%n_denmat,atoms%n_hia)
     hybinp%bands1 = CEILING(0.75*input%gw_neigd)
   END SUBROUTINE make_defaults
 END MODULE m_make_defaults

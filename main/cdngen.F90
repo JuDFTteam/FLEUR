@@ -47,6 +47,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_metagga
    !USE m_unfold_band_kpts
    USE m_denMultipoleExp
+   use m_slater
    USE m_greensfPostProcess
    USE m_types_greensfContourData
    USE m_types_eigdos
@@ -257,6 +258,12 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    IF(fmpi%irank.EQ.0) THEN
       IF(input%lResMax>0) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
    END IF
+
+   IF(atoms%n_opc>0) THEN
+      do jspin=1, input%jspins
+         call slater(input,jspin,atoms,vTot%mt(:,0,:,jspin),l_write=fmpi%irank==0)
+      enddo
+   ENDIF
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 

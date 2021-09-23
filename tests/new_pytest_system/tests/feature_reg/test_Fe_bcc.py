@@ -82,3 +82,30 @@ def test_Fe_bcc_SF_LDA(execute_fleur, grep_number, grep_exists):
     assert abs(bfield_before - -1.17291) <= 0.001
     assert abs(bfield_after - -1.06968) <= 0.001
     assert abs(mz - 1.98655) <= 0.001
+
+@pytest.mark.bulk
+@pytest.mark.magnetism
+@pytest.mark.soc
+def test_Fe_bcc_orbital_polarization_correction(execute_fleur, grep_number, grep_exists):
+    """
+    Test of the orbital polarization correction
+
+    Simple Fleur test with one step:
+    1.Run 12 iterations with a orbital polarization correction added on the 3d states and
+      check for the correct orbital moment
+    """
+    test_file_folder = './inputfiles/Fe_bcc_OPC/'
+
+    res_files = execute_fleur(test_file_folder)
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    assert grep_exists(res_files['out'], "orb. magnetic moments in the spheres:")
+    orbital_mom1 = grep_number(res_files['out'], "--> mm       1")
+    orbital_mom2 = grep_number(res_files['out'], "--> mm       2")
+
+    assert abs(orbital_mom1 - 0.07252) <= 0.001
+    assert abs(orbital_mom2 - 0.07252) <= 0.001
+

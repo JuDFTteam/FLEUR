@@ -30,7 +30,7 @@ MODULE m_nmat
       REAL,                INTENT(IN)     :: we(:)!(input%neig)
       COMPLEX,             INTENT(INOUT)  :: n_mmp(-lmaxU_const:,-lmaxU_const:,:)
 
-      INTEGER i,l,m,lp,mp,n,natom,i_u
+      INTEGER i,l,m,lp,mp,n,natom,i_u,i_denmat
       INTEGER ilo,ilop,ll1,lmp,lm
       COMPLEX c_0
 
@@ -38,9 +38,17 @@ MODULE m_nmat
       !
       ! calculate n_mat:
       !
-      DO i_u = 1,atoms%n_u
-         n = atoms%lda_u(i_u)%atomType
-         l = atoms%lda_u(i_u)%l
+      DO i_u = 1,atoms%n_u+atoms%n_opc
+         if(i_u>atoms%n_u) then
+            i_denmat = i_u + atoms%n_hia
+            n = atoms%lda_opc(i_u-atoms%n_u)%atomType
+            l = atoms%lda_opc(i_u-atoms%n_u)%l
+         else
+            i_denmat = i_u
+            n = atoms%lda_u(i_u)%atomType
+            l = atoms%lda_u(i_u)%l
+         endif
+
          ll1 = (l+1)*l
          DO natom = SUM(atoms%neq(:n-1))+1, SUM(atoms%neq(:n))
             n_tmp = cmplx_0
@@ -95,7 +103,7 @@ MODULE m_nmat
             !
             !  n_mmp should be rotated by D_mm' ; compare force_a21
             !
-            n_mmp(:,:,i_u) = n_mmp(:,:,i_u) + conjg(symMMPmat(n_tmp,sym,natom,l)) * 1.0/atoms%neq(n)
+            n_mmp(:,:,i_denmat) = n_mmp(:,:,i_denmat) + conjg(symMMPmat(n_tmp,sym,natom,l)) * 1.0/atoms%neq(n)
          ENDDO ! sum  over equivalent atoms
       END DO !loop over u parameters
 
