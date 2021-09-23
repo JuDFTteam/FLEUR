@@ -582,6 +582,11 @@ SUBROUTINE read_xml_atoms(this,xml)
        END DO
     END DO
  END IF
+ DO i = 1, this%n_opc
+   IF (this%lda_opc(i)%l/=2.OR.this%lda_opc(i)%n/=3) THEN
+      CALL juDFT_warn("LDA+OP only implemented/tested for 3d orbitals",calledby="read_xml_atoms")
+   END IF
+END DO
 
 
  this%jmtd = MAXVAL(this%jri(:))
