@@ -138,6 +138,8 @@ def pytest_addoption(parser):
                     help='Path to the build dir with fleur exe')
     parser.addoption("--no-cleanup", action="store_true",
                      help='Move every test result to failed dir and not delete any data')
+    parser.addoption("--show-tracebacks", action="store_true",
+                     help='Show tracebacks, where they were otherwise hidden')
     parser.addoption("--runevery", action="store", default=None, help='Run every x test')
     parser.addoption("--testoffset", action="store", default=None, help='Do not run first x tests')
     parser.addoption("--skipmarkers", action="store",
@@ -523,7 +525,7 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup):
 ##### other fixtures ####
 
 @pytest.fixture
-def execute_inpgen(inpgen_binary, work_dir):
+def execute_inpgen(inpgen_binary, work_dir, pytestconfig):
     """
     Fixture which returns an execute_inpgen function
     """
@@ -544,11 +546,12 @@ def execute_inpgen(inpgen_binary, work_dir):
         """
         import subprocess
 
+        __tracebackhide__ = not pytestconfig.getoption('--show-tracebacks') #We do not need the traceback here
+
         workdir = str(work_dir)
         testdir = test_dir()
         if cmdline_param is None:
             cmdline_param = []
-
 
         # Prepare only copy list, since we allow for name changes.
 
@@ -558,8 +561,6 @@ def execute_inpgen(inpgen_binary, work_dir):
                 new_only_copy_list[entry[0]] = entry[1]
             else:
                 new_only_copy_list[entry] = entry
-
-
 
         if test_file_folder is not None:
             abspath = os.path.abspath(os.path.join(testdir, test_file_folder))
@@ -574,15 +575,15 @@ def execute_inpgen(inpgen_binary, work_dir):
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
         #print(inpgen_binary)
         if inpgen_binary is None:
-            print('No Inpgen binary found')
-            return {}
+            pytest.fail('No Inpgen binary found')
+
         arg_list = [inpgen_binary] + cmdline_param
         #print(arg_list)
 
         os.chdir(workdir)
         with open(f"{workdir}/stdout", "w") as f_stdout:
             with open(f"{workdir}/stderr", "w") as f_stderr:
-                p1 = subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr)
+                p1 = subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr, check=False)
         # Check per hand if successful:
         with open(f"{workdir}/stderr", "r") as f_stderr:
                 error_content= f_stderr.read()
@@ -597,7 +598,7 @@ def execute_inpgen(inpgen_binary, work_dir):
             print('======================================')
             print('The following was printed to stderr:')
             print(error_content)
-            raise RuntimeError('Inpgen Execution failed')
+            pytest.fail('Inpgen Execution failed')
 
         result_files = {}
         for root, dirs, files in os.walk(workdir):
@@ -688,7 +689,7 @@ def mpi_command():
     return _mpi_command
 
 @pytest.fixture
-def execute_fleur(fleur_binary, work_dir, mpi_command):
+def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig):
     """
     Fixture which returns an execute_fleur function
     """
@@ -708,6 +709,8 @@ def execute_fleur(fleur_binary, work_dir, mpi_command):
         :return: a dictionary of the form 'filename :filepath'
         """
         import subprocess
+
+        __tracebackhide__ = not pytestconfig.getoption('--show-tracebacks')  #We do not need the traceback here
 
         if sub_dir is not None:
             workdir = os.path.abspath(os.path.join(work_dir, sub_dir))
@@ -759,8 +762,8 @@ def execute_fleur(fleur_binary, work_dir, mpi_command):
 
         fleur, parallel = fleur_binary
         if fleur is None:
-            print('No Fleur binary found')
-            return {}
+            pytest.fail('No Fleur binary found')
+
         mpiruncmd = mpi_command(run_env, mpi_procs, parallel)
 
         arg_list = mpiruncmd + [fleur] + cmdline_param
@@ -771,7 +774,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command):
             with open(f"{workdir}/{stderr}", "bw") as f_stderr:
                 # we parse the whole string and execute in shell,
                 # otherwise popen thinks 'mpirun -np 2 /path/fleur' is the path to the executable...
-                p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr)#check=True
+                p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=False)
         
         # Check per hand if successful:
         with open(f"{workdir}/stderr", "r") as f_stderr:
@@ -787,7 +790,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command):
             print('======================================')
             print('The following was printed to stderr:')
             print(error_content)
-            raise RuntimeError('Fleur Execution failed')
+            pytest.fail('Fleur Execution failed')
 
         result_files = {}
         for root, dirs, files in os.walk(workdir):
