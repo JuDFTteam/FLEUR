@@ -468,6 +468,41 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
     # put session tear down code here
     #print("Fleur test session ended.")
 
+
+_failed_parser_tests = set()
+@pytest.fixture
+def add_failed_parser_tests():
+    """
+    This fixture keeps a record of folders where parser tests failed
+    """
+    def _add_failed_parser_test(request):
+        base_name = request.node.name.split('[')[1][:-1]
+        _failed_parser_tests.add(base_name)
+
+    return _add_failed_parser_test
+
+@pytest.fixture(scope='session', autouse=True)
+def cleanup_parser_tests(parser_testdir, failed_dir):
+    """
+    Move those folders, where a parser test has failed to the failed_dir
+    The rest is cleaned up
+    """
+
+    yield #All tests run
+
+    #Move failed tests to failed_dir
+    for test_base_name in _failed_parser_tests:
+        method_name = test_base_name + '_parser_test'
+        test_dir = os.path.abspath(os.path.join(parser_testdir, test_base_name))
+        # if failed, move test result to failed dir, will replace dir if existent
+        destination = os.path.abspath(os.path.join(failed_dir, method_name))
+        if os.path.isdir(destination):
+            shutil.rmtree(destination)
+        shutil.copytree(test_dir, destination)
+
+    #Remove the parser_testdir
+    shutil.rmtree(parser_testdir)
+
 @pytest.fixture
 def set_environment_session():
     """
@@ -494,7 +529,8 @@ def pytest_runtest_makereport(item, call):
 
 
 @pytest.fixture(scope='function', autouse=True)
-def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup):
+def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup,
+                   add_failed_parser_tests):
     """
     Base fixture for every test case to execute cleanup code after a test
     Write testlog.
@@ -518,8 +554,14 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup):
                 shutil.rmtree(destination)
             shutil.copytree(workdir, destination)
         clean_workdir()
-    else:
-        yield
+    else: # this is for parser tests
+
+        yield # test is running
+
+        # clean up code goes here (We can only clean up
+        #at the end of the session since multiple parser need to access the same folder):
+        if request.node.rep_call.failed or not cleanup:
+            add_failed_parser_tests(request)
 
 
 ##### other fixtures ####
