@@ -104,7 +104,7 @@ MODULE m_rotMMPmat
    END FUNCTION rotMMPmat_dwgn
 
    PURE FUNCTION rotMMPmat_angle(mmpmat,alpha,beta,gamma,l,lp,spin_rotation,real_space_rotation,inverse) Result(mmpmatOut)
-
+      use m_types_nococonv
       COMPLEX,           INTENT(IN)  :: mmpmat(-lmaxU_const:,-lmaxU_const:,:)
       REAL,              INTENT(IN)  :: alpha,beta,gamma !Euler angles
       INTEGER,           INTENT(IN)  :: l
@@ -119,6 +119,8 @@ MODULE m_rotMMPmat
       COMPLEX :: d(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       COMPLEX :: dp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       LOGICAL :: spin_rotation_arg, inverseArg
+
+      TYPE(t_nococonv):: nococonv
 
       IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
       mmpmatOut = mmpmat
@@ -146,6 +148,7 @@ MODULE m_rotMMPmat
       su(2,1) = -conjg(eia)*si_bh
       su(1,2) = eia*si_bh
       su(2,2) = conjg(eia)*co_bh
+      su=nococonv%chi(alphaArg,betaArg)
 
       IF(PRESENT(lp)) THEN
          mmpmatOut = rotMMPmat_dwgn(mmpmat,d,dwgnp=dp,su=su,spin_rotation=spin_rotation,&
@@ -285,7 +288,7 @@ MODULE m_rotMMPmat
 
 
       co_bh = cos(beta*0.5)
-      si_bh = sin(beta*0.5)
+      si_bh = -sin(beta*0.5)
       d = cmplx_0
 
       DO m = -l,l

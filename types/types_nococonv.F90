@@ -49,14 +49,14 @@ CONTAINS
       chi_pass = nococonv%chi_explicit(nococonv%alph(n), nococonv%beta(n))
    end function
 
-   function chi_explicit(nococonv, alpha, beta) result(chi)
+   pure function chi_explicit(nococonv, alpha, beta) result(chi)
       class(t_nococonv), intent(in) :: nococonv
       REAL, INTENT(IN) :: alpha, beta
       COMPLEX         :: chi(2, 2)
-      chi(1, 1) = exp(-ImagUnit*alpha/2)*cos(beta/2)
-      chi(2, 1) = EXP(ImagUnit*alpha/2)*SIN(beta/2)
-      chi(1, 2) = -EXP(-ImagUnit*alpha/2)*SIN(beta/2)
-      chi(2, 2) = EXP(ImagUnit*alpha/2)*COS(beta/2)
+      chi(1, 1) = exp(ImagUnit*alpha/2)*cos(beta/2)
+      chi(2, 1) = EXP(-ImagUnit*alpha/2)*SIN(beta/2)
+      chi(1, 2) = -EXP(ImagUnit*alpha/2)*SIN(beta/2)
+      chi(2, 2) = EXP(-ImagUnit*alpha/2)*COS(beta/2)
    end function
 
    function denmat_to_mag_mat(nococonv, mat) result(mag)
@@ -82,7 +82,7 @@ CONTAINS
       complex, intent(in):: r21
       real :: mag(0:3)
       mag(0) = r11 + r22
-      mag(1) = -2*Real(r21)
+      mag(1) = 2*Real(r21)
       mag(2) = 2*Aimag(r21)
       mag(3) = r11 - r22
    end function
