@@ -13,6 +13,6 @@ include:
 
 #The pipeline only executed when not a single push triggers 
 include:
-   - 'docker/CI/extra.yml'
-   rules:
-    -if: $CI_PIPELINE_SOURCE != 'push'  
+   - local: 'docker/CI/extra.yml'
+     rules:
+        -if: $CI_PIPELINE_SOURCE != 'push'  
