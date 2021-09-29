@@ -1,0 +1,169 @@
+include:
+    - 'docker/CI/oneAPI.yml'
+    - 'docker/CI/NVHPC.yml'
+
+test-gfortran-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: test
+  dependencies:
+    - build-gfortran-serial
+  script:
+    - ulimit -s unlimited
+    - cd $CI_PROJECT_DIR/build.serial
+    - mkdir -p Testing
+    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.serial/Testing/pytest_summary.out"
+    - ./run_tests.sh -m serial | tee $CI_PROJECT_DIR/build.serial/Testing/pytest_session.stdout
+  artifacts:
+    when: on_failure
+    paths:
+      - build.serial/Testing
+
+pages:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: deploy
+  needs: ["doxygen","gfortran-coverage"]
+  script:
+    - echo "HTML should be ready from cache..."
+    - mv $CI_PROJECT_DIR/docs/Docu_main.html $CI_PROJECT_DIR/public/index.html
+  environment:
+     name: HTML-Pages
+     url: https://fleur.iffgit.fz-juelich.de/fleur
+  artifacts:
+    paths:
+      - public
+
+doxygen:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: html
+  needs: ["build-gfortran-hdf5"]
+  script:
+    - cd $CI_PROJECT_DIR/build ; make doc
+    - mkdir ../public
+    - mv docs/html/ ../public/doxygen
+  artifacts:
+    paths:
+      - public
+      - build/fleur
+      - build/fleur_MPI
+      - build/inpgen
+
+
+
+gfortran-coverage:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: html
+  needs: []
+  script:
+      - cd $CI_PROJECT_DIR; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
+      - lcov --capture --initial -d CMakeFiles -o baseline.info
+      - ulimit -s unlimited
+      - export juDFT_MPI="mpirun -n {mpi_procs} --allow-run-as-root "
+      - mkdir -p Testing
+      - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.coverage/Testing/pytest_summary.out"
+      - ./run_tests.sh | tee $CI_PROJECT_DIR/build.coverage/Testing/pytest_session.stdout
+      - lcov --capture  -d CMakeFiles -o after.info
+      - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
+      - genhtml combined.info --output-directory html_out
+      - mkdir ../public;mv html_out ../public/coverage_html
+  allow_failure: true
+  artifacts:
+    paths:
+      - public
+  environment:
+    name: Coverage
+    url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
+
+
+test-aiida-fleur-dev-gfortran-hdf5:
+  # This is to test the develop executables and all test input files against
+  # the develop branch of aiida-fleur. This will execute workflows regression tests
+  # with the compiled fleur executable.
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: test
+  dependencies:
+    - build-gfortran-hdf5
+  variables:
+    POSTGRES_DB: "postgres"
+    POSTGRES_USER: "postgres"
+    POSTGRES_PASSWORD: ''
+    POSTGRES_HOST_AUTH_METHOD: trust
+    RABBITMQ_DEFAULT_USER: guest
+    RABBITMQ_DEFAULT_PASS: guest
+    AIIDA_PROFILE: "default"
+    AIIDA_EMAIL: "aiida@localhost"
+    AIIDA_FIRST_NAME: "Giuseppe"
+    AIIDA_LAST_NAME: "Verdi"
+    AIIDA_INSTITUTION: "Khedivial"
+    AIIDA_DB_BACKEND: "django"
+
+  services:
+    - postgres:12.2-alpine
+    - rabbitmq:3.8
+
+    #AMQP_URL: 'amqp://guest:guest@rabbitmq:5672'
+  before_script:
+    - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Aiida-fleur system dependencies"
+    - apt-get update
+    - apt-get -yq install python3-pip
+    - useradd -d /builds/${GITLAB_USER_LOGIN} -g users -M -N builder
+    - chown -R builder:users .. /root $CI_PROJECT_DIR
+    - locale-gen en_US.UTF-8
+    - su -p builder -c "pip3 install --upgrade wheel setuptools"
+    - su -p builder -c "pip3 install pytest masci-tools"
+    - su -p builder -c "pip3 install aiida-core"
+    # needed for workflow tests
+    - su -p builder -c "pip3 install git+https://github.com/aiidateam/aiida-testing.git@export_cache"
+    #- pip3 install git+https://github.com/JuDFTteam/aiida-fleur.git@develop.[testing]
+    - git clone https://github.com/JuDFTteam/aiida-fleur.git
+    - chown -R builder:users aiida-fleur
+    - cd aiida-fleur
+    # Remove cache dirs
+    - git checkout develop
+    - su -p builder -c "pip3 install .[testing]"
+    - rm -rf tests/workflows/calc_data_dir tests/workflows/caches
+    - rm -rf tests/calculation/data_dir
+    - rm -rf tests/data_dir
+    - mkdir -p tests/workflows/calc_data_dir
+    - mkdir -p tests/workflows/caches
+    - mkdir -p tests/calculation/data_dir
+    - mkdir -p tests/data_dir
+    - chown -R builder:users tests
+    - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
+  script:
+    - git log --pretty=oneline --abbrev-commit -n 1
+    - ulimit -s unlimited
+    - export OMP_NUM_THREADS=2
+    - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
+    # we are in aiida-fleur dir
+    - pwd
+    - >
+      verdi quicksetup --non-interactive
+      --profile="${AIIDA_PROFILE}"
+      --email="${AIIDA_EMAIL}"
+      --first-name="${AIIDA_FIRST_NAME}"
+      --last-name="${AIIDA_LAST_NAME}"
+      --institution="${AIIDA_INSTITUTION}"
+      --db-backend="${AIIDA_DB_BACKEND}"
+      --db-host="postgres"
+      --db-username="${POSTGRES_USER}"
+      --db-password="${POSTGRES_PASSWORD}" || exit 1
+    - verdi status || exit 1
+    - export AIIDA_TEST_PROFILE="${AIIDA_PROFILE}"
+    - cd ./tests/
+    # Maybe also copy all current input files from fleur tests to run them through
+    # the auto generated tests
+    # For the regression tests to use the fleur executable for now it needs to be in these folders
+    - su -p builder -c "cp $CI_PROJECT_DIR/build/inpgen local_exe/inpgen && chmod +x local_exe/inpgen"
+    - su -p builder -c "cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur"
+    - sed -i "s/\./${CI_PROJECT_DIR//\//\\/}\/aiida-fleur\/tests/g" .aiida-testing-config.yml
+    - cat .aiida-testing-config.yml
+    - ls -la local_exe/
+    #Copy testfile for SCF workchain from fleur tests
+    - su -p builder -c "cp files/workflow_test_files/inp_scf.xml files/inpxml/Si/inp.xml"
+    # run tests
+    - su -p builder -c "export PATH=$PATH:/root/.local/bin && printenv PATH && reentry scan && ./run_all_cov.sh"
+  allow_failure: true
+#  artifacts:
+#    when: on_failure
+#    paths:
+#      - build/Testing

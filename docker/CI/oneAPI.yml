@@ -1,0 +1,33 @@
+build-intel:
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  stage: build
+  artifacts:
+     paths:
+       - build.intel
+     expire_in: 1h
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -l intel
+    - cd build.intel
+    - make -j 2
+  allow_failure: false
+
+
+test-intel:
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  stage: test
+  dependencies:
+     - build-intel
+  script:
+    - ulimit -s unlimited
+    - export OMP_NUM_THREADS=2
+    - cd $CI_PROJECT_DIR/build.intel
+    - mkdir -p Testing
+    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.intel/Testing/pytest_summary.out"
+    - ./run_tests.sh | tee $CI_PROJECT_DIR/build.intel/Testing/pytest_session.stdout
+  allow_failure: true
+  artifacts:
+    when: on_failure
+    paths:
+      - build.intel/Testing
+

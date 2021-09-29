@@ -1,0 +1,30 @@
+
+build-pgi:
+  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  stage: build
+  artifacts:
+     paths:
+       - build.pgi
+     expire_in: 1h
+  script:
+    - cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make
+  allow_failure: true
+
+
+test-pgi:
+  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  stage: test
+  dependencies:
+    - build-pgi
+  script:
+    - export OMP_NUM_THREADS=2
+    - cd $CI_PROJECT_DIR/build.pgi
+    - mkdir -p Testing
+    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.pgi/Testing/pytest_summary.out"
+    - ./run_tests.sh | tee $CI_PROJECT_DIR/build.pgi/Testing/pytest_session.stdout
+  allow_failure: true
+  artifacts:
+    when: on_failure
+    paths:
+      - build.pgi/Testing
+
