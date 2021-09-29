@@ -402,12 +402,12 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - pwd
     - >
       verdi quicksetup --non-interactive
-		  --profile="${AIIDA_PROFILE}"
-		  --email="${AIIDA_EMAIL}"
-		  --first-name="${AIIDA_FIRST_NAME}"
-		  --last-name="${AIIDA_LAST_NAME}"
-		  --institution="${AIIDA_INSTITUTION}"
-		  --db-backend="${AIIDA_DB_BACKEND}"
+      --profile="${AIIDA_PROFILE}"
+      --email="${AIIDA_EMAIL}"
+      --first-name="${AIIDA_FIRST_NAME}"
+      --last-name="${AIIDA_LAST_NAME}"
+      --institution="${AIIDA_INSTITUTION}"
+      --db-backend="${AIIDA_DB_BACKEND}"
       --db-host="postgres"
       --db-username="${POSTGRES_USER}"
       --db-password="${POSTGRES_PASSWORD}" || exit 1
