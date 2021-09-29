@@ -400,17 +400,17 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
     # we are in aiida-fleur dir
     - pwd
-    - |
-      verdi quicksetup --non-interactive \
-		    --profile="${AIIDA_PROFILE}" \
-		    --email="${AIIDA_EMAIL}" \
-		    --first-name="${AIIDA_FIRST_NAME}" \
-		    --last-name="${AIIDA_LAST_NAME}" \
-		    --institution="${AIIDA_INSTITUTION}" \
-		    --db-backend="${AIIDA_DB_BACKEND}" \
-        --db-host="postgres" \
-        --db-username="${POSTGRES_USER}" \
-        --db-password="${POSTGRES_PASSWORD}" || exit 1
+    - >
+      verdi quicksetup --non-interactive
+		  --profile="${AIIDA_PROFILE}"
+		  --email="${AIIDA_EMAIL}"
+		  --first-name="${AIIDA_FIRST_NAME}"
+		  --last-name="${AIIDA_LAST_NAME}"
+		  --institution="${AIIDA_INSTITUTION}"
+		  --db-backend="${AIIDA_DB_BACKEND}"
+      --db-host="postgres"
+      --db-username="${POSTGRES_USER}"
+      --db-password="${POSTGRES_PASSWORD}" || exit 1
     - verdi status || exit 1
     - export AIIDA_TEST_PROFILE="${AIIDA_PROFILE}"
     - cd ./tests/
