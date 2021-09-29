@@ -353,9 +353,15 @@ test-aiida-fleur-dev-gfortran-hdf5:
     POSTGRES_HOST_AUTH_METHOD: trust
     RABBITMQ_DEFAULT_USER: guest
     RABBITMQ_DEFAULT_PASS: guest
+    AIIDA_PROFILE: "default"
+    AIIDA_EMAIL: "aiida@localhost"
+    AIIDA_FIRST_NAME: "Giuseppe"
+    AIIDA_LAST_NAME: "Verdi"
+    AIIDA_INSTITUTION: "Khedivial"
+    AIIDA_DB_BACKEND: "django"
+
   services:
-    - postgres
-    #:12.2-alpine
+    - postgres:12.2-alpine
     - rabbitmq:3.8
 
     #AMQP_URL: 'amqp://guest:guest@rabbitmq:5672'
@@ -363,8 +369,6 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Aiida-fleur system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
-    # because aiida needs psql commands
-    - apt-get -yq install postgresql-12
     - useradd -d /builds/${GITLAB_USER_LOGIN} -g users -M -N builder
     - chown -R builder:users .. /root $CI_PROJECT_DIR
     - locale-gen en_US.UTF-8
@@ -396,7 +400,19 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
     # we are in aiida-fleur dir
     - pwd
-    - psql -h "postgres" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 'OK' AS status;"
+    - |
+      verdi quicksetup --non-interactive \
+		    --profile="${AIIDA_PROFILE}" \
+		    --email="${AIIDA_EMAIL}" \
+		    --first-name="${AIIDA_FIRST_NAME}" \
+		    --last-name="${AIIDA_LAST_NAME}" \
+		    --institution="${AIIDA_INSTITUTION}" \
+		    --db-backend="${AIIDA_DB_BACKEND}" \
+        --db-host="postgres" \
+        --db-username="${POSTGRES_USER}" \
+        --db-password="${POSTGRES_PASSWORD}" || exit 1
+    - verdi status || exit 1
+    - export AIIDA_TEST_PROFILE="${AIIDA_PROFILE}"
     - cd ./tests/
     # Maybe also copy all current input files from fleur tests to run them through
     # the auto generated tests
