@@ -198,6 +198,20 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                              vacuum,  sphhar, sym, gfinp, hub1inp, vTot, oneD, results, EnergyDen)
    endif
 
+   IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
+      IF (fmpi%irank == 0) THEN
+         CALL timestart("cdngen: dos")
+         CALL make_dos(kpts,atoms,vacuum,input,banddos,&
+                      sliceplot,noco,sym,cell,results,eigdos,oneD)
+         CALL timestop("cdngen: dos")
+      END IF
+   END IF
+
+   CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,fmpi,.TRUE.)
+   IF (fmpi%irank.EQ.0) THEN
+      CALL closeXMLElement('valenceDensity')
+   END IF ! fmpi%irank = 0
+
    IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
       IF(greensfImagPart%l_calc) THEN
          CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,kpts,cell,gfinp,input,sym,noco,fmpi,&
@@ -211,23 +225,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       ENDIF
    ENDIF
 
-   IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
-      IF (fmpi%irank == 0) THEN
-         CALL timestart("cdngen: dos")
-         CALL make_dos(kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,results,eigdos,oneD)
-         CALL timestop("cdngen: dos")
-      END IF
-   END IF
-
    IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf) THEN
       CALL juDFT_end("Charge density postprocessing done.",fmpi%irank)
    END IF
-
-   CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,fmpi,.TRUE.)
-   IF (fmpi%irank.EQ.0) THEN
-      CALL closeXMLElement('valenceDensity')
-   END IF ! fmpi%irank = 0
 
    IF (sliceplot%slice) THEN
       IF (fmpi%irank == 0) THEN
