@@ -7,14 +7,12 @@ stages:
    - html
    - deploy
 
-#the default pipeline always executed with every push
 include:
+   #the default pipeline always executed with every push
    - local: 'docker/CI/default.yml'
      rules:
         -if: $CI_PIPELINE_SOURCE == "push" 
-
-#The pipeline only executed when not a single push triggers 
-include:
+   #The pipeline only executed when not a single push triggers 
    - local: 'docker/CI/extra.yml'
      rules:
         -if: $CI_PIPELINE_SOURCE != "push"   
