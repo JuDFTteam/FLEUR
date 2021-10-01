@@ -1,23 +1,23 @@
 include:
-    - 'docker/CI/default.yml'
+    - 'docker/CI/short-pipeline.yml'
     - 'docker/CI/oneAPI.yml'
     - 'docker/CI/NVHPC.yml'
 
-#test-gfortran-serial:
-#  image: iffregistry.fz-juelich.de/fleur/fleur:latest
-#  stage: test
-#  dependencies:
-#    - build-gfortran-serial
-#  script:
-#    - ulimit -s unlimited
-#    - cd $CI_PROJECT_DIR/build.serial
-#    - mkdir -p Testing
-#    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.serial/Testing/pytest_summary.out"
-#    - ./run_tests.sh -m serial | tee $CI_PROJECT_DIR/build.serial/Testing/pytest_session.stdout
-#  artifacts:
-#    when: on_failure
-#    paths:
-#      - build.serial/Testing
+test-gfortran-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: test
+  dependencies:
+    - build-gfortran-serial
+  script:
+    - ulimit -s unlimited
+    - cd $CI_PROJECT_DIR/build.serial
+    - mkdir -p Testing
+    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.serial/Testing/pytest_summary.out"
+    - ./run_tests.sh -m serial | tee $CI_PROJECT_DIR/build.serial/Testing/pytest_session.stdout
+  artifacts:
+    when: on_failure
+    paths:
+      - build.serial/Testing
 
 pages:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
