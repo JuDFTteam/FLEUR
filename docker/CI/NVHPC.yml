@@ -12,7 +12,7 @@ build-pgi:
        - build.pgi
      expire_in: 12h
   script:
-    - cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make
+    - source /opt/nvidia/hpc_sdk/modulefiles/nvhpc/21.2 ; cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make
   allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE != "push"   
@@ -25,6 +25,7 @@ test-pgi:
     - build-pgi
   needs: ["build-pgi"]  
   script:
+    - source /opt/nvidia/hpc_sdk/modulefiles/nvhpc/21.2
     - export OMP_NUM_THREADS=2
     - cd $CI_PROJECT_DIR/build.pgi
     - mkdir -p Testing
