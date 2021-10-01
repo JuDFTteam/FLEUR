@@ -1,11 +1,10 @@
-
 build-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
   stage: build
   artifacts:
      paths:
        - build.pgi
-     expire_in: 1h
+     expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make
   allow_failure: true
@@ -16,6 +15,7 @@ test-pgi:
   stage: test
   dependencies:
     - build-pgi
+  needs: ["build-pgi"]  
   script:
     - export OMP_NUM_THREADS=2
     - cd $CI_PROJECT_DIR/build.pgi
