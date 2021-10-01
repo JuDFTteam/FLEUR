@@ -10,7 +10,7 @@ stages:
 include:
    - "docker/CI/gfortran-hdf.yml"
    - "docker/CI/gfortran-serial.yml"
-   - "docker/CI/OneAPI.yml"
+   - "docker/CI/oneAPI.yml"
    - "docker/CI/NVHPC.yml"
    - "docker/CI/html.yml"
    - "docker/CI/AiiDA.yml"
