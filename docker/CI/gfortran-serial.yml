@@ -1,0 +1,33 @@
+build-gfortran-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: build
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF
+    - cd build.serial
+    - make -j 2
+  artifacts:
+    paths:
+      - build.serial
+    expire_in: 12h
+  rules:
+    -if: $CI_PIPELINE_SOURCE != "push"   
+
+test-gfortran-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: test
+  dependencies:
+    - build-gfortran-serial
+  needs: ["build-gfortran-serial"]  
+  script:
+    - ulimit -s unlimited
+    - cd $CI_PROJECT_DIR/build.serial
+    - mkdir -p Testing
+    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.serial/Testing/pytest_summary.out"
+    - ./run_tests.sh -m serial | tee $CI_PROJECT_DIR/build.serial/Testing/pytest_session.stdout
+  artifacts:
+    when: on_failure
+    paths:
+      - build.serial/Testing
+  rules:
+    -if: $CI_PIPELINE_SOURCE != "push"   

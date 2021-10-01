@@ -1,81 +1,3 @@
-include:
-    - 'docker/CI/short-pipeline.yml'
-    - 'docker/CI/oneAPI.yml'
-    - 'docker/CI/NVHPC.yml'
-
-test-gfortran-serial:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
-  stage: test
-  dependencies:
-    - build-gfortran-serial
-  needs: ["build-gfortran-serial"]  
-  script:
-    - ulimit -s unlimited
-    - cd $CI_PROJECT_DIR/build.serial
-    - mkdir -p Testing
-    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.serial/Testing/pytest_summary.out"
-    - ./run_tests.sh -m serial | tee $CI_PROJECT_DIR/build.serial/Testing/pytest_session.stdout
-  artifacts:
-    when: on_failure
-    paths:
-      - build.serial/Testing
-
-pages:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
-  stage: deploy
-  needs: ["doxygen","gfortran-coverage"]
-  script:
-    - echo "HTML should be ready from cache..."
-    - mv $CI_PROJECT_DIR/docs/Docu_main.html $CI_PROJECT_DIR/public/index.html
-  environment:
-     name: HTML-Pages
-     url: https://fleur.iffgit.fz-juelich.de/fleur
-  artifacts:
-    paths:
-      - public
-
-doxygen:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
-  stage: html
-  needs: ["build-gfortran-hdf5"]
-  script:
-    - cd $CI_PROJECT_DIR/build ; make doc
-    - mkdir ../public
-    - mv docs/html/ ../public/doxygen
-  artifacts:
-    paths:
-      - public
-      - build/fleur
-      - build/fleur_MPI
-      - build/inpgen
-
-
-
-gfortran-coverage:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
-  stage: html
-  needs: []
-  script:
-      - cd $CI_PROJECT_DIR; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
-      - lcov --capture --initial -d CMakeFiles -o baseline.info
-      - ulimit -s unlimited
-      - export juDFT_MPI="mpirun -n {mpi_procs} --allow-run-as-root "
-      - mkdir -p Testing
-      - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.coverage/Testing/pytest_summary.out"
-      - ./run_tests.sh | tee $CI_PROJECT_DIR/build.coverage/Testing/pytest_session.stdout
-      - lcov --capture  -d CMakeFiles -o after.info
-      - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
-      - genhtml combined.info --output-directory html_out
-      - mkdir ../public;mv html_out ../public/coverage_html
-  allow_failure: true
-  artifacts:
-    paths:
-      - public
-  environment:
-    name: Coverage
-    url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
-
-
 test-aiida-fleur-dev-gfortran-hdf5:
   # This is to test the develop executables and all test input files against
   # the develop branch of aiida-fleur. This will execute workflows regression tests
@@ -169,3 +91,5 @@ test-aiida-fleur-dev-gfortran-hdf5:
 #    when: on_failure
 #    paths:
 #      - build/Testing
+  rules:
+    -if: $CI_PIPELINE_SOURCE != "push"   

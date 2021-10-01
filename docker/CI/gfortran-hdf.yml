@@ -11,18 +11,7 @@ build-gfortran-hdf5:
     - cd build
     - make -j 2
 
-build-gfortran-serial:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
-  stage: build
-  script:
-    - cd $CI_PROJECT_DIR
-    - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF
-    - cd build.serial
-    - make -j 2
-  artifacts:
-    paths:
-      - build.serial
-    expire_in: 12h
+
 
 test-gfortran-hdf5: 
   image: iffregistry.fz-juelich.de/fleur/fleur:latest

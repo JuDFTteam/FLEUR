@@ -1,0 +1,62 @@
+
+pages:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: deploy
+  needs: ["doxygen","gfortran-coverage"]
+  script:
+    - echo "HTML should be ready from cache..."
+    - mv $CI_PROJECT_DIR/docs/Docu_main.html $CI_PROJECT_DIR/public/index.html
+  environment:
+     name: HTML-Pages
+     url: https://fleur.iffgit.fz-juelich.de/fleur
+  artifacts:
+    paths:
+      - public
+  rules:
+    -if: $CI_PIPELINE_SOURCE != "push"   
+
+doxygen:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: html
+  needs: ["build-gfortran-hdf5"]
+  script:
+    - cd $CI_PROJECT_DIR/build ; make doc
+    - mkdir ../public
+    - mv docs/html/ ../public/doxygen
+  artifacts:
+    paths:
+      - public
+      - build/fleur
+      - build/fleur_MPI
+      - build/inpgen
+  rules:
+    -if: $CI_PIPELINE_SOURCE != "push"   
+
+
+gfortran-coverage:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: html
+  needs: []
+  script:
+      - cd $CI_PROJECT_DIR; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
+      - lcov --capture --initial -d CMakeFiles -o baseline.info
+      - ulimit -s unlimited
+      - export juDFT_MPI="mpirun -n {mpi_procs} --allow-run-as-root "
+      - mkdir -p Testing
+      - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.coverage/Testing/pytest_summary.out"
+      - ./run_tests.sh | tee $CI_PROJECT_DIR/build.coverage/Testing/pytest_session.stdout
+      - lcov --capture  -d CMakeFiles -o after.info
+      - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
+      - genhtml combined.info --output-directory html_out
+      - mkdir ../public;mv html_out ../public/coverage_html
+  allow_failure: true
+  artifacts:
+    paths:
+      - public
+  environment:
+    name: Coverage
+    url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
+  rules:
+    -if: $CI_PIPELINE_SOURCE != "push"   
+
+

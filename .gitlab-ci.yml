@@ -8,11 +8,9 @@ stages:
    - deploy
 
 include:
-   #the default pipeline always executed with every push
-   - local: 'docker/CI/short-pipeline.yml'
-     rules:
-        -if: $CI_PIPELINE_SOURCE == "push" 
-   #The pipeline only executed when not a single push triggers 
-   - local: 'docker/CI/long-pipeline.yml'
-     rules:
-        -if: $CI_PIPELINE_SOURCE != "push"   
+   - "docker/CI/gfortran-hdf.yml"
+   - "docker/CI/gfortran-serial.yml"
+   - "docker/CI/OneAPI.yml"
+   - "docker/CI/NVHPC.yml"
+   - "docker/CI/html.yml"
+   - "docker/CI/AiiDA.yml"
