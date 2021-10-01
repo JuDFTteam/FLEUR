@@ -1,3 +1,9 @@
+image:
+  name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  entrypoint: ["/usr/bin/bash -c"]
+
+
+
 build-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
   stage: build
