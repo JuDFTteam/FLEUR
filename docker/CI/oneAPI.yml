@@ -12,7 +12,7 @@ build-intel:
     - make -j 2
   allow_failure: false
   rules:
-    -if: $CI_PIPELINE_SOURCE != "push"   
+    - if: $CI_PIPELINE_SOURCE != "push"   
 
 test-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -33,4 +33,4 @@ test-intel:
     paths:
       - build.intel/Testing
   rules:
-     -if: $CI_PIPELINE_SOURCE != "push"   
+     - if: $CI_PIPELINE_SOURCE != "push"   

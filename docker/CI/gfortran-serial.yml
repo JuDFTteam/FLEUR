@@ -11,7 +11,7 @@ build-gfortran-serial:
       - build.serial
     expire_in: 12h
   rules:
-    -if: $CI_PIPELINE_SOURCE != "push"   
+    - if: $CI_PIPELINE_SOURCE != "push"   
 
 test-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -30,4 +30,4 @@ test-gfortran-serial:
     paths:
       - build.serial/Testing
   rules:
-    -if: $CI_PIPELINE_SOURCE != "push"   
+    - if: $CI_PIPELINE_SOURCE != "push"   

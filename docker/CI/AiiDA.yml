@@ -92,4 +92,4 @@ test-aiida-fleur-dev-gfortran-hdf5:
 #    paths:
 #      - build/Testing
   rules:
-    -if: $CI_PIPELINE_SOURCE != "push"   
+    - if: $CI_PIPELINE_SOURCE != "push"   
