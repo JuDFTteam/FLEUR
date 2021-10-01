@@ -4,7 +4,7 @@ build-gfortran-hdf5:
   artifacts:
      paths:
        - build
-     expire_in: 1h
+     expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
     - ./configure.sh GITLAB
@@ -22,13 +22,14 @@ build-gfortran-serial:
   artifacts:
     paths:
       - build.serial
-    expire_in: 1h
+    expire_in: 12h
 
 test-gfortran-hdf5: 
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
   dependencies:
     - build-gfortran-hdf5
+  needs: ["build-gfortran-hdf5"]
   script:
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
