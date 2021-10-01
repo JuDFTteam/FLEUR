@@ -211,13 +211,13 @@
    </xsd:complexType>
 
    <xsd:complexType name="Forcetheorem_DMI_SummaryType">
-      <xsd:sequence>
+      <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="Entry" type="Entry_DMI_Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="allAtoms" type="Entry_DMIATOMS_Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="singleAtom" type="Entry_DMIATOMS_Type"/>
       </xsd:sequence>
       <xsd:attribute name="Angles" type="xsd:integer" use="required"/>
-      <xsd:attribute name="qpoints" type="xsd:integer" use="required"/>
+      <xsd:attribute name="qPoints" type="xsd:integer" use="required"/>
       <xsd:attribute name="ef" type="xsd:integer" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="required"/>
    </xsd:complexType>
