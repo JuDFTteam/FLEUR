@@ -8,6 +8,7 @@ test-gfortran-serial:
   stage: test
   dependencies:
     - build-gfortran-serial
+  needs: ["build-gfortran-serial"]  
   script:
     - ulimit -s unlimited
     - cd $CI_PROJECT_DIR/build.serial
