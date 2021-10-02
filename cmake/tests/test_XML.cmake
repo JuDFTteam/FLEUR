@@ -5,7 +5,7 @@ LINK_LIBRARIES ${FLEUR_LIBRARIES}
 
 if (NOT FLEUR_USE_XML)
       find_package(LibXml2)
-      set(CMAKE_C_FLAGS "-I${LIBXML2_INCLUDE_DIR}")
+      set(CMAKE_C_FLAGS "-I${LIBXML2_INCLUDE_DIR}" ${CMAKE_C_FLAGS})
       if (LIBXML2_LIBRARIES)
           set(TEST_LIBRARIES ${FLEUR_LIBRARIES} ${LIBXML2_LIBRARIES})
       endif()
@@ -46,7 +46,7 @@ if (FLEUR_USE_XML)
    endif()
    if (NOT FLEUR_USE_XML)
       find_package(LibXml2)
-      set(CMAKE_C_FLAGS "-I${LIBXML2_INCLUDE_DIR}")
+      set(CMAKE_C_FLAGS "-I${LIBXML2_INCLUDE_DIR}" ${CMAKE_C_FLAGS})
       try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.c OUTPUT_VARIABLE compile_output
      )
      if ("$ENV{VERBOSE}")
