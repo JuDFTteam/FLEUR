@@ -14,8 +14,7 @@ MODULE m_make_defaults
   !---------------------------------------------------------------------
 CONTAINS
 
-  SUBROUTINE make_defaults(atoms, sym, cell, vacuum, input, stars, &
-       xcpot, noco, banddos, mpinp, hybinp)
+  SUBROUTINE make_defaults(atoms, sym, cell, vacuum, input, stars, xcpot, profile, noco, banddos, mpinp, hybinp)
     USE m_types_atoms
     USE m_types_cell
     USE m_types_sym
@@ -27,20 +26,21 @@ CONTAINS
     USE m_types_banddos
     USE m_types_mpinp
     USE m_types_hybinp
+    USE m_types_profile
     USE m_juDFT
 
-    TYPE(t_atoms), INTENT(INOUT) ::atoms
-    TYPE(t_sym), INTENT(IN)      ::sym
-    TYPE(t_cell), INTENT(INOUT)  ::cell
-
-    TYPE(t_vacuum), INTENT(INOUT)::vacuum
-    TYPE(t_input), INTENT(INOUT) ::input
-    TYPE(t_stars), INTENT(INOUT) ::stars
-    TYPE(t_xcpot_inbuild_nf), INTENT(INOUT) ::xcpot
-    TYPE(t_noco), INTENT(INOUT)  ::noco
-    TYPE(t_banddos), INTENT(INOUT) :: banddos
-    TYPE(t_mpinp), INTENT(INOUT) ::mpinp
-    TYPE(t_hybinp), INTENT(INOUT)::hybinp
+    TYPE(t_atoms), INTENT(INOUT)            :: atoms
+    TYPE(t_sym), INTENT(IN)                 :: sym
+    TYPE(t_cell), INTENT(INOUT)             :: cell
+    TYPE(t_vacuum), INTENT(INOUT)           :: vacuum
+    TYPE(t_input), INTENT(INOUT)            :: input
+    TYPE(t_stars), INTENT(INOUT)            :: stars
+    TYPE(t_xcpot_inbuild_nf), INTENT(INOUT) :: xcpot
+    TYPE(t_profile),INTENT(IN)              :: profile
+    TYPE(t_noco), INTENT(INOUT)             :: noco
+    TYPE(t_banddos), INTENT(INOUT)          :: banddos
+    TYPE(t_mpinp), INTENT(INOUT)            :: mpinp
+    TYPE(t_hybinp), INTENT(INOUT)           :: hybinp
 
     INTEGER :: n
     REAL    :: min_dtild
@@ -67,10 +67,14 @@ CONTAINS
        input%rkmax = MAXVAL(atoms%lmax/atoms%rmt)
        input%rkmax = round_to_deci(input%rkmax, 1)
     ENDIF
-    IF (input%rkmax > 4.5) THEN
+
+    IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
+       input%rkmax = profile%kmax
+    ELSE IF (input%rkmax > 4.5) THEN
        PRINT *, "WARNING, large default rkmax has been reduced. Check input"
        input%rkmax = 4.5
     ENDIF
+
     IF (noco%l_ss) input%ctail = .FALSE.
     input%zelec = DOT_PRODUCT(atoms%econf(:)%valence_electrons, atoms%neq(:))
     !
