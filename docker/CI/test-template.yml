@@ -12,9 +12,18 @@
   script:
     - ulimit -s unlimited
     - cd $BUILD_FOLDER
-    - export PYTEST_ADDOPTS="--test-summary-file={CI_PROJECT_DIR}/{BUILD_FOLDER}/{SUMMARY_FILE} ${PYTEST_ADDOPTS}"
-    - if [ -z "$markers" ]; then export PYTEST_ADDOPTS=" -m ${markers} ${PYTEST_ADDOPTS}"
-    - if [ -z "$skip_markers" ]; then export PYTEST_ADDOPTS=" --skipmarkers ${skip_markers} ${PYTEST_ADDOPTS}"
+    - >
+      export PYTEST_ADDOPTS="--test-summary-file={CI_PROJECT_DIR}/{BUILD_FOLDER}/{SUMMARY_FILE} ${PYTEST_ADDOPTS}"
+    - |
+      if [ -z "$markers" ]
+      then 
+        export PYTEST_ADDOPTS=" -m ${markers} ${PYTEST_ADDOPTS}"
+      fi
+    - |
+      if [ -z "$skip_markers" ]
+      then 
+        export PYTEST_ADDOPTS=" --skipmarkers ${skip_markers} ${PYTEST_ADDOPTS}"
+      fi
     - echo "Pytest Options= ${PYTEST_ADDOPTS}"
     - ./run_tests.sh
   artifacts:
