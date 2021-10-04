@@ -6,6 +6,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
   stage: test
   dependencies:
     - build-gfortran-hdf5
+  needs: ["build-gfortran-hdf5"]  
   variables:
     POSTGRES_DB: "postgres"
     POSTGRES_USER: "postgres"
