@@ -17,7 +17,7 @@ test-gfortran-hdf5:
   dependencies:
     - build-gfortran-hdf5
     - fast-test-gfortran-hdf5
-  needs: ["build-gfortran-hdf5"]
+  needs: ["fast-test-gfortran-hdf5"]
 
 fast-test-gfortran-hdf5: 
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
