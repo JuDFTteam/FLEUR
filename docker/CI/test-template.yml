@@ -15,7 +15,7 @@
     - export PYTEST_ADDOPTS="--test-summary-file={CI_PROJECT_DIR}/{BUILD_FOLDER}/{SUMMARY_FILE} ${PYTEST_ADDOPTS}"
     - if [ -z "$markers" ]; then export PYTEST_ADDOPTS=" -m ${markers} ${PYTEST_ADDOPTS}"
     - if [ -z "$skip_markers" ]; then export PYTEST_ADDOPTS=" --skipmarkers ${skip_markers} ${PYTEST_ADDOPTS}"
-    - echo "Pytest Options: ${PYTEST_ADDOPTS}"
+    - echo "Pytest Options= ${PYTEST_ADDOPTS}"
     - ./run_tests.sh
   artifacts:
     when: always
