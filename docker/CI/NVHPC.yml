@@ -12,7 +12,7 @@ build-pgi:
        - build.pgi
      expire_in: 12h
   script:
-    - module load nvhpc ; cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make
+    - cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make
   allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE != "push"   
