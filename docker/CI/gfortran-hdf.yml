@@ -16,6 +16,7 @@ test-gfortran-hdf5:
   extends: .test-fleur
   dependencies:
     - build-gfortran-hdf5
+    - fast-test-gfortran-hdf5
   needs: ["build-gfortran-hdf5"]
 
 fast-test-gfortran-hdf5: 
