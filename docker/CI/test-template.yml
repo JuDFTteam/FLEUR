@@ -8,19 +8,19 @@
     SUMMARY_FILE: "Testing/pytest_summary.out"
     PYTEST_ADDOPTS: ""
     markers: ""
-    skipmarkers: ""
+    skip_markers: ""
   script:
     - ulimit -s unlimited
     - cd $BUILD_FOLDER
     - >
       export PYTEST_ADDOPTS="--test-summary-file={CI_PROJECT_DIR}/{BUILD_FOLDER}/{SUMMARY_FILE} ${PYTEST_ADDOPTS}"
     - |
-      if [ -z "$markers" ]
+      if [ ! -z "$markers" ]
       then 
         export PYTEST_ADDOPTS=" -m ${markers} ${PYTEST_ADDOPTS}"
       fi
     - |
-      if [ -z "$skipmarkers" ]
+      if [ ! -z "$skip_markers" ]
       then
         export PYTEST_ADDOPTS=" --skipmarkers ${skip_markers} ${PYTEST_ADDOPTS}"
       fi
