@@ -1,4 +1,4 @@
-include: "test-template.yml"
+include: "docker/CI/test-template.yml"
 
 image:
   name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC

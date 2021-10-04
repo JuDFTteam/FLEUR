@@ -1,4 +1,4 @@
-include: 'test-template.yml'
+include: "docker/CI/test-template.yml"
 
 build-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
