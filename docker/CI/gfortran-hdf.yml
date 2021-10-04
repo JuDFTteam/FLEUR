@@ -14,9 +14,9 @@ build-gfortran-hdf5:
 test-gfortran-hdf5: 
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   extends: .test-fleur
-  dependencies:
+  needs: 
     - fast-test-gfortran-hdf5
-  needs: ["fast-test-gfortran-hdf5"]
+    - build-gfortran-hdf5
 
 fast-test-gfortran-hdf5: 
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -24,7 +24,6 @@ fast-test-gfortran-hdf5:
   stage: fast-test
   variables:
     markers: "fast"
-  dependencies:
+  needs: 
     - build-gfortran-hdf5
-  needs: ["build-gfortran-hdf5"]
 
