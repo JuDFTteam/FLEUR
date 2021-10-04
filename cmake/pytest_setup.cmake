@@ -88,7 +88,7 @@ if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
 fi
 mkdir -p Testing
 PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $PYTHON_EXECUTABLE -m pytest \"$@\" | tee Testing/pytest_session.stdout
-exit ${PIPESTATUS[0]}")
+exit \${PIPESTATUS[0]}")
 add_custom_target(pytest ALL
                   COMMAND chmod +x run_tests.sh
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
