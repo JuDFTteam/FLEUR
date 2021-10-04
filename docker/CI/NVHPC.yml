@@ -1,6 +1,6 @@
 image:
   name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
-  entrypoint: ["/usr/bin/bash -c"]
+  entrypoint: ["/usr/bin/bash -i -c"]
 
 
 
