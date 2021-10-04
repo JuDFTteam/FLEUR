@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.12)
 #Some stuff might be defined in config file
 if (EXISTS "${CMAKE_BINARY_DIR}/config.cmake")
    include("${CMAKE_BINARY_DIR}/config.cmake")
