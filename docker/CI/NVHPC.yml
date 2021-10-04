@@ -1,8 +1,8 @@
+include: "test-template.yml"
+
 image:
   name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
   entrypoint: ["/usr/bin/bash -i -c"]
-
-
 
 build-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
@@ -17,23 +17,10 @@ build-pgi:
   rules:
     - if: $CI_PIPELINE_SOURCE != "push"   
 
-
 test-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
-  stage: test
+  extends: .test-fleur-not-on-push
   dependencies:
     - build-pgi
   needs: ["build-pgi"]  
-  script:
-    - export OMP_NUM_THREADS=2
-    - cd $CI_PROJECT_DIR/build.pgi
-    - mkdir -p Testing
-    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.pgi/Testing/pytest_summary.out"
-    - ./run_tests.sh | tee $CI_PROJECT_DIR/build.pgi/Testing/pytest_session.stdout
   allow_failure: true
-  artifacts:
-    when: on_failure
-    paths:
-      - build.pgi/Testing
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "push"   

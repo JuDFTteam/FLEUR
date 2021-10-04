@@ -1,3 +1,5 @@
+include: 'test-template.yml'
+
 build-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
   stage: build
@@ -16,21 +18,10 @@ build-intel:
 
 test-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
-  stage: test
+  extends: .test-fleur-not-on-push
+  variables:
+    BUILD_FOLDER: "build.intel"
   dependencies:
      - build-intel
   needs: ["build-intel"]   
-  script:
-    - ulimit -s unlimited
-    - export OMP_NUM_THREADS=2
-    - cd $CI_PROJECT_DIR/build.intel
-    - mkdir -p Testing
-    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.intel/Testing/pytest_summary.out"
-    - ./run_tests.sh | tee $CI_PROJECT_DIR/build.intel/Testing/pytest_session.stdout
   allow_failure: true
-  artifacts:
-    when: on_failure
-    paths:
-      - build.intel/Testing
-  rules:
-     - if: $CI_PIPELINE_SOURCE != "push"   

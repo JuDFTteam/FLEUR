@@ -1,3 +1,5 @@
+include: 'test-template.yml'
+
 build-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
@@ -11,26 +13,20 @@ build-gfortran-hdf5:
     - cd build
     - make -j 2
 
-
-
 test-gfortran-hdf5: 
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
-  stage: test
+  extends: .test-fleur
   dependencies:
     - build-gfortran-hdf5
   needs: ["build-gfortran-hdf5"]
-  script:
-    - ulimit -s unlimited
-    - export OMP_NUM_THREADS=2
-    - export juDFT_MPI="mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
-    - cd $CI_PROJECT_DIR/build
-    - mkdir -p Testing
-    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build/Testing/pytest_summary.out"
-    - ./run_tests.sh | tee $CI_PROJECT_DIR/build/Testing/pytest_session.stdout
-  artifacts:
-    when: always
-    paths:
-      - build/Testing
 
-
+fast-test-gfortran-hdf5: 
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  extends: .test-fleur
+  stage: fast-test
+  variables:
+    markers: "fast"
+  dependencies:
+    - build-gfortran-hdf5
+  needs: ["build-gfortran-hdf5"]
 

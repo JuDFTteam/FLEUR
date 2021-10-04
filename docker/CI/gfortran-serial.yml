@@ -1,3 +1,5 @@
+include: 'test-template.yml'
+
 build-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
@@ -15,19 +17,10 @@ build-gfortran-serial:
 
 test-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
-  stage: test
+  extends: .test-fleur-not-on-push
   dependencies:
     - build-gfortran-serial
   needs: ["build-gfortran-serial"]  
-  script:
-    - ulimit -s unlimited
-    - cd $CI_PROJECT_DIR/build.serial
-    - mkdir -p Testing
-    - export PYTEST_ADDOPTS="--test-summary-file=$CI_PROJECT_DIR/build.serial/Testing/pytest_summary.out"
-    - ./run_tests.sh -m serial | tee $CI_PROJECT_DIR/build.serial/Testing/pytest_session.stdout
-  artifacts:
-    when: on_failure
-    paths:
-      - build.serial/Testing
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "push"   
+  variables:
+    BUILD_FOLDER: "build.serial"
+    markers: "serial"
