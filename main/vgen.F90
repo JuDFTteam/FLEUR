@@ -127,7 +127,7 @@ CONTAINS
       CALL vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
 
-      CALL bfield(input,noco,atoms,field,vTot)
+      CALL bfield(input,stars,noco,atoms,field,vTot)
 
       CALL vTot%distribute(fmpi%mpi_comm)
       CALL vCoul%distribute(fmpi%mpi_comm)
