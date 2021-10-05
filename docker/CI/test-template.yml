@@ -1,7 +1,7 @@
 .test-fleur:
   stage: test
   variables:
-    juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
+    juDFT_MPI: ""
     juDFT_PYTHON: ""
     OMP_NUM_THREADS: 2
     BUILD_FOLDER: build

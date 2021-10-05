@@ -14,6 +14,8 @@ build-gfortran-hdf5:
 test-gfortran-hdf5: 
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   extends: .test-fleur
+  variables:
+    juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
   needs: 
     - fast-test-gfortran-hdf5
     - build-gfortran-hdf5
