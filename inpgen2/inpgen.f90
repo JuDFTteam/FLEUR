@@ -225,15 +225,14 @@ PROGRAM inpgen
          END IF
 
          !First we determine the spacegoup and map the atoms to groups
-         CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,&
-              cell,sym,atoms)
+         CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,cell,sym,atoms)
 
          !All atom related parameters are set here. Note that some parameters might
          !have been set in the read_input call before by adding defaults to the atompar module
-         CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms,enpara)
+         CALL make_atomic_defaults(input,vacuum,profile,cell,oneD,atoms,enpara)
 
          !Set all defaults that have not been specified before or can not be specified in inpgen
-         CALL make_defaults(atoms,sym,cell,vacuum,input,stars,xcpot,noco,banddos,mpinp,hybinp)
+         CALL make_defaults(atoms,sym,cell,vacuum,input,stars,xcpot,profile,noco,banddos,mpinp,hybinp)
       ENDIF
 
       IF (numAddKptsSets.EQ.1) THEN

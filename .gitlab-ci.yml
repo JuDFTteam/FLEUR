@@ -353,7 +353,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     POSTGRES_HOST_AUTH_METHOD: trust
     RABBITMQ_DEFAULT_USER: guest
     RABBITMQ_DEFAULT_PASS: guest
-    AIIDA_PROFILE: "default"
+    AIIDA_PROFILE: "test_default"
     AIIDA_EMAIL: "aiida@localhost"
     AIIDA_FIRST_NAME: "Giuseppe"
     AIIDA_LAST_NAME: "Verdi"
@@ -369,21 +369,18 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Aiida-fleur system dependencies"
     - apt-get update
     - apt-get -yq install python3-pip
-    - useradd -d /builds/${GITLAB_USER_LOGIN} -g users -M -N builder
-    - chown -R builder:users .. /root $CI_PROJECT_DIR
-    - locale-gen en_US.UTF-8
-    - su -p builder -c "pip3 install --upgrade wheel setuptools"
-    - su -p builder -c "pip3 install pytest masci-tools"
-    - su -p builder -c "pip3 install aiida-core"
+    #- locale-gen en_US.UTF-8
+    - pip3 install --upgrade wheel setuptools
+    - pip3 install pytest masci-tools
+    - pip3 install aiida-core
     # needed for workflow tests
-    - su -p builder -c "pip3 install git+https://github.com/aiidateam/aiida-testing.git@export_cache"
+    - pip3 install git+https://github.com/aiidateam/aiida-testing.git@export_cache
     #- pip3 install git+https://github.com/JuDFTteam/aiida-fleur.git@develop.[testing]
     - git clone https://github.com/JuDFTteam/aiida-fleur.git
-    - chown -R builder:users aiida-fleur
     - cd aiida-fleur
     # Remove cache dirs
     - git checkout develop
-    - su -p builder -c "pip3 install .[testing]"
+    - pip3 install .[testing]
     - rm -rf tests/workflows/calc_data_dir tests/workflows/caches
     - rm -rf tests/calculation/data_dir
     - rm -rf tests/data_dir
@@ -391,15 +388,19 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - mkdir -p tests/workflows/caches
     - mkdir -p tests/calculation/data_dir
     - mkdir -p tests/data_dir
-    - chown -R builder:users tests
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - git log --pretty=oneline --abbrev-commit -n 1
     - ulimit -s unlimited
     - export OMP_NUM_THREADS=2
     - export juDFT_MPI="mpirun -n 2 --allow-run-as-root --mca btl vader,self"
+    - export OMPI_ALLOW_RUN_AS_ROOT=1
+    - export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
     # we are in aiida-fleur dir
     - pwd
+    - cd ./tests/
+    - export PATH=$PATH:/root/.local/bin
+    - reentry scan 
     - >
       verdi quicksetup --non-interactive
       --profile="${AIIDA_PROFILE}"
@@ -413,19 +414,18 @@ test-aiida-fleur-dev-gfortran-hdf5:
       --db-password="${POSTGRES_PASSWORD}" || exit 1
     - verdi status || exit 1
     - export AIIDA_TEST_PROFILE="${AIIDA_PROFILE}"
-    - cd ./tests/
     # Maybe also copy all current input files from fleur tests to run them through
     # the auto generated tests
     # For the regression tests to use the fleur executable for now it needs to be in these folders
-    - su -p builder -c "cp $CI_PROJECT_DIR/build/inpgen local_exe/inpgen && chmod +x local_exe/inpgen"
-    - su -p builder -c "cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur"
+    - cp $CI_PROJECT_DIR/build/inpgen local_exe/inpgen && chmod +x local_exe/inpgen
+    - cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur
     - sed -i "s/\./${CI_PROJECT_DIR//\//\\/}\/aiida-fleur\/tests/g" .aiida-testing-config.yml
     - cat .aiida-testing-config.yml
     - ls -la local_exe/
     #Copy testfile for SCF workchain from fleur tests
-    - su -p builder -c "cp files/workflow_test_files/inp_scf.xml files/inpxml/Si/inp.xml"
+    - cp files/workflow_test_files/inp_scf.xml files/inpxml/Si/inp.xml
     # run tests
-    - su -p builder -c "export PATH=$PATH:/root/.local/bin && printenv PATH && reentry scan && ./run_all_cov.sh"
+    - pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests
   allow_failure: true
 #  artifacts:
 #    when: on_failure
