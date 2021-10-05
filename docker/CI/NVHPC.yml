@@ -18,7 +18,8 @@ build-pgi:
 test-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
   extends: .test-fleur-not-on-push
-  dependencies:
+  variables:
+    BUILD_FOLDER: build.pgi
+  needs: 
     - build-pgi
-  needs: ["build-pgi"]  
   allow_failure: true

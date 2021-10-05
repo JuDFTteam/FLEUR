@@ -16,9 +16,8 @@ build-gfortran-serial:
 test-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   extends: .test-fleur-not-on-push
-  dependencies:
+  needs: 
     - build-gfortran-serial
-  needs: ["build-gfortran-serial"]  
   variables:
-    BUILD_FOLDER: "build.serial"
+    BUILD_FOLDER: build.serial
     markers: "serial"
