@@ -19,7 +19,7 @@ test-intel:
   extends: .test-fleur-not-on-push
   variables:
     BUILD_FOLDER: "build.intel"
-    juDFT_MPI: "mpirun -n {mpi_procs} "
+    juDFT_MPI: ""
   needs: 
     - build-intel
   allow_failure: true

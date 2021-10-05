@@ -20,4 +20,5 @@ test-gfortran-serial:
     - build-gfortran-serial
   variables:
     BUILD_FOLDER: build.serial
+    juDFT_MPI: ""
     markers: "serial"
