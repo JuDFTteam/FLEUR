@@ -33,5 +33,5 @@
 
 .test-fleur-not-on-push:
   extends: .test-fleur
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "push"   
+  except:
+    - pushes

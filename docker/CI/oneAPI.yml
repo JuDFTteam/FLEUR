@@ -11,8 +11,8 @@ build-intel:
     - cd build.intel
     - make -j 2
   allow_failure: false
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "push"   
+  except:
+    - pushes
 
 test-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI

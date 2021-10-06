@@ -14,8 +14,8 @@ pages:
   artifacts:
     paths:
       - public
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "push"   
+  except:
+    - pushes
 
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -32,8 +32,8 @@ doxygen:
       - build/fleur
       - build/fleur_MPI
       - build/inpgen
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "push"   
+  except:
+    - pushes
 
 
 gfortran-coverage:

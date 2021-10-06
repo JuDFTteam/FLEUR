@@ -12,8 +12,8 @@ build-pgi:
   script:
     - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make"
   allow_failure: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "push"   
+  except:
+    - pushes 
 
 test-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC

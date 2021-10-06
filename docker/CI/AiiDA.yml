@@ -88,5 +88,5 @@ test-aiida-fleur-dev-gfortran-hdf5:
     when: on_failure
     paths:
       - aiida-fleur/tests/
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "push"   
+  except:
+    - pushes
