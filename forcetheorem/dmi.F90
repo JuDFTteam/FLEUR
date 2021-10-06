@@ -150,7 +150,7 @@ CONTAINS
              DO i=1,size(this%h_so,1)-1
                write(attributes(6),'(f12.7)') this%h_so(i,nef,n,q)
                write(attributes(1),'(i0)') i
-               CALL writeXMLElementForm('singleAtom',(/'atomType','ef-shift','q       ','theta   ','phi     ','H_so    '/)&
+               CALL writeXMLElementForm('singleAtom',(/'atomType','q       ','ef-shift','theta   ','phi     ','H_so    '/)&
                ,attributes,RESHAPE((/8,8,1,5,3,6,5,5,12,12,12,12/),(/6,2/)))
              ENDDO
           END DO

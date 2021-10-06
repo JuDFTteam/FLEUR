@@ -144,8 +144,6 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
        CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx,vx%pw_w)
     END IF
 
-
-      l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u>0).AND.atoms%n_hia==0
 !     check if z-reflection trick can be used
       l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
 !     IF (fmpi%n_size > 1) l_zref = .FALSE.
@@ -167,7 +165,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
       CALL io_write_attint0(generalGroupID,'jspins',input%jspins)
       CALL io_write_attlog0(generalGroupID,'invs',sym%invs)
       CALL io_write_attlog0(generalGroupID,'l_soc',noco%l_soc)
-      CALL io_write_attlog0(generalGroupID,'l_real',l_real)
+      CALL io_write_attlog0(generalGroupID,'l_real',input%l_real)
       CALL io_write_attreal0(generalGroupID,'rkmax',input%rkmax)
       CALL h5gclose_f(generalGroupID, hdfError)
 

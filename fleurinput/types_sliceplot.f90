@@ -187,24 +187,24 @@ CONTAINS
 
     line=xml%GetAttributeValue('/@grid')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of grid points")
+    if (size(x)/=3) call judft_error("Wrong number of grid points", calledby="types_sliceplot%read_xml_plot")
     this%grid=x
 
     line=xml%GetAttributeValue('/@vec1')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec1")
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec1", calledby="types_sliceplot%read_xml_plot")
     this%vec1=x
     line=xml%GetAttributeValue('/@vec2')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec2")
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec2", calledby="types_sliceplot%read_xml_plot")
     this%vec2=x
     line=xml%GetAttributeValue('/@vec3')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec3")
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec3", calledby="types_sliceplot%read_xml_plot")
     this%vec3=x
     line=xml%GetAttributeValue('/@zero')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec0")
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec0", calledby="types_sliceplot%read_xml_plot")
     this%zero=x
 
     this%filename=xml%GetAttributeValue('/@file')

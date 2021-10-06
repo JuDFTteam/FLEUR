@@ -31,6 +31,7 @@ MODULE m_types_misc
       REAL                 :: te_veff   !<charge density-effective potential integral
       REAL                 :: te_exc    !<charge density-ex-corr.energy density integral
       REAL                 :: e_ldau    !<total energy contribution of LDA+U
+      REAL                 :: e_ldaopc    !<total energy contribution of LDA+OP
       REAL                 :: tote
       REAL                 :: last_distance
       REAL                 :: last_mmpMatdistance !Distance measure for LDA+HIA

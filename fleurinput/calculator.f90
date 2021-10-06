@@ -720,7 +720,7 @@ CONTAINS
       REAL       :: tmp(10)
       INTEGER :: n
       n = 0
-      DO WHILE (LEN_TRIM(ADJUSTL(s)) > 1)
+      DO WHILE (LEN_TRIM(ADJUSTL(s)) > 0)
          n = n + 1
          if (n > 10) call judft_error("List too long", &
                                       calledby="calculator")

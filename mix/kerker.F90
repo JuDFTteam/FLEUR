@@ -21,9 +21,6 @@ CONTAINS
     USE m_types_mixvector
     USE m_constants
 
-#ifdef CPP_MPI
-    USE m_mpi_bc_potden
-#endif
     IMPLICIT NONE
 
     TYPE(t_oneD),      INTENT(in)    :: oneD
@@ -53,9 +50,7 @@ CONTAINS
        CALL resDen%subPotDen( outDen, inDen )
        IF( input%jspins == 2 ) CALL resDen%SpinsToChargeAndMagnetisation()
     END IF MPI0_b
-#ifdef CPP_MPI
-    CALL mpi_bc_potden( fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
-#endif
+    CALL resDen%distribute(fmpi%mpi_comm)
     IF ( .NOT. input%film ) THEN
        CALL vgen_coulomb( 1, fmpi,  oneD, input, field, vacuum, sym, stars, cell, &
             sphhar, atoms, .FALSE., resDen, vYukawa )
@@ -64,9 +59,7 @@ CONTAINS
        if( fmpi%irank == 0 ) then
           call resDenMod%copyPotDen( resDen )
        end if
-#ifdef CPP_MPI
-       CALL mpi_bc_potden( fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDenMod )
-#endif
+       CALL resDenMod%distribute(fmpi%mpi_comm)
        vYukawa%iter = resDen%iter
        CALL VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, resDenMod, &
             vYukawa )

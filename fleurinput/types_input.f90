@@ -13,6 +13,7 @@ MODULE m_types_input
   PUBLIC:: t_input
   TYPE,EXTENDS(t_fleurinput_base):: t_input
   LOGICAL :: film=.FALSE.
+  LOGICAL :: l_real
   INTEGER :: jspins=1
   INTEGER :: neig=0
   REAL    :: rkmax=0.0
@@ -102,6 +103,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    END IF
    CALL mpi_bc(this%eig66(1),rank,mpi_comm)
    CALL mpi_bc(this%film,rank,mpi_comm)
+   CALL mpi_bc(this%l_real,rank,mpi_comm)
    CALL mpi_bc(this%jspins,rank,mpi_comm)
    CALL mpi_bc(this%neig,rank,mpi_comm)
    CALL mpi_bc(this%rkmax,rank,mpi_comm)
@@ -398,10 +400,12 @@ SUBROUTINE read_xml_input(this,xml)
    END IF
 END SUBROUTINE read_xml_input
 
-SUBROUTINE init_input(input,noco,l_hybrid,nbasfcn)
+SUBROUTINE init_input(input,noco,l_hybrid,invs,n_denmat,n_hia,nbasfcn)
    USE m_types_noco
    CLASS(t_input),INTENT(inout):: input
    TYPE(t_noco),INTENT(in)     :: noco
+   LOGICAL, INTENT(IN)         :: invs
+   INTEGER, INTENT(IN)         :: n_denmat, n_hia
    LOGICAL, INTENT(in)         :: l_hybrid
    INTEGER,INTENT(IN),OPTIONAL :: nbasfcn
 
@@ -424,6 +428,8 @@ SUBROUTINE init_input(input,noco,l_hybrid,nbasfcn)
    input%gw_neigd = MERGE(MAX(NINT(input%zelec)*10, 60),0, l_hybrid)
 
    IF(PRESENT(nbasfcn)) input%neig = MIN(input%neig, nbasfcn)
+
+   input%l_real = invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.n_denmat>0).and..not.n_hia>0
 END SUBROUTINE init_input
 
 END MODULE m_types_input

@@ -14,13 +14,18 @@ MODULE m_types_atoms
   PRIVATE
 
   TYPE t_utype
-     SEQUENCE
-     REAL :: u=0.0, j=0.0         ! the actual U and J parameters
-     REAL :: theta=0.0,phi=0.0   !the rotation angles by which the density metrics is rotated
-     INTEGER :: l=-1        ! the l quantum number to which this U parameter belongs
-     INTEGER :: atomType=0 ! The atom type to which this U parameter belongs
-     LOGICAL :: l_amf=.FALSE. ! logical switch to choose the "around mean field" LDA+U limit
+      SEQUENCE
+      REAL :: u=0.0, j=0.0         ! the actual U and J parameters
+      REAL :: theta=0.0,phi=0.0   !the rotation angles by which the density metrics is rotated
+      INTEGER :: l=-1        ! the l quantum number to which this U parameter belongs
+      INTEGER :: atomType=0 ! The atom type to which this U parameter belongs
+      LOGICAL :: l_amf=.FALSE. ! logical switch to choose the "around mean field" LDA+U limit
   END TYPE t_utype
+  TYPE t_opctype
+      SEQUENCE
+      INTEGER :: l=-1,n=-1
+      INTEGER :: atomType=0 ! The atom type to which this U parameter belongs
+  END TYPE t_opctype
   TYPE,EXTENDS(t_fleurinput_base):: t_atoms
      !<no of types
   INTEGER :: ntype=-1
@@ -32,10 +37,14 @@ MODULE m_types_atoms
   INTEGER ::nlotot=0
   !lmaxd=maxval(lmax)
   INTEGER:: lmaxd=-1
+  ! no of density matrices to calculate
+  INTEGER :: n_denmat=0
   ! no of lda+us
   INTEGER ::n_u=0
   ! no of lda+hubbard1s
   INTEGER :: n_hia=0
+  ! no of lda+orbital polarization corrections
+  INTEGER :: n_opc=0
   ! dimensions
   INTEGER :: jmtd=-1
   INTEGER :: msh=0 !core state mesh was in dimension
@@ -96,6 +105,7 @@ MODULE m_types_atoms
   !lda+hubbard1 information is attached behind lda+u
   !so the dimension actually used is atoms%n_u+atoms%n_hia
   TYPE(t_utype), ALLOCATABLE::lda_u(:)
+  TYPE(t_opctype), ALLOCATABLE::lda_opc(:)
   INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
   !flipSpinTheta and flipSpinPhi are the angles which are given
   !in the input to rotate the charge den by these polar angles.
@@ -141,6 +151,8 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%lmaxd,rank,mpi_comm)
  CALL mpi_bc(this%n_u,rank,mpi_comm)
  CALL mpi_bc(this%n_hia,rank,mpi_comm)
+ CALL mpi_bc(this%n_opc, rank, mpi_comm)
+ CALL mpi_bc(this%n_denmat, rank, mpi_comm)
  CALL mpi_bc(this%jmtd,rank,mpi_comm)
  CALL mpi_bc(this%msh,rank,mpi_comm)
  CALL mpi_bc(this%nz,rank,mpi_comm)
@@ -182,8 +194,10 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  IF (myrank.NE.rank) THEN
     IF (ALLOCATED(this%econf)) DEALLOCATE(this%econf)
     IF (ALLOCATED(this%lda_u)) DEALLOCATE(this%lda_u)
+    IF (ALLOCATED(this%lda_opc)) DEALLOCATE(this%lda_opc)
     ALLOCATE(this%econf(this%ntype))
     ALLOCATE(this%lda_u(4*this%ntype))
+    ALLOCATE(this%lda_opc(4*this%ntype))
  ENDIF
  DO n=1,this%ntype
     CALL this%econf(n)%broadcast(rank,mpi_comm)
@@ -197,6 +211,11 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
     CALL mpi_bc(this%lda_u(n)%atomType,rank,mpi_comm)
     CALL mpi_bc(this%lda_u(n)%l_amf,rank,mpi_comm)
  ENDDO
+ DO n=1,this%n_opc
+   CALL mpi_bc(this%lda_opc(n)%n,rank,mpi_comm)
+   CALL mpi_bc(this%lda_opc(n)%l,rank,mpi_comm)
+   CALL mpi_bc(this%lda_opc(n)%atomType,rank,mpi_comm)
+ENDDO
 #endif
 END SUBROUTINE mpi_bc_atoms
 
@@ -244,7 +263,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  INTEGER,ALLOCATABLE::lNumbers(:),nNumbers(:)
  LOGICAL           :: relaxx,relaxy,relaxz,l_flipElectronConfigSpins
  INTEGER,ALLOCATABLE :: itmp(:,:)
- REAL                :: down,up,dr,radius
+ REAL                :: down,up,dr,radius,vca_charge
  CHARACTER(len=20)   :: state
  this%ntype= xml%get_ntype()
  this%nat =  xml%get_nat()
@@ -260,6 +279,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%flipSpinScale(this%ntype))
  ALLOCATE(this%l_geo(this%ntype))
  ALLOCATE(this%lda_u(4*this%ntype))
+ ALLOCATE(this%lda_opc(4*this%ntype))
  ALLOCATE(this%bmu(this%ntype))
  ALLOCATE(this%relax(3,this%ntype))
  ALLOCATE(this%neq(this%ntype));this%neq=0
@@ -297,7 +317,8 @@ SUBROUTINE read_xml_atoms(this,xml)
     xpaths=xml%speciesPath(n)
     this%speciesname(n)=TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/@species')))
     this%nz(n)=evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@atomicNumber'))
-    this%zatom(n) = this%nz(n)
+    vca_charge=0.0;call readAtomAttribute(xml,n,'/special/@vca_charge',vca_charge)
+    this%zatom(n) = this%nz(n)+vca_charge
     IF (this%nz(n).EQ.0) THEN
        WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', n
        this%zatom(n) = 1.0e-10
@@ -378,6 +399,14 @@ SUBROUTINE read_xml_atoms(this,xml)
        this%lda_u(this%n_u)%theta =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@theta'))
        this%lda_u(this%n_u)%atomType = n
     END DO
+    DO i = 1,xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/ldaOPC')
+      WRITE(xpath,*) TRIM(ADJUSTL(xPaths))//'/ldaOPC[',i,']'
+      IF (i.GT.4) CALL juDFT_error("Too many OP corretions provided for a certain species (maximum is 4).",calledby ="read_xml_atoms")
+      this%n_opc = this%n_opc + 1
+      this%lda_opc(this%n_opc)%l = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l'))
+      this%lda_opc(this%n_opc)%n =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@n'))
+      this%lda_opc(this%n_opc)%atomType = n
+   END DO
     !electron config
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/electronConfig')==1) THEN
        l_flipElectronConfigSpins = .FALSE.
@@ -553,6 +582,11 @@ SUBROUTINE read_xml_atoms(this,xml)
        END DO
     END DO
  END IF
+ DO i = 1, this%n_opc
+   IF (this%lda_opc(i)%l/=2.OR.this%lda_opc(i)%n/=3) THEN
+      CALL juDFT_warn("LDA+OP only implemented/tested for 3d orbitals",calledby="read_xml_atoms")
+   END IF
+END DO
 
 
  this%jmtd = MAXVAL(this%jri(:))
@@ -678,6 +712,8 @@ SUBROUTINE init_atoms(this,cell)
          this%itype(ic) = it
       END DO
    END DO
+
+   this%n_denmat = this%n_u + this%n_hia + this%n_opc
 
 END SUBROUTINE init_atoms
 

@@ -25,7 +25,7 @@ MODULE m_greensf_io
 
    CONTAINS
 
-   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, kpts, inFilename)
+   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, cell, kpts, inFilename)
 
       USE m_types
       USE m_cdn_io
@@ -33,6 +33,7 @@ MODULE m_greensf_io
       TYPE(t_input),                INTENT(IN)  :: input
       TYPE(t_gfinp),                INTENT(IN)  :: gfinp
       TYPE(t_atoms),                INTENT(IN)  :: atoms
+      TYPE(t_cell),                 INTENT(IN)  :: cell
       TYPE(t_kpts),                 INTENT(IN)  :: kpts
       CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: inFilename
       INTEGER(HID_T),               INTENT(OUT) :: fileID
@@ -43,6 +44,13 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: generalGroupID, kptsGroupID
       INTEGER(HID_T)    :: kptCoordSpaceID, kptCoordSetID
       INTEGER(HID_T)    :: kptWeightSpaceID, kptWeightSetID
+      INTEGER(HID_T)    :: kptsSPLabelsSpaceID, kptsSPLabelsSetID
+      INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
+      INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
+      INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
+
+      INTEGER(HID_T)    :: stringTypeID
+      INTEGER(SIZE_T)   :: stringLength
 
       LOGICAL           :: l_error
       INTEGER           :: hdfError
@@ -51,7 +59,7 @@ MODULE m_greensf_io
       INTEGER           :: dimsInt(7)
       INTEGER(HSIZE_T)  :: dims(7)
 
-      version = 3
+      version = 6
       IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
@@ -81,8 +89,28 @@ MODULE m_greensf_io
       CALL io_write_attreal0(generalGroupID,'FermiEnergy',eFermiPrev)
       CALL io_write_attlog0(generalGroupID,'mperp',gfinp%l_mperp)
 
+      dims(:2)=(/3,3/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),bravaisMatrixSpaceID,hdfError)
+      CALL h5dcreate_f(generalGroupID, "bravaisMatrix", H5T_NATIVE_DOUBLE, bravaisMatrixSpaceID, bravaisMatrixSetID, hdfError)
+      CALL h5sclose_f(bravaisMatrixSpaceID,hdfError)
+      CALL io_write_real2(bravaisMatrixSetID,(/1,1/),dimsInt(:2),cell%amat)
+      CALL h5dclose_f(bravaisMatrixSetID, hdfError)
+
+      dims(:2)=(/3,3/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),reciprocalCellSpaceID,hdfError)
+      CALL h5dcreate_f(generalGroupID, "reciprocalCell", H5T_NATIVE_DOUBLE, reciprocalCellSpaceID, reciprocalCellSetID, hdfError)
+      CALL h5sclose_f(reciprocalCellSpaceID,hdfError)
+      CALL io_write_real2(reciprocalCellSetID,(/1,1/),dimsInt(:2),cell%bmat)
+      CALL h5dclose_f(reciprocalCellSetID, hdfError)
+
+
       CALL h5gcreate_f(generalGroupID, 'kpts', kptsGroupID, hdfError)
+
       CALL io_write_attint0(kptsGroupID,'nkpt',kpts%nkpt)
+      CALL io_write_attchar0(kptsGroupID,'kind',TRIM(ADJUSTL(kptsKindString_consts(kpts%kptsKind))))
+      CALL io_write_attint0(kptsGroupID,'nSpecialPoints',kpts%numSpecialPoints)
 
       dims(:2)=(/3,kpts%nkpt/)
       dimsInt=dims
@@ -99,6 +127,30 @@ MODULE m_greensf_io
       CALL h5sclose_f(kptWeightSpaceID,hdfError)
       CALL io_write_real1(kptWeightSetID,(/1/),dimsInt(:1),kpts%wtkpt)
       CALL h5dclose_f(kptWeightSetID, hdfError)
+
+      IF (ALLOCATED(kpts%specialPointIndices)) THEN
+         stringLength = LEN(kpts%specialPointNames(:))
+         CALL h5tcopy_f(H5T_NATIVE_CHARACTER, stringTypeID, hdfError)
+         CALL h5tset_size_f(stringTypeID, stringLength, hdfError)
+         CALL h5tset_strpad_f(stringTypeID, H5T_STR_SPACEPAD_F, hdfError)
+         CALL h5tset_cset_f(stringTypeID, H5T_CSET_ASCII_F, hdfError)
+         dims(:1)=(/kpts%numSpecialPoints/)
+         dimsInt=dims
+         CALL h5screate_simple_f(1,dims(:1),kptsSPLabelsSpaceID,hdfError)
+         CALL h5dcreate_f(kptsGroupID, "specialPointLabels", stringTypeID, kptsSPLabelsSpaceID, kptsSPLabelsSetID, hdfError)
+         CALL h5tclose_f(stringTypeID,hdfError)
+         CALL h5sclose_f(kptsSPLabelsSpaceID,hdfError)
+         CALL io_write_string1(kptsSPLabelsSetID,dimsInt(:1),LEN(kpts%specialPointNames(:)),kpts%specialPointNames)
+         CALL h5dclose_f(kptsSPLabelsSetID, hdfError)
+
+         dims(:1)=(/kpts%numSpecialPoints/)
+         dimsInt=dims
+         CALL h5screate_simple_f(1,dims(:1),kptsSPIndicesSpaceID,hdfError)
+         CALL h5dcreate_f(kptsGroupID, "specialPointIndices", H5T_NATIVE_INTEGER, kptsSPIndicesSpaceID, kptsSPIndicesSetID, hdfError)
+         CALL h5sclose_f(kptsSPIndicesSpaceID,hdfError)
+         CALL io_write_integer1(kptsSPIndicesSetID,(/1/),dimsInt(:1),kpts%specialPointIndices)
+         CALL h5dclose_f(kptsSPIndicesSetID, hdfError)
+      END IF
 
       CALL h5gclose_f(kptsGroupID, hdfError)
       CALL h5gclose_f(generalGroupID, hdfError)
@@ -413,11 +465,12 @@ MODULE m_greensf_io
       CALL io_write_attint0(groupID,'iContour',contour_mapping(g%elem%iContour))
       CALL io_write_attlog0(groupID,'l_onsite',.NOT.g%elem%isOffDiag())
       CALL io_write_attlog0(groupID,'l_sphavg',g%l_sphavg)
+      CALL io_write_attlog0(groupID,'l_kresolved',g%elem%l_kresolved)
       CALL io_write_attreal1(groupID,'atomDiff',matmul(cell%amat,g%elem%atomDiff))
       nLO = g%elem%countLOs(atoms)
       CALL io_write_attint0(groupID,'numLOs',nLO)
 
-      IF(g%l_sphavg) THEN
+      IF(g%l_sphavg.AND..NOT.g%l_kresolved) THEN
 
          dims(:6)=[2,g%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspins,2]
          dimsInt=dims
@@ -430,7 +483,7 @@ MODULE m_greensf_io
       ELSE IF(g%l_kresolved) THEN
          dims(:6)=[2,g%contour%nz,2*lmaxU_Const+1,2*lmaxU_Const+1,jspins,2]
          dimsInt=dims
-         DO ikpt = 1, SIZE(g%gmmpmat_k)
+         DO ikpt = 1, SIZE(g%gmmpmat_k,6)
             WRITE(datasetName,201) ikpt
 201         FORMAT('kresolved-',i0)
             CALL h5screate_simple_f(6,dims(:6),DataSpaceID,hdfError)
@@ -534,89 +587,135 @@ MODULE m_greensf_io
             ENDDO
             CALL h5gclose_f(loGroupID, hdfError)
             !--> End: LO Coefficients
-
-            !--> Start: Scalar Products
-            CALL h5gcreate_f(groupID, 'scalarProducts', scalarGroupID, hdfError)
-
-            dims(:2)=[2,2]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),DataSpaceID,hdfError)
-            CALL h5dcreate_f(scalarGroupID, "uun", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
-            CALL h5sclose_f(DataSpaceID,hdfError)
-            CALL io_write_real2(DataSetID,[1,1],dimsInt(:2),g%scalarProducts%uun)
-            CALL h5dclose_f(DataSetID, hdfError)
-
-            dims(:2)=[2,2]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),DataSpaceID,hdfError)
-            CALL h5dcreate_f(scalarGroupID, "dun", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
-            CALL h5sclose_f(DataSpaceID,hdfError)
-            CALL io_write_real2(DataSetID,[1,1],dimsInt(:2),g%scalarProducts%dun)
-            CALL h5dclose_f(DataSetID, hdfError)
-
-            dims(:2)=[2,2]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),DataSpaceID,hdfError)
-            CALL h5dcreate_f(scalarGroupID, "udn", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
-            CALL h5sclose_f(DataSpaceID,hdfError)
-            CALL io_write_real2(DataSetID,[1,1],dimsInt(:2),g%scalarProducts%udn)
-            CALL h5dclose_f(DataSetID, hdfError)
-
-            dims(:2)=[2,2]
-            dimsInt=dims
-            CALL h5screate_simple_f(2,dims(:2),DataSpaceID,hdfError)
-            CALL h5dcreate_f(scalarGroupID, "ddn", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
-            CALL h5sclose_f(DataSpaceID,hdfError)
-            CALL io_write_real2(DataSetID,[1,1],dimsInt(:2),g%scalarProducts%ddn)
-            CALL h5dclose_f(DataSetID, hdfError)
-
-            dims(:3)=[atoms%nlod,2,2]
-            dimsInt=dims
-            CALL h5screate_simple_f(3,dims(:3),DataSpaceID,hdfError)
-            CALL h5dcreate_f(scalarGroupID, "uulon", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
-            CALL h5sclose_f(DataSpaceID,hdfError)
-            CALL io_write_real3(DataSetID,[1,1,1],dimsInt(:3),g%scalarProducts%uulon)
-            CALL h5dclose_f(DataSetID, hdfError)
-
-            dims(:3)=[atoms%nlod,2,2]
-            dimsInt=dims
-            CALL h5screate_simple_f(3,dims(:3),DataSpaceID,hdfError)
-            CALL h5dcreate_f(scalarGroupID, "uloun", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
-            CALL h5sclose_f(DataSpaceID,hdfError)
-            CALL io_write_real3(DataSetID,[1,1,1],dimsInt(:3),g%scalarProducts%uloun)
-            CALL h5dclose_f(DataSetID, hdfError)
-
-            dims(:3)=[atoms%nlod,2,2]
-            dimsInt=dims
-            CALL h5screate_simple_f(3,dims(:3),DataSpaceID,hdfError)
-            CALL h5dcreate_f(scalarGroupID, "dulon", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
-            CALL h5sclose_f(DataSpaceID,hdfError)
-            CALL io_write_real3(DataSetID,[1,1,1],dimsInt(:3),g%scalarProducts%dulon)
-            CALL h5dclose_f(DataSetID, hdfError)
-
-            dims(:3)=[atoms%nlod,2,2]
-            dimsInt=dims
-            CALL h5screate_simple_f(3,dims(:3),DataSpaceID,hdfError)
-            CALL h5dcreate_f(scalarGroupID, "ulodn", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
-            CALL h5sclose_f(DataSpaceID,hdfError)
-            CALL io_write_real3(DataSetID,[1,1,1],dimsInt(:3),g%scalarProducts%ulodn)
-            CALL h5dclose_f(DataSetID, hdfError)
-
-            dims(:4)=[atoms%nlod,atoms%nlod,2,2]
-            dimsInt=dims
-            CALL h5screate_simple_f(4,dims(:4),DataSpaceID,hdfError)
-            CALL h5dcreate_f(scalarGroupID, "uloulopn", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
-            CALL h5sclose_f(DataSpaceID,hdfError)
-            CALL io_write_real4(DataSetID,[1,1,1,1],dimsInt(:4),g%scalarProducts%uloulopn)
-            CALL h5dclose_f(DataSetID, hdfError)
-
-            CALL h5gclose_f(scalarGroupID, hdfError)
-            !--> End: Scalar Products
          ENDIF
+
+         !--> Start: Scalar Products
+         CALL h5gcreate_f(groupID, 'scalarProducts', scalarGroupID, hdfError)
+
+         dims(:2)=[2,2]
+         dimsInt=dims
+         CALL h5screate_simple_f(2,dims(:2),DataSpaceID,hdfError)
+         CALL h5dcreate_f(scalarGroupID, "uun", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+         CALL h5sclose_f(DataSpaceID,hdfError)
+         CALL io_write_real2(DataSetID,[1,1],dimsInt(:2),g%scalarProducts%uun)
+         CALL h5dclose_f(DataSetID, hdfError)
+
+         dims(:2)=[2,2]
+         dimsInt=dims
+         CALL h5screate_simple_f(2,dims(:2),DataSpaceID,hdfError)
+         CALL h5dcreate_f(scalarGroupID, "dun", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+         CALL h5sclose_f(DataSpaceID,hdfError)
+         CALL io_write_real2(DataSetID,[1,1],dimsInt(:2),g%scalarProducts%dun)
+         CALL h5dclose_f(DataSetID, hdfError)
+
+         dims(:2)=[2,2]
+         dimsInt=dims
+         CALL h5screate_simple_f(2,dims(:2),DataSpaceID,hdfError)
+         CALL h5dcreate_f(scalarGroupID, "udn", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+         CALL h5sclose_f(DataSpaceID,hdfError)
+         CALL io_write_real2(DataSetID,[1,1],dimsInt(:2),g%scalarProducts%udn)
+         CALL h5dclose_f(DataSetID, hdfError)
+
+         dims(:2)=[2,2]
+         dimsInt=dims
+         CALL h5screate_simple_f(2,dims(:2),DataSpaceID,hdfError)
+         CALL h5dcreate_f(scalarGroupID, "ddn", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+         CALL h5sclose_f(DataSpaceID,hdfError)
+         CALL io_write_real2(DataSetID,[1,1],dimsInt(:2),g%scalarProducts%ddn)
+         CALL h5dclose_f(DataSetID, hdfError)
+
+         dims(:3)=[atoms%nlod,2,2]
+         dimsInt=dims
+         CALL h5screate_simple_f(3,dims(:3),DataSpaceID,hdfError)
+         CALL h5dcreate_f(scalarGroupID, "uulon", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+         CALL h5sclose_f(DataSpaceID,hdfError)
+         CALL io_write_real3(DataSetID,[1,1,1],dimsInt(:3),g%scalarProducts%uulon)
+         CALL h5dclose_f(DataSetID, hdfError)
+
+         dims(:3)=[atoms%nlod,2,2]
+         dimsInt=dims
+         CALL h5screate_simple_f(3,dims(:3),DataSpaceID,hdfError)
+         CALL h5dcreate_f(scalarGroupID, "uloun", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+         CALL h5sclose_f(DataSpaceID,hdfError)
+         CALL io_write_real3(DataSetID,[1,1,1],dimsInt(:3),g%scalarProducts%uloun)
+         CALL h5dclose_f(DataSetID, hdfError)
+
+         dims(:3)=[atoms%nlod,2,2]
+         dimsInt=dims
+         CALL h5screate_simple_f(3,dims(:3),DataSpaceID,hdfError)
+         CALL h5dcreate_f(scalarGroupID, "dulon", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+         CALL h5sclose_f(DataSpaceID,hdfError)
+         CALL io_write_real3(DataSetID,[1,1,1],dimsInt(:3),g%scalarProducts%dulon)
+         CALL h5dclose_f(DataSetID, hdfError)
+
+         dims(:3)=[atoms%nlod,2,2]
+         dimsInt=dims
+         CALL h5screate_simple_f(3,dims(:3),DataSpaceID,hdfError)
+         CALL h5dcreate_f(scalarGroupID, "ulodn", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+         CALL h5sclose_f(DataSpaceID,hdfError)
+         CALL io_write_real3(DataSetID,[1,1,1],dimsInt(:3),g%scalarProducts%ulodn)
+         CALL h5dclose_f(DataSetID, hdfError)
+
+         dims(:4)=[atoms%nlod,atoms%nlod,2,2]
+         dimsInt=dims
+         CALL h5screate_simple_f(4,dims(:4),DataSpaceID,hdfError)
+         CALL h5dcreate_f(scalarGroupID, "uloulopn", H5T_NATIVE_DOUBLE, DataSpaceID, DataSetID, hdfError)
+         CALL h5sclose_f(DataSpaceID,hdfError)
+         CALL io_write_real4(DataSetID,[1,1,1,1],dimsInt(:4),g%scalarProducts%uloulopn)
+         CALL h5dclose_f(DataSetID, hdfError)
+
+         CALL h5gclose_f(scalarGroupID, hdfError)
+         !--> End: Scalar Products
 
       ENDIF
 
    END SUBROUTINE writeGreensFElement
+
+   SUBROUTINE io_write_string1(datasetID,dims,stringLength,dataArray)
+
+      USE hdf5
+      USE m_hdf_tools4
+
+      IMPLICIT NONE
+
+      INTEGER(HID_T),              INTENT(IN) :: datasetID
+      INTEGER,                     INTENT(IN) :: dims(1)
+      INTEGER,                     INTENT(IN) :: stringLength
+      CHARACTER(LEN=stringLength), INTENT(IN) :: dataArray(:)
+
+      INTEGER          :: hdfError
+      INTEGER(HID_T)   :: dataspaceID, memSpaceID
+      INTEGER(HID_T)   :: stringTypeID
+      INTEGER(HID_t)   :: trans
+      INTEGER(HSIZE_t) :: memOffset(1), fncount(1)
+      INTEGER(HSIZE_t) :: dimsHDF(1)
+      INTEGER(SIZE_T)  :: stringLengthHDF
+
+      stringLengthHDF = stringLength
+      dimsHDF(:) = dims(:)
+      memOffset(:) = 0
+      fnCount(:) = dims(:)
+
+      trans = gettransprop()
+
+      CALL h5tcopy_f(H5T_NATIVE_CHARACTER, stringTypeID, hdfError)
+      CALL h5tset_size_f(stringTypeID, stringLengthHDF, hdfError)
+      CALL h5tset_strpad_f(stringTypeID, H5T_STR_SPACEPAD_F, hdfError)
+      CALL h5tset_cset_f(stringTypeID, H5T_CSET_ASCII_F, hdfError)
+
+      CALL h5dget_space_f(datasetID,dataspaceID,hdfError)
+      CALL h5sselect_hyperslab_f(dataspaceID,H5S_SELECT_SET_F,memOffset,fncount,hdfError)
+      CALL h5screate_simple_f(1,dimsHDF,memSpaceID,hdfError)
+      CALL h5dwrite_f(datasetID,stringTypeID,dataArray,dimsHDF,hdfError,memSpaceID,dataspaceID,trans)
+      CALL h5sclose_f(memSpaceID,hdfError)
+      CALL h5sclose_f(dataspaceID,hdfError)
+      CALL cleartransprop(trans)
+
+      CALL h5tclose_f(stringTypeID,hdfError)
+
+      CALL io_check("io_write_string1 !",hdfError)
+
+   END SUBROUTINE io_write_string1
 
 #endif
 

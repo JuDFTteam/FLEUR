@@ -181,10 +181,15 @@ MODULE m_flipcdn
 
 
       ! for LDA+U: flip density matrix
-      IF (input%lflip.AND.ANY(ABS(den%mmpMat) > 1e-12).AND.atoms%n_u+atoms%n_hia>0) THEN
-         DO i_u = 1, atoms%n_u+atoms%n_hia
-            itype = atoms%lda_u(i_u)%atomType
-            l = atoms%lda_u(i_u)%l
+      IF (input%lflip.AND.ANY(ABS(den%mmpMat) > 1e-12).AND.atoms%n_u+atoms%n_hia+atoms%n_opc>0) THEN
+         DO i_u = 1, atoms%n_u+atoms%n_hia+atoms%n_opc
+            if(i_u> atoms%n_u+atoms%n_hia) then
+               itype = atoms%lda_u(i_u)%atomType
+               l = atoms%lda_u(i_u)%l
+            else
+               itype = atoms%lda_opc(i_u-atoms%n_u-atoms%n_hia)%atomType
+               l = atoms%lda_opc(i_u-atoms%n_u-atoms%n_hia)%l
+            endif
             IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
                IF (any(noco%l_unrestrictMT)) THEN
                   den%mmpMat(:,:,i_u,:) = rotMMPmat(den%mmpMat(:,:,i_u,:),rotAnglePhi(itype),rotAngleTheta(itype),0.0,&

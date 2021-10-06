@@ -32,7 +32,6 @@ CONTAINS
       USE m_writeOutHeader
       !USE m_fleur_init_old
       USE m_types_xcpot_inbuild
-      USE m_mpi_bc_xcpot
       USE m_prpxcfft
       USE m_make_stars
       USE m_make_sphhar
@@ -43,12 +42,6 @@ CONTAINS
       USE m_lapwdim
       use m_make_xcpot
       USE m_gaunt, ONLY: gaunt_init
-#ifdef CPP_MPI
-      !USE m_mpi_bc_all,  ONLY : mpi_bc_all
-#ifndef CPP_OLDINTEL
-      USE m_mpi_dist_forcetheorem
-#endif
-#endif
 #ifdef CPP_HDF
       USE m_hdf_tools
 #endif
@@ -171,8 +164,7 @@ CONTAINS
       CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, xcpot, fi%oneD, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv, fi%oneD, forcetheo, fi%atoms, nbasfcn)
-      CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid, lapw_dim_nbasfcn)
-      CALL fi%noco%init(fi%atoms,fi%input%ldauSpinoffd)
+      CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
       CALL fi%oneD%init(fi%atoms) !call again, because make_stars modified it :-)
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input, fi%oneD, fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
@@ -210,8 +202,7 @@ CONTAINS
       !Collect some usage info
       CALL add_usage_data("A-Types", fi%atoms%ntype)
       CALL add_usage_data("fi%atoms", fi%atoms%nat)
-      CALL add_usage_data("Real", fi%sym%invs .AND. .NOT. fi%noco%l_noco &
-                          .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u > 0) .AND. fi%atoms%n_hia == 0)
+      CALL add_usage_data("Real", fi%input%l_real)
       CALL add_usage_data("Spins", fi%input%jspins)
       CALL add_usage_data("Noco", fi%noco%l_noco)
       CALL add_usage_data("SOC", fi%noco%l_soc)

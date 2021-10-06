@@ -69,7 +69,6 @@ CONTAINS
       USE m_usetup
       USE m_hubbard1_setup
       USE m_writeCFOutput
-      USE m_mpi_bc_potden
       USE m_mpi_bc_tool
       USE m_eig66_io
       USE m_chase_diag
@@ -197,7 +196,6 @@ CONTAINS
       ! Initialize Green's function (end)
 
       ! Open/allocate eigenvector storage (start)
-      l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u>0) .AND. fi%atoms%n_hia==0 
       if (fi%noco%l_soc .and. fi%input%l_wann) then
        !! Weed up and down spinor components for SOC MLWFs.
        !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
@@ -208,7 +206,7 @@ CONTAINS
       endif
       l_olap = fi%hybinp%l_hybrid .OR. fi%input%l_rdmft
       eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, wannierspin, &
-                        fi%noco%l_noco,.NOT. fi%INPUT%eig66(1), l_real, fi%noco%l_soc, fi%INPUT%eig66(1), l_olap, fmpi%n_size)
+                        fi%noco%l_noco,.NOT. fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%INPUT%eig66(1), l_olap, fmpi%n_size)
       hybdat%eig_id = eig_id
 !Rotate cdn to local frame if specified.
 
@@ -252,7 +250,8 @@ CONTAINS
          CALL chase_distance(results%last_distance)
 #endif
 
-         CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen,nococonv)
+         CALL inDen%distribute(fmpi%mpi_comm)
+         call nococonv%mpi_bc(fmpi%mpi_comm)
 
 !Plot inden if wanted
          IF (fi%sliceplot%iplot .NE. 0) THEN
@@ -264,7 +263,8 @@ CONTAINS
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                        fi%input, fi%sym, fi%oneD,CDN_ARCHIVE_TYPE_CDN_const, &
                                                        CDN_INPUT_DEN_const, 0, rdummy, tempDistance, l_dummy, sliceDen, 'cdn_slice')
-               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, sliceDen, nococonv)
+               CALL sliceden%distribute(fmpi%mpi_comm)
+               call nococonv%mpi_bc(fmpi%mpi_comm)
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
                               fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
             END IF
@@ -379,8 +379,7 @@ CONTAINS
 
             ! WRITE(oUnit,fmt='(A)') 'Starting 2nd variation ...'
             IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) &
-               CALL eigenso(eig_id, fmpi, stars, fi%vacuum, fi%atoms, sphhar, &
-                            fi%sym, fi%cell, fi%noco, nococonv, fi%input, fi%kpts, fi%oneD, vTot, enpara, results, fi%hub1inp, hub1data)
+               CALL eigenso(eig_id, fmpi, stars, sphhar, nococonv, vTot, enpara, results, fi%hub1inp, hub1data,fi)
             CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI

@@ -36,9 +36,7 @@ CONTAINS
       !USE m_icorrkeys
       USE m_eig66_io, ONLY : open_eig, write_eig, read_eig
       USE m_xmlOutput
-#ifdef CPP_MPI
-      USE m_mpi_bc_potden
-#endif
+
       USE m_symmetrize_matrix
       USE m_unfold_band_kpts !used for unfolding bands
       USE m_types_mpimat
@@ -105,8 +103,6 @@ CONTAINS
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
-      l_real=fi%sym%invs.AND..NOT.fi%noco%l_noco.AND..NOT.(fi%noco%l_soc.AND.fi%atoms%n_u>0).AND.fi%atoms%n_hia==0
-
       ! check if z-reflection trick can be used
       l_zref=(fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
       IF (fmpi%n_size > 1) l_zref = .FALSE.
@@ -135,7 +131,7 @@ CONTAINS
             ! Set up lapw list
             CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts,fi%atoms,fi%sym,nk,fi%cell,l_zref, fmpi)
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,l_real,nk,smat,hmat)
+            CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             nvBuffer(nk,jsp) = lapw%nv(jsp)
@@ -148,7 +144,7 @@ CONTAINS
             !Try to symmetrize matrix
             CALL symmetrize_matrix(fmpi,fi%noco,fi%kpts,nk,hmat,smat)
 
-            IF (fi%banddos%unfoldband) THEN
+            IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                select type(smat)
                type is (t_mat)
                   allocate(t_mat::smat_unfold)
@@ -219,10 +215,10 @@ CONTAINS
 #endif
             CALL timestop("EV output")
 
-            IF (fi%banddos%unfoldband) THEN
+            IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                IF(modulo (fi%kpts%nkpt,fmpi%n_size).NE.0) call juDFT_error("number fi%kpts needs to be multiple of number fmpi threads",&
                    hint=errmsg, calledby="eigen.F90")
-               CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,fi%input,fi%atoms,unfoldingBuffer,fmpi)
+               CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig,results,fi%input,fi%atoms,unfoldingBuffer,fmpi,fi%noco%l_soc,smat_unfold=smat_unfold)
                CALL smat_unfold%free()
                DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
                if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
@@ -238,7 +234,7 @@ CONTAINS
 
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
-      IF (fi%banddos%unfoldband) THEN
+      IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
          results%unfolding_weights = CMPLX(0.0,0.0)
        CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),CPP_MPI_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       END IF

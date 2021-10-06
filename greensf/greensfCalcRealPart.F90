@@ -217,6 +217,7 @@ MODULE m_greensfCalcRealPart
                lp = g(i_gf)%elem%lp
                l_sphavg = g(i_gf)%elem%l_sphavg
                l_kresolved = g(i_gf)%elem%l_kresolved
+               iContour = g(i_gf)%elem%iContour
                nLO = g(i_gf)%elem%countLOs(atoms)
                IF(g(i_gf)%elem%representative_elem > 0) CYCLE
                IF(.NOT.g(i_gf)%elem%l_kresolved_int) CYCLE

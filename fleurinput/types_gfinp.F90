@@ -99,8 +99,8 @@ MODULE m_types_gfinp
 
       !Arrays to indicate that certain Green's Functions are used for special calculations
       INTEGER, ALLOCATABLE :: hiaElem(:)
-      INTEGER, ALLOCATABLE :: torgueElem(:,:)
-      INTEGER, ALLOCATABLE :: numTorgueElems(:)
+      INTEGER, ALLOCATABLE :: torqueElem(:,:)
+      INTEGER, ALLOCATABLE :: numTorqueElems(:)
    CONTAINS
       PROCEDURE :: read_xml             => read_xml_gfinp
       PROCEDURE :: mpi_bc               => mpi_bc_gfinp
@@ -151,8 +151,8 @@ CONTAINS
       CALL mpi_bc(this%elup,rank,mpi_comm)
       CALL mpi_bc(this%numberContours,rank,mpi_comm)
       CALL mpi_bc(this%hiaElem,rank,mpi_comm)
-      CALL mpi_bc(this%torgueElem,rank,mpi_comm)
-      CALL mpi_bc(this%numTorgueElems,rank,mpi_comm)
+      CALL mpi_bc(this%torqueElem,rank,mpi_comm)
+      CALL mpi_bc(this%numTorqueElems,rank,mpi_comm)
 
 #ifdef CPP_MPI
       CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -401,8 +401,8 @@ CONTAINS
       n_hia = 0
 
       ALLOCATE(this%hiaElem(4*ntype))
-      ALLOCATE(this%numTorgueElems(ntype),source=0)
-      ALLOCATE(this%torgueElem(ntype,(lmaxU_const+1)**2),source=-1)
+      ALLOCATE(this%numTorqueElems(ntype),source=0)
+      ALLOCATE(this%torqueElem(ntype,(lmaxU_const+1)**2),source=-1)
 
       DO itype = 1, ntype
          xPathS=xml%speciesPath(itype)
@@ -506,7 +506,7 @@ CONTAINS
             this%hiaElem(n_hia) = i_gf
          ENDDO
 
-         WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation'
+         WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torqueCalculation'
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
          IF(numberNodes==1) THEN
             label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@label')))
@@ -531,17 +531,17 @@ CONTAINS
                l_fixedCutoffset = .TRUE.
             END SELECT
 
-            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torgueCalculation/greensfElements'
+            WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torqueCalculation/greensfElements'
             DO l = 0,lmaxU_const
                str = xml%GetAttributeValue(TRIM(xPathA)//'/'//spdf(l))
                READ(str,'(4l2)') (lp_calc(lp,l),lp=0,3)
                DO lp = 0,lmaxU_const
                   IF(.NOT.lp_calc(lp,l)) CYCLE
-                  !Torgue GF has to have radial dependence
+                  !Torque GF has to have radial dependence
                   i_gf =  this%add(l,itype,iContour,.FALSE.,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
                                    fixedCutoff=fixedCutoff,k_resolved=.FALSE.)
-                  this%numTorgueElems(itype) = this%numTorgueElems(itype) + 1
-                  this%torgueElem(itype,this%numTorgueElems(itype)) = i_gf
+                  this%numTorqueElems(itype) = this%numTorqueElems(itype) + 1
+                  this%torqueElem(itype,this%numTorqueElems(itype)) = i_gf
                ENDDO
             ENDDO
 
@@ -603,7 +603,7 @@ CONTAINS
       INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref,n_intersite, i_inter
       LOGICAL :: l_sphavg, l_all_kresolved, l_kresolved_radial
       INTEGER :: hiaElem(atoms%n_hia), intersite_elems(this%n), shells(this%n)
-      LOGICAL :: written(atoms%nType)
+      LOGICAL :: written(atoms%nType), l_kresolved
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
       INTEGER, ALLOCATABLE :: atomTypepList(:),atomTypepList1(:)
 
@@ -630,11 +630,12 @@ CONTAINS
          iContour = this%elem(i_gf)%iContour
          refCutoff = this%elem(i_gf)%refCutoff
          l_sphavg = this%elem(i_gf)%l_sphavg
+         l_kresolved = this%elem(i_gf)%l_kresolved
 
          refCutoff = MERGE(i_gf,refCutoff,refCutoff==-1) !If no refCutoff is set for the intersite element
                                                          !we take the onsite element as reference
 
-         CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+         CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
                                         this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,input,&
                                         .NOT.written(atomType),nOtherAtoms,atomTypepList)
          written(atomType) = .TRUE.
@@ -650,7 +651,7 @@ CONTAINS
 
             WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
 
-            CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,this%elem(i_gf)%l_fixedCutoffset,&
+            CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
                                            this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
                                            .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
 
@@ -708,9 +709,12 @@ CONTAINS
                           calledby="init_gfinp")
       ENDIF
 
-      IF(ANY(this%numTorgueElems(:)>0)) THEN
-         IF(input%jspins.NE.2) CALL juDFT_error("Torgue calculation only for magnetic systems", calledby="init_gfinp")
-         IF(sym%nop>1) CALL juDFT_warn("Torgue calculation only without symmetries", calledby="init_gfinp")
+      IF(ANY(this%numTorqueElems(:)>0)) THEN
+         IF(input%jspins.NE.2) CALL juDFT_error("Torque calculation only for magnetic systems", calledby="init_gfinp")
+         IF(.NOT.noco%l_mperp.or.this%l_mperp) &
+            CALL juDFT_error("Torque calculation only with l_mperp=T (both noco and greensfunction)", &
+                             calledby="init_gfinp")
+         IF(sym%nop>1) CALL juDFT_warn("Torque calculation only without symmetries", calledby="init_gfinp")
       ENDIF
 
 
@@ -913,7 +917,7 @@ CONTAINS
 
    END FUNCTION find_symmetry_rotated_bzcoeffs_gfinp
 
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_fixedCutoffset,fixedCutoff,&
+   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_kresolved,l_fixedCutoffset,fixedCutoff,&
                                           refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList)
 
       USE m_types_atoms
@@ -932,6 +936,7 @@ CONTAINS
       INTEGER,             INTENT(IN)     :: refAtom !which is the reference atom
       LOGICAL,             INTENT(IN)     :: l_sphavg
       INTEGER,             INTENT(IN)     :: iContour
+      LOGICAL,             INTENT(IN)     :: l_kresolved
       LOGICAL,             INTENT(IN)     :: l_fixedCutoffset
       REAL,                INTENT(IN)     :: fixedCutoff
       INTEGER,             INTENT(IN)     :: refCutoff
@@ -974,7 +979,7 @@ CONTAINS
          DO ishellAtom = 1, numAtomsShell(ishell)
 
             atomTypep = atoms%itype(shellAtoms(2,ishellAtom,ishell))
-            i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
+            i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,k_resolved=l_kresolved,&
                              atomDiff=shellDiffs(:,ishellAtom,ishell),l_fixedCutoffset=l_fixedCutoffset,&
                              fixedCutoff=fixedCutoff,atom=shellAtoms(1,ishellAtom,ishell),atomp = shellAtoms(2,ishellAtom,ishell))
             IF(repr == 0) THEN

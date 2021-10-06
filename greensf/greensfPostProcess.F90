@@ -6,7 +6,7 @@ MODULE m_greensfPostProcess
    USE m_greensfCalcRealPart
    USE m_greensfCalcScalarProducts
    USE m_greensf_io
-   USE m_greensfTorgue
+   USE m_greensfTorque
    USE m_excSplitting
    USE m_crystalfield
    USE m_genMTBasis
@@ -61,13 +61,13 @@ MODULE m_greensfPostProcess
       CALL timestop("Green's Function: Real Part")
 
       !----------------------------------------------
-      ! Torgue Calculations
+      ! Torque Calculations
       !----------------------------------------------
-      IF(ANY(gfinp%numTorgueElems>0)) THEN
-         CALL timestart("Green's Function: Torgue")
-         CALL greensfTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
+      IF(ANY(gfinp%numTorqueElems>0)) THEN
+         CALL timestart("Green's Function: Torque")
+         CALL greensfTorque(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
                             f,g,flo,vTot)
-         CALL timestop("Green's Function: Torgue")
+         CALL timestop("Green's Function: Torque")
       ENDIF
 
       IF(mpi%irank==0) THEN
@@ -99,7 +99,7 @@ MODULE m_greensfPostProcess
 
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, kpts)
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, cell, kpts)
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
                                u=f,udot=g,ulo=flo)

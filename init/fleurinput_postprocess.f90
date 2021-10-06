@@ -17,7 +17,7 @@ CONTAINS
     TYPE(t_sym),INTENT(INOUT)   ::sym
     TYPE(t_atoms),INTENT(INOUT) ::atoms
     TYPE(t_input),INTENT(INOUT) ::input
-    TYPE(t_noco),INTENT(IN)     ::noco
+    TYPE(t_noco),INTENT(INOUT)     ::noco
     TYPE(t_vacuum),INTENT(INOUT)::vacuum
     TYPE(t_banddos),INTENT(IN)  ::banddos
     TYPE(t_oneD),INTENT(INOUT)  ::oneD
@@ -34,6 +34,7 @@ CONTAINS
     CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
     !call make_xcpot(xcpot,atoms,input)
     call oneD%init(atoms)
+    CALL noco%init(atoms,input%ldauSpinoffd)
 
     call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts)
     ! Check muffin tin radii, only checking, dont use new parameters

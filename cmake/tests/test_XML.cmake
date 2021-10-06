@@ -5,7 +5,9 @@ LINK_LIBRARIES ${FLEUR_LIBRARIES}
 
 if (NOT FLEUR_USE_XML)
       find_package(LibXml2)
-      set(CMAKE_C_FLAGS "-I${LIBXML2_INCLUDE_DIR}")
+      list(TRANSFORM LIBXML2_INCLUDE_DIRS PREPEND -I)
+      string (REPLACE ";" " " LIBXML2_INCLUDE_DIRS_STR "${LIBXML2_INCLUDE_DIRS}")
+      set(CMAKE_C_FLAGS "${LIBXML2_INCLUDE_DIRS_STR} ${CMAKE_C_FLAGS}")
       if (LIBXML2_LIBRARIES)
           set(TEST_LIBRARIES ${FLEUR_LIBRARIES} ${LIBXML2_LIBRARIES})
       endif()
@@ -25,7 +27,7 @@ if (NOT FLEUR_USE_XML)
       set(TEST_LIBRARIES ${FLEUR_LIBRARIES} -lxml2)
 
 try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.f90
-            LINK_LIBRARIES ${TEST_LIBRARIES}
+            LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE compile_output 
             )
 	    if ("$ENV{VERBOSE}")
             	message("XML F90 compile test: ${FLEUR_USE_XML}\nLINK_LIBRARIES ${TEST_LIBRARIES}\n${compile_output}")
@@ -40,12 +42,20 @@ message("XML Library found for linking:${FLEUR_USE_XML}")
 
 if (FLEUR_USE_XML)
    try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.c
-   CMAKE_FLAGS "-DCMAKE_C_LINK_EXECUTABLE='echo no linking'" LINK_LIBRARIES "-lxml2")
+   CMAKE_FLAGS "-DCMAKE_C_LINK_EXECUTABLE='echo no linking'" LINK_LIBRARIES "-lxml2" OUTPUT_VARIABLE compile_output )
+   if ("$ENV{VERBOSE}")
+       message("XML C compile test: ${FLEUR_USE_XML}\n${compile_output}")
+   endif()
    if (NOT FLEUR_USE_XML)
       find_package(LibXml2)
-      set(CMAKE_C_FLAGS "-I${LIBXML2_INCLUDE_DIR}")
-      try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.c
+      list(TRANSFORM LIBXML2_INCLUDE_DIRS PREPEND -I)
+      string (REPLACE ";" " " LIBXML2_INCLUDE_DIRS_STR "${LIBXML2_INCLUDE_DIRS}")
+      set(CMAKE_C_FLAGS "${LIBXML2_INCLUDE_DIRS_STR} ${CMAKE_C_FLAGS}")
+      try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.c OUTPUT_VARIABLE compile_output
      )
+     if ("$ENV{VERBOSE}")
+       message("XML C compile test: ${FLEUR_USE_XML}\n INCLUDE DIRECTORIES: ${CMAKE_C_FLAGS}\n${compile_output}")
+     endif()
    endif()
 endif()
 

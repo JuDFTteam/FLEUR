@@ -34,9 +34,6 @@ CONTAINS
       USE m_rotate_mt_den_tofrom_local
       USE m_magnMomFromDen
       USE m_force_sf ! Klueppelberg (force level 3)
-#ifdef CPP_MPI
-      USE m_mpi_bc_potden
-#endif
 
       IMPLICIT NONE
 
@@ -130,15 +127,14 @@ CONTAINS
       CALL vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
 
-      CALL bfield(input,noco,atoms,field,vTot)
+      CALL bfield(input,stars,noco,atoms,field,vTot)
 
-#ifdef CPP_MPI
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vTot)
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vxc)
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,exc)
-#endif
+      CALL vTot%distribute(fmpi%mpi_comm)
+      CALL vCoul%distribute(fmpi%mpi_comm)
+      CALL vx%distribute(fmpi%mpi_comm)
+      CALL vxc%distribute(fmpi%mpi_comm)
+      CALL exc%distribute(fmpi%mpi_comm)
+
       ! Klueppelberg (force level 3)
       IF (input%l_f.AND.(input%f_level.GE.3).AND.(fmpi%irank.EQ.0)) THEN
          DO js = 1,input%jspins
