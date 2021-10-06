@@ -88,6 +88,8 @@ MODULE m_types_profile
       
       IF(.NOT.l_found) THEN
          WRITE(*,*) 'Could not find profile ', TRIM(ADJUSTL(profileName)), '. Using default profile.'
+      ELSE
+         WRITE(*,*) 'Using profile "', TRIM(ADJUSTL(profileName)), '".'
       END IF
 
    END SUBROUTINE loadProfile
