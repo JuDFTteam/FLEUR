@@ -28,8 +28,8 @@ CONTAINS
     IF (noco%l_noco) CALL judft_error("B-fields not implemented in noco case")
     
     !Interstitial
-    vTot%pw(:,1)=vTot%pw(:,1)-field%b_field/2.*stars%ustep
-    vTot%pw(:,2)=vTot%pw(:,2)+field%b_field/2.*stars%ustep
+    vTot%pw_w(:,1)=vTot%pw_w(:,1)-field%b_field/2.*stars%ustep
+    vTot%pw_w(:,2)=vTot%pw_w(:,2)+field%b_field/2.*stars%ustep
 
     !MT-spheres
     DO n=1,atoms%ntype
