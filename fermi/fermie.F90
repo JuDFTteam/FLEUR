@@ -117,7 +117,7 @@ CONTAINS
     ENDIF
     !---> pk non-collinear
     !
-    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('eigenvalues')
+    IF (fmpi%irank == 0. .and. .NOT.judft_was_argument("-minimalOutput")) CALL openXMLElementNoAttributes('eigenvalues')
     DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
           IF (fmpi%irank == 0) THEN
@@ -141,7 +141,7 @@ CONTAINS
        END DO
     ENDDO
     !finished reading of eigenvalues
-    IF (fmpi%irank == 0) CALL closeXMLElement('eigenvalues')
+    IF (fmpi%irank == 0 .and. .NOT.judft_was_argument("-minimalOutput")) CALL closeXMLElement('eigenvalues')
   IF (fmpi%irank == 0) THEN
 
     IF (ABS(input%fixed_moment)<1E-6) THEN

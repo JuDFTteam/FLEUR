@@ -40,7 +40,7 @@ MODULE m_types_profile
 
 
       INTEGER :: io_stat
-      INTEGER :: kmax, rmtFactor, lmaxFactor
+      REAL    :: kmax, rmtFactor, lmaxFactor
       LOGICAL :: l_exist, l_found
 
       CHARACTER(LEN=20) :: name
@@ -80,6 +80,7 @@ MODULE m_types_profile
                END IF
             ELSE
                WRITE(*,*) 'Error in loading profile!'
+               WRITE(*,*) 'io_stat: ', io_stat
             END IF
          END IF
       END DO
