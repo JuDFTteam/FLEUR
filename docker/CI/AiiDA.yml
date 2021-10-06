@@ -4,9 +4,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
   # with the compiled fleur executable.
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
-  dependencies:
+  needs: 
     - build-gfortran-hdf5
-  needs: ["build-gfortran-hdf5"]  
   variables:
     POSTGRES_DB: "postgres"
     POSTGRES_USER: "postgres"
