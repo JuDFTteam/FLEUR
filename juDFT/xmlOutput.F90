@@ -145,12 +145,12 @@ MODULE m_judft_xmlOutput
                WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
-#ifndef __PGI
+
             TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
-#endif
+
          END SELECT
       END DO
 
@@ -158,7 +158,7 @@ MODULE m_judft_xmlOutput
          DO i = 1, SIZE(contentList)
             SELECT TYPE(contentList)
                TYPE IS(INTEGER)
-#ifndef __PGI
+
                   WRITE(charContentList(i),'(i0)') contentList(i)
                TYPE IS(REAL)
                   WRITE(charContentList(i),'(f19.10)') contentList(i)
@@ -168,7 +168,7 @@ MODULE m_judft_xmlOutput
                   WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
                CLASS DEFAULT
                   STOP 'Type of contentList not allowed'
-#endif
+
             END SELECT
          END DO
          CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths,charContentList)
@@ -335,12 +335,10 @@ MODULE m_judft_xmlOutput
                WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
-#ifndef __PGI
             TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
-#endif
          END SELECT
       END DO
 
@@ -355,12 +353,10 @@ MODULE m_judft_xmlOutput
                   WRITE(charMatrix(i,j),'(a,SP,f8.5,a,f8.5,a)') '(',REAL(matrix(i,j)),',', AIMAG(matrix(i,j)),')'
                TYPE IS(LOGICAL)
                   WRITE(charMatrix(i,j),'(l1)') matrix(i,j)
-#ifndef __PGI
                TYPE IS(CHARACTER(LEN=*))
                   WRITE(charMatrix(i,j),'(a)') TRIM(ADJUSTL(matrix(i,j)))
                CLASS DEFAULT
                   STOP 'Type of matrix not allowed'
-#endif
             END SELECT
          END DO
       END DO
@@ -581,12 +577,10 @@ MODULE m_judft_xmlOutput
                WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
-#ifndef __PGI
             TYPE IS(CHARACTER(LEN=*))
                WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
             CLASS DEFAULT
                STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
-#endif
          END SELECT
       END DO
 
