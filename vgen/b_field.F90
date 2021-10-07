@@ -33,8 +33,8 @@ CONTAINS
 
     !MT-spheres
     DO n=1,atoms%ntype
-       vTot%mt(:atoms%jri(n),0,n,1)=vTot%mt(:atoms%jri(n),0,n,1)-(field%b_field+field%b_field_mt(n))/2.*atoms%rmsh(:atoms%jri(n),n)/sfp_const
-       vTot%mt(:atoms%jri(n),0,n,2)=vTot%mt(:atoms%jri(n),0,n,2)+(field%b_field+field%b_field_mt(n))/2.*atoms%rmsh(:atoms%jri(n),n)/sfp_const
+      vTot%mt(:atoms%jri(n),0,n,1)=vTot%mt(:atoms%jri(n),0,n,1)-(field%b_field+field%b_field_mt(n))/2.*atoms%rmsh(:atoms%jri(n),n)/sfp_const
+      vTot%mt(:atoms%jri(n),0,n,2)=vTot%mt(:atoms%jri(n),0,n,2)+(field%b_field+field%b_field_mt(n))/2.*atoms%rmsh(:atoms%jri(n),n)/sfp_const
     ENDDO
 
     !Vacuum

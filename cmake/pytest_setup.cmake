@@ -86,7 +86,9 @@ PYTHON_EXECUTABLE=\"${FLEUR_PYTHON}\"
 if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
   PYTHON_EXECUTABLE=\${juDFT_PYTHON}
 fi
-PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $PYTHON_EXECUTABLE -m pytest \"$@\"")
+mkdir -p Testing
+PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $PYTHON_EXECUTABLE -m pytest \"$@\" | tee Testing/pytest_session.stdout
+exit \${PIPESTATUS[0]}")
 add_custom_target(pytest ALL
                   COMMAND chmod +x run_tests.sh
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}

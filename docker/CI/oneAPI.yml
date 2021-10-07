@@ -1,0 +1,24 @@
+build-intel:
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  stage: build
+  artifacts:
+     paths:
+       - build.intel
+     expire_in: 12h
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -l intel
+    - cd build.intel
+    - make -j 2
+  allow_failure: false
+  except:
+    - pushes
+
+test-intel:
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  extends: .test-fleur-not-on-push
+  variables:
+    BUILD_FOLDER: "build.intel"
+  needs: 
+    - build-intel
+  allow_failure: true
