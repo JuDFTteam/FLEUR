@@ -1,0 +1,31 @@
+build-gfortran-hdf5:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: build
+  artifacts:
+     paths:
+       - build
+     expire_in: 12h
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh GITLAB
+    - cd build
+    - make -j 2
+
+test-gfortran-hdf5: 
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  extends: .test-fleur
+  variables:
+    juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
+  needs: 
+    - fast-test-gfortran-hdf5
+    - build-gfortran-hdf5
+
+fast-test-gfortran-hdf5: 
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  extends: .test-fleur
+  stage: fast-test
+  variables:
+    markers: "fast"
+  needs: 
+    - build-gfortran-hdf5
+

@@ -343,7 +343,7 @@ CONTAINS
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
 					ELSE
 						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
-						write (*,*) CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+						!write (*,*) CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 					END IF
 				END IF
 			END DO
