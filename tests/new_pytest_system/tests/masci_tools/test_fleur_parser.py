@@ -45,14 +45,6 @@ def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, parser_test
     try if the fleur parser in masci-tools can handle the parsing without
     crashing, successful and an empty parser log
     """
-    #Note:
-    #   You might notice that a lot of the output parser tests fail either because the out file does not validate
-    #   Or there are warnings
-    #   1. The validation errors occur since the schemas in fleur (develop) and masci-tools are slightly out of sync
-    #      at the moment (fixed in the raise_fleur_file_version branch)
-    #   2. There are a couple of output differences not yet accounted for in the output parser (Some could be solved in fleur)
-    #           - bandgap output only in hist mode
-
     #These warnings are expected to appear at the moment
     KNOWN_WARNINGS = {'No values found for attribute l_f'}
 

@@ -627,14 +627,6 @@
       <xsd:attribute default="TTT" name="relaxXYZ" type="TripleFleurBool" use="optional"/>
    </xsd:complexType>
 
-   <xsd:complexType name="PositionType">
-      <xsd:simpleContent>
-         <xsd:extension base="Double3DVecType">
-            <xsd:attribute name="scale" type="FleurDouble" use="required"/>
-         </xsd:extension>
-      </xsd:simpleContent>
-   </xsd:complexType>
-
    <xsd:complexType name="LOType">
       <xsd:attribute name="type" type="EParamSelectionEnum" use="required"/>
       <xsd:attribute name="l" type="AngularMomentumNumberType" use="required"/>
@@ -1052,17 +1044,17 @@
    </xsd:complexType>
 
    <xsd:complexType name="MAEType">
-     <xsd:attribute name="theta" type="DoubleVecType" use="required"/>
-     <xsd:attribute name="phi" type="DoubleVecType" use="required"/>
+     <xsd:attribute name="theta" type="FleurDoubleVecType" use="required"/>
+     <xsd:attribute name="phi" type="FleurDoubleVecType" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="DMIType">
      <xsd:all>
        <xsd:element  maxOccurs="1" minOccurs="1" name="qVectors" type="QListType"/>
      </xsd:all>
-     <xsd:attribute name="theta" type="DoubleVecType" use="required"/>
-     <xsd:attribute name="phi" type="DoubleVecType" use="required"/>
-     <xsd:attribute name="ef_shift" type="DoubleVecType" use="optional"/>
+     <xsd:attribute name="theta" type="FleurDoubleVecType" use="required"/>
+     <xsd:attribute name="phi" type="FleurDoubleVecType" use="required"/>
+     <xsd:attribute name="ef_shift" type="FleurDoubleVecType" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="JijType">
@@ -1074,7 +1066,7 @@
 
    <xsd:complexType name="QListType">
      <xsd:sequence>
-       <xsd:element maxOccurs="unbounded" minOccurs="1"  name="q" type="Double3DVecType" />
+       <xsd:element maxOccurs="unbounded" minOccurs="1"  name="q" type="FleurDouble3DVecType" />
      </xsd:sequence>
    </xsd:complexType>
 
