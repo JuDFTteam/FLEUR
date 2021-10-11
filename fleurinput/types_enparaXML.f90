@@ -104,13 +104,14 @@ CONTAINS
 
   END SUBROUTINE read_xml_enpara
 
-  SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,str,lo)
-    use m_types_atoms
+  SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,str,lo,addLOs)
+    USE m_types_atoms
     !sets the energy parameters according to simple electronic config string and lo string
     CLASS(t_enparaXML),INTENT(inout):: enpara
     TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER,INTENT(in)           :: ntype
     CHARACTER(len=*),INTENT(in)  :: str,lo
+    INTEGER, INTENT(IN)          :: addLOs(atoms%ntype)
 
     CHARACTER(len=100):: val_str
     character         :: ch
@@ -128,7 +129,7 @@ CONTAINS
        READ(val_str,"(i1,a1)") qn,ch
        l=INDEX("spdf",ch)-1
        !check if we have an lo for this l-channel
-       DO i=1,atoms%nlo(ntype)
+       DO i=1,atoms%nlo(ntype) - addLOs(ntype)
           IF (l==atoms%llo(i,ntype).AND.qn==enpara%qn_ello(i,ntype,1)) EXIT
        ENDDO
        IF (atoms%nlo(ntype)==0.OR.i>atoms%nlo(ntype)) THEN

@@ -6,6 +6,7 @@ MODULE m_types_profile
       REAL :: lmaxFactor
 
       CHARACTER(LEN=20) :: profileName
+      CHARACTER(LEN=20) :: addLOSetup
 
       CONTAINS
 
@@ -44,10 +45,11 @@ MODULE m_types_profile
       LOGICAL :: l_exist, l_found
 
       CHARACTER(LEN=20) :: name
+      CHARACTER(LEN=20) :: addLOSetup
       CHARACTER(LEN=20) :: filename
       CHARACTER(len=8)  :: str
 
-      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor
+      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup
 
       filename = "profile.config"
 
@@ -69,6 +71,7 @@ MODULE m_types_profile
             kmax = 4.5
             rmtFactor = 1.0
             lmaxFactor = 1.0
+            addLOSetup = ""
             READ(558,profile,iostat=io_stat)
             IF (io_stat.EQ.0) THEN
                IF(TRIM(ADJUSTL(profileName)).EQ.TRIM(ADJUSTL(name))) THEN
@@ -76,6 +79,7 @@ MODULE m_types_profile
                   this%kmax = kmax
                   this%rmtFactor = rmtFactor
                   this%lmaxFactor = lmaxFactor
+                  this%addLOSetup = TRIM(ADJUSTL(addLOSetup))
                   l_found = .TRUE.
                END IF
             ELSE
