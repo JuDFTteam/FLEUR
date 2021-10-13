@@ -118,7 +118,7 @@ CONTAINS
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
 
     !Locals
-    INTEGER:: n,q,i,nef
+    INTEGER:: n,q,i,nef,ierr
     CHARACTER(LEN=12):: attributes(6)
     CHARACTER(LEN=16) :: atom_name
     IF (this%q_done==0) RETURN
@@ -158,6 +158,8 @@ CONTAINS
        ENDDO
        CALL closeXMLElement('Forcetheorem_DMI')
     ENDIF
+
+    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr) ! This barrier is placed tpo ensure that the output above this line is actually written out.
 
     CALL judft_end("Forcetheorem DMI")
   END SUBROUTINE dmi_postprocess
