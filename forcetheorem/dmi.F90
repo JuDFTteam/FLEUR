@@ -114,6 +114,9 @@ CONTAINS
 
   SUBROUTINE dmi_postprocess(this)
     USE m_xmlOutput
+#ifdef CPP_MPI
+    USE mpi
+#endif
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
 
@@ -159,7 +162,9 @@ CONTAINS
        CALL closeXMLElement('Forcetheorem_DMI')
     ENDIF
 
+#ifdef CPP_MPI
     CALL MPI_BARRIER(MPI_COMM_WORLD,ierr) ! This barrier is placed tpo ensure that the output above this line is actually written out.
+#endif
 
     CALL judft_end("Forcetheorem DMI")
   END SUBROUTINE dmi_postprocess
