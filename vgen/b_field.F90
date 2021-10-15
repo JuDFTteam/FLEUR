@@ -11,6 +11,7 @@ CONTAINS
     !field%b_field is the field applied everywhere
     !field%b_field_mt is the field specific to the MT-sphere of a single atom type
     USE m_types
+    USE m_constants
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)::input
     TYPE(t_noco),INTENT(IN) ::noco
@@ -28,13 +29,13 @@ CONTAINS
     IF (noco%l_noco) CALL judft_error("B-fields not implemented in noco case")
     
     !Interstitial
-    vTot%pw_w(:,1)=vTot%pw_w(:,1)-field%b_field/2.*stars%ustep
-    vTot%pw_w(:,2)=vTot%pw_w(:,2)+field%b_field/2.*stars%ustep
+    vTot%pw_w(:,1)=vTot%pw_w(:,1)-((field%b_field/2.0)*stars%ustep(:))
+    vTot%pw_w(:,2)=vTot%pw_w(:,2)+((field%b_field/2.0)*stars%ustep(:))
 
     !MT-spheres
     DO n=1,atoms%ntype
-      vTot%mt(:atoms%jri(n),0,n,1)=vTot%mt(:atoms%jri(n),0,n,1)-(field%b_field+field%b_field_mt(n))/2.*atoms%rmsh(:atoms%jri(n),n)/sfp_const
-      vTot%mt(:atoms%jri(n),0,n,2)=vTot%mt(:atoms%jri(n),0,n,2)+(field%b_field+field%b_field_mt(n))/2.*atoms%rmsh(:atoms%jri(n),n)/sfp_const
+      vTot%mt(:atoms%jri(n),0,n,1)=vTot%mt(:atoms%jri(n),0,n,1)-((field%b_field+field%b_field_mt(n))/2.0)*(sfp_const)
+      vTot%mt(:atoms%jri(n),0,n,2)=vTot%mt(:atoms%jri(n),0,n,2)+((field%b_field+field%b_field_mt(n))/2.0)*(sfp_const)
     ENDDO
 
     !Vacuum
