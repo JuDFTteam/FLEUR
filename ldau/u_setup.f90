@@ -14,11 +14,8 @@ MODULE m_usetup
    !     Extension to multiple U per atom type  G.M. 2017              |
    !-------------------------------------------------------------------+
    USE m_juDFT
-   USE m_umtx
-   USE m_uj2f
    USE m_rotMMPmat
-   USE m_vmmp
-   USE m_vmmp21
+   USE m_dftUPotential
    USE m_types
    USE m_constants
 
@@ -42,23 +39,12 @@ MODULE m_usetup
       CHARACTER(len=2) :: l_type
       CHARACTER(len=9) :: l_form
 
-      REAL :: f0(atoms%n_u+atoms%n_hia),f2(atoms%n_u+atoms%n_hia)
-      REAL :: f4(atoms%n_u+atoms%n_hia),f6(atoms%n_u+atoms%n_hia)
-      REAL,    ALLOCATABLE :: u(:,:,:,:,:)
       COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:)
 
       ! look, whether density matrix exists already:
       IF (ANY(ABS(inDen%mmpMat).GT.1e-12)) THEN
 
          n_u = atoms%n_u+atoms%n_hia
-
-         ! calculate slater integrals from u and j
-         CALL uj2f(input%jspins,atoms%lda_u(:),n_u,f0,f2,f4,f6)
-
-         ! set up e-e- interaction matrix
-         ALLOCATE ( u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                      -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u), source=0.0 )
-         CALL umtx(atoms%lda_u(:),n_u,f0,f2,f4,f6,u)
 
          !Rotate the density matrix if specified with phi or theta angles
          ALLOCATE(n_mmp,mold=inDen%mmpmat)
@@ -67,12 +53,11 @@ MODULE m_usetup
                                          atoms%lda_u(i_u)%theta,0.0,atoms%lda_u(i_u)%l)
          ENDDO
 
-         ! calculate potential matrix and total energy correction
-         CALL v_mmp(atoms,input%jspins,hub1data%l_performSpinavg,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
-         !spin off-diagonal elements
-         IF(any(noco%l_unrestrictMT).OR.input%ldauSpinoffd) THEN
-            CALL v_mmp_21(atoms,n_mmp(:,:,:,3),u,pot%mmpMat(:,:,:,3),results%e_ldau)
-         ENDIF
+         DO i_u = 1, n_u
+            CALL dftUPotential(n_mmp(:,:,i_u,:), atoms, atoms%lda_u(i_u), input%jspins, &
+                               any(noco%l_unrestrictMT).OR.input%ldauSpinoffd, &
+                               pot%mmpMat(:,:,i_u,:))
+         ENDDO
 
          IF (mpi%irank.EQ.0) THEN
             DO ispin = 1,SIZE(pot%mmpMat,4)
@@ -97,7 +82,6 @@ MODULE m_usetup
             END DO
             WRITE (oUnit,*) results%e_ldau
          ENDIF
-         DEALLOCATE (u,n_mmp)
       ELSE
          IF (mpi%irank.EQ.0) THEN
             WRITE (*,*) 'no density matrix found ... skipping LDA+U'

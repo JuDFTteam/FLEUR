@@ -12,10 +12,29 @@ MODULE m_uj2f
    IMPLICIT NONE
 
    INTERFACE uj2f
-      PROCEDURE :: uj2f_simple, uj2f_spins
+      PROCEDURE :: uj2f_simple, uj2f_spins, uj2f_single
    END INTERFACE
 
    CONTAINS
+
+   SUBROUTINE uj2f_single(jspins,u_in,f0,f2,f4,f6)
+
+      INTEGER,          INTENT(IN)  :: jspins
+      TYPE(t_utype),    INTENT(IN)  :: u_in
+      REAL,             INTENT(OUT) :: f0,f2
+      REAL,             INTENT(OUT) :: f4,f6
+
+      REAL :: f0List(1),f2List(1)
+      REAL :: f4List(1),f6List(1)
+
+      CALL uj2f_simple(jspins,[u_in],1,f0List,f2List,f4List,f6List)
+
+      f0 = f0List(1)
+      f2 = f2List(1)
+      f4 = f4List(1)
+      f6 = f6List(1)
+
+   END SUBROUTINE uj2f_single
 
    SUBROUTINE uj2f_simple(jspins,u_in,n_u,f0,f2,f4,f6)
 

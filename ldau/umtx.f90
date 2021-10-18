@@ -11,9 +11,32 @@ MODULE m_umtx
 
    IMPLICIT NONE
 
+   INTERFACE umtx
+      PROCEDURE :: umtx_all, umtx_single
+   END INTERFACE
+
    CONTAINS
 
-   SUBROUTINE umtx(u_in,n_u,f0,f2,f4,f6,u)
+   SUBROUTINE umtx_single(u_in,f0,f2,f4,f6,u)
+
+      TYPE(t_utype), INTENT(IN)  :: u_in
+      REAL,          INTENT(IN)  :: f0,f2,f4,f6
+      REAL,          INTENT(OUT) :: u(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:)
+
+      REAL :: uAll(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1)
+      REAL :: f0List(1),f2List(1)
+      REAL :: f4List(1),f6List(1)
+
+      f0List(1) = f0; f2List(1) = f2
+      f4List(1) = f4; f6List(1) = f6
+
+      CALL umtx_all([u_in],1,f0List,f2List,f4List,f6List,uAll)
+
+      u = uAll(:,:,:,:,1)
+
+   END SUBROUTINE umtx_single
+
+   SUBROUTINE umtx_all(u_in,n_u,f0,f2,f4,f6,u)
 
       INTEGER,       INTENT(IN)  :: n_u
       TYPE(t_utype), INTENT(IN)  :: u_in(:)
@@ -110,5 +133,5 @@ MODULE m_umtx
       END DO
       DEALLOCATE (c)
 
-   END SUBROUTINE umtx
+   END SUBROUTINE umtx_all
 END MODULE m_umtx
