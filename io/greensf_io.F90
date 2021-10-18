@@ -459,11 +459,11 @@ MODULE m_greensf_io
       alpha=0.0; alphap=0.0
       beta=0.0; betap=0.0
       IF(noco%l_noco) THEN
-         alpha = nococonv%alpha(g%elem%atomType)
-         alphap = nococonv%alpha(g%elem%atomTypep)
+         alpha = nococonv%alph(g%elem%atomType)
+         alphap = nococonv%alph(g%elem%atomTypep)
          beta = nococonv%beta(g%elem%atomType)
          betap = nococonv%beta(g%elem%atomTypep)
-      ELSE IF(noco%l_soc)
+      ELSE IF(noco%l_soc) THEN
          alpha=nococonv%phi; alphap=nococonv%phi
          beta=nococonv%theta; betap=nococonv%theta
       ENDIF
