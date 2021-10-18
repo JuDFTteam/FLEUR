@@ -59,7 +59,7 @@ MODULE m_greensf_io
       INTEGER           :: dimsInt(7)
       INTEGER(HSIZE_T)  :: dims(7)
 
-      version = 6
+      version = 7
       IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
@@ -167,13 +167,15 @@ MODULE m_greensf_io
 
    END SUBROUTINE closeGreensFFile
 
-   SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, cell, archiveType, greensf, mmpmat, selfen,&
+   SUBROUTINE writeGreensFData(fileID, input, gfinp, atoms, nococonv, noco, cell, archiveType, greensf, mmpmat, selfen,&
                                u, udot, ulo)
 
       INTEGER(HID_T),   INTENT(IN) :: fileID
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_gfinp),    INTENT(IN) :: gfinp
       TYPE(t_atoms),    INTENT(IN) :: atoms
+      TYPE(t_nococonv), INTENT(IN) :: nococonv
+      TYPE(t_noco),     INTENT(IN) :: noco
       TYPE(t_cell),     INTENT(IN) :: cell
       TYPE(t_greensf),  INTENT(IN) :: greensf(:)
       INTEGER,          INTENT(IN) :: archiveType
@@ -336,7 +338,7 @@ MODULE m_greensf_io
             CALL io_write_attreal0(currentelementGroupID,"OffDTrace-y",AIMAG(trc(3)))
          ENDIF
 
-         CALL writeGreensFElement(currentelementGroupID, gfOut, atoms, cell, jspinsOut, contour_mapping)
+         CALL writeGreensFElement(currentelementGroupID, gfOut, atoms, nococonv, noco, cell, jspinsOut, contour_mapping)
 
          !Occupation matrix
          dims(:4)=[2,2*lmaxU_Const+1,2*lmaxU_Const+1,jspinsOut]
@@ -433,11 +435,13 @@ MODULE m_greensf_io
 
    END SUBROUTINE writeGreensFData
 
-   SUBROUTINE writeGreensFElement(groupID, g, atoms, cell, jspins, contour_mapping)
+   SUBROUTINE writeGreensFElement(groupID, g, atoms, nococonv, noco, cell, jspins, contour_mapping)
 
       INTEGER(HID_T),   INTENT(IN)  :: groupID
       TYPE(t_greensf),  INTENT(IN)  :: g
       TYPE(t_atoms),    INTENT(IN)  :: atoms
+      TYPE(t_nococonv), INTENT(IN)  :: nococonv
+      TYPE(t_noco),     INTENT(IN)  :: noco
       TYPE(t_cell),     INTENT(IN)  :: cell
       INTEGER,          INTENT(IN)  :: jspins
       INTEGER,          INTENT(IN)  :: contour_mapping(:)
@@ -450,11 +454,32 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: loGroupID,currentloGroupID, scalarGroupID
       INTEGER :: hdfError,ikpt
       INTEGER :: nLO, iLO, iLOp
+      REAL    :: alpha, alphap, beta, betap
+
+      alpha=0.0; alphap=0.0
+      beta=0.0; betap=0.0
+      IF(noco%l_noco) THEN
+         alpha = nococonv%alpha(g%elem%atomType)
+         alphap = nococonv%alpha(g%elem%atomTypep)
+         beta = nococonv%beta(g%elem%atomType)
+         betap = nococonv%beta(g%elem%atomTypep)
+      ELSE IF(noco%l_soc)
+         alpha=nococonv%phi; alphap=nococonv%phi
+         beta=nococonv%theta; betap=nococonv%theta
+      ENDIF
 
       CALL io_write_attint0(groupID,"l",g%elem%l)
       CALL io_write_attint0(groupID,"lp",g%elem%lp)
       CALL io_write_attint0(groupID,"atomType",g%elem%atomType)
       CALL io_write_attint0(groupID,"atomTypep",g%elem%atomTypep)
+      CALL io_write_attreal0(groupID,"alpha", alpha)
+      CALL io_write_attreal0(groupID,"alphap", alphap)
+      CALL io_write_attreal0(groupID,"beta", beta)
+      CALL io_write_attreal0(groupID,"betap", betap)
+      !The two attributes below are constant at the moment, but putting them in
+      !means that the conventions can be changed without disrupting everything outside fleur
+      CALL io_write_attlog0(groupID,"local_spin_frame", .TRUE.)
+      CALL io_write_attlog0(groupID,"local_real_frame", .NOT.g%elem%isIntersite())
       IF(g%elem%atom/=0) THEN
          CALL io_write_attchar0(groupID,"atom",TRIM(ADJUSTL(atoms%label(g%elem%atom))))
          CALL io_write_attchar0(groupID,"atomp",TRIM(ADJUSTL(atoms%label(g%elem%atomp))))
