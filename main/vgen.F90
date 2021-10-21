@@ -122,12 +122,12 @@ CONTAINS
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                       cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results)
 
+      CALL bfield(input,stars,noco,atoms,field,vTot)
+
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
       CALL vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
-
-      CALL bfield(input,stars,noco,atoms,field,vTot)
 
       CALL vTot%distribute(fmpi%mpi_comm)
       CALL vCoul%distribute(fmpi%mpi_comm)

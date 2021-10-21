@@ -430,7 +430,9 @@ MODULE m_types_greensf
 
          !Rotate the occupation matrix into the global frame in real-space
          IF(noco%l_noco) THEN
-            occmtx = rotMMPmat(occmtx,nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
+            IF (.NOT.this%elem%isIntersite()) THEN
+               occmtx = rotMMPmat(occmtx,nococonv%alph(atomType),nococonv%beta(atomType),0.0,l)
+            ENDIF
          ELSE IF(noco%l_soc) THEN
             occmtx = rotMMPmat(occmtx,nococonv%phi,nococonv%theta,0.0,l)
          ENDIF

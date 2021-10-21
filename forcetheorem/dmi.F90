@@ -55,7 +55,7 @@ CONTAINS
     this%qvec=q
 
     ALLOCATE(this%evsum(size(this%ef),0:SIZE(this%phi),SIZE(q,2)))
-    ALLOCATE(this%h_so(0:ntype,size(this%ef),0:SIZE(this%phi),SIZE(q,2)))
+    ALLOCATE(this%h_so(0:ntype,size(this%ef),SIZE(this%phi),SIZE(q,2)))
 
     this%evsum=0;this%h_so=0.0
   END SUBROUTINE dmi_init
@@ -114,11 +114,14 @@ CONTAINS
 
   SUBROUTINE dmi_postprocess(this)
     USE m_xmlOutput
+#ifdef CPP_MPI
+    USE mpi
+#endif
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
 
     !Locals
-    INTEGER:: n,q,i,nef
+    INTEGER:: n,q,i,nef,ierr
     CHARACTER(LEN=12):: attributes(6)
     CHARACTER(LEN=16) :: atom_name
     IF (this%q_done==0) RETURN
@@ -134,30 +137,30 @@ CONTAINS
        DO q=1,SIZE(this%evsum,3)
           WRITE(attributes(2),'(i5)') q
           DO nef=1,size(this%ef,1)
-            WRITE(attributes(3),'(f10.5)') this%ef(nef)
-            WRITE(attributes(4),'(f12.7)') this%evsum(nef,0,q)
-            CALL writeXMLElementForm('Entry',(/'q       ','ef-shift','ev-sum  '/),attributes(2:4),&
-            RESHAPE((/1,8,6,5,12,12/),(/3,2/)))
-            DO n=1,SIZE(this%evsum,2)-1
-              WRITE(attributes(4),'(f12.7)') this%theta(n)
-              WRITE(attributes(5),'(f12.7)') this%phi(n)
-              WRITE(attributes(6),'(f12.7)') this%evsum(nef,n,q)
-              CALL writeXMLElementForm('Entry',(/'q       ','ef-shift','theta   ','phi     ','ev-sum  '/),&
-              attributes(2:6),RESHAPE((/1,8,5,3,6,5,12,12,12,12/),(/5,2/)))
-              write(attributes(6),'(f12.7)') this%h_so(0,nef,n,q)
-              CALL writeXMLElementForm('allAtoms',(/'q       ','ef-shift','theta   ','phi     ','H_so    '/),&
-              attributes(2:6),RESHAPE((/1,8,5,3,6,5,12,12,12,12/),(/5,2/)))
-             DO i=1,size(this%h_so,1)-1
-               write(attributes(6),'(f12.7)') this%h_so(i,nef,n,q)
-               write(attributes(1),'(i0)') i
-               CALL writeXMLElementForm('singleAtom',(/'atomType','q       ','ef-shift','theta   ','phi     ','H_so    '/)&
-               ,attributes,RESHAPE((/8,8,1,5,3,6,5,5,12,12,12,12/),(/6,2/)))
-             ENDDO
+             WRITE(attributes(3),'(f10.5)') this%ef(nef)
+             WRITE(attributes(4),'(f13.8)') this%evsum(nef,0,q)
+             CALL writeXMLElementForm('Entry',(/'q       ','ef-shift','ev-sum  '/),attributes(2:4),RESHAPE((/1,8,6,5,12,12/),(/3,2/)))
+             DO n=1,SIZE(this%evsum,2)-1
+                WRITE(attributes(4),'(f13.8)') this%theta(n)
+                WRITE(attributes(5),'(f13.8)') this%phi(n)
+                WRITE(attributes(6),'(f13.8)') this%evsum(nef,n,q)
+                CALL writeXMLElementForm('Entry',(/'q       ','ef-shift','theta   ','phi     ','ev-sum  '/),attributes(2:6),RESHAPE((/1,8,5,3,6,5,12,12,12,12/),(/5,2/)))
+                write(attributes(6),'(f13.8)') this%h_so(0,nef,n,q)
+                CALL writeXMLElementForm('allAtoms',(/'q       ','ef-shift','theta   ','phi     ','H_so    '/),attributes(2:6),RESHAPE((/1,8,5,3,6,5,12,12,12,12/),(/5,2/)))
+                DO i=1,size(this%h_so,1)-1
+                   write(attributes(6),'(f13.8)') this%h_so(i,nef,n,q)
+                   write(attributes(1),'(i0)') i
+                   CALL writeXMLElementForm('singleAtom',(/'atomType','q       ','ef-shift','theta   ','phi     ','H_so    '/),attributes,RESHAPE((/8,8,1,5,3,6,5,5,12,12,12,12/),(/6,2/)))
+                END DO
+             END DO
           END DO
-        enddo
-       ENDDO
+       END DO
        CALL closeXMLElement('Forcetheorem_DMI')
     ENDIF
+
+#ifdef CPP_MPI
+    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr) ! This barrier is placed to ensure that the output above this line is actually written out.
+#endif
 
     CALL judft_end("Forcetheorem DMI")
   END SUBROUTINE dmi_postprocess
@@ -206,10 +209,10 @@ CONTAINS
     skip=.FALSE.
     IF (this%q_done==0) RETURN
 
-
     CALL ssomat(this%evsum(:,:,this%q_done),this%h_so(:,:,:,this%q_done),this%theta,this%phi,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results,this%ef+results%ef)
+                cell,noco,nococonv, input,fmpi, oneD,enpara,v,results,this%ef+results%ef)
     skip=.TRUE.
+
   END FUNCTION  dmi_eval
 
 

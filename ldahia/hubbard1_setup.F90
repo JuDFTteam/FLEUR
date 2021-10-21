@@ -375,7 +375,7 @@ MODULE m_hubbard1_setup
          !------------------------------
          CALL timestart("Hubbard 1: IO/Write")
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, cell, kpts, inFilename="greensf_DFT.hdf")
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, nococonv, noco, cell,&
                                GREENSF_HUBBARD_CONST, gdft, mmpmat)
          CALL closeGreensFFile(greensf_fileID)
 
@@ -383,7 +383,7 @@ MODULE m_hubbard1_setup
          !Write out correlated Green's Function
          !-------------------------------------
          CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, cell, kpts, inFilename="greensf_IMP.hdf")
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, nococonv, noco, cell,&
                               GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Hubbard 1: IO/Write")

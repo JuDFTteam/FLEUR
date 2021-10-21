@@ -85,7 +85,7 @@ CONTAINS
 
     DO n_dos=1,SIZE(banddos%dos_typelist)
     ntyp = banddos%dos_typelist(n_dos)
-       natom=sum(atoms%neq(:ntyp))
+       natom=sum(atoms%neq(:ntyp-1))
        DO nn = 1,atoms%neq(ntyp)
           natom = natom + 1
           DO lo = 1,atoms%nlo(ntyp)

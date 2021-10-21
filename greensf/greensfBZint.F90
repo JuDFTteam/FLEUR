@@ -156,7 +156,9 @@ MODULE m_greensfBZint
 
                            !Rotate into the local real frame
                            IF(noco%l_noco) THEN
-                              imSym = rotMMPmat(imSym,nococonv%alph(atomType),nococonv%beta(atomType),0.0,l,lp=lp,inverse=.TRUE.)
+                              IF (.NOT.l_intersite) THEN
+                                 imSym = rotMMPmat(imSym,nococonv%alph(atomType),nococonv%beta(atomType),0.0,l,lp=lp,inverse=.TRUE.)
+                              ENDIF
                            ELSE IF(noco%l_soc) THEN
                               imSym = rotMMPmat(imSym,nococonv%phi,nococonv%theta,0.0,l,lp=lp,inverse=.TRUE.)
                            ENDIF

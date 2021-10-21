@@ -29,8 +29,9 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)       :: cell
       TYPE(t_oneD),INTENT(IN)       :: oneD
 
-      INTEGER :: i,l,id,n,nn
+      INTEGER :: i,l,id,n,nn,qn,iLO
       INTEGER :: element_species(120)
+      INTEGER :: addLOs(atoms%ntype)
 
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
       TYPE(t_atompar):: ap(atoms%ntype)
@@ -54,6 +55,7 @@ CONTAINS
       ALLOCATE(atoms%lapw_l(atoms%ntype))
       ALLOCATE(atoms%llo(99,atoms%ntype));atoms%llo=-1!will be redone later
 
+      addLOs(:) = 0
       atoms%lapw_l=0
       atoms%speciesname=""
 
@@ -96,6 +98,10 @@ CONTAINS
          !atoms%bmu(n))=ap(n)%bmu
          !local orbitals
          atoms%nlo(n)=len_TRIM(ap(n)%lo)/2
+         IF (TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHELOs_noSC") THEN
+            addLOs(n) = 4 - atoms%nlo(n)
+         END IF
+         atoms%nlo(n) = atoms%nlo(n) + addLOs(n)
          DO i=1,atoms%nlo(n)
             DO l = 0, 3
                !Setting of llo will be redone below
@@ -130,12 +136,24 @@ CONTAINS
 
       CALL enpara%init(atoms%ntype,atoms%nlod,2,.TRUE.,atoms%nz)
       DO n=1,atoms%ntype
-         DO i=1,atoms%nlo(n)
+         DO i=1,atoms%nlo(n) - addLOs(n)
             DO l = 0, 3
                IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l
             ENDDO
          ENDDO
-         CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo)
+         CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo,addLOs)
+
+         IF (TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHELOs_noSC") THEN
+            i = 0
+            DO l = 0, 3
+               IF(ANY(atoms%llo(1:atoms%nlo(n)-addLOs(n),n).EQ.l)) CYCLE
+               qn = -(enpara%qn_el(l,n,1)+1)
+               iLO = atoms%nlo(n) - addLOs(n) + 1 + i
+               enpara%qn_ello(iLO,n,:) = qn
+               atoms%llo(iLO,n) = l
+               i = i + 1
+            END DO
+         END IF
       END DO
 
 
