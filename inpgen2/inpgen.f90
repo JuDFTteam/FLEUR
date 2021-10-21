@@ -174,6 +174,12 @@ PROGRAM inpgen
       kptsBZintegration = BZINT_METHOD_HIST
       kptsGamma = .FALSE.
 
+      CALL profile%init()
+      IF (judft_was_argument("-precise")) THEN
+         WRITE(*,*) 'NOTE: right now the "-precise" option is only a dummy that does not affect anything.'
+         CALL profile%load("precise")
+      END IF
+
       IF (judft_was_argument("-inp")) THEN
          l_kptsInitialized(:) = .FALSE.
          call read_old_inp(input,atoms,cell,stars,sym,noco,vacuum,forcetheo,&
@@ -195,8 +201,8 @@ PROGRAM inpgen
          !read the input
          l_kptsInitialized(:) = .FALSE.
          ALLOCATE (sliceplot%plot(1))
-         CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
-              kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+         CALL read_inpgen_input(profile,atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
+                                kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
          IF(input%film) sliceplot%plot(1)%zero(3) = -0.5
          IF (l_addPath) THEN
             l_check = .TRUE.
@@ -216,14 +222,6 @@ PROGRAM inpgen
          CALL judft_error("You should either specify -inp,-inp.xml or -f command line options. Check -h if unsure")
       ENDIF
       IF (.NOT.l_fullinput) THEN
-
-         CALL profile%init()
-         IF (judft_was_argument("-precise")) THEN
-            WRITE(*,*) 'NOTE: right now the "-precise" option is only a dummy that does not affect anything.'
-
-            CALL profile%load("precise")
-         END IF
-
          !First we determine the spacegoup and map the atoms to groups
          CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,cell,sym,atoms)
 

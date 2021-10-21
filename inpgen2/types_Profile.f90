@@ -4,6 +4,7 @@ MODULE m_types_profile
       REAL :: kmax
       REAL :: rmtFactor
       REAL :: lmaxFactor
+      REAL :: fermiSmearing
 
       CHARACTER(LEN=20) :: profileName
       CHARACTER(LEN=20) :: addLOSetup
@@ -28,6 +29,8 @@ MODULE m_types_profile
       this%kmax = 4.5
       this%rmtFactor = 1.0
       this%lmaxFactor = 1.0
+      this%fermiSmearing = 0.001
+      this%addLOSetup = ""
 
    END SUBROUTINE initProfile
 
@@ -41,7 +44,7 @@ MODULE m_types_profile
 
 
       INTEGER :: io_stat
-      REAL    :: kmax, rmtFactor, lmaxFactor
+      REAL    :: kmax, rmtFactor, lmaxFactor, fermiSmearing
       LOGICAL :: l_exist, l_found
 
       CHARACTER(LEN=20) :: name
@@ -49,7 +52,7 @@ MODULE m_types_profile
       CHARACTER(LEN=20) :: filename
       CHARACTER(len=8)  :: str
 
-      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup
+      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup,fermiSmearing
 
       filename = "profile.config"
 
@@ -72,6 +75,7 @@ MODULE m_types_profile
             rmtFactor = 1.0
             lmaxFactor = 1.0
             addLOSetup = ""
+            fermiSmearing = 0.001
             READ(558,profile,iostat=io_stat)
             IF (io_stat.EQ.0) THEN
                IF(TRIM(ADJUSTL(profileName)).EQ.TRIM(ADJUSTL(name))) THEN
@@ -80,6 +84,7 @@ MODULE m_types_profile
                   this%rmtFactor = rmtFactor
                   this%lmaxFactor = lmaxFactor
                   this%addLOSetup = TRIM(ADJUSTL(addLOSetup))
+                  this%fermiSmearing = fermiSmearing
                   l_found = .TRUE.
                END IF
             ELSE
