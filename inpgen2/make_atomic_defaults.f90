@@ -98,7 +98,7 @@ CONTAINS
          !atoms%bmu(n))=ap(n)%bmu
          !local orbitals
          atoms%nlo(n)=len_TRIM(ap(n)%lo)/2
-         IF (TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHELOs_noSC") THEN
+         IF ((TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHELOs_noSC").OR.(TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHDLOs_noSC")) THEN
             addLOs(n) = 4 - atoms%nlo(n)
          END IF
          atoms%nlo(n) = atoms%nlo(n) + addLOs(n)
@@ -143,12 +143,16 @@ CONTAINS
          ENDDO
          CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo,addLOs)
 
-         IF (TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHELOs_noSC") THEN
+         IF ((TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHELOs_noSC").OR.(TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHDLOs_noSC")) THEN
             i = 0
             DO l = 0, 3
                IF(ANY(atoms%llo(1:atoms%nlo(n)-addLOs(n),n).EQ.l)) CYCLE
-               qn = -(enpara%qn_el(l,n,1)+1)
                iLO = atoms%nlo(n) - addLOs(n) + 1 + i
+               qn = -(enpara%qn_el(l,n,1)+1)
+               IF(TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHDLOs_noSC") THEN
+                  qn = enpara%qn_el(l,n,1)
+                  atoms%ulo_der(iLO,n) = 2
+               END IF
                enpara%qn_ello(iLO,n,:) = qn
                atoms%llo(iLO,n) = l
                i = i + 1
