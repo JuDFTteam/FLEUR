@@ -228,10 +228,11 @@ CONTAINS
           end do
        end do
        if(iter.EQ.1) then
-          CALL chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 5, scale_distance, 'R', 'S' )
+          CALL chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, scale_distance, 'R', 'S' )
+          !CALL chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, 1E-5, 'R', 'S' )
        else
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
-          CALL chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 5, tol, 'A', 'S' )
+          CALL chase_r(hmat%data_r, hmat%matsize1, zMatTemp%data_r, eigenvalues, nev, nex, 25, tol, 'A', 'S' )
        end if
 
        ne = nev
@@ -284,6 +285,7 @@ CONTAINS
 
        if(iter.EQ.1) then
           CALL chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 5, scale_distance, 'R', 'S' )
+          !CALL chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 5, 1E-5, 'R', 'S' )
        else
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
           call chase_c(hmat%data_c, hmat%matsize1, zMatTemp%data_c, eigenvalues, nev, nex, 5, tol, 'A', 'S' )
@@ -339,6 +341,7 @@ CONTAINS
 
     REAL                                        :: t1,t2,t3,t4
 
+    CALL CPU_TIME(t1)    
     CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,info)
     CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,info)
     smat%blacsdata%blacs_desc=hmat%blacsdata%blacs_desc
@@ -395,23 +398,23 @@ CONTAINS
     IF (hmat%l_real) THEN
        IF(iter.EQ.1) THEN
           CALL CPU_TIME(t2)
-          CALL mpi_chase_r(hmat%data_r, zMatTemp%data_r, eigenvalues,  5, 1E-1, 'R', 'S' )
+          CALL mpi_chase_r(hmat%data_r, zMatTemp%data_r, eigenvalues,  25, 1E-1, 'R', 'S' )
           CALL CPU_TIME(t3)
        ELSE
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
           CALL CPU_TIME(t2)
-          CALL mpi_chase_r(hmat%data_r,  zMatTemp%data_r, eigenvalues, 5, tol, 'A', 'S' )
+          CALL mpi_chase_r(hmat%data_r,  zMatTemp%data_r, eigenvalues, 25, tol, 'A', 'S' )
           CALL CPU_TIME(t3)
        END IF
     ELSE
        IF(iter.EQ.1) THEN
           CALL CPU_TIME(t2)
-          CALL mpi_chase_c(hmat%data_c,  zMatTemp%data_c, eigenvalues,  5, 1E-1, 'R', 'S' )
+          CALL mpi_chase_c(hmat%data_c,  zMatTemp%data_c, eigenvalues,  25, 1E-1, 'R', 'S' )
           CALL CPU_TIME(t3)
        ELSE
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
           CALL CPU_TIME(t2)
-          CALL mpi_chase_c(hmat%data_c,  zMatTemp%data_c, eigenvalues,  5, tol, 'A', 'S' )
+          CALL mpi_chase_c(hmat%data_c,  zMatTemp%data_c, eigenvalues,  25, tol, 'A', 'S' )
           CALL CPU_TIME(t3)
        END IF
     ENDIF
@@ -455,7 +458,7 @@ CONTAINS
     CALL CPU_TIME(t4)
 
     IF (myid==0) THEN
-       PRINT *,"Chase Prep:",t2-t1
+       PRINT *,"Chase Prep:",t2-t1           
        PRINT *,"Chase Call:",t3-t2
        PRINT *,"Chase Post:",t4-t3
        PRINT *,"Chase Total:",t4-t1

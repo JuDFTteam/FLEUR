@@ -19,7 +19,7 @@
 #include "ChASE-MPI/impl/chase_mpidla_blaslapack_seq_inplace.hpp"
 
 #ifdef CHASE_USE_GPU
-   #include "ChASE-MPI/impl/chase_mpidla_cuda_seq.hpp"
+  #include "ChASE-MPI/impl/chase_mpidla_cuda_seq.hpp"
   #include "ChASE-MPI/impl/chase_mpidla_mgpu.hpp"
 #endif
 
@@ -112,13 +112,13 @@ template <typename T>
 void call_chase(T* H, int* N, T* V, Base<T>* ritzv, int* nev, int* nex,
                 int* deg, double* tol, char* mode, char* opt) {
 
-//#ifdef CHASE_USE_GPU	
-//   typedef ChaseMpi<ChaseMpiDLACudaSeq, T> SEQ_CHASE;
-//  std::cerr << "entering chase-seq-gpu" << std::endl;
-//#else
+#ifdef CHASE_USE_GPU	
+   typedef ChaseMpi<ChaseMpiDLACudaSeq, T> SEQ_CHASE;
+  std::cerr << "entering chase-seq-gpu" << std::endl;
+#else
   typedef ChaseMpi<ChaseMpiDLABlaslapackSeq, T> SEQ_CHASE;
   std::cerr << "entering chase-seq-cpu" << std::endl;
-//#endif
+#endif
 
   std::mt19937 gen(2342.0);
   std::normal_distribution<> d;
@@ -149,13 +149,13 @@ void chase_setup(MPI_Fint* fcomm, int* N, int *mbsize, int *nbsize, int* nev, in
 template <typename T>
 void chase_solve(T* H, T* V, Base<T>* ritzv, int* deg, double* tol, char* mode,
                  char* opt) {
-//#ifdef CHASE_USE_GPU
-//  typedef ChaseMpi<ChaseMpiDLAMultiGPU, T> CHASE;	
-//  std::cerr << "entering chase-distributed-gpu" << std::endl;
-//#else
+#ifdef CHASE_USE_GPU
+  typedef ChaseMpi<ChaseMpiDLAMultiGPU, T> CHASE;	
+  std::cerr << "entering chase-distributed-gpu" << std::endl;
+#else
   typedef ChaseMpi<ChaseMpiDLABlaslapack, T> CHASE;
   std::cerr << "entering chase-distributed-cpu" << std::endl;  
-//#endif
+#endif
 
   std::mt19937 gen(2342.0);
   std::normal_distribution<> d;
