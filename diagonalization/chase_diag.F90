@@ -33,16 +33,18 @@ IMPLICIT NONE
 
   !MPI
   INTERFACE
-     SUBROUTINE mpi_dchase_init( mpi_comm, n, nev, nex, xoff,yoff,xlen,ylen,npr,npc,myrow,mycol) BIND( c, name = 'dchase_init' )
-       USE, INTRINSIC :: iso_c_binding
-       INTEGER(c_int) :: mpi_comm, n, nev, nex, xoff,yoff,xlen,ylen,myrow,mycol,npr,npc
+     SUBROUTINE mpi_dchase_init( mpi_comm, n, mbsize, nbsize, nev, nex, dim0, dim1, grid_major, irsrc, icsrc) BIND( c, name = 'dchase_init' )
+       USE, INTRINSIC                :: iso_c_binding
+       INTEGER(c_int)                :: mpi_comm, n, mbsize, nbsize, nev, nex, dim0, dim1, irsrc, icsrc
+       character(len=1,kind=c_char)  :: grid_major
      END SUBROUTINE mpi_dchase_init
   END INTERFACE
 
   INTERFACE
-     SUBROUTINE mpi_zchase_init( mpi_comm, n, nev, nex, xoff,yoff,xlen,ylen,npr,npc,myrow,mycol) BIND( c, name = 'zchase_init' )
-       USE, INTRINSIC :: iso_c_binding
-       INTEGER(c_int) :: mpi_comm, n, nev, nex, xoff,yoff,xlen,ylen,myrow,mycol,npr,npc
+     SUBROUTINE mpi_zchase_init( mpi_comm, n, mbsize, nbsize, nev, nex, dim0, dim1, grid_major, irsrc, icsrc) BIND( c, name = 'zchase_init' )
+       USE, INTRINSIC                :: iso_c_binding
+       INTEGER(c_int)                :: mpi_comm, n, mbsize, nbsize, nev, nex, dim0, dim1, irsrc, icsrc
+       character(len=1,kind=c_char)  :: grid_major
      END SUBROUTINE mpi_zchase_init
   END INTERFACE
 
@@ -55,7 +57,6 @@ IMPLICIT NONE
        CHARACTER(len=1,kind=c_char)  :: mode, opt
      END SUBROUTINE mpi_chase_r
   END INTERFACE
-
 
   INTERFACE
      SUBROUTINE mpi_chase_c(h, v, ritzv, deg, tol, mode, opt ) BIND( c, name = 'zchase_solve' )
@@ -88,7 +89,7 @@ CONTAINS
   END SUBROUTINE chase_distance
 
 #ifdef CPP_CHASE
-    SUBROUTINE init_chase(mpi,input,atoms,kpts,noco,l_real)
+    SUBROUTINE init_chase(mpi,input,atoms,kpts,noco,l_real, l_olap)
     USE m_types_mpimat
     USE m_types_setup
     USE m_types_mpi
@@ -104,7 +105,7 @@ CONTAINS
     TYPE(t_atoms),             INTENT(IN)    :: atoms
     TYPE(t_kpts),              INTENT(IN)    :: kpts
     TYPE(t_noco),              INTENT(IN)    :: noco
-    LOGICAL,                   INTENT(IN)    :: l_real
+    LOGICAL,                   INTENT(IN)    :: l_real, l_olap
 
     INTEGER             :: nevd, nexd
     CHARACTER(len=1000) :: arg
@@ -120,7 +121,7 @@ CONTAINS
        nevd = min(input%neig,lapw%dim_nvd()+atoms%nlotot)
        nexd = min(max(nevd/4, 45),lapw%dim_nvd()+atoms%nlotot-nevd) !dimensioning for workspace
        chase_eig_id=open_eig(mpi%mpi_comm,lapw%dim_nbasfcn(),nevd+nexd,kpts%nkpt,input%jspins,&
-                             noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
+                             noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,l_olap, mpi%n_size)
     END IF
   END SUBROUTINE init_chase
 #endif
@@ -330,17 +331,14 @@ CONTAINS
     CLASS(t_mat), ALLOCATABLE, INTENT(OUT)      :: zmat
     REAL,                      INTENT(OUT)      :: eig(:)
 
-    INTEGER            :: i, j, nev, nex, nbands,xoff,yoff,xlen,ylen,ierr,nb_x,nb_y
-    INTEGER            :: info,myid,np
-    REAL               :: scale !scaling of eigenvalues from scalapack
+    INTEGER                                     ::nev, nex, i, j, nbands
+    INTEGER                                     :: info,myid,np
+    REAL                                        :: scale !scaling of eigenvalues from scalapack
+    REAL,                      ALLOCATABLE      :: eigenvalues(:)
+    TYPE(t_mat)                                 :: zMatTemp
 
-    TYPE(t_mat)  :: zMatTemp
-    TYPE(t_mpimat)                              :: chase_mat
-    REAL,                          ALLOCATABLE  :: eigenvalues(:)
+    REAL                                        :: t1,t2,t3,t4
 
-    REAL :: t1,t2,t3,t4
-
-    CALL CPU_TIME(t1)
     CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,info)
     CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,info)
     smat%blacsdata%blacs_desc=hmat%blacsdata%blacs_desc
@@ -374,38 +372,46 @@ CONTAINS
        ENDIF
     END IF
 
+    !Init ChASE
     nev = MIN(ne,hmat%global_size1)
-    nex = min(max(nev/4, 45), hmat%global_size1-nev) !dimensioning for workspace
+    nex = min(max(nev/4, 45), hmat%global_size1-nev)
+    IF (hmat%l_real) THEN
+       CALL mpi_dchase_init(hmat%blacsdata%mpi_com,hmat%global_size1, hmat%blacsdata%blacs_desc(5), hmat%blacsdata%blacs_desc(6), &
+       nev, nex, hmat%blacsdata%nprow, hmat%blacsdata%npcol,'C', &
+       hmat%blacsdata%blacs_desc(7), hmat%blacsdata%blacs_desc(8))
+    ELSE
+       CALL mpi_zchase_init(hmat%blacsdata%mpi_com,hmat%global_size1, hmat%blacsdata%blacs_desc(5), hmat%blacsdata%blacs_desc(6), &
+       nev, nex, hmat%blacsdata%nprow, hmat%blacsdata%npcol,'C', &
+       hmat%blacsdata%blacs_desc(7), hmat%blacsdata%blacs_desc(8))
+    ENDIF
 
     CALL hmat%u2l()
-    CALL priv_init_chasempimat(hmat,chase_mat,nev,nex)
 
-    !CALL chase_mat%u2l()
     ALLOCATE(eigenvalues(nev+nex))
     eigenvalues = 0.0
-    !ALLOCATE(t_mpimat::zmatTemp)
+
     CALL zMatTemp%init(hmat%l_real,hmat%global_size1,nev+nex,MPI_COMM_SELF,.TRUE.) !Generate a pseudo-distributed matrix
 
     IF (hmat%l_real) THEN
        IF(iter.EQ.1) THEN
           CALL CPU_TIME(t2)
-          CALL mpi_chase_r(chase_mat%data_r, zMatTemp%data_r, eigenvalues,  5, 1E-1, 'R', 'S' )
+          CALL mpi_chase_r(hmat%data_r, zMatTemp%data_r, eigenvalues,  5, 1E-1, 'R', 'S' )
           CALL CPU_TIME(t3)
        ELSE
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
           CALL CPU_TIME(t2)
-          CALL mpi_chase_r(chase_mat%data_r,  zMatTemp%data_r, eigenvalues, 5, tol, 'A', 'S' )
+          CALL mpi_chase_r(hmat%data_r,  zMatTemp%data_r, eigenvalues, 5, tol, 'A', 'S' )
           CALL CPU_TIME(t3)
        END IF
     ELSE
        IF(iter.EQ.1) THEN
           CALL CPU_TIME(t2)
-          CALL mpi_chase_c(chase_mat%data_c,  zMatTemp%data_c, eigenvalues,  5, 1E-1, 'R', 'S' )
+          CALL mpi_chase_c(hmat%data_c,  zMatTemp%data_c, eigenvalues,  5, 1E-1, 'R', 'S' )
           CALL CPU_TIME(t3)
        ELSE
           CALL read_eig(chase_eig_id,ikpt,jsp,neig=nbands,eig=eigenvalues,zmat=zMatTemp)
           CALL CPU_TIME(t2)
-          CALL mpi_chase_c(chase_mat%data_c,  zMatTemp%data_c, eigenvalues,  5, tol, 'A', 'S' )
+          CALL mpi_chase_c(hmat%data_c,  zMatTemp%data_c, eigenvalues,  5, tol, 'A', 'S' )
           CALL CPU_TIME(t3)
        END IF
     ENDIF
@@ -425,6 +431,7 @@ CONTAINS
        CALL pztrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_c,1,1,smat%blacsdata%blacs_desc,&
             hmat%data_c,1,1,smat%blacsdata%blacs_desc,info)
     END IF
+
     IF (info.NE.0) THEN
        WRITE (oUnit,*) 'Error in p?trtrs: info =',info
        CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
@@ -453,90 +460,8 @@ CONTAINS
        PRINT *,"Chase Post:",t4-t3
        PRINT *,"Chase Total:",t4-t1
     ENDIF
-
+    
   END SUBROUTINE chase_diag_MPI
-
-  SUBROUTINE priv_init_chasempimat(hmat,mat,nev,nex)
-    USE m_types_mpimat
-    USE m_types_mat
-    USE mpi
-    IMPLICIT NONE
-    TYPE(t_mpimat),INTENT(INOUT)::hmat,mat
-    INTEGER,INTENT(IN)          :: nev,nex
-    INTEGER::nbc,nbr
-
-    INTEGER     :: myrow,mycol
-    INTEGER     :: npblacs,np,myid
-    INTEGER     :: rowlen,collen,rowoff,coloff
-    INTEGER     :: k,i,j,l
-    INTEGER     :: ierr
-
-    INTEGER,ALLOCATABLE :: iblacsnums(:),ihelp(:),iusermap(:,:)
-
-    EXTERNAL descinit, blacs_get
-    EXTERNAL blacs_pinfo, blacs_gridinit
-    INTEGER,EXTERNAL::numroc,indxl2g
-
-    ALLOCATE(mat%blacsdata)
-    mat%blacsdata%mpi_com=hmat%blacsdata%mpi_com
-    mat%global_size1=hmat%global_size1
-    mat%global_size2=hmat%global_size1
-    mat%l_real=hmat%l_real
-
-    !Determine rank and no of processors
-    CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,ierr)
-    CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,ierr)
-
-    !Init ChASE
-    IF (mat%l_real) THEN
-       CALL mpi_dchase_init(hmat%blacsdata%mpi_com,mat%global_size1, nev, nex, rowoff,coloff,rowlen,collen,&
-            mat%blacsdata%nprow,mat%blacsdata%npcol,myrow,mycol)
-    ELSE
-       CALL mpi_zchase_init(hmat%blacsdata%mpi_com,mat%global_size1, nev, nex, rowoff,coloff,rowlen,collen,&
-            mat%blacsdata%nprow,mat%blacsdata%npcol,myrow,mycol)
-    ENDIF
-
-    !Determine block-sizes
-    CALL MPI_ALLREDUCE(rowlen,nbr,1,MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
-    CALL MPI_ALLREDUCE(collen,nbc,1,MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
-
-
-    ALLOCATE(iusermap(mat%blacsdata%nprow,mat%blacsdata%npcol))
-    iusermap=-2
-    !Get BLACS ranks for all MPI ranks
-    CALL BLACS_PINFO(iusermap(myrow+1,mycol+1),npblacs)  ! iamblacs = local process rank (e.g. myid)
-    CALL MPI_ALLREDUCE(MPI_IN_PLACE, iusermap, np,MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
-    !Get the Blacs default context
-    CALL BLACS_GET(0,0,mat%blacsdata%blacs_desc(2))
-    ! Create the Grid
-    CALL BLACS_GRIDMAP(mat%blacsdata%blacs_desc(2),iusermap,mat%blacsdata%nprow,mat%blacsdata%nprow,mat%blacsdata%npcol)
-
-
-    !Now create the matrix
-    mat%matsize1=numroc(mat%global_size1,nbr,myrow,0,mat%blacsdata%nprow)
-    mat%matsize2=numroc(mat%global_size1,nbc,mycol,0,mat%blacsdata%npcol)
-    IF (mat%l_real) THEN
-       ALLOCATE(mat%data_r(mat%matsize1,mat%matsize2))
-    ELSE
-       ALLOCATE(mat%data_c(mat%matsize1,mat%matsize2))
-    END IF
-    !Check for consistency
-    IF (mat%matsize1.NE.rowlen.OR.mat%matsize2.NE.collen) THEN
-       PRINT *,myid,"R:",mat%matsize1,rowlen,nbr
-       PRINT *,myid,"C:",mat%matsize2,collen,nbc
-       CALL judft_error("Distribution failed for chase")
-    ENDIF
-
-    !Create blacs descriptor for chase matrix
-    CALL descinit(mat%blacsdata%blacs_desc,mat%global_size1,mat%global_size2,nbr,nbc,0,0,mat%blacsdata%blacs_desc(2),mat%matsize1,ierr)
-    IF (ierr /=0 ) CALL judft_error('Creation of BLACS descriptor failed')
-
-    !Copy data from hmat
-    CALL mat%copy(hmat,1,1)
-
-
-
-  END SUBROUTINE priv_init_chasempimat
 
 
 #endif

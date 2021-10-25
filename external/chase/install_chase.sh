@@ -3,7 +3,8 @@
 cd src
 if [ ! -r ChASE ]
 then 
-     git clone https://github.com/SimLabQuantumMaterials/ChASE.git
+     git clone https://github.com/ChASE-library/ChASE
+#     mv ChASE_archived ChASE
 fi
 cd ..
 
@@ -14,10 +15,11 @@ then
   mkdir build
   cd build
   cmake ../src
-  make
+  make install
   cd ..
 fi
 
 #Store path to library for FLEUR
-export FLEUR_LIBDIR="$FLEUR_LIBDIR $PWD/build/FLEUR"
+#export FLEUR_LIBDIR="$FLEUR_LIBDIR $PWD/build/FLEUR"
+export FLEUR_LIBDIR="$FLEUR_LIBDIR $PWD/build/install/lib64"
 

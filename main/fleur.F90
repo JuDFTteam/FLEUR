@@ -211,7 +211,7 @@ CONTAINS
 !Rotate cdn to local frame if specified.
 
 #ifdef CPP_CHASE
-      CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
+      CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real, l_olap)
 #endif
       ! Open/allocate eigenvector storage (end)
 

@@ -1,13 +1,20 @@
 #First check if we can compile with ChASE
-try_compile(FLEUR_USE_CHASE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ChASE.f90 LINK_LIBRARIES ${FLEUR_LIBRARIES})
+
+try_compile(FLEUR_USE_CHASE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ChASE.f90 LINK_LIBRARIES ${FLEUR_LIBRARIES} OUTPUT_VARIABLE TRY_COMPILE_OUTPUT)
 
 if (NOT FLEUR_USE_CHASE)
 
-   set(TEST_LIBRARIES ${FLEUR_LIBRARIES} -lchase_fleur -lstdc++ )
+   set(TEST_LIBRARIES ${FLEUR_LIBRARIES} -lchase_fleur -lstdc++)
    try_compile(FLEUR_USE_CHASE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ChASE.f90 LINK_LIBRARIES ${TEST_LIBRARIES})
-
    if (FLEUR_USE_CHASE)
       set(FLEUR_LIBRARIES ${TEST_LIBRARIES})
+   else()
+      set(TEST_LIBRARIES ${FLEUR_LIBRARIES} -lchase_fleur -lchase_cuda -lstdc++)
+      try_compile(FLEUR_USE_CHASE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ChASE.f90 LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE TRY_COMPILE_OUTPUT)
+      message(WARNING ${TRY_COMPILE_OUTPUT})
+      if (FLEUR_USE_CHASE)
+        set(FLEUR_LIBRARIES ${TEST_LIBRARIES})
+      endif()
    endif()
 endif()
 
