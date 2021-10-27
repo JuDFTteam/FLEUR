@@ -25,11 +25,11 @@ MODULE m_dftUPotential
       LOGICAL, OPTIONAL,INTENT(IN)     :: addDoubleCounting
 
       INTEGER :: m,mp,q,p,ispin,jspin,spin_dim
-      REAL    :: spin_deg,u_htr,j_htr,f0,f2,f4,f6
+      REAL    :: spin_deg,u_htr,j_htr,f0,f2,f4,f6,energy_contribution,total_charge
       COMPLEX :: vu
       LOGICAL :: doubleCountingArg
       REAL,    ALLOCATABLE :: umatrix(:,:,:,:)
-      COMPLEX,    ALLOCATABLE :: Vdc(:,:,:)
+      COMPLEX, ALLOCATABLE :: Vdc(:,:,:)
 
       doubleCountingArg = .TRUE.
       IF(PRESENT(addDoubleCounting)) doubleCountingArg = addDoubleCounting
@@ -50,6 +50,7 @@ MODULE m_dftUPotential
 
       ALLOCATE ( umatrix(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
                          -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), source=0.0 )
+      ALLOCATE(Vdc(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, SIZE(density,3)), source=cmplx_0)
       CALL umtx(ldau,f0,f2,f4,f6,umatrix)
 
       u_htr = f0/hartree_to_ev_const
@@ -112,26 +113,26 @@ MODULE m_dftUPotential
       !          2  ---   m,m'     m,m'    m,m'          2           2       !
       !             m,m'                                                     !
       !----------------------------------------------------------------------+
-      IF(PRESENT(ldaUEnergy)) THEN
-         ldaUEnergy = 0.0
-         DO ispin = 1,spin_dim
-            DO m = -ldau%l,ldau%l
-               DO mp = -ldau%l,ldau%l
-                  IF(ispin < 3) THEN
-                     ldaUEnergy = ldaUEnergy + REAL(potential(m,mp,ispin)*density(m,mp,ispin))
-                  ELSE
-                     DO p = -ldau%l,ldau%l
-                        DO q = -ldau%l,ldau%l
-                           ldaUEnergy = ldaUEnergy + umatrix(m,p,q,mp) *&
-                                         ( density(m,mp,ispin)*conjg(density(q,p,ispin)) &
-                                         + conjg(density(mp,m,ispin))*density(p,q,ispin) )
-                        ENDDO
+
+      energy_contribution = 0.0
+      DO ispin = 1,spin_dim
+         DO m = -ldau%l,ldau%l
+            DO mp = -ldau%l,ldau%l
+               IF(ispin < 3) THEN
+                  energy_contribution = energy_contribution + REAL(potential(m,mp,ispin)*density(m,mp,ispin))
+               ELSE
+                  DO p = -ldau%l,ldau%l
+                     DO q = -ldau%l,ldau%l
+                        energy_contribution = energy_contribution + umatrix(m,p,q,mp) *&
+                                       REAL( density(m,mp,ispin)*conjg(density(q,p,ispin)) &
+                                       + conjg(density(mp,m,ispin))*density(p,q,ispin) )
                      ENDDO
-                  ENDIF
-               END DO
+                  ENDDO
+               ENDIF
             END DO
          END DO
-      ENDIF
+      END DO
+      energy_contribution = energy_contribution/2.0
 
       IF(doubleCountingArg) THEN
 
@@ -139,7 +140,21 @@ MODULE m_dftUPotential
                                  .FALSE.,.FALSE.,0.0)
          potential = potential - Vdc
 
+         total_charge = 0.0
+         DO ispin = 1, MIN(2,spin_dim)
+            DO m = -ldau%l, ldau%l
+               total_charge = total_charge +  REAL(density(m,m,ispin))
+            ENDDO
+         ENDDO
+         energy_contribution = energy_contribution - (u_htr-j_htr)/2.0 * total_charge
+
+         energy_contribution = energy_contribution -  &
+                                 doubleCountingEnergy(density, ldau, u_htr, j_htr, umatrix, l_spinoffd,&
+                                                      .FALSE.,.FALSE.,0.0)
+
       ENDIF
+      energy_contribution = energy_contribution * atoms%neq(ldau%atomType)
+      IF(PRESENT(ldaUEnergy)) ldaUEnergy = ldaUEnergy + energy_contribution
 
    END SUBROUTINE dftUPotential
 
