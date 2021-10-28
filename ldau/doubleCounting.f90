@@ -104,7 +104,6 @@ MODULE m_doubleCounting
             ENDDO
          ENDDO
       ENDIF
-      WRITE(*,*) Vdc
       
 
 !       IF(PRESENT(l_write)) THEN
