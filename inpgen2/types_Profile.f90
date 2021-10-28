@@ -7,7 +7,7 @@ MODULE m_types_profile
       REAL :: fermiSmearing
 
       CHARACTER(LEN=20) :: profileName
-      CHARACTER(LEN=20) :: addLOSetup
+      CHARACTER(LEN=50) :: addLOSetup
 
       CONTAINS
 
@@ -48,7 +48,7 @@ MODULE m_types_profile
       LOGICAL :: l_exist, l_found
 
       CHARACTER(LEN=20) :: name
-      CHARACTER(LEN=20) :: addLOSetup
+      CHARACTER(LEN=50) :: addLOSetup
       CHARACTER(LEN=20) :: filename
       CHARACTER(len=8)  :: str
 

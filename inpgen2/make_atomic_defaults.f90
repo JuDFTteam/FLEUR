@@ -32,6 +32,7 @@ CONTAINS
       INTEGER :: i,l,id,n,nn,qn,iLO
       INTEGER :: element_species(120)
       INTEGER :: addLOs(atoms%ntype)
+      INTEGER :: addHDSCLOs(atoms%ntype)
 
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
       TYPE(t_atompar):: ap(atoms%ntype)
@@ -56,6 +57,7 @@ CONTAINS
       ALLOCATE(atoms%llo(99,atoms%ntype));atoms%llo=-1!will be redone later
 
       addLOs(:) = 0
+      addHDSCLOs(:) = 0
       atoms%lapw_l=0
       atoms%speciesname=""
 
@@ -98,10 +100,13 @@ CONTAINS
          !atoms%bmu(n))=ap(n)%bmu
          !local orbitals
          atoms%nlo(n)=len_TRIM(ap(n)%lo)/2
-         IF ((TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHELOs_noSC").OR.(TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHDLOs_noSC")) THEN
+         IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
             addLOs(n) = 4 - atoms%nlo(n)
          END IF
-         atoms%nlo(n) = atoms%nlo(n) + addLOs(n)
+         IF (INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDSCLOs").NE.0) THEN
+            addHDSCLOs(n) = atoms%nlo(n)
+         END IF
+         atoms%nlo(n) = atoms%nlo(n) + addLOs(n) + addHDSCLOs(n)
          DO i=1,atoms%nlo(n)
             DO l = 0, 3
                !Setting of llo will be redone below
@@ -136,20 +141,27 @@ CONTAINS
 
       CALL enpara%init(atoms%ntype,atoms%nlod,2,.TRUE.,atoms%nz)
       DO n=1,atoms%ntype
-         DO i=1,atoms%nlo(n) - addLOs(n)
+         DO i=1,atoms%nlo(n) - addLOs(n) - addHDSCLOs(n)
             DO l = 0, 3
                IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l
             ENDDO
          ENDDO
          CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo,addLOs)
 
-         IF ((TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHELOs_noSC").OR.(TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHDLOs_noSC")) THEN
+         DO i = 1, addHDSCLOs(n)
+            iLO = atoms%nlo(n) - addLOs(n) - addHDSCLOs(n) + i
+            atoms%llo(iLO,n) = atoms%llo(i,n)
+            atoms%ulo_der(iLO,n) = 1
+            enpara%qn_ello(iLO,n,:) = enpara%qn_ello(i,n,1)
+         END DO
+
+         IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
             i = 0
             DO l = 0, 3
                IF(ANY(atoms%llo(1:atoms%nlo(n)-addLOs(n),n).EQ.l)) CYCLE
                iLO = atoms%nlo(n) - addLOs(n) + 1 + i
                qn = -(enpara%qn_el(l,n,1)+1)
-               IF(TRIM(ADJUSTL(profile%addLOSetup)).EQ."addHDLOs_noSC") THEN
+               IF(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0) THEN
                   qn = enpara%qn_el(l,n,1)
                   atoms%ulo_der(iLO,n) = 2
                END IF
