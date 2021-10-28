@@ -7,12 +7,13 @@ MODULE m_doubleCounting
 
    USE m_constants
    USE m_types
+   USE m_coulombPotential
 
    IMPLICIT NONE
 
    CONTAINS
 
-   FUNCTION doubleCountingPot(density, ldau, U,J, umatrix, l_spinoffd, l_mix,l_spinAvg, alpha, l_write) RESULT(Vdc)
+   FUNCTION doubleCountingPot(density, ldau, U,J, l_spinoffd, l_mix,l_spinAvg, alpha, l_write) RESULT(Vdc)
 
       !------------------------------------------------------
       ! Calculate the Double Counting Correction in either
@@ -23,7 +24,6 @@ MODULE m_doubleCounting
 
       COMPLEX,             INTENT(IN)  :: density(-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_utype),       INTENT(IN)  :: ldau       !LDA+U information
-      REAL,                INTENT(IN)  :: umatrix(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:)
       REAL,                INTENT(IN)  :: U, J
       LOGICAL,             INTENT(IN)  :: l_spinoffd
       LOGICAL,             INTENT(IN)  :: l_mix      !Mix between FLL and AMF
@@ -34,7 +34,7 @@ MODULE m_doubleCounting
       COMPLEX :: Vdc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(density,3))
 
       COMPLEX, ALLOCATABLE :: modified_density(:,:,:)
-      REAL :: charge, mag(3)
+      REAL :: charge, mag(3), tmp, D
       COMPLEX :: sigma(2,2,3)
       INTEGER :: spin_dim, ispin,m, spin1,spin2,mp
 
@@ -66,25 +66,27 @@ MODULE m_doubleCounting
 
       Vdc = cmplx_0
       IF(ldau%l_amf) THEN
-         ! ALLOCATE(modified_density(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, SIZE(density,3)), source=cmplx_0)
-         ! modified_density = density
+         ALLOCATE(modified_density(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, SIZE(density,3)), source=cmplx_0)
+         modified_density = cmplx_0
+         D = real(2*(2*ldau%l+1))
 
-         ! DO ispin = 1, spin_dim
+         DO ispin = 1, spin_dim
 
-         !    IF(ispin==3) THEN
-         !       spin1 = 2
-         !       spin2 = 1
-         !    ELSE
-         !       spin1 = ispin
-         !       spin2 = ispin
-         !    ENDIF
+            IF(ispin==3) THEN
+               spin1 = 2
+               spin2 = 1
+            ELSE
+               spin1 = ispin
+               spin2 = ispin
+            ENDIF
          
-         !    DO m = -ldau%l, ldau%l
+            DO m = -ldau%l, ldau%l
+               IF(spin1==spin2) modified_density(m,m,ispin) = charge/D
+               modified_density(m,m,ispin) = modified_density(m,m,ispin) + dot_product(mag,sigma(spin1,spin2,:))/D
+            ENDDO
 
-         !    ENDDO
-
-         ! ENDDO
-
+         ENDDO
+         call coulombPotential(modified_density,ldau, MIN(2,SIZE(density,3)), l_spinoffd,Vdc,tmp)
       ELSE
          DO ispin = 1, spin_dim
 
@@ -137,7 +139,7 @@ MODULE m_doubleCounting
    END FUNCTION doubleCountingPot
 
 
-   REAL FUNCTION doubleCountingEnergy(density, ldau, U,J, umatrix, l_spinoffd, l_mix,l_spinAvg, alpha, l_write)
+   REAL FUNCTION doubleCountingEnergy(density, ldau, U,J, l_spinoffd, l_mix,l_spinAvg, alpha, l_write)
 
       !------------------------------------------------------------
       ! Calculate the Double Counting Correction Energy in either
@@ -146,7 +148,6 @@ MODULE m_doubleCounting
 
       COMPLEX,             INTENT(IN)  :: density(-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_utype),       INTENT(IN)  :: ldau       !LDA+U information
-      REAL,                INTENT(IN)  :: umatrix(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:)
       REAL,                INTENT(IN)  :: U, J
       LOGICAL,             INTENT(IN)  :: l_spinoffd
       LOGICAL,             INTENT(IN)  :: l_mix      !Mix between FLL and AMF
@@ -154,8 +155,19 @@ MODULE m_doubleCounting
       REAL,                INTENT(IN)  :: alpha
       LOGICAL, OPTIONAL,   INTENT(IN)  :: l_write
 
-      REAL :: charge, mag(3)
+      REAL :: charge, mag(3), D
       INTEGER :: spin_dim, ispin,m, spin1,spin2
+      COMPLEX :: tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(density,3))
+      COMPLEX, ALLOCATABLE :: modified_density(:,:,:)
+      COMPLEX :: sigma(2,2,3)
+
+      sigma = cmplx_0
+      sigma(1,2,1)=CMPLX(1.0,0.0)
+      sigma(2,1,1)=CMPLX(1.0,0.0)
+      sigma(1,2,2)=CMPLX(0.0,-1.0)
+      sigma(2,1,2)=CMPLX(0.0,1.0)
+      sigma(1,1,3)=CMPLX(1.0,0.0)
+      sigma(2,2,3)=CMPLX(-1.0,0.0)
 
       spin_dim = SIZE(density,3)
       IF(.NOT.l_spinoffd) spin_dim = MIN(2,spin_dim)
@@ -178,7 +190,27 @@ MODULE m_doubleCounting
 
       doubleCountingEnergy = 0.0
       IF(ldau%l_amf) THEN
-         !Edc_AMF = U*nup*ndn + (U-J) *l*(nup**2+ndn**2)/(2.0*l+1)
+         ALLOCATE(modified_density(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, SIZE(density,3)), source=cmplx_0)
+         modified_density = cmplx_0
+         D = real(2*(2*ldau%l+1))
+
+         DO ispin = 1, spin_dim
+
+            IF(ispin==3) THEN
+               spin1 = 2
+               spin2 = 1
+            ELSE
+               spin1 = ispin
+               spin2 = ispin
+            ENDIF
+         
+            DO m = -ldau%l, ldau%l
+               IF(spin1==spin2) modified_density(m,m,ispin) = charge/D
+               modified_density(m,m,ispin) = modified_density(m,m,ispin) + dot_product(mag,sigma(spin1,spin2,:))/D
+            ENDDO
+
+         ENDDO
+         call coulombPotential(modified_density,ldau, MIN(2,SIZE(density,3)), l_spinoffd,tmp,doubleCountingEnergy)
       ELSE
          doubleCountingEnergy = U/2*charge*(charge-1) -J/2*charge*(charge/2-1)-J*dot_product(mag,mag)/4
       ENDIF

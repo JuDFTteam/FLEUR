@@ -7,6 +7,7 @@ ldau/uj2f.f90
 ldau/umtx.f90
 ldau/doubleCounting.f90
 ldau/dftUPotential.f90
+ldau/coulombPotential.f90
 # ldau/v_mmp.f90
 # ldau/v_mmp21.f90
 )

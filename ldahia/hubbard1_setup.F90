@@ -4,7 +4,6 @@ MODULE m_hubbard1_setup
    USE m_types
    USE m_constants
    USE m_uj2f
-   USE m_umtx
    USE m_doubleCounting
    USE m_hubbard1Distance
    USE m_polangle
@@ -71,7 +70,6 @@ MODULE m_hubbard1_setup
       REAL    :: f4(atoms%n_hia),f6(atoms%n_hia)
       REAL    :: diffalpha(atoms%n_hia), diffbeta(atoms%n_hia)
       REAL    :: occDFT(atoms%n_hia,input%jspins)
-      REAL,    ALLOCATABLE :: umatrix(:,:,:,:)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
       COMPLEX :: dcpot(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3)
       COMPLEX, ALLOCATABLE :: e(:)
@@ -109,10 +107,6 @@ MODULE m_hubbard1_setup
             J = atoms%lda_u(atoms%n_u+i_hia)%J
             l_amf = atoms%lda_u(atoms%n_u+i_hia)%l_amf
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-
-            ALLOCATE ( umatrix(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                               -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), source=0.0 )
-            CALL umtx(atoms%lda_u(atoms%n_u+i_hia),f0(i_hia),f2(i_hia),f4(i_hia),f6(i_hia),umatrix)
 
             IF(ALL(ABS(gdft(i_hia)%gmmpMat).LT.1e-12)) THEN
                CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
@@ -195,7 +189,7 @@ MODULE m_hubbard1_setup
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
             IF(l_mix) alpha_mix = doubleCountingMixFactor(mmpMat(:,:,i_hia,:), l, SUM(occDFT(i_hia,:)))
-            dcpot = doubleCountingPot(mmpMat(:,:,i_hia,:),atoms%lda_u(atoms%n_u+i_hia), U,J, umatrix,any(noco%l_unrestrictMT).OR.input%ldauSpinoffd,l_mix,hub1data%l_performSpinavg,&
+            dcpot = doubleCountingPot(mmpMat(:,:,i_hia,:),atoms%lda_u(atoms%n_u+i_hia), U,J,any(noco%l_unrestrictMT).OR.input%ldauSpinoffd,l_mix,hub1data%l_performSpinavg,&
                                       alpha_mix, l_write=fmpi%irank==0)
             
             mu_dc = 0.0

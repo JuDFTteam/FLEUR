@@ -55,9 +55,10 @@ MODULE m_usetup
 
          results%e_ldau = 0.0
          DO i_u = 1, n_u
-            CALL dftUPotential(n_mmp(:,:,i_u,:), atoms, atoms%lda_u(i_u), input%jspins, &
+            CALL dftUPotential(n_mmp(:,:,i_u,:), atoms%lda_u(i_u), input%jspins,&
+                               atoms%neq(atoms%lda_u(i_u)%atomType),&
                                any(noco%l_unrestrictMT).OR.input%ldauSpinoffd, &
-                               pot%mmpMat(:,:,i_u,:), ldaUEnergy=results%e_ldau)
+                               pot%mmpMat(:,:,i_u,:), results%e_ldau)
          ENDDO
 
          IF (mpi%irank.EQ.0) THEN
