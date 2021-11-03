@@ -66,7 +66,10 @@ MODULE m_doubleCounting
          charge = charge + mag_m(0)
          mag = mag + mag_m(1:)
       ENDDO
-      IF(spin_dim == 1) mag = 0.0
+      IF(spin_dim == 1) then
+         charge=charge/2.0
+         mag = 0.0
+      ENDIF
 
       Vdc = cmplx_0
       IF(ldau%l_amf) THEN
@@ -113,7 +116,7 @@ MODULE m_doubleCounting
       IF(PRESENT(l_write)) THEN
          IF(l_write) THEN
             WRITE(oUnit,"(/,A)") 'Double counting chemical potential:'
-            IF(l_amf) THEN
+            IF(ldau%l_amf) THEN
                WRITE(oUnit,9040) 'AMF: ','spin-up','spin-dn','(up+dn)/2','up-dn'
             ELSE
                WRITE(oUnit,9040) 'FLL: ','spin-up','spin-dn','(up+dn)/2','up-dn'
@@ -131,7 +134,8 @@ MODULE m_doubleCounting
       ENDIF
 
       IF(l_spinAvg) THEN
-         Vdc = (Vdc(:,:,1)+Vdc(:,:,min(2,spin_dim)))/2.0
+         Vdc(:,:,1) = (Vdc(:,:,1)+Vdc(:,:,min(2,spin_dim)))/2.0
+         if(spin_dim>1) Vdc(:,:,2) = Vdc(:,:,1)
          if(spin_dim==3) Vdc(:,:,3) = cmplx_0 !Is this right?
       ENDIF
 
@@ -188,7 +192,10 @@ MODULE m_doubleCounting
          mag = mag + mag_m(1:)
       ENDDO
 
-      IF(spin_dim == 1) mag = 0.0
+      IF(spin_dim == 1) then
+         charge=charge/2.0
+         mag = 0.
+      endif
 
       doubleCountingEnergy = 0.0
       IF(ldau%l_amf) THEN
