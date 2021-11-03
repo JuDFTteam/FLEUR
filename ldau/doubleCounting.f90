@@ -34,9 +34,10 @@ MODULE m_doubleCounting
       COMPLEX :: Vdc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(density,3))
 
       COMPLEX, ALLOCATABLE :: modified_density(:,:,:)
-      REAL :: charge, mag(3), tmp, D
-      COMPLEX :: sigma(2,2,3)
+      REAL :: charge, mag(3),mag_m(0:3), tmp, D
+      COMPLEX :: sigma(2,2,3), r21
       INTEGER :: spin_dim, ispin,m, spin1,spin2,mp
+      type(t_nococonv) :: nococonv !Used only for the procedures on it
 
       sigma = cmplx_0
       sigma(1,2,1)=CMPLX(1.0,0.0)
@@ -51,16 +52,19 @@ MODULE m_doubleCounting
 
       charge = 0.0
       mag = 0.0
-      DO ispin = 1, spin_dim
-         DO m = -ldau%l, ldau%l
-            IF(ispin < 3) THEN
-               charge = charge + REAL(density(m,m,ispin))
-               mag(3) = mag(3) + (-1)**(ispin-1) * REAL(density(m,m,ispin))
-            ELSE
-               mag(1) = mag(1) + 2 * REAL(density(m,m,ispin))
-               mag(2) = mag(2) + 2 * AIMAG(density(m,m,ispin))
-            ENDIF
-         ENDDO
+
+      DO m = -ldau%l, ldau%l
+         if (spin_dim==3) then
+            r21 = density(m,m,3)
+         else
+            r21 = 0.0
+         endif
+         mag_m = nococonv%denmat_to_mag(real(density(m,m,1)),&
+                                        real(density(m,m,min(2,spin_dim))),&
+                                        r21)
+
+         charge = charge + mag_m(0)
+         mag = mag + mag_m(1:)
       ENDDO
       IF(spin_dim == 1) mag = 0.0
 
@@ -154,11 +158,12 @@ MODULE m_doubleCounting
       REAL,                INTENT(IN)  :: alpha
       LOGICAL, OPTIONAL,   INTENT(IN)  :: l_write
 
-      REAL :: charge, mag(3), D
+      REAL :: charge, mag(3), mag_m(0:3), D
       INTEGER :: spin_dim, ispin,m, spin1,spin2
-      COMPLEX :: tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(density,3))
+      COMPLEX :: tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(density,3)), r21
       COMPLEX, ALLOCATABLE :: modified_density(:,:,:)
       COMPLEX :: sigma(2,2,3)
+      type(t_nococonv) :: nococonv !Used only for the procedures on it
 
       sigma = cmplx_0
       sigma(1,2,1)=CMPLX(1.0,0.0)
@@ -173,16 +178,18 @@ MODULE m_doubleCounting
 
       charge = 0.0
       mag = 0.0
-      DO ispin = 1, spin_dim
-         DO m = -ldau%l, ldau%l
-            IF(ispin < 3) THEN
-               charge = charge + REAL(density(m,m,ispin))
-               mag(3) = mag(3) + (-1)**(ispin-1) * REAL(density(m,m,ispin))
-            ELSE
-               mag(1) = mag(1) + 2 * REAL(density(m,m,ispin))
-               mag(2) = mag(2) + 2 * AIMAG(density(m,m,ispin))
-            ENDIF
-         ENDDO
+      DO m = -ldau%l, ldau%l
+         if (spin_dim==3) then
+            r21 = density(m,m,3)
+         else
+            r21 = 0.0
+         endif
+         mag_m = nococonv%denmat_to_mag(real(density(m,m,1)),&
+                                        real(density(m,m,min(2,spin_dim))),&
+                                        r21)
+
+         charge = charge + mag_m(0)
+         mag = mag + mag_m(1:)
       ENDDO
 
       IF(spin_dim == 1) mag = 0.0
