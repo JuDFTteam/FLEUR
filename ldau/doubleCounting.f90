@@ -209,7 +209,7 @@ MODULE m_doubleCounting
             ENDDO
 
          ENDDO
-         call coulombPotential(modified_density,ldau, MIN(2,SIZE(density,3)), l_spinoffd,tmp,doubleCountingEnergy)
+         call coulombPotential(density-modified_density,ldau, MIN(2,SIZE(density,3)), l_spinoffd,tmp,doubleCountingEnergy)
       ELSE
          doubleCountingEnergy = U/2*charge*(charge-1) -J/2*charge*(charge/2-1)-J*dot_product(mag,mag)/4
       ENDIF

@@ -24,7 +24,7 @@ MODULE m_dftUPotential
       REAL,             INTENT(INOUT)  :: ldaUEnergy
 
       INTEGER :: m,ispin,jspin
-      REAL    :: u_htr,j_htr,f0,f2,f4,f6,energy_contribution,total_charge
+      REAL    :: u_htr,j_htr,f0,f2,f4,f6,energy_contribution,total_charge, double_counting
       COMPLEX, ALLOCATABLE :: Vdc(:,:,:)
 
       call coulombPotential(density, ldau, jspins, l_spinoffd, potential, energy_contribution)
@@ -44,6 +44,15 @@ MODULE m_dftUPotential
                               .FALSE.,.FALSE.,0.0)
       potential = potential - Vdc
 
+      double_counting = doubleCountingEnergy(density, ldau, u_htr, j_htr, l_spinoffd,&
+                                             .FALSE.,.FALSE.,0.0)
+
+      if(ldau%l_amf) then
+         energy_contribution = double_counting
+      else
+         energy_contribution = energy_contribution - double_counting
+      endif
+      
       total_charge = 0.0
       DO ispin = 1, MIN(2,SIZE(density,3))
          DO m = -ldau%l, ldau%l
@@ -51,10 +60,6 @@ MODULE m_dftUPotential
          ENDDO
       ENDDO
       energy_contribution = energy_contribution - (u_htr-j_htr)/2.0 * total_charge
-
-      energy_contribution = energy_contribution -  &
-                              doubleCountingEnergy(density, ldau, u_htr, j_htr, l_spinoffd,&
-                                                   .FALSE.,.FALSE.,0.0)
       
       ldaUEnergy = ldaUEnergy + energy_contribution * equivalentAtoms
 
