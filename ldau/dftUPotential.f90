@@ -36,7 +36,7 @@ MODULE m_dftUPotential
       ELSE IF (ldau%l.EQ.2) THEN
          j_htr = 1.625*f2/(14*hartree_to_ev_const)
       ELSE IF (ldau%l.EQ.3) THEN
-         j_htr = (286.+195.*451./675.+250.*1001./2025.)*f2/(6435*hartree_to_ev_const)
+         j_htr = (286.+195*451/675+250*1001/2025)*f2/(6435*hartree_to_ev_const)
       END IF
 
       !Add double counting terms
