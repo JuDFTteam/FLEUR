@@ -9,8 +9,8 @@ MODULE m_types_enparaXML
   IMPLICIT NONE
   PRIVATE
   TYPE,EXTENDS(t_fleurinput_base):: t_enparaXML
-     INTEGER,ALLOCATABLE  :: qn_el(:,:,:)    !>if these are .ne.0 they are understood as
-     INTEGER,ALLOCATABLE  :: qn_ello(:,:,:)  !>quantum numbers
+     INTEGER,ALLOCATABLE  :: qn_el(:,:,:)    !if these are .ne.0 they are understood as
+     INTEGER,ALLOCATABLE  :: qn_ello(:,:,:)  !quantum numbers
      REAL                 :: evac0(2,2)
    CONTAINS
      PROCEDURE :: init

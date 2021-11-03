@@ -41,9 +41,9 @@ MODULE m_types_input
   INTEGER :: gw=0
   INTEGER :: gw_neigd=0
   INTEGER :: qfix=0
-  REAL    :: forcealpha =1.0 !< mixing parameter for geometry optimzer
-  REAL    :: epsdisp =0.00001!< minimal displacement. If all displacements are < epsdisp stop
-  REAL    :: epsforce =0.00001!< minimal force. If all forces <epsforce stop
+  REAL    :: forcealpha =1.0 ! mixing parameter for geometry optimzer
+  REAL    :: epsdisp =0.00001! minimal displacement. If all displacements are < epsdisp stop
+  REAL    :: epsforce =0.00001! minimal force. If all forces <epsforce stop
   REAL    :: force_converged=0.00001
   INTEGER :: forcemix=2
   REAL    :: alpha=0.05

@@ -25,7 +25,7 @@ CONTAINS
       REAL, INTENT(INOUT) :: afft(0:27*stars%mx1*stars%mx2*stars%mx3 - 1)
       REAL, INTENT(INOUT) :: bfft(0:27*stars%mx1*stars%mx2*stars%mx3 - 1)
       COMPLEX                 :: fg3(stars%ng3)
-      LOGICAL, INTENT(IN), OPTIONAL :: scaled !< determines if coefficients are scaled by stars%nstr
+      LOGICAL, INTENT(IN), OPTIONAL :: scaled ! < determines if coefficients are scaled by stars%nstr
 
       INTEGER i, ifftd
       REAL scale
