@@ -34,7 +34,7 @@ MODULE m_doubleCounting
       COMPLEX :: Vdc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(density,3))
 
       COMPLEX, ALLOCATABLE :: modified_density(:,:,:)
-      REAL :: charge, mag(3),mag_m(0:3), tmp, D
+      REAL :: charge, mag(3),mag_m(0:3), tmp, D, Vdcup,Vdcdn
       COMPLEX :: sigma(2,2,3), r21
       INTEGER :: spin_dim, ispin,m, spin1,spin2,mp
       type(t_nococonv) :: nococonv !Used only for the procedures on it
@@ -110,34 +110,30 @@ MODULE m_doubleCounting
       ENDIF
       
 
-!       IF(PRESENT(l_write)) THEN
-!          IF(l_write) THEN
-!             WRITE(oUnit,"(/,A)") 'Double counting chemical potential:'
-!             IF(l_amf) THEN
-!                WRITE(oUnit,9040) 'AMF: ','spin-up','spin-dn','(up+dn)/2','up-dn'
-!             ELSE
-!                WRITE(oUnit,9040) 'FLL: ','spin-up','spin-dn','(up+dn)/2','up-dn'
-!             ENDIF
-! 9040        FORMAT(TR3,A4,TR1,A7,TR3,A7,TR3,A9,TR3,A5)
-!             WRITE(oUnit,9050) Vdcup,Vdcdn,(Vdcup+Vdcdn)/2.0,Vdcup-Vdcdn
-! 9050        FORMAT(TR7,f8.4,TR2,f8.4,TR2,f8.4,TR4,f8.4)
-!          ENDIF
-!       ENDIF
+      IF(PRESENT(l_write)) THEN
+         IF(l_write) THEN
+            WRITE(oUnit,"(/,A)") 'Double counting chemical potential:'
+            IF(l_amf) THEN
+               WRITE(oUnit,9040) 'AMF: ','spin-up','spin-dn','(up+dn)/2','up-dn'
+            ELSE
+               WRITE(oUnit,9040) 'FLL: ','spin-up','spin-dn','(up+dn)/2','up-dn'
+            ENDIF
+9040        FORMAT(TR3,A4,TR1,A7,TR3,A7,TR3,A9,TR3,A5)
+            Vdcup = 0.0
+            Vdcdn = 0.0
+            do m = -ldau%l, ldau%l
+               Vdcup = Vdcup + Vdc(m,m,1)/real(2*ldau%l+1)
+               Vdcdn = Vdcdn + Vdc(m,m,min(2,spin_dim))/real(2*ldau%l+1)
+            enddo
+            WRITE(oUnit,9050) Vdcup,Vdcdn,(Vdcup+Vdcdn)/2.0,Vdcup-Vdcdn
+9050        FORMAT(TR7,f8.4,TR2,f8.4,TR2,f8.4,TR4,f8.4)
+         ENDIF
+      ENDIF
 
-      ! IF(l_spinAvg) THEN
-      !    Vdc(:) = (Vdcup+Vdcdn)/2.0
-      ! ELSE
-      !    Vdc(1) = Vdcup
-      !    IF(SIZE(rho) == 2) THEN
-      !       Vdc(2) = Vdcdn
-      !    ENDIF
-      ! ENDIF
-
-      ! IF(PRESENT(l_write)) THEN
-      !    IF(l_write) THEN
-      !       WRITE(oUnit,*) "Vdc = ", Vdc(:)
-      !    ENDIF
-      ! ENDIF
+      IF(l_spinAvg) THEN
+         Vdc = (Vdc(:,:,1)+Vdc(:,:,min(2,spin_dim)))/2.0
+         if(spin_dim==3) Vdc(:,:,3) = cmplx_0 !Is this right?
+      ENDIF
 
    END FUNCTION doubleCountingPot
 
