@@ -37,12 +37,12 @@
 &atom desc="Nickel (Ni)" z=28 econfig="1s2 2s2 2p6 3s2|3p6 4s2 3d8" lo="3p" /
 &atom desc="Copper (Cu)" z=29 econfig="1s2 2s2 2p6 3s2 3p6|4s1 3d10" lo="" /
 &atom desc="Zinc (Zn)" z=30 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10" lo="" /
-&atom desc="Gallium (Ga)" z=31 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p1" lo="3d" /
-&atom desc="Germanium (Ge)" z=32 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p2" lo="3d" /
-&atom desc="Arsenic (As)" z=33 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p3" lo="3d" /
-&atom desc="Selenium (Se)" z=34 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p4" lo="3d" /
-&atom desc="Bromine (Br)" z=35 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p5" lo="3d" /
-&atom desc="Krypton (Kr)" z=36 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p6" lo="3d" /
+&atom desc="Gallium (Ga)" z=31 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p1" lo="" /
+&atom desc="Germanium (Ge)" z=32 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p2" lo="" /
+&atom desc="Arsenic (As)" z=33 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p3" lo="" /
+&atom desc="Selenium (Se)" z=34 econfig="1s2 2s2 2p6 3s2 3p6|4s2 3d10 4p4" lo="" /
+&atom desc="Bromine (Br)" z=35 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p5" lo="" /
+&atom desc="Krypton (Kr)" z=36 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p6" lo="" /
 
 &atom desc="Rubidium (Rb)" z=37 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p6 5s1" lo="4s 4p" /
 &atom desc="Strontium (Sr)" z=38 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p6 5s2" lo="4s 4p" /

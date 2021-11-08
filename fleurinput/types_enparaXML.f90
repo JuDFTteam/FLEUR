@@ -178,6 +178,8 @@ CONTAINS
              this%qn_el(0:3,n,jsp) =  (/3,3,3,4/)
           ELSEIF ( nz(n) < 31 ) THEN
              this%qn_el(0:3,n,jsp) =  (/4,4,3,4/)
+          ELSEIF ( nz(n) < 35 ) THEN
+             this%qn_el(0:3,n,jsp) =  (/4,4,3,4/)
           ELSEIF ( nz(n) < 37 ) THEN
              this%qn_el(0:3,n,jsp) =  (/4,4,4,4/)
           ELSEIF ( nz(n) < 49 ) THEN
