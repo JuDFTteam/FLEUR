@@ -176,8 +176,11 @@ PROGRAM inpgen
 
       CALL profile%init()
       IF (judft_was_argument("-precise")) THEN
-         WRITE(*,*) 'NOTE: right now the "-precise" option is only a dummy that does not affect anything.'
+         WRITE(*,*) 'NOTE: right now the "-precise" option is under development and experimental.'
          CALL profile%load("precise")
+      ELSE IF (judft_was_argument("-profile")) THEN
+         WRITE(*,*) 'NOTE: right now the "-profile" option is under development and experimental.'
+         CALL profile%load(TRIM(ADJUSTL(judft_string_for_argument("-profile"))))
       END IF
 
       IF (judft_was_argument("-inp")) THEN

@@ -46,6 +46,7 @@ CONTAINS
     CALL new_argument(0,"-noInpgenComment","Disable printing inpgen input as a comment to the inp.xml file","")
 
     CALL new_argument(0,"-precise","Generate default parameters tailored to precise calculations","")
+    CALL new_argument(1,"-profile","Generate default parameters according to provided profile name. This can be one of 'precise'.","")
 
     IF (.NOT.check_arguments()) CALL judft_warn("Invalid command line arguments",hint="Use -h option to see valid choices")
     IF (.NOT. juDFT_was_argument("-h")) RETURN
