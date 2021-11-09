@@ -29,4 +29,19 @@ module m_factorials
 
     end function
 
+    real function factorial(n)
+
+        !Calculates the factorial n!
+
+        integer, intent(in) :: n
+
+        integer k
+
+        factorial = 1
+        do k = 1, n
+            factorial = factorial * k
+        enddo
+
+    end function
+
 end module

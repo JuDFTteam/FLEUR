@@ -52,6 +52,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
+   USE m_multipoleExpansion
 
    USE m_force_sf ! Klueppelberg (force level 3)
 
@@ -224,6 +225,10 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          ENDIF
       ENDIF
    ENDIF
+
+   IF(atoms%n_u > 0 .AND. input%ldauMultipoleExp .and. fmpi%irank.EQ.0) then
+      call dftuMultipoleExp(atoms, input, outDen)
+   endif
 
    IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf) THEN
       CALL juDFT_end("Charge density postprocessing done.",fmpi%irank)

@@ -170,6 +170,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="valenceDensity" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="onSiteExchangeSplitting" type="OnSiteExchangeSplittingType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="noncollinearTorque" type="GFTorqueType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="dftUMultipoleExpansion" type="DFTUMultipoleExpansionSequenceType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="coreStates" type="OutCoreStatesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="slaterIntegrals" type="SlaterIntegralsListType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
@@ -435,6 +436,42 @@
             <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
             <xsd:attribute name="j" type="xsd:double" use="required"/>
             <xsd:attribute name="units" type="xsd:string" use="required"/>
+         </xsd:extension>
+      </xsd:simpleContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="DFTUMultipoleExpansionSequenceType">
+      <xsd:sequence>
+         <xsd:element minOccurs="1" maxOccurs="unbounded" name="dftUMultipoleExpansionfor" type="DFTUMultipoleExpansionType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="DFTUMultipoleExpansionType">
+      <xsd:sequence>
+         <xsd:element minOccurs="1" maxOccurs="unbounded" name="multipoleTensor" type="DFTUMultipoleTensorType"/>
+      </xsd:sequence>
+      <xsd:attribute name="atomtype" type="xsd:integer" use="required"/>
+      <xsd:attribute name="l" type="xsd:integer" use="required"/>
+      <xsd:attribute name="dftUEnergy" type="xsd:double" use="required"/>
+      <xsd:attribute name="units" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="DFTUMultipoleTensorType">
+      <xsd:sequence>
+         <xsd:element minOccurs="1" maxOccurs="unbounded" name="component" type="DFTUTensorComponentType"/>
+      </xsd:sequence>
+      <xsd:attribute name="k" type="xsd:integer" use="required"/>
+      <xsd:attribute name="p" type="xsd:integer" use="required"/>
+      <xsd:attribute name="r" type="xsd:integer" use="required"/>
+      <xsd:attribute name="e_hartree" type="xsd:double" use="required"/>
+      <xsd:attribute name="e_xc" type="xsd:double" use="required"/>
+      <xsd:attribute name="units" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="DFTUTensorComponentType">
+      <xsd:simpleContent>
+         <xsd:extension base="FleurDouble2DVecType">
+            <xsd:attribute name="t" type="xsd:integer" use="required"/>
          </xsd:extension>
       </xsd:simpleContent>
    </xsd:complexType>

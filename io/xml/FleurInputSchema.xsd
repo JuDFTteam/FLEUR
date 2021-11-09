@@ -776,6 +776,7 @@
       <xsd:attribute default="1.00" name="spinf" type="xsd:double" use="optional"/>
       <xsd:attribute default="F" name="l_adjEnpara" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_spinoffd" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="multipoleExpansion" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="LdaHIAGeneralType">
