@@ -157,39 +157,38 @@ module m_wigner
 
     end function
 
-    real function wigner6ji(l1,l2,l3,m1,m2,m3,fac)
+    real function wigner6ji(j1,j2,j3,j4,j5,j6,fac)
 
-        integer, intent(in) :: l1,l2,l3,m1,m2,m3
+        integer, intent(in) :: j1,j2,j3,j4,j5,j6
         real, optional, intent(inout) :: fac(0:)
 
-        wigner6ji = wigner6jf(real(l1),real(l2),real(l3),real(m1),real(m2),real(m3), fac=fac)
+        wigner6ji = wigner6jf(real(j1),real(j2),real(j3),real(j4),real(j5),real(j6), fac=fac)
 
     end function
 
-    real function wigner6jf(l1,l2,l3,m1,m2,m3,fac)
+    real function wigner6jf(j1,j2,j3,j4,j5,j6,fac)
 
-        real, intent(in) :: l1,l2,l3,m1,m2,m3
+        real, intent(in) :: j1,j2,j3,j4,j5,j6
         real, optional, intent(in) :: fac(0:)
 
         integer :: tmin,tmax,t,f1,f2,f3,f4,f5
         integer :: maxfact
-        real :: prefactor
-        real :: fac_list(0:max(int(min(l1 + l2 + l3 + m1, l1 + m1 + m2 + m3, l2 + l3 + m2 + m3))+ 1,&
-                         int(l1 + l2 + l3 + m1), int(l1 + m1 + m2 + m3), &
-                         int(l2 + l3 + m2 + m3) ))
+        real :: prefactor,a1,a2,a3,a4
+        real :: fac_list(0:max(int(min(j1 + j2 + j5 + j4, j1 + j4 + j3 + j6, j2 + j5 + j3 + j6))+ 1,&
+                         int(j1 + j2 + j5 + j4), int(j1 + j4 + j3 + j6), &
+                         int(j2 + j5 + j3 + j6) ))
 
         wigner6jf = 0.0
-        prefactor = (-1) ** int(l1 + l2 + m1 + m2) * &
-                    big_delta_coeff(l1,l2,m2, fac=fac) * &
-                    big_delta_coeff(l3,m1,m2, fac=fac) * &
-                    big_delta_coeff(l1,l3,m3, fac=fac) * &
-                    big_delta_coeff(l2,m1,m3, fac=fac)
+        prefactor = big_delta_coeff(j1,j2,j3, fac=fac) * &
+                    big_delta_coeff(j5,j4,j3, fac=fac) * &
+                    big_delta_coeff(j1,j5,j6, fac=fac) * &
+                    big_delta_coeff(j2,j4,j6, fac=fac)
 
-        tmin = int(max(l1 + l2 + m2, l3 + m1 + m2, l1 + l3 + m3, l2 + m1 + m3))
-        tmax = int(min(l1 + l2 + l3 + m1, l1 + m1 + m2 + m3, l2 + l3 + m2 + m3))
+        tmin = int(max(j1 + j2 + j3, j5 + j4 + j3, j1 + j5 + j6, j2 + j4 + j6))
+        tmax = int(min(j1 + j2 + j5 + j4, j1 + j4 + j3 + j6, j2 + j5 + j3 + j6))
 
-        maxfact = max(tmax + 1, int(l1 + l2 + l3 + m1), int(l1 + m1 + m2 + m3), &
-                      int(l2 + l3 + m2 + m3))
+        maxfact = max(tmax + 1, int(j1 + j2 + j5 + j4), int(j1 + j4 + j3 + j6), &
+                      int(j2 + j5 + j3 + j6))
         
         if (present(fac)) then
             if (size(fac) < maxfact) then
@@ -202,16 +201,16 @@ module m_wigner
         wigner6jf = 0.0
         do t= tmin, tmax
             wigner6jf = wigner6jf + (-1)**t * fac_list(t+1) / (&
-                        fac_list(int(t-l1-l2-m2)) * &
-                        fac_list(int(t-l3-m1-m2)) * &
-                        fac_list(int(t-l1-l3-m3)) * &
-                        fac_list(int(t-l2-m1-m3)) * &
-                        fac_list(int(l1+l2+l3+m1-t)) * &
-                        fac_list(int(l1+m1+m2+m3-t)) * &
-                        fac_list(int(l2+l3+m2+m3-t)))
+                        fac_list(int(t-j1-j2-j3)) * &
+                        fac_list(int(t-j5-j4-j3)) * &
+                        fac_list(int(t-j1-j5-j6)) * &
+                        fac_list(int(t-j2-j4-j6)) * &
+                        fac_list(int(j1+j2+j5+j4-t)) * &
+                        fac_list(int(j1+j4+j3+j6-t)) * &
+                        fac_list(int(j2+j5+j3+j6-t)))
         enddo
 
-        wigner6jf = prefactor * wigner6jf * (-1) ** int(l1 + l2 + l3 + m1)
+        wigner6jf = prefactor * wigner6jf
 
     end function
 
