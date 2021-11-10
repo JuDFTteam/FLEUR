@@ -450,7 +450,7 @@
       <xsd:sequence>
          <xsd:element minOccurs="1" maxOccurs="unbounded" name="multipoleTensor" type="DFTUMultipoleTensorType"/>
       </xsd:sequence>
-      <xsd:attribute name="atomtype" type="xsd:integer" use="required"/>
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
       <xsd:attribute name="l" type="xsd:integer" use="required"/>
       <xsd:attribute name="dftUEnergy" type="xsd:double" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="required"/>
@@ -463,6 +463,7 @@
       <xsd:attribute name="k" type="xsd:integer" use="required"/>
       <xsd:attribute name="p" type="xsd:integer" use="required"/>
       <xsd:attribute name="r" type="xsd:integer" use="required"/>
+      <xsd:attribute name="w_square" type="xsd:double" use="required"/>
       <xsd:attribute name="e_hartree" type="xsd:double" use="required"/>
       <xsd:attribute name="e_xc" type="xsd:double" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="required"/>
