@@ -35,6 +35,7 @@ module m_multipoleExpansion
             l = atoms%lda_u(i_u)%l
 
             call uj2f(input%jspins, atoms%lda_u(i_u), f)
+            f = f/hartree_to_ev_const
 
             e_hartree = 0.0
             e_xc = 0.0
