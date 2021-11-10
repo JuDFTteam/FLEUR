@@ -226,16 +226,20 @@ module m_multipoleExpansion
 
         g = k + p + r
 
-        three_tensor_norm = ImagUnit**g * sqrt(factorial(g-2*k)) &
-                            * sqrt(factorial(g-2*p)) &
-                            * sqrt(factorial(g-2*r)) & 
-                            / sqrt(factorial(g+1)) &
-                        * doubleFactorial(g) &
-                        / ( &
-                              doubleFactorial(g-2*k) &
-                            * doubleFactorial(g-2*p) &
-                            * doubleFactorial(g-2*r) &
-                            )
+        if (mod(g,2)==0) then
+            three_tensor_norm = wigner3j(k, p, r, 0,0,0)
+        else
+            three_tensor_norm = ImagUnit**g * sqrt(factorial(g-2*k)) &
+                                * sqrt(factorial(g-2*p)) &
+                                * sqrt(factorial(g-2*r)) & 
+                                / sqrt(factorial(g+1)) &
+                            * doubleFactorial(g) &
+                            / ( &
+                                doubleFactorial(g-2*k) &
+                                * doubleFactorial(g-2*p) &
+                                * doubleFactorial(g-2*r) &
+                                )
+        endif
 
     end function
 
