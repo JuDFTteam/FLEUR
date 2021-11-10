@@ -137,15 +137,15 @@ module m_multipoleExpansion
         nsp = 1/sqrt(factorial(p+2))
         nkpr = three_tensor_norm(k,p,r)
 
-        prefactor = (-1)**(k+p)/(nlk*nsp*nkpr)
+        prefactor = (-1)**(k+p+l)/(nlk*nsp*nkpr)
         w_tensor = cmplx_0
         do t = -r, r
             do x = -k,k
                 do y = -p,p
                     do ispin = 1,jspins
                         do jspin = merge(1,ispin,size(denmat,3)==3),merge(jspins,ispin,size(denmat,3)==3)
-                            sa = ispin-1.5 
-                            sb = jspin-1.5 
+                            sa = 1.5-ispin 
+                            sb = 1.5-jspin 
                             if(ispin==jspin) then
                                 spin_index = ispin
                             else if(ispin>jspin) then
@@ -160,7 +160,7 @@ module m_multipoleExpansion
 
                             do m= -l, l
                                 do mp = -l,l
-                                    m_factor = (-1)**(l-mp) * wigner3j(l, k, l, -mp, x, m)
+                                    m_factor = (-1)**mp * wigner3j(l, k, l, -mp, x, m)
                                     if (spin_index<4) then 
                                         w_tensor(t) = w_tensor(t) + prefactor * tensor * m_factor * denmat(m,mp,spin_index)
                                     else
