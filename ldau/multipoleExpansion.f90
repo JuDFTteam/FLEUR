@@ -129,7 +129,7 @@ module m_multipoleExpansion
         complex w_tensor(-(lmaxU_const+1)**2:(lmaxU_const+1)**2)
 
         integer :: x,y,t,ispin,jspin,spin_index,m,mp
-        real :: nlk,nsp,sa,sb,tensor
+        real :: nlk,nsp,sa,sb,tensor,m_factor
         complex :: nkpr, prefactor
 
         nlk = factorial(2*l)/sqrt(factorial(2*l-k)*factorial(2*l+k+1))
@@ -159,11 +159,11 @@ module m_multipoleExpansion
 
                             do m= -l, l
                                 do mp = -l,l
-                                    tensor = tensor * (-1)**(l-mp) * wigner3j(l, k, l, -mp, x, m)
+                                    m_factor = (-1)**(l-mp) * wigner3j(l, k, l, -mp, x, m)
                                     if (spin_index<4) then 
-                                        w_tensor(t) = w_tensor(t) + prefactor * tensor * denmat(m,mp,spin_index)
+                                        w_tensor(t) = w_tensor(t) + prefactor * tensor * m_factor * denmat(m,mp,spin_index)
                                     else
-                                        w_tensor(t) = w_tensor(t) + prefactor * tensor * conjg(denmat(mp,m,spin_index))
+                                        w_tensor(t) = w_tensor(t) + prefactor * tensor * m_factor * conjg(denmat(mp,m,spin_index))
                                     endif
                                 enddo
                             enddo
