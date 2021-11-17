@@ -19,7 +19,7 @@ CONTAINS
     DO iintsp=1,2
        DO jintsp=1,2
        !$acc parallel loop collapse(2) copyin(chi) present(mat_tmp,mat_tmp%data_c) &
-          !$acc present(mat(jintsp,iintsp)%data_c)
+          !$acc present(mat(jintsp,iintsp),mat(jintsp,iintsp)%data_c)
           DO j=1,SIZE(mat_tmp%data_c,2)
              DO i=1,SIZE(mat_tmp%data_c,1)
                 mat(jintsp,iintsp)%data_c(i,j)=chi(jintsp,iintsp)*mat_tmp%data_c(i,j)+mat(jintsp,iintsp)%data_c(i,j)
