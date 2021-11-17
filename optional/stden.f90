@@ -205,7 +205,11 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                    den%pw,den%vacxy,den%mt,den%vacz)
       !roa-
    END DO
-
+    
+   if (noco%l_noco) THEN
+      den%pw(:,1)=(den%pw(:,1)+den%pw(:,2))*0.5
+      den%pw(:,2)=den%pw(:,1)
+   endif
 
    ! Check the normalization of total density
    CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
