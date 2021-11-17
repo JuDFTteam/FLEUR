@@ -143,7 +143,7 @@ CONTAINS
                                                                    & cmplx(1 / sqrt(2.), 0), cmplx(0, 0), cmplx(-1 / sqrt(2.), 0), &
                                                                    & -ImagUnit / sqrt(2.), cmplx(0, 0), -ImagUnit / sqrt(2.), &
                                                                    & cmplx(0, 0), cmplx(1, 0), cmplx(0, 0) &
-                                                                   & ], [3, 3] )) !< see my notes
+                                                                   & ], [3, 3] )) ! see my notes
 
 
     ! Initialization of additionaly required arrays.

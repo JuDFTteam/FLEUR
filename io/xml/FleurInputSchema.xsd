@@ -244,6 +244,12 @@
       </xsd:restriction>
    </xsd:simpleType>
 
+   <xsd:simpleType name="FleurDouble6DVecType">
+      <xsd:restriction base="FleurDoubleVecType">
+         <xsd:length value="6"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
    <xsd:simpleType name="TripleFleurBool">
       <xsd:restriction base="xsd:string">
          <xsd:pattern value="[FfTt][FfTt][FfTt]"/>
@@ -1028,7 +1034,7 @@
 
    <xsd:complexType name="RelaxStepType">
      <xsd:sequence>
-       <xsd:element maxOccurs="unbounded" minOccurs="1"  name="posforce" type="xsd:string" />
+       <xsd:element maxOccurs="unbounded" minOccurs="1"  name="posforce" type="FleurDouble6DVecType" />
      </xsd:sequence>
       <xsd:attribute name="energy" type="FleurDouble"/>
    </xsd:complexType>

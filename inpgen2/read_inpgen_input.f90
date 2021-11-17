@@ -12,8 +12,8 @@ MODULE m_read_inpgen_input
   PUBLIC read_inpgen_input, peekInpgenInput
 CONTAINS
 
-  SUBROUTINE read_inpgen_input(atom_pos,atom_id,atom_label,kpts_str,kptsName,kptsPath,kptsBZintegration,&
-       kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+  SUBROUTINE read_inpgen_input(profile,atom_pos,atom_id,atom_label,kpts_str,kptsName,kptsPath,kptsBZintegration,&
+                               kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
     !Subroutine reads the old-style input for inpgen
     USE m_atompar
     USE m_types_input
@@ -27,7 +27,9 @@ CONTAINS
     USE m_constants
     USE m_process_lattice_namelist
     USE m_inv3
+    USE m_types_profile
 
+    TYPE(t_profile),INTENT(IN)     :: profile
     REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:)
     CHARACTER(len=20), ALLOCATABLE,INTENT(OUT) :: atom_Label(:)
     CHARACTER(len=40),INTENT(OUT)  :: kpts_str(:)
@@ -43,6 +45,7 @@ CONTAINS
     TYPE(t_xcpot_inbuild_nf),INTENT(OUT)    :: xcpot
     TYPE(t_cell),INTENT(OUT)       :: cell
     TYPE(t_hybinp),INTENT(OUT)     :: hybinp
+
 
 
     !locals
@@ -74,6 +77,10 @@ CONTAINS
        input%comment="No title"
        BACKSPACE(98)
     ENDIF
+
+    IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
+       input%tkb = profile%fermiSmearing
+    END IF
 
     aa=0.0
     input%jspins=0

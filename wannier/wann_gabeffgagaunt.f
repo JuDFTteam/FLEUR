@@ -310,7 +310,7 @@ c******************************************************************
              do lh = 0,nlh(ns)
                lpp=llh(lh,ns) 
                llpp = lpp*(lpp+1)
-               mpp = mp - m  !<mp|m+mpp>
+               mpp = mp - m  ! <mp|m+mpp>
                lmpp = llpp + mpp 
                lmini = abs(l-lpp)
                lmaxi = l+lpp
@@ -340,7 +340,7 @@ c******************************************************************
      *                  djulo(lo,lp,lpp)*factor
                endif
 
-               mpp = m - mp  !<m|mp+mpp>
+               mpp = m - mp  ! <m|mp+mpp>
                lmpp = llpp + mpp 
                lmini = abs(lp-lpp)
                lmaxi = lp+lpp
@@ -397,7 +397,7 @@ c*************************************************************
              do lh = 0,nlh(ns)
                lpp=llh(lh,ns) 
                llpp = lpp*(lpp+1)
-               mpp = mp - m !<mp|m+mpp>
+               mpp = mp - m ! <mp|m+mpp>
                lmpp = llpp + mpp 
                lmini = abs(l-lpp)
                lmaxi = l+lpp
