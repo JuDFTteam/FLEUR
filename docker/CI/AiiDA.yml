@@ -38,12 +38,10 @@ test-aiida-fleur-dev-gfortran-hdf5:
     # Remove cache dirs
     - git checkout develop
     - pip3 install .[testing]
-    - rm -rf tests/workflows/calc_data_dir tests/workflows/caches
+    - rm -rf tests/workflows/calculations tests/workflows/caches
     - rm -rf tests/calculation/data_dir
     - rm -rf tests/data_dir
-    - mkdir -p tests/workflows/calc_data_dir
     - mkdir -p tests/workflows/caches
-    - mkdir -p tests/calculation/data_dir
     - mkdir -p tests/data_dir
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
@@ -82,7 +80,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     #Copy testfile for SCF workchain from fleur tests
     - cp files/workflow_test_files/inp_scf.xml files/inpxml/Si/inp.xml
     # run tests
-    - pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests
+    - pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests --mock-regenerate-test-data
   allow_failure: true
   artifacts:
     when: on_failure
