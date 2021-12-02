@@ -18,10 +18,10 @@ pip install -U pytest
 ```   
 
 # How to run tests:
-To run the tests pytest has to know two things: where to find the `conftest.py` file, which is under `<fleur_source_folder>/tests/new_pytest_system` and which build dir to test for.
+To run the tests pytest has to know two things: where to find the `conftest.py` file, which is under `<fleur_source_folder>/tests` and which build dir to test for.
 
 ## Execution from tests source dir
-One way is to go to the `tests/new_pytest_system` folder and to run all tests execute:
+One way is to go to the `tests` folder and to run all tests execute:
 ```
 $pytest
 ```
@@ -32,11 +32,11 @@ pytest automatically discovers all tests in the any sub directory structure of t
 If you execute pytest from any other directory, you have to provide the path to the folder with the head `conftest.py` and a path to the build dir with the fleur executables, either relative to the `contest.py` file or absolute.
 For example if you build dir is `<fleur_source_folder>/build.123`
 ```
-$pytest ../tests/new_pytest_system --build_dir=../../build.123
+$pytest ../tests --build_dir=../../build.123
 ```
 or
 ```
-$pytest ../tests/new_pytest_system --build_dir=`<fleur_source_folder>/build.123`
+$pytest ../tests --build_dir=`<fleur_source_folder>/build.123`
 ```
 
 The build process also generates a shell script in the build folder to perform the right pytest command for the current build directory. The arguments to this script are forwarded to pytest.
@@ -71,7 +71,7 @@ $pytest --maxfail=2  # exit after two failures
 Per default pytest times all tests but only displays the total runtime in the report.
 adding the `–duration=N` option will print the times of the `N` slowest tests during the run. 
 
-To execute all tests in a given (sub)folder (`tests/bar`) or file `tests/bar/test_foo.py` run (will only work from the `tests/new_pytest_system` ):
+To execute all tests in a given (sub)folder (`tests/bar`) or file `tests/bar/test_foo.py` run (will only work from the `tests` ):
 ```
 $pytest tests/bar
 $pytest tests/bar/test_foo.py
@@ -287,7 +287,7 @@ there are a bunch of them, we use two so far
 pytest-dependency
 ```
 If you want to add a plugin, please add it its source code, that one does not have to install it to run the tests everywhere.
-i.e add it under `tests/new_pytest_system/pytest_plugins`
+i.e add it under `tests/pytest_plugins`
 
 # How to create a new test
 
