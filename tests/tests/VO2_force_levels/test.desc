@@ -1,9 +1,0 @@
-$test_name="Check the computation of Aaron's force levels for the starting density.";
-$test_code="Fleur";
-$test_stages=1;
-$test_desc=<<EOF
-Simple test of Fleur with one steps:
-1.Generate a starting density.
-2.Calculate the resulting forces on all 3 force levels as implemented by Aaron K.
-EOF
-;

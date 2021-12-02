@@ -1,7 +1,0 @@
-jt::copyfile("files/inp-4.xml","$workdir/inp.xml");
-jt::copyfile("files/sym-2.xml","$workdir/sym.xml");
-jt::deletefile("$workdir/mixing_history*");
-jt::testrun("$executable ",$workdir);
-$result=jt::test_grepnumber("$workdir/out","distance of charge densities for it= *4",": *([^ ]*)",130.55,0.01);
-
-jt::stageresult($workdir,$result,4);

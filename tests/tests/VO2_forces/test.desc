@@ -1,9 +1,0 @@
-$test_name="Check the computation of normal Fleur forces for the starting density.";
-$test_code="Fleur";
-$test_stages=1;
-$test_desc=<<EOF
-Simple test of Fleur with one steps:
-1.Generate a starting density.
-2.Calculate the resulting forces.
-EOF
-;
