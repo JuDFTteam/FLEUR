@@ -43,9 +43,18 @@ CONTAINS
     real                             :: fix
     integer                          :: lh,n
 
+    if (sym%invs) then
+      !This is for easier debugging of the preconditioner. The imaginary part
+      !of the output density in the interstitial is never constrained to be
+      !0 in the case of inversion symmetric systems. This leads to all numerical
+      !noise leaking through making comparisons especially with different parallelizations
+      !more difficult. The input density is implicitly constrained since the
+      !mixvector%from_density subroutine throws away the imaginary part if sym%invs is .true.
+      outDen%pw(:,:input%jspins) = real(outDen%pw(:,:input%jspins))
+    endif
 
     CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
-    CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
+    CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_POTYUK )
     MPI0_b: IF( fmpi%irank == 0 ) THEN
        CALL resDen%subPotDen( outDen, inDen )
        IF( input%jspins == 2 ) CALL resDen%SpinsToChargeAndMagnetisation()
