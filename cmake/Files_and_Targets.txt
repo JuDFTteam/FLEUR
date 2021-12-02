@@ -53,11 +53,6 @@ include(greensf/CMakeLists.txt)
 include(tetra/CMakeLists.txt)
 include(opc/CMakeLists.txt)
 
-
-include(tests/tests_old.cmake)
-#include(tests/tests_new.cmake)
-
-
 set(fleur_SRC ${fleur_F90} ${fleur_F77})
 
 set_source_files_properties(${fleur_F90} PROPERTIES Fortran_FORMAT FREE)
