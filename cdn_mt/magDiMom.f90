@@ -65,7 +65,7 @@ SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,nococonv,l_fmpl2,rho,magDipoles,
          inRho(:,:,iType,4) = inRho(:,:,iType,2) * COS(theta)
          inRho(:,:,iType,2) = inRho(:,:,iType,2) * COS(phi)*SIN(theta)
       ELSE
-         DO ilh = 0,sphhar%nlh(sym%ntypsy(iType))
+         DO ilh = 0,sphhar%nlh(sym%ntypsy(sum(atoms%neq(:iType-1))+1))
             DO i = 1,atoms%jri(iType)
 
                cdn11 = rho(i,ilh,iType,1)

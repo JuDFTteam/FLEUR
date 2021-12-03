@@ -200,7 +200,7 @@ CONTAINS
       DO ityp = 1,atoms%ntype
          theta   = nococonv%beta(ityp)
          phi     = nococonv%alph(ityp)
-         DO ilh = 0,sphhar%nlh(sym%ntypsy(ityp))
+         DO ilh = 0,sphhar%nlh(sym%ntypsy(sum(atoms%neq(:ityp-1))+1))
 !$OMP PARALLEL DO DEFAULT(shared)& !Note: The default(shared) is because explicitly defining nococonv as shared is problematic for some compilers
 !$OMP SHARED(rho,ityp,ilh,denmat)&
 !$OMP PRIVATE(iri,cdnup,cdndown,chden,mgden,cdn11,cdn21,cdn22,mat)
