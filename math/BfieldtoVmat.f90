@@ -55,7 +55,7 @@ CONTAINS
       ! Calculate the charge and magnetization densities in the muffin tins.
 
       DO ityp = 1,atoms%ntype
-         DO ilh = 0,sphhar%nlh(sym%ntypsy(sum(atoms%neq(:ityp-1)+1))
+         DO ilh = 0,sphhar%nlh(sym%ntypsy(sum(atoms%neq(:ityp-1)+1)))
             DO iri = 1,atoms%jri(ityp)
                cdn11 = rho(iri,ilh,ityp,1)+rho(iri,ilh,ityp,4)
                cdn22 = rho(iri,ilh,ityp,1)-rho(iri,ilh,ityp,4)
