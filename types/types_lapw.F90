@@ -482,7 +482,7 @@ CONTAINS
       !     ..
       !     .. Data statements ..
       REAL, PARAMETER :: eps = 1.0E-8
-      REAL, PARAMETER :: linindq = 1.0e-5
+      REAL, PARAMETER :: linindq = 2.0e-6
 
       con1 = fpi_const/SQRT(cell%omtil)
       ntyp = n
