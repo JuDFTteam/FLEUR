@@ -16,18 +16,17 @@ CONTAINS
     TYPE(t_mat),INTENT(INOUT) ::mat(:,:)
     INTEGER:: iintsp,jintsp,i,j
 #ifdef _OPENACC
+    !$acc data copyin(chi)
     DO iintsp=1,2
        DO jintsp=1,2
-       !$acc parallel loop collapse(2) copyin(chi) present(mat_tmp,mat_tmp%data_c) &
-          !$acc present(mat(jintsp,iintsp),mat(jintsp,iintsp)%data_c)
-          DO j=1,SIZE(mat_tmp%data_c,2)
-             DO i=1,SIZE(mat_tmp%data_c,1)
-                mat(jintsp,iintsp)%data_c(i,j)=chi(jintsp,iintsp)*mat_tmp%data_c(i,j)+mat(jintsp,iintsp)%data_c(i,j)
-             ENDDO
-          ENDDO
-          !$acc end parallel loop
+         associate(m=>mat(jintsp,iintsp)%data_c,mt=>mat_tmp%data_c)
+            !$acc kernels present(m,mt,chi)
+            m=m+chi(jintsp,iintsp)*mt
+            !$acc end kernels
+         end associate
        ENDDO
     ENDDO
+    !$acc end data
 #else
     !$OMP PARALLEL DO PRIVATE(j,iintsp,jintsp) SHARED(mat_tmp,chi,mat) DEFAULT(NONE)
     DO j=1,mat_tmp%matsize2
