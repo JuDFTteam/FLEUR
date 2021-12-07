@@ -169,11 +169,11 @@ CONTAINS
             !     zMat ..... local eigenvectors, output
             if (fmpi%pe_diag) THEN
               CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
-              CALL smat%free()
-              CALL hmat%free()
             ELSE
               ne_all=0
             endif
+            CALL smat%free()
+            CALL hmat%free()
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
             if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
                                                    hint=errmsg, calledby="eigen.F90")
