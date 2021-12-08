@@ -3,7 +3,13 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
+#ifdef _OPENACC
+#define CPP_OMP !no OMP
+#define CPP_ACC $acc
+#else 
+#define CPP_OMP $OMP 
+#define CPP_ACC !no ACC 
+#endif
 MODULE m_hsmt_lo
   USE m_juDFT
   IMPLICIT NONE
@@ -57,10 +63,11 @@ CONTAINS
           l = hmat%matsize2
        END SELECT
 
-       !$OMP PARALLEL DEFAULT(none) &
-       !$OMP SHARED(fmpi,l,lapw,hmat,smat,jintsp) &
-       !$OMP PRIVATE(nkvec,kp)
-       !$OMP DO
+       !CPP_OMP PARALLEL DEFAULT(none) &
+       !CPP_OMP SHARED(fmpi,l,lapw,hmat,smat,jintsp) &
+       !CPP_OMP PRIVATE(nkvec,kp)
+       !CPP_OMP DO
+       !CPP_ACC kernels present(hmat,hmat%data_r,hmat%data_c)
        DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
           IF( nkvec > lapw%nv(jintsp)) THEN
              kp=(nkvec-1)/fmpi%n_size+1
@@ -71,9 +78,11 @@ CONTAINS
              ENDIF
           ENDIF
        ENDDO
-       !$OMP END DO
+       !CPP_ACC end kernels
+       !CPP_OMP END DO
        IF ( present(smat)) THEN
-          !$OMP DO
+          !CPP_OMP DO
+          !CPP_ACC kernels present(smat,smat%data_r,smat%data_c)
           DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
              IF( nkvec > lapw%nv(jintsp)) THEN
                 kp=(nkvec-1)/fmpi%n_size+1
@@ -84,9 +93,10 @@ CONTAINS
                 ENDIF
              ENDIF
           ENDDO
-          !$OMP END DO
+          !CPP_ACC end kernels
+          !CPP_OMP END DO
        ENDIF
-       !$OMP END PARALLEL
+       !CPP_OMP END PARALLEL
     ENDIF
 
     na = SUM(atoms%neq(:n-1))
