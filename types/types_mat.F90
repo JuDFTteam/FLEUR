@@ -53,9 +53,70 @@ MODULE m_types_mat
       procedure        :: bcast => t_mat_bcast
       procedure        :: pos_eigvec_sum => t_mat_pos_eigvec_sum
       procedure        :: leastsq => t_mat_leastsq
+      procedure        :: add
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine add(mat,mat2,alpha_c,alpha_r)
+#ifdef _OPENACC
+         use openacc
+#endif            
+         IMPLICIT NONE 
+         CLASS(t_mat), INTENT(INOUT)      :: mat
+         class(t_mat), INTENT(IN)         :: mat2
+         complex,intent(in),optional      :: alpha_c
+         complex,intent(in),optional      :: alpha_r
+   
+         real:: a_r
+         complex:: a_c
+         INTEGER:: i,j
+         a_c=1.0
+         if (present(alpha_c)) a_c=alpha_c
+      
+         a_r=1.0
+         if(present(alpha_r)) a_r=alpha_r
+         
+         if (mat%l_real) THEN
+#ifdef _OPENACC         
+            IF (acc_is_present(mat%data_r).and.acc_is_present(mat2%data_r)) THEN
+               !Data is on Device, hence we can operate on GPU
+               !$acc kernels present(mat%data_r,mat2%data_r)
+               mat%data_r=mat%data_r+a_r*mat2%data_r
+               !$acc end kernels
+            ELSE   
+#else 
+            IF (.true.) !in No openacc case always use OpenMP version
+#endif
+               !$OMP parallel do collapse(2) shared (mat,mat2,a_r) default(none)
+               DO i=1,mat%matsize1
+                  DO j=1,mat%matsize2
+                     mat%data_r(i,j)=mat%data_r(i,j)+a_r*mat2%data_r(i,j)
+                  ENDDO
+               ENDDO
+               !$OMP end parallel do
+            ENDIF
+         ELSE
+#ifdef _OPENACC         
+            IF (acc_is_present(mat%data_c).and.acc_is_present(mat2%data_c)) THEN
+               !Data is on Device, hence we can operate on GPU
+               !$acc kernels present(mat%data_c,mat2%data_c)
+               mat%data_c=mat%data_c+a_c*mat2%data_c
+               !$acc end kernels
+            ELSE   
+#else 
+            IF (.true.) !in No openacc case always use OpenMP version
+#endif
+               !$OMP parallel do collapse(2) shared (mat,mat2,a_c) default(none)
+               DO i=1,mat%matsize1
+                  DO j=1,mat%matsize2
+                     mat%data_c(i,j)=mat%data_c(i,j)+a_c*mat2%data_c(i,j)
+                  ENDDO
+               ENDDO
+               !$OMP end parallel do
+            ENDIF
+         ENDIF
+   END SUBROUTINE
+
    subroutine t_mat_leastsq(A, b)
       use m_constants
       implicit none
