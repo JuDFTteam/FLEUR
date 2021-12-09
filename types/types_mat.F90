@@ -85,7 +85,7 @@ CONTAINS
                !$acc end kernels
             ELSE   
 #else 
-            IF (.true.) !in No openacc case always use OpenMP version
+            IF (.true.) then !in No openacc case always use OpenMP version
 #endif
                !$OMP parallel do collapse(2) shared (mat,mat2,a_r) default(none)
                DO i=1,mat%matsize1
@@ -104,7 +104,7 @@ CONTAINS
                !$acc end kernels
             ELSE   
 #else 
-            IF (.true.) !in No openacc case always use OpenMP version
+            IF (.true.) then !in No openacc case always use OpenMP version
 #endif
                !$OMP parallel do collapse(2) shared (mat,mat2,a_c) default(none)
                DO i=1,mat%matsize1
