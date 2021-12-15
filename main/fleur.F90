@@ -185,6 +185,11 @@ CONTAINS
       ! jpInit. Then do the whole juPhon shtick until we have phonons. This
       ! eliminates the need for complicated juggling with the eig file and
       ! unoccupied states.
+      !
+      ! Also add safety. We do not want to even enter juPhon if ctail is on,
+      ! jspins is 2, natoms is 2 or more, noco is on, libxc is off etc. etc.
+      !
+      ! Those restrictions will gradually be lifted.
       !!!juPhon
 
       ! Initialize potentials (start)
