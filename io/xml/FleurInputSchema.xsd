@@ -1088,8 +1088,18 @@
    </xsd:complexType>
 
    <xsd:complexType name="JuPhonType">
+      <xsd:attribute name="l_jpCheck" type="FleurBool" use="required"/>
+      <xsd:attribute name="l_jpTest" type="FleurBool" use="required"/>
       <xsd:attribute name="l_potout" type="FleurBool" use="required"/>
       <xsd:attribute name="l_eigout" type="FleurBool" use="required"/>
+      <xsd:attribute name="l_symTsh" type="FleurBool" use="required"/>
+      <xsd:attribute name="l_symTdm" type="FleurBool" use="required"/>
+      <xsd:attribute name="l_bfkq" type="FleurBool" use="required"/>
+      <xsd:attribute name="jplmax" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="kgqmax" type="FleurDouble" use="required"/>
+      <xsd:attribute name="gqmax" type="FleurDouble" use="required"/>
+      <xsd:attribute name="eps_pert" type="FleurDouble" use="required"/>
+      <xsd:attribute name="eDiffcut" type="FleurDouble" use="required"/>      
    </xsd:complexType>
 
    <xsd:complexType name="OutputType">

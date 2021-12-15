@@ -11,8 +11,19 @@ MODULE m_types_juPhon
    PRIVATE
 
    TYPE, EXTENDS(t_fleurinput_base) :: t_juPhon
-      LOGICAL :: l_potout = .FALSE.
-      LOGICAL :: l_eigout = .FALSE.
+      LOGICAL :: l_jpCheck = .FALSE.
+      LOGICAL :: l_jpTest  = .FALSE.
+      LOGICAL :: l_potout  = .FALSE.
+      LOGICAL :: l_eigout  = .FALSE.
+      LOGICAL :: l_symTsh  = .FALSE.
+      LOGICAL :: l_symTdm  = .FALSE.
+      LOGICAL :: l_bfkq    = .FALSE.
+      INTEGER :: jplmax    = 0
+      REAL    :: kgqmax    = 0.0
+      REAL    :: gqmax     = 0.0
+      REAL    :: eps_pert  = 0.00001
+      REAL    :: eDiffcut  = 1e-12
+      REAL    :: qpt_ph(3)
 
    CONTAINS
       PROCEDURE :: read_xml => read_xml_juPhon
@@ -54,8 +65,21 @@ CONTAINS
 
       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon')
       IF (numberNodes == 1) THEN
-         this%l_potout = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_potout'))
-         this%l_eigout = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_eigout'))
+         this%l_jpCheck = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jpCheck'))
+         this%l_jpTest  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jpTest'))
+         this%l_potout  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_potout'))
+         this%l_eigout  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_eigout'))
+         this%l_symTsh  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symTsh'))
+         this%l_symTdm  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symTdm'))
+         this%l_bfkq    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_bfkq'))
+         this%jplmax    = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jplmax'))
+         this%kgqmax    = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@kgqmax'))
+         this%gqmax     = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@gqmax'))
+         this%eps_pert  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@eps_pert'))
+         this%eDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@eDiffcut'))
+         this%qpt_ph(1) = 0.0
+         this%qpt_ph(2) = 0.0
+         this%qpt_ph(3) = 0.0    
       ENDIF
 
    END SUBROUTINE read_xml_juPhon
