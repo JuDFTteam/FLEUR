@@ -47,7 +47,7 @@ MODULE m_vmmp21
             DO mp =-l,l
                DO p = -l,l
                   DO q = -l,l
-                     v_mmp21(m,mp,i_u) = v_mmp21(m,mp,i_u) - &
+                     v_mmp21(m,mp,i_u) = v_mmp21(m,mp,i_u) + &
                                           u(m,p,q,mp,i_u) * n_mmp21(p,q,i_u)
                   ENDDO
                ENDDO

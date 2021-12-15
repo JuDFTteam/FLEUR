@@ -18,6 +18,7 @@ MODULE m_smooth
 
       COMPLEX, ALLOCATABLE :: f_c(:)
 
+      ALLOCATE(f_c(n))
       f_c = f
       CALL smooth_c(e,f_c,sigma,n)
       f = REAL(f_c)

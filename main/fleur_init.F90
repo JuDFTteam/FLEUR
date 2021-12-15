@@ -9,11 +9,9 @@ MODULE m_fleur_init
 #endif
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE fleur_init(fmpi, &
-                         input, field, atoms, sphhar, cell, stars, sym, noco, nococonv, vacuum, forcetheo, &
-                         sliceplot, banddos, enpara, xcpot, results, kpts, mpinp, hybinp, &
-                         oneD, coreSpecInput, gfinp, hub1inp, wann)
+   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata)
       USE m_types
+      use m_store_load_hybrid
       USE m_fleurinput_read_xml
       USE m_fleurinput_mpi_bc
       USE m_types_mpinp
@@ -34,7 +32,6 @@ CONTAINS
       USE m_writeOutHeader
       !USE m_fleur_init_old
       USE m_types_xcpot_inbuild
-      USE m_mpi_bc_xcpot
       USE m_prpxcfft
       USE m_make_stars
       USE m_make_sphhar
@@ -45,43 +42,25 @@ CONTAINS
       USE m_lapwdim
       use m_make_xcpot
       USE m_gaunt, ONLY: gaunt_init
-#ifdef CPP_MPI
-      !USE m_mpi_bc_all,  ONLY : mpi_bc_all
-#ifndef CPP_OLDINTEL
-      USE m_mpi_dist_forcetheorem
-#endif
-#endif
 #ifdef CPP_HDF
       USE m_hdf_tools
 #endif
       IMPLICIT NONE
       !     Types, these variables contain a lot of data!
-      TYPE(t_mpi), INTENT(INOUT):: fmpi
-      TYPE(t_input), INTENT(OUT):: input
-      TYPE(t_field), INTENT(OUT) :: field
 
-      TYPE(t_atoms), INTENT(OUT):: atoms
+      TYPE(t_mpi), INTENT(INOUT):: fmpi
+      type(t_fleurinput), intent(inout) :: fi
       TYPE(t_sphhar), INTENT(OUT):: sphhar
-      TYPE(t_cell), INTENT(OUT):: cell
       TYPE(t_stars), INTENT(OUT):: stars
-      TYPE(t_sym), INTENT(OUT):: sym
-      TYPE(t_noco), INTENT(OUT):: noco
-      TYPE(t_vacuum), INTENT(OUT):: vacuum
-      TYPE(t_sliceplot), INTENT(OUT):: sliceplot
-      TYPE(t_banddos), INTENT(OUT):: banddos
       TYPE(t_enpara), INTENT(OUT):: enpara
       CLASS(t_xcpot), ALLOCATABLE, INTENT(OUT):: xcpot
       TYPE(t_results), INTENT(OUT):: results
-      TYPE(t_kpts), INTENT(OUT):: kpts
-      TYPE(t_mpinp), INTENT(OUT):: mpinp
-      TYPE(t_hybinp), INTENT(OUT):: hybinp
-      TYPE(t_oneD), INTENT(OUT):: oneD
-      TYPE(t_coreSpecInput), INTENT(OUT) :: coreSpecInput
       TYPE(t_wann), INTENT(OUT):: wann
       CLASS(t_forcetheo), ALLOCATABLE, INTENT(OUT)::forcetheo
-      TYPE(t_gfinp), INTENT(OUT):: gfinp
-      TYPE(t_hub1inp), INTENT(OUT):: hub1inp
-      TYPE(t_nococonv), INTENT(OUT):: nococonv
+      TYPE(t_nococonv), INTENT(OUT) :: nococonv
+      type(t_hybdat), intent(inout) :: hybdat
+      type(t_mpdata), intent(inout):: mpdata
+
       TYPE(t_enparaXML)::enparaXML
       TYPE(t_forcetheo_data)::forcetheo_data
 
@@ -159,80 +138,78 @@ CONTAINS
       END IF
 
       ALLOCATE (t_xcpot_inbuild::xcpot)
-      !Only PE==0 reads the input and does basic postprocessing
+      !Only PE==0 reads the fi%input and does basic postprocessing
       IF (fmpi%irank .EQ. 0) THEN
-         CALL fleurinput_read_xml(outxmlFileID, cell=cell, sym=sym, atoms=atoms, input=input, noco=noco, vacuum=vacuum, field=field, &
-                                  sliceplot=sliceplot, banddos=banddos, mpinp=mpinp, hybinp=hybinp, oneD=oneD, coreSpecInput=coreSpecInput, &
-                                  wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
-                                  enparaXML=enparaXML, gfinp=gfinp, hub1inp=hub1inp)
-         CALL fleurinput_postprocess(Cell, Sym, Atoms, Input, Noco, Vacuum, &
-                                     Banddos, Oned, Xcpot, Kpts, gfinp)
+         CALL fleurinput_read_xml(outxmlFileID, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
+                                  sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, oneD=fi%oneD, coreSpecInput=fi%coreSpecInput, &
+                                  wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
+                                  enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp)
+         CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
+                                     fi%banddos, fi%oneD, Xcpot, fi%kpts, fi%gfinp)
       END IF
-      !Distribute input to all PE
-      CALL fleurinput_mpi_bc(Cell, Sym, Atoms, Input, Noco, Vacuum, Field, &
-                             Sliceplot, Banddos, mpinp, hybinp, Oned, Corespecinput, Wann, &
-                             Xcpot, Forcetheo_data, Kpts, Enparaxml, gfinp, hub1inp, fmpi%Mpi_comm)
+      !Distribute fi%input to all PE
+      CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
+                             fi%sliceplot, fi%banddos, fi%mpinp, fi%hybinp, fi%oneD, fi%coreSpecInput, Wann, &
+                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm)
       !Remaining init is done using all PE
-      call make_xcpot(fmpi, xcpot, atoms, input)
-      CALL nococonv%init(noco)
-      CALL nococonv%init_ss(noco, atoms)
-      !CALL ylmnorm_init(MAX(atoms%lmaxd, 2*hybinp%lexp))
-      CALL gaunt_init(atoms%lmaxd + 1)
-      CALL enpara%init_enpara(atoms, input%jspins, input%film, enparaXML)
-      CALL make_sphhar(fmpi%irank == 0, atoms, sphhar, sym, cell, oneD)
+      call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
+      CALL nococonv%init(fi%noco)
+      CALL nococonv%init_ss(fi%noco, fi%atoms)
+      !CALL ylmnorm_init(MAX(fi%atoms%lmaxd, 2*fi%hybinp%lexp))
+      CALL gaunt_init(fi%atoms%lmaxd + 1)
+      CALL enpara%init_enpara(fi%atoms, fi%input%jspins, fi%input%film, enparaXML)
+      CALL make_sphhar(fmpi%irank == 0, fi%atoms, sphhar, fi%sym, fi%cell, fi%oneD)
       ! Store structure data (has to be performed before calling make_stars)
-      CALL storeStructureIfNew(input, stars, atoms, cell, vacuum, oneD, sym, fmpi, sphhar, noco)
-      CALL make_stars(stars, sym, atoms, vacuum, sphhar, input, cell, xcpot, oneD, noco, fmpi)
-      CALL make_forcetheo(forcetheo_data, cell, sym, atoms, forcetheo)
-      CALL lapw_dim(kpts, cell, input, noco, nococonv, oneD, forcetheo, atoms, nbasfcn)
-      CALL input%init(noco, hybinp%l_hybrid, lapw_dim_nbasfcn)
-      CALL noco%init(atoms,input%ldauSpinoffd)
-      CALL oned%init(atoms) !call again, because make_stars modified it :-)
-      CALL hybinp%init(atoms, cell, input, oneD, sym, xcpot)
+      CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum, fi%oneD, fi%sym, fmpi, sphhar, fi%noco)
+      CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, xcpot, fi%oneD, fi%noco, fmpi)
+      CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
+      CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv, fi%oneD, forcetheo, fi%atoms, nbasfcn)
+      CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
+      CALL fi%oneD%init(fi%atoms) !call again, because make_stars modified it :-)
+      CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input, fi%oneD, fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
-      IF(.NOT.banddos%band.AND..NOT.banddos%dos) THEN
-         IF(noco%l_soc.OR.noco%l_ss) l_timeReversalCheck = .TRUE.
+      IF(.NOT.fi%banddos%band.AND..NOT.fi%banddos%dos) THEN
+         IF(fi%noco%l_soc.OR.fi%noco%l_ss) l_timeReversalCheck = .TRUE.
       END IF
-      CALL kpts%init(sym, input%film, hybinp%l_hybrid .or. input%l_rdmft, l_timeReversalCheck)
-      CALL kpts%initTetra(input, cell, sym, noco%l_soc .OR. noco%l_ss)
-      IF (fmpi%irank == 0) CALL gfinp%init(atoms, sym, noco, cell, input)
-      CALL gfinp%mpi_bc(fmpi%mpi_comm) !THis has to be rebroadcasted because there could be new gf elements after init_gfinp
-      CALL prp_xcfft(fmpi, stars, input, cell, xcpot)
-      CALL convn(fmpi%irank == 0, atoms, stars)
-      IF (fmpi%irank == 0) CALL e_field(atoms, stars, sym, vacuum, cell, input, field%efield)
-      IF (fmpi%isize > 1) CALL field%mpi_bc(fmpi%mpi_comm, 0)
+      CALL fi%kpts%init(fi%sym, fi%input%film, fi%hybinp%l_hybrid .or. fi%input%l_rdmft, l_timeReversalCheck)
+      CALL fi%kpts%initTetra(fi%input, fi%cell, fi%sym, fi%noco%l_soc .OR. fi%noco%l_ss)
+      IF (fmpi%irank == 0) CALL fi%gfinp%init(fi%atoms, fi%sym, fi%noco, fi%cell, fi%input)
+      CALL fi%gfinp%mpi_bc(fmpi%mpi_comm) !THis has to be rebroadcasted because there could be new gf elements after init_gfinp
+      CALL prp_xcfft(fmpi, stars, fi%input, fi%cell, xcpot)
+      CALL convn(fmpi%irank == 0, fi%atoms, stars)
+      IF (fmpi%irank == 0) CALL e_field(fi%atoms, stars, fi%sym, fi%vacuum, fi%cell, fi%input, fi%field%efield)
+      IF (fmpi%isize > 1) CALL fi%field%mpi_bc(fmpi%mpi_comm, 0)
 
-      !At some point this should be enabled for noco as well
-      IF (.NOT. noco%l_noco) &
-         CALL transform_by_moving_atoms(fmpi, stars, atoms, vacuum, cell, sym, sphhar, input, oned, noco)
+      !At some point this should be enabled for fi%noco as well
+      IF (.NOT. fi%noco%l_noco) &
+         CALL transform_by_moving_atoms(fmpi, stars, fi%atoms, fi%vacuum, fi%cell, fi%sym, sphhar, fi%input, fi%oneD, fi%noco)
 
       !
       !--> determine more dimensions
       !
 
       IF (fmpi%irank .EQ. 0) THEN
-         CALL writeOutParameters(fmpi, input, sym, stars, atoms, vacuum, kpts, &
-                                 oneD, hybinp, cell, banddos, sliceplot, xcpot, &
-                                 noco, enpara, sphhar)
-         CALL fleur_info(kpts)
+         CALL writeOutParameters(fmpi, fi%input, fi%sym, stars, fi%atoms, fi%vacuum, fi%kpts, &
+                                 fi%oneD, fi%hybinp, fi%cell, fi%banddos, fi%sliceplot, xcpot, &
+                                 fi%noco, enpara, sphhar)
+         CALL fleur_info(fi%kpts)
          CALL deleteDensities()
       END IF
 
       !Finalize the fmpi setup
-      CALL setupMPI(kpts%nkpt, input%neig, nbasfcn, fmpi)
+      CALL setupMPI(fi%kpts%nkpt, fi%input%neig, nbasfcn, fmpi)
 
       !Collect some usage info
-      CALL add_usage_data("A-Types", atoms%ntype)
-      CALL add_usage_data("Atoms", atoms%nat)
-      CALL add_usage_data("Real", sym%invs .AND. .NOT. noco%l_noco &
-                          .AND. .NOT. (noco%l_soc .AND. atoms%n_u > 0) .AND. atoms%n_hia == 0)
-      CALL add_usage_data("Spins", input%jspins)
-      CALL add_usage_data("Noco", noco%l_noco)
-      CALL add_usage_data("SOC", noco%l_soc)
-      CALL add_usage_data("SpinSpiral", noco%l_ss)
+      CALL add_usage_data("A-Types", fi%atoms%ntype)
+      CALL add_usage_data("fi%atoms", fi%atoms%nat)
+      CALL add_usage_data("Real", fi%input%l_real)
+      CALL add_usage_data("Spins", fi%input%jspins)
+      CALL add_usage_data("Noco", fi%noco%l_noco)
+      CALL add_usage_data("SOC", fi%noco%l_soc)
+      CALL add_usage_data("SpinSpiral", fi%noco%l_ss)
       CALL add_usage_data("PlaneWaves", lapw_dim_nvd)
-      CALL add_usage_data("LOs", atoms%nlotot)
-      CALL add_usage_data("nkpt", kpts%nkpt)
+      CALL add_usage_data("LOs", fi%atoms%nlotot)
+      CALL add_usage_data("nkpt", fi%kpts%nkpt)
 
 #ifdef CPP_GPU
       CALL add_usage_data("gpu_per_node", 1)
@@ -240,12 +217,14 @@ CONTAINS
       CALL add_usage_data("gpu_per_node", 0)
 #endif
 
-      CALL results%init(input, atoms, kpts, noco)
+      CALL results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
 
       IF (fmpi%irank .EQ. 0) THEN
-         IF (input%gw .NE. 0) CALL mixing_history_reset(fmpi)
-         CALL setStartingDensity(noco%l_noco)
+         IF (fi%input%gw .NE. 0) CALL mixing_history_reset(fmpi)
+         CALL setStartingDensity(fi%noco%l_noco)
       END IF
+
+      if(fi%hybinp%l_hybrid) call load_hybrid_data(fi, fmpi, hybdat, mpdata)
 
       !new check mode will only run the init-part of FLEUR
       IF (judft_was_argument("-check")) CALL judft_end("Check-mode done", fmpi%irank)
@@ -262,11 +241,11 @@ CONTAINS
                WRITE (*, *) 'running HDWF-extension of FLEUR code'
                WRITE (*, *) 'with l_sgwf =', wann%l_sgwf, ' and l_socgwf =', wann%l_socgwf
 
-               IF (wann%l_socgwf .AND. .NOT. noco%l_soc) THEN
+               IF (wann%l_socgwf .AND. .NOT. fi%noco%l_soc) THEN
                   CALL juDFT_error("set l_soc=T if l_socgwf=T", calledby="fleur_init")
                END IF
 
-               IF ((wann%l_ms .OR. wann%l_sgwf) .AND. .NOT. (noco%l_noco .AND. noco%l_ss)) THEN
+               IF ((wann%l_ms .OR. wann%l_sgwf) .AND. .NOT. (fi%noco%l_noco .AND. fi%noco%l_ss)) THEN
                   CALL juDFT_error("set l_noco=l_ss=T for l_sgwf.or.l_ms", calledby="fleur_init")
                END IF
 
@@ -288,7 +267,7 @@ CONTAINS
          END IF
 
          ALLOCATE (wann%param_vec(3, wann%nparampts))
-         ALLOCATE (wann%param_alpha(atoms%ntype, wann%nparampts))
+         ALLOCATE (wann%param_alpha(fi%atoms%ntype, wann%nparampts))
 
          IF (fmpi%irank .EQ. 0) THEN
             IF (wann%l_gwf) THEN
@@ -307,12 +286,12 @@ CONTAINS
                   WRITE (oUnit, '(3(f14.10,1x))') wann%param_vec(1, pc), wann%param_vec(2, pc), wann%param_vec(3, pc)
                   IF (wann%l_sgwf .OR. wann%l_ms) THEN
                      iAtom = 1
-                     DO iType = 1, atoms%ntype
-                        phi_add = tpi_const*(wann%param_vec(1, pc)*atoms%taual(1, iAtom) + &
-                                             wann%param_vec(2, pc)*atoms%taual(2, iAtom) + &
-                                             wann%param_vec(3, pc)*atoms%taual(3, iAtom))
+                     DO iType = 1, fi%atoms%ntype
+                        phi_add = tpi_const*(wann%param_vec(1, pc)*fi%atoms%taual(1, iAtom) + &
+                                             wann%param_vec(2, pc)*fi%atoms%taual(2, iAtom) + &
+                                             wann%param_vec(3, pc)*fi%atoms%taual(3, iAtom))
                         wann%param_alpha(iType, pc) = nococonv%alph(iType) + phi_add
-                        iAtom = iAtom + atoms%neq(iType)
+                        iAtom = iAtom + fi%atoms%neq(iType)
                      END DO
                   END IF
                END DO
@@ -331,7 +310,7 @@ CONTAINS
 
 #ifdef CPP_MPI
          CALL MPI_BCAST(wann%param_vec, 3*wann%nparampts, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr(1))
-         CALL MPI_BCAST(wann%param_alpha, atoms%ntype*wann%nparampts, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr(1))
+         CALL MPI_BCAST(wann%param_alpha, fi%atoms%ntype*wann%nparampts, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr(1))
          CALL MPI_BCAST(wann%l_dim, 3, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr(1))
 #endif
 

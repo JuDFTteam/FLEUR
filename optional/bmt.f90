@@ -25,7 +25,7 @@ contains
 
     INTEGER k,i,ivac
     INTEGER type,typmag, archiveType
-    REAL fermiEnergyTemp
+    REAL fermiEnergyTemp, tempDistance
     LOGICAL l_qfix
     CHARACTER(len=8) filename
 
@@ -50,7 +50,7 @@ contains
     END IF
 
     CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
+                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,den)
 
     IF ( typmag < atoms%ntype ) THEN
        DO type= typmag+1,atoms%ntype

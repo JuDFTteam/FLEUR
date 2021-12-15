@@ -39,7 +39,8 @@ CONTAINS
     REAL b_xavh,scale,b_con_outx,b_con_outy,mx,my,mz,&
          &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix,absmag
     REAL    rho11,rho22, alphdiff
-    COMPLEX rho21,d(2,2),chi(2,2)
+    COMPLEX rho21
+    real :: magmom(0:3)
     !     ..
     !     .. Local Arrays ..
     REAL b_xc_h(atoms%jmtd),b_xav(atoms%ntype)
@@ -54,33 +55,24 @@ CONTAINS
     END IF
 
     !---> calculated the comp. of the local moment vector
-    mx = 2*REAL(qa21(itype))
-    my = 2*AIMAG(qa21(itype))
-    mz = chmom(itype,1) - chmom(itype,2)
-    absmag=SQRT(mx*mx+my*my+mz*mz)
-    WRITE  (oUnit,8025) itype,mx,my,mz,absmag
+    magmom=nococonv%denmat_to_mag(chmom(itype,1),chmom(itype,2),qa21(itype))
+    WRITE  (oUnit,8025) itype,magmom(1),magmom(2),magmom(3),sqrt(dot_product(magmom(1:3),magmom(1:3)))
     !---> determine the polar angles of the moment vector in the local frame
-    CALL pol_angle(mx,my,mz,betah,alphh,.true.)
+    CALL pol_angle(magmom(1),magmom(2),magmom(3),betah,alphh,.true.)
     WRITE  (oUnit,8026) itype,betah,alphh
 8025 FORMAT(2x,'Atom:',I9.1,' --> local frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
 8026 FORMAT(2x,'Atom:',I9.1,' -->',10x,' local beta=',f9.5,&
          &                   '  local alpha=',f9.5)
 
+         rho11=chmom(itype,1)
+         rho22=chmom(itype,2)
+         rho21=conjg(qa21(itype))
+         call nococonv%rotdenmat(itype, rho11,rho22,rho21, toGlobal=.true.)
+         magmom=nococonv%denmat_to_mag(rho11,rho22,rho21)
      !now also give output in global frame
-     d(1,1)=mz/2
-     d(2,2)=-mz/2
-     d(1,2)=cmplx(mx,-my)/2
-     d(2,1)=cmplx(mx,-my)/2
-
-     chi=transpose(conjg(nococonv%chi(itype)))
-     !transform to global frame
-     d=MATMUL(conjg(transpose(chi)), MATMUL(d,((chi))))
-
-     mx=2*real(d(2,1))
-     my=2*aimag(d(2,1))
-     mz=d(1,1)-d(2,2)
-     CALL pol_angle(mx,my,mz,betah,alphh,.true.)
-     WRITE  (oUnit,8125) itype,mx,my,mz
+     !call nococonv%rot_magvec(itype,magmom,toGlobal=.true.)
+     CALL pol_angle(magmom(1),magmom(2),magmom(3),betah,alphh,.true.)
+     WRITE  (oUnit,8125) itype,magmom(1),magmom(2),magmom(3)
      WRITE  (oUnit,8126) itype,betah,alphh
 8125 FORMAT(2x,'Atom:',I9.1,' --> global frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5)
 8126 FORMAT(2x,'Atom:',I9.1,' -->',10x,' global beta=',f9.5,&

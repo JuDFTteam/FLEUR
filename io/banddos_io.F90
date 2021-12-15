@@ -253,7 +253,7 @@ MODULE m_banddos_io
       character(len=*),intent(in) :: name_of_dos
       character(len=*),intent(in) :: weight_name
       real,intent(in)             :: weight_eig(:,:,:)
-      real,OPTIONAL,intent(in)    :: eig(:,:,:)
+      real,optional,intent(in)    :: eig(:,:,:)
       type(t_kpts),intent(in)     :: kpts
 
 
@@ -273,10 +273,10 @@ MODULE m_banddos_io
       ELSE
         CALL h5gcreate_f(GroupID, "BS", BSGroupID, hdfError)
       endif
-      IF(PRESENT(eig)) THEN
+      IF (PRESENT(eig)) THEN
          if (.not.io_dataexists(BSGroupID,"eigenvalues")) call io_write_var(BSGroupID,"eigenvalues",eig)
-         call io_write_var(BSGroupID,weight_name,weight_eig(:,:,:))
       END IF
+      call io_write_var(BSGroupID,weight_name,weight_eig(:,:,:))
       CALL h5gclose_f(BSGroupID, hdfError)
       CALL h5gclose_f(GroupID, hdfError)
    END SUBROUTINE

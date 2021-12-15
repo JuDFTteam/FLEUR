@@ -119,7 +119,7 @@ MODULE m_kk_cutoff
    END SUBROUTINE kk_cutoff
 
    SUBROUTINE kk_cutoffRadial(uu,ud,du,dd,noco,scalarGF,l_mperp,&
-                              l,atomType,input,eMesh,cutoff,scalingFactor)
+                              l,input,eMesh,cutoff,scalingFactor)
 
       COMPLEX,                   INTENT(IN)     :: uu(:,-lmaxU_const:,-lmaxU_const:,:)
       COMPLEX,                   INTENT(IN)     :: ud(:,-lmaxU_const:,-lmaxU_const:,:)
@@ -129,7 +129,6 @@ MODULE m_kk_cutoff
       TYPE(t_scalarGF),          INTENT(IN)     :: scalarGF
       LOGICAL,                   INTENT(IN)     :: l_mperp
       INTEGER,                   INTENT(IN)     :: l
-      INTEGER,                   INTENT(IN)     :: atomType
       TYPE(t_input),             INTENT(IN)     :: input
       REAL,                      INTENT(IN)     :: eMesh(:)
       INTEGER,                   INTENT(INOUT)  :: cutoff(:,:)
@@ -150,7 +149,7 @@ MODULE m_kk_cutoff
             spin2 = 1
          ENDIF
          !$OMP parallel do default(none) &
-         !$OMP shared(scalarGF,jspin,spin1,spin2,l,atomType,im,uu,ud,du,dd) &
+         !$OMP shared(scalarGF,jspin,spin1,spin2,l,im,uu,ud,du,dd) &
          !$OMP private(m,mp) collapse(2)
          DO m = -l,l
             DO mp = -l,l

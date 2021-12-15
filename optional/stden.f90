@@ -27,6 +27,8 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    USE m_cdn_io
    USE m_qfix
    USE m_atom2
+   USE m_clebsch
+   USE m_rotMMPmat
    USE m_RelaxSpinAxisMagn
    IMPLICIT NONE
 
@@ -47,17 +49,19 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    TYPE(t_potden)   :: den
    TYPE(t_enpara)   :: enpara
    ! Local Scalars
-   REAL d,del,fix,h,r,rnot,z,bm,qdel,va
+   REAL d,del,fix,h,r,rnot,z,bm,qdel,va,cl,j_state,mj,mj_state,ms
    REAL denz1(1,1),vacxpot(1,1),vacpot(1,1)
    INTEGER i,ivac,iza,j,jr,k,n,n1,ispin
-   INTEGER nw,ilo,natot,nat
+   INTEGER nw,ilo,natot,nat,l,atomType,istate,i_u,kappa,m
+
 
    ! Local Arrays
    REAL,    ALLOCATABLE :: vbar(:,:)
    REAL,    ALLOCATABLE :: rat(:,:),eig(:,:,:),sigm(:)
    REAL,    ALLOCATABLE :: rh(:,:,:),rh1(:,:,:),rhoss(:,:)
-   REAL     :: vacpar(2)
+   REAL     :: vacpar(2),occ_state(2)
    INTEGER lnum(29,atoms%ntype),nst(atoms%ntype)
+   INTEGER, ALLOCATABLE :: state_indices(:)
    INTEGER jrc(atoms%ntype)
    LOGICAL l_found(0:3),llo_found(atoms%nlod),l_st
    REAL,ALLOCATABLE   :: occ(:,:)
@@ -71,7 +75,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
 
    !use the init_potden_simple routine to prevent extra dimensions from noco calculations
    CALL den%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
-                 atoms%n_u+atoms%n_hia,input%jspins,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,&
+                 atoms%n_denmat,input%jspins,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,&
                  vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 
    ALLOCATE ( rat(atoms%msh,atoms%ntype),eig(29,input%jspins,atoms%ntype) )
@@ -222,6 +226,60 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       mmpmat_tmp(:,:,:,:size(den%mmpmat,4)) = den%mmpmat
       call move_alloc(mmpmat_tmp,den%mmpmat)
    ENDIF
+
+   IF(atoms%n_u>0.and.fmpi%irank==0) THEN
+      !Create initial guess for the density matrix based on the occupations in the inp.xml file
+      WRITE(*,*) "Creating initial guess for LDA+U density matrix"
+      den%mmpMat = cmplx_0
+      do i_u = 1, atoms%n_u
+         l = atoms%lda_u(i_u)%l
+         atomType = atoms%lda_u(i_u)%atomType
+
+         state_indices = atoms%econf(atomType)%get_states_for_orbital(l)
+         do istate = 1, atoms%econf(atomType)%num_states
+            if(state_indices(istate)<0) exit
+            occ_state=atoms%econf(atomType)%occupation(state_indices(istate),:)
+            kappa = atoms%econf(atomType)%kappa(state_indices(istate))
+
+            DO ispin=1,2
+                  
+               j_state = abs(kappa)-0.5
+               mj_state = -j_state
+               DO WHILE(mj_state <= MERGE(l,l+1,kappa>0))
+                  ms = MERGE(0.5,-0.5,ispin==1)
+                  mj = mj_state * SIGN(1.,ms)
+                  m  = mj - ms
+                  IF(ABS(m)<=l) then
+                     cl = clebsch(REAL(l),0.5,REAL(m),ms,j_state,mj)**2   
+                     den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) = den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) +  MIN(cl,occ_state(ispin))
+                     occ_state(ispin) = MAX(occ_state(ispin)-cl,0.0)
+                  endif
+                  mj_state = mj_state + 1 
+               ENDDO
+            ENDDO
+         enddo
+         IF(.not.noco%l_soc) THEN
+            !Average -m and m
+            DO ispin = 1, input%jspins
+               DO m = 1,l
+                  den%mmpMat(m,m,i_u,ispin) = (den%mmpMat(m,m,i_u,ispin) + den%mmpMat(-m,-m,i_u,ispin))/2.0
+                  den%mmpMat(-m,-m,i_u,ispin) = den%mmpMat(m,m,i_u,ispin) 
+               enddo
+            enddo
+         endif
+         !Rotate into the global real frame
+         IF(noco%l_noco) THEN
+            do ispin =1, input%jspins
+               den%mmpMat(:,:,i_u,ispin) = rotMMPmat(den%mmpMat(:,:,i_u,ispin),noco%alph_inp(atomType),noco%beta_inp(atomType),0.0,l)
+            enddo
+         ELSE IF(noco%l_soc) THEN
+            do ispin =1, input%jspins
+               den%mmpMat(:,:,i_u,ispin) = rotMMPmat(den%mmpMat(:,:,i_u,ispin),noco%phi_inp,noco%theta_inp,0.0,l)
+            enddo
+         ENDIF
+      enddo
+   ENDIF
+
    IF (fmpi%irank == 0) THEN
       z=SUM(atoms%neq(:)*atoms%zatom(:))
       IF (ABS(fix*z-z)>0.5) THEN

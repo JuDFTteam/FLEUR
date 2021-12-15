@@ -51,6 +51,7 @@ include(kpoints/CMakeLists.txt)
 include(ldahia/CMakeLists.txt)
 include(greensf/CMakeLists.txt)
 include(tetra/CMakeLists.txt)
+include(opc/CMakeLists.txt)
 
 
 include(tests/tests_old.cmake)

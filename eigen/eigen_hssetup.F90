@@ -16,7 +16,7 @@ CONTAINS
   !! 5. The matrices are copied to the final matrix, in the fi%noco-case the full matrix is constructed from the 4-parts.
 
    SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
-                            ud, td, v, lapw, l_real, nk, smat_final, hmat_final)
+                            ud, td, v, lapw, nk, smat_final, hmat_final)
       USE m_types
       USE m_types_mpimat
       USE m_types_gpumat
@@ -46,10 +46,10 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)    :: v, vx
       integer, intent(in)          :: nk
       CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
-      LOGICAL, INTENT(IN)           :: l_real
 
       CLASS(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
       INTEGER :: i, j, nspins
+      complex, allocatable :: vpw_wTemp(:,:)
 
       !Matrices for Hamiltonian and Overlapp
       !In fi%noco case we need 4-matrices for each spin channel
@@ -61,28 +61,33 @@ CONTAINS
       END IF
       DO i = 1, nspins
          DO j = 1, nspins
-            CALL smat(i, j)%init(l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
             CALL hmat(i, j)%init(smat(i, j))
          END DO
       END DO
 
       CALL timestart("Interstitial part")
       !Generate interstitial part of Hamiltonian
-      CALL hs_int(fi%input, fi%noco, stars, lapw, fmpi, fi%cell, isp, merge(v%pw_w-xcpot%get_exchange_weight()*vx%pw_w,v%pw_w,hybdat%l_subvxc), smat, hmat)
+      ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
+      vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
+      CALL hs_int(fi%input, fi%noco, stars, lapw, fmpi, fi%cell, isp, vpw_wTemp, smat, hmat)
+      DEALLOCATE(vpw_wTemp)
+
       CALL timestop("Interstitial part")
       CALL timestart("MT part")
       !MT-part of Hamiltonian. In case of fi%noco, we need an loop over the local spin of the fi%atoms
-      !$acc enter data copyin (hmat,smat)
       DO i = 1, nspins; DO j = 1, nspins
+            !$acc enter data copyin(hmat(i,j),smat(i,j))
             !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
          END DO; END DO
       CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, ud, td, smat, hmat)
       DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
-            !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c,hmat(i,j),smat(i,j))
+            !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
+            !$acc exist data delete(hmat(i,j),smat(i,j))
          ELSE
             !$acc exit data copyout(hmat(i,j)%data_c,smat(i,j)%data_c) delete(hmat(i,j)%data_r,smat(i,j)%data_r)
+            !$acc exist data delete(hmat(i,j),smat(i,j))
          END IF; END DO; END DO
-      !$acc exit data delete(hmat,smat)
       CALL timestop("MT part")
 
       !Vacuum contributions

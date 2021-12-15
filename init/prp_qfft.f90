@@ -36,7 +36,7 @@
       TYPE(t_stars),INTENT(INOUT)  :: stars
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_noco),INTENT(IN)      :: noco
-      TYPE(t_input),INTENT(INOUT)  :: input  !<rkmax might be modified
+      TYPE(t_input),INTENT(INOUT)  :: input  !rkmax might be modified
 !
 !
 !---> local variables

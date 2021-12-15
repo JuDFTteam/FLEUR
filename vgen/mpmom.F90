@@ -219,8 +219,11 @@ contains
 
     ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
     od = oneD%odi%d1
-    !$omp parallel do if(atoms%ntype < 600) default( shared ) private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, &
-    !$omp& l, cil, ll1, m, lm, k ) reduction( +:qlmp )
+    !$omp parallel do if(atoms%ntype < 600) default( none ) &
+    !$omp shared( fmpi, atoms, stars, oneD, sym, cell, input, potdenType, od, qpw) &
+    !$omp private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, l, cil, ll1, m, lm, k ) &
+    !$omp private( il, kl ) &
+    !$omp reduction( +:qlmp )
     do k = fmpi%irank+2, stars%ng3, fmpi%isize
       if ( od ) then
         call od_phasy( atoms%ntype, stars%ng3, atoms%nat, atoms%lmaxd, atoms%ntype, &

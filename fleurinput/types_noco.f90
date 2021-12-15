@@ -270,9 +270,12 @@ MODULE m_types_noco
      CLASS(t_noco),INTENT(inout):: noco
      TYPE(t_atoms),INTENT(in)   :: atoms
      LOGICAL, INTENT(in)        :: l_spinoffd_ldau
-
      INTEGER :: i_u, atomType
 
+     IF (noco%l_noco .AND. (ABS(noco%theta_inp)>1E-5.OR.ABS(noco%phi_inp)>1E-5)) &
+           CALL judft_warn("You specified a theta/phi angle for SOC in a Noco-calculation. These angles are used only in non-Noco SOC calculations.")
+
+ 
      IF(l_spinoffd_ldau) THEN
         DO i_u = 1, atoms%n_u+atoms%n_hia
            atomType = atoms%lda_u(i_u)%atomType

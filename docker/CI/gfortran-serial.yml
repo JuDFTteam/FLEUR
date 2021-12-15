@@ -1,0 +1,23 @@
+build-gfortran-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: build
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -l serial -mpi FALSE -hdf5 FALSE -cmake_opts -DFLEUR_USE_OPENMP=OFF
+    - cd build.serial
+    - make -j 2
+  artifacts:
+    paths:
+      - build.serial
+    expire_in: 12h
+  except:
+    - pushes
+
+test-gfortran-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  extends: .test-fleur-not-on-push
+  needs: 
+    - build-gfortran-serial
+  variables:
+    BUILD_FOLDER: build.serial
+    markers: "serial"

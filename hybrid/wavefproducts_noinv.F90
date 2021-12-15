@@ -13,7 +13,7 @@ CONTAINS
       type(t_nococonv), intent(in)    :: nococonv
       TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_mpdata), intent(in)      :: mpdata
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
+      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
       type(t_mat), intent(in)         :: z_k ! z_k is also z_k_p since ik < nkpt
       type(t_stars), intent(in)       :: stars
       type(t_mat), intent(inout)      :: cprod
@@ -48,7 +48,7 @@ CONTAINS
 
       !$acc data copyin(cprod) create(cprod%data_r) copyout(cprod%data_c)
          !$acc kernels 
-         cprod%data_c = 0.0
+         cprod%data_c(:,:) = 0.0
          !$acc end kernels
          call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                     ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)

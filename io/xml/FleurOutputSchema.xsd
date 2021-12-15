@@ -110,6 +110,7 @@
       <xsd:attribute name="jmtd" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="n_u" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="n_hia" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="n_opc" type="xsd:nonNegativeInteger" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="BasisType">
@@ -168,9 +169,9 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="FermiEnergy" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="valenceDensity" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="onSiteExchangeSplitting" type="OnSiteExchangeSplittingType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="noncollinearTorgue" type="GFTorgueType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="spinorbitTorgue" type="GFTorgueType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="noncollinearTorque" type="GFTorqueType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="coreStates" type="OutCoreStatesType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="slaterIntegrals" type="SlaterIntegralsListType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMagneticMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
@@ -210,13 +211,13 @@
    </xsd:complexType>
 
    <xsd:complexType name="Forcetheorem_DMI_SummaryType">
-      <xsd:sequence>
+      <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="Entry" type="Entry_DMI_Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="allAtoms" type="Entry_DMIATOMS_Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="singleAtom" type="Entry_DMIATOMS_Type"/>
       </xsd:sequence>
       <xsd:attribute name="Angles" type="xsd:integer" use="required"/>
-      <xsd:attribute name="qpoints" type="xsd:integer" use="required"/>
+      <xsd:attribute name="qPoints" type="xsd:integer" use="required"/>
       <xsd:attribute name="ef" type="xsd:integer" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="required"/>
    </xsd:complexType>
@@ -409,6 +410,35 @@
       <xsd:attribute name="lostElectrons" type="xsd:double" use="required"/>
    </xsd:complexType>
 
+   <xsd:complexType name="SlaterIntegralsListType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="slaterIntegral" type="SlaterIntegralType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="SlaterIntegralType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="state" type="SlaterCalculationType"/>
+      </xsd:sequence>
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+      <xsd:attribute name="atomicNumber" type="xsd:integer" use="required"/>
+      <xsd:attribute default="1" name="spin" type="xsd:integer" use="optional"/>
+      <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="n" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="screening" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="SlaterCalculationType">
+      <xsd:simpleContent>
+         <xsd:extension base="DoubleVecType">
+            <xsd:attribute name="n" type="xsd:nonNegativeInteger" use="required"/>
+            <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
+            <xsd:attribute name="j" type="xsd:double" use="required"/>
+            <xsd:attribute name="units" type="xsd:string" use="required"/>
+         </xsd:extension>
+      </xsd:simpleContent>
+   </xsd:complexType>
+
    <xsd:complexType name="MTMagneticMomentsType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="magneticMoment" type="MagneticMomentType"/>
@@ -462,13 +492,13 @@
       </xsd:sequence>
    </xsd:complexType>
 
-   <xsd:complexType name="GFTorgueType">
+   <xsd:complexType name="GFTorqueType">
       <xsd:sequence>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="torgue" type="TorgueType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="torque" type="TorqueType"/>
       </xsd:sequence>
    </xsd:complexType>
 
-   <xsd:complexType name="TorgueType">
+   <xsd:complexType name="TorqueType">
       <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
       <xsd:attribute name="sigma_x" type="xsd:double" use="required"/>
       <xsd:attribute name="sigma_y" type="xsd:double" use="required"/>

@@ -21,9 +21,6 @@ CONTAINS
     USE m_types_mixvector
     USE m_constants
 
-#ifdef CPP_MPI
-    USE m_mpi_bc_potden
-#endif
     IMPLICIT NONE
 
     TYPE(t_oneD),      INTENT(in)    :: oneD
@@ -46,16 +43,23 @@ CONTAINS
     real                             :: fix
     integer                          :: lh,n
 
+    if (sym%invs) then
+      !This is for easier debugging of the preconditioner. The imaginary part
+      !of the output density in the interstitial is never constrained to be
+      !0 in the case of inversion symmetric systems. This leads to all numerical
+      !noise leaking through making comparisons especially with different parallelizations
+      !more difficult. The input density is implicitly constrained since the
+      !mixvector%from_density subroutine throws away the imaginary part if sym%invs is .true.
+      outDen%pw(:,:input%jspins) = real(outDen%pw(:,:input%jspins))
+    endif
 
     CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
-    CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
+    CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_POTYUK )
     MPI0_b: IF( fmpi%irank == 0 ) THEN
        CALL resDen%subPotDen( outDen, inDen )
        IF( input%jspins == 2 ) CALL resDen%SpinsToChargeAndMagnetisation()
     END IF MPI0_b
-#ifdef CPP_MPI
-    CALL mpi_bc_potden( fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
-#endif
+    CALL resDen%distribute(fmpi%mpi_comm)
     IF ( .NOT. input%film ) THEN
        CALL vgen_coulomb( 1, fmpi,  oneD, input, field, vacuum, sym, stars, cell, &
             sphhar, atoms, .FALSE., resDen, vYukawa )
@@ -64,9 +68,7 @@ CONTAINS
        if( fmpi%irank == 0 ) then
           call resDenMod%copyPotDen( resDen )
        end if
-#ifdef CPP_MPI
-       CALL mpi_bc_potden( fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDenMod )
-#endif
+       CALL resDenMod%distribute(fmpi%mpi_comm)
        vYukawa%iter = resDen%iter
        CALL VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, resDenMod, &
             vYukawa )
@@ -75,10 +77,10 @@ CONTAINS
     MPI0_c: IF( fmpi%irank == 0 ) THEN
        resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
        DO n = 1, atoms%ntype
-          DO lh = 0, sphhar%nlhd
-             resDen%mt(1:atoms%jri(n),lh,n,1) = resDen%mt(1:atoms%jri(n),lh,n,1) &
+          DO lh = 0, sphhar%nlh(sym%ntypsy(sum(atoms%neq(:n-1))+1))
+             resDen%mt(:atoms%jri(n),lh,n,1) = resDen%mt(:atoms%jri(n),lh,n,1) &
                   - input%preconditioning_param ** 2 / fpi_const &
-                  * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
+                  * vYukawa%mt(:atoms%jri(n),lh,n,1) * atoms%rmsh(:atoms%jri(n),n) ** 2
           END DO
        END DO
        resDen%vacz  = resDen%vacz  - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz

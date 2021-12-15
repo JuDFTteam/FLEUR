@@ -17,14 +17,15 @@ CONTAINS
     TYPE(t_sym),INTENT(INOUT)   ::sym
     TYPE(t_atoms),INTENT(INOUT) ::atoms
     TYPE(t_input),INTENT(INOUT) ::input
-    TYPE(t_noco),INTENT(IN)     ::noco
+    TYPE(t_noco),INTENT(INOUT)     ::noco
     TYPE(t_vacuum),INTENT(INOUT)::vacuum
     TYPE(t_banddos),INTENT(IN)  ::banddos
     TYPE(t_oneD),INTENT(INOUT)  ::oneD
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_kpts),INTENT(INOUT)     ::kpts
     TYPE(t_gfinp),INTENT(IN)    ::gfinp
-
+    REAL    :: unfold(3,3)  !just for the unfolding
+    INTEGER :: i
     call cell%init(DOT_PRODUCT(atoms%volmts(:),atoms%neq(:)))
     call atoms%init(cell)
     CALL sym%init(cell,input%film)
@@ -33,6 +34,7 @@ CONTAINS
     CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
     !call make_xcpot(xcpot,atoms,input)
     call oneD%init(atoms)
+    CALL noco%init(atoms,input%ldauSpinoffd)
 
     call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts)
     ! Check muffin tin radii, only checking, dont use new parameters
@@ -43,6 +45,18 @@ CONTAINS
     IF (banddos%unfoldband) THEN
       write (*,*) 'input switch unfolding read'
       write (*,*) 'before', kpts%specialPoints(:,2)
+      !unfold=banddos%unfoldTransMat
+      !unfold(1,1)=banddos%unfoldTransMat(1,1)*banddos%s_cell_x
+      !unfold(2,2)=banddos%unfoldTransMat(2,2)*banddos%s_cell_y
+      !unfold(3,3)=banddos%unfoldTransMat(3,3)*banddos%s_cell_z
+      !Do i= 1,kpts%nkpt
+      !  kpts%bk(:,i)=matmul(unfold,kpts%bk(:,i))
+      !END DO
+      !Do i=1,size(kpts%specialPoints,2)
+      !  write (*,*) 'before', kpts%specialPoints(:,i)
+      !  kpts%specialPoints(:,i)=matmul(unfold,kpts%specialPoints(:,i))
+      !  write (*,*) 'after', kpts%specialPoints(:,i)
+      !END DO
       kpts%bk(1,:)=kpts%bk(1,:)*banddos%s_cell_x
       kpts%bk(2,:)=kpts%bk(2,:)*banddos%s_cell_y
       kpts%bk(3,:)=kpts%bk(3,:)*banddos%s_cell_z

@@ -202,6 +202,8 @@ CONTAINS
         TYPE(t_results)  :: results
         TYPE(t_nococonv) :: nococonv
         type(t_wann)     :: wann
+        TYPE(t_hybdat)   :: hybdat
+        type(t_mpdata)   :: mpdata
         CLASS(t_forcetheo),ALLOCATABLE::forcetheo
         class(t_xcpot), allocatable :: xcpot
 
@@ -230,13 +232,11 @@ CONTAINS
         fmpi%l_mpi_multithreaded = l_mpi_multithreaded
         fmpi%mpi_comm = jobs(njob)%mpi_comm
         CALL timestart("Initialization")
-        call fleur_init(fmpi,fi%input,fi%field,fi%atoms,sphhar,fi%cell,stars,fi%sym,fi%noco,nococonv,fi%vacuum,forcetheo,fi%sliceplot,&
-           fi%banddos,enpara,xcpot,results,fi%kpts,fi%mpinp,fi%hybinp,fi%oneD,fi%coreSpecInput,fi%gfinp,&
-           fi%hub1inp,wann)
+        call fleur_init(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,xcpot,results,wann, hybdat, mpdata)
         CALL timestop("Initialization")
 
         CALL fleur_execute(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&
-                           xcpot, wann)
+                           xcpot, wann, hybdat, mpdata)
 
     END SUBROUTINE
 
@@ -307,4 +307,4 @@ PROGRAM fleurjob
     CALL fleur_job_arguments(jobs)
     CALL fleur_job_distribute(jobs)
     CALL fleur_job_execute(jobs, l_mpi_multithreaded)
-END
+END PROGRAM fleurjob

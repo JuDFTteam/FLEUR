@@ -47,6 +47,7 @@ PROGRAM inpgen
   USE m_types_xml
   USE m_types_juPhon
   use m_make_sym
+  USE m_types_profile
 
       IMPLICIT NONE
 
@@ -73,7 +74,8 @@ PROGRAM inpgen
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_hub1inp)  :: hub1inp
       TYPE(t_enparaXML):: enparaxml
-      TYPE(t_juPhon)  :: juPhon
+      TYPE(t_juPhon)   :: juPhon
+      TYPE(t_profile)  :: profile
 
       INTEGER            :: idum, kptsUnit, inpOldUnit, ios, inpgenIUnit
       INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
@@ -97,6 +99,11 @@ PROGRAM inpgen
          USE iso_c_binding
          INTEGER(c_int) dropDefaultEConfig
        END FUNCTION dropDefaultEConfig
+
+       FUNCTION dropProfiles() BIND(C, name="dropProfiles")
+         USE iso_c_binding
+         INTEGER(c_int) dropProfiles
+       END FUNCTION dropProfiles
       END INTERFACE
 
       CALL judft_init(oUnit,.FALSE.)
@@ -107,6 +114,8 @@ PROGRAM inpgen
 
       INQUIRE(file='default.econfig',exist=l_exist)
       IF (.NOT.l_exist) idum=dropDefaultEconfig()
+      INQUIRE(file='profile.config',exist=l_exist)
+      IF (.NOT.l_exist) idum=dropProfiles()
 
       OPEN(oUnit,file='out')
 
@@ -165,6 +174,15 @@ PROGRAM inpgen
       kptsBZintegration = BZINT_METHOD_HIST
       kptsGamma = .FALSE.
 
+      CALL profile%init()
+      IF (judft_was_argument("-precise")) THEN
+         WRITE(*,*) 'NOTE: right now the "-precise" option is under development and experimental.'
+         CALL profile%load("precise")
+      ELSE IF (judft_was_argument("-profile")) THEN
+         WRITE(*,*) 'NOTE: right now the "-profile" option is under development and experimental.'
+         CALL profile%load(TRIM(ADJUSTL(judft_string_for_argument("-profile"))))
+      END IF
+
       IF (judft_was_argument("-inp")) THEN
          l_kptsInitialized(:) = .FALSE.
          call read_old_inp(input,atoms,cell,stars,sym,noco,vacuum,forcetheo,&
@@ -186,8 +204,8 @@ PROGRAM inpgen
          !read the input
          l_kptsInitialized(:) = .FALSE.
          ALLOCATE (sliceplot%plot(1))
-         CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
-              kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+         CALL read_inpgen_input(profile,atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
+                                kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
          IF(input%film) sliceplot%plot(1)%zero(3) = -0.5
          IF (l_addPath) THEN
             l_check = .TRUE.
@@ -208,16 +226,14 @@ PROGRAM inpgen
       ENDIF
       IF (.NOT.l_fullinput) THEN
          !First we determine the spacegoup and map the atoms to groups
-         CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,&
-              cell,sym,atoms)
+         CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,cell,sym,atoms)
 
          !All atom related parameters are set here. Note that some parameters might
          !have been set in the read_input call before by adding defaults to the atompar module
-         CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms,enpara)
+         CALL make_atomic_defaults(input,vacuum,profile,cell,oneD,atoms,enpara)
 
          !Set all defaults that have not been specified before or can not be specified in inpgen
-         CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
-                   xcpot,noco,mpinp,hybinp)
+         CALL make_defaults(atoms,sym,cell,vacuum,input,stars,xcpot,profile,noco,banddos,mpinp,hybinp)
       ENDIF
 
       IF (numAddKptsSets.EQ.1) THEN

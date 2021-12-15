@@ -70,13 +70,12 @@ CONTAINS
     CALL bravais_symm(cell, nops,mmrot,eps7*1000)
     CALL bravais_symm(cell, mops,mmrot,eps7)
     if (mops.ne.nops) then
-      write(*,*) "********** WARNING ***********"
-      write(*,*) "Your Bravais lattice 'misses' some symmetry by a small number,"
-      write(*,*) "e.g. with small modifications of your Bravais lattice you might be able"
-      write(*,*) "to exploit more symmetry."
-      write(*,*) "You might want to specify your lattice vectors more precise."
-      write(*,*) "Hint: the internal 'epsilon' for comparisons is 10^-7."
-      write(*,*) "********** END: WARNING ***********"
+      call juDFT_warn("Your Bravais lattice 'misses' some symmetry by a small number," // new_line("a") // &
+                      "e.g. with small modifications of your Bravais lattice you might be able"  // new_line("a") // &
+                      "to exploit more symmetry." // new_line("a") //&
+                      "You might want to specify your lattice vectors more precise.",&
+                      hint="The internal 'epsilon' for comparisons is 10^-7.",&
+                      calledby='make_spacegroup')
     endif
 
     !reduce symmetry in special setups

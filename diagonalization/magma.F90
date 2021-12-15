@@ -79,7 +79,7 @@ CONTAINS
        ALLOCATE(work(lwork),rwork(lrwork),iwork(liwork))
        !Now the diagonalization
        !CALL magmaf_zhegvdx_2stage_m(NGPU_CONST,&
-       CALL magmaf_zhegvdx(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
+       CALL magmaf_zhegvdx_m(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
                            SIZE(smat%data_c,1),0.0,0.0,1,ne,mout,eigTemp,work,lwork,rwork,lrwork,iwork,liwork,error)
        IF (error/=0) THEN
           WRITE(*,*) 'magmaf_zhegvdx error code: ', error

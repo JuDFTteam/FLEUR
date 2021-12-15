@@ -10,7 +10,7 @@ MODULE m_calc_hybrid
 CONTAINS
 
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
-                          results,xcpot,v,iterHF)
+                          results,xcpot,v,iter, iterHF)
       use m_work_package
       use m_set_coul_participation
       USE m_types_hybdat
@@ -46,7 +46,7 @@ CONTAINS
       TYPE(t_results), INTENT(INOUT)    :: results
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
       TYPE(t_potden), INTENT(IN)        :: v
-      INTEGER, INTENT(INOUT)            :: iterHF
+      INTEGER, INTENT(INOUT)            :: iter, iterHF
 
       ! local variables
       type(t_hybmpi)           :: glob_mpi, wp_mpi
@@ -77,6 +77,9 @@ CONTAINS
       hybdat%l_subvxc = fi%hybinp%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
       !If this is the first iteration loop we can not calculate a new non-local potential
       hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
+      !make sure we do at least one PBE first
+      if(iter == 1 .and. iterHF == 0) hybdat%l_calhf = .False.
+
       IF (.NOT. hybdat%l_calhf) THEN
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
       else

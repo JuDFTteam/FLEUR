@@ -159,6 +159,11 @@ CONTAINS
       if(k_pack%submpi%root()) then
          call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, vx_tmp)
          call vx_tmp%u2l()
+      ELSE  
+#ifdef CPP_MPI
+         ! balance post read_z barrier
+         call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
       endif
 
 

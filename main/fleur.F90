@@ -7,7 +7,7 @@ MODULE m_fleur
    IMPLICIT NONE
 CONTAINS
    SUBROUTINE fleur_execute(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, results, &
-                            xcpot, wann)
+                            xcpot, wann, hybdat, mpdata)
 
       !     ***************************************************************
       !
@@ -69,7 +69,6 @@ CONTAINS
       USE m_usetup
       USE m_hubbard1_setup
       USE m_writeCFOutput
-      USE m_mpi_bc_potden
       USE m_mpi_bc_tool
       USE m_eig66_io
       USE m_chase_diag
@@ -89,13 +88,13 @@ CONTAINS
       type(t_wann), intent(inout)    :: wann
 
       CLASS(t_forcetheo), INTENT(INOUT)::forcetheo
-      TYPE(t_enpara), INTENT(INOUT)   :: enpara
+      TYPE(t_enpara), INTENT(INOUT)    :: enpara
+      TYPE(t_hybdat), intent(inout)    :: hybdat
 
       TYPE(t_input) :: input_soc !same as fi%input with neig=2*neig !should be refactored out
 
-      TYPE(t_field)                   :: field2
-      TYPE(t_hybdat)                  :: hybdat
-      TYPE(t_mpdata)                  :: mpdata
+      TYPE(t_field)                    :: field2
+      TYPE(t_mpdata), intent(inout)    :: mpdata
 
       TYPE(t_potden)                  :: vTot, vx, vCoul, vxc, exc
       TYPE(t_potden)                  :: inDen, outDen, EnergyDen, sliceDen
@@ -109,7 +108,7 @@ CONTAINS
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
       LOGICAL :: l_forceTheorem, l_lastIter
-      REAL    :: fix, sfscale, rdummy
+      REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev,occDistancePrev
 
 #ifdef CPP_MPI
@@ -163,7 +162,7 @@ CONTAINS
       IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
       IF (any(fi%noco%l_unrestrictMT)) archiveType = CDN_ARCHIVE_TYPE_FFN_const
       IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%oneD, archiveType, CDN_INPUT_DEN_const, &
-                                              0, results%ef, l_qfix, inDen)
+                                              0, results%ef, results%last_distance, l_qfix, inDen)
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
       !   CALL initRelax(fi%noco, nococonv, fi%atoms, fi%input, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, inDen)
          !CALL doRelax(fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
@@ -191,13 +190,12 @@ CONTAINS
       ALLOCATE (greensFunction(MAX(1, fi%gfinp%n)))
       IF (fi%gfinp%n > 0) THEN
          DO i_gf = 1, fi%gfinp%n
-            CALL greensFunction(i_gf)%init(fi%gfinp%elem(i_gf), fi%gfinp, fi%atoms, fi%input)
+            CALL greensFunction(i_gf)%init(fi%gfinp%elem(i_gf), fi%gfinp, fi%atoms, fi%input, nkpt=fi%kpts%nkpt)
          ENDDO
       ENDIF
       ! Initialize Green's function (end)
 
       ! Open/allocate eigenvector storage (start)
-      l_real = fi%sym%invs .AND. .NOT. fi%noco%l_noco .AND. .NOT. (fi%noco%l_soc .AND. fi%atoms%n_u>0) .AND. fi%atoms%n_hia==0 
       if (fi%noco%l_soc .and. fi%input%l_wann) then
        !! Weed up and down spinor components for SOC MLWFs.
        !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
@@ -208,7 +206,7 @@ CONTAINS
       endif
       l_olap = fi%hybinp%l_hybrid .OR. fi%input%l_rdmft
       eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, wannierspin, &
-                        fi%noco%l_noco,.NOT. fi%INPUT%eig66(1), l_real, fi%noco%l_soc, fi%INPUT%eig66(1), l_olap, fmpi%n_size)
+                        fi%noco%l_noco,.NOT. fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%INPUT%eig66(1), l_olap, fmpi%n_size)
       hybdat%eig_id = eig_id
 !Rotate cdn to local frame if specified.
 
@@ -216,6 +214,15 @@ CONTAINS
       CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
 #endif
       ! Open/allocate eigenvector storage (end)
+
+      ! Perform some pre-scf-loop checks (start)
+      IF (fi%input%gw .EQ. 2) THEN
+         IF (ABS(results%last_distance).GT.fi%input%mindistance) THEN
+            CALL juDFT_warn('Performing spex="2" step without a selfconsistent density!')
+         END IF
+      END IF
+      ! Perform some pre-scf-loop checks (end)
+
       l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
          iter = iter + 1
@@ -243,7 +250,8 @@ CONTAINS
          CALL chase_distance(results%last_distance)
 #endif
 
-         CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, inDen,nococonv)
+         CALL inDen%distribute(fmpi%mpi_comm)
+         call nococonv%mpi_bc(fmpi%mpi_comm)
 
 !Plot inden if wanted
          IF (fi%sliceplot%iplot .NE. 0) THEN
@@ -254,8 +262,9 @@ CONTAINS
                CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                        fi%input, fi%sym, fi%oneD,CDN_ARCHIVE_TYPE_CDN_const, &
-                                                       CDN_INPUT_DEN_const, 0, rdummy, l_dummy, sliceDen, 'cdn_slice')
-               CALL mpi_bc_potden(fmpi, stars, sphhar, fi%atoms, fi%input, fi%vacuum, fi%oneD, fi%noco, sliceDen, nococonv)
+                                                       CDN_INPUT_DEN_const, 0, rdummy, tempDistance, l_dummy, sliceDen, 'cdn_slice')
+               CALL sliceden%distribute(fmpi%mpi_comm)
+               call nococonv%mpi_bc(fmpi%mpi_comm)
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
                               fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
             END IF
@@ -269,7 +278,7 @@ CONTAINS
             SELECT TYPE (xcpot)
             TYPE IS (t_xcpot_inbuild)
                CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
-                                results, xcpot, vTot, iterHF)
+                                results, xcpot, vTot, iter, iterHF)
             END SELECT
 #ifdef CPP_MPI
             call MPI_Barrier(fmpi%mpi_comm, ierr)
@@ -322,7 +331,7 @@ CONTAINS
             ENDDO
             IF (ALL(greensFunction(fi%gfinp%hiaElem)%l_calc)) THEN
                hub1data%iter = hub1data%iter + 1
-               CALL hubbard1_setup(fi%atoms, fi%cell, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, nococonv, vTot, &
+               CALL hubbard1_setup(fi%atoms, fi%cell, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, fi%kpts, nococonv, vTot, &
                                    greensFunction(fi%gfinp%hiaElem), hub1data, results, inDen)
             ELSE
                IF (fmpi%irank .EQ. 0) WRITE (*, *) 'Not all Greens Functions available: Running additional iteration'
@@ -370,8 +379,7 @@ CONTAINS
 
             ! WRITE(oUnit,fmt='(A)') 'Starting 2nd variation ...'
             IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) &
-               CALL eigenso(eig_id, fmpi, stars, fi%vacuum, fi%atoms, sphhar, &
-                            fi%sym, fi%cell, fi%noco, nococonv, fi%input, fi%kpts, fi%oneD, vTot, enpara, results, fi%hub1inp, hub1data)
+               CALL eigenso(eig_id, fmpi, stars, sphhar, nococonv, vTot, enpara, results, fi%hub1inp, hub1data,fi)
             CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI

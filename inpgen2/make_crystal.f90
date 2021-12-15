@@ -14,6 +14,7 @@ CONTAINS
     USE m_constants
     USE m_make_spacegroup
     USE m_make_atom_groups
+    USE m_inv3
     !USE m_generator
     IMPLICIT NONE
     !===> Arguments
@@ -32,7 +33,7 @@ CONTAINS
     !===> Local Variables
     INTEGER :: i,j,k,n,m,na,nt,inversionOp
     LOGICAL :: l_posCorrected(3)
-    REAL    :: rest
+    REAL    :: rest, det
     REAL,PARAMETER :: eps7 = 1.0e-7
     INTEGER,PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
 
@@ -52,6 +53,8 @@ CONTAINS
     !---> to distinguish different atom types (need not be atomic number)
     IF (film) THEN
        cell%amat(3,3)=max(cell%amat(3,3),8.0+2*maxval(abs(atompos(3,:))))
+       CALL inv3(cell%amat,cell%bmat,det)
+       cell%bmat = tpi_const*cell%bmat
        atompos(3,:)=atompos(3,:)/cell%amat(3,3)
        DO n=1,SIZE(atompos,2)
          atompos(:2,n) = atompos(:2,n) - ANINT( atompos(:2,n) - eps7 )

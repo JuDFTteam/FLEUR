@@ -1,0 +1,6 @@
+
+
+# python>=3.6
+pytest
+pytest-regression
+pytest-dependency

@@ -47,11 +47,12 @@ MODULE m_crystalfield
       REAL :: ex(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       REAL :: shift(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       REAL :: integrand(gfinp%ne), norm(gfinp%ne)
-      REAL, ALLOCATABLE :: imag(:)
+      COMPLEX, ALLOCATABLE :: imag(:,:,:)
       COMPLEX, ALLOCATABLE :: potmmpmat(:,:,:)
 
 
       ALLOCATE(potmmpmat(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, input%jspins))
+      ALLOCATE(imag(gfinp%ne,-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const),source=cmplx_0)
 
       h_loc = 0.0
       DO i_hia = 1, atoms%n_hia
@@ -74,13 +75,13 @@ MODULE m_crystalfield
          DO jspin = 1, input%jspins
             !Use the same cutoffs as in the kramer kronigs integration
             norm = 0.0
+            imag = greensfImagPart%applyCutoff(i_elem,i_gf,jspin,.TRUE.)/(3.0-input%jspins)
             DO m = -l, l
                DO mp = -l, l
-                  imag = greensfImagPart%applyCutoff(i_elem,i_gf,m,mp,jspin,.TRUE.)/(3.0-input%jspins)
                   integrand = 0.0
                   DO ie = 1, gfinp%ne
-                     integrand(ie) = -1.0/pi_const * ((ie-1) * del+eb) * imag(ie)
-                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * imag(ie)
+                     integrand(ie) = -1.0/pi_const * ((ie-1) * del+eb) * imag(ie,m,mp)
+                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * imag(ie,m,mp)
                   ENDDO
                   h_loc(m,mp,i_hia,jspin) = trapz(integrand,del,gfinp%ne)
                ENDDO

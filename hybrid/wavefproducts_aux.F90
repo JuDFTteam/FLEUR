@@ -18,7 +18,7 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_mpdata), intent(in)      :: mpdata
-      TYPE(t_hybdat), INTENT(IN)      :: hybdat
+      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
       type(t_stars), intent(in)       :: stars
       type(t_mat), intent(in)         :: z_k
       type(t_mat), intent(inout)      :: z_kqpt_p, cprod
@@ -84,6 +84,12 @@ CONTAINS
          band_list = [(i, i=bandoi, bandof)]
          call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, fi%input, ikqpt, jsp, z_kqpt, &
                      c_phase=c_phase_kqpt, parent_z=z_kqpt_p, list=band_list)
+#ifdef CPP_MPI
+         call timestart("read_z barrier")
+         call MPI_Barrier(MPI_COMM_WORLD, ierr)
+         hybdat%max_q = hybdat%max_q - 1
+         call timestop("read_z barrier")
+#endif
 
          allocate(psi_kqpt(0:stepf%gridLength-1, psize), stat=ierr)
          if(ierr /= 0) call juDFT_error("can't alloc psi_kqpt")

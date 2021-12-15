@@ -102,7 +102,7 @@ MODULE m_nocoInputCheck
     END IF
 
     IF(any(noco%l_unrestrictMT).AND.atoms%n_hia+atoms%n_u>0.AND.(.NOT.any(noco%l_alignMT))) THEN
-         CALL juDFT_warn("LDA+U and FullyFullyNoco should only be used together with the l_RelaxAlpha/Beta=T setting to achieve reasonable results.",calledby="nocoInputCheck")
+         CALL juDFT_warn("LDA+U and FullyFullyNoco should only be used together with the l_RelaxSQA=T setting to achieve reasonable results.",calledby="nocoInputCheck")
       ENDIF
 
           !Warning on strange choice of switches
@@ -115,8 +115,12 @@ MODULE m_nocoInputCheck
       if (any(error)) call judft_warn("Symmetry incompatible with Spin-Spiral")
     endif
 
-    IF (input%ldauSpinoffd.AND..NOT.noco%l_mperp) THEN
+    IF (any(noco%l_spinoffd_ldau).AND..NOT.noco%l_mperp) THEN
       CALL juDFT_error("l_spinoffd='T' for ldaU and l_mperp='F' makes no sense.",calledby='nocoInputCheck')
+    END IF
+
+    IF (any(noco%l_spinoffd_ldau).AND..NOT.noco%l_noco) THEN
+      CALL juDFT_error("l_spinoffd='T' for ldaU and l_noco='F' makes no sense.",calledby='nocoInputCheck')
     END IF
 
    END SUBROUTINE nocoInputCheck

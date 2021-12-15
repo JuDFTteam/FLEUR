@@ -1,6 +1,10 @@
 docs/mkdocs/site
 init/compileinfo.h
 Testing/*
+tests/new_pytest_system/work/*
+tests/new_pytest_system/failed_test_results/*
+tests/new_pytest_system/parser_testdir/*
+__pycache__
 *~
 \#*
 build
@@ -9,6 +13,7 @@ build.*
 *.x
 *.swp
 *.pyc
+*.mod
 tags
 .DS_Store
 .vscode

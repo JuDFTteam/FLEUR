@@ -433,6 +433,8 @@ CONTAINS
       CLASS DEFAULT
          CALL judft_error("Wrong datatype in copy")
       END SELECT
+#else 
+       call judft_error("Distributed matrix without SCALAPCK",calledby="mpimat_copy")      
 #endif
 
       call timestop("mpimat_copy")
@@ -575,8 +577,10 @@ CONTAINS
             mat%blacsdata => null()
          ELSE
 #ifdef CPP_SCALAPACK
-            if (mat%blacsdata%blacs_desc(2) /= -1) CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2), ierr)
-            DEALLOCATE (mat%blacsdata)
+            if (mat%blacsdata%blacs_desc(2) /= -1) THEN
+               CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2), ierr)
+               DEALLOCATE (mat%blacsdata)
+            endif   
 #endif
          END IF
       END IF
@@ -607,8 +611,8 @@ CONTAINS
       ALLOCATE (mat%blacsdata, stat=ierr)
       if (mpi_subcom == MPI_COMM_NULL) Then
          mat%blacsdata%blacs_desc(2) = -1
-         mat%global_size1 = 0
-         mat%global_size2 = 0
+         mat%global_size1 = matsize1
+         mat%global_size2 = matsize2
          mat%matsize1 = 0
          mat%matsize2 = 0
       else

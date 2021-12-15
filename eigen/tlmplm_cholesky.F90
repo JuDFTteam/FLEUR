@@ -9,10 +9,11 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,&
-       jspin,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid)
+       jspin,fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid)
     USE m_tlmplm
     USE m_types
     USE m_radovlp
+    use m_opc_setup
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -29,7 +30,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin!physical spin&spin index for data
     REAL,INTENT(IN)      :: alpha_hybrid
     !     ..
-    TYPE(t_potden),INTENT(IN)    :: v,vx
+    TYPE(t_potden),INTENT(IN)    :: v,vx,inden
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
@@ -37,16 +38,16 @@ CONTAINS
     !     .. Local Scalars ..
     REAL temp
     INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp,j1,j2
-    INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax
+    INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax,i_opc
     LOGICAL OK, isRoot, l_call_tlmplm
     COMPLEX :: one
     !     ..
     !     .. Local Arrays ..
     REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
+    real, allocatable :: opc_corrections(:)
 
     REAL,PARAMETER:: e_shift_min=0.5
     REAL,PARAMETER:: e_shift_max=65.0
-
 
     !     ..e_shift
     jsp=jspin
@@ -68,6 +69,10 @@ CONTAINS
 
     isRoot = fmpi%is_root()
 
+    if (atoms%n_opc > 0 .and. jsp<3) then
+      call opc_setup(input,atoms,fmpi,v,inden,jsp,opc_corrections)
+    endif
+
     DO j1=jmin,jmax
        j2=MERGE(j1,3-j1,jsp<3)
        one=MERGE(CMPLX(1.,0.),CMPLX(0.,1.),jsp<4)
@@ -78,9 +83,9 @@ CONTAINS
        !$OMP PARALLEL DO DEFAULT(NONE)&
        !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
        !$OMP PRIVATE(lmplm,lp,m,mp,n)&
-       !$OMP PRIVATE(OK,s,in,info)&
+       !$OMP PRIVATE(OK,s,in,info,i_u,i_opc)&
        !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,vx,alpha_hybrid,isRoot,l_call_tlmplm)&
-       !$OMP SHARED(fmpi,input,hub1inp,hub1data,uun21,udn21,dun21,ddn21,j1,j2)
+       !$OMP SHARED(fmpi,input,hub1inp,hub1data,uun21,udn21,dun21,ddn21,opc_corrections,j1,j2)
        DO  n = 1,atoms%ntype
           IF(l_call_tlmplm) CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid)
           OK=.FALSE.
@@ -124,6 +129,16 @@ CONTAINS
                    ENDDO
                 ENDDO
              END DO
+             DO i_opc=1,atoms%n_opc
+               IF (n.NE.atoms%lda_opc(i_opc)%atomType) CYCLE
+               !Found a "OPC" for this atom type
+               l=atoms%lda_opc(i_opc)%l
+               DO m = -l,l
+                  lm = l* (l+1) + m
+                  td%h_loc_nonsph(lm  ,lm  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lm  ,n,j1,j2) + opc_corrections(i_opc) * m
+                  td%h_loc_nonsph(lm+s,lm+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lm+s,n,j1,j2) + opc_corrections(i_opc) * m * ud%ddn(l,n,jsp)
+               END DO
+            END DO
              IF (jsp<3) THEN
                 !Create Cholesky decomposition of local hamiltonian
 

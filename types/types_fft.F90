@@ -12,6 +12,7 @@ module m_types_fft
    use fftw3
 #endif
 #ifdef _OPENACC
+   use openacc
    use cufft
 #endif
    !$ use omp_lib
@@ -125,7 +126,11 @@ contains
          ierr = cufftPlanMany(fft%cufft_plan, 3_4, n, &
                               n, stride, dist, n, stride, dist, CUFFT_Z2Z, fft%batch_size)
 
-         if(ierr /= 0) call juDFT_error("cuFFT Plan many failed.")
+         if(ierr /= 0) then
+            call acc_present_dump()
+            call handle_cufft_error(ierr)
+            call juDFT_error("cuFFT Plan many failed.")
+         endif
 #endif
       case(mklFFT_const)
 #ifdef CPP_FFT_MKL
@@ -202,6 +207,37 @@ contains
       end select
    end subroutine
 
+   subroutine handle_cufft_error(ierr)
+      implicit none 
+      integer, intent(in) :: ierr 
+
+      ! FROM
+      ! https://docs.nvidia.com/hpc-sdk/compilers/fortran-cuda-interfaces/index.html#cf-fft-runtime
+
+      select case (ierr)
+      case  (1)  
+         write (*,*) "CUFFT_INVALID_PLAN"
+      case (2)
+         write (*,*) "CUFFT_ALLOC_FAILED"
+      case (3)
+         write (*,*) "CUFFT_INVALID_TYPE"
+      case (4)
+         write (*,*) "CUFFT_INVALID_VALUE"
+      case (5)
+         write (*,*) "CUFFT_INTERNAL_ERROR"
+      case (6)
+         write (*,*) "CUFFT_EXEC_FAILED"
+      case (7)
+         write (*,*) "CUFFT_SETUP_FAILED"
+      case (8)
+         write (*,*) "CUFFT_INVALID_SIZE"
+      case (9)
+         write (*,*) "CUFFT_UNALIGNED_DATA"
+      case default
+         write (*,*) "unknow cuda errror"
+      end select
+
+   end subroutine handle_cufft_error
 
    subroutine t_fft_exec_batched(fft, dat)
       USE m_cfft

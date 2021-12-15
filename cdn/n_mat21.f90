@@ -56,7 +56,7 @@ MODULE m_nmat21
                                + conjg(eigVecCoeffs%bcof(i,lmp,natom,2))*eigVecCoeffs%acof(i,lm,natom,1) * denCoeffsOffdiag%du21n(l,n) &
                                + conjg(eigVecCoeffs%bcof(i,lmp,natom,2))*eigVecCoeffs%bcof(i,lm,natom,1) * denCoeffsOffdiag%dd21n(l,n))
                   ENDDO
-                  n_tmp(m,mp) = CMPLX(-REAL(c_0), AIMAG(c_0))
+                  n_tmp(m,mp) = c_0
                ENDDO
             ENDDO
             !
@@ -84,7 +84,7 @@ MODULE m_nmat21
                               ENDDO
                            ENDIF
                         ENDDO
-                        n_tmp(m,mp) = n_tmp(m,mp) + CMPLX(-REAL(c_0), AIMAG(c_0))
+                        n_tmp(m,mp) = n_tmp(m,mp) + c_0
                      ENDDO
                   ENDDO
                ENDIF
@@ -94,7 +94,7 @@ MODULE m_nmat21
             !
             !Note: This can be done only if the correct magnetic symmetries are
             !present. This is not the case at the moment (Jan 2020).
-            n_mmp(:,:,i_u) = n_mmp(:,:,i_u) + symMMPmat(n_tmp,sym,natom,l,phase=.TRUE.) * 1.0/atoms%neq(n)
+            n_mmp(:,:,i_u) = n_mmp(:,:,i_u) + conjg(symMMPmat(n_tmp,sym,natom,l,phase=.TRUE.)) * 1.0/atoms%neq(n)
          ENDDO ! sum  over equivalent
       ENDDO     ! loop over u parameters
 

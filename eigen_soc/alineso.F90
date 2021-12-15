@@ -45,7 +45,7 @@ CONTAINS
     INTEGER   i,i1 ,j,jsp,jsp1,k,ne,nn,nn1,nrec,info
     INTEGER   idim_c,idim_r,jsp2,nbas,j1,ierr
     CHARACTER vectors 
-    LOGICAL   l_socvec,l_qsgw,l_open,l_real
+    LOGICAL   l_socvec,l_qsgw,l_open
     INTEGER   irec,irecl_qsgw
     INTEGER nat_l, extra, nat_start, nat_stop
     COMPLEX   cdum
@@ -68,14 +68,13 @@ CONTAINS
     !     read from eigenvalue and -vector file
     !
 
-    l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u>0).and.atoms%n_hia==0
-    zmat%l_real=l_real
+    zmat%l_real=input%l_real
     zMat(1:input%jspins)%matsize1=lapw%nv(1:input%jspins)+atoms%nlotot
     zmat%matsize2=input%neig
    
     INQUIRE (4649,opened=l_socvec)
     INQUIRE (file='fleur.qsgw',exist=l_qsgw)
-    if (l_real) THEN
+    if (input%l_real) THEN
        ALLOCATE (zmat(1)%data_r(zmat(1)%matsize1,input%neig) )
        zmat(1)%data_r(:,:)= 0.  
        if (size(zmat)==2)THEN
@@ -236,7 +235,7 @@ CONTAINS
              !            sigma_xc_apw(nv+1:,nv+1:) = 0
              i  = nsz(1) * (jsp1-1) + 1 ; i1 = nsz(1) * jsp1
              j  = nsz(1) * (jsp2-1) + 1 ; j1 = nsz(1) * jsp2
-             if (l_real) THEN
+             if (input%l_real) THEN
                 sigma_xc(i:i1,j:j1) = &
                               MATMUL (       TRANSPOSE(zmat(1)%data_r(:nbas,:))  ,&
                               MATMUL ( sigma_xc_apw,   zmat(1)%data_r(:nbas,:) ) )
@@ -308,7 +307,7 @@ else
              ENDDO
           ENDDO  ! j
 
-          if (l_real) THEN
+          if (input%l_real) THEN
              CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*input%neig,input%neig,CMPLX(1.0,0.0),CMPLX(zmat(jsp)%data_r(:,:)),&
                   zmat(1)%matsize1, zhelp2,input%neig,CMPLX(0.0,0.0), zso(1,1,jsp2),zmat(1)%matsize1)
           else

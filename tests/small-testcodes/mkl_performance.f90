@@ -44,5 +44,5 @@ program test_blas
   enddo   
  
  
-end
+end program
   

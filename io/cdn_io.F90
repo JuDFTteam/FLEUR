@@ -136,7 +136,7 @@ CONTAINS
 
 
   SUBROUTINE readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,inOrOutCDN,&
-       relCdnIndex,fermiEnergy,l_qfix,den,inFilename)
+       relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename)
 
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -153,7 +153,7 @@ CONTAINS
     INTEGER, INTENT (IN)      :: inOrOutCDN
     INTEGER, INTENT (IN)      :: relCdnIndex
     INTEGER, INTENT (IN)      :: archiveType
-    REAL,    INTENT (OUT)     :: fermiEnergy
+    REAL,    INTENT (OUT)     :: fermiEnergy, lastDistance
     LOGICAL, INTENT (OUT)     :: l_qfix
 
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
@@ -176,6 +176,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: cdomvz(:,:)
 
     fermiEnergy = 0.0
+    lastDistance = -1.0
     l_qfix = .FALSE.
 
     CALL getIOMode(mode)
@@ -239,7 +240,7 @@ CONTAINS
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
           CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum, oneD, archiveName, densityType,&
-               fermiEnergy,l_qfix,l_DimChange,den)
+               fermiEnergy,lastDistance,l_qfix,l_DimChange,den)
 
           CALL closeCDNPOT_HDF(fileID)
 
@@ -351,7 +352,7 @@ CONTAINS
     END IF
 
     INQUIRE(FILE='n_mmp_mat',EXIST=l_exist)
-    IF(l_exist.AND.atoms%n_u+atoms%n_hia.GT.0) THEN
+    IF(l_exist.AND.atoms%n_denmat.GT.0) THEN
        OPEN (69,file='n_mmp_mat',status='unknown',form='formatted')
        READ (69,'(7f20.13)',IOSTAT=ioStatus) den%mmpMat
        REWIND(69)
@@ -676,7 +677,7 @@ CONTAINS
     IF((inOrOutCDN.EQ.CDN_INPUT_DEN_const).AND.(relCdnIndex.EQ.1).AND.&
        ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).OR.&
          (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const))) THEN
-       IF(atoms%n_u+atoms%n_hia.GT.0) THEN
+       IF(atoms%n_denmat.GT.0) THEN
           filename = 'n_mmp_mat'
           IF (mode.EQ.CDN_HDF5_MODE) THEN
              filename = 'n_mmp_mat_out'
@@ -1008,7 +1009,7 @@ CONTAINS
     !Locals
     INTEGER :: archiveType
     LOGICAL :: l_qfix
-    REAL    :: fermiEnergy,fix
+    REAL    :: fermiEnergy,fix, tempDistance
     REAL    :: shifts(3,atoms%nat)
 
     TYPE(t_potden):: den
@@ -1075,7 +1076,7 @@ CONTAINS
           !read the current density
           CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
-               0,fermiEnergy,l_qfix,den)
+               0,fermiEnergy,tempDistance,l_qfix,den)
        ENDIF
        !Now fix the density
        SELECT CASE(input%qfix)

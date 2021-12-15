@@ -74,7 +74,7 @@ MODULE m_greensfCalcScalarProducts
             ENDIF
          ENDDO
          IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-            CALL scalarGF(i_gf)%addOffdScalarProduct(l,lp,atomType,atomTypep,ANY(ABS(gfinp%elem(i_gf)%atomDiff).GT.1e-12),&
+            CALL scalarGF(i_gf)%addOffdScalarProduct(l,lp,atomType,atomTypep,gfinp%elem(i_gf)%isIntersite(),&
                                                      gfinp%l_mperp,atoms,input,f,g,flo)
          ELSE
             DO ispin = 1, input%jspins
