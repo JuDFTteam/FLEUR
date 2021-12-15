@@ -178,6 +178,15 @@ CONTAINS
       IF (any(fi%noco%l_alignMT)) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
       ! Initialize and load inDen density (end)
 
+      !!!juPhon:
+      ! Implement here a call to a new jpMain. In it, generate all necessary
+      ! quantities only from the density (potentials), transform them into an
+      ! unsymmetrized form and basically cover all steps that were formerly in
+      ! jpInit. Then do the whole juPhon shtick until we have phonons. This
+      ! eliminates the need for complicated juggling with the eig file and
+      ! unoccupied states.
+      !!!juPhon
+
       ! Initialize potentials (start)
       CALL vTot%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL vCoul%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTCOUL)
@@ -626,7 +635,7 @@ CONTAINS
             TYPE IS(t_forcetheo_ssdisp)
                l_forceTheorem = .TRUE.
          END SELECT
-         
+
          IF(l_forceTheorem.AND..NOT.l_cont) THEN
             IF(.NOT.l_lastIter) THEN
                l_lastIter = .TRUE.
