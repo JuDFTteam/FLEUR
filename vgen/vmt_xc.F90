@@ -146,6 +146,16 @@ MODULE m_vmt_xc
             IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_xc,grad, atom_num=n)
             IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_x,grad, atom_num=n)
 
+            !IF (l_libxc.AND.xcpot%needs_grad()) THEN
+            !   CALL save_npy('vxc_gga_mt_libxc.npy',v_xc)
+            !ELSE IF (l_libxc.AND.(.NOT.xcpot%needs_grad())) THEN
+            !  CALL save_npy('vxc_lda_mt_libxc.npy',v_xc)
+            !ELSE IF ((.NOT.l_libxc).AND.xcpot%needs_grad()) THEN
+            !   CALL save_npy('vxc_gga_mt_inbuild.npy',v_xc)
+            !ELSE
+            !  CALL save_npy('vxc_lda_mt_inbuild.npy',v_xc)
+            !END IF
+
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
