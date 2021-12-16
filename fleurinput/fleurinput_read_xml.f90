@@ -62,7 +62,16 @@ CONTAINS
     if (present(kpts)) CALL kpts%read_xml(xml)
     if (present(gfinp)) CALL gfinp%read_xml(xml)
     if (present(hub1inp)) CALL hub1inp%read_xml(xml)
-    if (present(juPhon)) CALL juPhon%read_xml(xml)
+    if (present(juPhon)) THEN
+        CALL juPhon%read_xml(xml)
+        IF (juPhon%kgqmax.LE.0.0) THEN
+            juPhon%kgqmax = input%rkmax
+        END IF
+
+        IF (juPhon%gqmax.LE.0.0) THEN
+            juPhon%gqmax = input%gmax
+        END IF
+    end if
     IF (present(kptsSelection).and.xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointListSelection')>0) THEN
        kptsSelection(:) = ''
        kptsSelection(1) = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/cell/bzIntegration/kPointListSelection/@listName')))
