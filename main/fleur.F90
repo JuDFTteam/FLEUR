@@ -179,23 +179,6 @@ CONTAINS
       IF (any(fi%noco%l_alignMT)) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
       ! Initialize and load inDen density (end)
 
-      !!!juPhon:
-      ! Implement here a call to a new jpMain. In it, generate all necessary
-      ! quantities only from the density (potentials), transform them into an
-      ! unsymmetrized form and basically cover all steps that were formerly in
-      ! jpInit. Then do the whole juPhon shtick until we have phonons. This
-      ! eliminates the need for complicated juggling with the eig file and
-      ! unoccupied states.
-      !
-      ! Also add safety. We do not want to even enter juPhon if ctail is on,
-      ! jspins is 2, natoms is 2 or more, noco is on, libxc is off etc. etc.
-      !
-      ! Those restrictions will gradually be lifted.
-
-      CALL dfpt()
-
-      !!!juPhon
-
       ! Initialize potentials (start)
       CALL vTot%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL vCoul%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTCOUL)
@@ -459,6 +442,23 @@ CONTAINS
             CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
+
+            !!!juPhon:
+            ! Implement here a call to a new jpMain. In it, generate all necessary
+            ! quantities only from the density (potentials), transform them into an
+            ! unsymmetrized form and basically cover all steps that were formerly in
+            ! jpInit. Then do the whole juPhon shtick until we have phonons. This
+            ! eliminates the need for complicated juggling with the eig file and
+            ! unoccupied states.
+            !
+            ! Also add safety. We do not want to even enter juPhon if ctail is on,
+            ! jspins is 2, natoms is 2 or more, noco is on, libxc is off etc. etc.
+            !
+            ! Those restrictions will gradually be lifted.
+
+            CALL dfpt()
+
+            !!!juPhon
 
             IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi, fi%oneD, enpara, vToT, results)) THEN
                CYCLE forcetheoloop
