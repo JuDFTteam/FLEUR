@@ -192,6 +192,11 @@ contains
        CALL mixvector_reset()
     endif
 
+    if (input%periodicMixingReset > 0 .and. mod(iteration, input%periodicMixingReset) == 0) then
+       call mixing_history_reset(fmpi)
+       call mixvector_reset()
+    endif
+
     call timestart("qfix")
     !fix charge of the new density
     IF (fmpi%irank==0) CALL qfix(fmpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)

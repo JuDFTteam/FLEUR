@@ -37,6 +37,7 @@ MODULE m_types_input
   INTEGER :: itmax =15
   REAL    :: minDistance=1.0e-5
   INTEGER :: maxiter=15
+  integer :: periodicMixingReset=-1 ! -1: no reset, >0: completely reset the mixing history every periodicMixingReset iterations
   INTEGER :: imix=7
   INTEGER :: gw=0
   INTEGER :: gw_neigd=0
@@ -120,6 +121,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%itmax,rank,mpi_comm)
    CALL mpi_bc(this%minDistance,rank,mpi_comm)
    CALL mpi_bc(this%maxiter,rank,mpi_comm)
+   CALL mpi_bc(this%periodicMixingReset,rank,mpi_comm)
    CALL mpi_bc(this%imix,rank,mpi_comm)
    CALL mpi_bc(this%gw,rank,mpi_comm)
    CALL mpi_bc(this%gw_neigd,rank,mpi_comm)
@@ -201,6 +203,7 @@ SUBROUTINE read_xml_input(this,xml)
    this%itmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
    this%minDistance = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
    this%maxiter = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@maxIterBroyd'))
+   this%periodicMixingReset = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@periodicMixingReset'))
    valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
    SELECT CASE (valueString)
       CASE ('straight')
