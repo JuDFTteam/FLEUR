@@ -203,7 +203,9 @@ SUBROUTINE read_xml_input(this,xml)
    this%itmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
    this%minDistance = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
    this%maxiter = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@maxIterBroyd'))
-   this%periodicMixingReset = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@periodicMixingReset'))
+   if (xml%versionNumber>=35) then
+      this%periodicMixingReset = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@periodicMixingReset'))
+   endif
    valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
    SELECT CASE (valueString)
       CASE ('straight')
