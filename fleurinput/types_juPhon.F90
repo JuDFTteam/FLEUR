@@ -19,7 +19,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_symTsh  = .FALSE. ! Use symmetrized kinetic energy in SH
       LOGICAL :: l_symTdm  = .FALSE. ! /in dynamic matrix calculation
       LOGICAL :: l_bfkq    = .FALSE. ! Use backfolding of k+q to the first BZ
-      INTEGER :: jplmax    = -1      ! lmax for phonon vectors (lmax+1)
+      INTEGER :: jplPlus   = 0       ! increase lmax for phonon vectors (lmax+1)
       REAL    :: kgqmax    = -1.0    ! Alternative maximum for |k+G+q|
       REAL    :: gqmax     = -1.0    ! Alternative maximum for |G+q|
       REAL    :: eps_pert  = 0.00001 ! Convergence criterion
@@ -98,9 +98,9 @@ CONTAINS
          IF (numberNodes == 1) THEN
            this%l_bfkq    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_bfkq'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/jplmax')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/jplPlus')
          IF (numberNodes == 1) THEN
-           this%jplmax    = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jplmax'))
+           this%jplPlus    = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jplPlus'))
          END IF
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/kgqmax')
          IF (numberNodes == 1) THEN

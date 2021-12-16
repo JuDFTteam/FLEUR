@@ -1096,11 +1096,11 @@
       <xsd:attribute name="l_symTsh" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_symTdm" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_bfkq" type="FleurBool" use="optional"/>
-      <xsd:attribute name="jplmax" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="jplPlus" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="kgqmax" type="FleurDouble" use="optional"/>
       <xsd:attribute name="gqmax" type="FleurDouble" use="optional"/>
       <xsd:attribute name="eps_pert" type="FleurDouble" use="optional"/>
-      <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional"/>      
+      <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OutputType">

@@ -74,7 +74,7 @@ CONTAINS
       USE m_chase_diag
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
-      !USE m_dfpt
+      USE m_dfpt
 
 !$    USE omp_lib
       IMPLICIT NONE
@@ -191,6 +191,9 @@ CONTAINS
       ! jspins is 2, natoms is 2 or more, noco is on, libxc is off etc. etc.
       !
       ! Those restrictions will gradually be lifted.
+
+      CALL dfpt()
+
       !!!juPhon
 
       ! Initialize potentials (start)
