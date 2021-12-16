@@ -57,6 +57,9 @@ CONTAINS
 
    SUBROUTINE read_xml_juPhon(this, xml)
       USE m_types_xml
+      USE m_judft
+
+      IMPLICIT NONE
 
       CLASS(t_juPhon), INTENT(INOUT) :: this
       TYPE(t_xml), INTENT(INOUT)     :: xml
@@ -65,59 +68,78 @@ CONTAINS
       CHARACTER(len=100) :: xPathA
 
       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon')
+
       IF (numberNodes == 1) THEN
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/l_dfpt')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_dfpt')
+
          IF (numberNodes == 1) THEN
            this%l_dfpt    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_dfpt'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/l_jpCheck')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_jpCheck')
+
          IF (numberNodes == 1) THEN
            this%l_jpCheck = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jpCheck'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/l_jpTest')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_jpTest')
+
          IF (numberNodes == 1) THEN
            this%l_jpTest  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jpTest'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/l_eigout')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_eigout')
+
          IF (numberNodes == 1) THEN
            this%l_potout  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_potout'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/l_potout')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_potout')
+
          IF (numberNodes == 1) THEN
            this%l_eigout  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_eigout'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/l_symTsh')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_symTsh')
+
          IF (numberNodes == 1) THEN
            this%l_symTsh  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symTsh'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/l_symTdm')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_symTdm')
+
          IF (numberNodes == 1) THEN
            this%l_symTdm  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symTdm'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/l_bfkq')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_bfkq')
+
          IF (numberNodes == 1) THEN
            this%l_bfkq    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_bfkq'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/jplPlus')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@jplPlus')
+
          IF (numberNodes == 1) THEN
-           this%jplPlus    = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jplPlus'))
+           this%jplPlus    = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@jplPlus'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/kgqmax')
+
+         IF ((this%jplPlus.NE.0).AND.(this%jplPlus.NE.1)) THEN
+           CALL judft_error("Unreasonable increase of lmax!")
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@kgqmax')
+
          IF (numberNodes == 1) THEN
            this%kgqmax    = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@kgqmax'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/gqmax')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@gqmax')
+
          IF (numberNodes == 1) THEN
            this%gqmax     = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@gqmax'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/eps_pert')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@eps_pert')
+
          IF (numberNodes == 1) THEN
            this%eps_pert  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@eps_pert'))
          END IF
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/eDiffcut')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@eDiffcut')
          IF (numberNodes == 1) THEN
            this%eDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@eDiffcut'))
          END IF
+
          this%qpt_ph(1) = 0.0
          this%qpt_ph(2) = 0.0
          this%qpt_ph(3) = 0.0
