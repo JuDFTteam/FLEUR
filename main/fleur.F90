@@ -74,6 +74,7 @@ CONTAINS
       USE m_chase_diag
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
+      !USE m_dfpt
 
 !$    USE omp_lib
       IMPLICIT NONE
