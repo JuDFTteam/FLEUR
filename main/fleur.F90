@@ -456,7 +456,7 @@ CONTAINS
             !
             ! Those restrictions will gradually be lifted.
 
-            CALL dfpt()
+            CALL dfpt(fi%juPhon,fi%input)
 
             !!!juPhon
 
