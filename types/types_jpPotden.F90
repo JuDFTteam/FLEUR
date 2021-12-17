@@ -15,15 +15,15 @@ MODULE m_types_jpPotden
      COMPLEX, ALLOCATABLE :: mt(:,:,:,:,:,:) ! ir, ilm, iatom, isp, idispat, idir
 
    CONTAINS
-     PROCEDURE :: init_potden_simple
-     PROCEDURE :: resetpotden
-     GENERIC   :: init=>init_potden_simple
-     procedure :: distribute
-     procedure :: collect
+     PROCEDURE :: init_jpPotden
+     PROCEDURE :: resetjpPotden
+     GENERIC   :: init=>init_jpPotden
+     procedure :: jpdistribute
+     procedure :: jpcollect
   END TYPE t_jpPotden
 
 CONTAINS
-  SUBROUTINE collect(this,fmpi_comm)
+  SUBROUTINE jpcollect(this,fmpi_comm)
     USE m_mpi_bc_tool
 #ifdef CPP_MPI
     USE mpi
@@ -46,9 +46,9 @@ CONTAINS
     IF (irank==0) this%mt=reshape(ctmp,shape(this%mt))
     DEALLOCATE(ctmp)
 #endif
-  END SUBROUTINE collect
+END SUBROUTINE jpcollect
 
-  SUBROUTINE distribute(this,fmpi_comm)
+  SUBROUTINE jpdistribute(this,fmpi_comm)
     USE m_mpi_bc_tool
 #ifdef CPP_MPI
     USE mpi
@@ -61,9 +61,9 @@ CONTAINS
     IF (ALLOCATED(this%pw_w)) CALL mpi_bc(this%pw_w ,0,fmpi_comm)
     CALL mpi_bc(this%mt ,0,fmpi_comm)
 #endif
-END SUBROUTINE distribute
+END SUBROUTINE jpdistribute
 
-  SUBROUTINE init_potden_simple(pd, vec_dim, disporder, nGq, jmtd, lmaxd, natoms, jspins)
+  SUBROUTINE init_jpPotden(pd, vec_dim, disporder, nGq, jmtd, lmaxd, natoms, jspins)
     USE m_judft
     IMPLICIT NONE
     CLASS(t_jpPotden), INTENT(OUT) :: pd
@@ -90,9 +90,9 @@ END SUBROUTINE distribute
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
     pd%mt=CMPLX(0.0,0.0)
-  END SUBROUTINE init_potden_simple
+  END SUBROUTINE init_jpPotden
 
-  SUBROUTINE resetPotDen(pd)
+  SUBROUTINE resetjpPotDen(pd)
 
     IMPLICIT NONE
 
@@ -101,6 +101,6 @@ END SUBROUTINE distribute
     pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
-  END SUBROUTINE resetPotDen
+END SUBROUTINE resetjpPotDen
 
 END MODULE m_types_jpPotden

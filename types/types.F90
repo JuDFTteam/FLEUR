@@ -23,6 +23,7 @@ MODULE m_types
   USE m_types_hybdat
   USE m_types_hybinp
   use m_types_hybmpi
+  USE m_types_jpPotden
   USE m_types_kpts
   USE m_types_lapw
   USE m_types_mat
