@@ -46,37 +46,31 @@ CONTAINS
     REAL b_xc_h(atoms%jmtd),b_xav(atoms%ntype)
 
     ! angles in nocoinp file are (alph-alphdiff)
-    IF (noco%l_ss) THEN
+     IF (noco%l_ss) THEN
        alphdiff = 2.0*pi_const*(nococonv%qss(1)*atoms%taual(1,iRepAtom) + &
                                 nococonv%qss(2)*atoms%taual(2,iRepAtom) + &
                                 nococonv%qss(3)*atoms%taual(3,iRepAtom) )
-    ELSE
+     ELSE
        alphdiff = 0.0
-    END IF
+     END IF
 
-    !---> calculated the comp. of the local moment vector
-    magmom=nococonv%denmat_to_mag(chmom(itype,1),chmom(itype,2),qa21(itype))
-    WRITE  (oUnit,8025) itype,magmom(1),magmom(2),magmom(3),sqrt(dot_product(magmom(1:3),magmom(1:3)))
-    !---> determine the polar angles of the moment vector in the local frame
-    CALL pol_angle(magmom(1),magmom(2),magmom(3),betah,alphh,.true.)
-    WRITE  (oUnit,8026) itype,betah,alphh
-8025 FORMAT(2x,'Atom:',I9.1,' --> local frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
-8026 FORMAT(2x,'Atom:',I9.1,' -->',10x,' local beta=',f9.5,&
-         &                   '  local alpha=',f9.5)
+     !---> calculated the comp. of the local moment vector
+     magmom=nococonv%denmat_to_mag(chmom(itype,1),chmom(itype,2),qa21(itype))
+     !---> determine the polar angles of the moment vector in the local frame
+     CALL pol_angle(magmom(1),magmom(2),magmom(3),betah,alphh,.true.)
+     call priv_output_moments(itype,magmom,betah,alphh,global=.true.)
 
-         rho11=chmom(itype,1)
-         rho22=chmom(itype,2)
-         rho21=conjg(qa21(itype))
-         call nococonv%rotdenmat(itype, rho11,rho22,rho21, toGlobal=.true.)
-         magmom=nococonv%denmat_to_mag(rho11,rho22,rho21)
+     rho11=chmom(itype,1)
+     rho22=chmom(itype,2)
+     rho21=qa21(itype)
+     call nococonv%rotdenmat(itype, rho11,rho22,rho21, toGlobal=.true.)
+     magmom=nococonv%denmat_to_mag(rho11,rho22,rho21)
      !now also give output in global frame
      !call nococonv%rot_magvec(itype,magmom,toGlobal=.true.)
      CALL pol_angle(magmom(1),magmom(2),magmom(3),betah,alphh,.true.)
-     WRITE  (oUnit,8125) itype,magmom(1),magmom(2),magmom(3)
-     WRITE  (oUnit,8126) itype,betah,alphh
-8125 FORMAT(2x,'Atom:',I9.1,' --> global frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5)
-8126 FORMAT(2x,'Atom:',I9.1,' -->',10x,' global beta=',f9.5,&
-         &                   '  global alpha=',f9.5)
+     call priv_output_moments(itype,magmom,betah,alphh,global=.true.)
+     
+
 
 
     IF(noco%l_alignMT(itype)) THEN
@@ -159,4 +153,37 @@ CONTAINS
          &                    ' delta B_con_y=',f12.6)
 
   END SUBROUTINE m_perp
+
+  subroutine priv_output_moments(itype,magmom,beta,alpha,global)
+   USE m_xmlOutput
+   USE m_constants
+   integer,intent(in):: itype 
+   real,intent(in)   :: magmom(3),beta,alpha
+   logical,intent(in) :: global
+
+   character(len=15):: label 
+   character(len=15):: attributes(4)      
+
+   if (global) then 
+      WRITE  (oUnit,8125) itype,magmom(1),magmom(2),magmom(3)
+      WRITE  (oUnit,8126) itype,betah,alphh
+   else
+      WRITE  (oUnit,8025) itype,magmom(1),magmom(2),magmom(3),sqrt(dot_product(magmom(1:3),magmom(1:3)))
+      WRITE  (oUnit,8026) itype,betah,alphh
+   endif
+8125 FORMAT(2x,'Atom:',I9.1,' --> global frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
+8126 FORMAT(2x,'Atom:',I9.1,' -->',10x,' global beta=',f9.5,'  global alpha=',f9.5)
+8025 FORMAT(2x,'Atom:',I9.1,' --> local frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
+8026 FORMAT(2x,'Atom:',I9.1,' -->',10x,' local beta=',f9.5,'  local alpha=',f9.5)
+
+   WRITE(attributes(1),'(i0)') iType
+   WRITE(attributes(2),'(f15.10)') magmom(1)
+   WRITE(attributes(3),'(f15.10)') magmom(2)
+   WRITE(attributes(4),'(f15.10)') magmom(3)
+   label=trim(merge("globalMagMoment","localMagMoment ",global))
+   CALL writeXMLElementFormPoly(label,(/'atomType','mx      ','my      ','mz      '/),&
+                             attributes,reshape((/8,2,2,2,6,15,15,15/),(/4,2/)))
+
+
+   end subroutine
 END MODULE m_m_perp
