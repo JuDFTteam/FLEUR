@@ -58,7 +58,7 @@ CONTAINS
      magmom=nococonv%denmat_to_mag(chmom(itype,1),chmom(itype,2),qa21(itype))
      !---> determine the polar angles of the moment vector in the local frame
      CALL pol_angle(magmom(1),magmom(2),magmom(3),betah,alphh,.true.)
-     call priv_output_moments(itype,magmom,betah,alphh,global=.true.)
+     call priv_output_moments(itype,magmom(1:3),betah,alphh,global=.false.)
 
      rho11=chmom(itype,1)
      rho22=chmom(itype,2)
@@ -68,7 +68,7 @@ CONTAINS
      !now also give output in global frame
      !call nococonv%rot_magvec(itype,magmom,toGlobal=.true.)
      CALL pol_angle(magmom(1),magmom(2),magmom(3),betah,alphh,.true.)
-     call priv_output_moments(itype,magmom,betah,alphh,global=.true.)
+     call priv_output_moments(itype,magmom(1:3),betah,alphh,global=.true.)
      
 
 
