@@ -10,9 +10,10 @@ MODULE m_dfpt_init
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_init(juPhon, input, atoms, stars, rho, rho0, recG)
+    SUBROUTINE dfpt_init(juPhon, sym, input, atoms, stars, rho, rho0, recG)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
+        TYPE(t_sym),      INTENT(IN)  :: sym
         TYPE(t_input),    INTENT(IN)  :: input
         TYPE(t_atoms),    INTENT(IN)  :: atoms
         TYPE(t_stars),    INTENT(IN)  :: stars
@@ -31,18 +32,19 @@ CONTAINS
         !v0%init_potden_simple(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins)
 
         ! Unpack the star coefficients onto a G-representation.
-        CALL stars_to_pw(stars,input%jspins,nG,rho%pw,rho0%pw,recG)
+        CALL stars_to_pw(sym, stars,input%jspins,nG,rho%pw,rho0%pw,recG)
 
         ! Unpack the lattice harmonics onto spherical harmonics.
         !CALL lh_to_sh(rho%mt,jpRho0%mt)
     END SUBROUTINE dfpt_init
 
-    SUBROUTINE stars_to_pw(stars, jspins, nG, rhostar, rhopw, recG)
+    SUBROUTINE stars_to_pw(sym, stars, jspins, nG, rhostar, rhopw, recG)
 
       USE m_types
 
       IMPLICIT NONE
 
+      TYPE(t_sym),   INTENT(IN)  :: sym
       TYPE(t_stars), INTENT(IN)  :: stars
       INTEGER,       INTENT(IN)  :: jspins
       INTEGER,       INTENT(IN)  :: nG
@@ -64,7 +66,8 @@ CONTAINS
                       IF (iStar.NE.0) THEN
                           iG = iG + 1
                           rhopw(iG, iSpin, 1, 1) = rhostar(iStar, iSpin) &
-                                  & * stars%rgphs(iGx, iGy, iGz) !/ stars%nstr(iStar)
+                                  & * stars%rgphs(iGx, iGy, iGz) &
+                                  & * stars%nstr(iStar) / sym%nop
                           write(110,*) rhopw(iG, iSpin, 1, 1)
                       END IF
                   END DO

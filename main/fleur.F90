@@ -457,7 +457,7 @@ CONTAINS
             ! Those restrictions will gradually be lifted.
 
             IF (fi%juPhon%l_dfpt) THEN
-              CALL dfpt(fi%juPhon,fi%input,fi%atoms,stars,inDen)
+              CALL dfpt(fi%juPhon,fi%sym,fi%input,fi%atoms,stars,inDen)
             END IF
 
             !!!juPhon
