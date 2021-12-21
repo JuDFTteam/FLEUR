@@ -6,11 +6,12 @@
 MODULE m_dfpt_init
 
     USE m_types
+    USE m_constants
 
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_init(juPhon, sym, input, atoms, sphhar, stars, rho, rho0, recG)
+    SUBROUTINE dfpt_init(juPhon, sym, input, atoms, sphhar, stars, rho, rho0, grRho0, recG)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -20,7 +21,7 @@ CONTAINS
         TYPE(t_stars),    INTENT(IN)  :: stars
         TYPE(t_potden),   INTENT(IN)  :: rho
 
-        TYPE(t_jpPotden), INTENT(OUT) :: rho0
+        TYPE(t_jpPotden), INTENT(OUT) :: rho0, grRho0
 
         INTEGER,          ALLOCATABLE, INTENT(OUT) :: recG(:, :)
 
@@ -29,6 +30,8 @@ CONTAINS
         ! Initialize unsymmetrized potdens and G vectors.
         nG=COUNT(stars%ig>0)
         CALL rho0%init_jpPotden(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins)
+        CALL grRho0%init_jpPotden(3, 0, nG, atoms%jmtd, atoms%lmaxd + juPhon%jplPlus, atoms%nat, input%jspins)
+
         ALLOCATE(recG(nG, 3))
         !v0%init_potden_simple(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins)
 
@@ -37,6 +40,9 @@ CONTAINS
 
         ! Unpack the lattice harmonics onto spherical harmonics.
         CALL lh_to_sh(sym, atoms, sphhar, input%jspins, rho%mt, rho0%mt)
+
+        ! Construct the interstitial gradients.
+        CALL pw_gradient(input%jspins, nG, recG, rho%pw, grRho%pw)
 
     END SUBROUTINE dfpt_init
 
@@ -53,10 +59,10 @@ CONTAINS
 
         INTEGER                    :: iStar, iG, iGx, iGy, iGz, iSpin
 
-        iG    = 0
         rhopw = CMPLX(0.0,0.0)
 
         DO iSpin = 1, jspins
+            iG = 0
             DO iGz= -stars%mx3, stars%mx3
                 DO iGy = -stars%mx2, stars%mx2
                     DO iGx = -stars%mx1, stars%mx1
@@ -71,6 +77,8 @@ CONTAINS
                 END DO
             END DO
         END DO
+
+        write(109,*) nG, iG
 
     END SUBROUTINE stars_to_pw
 
@@ -111,5 +119,26 @@ CONTAINS
         END DO
 
     END SUBROUTINE lh_to_sh
+
+    SUBROUTINE pw_gradient(jspins, nG, recG, rhopw, grRhopw)
+
+        INTEGER,       INTENT(IN)  :: jspins
+        INTEGER,       INTENT(IN)  :: nG
+        INTEGER,       INTENT(IN)  :: recG(:, :)
+
+        COMPLEX,       INTENT(IN)  :: rhopw(:, :, :, :)
+        COMPLEX,       INTENT(OUT) :: grRhopw(:, :, :, :)
+
+        INTEGER                    :: iG, iSpin
+
+        grRhopw = CMPLX(0.0,0.0)
+
+        DO iSpin = 1, jspins
+            DO iG = 1, nG
+                grRhopw(iG, iSpin, 1, :) = ImagUnit * recG(iG, :) * rhopw(iG, iSpin, 1, 1)
+            END DO
+        END DO
+
+    END SUBROUTINE pw_gradient
 
 END MODULE m_dfpt_init

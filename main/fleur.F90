@@ -454,6 +454,9 @@ CONTAINS
             ! Also add safety. We do not want to even enter juPhon if ctail is on,
             ! jspins is 2, natoms is 2 or more, noco is on, libxc is off etc. etc.
             !
+            ! Forbidden switches:
+            ! symor = .FALSE.
+            ! 
             ! Those restrictions will gradually be lifted.
 
             IF (fi%juPhon%l_dfpt) THEN

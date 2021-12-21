@@ -25,7 +25,7 @@ CONTAINS
         TYPE(t_stars),    INTENT(IN)  :: stars
         TYPE(t_potden),   INTENT(IN)  :: rho
 
-        TYPE(t_jpPotden)              :: rho0
+        TYPE(t_jpPotden)              :: rho0, grRho0
 
         INTEGER,          ALLOCATABLE :: recG(:, :)
 
@@ -59,7 +59,7 @@ CONTAINS
         ! This includes for example the de-symmetrized MT and pw quantities and
         ! their gradients. Notably, q-dependent quantities are initialized and
         ! constructed elsewhere, within the q-loop.
-        CALL dfpt_init(juPhon, sym, input, atoms, sphhar, stars, rho, rho0, recG)
+        CALL dfpt_init(juPhon, sym, input, atoms, sphhar, stars, rho, rho0, grRho0, recG)
 
         ! < Imagine starting a q-grid-loop here. >
 
