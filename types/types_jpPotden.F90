@@ -85,7 +85,7 @@ END SUBROUTINE jpdistribute
     IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
 
     ALLOCATE (pd%pw(nGq, jspins, pd%dispatoms, pd%vecdim),stat=err(1))
-    ALLOCATE (pd%mt(jmtd, lmaxd, natoms, jspins, pd%dispatoms, pd%vecdim),stat=err(2))
+    ALLOCATE (pd%mt(jmtd, (lmaxd+1)**2, natoms, jspins, pd%dispatoms, pd%vecdim),stat=err(2))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
