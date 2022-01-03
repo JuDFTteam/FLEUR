@@ -103,7 +103,6 @@ CONTAINS
     
     DO iType = 1, nAtomTypes
        CALL readAtomAttribute(xml,iType,'/special/@b_field_mt',this%b_field_mt(iType))
-       WRITE (*,*) 'b_field_mt: ', iType, this%b_field_mt(iType)
        IF(this%b_field_mt(iType).NE.0.0) THEN
           this%l_b_field=.TRUE.
        END IF
