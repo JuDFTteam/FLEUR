@@ -37,8 +37,9 @@ CONTAINS
     INTEGER, ALLOCATABLE :: iwork(:)
     COMPLEX, ALLOCATABLE :: work(:)
 
-
-    print*, "magma started"
+#ifdef _OPENACC
+    Magma_NumGPU=acc_get_num_devices(acc_device_nvidia)
+#endif
     IF (.NOT.initialized) THEN
        initialized=.TRUE.
        CALL magmaf_init()
