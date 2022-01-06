@@ -162,7 +162,7 @@ CONTAINS
    logical,intent(in) :: global
 
    character(len=15):: label 
-   character(len=15):: attributes(4)      
+   character(len=35):: attributes(2)      
 
    if (global) then 
       WRITE  (oUnit,8125) itype,magmom(1),magmom(2),magmom(3)
@@ -177,12 +177,10 @@ CONTAINS
 8026 FORMAT(2x,'Atom:',I9.1,' -->',10x,' local beta=',f9.5,'  local alpha=',f9.5)
 
    WRITE(attributes(1),'(i0)') iType
-   WRITE(attributes(2),'(f15.10)') magmom(1)
-   WRITE(attributes(3),'(f15.10)') magmom(2)
-   WRITE(attributes(4),'(f15.10)') magmom(3)
+   WRITE(attributes(2),'(3(f10.8,1x))') magmom(1),magmom(2),magmon(3)
    label=trim(merge("globalMagMoment","localMagMoment ",global))
-   CALL writeXMLElementFormPoly(label,(/'atomType','mx      ','my      ','mz      '/),&
-                             attributes,reshape((/8,2,2,2,6,15,15,15/),(/4,2/)))
+   CALL writeXMLElementFormPoly(label,(/'atomType','vec     '/),&
+                             attributes,reshape((/8,3,6,33/),(/2,2/)))
 
 
    end subroutine
