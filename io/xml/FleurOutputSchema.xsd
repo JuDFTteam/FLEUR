@@ -442,7 +442,8 @@
    <xsd:complexType name="MTMagneticMomentsType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="magneticMoment" type="MagneticMomentType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="magneticMoment" type="MagneticMomentVecType"/>         
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="globalMagMoment" type="MagneticMomentVecType"/>         
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="localMagMoment" type="MagneticMomentVecType"/>         
       </xsd:sequence>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>
