@@ -15,7 +15,7 @@ MODULE m_dfpt
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt(juPhon, sym, input, atoms, sphhar, stars, rho)
+    SUBROUTINE dfpt(juPhon, sym, input, atoms, sphhar, stars, cell, rho)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -23,6 +23,7 @@ CONTAINS
         TYPE(t_atoms),    INTENT(IN)  :: atoms
         TYPE(t_sphhar),   INTENT(IN)  :: sphhar
         TYPE(t_stars),    INTENT(IN)  :: stars
+        TYPE(t_cell),     INTENT(IN)  :: cell
         TYPE(t_potden),   INTENT(IN)  :: rho
 
         TYPE(t_jpPotden)              :: rho0, grRho0
@@ -59,7 +60,7 @@ CONTAINS
         ! This includes for example the de-symmetrized MT and pw quantities and
         ! their gradients. Notably, q-dependent quantities are initialized and
         ! constructed elsewhere, within the q-loop.
-        CALL dfpt_init(juPhon, sym, input, atoms, sphhar, stars, rho, rho0, grRho0, recG)
+        CALL dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, rho, rho0, grRho0, recG)
 
         ! < Imagine starting a q-grid-loop here. >
 

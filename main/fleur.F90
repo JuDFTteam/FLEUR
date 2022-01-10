@@ -456,11 +456,11 @@ CONTAINS
             !
             ! Forbidden switches:
             ! symor = .FALSE.
-            ! 
+            !
             ! Those restrictions will gradually be lifted.
 
             IF (fi%juPhon%l_dfpt) THEN
-              CALL dfpt(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, inDen)
+                CALL dfpt(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, fi%cell, inDen)
             END IF
 
             !!!juPhon

@@ -11,7 +11,7 @@ MODULE m_dfpt_init
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_init(juPhon, sym, input, atoms, sphhar, stars, rho, rho0, grRho0, recG)
+    SUBROUTINE dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, rho, rho0, grRho0, recG)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -19,6 +19,7 @@ CONTAINS
         TYPE(t_atoms),    INTENT(IN)  :: atoms
         TYPE(t_sphhar),   INTENT(IN)  :: sphhar
         TYPE(t_stars),    INTENT(IN)  :: stars
+        TYPE(t_cell),     INTENT(IN)  :: cell
         TYPE(t_potden),   INTENT(IN)  :: rho
 
         TYPE(t_jpPotden), INTENT(OUT) :: rho0, grRho0
@@ -42,7 +43,10 @@ CONTAINS
         CALL lh_to_sh(sym, atoms, sphhar, input%jspins, rho%mt, rho0%mt)
 
         ! Construct the interstitial gradients.
-        CALL pw_gradient(input%jspins, nG, recG, rho%pw, grRho%pw)
+        CALL pw_gradient(input%jspins, nG, recG, cell%bmat, rho0%pw, grRho0%pw)
+
+        ! Construct the muffin tin gradients.
+        CALL mt_gradient(input%jspins, atoms, juPhon%jplPlus, rho0%mt, grRho0%mt)
 
     END SUBROUTINE dfpt_init
 
@@ -77,8 +81,6 @@ CONTAINS
                 END DO
             END DO
         END DO
-
-        write(109,*) nG, iG
 
     END SUBROUTINE stars_to_pw
 
@@ -120,25 +122,41 @@ CONTAINS
 
     END SUBROUTINE lh_to_sh
 
-    SUBROUTINE pw_gradient(jspins, nG, recG, rhopw, grRhopw)
+    SUBROUTINE pw_gradient(jspins, nG, recG, bmat, rhopw, grRhopw)
 
         INTEGER,       INTENT(IN)  :: jspins
         INTEGER,       INTENT(IN)  :: nG
         INTEGER,       INTENT(IN)  :: recG(:, :)
+        REAL,          INTENT(IN)  :: bmat(:, :)
 
         COMPLEX,       INTENT(IN)  :: rhopw(:, :, :, :)
         COMPLEX,       INTENT(OUT) :: grRhopw(:, :, :, :)
 
-        INTEGER                    :: iG, iSpin
+        INTEGER :: iG, iSpin
+        REAL    :: gExt(3)
 
         grRhopw = CMPLX(0.0,0.0)
 
         DO iSpin = 1, jspins
             DO iG = 1, nG
-                grRhopw(iG, iSpin, 1, :) = ImagUnit * recG(iG, :) * rhopw(iG, iSpin, 1, 1)
+                gExt = matmul( bmat, recG(iG, :) )
+                grRhopw(iG, iSpin, 1, :) = ImagUnit * gExt * rhopw(iG, iSpin, 1, 1)
             END DO
         END DO
 
     END SUBROUTINE pw_gradient
+
+    SUBROUTINE mt_gradient(jspins, atoms, lplus, rhosh, grRhosh)
+
+        TYPE(t_atoms), INTENT(IN)  :: atoms
+        INTEGER,       INTENT(IN)  :: jspins, lplus
+        COMPLEX,       INTENT(IN)  :: rhosh(:, :, :, :, :, :)
+        COMPLEX,       INTENT(OUT) :: grRhosh(:, :, :, :, :, :)
+
+        INTEGER :: lmaxgrad(atoms%ntype)
+
+        lmaxgrad = atoms%lmax + lplus
+
+    END SUBROUTINE
 
 END MODULE m_dfpt_init
