@@ -90,6 +90,7 @@ CONTAINS
        CALL outDen%addPotDen( resDen, inDen )
        CALL qfix(fmpi,stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .FALSE., l_par=.FALSE., force_fix=.TRUE., fix=fix )
        CALL resDen%subPotDen( outDen, inDen )
+       resDen%mmpMat = outDen%mmpMat - inDen%mmpMat
     END IF MPI0_c
     CALL precon_v%from_density(resden)
 
