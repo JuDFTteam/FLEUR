@@ -51,7 +51,7 @@ vgen/divergence.f90
 vgen/xcBfield.f90
 )
 #vdW Stuff
-set(fleur_F90 ${fleur_F90}
-      vgen/fleur_vdW.F90
-      vgen/vdW.F90
-    )
+#set(fleur_F90 ${fleur_F90}
+#      vgen/fleur_vdW.F90
+#      vgen/vdW.F90
+#    )
