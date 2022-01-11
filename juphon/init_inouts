@@ -1,24 +1,36 @@
 jpInit:
 
 ! Type parameters
-type(t_atoms),                    intent(out) :: atoms
-type(t_cell),                     intent(out) :: cell
-type(t_sym),                      intent(out) :: sym
-type(t_stars),                    intent(out) :: stars
-type(t_sphhar),                   intent(out) :: lathar
-type(t_input),                    intent(out) :: input
 type(t_dimension),                intent(out) :: dimens
-type(t_enpara),                   intent(out) :: enpara
-type(t_xcpot),                    intent(out) :: xcpot
-type(t_kpts),                     intent(out) :: kpts
-type(t_kpts),                     intent(out) :: qpts
-type(t_potential),                intent(out) :: Veff0
-type(t_usdus),                    intent(out) :: usdus
-type(t_results),                  intent(out) :: results
 
-! Scalar parameters
-integer,                          intent(in)  :: logUnit !
-integer,                          intent(in)  :: startTime(8)
+integer,                          intent(out) :: ngdp2km
+
+integer,            allocatable,  intent(out) :: kveclo(:,:)
+integer,            allocatable,  intent(out) :: nRadFun(:,:)
+integer,            allocatable,  intent(out) :: iloTable(:, :, :)
+integer,            allocatable,  intent(out) :: mapKpq2K(:, :)
+real,               allocatable,  intent(out) :: rbas1(:,:,:,:,:)
+real,               allocatable,  intent(out) :: rbas2(:,:,:,:,:)
+real,               allocatable,  intent(out) :: El(:, :, :, :)
+real,               allocatable,  intent(out) :: gridf(:, :)
+real,               allocatable,  intent(out) :: uuilon(:, :)
+real,               allocatable,  intent(out) :: duilon(:, :)
+real,               allocatable,  intent(out) :: ulouilopn(:, :, :)
+integer,            allocatable,  intent(out) :: ilo2p(:, :)
+integer,            allocatable,  intent(out) :: gdp2Ind(:, :, :)
+
+Sternheimer_init:
+
+type(t_tlmplm),                 intent(out) :: tdHS0
+
+complex,           allocatable, intent(out) :: qpwcG(:, :)
+complex,           allocatable, intent(out) :: rho1MTCoreDispAt(:, :, :, :)
+complex,           allocatable, intent(out) :: grVxcIRKern(:)
+real,              allocatable, intent(out) :: dKernMTGPts(:, :, :)
+real,              allocatable, intent(out) :: gausWts(:)
+complex,           allocatable, intent(out) :: ylm(:, :)
+
+Moved to juPhonType (set to defaults; read from inp.xml in the future):
 integer,                          intent(out) :: iqpt
 real,                             intent(out) :: paPoX
 real,                             intent(out) :: paPoY
@@ -32,9 +44,6 @@ logical,                          intent(out) :: recipLengthUnit
 logical,                          intent(out) :: onlyTests
 logical,                          intent(out) :: testsActivated
 integer,                          intent(out) :: noPtsCon
-integer,                          intent(out) :: ngdp
-integer,                          intent(out) :: ngdp2km
-integer,                          intent(out) :: memd_atom
 integer,                          intent(out) :: numAddQs
 logical,                          intent(out) :: testCompareGrVeff0FleurSw
 logical,                          intent(out) :: testVeff1Sw
@@ -87,92 +96,60 @@ logical,                          intent(out) :: testActionHgrPhiSw
 logical,                          intent(out) :: testXCintegrals
 logical,                          intent(out) :: testEii2PsDens
 
-! Array parameters
-integer,            allocatable,  intent(out) :: kveclo(:,:)
-integer,            allocatable,  intent(out) :: nv(:, :)
-integer,            allocatable,  intent(out) :: nRadFun(:,:)
-integer,            allocatable,  intent(out) :: iloTable(:, :, :)
-integer,            allocatable,  intent(out) :: GbasVec(:, :)
-integer,            allocatable,  intent(out) :: ilst(:, :, :)
-integer,            allocatable,  intent(out) :: ne(:)
-integer,            allocatable,  intent(out) :: mapKpq2K(:, :)
-real,               allocatable,  intent(out) :: eig(:,:,:)
-real,               allocatable,  intent(out) :: rbas1(:,:,:,:,:)
-real,               allocatable,  intent(out) :: rbas2(:,:,:,:,:)
-real,               allocatable,  intent(out) :: El(:, :, :, :)
-real,               allocatable,  intent(out) :: vrCoul(:, :, :, :)
-MCOMPLEX,           allocatable,  intent(out) :: z(:,:,:,:)
-complex,            allocatable,  intent(out) :: vpwCoul_uw(:, :)
+Gained from scf-workflow:
+type(t_atoms),                    intent(out) :: atoms
+type(t_cell),                     intent(out) :: cell
+type(t_sym),                      intent(out) :: sym
+type(t_stars),                    intent(out) :: stars
+type(t_sphhar),                   intent(out) :: lathar
+type(t_input),                    intent(out) :: input
+type(t_enpara),                   intent(out) :: enpara
+type(t_results),                  intent(out) :: results
+type(t_kpts),                     intent(out) :: kpts
+integer,            allocatable,  intent(out) :: ne(:) [results]
+real,               allocatable,  intent(out) :: eig(:,:,:) [results]
+integer,            allocatable,  intent(out) :: mlh_atom(:,:,:) [sphhar]
+integer,            allocatable,  intent(out) :: nmem_atom(:, :) [sphhar]
+complex,            allocatable,  intent(out) :: clnu_atom(:,:,:) [sphhar]
+integer,                          intent(out) :: memd_atom [sphhar]
 complex,            allocatable,  intent(out) :: rho0IR(:,:)
 real,               allocatable,  intent(out) :: rho0MT(:,:,:,:)
-real,               allocatable,  intent(out) :: gridf(:, :)
-integer,            allocatable,  intent(out) :: gdp(:,:)
-integer,            allocatable,  intent(out) :: mlh_atom(:,:,:)
-integer,            allocatable,  intent(out) :: nmem_atom(:, :)
-complex,            allocatable,  intent(out) :: clnu_atom(:,:,:)
-real,               allocatable,  intent(out) :: uuilon(:, :)
-real,               allocatable,  intent(out) :: duilon(:, :)
-real,               allocatable,  intent(out) :: ulouilopn(:, :, :)
-integer,            allocatable,  intent(out) :: nobd(:, :)
-integer,            allocatable,  intent(out) :: ilo2p(:, :)
-integer,            allocatable,  intent(out) :: gdp2Ind(:, :, :)
-integer,            allocatable,  intent(out) :: kpq2kPrVec(:, :, :)
+
+To be gained from scf-workflow:
+"type(t_potential),                intent(out) :: Veff0"
+type(t_usdus),                    intent(out) :: usdus
+type(t_xcpot),                    intent(out) :: xcpot
+type(t_kpts),                     intent(out) :: qpts [copy kpts for now]
+
+Gained from new optionals in scf-workflow:
+integer,            allocatable,  intent(out) :: nv(:, :)
+
+To be gained from new optionals in scf-workflow:
+real,               allocatable,  intent(out) :: vrCoul(:, :, :, :)
+complex,            allocatable,  intent(out) :: vpwCoul_uw(:, :)
 complex,            allocatable,  intent(out) :: vXC0IR(:, :)
 complex,            allocatable,  intent(out) :: eXCIR(:)
 real,               allocatable,  intent(out) :: vXC0MT(:, :, :, :)
 real,               allocatable,  intent(out) :: eXCMT(:, :, :)
-integer,                          intent(out) :: gdp2iLim(2, 3)
+
+Calculated/Read in dfpt_init:
+complex,            allocatable,  intent(out) :: rho0MTsh(:, :, :, :)
+integer,                          intent(out) :: ngdp
+integer,            allocatable,  intent(out) :: GbasVec(:, :)
+integer,            allocatable,  intent(out) :: ilst(:, :, :)
+MCOMPLEX,           allocatable,  intent(out) :: z(:,:,:,:)
 complex,            allocatable,  intent(out) :: rho0IRpw(:, :)
+integer,            allocatable,  intent(out) :: gdp(:,:)
+integer,            allocatable,  intent(out) :: nobd(:, :)
+
+To be calculated in dfpt_init:
+complex,            allocatable,  intent(out) :: vEff0MTsh(:, :, :, :)
 complex,            allocatable,  intent(out) :: vEff0IRpw(:, :)
 complex,            allocatable,  intent(out) :: vEff0IRPwUw(:, :)
-complex,            allocatable,  intent(out) :: rho0MTsh(:, :, :, :)
-complex,            allocatable,  intent(out) :: vEff0MTsh(:, :, :, :)
-
-Sternheimer_init:
-
-type(t_atoms),                  intent(in)  :: atoms
-type(t_sym),                    intent(in)  :: sym
-type(t_cell),                   intent(in)  :: cell
-type(t_stars),                  intent(in)  :: stars
-type(t_dimension),              intent(in)  :: dimens
-type(t_sphhar),                 intent(in)  :: lathar
-type(t_enpara),                 intent(in)  :: enpara
-type(t_usdus),                  intent(in)  :: uds
-type(t_input),                  intent(in)  :: input
-type(t_kpts),                   intent(in)  :: qpts ! DEPRECATED shifted G-set
-type(t_tlmplm),                 intent(out) :: tdHS0
-
-! Scalar parameters
-integer,                        intent(in)  :: logUnit
-integer,                        intent(in)  :: ngdp
-integer,                        intent(in)  :: iqpt ! DEPRECATED shifted G-set
-
-! Array parameters
-integer,                        intent(in)  :: gdp(:, :)
-complex,                        intent(in)  :: rho0IR(:, :)
-real,                           intent(in)  :: rho0MT(:, 0:, :, :)
-integer,                        intent(in)  :: mlh_atom(:,0:,:)
-integer,                        intent(in)  :: nmem_atom(0:, :)
-complex,                        intent(in)  :: clnu_atom(:,0:,:)
-real,                           intent(in)  :: rbas1(:, :, 0:, :, :)
-real,                           intent(in)  :: rbas2(:, :, 0:, :, :)
-real,                           intent(in)  :: uuilon(:, :)
-real,                           intent(in)  :: duilon(:, :)
-real,                           intent(in)  :: ulouilopn(:, :, :)
-integer,                        intent(in)  :: ilo2p(:, :)
-complex,                        intent(in)  :: rho0IRpw(:, :)
-complex,                        intent(in)  :: rho0MTsh(:, :, :, :)
-complex,                        intent(in)  :: vEff0MTsh(:, :, :, :)
-complex,           allocatable, intent(out) :: qpwcG(:, :)
-complex,           allocatable, intent(out) :: rho1MTCoreDispAt(:, :, :, :)
-complex,           allocatable, intent(out) :: grVxcIRKern(:)
-real,              allocatable, intent(out) :: dKernMTGPts(:, :, :)
 complex,           allocatable, intent(out) :: grVeff0MT_init(:, :, :, :)
 complex,           allocatable, intent(out) :: grVeff0MT_main(:, :, :, :)
 complex,           allocatable, intent(out) :: grRho0IR(:, :)
 complex,           allocatable, intent(out) :: grRho0MT(:, :, :, :)
-real,              allocatable, intent(out) :: gausWts(:)
-complex,           allocatable, intent(out) :: ylm(:, :)
 complex,           allocatable, intent(out) :: grVext0IR_DM(:, :)
 complex,           allocatable, intent(out) :: grVext0MT_DM(:, :, :, :)
 complex,           allocatable, intent(out) :: grVCoul0IR_DM_SF(:, :)
@@ -180,3 +157,5 @@ complex,           allocatable, intent(out) :: grVCoul0MT_DM_SF(:, :, :, :)
 complex,           allocatable, intent(out) :: grVeff0IR_DM(:, :)
 complex,           allocatable, intent(out) :: grVeff0MT_DM(:, :, :, :)
 complex,           allocatable, intent(out) :: grVeff0MT_DMhxc(:, :, :, :)
+integer,            allocatable,  intent(out) :: kpq2kPrVec(:, :, :)
+integer,                          intent(out) :: gdp2iLim(2, 3)

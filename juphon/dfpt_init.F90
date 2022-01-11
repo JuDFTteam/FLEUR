@@ -57,6 +57,8 @@ CONTAINS
 !        INTEGER ierr
 !#endif
 
+        ! TODO: Meditate about the correct normalizations on all rho/V MT/pw.
+
         ! Initialize unsymmetrized potdens and G vectors.
         nG=COUNT(stars%ig>0)
         ngdp=nG
