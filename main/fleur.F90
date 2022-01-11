@@ -117,6 +117,7 @@ CONTAINS
 #endif
       REAL, ALLOCATABLE :: flh(:, :), flh2(:, :)
       COMPLEX, ALLOCATABLE :: flm(:, :)
+      INTEGER, ALLOCATABLE :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
       IF ((fi%input%preconditioning_param /= 0) .AND. fi%oneD%odi%d1) THEN
          CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby='fleur')
@@ -356,9 +357,15 @@ CONTAINS
             CALL enpara%update(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
             IF (.not. fi%input%eig66(1)) THEN
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
-                          enpara, nococonv, mpdata, hybdat, &
-                          iter, eig_id, results, inDen, vToT, vx, hub1data)
+                IF (fi%juPhon%l_dfpt) THEN
+                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
+                               enpara, nococonv, mpdata, hybdat, &
+                               iter, eig_id, results, inDen, vToT, vx, hub1data, nvfull, GbasVec_eig)
+                ELSE
+                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
+                               enpara, nococonv, mpdata, hybdat, &
+                               iter, eig_id, results, inDen, vToT, vx, hub1data)
+                END IF
             ENDIF
 !!$          eig_idList(pc) = eig_id
             CALL timestop("eigen")
@@ -460,7 +467,7 @@ CONTAINS
             ! Those restrictions will gradually be lifted.
 
             IF (fi%juPhon%l_dfpt) THEN
-                CALL dfpt(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, fi%cell, inDen)
+                CALL dfpt(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, fi%kpts, fmpi, results, inDen, eig_id, nvfull, GbasVec_eig)
             END IF
 
             !!!juPhon

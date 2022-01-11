@@ -7,11 +7,14 @@ MODULE m_dfpt_init
 
     USE m_types
     USE m_constants
+    USE m_eig66_io, ONLY : read_eig
 
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, rho, rho0, grRho0, recG)
+    SUBROUTINE dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, &
+                       & kpts, fmpi, results, rho, eig_id, nvfull, GbasVec_eig, rho0, &
+                       & grRho0, ngdp, recG, GbasVec, ilst, z0)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -20,16 +23,43 @@ CONTAINS
         TYPE(t_sphhar),   INTENT(IN)  :: sphhar
         TYPE(t_stars),    INTENT(IN)  :: stars
         TYPE(t_cell),     INTENT(IN)  :: cell
+        TYPE(t_noco),     INTENT(IN)  :: noco
+        TYPE(t_nococonv), INTENT(IN)  :: nococonv
+        TYPE(t_kpts),     INTENT(IN)  :: kpts
+        TYPE(t_mpi),      INTENT(IN)  :: fmpi
+        TYPE(t_results),  INTENT(IN)  :: results
         TYPE(t_potden),   INTENT(IN)  :: rho
+        INTEGER,          INTENT(IN)  :: eig_id
+        INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
         TYPE(t_jpPotden), INTENT(OUT) :: rho0, grRho0
 
-        INTEGER,          ALLOCATABLE, INTENT(OUT) :: recG(:, :)
+        INTEGER,          INTENT(OUT) :: ngdp
 
-        INTEGER :: nG
+        INTEGER,          ALLOCATABLE, INTENT(OUT) :: recG(:, :)
+        INTEGER,          ALLOCATABLE, INTENT(OUT) :: GbasVec(:, :)
+        INTEGER,          ALLOCATABLE, INTENT(OUT) :: ilst(:, :, :)
+        COMPLEX,          ALLOCATABLE, INTENT(OUT) :: z0(:, :, :, :)
+
+        TYPE(t_lapw) :: lapw
+        TYPE(t_mat)  :: zMat
+
+        TYPE(t_cdnvalJob) :: cdnvaljob
+
+        INTEGER      :: nG, nSpins, nbasfcn, iSpin, ik, iG, indexG, ifind, nk
+        LOGICAL      :: l_real, addG
+        REAL         :: bkpt(3)
+
+        INTEGER, ALLOCATABLE :: GbasVec_temp(:, :), ev_list(:), nocc(:, :)
+        REAL,    ALLOCATABLE :: we(:), eig(:)
+
+!#ifdef CPP_MPI
+!        INTEGER ierr
+!#endif
 
         ! Initialize unsymmetrized potdens and G vectors.
         nG=COUNT(stars%ig>0)
+        ngdp=nG
         CALL rho0%init_jpPotden(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins)
         CALL grRho0%init_jpPotden(3, 0, nG, atoms%jmtd, atoms%lmaxd + juPhon%jplPlus, atoms%nat, input%jspins)
 
@@ -47,6 +77,110 @@ CONTAINS
 
         ! Construct the muffin tin gradients.
         CALL mt_gradient(input%jspins, atoms, juPhon%jplPlus, rho0%mt, grRho0%mt)
+
+        IF (noco%l_noco) THEN
+           nSpins = 1
+        ELSE
+           nSpins = input%jspins
+        ENDIF
+
+        ALLOCATE(ilst(MAXVAL(nvfull), kpts%nkpt, input%jspins), GbasVec_temp(3, 0), GbasVec(3, 0) )
+
+        ! Store basis vectors G in a compressed way, as they occur multiple times
+        ! for different k-points. The array ilst stores the vector's index if it
+        ! has occured for a different k-point or spin already.
+        indexG = 0
+        ilst = -1
+        DO iSpin = 1, input%jspins
+            DO ik = 1, kpts%nkpt
+                DO iG = 1, nvfull(iSpin, ik)
+                    IF (uBound(GbasVec, 2).EQ.0) then
+                        addG = .true.
+                    ELSE
+                        DO ifind =  1, uBound(GbasVec, 2)
+                            IF (.NOT.ALL(ABS(GbasVec(:, ifind) - GbasVec_eig(:, iG, ik, iSpin)).LE.1E-8)) THEN
+                                addG = .TRUE.
+                            ELSE
+                                ilst(iG, ik, iSpin) = ifind
+                                addG = .FALSE.
+                                EXIT
+                            END IF
+                        END DO ! ifind
+                    END IF
+
+                    IF (addG) THEN
+                        IF (uBound(GbasVec, 2).EQ.0) THEN
+                            DEALLOCATE(GbasVec, GbasVec_temp)
+                            ALLOCATE(GbasVec(3, 1), GbasVec_temp(3, 1))
+                        ELSE
+                            GbasVec_temp = GbasVec
+                            DEALLOCATE(GbasVec)
+                            ALLOCATE(GbasVec(3, indexG + 1))
+                            GbasVec(:, :indexG) = GbasVec_temp
+                        END IF
+
+                        indexG = indexG + 1
+                        ilst(iG, ik, iSpin) = indexG
+                        GbasVec(1, indexG) = GbasVec_eig(1, iG, ik, iSpin)
+                        GbasVec(2, indexG) = GbasVec_eig(2, iG, ik, iSpin)
+                        GbasVec(3, indexG) = GbasVec_eig(3, iG, ik, iSpin)
+
+                        IF (uBound(GbasVec, 2).NE.0) THEN
+                            DEALLOCATE(GbasVec_temp)
+                            ALLOCATE(GbasVec_temp(3, indexG))
+                        END IF
+                    END IF
+                END DO ! iG
+            END DO ! ik
+        END DO ! iSpin
+
+        DEALLOCATE(GbasVec_temp)
+
+        !nbasfcn = MERGE(MAXVAL(nvfull(1,:))+MAXVAL(nvfull(2,:))+2*atoms%nlotot,MAXVAL(nvfull(1,:))+atoms%nlotot,noco%l_noco)
+
+        nbasfcn = MAXVAL(nvfull(1,:))+atoms%nlotot
+
+        ALLOCATE(z0(nbasfcn, input%neig, kpts%nkpt, nSpins))
+        ALLOCATE(nocc(kpts%nkpt, input%jspins))
+
+        z0 = CMPLX(0.0,0.0)
+        nocc = 0
+
+        l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco).AND.atoms%n_hia==0
+
+        CALL zMat%init(l_real, nbasfcn, input%neig)
+
+        DO iSpin = 1, nspins
+            CALL cdnvalJob%init(fmpi, input, kpts, noco, results, iSpin)
+            DO ik = 1,kpts%nkpt
+
+                nk=cdnvalJob%k_list(ik)
+
+                bkpt=kpts%bk(:, nk)
+
+                CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+                ev_list = cdnvaljob%compact_ev_list(nk, l_empty = .TRUE.)
+                nocc(ik, iSpin) = cdnvaljob%noccbd(nk)
+                we  = cdnvalJob%weights(ev_list, nk)
+                eig = results%eig(ev_list, nk, iSpin)
+
+                IF (fmpi%irank == 0) THEN
+                    CALL read_eig(eig_id, nk, iSpin, list = ev_list,  zmat=zMat)
+                    !CALL read_eig(eig_id, ik, iSpin, neig = results%neig(ik, iSpin), &
+                    !                                & eig = results%eig(:, ik, iSpin))
+                END IF
+
+                IF (l_real) THEN
+                    z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = CMPLX(1.0,0.0) * zMat%data_r(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
+                ELSE
+                    z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = zMat%data_c(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
+                END IF
+
+!#ifdef CPP_MPI
+!                CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
+!#endif
+            END DO
+        END DO
 
     END SUBROUTINE dfpt_init
 

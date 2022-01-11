@@ -22,7 +22,7 @@ CONTAINS
    !>@author D. Wortmann
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,&
                     enpara,nococonv,mpdata,hybdat,&
-                    iter,eig_id,results,inden,v,vx,hub1data)
+                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig)
 
 #include"cpp_double.h"
       USE m_types
@@ -60,6 +60,8 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)   :: vx
       TYPE(t_potden),INTENT(IN)    :: v
 
+      INTEGER, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: nvfull(:, :), GbasVec_eig(:, :, :, :)
+
 
 !    EXTERNAL MPI_BCAST    !only used by band_unfolding to broadcast the gvec
 
@@ -79,11 +81,12 @@ CONTAINS
 
       COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),fi%kpts%nkpt,fi%input%jspins) ! needed for unfolding bandstructure fmpi case
 
-      INTEGER, ALLOCATABLE :: nvBuffer(:,:), nvBufferTemp(:,:)
+      INTEGER, ALLOCATABLE :: nvBuffer(:,:), nvBufferTemp(:,:), nvfullBuffer(:,:), GbasVecBuffer(:, :, :, :)
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
       INTEGER                   :: jsp_m, i_kpt_m, i_m
+      INTEGER                   :: maxspin
 
       TYPE(t_tlmplm)            :: td
       TYPE(t_usdus)             :: ud
@@ -125,16 +128,32 @@ CONTAINS
       nvBuffer = 0
       nvBufferTemp = 0
 
-      DO jsp = 1,MERGE(1,fi%input%jspins,fi%noco%l_noco)
+      IF (PRESENT(nvfull)) THEN
+          ALLOCATE(nvfull(MERGE(1,fi%input%jspins,fi%noco%l_noco), fi%kpts%nkpt))
+          nvfull = 0
+          ALLOCATE(nvfullBuffer(MERGE(1,fi%input%jspins,fi%noco%l_noco), fi%kpts%nkpt))
+          nvfullBuffer = 0
+          ALLOCATE(GbasVec_eig(3, fi%input%neig, fi%kpts%nkpt, MERGE(1,fi%input%jspins,fi%noco%l_noco)))
+          GbasVec_eig = 0
+          ALLOCATE(GbasVecBuffer(3, fi%input%neig, fi%kpts%nkpt, MERGE(1,fi%input%jspins,fi%noco%l_noco)))
+          GbasVecBuffer = 0
+      END IF
+
+      DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)
             ! Set up lapw list
-            CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts,fi%atoms,fi%sym,nk,fi%cell,l_zref, fmpi)
+            CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref, fmpi)
             call timestart("Setup of H&S matrices")
             CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             nvBuffer(nk,jsp) = lapw%nv(jsp)
+
+            IF (PRESENT(nvfull)) THEN
+                nvfullBuffer(jsp, nk) = lapw%nv(jsp) + fi%atoms%nlotot
+                GbasVecBuffer(:, :lapw%nv(jsp), nk, jsp) = lapw%gvec(:, :lapw%nv(jsp), jsp)
+            END IF
 
             l_wu=.FALSE.
             ne_all=fi%input%neig
@@ -241,12 +260,20 @@ CONTAINS
       CALL MPI_ALLREDUCE(neigBuffer,results%neig,fi%kpts%nkpt*fi%input%jspins,MPI_INTEGER,MPI_SUM,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(nvBuffer(:,:),nvBufferTemp(:,:),size(nvbuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+      IF (PRESENT(nvfull)) THEN
+          CALL MPI_ALLREDUCE(nvfullBuffer(:,:),nvfull(:,:),size(nvfullBuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+          CALL MPI_ALLREDUCE(GbasVecBuffer(:,:,:,:),GbasVec_eig(:,:,:,:),size(GbasVecBuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+      END IF
       CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #else
       results%neig(:,:) = neigBuffer(:,:)
       results%eig(:neigd2,:,:) = eigBuffer(:neigd2,:,:)
       results%unfolding_weights(:,:,:) = unfoldingBuffer(:,:,:)
       nvBufferTemp(:,:) = nvBuffer(:,:)
+      IF (PRESENT(nvfull)) THEN
+          nvfull(:,:) = nvfullBuffer(:,:)
+          GbasVec_eig(:,:,:,:) = GbasVecBuffer(:,:,:,:)
+      END IF
 #endif
 
       IF(fmpi%irank.EQ.0) THEN
