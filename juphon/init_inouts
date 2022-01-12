@@ -2,25 +2,11 @@ jpInit:
 
 ! Type parameters
 type(t_dimension),                intent(out) :: dimens
-
 integer,                          intent(out) :: ngdp2km
-
 integer,            allocatable,  intent(out) :: kveclo(:,:)
-integer,            allocatable,  intent(out) :: nRadFun(:,:)
-integer,            allocatable,  intent(out) :: iloTable(:, :, :)
-integer,            allocatable,  intent(out) :: mapKpq2K(:, :)
-real,               allocatable,  intent(out) :: rbas1(:,:,:,:,:)
-real,               allocatable,  intent(out) :: rbas2(:,:,:,:,:)
-real,               allocatable,  intent(out) :: El(:, :, :, :)
-real,               allocatable,  intent(out) :: gridf(:, :)
-real,               allocatable,  intent(out) :: uuilon(:, :)
-real,               allocatable,  intent(out) :: duilon(:, :)
-real,               allocatable,  intent(out) :: ulouilopn(:, :, :)
-integer,            allocatable,  intent(out) :: ilo2p(:, :)
 integer,            allocatable,  intent(out) :: gdp2Ind(:, :, :)
 
 Sternheimer_init:
-
 type(t_tlmplm),                 intent(out) :: tdHS0
 
 complex,           allocatable, intent(out) :: qpwcG(:, :)
@@ -117,9 +103,9 @@ real,               allocatable,  intent(out) :: rho0MT(:,:,:,:)
 
 To be gained from scf-workflow:
 "type(t_potential),                intent(out) :: Veff0"
-type(t_usdus),                    intent(out) :: usdus
 type(t_xcpot),                    intent(out) :: xcpot
 type(t_kpts),                     intent(out) :: qpts [copy kpts for now]
+
 
 Gained from new optionals in scf-workflow:
 integer,            allocatable,  intent(out) :: nv(:, :)
@@ -141,6 +127,16 @@ MCOMPLEX,           allocatable,  intent(out) :: z(:,:,:,:)
 complex,            allocatable,  intent(out) :: rho0IRpw(:, :)
 integer,            allocatable,  intent(out) :: gdp(:,:)
 integer,            allocatable,  intent(out) :: nobd(:, :)
+integer,            allocatable,  intent(out) :: nRadFun(:,:)
+integer,            allocatable,  intent(out) :: iloTable(:, :, :)
+integer,            allocatable,  intent(out) :: ilo2p(:, :)
+real,               allocatable,  intent(out) :: rbas1(:,:,:,:,:)
+real,               allocatable,  intent(out) :: rbas2(:,:,:,:,:)
+type(t_usdus),                    intent(out) :: usdus
+real,               allocatable,  intent(out) :: uuilon(:, :) [usdus; last dim=1]
+real,               allocatable,  intent(out) :: duilon(:, :) [usdus; last dim=1]
+real,               allocatable,  intent(out) :: ulouilopn(:, :, :) [usdus; last dim=1]
+real,               allocatable,  intent(out) :: gridf(:, :)
 
 To be calculated in dfpt_init:
 complex,            allocatable,  intent(out) :: vEff0MTsh(:, :, :, :)
@@ -159,3 +155,5 @@ complex,           allocatable, intent(out) :: grVeff0MT_DM(:, :, :, :)
 complex,           allocatable, intent(out) :: grVeff0MT_DMhxc(:, :, :, :)
 integer,            allocatable,  intent(out) :: kpq2kPrVec(:, :, :)
 integer,                          intent(out) :: gdp2iLim(2, 3)
+integer,            allocatable,  intent(out) :: mapKpq2K(:, :)
+real,               allocatable,  intent(out) :: El(:, :, :, :) [from enpara]

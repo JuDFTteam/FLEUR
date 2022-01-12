@@ -15,7 +15,8 @@ MODULE m_dfpt
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, kpts, fmpi, results, rho, eig_id, nvfull, GbasVec_eig)
+    SUBROUTINE dfpt(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, &
+                  & kpts, fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -29,13 +30,22 @@ CONTAINS
         TYPE(t_kpts),     INTENT(IN)  :: kpts
         TYPE(t_mpi),      INTENT(IN)  :: fmpi
         TYPE(t_results),  INTENT(IN)  :: results
-        TYPE(t_potden),   INTENT(IN)  :: rho
+        TYPE(t_enpara),   INTENT(IN)  :: enpara
+        TYPE(t_potden),   INTENT(IN)  :: rho, vTot
         INTEGER,          INTENT(IN)  :: eig_id
         INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
+        TYPE(t_usdus)                 :: usdus
         TYPE(t_jpPotden)              :: rho0, grRho0
 
         INTEGER,          ALLOCATABLE :: recG(:, :), GbasVec(:, :), ilst(:, :, :)
+        INTEGER,          ALLOCATABLE :: nRadFun(:, :), iloTable(:, :, :), ilo2p(:, :)
+        REAL,             ALLOCATABLE :: uuilon(:, :)
+        REAL,             ALLOCATABLE :: duilon(:, :)
+        REAL,             ALLOCATABLE :: ulouilopn(:, :, :)
+        REAL,             ALLOCATABLE :: rbas1(:, :, :, :, :)
+        REAL,             ALLOCATABLE :: rbas2(:, :, :, :, :)
+        REAL,             ALLOCATABLE :: gridf(:, :)
         COMPLEX,          ALLOCATABLE :: z0(:, :, :, :)
 
         INTEGER :: ngdp
@@ -71,8 +81,8 @@ CONTAINS
         ! their gradients. Notably, q-dependent quantities are initialized and
         ! constructed elsewhere, within the q-loop.
         CALL dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, kpts, &
-                     & fmpi, results, rho, eig_id, nvfull, GbasVec_eig, rho0, grRho0, &
-                     & ngdp, recG, GbasVec, ilst, z0)
+                     & fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, grRho0, &
+                     & ngdp, recG, GbasVec, ilst, nRadFun, iloTable, ilo2p, uuilon, duilon, ulouilopn, rbas1, rbas2, gridf, z0)
 
         ! < Imagine starting a q-grid-loop here. >
 
