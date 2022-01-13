@@ -85,9 +85,9 @@ complex,            allocatable,  intent(out) :: clnu_atom(:,:,:) [sphhar]
 integer,                          intent(out) :: memd_atom [sphhar]
 complex,            allocatable,  intent(out) :: rho0IR(:,:)
 real,               allocatable,  intent(out) :: rho0MT(:,:,:,:)
+"type(t_potential),                intent(out) :: Veff0"
 
 To be gained from scf-workflow:
-"type(t_potential),                intent(out) :: Veff0"
 type(t_xcpot),                    intent(out) :: xcpot
 type(t_kpts),                     intent(out) :: qpts [copy kpts for now]
 
