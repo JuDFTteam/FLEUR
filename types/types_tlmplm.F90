@@ -33,6 +33,8 @@ MODULE m_types_tlmplm
      !COMPLEX,ALLOCATABLE :: h_loc_sp(:,:,:,:)   !l,lp,ntype,ispin,jspin
      !COMPLEX,ALLOCATABLE :: h_locLO(:,:,:,:,:)  !lm+mlo,mlo,ntype,ispin,jspin
      TYPE(t_rsoc)        :: rsoc
+     ! For juPhon:
+     INTEGER,ALLOCATABLE :: ind(:,:,:,:)
    CONTAINS
      PROCEDURE,PASS :: init => tlmplm_init
   END TYPE t_tlmplm

@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_dfpt
+    USE m_juDFT_time
     USE m_constants
     USE m_types
     USE m_dfpt_check
@@ -36,9 +37,14 @@ CONTAINS
         INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
         TYPE(t_usdus)                 :: usdus
-        TYPE(t_jpPotden)              :: rho0, grRho0
+        TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
+        type(t_tlmplm)                :: tdHS0
+        COMPLEX, ALLOCATABLE          :: loosetdout(:, :, :, :)
 
         INTEGER,          ALLOCATABLE :: recG(:, :), GbasVec(:, :), ilst(:, :, :)
+        INTEGER                       :: ngdp2km
+        INTEGER,          ALLOCATABLE :: gdp2Ind(:, :, :)
+        INTEGER                       :: gdp2iLim(2, 3)
         INTEGER,          ALLOCATABLE :: nRadFun(:, :), iloTable(:, :, :), ilo2p(:, :)
         REAL,             ALLOCATABLE :: uuilon(:, :)
         REAL,             ALLOCATABLE :: duilon(:, :)
@@ -47,6 +53,12 @@ CONTAINS
         REAL,             ALLOCATABLE :: rbas2(:, :, :, :, :)
         REAL,             ALLOCATABLE :: gridf(:, :)
         COMPLEX,          ALLOCATABLE :: z0(:, :, :, :)
+        complex,           allocatable :: grVxcIRKern(:)
+        real,              allocatable :: dKernMTGPts(:, :, :)
+        real,              allocatable :: gausWts(:)
+        complex,           allocatable :: ylm(:, :)
+        complex,           allocatable :: qpwcG(:, :)
+        complex,           allocatable :: rho1MTCoreDispAt(:, :, :, :)
 
         INTEGER :: ngdp
 
@@ -81,8 +93,10 @@ CONTAINS
         ! their gradients. Notably, q-dependent quantities are initialized and
         ! constructed elsewhere, within the q-loop.
         CALL dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, kpts, &
-                     & fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, grRho0, &
-                     & ngdp, recG, GbasVec, ilst, nRadFun, iloTable, ilo2p, uuilon, duilon, ulouilopn, rbas1, rbas2, gridf, z0)
+                     & fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, grRho0, vTot0, grVTot0, &
+                     & ngdp, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
+                     & uuilon, duilon, ulouilopn, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
+                     & gausWts, ylm, qpwcG, rho1MTCoreDispAt, tdHS0, loosetdout)
 
         ! < Imagine starting a q-grid-loop here. >
 
@@ -103,6 +117,8 @@ CONTAINS
         ! < Imagine ending a q-grid-loop here. >
 
         WRITE (oUnit,*) '------------------------------------------------------'
+
+        CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
 
     END SUBROUTINE dfpt
 END MODULE m_dfpt

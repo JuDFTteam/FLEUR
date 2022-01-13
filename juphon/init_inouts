@@ -1,20 +1,5 @@
-jpInit:
-
-! Type parameters
-type(t_dimension),                intent(out) :: dimens
-integer,                          intent(out) :: ngdp2km
-integer,            allocatable,  intent(out) :: kveclo(:,:)
-integer,            allocatable,  intent(out) :: gdp2Ind(:, :, :)
-
 Sternheimer_init:
-type(t_tlmplm),                 intent(out) :: tdHS0
-
 complex,           allocatable, intent(out) :: qpwcG(:, :)
-complex,           allocatable, intent(out) :: rho1MTCoreDispAt(:, :, :, :)
-complex,           allocatable, intent(out) :: grVxcIRKern(:)
-real,              allocatable, intent(out) :: dKernMTGPts(:, :, :)
-real,              allocatable, intent(out) :: gausWts(:)
-complex,           allocatable, intent(out) :: ylm(:, :)
 
 Moved to juPhonType (set to defaults; read from inp.xml in the future):
 integer,                          intent(out) :: iqpt
@@ -137,6 +122,15 @@ real,               allocatable,  intent(out) :: uuilon(:, :) [usdus; last dim=1
 real,               allocatable,  intent(out) :: duilon(:, :) [usdus; last dim=1]
 real,               allocatable,  intent(out) :: ulouilopn(:, :, :) [usdus; last dim=1]
 real,               allocatable,  intent(out) :: gridf(:, :)
+integer,                          intent(out) :: ngdp2km
+integer,            allocatable,  intent(out) :: gdp2Ind(:, :, :)
+integer,                          intent(out) :: gdp2iLim(2, 3)
+complex,           allocatable, intent(out) :: grVxcIRKern(:)
+real,              allocatable, intent(out) :: dKernMTGPts(:, :, :)
+real,              allocatable, intent(out) :: gausWts(:)
+complex,           allocatable, intent(out) :: ylm(:, :)
+complex,           allocatable, intent(out) :: rho1MTCoreDispAt(:, :, :, :)
+type(t_tlmplm),                 intent(out) :: tdHS0 [another loose array needed adding]
 
 To be calculated in dfpt_init:
 complex,            allocatable,  intent(out) :: vEff0MTsh(:, :, :, :)
@@ -154,6 +148,9 @@ complex,           allocatable, intent(out) :: grVeff0IR_DM(:, :)
 complex,           allocatable, intent(out) :: grVeff0MT_DM(:, :, :, :)
 complex,           allocatable, intent(out) :: grVeff0MT_DMhxc(:, :, :, :)
 integer,            allocatable,  intent(out) :: kpq2kPrVec(:, :, :)
-integer,                          intent(out) :: gdp2iLim(2, 3)
 integer,            allocatable,  intent(out) :: mapKpq2K(:, :)
 real,               allocatable,  intent(out) :: El(:, :, :, :) [from enpara]
+
+Deprecated and need to be sausaged in/out:
+type(t_dimension),                intent(out) :: dimens
+integer,            allocatable,  intent(out) :: kveclo(:,:)
