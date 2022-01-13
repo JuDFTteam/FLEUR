@@ -1,6 +1,3 @@
-Sternheimer_init:
-complex,           allocatable, intent(out) :: qpwcG(:, :)
-
 Moved to juPhonType (set to defaults; read from inp.xml in the future):
 integer,                          intent(out) :: iqpt
 real,                             intent(out) :: paPoX
@@ -67,7 +64,7 @@ logical,                          intent(out) :: testActionHgrPhiSw
 logical,                          intent(out) :: testXCintegrals
 logical,                          intent(out) :: testEii2PsDens
 
-Gained from scf-workflow:
+Gained organically from scf-workflow:
 type(t_atoms),                    intent(out) :: atoms
 type(t_cell),                     intent(out) :: cell
 type(t_sym),                      intent(out) :: sym
@@ -86,11 +83,7 @@ integer,                          intent(out) :: memd_atom [sphhar]
 complex,            allocatable,  intent(out) :: rho0IR(:,:)
 real,               allocatable,  intent(out) :: rho0MT(:,:,:,:)
 "type(t_potential),                intent(out) :: Veff0"
-
-To be gained from scf-workflow:
-type(t_xcpot),                    intent(out) :: xcpot
 type(t_kpts),                     intent(out) :: qpts [copy kpts for now]
-
 
 Gained from new optionals in scf-workflow:
 integer,            allocatable,  intent(out) :: nv(:, :)
@@ -130,12 +123,15 @@ real,              allocatable, intent(out) :: dKernMTGPts(:, :, :)
 real,              allocatable, intent(out) :: gausWts(:)
 complex,           allocatable, intent(out) :: ylm(:, :)
 complex,           allocatable, intent(out) :: rho1MTCoreDispAt(:, :, :, :)
+complex,           allocatable, intent(out) :: qpwcG(:, :)
 type(t_tlmplm),                 intent(out) :: tdHS0 [another loose array needed adding]
-
-To be calculated in dfpt_init:
+integer,            allocatable,  intent(out) :: kveclo(:,:) [dirty hack]
 complex,            allocatable,  intent(out) :: vEff0MTsh(:, :, :, :)
 complex,            allocatable,  intent(out) :: vEff0IRpw(:, :)
 complex,            allocatable,  intent(out) :: vEff0IRPwUw(:, :)
+real,               allocatable,  intent(out) :: El(:, :, :, :) [from enpara]
+
+To be calculated in dfpt_init:
 complex,           allocatable, intent(out) :: grVeff0MT_init(:, :, :, :)
 complex,           allocatable, intent(out) :: grVeff0MT_main(:, :, :, :)
 complex,           allocatable, intent(out) :: grRho0IR(:, :)
@@ -147,10 +143,13 @@ complex,           allocatable, intent(out) :: grVCoul0MT_DM_SF(:, :, :, :)
 complex,           allocatable, intent(out) :: grVeff0IR_DM(:, :)
 complex,           allocatable, intent(out) :: grVeff0MT_DM(:, :, :, :)
 complex,           allocatable, intent(out) :: grVeff0MT_DMhxc(:, :, :, :)
+
+To be calculated for each q:
 integer,            allocatable,  intent(out) :: kpq2kPrVec(:, :, :)
 integer,            allocatable,  intent(out) :: mapKpq2K(:, :)
-real,               allocatable,  intent(out) :: El(:, :, :, :) [from enpara]
 
 Deprecated and need to be sausaged in/out:
 type(t_dimension),                intent(out) :: dimens
-integer,            allocatable,  intent(out) :: kveclo(:,:)
+
+Irrelevant (for now):
+type(t_xcpot),                    intent(out) :: xcpot

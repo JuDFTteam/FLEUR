@@ -17,7 +17,7 @@ MODULE m_dfpt
 
 CONTAINS
     SUBROUTINE dfpt(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, &
-                  & kpts, fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig)
+                  & kpts, qpts, fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -29,6 +29,7 @@ CONTAINS
         TYPE(t_noco),     INTENT(IN)  :: noco
         TYPE(t_nococonv), INTENT(IN)  :: nococonv
         TYPE(t_kpts),     INTENT(IN)  :: kpts
+        TYPE(t_kpts),     INTENT(IN)  :: qpts
         TYPE(t_mpi),      INTENT(IN)  :: fmpi
         TYPE(t_results),  INTENT(IN)  :: results
         TYPE(t_enpara),   INTENT(IN)  :: enpara
@@ -41,6 +42,7 @@ CONTAINS
         type(t_tlmplm)                :: tdHS0
         COMPLEX, ALLOCATABLE          :: loosetdout(:, :, :, :)
 
+        REAL,             ALLOCATABLE :: El(:, :, :, :)
         INTEGER,          ALLOCATABLE :: recG(:, :), GbasVec(:, :), ilst(:, :, :)
         INTEGER                       :: ngdp2km
         INTEGER,          ALLOCATABLE :: gdp2Ind(:, :, :)
@@ -49,6 +51,7 @@ CONTAINS
         REAL,             ALLOCATABLE :: uuilon(:, :)
         REAL,             ALLOCATABLE :: duilon(:, :)
         REAL,             ALLOCATABLE :: ulouilopn(:, :, :)
+        INTEGER,          ALLOCATABLE :: kveclo(:,:)
         REAL,             ALLOCATABLE :: rbas1(:, :, :, :, :)
         REAL,             ALLOCATABLE :: rbas2(:, :, :, :, :)
         REAL,             ALLOCATABLE :: gridf(:, :)
@@ -94,8 +97,8 @@ CONTAINS
         ! constructed elsewhere, within the q-loop.
         CALL dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, kpts, &
                      & fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, grRho0, vTot0, grVTot0, &
-                     & ngdp, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
-                     & uuilon, duilon, ulouilopn, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
+                     & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
+                     & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                      & gausWts, ylm, qpwcG, rho1MTCoreDispAt, tdHS0, loosetdout)
 
         ! < Imagine starting a q-grid-loop here. >
@@ -118,7 +121,7 @@ CONTAINS
 
         WRITE (oUnit,*) '------------------------------------------------------'
 
-        CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+        CALL juDFT_end("Phonon calculation finished.")
 
     END SUBROUTINE dfpt
 END MODULE m_dfpt

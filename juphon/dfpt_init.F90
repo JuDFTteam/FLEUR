@@ -17,8 +17,8 @@ MODULE m_dfpt_init
 CONTAINS
     SUBROUTINE dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, &
                        & kpts, fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, &
-                       & grRho0, vTot0, grVTot0, ngdp, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
-                       & uuilonout, duilonout, ulouilopnout, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
+                       & grRho0, vTot0, grVTot0, ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
+                       & uuilonout, duilonout, ulouilopnout, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                        & gausWts, ylm, qpwcG, rho1MTCoreDispAt, tdHS0, loosetdout)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
@@ -43,6 +43,7 @@ CONTAINS
 
         INTEGER,          INTENT(OUT) :: ngdp
 
+        REAL,             ALLOCATABLE, INTENT(OUT) :: El(:, :, :, :)
         INTEGER,          ALLOCATABLE, INTENT(OUT) :: recG(:, :)
         INTEGER,                       INTENT(OUT) :: ngdp2km
         INTEGER,          ALLOCATABLE, INTENT(OUT) :: gdp2Ind(:, :, :)
@@ -55,6 +56,7 @@ CONTAINS
         REAL,             ALLOCATABLE, INTENT(OUT) :: uuilonout(:, :)
         REAL,             ALLOCATABLE, INTENT(OUT) :: duilonout(:, :)
         REAL,             ALLOCATABLE, INTENT(OUT) :: ulouilopnout(:, :, :)
+        INTEGER,          ALLOCATABLE, INTENT(OUT) :: kveclo(:,:)
         REAL,             ALLOCATABLE, INTENT(OUT) :: rbas1(:, :, :, :, :)
         REAL,             ALLOCATABLE, INTENT(OUT) :: rbas2(:, :, :, :, :)
         REAL,             ALLOCATABLE, INTENT(OUT) :: gridf(:, :)
@@ -89,6 +91,12 @@ CONTAINS
 !#ifdef CPP_MPI
 !        INTEGER ierr
 !#endif
+
+        call uniteEnergyParameters( atoms, enpara, input, El )
+
+        ! TODO: This is a hack:
+        ALLOCATE(kveclo(atoms%nlotot, kpts%nkpt))
+        kveclo = 0
 
         IF (noco%l_noco) THEN
            nSpins = 1
@@ -171,6 +179,15 @@ CONTAINS
                 bkpt=kpts%bk(:, nk)
 
                 CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+
+                ! Kinda like this for lapw%kvec and nkvec. Irrelevant for now.
+                !DO lo = 1,nlo(n)
+                !    kveclo(nkvec_sv+1:nkvec_sv+nkvec(lo,1)) =
+                !    +                                            kvec(1:nkvec(lo,1),lo)
+                !    nkvec_sv = nkvec_sv+nkvec(lo,1)
+                !    nkvec(lo,:) = 0
+                !END DO
+
                 ev_list = cdnvaljob%compact_ev_list(nk, l_empty = .TRUE.)
                 nocc(ik, iSpin) = cdnvaljob%noccbd(nk)
                 we  = cdnvalJob%weights(ev_list, nk)
@@ -194,9 +211,11 @@ CONTAINS
             END DO
         END DO
 
+        allocate( nRadFun(0:atoms%lmaxd, atoms%ntype) )
         ! The number of radial functions p for a given atom type and orbital quantum number l is at least 2 ( u and udot ).
         nRadFun = 2
 
+        allocate( iloTable(2 + atoms%nlod, 0: atoms%lmaxd, atoms%ntype) )
         ! Mapping array gives zero if for a given atom type and orbital quantum number l there is no local orbital radial solution u_LO
         iloTable = 0
 
@@ -320,17 +339,21 @@ CONTAINS
 
         !nG=COUNT(stars%ig>0)
         nG = ngdp
-        CALL rho0%init_jpPotden(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins)
-        CALL grRho0%init_jpPotden(3, 0, nG, atoms%jmtd, atoms%lmaxd + juPhon%jplPlus, atoms%nat, input%jspins)
-        CALL vTot0%init_jpPotden(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins)
-        CALL grVTot0%init_jpPotden(3, 0, nG, atoms%jmtd, atoms%lmaxd + juPhon%jplPlus, atoms%nat, input%jspins)
+        CALL rho0%init_jpPotden(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins, .FALSE.)
+        CALL grRho0%init_jpPotden(3, 0, nG, atoms%jmtd, atoms%lmaxd + juPhon%jplPlus, atoms%nat, input%jspins, .FALSE.)
+        CALL vTot0%init_jpPotden(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins, .TRUE.)
+        CALL grVTot0%init_jpPotden(3, 0, nG, atoms%jmtd, atoms%lmaxd + juPhon%jplPlus, atoms%nat, input%jspins, .TRUE.)
 
         !ALLOCATE(recG(nG, 3))
         !v0%init_potden_simple(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins)
 
         ! Unpack the star coefficients onto a G-representation.
-        CALL stars_to_pw(sym, stars, input%jspins, nG, rho%pw, rho0%pw)
-        CALL stars_to_pw(sym, stars, input%jspins, nG, vTot%pw, vTot0%pw)
+        !CALL stars_to_pw(sym, stars, input%jspins, nG, rho%pw, rho0%pw)
+        !CALL stars_to_pw(sym, stars, input%jspins, nG, vTot%pw, vTot0%pw)
+        !CALL stars_to_pw(sym, stars, input%jspins, nG, vTot%pw_w, vTot0%pw_w)
+        CALL convertStar2G(rho%pw(:, 1), rho0%pw, stars, nG, recG, cell)
+        CALL convertStar2G(vTot%pw(:, 1), vTot0%pw, stars, nG, recG, cell)
+        CALL convertStar2G(vTot%pw_w(:, 1), vTot0%pw_w, stars, nG, recG, cell)
 
         ! Unpack the lattice harmonics onto spherical harmonics.
         CALL lh_to_sh(sym, atoms, sphhar, input%jspins, rho%mt, rho0%mt)
@@ -379,6 +402,44 @@ CONTAINS
         END DO
 
     END SUBROUTINE stars_to_pw
+
+    !---------------------------------------------------------------------------------------------------------------------------------
+    !> @author
+    !> Christian-Roman Gerhorst, Forschungszentrum Jülich: IAS1 / PGI1
+    !>
+    !> @brief
+    !> Converts expansion coefficient of star expansion into expansion coefficients of plane-wave coefficients for interstitial
+    !> unperturbed density or potential.
+    !>
+    !> @details
+    !> See als Equation 7.4 (dissertation CRG)
+    !>
+    !> @param[in]  stars       : Stars type, see types.f90
+    !> @param[in]  ngdp        : Number of G-vectors for potentials and densities
+    !> @param[in]  stExpandQ   : Expansion coefficients of quantity expanded in stars
+    !> @param[in]  gdp         : G-vectors of potentials and densities
+    !> @param[out] gVecExpandQ : Expansion coefficients of quantity expanded in plane waves
+    !---------------------------------------------------------------------------------------------------------------------------------
+    subroutine convertStar2G(stExpandQ, gVecExpandQ, stars, ngdp, gdp, cell)
+
+      ! Scalar Arguments
+      type(t_stars),  intent(in)   :: stars
+      integer,        intent(in)   :: ngdp
+
+      ! Array Arguments
+      complex,        intent(in)   :: stExpandQ(:)
+      integer,        intent(in)   :: gdp(:, :)
+      complex,        intent(out)  :: gVecExpandQ(ngdp)
+      type(t_cell), optional, intent(in) :: cell
+
+      ! Local Scalar Variables
+      integer                      :: iGvec
+      real                         :: Gext(3)
+      gVecExpandQ = 0
+      do iGvec = 1, ngdp
+        gVecExpandQ(iGvec) = stExpandQ(stars%ig(gdp(1, iGvec), gdp(2, iGvec), gdp(3, iGvec))) * stars%rgphs(gdp(1, iGvec), gdp(2, iGvec), gdp(3, iGvec))
+      end do
+    end subroutine convertStar2G
 
     SUBROUTINE lh_to_sh(sym, atoms, sphhar, jspins, rholh, rhosh )
 
@@ -435,7 +496,7 @@ CONTAINS
 
         DO iSpin = 1, jspins
             DO iG = 1, nG
-                gExt = matmul( bmat, recG(iG, :) )
+                gExt = matmul( bmat, recG(:, iG) )
                 grRhopw(iG, iSpin, 1, :) = ImagUnit * gExt * rhopw(iG, iSpin, 1, 1)
             END DO
         END DO
@@ -1854,5 +1915,58 @@ CONTAINS
       end do ! n
 
     end subroutine tlmplm4H0
+
+    !>--------------------------------------------------------------------------------------------------------------------------------
+    !> @author
+    !> Christian-Roman Gerhorst and Markus Betzinger
+    !>
+    !> @brief
+    !> Unites the energy parameter of the FLAPW basis and the LOs into one energy parameter array.
+    !>
+    !> @details
+    !>
+    !>
+    !> @param[in] atoms      : Atoms type, see types.f90.
+    !> @param[in] enpara     : Energy parameter type, see types.f90.
+    !> @param[in] dimens     : Dimension type, see types.f90.
+    !> @param[out] El        : Contains LAPW and LOs energy parameters.
+    !>
+    !>--------------------------------------------------------------------------------------------------------------------------------
+    subroutine uniteEnergyParameters( atoms, enpara, input, El )
+
+      use m_types
+
+      implicit none
+
+      type(t_atoms),               intent(in)  :: atoms
+      type(t_enpara),              intent(in)  :: enpara
+      type(t_input),               intent(in)  :: input
+      real,           allocatable, intent(out) :: El(:, :, :, :)
+
+      integer                                  :: oqn_l !loop variable
+      integer                                  :: itype !loop variable
+      integer                                  :: isp   !loop variable
+      integer                                  :: ilo   !loop variable
+
+      ! Fill in regular energy parameter to index p = 1 similiar to radial solutions
+      allocate(El(1 + atoms%nlod, 0:atoms%lmaxd, atoms%ntype, input%jspins))
+      do isp = 1, input%jspins
+        do itype = 1, atoms%ntype
+          do oqn_l = 0, atoms%lmaxd
+            El(1, oqn_l, itype, isp) = enpara%el0(oqn_l, itype, isp)
+          end do
+        end do
+      end do
+
+      ! Fill in LO energy parameter to index p (indices LOs for p > 1)
+      do isp = 1, input%jspins
+        do itype = 1, atoms%ntype
+          do ilo = 1, atoms%nlo(itype)
+            El(1 + ilo, atoms%llo(ilo, itype), itype, isp) = enpara%ello0(ilo, itype, isp)
+          end do
+        end do
+      end do
+
+    end subroutine uniteEnergyParameters
 
 END MODULE m_dfpt_init

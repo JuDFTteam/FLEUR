@@ -63,11 +63,12 @@ END SUBROUTINE jpcollect
 #endif
 END SUBROUTINE jpdistribute
 
-  SUBROUTINE init_jpPotden(pd, vec_dim, disporder, nGq, jmtd, lmaxd, natoms, jspins)
+  SUBROUTINE init_jpPotden(pd, vec_dim, disporder, nGq, jmtd, lmaxd, natoms, jspins, l_pw_w)
     USE m_judft
     IMPLICIT NONE
     CLASS(t_jpPotden), INTENT(OUT) :: pd
     INTEGER, INTENT(IN)            :: vec_dim, disporder, nGq, jmtd, lmaxd, natoms, jspins
+    LOGICAL,           INTENT(IN)  :: l_pw_w
 
     INTEGER:: err(4)
 
@@ -82,9 +83,13 @@ END SUBROUTINE jpdistribute
     END IF
 
     IF(ALLOCATED(pd%pw)) DEALLOCATE (pd%pw)
+    IF(ALLOCATED(pd%pw_w)) DEALLOCATE (pd%pw_w)
     IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
 
     ALLOCATE (pd%pw(nGq, jspins, pd%dispatoms, pd%vecdim),stat=err(1))
+    IF (l_pw_w) THEN
+        ALLOCATE (pd%pw_w(nGq, jspins, pd%dispatoms, pd%vecdim),stat=err(3))
+    END IF
     ALLOCATE (pd%mt(jmtd, (lmaxd+1)**2, natoms, jspins, pd%dispatoms, pd%vecdim),stat=err(2))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
