@@ -318,8 +318,6 @@ CONTAINS
         !  end do
         !end do
 
-        ! TODO: Meditate about the correct normalizations on all rho/V MT/pw.
-
         ! Initialize unsymmetrized potdens and G vectors.
 
         call genPotDensGvecs(stars, cell, input, ngdp, ngdp2km, recG, gdp2Ind, gdp2iLim, .false.)
@@ -344,9 +342,6 @@ CONTAINS
         CALL vTot0%init_jpPotden(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins, .TRUE.)
         CALL grVTot0%init_jpPotden(3, 0, nG, atoms%jmtd, atoms%lmaxd + juPhon%jplPlus, atoms%nat, input%jspins, .TRUE.)
 
-        !ALLOCATE(recG(nG, 3))
-        !v0%init_potden_simple(1, 0, nG, atoms%jmtd, atoms%lmaxd, atoms%nat, input%jspins)
-
         ! Unpack the star coefficients onto a G-representation.
         !CALL stars_to_pw(sym, stars, input%jspins, nG, rho%pw, rho0%pw)
         !CALL stars_to_pw(sym, stars, input%jspins, nG, vTot%pw, vTot0%pw)
@@ -356,15 +351,19 @@ CONTAINS
         CALL convertStar2G(vTot%pw_w(:, 1), vTot0%pw_w, stars, nG, recG, cell)
 
         ! Unpack the lattice harmonics onto spherical harmonics.
-        CALL lh_to_sh(sym, atoms, sphhar, input%jspins, rho%mt, rho0%mt)
-        CALL lh_to_sh(sym, atoms, sphhar, input%jspins, vTot%mt, vTot0%mt)
+        ! Radial factors: rho has r^2 globally in l [2], vTot has r/sqrt(4pi) in l=0 [0].
+        ! The factors are removed in the transformation.
+        CALL lh_to_sh(sym, atoms, sphhar, input%jspins, 2, rho%mt, rho0%mt)
+        CALL lh_to_sh(sym, atoms, sphhar, input%jspins, 0, vTot%mt, vTot0%mt)
 
         ! Construct the interstitial gradients.
         CALL pw_gradient(input%jspins, nG, recG, cell%bmat, rho0%pw, grRho0%pw)
-        CALL pw_gradient(input%jspins, nG, recG, cell%bmat, vTot0%pw, grVTot0%pw)
+        !CALL pw_gradient(input%jspins, nG, recG, cell%bmat, vTot0%pw, grVTot0%pw)
+
         ! Construct the muffin tin gradients.
-        CALL mt_gradient(input%jspins, atoms, juPhon%jplPlus, rho0%mt, grRho0%mt)
-        CALL mt_gradient(input%jspins, atoms, juPhon%jplPlus, vTot0%mt, grVTot0%mt)
+        !CALL mt_gradient(input%jspins, atoms, juPhon%jplPlus, rho0%mt, grRho0%mt)
+        !CALL mt_gradient(input%jspins, atoms, juPhon%jplPlus, vTot0%mt, grVTot0%mt)
+        call mt_gradient_old(atoms, sphhar, sym, sphhar%clnu, sphhar%nmem, sphhar%mlh, rho%mt(:, :, :, 1), grRho0%mt(:, :, :, 1, 1, :) )
 
         call tlmplm4H0( atoms, enpara, usdus, input, tdHS0, 1, rbas1, rbas2, usdus%uuilon(:, :, 1), usdus%duilon(:, :, 1), usdus%ulouilopn(:, :, :, 1), ilo2p, vTot0%mt(:, :, :, 1, 1, 1), loosetdout )
 
@@ -441,17 +440,18 @@ CONTAINS
       end do
     end subroutine convertStar2G
 
-    SUBROUTINE lh_to_sh(sym, atoms, sphhar, jspins, rholh, rhosh )
+    SUBROUTINE lh_to_sh(sym, atoms, sphhar, jspins, radfact, rholh, rhosh )
 
         TYPE(t_sym),    INTENT(IN)  :: sym
         TYPE(t_atoms),  INTENT(IN)  :: atoms
         TYPE(t_sphhar), INTENT(IN)  :: sphhar
-        INTEGER,        INTENT(IN)  :: jspins
+        INTEGER,        INTENT(IN)  :: jspins, radfact
         REAL,           INTENT(IN)  :: rholh(:, 0:, :, :)
         COMPLEX,        INTENT(OUT) :: rhosh(:, :, :, :, :, :)
 
         INTEGER :: iSpin, iType, iEqat, iAtom, ilh, iMem, ilm, iR
         INTEGER :: ptsym, l, m
+        REAL    :: factor
 
         rhosh = CMPLX(0.0,0.0)
 
@@ -467,9 +467,16 @@ CONTAINS
                             m = sphhar%mlh(iMem, ilh, ptsym)
                             ilm = l * (l+1) + m + 1
                             DO iR = 1, atoms%jri(iType)
+                                IF ((radfact.EQ.0).AND.(l.EQ.0)) THEN
+                                    factor = atoms%rmsh(iR, iType) / sfp_const
+                                ELSE IF (radfact.EQ.2) THEN
+                                    factor = atoms%rmsh(iR, iType)**2
+                                ELSE
+                                    factor = 1.0
+                                END IF
                                 rhosh(iR, ilm, iAtom, iSpin, 1, 1) = &
                               & rhosh(iR, ilm, iAtom, iSpin, 1, 1) + &
-                              & rholh(iR, ilh, iType, iSpin) * sphhar%clnu(iMem, ilh, ptsym)
+                              & rholh(iR, ilh, iType, iSpin) * sphhar%clnu(iMem, ilh, ptsym) / factor
                             END DO
                         END DO
                     END DO
@@ -515,6 +522,210 @@ CONTAINS
         lmaxgrad = atoms%lmax + lplus
 
     END SUBROUTINE
+
+    !---------------------------------------------------------------------------------------------------------------------------------
+    !> @author
+    !> Christian-Roman Gerhorst, Forschungszentrum Jülich: IAS1 / PGI1
+    !>
+    !> @brief
+    !> Calculates the spherical harmonic expansion coefficients of the muffin-tin gradient applied to an arbitrary function multiplied
+    !> by $r^2$. The resulting gradient expansion coefficients are multiplied by a factor $r^2$.
+    !>
+    !> @note
+    !> The ingoing function is assumed to be multiplied with $r$. The outgoing resulting function is also multiplied by $r$.
+    !>
+    !> @param[in]  atoms     : Contains atoms-related quantities; definition of its members in types.F90 file.
+    !> @param[in]  lathar    : Contains entities concerning the lattice harmonics; more precise definition in type.F90 file.
+    !> @param[in]  clnu_atom : Coefficients to transform from lattice harmonics to spherical harmonics without any symmetry.
+    !> @param[in]  nmem_atom : Number of member per lattice harmonic in a system without any symmetry.
+    !> @param[in]  mlh_atom  : Magnetic quantum numbers of the members of any lattice harmonic in a system without any symmetry.
+    !> @param[in]  r2FlhMt   : Lattice harmonic coefficients of muffin-tin quantity multiplied by a factor of r**2.
+    !> @param[out] r2GrFshMt : Spherical harmonic coefficients of muffin-tin quantity's gradient multiplied by a factor of r**2
+    !---------------------------------------------------------------------------------------------------------------------------------
+    subroutine mt_gradient_old(atoms, lathar, sym, clnu_atom, nmem_atom, mlh_atom, r2FlhMt, GrFshMt)
+
+      use m_gaunt, only : gaunt1
+
+      ! Type parameters
+      ! ***************
+      type(t_atoms),               intent(in)  :: atoms
+      type(t_sphhar),              intent(in)  :: lathar
+      type(t_sym),                 intent(in)  :: sym
+
+      ! Array parameters
+      ! ****************
+      complex,                     intent(in)  :: clnu_atom(:, 0:, :)
+      integer,                     intent(in)  :: nmem_atom(0:, :)
+      integer,                     intent(in)  :: mlh_atom(:, 0:, :)
+      real,                        intent(in)  :: r2FlhMt(:, 0:, :)
+      complex,                     intent(out) :: GrFshMt(:, :, :, :)
+
+
+      ! Local Scalar Variables
+      ! **********************
+      ! pfac    : Prefactor
+      ! tGaunt  :  Gaunt coefficient
+      ! itype   : Loop index for atom types
+      ! ieqat   : Loop index for equivalent atoms
+      ! iatom   : Loop index for all atoms
+      ! imesh   : Loop index for radial mesh point
+      ! mqn_m   : Magnetic quantum number m
+      ! oqn_l   : Orbital quantum number l
+      ! mqn_mpp : Magnetic quantum number double primed to index the natural coordinates
+      ! lm      : Collective index for orbital and magnetic quantum number
+      ! symType : Index of the symmetry
+      ! ilh     : Loop index for different lattice harmonics (not their members!)
+      ! imem    : Loop index for members of a lattice harmonics
+      real                                     :: pfac
+      real                                     :: tGaunt
+      integer                                  :: itype
+      integer                                  :: ieqat
+      integer                                  :: iatom
+      integer                                  :: imesh
+      integer                                  :: mqn_m
+      integer                                  :: oqn_l
+      integer                                  :: mqn_mpp
+      integer                                  :: lm
+      integer                                  :: symType
+      integer                                  :: ilh
+      integer                                  :: imem
+
+      ! Local Array Variables
+      ! *********************
+      ! rDerFlhMt    : Radial derrivative of the incoming fuction
+      ! r2GrFshMtNat : Expansion coefficients of the muffin-tin gradient applied to the incoming function. The coefficients are given
+      !                in natural coordinates and multiplied by $r^2$
+      real,           allocatable              :: rDerFlhMt(:)
+      complex,        allocatable              :: r2GrFshMtNat(:, :, :, :)
+
+
+      ! Initialization of additionaly required arrays.
+      allocate( r2GrFshMtNat(atoms%jmtd, ( atoms%lmaxd + 1)**2, atoms%nat, 3) )
+      allocate( rDerFlhMt(atoms%jmtd) )
+      GrFshMt = cmplx(0., 0.)
+      r2GrFshMtNat = cmplx(0., 0.)
+      rDerFlhMt = 0.
+
+      pfac = sqrt( fpi_const / 3. )
+      do mqn_mpp = -1, 1
+        iatom = 0
+        do itype = 1, atoms%ntype
+          do ieqat = 1, atoms%neq(itype)
+            iatom = iatom + 1
+            symType = sym%ntypsy(iatom)
+            do ilh = 0, lathar%nlh(symType)
+              oqn_l = lathar%llh(ilh, symType)
+              do imem = 1, nmem_atom(ilh, iatom)
+                mqn_m = mlh_atom(imem, ilh, iatom)
+
+                ! l + 1 block
+                ! oqn_l - 1 to l, so oqn_l should be < lmax not <= lmax
+                if ( ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 ) .and. ( abs(mqn_m) <= oqn_l ) .and. (oqn_l < atoms%lmax(itype)) ) then
+                  lm = ( oqn_l + 1 ) * ( oqn_l + 2 ) + 1 + mqn_m - mqn_mpp
+                  call Derivative( r2FlhMt(:, ilh, itype), itype, atoms, rDerFlhMt )
+                  tGaunt = Gaunt1( oqn_l + 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd )
+                  do imesh = 1, atoms%jri(itype)
+                    r2GrFshMtNat(imesh, lm, iatom, mqn_mpp + 2) = r2GrFshMtNat(imesh, lm, iatom, mqn_mpp + 2) + pfac * (-1)**mqn_mpp &
+                      &* tGaunt * (rDerFlhMt(imesh) * clnu_atom(imem, ilh, iatom) &
+                      &- ((oqn_l + 2) * r2FlhMt(imesh, ilh, itype) * clnu_atom(imem, ilh, iatom) / atoms%rmsh(imesh, itype)))
+                  end do ! imesh
+                end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 ) .and. ( abs(mqn_m) <= oqn_l )
+
+                ! l - 1 block
+                if ( ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 ) .and. ( abs(mqn_m) <= oqn_l ) ) then
+                  if ( oqn_l - 1 == -1 ) then
+                    write (*, *) 'oqn_l too low'
+                  end if
+                  lm = (oqn_l - 1) * oqn_l + 1 + mqn_m - mqn_mpp
+                  ! This is also a trade of between storage and performance, because derivative is called redundantly, maybe store it?
+                  call Derivative( r2FlhMt(:, ilh, itype), itype, atoms, rDerFlhMt )
+                  tGaunt = Gaunt1( oqn_l - 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd )
+                  do imesh = 1, atoms%jri(itype)
+                    r2GrFshMtNat(imesh, lm, iatom, mqn_mpp + 2) = r2GrFshMtNat(imesh, lm, iatom, mqn_mpp + 2) + pfac * (-1)**mqn_mpp &
+                      & * tGaunt * (rDerFlhMt(imesh)  * clnu_atom(imem, ilh, iatom) &
+                      & + ((oqn_l - 1) * r2FlhMt(imesh, ilh, itype) * clnu_atom(imem, ilh, iatom) / atoms%rmsh(imesh, itype)))
+                  end do ! imesh
+                end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 ) .and. ( abs(mqn_m) <= oqn_l )
+              end do ! imem
+            end do ! ilh
+          end do ! ieqat
+        end do ! itype
+      end do ! mqn_mpp
+
+      ! Conversion from natural to cartesian coordinates
+      iatom = 0
+      do itype = 1, atoms%ntype
+        do ieqat = 1, atoms%neq(itype)
+          iatom = iatom + 1
+          do oqn_l = 0, atoms%lmax(itype)
+            do mqn_m = -oqn_l, oqn_l
+              lm = oqn_l * (oqn_l + 1) + 1 + mqn_m
+              do imesh = 1, atoms%jri(itype)
+                grFshMt(imesh, lm, iatom, 1:3) = matmul( Tmatrix0(1:3, 1:3), r2GrFshMtNat(imesh, lm, iatom, 1:3) ) / atoms%rmsh(imesh, itype)**2
+              end do
+            end do ! mqn_m
+          end do ! oqn_l
+        end do ! ieqat
+      end do ! itype
+
+    end subroutine mt_gradient_old
+
+    subroutine derivative(f, itype, atoms, df)
+
+       integer,       intent(in)  :: itype
+       type(t_atoms), intent(in)  :: atoms
+       real,          intent(in)  :: f(atoms%jri(itype))
+       real,          intent(out) :: df(atoms%jri(itype))
+       real                       :: h, r, d21, d32, d43, d31, d42, d41, df1, df2, s
+       real                       :: y0, y1, y2
+       integer                    :: i, n
+
+       n = atoms%jri(itype)
+       h = atoms%dx(itype)
+       r = atoms%rmsh(1, itype)
+
+       ! use Lagrange interpolation of 3rd order (and averaging) for points 3 to n
+       d21 = r * (exp(h)-1) ; d32 = d21 * exp(h) ; d43 = d32 * exp(h)
+       d31 = d21 + d32      ; d42 = d32 + d43
+       d41 = d31 + d43
+       df(1) =   d31*d41 / (d21*d32*d42) * f(2) + ( -1d0/d21 - 1d0/d31 - 1d0/d41) * f(1)&
+      &        - d21*d41 / (d31*d32*d43) * f(3) + d21*d31 / (d41*d42*d43) * f(4)
+       df(2) = - d32*d42 / (d21*d31*d41) * f(1) + (  1d0/d21 - 1d0/d32 - 1d0/d42) * f(2)&
+      &        + d21*d42 / (d31*d32*d43) * f(3) - d21*d32 / (d41*d42*d43) * f(4)
+       df1   =   d32*d43 / (d21*d31*d41) * f(1) - d31*d43 / (d21*d32*d42) * f(2) +&
+      &  ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(3) + d31*d32 / (d41*d42*d43) * f(4)
+       do i = 3, n - 2
+          d21 = d32 ; d32 = d43 ; d43 = d43 * exp(h)
+          d31 = d42 ; d42 = d42 * exp(h)
+          d41 = d41 * exp(h)
+          df2   = - d32*d42 / (d21*d31*d41) * f(i-1) + ( 1d0/d21 - 1d0/d32 - 1d0/d42) * f(i) + &
+      &             d21*d42 / (d31*d32*d43) * f(i+1) - d21*d32 / (d41*d42*d43) * f(i+2)
+          df(i) = ( df1 + df2 ) / 2
+          df1   = d32*d43 / (d21*d31*d41) * f(i-1) - d31*d43 / (d21*d32*d42) * f(i) +&
+      &    ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(i+1) + d31*d32 / (d41*d42*d43) * f(i+2)
+       enddo
+       df(n-1) = df1
+       df(n)   = - d42*d43 / (d21*d31*d41) * f(n-3) + d41*d43 / (d21*d32*d42) * f(n-2) -&
+      &            d41*d42 / (d31*d32*d43) * f(n-1) + ( 1d0/d41 + 1d0/d42 + 1d0/d43 ) * f(n)
+       ! for first two points use Lagrange interpolation of second order for log(f(i))
+       ! or, as a fall-back, Lagrange interpolation with the conditions f(1), f(2), f(3), f'(3).
+       s = sign(1d0,f(1))
+       if(sign(1d0,f(2)) /= s .or. sign(1d0,f(3))  /= s .or. any(abs(f(:3)) < 1e0)) then
+          d21   = r * (exp(h)-1)
+          d32   = d21 * exp(h)
+          d31   = d21 + d32
+          s     = df(3) / (d31*d32) - f(1) / (d21*d31**2) + f(2) / (d21*d32**2) - f(3) / (d31**2*d32) - f(3) / (d31*d32**2)
+          df(1) = - (d21+d31) / (d21*d31) * f(1) + d31 / (d21*d32) * f(2) - d21 / (d31*d32) * f(3) + d21*d31 * s
+
+          df(2) = - (d21-d32) / (d21*d32) * f(2) - d32 / (d21*d31) * f(1) + d21 / (d31*d32) * f(3) - d21*d32 * s
+       else
+          y0    = log(abs(f(1)))
+          y1    = log(abs(f(2)))
+          y2    = log(abs(f(3)))
+          df(1) = ( - 3*y0/2 + 2*y1 - y2/2 ) * f(1) / (h*r)
+          df(2) = (y2-y0)/2                  * f(2) / (h*r*exp(h))
+       endif
+    end subroutine derivative
 
     !---------------------------------------------------------------------------------------------------------------------------------
     !> @author
