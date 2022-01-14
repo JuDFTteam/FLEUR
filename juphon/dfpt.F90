@@ -12,6 +12,10 @@ MODULE m_dfpt
     USE m_dfpt_init
     USE m_dfpt_sternheimer
     USE m_dfpt_dynmat
+    !use m_jpSternheimer,     only : solveSternheimerSCC
+    !use m_jp2ndOrdQuant,     only : CalcIIEnerg2
+    !use m_jpSetupDynMat,     only : SetupDynamicMatrix
+    !use m_jpProcessDynMat,   only : DiagonalizeDynMat, CalculateFrequencies
 
     IMPLICIT NONE
 
@@ -112,6 +116,7 @@ CONTAINS
                      & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc,  tdHS0, loosetdout)
 
         ! < Imagine starting a q-grid-loop here. >
+        ! < For now we just select one q-point from the input. >
 
         IF (juPhon%l_jpTest) THEN
             ! This function will be used to run (parts of) the test suite for

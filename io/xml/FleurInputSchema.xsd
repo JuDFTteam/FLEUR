@@ -1101,6 +1101,7 @@
       <xsd:attribute name="gqmax" type="FleurDouble" use="optional"/>
       <xsd:attribute name="eps_pert" type="FleurDouble" use="optional"/>
       <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="singleQpt" type="xsd:positiveInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OutputType">
