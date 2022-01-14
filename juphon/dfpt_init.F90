@@ -19,7 +19,10 @@ CONTAINS
                        & kpts, fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, &
                        & grRho0, vTot0, grVTot0, ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                        & uuilonout, duilonout, ulouilopnout, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
-                       & gausWts, ylm, qpwcG, rho1MTCoreDispAt, tdHS0, loosetdout)
+                       & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
+                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc, tdHS0, loosetdout)
+
+        USE m_jpGrVeff0, ONLY : GenGrVeff0
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -67,6 +70,15 @@ CONTAINS
         complex,           allocatable, intent(out) :: ylm(:, :)
         complex,           allocatable, intent(out) :: qpwcG(:, :)
         complex,           allocatable, intent(out) :: rho1MTCoreDispAt(:, :, :, :)
+        complex,           allocatable, intent(out) :: grVeff0MT_init(:, :, :, :)
+        complex,           allocatable, intent(out) :: grVeff0MT_main(:, :, :, :)
+        complex,           allocatable, intent(out) :: grVext0IR_DM(:, :)
+        complex,           allocatable, intent(out) :: grVext0MT_DM(:, :, :, :)
+        complex,           allocatable, intent(out) :: grVCoul0IR_DM_SF(:, :)
+        complex,           allocatable, intent(out) :: grVCoul0MT_DM_SF(:, :, :, :)
+        complex,           allocatable, intent(out) :: grVeff0IR_DM(:, :)
+        complex,           allocatable, intent(out) :: grVeff0MT_DM(:, :, :, :)
+        complex,           allocatable, intent(out) :: grVeff0MT_DMhxc(:, :, :, :)
         type(t_tlmplm),                 intent(out) :: tdHS0
         COMPLEX, ALLOCATABLE,           INTENT(OUT) :: loosetdout(:, :, :, :)
 
@@ -77,7 +89,7 @@ CONTAINS
 
         INTEGER      :: nG, nSpins, nbasfcn, iSpin, ik, iG, indexG, ifind, nk, iType, ilo, l_lo, oqn_l, iGrid, iOrd
         INTEGER      :: nodeu, noded
-        LOGICAL      :: l_real, addG
+        LOGICAL      :: l_real, addG, harSw, extSw, xcSw, testGoldstein, grRhoTermSw
         REAL         :: bkpt(3), wronk
 
         INTEGER, ALLOCATABLE :: GbasVec_temp(:, :), ev_list(:), nocc(:, :)
@@ -87,6 +99,9 @@ CONTAINS
         REAL,    ALLOCATABLE :: flo(:, :, :)
         real,              allocatable              :: acoff(:)
         real,              allocatable              :: alpha(:)
+        complex,           allocatable              :: grVeff0IRDummy(:, :)
+        complex,           allocatable              :: grVeff0MTAdd_init(:, :, :, :)
+        complex,           allocatable              :: grVeff0IR_DMhxc(:, :)
 
 !#ifdef CPP_MPI
 !        INTEGER ierr
@@ -364,6 +379,111 @@ CONTAINS
         !CALL mt_gradient(input%jspins, atoms, juPhon%jplPlus, rho0%mt, grRho0%mt)
         !CALL mt_gradient(input%jspins, atoms, juPhon%jplPlus, vTot0%mt, grVTot0%mt)
         call mt_gradient_old(atoms, sphhar, sym, sphhar%clnu, sphhar%nmem, sphhar%mlh, rho%mt(:, :, :, 1), grRho0%mt(:, :, :, 1, 1, :) )
+
+        ! Gradient of external unperturbed potential without terms canceling in the Sternheimer SCC with the linear variation of the
+        ! external potential; see documentation of GenGrVeff0 for details. Required for 1st Sternheimer SCC iteration.
+        harSw = .false.
+        extSw = .true.
+        xcSw = .false.
+        testGoldstein = .false.
+        grRhoTermSw = .false.
+        call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
+                       & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
+                       & testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MT_init )
+        ! Only need MT part for Sternheimer SCC
+        deallocate ( grVeff0IRdummy )
+
+        ! Add full muffin-tin gradient of xc and Hartree potential to muffin-tin gradient contribution of the external potential with
+        ! volume term that should cancel in the Sternheimer SCC with the linear variation of the Hartree and the xc potential; see
+        ! documentation of GenGrVeff0 for details. Required for 1st Sternheimer SCC iteration.
+        harSw = .true.
+        extSw = .false.
+        xcSw = .true.
+        testGoldstein = .false.
+        grRhoTermSw = .true.
+        call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
+                       & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
+                       & testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MTAdd_init )
+        ! Only need MT part for Sternheimer SCC
+        deallocate ( grVeff0IRdummy )
+
+        !if (compPhon.or.anfix) then
+        !  iatom = 0
+        !  do itype = 1, atoms%ntype
+        !    do ieqat = 1, atoms%neq(itype)
+        !      iatom = iatom + 1
+        !      do idir = 1, 3
+        !        do oqn_l = 0, atoms%lmax(iatom)
+        !          do mqn_m = -oqn_l, oqn_l
+        !            do imesh = 1, atoms%jri(iatom)
+        !              grVeff0MT_init(imesh, lm, idir, iatom) = grVeff0MT_init(imesh, lm, idir, iatom) &
+        !                                                                                   & + grVeff0MTAdd_init(imesh, lm, idir, iatom)
+        !            end do ! imesh
+        !          end do ! mqn_m
+        !        end do ! oqn_l
+        !      end do ! idir
+        !    end do ! iDeqat
+        !  end do ! iDtype
+        !end if
+        deallocate(grVeff0MTAdd_init)
+
+        ! Full gradient of external unperturbed potential required for the Hellmann-Feynman contributions of the dynamical matrix.
+        harSw = .false.
+        extSw = .true.
+        xcSw = .false.
+        testGoldstein = .false.
+        grRhoTermSw = .true.
+        call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
+                       & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
+                       & testGoldstein, grRhoTermSw, grVext0IR_DM, grVext0MT_DM )
+
+        ! Gradient of effective unperturbed potential without terms canceling in the SternheimerSCC with the linear variation of the
+        ! effective potential; see documentation of GenGrVeff0 for details. Required for regular iterations and the final Sternheimer
+        ! SCC iteration.
+        harSw = .true.
+        extSw = .true.
+        xcSw = .true.
+        grRhoTermSw = .false.
+        testGoldstein = .false.
+        call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
+                       & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
+                       & testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MT_main )
+        ! Only need MT part for Sternheimer SCC
+        deallocate ( grVeff0IRdummy )
+
+        ! Gradient of Coulomb unperturbed potential without terms canceling in the SternheimerSCC with the linear variation of the
+        ! Coulomb potential. Required for dynamical matrix surface term
+        harSw = .true.
+        extSw = .true.
+        xcSw = .false.
+        grRhoTermSw = .false.
+        testGoldstein = .false.
+        call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
+                       & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
+                       & testGoldstein, grRhoTermSw, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF )
+        ! Only need MT part for Sternheimer SCC
+
+        ! Full gradient of effective unperturbed potential required for the Hellmann-Feynman contributions of the dynamical matrix.
+        harSw = .true.
+        extSw = .true.
+        xcSw = .true.
+        grRhoTermSw = .true.
+        testGoldstein = .false.
+
+        call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
+                       & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
+                       & testGoldstein, grRhoTermSw, grVeff0IR_DM, grVeff0MT_DM )
+
+        ! Sum of Hartree and xc potential gradients for the dynamical matrix
+        harSw = .true.
+        extSw = .false.
+        xcSw = .true.
+        grRhoTermSw = .true.
+        testGoldstein = .false.
+
+        call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
+                       & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
+                       & testGoldstein, grRhoTermSw, grVeff0IR_DMhxc, grVeff0MT_DMhxc )
 
         call tlmplm4H0( atoms, enpara, usdus, input, tdHS0, 1, rbas1, rbas2, usdus%uuilon(:, :, 1), usdus%duilon(:, :, 1), usdus%ulouilopn(:, :, :, 1), ilo2p, vTot0%mt(:, :, :, 1, 1, 1), loosetdout )
 

@@ -132,8 +132,6 @@ complex,            allocatable,  intent(out) :: vEff0IRPwUw(:, :)
 real,               allocatable,  intent(out) :: El(:, :, :, :) [from enpara]
 complex,           allocatable, intent(out) :: grRho0IR(:, :)
 complex,           allocatable, intent(out) :: grRho0MT(:, :, :, :)
-
-To be calculated in dfpt_init:
 complex,           allocatable, intent(out) :: grVeff0MT_init(:, :, :, :)
 complex,           allocatable, intent(out) :: grVeff0MT_main(:, :, :, :)
 complex,           allocatable, intent(out) :: grVext0IR_DM(:, :)

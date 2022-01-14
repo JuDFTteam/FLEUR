@@ -62,6 +62,15 @@ CONTAINS
         complex,           allocatable :: ylm(:, :)
         complex,           allocatable :: qpwcG(:, :)
         complex,           allocatable :: rho1MTCoreDispAt(:, :, :, :)
+        complex,           allocatable :: grVeff0MT_init(:, :, :, :)
+        complex,           allocatable :: grVeff0MT_main(:, :, :, :)
+        complex,           allocatable :: grVext0IR_DM(:, :)
+        complex,           allocatable :: grVext0MT_DM(:, :, :, :)
+        complex,           allocatable :: grVCoul0IR_DM_SF(:, :)
+        complex,           allocatable :: grVCoul0MT_DM_SF(:, :, :, :)
+        complex,           allocatable :: grVeff0IR_DM(:, :)
+        complex,           allocatable :: grVeff0MT_DM(:, :, :, :)
+        complex,           allocatable :: grVeff0MT_DMhxc(:, :, :, :)
 
         INTEGER :: ngdp
 
@@ -99,7 +108,8 @@ CONTAINS
                      & fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, grRho0, vTot0, grVTot0, &
                      & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                      & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
-                     & gausWts, ylm, qpwcG, rho1MTCoreDispAt, tdHS0, loosetdout)
+                     & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
+                     & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc,  tdHS0, loosetdout)
 
         ! < Imagine starting a q-grid-loop here. >
 
