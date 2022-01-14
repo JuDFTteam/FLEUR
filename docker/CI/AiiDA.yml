@@ -5,7 +5,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
   needs: 
-    - build-gfortran-hdf5
+    - build-gfortran-hdf5-serial
   variables:
     POSTGRES_DB: "postgres"
     POSTGRES_USER: "postgres"
@@ -38,12 +38,10 @@ test-aiida-fleur-dev-gfortran-hdf5:
     # Remove cache dirs
     - git checkout develop
     - pip3 install .[testing]
-    - rm -rf tests/workflows/calc_data_dir tests/workflows/caches
+    - rm -rf tests/workflows/calculations tests/workflows/caches
     - rm -rf tests/calculation/data_dir
     - rm -rf tests/data_dir
-    - mkdir -p tests/workflows/calc_data_dir
     - mkdir -p tests/workflows/caches
-    - mkdir -p tests/calculation/data_dir
     - mkdir -p tests/data_dir
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
@@ -75,14 +73,14 @@ test-aiida-fleur-dev-gfortran-hdf5:
     # the auto generated tests
     # For the regression tests to use the fleur executable for now it needs to be in these folders
     - cp $CI_PROJECT_DIR/build/inpgen local_exe/inpgen && chmod +x local_exe/inpgen
-    - cp $CI_PROJECT_DIR/build/fleur_MPI local_exe/fleur && chmod +x local_exe/fleur
+    - cp $CI_PROJECT_DIR/build/fleur local_exe/fleur && chmod +x local_exe/fleur
     - sed -i "s/\./${CI_PROJECT_DIR//\//\\/}\/aiida-fleur\/tests/g" .aiida-testing-config.yml
     - cat .aiida-testing-config.yml
     - ls -la local_exe/
     #Copy testfile for SCF workchain from fleur tests
     - cp files/workflow_test_files/inp_scf.xml files/inpxml/Si/inp.xml
     # run tests
-    - pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests
+    - pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests --mock-regenerate-test-data
   allow_failure: true
   artifacts:
     when: on_failure

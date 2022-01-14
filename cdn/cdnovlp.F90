@@ -365,7 +365,9 @@ CONTAINS
           !       differentiable density at the sphere boundary.
           !       IF mshc = jri  either core tail too small or no core (i.e. H)
           !
+          nat = 1
           DO  n = 1,atoms%ntype
+              nd = sym%ntypsy(nat)
               IF ((mshc(n).GT.atoms%jri(n)).AND.((atoms%econf(n)%num_core_states.GT.0).OR.l_st)) THEN
 
                    j1 = atoms%jri(n) - 1
@@ -400,15 +402,15 @@ CONTAINS
                       ! factor of two missing? grad e^{-alpha*r^2} = -2alpha\vec{r}e^{-alpha*r^2}
                       END DO ! j radial mesh
 
-                      DO lh = 0,sphhar%nlh(sym%ntypsy(n))
-                         IF (sphhar%llh(lh,sym%ntypsy(n)).ne.1) CYCLE
+                      DO lh = 0,sphhar%nlh(nd)
+                         IF (sphhar%llh(lh,nd).ne.1) CYCLE
 
                          gv = czero
-                         DO jm = 1,sphhar%nmem(lh,sym%ntypsy(n))
-                            m = sphhar%mlh(jm,lh,sym%ntypsy(n))
+                         DO jm = 1,sphhar%nmem(lh,nd)
+                            m = sphhar%mlh(jm,lh,nd)
 
                             DO dir = 1,3
-                               gv(dir) = gv(dir) + ycomp1(dir,m)* sphhar%clnu(jm,lh,sym%ntypsy(n)) ! why not conjg?
+                               gv(dir) = gv(dir) + ycomp1(dir,m)* sphhar%clnu(jm,lh,nd) ! why not conjg?
                             END DO ! direction
 
                          END DO ! jm
@@ -429,6 +431,7 @@ CONTAINS
                 ELSE
                    alpha(n) = 0.0
               ENDIF
+              nat = nat + atoms%neq(n)
           ENDDO
           !
           IF (fmpi%irank ==0) THEN

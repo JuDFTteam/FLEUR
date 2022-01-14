@@ -244,6 +244,12 @@
       </xsd:restriction>
    </xsd:simpleType>
 
+   <xsd:simpleType name="FleurDouble6DVecType">
+      <xsd:restriction base="FleurDoubleVecType">
+         <xsd:length value="6"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
    <xsd:simpleType name="TripleFleurBool">
       <xsd:restriction base="xsd:string">
          <xsd:pattern value="[FfTt][FfTt][FfTt]"/>
@@ -935,6 +941,7 @@
    <xsd:complexType name="ExpertModeType">
       <xsd:attribute name="gw" type="xsd:integer" use="optional"/>
       <xsd:attribute name="spex" type="xsd:integer" use="optional"/>
+      <xsd:attribute name="vdW" type="xsd:string" use="optional" />
       <xsd:attribute default="F" name="pot8" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="eig66" type="FleurBool" use="optional"/>
       <xsd:attribute default="0" name="lpr" type="xsd:integer" use="optional"/>
@@ -1028,7 +1035,7 @@
 
    <xsd:complexType name="RelaxStepType">
      <xsd:sequence>
-       <xsd:element maxOccurs="unbounded" minOccurs="1"  name="posforce" type="xsd:string" />
+       <xsd:element maxOccurs="unbounded" minOccurs="1"  name="posforce" type="FleurDouble6DVecType" />
      </xsd:sequence>
       <xsd:attribute name="energy" type="FleurDouble"/>
    </xsd:complexType>

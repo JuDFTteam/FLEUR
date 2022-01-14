@@ -40,9 +40,9 @@ MODULE m_types_stars
      INTEGER :: kxc3_fft
 
      INTEGER :: ng3_fft
-     INTEGER :: kmxxc_fft !<number of g-vectors forming the nxc3_fft stars in the charge density or xc-density sphere
+     INTEGER :: kmxxc_fft !number of g-vectors forming the nxc3_fft stars in the charge density or xc-density sphere
 
-     INTEGER :: nxc3_fft !< number of stars in the  charge density  fft-box
+     INTEGER :: nxc3_fft ! number of stars in the  charge density  fft-box
 
      !rep. g-vector of star
      INTEGER, ALLOCATABLE ::kv3(:, :)
@@ -61,7 +61,7 @@ MODULE m_types_stars
      !mapping of
      INTEGER, ALLOCATABLE ::ig2(:)
      !
-     REAL, ALLOCATABLE:: phi2(:) !<(n2d)
+     REAL, ALLOCATABLE:: phi2(:) !(n2d)
      !phase phactor of g-vector
      COMPLEX, ALLOCATABLE    ::rgphs(:, :, :)
      !mapping of stars to FFT-box

@@ -122,7 +122,7 @@ CONTAINS
 
     !Locals
     INTEGER:: n,q,i,nef,ierr
-    CHARACTER(LEN=12):: attributes(6)
+    CHARACTER(LEN=20):: attributes(6)
     CHARACTER(LEN=16) :: atom_name
     IF (this%q_done==0) RETURN
     IF (this%l_io) THEN
@@ -138,19 +138,19 @@ CONTAINS
           WRITE(attributes(2),'(i5)') q
           DO nef=1,size(this%ef,1)
              WRITE(attributes(3),'(f10.5)') this%ef(nef)
-             WRITE(attributes(4),'(f13.8)') this%evsum(nef,0,q)
+             WRITE(attributes(4),'(f15.8)') this%evsum(nef,0,q)
              CALL writeXMLElementForm('Entry',(/'q       ','ef-shift','ev-sum  '/),attributes(2:4),RESHAPE((/1,8,6,5,12,12/),(/3,2/)))
              DO n=1,SIZE(this%evsum,2)-1
-                WRITE(attributes(4),'(f13.8)') this%theta(n)
-                WRITE(attributes(5),'(f13.8)') this%phi(n)
-                WRITE(attributes(6),'(f13.8)') this%evsum(nef,n,q)
-                CALL writeXMLElementForm('Entry',(/'q       ','ef-shift','theta   ','phi     ','ev-sum  '/),attributes(2:6),RESHAPE((/1,8,5,3,6,5,12,12,12,12/),(/5,2/)))
-                write(attributes(6),'(f13.8)') this%h_so(0,nef,n,q)
-                CALL writeXMLElementForm('allAtoms',(/'q       ','ef-shift','theta   ','phi     ','H_so    '/),attributes(2:6),RESHAPE((/1,8,5,3,6,5,12,12,12,12/),(/5,2/)))
+                WRITE(attributes(4),'(f15.8)') this%theta(n)
+                WRITE(attributes(5),'(f15.8)') this%phi(n)
+                WRITE(attributes(6),'(f15.8)') this%evsum(nef,n,q)
+                CALL writeXMLElementForm('Entry',(/'q       ','ef-shift','theta   ','phi     ','ev-sum  '/),attributes(2:6),RESHAPE((/1,8,5,3,6,5,20,20,20,20/),(/5,2/)))
+                write(attributes(6),'(f15.8)') this%h_so(0,nef,n,q)
+                CALL writeXMLElementForm('allAtoms',(/'q       ','ef-shift','theta   ','phi     ','H_so    '/),attributes(2:6),RESHAPE((/1,8,5,3,6,5,20,20,20,20/),(/5,2/)))
                 DO i=1,size(this%h_so,1)-1
-                   write(attributes(6),'(f13.8)') this%h_so(i,nef,n,q)
+                   write(attributes(6),'(f15.8)') this%h_so(i,nef,n,q)
                    write(attributes(1),'(i0)') i
-                   CALL writeXMLElementForm('singleAtom',(/'atomType','q       ','ef-shift','theta   ','phi     ','H_so    '/),attributes,RESHAPE((/8,8,1,5,3,6,5,5,12,12,12,12/),(/6,2/)))
+                   CALL writeXMLElementForm('singleAtom',(/'atomType','q       ','ef-shift','theta   ','phi     ','H_so    '/),attributes,RESHAPE((/8,8,1,5,3,6,5,5,20,20,20,20/),(/6,2/)))
                 END DO
              END DO
           END DO

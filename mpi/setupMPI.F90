@@ -71,10 +71,10 @@ CONTAINS
     CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
     if (isize>1) THEN
       if (fmpi%irank==0) write(*,*) "Number of MPI/PE per node:",isize
-      if (gpus<isize) call judft_error("You need at least as many GPUs per node as PE running")
+      if (gpus<isize) call judft_warn("You should use as many GPUs/node as MPI-PEs/node running")
       CALL MPI_COMM_RANK(fmpi%mpi_comm_same_node,localrank,i)
-      call acc_set_device_num(localrank,acc_device_nvidia)
-      write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",localrank
+      call acc_set_device_num(mod(localrank,gpus),acc_device_nvidia)
+      write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",mod(localrank,gpus)
     ENDIF
 #else
     write(*,*) "Number of GPU    :",gpus

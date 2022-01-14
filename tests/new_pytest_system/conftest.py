@@ -15,6 +15,7 @@ import pytest
 import shlex
 import logging
 import shutil
+from pathlib import Path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'helpers'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'pytest_plugins'))
 # Now we can import everything that is in helpers, but be careful about name clashing
@@ -563,11 +564,44 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup,
         if request.node.rep_call.failed or not cleanup:
             add_failed_parser_tests(request)
 
+@pytest.fixture(name='test_logger', scope='function')
+def test_logger_fixture(work_dir, request):
+    """
+    Fixture for creating a log file along in the work_dir
+    to document the checks that passed and which failed
+    """
+    if 'fleur_parser' not in request.keywords:
+        logger = logging.getLogger()
+        test_log_handler = logging.FileHandler(Path(work_dir) / 'test.log')
+
+        logger.addHandler(test_log_handler)
+        logger.setLevel(logging.INFO)
+        try:
+            yield logger
+        except Exception as err:
+            logger.exception(err)
+            raise
+        finally:
+            test_log_handler.flush()
+            logger.removeHandler(test_log_handler)
+    else:
+        yield
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_logreport(report):
+    """
+    """
+    if report.when == 'call' and report.failed:
+        logger = logging.getLogger()
+        logger.error('Test failed')
+        logger.info(report.longrepr)
+        logger.handlers[0].flush()
+    yield
 
 ##### other fixtures ####
 
 @pytest.fixture
-def execute_inpgen(inpgen_binary, work_dir, pytestconfig):
+def execute_inpgen(inpgen_binary, work_dir, pytestconfig, test_logger):
     """
     Fixture which returns an execute_inpgen function
     """
@@ -617,6 +651,7 @@ def execute_inpgen(inpgen_binary, work_dir, pytestconfig):
                         shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
         #print(inpgen_binary)
         if inpgen_binary is None:
+            test_logger.error('No Inpgen binary found')
             pytest.fail('No Inpgen binary found')
 
         arg_list = [inpgen_binary] + cmdline_param
@@ -640,6 +675,7 @@ def execute_inpgen(inpgen_binary, work_dir, pytestconfig):
             print('======================================')
             print('The following was printed to stderr:')
             print(error_content)
+            test_logger.error('Inpgen Execution failed')
             pytest.fail('Inpgen Execution failed')
 
         result_files = {}
@@ -649,7 +685,7 @@ def execute_inpgen(inpgen_binary, work_dir, pytestconfig):
                 rel_path = rel_path.lstrip('./')
                 abs_path = os.path.abspath(os.path.join(root, file))
                 result_files[rel_path] = abs_path
-
+        test_logger.info(f'Inpgen produced files: {list(result_files.keys())}')
         os.chdir(testdir)
 
         return result_files
@@ -731,7 +767,7 @@ def mpi_command():
     return _mpi_command
 
 @pytest.fixture
-def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig):
+def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig, test_logger):
     """
     Fixture which returns an execute_fleur function
     """
@@ -804,6 +840,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig):
 
         fleur, parallel = fleur_binary
         if fleur is None:
+            test_logger.error('No Fleur binary found')
             pytest.fail('No Fleur binary found')
 
         mpiruncmd = mpi_command(run_env, mpi_procs, parallel)
@@ -832,6 +869,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig):
             print('======================================')
             print('The following was printed to stderr:')
             print(error_content)
+            test_logger.error('Fleur Execution failed')
             pytest.fail('Fleur Execution failed')
 
         result_files = {}
@@ -842,6 +880,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig):
                 abs_path = os.path.abspath(os.path.join(root, file))
                 result_files[rel_path] = abs_path
         os.chdir(testdir)
+        test_logger.info(f'Fleur produced files: {list(result_files.keys())}')
 
         return result_files
 
@@ -849,7 +888,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig):
 
 # Consider maybe running this after each fleur execution?
 @pytest.fixture(scope='function')#, autouse=True) # make this available in every test
-def validate_out_xml_file(execute_fleur):
+def validate_out_xml_file(test_logger):
     """
     return function validate_out_xml_file_f
     """
@@ -868,6 +907,7 @@ def validate_out_xml_file(execute_fleur):
         root = file_path.split('out.xml')[0]
         if schema_path is None:
             schema_path = os.path.join(root,'FleurOutputSchema.xsd')
+        test_logger.info("Test validating outputfile: {file_path}")
         print(f"Test validating outputfile: {file_path}")
         if not os.path.isfile(schema_path):
             msg = "No OutputSchema found"
@@ -880,6 +920,7 @@ def validate_out_xml_file(execute_fleur):
         if xmllint is None:
             msg = "No xmllint executable found"
             # the original test just continued
+            test_logger.error("No xmllint executable found")
             print(msg)
             return True
 
@@ -889,6 +930,7 @@ def validate_out_xml_file(execute_fleur):
                     subprocess.run([xmllint, '--schema', f'{schema_path}', f'{file_path}'],
                                    stderr=f_stderr, stdout=f_stdout, check=True)
                 except Exception as e:
+                    test_logger.error(f"Failed validating outputfile: {e}")
                     print(f"Failed validating outputfile: {e}")
                     return False
         return True
@@ -900,7 +942,7 @@ def validate_out_xml_file(execute_fleur):
 # The same goes for fleur and inpgen execute
 # Pro: The rexpressions stay close that what people are used to.
 @pytest.fixture
-def grep_exists():
+def grep_exists(test_logger):
     """returns the grep_exits function
     """
     def _grep_exists(filepath, expression):
@@ -913,6 +955,7 @@ def grep_exists():
         """
         #t0 = time.perf_counter()
         exists = False
+        test_logger.info(f'Searching for expression {expression!r}: {filepath}')
         #regex_pattern = "(" + expression + ")"
         #pattern = re.compile(regex_pattern) # This might be unsave,
         # but we do it to allow for same expressions as grep does
@@ -922,9 +965,13 @@ def grep_exists():
                     # re.search allows also for patters, complains about some
                     #print(line)
                     exists = True
+                    test_logger.info(f'Expression {expression!r} found')
                     break
         #t1 = time.perf_counter()
         #print(f'Executing grep exits took {t1 - t0:0.4f} seconds')
+
+        if not exists:
+            test_logger.error(f'Expression {expression} not found: {filepath}')
 
         return exists
 
@@ -932,7 +979,7 @@ def grep_exists():
 
 
 @pytest.fixture
-def grep_number():
+def grep_number(test_logger):
     """returns the grep number function
     """
     def _grep_number(filepath, expression, split=None, line_index=1, res_index=-1):
@@ -949,6 +996,7 @@ None then the given expression will be used.
         :return: float, list of floats
         """
         #t0 = time.perf_counter()
+        test_logger.info(f'Searching for number with expression {expression!r} ;occurrence {res_index}: {filepath}')
         numbers = []
         with open(filepath, "r") as file1:
             for line in file1:
@@ -966,13 +1014,17 @@ None then the given expression will be used.
         #print(f'Executing grep number took {t1 - t0:0.4f} seconds')
 
         if len(numbers) == 0:
-            raise ValueError(f'Number for "{expression}" was not found in {filepath}')
+            test_logger.error(f'Number for {expression!r} not found: {filepath}')
+            pytest.fail(f'Number for "{expression}" was not found in {filepath}')
         elif len(numbers) == 1:
+            test_logger.info(f'Number for {expression!r}: {numbers[0]}')
             return numbers[0]
 
         if res_index is not None:
+            test_logger.info(f'Number for {expression!r}: {numbers[res_index]}')
             return numbers[res_index]
         else:
+            test_logger.info(f'Number for {expression!r}: {numbers}')
             return numbers
     return _grep_number
 

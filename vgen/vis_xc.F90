@@ -52,7 +52,9 @@ CONTAINS
       REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),v_xc2(:,:),e_xc(:,:)
       INTEGER           :: jspin, i, js
-      LOGICAL           :: perform_MetaGGA
+      LOGICAL           :: perform_MetaGGA, l_libxc
+
+      l_libxc=.FALSE.
 
       perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
                       .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
@@ -84,13 +86,25 @@ CONTAINS
       CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
       call timestop("get_vxc")
 #endif
-      IF (xcpot%needs_grad()) THEN
-         SELECT TYPE(xcpot)
-         TYPE IS (t_xcpot_libxc)
+      
+      SELECT TYPE(xcpot)
+      TYPE IS (t_xcpot_libxc)
+         l_libxc=.TRUE.
+         IF (xcpot%needs_grad()) THEN
             CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
             CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_x,grad)
-         END SELECT
-      ENDIF
+         END IF
+      END SELECT
+
+      !IF (l_libxc.AND.xcpot%needs_grad()) THEN
+      !   CALL save_npy('vxc_gga_ir_libxc.npy',v_xc)
+      !ELSE IF (l_libxc.AND.(.NOT.xcpot%needs_grad())) THEN
+      !  CALL save_npy('vxc_lda_ir_libxc.npy',v_xc)
+      !ELSE IF ((.NOT.l_libxc).AND.xcpot%needs_grad()) THEN
+      !   CALL save_npy('vxc_gga_ir_inbuild.npy',v_xc)
+      !ELSE
+      !  CALL save_npy('vxc_lda_ir_inbuild.npy',v_xc)
+      !END IF
 
       v_xc2=v_xc
       !Put the potentials in rez. space.

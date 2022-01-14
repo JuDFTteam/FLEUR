@@ -11,6 +11,21 @@ build-gfortran-hdf5:
     - cd build
     - make -j 2
 
+build-gfortran-hdf5-serial:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: build
+  artifacts:
+     paths:
+       - build
+     expire_in: 12h
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -m GITLAB -mpi FALSE
+    - cd build
+    - make -j 2
+  except:
+    - pushes
+
 test-gfortran-hdf5: 
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   extends: .test-fleur

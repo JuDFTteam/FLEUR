@@ -13,7 +13,7 @@
     - ulimit -s unlimited
     - cd $BUILD_FOLDER
     - >
-      export PYTEST_ADDOPTS="--test-summary-file=${CI_PROJECT_DIR}/${BUILD_FOLDER}/${SUMMARY_FILE} ${PYTEST_ADDOPTS}"
+      export PYTEST_ADDOPTS="--durations 10 --test-summary-file=${CI_PROJECT_DIR}/${BUILD_FOLDER}/${SUMMARY_FILE} ${PYTEST_ADDOPTS}"
     - |
       if [ ! -z "$markers" ]
       then 

@@ -129,7 +129,7 @@ CONTAINS
   PROCEDURE :: mpi_bc=>mpi_bc_atoms
 END TYPE t_atoms
 
-PUBLIC :: t_atoms,t_utype
+PUBLIC :: t_atoms,t_utype, readAtomAttribute
 
 CONTAINS
 SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)

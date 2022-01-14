@@ -24,6 +24,7 @@ MODULE m_types_input
   LOGICAL :: cdinf =.FALSE.
   LOGICAL :: vchk =.FALSE.
   LOGICAL :: l_f =.FALSE.
+  INTEGER :: vdW=0 !bit pattern describing vdW treatment vdW=1->Grimme(D3), vdW=2->Soler
   INTEGER :: f_level = -1
   !     f_level ==-1: Original force calculation
   !     f_level == 0: Original force calculation with FORCES and POSCAR printout
@@ -41,9 +42,9 @@ MODULE m_types_input
   INTEGER :: gw=0
   INTEGER :: gw_neigd=0
   INTEGER :: qfix=0
-  REAL    :: forcealpha =1.0 !< mixing parameter for geometry optimzer
-  REAL    :: epsdisp =0.00001!< minimal displacement. If all displacements are < epsdisp stop
-  REAL    :: epsforce =0.00001!< minimal force. If all forces <epsforce stop
+  REAL    :: forcealpha =1.0 ! mixing parameter for geometry optimzer
+  REAL    :: epsdisp =0.00001! minimal displacement. If all displacements are < epsdisp stop
+  REAL    :: epsforce =0.00001! minimal force. If all forces <epsforce stop
   REAL    :: force_converged=0.00001
   INTEGER :: forcemix=2
   REAL    :: alpha=0.05
@@ -113,6 +114,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%cdinf,rank,mpi_comm)
    CALL mpi_bc(this%vchk,rank,mpi_comm)
    CALL mpi_bc(this%l_f,rank,mpi_comm)
+   CALL mpi_bc(this%vdW,rank,mpi_comm)
    CALL mpi_bc(this%f_level,rank,mpi_comm)
    CALL mpi_bc(this%eonly,rank,mpi_comm)
    CALL mpi_bc(this%ctail,rank,mpi_comm)
@@ -254,6 +256,8 @@ SUBROUTINE read_xml_input(this,xml)
       IF (numberNodesB.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))))
       IF (numberNodesC.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))))
       this%secvar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
+      valueString=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vdW')
+      if (index(valueString,"D3")>0) this%vdW=ibset(this%vdW,1)
    END IF
    ! Read in Brillouin zone integration parameters
    IF (xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/@mode')> 0) THEN

@@ -43,9 +43,18 @@ CONTAINS
     real                             :: fix
     integer                          :: lh,n
 
+    if (sym%invs) then
+      !This is for easier debugging of the preconditioner. The imaginary part
+      !of the output density in the interstitial is never constrained to be
+      !0 in the case of inversion symmetric systems. This leads to all numerical
+      !noise leaking through making comparisons especially with different parallelizations
+      !more difficult. The input density is implicitly constrained since the
+      !mixvector%from_density subroutine throws away the imaginary part if sym%invs is .true.
+      outDen%pw(:,:input%jspins) = real(outDen%pw(:,:input%jspins))
+    endif
 
     CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
-    CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
+    CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_POTYUK )
     MPI0_b: IF( fmpi%irank == 0 ) THEN
        CALL resDen%subPotDen( outDen, inDen )
        IF( input%jspins == 2 ) CALL resDen%SpinsToChargeAndMagnetisation()
@@ -68,10 +77,10 @@ CONTAINS
     MPI0_c: IF( fmpi%irank == 0 ) THEN
        resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
        DO n = 1, atoms%ntype
-          DO lh = 0, sphhar%nlhd
-             resDen%mt(1:atoms%jri(n),lh,n,1) = resDen%mt(1:atoms%jri(n),lh,n,1) &
+          DO lh = 0, sphhar%nlh(sym%ntypsy(sum(atoms%neq(:n-1))+1))
+             resDen%mt(:atoms%jri(n),lh,n,1) = resDen%mt(:atoms%jri(n),lh,n,1) &
                   - input%preconditioning_param ** 2 / fpi_const &
-                  * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
+                  * vYukawa%mt(:atoms%jri(n),lh,n,1) * atoms%rmsh(:atoms%jri(n),n) ** 2
           END DO
        END DO
        resDen%vacz  = resDen%vacz  - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz
@@ -81,6 +90,7 @@ CONTAINS
        CALL outDen%addPotDen( resDen, inDen )
        CALL qfix(fmpi,stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .FALSE., l_par=.FALSE., force_fix=.TRUE., fix=fix )
        CALL resDen%subPotDen( outDen, inDen )
+       resDen%mmpMat = outDen%mmpMat - inDen%mmpMat
     END IF MPI0_c
     CALL precon_v%from_density(resden)
 

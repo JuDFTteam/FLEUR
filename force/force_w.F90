@@ -19,7 +19,7 @@ CONTAINS
       USE m_xmlOutput
       USE m_relaxation
       USE m_rotate_forces
-
+      USE m_vdWfleur_grimme
       IMPLICIT NONE
 
       TYPE(t_mpi),     INTENT(IN)    :: fmpi
@@ -33,9 +33,9 @@ CONTAINS
 
       REAL maxAbsForceDist
       INTEGER i, jsp, n, nat1, ierr
-      REAL eps_force
+      REAL eps_force,e_vdW
       LOGICAL :: l_new, l_forceConverged
-
+      REAL,ALLOCATABLE:: f_vdW(:,:)
       REAL forcetot(3,atoms%ntype)
       CHARACTER(LEN=20) :: attributes(7)
 
@@ -124,6 +124,13 @@ CONTAINS
                             cell%omtil,atoms%neq,sym%mrot,cell%amat,cell%bmat,&
                             atoms%taual,sym%tau,forcetot)
       END IF
+
+      IF (l_forceConverged.and.btest(input%vdW,0)) THEN
+         ALLOCATE(f_vdW,mold=forcetot)
+         call vdW_fleur_grimme(atoms,sym,cell,input%film,e_vdW,f_vdW)
+         forcetot=forcetot+f_vdW
+         results%tote=results%tote+e_vdW
+      ENDIF
 
       IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,forcetot,results%tote)
 
