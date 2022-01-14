@@ -17,7 +17,7 @@ MODULE m_dfpt
 
 CONTAINS
     SUBROUTINE dfpt(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, &
-                  & kpts, qpts, fmpi, results, enpara, rho, vTot, vxc, exc, eig_id, nvfull, GbasVec_eig)
+                  & kpts, qpts, fmpi, results, enpara, rho, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -33,7 +33,7 @@ CONTAINS
         TYPE(t_mpi),      INTENT(IN)  :: fmpi
         TYPE(t_results),  INTENT(IN)  :: results
         TYPE(t_enpara),   INTENT(IN)  :: enpara
-        TYPE(t_potden),   INTENT(IN)  :: rho, vTot, vxc, exc
+        TYPE(t_potden),   INTENT(IN)  :: rho, vTot, vCoul, vxc, exc
         INTEGER,          INTENT(IN)  :: eig_id
         INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 

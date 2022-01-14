@@ -88,13 +88,11 @@ complex,            allocatable,  intent(out) :: vXC0IR(:, :)
 complex,            allocatable,  intent(out) :: eXCIR(:)
 real,               allocatable,  intent(out) :: vXC0MT(:, :, :, :)
 real,               allocatable,  intent(out) :: eXCMT(:, :, :)
+real,               allocatable,  intent(out) :: vrCoul(:, :, :, :)
+complex,            allocatable,  intent(out) :: vpwCoul_uw(:, :)
 
 Gained from new optionals in scf-workflow:
 integer,            allocatable,  intent(out) :: nv(:, :)
-
-To be gained from new optionals in scf-workflow:
-real,               allocatable,  intent(out) :: vrCoul(:, :, :, :)
-complex,            allocatable,  intent(out) :: vpwCoul_uw(:, :)
 
 Calculated/Read in dfpt_init:
 complex,            allocatable,  intent(out) :: rho0MTsh(:, :, :, :)
