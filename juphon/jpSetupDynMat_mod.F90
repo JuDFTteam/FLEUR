@@ -1,4 +1,5 @@
 module m_jpSetupDynMat
+    USE m_constants
 
 !NOTE: Coretail correction is implicetly in the dynamical matrix in the density and their gradients and variations of as well as
 ! in the potential
@@ -6,24 +7,25 @@ module m_jpSetupDynMat
 
   contains
 
-  subroutine SetupDynamicMatrix(atoms, input, sym, dimens, cell, lathar, stars, kpts, qpts, usdus, results, Veff0, iqpt, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, &
+  subroutine SetupDynamicMatrix(fmpi, noco, nococonv, oneD, atoms, input, sym, cell, lathar, stars, kpts, qpts, usdus, results, Veff0, iqpt, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, &
       & rho0IRst, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vEff0IR, vEff0MT, rho0MT, E2ndOrdII, El, eig, rbas1, rbas2, &
       & iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, mapKpq2K, kpq2kPrVec, gpqdp, memd_atom, logUnit, vXC0IR, eXCIR, vXC0MT, eXCMT, vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0IR, grRho0MT, grVext0IR, grVext0MT, grVeff0IR, grVeff0MT, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, vExt1MTnoVol, grVeff0MThxc, vEff1MTnoVol, vH1MTnoVol, vExt1MTnoVolnoq, vExt1noqIR_final, rho1MTz0, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
 
-#include "cppmacro.h"
-
-    use m_jpPotDensHelper, only : convertStar2G
+    use m_dfpt_init, only : convertStar2G
     use m_types
     use m_jpSetupDynMatSF, only : SetupDynMatSF
-    use m_jpConstants, only : compPhon
+    use m_juDFT_stop, only : juDFT_error
 
     implicit none
 
     ! Type parameters
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                  intent(in)  :: atoms
     type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
-    type(t_dimension),              intent(in)  :: dimens
     type(t_stars),                  intent(in)  :: stars
     type(t_cell),                   intent(in)  :: cell
     type(t_sphhar),                 intent(in)  :: lathar
@@ -31,7 +33,7 @@ module m_jpSetupDynMat
     type(t_kpts),                   intent(in)  :: qpts
     type(t_usdus),                  intent(in)  :: usdus
     type(t_results),                intent(in)  :: results
-    type(t_potential),              intent(in)  :: Veff0
+    type(t_potden),              intent(in)  :: Veff0
 
     ! Scalar parameters
     integer,                        intent(in)  :: iqpt
@@ -70,7 +72,7 @@ module m_jpSetupDynMat
     integer,                        intent(in)  :: nobd(:, :)
     integer,                        intent(in)  :: ilst(:, :, :)
     integer,                        intent(in)  :: GbasVec(:, :)
-    MCOMPLEX,                       intent(in)  :: z(:, :, :, :)
+    complex,                       intent(in)  :: z(:, :, :, :)
     integer,                        intent(in)  :: kveclo(:,:)
     integer,                        intent(in)  :: nRadFun(:, :)
     complex,                        intent(in)  :: vEff0IR(:,:)
@@ -158,7 +160,7 @@ module m_jpSetupDynMat
           end do ! idir
         end do ! iDeqat
       end do ! iDtype
-      NOstopNO
+      call juDFT_error('Old juPhon stopcall.', calledby='SetupDynamicMatrix')
     end if
 
     allocate (dynMat(3 * atoms%nat, 3 * atoms%nat))
@@ -179,18 +181,18 @@ module m_jpSetupDynMat
     ! - v1Deltas/=v1goods ---> Calculate and pass! ---> Put integrals after Pulay integration of rho1*VH
 
     ! Calculate the Hellmann-Feynman contribution to the dynamical matrix
-    call SetupDynMatHF(atoms, cell, lathar, stars, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho0IRpw, rho0MT, grRho0IR, grRho0MT,  &
+    call SetupDynMatHF(atoms, sym, cell, lathar, stars, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho0IRpw, rho0MT, grRho0IR, grRho0MT,  &
       & rho1IR, rho1MT, grVext0IR, grVext0MT, vExt1IR_final, vExt1MT, E2ndOrdII, dynMatHF, rho1MTDelta, vExt1MTDelta, vExt1MTq0, iqpt, vExt1MTnoVol, vExt1MTnoVolnoq, vExt1noqIR_final)
 
     ! Calculate the Pulay contribution to the dynamical matrix
-    call SetupDynMatPu( atoms, stars, lathar, input, sym, dimens, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT, &
+    call SetupDynMatPu( fmpi, noco, nococonv, oneD, atoms, stars, lathar, input, sym, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT, &
       & vEff1IR, vEff1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, El, eig, rbas1, rbas2, iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, clnu_atom, nmem_atom,    &
       & mlh_atom, vEff0IR, vEff0MT, kpq2kPrVec, dynMatPu, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, grVeff0MThxc, vEff1MTnoVol, &
       & vExt1MTnoVol, vH1MTnoVol, rho1MTz0 )
 
     ! Calculate the surface contribution to the dynamical matrix
     !!!latest:
-    call SetupDynMatSF( atoms, dimens, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
+    call SetupDynMatSF( fmpi, noco, nococonv, oneD, atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
       & memd_atom, nobd, gdp, mapKpq2K, rbas1(:, :, :, :, 1), rbas2(:, :, :, :, 1), nmem_atom, mlh_atom, clnu_atom, kveclo, iloTable, kpq2kPrVec, nv, ilst, &
       & gBasVec, nRadFun, z, eig, El, rho0IRpw, rho0MT, ngpqdp, gpqdp, rho1IR, rho1MTDelta, vXC0IR, eXCIR, vXC0MT, eXCMT, vExt1IR_final, &
       & vExt1MT, vHar1IR_final, vHar1MT_final, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, vEff0MT, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol, dynMatSf )
@@ -202,16 +204,16 @@ module m_jpSetupDynMat
       & + dynMatSf(:, :)
 
     !if (compPhon) then
-      open(114,file='000_dynmat_grob',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
-        write(114,*) 'HF:'
-        write(114,*) dynMatHF
-        write(114,*) 'Pulay:'
-        write(114,*) dynMatPu
-        write(114,*) 'Surface:'
-        write(114,*) dynMatSf
-        write(114,*) 'Full:'
-        write(114,*) dynMat
-      close(114)
+      !open(114,file='000_dynmat_grob',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
+        !write(114,*) 'HF:'
+        !write(114,*) dynMatHF
+        !write(114,*) 'Pulay:'
+        !write(114,*) dynMatPu
+        !write(114,*) 'Surface:'
+        !write(114,*) dynMatSf
+        !write(114,*) 'Full:'
+        !write(114,*) dynMat
+      !close(114)
     !end if
 
     do idirC=1,3
@@ -246,19 +248,17 @@ module m_jpSetupDynMat
                        ! If we move a bit from the first mesh point the result is really sensitive, the question is whether this
                        ! makes sense or to move more than the mesh point to zero or just take the first mesh point and renormalize
                        ! to the surface integral in the MT.
-  subroutine SetupDynMatHF(atoms, cell, lathar, stars, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho0IRpw, rho0MT, grRho0IR, grRho0MT,  &
+  subroutine SetupDynMatHF(atoms, sym, cell, lathar, stars, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho0IRpw, rho0MT, grRho0IR, grRho0MT,  &
       & rho1IR, rho1MT, grVext0IR, grVext0MT, vExt1IR, vExt1MT, E2ndOrdII, dynMatHF, rho1MTDelta, vExt1MTDelta, vExt1MTq0, iqpt, vExt1MTnoVol, vExt1MTnoVolnoq, vExt1IRnoq )
 
-    use m_types, only : t_atoms, t_cell, t_sphhar, t_stars
-    use m_jpPotDensHelper, only : WarpIRPot
-    use mod_juPhonUtils, only : Calc2ArgIntIR, Calc2ArgCmplxIntMT
-    use m_jpSetupDynMatHelper, only : CalcSurfIntIRDynMat, CalcSurfIntMTDynMat
-    use m_jpConstants, only : compPhon
+    use m_types, only : t_atoms, t_sym, t_cell, t_sphhar, t_stars
+    use m_juDFT_stop, only : juDFT_error
 
     implicit none
 
     ! Type parameters
     type(t_atoms),               intent(in)  :: atoms
+    type(t_sym),               intent(in)  :: sym
     type(t_cell),                intent(in)  :: cell
     type(t_sphhar),              intent(in)  :: lathar
     type(t_stars),               intent(in)  :: stars
@@ -311,7 +311,7 @@ module m_jpSetupDynMat
     integer                                  :: lm_pre, imesh
     complex                                  :: integral, integralsum
     logical                                  :: finiteQoptimization
-    logical                                  :: teNOstopNOtimization
+    logical                                  :: testoptimization
     integer                                  :: idir
     integer                                  :: iG
 
@@ -328,10 +328,10 @@ module m_jpSetupDynMat
     ! can be canceled analytically.
     ! For q = = nothing is changed
     finiteQoptimization = .false.
-    if (compPhon) then
+    !if (compPhon) then
       finiteQoptimization = .false.
-    end if
-    teNOstopNOtimization = .false.
+    !end if
+    testoptimization = .false.
 
     dynMatHFTest(:, :) = cmplx(0., 0.)
     dynMatCompInt1(:, :) = cmplx(0., 0.)
@@ -450,12 +450,12 @@ module m_jpSetupDynMat
                           ! in an exact way.
                           ! The product of rho1 and vext1 for q = 0 the l=1 component is 1e16
                           integral = cmplx(0., 0.)
-                          if (compPhon) then
-                            call Calc2ArgCmplxIntMT( atoms, iCtype, rho1MT(:, lm, iCatom, idirR, iBatom), &
-                              & vExt1MT(:, lm, iCatom, idirC, iAatom), integral )
+                          !if (compPhon) then
+                        !    call Calc2ArgCmplxIntMT( atoms, iCtype, rho1MT(:, lm, iCatom, idirR, iBatom), &
+                              !& vExt1MT(:, lm, iCatom, idirC, iAatom), integral )
                           !call Calc2ArgCmplxIntMT( atoms, iCtype, rho1MTdummy(:, lm, iCatom, idirR, iBatom), &
                           !  & vExt1MT(:, lm, iCatom, idirC, iAatom), integral )
-                          else
+                         ! else
                             !call Calc2ArgCmplxIntMT( atoms, iCtype, rho1MT(:, lm, iCatom, idirR, iBatom), &
                             !    & vExt1MTnoVol(:, lm, iCatom, idirC, iAatom), integral )
                             call Calc2ArgCmplxIntMT( atoms, iCtype, rho1MT(:, lm, iCatom, idirR, iBatom), &
@@ -463,7 +463,7 @@ module m_jpSetupDynMat
                             !!!CRGfix
                             !call Calc2ArgCmplxIntMT( atoms, iCtype, rho1MT(:, lm, iCatom, idirR, iBatom), &
                             !    & vExt1MTnoVol(:, lm, iCatom, idirC, iAatom), integral )
-                          end if
+                          !end if
                           !write(466,*) rho1MTDelta(:, lm, iCatom, idirR, iBatom)
                           !write(469,*) vExt1MTnoVol(:, lm, iCatom, idirC, iAatom), integral
                           !(5.3.176), 1st integral, MT
@@ -518,7 +518,7 @@ module m_jpSetupDynMat
 
                           !!!Note: 000_dynmat here
 
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
@@ -535,7 +535,7 @@ module m_jpSetupDynMat
 
                           !!!Note: 000_dynmat here
 
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
@@ -550,13 +550,13 @@ module m_jpSetupDynMat
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
 
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
 
 
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             ! Make substitution complete with q=0 parts of rho1 and Vext1
                             integral = cmplx(0., 0.)
                             call Calc2ArgCmplxIntMT( atoms, iCtype, -grRho0MT(:, lm, iCatom, idirR), &
@@ -583,7 +583,7 @@ module m_jpSetupDynMat
                   dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                     &dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3)
 
-                  if (teNOstopNOtimization) then
+                  if (testoptimization) then
                     if (iAatom == iBatom) then
 
                       dynMatCompInt1MgradInt(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
@@ -620,7 +620,7 @@ module m_jpSetupDynMat
                       end do ! iCtype
 
                     end if  ! iAtom == iBatom
-                  end if ! teNOstopNOtimization
+                  end if ! testoptimization
                 end if ! Optimization enabled for finite q
 
                 if ( iAatom == iBatom ) then
@@ -662,20 +662,20 @@ module m_jpSetupDynMat
                             ! MT vanishes up to 9e-8
                             ! MT volume integral of grRho and grVext0
                             integral = cmplx(0., 0.)
-                            if (compPhon) then
-                              call Calc2ArgCmplxIntMT( atoms, iCtype, grRho0MT(:, lm, iCatom, idirR), grVext0MT(:, lm,  idirC, iCatom), integral )
+                            !if (compPhon) then
+                             ! call Calc2ArgCmplxIntMT( atoms, iCtype, grRho0MT(:, lm, iCatom, idirR), grVext0MT(:, lm,  idirC, iCatom), integral )
                               !call Calc2ArgCmplxIntMT( atoms, iCtype, rho1MTdummy(:, lm, iCatom, idirR, iBatom), grVext0MT(:, lm,  idirC, iCatom), integral )
-                            dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
-                              & dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) - integral
-                            else
+                            !dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
+                            !  & dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) - integral
+                            !else
                               !call Calc2ArgCmplxIntMT( atoms, iCtype, grRho0MT(:, lm, iCatom, idirR), vExt1MTnoVolnoq(:, lm, iCatom, idirC, iAatom), integral )
                               call Calc2ArgCmplxIntMT( atoms, iCtype, grRho0MT(:, lm, iCatom, idirR), grVext0MT(:, lm,  idirC, iCatom), integral )
                               !!!CRGfix
                               !!call Calc2ArgCmplxIntMT( atoms, iCtype, grRho0MT(:, lm, iCatom, idirR), grVext0MT(:, lm,  idirC, iCatom), integral )
-                            dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
-                              & dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) - integral
+                            !dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
+                            !  & dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) - integral
                             !write(467,*) grRho0MT(:, lm, iCatom, idirR), vExt1MTnoVolnoq(:, lm, iCatom, idirC, iAatom), integral
-                            end if
+                            !end if
 
                             !(5.3.176), 2nd integral, MT
                             integralsum=integralsum-integral
@@ -771,7 +771,7 @@ module m_jpSetupDynMat
 
             integral3x3 = cmplx(0., 0.)
 
-            call CalcSurfIntMTDynMat( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, rho0MT(:, :, :, 1), vExt1MTContainer, integral3x3)
+            call CalcSurfIntMTDynMat( atoms, sym, lathar, clnu_atom, nmem_atom, mlh_atom, rho0MT(:, :, :, 1), vExt1MTContainer, integral3x3)
             do idirC = 1, 3
               do idirR = 1, 3
                 !(5.3.177), integral, MT
@@ -832,8 +832,8 @@ module m_jpSetupDynMat
     !end if
 
     ! Check of comparison between optimization and original method
-    if (any(abs(dynMatCompInt1(:, :)) > 1e-8)) NOstopNO'rho1 Vext1 integral not the same as optimization'
-    if (any(abs(dynMatCompInt1MgradInt(:, :)) > 1e-8)) NOstopNO'rho1 Vext1 integral -gradRho Veff1 integral not the same as optimization'
+    if (any(abs(dynMatCompInt1(:, :)) > 1e-8)) call juDFT_error('rho1 Vext1 integral not the same as optimization', calledby='SetupDynMatHF')
+    if (any(abs(dynMatCompInt1MgradInt(:, :)) > 1e-8)) call juDFT_error('rho1 Vext1 integral -gradRho Veff1 integral not the same as optimization', calledby='SetupDynMatHF')
 
     if (.false.) then
       write(*, '(a)') 'Test Matrix'
@@ -861,25 +861,25 @@ module m_jpSetupDynMat
   !> Equation 6.52 is subdivided in 7.114, 7.115 and 7.118 (all equations from PhD thesis A. Klueppelberg). For every of the latter
   !> equations a respective subroutine is called.
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine SetupDynMatPu(atoms, stars, lathar, input, sym, dimens, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT,      &
+  subroutine SetupDynMatPu(fmpi, noco, nococonv, oneD, atoms, stars, lathar, input, sym, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT,      &
       & vEff1IR, vEff1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, El, eig, rbas1, rbas2, iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, clnu_atom, nmem_atom,    &
       & mlh_atom, vEff0IR, vEff0MT, kpq2kPrVec, dynMatPu, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, grVeff0MThxc, vEff1MTnoVol, &
       & vExt1MTnoVol, vH1MTnoVol, rho1MTz0 )
-
-! Defines MCOMPLEX (macro which is type complex if no inversion symmetry and real if there is inversion symmetry)
-#include "cppmacro.h"
 
     use m_types
 
     implicit none
 
     ! Type parameters
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),     intent(in)  :: atoms
     type(t_stars),     intent(in)  :: stars
     type(t_sphhar),    intent(in)  :: lathar
     type(t_input),     intent(in)  :: input
     type(t_sym),       intent(in)  :: sym
-    type(t_dimension), intent(in)  :: dimens
     type(t_kpts),      intent(in)  :: kpts
     type(t_kpts),      intent(in)  :: qpts
     type(t_cell),      intent(in)  :: cell
@@ -936,7 +936,7 @@ module m_jpSetupDynMat
     integer,           intent(in)  :: nobd(:, :)
     integer,           intent(in)  :: ilst(:, :, :)
     integer,           intent(in)  :: GbasVec(:, :)
-    MCOMPLEX,          intent(in)  :: z(:, :, :, :)
+    complex,          intent(in)  :: z(:, :, :, :)
     integer,           intent(in)  :: kveclo(:,:)
     integer,           intent(in)  :: nRadFun(:, :)
     complex,           intent(in)  :: clnu_atom(:, 0:, :)
@@ -968,7 +968,7 @@ module m_jpSetupDynMat
     !write(470,*) dynMatPuInt
 
     ! Evaluate valence contribution of H - eps brakets
-    call EvalPuHepsBraKetsVal(atoms, cell, sym, dimens, lathar, stars, kpts, qpts, usdus, results, iqpt, nRadFun, vEff0IR, vEff0MT, clnu_atom,&
+    call EvalPuHepsBraKetsVal(fmpi, noco, nococonv, oneD, atoms, input, cell, sym, lathar, stars, kpts, qpts, usdus, results, iqpt, nRadFun, vEff0IR, vEff0MT, clnu_atom,&
     & nmem_atom, mlh_atom, rbas1(:, :, :, :, 1), rbas2(:, :, :, :, 1), El, mapKpq2K, nobd, nv, gBasVec, ilst, kveclo, z, iloTable, &
     & eig, kpq2kPrVec, dynMatPuME )
 
@@ -1013,8 +1013,6 @@ module m_jpSetupDynMat
   subroutine EvalIntRho1Veff1( atoms, cell, stars, ngpqdp, gdp, rho1IR, rho1MT, vEff1IR, vEff1MT, grRho0MT, grVeff0MT, dynMatPuInt, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, iqpt, ngdp, grVeff0MThxc, vEff1MTnoVol, vExt1MTnoVol, vH1MTnoVol, rho1MTz0 )
 
     use m_types
-    use mod_juPhonUtils, only : Calc2ArgIntIR, Calc2ArgCmplxIntMT
-    use m_jpPotDensHelper, only : WarpIRPot
 
 
     implicit none
@@ -1076,7 +1074,7 @@ module m_jpSetupDynMat
     integer                                 :: lm
     complex                                 :: integral, integralsum, integralsum2
     logical                                 :: finiteQoptimization
-    logical                                 :: teNOstopNOtimization
+    logical                                 :: testoptimization
     complex                                 :: dynMatHFTest(3, 3)
     complex                                 :: dynMatCompInt1(3, 3)
     complex                                 :: dynMatCompInt1MgradInt(3, 3)
@@ -1089,7 +1087,7 @@ module m_jpSetupDynMat
     ! Also, Veff is split up into Vext, Vhar and Vxc
     ! For q = = nothing is changed
     finiteQoptimization = .false.
-    teNOstopNOtimization = .false.
+    testoptimization = .false.
 
     allocate( dynMatPuInt( 3 * atoms%nat, 3 * atoms%nat ) )
     dynMatPuInt = cmplx(0., 0.)
@@ -1262,7 +1260,7 @@ module m_jpSetupDynMat
 
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
@@ -1275,7 +1273,7 @@ module m_jpSetupDynMat
                           !Is this basically the 2nd integral of (5.3.186)?
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
@@ -1287,12 +1285,12 @@ module m_jpSetupDynMat
 
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
 
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             ! q=0 parts of rho and Vhar
                             integral = cmplx(0., 0.)
                             call Calc2ArgCmplxIntMT( atoms, itypeG, -grRho0MT(:, lm, iGatom, idirR), &
@@ -1311,7 +1309,7 @@ module m_jpSetupDynMat
 
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
@@ -1324,7 +1322,7 @@ module m_jpSetupDynMat
                           !Is this basically the 1st integral of (5.3.186)?
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
@@ -1336,12 +1334,12 @@ module m_jpSetupDynMat
 
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
 
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             ! q=0 parts of rho and vExt1
                             integral = cmplx(0., 0.)
                             call Calc2ArgCmplxIntMT( atoms, itypeG, -grRho0MT(:, lm, iGatom, idirR), &
@@ -1359,7 +1357,7 @@ module m_jpSetupDynMat
 
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
@@ -1371,7 +1369,7 @@ module m_jpSetupDynMat
 
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
@@ -1383,12 +1381,12 @@ module m_jpSetupDynMat
 
                           dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                             &dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                               &dynMatCompInt1(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + integral
                           end if
 
-                          if (teNOstopNOtimization) then
+                          if (testoptimization) then
                             ! q=0 parts of vxc1 and of rho
                             integral = cmplx(0., 0.)
                             call Calc2ArgCmplxIntMT( atoms, itypeG, -grRho0MT(:, lm, iGatom, idirR), &
@@ -1412,7 +1410,7 @@ module m_jpSetupDynMat
                   dynMatPuInt(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                     & dynMatPuInt(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) + dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3)
 
-                  if (teNOstopNOtimization) then
+                  if (testoptimization) then
                     if (iAatom == iBatom) then
                       dynMatCompInt1MgradInt(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
                                                                    & dynMatHFTest(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3)
@@ -1487,8 +1485,8 @@ module m_jpSetupDynMat
       end do ! iDatomA
     end do ! iDtypeA
 
-    if (any(abs(dynMatCompInt1(:, :)) > 1e-8)) NOstopNO'rho1 Veff1 integral not the same as optimization'
-    if (any(abs(dynMatCompInt1MgradInt(:, :)) > 1e-8)) NOstopNO'rho1 Veff1 integral -gradRho Veff1 integral not the same as optimization'
+    if (any(abs(dynMatCompInt1(:, :)) > 1e-8)) call juDFT_error('rho1 Veff1 integral not the same as optimization', calledby='EvalIntRho1Veff1')
+    if (any(abs(dynMatCompInt1MgradInt(:, :)) > 1e-8)) call juDFT_error('rho1 Veff1 integral -gradRho Veff1 integral not the same as optimization', calledby='EvalIntRho1Veff1')
 
     if (.false.) then
       write(*, '(a)') 'Test Matrix'
@@ -1523,27 +1521,26 @@ module m_jpSetupDynMat
   !> @todo
   !> Account for the spin.
   !>-------------------------------------------------------------------------------------------------------------------------------------
-  subroutine EvalPuHepsBraKetsVal(atoms, cell, sym, dimens, lathar, stars, kpts, qpts, usdus, results, iqpt, nRadFun, vEff0IR, vEff0MtLh, clnu_atom,&
+  subroutine EvalPuHepsBraKetsVal(fmpi, noco, nococonv, oneD, atoms, input, cell, sym, lathar, stars, kpts, qpts, usdus, results, iqpt, nRadFun, vEff0IR, vEff0MtLh, clnu_atom,&
       & nmem_atom, mlh_atom, rbas1, rbas2, El, mapKpq2K, nobd, nv, gBasVec, ilst, kveclo, z, iloTable, eig, kpq2kPrVec, dynMatPu )
 
-#include "cppmacro.h"
-
     use m_types
-    use mod_juPhonUtils, only : CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat
-    use mod_juPhonUtils, only : Derivative
-    use m_jpConstants, only : iu
-    use m_jpSetupDynMatHelper, only : readInz1, CalcHnGrV0Varphi
-    !todo this should also be moved to the helper module
-    use m_jpSetupDynMatSF, only : CalcHGrVarphi
+    use m_jpSetupDynMatSF, only : CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat, readInz1, CalcHnGrV0Varphi, CalcHGrVarphi
+    use m_dfpt_init, only : Derivative
+
     implicit none
 
     ! Type parameter
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),              intent(in)  :: atoms
+    type(t_input),              intent(in)  :: input
     type(t_sphhar),             intent(in)  :: lathar
     type(t_stars),              intent(in)  :: stars
     type(t_cell),               intent(in)  :: cell
     type(t_sym),                intent(in)  :: sym
-    type(t_dimension),          intent(in)  :: dimens
     type(t_kpts),               intent(in)  :: kpts
     type(t_kpts),               intent(in)  :: qpts
     type(t_usdus),              intent(in)  :: usdus
@@ -1588,7 +1585,7 @@ module m_jpSetupDynMat
     integer,                    intent(in)  :: GbasVec(:, :)
     integer,                    intent(in)  :: ilst(:, :, :)
     integer,                    intent(in)  :: kveclo(:,:)
-    MCOMPLEX,                   intent(in)  :: z(:,:,:,:)
+    complex,                   intent(in)  :: z(:,:,:,:)
     integer,                    intent(in)  :: iloTable(:, 0:, :)
     real,                       intent(in)  :: eig(:, :, :)
     integer,                    intent(in)  :: kpq2kPrVec(:, :, :)
@@ -1672,7 +1669,7 @@ module m_jpSetupDynMat
     lmpMax     = maxval( lmpT(:) )
     nRadFunMax = maxval( nRadFun(:, :) )
 
-    allocate( z1nG(dimens%nbasfcn, 3, atoms%nat, maxval(nobd(:, :))) )
+    allocate( z1nG(SIZE(z(:,1,1,1)), 3, atoms%nat, maxval(nobd(:, :))) )
     allocate( varphi1(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), varphi2(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
     allocate( r2(atoms%jmtd) )
     allocate( delrVarphi1( atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), delrVarphi2( atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
@@ -1681,7 +1678,7 @@ module m_jpSetupDynMat
     allocate( hVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax)  )
     allocate( varphiVarphi(lmpMax, lmpMax, atoms%ntype), varphiHvarphi(lmpMax, lmpMax, atoms%nat))
     allocate( grVarphiVarphi(lmpMax, lmpMax, -1:1, atoms%ntype), grVarphiHVarphi(lmpMax, lmpMax, -1:1, atoms%nat ) )
-    allocate( vEff0MtSpH( atoms%jmtd, 0:dimens%lmd), vEff0NsphGrVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, -1:1), &
+    allocate( vEff0MtSpH( atoms%jmtd, 0:atoms%lmaxd*(atoms%lmaxd+2)), vEff0NsphGrVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, -1:1), &
             & r2grVeff0SphVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, 3) )
     allocate( r2grVeff0Varphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, 3))
     allocate( hGrVarphi(2, atoms%jmtd, (atoms%lmaxd + 2)**2, lmpMax, -1:1))
@@ -1751,7 +1748,7 @@ module m_jpSetupDynMat
         !todo block begin                             place this block into calchngrv0varphi
         ! Expand the coefficients of the lattice-harmonic given potential into spherical-harmonic coefficients for the given atom.
         vEff0MtSpH(:, :) = cmplx(0.0, 0.0)
-        ptsym = atoms%ntypsy(iatom)
+        ptsym = sym%ntypsy(iatom)
         do ilh = 0, lathar%nlh(ptsym)
           oqn_l = lathar%llh(ilh, ptsym)
           lm_pre = oqn_l * (oqn_l + 1)
@@ -1769,7 +1766,7 @@ module m_jpSetupDynMat
         !todo block end.............................................
 
         hVarphi = cmplx(0.0, 0.0)
-        call CalcHnGrV0Varphi( atoms, lathar, itype, iatom, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, vEff0MtLh, clnu_atom, &
+        call CalcHnGrV0Varphi( atoms, sym, lathar, itype, iatom, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, vEff0MtLh, clnu_atom, &
           & nmem_atom, mlh_atom, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, hVarphi, vEff0NsphGrVarphi, r2grVeff0SphVarphi, r2grVeff0Varphi )
 
         do mqn_m2PrC = -1, 1
@@ -1859,7 +1856,7 @@ module m_jpSetupDynMat
       !& mapKpq2K, nobd, z, z1nG, iloTable, grVarphiVarphi, nRadFun, eig, kpq2kPrVec, grVarphiHvarphi, &
       !& varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, varphiGrVeff0SphVarphi, varphiHGrvarphi, varphiGrVarphi, dynMatPu )
       !write(470,*) dynMatPu
-      call AddAlexPulayBraKets2DynMat( atoms, kpts, qpts, sym, dimens, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, GbasVec, ilst, kveclo, &
+      call AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, GbasVec, ilst, kveclo, &
       & mapKpq2K, nobd, z, z1nG, iloTable, grVarphiVarphi, nRadFun, eig, kpq2kPrVec, grVarphiHvarphi, &
       & varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, &
       & varphiGrVeff0SphVarphi, varphiHGrvarphi, varphiGrVarphi, dynMatPu )
@@ -1875,7 +1872,7 @@ module m_jpSetupDynMat
 
     use m_types, only : t_atoms
     !use m_intgr, only : intgr3NoIntp
-    use m_intgr, only : intgr3LinIntp
+    use m_intgr, only : intgr3!LinIntp ! TODO: Is this ok?
     !use m_intgr, only : intgr3
 
     implicit none
@@ -1969,7 +1966,7 @@ module m_jpSetupDynMat
                         & ( grVarphiCh1(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * grVarphiCh1(imesh, ichan, lmp, mqn_m2PrC) &
                         & + grVarphiCh2(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * grVarphiCh2(imesh, ichan, lmp, mqn_m2PrC) )
                       end do ! imesh
-                      call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
+                      call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
                       !call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
 !
                       grVarphiGrtVarphi(lmp1Pr, lmp, mqn_m2prR, mqn_m2prC, itype) = &
@@ -1986,8 +1983,8 @@ module m_jpSetupDynMat
                         &   (grVarPhiCh1(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * vEff0NsphGrVarphi(1, imesh, lm3Pr, lmp, mqn_m2PrC) &
                         &  + grVarPhiCh2(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * vEff0NsphGrVarphi(2, imesh, lm3Pr, lmp, mqn_m2PrC) ) )
                     end do ! imesh
-                    call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
-                    call intgr3LinIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI, 1)
+                    call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
+                    call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI )! TODO: Is this ok?
                     ! < grVarphi | Veff0nsph | grVarphi >
                     grVarphiVeff0NsphGrvarphi(lmp1Pr, lmp) = grVarphiVeff0NsphGrvarphi(lmp1Pr, lmp) + cmplx(integralR, integralI)
 
@@ -2002,8 +1999,8 @@ module m_jpSetupDynMat
                         &   (grVarPhiCh1(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * r2grVeff0SphVarphi(1, imesh, lm3Pr, lmp, mqn_m2PrC + 2) &
                         &  + grVarPhiCh2(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * r2grVeff0SphVarphi(2, imesh, lm3Pr, lmp, mqn_m2PrC + 2) ) )
                     end do ! imesh
-                    call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
-                    call intgr3LinIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI, 1)
+                    call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
+                    call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)! TODO: Is this ok?
                     ! < grVarphi| grTveff0Sph |varphi >
                     ! idir = mqn_m2PrC + 2 due to performance reasons
                     grVarphiGrtVeff0SphVarphi(lmp1Pr, lmp, mqn_m2PrR, mqn_m2PrC + 2, iatom) = &
@@ -2039,7 +2036,7 @@ module m_jpSetupDynMat
 
     use m_types, only : t_atoms
 !    use m_intgr, only : intgr3NoIntp
-    use m_intgr, only : intgr3LinIntp
+    use m_intgr, only : intgr3!LinIntp! TODO: Is this ok?
 !    use m_intgr, only : intgr3
 
     implicit none
@@ -2126,7 +2123,7 @@ module m_jpSetupDynMat
                     & + grVarPhiCh2(imesh, ichan, lmp1Pr, mqn_m2Pr) * varphi2(imesh, iradf, oqn_l) )
                 end do ! imesh
                 !call intgr3NoIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
-                call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
+                call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
                 !call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
                 ! < grVarphi | varphi >
                 grVarphiVarphi(lmp1Pr, lmp, mqn_m2Pr) = grVarphiVarphi(lmp1Pr, lmp, mqn_m2Pr) + integralR
@@ -2157,9 +2154,9 @@ module m_jpSetupDynMat
                         &  + grVarPhiCh2(imesh, ichan, lmp1Pr, mqn_m2Pr) * hVarphi(2, imesh, lm3Pr, lmp) ) )
                     end do ! imesh
             !        call intgr3NoIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
-                call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
+                call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
             !        call intgr3NoIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)
-                call intgr3LinIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI, 1)
+                call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)! TODO: Is this ok?
                     ! < grVarphi| H |varphi >
                     grVarphiHvarphi(lmp1Pr, lmp, mqn_m2Pr) = grVarphiHvarphi(lmp1Pr, lmp, mqn_m2Pr) &
                       & + cmplx(integralR, integralI)
@@ -2178,7 +2175,7 @@ module m_jpSetupDynMat
 
     use m_types, only : t_atoms, t_usdus
  !   use m_intgr, only : intgr3NoIntp
-    use m_intgr, only : intgr3LinIntp
+    use m_intgr, only : intgr3!LinIntp! TODO: Is this ok?
  !   use m_intgr, only : intgr3
 
     implicit none
@@ -2252,7 +2249,7 @@ module m_jpSetupDynMat
               intgrdR(imesh) = r2(imesh) * (varphi1(imesh, iradf1Pr, oqn_l) * varphi1(imesh, iradf, oqn_l) &
                 & + varphi2(imesh, iradf1Pr, oqn_l) * varphi2(imesh, iradf, oqn_l))
             end do ! imesh
-            call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
+            call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR )! TODO: Is this ok?
             varphiVarphi(lmp + iradf1Pr, lmp + iradf, itype) = integralR
           end do ! iradf1Pr
         end do ! iradf
@@ -2280,8 +2277,8 @@ module m_jpSetupDynMat
 !                call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)
 !                call intgr3NoIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
 !                call intgr3NoIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)
-                call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
-                call intgr3LinIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI, 1)
+                call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR )! TODO: Is this ok?
+                call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI )! TODO: Is this ok?
                 varphiHvarphi(lmp1Pr, lmp, iatom) = cmplx(integralR, integralI)
 
                 !!!For symmetrized kinetic energy:
@@ -2338,17 +2335,16 @@ module m_jpSetupDynMat
   !> @todo
   !> Account for the spin.
   !>-------------------------------------------------------------------------------------------------------------------------------------
-  subroutine CalcSelfAdjCorrection(atoms, dimens, chanMax, nRadFunMax, itype, mqn_m2Pr, nRadFun, grFlpChLout, grFlpChMout,   &
+  subroutine CalcSelfAdjCorrection(atoms, chanMax, nRadFunMax, itype, mqn_m2Pr, nRadFun, grFlpChLout, grFlpChMout,   &
       & varphi1, varphi2, delrVarphi1, delrVarphi2, braFuncCh1, braFuncCh2, delrBraFuncCh1, delrBraFuncCh2, selfAdjCorrection)
 
-      use m_types, only : t_atoms, t_dimension
-      use m_juDFT_NOstopNO, only : juDFT_error
+      use m_types, only : t_atoms
+      use m_juDFT_stop, only : juDFT_error
 
       implicit none
 
       ! Type paramter
       type(t_atoms),                  intent(in)  :: atoms
-      type(t_dimension),              intent(in)  :: dimens
 
       ! Scalar parameter
       ! chanMax: maximal number of scattering channels
@@ -2543,25 +2539,25 @@ module m_jpSetupDynMat
   !> Some arrays may be saved in the Heps calculation. we do not need one array for H and one for the overlap we can write into the
   !> heps array at once!
   !>-------------------------------------------------------------------------------------------------------------------------------------
-  subroutine Add2ndOrdWfPulayBraKets2DynMat( atoms, cell, dimens, sym, kpts, qpts, usdus, results, iqpt, ikpt, pMax, lmpMax, eps1DynMatPulTestSw, testComp2ndN1stOrdBasFuncSw, mapKpq2K, eig, nobd, nv, &
+  subroutine Add2ndOrdWfPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, cell, sym, kpts, qpts, usdus, results, iqpt, ikpt, pMax, lmpMax, eps1DynMatPulTestSw, testComp2ndN1stOrdBasFuncSw, mapKpq2K, eig, nobd, nv, &
       & gbas, ilst, kveclo, z, z1nG, nRadFun, iloTable, varphiVarphi, varphiHvarphi, grVarphiVarphiNat, grVarphiHVarphiNat, &
       & lmpT, varphiGrVeff0SphVarphi, varphiHGrvarphiNat, varphiGrVarphiNat, varphiGrVeff0Varphi, dynMatPu )
 
-#include"cppmacro.h"
-
     use m_abcof3
-    use m_types, only : t_atoms, t_sym, t_cell, t_kpts, t_dimension, t_usdus, t_results
-    use m_od_types, only : od_inp, od_sym
-    use mod_juPhonUtils, only : outerProduct, outerProductME
-    use m_jpConstants, only : iu, Tmatrix, Tmatrix_transposed
-    use m_juDFT_NOstopNO, only : juDFT_error
+    use m_types
+    use m_jp2ndOrdQuant, only : outerProduct, outerProductME
+    use m_juDFT_stop, only : juDFT_error
 
     implicit none
 
     ! Type parameters
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                  intent(in)    :: atoms
+    type(t_input),                  intent(in)    :: input
     type(t_cell),                   intent(in)    :: cell
-    type(t_dimension),              intent(in)    :: dimens
     type(t_sym),                    intent(in)    :: sym
     type(t_kpts),                   intent(in)    :: kpts
     type(t_kpts),                   intent(in)    :: qpts
@@ -2585,7 +2581,7 @@ module m_jpSetupDynMat
     integer,                        intent(in)    :: gbas(:, :)
     integer,                        intent(in)    :: ilst(:, :, :)
     integer,                        intent(in)    :: kveclo(:,:)
-    MCOMPLEX,                       intent(in)    :: z(:,:,:,:)
+    complex,                       intent(in)    :: z(:,:,:,:)
     complex,                        intent(in)    :: z1nG(:, :, :, :)
     integer,                        intent(in)    :: nRadFun(0:, :)
     integer,                        intent(in)    :: iloTable(:, 0:, :)
@@ -2603,6 +2599,7 @@ module m_jpSetupDynMat
     ! Type variable
     type(od_inp)                                  :: odi
     type(od_sym)                                  :: ods
+    type(t_lapw) :: lapw
 
     ! Scalar variables
     integer                                       :: iBas
@@ -2624,6 +2621,7 @@ module m_jpSetupDynMat
     integer                                       :: idirC
     integer                                       :: ikpq
     complex                                       :: matElemHeps
+    integer :: nk
 
 
 
@@ -2686,12 +2684,12 @@ module m_jpSetupDynMat
     ngoprI(:) = 1
 
     ! Allocate matching coefficients of MT basis functions
-    allocate( a( dimens%nvd, 0:dimens%lmd, atoms%nat), b(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( a( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), b(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       & bascof_lo(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
-    allocate( aKpq( dimens%nvd, 0:dimens%lmd, atoms%nat), bKpq(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( aKpq( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bKpq(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       & bascof_loKpq(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
-    allocate( z1Gext(dimens%nvd) )
-    allocate( gbasExt( dimens%nbasfcn, 3), gbasExtKpq( dimens%nbasfcn, 3), gBasMatExt( dimens%nbasfcn, 3, 3 ) )
+    allocate( z1Gext(MAXVAL(nv)) )
+    allocate( gbasExt( SIZE(z(:,1,1,1)), 3), gbasExtKpq( SIZE(z(:,1,1,1)), 3), gBasMatExt( SIZE(z(:,1,1,1)), 3, 3 ) )
     allocate( ab0cofScl(lmpMax), ab0cofVec(lmpMax, 3), abcofSumVec(lmpMax, 3), ab1cofVec( lmpMax, atoms%nat, 3), abcofMat(pMax), &
       & abcofSumMat(lmpMax, atoms%nat, 3, 3), abcofSumMatAlpha(lmpMax) )
     allocate( varphiPsi(lmpMax), grVarphiPsiNat(lmpMax, 3), varphiHPsi(lmpMax), &
@@ -2742,23 +2740,31 @@ module m_jpSetupDynMat
       aKpq(:, :, :) = cmplx(0.0, 0.0)
       bKpq(:, :, :) = cmplx(0.0, 0.0)
       bascof_loKpq(:, :, :, :, :) = cmplx(0.0, 0.0)
-      call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-        & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-        & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), gbas(1, ilst(:nv(1, ikpq), ikpq, 1)), &
-        & gbas(2, ilst(:nv(1, ikpq), ikpq, 1)), gbas(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq), nmat, &
-        & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-        & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
+      !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z(:,1,1,1)), &
+        !& atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+        !& atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), gbas(1, ilst(:nv(1, ikpq), ikpq, 1)), &
+        !& gbas(2, ilst(:nv(1, ikpq), ikpq, 1)), gbas(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq), nmat, &
+        !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+        !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
+        nk=fmpi%k_list(ikpq)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
+                            usdus, oneD, 1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
 
       nmat = nv(1, ikpt) + atoms%nlotot
       a(:, :, :) = cmplx(0.0, 0.0)
       b(:, :, :) = cmplx(0.0, 0.0)
       bascof_lo(:, :, :, :, :) = cmplx(0.0, 0.0)
-      call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-        & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-        & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, ilst(:nv(1, ikpt), ikpt, 1)), &
-        & gbas(2, ilst(:nv(1, ikpt), ikpt, 1)), gbas(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
-        & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-        & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+     ! call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z(:,1,1,1)), &
+    !    & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+    !    & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, ilst(:nv(1, ikpt), ikpt, 1)), &
+    !    & gbas(2, ilst(:nv(1, ikpt), ikpt, 1)), gbas(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
+    !    & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+    !    & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+    nk=fmpi%k_list(ikpt)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+    CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
+                        usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
 
       do iband = 1, nobd(ikpt, 1)
         iDatomA = 0
@@ -2772,21 +2778,21 @@ module m_jpSetupDynMat
               do mqn_m = - oqn_l, oqn_l
                 pMaxLocal = nRadFun(oqn_l, iDtypeA)
                 ! p = 1
-                ab0cofScl(lmp + 1) = iu**oqn_l * dot_product( conjg(z(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomA) )
+                ab0cofScl(lmp + 1) = ImagUnit**oqn_l * dot_product( conjg(z(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomA) )
                 ! p = 2
-                ab0cofScl(lmp + 2) = iu**oqn_l * dot_product( conjg(z(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomA) )
+                ab0cofScl(lmp + 2) = ImagUnit**oqn_l * dot_product( conjg(z(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomA) )
                 ! Add LO contributions
                 do iradf = 3, pMaxLocal
                   ! p = 1
-                  ab0cofScl(lmp + 1) = ab0cofScl(lmp + 1) + iu**oqn_l * &
+                  ab0cofScl(lmp + 1) = ab0cofScl(lmp + 1) + ImagUnit**oqn_l * &
                     & dot_product( conjg(z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                          & bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                   ! p = 2
-                  ab0cofScl(lmp + 2) = ab0cofScl(lmp + 2) + iu**oqn_l * &
+                  ab0cofScl(lmp + 2) = ab0cofScl(lmp + 2) + ImagUnit**oqn_l * &
                     & dot_product( conjg(z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                          & bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                   ! 2 < p < LOs for that l and that atom type
-                  ab0cofScl(lmp + iradf) = iu**oqn_l * dot_product( conjg(z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                  ab0cofScl(lmp + iradf) = ImagUnit**oqn_l * dot_product( conjg(z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                          & bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                 end do ! iradf
 
@@ -2810,24 +2816,24 @@ module m_jpSetupDynMat
                 do mqn_m = -oqn_l, oqn_l
                   pMaxLocal = nRadFun(oqn_l, iDtypeA)
                   ! p = 1
-                  ab0cofVec(lmp + 1, idirR) = iu**oqn_l * dot_product( conjg( z(:nv(1, ikpt), iband, ikpt, 1)), &
+                  ab0cofVec(lmp + 1, idirR) = ImagUnit**oqn_l * dot_product( conjg( z(:nv(1, ikpt), iband, ikpt, 1)), &
                                                                       & gbasExt(:nv(1, ikpt), idirR) * a(:nv(1, ikpt), lm, iDatomA) )
                   ! p = 2
-                  ab0cofVec(lmp + 2, idirR) = iu**oqn_l * dot_product( conjg( z(:nv(1, ikpt), iband, ikpt, 1)), &
+                  ab0cofVec(lmp + 2, idirR) = ImagUnit**oqn_l * dot_product( conjg( z(:nv(1, ikpt), iband, ikpt, 1)), &
                                                                       & gbasExt(:nv(1, ikpt), idirR) * b(:nv(1, ikpt), lm, iDatomA) )
                   do iradf = 3, pMaxLocal
                     ! p = 1
-                    ab0cofVec(lmp + 1, idirR) = ab0cofVec(lmp + 1, idirR) + iu**oqn_l * &
+                    ab0cofVec(lmp + 1, idirR) = ab0cofVec(lmp + 1, idirR) + ImagUnit**oqn_l * &
                       & dot_product( conjg( z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ), &
                                                        &   gbasExt(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, idirR) &
                                                        & * bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                     ! p = 2
-                    ab0cofVec(lmp + 2, idirR) = ab0cofVec(lmp + 2, idirR) + iu**oqn_l * &
+                    ab0cofVec(lmp + 2, idirR) = ab0cofVec(lmp + 2, idirR) + ImagUnit**oqn_l * &
                       & dot_product( conjg( z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ), &
                                                        &   gbasExt(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, idirR) &
                                                        & * bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                     ! 2 < p < LOs for that l and that atom type
-                    ab0cofVec(lmp + iradf, idirR) = iu**oqn_l * dot_product( conjg( z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ),&
+                    ab0cofVec(lmp + iradf, idirR) = ImagUnit**oqn_l * dot_product( conjg( z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ),&
                                                        &   gbasExt(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, idirR) &
                                                        & * bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                   end do ! iradf
@@ -2835,7 +2841,7 @@ module m_jpSetupDynMat
                   ! This help array has to be calulated in a seperate loop here because earlier ab0cofVec would not be available and the
                   ! next command needs abcofSumVec already.
                   do iradf = 1, pMaxLocal
-                    abcofSumVec(lmp + iradf, idirR) = iu * (ab0cofScl(lmp + iradf) * kExt(idirR) + ab0cofVec(lmp + iradf, idirR))
+                    abcofSumVec(lmp + iradf, idirR) = ImagUnit * (ab0cofScl(lmp + iradf) * kExt(idirR) + ab0cofVec(lmp + iradf, idirR))
                   end do ! iradf
 
                   ! Precalculation of the 2nd and the 4th line in A.51. Due to performance, the lmp in the resulting quantity are not
@@ -2860,23 +2866,23 @@ module m_jpSetupDynMat
                     do mqn_m = -oqn_l, oqn_l
                       pMaxLocal = nRadFun(oqn_l, iDtypeB)
                       ! p = 1
-                      ab1cofVec(lmp + 1, iDatomB, idirR) = iu**oqn_l * &
+                      ab1cofVec(lmp + 1, iDatomB, idirR) = ImagUnit**oqn_l * &
                                      & dot_product( conjg( z1nG(:nv(1, ikpq), idirR, iDatomA, iband) ), aKpq(:nv(1, ikpq), lm, iDatomB) )
                       ! p = 2
-                      ab1cofVec(lmp + 2, iDatomB, idirR) = iu**oqn_l * &
+                      ab1cofVec(lmp + 2, iDatomB, idirR) = ImagUnit**oqn_l * &
                                      & dot_product( conjg( z1nG(:nv(1, ikpq), idirR, iDatomA, iband) ), bKpq(:nv(1, ikpq), lm, iDatomB) )
                       do iradf = 3, pMaxLocal
                         ! p = 1
                         ab1cofVec(lmp + 1, iDatomB, idirR) = ab1cofVec(lmp + 1, iDatomB, idirR) &
-                          & + iu**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ), &
+                          & + ImagUnit**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ), &
                                                       & bascof_loKpq(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                         ! p = 2
                         ab1cofVec(lmp + 2, iDatomB, idirR) = ab1cofVec(lmp + 2, iDatomB, idirR) &
-                          & + iu**oqn_l * dot_product(conjg(z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband)), &
+                          & + ImagUnit**oqn_l * dot_product(conjg(z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband)), &
                                                       & bascof_loKpq(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                         ! 2 < p < LOs for that l and that atom type
                         ab1cofVec(lmp + iradf, iDatomB, idirR) = &
-                          & iu**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ),&
+                          & ImagUnit**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ),&
                                                       & bascof_loKpq(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                       end do ! iradf
                       lm = lm + 1
@@ -2903,23 +2909,23 @@ module m_jpSetupDynMat
                     pMaxLocal = nRadFun(oqn_l, iDtypeA)
                     abcofMat(:) = cmplx(0.0, 0.0)
                     ! p = 1
-                    abcofMat(1) = iu**oqn_l * dot_product( conjg( z(:nv(1, ikpt), iband, ikpt, 1) ), &
+                    abcofMat(1) = ImagUnit**oqn_l * dot_product( conjg( z(:nv(1, ikpt), iband, ikpt, 1) ), &
                                                                 & GbasMatExt(:nv(1, ikpt), idirR, idirC) * a(:nv(1, ikpt), lm, iDatomA) )
                     ! p = 2
-                    abcofMat(2) = iu**oqn_l * dot_product( conjg( z(:nv(1, ikpt), iband, ikpt, 1) ), &
+                    abcofMat(2) = ImagUnit**oqn_l * dot_product( conjg( z(:nv(1, ikpt), iband, ikpt, 1) ), &
                                                                 & GbasMatExt(:nv(1, ikpt), idirR, idirC) * b(:nv(1, ikpt), lm, iDatomA) )
                     ! Add LOs
                     do iradf = 3, pMaxLocal
                       ! p = 1
-                      abcofMat(1) = abcofMat(1)  + iu**oqn_l * dot_product( conjg( z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ), &
+                      abcofMat(1) = abcofMat(1)  + ImagUnit**oqn_l * dot_product( conjg( z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ), &
                                                        &   GbasMatExt(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, idirR, idirC) &
                                                        & * bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                       ! p = 2
-                      abcofMat(2) = abcofMat(2)  + iu**oqn_l * dot_product( conjg( z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ), &
+                      abcofMat(2) = abcofMat(2)  + ImagUnit**oqn_l * dot_product( conjg( z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ), &
                                                        &   GbasMatExt(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, idirR, idirC) &
                                                        & * bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                       ! 2 < p < LOs for that l and that atom type
-                      abcofMat(iradf) = iu**oqn_l * dot_product(conjg(z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                      abcofMat(iradf) = ImagUnit**oqn_l * dot_product(conjg(z(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        &   GbasMatExt(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, idirR, idirC) &
                                                        & * bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                     end do ! iradf
@@ -2955,20 +2961,20 @@ module m_jpSetupDynMat
                         pMaxLocal = nRadFun(oqn_l, iDtypeB)
 
                         ! p = 1
-                        abcofMat(1) = iu**oqn_l * dot_product( conjg(z1Gext(:nv(1, ikpq)) ), aKpq(:nv(1, ikpq), lm, iDatomB) )
+                        abcofMat(1) = ImagUnit**oqn_l * dot_product( conjg(z1Gext(:nv(1, ikpq)) ), aKpq(:nv(1, ikpq), lm, iDatomB) )
                         ! p = 2
-                        abcofMat(2) = iu**oqn_l * dot_product( conjg(z1Gext(:nv(1, ikpq)) ), bKpq(:nv(1, ikpq), lm, iDatomB) )
+                        abcofMat(2) = ImagUnit**oqn_l * dot_product( conjg(z1Gext(:nv(1, ikpq)) ), bKpq(:nv(1, ikpq), lm, iDatomB) )
                         do iradf = 3, pMaxLocal
                           ! p = 1
                           abcofMat(1) = abcofMat(1) &
-                            & + iu**oqn_l * dot_product( conjg( z1Gext(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot)), &
+                            & + ImagUnit**oqn_l * dot_product( conjg( z1Gext(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot)), &
                                                       & bascof_loKpq(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                           ! p = 2
                           abcofMat(2) = abcofMat(2) &
-                            & + iu**oqn_l * dot_product( conjg( z1Gext(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot)), &
+                            & + ImagUnit**oqn_l * dot_product( conjg( z1Gext(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot)), &
                                                      & bascof_loKpq(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                           ! 2 < p < LOs for that l and that atom type
-                          abcofMat(iradf) = iu**oqn_l * dot_product( conjg(z1Gext(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot) ) &
+                          abcofMat(iradf) = ImagUnit**oqn_l * dot_product( conjg(z1Gext(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot) ) &
                                                     &, bascof_loKpq(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                         end do ! p
 
@@ -2979,7 +2985,7 @@ module m_jpSetupDynMat
                           !      abcofMat also assumes A to be displaced because of z1Gext, although B should be displaced, therefore
                           !      abcofSumMat should be dependent on iDatomB(displaced) and iDatomA(iterate over)
                           abcofSumMat(lmp + iradf, iDatomB, idirR, idirC) = &
-                            & iu * ( ab1cofVec(lmp + iradf, iDatomB, idirR) * kpqExt(idirC) + abcofMat(iradf) )
+                            & ImagUnit * ( ab1cofVec(lmp + iradf, iDatomB, idirR) * kpqExt(idirC) + abcofMat(iradf) )
                         ! This line should be activated if we want to test whehter it cancels away without looking at the that are remaining for the Goldstone condition.
                         !    & iu * ( ab1cofVec(lmp + iradf, iDatomB, idirR) * kpqExt(idirC) + abcofMat(iradf) )
                         end do ! iradf
@@ -3181,14 +3187,14 @@ module m_jpSetupDynMat
                 ! and idirR
                 grPsiHepsPsi(:, :) = cmplx(0.0, 0.0)
                 grPsiHepsPsiT(:, :) = cmplx(0.0, 0.0)
-                grPsiHepsPsi(1:3, 1:3) = matmul(grPsiHepsPsiNat(1:3, 1:3), conjg(Tmatrix_transposed(1:3, 1:3)))
-                grPsiHepsPsiT(1:3, 1:3) = matmul(conjg(Tmatrix(1:3, 1:3)), grPsiHepsPsiNatT(1:3, 1:3))
+                grPsiHepsPsi(1:3, 1:3) = matmul(grPsiHepsPsiNat(1:3, 1:3), transpose(conjg(Tmatrix0(1:3, 1:3))))
+                grPsiHepsPsiT(1:3, 1:3) = matmul(conjg(Tmatrix0(1:3, 1:3)), grPsiHepsPsiNatT(1:3, 1:3))
                 grPsiHepsPsi(1:3, 1:3) = grPsiHepsPsi(1:3, 1:3) + grPsiHepsPsiT(1:3, 1:3)
 
                 psiHepsGrPsi(:, :) = cmplx(0., 0.)
                 psiHepsGrPsiT(:, :) = cmplx(0., 0.)
-                psiHepsGrPsi(1:3, 1:3) = matmul(psiHepsGrPsiNat(1:3, 1:3), Tmatrix_transposed(1:3, 1:3))
-                psiHepsGrPsiT(1:3, 1:3) = matmul(Tmatrix(1:3, 1:3), psiHepsGrPsiNatT(1:3, 1:3))
+                psiHepsGrPsi(1:3, 1:3) = matmul(psiHepsGrPsiNat(1:3, 1:3), transpose(conjg(Tmatrix0(1:3, 1:3))))
+                psiHepsGrPsiT(1:3, 1:3) = matmul(Tmatrix0(1:3, 1:3), psiHepsGrPsiNatT(1:3, 1:3))
                 psiHepsGrPsi(1:3, 1:3) = psiHepsGrPsi(1:3, 1:3) + psiHepsGrPsiT(1:3, 1:3) - psiGrVeff0sphPsi(1:3, 1:3) - psiGrVeff0sphPsiT(1:3, 1:3)
                 do idirC = 1, 3
                   do idirR = 1, 3
@@ -3232,24 +3238,26 @@ module m_jpSetupDynMat
   !> @todo
   !> Account for the spin.
   !>-------------------------------------------------------------------------------------------------------------------------------------
-  subroutine Add1stOrdWfPulayBraKets2DynMat( atoms, kpts, qpts, sym, dimens, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, gBas, &
+  subroutine Add1stOrdWfPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, gBas, &
       & gBasUnwrap, kveclo, mapKpq2K, nobd, z, z1nG, iloTable, grVarphiVarphiNat, nRadFun, eig, kpq2kPrVec, &
       & grVarphiHvarphiNat, varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, &
       & testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, varphiGrVeff0SphVarphi, varphiHGrvarphiNat, varphiGrVarphiNat, dynMatPu )
 
-    use m_types, only : t_atoms, t_dimension, t_sym, t_cell, t_kpts, t_usdus, t_stars, t_results
+    use m_types
     use m_abcof3
-    use m_od_types, only : od_inp, od_sym
-    use m_jpConstants, only : iu, Tmatrix, Tmatrix_transposed
 
     implicit none
 
     ! Type parameters
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                  intent(in)    :: atoms
+    type(t_input),                  intent(in)    :: input
     type(t_kpts),                   intent(in)    :: kpts
     type(t_kpts),                   intent(in)    :: qpts
     type(t_sym),                    intent(in)    :: sym
-    type(t_dimension),              intent(in)    :: dimens
     type(t_cell),                   intent(in)    :: cell
     type(t_usdus),                  intent(in)    :: usdus
     type(t_stars),                  intent(in)    :: stars
@@ -3273,7 +3281,7 @@ module m_jpSetupDynMat
     integer,                        intent(in)    :: kveclo(:,:)
     integer,                        intent(in)    :: mapKpq2K(:, :)
     integer,                        intent(in)    :: nobd(:, :)
-    MCOMPLEX,                       intent(in)    :: z(:,:,:,:)
+    complex,                       intent(in)    :: z(:,:,:,:)
     complex,                        intent(in)    :: z1nG(:, :, :, :)
     integer,                        intent(in)    :: iloTable(:, 0:, :)
     real,                           intent(in)    :: grVarphiVarphiNat(:, :, :, :)
@@ -3292,6 +3300,7 @@ module m_jpSetupDynMat
     ! Type variable
     type(od_inp)                                  :: odi
     type(od_sym)                                  :: ods
+    type(t_lapw) :: lapw
 
     ! Scalar variables
     integer                                       :: nmat
@@ -3322,6 +3331,7 @@ module m_jpSetupDynMat
     integer                                       :: iDeqatB
     integer                                       :: iradf1Pr
     complex                                       :: sAdjCorrPsiGrPsiNat
+    integer :: nk
 
     ! Array variabels
     integer,           allocatable                :: ngoprI(:)
@@ -3362,11 +3372,11 @@ module m_jpSetupDynMat
     allocate(ngoprI(atoms%nat))
     ngoprI(:) = 1
 
-    allocate( gBasExt(dimens%nvd, 3) )
+    allocate( gBasExt(MAXVAL(nv), 3) )
     ! Small matching coefficients
-    allocate( a( dimens%nvd, 0:dimens%lmd, atoms%nat), b(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( a( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), b(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
             & bascof_lo(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
-    allocate( aKpq( dimens%nvd, 0:dimens%lmd, atoms%nat), bKpq(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( aKpq( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bKpq(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
             & bascof_loKpq(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
     ! Large matching coefficients
     allocate( ab0cofScl(lmpMax, atoms%nat), ab0cofVec(lmpMax), & !ab0KpGcof(lmpMax, 3, atoms%nat), &
@@ -3386,24 +3396,34 @@ module m_jpSetupDynMat
       a(:, :, :) = cmplx(0.0, 0.0)
       b(:, :, :) = cmplx(0.0, 0.0)
       bascof_lo(:, :, :, :, :) = cmplx(0.0, 0.0)
-      call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-        & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-        & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gBas(1, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), &
-        & gBas(2, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), gBas(3, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
-        & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-        & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+      !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z(:,1,1,1)), &
+        !& atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+        !& atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gBas(1, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), &
+        !& gBas(2, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), gBas(3, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
+        !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+        !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+
+        nk=fmpi%k_list(ikpt)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
+                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
 
       ! Matching coefficients of MT basis functions at k + q = k' (ikpq). In the MT we must not account for the backfolding vector.
       nmat = nv(1, ikpq) + atoms%nlotot
       aKpq(:, :, :) = cmplx(0.0, 0.0)
       bKpq(:, :, :) = cmplx(0.0, 0.0)
       bascof_loKpq(:, :, :, :, :) = cmplx(0.0, 0.0)
-      call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-        & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-        & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), gBas(1, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), &
-        & gBas(2, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), gBas(3, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq), nmat, &
-        & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-        & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
+      !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z(:,1,1,1)), &
+        !& atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+        !& atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), gBas(1, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), &
+        !& gBas(2, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), gBas(3, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq), nmat, &
+        !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+        !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
+
+        nk=fmpi%k_list(ikpq)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
+                            usdus, oneD, 1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
 
       ! Quantities we need later as decoration for the matching coefficients
       kExt(1:3) = matmul(cell%bmat(1:3, 1:3), kpts%bk(1:3, ikpt))
@@ -3436,21 +3456,21 @@ module m_jpSetupDynMat
               do mqn_m = - oqn_l, oqn_l
                 pMaxLocal = nRadFun(oqn_l, iDtypeA)
                 ! p = 1
-                ab0cofScl(lmp + 1, iDatomA) = iu**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomA))
+                ab0cofScl(lmp + 1, iDatomA) = ImagUnit**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomA))
                 ! p = 2
-                ab0cofScl(lmp + 2, iDatomA) = iu**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomA))
+                ab0cofScl(lmp + 2, iDatomA) = ImagUnit**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomA))
                 ! Add LO contributions
                 do iradf = 3, pMaxLocal
                   ! p = 1
                   ab0cofScl(lmp + 1, iDatomA) = ab0cofScl(lmp + 1, iDatomA) &
-                    & + iu**oqn_l * dot_product( conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                    & + ImagUnit**oqn_l * dot_product( conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                         & bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                   ! p = 2
                   ab0cofScl(lmp + 2, iDatomA) = ab0cofScl(lmp + 2, iDatomA) &
-                    & + iu**oqn_l * dot_product( conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                    & + ImagUnit**oqn_l * dot_product( conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                         & bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                   ! 2 < p < LOs for that l and that atom type
-                  ab0cofScl(lmp + iradf, iDatomA) = iu**oqn_l * dot_product( conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                  ab0cofScl(lmp + iradf, iDatomA) = ImagUnit**oqn_l * dot_product( conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                         & bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                 end do ! iradf
                 lm = lm + 1
@@ -3468,21 +3488,21 @@ module m_jpSetupDynMat
 
                   ! p = 1
                   ab0cofVec(lmp + 1) = &
-                    &iu**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) * a(:nv(1, ikpt), lm, iDatomA))
+                    &ImagUnit**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) * a(:nv(1, ikpt), lm, iDatomA))
                   ! p = 2
                   ab0cofVec(lmp + 2) = &
-                    &iu**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) * b(:nv(1, ikpt), lm, iDatomA))
+                    &ImagUnit**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) * b(:nv(1, ikpt), lm, iDatomA))
                   do iradf = 3, pMaxLocal
                     ! p = 1
-                    ab0cofVec(lmp + 1) = ab0cofVec(lmp + 1) + iu**oqn_l * dot_product(conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                    ab0cofVec(lmp + 1) = ab0cofVec(lmp + 1) + ImagUnit**oqn_l * dot_product(conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                       &   gBasExt(kveclo(:atoms%nlotot, ikpt), idirR) &
                                                       & * bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                     ! p = 2
-                    ab0cofVec(lmp + 2) = ab0cofVec(lmp + 2) + iu**oqn_l * dot_product(conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                    ab0cofVec(lmp + 2) = ab0cofVec(lmp + 2) + ImagUnit**oqn_l * dot_product(conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                       &   gBasExt(kveclo(:atoms%nlotot, ikpt), idirR) &
                                                       & * bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                     ! 2 < p < LOs for that l and that atom type
-                    ab0cofVec(lmp + iradf) = iu**oqn_l * dot_product(conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                    ab0cofVec(lmp + iradf) = ImagUnit**oqn_l * dot_product(conjg(z(nv(1, ikpt) + 1 :nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                       &   gBasExt(kveclo(:atoms%nlotot, ikpt), idirR) &
                                                       & * bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                   end do ! iradf
@@ -3493,7 +3513,7 @@ module m_jpSetupDynMat
               end do ! oqn_l
               ! This is supposed to be the sum of abcofs which belong to
               abGrPsiSumCof(1:lmpT(iDtypeA), idirR, iDatomA, iDatomA) = &
-                                           & iu * ( kExt(idirR) * ab0cofScl(1:lmpT(iDtypeA), iDatomA) + ab0cofVec(1:lmpT(iDtypeA)) )
+                                           & ImagUnit * ( kExt(idirR) * ab0cofScl(1:lmpT(iDtypeA), iDatomA) + ab0cofVec(1:lmpT(iDtypeA)) )
             end do ! idirR
             ! Diagonal in atoms
             abGrPsiSumCofDiag(:, :, :) = cmplx(0., 0.)
@@ -3513,18 +3533,18 @@ module m_jpSetupDynMat
                       ! This quantity has also to be calculated for all atom combinations before proceeding as we do here by closing the
                       ! atom alpha loops.
                       ab1cofVec(lmp + 1, idirR, iDatomB, iDatomA) = &
-                                         & iu**oqn_l * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomA, iband)), aKpq(:nv(1, ikpq), lm, iDatomB))
+                                         & ImagUnit**oqn_l * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomA, iband)), aKpq(:nv(1, ikpq), lm, iDatomB))
                       ab1cofVec(lmp + 2, idirR, iDatomB, iDatomA) = &
-                                         & iu**oqn_l * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomA, iband)), bKpq(:nv(1, ikpq), lm, iDatomB))
+                                         & ImagUnit**oqn_l * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomA, iband)), bKpq(:nv(1, ikpq), lm, iDatomB))
                       do iradf = 3, pMaxLocal
                         ab1cofVec(lmp + 1, idirR, iDatomB, iDatomA) = ab1cofVec(lmp + 1, idirR, iDatomB, iDatomA) &
-                                     & + iu**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1 :nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ), &
+                                     & + ImagUnit**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1 :nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ), &
                                                      & bascof_loKpq(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                         ab1cofVec(lmp + 2, idirR, iDatomB, iDatomA) = ab1cofVec(lmp + 2, idirR, iDatomB, iDatomA) &
-                                     & + iu**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1 :nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ), &
+                                     & + ImagUnit**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1 :nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ), &
                                                      & bascof_loKpq(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                         ab1cofVec(lmp + iradf, idirR, iDatomB, iDatomA) = &
-                                     &   iu**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1 :nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ), &
+                                     &   ImagUnit**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1 :nv(1, ikpq) + atoms%nlotot, idirR, iDatomA, iband) ), &
                                                      & bascof_loKpq(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                       end do ! iradf
                       ! This is a precalculation for the quantity evaluated in the MTs of the whole unit cell (1st term of A.53 in
@@ -3630,11 +3650,11 @@ module m_jpSetupDynMat
                 end do ! idirC
 
                 psiHepsgrPsi(:, :) = cmplx(0.0, 0.0)
-                psiHepsgrPsi(1:3, 1:3) = matmul(psiHepsgrPsiNat(1:3, 1:3), Tmatrix_transposed(1:3, 1:3))
+                psiHepsgrPsi(1:3, 1:3) = matmul(psiHepsgrPsiNat(1:3, 1:3), transpose(Tmatrix0(1:3, 1:3)))
                 psiHepsgrPsi(1:3, 1:3) = psiHepsgrPsi(1:3, 1:3) - psiGrVeff0sphPsi(1:3, 1:3)
 
                 grPsiHepsPsi(:, :) = 0.
-                grPsiHepsPsi(1:3, 1:3) = matmul(conjg(Tmatrix(1:3, 1:3)), grPsiHepsPsiNat(1:3, 1:3))
+                grPsiHepsPsi(1:3, 1:3) = matmul(conjg(Tmatrix0(1:3, 1:3)), grPsiHepsPsiNat(1:3, 1:3))
 
                 do idirC = 1, 3
                   iatomG = 0
@@ -3658,7 +3678,7 @@ module m_jpSetupDynMat
                       ! todo The shift of the Gsets might be wrong kpq2kPrVec is for both basis funcrtions so cancels away actually
                       ! therefore one can also leave it away
                       ! nmat is at k + q, as given before the last abcof3 call in this routine
-                      call calcPsi1HepsPsi1IR( kpts, qpts, stars, dimens, cell, gBas(:, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), nv, &
+                      call calcPsi1HepsPsi1IR( kpts, qpts, stars, cell, gBas(:, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), nv, &
                         & z1nG(:, idirR, iDatomB, iband), z1nG(:, idirC, iDatomA, iband), nmat, ikpt, iqpt, ikpq, kpq2kPrVec, &
                         & vEff0IR, eig, iband, wholeUnitCellIR )
 
@@ -3706,24 +3726,26 @@ module m_jpSetupDynMat
 
   end subroutine Add1stOrdWfPulayBraKets2DynMat
 
-  subroutine AddAlexPulayBraKets2DynMat( atoms, kpts, qpts, sym, dimens, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, gBas, &
+  subroutine AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, gBas, &
       & gBasUnwrap, kveclo, mapKpq2K, nobd, z, z1nG, iloTable, grVarphiVarphiNat, nRadFun, eig, kpq2kPrVec, &
       & grVarphiHvarphiNat, varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, &
       & testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, varphiGrVeff0SphVarphi, varphiHGrvarphiNat, varphiGrVarphiNat, dynMatPu )
 
-    use m_types, only : t_atoms, t_dimension, t_sym, t_cell, t_kpts, t_usdus, t_stars, t_results
+    use m_types
     use m_abcof3
-    use m_od_types, only : od_inp, od_sym
-    use m_jpConstants, only : iu, Tmatrix, Tmatrix_transposed
 
     implicit none
 
     ! Type parameters
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                  intent(in)    :: atoms
+    type(t_input),                  intent(in)    :: input
     type(t_kpts),                   intent(in)    :: kpts
     type(t_kpts),                   intent(in)    :: qpts
     type(t_sym),                    intent(in)    :: sym
-    type(t_dimension),              intent(in)    :: dimens
     type(t_cell),                   intent(in)    :: cell
     type(t_usdus),                  intent(in)    :: usdus
     type(t_stars),                  intent(in)    :: stars
@@ -3747,7 +3769,7 @@ module m_jpSetupDynMat
     integer,                        intent(in)    :: kveclo(:,:)
     integer,                        intent(in)    :: mapKpq2K(:, :)
     integer,                        intent(in)    :: nobd(:, :)
-    MCOMPLEX,                       intent(in)    :: z(:,:,:,:)
+    complex,                       intent(in)    :: z(:,:,:,:)
     complex,                        intent(in)    :: z1nG(:, :, :, :)
     integer,                        intent(in)    :: iloTable(:, 0:, :)
     real,                           intent(in)    :: grVarphiVarphiNat(:, :, :, :)
@@ -3766,6 +3788,7 @@ module m_jpSetupDynMat
     ! Type variable
     type(od_inp)                                  :: odi
     type(od_sym)                                  :: ods
+    type(t_lapw) :: lapw
 
     ! Scalar variables
     integer                                       :: nmat
@@ -3796,6 +3819,7 @@ module m_jpSetupDynMat
     integer                                       :: iDeqatB
     integer                                       :: iradf1Pr
     complex                                       :: sAdjCorrPsiGrPsiNat
+    integer :: nk
 
     ! Array variabels
     integer,           allocatable                :: ngoprI(:)
@@ -3839,12 +3863,12 @@ module m_jpSetupDynMat
     allocate(ngoprI(atoms%nat))
     ngoprI(:) = 1
 
-    allocate( gBasExt(dimens%nvd, 3) )
-    allocate( gqBasExt(dimens%nvd, 3) )
+    allocate( gBasExt(MAXVAL(nv), 3) )
+    allocate( gqBasExt(MAXVAL(nv), 3) )
     ! Small matching coefficients
-    allocate( a( dimens%nvd, 0:dimens%lmd, atoms%nat), b(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( a( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), b(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
             & bascof_lo(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
-    allocate( aKpq( dimens%nvd, 0:dimens%lmd, atoms%nat), bKpq(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( aKpq( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bKpq(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
             & bascof_loKpq(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
     ! Large matching coefficients
     allocate( ab0cofScl(lmpMax, atoms%nat), ab0cofVec(lmpMax), & !ab0KpGcof(lmpMax, 3, atoms%nat), &
@@ -3869,24 +3893,33 @@ module m_jpSetupDynMat
     a(:, :, :) = cmplx(0.0, 0.0)
     b(:, :, :) = cmplx(0.0, 0.0)
     bascof_lo(:, :, :, :, :) = cmplx(0.0, 0.0)
-    call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-      & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-      & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gBas(1, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), &
-      & gBas(2, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), gBas(3, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
-      & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-      & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+    !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z(:,1,1,1)), &
+     ! & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+      !& atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gBas(1, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), &
+      !& gBas(2, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), gBas(3, gBasUnwrap(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
+      !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+      !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+      nk=fmpi%k_list(ikpt)
+      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+      CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
+                          usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
 
     ! Matching coefficients of MT basis functions at k + q = k' (ikpq). In the MT we must not account for the backfolding vector.
     nmat = nv(1, ikpq) + atoms%nlotot
     aKpq(:, :, :) = cmplx(0.0, 0.0)
     bKpq(:, :, :) = cmplx(0.0, 0.0)
     bascof_loKpq(:, :, :, :, :) = cmplx(0.0, 0.0)
-    call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-      & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-      & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), gBas(1, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), &
-      & gBas(2, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), gBas(3, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq), nmat, &
-      & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-      & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
+    !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z(:,1,1,1)), &
+     ! & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+     ! & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), gBas(1, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), &
+      !& gBas(2, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), gBas(3, gBasUnwrap(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq), nmat, &
+      !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+      !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
+      nk=fmpi%k_list(ikpq)
+      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+      CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
+                          usdus, oneD, 1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
+
 
     ! Quantities we need later as decoration for the matching coefficients
     !kExt(1:3) = matmul(cell%bmat(1:3, 1:3), kpts%bk(1:3, ikpt))
@@ -3917,8 +3950,8 @@ module m_jpSetupDynMat
           do oqn_l = 0, atoms%lmax(iDtypeA)
             do mqn_m = - oqn_l, oqn_l
               pMaxLocal = nRadFun(oqn_l, iDtypeA)
-              bigAscal(lmp + 1, iDatomA) = iu**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomA))
-              bigAscal(lmp + 2, iDatomA) = iu**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomA))
+              bigAscal(lmp + 1, iDatomA) = ImagUnit**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomA))
+              bigAscal(lmp + 2, iDatomA) = ImagUnit**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomA))
               lm = lm + 1
               lmp = lmp + pMaxLocal
             end do ! mqn_m
@@ -3930,8 +3963,8 @@ module m_jpSetupDynMat
             do oqn_l = 0, atoms%lmax(iDtypeA)
               do mqn_m = -oqn_l, oqn_l
                 pMaxLocal = nRadFun(oqn_l, iDtypeA)
-                bigAvec(lmp + 1, idirR, iDatomA) = iu**oqn_l * iu * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) * a(:nv(1, ikpt), lm, iDatomA))
-                bigAvec(lmp + 2, idirR, iDatomA) = iu**oqn_l * iu * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) * b(:nv(1, ikpt), lm, iDatomA))
+                bigAvec(lmp + 1, idirR, iDatomA) = ImagUnit**oqn_l * ImagUnit * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) * a(:nv(1, ikpt), lm, iDatomA))
+                bigAvec(lmp + 2, idirR, iDatomA) = ImagUnit**oqn_l * ImagUnit * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) * b(:nv(1, ikpt), lm, iDatomA))
                 lm = lm + 1
                 lmp = lmp + nRadFun(oqn_l, iDtypeA)
               end do ! mqn_m
@@ -3946,10 +3979,10 @@ module m_jpSetupDynMat
                 do mqn_m = -oqn_l, oqn_l
                   pMaxLocal = nRadFun(oqn_l, iDtypeA)
                   bigAmat(lmp + 1, idirR, idirC, iDatomA) = &
-                         & iu**oqn_l *  dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) &
+                         & ImagUnit**oqn_l *  dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) &
                                                                                             & * gBasExt(:nv(1, ikpt), idirC) * a(:nv(1, ikpt), lm, iDatomA))
                   bigAmat(lmp + 2, idirR, idirC, iDatomA) = &
-                         & iu**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) &
+                         & ImagUnit**oqn_l * dot_product(conjg(z(:nv(1, ikpt), iband, ikpt, 1)), gBasExt(:nv(1, ikpt), idirR) &
                                                                                             & * gBasExt(:nv(1, ikpt), idirC) * b(:nv(1, ikpt), lm, iDatomA))
                   lm = lm + 1
                   lmp = lmp + nRadFun(oqn_l, iDtypeA)
@@ -3969,9 +4002,9 @@ module m_jpSetupDynMat
                   do mqn_m = -oqn_l, oqn_l
                     pMaxLocal = nRadFun(oqn_l, iDtypeA)
                     bigAz1vec(lmp + 1, idirR, iDatomA, iDatomB) = &
-                                       & iu**oqn_l * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomB, iband)), aKpq(:nv(1, ikpq), lm, iDatomA))
+                                       & ImagUnit**oqn_l * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomB, iband)), aKpq(:nv(1, ikpq), lm, iDatomA))
                     bigAz1vec(lmp + 2, idirR, iDatomA, iDatomB) = &
-                                       & iu**oqn_l * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomB, iband)), bKpq(:nv(1, ikpq), lm, iDatomA))
+                                       & ImagUnit**oqn_l * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomB, iband)), bKpq(:nv(1, ikpq), lm, iDatomA))
                     lm = lm + 1
                     lmp = lmp + nRadFun(oqn_l, iDtypeA)
                   end do ! mqn_m
@@ -3985,10 +4018,10 @@ module m_jpSetupDynMat
                     do mqn_m = -oqn_l, oqn_l
                       pMaxLocal = nRadFun(oqn_l, iDtypeA)
                       bigAz1mat(lmp + 1, idirR, idirC, iDatomA, iDatomB) = &
-                                         & iu**oqn_l * iu * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomB, iband)), &
+                                         & ImagUnit**oqn_l * ImagUnit * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomB, iband)), &
                                                                       & gqBasExt(:nv(1, ikpq), idirC) * aKpq(:nv(1, ikpq), lm, iDatomA))
                       bigAz1mat(lmp + 2, idirR, idirC, iDatomA, iDatomB) = &
-                                         & iu**oqn_l * iu * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomB, iband)), &
+                                         & ImagUnit**oqn_l * ImagUnit * dot_product(conjg(z1nG(:nv(1, ikpq), idirR, iDatomB, iband)), &
                                                                       & gqBasExt(:nv(1, ikpq), idirC) * bKpq(:nv(1, ikpq), lm, iDatomA))
                       lm = lm + 1
                       lmp = lmp + nRadFun(oqn_l, iDtypeA)
@@ -4115,18 +4148,17 @@ module m_jpSetupDynMat
   !> @todo modernize method!!!
   !> @todo this routine is similiar to calcMEPotIR within jpSternhHF maybe unite it
   !--------------------------------------------------------------------------------------------------------------------------------------
-  subroutine calcPsi1HepsPsi1IR( kpts, qpts, stars, dimens, cell, Gbas, nv, z1Bra, z1Ket, nmat, ikpt, iqpt, ikpq, kpq2kPrVec, vEff0IR, eig, iband,&
+  subroutine calcPsi1HepsPsi1IR( kpts, qpts, stars, cell, Gbas, nv, z1Bra, z1Ket, nmat, ikpt, iqpt, ikpq, kpq2kPrVec, vEff0IR, eig, iband,&
       & hepsIR )
-
-#include "recycledRoutines/cpp_arch.h"
-#include "recycledRoutines/cpp_double.h"
 
       USE m_constants, ONLY : pimach
       use m_types
 
-      IMPLICIT NONE
+#ifdef CPP_FFTW
+               use :: FFTW3
+#endif
 
-      INCLUDE "fftw3.f" ! include FFTW constant
+      IMPLICIT NONE
 
 ! scalar arguments
 
@@ -4134,7 +4166,6 @@ module m_jpSetupDynMat
       type(t_kpts),      intent(in)  :: kpts
       type(t_kpts),      intent(in)  :: qpts
       type(t_stars),     intent(in)  :: stars
-      type(t_dimension), intent(in)  :: dimens
       type(t_cell),      intent(in)  :: cell
 
       ! Array parameter
@@ -4159,7 +4190,7 @@ module m_jpSetupDynMat
       real                          :: fftTime, matElemTime
       integer                       :: maxG(3), nfft(3)
       integer                       :: ifftds, ifft1ds, ifft2ds, ifft3ds
-      integer                       :: sk1d,sk2d,sk3d
+      integer                       :: smx1,smx2,smx3
       integer                       :: xis,yis,zis,xil,yil,zil,smallIndex,largeIndex
       integer                       :: xIndex,yIndex,zIndex
       real                          :: testG, time2, time1
@@ -4174,7 +4205,7 @@ module m_jpSetupDynMat
 
 ! local arrays
 
-      integer                       :: iv1d(dimens%nvd,1)
+      integer                       :: iv1d(MAXVAL(nv),1)
       integer, parameter            :: boxSizesMaxIndex = 200
       integer                       :: fftBoxSizes(1:boxSizesMaxIndex) !array with optimal FFT box sizes larger or equal to array index.
       complex, allocatable          :: theta(:)
@@ -4187,9 +4218,9 @@ module m_jpSetupDynMat
       complex, allocatable          :: zFFTBoxOvl(:)
       complex, allocatable          :: kpGz1(:)
       real                          :: kpqGExt(3)
-      complex                       :: vThetaZ(dimens%nbasfcn)
-      complex                       :: thetaZ(dimens%nbasfcn)
-      complex                       :: thetaZ2(dimens%nbasfcn)
+      complex                       :: vThetaZ(SIZE(z1Bra(:)))
+      complex                       :: thetaZ(SIZE(z1Bra(:)))
+      complex                       :: thetaZ2(SIZE(z1Bra(:)))
       complex  CPP_BLAS_cdotc
       external CPP_BLAS_cdotc
 
@@ -4255,13 +4286,13 @@ module m_jpSetupDynMat
          END IF
       END DO
       ! produkt darstellen aus Potential und Stufenfunktion, daher 2 * maxG (satz von parseval)
-      sk1d = 3*maxG(1) ! bis 2 kmax(=maxG) + Gmax
-      sk2d = 3*maxG(2)
-      sk3d = 3*maxG(3)
+      smx1 = 3*maxG(1) ! bis 2 kmax(=maxG) + Gmax
+      smx2 = 3*maxG(2)
+      smx3 = 3*maxG(3)
 
-      ifft1ds=(2*sk1d+1)
-      ifft2ds=(2*sk2d+1)
-      ifft3ds=(2*sk3d+1)
+      ifft1ds=(2*smx1+1)
+      ifft2ds=(2*smx2+1)
+      ifft3ds=(2*smx3+1)
 
       IF (ifft1ds <= boxSizesMaxIndex) THEN ! kann ich drin lassen
          ifft1ds = fftBoxSizes(ifft1ds)
@@ -4281,8 +4312,8 @@ module m_jpSetupDynMat
 
 !  ---> Initialization
 
-      ALLOCATE (tempGrid(0:27*stars%k1d*stars%k2d*stars%k3d-1))
-      ALLOCATE (tempGridOvl(0:27*stars%k1d*stars%k2d*stars%k3d-1))
+      ALLOCATE (tempGrid(0:27*stars%mx1*stars%mx2*stars%mx3-1))
+      ALLOCATE (tempGridOvl(0:27*stars%mx1*stars%mx2*stars%mx3-1))
 
       ALLOCATE (thetaV(0:ifftds-1))
       allocate (theta(0:ifftds -1))
@@ -4306,29 +4337,29 @@ module m_jpSetupDynMat
       ENDDO
 
 !  ---> reduce large fft grid "tempGrid" to small fft grid "thetaV" ("realFFTBox")
-      DO xIndex = -sk1d,sk1d ! aufpassen bzgl. indices
+      DO xIndex = -smx1,smx1 ! aufpassen bzgl. indices
          xis = xIndex
          xil = xIndex
          IF (xIndex < 0) THEN
             xis = xis+ifft1ds
-            xil = xil+3*stars%k1d
+            xil = xil+3*stars%mx1
          END IF
-         DO yIndex = -sk2d,sk2d
+         DO yIndex = -smx2,smx2
             yis = yIndex
             yil = yIndex
             IF (yIndex < 0) THEN
                yis = yis+ifft2ds
-               yil = yil+3*stars%k2d
+               yil = yil+3*stars%mx2
             END IF
-            DO zIndex = -sk3d,sk3d
+            DO zIndex = -smx3,smx3
                zis = zIndex
                zil = zIndex
                IF (zIndex < 0) THEN
                   zis = zis+ifft3ds
-                  zil = zil+3*stars%k3d
+                  zil = zil+3*stars%mx3
                END IF
                smallIndex = (xis+ifft1ds*yis+ifft1ds*ifft2ds*zis)
-               largeIndex = (xil+3*stars%k1d*yil+9*stars%k1d*stars%k2d*zil)
+               largeIndex = (xil+3*stars%mx1*yil+9*stars%mx1*stars%mx2*zil)
                thetaV(smallIndex) = tempGrid(largeIndex)
                theta(smallIndex) = tempGridOvl(largeIndex)
             END DO
@@ -4452,5 +4483,373 @@ module m_jpSetupDynMat
       CALL dfftw_destroy_plan(backwardPlanKin)
 
   end subroutine calcPsi1HepsPsi1IR
+
+  subroutine WarpIRPot( stars, ngpqdp, idir, gpqdp, pot, pot_warped )
+
+    use m_types
+    use m_cfft
+
+    implicit none
+
+    ! Type parameters
+    type(t_stars),                                intent(in)  :: stars
+
+    ! Scalar parameters
+    integer,                                      intent(in)  :: ngpqdp
+    integer,                                      intent(in)  :: idir
+
+    ! Array parameters
+    integer,                                      intent(in)  :: gpqdp(:, :)
+    complex,                                      intent(in)  :: pot(:, :)
+    complex,                                      intent(out) :: pot_warped(:)
+
+    ! Array variables
+    integer,                         allocatable              :: igfft(:)
+    real, allocatable :: mygfft(:, :)
+    real,                            allocatable              :: gfft(:, :)
+    integer                                                  :: nfft(3)
+    integer                                                   :: gabs(3)
+
+
+    ! Scalar variables
+    integer                                                   :: ifftd
+    integer                                                   :: iG
+    real                                                      :: scaling
+    integer                                                   :: imesh
+    integer :: idir1
+
+    REAL                :: pgfftF(0:(2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)-1)
+    INTEGER             :: igfftF(0:(2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)-1,2)
+
+    nfft = [3 * stars%mx1, 3 * stars%mx2, 3 * stars%mx3]
+    ifftd = product(nfft)
+
+    allocate( igfft(ngpqdp), gfft(0: ifftd - 1, 2) )
+    allocate( mygfft(0: ifftd - 1, 2) )
+    gabs = 0
+    igfft = 0
+    do iG = 1, ngpqdp
+      do idir1 = 1, 3
+        if ( gpqdp(idir1, iG) >= 0 ) then
+          gabs(idir1) = gpqdp(idir1, iG)
+        else
+          gabs(idir1) = gpqdp(idir1, iG) + nfft(idir1)
+        end if
+      end do
+      igfft(iG) = gabs(1) + gabs(2) * nfft(1) + gabs(3) * nfft(1) * nfft(2)
+    end do
+
+!    open(1000, file='igfftjp', form='formatted')
+!    do iG = 1, ngdp
+!    !  write (1000, '(i10,2x,i3,2x,i3,2x,i3,2x,i8)') ( gdp(1, iG) + stars%mx1 ) + 100 * ( gdp(2, iG) + stars%mx2 ) + 10000 * ( gdp(3, iG) + stars%mx3 ), &
+!    !    & gdp(1, iG), gdp(2, iG), gdp(3, iG), igfft(iG)
+!      write (1000, '(i10,2x,i3,2x,i3,2x,i3,2x,i8)') iG, &
+!        & gdp(1, iG), gdp(2, iG), gdp(3, iG), igfft(iG)
+!    end do
+!    close(1000)
+
+    gfft = 0
+    pot_warped=0
+
+      do iG = 1, ngpqdp
+        gfft(igfft(iG), 1) = real(pot(iG, idir))
+        gfft(igfft(iG), 2) = aimag(pot(iG, idir))
+      end do
+   !   mygfft = 0
+   !   mygfft = gfft
+
+!      open(1000, file='foo', form='formatted')
+!      do imesh = 0, ubound( gfft, dim=1)
+!        write (1000, '(i8,f20.13)') imesh, gfft(imesh, 1)
+!        write (1000, '(i8,f20.13)') imesh, gfft(imesh, 2)
+!      end do
+!      close(1000)
+
+
+      call cfft(gfft(0, 1), gfft(0, 2), ifftd, nfft(1), nfft(1), 1)
+      call cfft(gfft(0, 1), gfft(0, 2), ifftd, nfft(2), nfft(1) * nfft(2), 1)
+      call cfft(gfft(0, 1), gfft(0, 2), ifftd, nfft(3), ifftd, 1)
+
+!      open(1000, file='foo1', form='formatted')
+!      do imesh = 0, ubound( gfft, dim=1)
+!        write (1000, '(i8,f20.13)') imesh, gfft(imesh, 1)
+!        write (1000, '(i8,f20.13)') imesh, gfft(imesh, 2)
+!      end do
+!      close(1000)
+
+   !   call cfft(mygfft(:, 1), mygfft(:, 2), ifftd, nfft(1), nfft(1), 1)
+   !   call cfft(mygfft(:, 1), mygfft(:, 2), ifftd, nfft(2), nfft(1) * nfft(2), 1)
+   !   call cfft(mygfft(:, 1), mygfft(:, 2), ifftd, nfft(3), ifftd, 1)
+
+
+!      open(1000, file='foo2', form='formatted')
+!      do imesh = 0, ubound( mygfft, dim=1)
+!        write (1000, '(i8,f20.13)') imesh, mygfft(imesh, 1)
+!        write (1000, '(i8,f20.13)') imesh, mygfft(imesh, 2)
+!      end do
+!      close(1000)
+
+!    write (29999, *) stars%ufft
+      !gfft = 0
+      do imesh = 0, ifftd-1
+        gfft(imesh, :) = gfft(imesh, :) * stars%ufft(imesh) ! todo is ufft correctlz initialized
+       ! gfft(imesh, :) = stars%ufft(imesh) ! todo is ufft correctlz initialized
+      end do
+
+      call cfft(gfft(:, 1), gfft(:, 2), ifftd, nfft(1), nfft(1), -1)
+      call cfft(gfft(:, 1), gfft(:, 2), ifftd, nfft(2), nfft(1) * nfft(2), -1)
+      call cfft(gfft(:, 1), gfft(:, 2), ifftd, nfft(3), ifftd, -1)
+
+!      open(1000, file='foo5', form='formatted')
+!      do imesh = 0, ubound( mygfft, dim=1)
+!        write (1000, '(i8,f25.15)') imesh, gfft(imesh, 1)
+!        write (1000, '(i8,f25.15)') imesh, gfft(imesh, 2)
+!      end do
+!      close(1000)
+
+!      igfftF = 0
+!      pgfftF = 0
+!      open(1000, file='mapArray', form='unformatted')
+!      read(1000) igfftF, pgfftF
+!      close(1000)
+
+      !write (*, *) 'kimax und ngdp', stars%kimax, ngdp
+
+      scaling = 1. / real(ifftd)
+      do iG=1, ngpqdp
+        pot_warped(iG) = pot_warped(iG) +  cmplx( gfft(igfft(iG), 1), gfft(igfft(iG), 2) ) * scaling
+      end do
+  end subroutine warpIRPot
+
+  subroutine Calc2ArgIntIR(cell, ngdp, f, w_g, integral)
+
+    use m_types
+
+    implicit none
+
+    ! Type parameter
+    type(t_cell), intent(in)  :: cell
+
+    ! Scalar parameter
+    integer,      intent(in)  :: ngdp
+    complex,      intent(out) :: integral
+
+    ! Array parameter
+    complex,      intent(in)  :: f(:)
+    complex,      intent(in)  :: w_g(:)
+
+
+    ! The complex conjugation is done implicetly for the function passed as first argument of dot_product
+    integral = cell%omtil * dot_product( f(:ngdp), w_g(:ngdp) )
+
+  end subroutine Calc2ArgIntIR
+
+  ! Calculates a 2 argument voluyme integral in the MT
+  subroutine Calc2ArgCmplxIntMT( atoms, itype, f, g, integral )
+
+    use m_types
+    !use m_intgr, only : intgr3
+    use m_intgr, only : intgr3!LinIntp! TODO: Is this ok?
+
+    implicit none
+
+    ! Type parameters
+    type(t_atoms),             intent(in)  :: atoms
+
+    ! Scalar parameters
+    integer,                   intent(in)  :: itype
+    complex,                   intent(out) :: integral
+
+    ! Array parameters
+    complex,                   intent(in)  :: f(:)
+    complex,                   intent(in)  :: g(:)
+
+    ! Scalar variables
+    integer                                :: imesh
+    real                                   :: integralReal
+    real                                   :: integralImag
+
+    ! Array variables
+    real,          allocatable             :: intgrdR(:)
+    real,          allocatable             :: intgrdI(:)
+
+
+    allocate( intgrdR(atoms%jmtd), intgrdI(atoms%jmtd) )
+
+    intgrdR(:) = 0.
+    intgrdI(:) = 0.
+    integral = cmplx(0., 0.)
+
+    ! The intgr3LinIntp subroutine only accepts real quantities, so we split the integral into real and imaginary part.
+    do imesh = 1, atoms%jri(itype)
+      intgrdR(imesh) = real( atoms%rmsh(imesh, itype)**2 * conjg(f(imesh)) * g(imesh) )
+      intgrdI(imesh) = aimag( atoms%rmsh(imesh, itype)**2 * conjg(f(imesh)) * g(imesh) )
+    end do ! imesh
+    !call intgr3(intgrdR, atoms%rmsh(1,itype), atoms%dx(itype), atoms%jri(itype), integralReal)
+    !call intgr3(intgrdI, atoms%rmsh(1,itype), atoms%dx(itype), atoms%jri(itype), integralImag)
+    call intgr3( intgrdR, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralReal )! TODO: Is this ok?
+    call intgr3( intgrdI, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralImag )! TODO: Is this ok?
+
+    integral = integral + cmplx( integralReal, integralImag )
+
+  end subroutine Calc2ArgCmplxIntMT
+
+  subroutine CalcSurfIntIRDynMat( atoms, cell, ngdp1, ngdp2, gdp1, gdp2, rho0IRpw, grVext0IR, qpoint, surfInt )
+
+    use m_types
+    use m_ylm
+    use m_sphbes
+
+    implicit none
+
+    ! Type parameter
+    type(t_atoms),        intent(in)  :: atoms
+    type(t_cell),         intent(in)  :: cell
+
+    ! Scalar parameter
+    integer,              intent(in)  :: ngdp1
+    integer,              intent(in)  :: ngdp2
+
+    ! Array parameter
+    integer,              intent(in)  :: gdp1(:, :)
+    integer,              intent(in)  :: gdp2(:, :)
+    complex,              intent(in)  :: rho0IRpw(:)
+    complex,              intent(in)  :: grVext0IR(:, :)
+    real,                 intent(in)  :: qpoint(:)
+    complex,              intent(out) :: surfInt(3, 3)
+
+    ! Scalar variables
+    integer                           :: idirC
+    integer                           :: idirR
+    integer                           :: iatom
+    integer                           :: itype
+    integer                           :: ieqat
+    integer                           :: iG
+    integer                           :: it
+    integer                           :: iGp
+    complex                           :: phaseFac
+    complex                           :: tSummedCitY1t
+    complex                           :: pref
+    complex                           :: surfIntNonMat
+
+    ! Array variables
+    real                              :: gSum(3)
+    real                              :: gSumCart(3)
+    complex                           :: ylm(4)
+    real                              :: sbes(0:1)
+
+    surfInt(:, :) = cmplx(0., 0.)
+    iatom = 0
+    do itype = 1, atoms%ntype
+      pref = fpi_const * ImagUnit * atoms%rmt(itype) * atoms%rmt(itype)
+      do ieqat = 1, atoms%neq(itype)
+        iatom = iatom + 1
+        do iG = 1, ngdp1
+          do iGp = 1, ngdp2
+
+            gSum(1:3) = gdp1(1:3, iG) + gdp2(1:3, iGp) + qpoint(1:3)
+            gSumCart(1:3) = matmul( cell%bmat(1:3, 1:3), gSum(1:3) )
+
+            ylm(:) = cmplx(0., 0.)
+            call ylm4( 1, gSumCart, ylm )
+
+            sbes(:) = 0
+            call sphbes(1, norm2(gSumCart) * atoms%rmt(itype), sbes)
+
+            phaseFac = exp( ImagUnit * tpi_const * dot_product(gSum(1:3), atoms%taual(1:3, iatom)))
+
+            surfIntNonMat = pref * phaseFac * sbes(1) * rho0IRpw(iG)
+
+            do idirC = 1, 3
+              do idirR = 1, 3
+                ! Corresponds to the magnetic quantum number m for the orbital quantum number l = 1
+                tSummedCitY1t = cmplx(0., 0.)
+                do it = -1, 1
+                  tSummedCitY1t = tSummedCitY1t + c_im(idirR, it + 2) * ylm(it + 3)
+                end do ! it
+
+                surfInt(idirR, idirC) = surfInt(idirR, idirC) - surfIntNonMat * tSummedCitY1t * grVext0IR(iGp, idirC)
+              end do ! idirR
+            end do ! idirC
+          end do ! iGp
+        end do ! iG
+      end do ! ieqat
+    end do ! itype
+
+  end subroutine CalcSurfIntIRDynMat
+
+  subroutine CalcSurfIntMTDynMat(atoms, sym, lathar, clnu_atom, nmem_atom, mlh_atom, rho0MT, grVext0MT, surfInt)
+
+    use m_types, only : t_atoms, t_sym, t_sphhar
+    use m_gaunt, only : Gaunt1
+
+    implicit none
+
+    ! Type parameters
+    type(t_atoms),                     intent(in)  :: atoms
+    type(t_sym),                     intent(in)  :: sym
+    type(t_sphhar),                    intent(in)  :: lathar
+
+    ! Array parameters
+    complex,                           intent(in)  :: clnu_atom(:, 0:, :)
+    integer,                           intent(in)  :: nmem_atom(0:, :)
+    integer,                           intent(in)  :: mlh_atom(:, 0:, :)
+    real,                              intent(in)  :: rho0MT(:, 0:, :)
+    complex,                           intent(in)  :: grVext0MT(:, :, :, :)
+    complex,                           intent(out) :: surfInt(3, 3)
+
+    ! Scalar variables
+    integer                                        :: iatom
+    integer                                        :: itype
+    integer                                        :: ieqat
+    integer                                        :: ptsym
+    integer                                        :: ilh
+    integer                                        :: oqn_l
+    integer                                        :: imem
+    integer                                        :: mqn_m
+    integer                                        :: mqn_mp
+    integer                                        :: oqn_lpp
+    integer                                        :: mqn_mpp
+    integer                                        :: lmpp
+    real                                           :: gauntFactor
+    integer                                        :: idirC
+    integer                                        :: idirR
+
+    surfInt(:, :) = 0
+    iatom = 0
+    do itype = 1, atoms%ntype
+      do ieqat = 1, atoms%neq(itype)
+        iatom = iatom + 1
+        ptsym = sym%ntypsy(iatom)
+        do ilh = 0, lathar%nlh(ptsym)
+          oqn_l = lathar%llh(ilh, ptsym)
+          do imem = 1, nmem_atom(ilh, iatom)
+            mqn_m = mlh_atom(imem, ilh, iatom)
+            do mqn_mp = -1, 1
+              ! lmax + 1 is okay for grVext1
+             ! do oqn_lpp = abs(oqn_l - 1), oqn_l + 1
+              do oqn_lpp = 0, atoms%lmax(itype)
+                do mqn_mpp = -oqn_lpp, oqn_lpp
+             !   mqn_mpp = mqn_m + mqn_mp
+                lmpp = oqn_lpp * (oqn_lpp + 1) + 1 + mqn_mpp
+!                gauntFactor = Gaunt1( oqn_lpp, oqn_l, 1, mqn_mpp, mqn_m, mqn_mp, atoms%lmax(itype) + 1)
+                gauntFactor = Gaunt1( oqn_lpp, oqn_l, 1, mqn_mpp, mqn_m, mqn_mp, atoms%lmax(itype))
+                do idirC = 1, 3
+                  do idirR = 1, 3
+                  !todo check whether rho0MT or and c_im should be conjugated or grVext0MT should e conjugatd. This current solution gives the best results.
+                    surfInt(idirR, idirC) = surfInt(idirR, idirC) + c_im(idirR, mqn_mp + 2)  * atoms%rmt(itype)**2         &
+                      & * rho0MT(atoms%jri(itype), ilh, itype) * clnu_atom(imem, ilh, iatom) *                           &
+                      & conjg(grVext0MT(atoms%jri(itype), lmpp, idirC, iatom)) * gauntFactor
+                  end do ! idirC
+                end do ! idirR
+                end do
+              end do ! oqn_lpp
+            end do ! mqn_mp
+          end do ! imem
+        end do ! ilh
+      end do ! ieqat
+    end do ! itype
+
+  end subroutine CalcSurfIntMTDynMat
 
 end module m_jpSetupDynMat

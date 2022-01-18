@@ -1,32 +1,31 @@
 module m_jpSetupDynMatSF
 
-#include "cppmacro.h"
+    USE m_constants
 
   implicit none
 
 contains
 
-  subroutine SetupDynMatSF( atoms, dimens, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
+  subroutine SetupDynMatSF( fmpi, noco, nococonv, oneD, atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
       & memd_atom, nobd, gdp, mapKpq2K, rbas1, rbas2, nmem_atom, mlh_atom, clnu_atom, kveclo, iloTable, kpq2kPrVec, nv, mapGbas, &
       & gBas, nRadFun, z0, eig, El, rho0IRpw, rho0MT, ngpqdp, gpqdp, rho1IRPW, rho1MT, vXC0IRst, eXCIRst, vXC0MTlh, eXCMTlh, &
       & vExt1IR, vExt1MT, vHar1IR, vHar1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, vEff0MT, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol, dynMatSf )
 
     use m_types
-    use mod_juPhonUtils, only : Derivative, CalcChannelsGrFlpNat
-    use m_jpSetupDynMatHelper, only : CalcHnGrV0Varphi
-    use mod_juPhonUtils, only : CalcGrR2FinLH
-    use m_jpPotDensHelper, only : convertStar2G
-    use m_jpConstants, only : iu
-    use m_jpSetupDynMatHelper, only : CalcSurfIntIRDynMat, CalcSurfIntMTDynMat
+    use m_dfpt_init, only : Derivative, convertStar2G
 
     implicit none
 
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                 intent(in)  :: atoms
-    type(t_dimension),             intent(in)  :: dimens
+    type(t_input),                 intent(in)  :: input
     type(t_stars),                 intent(in)  :: stars
     type(t_cell),                  intent(in)  :: cell
     type(t_results),               intent(in)  :: results
-    type(t_potential),             intent(in)  :: Veff0
+    type(t_potden),             intent(in)  :: Veff0
     type(t_kpts),                  intent(in)  :: kpts
     type(t_kpts),                  intent(in)  :: qpts
     type(t_sphhar),                intent(in)  :: lathar
@@ -50,7 +49,7 @@ contains
     integer,                       intent(in)  :: nv(:, :)
     integer,                       intent(in)  :: mapGbas(:, :, :)
     integer,                       intent(in)  :: gBas(:, :)
-    MCOMPLEX,                      intent(in)  :: z0(:, :, :, :)
+    COMPLEX,                       intent(in)  :: z0(:, :, :, :)
     real,                          intent(in)  :: eig(:, :, :)
     real,                          intent(in)  :: rbas1(:, :, 0:, :)
     real,                          intent(in)  :: rbas2(:, :, 0:, :)
@@ -159,6 +158,7 @@ contains
     real                                       :: Gext(3)
     complex                                    :: surfInt(3, 3)
     complex                                    :: surfIntTest(3, 3)
+    integer :: lmd
 
     surfIntTest(:, :) = cmplx(.0, .0)
     allocate( dynMatSF( 3 * atoms%nat, 3 * atoms%nat) )
@@ -176,11 +176,12 @@ contains
     lmpMax     = maxval( lmpT(:) )
     nRadFunMax = maxval( nRadFun(:, :) )
 
+    lmd=atoms%lmaxd*(atoms%lmaxd+2)
     allocate( varphi1(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), varphi2(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
     allocate( delrVarphi1( atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), delrVarphi2( atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
     allocate( grVarphiCh1(atoms%jmtd, 2, lmpMax, -1:1), grVarphiCh2(atoms%jmtd, 2, lmpMax, -1:1), &
             & grVarphiChLout(2, 0:atoms%lmaxd), grVarphiChMout(-atoms%lmaxd:atoms%lmaxd, -1:1) )
-    allocate( vEff0MtSpH( atoms%jmtd, 0:dimens%lmd), vEff0NsphGrVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, -1:1), &
+    allocate( vEff0MtSpH( atoms%jmtd, 0:lmd), vEff0NsphGrVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, -1:1), &
             & r2grVeff0SphVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, 3) )
     allocate( r2grVeff0SphVarphiDummy(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, 3) )
     allocate( hFullVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax)  )
@@ -217,8 +218,8 @@ contains
     do idir = 1, 3
       do iG = 1, ngdp
         Gext(1:3) = matmul(cell%bmat(1:3, 1:3), gdp(1:3, iG))
-        grExcIR(iG, 1:3) = iu * Gext(1:3) * excIRpw(iG)
-        grVxc0IR(iG, 1:3) = iu * Gext(1:3) * vxc0IRpw(iG)
+        grExcIR(iG, 1:3) = ImagUnit * Gext(1:3) * excIRpw(iG)
+        grVxc0IR(iG, 1:3) = ImagUnit * Gext(1:3) * vxc0IRpw(iG)
       end do ! iG
     end do ! idir
 
@@ -248,8 +249,8 @@ contains
       end do ! ilh
     end do ! iDtypeB
 
-    call CalcGrR2FinLH( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, r2Vxc0MT, r2GrVxc0MT )
-    call CalcGrR2FinLH( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, r2ExcMT, r2GrExcMT )
+    call mt_gradient_old( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, r2Vxc0MT, r2GrVxc0MT )
+    call mt_gradient_old( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, r2ExcMT, r2GrExcMT )
 
     !todo we should implement a consistent order of indices
     do idir = 1, 3
@@ -262,8 +263,8 @@ contains
             do mqn_m = -oqn_l, oqn_l
               lm = lm_pre + mqn_m
               do imesh = 1, atoms%jri(iDtypeB)
-                grVxc0MT(imesh, lm, idir, iDatomB) = r2GrVxc0MT(imesh, lm, iDatomB, idir) / atoms%rmsh(imesh, iDtypeB)**2
-                grExcMT(imesh, lm, idir, iDatomB ) = r2GrExcMT(imesh, lm, iDatomB, idir) / atoms%rmsh(imesh, iDtypeB)**2
+                grVxc0MT(imesh, lm, idir, iDatomB) = r2GrVxc0MT(imesh, lm, iDatomB, idir)! / atoms%rmsh(imesh, iDtypeB)**2
+                grExcMT(imesh, lm, idir, iDatomB ) = r2GrExcMT(imesh, lm, iDatomB, idir)! / atoms%rmsh(imesh, iDtypeB)**2
               end do ! imesh
             end do ! mqn_m
           end do ! oqn_l
@@ -400,7 +401,7 @@ contains
             end if
 
             vEff0MtSpH(:, :) = cmplx(0.0, 0.0)
-            ptsym = atoms%ntypsy(iDatomB)
+            ptsym = sym%ntypsy(iDatomB)
             do ilh = 0, lathar%nlh(ptsym)
               oqn_l = lathar%llh(ilh, ptsym)
               lm_pre = oqn_l * (oqn_l + 1)
@@ -410,13 +411,13 @@ contains
                 !todo one could only evaluate the vEff0MtSpH which have a contribution, i.e. the oqn_l and mqn_m which are in llh and mlh_atom
                 ! maybe construct a pointer and run only over them to make it memory efficient.
                 do imesh = 1, atoms%jri(iDtypeB)
-                  vEff0MtSpH(imesh, lm) = vEff0MtSpH(imesh, lm) + Veff0%vr(imesh, ilh, iDtypeB, 1) * clnu_atom(imem, ilh, iDatomB)
+                  vEff0MtSpH(imesh, lm) = vEff0MtSpH(imesh, lm) + Veff0%mt(imesh, ilh, iDtypeB, 1) * clnu_atom(imem, ilh, iDatomB)
                 end do ! imesh
               end do ! imem
             end do ! ilh
 
             hFullVarphi = cmplx(0.0, 0.0)
-            call CalcHnGrV0Varphi( atoms, lathar, iDtypeB, iDatomB, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, Veff0%vr(:, :, :, 1), clnu_atom, &
+            call CalcHnGrV0Varphi( atoms, sym, lathar, iDtypeB, iDatomB, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, Veff0%mt(:, :, :, 1), clnu_atom, &
               & nmem_atom, mlh_atom, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, hFullVarphi, vEff0NsphGrVarphi, r2grVeff0SphVarphi, r2grVeff0SphVarphiDummy )
             deallocate(r2grVeff0SphVarphiDummy)
 
@@ -428,7 +429,7 @@ contains
             !       in the real density.
             ! IR Psi1 Heps Psi
             surfInt(:, :) = cmplx(0., 0.)
-            call CalcSFintIRPsi1HepsPsi( atoms, dimens, stars, cell, results, Veff0, kpts, qpts, ngdp, iqpt, iDtypeB, iDatomB, iDatomA, nobd,&
+            call CalcSFintIRPsi1HepsPsi( atoms, input, stars, cell, results, Veff0, kpts, qpts, ngdp, iqpt, iDtypeB, iDatomB, iDatomA, nobd,&
                                                   & gdp, mapKpq2K, kpq2kPrVec, nv, mapGbas, gBas, z0, eig, surfInt, testMode )
             if (testMode) then
               surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + surfInt(1:3, 1:3)
@@ -448,7 +449,7 @@ contains
 
             ! IR Psi Heps Psi1
             surfInt(:, :) = cmplx(0., 0.)
-            call CalcSFintIRPsiHepsPsi1( atoms, dimens, stars, cell, results, Veff0, kpts, qpts, ngdp, iqpt, iDtypeB, iDatomB, iDatomA,&
+            call CalcSFintIRPsiHepsPsi1( atoms, input, stars, cell, results, Veff0, kpts, qpts, ngdp, iqpt, iDtypeB, iDatomB, iDatomA,&
                                                   & nobd, gdp, mapKpq2K, kpq2kPrVec, nv, mapGbas, gBas, z0, eig, surfInt, testMode )
             if (testMode) then
               surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + surfInt(1:3, 1:3)
@@ -502,7 +503,7 @@ contains
 
             !!!latest:
             surfInt(:, :) = cmplx(0., 0.)
-            call CalcSurfIntMTDynMat( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, Veff0%vr(:, :, :, 1), rho1MTgoodContainer, surfInt)
+            call CalcSurfIntMTDynMat( atoms, sym, lathar, clnu_atom, nmem_atom, mlh_atom, Veff0%mt(:, :, :, 1), rho1MTgoodContainer, surfInt)
             surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) - transpose(surfInt(1:3, 1:3))
 
             do idirC=1,3
@@ -513,7 +514,7 @@ contains
                 write(565,*) idirR, idirC, -surfInt(idirC, idirR)
               end do
             end do
-            
+
 
             surfInt(:, :) = cmplx(0., 0.)
             call CalcSurfIntIRDynMat( atoms, cell, ngdp, ngdp, gdp, gdp, rho0IRpw, vCoulExt1IRContainer, qpts%bk(:, iqpt), surfInt )
@@ -526,7 +527,7 @@ contains
             surfIntTest(1:3, 1:3) = surfIntTest(1:3, 1:3) + surfInt(1:3, 1:3)
 
             surfInt(:, :) = cmplx(0., 0.)
-            call CalcSurfIntMTDynMat( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, rho0MT(:, :, :, 1), vCoulExt1MTContainer, surfInt)
+            call CalcSurfIntMTDynMat( atoms, sym, lathar, clnu_atom, nmem_atom, mlh_atom, rho0MT(:, :, :, 1), vCoulExt1MTContainer, surfInt)
             surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + surfInt(1:3, 1:3)
             surfIntTest(1:3, 1:3) = surfIntTest(1:3, 1:3) + surfInt(1:3, 1:3)
             write(*, *) 'surfintTest'
@@ -574,7 +575,7 @@ contains
 
                 ! gradPsi Heps Psi in MT
                 surfInt(:, :) = cmplx(0., 0.)
-                call CalcSFintMTgradPsiHepsPsi( atoms, cell, kpts, sym, dimens, results, usdus, iDtypeB, iDatomB, nRadFun, &
+                call CalcSFintMTgradPsiHepsPsi( fmpi, noco, nococonv, oneD, atoms, input, cell, kpts, sym, results, usdus, iDtypeB, iDatomB, nRadFun, &
                   & lmpMax, nobd, nv, gBas, mapGbas, kveclo, z0, eig, hFullVarphi, iloTable, grVarphiChLout, &
                   & grVarphiChMout, grVarphiCh1, grVarphiCh2, varphi1, varphi2, surfInt )
 
@@ -586,13 +587,13 @@ contains
 
                 surfInt(:, :) = cmplx(0., 0.)
                 ! Psi Heps gradPsi  MT
-                call CalcSFintMTPsiHepsGradPsi( atoms, kpts, dimens, sym, cell, usdus, results, iDtypeB, iDatomB, varphi1, varphi2, &
+                call CalcSFintMTPsiHepsGradPsi( fmpi, noco, nococonv, oneD, atoms, input, kpts, sym, cell, usdus, results, iDtypeB, iDatomB, varphi1, varphi2, &
                   & nv, El, gBas, eig, lmpMax, mapGbas, nRadFun, kveclo, nobd, z0, iloTable, grVarphiChLout, grVarphiChMout, &
                   & r2grVeff0SphVarphi, vEff0NsphGrVarphi, lmpT, grVarphiCh1, grVarphiCh2, surfInt )
 
                 ! Basis set correction part grad in Ket
                 !surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) - 2 * transpose(surfInt(1:3, 1:3))
- 
+
                 ! Surface integral with gradient in Ket
                 !surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + 2 * surfInt(1:3, 1:3)
 
@@ -602,10 +603,10 @@ contains
               ! 1/3
               ! gradPsi Teps Psi IR
               surfInt(:, :) = cmplx(0., 0.)
-              call CalcSFintIRgradPsiHepsPsi( atoms, stars, cell, dimens, kpts, results, Veff0, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
+              call CalcSFintIRgradPsiHepsPsi( atoms, input, stars, cell, kpts, results, Veff0, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
                                                                                                  & mapGbas, nv, gdp, z0, surfInt )
               surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + surfInt(1:3, 1:3)
- 
+
               do idirC=1,3
                 do idirR=1,3
                   write(465,*) 'PuSF grad Psi*'
@@ -614,11 +615,11 @@ contains
                   write(565,*) idirR, idirC, surfInt(idirR, idirC)
                 end do
               end do
-            
+
               ! 2/3
               ! psi Teps grPsi IR
               surfInt(:, :) = cmplx(0., 0.)
-              call CalcSFintIRPsiHepsGradPsi( atoms, stars, cell, dimens, kpts, results, Veff0, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
+              call CalcSFintIRPsiHepsGradPsi( atoms, input, stars, cell, kpts, results, Veff0, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
                 mapGbas, nv, gdp, z0, surfInt )
               surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + transpose(surfInt(1:3, 1:3))
 
@@ -630,7 +631,7 @@ contains
                   write(565,*) idirR, idirC, surfInt(idirR, idirC)
                 end do
               end do
- 
+
               ! 3/3
               ! psi GrVeff Psi IR
               !surfInt(:, :) = cmplx(0., 0.)
@@ -647,13 +648,13 @@ contains
 
               ! psi grVeff Psi MT
               !surfInt(:, :) = cmplx(0., 0.)
-              !call CalcSurfintMTPsigrVeff0Psi( atoms, sym, dimens, cell, kpts, usdus, results, lmpMax, iDtypeB, iDatomB, nobd, gbas, &
+              !call CalcSurfintMTPsigrVeff0Psi( atoms, input, sym, dimens, cell, kpts, usdus, results, lmpMax, iDtypeB, iDatomB, nobd, gbas, &
               !  & mapGbas, nRadFun, nv, z0, kveclo, varphi1, varphi2, grVeff0MT, iloTable, surfInt )
               !surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + surfInt(1:3, 1:3)
 
               !(5.3.183), 2nd integral [4 components]
               ! 1/4
-              ! rho grVxc0IR IR 
+              ! rho grVxc0IR IR
               !surfInt(:, :) = cmplx(0., 0.)
               !call CalcSurfIntIRDynMat( atoms, cell, ngdp, ngdp, gdp, gdp, rho0IRpw, grVxc0IR, [0., 0., 0.], surfInt )
               !surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) - transpose(surfInt(1:3, 1:3))
@@ -705,7 +706,7 @@ contains
               ! grRho0IR excIRpw IR
               ! Note : The gradient of the density is to be continious because the matching coefficients found for the wavefunctions,
               ! from which the density is contructed from also ensure continuity of the gradient of the wavefunctions, of which the
-              ! the gradient of the density is made from. Therefore, such integrals should vanish and they do up to 1e-6. 
+              ! the gradient of the density is made from. Therefore, such integrals should vanish and they do up to 1e-6.
               !surfInt(:, :) = cmplx(0., 0.)
               !call CalcSurfIntIRDynMat( atoms, cell, ngdp, ngdp, gdp, gdp, eXCIRpw, grRho0IR, [0., 0., 0.], surfInt )
               !surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + transpose(surfInt(1:3, 1:3))
@@ -774,7 +775,6 @@ contains
 
     use m_ylm
     use m_sphbes
-    use m_JPConstants, only : iu, tpi, fpi, c_im
     use m_types
 
     implicit none
@@ -799,8 +799,8 @@ contains
     real,                      intent(in)  :: gBasKin(:, :)
     real,                      intent(in)  :: gBasKet(:, :)
     real,                      intent(in)  :: gBasKin2(:, :)
-    MCOMPLEX,                  intent(in)  :: zBra(:, :)
-    MCOMPLEX,                  intent(in)  :: zKet(:, :)
+    COMPLEX,                  intent(in)  :: zBra(:, :)
+    COMPLEX,                  intent(in)  :: zKet(:, :)
     complex,                   intent(out) :: sIntT(:, :)
     complex,                   intent(out) :: sInt(:, :)
 
@@ -854,7 +854,7 @@ contains
     kinEffect(:) = 0.
     kinEffect2(:,:) = 0.
 
-    constPreFacs = -fpi * iu / cell%omtil * atoms%rmt(iDtypeB)**2
+    constPreFacs = -fpi_const * ImagUnit / cell%omtil * atoms%rmt(iDtypeB)**2
 
     do iBasK = 1, nv(ikptKet)
 
@@ -874,7 +874,7 @@ contains
         ! harmonic between the Y_lm from the natural coordinates and the Y_lm from the Rayleigh expansion
         call ylm4(1, GGqCart, ylm)
         call sphbes(1, GGqNorm * atoms%rmt(iDtypeB), sphBesJ)
-        tempNoMdep =  sphBesJ(1) * exp(iu * tpi * dot_product(GGqInt(1:3), atoms%taual(1:3, iDatomB)))
+        tempNoMdep =  sphBesJ(1) * exp(ImagUnit * tpi_const * dot_product(GGqInt(1:3), atoms%taual(1:3, iDatomB)))
         sumM = (0.0,0.0)
         ! For l = 1, we only have -1 < m < 1
         do lm = 2, 4
@@ -906,9 +906,8 @@ contains
   end subroutine calcSintKinEnergOvl
 
 
-  subroutine calcSurfVeff( atoms, kpts, cell, dimens, ikptBra, ikptKet, coScale, gbas, zeta, nv, nobd, ilst, zBra, zKet, iDtypeB, iDatomB, surfInt )
+  subroutine calcSurfVeff( atoms, input, kpts, cell, ikptBra, ikptKet, coScale, gbas, zeta, nv, nobd, ilst, zBra, zKet, iDtypeB, iDatomB, surfInt )
 
-    use m_jpConstants, only : fpi, iu, tpi
     use m_gaunt, only : gaunt1
     use m_types
     use m_ylm
@@ -918,9 +917,9 @@ contains
 
     ! Type parameters
     type(t_atoms),             intent(in)  :: atoms
+    type(t_input),             intent(in)  :: input
     type(t_kpts),              intent(in)  :: kpts
     type(t_cell),              intent(in)  :: cell
-    type(t_dimension),         intent(in)  :: dimens
 
     ! Scalar parameters
     integer,                   intent(in)  :: ikptBra
@@ -935,8 +934,8 @@ contains
     complex,                   intent(in)  :: zeta(:, :)
     integer,                   intent(in)  :: nv(:, :)
     integer,                   intent(in)  :: ilst(:, :, :)
-    MCOMPLEX,                  intent(in)  :: zBra(:, :)
-    MCOMPLEX,                  intent(in)  :: zKet(:, :)
+    COMPLEX,                  intent(in)  :: zBra(:, :)
+    COMPLEX,                  intent(in)  :: zKet(:, :)
     complex,                   intent(out) :: surfInt(:, :)
 
     ! Scalar variables
@@ -974,8 +973,8 @@ contains
     lmaxScaled = coScale * atoms%lmax(iDtypeB)
 
     allocate( psiKCoeff(nobd, (lmaxScaled + 1)**2) )
-    allocate( psiBCoeff(dimens%neigd, (lmaxScaled + 1)**2))
-    allocate( basCoeff(dimens%nvd, (lmaxScaled + 1)**2) )
+    allocate( psiBCoeff(input%neig, (lmaxScaled + 1)**2))
+    allocate( basCoeff(MAXVAL(nv), (lmaxScaled + 1)**2) )
     allocate( ylm((lmaxScaled + 1)**2) )
     allocate( sbes(0: lmaxScaled) )
 
@@ -987,10 +986,10 @@ contains
 
 
     basCoeff(:, :) = cmplx(0., 0.)
-    pref = fpi**2 / cell%omtil * atoms%rmt(iDtypeB)**2
+    pref = fpi_const**2 / cell%omtil * atoms%rmt(iDtypeB)**2
     do iG = 1, nv(1, ikptKet)
       gpk(1:3) = gbas(1:3, ilst(iG, ikptKet, 1)) + kpts%bk(1:3, ikptKet)
-      phaseFac = exp( iu * tpi * dot_product(gpk(:), atoms%taual(1:3, iDatomB)) )
+      phaseFac = exp( ImagUnit * tpi_const * dot_product(gpk(:), atoms%taual(1:3, iDatomB)) )
 
       gpkCart(1:3) = matmul( cell%bmat(1:3, 1:3), gpk(1:3) )
 
@@ -1001,7 +1000,7 @@ contains
       call sphbes( atoms%lmax(1), norm2(gpkCart(1:3)) * atoms%rmt(iDtypeB), sbes)
       do oqn_l = 0, atoms%lmax(1)!lmaxScaled
         lm_pre = oqn_l * (oqn_l + 1) + 1
-        factL = iu**oqn_l * sbes(oqn_l) * phaseFac
+        factL = ImagUnit**oqn_l * sbes(oqn_l) * phaseFac
         do mqn_m = -oqn_l, oqn_l
           lm = lm_pre + mqn_m
           basCoeff(iG, lm) = basCoeff(iG, lm) + factL * conjg(ylm(lm))
@@ -1016,7 +1015,7 @@ contains
         do iband = 1, nobd
           psiKCoeff(iband, lm) = dot_product(conjg(basCoeff(1:nv(1, ikptKet), lm)), zKet(1:nv(1, ikptKet), iband))
           ! Interstitial wavefunction
-!          write(2042, '(3(i8),2(f15.8))') ikpt, iband, lm, fpi / sqrt(cell%omtil) * psiKCoeff(iband, lm)
+!          write(2042, '(3(i8),2(f15.8))') ikpt, iband, lm, fpi_const / sqrt(cell%omtil) * psiKCoeff(iband, lm)
         end do ! iband
       end do ! mqn_m
     end do ! oqn_l
@@ -1025,7 +1024,7 @@ contains
       basCoeff(:, :) = cmplx(0., 0.)
       do iG = 1, nv(1, ikptBra)
         gpk(1:3) = gbas(1:3, ilst(iG, ikptBra, 1)) + kpts%bk(1:3, ikptBra)
-        phaseFac = exp( -iu * tpi * dot_product(gpk(:), atoms%taual(1:3, iDatomB)) )
+        phaseFac = exp( -ImagUnit * tpi_const * dot_product(gpk(:), atoms%taual(1:3, iDatomB)) )
 
         gpkCart(1:3) = matmul( cell%bmat(1:3, 1:3), gpk(1:3) )
 
@@ -1036,7 +1035,7 @@ contains
         call sphbes(lmaxScaled, norm2(gpkCart(1:3)) * atoms%rmt(iDtypeB), sbes)
         do oqn_l = 0, lmaxScaled
           lm_pre = oqn_l * (oqn_l + 1) + 1
-          factL = conjg(iu)**oqn_l * sbes(oqn_l) * phaseFac
+          factL = conjg(ImagUnit)**oqn_l * sbes(oqn_l) * phaseFac
           do mqn_m = -oqn_l, oqn_l
             lm = lm_pre + mqn_m
             basCoeff(iG, lm) = basCoeff(iG, lm) + factL * ylm(lm)
@@ -1050,7 +1049,7 @@ contains
         do iband = 1, nobd
           psiBCoeff(iband, lm) = dot_product(zBra(1:nv(1, ikptBra), iband), basCoeff(1:nv(1, ikptBra), lm))
           ! Complex conjugated interstitial wavefunction
-!          write(2045, '(3(i8),2(f15.8))') ikpt, iband, lm, fpi / sqrt(cell%omtil) * psiBCoeff(iband, lm)
+!          write(2045, '(3(i8),2(f15.8))') ikpt, iband, lm, fpi_const / sqrt(cell%omtil) * psiBCoeff(iband, lm)
         end do ! iband
       end do ! mqn_m
     end do ! oqn_l
@@ -1088,7 +1087,6 @@ contains
                    & lambdaBra, nRadFun, varphiKet1, varphiKet2, varphiBra1, varphiBra2, hVarphi, jacobiDet, hFullNoAbcofBK, overlapNoAbcofBK )
 
     use m_types
-    use m_jpConstants, only : c_im
     use m_gaunt, only : gaunt1
 
     implicit none
@@ -1142,7 +1140,7 @@ contains
     integer                                     :: iradf1Pr
     integer                                     :: ichanBra
     integer                                     :: idir
- 
+
     ! Array variables
     complex,           allocatable              :: ovlKetuV(:, :, :, :)
     complex,           allocatable              :: hamilKetuV(:, :, :, :)
@@ -1314,9 +1312,7 @@ contains
 
     use m_types
     use m_gaunt, only : gaunt1
-    use m_jpConstants, only : iu, fpi, tpi, c_im
-    use mod_juPhonUtils, only : fopen, fclose
-    use m_jpPotDensHelper, only : convertStar2G
+    use m_dfpt_init, only : convertStar2G
     use m_sphbes
     use m_ylm
 
@@ -1389,8 +1385,8 @@ contains
     do iG  = 1, ngdp
 
 !      if (all(gdp(:, iG) == 0)) cycle
-      phaseFac = exp( iu * tpi * dot_product(gdp(1:3, iG), atoms%taual(1:3, iDatom)) )
-      factG = -fpi * vpw_effPw(iG) * phaseFac
+      phaseFac = exp( ImagUnit * tpi_const * dot_product(gdp(1:3, iG), atoms%taual(1:3, iDatom)) )
+      factG = -fpi_const * vpw_effPw(iG) * phaseFac
 
       gCart(1:3) = matmul( cell%bmat(1:3, 1:3), gdp(1:3, iG) )
       sbes(:) = 0.
@@ -1401,7 +1397,7 @@ contains
       call ylm4( lmaxScale, gCart, ylm )
 
       do oqn_l2p = 0, lmaxScale
-        factL = factG * iu**oqn_l2p * sbes(oqn_l2p)
+        factL = factG * ImagUnit**oqn_l2p * sbes(oqn_l2p)
         do mqn_m2p = -oqn_l2p, oqn_l2p
           lm2p = oqn_l2p * (oqn_l2p + 1) + 1 + mqn_m2p
           factLM = factL * conjg(ylm(lm2p))
@@ -1517,22 +1513,21 @@ contains
 
   end subroutine CalcHGrVarphi
 
-  subroutine CalcSFintIRgradPsiHepsPsi( atoms, stars, cell, dimens, kpts, results, Veff0, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
+  subroutine CalcSFintIRgradPsiHepsPsi( atoms, input, stars, cell, kpts, results, Veff0, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
                                                                                                    & mapGbas, nv, gdp, z0, surfInt )
     use m_types
-    use m_jpPotDensHelper, only : ConvertStar2G
-    use m_jpConstants, only : iu
+    use m_dfpt_init, only : ConvertStar2G
 
     implicit none
 
     ! Type parameter
     type(t_atoms),             intent(in)  :: atoms
+    type(t_input),             intent(in)  :: input
     type(t_stars),             intent(in)  :: stars
     type(t_cell),              intent(in)  :: cell
-    type(t_dimension),         intent(in)  :: dimens
     type(t_kpts),              intent(in)  :: kpts
     type(t_results),           intent(in)  :: results
-    type(t_potential),         intent(in)  :: Veff0
+    type(t_potden),         intent(in)  :: Veff0
 
     ! Scalar parameter
     integer,                   intent(in)  :: ngdp
@@ -1546,7 +1541,7 @@ contains
     integer,                   intent(in)  :: mapGbas(:, :, :)
     integer,                   intent(in)  :: nv(:, :)
     integer,                   intent(in)  :: gdp(:, :)
-    MCOMPLEX,                  intent(in)  :: z0(:,:,:,:)
+    COMPLEX,                  intent(in)  :: z0(:,:,:,:)
     complex,                   intent(out) :: surfInt(:, :)
 
     ! Scalar variable
@@ -1575,8 +1570,8 @@ contains
     allocate( surfIntOvl( maxNobd, maxNobd ), surfIntVeff0( maxNobd, 3, 3 ), surfIntKinEnerg( maxNobd, maxNobd ) )
     allocate( veffUvIR(3, (coScale * atoms%lmaxd + 1)**2) )
     allocate( vpw_eff_uw( ngdp ) )
-    allocate( gBasMapped(3, dimens%nvd) )
-    allocate( z0gradAction(dimens%nvd, maxNobd, 3) )
+    allocate( gBasMapped(3, MAXVAL(nv)) )
+    allocate( z0gradAction(MAXVAL(nv), maxNobd, 3) )
 
     surfInt(:, :) = cmplx(0., 0.)
     surfIntOvl(:, :) = cmplx(0., 0.)
@@ -1587,7 +1582,7 @@ contains
 
 
     vpw_eff_uw = cmplx(0., 0.)
-    call convertStar2G( Veff0%vpw_uw(:, 1), vpw_eff_uw, stars, ngdp, gdp )
+    call convertStar2G( Veff0%pw(:, 1), vpw_eff_uw, stars, ngdp, gdp )
     call IRcoeffVeffUv( atoms, stars, cell, iDtypeB, iDatomB, ngdp, coScale, gdp, vpw_eff_uw, veffUvIR )
 
     do ikpt = 1, kpts%nkpt
@@ -1601,7 +1596,7 @@ contains
         gExt(1:3) = matmul( cell%bmat(1:3, 1:3), gBas(1:3, mapGbas(iBas, ikpt, 1)))
         do iband = 1, nobd(ikpt, 1)
           do idirR = 1, 3
-            z0gradAction(iBas, iband, idirR) = iu * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
+            z0gradAction(iBas, iband, idirR) = ImagUnit * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
           end do ! idirR
         end do ! iband
         gBasMapped(1:3, iBas) = real( gBas(1:3, mapGbas(iBas, ikpt, 1)) )
@@ -1609,7 +1604,7 @@ contains
 
       surfIntVeff0(:, :, :) = cmplx(0., 0.)
       do idirR = 1, 3
-        call calcSurfVeff( atoms, kpts, cell, dimens, ikpt, ikpt, coScale, gBas, veffUvIR, nv, nobd(ikpt, 1), &
+        call calcSurfVeff( atoms, input, kpts, cell, ikpt, ikpt, coScale, gBas, veffUvIR, nv, nobd(ikpt, 1), &
           & mapGbas, z0gradAction(:, :, idirR), z0(:, :, ikpt, 1), iDtypeB, iDatomB, surfIntVeff0(:, :, idirR) )
       end do !
 
@@ -1623,7 +1618,7 @@ contains
             & surfIntOvl )
 
           do iband = 1, nobd(ikpt, 1)
-            !!!latest: 
+            !!!latest:
             surfInt(idirR, idirC) = surfInt(idirR, idirC) + 2 * results%w_iks(iband, ikpt, 1) * ( surfIntKinEnerg(iband, iband) &
                                                    & + 0.0*surfIntVeff0(iband, idirC, idirR) - eig(iband, ikpt, 1) * surfIntOvl(iband, iband) )
 !            surfInt(idirR, idirC) = surfInt(idirR, idirC) + results%w_iks(iband, ikpt, 1) * ( surfIntVeff0(iband, idirC, idirR) - eig(iband, ikpt, 1) * surfIntOvl(iband) )
@@ -1636,23 +1631,22 @@ contains
 
   end subroutine CalcSFintIRgradPsiHepsPsi
 
-  subroutine CalcSFintIRPsiHepsGradPsi( atoms, stars, cell, dimens, kpts, results, Veff0, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
+  subroutine CalcSFintIRPsiHepsGradPsi( atoms, input, stars, cell, kpts, results, Veff0, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
       mapGbas, nv, gdp, z0, surfInt )
 
     use m_types
-    use m_jpPotDensHelper, only : ConvertStar2G
-    use m_jpConstants, only : iu
+    use m_dfpt_init, only : ConvertStar2G
 
     implicit none
 
     ! Type parameter
     type(t_atoms),             intent(in)  :: atoms
+    type(t_input),             intent(in)  :: input
     type(t_stars),             intent(in)  :: stars
     type(t_cell),              intent(in)  :: cell
-    type(t_dimension),         intent(in)  :: dimens
     type(t_kpts),              intent(in)  :: kpts
     type(t_results),           intent(in)  :: results
-    type(t_potential),         intent(in)  :: Veff0
+    type(t_potden),         intent(in)  :: Veff0
 
     ! Scalar parameter
     integer,                   intent(in)  :: ngdp
@@ -1666,7 +1660,7 @@ contains
     integer,                   intent(in)  :: mapGbas(:, :, :)
     integer,                   intent(in)  :: nv(:, :)
     integer,                   intent(in)  :: gdp(:, :)
-    MCOMPLEX,                  intent(in)  :: z0(:,:,:,:)
+    COMPLEX,                  intent(in)  :: z0(:,:,:,:)
     complex,                   intent(out) :: surfInt(:, :)
 
     ! Scalar variable
@@ -1695,8 +1689,8 @@ contains
     allocate( surfIntOvl( maxNobd, maxNobd ), surfIntVeff0( maxNobd, 3, 3 ), surfIntKinEnerg( maxNobd, maxNobd ) )
     allocate( veffUvIR(3, (coScale * atoms%lmaxd + 1)**2) )
     allocate( vpw_eff_uw( ngdp ) )
-    allocate( gBasMapped(3, dimens%nvd) )
-    allocate( z0gradAction(dimens%nvd, maxNobd, 3) )
+    allocate( gBasMapped(3, MAXVAL(nv)) )
+    allocate( z0gradAction(MAXVAL(nv), maxNobd, 3) )
 
     surfInt(:, :) = cmplx(0., 0.)
     surfIntOvl(:, :) = cmplx(0., 0.)
@@ -1707,7 +1701,7 @@ contains
 
 
     vpw_eff_uw = cmplx(0., 0.)
-    call convertStar2G( Veff0%vpw_uw(:, 1), vpw_eff_uw, stars, ngdp, gdp )
+    call convertStar2G( Veff0%pw(:, 1), vpw_eff_uw, stars, ngdp, gdp )
     call IRcoeffVeffUv( atoms, stars, cell, iDtypeB, iDatomB, ngdp, coScale, gdp, vpw_eff_uw, veffUvIR )
 
     do ikpt = 1, kpts%nkpt
@@ -1721,7 +1715,7 @@ contains
         gExt(1:3) = matmul( cell%bmat(1:3, 1:3), gBas(1:3, mapGbas(iBas, ikpt, 1)))
         do iband = 1, nobd(ikpt, 1)
           do idirR = 1, 3
-            z0gradAction(iBas, iband, idirR) = iu * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
+            z0gradAction(iBas, iband, idirR) = ImagUnit * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
           end do ! idirR
         end do ! iband
         gBasMapped(1:3, iBas) = real( gBas(1:3, mapGbas(iBas, ikpt, 1)) )
@@ -1729,7 +1723,7 @@ contains
 
       surfIntVeff0(:, :, :) = cmplx(0., 0.)
       do idirR = 1, 3
-        call calcSurfVeff( atoms, kpts, cell, dimens, ikpt, ikpt, coScale, gBas, veffUvIR, nv, nobd(ikpt, 1), &
+        call calcSurfVeff( atoms, input, kpts, cell, ikpt, ikpt, coScale, gBas, veffUvIR, nv, nobd(ikpt, 1), &
           & mapGbas, z0(:, :, ikpt, 1), z0gradAction(:, :, idirR), iDtypeB, iDatomB, surfIntVeff0(:, :, idirR) )
       end do !
 
@@ -1757,20 +1751,19 @@ contains
 
   end subroutine CalcSFintIRPsiHepsGradPsi
 
-  subroutine CalcSFintIRPsigrVeffPsi( atoms, stars, cell, dimens, kpts, results, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
+  subroutine CalcSFintIRPsigrVeffPsi( atoms, input, stars, cell, kpts, results, ngdp, iDtypeB, iDatomB, nobd, eig, gBas, &
       mapGbas, nv, gdp, z0, grVeff0IR, surfInt )
 
     use m_types
-    use m_jpPotDensHelper, only : ConvertStar2G
-    use m_jpConstants, only : iu
+    use m_dfpt_init, only : ConvertStar2G
 
     implicit none
 
     ! Type parameter
     type(t_atoms),             intent(in)  :: atoms
+    type(t_input),             intent(in)  :: input
     type(t_stars),             intent(in)  :: stars
     type(t_cell),              intent(in)  :: cell
-    type(t_dimension),         intent(in)  :: dimens
     type(t_kpts),              intent(in)  :: kpts
     type(t_results),           intent(in)  :: results
 
@@ -1786,7 +1779,7 @@ contains
     integer,                   intent(in)  :: mapGbas(:, :, :)
     integer,                   intent(in)  :: nv(:, :)
     integer,                   intent(in)  :: gdp(:, :)
-    MCOMPLEX,                  intent(in)  :: z0(:,:,:,:)
+    COMPLEX,                  intent(in)  :: z0(:,:,:,:)
     complex,                   intent(in)  :: grVeff0IR(:, :)
     complex,                   intent(out) :: surfInt(:, :)
 
@@ -1815,7 +1808,7 @@ contains
 
     allocate( surfIntOvl( maxNobd, maxNobd ), surfIntVeff0( maxNobd, 3, 3 ), surfIntKinEnerg( maxNobd, maxNobd ) )
     allocate( veffUvIR(3, (coScale * atoms%lmaxd + 1)**2, 3) )
-    allocate( gBasMapped(3, dimens%nvd) )
+    allocate( gBasMapped(3, MAXVAL(nv)) )
 
     surfInt(:, :) = cmplx(0., 0.)
     surfIntOvl(:, :) = cmplx(0., 0.)
@@ -1839,7 +1832,7 @@ contains
 
       surfIntVeff0(:, :, :) = cmplx(0., 0.)
       do idirR = 1, 3
-        call calcSurfVeff( atoms, kpts, cell, dimens, ikpt, ikpt, coScale, gBas, veffUvIR(:, :, idirR), nv, nobd(ikpt, 1), &
+        call calcSurfVeff( atoms, input, kpts, cell, ikpt, ikpt, coScale, gBas, veffUvIR(:, :, idirR), nv, nobd(ikpt, 1), &
           & mapGbas, z0(:, :, ikpt, 1), z0(:, :, ikpt, 1), iDtypeB, iDatomB, surfIntVeff0(:, :, idirR) )
       end do !
 
@@ -1864,23 +1857,26 @@ contains
 
   end subroutine CalcSFintIRPsigrVeffPsi
 
-  subroutine CalcSFintMTgradPsiHepsPsi( atoms, cell, kpts, sym, dimens, results, usdus, iDtypeB, iDatomB, nRadFun, &
+  subroutine CalcSFintMTgradPsiHepsPsi( fmpi, noco, nococonv, oneD, atoms, input, cell, kpts, sym, results, usdus, iDtypeB, iDatomB, nRadFun, &
       & lmpMax, nobd, nv, gBas, mapGbas, kveclo, z0, eig, hFullVarphi, iloTable, grVarphiChLout, &
       & grVarphiChMout, grVarphiCh1, grVarphiCh2, varphi1, varphi2, surfInt )
 
-    use m_types, only : t_atoms, t_cell, t_dimension, t_sphhar, t_kpts, t_potential, t_results, t_sym, t_usdus
-    use m_od_types, only : od_inp, od_sym
+    use m_types
     use m_abcof3
-    use m_jpConstants, only : Tmatrix, iu
+    use m_constants
 
     implicit none
 
     ! Type parameters
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                  intent(in) :: atoms
+    type(t_input),                  intent(in) :: input
     type(t_kpts),                   intent(in) :: kpts
     type(t_cell),                   intent(in) :: cell
     type(t_sym),                    intent(in) :: sym
-    type(t_dimension),              intent(in) :: dimens
     type(t_results),                intent(in) :: results
     type(t_usdus),                  intent(in) :: usdus
 
@@ -1896,7 +1892,7 @@ contains
     integer,                        intent(in)  :: gBas(:, :)
     integer,                        intent(in)  :: mapGbas(:, :, :)
     integer,                        intent(in)  :: kveclo(:,:)
-    MCOMPLEX,                       intent(in)  :: z0(:,:,:,:)
+    COMPLEX,                       intent(in)  :: z0(:,:,:,:)
     real,                           intent(in)  :: eig(:,:,:)
     complex,                        intent(in)  :: hFullVarphi(:, :, 0:, :)
     integer,                        intent(in)  :: iloTable(:, 0:, :)
@@ -1911,6 +1907,7 @@ contains
     ! Type variables
     type(od_inp)                                :: odi
     type(od_sym)                                :: ods
+    type(t_lapw) :: lapw
 
     ! Scalar variables
     integer                                     :: oqn_l
@@ -1931,6 +1928,7 @@ contains
     integer                                     :: iband
     integer                                     :: maxNobd
     integer                                     :: idirC
+    integer :: nk
 
     ! Array variables
     integer,           allocatable              :: muKet(:, :)
@@ -1959,7 +1957,7 @@ contains
     allocate( ngoprI(atoms%nat) )
     allocate( surfIntOvl( maxNobd ), surfIntHfl( maxNobd ) )
     allocate( ab0cof(lmpMax, maxNobd) )
-    allocate( a( dimens%nvd, 0:dimens%lmd, atoms%nat), b(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( a( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), b(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       & bascof_lo(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
 
     surfIntNat(:, :) = cmplx(0., 0.)
@@ -2006,13 +2004,16 @@ contains
         a(:, :, :) = cmplx(0.0, 0.0)
         b(:, :, :) = cmplx(0.0, 0.0)
         bascof_lo(:, :, :, :, :) = cmplx(0.0, 0.0)
-        call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-          & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-          & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gBas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
-          & gBas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gBas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
-          & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-          & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
-
+        !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z0(:,1,1,1)), &
+        !  & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+        !  & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gBas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
+        !  & gBas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gBas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
+        !  & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+        !  & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+        nk=fmpi%k_list(ikpt)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
+                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
         ab0cof(:, :) = cmplx(0., 0.)
         do iband = 1, nobd(ikpt, 1)
           lmp = 0
@@ -2021,21 +2022,21 @@ contains
             do mqn_m = - oqn_l, oqn_l
               pMaxLocal = nRadFun(oqn_l, iDtypeB)
               ! p = 1
-              ab0cof(lmp + 1, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomB) )
+              ab0cof(lmp + 1, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomB) )
               ! p = 2
-              ab0cof(lmp + 2, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomB) )
+              ab0cof(lmp + 2, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomB) )
               ! Add LO contributions
               do iradf = 3, pMaxLocal
                 ! p = 1
-                ab0cof(lmp + 1, iband) = ab0cof(lmp + 1, iband) + iu**oqn_l * &
+                ab0cof(lmp + 1, iband) = ab0cof(lmp + 1, iband) + ImagUnit**oqn_l * &
                   & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        & bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! p = 2
-                ab0cof(lmp + 2, iband) = ab0cof(lmp + 2, iband) + iu**oqn_l * &
+                ab0cof(lmp + 2, iband) = ab0cof(lmp + 2, iband) + ImagUnit**oqn_l * &
                   & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        & bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! 2 < p < LOs for that l and that atom type
-                ab0cof(lmp + iradf, iband) = iu**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                ab0cof(lmp + iradf, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        & bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
               end do ! iradf
 
@@ -2063,24 +2064,28 @@ contains
         end do ! idirC
       end do ! ikpt
 
-    surfInt(1:3, 1:3) = matmul( conjg(Tmatrix(1:3, 1:3)), surfIntNat(-1:1, 1:3) )
+    surfInt(1:3, 1:3) = matmul( conjg(Tmatrix0(1:3, 1:3)), surfIntNat(-1:1, 1:3) )
 
   end subroutine CalcSFintMTgradPsiHepsPsi
 
-  subroutine CalcSFintMTPsiHepsGradPsi( atoms, kpts, dimens, sym, cell, usdus, results, iDtypeB, iDatomB, varphi1, varphi2, nv, El, gBas, &
+  subroutine CalcSFintMTPsiHepsGradPsi( fmpi, noco, nococonv, oneD, atoms, input, kpts, sym, cell, usdus, results, iDtypeB, iDatomB, varphi1, varphi2, nv, El, gBas, &
       & eig, lmpMax, mapGbas, nRadFun, kveclo, nobd, z0, iloTable, grVarphiChLout, grVarphiChMout, r2grVeff0SphVarphi, vEff0NsphGrVarphi, lmpT, grVarphiCh1, grVarphiCh2, surfInt )
 
     use m_abcof3
-    use m_types, only : t_atoms, t_kpts, t_dimension, t_sym, t_cell, t_usdus, t_results
-    use m_od_types, only : od_inp, od_sym
-    use m_jpConstants, only : iu, Tmatrix
+    use m_types
+    use m_types_oneD, only : od_inp, od_sym
+    USE m_constants
 
     implicit none
 
     ! Type parameter
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                 intent(in)  :: atoms
+    type(t_input),                 intent(in)  :: input
     type(t_kpts),                  intent(in)  :: kpts
-    type(t_dimension),             intent(in)  :: dimens
     type(t_sym),                   intent(in)  :: sym
     type(t_cell),                  intent(in)  :: cell
     type(t_usdus),                 intent(in)  :: usdus
@@ -2096,7 +2101,7 @@ contains
     real,                          intent(in)  :: varphi2(:, :, 0:)
     integer,                       intent(in)  :: nv(:, :)
     real,                          intent(in)  :: El(:, 0:, :, :)
-    MCOMPLEX,                      intent(in)  :: z0(:, :, :, :)
+    COMPLEX,                      intent(in)  :: z0(:, :, :, :)
     integer,                       intent(in)  :: gbas(:, :)
     integer,                       intent(in)  :: mapGbas(:, :, :)
     integer,                       intent(in)  :: nRadFun(0:, :)
@@ -2116,6 +2121,7 @@ contains
     ! Type variables
     type(od_inp)                               :: odi
     type(od_sym)                               :: ods
+    type(t_lapw) :: lapw
 
     ! Scalar variables
     integer                                    :: chanMaxBra
@@ -2135,6 +2141,7 @@ contains
     integer                                    :: pMaxLocal
     integer                                    :: idirC
     integer                                    :: maxNobd
+    integer :: nk
 
     ! Array variables
     integer,           allocatable             :: muKet(:, :)
@@ -2169,7 +2176,7 @@ contains
     allocate( hPartNoAbcofBK(lmpMax, lmpMax, 3, atoms%nat, -1:1), overlapNoAbcofBK(lmpMax, lmpMax, 3, atoms%ntype, -1:1) )
     allocate( varphiGrVeffVarphiNoAbcofBK(lmpMax, lmpMax, 3, atoms%nat, 3), overlapNoAbcofBKDummy(lmpMax, lmpMax, 3, atoms%ntype)  )
     allocate( ab0cof(lmpMax, maxNobd) )
-    allocate( a( dimens%nvd, 0:dimens%lmd, atoms%nat), b(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( a( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), b(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       & bascof_lo(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
     allocate( varphiBra1(atoms%jmtd, 2, lmpMax, -1:1), varphiBra2(atoms%jmtd, 2, lmpMax, -1:1), &
             & varphiKet1(atoms%jmtd, 2, lmpMax, -1:1), varphiKet2(atoms%jmtd, 2, lmpMax, -1:1) )
@@ -2269,12 +2276,16 @@ contains
         a(:, :, :) = cmplx(0.0, 0.0)
         b(:, :, :) = cmplx(0.0, 0.0)
         bascof_lo(:, :, :, :, :) = cmplx(0.0, 0.0)
-        call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-          & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-          & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
-          & gbas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gbas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
-          & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-          & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+        !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z0(:,1,1,1)), &
+         ! & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+          !& atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
+          !& gbas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gbas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
+          !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+          !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+          nk=fmpi%k_list(ikpt)
+          CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+          CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
+                              usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
 
         ab0cof(:, :) = cmplx(0., 0.)
         do iband = 1, nobd(ikpt, 1)
@@ -2284,21 +2295,21 @@ contains
             do mqn_m = - oqn_l, oqn_l
               pMaxLocal = nRadFun(oqn_l, iDtypeB)
               ! p = 1
-              ab0cof(lmp + 1, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomB) )
+              ab0cof(lmp + 1, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomB) )
               ! p = 2
-              ab0cof(lmp + 2, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomB) )
+              ab0cof(lmp + 2, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomB) )
               ! Add LO contributions
               do iradf = 3, pMaxLocal
                 ! p = 1
-                ab0cof(lmp + 1, iband) = ab0cof(lmp + 1, iband) + iu**oqn_l * &
+                ab0cof(lmp + 1, iband) = ab0cof(lmp + 1, iband) + ImagUnit**oqn_l * &
                   & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        & bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! p = 2
-                ab0cof(lmp + 2, iband) = ab0cof(lmp + 2, iband) + iu**oqn_l * &
+                ab0cof(lmp + 2, iband) = ab0cof(lmp + 2, iband) + ImagUnit**oqn_l * &
                   & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        & bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! 2 < p < LOs for that l and that atom type
-                ab0cof(lmp + iradf, iband) = iu**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                ab0cof(lmp + iradf, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        & bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
               end do ! iradf
 
@@ -2336,30 +2347,28 @@ contains
       end do ! ikpt
 
       ! Transform the part involving gradients of basis functions into cartesian coordinates
-      surfInt(1:3, 1:3) = matmul(Tmatrix(1:3, 1:3), surfIntNatSum(-1:1, 1:3))
+      surfInt(1:3, 1:3) = matmul(Tmatrix0(1:3, 1:3), surfIntNatSum(-1:1, 1:3))
 
       ! Add term which has not been processed in natural coordinates
       surfInt(1:3, 1:3) = surfInt(1:3, 1:3) - psiGrVeffsphPsiSum(1:3, 1:3)
 
   end subroutine CalcSFintMTPsiHepsGradPsi
 
-  subroutine CalcSFintIRPsi1HepsPsi( atoms, dimens, stars, cell, results, Veff0, kpts, qpts, ngdp, iqpt, iDtypeB, iDatomB, iDatomA, nobd,&
+  subroutine CalcSFintIRPsi1HepsPsi( atoms, input, stars, cell, results, Veff0, kpts, qpts, ngdp, iqpt, iDtypeB, iDatomB, iDatomA, nobd,&
       & gdp, mapKpq2K, kpq2kPrVec, nv, mapGbas, gBas, z0, eig, surfInt, testGoldstein )
 
     use m_types
-    use m_jpPotDensHelper, only : ConvertStar2G
-    use m_jpSetupDynMatHelper, only : readInz1
-    use m_jpConstants, only : iu
+    use m_dfpt_init, only : ConvertStar2G
 
     implicit none
 
     ! Type parameters
     type(t_atoms),                 intent(in)  :: atoms
-    type(t_dimension),             intent(in)  :: dimens
+    type(t_input),                 intent(in)  :: input
     type(t_stars),                 intent(in)  :: stars
     type(t_cell),                  intent(in)  :: cell
     type(t_results),               intent(in)  :: results
-    type(t_potential),             intent(in)  :: Veff0
+    type(t_potden),             intent(in)  :: Veff0
     type(t_kpts),                  intent(in)  :: kpts
     type(t_kpts),                  intent(in)  :: qpts
 
@@ -2379,7 +2388,7 @@ contains
     integer,                       intent(in)  :: nv(:, :)
     integer,                       intent(in)  :: mapGbas(:, :, :)
     integer,                       intent(in)  :: gBas(:, :)
-    MCOMPLEX,                      intent(in)  :: z0(:, :, :, :)
+    COMPLEX,                      intent(in)  :: z0(:, :, :, :)
     real,                          intent(in)  :: eig(:, :, :)
     complex,                       intent(inout) :: surfInt(:, :)
 
@@ -2414,8 +2423,8 @@ contains
     allocate( surfIntOvl( maxNobd, maxNobd ), surfIntVeff0( maxNobd, 3, 3 ), surfIntKinEnerg( maxNobd, maxNobd ) )
     allocate( vpw_eff_uw( ngdp ) )
     allocate( veffUvIR(3, (coScale * atoms%lmaxd + 1)**2) )
-    allocate( z1nG(dimens%nbasfcn, 3, atoms%nat, maxNobd), z1nGContainer( dimens%nbasfcn, maxNobd, 3) )
-    allocate( gBasKet(3, dimens%nvd), gBasBra(3, dimens%nvd), gBasBra2(3, dimens%nvd)  )
+    allocate( z1nG(SIZE(z0(:,1,1,1)), 3, atoms%nat, maxNobd), z1nGContainer( SIZE(z0(:,1,1,1)), maxNobd, 3) )
+    allocate( gBasKet(3, MAXVAL(nv)), gBasBra(3, MAXVAL(nv)), gBasBra2(3, MAXVAL(nv))  )
 
     surfInt(:, :) = cmplx(0., 0.)
     surfIntOvl(:, :) = cmplx(0., 0.)
@@ -2424,7 +2433,7 @@ contains
 
     ! Generate plane-wave expanded potential
     vpw_eff_uw = cmplx(0., 0.)
-    call convertStar2G( Veff0%vpw_uw(:, 1), vpw_eff_uw, stars, ngdp, gdp )
+    call convertStar2G( Veff0%pw(:, 1), vpw_eff_uw, stars, ngdp, gdp )
 
     ! Calculate k-independent parts
     veffUvIR(:, :) = cmplx(0., 0.)
@@ -2442,7 +2451,7 @@ contains
           gExt(1:3) = matmul( cell%bmat(1:3, 1:3), gBas(1:3, mapGbas(iBas, ikpt, 1)))
           do iband = 1, nobd(ikpt, 1)
             do idirR = 1, 3
-              z1nGContainer(iBas, iband, idirR) = -iu * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
+              z1nGContainer(iBas, iband, idirR) = -ImagUnit * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
             end do ! idirR
           end do ! iband
         end do ! iBas
@@ -2483,7 +2492,7 @@ contains
       surfIntVeff0(:, :, :) = cmplx(0., 0.)
       do idirC = 1, 3
       !todo have a look onto the directions
-          call calcSurfVeff( atoms, kpts, cell, dimens, ikpq, ikpt, coScale, gBas, veffUvIR, nv, nobd(ikpt, 1), &
+          call calcSurfVeff( atoms, input, kpts, cell, ikpq, ikpt, coScale, gBas, veffUvIR, nv, nobd(ikpt, 1), &
             & mapGbas, z1nGContainer(:, :, idirC), z0(:, :, ikpt, 1), iDtypeB, iDatomB, surfIntVeff0(:, :, idirC) )
       end do ! idirC
 
@@ -2522,23 +2531,21 @@ contains
 
   end subroutine CalcSFintIRPsi1HepsPsi
 
-  subroutine CalcSFintIRPsiHepsPsi1( atoms, dimens, stars, cell, results, Veff0, kpts, qpts, ngdp, iqpt, iDtypeB, iDatomB, iDatomA,&
+  subroutine CalcSFintIRPsiHepsPsi1( atoms, input, stars, cell, results, Veff0, kpts, qpts, ngdp, iqpt, iDtypeB, iDatomB, iDatomA,&
       & nobd, gdp, mapKpq2K, kpq2kPrVec, nv, mapGbas, gBas, z0, eig, surfInt, testGoldstein )
 
     use m_types
-    use m_jpPotDensHelper, only : ConvertStar2G
-    use m_jpSetupDynMatHelper, only : readInz1
-    use m_jpConstants, only : iu
+    use m_dfpt_init, only : ConvertStar2G
 
     implicit none
 
     ! Type parameters
     type(t_atoms),                 intent(in)  :: atoms
-    type(t_dimension),             intent(in)  :: dimens
+    type(t_input),                 intent(in)  :: input
     type(t_stars),                 intent(in)  :: stars
     type(t_cell),                  intent(in)  :: cell
     type(t_results),               intent(in)  :: results
-    type(t_potential),             intent(in)  :: Veff0
+    type(t_potden),             intent(in)  :: Veff0
     type(t_kpts),                  intent(in)  :: kpts
     type(t_kpts),                  intent(in)  :: qpts
 
@@ -2557,7 +2564,7 @@ contains
     integer,                       intent(in)  :: nv(:, :)
     integer,                       intent(in)  :: mapGbas(:, :, :)
     integer,                       intent(in)  :: gBas(:, :)
-    MCOMPLEX,                      intent(in)  :: z0(:, :, :, :)
+    COMPLEX,                      intent(in)  :: z0(:, :, :, :)
     real,                          intent(in)  :: eig(:, :, :)
     logical,                       intent(in)  :: testGoldstein
     complex,                       intent(out) :: surfInt(:, :)
@@ -2593,8 +2600,8 @@ contains
     allocate( surfIntOvl( maxNobd, maxNobd ), surfIntVeff0( maxNobd, 3, 3 ), surfIntKinEnerg( maxNobd, maxNobd ) )
     allocate( vpw_eff_uw( ngdp ) )
     allocate( veffUvIR(3, (coScale * atoms%lmaxd + 1)**2) )
-    allocate( z1nG(dimens%nbasfcn, 3, atoms%nat, maxNobd), z1nGContainer( dimens%nbasfcn, maxNobd, 3) )
-    allocate( gBasKet(3, dimens%nvd), gBasBra(3, dimens%nvd), gBasKinEnerg(3, dimens%nvd) )
+    allocate( z1nG(SIZE(z0(:,1,1,1)), 3, atoms%nat, maxNobd), z1nGContainer( SIZE(z0(:,1,1,1)), maxNobd, 3) )
+    allocate( gBasKet(3, MAXVAL(nv)), gBasBra(3, MAXVAL(nv)), gBasKinEnerg(3, MAXVAL(nv)) )
 
     surfInt(:, :) = cmplx(0., 0.)
     surfIntOvl(:, :) = cmplx(0., 0.)
@@ -2603,7 +2610,7 @@ contains
 
     ! Generate plane-wave expanded potential
     vpw_eff_uw = cmplx(0., 0.)
-    call convertStar2G( Veff0%vpw_uw(:, 1), vpw_eff_uw, stars, ngdp, gdp )
+    call convertStar2G( Veff0%pw(:, 1), vpw_eff_uw, stars, ngdp, gdp )
 
     ! Calculate k-independent parts
     veffUvIR(:, :) = cmplx(0., 0.)
@@ -2622,7 +2629,7 @@ contains
           gExt(1:3) = matmul( cell%bmat(1:3, 1:3), gBas(1:3, mapGbas(iBas, ikpt, 1)))
           do iband = 1, nobd(ikpt, 1)
             do idirR = 1, 3
-              z1nGContainer(iBas, iband, idirR) = -iu * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
+              z1nGContainer(iBas, iband, idirR) = -ImagUnit * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
             end do ! idirR
           end do ! iband
         end do ! iBas
@@ -2662,8 +2669,9 @@ contains
       surfIntVeff0(:, :, :) = cmplx(0., 0.)
       do idirC = 1, 3
       !todo have a look onto the directions
-          call calcSurfVeff( atoms, kpts, cell, dimens, ikpt, ikpq, coScale, gBas, veffUvIR, nv, nobd(ikpt, 1), &
+          call calcSurfVeff( atoms, input, kpts, cell, ikpt, ikpq, coScale, gBas, veffUvIR, nv, nobd(ikpt, 1), &
             & mapGbas, z0(:, :, ikpt, 1), z1nGContainer(:, :, idirC), iDtypeB, iDatomB, surfIntVeff0(:, :, idirC) )
+
       end do ! idirC
 
       do idirC = 1, 3
@@ -2701,21 +2709,23 @@ contains
 
   end subroutine CalcSFintIRPsiHepsPsi1
 
-  subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1ExpCoeffVar( atoms, sym, dimens, usdus, kpts, cell, results, iqpt, iDtypeB, iDatomB, iDatomA, lmpMax, nRadFun, eig, varphi1, varphi2, hVarphi, &
+  subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1ExpCoeffVar( fmpi, noco, nococonv, oneD, atoms, input, sym, usdus, kpts, cell, results, iqpt, iDtypeB, iDatomB, iDatomA, lmpMax, nRadFun, eig, varphi1, varphi2, hVarphi, &
     & mapKpq2K, gBas, mapGbas, nv, kveclo, z0, lmpT, nobd, iloTable, surfInt, testGoldstein )
 
-    use m_types, only : t_atoms, t_sym, t_dimension, t_usdus, t_kpts, t_cell, t_results
+    use m_types
     use m_abcof3
-    use m_od_types, only : od_inp, od_sym
-    use m_jpConstants, only : iu
-    use m_jpSetupDynMatHelper, only : ReadInz1
+    use m_types_oneD, only : od_inp, od_sym
 
     implicit none
 
     ! Type parameters
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                  intent(in)  :: atoms
+    type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
-    type(t_dimension),              intent(in)  :: dimens
     type(t_usdus),                  intent(in)  :: usdus
     type(t_kpts),                   intent(in)  :: kpts
     type(t_cell),                   intent(in)  :: cell
@@ -2738,7 +2748,7 @@ contains
     integer,                        intent(in)  :: mapGbas(:, :, :)
     integer,                        intent(in)  :: nv(:, :)
     integer,                        intent(in)  :: kveclo(:,:)
-    MCOMPLEX,                       intent(in)  :: z0(:,:,:,:)
+    COMPLEX,                       intent(in)  :: z0(:,:,:,:)
     integer,                        intent(in)  :: nobd(:, :)
     integer,                        intent(in)  :: lmpT(:)
     integer,                        intent(in)  :: iloTable(:, 0:, :)
@@ -2749,6 +2759,7 @@ contains
     ! Type variables
     type(od_inp)                                :: odi
     type(od_sym)                                :: ods
+    type(t_lapw) :: lapw
 
     ! Scalar variables
     integer                                     :: oqn_l
@@ -2770,6 +2781,7 @@ contains
     integer                                     :: idirR
     integer                                     :: iband
     integer                                     :: pmaxLocal
+    integer :: nk
 
     ! Array variables
     integer,           allocatable              :: muKet(:, :)
@@ -2808,12 +2820,12 @@ contains
             & varphiKet1(atoms%jmtd, 2, lmpMax, -1:1), varphiKet2(atoms%jmtd, 2, lmpMax, -1:1) )
     allocate( lambdaKet(2, 0:atoms%lmaxd), lambdaBra(2, 0:atoms%lmaxd) )
     allocate( ngoprI(atoms%nat) )
-    allocate( a( dimens%nvd, 0:dimens%lmd, atoms%nat), b(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( a( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), b(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       & bascof_lo(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
-    allocate( aKpq( dimens%nvd, 0:dimens%lmd, atoms%nat), bKpq(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( aKpq( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bKpq(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       & bascof_loKpq(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
     allocate( ab1cofVec(lmpMax, maxNobd, 3), ab0cof(lmpMax, maxNobd) )
-    allocate( z1nG(dimens%nbasfcn, 3, atoms%nat, maxNobd), z1Analytical(dimens%nbasfcn, 3, atoms%nat, maxNobd) )
+    allocate( z1nG(SIZE(z0(:,1,1,1)), 3, atoms%nat, maxNobd), z1Analytical(SIZE(z0(:,1,1,1)), 3, atoms%nat, maxNobd) )
     allocate( surfIntMT(maxNobd), overlap(maxNobd) )
 
 
@@ -2873,7 +2885,7 @@ contains
           do iband = 1, nobd(ikpt, 1)
             do idirR = 1, 3
               !gradz0(iBas, iband, idirR) = iu * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
-              z1Analytical(iBas, idirR, iDatomA, iband) = -iu * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
+              z1Analytical(iBas, idirR, iDatomA, iband) = -ImagUnit * ( kExt(idirR) + gExt(idirR) ) * z0(iBas, iband, ikpt, 1)
             end do ! idirR
           end do ! iband
         end do ! iBas
@@ -2884,23 +2896,31 @@ contains
       aKpq(:, :, :) = cmplx(0.0, 0.0)
       bKpq(:, :, :) = cmplx(0.0, 0.0)
       bascof_loKpq(:, :, :, :, :) = cmplx(0.0, 0.0)
-      call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-        & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-        & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), gbas(1, mapGbas(:nv(1, ikpq), ikpq, 1)), &
-        & gbas(2, mapGbas(:nv(1, ikpq), ikpq, 1)), gbas(3, mapGbas(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq), nmat, &
-        & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-        & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
+      !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z0(:,1,1,1)), &
+        !& atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+        !& atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), gbas(1, mapGbas(:nv(1, ikpq), ikpq, 1)), &
+        !& gbas(2, mapGbas(:nv(1, ikpq), ikpq, 1)), gbas(3, mapGbas(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq), nmat, &
+        !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+        !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
+        nk=fmpi%k_list(ikpq)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
+                            usdus, oneD, 1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
 
       nmat = nv(1, ikpt) + atoms%nlotot
       a(:, :, :) = cmplx(0.0, 0.0)
       b(:, :, :) = cmplx(0.0, 0.0)
       bascof_lo(:, :, :, :, :) = cmplx(0.0, 0.0)
-      call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-        & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-        & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
-        & gbas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gbas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
-        & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-        & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+      !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z0(:,1,1,1)), &
+        !& atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+        !& atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
+        !& gbas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gbas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
+        !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+        !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+        nk=fmpi%k_list(ikpt)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
+                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
 
       ! Calculate the vector-like large matching coefficients using the first-order wave-function expansion coefficients gained
       ! from solving the Sternheimer equation.
@@ -2914,23 +2934,23 @@ contains
             do mqn_m = -oqn_l, oqn_l
               pMaxLocal = nRadFun(oqn_l, iDtypeB)
               ! p = 1
-              ab1cofVec(lmp + 1, iband, idirC) = iu**oqn_l * &
+              ab1cofVec(lmp + 1, iband, idirC) = ImagUnit**oqn_l * &
                              & dot_product( conjg( z1nG(:nv(1, ikpq), idirC, iDatomA, iband) ), aKpq(:nv(1, ikpq), lm, iDatomB) )
               ! p = 2
-              ab1cofVec(lmp + 2, iband, idirC) = iu**oqn_l * &
+              ab1cofVec(lmp + 2, iband, idirC) = ImagUnit**oqn_l * &
                              & dot_product( conjg( z1nG(:nv(1, ikpq), idirC, iDatomA, iband) ), bKpq(:nv(1, ikpq), lm, iDatomB) )
               do iradf = 3, pMaxLocal
                 ! p = 1
                 ab1cofVec(lmp + 1, iband, idirC) = ab1cofVec(lmp + 1, iband, idirC) &
-                  & + iu**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband) ), &
+                  & + ImagUnit**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband) ), &
                                               & bascof_loKpq(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! p = 2
                 ab1cofVec(lmp + 2, iband, idirC) = ab1cofVec(lmp + 2, iband, idirC) &
-                  & + iu**oqn_l * dot_product(conjg(z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband)), &
+                  & + ImagUnit**oqn_l * dot_product(conjg(z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband)), &
                                               & bascof_loKpq(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! 2 < p < LOs for that l and that atom type
                 ab1cofVec(lmp + iradf, iband, idirC) = &
-                  & iu**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband) ),&
+                  & ImagUnit**oqn_l * dot_product( conjg( z1nG(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband) ),&
                                               & bascof_loKpq(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
               end do ! iradf
               lm = lm + 1
@@ -2949,23 +2969,23 @@ contains
             do mqn_m = -oqn_l, oqn_l
               pMaxLocal = nRadFun(oqn_l, iDtypeB)
               ! p = 1
-              ab1cofVec(lmp + 1, iband, idirC) = iu**oqn_l * &
+              ab1cofVec(lmp + 1, iband, idirC) = ImagUnit**oqn_l * &
                              & dot_product( conjg( z1Analytical(:nv(1, ikpq), idirC, iDatomA, iband) ), aKpq(:nv(1, ikpq), lm, iDatomB) )
               ! p = 2
-              ab1cofVec(lmp + 2, iband, idirC) = iu**oqn_l * &
+              ab1cofVec(lmp + 2, iband, idirC) = ImagUnit**oqn_l * &
                              & dot_product( conjg( z1Analytical(:nv(1, ikpq), idirC, iDatomA, iband) ), bKpq(:nv(1, ikpq), lm, iDatomB) )
               do iradf = 3, pMaxLocal
                 ! p = 1
                 ab1cofVec(lmp + 1, iband, idirC) = ab1cofVec(lmp + 1, iband, idirC) &
-                  & + iu**oqn_l * dot_product( conjg( z1Analytical(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband) ), &
+                  & + ImagUnit**oqn_l * dot_product( conjg( z1Analytical(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband) ), &
                                               & bascof_loKpq(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! p = 2
                 ab1cofVec(lmp + 2, iband, idirC) = ab1cofVec(lmp + 2, iband, idirC) &
-                  & + iu**oqn_l * dot_product(conjg(z1Analytical(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband)), &
+                  & + ImagUnit**oqn_l * dot_product(conjg(z1Analytical(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband)), &
                                               & bascof_loKpq(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! 2 < p < LOs for that l and that atom type
                 ab1cofVec(lmp + iradf, iband, idirC) = &
-                  & iu**oqn_l * dot_product( conjg( z1Analytical(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband) ),&
+                  & ImagUnit**oqn_l * dot_product( conjg( z1Analytical(nv(1, ikpq) + 1:nv(1, ikpq) + atoms%nlotot, idirC, iDatomA, iband) ),&
                                               & bascof_loKpq(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
               end do ! iradf
               lm = lm + 1
@@ -2984,21 +3004,21 @@ contains
           do mqn_m = - oqn_l, oqn_l
             pMaxLocal = nRadFun(oqn_l, iDtypeB)
             ! p = 1
-            ab0cof(lmp + 1, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomB) )
+            ab0cof(lmp + 1, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomB) )
             ! p = 2
-            ab0cof(lmp + 2, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomB) )
+            ab0cof(lmp + 2, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomB) )
             ! Add LO contributions
             do iradf = 3, pMaxLocal
               ! p = 1
-              ab0cof(lmp + 1, iband) = ab0cof(lmp + 1, iband) + iu**oqn_l * &
+              ab0cof(lmp + 1, iband) = ab0cof(lmp + 1, iband) + ImagUnit**oqn_l * &
                 & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                      & bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
               ! p = 2
-              ab0cof(lmp + 2, iband) = ab0cof(lmp + 2, iband) + iu**oqn_l * &
+              ab0cof(lmp + 2, iband) = ab0cof(lmp + 2, iband) + ImagUnit**oqn_l * &
                 & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                      & bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
               ! 2 < p < LOs for that l and that atom type
-              ab0cof(lmp + iradf, iband) = iu**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+              ab0cof(lmp + iradf, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                      & bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
             end do ! iradf
 
@@ -3042,20 +3062,22 @@ contains
 
   end subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1ExpCoeffVar
 
-  subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG( atoms, sym, dimens, usdus, kpts, cell, results, lmpMax, iDtypeA,      &
+  subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG( fmpi, noco, nococonv, oneD, atoms, input, sym, usdus, kpts, cell, results, lmpMax, iDtypeA,      &
       & iDatomA, nRadFun, eig, hVarphi, gBas, mapGbas, nv, kveclo, z0, nobd, lmpT, iloTable, varphi1, varphi2, surfInt )
 
-    use m_types, only : t_atoms, t_sym, t_dimension, t_usdus, t_kpts, t_cell, t_results
+    use m_types
     use m_abcof3
-    use m_od_types, only : od_inp, od_sym
-    use m_jpConstants, only : iu
 
     implicit none
 
     ! Type parameters
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                  intent(in)  :: atoms
+    type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
-    type(t_dimension),              intent(in)  :: dimens
     type(t_usdus),                  intent(in)  :: usdus
     type(t_kpts),                   intent(in)  :: kpts
     type(t_cell),                   intent(in)  :: cell
@@ -3074,7 +3096,7 @@ contains
     integer,                        intent(in)  :: mapGbas(:, :, :)
     integer,                        intent(in)  :: nv(:, :)
     integer,                        intent(in)  :: kveclo(:,:)
-    MCOMPLEX,                       intent(in)  :: z0(:,:,:,:)
+    complex,                       intent(in)  :: z0(:,:,:,:)
     integer,                        intent(in)  :: nobd(:, :)
     integer,                        intent(in)  :: lmpT(:)
     integer,                        intent(in)  :: iloTable(:, 0:, :)
@@ -3085,6 +3107,7 @@ contains
     ! Type variables
     type(od_inp)                                :: odi
     type(od_sym)                                :: ods
+    type(t_lapw) :: lapw
 
     ! Scalar variables
     integer                                     :: oqn_l
@@ -3106,6 +3129,7 @@ contains
     integer                                     :: iband
     integer                                     :: pmaxLocal
     integer                                     :: iBas
+    integer :: nk
 
     ! Array variables
     integer,           allocatable              :: muKet(:, :)
@@ -3137,11 +3161,11 @@ contains
             & varphiKet1(atoms%jmtd, 2, lmpMax, -1:1), varphiKet2(atoms%jmtd, 2, lmpMax, -1:1) )
     allocate( lambdaKet(2, 0:atoms%lmaxd), lambdaBra(2, 0:atoms%lmaxd) )
     allocate( ngoprI(atoms%nat) )
-    allocate( a( dimens%nvd, 0:dimens%lmd, atoms%nat), b(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( a( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), b(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       & bascof_lo(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
     allocate( ab0cofSumVec(lmpMax, maxNobd, 3), ab0cofVec(lmpMax, maxNobd, 3), ab0cof(lmpMax, maxNobd) )
     allocate( surfIntMT(maxNobd), overlap(maxNobd) )
-    allocate( gBasExt(dimens%nbasfcn, 3))
+    allocate( gBasExt(SIZE(z0(:,1,1,1)), 3))
 
     hFullNoAbcofBK(:, :, :, :) = cmplx(0., 0.)
     overlapNoAbcofBK(:, :, :, :) = cmplx(0., 0.)
@@ -3188,13 +3212,16 @@ contains
       a(:, :, :) = cmplx(0.0, 0.0)
       b(:, :, :) = cmplx(0.0, 0.0)
       bascof_lo(:, :, :, :, :) = cmplx(0.0, 0.0)
-      call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-        & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-        & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
-        & gbas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gbas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
-        & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-        & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
-
+      !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z0(:,1,1,1)), &
+        !& atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+        !& atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
+        !& gbas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gbas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
+        !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+        !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+        nk=fmpi%k_list(ikpt)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
+                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
       ab0cof(:, :) = cmplx(0., 0.)
       do iband = 1, nobd(ikpt, 1)
         lmp = 0
@@ -3203,21 +3230,21 @@ contains
           do mqn_m = - oqn_l, oqn_l
             pMaxLocal = nRadFun(oqn_l, iDtypeA)
             ! p = 1
-            ab0cof(lmp + 1, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomA) )
+            ab0cof(lmp + 1, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomA) )
             ! p = 2
-            ab0cof(lmp + 2, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomA) )
+            ab0cof(lmp + 2, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomA) )
             ! Add LO contributions
             do iradf = 3, pMaxLocal
               ! p = 1
-              ab0cof(lmp + 1, iband) = ab0cof(lmp + 1, iband) + iu**oqn_l * &
+              ab0cof(lmp + 1, iband) = ab0cof(lmp + 1, iband) + ImagUnit**oqn_l * &
                 & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                      & bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
               ! p = 2
-              ab0cof(lmp + 2, iband) = ab0cof(lmp + 2, iband) + iu**oqn_l * &
+              ab0cof(lmp + 2, iband) = ab0cof(lmp + 2, iband) + ImagUnit**oqn_l * &
                 & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                      & bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
               ! 2 < p < LOs for that l and that atom type
-              ab0cof(lmp + iradf, iband) = iu**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+              ab0cof(lmp + iradf, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                      & bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
             end do ! iradf
 
@@ -3254,24 +3281,24 @@ contains
             do mqn_m = -oqn_l, oqn_l
               pMaxLocal = nRadFun(oqn_l, iDtypeA)
               ! p = 1
-              ab0cofVec(lmp + 1, iband, idirR) = iu**oqn_l * dot_product( conjg( z0(:nv(1, ikpt), iband, ikpt, 1)), &
+              ab0cofVec(lmp + 1, iband, idirR) = ImagUnit**oqn_l * dot_product( conjg( z0(:nv(1, ikpt), iband, ikpt, 1)), &
                                                                   & gbasExt(:nv(1, ikpt), idirR) * a(:nv(1, ikpt), lm, iDatomA) )
               ! p = 2
-              ab0cofVec(lmp + 2, iband, idirR) = iu**oqn_l * dot_product( conjg( z0(:nv(1, ikpt), iband, ikpt, 1)), &
+              ab0cofVec(lmp + 2, iband, idirR) = ImagUnit**oqn_l * dot_product( conjg( z0(:nv(1, ikpt), iband, ikpt, 1)), &
                                                                   & gbasExt(:nv(1, ikpt), idirR) * b(:nv(1, ikpt), lm, iDatomA) )
               do iradf = 3, pMaxLocal
                 ! p = 1
-                ab0cofVec(lmp + 1, iband, idirR) = ab0cofVec(lmp + 1, iband, idirR) + iu**oqn_l * &
+                ab0cofVec(lmp + 1, iband, idirR) = ab0cofVec(lmp + 1, iband, idirR) + ImagUnit**oqn_l * &
                   & dot_product( conjg( z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ), &
                                                    &   gbasExt(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, idirR) &
                                                    & * bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                 ! p = 2
-                ab0cofVec(lmp + 2, iband, idirR) = ab0cofVec(lmp + 2, iband, idirR) + iu**oqn_l * &
+                ab0cofVec(lmp + 2, iband, idirR) = ab0cofVec(lmp + 2, iband, idirR) + ImagUnit**oqn_l * &
                   & dot_product( conjg( z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ), &
                                                    &   gbasExt(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, idirR) &
                                                    & * bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
                 ! 2 < p < LOs for that l and that atom type
-                ab0cofVec(lmp + iradf, iband, idirR) = iu**oqn_l * dot_product( conjg( z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ),&
+                ab0cofVec(lmp + iradf, iband, idirR) = ImagUnit**oqn_l * dot_product( conjg( z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1) ),&
                                                    &   gbasExt(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, idirR) &
                                                    & * bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeA), iDatomA) )
               end do ! iradf
@@ -3279,7 +3306,7 @@ contains
               ! This help array has to be calulated in a seperate loop here because earlier ab0cofVec would not be available and the
               ! next command needs ab0cofSumVec already.
               do iradf = 1, pMaxLocal
-                ab0cofSumVec(lmp + iradf, iband, idirR) = iu * (ab0cof(lmp + iradf, iband) * kExt(idirR) + ab0cofVec(lmp + iradf, iband, idirR))
+                ab0cofSumVec(lmp + iradf, iband, idirR) = ImagUnit * (ab0cof(lmp + iradf, iband) * kExt(idirR) + ab0cofVec(lmp + iradf, iband, idirR))
               end do ! iradf
 
               ! Precalculation of the 2nd and the 4th line in A.51. Due to performance, the lmp in the resulting quantity are not
@@ -3316,25 +3343,28 @@ contains
     end do ! ikpt
   end subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG
 
-  subroutine CalcSurfintMTPsigrVeff0Psi( atoms, sym, dimens, cell, kpts, usdus, results, lmpMax, iDtypeB, iDatomB, nobd, gbas, &
+  subroutine CalcSurfintMTPsigrVeff0Psi( fmpi, noco, nococonv, oneD, atoms, input, sym, cell, kpts, usdus, results, lmpMax, iDtypeB, iDatomB, nobd, gbas, &
       & mapGbas, nRadFun, nv, z0, kveclo, varphi1, varphi2, grVeff0MT, iloTable, surfInt )
 
-    use m_jpConstants
-    use m_od_types, only : od_inp, od_sym
-    use m_types, only : t_atoms, t_sym, t_dimension, t_cell, t_kpts, t_usdus, t_results
+    use m_types_oneD
+    use m_types
     use m_abcof3
-    use m_jpSetupDynMatHelper, only : CalcFnsphVarphi
 
     implicit none
 
     ! Type parameter
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_nococonv),                intent(in)  :: nococonv
+    type(t_noco),                intent(in)  :: noco
+    type(t_oneD),                intent(in)  :: oneD
     type(t_atoms),                  intent(in)  :: atoms
+    type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
-    type(t_dimension),              intent(in)  :: dimens
     type(t_cell),                   intent(in)  :: cell
     type(t_kpts),                   intent(in)  :: kpts
     type(t_usdus),                  intent(in)  :: usdus
     type(t_results),                intent(in)  :: results
+
 
     ! Scalar parameter
     integer,                        intent(in)  :: lmpMax
@@ -3347,7 +3377,7 @@ contains
     integer,                        intent(in)  :: mapGbas(:, :, :)
     integer,                        intent(in)  :: nRadFun(0:, :)
     integer,                        intent(in)  :: nv(:, :)
-    MCOMPLEX,                       intent(in)  :: z0(:,:,:,:)
+    complex,                       intent(in)  :: z0(:,:,:,:)
     integer,                        intent(in)  :: kveclo(:,:)
     real,                           intent(in)  :: varphi1(:, :, 0:)
     real,                           intent(in)  :: varphi2(:, :, 0:)
@@ -3358,6 +3388,7 @@ contains
     ! Type variables
     type(od_inp)                                :: odi
     type(od_sym)                                :: ods
+    type(t_lapw) :: lapw
 
     ! Scalar variables
     integer                                     :: idirR
@@ -3377,6 +3408,7 @@ contains
     integer                                     :: ikpt
     integer                                    :: pMaxLocal
     integer                                     :: maxNobd
+    INTEGER :: nk
 
     ! Array variables
     complex,           allocatable              :: ab0cofKet(:, :)
@@ -3402,7 +3434,7 @@ contains
     allocate( ab0cofKet(lmpMax, maxNobd) )
     allocate( hFullNoAbcofBK(lmpMax, lmpMax, 3, atoms%nat), overlapNoAbcofBK(lmpMax, lmpMax, 3, atoms%ntype) )
     allocate( surfIntMT(maxNobd), overlap(maxNobd) )
-    allocate( a( dimens%nvd, 0:dimens%lmd, atoms%nat), b(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+    allocate( a( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), b(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       & bascof_lo(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
     allocate( ngoprI(atoms%nat) )
     allocate( lambdaKet(2, 0:atoms%lmaxd), lambdaBra(2, 0:atoms%lmaxd) )
@@ -3464,13 +3496,21 @@ contains
         a(:, :, :) = cmplx(0.0, 0.0)
         b(:, :, :) = cmplx(0.0, 0.0)
         bascof_lo(:, :, :, :, :) = cmplx(0.0, 0.0)
-        call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, dimens%nvd, dimens%jspd, 1, dimens%lmd, dimens%nbasfcn, &
-          & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
-          & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
-          & gbas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gbas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
-          & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, atoms%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
-          & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
-
+        !call abcof3( atoms%lmaxd, atoms%ntype, atoms%nat, sym%nop, MAXVAL(nv), input%jspins, 1, atoms%lmaxd*(atoms%lmaxd+2), SIZE(z0(:,1,1,1)), &
+        !  & atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, atoms%lmax, &
+        !  & atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), gbas(1, mapGbas(:nv(1, ikpt), ikpt, 1)), &
+        !  & gbas(2, mapGbas(:nv(1, ikpt), ikpt, 1)), gbas(3, mapGbas(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt), nmat, &
+        !  & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
+        !  & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
+        !!!!!DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco) TODO!!!!!
+         !!!!!!  k_loop:DO nk_i = 1,size(fmpi%k_list)
+        !nk=fmpi%k_list(nk_i)
+        ! Set up lapw list
+        !CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        nk=fmpi%k_list(ikpt)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
+                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
         ab0cofKet(:, :) = cmplx(0., 0.)
         do iband = 1, nobd(ikpt, 1)
           lmp = 0
@@ -3479,21 +3519,21 @@ contains
             do mqn_m = - oqn_l, oqn_l
               pMaxLocal = nRadFun(oqn_l, iDtypeB)
               ! p = 1
-              ab0cofKet(lmp + 1, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomB) )
+              ab0cofKet(lmp + 1, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), a(:nv(1, ikpt), lm, iDatomB) )
               ! p = 2
-              ab0cofKet(lmp + 2, iband) = iu**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomB) )
+              ab0cofKet(lmp + 2, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(:nv(1, ikpt), iband, ikpt, 1)), b(:nv(1, ikpt), lm, iDatomB) )
               ! Add LO contributions
               do iradf = 3, pMaxLocal
                 ! p = 1
-                ab0cofKet(lmp + 1, iband) = ab0cofKet(lmp + 1, iband) + iu**oqn_l * &
+                ab0cofKet(lmp + 1, iband) = ab0cofKet(lmp + 1, iband) + ImagUnit**oqn_l * &
                   & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        & bascof_lo(1, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! p = 2
-                ab0cofKet(lmp + 2, iband) = ab0cofKet(lmp + 2, iband) + iu**oqn_l * &
+                ab0cofKet(lmp + 2, iband) = ab0cofKet(lmp + 2, iband) + ImagUnit**oqn_l * &
                   & dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        & bascof_lo(2, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
                 ! 2 < p < LOs for that l and that atom type
-                ab0cofKet(lmp + iradf, iband) = iu**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
+                ab0cofKet(lmp + iradf, iband) = ImagUnit**oqn_l * dot_product( conjg(z0(nv(1, ikpt) + 1:nv(1, ikpt) + atoms%nlotot, iband, ikpt, 1)), &
                                                        & bascof_lo(3, mqn_m, :atoms%nlotot, iloTable(iradf, oqn_l, iDtypeB), iDatomB) )
               end do ! iradf
 
@@ -3521,5 +3561,930 @@ contains
     end do ! idirR
 
   end subroutine CalcSurfintMTPsigrVeff0Psi
+
+  subroutine CalcHnGrV0Varphi( atoms, sym, lathar, itype, iatom, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, vEff0MtLh, clnu_atom, &
+      & nmem_atom, mlh_atom, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, hVarphi, vEff0NsphGrVarphi, r2grVeff0SphVarphi, r2grVeff0Varphi )
+
+    use m_types, only : t_atoms, t_sym, t_sphhar
+
+!    use mod_juPhonUtils, only : fopen, fclose
+    implicit none
+
+    ! Type parameter
+    type(t_atoms),        intent(in)  :: atoms
+    type(t_sym),        intent(in)  :: sym
+    type(t_sphhar),       intent(in)  :: lathar
+
+    ! Scalar parameter
+    integer,              intent(in)  :: itype
+    integer,              intent(in)  :: iatom
+    integer,              intent(in)  :: lmpMax
+
+    ! Array parameter
+    real,                 intent(in)  :: El(:, 0:, :, :)
+    real,                 intent(in)  :: varphi1(:,:,0:)
+    real,                 intent(in)  :: varphi2(:,:,0:)
+    integer,              intent(in)  :: nRadFun(0:, :)
+    complex,              intent(in)  :: vEff0MtSpH(:, :)
+    real,                 intent(in)  :: vEff0MtLh(:, 0:, :)
+    complex,              intent(in)  :: clnu_atom(:, 0:, :)
+    integer,              intent(in)  :: nmem_atom(0:, :)
+    integer,              intent(in)  :: mlh_atom(:, 0:, :)
+    real,                 intent(in)  :: grVarphiCh1(:, :, :, -1:)
+    real,                 intent(in)  :: grVarphiCh2(:, :, :, -1:)
+    integer,              intent(in)  :: grVarphiChLout(:, 0:)
+    integer,              intent(in)  :: grVarphiChMout(-atoms%lmaxd:, -1:)
+    complex,              intent(out) :: hVarphi(:, :, 0:, :)
+    complex,              intent(out) :: vEff0NsphGrVarphi(:, :, :, :, -1:)
+    complex,              intent(out) :: r2grVeff0SphVarphi(:, :, :, :, :)
+    complex,              intent(out) :: r2grVeff0Varphi(:, :, :, :, :)
+
+
+
+    ! Scalar variables
+    integer                           :: lmp
+    integer                           :: oqn_l
+    integer                           :: mqn_m
+    integer                           :: oqn_l1Pr
+    integer                           :: mqn_m1Pr
+    integer                           :: imesh
+    integer                           :: iradf
+    real                              :: rInv
+    integer                           :: idir
+    integer                           :: lm
+    integer                           :: lm_pre
+    integer                           :: lm1Pr
+    integer                           :: lm1Pr_pre
+    integer                           :: irel
+    integer                           :: mqn_m2PrC
+    integer                           :: ilh
+
+    ! Array variables
+    real,           allocatable       :: hSph(:, :, :)
+    real,           allocatable       :: r2Veff0SphLh(:, :, :)
+    real,           allocatable       :: r2Veff0Lh(:, :, :)
+    complex,        allocatable       :: r2grVeff0SphSh( :, :, :, : )
+    complex,        allocatable       :: r2grVeff0Sh( :, :, :, : )
+    real,           allocatable       :: recMesh(:)
+    complex,        allocatable       :: grVeff0ShRobust(:, :, :)
+    complex,        allocatable       :: vnsphEff0Varphi(:, :, :, :)
+
+!    real,           allocatable       :: vxc0mt(:, :, :, :)
+!
+    allocate( hSph(2, atoms%jmtd, lmpMax), vnsphEff0Varphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax) )
+
+    hSph(:, :, :) = 0.
+    vnsphEff0Varphi = cmplx(0., 0.)
+
+    ! Spherical part only contributes until lmax and not lmax + 2 as we have only the ket here expanded until lmax and in the overlap we
+    ! cut there at lmax.
+    ! It should be the best compromise to close the loops here over oqn_l, mqn_m and p otherwise we have redundant code or if-clauses in
+    ! the inner loops. With this solution we only count the loops of oqn_l, mqn_m and p twice.
+    ! If we would have run the p loop from 1, this had led to if-clauses in the inner loops.
+    lmp = 0
+    do oqn_l = 0, atoms%lmax(itype)
+      do mqn_m = -oqn_l, oqn_l
+        lmp = lmp + 1
+        do imesh = 1, atoms%jri(itype)
+          hSph(1, imesh, lmp) = El(1, oqn_l, itype, 1) * varphi1(imesh, 1, oqn_l)
+          hSph(2, imesh, lmp) = El(1, oqn_l, itype, 1) * varphi2(imesh, 1, oqn_l)
+        end do ! imesh
+        lmp = lmp + 1
+        do imesh = 1, atoms%jri(itype)
+          hSph(1, imesh, lmp) = varphi1(imesh, 1, oqn_l) + El(1, oqn_l, itype, 1) * varphi1(imesh, 2, oqn_l)
+          hSph(2, imesh, lmp) = varphi2(imesh, 1, oqn_l) + El(1, oqn_l, itype, 1) * varphi2(imesh, 2, oqn_l)
+        end do ! imesh
+        do iradf = 3, nRadFun(oqn_l, itype)
+          lmp = lmp + 1
+          do imesh = 1, atoms%jri(itype)
+            hSph(1, imesh, lmp) = El(iradf - 1, oqn_l, itype, 1) * varphi1(imesh, iradf, oqn_l)
+            hSph(2, imesh, lmp) = El(iradf - 1, oqn_l, itype, 1) * varphi2(imesh, iradf, oqn_l)
+          end do ! imesh
+        end do ! p
+      end do ! mqn_m
+    end do ! oqn_l
+
+    ! Action of normal non-spherical potential onto MT basis functions without basis matching coefficients
+!    call CalcFnsphVarphi( atoms, itype, 0, nRadFun, varphi1, varphi2, vEff0MtSpH, vnsphEff0Varphi )
+    call CalcFnsphVarphi( atoms, itype, 1, nRadFun, varphi1, varphi2, vEff0MtSpH, vnsphEff0Varphi )
+
+    ! Action of complete Hamiltonian onto MT basis functions without basis matching coefficients
+    lmp = 0
+    do oqn_l = 0, atoms%lmax(itype)
+      lm_pre = oqn_l * (oqn_l + 1)
+      do mqn_m = -oqn_l, oqn_l
+        lm = lm_pre + mqn_m
+        do iradf = 1, nRadFun(oqn_l, itype)
+          lmp = lmp + 1
+          ! Add action of spherical Hamiltonian to the diagonal of lmp and l'm'p'.
+          do imesh = 1, atoms%jri(itype)
+            do irel = 1, 2
+              hVarphi(irel, imesh, lm, lmp) = hSph(irel, imesh, lmp)
+            end do ! irel
+          end do ! imesh
+          ! We store the bra index until lmax + 2 because the double gradient of the radial solution is expanded maximally until
+          ! lmax + 2
+          !do oqn_l1Pr = 0, atoms%lmax(itype) + 2
+          do oqn_l1Pr = 0, atoms%lmax(itype) !+ 2
+            lm1Pr_pre = oqn_l1Pr * (oqn_l1Pr + 1)
+            do mqn_m1Pr = -oqn_l1Pr, oqn_l1Pr
+              lm1Pr = lm1Pr_pre + mqn_m1Pr
+              do imesh = 1, atoms%jri(itype)
+                do irel = 1, 2
+                  ! The factors i^l actually assigned to the matching coefficients in theoretical equations are excluded from abcof
+                  ! and abcof3. Therefore, we multiply them here, so that, we do not need to care for them later.
+                  hVarphi(irel, imesh, lm1Pr, lmp) = hVarphi(irel, imesh, lm1Pr, lmp) + vnsphEff0Varphi(irel, imesh, lm1Pr, lmp)
+!                  hVarphi(irel, imesh, lm1Pr, lmp) = vnsphEff0Varphi(irel, imesh, lm1Pr, lmp)
+                end do ! irel
+              end do ! imesh
+            end do ! mqn_m
+          end do ! oqn_l
+        end do ! iradf
+      end do ! mqn_m1Pr
+    end do ! oqn_l1Pr
+    deallocate(hSph)
+
+    ! Construction of the special non-spherical potential required for the calculation of <gradVarphi|H|gradVarphi>
+
+    ! Remove numerically critical singularity at the core
+    ! !todo test this!
+    ! allocate( recMesh(atoms%jmtd) )
+    ! recMesh = 0.
+    ! do imesh = 1, atoms%jri(itype)
+    !   rInv = 1. / atoms%rmsh(imesh, itype)
+    !   recMesh(imesh) =  rInv / atoms%rmsh(imesh, itype)
+    !   r2VeffSpLh(imesh, 0) = r2VeffSpLh(imesh, 0) - atoms%zatom(itype) * rInv
+    ! end do ! imesh
+    !!call CalcGrFLhNatAt(atoms, lathar, itype, iatom, clnu_atom, nmem_atom, mlh_atom, vEff0MtLh(:, :, itype), grVeff0ShRobust)
+
+    ! ! The analytical gradient 1 / r of the l = 0 channel is expanded in spherical harmonics and added to the robust numerically derived
+    ! ! gradient part in the l = 1 channel
+    ! ! todo c_mi is the transposed vesion of c_im!
+    ! do idir = -1, 1
+    !   do mqn_m = -1, 1
+    !     ! l * (l + 1) = 2
+    !     lm = 2 + mqn_m
+    !     do imesh = 1, atoms%jri(itype)
+    !       grVeff0ShRobust(imesh, lm, idir) = grVeff0ShRobust(imesh, lm, idir) - recMesh(imesh) * c_mi(mqn_m + 2, idir + 2)
+    !     end do ! imesh
+    !   end do ! mqn_m
+    ! end do ! idir
+    ! deallocate(recMesh)
+
+    allocate(r2Veff0SphLh(atoms%jmtd, 0:lathar%nlhd, atoms%ntype))
+    r2Veff0SphLh(:, :, :) = cmplx(0.0, 0.0)
+
+!    allocate( vXC0MT(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, 1) )
+!    vxc0mt(:, :, :, :) = cmplx(0., 0.)
+!    ! XC potential in the MT read in from FLEUR
+!    call fopen(1000, name='v0MTFLEUR_xc', status='old', action='read', form='unformatted')
+!    read(1000) vXC0MT(:, :, :, :)
+!    call fclose(1000)
+!    do ilh = 0, lathar%nlhd
+    do imesh = 1, atoms%jri(itype)
+      r2Veff0SphLh(imesh, 0, itype) = vEff0Mtlh(imesh, 0, itype) * atoms%rmsh(imesh, itype) * atoms%rmsh(imesh, itype)
+!      !r2Veff0SphLh(imesh, ilh, itype) = vEff0Mtlh(imesh, ilh, itype) * atoms%rmsh(imesh, itype) * atoms%rmsh(imesh, itype)
+!      r2Veff0SphLh(imesh, ilh, itype) = vxc0mt(imesh, ilh, itype, 1) * atoms%rmsh(imesh, itype) * atoms%rmsh(imesh, itype)
+!      r2Veff0SphLh(imesh, ilh, itype) = (vEff0Mtlh(imesh, ilh, itype) - vxc0mt(imesh, ilh, itype, 1)) * atoms%rmsh(imesh, itype) * atoms%rmsh(imesh, itype)
+    end do
+!    end do
+
+    allocate( r2grVeff0SphSh( atoms%jmtd, (atoms%lmax(itype) + 2)**2, atoms%nat, 3 ) )
+    r2grVeff0SphSh = cmplx(0.0, 0.0)
+
+    call calcGrR2FinLH( atoms, sym, lathar, clnu_atom, nmem_atom, mlh_atom, r2Veff0SphLh, r2grVeff0SphSh )
+
+    allocate(r2Veff0Lh(atoms%jmtd, 0:lathar%nlhd, atoms%ntype))
+    r2Veff0Lh(:, :, :) = cmplx(0.0, 0.0)
+    do ilh = 0, lathar%nlhd
+      do imesh = 1, atoms%jri(itype)
+        r2Veff0Lh(imesh, ilh, itype) = vEff0Mtlh(imesh, ilh, itype) * atoms%rmsh(imesh, itype) * atoms%rmsh(imesh, itype)
+      end do ! imesh
+    end do ! ilh
+
+    allocate( r2grVeff0Sh( atoms%jmtd, (atoms%lmax(itype) + 2)**2, atoms%nat, 3 ) )
+    r2grVeff0Sh = cmplx(0.0, 0.0)
+    call calcGrR2FinLH( atoms, sym, lathar, clnu_atom, nmem_atom, mlh_atom, r2Veff0Lh, r2grVeff0Sh )
+
+
+  !  do idir = 1, 3
+  !    do oqn_l = 0, atoms%lmax(itype) + 1
+  !      do mqn_m = -oqn_l, oqn_l
+  !        lm = oqn_l * (oqn_l + 1) + 1 + mqn_m
+  !        do imesh = 1, atoms%jmtd
+  !          write(4000, '(4i8,2f15.8)') idir, oqn_l, mqn_m, imesh, r2grVeff0SphSh(imesh, lm, 1, idir)
+  !        end do ! imesh
+  !      end do ! mqn_m
+  !    end do ! oqn_l
+  !  end do ! idir
+
+
+    !todo before commnit: is it critical that lmPr is running until lmax + 2
+    ! NOTE: The main difference comes from the Coulomb potential, because here we have a difference in Weinert or numerical, in the
+    ! xc potential, we both do a numerical gradient so do not feel a big difference between chain rule to the kernel or direct
+    ! numerical gradient. In the Weinert method, for Neon we only have a contribuiton of 1e-6 from the non-spherical contributions of
+    ! the potential. The main difference comes from the spherical component. Here, we only have a difference of 1e-4 between using
+    ! Weinert or not.
+    r2grVeff0SphVarphi(:, :, :, :, :) = cmplx(0., 0.)
+    do idir = 1, 3
+      call CalcFnsphVarphi( atoms, itype, 0, nRadFun, varphi1, varphi2, r2grVeff0SphSh(:, :, iatom, idir), &
+                                                                                            & r2grVeff0SphVarphi(:, :, :, :, idir) )
+    end do
+
+    r2grVeff0Varphi(:, :, :, :, :) = cmplx(0., 0.)
+    do idir = 1, 3
+      call CalcFnsphVarphi( atoms, itype, 0, nRadFun, varphi1, varphi2, r2grVeff0Sh(:, :, iatom, idir), &
+                                                                                            & r2grVeff0Varphi(:, :, :, :, idir) )
+    end do
+
+    vEff0NsphGrVarphi = cmplx(0., 0.)
+    do mqn_m2PrC = -1, 1
+      call calcFnsphGrVarphi( atoms, itype, 1, mqn_m2PrC, nRadFun, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, vEff0MtSpH, &
+                                                                                        & vEff0NsphGrVarphi(:, :, :, :, mqn_m2PrC) )
+!      call calcFnsphGrVarphi( atoms, itype, 0, mqn_m2PrC, nRadFun, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, vEff0MtSpH, &
+!                                                                                        & vEff0NsphGrVarphi(:, :, :, :, mqn_m2PrC) )
+    end do ! mqn_m2Pr
+
+    !todo should be up to lmax + 1
+    !todo put in the generation of the spherical potential in here
+  end subroutine CalcHnGrV0Varphi
+
+  subroutine CalcSurfIntIRDynMat( atoms, cell, ngdp1, ngdp2, gdp1, gdp2, rho0IRpw, grVext0IR, qpoint, surfInt )
+
+    use m_types
+    use m_ylm
+    use m_sphbes
+
+    implicit none
+
+    ! Type parameter
+    type(t_atoms),        intent(in)  :: atoms
+    type(t_cell),         intent(in)  :: cell
+
+    ! Scalar parameter
+    integer,              intent(in)  :: ngdp1
+    integer,              intent(in)  :: ngdp2
+
+    ! Array parameter
+    integer,              intent(in)  :: gdp1(:, :)
+    integer,              intent(in)  :: gdp2(:, :)
+    complex,              intent(in)  :: rho0IRpw(:)
+    complex,              intent(in)  :: grVext0IR(:, :)
+    real,                 intent(in)  :: qpoint(:)
+    complex,              intent(out) :: surfInt(3, 3)
+
+    ! Scalar variables
+    integer                           :: idirC
+    integer                           :: idirR
+    integer                           :: iatom
+    integer                           :: itype
+    integer                           :: ieqat
+    integer                           :: iG
+    integer                           :: it
+    integer                           :: iGp
+    complex                           :: phaseFac
+    complex                           :: tSummedCitY1t
+    complex                           :: pref
+    complex                           :: surfIntNonMat
+
+    ! Array variables
+    real                              :: gSum(3)
+    real                              :: gSumCart(3)
+    complex                           :: ylm(4)
+    real                              :: sbes(0:1)
+
+    surfInt(:, :) = cmplx(0., 0.)
+    iatom = 0
+    do itype = 1, atoms%ntype
+      pref = fpi_const * ImagUnit * atoms%rmt(itype) * atoms%rmt(itype)
+      do ieqat = 1, atoms%neq(itype)
+        iatom = iatom + 1
+        do iG = 1, ngdp1
+          do iGp = 1, ngdp2
+
+            gSum(1:3) = gdp1(1:3, iG) + gdp2(1:3, iGp) + qpoint(1:3)
+            gSumCart(1:3) = matmul( cell%bmat(1:3, 1:3), gSum(1:3) )
+
+            ylm(:) = cmplx(0., 0.)
+            call ylm4( 1, gSumCart, ylm )
+
+            sbes(:) = 0
+            call sphbes(1, norm2(gSumCart) * atoms%rmt(itype), sbes)
+
+            phaseFac = exp( ImagUnit * tpi_const * dot_product(gSum(1:3), atoms%taual(1:3, iatom)))
+
+            surfIntNonMat = pref * phaseFac * sbes(1) * rho0IRpw(iG)
+
+            do idirC = 1, 3
+              do idirR = 1, 3
+                ! Corresponds to the magnetic quantum number m for the orbital quantum number l = 1
+                tSummedCitY1t = cmplx(0., 0.)
+                do it = -1, 1
+                  tSummedCitY1t = tSummedCitY1t + c_im(idirR, it + 2) * ylm(it + 3)
+                end do ! it
+
+                surfInt(idirR, idirC) = surfInt(idirR, idirC) - surfIntNonMat * tSummedCitY1t * grVext0IR(iGp, idirC)
+              end do ! idirR
+            end do ! idirC
+          end do ! iGp
+        end do ! iG
+      end do ! ieqat
+    end do ! itype
+
+  end subroutine CalcSurfIntIRDynMat
+
+  subroutine CalcSurfIntMTDynMat(atoms, sym, lathar, clnu_atom, nmem_atom, mlh_atom, rho0MT, grVext0MT, surfInt)
+
+    use m_types, only : t_atoms, t_sym, t_sphhar
+    use m_gaunt, only : Gaunt1
+
+    implicit none
+
+    ! Type parameters
+    type(t_atoms),                     intent(in)  :: atoms
+    type(t_sym),                     intent(in)  :: sym
+    type(t_sphhar),                    intent(in)  :: lathar
+
+    ! Array parameters
+    complex,                           intent(in)  :: clnu_atom(:, 0:, :)
+    integer,                           intent(in)  :: nmem_atom(0:, :)
+    integer,                           intent(in)  :: mlh_atom(:, 0:, :)
+    real,                              intent(in)  :: rho0MT(:, 0:, :)
+    complex,                           intent(in)  :: grVext0MT(:, :, :, :)
+    complex,                           intent(out) :: surfInt(3, 3)
+
+    ! Scalar variables
+    integer                                        :: iatom
+    integer                                        :: itype
+    integer                                        :: ieqat
+    integer                                        :: ptsym
+    integer                                        :: ilh
+    integer                                        :: oqn_l
+    integer                                        :: imem
+    integer                                        :: mqn_m
+    integer                                        :: mqn_mp
+    integer                                        :: oqn_lpp
+    integer                                        :: mqn_mpp
+    integer                                        :: lmpp
+    real                                           :: gauntFactor
+    integer                                        :: idirC
+    integer                                        :: idirR
+
+    surfInt(:, :) = 0
+    iatom = 0
+    do itype = 1, atoms%ntype
+      do ieqat = 1, atoms%neq(itype)
+        iatom = iatom + 1
+        ptsym = sym%ntypsy(iatom)
+        do ilh = 0, lathar%nlh(ptsym)
+          oqn_l = lathar%llh(ilh, ptsym)
+          do imem = 1, nmem_atom(ilh, iatom)
+            mqn_m = mlh_atom(imem, ilh, iatom)
+            do mqn_mp = -1, 1
+              ! lmax + 1 is okay for grVext1
+             ! do oqn_lpp = abs(oqn_l - 1), oqn_l + 1
+              do oqn_lpp = 0, atoms%lmax(itype)
+                do mqn_mpp = -oqn_lpp, oqn_lpp
+             !   mqn_mpp = mqn_m + mqn_mp
+                lmpp = oqn_lpp * (oqn_lpp + 1) + 1 + mqn_mpp
+!                gauntFactor = Gaunt1( oqn_lpp, oqn_l, 1, mqn_mpp, mqn_m, mqn_mp, atoms%lmax(itype) + 1)
+                gauntFactor = Gaunt1( oqn_lpp, oqn_l, 1, mqn_mpp, mqn_m, mqn_mp, atoms%lmax(itype))
+                do idirC = 1, 3
+                  do idirR = 1, 3
+                  !todo check whether rho0MT or and c_im should be conjugated or grVext0MT should e conjugatd. This current solution gives the best results.
+                    surfInt(idirR, idirC) = surfInt(idirR, idirC) + c_im(idirR, mqn_mp + 2)  * atoms%rmt(itype)**2         &
+                      & * rho0MT(atoms%jri(itype), ilh, itype) * clnu_atom(imem, ilh, iatom) *                           &
+                      & conjg(grVext0MT(atoms%jri(itype), lmpp, idirC, iatom)) * gauntFactor
+                  end do ! idirC
+                end do ! idirR
+                end do
+              end do ! oqn_lpp
+            end do ! mqn_mp
+          end do ! imem
+        end do ! ilh
+      end do ! ieqat
+    end do ! itype
+
+  end subroutine CalcSurfIntMTDynMat
+
+  subroutine readInz1( atoms, ikpt, iqpt, ikpq, nobd, nv, z1nG )
+
+    use m_types, only : t_atoms
+    use m_juDFT_stop, only : juDFT_warn
+
+    implicit none
+
+    ! Type parameter
+    type(t_atoms),                 intent(in)  :: atoms
+
+    ! Scalar parameter
+    integer,                       intent(in)  :: ikpt
+    integer,                       intent(in)  :: iqpt
+    integer,                       intent(in)  :: ikpq
+
+    ! Array parameter
+    integer,                       intent(in)  :: nobd(:, :)
+    integer,                       intent(in)  :: nv(:, :)
+    complex,                       intent(out) :: z1nG(:, :, :, :)
+
+    ! Scalar variables
+    integer                                    :: iDtype
+    integer                                    :: iDeqat
+    integer                                    :: iDatom
+    integer                                    :: iband
+    integer                                    :: idir
+    integer                                    :: iBas
+    logical                                    :: st
+
+    ! Array variables
+    character(len=:), allocatable              :: filename
+    character(len=15)                          :: filenameTemp
+
+
+    iDatom = 0
+    z1nG(:, :, :, :) = cmplx(0.0, 0.0)
+    do iDtype = 1, atoms%ntype
+      do iDeqat = 1, atoms%neq(iDtype)
+        iDatom = iDatom + 1
+        if (ikpt < 10 .and. iqpt >= 10 ) then
+          write(filenameTemp, '(a,i1,a,i0,a,i2.2)') 'z1a', iDatom, 'q', iqpt, 'k', ikpt
+        else if( ikpt >= 10 .and. iqpt < 10) then
+          write(filenameTemp, '(a,i1,a,i2.2,a,i0)') 'z1a', iDatom, 'q', iqpt, 'k', ikpt
+        else if( ikpt < 10 .and. iqpt < 10) then
+          write(filenameTemp, '(a,i1,a,i2.2,a,i2.2)') 'z1a', iDatom, 'q', iqpt, 'k', ikpt
+        else
+          write(filenameTemp, '(a,i1,a,i0,a,i0)') 'z1a', iDatom, 'q', iqpt, 'k', ikpt
+        end if
+        filename = trim(filenameTemp)
+        inquire (file=filename, exist=st)
+        if ( st ) then
+          open( 1000, file=filename, status='old', action='read', form='unformatted')
+          rewind(1000)
+          ! ATTENTION: Do not change order of loops, otherwise wrong input!
+          do iband = 1, nobd(ikpt, 1)
+            do idir = 1, 3
+              do iBas = 1, nv(1, ikpq) + atoms%nlotot
+                read(1000) z1nG(iBas, idir, iDatom, iband)
+              end do ! iBas
+            end do ! idir
+          end do ! iband
+          close(1000)
+        else
+          call juDFT_warn( filename//' not found! Its z1 is set to zero.', calledby='readInz1', hint='Perform calculation to gather&
+            & required z1.' )
+        end if
+      end do ! iDeqat
+    end do ! iDtype
+
+  end subroutine readInz1
+
+  subroutine calcFnsphVarphi(atoms, itype, oqn_lVmin, nRadFun, varphi1, varphi2, fSh, fShNsphVarphi)
+
+    use m_types, only : t_atoms
+    use m_gaunt, only : gaunt1
+
+    implicit none
+
+    type(t_atoms), intent(in)  :: atoms
+
+    integer,       intent(in)  :: itype
+    integer,       intent(in)  :: oqn_lVmin
+
+    integer,       intent(in)  :: nRadFun(0:, :)
+    real,          intent(in)  :: varphi1(:, :, 0:)
+    real,          intent(in)  :: varphi2(:, :, 0:)
+    complex,       intent(in)  :: fSh(:, :)
+    complex,       intent(out) :: fShNsphVarphi(:, :, 0:, :)
+
+    integer                    :: lmp
+    integer                    :: oqn_l
+    integer                    :: mqn_m
+    integer                    :: iradf
+    integer                    :: oqn_lV
+    integer                    :: lmV_pre
+    integer                    :: mqn_mV
+    integer                    :: lmV
+    integer                    :: mqn_m1Pr
+    integer                    :: oqn_l1Pr
+    integer                    :: lm1Pr
+    integer                    :: imesh
+    real                       :: gauntFactor
+    complex                    :: vEff0Gaunt
+
+    ! It might be slightly faster to interchange the oqn_lV and oqn_l loops, but then then bugs are easier to produce.
+    lmp = 0
+    do oqn_l = 0, atoms%lmax(itype)
+      do mqn_m = -oqn_l, oqn_l
+        ! We have due to the p loop a factor 2 without LOs and with LOs 2 + number of LOs but otherwise we would not run linearly through
+        ! the arrays.
+        do iradf = 1, nRadFun(oqn_l, itype)
+          lmp = lmp + 1
+          do oqn_lV = oqn_lVmin, atoms%lmax(itype)
+            lmV_pre = oqn_lV * (oqn_lV + 1)
+            do mqn_mV = -oqn_lV, oqn_lV
+              lmV = lmV_pre + mqn_mV + 1
+              ! The ket is only given until lmax, therefore we need no extension of rbas1/rbas2.
+              ! Gaunt selection rule for m
+              mqn_m1Pr = mqn_m + mqn_mV
+              ! Gaunt selection rule for the l of the bra and
+              ! in the non-spherical part of this routine, we have to consider that the bra (due to twofold gradient) has contributions up
+              ! to lmax + 2 and the non-spherical potential which has a cut-off of lmax and is multiplied with the ket having a cutoff of
+              ! lmax. The product is a quantity expanded until 2 * lmax (+ 1). Since we multiply it with the bra the product only has to
+              ! calculated until lmax + 2. Combined with the Gaunt selection rules, we calculate either until a l' from where the
+              ! Gaunt coefficients are zero or if this is larger than lmax + 2 we do not need them so we NOstopNOhere. On the other
+              ! hand the minimal l' should be given by the lower border of the Gaunt coefficients or by m' which is also determined
+              ! according to a Gaunt selection rule. l' should always be larger or equals m'. Otherwise we get lm indices which are
+              ! negative.
+       !       do oqn_l1Pr = max(abs(oqn_lV - oqn_l), abs(mqn_m1Pr)), min(oqn_lV + oqn_l, atoms%lmax(itype) + 2)
+              do oqn_l1Pr = max(abs(oqn_lV - oqn_l), abs(mqn_m1Pr)), min(oqn_lV + oqn_l, atoms%lmax(itype))
+                lm1Pr = oqn_l1Pr * (oqn_l1Pr + 1) + mqn_m1Pr
+       !         gauntFactor = gaunt1( oqn_l1Pr, oqn_lV, oqn_l, mqn_m1Pr, mqn_mV, mqn_m, atoms%lmaxd + 2)
+                gauntFactor = gaunt1( oqn_l1Pr, oqn_lV, oqn_l, mqn_m1Pr, mqn_mV, mqn_m, atoms%lmaxd)
+                do imesh = 1, atoms%jri(itype)
+                  vEff0Gaunt = fSh(imesh, lmV) * gauntFactor
+                  fShNsphVarphi(1, imesh, lm1Pr, lmp) = fShNsphVarphi(1, imesh, lm1Pr, lmp) + vEff0Gaunt * varphi1(imesh, iradf, oqn_l)
+                  fShNsphVarphi(2, imesh, lm1Pr, lmp) = fShNsphVarphi(2, imesh, lm1Pr, lmp) + vEff0Gaunt * varphi2(imesh, iradf, oqn_l)
+                end do ! imesh
+              end do ! oqn_l
+            end do ! mqn_mV
+          end do ! oqn_lV
+        end do ! iradf
+      end do ! mqn_m
+    end do ! oqn_l
+
+  end subroutine calcFnsphVarphi
+
+  subroutine calcGrR2FinLH(atoms, sym, lathar, clnu_atom, nmem_atom, mlh_atom, r2FlhMt, r2GrFshMt)
+
+    use m_gaunt, only : gaunt1
+    use m_types
+    USE m_constants
+
+    implicit none
+
+    ! Type parameters
+    ! ***************
+    type(t_atoms),               intent(in)  :: atoms
+    type(t_sym),               intent(in)  :: sym
+    type(t_sphhar),              intent(in)  :: lathar
+
+    ! Array parameters
+    ! ****************
+    complex,                     intent(in)  :: clnu_atom(:, 0:, :)
+    integer,                     intent(in)  :: nmem_atom(0:, :)
+    integer,                     intent(in)  :: mlh_atom(:, 0:, :)
+    real,                        intent(in)  :: r2FlhMt(:, 0:, :)
+    complex,        allocatable, intent(out) :: r2GrFshMt(:, :, :, :)
+
+
+    ! Local Scalar Variables
+    ! **********************
+    ! pfac    : Prefactor
+    ! tGaunt  :  Gaunt coefficient
+    ! itype   : Loop index for atom types
+    ! ieqat   : Loop index for equivalent atoms
+    ! iatom   : Loop index for all atoms
+    ! imesh   : Loop index for radial mesh point
+    ! mqn_m   : Magnetic quantum number m
+    ! oqn_l   : Orbital quantum number l
+    ! mqn_mpp : Magnetic quantum number double primed to index the natural coordinates
+    ! lm      : Collective index for orbital and magnetic quantum number
+    ! symType : Index of the symmetry
+    ! ilh     : Loop index for different lattice harmonics (not their members!)
+    ! imem    : Loop index for members of a lattice harmonics
+    real                                     :: pfac
+    real                                     :: tGaunt
+    integer                                  :: itype
+    integer                                  :: ieqat
+    integer                                  :: iatom
+    integer                                  :: imesh
+    integer                                  :: mqn_m
+    integer                                  :: oqn_l
+    integer                                  :: mqn_mpp
+    integer                                  :: lm
+    integer                                  :: symType
+    integer                                  :: ilh
+    integer                                  :: imem
+
+    ! Local Array Variables
+    ! *********************
+    ! rDerFlhMt    : Radial derrivative of the incoming fuction
+    ! r2GrFshMtNat : Expansion coefficients of the muffin-tin gradient applied to the incoming function. The coefficients are given
+    !                in natural coordinates and multiplied by $r^2$
+    real,           allocatable              :: rDerFlhMt(:)
+    complex,        allocatable              :: r2GrFshMtNat(:, :, :, :)
+
+
+    ! Initialization of additionaly required arrays.
+    allocate( r2GrFshMt(atoms%jmtd, ( atoms%lmaxd + 1)**2, atoms%nat, 3), &
+            & r2GrFshMtNat(atoms%jmtd, ( atoms%lmaxd + 1)**2, atoms%nat, 3) )
+    allocate( rDerFlhMt(atoms%jmtd) )
+    r2GrFshMt = cmplx(0., 0.)
+    r2GrFshMtNat = cmplx(0., 0.)
+    rDerFlhMt = 0.
+
+    pfac = sqrt( fpi_const / 3. )
+    do mqn_mpp = -1, 1
+      iatom = 0
+      do itype = 1, atoms%ntype
+        do ieqat = 1, atoms%neq(itype)
+          iatom = iatom + 1
+          symType = sym%ntypsy(iatom)
+          do ilh = 0, lathar%nlh(symType)
+            oqn_l = lathar%llh(ilh, symType)
+            do imem = 1, nmem_atom(ilh, iatom)
+              mqn_m = mlh_atom(imem, ilh, iatom)
+
+              ! l + 1 block
+              ! oqn_l - 1 to l, so oqn_l should be < lmax not <= lmax
+              if ( ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 ) .and. ( abs(mqn_m) <= oqn_l ) .and. (oqn_l < atoms%lmax(itype)) ) then
+                lm = ( oqn_l + 1 ) * ( oqn_l + 2 ) + 1 + mqn_m - mqn_mpp
+                call Derivative( r2FlhMt(:, ilh, itype), itype, atoms, rDerFlhMt )
+                tGaunt = Gaunt1( oqn_l + 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd )
+                do imesh = 1, atoms%jri(itype)
+                  r2GrFshMtNat(imesh, lm, iatom, mqn_mpp + 2) = r2GrFshMtNat(imesh, lm, iatom, mqn_mpp + 2) + pfac * (-1)**mqn_mpp &
+                    &* tGaunt * (rDerFlhMt(imesh) * clnu_atom(imem, ilh, iatom) &
+                    &- ((oqn_l + 2) * r2FlhMt(imesh, ilh, itype) * clnu_atom(imem, ilh, iatom) / atoms%rmsh(imesh, itype)))
+                end do ! imesh
+              end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 ) .and. ( abs(mqn_m) <= oqn_l )
+
+              ! l - 1 block
+              if ( ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 ) .and. ( abs(mqn_m) <= oqn_l ) ) then
+                if ( oqn_l - 1 == -1 ) then
+                  write (*, *) 'oqn_l too low'
+                end if
+                lm = (oqn_l - 1) * oqn_l + 1 + mqn_m - mqn_mpp
+                ! This is also a trade of between storage and performance, because derivative is called redundantly, maybe store it?
+                call Derivative( r2FlhMt(:, ilh, itype), itype, atoms, rDerFlhMt )
+                tGaunt = Gaunt1( oqn_l - 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd )
+                do imesh = 1, atoms%jri(itype)
+                  r2GrFshMtNat(imesh, lm, iatom, mqn_mpp + 2) = r2GrFshMtNat(imesh, lm, iatom, mqn_mpp + 2) + pfac * (-1)**mqn_mpp &
+                    & * tGaunt * (rDerFlhMt(imesh)  * clnu_atom(imem, ilh, iatom) &
+                    & + ((oqn_l - 1) * r2FlhMt(imesh, ilh, itype) * clnu_atom(imem, ilh, iatom) / atoms%rmsh(imesh, itype)))
+                end do ! imesh
+              end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 ) .and. ( abs(mqn_m) <= oqn_l )
+            end do ! imem
+          end do ! ilh
+        end do ! ieqat
+      end do ! itype
+    end do ! mqn_mpp
+
+    ! Conversion from natural to cartesian coordinates
+    iatom = 0
+    do itype = 1, atoms%ntype
+      do ieqat = 1, atoms%neq(itype)
+        iatom = iatom + 1
+        do oqn_l = 0, atoms%lmax(itype)
+          do mqn_m = -oqn_l, oqn_l
+            lm = oqn_l * (oqn_l + 1) + 1 + mqn_m
+            do imesh = 1, atoms%jri(itype)
+              r2GrFshMt(imesh, lm, iatom, 1:3) = matmul( Tmatrix0(1:3, 1:3), r2GrFshMtNat(imesh, lm, iatom, 1:3) )
+            end do
+          end do ! mqn_m
+        end do ! oqn_l
+      end do ! ieqat
+    end do ! itype
+
+  end subroutine calcGrR2FinLH
+
+  subroutine CalcChannelsGrFlpNat( atoms, itype, nRadFun, flp1, flp2, delrFlp1, delrFlp2, grFlpChLout, grFlpChMout, grFlpCh1,    &
+      & grFlpCh2 )
+
+    use m_types, only : t_atoms
+    use m_gaunt, only : gaunt1
+
+    implicit none
+
+    ! Type parameter
+    type(t_atoms),               intent(in)  :: atoms
+
+    ! Scalar parameter
+    integer,                     intent(in)  :: itype
+
+    ! Array parameter
+    ! nRadFun     : number of radial functions per l and type
+    ! flp1        : 1st(large) component of function with l and p(p loops over the radial function types)
+    ! flp2        : 2nd(small) component of function with l and p(p loops over the radial function types)
+    ! delrFlp1    : Radial derivative of the 1st component of function with l and p(p loops over the radial function types)
+    ! delrFlp2    : Radial derivative of the 2nd component of function with l and p(p loops over the radial function types)
+    ! grFlpChLout : Contains the resulting outgoing l of a respective scattering channel of the gradient
+    ! grFlpChMout : Contains the resulting outgoing m of a respective scattering channel of the gradient
+    ! grFlpCh1    : Contains the 1st (large) component of the gradient scattering channels of the input function
+    ! grFlpCh2    : Contains the 2nd (small) component of the gradient scattering channels of the input function
+    integer,                     intent(in)  :: nRadFun(0:, :)
+    real,                        intent(in)  :: flp1(:, :, 0:)
+    real,                        intent(in)  :: flp2(:, :, 0:)
+    real,                        intent(in)  :: delrFlp1(:, :, 0:)
+    real,                        intent(in)  :: delrFlp2(:, :, 0:)
+    integer,                     intent(out) :: grFlpChLout(:, 0:)
+    integer,                     intent(out) :: grFlpChMout(-atoms%lmaxd:, -1:)
+    real,                        intent(out) :: grFlpCh1(:, :, :, -1:)
+    real,                        intent(out) :: grFlpCh2(:, :, :, -1:)
+
+    ! Local Variables:
+    !
+    ! pfac     : contains sqrt(4 pi / 3)
+    ! lm          : encodes oqn_l and mqn_m
+    ! idirec      : runs over 3 directions the atom can be displaced to
+    ! tempGaunt1  : auxillary variable to store a Gaunt coefficient
+    ! imesh       : runs over mesh points of current grid
+    ! mqn_m       : magnetic quantum number m
+    ! mqn_mpp     : magnetic quantum number m", also used for indexing 3 directions the atom can be displaced to
+    ! oqn_l       : orbital quantum number l
+
+    ! Local Scalar Variables
+    real                                     :: pfac
+    integer                                  :: oqn_l
+    integer                                  :: mqn_m
+    integer                                  :: iradf
+    integer                                  :: lmp
+    real                                     :: gauntCoeff
+    integer                                  :: imesh
+    integer                                  :: mqn_m2Pr
+
+
+    ! Local Array Variables
+
+    grFlpCh1(:, :, :, :) = 0.
+    grFlpCh2(:, :, :, :) = 0.
+
+
+    pfac = sqrt( fpi_const / 3. )
+
+    ! Precalculate L-output channels
+    do oqn_l = 0, atoms%lmax(itype)
+      grFlpChLout(1, oqn_l) = oqn_l + 1
+      grFlpChLout(2, oqn_l) = oqn_l - 1
+    end do ! oqn_l
+    ! Set this lout = 0 - 1 to abnormal value as not allowed
+    grFlpChLout(2, 0) = -9999
+
+    ! Precalculate M-output channels
+    do mqn_m2Pr = -1, 1
+      do mqn_m = -atoms%lmax(itype), atoms%lmax(itype)
+        grFlpChMout(mqn_m, mqn_m2Pr) = mqn_m - mqn_m2Pr
+      end do ! mqn_m
+    end do ! mqn_m2Pr
+
+    do mqn_m2Pr = -1, 1
+      lmp = 0
+      do oqn_l = 0, atoms%lmax(itype)
+        do mqn_m = -oqn_l, oqn_l
+          do iradf = 1, nRadFun(oqn_l, itype)
+            lmp = lmp + 1
+
+            ! scattering channel (l + 1)
+            if ( (abs(mqn_m - mqn_m2Pr) <= oqn_l + 1) .and. (oqn_l < atoms%lmax(itype))) then
+              gauntCoeff = Gaunt1( oqn_l + 1, oqn_l, 1, mqn_m - mqn_m2Pr, mqn_m, -mqn_m2Pr, atoms%lmax(itype) )
+              do imesh = 1, atoms%jri(itype)
+                ! Consider large and small relativistic components of radial solution
+                grFlpCh1(imesh, 1, lmp, mqn_m2Pr) = grFlpCh1(imesh, 1, lmp, mqn_m2Pr) + pfac * (-1)**mqn_m2Pr * gauntCoeff &
+                               & * (delrFlp1(imesh, iradf, oqn_l) -  oqn_l      * flp1(imesh, iradf, oqn_l) / atoms%rmsh(imesh, itype))
+                grFlpCh2(imesh, 1, lmp, mqn_m2Pr) = grFlpCh2(imesh, 1, lmp, mqn_m2Pr) + pfac * (-1)**mqn_m2Pr * gauntCoeff &
+                               & * (delrFlp2(imesh, iradf, oqn_l) -  oqn_l      * flp2(imesh, iradf, oqn_l) / atoms%rmsh(imesh, itype))
+              enddo ! imesh
+            endif ! scattering channel (l + 1)
+
+            ! scattering channel (l - 1)
+            ! This condition ensures that oqn_l = 0 is not accepted due to the emerging false condition 0 or 1 <= -1
+            if ( ( abs(mqn_m - mqn_m2Pr) <= oqn_l - 1 ) ) then
+              gauntCoeff = Gaunt1( oqn_l - 1, oqn_l, 1, mqn_m - mqn_m2Pr, mqn_m, -mqn_m2Pr, atoms%lmax(itype))
+              do imesh = 1, atoms%jri(itype)
+                ! Consider large and small relativistic components of radial solution
+                grFlpCh1(imesh, 2, lmp, mqn_m2Pr) = grFlpCh1(imesh, 2, lmp, mqn_m2Pr) + pfac * (-1)**mqn_m2Pr * gauntCoeff &
+                               & * (delrFlp1(imesh, iradf, oqn_l) + (oqn_l + 1) * flp1(imesh, iradf, oqn_l) / atoms%rmsh(imesh, itype))
+                grFlpCh2(imesh, 2, lmp, mqn_m2Pr) = grFlpCh2(imesh, 2, lmp, mqn_m2Pr) + pfac * (-1)**mqn_m2Pr * gauntCoeff &
+                               & * (delrFlp2(imesh, iradf, oqn_l) + (oqn_l + 1) * flp2(imesh, iradf, oqn_l) / atoms%rmsh(imesh, itype))
+              enddo ! imesh
+            endif ! scattering channel (l - 1)
+
+          end do ! p
+        end do ! mqn_m
+      end do ! oqn_l
+    end do ! mqn_m2Pr
+
+  end subroutine CalcChannelsGrFlpNat
+
+  subroutine CalcChannelsGrGrtFlpNat( atoms, itype, lmpMax, nRadFun, grFlpChLout, grFlpChMout, grFlpCh1, grFlpCh2, delrGrFlpCh1, &
+      & delrGrFlpCh2, grGrtFlpChLout, grGrtFlpChMout, grGrtFlpCh1, grGrtFlpCh2 )
+
+    use m_types, only : t_atoms
+    use m_gaunt, only : gaunt1
+
+    implicit none
+
+    ! Type parameter
+    type(t_atoms),               intent(in)  :: atoms
+
+    ! Scalar parameter
+    integer,                     intent(in)  :: itype
+    integer,                     intent(in)  :: lmpMax
+
+    ! Array parameter
+    ! nRadFun        : number of radial functions per l and type
+    ! grFlpChLout    : Contains the resulting outgoing l of a respective scattering channel of the input gradient
+    ! grFlpChMout    : Contains the resulting outgoing m of a respective scattering channel of the input gradient
+    ! grFlpCh1       : Contains the 1st (large) component of the gradient scattering channels of the input function
+    ! grFlpCh2       : Contains the 2nd (small) component of the gradient scattering channels of the input function
+    ! delrgrFlpCh1   : Radial derivative of the 1st (large) component of the gradient scattering channels of the input function
+    ! delrgrFlpCh2   : Radial derivative of the 2nd (small) component of the gradient scattering channels of the input function
+    ! grGrtFlpChLout : Resulting output l channels to the scattering channels given in grGrtFlpCh1/2
+    ! grGrtFlpChMout : Resulting output m channels to the scattering channels given in grGrtFlpCh1/2
+    ! grGrtFlpCh1    : 1st(large) component of the double gradient of a function given in spherical harmonics
+    ! grGrtFlpCh2    : 2nd(small) component of the double gradient of a function given in spherical harmonics
+    ! Array parameter
+    integer,                     intent(in)  :: nRadFun(0:, :)
+    integer,                     intent(in)  :: grFlpChLout(:, 0:)
+    integer,                     intent(in)  :: grFlpChMout(-atoms%lmaxd:, -1:)
+    real,                        intent(in)  :: grFlpCh1(:, :, :, -1:)
+    real,                        intent(in)  :: grFlpCh2(:, :, :, -1:)
+    real,                        intent(in)  :: delrGrFlpCh1(:, :, :, -1:)
+    real,                        intent(in)  :: delrGrFlpCh2(:, :, :, -1:)
+    integer,                     intent(out) :: grGrtFlpChLout(:, 0:)
+    integer,                     intent(out) :: grGrtFlpChMout(-atoms%lmaxd:, -1:, -1:)
+    real,                        intent(out) :: grGrtFlpCh1(:, :, :, -1:, -1:)
+    real,                        intent(out) :: grGrtFlpCh2(:, :, :, -1:, -1:)
+
+    ! Scalar Variables
+    real                                     :: pfac
+    integer                                  :: mqn_m2PrC
+    integer                                  :: mqn_m2PrR
+    integer                                  :: lmp
+    integer                                  :: oqn_l
+    integer                                  :: mqn_m
+    integer                                  :: iradf
+    integer                                  :: iChGrGrt
+    integer                                  :: iChGr
+    integer                                  :: oqn_l3Pr
+    integer                                  :: mqn_m3Pr
+    real                                     :: gauntCoeff
+    integer                                  :: imesh
+
+    ! Array Variables
+
+    pfac = sqrt( fpi_const / 3 )
+
+    do mqn_m2PrC = -1, 1
+      do mqn_m2PrR = -1, 1
+        ! Precalculate output magnetic quantum number m
+        do mqn_m = -atoms%lmax(itype), atoms%lmax(itype)
+          ! We calculate grad grad^T. Hence, the incoming gradient is a column-vector
+          mqn_m3Pr = grFlpChMout(mqn_m, mqn_m2PrC)
+          ! The resulting m of the double gradient is calculated from the output m of the simple gradient.
+          grGrtFlpChMout(mqn_m, mqn_m2PrR, mqn_m2PrC) = mqn_m3Pr - mqn_m2PrR
+        end do ! mqn_m
+        lmp = 0
+        ! If we loop over the l, m quantum numbers of the original function and the scattering channels of its gradient, we
+        ! account for all contributions.
+        do oqn_l = 0, atoms%lmax(itype)
+          do mqn_m = -oqn_l, oqn_l
+            mqn_m3Pr = grFlpChMout(mqn_m, mqn_m2PrC)
+            do iradf = 1, nRadFun(oqn_l, itype)
+              lmp = lmp + 1
+              iChGrGrt = 0
+              do iChGr = 1, 2
+                oqn_l3Pr = grFlpChLout(iChGr, oqn_l)
+                if ((oqn_l3Pr < 0 ) .or. (oqn_l3Pr > atoms%lmax(itype) + 1)) cycle
+                iChGrGrt = iChGrGrt + 1
+                ! Still for the Gaunt coefficient conditions we need the resulting m and l quantum numbers of the simple gradient
+                ! scattering channels
+                if ( ( abs(mqn_m3Pr - mqn_m2PrR) <= oqn_l3Pr + 1 ) .and. ( abs(mqn_m3Pr) <= oqn_l3Pr ) ) then
+                  grGrtFlpChLout(iChGrGrt, oqn_l) = oqn_l3Pr + 1
+                  gauntCoeff = Gaunt1( oqn_l3Pr + 1, oqn_l3Pr, 1, mqn_m3Pr - mqn_m2PrR, mqn_m3Pr, -mqn_m2PrR, atoms%lmax(itype) + 2)
+                  do imesh = 1, atoms%jri(itype)
+                    ! We do not need two quantities here for large and small component but to make it consistent we use two!
+                    grGrtFlpCh1(imesh, iChGrGrt, lmp, mqn_m2PrR, mqn_m2PrC) = grGrtFlpCh1(imesh, iChGrGrt, lmp, mqn_m2PrR, mqn_m2PrC) &
+                                                & + pfac * (-1)**mqn_m2PrR * gauntCoeff * (delrGrFlpCh1(imesh, iChGr, lmp, mqn_m2PrC) &
+                                                & - oqn_l3Pr * grFlpCh1(imesh, iChGr, lmp, mqn_m2PrC) / atoms%rmsh(imesh, itype))
+                    grGrtFlpCh2(imesh, iChGrGrt, lmp, mqn_m2PrR, mqn_m2PrC) = grGrtFlpCh2(imesh, iChGrGrt, lmp, mqn_m2PrR, mqn_m2PrC) &
+                                                & + pfac * (-1)**mqn_m2PrR * gauntCoeff * (delrGrFlpCh2(imesh, iChGr, lmp, mqn_m2PrC) &
+                                                & - oqn_l3Pr * grFlpCh2(imesh, iChGr, lmp, mqn_m2PrC) / atoms%rmsh(imesh, itype))
+                  end do ! imesh
+                end if ! l + 1-scattering channel
+
+                iChGrGrt = iChGrGrt + 1
+                ! Still for the Gaunt coefficient conditions we need the resulting m and l quantum numbers of the simple gradient
+                ! scattering channels
+                if ( (abs(mqn_m3Pr - mqn_m2PrR) <= oqn_l3Pr - 1) .and. ( abs(mqn_m3Pr) <= oqn_l3Pr ) ) then
+                  grGrtFlpChLout(iChGrGrt, oqn_l) = oqn_l3Pr - 1
+                  gauntCoeff = Gaunt1( oqn_l3Pr - 1, oqn_l3Pr, 1, mqn_m3Pr - mqn_m2PrR, mqn_m3Pr, -mqn_m2PrR, atoms%lmax(itype) + 1)
+                  do imesh = 1, atoms%jri(itype)
+                    ! We do not need two quantities here for large and small component but to make it consistent we use two!
+                    grGrtFlpCh1(imesh, iChGrGrt, lmp, mqn_m2PrR, mqn_m2PrC) = grGrtFlpCh1(imesh, iChGrGrt, lmp, mqn_m2PrR, mqn_m2PrC) &
+                                                & + pfac * (-1)**mqn_m2PrR * gauntCoeff * (delrGrFlpCh1(imesh, iChGr, lmp, mqn_m2PrC) &
+                                                & + (oqn_l3Pr + 1) * grFlpCh1(imesh, iChGr, lmp, mqn_m2PrC) / atoms%rmsh(imesh, itype))
+                    grGrtFlpCh2(imesh, iChGrGrt, lmp, mqn_m2PrR, mqn_m2PrC) = grGrtFlpCh2(imesh, iChGrGrt, lmp, mqn_m2PrR, mqn_m2PrC) &
+                                                & + pfac * (-1)**mqn_m2PrR * gauntCoeff * (delrGrFlpCh2(imesh, iChGr, lmp, mqn_m2PrC) &
+                                                & + (oqn_l3Pr + 1) * grFlpCh2(imesh, iChGr, lmp, mqn_m2PrC) / atoms%rmsh(imesh, itype))
+                  end do ! imesh
+                end if ! l - 1-scattering channel
+              end do ! iChGr
+            end do ! iradf
+          end do ! mqn_m
+        end do ! oqn_l
+      end do ! mqn_m2PrR
+    end do ! mqn_m2PrC
+
+  end subroutine CalcChannelsGrGrtFlpNat
 
 end module m_jpSetupDynMatSF

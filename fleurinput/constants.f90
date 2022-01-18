@@ -117,6 +117,10 @@ MODULE m_constants
                                               & (0, 1.4472025091165353), (0, 0), (0, 1.4472025091165353), &
                                               & (0, 0), (2.0466534158929770, 0), (0, 0) &
                                               & ], [3, 3] )  ) !< Klüppelberg PhD thesis 4.28
+  integer, parameter, dimension(3)    :: dirvecx = [1, 0, 0]
+  integer, parameter, dimension(3)    :: dirvecy = [0, 1, 0]
+  integer, parameter, dimension(3)    :: dirvecz = [0, 0, 1]
+  integer, parameter, dimension(3, 3) :: id3x3   = reshape([dirvecx, dirvecy, dirvecz], [3, 3])
 
 CONTAINS
 

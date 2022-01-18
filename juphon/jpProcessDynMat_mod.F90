@@ -8,9 +8,7 @@ module m_jpProcessDynMat
 
   subroutine DiagonalizeDynMat(atoms, qpts, calcEv, dynMat, w, a, iqpt)
 
-    use m_JPConstants, only : iu
-    use mod_juPhonUtils, only : fopen, fclose
-
+    USE m_juDFT_stop
     implicit none
 
     ! Type parameters
@@ -68,7 +66,7 @@ module m_jpProcessDynMat
     end if
 !    filename = trim(filenameTemp)
 !    write(*, *) filename
-    call fopen( 1000, name=filenameTemp, status='replace', action='write', form='formatted')
+    open( 109, file=filenameTemp, status='replace', action='write', form='formatted')
 
     ! Set parameter for LAPACK diagonalization routine
     if (calcEv ) then
@@ -108,13 +106,13 @@ module m_jpProcessDynMat
 !    write(*, '(3(2(es16.8,1x),3x))') a(2, :) - dynMat(2, :)
 !    write(*, '(3(2(es16.8,1x),3x))') a(3, :) - dynMat(3, :)
 
-    write(1000, '(a,3f9.3)') 'q =', qpts%bk(1:3, iqpt)
-    write(1000, '(a)')       '==================================='
-    write(1000, '(a)')
-    write(1000, '(a)') 'Original Dynamical Matrix'
-    write(1000, '(3(2(es16.8,1x),3x))') a(1, :)
-    write(1000, '(3(2(es16.8,1x),3x))') a(2, :)
-    write(1000, '(3(2(es16.8,1x),3x))') a(3, :)
+    write(109, '(a,3f9.3)') 'q =', qpts%bk(1:3, iqpt)
+    write(109, '(a)')       '==================================='
+    write(109, '(a)')
+    write(109, '(a)') 'Original Dynamical Matrix'
+    write(109, '(3(2(es16.8,1x),3x))') a(1, :)
+    write(109, '(3(2(es16.8,1x),3x))') a(2, :)
+    write(109, '(3(2(es16.8,1x),3x))') a(3, :)
 
 !    write(1000, '(a)') 'Deviation from Hermiticity'
 !    write(1000, '(3(2(es16.8,1x),3x))') a(1, :) - dynMat(1, :)
@@ -136,11 +134,11 @@ module m_jpProcessDynMat
 
     if ( info < 0 ) then
       write(*, *) 'The ', info, '(st/nd/)th argument had an illegal value'
-      NOstopNO
+      CALL juDFT_error("Illegal argument value.",calledby="DiagonalizeDynMat")
     else if ( info > 0 ) then
       write(*, *) 'The diagonalization algorithm failed to converge; ', info, ' off-diagonal elements of an intermediate tridiaonal form&
                                                                                                              & did not converge to zero.'
-      NOstopNO
+      CALL juDFT_error("Diagonalization failed.",calledby="DiagonalizeDynMat")
     end if
 
     write(*, '(a)') 'The eigenvalues of the Dynamical matrix are:'
@@ -149,7 +147,7 @@ module m_jpProcessDynMat
       do ieqat = 1, atoms%neq(itype)
         iatom = iatom + 1
         write(*, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        write(1000, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        write(109, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
 
@@ -161,23 +159,20 @@ module m_jpProcessDynMat
       write(*, *)
       write(*, '(3(2(es16.8,1x),3x))') a(3, :)
       write(*, *)
-      write(1000, '(3(2(es16.8,1x),3x))') a(1, :)
-      write(1000, *)
-      write(1000, '(3(2(es16.8,1x),3x))') a(2, :)
-      write(1000, *)
-      write(1000, '(3(2(es16.8,1x),3x))') a(3, :)
-      write(1000, *)
+      write(109, '(3(2(es16.8,1x),3x))') a(1, :)
+      write(109, *)
+      write(109, '(3(2(es16.8,1x),3x))') a(2, :)
+      write(109, *)
+      write(109, '(3(2(es16.8,1x),3x))') a(3, :)
+      write(109, *)
     else
       a(:, :) = cmplx(0., 0.)
     end if
-    call fclose( 1000)
+    close( 109 )
 
   end subroutine diagonalizeDynMat
 
   subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs )
-
-    use mod_juPhonUtils, only : fopen, fclose
-    use m_JPConstants, only : tpi
 
     implicit none
 
@@ -209,7 +204,7 @@ module m_jpProcessDynMat
     else if (iqpt > 99 .and. iqpt < 1000) then
       write(filenameTemp, '("dynMatq=",i3)') iqpt
     end if
-    call fopen( 1000, name=filenameTemp, status='old', action='write', form='formatted', position='append')
+    open( 109, file=filenameTemp, status='old', action='write', form='formatted', position='append')
 
     allocate(eigenFreqs(3*atoms%nat))
     eigenFreqs = 0.
@@ -242,8 +237,8 @@ module m_jpProcessDynMat
 
     write(*, *)
     write(*, '(a)') 'Eigenfrequencies in THz'
-    write(1000, *)
-    write(1000, '(a)') 'Eigenfrequencies in THz'
+    write(109, *)
+    write(109, '(a)') 'Eigenfrequencies in THz'
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
@@ -252,21 +247,21 @@ module m_jpProcessDynMat
           if (abs(eigenVals((iatom - 1) * 3 + idir)) < 1e-5) then
             eigenFreqs((iatom - 1) * 3 + idir) = cmplx(0., 0.)
           else if (eigenVals((iatom - 1) * 3 + idir) < 0 ) then
-            eigenFreqs((iatom - 1) * 3 + idir) = cmplx(0., -sqrt(abs(eigenVals((iatom - 1) * 3 + idir)) * convFact) / tpi * 1e-12)
+            eigenFreqs((iatom - 1) * 3 + idir) = cmplx(0., -sqrt(abs(eigenVals((iatom - 1) * 3 + idir)) * convFact) / tpi_const * 1e-12)
           else
-            eigenFreqs((iatom - 1) * 3 + idir) = sqrt(eigenVals((iatom - 1) * 3 + idir) * convFact) / tpi * 1e-12
+            eigenFreqs((iatom - 1) * 3 + idir) = sqrt(eigenVals((iatom - 1) * 3 + idir) * convFact) / tpi_const * 1e-12
           end if
         end do ! idir
         write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        write(1000, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
 
 
     write(*, *)
     write(*, '(a)') 'Eigenfrequencies in 1/cm'
-    write(1000, *)
-    write(1000, '(a)') 'Eigenfrequencies in 1/cm'
+    write(109, *)
+    write(109, '(a)') 'Eigenfrequencies in 1/cm'
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
@@ -275,58 +270,11 @@ module m_jpProcessDynMat
           eigenFreqs((iatom - 1) * 3 + idir) = eigenFreqs((iatom - 1) * 3 + idir) * 33
         end do ! idir
         write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        write(1000, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
-    call fclose( 1000)
+    close( 109 )
 
   end subroutine CalculateFrequencies
 
 end module m_jpProcessDynMat
-!    write(formatString, '(i8)') 2 * 3 * atoms%nat
-!    inquire(file='phonDispersion', exist=dispFile)
-!    if (dispFile) then
-!      call fopen(1000, name='phonDispersion', status='old', action='write', position='append', form='formatted')
-!    else
-!      call fopen(1000, name='phonDispersion', status='new', action='write', form='formatted')
-!    end if
-!    write(1000, '(i5,1x,3(es20.10,1x),1x,'// trim(formatString) // '(es20.10,1x))') iqpt, qpts%bk(:, iqpt), cmplx(wR, wI)
-!    call fclose(1000)
-
-!    allocate( eigenFreqs(3, atoms%nat) )
-!    allocate( rEigenVecs(3, atoms%nat, 3, atoms%nat) )
-
-!    ! Does such a structure make sense if eigenvalues are reordered?
-!    iDatom = 0
-!    do iDtype = 1, atoms%ntype
-!      do iDeqat = 1, atoms%neq(iDtype)
-!        iDatom = iatom + 1
-!        do iDdir = 1, 3
-!          iAlpha = iDdir + 3 * (iDatom - 1)
-!          iatom = 0
-!          do itype = 1, atoms%ntype
-!            do ieqat = 1, atoms%neq(itype)
-!              iatom = iatom + 1
-!              ! Reformat the eigenvalues
-!              eigenFreqs(iDdir, iDatom) = cmplx(wR(iAlpha), wI(iAlpha))
-!
-!              do idir = 1, 3
-!                iBeta = idir + 3 * (iatom - 1)
-!                ! Reformat the eigenvectors
-!                if ( abs(wi(iAlpha)) > 1e-12 ) then
-!                  ! We have a conjugate pair and are at the eigenvalue with positive imaginary part
-!                  if ( (iAlpha < 3 * atoms%nat) .and. (wi(iAlpha + 1) > 1e-12) .and. (wi(iAlpha) > 0) .and. (wi(iAlpha + 1) < 0) ) then
-!                    rEigenVecs(idir, iatom, iDdir, iDatom) = vR(iBeta, iAlpha) + iu * vR(iBeta, iAlpha)
-!                  ! We have a conjugate pair and are at the eigenvalue with negative imaginary part
-!                  else if( ( jj > 1 ) .and. ( wi(jj - 1) > 1e-12 ) .and. (wi(jj) < 0) .and. (wi(jj - 1) > 0) ) then
-!                    rEigenVecs(idir, iatom, iDdir, iDatom) = vR(iBeta, iAlpha) - iu * vR(iBeta, iAlpha)
-!                  end if
-!                else
-!                  rEigenVecs(idir, iatom, iDdir, iDatom) = vR(iBeta, iAlpha)
-!                end if
-!              end do
-!            end do
-!          end do
-!        end do
-!      end do
-!    end do

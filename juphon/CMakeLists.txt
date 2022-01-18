@@ -6,4 +6,9 @@ juphon/dfpt_init.F90
 juphon/dfpt_sternheimer.F90
 juphon/dfpt_dynmat.F90
 juphon/jpGrVeff0_mod.F90
+juphon/jpSternheimer_mod.F90
+juphon/jp2ndOrdQuant_mod.F90
+juphon/jpSetupDynMat_mod.F90
+juphon/jpProcessDynMat_mod.F90
+juphon/jpSetupDynMatSF_mod.F90
 )

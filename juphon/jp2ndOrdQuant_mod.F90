@@ -8,10 +8,8 @@ module m_jp2ndOrdQuant
 
 
   ! should be correct, has been reviewed
-  subroutine GenPsDens2ndOrd(atoms, cell, dimens, ngpqdp, G0index, gpqdp, qpt, psDens2ndOrd, testMode)
+  subroutine GenPsDens2ndOrd(atoms, cell, ngpqdp, G0index, gpqdp, qpt, psDens2ndOrd, testMode)
 
-    use mod_juPhonUtils, only : outerProduct
-    use m_jPConstants, only : tpi, idM, iu
     use m_sphbes
 
     implicit none
@@ -19,7 +17,6 @@ module m_jp2ndOrdQuant
     ! Type parameter
     type(t_atoms),                  intent(in) :: atoms
     type(t_cell),                   intent(in) :: cell
-    type(t_dimension),              intent(in) :: dimens
 
     ! Scalar parameter
     integer,                        intent(in) :: ngpqdp
@@ -54,7 +51,7 @@ module m_jp2ndOrdQuant
     allocate(psDens2ndOrd(ngpqdp, 3, atoms%nat, 3))
     allocate(Gpqext(3, ngpqdp))
     allocate(Gpq(3, ngpqdp))
-    allocate( sbes( 0 : dimens%ncvd + 1, ngpqdp, atoms%ntype) )
+    allocate( sbes( 0 : MAXVAL(atoms%ncv) + 1, ngpqdp, atoms%ntype) )
     allocate( phaseFactor(ngpqdp, atoms%nat) )
     allocate( GpqextRmt(ngpqdp, atoms%ntype) )
     allocate( prefactor(atoms%ntype) )
@@ -86,7 +83,7 @@ module m_jp2ndOrdQuant
       if ( testMode ) then
         psDensMat(iG, 1:3, 1:3) = outerProduct(Gpqext(1:3, iG), Gpqext(1:3, iG))
       else
-        psDensMat(iG, 1:3, 1:3) = outerProduct(Gpqext(1:3, iG), Gpqext(1:3, iG)) - (norm2(Gpqext(1:3, iG))**2 * idM(1:3, 1:3) / 3.)
+        psDensMat(iG, 1:3, 1:3) = outerProduct(Gpqext(1:3, iG), Gpqext(1:3, iG)) - (norm2(Gpqext(1:3, iG))**2 * id3x3(1:3, 1:3) / 3.)
       end if
     end do ! iG
 
@@ -116,7 +113,7 @@ module m_jp2ndOrdQuant
         iatom = iatomTemp
         do ieqat = 1, atoms%neq(itype)
           iatom = iatom + 1
-          phaseFactor(iG, iatom) = exp(-tpi * iu * dot_product(Gpq(1:3, iG), atoms%taual(1:3, iatom)))
+          phaseFactor(iG, iatom) = exp(-tpi_const * ImagUnit * dot_product(Gpq(1:3, iG), atoms%taual(1:3, iatom)))
         end do ! ieqat
       end do ! iG
     end do ! itype
@@ -141,9 +138,8 @@ module m_jp2ndOrdQuant
 
   end subroutine GenPsDens2ndOrd
 
-  subroutine CalcIIEnerg2MatElem( atoms, cell, dimens, qpt, ngpqdp, gpqdp, E2ndOrdII )
+  subroutine CalcIIEnerg2MatElem( atoms, cell, qpt, ngpqdp, gpqdp, E2ndOrdII )
 
-    use m_jPConstants, only : tpi, iu, fpi, c_im
     use m_sphbes
 
     implicit none
@@ -151,7 +147,6 @@ module m_jp2ndOrdQuant
     ! Type parameter
     type(t_atoms),                  intent(in) :: atoms
     type(t_cell),                   intent(in) :: cell
-    type(t_dimension),              intent(in) :: dimens
 
     ! Scalar parameter
     integer,                        intent(in) :: ngpqdp
@@ -197,7 +192,7 @@ module m_jp2ndOrdQuant
     ! Generates pseudodensity as it is given in 7.95 Aaron Phd thesis, or for q = 0 in 7.78 Aaron Phd thesis
     ! We leave the test mode on, leading to the fact that the trace is not subtracted. Therefore, we have a non-vanishing diagonal.
     testMode = .true.
-    call GenPsDens2ndOrd(atoms, cell, dimens, ngpqdp, G0index, gpqdp, qpt, psDens2ndOrd, testMode)
+    call GenPsDens2ndOrd(atoms, cell, ngpqdp, G0index, gpqdp, qpt, psDens2ndOrd, testMode)
 
     ! Leave it here so it needs not be calculated 3N x 3N times.
     do iG = 1, ngpqdp
@@ -216,7 +211,7 @@ module m_jp2ndOrdQuant
         iAatom = iAatom + 1
         expAlpha(:) = cmplx(0.0, 0.0)
         do iG = 1, ngpqdp
-          expAlpha(iG) = exp(tpi * iu * dot_product(gpqdp(1:3, iG) + qpt(1:3), atoms%taual(1:3, iAatom)))
+          expAlpha(iG) = exp(tpi_const * ImagUnit * dot_product(gpqdp(1:3, iG) + qpt(1:3), atoms%taual(1:3, iAatom)))
         end do
         do iAdir = 1, 3
           iBatom = 0
@@ -230,7 +225,7 @@ module m_jp2ndOrdQuant
                     if (iG == G0index) cycle
                     E2ndOrdII( iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom -1) ) = &
                       & E2ndOrdII( iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom -1) ) &
-                      + atoms%zatom(iAtype) * fpi / &
+                      + atoms%zatom(iAtype) * fpi_const / &
                                                 & norm2(Gpqext(1:3, iG))**2 * psDens2ndOrd(iG, iBdir, iBatom, iAdir) * expAlpha(iG)
                   end do ! iG
                 end do ! iBdir
@@ -242,7 +237,7 @@ module m_jp2ndOrdQuant
                   do iG = 1, ngpqdp
                     if (iG == G0index) cycle
                     E2ndOrdII( iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom -1) ) = &
-                      E2ndOrdII( iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom -1) ) + atoms%zatom(iAtype) * fpi *               &
+                      E2ndOrdII( iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom -1) ) + atoms%zatom(iAtype) * fpi_const *               &
                       & psDens2ndOrd(iG, iBdir, iBatom, iAdir) * sbes(0, iG) / norm2(Gpqext(:, iG))**2 * expAlpha(iG)
                   end do
                   ! Constant term is switched off because it is subtracted away anyway in Equation 7.89, as q-independent
@@ -251,7 +246,7 @@ module m_jp2ndOrdQuant
                       E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom -1)) = &
                         & E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom -1)) &
                                  - atoms%zatom(iAtype) * atoms%zatom(iBtype) / atoms%rmt(iBtype)**3 * &
-                                            & ( 3 / fpi * c_im(iBdir, t + 2) * c_im(iAdir, 2 - t) * (-1)**t  )
+                                            & ( 3 / fpi_const * c_im(iBdir, t + 2) * c_im(iAdir, 2 - t) * (-1)**t  )
                     end do ! t
                   end if ! Constant term switched off
                 end do ! iBdir
@@ -271,11 +266,9 @@ module m_jp2ndOrdQuant
 
   end subroutine CalcIIEnerg2MatElem
 
-  subroutine CalcIIEnerg2(atoms, cell, dimens, qpts, stars, input, iqpt, ngdp, gdp, E2ndOrdII)
+  subroutine CalcIIEnerg2(atoms, cell, qpts, stars, input, iqpt, ngdp, gdp, E2ndOrdII)
 
-    use m_jPConstants, only : tpi, iu, fpi, c_im
     use m_sphbes
-    use m_jpPotDensHelper, only : genPertPotDensGvecs
 
     implicit none
 
@@ -283,7 +276,6 @@ module m_jp2ndOrdQuant
     ! Type parameter
     type(t_atoms),                  intent(in) :: atoms
     type(t_cell),                   intent(in) :: cell
-    type(t_dimension),              intent(in) :: dimens
     type(t_kpts),                   intent(in) :: qpts
     type(t_stars),                  intent(in) :: stars
     type(t_input),                  intent(in) :: input
@@ -336,15 +328,15 @@ module m_jp2ndOrdQuant
     E2ndOrdIIatQ0 = cmplx(0.0, 0.0)
 
     ! Call the routine for q = 0
-    call CalcIIEnerg2MatElem(atoms, cell, dimens, qpts%bk(1:3, 1), ngdp, gdp, E2ndOrdIIatQ0)
+    call CalcIIEnerg2MatElem(atoms, cell, qpts%bk(1:3, 1), ngdp, gdp, E2ndOrdIIatQ0)
 
     ! Call the routine for finite q
-    call CalcIIEnerg2MatElem(atoms, cell, dimens, -qpts%bk(1:3, iqpt), ngpqdp, gpqdp, E2ndOrdIIatFinQ)
+    call CalcIIEnerg2MatElem(atoms, cell, -qpts%bk(1:3, iqpt), ngpqdp, gpqdp, E2ndOrdIIatFinQ)
 
 #ifdef DEBUG_MODE
     if (.false.) then
       ! We get the same results for -q and q, probably because Eii2 is a real quantity
-      call CalcIIEnerg2MatElem(atoms, cell, dimens, qpts%bk(1:3, iqpt), ngpqdp, gpqdp, E2ndOrdIIatFinQ)
+      call CalcIIEnerg2MatElem(atoms, cell, qpts%bk(1:3, iqpt), ngpqdp, gpqdp, E2ndOrdIIatFinQ)
     end if
 #endif
     iAatom = 0
@@ -374,16 +366,13 @@ module m_jp2ndOrdQuant
   ! the Weinert method.
   ! Main subroutine for creating the second-order V_ext interstitial coefficients and muffin-tin coefficients using the Weinert method.
   ! Here the output is a matrix!!! So the factor of 2 is multiplied in the dynamical matrix not before multipliying the Qs.
-  subroutine GenVext2(atoms, cell, dimens, ngdp, gdp, vExt2IR, vExt2MT, testMode)
-
-    use m_jPConstants, only : fpi
+  subroutine GenVext2(atoms, cell, ngdp, gdp, vExt2IR, vExt2MT, testMode)
 
     implicit none
 
     ! Type parameter
     type(t_atoms),                  intent(in) :: atoms
     type(t_cell),                   intent(in) :: cell
-    type(t_dimension),              intent(in) :: dimens
 
     ! Scalar parameter
     integer,                        intent(in) :: ngdp
@@ -411,7 +400,7 @@ module m_jp2ndOrdQuant
     allocate(Gext(3, ngdp))
     vExt2IR = cmplx(0.0, 0.0)
 
-    call GenPsDens2ndOrd(atoms, cell, dimens, ngdp, G0index, gdp, [0., 0., 0.], psDens2ndOrd, testMode)
+    call GenPsDens2ndOrd(atoms, cell, ngdp, G0index, gdp, [0., 0., 0.], psDens2ndOrd, testMode)
 
     do iG = 1, ngdp
       Gext(:, iG) = matmul(cell%bmat, gdp(:, iG))
@@ -425,7 +414,7 @@ module m_jp2ndOrdQuant
             do ii = 1, 3
               do iG = 1, ngdp
                 if ( iG /= G0index ) then
-                  vExt2IR(iG, ii, jj, iatom) = fpi * psDens2ndOrd(iG, ii, iatom, jj ) / norm2(Gext(:, iG))**2
+                  vExt2IR(iG, ii, jj, iatom) = fpi_const * psDens2ndOrd(iG, ii, iatom, jj ) / norm2(Gext(:, iG))**2
                 end if
               end do
             end do
@@ -441,10 +430,7 @@ module m_jp2ndOrdQuant
   subroutine GenVext2MT(atoms, cell, ngdp, gdp, testMode, vExt2IR, vExt2MT)
 
     use m_gaunt, only : gaunt1
-    use m_JPConstants, only : fpi, c_im, pi, tpi
     use m_sphbes
-    use m_jpPotDensHelper, only : phasy1nSym
-
 
     implicit none
 
@@ -503,41 +489,41 @@ module m_jp2ndOrdQuant
     ! l = 0, m = 0
     !if (testMode) then
     if (.false.) then
-      volIntMat(1, 1, 1) = cmplx(sqrt(fpi), 0.)
-      volIntMat(1, 2, 2) = cmplx(sqrt(fpi), 0.)
-      volIntMat(1, 3, 3) = cmplx(sqrt(fpi), 0.)
+      volIntMat(1, 1, 1) = cmplx(sqrt(fpi_const), 0.)
+      volIntMat(1, 2, 2) = cmplx(sqrt(fpi_const), 0.)
+      volIntMat(1, 3, 3) = cmplx(sqrt(fpi_const), 0.)
     end if
 
     ! l = 1 has vanishing Gaunt coefficients.
 
     ! l = 2,  m = -2
-    volIntMat(5, 1, 1) = cmplx(sqrt(3 * tpi / 5), 0.)
-    volIntMat(5, 2, 2) = cmplx(-sqrt(3 * tpi / 5), 0.)
-    volIntMat(5, 1, 2) = cmplx(0., sqrt(3 * tpi / 5))
-    volIntMat(5, 2, 1) = cmplx(0., sqrt(3 * tpi / 5))
+    volIntMat(5, 1, 1) = cmplx(sqrt(3 * tpi_const / 5), 0.)
+    volIntMat(5, 2, 2) = cmplx(-sqrt(3 * tpi_const / 5), 0.)
+    volIntMat(5, 1, 2) = cmplx(0., sqrt(3 * tpi_const / 5))
+    volIntMat(5, 2, 1) = cmplx(0., sqrt(3 * tpi_const / 5))
 
     ! l = 2, m = -1
-    volIntMat(6, 1, 3) = cmplx(sqrt(3 * tpi / 5), 0.)
-    volIntMat(6, 3, 1) = cmplx(sqrt(3 * tpi / 5), 0.)
-    volIntMat(6, 2, 3) = cmplx(0., sqrt(3 * tpi / 5))
-    volIntMat(6, 3, 2) = cmplx(0., sqrt(3 * tpi / 5))
+    volIntMat(6, 1, 3) = cmplx(sqrt(3 * tpi_const / 5), 0.)
+    volIntMat(6, 3, 1) = cmplx(sqrt(3 * tpi_const / 5), 0.)
+    volIntMat(6, 2, 3) = cmplx(0., sqrt(3 * tpi_const / 5))
+    volIntMat(6, 3, 2) = cmplx(0., sqrt(3 * tpi_const / 5))
 
     ! l = 2, m = 0
-    volIntMat(7, 1, 1) = cmplx(-sqrt(fpi / 5), 0.)
-    volIntMat(7, 2, 2) = cmplx(-sqrt(fpi / 5), 0.)
-    volIntMat(7, 3, 3) = cmplx(4 * sqrt(pi / 5), 0.)
+    volIntMat(7, 1, 1) = cmplx(-sqrt(fpi_const / 5), 0.)
+    volIntMat(7, 2, 2) = cmplx(-sqrt(fpi_const / 5), 0.)
+    volIntMat(7, 3, 3) = cmplx(4 * sqrt(pi_const / 5), 0.)
 
     ! l = 2,  m = 1
-    volIntMat(8, 1, 3) = cmplx(-sqrt(3 * tpi / 5), 0.)
-    volIntMat(8, 3, 1) = cmplx(-sqrt(3 * tpi / 5), 0.)
-    volIntMat(8, 3, 2) = cmplx(0., sqrt(3 * tpi / 5))
-    volIntMat(8, 2, 3) = cmplx(0., sqrt(3 * tpi / 5))
+    volIntMat(8, 1, 3) = cmplx(-sqrt(3 * tpi_const / 5), 0.)
+    volIntMat(8, 3, 1) = cmplx(-sqrt(3 * tpi_const / 5), 0.)
+    volIntMat(8, 3, 2) = cmplx(0., sqrt(3 * tpi_const / 5))
+    volIntMat(8, 2, 3) = cmplx(0., sqrt(3 * tpi_const / 5))
 
     ! l = 2, m = 2
-    volIntMat(9, 1, 1) = cmplx(sqrt(3 * tpi / 5), 0.)
-    volIntMat(9, 2, 2) = cmplx(-sqrt(3 * tpi / 5), 0.)
-    volIntMat(9, 1, 2) = cmplx(0., -sqrt(3 * tpi / 5))
-    volIntMat(9, 2, 1) = cmplx(0., -sqrt(3 * tpi / 5))
+    volIntMat(9, 1, 1) = cmplx(sqrt(3 * tpi_const / 5), 0.)
+    volIntMat(9, 2, 2) = cmplx(-sqrt(3 * tpi_const / 5), 0.)
+    volIntMat(9, 1, 2) = cmplx(0., -sqrt(3 * tpi_const / 5))
+    volIntMat(9, 2, 1) = cmplx(0., -sqrt(3 * tpi_const / 5))
 
     if (.false.) then
     do jj = 1, 3
@@ -758,10 +744,8 @@ module m_jp2ndOrdQuant
   ! Deprecated
   subroutine phasy1lp2nSym(atomsT, cellT, Gvec, qptn, pylm)
 
-    use m_jPConstants, only : tpi, fpi, iu
     use m_ylm
     use m_types
-    use m_cotra
 
     implicit none
 
@@ -810,7 +794,7 @@ module m_jp2ndOrdQuant
 
     ! calculates 4 π i^l resolved for every l, not divided by nop because no loop over symmetry operations
     do oqn_l = 0, atomsT%lmaxd + 2
-       fpiul(oqn_l) = fpi * iu**oqn_l
+       fpiul(oqn_l) = fpi_const * ImagUnit**oqn_l
     enddo
 
 
@@ -827,8 +811,8 @@ module m_jp2ndOrdQuant
     pylm = cmplx(0.,0.)
     do itype = 1, atomsT%ntype
        do ineq = 1, atomsT%neq(itype)
-          x = tpi * dot_product(Gvec + qptn, atomsT%taual(:, iatom))
-          sf = exp(iu *  x)
+          x = tpi_const * dot_product(Gvec + qptn, atomsT%taual(:, iatom))
+          sf = exp(ImagUnit *  x)
           do oqn_l = 0, atomsT%lmax(itype) + 2
              ll1 = oqn_l * (oqn_l + 1) + 1
              csf = fpiul(oqn_l) * sf
@@ -842,4 +826,40 @@ module m_jp2ndOrdQuant
     enddo ! itype
 
   end subroutine phasy1lp2nSym
+
+  function outerProduct(a, b)
+
+    implicit none
+
+    real, intent(in) :: a(:)
+    real, intent(in) :: b(:)
+
+    real             :: outerProduct(size(a), size(b))
+
+    outerProduct(:, :) = spread(a, dim=2, ncopies=size(b)) * spread(b, dim=1, ncopies=size(a))
+
+  end function outerProduct
+
+  function outerProductME(a, b, i, j)
+
+    use m_juDFT_stop, only : juDFT_error
+
+    implicit none
+
+    complex,    intent(in)  :: a(:)
+    complex,    intent(in)  :: b(:)
+    integer,    intent(in)  :: i
+    integer,    intent(in)  :: j
+
+    complex                 :: outerProductME
+
+    if (i > size(a) .or. j > size(b)) then
+      call juDFT_error( 'Wished matrix element is out of scope of outer product matrix.', calledby='outerProductME', &
+        & hint='Choose smaller indices.')
+    end if
+
+    outerProductME = a(i) * b(j)
+
+  end function outerProductME
+
 end module m_jp2ndOrdQuant
