@@ -256,8 +256,10 @@ SUBROUTINE read_xml_input(this,xml)
       IF (numberNodesB.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))))
       IF (numberNodesC.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))))
       this%secvar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
-      valueString=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vdW')
-      if (index(valueString,"D3")>0) this%vdW=ibset(this%vdW,0)
+      IF(xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@vdW').EQ.1) THEN
+         valueString=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vdW')
+         if (index(valueString,"D3")>0) this%vdW=ibset(this%vdW,0)
+      END IF
    END IF
    ! Read in Brillouin zone integration parameters
    IF (xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/@mode')> 0) THEN
