@@ -177,7 +177,7 @@ CONTAINS
 8026 FORMAT(2x,'Atom:',I9.1,' -->',10x,' local beta=',f9.5,'  local alpha=',f9.5)
 
    WRITE(attributes(1),'(i0)') iType
-   WRITE(attributes(2),'(3(f9.7,1x))') magmom(1),magmom(2),magmom(3)
+   WRITE(attributes(2),'(3(f9.5,1x))') magmom(1),magmom(2),magmom(3)
    label=trim(merge("globalMagMoment","localMagMoment ",global))
    CALL writeXMLElementFormPoly(label,(/'atomType','vec     '/),&
                              attributes,reshape((/8,3,6,30/),(/2,2/)))
