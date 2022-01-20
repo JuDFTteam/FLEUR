@@ -14,6 +14,8 @@ MODULE m_vdWfleur_grimme
     REAL,    DIMENSION(:,:),POINTER :: coord_cart
     END TYPE atom_data
     
+    real,allocatable:: force_stored(:,:)
+    real            :: energy_stored
     PUBLIC :: vdw_fleur_grimme
 
     CONTAINS
@@ -32,7 +34,7 @@ MODULE m_vdWfleur_grimme
         REAL,    INTENT (OUT) :: e_vdW,f_vdW(:,:)
         
         INTEGER  :: NrAtomType,nsize,max_cyc,iop
-        INTEGER  :: NrAtoms,i,j,i1,i2,na
+        INTEGER  :: NrAtoms,i,j,i1,i2,na,na1
         INTEGER,SAVE:: irep(3)=0 !will be determined at first call and reused later
         REAL :: start,finish,delta
         REAL :: test(3,8),brmin(3),brmax(3),force_i(3),f_rot(3)
@@ -40,7 +42,11 @@ MODULE m_vdWfleur_grimme
         TYPE(atom_data) :: atom,atom_new
         REAL, ALLOCATABLE :: ener(:),force_vdW(:,:),force_max(:,:)
         
-                   
+        if (allocated(force_stored)) THEN
+            e_vdw=energy_stored
+            f_vdw=force_stored
+            return !vdW contribution already calculated
+        endif           
         max_cyc=merge(40,1,all(irep==0)) ! max. tries for bigger supercells
         ALLOCATE ( ener(max_cyc) )
         
@@ -143,8 +149,21 @@ MODULE m_vdWfleur_grimme
             force_i=matmul(cell%bmat,force_vdW(:,na))/tpi_const
             f_rot=f_rot+matmul(real(sym%mrot(:,:,iop)),force_i)
         ENDDO
-        f_vdW(:,i1)=matmul(cell%amat,f_rot)/atoms%neq(i1)
+        f_rot=f_rot/atoms%neq(i1)
+        na1 = na - atoms%neq(i1) + 1
+        force_i(:) = f_rot(:)
+        IF (sym%invarind(na1) > 1) THEN
+          DO i2 = 2, sym%invarind(na1)
+            iop = sym%invarop(na1,i2)
+            force_i=matmul(sym%mrot(:,:,iop),f_rot)
+          ENDDO
+          force_i(:) = force_i(:) / sym%invarind(na1)
+        ENDIF
+
+        f_vdW(:,i1)=matmul(cell%amat,force_i)
     ENDDO
+    force_stored=f_vdW !Automatic allocate!
+    energy_stored=e_vdw
     !
 END SUBROUTINE vdW_fleur_grimme
 !

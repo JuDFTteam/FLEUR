@@ -261,6 +261,9 @@ SUBROUTINE read_xml_input(this,xml)
       IF(xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@vdW').EQ.1) THEN
          valueString=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vdW')
          if (index(valueString,"D3")>0) this%vdW=ibset(this%vdW,0)
+         if (index(valueString,"Dion")>0) this%vdW=ibset(this%vdW,1)
+         if (index(valueString,"pot")>0) this%vdW=ibset(this%vdW,2)
+         if (index(valueString,"core")>0) this%vdW=ibset(this%vdW,3)        
       END IF
       IF(xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@vdW_tol').EQ.1) this%vdw_tol=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vdW_tol'))
    END IF

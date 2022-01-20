@@ -51,6 +51,8 @@ CONTAINS
     USE m_types
     USE m_xmlOutput
     use m_judft
+    USE m_vdWfleur_grimme
+    
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)          :: fmpi
     TYPE(t_results),INTENT(INOUT)   :: results
@@ -208,7 +210,14 @@ CONTAINS
           WRITE (oUnit,FMT=8081) results%tote-0.5e0*results%ts
        END IF
 
-       WRITE(attributes(1),'(f20.10)') results%tote
+       ! vdW D3 Grimme contribution
+       IF (btest(input%vdW,0)) THEN
+         if (.not.allocated(results%force_vdw)) ALLOCATE(results%force_vdW(3,atoms%ntype))
+         call vdW_fleur_grimme(input,atoms,sym,cell,results%e_vdW,results%force_vdw)
+      ENDIF
+      !ADD vdW contribution to energy (is zero if no vdW was evaluated)
+      results%tote=results%tote+results%e_vdW
+      WRITE(attributes(1),'(f20.10)') results%tote
        WRITE(attributes(2),'(a)') 'Htr'
        WRITE(attributes(3),'(a)') 'HF'
        IF (hybdat%l_calhf) THEN
@@ -225,6 +234,8 @@ CONTAINS
        CALL writeXMLElementFormPoly('chargeDenXCDenIntegral',(/'value'/),(/results%te_exc/),reshape((/26,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('FockExchangeEnergyValence',(/'value'/),(/0.5e0*results%te_hfex%valence/),reshape((/23,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('FockExchangeEnergyCore',(/'value'/),(/0.5e0*results%te_hfex%core/),reshape((/26,20/),(/1,2/)))
+       if (btest(input%vdw,0)) call writeXMLElementFormPoly('vdW Energy (Grimme D3)',(/'value'/),(/results%e_vdW/),reshape((/17,20/),(/1,2/)))
+       if (btest(input%vdw,1)) call writeXMLElementFormPoly('vdW Energy (M.Callsen)',(/'value'/),(/results%e_vdW/),reshape((/17,20/),(/1,2/)))
        DO  n = 1,atoms%ntype
           CALL openXMLElementPoly('atomTypeDependentContributions',(/'atomType'/),(/n/))
           CALL writeXMLElementFormPoly('electronNucleiInteractionDifferentMTs',(/'value'/),(/zintn_r(n)/),reshape((/8,20/),(/1,2/)))

@@ -19,7 +19,6 @@ CONTAINS
       USE m_xmlOutput
       USE m_relaxation
       USE m_rotate_forces
-      USE m_vdWfleur_grimme
       IMPLICIT NONE
 
       TYPE(t_mpi),     INTENT(IN)    :: fmpi
@@ -33,9 +32,8 @@ CONTAINS
 
       REAL maxAbsForceDist
       INTEGER i, jsp, n, nat1, ierr
-      REAL eps_force,e_vdW
+      REAL eps_force
       LOGICAL :: l_new, l_forceConverged
-      REAL,ALLOCATABLE:: f_vdW(:,:)
       REAL forcetot(3,atoms%ntype)
       CHARACTER(LEN=20) :: attributes(7)
 
@@ -69,10 +67,13 @@ CONTAINS
          DO n = 1,atoms%ntype
             IF (atoms%l_geo(n)) THEN
                DO jsp = 1,input%jspins
-                  DO i = 1,3
-                     forcetot(i,n) = forcetot(i,n) + results%force(i,n,jsp)
-                  END DO
+                  forcetot(:,n) = forcetot(:,n) + results%force(:,n,jsp)
                END DO
+
+               if (allocated(results%force_vdw)) THEN
+                  forcetot=forcetot+results%force_vdw
+                  write(oUnit,*) "vdW forces included in total force"
+               endif
 
                WRITE (oUnit,FMT=8010) n, (atoms%pos(i,nat1),i=1,3), &
                                          (forcetot(i,n),i=1,3)
@@ -125,12 +126,7 @@ CONTAINS
                             atoms%taual,sym%tau,forcetot)
       END IF
 
-      IF (l_forceConverged.and.btest(input%vdW,0)) THEN
-         ALLOCATE(f_vdW,mold=forcetot)
-         call vdW_fleur_grimme(input,atoms,sym,cell,e_vdW,f_vdW)
-         forcetot=forcetot+f_vdW
-         results%tote=results%tote+e_vdW
-      ENDIF
+    
 
       IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,forcetot,results%tote)
 

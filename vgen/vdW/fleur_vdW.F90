@@ -6,11 +6,12 @@
 
 MODULE m_fleur_vdW
   IMPLICIT NONE
-  PUBLIC fleur_vdW,priv_fleur_vdW
+  PRIVATE
+  PUBLIC fleur_vdW_mCallsen
 CONTAINS
-  SUBROUTINE fleur_vdW(fmpi,atoms,sphhar,stars,input,      &
-       cell,sym,oneD,vacuum,    &
-       qpw,rho,vpw_total,vr_total)
+  SUBROUTINE fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,      &
+   cell,sym,oneD,vacuum,results,    &
+   qpw,rho,vpw_total,vr_total)
     !Interface to Juelich vdW-code
     USE m_types
     USE m_constants
@@ -32,6 +33,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_oneD),INTENT(IN)      :: oneD
+    TYPE(t_results),INTENT(INOUT) :: results
     COMPLEX,INTENT(in)     :: qpw(:)
     REAL,INTENT(inout)     :: rho(:,:,:)
     COMPLEX,INTENT(inout)  :: vpw_total(:)
@@ -40,13 +42,13 @@ CONTAINS
 
     !locals
     TYPE(t_atoms)      :: atoms_tmp
-    REAL               :: e_vdW
     REAL,ALLOCATABLE   :: n_grid(:),v_grid(:),rhc(:,:,:)
     COMPLEX,ALLOCATABLE:: vpw(:),psq(:)
     INTEGER            :: n,ncmsh,j,i
-    LOGICAL            :: l_core,l_pot
+    LOGICAL            :: l_core
     REAL tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins)
 
+    if (.not.btest(input%vdw,1)) return ! No vdw contribution
 
     l_core=.FALSE. !try to subtract core charge?
     ALLOCATE(n_grid(27*stars%mx1*stars%mx2*stars%mx3),v_grid(27*stars%mx1*stars%mx2*stars%mx3))
@@ -55,7 +57,7 @@ CONTAINS
 
     IF (l_core) l_core = isCoreDensityPresent()
 
-    IF (l_core) THEN
+    IF (l_core.and.btest(input%vdw,3)) THEN
        WRITE(oUnit,*) "VdW contribution without core charge"       
        ! read the core charge
        CALL readCoreDensity(input,atoms,rhc,tec,qintc)
@@ -84,16 +86,13 @@ CONTAINS
 
 
     CALL priv_fleur_vdW(cell,stars, &
-         n_grid,e_vdW,v_grid,.TRUE.)
+         n_grid,results%e_vdW,v_grid,.TRUE.)
 
     WRITE(oUnit,*) "------  vdW-Potential code by M. Callsen included-------"
-    WRITE(oUnit,*) "vdW-Energy contribution:",e_vdW
+    WRITE(oUnit,*) "vdW-Energy contribution:",results%e_vdW
 
-
-    INQUIRE(file="vdW_sc",exist=l_pot)
-
-    IF (.NOT.l_pot) RETURN
-
+    if (.not.btest(input%vdw,2)) return ! No vdw contribution to potential
+    
 
     !Put potential on rez. grid
     n_grid=0.0
@@ -118,7 +117,7 @@ CONTAINS
     ! Add to total potential
     vpw_total(:)=vpw_total(:)+psq
 
-  END SUBROUTINE fleur_vdW
+  END SUBROUTINE fleur_vdW_mCallsen
 
 
 
