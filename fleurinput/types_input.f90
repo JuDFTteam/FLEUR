@@ -25,6 +25,7 @@ MODULE m_types_input
   LOGICAL :: vchk =.FALSE.
   LOGICAL :: l_f =.FALSE.
   INTEGER :: vdW=0 !bit pattern describing vdW treatment vdW=1->Grimme(D3), vdW=2->Soler
+  REAL    :: vdW_tol=0.005 !tolerance in vdW Energy (eV)
   INTEGER :: f_level = -1
   !     f_level ==-1: Original force calculation
   !     f_level == 0: Original force calculation with FORCES and POSCAR printout
@@ -115,6 +116,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%vchk,rank,mpi_comm)
    CALL mpi_bc(this%l_f,rank,mpi_comm)
    CALL mpi_bc(this%vdW,rank,mpi_comm)
+   CALL mpi_bc(this%vdW_tol,rank,mpi_comm)
    CALL mpi_bc(this%f_level,rank,mpi_comm)
    CALL mpi_bc(this%eonly,rank,mpi_comm)
    CALL mpi_bc(this%ctail,rank,mpi_comm)
@@ -260,6 +262,7 @@ SUBROUTINE read_xml_input(this,xml)
          valueString=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vdW')
          if (index(valueString,"D3")>0) this%vdW=ibset(this%vdW,0)
       END IF
+      IF(xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@vdW_tol').EQ.1) this%vdw_tol=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vdW_tol'))
    END IF
    ! Read in Brillouin zone integration parameters
    IF (xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/@mode')> 0) THEN

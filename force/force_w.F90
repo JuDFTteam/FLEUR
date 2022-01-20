@@ -127,7 +127,7 @@ CONTAINS
 
       IF (l_forceConverged.and.btest(input%vdW,0)) THEN
          ALLOCATE(f_vdW,mold=forcetot)
-         call vdW_fleur_grimme(atoms,sym,cell,input%film,e_vdW,f_vdW)
+         call vdW_fleur_grimme(input,atoms,sym,cell,e_vdW,f_vdW)
          forcetot=forcetot+f_vdW
          results%tote=results%tote+e_vdW
       ENDIF
