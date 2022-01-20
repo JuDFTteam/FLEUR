@@ -16,6 +16,8 @@
 !-----------------------------------------------------------------------------------------------------------------------------------
 module m_jpSternheimer
 
+    USE m_constants
+
   implicit none
 
   contains
@@ -100,358 +102,7 @@ module m_jpSternheimer
   !> @todo Insert spin, replace the 1
   !>
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine initSternheimerSCC( atoms, sym, cell, stars, dimens, lathar, enpara, uds, input, tdHS0, qpts, logUnit, ngdp, iqpt,    &
-      & gdp, rho0IR, rho0MT, mlh_atom, nmem_atom, clnu_atom, rbas1, rbas2, uuilon, duilon, ulouilopn, ilo2p, rho0IRpw, rho0MTsh,   &
-      & vEff0MTsh, qpwcG, rho1MTCoreDispAt, grVxcIRKern, dKernMTGPts, grVeff0MT_init, grVeff0MT_main, grRho0IR, grRho0MT, gausWts, &
-      & ylm, grVext0IR_DM, grVext0MT_DM, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc )
-
-    use m_types, only : t_atoms, t_sym, t_cell, t_stars, t_dimension, t_sphhar, t_enpara, t_usdus, t_input, t_kpts, t_tlmplm
-    use m_juDFT_time, only : TimeStart, TimeNOstopNO
-    use m_jpPotDensHelper, only : calcIRdVxcKern, calcMTdVxcKern
-    use m_jpGrVeff0, only : GenGrVeff0
-    use m_jpSternhPulaySurface, only : tlmplm4H0
-    use m_jpDens1stVar, only : calcPsDensMT, calcPDCinAlph
-    use m_JPConstants, only : iu, compPhon, anfix
-    use m_jpPotDensHelper, only : genPertPotDensGvecs ! DEPRECATED
-    use mod_juPhonUtils, only : calcGrR2FinLH
-
-
-    implicit none
-
-    ! Type paramter
-    type(t_atoms),                  intent(in)  :: atoms
-    type(t_sym),                    intent(in)  :: sym
-    type(t_cell),                   intent(in)  :: cell
-    type(t_stars),                  intent(in)  :: stars
-    type(t_dimension),              intent(in)  :: dimens
-    type(t_sphhar),                 intent(in)  :: lathar
-    type(t_enpara),                 intent(in)  :: enpara
-    type(t_usdus),                  intent(in)  :: uds
-    type(t_input),                  intent(in)  :: input
-    type(t_kpts),                   intent(in)  :: qpts ! DEPRECATED shifted G-set
-    type(t_tlmplm),                 intent(out) :: tdHS0
-
-    ! Scalar parameters
-    integer,                        intent(in)  :: logUnit
-    integer,                        intent(in)  :: ngdp
-    integer,                        intent(in)  :: iqpt ! DEPRECATED shifted G-set
-
-    ! Array parameters
-    integer,                        intent(in)  :: gdp(:, :)
-    complex,                        intent(in)  :: rho0IR(:, :)
-    real,                           intent(in)  :: rho0MT(:, 0:, :, :)
-    integer,                        intent(in)  :: mlh_atom(:,0:,:)
-    integer,                        intent(in)  :: nmem_atom(0:, :)
-    complex,                        intent(in)  :: clnu_atom(:,0:,:)
-    real,                           intent(in)  :: rbas1(:, :, 0:, :, :)
-    real,                           intent(in)  :: rbas2(:, :, 0:, :, :)
-    real,                           intent(in)  :: uuilon(:, :)
-    real,                           intent(in)  :: duilon(:, :)
-    real,                           intent(in)  :: ulouilopn(:, :, :)
-    integer,                        intent(in)  :: ilo2p(:, :)
-    complex,                        intent(in)  :: rho0IRpw(:, :)
-    complex,                        intent(in)  :: rho0MTsh(:, :, :, :)
-    complex,                        intent(in)  :: vEff0MTsh(:, :, :, :)
-    complex,           allocatable, intent(out) :: qpwcG(:, :)
-    complex,           allocatable, intent(out) :: rho1MTCoreDispAt(:, :, :, :)
-    complex,           allocatable, intent(out) :: grVxcIRKern(:)
-    real,              allocatable, intent(out) :: dKernMTGPts(:, :, :)
-    complex,           allocatable, intent(out) :: grVeff0MT_init(:, :, :, :)
-    complex,           allocatable, intent(out) :: grVeff0MT_main(:, :, :, :)
-    complex,           allocatable, intent(out) :: grRho0IR(:, :)
-    complex,           allocatable, intent(out) :: grRho0MT(:, :, :, :)
-    real,              allocatable, intent(out) :: gausWts(:)
-    complex,           allocatable, intent(out) :: ylm(:, :)
-    complex,           allocatable, intent(out) :: grVext0IR_DM(:, :)
-    complex,           allocatable, intent(out) :: grVext0MT_DM(:, :, :, :)
-    complex,           allocatable, intent(out) :: grVCoul0IR_DM_SF(:, :)
-    complex,           allocatable, intent(out) :: grVCoul0MT_DM_SF(:, :, :, :)
-    complex,           allocatable, intent(out) :: grVeff0IR_DM(:, :)
-    complex,           allocatable, intent(out) :: grVeff0MT_DM(:, :, :, :)
-    complex,           allocatable, intent(out) :: grVeff0MT_DMhxc(:, :, :, :)
-
-    ! Scalar variables
-    logical                                     :: harSw
-    logical                                     :: extSw
-    logical                                     :: xcSw
-    integer                                     :: idir
-    integer                                     :: iatom
-    integer                                     :: itype
-    integer                                     :: ieqat
-    integer                                     :: oqn_l
-    integer                                     :: mqn_m
-    integer                                     :: lm_pre
-    integer                                     :: lm
-    integer                                     :: imesh
-    integer                                     :: ilh
-    logical                                     :: testGoldstein
-    logical                                     :: grRhoTermSw
-    integer                                     :: iG
-    integer                                     :: ngpqdp ! DEPRECATED shifted G-set
-    integer                                     :: ngpqdp2km ! DEPRECATED shifted G-set
-
-    ! Array variables
-    real,              allocatable              :: acoff(:)
-    real,              allocatable              :: alpha(:)
-    real,              allocatable              :: r2Rho0MT(:, :, :, :)
-    complex,           allocatable              :: grVeff0IRDummy(:, :)
-    complex,           allocatable              :: grVeff0MTAdd_init(:, :, :, :)
-    complex,           allocatable              :: grVeff0IR_DMhxc(:, :)
-    complex,           allocatable              :: r2GrRho0MT(:, :, :, :)
-    integer,           allocatable              :: gpqdp(:, :) ! DEPRECATED shifted G-set
-    integer,           allocatable              :: gpqdp2Ind(:, :, :) ! DEPRECATED shifted G-set
-    integer                                     :: gpqdp2iLim(2, 3) ! DEPRECATED shifted G-set
-    real                                        :: Gext(3)
-
-    ! Shifted G-set for density and potential variations (DEPRECATED #56)
-    ! Is set hard-coded to q = 1
-    call genPertPotDensGvecs( stars, cell, input, ngpqdp, ngpqdp2km, qpts%bk(:, 1), gpqdp, gpqdp2Ind, gpqdp2iLim )
-
-    write( logUnit, * )
-    write( logUnit, '(a)') 'Initializing Sternheimer self-consistency cycle'
-    write( logUnit, '(a)') '***********************************************'
-    write( logUnit, * )
-
-
-    call TimeStart('Sh: calcGradRho')
-    write( logUnit, '(a)', advance='no')  '* Calculating numerical gradients of charge density...'
-
-    if (compPhon) then
-      open(109,file='000_grad_rho_pw',form='FORMATTED',action='WRITE',status='replace')
-    end if
-
-    ! IR part
-    allocate( grRho0IR(ngdp, 3) )
-    grRho0IR(:, :) = cmplx(0., 0.)
-    do idir = 1, 3
-      do iG = 1, ngdp
-        Gext(1:3) = matmul(cell%bmat(1:3, 1:3), gdp(1:3, iG))
-        grRho0IR(iG, idir)  = iu * Gext(idir) * rho0IRpw(iG, 1)
-        if (compPhon) then
-          if (idir.eq.3) then
-            write(109,*) iG, 1
-            write(109,*) real(grRho0IR(iG, 1)), aimag(grRho0IR(iG, 1))
-            write(109,*) iG, 2
-            write(109,*) real(grRho0IR(iG, 2)), aimag(grRho0IR(iG, 2))
-            write(109,*) iG, 3
-            write(109,*) real(grRho0IR(iG, 3)), aimag(grRho0IR(iG, 3))
-          end if
-        end if
-      end do ! iG
-    end do ! idir
-    if (compPhon) then
-      close(109)
-    end if
-
-    ! Muffin-tin part
-    ! Tests have revealed that the numerical accuracy increases if the MT density is multiplied by r**2 before put into the MT
-    ! gradient routine. Thus, r2Rho0MT is derived and divided by r^2 again later. Doing so avoids the subtraction of small numbers
-    ! close to the core.
-    allocate( r2Rho0MT( atoms%jmtd, 0:lathar%nlhd, atoms%ntype, 1) )
-    allocate( grRho0MT( atoms%jmtd, ( atoms%lmaxd + 1 )**2, atoms%nat, 3) )
-    r2Rho0MT(:, :, :, :) = 0.
-    grRho0MT(:, :, :, :) = cmplx(0., 0.)
-
-    do itype = 1, atoms%ntype
-      do ilh = 0, lathar%nlhd
-        do imesh = 1, atoms%jri(itype)
-          r2Rho0MT(imesh, ilh, itype, 1) = rho0MT(imesh, ilh, itype, 1) * atoms%rmsh(imesh, itype) * atoms%rmsh(imesh, itype)
-        end do
-      end do
-    end do
-
-    if (compPhon) then
-      open(109,file='000_grad_rho_mt',form='FORMATTED',action='WRITE',status='replace')
-    end if
-
-    call calcGrR2FinLH( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, r2Rho0MT(:, :, :, 1), r2GrRho0MT )
-
-    if (compPhon) then
-      close(109)
-    end if
-
-    do idir = 1, 3
-      iatom = 0
-      do itype = 1, atoms%ntype
-        do ieqat = 1, atoms%neq(itype)
-          iatom = iatom + 1
-          do oqn_l = 0, atoms%lmax(itype)
-            lm_pre = oqn_l * (oqn_l + 1) + 1
-            do mqn_m = -oqn_l, oqn_l
-              lm = lm_pre + mqn_m
-              do imesh = 1, atoms%jri(itype)
-                grRho0MT(imesh, lm, iatom, idir) = r2GrRho0MT(imesh, lm, iatom, idir) / atoms%rmsh(imesh, itype)**2
-              end do ! imesh
-            end do ! mqn_m
-          end do ! oqn_l
-        end do ! ieqat
-      end do ! itype
-    end do ! idir
-
-    write( logUnit, '(a)', advance='yes') 'done!'
-    write( logUnit, * )
-    call TimeNOstopNO('Sh: calcGradRho')
-
-
-    call TimeStart( 'Sh: calcXcKernel' )
-    write( logUnit, '(a)', advance='no')  '* Calculating exchange-correlation kernel...'
-
-    ! Calculate exchange-correlation kernel only once in the beginning so that we only have to convolute it with the density
-    ! gradient or the first-order variation of the density multiple times. The calculation of the derived kernel itself can be
-    ! arbitrarily sophisticated so we should avoid doing it multiple times and in every iteration.
-    call calcIRdVxcKern(stars, gdp, ngdp, rho0IR(:, 1), grVxcIRKern)
-    call calcMTdVxcKern(atoms, dimens, lathar, rho0MT(:, :, :, 1), nmem_atom, clnu_atom, mlh_atom, gausWts, ylm, dKernMTGPts)
-
-    write( logUnit, '(a)', advance='yes') 'done!'
-    write( logUnit, * )
-    call TimeNOstopNO('Sh: calcXcKernel')
-
-
-    call TimeStart( 'Sh: calcGrVeff0s' )
-    write( logUnit, '(a)', advance='no' ) "* Calculating expansion coefficients of muffin-tin unperturbed potential's gradients ..."
-
-    ! Gradient of external unperturbed potential without terms canceling in the Sternheimer SCC with the linear variation of the
-    ! external potential; see documentation of GenGrVeff0 for details. Required for 1st Sternheimer SCC iteration.
-    harSw = .false.
-    extSw = .true.
-    xcSw = .false.
-    testGoldstein = .false.
-    grRhoTermSw = .false.
-    call GenGrVeff0( atoms, cell, dimens, stars, ngdp, harSw, extSw, xcSw, gdp, rho0IRpw, rho0MTsh, grRho0IR, grRho0MT, gausWts, &
-      & ylm, dKernMTGPts, grVxcIRKern, testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MT_init )
-    ! Only need MT part for Sternheimer SCC
-    deallocate ( grVeff0IRdummy )
-
-    ! Add full muffin-tin gradient of xc and Hartree potential to muffin-tin gradient contribution of the external potential with
-    ! volume term that should cancel in the Sternheimer SCC with the linear variation of the Hartree and the xc potential; see
-    ! documentation of GenGrVeff0 for details. Required for 1st Sternheimer SCC iteration.
-    harSw = .true.
-    extSw = .false.
-    xcSw = .true.
-    testGoldstein = .false.
-    grRhoTermSw = .true.
-    call GenGrVeff0( atoms, cell, dimens, stars, ngdp, harSw, extSw, xcSw, gdp, rho0IRpw, rho0MTsh, grRho0IR, grRho0MT, gausWts, &
-      & ylm, dKernMTGPts, grVxcIRKern, testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MTAdd_init )
-    ! Only need MT part for Sternheimer SCC
-    deallocate ( grVeff0IRdummy )
-
-    if (compPhon.or.anfix) then
-      iatom = 0
-      do itype = 1, atoms%ntype
-        do ieqat = 1, atoms%neq(itype)
-          iatom = iatom + 1
-          do idir = 1, 3
-            do oqn_l = 0, atoms%lmax(iatom)
-              do mqn_m = -oqn_l, oqn_l
-                do imesh = 1, atoms%jri(iatom)
-                  grVeff0MT_init(imesh, lm, idir, iatom) = grVeff0MT_init(imesh, lm, idir, iatom) &
-                                                                                       & + grVeff0MTAdd_init(imesh, lm, idir, iatom)
-                end do ! imesh
-              end do ! mqn_m
-            end do ! oqn_l
-          end do ! idir
-        end do ! iDeqat
-      end do ! iDtype
-    end if
-    deallocate(grVeff0MTAdd_init)
-
-    ! Full gradient of external unperturbed potential required for the Hellmann-Feynman contributions of the dynamical matrix.
-    harSw = .false.
-    extSw = .true.
-    xcSw = .false.
-    testGoldstein = .false.
-    grRhoTermSw = .true.
-    call GenGrVeff0( atoms, cell, dimens, stars, ngdp, harSw, extSw, xcSw, gdp, rho0IRpw, rho0MTsh, grRho0IR, grRho0MT, gausWts, &
-      & ylm, dKernMTGPts, grVxcIRKern, testGoldstein, grRhoTermSw, grVext0IR_DM, grVext0MT_DM )
-
-    ! Gradient of effective unperturbed potential without terms canceling in the SternheimerSCC with the linear variation of the
-    ! effective potential; see documentation of GenGrVeff0 for details. Required for regular iterations and the final Sternheimer
-    ! SCC iteration.
-    harSw = .true.
-    extSw = .true.
-    xcSw = .true.
-    grRhoTermSw = .false.
-    testGoldstein = .false.
-    call GenGrVeff0(atoms, cell, dimens, stars, ngdp, harSw, extSw, xcSw, gdp, rho0IRpw, rho0MTsh, grRho0IR, grRho0MT, gausWts, &
-      & ylm, dKernMTGPts, grVxcIRKern, testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MT_main )
-    ! Only need MT part for Sternheimer SCC
-    deallocate ( grVeff0IRdummy )
-
-    ! Gradient of Coulomb unperturbed potential without terms canceling in the SternheimerSCC with the linear variation of the
-    ! Coulomb potential. Required for dynamical matrix surface term
-    harSw = .true.
-    extSw = .true.
-    xcSw = .false.
-    grRhoTermSw = .false.
-    testGoldstein = .false.
-    call GenGrVeff0(atoms, cell, dimens, stars, ngdp, harSw, extSw, xcSw, gdp, rho0IRpw, rho0MTsh, grRho0IR, grRho0MT, gausWts, &
-      & ylm, dKernMTGPts, grVxcIRKern, testGoldstein, grRhoTermSw, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF )
-    ! Only need MT part for Sternheimer SCC
-
-    ! Full gradient of effective unperturbed potential required for the Hellmann-Feynman contributions of the dynamical matrix.
-    harSw = .true.
-    extSw = .true.
-    xcSw = .true.
-    grRhoTermSw = .true.
-    testGoldstein = .false.
-
-    if (compPhon) then
-      open(109,file='000_grad_V_mt',form='FORMATTED',action='WRITE',status='replace')
-      open(110,file='000_grad_V_pw',form='FORMATTED',action='WRITE',status='replace')
-    end if
-
-    call GenGrVeff0(atoms, cell, dimens, stars, ngdp, harSw, extSw, xcSw, gdp, rho0IRpw, rho0MTsh, grRho0IR, grRho0MT, gausWts, &
-      & ylm, dKernMTGPts, grVxcIRKern, testGoldstein, grRhoTermSw, grVeff0IR_DM, grVeff0MT_DM )
-
-    if (compPhon) then
-      close(109)
-      close(110)
-    end if
-
-    ! Sum of Hartree and xc potential gradients for the dynamical matrix
-    harSw = .true.
-    extSw = .false.
-    xcSw = .true.
-    grRhoTermSw = .true.
-    testGoldstein = .false.
-    call GenGrVeff0(atoms, cell, dimens, stars, ngdp, harSw, extSw, xcSw, gdp, rho0IRpw, rho0MTsh, grRho0IR, grRho0MT, gausWts, &
-      & ylm, dKernMTGPts, grVxcIRKern, testGoldstein, grRhoTermSw, grVeff0IR_DMhxc, grVeff0MT_DMhxc )
-
-    write( logUnit, '(a)', advance='yes') 'done!'
-    call TimeNOstopNO( 'Sh: calcGrVeff0s' )
-
-
-    call TimeStart( 'Sh: tlmplmH0' )
-    write ( logUnit, '(a)', advance='no') "* Calculate t_{l'm'lm} integrals for Sternheimer matrix element with unperturbed &
-                                          &Hamiltonian..."
-
-    ! Integrals for calculating the Sternheimer equation matrix element with the unperturbed Hamiltonian for the displaced atom α
-    call tlmplm4H0( atoms, dimens, enpara, uds, input, tdHS0, 1, logUnit, rbas1, rbas2, uuilon, duilon, ulouilopn, ilo2p, &
-                                                                                                           & vEff0MTsh(:, :, :, 1) )
-    write( logUnit, '(a)', advance='yes') 'done!'
-    call TimeNOstopNO( 'Sh: tlmplmH0' )
-
-    write ( logUnit, '(a)', advance='no') "* Prepare core-tail correction terms..."
-    ! Calculate parameters of Gauss curve (pseudo-core density in MT) and Fourier transform of pseudo-core density for IR
-    call calcPsDensMT( atoms, cell, sym, stars, dimens, input, ngdp, acoff, alpha, qpwcG, gdp, logUnit )
-
-    ! Calculate the gradient of the Gauss function representing the pseudo-core density. This term is used to correct the core-tail
-    ! correction in the displaced atom itself, as there we know the real core-density that can be derived; see the calculation of
-    ! the linear charge density variation.
-    allocate( rho1MTCoreDispAt(atoms%jmtd, 1 : 4, atoms%nat, 3) )
-    rho1MTCoreDispAt = cmplx(0.0, 0.0)
-    call calcPDCinAlph( atoms, alpha, acoff, rho1MTCoreDispAt )
-
-    write( logUnit, '(a)', advance='yes') 'done!'
-
-    write( logUnit, * )
-    write( logUnit, * )
-    write( logUnit, '(a)') 'Initializing Sternheimer self-consistency cycle finished!'
-    write( logUnit, '(a)') '*********************************************************'
-    write( logUnit, * )
-
-  end subroutine initSternheimerSCC
-
+!!! Removed initSCC !!!
   !>--------------------------------------------------------------------------------------------------------------------------------
   !> @author
   !> Christian-Roman Gerhorst
@@ -565,7 +216,7 @@ module m_jpSternheimer
   !> certain q, the Sternheimer self-consistency cycle is performed and the continuity(see log) of the resulting quantities checked.
   !> See also Section 7.4.5 (dissertation CRG).
   !> @note
-  !> Handling the MCOMPLEX datatype for the zs. Can be removed when latest FLEUR convention is applied for z datatype.
+  !> Handling the complex datatype for the zs. Can be removed when latest FLEUR convention is applied for z datatype.
   !>
   !> @todo
   !> write logFileOutput
@@ -575,37 +226,31 @@ module m_jpSternheimer
   !> Spin is hard-coded
   !>
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine solveSternheimerSCC( atoms, sym, stars, lathar, dimens, cell, enpara, uds, input, kpts, qpts, results, usdus, logUnit,&
+  subroutine solveSternheimerSCC( fmpi, oneD, atoms, sym, stars, lathar, cell, enpara, uds, input, kpts, qpts, results, usdus, logUnit,&
     & ngdp, rbas1, rbas2, kveclo, uuilon, duilon, ulouilopn, gdp, mapKpq2K, ne, eig, gbas, mapGbas, z, nv, El, nRadFun, iloTable, &
-    & nobd, ilo2p, gdp2Ind, gdp2iLim, kpq2kPrVec, qpwcG, iqpt, tdHS0, ylm, grRho0IR, grRho0MT, grVeff0MT_init, grVeff0MT_main, &
+    & nobd, ilo2p, gdp2Ind, gdp2iLim, kpq2kPrVec, qpwcG, iqpt, tdHS0, loosetd, ylm, grRho0IR, grRho0MT, grVeff0MT_init, grVeff0MT_main, &
     & dKernMTGPts, vxc1IRKern, rho1MTCoreDispAt, gausWts, rho1IRDS, rho1MT, vExt1MT, vEff1IR_final, vEff1MT_final, &
     & oneSternhCycle, ngpqdp, gpqdp, vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, &
     & vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, rho0IRpw, rho0MTsh, vEff0IRpwUw, noPts2chCont, vExt1MTnoVol, vEff1MTnoVol, &
     & vH1MTnoVol, vExt1MTnoVolnoq, grVH0MT, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol, vEff0MTsh )
 
-#include "cppmacro.h"
-
-    use m_types, only : t_atoms, t_sym, t_stars, t_sphhar, t_dimension, t_cell, t_enpara, t_usdus, t_input, t_kpts, t_results, &
-                                                                                                                 & t_usdus, t_tlmplm
-    use m_jpPotDensHelper, only : genPertPotDensGvecs ! Deprecated
+    use m_types
     use m_jpDens1stVar, only : calcVarCTcorr, calcRho1IRValDS, calcKdepValRho1MT, multRadSolVzcRho1MT
-    use m_juDFT_time, only : TimeStart, TimeNOstopNO
+    use m_juDFT_time, only : TimeStart, Timestop
     use m_jpSternhHF, only : tlmplm4V, uDHu, ctorsh
     use m_jpSternhPulaySurface, only : calcSfVeffFast, IRcoeffVeffUv
     use m_jpIOnMixing, only : UpdNCheckDens, loadDensity, storeZ1nG
-    use mod_juPhonUtils, only : fopen, fclose
-    use m_juDFT_NOstopNO, only : juDFT_warn
-    use jpTest1stVarDens, only : checkjuPhDens1
-    use m_jpConstants, only : compPhon
+    use m_juDFT_stop, only : juDFT_warn, juDFT_error
 
     implicit none
 
     ! Type parameters
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_oneD),                  intent(in)  :: oneD
     type(t_atoms),                  intent(in)  :: atoms
     type(t_sym),                    intent(in)  :: sym
     type(t_stars),                  intent(in)  :: stars
     type(t_sphhar),                 intent(in)  :: lathar
-    type(t_dimension),              intent(in)  :: dimens
     type(t_cell),                   intent(in)  :: cell
     type(t_enpara),                 intent(in)  :: enpara
     type(t_usdus),                  intent(in)  :: uds
@@ -638,7 +283,7 @@ module m_jpSternheimer
     real,                           intent(in)  :: eig(:,:,:)
     integer,                        intent(in)  :: gbas(:, :)
     integer,                        intent(in)  :: mapGbas(:, :, :)
-    MCOMPLEX,                       intent(in)  :: z(:,:,:,:)
+    complex,                       intent(in)  :: z(:,:,:,:)
     integer,                        intent(in)  :: nv(:, :)
     integer,                        intent(in)  :: nRadFun(0:, :)
     integer,                        intent(in)  :: iloTable(:, 0:, :)
@@ -685,6 +330,7 @@ module m_jpSternheimer
     complex,           allocatable, intent(out) :: vCoul1IRtempNoVol(:, :)
     complex,           allocatable, intent(out) :: vCoul1MTtempNoVol(:, :, :, :)
     complex,           optional,    intent(in)  :: vEff0MTsh(:, :, :, :)
+    complex, intent(in) :: loosetd(:, :, :, :)
 
     ! Scalar variables
     logical                                     :: stern1stIt ! true, if 1st Sternheimer cycle iteration
@@ -775,9 +421,13 @@ module m_jpSternheimer
 
     complex                                     :: haa((atoms%lmaxd+1)**2,2,0:atoms%lmaxd,2,0:atoms%lmaxd), &
                                                   dhaa((atoms%lmaxd+1)**2,2,0:atoms%lmaxd,2,0:atoms%lmaxd)
-    real                                        :: vEff0MTrsh(atoms%jmtd,(atoms%lmaxd+1)**2,atoms%nat,dimens%jspd)
+    real                                        :: vEff0MTrsh(atoms%jmtd,(atoms%lmaxd+1)**2,atoms%nat,input%jspins)
     complex, allocatable :: mat_elH(:,:,:)
     complex, allocatable :: mat_elS(:,:)
+
+    complex, allocatable :: loosetdx1(:, :, :, :), loosetdx2(:, :, :, :)
+    complex, allocatable :: loosetdy1(:, :, :, :), loosetdy2(:, :, :, :)
+    complex, allocatable :: loosetdz1(:, :, :, :), loosetdz2(:, :, :, :)
 
     ! Generate potential G-set which is shifted according to the q-vector so fulfills ||q + G|| < Gmax
     ! NOTE: This routine is deprecated, as it was decided to not shift the set of the G-vectors, therefore it is deactivated at the
@@ -847,10 +497,10 @@ module m_jpSternheimer
     allocate( rho1IRctC(ngpqdp, atoms%nat, 3), rho1MTctC(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat) )
     allocate( veffUvIR(3, (atoms%lmaxd + 1)**2) )
     !todo here a nobdMax could be introduced
-    allocate( surfIntVFast(dimens%neigd, maxval(nobd), 3) )
-    allocate( z1nG(dimens%nbasfcn, dimens%neigd, 3) ) ! todo segfault in abcof if second argument not like this, this can be optimized
-    allocate( recEdiffME(dimens%neigd, maxval(nobd)) )
-    allocate( cutContr(dimens%neigd, maxval(nobd)) )
+    allocate( surfIntVFast(input%neig, maxval(nobd), 3) )
+    allocate( z1nG(SIZE(z(:,1,1,1)), input%neig, 3) ) ! todo segfault in abcof if second argument not like this, this can be optimized
+    allocate( recEdiffME(input%neig, maxval(nobd)) )
+    allocate( cutContr(input%neig, maxval(nobd)) )
 
 
     rho1IRDS(:, :, :)            = cmplx(0., 0.)
@@ -933,7 +583,7 @@ module m_jpSternheimer
     ! alpha (as it is done in FLEUR).
     call TimeStart( 'Sh: calcCtCt' )
     call calcVarCTcorr( atoms, cell, ngpqdp, gpqdp, qpts%bk(:, iqpt), qpwcG, rho1IRctC, rho1MTctC )
-    call TimeNOstopNO( 'Sh: calcCtCt' )
+    call Timestop( 'Sh: calcCtCt' )
 
     iDatom = 0
     do iDtype = 1, atoms%ntype
@@ -956,7 +606,7 @@ module m_jpSternheimer
           ! the evolution of the distance.
           !todo we have to change 789 to a name standing for the unitnumber
           write(filename, '(a10,i1,a4,i4)') 'distance', iDatom, 'qInd', iqpt
-          call fopen(789, name=filename, status='replace', action='write', form='formatted')
+          open(789, file=filename, status='replace', action='write', form='formatted')
           stern1stIt = .true.
           stern2ndIt = .false.
           sternRegIt = .false.
@@ -985,7 +635,7 @@ module m_jpSternheimer
             else
               write(*, '(a,1x,i1,1x,a,1x,i2,1x,a,a)') 'File for variation of density for displaced atom', iDatom, 'and q-point', &
                                                                                   & iqpt, 'with the name', filename, 'is not found.'
-              NOstopNO
+              CALL juDFT_error('Old stopping from t_juPhon',calledby ="solveSternheimerSCC")
             end if
           end do
           write(*, '(a)') 'Regular Sternheimer iteration mode activated!'
@@ -1021,7 +671,7 @@ module m_jpSternheimer
           ! This sum of the potentials is assigned to the tlmplm routine for every direction of displacement so that we can reuse
           ! the resulting integrals for the Sternheimer equation matrix element.
 
-          call UpdPots( atoms, stars, cell, dimens, iDatom, iDtype, stern1stIt, ngdp, grRho0IR, grRho0MT, qpts%bk(1:3, iqpt), &
+          call UpdPots( atoms, input, stars, cell, iDatom, iDtype, stern1stIt, ngdp, grRho0IR, grRho0MT, qpts%bk(1:3, iqpt), &
             & rho1IRDSplus, rho1MTplus, gdp, grVeff0MT_init, grVeff0MT_main, sumVMTs, ylm, gausWts, dKernMTGPts, vxc1IRKern, iqpt, &
             & sumVMTs2, sternFinIt, vExt1MT, vEff1MT_final, vExt1IR_final, vHar1IR_final, vHar1MT_final, vExt1MTDelta, vExt1MTq0, &
             & vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, rho0IRpw, rho0MTsh, vEff1IR_final, ngpqdp, gpqdp, vEff1IR, &
@@ -1034,32 +684,32 @@ module m_jpSternheimer
           ! and we want, in a first step, obey to the Fleur routine structure of tlmplm and hssr_wu, we need a seperate treatment of
           ! the upper and lower half of this tlmplm matrices.
           ! We call the routine at the moment for every displacement direction seperately.
-          !if (compPhon) then
+          !if (.false.) then
           !  open(111,file='000_dhmlrad',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
           !end if
-          call tlmplm4V( atoms, lathar, dimens, enpara, uds, input, tdVx, 1, 1, 1, sumVMTs, rbas1, rbas2, uuilon, duilon, &
+          call tlmplm4V( atoms, lathar, enpara, uds, input, tdVx, loosetdx1, 1, 1, 1, sumVMTs, rbas1, rbas2, uuilon, duilon, &
             & ulouilopn, ilo2p, nlo_atom )
-          !if (compPhon) then
+          !if (.false.) then
           !  close(111)
           !end if
-          call tlmplm4V( atoms, lathar, dimens, enpara, uds, input, tdVy, 1, 1, 2, sumVMTs, rbas1, rbas2, uuilon, duilon, &
+          call tlmplm4V( atoms, lathar, enpara, uds, input, tdVy, loosetdy1, 1, 1, 2, sumVMTs, rbas1, rbas2, uuilon, duilon, &
             & ulouilopn, ilo2p, nlo_atom )
-          call tlmplm4V( atoms, lathar, dimens, enpara, uds, input, tdVz, 1, 1, 3, sumVMTs, rbas1, rbas2, uuilon, duilon, &
+          call tlmplm4V( atoms, lathar, enpara, uds, input, tdVz, loosetdz1, 1, 1, 3, sumVMTs, rbas1, rbas2, uuilon, duilon, &
             & ulouilopn, ilo2p, nlo_atom )
-          !if (compPhon) then
+          !if (.false.) then
           !  open(111,file='000_dhmlrad',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
           !end if
-          call tlmplm4V( atoms, lathar, dimens, enpara, uds, input, tdVx2, 1, 1, 1, sumVMTs2, rbas1, rbas2, uuilon, duilon, &
+          call tlmplm4V( atoms, lathar, enpara, uds, input, tdVx2, loosetdx2, 1, 1, 1, sumVMTs2, rbas1, rbas2, uuilon, duilon, &
             & ulouilopn, ilo2p, nlo_atom )
-          !if (compPhon) then
+          !if (.false.) then
           !  close(111)
           !end if
-          call tlmplm4V( atoms, lathar, dimens, enpara, uds, input, tdVy2, 1, 1, 2, sumVMTs2, rbas1, rbas2, uuilon, duilon, &
+          call tlmplm4V( atoms, lathar, enpara, uds, input, tdVy2, loosetdy2, 1, 1, 2, sumVMTs2, rbas1, rbas2, uuilon, duilon, &
             & ulouilopn, ilo2p, nlo_atom )
-          call tlmplm4V( atoms, lathar, dimens, enpara, uds, input, tdVz2, 1, 1, 3, sumVMTs2, rbas1, rbas2, uuilon, duilon, &
+          call tlmplm4V( atoms, lathar, enpara, uds, input, tdVz2, loosetdz2, 1, 1, 3, sumVMTs2, rbas1, rbas2, uuilon, duilon, &
             & ulouilopn, ilo2p, nlo_atom )
 
-          if (.false..and.compPhon) then
+          if (.false..and..false.) then
             haa(:,:,:,:,:)  = cmplx(0.0,0.0)
             dhaa(:,:,:,:,:) = cmplx(0.0,0.0)
 
@@ -1098,7 +748,7 @@ module m_jpSternheimer
           ccnmt2(:, :, :, :, :) = cmplx(0., 0.)
 
           z1nG(:, :, :) = cmplx(0., 0.)
-          if (compPhon) then
+          if (.false.) then
             open(109,file='000_coeffs',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
             close(109)
           end if
@@ -1130,7 +780,7 @@ module m_jpSternheimer
             z1nG = cmplx(0.0, 0.0)
             ! Due to performance reasons we do not make a loop over idir (array of types, type of arrays)
 
-            if (compPhon) then
+            if (.false.) then
               allocate(mat_elH(nv(1,mapKpq2K(ikpt, iqpt)),nv(1,ikpt),3))
               allocate(mat_elS(nv(1,mapKpq2K(ikpt, iqpt)),nv(1,ikpt)))
               mat_elH(:, :, :) = cmplx(0., 0.)
@@ -1139,55 +789,58 @@ module m_jpSternheimer
 
             ! Calculate effective potential part of IR surface integral within Sternheimer equation
             surfIntVFast(:, :, :) = cmplx(0., 0.)
-            if (compPhon) then
-              call calcSfVeffFast( atoms, kpts, qpts, cell, dimens, ikpt, mapKpq2K(ikpt, iqpt), iqpt, kpq2kPrVec, &
+            if (.false.) then
+              call calcSfVeffFast( atoms, input, kpts, qpts, cell, ikpt, mapKpq2K(ikpt, iqpt), iqpt, kpq2kPrVec, &
                 & coScale, gbas, veffUvIR, nv, ne, nobd, &
                 & mapGbas, z, iDtype, iDatom, surfIntVFast, mat_elH )
             else
-               call calcSfVeffFast( atoms, kpts, qpts, cell, dimens, ikpt, mapKpq2K(ikpt, iqpt), iqpt, kpq2kPrVec, &
+               call calcSfVeffFast( atoms, input, kpts, qpts, cell, ikpt, mapKpq2K(ikpt, iqpt), iqpt, kpq2kPrVec, &
                 & coScale, gbas, veffUvIR, nv, ne, nobd, &
                 & mapGbas, z, iDtype, iDatom, surfIntVFast)
             end if
 
             ! todo Due to performance reasons we do not make a loop over idir (array of types, type of arrays) is that good?
-            if (compPhon) then
-            call solveSternheimerEq( atoms, sym, cell, kpts, qpts, dimens, uds, tdHS0, tdVx, stars, gdp, ne, nv, vEff1IR, &
+            if (.false.) then
+            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVx, loosetdx1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
-              & mapKpq2K(ikpt, iqpt), iqpt, 1, ngdp, nobd, z1nG(:, :, 1), nlo_atom, recEdiffME, kpq2kPrVec, tdVx2, cutContr, &
+              & mapKpq2K(ikpt, iqpt), iqpt, 1, ngdp, nobd, z1nG(:, :, 1), nlo_atom, recEdiffME, kpq2kPrVec, tdVx2, loosetdx2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp, haa, dhaa, rbas1, mat_elH(:, :, 1), mat_elS)
               mat_elS(:, :) = cmplx(0., 0.)
-            call solveSternheimerEq( atoms, sym, cell, kpts, qpts, dimens, uds, tdHS0, tdVy, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVy, loosetdy1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
-              & mapKpq2K(ikpt, iqpt), iqpt, 2, ngdp, nobd, z1nG(:, :, 2), nlo_atom, recEdiffME, kpq2kPrVec, tdVy2, cutContr, &
+              & mapKpq2K(ikpt, iqpt), iqpt, 2, ngdp, nobd, z1nG(:, :, 2), nlo_atom, recEdiffME, kpq2kPrVec, tdVy2, loosetdy2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp, haa, dhaa, rbas1, mat_elH(:, :, 2), mat_elS)
               mat_elS(:, :) = cmplx(0., 0.)
-            call solveSternheimerEq( atoms, sym, cell, kpts, qpts, dimens, uds, tdHS0, tdVz, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVz, loosetdz1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
-              & mapKpq2K(ikpt, iqpt), iqpt, 3, ngdp, nobd, z1nG(:, :, 3), nlo_atom, recEdiffME, kpq2kPrVec, tdVz2, cutContr, &
+              & mapKpq2K(ikpt, iqpt), iqpt, 3, ngdp, nobd, z1nG(:, :, 3), nlo_atom, recEdiffME, kpq2kPrVec, tdVz2, loosetdz2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp, haa, dhaa, rbas1, mat_elH(:, :, 3), mat_elS)
             else
-            call solveSternheimerEq( atoms, sym, cell, kpts, qpts, dimens, uds, tdHS0, tdVx, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVx, loosetdx1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
-              & mapKpq2K(ikpt, iqpt), iqpt, 1, ngdp, nobd, z1nG(:, :, 1), nlo_atom, recEdiffME, kpq2kPrVec, tdVx2, cutContr, &
+              & mapKpq2K(ikpt, iqpt), iqpt, 1, ngdp, nobd, z1nG(:, :, 1), nlo_atom, recEdiffME, kpq2kPrVec, tdVx2, loosetdx2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp)
 
-            call solveSternheimerEq( atoms, sym, cell, kpts, qpts, dimens, uds, tdHS0, tdVy, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVy, loosetdy1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
-              & mapKpq2K(ikpt, iqpt), iqpt, 2, ngdp, nobd, z1nG(:, :, 2), nlo_atom, recEdiffME, kpq2kPrVec, tdVy2, cutContr, &
+              & mapKpq2K(ikpt, iqpt), iqpt, 2, ngdp, nobd, z1nG(:, :, 2), nlo_atom, recEdiffME, kpq2kPrVec, tdVy2, loosetdy2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp)
 
-            call solveSternheimerEq( atoms, sym, cell, kpts, qpts, dimens, uds, tdHS0, tdVz, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVz, loosetdz1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
-              & mapKpq2K(ikpt, iqpt), iqpt, 3, ngdp, nobd, z1nG(:, :, 3), nlo_atom, recEdiffME, kpq2kPrVec, tdVz2, cutContr, &
+              & mapKpq2K(ikpt, iqpt), iqpt, 3, ngdp, nobd, z1nG(:, :, 3), nlo_atom, recEdiffME, kpq2kPrVec, tdVz2, loosetdz2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp)
             end if
-            if (compPhon) then
+
+            DEALLOCATE(loosetdx1, loosetdy1, loosetdz1, loosetdx2, loosetdy2, loosetdz2)
+
+            if (.false.) then
               deallocate(mat_elH,mat_elS)
             end if
 
@@ -1203,11 +856,11 @@ module m_jpSternheimer
 
             ! Calculate the k-dependent parts of the density. By looping over the k-points, we perform the sum over the k-points.
             if (sternFinIt) then
-              call calcKdepValRho1MT( atoms, dimens, sym, cell, kpts, usdus, results, ikpt, mapKpq2K(ikpt, iqpt), iDatom, nv, &
+              call calcKdepValRho1MT( fmpi, oneD, atoms, input, sym, cell, kpts, usdus, results, ikpt, mapKpq2K(ikpt, iqpt), iDatom, nv, &
                 & mapGbas, gBas, nobd(:, 1), uu, du, ud, dd, aclo, bclo, cclo, uunmt, udnmt, dunmt, ddnmt, acnmt, bcnmt, ccnmt, &
                 & z(:, :, ikpt, ispin), z1nG, kveclo, rbas1, rbas2, ilo2p, uu2, du2, ud2, dd2, aclo2, bclo2, cclo2, uunmt2, udnmt2, dunmt2, ddnmt2, acnmt2, bcnmt2, ccnmt2 )
             else
-              call calcKdepValRho1MT( atoms, dimens, sym, cell, kpts, usdus, results, ikpt, mapKpq2K(ikpt, iqpt), iDatom, nv, &
+              call calcKdepValRho1MT( fmpi, oneD, atoms, input, sym, cell, kpts, usdus, results, ikpt, mapKpq2K(ikpt, iqpt), iDatom, nv, &
                 & mapGbas, gBas, nobd(:, 1), uu, du, ud, dd, aclo, bclo, cclo, uunmt, udnmt, dunmt, ddnmt, acnmt, bcnmt, ccnmt, &
                 & z(:, :, ikpt, ispin), z1nG, kveclo, rbas1, rbas2, ilo2p )
             end if
@@ -1230,7 +883,7 @@ module m_jpSternheimer
           ! the Dynamical Matrix in the end.
           ! Adding contributions to density variations not dependent on z1
 
-          !if (compPhon) then
+          !if (.false.) then
             open(110,file='000_rho1x_pw',form='FORMATTED',action='WRITE',status='replace')
             open(109,file='000_rho1goodx_mt',form='FORMATTED',action='WRITE',status='replace')
             open(111,file='000_rho1y_pw',form='FORMATTED',action='WRITE',status='replace')
@@ -1243,9 +896,9 @@ module m_jpSternheimer
             do iG = 1, ngpqdp
               ! IR core contribution correction to the density variation
               ! We have a minus in the calculation of rho1IRctC
-              !!!anfix!!!
+              !!!.FALSE.!!!
               rho1IRDSplus(iG, idir) = rho1IRDSplus(iG, idir)! + rho1IRctC(iG, iDatom, idir)
-              !if (compPhon) then
+              !if (.false.) then
                 if (idir.eq.3) then
                   write(110,*) iG
                   write(110,*) real(rho1IRDSplus(iG, 1)), aimag(rho1IRDSplus(iG, 1))
@@ -1266,7 +919,7 @@ module m_jpSternheimer
                     do imesh = 1, atoms%jri(itype)
                       ! The correction of the core correction at the displaced atom. We need not to correct the core contribution of
                       ! the displaced atom as it is the reason for the core corrections in the non-displaced atoms
-                      !!!anfix!!!
+                      !!!.FALSE.!!!
                       rho1MTplus( imesh, lm, iatom, idir) = rho1MTplus( imesh, lm, iatom, idir) &
                                                                                       & - 0.0*rho1MTCoreDispAt( imesh, lm, iDatom, idir)
                     end do ! imesh
@@ -1278,10 +931,10 @@ module m_jpSternheimer
                     do imesh = 1, atoms%jri(itype)
                       ! MT core contribution correction to the density variation
                       ! we have a minus in the calculation of rho1MTctC
-                      !!!anfix!!!
+                      !!!.FALSE.!!!
                       rho1MTplus(imesh, lm, iatom, idir) = rho1MTplus(imesh, lm, iatom, idir) &
                                                                                       & + 0.0*rho1MTctC( imesh, lm, iatom, idir, iDatom)
-                      !if (compPhon) then
+                      !if (.false.) then
                         if (idir.eq.3) then
                           write(109,*) imesh, lm
                           write(109,*) real(rho1MTplus(imesh, lm, iatom, 1)), aimag(rho1MTplus(imesh, lm, iatom, 1))
@@ -1304,7 +957,7 @@ module m_jpSternheimer
             end do ! itype
           end do ! idir
 
-          !if (compPhon) then
+          !if (.false.) then
             close(109)
             close(110)
             close(111)
@@ -1323,7 +976,7 @@ module m_jpSternheimer
           do idir = 1, 3
             ! If a direction might converge faster than the other, it should not be converged any further so that broyden does not
             ! move out of the minimum due to numerical fluctuations
-            if (converged(idir) == .true.) then
+            if (converged(idir)) then
 
               if (idir == 1) then
                 write(789, '(i3,2x,i3,2(f20.5),1x)', advance='no') iDatom, iqpt, lastDistance(idir, iDatom, iqpt)
@@ -1342,7 +995,7 @@ module m_jpSternheimer
 
           end do ! idir
 
-          if (all(converged == .true.)) then
+          if (all(converged)) then
             write(*, '(a)') 'Converged linear density variation. Final run of Sternheimer self-consistency cycle!'
             sternFinIt = .true.
           end if
@@ -1351,15 +1004,15 @@ module m_jpSternheimer
           if (.false.) then
             counter = counter + 1
             write(filename1, '(a1,i1)') 'i',counter
-            call fopen( 1000, name=filename1, status='replace', action='write', form='formatted')
+            open( 1000, file=filename1, status='replace', action='write', form='formatted')
             do idir = 1, 3
               do iG = 1,ngpqdp
                 write(1000, '(2i8,2f15.8)') idir, iG, rho1IRDSplus(iG, idir)
               end do
             end do
-            call fclose(1000)
+            close(1000)
             write(filename1, '(a1,i1)') 'm',counter
-            call fopen( 1000, name=filename1, status='replace', action='write', form='formatted')
+            open( 1000, file=filename1, status='replace', action='write', form='formatted')
             do idir = 1, 3
               iatom = 0
               do itype = 1, atoms%ntype
@@ -1377,14 +1030,14 @@ module m_jpSternheimer
                 end do
               end do
             end do
-            call fclose(1000)
+            close(1000)
           end if
 
         end do ! self-consistency-loop
 
         ! Close file giving out the distances
         if ( .not.oneSternhCycle ) then
-          call fclose(789)
+          close(789)
         end if
 
         ! Having converged the Sternheimer equation for one displaced atom we assign this result to the collection variable.
@@ -1520,24 +1173,22 @@ module m_jpSternheimer
   !>
   !> @ todo add spin
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine UpdPots( atoms, stars, cell, dimens, iDatom, iDtype, first_run, ngdp, grRho0IR, grRho0MT, qpoint, rho1PW, rho1MT, gdp,&
+  subroutine UpdPots( atoms, input, stars, cell, iDatom, iDtype, first_run, ngdp, grRho0IR, grRho0MT, qpoint, rho1PW, rho1MT, gdp,&
       & grVeff0MT_init, grVeff0MT_main, sumVMTs, ylm, gWghts, dKernMTGPts, vxc1IRKern, iqpt, sumVMTs2, final_run, vExt1MT, &
       & vEff1MT_final, vExt1IR_final, vHar1IR_final, vHar1MT_final, vExt1MTDelta, vExt1MTq0, vHar1MTDelta,  vHar1MTq0, vXc1MTDelta,&
       & vXc1MTq0, rho0IRpw, rho0MTsh, vEff1IR_final, ngpqdp, gpqdp, vEff1IRsh, noPts2chCont, logUnit, vExt1MTnoVol, vEff1MTnoVol, &
       & vExt1MTnoVolnoq, vH1MTnoVol, vExt1noqIR_final, grVH0MT, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
 
-    use m_types, only : t_atoms, t_stars, t_cell, t_dimension
+    use m_types, only : t_atoms, t_input, t_stars, t_cell
     use m_jpVeff1, only : GenVeff1
-    use jpTest1stVarDens, only : checkjuPhDens1
-    use m_jpConstants, only : compPhon, anfix
 
     implicit none
 
     ! Type parameters
     type(t_atoms),                  intent(in)  :: atoms
+    type(t_input),                  intent(in)  :: input
     type(t_stars),                  intent(in)  :: stars
     type(t_cell),                   intent(in)  :: cell
-    type(t_dimension),              intent(in)  :: dimens
 
     ! Scalar parameters
     integer,                        intent(in)  :: iDatom
@@ -1655,23 +1306,23 @@ module m_jpSternheimer
       harSw = .false.
       extSw = .true.
       xcSw = .false.
-      !if (compPhon.or.anfix) then
+      !if (.false..or..FALSE.) then
         vExtFull = .true.
       !else
       !  vExtFull = .false.
       !end if
       vHarNum = .false.
 
-      if (compPhon) then
+      if (.false.) then
         open(109,file='000_V1in_mt',form='FORMATTED',action='WRITE',status='replace')
         open(110,file='000_V1in_pw',form='FORMATTED',action='WRITE',status='replace')
         open(111,file='000_Gqvec',form='FORMATTED',action='WRITE',status='replace')
       end if
 
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vEff1IRsh, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
-      if (compPhon) then
+      if (.false.) then
         close(109)
         close(110)
         close(111)
@@ -1689,7 +1340,7 @@ module m_jpSternheimer
       sumVMTs2 = cmplx(0.0, 0.0)
       iatom = 0
 
-      if (compPhon) then
+      if (.false.) then
         open(109,file='000_V1inGr_mt',form='FORMATTED',action='WRITE',status='replace')
       end if
 
@@ -1704,7 +1355,7 @@ module m_jpSternheimer
                  do imesh = 1, atoms%jri(itypeloc)
                    sumVMTs(imesh, lm, idir, iatom) = vEff1MT(imesh, lm, iatom, idir) + grVeff0MT_init(imesh, lm, idir, iatom)
 
-                   if (compPhon) then
+                   if (.false.) then
                      if (idir.eq.3) then
                        write(109,*) imesh, lm, iatom, 1
                        write(109,*) real(sumVMTs(imesh, lm, 1, iatom)), aimag(sumVMTs(imesh, lm, 1, iatom))
@@ -1722,7 +1373,7 @@ module m_jpSternheimer
         end do
       end do
 
-      if (compPhon) then
+      if (.false.) then
         close(109)
 
       !do idir = 1, 3
@@ -1757,15 +1408,15 @@ module m_jpSternheimer
       vExtFull = .false.!true for Alex
       vHarNum = .false.
 
-      !if (compPhon) then
+      !if (.false.) then
         !open(109,file='000_V1fin_mt',form='FORMATTED',action='WRITE',status='replace')
         open(110,file='000_V1x_pw',form='FORMATTED',action='WRITE',status='replace')
         open(113,file='000_V1y_pw',form='FORMATTED',action='WRITE',status='replace')
         open(114,file='000_V1z_pw',form='FORMATTED',action='WRITE',status='replace')
       !end if
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW,  rho1MT, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW,  rho1MT, &
         & grRho0MT, gdp, vEff1IRsh, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
-      !if (compPhon) then
+      !if (.false.) then
         !close(109)
         close(110)
         close(113)
@@ -1782,7 +1433,7 @@ module m_jpSternheimer
       sumVMTs = cmplx(0.0, 0.0)
       sumVMTs2 = cmplx(0.0, 0.0)
       iatom = 0
-      !if (compPhon) then
+      !if (.false.) then
         open(109,file='000_V1goodx_mt',form='FORMATTED',action='WRITE',status='replace')
         !open(110,file='000_V1x_mt',form='FORMATTED',action='WRITE',status='replace')
         open(111,file='000_V1goody_mt',form='FORMATTED',action='WRITE',status='replace')
@@ -1800,7 +1451,7 @@ module m_jpSternheimer
                  lm2 = oqn_l * (oqn_l + 1) + 1 - mqn_m
                  do imesh = 1, atoms%jri(itypeloc)
                    sumVMTs(imesh, lm, idir, iatom) = vEff1MT(imesh, lm, iatom, idir) + grVeff0MT_main(imesh, lm, idir, iatom)
-                   !if (compPhon) then
+                   !if (.false.) then
                      if (idir.eq.3) then
                        write(109,*) imesh, lm
                        write(109,*) real(sumVMTs(imesh, lm, 1, iatom)), aimag(sumVMTs(imesh, lm, 1, iatom))
@@ -1822,7 +1473,7 @@ module m_jpSternheimer
         end do
       end do
       deallocate( vEff1MT )
-      !if (compPhon) then
+      !if (.false.) then
         close(109)
         !close(110)
         close(111)
@@ -1839,7 +1490,7 @@ module m_jpSternheimer
       xcSw = .false.
       vExtFull = .false.
       vHarNum = .false.
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vCoul1IRtempNoVol, vCoul1MTtempNoVol, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
       ! Create effective potential for Pulay Dynamical Matrix contribution.
@@ -1848,7 +1499,7 @@ module m_jpSternheimer
       xcSw = .true.
       vExtFull = .true.
       vHarNum = .false.
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vEff1IR, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
       write(logUnit, '(a)') 'Continuity of effective final potential variation for Pulay dynamical matrix'
@@ -1861,7 +1512,7 @@ module m_jpSternheimer
       xcSw = .false.
       vExtFull = .true.
       vHarNum = .false.
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vHar1IR, vHar1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
       write(logUnit, '(a)') 'Continuity of Hartree final potential variation for surface dynamical matrix'
@@ -1880,7 +1531,7 @@ module m_jpSternheimer
       ! There is nothing canceling away as in Sternheimer therefore we need the full contribution of the external potential
       vExtFull = .true.
       vHarNum = .false.
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PWzero, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PWzero, &
         & rho1MTzero, grRho0MT, gdp, vExt1IRtemp, vExt1MTtemp, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, &
         & gpqdp, vHarNum ) ! add spin
 
@@ -1890,7 +1541,7 @@ module m_jpSternheimer
       xcSw = .false.
       vExtFull = .false.
       vHarNum = .false.
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PWzero, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PWzero, &
         & rho1MTzero, grRho0MT, gdp, vExt1IRtempNoVol, vExt1MTtempNoVol, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, &
         & iqpt, ngpqdp, gpqdp, vHarNum ) ! add spin
 
@@ -1901,7 +1552,7 @@ module m_jpSternheimer
       xcSw = .false.
       vExtFull = .false.
       vHarNum = .false.
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vH1IRtempNoVol, vH1MTtempNoVol, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, &
         & iqpt, ngpqdp, gpqdp, vHarNum ) ! add spin
 
@@ -1910,7 +1561,7 @@ module m_jpSternheimer
       xcSw = .false.
       vExtFull= .false.
       vHarNum = .false.
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, vExtFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, rho1PWzero, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, rho1PWzero, &
         & rho1MTzero, grRho0MT, gdp, vExt1IRtempNoVolnoq, vExt1MTtempNoVolnoq, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, 1, ngdp, gdp, &
         & vHarNum ) ! add spin
 
@@ -1964,7 +1615,7 @@ module m_jpSternheimer
       xcSw = .false.
       vExtFull= .false.
       vHarNum = .false.
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PWzero, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PWzero, &
         & rho1MTzero, grRho0MT, gdp, vExt1IRtemp, vExt1MTtemp, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, &
         & gpqdp, vHarNum )
 
@@ -1991,7 +1642,7 @@ module m_jpSternheimer
       vExtFull= .false.
       vHarNum = .false.
       deallocate(vExt1IRtemp, vExt1MTtemp)
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, vExtFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, rho1PWzero, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, rho1PWzero, &
         & rho1MTzero, grRho0MT, gdp, vExt1IRtemp, vExt1MTtemp, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, 1, ngdp, gdp, &
         & vHarNum ) ! add spin
 
@@ -2022,7 +1673,7 @@ module m_jpSternheimer
         vExtFull= .true.
         vHarNum = .false.
         deallocate(vExt1IRtemp, vExt1MTtemp)
-        call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, vExtFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, rho1PWzero,&
+        call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, rho1PWzero,&
           & rho1MTzero, grRho0MT, gdp, vExt1IRtemp, vExt1MTtemp, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, 1, ngdp, gdp,&
           & vHarNum ) ! add spin
 
@@ -2053,7 +1704,7 @@ module m_jpSternheimer
       vExtFull = .false.
       vHarNum = .true.
       deallocate(vExt1IRtemp, vExt1MTtemp)
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, -grRho0IR, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, -grRho0IR, &
         & rho1MTzero, grRho0MT, gdp, vExt1IRtemp, vExt1MTtemp, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, 1,  ngdp, gdp,&
         & vHarNum )
       do idir = 1, 3
@@ -2080,7 +1731,7 @@ module m_jpSternheimer
       vExtFull = .false.
       vHarNum = .false.
       deallocate(vExt1IRtemp, vExt1MTtemp)
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT,  gdp, vExt1IRtemp, vExt1MTtemp, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, &
         & vHarNum )
       do idir = 1, 3
@@ -2110,7 +1761,7 @@ module m_jpSternheimer
         vExtFull = .true.
         vHarNum = .false.
         deallocate(vExt1IRtemp, vExt1MTtemp)
-        call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, -grRho0IR,&
+        call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, -grRho0IR,&
           & rho1MTzero, grRho0MT, gdp, vExt1IRtemp, vExt1MTtemp, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, 1, ngdp, &
           & gdp, vHarNum )
 
@@ -2141,7 +1792,7 @@ module m_jpSternheimer
       vExtFull = .false.
       vHarNum = .false.
       deallocate(vExt1IRtemp, vExt1MTtemp)
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vExt1IRtemp, vExt1MTtemp, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, &
         & vHarNum )
       do idir = 1, 3
@@ -2170,7 +1821,7 @@ module m_jpSternheimer
         vExtFull = .true.
         vHarNum = .false.
         deallocate(vExt1IRtemp, vExt1MTtemp)
-        call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, rho1PWZero,&
+        call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, [0., 0., 0.], rho0IRpw, rho0MTsh, rho1PWZero,&
           & rho1MTzero, grRho0MT, gdp, vExt1IRtemp, vExt1MTtemp, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, 1, ngdp, gdp,&
           & vHarNum )
         do idir = 1, 3
@@ -2202,15 +1853,15 @@ module m_jpSternheimer
       vExtFull = .false.!.true. for Alex
       vHarNum = .false.
 
-      if (compPhon) then
+      if (.false.) then
         open(109,file='000_V1out_mt',form='FORMATTED',action='WRITE',status='replace')
         open(112,file='000_V1out_pw',form='FORMATTED',action='WRITE',status='replace')
       end if
 
-      call GenVeff1( stars, cell, atoms, dimens, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
+      call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vEff1IRsh, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
-      if (compPhon) then
+      if (.false.) then
         close(109)
         close(110)
       end if
@@ -2222,7 +1873,7 @@ module m_jpSternheimer
       sumVMTs = cmplx(0.0, 0.0)
       sumVMTs2 = cmplx(0.0, 0.0)
       iatom = 0
-      if (compPhon) then
+      if (.false.) then
         open(109,file='000_V1outGr_mt',form='FORMATTED',action='WRITE',status='replace')
       end if
       do itypeLoc = 1, atoms%ntype
@@ -2235,7 +1886,7 @@ module m_jpSternheimer
                  lm2 = oqn_l * (oqn_l + 1) + 1 - mqn_m
                  do imesh = 1, atoms%jri(itypeloc)
                    sumVMTs(imesh, lm, idir, iatom) = vEff1MT(imesh, lm, iatom, idir) + grVeff0MT_main(imesh, lm, idir, iatom)
-                   if (compPhon) then
+                   if (.false.) then
                      if (idir.eq.3) then
                        write(109,*) imesh, lm, iatom, 1
                        write(109,*) real(sumVMTs(imesh, lm, 1, iatom)), aimag(sumVMTs(imesh, lm, 1, iatom))
@@ -2252,7 +1903,7 @@ module m_jpSternheimer
           end do
         end do
       end do
-      !if (compPhon) then
+      !if (.false.) then
         close(109)
         !NOstopNO!1st iteration NOstopNO.
       !end if
@@ -2384,32 +2035,31 @@ module m_jpSternheimer
   !> @todo spin
   !> @todo cutcontr and eigBra?
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine solveSternheimerEq( atoms, sym, cell, kpts, qpts, dimens, usdus, td4HS0, td4V, stars,  gdp, ne, nv, vEff1IR, eigKet,&
+  subroutine solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, usdus, td4HS0, loosetd, td4V, loosetd1, stars,  gdp, ne, nv, vEff1IR, eigKet,&
       & eigBra, El, nRadFun, iloTable, ilst, GbasVec, zKet, zBra, kveclo, iDtype, iDatom, ikpt, ikpq, iqpt, idir, ngdp, nobd, z1G, &
-      & nlo_atom, recEdiffME, kpq2kPrVec, td4V2, cutContr, surfIntVFast, ngpqdp, gpqdp, maxlmp , haa, dhaa, rbas1, mat_elH, mat_elS)
+      & nlo_atom, recEdiffME, kpq2kPrVec, td4V2, loosetd2, cutContr, surfIntVFast, ngpqdp, gpqdp, maxlmp , haa, dhaa, rbas1, mat_elH, mat_elS)
 
-#include "cppmacro.h"
-
-    use m_types, only : t_atoms, t_stars, t_sym, t_cell, t_kpts, t_dimension, t_usdus, t_tlmplm, t_noco
+    use m_types
+    USE m_types_oneD
     use m_abcof, only : abcof
     use m_abcof3
-    use m_od_types, only : od_inp, od_sym
     use m_jpSternhHF, only : calcMEPotIR, calcVsumMT
     use m_jpSternhPulaySurface, only : CalcSintKinEps, CalcHS0MT
-    use m_juDFT_NOstopNO, only : juDFT_warn
-    use m_intgr, only : intgr3LinIntp
+    use m_juDFT_stop, only : juDFT_warn
+    !use m_intgr, only : intgr3LinIntp
     use m_gaunt, only : gaunt1
-    use m_jpConstants
 
     implicit none
 
     ! Type parameter
+    type(t_mpi),                  intent(in)  :: fmpi
+    type(t_oneD),                  intent(in)  :: oneD
     type(t_atoms),                  intent(in)  :: atoms
+    type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
     type(t_cell),                   intent(in)  :: cell
     type(t_kpts),                   intent(in)  :: kpts
     type(t_kpts),                   intent(in)  :: qpts
-    type(t_dimension),              intent(in)  :: dimens
     type(t_usdus),                  intent(in)  :: usdus
     type(t_tlmplm),                 intent(in)  :: td4HS0
     type(t_tlmplm),                 intent(in)  :: td4V
@@ -2437,8 +2087,8 @@ module m_jpSternheimer
     integer,                        intent(in)  :: iloTable(:, 0:, :)
     integer,                        intent(in)  :: ilst(:, :, :)
     integer,                        intent(in)  :: GbasVec(:, :)
-    MCOMPLEX,                       intent(in)  :: zKet(:, :)
-    MCOMPLEX,                       intent(in)  :: zBra(:, :)
+    complex,                       intent(in)  :: zKet(:, :)
+    complex,                       intent(in)  :: zBra(:, :)
     integer,                        intent(in)  :: kveclo(:,:)
     complex,                        intent(in)  :: vEff1IR(:, :)
     integer,                        intent(in)  :: nobd(:, :)
@@ -2453,19 +2103,23 @@ module m_jpSternheimer
     complex, optional,              intent(in)  :: haa(:,:,0:,:,0:), dhaa(:,:,0:,:,0:)
     real,    optional,              intent(in)  :: rbas1(:, :, 0:, :, :)
     complex, optional,              intent(inout)  :: mat_elH(:,:), mat_elS(:,:)
+    complex,                           intent(in)  :: loosetd1(:, :, :, :), loosetd2(:, :, :, :), loosetd(:, :, :, :)
 
     ! Type parameters
     type(t_noco)                                :: noco
+    type(t_nococonv)                            :: nococonv
     type(od_inp)                                :: odi
     type(od_sym)                                :: ods
+    TYPE(t_lapw) :: lapw
+    TYPE (t_mat) :: zMatKet, zMatBra, zMatTilde, zMatBar
 
     ! Array parameters
     integer,           allocatable              :: ngoprI(:)
-    MCOMPLEX,          allocatable              :: h0MTBv(:, :)
-    MCOMPLEX,          allocatable              :: s0MTBv(:, :)
-    MCOMPLEX,          allocatable              :: h0MTKv(:, :)
-    MCOMPLEX,          allocatable              :: s0MTKv(:, :)
-    MCOMPLEX,          allocatable              :: vEff1IRMat(:, :)
+    complex,          allocatable              :: h0MTBv(:, :)
+    complex,          allocatable              :: s0MTBv(:, :)
+    complex,          allocatable              :: h0MTKv(:, :)
+    complex,          allocatable              :: s0MTKv(:, :)
+    complex,          allocatable              :: vEff1IRMat(:, :)
     complex,           allocatable              :: acofKet(:, :, :)
     complex,           allocatable              :: bcofKet(:, :, :)
     complex,           allocatable              :: ccofKet(:, :, :, :)
@@ -2518,6 +2172,7 @@ module m_jpSternheimer
     integer                                     :: ilo
     integer                                     :: nband
     integer                                     :: pband
+    integer :: nk
 
     integer :: n1,n2, l, io, igp, lp, jo, lm2, k
     integer :: m, mp, ngp, ngpq, lmmax, i, iG, iGq
@@ -2538,10 +2193,10 @@ module m_jpSternheimer
     ! nmat has to be the dimension of the bras due to the concept of calcMEPotIR
     nmat = nv(1, ikpq) + atoms%nlotot
     if (present(mat_elH)) then
-      call calcMEPotIR( stars, dimens, GbasVec(:, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(:, ilst(:nv(1, ikpt), ikpt, 1)), nv, &
+      call calcMEPotIR( stars, GbasVec(:, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(:, ilst(:nv(1, ikpt), ikpt, 1)), nv, &
         & vEff1IR(:,idir), zBra, zKet, gdp, nmat, ne(ikpq), nobd(ikpt,1), ikpt, iqpt, ikpq, ngdp, vEff1IRMat, kpq2kPrVec, idir, mat_elH)
     else
-      call calcMEPotIR( stars, dimens, GbasVec(:, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(:, ilst(:nv(1, ikpt), ikpt, 1)), nv, &
+      call calcMEPotIR( stars, GbasVec(:, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(:, ilst(:nv(1, ikpt), ikpt, 1)), nv, &
         & vEff1IR(:,idir), zBra, zKet, gdp, nmat, ne(ikpq), nobd(ikpt,1), ikpt, iqpt, ikpq, ngdp, vEff1IRMat, kpq2kPrVec)
     end if
 
@@ -2551,29 +2206,29 @@ module m_jpSternheimer
     ! The abcofs should not rotated in the muffin-tin but are all described by one global coordinate system. Therefore the rotation
     ! operator is just the unity operator (indexed by 1) for all atoms.
     allocate(ngoprI(atoms%nat))
-    allocate(noco%alph(atoms%ntype), noco%beta(atoms%ntype))
+    allocate(nococonv%alph(atoms%ntype), nococonv%beta(atoms%ntype))
     ngoprI(:) = 1
 
     ! Abcof for ψ_{kn}^{(0)}
-    allocate(acofKet(nobd(ikpt,1), 0:dimens%lmd, atoms%nat), bcofKet(nobd(ikpt,1), 0:dimens%lmd, atoms%nat), &
+    allocate(acofKet(nobd(ikpt,1), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bcofKet(nobd(ikpt,1), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       &ccofKet(-atoms%llod:atoms%llod, nobd(ikpt,1), atoms%nlod, atoms%nat))
     nmat = nv(1, ikpt) + atoms%nlotot
     acofKet(:, :, :) = cmplx(0., 0.)
     bcofKet(:, :, :) = cmplx(0., 0.)
     ccofKet(:, :, :, :) = cmplx(0., 0.)
 
-    if (compPhon) then
-      if (idir.eq.1) then
-        if (ikpt.eq.1) then
-          open(109,file='000_match',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
-        else
-          open(109,file='000_match',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
-        end if
-      end if
+    !if (.false.) then
+    !  if (idir.eq.1) then
+!        if (ikpt.eq.1) then
+!          open(109,file='000_match',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
+!        else
+!          open(109,file='000_match',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
+!        end if
+!      end if
 
-      atestcofk(:,:) = cmplx(0., 0.)
-      btestcofk(:,:) = cmplx(0., 0.)
-    !  allocate(atestcofk2(dimens%nvd, 0:dimens%lmd, atoms%nat), btestcofk2(dimens%nvd, 0:dimens%lmd, atoms%nat), &
+!      atestcofk(:,:) = cmplx(0., 0.)
+!      btestcofk(:,:) = cmplx(0., 0.)
+    !  allocate(atestcofk2(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), btestcofk2(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
     !  & bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,atoms%nat))
 
     !  atestcofk2(:,:,:) = cmplx(0., 0.)
@@ -2581,13 +2236,13 @@ module m_jpSternheimer
     !  bascof_lo(:,:,:,:,:) = cmplx(0.,0.)
 
 
-    !  call abcof3(atoms%lmaxd,atoms%ntype,atoms%nat,sym%nop,dimens%nvd,dimens%jspd,1, &
-    ! &                 dimens%lmd,dimens%nbasfcn,atoms%llod,atoms%nlod,atoms%nlotot,sym%invtab, &
+    !  call abcof3(atoms%lmaxd,atoms%ntype,atoms%nat,sym%nop,MAXVAL(nv),input%jspins,1, &
+    ! &                 atoms%lmaxd*(atoms%lmaxd+2),dimens%nbasfcn,atoms%llod,atoms%nlod,atoms%nlotot,sym%invtab, &
     ! &                 atoms%ntype,sym%mrot,ngoprI,atoms%taual,atoms%neq,atoms%lmax,atoms%rmt,cell%omtil, &
     ! &                 cell%bmat,cell%bbmat,kpts%bk(:,ikpt),GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)), &
     ! &                 GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), &
     ! &                 nv(:, ikpt),  nmat, &
-    ! &                 usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds(:, :, 1), usdus%duds(:, :, 1), usdus%ddn(:, :, 1), atoms%invsat, &
+    ! &                 usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds(:, :, 1), usdus%duds(:, :, 1), usdus%ddn(:, :, 1), sym%invsat, &
     ! & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo, atoms%nlo,&
     ! & atoms%l_dulo, atoms%lapw_l, kveclo(:, ikpt),odi,ods,atestcofk2,btestcofk2,bascof_lo)
 
@@ -2608,32 +2263,40 @@ module m_jpSternheimer
     ! end if
 
     ! deallocate(atestcofk2,btestcofk2,bascof_lo)
-        call abcof ( atoms%lmaxd, atoms%ntype, dimens%neigd, nobd(ikpt,1), atoms%nat, sym%nop, dimens%nvd, dimens%jspd, dimens%lmd, &
-        & dimens%nbasfcn, atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
-        & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)), &
-        & GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt,1), &
-        & zKet(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), atoms%invsat, &
-        & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo, atoms%nlo,&
-        & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, noco%alph, noco%beta, noco%qss, kveclo(:, ikpt), odi, ods, &
-        & acofKet, bcofKet, ccofKet, atestcofk, btestcofk, idir, ikpt)
+        !call abcof ( atoms%lmaxd, atoms%ntype, input%neig, nobd(ikpt,1), atoms%nat, sym%nop, MAXVAL(nv), input%jspins, atoms%lmaxd*(atoms%lmaxd+2), &
+        !& SIZE(zKet(:,1)), atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
+        !& atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)), &
+        !& GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt,1), &
+        !& zKet(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), sym%invsat, &
+        !& sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo, atoms%nlo,&
+        !& atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpt), odi, ods, &
+        !& acofKet, bcofKet, ccofKet, atestcofk, btestcofk, idir, ikpt)
 
-      if (idir.eq.1) then
-        close(109)
-      end if
-    else
-      call abcof ( atoms%lmaxd, atoms%ntype, dimens%neigd, nobd(ikpt,1), atoms%nat, sym%nop, dimens%nvd, dimens%jspd, dimens%lmd, &
-        & dimens%nbasfcn, atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
-        & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)), &
-        & GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt,1), &
-        & zKet(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), atoms%invsat, &
-        & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo, atoms%nlo,&
-        & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, noco%alph, noco%beta, noco%qss, kveclo(:, ikpt), odi, ods, &
-        & acofKet, bcofKet, ccofKet)
-    end if
+        nk=fmpi%k_list(ikpt)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL zMatKet%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
+        zMatKet%data_c(:, :) = zKet(:, :)
+        CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &
+                 & acofKet(:, 0:, :), bcofKet(:, 0:, :), &
+                 & ccofKet(-atoms%llod:, :, :, :), zMatKet)
+
+      !if (idir.eq.1) then
+    !    close(109)
+     ! end if
+    !else
+    !  call abcof ( atoms%lmaxd, atoms%ntype, input%neig, nobd(ikpt,1), atoms%nat, sym%nop, MAXVAL(nv), input%jspins, atoms%lmaxd*(atoms%lmaxd+2), &
+    !    & SIZE(zKet(:,1)), atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
+    !    & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)), &
+    !    & GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt,1), &
+    !    & zKet(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), sym%invsat, &
+    !    & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo, atoms%nlo,&
+    !    & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpt), odi, ods, &
+    !    & acofKet, bcofKet, ccofKet)
+    !end if
 
     ! Abcof for ψ_{k'n'}^{(0)}
-    allocate(acofBra(ne(ikpq), 0:dimens%lmd, atoms%nat))
-    allocate(bcofBra(ne(ikpq), 0:dimens%lmd, atoms%nat))
+    allocate(acofBra(ne(ikpq), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat))
+    allocate(bcofBra(ne(ikpq), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat))
     allocate(ccofBra(-atoms%llod:atoms%llod, ne(ikpq), atoms%nlod, atoms%nat))
 
     acofBra(:, :, :) = cmplx(0., 0.)
@@ -2641,41 +2304,48 @@ module m_jpSternheimer
     ccofBra(:, :, :, :) = cmplx(0., 0.)
     nmat = nv(1, ikpq) + atoms%nlotot
 
-    if (compPhon) then
-      atestcofkq(:,:) = cmplx(0., 0.)
-      btestcofkq(:,:) = cmplx(0., 0.)
-      if (idir.eq.1) then
-        if (ikpt.eq.1) then
-          open(109,file='000_matchq',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
-        else
-          open(109,file='000_matchq',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
-        end if
-      end if
+    !if (.false.) then
+     ! atestcofkq(:,:) = cmplx(0., 0.)
+      !btestcofkq(:,:) = cmplx(0., 0.)
+      !if (idir.eq.1) then
+!        if (ikpt.eq.1) then
+!          open(109,file='000_matchq',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
+!        else
+!          open(109,file='000_matchq',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
+!        end if
+!      end if
 
-      call abcof ( atoms%lmaxd, atoms%ntype, dimens%neigd, ne(ikpq), atoms%nat, sym%nop, dimens%nvd, dimens%jspd, dimens%lmd, &
-        & dimens%nbasfcn, atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
-        & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), GbasVec(1, ilst(:nv(1, ikpq), ikpq, 1)), &
-        & GbasVec(2, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq),  nmat, ne(ikpq), zBra(:, :),&
-        & usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), atoms%invsat, sym%invsatnr, &
-        & usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1), usdus%dulos(:, :, 1), atoms%llo, atoms%nlo, atoms%l_dulo, &
-        & atoms%lapw_l, noco%l_noco, noco%l_ss, 1, noco%alph, noco%beta, noco%qss, kveclo(:, ikpq), odi, ods, &
-        & acofBra, bcofBra, ccofBra, atestcofkq, btestcofkq, idir, ikpq)
-      if (idir.eq.1) then
-        close(109)
-      end if
+!      call abcof ( atoms%lmaxd, atoms%ntype, input%neig, ne(ikpq), atoms%nat, sym%nop, MAXVAL(nv), input%jspins, atoms%lmaxd*(atoms%lmaxd+2), &
+!        & SIZE(zBra(:,1)), atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
+!        & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), GbasVec(1, ilst(:nv(1, ikpq), ikpq, 1)), &
+!        & GbasVec(2, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq),  nmat, ne(ikpq), zBra(:, :),&
+!        & usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), sym%invsat, sym%invsatnr, &
+!        & usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1), usdus%dulos(:, :, 1), atoms%llo, atoms%nlo, atoms%l_dulo, &
+!        & atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpq), odi, ods, &
+!        & acofBra, bcofBra, ccofBra, atestcofkq, btestcofkq, idir, ikpq)
+!      if (idir.eq.1) then
+!        close(109)
+!      end if
 
-    else
-      call abcof ( atoms%lmaxd, atoms%ntype, dimens%neigd, ne(ikpq), atoms%nat, sym%nop, dimens%nvd, dimens%jspd, dimens%lmd, &
-        & dimens%nbasfcn, atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
-        & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), GbasVec(1, ilst(:nv(1, ikpq), ikpq, 1)), &
-        & GbasVec(2, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq),  nmat, ne(ikpq), zBra(:, :),&
-        & usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), atoms%invsat, sym%invsatnr, &
-        & usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1), usdus%dulos(:, :, 1), atoms%llo, atoms%nlo, atoms%l_dulo, &
-        & atoms%lapw_l, noco%l_noco, noco%l_ss, 1, noco%alph, noco%beta, noco%qss, kveclo(:, ikpq), odi, ods, &
-        & acofBra, bcofBra, ccofBra)
-    end if
+!    else
+!      call abcof ( atoms%lmaxd, atoms%ntype, input%neig, ne(ikpq), atoms%nat, sym%nop, MAXVAL(nv), input%jspins, atoms%lmaxd*(atoms%lmaxd+2), &
+!        & SIZE(zBra(:,1)), atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
+!        & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), GbasVec(1, ilst(:nv(1, ikpq), ikpq, 1)), &
+!        & GbasVec(2, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq),  nmat, ne(ikpq), zBra(:, :),&
+!        & usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), sym%invsat, sym%invsatnr, &
+!        & usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1), usdus%dulos(:, :, 1), atoms%llo, atoms%nlo, atoms%l_dulo, &
+!        & atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpq), odi, ods, &
+!        & acofBra, bcofBra, ccofBra)
+    nk=fmpi%k_list(ikpq)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+    CALL zMatBra%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
+    zMatBra%data_c(:, :) = zBra(:, :)
+    CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
+            & acofBra(:, 0:, :), bcofBra(:, 0:, :), &
+            & ccofBra(-atoms%llod:, :, :, :), zMatBra)
+!    end if
 
-    if (compPhon) then
+    if (.false.) then
       ngp=nv(1, ikpt)
       ngpq=nv(1, ikpq)
       lmmax=(atoms%lmaxd+1)**2
@@ -2684,16 +2354,16 @@ module m_jpSternheimer
       dbtestcofkq(:,:) = cmplx(0., 0.)
       do iGq = 1, nv(1, ikpq)
         GpqCart(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(iGq, ikpq, 1)) + kpts%bk(1:3, ikpq))
-        datestcofkq(:,iGq)=iu * GpqCart(idir) * atestcofkq(:,iGq)
-        dbtestcofkq(:,iGq)=iu * GpqCart(idir) * btestcofkq(:,iGq)
+        datestcofkq(:,iGq)=ImagUnit * GpqCart(idir) * atestcofkq(:,iGq)
+        dbtestcofkq(:,iGq)=ImagUnit * GpqCart(idir) * btestcofkq(:,iGq)
       end do
 
       datestcofk(:,:) = cmplx(0., 0.)
       dbtestcofk(:,:) = cmplx(0., 0.)
       do iG = 1, nv(1, ikpt)
         Gext(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(iG, ikpt, 1)) + kpts%bk(1:3, ikpt))
-        datestcofk(:,iG)=iu * Gext(idir) * atestcofk(:,iG)
-        dbtestcofk(:,iG)=iu * Gext(idir) * btestcofk(:,iG)
+        datestcofk(:,iG)=ImagUnit * Gext(idir) * atestcofk(:,iG)
+        dbtestcofk(:,iG)=ImagUnit * Gext(idir) * btestcofk(:,iG)
       end do
 
       if (.false.) then
@@ -2773,23 +2443,23 @@ module m_jpSternheimer
                     if (abs(dble(z1))+abs(aimag(z1)).gt.1.d-14) then
                       if (jo.eq.1) then
                         btemp=atestcofk(lm,1:ngp)
-                        call zaxpy(ngp,z1*(iu**l),btemp,1,b1(i,1),lmmax)
+                        call zaxpy(ngp,z1*(ImagUnit**l),btemp,1,b1(i,1),lmmax)
                       else
                         btemp=btestcofk(lm,1:ngp)
-                        call zaxpy(ngp,z1*(iu**l),btemp,1,b1(i,1),lmmax)
+                        call zaxpy(ngp,z1*(ImagUnit**l),btemp,1,b1(i,1),lmmax)
                       end if
                     end if
                     if (abs(dble(z2))+abs(aimag(z2)).gt.1.d-14) then
                       if (jo.eq.1) then
                         btemp=datestcofk(lm,1:ngp)
-                        call zaxpy(ngp,z2*(iu**l),btemp,1,b3(i,1),lmmax)
+                        call zaxpy(ngp,z2*(ImagUnit**l),btemp,1,b3(i,1),lmmax)
                         btemp=atestcofk(lm,1:ngp)
-                        call zaxpy(ngp,z2*(iu**l),btemp,1,b2(i,1),lmmax)
+                        call zaxpy(ngp,z2*(ImagUnit**l),btemp,1,b2(i,1),lmmax)
                       else
                         btemp=dbtestcofk(lm,1:ngp)
-                        call zaxpy(ngp,z2*(iu**l),btemp,1,b3(i,1),lmmax)
+                        call zaxpy(ngp,z2*(ImagUnit**l),btemp,1,b3(i,1),lmmax)
                         btemp=btestcofk(lm,1:ngp)
-                        call zaxpy(ngp,z2*(iu**l),btemp,1,b2(i,1),lmmax)
+                        call zaxpy(ngp,z2*(ImagUnit**l),btemp,1,b2(i,1),lmmax)
                       end if
                     end if
                   end do
@@ -2797,12 +2467,12 @@ module m_jpSternheimer
               end do
               lmp=lp*(lp+1)+mp+1
               if (io.eq.1) then
-                a1(i,1:ngpq)=atestcofkq(lmp,1:ngpq)*(iu**lp)
-                a2(i,1:ngpq)=datestcofkq(lmp,1:ngpq)*(iu**lp)
+                a1(i,1:ngpq)=atestcofkq(lmp,1:ngpq)*(ImagUnit**lp)
+                a2(i,1:ngpq)=datestcofkq(lmp,1:ngpq)*(ImagUnit**lp)
               else
-                a1(i,1:ngpq)=btestcofkq(lmp,1:ngpq)*(iu**lp)
+                a1(i,1:ngpq)=btestcofkq(lmp,1:ngpq)*(ImagUnit**lp)
                 !a1(i,1:ngpq)=0
-                a2(i,1:ngpq)=dbtestcofkq(lmp,1:ngpq)*(iu**lp)
+                a2(i,1:ngpq)=dbtestcofkq(lmp,1:ngpq)*(ImagUnit**lp)
                 !a2(i,1:ngpq)=0
               end if
             end do
@@ -2878,7 +2548,7 @@ module m_jpSternheimer
     allocate( vSumMT(ne(ikpq), nobd(ikpt, 1) ) )
     vSumMT(:, :) = cmplx(0., 0.)
 
-    if (compPhon) then
+    if (.false.) then
       inquire(file='000_tlmplm1x',exist=didwe)
 
       if (.not.didwe) then
@@ -2886,17 +2556,17 @@ module m_jpSternheimer
       end if
 
       if (present(mat_elH)) then
-      call calcVsumMT( atoms, td4V, td4V2, ikpt, ikpq, ne, nobd, mCoefB, mCoefK, nRadFun, iloTable, nlo_atom, vSumMT, &
+      call calcVsumMT( atoms, td4V, td4V2, loosetd1, loosetd2, ikpt, ikpq, ne, nobd, mCoefB, mCoefK, nRadFun, iloTable, nlo_atom, vSumMT, &
                        idir, nv(1, ikpt), nv(1, ikpq) , atestcofk, btestcofk, atestcofkq, btestcofkq, mat_elH)
       else
-      call calcVsumMT( atoms, td4V, td4V2, ikpt, ikpq, ne, nobd, mCoefB, mCoefK, nRadFun, iloTable, nlo_atom, vSumMT, &
+      call calcVsumMT( atoms, td4V, td4V2, loosetd1, loosetd2, ikpt, ikpq, ne, nobd, mCoefB, mCoefK, nRadFun, iloTable, nlo_atom, vSumMT, &
                        idir, nv(1, ikpt), nv(1, ikpq) , atestcofk, btestcofk, atestcofkq, btestcofkq)
       end if
       if (.not.didwe) then
         close(111)
       end if
     else
-      call calcVsumMT( atoms, td4V, td4V2, ikpt, ikpq, ne, nobd, mCoefB, mCoefK, nRadFun, iloTable, nlo_atom, vSumMT )
+      call calcVsumMT( atoms, td4V, td4V2, loosetd1, loosetd2, ikpt, ikpq, ne, nobd, mCoefB, mCoefK, nRadFun, iloTable, nlo_atom, vSumMT )
     end if
 
     ! Calculate <\tilde{ψ}_{k'n'}^{(0)}|H|ψ_{kn}^{(0)}>_{MT} and <ψ_{k'n'}^{(0)}|H|\tilde{ψ}_{kn}^{(0)}>_{MT} and additionally the
@@ -2905,25 +2575,25 @@ module m_jpSternheimer
 
     ! In order to set up the matching coefficients for the bra tilde wave function the wave function coefficients are decorated with
     ! a factor for every G.
-    allocate(zTilde(dimens%nbasfcn, ne(ikpq)))
+    allocate(zTilde(SIZE(zBra(:,1)), ne(ikpq)))
     zTilde(:, :) = cmplx(0., 0.)
     do ieig = 1, ne(ikpq)
       do iBas = 1, nv(1, ikpq)
         GpqCart(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(iBas, ikpq, 1)) + kpts%bk(1:3, ikpq))
-        zTilde(iBas, ieig) = iu * GpqCart(idir) * zBra(iBas, ieig)
+        zTilde(iBas, ieig) = ImagUnit * GpqCart(idir) * zBra(iBas, ieig)
       end do
       if (.false.) then
         ! todo LO: LOs mit berücksichtigen, auch mit Gs?, + or - q?
         do iBas = nv(1, ikpq) + 1, nv(1, ikpq) + atoms%nlotot
           GpqCart(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(kveclo(iBas - nv(1, ikpq), ikpq), ikpq, 1)) &
                                                                                                              & + kpts%bk(1:3, ikpq))
-          zTilde(iBas, ieig) = iu * Gpqcart(idir) * zBra(iBas, ieig)
+          zTilde(iBas, ieig) = ImagUnit * Gpqcart(idir) * zBra(iBas, ieig)
         end do
       end if
     end do
 
     ! Calculate matching coefficients for \tilde{ψ}_{k'n'}^{(0)}
-    allocate(acofTilde(ne(ikpq), 0:dimens%lmd, atoms%nat), bcofTilde(ne(ikpq), 0:dimens%lmd, atoms%nat), &
+    allocate(acofTilde(ne(ikpq), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bcofTilde(ne(ikpq), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       &ccofTilde(-atoms%llod:atoms%llod, ne(ikpq), atoms%nlod, atoms%nat))
 
     acofTilde(:, :, :) = cmplx(0., 0.)
@@ -2931,51 +2601,66 @@ module m_jpSternheimer
     ccofTilde(:, :, :, :) = cmplx(0., 0.)
     nmat = nv(1, ikpq) + atoms%nlotot
 
-    call abcof ( atoms%lmaxd, atoms%ntype, ne(ikpq), ne(ikpq), atoms%nat, sym%nop, dimens%nvd, dimens%jspd, dimens%lmd, &
-      & dimens%nbasfcn, atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
-      & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), GbasVec(1, ilst(:nv(1, ikpq), ikpq, 1)), &
-      & GbasVec(2, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq),  nmat, ne(ikpq), &
-      & zTilde(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), atoms%invsat, &
-      & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1), usdus%dulos(:, :, 1), atoms%llo, atoms%nlo, &
-      & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, noco%alph, noco%beta, noco%qss, kveclo(:, ikpq), odi, ods, &
-      & acofTilde, bcofTilde, ccofTilde)
+    !call abcof ( atoms%lmaxd, atoms%ntype, ne(ikpq), ne(ikpq), atoms%nat, sym%nop, MAXVAL(nv), input%jspins, atoms%lmaxd*(atoms%lmaxd+2), &
+     ! & SIZE(zTilde(:,1)), atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
+     ! & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), GbasVec(1, ilst(:nv(1, ikpq), ikpq, 1)), &
+     ! & GbasVec(2, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq),  nmat, ne(ikpq), &
+     ! & zTilde(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), sym%invsat, &
+     ! & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1), usdus%dulos(:, :, 1), atoms%llo, atoms%nlo, &
+     ! & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpq), odi, ods, &
+     ! & acofTilde, bcofTilde, ccofTilde)
+
+      nk=fmpi%k_list(ikpq)
+      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+      CALL zMatTilde%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
+      zMatTilde%data_c(:, :) = zTilde(:, :)
+      CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
+               & acofTilde(:, 0:, :), bcofTilde(:, 0:, :), &
+               & ccofTilde(-atoms%llod:, :, :, :), zMatTilde)
     deallocate(zTilde)
 
     ! In order to set up the matching coefficients for the ket tilde wave function the wave function coefficients are decorated with
     ! a factor for every G.
-    allocate(zBar(dimens%nbasfcn, nobd(ikpt,1)))
+    allocate(zBar(SIZE(zKet(:,1)), nobd(ikpt,1)))
     zBar(:, :) = cmplx(0., 0.)
     ! is that correct that it oes to ne(ikpt and not ne(ikpq)
     do ieig = 1, nobd(ikpt, 1)
       do iBas = 1, nv(1, ikpt)
         Gext(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(iBas, ikpt, 1)) + kpts%bk(1:3, ikpt))
-        zBar(iBas, ieig) = iu * Gext(idir) * zKet(iBas, ieig)
+        zBar(iBas, ieig) = ImagUnit * Gext(idir) * zKet(iBas, ieig)
       end do
       if (.false.) then
         do iBas = nv(1, ikpt) + 1, nv(1, ikpt) + atoms%nlotot
           Gext(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(kveclo(iBas - nv(1, ikpt), ikpt), ikpt, 1)) &
                                                                                                              & + kpts%bk(1:3, ikpt))
-          zBar(iBas, ieig) = iu * Gext(idir) * zKet(iBas, ieig)
+          zBar(iBas, ieig) = ImagUnit * Gext(idir) * zKet(iBas, ieig)
         end do
       end if
     end do
 
     ! Calculate matching coefficients for \tilde{ψ}_{kn}^{(0)}
-    allocate(acofBar(nobd(ikpt,1), 0:dimens%lmd, atoms%nat), bcofBar(nobd(ikpt,1), 0:dimens%lmd, atoms%nat), &
+    allocate(acofBar(nobd(ikpt,1), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bcofBar(nobd(ikpt,1), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
       &ccofBar(-atoms%llod:atoms%llod, nobd(ikpt,1), atoms%nlod, atoms%nat))
     acofBar(:, :, :) = cmplx(0., 0.)
     bcofBar(:, :, :) = cmplx(0., 0.)
     ccofBar(:, :, :, :) = cmplx(0., 0.)
 
     nmat = nv(1, ikpt) + atoms%nlotot
-    call abcof ( atoms%lmaxd, atoms%ntype, nobd(ikpt,1), nobd(ikpt,1), atoms%nat, sym%nop, dimens%nvd, dimens%jspd, dimens%lmd, &
-      & dimens%nbasfcn, atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
-      & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)), &
-      & GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt,1), &
-      & zBar(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), atoms%invsat, &
-      & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo, atoms%nlo,&
-      & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, noco%alph, noco%beta, noco%qss, kveclo(:, ikpt), odi, ods, &
-      & acofBar, bcofBar, ccofBar)
+    !call abcof ( atoms%lmaxd, atoms%ntype, nobd(ikpt,1), nobd(ikpt,1), atoms%nat, sym%nop, MAXVAL(nv), input%jspins, atoms%lmaxd*(atoms%lmaxd+2), &
+    !  & SIZE(zBar(:,1)), atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
+    !  & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)), &
+    !  & GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt,1), &
+    !  & zBar(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), sym%invsat, &
+    !  & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo, atoms%nlo,&
+    !  & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpt), odi, ods, &
+    !  & acofBar, bcofBar, ccofBar)
+    nk=fmpi%k_list(ikpq)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+    CALL zMatBar%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
+    zMatBar%data_c(:, :) = zBar(:, :)
+    CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &
+             & acofBar(:, 0:, :), bcofBar(:, 0:, :), &
+             & ccofBar(-atoms%llod:, :, :, :), zMatBar)
     deallocate (zBar)
 
     ! Rearrange Hamiltonian acofs, bcofs, ccofs ensuring a consistent handling of LOs within the loop structure compared to LAPWs
@@ -3016,7 +2701,7 @@ module m_jpSternheimer
     s0MTKv(:, :) = cmplx(0., 0.)
     ! Calculate <\tilde{ψ}_{k'n'}^{(0)}|H|ψ_{kn}^{(0)}>_{MT} given the tlmplm integrals of the non-spherical potential as well as
     ! the overlap <\tilde{ψ}_{k'n'}^{(0)}|ψ_{kn}^{(0)}>_{MT}
-    if (compPhon) then
+    if (.false.) then
       inquire(file='000_tlmplm0',exist=didwe)
 
       if (.not.didwe) then
@@ -3024,12 +2709,12 @@ module m_jpSternheimer
       end if
 
       if (present(mat_elH)) then
-      call calcHS0MT( atoms, usdus, td4HS0, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefBv, mCoefK(:, :, iDatom), nRadFun, &
+      call calcHS0MT( atoms, usdus, td4HS0, loosetd, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefBv, mCoefK(:, :, iDatom), nRadFun, &
         & iloTable, nlo_atom, s0MTBv, h0MTBv, &
         & idir,nv(1,ikpt),nv(1,ikpq),atestcofk,btestcofk,atestcofkq,btestcofkq,datestcofk,dbtestcofk,datestcofkq,dbtestcofkq,&
         & mat_elH, mat_elS)
       else
-      call calcHS0MT( atoms, usdus, td4HS0, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefBv, mCoefK(:, :, iDatom), nRadFun, &
+      call calcHS0MT( atoms, usdus, td4HS0, loosetd, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefBv, mCoefK(:, :, iDatom), nRadFun, &
         & iloTable, nlo_atom, s0MTBv, h0MTBv, &
         & idir,nv(1,ikpt),nv(1,ikpq),atestcofk,btestcofk,atestcofkq,btestcofkq,datestcofk,dbtestcofk,datestcofkq,dbtestcofkq)
       end if
@@ -3038,13 +2723,13 @@ module m_jpSternheimer
         close(111)
       end if
     else
-      call calcHS0MT( atoms, usdus, td4HS0, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefBv, mCoefK(:, :, iDatom), nRadFun, &
+      call calcHS0MT( atoms, usdus, td4HS0, loosetd, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefBv, mCoefK(:, :, iDatom), nRadFun, &
         & iloTable, nlo_atom, s0MTBv, h0MTBv )
     end if
 
     ! Calculate <ψ_{k'n'}^{(0)}|H|\tilde{ψ}_{kn}^{(0)}>_{MT} given the tlmplm integrals of the non-spherical potential as well as
     ! the overlap <ψ_{k'n'}^{(0)}|\tilde{ψ}_{kn}^{(0)}>_{MT}
-    call calcHS0MT( atoms, usdus, td4HS0, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefB(:, :, iDatom), mCoefKv, nRadFun, &
+    call calcHS0MT( atoms, usdus, td4HS0, loosetd, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefB(:, :, iDatom), mCoefKv, nRadFun, &
       & iloTable, nlo_atom, s0MTKv, h0MTKv )
     deallocate( mCoefBv, mCoefKv )
     deallocate( mCoefK, mCoefB )
@@ -3097,7 +2782,7 @@ module m_jpSternheimer
           & - eigKet(nBand) * surfInt(pBand, nBand) &
           & )
 
-        !if (present(mat_elH).and.compPhon) then
+        !if (present(mat_elH).and..false.) then
         !  z1Band(pBand, nBand) = -recEdiffME(pBand, nBand) * &
         !                       & (hMatBand(pBand,nBand) - eigKet(nBand)*sMatBand(pBand,nBand))
         !end if
@@ -3117,7 +2802,7 @@ module m_jpSternheimer
     z1G(:nv(1, ikpq) + atoms%nlotot, :nobd(ikpt,1)) = matmul( zBra(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq)), &
                                                                                                 & z1Band(:ne(ikpq), :nobd(ikpt,1)) )
 
-    !if (compPhon) then
+    !if (.false.) then
       if (ikpt.eq.1.and.idir.eq.1) then
         open(109,file='000_z1',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
         open(110,file='000_z00',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
@@ -3149,10 +2834,306 @@ module m_jpSternheimer
       end if
     !end if
 
-    !if (anfix) then
+    !if (.FALSE.) then
       deallocate(z1Band)
     !end if
 
   end subroutine solveSternheimerEq
+
+  subroutine genPertPotDensGvecs( stars, cell, input, ngpqdp, ngpqdp2km, qpoint, gpqdp, gpqdp2Ind, gpqdp2iLim )
+
+    use m_types
+
+    implicit none
+
+    ! Type parameters
+    type(t_stars),          intent(in)   :: stars
+    type(t_cell),           intent(in)   :: cell
+    type(t_input),          intent(in)   :: input
+
+    ! Scalar parameters
+    integer,                intent(out)  :: ngpqdp
+    integer,                intent(out)  :: ngpqdp2km
+
+    ! Array parameters
+    real,                   intent(in)   :: qpoint(:)
+    integer,  allocatable,  intent(out)  :: gpqdp(:, :)
+    integer,  allocatable,  intent(out)  :: gpqdp2Ind(:, :, :)
+    integer,                intent(out)  :: gpqdp2iLim(2, 3)
+
+    ! Scalar variables
+    integer                              :: ngrest
+    integer                              :: iGx
+    integer                              :: iGy
+    integer                              :: iGz
+    integer                              :: iG
+
+    ! Array variables
+    integer,  allocatable                :: gpqdptemp2kmax(:, :)
+    integer,  allocatable                :: gpqdptemprest(:, :)
+    integer                              :: Gint(3)
+    real                                 :: Gpqext(3)
+
+    allocate( gpqdptemp2kmax(3, (2 * stars%mx1 + 1) * (2 * stars%mx2 + 1) * (2 * stars%mx3 +  1)), &
+            & gpqdptemprest(3, (2 * stars%mx1 + 1) * (2 * stars%mx2 + 1) * (2 * stars%mx3 +  1)) )
+
+    ngpqdp = 0
+    ngpqdp2km = 0
+    ngrest = 0
+    gpqdptemp2kmax(:, :) = cmplx(0., 0.)
+    gpqdptemprest(:, :) = cmplx(0., 0.)
+    ! From all possible G-vectors in a box, only these are accepted which are element of a sphere with radius gmax which is shifted.
+    ! We need a little bit more than k*d because they are thought for a Gmax ball that is not shifted by a q, i.e. |G+q|<Gmax
+    do iGx = -(stars%mx1 + 3), (stars%mx1 + 3)
+      do iGy = -(stars%mx2 + 3), (stars%mx2 + 3)
+        do iGz = -(stars%mx3 + 3), (stars%mx3 + 3)
+          Gint = [iGx, iGy, iGz]
+          Gpqext =  matmul(cell%bmat, real(Gint(1:3) + qpoint(1:3))) !transform from internal to external coordinates
+          if (norm2(Gpqext) <= stars%gmax) then
+            ngpqdp = ngpqdp + 1
+            ! Sort G-vectors
+            if ( norm2(Gpqext) <= 2 * input%rkmax ) then
+              ngpqdp2km = ngpqdp2km + 1
+              gpqdptemp2kmax(1:3, ngpqdp2km) = Gint(1:3)
+            else
+              ngrest = ngrest + 1
+              gpqdptemprest(1:3, ngrest) = Gint(1:3)
+            end if
+          end if
+        end do !iGz
+      end do !iGy
+    end do !iGx
+    allocate(gpqdp(3, ngpqdp))
+    ! Mapping array from G-vector to G-vector index
+    gpqdp(:, :) = 0
+    gpqdp(1:3, 1:ngpqdp2km) = gpqdptemp2kmax(1:3, 1:ngpqdp2km)
+    gpqdp(1:3, ngpqdp2km + 1 : ngpqdp) = gpqdptemprest(1:3, 1:ngrest)
+
+    gpqdp2iLim(1, 1) = minval(gpqdp(1, :))
+    gpqdp2iLim(2, 1) = maxval(gpqdp(1, :))
+    gpqdp2iLim(1, 2) = minval(gpqdp(2, :))
+    gpqdp2iLim(2, 2) = maxval(gpqdp(2, :))
+    gpqdp2iLim(1, 3) = minval(gpqdp(3, :))
+    gpqdp2iLim(2, 3) = maxval(gpqdp(3, :))
+
+    allocate(gpqdp2Ind(gpqdp2iLim( 1, 1) : gpqdp2iLim( 2, 1), gpqdp2iLim( 1, 2) : gpqdp2iLim( 2, 2), gpqdp2iLim( 1, 3) : &
+                                                                                                               & gpqdp2iLim( 2, 3)))
+    gpqdp2Ind = 0
+    do iG = 1, ngpqdp
+      gpqdp2Ind(gpqdp(1, iG), gpqdp(2, iG), gpqdp(3, iG)) = iG
+    end do
+
+  end subroutine genPertPotDensGvecs
+
+  subroutine checkjuPhDens1(atomsT, cellT, ngdp, fIR, fMufT, qpt, gdp, noPts2chCont, logFileUnit)
+
+      use m_types
+      use m_ylm
+
+      implicit none
+
+      type(t_atoms),        intent(in) :: atomsT
+      type(t_cell),         intent(in) :: cellT
+      integer,              intent(in) :: noPts2chCont !number of points to check continuity
+      integer,              intent(in) :: ngdp
+      integer,              intent(in) :: gdp(:, :)
+      integer,              intent(in)            :: logFileUnit ! why not as intent(in)?
+      complex,             intent(in) :: fIR(:, :)
+      complex,             intent(in) :: fMufT(:, :, :, :)
+      real, intent(in) :: qpt(:)
+  !    real,                 intent(in)  :: rmt(:) !MT-radii of atom type itype
+  !    integer,              intent(in)  :: ntype ! number of atom types
+  !    integer,              intent(in)  :: nop !number of symmetry operations
+  !    integer,              intent(in)  :: nq3 ! number of stars
+  !    logical,              intent(in)  :: symor !are symmetry operations symorphic or noct
+  !    integer,              intent(in)  :: kv3(:, :) !reciprocal g-vector of star
+  !    integer,              intent(in)  :: mrot(:, :, :) !symmetry operations, rotation matrices
+  !    real,              intent(in)  :: tau(:, :) !symmetry operations, translation vectors
+  !    integer,              intent(in)  :: invtab(:) !lists which symmetry operations are inverse to symmetry operations with indesx isym
+  !    real,                 intent(in)  :: bmat(:, :) !reciprocal Bravais matrix transposed
+  !    real,                 intent(in)  :: amat(:, :) !Bravais matrix
+  !    real,                 intent(in)  :: pos(:, :) !Postions of atoms in Brillouin zone
+  !    integer,              intent(in)  :: nmem(:, :) !number of lattice harmonics
+  !    integer,              intent(in)  :: llh(:, :) !ls of  lattice harmonics
+  !    complex,              intent(in)  :: clnu(:, :, :) !phasefactors in linear combination of lattice harmonics
+  !    logical,              intent(in)  :: density ! is function density?
+  !    complex,              intent(in)  :: fpw(:, :)
+  !    real,                 intent(in)  :: fr(:, :, :, :)
+  !    integer,              intent(in)  :: nstr(:)
+  !    integer,              intent(in)  :: nat
+  !    integer,              intent(in)  :: ntypsy(:)
+  !    integer,              intent(in)  :: ngopr(:)
+  !    integer,              intent(in)  :: lmax(:)
+  !    integer,              intent(in)  :: nlh(:)
+  !    integer,              intent(in)  :: mlh(:, :, :)
+  !    integer,              intent(in)  :: jri(:)
+  !    integer,              intent(in)  :: lmaxd
+  !    integer,              intent(in)  :: neq(:)
+  !
+  !
+      integer                           :: oqn_l
+      integer                           :: mqn_m
+      integer                           :: lm_lcontr
+      integer                           :: lm
+      integer                           :: irandPt
+      integer                           :: ieq !loop variable
+      real                              :: euclidNorm !variable to store eculidian L2 norm of vector
+      real,   allocatable               :: randPtsCart(:, :, :) !cartesian dimension, number of Pts, itype, random points
+      real,   allocatable               :: randPtsGrid(:, :, :) !random points on grid, coordinates, number of points
+      real,   allocatable               :: randPtsMTLoc(:, :, :) !random points in local atomic coordinate (coordinates, number of points, ntype)
+      integer                           :: itype !certain atom type
+  !    complex                           :: starAtRanPt(nq3) !value of star at certain point ! ng3 = nq3
+      complex,   allocatable               :: sumfuncvalI(:, :, :) !sum of function values coming from interstitial
+      integer                         :: iGvec
+      integer                          :: idirec
+  !    real                              :: scaling !scaling factor which makes difference between density and potential or wavefunction
+  !    integer                           :: icoord !loop variable
+      integer                           :: imatmulc, imatmulr !loop variable
+      real                              :: rvec(3) !randoom point
+      real                              :: rvec_int(3)
+      real  :: rotatedVector(3) !rotated vector after symmetry operation
+  !    integer                           :: istar !loop variable
+      integer                           :: iatom
+  !    integer                           :: symAt_temp
+      integer                           :: symOpr_temp
+      complex                           :: ylm((atomsT%lmaxd + 1)**2) !TODO eigentlich lmax(itype)
+      complex,    allocatable              :: sumOfMTFuncVal(:, :,:)
+  !    integer                           :: ilath
+  !    real                              :: linCombBas
+  !    integer                           :: l_temp
+  !    integer                           :: imem
+  !    integer                           :: lm_temp
+      real                              :: av(3), dms(3), rms(3)
+  !    integer                           :: ispin
+
+      allocate(randPtsCart(3, noPts2chCont, atomsT%nat), randPtsGrid(3, noPts2chCont, atomsT%ntype), randPtsMTLoc(3, noPts2chCont, atomsT%ntype) )
+
+      allocate(sumfuncvalI(3, noPts2chCont,atomsT%nat), sumOfMTFuncVal(3, noPts2chCont,atomsT%nat))
+     !Generate noPts2chCont random points on the MT sphere
+      randPtsCart(:, :, :) = cmplx(0., 0.)
+      iatom = 0
+      do itype = 1, atomsT%ntype
+        do ieq = 1, atomsT%neq(itype)
+          iatom = iatom + 1
+          call sphpts(randPtsCart(:, :, iatom), noPts2chCont, atomsT%rmt(itype), atomsT%pos(:, iatom))
+  !      do irandPt = 1, noPts2chCont
+  !        call random_number(randPtsCart(:, irandPt, itype))
+  !        euclidNorm = norm2(randPtsCart(:, irandPt, itype))
+  !        randPtsCart(:, irandPt, itype) = randPtsCart(:, irandPt, itype) / euclidNorm * atomsT%rmt(itype)
+        end do
+      end do
+
+
+      !Evaluate Stars for this random points at each MT sphere boundary in the unit cell
+      sumfuncValI = cmplx(0.0) !todo this is probably unneccessary, because it is already set to 0 in the loop
+      iatom       = 0
+      do itype = 1, atomsT%ntype
+        do ieq = 1, atomsT%neq(itype)
+          iatom = iatom + 1
+          do irandPt = 1, noPts2chCont
+  !          rvec = atomsT%pos(:,iatom) + randPtsCart(:,irandPt,itype)
+            rvec(:) = randPtsCart(:, irandPt, iatom)
+            ! transform rvec in internal, real-space coordinates --> rvec_int
+            !call cotra1(rvec, rvec_int, cellT%bmat) !todo do this inline from now on!!!
+            rvec_int = matmul(cellT%bmat, rvec)
+
+            ! Evaluate stars at random point
+            sumfuncValI(:, irandPt,iatom) = cmplx(0., 0.) !todo somehow this does not make sense
+            do iGvec = 1, ngdp !nq3 is number of stars
+              do idirec = 1, 3
+                sumfuncValI(idirec, irandPt,iatom) = sumfuncvalI(idirec, irandPt,iatom) + fIR(iGvec, idirec) * exp(ImagUnit * tpi_const * dot_product(gdp(:, iGvec) + qpt(:), rvec_int(:))) !jsp noch einfügen, warum Multiplikation with G-vectors
+              end do ! idirec
+            end do  !iGvec
+          end do  !irandPt
+        end do  !ieq
+      end do  !itype
+
+      if (all(qpt(:) < 1e-6)) then
+        if (any(aimag(sumfuncValI(:, :, :)) > 1e-8)) then
+          write(*, *) "Imaginary part of observable potential should be 0"
+          !NOstopNO
+        end if
+      end if
+
+
+      iatom = 0
+      sumOfMTFuncVal = cmplx(0., 0.)
+      do itype = 1, atomsT%ntype
+        !Evaluate MT sphere function at same random points
+        randPtsGrid = 0.0
+        do ieq = 1, atomsT%neq(itype)
+          iatom       = iatom + 1
+          !symOpr_temp = 1!atomsT%ngopr(iatom) ! symmetry operation mapping local to global coordinate system
+          do irandPt = 1, noPts2chCont
+            !rvec = randPtsCart(:,irandPt,itype)
+            ! We have to subtract the atom position to get into a local coordinate system of atom iatom
+            rvec = randPtsCart(:,irandPt,iatom) - atomsT%pos(:, iatom)
+           ! if (symOpr_temp /= 1) then
+           !   !Transform into internal real space coordinates
+           !   call cotra1(rvec, rvec_int, cellT%bmat) !allocate and deallocate randPtsGrid
+           !   do imatmulr = 1, 3 !todo optimize this
+           !     rotatedVector(imatmulr) = 0.0
+           !     do imatmulc = 1, 3
+           !       rotatedVector(imatmulr) = rotatedVector(imatmulr) + symT%mrot(imatmulr, imatmulc, symOpr_temp) *rvec_int(imatmulc)
+           !     end do
+           !   end do
+           !   call cotra0(rotatedVector, rvec, cellT%amat)
+           ! end if
+  !          call ylmnorm_init(atomsT%lmaxd + 1)
+            !call ylm4(atomsT%lmax(itype) + 1, rvec, ylm)
+            call ylm4(atomsT%lmax(itype) , rvec, ylm)
+  !          call ylmnorm_init(atomsT%lmaxd)
+
+            do oqn_l = 0, atomsT%lmax(itype)! + 1
+              lm_lcontr = oqn_l * (oqn_l + 1) + 1
+              do mqn_m = -oqn_l, oqn_l
+                lm = lm_lcontr + mqn_m
+                do idirec = 1, 3
+                  sumOfMTFuncVal(idirec, irandPt, iatom) = sumOfMTFuncVal(idirec, irandPt, iatom) + fMufT(atomsT%jri(itype), lm, iatom, idirec) * ylm(lm)
+                end do ! idir
+              end do
+            end do
+          end do
+        end do
+      end do
+
+      if (all(qpt(:) < 1e-6)) then
+        if (any(aimag(sumOfMTFuncVal(:, :, :)) > 1e-8)) then
+          write(*, *) "Imaginary part of observable potential should be 0"
+          !NOstopNO
+        end if
+      end if
+
+      write ( logFileUnit, '(a)' ) "Continuity of the unperturbed potential's gradient:"
+      write(logFileUnit,*)         '---------------------------------------------------'
+      iatom = 0
+      do itype = 1,atomsT%ntype
+        do ieq = 1,atomsT%neq(itype)
+          iatom = iatom + 1
+          write(logFileUnit,*) '  Atom:',iatom
+          write(logFileUnit,'(a)') '  coordinate(cartesian)      IR x-comp.  MT x-comp.     IR y-comp.  MT y-comp.     IR z-comp.  MT z-comp.'
+          do irandPt = 1,noPts2chCont
+              write(logFileUnit,'(3f8.4,3x,3(4f12.8, 3x))') randPtsCart(:,irandPt,iatom),sumfuncValI(1, irandPt,iatom),sumOfMTFuncVal(1, irandPt,iatom), sumfuncValI(2, irandPt,iatom),sumOfMTFuncVal(2, irandPt,iatom), sumfuncValI(3, irandPt,iatom),sumOfMTFuncVal(3, irandPt,iatom)
+          end do
+          do idirec = 1, 3
+            call fitchkNeg(real(sumfuncvalI(idirec, :,iatom)), real(sumOfMTFuncVal(idirec, :,iatom)), noPts2chCont, av(idirec), rms(idirec), dms(idirec))
+          end do
+          write(logFileUnit, *)
+        !  write(logFileUnit,'(a)') '  average deviation          IR x-comp.  MT x-comp.     IR y-comp.  MT y-comp.     IR z-comp.  MT z-comp.'
+          write(logFileUnit,'(2x, A,11x, 3(f15.8, 15x))'   )  'real average absolute value interstitial :',av(1), av(2), av(3)
+          write(logFileUnit,'(2x,A,6f15.8,A/)')               'real rms(x, y, z), real dms(x, y, z):          ',rms(1), rms(2), rms(3), dms(1), dms(2), dms(3),' in %'
+          av(:) = 0.
+          rms(:) = 0.
+          dms(:) = 0.
+          do idirec = 1, 3
+            call fitchkNeg(aimag(sumfuncvalI(idirec, :,iatom)), aimag(sumOfMTFuncVal(idirec, :,iatom)), noPts2chCont, av(idirec), rms(idirec), dms(idirec))
+          end do
+          write(logFileUnit, *)
+        !  write(logFileUnit,'(a)') '  average deviation          IR x-comp.  MT x-comp.     IR y-comp.  MT y-comp.     IR z-comp.  MT z-comp.'
+          write(logFileUnit,'(2x, A,11x, 3(f15.8, 15x))'   )  'aimag average absolute value interstitial :',av(1), av(2), av(3)
+          write(logFileUnit,'(2x,A,6f15.8,A/)')               'aimag rms(x, y, z), dms(x, y, z):          ',rms(1), rms(2), rms(3), dms(1), dms(2), dms(3),' in %'
+        end do
+      end do
+    end subroutine checkjuPhDens1
 
 end module m_jpSternheimer

@@ -16,6 +16,8 @@
 !-----------------------------------------------------------------------------------------------------------------------------------
 module m_jpDens1stVar
 
+    use m_constants
+
   implicit none
 
   contains
@@ -53,10 +55,7 @@ module m_jpDens1stVar
   subroutine calcRho1IRValDS( cell, results, nobd, nv, ikpt, iqpt, ikpq, idir, GbasVec, z, z1nG, rho1IR, gdp2Ind, mapGbas,   &
       & gdp2iLimi, kpq2kPrVec )
 
-#include "cppmacro.h"
-
     use m_types, only : t_cell, t_results
-    use m_jpConstants, only: compPhon
 
     implicit none
 
@@ -74,7 +73,7 @@ module m_jpDens1stVar
     ! Array parameter
     integer,         intent(in)    :: nv(:)
     integer,         intent(in)    :: GbasVec(:, :)
-    MCOMPLEX,        intent(in)    :: z(:, :)
+    complex,        intent(in)    :: z(:, :)
     complex,         intent(in)    :: z1nG(:, :, :)
     integer,         intent(in)    :: gdp2iLimi(2, 3)
     integer,         intent(in)    :: gdp2Ind(gdp2iLimi(1, 1):gdp2iLimi(2, 1), gdp2iLimi(1, 2):gdp2iLimi(2, 2),                    &
@@ -100,7 +99,7 @@ module m_jpDens1stVar
 
     ! factor 2 from product rule and time reversal symmetry and factor 2 from spin degeneracy
     prf = 4. / cell%omtil
-    if (compPhon) then
+    if (.FALSE.) then
       if (ikpt.eq.1.and.idir.eq.1) then
         open(209,file='000_rho1_pwsplit',form='FORMATTED',position='append',action='WRITE',status='replace')
       else
@@ -118,11 +117,11 @@ module m_jpDens1stVar
             rho1IR(Gind, idir) = rho1IR(Gind, idir) + prf * results%w_iks(iband, ikpt, 1) &
                                                         & * conjg( z(iGp, iband) ) &
                                                         & * z1nG(iGpp, iband, idir)
-            if (compPhon.and.iGpp.eq.1.and.iGp.eq.1) then
+            if (.FALSE..and.iGpp.eq.1.and.iGp.eq.1) then
               write(209,*) ikpt, iband!iGpp, iGp, idir, iband
               write(209,*) prf * results%w_iks(iband, ikpt, 1)
-              !write(209,*) conjg( z(iGp, iband) ) 
-              !write(209,*) z1nG(iGpp, iband, idir) 
+              !write(209,*) conjg( z(iGp, iband) )
+              !write(209,*) z1nG(iGpp, iband, idir)
             end if
           end do ! iband
         else
@@ -130,8 +129,8 @@ module m_jpDens1stVar
         end if
       end do ! iGp
     end do ! iGpp
-    if (compPhon) then
-      close(209) 
+    if (.FALSE.) then
+      close(209)
     end if
 
   end subroutine calcRho1IRValDS
@@ -242,9 +241,7 @@ module m_jpDens1stVar
   ! ist array is a clever array defined in the declarations
   subroutine calcRho1IRValFFT( cell, stars, results, ikpt, ngdp2km, nobd, ne, nv, gpot, gbas, z0, z1, rho1IR )
 
-#include "cppmacro.h"
-
-    use m_juDFT_NOstopNO, only : juDFT_error, juDFT_warn
+    use m_juDFT_stop, only : juDFT_error, juDFT_warn
     use m_types
     use m_fft_interface
 
@@ -262,7 +259,7 @@ module m_jpDens1stVar
 
     integer,                               intent(in)    :: gpot(:, :) ! gpot should be put only until ngdp2km
     integer,                               intent(in)    :: gbas(:, :) ! gbas should be put in with the ilst array!!!!
-    MCOMPLEX,                              intent(in)    :: z0(:, :)
+    complex,                              intent(in)    :: z0(:, :)
     complex,                               intent(in)    :: z1(:, :)
     complex,                               intent(inout) :: rho1IR(:) ! we have to see whether an inout or a out is better for performance
 
@@ -414,7 +411,9 @@ module m_jpDens1stVar
     call fft_interface( 3, length_zfft, rho1g, forw )
 
     scaling = 1.0 / real(ifftq3)
+#ifdef DEBUG_MODE
     q0 = rho1IR(iG0)
+#endif
     do iG = 1 , ngdp2km
       rho1IR(iG) = rho1IR(iG) + scaling * rho1g( igfft(iG) )
     end do
@@ -467,7 +466,6 @@ module m_jpDens1stVar
   subroutine rhomt( atoms, we, nobd, acof2cjg, bcof2cjg, acof, bcof, uu, dd, du, ud )
 
     use m_types, only : t_atoms
-    use m_jpConstants, only : compPhon
 
     implicit none
 
@@ -513,7 +511,7 @@ module m_jpDens1stVar
               ud(oqn_l, iatom) = ud(oqn_l, iatom) + 2 * we(iband) * conjg( acof2cjg(iband, lm, iatom) ) * bcof(iband, lm, iatom)
             end do ! iband
           end do ! mqn_m
-          if (compPhon) then
+          if (.FALSE.) then
             write(109,*) oqn_l, oqn_l, 1, 1, 1
             write(109,*) uu(oqn_l,1)
             write(109,*) oqn_l, oqn_l, 1, 1, 2
@@ -643,7 +641,6 @@ module m_jpDens1stVar
   subroutine rhonmt( atoms, we, nobd, acof, bcof, acof2cjg, bcof2cjg, uunmt, ddnmt, udnmt, dunmt )
 
     use m_types, only : t_atoms
-    use m_jpConstants, only : iu, compPhon
     use m_gaunt, only : gaunt1
 
     implicit none
@@ -717,7 +714,7 @@ module m_jpDens1stVar
                 do lp = lplow, lphi, 2
                   ! this is the factor i^l or i^l_p, respectively, which actually is part of the abcof. For non-diagonal
                   ! contributions we have to calculate it explicetly. For diagonal contributions it cancels away because l = l_p!
-                  cil = iu**( l - lp )
+                  cil = ImagUnit**( l - lp )
                   lmp = lp * ( lp + 1 ) + mp
                   !     -----> gaunt's coefficient
                   coef = gaunt1( l, lv, lp, m, mv, mp, atoms%lmaxd )
@@ -736,7 +733,7 @@ module m_jpDens1stVar
                                                                           & * conjg(bcof2cjg(iband, lmp, iatom)) &
                                                                           & * acof(iband, lm, iatom)
                   end do ! iband
-                  if (compPhon.and.m.eq.l) then
+                  if (.FALSE..and.m.eq.l) then
                     write(109,*) lp, l, lmv, 1, 1
                     write(109,*) real(uunmt(lp,l,lmv,1))
                     write(109,*) lp, l, lmv, 1, 2
@@ -962,7 +959,6 @@ module m_jpDens1stVar
       & dunmt, ddnmt, acnmt, bcnmt, ccnmt, atoms, nobd, rbas1, rbas2, we, ilo2p )
 
     use m_types, only : t_atoms
-    use m_jpConstants, only : compPhon
 
     implicit none
 
@@ -997,8 +993,8 @@ module m_jpDens1stVar
     complex,       intent(inout) :: udnmt(:, :,:,:)
     complex,       intent(inout) :: dunmt(:, :,:,:)
     complex,       intent(inout) :: ddnmt(:, :,:,:)
-    
-    if (compPhon) then
+
+    if (.FALSE.) then
       open(109,file='000_coeffs',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
     end if
 
@@ -1017,8 +1013,8 @@ module m_jpDens1stVar
       ! Non spherical part of LOs of 7.34d
       call rhonmtlo( atoms, nobd, we, acof, bcof, ccof, acof2cjg, bcof2cjg, ccof2cjg, acnmt, bcnmt, ccnmt )
     end if
-    
-    if (compPhon) then
+
+    if (.FALSE.) then
       close(109)
     end if
 
@@ -1069,22 +1065,20 @@ module m_jpDens1stVar
   !> @param[inout]  bcnmt   : LO related, to be done!
   !> @param[inout]  ccnmt   : LO related, to be done!
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine calcKdepValRho1MT( atoms, dimens, sym, cell, kpts, usdus, results, ikpt, ikpq, idispA, nv, ilst, GbasVec, nobd,&
+  subroutine calcKdepValRho1MT( fmpi, oneD, atoms, input, sym, cell, kpts, usdus, results, ikpt, ikpq, idispA, nv, ilst, GbasVec, nobd,&
       & uu, du, ud, dd, aclo, bclo, cclo, uunmt, udnmt, dunmt, ddnmt, acnmt, bcnmt, ccnmt, z0, z1, kveclo, rbas1, rbas2, ilo2p, &
       & uu2, du2, ud2, dd2, aclo2, bclo2, cclo2, uunmt2, udnmt2, dunmt2, ddnmt2, acnmt2, bcnmt2, ccnmt2 )
 
-#include "cppmacro.h"
-
-    use m_types, only : t_atoms, t_dimension, t_sym, t_cell, t_kpts, t_input, t_usdus, t_results, t_noco
-    use m_jpConstants, only : iu, compPhon
+    use m_types
     use m_abcof, only : abcof
-    use m_od_types, only : od_inp, od_sym
 
     implicit none
 
     ! Type parameter
+    type(t_mpi),                  intent(in)    :: fmpi
+    type(t_oneD),                  intent(in)    :: oneD
     type(t_atoms),                  intent(in)    :: atoms
-    type(t_dimension),              intent(in)    :: dimens
+    type(t_input),                  intent(in)    :: input
     type(t_sym),                    intent(in)    :: sym
     type(t_cell),                   intent(in)    :: cell
     type(t_kpts),                   intent(in)    :: kpts
@@ -1101,7 +1095,7 @@ module m_jpDens1stVar
     integer,                        intent(in)    :: ilst(:, :, :)
     integer,                        intent(in)    :: GbasVec(:, :)
     integer,                        intent(in)    :: nobd(:)
-    MCOMPLEX,                       intent(in)    :: z0(:, :)
+    complex,                       intent(in)    :: z0(:, :)
     complex,                        intent(in)    :: z1(:, :, :)
     integer,                        intent(in)    :: kveclo(:,:)
     real,                           intent(in)    :: rbas1(:,:,:,:,:)
@@ -1138,8 +1132,11 @@ module m_jpDens1stVar
 
     ! Local type variables !todo beware maybe not take them from fleur_init might be dangerous
     type(t_noco)                                  :: noco
+    type(t_nococonv)                                  :: nococonv
     type(od_inp)                                  :: odi
     type(od_sym)                                  :: ods
+    TYPE(t_lapw) :: lapw
+    TYPE (t_mat) :: zMat1, zMatikpG, zMat
 
     ! Local scalar variable
     integer                                       :: nmat
@@ -1149,6 +1146,7 @@ module m_jpDens1stVar
     integer                                       :: iatom
     integer                                       :: itype
     integer                                       :: ieqat
+    integer :: nk
 
     ! Local array variables
     real                                          :: Gpkext(3)
@@ -1170,9 +1168,9 @@ module m_jpDens1stVar
 
 
     ! Initialization
-    allocate( acofz1(nobd(ikpt), 0:dimens%lmd, atoms%nat, 3), bcofz1(nobd(ikpt), 0:dimens%lmd, atoms%nat, 3), &
+    allocate( acofz1(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat, 3), bcofz1(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat, 3), &
       &ccofz1(-atoms%llod:atoms%llod, nobd(ikpt), atoms%nlod, atoms%nat, 3) )
-    allocate( acofikpG(nobd(ikpt), 0:dimens%lmd, atoms%nat, 3), bcofikpG(nobd(ikpt), 0:dimens%lmd, atoms%nat, 3), &
+    allocate( acofikpG(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat, 3), bcofikpG(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat, 3), &
       &ccofikpG(-atoms%llod:atoms%llod, nobd(ikpt), atoms%nlod, atoms%nat, 3) )
     acofz1(:, :, :, :)      = cmplx(0., 0.)
     bcofz1(:, :, :, :)      = cmplx(0., 0.)
@@ -1186,37 +1184,45 @@ module m_jpDens1stVar
     ngoprI(:) = 1
 
     ! We do not want to have noco
-    allocate( noco%alph(atoms%ntype), noco%beta(atoms%ntype) )
-    noco%alph(:) = 0
-    noco%beta(:) = 0
+    allocate( nococonv%alph(atoms%ntype), nococonv%beta(atoms%ntype) )
+    nococonv%alph(:) = 0
+    nococonv%beta(:) = 0
 
-    allocate(zBar(dimens%nbasfcn, nobd(ikpt)))
+    allocate(zBar(SIZE(z0(:,1)), nobd(ikpt)))
     zBar(:, :) = cmplx(0., 0.)
 
     ! Calculate abcofs with z1 and with iG z0, see 7.30e
     do idir = 1, 3
       nmat = nv(1, ikpq) + atoms%nlotot
-      call abcof( atoms%lmaxd, atoms%ntype, dimens%neigd, nobd(ikpt), atoms%nat, sym%nop, dimens%nvd, dimens%jspd, dimens%lmd,     &
-        & dimens%nbasfcn, atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
-        & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), GbasVec(1, ilst(:nv(1, ikpq), ikpq, 1)),     &
-        & GbasVec(2, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq),  nmat, nobd(ikpt),        &
-        & z1(:, :, idir), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds(:, :, 1), usdus%duds(:, :, 1), usdus%ddn(:, :, 1),      &
-        & atoms%invsat, sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1),      &
-        & atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, noco%alph, noco%beta, noco%qss,             &
-        & kveclo(:, ikpq), odi, ods, acofz1(:, :, :, idir), bcofz1(:, :, :, idir), ccofz1(:, :, :, :, idir) )
+      !call abcof( atoms%lmaxd, atoms%ntype, input%neig, nobd(ikpt), atoms%nat, sym%nop, MAXVAL(nv), input%jspins, atoms%lmaxd*(atoms%lmaxd+2),     &
+        !& SIZE(z0(:,1)), atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
+        !& atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpq), GbasVec(1, ilst(:nv(1, ikpq), ikpq, 1)),     &
+        !& GbasVec(2, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(3, ilst(:nv(1, ikpq), ikpq, 1)), nv(:, ikpq),  nmat, nobd(ikpt),        &
+        !& z1(:, :, idir), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds(:, :, 1), usdus%duds(:, :, 1), usdus%ddn(:, :, 1),      &
+        !& sym%invsat, sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1),      &
+        !& atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss,             &
+        !& kveclo(:, ikpq), odi, ods, acofz1(:, :, :, idir), bcofz1(:, :, :, idir), ccofz1(:, :, :, :, idir) )
+
+        nk=fmpi%k_list(ikpq)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL zMat1%init(.FALSE., nv(1, ikpq) + atoms%nlotot, nobd(ikpt))
+        zMat1%data_c(:, :) = z1(:, :, idir)
+        CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1, oneD, &
+                 & acofz1(:, 0:, :, idir), bcofz1(:, 0:, :, idir), &
+                 & ccofz1(-atoms%llod:, :, :, :, idir), zMat1)
 
       ! Calculate iG abcof, see 7.30a and 7.30f
       zBar(:, :) = cmplx(0., 0.)
       do iband = 1, nobd(ikpt)
         do iBas = 1, nv(1, ikpt)
           Gpkext(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(iBas, ikpt, 1)) + kpts%bk(1:3, ikpt))
-          zBar(iBas, iband) = iu * Gpkext(idir) * z0(iBas, iband)
+          zBar(iBas, iband) = ImagUnit * Gpkext(idir) * z0(iBas, iband)
         end do
         if (.false.) then
           do iBas = nv(1, ikpt) + 1, nv(1, ikpt) + atoms%nlotot
             Gpkext(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(kveclo(iBas - nv(1, ikpt), ikpt), ikpt, 1)) &
               & + kpts%bk(1:3, ikpt) )
-            zBar(iBas, iband) = iu * Gpkext(idir) * z0(iBas, iband)
+            zBar(iBas, iband) = ImagUnit * Gpkext(idir) * z0(iBas, iband)
           end do
         end if
       end do
@@ -1226,34 +1232,48 @@ module m_jpDens1stVar
       ! the first neigd has to be neigd because the z0 read from fleur has to be neigd to flexibly use them within the Sternheimer
       ! equation
       nmat = nv(1, ikpt) + atoms%nlotot
-      call abcof ( atoms%lmaxd, atoms%ntype, nobd(ikpt), nobd(ikpt), atoms%nat, sym%nop, dimens%nvd, dimens%jspd, dimens%lmd,      &
-        & dimens%nbasfcn, atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
-        & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)),     &
-        & GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt),        &
-        & zBar(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), atoms%invsat,     &
-        & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo,         &
-        & atoms%nlo, atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, noco%alph, noco%beta, noco%qss, kveclo(:, ikpt), odi,  &
-        & ods, acofikpG(:, :, :, idir), bcofikpG(:, :, :, idir), ccofikpG(:, :, :, :, idir) )
+      !call abcof ( atoms%lmaxd, atoms%ntype, nobd(ikpt), nobd(ikpt), atoms%nat, sym%nop, MAXVAL(nv), input%jspins, atoms%lmaxd*(atoms%lmaxd+2),      &
+        !& SIZE(z0(:,1)), atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq, &
+        !& atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)),     &
+        !& GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt),        &
+        !& zBar(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds, usdus%duds(:, :, 1), usdus%ddn(:, :, 1), sym%invsat,     &
+        !& sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo,         &
+        !& atoms%nlo, atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpt), odi,  &
+        !& ods, acofikpG(:, :, :, idir), bcofikpG(:, :, :, idir), ccofikpG(:, :, :, :, idir) )
+        nk=fmpi%k_list(ikpt)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL zMatikpG%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt))
+        zMatikpG%data_c(:, :) = zBar(:, :)
+        CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1, oneD, &
+                 & acofikpG(:, 0:, :, idir), bcofikpG(:, 0:, :, idir), &
+                 & ccofikpG(-atoms%llod:, :, :, :, idir), zMatikpG)
     end do
 
     ! Calculate classical abcof for multiplying it with k-vector, see 7.30f
-    allocate( acof(nobd(ikpt), 0:dimens%lmd, atoms%nat), bcof(nobd(ikpt), 0:dimens%lmd, atoms%nat), &
+    allocate( acof(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bcof(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
             &ccof(-atoms%llod:atoms%llod, nobd(ikpt), atoms%nlod, atoms%nat) )
     acof(:, :, :) = cmplx(0., 0.)
     bcof(:, :, :) = cmplx(0., 0.)
     ccof(:, :, :, :) = cmplx(0., 0.)
 
     nmat = nv(1, ikpt) + atoms%nlotot
-    call abcof ( atoms%lmaxd, atoms%ntype, dimens%neigd, nobd(ikpt), atoms%nat, sym%nop, dimens%nvd, dimens%jspd, dimens%lmd,      &
-         & dimens%nbasfcn, atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq,&
-         & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)),    &
-         & GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt),       &
-         & z0(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds(:, :, 1), usdus%duds(:, :, 1), usdus%ddn(:, :, 1),           &
-         & atoms%invsat, sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1),     &
-         & atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, noco%alph, noco%beta, noco%qss,            &
-         & kveclo(:, ikpt), odi, ods, acof, bcof, ccof )
+    !call abcof ( atoms%lmaxd, atoms%ntype, input%neig, nobd(ikpt), atoms%nat, sym%nop, MAXVAL(nv), input%jspins, atoms%lmaxd*(atoms%lmaxd+2),      &
+    !     & SIZE(z0(:,1)), atoms%llod, atoms%nlod, atoms%nlotot, sym%invtab, atoms%ntype, sym%mrot, ngoprI, atoms%taual, atoms%neq,&
+    !     & atoms%lmax, atoms%rmt, cell%omtil, cell%bmat, cell%bbmat, kpts%bk(:, ikpt), GbasVec(1, ilst(:nv(1, ikpt), ikpt, 1)),    &
+    !     & GbasVec(2, ilst(:nv(1, ikpt), ikpt, 1)), GbasVec(3, ilst(:nv(1, ikpt), ikpt, 1)), nv(:, ikpt),  nmat, nobd(ikpt),       &
+    !     & z0(:, :), usdus%us(:, :, 1), usdus%dus(:, :, 1), usdus%uds(:, :, 1), usdus%duds(:, :, 1), usdus%ddn(:, :, 1),           &
+    !     & sym%invsat, sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1),     &
+    !     & atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss,            &
+    !     & kveclo(:, ikpt), odi, ods, acof, bcof, ccof )
+    nk=fmpi%k_list(ikpt)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+    CALL zMatikpG%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt))
+    zMat%data_c(:, :) = z0(:, :)
+    CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1, oneD, &
+             & acofikpG(:, 0:, :, idir), bcofikpG(:, 0:, :, idir), &
+             & ccofikpG(-atoms%llod:, :, :, :, idir), zMat)
 
-    allocate( acofSummed(nobd(ikpt), 0:dimens%lmd, atoms%nat, 3), bcofSummed(nobd(ikpt), 0:dimens%lmd, atoms%nat, 3), &
+    allocate( acofSummed(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat, 3), bcofSummed(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat, 3), &
       &ccofSummed(-atoms%llod:atoms%llod, nobd(ikpt), atoms%nlod, atoms%nat, 3) )
     acofSummed(:, :, :, :) = cmplx(0., 0.)
     bcofSummed(:, :, :, :) = cmplx(0., 0.)
@@ -1277,10 +1297,10 @@ module m_jpDens1stVar
           do iband = 1, nobd(ikpt)
             if ( iatom == idispA ) then
 
-              acofSummed(iband, 0:dimens%lmd, iatom, idir) = acofz1(iband, 0:dimens%lmd, iatom, idir) &
-                & + acofikpG(iband, 0:dimens%lmd, iatom, idir)
-              bcofSummed(iband, 0:dimens%lmd, iatom, idir) = bcofz1(iband, 0:dimens%lmd, iatom, idir) &
-                & + bcofikpG(iband, 0:dimens%lmd, iatom, idir)
+              acofSummed(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir) = acofz1(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir) &
+                & + acofikpG(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir)
+              bcofSummed(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir) = bcofz1(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir) &
+                & + bcofikpG(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir)
               if (.false.) then
                 if ( atoms%nlo(itype) > 0 ) then
                   ccofSummed(-atoms%llod:atoms%llod, iband, :atoms%nlod, iatom, idir) = &
@@ -1289,8 +1309,8 @@ module m_jpDens1stVar
                 end if
               end if
             else
-              acofSummed(iband, 0:dimens%lmd, iatom, idir) = acofz1(iband, 0:dimens%lmd, iatom, idir)
-              bcofSummed(iband, 0:dimens%lmd, iatom, idir) = bcofz1(iband, 0:dimens%lmd, iatom, idir)
+              acofSummed(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir) = acofz1(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir)
+              bcofSummed(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir) = bcofz1(iband, 0:atoms%lmaxd*(atoms%lmaxd+2), iatom, idir)
               if (.false.) then
                 if ( atoms%nlo(itype) > 0 ) then
                   ccofSummed(-atoms%llod:atoms%llod, iband, :atoms%nlod, iatom, idir) = &
@@ -1303,14 +1323,14 @@ module m_jpDens1stVar
       end do
     end do
 
-    if (compPhon) then
+    if (.FALSE.) then
       if (ikpt.eq.1) then
         open(109,file='000_matchsum',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
       else
          open(109,file='000_matchsum',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
       end if
       do iband = 1, nobd(ikpt)
-        do lm = 0, dimens%lmd
+        do lm = 0, atoms%lmaxd*(atoms%lmaxd+2)
           write(109,*) ikpq, iband, 1, lm+1
           write(109,*) real(acofSummed(iband,lm,1,1)), aimag(acofSummed(iband,lm,1,1))
           write(109,*) ikpq, iband, 2, lm+1
@@ -1384,6 +1404,7 @@ module m_jpDens1stVar
 
     use m_types, only : t_atoms
     use m_constants, only : sfp_const
+    use m_juDFT_stop, only : juDFT_error
 
     implicit none
 
@@ -1495,7 +1516,7 @@ module m_jpDens1stVar
               lm = l * (l + 1) + m
               do lp = 0, atoms%lmax(itype)
                 do lo = 1, atoms%nlo(itype)
-                  NOstopNO'1. LO contribution not allowed'
+                  call juDFT_error('1. LO contribution not allowed.', calledby='multRadSolVzcRho1MT')
                   do imesh = 1, atoms%jri(itype)
                     rho(imesh, lm, na, idir) = rho(imesh, lm, na, idir) + c_1 * (acnmt(lp, lo, lm, na, idir)                       &
                       & * ( rbas1(imesh, 1, lp, itype, 1) * rbas1(imesh, ilo2p(lo, itype), atoms%llo(lo, itype), itype, 1)         &
@@ -1508,7 +1529,7 @@ module m_jpDens1stVar
                 end do ! lo
               end do ! lp
               do lo = 1,atoms%nlo(itype)
-                NOstopNO'2. LO contribution not allowed'
+                call juDFT_error('2. LO contribution not allowed.', calledby='multRadSolVzcRho1MT')
                 do lop = 1,atoms%nlo(itype)
                   do imesh = 1,atoms%jri(itype)
                     rho(imesh,lm, na, idir) = rho(imesh,lm, na, idir) + c_1 * ccnmt(lop, lo, lm, na, idir)                         &
@@ -1578,230 +1599,7 @@ module m_jpDens1stVar
   !>  @param[out] qpwcG   : Plane-wave expansion coefficients of the FFT of the gradient of the pseudo core-density ( Gauss curve )
   !>
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine calcPsDensMT( atoms, cell, sym, stars, dimens, input, ngdp2km, acoff, alpha, qpwcG, gdp, logUnit )
-
-    use m_constants
-    use m_diflgr
-    use m_types
-    use m_cdnovlp, only : ft_of_CorePseudocharge
-    use mod_juPhonUtils, only : fopen, fclose
-    use m_juDFT_NOstopNO, only : juDFT_error, juDFT_warn
-    !
-    !     .. Parameters ..
-    TYPE(t_atoms),                  intent(in)            :: atoms
-    TYPE(t_cell),                   intent(in)            :: cell
-    TYPE(t_sym),                    intent(in)            :: sym
-    TYPE(t_stars),                  intent(in)            :: stars
-    TYPE(t_dimension),              intent(in)            :: dimens
-    TYPE(t_input),                  intent(in)            :: input
-
-    ! Scalar Parameters
-    integer,                        intent(in)            :: logUnit
-    integer,                        intent(in)            :: ngdp2km
-
-    ! Array Parameters
-    integer,                        intent(in)            :: gdp(:, :)
-    real,              allocatable, intent(out)           :: acoff(:)
-    real,              allocatable, intent(out)           :: alpha(:)
-    complex,           allocatable, intent(out)           :: qpwcG(:, :)
-
-    ! Local Scalars
-    real                                                  :: dif
-    real                                                  :: dxx
-    real                                                  :: tl_14
-    integer                                               :: j
-    integer                                               :: j1
-    integer                                               :: ncmsh
-    integer                                               :: ispin
-    integer                                               :: itype
-    integer                                               :: imesh
-    integer,                                    parameter :: method1 = 2
-    integer,                                    parameter :: method2 = 1
-
-    ! Local Arrays
-    integer,           allocatable                        :: mshc(:)
-    real,              allocatable                        :: rat(:, :)
-    real,              allocatable                        :: rh(:, :)
-
-    !
-    !     OLD VERSION:
-    !     The previous version to calculate the overlap of the
-    !     core tails was done in real space:
-    !     A three dimensional real space grid was set up. On each
-    !     of these grid points the charge density of all atoms inside
-    !     the unit cell and neigboring unit cells was calculated.
-    !     This calculation required a lagrange fit since the core
-    !     charge is on a radial mesh. The same was done in the vacuum
-    !     region, except on each z-plane we worked on a two dimension
-    !     grid. After the charge density was generated on a equidistant
-    !     grid the charge density was FFTed into G-space. The set up
-    !     of the charge density on the real space grid is rather time
-    !     consuming. 3-loops are required for the 3D grid
-    !                1-loop over all atoms in the unit cells
-    !                Larange interpolation
-    !                3D and 2D FFTs
-    !     In order to save time the non-spherical contributions inside
-    !     the sphere had been ignored. It turns out that the later
-    !     approximation is pure in the context of force calculations.
-    !
-    !     PRESENT VERSION:
-    !     The present version is written from scratch. It is based on the
-    !     idea that the FFT of an overlap of spherically symmetric
-    !     charges can be expressed by the product of
-    !
-    !     sum_natype{ F(G,ntype) * sum_atom(atype) {S(\vec{G},atom)}}
-    !
-    !     of form factor F and structure factor S. The Form factor
-    !     depends only G while the structure factor depends on \vec{G}
-    !     and can build up in G-space. F of a gaussian chargedensity can
-    !     be calculated analytically.
-
-    !     The core-tails to the vacuum region are described by an
-    !     exponentially decaying function into the vacuum:
-
-    !     rho(r_||,z,ivac)= sum_n{ rho(n,ivac) * exp(-kappa*(z-z_v))
-    !                                          * exp(iG(n)r_||) }
-
-    !     And the plane waves are expanded into lattice harmonics
-    !     up to a l_cutoff. Tests of the accuracy inside the sphere
-    !     have shown that a reduction of the l_cutoff inside the
-    !     in order to save time leads to sizable errors and should
-    !     be omitted.
-
-    !     rho_L(r) =  4 \pi i^l \sum_{g =|= 0}  \rho_int(g) r_i^{2} \times
-    !                              j_{l} (gr_i) \exp{ig\xi_i} Y^*_{lm} (g)
-
-    !     Tests have shown that the present version is about 10 times
-    !     faster than the previous one also all nonspherical terms are
-    !     included up to l=8 and the previous one included only l=0.
-    !     For l=16 it is still faster by factor 2.
-
-    !     coded                  Stefan Bl"ugel, IFF Nov. 1997
-    !     tested                 RObert Abt    , IFF Dez. 1997
-    !*****************************************************************
-    !
-    !     ..
-    !----> Abbreviation
-    !
-    !     mshc     : maximal radial meshpoint for which the radial coretail
-    !                density is larger than tol_14
-    !     method1  : two different ways to calculate the derivative of the
-    !                charge density at the sphere boundary.
-    !                (1) use subroutine diflgr based on lagrange interpol.
-    !                (2) use two point formular in real space,
-    !                    see notes of SB.
-    !                Tests have shown that (2) is more accurate.
-    !     method2  : two different integration routines to calculate form
-    !                factor of coretails outside the sphere.
-    !                (1) use subroutine intgrz to integrate the tails from
-    !                    outside to inside.
-    !                (2) use subroutine intgr3 to integrate the tails from
-    !                    muffin-tin radius to outside and include correction
-    !                    for start up.
-    !                Tests have shown that (1) is more accurate.
-    !
-    !
-
-    allocate( acoff(atoms%ntype), alpha(atoms%ntype) )
-    allocate( mshc(atoms%ntype), rat(dimens%msh, atoms%ntype) )
-    allocate( rh(dimens%msh, atoms%ntype))
-    allocate( qpwcG(ngdp2km, atoms%nat) )
-
-    mshc(:) = 0
-    rat(:, :) = 0.
-    acoff(:) = 0.
-    alpha(:) = 0.
-    rh = 0.
-    tl_14 = 1e-14
-    qpwcG = cmplx(0., 0.)
-
-    ! Read in core density from cdnc
-    call fopen(1000, name='cdnc', status='old', action='read', form='unformatted')
-    do ispin = 1, input%jspins
-      if ( ispin == 1 ) then
-        rewind( 1000 )
-      end if
-      do itype = 1, atoms%ntype
-
-        ncmsh = nint( log( (atoms%rmt(itype) + 10.0) / atoms%rmsh(1, itype) ) / atoms%dx(itype) + 1 )
-        ncmsh = min( ncmsh, dimens%msh )
-        ! read in core density
-        ! rh should be dependent on spin SPIN
-        read( 1000 ) (rh( imesh, itype ), imesh=1, ncmsh)
-
-        ! skip kinetic enrgy of the core
-        read( 1000 )
-      end do
-      ! only important if more than one spin later
-      read( 1000 )
-    end do
-    call fclose(1000)
-
-    ! (1) set up radial mesh beyond muffin-tin radius
-    ! (2) cut_off core tails from noise
-
-    nloop : do itype = 1, atoms%ntype
-      if ( atoms%ncst(itype) > 0 ) THEN
-        do j = 1, atoms%jri(itype)
-          rat(j, itype) = atoms%rmsh(j, itype)
-        end do
-        dxx = exp(atoms%dx(itype))
-        do j = atoms%jri(itype) + 1, dimens%msh
-          rat(j, itype) = rat(j - 1, itype) * dxx
-        end do
-        do j = atoms%jri(itype) - 1, dimens%msh
-          rh(j, itype) = rh(j, itype) / (fpi_const * rat(j, itype) * rat(j, itype))
-        end do
-        do j = dimens%msh, atoms%jri(itype), -1
-          if ( rh(j,itype) > tl_14 ) THEN
-            mshc(itype) = j
-            cycle nloop
-          end if
-        end do
-        mshc(itype) = atoms%jri(itype)
-      end if
-    end do nloop
-
-    ! the core density inside the spheres is replaced by a
-    ! gaussian-like pseudo density : n(r) = acoff*exp(-alpha*r*r)
-    ! acoff and alpha determined to obtain a continous and
-    ! differentiable density at the sphere boundary.
-    ! IF mshc = jri  either core tail too small or no core (i.e. H)
-    !
-    do itype = 1,atoms%ntype
-      if ( ( mshc(itype) > atoms%jri(itype) ) .and. ( ( atoms%ncst(itype) > 0 ) ) ) then
-        j1 = atoms%jri(itype) - 1
-        if ( method1 == 1) then
-           dif = diflgr( rat(j1, itype), rh(j1, itype) )
-           write (logUnit, fmt=8000) itype, rh(atoms%jri(itype),itype), dif
-           alpha(itype) = -0.5 * dif / ( rh(atoms%jri(itype), itype) * atoms%rmt(itype) )
-        else if ( method1 == 2) then
-           alpha(itype) = log( rh(j1,itype) / rh(atoms%jri(itype),itype) )
-           alpha(itype) = alpha(itype) / ( atoms%rmt(itype) * atoms%rmt(itype) * ( 1.0 - EXP( -2.0 * atoms%dx(itype) ) ) )
-        else
-           write ( logUnit, '('' error in choice of method1 in cdnovlp '')' )
-           call juDFT_error("error in choice of method1 in cdnovlp", calledby ="cdnovlp")
-        end if
-        acoff(itype) = rh(atoms%jri(itype), itype) * exp( alpha(itype) * atoms%rmt(itype) * atoms%rmt(itype) )
-        write (logUnit, FMT=8010) alpha(itype), acoff(itype)
-        do j = 1, atoms%jri(itype) - 1
-           rh(j, itype) = acoff(itype) * exp( -alpha(itype) * rat(j, itype)**2 )
-        end do
-      else
-        alpha(itype) = 0.0
-      end if
-    end do
-
-8000 FORMAT (/, 10x, 'core density and its first derivative at sph. bound. for atom type', i2, ' is', 3x, 2e15.7 )
-8010 FORMAT (/, 10x, 'alpha=', f10.5,5x, 'acoff=', f10.5)
-
-    ! Tolerance when alpha is assumed to be zero.
-    tl_14 = 1.0e-10!-14
-    ! calculate the fourier transform of the core-pseudocharge
-    call ft_of_CorePseudocharge( dimens, atoms, mshc, alpha, tl_14, rh, acoff, stars, method2, rat, cell, sym, ngdp2km, gdp, qpwcG )
-
-  end subroutine calcPsDensMT
-
+!!!! CALCPSDENSMT removed !!!
   !---------------------------------------------------------------------------------------------------------------------------------
   !> @author
   !> Christian-Roman Gerhorst, Forschungszentrum Jülich: IAS1 / PGI1
@@ -1825,7 +1623,6 @@ module m_jpDens1stVar
   !---------------------------------------------------------------------------------------------------------------------------------
   subroutine calcVarCTcorr( atoms, cell, ngpqdp2km, gpqdp, qbk, rhoPsC, rho1IRctC, rho1MTctC )
 
-    use m_jPConstants, only : iu, tpi, fpi
     use m_types, only : t_atoms, t_cell
     use m_sphbes, only : sphbes
     use m_ylm, only : ylm4
@@ -1900,15 +1697,15 @@ module m_jpDens1stVar
         do ieqat = 1, atoms%neq(itype)
           iatom = iatom + 1
           do idir = 1, 3
-            rho1IRctC(iG, iatom, idir) = -iu * Gqext(idir) * rhoPsC(iG, iatom)
+            rho1IRctC(iG, iatom, idir) = -ImagUnit * Gqext(idir) * rhoPsC(iG, iatom)
           end do ! idir
-          phFac(iG, iatom) = exp(iu * tpi * dot_product(gpqdp(:, iG) + qbk(:), atoms%taual(:, iatom)))
+          phFac(iG, iatom) = exp(ImagUnit * tpi_const * dot_product(gpqdp(:, iG) + qbk(:), atoms%taual(:, iatom)))
         end do
       end do
     end do
 
     do oqn_l = 0, atoms%lmaxd
-       fpiul(oqn_l) = fpi * iu**(oqn_l)
+       fpiul(oqn_l) = fpi_const * ImagUnit**(oqn_l)
     enddo
 
     iDatom = 0
@@ -1961,7 +1758,6 @@ module m_jpDens1stVar
   subroutine calcPDCinAlph( atoms, lcApsDens, ucApsDens, rho1MTAlphPSCcorr )
 
     use m_types, only : t_atoms
-    use m_JPConstants, only : c_im
 
     implicit none
 

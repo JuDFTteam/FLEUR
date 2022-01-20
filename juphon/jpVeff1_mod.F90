@@ -19,6 +19,8 @@
 !-----------------------------------------------------------------------------------------------------------------------------------
 module m_jpVeff1
 
+    USE m_constants
+
   implicit none
 
   contains
@@ -74,13 +76,12 @@ module m_jpVeff1
   !> @param[out]  vEff1IR     : Plane-wave insterstitial coefficients of the gradient of the unperturbed effective potential
   !> @param[out]  vEff1MT     : Spherical harmonic muffin-tin coefficients of the gradient of the unperturbed effective potential
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine GenVeff1(stars, cell, atoms, dimens, harSw, extSw, xcSW, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1IR, rho1MT, &
+  subroutine GenVeff1(input, stars, cell, atoms, harSw, extSw, xcSW, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1IR, rho1MT, &
       & grRho0MT, gdp, vEff1IR, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum)
 
-    use m_types, only : t_stars, t_cell, t_atoms, t_dimension
-    use m_JPConstants, only : fpi, iu, compPhon
-    use m_jpPotDensHelper, only : convolGrRhoKern, convolMTVeff1dKern
-    use m_juDFT_NOstopNO, only : juDFT_warn
+    use m_types, only : t_input, t_stars, t_cell, t_atoms
+    use m_jpGrVeff0, only : convolGrRhoKern
+    use m_juDFT_stop, only : juDFT_warn
 
     implicit none
 
@@ -127,10 +128,10 @@ module m_jpVeff1
     ! mqn_m        : magnetic quantum number m
 
     ! Type Parameter
+    type(t_input),                intent(in)    :: input
     type(t_stars),                intent(in)    :: stars
     type(t_cell),                 intent(in)    :: cell
     type(t_atoms),                intent(in)    :: atoms
-    type(t_dimension),            intent(in)    :: dimens
 
     ! Scalar Parameter
     logical,                      intent(in)    :: harSw
@@ -219,16 +220,16 @@ module m_jpVeff1
       ! external potential there is no contribution by the interstitial density as all the sources lie within the muffin-tins.
       allocate(rho1IRzero(ngpqdp, 3))
       rho1IRzero(:, :) = cmplx(0.0, 0.0)
-      call psqpwVec(atoms, cell, dimens, gpqdp, qpoint, ngpqdp, rho1IRzero, qlmPhon1Coul, psqPhon1Coul)
+      call psqpwVec(atoms, cell, gpqdp, qpoint, ngpqdp, rho1IRzero, qlmPhon1Coul, psqPhon1Coul)
     else if (harSw) then
-      call psqpwVec(atoms, cell, dimens, gpqdp, qpoint, ngpqdp, rho1IR, qlmPhon1Coul, psqPhon1Coul)
+      call psqpwVec(atoms, cell, gpqdp, qpoint, ngpqdp, rho1IR, qlmPhon1Coul, psqPhon1Coul)
     end if
 
     if (.false.) then
       allocate(psqPhon1CoulVar(3, ngpqdp))
       psqPhon1CoulVar = 0
       ! Note: rho1IR migh also be rho1IRzero, which then has to be initialized
-      call psqpwVecVar(atoms, cell, dimens, gpqdp, qpoint, ngpqdp, rho1IR, qlmPhon1Coul, psqPhon1CoulVar, iDatom)
+      call psqpwVecVar(atoms, cell, gpqdp, qpoint, ngpqdp, rho1IR, qlmPhon1Coul, psqPhon1CoulVar, iDatom)
 
       do iG = 1, ngpqdp
         do idir = 1, 3
@@ -244,7 +245,7 @@ module m_jpVeff1
       Gqext(1:3) = matmul(cell%bmat(1:3, 1:3), gpqdp(1:3, iG) + qpoint(1:3))
       noGqext = norm2(Gqext(1:3))
       if (noGqext < 1E-9) then
-        !if (compPhon) then
+        !if (.FALSE.) then
           write(110,*) iG
           write(110,*) 0.0,0.0
           write(113,*) iG
@@ -258,9 +259,9 @@ module m_jpVeff1
         cycle
       end if
       do idir = 1, 3
-        vEff1IR(iG, idir) = fpi * psqPhon1Coul(idir, iG) / noGqext**2
+        vEff1IR(iG, idir) = fpi_const * psqPhon1Coul(idir, iG) / noGqext**2
 
-        !if (compPhon) then
+        !if (.FALSE.) then
           if (idir.eq.3) then
             write(110,*) iG
             write(110,*) real(vEff1IR(iG, 1)), aimag(vEff1IR(iG, 1))
@@ -321,7 +322,7 @@ module m_jpVeff1
       end do
     end do
 
-    if (compPhon) then
+    if (.FALSE.) then
       if (.not.harSw .and. extSw) then
         do idir = 1, 3
           iatom = 0
@@ -348,10 +349,10 @@ module m_jpVeff1
 
     if ( xcSw ) then
       ! Construct mapping array for mapping a G-vector to its respective mesh point on the FFT mesh.
-      nfftx = 3 * stars%k1d
-      nffty = 3 * stars%k2d
-      nfftz = 3 * stars%k3d
-      nfftxy= 9 * stars%k1d * stars%k2d
+      nfftx = 3 * stars%mx1
+      nffty = 3 * stars%mx2
+      nfftz = 3 * stars%mx3
+      nfftxy= 9 * stars%mx1 * stars%mx2
 
       ! Mapping array for kernel
       allocate(pdG2FouM(ngdp))
@@ -391,7 +392,7 @@ module m_jpVeff1
         do iG = 1, ngpqdp
           vEff1IR(iG, idir) = vEff1IR(iG, idir) + vxc1IR(iG, idir)
 
-          if (compPhon) then
+          if (.FALSE.) then
             if (idir.eq.3) then
               write(112,*) iG, 1
               write(112,*) real(vEff1IR(iG, 1)), aimag(vEff1IR(iG, 1))
@@ -414,9 +415,9 @@ module m_jpVeff1
         do ieqat = 1, atoms%neq(itype)
           iatom = iatom + 1
           if (vExtFull) then
-            call convolMTVeff1dKern(atoms, dimens, iqpt, rho1MTfull, gWghts, dKernMTGPts, ylm, Vxc1MT)
+            call convolMTVeff1dKern(atoms, input, iqpt, rho1MTfull, gWghts, dKernMTGPts, ylm, Vxc1MT)
           else
-            call convolMTVeff1dKern(atoms, dimens, iqpt, rho1MT, gWghts, dKernMTGPts, ylm, Vxc1MT)
+            call convolMTVeff1dKern(atoms, input, iqpt, rho1MT, gWghts, dKernMTGPts, ylm, Vxc1MT)
           end if
         end do
       end do
@@ -430,7 +431,7 @@ module m_jpVeff1
               do imesh = 1, atoms%jri(itype)
                 vEff1MT(imesh, lm, iatom, idir) = vEff1MT(imesh, lm, iatom, idir) + Vxc1MT(imesh, lm, iatom, idir)
 
-                if (compPhon) then
+                if (.FALSE.) then
                   if (idir.eq.3) then
                     write(109,*) imesh, lm, iatom, 1
                     write(109,*) real(vEff1MT(imesh, lm, iatom, 1)), aimag(vEff1MT(imesh, lm, iatom, 1))
@@ -482,8 +483,7 @@ module m_jpVeff1
   subroutine mpmomVc1( atoms, cell, qpoint, gpqdp, harSw, extSw, ngpqdp, ngdp, gdp, rho0IRpw, rho0MTsh, grRho0MT, rho1PW, rho1MT, qlmPhon1Coul, iDatom, iDtype )
 
     use m_types, only : t_atoms, t_cell
-    use m_JPConstants, only : fpi, c_im
-    use m_jpPotDensHelper, only : CalcQlmHarSurf
+    use m_jpGrVeff0, only : CalcQlmHarSurf
 
     implicit none
 
@@ -620,7 +620,7 @@ module m_jpVeff1
             iatom = iatom + 1
             if (iatom == iDatom) then
               do mqn_m = -1, 1
-                qlmGrad0Ext(mqn_m, iatom, idirec) = -3. / fpi * atoms%zatom(iDtype) * c_im(idirec, mqn_m + 2)
+                qlmGrad0Ext(mqn_m, iatom, idirec) = -3. / fpi_const * atoms%zatom(iDtype) * c_im(idirec, mqn_m + 2)
               end do ! mqn_m
             end if
           end do ! ieqat
@@ -674,7 +674,7 @@ module m_jpVeff1
   !--------------------------------------------------------------------------------------------------------------------------------------
   subroutine mpMom1Hart(atoms, iDatom, iDtype, rho1MT, grRho0MT, qlmo1Hartr)
 
-    use m_intgr, only : intgr3LinIntp
+    use m_intgr, only : intgr3!LinIntp ! TODO: Is this ok?
     use m_types, only : t_atoms
 
     implicit none
@@ -768,8 +768,8 @@ module m_jpVeff1
                 fReal(imesh) = (atoms%rmsh(imesh, itype)**(oqn_l + 2)) * real(rho1MTfull(imesh, lm, iatom, idir))
                 fImag(imesh) = (atoms%rmsh(imesh, itype)**(oqn_l + 2)) * aimag(rho1MTfull(imesh, lm, iatom, idir))
               enddo ! imesh
-              call intgr3LinIntp(fReal, atoms%rmsh(:, itype), atoms%dx(itype), atoms%jri(itype), fintReal, 1)
-              call intgr3LinIntp(fImag, atoms%rmsh(:, itype), atoms%dx(itype), atoms%jri(itype), fintImag, 1)
+              call intgr3(fReal, atoms%rmsh(:, itype), atoms%dx(itype), atoms%jri(itype), fintReal) ! TODO: Is this ok?
+              call intgr3(fImag, atoms%rmsh(:, itype), atoms%dx(itype), atoms%jri(itype), fintImag) ! TODO: Is this ok?
               qlmo1Hartr(lm, iatom, idir) = cmplx(fintReal, fintImag)
             enddo ! mqn_m
           enddo ! oqn_l
@@ -813,7 +813,7 @@ module m_jpVeff1
     use m_constants, only : sfp_const
     use m_types
     use m_sphbes
-    use m_jpPotDensHelper, only : Phasy1nSym
+    use m_jpGrVeff0, only : Phasy1nSym
 
     implicit none
 
@@ -928,19 +928,16 @@ module m_jpVeff1
   !> It is out of order at the moment and has to be reviewed.
   !>
   !--------------------------------------------------------------------------------------------------------------------------------------
-  subroutine psqpwVecVar(atomsT, cellT, dimensT, gdp, qptn, ngdp, rhoPW, qlm, psq, iDatom)
+  subroutine psqpwVecVar(atomsT, cellT, gdp, qptn, ngdp, rhoPW, qlm, psq, iDatom)
 
-#include "recycledRoutines/cpp_double.h"
      use m_sphbes
      use m_types
-     use m_JPConstants, only : iu, tpi, fpi
 
      implicit none
 
      ! Scalar Parameters
      type(t_atoms),     intent(in)    :: atomsT
      type(t_cell),      intent(in)    :: cellT
-     type(t_dimension), intent(in)    :: dimensT
      integer,           intent(in)    :: ngdp
      integer,           intent(in)    :: iDatom
 
@@ -995,10 +992,10 @@ module m_jpVeff1
      ! sm     : auxiliary variable to calculate psq
      ! sa     : auxiliary variable to calculate psq
      !-----------------------------------------------------------------------------------------------------------------------------------
-     real                             :: pn(0:atomsT%lmaxd,atomsT%ntypd)
+     real                             :: pn(0:atomsT%lmaxd,atomsT%ntype)
      complex                          :: pylm((atomsT%lmaxd + 1)**2, atomsT%nat)
      real                             :: Gqext(3)
-     real                             :: sbes(0:atomsT%lmaxd + dimensT%ncvd + 1)
+     real                             :: sbes(0:atomsT%lmaxd + MAXVAL(atomsT%ncv) + 1)
      complex                          :: sl(3)
      complex                          :: sm(3)
      complex                          :: sa(3)
@@ -1064,12 +1061,12 @@ module m_jpVeff1
            do ieq = 1, atomsT%neq(itype)
              iatom = iatom + 1
              if (iatom == iDatom) then
-               x = tpi * dot_product(gdp(:, iGvec) + qptn, atomsT%taual(:, iatom))
-               sf = exp(-iu *  x)
+               x = tpi_const * dot_product(gdp(:, iGvec) + qptn, atomsT%taual(:, iatom))
+               sf = exp(-ImagUnit *  x)
                sl(idirec) = 0.
                n1 = ncvn + 1
                !sl(idirec) = iu * atomsT%zatom(itype) * pn(1, itype) * sbes(ncvn + 2) / ((norm2(Gqext) * atomsT%rmt(itype))**n1) * sf * Gqext(idirec)
-               sl(idirec) =  pn(1, itype) * iu * atomsT%zatom(itype) * sf * sbes(ncvn + 1) * Gqext(idirec) / ((norm2(Gqext) * atomsT%rmt(itype))**n1)
+               sl(idirec) =  pn(1, itype) * ImagUnit * atomsT%zatom(itype) * sf * sbes(ncvn + 1) * Gqext(idirec) / ((norm2(Gqext) * atomsT%rmt(itype))**n1)
           !     write(1022, *) real(sl(1))
           !     NOstopNO
                sa(idirec) = sl(idirec)
@@ -1115,19 +1112,17 @@ module m_jpVeff1
   !> @todo
   !> unite with same routine psqpwVeclp1 from grVeff0
   !--------------------------------------------------------------------------------------------------------------------------------------
-  subroutine psqpwVec(atoms, cell, dimens, gpqdp, qptn, ngpqdp, rho1PW, qlm, psq)
+  subroutine psqpwVec(atoms, cell, gpqdp, qptn, ngpqdp, rho1PW, qlm, psq)
 
-#include "recycledRoutines/cpp_double.h"
      use m_sphbes
      use m_types
-     use m_jpPotDensHelper, only : phasy1nSym
+     use m_jpGrVeff0, only : phasy1nSym
 
      implicit none
 
      ! Type Parameters
      type(t_atoms),                  intent(in)  :: atoms
      type(t_cell),                   intent(in)  :: cell
-     type(t_dimension),              intent(in)  :: dimens
 
      ! Scalar Parameters
      integer,                        intent(in)  :: ngpqdp
@@ -1225,7 +1220,7 @@ module m_jpVeff1
      ! paper cited above.
      ! The G = 0 term is not needed for calculating the interstitial contributions of the potentials and should be zero anyway.
      allocate(pylm((atoms%lmaxd + 1)**2, atoms%nat))
-     allocate(sbes(0:dimens%ncvd + 1 ))
+     allocate(sbes(0:MAXVAL(atoms%ncv) + 1 ))
      pylm(:, :) = cmplx(0., 0.)
      sbes(:) = 0.
 
@@ -1316,13 +1311,10 @@ module m_jpVeff1
   !--------------------------------------------------------------------------------------------------------------------------------------
    subroutine vmtsNsym(atoms, cell,  ngpqdp, idirec, iatom, itype, iDatom, vExtFull, gpqdp, qpoint,  vpw, rho, vr, harSw, extSw, vHarNum, linIntp)
 
-#include"recycledRoutines/cpp_double.h"
-      use m_JPConstants
       use m_types
-      use m_intgr, only : intgr2, intgr2LinIntp
+      use m_intgr, only : intgr2, intgr2!LinIntp  ! TODO: Is this ok?
       use m_sphbes
-      use mod_juPhonUtils
-      use m_jpPotDensHelper, only : phasy1nSym
+      use m_jpGrVeff0, only : phasy1nSym
 
       implicit none
 
@@ -1469,7 +1461,7 @@ module m_jpVeff1
         x2rImag = 0.
         do oqn_l = 0, atoms%lmax(itype)
           l21 = 2 * oqn_l + 1
-          fpl21 = fpi / l21 ! prefactor 1st term
+          fpl21 = fpi_const / l21 ! prefactor 1st term
           rmtl = 1. / atoms%rmt(itype)**oqn_l ! 1 / R^l
           rmt2l = 1. / atoms%rmt(itype)**l21 ! 1 / R^(2 l + 1)
           rrl(:) = 0.
@@ -1488,10 +1480,10 @@ module m_jpVeff1
               x2rImag(imesh) = rrl1(imesh) * aimag(rho(imesh, lm, iatom, idirec)) * atoms%rmsh(imesh, itype) * atoms%rmsh(imesh, itype)
              enddo
              if (linIntp) then
-               call intgr2LinIntp(x1rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rReal)
-               call intgr2LinIntp(x2rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rReal)
-               call intgr2LinIntp(x1rImag, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rImag)
-               call intgr2LinIntp(x2rImag, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rImag)
+               call intgr2(x1rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rReal) ! TODO: Is this ok?
+               call intgr2(x2rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rReal) ! TODO: Is this ok?
+               call intgr2(x1rImag, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rImag) ! TODO: Is this ok?
+               call intgr2(x2rImag, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rImag) ! TODO: Is this ok?
              else
                call intgr2(x1rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rReal)
                call intgr2(x2rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rReal)
@@ -1547,7 +1539,7 @@ module m_jpVeff1
       !
       ! Consistent with Aaron (7.66) line 1 and (2.43) line 1 in CRG 16.12.2020-19:00
 
-      !if ((extSw.and.(compPhon.or.anfix)).or.(vExtFull.and.extSw)) then
+      !if ((extSw.and.(.FALSE..or.anfix)).or.(vExtFull.and.extSw)) then
       if (extSw.and.vExtFull) then
         if ( iatom == iDatom ) then
           do lm = 2, 4
@@ -1564,5 +1556,98 @@ module m_jpVeff1
       ! Consistent with Aaron (7.47) and (2.30) in CRG 16.12.2020-19:00
 
    end subroutine vmtsNsym
+
+   subroutine convolMTVeff1dKern(atoms, input, iqpt, rho1MT, gWghts, dKernMTGPts, ylm, vxc1MT)
+     use m_types
+
+     implicit none
+
+     ! Type parameter
+     type(t_atoms),                 intent(in)  :: atoms
+     type(t_input),                 intent(in)  :: input
+
+     ! Scalar parameter
+     integer,                       intent(in)   :: iqpt
+     ! Array parameter
+     complex,                       intent(in)  :: rho1MT(:, :, :, :)
+     complex,                       intent(in)  :: ylm(:, :)
+     real,                          intent(in)  :: gWghts(:) ! gaussian weights belonging to gausPts
+     real,                          intent(in)  :: dKernMTGPts(:, :, :)
+     complex,                       intent(out) :: vxc1MT(:, :, :, :)
+
+     ! Local scalar variables
+     integer                                    :: idir
+     integer                                    :: iatom
+     integer                                    :: itype
+     integer                                    :: ieqat
+     integer                                    :: igmesh ! Loop variable over sampling points of spherical Gauss mesh
+     integer                                    :: irmesh ! Loop variable over radial MT mesh
+     integer                                    :: oqn_l
+     integer                                    :: lm_lonly !reduce multiplication when calculating lm
+     integer                                    :: mqn_m
+     integer                                    :: lm
+     complex                                    :: vxcMT1KernAdd
+
+     ! Local allocatable variables
+     complex,           allocatable             :: rhoMT1Gpts(:, :) !grRhoMT on Gauss mesh
+     complex,           allocatable             :: vxcMT1KernGPts(:, :)
+
+     vxc1MT(:, :, :, :) = cmplx(0., 0.)
+
+     allocate( rhoMT1Gpts(input%jspins, atoms%jmtd), vxcMT1KernGPts(input%jspins, atoms%jmtd) )
+     rhoMT1Gpts(:, :) = cmplx(0., 0.)
+     vxcMT1KernGPts(:, :) = cmplx(0., 0.)
+
+     do idir = 1, 3
+       iatom = 0
+       do itype = 1, atoms%ntype
+         do ieqat = 1, atoms%neq(itype)
+           iatom = iatom + 1
+           rhoMT1Gpts(:, :) = 0
+           vxcMT1KernGPts(:, :) = 0
+           do oqn_l = 0, atoms%lmax(itype)
+             lm_lonly = oqn_l * ( oqn_l + 1 ) + 1
+             do mqn_m = -oqn_l, oqn_l
+               lm = lm_lOnly + mqn_m
+               ! Evaluate grRho on spherical Gauss mesh in order to apply Gauss quadrature.
+               do irmesh = 1, atoms%jri(itype)
+                 do igmesh = 1, input%jspins
+                   rhoMT1Gpts(igmesh, irmesh) = rhoMT1Gpts(igmesh, irmesh) + rho1MT(irmesh, lm, iatom, idir) * ylm(igmesh, lm)
+                 end do ! igmesh
+               end do ! irmesh
+             end do ! mqn_m
+           end do ! oqn_l
+#if DEBUG_MODE
+           if (iqpt == 1) then
+             if ( any( aimag( rhoMT1Gpts ) > 1e-7 ) ) then
+               write(*, *) 'Warning rhoMTGpts has imaginary components.'
+             end if
+           end if
+#endif
+           ! On the spherical Gauss mesh the integral reduces to a weighted (gWghts) sum (over all sampling points on the Gauss mesh)
+           ! of the MT exchange-correlation kernel and either the density's gradient or the first variation of the gradient.
+           do irmesh = 1, atoms%jri(itype)
+             do igmesh = 1, input%jspins
+               vxcMT1KernGPts(igmesh, irmesh) = vxcMT1KernGPts(igmesh, irmesh) + rhoMT1Gpts(igmesh, irmesh) &
+                                               & * dKernMTGPts(igmesh, irmesh, iatom) * gWghts(igmesh)
+             end do
+           end do
+           do oqn_l = 0, atoms%lmax(itype)
+             lm_lonly = oqn_l * ( oqn_l + 1 ) + 1
+             do mqn_m = -oqn_l, oqn_l
+               lm = lm_lOnly + mqn_m
+               do irmesh = 1, atoms%jri(itype)
+               ! Back-transformation of the MT coefficients. Now they are expansion coefficients of the MT grid.
+                 vxcMT1KernAdd = dot_product( ylm(: input%jspins, lm), vxcMT1KernGPts(:input%jspins, irmesh) )
+               ! Add this contribution to MT exchange-correlation contribution to the potential
+                 vxc1MT(irmesh, lm, iatom, idir) = vxc1MT(irmesh, lm, iatom, idir) + vxcMT1KernAdd
+               end do ! irmesh
+             end do ! mqn_m
+           end do ! oqn_l
+         end do ! ieqat
+       end do ! itype
+     end do ! itype
+
+   end subroutine convolMTVeff1dKern
 
 end module m_jpVeff1

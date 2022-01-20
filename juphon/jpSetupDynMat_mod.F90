@@ -1014,7 +1014,6 @@ module m_jpSetupDynMat
 
     use m_types
 
-
     implicit none
 
     ! Type parameters

@@ -17,11 +17,9 @@ module m_jpIOnMixing
   subroutine UpdNCheckDens( atoms, stars, cell, input, ngpqdp, stern1stIt, stern2ndIt, sternRegIt, sternFinIt, iDatom, iqpt, idir,    &
       & gpqdp, lastDistance, rho1IRout, rho1MTout)
 
-#include "recycledRoutines/cpp_double.h"
-
     use m_types
     !use m_jpDens1stVar, only : loadDensity, noSymMetric, packMixVector, storeDensity, unpackMixVector, broydenNsym
-    use m_stmix
+    use m_stmix_old
 
     implicit none
 
@@ -119,7 +117,7 @@ module m_jpIOnMixing
     noco%l_noco = .false.
     if (input%imix.EQ.0) then
       write(*, *)'straight mixing'
-      CALL stmix(atoms,input,noco, nmap,nmap,fsm, sm)
+      CALL stmix_old(atoms,input,noco, nmap,nmap,fsm, sm)
     else if (input%imix == 7) then
       write(*, '(a)') 'General Anderson Mixing of displacement direction: '
       call broydenNsym(cell, stars, atoms, input, mmap, nmap, nmapMT, nmap, fsm, sm, idir, ngpqdp, gpqdp, iqpt, iDatom)
@@ -314,7 +312,6 @@ module m_jpIOnMixing
   subroutine storeDensity(atoms, ngpqdp, filename, rho1IR, rho1MT)
 
     use m_types
-    use mod_juPhonUtils, only : fopen, fclose
 
     implicit none
 
@@ -340,7 +337,7 @@ module m_jpIOnMixing
     integer                      :: lm
     integer                      :: imesh
 
-    call fopen(1000, name=filename, status='replace', action='write', form='unformatted')
+    open(1000, file=filename, status='replace', action='write', form='unformatted')
     ! Dimensions of IR array
     write(1000) ngpqdp, 3
     ! Write IR array
@@ -348,7 +345,7 @@ module m_jpIOnMixing
       write(1000) rho1IR(iG)
     end do ! iG
 
-    write(1000) atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3
+    write(1009) atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
@@ -363,15 +360,14 @@ module m_jpIOnMixing
         end do ! oqn_l
       end do ! ieqat
     end do ! itype
-    call fclose(1000)
+    close(1000)
 
   end subroutine storeDensity
 
   subroutine loadDensity(atoms, ngpqdp, filename, rho1IR, rho1MT)
 
     use m_types, only : t_atoms
-    use mod_juPhonUtils, only : fopen, fclose
-    use m_juDFT_NOstopNO, only : juDFT_error
+    use m_juDFT_stop, only : juDFT_error
 
     implicit none
 
@@ -406,7 +402,7 @@ module m_jpIOnMixing
 
    rho1MT(:, :, :) = cmplx(0.0, 0.0)
 
-    call fopen(1000, name=filename, status='old', action='read', form='unformatted')
+    open(1000, file=filename, status='old', action='read', form='unformatted')
     ! Dimensions of IR array
     read(1000) ngpqdp_proof, dir_proof
     if ((ngpqdp_proof /= ngpqdp) .or. (dir_proof /= 3)) then
@@ -438,7 +434,7 @@ module m_jpIOnMixing
         end do ! oqn_l
       end do ! ieqat
     end do ! itype
-    call fclose(1000)
+    close(1000)
 
   end subroutine loadDensity
 
@@ -523,7 +519,7 @@ module m_jpIOnMixing
   subroutine noSymMetric(atoms, stars, cell, idir, ngdp, nmap, nmapMT, gdp, mixVec, metMixVec)
 
     use m_types
-    use m_jpPotDensHelper, only : warpIRPot
+    use m_jpSetupDynMat, only : warpIRPot
 
     implicit none
 
@@ -636,11 +632,9 @@ module m_jpIOnMixing
   ! Taken from workstation release branch fleur at mix/broyden folder
   SUBROUTINE broydenNsym(cell, stars, atoms, input, mmap, nmaph, nmapmt, nmap, fm, sm, idir, ngdp, gdp, iqpt, iDatom)
 
-#include"recycledRoutines/cpp_double.h"
-
     USE m_types
     USE m_broyd_io
-    use m_juDFT_NOstopNO, only : juDFT_error
+    use m_juDFT_stop, only : juDFT_error
 
     IMPLICIT NONE
 
@@ -649,7 +643,7 @@ module m_jpIOnMixing
     TYPE(t_cell),INTENT(IN)    :: cell
     TYPE(t_atoms),INTENT(IN)   :: atoms
 
-    TYPE(t_hybrid)             :: hybrid
+    TYPE(t_hybdat)             :: hybdat
     ! Scalar Arguments
     INTEGER, INTENT (IN)        :: mmap,nmap
     INTEGER, INTENT (IN)        :: nmapmt
@@ -659,7 +653,7 @@ module m_jpIOnMixing
     integer,                       intent(in)    :: ngdp
 
     ! Array Arguments
-    REAL,    INTENT (IN)    :: fm(nmap) 
+    REAL,    INTENT (IN)    :: fm(nmap)
     REAL,    INTENT (INOUT) :: sm(nmap)
     integer,                       intent(in)    :: gdp(:, :)
 
@@ -695,15 +689,15 @@ module m_jpIOnMixing
     am  = 0.0
 
     mit = 0
-    hybrid%l_calhf = .false.
-    l_exist = initBroydenHistory(input,hybrid,nmap, idir, iqpt, iDatom) ! returns true if there already exists a Broyden history
+    hybdat%l_calhf = .false.
+    l_exist = initBroydenHistory(input,hybdat,nmap, idir, iqpt, iDatom) ! returns true if there already exists a Broyden history
     IF(.NOT.l_exist) mit = 1
 
     IF (mit.NE.1) THEN
-       ! load input charge density (sm1) and difference of 
+       ! load input charge density (sm1) and difference of
        ! in and out charge densities (fm1) from previous iteration (m-1)
 
-       CALL readLastIterInAndDiffDen(hybrid,nmap,mit,alphan,sm1(:nmap),fm1(:nmap), idir, iqpt, iDatom)
+       CALL readLastIterInAndDiffDen(hybdat,nmap,mit,alphan,sm1(:nmap),fm1(:nmap), idir, iqpt, iDatom)
        IF (ABS(input%alpha-alphan) > 0.0001) THEN
           WRITE (6,*) 'mixing parameter has been changed; reset'
           WRITE (6,*) 'broyden algorithm or set alpha to',alphan
@@ -719,25 +713,25 @@ module m_jpIOnMixing
     ! save F_m and rho_m for next iteration
     nit = mit +1
     IF (nit > input%maxiter+1) nit = 1
-    CALL writeLastIterInAndDiffDen(hybrid,nmap,nit,input%alpha,sm,fm, idir, iqpt, iDatom)
+    CALL writeLastIterInAndDiffDen(hybdat,nmap,nit,input%alpha,sm,fm, idir, iqpt, iDatom)
 
-    IF (mit.EQ.1) THEN 
+    IF (mit.EQ.1) THEN
        !     update for rho for mit=1 is straight mixing
        !     sm = sm + alpha*fm
        CALL CPP_BLAS_saxpy(nmap,input%alpha,fm,1,sm,1)
     ELSE
-       !     |vi> = w|vi> 
+       !     |vi> = w|vi>
        !     loop to generate um : um = sm1 + alpha*fm1 - \sum <fm1|w|vi> ui
        um(:nmap) = input%alpha * fm1(:nmap) + sm1(:nmap)
        iread = MIN(mit-1,input%maxiter+1)
        DO it = 2, iread
-          CALL readUVec(input,hybrid,nmap,it-mit,mit,ui, idir, iqpt, iDatom)
-          CALL readVVec(input,hybrid,nmap,it-mit,mit,dfivi,vi, idir, iqpt, iDatom)
+          CALL readUVec(input,hybdat,nmap,it-mit,mit,ui, idir, iqpt, iDatom)
+          CALL readVVec(input,hybdat,nmap,it-mit,mit,dfivi,vi, idir, iqpt, iDatom)
 
           am(it) = CPP_BLAS_sdot(nmap,vi,1,fm1,1)
           ! calculate um(:) = -am(it)*ui(:) + um
           CALL CPP_BLAS_saxpy(nmap,-am(it),ui,1,um,1)
-          WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it) 
+          WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it)
        END DO
 
        IF (input%imix.EQ.3) THEN
@@ -755,12 +749,12 @@ module m_jpIOnMixing
           ! generate vm = alpha*sm1  - \sum <ui|w|sm1> vi
           vm(:) = input%alpha * fm1(:)
           DO it = 2,iread
-             CALL readUVec(input,hybrid,nmap,it-mit,mit,ui, idir, iqpt, iDatom)
-             CALL readVVec(input,hybrid,nmap,it-mit,mit,dfivi,vi, idir, iqpt, iDatom)
+             CALL readUVec(input,hybdat,nmap,it-mit,mit,ui, idir, iqpt, iDatom)
+             CALL readVVec(input,hybdat,nmap,it-mit,mit,dfivi,vi, idir, iqpt, iDatom)
              bm = CPP_BLAS_sdot(nmap,ui,1,fm1,1)
              ! calculate vm(:) = -bm*vi(:) + vm
              CALL CPP_BLAS_saxpy(nmap,-bm,vi,1,vm,1)
-             !write(6,FMT='(5x,"<ui|w|Fm> for it",i2,5x,f10.6)') it, bm 
+             !write(6,FMT='(5x,"<ui|w|Fm> for it",i2,5x,f10.6)') it, bm
           END DO
 
           ! complete evaluation of vm
@@ -775,7 +769,7 @@ module m_jpIOnMixing
           !      broyden's second method
           !****************************************
 
-          ! multiply fm1 with metric matrix and store in vm:  w |fm1>  
+          ! multiply fm1 with metric matrix and store in vm:  w |fm1>
          ! CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
          !             mmap,nmaph,mapmt,mapvac2,fm1,vm,l_pot)
 
@@ -795,7 +789,7 @@ module m_jpIOnMixing
            call noSymMetric(atoms, stars, cell, idir, ngdp, nmap, nmapMT, gdp, fm1, vm)
 
           DO it = 2,iread
-             CALL readVVec(input,hybrid,nmap,it-mit,mit,dfivi,vi, idir, iqpt, iDatom)
+             CALL readVVec(input,hybdat,nmap,it-mit,mit,dfivi,vi, idir, iqpt, iDatom)
              ! calculate vm(:) = -am(it)*dfivi*vi(:) + vm
              CALL CPP_BLAS_saxpy(nmap,-am(it)*dfivi,vi,1,vm,1)
           END DO
@@ -816,8 +810,8 @@ module m_jpIOnMixing
        npos=mit-1
        IF (mit.GT.input%maxiter+1) npos = MOD(mit-2,input%maxiter)+1
 
-       CALL writeUVec(input,hybrid,nmap,mit,um, idir, iqpt, iDatom)
-       CALL writeVVec(input,hybrid,nmap,mit,dfivi,vm, idir, iqpt, iDatom)
+       CALL writeUVec(input,hybdat,nmap,mit,um, idir, iqpt, iDatom)
+       CALL writeVVec(input,hybdat,nmap,mit,dfivi,vm, idir, iqpt, iDatom)
 
        ! update rho(m+1)
        ! calculate <fm|w|vm>
@@ -832,7 +826,6 @@ module m_jpIOnMixing
 
   subroutine storeZ1nG( atoms, ikpt, iqpt, mapKpq2K, iDatom, nobd, nv, z1nG )
 
-    use mod_juPhonUtils, only : fopen, fclose
     use m_types, only : t_atoms
     implicit none
 
@@ -870,7 +863,7 @@ module m_jpIOnMixing
     end if
     filename = trim(filenameTemp)
 
-    call fopen( 1000, name=filename, status='replace', action='write', form='unformatted')
+    open( 1000, file=filename, status='replace', action='write', form='unformatted')
     rewind(1000)
 
     ! We have a loop over the occupied bands at k, not k + q, as the kets in the Sternheimer equation feature a k-point k and not k + q.
@@ -883,7 +876,7 @@ module m_jpIOnMixing
       end do ! iband
     end do ! idir
 
-    call fclose(1000)
+    close(1000)
 
   end subroutine storeZ1nG
 

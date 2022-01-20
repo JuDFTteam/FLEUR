@@ -17,7 +17,7 @@
 !-----------------------------------------------------------------------------------------------------------------------------------
 module m_jpSternhPulaySurface
 
-#include "cppmacro.h"
+    USE m_constants
 
   implicit none
 
@@ -56,19 +56,18 @@ module m_jpSternhPulaySurface
   !>                             parsed from Fleur
   !>
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine tlmplm4H0( atoms, dimens, enpara, usdus, input, td, jsp, logUnit, rbas1, rbas2, uuilon, duilon, ulouilopn, ilo2p, &
+  subroutine tlmplm4H0( atoms, enpara, usdus, input, td, loosetdout, jsp, logUnit, rbas1, rbas2, uuilon, duilon, ulouilopn, ilo2p, &
                                                                                                                           & vr0Sph )
 
-    use m_types, only : t_atoms, t_dimension, t_enpara, t_usdus, t_input, t_tlmplm
-    use m_intgr, only : intgr3LinIntp
+    use m_types, only : t_atoms, t_enpara, t_usdus, t_input, t_tlmplm
+    use m_intgr, only : intgr3!LinIntp ! TODO: Is this ok?
     use m_gaunt, only : gaunt1
-    use m_juDFT_NOstopNO, only : juDFT_error
+    use m_juDFT_stop, only : juDFT_error
 
     implicit none
 
     ! Type Parameters
     type(t_atoms),               intent(in)  :: atoms
-    type(t_dimension),           intent(in)  :: dimens
     type(t_enpara),              intent(in)  :: enpara
     type(t_usdus),               intent(in)  :: usdus
     type(t_input),               intent(in)  :: input
@@ -86,6 +85,7 @@ module m_jpSternhPulaySurface
     real,                        intent(in)  :: ulouilopn(:,:,:)
     integer,                     intent(in)  :: ilo2p(:, :)
     complex,                     intent(in)  :: vr0Sph(:, :, :)
+    COMPLEX, ALLOCATABLE,        INTENT(OUT) :: loosetdout(:, :, :, :)
 
     ! Scalar Variables
     complex                                  :: cil
@@ -142,20 +142,21 @@ module m_jpSternhPulaySurface
     mlolot_d = max(mlolotot,1)
 
     err = 0
-    allocate( indt(0:dimens%lmplmd) )
+    allocate( indt(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2) )
     allocate( dvd(0:atoms%lmaxd * (atoms%lmaxd + 3) / 2,(atoms%lmaxd + 1)**2 ) )
     allocate( dvu(0:atoms%lmaxd * (atoms%lmaxd + 3) / 2,(atoms%lmaxd + 1)**2 ) )
     allocate( uvd(0:atoms%lmaxd * (atoms%lmaxd + 3) / 2,(atoms%lmaxd + 1)**2 ) )
     allocate( uvu(0:atoms%lmaxd * (atoms%lmaxd + 3) / 2,(atoms%lmaxd + 1)**2 ) )
     allocate( xReal(atoms%jmtd), xImag(atoms%jmtd) )
-    allocate(td%tuu(0:dimens%lmplmd,atoms%nat,1),stat=err)
-    allocate(td%tud(0:dimens%lmplmd,atoms%nat,1),stat=err)
-    allocate(td%tdd(0:dimens%lmplmd,atoms%nat,1),stat=err)
-    allocate(td%tdu(0:dimens%lmplmd,atoms%nat,1),stat=err)
-    allocate(td%tdulo(0:dimens%lmd,-atoms%llod:atoms%llod,mlot_d,1),stat=err)
-    allocate(td%tuulo(0:dimens%lmd,-atoms%llod:atoms%llod,mlot_d,1),stat=err)
-    allocate(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1), stat=err)
-    allocate(td%ind(0:dimens%lmd,0:dimens%lmd,atoms%nat,1),stat=err )
+    !allocate(td%tuu(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2,atoms%nat,1),stat=err)
+    !allocate(td%tud(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2,atoms%nat,1),stat=err)
+    !allocate(td%tdd(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2,atoms%nat,1),stat=err)
+    !allocate(td%tdu(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2,atoms%nat,1),stat=err)
+    allocate(loosetdout(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2,atoms%nat,1,4),stat=err)
+    allocate(td%tdulo(0:atoms%lmaxd*(atoms%lmaxd+2),-atoms%llod:atoms%llod,mlot_d,1,1),stat=err) ! TODO: These needed a second spin index.
+    allocate(td%tuulo(0:atoms%lmaxd*(atoms%lmaxd+2),-atoms%llod:atoms%llod,mlot_d,1,1),stat=err)
+    allocate(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1,1), stat=err)
+    allocate(td%ind(0:atoms%lmaxd*(atoms%lmaxd+2),0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,1),stat=err )
     if (err.ne.0) then
        write (logUnit,'(a)') 'eigen: an error occured during allocation of'
        write (logUnit,'(a)') 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
@@ -169,13 +170,14 @@ module m_jpSternhPulaySurface
     uvu(:, :) = cmplx(0., 0.)
     xReal(:) = 0.
     xImag(:) = 0.
-    td%tuu(:, :, :) = cmplx(0., 0.)
-    td%tdd(:, :, :) = cmplx(0., 0.)
-    td%tud(:, :, :) = cmplx(0., 0.)
-    td%tdu(:, :, :) = cmplx(0., 0.)
-    td%tdulo(:, :, :, :) = cmplx(0., 0.)
-    td%tuulo(:, :, :, :) = cmplx(0., 0.)
-    td%tuloulo(:, :, :, :) = cmplx(0., 0.)
+    !td%tuu(:, :, :) = cmplx(0., 0.)
+    !td%tdd(:, :, :) = cmplx(0., 0.)
+    !td%tud(:, :, :) = cmplx(0., 0.)
+    !td%tdu(:, :, :) = cmplx(0., 0.)
+    loosetdout(:, :, :, :) = cmplx(0., 0.)
+    td%tdulo(:, :, :, :, 1) = cmplx(0., 0.) ! TODO: These needed a second spin index.
+    td%tuulo(:, :, :, :, 1) = cmplx(0., 0.)
+    td%tuloulo(:, :, :, :, 1) = cmplx(0., 0.)
     td%ind(:, :, :, :) = -9999
 
     na = 0
@@ -222,8 +224,8 @@ module m_jpSternhPulaySurface
                     xReal(i) =  tempRbas * real(vr0SpH(i, lm, na))
                     xImag(i) =  tempRbas * aimag(vr0SpH(i, lm, na))
                   end do
-                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
-                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
+                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) ! TODO: Is this ok?
+                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) ! TODO: Is this ok?
                   uvu(lpl, lm) = cmplx(tempReal, tempImag)
                   ! Calculate the integral <uDot|V|u>
                   do i = 1, atoms%jri(n)
@@ -231,8 +233,8 @@ module m_jpSternhPulaySurface
                     xReal(i) = tempRbas * real(vr0SpH(i, lm, na))
                     xImag(i) = tempRbas * aimag(vr0SpH(i, lm, na))
                   end do
-                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
-                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
+                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) ! TODO: Is this ok?
+                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) ! TODO: Is this ok?
                   dvu(lpl, lm) = cmplx(tempReal, tempImag)
                   ! Calculate the integral <u|V|uDot>
                   do i = 1,atoms%jri(n)
@@ -240,8 +242,8 @@ module m_jpSternhPulaySurface
                     xReal(i) = tempRbas * real(vr0SpH(i, lm, na))
                     xImag(i) = tempRbas * aimag(vr0SpH(i, lm, na))
                   end do
-                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
-                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
+                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) ! TODO: Is this ok?
+                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) ! TODO: Is this ok?
                   uvd(lpl, lm) = cmplx(tempReal, tempImag)
                   ! Calculte the integral <uDot|V|uDot>
                   do i = 1,atoms%jri(n)
@@ -249,8 +251,8 @@ module m_jpSternhPulaySurface
                     xReal(i) = tempRbas * real(vr0SpH(i, lm, na))
                     xImag(i) = tempRbas * aimag(vr0SpH(i, lm, na))
                   end do
-                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
-                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
+                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) ! TODO: Is this ok?
+                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) ! TODO: Is this ok?
                   dvd(lpl, lm) = cmplx(tempReal, tempImag)
                 end do ! m
               end if ! Gaunt selection rules
@@ -305,10 +307,14 @@ module m_jpSternhPulaySurface
                   ! After having found out that the Gaunt coefficient is not zero we multiply it.
                   cil = gaunt1(lp, lamda, l, mp, mu, m, atoms%lmaxd)
 
-                  td%tuu(lmplm, na, jsp) = td%tuu(lmplm, na, jsp) + cil * uvu(lpl, lmsph)
-                  td%tdd(lmplm, na, jsp) = td%tdd(lmplm, na, jsp) + cil * dvd(lpl, lmsph)
-                  td%tud(lmplm, na, jsp) = td%tud(lmplm, na, jsp) + cil * uvd(lpl, lmsph)
-                  td%tdu(lmplm, na, jsp) = td%tdu(lmplm, na, jsp) + cil * dvu(lpl, lmsph)
+                  !td%tuu(lmplm, na, jsp) = td%tuu(lmplm, na, jsp) + cil * uvu(lpl, lmsph)
+                  !td%tdd(lmplm, na, jsp) = td%tdd(lmplm, na, jsp) + cil * dvd(lpl, lmsph)
+                  !td%tud(lmplm, na, jsp) = td%tud(lmplm, na, jsp) + cil * uvd(lpl, lmsph)
+                  !td%tdu(lmplm, na, jsp) = td%tdu(lmplm, na, jsp) + cil * dvu(lpl, lmsph)
+                  loosetdout(lmplm, na, jsp, 1) = loosetdout(lmplm, na, jsp, 1) + cil * uvu(lpl, lmsph)
+                  loosetdout(lmplm, na, jsp, 2) = loosetdout(lmplm, na, jsp, 2) + cil * uvd(lpl, lmsph)
+                  loosetdout(lmplm, na, jsp, 3) = loosetdout(lmplm, na, jsp, 3) + cil * dvu(lpl, lmsph)
+                  loosetdout(lmplm, na, jsp, 4) = loosetdout(lmplm, na, jsp, 4) + cil * dvd(lpl, lmsph)
                   ! Logical matrix where there are non-vanishing matrix entries in the tlmplm matrices
                   indt(lmplm) = 1
                 end do ! l
@@ -384,11 +390,10 @@ module m_jpSternhPulaySurface
   subroutine tlo4HS0(atoms, enpara, usdus, input, tlmplm, jspin, jsp, ntyp, na, vr, rbas1, rbas2, uuilon, duilon, ulouilopn, ilo2p )
 
     !use m_intgr, only : intgr3
-    use m_intgr, only : intgr3LinIntp
+    use m_intgr, only : intgr3!LinIntp ! TODO: Is this ok?
     use m_gaunt, only : gaunt1
     use m_types
-    use m_juDFT_NOstopNO, only : juDFT_error
-    use m_jpConstants, only : iu
+    use m_juDFT_stop, only : juDFT_error
     implicit none
 
     type(t_atoms),         intent(in)    :: atoms
@@ -404,8 +409,8 @@ module m_jpSternhPulaySurface
     complex,               intent (in)   :: vr(atoms%jmtd,(atoms%lmaxd + 1)**2)
     real,                  intent(in)    :: rbas1(:,:,0:,:,:)
     real,                  intent(in)    :: rbas2(:,:,0:,:,:)
-    real,                  intent (in)   :: uuilon(atoms%nlod,atoms%ntypd),duilon(atoms%nlod,atoms%ntypd)
-    real,                  intent (in)   :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntypd)
+    real,                  intent (in)   :: uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
+    real,                  intent (in)   :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
     integer,               intent (in)   :: ilo2p(:, :)
     !     ..
     !     .. Local Scalars ..
@@ -453,15 +458,15 @@ module m_jpSternhPulaySurface
                    xReal(i) = (rbas1(i,1,lp,ntyp,1)*rbas1(i, ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+ rbas2(i, 1, lp, ntyp, 1) * rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*real(vr(i,lmpp))
                    xImag(i) = (rbas1(i,1,lp,ntyp,1)*rbas1(i, ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+ rbas2(i, 1, lp, ntyp, 1) * rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*aimag(vr(i,lmpp))
                 end do
-                call intgr3LinIntp(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal, 1)
-                call intgr3LinIntp(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag, 1)
+                call intgr3(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal) ! TODO: Is this ok?
+                call intgr3(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag) ! TODO: Is this ok?
                 uvulo(lo,lp,lmpp) = cmplx(tempReal, tempImag)
                 do i = 1,atoms%jri(ntyp)
                    xReal(i) = (rbas1(i,2,lp,ntyp,1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp),ntyp,1)+ rbas2(i,2,lp,ntyp,1)*rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*real(vr(i,lmpp))
                    xImag(i) = (rbas1(i,2,lp,ntyp,1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp),ntyp,1)+ rbas2(i,2,lp,ntyp,1)*rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*aimag(vr(i,lmpp))
                 end do
-                call intgr3LinIntp(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal, 1)
-                call intgr3LinIntp(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag, 1)
+                call intgr3(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal) ! TODO: Is this ok?
+                call intgr3(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag) ! TODO: Is this ok?
                 dvulo(lo,lp,lmpp) = cmplx(tempReal, tempImag)
                end do
              end if
@@ -490,8 +495,8 @@ module m_jpSternhPulaySurface
                    xReal(i) = (rbas1(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+rbas2(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas2(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1))*real(vr(i,lmpp))
                    xImag(i) = (rbas1(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+rbas2(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas2(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1))*aimag(vr(i,lmpp))
                 end do
-                call intgr3LinIntp(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal, 1)
-                call intgr3LinIntp(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag, 1)
+                call intgr3(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal) ! TODO: Is this ok?
+                call intgr3(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag) ! TODO: Is this ok?
                 ulovulo(loplo, lmpp) = cmplx(tempReal, tempImag)
                 end do
              end if
@@ -530,10 +535,10 @@ module m_jpSternhPulaySurface
                 do lp = lpmin,lpmax,2
                    lmp = lp* (lp+1) + mp
                    cil = gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
-                   tlmplm%tuulo(lmp,m,lo+mlo,jsp) = &
-                        tlmplm%tuulo(lmp,m,lo+mlo,jsp) + cil*uvulo(lo,lp,lmpp)
-                   tlmplm%tdulo(lmp,m,lo+mlo,jsp) = &
-                        tlmplm%tdulo(lmp,m,lo+mlo,jsp) + cil*dvulo(lo,lp,lmpp)
+                   tlmplm%tuulo(lmp,m,lo+mlo,jsp,1) = & ! TODO: These needed a second spin index.
+                        tlmplm%tuulo(lmp,m,lo+mlo,jsp,1) + cil*uvulo(lo,lp,lmpp)
+                   tlmplm%tdulo(lmp,m,lo+mlo,jsp,1) = &
+                        tlmplm%tdulo(lmp,m,lo+mlo,jsp,1) + cil*dvulo(lo,lp,lmpp)
                 end do
              end do
           end do
@@ -557,7 +562,7 @@ module m_jpSternhPulaySurface
                    if ((abs(l-lpp).le.lp) .and. (lp.le. (l+lpp)) .and.&
                         (mod(l+lp+lpp,2).eq.0) .and. (abs(m).le.l)) then
                       cil = gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
-                      tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) = tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) + cil*ulovulo(loplo,lmpp)
+                      tlmplm%tuloulo(mp,m,loplo+mlolo,jsp,1) = tlmplm%tuloulo(mp,m,loplo+mlolo,jsp,1) + cil*ulovulo(loplo,lmpp) ! TODO: These needed a second spin index.
                    end if
                 end do
              end do
@@ -573,18 +578,18 @@ module m_jpSternhPulaySurface
        l = atoms%llo(lo,ntyp)
        do m = -l,l
           lm = l* (l+1) + m
-          tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%uulon(lo,ntyp,jspin) *&
+          tlmplm%tuulo(lm,m,lo+mlo,jsp,1) = tlmplm%tuulo(lm,m,lo+mlo,jsp,1) + 0.5 * usdus%uulon(lo,ntyp,jspin) *& ! TODO: These needed a second spin index.
                ( enpara%el0(l,ntyp,jspin)+enpara%ello0(lo,ntyp,jspin) )
-          tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * usdus%dulon(lo,ntyp,jspin) *&
+          tlmplm%tdulo(lm,m,lo+mlo,jsp,1) = tlmplm%tdulo(lm,m,lo+mlo,jsp,1) + 0.5 * usdus%dulon(lo,ntyp,jspin) *& ! TODO: These needed a second spin index.
                ( enpara%el0(l,ntyp,jspin)+enpara%ello0(lo,ntyp,jspin) ) + 0.5 * usdus%uulon(lo,ntyp,jspin)
           if (atoms%ulo_der(lo,ntyp).GE.1) THEN
-             tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5 * uuilon(lo,ntyp)
-             tlmplm%tdulo(lm,m,lo+mlo,jsp) = tlmplm%tdulo(lm,m,lo+mlo,jsp) + 0.5 * duilon(lo,ntyp)
+             tlmplm%tuulo(lm,m,lo+mlo,jsp,1) = tlmplm%tuulo(lm,m,lo+mlo,jsp,1) + 0.5 * uuilon(lo,ntyp) ! TODO: These needed a second spin index.
+             tlmplm%tdulo(lm,m,lo+mlo,jsp,1) = tlmplm%tdulo(lm,m,lo+mlo,jsp,1) + 0.5 * duilon(lo,ntyp)
           endif
           !+apw_lo
           if (atoms%l_dulo(lo,ntyp)) THEN
-             tlmplm%tuulo(lm,m,lo+mlo,jsp) = tlmplm%tuulo(lm,m,lo+mlo,jsp) + 0.5
-             tlmplm%tdulo(lm,m,lo+mlo,jsp) = 0.0
+             tlmplm%tuulo(lm,m,lo+mlo,jsp,1) = tlmplm%tuulo(lm,m,lo+mlo,jsp,1) + 0.5 ! TODO: These needed a second spin index.
+             tlmplm%tdulo(lm,m,lo+mlo,jsp,1) = 0.0
           endif
           !+apw_lo
         end do
@@ -594,7 +599,7 @@ module m_jpSternhPulaySurface
        do lo = atoms%lo1l(lp,ntyp),lop
           loplo = ((lop-1)*lop)/2 + lo
           do m = -lp,lp
-             tlmplm%tuloulo(m,m,loplo+mlolo,jsp) = tlmplm%tuloulo(m,m,loplo+mlolo,jsp) + 0.5* (enpara%ello0(lop,ntyp,jspin)+&
+             tlmplm%tuloulo(m,m,loplo+mlolo,jsp,1) = tlmplm%tuloulo(m,m,loplo+mlolo,jsp,1) + 0.5* (enpara%ello0(lop,ntyp,jspin)+& ! TODO: These needed a second spin index.
                   enpara%ello0(lo,ntyp,jspin))* usdus%uloulopn(lop,lo,ntyp,jspin) + 0.5* (ulouilopn(lop,lo,ntyp) +&
                   ulouilopn(lo,lop,ntyp))
           end do
@@ -634,11 +639,10 @@ module m_jpSternhPulaySurface
   !> @param[out]  s        : Overlap of the Pulay incomplete basis correction in Sternheimer
   !> @param[out]  h        : Hamiltonian of the Pulay incomplete basis correction in Sternheimer
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine calcHS0MT( atoms, usdus, tlmplm, ikpt, ikpq, itype, iatom, ne, nobd, El, mCoefBp, mCoefKb, nRadFun, iloTable, &
+  subroutine calcHS0MT( atoms, usdus, tlmplm, loosetdin, ikpt, ikpq, itype, iatom, ne, nobd, El, mCoefBp, mCoefKb, nRadFun, iloTable, &
       & nlo_atom, s, h, idir, nvk, nvkq, almkg, blmkg, almkgq, blmkgq, dalmkg, dblmkg, dalmkgq, dblmkgq, mat_elH, mat_elS )
 
     use m_types
-    use m_jpConstants, only : iu, compPhon, anfix
 
     implicit none
 
@@ -662,13 +666,14 @@ module m_jpSternhPulaySurface
     integer,                     intent(in)  :: nRadFun(0:, :)
     integer,                     intent(in)  :: iloTable(:, 0:, :)
     integer,                     intent(in)  :: nlo_atom(:)
-    MCOMPLEX,                    intent(out) :: s(:, :)
-    MCOMPLEX,                    intent(out) :: h(:,:)
+    complex,                    intent(out) :: s(:, :)
+    complex,                    intent(out) :: h(:,:)
     integer, optional,           intent(in)  :: idir
     integer, optional,           intent(in)  :: nvk, nvkq
     complex, optional,           intent(in)  :: almkg(:,:), blmkg(:,:), almkgq(:,:), blmkgq(:,:)
     complex, optional,           intent(in)  :: dalmkg(:,:), dblmkg(:,:), dalmkgq(:,:), dblmkgq(:,:)
     complex, optional,           intent(inout) :: mat_elH(:,:), mat_elS(:,:)
+    COMPLEX, INTENT(IN) :: loosetdin(:, :, :, :)
 
     ! Local Variables
     integer                                  :: mlo
@@ -693,10 +698,10 @@ module m_jpSternhPulaySurface
     integer                                  :: indN
     integer                                  :: loBraKet
     integer                                  :: lB
-    MCOMPLEX                                 :: hpnEl, hEl, hElq
-    MCOMPLEX                                 :: spnEl, sEl, sElq
-    MCOMPLEX                                 :: spnElo
-    MCOMPLEX                                 :: hpnAdd, hAdd, hAddq
+    complex                                 :: hpnEl, hEl, hElq
+    complex                                 :: spnEl, sEl, sElq
+    complex                                 :: spnElo
+    complex                                 :: hpnAdd, hAdd, hAddq
     complex                                  :: utu
     complex                                  :: dtu
     complex                                  :: utd
@@ -706,7 +711,7 @@ module m_jpSternhPulaySurface
     complex                                  :: ulotu
     complex                                  :: ulotd
     complex                                  :: ulotulo
-    MCOMPLEX                                  :: spnAdd
+    complex                                  :: spnAdd
 
     complex,        allocatable              :: ax(:)
     complex,        allocatable              :: bx(:)
@@ -729,7 +734,7 @@ module m_jpSternhPulaySurface
     !allocate(hsurf,mold=h)
     !hsurf(:, :) = cmplx(0., 0.)
 
-    if (compPhon.and.present(almkg)) then
+    if (.FALSE..and.present(almkg)) then
       allocate(ax2(nvk), bx2(nvk),ax3(nvk), bx3(nvk))
       ax2(:) = cmplx(0., 0.)
       bx2(:) = cmplx(0., 0.)
@@ -749,7 +754,7 @@ module m_jpSternhPulaySurface
         ! go to acof of next lm
         lmlo = lmlo + 1
         lm = lm +1
-        
+
         if (oqn_l.eq.0) then
           utu2=0.5*usdus%us(0,1,1)*usdus%dus(0,1,1)*atoms%rmt(1)**2
           utd2=0.5*usdus%us(0,1,1)*usdus%duds(0,1,1)*atoms%rmt(1)**2
@@ -772,7 +777,7 @@ module m_jpSternhPulaySurface
             ! If index lmlo then acof is meant, if lmlo + 1 then bcof is meant
             spnEl = conjg(mCoefBp(pBand, lmlo)) * mCoefKb(nBand, lmlo) + conjg(mCoefBp(pBand, lmlo + 1))&
               & * mCoefKb(nBand, lmlo + 1) * usdus%ddn(oqn_l, itype, 1)
-    
+
             hpnAdd = conjg(mCoefBp(pband, lmlo)) * mCoefKb(nBand, lmlo + 1)
             !CRGfix
             !hpnAdd = 0.5 * (conjg(mCoefBp(pband, lmlo)) * mCoefKb(nBand, lmlo + 1) + &
@@ -815,13 +820,13 @@ module m_jpSternhPulaySurface
             hpnEl = El(1, oqn_l, itype, 1) * spnEl
             s(pBand, nBand) = s(pBand, nBand) + spnEl + spnElo + spnAdd
             h(pBand, nBand) = h(pBand, nBand) + hpnEl + hpnAdd
-            
+
             if (oqn_l.eq.0) then
               !hsurf(pBand, nBand) = hsurf(pBand, nBand) + conjg(mCoefBp(pBand, lmlo))   * utu2 * mCoefKb(nBand, lmlo) &
               !                                        & + conjg(mCoefBp(pBand, lmlo))   * utd2 * mCoefKb(nBand, lmlo+1) &
               !                                        & + conjg(mCoefBp(pBand, lmlo+1)) * dtu2 * mCoefKb(nBand, lmlo) &
               !                                        & + conjg(mCoefBp(pBand, lmlo+1)) * dtd2 * mCoefKb(nBand, lmlo+1)
-              if (anfix) then
+              if (.FALSE.) then
                 h(pBand, nBand) = h(pBand, nBand) + conjg(mCoefBp(pBand, lmlo))   * utu2 * mCoefKb(nBand, lmlo) &
                                                 & + conjg(mCoefBp(pBand, lmlo))   * utd2 * mCoefKb(nBand, lmlo+1) &
                                                 & + conjg(mCoefBp(pBand, lmlo+1)) * dtu2 * mCoefKb(nBand, lmlo) &
@@ -832,7 +837,7 @@ module m_jpSternhPulaySurface
           end do ! pband
         end do ! nband
 
-        if (compPhon.and.present(almkg)) then
+        if (.FALSE..and.present(almkg)) then
           do iG=1, nvk
             do iGq=1, nvkq
               sEl = 0
@@ -895,7 +900,7 @@ module m_jpSternhPulaySurface
         !ax4 = cmplx(0., 0.)
         !bx4 = cmplx(0., 0.)
 
-        if (compPhon) then
+        if (.FALSE.) then
           ax2 = cmplx(0., 0.)
           bx2 = cmplx(0., 0.)
           ax3 = cmplx(0., 0.)
@@ -917,24 +922,28 @@ module m_jpSternhPulaySurface
                 !dtu = iu**(lK - lB) * tlmplm%tdu(ind, iatom, 1)
                 !utd = iu**(lK - lB) * tlmplm%tud(ind, iatom, 1)
                 !dtd = iu**(lK - lB) * tlmplm%tdd(ind, iatom, 1)
-                utu = tlmplm%tuu(ind, iatom, 1)
-                dtu = tlmplm%tdu(ind, iatom, 1)
-                utd = tlmplm%tud(ind, iatom, 1)
-                dtd = tlmplm%tdd(ind, iatom, 1)
+                !utu = tlmplm%tuu(ind, iatom, 1)
+                !dtu = tlmplm%tdu(ind, iatom, 1)
+                !utd = tlmplm%tud(ind, iatom, 1)
+                !dtd = tlmplm%tdd(ind, iatom, 1)
+                utu = loosetdin(ind, iatom, 1, 1)
+                utd = loosetdin(ind, iatom, 1, 2)
+                dtu = loosetdin(ind, iatom, 1, 3)
+                dtd = loosetdin(ind, iatom, 1, 4)
 
                 utu2=0.5*usdus%us(lB,1,1)*usdus%dus(lB,1,1)*atoms%rmt(1)**2
                 utd2=0.5*usdus%us(lB,1,1)*usdus%duds(lB,1,1)*atoms%rmt(1)**2
                 dtu2=0.5*usdus%uds(lB,1,1)*usdus%dus(lB,1,1)*atoms%rmt(1)**2
                 dtd2=0.5*usdus%uds(lB,1,1)*usdus%duds(lB,1,1)*atoms%rmt(1)**2
 
-                if (anfix.and.(lB.eq.lK.and.mB.eq.mK)) then
+                if (.FALSE..and.(lB.eq.lK.and.mB.eq.mK)) then
                   utu=utu+utu2
                   utd=utd+utd2
                   dtu=dtu+dtu2
                   dtd=dtd+dtd2
                 end if
 
-                !if (compPhon) then
+                !if (.FALSE.) then
                 !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 1, 1
                 !  write(111,*) real(utu), aimag(utu)
                 !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 2, 1
@@ -945,26 +954,30 @@ module m_jpSternhPulaySurface
                 !  write(111,*) real(dtd), aimag(dtd)
                 !end if
 
-                utu=utu*(iu**(lK - lB))
-                dtu=dtu*(iu**(lK - lB))
-                utd=utd*(iu**(lK - lB))
-                dtd=dtd*(iu**(lK - lB))
-                utu2=utu2*(iu**(lK - lB))
-                dtu2=dtu2*(iu**(lK - lB))
-                utd2=utd2*(iu**(lK - lB))
-                dtd2=dtd2*(iu**(lK - lB))
+                utu=utu*(ImagUnit**(lK - lB))
+                dtu=dtu*(ImagUnit**(lK - lB))
+                utd=utd*(ImagUnit**(lK - lB))
+                dtd=dtd*(ImagUnit**(lK - lB))
+                utu2=utu2*(ImagUnit**(lK - lB))
+                dtu2=dtu2*(ImagUnit**(lK - lB))
+                utd2=utd2*(ImagUnit**(lK - lB))
+                dtd2=dtd2*(ImagUnit**(lK - lB))
               else !todo these are conjg in kurz hlomat
                 indN = -ind
                 !utu = iu**(lK - lB) * conjg(tlmplm%tuu(indN, iatom, 1))
                 !dtd = iu**(lK - lB) * conjg(tlmplm%tdd(indN, iatom, 1))
                 !utd = iu**(lK - lB) * conjg(tlmplm%tdu(indN, iatom, 1))
                 !dtu = iu**(lK - lB) * conjg(tlmplm%tud(indN, iatom, 1))
-                utu = conjg(tlmplm%tuu(indN, iatom, 1))
-                utd = conjg(tlmplm%tdu(indN, iatom, 1))
-                dtu = conjg(tlmplm%tud(indN, iatom, 1))
-                dtd = conjg(tlmplm%tdd(indN, iatom, 1))
+                !utu = conjg(tlmplm%tuu(indN, iatom, 1))
+                !utd = conjg(tlmplm%tdu(indN, iatom, 1))
+                !dtu = conjg(tlmplm%tud(indN, iatom, 1))
+                !dtd = conjg(tlmplm%tdd(indN, iatom, 1))
+                utu = conjg(loosetdin(ind, iatom, 1, 1))
+                dtu = conjg(loosetdin(ind, iatom, 1, 2))
+                utd = conjg(loosetdin(ind, iatom, 1, 3))
+                dtd = conjg(loosetdin(ind, iatom, 1, 4))
 
-                !if (anfix.and.(lB.eq.lK.and.mB.eq.mK)) then
+                !if (.FALSE..and.(lB.eq.lK.and.mB.eq.mK)) then
                 !  write(4009,*) 'Huh. We got here.'
                 !  utu=utu+0.5*usdus%us(lB,1,1)*usdus%dus(lB,1,1)*atoms%rmt(1)**2
                 !  utd=utd+0.5*usdus%us(lB,1,1)*usdus%duds(lB,1,1)*atoms%rmt(1)**2
@@ -972,7 +985,7 @@ module m_jpSternhPulaySurface
                 !  dtd=dtd+0.5*usdus%uds(lB,1,1)*usdus%duds(lB,1,1)*atoms%rmt(1)**2
                 !end if
 
-                !if (compPhon) then
+                !if (.FALSE.) then
                 !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 1, 1
                 !  write(111,*) real(utu), aimag(utu)
                 !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 2, 1
@@ -983,10 +996,10 @@ module m_jpSternhPulaySurface
                 !  write(111,*) real(dtd), aimag(dtd)
                 !end if
 
-                utu=utu*(iu**(lK - lB))
-                dtu=dtu*(iu**(lK - lB))
-                utd=utd*(iu**(lK - lB))
-                dtd=dtd*(iu**(lK - lB))
+                utu=utu*(ImagUnit**(lK - lB))
+                dtu=dtu*(ImagUnit**(lK - lB))
+                utd=utd*(ImagUnit**(lK - lB))
+                dtd=dtd*(ImagUnit**(lK - lB))
               end if ! ind >= or < 0
 
               do nBand = 1, nobd(ikpt, 1)
@@ -1002,8 +1015,8 @@ module m_jpSternhPulaySurface
                     coKsh = coKsh + 1
                     ! cannot be considered seperately!!!
                     ! todo LO: utulo bzw. dtulo ausgeben mit entsprechend lmB ud mK indices
-                    utulo = iu**(lK - lB) * conjg(tlmplm%tuulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1))
-                    dtulo = iu**(lK - lB) * conjg(tlmplm%tdulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1))
+                    utulo = ImagUnit**(lK - lB) * conjg(tlmplm%tuulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1, 1)) ! TODO: These needed a second spin index.
+                    dtulo = ImagUnit**(lK - lB) * conjg(tlmplm%tdulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1, 1))
                     ax(nBand) = ax(nBand) + utulo * mCoefKb(nBand, lmloK + coKsh)
 
                     bx(nBand) = bx(nBand) + dtulo * mCoefKb(nBand, lmloK + coKsh)  ! todo LO: should ax and bx really be an array
@@ -1020,8 +1033,8 @@ module m_jpSternhPulaySurface
                     ! don't forget the shift mlo and mlolo
                     ! indices have to be vice versa to utulo
                     ! todo LO: ulotu utulo vertauschen einzeln ausgeben für eine lm lmp kombi, cx(nBand?)
-                    ulotu = iu**(lK - lB) * tlmplm%tuulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1)
-                    ulotd = iu**(lK - lB) * tlmplm%tdulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1)
+                    ulotu = ImagUnit**(lK - lB) * tlmplm%tuulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1, 1) ! TODO: These needed a second spin index.
+                    ulotd = ImagUnit**(lK - lB) * tlmplm%tdulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1, 1)
                     ! give out ulotu, ulotd, are all lmloK acessed here?
                     ! the second index gives the shift of the LOs and determins which ccof has to be used
                     cx(nBand, coBsh) = cx(nBand, coBsh) + ulotu * mCoefKb(nBand, lmloK) + ulotd * mCoefKb(nBand, lmloK + 1)
@@ -1033,11 +1046,11 @@ module m_jpSternhPulaySurface
                       if ( iloTable(loBra, lB, itype) < iloTable(loKet, lK, itype ) ) then
                         loBraKet = ( ( iloTable(loKet, lK, itype) - 1 ) * iloTable(loKet, lK, itype) ) / 2 &
                                                                                                       & + iloTable(loBra, lB, itype)
-                        ulotulo = iu**(lK - lB) * tlmplm%tuloulo(mK, mB, loBraKet + mlolo, 1)
+                        ulotulo = ImagUnit**(lK - lB) * tlmplm%tuloulo(mK, mB, loBraKet + mlolo, 1, 1) ! TODO: These needed a second spin index.
                       else
                         loBraKet = ( ( iloTable(loBra, lB, itype) - 1 ) * iloTable(loBra, lB, itype) ) / 2 &
                                                                                                       & + iloTable(loKet, lK, itype)
-                        ulotulo = iu**(lK - lB) * conjg(tlmplm%tuloulo(mB, mK, loBraKet + mlolo, 1))
+                        ulotulo = ImagUnit**(lK - lB) * conjg(tlmplm%tuloulo(mB, mK, loBraKet + mlolo, 1, 1)) ! TODO: These needed a second spin index.
                       end if
                       cx(nBand, coBsh) =  cx(nBand, coBsh) + ulotulo * mCoefKb(nBand, lmloK + coKsh)
                     end do ! loKet
@@ -1045,7 +1058,7 @@ module m_jpSternhPulaySurface
                 end if
 
               end do ! nBand
-              if (compPhon.and.present(almkg)) then
+              if (.FALSE..and.present(almkg)) then
                 do iG=1, nvk
                   ax2(iG) = ax2(iG) + utu*almkg(lmK+1, iG) + utd*blmkg(lmK+1, iG)
                   bx2(iG) = bx2(iG) + dtu*almkg(lmK+1, iG) + dtd*blmkg(lmK+1, iG)
@@ -1054,7 +1067,7 @@ module m_jpSternhPulaySurface
                 end do
               end if
             else
-              !if (compPhon) then
+              !if (.FALSE.) then
               !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 1, 1
               !  write(111,*) 0, 0
               !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 2, 1
@@ -1077,7 +1090,7 @@ module m_jpSternhPulaySurface
                                                                                     !& + conjg(mCoefBp(pBand, lmloB + 1)) * bx4(nBand)
             !write(112,*) pband, nband
             !write(112,*) hsurf(pBand, nBand)
-            
+
             if (.false.) then
               coBsh = 1
               do loBra = 3, nRadFun(lB, itype)
@@ -1088,7 +1101,7 @@ module m_jpSternhPulaySurface
             end if
           end do !pBand
         end do ! nBand
-        if (compPhon.and.present(almkg)) then
+        if (.FALSE..and.present(almkg)) then
           do iGq=1, nvkq
             do iG=1, nvk
               hSumG(iGq,iG)=hSumG(iGq,iG)+conjg(almkgq(lmB+1, iGq))*ax3(iG)+ &
@@ -1103,7 +1116,7 @@ module m_jpSternhPulaySurface
       end do ! mp
     end do ! lp
 
-    if (.false..and.compPhon.and.present(almkg)) then
+    if (.false..and..FALSE..and.present(almkg)) then
         if (ikpt.eq.1.and.idir.eq.1) then
           open(109,file='000_ME_H0_kG_MT',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
           open(110,file='000_ME_H0_kGprq_MT',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
@@ -1182,7 +1195,6 @@ module m_jpSternhPulaySurface
     use m_types, only : t_atoms, t_cell, t_kpts
     use m_ylm
     use m_sphbes
-    use m_JPConstants, only : iu, tpi, fpi, c_im, compPhon, anfix
 
     implicit none
 
@@ -1207,8 +1219,8 @@ module m_jpSternhPulaySurface
     integer,                   intent(in)  :: Gbas(:, :)
     integer,                   intent(in)  :: ilst(:, :, :)
     integer,                   intent(in)  :: kpq2kPrVec(:, :, :)
-    MCOMPLEX,                  intent(in)  :: zBra(:, :)
-    MCOMPLEX,                  intent(in)  :: zKet(:, :)
+    complex,                  intent(in)  :: zBra(:, :)
+    complex,                  intent(in)  :: zKet(:, :)
     complex,                   intent(out) :: sIntTeps(:, :)
     complex,                   intent(out) :: sInt(:, :)
     complex, optional,         intent(inout) :: mat_elT(:,:)
@@ -1251,7 +1263,7 @@ module m_jpSternhPulaySurface
     sIntTeps(:, :) = cmplx(0., 0.)
     sInt(:, :) = cmplx(0., 0.)
 
-    if (compPhon) then
+    if (.FALSE.) then
       allocate(surfIntTG(nv(ikpq), nv(ikpt)))
       allocate(surfIntSG(nv(ikpq), nv(ikpt)))
       surfIntTG(:, :) = cmplx(0., 0.)
@@ -1259,7 +1271,7 @@ module m_jpSternhPulaySurface
     end if
 
     ! The minus comes from 7.121c
-    constPreFacs = -fpi * iu / cell%omtil * atoms%rmt(iDtype)**2
+    constPreFacs = -fpi_const * ImagUnit / cell%omtil * atoms%rmt(iDtype)**2
 
     ! For sake of performance, we first calculate the G-vector dependent quantities.
     do iKbas = 1, nv(ikpt)
@@ -1287,7 +1299,7 @@ module m_jpSternhPulaySurface
         call ylm4(1, GGqCart, ylm)
         sphBesJ(:) = 0.
         call sphbes(1, GGqNorm * atoms%rmt(iDtype), sphBesJ)
-        tempNoMdep =  sphBesJ(1) * exp(iu * tpi * dot_product(real(GGqInt(1:3)), atoms%taual(1:3, iDatom)))
+        tempNoMdep =  sphBesJ(1) * exp(ImagUnit * tpi_const * dot_product(real(GGqInt(1:3)), atoms%taual(1:3, iDatom)))
         sumM = (0., 0.)
         ! For l = 1, we only have -1 < m < 1, so lm = 2, 3, 4
         do lm = 2, 4
@@ -1299,13 +1311,13 @@ module m_jpSternhPulaySurface
         basisTemp(iBbas, iKbas) = tempNoMdep * sumM
       end do ! iBbas
     end do ! iKbas
-    
+
     ! Then we multiply the band dependent quantities
     do iKband = 1, nrKetBands
       do iBband = 1, nrBraBands
         do iKbas = 1, nv(ikpt)
           do iBbas = 1, nv(ikpq)
-            if (anfix) then
+            if (.FALSE.) then
               sIntTeps(iBband, iKband) = sIntTeps(iBband, iKband) + constPreFacs  &
                 & * conjg(zBra(iBbas, iBband)) * (kinEffect2(iBbas,iKbas)) * basisTemp(iBbas, iKbas) * zKet(iKbas, iKband)
               !CRGfix
@@ -1323,7 +1335,7 @@ module m_jpSternhPulaySurface
       end do !iKband
     end do ! iBband
 
-    if (compPhon) then
+    if (.FALSE.) then
       if (ikpt.eq.1.and.iDdir.eq.1) then
         open(109,file='000_ME_eThet1_IR',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
         open(110,file='000_ME_Thet1_IR',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
@@ -1384,11 +1396,10 @@ module m_jpSternhPulaySurface
   subroutine IRcoeffVeffUv( atoms, stars, cell, iDtype, iDatom, ngdp, coScale, gdp, veffUvIR, vEff0IRpwUw )
 
     use m_gaunt, only : gaunt1
-    use m_jpConstants, only : iu, fpi, tpi, c_im
-    use mod_juPhonUtils, only : fopen, fclose
     use m_sphbes
     use m_ylm
     use m_types, only : t_atoms, t_stars, t_cell
+    use m_juDFT_stop, only : juDFT_error
 
     implicit none
 
@@ -1433,7 +1444,7 @@ module m_jpSternhPulaySurface
     !todo discuss cutoffs!
     lmaxScale = coScale * atoms%lmax(iDtype)
 
-    if ( coScale /= 1 ) NOstopNO'Overthink norm of ylm'
+    if ( coScale /= 1 ) CALL juDFT_error('Overthink norm of ylm',calledby ="IRcoeffVeffUv")
 
     allocate( sbes(0:lmaxScale) )
     allocate( ylm((lmaxScale + 1)**2) )
@@ -1446,8 +1457,8 @@ module m_jpSternhPulaySurface
     ! Unite the unit vector with the effective potential determing a coefficient dependent on direction and lm
     do iG  = 1, ngdp
 
-      phaseFac = exp( iu * tpi * dot_product(gdp(1:3, iG), atoms%taual(1:3, iDatom)) )
-      factG = fpi * vEff0IRpwUw(iG, 1) * phaseFac
+      phaseFac = exp( ImagUnit * tpi_const * dot_product(gdp(1:3, iG), atoms%taual(1:3, iDatom)) )
+      factG = fpi_const * vEff0IRpwUw(iG, 1) * phaseFac
       !if (norm2(real(gdp(1:3, iG))).lt.10e-6) then
       !!  factG = 1.53*factG
       !  do idir = 1, 3
@@ -1465,7 +1476,7 @@ module m_jpSternhPulaySurface
       call ylm4( lmaxScale, gCart, ylm )
 
       do oqn_l = 0, lmaxScale
-        factL = factG * iu**oqn_l * sbes(oqn_l)
+        factL = factG * ImagUnit**oqn_l * sbes(oqn_l)
         do mqn_m = -oqn_l, oqn_l
           lm = oqn_l * (oqn_l + 1) + 1 + mqn_m
           factLM = factL * conjg(ylm(lm))
@@ -1517,11 +1528,10 @@ module m_jpSternhPulaySurface
   !> @param[in]  z       : Kohn-Sham eigenvectors
   !> @param[out) surfInt : Calculates the potential part of the surface integral Psi_k+q^IR (H - eps) Psi_k^IR
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine calcSfVeffFast( atoms, kpts, qpts, cell, dimens, ikpt, ikpq, iqpt, kpq2kPrVec, coScale, gbas, zeta, nv, ne, nobd, ilst, z, iDtype, iDatom, &
+  subroutine calcSfVeffFast( atoms, input, kpts, qpts, cell, ikpt, ikpq, iqpt, kpq2kPrVec, coScale, gbas, zeta, nv, ne, nobd, ilst, z, iDtype, iDatom, &
       & surfInt, mat_el )
 
-    use m_types, only : t_atoms, t_kpts, t_cell, t_dimension
-    use m_jpConstants, only : fpi, iu, tpi, compPhon
+    use m_types, only : t_atoms, t_input, t_kpts, t_cell
     use m_gaunt, only : gaunt1
     use m_ylm
     use m_sphbes
@@ -1530,10 +1540,10 @@ module m_jpSternhPulaySurface
 
     ! Type parameters
     type(t_atoms),             intent(in)  :: atoms
+    type(t_input),             intent(in)  :: input
     type(t_kpts),              intent(in)  :: kpts
     type(t_kpts),              intent(in)  :: qpts
     type(t_cell),              intent(in)  :: cell
-    type(t_dimension),         intent(in)  :: dimens
 
     ! Scalar parameters
     integer,                   intent(in)  :: ikpt
@@ -1551,7 +1561,7 @@ module m_jpSternhPulaySurface
     integer,                   intent(in)  :: ne(:)
     integer,                   intent(in)  :: nobd(:, :)
     integer,                   intent(in)  :: ilst(:, :, :)
-    MCOMPLEX,                  intent(in)  :: z(:, :, :, :)
+    complex,                  intent(in)  :: z(:, :, :, :)
     complex,                   intent(out) :: surfInt(:, :, :)
     complex, optional,         intent(inout) :: mat_el(:,:,:)
 
@@ -1596,8 +1606,8 @@ module m_jpSternhPulaySurface
     lmaxScaled = coScale * atoms%lmax(iDtype)
 
     allocate( psiKCoeff(nobd(ikpt, 1), (lmaxScaled + 1)**2) )
-    allocate( psiBCoeff(dimens%neigd, (lmaxScaled + 1)**2))
-    allocate( basCoeff(dimens%nvd, (lmaxScaled + 1)**2) )
+    allocate( psiBCoeff(input%neig, (lmaxScaled + 1)**2))
+    allocate( basCoeff(MAXVAL(nv), (lmaxScaled + 1)**2) )
     allocate( ylm((lmaxScaled + 1)**2) )
     allocate( sbes(0: lmaxScaled) )
 
@@ -1610,7 +1620,7 @@ module m_jpSternhPulaySurface
     surfInt(:, :, :) = cmplx(0., 0.)
     surfIntG(:, :, :) = cmplx(0., 0.)
 
-    if (compPhon) then
+    if (.FALSE.) then
       allocate( coeffkg(nv(1, ikpt), (lmaxScaled + 1)**2) )
       allocate( coeffkgq(nv(1, ikpq), (lmaxScaled + 1)**2) )
       allocate( gk(3,nv(1, ikpt)))
@@ -1620,15 +1630,15 @@ module m_jpSternhPulaySurface
       coeffkgq(:, :) = cmplx(0., 0.)
     end if
 
-    if ( coScale /= 1 ) NOstopNO'ylmNorm is not correctly set in calcSfVeffFast'
+    if ( coScale /= 1 ) CALL juDFT_error('ylmNorm is not correctly set in calcSfVeffFast',calledby ="calcSfVeffFast")
 
-    pref = -fpi**2 / cell%omtil * atoms%rmt(iDtype)**2
+    pref = -fpi_const**2 / cell%omtil * atoms%rmt(iDtype)**2
     ! Calculate wavefunction at k, start with basis function part
     do iG = 1, nv(1, ikpt)
       gpk(1:3) = gbas(1:3, ilst(iG, ikpt, 1)) + kpts%bk(1:3, ikpt)
-      phaseFac = exp( iu * tpi * dot_product(gpk(:), atoms%taual(1:3, iDatom)) )
+      phaseFac = exp( ImagUnit * tpi_const * dot_product(gpk(:), atoms%taual(1:3, iDatom)) )
       gpkCart(1:3) = matmul( cell%bmat(1:3, 1:3), gpk(1:3) )
-      if (compPhon) then
+      if (.FALSE.) then
         gk(1:3,iG) = gpkCart(1:3)
       end if
       ylm(:) = cmplx(0., 0.)
@@ -1638,7 +1648,7 @@ module m_jpSternhPulaySurface
       call sphbes( lmaxScaled, norm2(gpkCart(1:3)) * atoms%rmt(iDtype), sbes)
       do oqn_l = 0, lmaxScaled
         lm_pre = oqn_l * (oqn_l + 1) + 1
-        factL = iu**oqn_l * sbes(oqn_l) * phaseFac
+        factL = ImagUnit**oqn_l * sbes(oqn_l) * phaseFac
         do mqn_m = -oqn_l, oqn_l
           lm = lm_pre + mqn_m
           basCoeff(iG, lm) = basCoeff(iG, lm) + factL * conjg(ylm(lm))
@@ -1646,7 +1656,7 @@ module m_jpSternhPulaySurface
       end do ! oqn_l
     end do ! iG
 
-    if (compPhon) then
+    if (.FALSE.) then
       coeffkg(:,:)=basCoeff(:nv(1, ikpt),:)
     end if
 
@@ -1666,11 +1676,11 @@ module m_jpSternhPulaySurface
     basCoeff(:, :) = cmplx(0., 0.)
     do iG = 1, nv(1, ikpq)
       gpk(1:3) = gbas(1:3, ilst(iG, ikpq, 1)) + kpts%bk(1:3, ikpq)
-      phaseFac = exp( -iu * tpi * dot_product(gpk(:), atoms%taual(1:3, iDatom)) )
+      phaseFac = exp( -ImagUnit * tpi_const * dot_product(gpk(:), atoms%taual(1:3, iDatom)) )
 
       gpkCart(1:3) = matmul( cell%bmat(1:3, 1:3), gpk(1:3) )
 
-      if (compPhon) then
+      if (.FALSE.) then
         gkq(1:3,iG) = gpkCart(1:3)
       end if
 
@@ -1681,7 +1691,7 @@ module m_jpSternhPulaySurface
       call sphbes(lmaxScaled, norm2(gpkCart(1:3)) * atoms%rmt(iDtype), sbes)
       do oqn_l = 0, lmaxScaled
         lm_pre = oqn_l * (oqn_l + 1) + 1
-        factL = conjg(iu)**oqn_l * sbes(oqn_l) * phaseFac
+        factL = conjg(ImagUnit)**oqn_l * sbes(oqn_l) * phaseFac
         do mqn_m = -oqn_l, oqn_l
           lm = lm_pre + mqn_m
           basCoeff(iG, lm) = basCoeff(iG, lm) + factL * ylm(lm)
@@ -1689,7 +1699,7 @@ module m_jpSternhPulaySurface
       end do ! oqn_l
     end do ! iG
 
-    if (compPhon) then
+    if (.FALSE.) then
       coeffkgq(:,:)=basCoeff(:nv(1, ikpq),:)
     end if
 
@@ -1729,7 +1739,7 @@ module m_jpSternhPulaySurface
                   end do ! ibandB
                 end do ! ibandK
 
-                !if (compPhon) then
+                !if (.FALSE.) then
                 !  do iGq=1, nv(1, ikpq)
                 !    do iG=1, nv(1, ikpt)
                 !      surfIntG(iGq,iG,idir)=surfIntG(iGq,iG,idir)+pref*zeta(idir,lm2p)*gauntCoeff*coeffkgq(iGq,lm1p)*coeffkg(iG,lm)
@@ -1744,8 +1754,8 @@ module m_jpSternhPulaySurface
       end do ! mqn_m2p
     end do ! oqn_l2p
 
-    if (compPhon) then
-      pref2 = -fpi / cell%omtil * atoms%rmt(iDtype)**2
+    if (.FALSE.) then
+      pref2 = -fpi_const / cell%omtil * atoms%rmt(iDtype)**2
       do iG = 1, nv(1, ikpt)
         do iGq = 1, nv(1, ikpq)
           GGqInt(1:3) = Gbas(1:3, ilst(iG, ikpt, 1)) - Gbas(1:3, ilst(iGq, ikpq, 1)) &
@@ -1763,7 +1773,7 @@ module m_jpSternhPulaySurface
           sumL = (0., 0.)
           do oqn_l=0, lmaxScaled
             lm_pre = oqn_l * (oqn_l + 1) + 1
-            factL = iu**oqn_l * sbes(oqn_l) * exp(iu * tpi * dot_product(real(GGqInt(1:3)), atoms%taual(1:3, iDatom)))
+            factL = ImagUnit**oqn_l * sbes(oqn_l) * exp(ImagUnit * tpi_const * dot_product(real(GGqInt(1:3)), atoms%taual(1:3, iDatom)))
             sumM = (0., 0.)
             do mqn_m = -oqn_l, oqn_l
               lm = lm_pre + mqn_m

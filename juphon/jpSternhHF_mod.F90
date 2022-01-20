@@ -17,7 +17,7 @@
 !-----------------------------------------------------------------------------------------------------------------------------------
 module m_jpSternhHF
 
-#include "cppmacro.h"
+    USE m_constants
 
   implicit none
 
@@ -63,14 +63,10 @@ module m_jpSternhHF
   !> @param[out]  MeVeff1IR  : Interstitial part of Optimized Hellmann-Feynman Contribution to the Sternheiemr equation according to
   !>                           Chapter 7.4.2 in PhD thesis CRG.
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine calcMEPotIR( stars, dimens, GbasBra, GbasKet, nv, vEff1IR, zBra, zKet, gpqdp, nmatBra, nrBraBands, nrKetBands, ikpt,&
+  subroutine calcMEPotIR( stars, GbasBra, GbasKet, nv, vEff1IR, zBra, zKet, gpqdp, nmatBra, nrBraBands, nrKetBands, ikpt,&
       & iqpt, ikpq, ngpqdp, MeVeff1IR, kpq2kPrVec ,idirx, mat_elH)
 
-#include "recycledRoutines/cpp_arch.h"
-#include "recycledRoutines/cpp_double.h"
-
-      use m_types, only : t_stars, t_dimension
-      use m_jpConstants, only : compPhon
+      use m_types, only : t_stars
 
       implicit none
 
@@ -78,7 +74,6 @@ module m_jpSternhHF
 
       ! Type parameter
       type(t_stars),                 intent(in)  :: stars
-      type(t_dimension),             intent(in)  :: dimens
 
       ! Scalar parameter
       integer,                       intent(in)  :: nmatBra
@@ -95,11 +90,11 @@ module m_jpSternhHF
       integer,                       intent(in)  :: GbasKet(:, :)
       integer,                       intent(in)  :: nv(:, :)
       complex,                       intent(in)  :: vEff1IR(:)
-      MCOMPLEX,                      intent(in)  :: zBra(:,:)
-      MCOMPLEX,                      intent(in)  :: zKet(:,:)
+      complex,                      intent(in)  :: zBra(:,:)
+      complex,                      intent(in)  :: zKet(:,:)
       integer,                       intent(in)  :: gpqdp(:, :)
       integer,                       intent(in)  :: kpq2kPrVec(:, :, :)
-      MCOMPLEX,                      intent(out) :: MeVeff1IR(:,:)
+      complex,                      intent(out) :: MeVeff1IR(:,:)
       complex, optional,             intent(inout) :: mat_elH(:,:)
 
       ! Scalar variables
@@ -135,9 +130,9 @@ module m_jpSternhHF
       external                                      dfftw_destroy_plan
 
       ! Initialization
-      allocate( iv1d(dimens%nvd, 1) )
-      allocate( iv1dBra(dimens%nvd, 1) )
-      allocate( vThetaZ(dimens%nbasfcn) )
+      allocate( iv1d(MAXVAL(nv), 1) )
+      allocate( iv1dBra(MAXVAL(nv), 1) )
+      allocate( vThetaZ(SIZE(zBra(:, 1))) )
       allocate( v1T0(nv(1, ikpq)) )
       allocate( MEVeff1IRG(nv(1, ikpq),nv(1, ikpt)) )
       iv1d(:, :) = 0
@@ -146,9 +141,9 @@ module m_jpSternhHF
       MeVeff1IR(:, :) = cmplx(0., 0.)
 
       ! Standard size of FFT mesh in Fleur
-      nfft(1) = 3 * stars%k1d
-      nfft(2) = 3 * stars%k2d
-      nfft(3) = 3 * stars%k3d
+      nfft(1) = 3 * stars%mx1
+      nfft(2) = 3 * stars%mx2
+      nfft(3) = 3 * stars%mx3
 
       ifftds = product(nfft)
 
@@ -226,7 +221,7 @@ module m_jpSternhHF
       zFFTBox = (0.0,0.0)
       CALL Dfftw_plan_dft_3d(forwardPlan, nfft(1), nfft(2), nfft(3), zFFTBox, zFFTBox, FFTW_FORWARD, FFTW_MEASURE)
 
-      if (compPhon) then
+      if (.FALSE.) then
         do i = 1, nv(1, ikpt)
           ! Map ket basis function expansion coefficient from plane-wave expansion representation to FFT mesh of cumultative variable
           zFFTBox = (0., 0.)
@@ -352,26 +347,25 @@ module m_jpSternhHF
   !> In order to set up the total matrix also the potential with 7.105b also has to be decorated with a factor as in 7.108
   !>
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine tlmplm4V( atoms, lathar, dimens, enpara, usdus, input, td, jspin, jsp, idir, vr, rbas1, rbas2, uuilon, duilon, &
+  subroutine tlmplm4V( atoms, lathar, enpara, usdus, input, td, loosetdout, jspin, jsp, idir, vr, rbas1, rbas2, uuilon, duilon, &
       & ulouilopn, ilo2p, nlo_atom )
 
 !    use m_intgr, only : intgr3
-    use m_intgr, only : intgr3LinIntp
+    use m_intgr, only : intgr3!LinIntp !TODO: Is this ok?
     use m_gaunt, only : gaunt1
-    use m_types, only : t_atoms, t_sphhar, t_enpara, t_usdus, t_input, t_tlmplm, t_dimension
-    use m_juDFT_NOstopNO, only : juDFT_error
-    use m_jpConstants, only : compPhon
+    use m_types, only : t_atoms, t_sphhar, t_enpara, t_usdus, t_input, t_tlmplm
+    use m_juDFT_stop, only : juDFT_error
 
     implicit none
 
     ! Type parameters
     type(t_atoms),               intent(in)  :: atoms
     type(t_sphhar),              intent(in)  :: lathar
-    type(t_dimension),           intent(in)  :: dimens
     type(t_enpara),              intent(in)  :: enpara
     type(t_usdus),               intent(in)  :: usdus
     type(t_input),               intent(in)  :: input
     type(t_tlmplm),              intent(out) :: td
+    COMPLEX, ALLOCATABLE,        INTENT(OUT) :: loosetdout(:, :, :, :)
 
     ! Scalar Parameters
     integer,                     intent(in)  :: jspin !physical spin
@@ -443,20 +437,21 @@ module m_jpSternhHF
     mlolot_d = max(mlolotot, 1)
 
     err = 0
-    allocate( indt(0:dimens%lmplmd) )
+    allocate( indt(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2) )
     allocate( dvd(0:atoms%lmaxd * (atoms%lmaxd + 3) / 2,(atoms%lmaxd + 1)**2 ) )
     allocate( dvu(0:atoms%lmaxd * (atoms%lmaxd + 3) / 2,(atoms%lmaxd + 1)**2 ) )
     allocate( uvd(0:atoms%lmaxd * (atoms%lmaxd + 3) / 2,(atoms%lmaxd + 1)**2 ) )
     allocate( uvu(0:atoms%lmaxd * (atoms%lmaxd + 3) / 2,(atoms%lmaxd + 1)**2 ) )
     allocate( xReal(atoms%jmtd), xImag(atoms%jmtd) )
-    allocate( td%tuu(0:dimens%lmplmd, atoms%nat, 1), stat=err )
-    allocate( td%tud(0:dimens%lmplmd, atoms%nat, 1), stat=err )
-    allocate( td%tdd(0:dimens%lmplmd, atoms%nat, 1), stat=err )
-    allocate( td%tdu(0:dimens%lmplmd, atoms%nat, 1), stat=err )
-    allocate( td%tdulo(0:dimens%lmd, -atoms%llod:atoms%llod, mlot_d, 1), stat=err )
-    allocate( td%tuulo(0:dimens%lmd, -atoms%llod:atoms%llod, mlot_d, 1), stat=err )
-    allocate( td%tuloulo(-atoms%llod:atoms%llod, -atoms%llod:atoms%llod, mlolot_d, 1), stat=err )
-    allocate( td%ind(0:dimens%lmd, 0:dimens%lmd, atoms%nat, 1), stat=err )
+    !allocate( td%tuu(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2, atoms%nat, 1), stat=err )
+    !allocate( td%tud(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2, atoms%nat, 1), stat=err )
+    !allocate( td%tdd(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2, atoms%nat, 1), stat=err )
+    !allocate( td%tdu(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2, atoms%nat, 1), stat=err )
+    allocate( loosetdout(0:(atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2, atoms%nat, 1, 4), stat=err )
+    allocate( td%tdulo(0:atoms%lmaxd*(atoms%lmaxd+2), -atoms%llod:atoms%llod, mlot_d, 1, 1), stat=err ) ! TODO: These needed a second spin index.
+    allocate( td%tuulo(0:atoms%lmaxd*(atoms%lmaxd+2), -atoms%llod:atoms%llod, mlot_d, 1, 1), stat=err )
+    allocate( td%tuloulo(-atoms%llod:atoms%llod, -atoms%llod:atoms%llod, mlolot_d, 1, 1), stat=err )
+    allocate( td%ind(0:atoms%lmaxd*(atoms%lmaxd+2), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat, 1), stat=err )
     if (err.ne.0) then
        write (*,*) 'eigen: an error occured during allocation of'
        write (*,*) 'the tlmplm%tuu, tlmplm%tdd etc.: ',err,'  size: ',mlotot
@@ -470,13 +465,14 @@ module m_jpSternhHF
     uvu(:, :) = cmplx(0., 0.)
     xReal(:) = 0.
     xImag(:) = 0.
-    td%tuu(:, :, :) = cmplx(0.,0.)
-    td%tud(:, :, :) = cmplx(0.,0.)
-    td%tdd(:, :, :) = cmplx(0.,0.)
-    td%tdu(:, :, :) = cmplx(0.,0.)
-    td%tdulo(:, :, :, :) = cmplx(0.,0.)
-    td%tuulo(:, :, :, :) = cmplx(0.,0.)
-    td%tuloulo(:, :, :, :) = cmplx(0., 0.)
+    !td%tuu(:, :, :) = cmplx(0.,0.)
+    !td%tud(:, :, :) = cmplx(0.,0.)
+    !td%tdd(:, :, :) = cmplx(0.,0.)
+    !td%tdu(:, :, :) = cmplx(0.,0.)
+    loosetdout(:, :, :, :) = cmplx(0.,0.)
+    td%tdulo(:, :, :, :, 1) = cmplx(0.,0.) ! TODO: These needed a second spin index.
+    td%tuulo(:, :, :, :, 1) = cmplx(0.,0.)
+    td%tuloulo(:, :, :, :, 1) = cmplx(0., 0.)
     td%ind(:, :, :, :) = -9999
 
     na = 0
@@ -504,7 +500,7 @@ module m_jpSternhHF
                   uvd(lpl, lm) = cmplx(0.0, 0.0)
                   dvu(lpl, lm) = cmplx(0.0, 0.0)
 
-                  !if (compPhon) then
+                  !if (.FALSE.) then
                   !  write(111,*) lm, lp, l, n , na
                   !  write(111,*) 1, 1, real(uvu(lpl,lm)), aimag(uvu(lpl,lm))
                   !  write(111,*) 2, 1, real(dvu(lpl,lm)), aimag(dvu(lpl,lm))
@@ -518,7 +514,7 @@ module m_jpSternhHF
                 do m = -lamda, lamda
                   lm = lamda * (lamda + 1) + m + 1
 
-                  !if (compPhon) then
+                  !if (.FALSE.) then
                   !  write(111,*) lm, lp, l, n , na
                   !end if
 
@@ -531,8 +527,8 @@ module m_jpSternhHF
                     xReal(i) =  tempRbas * real(vr(i,lm,idir,na))
                     xImag(i) =  tempRbas * aimag(vr(i,lm,idir,na))
                   end do ! i
-                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
-                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
+                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) !TODO: Is this ok?
+                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) !TODO: Is this ok?
                   uvu(lpl,lm) = cmplx(tempReal, tempImag)
 
                   ! Calculate the integral <uDot|V|u>
@@ -541,8 +537,8 @@ module m_jpSternhHF
                     xReal(i) = tempRbas * real(vr(i,lm,idir,na))
                     xImag(i) = tempRbas * aimag(vr(i,lm,idir,na))
                   end do ! i
-                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
-                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
+                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) !TODO: Is this ok?
+                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) !TODO: Is this ok?
                   dvu(lpl,lm) = cmplx(tempReal, tempImag) ! changed
 
                   ! Calculate the integral <u|V|uDot>
@@ -551,8 +547,8 @@ module m_jpSternhHF
                     xReal(i) = tempRbas * real(vr(i, lm, idir,na))
                     xImag(i) = tempRbas * aimag(vr(i, lm, idir,na))
                   end do ! i
-                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
-                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
+                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) !TODO: Is this ok?
+                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) !TODO: Is this ok?
                   uvd(lpl,lm) = cmplx(tempReal, tempImag)
 
                   ! Calculte the integral <uDot|V|uDot>
@@ -561,11 +557,11 @@ module m_jpSternhHF
                     xReal(i) = tempRbas * real(vr(i, lm, idir, na))
                     xImag(i) = tempRbas * aimag(vr(i, lm, idir, na))
                   end do ! i
-                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
-                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
+                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) !TODO: Is this ok?
+                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) !TODO: Is this ok?
                   dvd(lpl, lm) = cmplx(tempReal, tempImag)
 
-                  !if (compPhon) then
+                  !if (.FALSE.) then
                   !  write(111,*) 1, 1, real(uvu(lpl,lm)), aimag(uvu(lpl,lm))
                   !  write(111,*) 2, 1, real(dvu(lpl,lm)), aimag(dvu(lpl,lm))
                   !  write(111,*) 1, 2, real(uvd(lpl,lm)), aimag(uvd(lpl,lm))
@@ -621,10 +617,15 @@ module m_jpSternhHF
                   ! index similiar to lpl but with ms in it (after the selection Gaunt selection rules)
                   lmplm = lmpl + lm
                   cil = gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
-                  td%tuu(lmplm,na,jsp) = td%tuu(lmplm,na,jsp) + cil*uvu(lpl,lmsph)
-                  td%tdd(lmplm,na,jsp) = td%tdd(lmplm,na,jsp) + cil*dvd(lpl,lmsph)
-                  td%tud(lmplm,na,jsp) = td%tud(lmplm,na,jsp) + cil*uvd(lpl,lmsph)
-                  td%tdu(lmplm,na,jsp) = td%tdu(lmplm,na,jsp) + cil*dvu(lpl,lmsph)
+                  !td%tuu(lmplm,na,jsp) = td%tuu(lmplm,na,jsp) + cil*uvu(lpl,lmsph)
+                  !td%tdd(lmplm,na,jsp) = td%tdd(lmplm,na,jsp) + cil*dvd(lpl,lmsph)
+                  !td%tud(lmplm,na,jsp) = td%tud(lmplm,na,jsp) + cil*uvd(lpl,lmsph)
+                  !td%tdu(lmplm,na,jsp) = td%tdu(lmplm,na,jsp) + cil*dvu(lpl,lmsph)
+                  loosetdout(lmplm, na, jsp, 1) = loosetdout(lmplm, na, jsp, 1) + cil * uvu(lpl, lmsph)
+                  loosetdout(lmplm, na, jsp, 2) = loosetdout(lmplm, na, jsp, 2) + cil * uvd(lpl, lmsph)
+                  loosetdout(lmplm, na, jsp, 3) = loosetdout(lmplm, na, jsp, 3) + cil * dvu(lpl, lmsph)
+                  loosetdout(lmplm, na, jsp, 4) = loosetdout(lmplm, na, jsp, 4) + cil * dvd(lpl, lmsph)
+
                   ! Logical matrix where there are non-vanishing matrix entries in the tlmplm matrices
                   indt(lmplm) = 1
                 end do ! l
@@ -701,11 +702,11 @@ module m_jpSternhHF
   !>--------------------------------------------------------------------------------------------------------------------------------
   subroutine tlo4V(atoms, enpara, lathar, usdus, input, tlmplm, jspin, jsp, ntyp, na, vr, rbas1, rbas2, uuilon, duilon, ulouilopn, ilo2p, nlo_atom)
     !use m_intgr, only : intgr3
-    use m_intgr, only : intgr3LinIntp
+    use m_intgr, only : intgr3!LinIntp !TODO: Is this ok?
     use m_gaunt, only : gaunt1
     use m_types
-    use m_juDFT_NOstopNO, only : juDFT_error
-    use m_jpConstants, only : iu
+    use m_juDFT_stop, only : juDFT_error
+
     implicit none
 
     type(t_atoms),       intent(in)    :: atoms
@@ -723,8 +724,8 @@ module m_jpSternhHF
     complex,             intent (in)   :: vr(atoms%jmtd,(atoms%lmaxd + 1)**2 ) ! changed
     real,                intent(in)    :: rbas1(:,:,0:,:,:)
     real,                intent(in)    :: rbas2(:,:,0:,:,:)
-    real,                intent (in)   :: uuilon(atoms%nlod,atoms%ntypd),duilon(atoms%nlod,atoms%ntypd)
-    real,                intent (in)   :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntypd)
+    real,                intent (in)   :: uuilon(atoms%nlod,atoms%ntype),duilon(atoms%nlod,atoms%ntype)
+    real,                intent (in)   :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
     integer, allocatable, intent(out)  :: nlo_atom(:)
     !     ..
     !     .. Local Scalars ..
@@ -774,15 +775,15 @@ module m_jpSternhHF
                    xReal(i) = (rbas1(i,1,lp,ntyp,1)*rbas1(i, ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+ rbas2(i, 1, lp, ntyp, 1) * rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*real(vr(i,lmpp)) ! changed
                    xImag(i) = (rbas1(i,1,lp,ntyp,1)*rbas1(i, ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+ rbas2(i, 1, lp, ntyp, 1) * rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*aimag(vr(i,lmpp)) ! changed
                 end do
-                call intgr3LinIntp(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal, 1) ! changed
-                call intgr3LinIntp(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag, 1) ! changed
+                call intgr3(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal) ! changed !TODO: Is this ok?
+                call intgr3(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag) ! changed !TODO: Is this ok?
                 uvulo(lo,lp,lmpp) = cmplx(tempReal, tempImag) ! changed
                 do i = 1,atoms%jri(ntyp)
                    xReal(i) = (rbas1(i,2,lp,ntyp,1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp),ntyp,1)+ rbas2(i,2,lp,ntyp,1)*rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*real(vr(i,lmpp)) ! changed
                    xImag(i) = (rbas1(i,2,lp,ntyp,1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp),ntyp,1)+ rbas2(i,2,lp,ntyp,1)*rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*aimag(vr(i,lmpp)) ! changed
                 end do !changed
-                call intgr3LinIntp(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal, 1) ! changed
-                call intgr3LinIntp(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag, 1) ! changed
+                call intgr3(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal) ! changed !TODO: Is this ok?
+                call intgr3(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag) ! changed !TODO: Is this ok?
                 dvulo(lo,lp,lmpp) = cmplx(tempReal, tempImag) ! changed
                 end do !changed
              end if
@@ -811,8 +812,8 @@ module m_jpSternhHF
                    xReal(i) = (rbas1(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+rbas2(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas2(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1))*real(vr(i,lmpp)) ! changed
                    xImag(i) = (rbas1(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+rbas2(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas2(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1))*aimag(vr(i,lmpp)) ! changed
                 end do ! changed
-                call intgr3LinIntp(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal, 1) ! changed
-                call intgr3LinIntp(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag, 1) ! changed
+                call intgr3(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal) ! changed !TODO: Is this ok?
+                call intgr3(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag) ! changed !TODO: Is this ok?
                 ulovulo(loplo,lmpp) = cmplx(tempReal, tempImag) !changed
                 end do ! changed
              end if
@@ -853,10 +854,10 @@ module m_jpSternhHF
                    lmp = lp* (lp+1) + mp
               !     cil = gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd + 1) ! changed
                    cil = gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd) ! changed
-                   tlmplm%tuulo(lmp,m,lo+mlo,jsp) = &
-                        tlmplm%tuulo(lmp,m,lo+mlo,jsp) + cil*uvulo(lo,lp,lmpp) ! changed
-                   tlmplm%tdulo(lmp,m,lo+mlo,jsp) = &
-                        tlmplm%tdulo(lmp,m,lo+mlo,jsp) + cil*dvulo(lo,lp,lmpp) ! changed
+                   tlmplm%tuulo(lmp,m,lo+mlo,jsp,1) = &
+                        tlmplm%tuulo(lmp,m,lo+mlo,jsp,1) + cil*uvulo(lo,lp,lmpp) ! changed ! TODO: These needed a second spin index.
+                   tlmplm%tdulo(lmp,m,lo+mlo,jsp,1) = &
+                        tlmplm%tdulo(lmp,m,lo+mlo,jsp,1) + cil*dvulo(lo,lp,lmpp) ! changed
                 end do
              end do
           end do
@@ -881,7 +882,7 @@ module m_jpSternhHF
                    if ((abs(l-lpp).le.lp) .and. (lp.le. (l+lpp)) .and.&
                         (mod(l+lp+lpp,2).eq.0) .and. (abs(m).le.l)) then
                       cil = gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd) ! changed
-                      tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) = tlmplm%tuloulo(mp,m,loplo+mlolo,jsp) + cil*ulovulo(loplo,lmpp) ! changed
+                      tlmplm%tuloulo(mp,m,loplo+mlolo,jsp,1) = tlmplm%tuloulo(mp,m,loplo+mlolo,jsp,1) + cil*ulovulo(loplo,lmpp) ! changed ! TODO: These needed a second spin index.
                    end if
                 end do
              end do
@@ -920,11 +921,10 @@ module m_jpSternhHF
   !>                         Hellmann--Feynman contribution, see 7.106 (Dissertation CRG).
   !>
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine calcVsumMT( atoms, td4V1, td4V2, ikpt, ikpq, ne, nobd, mCoefBp, mCoefKb, nRadFun, iloTable, nlo_atom, vSum , &
+  subroutine calcVsumMT( atoms, td4V1, td4V2, loosetdin1, loosetdin2, ikpt, ikpq, ne, nobd, mCoefBp, mCoefKb, nRadFun, iloTable, nlo_atom, vSum , &
                        & idir, nvk, nvkq, almkg, blmkg, almkgq, blmkgq, mat_elH)
 
     use m_types
-    use m_jpConstants, only : iu, compPhon
 
     implicit none
 
@@ -938,6 +938,7 @@ module m_jpSternhHF
     integer,                    intent(in)  :: ikpq
 
     ! Array Parameters
+    complex,                    intent(in)  :: loosetdin1(:, :, :, :), loosetdin2(:, :, :, :)
     integer,                    intent(in)  :: ne(:)
     integer,                    intent(in)  :: nobd(:, :)
     complex,                    intent(in)  :: mCoefBp(:, :, :)
@@ -945,7 +946,7 @@ module m_jpSternhHF
     integer,                    intent(in)  :: nRadFun(0:, :)
     integer,                    intent(in)  :: iloTable(:, 0:, :)
     integer,                    intent(in)  :: nlo_atom(:)
-    MCOMPLEX,                   intent(out) :: vSum(:,:)
+    complex,                   intent(out) :: vSum(:,:)
     integer, optional,          intent(in)  :: idir
     integer, optional,          intent(in)  :: nvk, nvkq
     complex, optional,          intent(in)  :: almkg(:,:), blmkg(:,:), almkgq(:,:), blmkgq(:,:)
@@ -997,7 +998,7 @@ module m_jpSternhHF
     ax(:) = cmplx(0., 0.)
     bx(:) = cmplx(0., 0.)
 
-    if (compPhon) then
+    if (.FALSE.) then
       allocate(ax2(nvk), bx2(nvk))
       ax2(:) = cmplx(0., 0.)
       bx2(:) = cmplx(0., 0.)
@@ -1037,7 +1038,7 @@ module m_jpSternhHF
             ax = cmplx(0.0, 0.0)
             bx = cmplx(0.0, 0.0)
 
-            if (compPhon) then
+            if (.FALSE.) then
               ax2 = cmplx(0.0, 0.0)
               bx2 = cmplx(0.0, 0.0)
             end if
@@ -1065,12 +1066,16 @@ module m_jpSternhHF
                   ! integrals for the potential only calculated for the triangular part.
                   if (ind >= 0) THEN
                      ! The i^l and i^l' stem from the matching coefficients
-                     utu = td4V1%tuu(ind, iatom, 1)
-                     dtu = td4V1%tdu(ind, iatom, 1)
-                     utd = td4V1%tud(ind, iatom, 1)
-                     dtd = td4V1%tdd(ind, iatom, 1)
+                     !utu = td4V1%tuu(ind, iatom, 1)
+                     !dtu = td4V1%tdu(ind, iatom, 1)
+                     !utd = td4V1%tud(ind, iatom, 1)
+                     !dtd = td4V1%tdd(ind, iatom, 1)
+                     utu = loosetdin1(ind, iatom, 1, 1)
+                     utd = loosetdin1(ind, iatom, 1, 2)
+                     dtu = loosetdin1(ind, iatom, 1, 3)
+                     dtd = loosetdin1(ind, iatom, 1, 4)
 
-                     !if (compPhon) then
+                     !if (.FALSE.) then
                      !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 1, 1
                      !  write(111,*) real(utu), aimag(utu)
                      !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 2, 1
@@ -1081,21 +1086,25 @@ module m_jpSternhHF
                      !  write(111,*) real(dtd), aimag(dtd)
                      !end if
 
-                     utu=utu*(iu**(lK - lB))
-                     dtu=dtu*(iu**(lK - lB))
-                     utd=utd*(iu**(lK - lB))
-                     dtd=dtd*(iu**(lK - lB))
+                     utu=utu*(ImagUnit**(lK - lB))
+                     dtu=dtu*(ImagUnit**(lK - lB))
+                     utd=utd*(ImagUnit**(lK - lB))
+                     dtd=dtd*(ImagUnit**(lK - lB))
                   else
                      ! the sign of the index is only a hint in which triangle we are
                      ! The i^l and i^l' stem from the matching coefficients, they are not only interated in a triangular but the
                      ! full matrix, therefore, they are not complex conjugated.
                      indN = -ind
-                     utu = conjg(td4V2%tuu(indn, iatom, 1))
-                     dtd = conjg(td4V2%tdd(indn, iatom, 1))
-                     utd = conjg(td4V2%tdu(indn, iatom, 1))
-                     dtu = conjg(td4V2%tud(indn, iatom, 1))
+                     !utu = conjg(td4V2%tuu(indn, iatom, 1))
+                     !dtd = conjg(td4V2%tdd(indn, iatom, 1))
+                     !utd = conjg(td4V2%tdu(indn, iatom, 1))
+                     !dtu = conjg(td4V2%tud(indn, iatom, 1))
+                     utu = conjg(loosetdin1(ind, iatom, 1, 1))
+                     dtu = conjg(loosetdin1(ind, iatom, 1, 2))
+                     utd = conjg(loosetdin1(ind, iatom, 1, 3))
+                     dtd = conjg(loosetdin1(ind, iatom, 1, 4))
 
-                     !if (compPhon) then
+                     !if (.FALSE.) then
                      !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 1, 1
                      !  write(111,*) real(utu), aimag(utu)
                      !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 2, 1
@@ -1106,10 +1115,10 @@ module m_jpSternhHF
                      !  write(111,*) real(dtd), aimag(dtd)
                      !end if
 
-                     utu=utu*(iu**(lK - lB))
-                     dtu=dtu*(iu**(lK - lB))
-                     utd=utd*(iu**(lK - lB))
-                     dtd=dtd*(iu**(lK - lB))
+                     utu=utu*(ImagUnit**(lK - lB))
+                     dtu=dtu*(ImagUnit**(lK - lB))
+                     utd=utd*(ImagUnit**(lK - lB))
+                     dtd=dtd*(ImagUnit**(lK - lB))
                   end if
 
                   do nBand = 1, nobd(ikpt, 1)
@@ -1122,8 +1131,8 @@ module m_jpSternhHF
                     if (.false.) then
                       do loKet = 3, nRadFun(lK, itype)
                         coKsh = coKsh + 1
-                        utulo = (iu**(lK - lB)) * conjg(td4V1%tuulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1))
-                        dtulo = (iu**(lK - lB)) * conjg(td4V1%tdulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1))
+                        utulo = (ImagUnit**(lK - lB)) * conjg(td4V1%tuulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1, 1)) ! TODO: These needed a second spin index.
+                        dtulo = (ImagUnit**(lK - lB)) * conjg(td4V1%tdulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1, 1))
                         ax(nBand) = ax(nBand) + utulo * mCoefKb(nBand, lmloK + coKsh, iatom)
                         bx(nBand) = bx(nBand) + dtulo * mCoefKb(nBand, lmloK + coKsh, iatom)
                       end do
@@ -1139,8 +1148,8 @@ module m_jpSternhHF
                         ! we only calculate a triangular matrix aren't we missing entries?
                         ! don't forget the shift mlo and mlolo
                         ! indices have to be vice versa to utulo
-                        ulotu =  (iu**(lK - lB)) * td4V1%tuulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1)
-                        ulotd =  (iu**(lK - lB)) * td4V1%tdulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1)
+                        ulotu =  (ImagUnit**(lK - lB)) * td4V1%tuulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1, 1) ! TODO: These needed a second spin index.
+                        ulotd =  (ImagUnit**(lK - lB)) * td4V1%tdulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1, 1)
                         cx(nBand, coBsh) = cx(nBand, coBsh) + ulotu *  mCoefKb(nBand, lmloK, iatom) &
                                                                                         & + ulotd * mCoefKb(nBand, lmloK + 1, iatom)
 
@@ -1151,11 +1160,11 @@ module m_jpSternhHF
                         if ( iloTable(loBra, lB, itype) < iloTable(loKet, lK, itype ) ) then
                           loBraKet = ( ( iloTable(loKet, lK, itype) - 1 ) * iloTable(loKet, lK, itype) ) / 2 &
                                                                                                       & + iloTable(loBra, lB, itype)
-                          ulotulo = (iu**(lK - lB)) * td4V1%tuloulo(mK, mB, loBraKet + mlolo, 1)
+                          ulotulo = (ImagUnit**(lK - lB)) * td4V1%tuloulo(mK, mB, loBraKet + mlolo, 1, 1) ! TODO: These needed a second spin index.
                         else
                           loBraKet = ( ( iloTable(loBra, lB, itype) - 1 ) * iloTable(loBra, lB, itype) ) / 2 &
                                                                                                       & + iloTable(loKet, lK, itype)
-                          ulotulo = (iu**(lK - lB)) * conjg(td4V1%tuloulo(mB, mK, loBraKet + mlolo, 1))
+                          ulotulo = (ImagUnit**(lK - lB)) * conjg(td4V1%tuloulo(mB, mK, loBraKet + mlolo, 1, 1)) ! TODO: These needed a second spin index.
                         end if
                         cx(nBand, coBsh) = cx(nBand, coBsh) + ulotulo *  mCoefKb(nBand, lmloK + coKsh, iatom)
                         end do ! loKet
@@ -1164,7 +1173,7 @@ module m_jpSternhHF
 
                   end do ! nBand
 
-                  if (compPhon) then
+                  if (.FALSE.) then
                     do iG=1, nvk
                       ax2(iG) = ax2(iG) + utu * almkg(lmK+1, iG) + utd *  blmkg(lmK+1, iG)
                       bx2(iG) = bx2(iG) + dtu * almkg(lmK+1, iG) + dtd *  blmkg(lmK+1, iG)
@@ -1172,7 +1181,7 @@ module m_jpSternhHF
                   end if
 
                 else
-                  !if (compPhon) then
+                  !if (.FALSE.) then
                   !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 1, 1
                   !  write(111,*) 0, 0
                   !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 2, 1
@@ -1201,7 +1210,7 @@ module m_jpSternhHF
               end do ! pband
             end do ! nBand
 
-            if (compPhon) then
+            if (.FALSE.) then
               do iGq=1, nvkq
                 do iG=1, nvk
                   vSumG(iGq,iG)=vSumG(iGq,iG)+conjg(almkgq(lmB+1, iGq))*ax2(iG)+conjg(blmkgq(lmB+1, iGq))*bx2(iG)
@@ -1216,11 +1225,11 @@ module m_jpSternhHF
       if ( allocated(cx) ) deallocate (cx)
     end do ! itype
 
-    !if (compPhon) then
+    !if (.FALSE.) then
     !    if (ikpt.eq.1.and.idir.eq.1) then
     !      open(109,file='000_ME_V1_MT',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
     !    else
-    !      open(109,file='000_ME_V1_MT',form='FORMATTED',action='WRITE',position='append',status='UNKNOWN')  
+    !      open(109,file='000_ME_V1_MT',form='FORMATTED',action='WRITE',position='append',status='UNKNOWN')
     !    end if
     !    do iG=1, nvk
     !      do iGq=1, nvkq
@@ -1239,8 +1248,7 @@ module m_jpSternhHF
 
   subroutine udHu(atoms,El,rbas1,rbas2,vEff0MT,sumVMTs,haa,dhaa)
 
-    use m_intgr, only : intgr3LinIntp
-    use m_JPConstants
+    use m_intgr, only : intgr3!LinIntp !TODO: Is this ok?
     use m_types, only : t_atoms
 
     implicit none
@@ -1283,10 +1291,10 @@ module m_jpSternhHF
               xReal=real(t1)
               xImag=aimag(t1)
 
-              call intgr3LinIntp(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal, 1)
-              call intgr3LinIntp(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag, 1)
+              call intgr3(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal) !TODO: Is this ok?
+              call intgr3(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag) !TODO: Is this ok?
 
-              haa(1,jo,lp,io,l)=El(1, l, 1, 1)*CMPLX(tempReal,tempImag)*sqrt(fpi)
+              haa(1,jo,lp,io,l)=El(1, l, 1, 1)*CMPLX(tempReal,tempImag)*sqrt(fpi_const)
               write(112,*) 1, l, l
               write(112,*) jo, io, real(haa(1,jo,lp,io,l)), aimag(haa(1,jo,lp,io,l))
             else
@@ -1306,8 +1314,8 @@ module m_jpSternhHF
                 xReal=real(t1)
                 xImag=aimag(t1)
 
-                call intgr3LinIntp(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal, 1)
-                call intgr3LinIntp(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag, 1)
+                call intgr3(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal) !TODO: Is this ok?
+                call intgr3(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag) !TODO: Is this ok?
 
                 dhaa(lm,jo,lp,io,l)=CMPLX(tempReal,tempImag)
 
@@ -1318,8 +1326,8 @@ module m_jpSternhHF
                   xReal=real(t1)
                   xImag=aimag(t1)
 
-                  call intgr3LinIntp(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal, 1)
-                  call intgr3LinIntp(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag, 1)
+                  call intgr3(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal) !TODO: Is this ok?
+                  call intgr3(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag) !TODO: Is this ok?
 
                   haa(lm,jo,lp,io,l)=CMPLX(tempReal,tempImag)
                   haa(lm,io,l,jo,lp)=haa(lm,jo,lp,io,l)
