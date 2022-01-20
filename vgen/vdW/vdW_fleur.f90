@@ -62,7 +62,7 @@ MODULE m_vdWfleur_grimme
             DO i2 = 1,atoms%neq(i1)
                 na = na + 1
                 atom%atomic_number(na) = NINT(atoms%zatom(i1))
-                atom%coord_bravais(:,na)=matmul(cell%atoms%pos(:,na))/tpi_const
+                atom%coord_bravais(:,na)=matmul(cell%bmat,atoms%pos(:,na))/tpi_const
                 atom%coord_cart(:,na)= atoms%pos(:,na)
             ENDDO
         ENDDO
