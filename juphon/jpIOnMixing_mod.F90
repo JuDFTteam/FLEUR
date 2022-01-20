@@ -62,6 +62,7 @@ module m_jpIOnMixing
     complex,           allocatable               :: rho1IRin(:)
     complex,           allocatable               :: rho1MTin(:, :, :)
 
+#include "cpp_double.h"
     !External functions
     real CPP_BLAS_sdot
     external CPP_BLAS_sdot
@@ -667,6 +668,7 @@ module m_jpIOnMixing
     REAL, ALLOCATABLE :: am(:)
     REAL, ALLOCATABLE :: fm1(:),sm1(:),ui(:),um(:),vi(:),vm(:)
 
+#include "cpp_double.h"
     ! External Functions
     REAL CPP_BLAS_sdot
     EXTERNAL CPP_BLAS_sdot

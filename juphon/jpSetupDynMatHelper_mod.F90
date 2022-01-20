@@ -542,7 +542,7 @@ module m_jpSetupDynMatHelper
 
     use m_types
     use m_jPConstants, only : iu, tpi, fpi, c_im
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
 
     implicit none

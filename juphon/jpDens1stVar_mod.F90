@@ -1625,7 +1625,7 @@ module m_jpDens1stVar
 
     use m_types, only : t_atoms, t_cell
     use m_sphbes, only : sphbes
-    use m_ylm, only : ylm4
+    use m_ylm_old, only : ylm4
 
     implicit none
 

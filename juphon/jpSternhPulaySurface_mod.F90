@@ -1193,7 +1193,7 @@ module m_jpSternhPulaySurface
       Gbas, ilst, zBra, zKet, sIntTeps, sInt, kpq2kPrVec, mat_elT, mat_elS )
 
     use m_types, only : t_atoms, t_cell, t_kpts
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
 
     implicit none
@@ -1397,7 +1397,7 @@ module m_jpSternhPulaySurface
 
     use m_gaunt, only : gaunt1
     use m_sphbes
-    use m_ylm
+    use m_ylm_old
     use m_types, only : t_atoms, t_stars, t_cell
     use m_juDFT_stop, only : juDFT_error
 
@@ -1533,7 +1533,7 @@ module m_jpSternhPulaySurface
 
     use m_types, only : t_atoms, t_input, t_kpts, t_cell
     use m_gaunt, only : gaunt1
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
 
     implicit none

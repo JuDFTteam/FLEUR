@@ -12,7 +12,7 @@ contains
       & vExt1IR, vExt1MT, vHar1IR, vHar1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, vEff0MT, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol, dynMatSf )
 
     use m_types
-    use m_dfpt_init, only : Derivative, convertStar2G
+    use m_dfpt_init, only : Derivative, convertStar2G, mt_gradient_old
 
     implicit none
 
@@ -249,8 +249,8 @@ contains
       end do ! ilh
     end do ! iDtypeB
 
-    call mt_gradient_old( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, r2Vxc0MT, r2GrVxc0MT )
-    call mt_gradient_old( atoms, lathar, clnu_atom, nmem_atom, mlh_atom, r2ExcMT, r2GrExcMT )
+    call mt_gradient_old( atoms, lathar, sym, clnu_atom, nmem_atom, mlh_atom, r2Vxc0MT, r2GrVxc0MT )
+    call mt_gradient_old( atoms, lathar, sym, clnu_atom, nmem_atom, mlh_atom, r2ExcMT, r2GrExcMT )
 
     !todo we should implement a consistent order of indices
     do idir = 1, 3
@@ -773,7 +773,7 @@ contains
   subroutine calcSintKinEnergOvl( atoms, cell, kpts, results, iDtypeB, iDatomB, ikptBra, ikptKet, idir, nv, nobd, gBasBra, gBasKin, &
       & gBasKet, gBasKin2, zBra, zKet, sIntT, sInt )
 
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
     use m_types
 
@@ -910,7 +910,7 @@ contains
 
     use m_gaunt, only : gaunt1
     use m_types
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
 
     implicit none
@@ -1314,7 +1314,7 @@ contains
     use m_gaunt, only : gaunt1
     use m_dfpt_init, only : convertStar2G
     use m_sphbes
-    use m_ylm
+    use m_ylm_old
 
     implicit none
 
@@ -3812,7 +3812,7 @@ contains
   subroutine CalcSurfIntIRDynMat( atoms, cell, ngdp1, ngdp2, gdp1, gdp2, rho0IRpw, grVext0IR, qpoint, surfInt )
 
     use m_types
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
 
     implicit none
@@ -4119,6 +4119,7 @@ contains
     use m_gaunt, only : gaunt1
     use m_types
     USE m_constants
+    USE m_dfpt_init, only : derivative
 
     implicit none
 
@@ -4486,5 +4487,96 @@ contains
     end do ! mqn_m2PrC
 
   end subroutine CalcChannelsGrGrtFlpNat
+
+  subroutine calcFnsphGrVarphi(atoms, itype, oqn_lVmin, mqn_m2Pr, nRadFun, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, fSh,&
+                                                                                                                    & fShNsphVarphi)
+
+    use m_types, only : t_atoms
+    use m_gaunt, only : gaunt1
+
+    implicit none
+
+    type(t_atoms), intent(in)  :: atoms
+
+    integer,       intent(in)  :: itype
+    integer,       intent(in)  :: oqn_lVmin
+    integer,       intent(in)  :: mqn_m2Pr
+
+    integer,       intent(in)  :: nRadFun(0:, :)
+    real,          intent(in)  :: grVarphiCh1(:, :, :, -1:)
+    real,          intent(in)  :: grVarphiCh2(:, :, :, -1:)
+    integer,       intent(in)  :: grVarphiChLout(:, 0:)
+    integer,       intent(in)  :: grVarphiChMout(-atoms%lmaxd:, -1:)
+    complex,       intent(in)  :: fSh(:, :)
+    complex,       intent(out) :: fShNsphVarphi(:, :, 0:, :)
+
+    integer                    :: lmp
+    integer                    :: oqn_l
+    integer                    :: mqn_m
+    integer                    :: iradf
+    integer                    :: oqn_lV
+    integer                    :: lmV_pre
+    integer                    :: mqn_mV
+    integer                    :: lmV
+    integer                    :: mqn_m1Pr
+    integer                    :: oqn_l1Pr
+    integer                    :: lm1Pr
+    integer                    :: imesh
+    real                       :: gauntFactor
+    complex                    :: vEff0Gaunt
+    integer                    :: mqn_m3Pr
+    integer                    :: ichan
+    integer                    :: oqn_l3Pr
+
+    fShNsphVarphi = cmplx(0., 0.)
+    ! It might be slightly faster to interchange the oqn_lV and oqn_l loops, but then then bugs are easier to produce.
+    lmp = 0
+    do oqn_l = 0, atoms%lmax(itype)
+      do mqn_m = -oqn_l, oqn_l
+        mqn_m3Pr = grVarphiChMout(mqn_m, mqn_m2Pr)
+        ! We have due to the p loop a factor 2 without LOs and with LOs 2 + number of LOs but otherwise we would not run linearly through
+        ! the arrays.
+        do iradf = 1, nRadFun(oqn_l, itype)
+          lmp = lmp + 1
+          do ichan = 1, 2
+            oqn_l3Pr = grVarphiChLout(ichan, oqn_l)
+            if (oqn_l3Pr < 0 .or. abs(mqn_m3Pr) > oqn_l3Pr .or. oqn_l3Pr > atoms%lmax(itype)) cycle
+            do oqn_lV = oqn_lVmin, atoms%lmax(itype)
+              lmV_pre = oqn_lV * (oqn_lV + 1)
+              do mqn_mV = -oqn_lV, oqn_lV
+                lmV = lmV_pre + mqn_mV + 1
+                ! The ket is only given until lmax, therefore we need no extension of rbas1/rbas2.
+                ! Gaunt selection rule for m
+                mqn_m1Pr = mqn_m3Pr + mqn_mV
+                ! Gaunt selection rule for the l of the bra and
+                ! in the non-spherical part of this routine, we have to consider that the bra (due to twofold gradient) has contributions up
+                ! to lmax + 2 and the non-spherical potential which has a cut-off of lmax and is multiplied with the ket having a cutoff of
+                ! lmax. The product is a quantity expanded until 2 * lmax (+ 1). Since we multiply it with the bra the product only has to
+                ! calculated until lmax + 2. Combined with the Gaunt selection rules, we calculate either until a l' from where the
+                ! Gaunt coefficients are zero or if this is larger than lmax + 2 we do not need them so we NOstopNOhere. On the other
+                ! hand the minimal l' should be given by the lower border of the Gaunt coefficients or by m' which is also determined
+                ! according to a Gaunt selection rule. l' should always be larger or equals m'. Otherwise we get lm indices which are
+                ! negative.
+!                do oqn_l1Pr = max(abs(oqn_lV - oqn_l3Pr), abs(mqn_m1Pr)), min(oqn_lV + oqn_l3Pr, atoms%lmax(itype) + 2)
+                do oqn_l1Pr = max(abs(oqn_lV - oqn_l3Pr), abs(mqn_m1Pr)), min(oqn_lV + oqn_l3Pr, atoms%lmax(itype))
+                  lm1Pr = oqn_l1Pr * (oqn_l1Pr + 1) + mqn_m1Pr
+!                  gauntFactor = gaunt1( oqn_l1Pr, oqn_lV, oqn_l3Pr, mqn_m1Pr, mqn_mV, mqn_m3Pr, atoms%lmaxd + 2)
+                  gauntFactor = gaunt1( oqn_l1Pr, oqn_lV, oqn_l3Pr, mqn_m1Pr, mqn_mV, mqn_m3Pr, atoms%lmaxd)
+                  do imesh = 1, atoms%jri(itype)
+                    vEff0Gaunt = fSh(imesh, lmV) * gauntFactor
+                    fShNsphVarphi(1, imesh, lm1Pr, lmp) = fShNsphVarphi(1, imesh, lm1Pr, lmp) + vEff0Gaunt &
+                                                                                        & * grVarphiCh1(imesh, ichan, lmp, mqn_m2Pr)
+                    fShNsphVarphi(2, imesh, lm1Pr, lmp) = fShNsphVarphi(2, imesh, lm1Pr, lmp) + vEff0Gaunt &
+                                                                                        & * grVarphiCh2(imesh, ichan, lmp, mqn_m2Pr)
+                  end do ! imesh
+                end do ! oqn_l
+              end do ! mqn_mV
+            end do ! oqn_lV
+          end do ! ichan
+        end do ! iradf
+      end do ! mqn_m
+    end do ! oqn_l
+
+  end subroutine calcFnsphGrVarphi
 
 end module m_jpSetupDynMatSF

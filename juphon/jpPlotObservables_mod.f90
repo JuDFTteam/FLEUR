@@ -1665,7 +1665,7 @@ module m_jpPlotObservables
      &                  qpw,rho,ngdp, gdp,qpt,&
      &                  xdnout, iqpt, latVec)
 !
-      USE m_ylm
+      USE m_ylm_old
       use m_types
       use m_constants
 
@@ -1852,7 +1852,7 @@ module m_jpPlotObservables
      &                  qpw,rho,ngdp, gdp,qpt,&
      &                  xdnout, iqpt, latVec)
 !
-      USE m_ylm
+      USE m_ylm_old
       use m_types
       use m_constants
 
@@ -2039,7 +2039,7 @@ module m_jpPlotObservables
     use m_types
     use m_jPConstants, only : iu, pi, tpi, fpi, Tmatrix
     use m_gaunt
-    use m_ylm
+    use m_ylm_old
     use m_cotra
     use m_juDFT_NOstopNO
     use mod_juPhonUtils, only : fopen, fclose
@@ -2581,7 +2581,7 @@ module m_jpPlotObservables
     use m_jPConstants, only : iu, pi, tpi, fpi, Tmatrix
     use mod_juPhonUtils, only : fopen, fclose
     use m_gaunt
-    use m_ylm
+    use m_ylm_old
     use m_cotra
     use m_jpPotDensHelper, only : convertStar2G
     use m_juDFT_NOstopNO
@@ -3798,7 +3798,7 @@ logical :: fBenchSw
     use m_jPConstants, only : iu, pi, tpi, fpi, Tmatrix
     use mod_juPhonUtils, only : fopen, fclose
     use m_gaunt
-    use m_ylm
+    use m_ylm_old
     use m_cotra
     use m_jpPotDensHelper, only : convertStar2G
     use m_juDFT_NOstopNO
@@ -4147,7 +4147,7 @@ logical :: fBenchSw
       use m_jPConstants, only : iu, pi, tpi, fpi, Tmatrix
       use mod_juPhonUtils, only : fopen, fclose
       use m_gaunt
-      use m_ylm
+      use m_ylm_old
       use m_cotra
       use m_jpPotDensHelper, only : convertStar2G
       use m_juDFT_NOstopNO
@@ -4453,7 +4453,7 @@ logical :: fBenchSw
 
     use m_types
     use m_jPConstants, only : iu, tpi!, pi, tpi, fpi, Tmatrix
-    use m_ylm
+    use m_ylm_old
     use mod_juPhonUtils, only : fopen, fclose
 !
     implicit none

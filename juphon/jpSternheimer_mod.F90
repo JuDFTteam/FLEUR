@@ -2928,7 +2928,8 @@ module m_jpSternheimer
   subroutine checkjuPhDens1(atomsT, cellT, ngdp, fIR, fMufT, qpt, gdp, noPts2chCont, logFileUnit)
 
       use m_types
-      use m_ylm
+      use m_ylm_old
+      USE m_sphpts
 
       implicit none
 
@@ -3135,5 +3136,42 @@ module m_jpSternheimer
         end do
       end do
     end subroutine checkjuPhDens1
+
+    subroutine fitchkNeg(f1, f2, n, av, rms, dmx)
+
+      implicit none
+
+      integer, intent(in) :: n
+
+      real,    intent(in) :: f1(n)
+      real,    intent(in) :: f2(n)
+
+      real,    intent(out) :: av
+      real,    intent(out) :: dmx
+      real,    intent(out) :: rms
+
+
+      real                 :: d
+      integer              :: i
+
+      av = 0.
+      rms = 0.
+      dmx = 0.
+      do i = 1,n
+         av = av + abs(f1(i))
+         d = (f1(i)-f2(i))**2
+         dmx = max(d,dmx)
+         rms = rms + d
+      end do
+      av = av/n
+      if (abs(av).LT.1.e-30) then
+         rms = 0.
+         dmx = 0.
+         return
+      end if
+      rms = sqrt(rms/n)/av*100.
+      dmx = sqrt(dmx)/av*100.
+
+    end subroutine fitchkNeg
 
 end module m_jpSternheimer

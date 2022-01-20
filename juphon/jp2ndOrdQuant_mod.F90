@@ -269,6 +269,7 @@ module m_jp2ndOrdQuant
   subroutine CalcIIEnerg2(atoms, cell, qpts, stars, input, iqpt, ngdp, gdp, E2ndOrdII)
 
     use m_sphbes
+    USE m_jpSternheimer, only : genpertpotdensgvecs
 
     implicit none
 
@@ -431,6 +432,7 @@ module m_jp2ndOrdQuant
 
     use m_gaunt, only : gaunt1
     use m_sphbes
+    use m_jpGrVeff0, only : Phasy1nSym
 
     implicit none
 
@@ -744,7 +746,7 @@ module m_jp2ndOrdQuant
   ! Deprecated
   subroutine phasy1lp2nSym(atomsT, cellT, Gvec, qptn, pylm)
 
-    use m_ylm
+    use m_ylm_old
     use m_types
 
     implicit none

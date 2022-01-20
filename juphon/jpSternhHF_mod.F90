@@ -121,6 +121,7 @@ module m_jpSternhHF
       integer                                    :: nfft(3)
 
       ! For BLAS
+#include"cpp_double.h"
       complex                                       CPP_BLAS_cdotc
       external                                      CPP_BLAS_cdotc
 

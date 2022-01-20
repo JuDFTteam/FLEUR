@@ -1395,7 +1395,7 @@ end subroutine CalcQlmHarSurf
 subroutine CalcQlmHarSurfIR( atoms, cell, ngdp, iDtype, iDatom, gdp, rho0IRpw, qlmHartSurfIR )
 
   use m_types, only : t_atoms, t_cell
-  use m_ylm, only : ylm4
+  use m_ylm_old, only : ylm4
   use m_sphbes, only : sphbes
   use m_gaunt, only : Gaunt1
 
@@ -1533,7 +1533,7 @@ end subroutine CalcQlmHarSurMT
 
 subroutine phasy1nSym(atoms, cell, Gvec, qptn, pylm)
 
-  use m_ylm
+  use m_ylm_old
   use m_types
 
   implicit none

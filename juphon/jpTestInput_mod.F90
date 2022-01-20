@@ -607,7 +607,7 @@ module m_jpTestInput
 
     use m_cotra
     use m_starf
-    use m_ylm
+    use m_ylm_old
     use mod_juPhonUtils
     use m_types
 
@@ -799,7 +799,7 @@ module m_jpTestInput
     use m_types, only : t_noco, t_atoms, t_cell, t_kpts, t_sym, t_dimension, t_usdus
     use m_abcof
     use m_cotra
-    use m_ylm
+    use m_ylm_old
     use m_od_types, only: od_inp, od_sym
     use m_juDFT_time, only : TimeStart, TimeNOstopNO
 

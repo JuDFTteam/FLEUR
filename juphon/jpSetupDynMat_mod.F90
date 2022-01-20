@@ -2544,7 +2544,7 @@ module m_jpSetupDynMat
 
     use m_abcof3
     use m_types
-    use m_jp2ndOrdQuant, only : outerProduct, outerProductME
+    !use m_jp2ndOrdQuant, only : outerProduct, outerProductME
     use m_juDFT_stop, only : juDFT_error
 
     implicit none
@@ -4220,6 +4220,7 @@ module m_jpSetupDynMat
       complex                       :: vThetaZ(SIZE(z1Bra(:)))
       complex                       :: thetaZ(SIZE(z1Bra(:)))
       complex                       :: thetaZ2(SIZE(z1Bra(:)))
+#include"cpp_double.h"
       complex  CPP_BLAS_cdotc
       external CPP_BLAS_cdotc
 
@@ -4696,7 +4697,7 @@ module m_jpSetupDynMat
   subroutine CalcSurfIntIRDynMat( atoms, cell, ngdp1, ngdp2, gdp1, gdp2, rho0IRpw, grVext0IR, qpoint, surfInt )
 
     use m_types
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
 
     implicit none
@@ -4850,5 +4851,40 @@ module m_jpSetupDynMat
     end do ! itype
 
   end subroutine CalcSurfIntMTDynMat
+
+  function outerProduct(a, b)
+
+    implicit none
+
+    real, intent(in) :: a(:)
+    real, intent(in) :: b(:)
+
+    real             :: outerProduct(size(a), size(b))
+
+    outerProduct(:, :) = spread(a, dim=2, ncopies=size(b)) * spread(b, dim=1, ncopies=size(a))
+
+  end function outerProduct
+
+  function outerProductME(a, b, i, j)
+
+    use m_juDFT_stop, only : juDFT_error
+
+    implicit none
+
+    complex,    intent(in)  :: a(:)
+    complex,    intent(in)  :: b(:)
+    integer,    intent(in)  :: i
+    integer,    intent(in)  :: j
+
+    complex                 :: outerProductME
+
+    if (i > size(a) .or. j > size(b)) then
+      call juDFT_error( 'Wished matrix element is out of scope of outer product matrix.', calledby='outerProductME', &
+        & hint='Choose smaller indices.')
+    end if
+
+    outerProductME = a(i) * b(j)
+
+  end function outerProductME
 
 end module m_jpSetupDynMat

@@ -744,7 +744,7 @@ module jpTest1stVarDens
     use m_types, only : t_noco, t_atoms, t_cell, t_kpts, t_sym, t_dimension, t_usdus
     use m_abcof
     use m_cotra
-    use m_ylm
+    use m_ylm_old
     use m_od_types, only: od_inp, od_sym
     use m_juDFT_time, only : TimeStart, TimeNOstopNO
 
@@ -1437,7 +1437,7 @@ module jpTest1stVarDens
     use m_types
     use m_jPConstants, only : iu, pi, tpi, fpi, Tmatrix
     use m_gaunt
-    use m_ylm
+    use m_ylm_old
     use m_cotra
     use m_juDFT_NOstopNO
     use mod_juPhonUtils, only : fopen, fclose, calcGrFinLH
@@ -1985,7 +1985,7 @@ subroutine checkjuPhDens1(atomsT, cellT, ngdp, fIR, fMufT, qpt, gdp, noPts2chCon
 
     use m_types
     use m_cotra
-    use m_ylm
+    use m_ylm_old
     use mod_juPhonUtils
     use m_jPConstants
     implicit none

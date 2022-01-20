@@ -467,7 +467,7 @@ CONTAINS
             ! Those restrictions will gradually be lifted.
 
             IF (fi%juPhon%l_dfpt) THEN
-                CALL dfpt(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, &
+                CALL dfpt(fi%juPhon, fi%sym, fi%oneD, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, &
                         & fi%kpts, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig)
             END IF
 

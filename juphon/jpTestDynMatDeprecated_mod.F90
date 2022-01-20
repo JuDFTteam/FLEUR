@@ -130,7 +130,7 @@ module m_jpTestDynMatDeprecated
     use m_abcof3
     use m_jpConstants, only : iu, fpi
     use m_jpPotDensHelper, only : grFlmpYlmPerType
-    use m_ylm
+    use m_ylm_old
     use mod_juPhonUtils, only : Derivative
 
     implicit none
@@ -912,7 +912,7 @@ module m_jpTestDynMatDeprecated
 
     use m_types
     use m_jPConstants, only : iu, tpi, fpi, c_im
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
 
     implicit none
@@ -7098,7 +7098,7 @@ end if
    use m_jp2ndOrdQuant, only : GenPsDens2ndOrd
    use m_jpConstants, only : fpi, iu, tpi
    use m_sphbes
-   use m_ylm
+   use m_ylm_old
 
    implicit none
 

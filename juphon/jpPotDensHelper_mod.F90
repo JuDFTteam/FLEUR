@@ -484,7 +484,7 @@ module m_jpPotDensHelper
   subroutine rotate_clnu(latharT, symT, atomsT, d_wgn, clnu_atom, memd_atom, nmem_atom, mlh_atom)
 
     use m_JPConstants
-    use m_ylm
+    use m_ylm_old
     use m_types
     use m_juDFT
 
@@ -934,7 +934,7 @@ module m_jpPotDensHelper
 
     use m_gaussp
     use m_types, only : t_atoms, t_dimension, t_sphhar
-    use m_ylm
+    use m_ylm_old
 
     implicit none
 
@@ -1455,7 +1455,7 @@ module m_jpPotDensHelper
   subroutine phasy1nSym(atoms, cell, Gvec, qptn, pylm)
 
     use m_jPConstants, only : tpi, fpi, iu
-    use m_ylm
+    use m_ylm_old
     use m_types
     use m_cotra
 
@@ -1613,7 +1613,7 @@ module m_jpPotDensHelper
 
     use m_types, only : t_atoms, t_cell
     use m_jPConstants, only : fpi, c_im, iu, tpi
-    use m_ylm, only : ylm4
+    use m_ylm_old, only : ylm4
     use m_sphbes, only : sphbes
     use m_gaunt, only : Gaunt1
 

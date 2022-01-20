@@ -3173,7 +3173,7 @@ integer :: ii
     use m_jpPotDensHelper, only : convertStar2G
     use m_jpConstants, only : iu, fpi, tpi
     use m_types
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
 
     implicit none
@@ -3297,7 +3297,7 @@ integer :: ii
     use m_types
     use m_jpConstants, only : iu, fpi, tpi, c_im
     use m_sphbes
-    use m_ylm
+    use m_ylm_old
     use mod_juPhonUtils, only : fopen, fclose
     use m_jpPotDensHelper, only : convertStar2G
 
@@ -4961,7 +4961,7 @@ integer :: ii
 #include "recycledRoutines/cpp_double.h"
 
     use m_types
-    use m_ylm
+    use m_ylm_old
     use m_sphbes
     use m_JPConstants, only : iu, fpi, tpi, c_im
 

@@ -391,7 +391,7 @@ subroutine checkjuPhPots1(noPts2chCont, atomsT, ngdp, gdp, cellT, sphharT, symT,
 
     use m_types
     use m_cotra
-    use m_ylm
+    use m_ylm_old
     use mod_juPhonUtils
     use m_jPConstants
     implicit none
@@ -604,7 +604,7 @@ subroutine checkjuPhPots(noPts2chCont, atomsT, ngdp, gdp, cellT, sphharT, symT, 
 
     use m_types
     use m_cotra
-    use m_ylm
+    use m_ylm_old
     use mod_juPhonUtils
     use m_jPConstants
     implicit none
@@ -841,7 +841,7 @@ subroutine checkjuPhPots(noPts2chCont, atomsT, ngdp, gdp, cellT, sphharT, symT, 
     use m_types
     use m_jPConstants, only : iu, pi, tpi, fpi, Tmatrix
     use m_gaunt
-    use m_ylm
+    use m_ylm_old
     use m_cotra
     use m_jpPotDensHelper
     use m_juDFT_NOstopNO
@@ -1387,7 +1387,7 @@ logical :: fBenchAvailSw
     use m_types
     use m_jPConstants, only : iu, pi, tpi, fpi, Tmatrix
     use m_gaunt
-    use m_ylm
+    use m_ylm_old
     use m_cotra
     use m_jpPotDensHelper
     use m_juDFT_NOstopNO

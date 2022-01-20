@@ -20,7 +20,7 @@ CONTAINS
                        & grRho0, vTot0, grVTot0, ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                        & uuilonout, duilonout, ulouilopnout, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                        & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc, tdHS0, loosetdout)
+                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc, tdHS0, loosetdout, nocc)
 
         USE m_jpGrVeff0, ONLY : GenGrVeff0
 
@@ -81,6 +81,7 @@ CONTAINS
         complex,           allocatable, intent(out) :: grVeff0MT_DMhxc(:, :, :, :)
         type(t_tlmplm),                 intent(out) :: tdHS0
         COMPLEX, ALLOCATABLE,           INTENT(OUT) :: loosetdout(:, :, :, :)
+        INTEGER, ALLOCATABLE,           INTENT(OUT) :: nocc(:, :)
 
         TYPE(t_lapw) :: lapw
         TYPE(t_mat)  :: zMat
@@ -92,7 +93,7 @@ CONTAINS
         LOGICAL      :: l_real, addG, harSw, extSw, xcSw, testGoldstein, grRhoTermSw
         REAL         :: bkpt(3), wronk
 
-        INTEGER, ALLOCATABLE :: GbasVec_temp(:, :), ev_list(:), nocc(:, :)
+        INTEGER, ALLOCATABLE :: GbasVec_temp(:, :), ev_list(:)
         REAL,    ALLOCATABLE :: we(:), eig(:)
         REAL,    ALLOCATABLE :: f(:, :, :)
         REAL,    ALLOCATABLE :: g(:, :, :)
@@ -1066,7 +1067,7 @@ CONTAINS
     subroutine calcMTdVxcKern(atoms, sphhar, sym, rho0MT, nmem_atom, clnu_atom, mlh_atom, gWghts, ylm, dKernMTGPts)
 
       use m_gaussp
-      use m_ylm
+      use m_ylm_old
 
       ! Type parameters
       type(t_atoms),                  intent(in)  :: atoms
