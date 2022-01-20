@@ -152,7 +152,9 @@
    </xsd:simpleType>
 
    <xsd:complexType name="BulkLatticeType">
-      <xsd:element name="bravaisMatrix" type="Matrix3Type"/>
+      <xsd:sequence>
+         <xsd:element name="bravaisMatrix" type="Matrix3Type"/>
+      </xsd:sequence>
       <xsd:attribute name="scale" type="FleurDouble" use="required"/>
    </xsd:complexType>
 

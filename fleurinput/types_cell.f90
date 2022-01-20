@@ -155,7 +155,7 @@ CONTAINS
        this%amat(1,1)=10.0
        this%amat(2,2)=10.0
        this%amat(3,3)=10.0
-     elseif (xml%getNumberOfNodes(trim(path)//'/bravaisMatrixFilm')) THEN
+     elseif (xml%getNumberOfNodes(trim(path)//'/bravaisMatrixFilm')==1) THEN
       if (dvac==0) call judft_error("A film-mode Bravais Matrix can only be given for dvac>0 (filmLattice must be given)")
       this%amat=0.0
       path=trim(path)//'/bravaisMatrixFilm'
