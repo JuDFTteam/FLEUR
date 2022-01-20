@@ -18,7 +18,7 @@ MODULE m_vdWfleur_grimme
 
     CONTAINS
     SUBROUTINE vdW_fleur_grimme(atoms,sym,cell,film,e_vdW,f_vdW)
-        USE m_constants,only:oUnit
+        USE m_constants,only:oUnit,tpi_const
         USE m_types,only: t_atoms,t_cell,t_sym,t_xcpot
         USE DFT_D2,  ONLY: driver_DFT_D2
         USE DFT_D3,  ONLY: driver_DFT_D3
@@ -36,7 +36,7 @@ MODULE m_vdWfleur_grimme
         INTEGER,SAVE:: irep(3)=0 !will be determined at first call and reused later
         REAL :: start,finish,toler,delta
         REAL :: test(3,8),brmin(3),brmax(3),force_i(3),f_rot(3)
-        LOGICAL l_D2,l_in_au,l_exist
+        LOGICAL l_D2,l_in_au
         TYPE(atom_data) :: atom,atom_new
         REAL, ALLOCATABLE :: ener(:),force_vdW(:,:),force_max(:,:)
         
@@ -62,7 +62,7 @@ MODULE m_vdWfleur_grimme
             DO i2 = 1,atoms%neq(i1)
                 na = na + 1
                 atom%atomic_number(na) = NINT(atoms%zatom(i1))
-                atom%coord_bravais(:,na)=matmul(cell%bmat,atoms%pos(:,na))
+                atom%coord_bravais(:,na)=matmul(cell%atoms%pos(:,na))/tpi_const
                 atom%coord_cart(:,na)= atoms%pos(:,na)
             ENDDO
         ENDDO
@@ -126,7 +126,6 @@ MODULE m_vdWfleur_grimme
         WRITE (oUnit,*) 'vdW did not converge with cell size!'
         e_vdW = 0.0
     ELSE
-        CALL cpu_time(finish)
         WRITE (oUnit,'(a13,3i5,a4,f12.3,a5)') 'vdW converged',irep(:)
         e_vdW = ener(nsize)/27.21138386
         WRITE ( oUnit,8060) e_vdW
@@ -142,7 +141,7 @@ MODULE m_vdWfleur_grimme
         DO i2 = 1,atoms%neq(i1)   ! here symmetrization should be done
             na = na + 1
             iop = sym%ngopr(na) ! invtab(ngopr(na))
-            force_i=matmul(cell%bmat,force_vdW(:,na))
+            force_i=matmul(cell%bmat,force_vdW(:,na))/tpi_const
             f_rot=f_rot+matmul(real(sym%mrot(:,:,iop)),force_i)
         ENDDO
         f_vdW(:,i1)=matmul(cell%amat,f_rot)/atoms%neq(i1)
