@@ -204,7 +204,7 @@ CONTAINS
                 !    nkvec(lo,:) = 0
                 !END DO
 
-                ev_list = cdnvaljob%compact_ev_list(nk, l_empty = .TRUE.)
+                ev_list = cdnvaljob%compact_ev_list(nk, l_empty = .FALSE.)
                 nocc(ik, iSpin) = cdnvaljob%noccbd(nk)
                 we  = cdnvalJob%weights(ev_list, nk)
                 eig = results%eig(ev_list, nk, iSpin)
