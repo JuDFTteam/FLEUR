@@ -136,6 +136,14 @@ MODULE m_hubbard1_setup
                   ENDDO
                ENDIF
 
+               !For the first iteration we just consider the diagonal elements of the density matrix
+               mmpMat(:,:,i_hia,:) = cmplx_0
+               do ispin = 1, input%jspins
+                  do m = -l, l
+                     mmpMat(m,m,i_hia,ispin) = occDFT(i_hia,ispin)/real(2*l+1)
+                  enddo
+               enddo
+
                DO i_exc = 1, hub1inp%n_exc(i_hia)
                   IF(hub1inp%init_mom(i_hia,i_exc) > -9e98) THEN
                      hub1data%mag_mom(i_hia,i_exc) = hub1inp%init_mom(i_hia,i_exc)
