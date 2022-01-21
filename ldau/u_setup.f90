@@ -58,7 +58,8 @@ MODULE m_usetup
             CALL dftUPotential(n_mmp(:,:,i_u,:), atoms%lda_u(i_u), input%jspins,&
                                atoms%neq(atoms%lda_u(i_u)%atomType),&
                                any(noco%l_unrestrictMT).OR.input%ldauSpinoffd, &
-                               pot%mmpMat(:,:,i_u,:), results%e_ldau)
+                               pot%mmpMat(:,:,i_u,:), results%e_ldau,
+                               spinavg_dc=hub1data%l_performSpinavg.and.i_u>atoms%n_u)
          ENDDO
 
          IF (mpi%irank.EQ.0) THEN

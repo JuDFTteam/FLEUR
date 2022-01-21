@@ -11,7 +11,7 @@ MODULE m_dftUPotential
 
    CONTAINS
 
-   SUBROUTINE dftUPotential(density, ldau, jspins, equivalentAtoms, l_spinoffd, potential, ldaUEnergy)
+   SUBROUTINE dftUPotential(density, ldau, jspins, equivalentAtoms, l_spinoffd, potential, ldaUEnergy, spinavg_dc)
 
       !This subroutine calculates the DFT+U potential matrix
 
@@ -22,10 +22,16 @@ MODULE m_dftUPotential
       LOGICAL,          INTENT(IN)     :: l_spinoffd
       COMPLEX,          INTENT(INOUT)  :: potential(-lmaxU_const:,-lmaxU_const:,:)
       REAL,             INTENT(INOUT)  :: ldaUEnergy
+      LOGICAL, OPTIONAL,INTENT(IN)     :: sphavg_dc
 
+
+      LOGICAL :: sphavg_dc_local
       INTEGER :: m,ispin,jspin
       REAL    :: u_htr,j_htr,f0,f2,f4,f6,energy_contribution,total_charge, double_counting
       COMPLEX, ALLOCATABLE :: Vdc(:,:,:)
+
+      spinavg_dc_local = .false.
+      if(present(sphavg_dc)) spinavg_dc_local = sphavg_dc .and. input%jspins==2
 
       call coulombPotential(density, ldau, jspins, l_spinoffd, potential, energy_contribution)
 
@@ -41,11 +47,11 @@ MODULE m_dftUPotential
 
       !Add double counting terms
       Vdc = doubleCountingPot(density, ldau, u_htr, j_htr, l_spinoffd,&
-                              .FALSE.,.FALSE.,0.0)
+                              .FALSE.,spinavg_dc_local,0.0)
       potential = potential - Vdc
 
       double_counting = doubleCountingEnergy(density, ldau, u_htr, j_htr, l_spinoffd,&
-                                             .FALSE.,.FALSE.,0.0)
+                                             .FALSE.,spinavg_dc_local,0.0)
 
       if(ldau%l_amf) then
          energy_contribution = double_counting
