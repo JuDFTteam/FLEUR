@@ -31,7 +31,7 @@ MODULE m_dftUPotential
       COMPLEX, ALLOCATABLE :: Vdc(:,:,:)
 
       spinavg_dc_local = .false.
-      if(present(sphavg_dc)) spinavg_dc_local = sphavg_dc .and. jspins==2
+      if(present(spinavg_dc)) spinavg_dc_local = spinavg_dc .and. jspins==2
 
       call coulombPotential(density, ldau, jspins, l_spinoffd, potential, energy_contribution)
 
