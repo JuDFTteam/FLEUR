@@ -25,7 +25,7 @@ MODULE m_dftUPotential
       LOGICAL, OPTIONAL,INTENT(IN)     :: spinavg_dc
 
 
-      LOGICAL :: sphavg_dc_local
+      LOGICAL :: spinavg_dc_local
       INTEGER :: m,ispin,jspin
       REAL    :: u_htr,j_htr,f0,f2,f4,f6,energy_contribution,total_charge, double_counting
       COMPLEX, ALLOCATABLE :: Vdc(:,:,:)
