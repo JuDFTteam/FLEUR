@@ -416,10 +416,12 @@ module m_jpIOnMixing
     end do ! iG
 
     read(1000) jmtd_proof, lm_proof, nat_proof, dir_proof
+    write(109,*) jmtd_proof, lm_proof, nat_proof, dir_proof
+    write(109,*) atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3
     if ( ( jmtd_proof /= atoms%jmtd ) .or. ( lm_proof /= (atoms%lmaxd + 1)**2 ) .or. (nat_proof /= atoms%nat) .or.                  &
       & (dir_proof /= 3) )then
-      call juDFT_error( 'Density file JPcdn1 inconsistent', calledby='loadDensity', hint='Dimensions of the linear MT density       &
-        & variation are not correct' )
+      call juDFT_error( 'Density file JPcdn1 inconsistent', calledby='loadDensity', &
+                 & hint='Dimensions of the linear MT density variation are not correct' )
     end if
     iatom = 0
     do itype = 1, atoms%ntype
