@@ -559,14 +559,14 @@ END SUBROUTINE intgr3_modern
        REAL,    INTENT (IN) :: y(jri)
        REAL,    INTENT (OUT):: z
 
-       INTEGER m,n0,nsteps
+       INTEGER m, n0, nsteps, i, j
        REAL tiny, yr(nr), h1, z1, ih1(nr)
        real x1, x2, y1, y2, n
 
-        z = zero
+        z = 0.0
 
         z = 0.5 * r(i1) * y(i1)
-        IF (i1 /= 1) CALL juDFT_error("intgr3LinIntp buggy for interpolations that do not start at mesh point 1.",calledby="intgr3LinIntp")
+        IF (i1.NE.1) CALL juDFT_error("intgr3LinIntp buggy for interpolations that do not start at mesh point 1.",calledby="intgr3LinIntp")
 
         nsteps = (jri-1)/nr1
         n0 = jri - nr1*nsteps
@@ -578,7 +578,7 @@ END SUBROUTINE intgr3_modern
             z1 = 0.
             DO j = 1, n0 - 1
                z1 = z1 + CPP_BLAS_sdot(7,a(1,j),1,yr,1)
-            ENDDO
+            END DO
             z = z + z1 * h / 60480.
          END IF
 
