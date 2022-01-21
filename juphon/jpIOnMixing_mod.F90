@@ -346,7 +346,7 @@ module m_jpIOnMixing
       write(1000) rho1IR(iG)
     end do ! iG
 
-    write(1009) atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3
+    write(1000) atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
