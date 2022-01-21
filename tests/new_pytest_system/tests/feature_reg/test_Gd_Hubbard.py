@@ -21,7 +21,7 @@ def test_Gd_Hubbard1(execute_fleur, grep_number, grep_exists):
 
     xisoc = grep_number(res_files['Hubbard1/hloc.cfg'], "xiSOC", "xiSOC")
 
-    mumatch = grep_number(res_files['out'], "muMatch =", ":")
+    mumatch = grep_number(res_files['out'], "muMatch =", "=")
     nmmp_occ = grep_number(res_files['out'], "nmmp occupation distance:", ":")
     nmmp_el = grep_number(res_files['out'], "nmmp element distance:", ":")   
     tenergy = grep_number(res_files['out'], "total energy=", "=")
