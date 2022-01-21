@@ -1871,7 +1871,7 @@ module m_jpSetupDynMat
 
     use m_types, only : t_atoms
     !use m_intgr, only : intgr3NoIntp
-    use m_intgr, only : intgr3!LinIntp ! TODO: Is this ok?
+    use m_intgr, only : intgr3LinIntp
     !use m_intgr, only : intgr3
 
     implicit none
@@ -1965,7 +1965,7 @@ module m_jpSetupDynMat
                         & ( grVarphiCh1(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * grVarphiCh1(imesh, ichan, lmp, mqn_m2PrC) &
                         & + grVarphiCh2(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * grVarphiCh2(imesh, ichan, lmp, mqn_m2PrC) )
                       end do ! imesh
-                      call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
+                      call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
                       !call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
 !
                       grVarphiGrtVarphi(lmp1Pr, lmp, mqn_m2prR, mqn_m2prC, itype) = &
@@ -1982,8 +1982,8 @@ module m_jpSetupDynMat
                         &   (grVarPhiCh1(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * vEff0NsphGrVarphi(1, imesh, lm3Pr, lmp, mqn_m2PrC) &
                         &  + grVarPhiCh2(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * vEff0NsphGrVarphi(2, imesh, lm3Pr, lmp, mqn_m2PrC) ) )
                     end do ! imesh
-                    call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
-                    call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI )! TODO: Is this ok?
+                    call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
+                    call intgr3LinIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI, 1)
                     ! < grVarphi | Veff0nsph | grVarphi >
                     grVarphiVeff0NsphGrvarphi(lmp1Pr, lmp) = grVarphiVeff0NsphGrvarphi(lmp1Pr, lmp) + cmplx(integralR, integralI)
 
@@ -1998,8 +1998,8 @@ module m_jpSetupDynMat
                         &   (grVarPhiCh1(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * r2grVeff0SphVarphi(1, imesh, lm3Pr, lmp, mqn_m2PrC + 2) &
                         &  + grVarPhiCh2(imesh, ichanPr, lmp1Pr, mqn_m2PrR) * r2grVeff0SphVarphi(2, imesh, lm3Pr, lmp, mqn_m2PrC + 2) ) )
                     end do ! imesh
-                    call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
-                    call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)! TODO: Is this ok?
+                    call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
+                    call intgr3LinIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI,1 )
                     ! < grVarphi| grTveff0Sph |varphi >
                     ! idir = mqn_m2PrC + 2 due to performance reasons
                     grVarphiGrtVeff0SphVarphi(lmp1Pr, lmp, mqn_m2PrR, mqn_m2PrC + 2, iatom) = &
@@ -2035,7 +2035,7 @@ module m_jpSetupDynMat
 
     use m_types, only : t_atoms
 !    use m_intgr, only : intgr3NoIntp
-    use m_intgr, only : intgr3!LinIntp! TODO: Is this ok?
+    use m_intgr, only : intgr3LinIntp
 !    use m_intgr, only : intgr3
 
     implicit none
@@ -2122,7 +2122,7 @@ module m_jpSetupDynMat
                     & + grVarPhiCh2(imesh, ichan, lmp1Pr, mqn_m2Pr) * varphi2(imesh, iradf, oqn_l) )
                 end do ! imesh
                 !call intgr3NoIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
-                call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
+                call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
                 !call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
                 ! < grVarphi | varphi >
                 grVarphiVarphi(lmp1Pr, lmp, mqn_m2Pr) = grVarphiVarphi(lmp1Pr, lmp, mqn_m2Pr) + integralR
@@ -2153,9 +2153,9 @@ module m_jpSetupDynMat
                         &  + grVarPhiCh2(imesh, ichan, lmp1Pr, mqn_m2Pr) * hVarphi(2, imesh, lm3Pr, lmp) ) )
                     end do ! imesh
             !        call intgr3NoIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
-                call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)! TODO: Is this ok?
+                call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1)
             !        call intgr3NoIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)
-                call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)! TODO: Is this ok?
+                call intgr3LinIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI, 1 )
                     ! < grVarphi| H |varphi >
                     grVarphiHvarphi(lmp1Pr, lmp, mqn_m2Pr) = grVarphiHvarphi(lmp1Pr, lmp, mqn_m2Pr) &
                       & + cmplx(integralR, integralI)
@@ -2174,7 +2174,7 @@ module m_jpSetupDynMat
 
     use m_types, only : t_atoms, t_usdus
  !   use m_intgr, only : intgr3NoIntp
-    use m_intgr, only : intgr3!LinIntp! TODO: Is this ok?
+    use m_intgr, only : intgr3LinIntp
  !   use m_intgr, only : intgr3
 
     implicit none
@@ -2248,7 +2248,7 @@ module m_jpSetupDynMat
               intgrdR(imesh) = r2(imesh) * (varphi1(imesh, iradf1Pr, oqn_l) * varphi1(imesh, iradf, oqn_l) &
                 & + varphi2(imesh, iradf1Pr, oqn_l) * varphi2(imesh, iradf, oqn_l))
             end do ! imesh
-            call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR )! TODO: Is this ok?
+            call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1 )
             varphiVarphi(lmp + iradf1Pr, lmp + iradf, itype) = integralR
           end do ! iradf1Pr
         end do ! iradf
@@ -2276,8 +2276,8 @@ module m_jpSetupDynMat
 !                call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)
 !                call intgr3NoIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR)
 !                call intgr3NoIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI)
-                call intgr3(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR )! TODO: Is this ok?
-                call intgr3(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI )! TODO: Is this ok?
+                call intgr3LinIntp(intgrdR(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralR, 1 )
+                call intgr3LinIntp(intgrdI(:), atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralI, 1 )
                 varphiHvarphi(lmp1Pr, lmp, iatom) = cmplx(integralR, integralI)
 
                 !!!For symmetrized kinetic energy:
@@ -4649,7 +4649,7 @@ module m_jpSetupDynMat
 
     use m_types
     !use m_intgr, only : intgr3
-    use m_intgr, only : intgr3!LinIntp! TODO: Is this ok?
+    use m_intgr, only : intgr3LinIntp
 
     implicit none
 
@@ -4687,8 +4687,8 @@ module m_jpSetupDynMat
     end do ! imesh
     !call intgr3(intgrdR, atoms%rmsh(1,itype), atoms%dx(itype), atoms%jri(itype), integralReal)
     !call intgr3(intgrdI, atoms%rmsh(1,itype), atoms%dx(itype), atoms%jri(itype), integralImag)
-    call intgr3( intgrdR, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralReal )! TODO: Is this ok?
-    call intgr3( intgrdI, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralImag )! TODO: Is this ok?
+    call intgr3LinIntp( intgrdR, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralReal, 1 )
+    call intgr3LinIntp( intgrdI, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), integralImag, 1 )
 
     integral = integral + cmplx( integralReal, integralImag )
 

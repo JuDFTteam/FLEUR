@@ -674,7 +674,7 @@ module m_jpVeff1
   !--------------------------------------------------------------------------------------------------------------------------------------
   subroutine mpMom1Hart(atoms, iDatom, iDtype, rho1MT, grRho0MT, qlmo1Hartr)
 
-    use m_intgr, only : intgr3!LinIntp ! TODO: Is this ok?
+    use m_intgr, only : intgr3LinIntp
     use m_types, only : t_atoms
 
     implicit none
@@ -768,8 +768,8 @@ module m_jpVeff1
                 fReal(imesh) = (atoms%rmsh(imesh, itype)**(oqn_l + 2)) * real(rho1MTfull(imesh, lm, iatom, idir))
                 fImag(imesh) = (atoms%rmsh(imesh, itype)**(oqn_l + 2)) * aimag(rho1MTfull(imesh, lm, iatom, idir))
               enddo ! imesh
-              call intgr3(fReal, atoms%rmsh(:, itype), atoms%dx(itype), atoms%jri(itype), fintReal) ! TODO: Is this ok?
-              call intgr3(fImag, atoms%rmsh(:, itype), atoms%dx(itype), atoms%jri(itype), fintImag) ! TODO: Is this ok?
+              call intgr3LinIntp(fReal, atoms%rmsh(:, itype), atoms%dx(itype), atoms%jri(itype), fintReal, 1)
+              call intgr3LinIntp(fImag, atoms%rmsh(:, itype), atoms%dx(itype), atoms%jri(itype), fintImag, 1)
               qlmo1Hartr(lm, iatom, idir) = cmplx(fintReal, fintImag)
             enddo ! mqn_m
           enddo ! oqn_l
@@ -1312,7 +1312,7 @@ module m_jpVeff1
    subroutine vmtsNsym(atoms, cell,  ngpqdp, idirec, iatom, itype, iDatom, vExtFull, gpqdp, qpoint,  vpw, rho, vr, harSw, extSw, vHarNum, linIntp)
 
       use m_types
-      use m_intgr, only : intgr2, intgr2!LinIntp  ! TODO: Is this ok?
+      use m_intgr, only : intgr2, intgr2LinIntp
       use m_sphbes
       use m_jpGrVeff0, only : phasy1nSym
 
@@ -1480,10 +1480,10 @@ module m_jpVeff1
               x2rImag(imesh) = rrl1(imesh) * aimag(rho(imesh, lm, iatom, idirec)) * atoms%rmsh(imesh, itype) * atoms%rmsh(imesh, itype)
              enddo
              if (linIntp) then
-               call intgr2(x1rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rReal) ! TODO: Is this ok?
-               call intgr2(x2rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rReal) ! TODO: Is this ok?
-               call intgr2(x1rImag, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rImag) ! TODO: Is this ok?
-               call intgr2(x2rImag, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rImag) ! TODO: Is this ok?
+               call intgr2LinIntp(x1rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rReal)
+               call intgr2LinIntp(x2rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rReal)
+               call intgr2LinIntp(x1rImag, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rImag)
+               call intgr2LinIntp(x2rImag, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rImag)
              else
                call intgr2(x1rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f1rReal)
                call intgr2(x2rReal, atoms%rmsh(1, itype), atoms%dx(itype), atoms%jri(itype), f2rReal)

@@ -352,7 +352,7 @@ module m_jpSternhHF
       & ulouilopn, ilo2p, nlo_atom )
 
 !    use m_intgr, only : intgr3
-    use m_intgr, only : intgr3!LinIntp !TODO: Is this ok?
+    use m_intgr, only : intgr3LinIntp
     use m_gaunt, only : gaunt1
     use m_types, only : t_atoms, t_sphhar, t_enpara, t_usdus, t_input, t_tlmplm
     use m_juDFT_stop, only : juDFT_error
@@ -528,8 +528,8 @@ module m_jpSternhHF
                     xReal(i) =  tempRbas * real(vr(i,lm,idir,na))
                     xImag(i) =  tempRbas * aimag(vr(i,lm,idir,na))
                   end do ! i
-                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) !TODO: Is this ok?
-                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) !TODO: Is this ok?
+                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
+                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
                   uvu(lpl,lm) = cmplx(tempReal, tempImag)
 
                   ! Calculate the integral <uDot|V|u>
@@ -538,8 +538,8 @@ module m_jpSternhHF
                     xReal(i) = tempRbas * real(vr(i,lm,idir,na))
                     xImag(i) = tempRbas * aimag(vr(i,lm,idir,na))
                   end do ! i
-                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) !TODO: Is this ok?
-                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) !TODO: Is this ok?
+                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
+                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
                   dvu(lpl,lm) = cmplx(tempReal, tempImag) ! changed
 
                   ! Calculate the integral <u|V|uDot>
@@ -548,8 +548,8 @@ module m_jpSternhHF
                     xReal(i) = tempRbas * real(vr(i, lm, idir,na))
                     xImag(i) = tempRbas * aimag(vr(i, lm, idir,na))
                   end do ! i
-                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) !TODO: Is this ok?
-                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) !TODO: Is this ok?
+                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
+                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
                   uvd(lpl,lm) = cmplx(tempReal, tempImag)
 
                   ! Calculte the integral <uDot|V|uDot>
@@ -558,8 +558,8 @@ module m_jpSternhHF
                     xReal(i) = tempRbas * real(vr(i, lm, idir, na))
                     xImag(i) = tempRbas * aimag(vr(i, lm, idir, na))
                   end do ! i
-                  call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) !TODO: Is this ok?
-                  call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) !TODO: Is this ok?
+                  call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
+                  call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
                   dvd(lpl, lm) = cmplx(tempReal, tempImag)
 
                   !if (.FALSE.) then
@@ -703,7 +703,7 @@ module m_jpSternhHF
   !>--------------------------------------------------------------------------------------------------------------------------------
   subroutine tlo4V(atoms, enpara, lathar, usdus, input, tlmplm, jspin, jsp, ntyp, na, vr, rbas1, rbas2, uuilon, duilon, ulouilopn, ilo2p, nlo_atom)
     !use m_intgr, only : intgr3
-    use m_intgr, only : intgr3!LinIntp !TODO: Is this ok?
+    use m_intgr, only : intgr3LinIntp
     use m_gaunt, only : gaunt1
     use m_types
     use m_juDFT_stop, only : juDFT_error
@@ -776,15 +776,15 @@ module m_jpSternhHF
                    xReal(i) = (rbas1(i,1,lp,ntyp,1)*rbas1(i, ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+ rbas2(i, 1, lp, ntyp, 1) * rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*real(vr(i,lmpp)) ! changed
                    xImag(i) = (rbas1(i,1,lp,ntyp,1)*rbas1(i, ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+ rbas2(i, 1, lp, ntyp, 1) * rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*aimag(vr(i,lmpp)) ! changed
                 end do
-                call intgr3(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal) ! changed !TODO: Is this ok?
-                call intgr3(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag) ! changed !TODO: Is this ok?
+                call intgr3LinIntp(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal,1) ! changed
+                call intgr3LinIntp(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag,1) ! changed
                 uvulo(lo,lp,lmpp) = cmplx(tempReal, tempImag) ! changed
                 do i = 1,atoms%jri(ntyp)
                    xReal(i) = (rbas1(i,2,lp,ntyp,1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp),ntyp,1)+ rbas2(i,2,lp,ntyp,1)*rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*real(vr(i,lmpp)) ! changed
                    xImag(i) = (rbas1(i,2,lp,ntyp,1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp),ntyp,1)+ rbas2(i,2,lp,ntyp,1)*rbas2(i,ilo2p(lo, ntyp),atoms%llo(lo, ntyp), ntyp, 1))*aimag(vr(i,lmpp)) ! changed
                 end do !changed
-                call intgr3(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal) ! changed !TODO: Is this ok?
-                call intgr3(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag) ! changed !TODO: Is this ok?
+                call intgr3LinIntp(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal,1) ! changed
+                call intgr3LinIntp(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag,1) ! changed
                 dvulo(lo,lp,lmpp) = cmplx(tempReal, tempImag) ! changed
                 end do !changed
              end if
@@ -813,8 +813,8 @@ module m_jpSternhHF
                    xReal(i) = (rbas1(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+rbas2(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas2(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1))*real(vr(i,lmpp)) ! changed
                    xImag(i) = (rbas1(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas1(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1)+rbas2(i,ilo2p(lop, ntyp), atoms%llo(lop, ntyp), ntyp, 1)*rbas2(i,ilo2p(lo, ntyp), atoms%llo(lo, ntyp), ntyp, 1))*aimag(vr(i,lmpp)) ! changed
                 end do ! changed
-                call intgr3(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal) ! changed !TODO: Is this ok?
-                call intgr3(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag) ! changed !TODO: Is this ok?
+                call intgr3LinIntp(xReal,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempReal,1) ! changed
+                call intgr3LinIntp(xImag,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),tempImag,1) ! changed
                 ulovulo(loplo,lmpp) = cmplx(tempReal, tempImag) !changed
                 end do ! changed
              end if
@@ -1249,7 +1249,7 @@ module m_jpSternhHF
 
   subroutine udHu(atoms,El,rbas1,rbas2,vEff0MT,sumVMTs,haa,dhaa)
 
-    use m_intgr, only : intgr3!LinIntp !TODO: Is this ok?
+    use m_intgr, only : intgr3LinIntp
     use m_types, only : t_atoms
 
     implicit none
@@ -1292,8 +1292,8 @@ module m_jpSternhHF
               xReal=real(t1)
               xImag=aimag(t1)
 
-              call intgr3(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal) !TODO: Is this ok?
-              call intgr3(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag) !TODO: Is this ok?
+              call intgr3LinIntp(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal,1)
+              call intgr3LinIntp(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag,1)
 
               haa(1,jo,lp,io,l)=El(1, l, 1, 1)*CMPLX(tempReal,tempImag)*sqrt(fpi_const)
               write(112,*) 1, l, l
@@ -1315,8 +1315,8 @@ module m_jpSternhHF
                 xReal=real(t1)
                 xImag=aimag(t1)
 
-                call intgr3(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal) !TODO: Is this ok?
-                call intgr3(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag) !TODO: Is this ok?
+                call intgr3LinIntp(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal,1)
+                call intgr3LinIntp(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag,1)
 
                 dhaa(lm,jo,lp,io,l)=CMPLX(tempReal,tempImag)
 
@@ -1327,8 +1327,8 @@ module m_jpSternhHF
                   xReal=real(t1)
                   xImag=aimag(t1)
 
-                  call intgr3(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal) !TODO: Is this ok?
-                  call intgr3(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag) !TODO: Is this ok?
+                  call intgr3LinIntp(xReal, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempReal,1)
+                  call intgr3LinIntp(xImag, atoms%rmsh(:,1), atoms%dx(1), atoms%jri(1), tempImag,1)
 
                   haa(lm,jo,lp,io,l)=CMPLX(tempReal,tempImag)
                   haa(lm,io,l,jo,lp)=haa(lm,jo,lp,io,l)

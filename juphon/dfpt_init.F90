@@ -1945,7 +1945,7 @@ CONTAINS
 
       use m_types, only : t_atoms, t_enpara, t_usdus, t_input, t_tlmplm
       !use m_intgr, only : intgr3LinIntp
-      use m_intgr, only : intgr3 ! TODO: Is this ok?
+      use m_intgr, only : intgr3LinIntp
       use m_gaunt, only : gaunt1
       use m_juDFT_stop, only : juDFT_error
 
@@ -2112,8 +2112,8 @@ CONTAINS
                       xReal(i) =  tempRbas * real(vr0SpH(i, lm, na))
                       xImag(i) =  tempRbas * aimag(vr0SpH(i, lm, na))
                     end do
-                    call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) ! TODO: Is this ok?
-                    call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) ! TODO: Is this ok?
+                    call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
+                    call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
                     uvu(lpl, lm) = cmplx(tempReal, tempImag)
                     ! Calculate the integral <uDot|V|u>
                     do i = 1, atoms%jri(n)
@@ -2121,8 +2121,8 @@ CONTAINS
                       xReal(i) = tempRbas * real(vr0SpH(i, lm, na))
                       xImag(i) = tempRbas * aimag(vr0SpH(i, lm, na))
                     end do
-                    call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) ! TODO: Is this ok?
-                    call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) ! TODO: Is this ok?
+                    call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
+                    call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
                     dvu(lpl, lm) = cmplx(tempReal, tempImag)
                     ! Calculate the integral <u|V|uDot>
                     do i = 1,atoms%jri(n)
@@ -2130,8 +2130,8 @@ CONTAINS
                       xReal(i) = tempRbas * real(vr0SpH(i, lm, na))
                       xImag(i) = tempRbas * aimag(vr0SpH(i, lm, na))
                     end do
-                    call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) ! TODO: Is this ok?
-                    call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag) ! TODO: Is this ok?
+                    call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
+                    call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
                     uvd(lpl, lm) = cmplx(tempReal, tempImag)
                     ! Calculte the integral <uDot|V|uDot>
                     do i = 1,atoms%jri(n)
@@ -2139,8 +2139,8 @@ CONTAINS
                       xReal(i) = tempRbas * real(vr0SpH(i, lm, na))
                       xImag(i) = tempRbas * aimag(vr0SpH(i, lm, na))
                     end do
-                    call intgr3(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal) ! TODO: Is this ok?
-                    call intgr3(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag)! TODO: Is this ok?
+                    call intgr3LinIntp(xReal, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempReal, 1)
+                    call intgr3LinIntp(xImag, atoms%rmsh(1,n), atoms%dx(n), atoms%jri(n), tempImag, 1)
                     dvd(lpl, lm) = cmplx(tempReal, tempImag)
                   end do ! m
                 end if ! Gaunt selection rules
