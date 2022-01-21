@@ -155,7 +155,7 @@ MODULE m_vdWfleur_grimme
         IF (sym%invarind(na1) > 1) THEN
           DO i2 = 2, sym%invarind(na1)
             iop = sym%invarop(na1,i2)
-            force_i=matmul(sym%mrot(:,:,iop),f_rot)
+            force_i=force_i+matmul(sym%mrot(:,:,iop),f_rot)
           ENDDO
           force_i(:) = force_i(:) / sym%invarind(na1)
         ENDIF
