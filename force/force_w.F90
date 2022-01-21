@@ -64,17 +64,18 @@ CONTAINS
          IF (input%l_f) CALL openXMLElement('totalForcesOnRepresentativeAtoms',(/'units'/),(/'Htr/bohr'/))
          nat1 = 1
          forcetot = 0.0
+         if (allocated(results%force_vdw)) THEN
+            forcetot=forcetot+results%force_vdw
+            write(oUnit,*) "vdW forces included in total force"
+         endif
+
          DO n = 1,atoms%ntype
             IF (atoms%l_geo(n)) THEN
                DO jsp = 1,input%jspins
                   forcetot(:,n) = forcetot(:,n) + results%force(:,n,jsp)
                END DO
 
-               if (allocated(results%force_vdw)) THEN
-                  forcetot=forcetot+results%force_vdw
-                  write(oUnit,*) "vdW forces included in total force"
-               endif
-
+               
                WRITE (oUnit,FMT=8010) n, (atoms%pos(i,nat1),i=1,3), &
                                          (forcetot(i,n),i=1,3)
 
