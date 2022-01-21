@@ -12,7 +12,7 @@ MODULE m_intgr
   !     a tail correction assuming that the function is a simple
   !     decaying exponential between the first mesh point and infinity.
   !     y contains the nmz function values tabulated at a spacing of h.
-  ! 
+  !
   !            integrator:      ---- input ----      output
   !    intgr0:   definite       y r0        h jri  | z
   !    intgr1: indefinite       y r1        h jri  | z(jri)
@@ -546,5 +546,56 @@ END SUBROUTINE intgr3_modern
       z(i)=z(i-1)+h*(x(i-1)*y(i-1)+x(i)*y(i))/2
 
    END SUBROUTINE
+
+   ! For juPhon:
+   SUBROUTINE intgr3LinIntp(y,r,h,jri,z, i1)
+
+       USE m_juDFT_stop, ONLY : juDFT_error
+
+       INTEGER, INTENT (IN) :: jri
+       INTEGER, INTENT (IN) :: i1
+       REAL,    INTENT (IN) :: h
+       REAL,    INTENT (IN) :: r(jri)
+       REAL,    INTENT (IN) :: y(jri)
+       REAL,    INTENT (OUT):: z
+
+       INTEGER m,n0,nsteps
+       REAL tiny, yr(nr), h1, z1, ih1(nr)
+       real x1, x2, y1, y2, n
+
+        z = zero
+
+        z = 0.5 * r(i1) * y(i1)
+        IF (i1 /= 1) CALL juDFT_error("intgr3LinIntp buggy for interpolations that do not start at mesh point 1.",calledby="intgr3LinIntp")
+
+        nsteps = (jri-1)/nr1
+        n0 = jri - nr1*nsteps
+
+        IF (n0.GT.1) THEN
+            DO i = 1, 7
+                yr(i) = r(i)*y(i)
+            END DO
+            z1 = 0.
+            DO j = 1, n0 - 1
+               z1 = z1 + CPP_BLAS_sdot(7,a(1,j),1,yr,1)
+            ENDDO
+            z = z + z1 * h / 60480.
+         END IF
+
+         h1 = h / h0
+
+         DO i = 1,nr
+           ih1(i) = h1 * ih(i)
+         END DO
+         DO m = 1,nsteps
+            DO i = 1,nr
+               yr(i) = ih1(i)*r(i+n0-1)
+            END DO
+            z = z + CPP_BLAS_sdot(nr,yr,1,y(n0),1)
+            n0 = n0 + nr1
+         END DO
+
+         RETURN
+     END SUBROUTINE intgr3LinIntp
 
 END MODULE m_intgr
