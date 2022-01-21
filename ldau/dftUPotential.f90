@@ -22,7 +22,7 @@ MODULE m_dftUPotential
       LOGICAL,          INTENT(IN)     :: l_spinoffd
       COMPLEX,          INTENT(INOUT)  :: potential(-lmaxU_const:,-lmaxU_const:,:)
       REAL,             INTENT(INOUT)  :: ldaUEnergy
-      LOGICAL, OPTIONAL,INTENT(IN)     :: sphavg_dc
+      LOGICAL, OPTIONAL,INTENT(IN)     :: spinavg_dc
 
 
       LOGICAL :: sphavg_dc_local
@@ -31,7 +31,7 @@ MODULE m_dftUPotential
       COMPLEX, ALLOCATABLE :: Vdc(:,:,:)
 
       spinavg_dc_local = .false.
-      if(present(sphavg_dc)) spinavg_dc_local = sphavg_dc .and. input%jspins==2
+      if(present(sphavg_dc)) spinavg_dc_local = sphavg_dc .and. jspins==2
 
       call coulombPotential(density, ldau, jspins, l_spinoffd, potential, energy_contribution)
 
