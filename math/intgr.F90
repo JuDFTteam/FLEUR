@@ -605,7 +605,7 @@ END SUBROUTINE intgr3_modern
         REAL,    INTENT (IN) ::  rmsh(jri),y(jri)
         REAL,    INTENT (OUT)::  z(jri)
 
-        REAL :: dr, r(7)
+        REAL :: dr, r(7), yr(nr)
         INTEGER :: i, j
 
         z = 0.0
