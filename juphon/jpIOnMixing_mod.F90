@@ -120,7 +120,7 @@ module m_jpIOnMixing
       write(*, *)'straight mixing'
       CALL stmix_old(atoms,input,noco, nmap,nmap,fsm, sm)
     else if (input%imix == 7) then
-      write(*, '(a)') 'General Anderson Mixing of displacement direction: '
+      write(*, *) 'Generalized Anderson Mixing of displacement direction: ', idir
       call broydenNsym(cell, stars, atoms, input, mmap, nmap, nmapMT, nmap, fsm, sm, idir, ngpqdp, gpqdp, iqpt, iDatom)
     end if
 
