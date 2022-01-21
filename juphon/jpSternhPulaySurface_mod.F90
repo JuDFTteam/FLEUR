@@ -673,7 +673,7 @@ module m_jpSternhPulaySurface
     complex, optional,           intent(in)  :: almkg(:,:), blmkg(:,:), almkgq(:,:), blmkgq(:,:)
     complex, optional,           intent(in)  :: dalmkg(:,:), dblmkg(:,:), dalmkgq(:,:), dblmkgq(:,:)
     complex, optional,           intent(inout) :: mat_elH(:,:), mat_elS(:,:)
-    COMPLEX, INTENT(IN) :: loosetdin(:, :, :, :)
+    COMPLEX, INTENT(IN) :: loosetdin(0:, :, :, :)
 
     ! Local Variables
     integer                                  :: mlo
@@ -896,7 +896,9 @@ module m_jpSternhPulaySurface
         lmB = lmB + 1
         ax = cmplx(0., 0.)
         bx = cmplx(0., 0.)
-        cx = cmplx(0., 0.)
+        if ( atoms%nlo(itype) > 0 ) then
+            cx = cmplx(0., 0.) !TODO: Assignment of scalar to unallocated array.
+        end if
         !ax4 = cmplx(0., 0.)
         !bx4 = cmplx(0., 0.)
 
@@ -972,10 +974,10 @@ module m_jpSternhPulaySurface
                 !utd = conjg(tlmplm%tdu(indN, iatom, 1))
                 !dtu = conjg(tlmplm%tud(indN, iatom, 1))
                 !dtd = conjg(tlmplm%tdd(indN, iatom, 1))
-                utu = conjg(loosetdin(ind, iatom, 1, 1))
-                dtu = conjg(loosetdin(ind, iatom, 1, 2))
-                utd = conjg(loosetdin(ind, iatom, 1, 3))
-                dtd = conjg(loosetdin(ind, iatom, 1, 4))
+                utu = conjg(loosetdin(indn, iatom, 1, 1))
+                dtu = conjg(loosetdin(indn, iatom, 1, 2))
+                utd = conjg(loosetdin(indn, iatom, 1, 3))
+                dtd = conjg(loosetdin(indn, iatom, 1, 4))
 
                 !if (.FALSE..and.(lB.eq.lK.and.mB.eq.mK)) then
                 !  write(4009,*) 'Huh. We got here.'
@@ -1618,7 +1620,6 @@ module m_jpSternhPulaySurface
     sbes(:) = 0.
 
     surfInt(:, :, :) = cmplx(0., 0.)
-    surfIntG(:, :, :) = cmplx(0., 0.)
 
     if (.FALSE.) then
       allocate( coeffkg(nv(1, ikpt), (lmaxScaled + 1)**2) )
@@ -1628,6 +1629,7 @@ module m_jpSternhPulaySurface
       allocate(surfIntG(nv(1, ikpq),nv(1, ikpt),3))
       coeffkg(:, :) = cmplx(0., 0.)
       coeffkgq(:, :) = cmplx(0., 0.)
+      surfIntG(:, :, :) = cmplx(0., 0.)
     end if
 
     if ( coScale /= 1 ) CALL juDFT_error('ylmNorm is not correctly set in calcSfVeffFast',calledby ="calcSfVeffFast")

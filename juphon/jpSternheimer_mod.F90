@@ -687,6 +687,9 @@ module m_jpSternheimer
           !if (.false.) then
           !  open(111,file='000_dhmlrad',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
           !end if
+          IF (ALLOCATED(loosetdx1)) THEN
+              DEALLOCATE(loosetdx1, loosetdy1, loosetdz1, loosetdx2, loosetdy2, loosetdz2)
+          END IF
           call tlmplm4V( atoms, lathar, enpara, uds, input, tdVx, loosetdx1, 1, 1, 1, sumVMTs, rbas1, rbas2, uuilon, duilon, &
             & ulouilopn, ilo2p, nlo_atom )
           !if (.false.) then
@@ -838,7 +841,7 @@ module m_jpSternheimer
               & surfIntVFast, ngpqdp, gpqdp, maxlmp)
             end if
 
-            DEALLOCATE(loosetdx1, loosetdy1, loosetdz1, loosetdx2, loosetdy2, loosetdz2)
+            !DEALLOCATE(loosetdx1, loosetdy1, loosetdz1, loosetdx2, loosetdy2, loosetdz2)
 
             if (.false.) then
               deallocate(mat_elH,mat_elS)
@@ -884,12 +887,12 @@ module m_jpSternheimer
           ! Adding contributions to density variations not dependent on z1
 
           !if (.false.) then
-            open(110,file='000_rho1x_pw',form='FORMATTED',action='WRITE',status='replace')
-            open(109,file='000_rho1goodx_mt',form='FORMATTED',action='WRITE',status='replace')
-            open(111,file='000_rho1y_pw',form='FORMATTED',action='WRITE',status='replace')
-            open(112,file='000_rho1goody_mt',form='FORMATTED',action='WRITE',status='replace')
-            open(113,file='000_rho1z_pw',form='FORMATTED',action='WRITE',status='replace')
-            open(114,file='000_rho1goodz_mt',form='FORMATTED',action='WRITE',status='replace')
+            !open(110,file='000_rho1x_pw',form='FORMATTED',action='WRITE',status='replace')
+            !open(109,file='000_rho1goodx_mt',form='FORMATTED',action='WRITE',status='replace')
+            !open(111,file='000_rho1y_pw',form='FORMATTED',action='WRITE',status='replace')
+            !open(112,file='000_rho1goody_mt',form='FORMATTED',action='WRITE',status='replace')
+            !open(113,file='000_rho1z_pw',form='FORMATTED',action='WRITE',status='replace')
+            !open(114,file='000_rho1goodz_mt',form='FORMATTED',action='WRITE',status='replace')
           !end if
 
           do idir = 1, 3
@@ -899,14 +902,14 @@ module m_jpSternheimer
               !!!.FALSE.!!!
               rho1IRDSplus(iG, idir) = rho1IRDSplus(iG, idir)! + rho1IRctC(iG, iDatom, idir)
               !if (.false.) then
-                if (idir.eq.3) then
-                  write(110,*) iG
-                  write(110,*) real(rho1IRDSplus(iG, 1)), aimag(rho1IRDSplus(iG, 1))
-                  write(111,*) iG
-                  write(111,*) real(rho1IRDSplus(iG, 2)), aimag(rho1IRDSplus(iG, 2))
-                  write(113,*) iG
-                  write(113,*) real(rho1IRDSplus(iG, 3)), aimag(rho1IRDSplus(iG, 3))
-                end if
+                !if (idir.eq.3) then
+                 ! write(110,*) iG
+                  !write(110,*) real(rho1IRDSplus(iG, 1)), aimag(rho1IRDSplus(iG, 1))
+                  !write(111,*) iG
+                  !write(111,*) real(rho1IRDSplus(iG, 2)), aimag(rho1IRDSplus(iG, 2))
+                  !write(113,*) iG
+                  !write(113,*) real(rho1IRDSplus(iG, 3)), aimag(rho1IRDSplus(iG, 3))
+                !end if
               !end if
             end do ! iG
 
@@ -935,20 +938,20 @@ module m_jpSternheimer
                       rho1MTplus(imesh, lm, iatom, idir) = rho1MTplus(imesh, lm, iatom, idir) &
                                                                                       & + 0.0*rho1MTctC( imesh, lm, iatom, idir, iDatom)
                       !if (.false.) then
-                        if (idir.eq.3) then
-                          write(109,*) imesh, lm
-                          write(109,*) real(rho1MTplus(imesh, lm, iatom, 1)), aimag(rho1MTplus(imesh, lm, iatom, 1))
-                          write(109,*) real(rho1MTplus(imesh, lm, iatom, 1) - grRho0MT(imesh, lm, iatom, 1)), &
-                                    & aimag(rho1MTplus(imesh, lm, iatom, 1) - grRho0MT(imesh, lm, iatom, 1))
-                          write(112,*) imesh, lm
-                          write(112,*) real(rho1MTplus(imesh, lm, iatom, 2)), aimag(rho1MTplus(imesh, lm, iatom, 2))
-                          write(112,*) real(rho1MTplus(imesh, lm, iatom, 2) - grRho0MT(imesh, lm, iatom, 2)), &
-                                    & aimag(rho1MTplus(imesh, lm, iatom, 2) - grRho0MT(imesh, lm, iatom, 2))
-                          write(114,*) imesh, lm
-                          write(114,*) real(rho1MTplus(imesh, lm, iatom, 3)), aimag(rho1MTplus(imesh, lm, iatom, 3))
-                          write(114,*) real(rho1MTplus(imesh, lm, iatom, 3) - grRho0MT(imesh, lm, iatom, 3)), &
-                                    & aimag(rho1MTplus(imesh, lm, iatom, 3) - grRho0MT(imesh, lm, iatom, 3))
-                        end if
+!                        if (idir.eq.3) then
+!                          write(109,*) imesh, lm
+!                          write(109,*) real(rho1MTplus(imesh, lm, iatom, 1)), aimag(rho1MTplus(imesh, lm, iatom, 1))
+!                          write(109,*) real(rho1MTplus(imesh, lm, iatom, 1) - grRho0MT(imesh, lm, iatom, 1)), &
+!                                    & aimag(rho1MTplus(imesh, lm, iatom, 1) - grRho0MT(imesh, lm, iatom, 1))
+!                          write(112,*) imesh, lm
+!                          write(112,*) real(rho1MTplus(imesh, lm, iatom, 2)), aimag(rho1MTplus(imesh, lm, iatom, 2))
+!                          write(112,*) real(rho1MTplus(imesh, lm, iatom, 2) - grRho0MT(imesh, lm, iatom, 2)), &
+!                                    & aimag(rho1MTplus(imesh, lm, iatom, 2) - grRho0MT(imesh, lm, iatom, 2))
+!                          write(114,*) imesh, lm
+!                          write(114,*) real(rho1MTplus(imesh, lm, iatom, 3)), aimag(rho1MTplus(imesh, lm, iatom, 3))
+!                          write(114,*) real(rho1MTplus(imesh, lm, iatom, 3) - grRho0MT(imesh, lm, iatom, 3)), &
+!                                    & aimag(rho1MTplus(imesh, lm, iatom, 3) - grRho0MT(imesh, lm, iatom, 3))
+!                        end if
                       !end if
                     end do ! imesh
                   end do ! mqn_m
@@ -958,12 +961,12 @@ module m_jpSternheimer
           end do ! idir
 
           !if (.false.) then
-            close(109)
-            close(110)
-            close(111)
-            close(112)
-            close(113)
-            close(114)
+            !close(109)
+            !close(110)
+            !close(111)
+            !close(112)
+            !close(113)
+            !close(114)
           !end if
 
           ! After the Sternheimer equation is converged we jump out of the convergence loop having written out the effective
@@ -1434,11 +1437,11 @@ module m_jpSternheimer
       sumVMTs2 = cmplx(0.0, 0.0)
       iatom = 0
       !if (.false.) then
-        open(109,file='000_V1goodx_mt',form='FORMATTED',action='WRITE',status='replace')
+        !open(109,file='000_V1goodx_mt',form='FORMATTED',action='WRITE',status='replace')
         !open(110,file='000_V1x_mt',form='FORMATTED',action='WRITE',status='replace')
-        open(111,file='000_V1goody_mt',form='FORMATTED',action='WRITE',status='replace')
+        !open(111,file='000_V1goody_mt',form='FORMATTED',action='WRITE',status='replace')
         !open(112,file='000_V1y_mt',form='FORMATTED',action='WRITE',status='replace')
-        open(113,file='000_V1goodz_mt',form='FORMATTED',action='WRITE',status='replace')
+        !open(113,file='000_V1goodz_mt',form='FORMATTED',action='WRITE',status='replace')
         !open(114,file='000_V1z_mt',form='FORMATTED',action='WRITE',status='replace')
       !end if
       do itypeLoc = 1, atoms%ntype
@@ -1452,17 +1455,17 @@ module m_jpSternheimer
                  do imesh = 1, atoms%jri(itypeloc)
                    sumVMTs(imesh, lm, idir, iatom) = vEff1MT(imesh, lm, iatom, idir) + grVeff0MT_main(imesh, lm, idir, iatom)
                    !if (.false.) then
-                     if (idir.eq.3) then
-                       write(109,*) imesh, lm
-                       write(109,*) real(sumVMTs(imesh, lm, 1, iatom)), aimag(sumVMTs(imesh, lm, 1, iatom))
-                       write(109,*) real(vEff1MT(imesh, lm, iatom, 1)), aimag(vEff1MT(imesh, lm, iatom, 1))
-                       write(111,*) imesh, lm
-                       write(111,*) real(sumVMTs(imesh, lm, 2, iatom)), aimag(sumVMTs(imesh, lm, 2, iatom))
-                       write(111,*) real(vEff1MT(imesh, lm, iatom, 2)), aimag(vEff1MT(imesh, lm, iatom, 2))
-                       write(113,*) imesh, lm
-                       write(113,*) real(sumVMTs(imesh, lm, 3, iatom)), aimag(sumVMTs(imesh, lm, 3, iatom))
-                       write(113,*) real(vEff1MT(imesh, lm, iatom, 3)), aimag(vEff1MT(imesh, lm, iatom, 3))
-                     end if
+                     !if (idir.eq.3) then
+                      ! write(109,*) imesh, lm
+                      ! write(109,*) real(sumVMTs(imesh, lm, 1, iatom)), aimag(sumVMTs(imesh, lm, 1, iatom))
+                      ! write(109,*) real(vEff1MT(imesh, lm, iatom, 1)), aimag(vEff1MT(imesh, lm, iatom, 1))
+                      ! write(111,*) imesh, lm
+                      ! write(111,*) real(sumVMTs(imesh, lm, 2, iatom)), aimag(sumVMTs(imesh, lm, 2, iatom))
+                      ! write(111,*) real(vEff1MT(imesh, lm, iatom, 2)), aimag(vEff1MT(imesh, lm, iatom, 2))
+                      ! write(113,*) imesh, lm
+                      ! write(113,*) real(sumVMTs(imesh, lm, 3, iatom)), aimag(sumVMTs(imesh, lm, 3, iatom))
+                      ! write(113,*) real(vEff1MT(imesh, lm, iatom, 3)), aimag(vEff1MT(imesh, lm, iatom, 3))
+                     !end if
                    !end if
                    sumVMTs2(imesh, lm2, idir, iatom) = (-1)**(mqn_m) * conjg(sumVMTs(imesh, lm, idir, iatom))
                    vEff1MTNoVol(imesh, lm, iatom, idir, iDatom) = vEff1MT(imesh, lm, iatom, idir) + grVeff0MT_main(imesh, lm, idir, iatom)
@@ -1474,11 +1477,11 @@ module m_jpSternheimer
       end do
       deallocate( vEff1MT )
       !if (.false.) then
-        close(109)
+        !close(109)
         !close(110)
-        close(111)
+        !close(111)
         !close(112)
-        close(113)
+        !close(113)
         !close(114)
         !NOstopNO!convergent NOstopNO
       !end if
@@ -2186,6 +2189,17 @@ module m_jpSternheimer
     ! Initializiation
     z1G(:, :) = cmplx(0., 0.)
 
+    ! Set noco stuff to false.
+    noco%l_soc  = .FALSE.
+    noco%l_noco = .FALSE.
+    noco%l_ss   = .FALSE.
+    ALLOCATE(noco%l_constrained(atoms%ntype))
+    ALLOCATE(noco%l_unrestrictMT(atoms%ntype))
+    ALLOCATE(noco%l_spinoffd_ldau(atoms%ntype))
+    noco%l_constrained(atoms%ntype)   = .FALSE.
+    noco%l_unrestrictMT(atoms%ntype)  = .FALSE.
+    noco%l_spinoffd_ldau(atoms%ntype) = .FALSE.
+
     ! Calculate <ψ_{k'n'}^{(0)}|V^{(1)}_{eff}(q)|ψ_{kn}^{(0)}>_{IR}
     ! -------------------------------------------------------------
     allocate( vEff1IRMat(ne(ikpq), nobd(ikpt,1)) )
@@ -2275,7 +2289,7 @@ module m_jpSternheimer
         nk=fmpi%k_list(ikpt)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
         CALL zMatKet%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
-        zMatKet%data_c(:, :) = zKet(:, :)
+        zMatKet%data_c(:, :) = zKet(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt, 1))
         CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &
                  & acofKet(:, 0:, :), bcofKet(:, 0:, :), &
                  & ccofKet(-atoms%llod:, :, :, :), zMatKet)
@@ -2339,7 +2353,7 @@ module m_jpSternheimer
     nk=fmpi%k_list(ikpq)
     CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
     CALL zMatBra%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
-    zMatBra%data_c(:, :) = zBra(:, :)
+    zMatBra%data_c(:, :) = zBra(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq))
     CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
             & acofBra(:, 0:, :), bcofBra(:, 0:, :), &
             & ccofBra(-atoms%llod:, :, :, :), zMatBra)
@@ -2613,7 +2627,7 @@ module m_jpSternheimer
       nk=fmpi%k_list(ikpq)
       CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
       CALL zMatTilde%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
-      zMatTilde%data_c(:, :) = zTilde(:, :)
+      zMatTilde%data_c(:, :) = zTilde(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq))
       CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
                & acofTilde(:, 0:, :), bcofTilde(:, 0:, :), &
                & ccofTilde(-atoms%llod:, :, :, :), zMatTilde)
@@ -2657,7 +2671,7 @@ module m_jpSternheimer
     nk=fmpi%k_list(ikpq)
     CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
     CALL zMatBar%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
-    zMatBar%data_c(:, :) = zBar(:, :)
+    zMatBar%data_c(:, :) = zBar(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt, 1))
     CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &
              & acofBar(:, 0:, :), bcofBar(:, 0:, :), &
              & ccofBar(-atoms%llod:, :, :, :), zMatBar)
@@ -2803,35 +2817,35 @@ module m_jpSternheimer
                                                                                                 & z1Band(:ne(ikpq), :nobd(ikpt,1)) )
 
     !if (.false.) then
-      if (ikpt.eq.1.and.idir.eq.1) then
-        open(109,file='000_z1',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
-        open(110,file='000_z00',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
-      else
-        open(109,file='000_z1',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
-        if (idir.eq.1) then
-          open(110,file='000_z00',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
-        end if
-      end if
-      do n2=1, nobd(ikpt,1)
-        do n1=1, nv(1, ikpq) + atoms%nlotot
-          Gext(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(n1, ikpq, 1)) + kpts%bk(1:3, ikpq))
-          write(109,*) ikpq, n1, n2,  idir
-          write(109,*) Gext(1), Gext(2), Gext(3)
-          write(109,*) real(z1G(n1,n2)), aimag(z1G(n1,n2))
-        end do
-        if (idir.eq.1) then
-          do n1=1, nv(1, ikpt) + atoms%nlotot
-            Gext(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(n1, ikpt, 1)) + kpts%bk(1:3, ikpt))
-            write(110,*) ikpt, n1, n2
-            write(110,*) Gext(1), Gext(2), Gext(3)
-            write(110,*) real(zKet(n1,n2)), aimag(zKet(n1,n2))
-          end do
-        end if
-      end do
-      close(109)
-      if (idir.eq.1) then
-        close(110)
-      end if
+!      if (ikpt.eq.1.and.idir.eq.1) then
+!        open(109,file='000_z1',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
+!        open(110,file='000_z00',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
+!      else
+!        open(109,file='000_z1',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
+!        if (idir.eq.1) then
+!          open(110,file='000_z00',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
+!        end if
+!      end if
+!      do n2=1, nobd(ikpt,1)
+!        do n1=1, nv(1, ikpq) + atoms%nlotot
+!          Gext(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(n1, ikpq, 1)) + kpts%bk(1:3, ikpq))
+!          write(109,*) ikpq, n1, n2,  idir
+!          write(109,*) Gext(1), Gext(2), Gext(3)
+!          write(109,*) real(z1G(n1,n2)), aimag(z1G(n1,n2))
+!        end do
+!        if (idir.eq.1) then
+!          do n1=1, nv(1, ikpt) + atoms%nlotot
+!            Gext(1:3) = matmul( cell%bmat(1:3, 1:3), GbasVec(1:3, ilst(n1, ikpt, 1)) + kpts%bk(1:3, ikpt))
+!            write(110,*) ikpt, n1, n2
+!            write(110,*) Gext(1), Gext(2), Gext(3)
+!            write(110,*) real(zKet(n1,n2)), aimag(zKet(n1,n2))
+!          end do
+!        end if
+!      end do
+!      close(109)
+!      if (idir.eq.1) then
+!        close(110)
+!      end if
     !end if
 
     !if (.FALSE.) then

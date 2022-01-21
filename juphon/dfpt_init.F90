@@ -301,8 +301,10 @@ CONTAINS
                 !          usdus,usdus%uuilon(1,1,jspin),usdus%duilon(1,1,jspin),usdus%ulouilopn(1,1,1,jspin),flo)
 
               ! new:
-              CALL radflo(atoms, iType, iSpin, enpara%ello0(1, 1, iSpin), vTot%mt(:, 0, iType, iSpin), &
-                        & f, g, fmpi, usdus, usdus%uuilon(:, :, iSpin), usdus%duilon(:, :, iSpin), usdus%ulouilopn(:, :, :, iSpin), flo)
+              IF (atoms%nlo(iType).GE.1) THEN
+                  CALL radflo(atoms, iType, iSpin, enpara%ello0(1, 1, iSpin), vTot%mt(:, 0, iType, iSpin), &
+                            & f, g, fmpi, usdus, usdus%uuilon(:, :, iSpin), usdus%duilon(:, :, iSpin), usdus%ulouilopn(:, :, :, iSpin), flo)
+              END IF
 
               DO igrid = 1, atoms%jri(itype) ! was jmtd in former times, which is not necessary
 
@@ -1117,8 +1119,9 @@ CONTAINS
       call gaussp( atoms%lmaxd, gPts, gWghts )
 
       ! The ylms are note filled linearily as a compromise to perform a linear run through all the other arrays
+      call ylmnorm_init(atoms%lmaxd)
       do igmesh = 1, atoms%nsp()
-        call Ylm4( atoms%lmaxd, gPts(:, igmesh), ylm(igmesh, :) )
+        call ylm4( atoms%lmaxd, gPts(:, igmesh), ylm(igmesh, :) )
       end do
 
       dKernMTGPts(:, :, :) = 0
@@ -1142,6 +1145,7 @@ CONTAINS
               end do ! irmesh
             end do ! imem
           end do ! ilh
+
           if ( any( abs(aimag( rhoMTGpts )) > 1e-7 ) ) then
             write(*, *) 'Warning rhoMTGpts has imaginary components.'
           end if

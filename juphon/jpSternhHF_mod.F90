@@ -939,7 +939,7 @@ module m_jpSternhHF
     integer,                    intent(in)  :: ikpq
 
     ! Array Parameters
-    complex,                    intent(in)  :: loosetdin1(:, :, :, :), loosetdin2(:, :, :, :)
+    complex,                    intent(in)  :: loosetdin1(0:, :, :, :), loosetdin2(0:, :, :, :)
     integer,                    intent(in)  :: ne(:)
     integer,                    intent(in)  :: nobd(:, :)
     complex,                    intent(in)  :: mCoefBp(:, :, :)
@@ -1100,10 +1100,10 @@ module m_jpSternhHF
                      !dtd = conjg(td4V2%tdd(indn, iatom, 1))
                      !utd = conjg(td4V2%tdu(indn, iatom, 1))
                      !dtu = conjg(td4V2%tud(indn, iatom, 1))
-                     utu = conjg(loosetdin1(ind, iatom, 1, 1))
-                     dtu = conjg(loosetdin1(ind, iatom, 1, 2))
-                     utd = conjg(loosetdin1(ind, iatom, 1, 3))
-                     dtd = conjg(loosetdin1(ind, iatom, 1, 4))
+                     utu = conjg(loosetdin2(indn, iatom, 1, 1))
+                     dtu = conjg(loosetdin2(indn, iatom, 1, 2))
+                     utd = conjg(loosetdin2(indn, iatom, 1, 3))
+                     dtd = conjg(loosetdin2(indn, iatom, 1, 4))
 
                      !if (.FALSE.) then
                      !  write(111,*) lB*(lB+1)+1+mB, lK*(lK+1)+1+mK, 1, 1

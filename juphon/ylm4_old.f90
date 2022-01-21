@@ -24,7 +24,7 @@ CONTAINS
       USE m_juDFT
       INTEGER, INTENT (IN) :: lmax
       REAL,    INTENT (IN) :: v(3)
-      COMPLEX, INTENT (OUT):: ylm( (lmax+1)**2 )
+      COMPLEX, INTENT (INOUT):: ylm( (lmax+1)**2 )
 
       REAL,    PARAMETER   :: small = 1.0e-12
 
@@ -35,14 +35,14 @@ CONTAINS
 
 
       IF (lmax.GT.lmaxd) THEN
-         CALL juDFT_error("lmaxd too small in ylm4")
+         !CALL juDFT_error("lmaxd too small in ylm4")
 !$OMP MASTER
 !        WRITE(6,*) ' calling ylmnorm, lmax=',lmax,lmaxd
 !-->     first deallocate the array if it exists
          IF ( allocated(ynorm) ) DEALLOCATE(ynorm)
          ALLOCATE ( ynorm( (lmax+1)**2 ) )   ! allocate array
          lmaxd = lmax
-         !CALL ylmnorm
+         CALL ylmnorm_init(lmax)
 !$OMP END MASTER
       ENDIF
 

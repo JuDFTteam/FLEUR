@@ -246,14 +246,14 @@ module m_jpVeff1
       noGqext = norm2(Gqext(1:3))
       if (noGqext < 1E-9) then
         !if (.FALSE.) then
-          write(110,*) iG
-          write(110,*) 0.0,0.0
-          write(113,*) iG
-          write(113,*) 0.0,0.0
-          write(114,*) iG
-          write(114,*) 0.0,0.0
-          write(111,*) iG
-          write(111,*) gpqdp(1,iG), gpqdp(2, iG),gpqdp(3, iG)
+          !write(110,*) iG
+          !write(110,*) 0.0,0.0
+          !write(113,*) iG
+          !write(113,*) 0.0,0.0
+          !write(114,*) iG
+          !write(114,*) 0.0,0.0
+          !write(111,*) iG
+          !write(111,*) gpqdp(1,iG), gpqdp(2, iG),gpqdp(3, iG)
         !end if
 
         cycle
@@ -262,16 +262,16 @@ module m_jpVeff1
         vEff1IR(iG, idir) = fpi_const * psqPhon1Coul(idir, iG) / noGqext**2
 
         !if (.FALSE.) then
-          if (idir.eq.3) then
-            write(110,*) iG
-            write(110,*) real(vEff1IR(iG, 1)), aimag(vEff1IR(iG, 1))
-            write(113,*) iG
-            write(113,*) real(vEff1IR(iG, 2)), aimag(vEff1IR(iG, 2))
-            write(114,*) iG
-            write(114,*) real(vEff1IR(iG, 3)), aimag(vEff1IR(iG, 3))
-            write(111,*) iG
-            write(111,*) gpqdp(1,iG), gpqdp(2, iG),gpqdp(3, iG)
-          end if
+          !if (idir.eq.3) then
+        !    write(110,*) iG
+        !    write(110,*) real(vEff1IR(iG, 1)), aimag(vEff1IR(iG, 1))
+        !    write(113,*) iG
+        !    write(113,*) real(vEff1IR(iG, 2)), aimag(vEff1IR(iG, 2))
+        !    write(114,*) iG
+        !    write(114,*) real(vEff1IR(iG, 3)), aimag(vEff1IR(iG, 3))
+        !    write(111,*) iG
+        !    write(111,*) gpqdp(1,iG), gpqdp(2, iG),gpqdp(3, iG)
+         ! end if
         !end if
 
       end do

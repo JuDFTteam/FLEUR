@@ -1188,6 +1188,17 @@ module m_jpDens1stVar
     nococonv%alph(:) = 0
     nococonv%beta(:) = 0
 
+    ! Set noco stuff to false.
+    noco%l_soc  = .FALSE.
+    noco%l_noco = .FALSE.
+    noco%l_ss   = .FALSE.
+    ALLOCATE(noco%l_constrained(atoms%ntype))
+    ALLOCATE(noco%l_unrestrictMT(atoms%ntype))
+    ALLOCATE(noco%l_spinoffd_ldau(atoms%ntype))
+    noco%l_constrained(atoms%ntype)   = .FALSE.
+    noco%l_unrestrictMT(atoms%ntype)  = .FALSE.
+    noco%l_spinoffd_ldau(atoms%ntype) = .FALSE.
+
     allocate(zBar(SIZE(z0(:,1)), nobd(ikpt)))
     zBar(:, :) = cmplx(0., 0.)
 
@@ -1206,9 +1217,9 @@ module m_jpDens1stVar
         nk=fmpi%k_list(ikpq)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
         CALL zMat1%init(.FALSE., nv(1, ikpq) + atoms%nlotot, nobd(ikpt))
-        zMat1%data_c(:, :) = z1(:, :, idir)
+        zMat1%data_c(:, :) = z1(:nv(1, ikpq) + atoms%nlotot, :nobd(ikpt), idir)
         CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1, oneD, &
-                 & acofz1(:, 0:, :, idir), bcofz1(:, 0:, :, idir), &
+                 & acofz1(:, :, :, idir), bcofz1(:, :, :, idir), &
                  & ccofz1(-atoms%llod:, :, :, :, idir), zMat1)
 
       ! Calculate iG abcof, see 7.30a and 7.30f
@@ -1243,9 +1254,9 @@ module m_jpDens1stVar
         nk=fmpi%k_list(ikpt)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
         CALL zMatikpG%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt))
-        zMatikpG%data_c(:, :) = zBar(:, :)
+        zMatikpG%data_c(:, :) = zBar(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt))
         CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1, oneD, &
-                 & acofikpG(:, 0:, :, idir), bcofikpG(:, 0:, :, idir), &
+                 & acofikpG(:, :, :, idir), bcofikpG(:, :, :, idir), &
                  & ccofikpG(-atoms%llod:, :, :, :, idir), zMatikpG)
     end do
 
@@ -1267,11 +1278,11 @@ module m_jpDens1stVar
     !     & kveclo(:, ikpt), odi, ods, acof, bcof, ccof )
     nk=fmpi%k_list(ikpt)
     CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
-    CALL zMatikpG%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt))
-    zMat%data_c(:, :) = z0(:, :)
+    CALL zMat%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt))
+    zMat%data_c(:, :) = z0(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt))
     CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1, oneD, &
-             & acofikpG(:, 0:, :, idir), bcofikpG(:, 0:, :, idir), &
-             & ccofikpG(-atoms%llod:, :, :, :, idir), zMat)
+             & acof, bcof, &
+             & ccof, zMat)
 
     allocate( acofSummed(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat, 3), bcofSummed(nobd(ikpt), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat, 3), &
       &ccofSummed(-atoms%llod:atoms%llod, nobd(ikpt), atoms%nlod, atoms%nat, 3) )
