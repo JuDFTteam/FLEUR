@@ -598,4 +598,42 @@ END SUBROUTINE intgr3_modern
          RETURN
      END SUBROUTINE intgr3LinIntp
 
+     SUBROUTINE intgr2LinIntp(y,rmsh,h,jri,z)
+
+        INTEGER, INTENT (IN) :: jri
+        REAL,    INTENT (IN) :: h
+        REAL,    INTENT (IN) ::  rmsh(jri),y(jri)
+        REAL,    INTENT (OUT)::  z(jri)
+
+        REAL :: dr, r(7)
+        INTEGER :: i, j
+
+        z = 0.0
+
+        z(1) = 0.5 * rmsh(1) * y(1)
+
+        dr = exp(h)
+        DO i = 1,7
+            r(i) = rmsh(i)
+            yr(i) = rmsh(i)*y(i)
+        END DO
+
+        DO j = 1,nr - 2
+            z(j+1) = z(j) + h*CPP_BLAS_sdot(7,a(1,j),1,yr,1)/60480.
+        END DO
+
+        DO i = 1,nr
+          r(i) = h*ih(i)*r(i)/h0
+        END DO
+
+        DO j = nr,jri
+            z(j) = z(j-nr1) + CPP_BLAS_sdot(nr,r,1,y(j-nr1),1)
+            DO i = 1,7
+                r(i) = dr*r(i)
+            END DO
+        END DO
+
+        RETURN
+    END SUBROUTINE intgr2LinIntp
+
 END MODULE m_intgr
