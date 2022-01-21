@@ -31,8 +31,8 @@ def test_Gd_Hubbard1(execute_fleur, grep_number, grep_exists):
     assert abs(mumatch - -3.1063151E-002) <= 0.0001
     assert abs(nmmp_occ - 6.99999999668645) <= 0.00001
     assert abs(nmmp_el - 0.997526430566068) <= 0.00001
-    assert abs(tenergy - -22560.5841855308) <= 0.00001
-    assert abs(dist - 25.034287) <= 0.0001
+    assert abs(tenergy - -22560.583472) <= 0.00001
+    assert abs(dist - 25.033576) <= 0.0001
 
 @pytest.mark.soc
 @pytest.mark.edsolver
@@ -62,5 +62,5 @@ def test_Gd_Hubbard1_noSYM(execute_fleur, grep_number, grep_exists):
 
     assert abs(nmmp_occ - 7.00000) <= 0.0005
     assert abs(nmmp_el - 0.9999) <= 0.0005
-    assert abs(tenergy - -22560.55679) <= 0.00005
-    assert abs(dist - 25.0582) <= 0.0002
+    assert abs(tenergy - -22560.556083) <= 0.00005
+    assert abs(dist - 25.0574) <= 0.0002
