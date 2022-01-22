@@ -1261,7 +1261,7 @@ def collect_all_judft_messages():
     by grepping for them.
     """
     testdir = test_dir()
-    rel_fleur_source = '../../'
+    rel_fleur_source = '../'
     fleur_source_dir = os.path.abspath(os.path.join(testdir, rel_fleur_source))
     # source code is top dir, to much other stuff in there, thats why hardcode source dirs for speed
     # and to avoid problems with binaries and so on.
