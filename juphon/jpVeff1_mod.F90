@@ -277,7 +277,6 @@ module m_jpVeff1
       end do
     end do
 
-
     ! This block solves the Dirichlet boundary value problem in order to get the MT contribution of the first variation of the Coulomb
     ! potential plus the gradient of the unperturbed Coulomb potential for displaced atoms. In this context, it is considered, whether
     ! the current atom is displaced or not.

@@ -920,7 +920,7 @@ CONTAINS
           do Gz = -starsT%mx3, starsT%mx3
             Gint = [Gx, Gy, Gz]
             Gext =  matmul(cellT%bmat, Gint) !transform from internal to external coordinates
-            if (norm2(Gext) <= starsT%gmax) then
+            if (norm2(Gext) <= inputT%gmax) then
 !  #ifdef DEBUG_MODE
 !              if (starsT%ig(Gx, Gy, Gz) <= 0) then
 !                call juDFT_error('Inconsistency in determination of G-vectors for potential or density', calledby='genPotDensGvecs', &

@@ -2903,7 +2903,7 @@ module m_jpSternheimer
         do iGz = -(stars%mx3 + 3), (stars%mx3 + 3)
           Gint = [iGx, iGy, iGz]
           Gpqext =  matmul(cell%bmat, real(Gint(1:3) + qpoint(1:3))) !transform from internal to external coordinates
-          if (norm2(Gpqext) <= stars%gmax) then
+          if (norm2(Gpqext) <= input%gmax) then
             ngpqdp = ngpqdp + 1
             ! Sort G-vectors
             if ( norm2(Gpqext) <= 2 * input%rkmax ) then
@@ -3050,7 +3050,7 @@ module m_jpSternheimer
             rvec(:) = randPtsCart(:, irandPt, iatom)
             ! transform rvec in internal, real-space coordinates --> rvec_int
             !call cotra1(rvec, rvec_int, cellT%bmat) !todo do this inline from now on!!!
-            rvec_int = matmul(cellT%bmat, rvec)
+            rvec_int = matmul(cellT%bmat, rvec) / tpi_const
 
             ! Evaluate stars at random point
             sumfuncValI(:, irandPt,iatom) = cmplx(0., 0.) !todo somehow this does not make sense
