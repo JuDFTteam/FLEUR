@@ -116,7 +116,7 @@ CONTAINS
       INTEGER :: ierr
 #endif
       REAL, ALLOCATABLE :: flh(:, :), flh2(:, :)
-      COMPLEX, ALLOCATABLE :: flm(:, :)
+      COMPLEX, ALLOCATABLE :: flm(:, :), z0(:, :, :, :)
       INTEGER, ALLOCATABLE :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
       IF ((fi%input%preconditioning_param /= 0) .AND. fi%oneD%odi%d1) THEN
@@ -360,7 +360,7 @@ CONTAINS
                 IF (fi%juPhon%l_dfpt) THEN
                     CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
                                enpara, nococonv, mpdata, hybdat, &
-                               iter, eig_id, results, inDen, vToT, vx, hub1data, nvfull, GbasVec_eig)
+                               iter, eig_id, results, inDen, vToT, vx, hub1data, nvfull, GbasVec_eig, z0)
                 ELSE
                     CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
                                enpara, nococonv, mpdata, hybdat, &
@@ -468,7 +468,7 @@ CONTAINS
 
             IF (fi%juPhon%l_dfpt) THEN
                 CALL dfpt(fi%juPhon, fi%sym, fi%oneD, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, &
-                        & fi%kpts, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig)
+                        & fi%kpts, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0)
             END IF
 
             !!!juPhon
