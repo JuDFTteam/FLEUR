@@ -9,8 +9,8 @@ MODULE m_types_jpPotden
    TYPE t_jpPotden
      INTEGER              :: vecdim ! 1 <-> scalar density/potential
                                     ! 3 <-> vectorial quantity
-     INTEGER              :: dispatoms ! 1 <-> scalar quantity/gradient
-                                        ! num_atoms <-> perturbed quantity
+     INTEGER              :: dispatoms ! 1 <-> ground state quantity/gradient
+                                       ! num_atoms <-> perturbed quantity
      COMPLEX, ALLOCATABLE :: pw(:,:,:,:), pw_w(:,:,:,:) ! iG, isp, idispat, idir
      COMPLEX, ALLOCATABLE :: mt(:,:,:,:,:,:) ! ir, ilm, iatom, isp, idispat, idir
 
