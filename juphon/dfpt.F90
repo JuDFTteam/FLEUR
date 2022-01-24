@@ -145,6 +145,8 @@ CONTAINS
         ! This includes for example the de-symmetrized MT and pw quantities and
         ! their gradients. Notably, q-dependent quantities are initialized and
         ! constructed elsewhere, within the q-loop.
+        ! TODO: I ignored the actual significance of clnu_atom etc. They are not type-dependent, but actually
+        ! refer to each atom respectively. So this will explode for iatom > 1. This is easily fixed.
         CALL dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, kpts, &
                      & fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, grRho0, vTot0, grVTot0, &
                      & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
