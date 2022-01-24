@@ -241,6 +241,7 @@ module m_jpSternheimer
     use m_jpSternhPulaySurface, only : calcSfVeffFast, IRcoeffVeffUv
     use m_jpIOnMixing, only : UpdNCheckDens, loadDensity, storeZ1nG
     use m_juDFT_stop, only : juDFT_warn, juDFT_error
+    USE m_npy
 
     implicit none
 
@@ -429,6 +430,44 @@ module m_jpSternheimer
     complex, allocatable :: loosetdy1(:, :, :, :), loosetdy2(:, :, :, :)
     complex, allocatable :: loosetdz1(:, :, :, :), loosetdz2(:, :, :, :)
 
+    ! Comments after activated quantities indicate the problems/differences to old juPhon.
+    !CALL save_npy('rbas1.npy',rbas1)
+    !CALL save_npy('rbas2.npy',rbas2)
+    CALL save_npy('El.npy',El) ! Size differs (certainly LO related). Max seems nicer and the values match.
+    !CALL save_npy('kveclo.npy',kveclo)
+    !CALL save_npy('uuilon.npy',uuilon)
+    !CALL save_npy('duilon.npy',duilon)
+    !CALL save_npy('ulouilopn.npy',ulouilopn)
+    !CALL save_npy('gdp.npy',gdp)
+    !CALL save_npy('qpwcG.npy',qpwcG)
+    !CALL save_npy('mapKpq2K.npy',mapKpq2K)
+    !CALL save_npy('ne.npy',ne)
+    CALL save_npy('eig.npy',eig) ! Slightly different values; some high values uninitialized instead of fixed.
+    !CALL save_npy('gbas.npy',gbas)
+    !CALL save_npy('mapGbas.npy',mapGbas)
+    CALL save_npy('z0.npy',z) ! Not all eigenvalues sufficiently filled.
+    !CALL save_npy('nv.npy',nv)
+    !CALL save_npy('nRadFun.npy',nRadFun)
+    !CALL save_npy('iloTable.npy',iloTable)
+    !CALL save_npy('nobd.npy',nobd)
+    !CALL save_npy('ilo2p.npy',ilo2p)
+    !CALL save_npy('gdp2Ind.npy',gdp2Ind) ! will substitute shifted G-set
+    !CALL save_npy('gdp2iLim.npy',gdp2iLim)
+    !CALL save_npy('kpq2kPrVec.npy',kpq2kPrVec)
+    !CALL save_npy('ylm.npy',ylm)
+    !CALL save_npy('grRho0IR.npy',grRho0IR)
+    CALL save_npy('grRho0MT.npy',grRho0MT) ! r-factor shenanigans...
+    CALL save_npy('grVH0MT.npy',grVH0MT) ! Propagated r-factor shenanigans...
+    !CALL save_npy('grVeff0MT_init.npy',grVeff0MT_init)
+    !CALL save_npy('grVeff0MT_main.npy',grVeff0MT_main)
+    CALL save_npy('dKernMTGPts.npy',dKernMTGPts) ! Propagated r-factor shenanigans I suppose...
+    !CALL save_npy('vxc1IRKern.npy',vxc1IRKern)
+    !CALL save_npy('rho1MTCoreDispAt.npy',rho1MTCoreDispAt)
+    !CALL save_npy('rho0IRpw.npy',rho0IRpw)
+    !CALL save_npy('rho0MTsh.npy',rho0MTsh)
+    !CALL save_npy('gausWts.npy',gausWts) ! gaussian weights belonging to gausPts
+    !CALL save_npy('vEff0IRpwUw.npy', vEff0IRpwUw)
+    !NOstop
     ! Generate potential G-set which is shifted according to the q-vector so fulfills ||q + G|| < Gmax
     ! NOTE: This routine is deprecated, as it was decided to not shift the set of the G-vectors, therefore it is deactivated at the
     !       moment by just generating a G-set with no shift that is equivalent to the standard G-set for the density and the
@@ -780,6 +819,7 @@ module m_jpSternheimer
 
             call GenRecEdifME( ne(mapKpq2K(ikpt, iqpt)), nobd(ikpt, 1), eig(:, mapKpq2K(ikpt, iqpt), 1), eig(:, ikpt, 1), &
                                                                                                             & recEdiffME, cutContr )
+
             z1nG = cmplx(0.0, 0.0)
             ! Due to performance reasons we do not make a loop over idir (array of types, type of arrays)
 
