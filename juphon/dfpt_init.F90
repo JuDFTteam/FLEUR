@@ -206,6 +206,7 @@ CONTAINS
 
                 ev_list = cdnvaljob%compact_ev_list(nk, l_empty = .FALSE.)
                 nocc(ik, iSpin) = SIZE(ev_list)
+                ev_list = cdnvaljob%compact_ev_list(nk, l_empty = .TRUE.)
                 !nocc(ik, iSpin) = cdnvaljob%noccbd(nk)
                 we  = cdnvalJob%weights(ev_list, nk)
                 eig = results%eig(ev_list, nk, iSpin)
@@ -217,9 +218,11 @@ CONTAINS
                 END IF
 
                 IF (l_real) THEN
-                    z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = CMPLX(1.0,0.0) * zMat%data_r(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
+                    !z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = CMPLX(1.0,0.0) * zMat%data_r(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
+                    z0(:nvfull(iSpin, ik), :nvfull(iSpin, ik), ik, iSpin) = CMPLX(1.0,0.0) * zMat%data_r(:nvfull(iSpin, ik), :nvfull(iSpin, ik))
                 ELSE
-                    z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = zMat%data_c(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
+                    !z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = zMat%data_c(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
+                    z0(:nvfull(iSpin, ik), :nvfull(iSpin, ik), ik, iSpin) = zMat%data_c(:nvfull(iSpin, ik), :nvfull(iSpin, ik))
                 END IF
 
 !#ifdef CPP_MPI
