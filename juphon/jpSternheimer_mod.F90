@@ -433,7 +433,7 @@ module m_jpSternheimer
     ! Comments after activated quantities indicate the problems/differences to old juPhon.
     !CALL save_npy('rbas1.npy',rbas1)
     !CALL save_npy('rbas2.npy',rbas2)
-    CALL save_npy('El.npy',El) ! Size differs (certainly LO related). Max seems nicer and the values match.
+    CALL save_npy('El.npy',El) ! Size differs (certainly LO related). Max seems nicer, but the values match.
     !CALL save_npy('kveclo.npy',kveclo)
     !CALL save_npy('uuilon.npy',uuilon)
     !CALL save_npy('duilon.npy',duilon)
@@ -456,11 +456,11 @@ module m_jpSternheimer
     !CALL save_npy('kpq2kPrVec.npy',kpq2kPrVec)
     !CALL save_npy('ylm.npy',ylm)
     !CALL save_npy('grRho0IR.npy',grRho0IR)
-    CALL save_npy('grRho0MT.npy',grRho0MT) ! r-factor shenanigans...
-    CALL save_npy('grVH0MT.npy',grVH0MT) ! Propagated r-factor shenanigans...
+    !CALL save_npy('grRho0MT.npy',grRho0MT) ! Fixed.
+    !CALL save_npy('grVH0MT.npy',grVH0MT) ! Fixed.
     !CALL save_npy('grVeff0MT_init.npy',grVeff0MT_init)
     !CALL save_npy('grVeff0MT_main.npy',grVeff0MT_main)
-    CALL save_npy('dKernMTGPts.npy',dKernMTGPts) ! Propagated r-factor shenanigans I suppose...
+    !CALL save_npy('dKernMTGPts.npy',dKernMTGPts) ! Fixed.
     !CALL save_npy('vxc1IRKern.npy',vxc1IRKern)
     !CALL save_npy('rho1MTCoreDispAt.npy',rho1MTCoreDispAt)
     !CALL save_npy('rho0IRpw.npy',rho0IRpw)

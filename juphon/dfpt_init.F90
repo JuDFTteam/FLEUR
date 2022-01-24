@@ -20,9 +20,10 @@ CONTAINS
                        & grRho0, vTot0, grVTot0, ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                        & uuilonout, duilonout, ulouilopnout, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                        & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc, tdHS0, loosetdout, nocc)
+                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc, tdHS0, loosetdout, nocc, rhoclean)
 
         USE m_jpGrVeff0, ONLY : GenGrVeff0
+        USE m_npy
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -37,7 +38,7 @@ CONTAINS
         TYPE(t_mpi),      INTENT(IN)  :: fmpi
         TYPE(t_results),  INTENT(IN)  :: results
         TYPE(t_enpara),   INTENT(IN)  :: enpara
-        TYPE(t_potden),   INTENT(IN)  :: rho, vTot
+        TYPE(t_potden),   INTENT(IN)  :: rho, vTot, rhoclean
         INTEGER,          INTENT(IN)  :: eig_id
         INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
@@ -345,7 +346,8 @@ CONTAINS
         call genPotDensGvecs(stars, cell, input, ngdp, ngdp2km, recG, gdp2Ind, gdp2iLim, .false.)
 
         call calcIRdVxcKern(stars, recG, ngdp, rho%pw(:, 1), grVxcIRKern)
-        call calcMTdVxcKern(atoms, sphhar, sym, rho%mt(:, :, :, 1), sphhar%nmem, sphhar%clnu, sphhar%mlh, gausWts, ylm, dKernMTGPts)
+
+        call calcMTdVxcKern(atoms, sphhar, sym, rhoclean%mt(:, :, :, 1), sphhar%nmem, sphhar%clnu, sphhar%mlh, gausWts, ylm, dKernMTGPts)
 
         ! Calculate parameters of Gauss curve (pseudo-core density in MT) and Fourier transform of pseudo-core density for IR
         call calcPsDensMT( fmpi, atoms, cell, sym, stars, input, ngdp, acoff, alpha, qpwcG, recG )
