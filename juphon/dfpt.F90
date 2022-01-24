@@ -184,7 +184,7 @@ CONTAINS
           & gdp2iLim, kpq2kPrVec, qpwcG, juPhon%singleQpt, tdHS0, loosetd, ylm, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), grVeff0MT_init, grVeff0MT_main, dKernMTGPts,       &! main --> DM for Alex
           & grVxcIRKern, rho1MTCoreDispAt, gausWts, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, juPhon%oneSternhCycle, ngpqdp, gpqdp,&
           & vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, &
-          & vXc1MTq0, rho0%pw(:, :, 1, 1), rho0%mt(:, :, :, :, 1, 1), vTot%pw, juPhon%noPtsCon, vExt1MTnoVol, vEff1MTnoVol, vH1MTnoVol, vExt1MTnoVolnoq, grVeff0MT_DMhxc, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
+          & vXc1MTq0, rho0%pw(:, :, 1, 1), rho0%mt(:, :, :, :, 1, 1), vTot0%pw(:, :, 1, 1), juPhon%noPtsCon, vExt1MTnoVol, vEff1MTnoVol, vH1MTnoVol, vExt1MTnoVolnoq, grVeff0MT_DMhxc, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
 
   call CalcIIEnerg2(atoms, cell, qpts, stars, input, juPhon%singleQpt, ngdp, recG, E2ndOrdII)
 
