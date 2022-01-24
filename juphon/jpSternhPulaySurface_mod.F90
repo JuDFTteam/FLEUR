@@ -1419,7 +1419,7 @@ module m_jpSternhPulaySurface
     ! Array parameter
     integer,                   intent(in)  :: gdp(:, :)
     complex,                   intent(in)  :: vEff0IRpwUw(:, :)
-    complex,                   intent(out) :: veffUvIR(:, :)
+    complex,                   intent(inout) :: veffUvIR(:, :)
 
     ! Scalar variables
     integer                                :: iG
