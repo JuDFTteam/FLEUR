@@ -476,7 +476,7 @@ MODULE m_hubbard1_setup
          ENDIF
          write(attributes(1),'(f14.8)') results%last_occdistance
          write(attributes(2),'(f14.8)') results%last_mmpMatdistance                                    
-         call writeXMLElement('hubbard1Distance',['occupationDistance','elementDistance   '], attributes)
+         call writeXMLElement('hubbard1Distance',['occupationDistance','elementDistance   '], attributes(:2))
          call closeXMLElement('hubbard1Iteration')
       ENDIF
 
