@@ -688,4 +688,11 @@
       </xsd:restriction>
    </xsd:simpleType>
 
+   <!-- Cannot be in the FleurInputSchema.xsd since we still support older FleurInputSchemas -->
+   <xsd:simpleType name="FleurDouble4DVecType">
+      <xsd:restriction base="FleurDoubleVecType">
+         <xsd:length value="4"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
 </xsd:schema>
