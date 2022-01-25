@@ -2709,8 +2709,8 @@ contains
 
   end subroutine CalcSFintIRPsiHepsPsi1
 
-  subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1ExpCoeffVar( fmpi, noco, nococonv, oneD, atoms, input, sym, usdus, kpts, cell, results, iqpt, iDtypeB, iDatomB, iDatomA, lmpMax, nRadFun, eig, varphi1, varphi2, hVarphi, &
-    & mapKpq2K, gBas, mapGbas, nv, kveclo, z0, lmpT, nobd, iloTable, surfInt, testGoldstein )
+  subroutine CalcSFintlongname1( fmpi, noco, nococonv, oneD, atoms, input, sym, usdus, kpts, cell, results, iqpt, iDtypeB, iDatomB, iDatomA, lmpMax, nRadFun, eig, varphi1, varphi2, hVarphi, &
+    & mapKpq2K, gBas, mapGbas, nv, kveclo, z0, lmpT, nobd, iloTable, surfInt, testGoldstein ) !CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1ExpCoeffVar
 
     use m_types
     use m_abcof3
@@ -3060,10 +3060,10 @@ contains
 
     end do ! ikpt
 
-  end subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1ExpCoeffVar
+  end subroutine CalcSFintlongname1 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1ExpCoeffVar
 
-  subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG( fmpi, noco, nococonv, oneD, atoms, input, sym, usdus, kpts, cell, results, lmpMax, iDtypeA,      &
-      & iDatomA, nRadFun, eig, hVarphi, gBas, mapGbas, nv, kveclo, z0, nobd, lmpT, iloTable, varphi1, varphi2, surfInt )
+  subroutine CalcSFintlongname2( fmpi, noco, nococonv, oneD, atoms, input, sym, usdus, kpts, cell, results, lmpMax, iDtypeA,      &
+      & iDatomA, nRadFun, eig, hVarphi, gBas, mapGbas, nv, kveclo, z0, nobd, lmpT, iloTable, varphi1, varphi2, surfInt ) ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG
 
     use m_types
     use m_abcof3
@@ -3341,7 +3341,7 @@ contains
       end do ! idirC
 
     end do ! ikpt
-  end subroutine CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG
+  end subroutine CalcSFintlongname1 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG
 
   subroutine CalcSurfintMTPsigrVeff0Psi( fmpi, noco, nococonv, oneD, atoms, input, sym, cell, kpts, usdus, results, lmpMax, iDtypeB, iDatomB, nobd, gbas, &
       & mapGbas, nRadFun, nv, z0, kveclo, varphi1, varphi2, grVeff0MT, iloTable, surfInt )
