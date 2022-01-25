@@ -181,7 +181,7 @@ CONTAINS
 
         call solveSternheimerSCC( fmpi, oneD, atoms, sym, stars, sphhar, cell, enpara, usdus, input, kpts, qpts, results, usdus,      &
           & logUnit, ngdp, rbas1, rbas2, kveclo, uuilon, duilon, ulouilopn, &
-          & recG, mapKpq2K, results%neig(:, 1), results%eig, GbasVec, ilst, z0_inp, nvfull, El, nradFun, iloTable, nocc, ilo2p, gdp2Ind,     &
+          & recG, mapKpq2K, results%neig(:, 1), results%eig, GbasVec, ilst, z0, nvfull, El, nradFun, iloTable, nocc, ilo2p, gdp2Ind,     &
           & gdp2iLim, kpq2kPrVec, qpwcG, juPhon%singleQpt, tdHS0, loosetd, ylm, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), grVeff0MT_init, grVeff0MT_main, dKernMTGPts,       &! main --> DM for Alex
           & grVxcIRKern, rho1MTCoreDispAt, gausWts, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, juPhon%oneSternhCycle, ngpqdp, gpqdp,&
           & vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, &

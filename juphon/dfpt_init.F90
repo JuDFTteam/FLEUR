@@ -104,6 +104,7 @@ CONTAINS
         complex,           allocatable              :: grVeff0IRDummy(:, :)
         complex,           allocatable              :: grVeff0MTAdd_init(:, :, :, :)
         complex,           allocatable              :: grVeff0IR_DMhxc(:, :)
+        INTEGER,           ALLOCATABLE              :: GbasVec_eig_loc(:, :, :, :)
 
 !#ifdef CPP_MPI
 !        INTEGER ierr
@@ -123,6 +124,73 @@ CONTAINS
 
         ALLOCATE(ilst(MAXVAL(nvfull), kpts%nkpt, input%jspins), GbasVec_temp(3, 0), GbasVec(3, 0) )
 
+        !nbasfcn = MERGE(MAXVAL(nvfull(1,:))+MAXVAL(nvfull(2,:))+2*atoms%nlotot,MAXVAL(nvfull(1,:))+atoms%nlotot,noco%l_noco)
+
+        nbasfcn = MAXVAL(nvfull(1,:))+atoms%nlotot
+
+        ALLOCATE(z0(nbasfcn, input%neig, kpts%nkpt, nSpins))
+        ALLOCATE(nocc(kpts%nkpt, input%jspins))
+
+        ALLOCATE(GbasVec_eig_loc(3, input%neig, kpts%nkpt, MERGE(1,input%jspins,noco%l_noco)))
+        GbasVec_eig_loc = 0
+
+        z0 = CMPLX(0.0,0.0)
+        nocc = 0
+
+        l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco).AND.atoms%n_hia==0
+
+        !CALL zMat%init(l_real, nbasfcn, input%neig)
+
+        DO iSpin = 1, nspins
+            CALL cdnvalJob%init(fmpi, input, kpts, noco, results, iSpin)
+            DO ik = 1,kpts%nkpt
+
+                !nk=cdnvalJob%k_list(ik)
+
+                !bkpt=kpts%bk(:, nk)
+                bkpt=kpts%bk(:, ik)
+
+                !CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+                CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, .FALSE., fmpi)
+                GbasVec_eig_loc(:, :lapw%nv(iSpin) + atoms%nlotot, ik, iSpin) = lapw%gvec(:, :, iSpin)
+
+                ! Kinda like this for lapw%kvec and nkvec. Irrelevant for now.
+                !DO lo = 1,nlo(n)
+                !    kveclo(nkvec_sv+1:nkvec_sv+nkvec(lo,1)) =
+                !    +                                            kvec(1:nkvec(lo,1),lo)
+                !    nkvec_sv = nkvec_sv+nkvec(lo,1)
+                !    nkvec(lo,:) = 0
+                !END DO
+
+                ev_list = cdnvaljob%compact_ev_list(ik, l_empty = .FALSE.)
+                nocc(ik, iSpin) = SIZE(ev_list)
+                ev_list = cdnvaljob%compact_ev_list(ik, l_empty = .TRUE.)
+                !nocc(ik, iSpin) = cdnvaljob%noccbd(nk)
+                !we  = cdnvalJob%weights(ev_list, nk)
+                !eig = results%eig(ev_list, nk, iSpin)
+
+                !IF (fmpi%irank == 0) THEN
+                nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+                CALL zMat%init(l_real, nbasfcn, SIZE(ev_list))
+                CALL read_eig(eig_id, ik, iSpin, list = ev_list, zmat=zMat)
+                    !CALL read_eig(eig_id, ik, iSpin, neig = results%neig(ik, iSpin), &
+                    !                                & eig = results%eig(:, ik, iSpin))
+                !END IF
+
+                IF (l_real) THEN
+                    !z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = CMPLX(1.0,0.0) * zMat%data_r(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
+                    z0(:lapw%nv(iSpin), :lapw%nv(iSpin), ik, iSpin) = CMPLX(1.0,0.0) * zMat%data_r(:lapw%nv(iSpin), :lapw%nv(iSpin))
+                ELSE
+                    !z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = zMat%data_c(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
+                    z0(:lapw%nv(iSpin), :lapw%nv(iSpin), ik, iSpin) = zMat%data_c(:lapw%nv(iSpin), :lapw%nv(iSpin))
+                END IF
+
+!#ifdef CPP_MPI
+!                CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
+!#endif
+            END DO
+        END DO
+
         ! Store basis vectors G in a compressed way, as they occur multiple times
         ! for different k-points. The array ilst stores the vector's index if it
         ! has occured for a different k-point or spin already.
@@ -135,7 +203,7 @@ CONTAINS
                         addG = .true.
                     ELSE
                         DO ifind =  1, uBound(GbasVec, 2)
-                            IF (.NOT.ALL(ABS(GbasVec(:, ifind) - GbasVec_eig(:, iG, ik, iSpin)).LE.1E-8)) THEN
+                            IF (.NOT.ALL(ABS(GbasVec(:, ifind) - GbasVec_eig_loc(:, iG, ik, iSpin)).LE.1E-8)) THEN
                                 addG = .TRUE.
                             ELSE
                                 ilst(iG, ik, iSpin) = ifind
@@ -158,9 +226,9 @@ CONTAINS
 
                         indexG = indexG + 1
                         ilst(iG, ik, iSpin) = indexG
-                        GbasVec(1, indexG) = GbasVec_eig(1, iG, ik, iSpin)
-                        GbasVec(2, indexG) = GbasVec_eig(2, iG, ik, iSpin)
-                        GbasVec(3, indexG) = GbasVec_eig(3, iG, ik, iSpin)
+                        GbasVec(1, indexG) = GbasVec_eig_loc(1, iG, ik, iSpin)
+                        GbasVec(2, indexG) = GbasVec_eig_loc(2, iG, ik, iSpin)
+                        GbasVec(3, indexG) = GbasVec_eig_loc(3, iG, ik, iSpin)
 
                         IF (uBound(GbasVec, 2).NE.0) THEN
                             DEALLOCATE(GbasVec_temp)
@@ -172,65 +240,6 @@ CONTAINS
         END DO ! iSpin
 
         DEALLOCATE(GbasVec_temp)
-
-        !nbasfcn = MERGE(MAXVAL(nvfull(1,:))+MAXVAL(nvfull(2,:))+2*atoms%nlotot,MAXVAL(nvfull(1,:))+atoms%nlotot,noco%l_noco)
-
-        nbasfcn = MAXVAL(nvfull(1,:))+atoms%nlotot
-
-        ALLOCATE(z0(nbasfcn, input%neig, kpts%nkpt, nSpins))
-        ALLOCATE(nocc(kpts%nkpt, input%jspins))
-
-        z0 = CMPLX(0.0,0.0)
-        nocc = 0
-
-        l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco).AND.atoms%n_hia==0
-
-        CALL zMat%init(l_real, nbasfcn, input%neig)
-
-        DO iSpin = 1, nspins
-            CALL cdnvalJob%init(fmpi, input, kpts, noco, results, iSpin)
-            DO ik = 1,kpts%nkpt
-
-                nk=cdnvalJob%k_list(ik)
-
-                bkpt=kpts%bk(:, nk)
-
-                CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
-
-                ! Kinda like this for lapw%kvec and nkvec. Irrelevant for now.
-                !DO lo = 1,nlo(n)
-                !    kveclo(nkvec_sv+1:nkvec_sv+nkvec(lo,1)) =
-                !    +                                            kvec(1:nkvec(lo,1),lo)
-                !    nkvec_sv = nkvec_sv+nkvec(lo,1)
-                !    nkvec(lo,:) = 0
-                !END DO
-
-                ev_list = cdnvaljob%compact_ev_list(nk, l_empty = .FALSE.)
-                nocc(ik, iSpin) = SIZE(ev_list)
-                ev_list = cdnvaljob%compact_ev_list(nk, l_empty = .TRUE.)
-                !nocc(ik, iSpin) = cdnvaljob%noccbd(nk)
-                we  = cdnvalJob%weights(ev_list, nk)
-                eig = results%eig(ev_list, nk, iSpin)
-
-                IF (fmpi%irank == 0) THEN
-                    CALL read_eig(eig_id, nk, iSpin, list = ev_list,  zmat=zMat)
-                    !CALL read_eig(eig_id, ik, iSpin, neig = results%neig(ik, iSpin), &
-                    !                                & eig = results%eig(:, ik, iSpin))
-                END IF
-
-                IF (l_real) THEN
-                    !z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = CMPLX(1.0,0.0) * zMat%data_r(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
-                    z0(:nvfull(iSpin, ik), :nvfull(iSpin, ik), ik, iSpin) = CMPLX(1.0,0.0) * zMat%data_r(:nvfull(iSpin, ik), :nvfull(iSpin, ik))
-                ELSE
-                    !z0(:nvfull(iSpin, ik), :results%neig(ik, iSpin), ik, iSpin) = zMat%data_c(:nvfull(iSpin, ik), :results%neig(ik, iSpin))
-                    z0(:nvfull(iSpin, ik), :nvfull(iSpin, ik), ik, iSpin) = zMat%data_c(:nvfull(iSpin, ik), :nvfull(iSpin, ik))
-                END IF
-
-!#ifdef CPP_MPI
-!                CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
-!#endif
-            END DO
-        END DO
 
         allocate( nRadFun(0:atoms%lmaxd, atoms%ntype) )
         ! The number of radial functions p for a given atom type and orbital quantum number l is at least 2 ( u and udot ).

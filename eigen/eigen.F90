@@ -277,8 +277,9 @@ CONTAINS
       IF (PRESENT(nvfull)) THEN
           CALL MPI_ALLREDUCE(nvfullBuffer(:,:),nvfull(:,:),size(nvfullBuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
           CALL MPI_ALLREDUCE(GbasVecBuffer(:,:,:,:),GbasVec_eig(:,:,:,:),size(GbasVecBuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
-          CALL MPI_ALLREDUCE(z0Buffer(:,:,:,:),z0(:,:,:,:),size(z0),MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
+          !CALL MPI_ALLREDUCE(z0Buffer(:,:,:,:),z0(:,:,:,:),size(z0),MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
           ! TODO: This last broadcast is surely faulty.
+          z0(:,:,:,:) = z0Buffer(:,:,:,:)
       END IF
       CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #else
