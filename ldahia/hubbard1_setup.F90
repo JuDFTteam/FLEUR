@@ -13,6 +13,7 @@ MODULE m_hubbard1_setup
    USE m_mpi_bc_tool
    USE m_greensf_io
    USE m_rotMMPmat
+   use m_xmlOutput
 #ifdef CPP_EDSOLVER
    USE EDsolver, only: EDsolver_from_cfg
 #endif
@@ -47,7 +48,7 @@ MODULE m_hubbard1_setup
 
       LOGICAL, PARAMETER :: l_mix = .FALSE.
 
-      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n
+      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n,i,k,ind1,ind2
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
@@ -60,6 +61,7 @@ MODULE m_hubbard1_setup
       TYPE(t_greensf),ALLOCATABLE :: gdft_rot(:)
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
       TYPE(t_selfen), ALLOCATABLE :: selfen(:)
+      TYPE(t_mat) :: cfmat
 
 #ifdef CPP_HDF
       INTEGER(HID_T)     :: greensf_fileID
@@ -74,6 +76,7 @@ MODULE m_hubbard1_setup
       COMPLEX :: dcpot(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3)
       COMPLEX, ALLOCATABLE :: e(:)
       COMPLEX, ALLOCATABLE :: ctmp(:)
+      character(len=30) :: attributes(7)
 
       !Check if the EDsolver library is linked
 #ifndef CPP_EDSOLVER
@@ -88,6 +91,8 @@ MODULE m_hubbard1_setup
 
 
       IF(fmpi%irank.EQ.0) THEN
+         write(attributes(1),'(i0)') hub1data%iter
+         call openXMLElement('hubbard1Iteration',['number'], attributes(:1))
          !-------------------------------------------
          ! Create the Input for the Hubbard 1 Solver
          !-------------------------------------------
@@ -218,6 +223,45 @@ MODULE m_hubbard1_setup
             !Copy the bath file to the Hubbard 1 solver if its present
             IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(folder)))
 
+            !Create XML output for the solver parameters
+            write(attributes(1), '(i0)') nType
+            write(attributes(2), '(i0)') l
+            write(attributes(3), '(f14.8)') mu_dc(1)
+            write(attributes(4), '(i0)') occDFT_INT
+            call openXMLElement('solverParameters', ['atomType  ', 'l         ', 'chemPot   ', 'occupation'], attributes(:4))
+            
+            write(attributes(1), '(f14.8)') f0(i_hia)
+            write(attributes(2), '(f14.8)') f2(i_hia)
+            write(attributes(3), '(f14.8)') f4(i_hia)
+            write(attributes(4), '(f14.8)') f6(i_hia)
+            call writeXMLElementNoAttributes('slaterParameters',attributes(:4))
+            
+            do i_exc = 1, hub1inp%n_exc(i_hia)
+               write(attributes(1), '(i0)') hub1inp%exc_l(i_hia,i_exc)
+               write(attributes(2), '(f14.8)') hub1inp%exc(i_hia,i_exc)
+               write(attributes(3), '(f14.8)') hub1data%mag_mom(i_hia,i_exc)
+               call writeXMLElement('exchange',['l     ', 'J     ', 'moment'],attributes(:3))
+            enddo
+            write(attributes(1), '(f14.8)') hub1data%xi(i_hia)
+            call writeXMLElement('socParameter',['value'],attributes(:1))
+
+            IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12) THEN
+               CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))
+               cfmat%data_r= 0.0
+               DO i = 1, 2
+                  DO m = 1, (2*l+1)
+                     DO k = 1, (2*l+1)
+                        ind1 = (i-1)*(2*l+1) + m
+                        ind2 = (i-1)*(2*l+1) + k
+                        cfmat%data_r(ind1,ind2) = hub1data%ccfmat(i_hia,m-l-1,k-l-1)*hartree_to_ev_const*hub1inp%ccf(i_hia)
+                     ENDDO
+                  ENDDO
+               ENDDO
+               write(attributes(1), '(f14.8)') hub1inp%ccf(i_hia)
+               CALL writeXMLElementMatrixFormPoly('crystalField',['factor'],attributes(:1),reshape([5,14],[1,2]),cfmat%data_r)
+            ENDIF
+
+            call closeXMLElement('solverParameters')
             !-------------------------------------------------------
             ! Write the main config files
             !-------------------------------------------------------
@@ -430,6 +474,10 @@ MODULE m_hubbard1_setup
                hub1data%l_performSpinavg = .FALSE.
             ENDIF
          ENDIF
+         write(attributes(1),'(f14.8)') results%last_occdistance
+         write(attributes(2),'(f14.8)') results%last_mmpMatdistance                                    
+         call writeXMLElement('hubbard1Distance',['occupationDistance','elementDistance   '], attributes)
+         call closeXMLElement('hubbard1Iteration')
       ENDIF
 
       CALL mpi_bc(hub1data%l_performSpinavg,0,fmpi%mpi_comm)

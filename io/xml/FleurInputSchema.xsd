@@ -225,6 +225,12 @@
       </xsd:restriction>
    </xsd:simpleType>
 
+   <xsd:simpleType name="FleurDouble4DVecType">
+      <xsd:restriction base="FleurDoubleVecType">
+         <xsd:length value="4"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
    <xsd:simpleType name="FleurDouble6DVecType">
       <xsd:restriction base="FleurDoubleVecType">
          <xsd:length value="6"/>
