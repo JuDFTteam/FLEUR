@@ -20,7 +20,7 @@ CONTAINS
                        & grRho0, vTot0, grVTot0, ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                        & uuilonout, duilonout, ulouilopnout, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                        & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc, tdHS0, loosetdout, nocc, rhoclean)
+                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetdout, nocc, rhoclean)
 
         USE m_jpGrVeff0, ONLY : GenGrVeff0
         USE m_npy
@@ -79,7 +79,6 @@ CONTAINS
         complex,           allocatable, intent(out) :: grVCoul0MT_DM_SF(:, :, :, :)
         complex,           allocatable, intent(out) :: grVeff0IR_DM(:, :)
         complex,           allocatable, intent(out) :: grVeff0MT_DM(:, :, :, :)
-        complex,           allocatable, intent(out) :: grVeff0MT_DMhxc(:, :, :, :)
         type(t_tlmplm),                 intent(out) :: tdHS0
         COMPLEX, ALLOCATABLE,           INTENT(OUT) :: loosetdout(:, :, :, :)
         INTEGER, ALLOCATABLE,           INTENT(OUT) :: nocc(:, :)
@@ -491,17 +490,6 @@ CONTAINS
         call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
                        & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
                        & testGoldstein, grRhoTermSw, grVeff0IR_DM, grVeff0MT_DM )
-
-        ! Sum of Hartree and xc potential gradients for the dynamical matrix
-        harSw = .true.
-        extSw = .false.
-        xcSw = .true.
-        grRhoTermSw = .true.
-        testGoldstein = .false.
-
-        call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
-                       & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
-                       & testGoldstein, grRhoTermSw, grVeff0IR_DMhxc, grVeff0MT_DMhxc )
 
         call tlmplm4H0( atoms, enpara, usdus, input, tdHS0, 1, rbas1, rbas2, usdus%uuilon(:, :, 1), usdus%duilon(:, :, 1), usdus%ulouilopn(:, :, :, 1), ilo2p, vTot0%mt(:, :, :, 1, 1, 1), loosetdout )
 

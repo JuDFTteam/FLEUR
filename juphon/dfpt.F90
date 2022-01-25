@@ -80,7 +80,6 @@ CONTAINS
         complex,           allocatable :: grVCoul0MT_DM_SF(:, :, :, :)
         complex,           allocatable :: grVeff0IR_DM(:, :)
         complex,           allocatable :: grVeff0MT_DM(:, :, :, :)
-        complex,           allocatable :: grVeff0MT_DMhxc(:, :, :, :)
         complex,           allocatable :: dynMat(:, :)
         complex,           allocatable :: E2ndOrdII(:, :)
         complex,           allocatable :: eigenFreqs(:)
@@ -100,11 +99,8 @@ CONTAINS
         complex,            allocatable :: vExt1IR_final(:, :, :)
         complex,            allocatable :: vExt1MT(:, :, :, :, :)
         complex,            allocatable :: vExt1MTDelta(:, :, :, :, :)
-        complex,            allocatable :: vExt1MTnoVol(:, :, :, :, :)
-        complex,            allocatable :: vExt1MTnoVolnoq(:, :, :, :, :)
         complex,            allocatable :: vExt1MTq0(:, :, :, :, :)
         complex,            allocatable :: vExt1noqIR_final(:, :, :)
-        complex,            allocatable :: vH1MTnoVol(:, :, :, :, :)
         complex,            allocatable :: vHar1IR_final(:, :, :)
         complex,            allocatable :: vHar1MTDelta(:, :, :, :, :)
         complex,            allocatable :: vHar1MTq0(:, :, :, :, :)
@@ -172,7 +168,7 @@ CONTAINS
                      & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                      & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                      & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-                     & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, grVeff0MT_DMhxc,  tdHS0, loosetd, nocc, rhoclean)
+                     & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean)
 
         ! < Imagine starting a q-grid-loop here. >
         ! < For now we just select one q-point from the input. >
@@ -185,7 +181,7 @@ CONTAINS
           & gdp2iLim, kpq2kPrVec, qpwcG, juPhon%singleQpt, tdHS0, loosetd, ylm, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), grVeff0MT_init, grVeff0MT_main, dKernMTGPts,       &! main --> DM for Alex
           & grVxcIRKern, rho1MTCoreDispAt, gausWts, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, juPhon%oneSternhCycle, ngpqdp, gpqdp,&
           & vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, &
-          & vXc1MTq0, rho0%pw(:, :, 1, 1), rho0%mt(:, :, :, :, 1, 1), vTot0%pw(:, :, 1, 1), juPhon%noPtsCon, vExt1MTnoVol, vEff1MTnoVol, vH1MTnoVol, vExt1MTnoVolnoq, grVeff0MT_DMhxc, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
+          & vXc1MTq0, rho0%pw(:, :, 1, 1), rho0%mt(:, :, :, :, 1, 1), vTot0%pw(:, :, 1, 1), juPhon%noPtsCon, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
 
   call CalcIIEnerg2(atoms, cell, qpts, stars, input, juPhon%singleQpt, ngdp, recG, E2ndOrdII)
 
@@ -194,7 +190,7 @@ CONTAINS
     & rhoclean%mt, E2ndOrdII, El, results%eig, rbas1, rbas2, iloTable, nvfull, nocc, ilst, GbasVec, z0, kveclo, nRadFun, mapKpq2K, kpq2kPrVec,       &
     & gpqdp, sphhar%memd, logUnit, vxc%pw, exc%pw(:, 1), vxc%mt, exc%mt(:, 0:, :, 1), vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), &
     & grVext0IR_DM, grVext0MT_DM, grVeff0IR_DM, grVeff0MT_DM, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, &
-    & vXc1MTDelta, vXc1MTq0, vExt1MTnoVol, grVeff0MT_DMhxc, vEff1MTnoVol, vH1MTnoVol, vExt1MTnoVolnoq, vExt1noqIR_final, rho1MTz0, &
+    & vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, &
     & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol)
 
     call DiagonalizeDynMat(atoms, qpts, juPhon%calcEigenVec, dynMat, eigenVals, eigenVecs, juPhon%singleQpt)

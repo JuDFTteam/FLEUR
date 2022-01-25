@@ -231,8 +231,8 @@ module m_jpSternheimer
     & nobd, ilo2p, gdp2Ind, gdp2iLim, kpq2kPrVec, qpwcG, iqpt, tdHS0, loosetd, ylm, grRho0IR, grRho0MT, grVeff0MT_init, grVeff0MT_main, &
     & dKernMTGPts, vxc1IRKern, rho1MTCoreDispAt, gausWts, rho1IRDS, rho1MT, vExt1MT, vEff1IR_final, vEff1MT_final, &
     & oneSternhCycle, ngpqdp, gpqdp, vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, &
-    & vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, rho0IRpw, rho0MTsh, vEff0IRpwUw, noPts2chCont, vExt1MTnoVol, vEff1MTnoVol, &
-    & vH1MTnoVol, vExt1MTnoVolnoq, grVH0MT, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol, vEff0MTsh )
+    & vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, rho0IRpw, rho0MTsh, vEff0IRpwUw, noPts2chCont, vEff1MTnoVol, &
+    & vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol, vEff0MTsh )
 
     use m_types
     use m_jpDens1stVar, only : calcVarCTcorr, calcRho1IRValDS, calcKdepValRho1MT, multRadSolVzcRho1MT
@@ -296,7 +296,6 @@ module m_jpSternheimer
     complex,                        intent(in)  :: ylm(:, :)
     complex,                        intent(in)  :: grRho0IR(:, :)
     complex,                        intent(in)  :: grRho0MT(:, :, :, :)
-    complex,                        intent(in)  :: grVH0MT(:, :, :, :)
     complex,                        intent(in)  :: grVeff0MT_init(:, :, :, :)
     complex,                        intent(in)  :: grVeff0MT_main(:, :, :, :)
     real,                           intent(in)  :: dKernMTGPts(:, :, :)
@@ -313,10 +312,7 @@ module m_jpSternheimer
     complex,           allocatable, intent(out) :: vExt1noqIR_final(:, :, :)
     complex,           allocatable, intent(out) :: vHar1IR_final(:, :, :)
     complex,           allocatable, intent(out) :: vExt1MT(:, :, :, :, :)
-    complex,           allocatable, intent(out) :: vExt1MTnoVol(:, :, :, :, :)
     complex,           allocatable, intent(out) :: vEff1MTnoVol(:, :, :, :, :)
-    complex,           allocatable, intent(out) :: vExt1MTnoVolnoq(:, :, :, :, :)
-    complex,           allocatable, intent(out) :: vH1MTnoVol(:, :, :, :, :)
     complex,           allocatable, intent(out) :: vExt1MTDelta(:, :, :, :, :)
     complex,           allocatable, intent(out) :: vExt1MTq0(:, :, :, :, :)
     complex,           allocatable, intent(out) :: vHar1MTDelta(:, :, :, :, :)
@@ -457,7 +453,6 @@ module m_jpSternheimer
     !CALL save_npy('ylm.npy',ylm)
     !CALL save_npy('grRho0IR.npy',grRho0IR)
     !CALL save_npy('grRho0MT.npy',grRho0MT) ! Fixed.
-    !CALL save_npy('grVH0MT.npy',grVH0MT) ! Fixed.
     !CALL save_npy('grVeff0MT_init.npy',grVeff0MT_init)
     !CALL save_npy('grVeff0MT_main.npy',grVeff0MT_main)
     !CALL save_npy('dKernMTGPts.npy',dKernMTGPts) ! Fixed.
@@ -467,7 +462,11 @@ module m_jpSternheimer
     !CALL save_npy('rho0MTsh.npy',rho0MTsh)
     !CALL save_npy('gausWts.npy',gausWts) ! gaussian weights belonging to gausPts
     !CALL save_npy('vEff0IRpwUw.npy', vEff0IRpwUw)
-    !NOstop
+    !CALL save_npy('tuu.npy', loosetd(:, :, :, 1))
+    !CALL save_npy('tud.npy', loosetd(:, :, :, 2))
+    !CALL save_npy('tdu.npy', loosetd(:, :, :, 3))
+    !CALL save_npy('tdd.npy', loosetd(:, :, :, 4))
+    !stop
     ! Generate potential G-set which is shifted according to the q-vector so fulfills ||q + G|| < Gmax
     ! NOTE: This routine is deprecated, as it was decided to not shift the set of the G-vectors, therefore it is deactivated at the
     !       moment by just generating a G-set with no shift that is equivalent to the standard G-set for the density and the
@@ -495,10 +494,7 @@ module m_jpSternheimer
     allocate( sumVMTs(atoms%jmtd, (atoms%lmaxd + 1 )**2, 3, atoms%nat) )
     allocate( sumVMTs2(atoms%jmtd, (atoms%lmaxd + 1)**2, 3, atoms%nat) )
     allocate( vExt1MT(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat ))
-    allocate( vExt1MTnoVol(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat ))
     allocate( vEff1MTnoVol(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat ))
-    allocate( vExt1MTnoVolnoq(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat ))
-    allocate( vH1MTnoVol(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat ))
     allocate( vExt1MTDelta(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat ))
     allocate( vExt1MTq0(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat ))
     allocate( vHar1MTDelta(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat ))
@@ -552,10 +548,7 @@ module m_jpSternheimer
     sumVMTs(:, :, :, :)          = cmplx(0., 0.)
     sumVMTs2(:, :, :, :)         = cmplx(0., 0.)
     vExt1MT(:, :, :, :, :)       = cmplx(0., 0.)
-    vExt1MTnoVol(:, :, :, :, :)       = cmplx(0., 0.)
     vEff1MTnoVol(:, :, :, :, :)       = cmplx(0., 0.)
-    vExt1MTnoVolnoq(:, :, :, :, :)       = cmplx(0., 0.)
-    vH1MTnoVol(:, :, :, :, :)       = cmplx(0., 0.)
     vExt1MTDelta(:, :, :, :, :)  = cmplx(0., 0.)
     vExt1MTq0(:, :, :, :, :)     = cmplx(0., 0.)
     vHar1MTDelta(:, :, :, :, :)  = cmplx(0., 0.)
@@ -696,6 +689,7 @@ module m_jpSternheimer
         veffUvIR(:, :) = cmplx(0., 0.)
         !todo shift to sternheimerPUlay
         call IRcoeffVeffUv( atoms, stars, cell, iDtype, iDatom, ngdp, coScale, gdp, veffUvIR, vEff0IRpwUw )
+        !SCALL save_npy('veffUvIR.npy', veffUvIR)
 
         ! The lmp index is comparable to the lm index but for every lm combination it includes also an index that runs over the
         ! matching coefficients for belonging to the u, the udot and the u_LO. Determine the max lmp for all atom types.
@@ -714,7 +708,28 @@ module m_jpSternheimer
             & rho1IRDSplus, rho1MTplus, gdp, grVeff0MT_init, grVeff0MT_main, sumVMTs, ylm, gausWts, dKernMTGPts, vxc1IRKern, iqpt, &
             & sumVMTs2, sternFinIt, vExt1MT, vEff1MT_final, vExt1IR_final, vHar1IR_final, vHar1MT_final, vExt1MTDelta, vExt1MTq0, &
             & vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, rho0IRpw, rho0MTsh, vEff1IR_final, ngpqdp, gpqdp, vEff1IR, &
-            & noPts2chCont, logUnit, vExt1MTnoVol, vEff1MTnoVol, vExt1MTnoVolnoq, vH1MTnoVol, vExt1noqIR_final, grVH0MT, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
+            & noPts2chCont, logUnit, vEff1MTnoVol, vExt1noqIR_final, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
+
+            !CALL save_npy('sumVMTs.npy',sumVMTs)
+            !CALL save_npy('sumVMTs2.npy',sumVMTs2)
+            !CALL save_npy('vExt1IR_final.npy',vExt1IR_final)
+            !CALL save_npy('vHar1IR_final.npy',vHar1IR_final)
+            !CALL save_npy('vExt1MT.npy',vExt1MT)
+            !CALL save_npy('vEff1MTnoVol.npy',vEff1MTnoVol)
+            !CALL save_npy('vExt1MTDelta.npy',vExt1MTDelta)
+            !CALL save_npy('vExt1MTq0.npy',vExt1MTq0)
+            !CALL save_npy('vHar1MTDelta.npy',vHar1MTDelta)
+            !CALL save_npy('vHar1MTq0.npy',vHar1MTq0)
+            !CALL save_npy('vXc1MTDelta.npy',vXc1MTDelta)
+            !CALL save_npy('vXc1MTq0.npy',vXc1MTq0)
+            !CALL save_npy('vEff1IR_final.npy',vEff1IR_final)
+            !CALL save_npy('vExt1noqIR_final.npy',vExt1noqIR_final)
+            !CALL save_npy('vEff1MT_final.npy',vEff1MT_final)
+            !CALL save_npy('vHar1MT_final.npy',vHar1MT_final)
+            !CALL save_npy('vCoul1IRtempNoVol.npy',vCoul1IRtempNoVol)
+            !CALL save_npy('vCoul1MTtempNoVol.npy',vCoul1MTtempNoVol)
+            !CALL save_npy('vEff1IRsh.npy',vEff1IR)
+            !stop
 
           ! resetting rho1IRDSplus for next iteration, because the current rho1IRDSplus is contained in the linear potential
           ! variations
@@ -841,6 +856,9 @@ module m_jpSternheimer
                 & coScale, gbas, veffUvIR, nv, ne, nobd, &
                 & mapGbas, z, iDtype, iDatom, surfIntVFast)
             end if
+
+            !CALL save_npy('surfIntVFast.npy',surfIntVFast)
+            !stop
 
             ! todo Due to performance reasons we do not make a loop over idir (array of types, type of arrays) is that good?
             if (.false.) then
@@ -1219,8 +1237,8 @@ module m_jpSternheimer
   subroutine UpdPots( atoms, input, stars, cell, iDatom, iDtype, first_run, ngdp, grRho0IR, grRho0MT, qpoint, rho1PW, rho1MT, gdp,&
       & grVeff0MT_init, grVeff0MT_main, sumVMTs, ylm, gWghts, dKernMTGPts, vxc1IRKern, iqpt, sumVMTs2, final_run, vExt1MT, &
       & vEff1MT_final, vExt1IR_final, vHar1IR_final, vHar1MT_final, vExt1MTDelta, vExt1MTq0, vHar1MTDelta,  vHar1MTq0, vXc1MTDelta,&
-      & vXc1MTq0, rho0IRpw, rho0MTsh, vEff1IR_final, ngpqdp, gpqdp, vEff1IRsh, noPts2chCont, logUnit, vExt1MTnoVol, vEff1MTnoVol, &
-      & vExt1MTnoVolnoq, vH1MTnoVol, vExt1noqIR_final, grVH0MT, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
+      & vXc1MTq0, rho0IRpw, rho0MTsh, vEff1IR_final, ngpqdp, gpqdp, vEff1IRsh, noPts2chCont, logUnit, vEff1MTnoVol, &
+      & vExt1noqIR_final, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
 
     use m_types, only : t_atoms, t_input, t_stars, t_cell
     use m_jpVeff1, only : GenVeff1
@@ -1247,7 +1265,6 @@ module m_jpSternheimer
     ! Array parameters
     complex,                        intent(in)  :: grRho0IR(:, :)
     complex,                        intent(in)  :: grRho0MT(:, :, :, :)
-    complex,                        intent(in)  :: grVH0MT(:, :, :, :)
     real,                           intent(in)  :: qpoint(:)
     complex,                        intent(in)  :: rho1PW(:, :)
     complex,                        intent(in)  :: rho1MT(:, :, :, :)
@@ -1266,10 +1283,7 @@ module m_jpSternheimer
     complex,                        intent(out) :: vExt1IR_final(:, :, :)
     complex,                        intent(out) :: vHar1IR_final(:, :, :)
     complex,                        intent(out) :: vExt1MT(:, :, :, :, :)
-    complex,                        intent(out) :: vExt1MTnoVol(:, :, :, :, :)
     complex,                        intent(out) :: vEff1MTnoVol(:, :, :, :, :)
-    complex,                        intent(out) :: vExt1MTnoVolnoq(:, :, :, :, :)
-    complex,                        intent(out) :: vH1MTnoVol(:, :, :, :, :)
     complex,                        intent(out) :: vExt1MTDelta(:, :, :, :, :)
     complex,                        intent(out) :: vExt1MTq0(:, :, :, :, :)
     complex,                        intent(out) :: vHar1MTDelta(:, :, :, :, :)
@@ -1324,10 +1338,7 @@ module m_jpSternheimer
     sumVMTs(:, :, :, :)          = cmplx(0., 0.)
     sumVMTs2(:, :, :, :)         = cmplx(0., 0.)
     vExt1MT(:, :, :, :, :)       = cmplx(0., 0.)
-    vExt1MTnoVol(:, :, :, :, :)  = cmplx(0., 0.)
     vEff1MTnoVol(:, :, :, :, :)  = cmplx(0., 0.)
-    vExt1MTnoVolnoq(:, :, :, :, :)  = cmplx(0., 0.)
-    vH1MTnoVol(:, :, :, :, :)  = cmplx(0., 0.)
     vExt1MTDelta(:, :, :, :, :)  = cmplx(0., 0.)
     vExt1MTq0(:, :, :, :, :)     = cmplx(0., 0.)
     vHar1MTDelta(:, :, :, :, :)  = cmplx(0., 0.)
@@ -1636,9 +1647,6 @@ module m_jpSternheimer
                 do imesh = 1, atoms%jri(itype)
                   vHar1MT_final(imesh, lm, iatom, idir, iDatom) = vHar1MT(imesh, lm, iatom, idir)
                   vExt1MT(imesh, lm, iatom, idir, iDatom) = vExt1MTtemp(imesh, lm, iatom, idir)
-                  vExt1MTNoVol(imesh, lm, iatom, idir, iDatom) = vExt1MTtempNoVol(imesh, lm, iatom, idir) + grVeff0MT_init(imesh, lm, idir, iatom)
-                  vH1MTNoVol(imesh, lm, iatom, idir, iDatom) = vH1MTtempNoVol(imesh, lm, iatom, idir) + grVH0MT(imesh, lm, idir, iatom)
-                  vExt1MTNoVolnoq(imesh, lm, iatom, idir, iDatom) = vExt1MTtempNoVolnoq(imesh, lm, iatom, idir) + grVeff0MT_init(imesh, lm, idir, iatom)
                   vEff1MT_final(imesh, lm, iatom, idir, iDatom) = vEff1MT(imesh, lm, iatom, idir)
                 end do
               end do

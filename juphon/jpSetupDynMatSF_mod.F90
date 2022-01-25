@@ -1,4 +1,4 @@
-module m_jpSetupDynMatSF
+module m_dynSF
 
     USE m_constants
 
@@ -6,7 +6,7 @@ module m_jpSetupDynMatSF
 
 contains
 
-  subroutine SetupDynMatSF( fmpi, noco, nococonv, oneD, atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
+  subroutine dynSF( fmpi, noco, nococonv, oneD, atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
       & memd_atom, nobd, gdp, mapKpq2K, rbas1, rbas2, nmem_atom, mlh_atom, clnu_atom, kveclo, iloTable, kpq2kPrVec, nv, mapGbas, &
       & gBas, nRadFun, z0, eig, El, rho0IRpw, rho0MT, ngpqdp, gpqdp, rho1IRPW, rho1MT, vXC0IRst, eXCIRst, vXC0MTlh, eXCMTlh, &
       & vExt1IR, vExt1MT, vHar1IR, vHar1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, vEff0MT, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol, dynMatSf )
@@ -751,7 +751,7 @@ contains
       end do ! iDeqatA
     end do ! iDtypeA
 
-  end subroutine SetupDynMatSF
+  end subroutine dynSF
 
 
   ! Calculates the surface integral in the Sternheimer equation, where from the Hamiltonian only the kinetic energy operator is
@@ -4579,4 +4579,4 @@ contains
 
   end subroutine calcFnsphGrVarphi
 
-end module m_jpSetupDynMatSF
+end module m_dynSF

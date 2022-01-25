@@ -9,11 +9,11 @@ module m_jpSetupDynMat
 
   subroutine SetupDynamicMatrix(fmpi, noco, nococonv, oneD, atoms, input, sym, cell, lathar, stars, kpts, qpts, usdus, results, Veff0, iqpt, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, &
       & rho0IRst, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vEff0IR, vEff0MT, rho0MT, E2ndOrdII, El, eig, rbas1, rbas2, &
-      & iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, mapKpq2K, kpq2kPrVec, gpqdp, memd_atom, logUnit, vXC0IR, eXCIR, vXC0MT, eXCMT, vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0IR, grRho0MT, grVext0IR, grVext0MT, grVeff0IR, grVeff0MT, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, vExt1MTnoVol, grVeff0MThxc, vEff1MTnoVol, vH1MTnoVol, vExt1MTnoVolnoq, vExt1noqIR_final, rho1MTz0, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
+      & iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, mapKpq2K, kpq2kPrVec, gpqdp, memd_atom, logUnit, vXC0IR, eXCIR, vXC0MT, eXCMT, vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0IR, grRho0MT, grVext0IR, grVext0MT, grVeff0IR, grVeff0MT, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
 
     use m_dfpt_init, only : convertStar2G
     use m_types
-    use m_jpSetupDynMatSF, only : SetupDynMatSF
+    use m_dynSF, only : dynSF
     use m_juDFT_stop, only : juDFT_error
 
     implicit none
@@ -51,12 +51,9 @@ module m_jpSetupDynMat
     complex,                        intent(in)  :: rho1MT(:, :, :, :, :)
     complex,                        intent(in)  :: rho1MTz0(:, :, :, :)
     complex,                        intent(in)  :: vExt1MT(:, :, :, :, :)
-    complex,                        intent(in)  :: vExt1MTnoVol(:, :, :, :, :)
     complex,                        intent(in)  :: vEff1MTnoVol(:, :, :, :, :)
-    complex,                        intent(in)  :: vExt1MTnoVolnoq(:, :, :, :, :)
     complex,                        intent(in)  :: grVCoul0IR_DM_SF(:, :)
     complex,                        intent(in)  :: grVCoul0MT_DM_SF(:, :, :, :)
-    complex,                        intent(in)  :: vH1MTnoVol(:, :, :, :, :)
     complex,                        intent(in)  :: vEff1IR(:, :, :)
     complex,                        intent(in)  :: vEff1MT(:, :, :, :, :)
     real,                           intent(in)  :: rho0MT(:, :, :, :)
@@ -91,7 +88,6 @@ module m_jpSetupDynMat
     complex,                        intent(in)  :: grVext0MT(:, :, :, :)
     complex,                        intent(in)  :: grVeff0IR(:, :)
     complex,                        intent(in)  :: grVeff0MT(:, :, :, :)
-    complex,                        intent(in)  :: grVeff0MThxc(:, :, :, :)
     complex,                        intent(in)  :: grRho0IR(:, :)
     complex,                        intent(in)  :: grRho0MT(:, :, :, :)
     complex,                        intent(in)  :: rho1MTDelta(:, :, :, :, :)
@@ -182,17 +178,17 @@ module m_jpSetupDynMat
 
     ! Calculate the Hellmann-Feynman contribution to the dynamical matrix
     call SetupDynMatHF(atoms, sym, cell, lathar, stars, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho0IRpw, rho0MT, grRho0IR, grRho0MT,  &
-      & rho1IR, rho1MT, grVext0IR, grVext0MT, vExt1IR_final, vExt1MT, E2ndOrdII, dynMatHF, rho1MTDelta, vExt1MTDelta, vExt1MTq0, iqpt, vExt1MTnoVol, vExt1MTnoVolnoq, vExt1noqIR_final)
+      & rho1IR, rho1MT, grVext0IR, grVext0MT, vExt1IR_final, vExt1MT, E2ndOrdII, dynMatHF, rho1MTDelta, vExt1MTDelta, vExt1MTq0, iqpt, vExt1noqIR_final)
 
     ! Calculate the Pulay contribution to the dynamical matrix
     call SetupDynMatPu( fmpi, noco, nococonv, oneD, atoms, stars, lathar, input, sym, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT, &
       & vEff1IR, vEff1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, El, eig, rbas1, rbas2, iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, clnu_atom, nmem_atom,    &
-      & mlh_atom, vEff0IR, vEff0MT, kpq2kPrVec, dynMatPu, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, grVeff0MThxc, vEff1MTnoVol, &
-      & vExt1MTnoVol, vH1MTnoVol, rho1MTz0 )
+      & mlh_atom, vEff0IR, vEff0MT, kpq2kPrVec, dynMatPu, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, &
+      & rho1MTz0 )
 
     ! Calculate the surface contribution to the dynamical matrix
     !!!latest:
-    call SetupDynMatSF( fmpi, noco, nococonv, oneD, atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
+    call dynSF( fmpi, noco, nococonv, oneD, atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
       & memd_atom, nobd, gdp, mapKpq2K, rbas1(:, :, :, :, 1), rbas2(:, :, :, :, 1), nmem_atom, mlh_atom, clnu_atom, kveclo, iloTable, kpq2kPrVec, nv, ilst, &
       & gBasVec, nRadFun, z, eig, El, rho0IRpw, rho0MT, ngpqdp, gpqdp, rho1IR, rho1MTDelta, vXC0IR, eXCIR, vXC0MT, eXCMT, vExt1IR_final, &
       & vExt1MT, vHar1IR_final, vHar1MT_final, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, vEff0MT, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol, dynMatSf )
@@ -249,7 +245,7 @@ module m_jpSetupDynMat
                        ! makes sense or to move more than the mesh point to zero or just take the first mesh point and renormalize
                        ! to the surface integral in the MT.
   subroutine SetupDynMatHF(atoms, sym, cell, lathar, stars, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho0IRpw, rho0MT, grRho0IR, grRho0MT,  &
-      & rho1IR, rho1MT, grVext0IR, grVext0MT, vExt1IR, vExt1MT, E2ndOrdII, dynMatHF, rho1MTDelta, vExt1MTDelta, vExt1MTq0, iqpt, vExt1MTnoVol, vExt1MTnoVolnoq, vExt1IRnoq )
+      & rho1IR, rho1MT, grVext0IR, grVext0MT, vExt1IR, vExt1MT, E2ndOrdII, dynMatHF, rho1MTDelta, vExt1MTDelta, vExt1MTq0, iqpt, vExt1IRnoq )
 
     use m_types, only : t_atoms, t_sym, t_cell, t_sphhar, t_stars
     use m_juDFT_stop, only : juDFT_error
@@ -285,8 +281,6 @@ module m_jpSetupDynMat
     complex,                     intent(in)  :: vExt1IR(:, :, :)
     complex,                     intent(in)  :: vExt1IRnoq(:, :, :)
     complex,                     intent(in)  :: vExt1MT(:, :, :, :, :)
-    complex,                     intent(in)  :: vExt1MTnoVol(:, :, :, :, :)
-    complex,                     intent(in)  :: vExt1MTnoVolnoq(:, :, :, :, :)
     complex,                     intent(in)  :: E2ndOrdII(:, :)
     complex,                     intent(in)  :: rho1MTDelta(:, :, :, :, :)
     complex,                        intent(in)  :: vExt1MTDelta(:, :, :, :, :)
@@ -863,8 +857,8 @@ module m_jpSetupDynMat
   !>--------------------------------------------------------------------------------------------------------------------------------
   subroutine SetupDynMatPu(fmpi, noco, nococonv, oneD, atoms, stars, lathar, input, sym, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT,      &
       & vEff1IR, vEff1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, El, eig, rbas1, rbas2, iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, clnu_atom, nmem_atom,    &
-      & mlh_atom, vEff0IR, vEff0MT, kpq2kPrVec, dynMatPu, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, grVeff0MThxc, vEff1MTnoVol, &
-      & vExt1MTnoVol, vH1MTnoVol, rho1MTz0 )
+      & mlh_atom, vEff0IR, vEff0MT, kpq2kPrVec, dynMatPu, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, &
+      & rho1MTz0 )
 
     use m_types
 
@@ -920,13 +914,10 @@ module m_jpSetupDynMat
     complex,           intent(in)  :: vEff1IR(:, :, :)
     complex,           intent(in)  :: vEff1MT(:, :, :, :, :)
     complex,           intent(in)  :: vEff1MTnoVol(:, :, :, :, :)
-    complex,           intent(in)  :: vExt1MTnoVol(:, :, :, :, :)
-    complex,           intent(in)  :: vH1MTnoVol(:, :, :, :, :)
     complex,                    intent(in)  :: grRho0IR(:, :)
     complex,                    intent(in)  :: grRho0MT(:, :, :, :)
     complex,                    intent(in)  :: grVeff0IR(:, :)
     complex,                    intent(in)  :: grVeff0MT(:, :, :, :)
-    complex,                    intent(in)  :: grVeff0MThxc(:, :, :, :)
     real,              intent(in)  :: El(:, 0:, :, :)
     real,              intent(in)  :: eig(:, :, :)
     real,              intent(in)  :: rbas1(:,:,0:,:,:)
@@ -963,7 +954,7 @@ module m_jpSetupDynMat
     dynMatPu = cmplx(0., 0.)
 
     ! Evaluate 7.114 PhD thesis A. Klueppelberg with recasted core contributions and contributions from recasted Pulay matrix elements.
-    call EvalIntRho1Veff1(atoms, cell, stars, ngpqdp, gdp, rho1IR, rho1MT, vEff1IR, vEff1MT, grRho0MT, grVeff0MT, dynMatPuInt, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, iqpt, ngdp, grVeff0MThxc, vEff1MTnoVol, vExt1MTnoVol, vH1MTnoVol, rho1MTz0 )
+    call EvalIntRho1Veff1(atoms, cell, stars, ngpqdp, gdp, rho1IR, rho1MT, vEff1IR, vEff1MT, grRho0MT, grVeff0MT, dynMatPuInt, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, iqpt, ngdp, vEff1MTnoVol, rho1MTz0 )
 
     !write(470,*) dynMatPuInt
 
@@ -1010,7 +1001,7 @@ module m_jpSetupDynMat
   !> Account for spin
   !>
   !>-------------------------------------------------------------------------------------------------------------------------------------
-  subroutine EvalIntRho1Veff1( atoms, cell, stars, ngpqdp, gdp, rho1IR, rho1MT, vEff1IR, vEff1MT, grRho0MT, grVeff0MT, dynMatPuInt, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, iqpt, ngdp, grVeff0MThxc, vEff1MTnoVol, vExt1MTnoVol, vH1MTnoVol, rho1MTz0 )
+  subroutine EvalIntRho1Veff1( atoms, cell, stars, ngpqdp, gdp, rho1IR, rho1MT, vEff1IR, vEff1MT, grRho0MT, grVeff0MT, dynMatPuInt, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, iqpt, ngdp, vEff1MTnoVol, rho1MTz0 )
 
     use m_types
 
@@ -1038,11 +1029,8 @@ module m_jpSetupDynMat
     complex,                    intent(in)  :: vEff1IR(:, :, :)
     complex,                    intent(in)  :: vEff1MT(:, :, :, :, :)
     complex,                    intent(in)  :: vEff1MTnoVol(:, :, :, :, :)
-    complex,                    intent(in)  :: vExt1MTnoVol(:, :, :, :, :)
-    complex,                    intent(in)  :: vH1MTnoVol(:, :, :, :, :)
     complex,                    intent(in)  :: grRho0MT(:, :, :, :)
     complex,                    intent(in)  :: grVeff0MT(:, :, :, :)
-    complex,                    intent(in)  :: grVeff0MThxc(:, :, :, :)
     complex,                    intent(in)  :: vExt1MTDelta(:, :, :, :, :)
     complex,                    intent(in)  :: vExt1MTq0(:, :, :, :, :)
     complex,                    intent(in)  :: vHar1MTDelta(:, :, :, :, :)
@@ -1524,7 +1512,7 @@ module m_jpSetupDynMat
       & nmem_atom, mlh_atom, rbas1, rbas2, El, mapKpq2K, nobd, nv, gBasVec, ilst, kveclo, z, iloTable, eig, kpq2kPrVec, dynMatPu )
 
     use m_types
-    use m_jpSetupDynMatSF, only : CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat, readInz1, CalcHnGrV0Varphi, CalcHGrVarphi
+    use m_dynSF, only : CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat, readInz1, CalcHnGrV0Varphi, CalcHGrVarphi
     use m_dfpt_init, only : Derivative
 
     implicit none
