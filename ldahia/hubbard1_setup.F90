@@ -48,7 +48,7 @@ MODULE m_hubbard1_setup
 
       LOGICAL, PARAMETER :: l_mix = .FALSE.
 
-      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n,i,k,ind1,ind2
+      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
@@ -61,7 +61,6 @@ MODULE m_hubbard1_setup
       TYPE(t_greensf),ALLOCATABLE :: gdft_rot(:)
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
       TYPE(t_selfen), ALLOCATABLE :: selfen(:)
-      TYPE(t_mat) :: cfmat
 
 #ifdef CPP_HDF
       INTEGER(HID_T)     :: greensf_fileID
@@ -227,8 +226,9 @@ MODULE m_hubbard1_setup
             write(attributes(1), '(i0)') nType
             write(attributes(2), '(i0)') l
             write(attributes(3), '(f14.8)') mu_dc(1)
-            write(attributes(4), '(i0)') occDFT_INT
-            call openXMLElement('solverParameters', ['atomType  ', 'l         ', 'chemPot   ', 'occupation'], attributes(:4))
+            write(attributes(4), '(i0)') occDFT_INT    
+            write(attributes(5), '(a)') 'eV'                                        
+            call openXMLElement('solverParameters', ['atomType   ', 'l          ', 'chemPot    ', 'occupation ', 'energy_unit'], attributes(:5))
             
             write(attributes(1), '(f14.8)') f0(i_hia)
             write(attributes(2), '(f14.8)') f2(i_hia)
@@ -246,19 +246,10 @@ MODULE m_hubbard1_setup
             call writeXMLElement('socParameter',['value'],attributes(:1))
 
             IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12) THEN
-               CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))
-               cfmat%data_r= 0.0
-               DO i = 1, 2
-                  DO m = 1, (2*l+1)
-                     DO k = 1, (2*l+1)
-                        ind1 = (i-1)*(2*l+1) + m
-                        ind2 = (i-1)*(2*l+1) + k
-                        cfmat%data_r(ind1,ind2) = hub1data%ccfmat(i_hia,m-l-1,k-l-1)*hartree_to_ev_const*hub1inp%ccf(i_hia)
-                     ENDDO
-                  ENDDO
-               ENDDO
                write(attributes(1), '(f14.8)') hub1inp%ccf(i_hia)
-               CALL writeXMLElementMatrixFormPoly('crystalField',['factor'],attributes(:1),reshape([5,14],[1,2]),cfmat%data_r)
+               CALL writeXMLElementMatrixFormPoly('crystalField',['factor'],attributes(:1),&
+                                                  reshape([6,14],[1,2]),&
+                                                  hub1data%ccfmat(i_hia,-l:l,-l:l)*hartree_to_ev_const*hub1inp%ccf(i_hia))
             ENDIF
 
             call closeXMLElement('solverParameters')
