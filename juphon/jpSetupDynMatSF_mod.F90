@@ -3341,7 +3341,7 @@ contains
       end do ! idirC
 
     end do ! ikpt
-  end subroutine CalcSFintlongname1 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG
+end subroutine CalcSFintlongname2 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG
 
   subroutine CalcSurfintMTPsigrVeff0Psi( fmpi, noco, nococonv, oneD, atoms, input, sym, cell, kpts, usdus, results, lmpMax, iDtypeB, iDatomB, nobd, gbas, &
       & mapGbas, nRadFun, nv, z0, kveclo, varphi1, varphi2, grVeff0MT, iloTable, surfInt )
