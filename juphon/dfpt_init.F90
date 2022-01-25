@@ -1950,6 +1950,7 @@ CONTAINS
       use m_intgr, only : intgr3LinIntp
       use m_gaunt, only : gaunt1
       use m_juDFT_stop, only : juDFT_error
+      use m_jpSternhPulaySurface, only : tlo4HS0
 
       implicit none
 
