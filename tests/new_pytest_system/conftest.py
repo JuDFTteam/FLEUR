@@ -799,6 +799,9 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig, test_logger
         testdir = test_dir()
         if cmdline_param is None:
             cmdline_param = []
+        extra_args = os.environ.get('juDFT_ARGS','')
+        if extra_args:
+            cmdline_param.extend(extra_args.split(' '))
 
         osenv = dict(os.environ)
         run_env = osenv # This creates a complete env for the fleur, but we keep all session env
