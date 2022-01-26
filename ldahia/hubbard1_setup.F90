@@ -476,7 +476,7 @@ MODULE m_hubbard1_setup
                WRITE(attributes(4),'(i0)') atoms%lda_u(i_u)%l
                WRITE(attributes(5),'(f15.8)') atoms%lda_u(i_u)%u
                WRITE(attributes(6),'(f15.8)') atoms%lda_u(i_u)%j
-               WRITE(attributes(6),'(f15.8)') selfen(i_hia)%muMatch(:)
+               WRITE(attributes(7),'(2f15.8)') selfen(i_hia)%muMatch(:)
                CALL writeXMLElementMatrixPoly('densityMatrixFor',&
                                              ['spin    ','atomType','hiaIndex','l       ','U       ','J       ','muMatch '],&
                                              attributes,den%mmpMat(-l:l,-l:l,i_u,ispin))
