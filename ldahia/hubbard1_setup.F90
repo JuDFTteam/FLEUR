@@ -48,7 +48,7 @@ MODULE m_hubbard1_setup
 
       LOGICAL, PARAMETER :: l_mix = .FALSE.
 
-      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n
+      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n,i_u
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
@@ -465,6 +465,24 @@ MODULE m_hubbard1_setup
                hub1data%l_performSpinavg = .FALSE.
             ENDIF
          ENDIF
+         CALL openXMLElementNoAttributes('hubbard1DensityMatrix')
+         DO ispin = 1, SIZE(den%mmpMat,4)
+            DO i_hia = 1, atoms%n_hia
+               i_u = atoms%n_u + i_hia
+               attributes = ''
+               WRITE(attributes(1),'(i0)') ispin
+               WRITE(attributes(2),'(i0)') atoms%lda_u(i_u)%atomType
+               WRITE(attributes(3),'(i0)') i_hia
+               WRITE(attributes(4),'(i0)') atoms%lda_u(i_u)%l
+               WRITE(attributes(5),'(f15.8)') atoms%lda_u(i_u)%u
+               WRITE(attributes(6),'(f15.8)') atoms%lda_u(i_u)%j
+               WRITE(attributes(6),'(f15.8)') selfen(i_hia)%muMatch(:)
+               CALL writeXMLElementMatrixPoly('densityMatrixFor',&
+                                             ['spin    ','atomType','hiaIndex','l       ','U       ','J       ','muMatch '],&
+                                             attributes,den%mmpMat(-l:l,-l:l,i_u,ispin))
+            END DO
+         END DO
+         CALL closeXMLElement('hubbard1DensityMatrix')
          write(attributes(1),'(f14.8)') results%last_occdistance
          write(attributes(2),'(f14.8)') results%last_mmpMatdistance                                    
          call writeXMLElement('hubbard1Distance',['occupationDistance','elementDistance   '], attributes(:2))
