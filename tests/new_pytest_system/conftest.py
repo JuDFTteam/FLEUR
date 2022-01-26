@@ -537,8 +537,6 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup,
     Write testlog.
     """
 
-    call_failed  = request.node.rep_call.failed if getattr(request.node, 'rep_call', None) is not None else True
-
     if 'fleur_parser' not in request.keywords:
 
         workdir = work_dir
@@ -548,6 +546,7 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup,
 
         # clean up code goes here:
 
+        call_failed  = request.node.rep_call.failed if getattr(request.node, 'rep_call', None) is not None else True
         method_name = request.node.name
         if call_failed or not cleanup:
             #log('Test {} failed :('.format(method_name))
@@ -561,6 +560,7 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup,
 
         yield # test is running
 
+        call_failed  = request.node.rep_call.failed if getattr(request.node, 'rep_call', None) is not None else True
         # clean up code goes here (We can only clean up
         #at the end of the session since multiple parser need to access the same folder):
         if call_failed or not cleanup:
@@ -1158,8 +1158,6 @@ def stage_for_parser_test(request, work_dir, parser_testdir):
     To later autogenerate tests for the fleur parsers
     """
 
-    call_failed  = request.node.rep_call.failed if getattr(request.node, 'rep_call', None) is not None else True
-
     if 'fleur_parser' not in request.keywords:
 
         parsertestdir = parser_testdir
@@ -1169,6 +1167,7 @@ def stage_for_parser_test(request, work_dir, parser_testdir):
 
         # clean up code goes here:
 
+        call_failed  = request.node.rep_call.failed if getattr(request.node, 'rep_call', None) is not None else True
         method_name = request.node.name
         if RUN_PARSER_TESTS and not call_failed:
             # if not failed move test result to parsertestdir, will replace dir if existent
