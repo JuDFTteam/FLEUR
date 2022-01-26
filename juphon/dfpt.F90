@@ -163,18 +163,20 @@ CONTAINS
         ! constructed elsewhere, within the q-loop.
         ! TODO: I ignored the actual significance of clnu_atom etc. They are not type-dependent, but actually
         ! refer to each atom respectively. So this will explode for iatom > 1. This is easily fixed.
+        CALL timestart("juPhon DFPT initialization")
         CALL dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, kpts, &
                      & fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, grRho0, vTot0, grVTot0, &
                      & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                      & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                      & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
                      & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean)
-
+        CALL timestop("juPhon DFPT initialization")
         ! < Imagine starting a q-grid-loop here. >
         ! < For now we just select one q-point from the input. >
 
         call createkqMapArrays( kpts, qpts, 0, kpts%nkpt3, [0], mapKpq2K, kpq2kPrVec )
 
+        CALL timestart("juPhon DFPT scf loop")
         call solveSternheimerSCC( fmpi, oneD, atoms, sym, stars, sphhar, cell, enpara, usdus, input, kpts, qpts, results, usdus,      &
           & logUnit, ngdp, rbas1, rbas2, kveclo, uuilon, duilon, ulouilopn, &
           & recG, mapKpq2K, results%neig(:, 1), results%eig, GbasVec, ilst, z0, nvfull, El, nradFun, iloTable, nocc, ilo2p, gdp2Ind,     &
@@ -182,19 +184,29 @@ CONTAINS
           & grVxcIRKern, rho1MTCoreDispAt, gausWts, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, juPhon%oneSternhCycle, ngpqdp, gpqdp,&
           & vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, &
           & vXc1MTq0, rho0%pw(:, :, 1, 1), rho0%mt(:, :, :, :, 1, 1), vTot0%pw(:, :, 1, 1), juPhon%noPtsCon, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
+        CALL timestop("juPhon DFPT scf loop")
 
-  call CalcIIEnerg2(atoms, cell, qpts, stars, input, juPhon%singleQpt, ngdp, recG, E2ndOrdII)
+        CALL timestart("juPhon DFPT Eii2")
+        CALL CalcIIEnerg2(atoms, cell, qpts, stars, input, juPhon%singleQpt, ngdp, recG, E2ndOrdII)
+        CALL timestop("juPhon DFPT Eii2")
 
-  call SetupDynamicMatrix( fmpi, noco, nococonv, oneD, atoms, input, sym, cell, sphhar, stars, kpts, qpts, usdus, results, vTotclean, juPhon%singleQpt, ngdp, ngpqdp, recG, sphhar%mlh, sphhar%nmem,&
-    & sphhar%clnu, rho%pw, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vTotclean%pw_w, vTotclean%mt(:, :, :, 1),&
-    & rhoclean%mt, E2ndOrdII, El, results%eig, rbas1, rbas2, iloTable, nvfull, nocc, ilst, GbasVec, z0, kveclo, nRadFun, mapKpq2K, kpq2kPrVec,       &
-    & gpqdp, sphhar%memd, logUnit, vxc%pw, exc%pw(:, 1), vxc%mt, exc%mt(:, 0:, :, 1), vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), &
-    & grVext0IR_DM, grVext0MT_DM, grVeff0IR_DM, grVeff0MT_DM, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, &
-    & vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, &
-    & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol)
+        CALL timestart("juPhon DFPT dynmat setup")
+        CALL SetupDynamicMatrix( fmpi, noco, nococonv, oneD, atoms, input, sym, cell, sphhar, stars, kpts, qpts, usdus, results, vTotclean, juPhon%singleQpt, ngdp, ngpqdp, recG, sphhar%mlh, sphhar%nmem,&
+            & sphhar%clnu, rho%pw, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vTotclean%pw_w, vTotclean%mt(:, :, :, 1),&
+            & rhoclean%mt, E2ndOrdII, El, results%eig, rbas1, rbas2, iloTable, nvfull, nocc, ilst, GbasVec, z0, kveclo, nRadFun, mapKpq2K, kpq2kPrVec,       &
+            & gpqdp, sphhar%memd, logUnit, vxc%pw, exc%pw(:, 1), vxc%mt, exc%mt(:, 0:, :, 1), vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), &
+            & grVext0IR_DM, grVext0MT_DM, grVeff0IR_DM, grVeff0MT_DM, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, &
+            & vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, &
+            & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol)
+        CALL timestop("juPhon DFPT dynmat setup")
 
-    call DiagonalizeDynMat(atoms, qpts, juPhon%calcEigenVec, dynMat, eigenVals, eigenVecs, juPhon%singleQpt)
-    call CalculateFrequencies(atoms, juPhon%singleQpt, eigenVals, eigenFreqs)
+        CALL timestart("juPhon DFPT dynmat diagonalization")
+        CALL DiagonalizeDynMat(atoms, qpts, juPhon%calcEigenVec, dynMat, eigenVals, eigenVecs, juPhon%singleQpt)
+        CALL timestop("juPhon DFPT dynmat diagonalization")
+
+        CALL timestart("juPhon DFPT frequency calculation")
+        CALL CalculateFrequencies(atoms, juPhon%singleQpt, eigenVals, eigenFreqs)
+        CALL timestop("juPhon DFPT frequency calculation")
 
         IF (juPhon%l_jpTest) THEN
             ! This function will be used to run (parts of) the test suite for

@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_init
 
+    USE m_juDFT
     USE m_types
     USE m_constants
     USE m_radfun

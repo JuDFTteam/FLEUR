@@ -1,4 +1,5 @@
 module m_jpSetupDynMat
+    USE m_juDFT_time
     USE m_constants
 
 !NOTE: Coretail correction is implicetly in the dynamical matrix in the density and their gradients and variations of as well as
@@ -159,6 +160,8 @@ module m_jpSetupDynMat
       call juDFT_error('Old juPhon stopcall.', calledby='SetupDynamicMatrix')
     end if
 
+    CALL timestart('dynmat setup init')
+
     allocate (dynMat(3 * atoms%nat, 3 * atoms%nat))
 
     dynMat = cmplx(0.0, 0.0)
@@ -176,22 +179,30 @@ module m_jpSetupDynMat
     ! - HF Surface MT: zeroing is not correct.
     ! - v1Deltas/=v1goods ---> Calculate and pass! ---> Put integrals after Pulay integration of rho1*VH
 
+    CALL timestop('dynmat setup init')
+
     ! Calculate the Hellmann-Feynman contribution to the dynamical matrix
+    CALL timestart('dynmat setup HF')
     call SetupDynMatHF(atoms, sym, cell, lathar, stars, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho0IRpw, rho0MT, grRho0IR, grRho0MT,  &
       & rho1IR, rho1MT, grVext0IR, grVext0MT, vExt1IR_final, vExt1MT, E2ndOrdII, dynMatHF, rho1MTDelta, vExt1MTDelta, vExt1MTq0, iqpt, vExt1noqIR_final)
+    CALL timestop('dynmat setup HF')
 
     ! Calculate the Pulay contribution to the dynamical matrix
+    CALL timestart('dynmat setup Pu')
     call SetupDynMatPu( fmpi, noco, nococonv, oneD, atoms, stars, lathar, input, sym, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT, &
       & vEff1IR, vEff1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, El, eig, rbas1, rbas2, iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, clnu_atom, nmem_atom,    &
       & mlh_atom, vEff0IR, vEff0MT, kpq2kPrVec, dynMatPu, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, &
       & rho1MTz0 )
+    CALL timestop('dynmat setup Pu')
 
     ! Calculate the surface contribution to the dynamical matrix
     !!!latest:
+    CALL timestart('dynmat setup SF')
     call dynSF( fmpi, noco, nococonv, oneD, atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
       & memd_atom, nobd, gdp, mapKpq2K, rbas1(:, :, :, :, 1), rbas2(:, :, :, :, 1), nmem_atom, mlh_atom, clnu_atom, kveclo, iloTable, kpq2kPrVec, nv, ilst, &
       & gBasVec, nRadFun, z, eig, El, rho0IRpw, rho0MT, ngpqdp, gpqdp, rho1IR, rho1MTDelta, vXC0IR, eXCIR, vXC0MT, eXCMT, vExt1IR_final, &
       & vExt1MT, vHar1IR_final, vHar1MT_final, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, vEff0MT, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol, dynMatSf )
+    CALL timestop('dynmat setup SF')
 
     ! Add up all three contributions
     dynMat(:, :) = &
@@ -954,14 +965,17 @@ module m_jpSetupDynMat
     dynMatPu = cmplx(0., 0.)
 
     ! Evaluate 7.114 PhD thesis A. Klueppelberg with recasted core contributions and contributions from recasted Pulay matrix elements.
+    CALL timestart('dynmat setup Pu Ints')
     call EvalIntRho1Veff1(atoms, cell, stars, ngpqdp, gdp, rho1IR, rho1MT, vEff1IR, vEff1MT, grRho0MT, grVeff0MT, dynMatPuInt, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, iqpt, ngdp, vEff1MTnoVol, rho1MTz0 )
-
+    CALL timestop('dynmat setup Pu Ints')
     !write(470,*) dynMatPuInt
 
     ! Evaluate valence contribution of H - eps brakets
+    CALL timestart('dynmat setup Pu Brakets')
     call EvalPuHepsBraKetsVal(fmpi, noco, nococonv, oneD, atoms, input, cell, sym, lathar, stars, kpts, qpts, usdus, results, iqpt, nRadFun, vEff0IR, vEff0MT, clnu_atom,&
     & nmem_atom, mlh_atom, rbas1(:, :, :, :, 1), rbas2(:, :, :, :, 1), El, mapKpq2K, nobd, nv, gBasVec, ilst, kveclo, z, iloTable, &
     & eig, kpq2kPrVec, dynMatPuME )
+    CALL timestop('dynmat setup Pu Brakets')
 
     do idirC = 1, 3
       do idirR = 1, 3
@@ -971,7 +985,6 @@ module m_jpSetupDynMat
         write(565,*) idirR, idirC, dynMatPuME(idirR, idirC)
       end do
     end do
-
 
     ! Add up contribution from Pulay volume integral and the matrix elements containing 1st and 2nd order variation of the WFs.
     dynMatPu(:, :) =  &
@@ -1098,6 +1111,7 @@ module m_jpSetupDynMat
       end do ! iAeqat
     end do ! iAtype
 
+    CALL timestart('dynmat setup Pu Ints loop')
     iAatom = 0
     do iDtypeA = 1, atoms%ntype
       do iDatomA = 1, atoms%neq(iDtypeA)
@@ -1471,6 +1485,7 @@ module m_jpSetupDynMat
         end do ! idirC
       end do ! iDatomA
     end do ! iDtypeA
+    CALL timestop('dynmat setup Pu Ints loop')
 
     if (any(abs(dynMatCompInt1(:, :)) > 1e-8)) call juDFT_error('rho1 Veff1 integral not the same as optimization', calledby='EvalIntRho1Veff1')
     if (any(abs(dynMatCompInt1MgradInt(:, :)) > 1e-8)) call juDFT_error('rho1 Veff1 integral -gradRho Veff1 integral not the same as optimization', calledby='EvalIntRho1Veff1')
@@ -1643,11 +1658,15 @@ module m_jpSetupDynMat
     integer :: idir
     integer :: lmaxBra
 
+    CALL timestart('dynmat setup Pu Brakets allocations 1')
+
     allocate(dynMatPu(3 * atoms%nat, 3 * atoms%nat))
     dynMatPu(:, :) = cmplx(0., 0.)
 
+    CALL timestop('dynmat setup Pu Brakets allocations 1')
 
     ! Quantities for initialization
+    CALL timestart('dynmat setup Pu Brakets allocations 2')
     allocate( lmpT(atoms%ntype) )
     lmpT(:) = 0
     do itype = 1, atoms%ntype
@@ -1655,7 +1674,9 @@ module m_jpSetupDynMat
     end do ! itype
     lmpMax     = maxval( lmpT(:) )
     nRadFunMax = maxval( nRadFun(:, :) )
+    CALL timestop('dynmat setup Pu Brakets allocations 2')
 
+    CALL timestart('dynmat setup Pu Brakets allocations 3')
     allocate( z1nG(SIZE(z(:,1,1,1)), 3, atoms%nat, maxval(nobd(:, :))) )
     allocate( varphi1(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), varphi2(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
     allocate( r2(atoms%jmtd) )
@@ -1674,6 +1695,7 @@ module m_jpSetupDynMat
     allocate( varphiGrVeff0Varphi(lmpMax, lmpMax, atoms%nat, 3) )
     allocate( varphiHGrvarphi(lmpMax, lmpMax, atoms%nat, -1:1) )
     allocate( varphiGrVarphi(lmpMax, lmpMax, -1:1, atoms%ntype))
+    CALL timestop('dynmat setup Pu Brakets allocations 3')
 
     hGrVarphi(:, :, :, :, :) = cmplx(0., 0.)
     varphiGrVeff0SphVarphi(:, :, :, :) = cmplx(0., 0.)
@@ -1700,6 +1722,7 @@ module m_jpSetupDynMat
         r2(imesh) = atoms%rmsh(imesh, itype) * atoms%rmsh(imesh, itype)
       end do ! imesh
 
+      CALL timestart('dynmat setup Pu Brakets phistuff')
       varphi1(:, :, :) = 0.
       varphi2(:, :, :) = 0.
       delrVarphi1(:, :, :) = 0.
@@ -1717,16 +1740,18 @@ module m_jpSetupDynMat
           call Derivative( varphi2(1:atoms%jri(itype), iradf, oqn_l), itype, atoms, delrVarphi2(1:atoms%jri(itype), iradf, oqn_l) )
         end do ! iradf
       end do ! oqn_l
+      CALL timestop('dynmat setup Pu Brakets phistuff')
 
       ! Calculate the application of the gradient and the gradient's dyadic product onto the MT basis functions (matching coefficients
       ! have no spatial dependence) and determing its scattering channels.
+      CALL timestart('dynmat setup Pu Brakets grphistuff')
       grVarphiChLout(:, :) = 0
       grVarphiChMout(:, :) = 0
       grVarphiCh1(:, :, :, :) = 0.
       grVarphiCh2(:, :, :, :) = 0.
       call CalcChannelsGrFlpNat( atoms, itype, nRadFun, varphi1, varphi2, delrVarphi1, delrVarphi2, grVarphiChLout, grVarphiChMout, &
                                                                                                         & grVarphiCh1, grVarphiCh2 )
-
+      CALL timestop('dynmat setup Pu Brakets grphistuff')
       deallocate( delrVarphi1, delrVarphi2 )
 
       ! Calculate H |varphi>
@@ -1752,36 +1777,45 @@ module m_jpSetupDynMat
 
         !todo block end.............................................
 
+        CALL timestart('dynmat setup Pu Brakets phi mat els 1')
         hVarphi = cmplx(0.0, 0.0)
         call CalcHnGrV0Varphi( atoms, sym, lathar, itype, iatom, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, vEff0MtLh, clnu_atom, &
           & nmem_atom, mlh_atom, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, hVarphi, vEff0NsphGrVarphi, r2grVeff0SphVarphi, r2grVeff0Varphi )
+        CALL timestop('dynmat setup Pu Brakets phi mat els 1')
 
+        CALL timestart('dynmat setup Pu Brakets phi mat els 2')
         do mqn_m2PrC = -1, 1
           call CalcHGrVarphi( atoms, itype, mqn_m2PrC, lmpMax, lmaxBra, grVarphiChMout, nRadFun, grVarPhiCh1, grVarPhiCh2,        &
                                                       & grVarphiChLout, vEff0NsphGrVarphi, El, lmpT, hGrVarphi )
         end do ! mqn_m2PrC
+        CALL timestop('dynmat setup Pu Brakets phi mat els 2')
 
         deallocate( vEff0MtSpH )
 
+        CALL timestart('dynmat setup Pu Brakets phi mat els 3')
         do mqn_m2PrC = -1, 1
           varphiVarphiDummy(:, :, :) = 0.
           !todo attention where the hGrVarphi starts!
           call CalcScalBasfMatElems( atoms, itype, iatom, nRadFun, r2, varphi1, varphi2, hGrVarphi(:, :, :, :, mqn_m2PrC), varphiVarphiDummy, varphiHGrvarphi(:, :, :, mqn_m2PrC) )
         end do ! mqn_m2PrC
-
+        CALL timestop('dynmat setup Pu Brakets phi mat els 3')
 
         ! Calculate all radial integrals with no gradients.jjjj
         ! Calculate scalar basis function matrix elements
 
         !call CalcScalBasfMatElems( atoms, itype, iatom, nRadFun, r2, varphi1, varphi2, hVarphi, varphiVarphi, varphiHvarphi )
         !!! Symmetrized kinetic energy:
+        CALL timestart('dynmat setup Pu Brakets phi mat els 4')
         call CalcScalBasfMatElems( atoms, itype, iatom, nRadFun, r2, varphi1, varphi2, hVarphi, varphiVarphi, varphiHvarphi, usdus )
+        CALL timestop('dynmat setup Pu Brakets phi mat els 4')
 
         ! not optimal with the first dimension
         ! This should be R for row but we want to avoid overhead setting up a new loop.
         !todo also have a look at calcproj on grVarphi in deprecated tests
+        CALL timestart('dynmat setup Pu Brakets phi mat els 5')
         call CalcVecBasfMatElems( atoms, itype, 2, nRadFun, r2, grVarphiChLout, grVarphiChMout, varphi1, varphi2, &
           & grVarPhiCh1, grVarphiCh2, hVarphi, grVarphiVarphi(:, :, :, itype), grVarphiHVarphi(:, :, :, iatom) )
+        CALL timestop('dynmat setup Pu Brakets phi mat els 5')
 
         do mqn_m2PrC = -1, 1
           do jj = 1, lmpMax
@@ -1793,6 +1827,7 @@ module m_jpSetupDynMat
       end do ! ieqat
     end do !itype
 
+    CALL timestart('dynmat setup Pu Brakets phi mat els 6')
     iatom = 0
     r2(:) = 1.
     iatom = 0
@@ -1805,6 +1840,7 @@ module m_jpSetupDynMat
         end do ! idir
       end do ! ieqat
     end do ! itype
+    CALL timestop('dynmat setup Pu Brakets phi mat els 6')
 
     ! get rid of unrequired arrays
     deallocate( varphi1, varphi2, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, &
@@ -1849,7 +1885,7 @@ module m_jpSetupDynMat
       & varphiGrVeff0SphVarphi, varphiHGrvarphi, varphiGrVarphi, dynMatPu )
     end do ! ikpt
     !write(*, '(a)') '1st, 2nd and 3rd Pulay Braket term added to dynamical matrix.'
-    write(*, '(a)') 'Alex Pulay Braket terms added to dynamical matrix.'
+    write(*, '(a)') 'Reduced Pulay Braket terms added to dynamical matrix.'
 
   end subroutine EvalPuHepsBraKetsVal
 
