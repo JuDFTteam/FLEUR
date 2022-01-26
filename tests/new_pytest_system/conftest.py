@@ -537,6 +537,8 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup,
     Write testlog.
     """
 
+    call_failed  = request.node.rep_call.failed if getattr(request.node, 'rep_call', None) is not None else True
+
     if 'fleur_parser' not in request.keywords:
 
         workdir = work_dir
@@ -547,7 +549,7 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup,
         # clean up code goes here:
 
         method_name = request.node.name
-        if request.node.rep_call.failed or not cleanup:
+        if call_failed or not cleanup:
             #log('Test {} failed :('.format(method_name))
             # if failed move test result to failed dir, will replace dir if existent
             destination = os.path.abspath(os.path.join(faildir, method_name))
@@ -561,7 +563,7 @@ def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup,
 
         # clean up code goes here (We can only clean up
         #at the end of the session since multiple parser need to access the same folder):
-        if request.node.rep_call.failed or not cleanup:
+        if call_failed or not cleanup:
             add_failed_parser_tests(request)
 
 @pytest.fixture(name='test_logger', scope='function')
@@ -1156,6 +1158,8 @@ def stage_for_parser_test(request, work_dir, parser_testdir):
     To later autogenerate tests for the fleur parsers
     """
 
+    call_failed  = request.node.rep_call.failed if getattr(request.node, 'rep_call', None) is not None else True
+
     if 'fleur_parser' not in request.keywords:
 
         parsertestdir = parser_testdir
@@ -1166,7 +1170,7 @@ def stage_for_parser_test(request, work_dir, parser_testdir):
         # clean up code goes here:
 
         method_name = request.node.name
-        if RUN_PARSER_TESTS and not request.node.rep_call.failed:
+        if RUN_PARSER_TESTS and not call_failed:
             # if not failed move test result to parsertestdir, will replace dir if existent
             destination = os.path.abspath(os.path.join(parsertestdir, method_name))
             if os.path.isdir(destination):
