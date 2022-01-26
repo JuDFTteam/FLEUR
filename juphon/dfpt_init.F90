@@ -1103,14 +1103,15 @@ CONTAINS
 
       ! Local Array Variables
       real,              allocatable              :: gPts(:, :) ! gaussian points to exactly integrate spherial harmonics
-      complex,           allocatable              :: rhoMTGpts(:, :)
+      complex,           allocatable              :: rhoMTGpts(:, :), ylmtemp(:)
 
       ! Replaced dimension%nspd by atoms%nsp()
-      allocate( gWghts(atoms%nsp()), ylm(atoms%nsp(), ( atoms%lmaxd + 1 )**2), &
+      allocate( gWghts(atoms%nsp()), ylmtemp( ( atoms%lmaxd + 1 )**2), ylm(atoms%nsp(), ( atoms%lmaxd + 1 )**2), &
         & dKernMTGPts(atoms%nsp(), atoms%jmtd, atoms%nat), gPts(3, atoms%nsp()), rhoMTGpts(atoms%nsp(), atoms%jmtd) )
 
       gWghts(:) = 0.
       ylm(:, :) = cmplx(0., 0.)
+      ylmtemp = cmplx(0., 0.)
       dKernMTGPts(:, :, :) = 0.
       gPts(:, :) = 0.
       rhoMTGpts(:, :) = cmplx(0., 0.)
@@ -1124,7 +1125,8 @@ CONTAINS
       ! The ylms are note filled linearily as a compromise to perform a linear run through all the other arrays
       call ylmnorm_init(atoms%lmaxd)
       do igmesh = 1, atoms%nsp()
-        call ylm4( atoms%lmaxd, gPts(:, igmesh), ylm(igmesh, :) )
+        call ylm4( atoms%lmaxd, gPts(:, igmesh), ylmtemp )
+        ylm(igmesh, :) = ylmtemp
       end do
 
       dKernMTGPts(:, :, :) = 0

@@ -1679,10 +1679,13 @@ module m_jpDens1stVar
     real,          allocatable             :: sbes(:, :, :, :)
     complex,       allocatable             :: fpiul(:)
     real                                   :: Gqext(3)
+    complex,       allocatable             :: ylmtemp(:)
+    real,          allocatable             :: sbestemp(:)
 
     ! Init local variables
-    allocate( ylm(ngpqdp2km, ( atoms%lmaxd + 1 )**2), &
+    allocate( ylm(ngpqdp2km, ( atoms%lmaxd + 1 )**2), ylmtemp(( atoms%lmaxd + 1 )**2), &
             & sbes( atoms%jmtd, 0: atoms%lmaxd, ngpqdp2km, atoms%ntype ), &
+            & sbestemp(0: atoms%lmaxd), &
             & phFac(ngpqdp2km, atoms%nat), &
             & fpiul(0:atoms%lmaxd) )
     ylm(:, :)        = cmplx(0., 0.)
@@ -1697,13 +1700,15 @@ module m_jpDens1stVar
     ! to fill it like this (no sequential memory) is the better compromise for later
     do iG = 1, ngpqdp2km
       Gqext(1:3) = matmul( cell%bmat(1:3, 1:3), real(gpqdp(1:3, iG) + qbk(1:3)) )
-      call ylm4(atoms%lmaxd, Gqext(1:3), ylm(iG, :))
+      call ylm4(atoms%lmaxd, Gqext(1:3), ylmtemp)
+      ylm(iG, :) = ylmtemp
       normedG = norm2(Gqext)
       iatom = 0
       do itype = 1, atoms%ntype
         do imesh = 1, atoms%jri(itype)
           sbesArg = atoms%rmsh(imesh, itype) * normedG
-          call sphbes(atoms%lmax(itype), sbesArg , sbes(imesh, :, iG, itype))
+          call sphbes(atoms%lmax(itype), sbesArg , sbestemp)
+          sbes(imesh, :, iG, itype) = sbestemp
         end do
         do ieqat = 1, atoms%neq(itype)
           iatom = iatom + 1
