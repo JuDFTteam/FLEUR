@@ -3611,6 +3611,7 @@ module m_jpSetupDynMat
 
     use m_types
     use m_abcof3
+    USE m_npy
 
     implicit none
 
@@ -3731,6 +3732,21 @@ module m_jpSetupDynMat
     complex                                       :: psiHepsPsi(3, 3)
     complex                                       :: psiGrVeff0sphPsi(3, 3)
     real                                          :: kExt(3)
+
+    CALL save_npy('lmpT.npy',lmpT)
+    CALL save_npy('gBas.npy',gBas)
+    CALL save_npy('gBasUnwrap.npy',)
+    CALL save_npy('mapKpq2K.npy',mapKpq2K)
+    CALL save_npy('nobd.npy',nobd)
+    CALL save_npy('z.npy',z)
+    CALL save_npy('z1nG.npy',z1nG)
+    CALL save_npy('iloTable.npy',iloTable)
+    CALL save_npy('nRadFun.npy',nRadFun)
+    CALL save_npy('eig.npy',eig)
+    CALL save_npy('kpq2kPrVec.npy',kpq2kPrVec)
+    CALL save_npy('varphiVarphi.npy',varphiVarphi)
+    CALL save_npy('varphiHvarphi.npy',varphiHvarphi)
+    CALL save_npy('vEff0IR.npy',vEff0IR)
 
     ! We do not want the local coordinate systems to be rotated for non-representative atoms constructing the matching coefficients.
     allocate(ngoprI(atoms%nat))
