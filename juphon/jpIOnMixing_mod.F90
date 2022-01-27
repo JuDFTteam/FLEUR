@@ -212,9 +212,9 @@ module m_jpIOnMixing
     integer              :: imesh
 
     ! Initialize mixing vector
-    do iMVec = 1, nmap
-      mixVec(iMVec) = 0.0
-    end do
+    !do iMVec = 1, nmap
+    !  mixVec(iMVec) = 0.0
+    !end do
 
     ! Pack mixing vector with linear density variation arrays
     iMVec = 0
