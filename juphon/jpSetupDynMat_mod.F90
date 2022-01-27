@@ -1587,7 +1587,7 @@ module m_jpSetupDynMat
     integer,                    intent(in)  :: GbasVec(:, :)
     integer,                    intent(in)  :: ilst(:, :, :)
     integer,                    intent(in)  :: kveclo(:,:)
-    complex,                   intent(in)  :: z(:,:,:,:)
+    complex,                    intent(in)  :: z(:,:,:,:)
     integer,                    intent(in)  :: iloTable(:, 0:, :)
     real,                       intent(in)  :: eig(:, :, :)
     integer,                    intent(in)  :: kpq2kPrVec(:, :, :)
@@ -1633,14 +1633,12 @@ module m_jpSetupDynMat
     integer,       allocatable              :: grVarphiChMout(:, :)
     real,          allocatable              :: grVarphiCh1(:, :, :, :)
     real,          allocatable              :: grVarphiCh2(:, :, :, :)
-    real,          allocatable              :: delrGrVarphiCh1(:, :, :, :)
-    real,          allocatable              :: delrGrVarphiCh2(:, :, :, :)
     complex,       allocatable              :: vEff0MtSpH(:, :)
     complex,       allocatable              :: hVarphi(:, :, :, :)
     real,          allocatable              :: varphiVarphi(:, :, :)
     complex,       allocatable              :: varphiHvarphi(:, :, :)
     real,          allocatable              :: grVarphiVarphi(:, :, :, :)
-    complex,       allocatable              :: grVarphiHpreGrtVarphi(:, :, :, :, :)
+    !complex,       allocatable              :: grVarphiHpreGrtVarphi(:, :, :, :, :)
     complex,       allocatable              :: grVarphiHVarphi(:, :, :, :)
     complex,       allocatable              :: vEff0NsphGrVarphi(:, :, :, :, :)
     complex,       allocatable              :: r2grVeff0SphVarphi(:, :, :, :, :)
@@ -1880,9 +1878,9 @@ module m_jpSetupDynMat
       !& varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, varphiGrVeff0SphVarphi, varphiHGrvarphi, varphiGrVarphi, dynMatPu )
       !write(470,*) dynMatPu
       call AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, GbasVec, ilst, kveclo, &
-      & mapKpq2K, nobd, z, z1nG, iloTable, grVarphiVarphi, nRadFun, eig, kpq2kPrVec, grVarphiHvarphi, &
+      & mapKpq2K, nobd, z, z1nG, iloTable, nRadFun, eig, kpq2kPrVec, &
       & varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, &
-      & varphiGrVeff0SphVarphi, varphiHGrvarphi, varphiGrVarphi, dynMatPu )
+      & dynMatPu )
     end do ! ikpt
     !write(*, '(a)') '1st, 2nd and 3rd Pulay Braket term added to dynamical matrix.'
     write(*, '(a)') 'Reduced Pulay Braket terms added to dynamical matrix.'
@@ -3750,9 +3748,9 @@ module m_jpSetupDynMat
   end subroutine Add1stOrdWfPulayBraKets2DynMat
 
   subroutine AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, gBas, &
-      & gBasUnwrap, kveclo, mapKpq2K, nobd, z, z1nG, iloTable, grVarphiVarphiNat, nRadFun, eig, kpq2kPrVec, &
-      & grVarphiHvarphiNat, varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, &
-      & testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, varphiGrVeff0SphVarphi, varphiHGrvarphiNat, varphiGrVarphiNat, dynMatPu )
+      & gBasUnwrap, kveclo, mapKpq2K, nobd, z, z1nG, iloTable, nRadFun, eig, kpq2kPrVec, &
+      & varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, &
+      & testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, dynMatPu )
 
     use m_types
     use m_abcof3
@@ -3760,10 +3758,10 @@ module m_jpSetupDynMat
     implicit none
 
     ! Type parameters
-    type(t_mpi),                  intent(in)  :: fmpi
-    type(t_nococonv),                intent(in)  :: nococonv
-    type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+    type(t_mpi),                    intent(in)  :: fmpi
+    type(t_nococonv),               intent(in)  :: nococonv
+    type(t_noco),                   intent(in)  :: noco
+    type(t_oneD),                   intent(in)  :: oneD
     type(t_atoms),                  intent(in)    :: atoms
     type(t_input),                  intent(in)    :: input
     type(t_kpts),                   intent(in)    :: kpts
@@ -3792,20 +3790,15 @@ module m_jpSetupDynMat
     integer,                        intent(in)    :: kveclo(:,:)
     integer,                        intent(in)    :: mapKpq2K(:, :)
     integer,                        intent(in)    :: nobd(:, :)
-    complex,                       intent(in)    :: z(:,:,:,:)
+    complex,                        intent(in)    :: z(:,:,:,:)
     complex,                        intent(in)    :: z1nG(:, :, :, :)
     integer,                        intent(in)    :: iloTable(:, 0:, :)
-    real,                           intent(in)    :: grVarphiVarphiNat(:, :, :, :)
     integer,                        intent(in)    :: nRadFun(0:, :)
     real,                           intent(in)    :: eig(:, :, :)
     integer,                        intent(in)    :: kpq2kPrVec(:, :, :)
-    complex,                        intent(in)    :: grVarphiHvarphiNat(:, :, :, :)
     real,                           intent(in)    :: varphiVarphi(:, :, :)
     complex,                        intent(in)    :: varphiHvarphi(:, :, :)
-    complex,                        intent(in)    :: varphiGrVeff0SphVarphi(:, :, :, :)
-    complex,                        intent(in)    :: varphiHGrvarphiNat(:, :, :, :)
     complex,                        intent(in)    :: vEff0IR(:,:)
-    real,                           intent(in)    :: varphiGrVarphiNat(:, :, :, :)
     complex,                        intent(inout) :: dynMatPu(:, :)
 
     ! Type variable
