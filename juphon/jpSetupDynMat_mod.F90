@@ -1529,6 +1529,7 @@ module m_jpSetupDynMat
     use m_types
     use m_dynSF, only : CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat, readInz1, CalcHnGrV0Varphi, CalcHGrVarphi
     use m_dfpt_init, only : Derivative
+    use m_npy
 
     implicit none
 
@@ -1627,28 +1628,11 @@ module m_jpSetupDynMat
     real,          allocatable              :: varphi1(:, :, :)
     real,          allocatable              :: varphi2(:, :, :)
     real,          allocatable              :: r2(:)
-    real,          allocatable              :: delrVarphi1(:, :, :)
-    real,          allocatable              :: delrVarphi2(:, :, :)
-    integer,       allocatable              :: grVarphiChLout(:, :)
-    integer,       allocatable              :: grVarphiChMout(:, :)
-    real,          allocatable              :: grVarphiCh1(:, :, :, :)
-    real,          allocatable              :: grVarphiCh2(:, :, :, :)
     complex,       allocatable              :: vEff0MtSpH(:, :)
     complex,       allocatable              :: hVarphi(:, :, :, :)
     real,          allocatable              :: varphiVarphi(:, :, :)
     complex,       allocatable              :: varphiHvarphi(:, :, :)
-    real,          allocatable              :: grVarphiVarphi(:, :, :, :)
     !complex,       allocatable              :: grVarphiHpreGrtVarphi(:, :, :, :, :)
-    complex,       allocatable              :: grVarphiHVarphi(:, :, :, :)
-    complex,       allocatable              :: vEff0NsphGrVarphi(:, :, :, :, :)
-    complex,       allocatable              :: r2grVeff0SphVarphi(:, :, :, :, :)
-    complex,       allocatable              :: r2grVeff0Varphi(:, :, :, :, :)
-    complex,       allocatable              :: hGrVarphi(:, :, :, :, :)
-    real,          allocatable              :: varphiVarphiDummy(:, :, :)
-    complex,       allocatable              :: varphiGrVeff0SphVarphi(:, :, :, :)
-    complex,       allocatable              :: varphiGrVeff0Varphi(:, :, :, :)
-    complex,       allocatable              :: varphiHGrvarphi(:, :, :, :)
-    real,          allocatable              :: varphiGrVarphi(:, :, :, :)
     real                                    :: kExt(1:3)
     real                                    :: gbasExt(1:3)
     integer :: iBas
@@ -1678,41 +1662,20 @@ module m_jpSetupDynMat
     allocate( z1nG(SIZE(z(:,1,1,1)), 3, atoms%nat, maxval(nobd(:, :))) )
     allocate( varphi1(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), varphi2(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
     allocate( r2(atoms%jmtd) )
-    allocate( delrVarphi1( atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), delrVarphi2( atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
-    allocate( grVarphiCh1(atoms%jmtd, 2, lmpMax, -1:1), grVarphiCh2(atoms%jmtd, 2, lmpMax, -1:1), &
-            & grVarphiChLout(2, 0:atoms%lmaxd), grVarphiChMout(-atoms%lmaxd:atoms%lmaxd, -1:1) )
-    allocate( hVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax)  )
+    allocate( hVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax)  ) ! Probably a problem.
     allocate( varphiVarphi(lmpMax, lmpMax, atoms%ntype), varphiHvarphi(lmpMax, lmpMax, atoms%nat))
-    allocate( grVarphiVarphi(lmpMax, lmpMax, -1:1, atoms%ntype), grVarphiHVarphi(lmpMax, lmpMax, -1:1, atoms%nat ) )
-    allocate( vEff0MtSpH( atoms%jmtd, 0:atoms%lmaxd*(atoms%lmaxd+2)), vEff0NsphGrVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, -1:1), &
-            & r2grVeff0SphVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, 3) )
-    allocate( r2grVeff0Varphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, 3))
-    allocate( hGrVarphi(2, atoms%jmtd, (atoms%lmaxd + 2)**2, lmpMax, -1:1))
-    allocate( varphiVarphiDummy(lmpMax, lmpMax, atoms%ntype) )
-    allocate( varphiGrVeff0SphVarphi(lmpMax, lmpMax, atoms%nat, 3) )
-    allocate( varphiGrVeff0Varphi(lmpMax, lmpMax, atoms%nat, 3) )
-    allocate( varphiHGrvarphi(lmpMax, lmpMax, atoms%nat, -1:1) )
-    allocate( varphiGrVarphi(lmpMax, lmpMax, -1:1, atoms%ntype))
+    allocate( vEff0MtSpH( atoms%jmtd, 0:atoms%lmaxd*(atoms%lmaxd+2)) )
     CALL timestop('dynmat setup Pu Brakets allocations 3')
 
-    hGrVarphi(:, :, :, :, :) = cmplx(0., 0.)
-    varphiGrVeff0SphVarphi(:, :, :, :) = cmplx(0., 0.)
-    varphiGrVeff0Varphi(:, :, :, :) = cmplx(0., 0.)
-    varphiVarphiDummy(:, :, :) = 0.
-    varphiHGrvarphi(:, :, :, :) = cmplx(0., 0.)
-    varphiVarphi(:, :, :)            = 0.
-    varphiHvarphi(:, :, :)              = cmplx(0., 0.)
-    grVarphiVarphi(:, :, :,  :)         = 0.
-    grVarphiHVarphi(:, :, :, :)         = cmplx(0., 0.)
-    vEff0NsphGrVarphi(:, :, :, :, :)    = cmplx(0., 0.)
-    r2grVeff0SphVarphi(:, :, :, :, :)   = cmplx(0., 0.)
-    r2grVeff0Varphi(:, :, :, :, :)   = cmplx(0., 0.)
-    varphiGrVarphi(:, :, :, :) = 0.
+    !CALL save_npy(".npy", )
+
+    varphiVarphi = 0.
+    varphiHvarphi = cmplx(0., 0.)
 
     iatom = 0
     do itype = 1, atoms%ntype
 
-    lmaxBra = atoms%lmax(itype)
+      lmaxBra = atoms%lmax(itype)
 
       ! Precalculate radial Jacobi determinant for later integrals
       r2(:) = 0.
@@ -1721,10 +1684,8 @@ module m_jpSetupDynMat
       end do ! imesh
 
       CALL timestart('dynmat setup Pu Brakets phistuff')
-      varphi1(:, :, :) = 0.
-      varphi2(:, :, :) = 0.
-      delrVarphi1(:, :, :) = 0.
-      delrVarphi2(:, :, :) = 0.
+      varphi1 = 0.
+      varphi2 = 0.
       do oqn_l = 0, atoms%lmax(itype)
         do iradf = 1, nRadFun(oqn_l, itype)
           do imesh = 1, atoms%jri(itype)
@@ -1733,31 +1694,16 @@ module m_jpSetupDynMat
             varphi1(imesh, iradf, oqn_l) = rbas1(imesh, iradf, oqn_l, itype) / atoms%rmsh(imesh, itype)
             varphi2(imesh, iradf, oqn_l) = rbas2(imesh, iradf, oqn_l, itype) / atoms%rmsh(imesh, itype)
           end do ! imesh
-          ! Precalculate partial derivatives of varphis in r-direction since it is needed twice
-          call Derivative( varphi1(1:atoms%jri(itype), iradf, oqn_l), itype, atoms, delrVarphi1(1:atoms%jri(itype), iradf, oqn_l) )
-          call Derivative( varphi2(1:atoms%jri(itype), iradf, oqn_l), itype, atoms, delrVarphi2(1:atoms%jri(itype), iradf, oqn_l) )
         end do ! iradf
       end do ! oqn_l
       CALL timestop('dynmat setup Pu Brakets phistuff')
-
-      ! Calculate the application of the gradient and the gradient's dyadic product onto the MT basis functions (matching coefficients
-      ! have no spatial dependence) and determing its scattering channels.
-      CALL timestart('dynmat setup Pu Brakets grphistuff')
-      grVarphiChLout(:, :) = 0
-      grVarphiChMout(:, :) = 0
-      grVarphiCh1(:, :, :, :) = 0.
-      grVarphiCh2(:, :, :, :) = 0.
-      call CalcChannelsGrFlpNat( atoms, itype, nRadFun, varphi1, varphi2, delrVarphi1, delrVarphi2, grVarphiChLout, grVarphiChMout, &
-                                                                                                        & grVarphiCh1, grVarphiCh2 )
-      CALL timestop('dynmat setup Pu Brakets grphistuff')
-      deallocate( delrVarphi1, delrVarphi2 )
 
       ! Calculate H |varphi>
       do ieqat = 1, atoms%neq(itype)
         iatom = iatom + 1
         !todo block begin                             place this block into calchngrv0varphi
         ! Expand the coefficients of the lattice-harmonic given potential into spherical-harmonic coefficients for the given atom.
-        vEff0MtSpH(:, :) = cmplx(0.0, 0.0)
+        vEff0MtSpH = cmplx(0.0, 0.0)
         ptsym = sym%ntypsy(iatom)
         do ilh = 0, lathar%nlh(ptsym)
           oqn_l = lathar%llh(ilh, ptsym)
@@ -1773,76 +1719,22 @@ module m_jpSetupDynMat
           end do ! imem
         end do ! ilh
 
-        !todo block end.............................................
-
-        CALL timestart('dynmat setup Pu Brakets phi mat els 1')
-        hVarphi = cmplx(0.0, 0.0)
-        call CalcHnGrV0Varphi( atoms, sym, lathar, itype, iatom, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, vEff0MtLh, clnu_atom, &
-          & nmem_atom, mlh_atom, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, hVarphi, vEff0NsphGrVarphi, r2grVeff0SphVarphi, r2grVeff0Varphi )
-        CALL timestop('dynmat setup Pu Brakets phi mat els 1')
-
-        CALL timestart('dynmat setup Pu Brakets phi mat els 2')
-        do mqn_m2PrC = -1, 1
-          call CalcHGrVarphi( atoms, itype, mqn_m2PrC, lmpMax, lmaxBra, grVarphiChMout, nRadFun, grVarPhiCh1, grVarPhiCh2,        &
-                                                      & grVarphiChLout, vEff0NsphGrVarphi, El, lmpT, hGrVarphi )
-        end do ! mqn_m2PrC
-        CALL timestop('dynmat setup Pu Brakets phi mat els 2')
-
         deallocate( vEff0MtSpH )
-
-        CALL timestart('dynmat setup Pu Brakets phi mat els 3')
-        do mqn_m2PrC = -1, 1
-          varphiVarphiDummy(:, :, :) = 0.
-          !todo attention where the hGrVarphi starts!
-          call CalcScalBasfMatElems( atoms, itype, iatom, nRadFun, r2, varphi1, varphi2, hGrVarphi(:, :, :, :, mqn_m2PrC), varphiVarphiDummy, varphiHGrvarphi(:, :, :, mqn_m2PrC) )
-        end do ! mqn_m2PrC
-        CALL timestop('dynmat setup Pu Brakets phi mat els 3')
 
         ! Calculate all radial integrals with no gradients.jjjj
         ! Calculate scalar basis function matrix elements
 
         !call CalcScalBasfMatElems( atoms, itype, iatom, nRadFun, r2, varphi1, varphi2, hVarphi, varphiVarphi, varphiHvarphi )
         !!! Symmetrized kinetic energy:
-        CALL timestart('dynmat setup Pu Brakets phi mat els 4')
+        CALL timestart('dynmat setup Pu Brakets phi mat els')
         call CalcScalBasfMatElems( atoms, itype, iatom, nRadFun, r2, varphi1, varphi2, hVarphi, varphiVarphi, varphiHvarphi, usdus )
-        CALL timestop('dynmat setup Pu Brakets phi mat els 4')
+        CALL timestop('dynmat setup Pu Brakets phi mat els')
 
-        ! not optimal with the first dimension
-        ! This should be R for row but we want to avoid overhead setting up a new loop.
-        !todo also have a look at calcproj on grVarphi in deprecated tests
-        CALL timestart('dynmat setup Pu Brakets phi mat els 5')
-        call CalcVecBasfMatElems( atoms, itype, 2, nRadFun, r2, grVarphiChLout, grVarphiChMout, varphi1, varphi2, &
-          & grVarPhiCh1, grVarphiCh2, hVarphi, grVarphiVarphi(:, :, :, itype), grVarphiHVarphi(:, :, :, iatom) )
-        CALL timestop('dynmat setup Pu Brakets phi mat els 5')
-
-        do mqn_m2PrC = -1, 1
-          do jj = 1, lmpMax
-            do ii = 1, lmpMax
-              varphiGrVarphi(ii, jj, mqn_m2PrC, itype) = grVarphiVarphi(jj, ii, mqn_m2PrC, itype)
-            end do ! ii
-          end do ! jj
-        end do ! mqn_m2PrC
       end do ! ieqat
     end do !itype
 
-    CALL timestart('dynmat setup Pu Brakets phi mat els 6')
-    iatom = 0
-    r2(:) = 1.
-    iatom = 0
-    do itype = 1, atoms%ntype
-      do ieqat = 1, atoms%neq(itype)
-        iatom = iatom + 1
-        do idir = 1, 3
-          call CalcScalBasfMatElems( atoms, itype, iatom, nRadFun, r2, varphi1, varphi2, r2GrVeff0SphVarphi(:, :, :, :, idir), varphiVarphiDummy, varphiGrVeff0SphVarphi(:, :, :, idir) )
-          call CalcScalBasfMatElems( atoms, itype, iatom, nRadFun, r2, varphi1, varphi2, r2GrVeff0Varphi(:, :, :, :, idir), varphiVarphiDummy, varphiGrVeff0Varphi(:, :, :, idir) )
-        end do ! idir
-      end do ! ieqat
-    end do ! itype
-    CALL timestop('dynmat setup Pu Brakets phi mat els 6')
-
     ! get rid of unrequired arrays
-    deallocate( varphi1, varphi2, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, &
-      & r2grVeff0SphVarphi, vEff0NsphGrVarphi, r2, hVarphi, varphiVarphiDummy, hGrVarphi )
+    deallocate( varphi1, varphi2, r2, hVarphi)
 
     write(*, *) 'All quantities for DynMatPu have been prepared'
     ! This is what Aaron Klueppelberg calls first and second braket.
@@ -1857,32 +1749,12 @@ module m_jpSetupDynMat
     do ikpt = 1, kpts%nkpt
       z1nG = cmplx(0.0, 0.0)
       call ReadInz1( atoms, ikpt, iqpt, mapKpq2K(ikpt, iqpt), nobd, nv, z1nG )
-!      kExt(1:3) = matmul(cell%bmat, kpts%bk(1:3, ikpt))
-!      gbasExt(:) = 0.
-!      do iBas = 1, nv(1, ikpt) !+ atoms%nlotot
-!        gbasExt(1:3) = matmul( cell%bmat(1:3, 1:3), gBasVec(1:3, ilst(iBas, ikpt, 1)))
-!        do iband = 1, nobd(ikpt, 1)
-!          do idir = 1, 3
-!            z1nG(iBas, idir, 1, iband) = -iu * ( kExt(idir) + gbasExt(idir) ) * z(iBas, iband, ikpt, 1)
-!          end do ! iBas
-!        end do ! idir
-!      end do ! iband
-      !(5.3.179/180)
-      !call Add2ndOrdWfPulayBraKets2DynMat( atoms, cell, dimens, sym, kpts, qpts, usdus, results, iqpt, ikpt, nRadFunMax, lmpMax, eps1DynMatPulTestSw, testComp2ndN1stOrdBasFuncSw, mapKpq2K, eig, nobd, nv, &
-      !  & gBasVec, ilst, kveclo, z, z1nG, nRadFun, iloTable, varphiVarphi, varphiHvarphi, grVarphiVarphi, grVarphiHVarphi, &
-      !  &  lmpT, varphiGrVeff0SphVarphi, varphiHGrvarphi, varphiGrVarphi, varphiGrVeff0Varphi, dynMatPu )
-      !write(470,*) dynMatPu
-      !(5.3.181)
-      !call Add1stOrdWfPulayBraKets2DynMat( atoms, kpts, qpts, sym, dimens, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, GbasVec, ilst, kveclo, &
-      !& mapKpq2K, nobd, z, z1nG, iloTable, grVarphiVarphi, nRadFun, eig, kpq2kPrVec, grVarphiHvarphi, &
-      !& varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, varphiGrVeff0SphVarphi, varphiHGrvarphi, varphiGrVarphi, dynMatPu )
-      !write(470,*) dynMatPu
+
       call AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, GbasVec, ilst, kveclo, &
       & mapKpq2K, nobd, z, z1nG, iloTable, nRadFun, eig, kpq2kPrVec, &
       & varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, &
       & dynMatPu )
     end do ! ikpt
-    !write(*, '(a)') '1st, 2nd and 3rd Pulay Braket term added to dynamical matrix.'
     write(*, '(a)') 'Reduced Pulay Braket terms added to dynamical matrix.'
 
   end subroutine EvalPuHepsBraKetsVal
