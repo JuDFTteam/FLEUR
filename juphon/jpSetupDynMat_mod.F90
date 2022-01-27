@@ -677,8 +677,8 @@ module m_jpSetupDynMat
                               call Calc2ArgCmplxIntMT( atoms, iCtype, grRho0MT(:, lm, iCatom, idirR), grVext0MT(:, lm,  idirC, iCatom), integral )
                               !!!CRGfix
                               !!call Calc2ArgCmplxIntMT( atoms, iCtype, grRho0MT(:, lm, iCatom, idirR), grVext0MT(:, lm,  idirC, iCatom), integral )
-                            !dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
-                            !  & dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) - integral
+                            dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) = &
+                              & dynMatHF(idirR + (iBatom - 1) * 3, idirC + (iAatom - 1) * 3) - integral
                             !write(467,*) grRho0MT(:, lm, iCatom, idirR), vExt1MTnoVolnoq(:, lm, iCatom, idirC, iAatom), integral
                             !end if
 
