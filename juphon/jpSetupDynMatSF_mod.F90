@@ -232,12 +232,16 @@ contains
     ! Perform mt gradient of xc-quantities
     allocate( r2Vxc0MT( atoms%jmtd, 0:lathar%nlhd, atoms%ntype) )
     allocate( grVxc0MT( atoms%jmtd, ( atoms%lmaxd + 2 )**2, 3, atoms%nat  ) )
+    allocate( r2grVxc0MT( atoms%jmtd, ( atoms%lmaxd + 2 )**2, atoms%nat, 3 ) )
     allocate( r2ExcMT( atoms%jmtd, 0:lathar%nlhd, atoms%ntype) )
     allocate( grExcMT( atoms%jmtd, ( atoms%lmaxd + 2 )**2, 3, atoms%nat  ) )
+    allocate( r2grExcMT( atoms%jmtd, ( atoms%lmaxd + 2 )**2, atoms%nat, 3 ) )
     r2Vxc0MT(:, :, :) = 0.
     grVxc0MT(:, :, :, :) = cmplx(0., 0.)
     r2ExcMT(:, :, :) = 0.
     grExcMT(:, :, :, :) = cmplx(0., 0.)
+    r2grVxc0MT(:, :, :, :) = cmplx(0., 0.)
+    r2grExcMT(:, :, :, :) = cmplx(0., 0.)
 
     do iDtypeB = 1, atoms%ntype
       do ilh = 0, lathar%nlhd

@@ -1602,11 +1602,9 @@ module m_jpSetupDynMat
     integer                                 :: imesh
     integer                                 :: oqn_l
     integer                                 :: iradf
-    integer                                 :: mqn_m2PrR
     integer                                 :: mqn_m
     integer                                 :: ichan
     integer                                 :: lmp
-    integer                                 :: mqn_m2PrC
     integer                                 :: ieqat
     integer                                 :: ptsym
     integer                                 :: ilh
@@ -1614,10 +1612,7 @@ module m_jpSetupDynMat
     integer                                 :: imem
     integer                                 :: lm
     integer                                 :: ikpt
-    integer                                 :: ii
-    integer                                 :: jj
     logical                                 :: eps1DynMatPulTestSw
-    logical                                 :: testComp2ndN1stOrdBasFuncSw
     logical                                 :: testCompTerm3rdBraKetsVarKet
     logical                                 :: testCompTerm3rdBraKetsVarBra
     logical                                 :: dynMatPu3rdBraKetHepsSw
@@ -1632,7 +1627,6 @@ module m_jpSetupDynMat
     complex,       allocatable              :: hVarphi(:, :, :, :)
     real,          allocatable              :: varphiVarphi(:, :, :)
     complex,       allocatable              :: varphiHvarphi(:, :, :)
-    !complex,       allocatable              :: grVarphiHpreGrtVarphi(:, :, :, :, :)
     real                                    :: kExt(1:3)
     real                                    :: gbasExt(1:3)
     integer :: iBas
@@ -1640,15 +1634,10 @@ module m_jpSetupDynMat
     integer :: idir
     integer :: lmaxBra
 
-    CALL timestart('dynmat setup Pu Brakets allocations 1')
-
     allocate(dynMatPu(3 * atoms%nat, 3 * atoms%nat))
     dynMatPu(:, :) = cmplx(0., 0.)
 
-    CALL timestop('dynmat setup Pu Brakets allocations 1')
-
     ! Quantities for initialization
-    CALL timestart('dynmat setup Pu Brakets allocations 2')
     allocate( lmpT(atoms%ntype) )
     lmpT(:) = 0
     do itype = 1, atoms%ntype
@@ -1656,18 +1645,15 @@ module m_jpSetupDynMat
     end do ! itype
     lmpMax     = maxval( lmpT(:) )
     nRadFunMax = maxval( nRadFun(:, :) )
-    CALL timestop('dynmat setup Pu Brakets allocations 2')
 
     CALL timestart('dynmat setup Pu Brakets allocations 3')
     allocate( z1nG(SIZE(z(:,1,1,1)), 3, atoms%nat, maxval(nobd(:, :))) )
     allocate( varphi1(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), varphi2(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
     allocate( r2(atoms%jmtd) )
-    allocate( hVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax)  ) ! Probably a problem.
+    allocate( hVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax)  )
     allocate( varphiVarphi(lmpMax, lmpMax, atoms%ntype), varphiHvarphi(lmpMax, lmpMax, atoms%nat))
     allocate( vEff0MtSpH( atoms%jmtd, 0:atoms%lmaxd*(atoms%lmaxd+2)) )
     CALL timestop('dynmat setup Pu Brakets allocations 3')
-
-    !CALL save_npy(".npy", )
 
     varphiVarphi = 0.
     varphiHvarphi = cmplx(0., 0.)
@@ -1737,9 +1723,8 @@ module m_jpSetupDynMat
     deallocate( varphi1, varphi2, r2, hVarphi)
 
     write(*, *) 'All quantities for DynMatPu have been prepared'
-    ! This is what Aaron Klueppelberg calls first and second braket.
+
     eps1DynMatPulTestSw = .false.
-    testComp2ndN1stOrdBasFuncSw = .false.
     testCompTerm3rdBraKetsVarKet = .false.
     testCompTerm3rdBraKetsVarBra = .false.
     dynMatPu3rdBraKetHepsSw = .false.
@@ -2642,7 +2627,7 @@ module m_jpSetupDynMat
         nk=fmpi%k_list(ikpq)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
-                            usdus, oneD, 1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
+                            usdus, oneD, 1, nmat, aKpq, bKpq, bascof_loKpq)
 
       nmat = nv(1, ikpt) + atoms%nlotot
       a(:, :, :) = cmplx(0.0, 0.0)
@@ -2657,7 +2642,7 @@ module m_jpSetupDynMat
     nk=fmpi%k_list(ikpt)
     CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
     CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                        usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
+                        usdus, oneD, 1, nmat, a, b, bascof_lo)
 
       do iband = 1, nobd(ikpt, 1)
         iDatomA = 0
@@ -3299,7 +3284,7 @@ module m_jpSetupDynMat
         nk=fmpi%k_list(ikpt)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
+                            usdus, oneD, 1, nmat, a, b, bascof_lo)
 
       ! Matching coefficients of MT basis functions at k + q = k' (ikpq). In the MT we must not account for the backfolding vector.
       nmat = nv(1, ikpq) + atoms%nlotot
@@ -3316,7 +3301,7 @@ module m_jpSetupDynMat
         nk=fmpi%k_list(ikpq)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
-                            usdus, oneD, 1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
+                            usdus, oneD, 1, nmat, aKpq, bKpq, bascof_loKpq)
 
       ! Quantities we need later as decoration for the matching coefficients
       kExt(1:3) = matmul(cell%bmat(1:3, 1:3), kpts%bk(1:3, ikpt))
@@ -3790,7 +3775,7 @@ module m_jpSetupDynMat
       nk=fmpi%k_list(ikpt)
       CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
       CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                          usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
+                          usdus, oneD, 1, nmat, a, b, bascof_lo)
 
     ! Matching coefficients of MT basis functions at k + q = k' (ikpq). In the MT we must not account for the backfolding vector.
     nmat = nv(1, ikpq) + atoms%nlotot
@@ -3806,7 +3791,7 @@ module m_jpSetupDynMat
       nk=fmpi%k_list(ikpq)
       CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
       CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
-                          usdus, oneD, 1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
+                          usdus, oneD, 1, nmat, aKpq, bKpq, bascof_loKpq)
 
 
     ! Quantities we need later as decoration for the matching coefficients
