@@ -135,7 +135,7 @@ def parser_testdir(build_dir):
 def pytest_addoption(parser):
     """We add an option to pytest to parse the build dir
     """
-    parser.addoption("--build_dir", action="store", default="../../build/",
+    parser.addoption("--build_dir", action="store", default="../build/",
                     help='Path to the build dir with fleur exe')
     parser.addoption("--no-cleanup", action="store_true",
                      help='Move every test result to failed dir and not delete any data')

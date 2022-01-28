@@ -32,7 +32,7 @@ pytest automatically discovers all tests in the any sub directory structure of t
 If you execute pytest from any other directory, you have to provide the path to the folder with the head `conftest.py` and a path to the build dir with the fleur executables, either relative to the `contest.py` file or absolute.
 For example if you build dir is `<fleur_source_folder>/build.123`
 ```
-$pytest ../tests --build_dir=../../build.123
+$pytest ../tests --build_dir=../build.123
 ```
 or
 ```
