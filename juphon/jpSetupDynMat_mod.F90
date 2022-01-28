@@ -1527,7 +1527,7 @@ module m_jpSetupDynMat
       & nmem_atom, mlh_atom, rbas1, rbas2, El, mapKpq2K, nobd, nv, gBasVec, ilst, kveclo, z, iloTable, eig, kpq2kPrVec, dynMatPu )
 
     use m_types
-    use m_dynSF, only : CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat, readInz1, CalcHnGrV0Varphi, CalcHGrVarphi
+    use m_dynSF, only : CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat, readInz1, CalcHVarphi, CalcHGrVarphi
     use m_dfpt_init, only : Derivative
     use m_npy
 
@@ -1704,6 +1704,13 @@ module m_jpSetupDynMat
             end do ! imesh
           end do ! imem
         end do ! ilh
+
+        hVarphi = cmplx(0.0, 0.0)
+        !call CalcHnGrV0Varphi( atoms, sym, lathar, itype, iatom, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, vEff0MtLh, clnu_atom, &
+        !  & nmem_atom, mlh_atom, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, hVarphi, vEff0NsphGrVarphi, r2grVeff0SphVarphi, r2grVeff0Varphi )
+        ! Replace by:
+        call CalcHVarphi( atoms, sym, lathar, itype, iatom, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, clnu_atom, &
+          & nmem_atom, mlh_atom, hVarphi )
 
         deallocate( vEff0MtSpH )
 

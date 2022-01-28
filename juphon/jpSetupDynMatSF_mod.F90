@@ -13,6 +13,7 @@ contains
 
     use m_types
     use m_dfpt_init, only : Derivative, convertStar2G, mt_gradient_old
+    USE m_juDFT_time
 
     implicit none
 
@@ -160,6 +161,7 @@ contains
     complex                                    :: surfIntTest(3, 3)
     integer :: lmd
 
+    CALL timestart('dynmat SF inits 1')
     surfIntTest(:, :) = cmplx(.0, .0)
     allocate( dynMatSF( 3 * atoms%nat, 3 * atoms%nat) )
     dynMatSF = cmplx(0., 0.)
@@ -176,14 +178,17 @@ contains
     lmpMax     = maxval( lmpT(:) )
     nRadFunMax = maxval( nRadFun(:, :) )
 
+    CALL timestop('dynmat SF inits 1')
+    CALL timestart('dynmat SF inits 2')
+
+    ! TODO: These are terrible!
+    ! A lot is now superfluous and needs to fly out.
     lmd=atoms%lmaxd*(atoms%lmaxd+2)
     allocate( varphi1(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), varphi2(atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
     allocate( delrVarphi1( atoms%jmtd, nRadFunMax, 0:atoms%lmaxd), delrVarphi2( atoms%jmtd, nRadFunMax, 0:atoms%lmaxd) )
     allocate( grVarphiCh1(atoms%jmtd, 2, lmpMax, -1:1), grVarphiCh2(atoms%jmtd, 2, lmpMax, -1:1), &
             & grVarphiChLout(2, 0:atoms%lmaxd), grVarphiChMout(-atoms%lmaxd:atoms%lmaxd, -1:1) )
-    allocate( vEff0MtSpH( atoms%jmtd, 0:lmd), vEff0NsphGrVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, -1:1), &
-            & r2grVeff0SphVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, 3) )
-    allocate( r2grVeff0SphVarphiDummy(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax, 3) )
+    allocate( vEff0MtSpH( atoms%jmtd, 0:lmd) )
     allocate( hFullVarphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax)  )
     allocate( eXCIRpw(ngdp), vXC0IRpw(ngdp) )
     allocate( grExcIR(ngdp, 3), grVxc0IR(ngdp, 3), vCoulExt1IRContainer(ngdp, 3) )
@@ -195,10 +200,9 @@ contains
             & v0MTContainer(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, 1) )
     allocate(surfInts(3, 3, atoms%nat, atoms%nat))
 
+    CALL timestop('dynmat SF inits 2')
+    CALL timestart('dynmat SF inits 3')
     ! Calculating the numerical gradients of Exc0 and Vxc0 read in from FLEUR
-    r2grVeff0SphVarphi(:, :, :, :, :) = cmplx(0., 0.)
-    r2grVeff0SphVarphiDummy(:, :, :, :, :) = cmplx(0., 0.)
-    vEff0NsphGrVarphi(:, :, :, :, :) = cmplx(0., 0.)
     eXCIRpw(:) = cmplx(0., 0.)
     vXC0IRpw(:) = cmplx(0., 0.)
     grRho0MTContainer = cmplx(0., 0.)
@@ -208,6 +212,7 @@ contains
     vCoulExt1MTContainer = cmplx(0., 0.)
     v0MTContainer = 0.0
     vCoulExt1IRContainer(:, :) = cmplx(0., 0.)
+    CALL timestop('dynmat SF inits 3')
 
     call convertStar2G( vXC0IRst(:, 1), vXC0IRpw, stars, ngdp, gdp )
     call convertStar2G( eXCIRst(:), eXCIRpw, stars, ngdp, gdp )
@@ -386,23 +391,8 @@ contains
                   varphi1(imesh, iradf, oqn_l) = rbas1(imesh, iradf, oqn_l, iDtypeB) / atoms%rmsh(imesh, iDtypeB)
                   varphi2(imesh, iradf, oqn_l) = rbas2(imesh, iradf, oqn_l, iDtypeB) / atoms%rmsh(imesh, iDtypeB)
                 end do ! imesh
-                if (.false.) then
-                  call Derivative( varphi1(1:atoms%jri(iDtypeB), iradf, oqn_l), iDtypeB, atoms, delrVarphi1(1:atoms%jri(iDtypeB), iradf, oqn_l) )
-                  call Derivative( varphi2(1:atoms%jri(iDtypeB), iradf, oqn_l), iDtypeB, atoms, delrVarphi2(1:atoms%jri(iDtypeB), iradf, oqn_l) )
-                end if
               end do ! iradf
             end do ! oqn_l
-
-            ! Calculate the application of the gradient and the gradient's dyadic product onto the MT basis functions (matching coefficients
-            ! have no spatial dependence) and determing its scattering channels.
-            grVarphiChLout(:, :) = 0
-            grVarphiChMout(:, :) = 0
-            grVarphiCh1(:, :, :, :) = 0.
-            grVarphiCh2(:, :, :, :) = 0.
-            if (.false.) then
-              call CalcChannelsGrFlpNat( atoms, iDtypeB, nRadFun, varphi1, varphi2, delrVarphi1, delrVarphi2, grVarphiChLout, grVarphiChMout, &
-                                                                                                              & grVarphiCh1, grVarphiCh2 )
-            end if
 
             vEff0MtSpH(:, :) = cmplx(0.0, 0.0)
             ptsym = sym%ntypsy(iDatomB)
@@ -421,10 +411,8 @@ contains
             end do ! ilh
 
             hFullVarphi = cmplx(0.0, 0.0)
-            call CalcHnGrV0Varphi( atoms, sym, lathar, iDtypeB, iDatomB, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, Veff0%mt(:, :, :, 1), clnu_atom, &
-              & nmem_atom, mlh_atom, grVarphiCh1, grVarphiCh2, grVarphiChLout, grVarphiChMout, hFullVarphi, vEff0NsphGrVarphi, r2grVeff0SphVarphi, r2grVeff0SphVarphiDummy )
-            deallocate(r2grVeff0SphVarphiDummy)
-
+            call CalcHVarphi( atoms, sym, lathar, iDtypeB, iDatomB, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, clnu_atom, &
+              & nmem_atom, mlh_atom, hFullVarphi )
 
             ! Note: We need always a pair of matrix elements to hermitize out the phase that hinders us from the z1 cancelling with
             !       the i(k + G) z0. That is Psi1 heps Psi does only cancle with gradPsi Heps Psi up to 9e-4, but the Psi H - eps Psi1
@@ -574,34 +562,6 @@ contains
               !call CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG( atoms, sym, dimens, usdus, kpts, cell, results, lmpMax, iDtypeA,      &
               !  & iDatomA, nRadFun, eig, hFullVarphi, gBas, mapGbas, nv, kveclo, z0, nobd, lmpT, iloTable, varphi1, varphi2, surfInt )
 !              surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + 2 * surfInt(1:3, 1:3)
-
-              if (.false.) then
-
-                ! gradPsi Heps Psi in MT
-                surfInt(:, :) = cmplx(0., 0.)
-                call CalcSFintMTgradPsiHepsPsi( fmpi, noco, nococonv, oneD, atoms, input, cell, kpts, sym, results, usdus, iDtypeB, iDatomB, nRadFun, &
-                  & lmpMax, nobd, nv, gBas, mapGbas, kveclo, z0, eig, hFullVarphi, iloTable, grVarphiChLout, &
-                  & grVarphiChMout, grVarphiCh1, grVarphiCh2, varphi1, varphi2, surfInt )
-
-                ! Basis set correction part grad in Bra
-                !surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) - 2 * transpose(surfInt(1:3, 1:3))
-
-                ! Surface integral with gradient in Bra
-                !surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + 2 * surfInt(1:3, 1:3)
-
-                surfInt(:, :) = cmplx(0., 0.)
-                ! Psi Heps gradPsi  MT
-                call CalcSFintMTPsiHepsGradPsi( fmpi, noco, nococonv, oneD, atoms, input, kpts, sym, cell, usdus, results, iDtypeB, iDatomB, varphi1, varphi2, &
-                  & nv, El, gBas, eig, lmpMax, mapGbas, nRadFun, kveclo, nobd, z0, iloTable, grVarphiChLout, grVarphiChMout, &
-                  & r2grVeff0SphVarphi, vEff0NsphGrVarphi, lmpT, grVarphiCh1, grVarphiCh2, surfInt )
-
-                ! Basis set correction part grad in Ket
-                !surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) - 2 * transpose(surfInt(1:3, 1:3))
-
-                ! Surface integral with gradient in Ket
-                !surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + 2 * surfInt(1:3, 1:3)
-
-              end if
 
               !(5.3.184), 3rd integral [3 components]
               ! 1/3
@@ -3812,6 +3772,132 @@ end subroutine CalcSFintlongname2 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarik
     !todo should be up to lmax + 1
     !todo put in the generation of the spherical potential in here
   end subroutine CalcHnGrV0Varphi
+
+  subroutine CalcHVarphi( atoms, sym, lathar, itype, iatom, lmpMax, El, varphi1, varphi2, nRadFun, vEff0MtSpH, clnu_atom, &
+      & nmem_atom, mlh_atom, hVarphi )
+
+    use m_types, only : t_atoms, t_sym, t_sphhar
+
+!    use mod_juPhonUtils, only : fopen, fclose
+    implicit none
+
+    ! Type parameter
+    type(t_atoms),        intent(in)  :: atoms
+    type(t_sym),        intent(in)  :: sym
+    type(t_sphhar),       intent(in)  :: lathar
+
+    ! Scalar parameter
+    integer,              intent(in)  :: itype
+    integer,              intent(in)  :: iatom
+    integer,              intent(in)  :: lmpMax
+
+    ! Array parameter
+    real,                 intent(in)  :: El(:, 0:, :, :)
+    real,                 intent(in)  :: varphi1(:,:,0:)
+    real,                 intent(in)  :: varphi2(:,:,0:)
+    integer,              intent(in)  :: nRadFun(0:, :)
+    complex,              intent(in)  :: vEff0MtSpH(:, :)
+    complex,              intent(in)  :: clnu_atom(:, 0:, :)
+    integer,              intent(in)  :: nmem_atom(0:, :)
+    integer,              intent(in)  :: mlh_atom(:, 0:, :)
+    complex,              intent(out) :: hVarphi(:, :, 0:, :)
+
+    ! Scalar variables
+    integer                           :: lmp
+    integer                           :: oqn_l
+    integer                           :: mqn_m
+    integer                           :: oqn_l1Pr
+    integer                           :: mqn_m1Pr
+    integer                           :: imesh
+    integer                           :: iradf
+    real                              :: rInv
+    integer                           :: idir
+    integer                           :: lm
+    integer                           :: lm_pre
+    integer                           :: lm1Pr
+    integer                           :: lm1Pr_pre
+    integer                           :: irel
+    integer                           :: mqn_m2PrC
+    integer                           :: ilh
+
+    ! Array variables
+    real,           allocatable       :: hSph(:, :, :)
+    complex,        allocatable       :: vnsphEff0Varphi(:, :, :, :)
+
+    allocate( hSph(2, atoms%jmtd, lmpMax), vnsphEff0Varphi(2, atoms%jmtd, 0:(atoms%lmaxd + 3)**2 - 1, lmpMax) )
+
+    hSph(:, :, :) = 0.
+    vnsphEff0Varphi = cmplx(0., 0.)
+
+    ! Spherical part only contributes until lmax and not lmax + 2 as we have only the ket here expanded until lmax and in the overlap we
+    ! cut there at lmax.
+    ! It should be the best compromise to close the loops here over oqn_l, mqn_m and p otherwise we have redundant code or if-clauses in
+    ! the inner loops. With this solution we only count the loops of oqn_l, mqn_m and p twice.
+    ! If we would have run the p loop from 1, this had led to if-clauses in the inner loops.
+    lmp = 0
+    do oqn_l = 0, atoms%lmax(itype)
+      do mqn_m = -oqn_l, oqn_l
+        lmp = lmp + 1
+        do imesh = 1, atoms%jri(itype)
+          hSph(1, imesh, lmp) = El(1, oqn_l, itype, 1) * varphi1(imesh, 1, oqn_l)
+          hSph(2, imesh, lmp) = El(1, oqn_l, itype, 1) * varphi2(imesh, 1, oqn_l)
+        end do ! imesh
+        lmp = lmp + 1
+        do imesh = 1, atoms%jri(itype)
+          hSph(1, imesh, lmp) = varphi1(imesh, 1, oqn_l) + El(1, oqn_l, itype, 1) * varphi1(imesh, 2, oqn_l)
+          hSph(2, imesh, lmp) = varphi2(imesh, 1, oqn_l) + El(1, oqn_l, itype, 1) * varphi2(imesh, 2, oqn_l)
+        end do ! imesh
+        do iradf = 3, nRadFun(oqn_l, itype)
+          lmp = lmp + 1
+          do imesh = 1, atoms%jri(itype)
+            hSph(1, imesh, lmp) = El(iradf - 1, oqn_l, itype, 1) * varphi1(imesh, iradf, oqn_l)
+            hSph(2, imesh, lmp) = El(iradf - 1, oqn_l, itype, 1) * varphi2(imesh, iradf, oqn_l)
+          end do ! imesh
+        end do ! p
+      end do ! mqn_m
+    end do ! oqn_l
+
+    ! Action of normal non-spherical potential onto MT basis functions without basis matching coefficients
+!    call CalcFnsphVarphi( atoms, itype, 0, nRadFun, varphi1, varphi2, vEff0MtSpH, vnsphEff0Varphi )
+    call CalcFnsphVarphi( atoms, itype, 1, nRadFun, varphi1, varphi2, vEff0MtSpH, vnsphEff0Varphi )
+
+    ! Action of complete Hamiltonian onto MT basis functions without basis matching coefficients
+    lmp = 0
+    do oqn_l = 0, atoms%lmax(itype)
+      lm_pre = oqn_l * (oqn_l + 1)
+      do mqn_m = -oqn_l, oqn_l
+        lm = lm_pre + mqn_m
+        do iradf = 1, nRadFun(oqn_l, itype)
+          lmp = lmp + 1
+          ! Add action of spherical Hamiltonian to the diagonal of lmp and l'm'p'.
+          do imesh = 1, atoms%jri(itype)
+            do irel = 1, 2
+              hVarphi(irel, imesh, lm, lmp) = hSph(irel, imesh, lmp)
+            end do ! irel
+          end do ! imesh
+          ! We store the bra index until lmax + 2 because the double gradient of the radial solution is expanded maximally until
+          ! lmax + 2
+          !do oqn_l1Pr = 0, atoms%lmax(itype) + 2
+          do oqn_l1Pr = 0, atoms%lmax(itype) !+ 2
+            lm1Pr_pre = oqn_l1Pr * (oqn_l1Pr + 1)
+            do mqn_m1Pr = -oqn_l1Pr, oqn_l1Pr
+              lm1Pr = lm1Pr_pre + mqn_m1Pr
+              do imesh = 1, atoms%jri(itype)
+                do irel = 1, 2
+                  ! The factors i^l actually assigned to the matching coefficients in theoretical equations are excluded from abcof
+                  ! and abcof3. Therefore, we multiply them here, so that, we do not need to care for them later.
+                  hVarphi(irel, imesh, lm1Pr, lmp) = hVarphi(irel, imesh, lm1Pr, lmp) + vnsphEff0Varphi(irel, imesh, lm1Pr, lmp)
+!                  hVarphi(irel, imesh, lm1Pr, lmp) = vnsphEff0Varphi(irel, imesh, lm1Pr, lmp)
+                end do ! irel
+              end do ! imesh
+            end do ! mqn_m
+          end do ! oqn_l
+        end do ! iradf
+      end do ! mqn_m1Pr
+    end do ! oqn_l1Pr
+    deallocate(hSph)
+
+  end subroutine CalcHVarphi
 
   subroutine CalcSurfIntIRDynMat( atoms, cell, ngdp1, ngdp2, gdp1, gdp2, rho0IRpw, grVext0IR, qpoint, surfInt )
 

@@ -192,7 +192,7 @@ CONTAINS
 
         CALL timestart("juPhon DFPT dynmat setup")
         CALL SetupDynamicMatrix( fmpi, noco, nococonv, oneD, atoms, input, sym, cell, sphhar, stars, kpts, qpts, usdus, results, vTotclean, juPhon%singleQpt, ngdp, ngpqdp, recG, sphhar%mlh, sphhar%nmem,&
-            & sphhar%clnu, rho%pw, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vTotclean%pw_w, vTotclean%mt(:, 0:, :, 1),&
+            & sphhar%clnu, rho%pw, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vTot%pw_w, vTotclean%mt(:, 0:, :, 1),&
             & rhoclean%mt, E2ndOrdII, El, results%eig, rbas1, rbas2, iloTable, nvfull, nocc, ilst, GbasVec, z0, kveclo, nRadFun, mapKpq2K, kpq2kPrVec,       &
             & gpqdp, sphhar%memd, logUnit, vxc%pw, exc%pw(:, 1), vxc%mt, exc%mt(:, 0:, :, 1), vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), &
             & grVext0IR_DM, grVext0MT_DM, grVeff0IR_DM, grVeff0MT_DM, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, &
