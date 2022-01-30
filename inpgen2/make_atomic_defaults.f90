@@ -84,11 +84,11 @@ CONTAINS
       DO n=1,atoms%ntype
          id=NINT((atoms%zatom(n)-atoms%nz(n))*100)
          IF (id>0) THEN
-            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),id)
+            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),profile,id)
             !This specific atom also has a rmt given?
 !            IF (ap(n)%id==id.AND.ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          ELSE
-            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n))   
+            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),profile)   
          ENDIF
          IF (ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          CALL ap(n)%add_defaults()

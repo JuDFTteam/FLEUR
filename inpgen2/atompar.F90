@@ -1,5 +1,6 @@
 MODULE m_atompar
   USE m_judft
+  USE m_types_profile
   IMPLICIT NONE
   type t_atompar
      integer :: id = -1
@@ -97,8 +98,9 @@ contains
   end subroutine add_defaults
 
 
-  subroutine add_atompar(ap)
-    TYPE(t_atompar),INTENT(in),OPTIONAL::ap
+  subroutine add_atompar(ap, profile)
+    TYPE(t_atompar),INTENT(in),OPTIONAL :: ap
+    TYPE(t_profile),INTENT(IN),optional :: profile
     type(t_atompar),allocatable:: tmp_list(:)
 
 
@@ -108,7 +110,11 @@ contains
        ALLOCATE(atompar_list(100))
        !Try to read default parameter files
        CALL read_params("default.econfig")
-       CALL read_params("oxides_validation.econfig")
+       IF(PRESENT(profile)) THEN
+          IF(profile%atomSetup.NE."") THEN
+             CALL read_params(TRIM(ADJUSTL(profile%atomSetup))//".econfig")
+          END IF
+       END IF
        CALL read_params("fleur.econfig")
        call read_params("my.econfig")
     else
@@ -126,15 +132,16 @@ contains
     ENDIF
   end subroutine add_atompar
 
-  function find_atompar(nucnumber,rmt_max,id)result(ap)
+  function find_atompar(nucnumber,rmt_max,profile,id)result(ap)
     integer,intent(in)          :: nucnumber
     real,intent(in)             :: rmt_max
+    TYPE(t_profile),INTENT(IN),optional :: profile
     integer,intent(in),optional :: id
     type(t_atompar)    :: ap
 
     integer :: n
 
-    call add_atompar() !Make sure we have at least the defaults
+    call add_atompar(profile=profile) !Make sure we have at least the defaults
     !check if there is an id given
     if (present(id)) then
        DO n=no_of_atompars,1,-1
