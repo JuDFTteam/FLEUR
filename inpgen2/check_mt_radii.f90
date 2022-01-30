@@ -10,13 +10,14 @@ MODULE m_check_mt_radii
   !  Check muffin tin radii and determine a reasonable choice for MTRs.
   !---------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE check_mt_radii(atoms,input,vacuum,cell,oneD,l_test,rmt1,overlap)
+  SUBROUTINE check_mt_radii(atoms,input,vacuum,cell,oneD,profile,l_test,rmt1,overlap)
 
     USE m_types_input
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_cell
     USE m_types_oneD
+    USE m_types_profile
     USE m_constants
 
     USE m_sort
@@ -30,6 +31,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_oneD),INTENT(IN)  :: oneD
+    TYPE(t_profile),INTENT(IN)    :: profile
     LOGICAL, INTENT (IN)     :: l_test
     !     ..
     !     .. Array Arguments ..
@@ -103,8 +105,33 @@ CONTAINS
     ELSE
        rmtFac = 0.975
     ENDIF
+
     t_rmt(0:103) = 2.3 ! default value
-    t_rmt(1) = 1.0 ; t_rmt(5:9) = 1.3 ; t_rmt(16:17) = 1.8
+    t_rmt(1) = 1.0
+    t_rmt(2) = 1.5
+    t_rmt(3:4) = 1.3
+    t_rmt(5:9) = 1.3
+    t_rmt(10) = 1.9
+    t_rmt(11:12) = 1.7
+    t_rmt(13:17) = 1.5
+    t_rmt(18) = 2.1
+
+    IF(profile%atomSetup.EQ."oxides_validation") THEN
+       t_rmt(21:30) = 1.8
+       t_rmt(31:35) = 1.7
+       t_rmt(35) = 1.7
+       t_rmt(37:38) = 1.9
+       t_rmt(49:50) = 1.8
+       t_rmt(51) = 2.3
+       t_rmt(52:53) = 2.2
+       t_rmt(55:56) = 2.0
+       t_rmt(71:80) = 2.1
+       t_rmt(78) = 2.2
+       t_rmt(79:80) = 1.7
+       t_rmt(81:82) = 2.0
+       t_rmt(87:88) = 2.0
+    END IF
+
     cubeLength = 2*rmtMax+rmtDelta
     maxCubeAtoms = (FLOOR(cubeLength / (0.7*2.0*rmtMin)) + 1)**3
     error  = .FALSE.

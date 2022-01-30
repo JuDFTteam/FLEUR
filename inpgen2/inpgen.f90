@@ -100,6 +100,11 @@ PROGRAM inpgen
          INTEGER(c_int) dropDefaultEConfig
        END FUNCTION dropDefaultEConfig
 
+       FUNCTION dropOxidesValidationEConfig() BIND(C, name="dropOxidesValidationEConfig")
+         USE iso_c_binding
+         INTEGER(c_int) dropOxidesValicationEConfig
+       END FUNCTION dropOxidesValidationEConfig
+
        FUNCTION dropProfiles() BIND(C, name="dropProfiles")
          USE iso_c_binding
          INTEGER(c_int) dropProfiles
@@ -112,8 +117,6 @@ PROGRAM inpgen
       CALL inpgen_help()
       l_explicit=judft_was_argument("-explicit")
 
-      INQUIRE(file='default.econfig',exist=l_exist)
-      IF (.NOT.l_exist) idum=dropDefaultEconfig()
       INQUIRE(file='profile.config',exist=l_exist)
       IF (.NOT.l_exist) idum=dropProfiles()
 
@@ -181,6 +184,14 @@ PROGRAM inpgen
       ELSE IF (judft_was_argument("-profile")) THEN
          WRITE(*,*) 'NOTE: right now the "-profile" option is under development and experimental.'
          CALL profile%load(TRIM(ADJUSTL(judft_string_for_argument("-profile"))))
+      END IF
+
+      IF(profile%atomSetup.EQ."oxides_validation") THEN
+         INQUIRE(file='oxides_validation.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropOxidesValidationEconfig()
+      ELSE
+         INQUIRE(file='default.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropDefaultEconfig()
       END IF
 
       IF (judft_was_argument("-inp")) THEN

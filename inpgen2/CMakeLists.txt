@@ -22,8 +22,10 @@ endif()
 
 add_executable(inpgen2 ${externallibs}
 dropDefaults.c
+dropOxidesValidationEConfig.c
 dropProfiles.c
 default_econfig.h
+oxides_validation_econfig.h
 profileConfig.h
 
 inpgen_help.f90
@@ -164,6 +166,8 @@ endif()
 set_target_properties(inpgen2 PROPERTIES LINKER_LANGUAGE Fortran)
 
 file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h)
+file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/oxides_validation_econfig.h)
+file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/profileConfig.h)
 find_program(XXD_PROG xxd)
 
 if (XXD_PROG)
@@ -173,6 +177,13 @@ if (XXD_PROG)
     DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/default.econfig
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
     COMMENT "Putting current default.econfig into default_econfig.h")
+
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+    COMMAND ${XXD_PROG} -i oxides_validation.econfig ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/oxides_validation.econfig
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
+    COMMENT "Putting current oxides_validation.econfig into oxides_validation_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
@@ -186,6 +197,12 @@ else()
     COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of default_econfig.h")
+
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+    COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/oxides_validation_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+    COMMENT "No xxd found using backup")
+    message("No xxd command found! Using backup of oxides_validation_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h

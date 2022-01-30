@@ -108,6 +108,7 @@ contains
        ALLOCATE(atompar_list(100))
        !Try to read default parameter files
        CALL read_params("default.econfig")
+       CALL read_params("oxides_validation.econfig")
        CALL read_params("fleur.econfig")
        call read_params("my.econfig")
     else
