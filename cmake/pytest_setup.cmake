@@ -81,7 +81,7 @@ endif()
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/run_tests.sh CONTENT
 "#!/usr/bin/env bash
 ADDOPTS_ENV=\${PYTEST_ADDOPTS}
-PYTEST_ADDOPTS=\"${CMAKE_SOURCE_DIR}/tests/new_pytest_system --build_dir=${CMAKE_BINARY_DIR} \${ADDOPTS_ENV}\"
+PYTEST_ADDOPTS=\"${CMAKE_SOURCE_DIR}/tests --build_dir=${CMAKE_BINARY_DIR} \${ADDOPTS_ENV}\"
 PYTHON_EXECUTABLE=\"${FLEUR_PYTHON}\"
 if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
   PYTHON_EXECUTABLE=\${juDFT_PYTHON}
@@ -94,7 +94,7 @@ add_custom_target(pytest ALL
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                   COMMENT "Making test script executable")
 
-add_custom_target(test_new
+add_custom_target(test
                   COMMAND sh run_tests.sh
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                   COMMENT "Making 'make test' run the python script executable")

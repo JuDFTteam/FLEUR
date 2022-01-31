@@ -58,7 +58,6 @@ fi
 
 #variables to store arguments
 
-all_tests=0
 machine=""
 label=""
 backup=0
@@ -175,7 +174,7 @@ done
 . $DIR/cmake/store_environment.sh
 
 
-${cmake} $CMAKE_OPTIONS -Dall_tests=$all_tests $NINJAARG -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
+${cmake} $CMAKE_OPTIONS $NINJAARG -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
 
 cd -
 
