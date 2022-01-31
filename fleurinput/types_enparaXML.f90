@@ -115,7 +115,7 @@ CONTAINS
 
     CHARACTER(len=100):: val_str, coreStr
     character         :: ch
-    INTEGER           :: qn,n,i,l
+    INTEGER           :: qn,n,i,l, nobleGasConfigIndex
     LOGICAL           :: representedStates(10,0:3)
     LOGICAL           :: isRepresented
 
@@ -127,6 +127,20 @@ CONTAINS
     
     ! Process core string
     coreStr=ADJUSTL(eConfigStr(1:INDEX(eConfigStr,"|")-1))
+    
+    nobleGasConfigIndex = INDEX(coreStr,"[He]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Ne]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Ar]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6 3s2 3p6"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Kr]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Xe]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6 3s2 3p6 4s2 3d10 5p6 5s2 4d10 5p6"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Rn]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6 3s2 3p6 4s2 3d10 5p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6"// coreStr(nobleGasConfigIndex+4:)
+    
     DO WHILE(LEN_TRIM(coreStr)>1)
        READ(coreStr,"(i1,a1)") qn,ch
        l = INDEX("spdf",ch) - 1
