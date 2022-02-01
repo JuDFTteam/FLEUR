@@ -173,6 +173,8 @@ contains
        endif
     enddo
 
+    WRITE(*,*) 'atomic number: ', nucnumber
+    IF(PRESENT(profile)) WRITE(*,*) 'profile%atomSetup: ', TRIM(profile%atomSetup)
     call judft_error("No possible atomic parameter-set found")
   end function find_atompar
 
@@ -210,10 +212,11 @@ contains
 100 CLOSE(99)
   END SUBROUTINE read_params
 
-  SUBROUTINE read_atom_params_old(fh,ap)
+  SUBROUTINE read_atom_params_old(fh,ap,profile)
     !Try to read old namelist
     integer,intent(in)::fh
     TYPE(t_atompar),INTENT(out)::ap
+    TYPE(t_profile),INTENT(IN),OPTIONAL :: profile
 
     REAL:: id,z,rmt,dx,bmu
     INTEGER:: jri,lmax,lnonsph,ncst,nc,io_stat,nz
@@ -254,7 +257,11 @@ contains
     IF (ncst>-1) CALL judft_warn("ncst is no longer supported as input")
 
     IF (LEN_TRIM(econfig)==0)THEN
-       ap=find_atompar(nz,rmt)
+       IF (PRESENT(profile)) THEN
+          ap=find_atompar(nz,rmt,profile)
+       ELSE
+          ap=find_atompar(nz,rmt)
+       END IF
        econfig=ap%econfig
        IF (LEN_TRIM(lo)==0) then
          lo=ap%lo
