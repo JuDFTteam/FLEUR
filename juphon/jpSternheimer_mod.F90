@@ -429,7 +429,7 @@ module m_jpSternheimer
     ! Comments after activated quantities indicate the problems/differences to old juPhon.
     !CALL save_npy('rbas1.npy',rbas1)
     !CALL save_npy('rbas2.npy',rbas2)
-    CALL save_npy('El.npy',El) ! Size differs (certainly LO related). Max seems nicer, but the values match.
+    !CALL save_npy('El.npy',El) ! Size differs (certainly LO related). Max seems nicer, but the values match.
     !CALL save_npy('kveclo.npy',kveclo)
     !CALL save_npy('uuilon.npy',uuilon)
     !CALL save_npy('duilon.npy',duilon)
@@ -438,10 +438,10 @@ module m_jpSternheimer
     !CALL save_npy('qpwcG.npy',qpwcG)
     !CALL save_npy('mapKpq2K.npy',mapKpq2K)
     !CALL save_npy('ne.npy',ne)
-    CALL save_npy('eig.npy',eig) ! Slightly different values; some high values uninitialized instead of fixed.
+    !CALL save_npy('eig.npy',eig) ! Slightly different values; some high values uninitialized instead of fixed.
     !CALL save_npy('gbas.npy',gbas)
     !CALL save_npy('mapGbas.npy',mapGbas)
-    CALL save_npy('z0.npy',z) ! Not all eigenvalues sufficiently filled.
+    !CALL save_npy('z0.npy',z) ! Not all eigenvalues sufficiently filled.
     !CALL save_npy('nv.npy',nv)
     !CALL save_npy('nRadFun.npy',nRadFun)
     !CALL save_npy('iloTable.npy',iloTable)
@@ -689,7 +689,7 @@ module m_jpSternheimer
         veffUvIR(:, :) = cmplx(0., 0.)
         !todo shift to sternheimerPUlay
         call IRcoeffVeffUv( atoms, stars, cell, iDtype, iDatom, ngdp, coScale, gdp, veffUvIR, vEff0IRpwUw )
-        !SCALL save_npy('veffUvIR.npy', veffUvIR)
+        !CALL save_npy('veffUvIR.npy', veffUvIR) !Slightly different.
 
         ! The lmp index is comparable to the lm index but for every lm combination it includes also an index that runs over the
         ! matching coefficients for belonging to the u, the udot and the u_LO. Determine the max lmp for all atom types.
@@ -2335,12 +2335,13 @@ module m_jpSternheimer
         !& acofKet, bcofKet, ccofKet, atestcofk, btestcofk, idir, ikpt)
 
         nk=fmpi%k_list(ikpt)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, .FALSE., fmpi)
         CALL zMatKet%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
         zMatKet%data_c(:, :) = zKet(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt, 1))
         CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &
                  & acofKet(:, 0:, :), bcofKet(:, 0:, :), &
                  & ccofKet(-atoms%llod:, :, :, :), zMatKet)
+        !CALL save_npy("acofKet.npy", acofKet)
 
       !if (idir.eq.1) then
     !    close(109)
@@ -2399,12 +2400,13 @@ module m_jpSternheimer
 !        & atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpq), odi, ods, &
 !        & acofBra, bcofBra, ccofBra)
     nk=fmpi%k_list(ikpq)
-    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, .FALSE., fmpi)
     CALL zMatBra%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
     zMatBra%data_c(:, :) = zBra(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq))
     CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
             & acofBra(:, 0:, :), bcofBra(:, 0:, :), &
             & ccofBra(-atoms%llod:, :, :, :), zMatBra)
+    !CALL save_npy("acofBra.npy", acofBra)
 !    end if
 
     if (.false.) then
@@ -2673,12 +2675,13 @@ module m_jpSternheimer
      ! & acofTilde, bcofTilde, ccofTilde)
 
       nk=fmpi%k_list(ikpq)
-      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, .FALSE., fmpi)
       CALL zMatTilde%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
       zMatTilde%data_c(:, :) = zTilde(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq))
       CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
                & acofTilde(:, 0:, :), bcofTilde(:, 0:, :), &
                & ccofTilde(-atoms%llod:, :, :, :), zMatTilde)
+      !CALL save_npy("acofTilde.npy", acofTilde)
     deallocate(zTilde)
 
     ! In order to set up the matching coefficients for the ket tilde wave function the wave function coefficients are decorated with
@@ -2716,13 +2719,15 @@ module m_jpSternheimer
     !  & sym%invsatnr, usdus%ulos(:, :, 1), usdus%uulon(:, :, 1), usdus%dulon(:, :, 1),  usdus%dulos(:, :, 1), atoms%llo, atoms%nlo,&
     !  & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpt), odi, ods, &
     !  & acofBar, bcofBar, ccofBar)
-    nk=fmpi%k_list(ikpq)
-    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+    nk=fmpi%k_list(ikpt)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, .FALSE., fmpi)
     CALL zMatBar%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
     zMatBar%data_c(:, :) = zBar(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt, 1))
     CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &
              & acofBar(:, 0:, :), bcofBar(:, 0:, :), &
              & ccofBar(-atoms%llod:, :, :, :), zMatBar)
+    !CALL save_npy("acofBar.npy", acofBar)
+    !STOP
     deallocate (zBar)
 
     ! Rearrange Hamiltonian acofs, bcofs, ccofs ensuring a consistent handling of LOs within the loop structure compared to LAPWs
