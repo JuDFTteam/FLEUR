@@ -95,7 +95,7 @@ CONTAINS
           CASE('inpu')
              CALL process_input(line,input%film,sym%symor,cartesian,hybinp%l_hybrid)
           CASE('atom')
-             CALL read_atom_params_old(98,ap)
+             CALL read_atom_params_old(98,ap,profile)
              CALL add_atompar(ap)
           CASE('qss ')
              CALL process_qss(line,noco)
