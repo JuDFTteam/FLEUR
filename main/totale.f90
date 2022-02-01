@@ -234,8 +234,7 @@ CONTAINS
        CALL writeXMLElementFormPoly('chargeDenXCDenIntegral',(/'value'/),(/results%te_exc/),reshape((/26,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('FockExchangeEnergyValence',(/'value'/),(/0.5e0*results%te_hfex%valence/),reshape((/23,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('FockExchangeEnergyCore',(/'value'/),(/0.5e0*results%te_hfex%core/),reshape((/26,20/),(/1,2/)))
-       if (btest(input%vdw,0)) call writeXMLElementFormPoly('vdW Energy (Grimme D3)',(/'value'/),(/results%e_vdW/),reshape((/17,20/),(/1,2/)))
-       if (btest(input%vdw,1)) call writeXMLElementFormPoly('vdW Energy (M.Callsen)',(/'value'/),(/results%e_vdW/),reshape((/17,20/),(/1,2/)))
+       if (btest(input%vdw,0).or.btest(input%vdW,1)) call writeXMLElementFormPoly('vdWEnergy',(/'value'/),(/results%e_vdW/),reshape((/17,20/),(/1,2/)))
        DO  n = 1,atoms%ntype
           CALL openXMLElementPoly('atomTypeDependentContributions',(/'atomType'/),(/n/))
           CALL writeXMLElementFormPoly('electronNucleiInteractionDifferentMTs',(/'value'/),(/zintn_r(n)/),reshape((/8,20/),(/1,2/)))
