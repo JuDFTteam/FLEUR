@@ -1738,14 +1738,21 @@ module m_jpSetupDynMat
 ! todo we still have to make it band dependent for metals later
     write(*, *) 'bug for other systems than neon with more than one atom, also some lines below'
     write(*, *) 'why not z1 at nobd(ikpq)?'
+    ! TODO: On iff1483 this takes ages; but why?
+    ! IDEA: Is it the read command?
     do ikpt = 1, kpts%nkpt
+
+      CALL timestart('Dynmat brakets read z1.')
       z1nG = cmplx(0.0, 0.0)
       call ReadInz1( atoms, ikpt, iqpt, mapKpq2K(ikpt, iqpt), nobd, nv, z1nG )
+      CALL timestop('Dynmat brakets read z1.')
 
+      CALL timestart('Dynmat brakets calc.')
       call AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, GbasVec, ilst, kveclo, &
       & mapKpq2K, nobd, z, z1nG, iloTable, nRadFun, eig, kpq2kPrVec, &
       & varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, &
       & dynMatPu )
+      CALL timestop('Dynmat brakets calc.')
     end do ! ikpt
     write(*, '(a)') 'Reduced Pulay Braket terms added to dynamical matrix.'
 
