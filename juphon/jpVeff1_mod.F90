@@ -1593,7 +1593,7 @@ module m_jpVeff1
 
      vxc1MT(:, :, :, :) = cmplx(0., 0.)
 
-     allocate( rhoMT1Gpts(input%jspins, atoms%jmtd), vxcMT1KernGPts(input%jspins, atoms%jmtd) )
+     allocate( rhoMT1Gpts(atoms%nsp(), atoms%jmtd), vxcMT1KernGPts(atoms%nsp(), atoms%jmtd) )
      rhoMT1Gpts(:, :) = cmplx(0., 0.)
      vxcMT1KernGPts(:, :) = cmplx(0., 0.)
 
@@ -1610,7 +1610,7 @@ module m_jpVeff1
                lm = lm_lOnly + mqn_m
                ! Evaluate grRho on spherical Gauss mesh in order to apply Gauss quadrature.
                do irmesh = 1, atoms%jri(itype)
-                 do igmesh = 1, input%jspins
+                 do igmesh = 1, atoms%nsp()
                    rhoMT1Gpts(igmesh, irmesh) = rhoMT1Gpts(igmesh, irmesh) + rho1MT(irmesh, lm, iatom, idir) * ylm(igmesh, lm)
                  end do ! igmesh
                end do ! irmesh
@@ -1626,7 +1626,7 @@ module m_jpVeff1
            ! On the spherical Gauss mesh the integral reduces to a weighted (gWghts) sum (over all sampling points on the Gauss mesh)
            ! of the MT exchange-correlation kernel and either the density's gradient or the first variation of the gradient.
            do irmesh = 1, atoms%jri(itype)
-             do igmesh = 1, input%jspins
+             do igmesh = 1, atoms%nsp()
                vxcMT1KernGPts(igmesh, irmesh) = vxcMT1KernGPts(igmesh, irmesh) + rhoMT1Gpts(igmesh, irmesh) &
                                                & * dKernMTGPts(igmesh, irmesh, iatom) * gWghts(igmesh)
              end do
@@ -1637,7 +1637,7 @@ module m_jpVeff1
                lm = lm_lOnly + mqn_m
                do irmesh = 1, atoms%jri(itype)
                ! Back-transformation of the MT coefficients. Now they are expansion coefficients of the MT grid.
-                 vxcMT1KernAdd = dot_product( ylm(: input%jspins, lm), vxcMT1KernGPts(:input%jspins, irmesh) )
+                 vxcMT1KernAdd = dot_product( ylm(:atoms%nsp(), lm), vxcMT1KernGPts(:atoms%nsp(), irmesh) )
                ! Add this contribution to MT exchange-correlation contribution to the potential
                  vxc1MT(irmesh, lm, iatom, idir) = vxc1MT(irmesh, lm, iatom, idir) + vxcMT1KernAdd
                end do ! irmesh
