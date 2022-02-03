@@ -1740,6 +1740,7 @@ module m_jpSetupDynMat
     write(*, *) 'why not z1 at nobd(ikpq)?'
     ! TODO: On iff1483 this takes ages; but why?
     ! IDEA: Is it the read command?
+    ! NOPE: It was the unnecessary allocations(?)
     do ikpt = 1, kpts%nkpt
 
       CALL timestart('Dynmat brakets read z1.')
@@ -3710,7 +3711,7 @@ module m_jpSetupDynMat
     integer :: nk
 
     ! Array variabels
-    integer,           allocatable                :: ngoprI(:)
+    !integer,           allocatable                :: ngoprI(:)
     complex,           allocatable                :: a(:, :, :)
     complex,           allocatable                :: b(:, :, :)
     complex,           allocatable                :: bascof_lo(:, :, :, :, :)
@@ -3719,52 +3720,31 @@ module m_jpSetupDynMat
     complex,           allocatable                :: bascof_loKpq(:, :, :, :, :)
     real,              allocatable                :: gBasExt(:, :)
     real,              allocatable                :: gqBasExt(:, :)
-    complex,           allocatable                :: ab0cofScl(:, :)
-    complex,           allocatable                :: ab0cofVec(:)
     !complex,           allocatable                :: ab0KpGcof(:, :, :) seems obsolete
-    complex,           allocatable                :: grPsiHepsVarphiOffDiagNat(:, :, :)
-    complex,           allocatable                :: varphiHepsGrPsiOffDiagNat(:, :, :)
-    complex,           allocatable                :: allMTvarphiHepsPsi(:, :)
-    complex,           allocatable                :: ab1cofVec(:, :, :, :)
-    complex,           allocatable                :: grVarphiHepsPsiOffDiagNat(:)
-    complex,           allocatable                :: psiHepsgrVarphiNat(:)
-    complex,           allocatable                :: grVarphiHepsPsiNat(:)
-    complex,           allocatable                :: varphiHepsGrPsiOffDiag(:, :)
     !complex,           allocatable                :: psiHepsVarphi(:, :, :) ! seems obsolete
-    complex,           allocatable                :: abGrPsiSumCof(:, :, :, :)
-    complex,           allocatable                :: psiHepsgrPsiNat(:, :)
-    complex,           allocatable                :: varphiHepsGrPsiNat(:)
-    complex,           allocatable                :: varphiGrVeff0sphPsi(:)
-    complex,           allocatable                :: varphiHepsPsi(:, :)
-    complex,           allocatable                :: abGrPsiSumCofDiag(:, :, :)
-    complex,           allocatable                :: varphiHepsPsiOffDiag(:)
     complex,           allocatable                :: bigAscal(:,:), bigAvec(:,:,:), bigAmat(:,:,:,:), bigAz1vec(:,:,:,:), bigAz1mat(:,:,:,:,:)
     complex,           allocatable                :: helpscal(:), helpvec(:,:), helpmat(:,:,:)
-    complex                                       :: grPsiHepsPsiNat(3, 3)
-    complex                                       :: grPsiHepsPsi(3, 3)
-    complex                                       :: psiHepsgrPsi(3, 3)
     complex                                       :: psiHepsPsi(3, 3)
-    complex                                       :: psiGrVeff0sphPsi(3, 3)
     real                                          :: kExt(3)
 
-    CALL save_npy('lmpT.npy',lmpT)
-    CALL save_npy('gBas.npy',gBas)
-    CALL save_npy('gBasUnwrap.npy',gBasUnwrap)
-    CALL save_npy('mapKpq2K.npy',mapKpq2K)
-    CALL save_npy('nobd.npy',nobd)
-    CALL save_npy('z.npy',z)
-    CALL save_npy('z1nG.npy',z1nG)
-    CALL save_npy('iloTable.npy',iloTable)
-    CALL save_npy('nRadFun.npy',nRadFun)
-    CALL save_npy('eig.npy',eig)
-    CALL save_npy('kpq2kPrVec.npy',kpq2kPrVec)
-    CALL save_npy('varphiVarphi.npy',varphiVarphi)
-    CALL save_npy('varphiHvarphi.npy',varphiHvarphi)
-    CALL save_npy('vEff0IR.npy',vEff0IR)
+    !CALL save_npy('lmpT.npy',lmpT)
+    !CALL save_npy('gBas.npy',gBas)
+    !CALL save_npy('gBasUnwrap.npy',gBasUnwrap)
+    !CALL save_npy('mapKpq2K.npy',mapKpq2K)
+    !CALL save_npy('nobd.npy',nobd)
+    !CALL save_npy('z.npy',z)
+    !CALL save_npy('z1nG.npy',z1nG)
+    !CALL save_npy('iloTable.npy',iloTable)
+    !CALL save_npy('nRadFun.npy',nRadFun)
+    !CALL save_npy('eig.npy',eig)
+    !CALL save_npy('kpq2kPrVec.npy',kpq2kPrVec)
+    !CALL save_npy('varphiVarphi.npy',varphiVarphi)
+    !CALL save_npy('varphiHvarphi.npy',varphiHvarphi)
+    !CALL save_npy('vEff0IR.npy',vEff0IR)
 
     ! We do not want the local coordinate systems to be rotated for non-representative atoms constructing the matching coefficients.
-    allocate(ngoprI(atoms%nat))
-    ngoprI(:) = 1
+    !allocate(ngoprI(atoms%nat))
+    !ngoprI(:) = 1
 
     allocate( gBasExt(MAXVAL(nv), 3) )
     allocate( gqBasExt(MAXVAL(nv), 3) )
@@ -3773,21 +3753,11 @@ module m_jpSetupDynMat
             & bascof_lo(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
     allocate( aKpq( MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bKpq(MAXVAL(nv), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), &
             & bascof_loKpq(3, -atoms%llod:atoms%llod, 4 * atoms%llod + 2, atoms%nlod, atoms%nat) )
-    ! Large matching coefficients
-    allocate( ab0cofScl(lmpMax, atoms%nat), ab0cofVec(lmpMax), & !ab0KpGcof(lmpMax, 3, atoms%nat), &
-            & ab1cofVec(lmpMax, 3, atoms%nat, atoms%nat), abGrPsiSumCof(lmpMax, 3, atoms%nat, atoms%nat) )
     ! Large matchigs for Alex
     allocate( bigAscal(lmpMax, atoms%nat), bigAvec(lmpMax, 3, atoms%nat), bigAmat(lmpMax, 3, 3, atoms%nat), &
             & bigAz1vec(lmpMax, 3, atoms%nat, atoms%nat), bigAz1mat(lmpMax, 3, 3, atoms%nat, atoms%nat) )
     ! Help Alex
-    allocate( helpscal(lmpMax) )!, helpvec(lmpMax, 3), helpmat(lmpMax, 3, 3) )
-    ! Temporary help arrays
-    allocate( grPsiHepsVarphiOffDiagNat(lmpMax, 3, atoms%nat), varphiHepsGrPsiOffDiagNat(lmpMax, 3, atoms%nat), &
-            & allMTvarphiHepsPsi(lmpMax, atoms%nat), grVarphiHepsPsiOffDiagNat(lmpMax), &
-            & psiHepsgrVarphiNat(lmpMax), &
-            & grVarphiHepsPsiNat(lmpMax), varphiHepsGrPsiOffDiag(lmpMax, 3), &!psiHepsVarphi(lmpMax, 3, atoms%nat), &
-            & varphiHepsPsi(lmpMax, 3), abGrPsiSumCofDiag(lmpMax, 3, atoms%nat) )
-    allocate( psiHepsgrPsiNat(3, 3), varphiHepsGrPsiNat(lmpMax), varphiGrVeff0sphPsi(lmpMax), varphiHepsPsiOffDiag(lmpMax))
+    allocate( helpscal(lmpMax) )
 
     ikpq = mapKpq2K(ikpt, iqpt)
 
