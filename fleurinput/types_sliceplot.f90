@@ -141,14 +141,18 @@ CONTAINS
         xPathA = '/fleurInput/output/plotting/plot'
         numberNodes = xml%GetNumberOfNodes(xPathA)
         this%nplots=numberNodes
+
         IF(ALLOCATED(this%plot)) DEALLOCATE (this%plot)
         ALLOCATE(this%plot(numberNodes))
-        do i = 1, numberNodes
-          write(xPathA,'(a,i0,a)') '/fleurInput/output/plotting/plot[',i,']'
-          call xml%set_basepath(xPathA)
-          call this%plot(i)%read_xml(xml)
-          call xml%set_basepath('')
-        end do
+
+        IF(numberNodes>0) THEN 
+          do i = 1, numberNodes
+            write(xPathA,'(a,i0,a)') '/fleurInput/output/plotting/plot[',i,']'
+            call xml%set_basepath(xPathA)
+            call this%plot(i)%read_xml(xml)
+            call xml%set_basepath('')
+          end do
+        ENDIF
       ELSE
         call judft_warn("Plotting output switches not read. Too old xml version")
       ENDIF
@@ -183,24 +187,24 @@ CONTAINS
 
     line=xml%GetAttributeValue('/@grid')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of grid points")
+    if (size(x)/=3) call judft_error("Wrong number of grid points", calledby="types_sliceplot%read_xml_plot")
     this%grid=x
 
     line=xml%GetAttributeValue('/@vec1')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec1")
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec1", calledby="types_sliceplot%read_xml_plot")
     this%vec1=x
     line=xml%GetAttributeValue('/@vec2')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec2")
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec2", calledby="types_sliceplot%read_xml_plot")
     this%vec2=x
     line=xml%GetAttributeValue('/@vec3')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec3")
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec3", calledby="types_sliceplot%read_xml_plot")
     this%vec3=x
     line=xml%GetAttributeValue('/@zero')
     call evaluateList(x,line)
-    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec0")
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec0", calledby="types_sliceplot%read_xml_plot")
     this%zero=x
 
     this%filename=xml%GetAttributeValue('/@file')

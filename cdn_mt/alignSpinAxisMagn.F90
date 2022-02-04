@@ -104,7 +104,6 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-nococonv%betaPrev,outden)
      !rotation angle
      CALL gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,outden,dPhi,dtheta)
-     print *,"delta-angles:",dphi,dtheta
      !dphi   = dphi  *(noco%mix_RelaxWeightOffD-1.0)
      dtheta = dtheta *(noco%mix_RelaxWeightOffD-1.0)
 
@@ -128,9 +127,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alphPrev,zeros,outden)
 
      CALL gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,outden,dPhi,dtheta)
-     print *,"inden :",nococonv%alphPrev,nococonv%betaPrev
-     print *,"Outden:",dphi,dtheta
-
+  
      call delta_den%subPotDen(outden,inden)
      !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-dphi,zeros,delta_den)
      !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-dtheta,delta_den)
@@ -200,6 +197,7 @@ END SUBROUTINE cureTooSmallAngles
 
 !Calculates angles from magnetization and assigns correct sign to be used in the rotation (flipcdn) routine properly.
 SUBROUTINE Gimmeangles(Input,Atoms,Noco,Vacuum,Sphhar,Stars,Den,Phitemp,Thetatemp)
+  use m_types_nococonv
    TYPE(t_input) ,INTENT(IN)     :: input
    TYPE(t_atoms) ,INTENT(IN)     :: atoms
    TYPE(t_noco)  ,INTENT(IN)     :: noco
@@ -211,15 +209,17 @@ SUBROUTINE Gimmeangles(Input,Atoms,Noco,Vacuum,Sphhar,Stars,Den,Phitemp,Thetatem
 
    REAL                          :: moments(3,atoms%ntype)
 
-   CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
-   phiTemp(:)=(-1)*phiTemp(:)
+  type(t_nococonv):: nococonv
+  call nococonv%avg_moments(den,atoms,moments,thetatemp,phitemp)
+   !!CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
+   !phiTemp(:)=(-1)*phiTemp(:)
 
 END SUBROUTINE gimmeAngles
 
 !Rotates from global frame into current local frame
 SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
         ,sym,oneD,cell,noco,nococonv,input,atoms,l_adjust,den,l_update_nococonv)
-   USE m_mpi_bc_potden
+
    TYPE(t_mpi),INTENT(IN)                :: fmpi
    TYPE(t_input), INTENT(IN)             :: input
    TYPE(t_atoms), INTENT(IN)             :: atoms
@@ -247,22 +247,22 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
        call Gimmeangles(input,atoms,noco,vacuum,sphhar,stars,den,nococonv%alphPrev,nococonv%betaPrev)
      endif
      !Now try to minimize difference to previous angles
-     DO n=1,atoms%ntype
-       dalph=abs(alph_old(n)-nococonv%alphPrev(n))
-       if (abs(nococonv%alph(n)-nococonv%alphprev(n)-Pi_const)<dalph) THEN
-         nococonv%alphprev(n)=nococonv%alphprev(n)+pi_const
-         nococonv%betaprev(n)=-1*nococonv%betaprev(n)
-       elseif (abs(nococonv%alph(n)-nococonv%alphprev(n)+Pi_const)<dalph) THEN
-         nococonv%alphprev(n)=nococonv%alphprev(n)-pi_const
-         nococonv%betaprev(n)=-1*nococonv%betaprev(n)
-       endif
-     enddo
+     !DO n=1,atoms%ntype
+     !  dalph=abs(alph_old(n)-nococonv%alphPrev(n))
+     !  if (abs(nococonv%alph(n)-nococonv%alphprev(n)-Pi_const)<dalph) THEN
+     !    nococonv%alphprev(n)=nococonv%alphprev(n)+pi_const
+     !    nococonv%betaprev(n)=-1*nococonv%betaprev(n)
+     !  elseif (abs(nococonv%alph(n)-nococonv%alphprev(n)+Pi_const)<dalph) THEN
+     !    nococonv%alphprev(n)=nococonv%alphprev(n)-pi_const
+     !    nococonv%betaprev(n)=-1*nococonv%betaprev(n)
+     !  endif
+     !enddo
 
-     write(6,*) "toLocalSpin: alpha=",-nococonv%alphprev
-     write(6,*) "toLocalSpin: beta=",-nococonv%betaprev
-
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(-nococonv%alphPrev,zeros,noco%l_alignMT),zeros,den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(-nococonv%betaPreV,zeros,noco%l_alignMT),den)
+  
+     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alphprev,zeros,noco%l_alignMT),merge(nococonv%betaprev,zeros,noco%l_alignMT),Den,toGlobal=.false.)
+     
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(-nococonv%alphPrev,zeros,noco%l_alignMT),zeros,den)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(-nococonv%betaPreV,zeros,noco%l_alignMT),den)
      if (present(l_update_nococonv)) then
        if (l_update_nococonv) THEN
          nococonv%alph=merge(nococonv%alphPrev,nococonv%alph,noco%l_alignMT)
@@ -272,7 +272,8 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
        ENDIF
      ENDIF
    endif
-   call mpi_bc_potden(fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, Den,nococonv)
+   call den%distribute(fmpi%mpi_comm)
+   call nococonv%mpi_bc(fmpi%mpi_comm)
 
 
 END SUBROUTINE
@@ -280,7 +281,7 @@ END SUBROUTINE
 !Rotates into the global frame so mixing can be performed without any restrictions. => Compatible with anderson mixing scheme.
 SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
 ,sym,oneD,cell,input,atoms, den,fmpi,l_update_nococonv)
-   USE m_mpi_bc_potden
+
    TYPE(t_mpi),INTENT(IN),OPTIONAL       :: fmpi
    TYPE(t_input), INTENT(IN)             :: input
    TYPE(t_atoms), INTENT(IN)             :: atoms
@@ -305,11 +306,9 @@ SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
 
    if (l_irank0) then
      zeros(:)=0.0
-     write(6,*) "toGlobalSpin: alpha=",nococonv%alph
-     write(6,*) "toGlobalSpin: beta=",nococonv%beta
-
-     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
+     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),merge(nococonv%beta,zeros,noco%l_alignMT),Den,toGlobal=.true.)
+     !CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
      ! Nococonv is zero now since rotation has been reverted.
      if (present(l_update_nococonv)) THEN
        if (l_update_nococonv) THEN
@@ -320,7 +319,10 @@ SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
        ENDIF
      ENDIF
    ENDIF
-   if (present(fmpi)) call mpi_bc_potden(fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, Den,nococonv)
+   if (present(fmpi)) then
+      call den%distribute(fmpi%mpi_comm)
+      call nococonv%mpi_bc(fmpi%mpi_comm)
+   endif
 
 END SUBROUTINE
 

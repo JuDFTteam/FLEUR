@@ -37,11 +37,12 @@ MODULE m_types_sym
       !Phase factors for offidagonal lda+u
       REAL, ALLOCATABLE :: phase(:)
       !
-      ! Atom sepecific stuff
+      ! Atom specific stuff
       !
       INTEGER, ALLOCATABLE :: invsatnr(:) !(atoms%nat)
       INTEGER, ALLOCATABLE :: invarop(:, :)!(atoms%nat,nop)
       INTEGER, ALLOCATABLE :: invarind(:) !(atoms%nat)
+      INTEGER, ALLOCATABLE :: mapped_atom(:,:) !(nop,atoms%nat)
       !no of op that maps atom into
       INTEGER, ALLOCATABLE::ngopr(:)
       !symetry of atoms(nat)
@@ -91,6 +92,7 @@ CONTAINS
       CALL mpi_bc(this%invsatnr, rank, mpi_comm)
       CALL mpi_bc(this%invarop, rank, mpi_comm)
       CALL mpi_bc(this%invarind, rank, mpi_comm)
+      CALL mpi_bc(this%mapped_atom, rank, mpi_comm)
       CALL mpi_bc(this%nsymt, rank, mpi_comm)
       CALL mpi_bc(this%nsym, rank, mpi_comm)
       CALL mpi_bc(this%invsat, rank, mpi_comm)
@@ -104,7 +106,7 @@ CONTAINS
       CLASS(t_sym), INTENT(inout):: this
       TYPE(t_xml), INTENT(INOUT)::xml
 
-      INTEGER:: number_sets, n
+      INTEGER:: n
       CHARACTER(len=200)::str, path, path2
 
       IF (xml%GetNumberOfNodes("/fleurInput/cell/symmetryFile") > 0) THEN

@@ -50,9 +50,9 @@ CONTAINS
       IF (ALLOCATED(sym%d_wgn)) DEALLOCATE (sym%d_wgn)
       ALLOCATE (sym%d_wgn(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, lmaxU_const, sym%nop), &
                source=CMPLX_NOT_INITALIZED)
-      IF (atoms%n_u + gfinp%n .GT. 0) THEN !replace with atoms%n_u+gfinp%n
+      IF (atoms%n_denmat + gfinp%n .GT. 0) THEN !replace with atoms%n_u+gfinp%n
 
-         CALL d_wigner(sym%nop, sym%mrot, cell%bmat, lmaxU_const, sym%d_wgn)
+         CALL d_wigner(sym%nop, sym%mrot, cell%bmat, lmaxU_const, sym%d_wgn, write=.TRUE.)
          !For spin-offdiagonal parts, we need additional phase factors
          IF (noco%l_mperp) THEN
             IF (ALLOCATED(sym%phase)) DEALLOCATE (sym%phase)

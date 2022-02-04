@@ -10,6 +10,7 @@ MODULE m_types_field
   !*************************************************************
   USE m_juDFT
   USE m_types_fleurinput_base
+  USE m_types_atoms
   IMPLICIT NONE
   PRIVATE
   TYPE:: t_efield
@@ -94,9 +95,19 @@ CONTAINS
     TYPE(t_xml),INTENT(INOUT)::xml
 
     CHARACTER(len=100)::xpatha,xpathb
-    INTEGER:: numberNodes,i
+    INTEGER:: numberNodes, i, nAtomTypes, iType
 
-    allocate(this%b_field_mt(xml%get_ntype()));this%b_field_mt=0.0
+    nAtomTypes = xml%get_ntype()
+    ALLOCATE(this%b_field_mt(nAtomTypes))
+    this%b_field_mt=0.0
+    
+    DO iType = 1, nAtomTypes
+       CALL readAtomAttribute(xml,iType,'/special/@b_field_mt',this%b_field_mt(iType))
+       IF(this%b_field_mt(iType).NE.0.0) THEN
+          this%l_b_field=.TRUE.
+       END IF
+    END DO
+
     xPathA = '/fleurInput/calculationSetup/fields'
     numberNodes = xml%GetNumberOfNodes(xPathA)
     IF (numberNodes.EQ.1) THEN
@@ -104,6 +115,7 @@ CONTAINS
           this%b_field=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'//@b_field'))
           this%l_b_field=.TRUE.
        ENDIF
+       
        this%efield%zsigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
        this%efield%sig_b(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))
        this%efield%sig_b(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_2'))

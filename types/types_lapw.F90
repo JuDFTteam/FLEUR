@@ -372,7 +372,7 @@ CONTAINS
          END IF
       END DO
 
-      IF (ANY(atoms%nlo > 0)) CALL priv_lo_basis_setup(lapw, atoms, sym, noco, nococonv, cell)
+      IF (ANY(atoms%nlo > 0)) CALL priv_lo_basis_setup(lapw, atoms, input, sym, noco, nococonv, cell)
 
       lapw%nv_tot = lapw%nv(1)
       lapw%nmat = lapw%nv(1) + atoms%nlotot
@@ -383,12 +383,13 @@ CONTAINS
       call timestop("t_lapw_init")
    CONTAINS
 
-      SUBROUTINE priv_lo_basis_setup(lapw, atoms, sym, noco, nococonv, cell)
+      SUBROUTINE priv_lo_basis_setup(lapw, atoms, input, sym, noco, nococonv, cell)
          USE m_types_fleurinput
 
          IMPLICIT NONE
          TYPE(t_lapw), INTENT(INOUT):: lapw
          TYPE(t_atoms), INTENT(IN)  :: atoms
+         TYPE(t_input), INTENT(IN)  :: input
          TYPE(t_sym), INTENT(IN)    :: sym
          TYPE(t_cell), INTENT(IN)   :: cell
          TYPE(t_noco), INTENT(IN)   :: noco
@@ -397,7 +398,7 @@ CONTAINS
          INTEGER:: n, na, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
          IF (.NOT. ALLOCATED(lapw%kvec)) THEN
             ALLOCATE (lapw%kvec(2*(2*atoms%llod + 1), atoms%nlod, atoms%nat))
-            ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat))
+            ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat));lapw%nkvec=0
             ALLOCATE (lapw%index_lo(atoms%nlod, atoms%nat))
          ENDIF
          iindex = 0
@@ -409,7 +410,7 @@ CONTAINS
                if (sym%invsat(na) > 1) cycle
                !np = MERGE(oneD%ods%ngopr(na),sym%invtab(sym%ngopr(na)),oneD%odi%d1)
                np = sym%invtab(sym%ngopr(na))
-               CALL priv_vec_for_lo(atoms, sym, na, n, np, noco, nococonv, lapw, cell)
+               CALL priv_vec_for_lo(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
                DO lo = 1, atoms%nlo(n)
                   lapw%index_lo(lo, na) = iindex
                   iindex = iindex + lapw%nkvec(lo, na)
@@ -442,7 +443,7 @@ CONTAINS
       !$OMP END PARALLEL DO
    END SUBROUTINE lapw_phase_factors
 
-   SUBROUTINE priv_vec_for_lo(atoms, sym, na, n, np, noco, nococonv, lapw, cell)
+   SUBROUTINE priv_vec_for_lo(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
 
       USE m_constants
       USE m_orthoglo
@@ -456,6 +457,7 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)  :: atoms
+      TYPE(t_input), INTENT(IN)  :: input
       TYPE(t_lapw), INTENT(INOUT):: lapw
       !     ..
       !     .. Scalar Arguments ..
@@ -467,7 +469,7 @@ CONTAINS
       COMPLEX term1
       REAL th, con1
       INTEGER l, lo, mind, ll1, lm, iintsp, k, nkmin, ntyp, lmp, m, nintsp, k_start
-      LOGICAL linind, enough, l_lo1, l_real
+      LOGICAL linind, enough, l_lo1
       !     ..
       !     .. Local Arrays ..
       INTEGER :: nkvec(atoms%nlod, 2)
@@ -480,9 +482,7 @@ CONTAINS
       !     ..
       !     .. Data statements ..
       REAL, PARAMETER :: eps = 1.0E-8
-      REAL, PARAMETER :: linindq = 1.0e-4
-
-      l_real = sym%invs .and. .not. noco%l_noco .and. .not. (noco%l_soc .and. atoms%n_u>0) .and. atoms%n_hia == 0
+      REAL, PARAMETER :: linindq = 2.0e-6
 
       con1 = fpi_const/SQRT(cell%omtil)
       ntyp = n
@@ -568,7 +568,7 @@ CONTAINS
                               lm = ll1 + m
                               cwork(m, nkvec(lo, iintsp), lo, iintsp) = term1*ylm(lm)
                            END DO
-                           CALL orthoglo(l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .FALSE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
+                           CALL orthoglo(input%l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .FALSE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
                            IF (linind) THEN
                               lapw%kvec(nkvec(lo, iintsp), lo, na) = k
                            ELSE
@@ -590,7 +590,7 @@ CONTAINS
                                  lmp = ll1 - m
                                  cwork(mind, nkvec(lo, iintsp), lo, iintsp) = ((-1)**(l + m))*CONJG(term1*ylm(lmp))
                               END DO
-                              CALL orthoglo(l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .TRUE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
+                              CALL orthoglo(input%l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .TRUE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
                               IF (linind) THEN
                                  lapw%kvec(nkvec(lo, iintsp), lo, na) = k
                                  !                          write(*,*) nkvec(lo,iintsp),k,' <- '

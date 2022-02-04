@@ -1,0 +1,66 @@
+
+pages:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: deploy
+  needs: 
+    - doxygen
+    - gfortran-coverage
+  script:
+    - echo "HTML should be ready from cache..."
+    - mv $CI_PROJECT_DIR/docs/Docu_main.html $CI_PROJECT_DIR/public/index.html
+  environment:
+     name: HTML-Pages
+     url: https://fleur.iffgit.fz-juelich.de/fleur
+  artifacts:
+    paths:
+      - public
+  except:
+    - pushes
+
+doxygen:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  stage: html
+  needs: 
+    - build-gfortran-hdf5
+  script:
+    - cd $CI_PROJECT_DIR/build ; make doc
+    - mkdir ../public
+    - mv docs/html/ ../public/doxygen
+  artifacts:
+    paths:
+      - public
+      - build/fleur
+      - build/fleur_MPI
+      - build/inpgen
+  except:
+    - pushes
+
+
+gfortran-coverage:
+  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  extends: .test-fleur-not-on-push
+  stage: html
+  needs: []
+  variables:
+    BUILD_FOLDER: "."
+    juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root "
+  before_script:
+      - cd $CI_PROJECT_DIR
+      - ./configure.sh -l coverage -flags --coverage GITLAB
+      - cd build.coverage
+      - make -j 4
+      - lcov --capture --initial -d CMakeFiles -o baseline.info
+  after_script:
+      - lcov --capture  -d CMakeFiles -o after.info
+      - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
+      - genhtml combined.info --output-directory html_out
+      - mkdir ../public;mv html_out ../public/coverage_html
+  allow_failure: true
+  artifacts:
+    paths:
+      - public
+  environment:
+    name: Coverage
+    url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
+
+

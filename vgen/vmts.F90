@@ -40,6 +40,7 @@ contains
     use m_sphbes
     use m_od_phasy
     use m_SphBessel
+    !$ use omp_lib
     implicit none
 
     type(t_input),  intent(in)        :: input
@@ -72,7 +73,6 @@ contains
     integer                       :: ierr
     complex, allocatable          :: c_b(:)
 #endif
-    integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 
     ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary

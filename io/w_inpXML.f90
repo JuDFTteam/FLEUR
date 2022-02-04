@@ -141,7 +141,7 @@ CONTAINS
          filenum = 98
          OPEN (fileNum, file=TRIM(ADJUSTL(filename)), form='formatted', status='replace')
          WRITE (fileNum, '(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="0.34">'
+         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="0.35">'
       ELSE
          fileNum = getXMLOutputUnitNumber()
          CALL openXMLElementNoAttributes('inputData')
@@ -336,22 +336,31 @@ CONTAINS
 !      <filmLattice ...>
 241      FORMAT('      <filmLattice scale="', f0.8, '" dVac="', f0.8, '" dTilda="', f0.8, '">')
          WRITE (fileNum, 241) 1.0, vacuum%dvac, cell%amat(3, 3)
+         !       <bravaisMatrixFilm>
+         WRITE (fileNum, '(a)') '         <bravaisMatrixFilm>'
+      !            <row-1>0.00000 5.13000 </row-1>
+251      FORMAT('            <row-1>', f22.16, ' ', f22.16, '</row-1>')
+         WRITE (fileNum, 251) cell%amat(:2, 1)
+      !            <row-2>5.13000 0.00000 5.13000</row-2>
+252      FORMAT('            <row-2>', f22.16, ' ', f22.16, '</row-2>')
+         WRITE (fileNum, 252) cell%amat(:2, 2)
+         WRITE (fileNum, '(a)') '         </bravaisMatrixFilm>'
       ELSE
 242      FORMAT('      <bulkLattice scale="', f0.10, '">')
-         WRITE (fileNum, 242) 1.0
-      ENDIF
-      !         <bravaisMatrix>
-      WRITE (fileNum, '(a)') '         <bravaisMatrix>'
-      !            <row-1>0.00000 5.13000 5.13000</row-1>
-250   FORMAT('            <row-1>', f22.16, ' ', f22.16, ' ', f22.16, '</row-1>')
-      WRITE (fileNum, 250) cell%amat(:, 1)
-      !            <row-2>5.13000 0.00000 5.13000</row-2>
-260   FORMAT('            <row-2>', f22.16, ' ', f22.16, ' ', f22.16, '</row-2>')
-      WRITE (fileNum, 260) cell%amat(:, 2)
-      !            <row-3>5.13000 5.13000 0.00000</row-3>
-270   FORMAT('            <row-3>', f22.16, ' ', f22.16, ' ', f22.16, '</row-3>')
-      WRITE (fileNum, 270) cell%amat(:, 3)
-      WRITE (fileNum, '(a)') '         </bravaisMatrix>'
+WRITE (fileNum, 242) 1.0
+!         <bravaisMatrix>
+   WRITE (fileNum, '(a)') '         <bravaisMatrix>'
+!            <row-1>0.00000 5.13000 5.13000</row-1>
+250      FORMAT('            <row-1>', f22.16, ' ', f22.16, ' ', f22.16, '</row-1>')
+   WRITE (fileNum, 250) cell%amat(:, 1)
+!            <row-2>5.13000 0.00000 5.13000</row-2>
+260      FORMAT('            <row-2>', f22.16, ' ', f22.16, ' ', f22.16, '</row-2>')
+   WRITE (fileNum, 260) cell%amat(:, 2)
+!            <row-3>5.13000 5.13000 0.00000</row-3>
+270      FORMAT('            <row-3>', f22.16, ' ', f22.16, ' ', f22.16, '</row-3>')
+   WRITE (fileNum, 270) cell%amat(:, 3)
+   WRITE (fileNum, '(a)') '         </bravaisMatrix>'
+   ENDIF
 
       IF (input%film) THEN
 268      FORMAT('         <vacuumEnergyParameters vacuum="', i0, '" spinUp="', f0.8, '" spinDown="', f0.8, '"/>')
@@ -603,13 +612,18 @@ CONTAINS
 !      WRITE (fileNum, 396) juPhon%l_potout, juPhon%l_eigout
 
 !      <plotting iplot="0" />
-400   FORMAT('      <plotting iplot="', i0, '" polar="', l1, '">')
-      WRITE (fileNum, 400) sliceplot%iplot, sliceplot%polar
-401   FORMAT('         <plot TwoD="', l1, '" vec1="', 3f5.1,  '" vec2="', 3f5.1, '" vec3="', 3f5.1, '" zero="', 3f5.1, '" file="', a, '"/>')
-      WRITE (fileNum, 401) sliceplot%plot(1)%twodim, sliceplot%plot(1)%vec1(:), sliceplot%plot(1)%vec2(:), sliceplot%plot(1)%vec3(:),&
-                           sliceplot%plot(1)%zero(:), TRIM(ADJUSTL(sliceplot%plot(1)%filename))
-      WRITE (fileNum, '(a)') '      </plotting>'
-
+      IF(SIZE(sliceplot%plot)>0) THEN
+400      FORMAT('      <plotting iplot="', i0, '" polar="', l1, '">')
+         WRITE (fileNum, 400) sliceplot%iplot, sliceplot%polar
+401      FORMAT('         <plot TwoD="', l1, '" vec1="', 3f5.1,  '" vec2="', 3f5.1, '" vec3="', 3f5.1, '" zero="', 3f5.1, '" file="', a, '"/>')
+         WRITE (fileNum, 401) sliceplot%plot(1)%twodim, sliceplot%plot(1)%vec1(:), sliceplot%plot(1)%vec2(:), sliceplot%plot(1)%vec3(:),&
+                              sliceplot%plot(1)%zero(:), TRIM(ADJUSTL(sliceplot%plot(1)%filename))
+         WRITE (fileNum, '(a)') '      </plotting>'
+      ELSE
+402      FORMAT('      <plotting iplot="', i0, '" polar="', l1, '"/>')
+         WRITE (fileNum, 402) sliceplot%iplot, sliceplot%polar
+      ENDIF
+      
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
 410   FORMAT('      <chargeDensitySlicing numkpt="', i0, '" minEigenval="', f0.8, '" maxEigenval="', f0.8, '" nnne="', i0, '" pallst="', l1, '"/>')
       WRITE (fileNum, 410) sliceplot%kk, sliceplot%e1s, sliceplot%e2s, sliceplot%nnne, input%pallst

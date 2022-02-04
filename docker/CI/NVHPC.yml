@@ -1,0 +1,25 @@
+image:
+  name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  entrypoint: ["/usr/bin/bash -i -c"]
+
+build-pgi:
+  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  stage: build
+  artifacts:
+     paths:
+       - build.pgi
+     expire_in: 12h
+  script:
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make"
+  allow_failure: true
+  except:
+    - pushes 
+
+test-pgi:
+  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  extends: .test-fleur-not-on-push
+  variables:
+    BUILD_FOLDER: build.pgi
+  needs: 
+    - build-pgi
+  allow_failure: true

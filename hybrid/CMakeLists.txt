@@ -16,7 +16,8 @@ hybrid/eigvec_setup.F90
 hybrid/exchange_core.F90
 hybrid/exchange_val_hf.F90
 hybrid/exponential_integral.f90
-hybrid/ex_to_vx.f90
+hybrid/ex_to_vx.F90
+hybrid/gamma_double_gpt_loop.F90
 hybrid/gen_wavf.F90
 hybrid/glob_tofrom_loc.F90
 hybrid/HF_init.F90
@@ -32,11 +33,12 @@ hybrid/mixedbasis.F90
 hybrid/mtir_size.f90
 hybrid/olap.F90
 hybrid/progress_thread/thread_lib.f90 
-hybrid/reorder.f90
+hybrid/reorder.F90
 hybrid/set_coul_participation.f90
 hybrid/sphbessel_integral.f90
 hybrid/spmm.F90
-hybrid/spmvec.F90
+hybrid/spmm_inv.F90
+hybrid/spmm_noinv.F90
 hybrid/structureconstant.F90
 hybrid/store_load_hybrid.F90
 hybrid/subvxc.F90
@@ -48,7 +50,7 @@ hybrid/util/intgrf.f90
 hybrid/util/util.f90
 hybrid/wavefproducts_aux.F90
 hybrid/wavefproducts.f90
-hybrid/wavefproducts_inv.f90
+hybrid/wavefproducts_inv.F90
 hybrid/wavefproducts_noinv.F90
 hybrid/work_package.F90
 hybrid/wrapper.f90

@@ -131,9 +131,9 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
                !rho_22
                outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(nococonv%beta(iType))
                !real part rho_21
-               outDen%pw(1,3) = outDen%pw(1,3) + cmplx( 0.5*momint *cos(nococonv%alph(iType))*sin(nococonv%beta(iType)),&
+               outDen%pw(1,3) = outDen%pw(1,3) + cmplx( -1*momint *cos(nococonv%alph(iType))*sin(nococonv%beta(iType)),&
                !imaginary part rho_21
-                                                       -0.5*momint *sin(nococonv%alph(iType))*sin(nococonv%beta(iType)))
+                                                          momint *sin(nococonv%alph(iType))*sin(nococonv%beta(iType)))
             END DO
             !pk non-collinear (end)
          END IF

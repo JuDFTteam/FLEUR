@@ -22,7 +22,7 @@ MODULE m_types_xml
       INTEGER:: id
       character(len=200):: basepath = ""
       integer           :: versionNumber = 0
-      INTEGER           :: currentversionNumber = 34 !parameters are not allowed here
+      INTEGER           :: currentversionNumber = 35 !parameters are not allowed here
    CONTAINS
       PROCEDURE        :: init
       PROCEDURE        :: GetNumberOfNodes
@@ -164,12 +164,124 @@ CONTAINS
       CLASS(t_xml), INTENT(IN)::xml
       INTEGER, ALLOCATABLE::get_nlo(:)
 
-      INTEGER n
+      INTEGER n, numNodes, lNumCount, nNumCount, iLO, nLO
+      CHARACTER(LEN=200) :: xPathA, xPathB, xPathC
+      CHARACTER(LEN=200) :: lString, nString
+
+      INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:)
+
       ALLOCATE (get_nlo(xml%get_ntype()))
       DO n = 1, xml%get_ntype()
-         get_nlo(n) = xml%GetNumberOfNodes(TRIM(xml%speciesPath(n))//'/lo')
+         xPathA = TRIM(ADJUSTL(xml%speciesPath(n))//'/lo')
+         numNodes = xml%GetNumberOfNodes(TRIM(xPathA))
+         nLO = 0
+         DO iLO = 1, numNodes
+            WRITE(xPathB,*) TRIM(xPathA),'[',iLO,']/@l'
+            WRITE(xPathC,*) TRIM(xPathA),'[',iLO,']/@n'
+            lString = xml%getAttributeValue(TRIM(ADJUSTL(xPathB)))
+            nString = xml%getAttributeValue(TRIM(ADJUSTL(xPathC)))
+            CALL getIntegerSequenceFromString(TRIM(ADJUSTL(lString)), lNumbers, lNumCount)
+            CALL getIntegerSequenceFromString(TRIM(ADJUSTL(nString)), nNumbers, nNumCount)
+            IF(lNumCount.NE.nNumCount) THEN
+               CALL judft_error('Error in LO input: l quantum number count does not equal n quantum number count')
+            END IF
+            nLO = nLO + lNumCount
+            DEALLOCATE (lNumbers, nNumbers)
+         END DO
+         
+         get_nlo(n) = nLO
       ENDDO
    END FUNCTION get_nlo
+
+   SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
+      use m_juDFT_stop
+      IMPLICIT NONE
+
+      CHARACTER(*),         INTENT(IN)  :: string
+      INTEGER, ALLOCATABLE, INTENT(OUT) :: sequence(:)
+      INTEGER,              INTENT(OUT) :: count
+
+      INTEGER :: i, length, start, lastNumber, currentNumber, index
+      LOGICAL singleNumber, comma, dash
+
+      ! 3 cases: 1. a single number
+      !          2. number - number
+      !          3. comma separated numbers
+
+      length = LEN(string)
+      count = 0
+      start = 1
+      singleNumber = .TRUE.
+      comma = .FALSE.
+      dash = .FALSE.
+      lastNumber = 0
+      count = 0
+
+      ! 1. Determine number count
+
+      DO i = 1, length
+         SELECT CASE (string(i:i))
+         CASE ('0':'9')
+         CASE (',')
+            IF ((start.EQ.i).OR.(dash)) THEN
+               CALL judft_error('String has wrong syntax (in getIntegerSequenceFromString)')
+            END IF
+            singleNumber = .FALSE.
+            comma = .TRUE.
+            READ(string(start:i-1),*) lastNumber
+            count = count + 1
+            start = i+1
+         CASE ('-')
+            IF ((start.EQ.i).OR.(dash).OR.(comma)) THEN
+               CALL judft_error('String has wrong syntax (in getIntegerSequenceFromString)')
+            END IF
+            singleNumber = .FALSE.
+            dash = .TRUE.
+            READ(string(start:i-1),*) lastNumber
+            start = i+1
+         CASE DEFAULT
+            CALL judft_error('String has wrong syntax (in getIntegerSequenceFromString)')
+         END SELECT
+      END DO
+      IF(start.GT.length) THEN
+         CALL judft_error('String has wrong syntax (in getIntegerSequenceFromString)')
+      END IF
+      READ(string(start:length),*) currentNumber
+      IF (dash) THEN
+         count = currentNumber - lastNumber + 1
+      ELSE
+         count = count + 1
+      END IF
+
+      IF (ALLOCATED(sequence)) THEN
+         DEALLOCATE(sequence)
+      END IF
+      ALLOCATE(sequence(count))
+
+      ! 2. Read in numbers iff comma separation ...and store numbers in any case
+
+      IF (singleNumber) THEN
+         sequence(1) = currentNumber
+      ELSE IF (dash) THEN
+         DO i = 1, count
+            sequence(i) = lastNumber + i - 1
+         END DO
+      ELSE
+         index = 1
+         start = 1
+         DO i = 1, length
+            SELECT CASE (string(i:i))
+            CASE (',')
+               comma = .TRUE.
+               READ(string(start:i-1),*) lastNumber
+               start = i+1
+               SEQUENCE(index) = lastNumber
+               index = index + 1
+            END SELECT
+         END DO
+         sequence(index) = currentNumber
+      END IF
+   END SUBROUTINE getIntegerSequenceFromString
 
    FUNCTION speciesPath(xml, itype)
       CLASS(t_xml), INTENT(IN)::xml
@@ -266,97 +378,6 @@ CONTAINS
       END IF
 
    END FUNCTION popFirstStringToken
-
-   SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
-
-      IMPLICIT NONE
-
-      CHARACTER(*), INTENT(IN)  :: string
-      INTEGER, ALLOCATABLE, INTENT(OUT) :: sequence(:)
-      INTEGER, INTENT(OUT) :: count
-
-      INTEGER :: i, length, start, lastNumber, currentNumber, index
-      LOGICAL singleNumber, comma, dash
-
-      ! 3 cases: 1. a single number
-      !          2. number - number
-      !          3. comma separated numbers
-
-      length = LEN(string)
-      count = 0
-      start = 1
-      singleNumber = .TRUE.
-      comma = .FALSE.
-      dash = .FALSE.
-      lastNumber = 0
-      count = 0
-
-      ! 1. Determine number count
-
-      DO i = 1, length
-         SELECT CASE (string(i:i))
-         CASE ('0':'9')
-         CASE (',')
-            IF ((start .EQ. i) .OR. (dash)) THEN
-               STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
-            END IF
-            singleNumber = .FALSE.
-            comma = .TRUE.
-            READ (string(start:i - 1), *) lastNumber
-            count = count + 1
-            start = i + 1
-         CASE ('-')
-            IF ((start .EQ. i) .OR. (dash) .OR. (comma)) THEN
-               STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
-            END IF
-            singleNumber = .FALSE.
-            dash = .TRUE.
-            READ (string(start:i - 1), *) lastNumber
-            start = i + 1
-         CASE DEFAULT
-            STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
-         END SELECT
-      END DO
-      IF (start .GT. length) THEN
-         STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
-      END IF
-      READ (string(start:length), *) currentNumber
-      IF (dash) THEN
-         count = currentNumber - lastNumber + 1
-      ELSE
-         count = count + 1
-      END IF
-
-      IF (ALLOCATED(sequence)) THEN
-         DEALLOCATE (sequence)
-      END IF
-      ALLOCATE (sequence(count))
-
-      ! 2. Read in numbers iff comma separation ...and store numbers in any case
-
-      IF (singleNumber) THEN
-         sequence(1) = currentNumber
-      ELSE IF (dash) THEN
-         DO i = 1, count
-            sequence(i) = lastNumber + i - 1
-         END DO
-      ELSE
-         index = 1
-         start = 1
-         DO i = 1, length
-            SELECT CASE (string(i:i))
-            CASE (',')
-               comma = .TRUE.
-               READ (string(start:i - 1), *) lastNumber
-               start = i + 1
-               sequence(index) = lastNumber
-               index = index + 1
-            END SELECT
-         END DO
-         sequence(index) = currentNumber
-      END IF
-
-   END SUBROUTINE getIntegerSequenceFromString
 
    FUNCTION countStringTokens(line) RESULT(tokenCount)
 

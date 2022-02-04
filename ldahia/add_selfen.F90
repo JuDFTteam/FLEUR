@@ -133,7 +133,6 @@ MODULE m_add_selfen
    SUBROUTINE getOccupationMtx(g0,gfinp,input,atoms,noco,nococonv,selfen,mu,l_fullMatch,iMatch,&
                                g,mmpMat,nocc,l_invalidElements)
 
-      USE m_occmtx
 
       TYPE(t_greensf),     INTENT(IN)    :: g0           !DFT Green's Function
       TYPE(t_gfinp),       INTENT(IN)    :: gfinp
@@ -199,9 +198,9 @@ MODULE m_add_selfen
 
       !Get the occupation matrix
       IF(l_fullMatch) THEN
-         CALL occmtx(g,gfinp,input,atoms,noco,nococonv,mmpMat,check=.TRUE.,occError=l_invalidElements)
+         mmpMat = g%occupationMatrix(gfinp,input,atoms,noco,nococonv,check=.TRUE.,occError=l_invalidElements)
       ELSE
-         CALL occmtx(g,gfinp,input,atoms,noco,nococonv,mmpMat,spin=iMatch,check=.TRUE.,occError=l_invalidElements)
+         mmpMat(:,:,iMatch) = g%occupationMatrix(iMatch,gfinp,input,atoms,noco,nococonv,check=.TRUE.,occError=l_invalidElements)
       ENDIF
 
       !Compute the trace

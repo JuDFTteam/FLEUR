@@ -11,7 +11,7 @@ MODULE m_make_kpoints
   private
   public :: make_kpoints, add_special_points_default
 CONTAINS
-  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,str,kptsName,kptsPath)
+  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,l_gamma,str,kptsName,kptsPath)
     USE m_types_kpts
     USE m_types_cell
     USE m_types_sym
@@ -23,17 +23,17 @@ CONTAINS
     TYPE(t_hybinp), intent(in) :: hybinp
     LOGICAL,INTENT(in)::l_socorss,film
     INTEGER,INTENT(inout)::bz_integration
+    LOGICAL,INTENT(inout)::l_gamma
     CHARACTER(len=*),INTENT(inout)::str
     CHARACTER(len=*),INTENT(inout)::kptsName
     CHARACTER(len=*),INTENT(inout)::kptsPath
 
-    LOGICAL:: l_gamma,l_soc_or_ss, l_bzset, l_onlyIdentitySym
+    LOGICAL:: l_soc_or_ss, l_bzset, l_onlyIdentitySym
     REAL   :: den
     INTEGER:: nk,grid(3)
     character(len=40)::name=""
     !defaults
     l_soc_or_ss=l_socorss
-    l_gamma=.false.
 
     IF (kptsPath.NE.''.AND.kptsPath.NE.'default') THEN
        CALL set_special_points(kpts,kptsPath)
@@ -51,7 +51,7 @@ CONTAINS
     DO WHILE(INDEX(str,'@')>0)
        ! Read in the integration method if they are specified on the command line (hist is standard)
        l_bzset = .FALSE. !To warn if there are multiple definitions on the command line
-        IF (INDEX(str,'gauss@')==1) THEN
+       IF (INDEX(str,'gauss@')==1) THEN
           IF(bz_integration.NE.BZINT_METHOD_HIST) &
               CALL juDFT_warn("You specified the integration method in file and on command line")
           bz_integration=BZINT_METHOD_GAUSS
@@ -59,8 +59,7 @@ CONTAINS
               CALL juDFT_warn("You specified the integration method multiple times in the command line")
           l_bzset = .TRUE.
           str=str(7:)
-       ENDIF
-       IF (INDEX(str,'tria@')==1) THEN
+       ELSE IF (INDEX(str,'tria@')==1) THEN
           IF(bz_integration.NE.BZINT_METHOD_HIST) &
               CALL juDFT_warn("You specified the integration method in file and on command line")
           bz_integration=BZINT_METHOD_TRIA
@@ -68,8 +67,7 @@ CONTAINS
               CALL juDFT_warn("You specified the integration method multiple times in the command line")
           l_bzset = .TRUE.
           str=str(6:)
-       ENDIF
-       IF (INDEX(str,'tetra@')==1) THEN
+       ELSE IF (INDEX(str,'tetra@')==1) THEN
           IF(bz_integration.NE.BZINT_METHOD_HIST) &
               CALL juDFT_warn("You specified the integration method in file and on command line")
           bz_integration=BZINT_METHOD_TETRA
@@ -77,14 +75,15 @@ CONTAINS
               CALL juDFT_warn("You specified the integration method multiple times in the command line")
           l_bzset = .TRUE.
           str=str(7:)
-       ENDIF
-       IF (INDEX(str,'gamma@')==1) THEN
+       ELSE IF (INDEX(str,'gamma@')==1) THEN
           l_gamma=.TRUE.
           str=str(7:)
-       ENDIF
-       IF (INDEX(str,'soc@')==1) THEN
+       ELSE IF (INDEX(str,'soc@')==1) THEN
           l_soc_or_ss=.TRUE.
           str=str(5:)
+       ELSE
+          WRITE (*,'(2a)') 'Modifier for k-point set: ', str(1:INDEX(str,'@')-1)
+          CALL juDFT_error("Unknown modifier for k-point set.", calledby="make_kpoints")
        ENDIF
     END DO
 

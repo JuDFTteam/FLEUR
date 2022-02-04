@@ -168,7 +168,7 @@ CONTAINS
 
     jspinStart = ispin
     jspinEnd = ispin
-    IF (any(noco%l_constrained).or.l_socfirst.OR.any(noco%l_unrestrictMT)) THEN
+    IF (any(noco%l_constrained).or.l_socfirst.OR.any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau)) THEN
        jspinStart = 1
        jspinEnd = input%jspins
     END IF

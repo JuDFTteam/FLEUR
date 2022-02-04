@@ -14,8 +14,7 @@ MODULE m_make_defaults
   !---------------------------------------------------------------------
 CONTAINS
 
-  SUBROUTINE make_defaults(atoms, sym, cell, vacuum, input, stars, &
-       xcpot, noco, mpinp, hybinp)
+  SUBROUTINE make_defaults(atoms, sym, cell, vacuum, input, stars, xcpot, profile, noco, banddos, mpinp, hybinp)
     USE m_types_atoms
     USE m_types_cell
     USE m_types_sym
@@ -24,21 +23,24 @@ CONTAINS
     USE m_types_input
     USE m_types_stars
     USE m_types_noco
+    USE m_types_banddos
     USE m_types_mpinp
     USE m_types_hybinp
+    USE m_types_profile
     USE m_juDFT
 
-    TYPE(t_atoms), INTENT(INOUT) ::atoms
-    TYPE(t_sym), INTENT(IN)      ::sym
-    TYPE(t_cell), INTENT(INOUT)  ::cell
-
-    TYPE(t_vacuum), INTENT(INOUT)::vacuum
-    TYPE(t_input), INTENT(INOUT) ::input
-    TYPE(t_stars), INTENT(INOUT) ::stars
-    TYPE(t_xcpot_inbuild_nf), INTENT(INOUT) ::xcpot
-    TYPE(t_noco), INTENT(INOUT)  ::noco
-    TYPE(t_mpinp), INTENT(INOUT) ::mpinp
-    TYPE(t_hybinp), INTENT(INOUT)::hybinp
+    TYPE(t_atoms), INTENT(INOUT)            :: atoms
+    TYPE(t_sym), INTENT(IN)                 :: sym
+    TYPE(t_cell), INTENT(INOUT)             :: cell
+    TYPE(t_vacuum), INTENT(INOUT)           :: vacuum
+    TYPE(t_input), INTENT(INOUT)            :: input
+    TYPE(t_stars), INTENT(INOUT)            :: stars
+    TYPE(t_xcpot_inbuild_nf), INTENT(INOUT) :: xcpot
+    TYPE(t_profile),INTENT(IN)              :: profile
+    TYPE(t_noco), INTENT(INOUT)             :: noco
+    TYPE(t_banddos), INTENT(INOUT)          :: banddos
+    TYPE(t_mpinp), INTENT(INOUT)            :: mpinp
+    TYPE(t_hybinp), INTENT(INOUT)           :: hybinp
 
     INTEGER :: n
     REAL    :: min_dtild
@@ -65,10 +67,14 @@ CONTAINS
        input%rkmax = MAXVAL(atoms%lmax/atoms%rmt)
        input%rkmax = round_to_deci(input%rkmax, 1)
     ENDIF
-    IF (input%rkmax > 4.5) THEN
+
+    IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
+       input%rkmax = profile%kmax
+    ELSE IF (input%rkmax > 4.5) THEN
        PRINT *, "WARNING, large default rkmax has been reduced. Check input"
        input%rkmax = 4.5
     ENDIF
+
     IF (noco%l_ss) input%ctail = .FALSE.
     input%zelec = DOT_PRODUCT(atoms%econf(:)%valence_electrons, atoms%neq(:))
     !
@@ -97,6 +103,15 @@ CONTAINS
     !
     IF (.NOT. input%film) THEN
        vacuum%dvac = cell%amat(3, 3)
+       IF (cell%primCellZ.NE.0.0) THEN
+          IF(cell%amat(3,3) - (cell%primCellZ * NINT(cell%amat(3,3) / cell%primCellZ)).GT.1.0e-5) THEN
+             WRITE(*,'(a,f15.8)') 'Supercell z: ', cell%amat(3,3)
+             WRITE(*,'(a,f15.8)') 'primitive cell z: ', cell%primCellZ
+             WRITE(*,'(a,f15.8)') 'Factor between supercell z and primitive cell z: ', cell%amat(3,3) / cell%primCellZ
+             CALL juDFT_warn("supercell and primitive cell z dimensions are inconsistent.", calledby="make_defaults")
+          END IF
+          banddos%s_cell_z = NINT(cell%amat(3,3) / cell%primCellZ)
+       END IF
     ELSE
        IF (vacuum%dvac<=abs(cell%amat(3,3))) THEN
           min_dtild=0.0
@@ -110,9 +125,12 @@ CONTAINS
           ENDIF
           vacuum%dvac = round_to_deci(vacuum%dvac, 2)
           atoms%taual(3,:)=atoms%taual(3,:)*cell%amat(3,3)/(vacuum%dvac+2.5)
-          cell%amat(3,3)=vacuum%dvac+2.5
        ENDIF
-
+       cell%amat(3,3)=vacuum%dvac+2.5
+       IF(cell%primCellZ.NE.0.0) THEN
+          cell%amat(3,3) = cell%primCellZ * CEILING(cell%amat(3,3) / cell%primCellZ)
+          banddos%s_cell_z = NINT(cell%amat(3,3) / cell%primCellZ)
+       END IF
     ENDIF
     vacuum%nvac = 2
     IF (sym%zrfs .OR. sym%invs) vacuum%nvac = 1
@@ -150,7 +168,7 @@ CONTAINS
     hybinp%select1(4, :) = 2
     mpinp%g_cutoff = round_to_deci(input%rkmax - 0.5, 1)
     mpinp%linear_dep_tol = 1e-4
-    CALL input%init(noco,hybinp%l_hybrid)
+    CALL input%init(noco,hybinp%l_hybrid,sym%invs,atoms%n_denmat,atoms%n_hia)
     hybinp%bands1 = CEILING(0.75*input%gw_neigd)
   END SUBROUTINE make_defaults
 END MODULE m_make_defaults

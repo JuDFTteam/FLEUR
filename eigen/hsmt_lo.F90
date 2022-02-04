@@ -3,15 +3,24 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
+#ifdef _OPENACC
+#define CPP_OMP !no OMP
+#define CPP_ACC $acc
+#else 
+#define CPP_OMP $OMP 
+#define CPP_ACC !no ACC 
+#endif
 MODULE m_hsmt_lo
   USE m_juDFT
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC hsmt_lo
 CONTAINS
-  SUBROUTINE Hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,Isp,jsp,Iintsp,Jintsp,Hmat,Smat)
+  SUBROUTINE Hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,Isp,jsp,Iintsp,Jintsp,Hmat,set0,Smat)
     USE m_hlomat
     USE m_slomat
     USE m_setabc1lo
+    USE m_types_mpimat
     USE m_types
     USE m_hsmt_fjgj
     IMPLICIT NONE
@@ -26,6 +35,7 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)    :: ud
     TYPE(t_tlmplm),INTENT(IN)   :: tlmplm
     TYPE(t_fjgj),INTENT(IN)     :: fjgj
+    LOGICAL,INTENT(IN)          :: set0  !if true, initialize the LO-part of the matrices with zeros
 
     CLASS(t_mat),INTENT(INOUT)::hmat
     CLASS(t_mat),INTENT(INOUT),OPTIONAL::smat
@@ -39,10 +49,56 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER na,nn,usp
+    INTEGER l,nkvec,kp
     !     ..
     !     .. Local Arrays ..
     REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     CALL timestart("LO setup")
+
+    IF (set0) THEN
+       SELECT TYPE (hmat)
+       TYPE IS (t_mpimat)
+          l = hmat%global_size2
+       CLASS DEFAULT
+          l = hmat%matsize2
+       END SELECT
+
+       !CPP_OMP PARALLEL DEFAULT(none) &
+       !CPP_OMP SHARED(fmpi,l,lapw,hmat,smat,jintsp) &
+       !CPP_OMP PRIVATE(nkvec,kp)
+       !CPP_OMP DO
+       !CPP_ACC kernels present(hmat,hmat%data_r,hmat%data_c)
+       DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
+          IF( nkvec > lapw%nv(jintsp)) THEN
+             kp=(nkvec-1)/fmpi%n_size+1
+             IF (hmat%l_real) THEN
+                hmat%data_r(:,kp) = 0.0
+             ELSE
+                hmat%data_c(:,kp) = CMPLX(0.0,0.0)
+             ENDIF
+          ENDIF
+       ENDDO
+       !CPP_ACC end kernels
+       !CPP_OMP END DO
+       IF ( present(smat)) THEN
+          !CPP_OMP DO
+          !CPP_ACC kernels present(smat,smat%data_r,smat%data_c)
+          DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
+             IF( nkvec > lapw%nv(jintsp)) THEN
+                kp=(nkvec-1)/fmpi%n_size+1
+                IF (smat%l_real) THEN
+                   smat%data_r(:,kp) = 0.0
+                ELSE
+                   smat%data_c(:,kp) = CMPLX(0.0,0.0)
+                ENDIF
+             ENDIF
+          ENDDO
+          !CPP_ACC end kernels
+          !CPP_OMP END DO
+       ENDIF
+       !CPP_OMP END PARALLEL
+    ENDIF
+
     na = SUM(atoms%neq(:n-1))
     DO nn = 1,atoms%neq(n)
        na = na + 1
@@ -82,4 +138,5 @@ CONTAINS
 
     RETURN
   END SUBROUTINE hsmt_lo
+
 END MODULE m_hsmt_lo

@@ -65,11 +65,11 @@ CONTAINS
       USE m_trafo
       USE m_wavefproducts
       USE m_olap
-      USE m_spmvec
       USE m_hsefunctional
       USE m_io_hybrid
       USE m_kp_perturbation
-      use m_spmm
+      use m_spmm_inv
+      use m_spmm_noinv
       use m_work_package
       use m_judft 
 #ifdef CPP_MPI
@@ -115,7 +115,7 @@ CONTAINS
       INTEGER                 ::  iband, jq, iq, nq_idx
       INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p, start, stride
-      INTEGER                 ::  n1, n2, nn2, me
+      INTEGER                 ::  n1, n2, nn2, me, max_band_pack
       INTEGER                 ::  ikqpt, iob, m, n, k, lda, ldb, ldc
       INTEGER                 ::  ok, psize, n_parts, ipart, ibando
 
@@ -127,15 +127,15 @@ CONTAINS
       LOGICAL, SAVE           ::  initialize = .true.
 
       ! local arrays
-      COMPLEX              :: exchcorrect(fi%kpts%nkptf)
-      COMPLEX, allocatable :: dcprod(:,:,:) ! (hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp), 3)
-      COMPLEX, allocatable :: exch_vv(:,:) !(hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp))
-      COMPLEX              :: hessian(3, 3)
-      COMPLEX              :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk,jsp))
-      COMPLEX              :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
-      COMPLEX, ALLOCATABLE :: phase_vv(:, :), c_coul_wavf(:,:), dot_result_c(:,:)
-      REAL,    ALLOCATABLE :: r_coul_wavf(:,:), dot_result_r(:,:)
-      LOGICAL              :: occup(fi%input%neig), conjg_mtir
+      COMPLEX                          :: exchcorrect(fi%kpts%nkptf)
+      COMPLEX, allocatable             :: dcprod(:,:,:) ! (hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp), 3)
+      COMPLEX, allocatable             :: exch_vv(:,:) !(hybdat%nbands(k_pack%nk,jsp), hybdat%nbands(k_pack%nk,jsp))
+      COMPLEX                          :: hessian(3, 3)
+      COMPLEX                          :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk,jsp))
+      COMPLEX                          :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
+      COMPLEX, ALLOCATABLE CPP_MANAGED :: phase_vv(:, :), c_coul_wavf(:,:), dot_result_c(:,:)
+      REAL, ALLOCATABLE CPP_MANAGED    :: r_coul_wavf(:,:), dot_result_r(:,:)
+      LOGICAL                          :: occup(fi%input%neig), conjg_mtir
 #ifdef _OPENACC
       real, allocatable    :: cprod_vv_r(:,:)
       complex, allocatable :: cprod_vv_c(:,:)
@@ -179,215 +179,230 @@ CONTAINS
       if(ierr /= 0) call judft_error("Can't alloc exch_vv")
 
 
-      !$acc enter data create(exch_vv) copyin(hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest, ik, jsp) 
-      !$acc kernels present(exch_vv) default(none)
-      exch_vv = 0
-      !$acc end kernels
+      !$acc data copyout(exch_vv) copyin(hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest) 
+         !$acc kernels present(exch_vv) default(none)
+         exch_vv = 0
+         !$acc end kernels
 
-      call timestop("alloc phase_vv & dot_res")
-      
-      call timestart("q_loop")
-      DO jq = 1, size(k_pack%q_packs)
-         call timestart("initial setup")
-         iq = k_pack%q_packs(jq)%ptr
-         iq_p = fi%kpts%bkp(iq)
+         call timestop("alloc phase_vv & dot_res")
+         
+         call timestart("q_loop")
 
-         ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)))
-
-         n_parts = size(k_pack%q_packs(jq)%band_packs)
-         start  = k_pack%q_packs(jq)%submpi%rank + 1
-         stride = k_pack%q_packs(jq)%submpi%size
-         call timestop("initial setup")
-         do ipart = start, n_parts, stride
-            !if (n_parts > 1) write (*, *) "Part ("//int2str(ipart)//"/"//int2str(n_parts)//") ik= "//int2str(ik)//" jq= "//int2str(jq)
-            psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
-            ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
-            call timestart("alloc & copy")
-            call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik,jsp), mat_name="cprod_vv")
-            call alloc_dev_cpy(cprod_vv, CPP_cprod_r, CPP_cprod_c)
-            call timestop("alloc & copy")
-            IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
-                                      hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
-            ELSE
-               CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw,&
-                                        hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
-            END IF
-
-            ! The sparse matrix technique is not feasible for the HSE
-            ! functional. Thus, a dynamic adjustment is implemented
-            ! The mixed basis functions and the potential difference
-            ! are Fourier transformed, so that the exchange can be calculated
-            ! in Fourier space
-            ! IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-            !    call judft_error("HSE not implemented")
-            !    ! iband1 = hybdat%nobd(ikqpt, jsp)
-
-            !    ! exch_vv = exch_vv + &
-            !    !           dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
-            !    !                                  fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
-            !    !                                  fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
-            !    !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-            !    !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
-            !    !                                  fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
-            !    !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
-            ! END IF
-
-            ! the Coulomb matrix is only evaluated at the irrecuible k-points
-            ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
-            ! from IBZ to current k-point
-
-            call timestart("bra_trafo stuff")
-            IF (fi%kpts%bkp(iq) /= iq) THEN
-               call carr3_vv%init(cprod_vv, mat_name="carr_3")
-               call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik,jsp), iq, psize, phase_vv, cprod_vv, carr3_vv)
-               call cprod_vv%copy(carr3_vv, 1, 1)
-               call carr3_vv%free()
-            ELSE
-               phase_vv(:, :) = cmplx_1
-            END IF
-            call timestop("bra_trafo stuff")
-            
-            call timestart("alloc coul_wavf")
-            if(cprod_vv%l_real) then 
-               allocate(r_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr)
-               allocate(c_coul_wavf(0,0))
-            else
-               allocate(c_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr)
-               allocate(r_coul_wavf(0,0))
-            endif
-            if(ierr /= 0) call judft_error("can't alloc coul_wavf")
-            !$acc data create(c_coul_wavf, r_coul_wavf)
-            !$acc kernels present(r_coul_wavf, c_coul_wavf)
-            r_coul_wavf = 0.0
-            c_coul_wavf = cmplx_0
-            !$acc end kernels
-            !$acc wait
-            call timestop("alloc coul_wavf")
-            
-            call timestart("exchange matrix")
-            call timestart("sparse matrix products")
-            IF (mat_ex%l_real) THEN
-               call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv, r_coul_wavf)
-            ELSE
-               conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
-               call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv, c_coul_wavf)
-            END IF
-            call timestop("sparse matrix products")
-
-            nq_idx = k_pack%q_packs(jq)%rank
-
-            call timestart("apply prefactors carr1_v")
-            !$acc enter data copyin(phase_vv)
-            !$acc data copyin(psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
-            if (mat_ex%l_real) then
-#ifdef _OPENACC
-               call timestart("cpy cprod")
-               call dlacpy("N", size(cprod_vv%data_r, 1), size(cprod_vv%data_r, 2), cprod_vv%data_r, size(cprod_vv%data_r, 1), CPP_cprod_r, size(CPP_cprod_r,1))
-               call timestop("cpy cprod")
-#endif
-               !$acc enter data copyin(CPP_cprod_r)
-
-               !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-               !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, phase_vv, ikqpt, ibando)&
-               !$acc present(n_q, nq_idx)
-               DO iband = 1, hybdat%nbands(ik,jsp)
-                  DO iob = 1, psize
-                     do i = 1, hybdat%nbasm(iq)
-                        r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1))&
-                                                  * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)                        
-                     enddo
-                  enddo
-               enddo
-               !$acc end parallel loop
-            else
-#ifdef _OPENACC
-               call timestart("cpy cprod")
-               call zlacpy("N", size(cprod_vv%data_c, 1), size(cprod_vv%data_c, 2), cprod_vv%data_c, size(cprod_vv%data_c, 1), CPP_cprod_c, size(CPP_cprod_c,1))
-               call timestop("cpy cprod")
-#endif
-               !$acc enter data copyin(CPP_cprod_c)
-
-               !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-               !$acc present(c_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, ik, jsp, psize, wl_iks, ikqpt, ibando)&
-               !$acc present(n_q, nq_idx)
-               DO iband = 1, hybdat%nbands(ik,jsp)
-                  DO iob = 1, psize
-                     do i = 1, hybdat%nbasm(iq)
-                        c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) &
-                                                   * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
-                     enddo
-                  enddo
-               enddo
-               !$acc end parallel loop
-            endif
-            !$acc end data
-
-            call timestop("apply prefactors carr1_v")
-
-            call timestart("exch_vv dot prod")
-            m = hybdat%nbands(ik,jsp)
-            n = hybdat%nbands(ik,jsp)
-            k = hybdat%nbasm(iq)
-            lda = hybdat%nbasm(iq)*psize
-            ldb = hybdat%nbasm(iq)*psize
-            ldc = hybdat%nbands(ik,jsp)
-
-            IF (mat_ex%l_real) THEN
-               !calculate all dotproducts for the current iob -> need to skip intermediate iob
-               !$acc enter data create(dot_result_r) 
-               DO iob = 1, psize
-                  call timestart("CPP_dgemm")
-                  !$acc host_data use_device(CPP_cprod_r, dot_result_r)
-                  call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
-                  !$acc end host_data
-                  !$acc wait
-                  call timestop("CPP_dgemm")
-
-                  !$acc kernels present(exch_vv, dot_result_r, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest) default(none)
-                  DO iband = 1, hybdat%nbands(ik,jsp)
-                     DO n2 = 1, nsest(iband)
-                        nn2 = indx_sest(n2, iband)
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_r(iband, nn2)
-                     enddo
-                  END DO
-                  !$acc end kernels
-               END DO
-               !$acc exit data delete(CPP_cprod_r, dot_result_r)
-            ELSE
-               !calculate all dotproducts for the current iob -> need to skip intermediate iob
-               !$acc enter data create(dot_result_c) 
-               DO iob = 1, psize
-                  call timestart("CPP_zgemm")
-                  !$acc host_data use_device(c_coul_wavf, CPP_cprod_c, dot_result_c)
-                  call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, dot_result_c, ldc)
-                  !$acc end host_data
-                  !$acc wait
-                  call timestop("CPP_zgemm")
-
-                  !$acc kernels present(exch_vv, dot_result_c, hybdat, hybdat%nbands, nsest, indx_sest)  default(none)
-                  DO iband = 1, hybdat%nbands(ik,jsp)
-                     DO n2 = 1, nsest(iband)
-                        nn2 = indx_sest(n2, iband)
-                        exch_vv(nn2, iband) = exch_vv(nn2, iband) + dot_result_c(iband, nn2)
-                     enddo
-                  END DO
-                  !$acc end kernels
-               enddo
-               !$acc exit data delete(c_coul_wavf,CPP_cprod_c, dot_result_c)
-            END IF
-            !$acc exit data delete(phase_vv)
-            call timestop("exch_vv dot prod")
-            call timestop("exchange matrix")
-            !$acc end data 
-
-            call cprod_vv%free()
-            if(allocated(r_coul_wavf)) deallocate(r_coul_wavf)
-            if(allocated(c_coul_wavf)) deallocate(c_coul_wavf)
+         call timestart("get max_q")
+         max_band_pack = 0 
+         DO jq = 1, size(k_pack%q_packs)
+            max_band_pack = max(max_band_pack, k_pack%q_packs(jq)%submpi%size)
          enddo
-      END DO  !jq
-      !$acc exit data copyout(exch_vv) delete(hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest, ik, jsp)
+         hybdat%max_q = size(k_pack%q_packs) * fi%kpts%nkptf  * max_band_pack
+#ifdef CPP_MPI
+         call MPI_Allreduce(MPI_IN_PLACE, hybdat%max_q, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
+#endif
+         call timestop("get max_q")
+
+         DO jq = 1, size(k_pack%q_packs)
+            call timestart("initial setup")
+            iq = k_pack%q_packs(jq)%ptr
+            iq_p = fi%kpts%bkp(iq)
+
+            ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:, ik) + fi%kpts%bkf(:, iq)))
+
+            n_parts = size(k_pack%q_packs(jq)%band_packs)
+            start  = k_pack%q_packs(jq)%submpi%rank + 1
+            stride = k_pack%q_packs(jq)%submpi%size
+            call timestop("initial setup")
+            do ipart = start, n_parts, stride
+               !if (n_parts > 1) write (*, *) "Part ("//int2str(ipart)//"/"//int2str(n_parts)//") ik= "//int2str(ik)//" jq= "//int2str(jq)
+               psize = k_pack%q_packs(jq)%band_packs(ipart)%psize
+               ibando = k_pack%q_packs(jq)%band_packs(ipart)%start_idx
+               call timestart("alloc & copy")
+               call cprod_vv%alloc(mat_ex%l_real, hybdat%nbasm(iq), psize*hybdat%nbands(ik,jsp), mat_name="cprod_vv")
+               call alloc_dev_cpy(cprod_vv, CPP_cprod_r, CPP_cprod_c)
+               call timestop("alloc & copy")
+               IF (mat_ex%l_real) THEN
+                  CALL wavefproducts_inv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw, &
+                                       hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
+               ELSE
+                  CALL wavefproducts_noinv(fi, ik, z_k, iq, jsp, ibando, ibando + psize - 1, lapw,&
+                                          hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod_vv)
+               END IF
+               ! The sparse matrix technique is not feasible for the HSE
+               ! functional. Thus, a dynamic adjustment is implemented
+               ! The mixed basis functions and the potential difference
+               ! are Fourier transformed, so that the exchange can be calculated
+               ! in Fourier space
+               ! IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+               !    call judft_error("HSE not implemented")
+               !    ! iband1 = hybdat%nobd(ikqpt, jsp)
+
+               !    ! exch_vv = exch_vv + &
+               !    !           dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
+               !    !                                  fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
+               !    !                                  fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
+               !    !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
+               !    !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
+               !    !                                  fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
+               !    !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
+               ! END IF
+
+               ! the Coulomb matrix is only evaluated at the irrecuible k-points
+               ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
+               ! from IBZ to current k-point
+
+               call timestart("bra_trafo stuff")
+               IF (fi%kpts%bkp(iq) /= iq) THEN
+                  call carr3_vv%init(cprod_vv, mat_name="carr_3")
+                  call bra_trafo(fi, mpdata, hybdat, hybdat%nbands(ik,jsp), iq, psize, phase_vv, cprod_vv, carr3_vv)
+                  call cprod_vv%copy(carr3_vv, 1, 1)
+                  call carr3_vv%free()
+               ELSE
+                  phase_vv(:, :) = cmplx_1
+               END IF
+               call timestop("bra_trafo stuff")
+               
+               call timestart("alloc coul_wavf")
+               if(cprod_vv%l_real) then 
+                  allocate(r_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr)
+                  allocate(c_coul_wavf(0,0))
+               else
+                  allocate(c_coul_wavf(cprod_vv%matsize1, cprod_vv%matsize2), stat=ierr)
+                  allocate(r_coul_wavf(0,0))
+               endif
+               if(ierr /= 0) call judft_error("can't alloc coul_wavf")
+               r_coul_wavf = 0.0
+               call timestop("alloc coul_wavf")
+               
+               call timestart("exchange matrix")
+               call timestart("sparse matrix products")
+               IF (mat_ex%l_real) THEN
+                  call spmm_invs(fi, mpdata, hybdat, iq_p, cprod_vv%data_r, r_coul_wavf)
+               ELSE
+                  conjg_mtir = (fi%kpts%bksym(iq) > fi%sym%nop)
+                  call spmm_noinvs(fi, mpdata, hybdat, iq_p, conjg_mtir, cprod_vv%data_c, c_coul_wavf)
+               END IF
+               call timestop("sparse matrix products")
+
+               !$acc enter data copyin(phase_vv, r_coul_wavf, c_coul_wavf)
+               nq_idx = k_pack%q_packs(jq)%rank
+
+
+               call timestart("apply prefactors carr1_v")
+               !$acc data copyin(psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
+                  if (mat_ex%l_real) then
+#ifdef _OPENACC
+                     call timestart("cpy cprod")
+                     call dlacpy("N", size(cprod_vv%data_r, 1), size(cprod_vv%data_r, 2), cprod_vv%data_r, size(cprod_vv%data_r, 1), CPP_cprod_r, size(CPP_cprod_r,1))
+                     call timestop("cpy cprod")
+#endif
+                     !$acc enter data copyin(CPP_cprod_r)
+
+                     !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
+                     !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, psize, wl_iks, phase_vv, ikqpt, ibando)&
+                     !$acc present(n_q, nq_idx)
+                     DO iband = 1, hybdat%nbands(ik,jsp)
+                        DO iob = 1, psize
+                           do i = 1, hybdat%nbasm(iq)
+                              r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1))&
+                                                      * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)                        
+                           enddo
+                        enddo
+                     enddo
+                     !$acc end parallel loop
+
+                  else
+#ifdef _OPENACC
+                     call timestart("cpy cprod")
+                     call zlacpy("N", size(cprod_vv%data_c, 1), size(cprod_vv%data_c, 2), cprod_vv%data_c, size(cprod_vv%data_c, 1), CPP_cprod_c, size(CPP_cprod_c,1))
+                     call timestop("cpy cprod")
+#endif
+                     !$acc enter data copyin(CPP_cprod_c)
+
+                     !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
+                     !$acc present(c_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, psize, wl_iks, ikqpt, ibando)&
+                     !$acc present(n_q, nq_idx)
+                     DO iband = 1, hybdat%nbands(ik,jsp)
+                        DO iob = 1, psize
+                           do i = 1, hybdat%nbasm(iq)
+                              c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) &
+                                                         * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
+                           enddo
+                        enddo
+                     enddo
+                     !$acc end parallel loop
+                  endif
+               !$acc end data ! (psize, wl_iks, n_q, nq_idx, ibando, ikqpt)
+               call timestop("apply prefactors carr1_v")
+
+               call timestart("exch_vv dot prod")
+               m = hybdat%nbands(ik,jsp)
+               n = hybdat%nbands(ik,jsp)
+               k = hybdat%nbasm(iq)
+               lda = hybdat%nbasm(iq)*psize
+               ldb = hybdat%nbasm(iq)*psize
+               ldc = hybdat%nbands(ik,jsp)
+
+               IF (mat_ex%l_real) THEN
+                  !calculate all dotproducts for the current iob -> need to skip intermediate iob
+                  !$acc enter data create(dot_result_r) 
+                  DO iob = 1, psize
+                     call timestart("CPP_dgemm")
+                     !$acc host_data use_device(r_coul_wavf, CPP_cprod_r, dot_result_r)
+                     call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
+                     !$acc end host_data
+                     !$acc wait
+                     call timestop("CPP_dgemm")
+
+                     !$acc kernels present(exch_vv, dot_result_r, phase_vv, hybdat, hybdat%nbands, nsest, indx_sest) default(none)
+                     DO iband = 1, hybdat%nbands(ik,jsp)
+                        DO n2 = 1, nsest(iband)
+                           nn2 = indx_sest(n2, iband)
+                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_r(iband, nn2)
+                        enddo
+                     END DO
+                     !$acc end kernels
+                  END DO
+                  !$acc exit data delete(CPP_cprod_r, dot_result_r)
+               ELSE
+                  !calculate all dotproducts for the current iob -> need to skip intermediate iob
+                  !$acc enter data create(dot_result_c) 
+                  DO iob = 1, psize
+                     call timestart("CPP_zgemm")
+                     !$acc host_data use_device(c_coul_wavf, CPP_cprod_c, dot_result_c)
+                     call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, dot_result_c, ldc)
+                     !$acc end host_data
+                     !$acc wait
+                     call timestop("CPP_zgemm")
+
+                     !$acc kernels present(exch_vv, dot_result_c, hybdat, hybdat%nbands, nsest, indx_sest)  default(none)
+                     DO iband = 1, hybdat%nbands(ik,jsp)
+                        DO n2 = 1, nsest(iband)
+                           nn2 = indx_sest(n2, iband)
+                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + dot_result_c(iband, nn2)
+                        enddo
+                     END DO
+                     !$acc end kernels
+                  enddo
+                  !$acc exit data delete(CPP_cprod_c, dot_result_c)
+               END IF
+               !$acc exit data delete(phase_vv, r_coul_wavf, c_coul_wavf)
+               call timestop("exch_vv dot prod")
+               call timestop("exchange matrix")
+               
+               call cprod_vv%free()
+               if(allocated(r_coul_wavf)) deallocate(r_coul_wavf)
+               if(allocated(c_coul_wavf)) deallocate(c_coul_wavf)
+            enddo
+         END DO  !jq
+      !$acc end data ! exch_vv hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest
       call timestop("q_loop")
+
+#ifdef CPP_MPI
+      call timestart("balanicing MPI_Barriers")
+      do while (hybdat%max_q > 0)
+         call MPI_Barrier(MPI_COMM_WORLD, ierr)
+         hybdat%max_q = hybdat%max_q - 1
+      enddo
+      call timestop("balanicing MPI_Barriers")
+#endif
 
       if(allocated(dot_result_r)) deallocate(dot_result_r)
       if(allocated(dot_result_c)) deallocate(dot_result_c)
@@ -544,7 +559,6 @@ CONTAINS
       END IF
       call timestop("reduce exch_vv>mat_ex")
       CALL timestop("valence exchange calculation")
-
    END SUBROUTINE exchange_valence_hf
 
    SUBROUTINE calc_divergence(cell, kpts, divergence)

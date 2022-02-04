@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_forcea21U
 CONTAINS
-   SUBROUTINE force_a21_U(atoms,i_u,itype,isp,we,ne,usdus,v_mmp,eigVecCoeffs,aveccof,bveccof,cveccof,a21)
+   SUBROUTINE force_a21_U(atoms,itype,isp,we,ne,usdus,v_mmp,eigVecCoeffs,aveccof,bveccof,cveccof,a21)
       !--------------------------------------------------------------------------
       ! This subroutine calculates the lda+U contribution to the HF forces, 
       ! similar to the A21 term, according to eqn. (22) of F. Tran et al.
@@ -24,8 +24,6 @@ CONTAINS
       TYPE(t_eigVecCoeffs), INTENT(IN) :: eigVecCoeffs
 
       INTEGER, INTENT (IN)    :: itype,isp,ne
-      INTEGER, INTENT (INOUT) :: i_u ! on input: index for the first U for atom type "itype   or higher"
-                                     ! on exit:  index for the first U for atom type "itype+1 or higher"
 
       REAL,    INTENT(IN)    :: we(:) !(ne)
       COMPLEX, INTENT(IN)    :: v_mmp(-lmaxU_const:,-lmaxU_const:,:) !(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u+atoms%n_hia)
@@ -35,7 +33,7 @@ CONTAINS
       REAL,    INTENT(INOUT) :: a21(:,:) !(3,atoms%nat)
 
       COMPLEX v_a, v_b, v_c, p1, p2, p3
-      INTEGER lo, lop, l, lp, mp, lm, lmp, iatom, ie, i, m
+      INTEGER lo, lop, l, lp, mp, lm, lmp, iatom, ie, i, m, i_u
 
       !--- ABBREVIATIONS --------------------------------------------------------
       ! ccof       : coefficient of the local orbital function (u_lo*Y_lm)
@@ -44,9 +42,9 @@ CONTAINS
       ! comments in setlomap.
       !--------------------------------------------------------------------------
 
-      IF (atoms%lda_u(i_u)%atomType.GT.itype) RETURN
+      DO i_u = 1, atoms%n_u+atoms%n_hia
 
-      DO WHILE (atoms%lda_u(i_u)%atomType.EQ.itype)
+         IF(atoms%lda_u(i_u)%atomType/=itype) CYCLE
 
          l = atoms%lda_u(i_u)%l
 
@@ -100,8 +98,6 @@ CONTAINS
             END IF   ! l == atoms%llo(lo,itype)
          END DO     ! lo = 1,atoms%nlo
 
-         i_u = i_u + 1
-         IF(i_u.GT.atoms%n_u+atoms%n_hia) EXIT
       END DO
    END SUBROUTINE force_a21_U
 END MODULE m_forcea21U

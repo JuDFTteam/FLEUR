@@ -90,8 +90,6 @@ c      complex :: tuu,tud,tdu,tdd
       integer symvac,symvacvac,igvm2,igvm2i
       integer :: j1,j2,i1,i2,ind3,ind2
       character(len=20) :: fname
-c     ..intrinsic functions..
-      intrinsic aimag,cmplx,conjg,real,sqrt
 
       allocate ( ac(nv2d,nslibd),bc(nv2d,nslibd),
      +           ac_b(nv2d,nslibd_b),bc_b(nv2d,nslibd_b),

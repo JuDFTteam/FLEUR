@@ -26,14 +26,15 @@ MODULE m_constants
   REAL,             PARAMETER :: tpi_const=2.*3.1415926535897932
   REAL,             PARAMETER :: fpi_const=4.*3.1415926535897932
   REAL,             PARAMETER :: sfp_const=SQRT(4.*3.1415926535897932)
+  real,             parameter :: sqrt_2=sqrt(2.0)
   COMPLEX,          PARAMETER :: ImagUnit=(0.0,1.0)
   REAL,             PARAMETER :: hartree_to_ev_const=27.211386245988 ! value from  https://physics.nist.gov/cgi-bin/cuu/Value?hrev
                                                                      ! 27.211386245988(53)
   REAL,             PARAMETER :: bohr_to_angstrom_const=0.529177210903 ! value from https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
                                                                        ! 0.529177210903(80) 
   REAL,             PARAMETER :: eVac0Default_const = -0.25
-  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 34'
-  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 5.1          (www.max-centre.eu)'
+  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 35'
+  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 6.0          (www.max-centre.eu)'
   REAL, PARAMETER             :: boltzmann_const = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
   INTEGER, PARAMETER :: POTDEN_TYPE_OTHER        = 0    ! POTDEN_TYPE <= 0 ==> undefined

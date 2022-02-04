@@ -23,6 +23,7 @@ CONTAINS
     ! function legpol() at end of module
     !***********************************************************************
     USE m_constants,ONLY: fpi_const
+    !USE m_types_mpimat
     USE m_types
     USE m_hsmt_fjgj
     IMPLICIT NONE

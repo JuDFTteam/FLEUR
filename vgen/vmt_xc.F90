@@ -34,7 +34,6 @@ MODULE m_vmt_xc
          USE m_types_xcpot_inbuild
          USE m_types
          USE m_metagga
-         USE m_juDFT_string
          IMPLICIT NONE
 
          CLASS(t_xcpot),INTENT(IN)      :: xcpot
@@ -70,15 +69,15 @@ MODULE m_vmt_xc
          lda_atom=.FALSE.; l_libxc=.FALSE.
          SELECT TYPE(xcpot)
          TYPE IS(t_xcpot_inbuild)
-            lda_atom=xcpot%lda_atom
+            lda_atom=atoms%lda_atom
             IF (ANY(lda_atom)) THEN
                IF((.NOT.xcpot%is_name("pw91"))) &
                   CALL judft_warn("Using locally LDA only possible with pw91 functional")
                !TODO: check this code and the functionality
-               !xcpot_tmp%inbuild_name="l91"
-               !xcpot_tmp%l_relativistic=.FALSE.
+               xcpot_tmp%l_inbuild = .TRUE.
+               xcpot_tmp%inbuild_name="l91"
+               xcpot_tmp%l_relativistic=.FALSE.
                CALL xcpot_tmp%init(atoms%ntype)
-               ALLOCATE(xcl(SIZE(v_xc,1),SIZE(v_xc,2)))
             ENDIF
          CLASS DEFAULT
             l_libxc=.true. !libxc!!
@@ -127,6 +126,7 @@ MODULE m_vmt_xc
                   , v_x,grad)
 #endif
             IF (lda_atom(n)) THEN
+               ALLOCATE(xcl(nsp*atoms%jri(n),input%jspins))
                ! Use local part of pw91 for this atom
                CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
                !Mix the potentials
@@ -145,6 +145,16 @@ MODULE m_vmt_xc
             !Add postprocessing for libxc
             IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_xc,grad, atom_num=n)
             IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_x,grad, atom_num=n)
+
+            !IF (l_libxc.AND.xcpot%needs_grad()) THEN
+            !   CALL save_npy('vxc_gga_mt_libxc.npy',v_xc)
+            !ELSE IF (l_libxc.AND.(.NOT.xcpot%needs_grad())) THEN
+            !  CALL save_npy('vxc_lda_mt_libxc.npy',v_xc)
+            !ELSE IF ((.NOT.l_libxc).AND.xcpot%needs_grad()) THEN
+            !   CALL save_npy('vxc_gga_mt_inbuild.npy',v_xc)
+            !ELSE
+            !  CALL save_npy('vxc_lda_mt_inbuild.npy',v_xc)
+            !END IF
 
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
@@ -183,6 +193,7 @@ MODULE m_vmt_xc
                ENDIF
                CALL mt_from_grid(atoms,sym,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
             ENDIF
+            IF (lda_atom(n)) DEALLOCATE(xcl)
             DEALLOCATE (ch,v_x,v_xc,e_xc)
          ENDDO
 

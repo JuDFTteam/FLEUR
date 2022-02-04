@@ -12,8 +12,8 @@ MODULE m_read_inpgen_input
   PUBLIC read_inpgen_input, peekInpgenInput
 CONTAINS
 
-  SUBROUTINE read_inpgen_input(atom_pos,atom_id,atom_label,kpts_str,kptsName,kptsPath,kptsBZintegration,&
-       input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+  SUBROUTINE read_inpgen_input(profile,atom_pos,atom_id,atom_label,kpts_str,kptsName,kptsPath,kptsBZintegration,&
+                               kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
     !Subroutine reads the old-style input for inpgen
     USE m_atompar
     USE m_types_input
@@ -27,13 +27,16 @@ CONTAINS
     USE m_constants
     USE m_process_lattice_namelist
     USE m_inv3
+    USE m_types_profile
 
+    TYPE(t_profile),INTENT(IN)     :: profile
     REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:)
     CHARACTER(len=20), ALLOCATABLE,INTENT(OUT) :: atom_Label(:)
     CHARACTER(len=40),INTENT(OUT)  :: kpts_str(:)
     CHARACTER(len=40),INTENT(out)  :: kptsName(:)
     CHARACTER(len=500),INTENT(out) :: kptsPath(:)
     INTEGER,INTENT(OUT)            :: kptsBZintegration(:)
+    LOGICAL,INTENT(OUT)            :: kptsGamma(:)
     TYPE(t_input),INTENT(out)      :: input
     TYPE(t_sym),INTENT(OUT)        :: sym
     TYPE(t_noco),INTENT(OUT)       :: noco
@@ -44,11 +47,13 @@ CONTAINS
     TYPE(t_hybinp),INTENT(OUT)     :: hybinp
 
 
+
     !locals
     REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),cart_mat(3,3),det,temp
     INTEGER             :: ios,n,i, iKpts
     CHARACTER(len=100)  :: filename
-    LOGICAL             :: l_exist,cartesian
+    LOGICAL             :: l_exist
+    LOGICAL             :: cartesian=.false.
     CHARACTER(len=16384):: line
     TYPE(t_atompar)     :: ap
 
@@ -73,6 +78,10 @@ CONTAINS
        BACKSPACE(98)
     ENDIF
 
+    IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
+       input%tkb = profile%fermiSmearing
+    END IF
+
     aa=0.0
     input%jspins=0
     readloop: DO WHILE(ios==0)
@@ -86,7 +95,7 @@ CONTAINS
           CASE('inpu')
              CALL process_input(line,input%film,sym%symor,cartesian,hybinp%l_hybrid)
           CASE('atom')
-             CALL read_atom_params_old(98,ap)
+             CALL read_atom_params_old(98,ap,profile)
              CALL add_atompar(ap)
           CASE('qss ')
              CALL process_qss(line,noco)
@@ -101,10 +110,10 @@ CONTAINS
           CASE('comp')
              CALL process_comp(line,input%jspins,input%frcor,input%ctail,input%kcrel,stars%gmax,xcpot%gmaxxc,input%rkmax)
           CASE('expe')
-             CALL process_expert(line,input%gw)
+             CALL process_expert(line,input%gw,cell%primCellZ)
           CASE('kpt ')
              iKpts = iKpts + 1
-             CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),input%tkb)
+             CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),kptsGamma(ikpts),input%tkb)
              IF(TRIM(ADJUSTL(kptsName(iKpts))).EQ.'') THEN
                 IF(TRIM(ADJUSTL(kptsPath(iKpts))).EQ.'') THEN
                    WRITE(kptsName(iKpts),'(a,i0)') "default-", iKpts
@@ -224,7 +233,7 @@ CONTAINS
     INTEGER, INTENT(INOUT) :: numKptsPath
 
     INTEGER             :: ios
-    LOGICAL             :: l_exist
+    LOGICAL             :: l_exist,gamma
     CHARACTER(len=100)  :: filename
     CHARACTER(len=16384):: line
 
@@ -256,7 +265,7 @@ CONTAINS
           SELECT CASE(line(2:5)) !e.g. atom
           CASE('kpt ')
              numKpts = numKpts + 1
-             CALL process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,tkb)
+             CALL process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,gamma,tkb)
              IF(kptsPath.NE.'') numKptsPath = numKptsPath + 1
           END SELECT
        END IF
@@ -267,27 +276,29 @@ CONTAINS
   END SUBROUTINE peekInpgenInput
 
 
-  SUBROUTINE process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,tkb)
+  SUBROUTINE process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,kptsGamma,tkb)
     USE m_constants
     CHARACTER(len=*),INTENT(in)::line
     CHARACTER(len=40),INTENT(out)::kpts_str
     CHARACTER(len=40),INTENT(out)::kptsName
     CHARACTER(len=500),INTENT(out)::kptsPath
     INTEGER,INTENT(inout)::bz_integration_out
+    LOGICAL,INTENT(out)::kptsGamma
     REAL,INTENT(inout):: tkb
 
-    LOGICAL :: tria
+    LOGICAL :: tria, gamma
     INTEGER :: div1,div2,div3,nkpt, numSpecifications
     CHARACTER(len=5) :: bz_integration
     CHARACTER(len=40) :: name
     CHARACTER(len=500) :: path
     REAL    :: den
-    NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,tria,den,path,name
+    NAMELIST /kpt/nkpt,div1,div2,div3,tkb,bz_integration,gamma,tria,den,path,name
     div1=0;div2=0;div3=0;nkpt=0;den=0.0
     bz_integration = 'hist'
     name = ''
     path = ''
     tria=.FALSE.
+    gamma=.FALSE.
     READ(line,kpt)
     kpts_str=''
 
@@ -331,12 +342,14 @@ CONTAINS
     ENDIF
     kptsName = name
     kptsPath = path
+    kptsGamma = gamma
 
   END SUBROUTINE process_kpts
 
   SUBROUTINE process_input(line,film,symor,cartesian,hybinp)
     CHARACTER(len=*),INTENT(in)::line
     LOGICAL,INTENT(out)::film,symor,hybinp
+
 
     INTEGER :: ios
     LOGICAL :: cartesian, cal_symm, checkinp,inistop,oldfleur
@@ -454,13 +467,16 @@ CONTAINS
     IF (ios.NE.0) CALL judft_error(("Error reading:" //TRIM(line)))
   END SUBROUTINE process_comp
 
-  SUBROUTINE process_expert(line,gw)
+  SUBROUTINE process_expert(line,gw,primCellZ)
     USE m_types_xcpot_inbuild_nofunction
     CHARACTER(len=*),INTENT(in)::line
     INTEGER, INTENT(INOUT) :: gw
+    REAL, INTENT(OUT) :: primCellZ
     INTEGER :: spex
-    NAMELIST /expert/ spex
     INTEGER :: ios
+    NAMELIST /expert/ spex, primCellZ
+    primCellZ = 0.0
+
 
     spex = 0
     READ(line,expert,iostat=ios)

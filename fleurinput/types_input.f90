@@ -13,6 +13,7 @@ MODULE m_types_input
   PUBLIC:: t_input
   TYPE,EXTENDS(t_fleurinput_base):: t_input
   LOGICAL :: film=.FALSE.
+  LOGICAL :: l_real
   INTEGER :: jspins=1
   INTEGER :: neig=0
   REAL    :: rkmax=0.0
@@ -23,6 +24,8 @@ MODULE m_types_input
   LOGICAL :: cdinf =.FALSE.
   LOGICAL :: vchk =.FALSE.
   LOGICAL :: l_f =.FALSE.
+  INTEGER :: vdW=0 !bit pattern describing vdW treatment vdW=1->Grimme(D3), vdW=2->Soler
+  REAL    :: vdW_tol=0.005 !tolerance in vdW Energy (eV)
   INTEGER :: f_level = -1
   !     f_level ==-1: Original force calculation
   !     f_level == 0: Original force calculation with FORCES and POSCAR printout
@@ -35,14 +38,14 @@ MODULE m_types_input
   INTEGER :: coretail_lmax =0
   INTEGER :: itmax =15
   REAL    :: minDistance=1.0e-5
-  INTEGER :: maxiter=99
+  INTEGER :: maxiter=15
   INTEGER :: imix=7
   INTEGER :: gw=0
   INTEGER :: gw_neigd=0
   INTEGER :: qfix=0
-  REAL    :: forcealpha =1.0 !< mixing parameter for geometry optimzer
-  REAL    :: epsdisp =0.00001!< minimal displacement. If all displacements are < epsdisp stop
-  REAL    :: epsforce =0.00001!< minimal force. If all forces <epsforce stop
+  REAL    :: forcealpha =1.0 ! mixing parameter for geometry optimzer
+  REAL    :: epsdisp =0.00001! minimal displacement. If all displacements are < epsdisp stop
+  REAL    :: epsforce =0.00001! minimal force. If all forces <epsforce stop
   REAL    :: force_converged=0.00001
   INTEGER :: forcemix=2
   REAL    :: alpha=0.05
@@ -75,6 +78,7 @@ MODULE m_types_input
   REAL    :: ldauMixParam=0.05
   REAL    :: ldauSpinf=1.0
   LOGICAL :: ldauAdjEnpara=.FALSE.
+  LOGICAL :: ldauSpinoffd=.FALSE.
   LOGICAL :: l_rdmft=.FALSE.
   REAL    :: rdmftOccEps=0.0
   INTEGER :: rdmftStatesBelow=0
@@ -101,6 +105,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    END IF
    CALL mpi_bc(this%eig66(1),rank,mpi_comm)
    CALL mpi_bc(this%film,rank,mpi_comm)
+   CALL mpi_bc(this%l_real,rank,mpi_comm)
    CALL mpi_bc(this%jspins,rank,mpi_comm)
    CALL mpi_bc(this%neig,rank,mpi_comm)
    CALL mpi_bc(this%rkmax,rank,mpi_comm)
@@ -110,6 +115,8 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%cdinf,rank,mpi_comm)
    CALL mpi_bc(this%vchk,rank,mpi_comm)
    CALL mpi_bc(this%l_f,rank,mpi_comm)
+   CALL mpi_bc(this%vdW,rank,mpi_comm)
+   CALL mpi_bc(this%vdW_tol,rank,mpi_comm)
    CALL mpi_bc(this%f_level,rank,mpi_comm)
    CALL mpi_bc(this%eonly,rank,mpi_comm)
    CALL mpi_bc(this%ctail,rank,mpi_comm)
@@ -153,6 +160,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%ldauMixParam,rank,mpi_comm)
    CALL mpi_bc(this%ldauSpinf,rank,mpi_comm)
    CALL mpi_bc(this%ldauAdjEnpara,rank,mpi_comm)
+   CALL mpi_bc(this%ldauSpinoffd,rank,mpi_comm)
    CALL mpi_bc(this%l_rdmft,rank,mpi_comm)
    CALL mpi_bc(this%rdmftOccEps,rank,mpi_comm)
    CALL mpi_bc(this%rdmftStatesBelow,rank,mpi_comm)
@@ -250,6 +258,14 @@ SUBROUTINE read_xml_input(this,xml)
       IF (numberNodesB.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))))
       IF (numberNodesC.EQ.1) this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))))
       this%secvar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
+      IF(xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@vdW').EQ.1) THEN
+         valueString=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vdW')
+         if (index(valueString,"D3")>0) this%vdW=ibset(this%vdW,0)
+         if (index(valueString,"Dion")>0) this%vdW=ibset(this%vdW,1)
+         if (index(valueString,"pot")>0) this%vdW=ibset(this%vdW,2)
+         if (index(valueString,"core")>0) this%vdW=ibset(this%vdW,3)        
+      END IF
+      IF(xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@vdW_tol').EQ.1) this%vdw_tol=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vdW_tol'))
    END IF
    ! Read in Brillouin zone integration parameters
    IF (xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/@mode')> 0) THEN
@@ -333,6 +349,9 @@ SUBROUTINE read_xml_input(this,xml)
       this%ldauMixParam = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
       this%ldauSpinf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
       this%ldauAdjEnpara = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_adjEnpara'))
+      IF(xml%versionNumber>=35) THEN
+        this%ldauSpinoffd = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_spinoffd'))
+      ENDIF
    END IF
    ! Read in RDMFT parameters
    xPathA = '/fleurInput/calculationSetup/rdmft'
@@ -393,10 +412,12 @@ SUBROUTINE read_xml_input(this,xml)
    END IF
 END SUBROUTINE read_xml_input
 
-SUBROUTINE init_input(input,noco,l_hybrid,nbasfcn)
+SUBROUTINE init_input(input,noco,l_hybrid,invs,n_denmat,n_hia,nbasfcn)
    USE m_types_noco
    CLASS(t_input),INTENT(inout):: input
    TYPE(t_noco),INTENT(in)     :: noco
+   LOGICAL, INTENT(IN)         :: invs
+   INTEGER, INTENT(IN)         :: n_denmat, n_hia
    LOGICAL, INTENT(in)         :: l_hybrid
    INTEGER,INTENT(IN),OPTIONAL :: nbasfcn
 
@@ -419,6 +440,8 @@ SUBROUTINE init_input(input,noco,l_hybrid,nbasfcn)
    input%gw_neigd = MERGE(MAX(NINT(input%zelec)*10, 60),0, l_hybrid)
 
    IF(PRESENT(nbasfcn)) input%neig = MIN(input%neig, nbasfcn)
+
+   input%l_real = invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.n_denmat>0).and..not.n_hia>0
 END SUBROUTINE init_input
 
 END MODULE m_types_input

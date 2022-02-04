@@ -4,25 +4,25 @@ MODULE m_greensfPostProcess
    USE m_constants
    USE m_types
    USE m_greensfCalcRealPart
+   USE m_greensfCalcScalarProducts
    USE m_greensf_io
-   USE m_occmtx
-   USE m_greensfTorgue
+   USE m_greensfTorque
    USE m_excSplitting
    USE m_crystalfield
    USE m_genMTBasis
    USE m_sointg
-   USE m_types_scalarGF
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,cell,gfinp,input,sym,noco,mpi,&
+   SUBROUTINE greensfPostProcess(greensFunction,greensfImagPart,atoms,kpts,cell,gfinp,input,sym,noco,mpi,&
                                  nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
 
       !contains all the modules for calculating properties from the greens function
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
+      TYPE(t_kpts),              INTENT(IN)     :: kpts
       TYPE(t_cell),              INTENT(IN)     :: cell
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
       TYPE(t_input),             INTENT(IN)     :: input
@@ -39,98 +39,35 @@ MODULE m_greensfPostProcess
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),           INTENT(INOUT)  :: greensFunction(:)
 
-      INTEGER  i_gf,l,lp,atomType,atomTypep,i_elem,indUnique,jspin,ierr,i
+      INTEGER  i_gf,l,lp,atomType,atomTypep,i_elem,jspin,ierr,i,indUnique
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,gfinp%n,3)
       LOGICAL  l_sphavg,l_check
-
       REAL, ALLOCATABLE :: f(:,:,:,:,:),g(:,:,:,:,:), flo(:,:,:,:,:)
+      TYPE(t_scalarGF), ALLOCATABLE :: scalarGF(:)
 
-      TYPE(t_usdus)            :: usdus
-      TYPE(t_denCoeffsOffDiag) :: denCoeffsOffDiag
-      TYPE(t_scalarGF)         :: scalarGF(gfinp%n)
 #ifdef CPP_HDF
       INTEGER(HID_T) :: greensf_fileID
 #endif
 
-      IF(gfinp%checkRadial()) THEN
-         !-----------------------------------------------------------
-         ! Calculate the needed radial functions and scalar products
-         !-----------------------------------------------------------
-         CALL timestart("Green's Function: Radial Functions")
-         ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
-         ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins,atoms%nType),source=0.0)
-         ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins,atoms%nType),source=0.0)
-
-         ! Initializations
-         CALL usdus%init(atoms,input%jspins)
-         CALL denCoeffsOffDiag%init(atoms,noco,sphhar,.FALSE.,.FALSE.)
-
-         !Generate the scalar products we need
-         DO i_gf = 1, gfinp%n
-            l  = gfinp%elem(i_gf)%l
-            lp = gfinp%elem(i_gf)%lp
-            atomType  = gfinp%elem(i_gf)%atomType
-            atomTypep = gfinp%elem(i_gf)%atomTypep
-
-            l_sphavg  = gfinp%elem(i_gf)%l_sphavg
-            IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-               CALL scalarGF(i_gf)%init(atoms,input)
-            ENDIF
-            IF(l_sphavg) CYCLE
-
-            i_elem = gfinp%uniqueElements(atoms,ind=i_gf,l_sphavg=l_sphavg,indUnique=indUnique)
-
-            IF(i_gf/=indUnique) THEN
-               IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-                  scalarGF(i_gf) = scalarGF(indUnique)
-               ENDIF
-               CYCLE
-            ENDIF
-            DO jspin = 1, input%jspins
-               CALL genMTBasis(atoms,enpara,vTot,mpi,atomType,jspin,usdus,&
-                               f(:,:,:,jspin,atomType),g(:,:,:,jspin,atomType),flo(:,:,:,jspin,atomType),&
-                               hub1data=hub1data,l_writeArg=.FALSE.)
-               IF(atomType/=atomTypep) THEN
-                  CALL genMTBasis(atoms,enpara,vTot,mpi,atomTypep,jspin,usdus,&
-                                  f(:,:,:,jspin,atomTypep),g(:,:,:,jspin,atomTypep),flo(:,:,:,jspin,atomTypep),&
-                                  hub1data=hub1data,l_writeArg=.FALSE.)
-               ENDIF
-            ENDDO
-            IF(gfinp%l_mperp) THEN
-               CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomType),g(:,:,:,:,atomType),&
-                                                             flo(:,:,:,:,atomType),atomType)
-               IF(atomType/=atomTypep) THEN
-                  CALL denCoeffsOffDiag%addRadFunScalarProducts(atoms,f(:,:,:,:,atomTypep),g(:,:,:,:,atomTypep),&
-                                                                flo(:,:,:,:,atomTypep),atomTypep)
-               ENDIF
-            ENDIF
-            IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-               CALL scalarGF(i_gf)%addScalarProduct(l,lp,atomType,atomTypep,ANY(ABS(gfinp%elem(i_gf)%atomDiff).GT.1e-12),&
-                                                    gfinp%l_mperp,atoms,input,f,g,flo)
-            ENDIF
-         ENDDO
-         CALL timestop("Green's Function: Radial Functions")
-      ENDIF
+      CALL greensfCalcScalarProducts(gfinp,atoms,input,enpara,noco,sphhar,vTot,mpi,hub1data,&
+                                     greensFunctions=greensFunction,scalarProducts=scalarGF,&
+                                     fout=f,gout=g,floout=flo)
       !--------------------------------------------------------------------------------
       ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
       !--------------------------------------------------------------------------------
       CALL timestart("Green's Function: Real Part")
-      CALL greensfCalcRealPart(atoms,gfinp,sym,input,noco,usdus,denCoeffsOffDiag,mpi,results%ef,&
+      CALL greensfCalcRealPart(atoms,gfinp,sym,input,noco,kpts,mpi,results%ef,&
                                greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 
       !----------------------------------------------
-      ! Torgue Calculations
+      ! Torque Calculations
       !----------------------------------------------
-      IF(ANY(gfinp%numTorgueElems>0)) THEN
-         CALL timestart("Green's Function: Torgue")
-         CALL greensfTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
+      IF(ANY(gfinp%numTorqueElems>0)) THEN
+         CALL timestart("Green's Function: Torque")
+         CALL greensfTorque(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
                             f,g,flo,vTot)
-         IF(.FALSE.) THEN
-            CALL greensfSOTorgue(greensFunction,gfinp,mpi,sphhar,atoms,sym,noco,nococonv,input,&
-                                 enpara,f,g,flo,vTot)
-         ENDIF
-         CALL timestop("Green's Function: Torgue")
+         CALL timestop("Green's Function: Torque")
       ENDIF
 
       IF(mpi%irank==0) THEN
@@ -144,7 +81,7 @@ MODULE m_greensfPostProcess
          ENDIF
 
          !Onsite exchange Splitting from difference of center of mass of the bands
-         CALL excSplitting(gfinp,atoms,input,usdus,greensfImagPart,results%ef)
+         CALL excSplitting(gfinp,atoms,input,scalarGF,greensfImagPart,results%ef)
 
          !-------------------------------------------------------
          ! Occupation matrix (only for diagonal onsite elements)
@@ -152,32 +89,20 @@ MODULE m_greensfPostProcess
          CALL timestart("Green's Function: Occupation")
          mmpmat = cmplx_0
          DO i_gf = 1, gfinp%n
-            l_sphavg    = greensFunction(i_gf)%elem%l_sphavg
-            l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag() !If there are SCLOs present the occupations can get bigger than 1
-            IF(l_sphavg) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
-                           l_write=.TRUE.,check=l_check)
-            ELSE IF(gfinp%elem(i_gf)%isOffDiag()) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
-                           scalarGF=scalarGF(i_gf),l_write=.TRUE.,check=l_check)
-            ELSE IF(.NOT.gfinp%l_mperp) THEN
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
-                           usdus=usdus,l_write=.TRUE.,check=l_check)
-            ELSE
-               CALL occmtx(greensFunction(i_gf),gfinp,input,atoms,noco,nococonv,mmpmat(:,:,i_gf,:),&
-                           usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag,&
-                           l_write=.TRUE.,check=l_check)
-            ENDIF
+            IF(gfinp%elem(i_gf)%l_kresolved) CYCLE
+            !If there are SCLOs present the occupations can get bigger than 1
+            l_check = gfinp%elem(i_gf)%countLOs(atoms)==0 .AND..NOT.gfinp%elem(i_gf)%isOffDiag()
+            mmpmat(:,:,i_gf,:) = greensFunction(i_gf)%occupationMatrix(gfinp,input,atoms,noco,nococonv,&
+                                                                       l_write=.TRUE.,check=l_check)
          ENDDO
          CALL timestop("Green's Function: Occupation")
 
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms)
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, cell, kpts)
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, nococonv, noco, cell,&
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
-                               u=f,udot=g,ulo=flo,usdus=usdus,denCoeffsOffDiag=denCoeffsOffDiag,&
-                               scalarGF=scalarGF)
+                               u=f,udot=g,ulo=flo)
          CALL closeGreensFFile(greensf_fileID)
          CALL timestop("Green's Function: IO/Write")
 #endif

@@ -16,9 +16,9 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)           :: atoms
     TYPE(t_banddos),INTENT(IN)         :: banddos
     TYPE(t_eigVecCoeffs),INTENT(IN)   :: eigVecCoeffs
-    COMPLEX, ALLOCATABLE,INTENT(OUT) :: acof(:,:,:)
-    COMPLEX, ALLOCATABLE,INTENT(OUT) :: bcof(:,:,:)
-    COMPLEX, ALLOCATABLE,INTENT(OUT) :: ccof(:,:,:,:)
+    COMPLEX, ALLOCATABLE,INTENT(INOUT) :: acof(:,:)
+    COMPLEX, ALLOCATABLE,INTENT(INOUT) :: bcof(:,:)
+    COMPLEX, ALLOCATABLE,INTENT(INOUT) :: ccof(:,:,:)
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp
@@ -37,9 +37,9 @@ CONTAINS
 
     DO l = 1, atoms%lmax(itype)
       DO i = 1, size(acof,1)
-        acof(i,l**2:l*(l+2),jsp) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,1)),&
+        acof(i,l**2:l*(l+2)) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,1)),&
         eigVecCoeffs%acof(i,l**2:l*(l+2),na,jsp))
-        bcof(i,l**2:l*(l+2),jsp) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,1)),&
+        bcof(i,l**2:l*(l+2)) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,1)),&
         eigVecCoeffs%bcof(i,l**2:l*(l+2),na,jsp))
       ENDDO
     ENDDO
@@ -47,7 +47,7 @@ CONTAINS
       l = atoms%llo(ilo,itype)
       IF (l.GT.0) THEN
         DO i = 1 ,size(acof,1)
-          ccof(-l:l,i,ilo,jsp) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,1)),&
+          ccof(-l:l,i,ilo) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,1)),&
           eigVecCoeffs%ccof(-l:l,i,ilo,na,jsp))
         ENDDO
       ENDIF

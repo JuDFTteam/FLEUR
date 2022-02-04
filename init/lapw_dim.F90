@@ -6,7 +6,7 @@
 
 MODULE m_lapwdim
 CONTAINS
-  SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,oneD,forcetheo,atoms)
+  SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,oneD,forcetheo,atoms,nbasfcn)
     !
     !*********************************************************************
     !     determines dimensions of the lapw basis set with |k+G|<rkmax.
@@ -24,9 +24,10 @@ CONTAINS
     TYPE(t_oneD),INTENT(IN)      :: oneD
     CLASS(t_forcetheo),INTENT(IN):: forcetheo
     TYPE(t_atoms),INTENT(IN)     :: atoms
+    INTEGER, INTENT(OUT)         :: nbasfcn
 
     !local variable for init
-    INTEGER               :: nvd,nv2d,nbasfcn
+    INTEGER               :: nvd,nv2d
     TYPE(t_lapw) :: lapw
 
     INTEGER j1,j2,j3,mk1,mk2,mk3,iofile,ksfft,q,nk,nv,nv2

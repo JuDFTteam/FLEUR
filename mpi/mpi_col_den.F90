@@ -461,6 +461,18 @@ CONTAINS
     ENDIF
     !-lda+U
 
+    !+lda+OP
+    IF ( atoms%n_opc.GT.0 ) THEN
+      n = 49*atoms%n_opc
+      ALLOCATE(c_b(n))
+      CALL MPI_REDUCE(den%mmpMat(:,:,atoms%n_u+atoms%n_hia+1:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+      IF (fmpi%irank.EQ.0) THEN
+         CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat(:,:,atoms%n_u+atoms%n_hia+1:,jspin), 1)
+      ENDIF
+      DEALLOCATE (c_b)
+   ENDIF
+   !-lda+U
+
     CALL timestop("mpi_col_den")
 
 #endif

@@ -25,6 +25,7 @@ MODULE m_types_hybdat
       INTEGER                :: maxfac
       INTEGER                :: maxlmindx = -1
       INTEGER                :: nbasp = -1
+      integer                :: max_q = -1
       LOGICAL                :: l_addhf = .false.
       LOGICAL                :: l_calhf = .false.
       LOGICAL                :: l_print_iob_splitting = .True.
@@ -38,7 +39,6 @@ MODULE m_types_hybdat
       REAL, ALLOCATABLE      :: gridf(:, :)
       REAL, ALLOCATABLE      :: prodm(:, :, :, :)
       REAL, ALLOCATABLE      :: sfac(:), fac(:)
-
       ! coulomb matrix stuff
       type(t_coul), allocatable   :: coul(:)
 

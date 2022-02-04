@@ -6,13 +6,14 @@ MODULE m_hubbard1_setup
    USE m_uj2f
    USE m_doubleCounting
    USE m_hubbard1Distance
-   USE m_occmtx
    USE m_polangle
    USE m_hubbard1_io
    USE m_types_selfen
    USE m_add_selfen
    USE m_mpi_bc_tool
    USE m_greensf_io
+   USE m_rotMMPmat
+   use m_xmlOutput
 #ifdef CPP_EDSOLVER
    USE EDsolver, only: EDsolver_from_cfg
 #endif
@@ -28,7 +29,7 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,cell,gfinp,hub1inp,input,fmpi,noco,nococonv,pot,gdft,hub1data,results,den)
+   SUBROUTINE hubbard1_setup(atoms,cell,gfinp,hub1inp,input,fmpi,noco,kpts,nococonv,pot,gdft,hub1data,results,den)
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_cell),     INTENT(IN)     :: cell
@@ -37,6 +38,7 @@ MODULE m_hubbard1_setup
       TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_mpi),      INTENT(IN)     :: fmpi
       TYPE(t_noco),     INTENT(IN)     :: noco
+      TYPE(t_kpts),     INTENT(IN)     :: kpts
       TYPE(t_nococonv), INTENT(IN)     :: nococonv
       TYPE(t_potden),   INTENT(IN)     :: pot
       TYPE(t_greensf),  INTENT(IN)     :: gdft(:) !green's function calculated from the Kohn-Sham system
@@ -46,16 +48,17 @@ MODULE m_hubbard1_setup
 
       LOGICAL, PARAMETER :: l_mix = .FALSE.
 
-      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n
+      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n,i_u
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
       INTEGER :: n_hia_task,extra,i_hia_start,i_hia_end
-      REAL    :: U,J,mx,my,mz,alpha_mix
+      REAL    :: U,J,mx,my,mz,alpha_mix,beta,alpha
       COMPLEX :: offdtrace
       LOGICAL :: l_firstIT_HIA,l_ccfexist,l_bathexist,l_amf
 
       CHARACTER(len=300) :: folder
+      TYPE(t_greensf),ALLOCATABLE :: gdft_rot(:)
       TYPE(t_greensf),ALLOCATABLE :: gu(:)
       TYPE(t_selfen), ALLOCATABLE :: selfen(:)
 
@@ -66,18 +69,29 @@ MODULE m_hubbard1_setup
       REAL    :: mu_dc(input%jspins)
       REAL    :: f0(atoms%n_hia),f2(atoms%n_hia)
       REAL    :: f4(atoms%n_hia),f6(atoms%n_hia)
-      REAL    :: alpha(atoms%n_hia), beta(atoms%n_hia)
+      REAL    :: diffalpha(atoms%n_hia), diffbeta(atoms%n_hia)
       REAL    :: occDFT(atoms%n_hia,input%jspins)
       COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
+      COMPLEX :: dcpot(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3)
       COMPLEX, ALLOCATABLE :: e(:)
       COMPLEX, ALLOCATABLE :: ctmp(:)
+      character(len=30) :: attributes(7)
 
       !Check if the EDsolver library is linked
 #ifndef CPP_EDSOLVER
       CALL juDFT_error("No solver linked for Hubbard 1", hint="Link the edsolver library",calledby="hubbard1_setup")
 #endif
 
+      ALLOCATE(gdft_rot(atoms%n_hia))
+      DO i_hia = 1, atoms%n_hia
+         CALL gdft_rot(i_hia)%init(gdft(i_hia)%elem,gfinp,atoms,input,contour_in=gdft(i_hia)%contour)
+         gdft_rot(i_hia) = gdft(i_hia)
+      ENDDO
+
+
       IF(fmpi%irank.EQ.0) THEN
+         write(attributes(1),'(i0)') hub1data%iter
+         call openXMLElement('hubbard1Iteration',['number'], attributes(:1))
          !-------------------------------------------
          ! Create the Input for the Hubbard 1 Solver
          !-------------------------------------------
@@ -109,7 +123,7 @@ MODULE m_hubbard1_setup
             !-------------------------------------------------------
             ! Calculate the DFT occupation of the correlated shell
             !-------------------------------------------------------
-            CALL occmtx(gdft(i_hia),gfinp,input,atoms,noco,nococonv,mmpMat(:,:,i_hia,:))
+            mmpMat(:,:,i_hia,:) = gdft(i_hia)%occupationMatrix(gfinp,input,atoms,noco,nococonv)
 
             !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
             l_firstIT_HIA = hub1data%iter.EQ.1 .AND.ALL(ABS(den%mmpMat(:,:,indStart:indEnd,:)).LT.1e-12)
@@ -126,6 +140,14 @@ MODULE m_hubbard1_setup
                   ENDDO
                ENDIF
 
+               !For the first iteration we just consider the diagonal elements of the density matrix
+               mmpMat(:,:,i_hia,:) = cmplx_0
+               do ispin = 1, input%jspins
+                  do m = -l, l
+                     mmpMat(m,m,i_hia,ispin) = occDFT(i_hia,ispin)/real(2*l+1)
+                  enddo
+               enddo
+
                DO i_exc = 1, hub1inp%n_exc(i_hia)
                   IF(hub1inp%init_mom(i_hia,i_exc) > -9e98) THEN
                      hub1data%mag_mom(i_hia,i_exc) = hub1inp%init_mom(i_hia,i_exc)
@@ -140,7 +162,7 @@ MODULE m_hubbard1_setup
                ENDDO
             ENDIF
 
-            IF (noco%l_unrestrictMT(nType) .and. gfinp%l_mperp) then
+            IF (noco%l_unrestrictMT(nType).OR.noco%l_spinoffd_ldau(ntype) .and. gfinp%l_mperp) then
                !Calculate local magnetization vector from greens function
                mz = occDFT(i_hia,1) - occDFT(i_hia,2)
                offdtrace = cmplx_0
@@ -149,9 +171,13 @@ MODULE m_hubbard1_setup
                ENDDO
                mx = 2.0 * REAL(offdtrace)
                my = 2.0 * AIMAG(offdtrace)
-               CALL pol_angle(mx,my,mz,beta(i_hia),alpha(i_hia))
+               CALL pol_angle(mx,my,mz,beta,alpha)
+
+               diffbeta(i_hia) = nococonv%beta(nType) - beta
+               diffalpha(i_hia) = nococonv%alph(nType) - alpha
 
                !TODO: ROTATE GREENS FUNCTION SPINFRAME TO ALIGN WITH CURRENT MAGNETIZATION
+               CALL gdft_rot(i_hia)%rotate_euler_angles(atoms,diffalpha(i_hia),diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
             ENDIF
 
             !Nearest Integer occupation
@@ -174,9 +200,16 @@ MODULE m_hubbard1_setup
             ! V_FLL = U (n - 1/2) - J (n - 1) / 2
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
-            IF(l_mix) alpha_mix = doubleCountingMixFactor(mmpMat(:,:,i_hia,:), l, occDFT(i_hia,:))
-            mu_dc = doubleCountingPot(U,J,l,l_amf,l_mix,hub1data%l_performSpinavg,occDFT(i_hia,:),&
+            IF(l_mix) alpha_mix = doubleCountingMixFactor(mmpMat(:,:,i_hia,:), l, SUM(occDFT(i_hia,:)))
+            dcpot = doubleCountingPot(mmpMat(:,:,i_hia,:),atoms%lda_u(atoms%n_u+i_hia), U,J,any(noco%l_unrestrictMT).OR.input%ldauSpinoffd,l_mix,hub1data%l_performSpinavg,&
                                       alpha_mix, l_write=fmpi%irank==0)
+            
+            mu_dc = 0.0
+            DO ispin = 1, input%jspins
+               DO m=-l,l
+                  mu_dc(ispin) = mu_dc(ispin) + REAL(dcpot(m,m,ispin))/REAL(2*l+1)
+               ENDDO
+            ENDDO
 
             !-------------------------------------------------------
             ! Check for additional input files
@@ -189,6 +222,37 @@ MODULE m_hubbard1_setup
             !Copy the bath file to the Hubbard 1 solver if its present
             IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(folder)))
 
+            !Create XML output for the solver parameters
+            write(attributes(1), '(i0)') nType
+            write(attributes(2), '(i0)') l
+            write(attributes(3), '(f14.8)') mu_dc(1)
+            write(attributes(4), '(i0)') occDFT_INT    
+            write(attributes(5), '(a)') 'eV'                                        
+            call openXMLElement('solverParameters', ['atomType   ', 'l          ', 'chemPot    ', 'occupation ', 'energy_unit'], attributes(:5))
+            
+            write(attributes(1), '(f14.8)') f0(i_hia)
+            write(attributes(2), '(f14.8)') f2(i_hia)
+            write(attributes(3), '(f14.8)') f4(i_hia)
+            write(attributes(4), '(f14.8)') f6(i_hia)
+            call writeXMLElementNoAttributes('slaterParameters',attributes(:4))
+            
+            do i_exc = 1, hub1inp%n_exc(i_hia)
+               write(attributes(1), '(i0)') hub1inp%exc_l(i_hia,i_exc)
+               write(attributes(2), '(f14.8)') hub1inp%exc(i_hia,i_exc)
+               write(attributes(3), '(f14.8)') hub1data%mag_mom(i_hia,i_exc)
+               call writeXMLElement('exchange',['l     ', 'J     ', 'moment'],attributes(:3))
+            enddo
+            write(attributes(1), '(f14.8)') hub1data%xi(i_hia)
+            call writeXMLElement('socParameter',['value'],attributes(:1))
+
+            IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12) THEN
+               write(attributes(1), '(f14.8)') hub1inp%ccf(i_hia)
+               CALL writeXMLElementMatrixFormPoly('crystalField',['factor'],attributes(:1),&
+                                                  reshape([6,14],[1,2]),&
+                                                  hub1data%ccfmat(i_hia,-l:l,-l:l)*hartree_to_ev_const*hub1inp%ccf(i_hia))
+            ENDIF
+
+            call closeXMLElement('solverParameters')
             !-------------------------------------------------------
             ! Write the main config files
             !-------------------------------------------------------
@@ -209,6 +273,7 @@ MODULE m_hubbard1_setup
       ALLOCATE(selfen(atoms%n_hia))
       DO i_hia = 1, atoms%n_hia
          CALL gu(i_hia)%init(gdft(i_hia)%elem,gfinp,atoms,input,contour_in=gdft(i_hia)%contour)
+         CALL gdft_rot(i_hia)%mpi_bc(fmpi%mpi_comm)
          CALL selfen(i_hia)%init(lmaxU_const,gdft(i_hia)%contour%nz,input%jspins,&
                                  noco%l_noco.AND.(noco%l_soc.OR.gfinp%l_mperp).OR.hub1inp%l_fullmatch)
       ENDDO
@@ -298,7 +363,7 @@ MODULE m_hubbard1_setup
 #endif
 
          CALL timestart("Hubbard 1: Add Selfenergy")
-         CALL add_selfen(gdft(i_hia),selfen(i_hia),gfinp,input,atoms,noco,nococonv,&
+         CALL add_selfen(gdft_rot(i_hia),selfen(i_hia),gfinp,input,atoms,noco,nococonv,&
                          occDFT(i_hia,:),gu(i_hia),mmpMat(:,:,i_hia,:))
          CALL timestop("Hubbard 1: Add Selfenergy")
 
@@ -322,30 +387,6 @@ MODULE m_hubbard1_setup
          ENDIF
       ENDDO
 
-
-#ifdef CPP_HDF
-      IF(fmpi%irank.EQ.0) THEN
-         !------------------------------
-         !Write out DFT Green's Function
-         !------------------------------
-         CALL timestart("Hubbard 1: IO/Write")
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_DFT.hdf")
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
-                               GREENSF_HUBBARD_CONST, gdft, mmpmat)
-         CALL closeGreensFFile(greensf_fileID)
-
-         !-------------------------------------
-         !Write out correlated Green's Function
-         !-------------------------------------
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, inFilename="greensf_IMP.hdf")
-         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, cell,&
-                              GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
-         CALL closeGreensFFile(greensf_fileID)
-         CALL timestop("Hubbard 1: IO/Write")
-      ENDIF
-#endif
-
-
 #ifdef CPP_MPI
       !Collect the density matrix to rank 0
       n = SIZE(mmpMat)
@@ -364,8 +405,11 @@ MODULE m_hubbard1_setup
       IF(fmpi%irank.EQ.0) THEN
          DO i_hia = 1, atoms%n_hia
             nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-            IF (noco%l_unrestrictMT(nType) .and. gfinp%l_mperp) then
+            l = atoms%lda_u(atoms%n_u+i_hia)%l
+            IF (noco%l_unrestrictMT(nType) .OR. noco%l_spinoffd_ldau(ntype) .and. gfinp%l_mperp) then
                !TODO: ROTATE GREENS FUNCTION AND mmpmat SPINFRAME TO LOCAL FRAME
+               CALL gu(i_hia)%rotate_euler_angles(atoms,-diffalpha(i_hia),-diffbeta(i_hia),0.0,spin_rotation=.TRUE.)
+               mmpMat(:,:,i_hia,:) = rotMMPmat(mmpMat(:,:,i_hia,:),-diffalpha(i_hia),-diffbeta(i_hia),0.0,l,spin_rotation=.TRUE.)
             ENDIF
 
             CALL hubbard1Distance(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),results)
@@ -374,6 +418,28 @@ MODULE m_hubbard1_setup
             ENDDO
          ENDDO
       ENDIF
+
+#ifdef CPP_HDF
+      IF(fmpi%irank.EQ.0) THEN
+         !------------------------------
+         !Write out DFT Green's Function
+         !------------------------------
+         CALL timestart("Hubbard 1: IO/Write")
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, cell, kpts, inFilename="greensf_DFT.hdf")
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, nococonv, noco, cell,&
+                               GREENSF_HUBBARD_CONST, gdft, mmpmat)
+         CALL closeGreensFFile(greensf_fileID)
+
+         !-------------------------------------
+         !Write out correlated Green's Function
+         !-------------------------------------
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, cell, kpts, inFilename="greensf_IMP.hdf")
+         CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, nococonv, noco, cell,&
+                              GREENSF_HUBBARD_CONST, gu, mmpmat,selfen=selfen)
+         CALL closeGreensFFile(greensf_fileID)
+         CALL timestop("Hubbard 1: IO/Write")
+      ENDIF
+#endif
 
       !Broadcast the density matrix
       CALL mpi_bc(den%mmpMat,0,fmpi%mpi_comm)
@@ -399,6 +465,28 @@ MODULE m_hubbard1_setup
                hub1data%l_performSpinavg = .FALSE.
             ENDIF
          ENDIF
+         CALL openXMLElementNoAttributes('hubbard1DensityMatrix')
+         DO ispin = 1, SIZE(den%mmpMat,4)
+            DO i_hia = 1, atoms%n_hia
+               i_u = atoms%n_u + i_hia
+               attributes = ''
+               WRITE(attributes(1),'(i0)') ispin
+               WRITE(attributes(2),'(i0)') atoms%lda_u(i_u)%atomType
+               WRITE(attributes(3),'(i0)') i_hia
+               WRITE(attributes(4),'(i0)') atoms%lda_u(i_u)%l
+               WRITE(attributes(5),'(f15.8)') atoms%lda_u(i_u)%u
+               WRITE(attributes(6),'(f15.8)') atoms%lda_u(i_u)%j
+               WRITE(attributes(7),'(2f15.8)') selfen(i_hia)%muMatch(:)
+               CALL writeXMLElementMatrixPoly('densityMatrixFor',&
+                                             ['spin    ','atomType','hiaIndex','l       ','U       ','J       ','muMatch '],&
+                                             attributes,den%mmpMat(-l:l,-l:l,i_u,ispin))
+            END DO
+         END DO
+         CALL closeXMLElement('hubbard1DensityMatrix')
+         write(attributes(1),'(f14.8)') results%last_occdistance
+         write(attributes(2),'(f14.8)') results%last_mmpMatdistance                                    
+         call writeXMLElement('hubbard1Distance',['occupationDistance','elementDistance   '], attributes(:2))
+         call closeXMLElement('hubbard1Iteration')
       ENDIF
 
       CALL mpi_bc(hub1data%l_performSpinavg,0,fmpi%mpi_comm)

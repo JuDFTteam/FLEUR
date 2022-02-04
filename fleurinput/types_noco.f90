@@ -31,6 +31,7 @@ MODULE m_types_noco
     REAL, ALLOCATABLE   :: mix_RelaxWeightOffD(:)
     LOGICAL, ALLOCATABLE :: l_constrained(:)
     LOGICAL, ALLOCATABLE :: l_unrestrictMT(:)
+    LOGICAL, ALLOCATABLE :: l_spinoffd_ldau(:)
     LOGICAL,allocatable  :: l_alignMT(:)
     REAL, ALLOCATABLE    :: alph_inp(:)
     REAL, ALLOCATABLE    :: beta_inp(:)
@@ -39,6 +40,7 @@ MODULE m_types_noco
   CONTAINS
     PROCEDURE :: read_xml=>read_xml_noco
     PROCEDURE :: mpi_bc =>mpi_bc_noco
+    PROCEDURE :: init => init_noco
    END TYPE t_noco
 
    PUBLIC t_noco
@@ -76,7 +78,7 @@ MODULE m_types_noco
      CALL mpi_bc(this%l_unrestrictMT,rank,mpi_comm)
      CALL mpi_bc(this%mix_b,rank,mpi_comm)
      CALL mpi_bc(this%socscale,rank,mpi_comm)
-
+     CALL mpi_bc(this%l_spinoffd_ldau,rank,mpi_comm)
 
    END SUBROUTINE mpi_bc_noco
 
@@ -123,10 +125,12 @@ MODULE m_types_noco
       ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
       ALLOCATE(this%l_constrained(ntype),this%mix_RelaxWeightOffD(ntype))
       ALLOCATE(this%l_unrestrictMT(ntype),this%l_alignMT(ntype))
+      ALLOCATE(this%l_spinoffd_ldau(ntype))
       this%l_unrestrictMT=.false.
       this%l_constrained=.false.
       this%mix_RelaxWeightOffD=1.0
       this%l_alignMT=.false.
+      this%l_spinoffd_ldau=.false.
       ALLOCATE(this%alph_inp(ntype),this%beta_inp(ntype))
       this%alph_inp=0.0;this%beta_inp=0.0
       ALLOCATE(this%socscale(ntype))
@@ -214,11 +218,12 @@ MODULE m_types_noco
 
       ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
       ALLOCATE(this%l_alignMT(ntype),this%l_constrained(ntype),this%mix_RelaxWeightOffD(ntype))
-      ALLOCATE(this%l_unrestrictMT(ntype))
+      ALLOCATE(this%l_unrestrictMT(ntype),this%l_spinoffd_ldau(ntype))
       this%l_alignMT=.false.
       this%l_unrestrictMT=.false.
       this%mix_RelaxWeightOffD=1.0
       this%l_constrained=.false.
+      this%l_spinoffd_ldau=.false.
       ALLOCATE(this%alph_inp(ntype),this%beta_inp(ntype))
       this%alph_inp=0.0;this%beta_inp=0.0
       ALLOCATE(this%socscale(ntype))
@@ -260,6 +265,24 @@ MODULE m_types_noco
 
     END SUBROUTINE read_xml_noco_old
 
+  SUBROUTINE init_noco(noco,atoms,l_spinoffd_ldau)
+     USE m_types_atoms
+     CLASS(t_noco),INTENT(inout):: noco
+     TYPE(t_atoms),INTENT(in)   :: atoms
+     LOGICAL, INTENT(in)        :: l_spinoffd_ldau
+     INTEGER :: i_u, atomType
 
+     IF (noco%l_noco .AND. (ABS(noco%theta_inp)>1E-5.OR.ABS(noco%phi_inp)>1E-5)) &
+           CALL judft_warn("You specified a theta/phi angle for SOC in a Noco-calculation. These angles are used only in non-Noco SOC calculations.")
+
+ 
+     IF(l_spinoffd_ldau) THEN
+        DO i_u = 1, atoms%n_u+atoms%n_hia
+           atomType = atoms%lda_u(i_u)%atomType
+           noco%l_spinoffd_ldau(atomType) = .TRUE.
+        ENDDO
+     ENDIF
+
+  END SUBROUTINE init_noco
 
  END MODULE m_types_noco

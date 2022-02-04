@@ -46,9 +46,9 @@ CONTAINS
 
     INTEGER, INTENT (IN) :: ev_list(nobd)
 
-    COMPLEX, ALLOCATABLE :: acof(:,:,:)
-    COMPLEX, ALLOCATABLE :: bcof(:,:,:)
-    COMPLEX, ALLOCATABLE :: ccof(:,:,:,:)
+    COMPLEX, ALLOCATABLE :: acof(:,:)
+    COMPLEX, ALLOCATABLE :: bcof(:,:)
+    COMPLEX, ALLOCATABLE :: ccof(:,:,:)
 
     !	..Local Scalars
     INTEGER  n,mt,ityp,imt,lm,lo,n_dos
@@ -76,10 +76,9 @@ CONTAINS
     !****************************************************
     !
 
-    ALLOCATE(acof(size(eigVecCoeffs%acof,1),0:size(eigVecCoeffs%acof,2)-1,size(eigVecCoeffs%acof,4)))
-    ALLOCATE(bcof(size(eigVecCoeffs%bcof,1),0:size(eigVecCoeffs%bcof,2)-1,size(eigVecCoeffs%bcof,4)))
-    ALLOCATE(ccof(-atoms%llod:atoms%llod,size(eigVecCoeffs%ccof,2),size(eigVecCoeffs%ccof,3),size(eigVecCoeffs%ccof,5)))
-
+    ALLOCATE(acof(size(eigVecCoeffs%acof,1),0:size(eigVecCoeffs%acof,2)-1))
+    ALLOCATE(bcof(size(eigVecCoeffs%bcof,1),0:size(eigVecCoeffs%bcof,2)-1))
+    ALLOCATE(ccof(-atoms%llod:atoms%llod,size(eigVecCoeffs%ccof,2),size(eigVecCoeffs%ccof,3)))
 
     DO   ityp = 1,atoms%ntype
        ddn0 = usdus%ddn(0,ityp,jspin)
@@ -93,9 +92,9 @@ CONTAINS
           IF (ANY((/banddos%alpha(mt),banddos%beta(mt),banddos%gamma(mt)/).NE.0.0)) THEN
             CALL abcrot2(ityp,mt,atoms,banddos,eigVecCoeffs,jspin,acof,bcof,ccof) ! rotate ab-coeffs
           ELSE
-            acof=eigVecCoeffs%acof(:,:,mt,:)
-            bcof=eigVecCoeffs%bcof(:,:,mt,:)
-            ccof=eigVecCoeffs%ccof(:,:,:,mt,:)
+            acof=eigVecCoeffs%acof(:,:,mt,jspin)
+            bcof=eigVecCoeffs%bcof(:,:,mt,jspin)
+            ccof=eigVecCoeffs%ccof(:,:,:,mt,jspin)
           ENDIF
           !find index for dos
           DO n_dos=1,size(banddos%dos_atomlist)
@@ -105,79 +104,79 @@ CONTAINS
              !
              ! acof
              !   s-states
-             ca00 = acof(n,0,jspin)
+             ca00 = acof(n,0)
              !   p-states
-             ca01 = acof(n,1,jspin) - acof(n,3,jspin)
-             ca02 = acof(n,1,jspin) + acof(n,3,jspin)
-             ca03 = acof(n,2,jspin)
+             ca01 = acof(n,1) - acof(n,3)
+             ca02 = acof(n,1) + acof(n,3)
+             ca03 = acof(n,2)
              !   d-states
-             ca04 = acof(n,4,jspin) - acof(n,8,jspin)
-             ca05 = acof(n,5,jspin) + acof(n,7,jspin)
-             ca06 = acof(n,5,jspin) - acof(n,7,jspin)
-             ca07 = acof(n,4,jspin) + acof(n,8,jspin)
-             ca08 = acof(n,6,jspin)
+             ca04 = acof(n,4) - acof(n,8)
+             ca05 = acof(n,5) + acof(n,7)
+             ca06 = acof(n,5) - acof(n,7)
+             ca07 = acof(n,4) + acof(n,8)
+             ca08 = acof(n,6)
              !
              !   f-states: a cubic set (cub)
              !
-             ca09 = ( acof(n,9,jspin)  - acof(n,15,jspin) )*SQRT(5.0) -&
-                    ( acof(n,11,jspin) - acof(n,13,jspin) )*SQRT(3.0)
-             ca10 = ( acof(n,9,jspin)  + acof(n,15,jspin) )*SQRT(5.0) +&
-                    ( acof(n,11,jspin) + acof(n,13,jspin) )*SQRT(3.0)
-             ca11 =   acof(n,12,jspin)
-             ca12 = ( acof(n,9,jspin)  + acof(n,15,jspin) )*SQRT(3.0) -&
-                    ( acof(n,11,jspin) + acof(n,13,jspin) )*SQRT(5.0)
-             ca13 =   acof(n,10,jspin) + acof(n,14,jspin)
-             ca14 = ( acof(n,9,jspin)  - acof(n,15,jspin) )*SQRT(3.0) +&
-                    ( acof(n,11,jspin) - acof(n,13,jspin) )*SQRT(5.0)
-             ca15 =   acof(n,10,jspin) - acof(n,14,jspin)
+             ca09 = ( acof(n,9)  - acof(n,15) )*SQRT(5.0) -&
+                    ( acof(n,11) - acof(n,13) )*SQRT(3.0)
+             ca10 = ( acof(n,9)  + acof(n,15) )*SQRT(5.0) +&
+                    ( acof(n,11) + acof(n,13) )*SQRT(3.0)
+             ca11 =   acof(n,12)
+             ca12 = ( acof(n,9)  + acof(n,15) )*SQRT(3.0) -&
+                    ( acof(n,11) + acof(n,13) )*SQRT(5.0)
+             ca13 =   acof(n,10) + acof(n,14)
+             ca14 = ( acof(n,9)  - acof(n,15) )*SQRT(3.0) +&
+                    ( acof(n,11) - acof(n,13) )*SQRT(5.0)
+             ca15 =   acof(n,10) - acof(n,14)
              !
              !   f-states:	a low symmetry set (lss)
              !
-             ca16 =  acof(n,11,jspin) - acof(n,13,jspin)
-             ca17 =  acof(n,11,jspin) + acof(n,13,jspin)
-             ca18 =  acof(n,12,jspin)
-             ca19 =  acof(n,10,jspin) - acof(n,14,jspin)
-             ca20 =  acof(n,10,jspin) + acof(n,14,jspin)
-             ca21 =  acof(n,9,jspin)  - acof(n,15,jspin)
-             ca22 =  acof(n,9,jspin)  + acof(n,15,jspin)
+             ca16 =  acof(n,11) - acof(n,13)
+             ca17 =  acof(n,11) + acof(n,13)
+             ca18 =  acof(n,12)
+             ca19 =  acof(n,10) - acof(n,14)
+             ca20 =  acof(n,10) + acof(n,14)
+             ca21 =  acof(n,9)  - acof(n,15)
+             ca22 =  acof(n,9)  + acof(n,15)
              !
              ! bcof
              !   s-states
-             cb00 =  bcof(n,0,jspin)
+             cb00 =  bcof(n,0)
              !   p-states
-             cb01 =  bcof(n,1,jspin) - bcof(n,3,jspin)
-             cb02 =  bcof(n,1,jspin) + bcof(n,3,jspin)
-             cb03 =  bcof(n,2,jspin)
+             cb01 =  bcof(n,1) - bcof(n,3)
+             cb02 =  bcof(n,1) + bcof(n,3)
+             cb03 =  bcof(n,2)
              !   d-states
-             cb04 =  bcof(n,4,jspin) - bcof(n,8,jspin)
-             cb05 =  bcof(n,5,jspin) + bcof(n,7,jspin)
-             cb06 =  bcof(n,5,jspin) - bcof(n,7,jspin)
-             cb07 =  bcof(n,4,jspin) + bcof(n,8,jspin)
-             cb08 =  bcof(n,6,jspin)
+             cb04 =  bcof(n,4) - bcof(n,8)
+             cb05 =  bcof(n,5) + bcof(n,7)
+             cb06 =  bcof(n,5) - bcof(n,7)
+             cb07 =  bcof(n,4) + bcof(n,8)
+             cb08 =  bcof(n,6)
              !
              !   f-states: a cubic set (cub)
              !
-             cb09 = ( bcof(n,9,jspin)  - bcof(n,15,jspin) )*SQRT(5.0) -&
-                    ( bcof(n,11,jspin) - bcof(n,13,jspin) )*SQRT(3.0)
-             cb10 = ( bcof(n,9,jspin)  + bcof(n,15,jspin) )*SQRT(5.0) +&
-                    ( bcof(n,11,jspin) + bcof(n,13,jspin) )*SQRT(3.0)
-             cb11 =   bcof(n,12,jspin)
-             cb12 = ( bcof(n,9,jspin)  + bcof(n,15,jspin) )*SQRT(3.0) -&
-                    ( bcof(n,11,jspin) + bcof(n,13,jspin) )*SQRT(5.0)
-             cb13 =   bcof(n,10,jspin) + bcof(n,14,jspin)
-             cb14 = ( bcof(n,9,jspin)  - bcof(n,15,jspin) )*SQRT(3.0) +&
-                    ( bcof(n,11,jspin) - bcof(n,13,jspin) )*SQRT(5.0)
-             cb15 =   bcof(n,10,jspin) - bcof(n,14,jspin)
+             cb09 = ( bcof(n,9)  - bcof(n,15) )*SQRT(5.0) -&
+                    ( bcof(n,11) - bcof(n,13) )*SQRT(3.0)
+             cb10 = ( bcof(n,9)  + bcof(n,15) )*SQRT(5.0) +&
+                    ( bcof(n,11) + bcof(n,13) )*SQRT(3.0)
+             cb11 =   bcof(n,12)
+             cb12 = ( bcof(n,9)  + bcof(n,15) )*SQRT(3.0) -&
+                    ( bcof(n,11) + bcof(n,13) )*SQRT(5.0)
+             cb13 =   bcof(n,10) + bcof(n,14)
+             cb14 = ( bcof(n,9)  - bcof(n,15) )*SQRT(3.0) +&
+                    ( bcof(n,11) - bcof(n,13) )*SQRT(5.0)
+             cb15 =   bcof(n,10) - bcof(n,14)
              !
              !   f-states:	a low symmetry set (lss)
              !
-             cb16 =  bcof(n,11,jspin) - bcof(n,13,jspin)
-             cb17 =  bcof(n,11,jspin) + bcof(n,13,jspin)
-             cb18 =  bcof(n,12,jspin)
-             cb19 =  bcof(n,10,jspin) - bcof(n,14,jspin)
-             cb20 =  bcof(n,10,jspin) + bcof(n,14,jspin)
-             cb21 =  bcof(n,9,jspin)  - bcof(n,15,jspin)
-             cb22 =  bcof(n,9,jspin)  + bcof(n,15,jspin)
+             cb16 =  bcof(n,11) - bcof(n,13)
+             cb17 =  bcof(n,11) + bcof(n,13)
+             cb18 =  bcof(n,12)
+             cb19 =  bcof(n,10) - bcof(n,14)
+             cb20 =  bcof(n,10) + bcof(n,14)
+             cb21 =  bcof(n,9)  - bcof(n,15)
+             cb22 =  bcof(n,9)  + bcof(n,15)
              !------------------------------------------------------------------
              !  s
              comp(1)  =   ca00*CONJG(ca00) + cb00*CONJG(cb00)*ddn0
@@ -214,7 +213,7 @@ CONTAINS
                 l = atoms%llo(lo,ityp)
                 ! lo-s
                 IF ( l.EQ.0 )  THEN
-	           cc00 = ccof(0,n,lo,jspin)
+	           cc00 = ccof(0,n,lo)
                    ck00 = CONJG(cc00)
 
                    comp(1)  =  comp(1)  +&
@@ -224,9 +223,9 @@ CONTAINS
                 ENDIF
                 ! lo-p
                 IF ( l.EQ.1 )  THEN
-	           cc01 = ccof(-1,n,lo,jspin) - ccof(1,n,lo,jspin)
-	           cc02 = ccof(-1,n,lo,jspin) + ccof(1,n,lo,jspin)
-	           cc03 = ccof( 0,n,lo,jspin)
+	           cc01 = ccof(-1,n,lo) - ccof(1,n,lo)
+	           cc02 = ccof(-1,n,lo) + ccof(1,n,lo)
+	           cc03 = ccof( 0,n,lo)
 
                    ck01 = CONJG(cc01)
                    ck02 = CONJG(cc02)
@@ -242,11 +241,11 @@ CONTAINS
                 ENDIF
                 ! lo-d
                 IF ( l.EQ.2 )  THEN
-	           cc04 = ccof(-2,n,lo,jspin) - ccof(2,n,lo,jspin)
-	           cc05 = ccof(-1,n,lo,jspin) + ccof(1,n,lo,jspin)
-	           cc06 = ccof(-1,n,lo,jspin) - ccof(1,n,lo,jspin)
-	           cc07 = ccof(-2,n,lo,jspin) + ccof(2,n,lo,jspin)
-	           cc08 = ccof( 0,n,lo,jspin)
+	           cc04 = ccof(-2,n,lo) - ccof(2,n,lo)
+	           cc05 = ccof(-1,n,lo) + ccof(1,n,lo)
+	           cc06 = ccof(-1,n,lo) - ccof(1,n,lo)
+	           cc07 = ccof(-2,n,lo) + ccof(2,n,lo)
+	           cc08 = ccof( 0,n,lo)
 
                    ck04 = CONJG(cc04)
                    ck05 = CONJG(cc05)
@@ -271,17 +270,17 @@ CONTAINS
                    !
                    !  a cubic set (cub)
                    !
-	           cc09 = ( ccof(-3,n,lo,jspin) - ccof(3,n,lo,jspin) )*SQRT(5.0) -&
-                          ( ccof(-1,n,lo,jspin) - ccof(1,n,lo,jspin) )*SQRT(3.0)
-	           cc10 = ( ccof(-3,n,lo,jspin) + ccof(3,n,lo,jspin) )*SQRT(5.0) +&
-                          ( ccof(-1,n,lo,jspin) + ccof(1,n,lo,jspin) )*SQRT(3.0)
-	           cc11 =   ccof( 0,n,lo,jspin)
-	           cc12 = ( ccof(-3,n,lo,jspin) + ccof(3,n,lo,jspin) )*SQRT(3.0) -&
-                          ( ccof(-1,n,lo,jspin) + ccof(1,n,lo,jspin) )*SQRT(5.0)
-	           cc13 =   ccof(-2,n,lo,jspin) + ccof(2,n,lo,jspin)
-	           cc14 = ( ccof(-3,n,lo,jspin) - ccof(3,n,lo,jspin) )*SQRT(3.0) +&
-                          ( ccof(-1,n,lo,jspin) - ccof(1,n,lo,jspin) )*SQRT(5.0)
-	           cc15 =   ccof(-2,n,lo,jspin) - ccof(2,n,lo,jspin)
+	           cc09 = ( ccof(-3,n,lo) - ccof(3,n,lo) )*SQRT(5.0) -&
+                          ( ccof(-1,n,lo) - ccof(1,n,lo) )*SQRT(3.0)
+	           cc10 = ( ccof(-3,n,lo) + ccof(3,n,lo) )*SQRT(5.0) +&
+                          ( ccof(-1,n,lo) + ccof(1,n,lo) )*SQRT(3.0)
+	           cc11 =   ccof( 0,n,lo)
+	           cc12 = ( ccof(-3,n,lo) + ccof(3,n,lo) )*SQRT(3.0) -&
+                          ( ccof(-1,n,lo) + ccof(1,n,lo) )*SQRT(5.0)
+	           cc13 =   ccof(-2,n,lo) + ccof(2,n,lo)
+	           cc14 = ( ccof(-3,n,lo) - ccof(3,n,lo) )*SQRT(3.0) +&
+                          ( ccof(-1,n,lo) - ccof(1,n,lo) )*SQRT(5.0)
+	           cc15 =   ccof(-2,n,lo) - ccof(2,n,lo)
             !
                    ck09 = CONJG(cc09)
                    ck10 = CONJG(cc10)
@@ -308,13 +307,13 @@ CONTAINS
           !
           !  a low symmetry set (lss)
           !
-	           cc16 = ccof(-1,n,lo,jspin) - ccof(1,n,lo,jspin)
-	           cc17 = ccof(-1,n,lo,jspin) + ccof(1,n,lo,jspin)
-	           cc18 = ccof( 0,n,lo,jspin)
-	           cc19 = ccof(-2,n,lo,jspin) - ccof(2,n,lo,jspin)
-	           cc20 = ccof(-2,n,lo,jspin) + ccof(2,n,lo,jspin)
-	           cc21 = ccof(-3,n,lo,jspin) - ccof(3,n,lo,jspin)
-	           cc22 = ccof(-3,n,lo,jspin) + ccof(3,n,lo,jspin)
+	           cc16 = ccof(-1,n,lo) - ccof(1,n,lo)
+	           cc17 = ccof(-1,n,lo) + ccof(1,n,lo)
+	           cc18 = ccof( 0,n,lo)
+	           cc19 = ccof(-2,n,lo) - ccof(2,n,lo)
+	           cc20 = ccof(-2,n,lo) + ccof(2,n,lo)
+	           cc21 = ccof(-3,n,lo) - ccof(3,n,lo)
+	           cc22 = ccof(-3,n,lo) + ccof(3,n,lo)
             !
                    ck16 = CONJG(cc16)
                    ck17 = CONJG(cc17)

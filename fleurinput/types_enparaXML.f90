@@ -9,8 +9,8 @@ MODULE m_types_enparaXML
   IMPLICIT NONE
   PRIVATE
   TYPE,EXTENDS(t_fleurinput_base):: t_enparaXML
-     INTEGER,ALLOCATABLE  :: qn_el(:,:,:)    !>if these are .ne.0 they are understood as
-     INTEGER,ALLOCATABLE  :: qn_ello(:,:,:)  !>quantum numbers
+     INTEGER,ALLOCATABLE  :: qn_el(:,:,:)    !if these are .ne.0 they are understood as
+     INTEGER,ALLOCATABLE  :: qn_ello(:,:,:)  !quantum numbers
      REAL                 :: evac0(2,2)
    CONTAINS
      PROCEDURE :: init
@@ -49,35 +49,49 @@ CONTAINS
     TYPE(t_xml),INTENT(INOUT)   ::xml
 
     LOGICAL :: l_enpara,film
-    INTEGER :: jspins,ntype,lmaxd,n,lo,i
-    CHARACTER(len=100)::xpath,xpath2
-    INTEGER, ALLOCATABLE :: nlo(:),neq(:)
+    INTEGER :: jspins,ntype,n,iLO,i, nLOLocal, lNumCount, nNumCount
+    CHARACTER(len=200) :: xPath, xPathB
+    CHARACTER(LEN=200) :: lString, nString
+    INTEGER, ALLOCATABLE :: nlo(:)
+    INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:)
 
     ntype=xml%get_ntype()
     nlo=xml%get_nlo()
-    lmaxd=xml%get_lmaxd()
     jspins=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
     film=xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
 
     CALL this%init(ntype,MAXVAL(nlo),jspins)
 
     DO n=1,ntype
-       xPath=TRIM(xml%speciesPath(n))//'/energyParameters'
-       this%qn_el(0,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@s'))
-       this%qn_el(1,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@p'))
-       this%qn_el(2,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@d'))
-       this%qn_el(3,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@f'))
-       DO lo=1,nlo(n)
-          WRITE(xpath2,"(a,a,i0,a)") TRIM(xml%speciesPath(n)),'/lo[',lo,']'
-          this%qn_ello(lo,n,:)=evaluateFirstINTOnly(xml%GetAttributeValue(TRIM(xpath2)//'/@n'))
-          IF (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPath2))//'/@type')))=='HELO') &
-               this%qn_ello(lo,n,:)=-1*this%qn_ello(lo,n,:)
+       xPath = TRIM(xml%speciesPath(n))//'/energyParameters'
+       this%qn_el(0,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xPath)//'/@s'))
+       this%qn_el(1,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xPath)//'/@p'))
+       this%qn_el(2,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xPath)//'/@d'))
+       this%qn_el(3,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xPath)//'/@f'))
+       nLOLocal = 0
+       DO iLO = 1, xml%getNumberOfNodes(TRIM(ADJUSTL(xml%speciesPath(n))//'/lo'))
+          WRITE(xPathB,"(a,a,i0,a)") TRIM(xml%speciesPath(n)),'/lo[',iLO,']'
+          lString = xml%getAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l')
+          nString = xml%getAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n')
+          CALL xml%getIntegerSequenceFromString(TRIM(ADJUSTL(lString)), lNumbers, lNumCount)
+          CALL xml%getIntegerSequenceFromString(TRIM(ADJUSTL(nString)), nNumbers, nNumCount)
+          IF(lNumCount.NE.nNumCount) THEN
+             CALL judft_error('Error in LO input: l quantum number count does not equal n quantum number count')
+          END IF
+          DO i = 1, lNumCount
+             this%qn_ello(nLOLocal+i,n,:) = nNumbers(i)
+             IF (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathB))//'/@type')))=='HELO') THEN
+                this%qn_ello(nLOLocal+i,n,:)=-1*this%qn_ello(nLOLocal+i,n,:)
+             END IF
+          END DO
+          nLOLocal = nLOLocal +lnumcount
+          DEALLOCATE (lNumbers, nNumbers)
        END DO
     END DO
     !Read vacuum
     IF (xml%GetNumberOfNodes("/fleurInput/cell/filmLattice")==1) THEN
        DO i=1,xml%GetNumberOfNodes("/fleurInput/cell/filmLattice/vacuumEnergyParameters")
-          WRITE(xpath,"(a,i0,a)") '/fleurInput/cell/filmLattice/vacuumEnergyParameters[',i,']'
+          WRITE(xPath,"(a,i0,a)") '/fleurInput/cell/filmLattice/vacuumEnergyParameters[',i,']'
           n = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))//'/@vacuum'))
           this%evac0(n,:) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))//'/@spinUp'))
           IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPath))//'/@spinDown').GE.1) THEN
@@ -90,45 +104,98 @@ CONTAINS
 
   END SUBROUTINE read_xml_enpara
 
-  SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,str,lo)
-    use m_types_atoms
+  SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,eConfigStr,loStr,addLOs)
+    USE m_types_atoms
     !sets the energy parameters according to simple electronic config string and lo string
-    CLASS(t_enparaXML),INTENT(inout):: enpara
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    INTEGER,INTENT(in)           :: ntype
-    CHARACTER(len=*),INTENT(in)  :: str,lo
+    CLASS(t_enparaXML),INTENT(inout) :: enpara
+    TYPE(t_atoms),INTENT(IN)         :: atoms
+    INTEGER,INTENT(in)               :: ntype
+    CHARACTER(len=*),INTENT(in)      :: eConfigStr, loStr
+    INTEGER, INTENT(IN)              :: addLOs(atoms%ntype)
 
-    CHARACTER(len=100):: val_str
+    CHARACTER(len=100):: val_str, coreStr
     character         :: ch
-    INTEGER           :: qn,n,i,l
+    INTEGER           :: qn,n,i,l, nobleGasConfigIndex
+    LOGICAL           :: representedStates(10,0:3)
+    LOGICAL           :: isRepresented
 
-    !Process lo's
-    DO i=1,LEN_TRIM(lo)/2
-       READ(lo(2*i-1:2*i),"(i1,a1)") qn,ch
-       enpara%qn_ello(i,ntype,:)=qn
+
+    representedStates = .FALSE.
+    representedStates(1,1) = .TRUE.
+    representedStates(1:2,2) = .TRUE.
+    representedStates(1:3,3) = .TRUE.
+    
+    ! Process core string
+    coreStr=ADJUSTL(eConfigStr(1:INDEX(eConfigStr,"|")-1))
+    
+    nobleGasConfigIndex = INDEX(coreStr,"[He]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Ne]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Ar]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6 3s2 3p6"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Kr]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Xe]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6 3s2 3p6 4s2 3d10 5p6 5s2 4d10 5p6"// coreStr(nobleGasConfigIndex+4:)
+    nobleGasConfigIndex = INDEX(coreStr,"[Rn]")
+    IF (nobleGasConfigIndex.NE.0) coreStr = "1s2 2s2 2p6 3s2 3p6 4s2 3d10 5p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6"// coreStr(nobleGasConfigIndex+4:)
+    
+    DO WHILE(LEN_TRIM(coreStr)>1)
+       READ(coreStr,"(i1,a1)") qn,ch
+       l = INDEX("spdf",ch) - 1
+       representedStates(qn,l) = .TRUE.
+       IF (LEN_TRIM(coreStr) > 5) THEN
+          coreStr = ADJUSTL(coreStr(5:))
+       ELSE
+          coreStr = ""
+       ENDIF
+    END DO
+
+    ! Process LOs
+    DO i=1,LEN_TRIM(loStr)/2
+       READ(loStr(2*i-1:2*i),"(i1,a1)") qn,ch
+       l = INDEX("spdf",ch) - 1
+       enpara%qn_ello(i,ntype,:) = qn
+       representedStates(qn,l) = .TRUE.
     ENDDO
+    
+    ! Set energy parameters for LAPW basis functions
+    
+    DO l = 0, 3
+       isRepresented = .FALSE.
+       qn = 0
+       DO WHILE (.NOT.isRepresented)
+          qn = qn + 1
+          IF (.NOT.representedStates(qn,l)) THEN
+             enpara%qn_el(l,ntype,:) = qn
+             representedStates(qn,l) = .TRUE.
+             isRepresented = .TRUE.
+          END IF
+       END DO
+    END DO
 
-    !Valence string
-    val_str=ADJUSTL(str(INDEX(str,"|")+1:))
+    ! Check representation for valence string
+    val_str=ADJUSTL(eConfigStr(INDEX(eConfigStr,"|")+1:))
     DO WHILE(LEN_TRIM(val_str)>1)
        READ(val_str,"(i1,a1)") qn,ch
-       l=INDEX("spdf",ch)-1
-       !check if we have an lo for this l-channel
-       DO i=1,atoms%nlo(ntype)
-          IF (l==atoms%llo(i,ntype).AND.qn==enpara%qn_ello(i,ntype,1)) EXIT
-       ENDDO
-       IF (atoms%nlo(ntype)==0.OR.i>atoms%nlo(ntype)) THEN
-          !set the lapw parameter
-          IF (enpara%qn_el(l,ntype,1)<0) CALL judft_error("Electronic configuration needs more LOs")
-          enpara%qn_el(l,ntype,:)=-qn
-       ENDIF
+       l = INDEX("spdf",ch) - 1
+       IF(.NOT.representedStates(qn,l)) THEN
+          WRITE(*,*) "Valence state is neither represented by LAPW energy parameters nor by LOs."
+          WRITE(*,*) 'atom type = ', ntype
+          WRITE(*,*) 'n = ', qn
+          WRITE(*,*) 'l = ', l
+          CALL juDFT_error("Valence state is neither represented by LAPW energy parameters nor by LOs.", calledby = "types_enparaXML")
+       END IF
        IF (LEN_TRIM(val_str)>5) THEN
           val_str=ADJUSTL(val_str(5:))
        ELSE
           val_str=""
        ENDIF
     ENDDO
-    enpara%qn_el(:,ntype,:)=ABS(enpara%qn_el(:,ntype,:))
+    IF (ANY(enpara%qn_el(:,ntype,:).LT.0)) THEN
+       CALL juDFT_error("Negative energy parameter generated", calledby = "types_enparaXML")
+    END IF
   END SUBROUTINE set_quantum_numbers
 
   SUBROUTINE Init(This,Ntype,Nlod,Jspins,L_defaults,Nz)
@@ -152,36 +219,8 @@ CONTAINS
     ELSE
        RETURN
     ENDIF
-    !Set most simple defaults
-    DO jsp=1,jspins
-       DO n = 1,ntype
-          IF ( nz(n) < 3 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/1,2,3,4/)
-          ELSEIF ( nz(n) < 11 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/2,2,3,4/)
-          ELSEIF ( nz(n) < 19 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/3,3,3,4/)
-          ELSEIF ( nz(n) < 31 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/4,4,3,4/)
-          ELSEIF ( nz(n) < 37 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/4,4,4,4/)
-          ELSEIF ( nz(n) < 49 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/5,5,4,4/)
-          ELSEIF ( nz(n) < 55 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/5,5,5,4/)
-          ELSEIF ( nz(n) < 72 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/6,6,5,4/)
-          ELSEIF ( nz(n) < 81 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/6,6,5,5/)
-          ELSEIF ( nz(n) < 87 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/6,6,6,5/)
-          ELSE
-             this%qn_el(0:3,n,jsp) =  (/7,7,6,5/)
-          ENDIF
-
-          this%qn_ello(:,n,jsp) = 0
-       ENDDO
-    ENDDO
+    !Set negative initial values
+    this%qn_el(0:3,:,:) = -1
 
     this%evac0=eVac0Default_const
 

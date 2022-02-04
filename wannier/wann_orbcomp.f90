@@ -115,8 +115,6 @@ CONTAINS
     LOGICAL :: l_doit
     !      ..
     !      ..
-    !      Intrinsic Function
-    INTRINSIC sqrt,conjg
     !
     DATA h/0.50/ g/0.0625/
     !**************************************************** 

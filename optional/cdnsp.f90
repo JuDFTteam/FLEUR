@@ -36,7 +36,7 @@
           TYPE(t_potden)               :: den
           TYPE(t_input)                ::input_jsp
           !     .. Local Scalars ..
-          REAL dummy,pp,qtot1,qtot2,spmtot,qval,sfp,fermiEnergyTemp
+          REAL dummy,pp,qtot1,qtot2,spmtot,qval,sfp,fermiEnergyTemp,tempDistance
           INTEGER i,ivac,j,k,lh,n,na,jsp_new,i_u
           INTEGER ios, archiveType
           LOGICAL n_exist,l_qfix
@@ -59,7 +59,7 @@
           CALL readCoreDensity(input_jsp,atoms,rhoc,tec,qintc)
 
           CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input_jsp,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
+                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,den)
 
           qval = 0.
           na = 1

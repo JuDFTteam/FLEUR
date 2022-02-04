@@ -33,6 +33,7 @@ MODULE m_types
   USE m_types_nococonv
   USE m_types_potden
   USE m_types_regionCharges
+  USE m_types_scalarGF
   USE m_types_setup
   USE m_types_tlmplm
   USE m_types_usdus

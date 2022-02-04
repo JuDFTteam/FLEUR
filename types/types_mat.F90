@@ -1,6 +1,12 @@
 MODULE m_types_mat
+#ifdef _OPENACC
+   use openacc
+   use cusolverDn
+   use cublas
+#endif
 #include"cpp_double.h"
    USE m_judft
+   use m_constants
    IMPLICIT NONE
    PRIVATE
    !<This is the basic type to store and manipulate real/complex rank-2 matrices
@@ -47,9 +53,70 @@ MODULE m_types_mat
       procedure        :: bcast => t_mat_bcast
       procedure        :: pos_eigvec_sum => t_mat_pos_eigvec_sum
       procedure        :: leastsq => t_mat_leastsq
+      procedure        :: add
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine add(mat,mat2,alpha_c,alpha_r)
+#ifdef _OPENACC
+         use openacc
+#endif            
+         IMPLICIT NONE 
+         CLASS(t_mat), INTENT(INOUT)      :: mat
+         class(t_mat), INTENT(IN)         :: mat2
+         complex,intent(in),optional      :: alpha_c
+         complex,intent(in),optional      :: alpha_r
+   
+         real:: a_r
+         complex:: a_c
+         INTEGER:: i,j
+         a_c=1.0
+         if (present(alpha_c)) a_c=alpha_c
+      
+         a_r=1.0
+         if(present(alpha_r)) a_r=alpha_r
+         
+         if (mat%l_real) THEN
+#ifdef _OPENACC         
+            IF (acc_is_present(mat%data_r).and.acc_is_present(mat2%data_r)) THEN
+               !Data is on Device, hence we can operate on GPU
+               !$acc kernels present(mat%data_r,mat2%data_r)
+               mat%data_r=mat%data_r+a_r*mat2%data_r
+               !$acc end kernels
+            ELSE   
+#else 
+            IF (.true.) then !in No openacc case always use OpenMP version
+#endif
+               !$OMP parallel do collapse(2) shared (mat,mat2,a_r) default(none)
+               DO i=1,mat%matsize1
+                  DO j=1,mat%matsize2
+                     mat%data_r(i,j)=mat%data_r(i,j)+a_r*mat2%data_r(i,j)
+                  ENDDO
+               ENDDO
+               !$OMP end parallel do
+            ENDIF
+         ELSE
+#ifdef _OPENACC         
+            IF (acc_is_present(mat%data_c).and.acc_is_present(mat2%data_c)) THEN
+               !Data is on Device, hence we can operate on GPU
+               !$acc kernels present(mat%data_c,mat2%data_c)
+               mat%data_c=mat%data_c+a_c*mat2%data_c
+               !$acc end kernels
+            ELSE   
+#else 
+            IF (.true.) then !in No openacc case always use OpenMP version
+#endif
+               !$OMP parallel do collapse(2) shared (mat,mat2,a_c) default(none)
+               DO i=1,mat%matsize1
+                  DO j=1,mat%matsize2
+                     mat%data_c(i,j)=mat%data_c(i,j)+a_c*mat2%data_c(i,j)
+                  ENDDO
+               ENDDO
+               !$OMP end parallel do
+            ENDIF
+         ENDIF
+   END SUBROUTINE
+
    subroutine t_mat_leastsq(A, b)
       use m_constants
       implicit none
@@ -332,6 +399,12 @@ CONTAINS
       INTEGER:: lwork, info
       REAL, ALLOCATABLE:: work(:)
       INTEGER, allocatable::ipiv(:)
+      logical :: both_on_gpu
+#ifdef _OPENACC 
+      integer :: ierr, sz
+      real(8), dimension(100,100) :: A
+      type(cusolverDnHandle) :: handle
+#endif
 
       select type (vec) 
       class is (t_mat)
@@ -339,41 +412,163 @@ CONTAINS
          call judft_error("lproblem can only be solved if vec and mat are the same class")
       end select
 
-      IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) &
-          .OR. (mat%matsize1 .NE. vec%matsize1)) &
+      IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) .OR. (mat%matsize1 .NE. vec%matsize1)) then
          CALL judft_error("Invalid matices in t_mat_lproblem")
-      IF (mat%l_real) THEN
-         call timestart("solve real linear problem")
-         IF (mat%unsymmetry() < 1E-8) THEN
-            !Matrix is symmetric
-            CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, &
-                       vec%data_r, vec%matsize1, INFO)
-            IF (INFO > 0) THEN
-               !Matrix was not positive definite
-               lwork = -1; ALLOCATE (work(1))
-               CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
-                          vec%data_r, vec%matsize1, WORK, LWORK, INFO)
-               lwork = INT(work(1))
-               DEALLOCATE (work); ALLOCATE (ipiv(mat%matsize1), work(lwork))
-               CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
-                          vec%data_r, vec%matsize1, WORK, LWORK, INFO)
-               IF (info .NE. 0) CALL judft_error("Could not solve linear equation, matrix singular")
+      endif 
+
+#ifdef _OPENACC
+      if(mat%l_real) then
+         both_on_gpu = acc_is_present(mat%data_r) .and. acc_is_present(vec%data_r)
+      else
+         both_on_gpu = acc_is_present(mat%data_c) .and. acc_is_present(vec%data_c)
+      endif
+#else 
+      both_on_gpu = .False.
+#endif
+
+      if(both_on_gpu) then
+#ifdef _OPENACC       
+         allocate(ipiv(mat%matsize1))
+         sz = mat%matsize1
+         ierr = cusolverDnCreate(handle)
+         if(ierr /= 0) call juDFT_error("can't create handle")
+         
+         !$acc data create(ipiv)
+            call perform_LU_cusolver(handle, mat%l_real, mat%data_r, mat%data_c, ipiv)
+            call calc_rhs(handle, mat%l_real, mat%data_r, mat%data_c, vec%data_r, vec%data_c, ipiv)
+         !$acc end data
+         
+         ierr = cusolverDnDestroy(handle)
+         deallocate(ipiv)
+         if(ierr /= 0) call juDFT_error("can't destroy handle")
+#endif
+      else
+         IF (mat%l_real) THEN
+            call timestart("solve real linear problem")
+            IF (mat%unsymmetry() < 1E-8) THEN
+               !Matrix is symmetric
+               CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, &
+                        vec%data_r, vec%matsize1, INFO)
+               IF (INFO > 0) THEN
+                  !Matrix was not positive definite
+                  lwork = -1; ALLOCATE (work(1))
+                  CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
+                           vec%data_r, vec%matsize1, WORK, LWORK, INFO)
+                  lwork = INT(work(1))
+                  DEALLOCATE (work); ALLOCATE (ipiv(mat%matsize1), work(lwork))
+                  CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
+                           vec%data_r, vec%matsize1, WORK, LWORK, INFO)
+                  IF (info .NE. 0) CALL judft_error("Could not solve linear equation, matrix singular")
+               END IF
+            ELSE
+               allocate (ipiv(mat%matsize1))
+               call dgesv(mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, ipiv, vec%data_r, vec%matsize1, info)
+               if (info /= 0) call judft_error("Error in dgesv for lproblem")
             END IF
+            call timestop("solve real linear problem")
          ELSE
+            call timestart("solve cmplx linear problem")
+            ! I don't to do the whole testing for symmetry:
             allocate (ipiv(mat%matsize1))
-            call dgesv(mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, ipiv, vec%data_r, vec%matsize1, info)
-            if (info /= 0) call judft_error("Error in dgesv for lproblem")
-         END IF
-         call timestop("solve real linear problem")
-      ELSE
-         call timestart("solve cmplx linear problem")
-         ! I don't to do the whole testing for symmetry:
-         allocate (ipiv(mat%matsize1))
-         call zgesv(mat%matsize1, vec%matsize2, mat%data_c, mat%matsize1, ipiv, vec%data_c, vec%matsize1, info)
-         if (info /= 0) call judft_error("Error in zgesv for lproblem")
-         call timestop("solve cmplx linear problem")
-      ENDIF
+            call zgesv(mat%matsize1, vec%matsize2, mat%data_c, mat%matsize1, ipiv, vec%data_c, vec%matsize1, info)
+            if (info /= 0) call judft_error("Error in zgesv for lproblem")
+            call timestop("solve cmplx linear problem")
+         ENDIF
+      endif
    END SUBROUTINE t_mat_lproblem
+
+#ifdef _OPENACC  
+   subroutine perform_LU_cusolver(handle, l_real, data_r, data_c, ipiv)
+      implicit none
+      type(cusolverDnHandle), intent(in) :: handle
+      logical, intent(in)                :: l_real 
+      real, intent(inout)                :: data_r(:,:)
+      complex, intent(inout)             :: data_c(:,:)
+      integer, intent(inout)             :: ipiv(:)
+
+      real, allocatable    :: r_work(:)
+      complex, allocatable :: c_work(:)
+      integer :: lwork, devinfo, sz, ierr
+
+      lwork = get_lwork_cusolver(handle, l_real, data_r, data_c) 
+      if(l_real) then 
+         sz = size(data_r,1)
+         allocate(r_work(lwork), stat=ierr)
+         if(ierr /= 0) call juDFT_error("cant' alloc r_work")
+
+         !$acc data create(r_work) copyout(devinfo)
+            !$acc host_data use_device(data_r, r_work, ipiv, devinfo)
+            ierr = cusolverDnDgetrf(handle, sz, sz, data_r, sz, r_work, ipiv, devinfo)
+            !$acc end host_data 
+         !$acc end data
+         if(ierr /= 0) call juDFT_error("cusolver failed R")
+         deallocate(r_work)
+      else
+         sz = size(data_c,1)
+         allocate(c_work(lwork), stat=ierr)
+         if(ierr /= 0) call juDFT_error("cant' alloc c_work")
+
+         !$acc data create(c_work) copyout(devinfo)
+            !$acc host_data use_device(data_c, c_work, ipiv, devinfo)
+            ierr = cusolverDnZgetrf(handle, sz, sz, data_c, sz, c_work, ipiv, devinfo)
+            !$acc end host_data 
+         !$acc end data
+         if(ierr /= 0) call juDFT_error("cusolver failed C")
+         deallocate(c_work)
+      endif 
+   end subroutine perform_LU_cusolver
+   
+   subroutine calc_rhs(handle, l_real, mat_r, mat_c, vec_r, vec_c, ipiv)
+      implicit none
+      type(cusolverDnHandle), intent(in) :: handle
+      logical, intent(in)                :: l_real 
+      real, intent(inout)                :: mat_r(:,:), vec_r(:,:)
+      complex, intent(inout)             :: mat_c(:,:), vec_c(:,:)
+      integer, intent(in)                :: ipiv(:)
+
+      integer :: ierr, n, nrhs, devinfo
+
+      !$acc data copyout(devinfo)
+         if(l_real) then 
+            n = size(mat_r, 1) 
+            nrhs = size(vec_r, 2)
+            !$acc host_data use_device(mat_r, vec_r, ipiv, devinfo)
+            ierr = cusolverDnDgetrs(handle, CUBLAS_OP_N, n, nrhs, mat_r, n, ipiv, vec_r, n, devinfo)
+            !$acc end host_data
+         else 
+            n = size(mat_c, 1) 
+            nrhs = size(vec_c, 2)
+            !$acc host_data use_device(mat_c, vec_c, ipiv, devinfo)
+            ierr = cusolverDnZgetrs(handle, CUBLAS_OP_N, n, nrhs, mat_c, n, ipiv, vec_c, n, devinfo)
+            !$acc end host_data
+         endif
+      !$acc end data
+      if(ierr /= 0) call judft_error("rhs failed")
+   end subroutine calc_rhs 
+      
+   function get_lwork_cusolver(handle, l_real, data_r, data_c) result(lwork)
+      implicit none 
+      type(cusolverDnHandle), intent(in) :: handle
+      logical, intent(in)                :: l_real 
+      real, intent(in)                   :: data_r(:,:)
+      complex, intent(in)                :: data_c(:,:)
+      integer :: lwork, sz, ierr
+
+      if(l_real) then
+         sz = size(data_r,1)
+         !$acc host_data use_device(data_r)
+         ierr = cusolverDnDgetrf_buffersize(handle, sz, sz, data_r, sz, lwork)
+         !$acc end host_data
+      else
+         sz = size(data_c,1)
+         !$acc host_data use_device(data_c)
+         ierr = cusolverDnZgetrf_buffersize(handle, sz, sz, data_c, sz, lwork)
+         !$acc end host_data
+      endif
+
+      if(ierr /= 0) call juDFT_error("can't get lwork")
+   end function get_lwork_cusolver
+#endif
 
    SUBROUTINE t_mat_free(mat)
       use m_judft
@@ -503,7 +698,6 @@ CONTAINS
 
    SUBROUTINE t_mat_multiply(mat1, mat2, res, transA, transB)
       use m_judft
-      use m_constants
       CLASS(t_mat), INTENT(INOUT)            :: mat1
       CLASS(t_mat), INTENT(IN)               :: mat2
       CLASS(t_mat), INTENT(INOUT), OPTIONAL    :: res
@@ -512,6 +706,7 @@ CONTAINS
       integer           :: m,n,k, lda, ldb, ldc
       character(len=1)  :: transA_i, transB_i
       type(t_mat)       :: tmp
+      logical           :: run_on_gpu 
 
       call timestart("t_mat_multiply")
 
@@ -532,6 +727,27 @@ CONTAINS
       endif
 
       if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricies of the same type")
+
+      if(mat1%l_real) then
+#ifdef _OPENACC
+         run_on_gpu = acc_is_present(mat1%data_r) .and. acc_is_present(mat2%data_r)
+         if(present(res)) then
+            run_on_gpu = run_on_gpu .and. acc_is_present(res%data_r)
+         endif 
+#else
+         run_on_gpu = .False.
+#endif
+      else
+#ifdef _OPENACC
+         run_on_gpu = acc_is_present(mat1%data_c) .and. acc_is_present(mat2%data_c)
+         if(present(res)) then
+            run_on_gpu = run_on_gpu .and. acc_is_present(res%data_c)
+         endif 
+#else
+         run_on_gpu = .False.
+#endif
+      endif
+
       if(transB_i == "N" ) then
          if(k /= mat2%matsize1) call judft_error("dimensions don't agree for matmul")
          n = mat2%matsize2
@@ -558,37 +774,35 @@ CONTAINS
          ! prepare res matrix
          if(res%allocated()) then
             if(res%l_real .neqv. mat1%l_real) then
-               call res%free()
+               call juDFT_error("res must be of the correct type")
             else
                if(res%l_real) then
-                  if(any(shape(res%data_r) < [m,n])) then
-                     call res%free()
-                  else
-                     res%data_r = 0.0
-                     res%matsize1 = m
-                     res%matsize2 = n
+                  if(any(shape(res%data_r) /= [m,n])) then
+                     call juDFT_error("res must be of the correct size!")
                   endif
                else
-                  if(any(shape(res%data_c) < [m,n])) then
-                     call res%free()
-                  else
-                     res%data_c = cmplx_0
-                     res%matsize1 = m
-                     res%matsize2 = n
+                  if(any(shape(res%data_c) /= [m,n])) then
+                     call juDFT_error("res must be of the correct size!")
                   endif
                endif
             endif
+         else
+            call juDFT_error("res must be allocated")
          endif
-         if(.not. res%allocated()) call res%alloc(mat1%l_real, m,n)
 
          ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
-         IF (mat1%l_real) THEN
-            call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
-         ELSE
-            call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0,res%data_c, ldc)
-         ENDIF
+         if(run_on_gpu) then
+            call perform_cublas_gemm(mat1%l_real, transA_i,transB_i,m,n,k, lda, ldb, ldc,&
+                                    mat1%data_r, mat1%data_c, mat2%data_r, mat2%data_c, res%data_r, res%data_c)
+         else
+            IF (mat1%l_real) THEN
+               call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
+            ELSE
+               call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0,res%data_c, ldc)
+            ENDIF
+         endif
       else
          if (mat1%matsize1  /= mat1%matsize2 .or. mat2%matsize2 /= mat2%matsize1)&
             CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
@@ -597,16 +811,49 @@ CONTAINS
          ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
-         if (mat1%l_real) THEN
-            call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
-         ELSE
-            call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
-         ENDIF
-         call mat1%copy(tmp,1,1)
+         if(run_on_gpu) then
+            !$acc data create(tmp, tmp%data_r, tmp%data_c)
+            call perform_cublas_gemm(mat1%l_real, transA_i, transB_i, m,n,k, lda, ldb, ldc,& 
+                                     mat1%data_r, mat1%data_c, mat2%data_r, mat2%data_c, tmp%data_r, tmp%data_c)
+            call mat1%copy(tmp,1,1)
+            !$acc end data
+         else
+            if (mat1%l_real) THEN
+               call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
+            ELSE
+               call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
+            ENDIF
+            call mat1%copy(tmp,1,1)
+         endif
          call tmp%free()
       end IF
       call timestop("t_mat_multiply")
    end SUBROUTINE t_mat_multiply
+
+   subroutine perform_cublas_gemm(l_real, transA, transB, m,n,k, lda, ldb, ldc,& 
+                                  mat1_data_r, mat1_data_c, mat2_data_r, mat2_data_c, res_data_r, res_data_c)
+      implicit none 
+      logical, intent(in)           :: l_real
+      character(len=*), intent(in)  :: transA, transB 
+      integer, intent(in)           :: m, n, k, lda, ldb, ldc
+      real, intent(in)              :: mat1_data_r(:,:), mat2_data_r(:,:)
+      complex, intent(in)           :: mat1_data_c(:,:), mat2_data_c(:,:)
+      real, intent(inout)           :: res_data_r(:,:)
+      complex, intent(inout)        :: res_data_c(:,:)
+
+#ifdef _OPENACC
+      if(l_real) then
+         !$acc host_data use_device(mat1_data_r, mat2_data_r, res_data_r)
+         call cublasDgemm(transA, transB, m, n, k, 1.0, mat1_data_r, lda, mat2_data_r, ldb, 0.0, res_data_r, ldc)
+         !$acc end host_data
+      else
+         !$acc host_data use_device(mat1_data_c, mat2_data_c, res_data_c)
+         call cublasZgemm(transA, transB, m, n, k, cmplx_1, mat1_data_c, lda, mat2_data_c, ldb, cmplx_0, res_data_c, ldc)
+         !$acc end host_data
+      endif
+#endif
+   end subroutine perform_cublas_gemm
+
 
    SUBROUTINE t_mat_transpose(mat1, res)
       CLASS(t_mat), INTENT(INOUT)       ::mat1
@@ -759,11 +1006,33 @@ CONTAINS
       class(t_mat), INTENT(IN)   :: mat1
       INTEGER, INTENT(IN)        :: n1, n2
 
-      INTEGER:: i1, i2
+      INTEGER:: i1, i2, j1, j2
+      logical:: both_on_gpu, tmp
 
       call timestart("t_mat_copy")
 
-      if(.not. mat%allocated()) call mat%init(mat1)
+      if(.not. mat%allocated()) then
+#ifdef _OPENACC
+         tmp = acc_is_present(mat1%data_c)
+#else 
+         tmp = .False.
+#endif
+         if(tmp) then
+            call judft_error("can't use copy alloc on GPU")
+         else
+            call mat%init(mat1)
+         endif
+      endif
+
+#ifdef _OPENACC
+      if(mat1%l_real) then
+         both_on_gpu = acc_is_present(mat%data_r) .and. acc_is_present(mat1%data_r)
+      else
+         both_on_gpu = acc_is_present(mat%data_c) .and. acc_is_present(mat1%data_c)
+      endif
+#else 
+      both_on_GPU = .False.
+#endif 
 
       select type (mat1)
       type is(t_mat)
@@ -776,19 +1045,37 @@ CONTAINS
       i2 = mat%matsize2 - n2 + 1
       i1 = MIN(i1, mat1%matsize1)
       i2 = MIN(i2, mat1%matsize2)
-      IF (mat%l_real) THEN
-         call dlacpy("N", i1, i2, mat1%data_r, size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
-      ELSE
-         call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
-      END IF
+
+      if(both_on_GPU )then
+         if(mat%l_real) then
+            !$acc kernels present(mat, mat%data_r, mat1, mat1%data_r)
+            do j1 = 1,i1 
+               do j2 = 1,i2 
+                  mat%data_r(n1+j1-1, n2+j2-1) = mat1%data_r(j1,j2)
+               enddo
+            enddo
+            !$acc end kernels
+         else 
+            !$acc kernels present(mat, mat%data_c, mat1, mat1%data_c)
+            do j1 = 1,i1 
+               do j2 = 1,i2 
+                  mat%data_c(n1+j1-1, n2+j2-1) = mat1%data_c(j1,j2)
+               enddo
+            enddo
+            !$acc end kernels
+         endif
+      else
+         IF (mat%l_real) THEN
+            call dlacpy("N", i1, i2, mat1%data_r, size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
+         ELSE
+            call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
+         END IF
+      endif
 
       call timestop("t_mat_copy")
    END SUBROUTINE t_mat_copy
 
    SUBROUTINE t_mat_clear(mat)
-#ifdef _OPENACC
-    use openacc
-#endif
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
       INTEGER :: i
@@ -802,13 +1089,13 @@ CONTAINS
       IF (mat%l_real) THEN
         if (acc_is_present(mat%data_r)) Then
           !$acc kernels present(mat%data_r)
-          mat%data_r=0.0
+          mat%data_r(:,:)=0.0
           !$acc end kernels
         endif
       ELSE
         if (acc_is_present(mat%data_c)) Then
           !$acc kernels present(mat%data_c)
-          mat%data_c=0.0
+          mat%data_c(:,:)=0.0
           !$acc end kernels
         endif
       ENDIF

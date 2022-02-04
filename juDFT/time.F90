@@ -216,7 +216,7 @@ CONTAINS
       CALL MPI_INITIALIZED(l_mpi,ierr)
       IF (l_mpi) THEN
          CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, ierr)
-         WRITE (*, "(i3,3a,f20.2,5x,a)") irank, startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
+         WRITE (*, "(i4,3a,f20.2,5x,a)") irank, startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
       ELSE
          WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
       ENDIF

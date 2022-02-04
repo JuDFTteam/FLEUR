@@ -73,7 +73,7 @@ CONTAINS
 
     ! needed directly for calculating matrix elements
     seigvso=0.0
-    ALLOCATE(eig_shift(input%neig,kpts%nkpt,0:atoms%ntype,SIZE(theta)));eig_shift=0.0
+    ALLOCATE(eig_shift(input%neig,0:atoms%ntype,kpts%nkpt,SIZE(theta)));eig_shift=0.0
     ALLOCATE( acof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,2,2),&
          bcof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,2,2) )
     ALLOCATE( ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat,2,2) )
@@ -177,7 +177,7 @@ CONTAINS
        DO nr=1,SIZE(theta)
           DO nk=1,kpts%nkpt
             DO nef=1,size(ef)
-              w_iks=kpts%wtkpt(nk)*fermifct(results%eig(:,nk,1),ef(n),input%tkb)
+              w_iks=kpts%wtkpt(nk)*fermifct(results%eig(:,nk,1),ef(nef),input%tkb)
               !for first angle, also add unmodified eigenvalue sum
               if (nr==1) seigvso(nef,0)=seigvso(nef,nr)+dot_PRODUCT(w_iks,eig_shift(:,0,nk,nr)+results%eig(:,nk,1))
               seigvso(nef,nr)=seigvso(nef,nr)+dot_PRODUCT(w_iks,eig_shift(:,0,nk,nr)+results%eig(:,nk,1))

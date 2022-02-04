@@ -35,12 +35,14 @@ CONTAINS
     COMPLEX, INTENT(INOUT),OPTIONAL:: abclo(:,:,:,:)
     REAL,INTENT(IN),OPTIONAL:: alo1(:),blo1(:),clo1(:)
 
-    INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ll
-    COMPLEX :: term,tempA,tempB
-    REAL    :: v(3),bmrot(3,3),gkrot(3)
-    COMPLEX :: ylm((atoms%lmaxd+1)**2),facA((atoms%lmaxd+1)**2),facB((atoms%lmaxd+1)**2)
-    COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT)))
+    INTEGER :: np,k,l,ll1,m,lmax,nkvec,lo,lm,invsfct,lmMin,lmMax,ierr
+    COMPLEX :: term
+    REAL    :: bmrot(3,3)
+    COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT).or.any(noco%l_spinoffd_ldau)))
     LOGICAL :: l_apw,l_abclo
+    
+    real, allocatable    :: gkrot(:,:)
+    COMPLEX, allocatable :: ylm(:,:)
 
     l_abclo=present(abclo)
     lmax = MERGE(atoms%lnonsph(n),atoms%lmax(n),l_nonsph)
@@ -56,12 +58,24 @@ CONTAINS
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),nococonv%qss,c_ph(:,iintsp))
     bmrot = transpose(MATMUL(1.*sym%mrot(:,:,np),cell%bmat))
 
+    allocate(ylm((lmax+1)**2, lapw%nv(iintsp)), stat=ierr)
+    if(ierr /= 0) call juDFT_error("can't allocate ylm")
+    allocate(gkrot(3,lapw%nv(iintsp)), stat=ierr)
+    if(ierr /= 0) call juDFT_error("can't allocate gkrot")
+
+
+    ! !-->    generate spherical harmonics
+    !gkrot = matmul(bmrot, lapw%vk(:,:,iintsp))
+    ! these two lines should eventually move to the GPU
+    call dgemm("N","N", 3, lapw%nv(iintsp), 3, 1.0, bmrot, 3, lapw%vk(:,:,iintsp), 3, 0.0, gkrot, 3)
+    CALL ylm4_batched(lmax,gkrot,ylm)
+
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
     !$OMP& SHARED(lapw,lmax,c_ph,iintsp,abCoeffs,fjgj,abclo,cell,atoms,sym) &
-    !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ispin,bmrot) &
-    !$OMP& PRIVATE(k,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec,facA,facB,v) &
-    !$OMP& PRIVATE(gkrot,lmMin,lmMax,tempA,tempB)
+    !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ispin,bmrot, ylm) &
+    !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec) &
+    !$OMP& PRIVATE(lmMin,lmMax)
 #else
     !$acc kernels present(abCoeffs) default(none)
     abCoeffs(:,:)=0.0
@@ -70,37 +84,21 @@ CONTAINS
 
 
     !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
-    !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) &
-    !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo) &
+    !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
+    !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
     !$acc present(abclo,alo1,blo1,clo1)&
-    !$acc private(gkrot,k,v,ylm,l,lm,invsfct,lo,facA,facB,term,invsfct,tempA,tempB,lmMin,lmMax,ll)  default(none)
+    !$acc private(k,l,lm,invsfct,lo,term,lmMin,lmMax)  default(none)
     DO k = 1,lapw%nv(iintsp)
-       !-->  apply the rotation that brings this atom into the
-       !-->  representative (this is the definition of ngopr(na)
-       !-->  and transform to cartesian coordinates
-       v=lapw%vk(:,k,iintsp)
-       !gkrot(:) = MATMUL(bmrot,v)
-       gkrot(1) = bmrot(1,1)*v(1)+bmrot(1,2)*v(2)+bmrot(1,3)*v(3)
-       gkrot(2) = bmrot(2,1)*v(1)+bmrot(2,2)*v(2)+bmrot(2,3)*v(3)
-       gkrot(3) = bmrot(3,1)*v(1)+bmrot(3,2)*v(2)+bmrot(3,3)*v(3)
-
-       !-->    generate spherical harmonics
-       CALL ylm4(lmax,gkrot,ylm)
        !-->  synthesize the complex conjugates of a and b
-       !$acc  loop vector private(l,tempA,tempB,lmMin,lmMax)
+       !$acc  loop vector private(l,lmMin,lmMax)
        DO l = 0,lmax
-          tempA = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp)
-          tempB = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp)
           lmMin = l*(l+1) + 1 - l
           lmMax = l*(l+1) + 1 + l
-          facA(lmMin:lmMax) = tempA
-          facB(lmMin:lmMax) = tempB
+          abCoeffs(lmMin:lmMax, k)                = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp) * ylm(lmMin:lmMax, k)
+          abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp) * ylm(lmMin:lmMax, k)
        END DO
        !$acc end loop
-       !!$acc loop vector private(ll)
-       abCoeffs(:ab_size,k)            = facA(:ab_size)*ylm(:ab_size)
-       abCoeffs(ab_size+1:2*ab_size,k) = facB(:ab_size)*ylm(:ab_size)
-       !!$acc end loop
+       
        IF (l_abclo) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
@@ -113,9 +111,9 @@ CONTAINS
                    ll1 = l*(l+1) + 1
                    DO m = -l,l
                       lm = ll1 + m
-                      abclo(1,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*alo1(lo)
-                      abclo(2,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*blo1(lo)
-                      abclo(3,m+atoms%llod+1,nkvec,lo) = term*ylm(lm)*clo1(lo)
+                      abclo(1,m+atoms%llod+1,nkvec,lo) = term*ylm(lm,k)*alo1(lo)
+                      abclo(2,m+atoms%llod+1,nkvec,lo) = term*ylm(lm,k)*blo1(lo)
+                      abclo(3,m+atoms%llod+1,nkvec,lo) = term*ylm(lm,k)*clo1(lo)
                    END DO
                 END IF
              ENDDO

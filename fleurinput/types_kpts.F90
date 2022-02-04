@@ -1055,7 +1055,7 @@ CONTAINS
       kpts%nkptf = ic
       IF(l_timeReversalCheck) THEN
          IF(nkptfCheck.NE.kpts%nkptf) THEN
-            CALL juDFT_error("k-point set is not compatible to missing time-reversal symmetry in calculation.",calledby="gen_bz")
+            CALL juDFT_warn("k-point set is not compatible to missing time-reversal symmetry in calculation.",calledby="gen_bz")
          END IF
       END IF
       ! Reallocate bkf, bkp, bksym

@@ -16,12 +16,19 @@ CONTAINS
     TYPE(t_banddos),INTENT(IN)  :: banddos
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_cell),INTENT(INOUT)  :: p_cell
+	REAL    :: unfold(3,3)  !this variable should be given in the input xml
+	REAL    :: inv_unfold(3,3)
+    REAL    :: inv_unfold_det
+	INTEGER :: i
+	unfold=banddos%unfoldTransMat
+	unfold(1,1)=banddos%unfoldTransMat(1,1)*banddos%s_cell_x
+	unfold(2,2)=banddos%unfoldTransMat(2,2)*banddos%s_cell_y
+	unfold(3,3)=banddos%unfoldTransMat(3,3)*banddos%s_cell_z
+	
+	CALL inv3(unfold,inv_unfold,inv_unfold_det)
 
-    INTEGER :: i
     DO i =1,3
-	p_cell%amat(1,i)=cell%amat(1,i)/banddos%s_cell_x
-	p_cell%amat(2,i)=cell%amat(2,i)/banddos%s_cell_y
-	p_cell%amat(3,i)=cell%amat(3,i)/banddos%s_cell_z
+	p_cell%amat(:,i)=matmul(inv_unfold,cell%amat(:,i))
     END DO
     CALL inv3(p_cell%amat,p_cell%bmat,p_cell%omtil)
     p_cell%bmat=p_cell%bmat*tpi_const
@@ -48,21 +55,6 @@ CONTAINS
     !write(1088,'(f15.8,f15.8,f15.8)') cell%amat(1,1), cell%amat(1,2), cell%amat(1,3)
     !write(1088,'(f15.8,f15.8,f15.8)') cell%amat(2,1), cell%amat(2,2), cell%amat(2,3)
     !write(1088,'(f15.8,f15.8,f15.8)') cell%amat(3,1), cell%amat(3,2), cell%amat(3,3)
-    !write(1088,*) 'brav. rez. matrix: '
-    !write(1088,'(f15.8,f15.8,f15.8)') cell%bmat(1,1), cell%bmat(1,2), cell%bmat(1,3)
-    !write(1088,'(f15.8,f15.8,f15.8)') cell%bmat(2,1), cell%bmat(2,2), cell%bmat(2,3)
-    !write(1088,'(f15.8,f15.8,f15.8)') cell%bmat(3,1), cell%bmat(3,2), cell%bmat(3,3)
-    !write(1088,*) ' primitive brav. matrix: '
-    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%amat(1,1), p_cell%amat(1,2), p_cell%amat(1,3)
-    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%amat(2,1), p_cell%amat(2,2), p_cell%amat(2,3)
-    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%amat(3,1), p_cell%amat(3,2), p_cell%amat(3,3)
-    !write(1088,*) 'primitive brav. rez. matrix: '
-    !write(89,'(3f15.8)') p_cell%bmat
-    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%bmat(1,1), p_cell%bmat(1,2), p_cell%bmat(1,3)
-    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%bmat(2,1), p_cell%bmat(2,2), p_cell%bmat(2,3)
-    !write(1088,'(f15.8,f15.8,f15.8)') p_cell%bmat(3,1), p_cell%bmat(3,2), p_cell%bmat(3,3)
-    !write(1088,'(a,i7,a,i7)') 'kpts%nkpt',kpts%nkpt,'   p_kpts%nkpt',p_kpts%nkpt
-    !write(1088,*) kpts%specialPoints
   END SUBROUTINE unfold_band_kpts
 
   SUBROUTINE find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
@@ -104,33 +96,6 @@ CONTAINS
 		list(1,i)=pc_kpoint_c(1)
 		list(2,i)=pc_kpoint_c(2)
 		list(3,i)=pc_kpoint_c(3)
-	!!!!------- finding kpts in primitive rez. unit cell -----
-	!	representation_found=.false.
-	!m_loop:	DO m1= -banddos%s_cell_x,banddos%s_cell_x
-	!		DO m2= -banddos%s_cell_y,banddos%s_cell_y
-	!			DO m3= -banddos%s_cell_z,banddos%s_cell_z
-	!				pc_kpoint_c(1)=list(1,i)-m1*cell%bmat(1,1)-m2*cell%bmat(1,2)-m3*cell%bmat(1,3)
-	!				pc_kpoint_c(2)=list(2,i)-m1*cell%bmat(2,1)-m2*cell%bmat(2,2)-m3*cell%bmat(2,3)
-	!				pc_kpoint_c(3)=list(3,i)-m1*cell%bmat(3,1)-m2*cell%bmat(3,2)-m3*cell%bmat(3,3)
-	!!				IF (         (dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,1)) >= 0).AND.((dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,1)) < dot_product(cell%bmat(:,1), cell%bmat(:,1)))) &
-	!!				     & .AND. (dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,2)) >= 0).AND.((dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,2)) < dot_product(cell%bmat(:,2), cell%bmat(:,2)))) &
-	!!				     & .AND. (dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,3)) >= 0).AND.((dot_product(pc_kpoint_c(:)+eps(:), cell%bmat(:,3)) < dot_product(cell%bmat(:,3), cell%bmat(:,3))))) THEN
-	!				IF (all((matmul(rez_inv_to_internal,pc_kpoint_c)+eps(:))>=0).and.all((matmul(rez_inv_to_internal,pc_kpoint_c)+eps(:))<1)) THEN
-	!					list(4,i)=pc_kpoint_c(1)
-	!					list(5,i)=pc_kpoint_c(2)
-	!					list(6,i)=pc_kpoint_c(3)
-	!					list(7,i)=-m1
-	!					list(8,i)=-m2
-	!					list(9,i)=-m3
-	!					representation_found=.true.
-	!				END IF
-	 !      			        IF (representation_found) EXIT m_loop
-	!			END DO
-	!		END DO
-	!	END DO m_loop
-	 !       IF (.not.representation_found) THEN
-	  !      write(*,'(a,f15.8,f15.8,f15.8)') 'No representation found for the following kpoint:',list(1,i),list(2,i),list(3,i)
-	   !     END IF
 	   !----------------------- method internal coordintes --------------------
 	    sc_kpoint_i(:)=matmul(pc_kpoint_c,rez_inv_to_internal)
 	    pc_kpoint_i(:)=p_kpts%bk(1:3,i)
@@ -171,7 +136,7 @@ CONTAINS
     write(90,'(10f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts
 !----------------------------------------------------------------
- SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,fmpi)
+ SUBROUTINE calculate_plot_w_n(banddos,cell,kpts,zMat,lapw,i_kpt,jsp,eig,results,input,atoms,unfoldingBuffer,fmpi,l_soc,smat_unfold,zso)
 	USE m_types
 	USE m_juDFT
 	USE m_inv3
@@ -179,29 +144,44 @@ CONTAINS
     USE m_constants
 	implicit none
 
-    TYPE(t_input),INTENT(IN) :: input
+    TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_atoms),INTENT(IN)     :: atoms
-	TYPE(t_banddos),INTENT(IN)  :: banddos
+	TYPE(t_banddos),INTENT(IN)   :: banddos
 	TYPE(t_results),INTENT(INOUT)  :: results
 	TYPE(t_cell),INTENT(IN)     :: cell
 	TYPE(t_kpts),INTENT(IN)     :: kpts
-	CLASS(t_mat),INTENT(INOUT)  :: smat_unfold
+	CLASS(t_mat),OPTIONAL,INTENT(INOUT)  :: smat_unfold
 	CLASS(t_mat),INTENT(IN)     :: zMat
 	TYPE(t_lapw),INTENT(IN)     :: lapw
-        TYPE(t_mpi),INTENT(IN)       :: fmpi
-	TYPE(t_cell)      :: p_cell
+    TYPE(t_mpi),INTENT(IN)      :: fmpi
+	TYPE(t_cell)            :: p_cell
+	LOGICAL, INTENT(IN)     :: l_soc
 	INTEGER, INTENT(IN)	    :: i_kpt,jsp
 	REAL, INTENT(IN)	    :: eig(:)
-        COMPLEX, INTENT(INOUT)         :: unfoldingBuffer(:,:,:)
+	COMPLEX, INTENT(IN), OPTIONAL     ::zso(:,:,:)
+    COMPLEX, INTENT(INOUT)  :: unfoldingBuffer(:,:,:)
 	INTEGER :: i,j,k,l,n
 	INTEGER :: na,n_i,nn,nk,nki,gi,lo
-	REAL, ALLOCATABLE	::w_n(:)
-	COMPLEX, ALLOCATABLE    ::w_n_c(:)
-	REAL, ALLOCATABLE	::w_n_sum(:)
-	COMPLEX, ALLOCATABLE    ::w_n_c_sum(:)
-        LOGICAL :: method_rubel=.false.
-        LOGICAL :: write_to_file=.false.
-        CLASS(t_mat), ALLOCATABLE :: zMat_s
+	REAL, ALLOCATABLE	  ::w_n(:)
+	COMPLEX, ALLOCATABLE  ::w_n_c(:)
+	REAL, ALLOCATABLE	  ::w_n_sum(:)
+	COMPLEX, ALLOCATABLE  ::w_n_c_sum(:)
+    LOGICAL :: method_rubel = .FALSE. 
+    LOGICAL :: write_to_file = .false.
+    CLASS(t_mat), ALLOCATABLE :: zMat_s
+	REAL    :: unfold(3,3)  !this variable should be given in the input xml
+	REAL    :: multiple(3)
+	REAL    :: inv_unfold(3,3)
+    REAL    :: inv_unfold_det
+    REAL    :: eps_r=0.0000000001
+!---------combining matrix input and unfolding factor input-----------	
+	unfold=banddos%unfoldTransMat
+	unfold(1,1)=banddos%unfoldTransMat(1,1)*banddos%s_cell_x
+	unfold(2,2)=banddos%unfoldTransMat(2,2)*banddos%s_cell_y
+	unfold(3,3)=banddos%unfoldTransMat(3,3)*banddos%s_cell_z
+    CALL inv3(unfold,inv_unfold,inv_unfold_det)
+        method_rubel = .NOT.banddos%unfoldUseOlap
+
 	CALL build_primitive_cell(banddos,p_cell,cell)
 
 	IF (.not. method_rubel) THEN
@@ -256,48 +236,52 @@ CONTAINS
 !---------------------------------------------------------
 !		write(345,'(3I6)') lapw%gvec(:,:,jsp)
 	write (*,*)results%ef
-        write (*,*) i_kpt
+    write (*,*) i_kpt
 	IF (.not. method_rubel) THEN
 !          IF (fmpi%n_size==1) THEN
 !             call smat_unfold%multiply(zMat,zMat_s)
 !          ELSE
 !             call smat_unfold%mpimat_multiply(zMat,zMat_s)
 !          ENDIF
-           call smat_unfold%multiply(zMat,zMat_s)
-        END IF
-       !$omp parallel private(j,n_i,nn,na,lo,nk,nki,gi)
-       !$omp do
-        DO i=1,zMat%matsize2
+	   call smat_unfold%multiply(zMat,zMat_s)
+    END IF
+   !$omp parallel default(none) private(j,n_i,nn,na,lo,nk,nki,gi,multiple) shared(zmat,method_rubel,jsp,lapw,w_n_sum, w_n_c_sum,inv_unfold,eps_r,w_n,w_n_c,atoms,zmat_s,write_to_file,i_kpt,kpts,eig,results,unfoldingBuffer,zso,l_soc)
+   !$omp do
+	DO i=1,zMat%matsize2
 !	        write (*,*) 'here i work 1 -', i
-        	IF (method_rubel) THEN
-!			write (*,*) 'here i work in loop rubel'
-                        DO j=1,lapw%nv(jsp)
+		IF (method_rubel) THEN
+			DO j=1,lapw%nv(jsp)
 				IF (zmat%l_real) THEN
 					w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
-!						write(*,*) 'zMat is real'
+				!	write(*,*) 'zMat is real'
 				ELSE
-!                write (*,*) 'here i work in loop 1'
-					w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
-!						write(*,*) 'zMat is complex'
+					IF (l_soc) THEN
+						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zso(j,i,jsp))*zso(j,i,jsp)
+					ELSE 
+						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+					END IF
+				!	write(*,*) 'zMat is complex', j,i
 				END IF
-!				write (*,*) 'here i work 2'
-! with moving     IF ((modulo(lapw%gvec(1,j,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-!				     &(modulo(lapw%gvec(2,j,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-!					 &(modulo(lapw%gvec(3,j,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
-			IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
-				&(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
-				&(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
+				multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
+				IF ((abs(modulo(multiple(1),1.0))<eps_r).AND.&
+					&(abs(modulo(multiple(2),1.0))<eps_r).AND.&
+					&(abs(modulo(multiple(3),1.0))<eps_r)) THEN    
 					IF (zmat%l_real) THEN
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
-!							write(*,*) 'zMat is real'
+						!write(*,*) 'zMat is real'
 					ELSE
-						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
-!							write(*,*) 'zMat is complex'
+						IF (l_soc) THEN
+							w_n_c(i)=w_n_c(i)+CONJG(zso(j,i,jsp))*zso(j,i,jsp)
+						ELSE
+							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+						END IF
+						!write(*,*) 'zMat is complex - restricted sum'
 					END IF
-			   	END IF
+				END IF
 			END DO
 !------------------LO's------------------------
 			na=0
+			!write(*,*) 'start lo', i
 			DO n_i=1,atoms%ntype
 				DO nn=1,atoms%neq(n_i)
 					na=na+1
@@ -311,38 +295,39 @@ CONTAINS
 							ELSE
 								w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 							END IF
-							IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
-							   &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
-							   &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
-!								IF ((modulo(lapw%gvec(1,gi,jsp)+NINT(kpts%sc_list(7,i_kpt)),banddos%s_cell_x)==0).AND.&
-!								&(modulo(lapw%gvec(2,gi,jsp)+NINT(kpts%sc_list(8,i_kpt)),banddos%s_cell_y)==0).AND.&
-!								&(modulo(lapw%gvec(3,gi,jsp)+NINT(kpts%sc_list(9,i_kpt)),banddos%s_cell_z)==0)) THEN
+							multiple=matmul(inv_unfold,lapw%gvec(:,gi,jsp))
+							IF ((abs(modulo(multiple(1),1.0))<eps_r).AND.&
+								&(abs(modulo(multiple(2),1.0))<eps_r).AND.&
+								&(abs(modulo(multiple(3),1.0))<eps_r)) THEN 
 								IF (zmat%l_real) THEN
 									w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(j,i)
+									!write(*,*) zMat%data_r(j,i)*zMat%data_r(j,i)
 								ELSE
 									w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
+									!write (*,*) CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 								END IF
 							END IF
 						END DO
 					END DO
 				END DO
 			END DO
+			!write(*,*) 'finished lo', i
 !--------------------------LO's finished----------------
 		ELSE
-		    !write (*,*) 'start else'
-!            write (*,*) 'lapw%nv',lapw%nv(jsp),'j',j
+			!write (*,*) 'start else'
+			!write (*,*) 'lapw%nv',lapw%nv(jsp),'j',j
 			!DO j=1,lapw%nv(jsp)
-				!        write (*,*) 'test loop', j
-				!END DO
+			!        write (*,*) 'test loop', j
+			!END DO
 			DO j=1,lapw%nv(jsp)
-!				write (*,*) 'start do',j
-!				DO k=1,zMat%matsize1
+				!write (*,*) 'start do',j
+				!DO k=1,zMat%matsize1
 				IF (zmat%l_real) THEN
-!						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
+					!w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
 					w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
-!					write (*,*) 'weight sum real'
+					!write (*,*) 'weight sum real'
 				ELSE
-!						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
+					!w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
 					w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
 				END IF
 !				END DO
@@ -350,56 +335,42 @@ CONTAINS
 !				write (*,*) kpts%sc_list(:,i_kpt)
 !				write (*,*) banddos%s_cell_x,banddos%s_cell_y,banddos%s_cell_z
 				!CALL juDFT_error('debugging stop, unfolding')
-				IF ((modulo(lapw%gvec(1,j,jsp),banddos%s_cell_x)==0).AND.&
-					&(modulo(lapw%gvec(2,j,jsp),banddos%s_cell_y)==0).AND.&
-					&(modulo(lapw%gvec(3,j,jsp),banddos%s_cell_z)==0)) THEN
-!					DO k=1,zMat%matsize1
+				multiple=matmul(inv_unfold,lapw%gvec(:,j,jsp))
+				IF ((abs(modulo(multiple(1),1.0))<eps_r).AND.&
+					&(abs(modulo(multiple(2),1.0))<eps_r).AND.&
+					&(abs(modulo(multiple(3),1.0))<eps_r)) THEN  
 					IF (zmat%l_real) THEN
-!						write (*,*) 'weight sum real if'
-!						write(90,'(3f15.8)') kpts%bk(:,:)
-!						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
-						!write (*,*) 'real, if loop'
 						w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
-!				CALL juDFT_error('debugging stop, unfolding')
 					ELSE
-!						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
 						w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
+						!write (*,*) CONJG(zMat%data_c(j,i))*zMat%data_c(j,i)
 					END IF
-!					END DO
 				END IF
 			END DO
-!			write(1250+fmpi%irank,'(4f15.8)') w_n_c(i),w_n_c_sum(i)
 !------------------LO's------------------------
-      			na=0
-      			DO n_i=1,atoms%ntype
-        			DO nn=1,atoms%neq(n_i)
-          				na=na+1
-          				DO lo=1,atoms%nlo(n_i)
+				na=0
+				DO n_i=1,atoms%ntype
+					DO nn=1,atoms%neq(n_i)
+						na=na+1
+						DO lo=1,atoms%nlo(n_i)
 						nk=lapw%nkvec(lo,na)
 						DO nki=1,nk
 							gi=lapw%kvec(nki,lo,na)
 							j=lapw%nv(jsp)+lapw%index_lo(lo,na)+nki
-				!			DO k=1,zMat%matsize1
 								IF (zmat%l_real) THEN
-				!						w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
 									w_n_sum(i)=w_n_sum(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
 								ELSE
-				!						w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
 									w_n_c_sum(i)=w_n_c_sum(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
 								END IF
-				!			END DO
-							IF ((modulo(lapw%gvec(1,gi,jsp),banddos%s_cell_x)==0).AND.&
-							   &(modulo(lapw%gvec(2,gi,jsp),banddos%s_cell_y)==0).AND.&
-							   &(modulo(lapw%gvec(3,gi,jsp),banddos%s_cell_z)==0)) THEN
-			!					DO k=1,zMat%matsize1
-									IF (zmat%l_real) THEN
-			!							w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat%data_r(k,i)*smat_unfold%data_r(j,k)
-										w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
-									ELSE
-			!							w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat%data_c(k,i)*smat_unfold%data_c(j,k)
-										w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
-									END IF
-		    	!					END DO
+							multiple=matmul(inv_unfold,lapw%gvec(:,gi,jsp))
+							IF ((abs(modulo(multiple(1),1.0))<eps_r).AND.&
+								&(abs(modulo(multiple(2),1.0))<eps_r).AND.&
+								&(abs(modulo(multiple(3),1.0))<eps_r)) THEN
+								IF (zmat%l_real) THEN
+									w_n(i)=w_n(i)+zMat%data_r(j,i)*zMat_s%data_r(j,i)
+								ELSE
+									w_n_c(i)=w_n_c(i)+CONJG(zMat%data_c(j,i))*zMat_s%data_c(j,i)
+								END IF
 							END IF
 						END DO
 					END DO
@@ -407,7 +378,7 @@ CONTAINS
 			END DO
 !--------------------------LO's finished----------------
 		END IF
-!		IF (method_rubel) THEN
+		!IF (method_rubel) THEN
 		IF (write_to_file) THEN
 			IF (zmat%l_real) THEN
 				IF (w_n(i)/w_n_sum(i)<0) w_n(i)=0   ! delete negative entries
@@ -419,8 +390,8 @@ CONTAINS
 				IF (jsp==1) write(679,'(4f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF (jsp==2) write(680,'(4f15.8)') kpts%sc_list(10,i_kpt), ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)/w_n_c_sum(i)
 				IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
-		    END IF
-        END IF
+			END IF
+		END IF
 		IF (zmat%l_real) THEN
 			IF (w_n(i)/w_n_sum(i)<0) w_n(i)=0   ! delete negative entries
 			unfoldingBuffer(i,i_kpt,jsp)=w_n(i)/w_n_sum(i)
@@ -429,22 +400,11 @@ CONTAINS
 			IF (real(w_n_c(i))<0) w_n_c(i)=0    ! delete negative entries
 			unfoldingBuffer(i,i_kpt,jsp)=w_n_c(i)/w_n_c_sum(i)
 			IF ((abs(w_n_c(i)/w_n_c_sum(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c/sum larger 1 or smaller 0', w_n_c(i)/w_n_c_sum(i), 'eigenvalue',eig(i)
-	    END IF
-!		ELSE
-!			IF (zmat%l_real) THEN
-!				IF (jsp==1) write(679,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)
-!				IF (jsp==2) write(680,'(3f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n(i)
-!				IF ((w_n(i)>1).or.(w_n(i)<0)) write(*,*) 'w_n larger 1 or smaller 0', w_n(i), 'eigenvalue',eig(i)
-!			ELSE
-!				IF (jsp==1) write(679,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)
-!				IF (jsp==2) write(680,'(4f15.8)') kpt_dist, ((eig(i)-results%ef)*hartree_to_ev_const),w_n_c(i)
-!				IF ((abs(w_n_c(i))>1).or.(real(w_n_c(i))<0)) write(*,*) 'w_n_c larger 1 or smaller 0', w_n_c(i), 'eigenvalue',eig(i)
-!	        	END IF
-!		END IF
+		END IF
 	END DO
-       !$omp end do
-       !$omp end parallel
-        write (*,*) 'finished',i_kpt
+   !$omp end do
+   !$omp end parallel
+	write (*,*) 'finished',i_kpt
 	IF (i_kpt==kpts%nkpt) THEN
 		IF (write_to_file .AND. jsp==1) CLOSE (679)
 		IF (jsp==input%jspins) THEN
@@ -452,7 +412,6 @@ CONTAINS
 			!kpts%bk(:,:)=kpts%sc_list(11:13,:)
 			write(*,*) 'Unfolded Bandstructure calculated succesfully, calledby=calculate_plot_w_n'
 			!CALL juDFT_error('Unfolded Bandstructure created succesfully - use band_sc.gnu to plot', calledby='calculate_plot_w_n')
-
 		END IF
 	END IF
  END SUBROUTINE

@@ -5,7 +5,7 @@ include_directories(include)
 set(FLEURINPUT_COMPILEOPTS "${FLEUR_PRECISION_OPTION}")
 add_subdirectory("fleurinput")
 
-set(c_filesFleur include/inputSchema.h  include/outputSchema.h io/xml/dropInputSchema.c io/xml/dropOutputSchema.c io/xml/xmlInterfaceWrapper.c)
+set(c_filesFleur io/xml/dropInputSchema.c io/xml/dropOutputSchema.c io/xml/xmlInterfaceWrapper.c)
 if(FLEUR_USE_CUSOLVER)
   set(c_filesFleur ${c_filesFleur} diagonalization/cusolver.c)
 endif()
@@ -51,11 +51,7 @@ include(kpoints/CMakeLists.txt)
 include(ldahia/CMakeLists.txt)
 include(greensf/CMakeLists.txt)
 include(tetra/CMakeLists.txt)
-
-
-include(tests/tests_old.cmake)
-#include(tests/tests_new.cmake)
-
+include(opc/CMakeLists.txt)
 
 set(fleur_SRC ${fleur_F90} ${fleur_F77})
 

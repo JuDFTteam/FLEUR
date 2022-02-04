@@ -73,6 +73,7 @@ PRIVATE
 
       CONTAINS
          PROCEDURE,PASS :: init => eigVecCoeffs_init
+         PROCEDURE,PASS :: rotate_to_rep_atom => rotate_eigveccoeffs_to_rep_atom
    END TYPE t_eigVecCoeffs
 
 
@@ -291,6 +292,68 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpi
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)
 
 END SUBROUTINE eigVecCoeffs_init
+
+FUNCTION rotate_eigveccoeffs_to_rep_atom(this, atoms, sym,lmax) RESULT(rot)
+! C     ***************************************************************
+! C     * This routine transforms a/b/cof which are given wrt rotated *
+! C     * MT functions (according to invsat/ngopr) into a/b/cof wrt   *
+! C     * unrotated MT functions. Needed for GW calculations.         *
+! C     *                                                             *
+! C     * Christoph Friedrich Mar/2005                                *
+! C     ***************************************************************
+      USE m_types_setup
+      USE m_constants
+      USE m_juDFT
+      IMPLICIT NONE
+
+      CLASS(t_eigVecCoeffs),  INTENT(IN)  :: this
+      TYPE(t_atoms),          INTENT(IN)  :: atoms
+      TYPE(t_sym),            INTENT(IN)  :: sym
+      INTEGER,                INTENT(IN)  :: lmax
+
+      TYPE(t_eigVecCoeffs) :: rot
+
+      INTEGER itype,iatom,iop,ilo,i,l,m,lm,lmp,ifac,ispin
+
+      IF(lmax>lmaxU_const) CALL juDFT_error('NOt yet implemented for lmax>3', calledby='rotate_eigveccoeffs_to_rep_atom')
+
+      rot = this
+
+      DO itype = 1 ,atoms%ntype
+        DO iAtom = SUM(atoms%neq(:itype-1))+1 , SUM(atoms%neq(:itype))
+          iop=sym%ngopr(iatom)
+         ! C                                    l                        l    l
+         ! C inversion of spherical harmonics: Y (pi-theta,pi+phi) = (-1)  * Y (theta,phi)
+         ! C                                    m                             m
+          ifac = 1
+          IF(sym%invsat(iatom).EQ.2) THEN
+            iop=sym%ngopr(sym%invsatnr(iatom))
+            ifac = -1
+          ENDIF
+          DO ispin = LBOUND(this%acof,4),UBOUND(this%acof,4)
+             DO l=1,MIN(lmax,atoms%lmax(iType))
+               ! c  replaced d_wgn by conjg(d_wgn),FF October 2006
+               DO i=1,SIZE(this%acof,1)
+                 rot%acof(i,l**2:l*(l+2),iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%acof(i,l**2:l*(l+2),iatom,ispin))
+                 rot%bcof(i,l**2:l*(l+2),iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%bcof(i,l**2:l*(l+2),iatom,ispin))
+               ENDDO
+             ENDDO
+          ENDDO
+          DO ispin = LBOUND(this%acof,4),UBOUND(this%acof,4)
+             DO ilo=1,atoms%nlo(itype)
+               l=atoms%llo(ilo,itype)
+               IF(l.gt.0.AND.l<=lmax) THEN
+                 DO i=1,SIZE(this%acof,1)
+                     rot%ccof(-l:l,i,ilo,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%ccof(-l:l,i,ilo,iAtom, ispin))
+                 ENDDO
+               ENDIF
+             ENDDO
+         ENDDO
+        ENDDO
+      ENDDO
+
+END FUNCTION rotate_eigveccoeffs_to_rep_atom
+
 
 
 SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)

@@ -94,6 +94,8 @@ MODULE m_cdnpot_io_common
       IF(atoms%jmtd.NE.refAtoms%jmtd) l_same = .FALSE.
       IF(atoms%n_u.NE.refAtoms%n_u) l_same = .FALSE.
       IF(atoms%n_hia.NE.refAtoms%n_hia) l_same = .FALSE.
+      IF(atoms%n_opc.NE.refAtoms%n_opc) l_same = .FALSE.
+      IF(input%ldauSpinoffd.NEQV.refInput%ldauSpinoffd) l_same = .FALSE.
       IF(vacuum%dvac.NE.refVacuum%dvac) l_same = .FALSE.
       IF(sym%nop.NE.refSym%nop) l_same = .FALSE.
       IF(sym%nop2.NE.refSym%nop2) l_same = .FALSE.
@@ -102,6 +104,14 @@ MODULE m_cdnpot_io_common
          DO i = 1, atoms%n_u+atoms%n_hia
             IF (atoms%lda_u(i)%atomType.NE.refAtoms%lda_u(i)%atomType) l_same = .FALSE.
             IF (atoms%lda_u(i)%l.NE.refAtoms%lda_u(i)%l) l_same = .FALSE.
+         END DO
+      END IF
+
+      IF(atoms%n_opc.EQ.refAtoms%n_opc) THEN
+         DO i = 1, atoms%n_opc
+            IF (atoms%lda_opc(i)%atomType.NE.refAtoms%lda_opc(i)%atomType) l_same = .FALSE.
+            IF (atoms%lda_opc(i)%l.NE.refAtoms%lda_opc(i)%l) l_same = .FALSE.
+            IF (atoms%lda_opc(i)%n.NE.refAtoms%lda_opc(i)%n) l_same = .FALSE.
          END DO
       END IF
 

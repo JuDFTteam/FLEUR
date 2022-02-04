@@ -97,181 +97,181 @@ CONTAINS
       ld_dotres   = size(dot_result,1)
 
       
-      !$acc data copyin(indx_sest, nsest, hybdat, hybdat%nbands, exchange) create(dot_result, exchange%data_r, exchange%data_c)
-      if(exchange%l_real) then
-         !$acc kernels present(exchange, exchange%data_r)
-         exchange%data_r = 0.0
-         !$acc end kernels
-      else 
-         !$acc kernels present(exchange, exchange%data_c)
-         exchange%data_c = cmplx_0
-         !$acc end kernels
-      endif
-      do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
-         itype = fi%atoms%itype(iatom)
-         DO l1 = 0, hybdat%lmaxc(itype)
-            DO p1 = 1, hybdat%nindxc(l1, itype)
+      !$acc data copyin(indx_sest, nsest, hybdat, hybdat%nbands, exchange) create(dot_result) copyout(exchange%data_r, exchange%data_c)
+         if(exchange%l_real) then
+            !$acc kernels present(exchange, exchange%data_r)
+            exchange%data_r(:,:) = 0.0
+            !$acc end kernels
+         else 
+            !$acc kernels present(exchange, exchange%data_c)
+            exchange%data_c(:,:) = cmplx_0
+            !$acc end kernels
+         endif
+         do iatom = 1+submpi%rank,fi%atoms%nat, submpi%size 
+            itype = fi%atoms%itype(iatom)
+            DO l1 = 0, hybdat%lmaxc(itype)
+               DO p1 = 1, hybdat%nindxc(l1, itype)
 
-               DO l = 0, fi%hybinp%lcutm1(itype)
+                  DO l = 0, fi%hybinp%lcutm1(itype)
 
-                  ! Define core-valence product functions
-                  call timestart("Define core-valence prod.-func")
-                  n = 0
-                  DO l2 = 0, fi%atoms%lmax(itype)
-                     IF (l < ABS(l1 - l2) .OR. l > l1 + l2) CYCLE
+                     ! Define core-valence product functions
+                     call timestart("Define core-valence prod.-func")
+                     n = 0
+                     DO l2 = 0, fi%atoms%lmax(itype)
+                        IF (l < ABS(l1 - l2) .OR. l > l1 + l2) CYCLE
 
-                     DO p2 = 1, mpdata%num_radfun_per_l(l2, itype)
-                        n = n + 1
-                        M = SIZE(fprod, 2)
-                        IF (n > M) THEN
-                           allocate(fprod2(fi%atoms%jmtd, M), larr2(M), parr2(M))
-                           fprod2 = fprod; larr2 = larr; parr2 = parr
-                           deallocate(fprod, larr, parr)
-                           allocate(fprod(fi%atoms%jmtd, M + 5), larr(M + 5), parr(M + 5))
-                           fprod(:, :M) = fprod2
-                           larr(:M) = larr2
-                           parr(:M) = parr2
-                           deallocate(fprod2, larr2, parr2)
-                        END IF
-                        fprod(:fi%atoms%jri(itype), n) = (hybdat%core1(:fi%atoms%jri(itype), p1, l1, itype)*hybdat%bas1(:fi%atoms%jri(itype), p2, l2, itype) &
-                                                         + hybdat%core2(:fi%atoms%jri(itype), p1, l1, itype)*hybdat%bas2(:fi%atoms%jri(itype), p2, l2, itype))/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)
-                        larr(n) = l2
-                        parr(n) = p2
+                        DO p2 = 1, mpdata%num_radfun_per_l(l2, itype)
+                           n = n + 1
+                           M = SIZE(fprod, 2)
+                           IF (n > M) THEN
+                              allocate(fprod2(fi%atoms%jmtd, M), larr2(M), parr2(M))
+                              fprod2 = fprod; larr2 = larr; parr2 = parr
+                              deallocate(fprod, larr, parr)
+                              allocate(fprod(fi%atoms%jmtd, M + 5), larr(M + 5), parr(M + 5))
+                              fprod(:, :M) = fprod2
+                              larr(:M) = larr2
+                              parr(:M) = parr2
+                              deallocate(fprod2, larr2, parr2)
+                           END IF
+                           fprod(:fi%atoms%jri(itype), n) = (hybdat%core1(:fi%atoms%jri(itype), p1, l1, itype)*hybdat%bas1(:fi%atoms%jri(itype), p2, l2, itype) &
+                                                            + hybdat%core2(:fi%atoms%jri(itype), p1, l1, itype)*hybdat%bas2(:fi%atoms%jri(itype), p2, l2, itype))/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)
+                           larr(n) = l2
+                           parr(n) = p2
+                        END DO
                      END DO
-                  END DO
-                  call timestop("Define core-valence prod.-func")
+                     call timestop("Define core-valence prod.-func")
 
-                  ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
+                     ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                  call timestart("Eval rad. integr")
-                  allocate(integral(n,n), stat=ierr, source=cmplx_0)
-                  if(ierr /= 0) call judft_error("can't allocate integral")
-                  ld_integral = size(integral, 1)
+                     call timestart("Eval rad. integr")
+                     allocate(integral(n,n), stat=ierr, source=cmplx_0)
+                     if(ierr /= 0) call judft_error("can't allocate integral")
+                     ld_integral = size(integral, 1)
 
-                  allocate(carr(n,hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
-                  ld_carr     = size(carr,1)
-                  if(ierr /= 0) call judft_error("can't allocate carr")
-                  
-                  allocate(tmp(n,hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
-                  if(ierr /= 0) call judft_error("can't allocate carr")
-                  ld_tmp      = size(tmp,1)
+                     allocate(carr(n,hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
+                     ld_carr     = size(carr,1)
+                     if(ierr /= 0) call judft_error("can't allocate carr")
+                     
+                     allocate(tmp(n,hybdat%nbands(nk,jsp)), stat=ierr, source=cmplx_0)
+                     if(ierr /= 0) call judft_error("can't allocate carr")
+                     ld_tmp      = size(tmp,1)
 
-                  allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n), stat=ierr)
-                  if(ierr /= 0) call judft_error("can't allocate something i guess")
+                     allocate(carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)), ctmp_vec(n), stat=ierr)
+                     if(ierr /= 0) call judft_error("can't allocate something i guess")
 
-                  DO i = 1, n
-                     CALL primitivef(primf1, fprod(:fi%atoms%jri(itype), i)*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1),&
-                                     fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, itype, fi%atoms%ntype)
-                     ! -itype is to enforce inward integration
-                     CALL primitivef(primf2, fprod(:fi%atoms%jri(itype), i)/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l,&
-                                     fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, -itype, fi%atoms%ntype)  
-                     primf1(:fi%atoms%jri(itype)) = primf1(:fi%atoms%jri(itype))/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l
-                     primf2(:fi%atoms%jri(itype)) = primf2(:fi%atoms%jri(itype))*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1)
-                     DO j = 1, n
-                        integrand = fprod(:, j)*(primf1 + primf2)
-                        integral(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, fi%atoms, itype, hybdat%gridf)
+                     DO i = 1, n
+                        CALL primitivef(primf1, fprod(:fi%atoms%jri(itype), i)*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1),&
+                                       fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, itype, fi%atoms%ntype)
+                        ! -itype is to enforce inward integration
+                        CALL primitivef(primf2, fprod(:fi%atoms%jri(itype), i)/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l,&
+                                       fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, -itype, fi%atoms%ntype)  
+                        primf1(:fi%atoms%jri(itype)) = primf1(:fi%atoms%jri(itype))/fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**l
+                        primf2(:fi%atoms%jri(itype)) = primf2(:fi%atoms%jri(itype))*fi%atoms%rmsh(:fi%atoms%jri(itype), itype)**(l + 1)
+                        DO j = 1, n
+                           integrand = fprod(:, j)*(primf1 + primf2)
+                           integral(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, fi%atoms, itype, hybdat%gridf)
+                        END DO
                      END DO
-                  END DO
-                  call timestop("Eval rad. integr")
+                     call timestop("Eval rad. integr")
 
-                  !$acc enter data copyin(integral) create(tmp)
-                  ! Add everything up
-                  call timestart("Add everything up")
-                  DO m1 = -l1, l1
-                     DO M = -l, l
-                        m2 = m1 + M
+                     !$acc enter data copyin(integral) create(tmp)
+                     ! Add everything up
+                     call timestart("Add everything up")
+                     DO m1 = -l1, l1
+                        DO M = -l, l
+                           m2 = m1 + M
 
-                        call timestart("set carr")
-                        carr = 0
-                        !$OMP PARALLEL DO default(none) collapse(2)&
-                        !$OMP private(n1, i, ll, lm, l2)&
-                        !$OMP shared(hybdat, n, m2, mpdata, carr, cmt, larr, itype, parr, iatom)&
-                        !$OMP shared(m1, M, l, l1, nk, jsp)
-                        DO n1 = 1, hybdat%nbands(nk,jsp)
-                           DO i = 1, n
-                              ll = larr(i)
-                              IF (ABS(m2) > ll) CYCLE
-
-                              lm = SUM([((2*l2 + 1)*mpdata%num_radfun_per_l(l2, itype), l2=0, ll - 1)]) &
-                                    + (m2 + ll)*mpdata%num_radfun_per_l(ll, itype) + parr(i)
-
-                              carr(i, n1) = cmt(n1, lm, iatom)*gaunt(l1, ll, l, m1, m2, M, hybdat%maxfac, hybdat%fac, hybdat%sfac)
-
-                           END DO
-                        enddo
-                        !$OMP END PARALLEL DO
-                        call timestop("set carr")
-                        
-                        call timestart("zgemms with cpy")
-                        !$acc enter data copyin(carr)
-
-                        call timestart("zgemms without cpy")
-                        !$acc host_data use_device(integral, carr, tmp, dot_result)
-                        call CPP_zgemm("N", "N", n, hybdat%nbands(nk,jsp), n, cmplx_1, integral, ld_integral, carr, ld_carr, cmplx_0, tmp, ld_tmp)
-                        call CPP_zgemm("C", "N", hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp), n, cmplx_1, carr, ld_carr, tmp, ld_tmp, cmplx_0, dot_result, ld_dotres)
-                        !$acc end host_data
-                        !$acc wait
-                        call timestop("zgemms without cpy")
-                        !$acc exit data delete(carr)
-                        call timestop("zgemms with cpy")
-
-                        call timestart("add to exchange")
-                        if(exchange%l_real) then
-#ifdef _OPENACC
-                           !$acc parallel loop default(none) private(n1, n2, nn2) &
-                           !$acc present(exchange, exchange%data_r, dot_result, indx_sest, nsest, hybdat, hybdat%nbands)
-#else
-                           !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
-                           !$OMP private(n1, n2, nn2)&
-                           !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk, jsp)
-#endif
+                           call timestart("set carr")
+                           carr = 0
+                           !$OMP PARALLEL DO default(none) collapse(2)&
+                           !$OMP private(n1, i, ll, lm, l2)&
+                           !$OMP shared(hybdat, n, m2, mpdata, carr, cmt, larr, itype, parr, iatom)&
+                           !$OMP shared(m1, M, l, l1, nk, jsp)
                            DO n1 = 1, hybdat%nbands(nk,jsp)
-                              DO n2 = 1, nsest(n1)!n1
-                                 nn2 = indx_sest(n2, n1)
-                                 if(nn2 <= n1) then
-                                    exchange%data_r(nn2, n1) = exchange%data_r(nn2, n1) + real(dot_result(n1,nn2))
-                                 endif
+                              DO i = 1, n
+                                 ll = larr(i)
+                                 IF (ABS(m2) > ll) CYCLE
+
+                                 lm = SUM([((2*l2 + 1)*mpdata%num_radfun_per_l(l2, itype), l2=0, ll - 1)]) &
+                                       + (m2 + ll)*mpdata%num_radfun_per_l(ll, itype) + parr(i)
+
+                                 carr(i, n1) = cmt(n1, lm, iatom)*gaunt(l1, ll, l, m1, m2, M, hybdat%maxfac, hybdat%fac, hybdat%sfac)
+
                               END DO
-                           END DO
-#ifdef _OPENACC
-                           !$acc end parallel loop
-#else
+                           enddo
                            !$OMP END PARALLEL DO
-#endif
-                        else
+                           call timestop("set carr")
+                           
+                           call timestart("zgemms with cpy")
+                           !$acc enter data copyin(carr)
+
+                           call timestart("zgemms without cpy")
+                           !$acc host_data use_device(integral, carr, tmp, dot_result)
+                           call CPP_zgemm("N", "N", n, hybdat%nbands(nk,jsp), n, cmplx_1, integral, ld_integral, carr, ld_carr, cmplx_0, tmp, ld_tmp)
+                           call CPP_zgemm("C", "N", hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp), n, cmplx_1, carr, ld_carr, tmp, ld_tmp, cmplx_0, dot_result, ld_dotres)
+                           !$acc end host_data
+                           !$acc wait
+                           call timestop("zgemms without cpy")
+                           !$acc exit data delete(carr)
+                           call timestop("zgemms with cpy")
+
+                           call timestart("add to exchange")
+                           if(exchange%l_real) then
 #ifdef _OPENACC
-                           !$acc parallel loop default(none) private(n1, n2, nn2) &
-                           !$acc present(exchange, exchange%data_c, dot_result, indx_sest, nsest, hybdat, hybdat%nbands)
+                              !$acc parallel loop default(none) private(n1, n2, nn2) &
+                              !$acc present(exchange, exchange%data_r, dot_result, indx_sest, nsest, hybdat, hybdat%nbands)
 #else
-                           !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
-                           !$OMP private(n1, n2, nn2)&
-                           !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk, jsp)
+                              !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
+                              !$OMP private(n1, n2, nn2)&
+                              !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk, jsp)
 #endif
-                           DO n1 = 1, hybdat%nbands(nk,jsp)
-                              DO n2 = 1, nsest(n1)!n1
-                                 nn2 = indx_sest(n2, n1)
-                                 if(nn2 <= n1) then
-                                    exchange%data_c(nn2, n1) = exchange%data_c(nn2, n1) + dot_result(n1,nn2)
-                                 endif
+                              DO n1 = 1, hybdat%nbands(nk,jsp)
+                                 DO n2 = 1, nsest(n1)!n1
+                                    nn2 = indx_sest(n2, n1)
+                                    if(nn2 <= n1) then
+                                       exchange%data_r(nn2, n1) = exchange%data_r(nn2, n1) + real(dot_result(n1,nn2))
+                                    endif
+                                 END DO
                               END DO
-                           END DO
 #ifdef _OPENACC
-                           !$acc end parallel loop
+                              !$acc end parallel loop
 #else
-                           !$OMP END PARALLEL DO
+                              !$OMP END PARALLEL DO
 #endif
-                        endif
-                        call timestop("add to exchange")
+                           else
+#ifdef _OPENACC
+                              !$acc parallel loop default(none) private(n1, n2, nn2) &
+                              !$acc present(exchange, exchange%data_c, dot_result, indx_sest, nsest, hybdat, hybdat%nbands)
+#else
+                              !$OMP PARALLEL DO default(none) schedule(dynamic, 10)&
+                              !$OMP private(n1, n2, nn2)&
+                              !$OMP shared(hybdat, nsest, indx_sest, exchange, dot_result, nk, jsp)
+#endif
+                              DO n1 = 1, hybdat%nbands(nk,jsp)
+                                 DO n2 = 1, nsest(n1)!n1
+                                    nn2 = indx_sest(n2, n1)
+                                    if(nn2 <= n1) then
+                                       exchange%data_c(nn2, n1) = exchange%data_c(nn2, n1) + dot_result(n1,nn2)
+                                    endif
+                                 END DO
+                              END DO
+#ifdef _OPENACC
+                              !$acc end parallel loop
+#else
+                              !$OMP END PARALLEL DO
+#endif
+                           endif
+                           call timestop("add to exchange")
+                        END DO
                      END DO
+                     !$acc exit data delete(integral, tmp)
+                     call timestop("Add everything up")
+                     deallocate(integral, carr, tmp)
+                     deallocate(carr2, carr3, ctmp_vec)
                   END DO
-                  !$acc exit data delete(integral, tmp)
-                  call timestop("Add everything up")
-                  deallocate(integral, carr, tmp)
-                  deallocate(carr2, carr3, ctmp_vec)
                END DO
             END DO
          END DO
-      END DO
       !$acc end data
 
 
@@ -466,7 +466,7 @@ CONTAINS
       !$OMP END PARALLEL DO
 
       IF (sym%invs) THEN
-         CALL symmetrize(exch, ncstd, ncstd, 3, .FALSE., atoms, hybdat%lmaxc, hybdat%lmaxcd, hybdat%nindxc, sym)
+         CALL symmetrize(exch, ncstd, ncstd, 3, atoms, hybdat%lmaxc, hybdat%lmaxcd, hybdat%nindxc, sym)
          IF (ANY(ABS(AIMAG(exch)) > 1E-6)) call judft_error('exchange_cccc: exch possesses significant imaginary part')
       ENDIF
       !       DO icst = 1,ncstd

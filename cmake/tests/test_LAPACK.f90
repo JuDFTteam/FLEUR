@@ -3,4 +3,4 @@
       integer info
 
       call ssyev('N','U',2,a,2,w,work,2,info)
-      end
+      end program

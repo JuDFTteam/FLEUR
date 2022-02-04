@@ -81,7 +81,7 @@ contains
 
     complex                                 :: termj, termn, z2, zj, zn
     real                                    :: rl, rn
-    real,    dimension(0:lmax)              :: rnm
+    complex,    dimension(0:lmax)           :: rnm
     integer                                 :: l, m, n
 
 
@@ -140,15 +140,11 @@ contains
     complex, dimension(0:lmax), intent(out) :: hl
 
     complex, dimension(0:lmax)              :: jl_complex, nl_complex
-    complex                                 :: z
 
+    call SphBesselComplex( jl_complex, nl_complex, hl, cmplx(x,0.0), lmax )
 
-    z = x           ! internal conversion from real to complex
-
-    call SphBesselComplex( jl_complex, nl_complex, hl, z, lmax )
-
-    jl = jl_complex ! internal conversion from complex to real
-    nl = nl_complex ! internal conversion from complex to real
+    jl = real(jl_complex)
+    nl = real(nl_complex)
 
   end subroutine SphBesselReal
 
@@ -210,8 +206,8 @@ contains
     call SphBesselComplex( jl, nl, hl, z, lmax )
 
     do l = 0, lmax
-      il(l) = (-ImagUnit) ** l * jl(l)
-      kl(l) = - ImagUnit  ** l * hl(l)
+      il(l) = real((-ImagUnit) ** l * jl(l))
+      kl(l) = real(- ImagUnit  ** l * hl(l))
     end do     
 
   end subroutine ModSphBesselReal

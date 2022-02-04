@@ -43,5 +43,5 @@ program test_blas
   print *, "zpotrf:",time2-time1
   print *,i
   
-end
+end program
   

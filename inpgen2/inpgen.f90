@@ -47,6 +47,7 @@ PROGRAM inpgen
   USE m_types_xml
   USE m_types_juPhon
   use m_make_sym
+  USE m_types_profile
 
       IMPLICIT NONE
 
@@ -73,7 +74,8 @@ PROGRAM inpgen
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_hub1inp)  :: hub1inp
       TYPE(t_enparaXML):: enparaxml
-      TYPE(t_juPhon)  :: juPhon
+      TYPE(t_juPhon)   :: juPhon
+      TYPE(t_profile)  :: profile
 
       INTEGER            :: idum, kptsUnit, inpOldUnit, ios, inpgenIUnit
       INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
@@ -86,6 +88,7 @@ PROGRAM inpgen
       CHARACTER(len=40), ALLOCATABLE  :: kptsName(:)
       CHARACTER(len=500), ALLOCATABLE :: kptsPath(:)
       INTEGER, ALLOCATABLE :: kptsBZintegration(:)
+      LOGICAL, ALLOCATABLE :: kptsGamma(:)
       LOGICAL, ALLOCATABLE :: l_kptsInitialized(:)
       LOGICAL            :: l_exist, l_addPath, l_check, l_oldinpXML
 
@@ -96,6 +99,16 @@ PROGRAM inpgen
          USE iso_c_binding
          INTEGER(c_int) dropDefaultEConfig
        END FUNCTION dropDefaultEConfig
+
+       FUNCTION dropOxidesValidationEConfig() BIND(C, name="dropOxidesValidationEConfig")
+         USE iso_c_binding
+         INTEGER(c_int) dropOxidesValicationEConfig
+       END FUNCTION dropOxidesValidationEConfig
+
+       FUNCTION dropProfiles() BIND(C, name="dropProfiles")
+         USE iso_c_binding
+         INTEGER(c_int) dropProfiles
+       END FUNCTION dropProfiles
       END INTERFACE
 
       CALL judft_init(oUnit,.FALSE.)
@@ -104,8 +117,8 @@ PROGRAM inpgen
       CALL inpgen_help()
       l_explicit=judft_was_argument("-explicit")
 
-      INQUIRE(file='default.econfig',exist=l_exist)
-      IF (.NOT.l_exist) idum=dropDefaultEconfig()
+      INQUIRE(file='profile.config',exist=l_exist)
+      IF (.NOT.l_exist) idum=dropProfiles()
 
       OPEN(oUnit,file='out')
 
@@ -153,6 +166,7 @@ PROGRAM inpgen
       ALLOCATE(kpts_str(numKpts))
       ALLOCATE(kptsName(numKpts))
       ALLOCATE(kptsPath(numKpts))
+      ALLOCATE(kptsGamma(numKpts))
       ALLOCATE(l_kptsInitialized(numKpts))
       ALLOCATE(kptsBZintegration(numKpts))
       kpts_str(:)=""
@@ -161,6 +175,24 @@ PROGRAM inpgen
       kptsSelection(:) = ''
       l_kptsInitialized(:) = .TRUE.
       kptsBZintegration = BZINT_METHOD_HIST
+      kptsGamma = .FALSE.
+
+      CALL profile%init()
+      IF (judft_was_argument("-precise")) THEN
+         WRITE(*,*) 'NOTE: right now the "-precise" option is under development and experimental.'
+         CALL profile%load("precise")
+      ELSE IF (judft_was_argument("-profile")) THEN
+         WRITE(*,*) 'NOTE: right now the "-profile" option is under development and experimental.'
+         CALL profile%load(TRIM(ADJUSTL(judft_string_for_argument("-profile"))))
+      END IF
+
+      IF(profile%atomSetup.EQ."oxides_validation") THEN
+         INQUIRE(file='oxides_validation.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropOxidesValidationEconfig()
+      ELSE
+         INQUIRE(file='default.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropDefaultEconfig()
+      END IF
 
       IF (judft_was_argument("-inp")) THEN
          l_kptsInitialized(:) = .FALSE.
@@ -183,8 +215,8 @@ PROGRAM inpgen
          !read the input
          l_kptsInitialized(:) = .FALSE.
          ALLOCATE (sliceplot%plot(1))
-         CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
-              input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+         CALL read_inpgen_input(profile,atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
+                                kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
          IF(input%film) sliceplot%plot(1)%zero(3) = -0.5
          IF (l_addPath) THEN
             l_check = .TRUE.
@@ -205,16 +237,14 @@ PROGRAM inpgen
       ENDIF
       IF (.NOT.l_fullinput) THEN
          !First we determine the spacegoup and map the atoms to groups
-         CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,&
-              cell,sym,atoms)
+         CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,cell,sym,atoms)
 
          !All atom related parameters are set here. Note that some parameters might
          !have been set in the read_input call before by adding defaults to the atompar module
-         CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms,enpara)
+         CALL make_atomic_defaults(input,vacuum,profile,cell,oneD,atoms,enpara)
 
          !Set all defaults that have not been specified before or can not be specified in inpgen
-         CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
-                   xcpot,noco,mpinp,hybinp)
+         CALL make_defaults(atoms,sym,cell,vacuum,input,stars,xcpot,profile,noco,banddos,mpinp,hybinp)
       ENDIF
 
       IF (numAddKptsSets.EQ.1) THEN
@@ -251,7 +281,7 @@ PROGRAM inpgen
       DO iKpts = 1, numKpts
          IF (l_kptsInitialized(iKpts)) CYCLE
          CALL make_kpoints(kpts(iKpts),cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,&
-                           kptsBZintegration(iKpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
+                           kptsBZintegration(iKpts),kptsGamma(ikpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
          if(hybinp%l_hybrid .and. kpts(iKpts)%kptsKind == KPTS_KIND_MESH) then
             call timestart("Hybrid setup BZ")
             CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)

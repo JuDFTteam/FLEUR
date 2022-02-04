@@ -151,27 +151,8 @@ contains
       q_pack%size   = fi%kpts%EIBZ(nk)%nkpt
       q_pack%ptr    = ptr
 
-      ! arrays should be less than 15 gb
-      if(fi%sym%invs) then
-         target_psize = floor(target_memsize(fi, hybdat, mpdata%n_g)/( 8.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)))
-      else
-         target_psize = floor(target_memsize(fi, hybdat, mpdata%n_g)/(16.0 * maxval(hybdat%nbasm) * MIN(fi%hybinp%bands1, fi%input%neig)))
-      endif
-
-      if(target_psize == 0) then
-         write(*,*) "Can't keep mem requirement. Setting target_psize = 1"
-      endif
-
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
- 
-      n_parts = ceiling(1.0*hybdat%nobd(ikqpt, jsp)/target_psize)
-
-      if(mod(n_parts, q_pack%submpi%size) /= 0) then
-         n_parts = n_parts + q_pack%submpi%size - mod(n_parts,  q_pack%submpi%size)
-      endif
-
-      ! I can't have more parts than hybdat%nobd
-      n_parts = min(hybdat%nobd(ikqpt, jsp), n_parts)
+      n_parts = calc_n_parts(fi, hybdat, mpdata%n_g, q_pack, ikqpt, jsp)
       
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
@@ -280,7 +261,67 @@ contains
       enddo
    end function t_work_package_has_nk
 
-   real function target_memsize(fi, hybdat, n_g)
+   function calc_n_parts(fi, hybdat, n_g, q_pack, ikqpt, jsp) result(n_parts)
+      implicit none 
+      type(t_fleurinput), intent(in) :: fi
+      type(t_hybdat), intent(in)     :: hybdat
+      integer, intent(in)            :: n_g(:), ikqpt, jsp
+      class(t_q_package), intent(in) :: q_pack 
+      
+      integer :: n_parts, me, ierr, ikpt
+
+      integer(8), parameter :: i8_one = 1
+      integer(8)            :: coulomb_size, exch_size, indx_size, nsest_size, target_size, rc_factor 
+      integer(8)            :: cprod_size, spmm_peak, max_peak
+      integer(8)            :: max_nbasm, max_nbands, psize
+
+      rc_factor  = merge(8, 16, fi%sym%invs)
+      max_nbasm  = maxval(hybdat%nbasm)
+      max_nbands = maxval(hybdat%nbands)
+
+      target_size = target_memsize(fi, hybdat)
+      coulomb_size = 0.0
+      do ikpt = 1,fi%kpts%nkpt
+         coulomb_size = max(int(mtir_size(fi, n_g, ikpt),kind=8)**2, coulomb_size)
+      enddo
+      ! size in byte
+      coulomb_size = rc_factor * coulomb_size
+      exch_size    = rc_factor * maxval(i8_one*hybdat%nbands)**2
+      indx_size    = 4 *         maxval(i8_one*hybdat%nbands)**2
+      nsest_size   = 4 *         maxval(i8_one*hybdat%nbands)
+
+      psize = maxval(hybdat%nobd)
+      do while(psize > 1)
+         cprod_size = max_nbasm * max_nbands * psize * rc_factor
+
+         spmm_peak = 2*cprod_size + coulomb_size + exch_size + indx_size + nsest_size
+
+         max_peak = maxval([spmm_peak])
+
+         if(max_peak <= target_size) then 
+            exit 
+         endif
+         psize = psize - 1
+      enddo
+
+      n_parts = ceiling(1.0*maxval(hybdat%nobd)/psize)
+      do while(mod(n_parts, q_pack%submpi%size) /= 0)
+         n_parts = n_parts + 1
+      enddo
+
+      if(n_parts > hybdat%nobd(ikqpt, jsp)) then 
+         write (*,*) "too many parts... reducing to nobd"
+         n_parts = hybdat%nobd(ikqpt, jsp)
+      endif
+#ifdef CPP_MPI
+      call MPI_COMM_RANK(MPI_COMM_WORLD, me, ierr)
+#else
+      me = 0
+#endif
+      if(me == 0) write (*,*) "psize: " // int2str(psize) // " max_peak: " // int2str(max_peak) // " nparts: " // int2str(n_parts)
+   end function calc_n_parts
+
+   integer(8) function target_memsize(fi, hybdat)
 #ifdef _OPENACC 
       use openacc
       use iso_c_binding
@@ -289,25 +330,16 @@ contains
       implicit none 
       type(t_fleurinput), intent(in) :: fi
       type(t_hybdat), intent(in)     :: hybdat
-      integer, intent(in)            :: n_g(:)
 
 #ifdef _OPENACC    
       integer           :: ikpt
       integer(C_SIZE_T) :: gpu_mem
       real              :: coulomb_size, exch_size
 
-      coulomb_size = 0.0
-      do ikpt = 1,fi%kpts%nkpt
-         coulomb_size = max(1.0*(mtir_size(fi, n_g, ikpt)**2), coulomb_size)
-      enddo
-      ! size in byte
-      coulomb_size = coulomb_size * merge(8, 16, fi%sym%invs)
-      exch_size = maxval(hybdat%nbands)**2 * merge(8, 16, fi%sym%invs)
-
       gpu_mem = acc_get_property(0,acc_device_current, acc_property_free_memory)
-      target_memsize = 0.5*((0.85*gpu_mem) - (coulomb_size + exch_size))
+      target_memsize = int(0.75*gpu_mem, kind=8)
 #else
-      target_memsize = 15e9 ! 10 Gb
+      target_memsize = int(15e9, kind=8) ! 15 Gb
 #endif
    end function target_memsize
 end module m_work_package

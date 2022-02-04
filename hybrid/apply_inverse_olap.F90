@@ -44,7 +44,9 @@ contains
       coul_submtx%data_c(:, :) = coulomb%data_c(hybdat%nbasp + 1:, :)
       call timestop("copy in 1")
 
-      call olap%linear_problem(coul_submtx)
+      !$acc data copyin(olap, olap%data_r, olap%data_c, coul_submtx) copy(coul_submtx%data_r, coul_submtx%data_c)
+         call olap%linear_problem(coul_submtx)
+      !$acc end data
       call timestart("copy out 1")
       coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
       call coul_submtx%free()
@@ -62,7 +64,9 @@ contains
 
       SELECT TYPE(coul_submtx)
       CLASS is (t_mat)
-         call olap%linear_problem(coul_submtx)
+         !$acc data copyin(olap, olap%data_r, olap%data_c, coul_submtx) copy(coul_submtx%data_r, coul_submtx%data_c)
+            call olap%linear_problem(coul_submtx)
+         !$acc end data
          call olap%free()
       class is (t_mpimat)
          call olap_mpi%init(coul_submtx,  olap%matsize1, olap%matsize2)

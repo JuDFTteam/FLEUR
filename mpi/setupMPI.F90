@@ -12,7 +12,7 @@ MODULE m_setupMPI
   IMPLICIT NONE
 
 CONTAINS
-  SUBROUTINE setupMPI(nkpt,neigd,fmpi)
+  SUBROUTINE setupMPI(nkpt,neigd,nbasfcn,fmpi)
 !$  use omp_lib
 #ifdef _OPENACC
    use openacc
@@ -20,7 +20,7 @@ CONTAINS
     use m_omp_checker
     USE m_types
     USE m_available_solvers,ONLY:parallel_solver_available
-    INTEGER,INTENT(in)           :: nkpt,neigd
+    INTEGER,INTENT(in)           :: nkpt,neigd,nbasfcn
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
     INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk
@@ -46,20 +46,35 @@ CONTAINS
           CALL add_usage_data("OMP",0)
        ELSE
           WRITE(*,*) "Number of OMP-threads:",omp
+          IF(omp.EQ.1.AND.fmpi%isize.GE.6.AND.&
+             ABS(NINT(REAL(nkpt)/REAL(fmpi%isize))*fmpi%isize-nkpt).GT.1.0e-7) THEN
+             WRITE(*,*) ''
+             WRITE(*,*) '========================================'
+             WRITE(*,*) 'WARNING:'
+             WRITE(*,*) 'You are making use of multiple MPI processes but no OpenMP parallelization.'
+             WRITE(*,*) 'The chosen parallelization scheme is also no pure k-point parallelization.'
+             WRITE(*,*) 'The performance of your calculation may benefit by also employing some'
+             WRITE(*,*) 'OpenMP parallelization.'
+             WRITE(*,*) ''
+             WRITE(*,*) 'Fleur will proceed with the calculation.'
+             WRITE(*,*) '========================================'
+             WRITE(*,*) ''
+          END IF
+
           CALL add_usage_data("OMP",omp)
        ENDIF
     endif
 #ifdef _OPENACC
     gpus=acc_get_num_devices(acc_device_nvidia)
 #ifdef CPP_MPI
-    write(*,*) "Number of GPU per node   :",gpus
+    if (fmpi%irank==0) write(*,*) "Number of GPU per node   :",gpus
     CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
     if (isize>1) THEN
       if (fmpi%irank==0) write(*,*) "Number of MPI/PE per node:",isize
-      if (gpus<isize) call judft_error("You need at least as many GPUs per node as PE running")
+      if (gpus<isize) call judft_warn("You should use as many GPUs/node as MPI-PEs/node running")
       CALL MPI_COMM_RANK(fmpi%mpi_comm_same_node,localrank,i)
-      call acc_set_device_num(localrank,acc_device_nvidia)
-      write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",localrank
+      call acc_set_device_num(mod(localrank,gpus),acc_device_nvidia)
+      write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",mod(localrank,gpus)
     ENDIF
 #else
     write(*,*) "Number of GPU    :",gpus
@@ -84,7 +99,7 @@ CONTAINS
     END IF
 #ifdef CPP_MPI
     !Distribute the work
-    CALL priv_distribute_k(nkpt,fmpi)
+    CALL priv_distribute_k(nkpt,nbasfcn,fmpi)
     !generate the MPI communicators
     CALL priv_create_comm(nkpt,neigd,fmpi)
     !Now check if parallelization is possible
@@ -126,10 +141,10 @@ CONTAINS
   END SUBROUTINE setupMPI
 
 
-  SUBROUTINE priv_distribute_k(nkpt,fmpi)
+  SUBROUTINE priv_distribute_k(nkpt,nbasfcn,fmpi)
     use m_types
     implicit none
-    INTEGER,INTENT(in)      :: nkpt
+    INTEGER,INTENT(in)      :: nkpt, nbasfcn
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
     !-------------------------------------------------------------------------------------------
@@ -179,6 +194,24 @@ CONTAINS
        WRITE(*,*) 'k-points in parallel: ',n_members
        WRITE(*,*) "pe's per k-point:     ",fmpi%n_size
        WRITE(*,*) '# of k-point loops:   ',nkpt/n_members
+
+       IF((REAL(nbasfcn) / REAL(fmpi%n_size)).LE.20) THEN
+          WRITE(*,*) ''
+          WRITE(*,*) '========================================'
+          WRITE(*,*) 'WARNING:'
+          WRITE(*,*) 'The chosen parallelization scheme implies very few LAPW basis functions'
+          WRITE(*,*) 'per MPI process. This may lead to poor performance and other problems.'
+          IF((nkpt/n_members).GE.4*fmpi%isize) THEN
+             WRITE(*,*) ''
+             WRITE(*,*) 'You may want to adjust the number of MPI processes such that the k-point'
+             WRITE(*,*) 'parallelization is increased.'
+             WRITE(*,*) ''
+          END IF
+          WRITE(*,*) 'Fleur will proceed with the calculation.'
+          WRITE(*,*) '========================================'
+          WRITE(*,*) ''
+       END IF
+
     ENDIF
   END SUBROUTINE priv_distribute_k
 

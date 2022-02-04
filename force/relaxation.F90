@@ -130,7 +130,7 @@ CONTAINS
 
          numDispReduce = 0
          overlap=1.0
-         DO WHILE(ANY(overlap>1E-10))
+         DO WHILE(ANY(overlap.GT.0.0))
             overlap = 0.0
             totalDisplace=displace+old_displace
 
@@ -142,7 +142,7 @@ CONTAINS
             tempAtoms%pos=MATMUL(cell%amat,tempAtoms%taual)
             CALL chkmt(tempAtoms,input,vacuum,cell,oneD,.TRUE.,overlap=overlap)
 
-            IF (ANY(overlap>1E-10)) THEN
+            IF (ANY(overlap.GT.0.0)) THEN
                numDispReduce = numDispReduce + 1
                IF (numDispReduce.GE.3) THEN
                   CALL juDFT_warn("Strong MT spheres crash in structural relaxation")

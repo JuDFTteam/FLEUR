@@ -125,7 +125,7 @@ CONTAINS
     !---> add the contribution of the local orbitals and flapw - lo cross-
     !---> terms to the non-spherical chargedensity inside the muffin tins.
 
-    DO lh = 1,sphhar%nlh(sym%ntypsy(atoms%nat))
+    DO lh = 1,sphhar%nlh(sym%ntypsy(sum(atoms%neq(:itype-1))+1))
        DO lp = 0,atoms%lmax(itype)
           DO lo = 1,atoms%nlo(itype)
              l = atoms%llo(lo,itype)

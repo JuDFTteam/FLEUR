@@ -34,10 +34,7 @@ CONTAINS
       USE m_rotate_mt_den_tofrom_local
       USE m_magnMomFromDen
       USE m_force_sf ! Klueppelberg (force level 3)
-#ifdef CPP_MPI
-      USE m_mpi_bc_potden
-#endif
-
+      USE m_fleur_vdW
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT) :: results
@@ -110,6 +107,9 @@ CONTAINS
 
       CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
       
+      !vdW Potential
+      IF (input%vdw>0) CALL fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,cell,sym,oneD,vacuum,results,workden%pw(:,1),workden%mt(:,:,:,1),vCoul%pw(:,1),vCoul%mt)
+
       ! b)
       CALL vCoul%copy_both_spin(vTot)
       vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
@@ -125,20 +125,21 @@ CONTAINS
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                       cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results)
 
+      CALL bfield(input,stars,noco,atoms,field,vTot)
+
+      
+
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
       CALL vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
 
-      CALL bfield(input,noco,atoms,field,vTot)
+      CALL vTot%distribute(fmpi%mpi_comm)
+      CALL vCoul%distribute(fmpi%mpi_comm)
+      CALL vx%distribute(fmpi%mpi_comm)
+      CALL vxc%distribute(fmpi%mpi_comm)
+      CALL exc%distribute(fmpi%mpi_comm)
 
-#ifdef CPP_MPI
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vTot)
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vxc)
-      CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,exc)
-#endif
       ! Klueppelberg (force level 3)
       IF (input%l_f.AND.(input%f_level.GE.3).AND.(fmpi%irank.EQ.0)) THEN
          DO js = 1,input%jspins

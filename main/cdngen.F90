@@ -47,13 +47,12 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_metagga
    !USE m_unfold_band_kpts
    USE m_denMultipoleExp
+   use m_slater
    USE m_greensfPostProcess
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
-#ifdef CPP_MPI
-   USE m_mpi_bc_potden
-#endif
+
    USE m_force_sf ! Klueppelberg (force level 3)
 
    IMPLICIT NONE
@@ -169,7 +168,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          greensFunction(i_gf)%contour = contour(iContour)
          CALL greensFunction(i_gf)%reset()
       ENDDO
-      CALL greensfImagPart%init(gfinp,atoms,input,noco,ANY(greensFunction(:)%l_calc))
+      CALL greensfImagPart%init(gfinp,atoms,input,noco,ANY(greensFunction(:)%l_calc),SIZE(fmpi%k_list))
    ENDIF
 
    IF(fmpi%irank==0 .AND.PRESENT(hub1data)) THEN
@@ -200,41 +199,22 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    endif
 
    IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
-     IF (fmpi%irank == 0) THEN
-       CALL timestart("cdngen: dos")
-       call make_dos(kpts,atoms,vacuum,input,banddos,&
+      IF (fmpi%irank == 0) THEN
+         CALL timestart("cdngen: dos")
+         CALL make_dos(kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,sym,cell,results,eigdos,oneD)
-       CALL timestop("cdngen: dos")
-     END IF
-     CALL juDFT_end("DOS OK",fmpi%irank)
+         CALL timestop("cdngen: dos")
+      END IF
    END IF
-
-   IF ((banddos%dos.OR.banddos%vacdos)) CALL juDFT_end("DOS OK",fmpi%irank)
 
    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy,fmpi,.TRUE.)
    IF (fmpi%irank.EQ.0) THEN
       CALL closeXMLElement('valenceDensity')
    END IF ! fmpi%irank = 0
 
-   IF (sliceplot%slice) THEN
-      IF (fmpi%irank == 0) THEN
-         IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and sliceplot not implemented. To perfom a sliceplot of the correct cdn deactivate realaxation.", calledby = "cdngen" )
-         CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                           0,-1.0,0.0,-1.0,-1.0,.FALSE.,outDen,'cdn_slice')
-      END IF
-#ifdef CPP_MPI
-               CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
-#endif
-      CALL juDFT_end("slice OK",fmpi%irank)
-   END IF
-
-   !IF (sliceplot%iplot.NE.0) THEN
-   !   CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi,oneD, sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
-   !END IF
-
    IF(PRESENT(greensFunction) .AND.gfinp%n.GT.0) THEN
       IF(greensfImagPart%l_calc) THEN
-         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,cell,gfinp,input,sym,noco,fmpi,&
+         CALL greensfPostProcess(greensFunction,greensfImagPart,atoms,kpts,cell,gfinp,input,sym,noco,fmpi,&
                                  nococonv,vTot,enpara,hub1inp,sphhar,hub1data,results)
       ELSE
          IF(fmpi%irank.EQ.0) THEN
@@ -244,6 +224,24 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          ENDIF
       ENDIF
    ENDIF
+
+   IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf) THEN
+      CALL juDFT_end("Charge density postprocessing done.",fmpi%irank)
+   END IF
+
+   IF (sliceplot%slice) THEN
+      IF (fmpi%irank == 0) THEN
+         IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and sliceplot not implemented. To perfom a sliceplot of the correct cdn deactivate realaxation.", calledby = "cdngen" )
+         CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                           0,-1.0,0.0,-1.0,-1.0,.FALSE.,outDen,'cdn_slice')
+      END IF
+      call outDen%distribute(fmpi%mpi_comm)
+      CALL juDFT_end("slice OK",fmpi%irank)
+   END IF
+
+   !IF (sliceplot%iplot.NE.0) THEN
+   !   CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi,oneD, sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
+   !END IF
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then
@@ -260,6 +258,12 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    IF(fmpi%irank.EQ.0) THEN
       IF(input%lResMax>0) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
    END IF
+
+   IF(atoms%n_opc>0) THEN
+      do jspin=1, input%jspins
+         call slater(input,jspin,atoms,vTot%mt(:,0,:,jspin),l_write=fmpi%irank==0)
+      enddo
+   ENDIF
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 
@@ -293,9 +297,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL MPI_BCAST(nococonv%beta,atoms%ntype,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
    CALL MPI_BCAST(nococonv%b_con,atoms%ntype*2,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
    CALL MPI_BCAST(nococonv%qss,3,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-
-   CALL mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif
+   CALL outDen%distribute(fmpi%mpi_comm)
 
    ! Klueppelberg (force level 3)
    IF (input%l_f.AND.(input%f_level.GE.3).AND.(fmpi%irank.EQ.0)) THEN

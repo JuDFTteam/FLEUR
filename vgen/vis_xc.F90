@@ -52,19 +52,29 @@ CONTAINS
       REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),v_xc2(:,:),e_xc(:,:)
       INTEGER           :: jspin, i, js
-      LOGICAL           :: perform_MetaGGA
+      LOGICAL           :: perform_MetaGGA, l_libxc
+
+      l_libxc=.FALSE.
 
       perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
                       .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
+
+      call timestart("init_pw_grid")
       CALL init_pw_grid(xcpot%needs_grad(),stars,sym,cell)
+      call timestop("init_pw_grid")
 
       !Put the charge on the grid, in GGA case also calculate gradients
+      call timestart("pw_to_grid")
       CALL pw_to_grid(xcpot%needs_grad(),input%jspins,noco%l_noco,stars,cell,den%pw,grad,xcpot,rho)
+      call timestop("pw_to_grid")
 
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_xc2,mold=rho)
       ALLOCATE(v_x,mold=rho)
+
+      call timestart("apply_cutoffs")
       CALL xcpot%apply_cutoffs(1.E-6,rho,grad)
+      call timestop("apply_cutoffs")
 #ifdef CPP_LIBXC
       if(perform_MetaGGA .and. kinED%set) then
          CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=kinED%is)
@@ -72,21 +82,37 @@ CONTAINS
          CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
       endif
 #else
-        CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
+      call timestart("get_vxc")   
+      CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
+      call timestop("get_vxc")
 #endif
-      IF (xcpot%needs_grad()) THEN
-         SELECT TYPE(xcpot)
-         TYPE IS (t_xcpot_libxc)
+      
+      SELECT TYPE(xcpot)
+      TYPE IS (t_xcpot_libxc)
+         l_libxc=.TRUE.
+         IF (xcpot%needs_grad()) THEN
             CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
             CALL libxc_postprocess_gga_pw(xcpot,stars,cell,v_x,grad)
-         END SELECT
-      ENDIF
+         END IF
+      END SELECT
+
+      !IF (l_libxc.AND.xcpot%needs_grad()) THEN
+      !   CALL save_npy('vxc_gga_ir_libxc.npy',v_xc)
+      !ELSE IF (l_libxc.AND.(.NOT.xcpot%needs_grad())) THEN
+      !  CALL save_npy('vxc_lda_ir_libxc.npy',v_xc)
+      !ELSE IF ((.NOT.l_libxc).AND.xcpot%needs_grad()) THEN
+      !   CALL save_npy('vxc_gga_ir_inbuild.npy',v_xc)
+      !ELSE
+      !  CALL save_npy('vxc_lda_ir_inbuild.npy',v_xc)
+      !END IF
 
       v_xc2=v_xc
       !Put the potentials in rez. space.
+      call timestart("pw_from_grid")
       CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_xc,vTot%pw,vTot%pw_w)
       CALL  pw_from_grid(xcpot%needs_grad(),stars,.false.,v_xc2,vxc%pw)
       CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_x,vx%pw,vx%pw_w)
+      call timestop("pw_from_grid")
 
       !calculate the ex.-cor energy density
       IF (ALLOCATED(exc%pw_w)) THEN
@@ -99,11 +125,17 @@ CONTAINS
          ENDIF
 
 #else
+         call timestart("get_exc")  
          CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
+         call timestop("get_exc")
 #endif
+         call timestart("pw_from_grid")
          CALL pw_from_grid(xcpot%needs_grad(),stars,.TRUE.,e_xc,exc%pw,exc%pw_w)
+         call timestop("pw_from_grid")
       ENDIF
 
+      call timestart("finish_pw_grid")
       CALL finish_pw_grid()
+      call timestop("finish_pw_grid")
    END SUBROUTINE vis_xc
 END MODULE m_vis_xc

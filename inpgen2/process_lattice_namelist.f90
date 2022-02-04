@@ -17,7 +17,7 @@ CONTAINS
     REAL,    INTENT (OUT) :: a1(3),a2(3),a3(3)
     REAL,    INTENT (OUT) :: aa                ! overall scaling constant
     REAL,    INTENT (OUT) :: scale(3),mat(3,3) ! for trigonal lattices
-    REAL,    INTENT(OUT) ::  cart_mat(3,3)
+    REAL,    INTENT (OUT) :: cart_mat(3,3)
 
     !==> Local Variables
     CHARACTER(len=40) :: latsys
@@ -27,7 +27,7 @@ CONTAINS
     REAL    :: c1(3),c2(3),c3(3)
     REAL    :: ar,br,cr,b1,b2,am(3,3)
     REAL    :: ca,cb,at
-    INTEGER :: i,j,err,i1,i2,i_c,ios
+    INTEGER :: i,j,errorCode,i1,i2,i_c,ios
     LOGICAL :: noangles
 
     REAL, PARAMETER :: eps = 1.0e-7, sqrt2  =  1.4142135623730950, &
@@ -89,6 +89,8 @@ CONTAINS
        cr = gamma
     ENDIF
 
+    errorCode = 0
+
     scale(1) = a
     scale(2) = b
     scale(3) = c
@@ -108,8 +110,8 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       IF ( a.NE.b .OR. a.NE.c ) err = 11
-       IF ( ar.NE.br .OR. ar.NE.cr .OR. ar.NE.(pi_const/2.0) ) err = 12
+       IF ( a.NE.b .OR. a.NE.c ) errorCode = 11
+       IF ( ar.NE.br .OR. ar.NE.cr .OR. ar.NE.(pi_const/2.0) ) errorCode = 12
 
        !===>  2: cubic-F          (cF) fcc
 
@@ -124,7 +126,7 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       IF ( a.NE.b .OR. a.NE.c ) err = 21
+       IF ( a.NE.b .OR. a.NE.c ) errorCode = 11
 
        !===>  3: cubic-I          (cI) bcc
 
@@ -139,7 +141,7 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       IF ( a.NE.b .OR. a.NE.c ) err = 31
+       IF ( a.NE.b .OR. a.NE.c ) errorCode = 11
 
        !===>  4: hexagonal-P      (hP) hcp
 
@@ -154,7 +156,7 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       IF ( a.NE.b ) err = 41
+       IF ( a.NE.b ) errorCode = 41
 
        !===>  4.1 : hexagonal-P   60 degrees variant
 
@@ -170,7 +172,7 @@ CONTAINS
        scale = 1.0
        i_c = 9
 
-       IF ( a.NE.b ) err = 41
+       IF ( a.NE.b ) errorCode = 41
 
        !===>  5.1: hexagonal-R      (hR) trigonal,( rhombohedral )
 
@@ -185,9 +187,9 @@ CONTAINS
        a2 = lmat(:,2,i_c)
        a3 = lmat(:,3,i_c)
 
-       IF ( a.NE.b ) err = 51
-       IF ( b.NE.c ) err = 51
-       IF ( alpha.EQ.0.0  .OR. alpha.NE.beta .OR. alpha.NE.gamma ) err = 52
+       IF ( a.NE.b ) errorCode = 41
+       IF ( b.NE.c ) errorCode = 51
+       IF ( alpha.EQ.0.0  .OR. alpha.NE.beta .OR. alpha.NE.gamma ) errorCode = 52
 
        at = sqrt( 2.0 / 3.0 * ( 1 - cos(ar) ) )
        am(:,1) = a1 ; am(:,2) = a2 ; am(:,3) = a3
@@ -211,9 +213,9 @@ CONTAINS
        a2 = lmat(:,2,i_c)
        a3 = lmat(:,3,i_c)
 
-       IF ( a.NE.b ) err = 53
-       IF ( alpha.NE.90 ) err = 54
-       IF ( alpha.NE.beta .OR. gamma.NE.120 ) err = 54
+       IF ( a.NE.b ) errorCode = 41
+       IF ( alpha.NE.90 ) errorCode = 54
+       IF ( alpha.NE.beta .OR. gamma.NE.120 ) errorCode = 54
 
        mat(:,1) = a*lmat(:,1,4) ! to transfer atom
        mat(:,2) = a*lmat(:,2,4) ! positions hex -> trig
@@ -250,8 +252,8 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       IF ( a.NE.b ) err = 61
-       IF ( ar.NE.br .OR. ar.NE.cr .OR. ar.NE.(pi_const/2.0)  ) err= 62
+       IF ( a.NE.b ) errorCode = 61
+       IF ( ar.NE.br .OR. ar.NE.cr .OR. ar.NE.(pi_const/2.0)  ) errorCode = 62
 
        !===>  7: tetragonal-I     (tI) bct
 
@@ -266,7 +268,7 @@ CONTAINS
        a3 = lmat(:,3,i_c) * scale(:)
        scale = 1.0
 
-       IF ( a.NE.b ) err = 61
+       IF ( a.NE.b ) errorCode = 61
 
        !===>  8: orthorhombic-P   (oP)
 
@@ -455,6 +457,26 @@ CONTAINS
     ELSE
        call judft_error(("unknown lattice system latsys="//latsys))
     ENDIF
+    
+    IF (errorCode.NE.0) THEN
+       SELECT CASE(errorCode)
+          CASE (11)
+             CALL juDFT_error("For cubic lattices lattice parameters b and c may not differ from a.", &
+                              hint = "Please only specify a.", calledby = "process_lattice_nanmelist")
+          CASE (12)
+             CALL juDFT_error("For simple cubic lattices the angles alpha, beta, gamma all have to be 90°.", &
+                              hint = "Please don't specify any angle.", calledby = "process_lattice_nanmelist")
+          CASE (41)
+             CALL juDFT_error("For hexagonal lattices the lattice parameters a and b have to be identical.", &
+                              hint = "Please only specify a.", calledby = "process_lattice_nanmelist")
+          CASE (61)
+             CALL juDFT_error("For tetragonal lattices the lattice parameters a and b have to be identical.", &
+                              hint = "Please only specify a.", calledby = "process_lattice_nanmelist")
+          CASE DEFAULT
+             CALL juDFT_error("Chosen lattice system is incompatible to specified parameters or angles.", &
+                              hint = "Please check the input.", calledby = "process_lattice_nanmelist")
+       END SELECT
+    END IF
 
     IF ( noangles .AND. ( abs(alpha - 90.0 ) > eps .OR.&
          abs(beta  - 90.0 ) > eps .OR. abs(gamma - 90.0 ) > eps )    ) THEN

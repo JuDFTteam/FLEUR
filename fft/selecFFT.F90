@@ -5,9 +5,10 @@ MODULE m_selecFFT
    IMPLICIT NONE
 
    INTEGER, PARAMETER :: defaultFFT_const = 0
-   INTEGER, PARAMETER :: mklFFT_const = 1
-   INTEGER, PARAMETER :: spFFT_const = 2
-   INTEGER, PARAMETER :: fftw_const = 3
+   INTEGER, PARAMETER :: mklFFT_const     = 1
+   INTEGER, PARAMETER :: spFFT_const      = 2
+   INTEGER, PARAMETER :: fftw_const       = 3
+   integer, parameter :: cufft_const      = 4
 
 #ifdef CPP_FFT_MKL
    LOGICAL, PARAMETER :: mklFFT_available = .TRUE.
@@ -27,12 +28,20 @@ MODULE m_selecFFT
    LOGICAL, PARAMETER :: spFFT_available = .FALSE.
 #endif
 
-   CONTAINS
+#ifdef _OPENACC
+   LOGICAL, PARAMETER :: cuFFT_available = .TRUE.
+#else
+   LOGICAL, PARAMETER :: cuFFT_available = .FALSE.
+#endif
 
-   FUNCTION selecFFT(l_sparse)
+
+CONTAINS
+
+   FUNCTION selecFFT(l_sparse, l_gpu)
 
       INTEGER             :: selecFFT
       LOGICAL, INTENT(IN) :: l_sparse
+      logical,optional, intent(in) :: l_gpu
 
       INTEGER :: fftRoutine
 
@@ -48,6 +57,13 @@ MODULE m_selecFFT
 #ifdef CPP_SPFFT
       IF(l_sparse) fftRoutine = spFFT_const
 #endif
+
+#ifdef _OPENACC
+      if(present(l_gpu)) then
+         if(l_gpu) fftRoutine = cufft_const
+      endif
+#endif
+
       IF (TRIM(juDFT_string_for_argument("-fft"))=="fftw") THEN
 #ifdef CPP_FFTW
          fftRoutine = fftw_const
@@ -62,11 +78,21 @@ MODULE m_selecFFT
 #else
          CALL juDFT_error("Selected FFT (mkl) is not available!", calledby="selecFFT")
 #endif
-
       END IF
+
       IF (TRIM(juDFT_string_for_argument("-fft"))=="spfft") THEN
 #ifdef CPP_SPFFT
          IF(l_sparse) fftRoutine = spFFT_const
+#else
+         CALL juDFT_error("Selected FFT (spfft) is not available!", calledby="selecFFT")
+#endif
+      END IF
+
+      IF (TRIM(juDFT_string_for_argument("-fft"))=="cufft") THEN
+#ifdef _OPENACC
+         if(present(l_gpu)) then
+            IF(l_gpu) fftRoutine = cuFFT_const
+         endif
 #else
          CALL juDFT_error("Selected FFT (spfft) is not available!", calledby="selecFFT")
 #endif

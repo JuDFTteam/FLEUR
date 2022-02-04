@@ -20,7 +20,6 @@ MODULE m_dwigner
   INTERFACE d_wigner
      MODULE PROCEDURE real_wigner, integer_wigner, integer_wigner_1op
   END INTERFACE d_wigner
-  LOGICAL :: written=.FALSE.
   PUBLIC :: d_wigner
 
 
@@ -29,39 +28,45 @@ CONTAINS
   !        private routine for integer rotation where only
   !        one rotation is passed 
   !***************************************************
-  SUBROUTINE integer_wigner_1op(mrot,bmat,lmax, d_wgn)
+  SUBROUTINE integer_wigner_1op(mrot,bmat,lmax, d_wgn, write)
+
+    IMPLICIT NONE
 
     INTEGER, INTENT(IN)  :: lmax
     INTEGER, INTENT(IN)  :: mrot(3,3)
     REAL,    INTENT(IN)  :: bmat(3,3)
     COMPLEX, INTENT(OUT) :: d_wgn(-lmax:lmax,-lmax:lmax,lmax)
+    LOGICAL, OPTIONAL, INTENT(IN) :: write
     REAL                    realmrot(3,3,1)
 
     realmrot(:,:,1) = mrot(:,:)
-    CALL real_wigner(1,realmrot,bmat,lmax, d_wgn)
+    CALL real_wigner(1,realmrot,bmat,lmax, d_wgn, write=write)
 
   END SUBROUTINE integer_wigner_1op
 
   !***************************************************
   !        private routine for integer rotation
   !***************************************************
-  SUBROUTINE integer_wigner(nop,mrot,bmat,lmax, d_wgn)
+  SUBROUTINE integer_wigner(nop,mrot,bmat,lmax, d_wgn, write)
+
+    IMPLICIT NONE
 
     INTEGER, INTENT(IN)  :: nop,lmax
     INTEGER, INTENT(IN)  :: mrot(3,3,nop)
     REAL,    INTENT(IN)  :: bmat(3,3)
     COMPLEX, INTENT(OUT) :: d_wgn(-lmax:lmax,-lmax:lmax,lmax,nop)
+    LOGICAL, OPTIONAL, INTENT(IN) :: write
     REAL                    realmrot(3,3,nop)
 
     realmrot(:,:,:) = mrot(:,:,:)
-    CALL real_wigner(nop,realmrot,bmat,lmax, d_wgn)
+    CALL real_wigner(nop,realmrot,bmat,lmax, d_wgn, write=write)
 
   END SUBROUTINE integer_wigner
 
   !c**************************************************
   !c         private routine for real rotation
   !c**************************************************
-  SUBROUTINE real_wigner(nop,mrot,bmat,lmax, d_wgn)
+  SUBROUTINE real_wigner(nop,mrot,bmat,lmax, d_wgn, write)
 
     USE m_constants
     USE m_inv3
@@ -73,6 +78,7 @@ CONTAINS
     REAL,    INTENT(IN)  :: mrot(3,3,nop)
     REAL,    INTENT(IN)  :: bmat(3,3)
     COMPLEX, INTENT(OUT) :: d_wgn(-lmax:lmax,-lmax:lmax,lmax,nop)
+    LOGICAL, OPTIONAL, INTENT(IN) :: write
 
     ! .. local variables:
     INTEGER              :: ns,signum
@@ -151,18 +157,19 @@ CONTAINS
 
     ENDDO ! loop over nop
 
-#ifndef CPP_MPI
-    IF(.NOT.written) THEN
-       WRITE (oUnit,8000)
-       DO ns = 1, nop
-          WRITE (oUnit,8010) ns,alpha(ns),beta(ns),GAMMA(ns),det(ns)
-       ENDDO
-       written=.TRUE.
+
+    IF(PRESENT(write)) THEN
+      IF(write) THEN
+          WRITE (oUnit,8000)
+          DO ns = 1, nop
+             WRITE (oUnit,8010) ns,alpha(ns),beta(ns),GAMMA(ns),det(ns)
+          ENDDO
+8000      FORMAT(//,'   eulerian angles for the rotations ',&
+                 //,'   ns   alpha     beta      gamma    determ ')
+8010      FORMAT(i5,4f10.5)
+      ENDIF
     ENDIF
-8000 FORMAT(//,'   eulerian angles for the rotations ',&
-      //,'   ns   alpha     beta      gamma    determ ')
-8010 FORMAT(i5,4f10.5)
-#endif
+
     d_wgn = cmplx_0
     DO ns = 1, nop
 

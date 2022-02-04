@@ -42,9 +42,6 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    USE m_types_dos
    use m_calc_cmt
 
-#ifdef CPP_MPI
-   USE m_mpi_bc_potden
-#endif
 #endif
 
    IMPLICIT NONE
@@ -83,7 +80,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    INTEGER                              :: iState, jState, iStep, numStates, numRelevantStates, convIter
    INTEGER                              :: maxHistoryLength
    INTEGER                              :: lastGroupEnd, currentGroupEnd
-   REAL                                 :: fix, potDenInt, fermiEnergyTemp, spinDegenFac
+   REAL                                 :: fix, potDenInt, fermiEnergyTemp, tempDistance, spinDegenFac
    REAL                                 :: rdmftFunctionalValue, occStateI, gradSum
    REAL                                 :: exchangeTerm, lagrangeMultiplier, equalityCriterion
    REAL                                 :: mixParam, rdmftEnergy, occSum
@@ -336,9 +333,8 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,CDN_input_DEN_const,&
                                  0,-1.0,0.0,-1.0,-1.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
             END IF
-#ifdef CPP_MPI
-            CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,singleStateDen)
-#endif
+            CALL singleStateDen%distribute(fmpi%mpi_comm)
+
             ! For each state calculate Integral over KS effective potential times single state density
             potDenInt = 0.0
             CALL int_nv(jsp,stars,fi%vacuum,fi%atoms,sphhar,fi%cell,fi%sym,fi%input,fi%oned,vTotTemp,singleStateDen,potDenInt)
@@ -460,9 +456,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
          CALL qfix(fmpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%oned,overallDen,&
                    fi%noco%l_noco,.TRUE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
       END IF
-#ifdef CPP_MPI
-      CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallDen)
-#endif
+      CALL overallDen%distribute(fmpi%mpi_comm)
 
       ! Calculate Coulomb potential for overall density (+including external potential)
       CALL overallDen%sum_both_spin()!workden)
@@ -471,9 +465,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       overallVCoul%pw_w(:,:) = 0.0
       CALL vgen_coulomb(1,fmpi,fi%oned,fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
       CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1),stars%ufft)   ! Is there a problem with a second spin?!
-#ifdef CPP_MPI
-      CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,overallVCoul)
-#endif
+      CALL overallVCoul%distribute(fmpi%mpi_comm)
 
       overallVCoulSSDen = 0.0
       DO jspin = 1, fi%input%jspins
@@ -485,12 +477,10 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
                IF (fmpi%irank.EQ.0) THEN
                   CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,&
-                                   CDN_input_DEN_const,0,fermiEnergyTemp,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
+                                   CDN_input_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
                   CALL singleStateDen%sum_both_spin()!workden)
                END IF
-#ifdef CPP_MPI
-               CALL mpi_bc_potden(fmpi,stars,sphhar,fi%atoms,fi%input,fi%vacuum,fi%oned,fi%noco,singleStateDen)
-#endif
+               CALL singleStateDen%distribute(fmpi%mpi_comm)
 
                ! For each state calculate integral over Coulomb potential times single state density
                potDenInt = 0.0

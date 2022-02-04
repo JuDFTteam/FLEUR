@@ -227,7 +227,9 @@ CONTAINS
        ENDIF
        IF (MOD(ierr/16,2).NE.0) THEN
           !WRITE(oUnit,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
-          CALL judft_warn("SCALAPACK failed: B was not positive definite",calledby="scalapack.f90")
+          CALL judft_warn("SCALAPACK failed: B was not positive definite. " // new_line("a") // &
+                          "Order of the smallest minor which is not positive definite:" // int2str(ifail(1))&
+                         ,calledby="scalapack.f90")
        ENDIF
     ENDIF
     IF (num2 < num1) THEN

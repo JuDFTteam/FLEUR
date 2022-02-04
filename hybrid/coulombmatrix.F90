@@ -40,6 +40,7 @@ MODULE m_coulombmatrix
    use m_sphbes, only: sphbes
    use m_glob_tofrom_loc
    USE m_trafo, ONLY: symmetrize_mpimat, symmetrize, bramat_trafo
+   use m_gamma_double_gpt_loop
 CONTAINS
 
    SUBROUTINE coulombmatrix(fmpi, fi, mpdata, hybdat, xcpot)
@@ -556,8 +557,13 @@ CONTAINS
 
             !finally we can loop over the plane waves (G: igpt1,igpt2)
             call timestart("loop over plane waves")
-            allocate (carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2), source=cmplx_0)
-               
+
+            !$OMP parallel default(none) private(carr2, igpt0, igpt1, igpt2, ix, iy, ix_loc, pe_ix, iatom, lm1, l1, m1)&
+            !$OMP private(lm2, l2, m2, cdum, ic, lm, l, m, itype, itype2, igptp1, csum, igptp2, iqnrm1, iqnrm2, cexp)&
+            !$OMP shared(fmpi, fi, ikpt, ngptm1, pgptm1, pqnrm, coul, gmat, structconst, sphbesmoment, hybdat, mpdata)&
+            !$OMP shared(carr2a, carr2b)
+            allocate(carr2(fi%atoms%nat, (fi%hybinp%lexp + 1)**2))               
+            !$OMP do schedule(dynamic)
             DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybdat%nbasp + igpt2
@@ -573,8 +579,6 @@ CONTAINS
                      itype2 = fi%atoms%itype(iatom)
                      cexp = CONJG(carr2b(iatom, igpt2))
                      
-                     !$OMP PARALLEL DO default(none) private(lm1,l1,m1,lm2,l2,m2,cdum,l,lm, iat2) &
-                     !$OMP shared(fi, sphbesmoment, itype2, iqnrm2, cexp, carr2a, igpt2, carr2, gmat, structconst, iatom, ikpt) 
                      DO lm1 = 1, (fi%hybinp%lexp+1)**2
                         call calc_l_m_from_lm(lm1, l1, m1)
                         do lm2 = 1, (fi%hybinp%lexp+1)**2
@@ -587,15 +591,11 @@ CONTAINS
                            enddo
                         enddo
                      enddo
-                     !$OMP end parallel do
                   end do ! iatom
 
                   call timestop("itype loops")
 
                   call timestart("igpt1")
-                  !$OMP PARALLEL DO default(none) &
-                  !$OMP private(igpt1, iy, igptp1, iqnrm1, csum, ic, itype, lm, l, m, cdum) &
-                  !$OMP shared(fi, carr2b, sphbesmoment, igpt2, ix_loc, carr2, carr2a, coul, hybdat, mpdata, ikpt, pqnrm)
                   DO igpt1 = 1, igpt2
                      iy = hybdat%nbasp + igpt1
                      igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -611,11 +611,14 @@ CONTAINS
                      END DO
                      coul(ikpt)%data_c(iy,ix_loc) = coul(ikpt)%data_c(iy,ix_loc) + csum/fi%cell%vol
                   END DO
-                  !$OMP end parallel do
                   call timestop("igpt1")
                endif ! pe_ix
             END DO !igpt0
-            deallocate (carr2, carr2a, carr2b)
+            !$omp end do
+            deallocate (carr2) 
+            !$OMP end parallel
+            deallocate(carr2a, carr2b)
+
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("coulomb matrix 3b")
@@ -625,58 +628,9 @@ CONTAINS
             !     Add corrections from higher orders in (3b) to coulomb(:,1)
             ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
             call timestart("add corrections from higher orders")
+            call gamma_double_gpt_loop(fi, fmpi, hybdat, mpdata, sphbesmoment, gmat,  ngptm1, pgptm1, pqnrm, coul(1)%data_c) 
+
             rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
-
-            call timestart("double gpt loop")
-            DO igpt0 = 1, ngptm1(1)
-               igpt2 = pgptm1(igpt0, 1)
-               if(igpt2 /= 1) then
-                  ix = hybdat%nbasp + igpt2
-                  call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
-                  if(pe_ix == fmpi%n_rank) then
-                     iqnrm2 = pqnrm(igpt2, 1)
-                     igptp2 = mpdata%gptm_ptr(igpt2, 1)
-                     q2 = MATMUL(mpdata%g(:, igptp2), fi%cell%bmat)
-                     qnorm2 = norm2(q2)
-
-                     !$OMP PARALLEL DO default(none) schedule(dynamic) &
-                     !$OMP shared(igpt2, hybdat, fi, pqnrm, mpdata, q2, qnorm2, igptp2) &
-                     !$OMP shared(coul, ix_loc, rdum, sphbesmoment, iqnrm2)&
-                     !$OMP private(igpt1, iy, iqnrm1, igptp1, q1, qnorm1, rdum1, iatm1) &
-                     !$OMP private(itype1, iatm2, itype2, cdum)
-                     DO igpt1 = 2, igpt2
-                        iy = hybdat%nbasp + igpt1
-                        iqnrm1 = pqnrm(igpt1, 1)
-                        igptp1 = mpdata%gptm_ptr(igpt1, 1)
-                        q1 = MATMUL(mpdata%g(:, igptp1), fi%cell%bmat)
-                        qnorm1 = norm2(q1)
-                        rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
-                        do iatm1 = 1,fi%atoms%nat
-                           itype1 = fi%atoms%itype(iatm1)
-                           do iatm2 = 1,fi%atoms%nat 
-                              itype2 = fi%atoms%itype(iatm2)
-                              cdum = EXP(CMPLX(0.0, 1.0)*tpi_const* &
-                                       (-dot_PRODUCT(mpdata%g(:, igptp1), fi%atoms%taual(:, iatm1)) &
-                                          + dot_PRODUCT(mpdata%g(:, igptp2), fi%atoms%taual(:, iatm2))))
-                              coul(1)%data_c(iy, ix_loc) = coul(1)%data_c(iy, ix_loc) + rdum*cdum*( &
-                                                -sphbesmoment(1, itype1, iqnrm1) &
-                                                *sphbesmoment(1, itype2, iqnrm2)*rdum1/3 &
-                                                - sphbesmoment(0, itype1, iqnrm1) &
-                                                *sphbesmoment(2, itype2, iqnrm2)/6 &
-                                                - sphbesmoment(2, itype1, iqnrm1) &
-                                                *sphbesmoment(0, itype2, iqnrm2)/6 &
-                                                + sphbesmoment(0, itype1, iqnrm1) &
-                                                *sphbesmoment(1, itype2, iqnrm2)/qnorm2/2 &
-                                                + sphbesmoment(1, itype1, iqnrm1) &
-                                                *sphbesmoment(0, itype2, iqnrm2)/qnorm1/2)
-                           END DO
-                        END DO
-                     END DO
-                     !$OMP END PARALLEL DO
-                  endif !pe_ix
-               endif
-            END DO
-            call timestop("double gpt loop")
 
             ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
             call timestart("igpt1=1 loop")
@@ -969,19 +923,19 @@ CONTAINS
          coeff(1,hybdat%nbasp + 1:n) = olap%data_c(1, 1:n - hybdat%nbasp)
       END IF
       IF (sym%invs) THEN
-         CALL symmetrize(coeff, 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(coeff, 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(claplace, 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(claplace, 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(-1:-1,:), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(-1:-1,:), 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(0:0,:), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(0:0,:), 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
-         CALL symmetrize(cderiv(1:1,:), 1, nbasm1(1), 2, .FALSE., &
+         CALL symmetrize(cderiv(1:1,:), 1, nbasm1(1), 2, &
                          atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
       ENDIF

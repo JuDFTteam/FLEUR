@@ -1,9 +1,0 @@
-$test_name="H2O: structural relaxation with BFGS";
-$test_code="Fleur";
-$test_stages=1;
-$test_desc=<<EOF
-Simple test of Fleur with a single steps:
-1.Run Fleur 3 times and check the agreement of the relaxation with the reference.
-Uses: forces, BFGS
-EOF
-;

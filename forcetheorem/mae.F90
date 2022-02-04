@@ -65,12 +65,14 @@ CONTAINS
   END SUBROUTINE  mae_start
 
 
-  LOGICAL FUNCTION mae_next_job(this,lastiter,atoms,noco,nococonv)
+  LOGICAL FUNCTION mae_next_job(this,fmpi,lastiter,atoms,noco,nococonv)
     USE m_types_setup
     USE m_xmlOutput
     USE m_constants
+    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
+    TYPE(t_mpi), INTENT(IN)             :: fmpi
     LOGICAL,INTENT(IN)                  :: lastiter
     TYPE(t_atoms),INTENT(IN)            :: atoms
     TYPE(t_noco),INTENT(IN)             :: noco
@@ -78,7 +80,7 @@ CONTAINS
     TYPE(t_nococonv),INTENT(INOUT) :: nococonv
     CHARACTER(LEN=12):: attributes(2)
        IF (.NOT.lastiter) THEN
-          mae_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco,nococonv)
+          mae_next_job=this%t_forcetheo%next_job(fmpi,lastiter,atoms,noco,nococonv)
           RETURN
        ENDIF
        !OK, now we start the MAE-loop
@@ -90,10 +92,12 @@ CONTAINS
        nococonv%phi=this%phi(this%directions_done)
        if (.not.noco%l_soc) call judft_error("Force theorem mode for MAE requires l_soc=T")
        !noco%l_soc=.true.
-       IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop')
-       WRITE(attributes(1),'(a)') 'MAE'
-       WRITE(attributes(2),'(i5)') this%directions_done
-       CALL openXMLElementPoly('Forcetheorem_Loop',(/'calculationType','No             '/),attributes)
+       IF (fmpi%irank .EQ. 0) THEN
+          IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop')
+          WRITE(attributes(1),'(a)') 'MAE'
+          WRITE(attributes(2),'(i5)') this%directions_done
+          CALL openXMLElementPoly('Forcetheorem_Loop',(/'calculationType','No             '/),attributes)
+       END IF
   END FUNCTION mae_next_job
 
   FUNCTION mae_eval(this,eig_id,atoms,kpts,sym,&

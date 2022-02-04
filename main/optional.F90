@@ -116,7 +116,7 @@ CONTAINS
              IF(.NOT.MAXVAL(ABS(atoms%econf(atomsCounter)%Occupation(:,1)-atoms%econf(atomsCounter)%Occupation(:,2))).EQ.0)stateCheck=.FALSE.
           END DO
        END IF
-       IF (stateCheck.AND.(input%jspins.EQ.2)) CALL juDFT_warn("You're setting up a spin-polarized calculation (jspins=2) without any acutal polarization given in the systems occupation. You're sure you want that?", calledby = "optional")
+       IF (stateCheck.AND.(input%jspins.EQ.2)) CALL juDFT_warn("You're setting up a spin-polarized calculation (jspins=2) without any actual polarization given in the systems occupation. You're sure you want that?", calledby = "optional")
        CALL stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   input,cell,xcpot,noco,oneD)
        !

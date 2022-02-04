@@ -46,14 +46,14 @@
 
 !     .. Local Scalars ..
       REAL s3,norm
-      INTEGER i,icount,j,j1,j2,j3,jop,n,na,nat1,nat2,nb,na_r
+      INTEGER i,icount,j,j1,j2,j3,jop,n,na,nat,natp,iop,nat1,nat2,nb,na_r
       INTEGER k,ij,n1,n2,ix,iy,iz,na2
       REAL, PARAMETER :: del = 1.0e-4
 
 !     .. Local Arrays ..
       INTEGER mt(3,3),mp(3,3)
       REAL aamat(3,3),sum_tau_lat(3),sum_taual(3)
-      REAL gam(3),gaminv(3),gamr(3),sr(3),ttau(3)
+      REAL gam(3),gaminv(3),gamr(3),sr(3),ttau(3),gammap(3)
       LOGICAL error(sym%nop)
 
     !  CALL dotset(&
@@ -129,7 +129,7 @@
 !
 ! search for operations which leave taual invariant
 !
-               IF (input%l_f.OR.(atoms%n_u+gfinp%n.GT.0)) THEN
+               IF (input%l_f.OR.(atoms%n_denmat+gfinp%n.GT.0)) THEN
                   DO j3 = -2,2
                      sr(3) = gaminv(3) + real(j3)
                      DO j2 = -2,2
@@ -165,10 +165,10 @@
 ! end of different types of atoms
     ENDDO
 
-!------------------------- FORCE PART -------------------------------
-!+gu this is the remainder of spgset necessary for force calculations
-!
-      IF (input%l_f.OR.(atoms%n_u+gfinp%n.GT.0)) THEN
+      !------------------------- FORCE PART -------------------------------
+      !+gu this is the remainder of spgset necessary for force calculations
+      !
+      IF (input%l_f.OR.(atoms%n_denmat+gfinp%n.GT.0)) THEN
 
       WRITE (oUnit,FMT=&
      &  '(//,"list of operations which leave taual invariant",/)')
@@ -178,24 +178,68 @@
       END DO
 
       ENDIF
-!------------------------- FORCE PART ENDS --------------------------
-!
-!     check closure  ; note that:  {R|t} tau = R^{-1} tau -  R^{-1} t
-!
-!--->    loop over all operations
-!
+
+      IF(gfinp%n > 0) THEN
+         ! Create mapped_atom array
+         ! Store, where atoms are mapped to when symmetry operations are applied
+         ALLOCATE(sym%mapped_atom(sym%nop,atoms%nat),source=0)
+
+         DO n = 1 , atoms%ntype
+            DO nat = SUM(atoms%neq(:n-1)) + 1, SUM(atoms%neq(:n))
+
+               DO iop = 1, sym%nop
+                  gamr = matmul(sym%mrot(:,:,iop), atoms%taual(:,nat))
+                  gamr = gamr + sym%tau(:,iop)
+
+                  icount = 0
+                  DO natp = SUM(atoms%neq(:n-1)) + 1, SUM(atoms%neq(:n))
+                     gammap = gamr - atoms%taual(:,natp)
+                     IF (icount.EQ.0) THEN
+                        DO j3 = -2,2
+                           sr(3) = gammap(3) + real(j3)
+                           DO j2 = -2,2
+                              sr(2) = gammap(2) + real(j2)
+                              DO j1 = -2,2
+                                 sr(1) = gammap(1) + real(j1)
+                                 s3 = sqrt(dot_product(matmul(sr,aamat),sr))
+                                 IF ((s3.LT.del).AND.(.not.error(iop))) THEN
+                                    icount = icount + 1
+                                    sym%mapped_atom(iop,nat) = natp
+                                 END IF
+                              END DO
+                           END DO
+                        END DO
+                     END IF
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO
+
+         WRITE (oUnit,FMT='(//,"list of atoms, which are mapped to by symmetry operations",/)')
+         DO na = 1,atoms%nat
+            WRITE (oUnit,FMT='("atom nr.",i3,3x,(t14,"mapped atoms are:",24i3))') na,(sym%mapped_atom(nb,na),nb=1,sym%nop)
+         END DO
+      ENDIF
+
+
+      !------------------------- FORCE PART ENDS --------------------------
+      !
+      !     check closure  ; note that:  {R|t} tau = R^{-1} tau -  R^{-1} t
+      !
+      !--->    loop over all operations
+      !
       WRITE (oUnit,FMT=8040)
  8040 FORMAT (/,/,' multiplication table',/,/)
       sym%multab = 0
       DO j=1,sym%nop
 
-!--->    multiply {R_j|t_j}{R_i|t_i}
+         !--->    multiply {R_j|t_j}{R_i|t_i}
          DO i=1,sym%nop
             mp = matmul( sym%mrot(:,:,j) , sym%mrot(:,:,i) )
             ttau = sym%tau(:,j) + matmul( sym%mrot(:,:,j) , sym%tau(:,i) )
             ttau = ttau - anint( ttau - 1.e-7 )
 
-!--->    determine which operation this is
+            !--->    determine which operation this is
             DO k=1,sym%nop
               IF( all( mp(:,:) == sym%mrot(:,:,k) ) .AND.&
      &            ALL( abs( ttau(:)-sym%tau(:,k) ) < 1.e-7 ) ) THEN
@@ -232,7 +276,7 @@
          sym%invsatnr(na) = 0
       END DO
 
-      IF (.not.(noco%l_soc.and.atoms%n_u>0) .and. atoms%n_hia==0) THEN
+      IF (.not.(noco%l_soc.and.atoms%n_u+atoms%n_opc>0) .and. atoms%n_hia==0) THEN
       IF (sym%invs) THEN
          WRITE (oUnit,FMT=*)
          nat1 = 1

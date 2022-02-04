@@ -121,7 +121,7 @@ CONTAINS
          ! interstitial region
          CALL timestart("Vxc in interstitial")
             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc, vxc)
-      CALL timestop("Vxc in interstitial")
+         CALL timestop("Vxc in interstitial")
       END IF !irank==0
 
       !

@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_fftGrid
+   use m_constants
    TYPE t_fftGrid
 
       INTEGER :: extend(3) = [-1, -1, -1]
@@ -20,6 +21,7 @@ MODULE m_types_fftGrid
       PROCEDURE :: takeFieldFromGrid
       PROCEDURE :: getRealPartOfGrid
       PROCEDURE :: putStateOnGrid
+      procedure :: put_state_on_external_grid
       PROCEDURE :: putRealStateOnGrid
       PROCEDURE :: putComplexStateOnGrid
       PROCEDURE :: fillStateIndexArray
@@ -28,12 +30,12 @@ MODULE m_types_fftGrid
       procedure :: g2fft => map_g_to_fft_grid
    END TYPE t_fftGrid
 
-   PUBLIC :: t_fftGrid
+   PUBLIC :: t_fftGrid, put_real_on_external_grid, put_cmplx_on_external_grid
 
 CONTAINS
 function map_g_to_fft_grid(grid, g_in) result(g_idx)
    implicit none 
-   CLASS(t_fftGrid), INTENT(INOUT) :: grid
+   CLASS(t_fftGrid), INTENT(IN)    :: grid
    integer, intent(in)             :: g_in(3)
    integer                         :: g_idx
 
@@ -172,6 +174,25 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       END IF
    END SUBROUTINE putStateOnGrid
 
+   SUBROUTINE put_state_on_external_grid(this, lapw, iSpin, zMat, iState, ext_grid, l_gpu)
+      USE m_types_lapw
+      USE m_types_mat
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      TYPE(t_lapw), INTENT(IN)    :: lapw
+      TYPE(t_mat), INTENT(IN)    :: zMat
+      INTEGER, INTENT(IN)    :: iSpin
+      INTEGER, INTENT(IN)    :: iState
+      complex, intent(inout) :: ext_grid(0:)
+      logical, intent(in), optional :: l_gpu
+
+      if (zMat%l_real) then
+         call put_real_on_external_grid(this, lapw, ispin, zMat%data_r(:, iState), ext_grid, l_gpu)
+      else
+         call put_cmplx_on_external_grid(this, lapw, ispin, zMat%data_c(:, iState), ext_grid, l_gpu)
+      endif
+   end subroutine put_state_on_external_grid
+
    SUBROUTINE putRealStateOnGrid(this, lapw, iSpin, state)
       USE m_types_lapw
       IMPLICIT NONE
@@ -180,19 +201,56 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       REAL, INTENT(IN)    :: state(:)
       INTEGER, INTENT(IN)    :: iSpin
 
+      call put_real_on_external_grid(this, lapw, ispin, state, this%grid)
+   END SUBROUTINE putRealStateOnGrid
+
+   subroutine put_real_on_external_grid(this, lapw, ispin, state, ext_grid, l_gpu)   
+     USE m_types_lapw
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      TYPE(t_lapw), INTENT(IN)    :: lapw
+      REAL, INTENT(IN)       :: state(:)
+      complex, intent(inout) :: ext_grid(0:)
+      INTEGER, INTENT(IN)    :: iSpin
+      logical, intent(in), optional :: l_gpu
+
+      logical :: use_gpu
       INTEGER :: xGrid, yGrid, zGrid, layerDim, iLAPW
 
       layerDim = this%dimensions(1)*this%dimensions(2)
 
-      this%grid(:) = CMPLX(0.0, 0.0)
+      if(present(l_gpu)) then 
+         use_gpu = l_gpu 
+      else
+         use_gpu = .False. 
+      endif 
 
-      DO iLAPW = 1, lapw%nv(iSpin)
-         xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
-         yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
-         zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
-         this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
-      END DO
-   END SUBROUTINE putRealStateOnGrid
+      if(use_gpu) then
+         !$acc kernels
+         ext_grid = cmplx_0
+         !$acc end kernels
+
+         !$acc parallel loop default(none) private(xGrid, yGrid, zGrid) &
+         !$acc present(lapw, lapw%nv, lapw%gvec, this, this%dimensions, ext_grid, state) &
+         !$acc copyin(layerDim, iSpin)
+         DO iLAPW = 1, lapw%nv(iSpin)
+            xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
+            yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
+            zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
+            ext_grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
+         END DO
+         !$acc end parallel loop
+      else
+         ext_grid = cmplx_0
+
+         DO iLAPW = 1, lapw%nv(iSpin)
+            xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
+            yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
+            zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
+            ext_grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
+         END DO
+      endif
+   end subroutine put_real_on_external_grid
 
    SUBROUTINE putComplexStateOnGrid(this, lapw, iSpin, state)
       USE m_types_lapw
@@ -202,19 +260,54 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       COMPLEX, INTENT(IN)    :: state(:)
       INTEGER, INTENT(IN)    :: iSpin
 
-      INTEGER :: xGrid, yGrid, zGrid, layerDim, iLAPW
-
-      layerDim = this%dimensions(1)*this%dimensions(2)
-
-      this%grid(:) = CMPLX(0.0, 0.0)
-
-      DO iLAPW = 1, lapw%nv(iSpin)
-         xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
-         yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
-         zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
-         this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = state(iLAPW)
-      END DO
+      call put_cmplx_on_external_grid(this, lapw, ispin, state, this%grid)
    END SUBROUTINE putComplexStateOnGrid
+
+   SUBROUTINE put_cmplx_on_external_grid(this, lapw, iSpin, state, ext_grid, l_gpu)
+      USE m_types_lapw
+      use m_judft
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      TYPE(t_lapw), INTENT(IN)    :: lapw
+      COMPLEX, INTENT(IN)    :: state(:)
+      complex, intent(inout) :: ext_grid(0:)
+      INTEGER, INTENT(IN)    :: iSpin
+      logical, intent(in), optional :: l_gpu
+
+      logical :: use_gpu
+      INTEGER :: xGrid, yGrid, zGrid, iLAPW
+
+      if(present(l_gpu)) then 
+         use_gpu = l_gpu 
+      else
+         use_gpu = .False. 
+      endif 
+
+      if(use_gpu) then
+         !$acc kernels
+         ext_grid = cmplx_0
+         !$acc end kernels
+
+         !$acc parallel loop default(none) private(xGrid, yGrid, zGrid) &
+         !$acc present(lapw, lapw%nv, lapw%gvec, this, this%dimensions, ext_grid, state, iSpin) 
+         DO iLAPW = 1, lapw%nv(iSpin)
+            xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
+            yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
+            zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
+            ext_grid(xGrid + this%dimensions(1)*yGrid + (this%dimensions(1)*this%dimensions(2))*zGrid) = state(iLAPW)
+         END DO
+         !$acc end parallel loop
+      else
+         ext_grid = cmplx_0
+
+         DO iLAPW = 1, lapw%nv(iSpin)
+            xGrid = MODULO(lapw%gvec(1, iLAPW, iSpin), this%dimensions(1))
+            yGrid = MODULO(lapw%gvec(2, iLAPW, iSpin), this%dimensions(2))
+            zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
+            ext_grid(xGrid + this%dimensions(1)*yGrid + (this%dimensions(1)*this%dimensions(2))*zGrid) = state(iLAPW)
+         END DO
+      endif
+   end SUBROUTINE put_cmplx_on_external_grid
 
    SUBROUTINE fillStateIndexArray(this, lapw, ispin, indexArray)
       USE m_types_lapw
@@ -234,7 +327,6 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
          zGrid = MODULO(lapw%gvec(3, iLAPW, iSpin), this%dimensions(3))
          indexArray(iLAPW) = xGrid + this%dimensions(1)*yGrid + layerDim*zGrid
       END DO
-
    END SUBROUTINE fillStateIndexArray
 
    SUBROUTINE fillFieldSphereIndexArray(this, stars, gCutoff, indexArray)

@@ -17,8 +17,8 @@ types_enparaXML.f90        types_forcetheo_data.f90
 types_mpinp.f90            types_gfinp.F90      types_hub1inp.f90
 types_xml.f90              types_juPhon.F90     types_brZone.f90
 calculator.f90 constants.f90 mpi_bc_tool.F90 ../include/inputSchema.h ../include/outputSchema.h ../io/xml/dropInputSchema.c 
-../io/xml/dropOutputSchema.c ../io/xml/inputSchema_old.h  ../io/xml/xmlInterfaceWrapper.c
-../math/d_wigner.F90 ../math/inv3.f90 ../math/grule.f90 ../global/sort.f90 ../kpoints/tetcon.f90 
+../io/xml/dropOutputSchema.c ../io/xml/inputSchema_old.h ../io/xml/outputSchema_old.h ../io/xml/xmlInterfaceWrapper.c
+../math/d_wigner.F90 ../math/inv3.f90 ../math/grule.f90 ../global/sort.f90 ../global/atom_shells.f90 ../kpoints/tetcon.f90 
 ../kpoints/triang.f ../kpoints/bravais.f ../kpoints/brzone2.f90
 ../hybrid/map_to_unit.f90
 )
