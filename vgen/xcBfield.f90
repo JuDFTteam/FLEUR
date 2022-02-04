@@ -182,7 +182,7 @@ CONTAINS
          CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
          cvec(i)%pw=CMPLX(0.0,0.0)
          cvec(i)%pw_w=CMPLX(0.0,0.0)
-         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,cvec(i)%pw,cvec(i)%pw_w)
+         CALL pw_from_grid(stars,intden,cvec(i)%pw,cvec(i)%pw_w)
          DEALLOCATE(intden)
       END DO !i
       CALL finish_pw_grid()

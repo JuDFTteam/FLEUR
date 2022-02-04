@@ -59,8 +59,10 @@ CONTAINS
       endif
 
       call stepf%init(fi%cell, fi%sym, gcutoff)
-      call stepf%putFieldOnGrid(stars, stars%ustep)
-
+      block
+         type(t_cell)         :: cell !unused 
+         call stepf%putFieldOnGrid(stars, cell,stars%ustep)
+      end block
       call fft%init(stepf%dimensions, .false., batch_size=1, l_gpu=.True.)
       !$acc data copyin(stepf, stepf%grid, stepf%gridlength)
          ! after we transform psi_k*stepf*psi_kqpt back  to 
