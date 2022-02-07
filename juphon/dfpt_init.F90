@@ -1189,6 +1189,10 @@ CONTAINS
     !---------------------------------------------------------------------------------------------------------------------------------
     subroutine calcKernDerOnGrid(nGridPts, alpha, rhoMTGpts, grVxcMTKernGPts, oldmode, xcpot)
 
+      USE m_types
+      USE m_types_xcpot_libxc
+      USE m_npy
+
       integer,           intent(in)  :: nGridPts
       real,              intent(in)  :: alpha
       real,              intent(in)  :: rhoMTGpts(:)
@@ -1200,15 +1204,44 @@ CONTAINS
       real                           :: prfac
       integer                        :: imesh
       real                           :: rhoCapped
+      LOGICAL :: l_libxc
 
+      ! Libxc:
+      real :: rhoMTGptsdummy(SIZE(rhoMTGpts), 1)
+      real :: grVxcMTKernGPtsdummy(SIZE(grVxcMTKernGPts), 1)
+
+      ! Oldmode for
       grVxcMTKernGPts(:) = 0.
       prfac = 1. / 9. / pi_const
       do imesh = 1, nGridPts
         rhoCapped = max( 1e-15, rhoMTGpts(imesh) )
+        rhoMTGptsdummy(imesh, 1) = rhoCapped
         ! We merged all factors from FLEUR together converted it in hartree units (division by 2) and multiplied it with the 1 / 3
         ! from the derivative which is the prefactor used here so we have 1 / 3 * (3 / pi)**(1/3) * rho**(-2 / 3)
         grVxcMTKernGPts(imesh) = - prfac**(1. / 3.) * alpha * rhoCapped**(-2. / 3.)
       end do
+
+      !CALL save_npy("fxc_inbuild.npy", grVxcMTKernGPts)
+
+      SELECT TYPE(xcpot)
+      TYPE IS (t_xcpot_libxc)
+         l_libxc=.TRUE.
+      END SELECT
+
+#ifdef CPP_LIBXC
+      IF (l_libxc) THEN
+          CALL xcpot%get_fxc(1, rhoMTGptsdummy, grVxcMTKernGPtsdummy)
+          !CALL save_npy("fxc_libxc.npy", grVxcMTKernGPtsdummy(:, 1))
+          !STOP
+      ELSE
+          CALL judft_error("You tried to use Fleur DFPT with a non-libxc functional. Please fix that.")
+      END IF
+#else
+      CALL judft_error("You compiled Fleur without libxc but want to use DFPT. Please fix that.")
+#endif
+
+    ! The .npy comparison showed this is ok.
+    grVxcMTKernGPts = grVxcMTKernGPtsdummy(:, 1)
 
     end subroutine calcKernDerOnGrid
 
