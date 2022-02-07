@@ -62,7 +62,7 @@ MODULE m_types_stars
      INTEGER, ALLOCATABLE ::ig2(:)
      !
      REAL, ALLOCATABLE:: phi2(:) !(n2d)
-     !phase phactor of g-vector
+     !phase factor of g-vector
      COMPLEX, ALLOCATABLE    ::rgphs(:, :, :)
      !mapping of stars to FFT-box
      INTEGER, ALLOCATABLE :: igfft(:, :)

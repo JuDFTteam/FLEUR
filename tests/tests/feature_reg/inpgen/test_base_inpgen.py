@@ -45,9 +45,9 @@ def test_inpgen_Si_inputfile_content(execute_inpgen, clean_workdir):
     """Simple test of Inpgen:
     1.Generate input files where no namelists are given & compare with expected files
     Be very careful when changing the inpgen input file, it is parsed by various other tools:
-    
+
     Masci-tools (used by aiida-fleur): https://github.com/JuDFTteam/masci-tools/tree/develop/masci_tools/io/io_fleur_inpgen.py
-    Phononpy: https://github.com/phonopy/phonopy/blob/develop/phonopy/interface/fleur.py
+    Phonopy: https://github.com/phonopy/phonopy/blob/develop/phonopy/interface/fleur.py
     # ASE
     """
     test_file_folder = './inputfiles/inpgen/Si_full_para/'

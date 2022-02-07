@@ -31,7 +31,7 @@ MODULE m_constants
   REAL,             PARAMETER :: hartree_to_ev_const=27.211386245988 ! value from  https://physics.nist.gov/cgi-bin/cuu/Value?hrev
                                                                      ! 27.211386245988(53)
   REAL,             PARAMETER :: bohr_to_angstrom_const=0.529177210903 ! value from https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
-                                                                       ! 0.529177210903(80) 
+                                                                       ! 0.529177210903(80)
   REAL,             PARAMETER :: eVac0Default_const = -0.25
   CHARACTER(len=9), PARAMETER :: version_const = 'fleur 35'
   CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 6.0          (www.max-centre.eu)'
@@ -105,6 +105,22 @@ MODULE m_constants
   CHARACTER(4),DIMENSION(6),PARAMETER :: nobleGasConfigList_const=(/'[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]'/)
 
   INTEGER,DIMENSION(6),PARAMETER :: nobleGasNumStatesList_const=(/1, 4, 7, 12, 17, 24/)
+
+  ! juPhon stuff:
+  complex, dimension(3, 3), parameter  :: Tmatrix0 = transpose(reshape([ &
+                                              & (0.7071067811865475, 0), (0, 0), (-0.7071067811865475, 0), &
+                                              & -ImagUnit * 0.7071067811865475, (0, 0), -ImagUnit * 0.7071067811865475, &
+                                              & (0, 0), (1, 0), (0, 0) &
+                                              & ], [3, 3] )) !< Klüppelberg PhD thesis 4.18
+  complex, dimension(3, 3), parameter :: c_im = transpose(  reshape([ &
+                                              & (1.4472025091165353, 0), (0, 0), (-1.4472025091165353, 0), &
+                                              & (0, 1.4472025091165353), (0, 0), (0, 1.4472025091165353), &
+                                              & (0, 0), (2.0466534158929770, 0), (0, 0) &
+                                              & ], [3, 3] )  ) !< Klüppelberg PhD thesis 4.28
+  integer, parameter, dimension(3)    :: dirvecx = [1, 0, 0]
+  integer, parameter, dimension(3)    :: dirvecy = [0, 1, 0]
+  integer, parameter, dimension(3)    :: dirvecz = [0, 0, 1]
+  integer, parameter, dimension(3, 3) :: id3x3   = reshape([dirvecx, dirvecy, dirvecz], [3, 3])
 
 CONTAINS
 
