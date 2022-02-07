@@ -19,7 +19,6 @@ CONTAINS
       USE m_xmlOutput
       USE m_relaxation
       USE m_rotate_forces
-
       IMPLICIT NONE
 
       TYPE(t_mpi),     INTENT(IN)    :: fmpi
@@ -35,7 +34,6 @@ CONTAINS
       INTEGER i, jsp, n, nat1, ierr
       REAL eps_force
       LOGICAL :: l_new, l_forceConverged
-
       REAL forcetot(3,atoms%ntype)
       CHARACTER(LEN=20) :: attributes(7)
 
@@ -66,14 +64,18 @@ CONTAINS
          IF (input%l_f) CALL openXMLElement('totalForcesOnRepresentativeAtoms',(/'units'/),(/'Htr/bohr'/))
          nat1 = 1
          forcetot = 0.0
+         if (allocated(results%force_vdw)) THEN
+            forcetot=forcetot+results%force_vdw
+            write(oUnit,*) "vdW forces included in total force"
+         endif
+
          DO n = 1,atoms%ntype
             IF (atoms%l_geo(n)) THEN
                DO jsp = 1,input%jspins
-                  DO i = 1,3
-                     forcetot(i,n) = forcetot(i,n) + results%force(i,n,jsp)
-                  END DO
+                  forcetot(:,n) = forcetot(:,n) + results%force(:,n,jsp)
                END DO
 
+               
                WRITE (oUnit,FMT=8010) n, (atoms%pos(i,nat1),i=1,3), &
                                          (forcetot(i,n),i=1,3)
 
@@ -124,6 +126,8 @@ CONTAINS
                             cell%omtil,atoms%neq,sym%mrot,cell%amat,cell%bmat,&
                             atoms%taual,sym%tau,forcetot)
       END IF
+
+    
 
       IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,forcetot,results%tote)
 

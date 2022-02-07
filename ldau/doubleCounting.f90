@@ -196,6 +196,7 @@ MODULE m_doubleCounting
          charge=charge/2.0
          mag = 0.
       endif
+      if (l_spinAvg) mag = 0.
 
       doubleCountingEnergy = 0.0
       IF(ldau%l_amf) THEN

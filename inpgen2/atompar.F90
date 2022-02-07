@@ -1,5 +1,6 @@
 MODULE m_atompar
   USE m_judft
+  USE m_types_profile
   IMPLICIT NONE
   type t_atompar
      integer :: id = -1
@@ -97,8 +98,9 @@ contains
   end subroutine add_defaults
 
 
-  subroutine add_atompar(ap)
-    TYPE(t_atompar),INTENT(in),OPTIONAL::ap
+  subroutine add_atompar(ap, profile)
+    TYPE(t_atompar),INTENT(in),OPTIONAL :: ap
+    TYPE(t_profile),INTENT(IN),optional :: profile
     type(t_atompar),allocatable:: tmp_list(:)
 
 
@@ -108,6 +110,11 @@ contains
        ALLOCATE(atompar_list(100))
        !Try to read default parameter files
        CALL read_params("default.econfig")
+       IF(PRESENT(profile)) THEN
+          IF(profile%atomSetup.NE."") THEN
+             CALL read_params(TRIM(ADJUSTL(profile%atomSetup))//".econfig")
+          END IF
+       END IF
        CALL read_params("fleur.econfig")
        call read_params("my.econfig")
     else
@@ -125,15 +132,16 @@ contains
     ENDIF
   end subroutine add_atompar
 
-  function find_atompar(nucnumber,rmt_max,id)result(ap)
+  function find_atompar(nucnumber,rmt_max,profile,id)result(ap)
     integer,intent(in)          :: nucnumber
     real,intent(in)             :: rmt_max
+    TYPE(t_profile),INTENT(IN),optional :: profile
     integer,intent(in),optional :: id
     type(t_atompar)    :: ap
 
     integer :: n
 
-    call add_atompar() !Make sure we have at least the defaults
+    call add_atompar(profile=profile) !Make sure we have at least the defaults
     !check if there is an id given
     if (present(id)) then
        DO n=no_of_atompars,1,-1
@@ -165,6 +173,8 @@ contains
        endif
     enddo
 
+    WRITE(*,*) 'atomic number: ', nucnumber
+    IF(PRESENT(profile)) WRITE(*,*) 'profile%atomSetup: ', TRIM(profile%atomSetup)
     call judft_error("No possible atomic parameter-set found")
   end function find_atompar
 
@@ -202,10 +212,11 @@ contains
 100 CLOSE(99)
   END SUBROUTINE read_params
 
-  SUBROUTINE read_atom_params_old(fh,ap)
+  SUBROUTINE read_atom_params_old(fh,ap,profile)
     !Try to read old namelist
     integer,intent(in)::fh
     TYPE(t_atompar),INTENT(out)::ap
+    TYPE(t_profile),INTENT(IN),OPTIONAL :: profile
 
     REAL:: id,z,rmt,dx,bmu
     INTEGER:: jri,lmax,lnonsph,ncst,nc,io_stat,nz
@@ -246,7 +257,11 @@ contains
     IF (ncst>-1) CALL judft_warn("ncst is no longer supported as input")
 
     IF (LEN_TRIM(econfig)==0)THEN
-       ap=find_atompar(nz,rmt)
+       IF (PRESENT(profile)) THEN
+          ap=find_atompar(nz,rmt,profile)
+       ELSE
+          ap=find_atompar(nz,rmt)
+       END IF
        econfig=ap%econfig
        IF (LEN_TRIM(lo)==0) then
          lo=ap%lo

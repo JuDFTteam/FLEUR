@@ -34,7 +34,7 @@ CONTAINS
       USE m_rotate_mt_den_tofrom_local
       USE m_magnMomFromDen
       USE m_force_sf ! Klueppelberg (force level 3)
-
+      USE m_fleur_vdW
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT) :: results
@@ -107,6 +107,9 @@ CONTAINS
 
       CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
       
+      !vdW Potential
+      IF (input%vdw>0) CALL fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,cell,sym,oneD,vacuum,results,workden%pw(:,1),workden%mt(:,:,:,1),vCoul%pw(:,1),vCoul%mt)
+
       ! b)
       CALL vCoul%copy_both_spin(vTot)
       vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
@@ -123,6 +126,8 @@ CONTAINS
                       cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results)
 
       CALL bfield(input,stars,noco,atoms,field,vTot)
+
+      
 
       ! d)
       ! TODO: Check if this is needed for more potentials as well!

@@ -1,9 +1,0 @@
-$test_name="Plot test which checks if density and potential plottable files set up/written out correctly. The same checks are done for the vectorplot feature.";
-$test_code="Fleur";
-$test_stages=2;
-$test_desc=<<EOF
-Simple test of Fleur with two steps:
-1.Generate a starting density.
-2.Generate plottable xsf files for potential and input density. Check entries in those files.
-EOF
-;

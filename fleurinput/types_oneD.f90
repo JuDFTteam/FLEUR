@@ -96,6 +96,7 @@ MODULE m_types_oneD
     end if
     !Attention only few variables are broadcasted
     CALL mpi_bc(this%odd%d1 ,rank,mpi_comm)
+    CALL mpi_bc(this%odi%d1 ,rank,mpi_comm)
     CALL mpi_bc(this%odd%M ,rank,mpi_comm)
     CALL mpi_bc(this%odd%mb ,rank,mpi_comm)
     CALL mpi_bc(this%odd%m_cyl ,rank,mpi_comm)
@@ -120,6 +121,7 @@ MODULE m_types_oneD
       numberNodes = xml%GetNumberOfNodes(xPathA)
 
       this%odd%d1 = .FALSE.
+      this%odi%d1 = .FALSE.
 
       IF (numberNodes.EQ.1) THEN
          this%odd%d1 = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@d1'))

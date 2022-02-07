@@ -8,6 +8,7 @@ MODULE m_types_profile
 
       CHARACTER(LEN=20) :: profileName
       CHARACTER(LEN=50) :: addLOSetup
+      CHARACTER(LEN=20) :: atomSetup
 
       CONTAINS
 
@@ -31,6 +32,7 @@ MODULE m_types_profile
       this%lmaxFactor = 1.0
       this%fermiSmearing = 0.001
       this%addLOSetup = ""
+      this%atomSetup = ""
 
    END SUBROUTINE initProfile
 
@@ -51,8 +53,9 @@ MODULE m_types_profile
       CHARACTER(LEN=50) :: addLOSetup
       CHARACTER(LEN=20) :: filename
       CHARACTER(len=8)  :: str
+      CHARACTER(LEN=20) :: atomSetup
 
-      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup,fermiSmearing
+      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup,fermiSmearing,atomSetup
 
       filename = "profile.config"
 
@@ -76,6 +79,7 @@ MODULE m_types_profile
             lmaxFactor = 1.0
             addLOSetup = ""
             fermiSmearing = 0.001
+            atomSetup = ""
             READ(558,profile,iostat=io_stat)
             IF (io_stat.EQ.0) THEN
                IF(TRIM(ADJUSTL(profileName)).EQ.TRIM(ADJUSTL(name))) THEN
@@ -85,6 +89,7 @@ MODULE m_types_profile
                   this%lmaxFactor = lmaxFactor
                   this%addLOSetup = TRIM(ADJUSTL(addLOSetup))
                   this%fermiSmearing = fermiSmearing
+                  this%atomSetup = TRIM(ADJUSTL(atomSetup))
                   l_found = .TRUE.
                END IF
             ELSE

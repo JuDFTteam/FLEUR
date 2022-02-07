@@ -153,19 +153,7 @@
 
    <xsd:complexType name="BulkLatticeType">
       <xsd:sequence>
-         <xsd:choice>
-            <xsd:sequence>
-               <xsd:element name="a1" type="LatticeParameterType"/>
-               <xsd:element minOccurs="0" name="a2" type="LatticeParameterType"/>
-               <xsd:element name="c" type="LatticeParameterType"/>
-            </xsd:sequence>
-            <xsd:sequence>
-               <xsd:element name="row-1" type="FleurDouble2DVecType"/>
-               <xsd:element name="row-2" type="FleurDouble2DVecType"/>
-               <xsd:element name="c" type="LatticeParameterType"/>
-            </xsd:sequence>
-            <xsd:element name="bravaisMatrix" type="Matrix3Type"/>
-         </xsd:choice>
+         <xsd:element name="bravaisMatrix" type="Matrix3Type"/>
       </xsd:sequence>
       <xsd:attribute name="scale" type="FleurDouble" use="required"/>
    </xsd:complexType>
@@ -173,15 +161,8 @@
    <xsd:complexType name="FilmLatticeType">
       <xsd:sequence>
          <xsd:choice>
-            <xsd:sequence>
-               <xsd:element name="a1" type="LatticeParameterType"/>
-               <xsd:element minOccurs="0" name="a2" type="LatticeParameterType"/>
-            </xsd:sequence>
-            <xsd:sequence>
-               <xsd:element name="row-1" type="FleurDouble2DVecType"/>
-               <xsd:element name="row-2" type="FleurDouble2DVecType"/>
-            </xsd:sequence>
             <xsd:element name="bravaisMatrix" type="Matrix3Type"/>
+            <xsd:element name="bravaisMatrixFilm" type="Matrix2Type"/>
          </xsd:choice>
          <xsd:element minOccurs="0" maxOccurs="2" name="vacuumEnergyParameters" type="VacuumEnergyParameterType"/>
       </xsd:sequence>
@@ -190,14 +171,7 @@
       <xsd:attribute name="dTilda" type="FleurDouble" use="required"/>
    </xsd:complexType>
 
-   <xsd:complexType name="LatticeParameterType">
-      <xsd:simpleContent>
-         <xsd:extension base="FleurDouble">
-            <xsd:attribute default="1.0" name="scale" type="FleurDouble" use="optional"/>
-         </xsd:extension>
-      </xsd:simpleContent>
-   </xsd:complexType>
-
+  
    <xsd:complexType name="VacuumEnergyParameterType">
       <xsd:attribute name="vacuum" type="xsd:integer" use="required"/>
       <xsd:attribute name="spinUp" type="FleurDouble" use="required"/>
@@ -210,6 +184,13 @@
          <xsd:element name="row-2" type="FleurDouble3DVecType"/>
          <xsd:element name="row-3" type="FleurDouble3DVecType"/>
       </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="Matrix2Type">
+      <xsd:sequence>
+         <xsd:element name="row-1" type="FleurDouble2DVecType"/>
+         <xsd:element name="row-2" type="FleurDouble2DVecType"/>
+         </xsd:sequence>
    </xsd:complexType>
 
    <xsd:simpleType name="StringVecType">
@@ -941,6 +922,8 @@
    <xsd:complexType name="ExpertModeType">
       <xsd:attribute name="gw" type="xsd:integer" use="optional"/>
       <xsd:attribute name="spex" type="xsd:integer" use="optional"/>
+      <xsd:attribute default="NONE" name="vdW" type="xsd:string" use="optional" />
+      <xsd:attribute default="0.0005" name="vdW_tol" type="FleurDouble" use="optional" />
       <xsd:attribute default="F" name="pot8" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="eig66" type="FleurBool" use="optional"/>
       <xsd:attribute default="0" name="lpr" type="xsd:integer" use="optional"/>

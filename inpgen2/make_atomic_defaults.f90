@@ -71,7 +71,7 @@ CONTAINS
       atoms%lda_u%l = -1 ;  atoms%relax(:,:) = 1
 
       !Determine MT-radii
-      CALL check_mt_radii(atoms,input,vacuum,cell,oneD,.false.,atoms%rmt)
+      CALL check_mt_radii(atoms,input,vacuum,cell,oneD,profile,.false.,atoms%rmt)
 
       IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
          atoms%rmt(:) = atoms%rmt(:) * profile%rmtFactor
@@ -84,11 +84,11 @@ CONTAINS
       DO n=1,atoms%ntype
          id=NINT((atoms%zatom(n)-atoms%nz(n))*100)
          IF (id>0) THEN
-            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),id)
+            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),profile,id)
             !This specific atom also has a rmt given?
 !            IF (ap(n)%id==id.AND.ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          ELSE
-            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n))   
+            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),profile)   
          ENDIF
          IF (ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          CALL ap(n)%add_defaults()
@@ -129,6 +129,7 @@ CONTAINS
 
          IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
             atoms%lmax(n) = NINT(profile%kmax*profile%lmaxFactor*atoms%rmt(n))
+            atoms%lnonsph(n) = MIN( MAX(atoms%lmax(n)-2,3) , 8 )
          END IF
 
       END DO
@@ -170,6 +171,15 @@ CONTAINS
                i = i + 1
             END DO
          END IF
+
+         DO i=1,atoms%nlo(n) - addLOs(n) - addHDSCLOs(n)
+            ! If the main quantum number of the LO is larger than that of the
+            ! LAPW basis we make it a HELO type LO.
+            l = atoms%llo(i,n)
+            qn = enpara%qn_ello(i,n,1)
+            IF (qn.GT.enpara%qn_el(l,n,1)) enpara%qn_ello(i,n,1) = -qn
+         END DO
+
       END DO
 
 

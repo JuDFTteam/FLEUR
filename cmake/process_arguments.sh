@@ -11,8 +11,6 @@ do
         -backup) backup=1;;
         -g) gitupdate=1;;
 	-gitupdate) gitupdate=1;;
-	-t) all_tests=1;;
-	-all_tests) all_tests=1;;
 	-l) shift;label=$1;;
 	-m) shift;machine=$1;;
 	-cmake) shift;cmake=$1;;
