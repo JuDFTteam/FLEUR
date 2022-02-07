@@ -1241,7 +1241,9 @@ CONTAINS
 #endif
 
     ! The .npy comparison showed this is ok.
-    grVxcMTKernGPts = grVxcMTKernGPtsdummy(:, 1)
+    IF (.NOT.oldmode) THEN
+        grVxcMTKernGPts = grVxcMTKernGPtsdummy(:, 1)
+    END IF
 
     end subroutine calcKernDerOnGrid
 
