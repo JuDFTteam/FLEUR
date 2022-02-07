@@ -522,10 +522,10 @@ contains
             call CalcSurfIntMTDynMat( atoms, sym, lathar, clnu_atom, nmem_atom, mlh_atom, rho0MT(:, :, :, 1), vCoulExt1MTContainer, surfInt)
             surfInts(1:3, 1:3, iDatomB, iDatomA) = surfInts(1:3, 1:3, iDatomB, iDatomA) + surfInt(1:3, 1:3)
             surfIntTest(1:3, 1:3) = surfIntTest(1:3, 1:3) + surfInt(1:3, 1:3)
-            write(*, *) 'surfintTest'
-            write(*, '(3(2(es16.8,1x),3x))') surfIntTest(1, :)
-            write(*, '(3(2(es16.8,1x),3x))') surfIntTest(2, :)
-            write(*, '(3(2(es16.8,1x),3x))') surfIntTest(3, :)
+            !write(*, *) 'surfintTest'
+            !write(*, '(3(2(es16.8,1x),3x))') surfIntTest(1, :)
+            !write(*, '(3(2(es16.8,1x),3x))') surfIntTest(2, :)
+            !write(*, '(3(2(es16.8,1x),3x))') surfIntTest(3, :)
             !todo check whether rho0MT and the potential is correctly run through
             !(5.3.182), 1st integral [2 components]; provide "good" quantities as input!!!
             ! 1/2

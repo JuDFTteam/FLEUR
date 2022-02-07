@@ -21,7 +21,8 @@ MODULE m_dfpt
 
 CONTAINS
     SUBROUTINE dfpt(juPhon, sym, oneD, input, atoms, sphhar, stars, cell, noco, nococonv, &
-                  & kpts, qpts, fmpi, results, enpara, rho, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0_inp)
+                  & kpts, qpts, fmpi, results, enpara, rho, vTot, vCoul, vxc, exc, eig_id, &
+                  & nvfull, GbasVec_eig, z0_inp, oldmode, xcpot)
 
         TYPE(t_juPhon),   INTENT(IN)  :: juPhon
         TYPE(t_sym),      INTENT(IN)  :: sym
@@ -42,6 +43,9 @@ CONTAINS
         INTEGER,          INTENT(IN)  :: eig_id
         INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
         COMPLEX,          INTENT(IN)  :: z0_inp(:, :, :, :)
+        ! New input:
+        LOGICAL, INTENT(IN)        :: oldmode
+        CLASS(t_xcpot), INTENT(IN) :: xcpot
 
         TYPE(t_usdus)                 :: usdus
         TYPE(t_potden)                :: vTotclean, rhoclean
@@ -169,7 +173,7 @@ CONTAINS
                      & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                      & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                      & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-                     & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean)
+                     & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean, oldmode, xcpot)
         CALL timestop("juPhon DFPT initialization")
         ! < Imagine starting a q-grid-loop here. >
         ! < For now we just select one q-point from the input. >

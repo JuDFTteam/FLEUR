@@ -21,7 +21,7 @@ CONTAINS
                        & grRho0, vTot0, grVTot0, ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                        & uuilonout, duilonout, ulouilopnout, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                        & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetdout, nocc, rhoclean)
+                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetdout, nocc, rhoclean, oldmode, xcpot)
 
         USE m_jpGrVeff0, ONLY : GenGrVeff0
         USE m_npy
@@ -47,6 +47,10 @@ CONTAINS
         TYPE(t_jpPotden), INTENT(OUT) :: rho0, grRho0, vTot0, grVTot0
 
         INTEGER,          INTENT(OUT) :: ngdp
+
+        ! New input:
+        LOGICAL, INTENT(IN)        :: oldmode
+        CLASS(t_xcpot), INTENT(IN) :: xcpot
 
         REAL,             ALLOCATABLE, INTENT(OUT) :: El(:, :, :, :)
         INTEGER,          ALLOCATABLE, INTENT(OUT) :: recG(:, :)
@@ -354,9 +358,9 @@ CONTAINS
 
         call genPotDensGvecs(stars, cell, input, ngdp, ngdp2km, recG, gdp2Ind, gdp2iLim, .false.)
 
-        call calcIRdVxcKern(stars, recG, ngdp, rho%pw(:, 1), grVxcIRKern)
+        call calcIRdVxcKern(stars, recG, ngdp, rho%pw(:, 1), grVxcIRKern, oldmode, xcpot)
 
-        call calcMTdVxcKern(atoms, sphhar, sym, rhoclean%mt(:, :, :, 1), sphhar%nmem, sphhar%clnu, sphhar%mlh, gausWts, ylm, dKernMTGPts)
+        call calcMTdVxcKern(atoms, sphhar, sym, rhoclean%mt(:, :, :, 1), sphhar%nmem, sphhar%clnu, sphhar%mlh, gausWts, ylm, dKernMTGPts, oldmode, xcpot)
 
         ! Calculate parameters of Gauss curve (pseudo-core density in MT) and Fourier transform of pseudo-core density for IR
         call calcPsDensMT( fmpi, atoms, cell, sym, stars, input, ngdp, acoff, alpha, qpwcG, recG )
@@ -991,7 +995,7 @@ CONTAINS
     !> @param[in] fg3G  : Plane wave interstitial coefficients of the functional derivative of the xc-kernel with respect to the
     !>                    density
     !---------------------------------------------------------------------------------------------------------------------------------
-    subroutine calcIRdVxcKern(stars, gdp, ngdp, qpw, fg3G)
+    subroutine calcIRdVxcKern(stars, gdp, ngdp, qpw, fg3G, oldmode, xcpot)
 
       use m_fft3d
 
@@ -1005,6 +1009,10 @@ CONTAINS
       integer,                    intent(in) :: gdp(:, :)
       complex,                    intent(in) :: qpw(:)
       complex,       allocatable, intent(out):: fg3G(:)
+
+      ! New input:
+      LOGICAL, INTENT(IN)        :: oldmode
+      CLASS(t_xcpot), INTENT(IN) :: xcpot
 
       ! Scalar variables
       integer                                :: ifftd
@@ -1037,7 +1045,7 @@ CONTAINS
       bf3 = 0
 
       ! Calculate functional derivative of kernel based on qpw in direct space because we know the representation in direct space.
-      call calcKernDerOnGrid(ifftd, 1., af3, VxcIRKern)
+      call calcKernDerOnGrid(ifftd, 1., af3, VxcIRKern, oldmode, xcpot)
 
       ! Back-FFT to direct space. We only have made a functional derivative which does not break the symmetry so we can still use this
       ! kind of fft. We use the fft of the new fleur version, if we have no optional parameter the function is the same as in old
@@ -1070,7 +1078,7 @@ CONTAINS
     !> @param[in] dKernMTGPts : Spherical harmonic muffin-tin coefficients of the functional derivative of the xc-kernel with
     !>                         respect to the density
     !---------------------------------------------------------------------------------------------------------------------------------
-    subroutine calcMTdVxcKern(atoms, sphhar, sym, rho0MT, nmem_atom, clnu_atom, mlh_atom, gWghts, ylm, dKernMTGPts)
+    subroutine calcMTdVxcKern(atoms, sphhar, sym, rho0MT, nmem_atom, clnu_atom, mlh_atom, gWghts, ylm, dKernMTGPts, oldmode, xcpot)
 
       use m_gaussp
       use m_ylm_old
@@ -1088,6 +1096,9 @@ CONTAINS
       real,              allocatable, intent(out) :: gWghts(:) ! gaussian weights belonging to gausPts
       complex,           allocatable, intent(out) :: ylm(:, :)
       real,              allocatable, intent(out) :: dKernMTGPts(:, :, :)
+      ! New input:
+      LOGICAL, INTENT(IN)        :: oldmode
+      CLASS(t_xcpot), INTENT(IN) :: xcpot
 
       ! Scalar local variables
       integer                                     :: igmesh
@@ -1157,7 +1168,7 @@ CONTAINS
           end if
           ! Calculate functional derivative of the density on the Gauss mesh for every atom
           do irmesh = 1, atoms%jri(itype)
-            call calcKernDerOnGrid(atoms%nsp(), 1., real(rhoMTGpts(:, irmesh)), dKernMTGPts(:, irmesh, iatom))
+            call calcKernDerOnGrid(atoms%nsp(), 1., real(rhoMTGpts(:, irmesh)), dKernMTGPts(:, irmesh, iatom), oldmode, xcpot)
           end do ! irmesh
         end do ! ieqat
       end do ! itype
@@ -1176,12 +1187,15 @@ CONTAINS
     !> @param[in] rhoMTGpts       : Unperturbed density on a real-space mesh
     !> @param[in] grVxcMTKernGPts : Functional derivative of the x-alpha kernel with respect to the density.
     !---------------------------------------------------------------------------------------------------------------------------------
-    subroutine calcKernDerOnGrid(nGridPts, alpha, rhoMTGpts, grVxcMTKernGPts)
+    subroutine calcKernDerOnGrid(nGridPts, alpha, rhoMTGpts, grVxcMTKernGPts, oldmode, xcpot)
 
       integer,           intent(in)  :: nGridPts
       real,              intent(in)  :: alpha
       real,              intent(in)  :: rhoMTGpts(:)
       real,              intent(out) :: grVxcMTKernGPts(:)
+      ! New input needed for the expansion to generalized dVxc:
+      LOGICAL, INTENT(IN)        :: oldmode
+      CLASS(t_xcpot), INTENT(IN) :: xcpot
 
       real                           :: prfac
       integer                        :: imesh
