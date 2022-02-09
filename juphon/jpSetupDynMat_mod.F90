@@ -4100,9 +4100,11 @@ module m_jpSetupDynMat
 
       intrinsic isign,real,cmplx,aimag,conjg
 
+#ifdef CPP_FFTW
       external dfftw_plan_dft_3d
       external dfftw_execute_dft
       external dfftw_destroy_plan
+#endif
 
 ! initialization of variables
 
@@ -4193,10 +4195,12 @@ module m_jpSetupDynMat
       allocate (theta(0:ifftds -1))
       thetaV = (0.0,0.0)
       theta = (0.0,0.0)
+#ifdef CPP_FFTW
       ! todo talk with gregor ifft1ds and ifft3ds are interchanged
       CALL dfftw_plan_dft_3d(backwardPlan, ifft1ds,ifft2ds,ifft3ds, thetaV, thetaV, FFTW_BACKWARD, FFTW_ESTIMATE)
       !todo can'we use the same plan here as above?
       CALL dfftw_plan_dft_3d(backwardPlanOvl, ifft1ds,ifft2ds,ifft3ds, theta, theta, FFTW_BACKWARD, FFTW_ESTIMATE)
+#endif
       thetaV = (0.0,0.0)
       theta = (0.0,0.0)
       tempGrid = (0.0,0.0)
@@ -4245,11 +4249,13 @@ module m_jpSetupDynMat
 
 !  ---> perform 3D FFT on "thetaV" from reciprocal space to real space
 
+#ifdef CPP_FFTW
       CALL dfftw_execute_dft(backwardPlan, thetaV, thetaV)
       CALL dfftw_destroy_plan(backwardPlan)
 
       CALL dfftw_execute_dft(backwardPlanOvl, theta, theta)
       CALL dfftw_destroy_plan(backwardPlanOvl)
+#endif
 
 
 !*********************************************************************

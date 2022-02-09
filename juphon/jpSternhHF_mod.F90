@@ -70,7 +70,9 @@ module m_jpSternhHF
 
       implicit none
 
+#ifdef CPP_FFTW
       include "fftw3.f" ! include FFTW constants
+#endif
 
       ! Type parameter
       type(t_stars),                 intent(in)  :: stars
@@ -125,10 +127,12 @@ module m_jpSternhHF
       complex                                       CPP_BLAS_cdotc
       external                                      CPP_BLAS_cdotc
 
+#ifdef CPP_FFTW
       ! For FFTW
       external                                      dfftw_plan_dft_3d
       external                                      dfftw_execute_dft
       external                                      dfftw_destroy_plan
+#endif
 
       ! Initialization
       allocate( iv1d(MAXVAL(nv), 1) )
@@ -166,7 +170,9 @@ module m_jpSternhHF
       ! Generate FFT plan for potential variation, this is required when using the fftw library.
       allocate (vEff1(0:ifftds-1))
       vEff1 = (0.0,0.0)
+#ifdef CPP_FFTW
       call Dfftw_plan_dft_3d(backwardPlan, nfft(1),nfft(2),nfft(3), vEff1, vEff1, FFTW_BACKWARD, FFTW_ESTIMATE)
+#endif
       vEff1 = (0.0,0.0)
 
       ! Map effective potential to FFT array
@@ -175,8 +181,10 @@ module m_jpSternhHF
       end do
 
       ! Perform 3D FFT on "vEff1" from reciprocal space to real space and destroy the plan
+#ifdef CPP_FFTW
       call Dfftw_execute_dft(backwardPlan, vEff1, vEff1)
       call Dfftw_destroy_plan(backwardPlan)
+#endif
 
       ! Generate the mapping array between FFT mesh and plane-wave expansion for the ket wave function
       do iv = 1, nv(1, ikpt)
@@ -218,9 +226,13 @@ module m_jpSternhHF
       ! this is required when using the fftw library.
       allocate (zFFTBox(0:ifftds - 1))
       zFFTBox = (0.0,0.0)
+#ifdef CPP_FFTW
       CALL Dfftw_plan_dft_3d(backwardPlan, nfft(1), nfft(2), nfft(3), zFFTBox, zFFTBox, FFTW_BACKWARD, FFTW_MEASURE)
+#endif
       zFFTBox = (0.0,0.0)
+#ifdef CPP_FFTW
       CALL Dfftw_plan_dft_3d(forwardPlan, nfft(1), nfft(2), nfft(3), zFFTBox, zFFTBox, FFTW_FORWARD, FFTW_MEASURE)
+#endif
 
       if (.FALSE.) then
         do i = 1, nv(1, ikpt)
@@ -229,15 +241,18 @@ module m_jpSternhHF
           zFFTBox(iv1d(i, 1)) = (1., 0.)
 
           ! Perform 3D FFT on cumultative variable from reciprocal space to real space and destroy the plan
+#ifdef CPP_FFTW
           call Dfftw_execute_dft(backwardPlan, zFFTBox, zFFTBox)
+#endif
 
           ! Multiply to the ket wave function expansion coefficients the linear variation of the effective potential and the step
           ! function in real space exploiting the convolution theorem
           do j = 0, ifftds - 1
             zFFTBox(j) = zFFTBox(j) * vEff1(j) * stars%ufft(j)
           end do
-
+#ifdef CPP_FFTW
           call dfftw_execute_dft(forwardPlan, zFFTBox, zFFTBox)
+#endif
           v1T0 = cmplx(0.0,0.0)
           do iv = 1, nv(1, ikpq)
             v1T0(iv) = zFFTBox(iv1dBra(iv, 1))
@@ -272,7 +287,9 @@ module m_jpSternhHF
          end do
 
          ! Perform 3D FFT on cumultative variable from reciprocal space to real space and destroy the plan
+#ifdef CPP_FFTW
          call Dfftw_execute_dft(backwardPlan, zFFTBox, zFFTBox)
+#endif
 
          ! Multiply to the ket wave function expansion coefficients the linear variation of the effective potential and the step
          ! function in real space exploiting the convolution theorem
@@ -281,7 +298,9 @@ module m_jpSternhHF
          end do
 
          ! Perform 3D FFT on cumultative variable from real space to reciprocal space
+#ifdef CPP_FFTW
          call dfftw_execute_dft(forwardPlan, zFFTBox, zFFTBox)
+#endif
 
          ! Map the cumultative variable back to the expansion of the plane waves and fix a factor ifftds that has emerged due to the
          ! FFT. The cumultative variable corresponds to 7.103 (dissertation CRG).
@@ -303,8 +322,10 @@ module m_jpSternhHF
       end do
 
       ! Destroy plans so that there is no garbage
+#ifdef CPP_FFTW
       call dfftw_destroy_plan(forwardPlan)
       call dfftw_destroy_plan(backwardPlan)
+#endif
 
   end subroutine calcMEPotIR
 
