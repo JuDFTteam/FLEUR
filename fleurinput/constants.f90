@@ -107,16 +107,19 @@ MODULE m_constants
   INTEGER,DIMENSION(6),PARAMETER :: nobleGasNumStatesList_const=(/1, 4, 7, 12, 17, 24/)
 
   ! juPhon stuff:
-  complex, dimension(3, 3), parameter  :: Tmatrix0 = transpose(reshape([ &
-                                              & (0.7071067811865475, 0), (0, 0), (-0.7071067811865475, 0), &
-                                              & -ImagUnit * 0.7071067811865475, (0, 0), -ImagUnit * 0.7071067811865475, &
-                                              & (0, 0), (1, 0), (0, 0) &
-                                              & ], [3, 3] )) !< Klüppelberg PhD thesis 4.18
-  complex, dimension(3, 3), parameter :: c_im = transpose(  reshape([ &
-                                              & (1.4472025091165353, 0), (0, 0), (-1.4472025091165353, 0), &
-                                              & (0, 1.4472025091165353), (0, 0), (0, 1.4472025091165353), &
-                                              & (0, 0), (2.0466534158929770, 0), (0, 0) &
-                                              & ], [3, 3] )  ) !< Klüppelberg PhD thesis 4.28
+  complex, dimension(3, 3), parameter  :: Tmatrix0 = reshape( &
+                                              [(0.7071067811865475, 0.),(0.,-0.7071067811865475),(0., 0.),&
+                                               (0., 0.),(0., 0.),(1., 0.), &
+                                               (-0.7071067811865475,0.),(0.,-0.7071067811865475),(0., 0.)],[3,3])!< Klüppelberg PhD thesis 4.18
+  complex, dimension(3, 3), parameter :: c_im =   reshape([ &
+                                                (1.4472025091165353, 0.),(0., 1.4472025091165353),(0., 0.),&
+                                                 (0., 0.), (0., 0.),(2.0466534158929770, 0.),&
+                                                (-1.4472025091165353, 0.),(0., 1.4472025091165353),(0., 0.)&
+
+
+                                              & ], [3, 3] )   !< Klüppelberg PhD thesis 4.28
+  
+
   integer, parameter, dimension(3)    :: dirvecx = [1, 0, 0]
   integer, parameter, dimension(3)    :: dirvecy = [0, 1, 0]
   integer, parameter, dimension(3)    :: dirvecz = [0, 0, 1]

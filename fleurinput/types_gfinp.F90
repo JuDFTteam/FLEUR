@@ -896,8 +896,7 @@ CONTAINS
       INTEGER :: atom_rot, atom_rotp, i_gf_rot, iop_arg
 
 
-      IF(.NOT.this%elem(i_gf)%isIntersite()) CALL juDFT_error("find_symmetry_rotated_bzcoeffs should only be used"&
-                                                              "for Intersite Green's functions", calledby='find_symmetry_rotated_bzcoeffs')
+      IF(.NOT.this%elem(i_gf)%isIntersite()) CALL juDFT_error("find_symmetry_rotated_bzcoeffs should only be used for Intersite Green's functions", calledby='find_symmetry_rotated_bzcoeffs')
 
       iop_arg = iop
       IF(iop_arg > sym%nop) iop_arg = iop_arg - sym%nop
