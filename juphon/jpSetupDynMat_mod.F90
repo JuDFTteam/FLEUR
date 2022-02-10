@@ -4292,12 +4292,14 @@ module m_jpSetupDynMat
 
       ! todo discuss with gregor order of ifft1ds!
       ! todo discuss with gregor whether we have to make so much plans
+#ifdef CPP_FFTW
       CALL dfftw_plan_dft_3d(backwardPlan, ifft1ds,ifft2ds,ifft3ds, zFFTBox, zFFTBox, FFTW_BACKWARD, FFTW_MEASURE)
       CALL dfftw_plan_dft_3d(forwardPlan, ifft1ds,ifft2ds,ifft3ds, zFFTBox, zFFTBox, FFTW_FORWARD, FFTW_MEASURE)
       CALL dfftw_plan_dft_3d(backwardPlanKin, ifft1ds,ifft2ds,ifft3ds, zFFTBoxKin, zFFTBoxKin, FFTW_BACKWARD, FFTW_MEASURE)
       CALL dfftw_plan_dft_3d(forwardPlanKin, ifft1ds,ifft2ds,ifft3ds, zFFTBoxKin, zFFTBoxKin, FFTW_FORWARD, FFTW_MEASURE)
       CALL dfftw_plan_dft_3d(backwardPlanOvl, ifft1ds,ifft2ds,ifft3ds, zFFTBoxOvl, zFFTBoxOvl, FFTW_BACKWARD, FFTW_MEASURE)
       CALL dfftw_plan_dft_3d(forwardPlanOvl, ifft1ds,ifft2ds,ifft3ds, zFFTBoxOvl, zFFTBoxOvl, FFTW_FORWARD, FFTW_MEASURE)
+#endif
 
       CALL cpu_time(time1)
       zFFTBox = (0.0,0.0)
@@ -4308,21 +4310,22 @@ module m_jpSetupDynMat
          zFFTBoxOvl(iv1d(iv,1)) = z1Ket(iv)
          zFFTBoxKin(iv1d(iv,1)) = kpGz1(iv)
       END DO
-
+#ifdef CPP_FFTW
       CALL dfftw_execute_dft(backwardPlan, zFFTBox, zFFTBox)
       CALL dfftw_execute_dft(backwardPlanOvl, zFFTBoxOvl, zFFTBoxOvl)
       CALL dfftw_execute_dft(backwardPlanKin, zFFTBoxKin, zFFTBoxKin)
-
+#endif
 
       DO j = 0, ifftds-1
          zFFTBox(j) = zFFTBox(j) * thetaV(j)
          zFFTBoxOvl(j) = zFFTBoxOvl(j) * theta(j)
          zFFTBoxKin(j) = zFFTBoxKin(j) * theta(j)
       END DO
-
+#ifdef CPP_FFTW
       CALL dfftw_execute_dft(forwardPlan, zFFTBox, zFFTBox)
       CALL dfftw_execute_dft(forwardPlanOvl, zFFTBoxOvl, zFFTBoxOvl)
       CALL dfftw_execute_dft(forwardPlanKin, zFFTBoxKin, zFFTBoxKin)
+#endif
 
       CALL cpu_time(time2)
       fftTime = fftTime + time2 - time1
@@ -4354,13 +4357,14 @@ module m_jpSetupDynMat
       h = h + CPP_BLAS_cdotc(nmat,z1Bra(1),1,vThetaZ,1)
       hepsIR = h - eig(iband, ikpt, 1) * s!nmat von bra!
       !changed end
-
+#ifdef CPP_FFTW
       CALL dfftw_destroy_plan(forwardPlan)
       CALL dfftw_destroy_plan(backwardPlan)
       CALL dfftw_destroy_plan(forwardPlanOvl)
       CALL dfftw_destroy_plan(backwardPlanOvl)
       CALL dfftw_destroy_plan(forwardPlanKin)
       CALL dfftw_destroy_plan(backwardPlanKin)
+#endif
 
   end subroutine calcPsi1HepsPsi1IR
 
