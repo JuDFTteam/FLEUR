@@ -315,18 +315,19 @@ CONTAINS
     INTEGER              :: js,k,i
     REAL,ALLOCATABLE     :: bf3(:),vcon(:)
     COMPLEX, ALLOCATABLE :: fg3(:)
-    ALLOCATE( bf3(size(v_in,1)),fg3(stars%ng3))
-    !ALLOCATE ( vcon(0:size(v_in,1)-1) )
+    if (present(v_out_pw_w)) ALLOCATE( bf3(size(stars%ufft)),vcon(size(stars%ufft)))
+    ALLOCATE ( fg3(stars%ng3) )
     DO js = 1,SIZE(v_in,2)
-       bf3=0.0
-       if (present(v_out_pw_w)) vcon=v_in(0:,js)
-       CALL fft3d(v_in(0:,js),bf3, fg3, stars,-1)
+       fftgrid%grid=v_in(0:,js)
+       call fftgrid%perform_fft(forward=.true.)
+       call fftgrid%takeFieldFromGrid(stars,fg3)
+       !CALL fft3d(v_in(0:,js),bf3, fg3, stars,-1)
        v_out_pw(:,js) = v_out_pw(:,js) + fg3(:)
        
        IF (present(v_out_pw_w)) THEN
              !----> Perform fft transform: v_xc(star) --> vxc(r)
              !     !Use large fft mesh for convolution
-          CALL fft3d(vcon,bf3, fg3, stars,+1)
+             CALL fft3d(vcon,bf3, fg3, stars,+1)
           !
           !----> Convolute with step function
           !
