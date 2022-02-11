@@ -282,7 +282,7 @@ CONTAINS
                ELSE
                   pw(:) = CMPLX(vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1), vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1))
                ENDIF
-               CALL convol(stars, pw_w, pw, stars%ufft)
+               CALL convol(stars, pw_w, pw)
                pw_w = pw_w*cell%omtil
                mvec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(pw_w)
                IF ((.NOT. sym%invs) .OR. (js == 3)) THEN
