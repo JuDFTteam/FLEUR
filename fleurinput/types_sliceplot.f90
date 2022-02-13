@@ -213,7 +213,11 @@ CONTAINS
     this%onlyMT        = evaluateFirstBoolOnly(xml%GetAttributeValue('/@onlyMT'))
     this%typeMT        = evaluateFirstIntOnly(xml%GetAttributeValue('/@typeMT'))
     this%vecField      = evaluateFirstBoolOnly(xml%GetAttributeValue('/@vecField'))
-    this%edgesAllSides = evaluateFirstBoolOnly(xml%GetAttributeValue('/@edgesAllSides'))
+    this%edgesAllSides = .TRUE.
+    numberNodes = xml%GetNumberOfNodes('/@edgesAllSides')
+    IF(numberNodes.GT.0) THEN
+       this%edgesAllSides = evaluateFirstBoolOnly(xml%GetAttributeValue('/@edgesAllSides'))
+    END IF
 
   END SUBROUTINE read_xml_plot
 
