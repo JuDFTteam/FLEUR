@@ -730,6 +730,7 @@
       <xsd:attribute default="F" name="onlyMT" type="FleurBool" use="optional"/>
       <xsd:attribute default="0" name="typeMT" type="xsd:integer" use="optional"/>
       <xsd:attribute default="F" name="vecField" type="FleurBool" use="optional"/>
+      <xsd:attribute default="T" name="edgesAllSides" type="FleurBool" use="optional"/>
     </xsd:complexType>
 
    <xsd:complexType name="ChargeDensitySlicingType">

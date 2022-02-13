@@ -706,6 +706,12 @@ CONTAINS
         zero=sliceplot%plot(nplo)%zero
         filename=sliceplot%plot(nplo)%filename
 
+        IF(.NOT.sliceplot%plot(nplo)%edgesAllSides) THEN
+           vec1 = vec1 * float(grid(1)) / float(grid(1)+1)
+           vec2 = vec2 * float(grid(2)) / float(grid(2)+1)
+           IF(.NOT.input%film) vec3 = vec3 * float(grid(3)) / float(grid(3)+1)
+        END IF
+
          IF (xsf.AND.sliceplot%plot(nplo)%vecField.AND.(fmpi%irank.EQ.0)) THEN
             OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted')
             CALL xsf_WRITE_atoms(nfile+10,atoms,input%film,oneD%odi%d1,cell%amat)
