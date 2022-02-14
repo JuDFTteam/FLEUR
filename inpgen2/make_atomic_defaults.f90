@@ -30,6 +30,7 @@ CONTAINS
       TYPE(t_oneD),INTENT(IN)       :: oneD
 
       INTEGER :: i,l,id,n,nn,qn,iLO
+      INTEGER :: loLCutoff
       INTEGER :: element_species(120)
       INTEGER :: addLOs(atoms%ntype)
       INTEGER :: addHDSCLOs(atoms%ntype)
@@ -100,8 +101,12 @@ CONTAINS
          !atoms%bmu(n))=ap(n)%bmu
          !local orbitals
          atoms%nlo(n)=len_TRIM(ap(n)%lo)/2
+         loLCutoff = 4 ! l cutoff for additional LOs. This l quantum number is already excluded.
+         IF (atoms%nz(n).EQ.1) loLCutoff = 2
+         IF (atoms%nz(n).EQ.2) loLCutoff = 3
+         IF ((atoms%nz(n).GE.5).AND.(atoms%nz(n).LE.9)) loLCutoff = 3 
          IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
-            addLOs(n) = 4 - atoms%nlo(n)
+            addLOs(n) = loLCutoff - atoms%nlo(n)
          END IF
          IF (INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDSCLOs").NE.0) THEN
             addHDSCLOs(n) = atoms%nlo(n)
@@ -142,12 +147,16 @@ CONTAINS
 
       CALL enpara%init(atoms%ntype,atoms%nlod,2,.TRUE.,atoms%nz)
       DO n=1,atoms%ntype
+         loLCutoff = 4 ! l cutoff for additional LOs. This l quantum number is already excluded.
+         IF (atoms%nz(n).EQ.1) loLCutoff = 2
+         IF (atoms%nz(n).EQ.2) loLCutoff = 3
+         IF ((atoms%nz(n).GE.5).AND.(atoms%nz(n).LE.9)) loLCutoff = 3 
          DO i=1,atoms%nlo(n) - addLOs(n) - addHDSCLOs(n)
             DO l = 0, 3
                IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l
             ENDDO
          ENDDO
-         CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo,addLOs)
+         CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo)
 
          DO i = 1, addHDSCLOs(n)
             iLO = atoms%nlo(n) - addLOs(n) - addHDSCLOs(n) + i
@@ -158,7 +167,7 @@ CONTAINS
 
          IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
             i = 0
-            DO l = 0, 3
+            DO l = 0, loLCutoff - 1
                IF(ANY(atoms%llo(1:atoms%nlo(n)-addLOs(n),n).EQ.l)) CYCLE
                iLO = atoms%nlo(n) - addLOs(n) + 1 + i
                qn = -(enpara%qn_el(l,n,1)+1)
