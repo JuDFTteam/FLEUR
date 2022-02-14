@@ -60,7 +60,7 @@ CONTAINS
                       .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
 
       call timestart("init_pw_grid")
-      CALL init_pw_grid(xcpot%needs_grad(),stars,sym,cell)
+      CALL init_pw_grid(stars,sym,cell,xcpot)
       call timestop("init_pw_grid")
 
       !Put the charge on the grid, in GGA case also calculate gradients

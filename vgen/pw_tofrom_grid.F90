@@ -14,15 +14,17 @@ MODULE m_pw_tofrom_grid
    
    PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
-  SUBROUTINE init_pw_grid(dograds,stars,sym,cell)
+  SUBROUTINE init_pw_grid(stars,sym,cell,xcpot)
     USE m_prpxcfftmap
     USE m_types
+    use m_types_xcpot
     IMPLICIT NONE
-    LOGICAL,INTENT(IN)            :: dograds
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
-
+    CLASS(t_xcpot),INTENT(IN),OPTIONAL :: xcpot
+    
+    logical :: dograds
       !---> set up pointer for backtransformation of from g-vector in
       !     positive domain of xc density fftbox into stars.
       !     also the x,y,z components of the g-vectors are set up to calculate
@@ -30,8 +32,15 @@ CONTAINS
       !     in principle this can also be done in main program once.
       !     it is done here to save memory.
 
-    call fftgrid%init(cell,sym,stars%gmax)
-    griddim=size(fftgrid%grid)
+    dograds=.false.
+    if (present(xcpot)) dograds=xcpot%needs_grad()
+
+    if (dograds) THEN 
+      call fftgrid%init(cell,sym,xcpot%gmaxxc)
+    else
+      call fftgrid%init(cell,sym,stars%gmax,(/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
+    endif
+   griddim=size(fftgrid%grid)
 
   END SUBROUTINE init_pw_grid
 
@@ -327,7 +336,11 @@ CONTAINS
        IF (present(v_out_pw_w)) THEN
              !----> Perform fft transform: v_xc(star) --> vxc(r)
              !     !Use large fft mesh for convolution
-             CALL fft3d(vcon,bf3, fg3, stars,+1)
+            if (size(vcon).ne.size(v_in,1)) then
+               CALL fft3d(vcon,bf3, fg3, stars,+1)
+            else  
+               vcon=v_in(0:,js)
+            endif 
           !
           !----> Convolute with step function
           !

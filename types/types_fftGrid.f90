@@ -68,7 +68,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
          + shifted_g(3) * grid%dimensions(1) * grid%dimensions(2)
  end function map_g_to_fft_grid
 
-   SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff)
+   SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff,dims)
       USE m_constants
       USE m_boxdim
       USE m_spgrot
@@ -80,6 +80,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)    :: sym
       REAL, INTENT(IN)    :: gCutoff
+      INTEGER,INTENT(IN),OPTIONAL :: dims(3)
 
       INTEGER, ALLOCATABLE :: ig(:, :, :)
 
@@ -94,6 +95,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       do i = 1,3
          this%dimensions(i) = next_optimal_fft_size(this%dimensions(i))
       enddo
+      if (present(dims)) this%dimensions=dims
       this%gridLength = product(this%dimensions)
    
       IF (ALLOCATED(this%grid)) DEALLOCATE (this%grid)

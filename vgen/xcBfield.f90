@@ -177,7 +177,7 @@ CONTAINS
       CALL divpotgrad(input,stars,atloc,sphhar,vacuum,sym,cell,noco,phi,cvec)
       CALL timestop("Building correction field")
 
-      CALL init_pw_grid(.FALSE.,stars,sym,cell)
+      CALL init_pw_grid(stars,sym,cell)
       DO i=1,3
          CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
          cvec(i)%pw=CMPLX(0.0,0.0)
