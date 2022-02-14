@@ -29,7 +29,7 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_potden),INTENT(IN)    :: potDen
-  
+
 
       ! Scalar Arguments
       INTEGER, INTENT (IN) :: iflag,jsp,n,na,iv
@@ -41,19 +41,19 @@ CONTAINS
       REAL,    INTENT (INOUT) :: p(3)
 
       ! Logical argument
-      LOGICAL, INTENT (IN) :: l_potential 
+      LOGICAL, INTENT (IN) :: l_potential
 
-      ! Local scalars 
+      ! Local scalars
       REAL delta,s,sx,xd1,xd2,xx1,xx2,rrr,phi
       INTEGER i,j,jp3,jr,k,lh,mem,nd,nopa,ivac,ll1,lm ,gzi,m
 
       ! Local arrays
       COMPLEX, ALLOCATABLE :: sf2(:),sf3(:),ylm(:)
       REAL rcc(3),x(3)
-      
+
       ALLOCATE( sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2))
       ivac=iv
-     
+
       IF (iflag.NE.1) THEN
          IF (iflag.NE.0) THEN
             ! Interstitial part:
@@ -97,7 +97,7 @@ CONTAINS
             ELSE
                xdnout = 0.0
             END IF
-         
+
          ! +odim
          ELSE
             IF (p(3).LT.0.0) THEN
@@ -139,7 +139,7 @@ CONTAINS
          RETURN
       ENDIF
       ! MT part:
-      
+
       nd = sym%ntypsy(na)
       nopa = sym%ngopr(na)
       IF (oneD%odi%d1) nopa = oneD%ods%ngopr(na)

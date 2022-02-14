@@ -88,7 +88,7 @@ ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/pol_angle.f90
 ${FLEUR_SRC}/math/matmul.f
 ${FLEUR_SRC}/init/strgn_dim.F
-${FLEUR_SRC}/init/spgrot.f
+${FLEUR_SRC}/init/spgrot.f90
 ${FLEUR_SRC}/init/mapatom.F90
 ${FLEUR_SRC}/init/od_mapatom.F90
 #${FLEUR_SRC}/init/convn_dim.f

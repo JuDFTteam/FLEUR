@@ -109,10 +109,7 @@ CONTAINS
     WRITE(oUnit,*) "vdW average Potential  :",vpw(1)
 
 
-    CALL convol(                    &
-         stars,   &
-         psq,               &
-         vpw,stars%ufft)
+    CALL convol(stars,psq,vpw)
 
     ! Add to total potential
     vpw_total(:)=vpw_total(:)+psq

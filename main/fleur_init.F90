@@ -143,14 +143,14 @@ CONTAINS
          CALL fleurinput_read_xml(outxmlFileID, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
                                   sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, oneD=fi%oneD, coreSpecInput=fi%coreSpecInput, &
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
-                                  enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp)
+                                  enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, juPhon=fi%juPhon)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
                                      fi%banddos, fi%oneD, Xcpot, fi%kpts, fi%gfinp)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
                              fi%sliceplot, fi%banddos, fi%mpinp, fi%hybinp, fi%oneD, fi%coreSpecInput, Wann, &
-                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm)
+                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%juPhon)
       !Remaining init is done using all PE
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
       CALL nococonv%init(fi%noco)

@@ -154,7 +154,7 @@ CONTAINS
             veff = vTot
             IF (xcpot%is_hybrid() .AND. hybdat%l_subvxc) THEN
                DO ispin = 1, input%jspins
-                  CALL convol(stars, vx%pw_w(:, ispin), vx%pw(:, ispin), stars%ufft)
+                  CALL convol(stars, vx%pw_w(:, ispin), vx%pw(:, ispin))
                END DO
                veff%pw = vTot%pw - xcpot%get_exchange_weight()*vx%pw
                veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight()*vx%pw_w
