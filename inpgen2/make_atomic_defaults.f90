@@ -33,7 +33,9 @@ CONTAINS
       INTEGER :: loLCutoff
       INTEGER :: element_species(120)
       INTEGER :: addLOs(atoms%ntype)
-      INTEGER :: addHDSCLOs(atoms%ntype)
+      INTEGER :: numLOs(10,0:3)
+      INTEGER :: numlLO(0:3)
+      INTEGER :: inequivalentNLO
 
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
       TYPE(t_atompar):: ap(atoms%ntype)
@@ -58,7 +60,6 @@ CONTAINS
       ALLOCATE(atoms%llo(99,atoms%ntype));atoms%llo=-1!will be redone later
 
       addLOs(:) = 0
-      addHDSCLOs(:) = 0
       atoms%lapw_l=0
       atoms%speciesname=""
 
@@ -104,20 +105,25 @@ CONTAINS
          loLCutoff = 4 ! l cutoff for additional LOs. This l quantum number is already excluded.
          IF (atoms%nz(n).EQ.1) loLCutoff = 2
          IF (atoms%nz(n).EQ.2) loLCutoff = 3
-         IF ((atoms%nz(n).GE.5).AND.(atoms%nz(n).LE.9)) loLCutoff = 3 
-         IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
-            addLOs(n) = loLCutoff - atoms%nlo(n)
-         END IF
-         IF (INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDSCLOs").NE.0) THEN
-            addHDSCLOs(n) = atoms%nlo(n)
-         END IF
-         atoms%nlo(n) = atoms%nlo(n) + addLOs(n) + addHDSCLOs(n)
+         IF ((atoms%nz(n).GE.5).AND.(atoms%nz(n).LE.9)) loLCutoff = 3
+         numlLO(:) = 0
          DO i=1,atoms%nlo(n)
             DO l = 0, 3
                !Setting of llo will be redone below
-               IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l
+               IF (ap(n)%lo(2*i:2*i) == lotype(l)) THEN
+                  atoms%llo(i,n) = l
+                  numlLO(l) = numlLO(l) + 1
+               END IF
             ENDDO
          ENDDO
+         inequivalentNLO = 0
+         DO l = 0, 3
+            IF(numlLO(l).NE.0) inequivalentNLO = inequivalentNLO + 1
+         END DO
+         IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
+            addLOs(n) = loLCutoff - inequivalentNLO
+         END IF
+         atoms%nlo(n) = atoms%nlo(n) + addLOs(n)
          CALL atoms%econf(n)%init(ap(n)%econfig)
          if (abs(ap(n)%bmu)>1E-8.and.input%jspins.ne.1) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
          !atoms%ncst(n)=econfig_count_core(econfig)
@@ -151,19 +157,12 @@ CONTAINS
          IF (atoms%nz(n).EQ.1) loLCutoff = 2
          IF (atoms%nz(n).EQ.2) loLCutoff = 3
          IF ((atoms%nz(n).GE.5).AND.(atoms%nz(n).LE.9)) loLCutoff = 3 
-         DO i=1,atoms%nlo(n) - addLOs(n) - addHDSCLOs(n)
+         DO i=1,atoms%nlo(n) - addLOs(n)
             DO l = 0, 3
                IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l
             ENDDO
          ENDDO
          CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo)
-
-         DO i = 1, addHDSCLOs(n)
-            iLO = atoms%nlo(n) - addLOs(n) - addHDSCLOs(n) + i
-            atoms%llo(iLO,n) = atoms%llo(i,n)
-            atoms%ulo_der(iLO,n) = 1
-            enpara%qn_ello(iLO,n,:) = enpara%qn_ello(i,n,1)
-         END DO
 
          IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
             i = 0
@@ -181,12 +180,16 @@ CONTAINS
             END DO
          END IF
 
-         DO i=1,atoms%nlo(n) - addLOs(n) - addHDSCLOs(n)
+         numLOs(:,:) = 0
+         DO iLO = 1,atoms%nlo(n) - addLOs(n)
             ! If the main quantum number of the LO is larger than that of the
             ! LAPW basis we make it a HELO type LO.
-            l = atoms%llo(i,n)
-            qn = enpara%qn_ello(i,n,1)
-            IF (qn.GT.enpara%qn_el(l,n,1)) enpara%qn_ello(i,n,1) = -qn
+            l = atoms%llo(iLO,n)
+            qn = enpara%qn_ello(iLO,n,1)
+            IF (qn.GT.enpara%qn_el(l,n,1)) enpara%qn_ello(iLO,n,1) = -qn
+            ! Adjust ulo_der for multiple LOs for the same qn, l.
+            atoms%ulo_der(iLO,n) = numLOs(ABS(qn),l)
+            numLOs(ABS(qn),l) = numLOs(ABS(qn),l) + 1
          END DO
 
       END DO
