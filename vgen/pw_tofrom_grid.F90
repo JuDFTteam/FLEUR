@@ -16,7 +16,6 @@ MODULE m_pw_tofrom_grid
    PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
   SUBROUTINE init_pw_grid(stars,sym,cell,xcpot)
-    USE m_prpxcfftmap
     USE m_types
     use m_types_xcpot
     IMPLICIT NONE
@@ -37,7 +36,7 @@ CONTAINS
     if (present(xcpot)) dograds=xcpot%needs_grad()
 
     if (dograds) THEN 
-      call fftgrid%init(cell,sym,xcpot%gmaxxc,(/stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft/))
+      call fftgrid%init(cell,sym,xcpot%gmaxxc)!,(/stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft/))
       gmax=xcpot%gmaxxc
     else
       call fftgrid%init(cell,sym,stars%gmax,(/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
@@ -80,8 +79,6 @@ CONTAINS
     USE m_grdrsis
     USE m_polangle
     USE m_mkgxyz3
-    USE m_fft3dxc
-    USE m_fft3d
     USE m_types
     USE m_constants
     IMPLICIT NONE
@@ -187,17 +184,20 @@ CONTAINS
             call fftgrid%perform_fft(forward=.false.)
             rhd1(0:,js,idm)=fftgrid%grid
          END DO
-
-         DO jdm = 1,idm
-            sd=0;sd(jdm)=1
+         if (allocated(grad%lapace).or.allocated(grad%agrt)) THEN
+           !Higher derivatives needed 
+           DO jdm = 1,idm
+             sd=0;sd(jdm)=1
              ndm = ndm + 1
              DO js=1,jspins
                 call fftgrid%putFieldOnGrid(stars,cell,den_pw(:,js),gmax,firstderiv=fd,secondderiv=sd)
                 call fftgrid%perform_fft(forward=.false.)
                 rhd2(0:,js,ndm)=fftgrid%grid
              END DO
-          END DO ! jdm
+           END DO ! jdm
+         endif  
        END DO   ! idm
+         ENDIF
        ELSE !noco case
 
           IF (l_rdm) THEN
@@ -315,7 +315,6 @@ CONTAINS
 
   SUBROUTINE pw_from_grid(stars,v_in,v_out_pw,v_out_pw_w)
     USE m_fft3d
-    USE m_fft3dxc
     USE m_types
     IMPLICIT NONE
     TYPE(t_stars),INTENT(IN)      :: stars

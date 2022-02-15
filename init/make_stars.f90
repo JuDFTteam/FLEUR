@@ -14,8 +14,6 @@ CONTAINS
     USE m_od_strgn1
     USE m_strgn
     USE m_stepf
-    USE m_prpqfftmap
-    USE m_prpqfft
     USE m_strgndim
     USE m_lapwdim
     USE m_types_sym
@@ -86,10 +84,7 @@ CONTAINS
        stars%sk3(:) = 0.0
        stars%phi2(:) = 0.0
 
-       ! Initialize xc fft box
-
-       CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
-
+       
        ! Missing xc functionals initializations
        IF (xcpot%needs_grad()) THEN
           ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
@@ -118,16 +113,15 @@ CONTAINS
        CALL lapw_fft_dim(cell,input,noco,stars)
 
 
-       ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
-       ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
-
-       ! Set up pointer for backtransformation from g-vector in positive
-       ! domain of carge density fftibox into stars
-       CALL prp_qfft(fmpi%irank==0,stars,cell,noco,input)
-       CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
 
        CALL timestop("strgn")
     ENDIF
+    !count number of stars in 2*rkmax (stars are ordered)
+    associate(i=>stars%ng3_fft)
+    DO i=stars%ng3,1,-1
+      IF ( stars%sk3(i).LE.2.0*input%rkmax ) EXIT
+    ENDDO
+    end associate 
     CALL stars%mpi_bc(fmpi%mpi_comm)
 
     CALL timestart("stepf")

@@ -307,7 +307,7 @@
          xcpot%gmaxxc=stars%gmax
       END IF
 
-      CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
+      !CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
 !
 ! k-point generator provides kpts-file, if it's missing:
 !
