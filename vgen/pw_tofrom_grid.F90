@@ -11,6 +11,7 @@ MODULE m_pw_tofrom_grid
 
    TYPE(t_fftgrid) :: fftgrid
    INTEGER         :: griddim
+   REAL            :: gmax
    
    PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
@@ -36,9 +37,11 @@ CONTAINS
     if (present(xcpot)) dograds=xcpot%needs_grad()
 
     if (dograds) THEN 
-      call fftgrid%init(cell,sym,xcpot%gmaxxc)
+      call fftgrid%init(cell,sym,xcpot%gmaxxc,(/stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft/))
+      gmax=xcpot%gmaxxc
     else
       call fftgrid%init(cell,sym,stars%gmax,(/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
+      gmax=stars%gmax
     endif
    griddim=size(fftgrid%grid)
 
@@ -136,14 +139,14 @@ CONTAINS
     IF (PRESENT(rho)) THEN
     !Put den_pw on grid and store into rho(:,1:2)
         DO js=1,jspins
-            call fftgrid%putFieldOnGrid(stars,cell,den_pw(:,js))
+            call fftgrid%putFieldOnGrid(stars,cell,den_pw(:,js),gmax)
             call fftgrid%perform_fft(forward=.false.)
             rho(0:,js)=fftgrid%grid
          END DO
 
        IF (l_noco) THEN
           !  Get mx,my on real space grid and recalculate rho and magmom
-          call fftgrid%putFieldOnGrid(stars,cell,den_pw(:,3))
+          call fftgrid%putFieldOnGrid(stars,cell,den_pw(:,3),gmax)
           call fftgrid%perform_fft(forward=.false.)
           mx=real(fftgrid%grid)
           my=aimag(fftgrid%grid)
@@ -180,7 +183,7 @@ CONTAINS
        DO idm = 1,3
          fd=0.0;fd(idm)=1 
          DO js=1,jspins
-            call fftgrid%putFieldOnGrid(stars,cell,den_pw(:,js),firstderiv=fd)
+            call fftgrid%putFieldOnGrid(stars,cell,den_pw(:,js),gmax,firstderiv=fd)
             call fftgrid%perform_fft(forward=.false.)
             rhd1(0:,js,idm)=fftgrid%grid
          END DO
@@ -189,7 +192,7 @@ CONTAINS
             sd=0;sd(jdm)=1
              ndm = ndm + 1
              DO js=1,jspins
-                call fftgrid%putFieldOnGrid(stars,cell,den_pw(:,js),firstderiv=fd,secondderiv=sd)
+                call fftgrid%putFieldOnGrid(stars,cell,den_pw(:,js),gmax,firstderiv=fd,secondderiv=sd)
                 call fftgrid%perform_fft(forward=.false.)
                 rhd2(0:,js,ndm)=fftgrid%grid
              END DO
@@ -329,7 +332,7 @@ CONTAINS
     DO js = 1,SIZE(v_in,2)
        fftgrid%grid=v_in(0:,js)
        call fftgrid%perform_fft(forward=.true.)
-       call fftgrid%takeFieldFromGrid(stars,fg3)
+       call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
        !CALL fft3d(v_in(0:,js),bf3, fg3, stars,-1)
        v_out_pw(:,js) = v_out_pw(:,js) + fg3(:)
        
