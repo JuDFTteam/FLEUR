@@ -125,7 +125,7 @@ CONTAINS
          IF (banddos%dos .OR. banddos%vacdos .OR. input%cdinf.OR.banddos%band) THEN
             stateFFTExtendedRadius = 3.0*stateRadius+0.1
             CALL stepFct%init(cell,sym,stateFFTExtendedRadius+0.001)
-            CALL stepFct%putFieldOnGrid(stars,cell, stars%ustep, stateFFTRadius+0.0005)
+            CALL stepFct%putFieldOnGrid(stars, stars%ustep, cell,stateFFTRadius+0.0005)
             CALL stepFct%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
             CALL fft_interface(3, stepFct%dimensions(:), stepFct%grid, .FALSE., fieldSphereIndices)
          END IF

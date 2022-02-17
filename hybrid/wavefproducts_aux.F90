@@ -61,7 +61,7 @@ CONTAINS
       call stepf%init(fi%cell, fi%sym, gcutoff)
       block
          type(t_cell)         :: cell !unused 
-         call stepf%putFieldOnGrid(stars, cell,stars%ustep)
+         call stepf%putfieldOnGrid(stars, stars%ustep)
       end block
       call fft%init(stepf%dimensions, .false., batch_size=1, l_gpu=.True.)
       !$acc data copyin(stepf, stepf%grid, stepf%gridlength)
@@ -73,7 +73,7 @@ CONTAINS
          !$acc end kernels
 
          call fft%exec(stepf%grid)
-         call fft%free()
+         !call fft%free()
          
          call setup_g_ptr(mpdata, stepf, g_t, iq, g_ptr)
          
@@ -111,8 +111,8 @@ CONTAINS
                enddo
                !$acc end kernels
             !$acc end data
-            call wavef2rs_fft%free()
-            call grid%free()
+            !call wavef2rs_fft%free()
+            !call grid%free()
 
             call timestart("Big OMP loop")
 #ifndef _OPENACC
@@ -188,9 +188,9 @@ CONTAINS
                !$OMP END DO
 #endif
             !$acc end data 
-            call fft%free()
-            call grid%free()
-            call wavef2rs_fft%free()
+            !call fft%free()
+            !call grid%free()
+            !call wavef2rs_fft%free()
          !$acc end data ! psi_kqpt
          deallocate (prod, psi_k)
       !$acc end data ! stepf, stepf%grid
@@ -198,7 +198,7 @@ CONTAINS
 #ifndef _OPENACC
       !$OMP END PARALLEL
 #endif
-      call stepf%free()
+      !call stepf%free()
 
       call timestop("Big OMP loop")
       deallocate(psi_kqpt)

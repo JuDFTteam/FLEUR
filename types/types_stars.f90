@@ -26,18 +26,9 @@ MODULE m_types_stars
      !No of elements in 2D-FFT
      INTEGER ::kimax2
 
-     
-
-     !fft box for xc-pot
-     !INTEGER :: kxc1_fft
-     !INTEGER :: kxc2_fft
-     !INTEGER :: kxc3_fft
-
+   
      INTEGER :: ng3_fft !number of stars in fft-box of size 2*rkmax
-     !INTEGER :: kmxxc_fft !number of g-vectors forming the nxc3_fft stars in the charge density or xc-density sphere
-
-     !INTEGER :: nxc3_fft ! number of stars in the  charge density  fft-box
-
+   
      !rep. g-vector of star
      INTEGER, ALLOCATABLE ::kv3(:, :)
      !length of star
@@ -126,4 +117,6 @@ CONTAINS
 
 
   END SUBROUTINE mpi_bc_stars
+
+
 END MODULE m_types_stars

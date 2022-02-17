@@ -15,8 +15,9 @@ MODULE m_types_fftGrid
 
    CONTAINS
 
-      PROCEDURE :: init => t_fftGrid_init
-      PROCEDURE :: free => t_fftGrid_free
+      PROCEDURE :: t_fftGrid_init,t_fftGrid_init_dims
+      GENERIC   :: init => t_fftGrid_init,t_fftGrid_init_dims
+      FINAL     :: free
       PROCEDURE :: putFieldOnGrid
       PROCEDURE :: takeFieldFromGrid
       PROCEDURE :: getRealPartOfGrid
@@ -68,7 +69,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
          + shifted_g(3) * grid%dimensions(1) * grid%dimensions(2)
  end function map_g_to_fft_grid
 
-   SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff,dims)
+   SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff)
       USE m_constants
       USE m_boxdim
       USE m_spgrot
@@ -80,7 +81,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)    :: sym
       REAL, INTENT(IN)    :: gCutoff
-      INTEGER,INTENT(IN),OPTIONAL :: dims(3)
+      
 
       INTEGER, ALLOCATABLE :: ig(:, :, :)
 
@@ -95,21 +96,32 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       do i = 1,3
          this%dimensions(i) = next_optimal_fft_size(this%dimensions(i))
       enddo
-      if (present(dims)) this%dimensions=dims
       this%gridLength = product(this%dimensions)
    
       IF (ALLOCATED(this%grid)) DEALLOCATE (this%grid)
       ALLOCATE (this%grid(0:this%gridLength - 1), source=CMPLX_NOT_INITALIZED)
    END SUBROUTINE t_fftGrid_init
 
-   SUBROUTINE putFieldOnGrid(this, stars, cell,field, gCutoff, firstderiv,secondderiv)
+   SUBROUTINE t_fftGrid_init_dims(this,dims)
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      INTEGER,INTENT(IN)             :: dims(3)
+      this%dimensions=dims
+      this%gridLength = product(this%dimensions)
+   
+      IF (ALLOCATED(this%grid)) DEALLOCATE (this%grid)
+      ALLOCATE (this%grid(0:this%gridLength - 1), source=CMPLX_NOT_INITALIZED)
+   END SUBROUTINE t_fftGrid_init_dims
+
+
+   SUBROUTINE putFieldOnGrid(this, stars,field, cell, gCutoff, firstderiv,secondderiv)
       USE m_types_stars
       USE m_types_cell
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
       TYPE(t_stars), INTENT(IN)       :: stars
-      TYPE(t_cell),INTENT(IN)         :: cell
       COMPLEX, INTENT(IN)             :: field(:) ! length is stars%ng3
+      TYPE(t_cell),INTENT(IN),OPTIONAL:: cell
       REAL, OPTIONAL, INTENT(IN)      :: gCutoff
       real,optional,intent(in)        :: firstderiv(3),secondderiv(3)
 
@@ -419,16 +431,16 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
    END SUBROUTINE getRealPartOfGrid
 
-   subroutine t_fftGrid_free(fftGrid)
+   subroutine free(fftGrid)
       implicit none
-      CLASS(t_fftGrid), INTENT(INOUT)    :: fftGrid
+      TYPE(t_fftGrid), INTENT(INOUT)    :: fftGrid
 
       fftGrid%extend     = -1
       fftGrid%dimensions = -1
       fftGrid%gridLength = -1
 
       if(allocated(fftGrid%grid)) deallocate(fftGrid%grid)
-   end subroutine t_fftGrid_free
+   end subroutine free
 
    function calc_extend(cell, sym, gCutoff) result(mxx)
       USE m_constants
