@@ -279,7 +279,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    IF (ALLOCATED(vTot%pw_w)) DEALLOCATE (vTot%pw_w)
    ALLOCATE(vTot%pw_w(SIZE(overallDen%pw,1),fi%input%jspins))
    DO jspin = 1, fi%input%jspins
-      CALL convol(stars,vTot%pw_w(:,jspin),vTot%pw(:,jspin),stars%ufft)
+      CALL convol(stars,vTot%pw_w(:,jspin),vTot%pw(:,jspin))
    END DO
 
    CALL vTotTemp%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_POTTOT)
@@ -293,7 +293,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
    vCoul%pw_w = CMPLX(0.0,0.0)
    DO jspin = 1, fi%input%jspins
-      CALL convol(stars,vCoul%pw_w(:,jspin),vCoul%pw(:,jspin),stars%ufft)
+      CALL convol(stars,vCoul%pw_w(:,jspin),vCoul%pw(:,jspin))
    END DO
 
    vTotSSDen = 0.0
@@ -464,7 +464,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       ALLOCATE(overallVCoul%pw_w(size(overallVCoul%pw,1),size(overallVCoul%pw,2)))
       overallVCoul%pw_w(:,:) = 0.0
       CALL vgen_coulomb(1,fmpi,fi%oned,fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
-      CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1),stars%ufft)   ! Is there a problem with a second spin?!
+      CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1))   ! Is there a problem with a second spin?!
       CALL overallVCoul%distribute(fmpi%mpi_comm)
 
       overallVCoulSSDen = 0.0

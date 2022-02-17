@@ -74,6 +74,7 @@ CONTAINS
       USE m_chase_diag
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
+      USE m_dfpt
 
 !$    USE omp_lib
       IMPLICIT NONE
@@ -115,7 +116,8 @@ CONTAINS
       INTEGER :: ierr
 #endif
       REAL, ALLOCATABLE :: flh(:, :), flh2(:, :)
-      COMPLEX, ALLOCATABLE :: flm(:, :)
+      COMPLEX, ALLOCATABLE :: flm(:, :), z0(:, :, :, :)
+      INTEGER, ALLOCATABLE :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
       IF ((fi%input%preconditioning_param /= 0) .AND. fi%oneD%odi%d1) THEN
          CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby='fleur')
@@ -355,9 +357,15 @@ CONTAINS
             CALL enpara%update(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
             IF (.not. fi%input%eig66(1)) THEN
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
-                          enpara, nococonv, mpdata, hybdat, &
-                          iter, eig_id, results, inDen, vToT, vx, hub1data)
+                IF (fi%juPhon%l_dfpt) THEN
+                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
+                               enpara, nococonv, mpdata, hybdat, &
+                               iter, eig_id, results, inDen, vToT, vx, hub1data, nvfull, GbasVec_eig, z0)
+                ELSE
+                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
+                               enpara, nococonv, mpdata, hybdat, &
+                               iter, eig_id, results, inDen, vToT, vx, hub1data)
+                END IF
             ENDIF
 !!$          eig_idList(pc) = eig_id
             CALL timestop("eigen")
@@ -441,6 +449,31 @@ CONTAINS
             CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
+
+            !!!juPhon:
+            ! Implement here a call to a new jpMain. In it, generate all necessary
+            ! quantities only from the density (potentials), transform them into an
+            ! unsymmetrized form and basically cover all steps that were formerly in
+            ! jpInit. Then do the whole juPhon shtick until we have phonons. This
+            ! eliminates the need for complicated juggling with the eig file and
+            ! unoccupied states.
+            !
+            ! Also add safety. We do not want to even enter juPhon if ctail is on,
+            ! jspins is 2, natoms is 2 or more, noco is on, libxc is off etc. etc.
+            !
+            ! Forbidden switches:
+            ! symor = .FALSE.
+            !
+            ! Those restrictions will gradually be lifted.
+
+            IF (fi%juPhon%l_dfpt) THEN
+                CALL timestart("juPhon DFPT")
+                CALL dfpt(fi%juPhon, fi%sym, fi%oneD, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, &
+                        & fi%kpts, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0, .FALSE., xcpot)
+                CALL timestop("juPhon DFPT")
+            END IF
+
+            !!!juPhon
 
             IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi, fi%oneD, enpara, vToT, results)) THEN
                CYCLE forcetheoloop
@@ -626,7 +659,7 @@ CONTAINS
             TYPE IS(t_forcetheo_ssdisp)
                l_forceTheorem = .TRUE.
          END SELECT
-         
+
          IF(l_forceTheorem.AND..NOT.l_cont) THEN
             IF(.NOT.l_lastIter) THEN
                l_lastIter = .TRUE.

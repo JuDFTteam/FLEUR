@@ -4,7 +4,7 @@ MODULE m_fleurinput_mpi_bc
 CONTAINS
   SUBROUTINE fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,rank)
+       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,juPhon,rank)
     USE m_types_xml
 
 
@@ -28,6 +28,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(INOUT)::kpts
     TYPE(t_gfinp),INTENT(INOUT)::gfinp
     TYPE(t_hub1inp),INTENT(INOUT)::hub1inp
+    TYPE(t_juPhon),INTENT(INOUT)::juPhon
     INTEGER,INTENT(IN)::mpi_comm
     INTEGER,OPTIONAL,INTENT(IN)::rank
 
@@ -52,6 +53,7 @@ CONTAINS
     CALL gfinp%mpi_bc(mpi_comm,rank)
     CALL hub1inp%mpi_bc(mpi_comm,rank)
     CALL xcpot%mpi_bc(mpi_comm,rank)
+    CALL juPhon%mpi_bc(mpi_comm,rank)
 
   END SUBROUTINE fleurinput_mpi_bc
 END MODULE m_fleurinput_mpi_bc

@@ -1,6 +1,6 @@
 MODULE m_convol
 CONTAINS
-   SUBROUTINE convol(stars, fg3, ag3, ufft)
+   SUBROUTINE convol(stars, fg3, ag3)
 
 !************************************************************
 !*                                                          *
@@ -24,7 +24,7 @@ CONTAINS
 
       COMPLEX, INTENT(IN)     :: ag3(stars%ng3)
       COMPLEX, INTENT(OUT)    :: fg3(stars%ng3)
-      REAL, INTENT(IN)     :: ufft(0:27*stars%mx1*stars%mx2*stars%mx3 - 1)
+      !REAL, INTENT(IN)     :: ufft(0:27*stars%mx1*stars%mx2*stars%mx3 - 1)
 
       INTEGER i, ifftd
       REAL, ALLOCATABLE :: gfft(:, :)
@@ -37,7 +37,7 @@ CONTAINS
      &           ag3,stars, +1)
 
       DO i = 0, ifftd - 1
-         gfft(i, :) = gfft(i, :)*ufft(i)
+         gfft(i, :) = gfft(i, :)*stars%ufft(i)
       ENDDO
 
       CALL fft3d(gfft(0, 1), gfft(0, 2),&

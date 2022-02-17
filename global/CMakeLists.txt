@@ -6,7 +6,6 @@ global/radsra.f
 global/radsrd.F
 global/radsrdn.f
 global/soc_sym.f
-global/starf.f
 global/vacudz.f
 global/vacuz.f
 global/abcrot.f
@@ -25,6 +24,7 @@ global/convn.f90
 global/phasy1.f90
 global/qfix.f90
 global/radflo.F90
+global/starf.f90
 global/utility.F90
 global/find_enpara.f90
 global/rotMMPmat.f90

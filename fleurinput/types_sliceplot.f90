@@ -25,6 +25,7 @@ MODULE m_types_sliceplot
     LOGICAL :: onlyMT=.false.
     integer :: typeMT=0
     LOGICAL :: vecField=.false.
+    LOGICAL :: edgesAllSides = .TRUE.
   CONTAINS
      PROCEDURE :: read_xml=>read_xml_plot
      PROCEDURE :: mpi_bc=>mpi_bc_plot
@@ -112,7 +113,8 @@ CONTAINS
     CALL mpi_bc(rank,mpi_comm,this%filename)    
     CALL mpi_bc(this%onlyMT,rank,mpi_comm)  
     CALL mpi_bc(this%typeMT,rank,mpi_comm)  
-    CALL mpi_bc(this%vecField,rank,mpi_comm)  
+    CALL mpi_bc(this%vecField,rank,mpi_comm)
+    CALL mpi_bc(this%edgesAllSides,rank,mpi_comm)
 
   END SUBROUTINE mpi_bc_plot
 
@@ -207,10 +209,15 @@ CONTAINS
     if (size(x)/=3) call judft_error("Wrong number of coordinates for vec0", calledby="types_sliceplot%read_xml_plot")
     this%zero=x
 
-    this%filename=xml%GetAttributeValue('/@file')
-    this%onlyMT     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@onlyMT'))
-    this%typeMT     = evaluateFirstIntOnly(xml%GetAttributeValue('/@typeMT'))
-    this%vecField     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@vecField'))
+    this%filename      = xml%GetAttributeValue('/@file')
+    this%onlyMT        = evaluateFirstBoolOnly(xml%GetAttributeValue('/@onlyMT'))
+    this%typeMT        = evaluateFirstIntOnly(xml%GetAttributeValue('/@typeMT'))
+    this%vecField      = evaluateFirstBoolOnly(xml%GetAttributeValue('/@vecField'))
+    this%edgesAllSides = .TRUE.
+    numberNodes = xml%GetNumberOfNodes('/@edgesAllSides')
+    IF(numberNodes.GT.0) THEN
+       this%edgesAllSides = evaluateFirstBoolOnly(xml%GetAttributeValue('/@edgesAllSides'))
+    END IF
 
   END SUBROUTINE read_xml_plot
 
