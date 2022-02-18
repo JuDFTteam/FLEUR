@@ -289,7 +289,11 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
 
       ! Write superposed density onto density file
       den%iter = 0
-
+ 
+      if (noco%l_noco) THEN
+         den%pw(:,1)=(den%pw(:,1)+den%pw(:,2))*0.5
+         den%pw(:,2)=den%pw(:,1)
+      endif
       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
           merge(CDN_ARCHIVE_TYPE_FFN_const,CDN_ARCHIVE_TYPE_CDN1_const,any(noco%l_alignMT)),&
           CDN_INPUT_DEN_const,1,-1.0,0.0,-1.0,-1.0,.TRUE.,den)
