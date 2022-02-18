@@ -21,11 +21,7 @@ MODULE m_types_stars
      INTEGER ::mx1
      INTEGER ::mx2
      INTEGER ::mx3
-     !No of elements in FFT
-     INTEGER ::kimax
-     !No of elements in 2D-FFT
-     INTEGER ::kimax2
-
+     
    
      INTEGER :: ng3_fft !number of stars in fft-box of size 2*rkmax
    
@@ -83,8 +79,8 @@ CONTAINS
     CALL mpi_bc(this%mx1,rank,mpi_comm)
     CALL mpi_bc(this%mx2,rank,mpi_comm)
     CALL mpi_bc(this%mx3,rank,mpi_comm)
-    CALL mpi_bc(this%kimax,rank,mpi_comm)
-    CALL mpi_bc(this%kimax2,rank,mpi_comm)
+    !CALL mpi_bc(this%kimax,rank,mpi_comm)
+    !CALL mpi_bc(this%kimax2,rank,mpi_comm)
     !CALL mpi_bc(this%kq1_fft,rank,mpi_comm)
     !CALL mpi_bc(this%kq2_fft,rank,mpi_comm)
     !CALL mpi_bc(this%kq3_fft,rank,mpi_comm)

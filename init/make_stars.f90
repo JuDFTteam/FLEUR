@@ -41,6 +41,8 @@ CONTAINS
     TYPE(t_noco),INTENT(in)::noco
     TYPE(t_mpi),INTENT(in)::fmpi
     ! Generate stars
+    INTEGER :: kimax,kimax2
+
 
     ! Dimensioning of stars
     IF (fmpi%irank==0) THEN
@@ -58,8 +60,8 @@ CONTAINS
           oneD%odd%nop = sym%nop
        END IF
        stars%gmax=input%gmax
-       stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
-       stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
+       kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
+       kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
        IF (oneD%odd%d1) THEN
           oneD%odd%k3 = stars%mx3
           oneD%odd%nn2d = (2*(oneD%odd%k3)+1)*(2*(oneD%odd%M)+1)
@@ -74,9 +76,9 @@ CONTAINS
        ALLOCATE (stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3))
        ALLOCATE (stars%nstr2(stars%ng2),stars%nstr(stars%ng3))
        ALLOCATE (stars%sk2(stars%ng2),stars%sk3(stars%ng3),stars%phi2(stars%ng2))
-       ALLOCATE (stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2))
+       ALLOCATE (stars%igfft(0:kimax,2),stars%igfft2(0:kimax2,2))
        ALLOCATE (stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-       ALLOCATE (stars%pgfft(0:stars%kimax),stars%pgfft2(0:stars%kimax2))
+       ALLOCATE (stars%pgfft(0:kimax),stars%pgfft2(0:kimax2))
        ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
        stars%kv3(:,:) = 0
@@ -87,7 +89,7 @@ CONTAINS
        
        ! Missing xc functionals initializations
        IF (xcpot%needs_grad()) THEN
-          ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
+          ALLOCATE (stars%ft2_gfx(0:kimax2),stars%ft2_gfy(0:kimax2))
           ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                oneD%pgft1xy(0:oneD%odd%nn2d-1),&
                oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
