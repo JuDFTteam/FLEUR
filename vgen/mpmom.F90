@@ -24,7 +24,8 @@ module m_mpmom
 #endif
 contains
 
-  subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm,l_coreCharge )
+  subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm,l_coreCharge,&
+                  & rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
 
     use m_types
     USE m_constants
@@ -44,18 +45,37 @@ contains
     complex,         intent(out)  :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     LOGICAL, OPTIONAL, INTENT(IN) :: l_coreCharge
 
+    REAL, OPTIONAL, INTENT(IN)          :: rhoimag(:,0:,:), rho0(:,0:,:)
+    INTEGER, OPTIONAL, INTENT(IN)       :: iDtype, iDir ! DFPT: Type and direction of displaced atom
+    COMPLEX, OPTIONAL, INTENT(IN)       :: qpw0(:)
+    TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
+
     integer                       :: j, jm, lh, mb, mem, mems, n, nd, l, nat, m
     complex                       :: qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     complex                       :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
+    LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
+
+    l_dfptvgen = PRESENT(stars2)
+
     ! multipole moments of original charge density
     if ( fmpi%irank == 0 ) then
+      qlmo = 0.0
 !      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
-      call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
+      IF (.NOT.l_dfptvgen) THEN
+          call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
+      ELSE
+          ! qlmo for the real part of rho1:
+          call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge=.FALSE.)
+          ! qlmo for the imaginary part of rho1 and the perturbation of vExt in the displaced atom:
+          call mt_moments( input, atoms, sym,sphhar, rhoimag(:,:,:), potdenType,qlmo,l_coreCharge=.TRUE.,l_rhoimag=.TRUE.,iDtype=iDtype,iDir=iDir)
+      END IF
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
     call pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw(:), potdenType, qlmp )
+
+    ! TODO: Add surface contributions here. [DFPT]
 
     if ( fmpi%irank == 0 ) then
       ! see (A14)
@@ -84,7 +104,7 @@ contains
 
 
 !  subroutine mt_moments( input, atoms, sphhar, rho, potdenType, qlmo )
-  subroutine mt_moments( input, atoms, sym,sphhar, rho, potdenType,qlmo,l_coreCharge)
+  subroutine mt_moments( input, atoms, sym,sphhar, rho, potdenType,qlmo,l_coreCharge,l_rhoimag,iDtype,iDir)
     ! multipole moments of original charge density
     ! see (A15) (Coulomb case) or (A17) (Yukawa case)
 
@@ -102,14 +122,19 @@ contains
     type(t_sym),    intent(in)        :: sym
     real,           intent(in)        :: rho(: ,0:, :)
     integer,        intent(in)        :: potdenType
-    complex,        intent(out)       :: qlmo(-atoms%lmaxd:,0:,:)
-    LOGICAL, OPTIONAL, INTENT(IN)     :: l_coreCharge
+    complex,        intent(inout)     :: qlmo(-atoms%lmaxd:,0:,:)
+    LOGICAL, OPTIONAL, INTENT(IN)     :: l_coreCharge,l_rhoimag
+    INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
     integer                           :: n, ns, jm, nl, l, j, mb, m, nat, i, imax, lmax
     real                              :: fint
     real                              :: f( maxval( atoms%jri ) )
     real, allocatable, dimension(:,:) :: il, kl
     LOGICAL                           :: l_subtractCoreCharge
+
+    LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
+
+    l_dfptvgen = PRESENT(iDtype)
 
     if ( potdenType == POTDEN_TYPE_POTYUK ) then
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
@@ -119,7 +144,6 @@ contains
     if ( potdenType == POTDEN_TYPE_POTYUK ) l_subtractCoreCharge = .FALSE.
     IF(PRESENT(l_coreCharge)) l_subtractCoreCharge = l_coreCharge
 
-    qlmo = 0.0
     nat = 1
     do n = 1, atoms%ntype
       ns = sym%ntypsy(nat)
@@ -134,7 +158,7 @@ contains
       end if
       do nl = 0, sphhar%nlh(ns)
         l = sphhar%llh(nl,ns)
-        if(jm < 2) call juDFT_error("This would be uninit in integr3.")
+        if(jm < 2) call juDFT_error("This would be uninit in intgr3.")
         do j = 1, jm
           if ( potdenType /= POTDEN_TYPE_POTYUK ) then
             f(j) = atoms%rmsh(j,n) ** l * rho(j,nl,n)
@@ -148,12 +172,22 @@ contains
         end if
         do mb = 1, sphhar%nmem(nl,ns)
           m = sphhar%mlh(mb,nl,ns)
-          qlmo(m,l,n) = qlmo(m,l,n) + sphhar%clnu(mb,nl,ns) * fint
+          IF (.NOT.PRESENT(l_rhoimag)) THEN
+              qlmo(m,l,n) = qlmo(m,l,n) + sphhar%clnu(mb,nl,ns) * fint
+          ELSE
+              qlmo(m,l,n) = qlmo(m,l,n) + ImagUnit*sphhar%clnu(mb,nl,ns) * fint
+          END IF
         end do
       end do
 !      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
       if (l_subtractCoreCharge) then
-        qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n) / sfp_const
+        IF (.NOT.l_dfptvgen) THEN
+            qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n) / sfp_const
+        ELSE
+            IF ((n.EQ.iDtype)) THEN
+                qlmo(-1:1,1,n) = qlmo(-1:1,1,n) - 3.0 / fpi_const * atoms%zatom(n) * c_im(iDir, :)
+            END IF
+        END IF
       end if
       nat = nat + atoms%neq(n)
     end do
@@ -258,7 +292,7 @@ contains
         end do                  ! l = 0, atoms%lmax(n)
       end do                    ! n = 1, atoms%ntype
     end do                      ! k = 2, stars%ng3
-!    !$omp end parallel do 
+!    !$omp end parallel do
 #ifdef CPP_MPI
     CALL MPI_REDUCE( qlmp, qlmp_out, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, fmpi%mpi_comm, ierr )
 #else

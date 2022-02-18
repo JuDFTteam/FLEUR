@@ -38,13 +38,14 @@ CONTAINS
     ENDDO
     CALL div%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,0,input%jspins,.FALSE.,.FALSE.,1001,&
     vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-    allocate(div%pw_w,mold=div%pw)     
+    allocate(div%pw_w,mold=div%pw)
 
     !Generate magnetization out of density matrix
     CALL matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco,nococonv, 1.0, &
          outden, cden, m_den(1), m_den(2), m_den(3))
     !Calcalate divergence
     CALL divergence(input,stars,atoms,sphhar,vacuum,sym,cell,noco,m_den,div)
+    qlmo = 0.0
     CALL mt_moments( input, atoms, sym,sphhar, div%mt(:,:,:,1), POTDEN_TYPE_POTCOUL,qlmo,.FALSE.)
 
     WRITE(oUnit,*) "Magnetic Multipoles:"

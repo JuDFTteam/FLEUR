@@ -18,6 +18,8 @@ MODULE m_types_jpPotden
      PROCEDURE :: init_jpPotden
      PROCEDURE :: resetjpPotden
      GENERIC   :: init=>init_jpPotden
+     PROCEDURE :: jp_copy_both_spin
+     PROCEDURE :: jp_sum_both_spin
      procedure :: jpdistribute
      procedure :: jpcollect
   END TYPE t_jpPotden
@@ -107,5 +109,59 @@ END SUBROUTINE jpdistribute
     pd%mt=0.0
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
 END SUBROUTINE resetjpPotDen
+
+    SUBROUTINE jp_sum_both_spin(this, that)
+
+        IMPLICIT NONE
+
+        CLASS(t_jpPotden), INTENT(INOUT)           :: this
+        TYPE(t_jpPotden),  INTENT(INOUT), OPTIONAL :: that
+
+        IF (PRESENT(that)) THEN
+            IF (SIZE(this%pw,2)>1) THEN
+                that%mt(:,0:,:,1,:,:)=this%mt(:,0:,:,1,:,:)+this%mt(:,0:,:,2,:,:)
+                that%pw(:,1,:,:)=this%pw(:,1,:,:)+this%pw(:,2,:,:)
+                !that%vacz(:,:,1)=this%vacz(:,:,1)+this%vacz(:,:,2)
+                !that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)+this%vacxy(:,:,:,2)
+                IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1,:,:)=this%pw_w(:,1,:,:)+this%pw_w(:,2,:,:)
+            ELSE
+                that%mt(:,0:,:,1,:,:)=this%mt(:,0:,:,1,:,:)
+                that%pw(:,1,:,:)=this%pw(:,1,:,:)
+                !that%vacz(:,:,1)=this%vacz(:,:,1)
+                !that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)
+                IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1,:,:)=this%pw_w(:,1,:,:)
+            END IF
+        ELSE
+            IF (SIZE(this%pw,2)>1) THEN
+                this%mt(:,0:,:,1,:,:)=this%mt(:,0:,:,1,:,:)+this%mt(:,0:,:,2,:,:)
+                this%pw(:,1,:,:)=this%pw(:,1,:,:)+this%pw(:,2,:,:)
+                !this%vacz(:,:,1)=this%vacz(:,:,1)+this%vacz(:,:,2)
+                !this%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)+this%vacxy(:,:,:,2)
+                IF (ALLOCATED(this%pw_w)) this%pw_w(:,1,:,:)=this%pw_w(:,1,:,:)+this%pw_w(:,2,:,:)
+            END IF
+        END IF
+    END SUBROUTINE jp_sum_both_spin
+
+    SUBROUTINE jp_copy_both_spin(this, that)
+
+        IMPLICIT NONE
+
+        CLASS(t_jpPotden),INTENT(IN)    :: this
+        TYPE(t_jpPotden), INTENT(INOUT) :: that
+
+      that%mt(:,0:,:,1,:,:)=this%mt(:,0:,:,1,:,:)
+      that%pw(:,1,:,:)=this%pw(:,1,:,:)
+      !that%vacz(:,:,1)=this%vacz(:,:,1)
+      !that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)
+      IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1,:,:)=this%pw_w(:,1,:,:)
+
+      IF (SIZE(that%mt,4)>1) THEN
+         that%mt(:,0:,:,2,:,:)=this%mt(:,0:,:,1,:,:)
+         that%pw(:,2,:,:)=this%pw(:,1,:,:)
+         !that%vacz(:,:,2)=this%vacz(:,:,1)
+         !that%vacxy(:,:,:,2)=this%vacxy(:,:,:,1)
+         IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,2,:,:)=this%pw_w(:,1,:,:)
+      END IF
+  END SUBROUTINE jp_copy_both_spin
 
 END MODULE m_types_jpPotden

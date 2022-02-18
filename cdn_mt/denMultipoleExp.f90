@@ -30,7 +30,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell, oneD, d
       END IF
       qlm = CMPLX(0.0,0.0)
       workDen = den
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
@@ -40,7 +40,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell, oneD, d
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
@@ -53,7 +53,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell, oneD, d
    qlm = CMPLX(0.0,0.0)
    workDen = den
    IF(input%jspins == 2) CALL workDen%SpinsToChargeAndMagnetisation()
-   CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,.FALSE.)
+   CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
    IF(fmpi%irank.EQ.0) THEN
       WRITE(oUnit,*) '======================================='
    END IF
@@ -64,7 +64,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell, oneD, d
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell,oneD,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
