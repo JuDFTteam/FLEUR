@@ -17,76 +17,39 @@ CONTAINS
 !*                                                          *
 !************************************************************
       USE m_types
-      USE m_fft_interface
-      IMPLICIT NONE
+      USE m_types_fftGrid
+      IMPLICIT none
 
-      INTEGER, INTENT(IN) :: isn
-      TYPE(t_stars), INTENT(IN):: stars
-      REAL, INTENT(INOUT) :: afft(0:27*stars%mx1*stars%mx2*stars%mx3 - 1)
-      REAL, INTENT(INOUT) :: bfft(0:27*stars%mx1*stars%mx2*stars%mx3 - 1)
-      COMPLEX                 :: fg3(stars%ng3)
+      INTEGER, INTENT(IN)       :: isn
+      TYPE(t_stars), INTENT(IN) :: stars
+      REAL, INTENT(INOUT)       :: afft(:)
+      REAL, INTENT(INOUT)       :: bfft(:)
+      COMPLEX                   :: fg3(stars%ng3) !Sometimes we call this with an intent(in) variable if isn>0 (This is somewhat unsafe)
       LOGICAL, INTENT(IN), OPTIONAL :: scaled ! < determines if coefficients are scaled by stars%nstr
 
-      INTEGER i, ifftd
-      REAL scale
-      COMPLEX ctmp
-      LOGICAL forw
-      INTEGER length_zfft(3)
-      complex :: zfft(0:27*stars%mx1*stars%mx2*stars%mx3 - 1)
-
-      ifftd = 27*stars%mx1*stars%mx2*stars%mx3
+      TYPE(t_fftgrid) :: fftgrid
+      call fftgrid%init((/stars%mx1,stars%mx2,stars%mx3/))
 
       IF (isn > 0) THEN
-!
-!  ---> put stars onto the fft-grid
-!
-         afft = 0.0
-         bfft = 0.0
-         DO i = 0, stars%kimax
-            ctmp = fg3(stars%igfft(i, 1))*stars%pgfft(i)
-            afft(stars%igfft(i, 2)) = real(ctmp)
-            bfft(stars%igfft(i, 2)) = aimag(ctmp)
-         ENDDO
-      ENDIF
-
+          call fftgrid%putFieldOnGrid(stars,fg3)
+      ELSE 
+         fftgrid%grid=cmplx(afft,bfft)
+      ENDIF       
+     
+      call fftgrid%perform_fft(forward=(isn<0))
 !---> now do the fft (isn=+1 : G -> r ; isn=-1 : r -> G)
 
-      zfft = cmplx(afft, bfft)
-      if (isn == -1) then
-         forw = .true.
+      if (isn >0) THEN
+        afft = real(fftgrid%grid)
+        bfft = aimag(fftgrid%grid)
       else
-         forw = .false.
-      end if
-      length_zfft(1) = 3*stars%mx1
-      length_zfft(2) = 3*stars%mx2
-      length_zfft(3) = 3*stars%mx3
-      call fft_interface(3, length_zfft, zfft, forw, stars%igfft(0:stars%kimax, 2))
-
-      afft = real(zfft)
-      bfft = aimag(zfft)
-
-      IF (isn < 0) THEN
-!
-!  ---> collect stars from the fft-grid
-!
-         DO i = 1, stars%ng3
-            fg3(i) = cmplx(0.0, 0.0)
-         ENDDO
-         DO i = 0, stars%kimax
-            fg3(stars%igfft(i, 1)) = fg3(stars%igfft(i, 1)) + CONJG(stars%pgfft(i))* &
-       &                 zfft(stars%igfft(i, 2))
-         ENDDO
-         scale = 1.0/ifftd
+         call fftgrid%takeFieldFromGrid(stars,fg3)
          IF (PRESENT(scaled)) THEN
-            IF (scaled) THEN
-               fg3 = scale*fg3/stars%nstr
-            ELSE
-               fg3 = scale*fg3
-            ENDIF
+            IF (scaled) fg3 = fg3/stars%nstr
          ELSE
-            fg3 = scale*fg3/stars%nstr
+            fg3 = fg3/stars%nstr
          ENDIF
-      ENDIF
+      ENDIF   
 
    END SUBROUTINE fft3d
 END MODULE m_fft3d

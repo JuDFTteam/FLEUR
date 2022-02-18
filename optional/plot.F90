@@ -256,17 +256,17 @@ CONTAINS
       ! Fourier transform the diagonal part of the density matrix in the
       ! interstitial (qpw) to real space (ris).
       DO iden = 1,2
-         CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,1)
+         CALL fft3d(ris(0:,iden),fftwork,qpw(1,iden),stars,1)
          IF (ALLOCATED(denmat%pw_w)) THEN
-            CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,1)
+            CALL fft3d(ris2(0:,iden),fftwork,qpww(1,iden),stars,1)
          END IF
       END DO
 
       ! Also do that for the off-diagonal part. Real part goes into index
       ! 3 and imaginary part into index 4.
-      CALL fft3d(ris(0,3),ris(0,4),cdom(1),stars,1)
+      CALL fft3d(ris(0:,3),ris(0:,4),cdom(1),stars,1)
       IF (ALLOCATED(denmat%pw_w)) THEN
-         CALL fft3d(ris2(0,3),ris2(0,4),cdomw(1),stars,1)
+         CALL fft3d(ris2(0:,3),ris2(0:,4),cdomw(1),stars,1)
       END IF
 
       ! Calculate the charge and magnetization densities in the interstitial.
@@ -308,10 +308,10 @@ CONTAINS
       ! reciprocal space.
       DO iden = 1,4
          fftwork=zero
-         CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,-1)
+         CALL fft3d(ris(0:,iden),fftwork,qpw(1,iden),stars,-1)
          fftwork=zero
          IF (ALLOCATED(denmat%pw_w)) THEN
-            CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,-1)
+            CALL fft3d(ris2(0:,iden),fftwork,qpww(1,iden),stars,-1)
          END IF
       END DO
 
