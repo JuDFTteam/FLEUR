@@ -75,6 +75,7 @@ CONTAINS
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
+      USE m_magmoms
 
 !$    USE omp_lib
       IMPLICIT NONE
@@ -171,6 +172,7 @@ CONTAINS
       !END IF
       CALL timestart("Qfix")
       CALL qfix(fmpi, stars, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell, fi%oneD, inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
+      !call magMoms(fi%input,fi%atoms,fi%noco,nococonv,den=inDen)
       CALL timestop("Qfix")
       IF (fmpi%irank .EQ. 0) THEN
          CALL writeDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%oneD, archiveType, CDN_INPUT_DEN_const, &

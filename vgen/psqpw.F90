@@ -1,12 +1,12 @@
 module m_psqpw
   !     ***********************************************************
   !     generates the fourier coefficients of pseudo charge density
-  !     
+  !
   !     For yukawa_residual = .true. the subroutines calculate the
-  !     pseudo charge density for the generation of the Yukawa 
-  !     potential instead of the Coulomb potential. This is used in 
+  !     pseudo charge density for the generation of the Yukawa
+  !     potential instead of the Coulomb potential. This is used in
   !     the preconditioning of the SCF iteration for metallic systems.
-  !      
+  !
   !     references:
   !     for both the Coulomb and Yukawa cases:
   !     F. Tran, P. Blaha: Phys. Rev. B 83, 235118 (2011)
@@ -17,15 +17,15 @@ module m_psqpw
 contains
 
   subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
-       &     qpw, rho, rht, l_xyav, potdenType, psq )
+       &     qpw, rho, rht, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
 
 #include"cpp_double.h"
-#ifdef CPP_MPI 
-    use mpi 
+#ifdef CPP_MPI
+    use mpi
 #endif
     use m_constants
     use m_phasy1
-    use m_mpmom 
+    use m_mpmom
     use m_sphbes
     use m_qsf
     use m_od_phasy
@@ -45,11 +45,18 @@ contains
     type(t_sym),        intent(in)  :: sym
     type(t_oneD),       intent(in)  :: oneD
     logical,            intent(in)  :: l_xyav
-    complex,            intent(in)  :: qpw(stars%ng3) 
-    real,               intent(in)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) 
+    complex,            intent(in)  :: qpw(stars%ng3)
+    real,               intent(in)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     real,               intent(in)  :: rht(vacuum%nmzd,2)
     integer,            intent(in)  :: potdenType
     complex,            intent(out) :: psq(stars%ng3)
+
+    REAL, OPTIONAL, INTENT(IN)      :: rhoimag(atoms%jmtd,0:sphhar%nlhd,atoms%ntype), rho0(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    COMPLEX, OPTIONAL, INTENT(IN)   :: qpw0(stars%ng3)
+
+    TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
+
+    INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
     complex                         :: psint, sa, sl, sm
     real                            :: f, fact, fpo, gz, p, qvac, rmtl, s, fJ, gr, g
@@ -62,14 +69,23 @@ contains
     real                            :: rht1(vacuum%nmz)
     real, allocatable, dimension(:) :: il, kl
     real                            :: g0(atoms%ntype)
+    LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
+
 #ifdef CPP_MPI
     integer                         :: ierr
     complex, allocatable            :: c_b(:)
 #endif
 
+    l_dfptvgen = PRESENT(stars2)
+
     ! Calculate multipole moments
     call timestart("mpmom")
-    call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm )
+    IF (.NOT.l_dfptvgen) THEN
+        call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm )
+    ELSE
+        call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm, &
+                  & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0 )
+    END IF
     call timestop("mpmom")
 #ifdef CPP_MPI
     psq(:) = cmplx( 0.0, 0.0 )
@@ -80,7 +96,7 @@ contains
 
     ! prefactor in (A10) (Coulomb case) or (A11) (Yukawa case)
     ! nc(n) is the integer p in the paper; ncv(n) is l + p
-    ! Coulomb case: pn(l,n) = (2 * l + 2 * p + 3)!! / ( (2 * l + 1)!! * R ** (ncv(n) + 1) ), 
+    ! Coulomb case: pn(l,n) = (2 * l + 2 * p + 3)!! / ( (2 * l + 1)!! * R ** (ncv(n) + 1) ),
     ! Yukawa case: pn(l,n) = lambda ** (l + p + 1) / ( i_{l+p+1}(lambda * R) * (2 * l + 1)!! )
     ! g0 is the prefactor for the q=0 component in (A13)
     pn = 0.
@@ -137,7 +153,7 @@ contains
           ll1 = l * ( l + 1 ) + 1
           sm = 0.
           do m = -l, l
-            lm = ll1 + m 
+            lm = ll1 + m
             sm = sm + qlm(m,l,n) * conjg( pylm(lm,n) )
           end do
 60        sl = sl + pn(l,n) / ( stars%sk3(k) ** n1 ) * aj( ncvn + 1 ) * sm
@@ -147,7 +163,7 @@ contains
       psq(k) = qpw(k) + fpo * sa
     end do
     !$omp end parallel do
-    
+
     call timestop("loop")
 #ifdef CPP_MPI
     allocate( c_b(stars%ng3) )
@@ -216,7 +232,7 @@ contains
       write(oUnit, fmt=8010 ) fact * 1000
 8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
-    end if ! fmpi%irank == 0 
+    end if ! fmpi%irank == 0
 
   end subroutine psqpw
 

@@ -119,7 +119,7 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,results,td,ud,alpha_hybrid)
+      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,results,td,ud,alpha_hybrid,.FALSE.)
 
       neigBuffer = 0
       results%neig = 0
