@@ -619,6 +619,10 @@ CONTAINS
 
     SUBROUTINE sh_to_lh(sym, atoms, sphhar, jspins, rhosh, rholhreal, rholhimag)
 
+        ! WARNING: This routine will not fold back correctly for activated sym-
+        !          metry and gradients (rho in l=0 and lattice harmonics do not
+        !          allow l=1 --> gradient in l=1 is lost)
+
         TYPE(t_sym),    INTENT(IN)  :: sym
         TYPE(t_atoms),  INTENT(IN)  :: atoms
         TYPE(t_sphhar), INTENT(IN)  :: sphhar
@@ -633,28 +637,24 @@ CONTAINS
         rholhimag = 0.0
 
         DO iSpin = 1, jspins
-            !iAtom = 0
             DO iType = 1, atoms%ntype
-                !DO iEqat = 1, atoms%neq(iType)
-                    !iAtom = iAtom + 1
-                    iAtom = SUM(atoms%neq(:iType-1)) + 1
-                    ptsym = sym%ntypsy(iAtom)
-                    DO ilh = 0, sphhar%nlh(ptsym)
-                        l = sphhar%llh(iLH, ptsym)
-                        DO iMem = 1, sphhar%nmem(ilh, ptsym)
-                            m = sphhar%mlh(iMem, ilh, ptsym)
-                            ilm = l * (l+1) + m + 1
-                            DO iR = 1, atoms%jri(iType)
-                                rholhreal(iR, ilh, iType, iSpin) = &
-                              & rholhreal(iR, ilh, iType, iSpin) + &
-                              &  real(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym)))
-                                rholhimag(iR, ilh, iType, iSpin) = &
-                              & rholhimag(iR, ilh, iType, iSpin) + &
-                              & aimag(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym)))
-                            END DO
+                iAtom = SUM(atoms%neq(:iType-1)) + 1
+                ptsym = sym%ntypsy(iAtom)
+                DO ilh = 0, sphhar%nlh(ptsym)
+                    l = sphhar%llh(iLH, ptsym)
+                    DO iMem = 1, sphhar%nmem(ilh, ptsym)
+                        m = sphhar%mlh(iMem, ilh, ptsym)
+                        ilm = l * (l+1) + m + 1
+                        DO iR = 1, atoms%jri(iType)
+                            rholhreal(iR, ilh, iType, iSpin) = &
+                          & rholhreal(iR, ilh, iType, iSpin) + &
+                          &  real(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym)))
+                            rholhimag(iR, ilh, iType, iSpin) = &
+                          & rholhimag(iR, ilh, iType, iSpin) + &
+                          & aimag(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym)))
                         END DO
                     END DO
-                !END DO
+                END DO
             END DO
         END DO
 
