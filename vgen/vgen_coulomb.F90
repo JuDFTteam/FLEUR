@@ -7,13 +7,13 @@
 module m_vgen_coulomb
 
   use m_juDFT
-#ifdef CPP_MPI 
-  use mpi 
+#ifdef CPP_MPI
+  use mpi
 #endif
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,  oneD, input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results )
+             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvTotimag, dfptden0, stars2, iDtype, iDir )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -57,6 +57,10 @@ contains
     type(t_potden),     intent(inout)            :: vCoul
     type(t_results),    intent(inout), optional  :: results
 
+    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag, dfptvTotimag, dfptden0
+    TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
+    INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
+
     complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
     integer                                      :: lh, n, nzst1
@@ -65,10 +69,13 @@ contains
     real                                         :: ani, g3, z, sig1dh, vz1dh
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
+    LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
+
 #ifdef CPP_MPI
     integer:: ierr
 #endif
 
+    l_dfptvgen = PRESENT(stars2)
 
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
     vCoul%iter = den%iter
@@ -77,8 +84,14 @@ contains
 
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
-    call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
-         den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq )
+    IF (.NOT.l_dfptvgen) THEN
+        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
+            & den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq )
+    ELSE
+        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
+            & den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq,&
+            & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) )
+    END IF
     call timestop( "psqpw" )
 
 
@@ -183,6 +196,8 @@ contains
     call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
+    ! TODO: DFPT here; modify vmts for the vExt perturbation and the
+    !       second potden in --> second potential out.
     call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
                den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
     call timestop( "MT-spheres" )
@@ -190,9 +205,9 @@ contains
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return
 
     if ( fmpi%irank == 0 ) then
-      CHECK_CONTINUITY: if ( input%vchk ) then
-        call timestart( "checking" )
-        call checkDOPAll( input,  sphhar, stars, atoms, sym, vacuum, oneD, &
+      CHECK_CONTINUITY: if ( input%vchk ) then ! TODO: We could use this for DFPT as well if we
+        call timestart( "checking" )           !       passed an optional to checkDOPAll and modded
+        call checkDOPAll( input,  sphhar, stars, atoms, sym, vacuum, oneD, & ! slightly.
                           cell, vCoul, ispin )
         call timestop( "checking" )
       end if CHECK_CONTINUITY
