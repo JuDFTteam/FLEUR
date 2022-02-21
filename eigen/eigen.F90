@@ -22,7 +22,7 @@ CONTAINS
    !>@author D. Wortmann
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,&
                     enpara,nococonv,mpdata,hybdat,&
-                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig,z0)
+                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig)
 
 #include"cpp_double.h"
       USE m_types
@@ -61,7 +61,6 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)    :: v
 
       INTEGER, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: nvfull(:, :), GbasVec_eig(:, :, :, :)
-      COMPLEX, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: z0(:, :, :, :)
 
 !    EXTERNAL MPI_BCAST    !only used by band_unfolding to broadcast the gvec
 
@@ -82,7 +81,6 @@ CONTAINS
       COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),fi%kpts%nkpt,fi%input%jspins) ! needed for unfolding bandstructure fmpi case
 
       INTEGER, ALLOCATABLE :: nvBuffer(:,:), nvBufferTemp(:,:), nvfullBuffer(:,:), GbasVecBuffer(:, :, :, :)
-      COMPLEX, ALLOCATABLE :: z0Buffer(:,:,:,:)
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
@@ -138,10 +136,6 @@ CONTAINS
           GbasVec_eig = 0
           ALLOCATE(GbasVecBuffer(3, fi%input%neig, fi%kpts%nkpt, MERGE(1,fi%input%jspins,fi%noco%l_noco)))
           GbasVecBuffer = 0
-          ALLOCATE(z0(fi%input%neig, fi%input%neig, fi%kpts%nkpt, fi%input%jspins))
-          z0 = CMPLX(0.0, 0.0)
-          ALLOCATE(z0Buffer(fi%input%neig, fi%input%neig, fi%kpts%nkpt, fi%input%jspins))
-          z0Buffer = CMPLX(0.0, 0.0)
       END IF
 
       DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
@@ -201,15 +195,6 @@ CONTAINS
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
             if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
                                                    hint=errmsg, calledby="eigen.F90")
-
-            ! TODO: Should this go before or after the complex conjugation some lines below?
-            IF (PRESENT(nvfull)) THEN
-                IF (zMat%l_real) THEN
-                    z0Buffer(:lapw%nv(jsp), :lapw%nv(jsp), nk, jsp) = CMPLX(1.0,0.0)*zMat%data_r(:lapw%nv(jsp), :lapw%nv(jsp))
-                ELSE
-                    z0Buffer(:lapw%nv(jsp), :lapw%nv(jsp), nk, jsp) = zMat%data_c(:lapw%nv(jsp), :lapw%nv(jsp))
-                END IF
-            END IF
 
             ! Output results
             CALL timestart("EV output")
@@ -277,9 +262,6 @@ CONTAINS
       IF (PRESENT(nvfull)) THEN
           CALL MPI_ALLREDUCE(nvfullBuffer(:,:),nvfull(:,:),size(nvfullBuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
           CALL MPI_ALLREDUCE(GbasVecBuffer(:,:,:,:),GbasVec_eig(:,:,:,:),size(GbasVecBuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
-          !CALL MPI_ALLREDUCE(z0Buffer(:,:,:,:),z0(:,:,:,:),size(z0),MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-          ! TODO: This last broadcast is surely faulty.
-          z0(:,:,:,:) = z0Buffer(:,:,:,:)
       END IF
       CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #else
@@ -290,7 +272,6 @@ CONTAINS
       IF (PRESENT(nvfull)) THEN
           nvfull(:,:) = nvfullBuffer(:,:)
           GbasVec_eig(:,:,:,:) = GbasVecBuffer(:,:,:,:)
-          z0(:,:,:,:) = z0Buffer(:,:,:,:)
       END IF
 #endif
 
