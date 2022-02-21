@@ -20,9 +20,18 @@ CONTAINS
    !> 4. writing (saving) of eigenvectors
    !>
    !>@author D. Wortmann
+   !
+   ! Modifications done to use this with DFPT phonons:
+   ! a) We need additional MT-integrals from mt_setup that cover the potential variation V1.
+   ! b) The eigenvalues are to be evaluated for k+q, not k.
+   ! c) Additionally, load in the occupied states for k without q.
+   ! d) The work isn't done once the eigenvectors and eigenvalues are found. There is post-
+   !    processing to gain the perturbed eigenvalues and eigenvectors.
+   ! e) The latter are the actual output for the routine when used for DFPT. They are saved
+   !    the same way as the eigenvalues before, but for a shifted eig_id(?).
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,&
                     enpara,nococonv,mpdata,hybdat,&
-                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig)
+                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig,bqpt)
 
 #include"cpp_double.h"
       USE m_types
@@ -62,6 +71,8 @@ CONTAINS
 
       INTEGER, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
+      REAL, OPTIONAL, INTENT(IN) :: bqpt
+
 !    EXTERNAL MPI_BCAST    !only used by band_unfolding to broadcast the gvec
 
       ! Scalar Arguments
@@ -84,7 +95,7 @@ CONTAINS
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
-      INTEGER                   :: jsp_m, i_kpt_m, i_m
+      INTEGER                   :: jsp_m, i_kpt_m, i_m, iK
       INTEGER                   :: maxspin
 
       TYPE(t_tlmplm)            :: td
@@ -93,11 +104,23 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: zMat
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
       CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
+      TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
 
       ! Variables for HF or fi%hybinp functional calculation
       INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat
       character(len=300)        :: errmsg
       real                      :: alpha_hybrid
+
+      LOGICAL                   :: l_dfpteigen
+
+      l_dfpteigen = PRESENT(bqpt)
+
+      IF (l_dfpteigen) THEN
+          kqpts = fi%kpts
+          DO iK = 1, fi%kpts%nkpt
+              kqpts%bk(3, iK) = kqpts%bk(3, iK) + bqpt
+          END DO
+      END IF
 
       call ud%init(fi%atoms,fi%input%jspins)
       ALLOCATE(eig(fi%input%neig))
@@ -106,7 +129,11 @@ CONTAINS
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
       ! check if z-reflection trick can be used
-      l_zref=(fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
+      IF(.NOT.l_dfpteigen) THEN
+          l_zref=(fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
+      ELSE
+          l_zref=(fi%sym%zrfs.AND.(SUM(ABS(kqpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
+      END IF
       IF (fmpi%n_size > 1) l_zref = .FALSE.
 
       !IF (fmpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
@@ -142,7 +169,11 @@ CONTAINS
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)
             ! Set up lapw list
-            CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref, fmpi)
+            IF(.NOT.l_dfpteigen) THEN
+                CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref, fmpi)
+            ELSE
+                CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, l_zref, fmpi)
+            END IF
             call timestart("Setup of H&S matrices")
             CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
@@ -160,7 +191,11 @@ CONTAINS
             IF(ne_all > lapw%nmat) ne_all = lapw%nmat
 
             !Try to symmetrize matrix
-            CALL symmetrize_matrix(fmpi,fi%noco,fi%kpts,nk,hmat,smat)
+            IF(.NOT.l_dfpteigen) THEN
+                CALL symmetrize_matrix(fmpi,fi%noco,fi%kpts,nk,hmat,smat)
+            ELSE
+                CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat)
+            END IF
 
             IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                select type(smat)
@@ -195,6 +230,10 @@ CONTAINS
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
             if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
                                                    hint=errmsg, calledby="eigen.F90")
+
+            !IF (l_dfpteigen) THEN
+            !    CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat) ! Read in eigenstuff at k.
+            !END IF
 
             ! Output results
             CALL timestart("EV output")
