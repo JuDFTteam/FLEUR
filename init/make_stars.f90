@@ -42,6 +42,12 @@ CONTAINS
     TYPE(t_oneD),INTENT(inout)::oneD
     TYPE(t_noco),INTENT(in)::noco
     TYPE(t_mpi),INTENT(in)::fmpi
+
+    ! TODO: Add optional bqpt and l_dfpt. The former makes this routine build stars
+    !       around an origin vector q (0 by default) and the latter tells it to build
+    !       a modified step function for use with DFPT.
+    !       Use a dummy oneD, copied input and call the result starsq.
+
     ! Generate stars
 
     ! Dimensioning of stars
@@ -122,7 +128,7 @@ CONTAINS
        ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
 
        ! Set up pointer for backtransformation from g-vector in positive
-       ! domain of carge density fftibox into stars
+       ! domain of charge density fftibox into stars
        CALL prp_qfft(fmpi%irank==0,stars,cell,noco,input)
        CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
 
@@ -131,6 +137,7 @@ CONTAINS
     CALL stars%mpi_bc(fmpi%mpi_comm)
 
     CALL timestart("stepf")
+    ! TODO: DFPT here to alternatively call stepf derivative.
     CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi)
     CALL mpi_bc(stars%ustep,0,fmpi%mpi_comm)
     CALL mpi_bc(stars%ufft,0,fmpi%mpi_comm)
