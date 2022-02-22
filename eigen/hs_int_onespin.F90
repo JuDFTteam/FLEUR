@@ -6,7 +6,7 @@
 
 MODULE m_hs_int_onespin
 CONTAINS
-    SUBROUTINE hs_int_onespin(input, fmpi, lapw1, lapw2, stars, ispin, jspin, cell, vpw, hmat, smat, l_dfpths)
+    SUBROUTINE hs_int_onespin(input, fmpi, gvec1, gvec2, bkpt1, bkpt2, nv1, nv2, rk1, rk2, stars, ispin, jspin, cell, vpw, hmat, smat, l_dfpths)
 
         USE m_types
 
@@ -15,7 +15,9 @@ CONTAINS
         TYPE(t_input),INTENT(IN)      :: input
         TYPE(t_stars),INTENT(IN)      :: stars
         TYPE(t_cell),INTENT(IN)       :: cell
-        TYPE(t_lapw),INTENT(IN)       :: lapw1, lapw2
+        INTEGER ,INTENT(IN)           :: gvec1(:, :), gvec2(:, :)
+        INTEGER, INTENT(IN)           :: nv1, nv2
+        REAL, INTENT(IN)              :: bkpt1(3), bkpt2(3), rk1(:), rk2(:)
         TYPE(t_mpi),INTENT(IN)        :: fmpi
 
         INTEGER,INTENT(IN)            :: ispin, jspin
@@ -29,12 +31,17 @@ CONTAINS
         COMPLEX :: th,ts,phase
         REAL    :: b1(3),b2(3),r2
 
-        DO  i = fmpi%n_rank+1,lapw1%nv(ispin),fmpi%n_size
+        !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
+        !$OMP SHARED(fmpi,stars,input,cell,vpw,gvec1,gvec2,bkpt1,bkpt2,rk1,rk2) &
+        !$OMP SHARED(nv1,nv2,ispin,jspin,l_dfpths)&
+        !$OMP SHARED(hmat,smat)&
+        !$OMP PRIVATE(ii,i0,i,j,jmax,in,phase,b1,b2,r2,th,ts)
+        DO  i = fmpi%n_rank+1,nv1,fmpi%n_size
            i0=(i-1)/fmpi%n_size+1
            !--->    loop over (k+g)
-           jmax = MERGE(lapw2%nv(jspin),MIN(i,lapw2%nv(jspin)),l_dfpths)
+           jmax = MERGE(nv2,MIN(i,nv2),l_dfpths)
            DO  j = 1, jmax
-              ii = lapw1%gvec(:,i,ispin) - lapw2%gvec(:,j,jspin)
+              ii = gvec1(:,i) - gvec2(:,j)
               IF (ispin==1.AND.jspin==2.AND..NOT.l_dfpths) THEN
                  ii=-1*ii
                  in = stars%ig(ii(1),ii(2),ii(3))
@@ -54,12 +61,12 @@ CONTAINS
                  phase = stars%rgphs(ii(1),ii(2),ii(3))
                  ts = phase*stars%ustep(in)
                  IF (input%l_useapw.OR.l_dfpths) THEN
-                    b1=lapw1%bkpt+lapw1%gvec(:,i,ispin)
-                    b2=lapw2%bkpt+lapw2%gvec(:,j,jspin)
+                    b1=bkpt1+gvec1(:,i)
+                    b2=bkpt2+gvec2(:,j)
                     r2 = DOT_PRODUCT(MATMUL(b2,cell%bbmat),b1)
                     th = phase*(0.5*r2*stars%ustep(in)+vpw(in,ispin))
                  ELSE
-                    th = phase* (0.25* (lapw1%rk(i,ispin)**2+lapw2%rk(j,jspin)**2)*stars%ustep(in) + vpw(in,ispin))
+                    th = phase* (0.25* (rk1(i)**2+rk2(j)**2)*stars%ustep(in) + vpw(in,ispin))
                  ENDIF
               ENDIF
               !--->    determine matrix element and store
@@ -72,5 +79,6 @@ CONTAINS
               endif
            ENDDO
         ENDDO
+        !$OMP END PARALLEL DO
     END SUBROUTINE hs_int_onespin
 END MODULE m_hs_int_onespin

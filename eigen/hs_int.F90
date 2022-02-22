@@ -35,12 +35,13 @@ CONTAINS
        DO jspin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
           jjspin=MIN(jspin,SIZE(smat,1))
 
-          !$OMP PARALLEL !SCHEDULE(dynamic) DEFAULT(none) &
+          !!$OMP PARALLEL !SCHEDULE(dynamic) DEFAULT(none) &
           !!$OMP SHARED(fmpi,lapw,stars,input,cell,vpw) &
           !!$OMP SHARED(jjspin,iispin,ispin,jspin)&
           !!$OMP SHARED(hmat,smat)&
           !!$OMP PRIVATE(ii,i0,i,j,in,phase,b1,b2,r2,th,ts)
-          CALL hs_int_onespin(input, fmpi, lapw, lapw, stars, ispin, jspin, cell, vpw, hmat(jjspin,iispin), smat(jjspin,iispin), .FALSE.)
+          CALL hs_int_onespin(input, fmpi, lapw%gvec(:,:,ispin), lapw%gvec(:,:,jspin), lapw%bkpt, lapw%bkpt, lapw%nv(ispin), lapw%nv(jspin), &
+                            & lapw%rk(:,ispin), lapw%rk(:,jspin), stars, ispin, jspin, cell, vpw, hmat(jjspin,iispin), smat(jjspin,iispin), .FALSE.)
 !          DO  i = fmpi%n_rank+1,lapw%nv(ispin),fmpi%n_size
 !             i0=(i-1)/fmpi%n_size+1
 !             !--->    loop over (k+g)
@@ -83,7 +84,7 @@ CONTAINS
 !                endif
 !             ENDDO
 !          ENDDO
-          !$OMP END PARALLEL
+          !!$OMP END PARALLEL
        ENDDO
     ENDDO
   END SUBROUTINE hs_int
