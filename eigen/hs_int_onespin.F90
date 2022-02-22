@@ -6,7 +6,7 @@
 
 MODULE m_hs_int_onespin
 CONTAINS
-    SUBROUTINE hs_int_onespin(input, fmpi, lapw1, lapw2, stars, ispin, jspin, iispin, jjspin, cell, vpw, hmat, smat, l_dfpths)
+    SUBROUTINE hs_int_onespin(input, fmpi, lapw1, lapw2, stars, ispin, jspin, cell, vpw, hmat, smat, l_dfpths)
 
         USE m_types
 
@@ -18,9 +18,9 @@ CONTAINS
         TYPE(t_lapw),INTENT(IN)       :: lapw1, lapw2
         TYPE(t_mpi),INTENT(IN)        :: fmpi
 
-        INTEGER,INTENT(IN)            :: ispin, jspin, iispin, jjspin
+        INTEGER,INTENT(IN)            :: ispin, jspin
         COMPLEX,INTENT(IN)            :: vpw(:,:)
-        CLASS(t_mat),INTENT(INOUT)     :: hmat(:,:), smat(:,:)
+        CLASS(t_mat),INTENT(INOUT)     :: hmat, smat
 
         LOGICAL, INTENT(IN) :: l_dfpths
 
@@ -63,12 +63,12 @@ CONTAINS
                  ENDIF
               ENDIF
               !--->    determine matrix element and store
-              IF (hmat(1,1)%l_real) THEN
-                 hmat(jjspin,iispin)%data_r(j,i0) = REAL(th)
-                 smat(jjspin,iispin)%data_r(j,i0) = REAL(ts)
+              IF (hmat%l_real) THEN
+                 hmat%data_r(j,i0) = REAL(th)
+                 smat%data_r(j,i0) = REAL(ts)
               else
-                 hmat(jjspin,iispin)%data_c(j,i0) = th
-                 smat(jjspin,iispin)%data_c(j,i0) = ts
+                 hmat%data_c(j,i0) = th
+                 smat%data_c(j,i0) = ts
               endif
            ENDDO
         ENDDO

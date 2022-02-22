@@ -40,7 +40,7 @@ CONTAINS
           !!$OMP SHARED(jjspin,iispin,ispin,jspin)&
           !!$OMP SHARED(hmat,smat)&
           !!$OMP PRIVATE(ii,i0,i,j,in,phase,b1,b2,r2,th,ts)
-          CALL hs_int_onespin(input, fmpi, lapw, lapw, stars, ispin, jspin, iispin, jjspin, cell, vpw, hmat, smat, .FALSE.)
+          CALL hs_int_onespin(input, fmpi, lapw, lapw, stars, ispin, jspin, cell, vpw, hmat(jjspin,iispin), smat(jjspin,iispin), .FALSE.)
 !          DO  i = fmpi%n_rank+1,lapw%nv(ispin),fmpi%n_size
 !             i0=(i-1)/fmpi%n_size+1
 !             !--->    loop over (k+g)
