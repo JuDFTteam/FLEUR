@@ -72,6 +72,8 @@ CONTAINS
       INTEGER, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
       REAL, OPTIONAL, INTENT(IN) :: bqpt
+      ! TODO: Plant here some more optionals for DFPT, that are *exclusively*
+      !       passed to dfpt-specific subroutines.
 
 !    EXTERNAL MPI_BCAST    !only used by band_unfolding to broadcast the gvec
 
@@ -115,8 +117,9 @@ CONTAINS
 
       l_dfpteigen = PRESENT(bqpt)
 
+      kqpts = fi%kpts
+      ! Modify this from kpts only in DFPT case.
       IF (l_dfpteigen) THEN
-          kqpts = fi%kpts
           DO iK = 1, fi%kpts%nkpt
               kqpts%bk(3, iK) = kqpts%bk(3, iK) + bqpt
           END DO
@@ -129,11 +132,7 @@ CONTAINS
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
       ! check if z-reflection trick can be used
-      IF(.NOT.l_dfpteigen) THEN
-          l_zref=(fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
-      ELSE
-          l_zref=(fi%sym%zrfs.AND.(SUM(ABS(kqpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
-      END IF
+      l_zref=(fi%sym%zrfs.AND.(SUM(ABS(kqpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
       IF (fmpi%n_size > 1) l_zref = .FALSE.
 
       !IF (fmpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
@@ -145,6 +144,10 @@ CONTAINS
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
       CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,results,td,ud,alpha_hybrid,.FALSE.)
+      ! Get matrix elements of perturbed potential in DFPT case.
+!      IF (l_dfpteigen) THEN
+!          CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v1,vx,fmpi,results,tdV1,ud,alpha_hybrid,.TRUE.)
+!      END IF
 
       neigBuffer = 0
       results%neig = 0
@@ -169,11 +172,8 @@ CONTAINS
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)
             ! Set up lapw list
-            IF(.NOT.l_dfpteigen) THEN
-                CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref, fmpi)
-            ELSE
-                CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, l_zref, fmpi)
-            END IF
+            CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, l_zref, fmpi)
+
             call timestart("Setup of H&S matrices")
             CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
@@ -191,11 +191,7 @@ CONTAINS
             IF(ne_all > lapw%nmat) ne_all = lapw%nmat
 
             !Try to symmetrize matrix
-            IF(.NOT.l_dfpteigen) THEN
-                CALL symmetrize_matrix(fmpi,fi%noco,fi%kpts,nk,hmat,smat)
-            ELSE
-                CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat)
-            END IF
+            CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat)
 
             IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                select type(smat)
@@ -258,12 +254,20 @@ CONTAINS
 #else
                 n_rank = 0; n_size=1;
 #endif
-                CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
-                           eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
+                !IF (.NOT.l_dfpteigen) THEN
+                    CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
+                               eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
+                !ELSE
+                !    CALL dfpt_eigen()
+                !END IF
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
-                if (fmpi%pe_diag) CALL write_eig(eig_id, nk,jsp,ne_found,&
-                           n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
+                !IF (.NOT.l_dfpteigen) THEN
+                    if (fmpi%pe_diag) CALL write_eig(eig_id, nk,jsp,ne_found,&
+                                  n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
+                !ELSE
+                !    if (fmpi%pe_diag) CALL dfpt_eigen()
+                !END IF
             ENDIF
             neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
