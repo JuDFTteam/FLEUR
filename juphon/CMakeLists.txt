@@ -22,4 +22,5 @@ juphon/ylm4_old.f90
 juphon/dfpt_vgen.F90
 juphon/dfpt_vgen_coulomb.F90
 juphon/dfpt_vgen_xcpot.F90
+juphon/invert_HepsS.F90
 )
