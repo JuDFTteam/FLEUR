@@ -28,10 +28,10 @@ CONTAINS
    ! d) The work isn't done once the eigenvectors and eigenvalues are found. There is post-
    !    processing to gain the perturbed eigenvalues and eigenvectors.
    ! e) The latter are the actual output for the routine when used for DFPT. They are saved
-   !    the same way as the eigenvalues before, but for a shifted eig_id(?).
+   !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,&
                     enpara,nococonv,mpdata,hybdat,&
-                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig,bqpt)
+                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,starsq,v1real,v1imag)
 
 #include"cpp_double.h"
       USE m_types
@@ -69,23 +69,25 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)   :: vx
       TYPE(t_potden),INTENT(IN)    :: v
 
-      INTEGER, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: nvfull(:, :), GbasVec_eig(:, :, :, :)
-
-      REAL, OPTIONAL, INTENT(IN) :: bqpt
-      ! TODO: Plant here some more optionals for DFPT, that are *exclusively*
-      !       passed to dfpt-specific subroutines.
-
 !    EXTERNAL MPI_BCAST    !only used by band_unfolding to broadcast the gvec
 
       ! Scalar Arguments
       INTEGER,INTENT(IN)    :: iter
       INTEGER,INTENT(IN)    :: eig_id
 
+      INTEGER, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: nvfull(:, :), GbasVec_eig(:, :, :, :)
+
+      REAL,    OPTIONAL, INTENT(IN) :: bqpt
+      INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eig_id
+
+      TYPE(t_stars),  OPTIONAL, INTENT(IN) :: starsq
+      TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1real, v1imag
+
       ! Local Scalars
       INTEGER jsp,nk,nred,ne_all,ne_found,neigd2
       INTEGER ne, nk_i,n_size,n_rank
       INTEGER isp,i,j,err
-      LOGICAL l_wu,l_file,l_real,l_zref
+      LOGICAL l_real,l_zref
       INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr
@@ -185,7 +187,6 @@ CONTAINS
                 GbasVecBuffer(:, :lapw%nv(jsp), nk, jsp) = lapw%gvec(:, :lapw%nv(jsp), jsp)
             END IF
 
-            l_wu=.FALSE.
             ne_all=fi%input%neig
             IF(ne_all < 0) ne_all = lapw%nmat
             IF(ne_all > lapw%nmat) ne_all = lapw%nmat
