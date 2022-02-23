@@ -28,7 +28,7 @@ CONTAINS
       LOGICAL, INTENT(IN), OPTIONAL :: scaled ! < determines if coefficients are scaled by stars%nstr
 
       TYPE(t_fftgrid) :: fftgrid
-      call fftgrid%init((/stars%mx1,stars%mx2,stars%mx3/))
+      call fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
 
       IF (isn > 0) THEN
           call fftgrid%putFieldOnGrid(stars,fg3)
@@ -44,10 +44,9 @@ CONTAINS
         bfft = aimag(fftgrid%grid)
       else
          call fftgrid%takeFieldFromGrid(stars,fg3)
+         !Scaling by stars%nstr is already done in previous call
          IF (PRESENT(scaled)) THEN
-            IF (scaled) fg3 = fg3/stars%nstr
-         ELSE
-            fg3 = fg3/stars%nstr
+            IF (.not.scaled) fg3 = fg3*stars%nstr
          ENDIF
       ENDIF   
 

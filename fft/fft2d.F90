@@ -50,11 +50,13 @@ CONTAINS
        bfft2=0.0
        IF (PRESENT(gfxy)) THEN
           DO i=0,(2*stars%mx1+1)* (2*stars%mx2+1)-1
+             if (stars%igfft2(i,1)==0) cycle
              afft2(stars%igfft2(i,2))=REAL(fg2(stars%igfft2(i,1))*stars%pgfft2(i))*gfxy(i)
              bfft2(stars%igfft2(i,2))=AIMAG(fg2(stars%igfft2(i,1))*stars%pgfft2(i))*gfxy(i)
           ENDDO
        ELSE
           DO i=0,(2*stars%mx1+1)* (2*stars%mx2+1)-1
+            if (stars%igfft2(i,1)==0) cycle
              afft2(stars%igfft2(i,2))=REAL(fg2(stars%igfft2(i,1))*stars%pgfft2(i))
              bfft2(stars%igfft2(i,2))=AIMAG(fg2(stars%igfft2(i,1))*stars%pgfft2(i))
           ENDDO
@@ -75,6 +77,7 @@ CONTAINS
        ENDDO
        scale=1.0/ifftd2
        DO i=0,(2*stars%mx1+1)* (2*stars%mx2+1)-1
+          if (stars%igfft2(i,1)==0) cycle
           fg2(stars%igfft2(i,1))=fg2(stars%igfft2(i,1))+ CONJG( stars%pgfft2(i) ) * &
                &                 CMPLX(afft2(stars%igfft2(i,2)),bfft2(stars%igfft2(i,2)))
        ENDDO

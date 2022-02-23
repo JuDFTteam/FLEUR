@@ -28,10 +28,8 @@ SUBROUTINE convol(stars, fg3, ag3)
          COMPLEX, INTENT(INOUT)         :: fg3(:)
         
          TYPE(t_fftgrid) :: fftgrid
-         INTEGER         :: i
-
-
-         call fftgrid%init((/stars%mx1,stars%mx2,stars%mx3/))
+         
+         call fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
 
          if (size(fftgrid%grid).ne.size(stars%ufft)) call judft_error("Bug in t_stars%convol")
          if (present(ag3)) THEN
@@ -42,9 +40,8 @@ SUBROUTINE convol(stars, fg3, ag3)
          endif
          call fftgrid%perform_fft(forward=.false.)
       
-         DO i = 1, size(stars%ufft)
-            fftgrid%grid(i) = fftgrid%grid(i)*stars%ufft(i-1)
-         ENDDO
+         fftgrid%grid = fftgrid%grid*stars%ufft
+         
          call fftgrid%perform_fft(forward=.true.)
          call fftgrid%takeFieldFromGrid(stars,fg3)
          fg3 = fg3*stars%nstr

@@ -24,7 +24,6 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     CLASS(t_xcpot),INTENT(IN),OPTIONAL :: xcpot
     
-    logical :: dograds
       !---> set up pointer for backtransformation of from g-vector in
       !     positive domain of xc density fftbox into stars.
       !     also the x,y,z components of the g-vectors are set up to calculate
@@ -32,13 +31,18 @@ CONTAINS
       !     in principle this can also be done in main program once.
       !     it is done here to save memory.
 
-    dograds=.false.
     if (present(xcpot)) THEN
       gmax=xcpot%gmaxxc
+      if (xcpot%needs_grad().and.gmax>0.0) then
+         call fftgrid%init(cell,sym,gmax)
+      else  
+         call fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
+         gmax=stars%gmax
+      endif   
     else
       gmax=stars%gmax
-    endif    
-    call fftgrid%init(cell,sym,gmax)
+      call fftgrid%init(cell,sym,gmax)
+   endif    
     griddim=size(fftgrid%grid)
 
   END SUBROUTINE init_pw_grid
@@ -165,6 +169,9 @@ CONTAINS
        ENDIF
     ENDIF
     IF (dograds) THEN
+      IF (PRESENT(xcpot)) THEN
+         CALL xcpot%alloc_gradients(griddim,jspins,grad)
+      END IF
 
     
     ! in non-collinear calculations the derivatives of |m| are calculated in real space.
@@ -278,10 +285,7 @@ CONTAINS
 
     
 
-       IF (PRESENT(xcpot)) THEN
-          CALL xcpot%alloc_gradients(griddim,jspins,grad)
-       END IF
-
+       
        !
        !     calculate the quantities such as abs(grad(rho)),.. used in
        !     evaluating the gradient contributions to potential and energy.
@@ -333,7 +337,14 @@ CONTAINS
        
        !----> add to warped coulomb potential
        IF (present(v_out_pw_w)) THEN
+         if (size(fftgrid%grid)==size(stars%ufft)) THEN
+            fftgrid%grid=v_in(0:,js)*stars%ufft
+            call fftgrid%perform_fft(forward=.true.)
+            call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
+            fg3 = fg3*stars%nstr
+         else   
           call convol(stars,fg3)
+         ENDIF 
           v_out_pw_w(:,js) = v_out_pw_w(:,js) + fg3
        ENDIF
     END DO
