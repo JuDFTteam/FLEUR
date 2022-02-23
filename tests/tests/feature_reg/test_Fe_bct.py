@@ -66,7 +66,7 @@ def test_Fe_bct_LOXML(execute_fleur, grep_number, grep_exists):
     assert abs(fermi - 0.341) <= 0.01
     assert abs(tenergy - -2545.5968) <= 0.01
     assert abs(dist - 1.593616) <= 0.3
-    assert abs(mm - 1.90) <= 0.01
+    assert abs(mm - 1.888) <= 0.01
 
 @pytest.mark.serial
 @pytest.mark.bulk
