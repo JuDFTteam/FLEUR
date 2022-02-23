@@ -20,9 +20,10 @@ SUBROUTINE convol(stars, fg3, ag3)
    !************************************************************
          USE m_types_fftGrid
          USE m_juDFT
+         USE m_types_stars
          IMPLICIT NONE
    
-         CLASS(t_stars), INTENT(IN)     :: stars
+         TYPE(t_stars), INTENT(IN)     :: stars
    
          COMPLEX, INTENT(IN),OPTIONAL   :: ag3(:)
          COMPLEX, INTENT(INOUT)         :: fg3(:)
