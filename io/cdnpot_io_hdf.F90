@@ -380,7 +380,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_integer2(igfftSetID,(/1,1/),dimsInt(:2),stars%igfft(0:,:))
       CALL h5dclose_f(igfftSetID, hdfError)
 
-      dims(:2)=(/size(igfft2,1),2/)
+      dims(:2)=(/size(stars%igfft2,1),2/)
       dimsInt=dims
       CALL h5screate_simple_f(2,dims(:2),igfft2SpaceID,hdfError)
       CALL h5dcreate_f(groupID, "igfft2", H5T_NATIVE_INTEGER, igfft2SpaceID, igfft2SetID, hdfError)
@@ -388,7 +388,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_integer2(igfft2SetID,(/1,1/),dimsInt(:2),stars%igfft2(0:,:))
       CALL h5dclose_f(igfft2SetID, hdfError)
 
-      dims(:2)=(/2,size(pgfft)/)
+      dims(:2)=(/2,size(stars%pgfft)/)
       dimsInt=dims
       CALL h5screate_simple_f(2,dims(:2),pgfftSpaceID,hdfError)
       CALL h5dcreate_f(groupID, "pgfft", H5T_NATIVE_DOUBLE, pgfftSpaceID, pgfftSetID, hdfError)
