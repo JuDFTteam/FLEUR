@@ -31,7 +31,7 @@ def test_Fe_bct_LibXC(execute_fleur, grep_number, grep_exists):
     assert abs(qfix - 1.0) <= 0.00001
     assert abs(fermi - 0.338) <= 0.005
     assert abs(tenergy - -2545.600) <= 0.005
-    assert abs(dist - 12.700) <= 0.09
+    assert abs(dist - 12.799) <= 0.09
     assert abs(mm - 1.96) <= 0.03
 
 @pytest.mark.serial

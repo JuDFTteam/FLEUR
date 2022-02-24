@@ -18,16 +18,16 @@ def test_MnHybridNoinv(execute_fleur, check_value_outfile, fleur_binary):
     
     assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-2317.1670995071, -2317.1757499769], 0.000001)
     exp_mm1 = 32*[None]
-    exp_mm1[-1] = 2.47449
-    assert check_value_outfile(res_files['out'], "--> mm       1", " ", exp_mm1, 0.00001)
+    exp_mm1[-1] = 2.4744
+    assert check_value_outfile(res_files['out'], "--> mm       1", " ", exp_mm1, 0.0001)
  
     exp_mm2 = 32*[None]
-    exp_mm2[-1] =-2.47449
-    assert check_value_outfile(res_files['out'], "--> mm       2", " ", exp_mm2, 0.00001)
+    exp_mm2[-1] =-2.4744
+    assert check_value_outfile(res_files['out'], "--> mm       2", " ", exp_mm2, 0.0001)
  
     # only check the last bandgap
     exp_bandgap = 32 * [None]
-    exp_bandgap[-1] = 0.087531
+    exp_bandgap[-1] = 0.087507
     assert check_value_outfile(res_files['out'], "bandgap                     :", "htr", exp_bandgap, 0.0001)
 
 @pytest.mark.hybrid
@@ -49,14 +49,14 @@ def test_MnHybridNoinv_eigpar(execute_fleur, check_value_outfile, fleur_binary):
     
     assert check_value_outfile(res_files['out'], "HF total energy=", "htr", [-2317.1670995071, -2317.1757499769], 0.000001)
     exp_mm1 = 32*[None]
-    exp_mm1[-1] = 2.47449
-    assert check_value_outfile(res_files['out'], "--> mm       1", " ", exp_mm1, 0.00001)
+    exp_mm1[-1] = 2.4744
+    assert check_value_outfile(res_files['out'], "--> mm       1", " ", exp_mm1, 0.0001)
 
     exp_mm2 = 32*[None]
-    exp_mm2[-1] =-2.47449
-    assert check_value_outfile(res_files['out'], "--> mm       2", " ", exp_mm2, 0.00001)
+    exp_mm2[-1] =-2.4744
+    assert check_value_outfile(res_files['out'], "--> mm       2", " ", exp_mm2, 0.0001)
 
     # only check the last bandgap
     exp_bandgap = 32 * [None]
-    exp_bandgap[-1] = 0.087531
+    exp_bandgap[-1] = 0.087507
     assert check_value_outfile(res_files['out'], "bandgap                     :", "htr", exp_bandgap, 0.0001)
