@@ -43,7 +43,7 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['vTot_f.xsf'], "1.43300")
     assert grep_exists(res_files['vTot_f.xsf'], "4035743.16")
     assert grep_exists(res_files['vTot_f.xsf'], "10.44663")
-    assert grep_exists(res_files['vTot_f.xsf'], "4.62363")
+    assert grep_exists(res_files['vTot_f.xsf'], "4.62362")
     
     # 3D Vectorplot section
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.86600")
@@ -118,8 +118,7 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn_A_vec_plotOnlyMT.xsf'], r"0\.00000000.*0\.00000000.*0\.00000000.*0\.00000000")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444")
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.0000057472")
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.4258351")
+    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425765")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555")
 
     # Stage 4
