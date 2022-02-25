@@ -56,7 +56,7 @@ def test_GreensFunction_SphavgFilm(execute_fleur, grep_number, grep_exists):
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ":")
 
     assert abs(spinup_trace - 4.8586) <= 0.0005
-    assert abs(spindown_trace - 2.6652) <= 0.0005
+    assert abs(spindown_trace - 2.6644) <= 0.0005
 
 
 @pytest.mark.serial
@@ -344,13 +344,13 @@ def test_GreensFunction_mperp_xdir(execute_fleur, grep_number, grep_exists):
     spinoffdy_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(y\):", ":")
 
     assert abs(spinup_trace_atom1 - 4.5242) <= 0.0005
-    assert abs(spindn_trace_atom1 - 2.3679) <= 0.0005
-    assert abs(spinoffdx_trace_atom1 - 0.5994) <= 0.0005
+    assert abs(spindn_trace_atom1 - 2.3726) <= 0.0005
+    assert abs(spinoffdx_trace_atom1 - 0.601) <= 0.0005
     assert abs(spinoffdy_trace_atom1 - 0.0000) <= 0.0005
 
-    assert abs(spinup_trace_atom2 - 4.5214) <= 0.0005
-    assert abs(spindn_trace_atom2 - 2.38) <= 0.0005
-    assert abs(spinoffdx_trace_atom2 + 0.6027) <= 0.0005
+    assert abs(spinup_trace_atom2 - 4.5242) <= 0.0005
+    assert abs(spindn_trace_atom2 - 2.3726) <= 0.0005
+    assert abs(spinoffdx_trace_atom2 + 0.601) <= 0.0005
     assert abs(spinoffdy_trace_atom2 - 0.0000) <= 0.0005
 
 
@@ -389,13 +389,13 @@ def test_GreensFunction_mperp_ydir(execute_fleur, grep_number, grep_exists):
     spinoffdy_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(y\):", ":")
 
     assert abs(spinup_trace_atom1 - 4.5242) <= 0.0005
-    assert abs(spindn_trace_atom1 - 2.3679) <= 0.0005
+    assert abs(spindn_trace_atom1 - 2.3726) <= 0.0005
     assert abs(spinoffdx_trace_atom1 - 0.0000) <= 0.0005
-    assert abs(spinoffdy_trace_atom1 + 0.5994) <= 0.0005
+    assert abs(spinoffdy_trace_atom1 + 0.601) <= 0.0005
 
-    assert abs(spinup_trace_atom2 - 4.5214) <= 0.0005
-    assert abs(spindn_trace_atom2 - 2.38) <= 0.0005
-    assert abs(spinoffdx_trace_atom2 + 0.6027) <= 0.0005
+    assert abs(spinup_trace_atom2 - 4.5242) <= 0.0005
+    assert abs(spindn_trace_atom2 - 2.3726) <= 0.0005
+    assert abs(spinoffdx_trace_atom2 + 0.601) <= 0.0005
     assert abs(spinoffdy_trace_atom2 - 0.0000) <= 0.0005
 
 

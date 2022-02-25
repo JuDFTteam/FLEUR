@@ -59,8 +59,10 @@ CONTAINS
       endif
 
       call stepf%init(fi%cell, fi%sym, gcutoff)
-      call stepf%putFieldOnGrid(stars, stars%ustep)
-
+      block
+         type(t_cell)         :: cell !unused 
+         call stepf%putfieldOnGrid(stars, stars%ustep)
+      end block
       call fft%init(stepf%dimensions, .false., batch_size=1, l_gpu=.True.)
       !$acc data copyin(stepf, stepf%grid, stepf%gridlength)
          ! after we transform psi_k*stepf*psi_kqpt back  to 
@@ -110,7 +112,7 @@ CONTAINS
                !$acc end kernels
             !$acc end data
             call wavef2rs_fft%free()
-            call grid%free()
+            !call grid%free()
 
             call timestart("Big OMP loop")
 #ifndef _OPENACC
@@ -187,7 +189,7 @@ CONTAINS
 #endif
             !$acc end data 
             call fft%free()
-            call grid%free()
+            !call grid%free()
             call wavef2rs_fft%free()
          !$acc end data ! psi_kqpt
          deallocate (prod, psi_k)
@@ -196,7 +198,7 @@ CONTAINS
 #ifndef _OPENACC
       !$OMP END PARALLEL
 #endif
-      call stepf%free()
+      !call stepf%free() 
 
       call timestop("Big OMP loop")
       deallocate(psi_kqpt)

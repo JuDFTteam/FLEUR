@@ -297,12 +297,15 @@ module m_jpDens1stVar
     integer :: iG0
 
 
+    INTEGER :: stars_kq1_fft,stars_kq2_fft,stars_kq3_fft
+
+
     ! setup FFT box dimensions
-    ifftq1  = stars%kq1_fft
-    ifftq2  = stars%kq1_fft * stars%kq2_fft
-    ifftq3  = stars%kq1_fft * stars%kq2_fft * stars%kq3_fft
-    ifftq3d = stars%kq1_fft * stars%kq2_fft * stars%kq3_fft
-    ifftq2d = stars%kq1_fft * stars%kq2_fft
+    ifftq1  = stars_kq1_fft
+    ifftq2  = stars_kq1_fft * stars_kq2_fft
+    ifftq3  = stars_kq1_fft * stars_kq2_fft * stars_kq3_fft
+    ifftq3d = stars_kq1_fft * stars_kq2_fft * stars_kq3_fft
+    ifftq2d = stars_kq1_fft * stars_kq2_fft
 
     ! Prefactor
     allocate( prf(nobd) )
@@ -325,9 +328,9 @@ module m_jpDens1stVar
       ! 0 <= iG1 <= 2 * k1 - 1 = kq1_fft - 1
       ! 0 <= iG2 <= 2 * k2 - 1 = kq2_fft - 1
       ! 0 <= iG3 <= 2 * k3 - 1 = kq3_fft - 1
-      iG1 = iG1 + stars%kq1_fft * ist( isign( 1, iG1) )
-      iG2 = iG2 + stars%kq2_fft * ist( isign( 1, iG2) )
-      iG3 = iG3 + stars%kq3_fft * ist( isign( 1, iG3) )
+      iG1 = iG1 + stars_kq1_fft * ist( isign( 1, iG1) )
+      iG2 = iG2 + stars_kq2_fft * ist( isign( 1, iG2) )
+      iG3 = iG3 + stars_kq3_fft * ist( isign( 1, iG3) )
 
       iv1d(iG) = iG3 * ifftq2 + iG2 * ifftq1 + iG1
     end do
@@ -336,7 +339,7 @@ module m_jpDens1stVar
     !allocate( igfft(ngdp2km) )
     ! Probably it might be a good idea to define iggft outside because it is required several times!
     allocate( igfft(ngdp2km) )
-    nfft = [stars%kq1_fft, stars%kq2_fft, stars%kq3_fft]
+    nfft = [stars_kq1_fft, stars_kq2_fft, stars_kq3_fft]
     gabs = 0
     igfft = 0
     do iG = 1, ngdp2km
@@ -357,9 +360,9 @@ module m_jpDens1stVar
 
 
     !kqi_fft are the dimensions of a fft box which are suitable for a 2 kmax density
-    allocate( z0fft( 0 : stars%kq1_fft * stars%kq2_fft * stars%kq3_fft - 1 ), &
-              z1fft( 0 : stars%kq1_fft * stars%kq2_fft * stars%kq3_fft - 1 ), &
-              rho1g( 0 : stars%kq1_fft * stars%kq2_fft * stars%kq3_fft - 1 ) ) ! rho1 on fft Grid
+    allocate( z0fft( 0 : stars_kq1_fft * stars_kq2_fft * stars_kq3_fft - 1 ), &
+              z1fft( 0 : stars_kq1_fft * stars_kq2_fft * stars_kq3_fft - 1 ), &
+              rho1g( 0 : stars_kq1_fft * stars_kq2_fft * stars_kq3_fft - 1 ) ) ! rho1 on fft Grid
 
     ! initialize first variation of MT charge density on FFT grid
     rho1g = cmplx( 0.0, 0.0 )
@@ -378,9 +381,9 @@ module m_jpDens1stVar
       ! for rfft
       forw = .false. ! is equivalent to isn = 1
       ! FFT transform
-      length_zfft(1) = stars%kq1_fft
-      length_zfft(2) = stars%kq2_fft
-      length_zfft(3) = stars%kq3_fft
+      length_zfft(1) = stars_kq1_fft
+      length_zfft(2) = stars_kq2_fft
+      length_zfft(3) = stars_kq3_fft
 
       call fft_interface(3, length_zfft, z0fft, forw)
       call fft_interface(3, length_zfft, z1fft, forw)

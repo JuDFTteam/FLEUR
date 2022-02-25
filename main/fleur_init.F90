@@ -32,7 +32,6 @@ CONTAINS
       USE m_writeOutHeader
       !USE m_fleur_init_old
       USE m_types_xcpot_inbuild
-      USE m_prpxcfft
       USE m_make_stars
       USE m_make_sphhar
       USE m_convn
@@ -175,7 +174,6 @@ CONTAINS
       CALL fi%kpts%initTetra(fi%input, fi%cell, fi%sym, fi%noco%l_soc .OR. fi%noco%l_ss)
       IF (fmpi%irank == 0) CALL fi%gfinp%init(fi%atoms, fi%sym, fi%noco, fi%cell, fi%input)
       CALL fi%gfinp%mpi_bc(fmpi%mpi_comm) !THis has to be rebroadcasted because there could be new gf elements after init_gfinp
-      CALL prp_xcfft(fmpi, stars, fi%input, fi%cell, xcpot)
       CALL convn(fmpi%irank == 0, fi%atoms, stars)
       IF (fmpi%irank == 0) CALL e_field(fi%atoms, stars, fi%sym, fi%vacuum, fi%cell, fi%input, fi%field%efield)
       IF (fmpi%isize > 1) CALL fi%field%mpi_bc(fmpi%mpi_comm, 0)

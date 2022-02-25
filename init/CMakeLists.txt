@@ -6,7 +6,7 @@ init/lhcal.f
 init/local_sym.f
 #init/mod_symdata.f
 init/od_chisym.f
-init/prp_xcfft_box.f
+#init/prp_xcfft_box.f
 init/ptsym.f
 init/strgn_dim.F
 init/ss_sym.f
@@ -28,8 +28,8 @@ init/boxdim.f90
 init/mapatom.F90
 init/od_mapatom.F90
 init/od_strgn1.f90
-init/prp_qfft.f90
-init/prp_xcfft.f90
+#init/prp_qfft.f90
+#init/prp_xcfft.f90
 init/spgrot.f90
 init/stepf.F90
 init/strgn.f90

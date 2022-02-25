@@ -50,4 +50,4 @@ def test_PTOXML(execute_fleur, grep_number, grep_exists):
     tenergy = grep_number(res_files['out'], "total energy=", "=")
 
     assert abs(efermi - 0.211258) <= 0.001
-    assert abs(tenergy - -22006.6222524) <= 0.0001
+    assert abs(tenergy - -22006.622360) <= 0.0001

@@ -62,7 +62,7 @@ CONTAINS
       n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !See in _mt routine
       ALLOCATE(vsigma_g(stars%ng3,n_sigma),vsigma(nsp,n_sigma)); vsigma_g=0.0
       vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
-      CALL pw_from_grid(xcpot%needs_grad(),stars,.FALSE.,vsigma,vsigma_g)
+      CALL pw_from_grid(stars,vsigma,vsigma_g)
       !vsigma_g(:,1)=vsigma_g(:,1)*stars%nstr(:)
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
       CALL pw_to_grid(xcpot%needs_grad(),n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma,xcpot)

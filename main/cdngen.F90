@@ -27,7 +27,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types
    USE m_constants
    USE m_juDFT
-   USE m_prpqfftmap
+   !USE m_prpqfftmap
    USE m_cdnval
    USE m_plot
    USE m_cdn_io

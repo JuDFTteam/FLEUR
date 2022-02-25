@@ -14,7 +14,7 @@ MODULE m_grdrsis
   !     based on 'rhzgrd' coded by t.asada. june,1995.
   !.....-----------------------------------------------------------------
 CONTAINS
-  SUBROUTINE grdrsis(ro,cell,xmax1,xmax2,xmax3, dro)
+  SUBROUTINE grdrsis(ro,cell,xmax, dro)
     !.....-----------------------------------------------------------------
     ! input: 
     !  ro(0:xmax1*xmax2*xmax3-1)  
@@ -35,23 +35,20 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)   :: cell
     !     ..
     !     .. Scalar arguments ..
-    INTEGER, INTENT (IN) :: xmax1,xmax2,xmax3 
+    INTEGER, INTENT (IN) :: xmax(3)
     !     ..
     !     .. Array arguments ..
-    REAL,    INTENT(IN)  :: ro(0:xmax1*xmax2*xmax3-1)
+    REAL,    INTENT(IN)  :: ro(0:)
     !     ..
     !     .. Array output ..
-    REAL,    INTENT(OUT) :: dro(0:xmax1*xmax2*xmax3-1,3)  
+    REAL,    INTENT(OUT) :: dro(0:,:)  
     !     ..
     !     .. Locals ..
-    INTEGER :: xmax(3)
     INTEGER :: direction,xyz(3),x1,x2,x3,i,ii(-3:2) 
-    REAL    :: dx,drointern(0:xmax1*xmax2*xmax3-1,3)  
+    REAL    :: dx,drointern(0:xmax(1)*xmax(2)*xmax(3)-1,3)  
 
 
-    xmax(1)= xmax1
-    xmax(2)= xmax2
-    xmax(3)= xmax3
+  
     DO i=1,3
        IF ( xmax(i) < 3 ) THEN
           CALL juDFT_error("grid to small",calledby="grdrsis")
