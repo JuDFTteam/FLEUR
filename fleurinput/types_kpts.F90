@@ -1067,7 +1067,7 @@ CONTAINS
             binZ = FLOOR((kpts%bk(3,ikpt)*kpts%nkpt3(3))+eps)
             nkptInBin(binX,binY,binZ) = nkptInBin(binX,binY,binZ) + 1
          END DO
-         maxBinSize = MAXVAL(nkptInBin) + 1
+         maxBinSize = MAXVAL(nkptInBin) + 2
          DEALLOCATE (nkptInBin) 
          ALLOCATE (kptParentBins(maxBinSize,-(kpts%nkpt3(1)+1):(kpts%nkpt3(1)+1),-(kpts%nkpt3(2)+1):(kpts%nkpt3(2)+1),-(kpts%nkpt3(3)+1):(kpts%nkpt3(3)+1)))
          kptParentBins = 0
