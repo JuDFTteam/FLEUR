@@ -76,9 +76,7 @@ CONTAINS
        ALLOCATE (stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3))
        ALLOCATE (stars%nstr2(stars%ng2),stars%nstr(stars%ng3))
        ALLOCATE (stars%sk2(stars%ng2),stars%sk3(stars%ng3),stars%phi2(stars%ng2))
-       ALLOCATE (stars%igfft(0:kimax,2),stars%igfft2(0:kimax2,2))
        ALLOCATE (stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-       ALLOCATE (stars%pgfft(0:kimax),stars%pgfft2(0:kimax2))
        ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
        stars%kv3(:,:) = 0

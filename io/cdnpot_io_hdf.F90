@@ -372,37 +372,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_complex3(rgphsSetID,(/-1,1,1,1/),dimsInt(:4),stars%rgphs)
       CALL h5dclose_f(rgphsSetID, hdfError)
 
-      dims(:2)=(/size(stars%igfft,1),2/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),igfftSpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "igfft", H5T_NATIVE_INTEGER, igfftSpaceID, igfftSetID, hdfError)
-      CALL h5sclose_f(igfftSpaceID,hdfError)
-      CALL io_write_integer2(igfftSetID,(/1,1/),dimsInt(:2),stars%igfft(0:,:))
-      CALL h5dclose_f(igfftSetID, hdfError)
 
-      dims(:2)=(/size(stars%igfft2,1),2/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),igfft2SpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "igfft2", H5T_NATIVE_INTEGER, igfft2SpaceID, igfft2SetID, hdfError)
-      CALL h5sclose_f(igfft2SpaceID,hdfError)
-      CALL io_write_integer2(igfft2SetID,(/1,1/),dimsInt(:2),stars%igfft2(0:,:))
-      CALL h5dclose_f(igfft2SetID, hdfError)
-
-      dims(:2)=(/2,size(stars%pgfft)/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),pgfftSpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "pgfft", H5T_NATIVE_DOUBLE, pgfftSpaceID, pgfftSetID, hdfError)
-      CALL h5sclose_f(pgfftSpaceID,hdfError)
-      CALL io_write_complex1(pgfftSetID,(/-1,1/),dimsInt(:2),stars%pgfft(0:))
-      CALL h5dclose_f(pgfftSetID, hdfError)
-
-      dims(:2)=(/2,size(stars%pgfft2)/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),pgfft2SpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "pgfft2", H5T_NATIVE_DOUBLE, pgfft2SpaceID, pgfft2SetID, hdfError)
-      CALL h5sclose_f(pgfft2SpaceID,hdfError)
-      CALL io_write_complex1(pgfft2SetID,(/-1,1/),dimsInt(:2),stars%pgfft2(0:))
-      CALL h5dclose_f(pgfft2SetID, hdfError)
 
       dims(:1)=(/ft2_gf_dim/)
       dimsInt=dims
@@ -497,10 +467,6 @@ MODULE m_cdnpot_io_hdf
       IF(ALLOCATED(stars%nstr2)) DEALLOCATE(stars%nstr2)
       IF(ALLOCATED(stars%phi2)) DEALLOCATE(stars%phi2)
       IF(ALLOCATED(stars%rgphs)) DEALLOCATE(stars%rgphs)
-      IF(ALLOCATED(stars%igfft)) DEALLOCATE(stars%igfft)
-      IF(ALLOCATED(stars%igfft2)) DEALLOCATE(stars%igfft2)
-      IF(ALLOCATED(stars%pgfft)) DEALLOCATE(stars%pgfft)
-      IF(ALLOCATED(stars%pgfft2)) DEALLOCATE(stars%pgfft2)
       IF(ALLOCATED(stars%ft2_gfx)) DEALLOCATE(stars%ft2_gfx)
       IF(ALLOCATED(stars%ft2_gfy)) DEALLOCATE(stars%ft2_gfy)
 
@@ -514,10 +480,6 @@ MODULE m_cdnpot_io_hdf
       ALLOCATE(stars%nstr2(stars%ng2))
       ALLOCATE(stars%phi2(stars%ng2))
       ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-      ALLOCATE(stars%igfft(0:kimax,2))
-      ALLOCATE(stars%igfft2(0:kimax2,2))
-      ALLOCATE(stars%pgfft(0:kimax))
-      ALLOCATE(stars%pgfft2(0:kimax2))
       ALLOCATE(stars%ft2_gfx(0:ft2_gf_dim-1))
       ALLOCATE(stars%ft2_gfy(0:ft2_gf_dim-1))
 
@@ -571,25 +533,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_complex3(rgphsSetID,(/-1,1,1,1/),dimsInt(:4),stars%rgphs)
       CALL h5dclose_f(rgphsSetID, hdfError)
 
-      dimsInt(:2)=(/kimax+1,2/)
-      CALL h5dopen_f(groupID, 'igfft', igfftSetID, hdfError)
-      CALL io_read_integer2(igfftSetID,(/1,1/),dimsInt(:2),stars%igfft(0:kimax,:))
-      CALL h5dclose_f(igfftSetID, hdfError)
-
-      dimsInt(:2)=(/kimax2+1,2/)
-      CALL h5dopen_f(groupID, 'igfft2', igfft2SetID, hdfError)
-      CALL io_read_integer2(igfft2SetID,(/1,1/),dimsInt(:2),stars%igfft2(0:kimax2,:))
-      CALL h5dclose_f(igfft2SetID, hdfError)
-
-      dimsInt(:2)=(/2,kimax+1/)
-      CALL h5dopen_f(groupID, 'pgfft', pgfftSetID, hdfError)
-      CALL io_read_complex1(pgfftSetID,(/-1,1/),dimsInt(:2),stars%pgfft(0:kimax))
-      CALL h5dclose_f(pgfftSetID, hdfError)
-
-      dimsInt(:2)=(/2,kimax2+1/)
-      CALL h5dopen_f(groupID, 'pgfft2', pgfft2SetID, hdfError)
-      CALL io_read_complex1(pgfft2SetID,(/-1,1/),dimsInt(:2),stars%pgfft2(0:kimax2))
-      CALL h5dclose_f(pgfft2SetID, hdfError)
 
       dimsInt(:1)=(/ft2_gf_dim/)
       CALL h5dopen_f(groupID, 'ft2_gfx', ft2_gfxSetID, hdfError)

@@ -4208,11 +4208,12 @@ module m_jpSetupDynMat
 
 !  ---> put stars onto the large fft-grid "tempGrid"
 
-      DO istar=0, (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
+      CALL juDFT_error("TODO, this code must be replaced, arrays do no longer exist in stars")
+      !DO istar=0, stars%kimax
       ! vEff0IR is already warped and only has to be decorated with the phase for non-symorphic systems
-         tempGrid(stars%igfft(istar, 2)) = vEff0IR(stars%igfft(istar, 1), 1) * stars%pgfft(istar) ! changed!
-         tempGridOvl(stars%igfft(istar, 2)) = stars%ustep(stars%igfft(istar, 1)) * stars%pgfft(istar) ! changed!
-      ENDDO
+      !   tempGrid(stars%igfft(istar, 2)) = vEff0IR(stars%igfft(istar, 1), 1) * stars%pgfft(istar) ! changed!
+      !   tempGridOvl(stars%igfft(istar, 2)) = stars%ustep(stars%igfft(istar, 1)) * stars%pgfft(istar) ! changed!
+      !ENDDO
 
 !  ---> reduce large fft grid "tempGrid" to small fft grid "thetaV" ("realFFTBox")
       DO xIndex = -smx1,smx1 ! aufpassen bzgl. indices

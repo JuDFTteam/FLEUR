@@ -21,10 +21,29 @@ MODULE m_types_stars
      INTEGER ::mx1
      INTEGER ::mx2
      INTEGER ::mx3
-     
-   
-     INTEGER :: ng3_fft !number of stars in fft-box of size 2*rkmax
-   
+     !No of elements in FFT
+     INTEGER ::kimax
+     !No of elements in 2D-FFT
+     INTEGER ::kimax2
+
+     !Box for FFT in pwden
+     INTEGER :: kq1_fft
+     INTEGER :: kq2_fft
+     INTEGER :: kq3_fft
+     INTEGER :: kmxq_fft !no of g-vectors in sphere
+     INTEGER, ALLOCATABLE :: igq_fft(:)
+     INTEGER, ALLOCATABLE :: igq2_fft(:)
+
+     !fft box for xc-pot
+     INTEGER :: kxc1_fft
+     INTEGER :: kxc2_fft
+     INTEGER :: kxc3_fft
+
+     INTEGER :: ng3_fft
+     INTEGER :: kmxxc_fft !number of g-vectors forming the nxc3_fft stars in the charge density or xc-density sphere
+
+     INTEGER :: nxc3_fft ! number of stars in the  charge density  fft-box
+
      !rep. g-vector of star
      INTEGER, ALLOCATABLE ::kv3(:, :)
      !length of star
@@ -79,20 +98,20 @@ CONTAINS
     CALL mpi_bc(this%mx1,rank,mpi_comm)
     CALL mpi_bc(this%mx2,rank,mpi_comm)
     CALL mpi_bc(this%mx3,rank,mpi_comm)
-    !CALL mpi_bc(this%kimax,rank,mpi_comm)
-    !CALL mpi_bc(this%kimax2,rank,mpi_comm)
-    !CALL mpi_bc(this%kq1_fft,rank,mpi_comm)
-    !CALL mpi_bc(this%kq2_fft,rank,mpi_comm)
-    !CALL mpi_bc(this%kq3_fft,rank,mpi_comm)
-    !CALL mpi_bc(this%kmxq_fft ,rank,mpi_comm)
-    !CALL mpi_bc(this%igq_fft,rank,mpi_comm)
-    !CALL mpi_bc(this%igq2_fft,rank,mpi_comm)
-    !CALL mpi_bc(this%kxc1_fft,rank,mpi_comm)
-    !CALL mpi_bc(this%kxc2_fft,rank,mpi_comm)
-    !CALL mpi_bc(this%kxc3_fft,rank,mpi_comm)
+    CALL mpi_bc(this%kimax,rank,mpi_comm)
+    CALL mpi_bc(this%kimax2,rank,mpi_comm)
+    CALL mpi_bc(this%kq1_fft,rank,mpi_comm)
+    CALL mpi_bc(this%kq2_fft,rank,mpi_comm)
+    CALL mpi_bc(this%kq3_fft,rank,mpi_comm)
+    CALL mpi_bc(this%kmxq_fft ,rank,mpi_comm)
+    CALL mpi_bc(this%igq_fft,rank,mpi_comm)
+    CALL mpi_bc(this%igq2_fft,rank,mpi_comm)
+    CALL mpi_bc(this%kxc1_fft,rank,mpi_comm)
+    CALL mpi_bc(this%kxc2_fft,rank,mpi_comm)
+    CALL mpi_bc(this%kxc3_fft,rank,mpi_comm)
     CALL mpi_bc(this%ng3_fft,rank,mpi_comm)
-    !CALL mpi_bc(this%kmxxc_fft,rank,mpi_comm)
-    !CALL mpi_bc(this%nxc3_fft ,rank,mpi_comm)
+    CALL mpi_bc(this%kmxxc_fft,rank,mpi_comm)
+    CALL mpi_bc(this%nxc3_fft ,rank,mpi_comm)
     CALL mpi_bc(this%kv3,rank,mpi_comm)
     CALL mpi_bc(this%sk3,rank,mpi_comm)
     CALL mpi_bc(this%ig,rank,mpi_comm)
@@ -162,4 +181,5 @@ CONTAINS
         ENDDO
         stars%ig(kr(1,n),kr(2,n),kr(2,n))=k
         stars%rgph(kr(1,n),kr(2,n),kr(2,n))=stars%rgph(kr(1,n),kr(2,n),kr(2,n))+phas(n)
+
 END MODULE m_types_stars

@@ -114,7 +114,8 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
    END SUBROUTINE t_fftGrid_init_dims
 
 
-   SUBROUTINE putFieldOnGrid(this, stars,field, cell, gCutoff, firstderiv,secondderiv)
+
+   SUBROUTINE putFieldOnGrid(this, stars,field, cell, gCutoff, firstderiv,secondderiv,l_2D)
       USE m_types_stars
       USE m_types_cell
       IMPLICIT NONE
@@ -124,12 +125,13 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       TYPE(t_cell),INTENT(IN),OPTIONAL:: cell
       REAL, OPTIONAL, INTENT(IN)      :: gCutoff
       real,optional,intent(in)        :: firstderiv(3),secondderiv(3)
+      LOGICAL,OPTIONAL,intent(in)     :: l_2d
 
       INTEGER :: x, y, z, iStar
       INTEGER :: xGrid, yGrid, zGrid, layerDim
       REAL    :: gCutoffInternal
       COMPLEX :: fct
-
+      LOGICAL :: twoD
       gCutoffInternal = 1.0e99
       IF (PRESENT(gCutoff)) gCutoffInternal = gCutoff
 
@@ -137,19 +139,29 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
       this%grid(:) = CMPLX(0.0, 0.0)
 
-      DO z = -stars%mx3, stars%mx3
-         zGrid = MODULO(z, this%dimensions(3))
+      l_2d=.false.
+      if (present(l_2d)) twoD=l_2d
+      if (twoD.and.this%dimensions(3)>0) call juDFT_err("Bug in putFieldOnGrid: no two-D grid")
+      
+      DO z = merge(0,-stars%mx3,twoD), merge(0,stars%mx3,twoD)
+         zGrid = MODULO(z, merge(1,this%dimensions(3),twoD)) !always 0 in 2d-case
          DO y = -stars%mx2, stars%mx2
             yGrid = MODULO(y, this%dimensions(2))
             DO x = -stars%mx1, stars%mx1
-               iStar = stars%ig(x, y, z)
-               fct=stars%rgphs(x, y, z)
+               IF (twod) THEN
+                  iStar=stars%ig2_map(x,y)
+                  fct=stars%rgphs2(x,y)
+               ELSE   
+                  iStar = stars%ig(x, y, z)
+                  fct=stars%rgphs(x, y, z)
+               endif   
                if (present(firstderiv)) THEN
                   fct=fct*cmplx(0.0,-1*dot_product(firstderiv,matmul(real([x,y,z]),cell%bmat)))
                   if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,matmul(real([x,y,z]),cell%bmat)))
                endif   
                IF (iStar .EQ. 0) CYCLE
                IF (stars%sk3(iStar) .GT. gCutoffInternal) CYCLE
+               IF (twod.and.stars%sk2(istar)>gCutoffInternal) CYCLE
                xGrid = MODULO(x, this%dimensions(1))
                this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = field(iStar)*fct
             END DO
@@ -158,41 +170,59 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
    END SUBROUTINE putFieldOnGrid
 
-   SUBROUTINE takeFieldFromGrid(this, stars, field, gCutoff)
+   SUBROUTINE takeFieldFromGrid(this, stars, field, gCutoff,l_2d)
       USE m_types_stars
       IMPLICIT NONE
-      CLASS(t_fftGrid), INTENT(IN)    :: this
+      CLASS(t_fftGrid), INTENT(IN) :: this
       TYPE(t_stars), INTENT(IN)    :: stars
-      COMPLEX, INTENT(INOUT) :: field(:)
-      REAL, OPTIONAL, INTENT(IN)    :: gCutoff
+      COMPLEX, INTENT(INOUT)       :: field(:)
+      REAL, OPTIONAL, INTENT(IN)   :: gCutoff
+      LOGICAL,OPTIONAL,intent(in)     :: l_2d
+
 
       INTEGER :: x, y, z, iStar
       INTEGER :: xGrid, yGrid, zGrid, layerDim
       REAL    :: elementWeight, gCutoffInternal
+      COMPLEX :: fct
+      LOGICAL :: twod
 
       gCutoffInternal = 1.0e99
       IF (PRESENT(gCutoff)) gCutoffInternal = gCutoff
-
+      
+      l_2d=.false.
+      if (present(l_2d)) twoD=l_2d
+      if (twoD.and.this%dimensions(3)>0) call juDFT_err("Bug in takeFieldFromGrid: no two-D grid")
+      
       field(:) = CMPLX(0.0, 0.0)
       layerDim = this%dimensions(1)*this%dimensions(2)
 
-      DO z = -stars%mx3, stars%mx3
-         zGrid = MODULO(z, this%dimensions(3))
+      DO z = merge(0,-stars%mx3,twoD), merge(0,stars%mx3,twoD)
+         zGrid = MODULO(z, merge(1,this%dimensions(3),twoD)) !always 0 in 2d-case
          DO y = -stars%mx2, stars%mx2
             yGrid = MODULO(y, this%dimensions(2))
             DO x = -stars%mx1, stars%mx1
-               iStar = stars%ig(x, y, z)
+               IF(two2d) THEN
+                  iStar = stars%ig2_map(x, y)
+                  fct = conjg(stars%rgphs2(x,y))
+               ELSE   
+                  iStar = stars%ig(x, y, z)
+                  fct=CONJG(stars%rgphs(x, y, z))
+               ENDIF   
                IF (iStar .EQ. 0) CYCLE
                IF (stars%sk3(iStar) .GT. gCutoffInternal) CYCLE
                xGrid = MODULO(x, this%dimensions(1))
-               field(iStar) = field(iStar) + this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) * CONJG(stars%rgphs(x, y, z))
+               field(iStar) = field(iStar) + this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) * fact
             END DO
          END DO
       END DO
 
-      elementWeight = 1.0/(this%dimensions(1)*this%dimensions(2)*this%dimensions(3))
-
-      field(:) = elementWeight*field(:)/stars%nstr(:)
+      if (twoD) THEN
+         elementWeight = 1.0/(this%dimensions(1)*this%dimensions(2))
+         field(:) = elementWeight*field(:)/stars%nstr2(:)
+      ELSE
+         elementWeight = 1.0/(this%dimensions(1)*this%dimensions(2)*this%dimensions(3))
+         field(:) = elementWeight*field(:)/stars%nstr(:)
+      endif
 
    END SUBROUTINE takeFieldFromGrid
 
