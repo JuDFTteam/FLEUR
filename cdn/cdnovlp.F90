@@ -443,10 +443,10 @@ CONTAINS
           !
           !=====> calculate the fourier transform of the core-pseudocharge
           IF (l_f2) THEN
-             CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
+             CALL ft_of_CorePseudocharge(fmpi,input,atoms,mshc,alpha,tol_14,rh, &
                              acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
           ELSE
-             CALL ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,tol_14,rh, &
+             CALL ft_of_CorePseudocharge(fmpi,input,atoms,mshc,alpha,tol_14,rh, &
                              acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2)
           END IF
 
@@ -687,7 +687,7 @@ CONTAINS
 !     INTERNAL SUBROUTINES
 !***********************************************************************
 
-      subroutine ft_of_CorePseudocharge(fmpi,atoms,mshc,alpha,&
+      subroutine ft_of_CorePseudocharge(fmpi,input,atoms,mshc,alpha,&
             tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
 
       !=====> calculate the fourier transform of the core-pseudocharge
@@ -700,7 +700,7 @@ CONTAINS
       USE m_types
 
       type(t_mpi)      ,intent(in) :: fmpi
-      
+      TYPE(t_input),    INTENT(in) ::input
       type(t_atoms)    ,intent(in) :: atoms
       integer          ,intent(in) :: mshc(atoms%ntype),jspin
       real             ,intent(in) :: alpha(atoms%ntype), tol_14
@@ -719,6 +719,7 @@ CONTAINS
 
 !     ..Local variables
       integer nat1, n, n_out_p, k
+      INTEGER :: reducedStarsCutoff ! This is introduced to avoid numerical instabilities.
       complex czero
 
 !     ..Local arrays
@@ -730,11 +731,12 @@ CONTAINS
 #endif
       czero = (0.0,0.0)
 #ifdef CPP_MPI
-      DO k = 1 , stars%ng3
+      DO k = 1, stars%ng3
          qpwc_loc(k) = czero
       ENDDO
 #endif
-      DO k = 1 , stars%ng3    
+      DO k = 1, stars%ng3
+          IF (stars%sk3(k).LE.3.5*input%rkmax) reducedStarsCutoff = k ! The factor 3.5 is arbitrary. One could try going down to 2.0.
           qpwc(k) = czero
       ENDDO
 
@@ -749,7 +751,7 @@ CONTAINS
               
               ! (1) Form factor for each atom type
              
-              CALL FormFactor_forAtomType(atoms%msh,method2,n_out_p,&
+              CALL FormFactor_forAtomType(atoms%msh,method2,n_out_p,reducedStarsCutoff,&
                                  atoms%rmt(n),atoms%jri(n),atoms%dx(n),mshc(n),rat(:,n), &
                                  rh(:,n),alpha(n),stars,cell,acoff(n),qf)
 
@@ -763,11 +765,11 @@ CONTAINS
               END IF  
               
               IF (l_f2) THEN     
-                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
+                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,reducedStarsCutoff,&
                                     atoms%neq(n),atoms%nat,atoms%taual,&
                                     cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
               ELSE
-                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
+                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,reducedStarsCutoff,&
                                     atoms%neq(n),atoms%nat,atoms%taual,&
                                     cell,qf,qpwc_at,jspin,l_f2,n)              
               END IF
@@ -796,7 +798,7 @@ CONTAINS
        END IF
       end subroutine ft_of_CorePseudocharge
 
-   SUBROUTINE StructureConst_forAtom(nat1,stars,oneD,sym,&
+   SUBROUTINE StructureConst_forAtom(nat1,stars,oneD,sym,reducedStarsCutoff,&
                           neq,natd,taual,cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
       ! Calculates the structure constant for each atom of atom type
 
@@ -809,6 +811,7 @@ CONTAINS
       type(t_stars), intent(in)  :: stars
       type(t_oneD),  intent(in)  :: oneD
       type(t_sym),   intent(in)  :: sym
+      INTEGER,       INTENT(IN)  :: reducedStarsCutoff
       integer,       intent(in)  :: neq,natd, jspin, n
       real,          intent(in)  :: taual(3,natd)
       type(t_cell),  intent(in)  :: cell
@@ -829,9 +832,7 @@ CONTAINS
       complex phaso(oneD%ods%nop), kcmplx(3)
 
       czero = (0.0,0.0)
-      DO k = 1 , stars%ng3    
-         qpwc_at(k) = czero
-      END DO
+      qpwc_at(:) = czero
 
       !    first G=0
       k=1
@@ -842,11 +843,11 @@ CONTAINS
       force_mt_loc=0.0
       force_is_loc=cmplx(0.0,0.0)
 !$OMP PARALLEL DO DEFAULT(none) &
-!$OMP SHARED(stars,oneD,sym,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw) &
+!$OMP SHARED(stars,oneD,sym,reducedStarsCutoff,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw) &
 !$OMP FIRSTPRIVATE(czero) &
 !$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kro,phaso,kcmplx,phase) &
 !$OMP REDUCTION(+:force_mt_loc,force_is_loc)
-      DO  k = 2,stars%ng3
+      DO  k = 2,reducedStarsCutoff
          IF (.NOT.oneD%odi%d1) THEN
             CALL spgrot(sym%nop, sym%symor, sym%mrot, sym%tau, sym%invtab, &
                         stars%kv3(:,k), kr, phas)
@@ -912,7 +913,7 @@ CONTAINS
       END IF
    END SUBROUTINE StructureConst_forAtom
 
-   SUBROUTINE FormFactor_forAtomType(msh, method2, n_out_p, rmt, jri, dx, &
+   SUBROUTINE FormFactor_forAtomType(msh, method2, n_out_p, reducedStarsCutoff, rmt, jri, dx, &
                                      mshc, rat, rh, alpha, stars, cell, acoff, &
                                      qf)
 
@@ -923,6 +924,7 @@ CONTAINS
 
       
       integer          ,intent(in) :: msh,method2, n_out_p
+      INTEGER,          INTENT(IN) :: reducedStarsCutoff
       real             ,intent(in) :: rmt
       integer          ,intent(in) :: jri
       real             ,intent(in) :: dx
@@ -944,9 +946,7 @@ CONTAINS
       real rhohelp(msh)
 
       zero = 0.0
-      DO k = 1,stars%ng3
-         qf(k) = 0.0
-      END DO
+      qf(:) = 0.0
 
       tail = .FALSE.
       f11 = tpi_const * rmt * rh(jri) / alpha
@@ -954,11 +954,11 @@ CONTAINS
       ar  = SQRT( alpha ) * rmt 
 
 !$OMP PARALLEL DO DEFAULT(none) & 
-!$OMP SHARED(stars,f11,f12,ar,method2,n_out_p,jri,rat,rh,dx,tail) &
+!$OMP SHARED(stars,f11,f12,ar,method2,n_out_p,reducedStarsCutoff,jri,rat,rh,dx,tail) &
 !$OMP SHARED(alpha,cell,mshc,rmt,qf) &
 !$OMP FIRSTPRIVATE(zero) &
 !$OMP PRIVATE(k,g,ai,qfin,ir,j,rhohelp,qfout,gr,a4,alpha3)
-      DO  k = 1,stars%ng3
+      DO k = 1, reducedStarsCutoff
          g = stars%sk3(k)
          !    first G=0
          IF ( k.EQ.1 ) THEN
