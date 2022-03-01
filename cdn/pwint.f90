@@ -77,7 +77,7 @@
       IF (.NOT.oneD%odi%d1) THEN
          CALL spgrot(&
      &           sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
-     &           stars%kv3,&
+     &           stars%kv3(:,ig3d),&
      &           kr,ph)
           DO  n = 1,atoms%ntype
             srmt = s*atoms%rmt(n)
@@ -99,7 +99,7 @@
                srmt = s*atoms%rmt(n)
                CALL spgrot(&
      &              sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
-     &              stars%kv3,&
+     &              stars%kv3(:,ig3d),&
      &              kr,ph)
                sfs = (0.0,0.0)
                DO nn = 1,sym%nop

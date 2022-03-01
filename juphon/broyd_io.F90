@@ -1,7 +1,7 @@
 MODULE m_broyd_io
 
 !TODO cdn_IO and getIOMODE IS COMMENTED OUT WHICH IS NOT THE ORIGINAL VERSION!!!!!
-USE m_types
+USE m_types_hybdat
 !USE m_cdn_io
 
 IMPLICIT NONE

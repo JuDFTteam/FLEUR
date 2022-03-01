@@ -1,4 +1,4 @@
-      MODULE m_strgn
+
 c
 c     *********************************************************
 c     generate two- and three-dimensional stars

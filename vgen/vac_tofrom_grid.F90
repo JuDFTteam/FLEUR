@@ -229,12 +229,12 @@ CONTAINS
 
 
 
-                CALL fft2d(stars, rhdx(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfx)
+                CALL fft2d(stars, rhdx(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[1.,0.,0.])
                 !TODO    &                 pgft2x)
 
                 rhti = 0.0
                 CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*vacxy)&
-                      stars, rhdy(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy)
+                      stars, rhdy(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.,0.])
 
                 rhti = 0.0
                 CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
@@ -246,11 +246,11 @@ CONTAINS
 
                 rhti = 0.0
                 CALL fft2d(      &          ! d2n/dx2 = FFT(0,-gx^2*vacxy)&
-                       stars, rhdxx(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfx*stars%ft2_gfx)
+                       stars, rhdxx(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[1.0,0.,0.],secondderiv=[1.0,0.,0.])
 
                 rhti = 0.0
                 CALL fft2d(       &          ! d2n/dy2 = FFT(0,-gy^2*vacxy)&
-                      stars, rhdyy(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy*stars%ft2_gfy)
+                      stars, rhdyy(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.0,0.],secondderiv=[0.,1.0,0.])
 
                 rhti = 0.0
                 CALL fft2d(        &         ! d2n/dz2 = FFT(rhtdzz,rxydzz)&
@@ -263,11 +263,11 @@ CONTAINS
 
                 rhti = 0.0
                 CALL fft2d(         &         ! d2n/dyz = FFT(0,i*gy*rxydz)&
-                       stars, rhdyz(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy)
+                       stars, rhdyz(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.0,0.])
 
                 rhti = 0.0
                 CALL fft2d(          &        ! d2n/dzx = FFT(0,i*gx*rxydz)&
-                       stars, rhdzx(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfx)
+                       stars, rhdzx(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[1.,0.0,0.])
 
                 DO iq=1,stars%ng2-1
                    cqpw(iq)=-vacxy(ip,iq,ivac,js)
@@ -275,7 +275,7 @@ CONTAINS
 
                 rhti = 0.0
                 CALL fft2d(           &    ! d2n/dxy = FFT(0,-gx*gy*vacxy)&
-                      stars, rhdxy(0,js),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy*stars%ft2_gfx)
+                      stars, rhdxy(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.0,0.],secondderiv=[1.,0.0,0.])
 
              END DO ! js=1,jspins
 

@@ -5,7 +5,7 @@ CONTAINS
        &                 afft2,bfft2,&
        &                 fg,fgi,fgxy,&
        &                 stride,isn,&
-       &                 gfxy )
+       &                 firstderiv,secondderiv )
 
     !*************************************************************
     !*                                                           *
@@ -29,15 +29,14 @@ CONTAINS
 
     REAL                  :: afft2(0:9*stars%mx1*stars%mx2-1),bfft2(0:9*stars%mx1*stars%mx2-1)
     COMPLEX               :: fgxy(stride,stars%ng2-1)
-    REAL,OPTIONAL,INTENT(IN) :: gfxy(0:) !factor to calculate the derivates, i.e. g_x
-
+    REAL,OPTIONAL,INTENT(IN):: firstderiv(3),secondderiv(3)
+    
     !... local variables
 
    TYPE(t_fftgrid) :: grid
    INTEGER i
    COMPLEX fg2(stars%ng2)
 
-   if (present(gfxy)) call judft_error("NOT IMPLEMENTED")
    
    call grid%init([3*stars%mx2,3*stars%mx2,1])
 
@@ -46,28 +45,28 @@ CONTAINS
        fg2(1) = CMPLX(fg,fgi)
        fg2(2:)=fgxy(stride,:)
 
-       call grid%putFieldOnGrid(stars,fg2,l_2d=.true.)
+       call grid%putFieldOnGrid(stars,fg2,firstderiv=firstderiv,secondderiv=secondderiv,l_2d=.true.)
     else
-       grid%grid=cmplx(afft,bfft)
+       grid%grid=cmplx(afft2,bfft2)
     endif
 
-    call fftgrid%perform_fft(forward=(isn<0))
+    call grid%perform_fft(forward=(isn<0))
     
     if (isn >0) THEN
-        afft = real(fftgrid%grid)
-        bfft = aimag(fftgrid%grid)
+        afft2 = real(grid%grid)
+        bfft2 = aimag(grid%grid)
       else
-         call fftgrid%takeFieldFromGrid(stars,fg2,l_2d=.true.)
+         call grid%takeFieldFromGrid(stars,fg2,l_2d=.true.)
          !Scaling by stars%nstr is already done in previous call
-         IF (PRESENT(scaled)) THEN
-            IF (.not.scaled) fg3 = fg3*stars%nstr
-         ENDIF
+         !IF (PRESENT(scaled)) THEN
+         !   IF (.not.scaled) fg3 = fg3*stars%nstr
+         !ENDIF
       ENDIF   
     IF (isn.LT.0) THEN
        !
        !  ---> collect stars from the fft-grid
        !
-       grid%takeFieldFromGrid(stars, fg2, l_2d=.true.)
+       call grid%takeFieldFromGrid(stars, fg2, l_2d=.true.)
        fg=REAL(fg2(1))
        fgi=AIMAG(fg2(1))
        DO i=2,stars%ng2

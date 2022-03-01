@@ -205,11 +205,13 @@ CONTAINS
             ! d(rho)/atoms%dx is obtained by a FFT of i*gx*den%vacxy
             ! (den%vacz is set to zero and gx is included in
             ! dn/atoms =  FFT(0,i*gx*den%vacxy)
-            CALL fft2d(stars, rhdx(0),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfx)
+
+            
+            CALL fft2d(stars, rhdx(0),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[1.,0.0,0.])
 
             rhti = 0.0
             CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*den%vacxy)&
-                        stars, rhdy(0),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy)
+                        stars, rhdy(0),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.0,0.])
 
             rhti = 0.0
             CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
