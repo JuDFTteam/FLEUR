@@ -114,16 +114,16 @@ CONTAINS
 
        CALL lapw_fft_dim(cell,input,noco,stars)
 
-
+       !count number of stars in 2*rkmax (stars are ordered)
+       associate(i=>stars%ng3_fft)
+       DO i=stars%ng3,1,-1
+         IF ( stars%sk3(i).LE.2.0*input%rkmax ) EXIT
+       END DO
+       end associate 
 
        CALL timestop("strgn")
     ENDIF
-    !count number of stars in 2*rkmax (stars are ordered)
-    associate(i=>stars%ng3_fft)
-    DO i=stars%ng3,1,-1
-      IF ( stars%sk3(i).LE.2.0*input%rkmax ) EXIT
-    ENDDO
-    end associate 
+
     CALL stars%mpi_bc(fmpi%mpi_comm)
 
     CALL timestart("stepf")
