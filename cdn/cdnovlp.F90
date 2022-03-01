@@ -736,7 +736,7 @@ CONTAINS
       ENDDO
 #endif
       DO k = 1, stars%ng3
-          IF (stars%sk3(k).LE.3.5*input%rkmax) reducedStarsCutoff = k ! The factor 3.5 is arbitrary. One could try going down to 2.0.
+          IF (stars%sk3(k).LE.3.0*input%rkmax) reducedStarsCutoff = k ! The factor 3.0 is arbitrary. One could try going down to 2.0.
           qpwc(k) = czero
       ENDDO
 
