@@ -15,7 +15,7 @@ CONTAINS
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: fmpi
 
-    TYPE(t_enpara),INTENT(INOUT) :: enpara
+    TYPE(t_enpara),INTENT(IN) :: enpara
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_nococonv),INTENT(IN)  :: nococonv
