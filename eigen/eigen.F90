@@ -43,7 +43,7 @@ CONTAINS
       USE m_mt_setup
       USE m_util
       !USE m_icorrkeys
-      USE m_eig66_io, ONLY : open_eig, write_eig, read_eig
+      USE m_eig66_io, ONLY : write_eig, read_eig
       USE m_xmlOutput
 
       USE m_symmetrize_matrix
@@ -99,9 +99,6 @@ CONTAINS
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
-      INTEGER                   :: jsp_m, i_kpt_m, i_m, iK
-      INTEGER                   :: maxspin
-
       TYPE(t_tlmplm)            :: td
       TYPE(t_usdus)             :: ud
       TYPE(t_lapw)              :: lapw
@@ -122,8 +119,8 @@ CONTAINS
       kqpts = fi%kpts
       ! Modify this from kpts only in DFPT case.
       IF (l_dfpteigen) THEN
-          DO iK = 1, fi%kpts%nkpt
-              kqpts%bk(3, iK) = kqpts%bk(3, iK) + bqpt
+          DO nk_i = 1, fi%kpts%nkpt
+              kqpts%bk(3, nk_i) = kqpts%bk(3, nk_i) + bqpt
           END DO
       END IF
 
@@ -148,7 +145,7 @@ CONTAINS
       CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,results,td,ud,alpha_hybrid,.FALSE.)
       ! Get matrix elements of perturbed potential in DFPT case.
 !      IF (l_dfpteigen) THEN
-!          CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v1,vx,fmpi,results,tdV1,ud,alpha_hybrid,.TRUE.)
+!          CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1datadummy,inden,v1,vx,fmpi,results,tdV1,uddummy,alpha_hybrid,.TRUE.,v1real,v1imag)
 !      END IF
 
       neigBuffer = 0
@@ -213,7 +210,7 @@ CONTAINS
 
             ! Solve generalized eigenvalue problem.
             !     ne_all ... number of eigenpairs searched (and found) on this node
-            !                on fi%input, overall number of eigenpairs searched,
+            !                on input, overall number of eigenpairs searched,
             !                on output, local number of eigenpairs found
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
@@ -260,6 +257,7 @@ CONTAINS
                                eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                 !ELSE
                 !    CALL dfpt_eigen()
+                !    RETURN
                 !END IF
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
@@ -268,6 +266,7 @@ CONTAINS
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 !ELSE
                 !    if (fmpi%pe_diag) CALL dfpt_eigen()
+                !    RETURN
                 !END IF
             ENDIF
             neigBuffer(nk,jsp) = ne_found
