@@ -17,7 +17,7 @@ CONTAINS
 
         !Coretails
         IF (fi%input%ctail) THEN
-            CALL judft_error("juPhon doesn't do local orbitals yet.")
+            CALL judft_error("juPhon coretails are problematic at the moment.")
         END IF
 
         !LOs
