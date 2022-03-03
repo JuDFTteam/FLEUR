@@ -360,7 +360,7 @@ CONTAINS
                 IF (fi%juPhon%l_dfpt) THEN
                     CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
                                enpara, nococonv, mpdata, hybdat, &
-                               iter, eig_id, results, inDen, vToT, vx, hub1data, nvfull, GbasVec_eig)
+                               iter, eig_id, results, inDen, vToT, vx, hub1data, nvfull=nvfull, GbasVec_eig=GbasVec_eig)
                 ELSE
                     CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
                                enpara, nococonv, mpdata, hybdat, &
