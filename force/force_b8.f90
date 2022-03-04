@@ -40,7 +40,7 @@ CONTAINS
          fsur2(1:3) = cmplx(0.0,0.0)         
 
          ! Skip G=(0,0,0) [no contribution to ekin]
-         DO istr=2,stars%ng3_fft
+         DO istr=2,stars%ng3_fft 
             g(:)     = stars%kv3(:,istr)
             fstar(:) = cmplx(0.0,0.0)
             CALL stern(sym,cell,g, nst,stg,taup,gl,rstg)

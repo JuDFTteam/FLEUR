@@ -219,7 +219,7 @@ contains
 8020      format (/,10x,'density-coulomb potential integrals',/)
           !       interstitial first
           !       convolute ufft and pot: F(G) = \sum_(G') U(G - G') V(G')
-          call convol( stars, vCoul%pw_w(:,ispin), vCoul%pw(:,ispin), stars%ufft )
+          call convol( stars, vCoul%pw_w(:,ispin), vCoul%pw(:,ispin))
           results%te_vcoul = 0.0
           call int_nv( ispin, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, &
                        vCoul, den, results%te_vcoul )

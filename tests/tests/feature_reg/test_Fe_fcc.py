@@ -55,4 +55,4 @@ def test_FeFFNLOsSOC(execute_fleur, grep_number, grep_exists):
     for file1 in should_files:
         assert file1 in res_file_names
 
-    assert grep_exists(res_files['out'], r"mx= [\s\-]0\.00000 my= [\s\-]0\.00000 mz=  2\.293")
+    assert grep_exists(res_files['out'], r"mx= [\s\-]0\.00000 my= [\s\-]0\.00000 mz=  2\.305")

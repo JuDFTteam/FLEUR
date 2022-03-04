@@ -26,4 +26,4 @@ def test_SiLOXML(execute_fleur, grep_number, grep_exists):
     assert abs(efermi - 0.18481) <= 0.0001
     assert abs(bandgap - 0.08353) <= 0.0001
     assert abs(tenergy - -580.064565) <= 0.0001
-    assert abs(dist - 0.0261) <= 0.0001
+    assert abs(dist - 0.0262) <= 0.0001

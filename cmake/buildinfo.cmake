@@ -36,4 +36,4 @@ else()
    set(git_branch unknown)
 endif()
 
-message("compile_date=\"${compile_time}\"\ncompile_user=\"${compile_user}\"\ncompile_host=\"${compile_host}\"\ngitdesc=\"${git_describe}\"\ngitbranch=\"${git_branch}\"\ngithash=\"${git_hash}\"")
+file(WRITE "${BI_FILE}" "compile_date=\"${compile_time}\"\ncompile_user=\"${compile_user}\"\ncompile_host=\"${compile_host}\"\ngitdesc=\"${git_describe}\"\ngitbranch=\"${git_branch}\"\ngithash=\"${git_hash}\"")

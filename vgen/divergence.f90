@@ -221,9 +221,7 @@ CONTAINS
 
             !af2=max(af2,10e-13)
 
-            DO i=0,stars%kimax2
-               af2(i)=max(af2(i),d_15)
-            ENDDO
+            where (af2<d_15) af2=d_15
 
             !
             !           ----> 2-d back fft to g space

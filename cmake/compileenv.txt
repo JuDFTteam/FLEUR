@@ -2,7 +2,7 @@
 #init/compile_descr.F90 to determine the program version and
 #some compilation environment description
 
-include("${CMAKE_SOURCE_DIR}/cmake/buildinfo.cmake")
+#include("${CMAKE_SOURCE_DIR}/cmake/buildinfo.cmake")
 
 file(REMOVE ${CMAKE_SOURCE_DIR}/init/compileinfo.h)
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/include/compileinfo.h CONTENT "compile_flags=\"${CMAKE_Fortran_FLAGS}\"\nlink_flags=\"${FLEUR_LIBRARIES}\"\n")
@@ -18,7 +18,7 @@ endif()
 file(REMOVE ${CMAKE_BINARY_DIR}/include/buildinfo.h)
 ADD_CUSTOM_COMMAND(
         OUTPUT ${CMAKE_BINARY_DIR}/include/buildinfo.h
-        COMMAND ${CMAKE_COMMAND} -P cmake/buildinfo.cmake 2> ${CMAKE_BINARY_DIR}/include/buildinfo.h
+        COMMAND ${CMAKE_COMMAND} -DBI_FILE=${CMAKE_BINARY_DIR}/include/buildinfo.h -P cmake/buildinfo.cmake 
         DEPENDS ${buildinfo_deps}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "Generating buildinfo.h")

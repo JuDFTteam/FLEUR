@@ -15,8 +15,9 @@ MODULE m_types_fftGrid
 
    CONTAINS
 
-      PROCEDURE :: init => t_fftGrid_init
-      PROCEDURE :: free => t_fftGrid_free
+      PROCEDURE :: t_fftGrid_init,t_fftGrid_init_dims
+      GENERIC   :: init => t_fftGrid_init,t_fftGrid_init_dims
+      FINAL     :: free
       PROCEDURE :: putFieldOnGrid
       PROCEDURE :: takeFieldFromGrid
       PROCEDURE :: getRealPartOfGrid
@@ -28,11 +29,27 @@ MODULE m_types_fftGrid
       PROCEDURE :: fillFieldSphereIndexArray
       PROCEDURE :: getElement
       procedure :: g2fft => map_g_to_fft_grid
+      PROCEDURE :: perform_fft
    END TYPE t_fftGrid
 
    PUBLIC :: t_fftGrid, put_real_on_external_grid, put_cmplx_on_external_grid
 
 CONTAINS
+subroutine perform_fft(grid,forward)
+   use m_types_fft
+   implicit none 
+   CLASS(t_fftGrid), INTENT(INOUT) :: grid
+   LOGICAL,INTENT(IN)              :: forward
+   
+   type(t_fft) :: fft
+
+   if (size(grid%grid) .ne. product(grid%dimensions)) call juDFT_error('array bounds are inconsistent', calledby='perform_fft')
+   
+   call fft%init(grid%dimensions, forward)
+   call fft%exec(grid%grid)
+   call fft%free()
+end subroutine perform_fft
+
 function map_g_to_fft_grid(grid, g_in) result(g_idx)
    implicit none 
    CLASS(t_fftGrid), INTENT(IN)    :: grid
@@ -64,6 +81,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)    :: sym
       REAL, INTENT(IN)    :: gCutoff
+      
 
       INTEGER, ALLOCATABLE :: ig(:, :, :)
 
@@ -84,17 +102,33 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       ALLOCATE (this%grid(0:this%gridLength - 1), source=CMPLX_NOT_INITALIZED)
    END SUBROUTINE t_fftGrid_init
 
-   SUBROUTINE putFieldOnGrid(this, stars, field, gCutoff)
-      USE m_types_stars
+   SUBROUTINE t_fftGrid_init_dims(this,dims)
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(INOUT) :: this
-      TYPE(t_stars), INTENT(IN)    :: stars
-      COMPLEX, INTENT(IN)    :: field(:) ! length is stars%ng3
-      REAL, OPTIONAL, INTENT(IN)    :: gCutoff
+      INTEGER,INTENT(IN)             :: dims(3)
+      this%dimensions=dims
+      this%gridLength = product(this%dimensions)
+   
+      IF (ALLOCATED(this%grid)) DEALLOCATE (this%grid)
+      ALLOCATE (this%grid(0:this%gridLength - 1), source=CMPLX_NOT_INITALIZED)
+   END SUBROUTINE t_fftGrid_init_dims
+
+
+   SUBROUTINE putFieldOnGrid(this, stars,field, cell, gCutoff, firstderiv,secondderiv)
+      USE m_types_stars
+      USE m_types_cell
+      IMPLICIT NONE
+      CLASS(t_fftGrid), INTENT(INOUT) :: this
+      TYPE(t_stars), INTENT(IN)       :: stars
+      COMPLEX, INTENT(IN)             :: field(:) ! length is stars%ng3
+      TYPE(t_cell),INTENT(IN),OPTIONAL:: cell
+      REAL, OPTIONAL, INTENT(IN)      :: gCutoff
+      real,optional,intent(in)        :: firstderiv(3),secondderiv(3)
 
       INTEGER :: x, y, z, iStar
       INTEGER :: xGrid, yGrid, zGrid, layerDim
       REAL    :: gCutoffInternal
+      COMPLEX :: fct
 
       gCutoffInternal = 1.0e99
       IF (PRESENT(gCutoff)) gCutoffInternal = gCutoff
@@ -109,10 +143,15 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
             yGrid = MODULO(y, this%dimensions(2))
             DO x = -stars%mx1, stars%mx1
                iStar = stars%ig(x, y, z)
+               fct=stars%rgphs(x, y, z)
+               if (present(firstderiv)) THEN
+                  fct=fct*cmplx(0.0,-1*dot_product(firstderiv,matmul(real([x,y,z]),cell%bmat)))
+                  if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,matmul(real([x,y,z]),cell%bmat)))
+               endif   
                IF (iStar .EQ. 0) CYCLE
                IF (stars%sk3(iStar) .GT. gCutoffInternal) CYCLE
                xGrid = MODULO(x, this%dimensions(1))
-               this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = field(iStar)*stars%rgphs(x, y, z)
+               this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = field(iStar)*fct
             END DO
          END DO
       END DO
@@ -392,16 +431,16 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
    END SUBROUTINE getRealPartOfGrid
 
-   subroutine t_fftGrid_free(fftGrid)
+   subroutine free(fftGrid)
       implicit none
-      CLASS(t_fftGrid), INTENT(INOUT)    :: fftGrid
+      TYPE(t_fftGrid), INTENT(INOUT)    :: fftGrid
 
       fftGrid%extend     = -1
       fftGrid%dimensions = -1
       fftGrid%gridLength = -1
 
       if(allocated(fftGrid%grid)) deallocate(fftGrid%grid)
-   end subroutine t_fftGrid_free
+   end subroutine free
 
    function calc_extend(cell, sym, gCutoff) result(mxx)
       USE m_constants

@@ -27,5 +27,5 @@ def test_NiOldaUAMF(execute_fleur, grep_number, grep_exists):
     efermi = grep_number(res_files['out'], "first approx. to ef", ":")
 
     assert abs(tenergy - -3189.616) <= 0.001
-    assert abs(dist - 0.002058) <= 0.0001
+    assert abs(dist - 0.002572) <= 0.0001
     assert abs(efermi - 0.240) <= 0.001
