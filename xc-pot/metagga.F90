@@ -303,7 +303,7 @@ CONTAINS
       REAL, ALLOCATABLE            :: den_rs(:,:), ED_rs(:,:), vTot_rs(:,:)
       TYPE(t_gradients)            :: tmp_grad
 
-      CALL init_pw_grid(xcpot%needs_grad(),stars,sym,cell)
+      CALL init_pw_grid(stars,sym,cell,xcpot)
 
       CALL pw_to_grid(xcpot%needs_grad(), input%jspins, noco%l_noco, stars, &
                       cell,  EnergyDen%pw, tmp_grad, xcpot,    ED_rs)

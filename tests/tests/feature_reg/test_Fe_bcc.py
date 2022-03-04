@@ -80,8 +80,8 @@ def test_Fe_bcc_SF_LDA(execute_fleur, grep_number, grep_exists):
 
     assert abs(magmom - 2.37929) <= 0.001
     assert abs(bfield_before - -1.17291) <= 0.001
-    assert abs(bfield_after - -1.06968) <= 0.001
-    assert abs(mz - 1.98655) <= 0.001
+    assert abs(bfield_after - -1.08379) <= 0.001
+    assert abs(mz - 1.99149) <= 0.001
 
 @pytest.mark.bulk
 @pytest.mark.magnetism

@@ -201,9 +201,9 @@ CONTAINS
        mk3 = mk3 + 1
     ENDIF
     !
-    stars%kq1_fft = 2*mk1
-    stars%kq2_fft = 2*mk2
-    stars%kq3_fft = 2*mk3
+    !stars%kq1_fft = 2*mk1
+    !stars%kq2_fft = 2*mk2
+    !stars%kq3_fft = 2*mk3
     !
     !---> fft's are usually fastest for low primes
     !     (restrict kqid to: kqid=  (2**P) * (3**Q) * (5**R)
@@ -213,9 +213,9 @@ CONTAINS
     !                      0  PROGRAM, RADIX-2 ONLY
     !                      1  PROGRAM, RADIX-2, RADIX-3,RADIX-5
 
-    stars%kq1_fft = ifft235(ksfft,stars%kq1_fft,gmaxp)
-    stars%kq2_fft = ifft235(ksfft,stars%kq2_fft,gmaxp)
-    stars%kq3_fft = ifft235(ksfft,stars%kq3_fft,gmaxp)
+    !stars%kq1_fft = ifft235(ksfft,stars%kq1_fft,gmaxp)
+    !stars%kq2_fft = ifft235(ksfft,stars%kq2_fft,gmaxp)
+    !stars%kq3_fft = ifft235(ksfft,stars%kq3_fft,gmaxp)
 
 
   END SUBROUTINE lapw_fft_dim
