@@ -383,7 +383,7 @@ module m_jpVeff1
       allocate(vxc1IR(ngpqdp, 3))
       vxc1IR(:, :) = 0
       do idir = 1, 3
-        call convolGrRhoKern(stars, ngdp, ngpqdp, rho1IR(:, idir), vxc1IRKern, pdG2FouM, pdG2FouMv, vxc1IR(:, idir), iqpt)
+        call convolGrRhoKern(stars, ngdp, ngpqdp, iDir, rho1IR(:, idir), vxc1IRKern, pdG2FouM, pdG2FouMv, vxc1IR(:, idir), iqpt)
       end do
 
       ! Add x-alpha xc-potential contribution for IR

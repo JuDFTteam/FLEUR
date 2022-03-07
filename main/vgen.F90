@@ -9,8 +9,7 @@ MODULE m_vgen
 CONTAINS
 
    SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell,oneD,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,&
-                   &starsq,dfptdenimag,dfptvTotimag,dfptdenreal,iDtype,iDir) ! OPTIONAL DFPT variables
+                   cell,oneD,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (main routine)
       !
@@ -25,17 +24,6 @@ CONTAINS
       !   TE_VEFF  : charge density-effective potential integral
       !   TE_EXC   : charge density-xc-energy density integral
       !
-      ! Modification for use with DFPT:
-      ! The density variables in the interstitial now live in a G-expansion
-      ! shifted by q and those in the Muffin Tin are no longer real. Account for
-      ! that with optional arguments: use q-shifted stars and carry the imaginary
-      ! part of the MT-density along explicitely. Changes:
-      ! - The interstitial part and MT real part is in dfptdenreal
-      ! - The MT imaginary part is in dfptdenimag
-      ! - vTot will carry the same quantities for V1 as dfptdenreal for rho1
-      ! - The MT imaginary part is in dfptvTotimag
-      ! - iDtype and iDir tell us where we perturb (atom and direction)
-      ! - den is still den; we need it for additional qlm of surface contributions
       !--------------------------------------------------------------------------
 
       USE m_types
@@ -49,6 +37,7 @@ CONTAINS
       USE m_magnMomFromDen
       USE m_force_sf ! Klueppelberg (force level 3)
       USE m_fleur_vdW
+
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT) :: results
@@ -71,18 +60,10 @@ CONTAINS
       TYPE(t_potden),    INTENT(INOUT) :: den
       TYPE(t_potden),    INTENT(INOUT) :: vTot, vx, vCoul, vxc, exc
 
-      TYPE(t_stars),  OPTIONAL, INTENT(IN)    :: starsq
-      TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: dfptdenimag, dfptvTotimag, dfptdenreal
-
-      INTEGER, OPTIONAL, INTENT(IN)           :: iDtype, iDir ! DFPT: Type and direction of displaced atom
-
-      TYPE(t_potden)                   :: workden, denRot, workdenImag, workdenReal
+      TYPE(t_potden)                   :: workden, denRot
 
       INTEGER :: i, js
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
-      LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
-
-      l_dfptvgen = PRESENT(starsq)
 
       IF (fmpi%irank == 0) THEN
          IF (noco%l_sourceFree) THEN
@@ -95,9 +76,8 @@ CONTAINS
       END IF
 
       IF (fmpi%irank==0) WRITE (oUnit,FMT=8000)
-      IF ((fmpi%irank==0).AND.l_dfptvgen) WRITE (oUnit,FMT=8001)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
-8001  FORMAT (/,/,t10,'          (DFPT edition)              ',/)
+
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
@@ -122,28 +102,13 @@ CONTAINS
 
       results%force=0.0
 
-      IF (.NOT.l_dfptvgen) THEN
-        CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
+      CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
 
-        ! a)
-        ! Sum up both spins in den into workden:
-        CALL den%sum_both_spin(workden)
+      ! a)
+      ! Sum up both spins in den into workden:
+      CALL den%sum_both_spin(workden)
 
-        CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
-      ELSE
-        CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
-        CALL workDenReal%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
-        CALL workDenImag%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
-        CALL den%sum_both_spin(workden)
-        CALL dfptdenreal%sum_both_spin(workdenReal)
-        CALL dfptdenimag%sum_both_spin(workdenImag)
-        ! TODO: Feeding starsq in instead of stars will be meaningless, unless
-        !       we also add the q in question at the relevant points.
-        ! NOTE: The normal stars are also passed as an optional argument, because
-        !       they are needed for surface-qlm.
-        CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.FALSE.,workdenReal,vCoul,&
-                        & dfptdenimag=workdenImag,dfptvTotimag=dfptvTotimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
-      END IF
+      CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
 
       !vdW Potential
       IF (input%vdw>0) CALL fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,cell,sym,oneD,vacuum,results,workden%pw(:,1),workden%mt(:,:,:,1),vCoul%pw(:,1),vCoul%mt)

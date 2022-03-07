@@ -8,12 +8,13 @@ MODULE m_dfpt_check
 IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_check(fi)
+    SUBROUTINE dfpt_check(fi, xcpot)
 
         USE m_types_fleurinput
         USE m_juDFT_stop, only : juDFT_error
 
-        TYPE(t_fleurinput), INTENT(IN)  :: fi
+        TYPE(t_fleurinput), INTENT(IN) :: fi
+        CLASS(t_xcpot),     INTENT(IN) :: xcpot
 
         !Coretails
         IF (fi%input%ctail) THEN
@@ -40,6 +41,11 @@ CONTAINS
             CALL judft_error("juPhon doesn't do non-collinear systems yet.")
         END IF
 
+        !GGA
+        IF (xcpot%needs_grad()) THEN
+            CALL judft_error("juPhon doesn't do GGA functionals [yet].")
+        END IF
+
         !DFTU etc.
         IF ((fi%atoms%n_u.GT.0).OR.(fi%atoms%n_hia.GT.0).OR.(fi%atoms%n_opc.GT.0)) THEN
             CALL judft_error("juPhon doesn't do DFT+X [yet].")
@@ -50,6 +56,10 @@ CONTAINS
             CALL judft_error("juPhon doesn't do spin-spiral systems [yet].")
         END IF
 
+        !vdW
+        IF (fi%input%vdw.GT.0) THEN
+            CALL judft_error("juPhon doesn't do van-der-Waals systems.")
+        END IF
         !Film
         IF (fi%input%film) THEN
             CALL judft_error("juPhon doesn't do film systems.")

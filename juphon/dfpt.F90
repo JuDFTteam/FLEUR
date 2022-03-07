@@ -135,7 +135,7 @@ CONTAINS
             ! input. I.e. check, whether all prohibited switches are off and,
             ! once there is more expertise considering this topic, check whether
             ! the cutoffs are chosen appropriately.
-            CALL dfpt_check(fi)
+            CALL dfpt_check(fi, xcpot)
         END IF
 
         ! Construct potential without the l=0 prefactor.
