@@ -17,6 +17,7 @@ CONTAINS
         USE m_types
         USE m_constants
         USE m_get_int_perturbation
+        USE m_get_mt_perturbation
         !USE m_rotate_mt_den_tofrom_local
 
         IMPLICIT NONE
@@ -42,7 +43,7 @@ CONTAINS
             END DO
         ELSE IF(noco%l_noco) THEN
             CALL get_int_global_perturbation(stars,atoms,sym,input,denRot,den1Rot,den1imRot,vTot,vTot1,starsq)
-            !IF (any(noco%l_unrestrictMT)) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,noco,vtot)
+            IF (any(noco%l_unrestrictMT)) CALL get_mt_global_perturbation(atoms,sphhar,sym,denRot,den1Rot,den1imRot,noco,vTot,vTot1,vTot1imag)
         END IF
 
     END SUBROUTINE dfpt_vgen_finalize
