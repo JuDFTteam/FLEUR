@@ -126,7 +126,7 @@ CONTAINS
       END IF
 
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                      cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results)
+                      cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
 
       CALL bfield(input,stars,noco,atoms,field,vTot)
 

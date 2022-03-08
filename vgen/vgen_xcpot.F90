@@ -13,7 +13,7 @@ MODULE m_vgen_xcpot
 CONTAINS
 
    SUBROUTINE vgen_xcpot(hybdat, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
-                          cell, oneD, sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results)
+                          cell, oneD, sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results, denRotimag, dfptvTotimag, starsq)
 
       !     ***********************************************************
       !     FLAPW potential generator                           *
@@ -57,6 +57,8 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)              :: den, denRot, EnergyDen
       TYPE(t_potden), INTENT(INOUT)           :: vTot, vx, vxc, exc
       TYPE(t_results), INTENT(INOUT), OPTIONAL :: results
+      TYPE(t_potden), INTENT(IN), OPTIONAL     :: denRotimag, dfptvTotimag
+      TYPE(t_stars), INTENT(IN), OPTIONAL      :: starsq
 
       ! Local type instances
       TYPE(t_potden)    :: workDen, veff
