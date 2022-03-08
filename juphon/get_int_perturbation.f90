@@ -28,8 +28,7 @@ CONTAINS
 
         INTEGER                       :: iden, jspin, ifft3
         INTEGER                       :: ityp, iri, imesh
-        REAL                          :: rho_11, rho_22, rho_21r, rho_21i
-        REAL                          :: mx, my, mz, m
+        REAL                          :: rho_11, rho_22, m
         REAL                          :: rhotot, rho_up, rho_down, theta, phi
         COMPLEX                       :: m1, mx1, my1, mz1, n1, t1, p1, rho1_up, rho1_down
 
@@ -39,15 +38,17 @@ CONTAINS
         ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
 
         !TODO: Make sure the indices for rho1 are 1,2,3,4 == n1,mx1,my1,mz1
-        ALLOCATE (ris(ifft3,4),fftwork(ifft3))
+        ALLOCATE (ris(ifft3,2),fftwork(ifft3))
         ALLOCATE (ris_real(ifft3,4),ris_imag(ifft3,4))
+
+        ALLOCATE(den1%phi_pw(ifft3),den1%theta_pw(ifft3))
+        ALLOCATE(den1im%phi_pw(ifft3),den1im%theta_pw(ifft3))
 
         DO iden = 1, 2
             CALL fft3d(ris(:,iden),      fftwork,          den%pw(:,iden),  stars,  +1)
             CALL fft3d(ris_real(:,iden), ris_imag(:,iden), den1%pw(:,iden), starsq, +1)
         END DO
 
-        CALL fft3d(ris(:,3),      ris(:,4),      den%pw(:,3),  stars,  +1)
         CALL fft3d(ris_real(:,3), ris_imag(:,3), den1%pw(:,3), starsq, +1)
         CALL fft3d(ris_real(:,4), ris_imag(:,4), den1%pw(:,4), starsq, +1)
 
@@ -55,14 +56,9 @@ CONTAINS
             ! Get real space density matrix elements
             rho_11   = ris(imesh,1)
             rho_22   = ris(imesh,2)
-            rho_21r  = ris(imesh,3)
-            rho_21i  = ris(imesh,4)
 
             ! Calculate unperturbed magnetization density
-            mx       =  2*rho_21r
-            my       =  2*rho_21i !TODO: PLEASE get on the same page with this sign!
-            mz       = rho_11 - rho_22
-            m  = SQRT(mx**2 + my**2 + mz**2)
+            m       = rho_11 - rho_22
 
             ! Calculate perturbed total and magnetization density
             n1  = ris_real(imesh,1) + Imagunit * ris_imag(imesh,1)
@@ -88,7 +84,6 @@ CONTAINS
             p1 = cmplx(0.0, 0.0)
             p1 = p1 - mx1 * SIN(theta) * SIN(phi) / m
             p1 = p1 + my1 * SIN(theta) * COS(phi) / m
-
 
             rho1_up   = (n1 + m1)/2
             rho1_down = (n1 - m1)/2

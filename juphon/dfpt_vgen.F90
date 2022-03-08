@@ -36,6 +36,7 @@ CONTAINS
       USE m_vgen_finalize
       USE m_rotate_mt_den_tofrom_local
       USE m_get_int_perturbation
+      USE m_get_mt_perturbation
       USE m_dfpt_vgen_finalize
 
       IMPLICIT NONE
@@ -135,11 +136,12 @@ CONTAINS
               !perturbed density matrix. Also saves the perturbed angles.
               !TODO: Calculate in real space but put back onto coefficients, just
               !      like in normal scf.
-              CALL den1Rot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
+              CALL den1Rot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
+              CALL den1imRot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
               den1Rot=dfptdenreal
               den1imRot=dfptdenimag
-              CALL get_int_local_perturbation(sym, stars, atoms, sphhar, input, den, den1Rot, den1imRot, starsq)
-              !!IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation()
+              CALL get_int_local_perturbation(sym, stars, atoms, sphhar, input, denRot, den1Rot, den1imRot, starsq)
+              IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation(atoms,sphhar,sym,noco,denRot,den1Rot,den1imRot)
           END IF
           CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                           cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
