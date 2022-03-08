@@ -10,7 +10,7 @@ CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    cell,oneD,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,&
-                   &starsq,dfptdenimag,dfptvTotimag,dfptdenreal,iDtype,iDir)
+                   &starsq,dfptdenimag,dfptvTot,dfptvTotimag,dfptdenreal,iDtype,iDir)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
       !
@@ -38,6 +38,8 @@ CONTAINS
       USE m_magnMomFromDen
       USE m_force_sf ! Klueppelberg (force level 3)
       USE m_fleur_vdW
+      USE m_get_int_perturbation
+
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT) :: results
@@ -57,15 +59,15 @@ CONTAINS
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_potden),    INTENT(IN)    :: EnergyDen
-      TYPE(t_potden),    INTENT(INOUT) :: den
-      TYPE(t_potden),    INTENT(INOUT) :: vTot, vx, vxc, exc
+      TYPE(t_potden),    INTENT(INOUT) :: den, vTot, dfptvTot
 
       TYPE(t_stars),  OPTIONAL, INTENT(IN)    :: starsq
       TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: dfptdenimag, dfptvTotimag, dfptdenreal
 
       INTEGER, OPTIONAL, INTENT(IN)           :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
-      TYPE(t_potden)                   :: workden, denRot, workdenImag, workdenReal, vCoul, dfptvCoulimag
+      TYPE(t_potden)                   :: workden, denRot, workdenImag, workdenReal, den1Rot, den1imRot
+      TYPE(t_potden)                   :: vCoul, dfptvCoulimag, vxc, exc, vx
 
       INTEGER :: i, js
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
@@ -87,7 +89,8 @@ CONTAINS
       IF ((fmpi%irank==0).AND.l_dfptvgen) WRITE (oUnit,FMT=8001)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 8001  FORMAT (/,/,t10,'          (DFPT edition)              ',/)
-      CALL vTot%resetPotDen()
+      CALL dfptvTot%resetPotDen()
+      CALL dfptvTotimag%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
       CALL vxc%resetPotDen()
@@ -101,9 +104,11 @@ CONTAINS
       ALLOCATE (exc%pw_w(stars%ng3, 1)); exc%pw_w = 0.0
 
 #ifndef CPP_OLDINTEL
-      ALLOCATE(vTot%pw_w,mold=vTot%pw)
+      ALLOCATE(dfptvTot%pw_w,mold=dfptvTot%pw)
+      ALLOCATE(dfptvTotimag%pw_w,mold=dfptvTotimag%pw)
 #else
-      ALLOCATE( vTot%pw_w(size(vTot%pw,1),size(vTot%pw,2)))
+      ALLOCATE( dfptvTot%pw_w(size(dfptvTot%pw,1),size(dfptvTot%pw,2)))
+      ALLOCATE( dfptvTotimag%pw_w(size(dfptvTotimag%pw,1),size(dfptvTotimag%pw,2)))
 #endif
 
       ALLOCATE(vCoul%pw_w(SIZE(vCoul%pw,1),size(vCoul%pw,2)))
@@ -128,7 +133,7 @@ CONTAINS
                         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
 
       ! b)
-      CALL vCoul%copy_both_spin(vTot)
+      CALL vCoul%copy_both_spin(dfptvTot)
       CALL dfptvCoulimag%copy_both_spin(dfptvTotimag)
 
       ! c)
@@ -145,7 +150,10 @@ CONTAINS
               !perturbed density matrix. Also saves the perturbed angles.
               !TODO: Calculate in real space but put back onto coefficients, just
               !      like in normal scf.
-              !!CALL get_int_local_perturbation()
+              CALL den1Rot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
+              den1Rot=dfptdenreal
+              den1imRot=dfptdenimag
+              CALL get_int_local_perturbation(sym, stars, atoms, sphhar, input, den, den1Rot, den1imRot, starsq)
               !!IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation()
           END IF
           CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
@@ -156,10 +164,8 @@ CONTAINS
       !!CALL dfpt_vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
 
-      CALL vTot%distribute(fmpi%mpi_comm)
-      CALL vx%distribute(fmpi%mpi_comm)
-      CALL vxc%distribute(fmpi%mpi_comm)
-      CALL exc%distribute(fmpi%mpi_comm)
+      CALL dfptvTot%distribute(fmpi%mpi_comm)
+      CALL dfptvTotimag%distribute(fmpi%mpi_comm)
 
       ! Klueppelberg (force level 3)
       IF (input%l_f.AND.(input%f_level.GE.3).AND.(fmpi%irank.EQ.0)) THEN
