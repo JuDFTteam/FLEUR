@@ -134,8 +134,6 @@ CONTAINS
               !Functions that construct the spin-dependent perturbed densities
               !from the perturbed charge and (vectorial) magnetization density/
               !perturbed density matrix. Also saves the perturbed angles.
-              !TODO: Calculate in real space but put back onto coefficients, just
-              !      like in normal scf.
               CALL den1Rot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
               CALL den1imRot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
               den1Rot=dfptdenreal
@@ -145,7 +143,7 @@ CONTAINS
           END IF
           CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                           cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
-                          & denRotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
+                          & den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
       ! d)
       ! TODO: This is so different from the base case, that we build a new suboutine.

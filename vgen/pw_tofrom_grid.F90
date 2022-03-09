@@ -92,7 +92,7 @@ CONTAINS
     COMPLEX,INTENT(IN)                    :: den_pw(:,:)
     TYPE(t_gradients),INTENT(OUT)         :: grad
     CLASS(t_xcpot), INTENT(IN),OPTIONAL   :: xcpot
-    REAL,ALLOCATABLE,INTENT(OUT),OPTIONAL :: rho(:,:)
+    REAL,ALLOCATABLE,INTENT(OUT),OPTIONAL :: rho(:,:),rhoim(:,:)
 
 
     INTEGER      :: js,i,idm,ig,ndm,jdm,j
@@ -115,10 +115,12 @@ CONTAINS
     ALLOCATE( bf3(0:griddim-1))
     IF (dograds) THEN
        IF (PRESENT(rho)) ALLOCATE(rho(0:griddim-1,jspins))
+       IF (PRESENT(rhoim)) ALLOCATE(rhoim(0:griddim-1,jspins))
        ALLOCATE( ph_wrk(0:griddim-1),rhd1(0:griddim-1,jspins,3))
        ALLOCATE( rhd2(0:griddim-1,jspins,6) )
      ELSE
         IF (PRESENT(rho)) ALLOCATE(rho(0:griddim-1,jspins))
+        IF (PRESENT(rhoim)) ALLOCATE(rhoim(0:griddim-1,jspins))
      ENDIF
     IF (l_noco)  THEN
        IF (dograds) THEN
@@ -139,7 +141,10 @@ CONTAINS
         DO js=1,jspins
             call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax)
             call fftgrid%perform_fft(forward=.false.)
-            rho(0:,js)=fftgrid%grid
+            ! TODO: grid is technically still complex right? The REAL cast happens here:
+            !rho(0:,js)=fftgrid%grid
+            rho(0:,js)   =  REAL(fftgrid%grid)
+            rhoim(0:,js) = AIMAG(fftgrid%grid)
          END DO
 
        IF (l_noco) THEN
@@ -309,6 +314,9 @@ CONTAINS
     ENDIF
     IF (PRESENT(rho)) THEN
        WHERE(ABS(rho) < d_15) rho = d_15
+    ENDIF
+    IF (PRESENT(rhoim)) THEN
+       WHERE(ABS(rhoim) < d_15) rhoim = d_15
     ENDIF
 
   END SUBROUTINE pw_to_grid

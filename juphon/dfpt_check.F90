@@ -46,9 +46,19 @@ CONTAINS
             CALL judft_error("juPhon doesn't do GGA functionals [yet].")
         END IF
 
+        !MetaGGA
+        IF (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA()) THEN
+            CALL judft_error("juPhon doesn't do MetaGGA functionals.")
+        END IF
+
         !DFTU etc.
         IF ((fi%atoms%n_u.GT.0).OR.(fi%atoms%n_hia.GT.0).OR.(fi%atoms%n_opc.GT.0)) THEN
             CALL judft_error("juPhon doesn't do DFT+X [yet].")
+        END IF
+
+        !SOC:
+        IF (fi%noco%l_soc) THEN
+            CALL judft_error("juPhon doesn't do spin-orbit coupling [yet].")
         END IF
 
         !Spin spirals:
