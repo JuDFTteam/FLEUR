@@ -144,7 +144,7 @@ CONTAINS
             ! TODO: grid is technically still complex right? The REAL cast happens here:
             !rho(0:,js)=fftgrid%grid
             rho(0:,js)   =  REAL(fftgrid%grid)
-            rhoim(0:,js) = AIMAG(fftgrid%grid)
+            IF (PRESENT(rhoim)) rhoim(0:,js) = AIMAG(fftgrid%grid)
          END DO
 
        IF (l_noco) THEN
