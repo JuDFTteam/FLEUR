@@ -12,7 +12,7 @@ MODULE m_pw_tofrom_grid
    TYPE(t_fftgrid) :: fftgrid
    INTEGER         :: griddim
    REAL            :: gmax
-   
+
    PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
   SUBROUTINE init_pw_grid(stars,sym,cell,xcpot)
@@ -23,7 +23,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
     CLASS(t_xcpot),INTENT(IN),OPTIONAL :: xcpot
-    
+
       !---> set up pointer for backtransformation of from g-vector in
       !     positive domain of xc density fftbox into stars.
       !     also the x,y,z components of the g-vectors are set up to calculate
@@ -35,19 +35,19 @@ CONTAINS
       gmax=xcpot%gmaxxc
       if (xcpot%needs_grad().and.gmax>0.0) then
          call fftgrid%init(cell,sym,gmax)
-      else  
+      else
          call fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
          gmax=stars%gmax
-      endif   
+      endif
     else
       gmax=stars%gmax
       call fftgrid%init(cell,sym,gmax)
-   endif    
+   endif
     griddim=size(fftgrid%grid)
 
   END SUBROUTINE init_pw_grid
 
-  SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,xcpot,rho)
+  SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,xcpot,rho,rhoim)
     !.....------------------------------------------------------------------
     !------->          abbreviations
     !
@@ -153,11 +153,11 @@ CONTAINS
           call fftgrid%perform_fft(forward=.false.)
           mx=real(fftgrid%grid)
           my=aimag(fftgrid%grid)
-     
+
           DO i=0,MIN(SIZE(rho,1),size(mx))-1
              rhotot= 0.5*( rho(i,1) + rho(i,2) )
              magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
-             IF (l_rdm.AND.dograds) rhodiag(i,1:2) = rho(i,1:2) 
+             IF (l_rdm.AND.dograds) rhodiag(i,1:2) = rho(i,1:2)
              rho(i,1)= rhotot+magmom(i)
              rho(i,2)= rhotot-magmom(i)
              IF (l_rdm.AND.dograds) THEN              ! prepare rotation matrix
@@ -178,23 +178,23 @@ CONTAINS
          CALL xcpot%alloc_gradients(griddim,jspins,grad)
       END IF
 
-    
+
     ! in non-collinear calculations the derivatives of |m| are calculated in real space.
 
-      
+
        IF (.not.l_noco) THEN
 
       ! In collinear calculations all derivatives are calculated in g-spce,
        ndm = 0
        DO idm = 1,3
-         fd=0.0;fd(idm)=1 
+         fd=0.0;fd(idm)=1
          DO js=1,jspins
             call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,firstderiv=fd)
             call fftgrid%perform_fft(forward=.false.)
             rhd1(0:,js,idm)=fftgrid%grid
          END DO
          IF (allocated(grad%laplace).or.allocated(grad%agrt)) THEN
-           !Higher derivatives needed 
+           !Higher derivatives needed
            DO jdm = 1,idm
              sd=0;sd(jdm)=1
              ndm = ndm + 1
@@ -204,9 +204,9 @@ CONTAINS
                 rhd2(0:,js,ndm)=fftgrid%grid
              END DO
            END DO ! jdm
-         ENDIF  
+         ENDIF
        END DO   ! idm
-         
+
        ELSE !noco case
 
           IF (l_rdm) THEN
@@ -256,7 +256,7 @@ CONTAINS
                 ENDDO
               ENDDO
               DEALLOCATE (rhodiag,der,rhdd,dder,sinsqu,cossqu,sincos,exi)
- 
+
           ELSE
 
              CALL grdrsis(magmom,cell,fftgrid%dimensions,dmagmom )
@@ -288,9 +288,9 @@ CONTAINS
 
        END IF
 
-    
 
-       
+
+
        !
        !     calculate the quantities such as abs(grad(rho)),.. used in
        !     evaluating the gradient contributions to potential and energy.
@@ -342,7 +342,7 @@ CONTAINS
        call fftgrid%perform_fft(forward=.true.)
        call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
        v_out_pw(:,js) = v_out_pw(:,js) + fg3(:)
-       
+
        !----> add to warped coulomb potential
        IF (present(v_out_pw_w)) THEN
          if (size(fftgrid%grid)==size(stars%ufft)) THEN
@@ -350,9 +350,9 @@ CONTAINS
             call fftgrid%perform_fft(forward=.true.)
             call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
             fg3 = fg3*stars%nstr
-         else   
+         else
           call convol(stars,fg3)
-         ENDIF 
+         ENDIF
           v_out_pw_w(:,js) = v_out_pw_w(:,js) + fg3
        ENDIF
     END DO
