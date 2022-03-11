@@ -16,6 +16,11 @@ CONTAINS
         TYPE(t_fleurinput), INTENT(IN) :: fi
         CLASS(t_xcpot),     INTENT(IN) :: xcpot
 
+        !Symmetry
+        IF (fi%sym%nop.GT.1) THEN
+            CALL judft_error("juPhon uses only unit symmetry.")
+        END IF
+
         !Coretails
         IF (fi%input%ctail) THEN
             CALL judft_error("juPhon coretails are problematic at the moment.")

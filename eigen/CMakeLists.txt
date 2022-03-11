@@ -31,6 +31,7 @@ eigen/tlo.f90
 eigen/vacfun.F90
 eigen/eigen_redist_matrix.f90
 eigen/hs_int_onespin.F90
+eigen/hs_int_direct.F90
 )
 #if (FLEUR_USE_GPU)
 #   set(fleur_F90 ${fleur_F90}
