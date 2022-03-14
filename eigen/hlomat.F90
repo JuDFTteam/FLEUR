@@ -51,7 +51,7 @@ CONTAINS
     CLASS(t_mat),INTENT (INOUT) :: hmat
     !     ..
     !     .. Local Scalars ..
-    COMPLEX axx,bxx,cxx,dtd,dtu,dtulo,ulotd,ulotu,ulotulo,utd,utu, utulo
+    COMPLEX axx,bxx,cxx,dtd,dtu,tdulo,tulod,tulou,tuloulo,utd,utu, tuulo
     INTEGER im,in,invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i
     INTEGER mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo
     INTEGER locol,lorow,ii,ij,n,k,ab_size,s
@@ -102,7 +102,7 @@ CONTAINS
        IF (sym%invsat(na) == 1) invsfct = 2
        !
        !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo) &
-       !$acc & copyin(atoms,lapw,tlmplm,tlmplm%ulotu,tlmplm%ulotd,tlmplm%h_loc(:,:,ntyp,jsp,isp),lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
+       !$acc & copyin(atoms,lapw,tlmplm,tlmplm%tulou,tlmplm%tulod,tlmplm%h_loc(:,:,ntyp,jsp,isp),lapw%nv(:),tlmplm%tdulo(:,:,:,jsp,isp),tlmplm%tuloulo(:,:,:,jsp,isp),atoms%rmt(ntyp))&
        !$acc & copyin(lapw%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,jsp,isp),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
        !$acc & copyin(ud,ud%us(:,ntyp,isp),ud%uds(:,ntyp,isp),ud%dus(:,ntyp,isp),ud%dulos(:,ntyp,isp),ud%duds(:,ntyp,isp))&
        !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
@@ -212,28 +212,28 @@ CONTAINS
                             dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
                             utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
                             dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
-                            utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
-                            dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
-                            ulotu=CONJG(tlmplm%ulotu(lm,mp,lop+mlo,jsp,isp))
-                            ulotd=CONJG(tlmplm%ulotd(lm,mp,lop+mlo,jsp,isp))
+                            tuulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
+                            tdulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
+                            tulou=tlmplm%tulou(lm,mp,lop+mlo,jsp,isp)
+                            tulod=tlmplm%tulod(lm,mp,lop+mlo,jsp,isp)
                             !--->                         note that lo > lop
                             IF (lo>lop) THEN
                                lolop = ((lo-1)*lo)/2 + lop
-                               ulotulo = CONJG(tlmplm%tuloulo (m,mp,lolop+mlolo,jsp,isp))
+                               tuloulo = tlmplm%tuloulo (m,mp,lolop+mlolo,jsp,isp)
                             ELSE
                                lolop = ((lop-1)*lop)/2 + lo
-                               ulotulo = CONJG(tlmplm%tuloulo (mp,m,lolop+mlolo,jsp,isp))
+                               tuloulo = tlmplm%tuloulo (mp,m,lolop+mlolo,jsp,isp)
                             ENDIF
                             axx=CONJG(abclo(1,m,nkvec,lo,2))*utu +&
                                  CONJG(abclo(2,m,nkvec,lo,2))*utd +&
-                                 CONJG(abclo(3,m,nkvec,lo,2))*utulo
+                                 CONJG(abclo(3,m,nkvec,lo,2))*tuulo
                             bxx=CONJG(abclo(1,m,nkvec,lo,2))*dtu +&
                                  CONJG(abclo(2,m,nkvec,lo,2))*dtd +&
-                                 CONJG(abclo(3,m,nkvec,lo,2))*dtulo
+                                 CONJG(abclo(3,m,nkvec,lo,2))*tdulo
                             cxx = &
-                                 CONJG(abclo(1,m,nkvec,lo,2))*ulotu +&
-                                 CONJG(abclo(2,m,nkvec,lo,2))*ulotd +&
-                                 CONJG(abclo(3,m,nkvec,lo,2))*ulotulo
+                                 CONJG(abclo(1,m,nkvec,lo,2))*tulou +&
+                                 CONJG(abclo(2,m,nkvec,lo,2))*tulod +&
+                                 CONJG(abclo(3,m,nkvec,lo,2))*tuloulo
                             IF (hmat%l_real) THEN
                                hmat%data_r(lorow,locol) = hmat%data_r(lorow,locol) + chi*invsfct * (&
                                     REAL(abclo(1,mp,nkvecp,lop,1))* REAL(axx) -&
@@ -266,21 +266,21 @@ CONTAINS
                          dtu=tlmplm%h_loc(lmp+s,lm,ntyp,jsp,isp)
                          utd=tlmplm%h_loc(lmp,lm+s,ntyp,jsp,isp)
                          dtd=tlmplm%h_loc(lmp+s,lm+s,ntyp,jsp,isp)
-                         utulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
-                         dtulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
-                         ulotu = conjg(tlmplm%ulotu(lm,mp,lo+mlo,jsp,isp))
-                         ulotd = conjg(tlmplm%ulotd(lm,mp,lo+mlo,jsp,isp))
+                         tuulo = tlmplm%tuulo(lmp,m,lo+mlo,jsp,isp)
+                         tdulo = tlmplm%tdulo(lmp,m,lo+mlo,jsp,isp)
+                         tulou = tlmplm%tulou(lm,mp,lo+mlo,jsp,isp)
+                         tulod = tlmplm%tulod(lm,mp,lo+mlo,jsp,isp)
                          lolo = ((lo-1)*lo)/2 + lo
-                         ulotulo =CONJG(tlmplm%tuloulo(m,mp,lolo+mlolo,jsp,isp))
+                         tuloulo =tlmplm%tuloulo(m,mp,lolo+mlolo,jsp,isp)
                          axx = CONJG(abclo(1,m,nkvec,lo,2))*utu +&
                               CONJG(abclo(2,m,nkvec,lo,2))*utd +&
-                              CONJG(abclo(3,m,nkvec,lo,2))*utulo
+                              CONJG(abclo(3,m,nkvec,lo,2))*tuulo
                          bxx = CONJG(abclo(1,m,nkvec,lo,2))*dtu +&
                               CONJG(abclo(2,m,nkvec,lo,2))*dtd +&
-                              CONJG(abclo(3,m,nkvec,lo,2))*dtulo
-                         cxx = CONJG(abclo(1,m,nkvec,lo,2))*ulotu +&
-                              CONJG(abclo(2,m,nkvec,lo,2))*ulotd +&
-                              CONJG(abclo(3,m,nkvec,lo,2))*ulotulo
+                              CONJG(abclo(3,m,nkvec,lo,2))*tdulo
+                         cxx = CONJG(abclo(1,m,nkvec,lo,2))*tulou +&
+                              CONJG(abclo(2,m,nkvec,lo,2))*tulod +&
+                              CONJG(abclo(3,m,nkvec,lo,2))*tuloulo
                          IF (hmat%l_real) THEN
                             hmat%data_r(lorow,locol) = hmat%data_r(lorow,locol) + chi*invsfct* (&
                                  REAL(abclo(1,mp,nkvecp,lo,1))* REAL(axx) -&

@@ -42,7 +42,7 @@ CONTAINS
     !     .. Local Scalars ..
     REAL temp
     INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp,j1,j2
-    INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax,i_opc
+    INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax,i_opc,lh0
     LOGICAL OK, isRoot, l_call_tlmplm
     COMPLEX :: one
     !     ..
@@ -86,17 +86,19 @@ CONTAINS
 
        !TODO: Can v1 be added here as SHARED though it is optional?
        !$OMP PARALLEL DO DEFAULT(NONE)&
-       !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
+       !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp,lh0)&
        !$OMP PRIVATE(lmplm,lp,m,mp,n)&
        !$OMP PRIVATE(OK,s,in,info,i_u,i_opc)&
        !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,vx,v1,alpha_hybrid,isRoot,l_call_tlmplm)&
        !$OMP SHARED(fmpi,input,hub1inp,hub1data,uun21,udn21,dun21,ddn21,opc_corrections,j1,j2,l_all_l)
        DO  n = 1,atoms%ntype
           IF (l_call_tlmplm) THEN
+              lh0 = MERGE(1,0,jsp<3.and.alpha_hybrid==0)
+
               IF (PRESENT(v1)) THEN
-                  CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_all_l,v1)
+                  CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,l_all_l,one,v1)
               ELSE
-                  CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_all_l)
+                  CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,l_all_l,one)
               END IF
           END IF
           OK=.FALSE.
