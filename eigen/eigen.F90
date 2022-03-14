@@ -50,6 +50,7 @@ CONTAINS
       USE m_unfold_band_kpts !used for unfolding bands
       USE m_types_mpimat
       use m_store_load_hybrid
+      USE m_dfpt_tlmplm
 
       IMPLICIT NONE
 
@@ -99,7 +100,7 @@ CONTAINS
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
-      TYPE(t_tlmplm)            :: td
+      TYPE(t_tlmplm)            :: td, tdV1
       TYPE(t_usdus)             :: ud
       TYPE(t_lapw)              :: lapw
       CLASS(t_mat), ALLOCATABLE :: zMat
@@ -142,11 +143,11 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,results,td,ud,alpha_hybrid,.FALSE.)
+      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,results,td,ud,alpha_hybrid)
       ! Get matrix elements of perturbed potential in DFPT case.
-!      IF (l_dfpteigen) THEN
-!          CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1datadummy,inden,v1,vx,fmpi,results,tdV1,uddummy,alpha_hybrid,.TRUE.,v1real,v1imag)
-!      END IF
+      IF (l_dfpteigen) THEN
+          CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag)
+      END IF
 
       neigBuffer = 0
       results%neig = 0

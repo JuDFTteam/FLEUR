@@ -34,7 +34,7 @@ CONTAINS
 
     COMPLEX, INTENT(IN) :: one
 
-    TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1
+    REAL, OPTIONAL, INTENT(IN) :: v1(:,:)
 
     REAL, ALLOCATABLE   :: dvd(:,:),dvu(:,:),uvd(:,:),uvu(:,:),f(:,:,:,:),g(:,:,:,:),x(:),flo(:,:,:,:)
     REAL,ALLOCATABLE    :: vr0(:,:)
@@ -65,7 +65,7 @@ CONTAINS
             vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(jsp-2,n) !Add constraining field
         ENDIF
     ELSE
-        vr0=v1%mt(:, :, n, jsp)
+        vr0=v1
     END IF
 
     DO i=MIN(jspin1,jspin2),MAX(jspin1,jspin2)
