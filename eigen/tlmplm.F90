@@ -62,7 +62,6 @@ CONTAINS
             vr0(:,0)=0.0
             if (alpha_hybrid.ne.0) vr0=vr0-alpha_hybrid*vx%mt(:,:,n,jsp)
         ELSE
-            ! TODO: Shouldn't we correct v0 for the l=0-factor?
             vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(jsp-2,n) !Add constraining field
         ENDIF
     ELSE
