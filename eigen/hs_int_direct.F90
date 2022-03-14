@@ -6,7 +6,7 @@
 
 MODULE m_hs_int_direct
 CONTAINS
-    SUBROUTINE hs_int_direct(fmpi, gvecPr, gvec, kvecPr, kvec, nvPr, nv, stars, cell, vpw, hmat, smat, l_smat, l_fullj, iTkin)
+    SUBROUTINE hs_int_direct(fmpi, gvec, gvecPr, kvec, kvecPr, nv, nvPr, stars, cell, vpw, hmat, smat, l_smat, l_fullj, iTkin, fact)
         ! Calculates matrix elements of the form
         ! <\phi_{k'G'}|M|\phi_{kG}>
         ! for different use cases in the DFT/DFPT scf loop and operators M.
@@ -26,7 +26,7 @@ CONTAINS
         ! M = \Theta_{IR}^{(1)} into smat.
         ! [vpw = \Theta_{IR}^{(1)} * V + \Theta_{IR} * V^{(1)}]
         ! [stars%ustep = \Theta_{IR}^{(1)}]
-        ! [l_smat = ?, l_fullj = T]
+        ! [l_smat = F for offdiags, l_fullj = T]
         ! [iTkin = 0 for offdiags, 1 else]
 
         USE m_types
@@ -36,7 +36,7 @@ CONTAINS
         TYPE(t_stars),INTENT(IN)      :: stars
         TYPE(t_cell),INTENT(IN)       :: cell
         INTEGER ,INTENT(IN)           :: gvecPr(:, :), gvec(:, :)
-        INTEGER, INTENT(IN)           :: nvPr, nv, iTkin
+        INTEGER, INTENT(IN)           :: nvPr, nv, iTkin, fact
         REAL, INTENT(IN)              :: kvecPr(3), kvec(3)
         TYPE(t_mpi),INTENT(IN)        :: fmpi
 
@@ -52,14 +52,14 @@ CONTAINS
 
         !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
         !$OMP SHARED(fmpi, stars, cell, vpw, gvecPr, gvec, kvecPr, kvec) &
-        !$OMP SHARED(nvPr, nv, l_smat, l_fullj, iTkin)&
+        !$OMP SHARED(nvPr, nv, l_smat, l_fullj, iTkin, fact)&
         !$OMP SHARED(hmat, smat)&
         !$OMP PRIVATE(gPrG, i0, i, j, jmax, gInd, phase, bvecPr, bvec, r2, th, ts)
-        DO  i = fmpi%n_rank + 1, nvPr, fmpi%n_size
+        DO  i = fmpi%n_rank + 1, nv, fmpi%n_size
             i0 = (i-1) / fmpi%n_size + 1
-            jmax = MERGE(nv, MIN(i, nv), l_fullj)
+            jmax = MERGE(nvPr, MIN(i, nvPr), l_fullj)
             DO  j = 1, jmax
-                gPrG = gvecPr(:,i) - gvec(:,j)
+                gPrG = fact * (gvec(:,i) - gvecPr(:,j))
 
                 gInd = stars%ig(gPrG(1), gPrG(2), gPrG(3))
                 IF (gInd.EQ.0) CYCLE
@@ -69,14 +69,16 @@ CONTAINS
                 th = phase * vpw(gInd)
 
                 IF (iTkin.GT.0) THEN
-                    bvecPr = kvecPr + gvecPr(:,i)
-                    bvec = kvec + gvec(:,j)
+                    bvecPr = kvecPr + gvecPr(:,j)
+                    bvec = kvec + gvec(:,i)
 
                     IF (iTkin.EQ.1) THEN ! Symmetric Dirac form
                         r2 = 0.5 * DOT_PRODUCT(MATMUL(bvecPr,cell%bbmat),bvec)
                     ELSE IF (iTkin.EQ.2) THEN ! Symmetrized Laplace form
                         r2 = 0.25 * DOT_PRODUCT(MATMUL(bvecPr,cell%bbmat),bvecPr)
                         r2 = r2 + 0.25 * DOT_PRODUCT(MATMUL(bvec,cell%bbmat),bvec)
+                        ! Old form:
+                        ! 0.25* (rk(i)**2+rkPr(j)**2); rk(Pr)=lapw(Pr)%rk
                     ELSE ! Pure Laplace form
                         r2 = 0.5 * DOT_PRODUCT(MATMUL(bvec,cell%bbmat),bvec)
                     END IF
@@ -86,7 +88,7 @@ CONTAINS
                 IF (l_smat) THEN
                     ts = phase*stars%ustep(gInd)
                 ELSE
-                    ts = CMPLX(0.0, 0.0)
+                    ts = 0.0
                 END IF
 
                 IF (hmat%l_real) THEN
