@@ -7,7 +7,7 @@ MODULE m_tlmplm
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,nococonv,&
-       jspin1,jspin2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,l_all_l,one,v1)
+       jspin1,jspin2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,one,v1)
     USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_genMTBasis
@@ -32,7 +32,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: n,jspin1,jspin2,jsp,lh0 !atom index,physical spin&spin index for data
     REAL,INTENT(IN)      :: alpha_hybrid
 
-    LOGICAL, INTENT(IN) :: l_all_l
     COMPLEX, INTENT(IN) :: one
 
     TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1
@@ -46,7 +45,7 @@ CONTAINS
     INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,lplmax
     LOGICAL l_remove
 
-    lplmax = MERGE(atoms%lmaxd*(atoms%lmaxd+2),atoms%lmaxd*(atoms%lmaxd+3)/2,l_all_l)
+    lplmax = atoms%lmaxd*(atoms%lmaxd+3)/2
 
     ALLOCATE( dvd(0:lplmax,0:sphhar%nlhd ));dvd=0.0
     ALLOCATE( dvu(0:lplmax,0:sphhar%nlhd ));dvu=0.0
@@ -81,8 +80,8 @@ CONTAINS
     !--->    for l' .ge. l, but only those that will contribute
     !
     DO lp = 0,atoms%lmax(n)
-       lp1 = MERGE(lp * (atoms%lmax(n)+1), (lp*(lp+1))/2, l_all_l)
-       DO l = 0, MERGE(atoms%lmax(n), lp, l_all_l)
+       lp1 = (lp*(lp+1))/2
+       DO l = 0, lp
           lpl = lp1 + l
           !----------------------------------------------------------------------------
           ! Remove non-spherical components for the orbitals treated with DFT+Hubbard-1
@@ -136,7 +135,7 @@ CONTAINS
     !--->    loop over l'm'
     s=td%h_loc2(n)
     DO lp = 0,atoms%lmax(n)
-       lp1 = MERGE(lp * (atoms%lmax(n)+1), (lp*(lp+1))/2, l_all_l)
+       lp1 = (lp*(lp+1))/2
        DO mp = -lp,lp
           lmp = lp* (lp+1) + mp
           !lmpl = (lmp* (lmp+1))/2
@@ -156,7 +155,7 @@ CONTAINS
                 lmin = lmin + MOD(l2,2)
                 DO l = lmin,lmxx,2
                    lm = l* (l+1) + m
-                   IF ((lm.GT.lmp).AND.(.NOT.l_all_l)) CYCLE
+                   IF (lm.GT.lmp) CYCLE
                    lpl = lp1 + l
                    !lmplm = lmpl + lm
                    cil = ((ImagUnit** (l-lp))*sphhar%clnu(mem,lh,nsym))*&
@@ -165,7 +164,7 @@ CONTAINS
                    td%h_loc(lmp+s,lm,n,jspin1,jspin2)  =  td%h_loc(lmp+s,lm,n,jspin1,jspin2)+ one*cil*dvu(lpl,lh)
                    td%h_loc(lmp,lm+s,n,jspin1,jspin2)  =  td%h_loc(lmp,lm+s,n,jspin1,jspin2)+ one*cil*uvd(lpl,lh)
                    td%h_loc(lmp+s,lm+s,n,jspin1,jspin2)    =  td%h_loc(lmp+s,lm+s,n,jspin1,jspin2)+ one*cil*dvd(lpl,lh)
-                   IF ((lm.NE.lmp).AND.(.NOT.l_all_l)) THEN
+                   IF (lm.NE.lmp) THEN
                       td%h_loc(lm,lmp,n,jspin1,jspin2)    =  td%h_loc(lm,lmp,n,jspin1,jspin2)+ one*CONJG(cil*uvu(lpl,lh))
                       td%h_loc(lm+s,lmp,n,jspin1,jspin2)  =  td%h_loc(lm+s,lmp,n,jspin1,jspin2)+ one*CONJG(cil*uvd(lpl,lh))
                       td%h_loc(lm,lmp+s,n,jspin1,jspin2)  =  td%h_loc(lm,lmp+s,n,jspin1,jspin2)+ one*CONJG(cil*dvu(lpl,lh))
@@ -182,7 +181,7 @@ CONTAINS
     !--->   if there are any
     IF (atoms%nlo(n).GE.1) THEN
        CALL tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,n,enpara,lh0,input,vr0,&
-            na,flo,f,g,ud, td, l_all_l, one, v1)
+            na,flo,f,g,ud, td, one)
     ENDIF
   END SUBROUTINE tlmplm
 END MODULE m_tlmplm
