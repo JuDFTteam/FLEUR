@@ -41,7 +41,7 @@ CONTAINS
 
     COMPLEX  :: cil
     REAL     :: temp
-    INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
+    INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmx,lmxx,lp,info,in
     INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,lplmax
     LOGICAL l_remove
 
@@ -157,7 +157,6 @@ CONTAINS
                    lm = l* (l+1) + m
                    IF (lm.GT.lmp) CYCLE
                    lpl = lp1 + l
-                   !lmplm = lmpl + lm
                    cil = ((ImagUnit** (l-lp))*sphhar%clnu(mem,lh,nsym))*&
                         gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
                    td%h_loc(lmp,lm,n,jspin1,jspin2)    =  td%h_loc(lmp,lm,n,jspin1,jspin2)+ one*cil*uvu(lpl,lh)
