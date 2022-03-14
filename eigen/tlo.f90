@@ -14,7 +14,7 @@ MODULE m_tlo
   !***********************************************************************
 CONTAINS
   SUBROUTINE tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,ntyp,enpara,lh0,input,vr,&
-       na,flo,f,g,usdus, tlmplm, one, v1imag)
+       na,flo,f,g,usdus, tlmplm, one)
     !
     !*************** ABBREVIATIONS *****************************************
     ! tuulo      : t-matrix element of the lo and the apw radial fuction
@@ -45,8 +45,6 @@ CONTAINS
     REAL,    INTENT (IN) :: flo(:,:,:,:)!(atoms%jmtd,2,atoms%nlod,spins)
 
     COMPLEX, INTENT(IN) :: one
-
-    TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1imag
 
     !     ..
     !     .. Local Scalars ..
