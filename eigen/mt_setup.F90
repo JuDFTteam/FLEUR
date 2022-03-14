@@ -7,12 +7,12 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,vTot,vx,fmpi,results,td,ud,alpha_hybrid)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,vTot,vx,fmpi,td,ud,alpha_hybrid)
     USE m_types
     USE m_tlmplm_cholesky
     USE m_spnorb
     IMPLICIT NONE
-    TYPE(t_results),INTENT(INOUT):: results
+
     TYPE(t_mpi),INTENT(IN)       :: fmpi
 
     TYPE(t_enpara),INTENT(IN) :: enpara

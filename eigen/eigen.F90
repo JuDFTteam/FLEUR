@@ -143,7 +143,7 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,results,td,ud,alpha_hybrid)
+      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,td,ud,alpha_hybrid)
       ! Get matrix elements of perturbed potential in DFPT case.
       IF (l_dfpteigen) THEN
           CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag)
@@ -225,10 +225,6 @@ CONTAINS
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
             if(dealloc_stat /= 0) call juDFT_error("deallocate failed for hmat or smat",&
                                                    hint=errmsg, calledby="eigen.F90")
-
-            !IF (l_dfpteigen) THEN
-            !    CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat) ! Read in eigenstuff at k.
-            !END IF
 
             ! Output results
             CALL timestart("EV output")
