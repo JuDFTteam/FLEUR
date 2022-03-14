@@ -14,7 +14,7 @@ MODULE m_tlo
   !***********************************************************************
 CONTAINS
   SUBROUTINE tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,ntyp,enpara,lh0,input,vr,&
-       na,flo,f,g,usdus, tlmplm, l_all_l, one, v1imag)
+       na,flo,f,g,usdus, tlmplm, one, v1imag)
     !
     !*************** ABBREVIATIONS *****************************************
     ! tuulo      : t-matrix element of the lo and the apw radial fuction
@@ -44,7 +44,6 @@ CONTAINS
     REAL,    INTENT (IN) :: f(:,:,0:,:),g(:,:,0:,:) !(atoms%jmtd,2,0:atoms%lmaxd,spins)
     REAL,    INTENT (IN) :: flo(:,:,:,:)!(atoms%jmtd,2,atoms%nlod,spins)
 
-    LOGICAL, INTENT(IN) :: l_all_l
     COMPLEX, INTENT(IN) :: one
 
     TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1imag
@@ -87,7 +86,7 @@ CONTAINS
     loplo = 0
     DO lop = 1,atoms%nlo(ntyp)
        lp = atoms%llo(lop,ntyp)
-       DO lo = 1,lop ! TODO: To enable all l_all_l here as well some more thinking is needed.
+       DO lo = 1,lop
           l = atoms%llo(lo,ntyp)
           loplo = loplo + 1
           IF (loplo>SIZE(ulovulo,1))  CALL juDFT_error("loplo too large!!!" ,calledby ="tlo")
