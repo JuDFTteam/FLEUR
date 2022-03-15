@@ -58,6 +58,8 @@ CONTAINS
 
       l_libxc=.FALSE.
 
+      ALLOCATE(vTotim%pw,mold=vTot%pw)
+
       call timestart("init_pw_grid")
       CALL init_pw_grid(stars,sym,cell,xcpot)
       call timestop("init_pw_grid")
@@ -96,7 +98,6 @@ CONTAINS
       !Put the potentials in rez. space.
       call timestart("pw_from_grid")
       CALL  pw_from_grid(starsq,v_xc1re,vTot%pw)
-      ! TODO: Allocate this properly!
       CALL  pw_from_grid(starsq,v_xc1im,vTotim%pw)
       vTot%pw = vTot%pw + ImagUnit * vTotim%pw
       call timestop("pw_from_grid")
