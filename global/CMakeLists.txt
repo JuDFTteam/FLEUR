@@ -32,6 +32,6 @@ global/symMMPmat.f90
 )
 if (FLEUR_USE_GPU)
   set(fleur_F90 ${fleur_F90}
-#  global/nvtx.F90
+
   )
 endif()

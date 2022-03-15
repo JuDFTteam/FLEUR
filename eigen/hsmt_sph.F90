@@ -22,9 +22,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    USE m_hsmt_fjgj
-#ifdef CPP_GPU
-   USE nvtx
-#endif
+
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
    TYPE(t_mpi),INTENT(IN)        :: fmpi
@@ -62,7 +60,6 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    REAL :: dot, fct, fct2
 
    CALL timestart("spherical setup")
-   !call nvtxStartRange("hsmt_sph",1)
    DO l = 0,atoms%lmaxd
       fleg1(l) = REAL(l+l+1)/REAL(l+1)
       fleg2(l) = REAL(l)/REAL(l+1)
@@ -175,7 +172,6 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    !$acc end data
    !$acc wait
    CALL timestop("spherical setup")
-   !call nvtxEndRange()
    RETURN
 END SUBROUTINE hsmt_sph_acc
 
@@ -183,9 +179,6 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    USE m_hsmt_fjgj
-#ifdef CPP_GPU
-   USE nvtx
-#endif
    IMPLICIT NONE
    TYPE(t_input),INTENT(IN)      :: input
    TYPE(t_mpi),INTENT(IN)        :: fmpi
@@ -225,7 +218,6 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    INTEGER :: NVEC_rem  !remainder
 
    CALL timestart("spherical setup")
-   !call nvtxStartRange("hsmt_sph",1)
    DO l = 0,atoms%lmaxd
       fleg1(l) = REAL(l+l+1)/REAL(l+1)
       fleg2(l) = REAL(l)/REAL(l+1)
