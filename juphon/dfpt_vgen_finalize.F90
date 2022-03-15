@@ -35,7 +35,7 @@ CONTAINS
         INTEGER                         :: i, js
 
         IF (.NOT.noco%l_noco) THEN
-            ! TODO: Do we need this for dfpt??
+            ! TODO: Do we need this for dfpt [probably not; all nstr=1]??
             DO js=1,SIZE(vtot1%pw_w, 2)
                 DO i=1,stars%ng3
                     vTot1%pw_w(i,js)=vTot1%pw_w(i,js) / starsq%nstr(i)
