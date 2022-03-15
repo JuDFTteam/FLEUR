@@ -64,10 +64,10 @@ def test_CuBandXML(execute_fleur, grep_exists, stage_for_parser_test, validate_o
     #       density (previous eFermi = 0.0).
     bands_file = res_files['bands.1']
     if with_hdf:
-        assert grep_exists(bands_file, "0.033629.*-0.400779") #line 2
-        assert grep_exists(bands_file, "0.269033.*0.614193") #line 9
-        assert grep_exists(bands_file, "0.336291.*32.833232") #line 351
-        assert grep_exists(bands_file, "0.638954.*33.485766") #line 360
+        assert grep_exists(bands_file, "0.033629.*-0.400778") #line 2
+        assert grep_exists(bands_file, "0.269033.*0.614194") #line 9
+        assert grep_exists(bands_file, "0.336291.*32.833251") #line 351
+        assert grep_exists(bands_file, "0.638954.*33.485771") #line 360
     else:
         assert grep_exists(bands_file, "0.033629.*-11.565510") #line 2
         assert grep_exists(bands_file, "0.269033.*-10.550538") #line 9
