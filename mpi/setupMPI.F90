@@ -14,9 +14,7 @@ MODULE m_setupMPI
 CONTAINS
   SUBROUTINE setupMPI(nkpt,neigd,nbasfcn,fmpi)
 !$  use omp_lib
-#ifdef _OPENACC
-   use openacc
-#endif
+
     use m_omp_checker
     USE m_types
     USE m_available_solvers,ONLY:parallel_solver_available
@@ -64,22 +62,7 @@ CONTAINS
           CALL add_usage_data("OMP",omp)
        ENDIF
     endif
-#ifdef _OPENACC
-    gpus=acc_get_num_devices(acc_device_nvidia)
-#ifdef CPP_MPI
-    if (fmpi%irank==0) write(*,*) "Number of GPU per node   :",gpus
-    CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
-    if (isize>1) THEN
-      if (fmpi%irank==0) write(*,*) "Number of MPI/PE per node:",isize
-      if (gpus<isize) call judft_warn("You should use as many GPUs/node as MPI-PEs/node running")
-      CALL MPI_COMM_RANK(fmpi%mpi_comm_same_node,localrank,i)
-      call acc_set_device_num(mod(localrank,gpus),acc_device_nvidia)
-      write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",mod(localrank,gpus)
-    ENDIF
-#else
-    write(*,*) "Number of GPU    :",gpus
-#endif
-#endif
+    call priv_distribute_gpu(fmpi)
     IF (fmpi%isize==1) THEN
        !give some info on available parallelisation
        CALL priv_dist_info(nkpt)
@@ -329,5 +312,30 @@ CONTAINS
 #endif
     end
 
+   subroutine priv_distribute_gpu(fmpi)
+#ifdef _OPENACC
+   use openacc
+#endif    
+    use m_types_mpi
+    type(t_mpi),intent(in):: fmpi
+    INTEGER :: i, isize, gpus,localrank
+
+#ifdef _OPENACC
+    gpus=acc_get_num_devices(acc_device_nvidia)
+#ifdef CPP_MPI
+    if (fmpi%irank==0) write(*,*) "Number of GPU per node/MPI:",gpus
+    CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
+    if (isize>1) THEN
+      if (fmpi%irank==0) write(*,*) "Number of MPI/PE per node:",isize
+      if (gpus>isize) call judft_warn("You use more GPU/node as MPI-PEs/node running. This will underutilize the GPUs")
+      CALL MPI_COMM_RANK(fmpi%mpi_comm_same_node,localrank,i)
+      call acc_set_device_num(mod(localrank,gpus),acc_device_nvidia)
+      write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",mod(localrank,gpus)
+    ENDIF
+#else
+    write(*,*) "Number of GPU    :",gpus
+#endif
+#endif
+    end subroutine
 
 END MODULE m_setupMPI
