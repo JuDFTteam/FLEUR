@@ -190,6 +190,8 @@ contains
         ELSE
             IF ((n.EQ.iDtype)) THEN
                 qlmo(-1:1,1,n) = qlmo(-1:1,1,n) - 3.0 / fpi_const * atoms%zatom(n) * c_im(iDir, :)
+            ELSE IF ((0.EQ.iDtype)) THEN
+                qlmo(-1:1,1,n) = qlmo(-1:1,1,n) + 3.0 / fpi_const * atoms%zatom(n) * c_im(iDir, :)
             END IF
         END IF
       end if
