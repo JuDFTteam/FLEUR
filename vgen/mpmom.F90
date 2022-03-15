@@ -69,13 +69,15 @@ contains
           call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge=.FALSE.)
           ! qlmo for the imaginary part of rho1 and the perturbation of vExt in the displaced atom:
           call mt_moments( input, atoms, sym,sphhar, rhoimag(:,:,:), potdenType,qlmo,l_coreCharge=.TRUE.,l_rhoimag=.TRUE.,iDtype=iDtype,iDir=iDir)
+          CALL dfpt_mt_moments_SF(atoms, sym, sphhar, iDtype, iDir, rho0(:,:,:), qlmo)
       END IF
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
     call pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw(:), potdenType, qlmp )
-
-    ! TODO: Add surface contributions here. [DFPT]
+    !IF (l_dfptvgen) THEN
+    !CALL dfpt_pw_moments_SF() !TODO: Link this correctly and make sure the atom loop goes over all atoms for gradV; only iDtype for V1.
+    !END IF
 
     if ( fmpi%irank == 0 ) then
       ! see (A14)
@@ -268,7 +270,7 @@ contains
 
       nqpw = qpw(k) * stars%nstr(k)
       do n = 1, atoms%ntype
-        sk3r = stars%sk3(k) * atoms%rmt(n)
+        sk3r = stars%sk3(k) * atoms%rmt(n) ! TODO: Make sure stars%sk3 considers stars%center so DFPT works
         call sphbes( atoms%lmax(n) + 1, sk3r, aj )
         rl2 = atoms%rmt(n) ** 2
         if ( potdenType == POTDEN_TYPE_POTYUK ) then
@@ -300,5 +302,111 @@ contains
 #endif
 
   end subroutine pw_moments
+
+   SUBROUTINE dfpt_mt_moments_SF(atoms, sym, sphhar, iDtype, iDir, rho0, qlmo)
+      USE m_types
+      USE m_gaunt, only : Gaunt1
+      USE m_constants
+
+      IMPLICIT NONE
+
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      TYPE(t_sym),    INTENT(IN)    :: sym
+      TYPE(t_sphhar), INTENT(IN)    :: sphhar
+      INTEGER,        INTENT(IN)    :: iDtype, iDir
+      REAL,           INTENT(IN)    :: rho0(:, :, :)
+      COMPLEX,        INTENT(INOUT) :: qlmo(:, :, :)
+
+      INTEGER :: mb, n, nat, nl, ns, jm, l, lp, m, mp, mVec, pref
+      REAL    :: fint, gauntFactor
+
+      nat = 1
+      pref = -1
+      IF (iDtype.NE.0) nat = SUM(atoms%neq(:iDtype-1)); pref = 1
+
+      DO n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
+         ns = sym%ntypsy(nat)
+         jm = atoms%jri(n)
+         DO nl = 0, sphhar%nlh(ns)
+            lp = sphhar%llh(nl,ns)
+            DO l = MERGE(1, lp - 1, lp.EQ.0), MERGE(1, lp + 1, lp.EQ.0), 2 ! Gaunt selection
+               fint = atoms%rmt(n)**l * rho0(jm,nl,n)
+               DO mb = 1, sphhar%nmem(nl,ns)
+                  mp = sphhar%mlh(mb,nl,ns)
+                  DO mVec = -1, 1
+                     m = mVec + mp ! Gaunt selection
+                     IF (m.GT.l) CYCLE
+                     gauntFactor = Gaunt1(l, 1, lp, m, mVec, mp, atoms%lmax(n))
+                     qlmo(m, l, n) = qlmo(m, l, n) + c_im(iDir, mVec + 2)* gauntFactor * &
+                                                   & sphhar%clnu(mb,nl,ns) * fint * pref
+                  END DO ! mVec
+               END DO ! mb
+            END DO ! l
+         END DO ! nl
+         nat = nat + atoms%neq(n)
+      END DO ! n
+
+   END SUBROUTINE dfpt_mt_moments_SF
+
+!  SUBROUTINE dfpt_pw_moments_SF( atoms, cell, ngdp, iDtype, iDatom, gdp, rho0IRpw, qlmp )
+!
+!      USE m_types,  only : t_atoms, t_cell
+!      USE m_ylm,    only : ylm4
+!      USE m_sphbes, only : sphbes
+!      USE m_gaunt,  only : Gaunt1
+!      USE m_constants
+
+!      IMPLICIT NONE
+
+!      TYPE(t_atoms), INTENT(IN)    :: atoms
+!      TYPE(t_cell),  INTENT(IN)    :: cell
+!      INTEGER,       INTENT(IN)    :: ngdp
+!      INTEGER,       INTENT(IN)    :: iDtype
+!      INTEGER,       INTENT(IN)    :: iDatom
+!      INTEGER,       INTENT(IN)    :: gdp(:, :)
+!      COMPLEX,       INTENT(IN)    :: rho0IRpw(:)
+!      COMPLEX,       INTENT(INOUT) :: qlmp(:, :,:)
+
+!      INTEGER :: iG, l, m, lp, mp, m2p, lm, lmp, iDir
+!      COMPLEX :: pref, phaseFac, temp1, temp2, temp3
+!      REAL    :: gnorm, gauntFactor
+
+!      REAL    :: gext(3)
+!      REAL    :: sbes(0:atoms%lmax(iDtype))
+!      COMPLEX :: ylm((atoms%lmax(iDtype) + 1)**2)
+
+
+!      pref = fpi_const * atoms%rmt(iDtype) * atoms%rmt(iDtype)
+!      DO iG = 1, ngdp
+!          gext = matmul(cell%bmat, real(gdp(:, iG)))
+!          gnorm = norm2(gExt)
+
+!          call ylm4( atoms%lmax(iDtype), gExt(1:3), ylm )
+!          call sphbes(atoms%lmax(iDtype), gnorm * atoms%rmt(iDtype), sbes)
+
+!          phaseFac = exp( ImagUnit * tpi_const * dot_product(gdp(:, iG), atoms%taual(:, iDatom)))
+
+!          DO l = 0, atoms%lmax(iDtype)
+!             temp1 = pref * phaseFac * atoms%rmt(iDtype)**l * rho0IRpw(iG)
+!             DO m = -l, l
+!                  lm = l * (l + 1) + m + 1
+!                  DO lp = 0, atoms%lmax(iDtype)
+!                      temp2 = temp1 * sbes(lp) * ImagUnit**lp
+!                      DO mp = -lp, lp
+!                          lmp = lp * (lp + 1) + mp + 1
+!                          temp3 = temp2 * conjg(ylm(lmp))
+!                          DO m2p = -1, 1
+!                              gauntFactor = Gaunt1( l, lp, 1, m, mp, m2p, atoms%lmax(iDtype))
+!                              DO iDir = 1, 3
+!                                  qlmp(lm, iDatom, iDir) = qlmp(lm, iDatom, iDir) + c_im(iDir, m2p + 2) * gauntFactor * temp3
+!                              END DO ! iDir
+!                          END DO ! m2p
+!                      END DO ! mp
+!                  END DO ! lp
+!             END DO ! m
+!          END DO ! l
+!      END DO ! iG
+
+ ! END SUBROUTINE dfpt_pw_moments_SF
 
 end module m_mpmom
