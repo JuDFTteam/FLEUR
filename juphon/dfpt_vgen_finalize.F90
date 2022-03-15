@@ -32,14 +32,23 @@ CONTAINS
         TYPE(t_sphhar),   INTENT(IN)    :: sphhar
         TYPE(t_potden),   INTENT(INOUT) :: vTot, vTot1, vTot1imag, denRot, den1Rot, den1imRot
 
-        INTEGER                         :: i, js
+        INTEGER                         :: i, js, ifft3
+        REAL,    ALLOCATABLE :: fftwork(:), vre(:), v1re(:), v1im(:)
+        COMPLEX, ALLOCATABLE :: v1full(:)
+
+        ifft3 = 27*stars%mx1*stars%mx2*stars%mx3 !TODO: What if starsq/=stars in that regard?
+
+        ALLOCATE (vre(ifft3),v1re(ifft3),v1im(ifft3),v1full(ifft3),fftwork(ifft3))
 
         IF (.NOT.noco%l_noco) THEN
-            ! TODO: Do we need this for dfpt [probably not; all nstr=1]??
-            DO js=1,SIZE(vtot1%pw_w, 2)
-                DO i=1,stars%ng3
-                    vTot1%pw_w(i,js)=vTot1%pw_w(i,js) / starsq%nstr(i)
-                END DO
+            DO js = 1, input%jspins
+               vre = 0.0; v1re = 0.0; v1im = 0.0
+               CALL fft3d(v1re, v1im, vTot1%pw(:, js), starsq, +1)
+               CALL fft3d(vre, fftwork, vTot%pw(:, js), stars, +1)
+               v1full = CMPLX(v1re,v1im) * stars%ufft + vre * starsq%ufft!-q
+               v1re =  REAL(v1full)
+               v1im = AIMAG(v1full)
+               CALL fft3d(v1re, v1im, vTot1%pw_w(:, js), starsq, -1)
             END DO
         ELSE IF(noco%l_noco) THEN
             CALL get_int_global_perturbation(stars,atoms,sym,input,denRot,den1Rot,den1imRot,vTot,vTot1,starsq)

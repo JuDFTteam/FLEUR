@@ -122,7 +122,7 @@ CONTAINS
         COMPLEX :: a11, a22, a21, a12, av11, av22, av21, av12
         COMPLEX :: t1, p1, v21, v12, v1up, v1down, v1, b1, v1mat11, v1mat22, v1mat21, v1mat12
 
-        ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
+        ifft3 = 27*stars%mx1*stars%mx2*stars%mx3 !TODO: What if starsq/=stars in that regard?
         IF (ifft3.NE.SIZE(den%theta_pw)) CALL judft_error("Wrong size of angles")
 
         ALLOCATE (vis(ifft3,4),vis_re(ifft3,4),vis_im(ifft3,4),fftwork(ifft3),vis2_re(ifft3,4),vis2_im(ifft3,4),v1re(ifft3,4),v1im(ifft3,4))
