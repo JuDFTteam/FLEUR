@@ -69,10 +69,10 @@ def test_CuBandXML(execute_fleur, grep_exists, stage_for_parser_test, validate_o
         assert grep_exists(bands_file, "0.336291.*32.833251") #line 351
         assert grep_exists(bands_file, "0.638954.*33.485771") #line 360
     else:
-        assert grep_exists(bands_file, "0.033629.*-11.565510") #line 2
-        assert grep_exists(bands_file, "0.269033.*-10.550538") #line 9
-        assert grep_exists(bands_file, "0.336291.*21.668500") #line 351
-        assert grep_exists(bands_file, "0.638954.*22.321034") #line 360
+        assert grep_exists(bands_file, "0.033629.*-11.565509") #line 2
+        assert grep_exists(bands_file, "0.269033.*-10.550537") #line 9
+        assert grep_exists(bands_file, "0.336291.*21.668519") #line 351
+        assert grep_exists(bands_file, "0.638954.*22.321040") #line 360
 
 
 @pytest.mark.fleur

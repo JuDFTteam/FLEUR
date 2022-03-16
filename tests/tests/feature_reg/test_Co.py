@@ -81,8 +81,8 @@ def test_CoUnfold(execute_fleur, grep_exists, grep_number):
         assert grep_exists(res_files['bands_sc.2'], "18.1958.*0.62228")
         assert grep_exists(res_files['bands_sc.2'], "27.1348.*0.00942")
     else:
-        assert grep_exists(res_files['bands_sc.1'], "-8.92164.*0.94323")
-        assert grep_exists(res_files['bands_sc.1'], "6.028964.*0.039764")
-        assert grep_exists(res_files['bands_sc.2'], "10.19046.*0.622318")
-        assert grep_exists(res_files['bands_sc.2'], "19.12943.*0.009426")
+        assert grep_exists(res_files['bands_sc.1'], "-8.92160.*0.94323")
+        assert grep_exists(res_files['bands_sc.1'], "6.028983.*0.039764")
+        assert grep_exists(res_files['bands_sc.2'], "10.19049.*0.622280")
+        assert grep_exists(res_files['bands_sc.2'], "19.12947.*0.009426")
 
