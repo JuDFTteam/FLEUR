@@ -19,7 +19,7 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
-    
+
     assert ('cdn.hdf' in res_file_names) or ('cdn1' in res_file_names)
 
     # Stage 2
@@ -34,27 +34,17 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['denIn_A2.xsf'], "2.86600")
     assert grep_exists(res_files['denIn_A2.xsf'], "1.43300")
-<<<<<<< HEAD
-    assert grep_exists(res_files['denIn_A2.xsf'], "1.55853")
-    assert grep_exists(res_files['denIn_A2.xsf'], "0.12626")
-    assert grep_exists(res_files['denIn_A2.xsf'], "0.12724")
-=======
     assert grep_exists(res_files['denIn_A2.xsf'], "1.55851")
     assert grep_exists(res_files['denIn_A2.xsf'], "0.12627")
     assert grep_exists(res_files['denIn_A2.xsf'], "0.12725")
->>>>>>> develop
 
 
     assert grep_exists(res_files['vTot_f.xsf'], "2.86600")
     assert grep_exists(res_files['vTot_f.xsf'], "1.43300")
     assert grep_exists(res_files['vTot_f.xsf'], "4035743.16")
     assert grep_exists(res_files['vTot_f.xsf'], "10.44663")
-<<<<<<< HEAD
-    assert grep_exists(res_files['vTot_f.xsf'], "4.62362")
-=======
     assert grep_exists(res_files['vTot_f.xsf'], "4.62361")
->>>>>>> develop
-    
+
     # 3D Vectorplot section
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.86600")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "1.43300")
@@ -62,22 +52,14 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.015585")
-<<<<<<< HEAD
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.42576")
-=======
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.42575")
->>>>>>> develop
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555")
 
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "2.86600")
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "1.43300")
-    
+
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.318444")
-<<<<<<< HEAD
-    assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.029002")
-=======
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.029060")
->>>>>>> develop
 
 
 @pytest.mark.plot
@@ -99,7 +81,7 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
-    
+
     assert ('cdn.hdf' in res_file_names) or ('cdn1' in res_file_names)
 
     # Stage 2
@@ -119,11 +101,7 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.015585")
-<<<<<<< HEAD
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425765")
-=======
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425758")
->>>>>>> develop
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555")
 
     # Stage 3
@@ -140,11 +118,7 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn_A_vec_plotOnlyMT.xsf'], r"0\.00000000.*0\.00000000.*0\.00000000.*0\.00000000")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444")
-<<<<<<< HEAD
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425765")
-=======
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425758")
->>>>>>> develop
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555")
 
     # Stage 4

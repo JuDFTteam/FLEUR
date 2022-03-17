@@ -1058,10 +1058,7 @@ CONTAINS
       REAL, PARAMETER          ::  sameKPTEps = 1.0e-6
 
       !Add existing vectors to list of full vectors
-<<<<<<< HEAD
       !For a DFPT test calculation, this broke --> set additional .FALSE.
-=======
->>>>>>> develop
       IF (((kpts%kptsKind.EQ.KPTS_KIND_MESH).OR.(kpts%kptsKind.EQ.KPTS_KIND_SPEX_MESH)).AND.(.NOT.ANY(kpts%nkpt3(:).EQ.0))) THEN
          ALLOCATE (nkptInBin(-(kpts%nkpt3(1)+1):(kpts%nkpt3(1)+1),-(kpts%nkpt3(2)+1):(kpts%nkpt3(2)+1),-(kpts%nkpt3(3)+1):(kpts%nkpt3(3)+1)))
          nkptInBin = 0
