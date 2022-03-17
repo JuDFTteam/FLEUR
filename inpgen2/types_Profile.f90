@@ -2,6 +2,7 @@ MODULE m_types_profile
 
    TYPE :: t_profile
       REAL :: kmax
+      REAL :: kGmaxFactor
       REAL :: rmtFactor
       REAL :: lmaxFactor
       REAL :: fermiSmearing
@@ -28,6 +29,7 @@ MODULE m_types_profile
 
       this%profileName = "default"
       this%kmax = 4.5
+      this%kGmaxFactor = 3.0
       this%rmtFactor = 1.0
       this%lmaxFactor = 1.0
       this%fermiSmearing = 0.001
@@ -46,7 +48,7 @@ MODULE m_types_profile
 
 
       INTEGER :: io_stat
-      REAL    :: kmax, rmtFactor, lmaxFactor, fermiSmearing
+      REAL    :: kmax, kGmaxFactor, rmtFactor, lmaxFactor, fermiSmearing
       LOGICAL :: l_exist, l_found
 
       CHARACTER(LEN=20) :: name
@@ -55,7 +57,7 @@ MODULE m_types_profile
       CHARACTER(len=8)  :: str
       CHARACTER(LEN=20) :: atomSetup
 
-      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup,fermiSmearing,atomSetup
+      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup,fermiSmearing,atomSetup,kGmaxFactor
 
       filename = "profile.config"
 
@@ -75,6 +77,7 @@ MODULE m_types_profile
             BACKSPACE(558)
             name = "unknown"
             kmax = 4.5
+            kGmaxFactor = 3.0
             rmtFactor = 1.0
             lmaxFactor = 1.0
             addLOSetup = ""
@@ -85,6 +88,7 @@ MODULE m_types_profile
                IF(TRIM(ADJUSTL(profileName)).EQ.TRIM(ADJUSTL(name))) THEN
                   this%profileName = name
                   this%kmax = kmax
+                  this%kGmaxFactor = kGmaxFactor
                   this%rmtFactor = rmtFactor
                   this%lmaxFactor = lmaxFactor
                   this%addLOSetup = TRIM(ADJUSTL(addLOSetup))

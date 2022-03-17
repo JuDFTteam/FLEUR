@@ -12,7 +12,11 @@ MODULE m_pw_tofrom_grid
    TYPE(t_fftgrid) :: fftgrid
    INTEGER         :: griddim
    REAL            :: gmax
+<<<<<<< HEAD
 
+=======
+   
+>>>>>>> develop
    PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
   SUBROUTINE init_pw_grid(stars,sym,cell,xcpot)
@@ -23,7 +27,11 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
     CLASS(t_xcpot),INTENT(IN),OPTIONAL :: xcpot
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> develop
       !---> set up pointer for backtransformation of from g-vector in
       !     positive domain of xc density fftbox into stars.
       !     also the x,y,z components of the g-vectors are set up to calculate
@@ -35,6 +43,7 @@ CONTAINS
       gmax=xcpot%gmaxxc
       if (xcpot%needs_grad().and.gmax>0.0) then
          call fftgrid%init(cell,sym,gmax)
+<<<<<<< HEAD
       else
          call fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
          gmax=stars%gmax
@@ -43,6 +52,16 @@ CONTAINS
       gmax=stars%gmax
       call fftgrid%init(cell,sym,gmax)
    endif
+=======
+      else  
+         call fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
+         gmax=stars%gmax
+      endif   
+    else
+      gmax=stars%gmax
+      call fftgrid%init(cell,sym,gmax)
+   endif    
+>>>>>>> develop
     griddim=size(fftgrid%grid)
 
   END SUBROUTINE init_pw_grid
@@ -115,12 +134,18 @@ CONTAINS
     ALLOCATE( bf3(0:griddim-1))
     IF (dograds) THEN
        IF (PRESENT(rho)) ALLOCATE(rho(0:griddim-1,jspins))
+<<<<<<< HEAD
        IF (PRESENT(rhoim)) ALLOCATE(rhoim(0:griddim-1,jspins))
+=======
+>>>>>>> develop
        ALLOCATE( ph_wrk(0:griddim-1),rhd1(0:griddim-1,jspins,3))
        ALLOCATE( rhd2(0:griddim-1,jspins,6) )
      ELSE
         IF (PRESENT(rho)) ALLOCATE(rho(0:griddim-1,jspins))
+<<<<<<< HEAD
         IF (PRESENT(rhoim)) ALLOCATE(rhoim(0:griddim-1,jspins))
+=======
+>>>>>>> develop
      ENDIF
     IF (l_noco)  THEN
        IF (dograds) THEN
@@ -141,10 +166,14 @@ CONTAINS
         DO js=1,jspins
             call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax)
             call fftgrid%perform_fft(forward=.false.)
+<<<<<<< HEAD
             ! TODO: grid is technically still complex right? The REAL cast happens here:
             !rho(0:,js)=fftgrid%grid
             rho(0:,js)   =  REAL(fftgrid%grid)
             IF (PRESENT(rhoim)) rhoim(0:,js) = AIMAG(fftgrid%grid)
+=======
+            rho(0:,js)=fftgrid%grid
+>>>>>>> develop
          END DO
 
        IF (l_noco) THEN
@@ -153,11 +182,19 @@ CONTAINS
           call fftgrid%perform_fft(forward=.false.)
           mx=real(fftgrid%grid)
           my=aimag(fftgrid%grid)
+<<<<<<< HEAD
 
           DO i=0,MIN(SIZE(rho,1),size(mx))-1
              rhotot= 0.5*( rho(i,1) + rho(i,2) )
              magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
              IF (l_rdm.AND.dograds) rhodiag(i,1:2) = rho(i,1:2)
+=======
+     
+          DO i=0,MIN(SIZE(rho,1),size(mx))-1
+             rhotot= 0.5*( rho(i,1) + rho(i,2) )
+             magmom(i)= SQRT(  (0.5*(rho(i,1)-rho(i,2)))**2 + mx(i)**2 + my(i)**2 )
+             IF (l_rdm.AND.dograds) rhodiag(i,1:2) = rho(i,1:2) 
+>>>>>>> develop
              rho(i,1)= rhotot+magmom(i)
              rho(i,2)= rhotot-magmom(i)
              IF (l_rdm.AND.dograds) THEN              ! prepare rotation matrix
@@ -178,6 +215,7 @@ CONTAINS
          CALL xcpot%alloc_gradients(griddim,jspins,grad)
       END IF
 
+<<<<<<< HEAD
 
     ! in non-collinear calculations the derivatives of |m| are calculated in real space.
 
@@ -207,6 +245,37 @@ CONTAINS
          ENDIF
        END DO   ! idm
 
+=======
+    
+    ! in non-collinear calculations the derivatives of |m| are calculated in real space.
+
+      
+       IF (.not.l_noco) THEN
+
+      ! In collinear calculations all derivatives are calculated in g-spce,
+       ndm = 0
+       DO idm = 1,3
+         fd=0.0;fd(idm)=1 
+         DO js=1,jspins
+            call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,firstderiv=fd)
+            call fftgrid%perform_fft(forward=.false.)
+            rhd1(0:,js,idm)=fftgrid%grid
+         END DO
+         IF (allocated(grad%laplace).or.allocated(grad%agrt)) THEN
+           !Higher derivatives needed 
+           DO jdm = 1,idm
+             sd=0;sd(jdm)=1
+             ndm = ndm + 1
+             DO js=1,jspins
+                call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,firstderiv=fd,secondderiv=sd)
+                call fftgrid%perform_fft(forward=.false.)
+                rhd2(0:,js,ndm)=fftgrid%grid
+             END DO
+           END DO ! jdm
+         ENDIF  
+       END DO   ! idm
+         
+>>>>>>> develop
        ELSE !noco case
 
           IF (l_rdm) THEN
@@ -256,7 +325,11 @@ CONTAINS
                 ENDDO
               ENDDO
               DEALLOCATE (rhodiag,der,rhdd,dder,sinsqu,cossqu,sincos,exi)
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> develop
           ELSE
 
              CALL grdrsis(magmom,cell,fftgrid%dimensions,dmagmom )
@@ -288,9 +361,15 @@ CONTAINS
 
        END IF
 
+<<<<<<< HEAD
 
 
 
+=======
+    
+
+       
+>>>>>>> develop
        !
        !     calculate the quantities such as abs(grad(rho)),.. used in
        !     evaluating the gradient contributions to potential and energy.
@@ -342,7 +421,11 @@ CONTAINS
        call fftgrid%perform_fft(forward=.true.)
        call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
        v_out_pw(:,js) = v_out_pw(:,js) + fg3(:)
+<<<<<<< HEAD
 
+=======
+       
+>>>>>>> develop
        !----> add to warped coulomb potential
        IF (present(v_out_pw_w)) THEN
          if (size(fftgrid%grid)==size(stars%ufft)) THEN
@@ -350,9 +433,15 @@ CONTAINS
             call fftgrid%perform_fft(forward=.true.)
             call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
             fg3 = fg3*stars%nstr
+<<<<<<< HEAD
          else
           call convol(stars,fg3)
          ENDIF
+=======
+         else   
+          call convol(stars,fg3)
+         ENDIF 
+>>>>>>> develop
           v_out_pw_w(:,js) = v_out_pw_w(:,js) + fg3
        ENDIF
     END DO

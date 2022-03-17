@@ -43,7 +43,7 @@ CONTAINS
     TYPE(t_hybinp), INTENT(INOUT)           :: hybinp
 
     INTEGER :: n
-    REAL    :: min_dtild
+    REAL    :: min_dtild, kmaxGmaxFactor, kmaxGmaxXCFactor
     !
     !input
     !
@@ -68,8 +68,13 @@ CONTAINS
        input%rkmax = round_to_deci(input%rkmax, 1)
     ENDIF
 
+    kmaxGmaxFactor = 3.0
+    kmaxGmaxXCFactor = 3.0
+
     IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
        input%rkmax = profile%kmax
+       kmaxGmaxFactor = profile%kGmaxFactor
+       kmaxGmaxXCFactor = profile%kGmaxFactor
     ELSE IF (input%rkmax > 4.5) THEN
        PRINT *, "WARNING, large default rkmax has been reduced. Check input"
        input%rkmax = 4.5
@@ -77,16 +82,17 @@ CONTAINS
 
     IF (noco%l_ss) input%ctail = .FALSE.
     input%zelec = DOT_PRODUCT(atoms%econf(:)%valence_electrons, atoms%neq(:))
+
     !
     ! stars
     !
-    stars%gmax = MERGE(stars%gmax, round_to_deci(3.0*input%rkmax, 1), stars%gmax > 0)
+    stars%gmax = MERGE(stars%gmax, round_to_deci(kmaxGmaxFactor*input%rkmax, 1), stars%gmax > 0)
     input%gmax = stars%gmax
 
     !
     !xcpot
     !
-    xcpot%gmaxxc = MERGE(xcpot%gmaxxc, round_to_deci(3.0*input%rkmax,1), xcpot%gmaxxc > 0)
+    xcpot%gmaxxc = MERGE(xcpot%gmaxxc, round_to_deci(kmaxGmaxXCFactor*input%rkmax,1), xcpot%gmaxxc > 0)
     xcpot%gmaxxc = MIN(input%gmax,xcpot%gmaxxc)
 
     xcpot%l_inbuild = .TRUE.

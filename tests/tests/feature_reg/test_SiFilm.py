@@ -38,7 +38,11 @@ def test_SiFilmPlotXML(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn.xsf'], ".39481")
     assert grep_exists(res_files['denIn.xsf'], "2.23341")
     # density values
+<<<<<<< HEAD
     assert grep_exists(res_files['denIn.xsf'], "1.9231") # line 24
+=======
+    assert grep_exists(res_files['denIn.xsf'], "1.9227") # line 24
+>>>>>>> develop
     assert grep_exists(res_files['denIn.xsf'], "7.9875") # line 521
     assert grep_exists(res_files['denIn.xsf'], "10.2889") # line 523
 
@@ -90,8 +94,14 @@ def test_SiFilmSlicePlotXML(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['slice.xsf'], ".39481")
     assert grep_exists(res_files['slice.xsf'], "2.23341")
     # density values
+<<<<<<< HEAD
     assert grep_exists(res_files['slice.xsf'], "1.43968")  # line 24
     assert grep_exists(res_files['slice.xsf'], "2.54654")  # line 289
     assert grep_exists(res_files['slice.xsf'], "2.86363")  # line 521
+=======
+    assert grep_exists(res_files['slice.xsf'], "1.43964")  # line 24
+    assert grep_exists(res_files['slice.xsf'], "2.54654")  # line 289
+    assert grep_exists(res_files['slice.xsf'], "2.86364")  # line 521
+>>>>>>> develop
     assert grep_exists(res_files['slice.xsf'], "0.20168")  # line 523
     assert grep_exists(res_files['slice.xsf'], "3.10848")  # line 3018
