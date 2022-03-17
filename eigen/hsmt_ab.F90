@@ -9,7 +9,7 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-  SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ispin,iintsp,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
+  SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
 !Calculate overlap matrix, CPU vesion
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
@@ -25,7 +25,7 @@ CONTAINS
     TYPE(t_fjgj),INTENT(IN)     :: fjgj
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ispin,n,na,iintsp
+    INTEGER, INTENT (IN) :: ilSpin,n,na,igSpin
     LOGICAL,INTENT(IN)   :: l_nonsph
     INTEGER,INTENT(OUT)  :: ab_size
     !     ..
@@ -40,7 +40,7 @@ CONTAINS
     REAL    :: bmrot(3,3)
     COMPLEX :: c_ph(maxval(lapw%nv),MERGE(2,1,noco%l_ss.or.any(noco%l_unrestrictMT).or.any(noco%l_spinoffd_ldau)))
     LOGICAL :: l_apw,l_abclo
-    
+
     real, allocatable    :: gkrot(:,:)
     COMPLEX, allocatable :: ylm(:,:)
 
@@ -55,25 +55,25 @@ CONTAINS
 !    abCoeffs=0.0
 
     np = sym%invtab(sym%ngopr(na))
-    CALL lapw%phase_factors(iintsp,atoms%taual(:,na),nococonv%qss,c_ph(:,iintsp))
+    CALL lapw%phase_factors(igSpin,atoms%taual(:,na),nococonv%qss,c_ph(:,igSpin))
     bmrot = transpose(MATMUL(1.*sym%mrot(:,:,np),cell%bmat))
 
-    allocate(ylm((lmax+1)**2, lapw%nv(iintsp)), stat=ierr)
+    allocate(ylm((lmax+1)**2, lapw%nv(igSpin)), stat=ierr)
     if(ierr /= 0) call juDFT_error("can't allocate ylm")
-    allocate(gkrot(3,lapw%nv(iintsp)), stat=ierr)
+    allocate(gkrot(3,lapw%nv(igSpin)), stat=ierr)
     if(ierr /= 0) call juDFT_error("can't allocate gkrot")
 
 
     ! !-->    generate spherical harmonics
-    !gkrot = matmul(bmrot, lapw%vk(:,:,iintsp))
+    !gkrot = matmul(bmrot, lapw%vk(:,:,igSpin))
     ! these two lines should eventually move to the GPU
-    call dgemm("N","N", 3, lapw%nv(iintsp), 3, 1.0, bmrot, 3, lapw%vk(:,:,iintsp), 3, 0.0, gkrot, 3)
+    call dgemm("N","N", 3, lapw%nv(igSpin), 3, 1.0, bmrot, 3, lapw%vk(:,:,igSpin), 3, 0.0, gkrot, 3)
     CALL ylm4_batched(lmax,gkrot,ylm)
 
 #ifndef _OPENACC
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP& SHARED(lapw,lmax,c_ph,iintsp,abCoeffs,fjgj,abclo,cell,atoms,sym) &
-    !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ispin,bmrot, ylm) &
+    !$OMP& SHARED(lapw,lmax,c_ph,igSpin,abCoeffs,fjgj,abclo,cell,atoms,sym) &
+    !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ilSpin,bmrot, ylm) &
     !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec) &
     !$OMP& PRIVATE(lmMin,lmMax)
 #else
@@ -88,21 +88,21 @@ CONTAINS
     !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
     !$acc present(abclo,alo1,blo1,clo1)&
     !$acc private(k,l,lm,invsfct,lo,term,lmMin,lmMax)  default(none)
-    DO k = 1,lapw%nv(iintsp)
+    DO k = 1,lapw%nv(igSpin)
        !-->  synthesize the complex conjugates of a and b
        !$acc  loop vector private(l,lmMin,lmMax)
        DO l = 0,lmax
           lmMin = l*(l+1) + 1 - l
           lmMax = l*(l+1) + 1 + l
-          abCoeffs(lmMin:lmMax, k)                = fjgj%fj(k,l,ispin,iintsp)*c_ph(k,iintsp) * ylm(lmMin:lmMax, k)
-          abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ispin,iintsp)*c_ph(k,iintsp) * ylm(lmMin:lmMax, k)
+          abCoeffs(lmMin:lmMax, k)                = fjgj%fj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * ylm(lmMin:lmMax, k)
+          abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * ylm(lmMin:lmMax, k)
        END DO
        !$acc end loop
-       
+
        IF (l_abclo) THEN
           !determine also the abc coeffs for LOs
           invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
-          term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
+          term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,igSpin)
           !!$acc loop vector private(lo,l,nkvec,ll1,m,lm)
           DO lo = 1,atoms%nlo(n)
              l = atoms%llo(lo,n)
