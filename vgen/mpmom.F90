@@ -269,7 +269,7 @@ contains
         call od_phasy( atoms%ntype, stars%ng3, atoms%nat, atoms%lmaxd, atoms%ntype, &
              atoms%neq, atoms%lmax, atoms%taual, cell%bmat, stars%kv3, k, oneD%odi, oneD%ods, pylm)
       else
-        call phasy1( atoms, stars, sym, cell, k, pylm )
+        call phasy1( atoms, stars, sym, cell, k, pylm ) ! TODO: Make sure stars%center is considered correctly!
       end if
 
       nqpw = qpw(k) * stars%nstr(k)

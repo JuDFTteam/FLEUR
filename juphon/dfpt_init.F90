@@ -571,7 +571,7 @@ CONTAINS
       end do
     end subroutine convertStar2G
 
-    SUBROUTINE lh_to_sh(sym, atoms, sphhar, jspins, radfact, rholh, rhosh )
+    SUBROUTINE lh_to_sh(sym, atoms, sphhar, jspins, radfact, rholh, rhosh)
 
         TYPE(t_sym),    INTENT(IN)  :: sym
         TYPE(t_atoms),  INTENT(IN)  :: atoms
