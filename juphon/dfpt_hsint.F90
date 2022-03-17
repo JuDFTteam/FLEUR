@@ -57,7 +57,7 @@ CONTAINS
                 IF (iSpinPr.EQ.iSpin) iTkin = 1
 
                 CALL hs_int_direct(fmpi, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), lapwq%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), &
-                                 & starsq, cell, vpw_temp, hmat(iMatPr, iMat), smat(iMatPr, iMat), l_smat, .TRUE., iTkin, 1)
+                                 & starsq, cell%bbmat, vpw_temp, hmat(iMatPr, iMat), smat(iMatPr, iMat), l_smat, .TRUE., iTkin, 1)
             END DO
         END DO
     END SUBROUTINE dfpt_hs_int

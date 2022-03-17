@@ -6,7 +6,7 @@
 
 MODULE m_hs_int_direct
 CONTAINS
-    SUBROUTINE hs_int_direct(fmpi, gvec, gvecPr, kvec, kvecPr, nv, nvPr, stars, cell, vpw, hmat, smat, l_smat, l_fullj, iTkin, fact)
+    SUBROUTINE hs_int_direct(fmpi, gvec, gvecPr, kvec, kvecPr, nv, nvPr, stars, bbmat, vpw, hmat, smat, l_smat, l_fullj, iTkin, fact)
         ! Calculates matrix elements of the form
         ! <\phi_{k'G'}|M|\phi_{kG}>
         ! for different use cases in the DFT/DFPT scf loop and operators M.
@@ -34,7 +34,7 @@ CONTAINS
         IMPLICIT NONE
 
         TYPE(t_stars),INTENT(IN)      :: stars
-        TYPE(t_cell),INTENT(IN)       :: cell
+        REAL, INTENT(IN)              :: bbmat(3, 3)
         INTEGER ,INTENT(IN)           :: gvecPr(:, :), gvec(:, :)
         INTEGER, INTENT(IN)           :: nvPr, nv, iTkin, fact
         REAL, INTENT(IN)              :: kvecPr(3), kvec(3)
@@ -51,7 +51,7 @@ CONTAINS
         REAL    :: bvecPr(3), bvec(3), r2
 
         !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
-        !$OMP SHARED(fmpi, stars, cell, vpw, gvecPr, gvec, kvecPr, kvec) &
+        !$OMP SHARED(fmpi, stars, bbmat, vpw, gvecPr, gvec, kvecPr, kvec) &
         !$OMP SHARED(nvPr, nv, l_smat, l_fullj, iTkin, fact)&
         !$OMP SHARED(hmat, smat)&
         !$OMP PRIVATE(gPrG, i0, i, j, jmax, gInd, phase, bvecPr, bvec, r2, th, ts)
@@ -73,14 +73,14 @@ CONTAINS
                     bvec = kvec + gvec(:,i)
 
                     IF (iTkin.EQ.1) THEN ! Symmetric Dirac form
-                        r2 = 0.5 * DOT_PRODUCT(MATMUL(bvecPr,cell%bbmat),bvec)
+                        r2 = 0.5 * DOT_PRODUCT(MATMUL(bvecPr,bbmat),bvec)
                     ELSE IF (iTkin.EQ.2) THEN ! Symmetrized Laplace form
-                        r2 = 0.25 * DOT_PRODUCT(MATMUL(bvecPr,cell%bbmat),bvecPr)
-                        r2 = r2 + 0.25 * DOT_PRODUCT(MATMUL(bvec,cell%bbmat),bvec)
+                        r2 = 0.25 * DOT_PRODUCT(MATMUL(bvecPr,bbmat),bvecPr)
+                        r2 = r2 + 0.25 * DOT_PRODUCT(MATMUL(bvec,bbmat),bvec)
                         ! Old form:
                         ! 0.25* (rk(i)**2+rkPr(j)**2); rk(Pr)=lapw(Pr)%rk
                     ELSE ! Pure Laplace form
-                        r2 = 0.5 * DOT_PRODUCT(MATMUL(bvec,cell%bbmat),bvec)
+                        r2 = 0.5 * DOT_PRODUCT(MATMUL(bvec,bbmat),bvec)
                     END IF
                     th = th + phase * r2 * stars%ustep(gInd)
                 END IF

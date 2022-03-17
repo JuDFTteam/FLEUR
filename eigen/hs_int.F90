@@ -65,7 +65,7 @@ CONTAINS
             END IF
             CALL hs_int_direct(fmpi, lapw%gvec(:,:,ispin), lapw%gvec(:,:,jspin), &
                              & lapw%bkpt+iQss*(2*ispin - 3)/2.0*nococonv%qss, lapw%bkpt+iQss*(2*jspin - 3)/2.0*nococonv%qss, &
-                             & lapw%nv(ispin), lapw%nv(jspin), stars, cell, vpw_temp, hmat(jjspin,iispin), smat(jjspin,iispin), l_smat, .FALSE., iTkin, fact)
+                             & lapw%nv(ispin), lapw%nv(jspin), stars, cell%bbmat, vpw_temp, hmat(jjspin,iispin), smat(jjspin,iispin), l_smat, .FALSE., iTkin, fact)
             END DO
       END DO
    END SUBROUTINE hs_int
