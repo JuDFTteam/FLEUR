@@ -7,7 +7,7 @@
 MODULE m_dfpt_hs_int
 CONTAINS
     ! Constructs the interstitial perturbed Hamiltonian and overlap matrix
-    SUBROUTINE dfpt_hs_int(noco, starsq, lapwq, lapw, fmpi, cell, isp, vpw, smat, hmat)
+    SUBROUTINE dfpt_hs_int(noco, starsq, lapwq, lapw, fmpi, bbmat, isp, vpw, smat, hmat)
 
         USE m_types
         USE m_hs_int_direct
@@ -16,7 +16,7 @@ CONTAINS
 
         TYPE(t_noco),INTENT(IN)       :: noco
         TYPE(t_stars),INTENT(IN)      :: starsq
-        TYPE(t_cell),INTENT(IN)       :: cell
+        REAL, INTENT(IN)              :: bbmat(3, 3)
         TYPE(t_lapw),INTENT(IN)       :: lapwq, lapw
         TYPE(t_mpi),INTENT(IN)        :: fmpi
         INTEGER,INTENT(IN)            :: isp
@@ -57,7 +57,7 @@ CONTAINS
                 IF (iSpinPr.EQ.iSpin) iTkin = 1
 
                 CALL hs_int_direct(fmpi, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), lapwq%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), &
-                                 & starsq, cell%bbmat, vpw_temp, hmat(iMatPr, iMat), smat(iMatPr, iMat), l_smat, .TRUE., iTkin, 1)
+                                 & starsq, bbmat, vpw_temp, hmat(iMatPr, iMat), smat(iMatPr, iMat), l_smat, .TRUE., iTkin, 1)
             END DO
         END DO
     END SUBROUTINE dfpt_hs_int

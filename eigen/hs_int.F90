@@ -7,7 +7,7 @@
 MODULE m_hs_int
 CONTAINS
    !Subroutine to construct the interstitial Hamiltonian and overlap matrix
-   SUBROUTINE hs_int(input, noco, nococonv, stars, lapw, fmpi, cell, isp, vpw, &
+   SUBROUTINE hs_int(input, noco, nococonv, stars, lapw, fmpi, bbmat, isp, vpw, &
                    & smat,hmat)
       USE m_types
       USE m_hs_int_direct
@@ -18,7 +18,7 @@ CONTAINS
       TYPE(t_noco),     INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_stars),    INTENT(IN)    :: stars
-      TYPE(t_cell),     INTENT(IN)    :: cell
+      REAL,             INTENT(IN)    :: bbmat(3, 3)
       TYPE(t_lapw),     INTENT(IN)    :: lapw
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
       INTEGER,          INTENT(IN)    :: isp
@@ -65,7 +65,7 @@ CONTAINS
             END IF
             CALL hs_int_direct(fmpi, lapw%gvec(:,:,ispin), lapw%gvec(:,:,jspin), &
                              & lapw%bkpt+iQss*(2*ispin - 3)/2.0*nococonv%qss, lapw%bkpt+iQss*(2*jspin - 3)/2.0*nococonv%qss, &
-                             & lapw%nv(ispin), lapw%nv(jspin), stars, cell%bbmat, vpw_temp, hmat(jjspin,iispin), smat(jjspin,iispin), l_smat, .FALSE., iTkin, fact)
+                             & lapw%nv(ispin), lapw%nv(jspin), stars, bbmat, vpw_temp, hmat(jjspin,iispin), smat(jjspin,iispin), l_smat, .FALSE., iTkin, fact)
             END DO
       END DO
    END SUBROUTINE hs_int

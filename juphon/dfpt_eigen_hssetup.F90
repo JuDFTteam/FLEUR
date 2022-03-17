@@ -54,7 +54,7 @@ CONTAINS
 
       CALL timestart("Interstitial part")
       !Generate interstitial part of Hamiltonian
-      CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%ncell, isp, vTot1%pw_w, smat, hmat)
+      CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, smat, hmat)
 
       CALL timestop("Interstitial part")
       CALL timestart("MT part")
