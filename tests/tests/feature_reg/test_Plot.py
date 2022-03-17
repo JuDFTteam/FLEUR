@@ -19,7 +19,7 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
-    
+
     assert ('cdn.hdf' in res_file_names) or ('cdn1' in res_file_names)
 
     # Stage 2
@@ -44,7 +44,7 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['vTot_f.xsf'], "4035743.16")
     assert grep_exists(res_files['vTot_f.xsf'], "10.44663")
     assert grep_exists(res_files['vTot_f.xsf'], "4.62361")
-    
+
     # 3D Vectorplot section
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.86600")
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "1.43300")
@@ -57,7 +57,7 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "2.86600")
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "1.43300")
-    
+
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.318444")
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.029060")
 
@@ -81,7 +81,7 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     should_files = ['out']
     for file1 in should_files:
         assert (file1 in res_file_names), f'{file1} missing'
-    
+
     assert ('cdn.hdf' in res_file_names) or ('cdn1' in res_file_names)
 
     # Stage 2

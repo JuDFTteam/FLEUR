@@ -14,7 +14,7 @@ MODULE m_tlo
   !***********************************************************************
 CONTAINS
   SUBROUTINE tlo(atoms,sym,sphhar,jspin1,jspin2,jsp,ntyp,enpara,lh0,input,vr,&
-       na,flo,f,g,usdus, tlmplm, l_all_l, v1)
+       na,flo,f,g,usdus, tlmplm, one)
     !
     !*************** ABBREVIATIONS *****************************************
     ! tuulo      : t-matrix element of the lo and the apw radial fuction
@@ -44,21 +44,17 @@ CONTAINS
     REAL,    INTENT (IN) :: f(:,:,0:,:),g(:,:,0:,:) !(atoms%jmtd,2,0:atoms%lmaxd,spins)
     REAL,    INTENT (IN) :: flo(:,:,:,:)!(atoms%jmtd,2,atoms%nlod,spins)
 
-    LOGICAL, INTENT(IN) :: l_all_l
-
-    TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1
+    COMPLEX, INTENT(IN) :: one
 
     !     ..
     !     .. Local Scalars ..
-    COMPLEX cil,one
+    COMPLEX cil
     INTEGER i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo
     !     ..
     !     .. Local Arrays ..
     REAL x(atoms%jmtd),ulovulo(atoms%nlod*(atoms%nlod+1)/2,lh0:sphhar%nlhd)
     REAL uvulo(atoms%nlod,0:atoms%lmaxd,lh0:sphhar%nlhd),dvulo(atoms%nlod,0:atoms%lmaxd,lh0:sphhar%nlhd)
     !     ..
-    one=MERGE(CMPLX(1.,0.),CMPLX(0.,1.),jsp<4)
-    one=MERGE(CONJG(one),one,jspin1<jspin2)
 
     DO lo = 1,atoms%nlo(ntyp)
        l = atoms%llo(lo,ntyp)
@@ -88,7 +84,7 @@ CONTAINS
     loplo = 0
     DO lop = 1,atoms%nlo(ntyp)
        lp = atoms%llo(lop,ntyp)
-       DO lo = 1,lop ! TODO: To enable all l_all_l here as well some more thinking is needed.
+       DO lo = 1,lop
           l = atoms%llo(lo,ntyp)
           loplo = loplo + 1
           IF (loplo>SIZE(ulovulo,1))  CALL juDFT_error("loplo too large!!!" ,calledby ="tlo")
@@ -146,10 +142,10 @@ CONTAINS
                    tlmplm%tdulo(lmp,m,lo+mlo,jspin1,jspin2) = &
                         tlmplm%tdulo(lmp,m,lo+mlo,jspin1,jspin2) + one*cil*dvulo(lo,lp,lh)
                   !cil = conjg(((ImagUnit** (l-lp))*sphhar%clnu(mem,lh,sym%ntypsy(na))))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
-                  tlmplm%ulotu(lmp,m,lo+mlo,jspin1,jspin2) = &
-                        tlmplm%ulotu(lmp,m,lo+mlo,jspin1,jspin2) + conjg(one)*cil*uvulo(lo,lp,lh)
-                   tlmplm%ulotd(lmp,m,lo+mlo,jspin1,jspin2) = &
-                        tlmplm%ulotd(lmp,m,lo+mlo,jspin1,jspin2) + conjg(one)*cil*dvulo(lo,lp,lh)
+                  tlmplm%tulou(lmp,m,lo+mlo,jspin1,jspin2) = &
+                        tlmplm%tulou(lmp,m,lo+mlo,jspin1,jspin2) + one*conjg(cil*uvulo(lo,lp,lh))
+                   tlmplm%tulod(lmp,m,lo+mlo,jspin1,jspin2) = &
+                        tlmplm%tulod(lmp,m,lo+mlo,jspin1,jspin2) + one*conjg(cil*dvulo(lo,lp,lh))
                 END DO
              END DO
           END DO
@@ -174,7 +170,7 @@ CONTAINS
                    IF ((ABS(l-lpp).LE.lp) .AND. (lp.LE. (l+lpp)) .AND.&
                         (MOD(l+lp+lpp,2).EQ.0) .AND. (ABS(m).LE.l)) THEN
                       cil = ((ImagUnit** (l-lp))*sphhar%clnu(mem,lh,sym%ntypsy(na)))* gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
-                      tlmplm%tuloulo(mp,m,loplo+mlolo,jspin1,jspin2) = tlmplm%tuloulo(mp,m,loplo+mlolo,jspin1,jspin2) + conjg(one)*cil*ulovulo(loplo,lh)
+                      tlmplm%tuloulo(mp,m,loplo+mlolo,jspin1,jspin2) = tlmplm%tuloulo(mp,m,loplo+mlolo,jspin1,jspin2) + one*conjg(cil*ulovulo(loplo,lh))
                    END IF
                 END DO
              END DO
@@ -194,22 +190,22 @@ CONTAINS
                   ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) )
              tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%dulon(lo,ntyp,jspin1) *&
                   ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) ) + 0.5 * usdus%uulon(lo,ntyp,jspin1)
-            tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%uulon(lo,ntyp,jspin1) *&
+            tlmplm%tulou(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tulou(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%uulon(lo,ntyp,jspin1) *&
                   ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) )
-            tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%dulon(lo,ntyp,jspin1) *&
+            tlmplm%tulod(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tulod(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%dulon(lo,ntyp,jspin1) *&
                  ( enpara%el0(l,ntyp,jspin1)+enpara%ello0(lo,ntyp,jspin1) ) + 0.5 * usdus%uulon(lo,ntyp,jspin1)
             IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
                 tlmplm%tuulo(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tuulo(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%uuilon(lo,ntyp,jspin1)
                 tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%duilon(lo,ntyp,jspin1)
-                tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%uuilon(lo,ntyp,jspin1)
-                tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%duilon(lo,ntyp,jspin1)
+                tlmplm%tulou(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tulou(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%uuilon(lo,ntyp,jspin1)
+                tlmplm%tulod(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tulod(lm,m,lo+mlo,jspin1,jspin2) + 0.5 * usdus%duilon(lo,ntyp,jspin1)
              ENDIF
              !+apw_lo
              IF (atoms%l_dulo(lo,ntyp)) THEN
                 tlmplm%tuulo(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tuulo(lm,m,lo+mlo,jspin1,jspin2) + 0.5
                 tlmplm%tdulo(lm,m,lo+mlo,jspin1,jspin2) = 0.0
-                tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%ulotu(lm,m,lo+mlo,jspin1,jspin2) + 0.5
-                tlmplm%ulotd(lm,m,lo+mlo,jspin1,jspin2) = 0.0
+                tlmplm%tulou(lm,m,lo+mlo,jspin1,jspin2) = tlmplm%tulou(lm,m,lo+mlo,jspin1,jspin2) + 0.5
+                tlmplm%tulod(lm,m,lo+mlo,jspin1,jspin2) = 0.0
              ENDIF
              !+apw_lo
           END DO

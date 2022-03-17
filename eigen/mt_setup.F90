@@ -7,15 +7,15 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,vTot,vx,fmpi,results,td,ud,alpha_hybrid,l_all_l,v1)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,vTot,vx,fmpi,td,ud,alpha_hybrid)
     USE m_types
     USE m_tlmplm_cholesky
     USE m_spnorb
     IMPLICIT NONE
-    TYPE(t_results),INTENT(INOUT):: results
+
     TYPE(t_mpi),INTENT(IN)       :: fmpi
 
-    TYPE(t_enpara),INTENT(INOUT) :: enpara
+    TYPE(t_enpara),INTENT(IN) :: enpara
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_nococonv),INTENT(IN)  :: nococonv
@@ -30,10 +30,6 @@ CONTAINS
     TYPE(t_hub1data),INTENT(INOUT)::hub1data
     REAl,INTENT(IN)               :: alpha_hybrid
 
-    LOGICAL, INTENT(IN) :: l_all_l
-
-    TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1
-
     INTEGER:: jsp
 
 
@@ -42,11 +38,7 @@ CONTAINS
 
     DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau))
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,fmpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
-       IF (PRESENT(v1)) THEN
-           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,vx,inDen,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_all_l,v1)
-       ELSE
-           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,vx,inDen,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_all_l)
-       END IF
+       CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,vx,inDen,input,hub1inp,hub1data,td,ud,alpha_hybrid)
     END DO
     CALL timestop("tlmplm")
 

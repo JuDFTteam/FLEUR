@@ -13,7 +13,8 @@ MODULE m_vgen_xcpot
 CONTAINS
 
    SUBROUTINE vgen_xcpot(hybdat, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
-                          cell, oneD, sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results)
+                          cell, oneD, sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results, &
+                          den1Rot, den1Rotimag, dfptvTotimag, starsq)
 
       !     ***********************************************************
       !     FLAPW potential generator                           *
@@ -37,6 +38,8 @@ CONTAINS
       USE m_cdntot
       USE m_intgr
       USE m_metagga
+      USE m_dfpt_vmt_xc
+      USE m_dfpt_vis_xc
 
       IMPLICIT NONE
 
@@ -57,6 +60,9 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)              :: den, denRot, EnergyDen
       TYPE(t_potden), INTENT(INOUT)           :: vTot, vx, vxc, exc
       TYPE(t_results), INTENT(INOUT), OPTIONAL :: results
+      TYPE(t_potden), INTENT(IN), OPTIONAL     :: den1Rot, den1Rotimag
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL  :: dfptvTotimag
+      TYPE(t_stars), INTENT(IN), OPTIONAL      :: starsq
 
       ! Local type instances
       TYPE(t_potden)    :: workDen, veff
@@ -67,9 +73,12 @@ CONTAINS
       ! Local Scalars
       INTEGER :: ifftd, ifftd2, ifftxc3d, ispin, i, iType
       REAL    :: dpdot
+      LOGICAL :: l_dfptvgen
 #ifdef CPP_MPI
       integer:: ierr
 #endif
+
+      l_dfptvgen = PRESENT(starsq)
 
       call set_kinED(fmpi, sphhar, atoms, sym,  xcpot, &
       input, noco, stars,vacuum,oned, cell, Den, EnergyDen, vTot,kinED)
@@ -120,7 +129,12 @@ CONTAINS
 
          ! interstitial region
          CALL timestart("Vxc in interstitial")
-            CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc, vxc)
+         IF (.NOT.l_dfptvgen) THEN
+             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc, vxc)
+         ELSE
+             ! TODO: This is different enough to warrant a separate subroutine, right?
+             CALL dfpt_vis_xc(stars, starsq, sym, cell, denRot, den1Rot, xcpot, input, vTot)
+         END IF
          CALL timestop("Vxc in interstitial")
       END IF !irank==0
 
@@ -132,8 +146,12 @@ CONTAINS
          CALL timestart("Vxc in MT")
       END IF
 
-      CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
-                  EnergyDen,kinED, noco,vTot, vx, exc, vxc)
+      IF (.NOT.l_dfptvgen) THEN
+          CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
+                      EnergyDen,kinED, noco,vTot, vx, exc, vxc)
+      ELSE
+          CALL dfpt_vmt_xc(fmpi,sphhar,atoms,denRot,den1Rot,den1Rotimag,xcpot,input,sym,noco,vTot,dfptvTotimag)
+      END IF
 
       ! add MT EXX potential to vr
       IF (fmpi%irank == 0) THEN

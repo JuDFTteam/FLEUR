@@ -1,0 +1,22 @@
+To run a phonon calculation at the moment, do the following:
+
+1) Write a suitable input file for the input generator. Set the k-point generation
+   to a grid of N x N x N.
+2) Run inpgen as follows: /path/to/fleur/inpgen -f inputFile -nosym
+   This will generate an inp.xml with no symmetries and exactly N^3 k-points.
+3) Run it again with /path/to/fleur/inpgen -inp.xml -nosym -kpt dfpt#gamma@grid=N,N,N
+   to generate an additional k-Point-Grid that definitely includes [0, 0, 0].
+4) Set the xc-functional tag to an LDA from libxc (e.g. xAlpha):
+      <xcFunctional name="LibXC" relativisticCorrections="F">
+         <LibXCName  exchange="lda_x" correlation="lda_c_xalpha"/>
+      </xcFunctional>
+5) Run Fleur normally [/path/to/fleur/fleur(_MPI)] and converge out.
+[5.1) Optimize the ground state energy w.r.t. the lattice parameter.]
+[5.2) Ideally: Back up the result.]
+6) Modify the inp.xml: Set <<<numbands="all">>>, <kPointListSelection listName="dfpt"/>
+   and add the tag <juPhon l_dfpt="T" singleQpt="M"/> in the output section [M corresponds
+   to the index of the desired q-Point in kpts.xml @dfpt].
+7) Run Fleur. The result should be the dynamical matrix, its Eigenvectors and Eigenvalues
+   [additionally transformed into frequencies].
+8) For the next q-Point: Delete the folder's contents, retrieve the backup and repeat
+   steps 6+7 for the next q-Point index.

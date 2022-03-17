@@ -1,0 +1,56 @@
+Init:
+   - calculate \rho-/V-gradients ONCE for all cartesian directions:
+      - gradVext analytically [0 as \rho-input]
+      - gradRho by numerical differentiation
+      - from this: gradVeff
+q-loop:
+   \beta-loop:
+      j-loop:
+         - generate stars shifted by q with starsq%ustep and starsq%ufft
+           containing not \Theta, but \Theta1
+         - make the Theta1 variables explicitly complex (ufftq,ustepq)
+         - add additional stars%center, that contains q [default: 0]
+         scf-loop:
+            vgen1:
+               vgen_coulomb:
+                  - add the possibility to generate gradV_j from gradRho_j and V1 from rho1
+                     - make vgen_coulomb take a second (imaginary part) and third
+                       (unperturbed) density variable [--> SF elements; done]
+                     - make the inner logic understand shifted stars and 2nd den [done(?)]
+                     - add a part constructing Vext1(l=1) instead of Vext(l=0) qlm [done]
+                     - add SF qlm construction [done]
+                     - make SF qlm construction sensitive to the case (V1: positive
+                       prefactor and only displaced atom; gradV: negative prefactor
+                       and all atoms) [done]
+                     - make qlm for Vext the same [done]
+               vgen_xcpot:
+                  - add new subroutines with altered calls (e.g. dfpt_visxc) [done]
+                  - construct the inner logic to get fxc from rho [done]
+                  - add the logic to fuse fxc and rho1 into vxc1 in MT [done]
+                  - add the logic to fuse fxc and rho1 into vxc1 in IR [done]
+                  - add noco logic around vgen_xcpot for vmat1 [done]
+            eigen1:
+               tlmplm:
+                  - get the matrix elements of both H and V1 [done]
+               hssetup:
+                  - get H1 and S1 matrices from the interstitial v1%pw_w [done]
+                  - get H1 and S1 matrices from the MT td and tdV1 and enppara [WIP]
+               Analytical Matrix inversion:
+                  - write routine that inverts (Hkq-\epsilonk*Skq) in a spectral representation [done]
+               z1-calculation:
+                  - chain together the matrix multiplication z1=-(Hkq-\epsilonk*Skq)^(-1)*(H1-\epsilonk*S1)*z0
+                  - save z1 (and for q=0 \epsilon1) the same way z0 and \epsilon are normally saved [different eig_id!]
+            cdngen1:
+                  - a lot of work
+            mixing:
+               - Add MT-density imaginary part and make sure the IR-part is
+                 handled correctly (4 indices)
+         end scf-loop
+      end j-loop
+      dynmat-row construction:
+         - HF
+         - k-dependent (IBC)
+         - SF
+   end \beta-loop
+   (dynmat-constuction)
+end q-loop

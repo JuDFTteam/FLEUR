@@ -297,7 +297,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) THEN
            CALL tlmplm%init(atoms,input%jspins,.FALSE.)
-           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,vtot,den,input,hub1inp,hub1data,tlmplm,usdus,0.0,.FALSE.)
+           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,vtot,den,input,hub1inp,hub1data,tlmplm,usdus,0.0)
            CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
            usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,lapw%gvec(1,:,:),lapw%gvec(2,:,:),lapw%gvec(3,:,:),bkpt)
          ENDIF

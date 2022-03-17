@@ -40,6 +40,12 @@ CONTAINS
     TYPE(t_oneD),INTENT(inout)::oneD
     TYPE(t_noco),INTENT(in)::noco
     TYPE(t_mpi),INTENT(in)::fmpi
+
+    ! TODO: Add optional bqpt and l_dfpt. The former makes this routine build stars
+    !       around an origin vector q (0 by default) and the latter tells it to build
+    !       a modified step function for use with DFPT.
+    !       Use a dummy oneD, copied input and call the result starsq.
+
     ! Generate stars
     INTEGER :: kimax,kimax2
 
@@ -127,6 +133,7 @@ CONTAINS
     CALL stars%mpi_bc(fmpi%mpi_comm)
 
     CALL timestart("stepf")
+    ! TODO: DFPT here to alternatively call stepf derivative.
     CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi)
     CALL mpi_bc(stars%ustep,0,fmpi%mpi_comm)
     CALL mpi_bc(stars%ufft,0,fmpi%mpi_comm)

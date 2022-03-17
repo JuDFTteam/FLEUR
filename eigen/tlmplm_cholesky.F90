@@ -9,7 +9,7 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,&
-       jspin,fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_all_l,v1)
+       jspin,fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid)
     USE m_tlmplm
     USE m_types
     USE m_radovlp
@@ -34,15 +34,11 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
-    LOGICAL, INTENT(IN) :: l_all_l
-
-    TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1
-
     !     ..
     !     .. Local Scalars ..
     REAL temp
     INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp,j1,j2
-    INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax,i_opc
+    INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax,i_opc,lh0
     LOGICAL OK, isRoot, l_call_tlmplm
     COMPLEX :: one
     !     ..
@@ -84,20 +80,18 @@ CONTAINS
 
        l_call_tlmplm = j1.EQ.j2.OR.any(noco%l_unrestrictMT)
 
-       !TODO: Can v1 be added here as SHARED though it is optional?
        !$OMP PARALLEL DO DEFAULT(NONE)&
-       !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
+       !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp,lh0)&
        !$OMP PRIVATE(lmplm,lp,m,mp,n)&
        !$OMP PRIVATE(OK,s,in,info,i_u,i_opc)&
-       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,vx,v1,alpha_hybrid,isRoot,l_call_tlmplm)&
-       !$OMP SHARED(fmpi,input,hub1inp,hub1data,uun21,udn21,dun21,ddn21,opc_corrections,j1,j2,l_all_l)
+       !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,vx,alpha_hybrid,isRoot,l_call_tlmplm)&
+       !$OMP SHARED(fmpi,input,hub1inp,hub1data,uun21,udn21,dun21,ddn21,opc_corrections,j1,j2)
        DO  n = 1,atoms%ntype
           IF (l_call_tlmplm) THEN
-              IF (PRESENT(v1)) THEN
-                  CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_all_l,v1)
-              ELSE
-                  CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_all_l)
-              END IF
+              lh0 = MERGE(1,0,jsp<3.and.alpha_hybrid==0)
+
+              CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,one)
+
           END IF
           OK=.FALSE.
           cholesky_loop:DO WHILE(.NOT.OK)

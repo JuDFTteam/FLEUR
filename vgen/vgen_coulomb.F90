@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,  oneD, input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvTotimag, dfptden0, stars2, iDtype, iDir )
+             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -57,7 +57,7 @@ contains
     type(t_potden),     intent(inout)            :: vCoul
     type(t_results),    intent(inout), optional  :: results
 
-    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag, dfptvTotimag, dfptden0
+    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag, dfptvCoulimag, dfptden0
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 

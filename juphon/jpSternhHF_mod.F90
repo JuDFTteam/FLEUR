@@ -1001,11 +1001,11 @@ module m_jpSternhHF
     complex                                 :: dtu
     complex                                 :: utd
     complex                                 :: dtd
-    complex                                 :: utulo
-    complex                                 :: dtulo
-    complex                                 :: ulotu
-    complex                                 :: ulotd
-    complex                                 :: ulotulo
+    complex                                 :: tuulo
+    complex                                 :: tdulo
+    complex                                 :: tulou
+    complex                                 :: tulod
+    complex                                 :: tuloulo
 
     ! Local Arrays
     complex,        allocatable             :: ax(:)
@@ -1153,10 +1153,10 @@ module m_jpSternhHF
                     if (.false.) then
                       do loKet = 3, nRadFun(lK, itype)
                         coKsh = coKsh + 1
-                        utulo = (ImagUnit**(lK - lB)) * conjg(td4V1%tuulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1, 1)) ! TODO: These needed a second spin index.
-                        dtulo = (ImagUnit**(lK - lB)) * conjg(td4V1%tdulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1, 1))
-                        ax(nBand) = ax(nBand) + utulo * mCoefKb(nBand, lmloK + coKsh, iatom)
-                        bx(nBand) = bx(nBand) + dtulo * mCoefKb(nBand, lmloK + coKsh, iatom)
+                        tuulo = (ImagUnit**(lK - lB)) * conjg(td4V1%tuulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1, 1)) ! TODO: These needed a second spin index.
+                        tdulo = (ImagUnit**(lK - lB)) * conjg(td4V1%tdulo(lmB, mK, iloTable(loKet, lK, itype) + mlo, 1, 1))
+                        ax(nBand) = ax(nBand) + tuulo * mCoefKb(nBand, lmloK + coKsh, iatom)
+                        bx(nBand) = bx(nBand) + tdulo * mCoefKb(nBand, lmloK + coKsh, iatom)
                       end do
                     end if ! LO false
 
@@ -1169,11 +1169,11 @@ module m_jpSternhHF
                         ! what is with the ls they either have to be equal or not
                         ! we only calculate a triangular matrix aren't we missing entries?
                         ! don't forget the shift mlo and mlolo
-                        ! indices have to be vice versa to utulo
-                        ulotu =  (ImagUnit**(lK - lB)) * td4V1%tuulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1, 1) ! TODO: These needed a second spin index.
-                        ulotd =  (ImagUnit**(lK - lB)) * td4V1%tdulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1, 1)
-                        cx(nBand, coBsh) = cx(nBand, coBsh) + ulotu *  mCoefKb(nBand, lmloK, iatom) &
-                                                                                        & + ulotd * mCoefKb(nBand, lmloK + 1, iatom)
+                        ! indices have to be vice versa to tuulo
+                        tulou =  (ImagUnit**(lK - lB)) * td4V1%tuulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1, 1) ! TODO: These needed a second spin index.
+                        tulod =  (ImagUnit**(lK - lB)) * td4V1%tdulo(lmK, mB, iloTable(loBra, lB, itype) + mlo, 1, 1)
+                        cx(nBand, coBsh) = cx(nBand, coBsh) + tulou *  mCoefKb(nBand, lmloK, iatom) &
+                                                                                        & + tulod * mCoefKb(nBand, lmloK + 1, iatom)
 
                         coKsh = 1
                         do loKet = 3, nRadFun(lK, itype)
@@ -1182,13 +1182,13 @@ module m_jpSternhHF
                         if ( iloTable(loBra, lB, itype) < iloTable(loKet, lK, itype ) ) then
                           loBraKet = ( ( iloTable(loKet, lK, itype) - 1 ) * iloTable(loKet, lK, itype) ) / 2 &
                                                                                                       & + iloTable(loBra, lB, itype)
-                          ulotulo = (ImagUnit**(lK - lB)) * td4V1%tuloulo(mK, mB, loBraKet + mlolo, 1, 1) ! TODO: These needed a second spin index.
+                          tuloulo = (ImagUnit**(lK - lB)) * td4V1%tuloulo(mK, mB, loBraKet + mlolo, 1, 1) ! TODO: These needed a second spin index.
                         else
                           loBraKet = ( ( iloTable(loBra, lB, itype) - 1 ) * iloTable(loBra, lB, itype) ) / 2 &
                                                                                                       & + iloTable(loKet, lK, itype)
-                          ulotulo = (ImagUnit**(lK - lB)) * conjg(td4V1%tuloulo(mB, mK, loBraKet + mlolo, 1, 1)) ! TODO: These needed a second spin index.
+                          tuloulo = (ImagUnit**(lK - lB)) * conjg(td4V1%tuloulo(mB, mK, loBraKet + mlolo, 1, 1)) ! TODO: These needed a second spin index.
                         end if
-                        cx(nBand, coBsh) = cx(nBand, coBsh) + ulotulo *  mCoefKb(nBand, lmloK + coKsh, iatom)
+                        cx(nBand, coBsh) = cx(nBand, coBsh) + tuloulo *  mCoefKb(nBand, lmloK + coKsh, iatom)
                         end do ! loKet
                       end do ! loBra
                     end if ! LO false

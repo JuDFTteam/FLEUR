@@ -15,7 +15,7 @@ def test_SiFilmPlotXML(execute_fleur, grep_number, grep_exists):
     test_file_folder = './inputfiles/SiFilmPlotXML/'
 
     # Stage 1
-    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.out']) #kpts.xml 
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.out']) #kpts.xml
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:

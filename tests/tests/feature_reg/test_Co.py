@@ -30,7 +30,7 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for it=    2", ": ")
     dist_spin = grep_number(res_files['out'], "distance of spin densities for it=    2", ": ")
-    
+
     assert abs(tenergy - -2786.95650275) <= 0.001
     assert abs(dist - 8.376682) <= 0.001
     assert abs(dist_spin - 17.14035) <= 0.001
@@ -44,10 +44,10 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
         should_files.append('banddos.hdf')
     else:
         should_files.append('MCD.1')
-        
+
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     if not with_hdf:
         assert grep_exists(res_files['MCD.1'], "0.95976")
         assert grep_exists(res_files['MCD.1'], "0.36559")
@@ -85,4 +85,3 @@ def test_CoUnfold(execute_fleur, grep_exists, grep_number):
         assert grep_exists(res_files['bands_sc.1'], "6.028983.*0.039764")
         assert grep_exists(res_files['bands_sc.2'], "10.19049.*0.622280")
         assert grep_exists(res_files['bands_sc.2'], "19.12947.*0.009426")
-
