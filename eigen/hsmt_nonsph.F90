@@ -10,7 +10,7 @@ MODULE m_hsmt_nonsph
    PUBLIC hsmt_nonsph
 
 CONTAINS
-   SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,igSpinPr,igSpin,chi,noco,nococonv,cell,lapw,td,fjgj,hmat,set0)
+   SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,igSpinPr,igSpin,chi,noco,nococonv,cell,lapw,td,fjgj,hmat,set0,lapwq)
       USE m_hsmt_fjgj
       USE m_types
       USE m_hsmt_ab
@@ -41,22 +41,36 @@ CONTAINS
 
       CLASS(t_mat),INTENT(INOUT)     ::hmat
 
+      TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq ! Additional set of lapw, in case
+                                                   ! the left and right ones differ.
+
       INTEGER :: nn, na, ab_size, l, ll, size_ab_select
       INTEGER :: size_data_c, size_ab, size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
       REAL    :: rchi
       COMPLEX :: cchi
+      LOGICAL :: l_samelapw
 
       COMPLEX, ALLOCATABLE :: ab1(:,:),ab_select(:,:)
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ab2(:,:), h_loc(:,:), data_c(:,:)
 
+      TYPE(t_lapw) :: lapwPr
+
       CALL timestart("non-spherical setup")
+
+      l_samelapw = .FALSE.
+      IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
+      IF (.NOT.l_samelapw) THEN
+         lapwPr = lapwq
+      ELSE
+         lapwPr = lapw
+      END IF
 
       size_ab = maxval(lapw%nv)
 
       IF (fmpi%n_size==1) Then
          size_ab_select=size_ab
       ELSE
-         size_ab_select=lapw%num_local_cols(igSpinPr)
+         size_ab_select=lapwPr%num_local_cols(igSpinPr)
       END IF
 
       ALLOCATE(ab_select(size_ab_select, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
@@ -151,27 +165,52 @@ CONTAINS
                   END DO
                   !$omp end parallel do
 #endif
-                  IF (fmpi%n_size==1) THEN !use z-herk trick on single PE
-                     !$acc host_data use_device(data_c,ab1)
-                     IF (set0 .and. nn == 1) THEN
-                        !CPP_data_c = CMPLX(0.0,0.0)
-                        CALL CPP_zherk("U", "N", lapw%nv(igSpinPr), ab_size, Rchi, &
-                                       & ab1, size_ab, 0.0, CPP_data_c, size_data_c)
+                  IF (l_samelapw) THEN
+                     IF (fmpi%n_size==1) THEN !use z-herk trick on single PE
+                        !$acc host_data use_device(data_c,ab1)
+                        IF (set0 .and. nn == 1) THEN
+                           !CPP_data_c = CMPLX(0.0,0.0)
+                           CALL CPP_zherk("U", "N", lapw%nv(igSpinPr), ab_size, Rchi, &
+                                        & ab1, size_ab, 0.0, CPP_data_c, size_data_c)
+                        ELSE
+                           CALL CPP_zherk("U", "N", lapw%nv(igSpinPr), ab_size, Rchi, &
+                                        & ab1, size_ab, 1.0, CPP_data_c, size_data_c)
+                        END IF
+                        !$acc end host_data
                      ELSE
-                        CALL CPP_zherk("U", "N", lapw%nv(igSpinPr), ab_size, Rchi, &
-                                       & ab1, size_ab, 1.0, CPP_data_c, size_data_c)
+                        !$acc host_data use_device(data_c,ab1,ab_select)
+                        IF (set0 .and. nn == 1) THEN
+                           !CPP_data_c = CMPLX(0.0,0.0)
+                           CALL CPP_zgemm("N", "T", lapw%nv(igSpinPr), size_ab_select, ab_size, cchi, &
+                                        & ab1, size_ab, ab_select, lapw%num_local_cols(igSpinPr), &
+                                        & CMPLX(0.0, 0.0), CPP_data_c, size_data_c)
+                        ELSE
+                           CALL CPP_zgemm("N", "T", lapw%nv(igSpinPr), size_ab_select, ab_size, cchi, &
+                                        & ab1, size_ab, ab_select, lapw%num_local_cols(igSpinPr), &
+                                        & CMPLX(1.0, 0.0), CPP_data_c, size_data_c)
+                        END IF
+                        !$acc end host_data
                      END IF
-                     !$acc end host_data
                   ELSE
-                     !$acc host_data use_device(data_c,ab1,ab_select)
+                     CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
+                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
+                     !!$acc update device (abCoeffs)
+                     !$acc host_data use_device(abCoeffs,h_loc,ab2)
+                     CALL CPP_zgemm("T", "N", lapwPr%nv(igSpin), ab_size, ab_size, CMPLX(1.0, 0.0), &
+                                  & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
+                                  & CMPLX(0.0, 0.0), ab2, size_ab2)
+                     !$acc end host_data
+                     !$acc kernels  default(none) present(ab2)
+                     ab2(:, :) = conjg(ab2(:, :))
+                     !$acc end kernels
+                     !$acc host_data use_device(ab2,ab1,data_c,ab_select)
                      IF (set0 .and. nn == 1) THEN
-                        !CPP_data_c = CMPLX(0.0,0.0)
-                        CALL CPP_zgemm("N", "T", lapw%nv(igSpinPr), size_ab_select, ab_size, cchi, &
-                                     & ab1, size_ab, ab_select, lapw%num_local_cols(igSpinPr), &
+                        CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
+                                     & ab2, size_ab2, ab_select, size_ab_select, &
                                      & CMPLX(0.0, 0.0), CPP_data_c, size_data_c)
                      ELSE
-                        CALL CPP_zgemm("N", "T", lapw%nv(igSpinPr), size_ab_select, ab_size, cchi, &
-                                     & ab1, size_ab, ab_select, lapw%num_local_cols(igSpinPr), &
+                        CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
+                                     & ab2, size_ab2, ab_select, size_ab_select, &
                                      & CMPLX(1.0, 0.0), CPP_data_c, size_data_c)
                      END IF
                      !$acc end host_data
@@ -189,7 +228,7 @@ CONTAINS
 
                   ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}
                   CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpin, n, na, cell, &
-                             & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
+                             & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
                   !!$acc update device(abCoeffs)
                   !$acc kernels default(none) present(abCoeffs)
                   abCoeffs(:,:)=conjg(abCoeffs(:,:))
@@ -198,11 +237,11 @@ CONTAINS
                   !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
                   IF (set0 .and. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
-                     CALL CPP_zgemm("T", "T", lapw%nv(igSpinPr), size_ab_select, ab_size, chi, &
+                     CALL CPP_zgemm("T", "T", lapwPr%nv(igSpinPr), size_ab_select, ab_size, chi, &
                                   & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
                                   & CMPLX(0.0, 0.0), CPP_data_c, SIZE_data_c)
                   ELSE
-                     CALL CPP_zgemm("T", "T", lapw%nv(igSpinPr), size_ab_select, ab_size, chi, &
+                     CALL CPP_zgemm("T", "T", lapwPr%nv(igSpinPr), size_ab_select, ab_size, chi, &
                                   & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
                                   & CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                   END IF
@@ -216,11 +255,11 @@ CONTAINS
                !Second set of abCoeffs is needed
                ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}^{'}
                CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpinPr, n, na, cell, &
-                          & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
+                          & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
                IF (ilSpinPr==ilSpin) THEN
                   !!$acc update device (abCoeffs)
                   !$acc host_data use_device(abCoeffs,h_loc,ab2)
-                  CALL CPP_zgemm("T", "N", lapw%nv(igSpinPr), ab_size, ab_size, CMPLX(1.0, 0.0), &
+                  CALL CPP_zgemm("T", "N", lapwPr%nv(igSpinPr), ab_size, ab_size, CMPLX(1.0, 0.0), &
                                & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
                                & CMPLX(0.0, 0.0), ab2, size_ab2)
                   !$acc end host_data
@@ -229,7 +268,7 @@ CONTAINS
                   !$acc end kernels
                   !Multiply for Hamiltonian
                   !$acc host_data use_device(ab2,ab1,data_c,ab_select)
-                  CALL CPP_zgemm("N", "T", lapw%nv(igSpinPr), lapw%num_local_cols(igSpin), ab_size, chi, &
+                  CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
                                & ab2, size_ab2, ab_select, size_ab_select, &
                                & CMPLX(1.0, 0.0), CPP_data_c, size_data_c)
                   !$acc end host_data
@@ -244,11 +283,11 @@ CONTAINS
                   !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
                   IF (set0 .AND. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
-                     CALL CPP_zgemm("T", "T", lapw%nv(igSpinPr), lapw%num_local_cols(igSpin), ab_size, cchi, &
+                     CALL CPP_zgemm("T", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
                                   & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
                                   & CMPLX(0.0, 0.0), CPP_data_c, SIZE_data_c)
                   ELSE
-                     CALL CPP_zgemm("T", "T", lapw%nv(igSpinPr), lapw%num_local_cols(igSpin), ab_size, cchi, &
+                     CALL CPP_zgemm("T", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
                                   & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
                                   CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                   END IF
