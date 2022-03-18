@@ -35,6 +35,11 @@ q-loop:
                hssetup:
                   - get H1 and S1 matrices from the interstitial v1%pw_w [done]
                   - get H1 and S1 matrices from the MT td and tdV1 and enppara [WIP]
+                     - use hsmt_nonsph for the matrix elements of V1
+                        - nonsph gives a full matrix as we need, but we need to teach
+                          it to accept different matching coefficients for different
+                          k left and right [easy]
+                        - nonsph spits out *exactly* the complex conjugate of a*Ha[!]
                Analytical Matrix inversion:
                   - write routine that inverts (Hkq-\epsilonk*Skq) in a spectral representation [done]
                z1-calculation:
