@@ -139,9 +139,9 @@ CONTAINS
 
             ! ab1 = MATMUL(TRANSPOSE(abCoeffs(:ab_size,:lapw%nv(igSpin))),h_loc(:ab_size,:ab_size,n,ilSpin))
             ! In diagonal case:
-            ! ab1 = a^T * L (lower triangular matrix from Cholesky decomposition)
+            ! ab1 = a^H * L (lower triangular matrix from Cholesky decomposition)
             ! Offdiagonal case:
-            ! ab1 = a^T * V (potential matrix in lmp lm etc.)
+            ! ab1 = a^H * V (potential matrix in lmp lm etc.)
 
             ! Of these ab1 coeffs only a part is needed in case of MPI parallelism
             !$acc kernels default(none) present(ab_select,ab1)copyin(fmpi)
@@ -165,6 +165,8 @@ CONTAINS
                   END DO
                   !$omp end parallel do
 #endif
+                  ! In diagonal case:
+                  ! ab1 = a^T * conjg(L)
                   IF (l_samelapw) THEN
                      IF (fmpi%n_size==1) THEN !use z-herk trick on single PE
                         !$acc host_data use_device(data_c,ab1)
@@ -216,13 +218,15 @@ CONTAINS
                      !$acc end host_data
                   END IF
                   ! In zherk case:
-                  ! ab1 = a^H * conjg(L)
-                  ! data_c += chi * a^H * conjg(L) * L * a = a^H * conjg(H) * a
+                  ! ab1 = a^T * conjg(L)
+                  ! data_c += chi * a^T * conjg(L) * L^T * conjg(a) = chi * a^T * conjg(H) * conjg(a)
+                  !         = chi * conjg(a^H * H * a)
                   ! [only upper triangle]
                   ! In zgemm case:
-                  ! ab_select = a^T * L
-                  ! ab1 = a^H * conjg(L)
-                  ! data_c += chi * a^H * conjg(L) * L^T * a = a^H * conjg(H) * a
+                  ! ab_select = a^H * L
+                  ! ab1 = a^T * conjg(L)
+                  ! data_c += chi * a^T * conjg(L) * L^T * conjg(a) = chi * a^T * conjg(H) * conjg(a)
+                  !         = chi * conjg(a^H * H * a)
                ELSE !This is the case of a local off-diagonal contribution.
                   !It is not Hermitian, so we NEED to use zgemm CALL
 
@@ -247,9 +251,9 @@ CONTAINS
                   END IF
                   !$acc end host_data
                   ! Offdiagonal case:
-                  ! ab_select = a^T * V
-                  ! abCoeffs = conj(a'('))
-                  ! data_c += chi * a'^H * V^T * a
+                  ! ab_select = a^H * V
+                  ! abCoeffs = a'(')
+                  ! data_c += chi * a'^T * V^T * conjg(a) = chi * conjg(a'^H * V^H * a)
                END IF
             ELSE  !here the l_ss off-diagonal part starts
                !Second set of abCoeffs is needed
@@ -266,6 +270,7 @@ CONTAINS
                   !$acc kernels  default(none) present(ab2)
                   ab2(:, :) = conjg(ab2(:, :))
                   !$acc end kernels
+                  ! ab2 = a''^T * conjg(L)
                   !Multiply for Hamiltonian
                   !$acc host_data use_device(ab2,ab1,data_c,ab_select)
                   CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
@@ -273,9 +278,10 @@ CONTAINS
                                & CMPLX(1.0, 0.0), CPP_data_c, size_data_c)
                   !$acc end host_data
                   ! Diagonal case:
-                  ! ab2 = a''^H * conjg(L)
-                  ! ab_select = a^T * L
-                  ! data_c += chi * a''^H * conjg(L) * L^T * a = a''^H * conjg(H) * a
+                  ! ab2 = a''^T * conjg(L)
+                  ! ab_select = a^H * L
+                  ! data_c += chi * a''^T * conjg(L) * L^T * conjg(a) = a''^T * conjg(H) * conjg(a)
+                  !         = chi * conjg(a''^H * H * a)
                ELSE
                   !$acc kernels default(none) present(abCoeffs)
                   abCoeffs(:,:)=conjg(abCoeffs(:,:))
@@ -293,9 +299,9 @@ CONTAINS
                   END IF
                   !$acc end host_data
                   ! Offdiagonal case:
-                  ! abCoeffs = a''^H
-                  ! ab_select = a^T * V
-                  ! data_c += chi * a''^H * V^T * a = a''^H * V^T * a
+                  ! abCoeffs = a''
+                  ! ab_select = a^H * V
+                  ! data_c += chi * a''^T * V^T * conjg(a) = chi * conjg(a''^H * V^H * a)
                END IF
             END IF
          END IF

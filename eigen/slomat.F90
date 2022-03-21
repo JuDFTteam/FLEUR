@@ -106,10 +106,10 @@ CONTAINS
                    dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN
                       smat%data_r(kp,locol) = smat%data_r(kp,locol) + chi*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
-                           cph(k,jintsp)*CONJG(cph(kp,iintsp))
+                           CONJG(cph(k,jintsp))*cph(kp,iintsp)
                    ELSE
                       smat%data_c(kp,locol) = smat%data_c(kp,locol) + chi*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
-                           cph(k,jintsp)*CONJG(cph(kp,iintsp))
+                           CONJG(cph(k,jintsp))*cph(kp,iintsp)
                    ENDIF
                 END DO
                 !$acc end loop
@@ -133,10 +133,10 @@ CONTAINS
                          dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                          IF (smat%l_real) THEN
                             smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+chi*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)* &
-                                 cph(k,jintsp)*conjg(cph(kp,iintsp))
+                                 CONJG(cph(k,jintsp))*cph(kp,iintsp)
                          ELSE
                             smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+chi*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)*&
-                                 cph(k,jintsp)*CONJG(cph(kp,iintsp))
+                                 CONJG(cph(k,jintsp))*cph(kp,iintsp)
                          ENDIF
                       END DO
                    ENDIF
@@ -150,10 +150,10 @@ CONTAINS
                    dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN
                       smat%data_r(lorow,locol) = smat%data_r(lorow,locol) + chi*invsfct*fact1*legpol(l,dotp) *&
-                           cph(k,jintsp)*CONJG(cph(kp,iintsp))
+                           CONJG(cph(k,jintsp))*cph(kp,iintsp)
                    ELSE
                       smat%data_c(lorow,locol) = smat%data_c(lorow,locol) + chi*invsfct*fact1*legpol(l,dotp)*&
-                           cph(k,jintsp)*CONJG(cph(kp,iintsp))
+                           CONJG(cph(k,jintsp))*cph(kp,iintsp)
                    ENDIF
                 END DO
              ENDIF ! mod(locol-1,n_size) = nrank
