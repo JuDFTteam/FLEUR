@@ -6,7 +6,8 @@
 
 MODULE m_hs_int_direct
 CONTAINS
-   SUBROUTINE hs_int_direct(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat)
+   SUBROUTINE hs_int_direct(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, &
+                          & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat)
       ! Calculates matrix elements of the form
       ! <\phi_{k'G'}|M|\phi_{kG}>
       ! for different use cases in the DFT/DFPT scf loop and operators M.
@@ -44,21 +45,18 @@ CONTAINS
 
       CLASS(t_mat),  INTENT(INOUT) :: hmat, smat
 
-      INTEGER :: i, j, i0, jmax, gPrG(3)
-      INTEGER :: gInd
+      INTEGER :: ikGPr, ikG, ikG0, gPrG(3), gInd
       COMPLEX :: th, ts, phase
       REAL    :: bvecPr(3), bvec(3), r2
 
       !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
-      !$OMP SHARED(fmpi, stars, bbmat, vpw, gvecPr, gvec, kvecPr, kvec) &
-      !$OMP SHARED(nvPr, nv, l_smat, l_fullj, iTkin, fact)&
-      !$OMP SHARED(hmat, smat)&
-      !$OMP PRIVATE(gPrG, i0, i, j, jmax, gInd, phase, bvecPr, bvec, r2, th, ts)
-      DO  i = fmpi%n_rank + 1, nv, fmpi%n_size
-         i0 = (i-1) / fmpi%n_size + 1
-         jmax = MERGE(nvPr, MIN(i, nvPr), l_fullj)
-         DO  j = 1, jmax
-            gPrG = fact * (gvecPr(:, j) - gvec(:, i))
+      !$OMP SHARED(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec) &
+      !$OMP SHARED(nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat) &
+      !$OMP PRIVATE(ikGPr, ikG, ikG0, gPrG, gInd, th, ts, phase, bvecPr, bvec, r2)
+      DO  ikG = fmpi%n_rank + 1, nv, fmpi%n_size
+         ikG0 = (ikG-1) / fmpi%n_size + 1
+         DO  ikGPr = 1, MERGE(nvPr, MIN(ikG, nvPr), l_fullj)
+            gPrG = fact * (gvecPr(:, ikGPr) - gvec(:, ikG))
 
             gInd = stars%ig(gPrG(1), gPrG(2), gPrG(3))
 
@@ -69,8 +67,8 @@ CONTAINS
             th = phase * vpw(gInd)
 
             IF (iTkin.GT.0) THEN
-               bvecPr = kvecPr + gvecPr(:, j)
-               bvec = kvec + gvec(:, i)
+               bvecPr = kvecPr + gvecPr(:, ikGPr)
+               bvec = kvec + gvec(:, ikG)
 
                IF (iTkin.EQ.1) THEN ! Symmetric Dirac form
                   r2 = 0.5 * DOT_PRODUCT(MATMUL(bvecPr, bbmat), bvec)
@@ -93,11 +91,11 @@ CONTAINS
             END IF
 
             IF (hmat%l_real) THEN
-               hmat%data_r(j, i0) = REAL(th)
-               smat%data_r(j, i0) = REAL(ts)
+               hmat%data_r(ikGPr, ikG0) = REAL(th)
+               smat%data_r(ikGPr, ikG0) = REAL(ts)
             ELSE
-               hmat%data_c(j, i0) = CONJG(th) ! This corresponds to the conclusive
-               smat%data_c(j, i0) = CONJG(ts) ! conjugation in eigen.
+               hmat%data_c(ikGPr, ikG0) = CONJG(th) ! This corresponds to the
+               smat%data_c(ikGPr, ikG0) = CONJG(ts) ! conjugation in eigen.
             END IF
          END DO
       END DO
