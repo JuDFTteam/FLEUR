@@ -8,7 +8,17 @@ MODULE m_hs_int
 CONTAINS
    !Subroutine to construct the interstitial Hamiltonian and overlap matrix
    SUBROUTINE hs_int(input, noco, nococonv, stars, lapw, fmpi, bbmat, isp, vpw, &
-                   & smat,hmat)
+                   & smat, hmat)
+      ! Control subroutine for the calculation of Hamiltonian/overlap matrix
+      ! elements in the interstitial. The spin logic and case selections are
+      ! found here while the actual calculation loop is one layer deeper in
+      ! hs_int_direct.
+      !
+      ! <\Phi'|H/S|\Phi>
+      !
+      ! All primed indices are to be understood as corresponding to the Bra
+      ! basis function, e.g. iSpinPr is the left and iSpin the right hand spin.
+
       USE m_types
       USE m_hs_int_direct
 
@@ -63,9 +73,9 @@ CONTAINS
                END IF
                fact     = 1
             END IF
-            CALL hs_int_direct(fmpi, lapw%gvec(:,:,iSpin), lapw%gvec(:,:,iSpinPr), &
-                             & lapw%bkpt+iQss*(2*iSpin - 3)/2.0*nococonv%qss, lapw%bkpt+iQss*(2*iSpinPr - 3)/2.0*nococonv%qss, &
-                             & lapw%nv(iSpin), lapw%nv(iSpinPr), stars, bbmat, vpw_temp, hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin), l_smat, .FALSE., iTkin, fact)
+            CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:,:,iSpinPr), lapw%gvec(:,:,iSpin), &
+                             & lapw%bkpt+iQss*(2*iSpinPr - 3)/2.0*nococonv%qss, lapw%bkpt+iQss*(2*iSpin - 3)/2.0*nococonv%qss, &
+                             & lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, fact, l_smat, .FALSE., vpw_temp, hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin))
             END DO
       END DO
    END SUBROUTINE hs_int
