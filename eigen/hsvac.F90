@@ -100,26 +100,26 @@ CONTAINS
                END DO
 
                !---> update hamiltonian and overlap matrices
-               IF (iSpin==iSpinPr) THEN
-                  DO ikG = fmpi%n_rank+1,lapw%nv(iSpinPr),fmpi%n_size
-                     ikG0=(ikG-1)/fmpi%n_size+1 !local column index
-                     ikG2 = map2(ikG,iSpinPr)
-                     DO ikGPr = 1,ikG - 1 !TODO check noco case
+               IF (iSpinPr==iSpin) THEN
+                  DO ikG = fmpi%n_rank + 1, lapw%nv(iSpin), fmpi%n_size
+                     ikG0 = (ikG-1)/fmpi%n_size + 1 !local column index
+                     ikG2 = map2(ikG,iSpin)
+                     DO ikGPr = 1, ikG - 1 !TODO check noco case
                         !---> overlap: only  (g-g') parallel=0       '
-                        IF (map2(ikGPr,iSpin).EQ.ikG2) THEN
-                           sij = CONJG(a(ikG,iSpinPr))*a(ikGPr,iSpinPr) + &
-                                 CONJG(b(ikG,iSpinPr))*b(ikGPr,iSpinPr)*ddnv(ikG2,iSpinPr)
+                        IF (map2(ikGPr, iSpin).EQ.ikG2) THEN
+                           sij = CONJG(a(ikGPr,iSpin))*a(ikG,iSpin) + &
+                                 CONJG(b(ikGPr,iSpin))*b(ikG,iSpin)*ddnv(ikG2,iSpin)
                            !+APW_LO
                            IF (input%l_useapw) THEN
-                              apw_lo = CONJG(a(ikG,iSpin)*  uz(ikG2,iSpin) + b(ikG,iSpin)* udz(ikG2,iSpin) ) &
-                                          * (a(ikGPr,iSpin)* duz(ikG2,iSpin) + b(ikGPr,iSpin)*dudz(ikG2,iSpin) )&
-                                     +      (a(ikGPr,iSpin)*  uz(ikG2,iSpin) + b(ikGPr,iSpin)* udz(ikG2,iSpin) ) &
-                                     * CONJG(a(ikG,iSpin)* duz(ikG2,iSpin) + b(ikG,iSpin)*dudz(ikG2,iSpin) )
+                              apw_lo =      (a(ikG,iSpin)   *  uz(ikG2,iSpin) + b(ikG,iSpin)   *  udz(ikG2,iSpin)) &
+                                     * CONJG(a(ikGPr,iSpin) * duz(ikG2,iSpin) + b(ikGPr,iSpin) * dudz(ikG2,iSpin)) &
+                                     + CONJG(a(ikGPr,iSpin) *  uz(ikG2,iSpin) + b(ikGPr,iSpin) *  udz(ikG2,iSpin)) &
+                                     *      (a(ikG,iSpin)   * duz(ikG2,iSpin) + b(ikG,iSpin)   * dudz(ikG2,iSpin))
                               ! IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
                               IF (hmat(1,1)%l_real) THEN
                                  hmat(igSpin,igSpin)%data_r(ikGPr,ikG0) = hmat(igSpin,igSpin)%data_r(ikGPr,ikG0) + 0.25 * REAL(apw_lo)
                               ELSE
-                                 hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) + 0.25 * apw_lo
+                                 hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) + 0.25 * CONJG(apw_lo)
                               END IF
                            END IF
 
@@ -127,33 +127,37 @@ CONTAINS
                            IF (hmat(1,1)%l_real) THEN
                               smat(igSpin,igSpin)%data_r(ikGPr,ikG0) = smat(igSpin,igSpin)%data_r(ikGPr,ikG0) + REAL(sij)
                            ELSE
-                              smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + sij
+                              smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + CONJG(sij)
                            END IF
                         END IF
                      END DO
 
-                     !Diagonal term of Overlapp matrix, Hamiltonian later
-                     sij = CONJG(a(ikG,iSpinPr))*a(ikG,iSpinPr) + CONJG(b(ikG,iSpinPr))*b(ikG,iSpinPr)*ddnv(ikG2,iSpinPr)
+                     !Diagonal term of Overlap matrix, Hamiltonian later
+                     sij = CONJG(a(ikG,iSpin))*a(ikG,iSpin) + CONJG(b(ikG,iSpin))*b(ikG,iSpin)*ddnv(ikG2,iSpin)
                      IF (hmat(1,1)%l_real) THEN
                         smat(igSpin,igSpin)%data_r(ikGPr,ikG0) = smat(igSpin,igSpin)%data_r(ikGPr,ikG0) + REAL(sij)
                      ELSE
-                        smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + sij
+                        smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + CONJG(sij) ! conjg technically moot
                      END IF
                   END DO
                END IF
 
                !--->    hamiltonian update
-               DO  ikG = fmpi%n_rank+1,lapw%nv(iSpin),fmpi%n_size
-                  ikG0=(ikG-1)/fmpi%n_size+1 !local column index
+               DO ikG = fmpi%n_rank+1,lapw%nv(iSpin),fmpi%n_size
+                  ikG0 = (ikG-1)/fmpi%n_size + 1 !local column index
                   ikG2 = map2(ikG,iSpin)
-                  DO ikGPr = 1,MERGE(ikG,lapw%nv(iSpinPr),iSpin==iSpinPr)
-                     ikGPr2 = map2(ikGPr,iSpinPr)
-                     hij = CONJG(a(ikG,iSpin))* (tuuv(ikG2,ikGPr2)*a(ikGPr,iSpinPr) +tudv(ikG2,ikGPr2)*b(ikGPr,iSpinPr))&
-                         + CONJG(b(ikG,iSpin))* (tddv(ikG2,ikGPr2)*b(ikGPr,iSpinPr) +tduv(ikG2,ikGPr2)*a(ikGPr,iSpinPr))
+                  DO ikGPr = 1, MERGE(ikG, lapw%nv(iSpinPr), iSpin==iSpinPr)
+                     ikGPr2 = map2(ikGPr, iSpinPr)
+                     !hij = CONJG(a(ikGPr, iSpinPr) * tuuv(ikG2, ikGPr2) + b(ikGPr,iSpinPr) * tudv(ikG2,ikGPr2)) * a(ikG,iSpin) &
+                     !    + CONJG(b(ikGPr, iSpinPr) * tddv(ikG2, ikGPr2) + a(ikGPr,iSpinPr) * tduv(ikG2,ikGPr2)) * b(ikG,iSpin)
+                     hij = CONJG(a(ikGPr, iSpinPr)) * tuuv(ikGPr2, ikG2) * a(ikG,iSpin) &
+                         + CONJG(b(ikGPr, iSpinPr)) * tddv(ikGPr2, ikG2) * b(ikG,iSpin) &
+                         + CONJG(a(ikGPr, iSpinPr)) * tudv(ikGPr2, ikG2) * b(ikG,iSpin) &
+                         + CONJG(b(ikGPr, iSpinPr)) * tduv(ikGPr2, ikG2) * a(ikG,iSpin)
                      IF (hmat(1,1)%l_real) THEN
                         hmat(igSpinPr,igSpin)%data_r(ikGPr,ikG0) = hmat(igSpinPr,igSpin)%data_r(ikGPr,ikG0) + REAL(hij)
                      ELSE
-                        hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) + hij
+                        hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) + CONJG(hij)
                      END IF
                   END DO
                END DO
