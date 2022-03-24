@@ -59,7 +59,7 @@ CONTAINS
             i0 = (i-1) / fmpi%n_size + 1
             jmax = MERGE(nvPr, MIN(i, nvPr), l_fullj)
             DO  j = 1, jmax
-                gPrG = fact * (gvec(:,i) - gvecPr(:,j))
+                gPrG = fact * (gvecPr(:,j) - gvec(:,i))
 
                 gInd = stars%ig(gPrG(1), gPrG(2), gPrG(3))
                 IF (gInd.EQ.0) CYCLE
@@ -95,8 +95,8 @@ CONTAINS
                     hmat%data_r(j,i0) = REAL(th)
                     smat%data_r(j,i0) = REAL(ts)
                 ELSE
-                    hmat%data_c(j,i0) = th
-                    smat%data_c(j,i0) = ts
+                    hmat%data_c(j,i0) = CONJG(th)
+                    smat%data_c(j,i0) = CONJG(ts)
                 END IF
             END DO
         END DO

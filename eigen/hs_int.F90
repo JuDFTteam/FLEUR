@@ -39,13 +39,13 @@ CONTAINS
          igSpinPr=MIN(iSpinPr,SIZE(smat,1))
          DO iSpin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
             igSpin=MIN(iSpin,SIZE(smat,1))
-            IF (iSpinPr.EQ.2.AND.iSpin.EQ.1) THEN
+            IF (iSpinPr.EQ.1.AND.iSpin.EQ.2) THEN
                vpw_temp = conjg(vpw(:, 3))
                l_smat   = .FALSE. ! Offdiagonal part --> No step function part.
                iTkin    = 0       ! Offdiagonal part --> No T part.
                fact     = -1      ! (12)-element --> (-1) prefactor
                iQss     = 0       ! No spin-spiral considered (no T).
-            ELSE IF (iSpinPr.EQ.1.AND.iSpin.EQ.2) THEN
+            ELSE IF (iSpinPr.EQ.2.AND.iSpin.EQ.1) THEN
                vpw_temp = vpw(:, 3)
                l_smat   = .FALSE.
                iTkin    = 0
