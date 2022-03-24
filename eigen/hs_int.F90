@@ -36,16 +36,16 @@ CONTAINS
       IF (noco%l_noco.AND.isp==2) RETURN !was done already
 
       DO iSpinPr=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
-         igSpin=MIN(iSpinPr,SIZE(smat,1))
+         igSpinPr=MIN(iSpinPr,SIZE(smat,1))
          DO iSpin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
-            igSpinPr=MIN(iSpin,SIZE(smat,1))
-            IF (iSpinPr.EQ.1.AND.iSpin.EQ.2) THEN
+            igSpin=MIN(iSpin,SIZE(smat,1))
+            IF (iSpinPr.EQ.2.AND.iSpin.EQ.1) THEN
                vpw_temp = conjg(vpw(:, 3))
                l_smat   = .FALSE. ! Offdiagonal part --> No step function part.
                iTkin    = 0       ! Offdiagonal part --> No T part.
                fact     = -1      ! (12)-element --> (-1) prefactor
                iQss     = 0       ! No spin-spiral considered (no T).
-            ELSE IF (iSpinPr.EQ.2.AND.iSpin.EQ.1) THEN
+            ELSE IF (iSpinPr.EQ.1.AND.iSpin.EQ.2) THEN
                vpw_temp = vpw(:, 3)
                l_smat   = .FALSE.
                iTkin    = 0
@@ -63,9 +63,9 @@ CONTAINS
                END IF
                fact     = 1
             END IF
-            CALL hs_int_direct(fmpi, lapw%gvec(:,:,iSpinPr), lapw%gvec(:,:,iSpin), &
-                             & lapw%bkpt+iQss*(2*iSpinPr - 3)/2.0*nococonv%qss, lapw%bkpt+iQss*(2*iSpin - 3)/2.0*nococonv%qss, &
-                             & lapw%nv(iSpinPr), lapw%nv(iSpin), stars, bbmat, vpw_temp, hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin), l_smat, .FALSE., iTkin, fact)
+            CALL hs_int_direct(fmpi, lapw%gvec(:,:,iSpin), lapw%gvec(:,:,iSpinPr), &
+                             & lapw%bkpt+iQss*(2*iSpin - 3)/2.0*nococonv%qss, lapw%bkpt+iQss*(2*iSpinPr - 3)/2.0*nococonv%qss, &
+                             & lapw%nv(iSpin), lapw%nv(iSpinPr), stars, bbmat, vpw_temp, hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin), l_smat, .FALSE., iTkin, fact)
             END DO
       END DO
    END SUBROUTINE hs_int
