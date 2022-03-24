@@ -41,7 +41,7 @@ CONTAINS
     COMPLEX hij,sij,apw_lo,c_1
     REAL d2,gz,sign,th,wronk
     INTEGER i,i2,ii,jj,ik,j,jk,k,jspin,ii0,i0
-    INTEGER ivac,irec,imz,igvm2,igvm2i,s1,s2
+    INTEGER ivac,irec,imz,igvm2,igvm2i,igSpin,igSpinPr
     INTEGER jspin1,jspin2,jmax,jsp_start,jsp_end
     INTEGER i_start,nc,nc_0
     !     ..
@@ -82,9 +82,9 @@ CONTAINS
     DO ivac = 1,2
        sign = 3. - 2.*ivac !+/- 1
        DO jspin1=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco) !loop over global spin
-          s1=MIN(SIZE(hmat,1),jspin1) !in colinear case s1=1
+          igSpin=MIN(SIZE(hmat,1),jspin1) !in colinear case igSpin=1
           DO jspin2=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco) !loop over global spin
-             s2=MIN(SIZE(hmat,1),jspin2) !in colinear case s2=1
+             igSpinPr=MIN(SIZE(hmat,1),jspin2) !in colinear case igSpinPr=1
           !--->       get the wavefunctions and set up the tuuv, etc matrices
              CALL timestart("vacfun")
              CALL vacfun(&
@@ -124,25 +124,25 @@ CONTAINS
                               * CONJG(a(i,jspin1)* duz(ik,jspin1) + b(i,jspin1)*dudz(ik,jspin1) )
                          !            IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
                          IF (hmat(1,1)%l_real) THEN
-                            hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + 0.25 * REAL(apw_lo)
+                            hmat(igSpin,igSpin)%data_r(j,i0) = hmat(igSpin,igSpin)%data_r(j,i0) + 0.25 * REAL(apw_lo)
                          ELSE
-                            hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + 0.25 * apw_lo
+                            hmat(igSpin,igSpin)%data_c(j,i0) = hmat(igSpin,igSpin)%data_c(j,i0) + 0.25 * apw_lo
                          ENDIF
                       ENDIF
                       !Overlapp Matrix
                       IF (hmat(1,1)%l_real) THEN
-                         smat(s1,s2)%data_r(j,i0) = smat(s1,s2)%data_r(j,i0) + REAL(sij)
+                         smat(igSpin,igSpin)%data_r(j,i0) = smat(igSpin,igSpin)%data_r(j,i0) + REAL(sij)
                       ELSE
-                         smat(s1,s2)%data_c(j,i0) = smat(s1,s2)%data_c(j,i0) + sij
+                         smat(igSpin,igSpin)%data_c(j,i0) = smat(igSpin,igSpin)%data_c(j,i0) + sij
                       ENDIF
                    END IF
                 ENDDO
                 !Diagonal term of Overlapp matrix, Hamiltonian later
                 sij = CONJG(a(i,jspin2))*a(i,jspin2) + CONJG(b(i,jspin2))*b(i,jspin2)*ddnv(ik,jspin2)
                 IF (hmat(1,1)%l_real) THEN
-                   smat(s2,s1)%data_r(j,i0) = smat(s1,s2)%data_r(j,i0) + REAL(sij)
+                   smat(igSpin,igSpin)%data_r(j,i0) = smat(igSpin,igSpin)%data_r(j,i0) + REAL(sij)
                 ELSE
-                   smat(s2,s1)%data_c(j,i0) = smat(s1,s2)%data_c(j,i0) + sij
+                   smat(igSpin,igSpin)%data_c(j,i0) = smat(igSpin,igSpin)%data_c(j,i0) + sij
                 ENDIF
              ENDDO
           ENDIF
@@ -156,9 +156,9 @@ CONTAINS
                 hij = CONJG(a(i,jspin1))* (tuuv(ik,jk)*a(j,jspin2) +tudv(ik,jk)*b(j,jspin2))&
                      + CONJG(b(i,jspin1))* (tddv(ik,jk)*b(j,jspin2) +tduv(ik,jk)*a(j,jspin2))
                 IF (hmat(1,1)%l_real) THEN
-                   hmat(s2,s1)%data_r(j,i0) = hmat(s2,s1)%data_r(j,i0) + REAL(hij)
+                   hmat(igSpinPr,igSpin)%data_r(j,i0) = hmat(igSpinPr,igSpin)%data_r(j,i0) + REAL(hij)
                 ELSE
-                   hmat(s2,s1)%data_c(j,i0) = hmat(s2,s1)%data_c(j,i0) + hij
+                   hmat(igSpinPr,igSpin)%data_c(j,i0) = hmat(igSpinPr,igSpin)%data_c(j,i0) + hij
                 ENDIF
              ENDDO
           ENDDO
