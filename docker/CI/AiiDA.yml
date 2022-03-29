@@ -38,6 +38,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - git checkout aiida2.0-regression-tests
     - pip3 install .[testing]
     - pip3 install aiida-core==2.0.0b1
+    - pip3 install git+https://github.com/JuDFTteam/masci-tools.git@develop
     - rm -rf tests/workflows/calculations tests/workflows/caches
     - rm -rf tests/calculation/data_dir
     - rm -rf tests/data_dir
