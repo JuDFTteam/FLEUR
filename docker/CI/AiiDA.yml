@@ -18,7 +18,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     AIIDA_FIRST_NAME: "Giuseppe"
     AIIDA_LAST_NAME: "Verdi"
     AIIDA_INSTITUTION: "Khedivial"
-    AIIDA_DB_BACKEND: "django"
+    AIIDA_DB_BACKEND: "psql_dos"
 
   services:
     - postgres:12.2-alpine
