@@ -29,15 +29,15 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Aiida-fleur system dependencies"
     - pip3 install --upgrade wheel setuptools
     - pip3 install pytest masci-tools
-    - pip3 install aiida-core
     # needed for workflow tests
-    - pip3 install git+https://github.com/aiidateam/aiida-testing.git@export_cache
+    - pip3 install git+https://github.com/JuDFTteam/aiida-testing.git@export_cache
     #- pip3 install git+https://github.com/JuDFTteam/aiida-fleur.git@develop.[testing]
     - git clone https://github.com/JuDFTteam/aiida-fleur.git
     - cd aiida-fleur
     # Remove cache dirs
-    - git checkout develop
+    - git checkout aiida2.0-regression-tests
     - pip3 install .[testing]
+    - pip3 install aiida-core==2.0.0b1
     - rm -rf tests/workflows/calculations tests/workflows/caches
     - rm -rf tests/calculation/data_dir
     - rm -rf tests/data_dir
@@ -86,5 +86,5 @@ test-aiida-fleur-dev-gfortran-hdf5:
     when: always
     paths:
       - aiida-fleur/tests/
-  except:
-    - pushes
+  # except:
+  #   - pushes
