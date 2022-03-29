@@ -10,8 +10,8 @@ build-gfortran-serial:
     paths:
       - build.serial
     expire_in: 12h
-  except:
-    - pushes
+  # except:
+  #   - pushes
 
 test-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
