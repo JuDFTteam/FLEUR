@@ -11,7 +11,7 @@ MODULE m_hsmt_ab
 CONTAINS
 
    SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
-      ! Construct the *complex conjugates* of matching coefficients of the form
+      ! Construct the matching coefficients of the form
       ! a_{l,m,order}^{\mu,\bm{G}}(\bm{k}) = e^{i \bm{K}\cdot\bm{\tau}_{\mu}} *
       !                                      (Y_{l}^{m}(R^{\mu}\bm{K}))^{*} *
       !                                      fjgj
@@ -109,15 +109,15 @@ CONTAINS
          DO l = 0,lmax
             lmMin = l*(l+1) + 1 - l
             lmMax = l*(l+1) + 1 + l
-            abCoeffs(lmMin:lmMax, k)                = fjgj%fj(k,l,ilSpin,igSpin)*CONJG(c_ph(k,igSpin)) * ylm(lmMin:lmMax, k)
-            abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ilSpin,igSpin)*CONJG(c_ph(k,igSpin)) * ylm(lmMin:lmMax, k)
+            abCoeffs(lmMin:lmMax, k)                = fjgj%fj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
+            abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
          END DO
          !$acc end loop
 
          IF (l_abclo) THEN
             ! Determine also the abc coeffs for LOs
             invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
-            term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*CONJG(c_ph(k,igSpin))
+            term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,igSpin)
             !!$acc loop vector private(lo,l,nkvec,ll1,m,lm)
             DO lo = 1,atoms%nlo(n)
                l = atoms%llo(lo,n)
@@ -126,9 +126,9 @@ CONTAINS
                      ll1 = l*(l+1) + 1
                      DO m = -l,l
                         lm = ll1 + m
-                        abclo(1,m+atoms%llod+1,nkvec,lo) = term*ylm(lm,k)*alo1(lo)
-                        abclo(2,m+atoms%llod+1,nkvec,lo) = term*ylm(lm,k)*blo1(lo)
-                        abclo(3,m+atoms%llod+1,nkvec,lo) = term*ylm(lm,k)*clo1(lo)
+                        abclo(1,m+atoms%llod+1,nkvec,lo) = term*CONJG(ylm(lm,k))*alo1(lo)
+                        abclo(2,m+atoms%llod+1,nkvec,lo) = term*CONJG(ylm(lm,k))*blo1(lo)
+                        abclo(3,m+atoms%llod+1,nkvec,lo) = term*CONJG(ylm(lm,k))*clo1(lo)
                      END DO
                   END IF
                END DO
