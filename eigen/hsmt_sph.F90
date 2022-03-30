@@ -18,7 +18,7 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
-SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0)
+SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    USE m_hsmt_fjgj
@@ -37,7 +37,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    LOGICAL,INTENT(IN)            :: set0  !if true, initialize the smat matrix with zeros
     !     ..
    !     .. Scalar Arguments ..
-   INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
+   INTEGER, INTENT (IN) :: n,isp,igSpinPr,igSpin
    COMPLEX, INTENT(IN)  :: chi
    !     ..
    !     .. Array Arguments ..
@@ -49,12 +49,12 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    REAL tnn(3), elall,fjkiln,gjkiln,ddnln,ski(3)
    REAL apw_lo1,apw_lo2,w1
 
-   INTEGER kii,ki,kj,l,nn,kj_end,l3,jv,kj_off,kj_vec,l31
+   INTEGER ikG0,ikG,ikGPr,l,nn,l3,jv,kj_off,kj_vec
 
    !     ..
    !     .. Local Arrays ..
    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
-   REAL qssbti(3),qssbtj(3)
+   REAL qssAdd(3),qssAddPr(3)
    REAL :: plegend(0:2)
    REAL :: xlegend
    REAL :: VecHelpS,VecHelpH
@@ -68,10 +68,10 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
       fleg2(l) = REAL(l)/REAL(l+1)
       fl2p1(l) = REAL(l+l+1)/fpi_const
    END DO ! l
-   qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
-   qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
+   qssAdd=MERGE(- nococonv%qss/2,+ nococonv%qss/2,igSpin.EQ.1)
+   qssAddPr=MERGE(- nococonv%qss/2,+ nococonv%qss/2,igSpinPr.EQ.1)
    !$acc  data &
-   !$acc&   copyin(jintsp,iintsp,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssbti,qssbtj)&
+   !$acc&   copyin(igSpin,igSpinPr,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssAdd,qssAddPr)&
    !$acc&   copyin(lapw,atoms,fmpi,input,usdus)&
    !$acc&   copyin(lapw%nv,lapw%gvec,lapw%gk)&
    !$acc&   copyin(atoms%lmax,atoms%rmt,atoms%lnonsph,atoms%neq,atoms%taual)&
@@ -83,23 +83,23 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
 
    !$acc parallel default(none)
    !$acc loop gang
-   DO  ki =  fmpi%n_rank+1, lapw%nv(jintsp), fmpi%n_size
+   DO  ikG =  fmpi%n_rank+1, lapw%nv(igSpin), fmpi%n_size
       !$acc loop  vector independent&
-      !$acc &    PRIVATE(kj, kii,ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,dot)
-      DO  kj = 1, min(ki,lapw%nv(iintsp))
-         kii=(ki-1)/fmpi%n_size+1
-         ski = lapw%gvec(:,ki,jintsp) + qssbti(:)
+      !$acc &    PRIVATE(ikGPr, ikG0,ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,dot)
+      DO  ikGPr = 1, min(ikG,lapw%nv(igSpinPr))
+         ikG0=(ikG-1)/fmpi%n_size+1
+         ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:)
 
          !--->          update overlap and l-diagonal hamiltonian matrix
          VecHelpS = 0.0
          VecHelpH = 0.0
 
          !--->       x for legendre polynomials
-         xlegend =dot_product(lapw%gk(1:3,kj,iintsp),lapw%gk(1:3,ki,jintsp))
+         xlegend =dot_product(lapw%gk(1:3,ikGPr,igSpinPr),lapw%gk(1:3,ikG,igSpin))
          !$acc loop seq
          DO  l = 0,atoms%lmax(n)
-            fjkiln = fjgj%fj(ki,l,isp,jintsp)
-            gjkiln = fjgj%gj(ki,l,isp,jintsp)
+            fjkiln = fjgj%fj(ikG,l,isp,igSpin)
+            gjkiln = fjgj%gj(ikG,l,isp,igSpin)
             IF (input%l_useapw) THEN
                w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
                apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
@@ -118,14 +118,14 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
             ELSE
                plegend(l3) = fleg1(l-1)*xlegend*plegend(modulo(l-1,3)) - fleg2(l-1)*plegend(modulo(l-2,3))
             END IF ! l
-            fct  = plegend(l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj,l,isp,iintsp) + gjkiln*fjgj%gj(kj,l,isp,iintsp)*ddnln )
-            fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj,l,isp,iintsp) + fjkiln*fjgj%gj(kj,l,isp,iintsp) )
+            fct  = plegend(l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) + gjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*ddnln )
+            fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) + fjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr) )
 
             VecHelpS = VecHelpS + fct
             VecHelpH = VecHelpH + fct*elall + fct2
 
             IF (input%l_useapw) THEN
-               VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(kj,l,isp,iintsp) + apw_lo2*fjgj%gj(l,kj,isp,iintsp) )
+               VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(ikGPr,l,isp,igSpinPr) + apw_lo2*fjgj%gj(l,ikGPr,isp,igSpinPr) )
             ENDIF ! useapw
 
             !--->          end loop over l
@@ -137,38 +137,35 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
          DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
             tnn(1:3) = tpi_const*atoms%taual(1:3,nn)
 
-            dot = DOT_PRODUCT(ski(1:3) - lapw%gvec(1:3,kj,iintsp) - qssbtj(1:3), tnn(1:3))
+            dot = DOT_PRODUCT(ski(1:3) - lapw%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3), tnn(1:3))
 
             cph_re = cph_re + COS(dot)
-            cph_im = cph_im - SIN(dot)
-            ! IF (iintsp.NE.jintsp) cph_im=-cph_im
+            cph_im = cph_im + SIN(dot)
+            ! IF (igSpinPr.NE.igSpin) cph_im=-cph_im
          END DO ! nn
 
          IF (smat%l_real) THEN
             IF (set0) THEN
-               smat%data_r(kj,kii) = cph_re * VecHelpS
+               smat%data_r(ikGPr,ikG0) = cph_re * VecHelpS
             ELSE
-               smat%data_r(kj,kii) = &
-               smat%data_r(kj,kii) + cph_re * VecHelpS
-            ENDIF
-            hmat%data_r(kj,kii) = &
-            hmat%data_r(kj,kii) + cph_re * VecHelpH
+               smat%data_r(ikGPr,ikG0) = &
+               smat%data_r(ikGPr,ikG0) + cph_re * VecHelpS
+            END IF
+            hmat%data_r(ikGPr,ikG0) = &
+            hmat%data_r(ikGPr,ikG0) + cph_re * VecHelpH
          ELSE  ! real
             IF (set0) THEN
-               smat%data_c(kj,kii) = chi*cmplx(cph_re,cph_im) * VecHelpS
+               smat%data_c(ikGPr,ikG0) = CONJG(chi*cmplx(cph_re,cph_im) * VecHelpS)
             ELSE
-               smat%data_c(kj,kii) = &
-               smat%data_c(kj,kii) + chi*cmplx(cph_re,cph_im) * VecHelpS
-            ENDIF
-            hmat%data_c(kj,kii) = &
-            hmat%data_c(kj,kii) + chi*cmplx(cph_re,cph_im) * VecHelpH
-         ENDIF ! real
-
-
+               smat%data_c(ikGPr,ikG0) = &
+               smat%data_c(ikGPr,ikG0) + CONJG(chi*cmplx(cph_re,cph_im) * VecHelpS)
+            END IF
+            hmat%data_c(ikGPr,ikG0) = &
+            hmat%data_c(ikGPr,ikG0) + CONJG(chi*cmplx(cph_re,cph_im) * VecHelpH)
+         END IF ! real
       END DO ! kj_off
       !$acc end loop
-      !--->    end loop over ki
-   ENDDO
+   END DO ! ikG
 
    !$acc end loop
    !$acc end parallel
@@ -179,7 +176,7 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    RETURN
 END SUBROUTINE hsmt_sph_acc
 
-SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0)
+SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0)
    USE m_constants, ONLY : fpi_const,tpi_const
    USE m_types
    USE m_hsmt_fjgj
@@ -198,7 +195,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    LOGICAL,INTENT(IN)            :: set0  !if true, initialize the smat matrix with zeros
     !     ..
    !     .. Scalar Arguments ..
-   INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
+   INTEGER, INTENT (IN) :: n,isp,igSpinPr,igSpin
    COMPLEX, INTENT(IN)  :: chi
    !     ..
    !     .. Array Arguments ..
@@ -210,12 +207,12 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    REAL tnn(3), elall,fjkiln,gjkiln,ddnln,ski(3)
    REAL apw_lo1,apw_lo2,w1
 
-   INTEGER kii,ki,kj,l,nn,kj_end,l3,jv,kj_off,kj_vec,l31
+   INTEGER ikG0,ikG,ikGPr,l,nn,kj_end,l3,jv,kj_off,kj_vec
 
    !     ..
    !     .. Local Arrays ..
    REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
-   REAL qssbti(3),qssbtj(3)
+   REAL qssAdd(3),qssAddPr(3)
    REAL, ALLOCATABLE :: plegend(:,:)
    REAL, ALLOCATABLE :: xlegend(:)
    REAL, ALLOCATABLE :: VecHelpS(:),VecHelpH(:)
@@ -233,8 +230,8 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    END DO ! l
   !$OMP     PARALLEL DEFAULT(NONE)&
   !$OMP     SHARED(lapw,atoms,nococonv,fmpi,input,usdus,smat,hmat)&
-  !$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi,set0)&
-  !$OMP     PRIVATE(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)&
+  !$OMP     SHARED(igSpin,igSpinPr,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi,set0)&
+  !$OMP     PRIVATE(ikG0,ikG,ski,ikGPr,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssAdd,qssAddPr,fct2)&
   !$OMP     PRIVATE(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln)&
   !$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
   !$OMP     PRIVATE(VecHelpS,VecHelpH,NVEC_rem)
@@ -243,14 +240,14 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
    ALLOCATE(plegend(NVEC,0:2))
    ALLOCATE(xlegend(NVEC))
    ALLOCATE(VecHelpS(NVEC),VecHelpH(NVEC))
-   qssbti=MERGE(- nococonv%qss/2,+ nococonv%qss/2,jintsp.EQ.1)
-   qssbtj=MERGE(- nococonv%qss/2,+ nococonv%qss/2,iintsp.EQ.1)
+   qssAdd=MERGE(- nococonv%qss/2,+ nococonv%qss/2,igSpin.EQ.1)
+   qssAddPr=MERGE(- nococonv%qss/2,+ nococonv%qss/2,igSpinPr.EQ.1)
    !$OMP      DO SCHEDULE(DYNAMIC,1)
-   DO  ki =  fmpi%n_rank+1, lapw%nv(jintsp), fmpi%n_size
-      kj_end=min(ki,lapw%nv(iintsp))
-      kii=(ki-1)/fmpi%n_size+1
-      ski = lapw%gvec(:,ki,jintsp) + qssbti(:)
-      DO  kj_off = 1, lapw%nv(iintsp), NVEC
+   DO  ikG =  fmpi%n_rank+1, lapw%nv(igSpin), fmpi%n_size
+      kj_end=min(ikG,lapw%nv(igSpinPr))
+      ikG0=(ikG-1)/fmpi%n_size+1
+      ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:)
+      DO  kj_off = 1, lapw%nv(igSpinPr), NVEC
          NVEC_rem = NVEC
          kj_vec = kj_off - 1 + NVEC
          IF (kj_vec > kj_end) THEN
@@ -264,13 +261,13 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
 
          !--->       x for legendre polynomials
          DO jv = 0, NVEC_rem-1
-            kj = jv + kj_off
-            xlegend(jv+1) =dot_product(lapw%gk(1:3,kj,iintsp),lapw%gk(1:3,ki,jintsp))
-         END DO ! kj
+            ikGPr = jv + kj_off
+            xlegend(jv+1) =dot_product(lapw%gk(1:3,ikGPr,igSpinPr),lapw%gk(1:3,ikG,igSpin))
+         END DO ! ikGPr
          DO  l = 0,atoms%lmax(n)
 
-            fjkiln = fjgj%fj(ki,l,isp,jintsp)
-            gjkiln = fjgj%gj(ki,l,isp,jintsp)
+            fjkiln = fjgj%fj(ikG,l,isp,igSpin)
+            gjkiln = fjgj%gj(ikG,l,isp,igSpin)
 
             IF (input%l_useapw) THEN
                w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
@@ -292,14 +289,14 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
                plegend(:NVEC_REM,l3) = fleg1(l-1)*xlegend(:NVEC_REM)*plegend(:NVEC_REM,modulo(l-1,3)) - fleg2(l-1)*plegend(:NVEC_REM,modulo(l-2,3))
             END IF ! l
 
-            fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj_off:kj_vec,l,isp,iintsp) + gjkiln*fjgj%gj(kj_off:kj_vec,l,isp,iintsp)*ddnln )
-            fct2(:NVEC_REM) = plegend(:NVEC_REM,l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,iintsp) + fjkiln*fjgj%gj(kj_off:kj_vec,l,isp,iintsp) )
+            fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) + gjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr)*ddnln )
+            fct2(:NVEC_REM) = plegend(:NVEC_REM,l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) + fjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr) )
 
             VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
             VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)
 
             IF (input%l_useapw) THEN
-               VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgj%fj(kj_off:kj_vec,l,isp,iintsp) + apw_lo2*fjgj%gj(kj_off:kj_vec,l,isp,iintsp) )
+               VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) + apw_lo2*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr) )
             ENDIF ! useapw
 
             !--->          end loop over l
@@ -310,37 +307,37 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,iintsp,jintsp,chi,lapw,e
          DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
             tnn(1:3) = tpi_const*atoms%taual(1:3,nn)
             DO jv = 0, NVEC_rem-1
-               kj = jv + kj_off
-               dot(jv+1) = DOT_PRODUCT(ski(1:3) - lapw%gvec(1:3,kj,iintsp) - qssbtj(1:3), tnn(1:3))
-            END DO ! kj
+               ikGPr = jv + kj_off
+               dot(jv+1) = DOT_PRODUCT(ski(1:3) - lapw%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3), tnn(1:3))
+            END DO ! ikGPr
             cph_re(:NVEC_REM) = cph_re(:NVEC_REM) + COS(dot(:NVEC_REM))
-            cph_im(:NVEC_REM) = cph_im(:NVEC_REM) - SIN(dot(:NVEC_REM))
-            ! IF (iintsp.NE.jintsp) cph_im=-cph_im
+            cph_im(:NVEC_REM) = cph_im(:NVEC_REM) + SIN(dot(:NVEC_REM))
+            ! IF (igSpinPr.NE.igSpin) cph_im=-cph_im
          END DO ! nn
 
          IF (smat%l_real) THEN
             IF (set0) THEN
-               smat%data_r(kj_off:kj_vec,kii) = cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
+               smat%data_r(kj_off:kj_vec,ikG0) = cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
             ELSE
-               smat%data_r(kj_off:kj_vec,kii) = &
-               smat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
+               smat%data_r(kj_off:kj_vec,ikG0) = &
+               smat%data_r(kj_off:kj_vec,ikG0) + cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
             ENDIF
-            hmat%data_r(kj_off:kj_vec,kii) = &
-            hmat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpH(:NVEC_REM)
+            hmat%data_r(kj_off:kj_vec,ikG0) = &
+            hmat%data_r(kj_off:kj_vec,ikG0) + cph_re(:NVEC_REM) * VecHelpH(:NVEC_REM)
          ELSE  ! real
             IF (set0) THEN
-               smat%data_c(kj_off:kj_vec,kii) = chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM)
+               smat%data_c(kj_off:kj_vec,ikG0) = CONJG(chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM))
             ELSE
-               smat%data_c(kj_off:kj_vec,kii) = &
-               smat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM)
+               smat%data_c(kj_off:kj_vec,ikG0) = &
+               smat%data_c(kj_off:kj_vec,ikG0) + CONJG(chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM))
             ENDIF
-            hmat%data_c(kj_off:kj_vec,kii) = &
-            hmat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpH(:NVEC_REM)
+            hmat%data_c(kj_off:kj_vec,ikG0) = &
+            hmat%data_c(kj_off:kj_vec,ikG0) + CONJG(chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpH(:NVEC_REM))
          ENDIF ! real
 
 
       END DO ! kj_off
-      !--->    end loop over ki
+      !--->    end loop over ikG
    ENDDO
    !$OMP     END DO
    DEALLOCATE(plegend)
