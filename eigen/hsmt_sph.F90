@@ -155,13 +155,13 @@ SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw
             hmat%data_r(ikGPr,ikG0) + cph_re * VecHelpH
          ELSE  ! real
             IF (set0) THEN
-               smat%data_c(ikGPr,ikG0) = CONJG(chi*cmplx(cph_re,cph_im) * VecHelpS)
+               smat%data_c(ikGPr,ikG0) = chi*cmplx(cph_re,cph_im) * VecHelpS
             ELSE
                smat%data_c(ikGPr,ikG0) = &
-               smat%data_c(ikGPr,ikG0) + CONJG(chi*cmplx(cph_re,cph_im) * VecHelpS)
+               smat%data_c(ikGPr,ikG0) + chi*cmplx(cph_re,cph_im) * VecHelpS
             END IF
             hmat%data_c(ikGPr,ikG0) = &
-            hmat%data_c(ikGPr,ikG0) + CONJG(chi*cmplx(cph_re,cph_im) * VecHelpH)
+            hmat%data_c(ikGPr,ikG0) + chi*cmplx(cph_re,cph_im) * VecHelpH
          END IF ! real
       END DO ! kj_off
       !$acc end loop
@@ -326,13 +326,13 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw
             hmat%data_r(kj_off:kj_vec,ikG0) + cph_re(:NVEC_REM) * VecHelpH(:NVEC_REM)
          ELSE  ! real
             IF (set0) THEN
-               smat%data_c(kj_off:kj_vec,ikG0) = CONJG(chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM))
+               smat%data_c(kj_off:kj_vec,ikG0) = chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM)
             ELSE
                smat%data_c(kj_off:kj_vec,ikG0) = &
-               smat%data_c(kj_off:kj_vec,ikG0) + CONJG(chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM))
+               smat%data_c(kj_off:kj_vec,ikG0) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM)
             ENDIF
             hmat%data_c(kj_off:kj_vec,ikG0) = &
-            hmat%data_c(kj_off:kj_vec,ikG0) + CONJG(chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpH(:NVEC_REM))
+            hmat%data_c(kj_off:kj_vec,ikG0) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpH(:NVEC_REM)
          ENDIF ! real
 
 

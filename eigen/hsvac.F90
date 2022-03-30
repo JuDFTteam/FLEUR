@@ -119,7 +119,7 @@ CONTAINS
                               IF (hmat(1,1)%l_real) THEN
                                  hmat(igSpin,igSpin)%data_r(ikGPr,ikG0) = hmat(igSpin,igSpin)%data_r(ikGPr,ikG0) + 0.25 * REAL(apw_lo)
                               ELSE
-                                 hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) + 0.25 * CONJG(apw_lo)
+                                 hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) + 0.25 * apw_lo
                               END IF
                            END IF
 
@@ -127,7 +127,7 @@ CONTAINS
                            IF (hmat(1,1)%l_real) THEN
                               smat(igSpin,igSpin)%data_r(ikGPr,ikG0) = smat(igSpin,igSpin)%data_r(ikGPr,ikG0) + REAL(sij)
                            ELSE
-                              smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + CONJG(sij)
+                              smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + sij
                            END IF
                         END IF
                      END DO
@@ -137,7 +137,7 @@ CONTAINS
                      IF (hmat(1,1)%l_real) THEN
                         smat(igSpin,igSpin)%data_r(ikGPr,ikG0) = smat(igSpin,igSpin)%data_r(ikGPr,ikG0) + REAL(sij)
                      ELSE
-                        smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + CONJG(sij) ! conjg technically moot
+                        smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + sij
                      END IF
                   END DO
                END IF
@@ -157,7 +157,7 @@ CONTAINS
                      IF (hmat(1,1)%l_real) THEN
                         hmat(igSpinPr,igSpin)%data_r(ikGPr,ikG0) = hmat(igSpinPr,igSpin)%data_r(ikGPr,ikG0) + REAL(hij)
                      ELSE
-                        hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) + CONJG(hij)
+                        hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) + hij
                      END IF
                   END DO
                END DO

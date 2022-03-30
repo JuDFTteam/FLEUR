@@ -103,8 +103,9 @@ CONTAINS
          if (any(shape(smat) /= 1)) then
             call judft_error("Hybrid doesn't do noco.")
          end if
-
+         smat(1,1)%data_c = CONJG(smat(1,1)%data_c)
          CALL write_eig(hybdat%eig_id, nk, isp, smat=smat(1, 1), n_start=fmpi%n_size, n_end=fmpi%n_rank)
+         smat(1,1)%data_c = CONJG(smat(1,1)%data_c)
       END IF
 
       IF (fi%hybinp%l_hybrid) THEN

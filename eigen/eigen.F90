@@ -199,12 +199,14 @@ CONTAINS
                   select type(smat_unfold)
                   type is (t_mat)
                      smat_unfold=smat
+                     smat_unfold%data_c=CONJG(smat%data_c)
                   end select
                type is (t_mpimat)
                   allocate(t_mpimat::smat_unfold)
                   select type(smat_unfold)
                   type is (t_mpimat)
                      smat_unfold=smat
+                     smat_unfold%data_c=CONJG(smat%data_c)
                   end select
                end select
             END IF
@@ -235,9 +237,6 @@ CONTAINS
               CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, fmpi%diag_sub_comm,ierr)
               ne_all=MIN(fi%input%neig,ne_all)
 #endif
-              IF (.NOT.zMat%l_real) THEN
-                zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
-              END IF
             endif
 
             IF (fmpi%n_rank == 0) THEN

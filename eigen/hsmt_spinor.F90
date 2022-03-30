@@ -39,10 +39,10 @@ CONTAINS
        isp2=2
     ENDIF
 
-    chi_mat(1,1) = chi(1,isp1)*CONJG(chi(1,isp2))
-    chi_mat(2,1) = chi(2,isp1)*CONJG(chi(1,isp2))
-    chi_mat(2,2) = chi(2,isp1)*CONJG(chi(2,isp2))
-    chi_mat(1,2) = chi(1,isp1)*CONJG(chi(2,isp2))
+    chi_mat(1,1) = CONJG(chi(1,isp1)*CONJG(chi(1,isp2)))
+    chi_mat(2,1) = CONJG(chi(2,isp1)*CONJG(chi(1,isp2)))
+    chi_mat(2,2) = CONJG(chi(2,isp1)*CONJG(chi(2,isp2)))
+    chi_mat(1,2) = CONJG(chi(1,isp1)*CONJG(chi(2,isp2)))
 
 
 
@@ -77,7 +77,7 @@ CONTAINS
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
     chi=nococonv%chi(n)
-    
+
 
     isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),((chi))))
     isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),((chi))))

@@ -94,8 +94,8 @@ CONTAINS
                hmat%data_r(ikGPr, ikG0) = REAL(th)
                smat%data_r(ikGPr, ikG0) = REAL(ts)
             ELSE
-               hmat%data_c(ikGPr, ikG0) = CONJG(th) ! This corresponds to the
-               smat%data_c(ikGPr, ikG0) = CONJG(ts) ! conjugation in eigen.
+               hmat%data_c(ikGPr, ikG0) = th ! This corresponds to the
+               smat%data_c(ikGPr, ikG0) = ts ! conjugation in eigen.
             END IF
          END DO
       END DO
