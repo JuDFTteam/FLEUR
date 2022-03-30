@@ -126,22 +126,33 @@ CONTAINS
 
             ! abCoeffs for \sigma_{\alpha} and \sigma_{g}
             ! Denoted in comments as a
-            ! [local spin primed -> '; local and global spin primed -> '']
+            ! [local spin primed -> '; global spin primed -> pr]
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                        & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
 
-            !!$acc update device(ab)
-            !$acc host_data use_device(abCoeffs,ab1,h_loc)
-            CALL CPP_zgemm("C", "N", lapw%nv(igSpin), ab_size, ab_size, cmplx(1.0, 0.0), &
-                         & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
-                         & cmplx(0.0, 0.0), ab1, size_ab)
-            !$acc end host_data
+            IF (l_samelapw) THEN ! TODO: Do we possibly need to do this for fully fully noco as well?
+               !!$acc update device(ab)
+               !$acc host_data use_device(abCoeffs,ab1,h_loc)
+               CALL CPP_zgemm("C", "N", lapw%nv(igSpin), ab_size, ab_size, cmplx(1.0, 0.0), &
+                            & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
+                            & cmplx(0.0, 0.0), ab1, size_ab)
+               !$acc end host_data
+            ELSE ! Needed, because t^H .NE. t!
+               !!$acc update device(ab)
+               !$acc host_data use_device(abCoeffs,ab1,h_loc)
+               CALL CPP_zgemm("C", "C", lapw%nv(igSpin), ab_size, ab_size, cmplx(1.0, 0.0), &
+                            & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
+                            & cmplx(0.0, 0.0), ab1, size_ab)
+               !$acc end host_data
+            END IF
 
             ! ab1 = MATMUL(TRANSPOSE(abCoeffs(:ab_size,:lapw%nv(igSpin))),h_loc(:ab_size,:ab_size,n,ilSpin))
-            ! In diagonal case:
+            ! In locally diagonal case:
             ! ab1 = a^H * L (lower triangular matrix from Cholesky decomposition)
-            ! Offdiagonal case:
-            ! ab1 = a^H * V (potential matrix in lmp lm etc.)
+            ! Locally offdiagonal case:
+            ! ab1 = a^H * t (potential matrix in lmp lm etc.)
+            ! .NOT.l_samelapw:
+            ! ab1 = a^H * t^H
 
             ! Of these ab1 coeffs only a part is needed in case of MPI parallelism
             !$acc kernels default(none) present(ab_select,ab1)copyin(fmpi)
@@ -166,7 +177,6 @@ CONTAINS
                   END DO
                   !$omp end parallel do
 #endif
-                  ! In diagonal case:
                   ! ab1 = a^T * conjg(L)
                   IF (l_samelapw) THEN
                      IF (fmpi%n_size==1) THEN !use z-herk trick on single PE
@@ -180,7 +190,12 @@ CONTAINS
                                         & ab1, size_ab, 1.0, CPP_data_c, size_data_c)
                         END IF
                         !$acc end host_data
-                     ELSE
+                        ! data_c += Rchi * a^T * conjg(L) * L^T * conjg(a) = Rchi * a^T * conjg(H) * conjg(a)
+                        !         = Rchi * conjg(a^H * H * a)
+                        ! conjgsolve:
+                        ! data_c += Rchi * a^H * H * a
+                        ! [only upper triangle]
+                     ELSE ! zgemm case
                         ! conjgsolve: N, C
                         !$acc host_data use_device(data_c,ab1,ab_select)
                         IF (set0 .and. nn == 1) THEN
@@ -194,45 +209,35 @@ CONTAINS
                                         & CMPLX(1.0, 0.0), CPP_data_c, size_data_c)
                         END IF
                         !$acc end host_data
+                        ! ab_select = a^H * L
+                        ! ab1 = a^T * conjg(L)
+                        ! data_c += cchi * ab1 * abselect^T
+                        !         = cchi * conjg(a^H * H * a)
+                        ! conjgsolve:
+                        ! ab_select = a^H * L
+                        ! ab1 = a^H * L
+                        ! data_c += cchi * ab1 * abselect^H
+                        !         = cchi * a^H * H * a
                      END IF
-                  ELSE
+                  ELSE ! Case for additional q on left vector.
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                                 & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
-                     ! conjgsolve: C, C.
                      !!$acc update device (abCoeffs)
-                     !$acc host_data use_device(abCoeffs,h_loc,ab2)
-                     CALL CPP_zgemm("C", "N", lapwPr%nv(igSpin), ab_size, ab_size, CMPLX(1.0, 0.0), &
-                                  & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
-                                  & CMPLX(0.0, 0.0), ab2, size_ab2)
-                     !$acc end host_data
-                     ! conjgsolve: Don't conjugate.
-                     !$acc kernels  default(none) present(ab2)
-                     ab2(:, :) = conjg(ab2(:, :))
-                     !$acc end kernels
-                     ! conjgsolve:
-                     !$acc host_data use_device(ab2,ab1,data_c,ab_select)
+
+                     !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
                      IF (set0 .and. nn == 1) THEN
-                        CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
-                                     & ab2, size_ab2, ab_select, size_ab_select, &
-                                     & CMPLX(0.0, 0.0), CPP_data_c, size_data_c)
+                        CALL CPP_zgemm("C", "C", lapwPr%nv(igSpin), size_ab_select, ab_size, chi, &
+                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     & CMPLX(0.0, 0.0), CPP_data_c, SIZE_data_c)
                      ELSE
-                        CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
-                                     & ab2, size_ab2, ab_select, size_ab_select, &
-                                     & CMPLX(1.0, 0.0), CPP_data_c, size_data_c)
+                        CALL CPP_zgemm("C", "C", lapwPr%nv(igSpin), size_ab_select, ab_size, chi, &
+                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     & CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                      END IF
                      !$acc end host_data
+                     ! data_c += chi * aq * abselect^H
+                     !         = chi * aq^H * t * a
                   END IF
-                  ! In zherk case:
-                  ! ab1 = a^T * conjg(L)
-                  ! data_c += chi * a^T * conjg(L) * L^T * conjg(a) = chi * a^T * conjg(H) * conjg(a)
-                  !         = chi * conjg(a^H * H * a)
-                  ! [only upper triangle]
-                  ! In zgemm case:
-                  ! ab_select = a^H * L
-                  ! ab1 = a^T * conjg(L)
-                  ! data_c += chi * a^T * conjg(L) * L^T * conjg(a) = chi * a^T * conjg(H) * conjg(a)
-                  !         = chi * conjg(a^H * H * a)
-                  ! conjgsolve: chi * a^H * L * L^H * a
                ELSE !This is the case of a local off-diagonal contribution.
                   !It is not Hermitian, so we NEED to use zgemm CALL
 
@@ -254,14 +259,20 @@ CONTAINS
                                   & CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                   END IF
                   !$acc end host_data
-                  ! Offdiagonal case:
                   ! ab_select = a^H * t
-                  ! abCoeffs = a'(')
-                  ! data_c += chi * a'^T * t^T * conjg(a) = chi * conjg(a'^H * conjg(t) * a)
+                  ! abCoeffs = a'
+                  ! data_c += chi * abCoeffs^T * ab_select^T
+                  !         = chi * conjg(a'^H * t * a)
                   ! conjgsolve:
                   ! ab_select = a^H * t
-                  ! abCoeffs = a'(')
-                  ! data_c += chi * a'^H * t^H * a = chi * a'^H * t * a
+                  ! abCoeffs = a'
+                  ! data_c += chi * abCoeffs^H * ab_select^H
+                  !         = chi * a'^H * t * a
+                  ! .NOT.l_samelapw:
+                  ! ab_select = a^H * t^H
+                  ! abCoeffs = aq'
+                  ! data_c += chi * abCoeffs^H * ab_select^H
+                  !         = chi * aq'^H * t * a
                END IF
             ELSE  !here the l_ss off-diagonal part starts
                !Second set of abCoeffs is needed
@@ -269,32 +280,54 @@ CONTAINS
                CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpinPr, n, na, cell, &
                           & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
                IF (ilSpinPr==ilSpin) THEN
-                  !!$acc update device (abCoeffs)
-                  !$acc host_data use_device(abCoeffs,h_loc,ab2)
-                  CALL CPP_zgemm("C", "N", lapwPr%nv(igSpinPr), ab_size, ab_size, CMPLX(1.0, 0.0), &
-                               & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
-                               & CMPLX(0.0, 0.0), ab2, size_ab2)
-                  !$acc end host_data
-                  ! conjgsolve: Don't conjugate.
-                  !$acc kernels  default(none) present(ab2)
-                  ab2(:, :) = conjg(ab2(:, :))
-                  !$acc end kernels
-                  ! ab2 = a''^T * conjg(L)
-                  !Multiply for Hamiltonian
-                  ! conjgsolve: N, C
-                  !$acc host_data use_device(ab2,ab1,data_c,ab_select)
-                  CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
-                               & ab2, size_ab2, ab_select, size_ab_select, &
-                               & CMPLX(1.0, 0.0), CPP_data_c, size_data_c)
-                  !$acc end host_data
-                  ! Diagonal case:
-                  ! ab2 = a''^T * conjg(L)
-                  ! ab_select = a^H * L
-                  ! data_c += chi * a''^T * conjg(L) * L^T * conjg(a) = a''^T * conjg(H) * conjg(a)
-                  !         = chi * conjg(a''^H * H * a)
-                  ! conjgsolve:
-                  ! ab2 = a''^T * L
+                  IF (l_samelapw) THEN
+                     !!$acc update device (abCoeffs)
+                     !$acc host_data use_device(abCoeffs,h_loc,ab2)
+                     CALL CPP_zgemm("C", "N", lapwPr%nv(igSpinPr), ab_size, ab_size, CMPLX(1.0, 0.0), &
+                                  & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
+                                  & CMPLX(0.0, 0.0), ab2, size_ab2)
+                     !$acc end host_data
+                     ! conjgsolve: Don't conjugate.
+                     !$acc kernels  default(none) present(ab2)
+                     ab2(:, :) = conjg(ab2(:, :))
+                     !$acc end kernels
+                     ! ab2 = aPr'^T * conjg(L)
+                     !Multiply for Hamiltonian
+                     ! conjgsolve: N, C
+                     !$acc host_data use_device(ab2,ab1,data_c,ab_select)
+                     CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
+                                  & ab2, size_ab2, ab_select, size_ab_select, &
+                                  & CMPLX(1.0, 0.0), CPP_data_c, size_data_c)
+                     !$acc end host_data
+                     ! ab2 = aPr'^T * conjg(L)
+                     ! ab_select = a^H * L
+                     ! data_c += chi * ab2 * ab_select^T
+                     !         = chi * conjg(aPr'^H * H * a)
+                     ! conjgsolve:
+                     ! ab2 = aPr'^H * L
+                     ! ab_select = a^H * L
+                     ! data_c += chi * ab2 * ab_select^H
+                     !         = chi * aPr'^H * H * a
+                  ELSE
+                     !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
+                     IF (set0 .AND. nn == 1) THEN
+                        !CPP_data_c = CMPLX(0.0,0.0)
+                        CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
+                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     & CMPLX(0.0, 0.0), CPP_data_c, SIZE_data_c)
+                     ELSE
+                        CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
+                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
+                     END IF
+                     !$acc end host_data
+                     ! abCoeffs = aqPr'
+                     ! ab_select = a^H * t^H
+                     ! data_c += cchi * abCoeffs^H *  abselect^H
+                     !         = cchi * aqPr'^H * t * a
+                  END IF
                ELSE
+                  ! conjgsolve: C, C
                   !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
                   IF (set0 .AND. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
@@ -307,10 +340,20 @@ CONTAINS
                                   CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                   END IF
                   !$acc end host_data
-                  ! Offdiagonal case:
-                  ! abCoeffs = a''
-                  ! ab_select = a^H * V
-                  ! data_c += chi * a''^T * V^T * conjg(a) = chi * conjg(a''^H * V^H * a)
+                  ! ab_select = a^H * t
+                  ! abCoeffs = aPr'
+                  ! data_c += chi * abCoeffs^T * ab_select^T
+                  !         = chi * conjg(aPr'^H * t * a)
+                  ! conjgsolve:
+                  ! ab_select = a^H * t
+                  ! abCoeffs = aPr'
+                  ! data_c += chi * abCoeffs^H * ab_select^H
+                  !         = chi * aPr'^H * t * a
+                  ! .NOT.l_samelapw:
+                  ! ab_select = a^H * t^H
+                  ! abCoeffs = aqPr'
+                  ! data_c += chi * abCoeffs^H * ab_select^H
+                  !         = chi * aqPr'^H * t * a
                END IF
             END IF
          END IF
