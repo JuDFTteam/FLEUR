@@ -154,6 +154,7 @@ CONTAINS
 
             IF (igSpinPr==igSpin) THEN
                IF (ilSpinPr==ilSpin) THEN
+                  ! conjgsolve: skip these conjugations
 #ifdef _OPENACC
                   !$acc kernels default(none) present(ab1)
                   ab1(:, :) = conjg(ab1(:, :))
@@ -180,6 +181,7 @@ CONTAINS
                         END IF
                         !$acc end host_data
                      ELSE
+                        ! conjgsolve: N, C
                         !$acc host_data use_device(data_c,ab1,ab_select)
                         IF (set0 .and. nn == 1) THEN
                            !CPP_data_c = CMPLX(0.0,0.0)
@@ -196,15 +198,18 @@ CONTAINS
                   ELSE
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                                 & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
+                     ! conjgsolve: C, C.
                      !!$acc update device (abCoeffs)
                      !$acc host_data use_device(abCoeffs,h_loc,ab2)
-                     CALL CPP_zgemm("T", "N", lapwPr%nv(igSpin), ab_size, ab_size, CMPLX(1.0, 0.0), &
+                     CALL CPP_zgemm("C", "N", lapwPr%nv(igSpin), ab_size, ab_size, CMPLX(1.0, 0.0), &
                                   & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
                                   & CMPLX(0.0, 0.0), ab2, size_ab2)
                      !$acc end host_data
+                     ! conjgsolve: Don't conjugate.
                      !$acc kernels  default(none) present(ab2)
                      ab2(:, :) = conjg(ab2(:, :))
                      !$acc end kernels
+                     ! conjgsolve:
                      !$acc host_data use_device(ab2,ab1,data_c,ab_select)
                      IF (set0 .and. nn == 1) THEN
                         CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
@@ -227,6 +232,7 @@ CONTAINS
                   ! ab1 = a^T * conjg(L)
                   ! data_c += chi * a^T * conjg(L) * L^T * conjg(a) = chi * a^T * conjg(H) * conjg(a)
                   !         = chi * conjg(a^H * H * a)
+                  ! conjgsolve: chi * a^H * L * L^H * a
                ELSE !This is the case of a local off-diagonal contribution.
                   !It is not Hermitian, so we NEED to use zgemm CALL
 
@@ -234,10 +240,8 @@ CONTAINS
                   CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpin, n, na, cell, &
                              & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
                   !!$acc update device(abCoeffs)
-                  !$acc kernels default(none) present(abCoeffs)
-                  abCoeffs(:,:)=conjg(abCoeffs(:,:))
-                  !$acc end kernels
 
+                  ! conjgsolve: C, C
                   !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
                   IF (set0 .and. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
@@ -251,9 +255,13 @@ CONTAINS
                   END IF
                   !$acc end host_data
                   ! Offdiagonal case:
-                  ! ab_select = a^H * V
+                  ! ab_select = a^H * t
                   ! abCoeffs = a'(')
-                  ! data_c += chi * a'^T * V^T * conjg(a) = chi * conjg(a'^H * V^H * a)
+                  ! data_c += chi * a'^T * t^T * conjg(a) = chi * conjg(a'^H * conjg(t) * a)
+                  ! conjgsolve:
+                  ! ab_select = a^H * t
+                  ! abCoeffs = a'(')
+                  ! data_c += chi * a'^H * t^H * a = chi * a'^H * t * a
                END IF
             ELSE  !here the l_ss off-diagonal part starts
                !Second set of abCoeffs is needed
@@ -263,15 +271,17 @@ CONTAINS
                IF (ilSpinPr==ilSpin) THEN
                   !!$acc update device (abCoeffs)
                   !$acc host_data use_device(abCoeffs,h_loc,ab2)
-                  CALL CPP_zgemm("T", "N", lapwPr%nv(igSpinPr), ab_size, ab_size, CMPLX(1.0, 0.0), &
+                  CALL CPP_zgemm("C", "N", lapwPr%nv(igSpinPr), ab_size, ab_size, CMPLX(1.0, 0.0), &
                                & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
                                & CMPLX(0.0, 0.0), ab2, size_ab2)
                   !$acc end host_data
+                  ! conjgsolve: Don't conjugate.
                   !$acc kernels  default(none) present(ab2)
                   ab2(:, :) = conjg(ab2(:, :))
                   !$acc end kernels
                   ! ab2 = a''^T * conjg(L)
                   !Multiply for Hamiltonian
+                  ! conjgsolve: N, C
                   !$acc host_data use_device(ab2,ab1,data_c,ab_select)
                   CALL CPP_zgemm("N", "T", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, chi, &
                                & ab2, size_ab2, ab_select, size_ab_select, &
@@ -282,10 +292,9 @@ CONTAINS
                   ! ab_select = a^H * L
                   ! data_c += chi * a''^T * conjg(L) * L^T * conjg(a) = a''^T * conjg(H) * conjg(a)
                   !         = chi * conjg(a''^H * H * a)
+                  ! conjgsolve:
+                  ! ab2 = a''^T * L
                ELSE
-                  !$acc kernels default(none) present(abCoeffs)
-                  abCoeffs(:,:)=conjg(abCoeffs(:,:))
-                  !$acc end kernels
                   !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
                   IF (set0 .AND. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
