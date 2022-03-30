@@ -132,7 +132,7 @@ CONTAINS
 
             !!$acc update device(ab)
             !$acc host_data use_device(abCoeffs,ab1,h_loc)
-            CALL CPP_zgemm("T", "N", lapw%nv(igSpin), ab_size, ab_size, cmplx(1.0, 0.0), &
+            CALL CPP_zgemm("C", "N", lapw%nv(igSpin), ab_size, ab_size, cmplx(1.0, 0.0), &
                          & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
                          & cmplx(0.0, 0.0), ab1, size_ab)
             !$acc end host_data
