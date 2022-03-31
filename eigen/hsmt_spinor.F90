@@ -62,13 +62,14 @@ CONTAINS
     COMPLEX  :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2),d(2,2)
 
     !     isigma= i * sigma, where sigma is Pauli matrix
-    isigma=CMPLX(0.0,0.0)
-    isigma(1,2,1)=CMPLX(0.0,1.0)
-    isigma(2,1,1)=CMPLX(0.0,1.0)
-    isigma(1,2,2)=CMPLX(-1.0,0.0)
-    isigma(2,1,2)=CMPLX(1.0,0.0)
-    isigma(1,1,3)=CMPLX(0.0,-1.0)
-    isigma(2,2,3)=CMPLX(0.0,1.0)
+    isigma = CMPLX(0.0,0.0)
+
+    isigma(1,2,1)=CMPLX(0.0,1.0)   !     (0  1)   ( 0  i)
+    isigma(2,1,1)=CMPLX(0.0,1.0)   ! i * (1  0) = ( i  0)
+    isigma(1,2,2)=CMPLX(-1.0,0.0)  !     (0 -i)   ( 0  1) !!!!!!!!!
+    isigma(2,1,2)=CMPLX(1.0,0.0)   ! i * (i  0) = (-1  0) !!!!!!!!!
+    isigma(1,1,3)=CMPLX(0.0,-1.0)  !     (1  0)   ( i  0)
+    isigma(2,2,3)=CMPLX(0.0,1.0)   ! i * (0 -1) = ( 0 -i)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe

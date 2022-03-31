@@ -130,14 +130,14 @@ CONTAINS
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                        & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
 
-            IF (l_samelapw) THEN ! TODO: Do we possibly need to do this for fully fully noco as well?
+            IF (l_samelapw) THEN
                !!$acc update device(ab)
                !$acc host_data use_device(abCoeffs,ab1,h_loc)
                CALL CPP_zgemm("C", "N", lapw%nv(igSpin), ab_size, ab_size, cmplx(1.0, 0.0), &
                             & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
                             & cmplx(0.0, 0.0), ab1, size_ab)
                !$acc end host_data
-            ELSE ! Needed, because t^H .NE. t!
+            ELSE ! Needed, because t^H .NE. t! TODO: Do we possibly need to do this for fully fully noco as well?
                !!$acc update device(ab)
                !$acc host_data use_device(abCoeffs,ab1,h_loc)
                CALL CPP_zgemm("C", "C", lapw%nv(igSpin), ab_size, ab_size, cmplx(1.0, 0.0), &
