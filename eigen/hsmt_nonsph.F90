@@ -130,7 +130,7 @@ CONTAINS
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                        & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
 
-            IF (l_samelapw) THEN
+            IF (l_samelapw.AND.(ilSpinPr==ilSpin)) THEN
                !!$acc update device(ab)
                !$acc host_data use_device(abCoeffs,ab1,h_loc)
                CALL CPP_zgemm("C", "N", lapw%nv(igSpin), ab_size, ab_size, cmplx(1.0, 0.0), &
