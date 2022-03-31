@@ -133,7 +133,7 @@ CONTAINS
        CALL setabc1lo(atoms,iType,usdus,jspin,alo1,blo1,clo1)
 
           ! generate the spinors (chi)
-       IF(noco%l_noco) ccchi=nococonv%chi(itype)
+       IF(noco%l_noco) ccchi=conjg(nococonv%umat(itype))
 
 
        nintsp = 1

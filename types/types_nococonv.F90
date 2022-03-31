@@ -23,10 +23,10 @@ MODULE m_types_nococonv
    CONTAINS
       procedure:: init => t_nococonv_init
       procedure:: init_ss => t_nococonv_initss
-      !Routines to obtain chi transformation matrix
-      procedure:: chi_pass
-      procedure:: chi_explicit
-      generic :: chi => chi_pass, chi_explicit
+      !Routines to obtain umat transformation matrix
+      procedure:: umat_pass
+      procedure:: umat_explicit
+      generic :: umat => umat_pass, umat_explicit
       !Routines to rotate density matrix
       procedure:: rotdenmat_mat, rotdenmat_denmat
       procedure:: rotdenmat_explicit_mat, rotdenmat_explicit_denmat
@@ -69,21 +69,21 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
 
  END SUBROUTINE mpi_bc_nococonv
 
-   function chi_pass(nococonv, n)
+   function umat_pass(nococonv, n)
       CLASS(t_nococonv), INTENT(IN)  :: nococonv
       INTEGER, INTENT(IN)           :: n
-      COMPLEX                      :: chi_pass(2, 2)
-      chi_pass = nococonv%chi_explicit(nococonv%alph(n), nococonv%beta(n))
+      COMPLEX                      :: umat_pass(2, 2)
+      umat_pass = nococonv%umat_explicit(nococonv%alph(n), nococonv%beta(n))
    end function
 
-   function chi_explicit(nococonv, alpha, beta) result(chi)
+   function umat_explicit(nococonv, alpha, beta) result(umat)
       class(t_nococonv), intent(in) :: nococonv
       REAL, INTENT(IN) :: alpha, beta
-      COMPLEX         :: chi(2, 2)
-      chi(1, 1) = exp(ImagUnit*alpha/2)*cos(beta/2)
-      chi(2, 1) = -EXP(-ImagUnit*alpha/2)*SIN(beta/2)
-      chi(1, 2) = EXP(ImagUnit*alpha/2)*SIN(beta/2)
-      chi(2, 2) = EXP(-ImagUnit*alpha/2)*COS(beta/2)
+      COMPLEX         :: umat(2, 2)
+      umat(1, 1) =  EXP(-ImagUnit*alpha/2)*COS(beta/2)
+      umat(2, 1) = -EXP( ImagUnit*alpha/2)*SIN(beta/2)
+      umat(1, 2) =  EXP(-ImagUnit*alpha/2)*SIN(beta/2)
+      umat(2, 2) =  EXP( ImagUnit*alpha/2)*COS(beta/2)
    end function
 
    function denmat_to_mag_mat(nococonv, mat) result(mag)

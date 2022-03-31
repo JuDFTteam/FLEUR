@@ -105,10 +105,10 @@ CONTAINS
                         clo1(lo)*ud%dulon(lo,ntyp,isp)))
                    dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN
-                      smat%data_r(kp,locol) = smat%data_r(kp,locol) + CONJG(chi)*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
+                      smat%data_r(kp,locol) = smat%data_r(kp,locol) + chi*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ELSE
-                      smat%data_c(kp,locol) = smat%data_c(kp,locol) + CONJG(chi)*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
+                      smat%data_c(kp,locol) = smat%data_c(kp,locol) + chi*invsfct*fact2 * legpol(atoms%llo(lo,ntyp),dotp) *&
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ENDIF
                 END DO
@@ -132,10 +132,10 @@ CONTAINS
                          lorow=lapw%nv(iintsp)+lapw%index_lo(lop,na)+nkvecp
                          dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                          IF (smat%l_real) THEN
-                            smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+CONJG(chi)*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)* &
+                            smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+chi*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)* &
                                  cph(k,jintsp)*CONJG(cph(kp,iintsp))
                          ELSE
-                            smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+CONJG(chi)*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)*&
+                            smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+chi*invsfct*fact3*legpol(atoms%llo(lo,ntyp),dotp)*&
                                  cph(k,jintsp)*CONJG(cph(kp,iintsp))
                          ENDIF
                       END DO
@@ -149,10 +149,10 @@ CONTAINS
                    lorow=lapw%nv(iintsp)+lapw%index_lo(lo,na)+nkvecp
                    dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN
-                      smat%data_r(lorow,locol) = smat%data_r(lorow,locol) + CONJG(chi)*invsfct*fact1*legpol(l,dotp) *&
+                      smat%data_r(lorow,locol) = smat%data_r(lorow,locol) + chi*invsfct*fact1*legpol(l,dotp) *&
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ELSE
-                      smat%data_c(lorow,locol) = smat%data_c(lorow,locol) + CONJG(chi)*invsfct*fact1*legpol(l,dotp)*&
+                      smat%data_c(lorow,locol) = smat%data_c(lorow,locol) + chi*invsfct*fact1*legpol(l,dotp)*&
                            cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ENDIF
                 END DO

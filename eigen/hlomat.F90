@@ -167,13 +167,13 @@ CONTAINS
                       ENDDO
                    ELSE
                       DO kp = 1,lapw%nv(iintsp)
-                         hmat%data_c(kp,locol) = hmat%data_c(kp,locol) + CONJG(chi)*invsfct * (&
+                         hmat%data_c(kp,locol) = hmat%data_c(kp,locol) + chi*invsfct * (&
                               abclo(1,m,nkvec,lo,2) *  ax(kp)  +&
                               abclo(2,m,nkvec,lo,2) *  bx(kp)  +&
                               abclo(3,m,nkvec,lo,2) *  cx(kp)  )
                          IF (input%l_useapw) THEN
                             !---> APWlo
-                            hmat%data_c(kp,locol)=hmat%data_c(kp,locol) + 0.25 * atoms%rmt(ntyp)**2 * CONJG(chi)*invsfct*(&
+                            hmat%data_c(kp,locol)=hmat%data_c(kp,locol) + 0.25 * atoms%rmt(ntyp)**2 * chi*invsfct*(&
                                  (CONJG(abCoeffs(lm,kp,1))* ud%us(l,ntyp,isp)+&
                                  CONJG(abCoeffs(ab_size/2+lm,kp,1))*ud%uds(l,ntyp,isp))*&
                                  (abclo(1,m,nkvec,lo,2)*  ud%dus(l,ntyp,isp)&
@@ -243,7 +243,7 @@ CONTAINS
                                     REAL(abclo(3,mp,nkvecp,lop,1))* REAL(cxx) +&
                                     AIMAG(abclo(3,mp,nkvecp,lop,1))*AIMAG(cxx) )
                             ELSE
-                               hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) + CONJG(chi)*invsfct * (&
+                               hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) + chi*invsfct * (&
                                     CONJG(abclo(1,mp,nkvecp,lop,1)) * axx +&
                                     CONJG(abclo(2,mp,nkvecp,lop,1)) * bxx +&
                                     CONJG(abclo(3,mp,nkvecp,lop,1)) * cxx )
@@ -290,7 +290,7 @@ CONTAINS
                                  REAL(abclo(3,mp,nkvecp,lo,1))* REAL(cxx) +&
                                  AIMAG(abclo(3,mp,nkvecp,lo,1))*AIMAG(cxx) )
                          ELSE
-                            hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) + CONJG(chi)*invsfct* (&
+                            hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) + chi*invsfct* (&
                                  CONJG(abclo(1,mp,nkvecp,lo,1))*axx +&
                                  CONJG(abclo(2,mp,nkvecp,lo,1))*bxx +&
                                  CONJG(abclo(3,mp,nkvecp,lo,1))*cxx )
