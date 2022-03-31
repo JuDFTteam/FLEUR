@@ -16,7 +16,7 @@ MODULE m_hlomat
   ! p.kurz sept. 1996
   !***********************************************************************
 CONTAINS
-  SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpin,ilSpinPr,&
+  SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
        ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat)
     !
 #include"cpp_double.h"
