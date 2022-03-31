@@ -89,7 +89,7 @@ CONTAINS
       !$acc  data &
       !$acc&   copyin(igSpin,igSpinPr,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssAdd,qssAddPr,l_fullj,bmat,idir)&
       !$acc&   copyin(lapw,lapwPr,atoms,fmpi,input,usdus)&
-      !$acc&   copyin(lapw%nv,lapw%gvec,lapw%gk,lapwPr%nv,lapwPr%gvec,lapwPr%gk)&
+      !$acc&   copyin(lapw%nv,lapw%gvec,lapw%gk,lapwPr%nv,lapwPr%gvec,lapwPr%gk,lapw%bkpt,lapwPr%bkpt)&
       !$acc&   copyin(atoms%lmax,atoms%rmt,atoms%lnonsph,atoms%neq,atoms%taual)&
       !$acc&   copyin(fmpi%n_size,fmpi%n_rank)&
       !$acc&   copyin(input%l_useapw)&
@@ -101,7 +101,7 @@ CONTAINS
       !$acc loop gang
       DO ikG =  fmpi%n_rank+1, lapw%nv(igSpin), fmpi%n_size
          !$acc loop  vector independent&
-         !$acc &    PRIVATE(ikGPr,ikG0,ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,dot)
+         !$acc &    PRIVATE(ikGPr,ikG0,ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,cfac,pref,dot)
          DO  ikGPr = 1, MERGE(lapwPr%nv(igSpinPr),MIN(ikG,lapwPr%nv(igSpinPr)),l_fullj)
             ikG0 = (ikG-1)/fmpi%n_size + 1
             ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:) + lapw%bkpt
@@ -293,7 +293,7 @@ CONTAINS
       DO ikG =  fmpi%n_rank+1, lapw%nv(igSpin), fmpi%n_size
          kj_end = MERGE(lapwPr%nv(igSpinPr),min(ikG,lapwPr%nv(igSpinPr)),l_fullj)
          ikG0 = (ikG-1)/fmpi%n_size + 1
-         ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:)
+         ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:) + lapw%bkpt
          DO kj_off = 1, lapwPr%nv(igSpinPr), NVEC
             NVEC_rem = NVEC
             kj_vec = kj_off - 1 + NVEC
