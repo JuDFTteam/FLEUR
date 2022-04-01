@@ -125,7 +125,7 @@ CONTAINS
                ddnln = usdus%ddn(l,n,isp)
                elall = el(l,n,isp)
 
-               IF (l<=atoms%lnonsph(n)) elall=elall-e_shift!(isp)
+               IF (l<=atoms%lnonsph(n).AND..NOT.l_fullj) elall=elall-e_shift!(isp)
 
                ! Legendre polynomials
                l3 = modulo(l, 3)
@@ -139,10 +139,14 @@ CONTAINS
                             & - fleg2(l-1)*plegend(modulo(l-2,3))
                END IF ! l
 
-               fct  = plegend(l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
-                                                 & + gjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*ddnln )
-               fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
-                                                 & + fjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr) )
+               fct  = plegend(l3) * fl2p1(l) * ( fjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
+                                             & + gjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*ddnln )
+               IF (.NOT.l_fullj) THEN
+                  fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
+                                                    & + fjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr) )
+               ELSE
+                  fct2 = plegend(l3)*fl2p1(l) * gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr)
+               END IF
 
                VecHelpS = VecHelpS + fct
                VecHelpH = VecHelpH + fct*elall + fct2
@@ -325,7 +329,7 @@ CONTAINS
                ddnln = usdus%ddn(l,n,isp)
                elall = el(l,n,isp)
 
-               IF (l<=atoms%lnonsph(n)) elall=elall-e_shift!(isp)
+               IF (l<=atoms%lnonsph(n).AND..NOT.l_fullj) elall=elall-e_shift!(isp)
 
                ! Legendre polynomials
                l3 = modulo(l, 3)
@@ -338,10 +342,14 @@ CONTAINS
                                       & - fleg2(l-1)*plegend(:NVEC_REM,modulo(l-2,3))
                END IF ! l
 
-               fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) &
-                                                                      & + gjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr)*ddnln )
-               fct2(:NVEC_REM) = plegend(:NVEC_REM,l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) &
-                                                                      & + fjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr) )
+               fct(:NVEC_REM)  = plegend(:NVEC_REM,l3) * fl2p1(l) * ( fjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) &
+                                                                  & + gjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr)*ddnln )
+               IF (.NOT.l_fullj) THEN
+                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) &
+                                                                           & + fjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr) )
+               ELSE
+                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr)
+               END IF
 
                VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
                VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)

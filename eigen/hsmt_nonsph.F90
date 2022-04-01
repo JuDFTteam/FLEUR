@@ -137,7 +137,7 @@ CONTAINS
                             & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
                             & cmplx(0.0, 0.0), ab1, size_ab)
                !$acc end host_data
-            ELSE ! Needed, because t^H .NE. t! TODO: Do we possibly need to do this for fully fully noco as well?
+            ELSE ! Needed, because t^H .NE. t!
                !!$acc update device(ab)
                !$acc host_data use_device(abCoeffs,ab1,h_loc)
                CALL CPP_zgemm("C", "C", lapw%nv(igSpin), ab_size, ab_size, cmplx(1.0, 0.0), &
@@ -274,7 +274,7 @@ CONTAINS
                      ! data_c += chi * ab2 * ab_select^H
                      !         = chi * aPr'^H * H * a
                   ELSE
-                     !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
+                     !$acc host_data use_device(abCoeffs,data_c,ab_select)
                      IF (set0 .AND. nn == 1) THEN
                         !CPP_data_c = CMPLX(0.0,0.0)
                         CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
