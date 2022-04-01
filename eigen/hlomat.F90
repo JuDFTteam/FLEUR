@@ -17,7 +17,7 @@ MODULE m_hlomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat)
+       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_pref)
     !
 #include"cpp_double.h"
     USE m_hsmt_ab
@@ -49,6 +49,7 @@ CONTAINS
     REAL, INTENT (IN) :: alo1(:,:),blo1(:,:),clo1(:,:)
 
     CLASS(t_mat),INTENT (INOUT) :: hmat
+    LOGICAL, INTENT(IN) :: l_pref
     !     ..
     ! Local Scalars
       COMPLEX :: axx,bxx,cxx,dtd,dtu,tdulo,tulod,tulou,tuloulo,utd,utu, tuulo
@@ -65,9 +66,11 @@ CONTAINS
       ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
       ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
 
+      ! TODO: Introduce the logic for different lapw and the full rectangular
+      !       instead of triangular construction...
       !$acc data create(abcoeffs,abclo)
       !$acc data copyin(alo1,blo1,clo1)
-      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,1),ab_size,.TRUE.,abclo(:,:,:,:,1),alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
+      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,1),ab_size,.TRUE.,l_pref,1,abclo(:,:,:,:,1),alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
 
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin) THEN
          !$acc kernels present(abcoeffs)
@@ -79,7 +82,7 @@ CONTAINS
          CALL CPP_BLAS_ccopy(SIZE(abclo,1)*SIZE(abclo,2)*SIZE(abclo,3)*SIZE(abclo,4),abclo(:,:,:,:,1),1,abclo(:,:,:,:,2),1)
 #endif
       ELSE
-         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,2),ab_size,.TRUE.,abclo(:,:,:,:,2),alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
+         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:,2),ab_size,.TRUE.,l_pref,1,abclo(:,:,:,:,2),alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
       END IF
       !$acc end data
 

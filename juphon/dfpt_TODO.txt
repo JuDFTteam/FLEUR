@@ -41,9 +41,11 @@ q-loop:
                         - nonsph gives a full matrix as we need, but we need to teach
                           it to accept different matching coefficients for different
                           k left and right [done]
-                     - use hsmt_nonsph for H-elements with perturbed matchings [done]
-                        - teach hsmt_ab how to work with i(k+G) prefactors [done]
+                     - use hsmt_nonsph for H-elements with perturbed matchings
+                        - teach hsmt_ab how to work with i(k+G) prefactors
                      - use hsmt_sph for H/S-elements with perturbed matchings [done]
+                        - teach it to comprehend the prefactor
+                     - What about the LOs??
                Analytical Matrix inversion:
                   - write routine that inverts (Hkq-\epsilonk*Skq) in a spectral representation [done]
                z1-calculation:

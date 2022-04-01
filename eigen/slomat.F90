@@ -13,7 +13,7 @@ MODULE m_slomat
 CONTAINS
    SUBROUTINE slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
                      isp,ud, alo1,blo1,clo1,fjgj,&
-                     igSpinPr,igSpin,chi,smat)
+                     igSpinPr,igSpin,chi,smat,l_pref)
     !***********************************************************************
     ! locol stores the number of columns already processed; on parallel
     !       computers this decides, whether the LO-contribution is
@@ -48,6 +48,7 @@ CONTAINS
       REAL,   INTENT (IN)       :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
       TYPE(t_usdus),INTENT(IN)  :: ud
       CLASS(t_mat),INTENT(INOUT) :: smat
+      LOGICAL, INTENT(IN) :: l_pref
 
       ! Local Scalars
       REAL    :: con,dotp,fact1,fact2,fact3,fl2p1
@@ -58,8 +59,18 @@ CONTAINS
 
       ALLOCATE(cph(MAXVAL(lapw%nv),2))
 
+      ! TODO: Introduce the logic for different lapw and the full rectangular
+      !       instead of triangular construction...
+      
       DO i=MIN(igSpin,igSpinPr),MAX(igSpin,igSpinPr)
+         ! TODO:
+         ! Implement here the logic for cph from lapwq and [if not later on]
+         ! the ikG prefactor logic. Introduce the idea of different lapw everywhere.
          CALL lapw%phase_factors(i,atoms%taual(:,na),nococonv%qss,cph(:,i))
+         !IF (l_fullj) THEN
+         !   pref = ImagUnit * MATMUL(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, bmat)
+         !   cfac = pref(idir) * cfac
+         !END IF
       END DO
 
       IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
@@ -117,6 +128,7 @@ CONTAINS
                   !$acc end loop
                   ! Calculate the overlap matrix elements with other local orbitals
                   ! of the same atom, if they have the same l
+                  ! TODO: Also go all the way for DFPT.
                   DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),igSpinPr==igSpin)
                      IF (lop==lo) CYCLE !Do later
                      lp = atoms%llo(lop,ntyp)

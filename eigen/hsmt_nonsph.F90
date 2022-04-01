@@ -10,7 +10,7 @@ MODULE m_hsmt_nonsph
    PUBLIC hsmt_nonsph
 
 CONTAINS
-   SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,igSpinPr,igSpin,chi,noco,nococonv,cell,lapw,td,fjgj,hmat,set0,lapwq)
+   SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,igSpinPr,igSpin,chi,noco,nococonv,cell,lapw,td,fjgj,hmat,set0,l_pref,iDir,lapwq)
       USE m_hsmt_fjgj
       USE m_types
       USE m_hsmt_ab
@@ -35,9 +35,9 @@ CONTAINS
       TYPE(t_tlmplm),   INTENT(IN) :: td
       TYPE(t_fjgj),     INTENT(IN) :: fjgj
 
-      INTEGER,          INTENT(IN) :: n, ilSpinPr, ilSpin, igSpinPr, igSpin
+      INTEGER,          INTENT(IN) :: n, ilSpinPr, ilSpin, igSpinPr, igSpin, iDir
       COMPLEX,          INTENT(IN) :: chi
-      LOGICAL,          INTENT(IN) :: set0  !if true, initialize the hmat matrix with zeros
+      LOGICAL,          INTENT(IN) :: l_pref, set0  !if true, initialize the hmat matrix with zeros
 
       CLASS(t_mat),INTENT(INOUT)     ::hmat
 
@@ -128,7 +128,7 @@ CONTAINS
             ! Denoted in comments as a
             ! [local spin primed -> '; global spin primed -> pr]
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                       & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
+                       & lapw, fjgj, abCoeffs, ab_size, .TRUE., l_pref, iDir)
 
             IF (l_samelapw.AND.(ilSpinPr==ilSpin)) THEN
                !!$acc update device(ab)
@@ -201,7 +201,7 @@ CONTAINS
                      END IF
                   ELSE ! Case for additional q on left vector.
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
+                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., l_pref, iDir)
                      !!$acc update device (abCoeffs)
 
                      !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
@@ -223,7 +223,7 @@ CONTAINS
 
                   ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}
                   CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpin, n, na, cell, &
-                             & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
+                             & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., l_pref, iDir)
                   !!$acc update device(abCoeffs)
 
                   !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
@@ -253,7 +253,7 @@ CONTAINS
                !Second set of abCoeffs is needed
                ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}^{'}
                CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpinPr, n, na, cell, &
-                          & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
+                          & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., l_pref, iDir)
                IF (ilSpinPr==ilSpin) THEN
                   IF (l_samelapw) THEN
                      !!$acc update device (abCoeffs)
