@@ -32,9 +32,18 @@ q-loop:
             eigen1:
                tlmplm:
                   - get the matrix elements of both H and V1 [done]
+                  - correct the matrix elements of H:
+                    We do not need a symmetrized form (0.5, 0.5) [done]
                hssetup:
                   - get H1 and S1 matrices from the interstitial v1%pw_w [done]
-                  - get H1 and S1 matrices from the MT td and tdV1 and enppara [WIP]
+                  - get H1 and S1 matrices from the MT td and tdV1 and enpara [sone]
+                     - use hsmt_nonsph for the matrix elements of V1 [done]
+                        - nonsph gives a full matrix as we need, but we need to teach
+                          it to accept different matching coefficients for different
+                          k left and right [done]
+                     - use hsmt_nonsph for H-elements with perturbed matchings [done]
+                        - teach hsmt_ab how to work with i(k+G) prefactors [done]
+                     - use hsmt_sph for H/S-elements with perturbed matchings [done]
                Analytical Matrix inversion:
                   - write routine that inverts (Hkq-\epsilonk*Skq) in a spectral representation [done]
                z1-calculation:

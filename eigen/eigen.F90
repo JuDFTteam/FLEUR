@@ -100,13 +100,14 @@ CONTAINS
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
-      TYPE(t_tlmplm)            :: td, tdV1
-      TYPE(t_usdus)             :: ud
+      TYPE(t_tlmplm)            :: td, tdV1, tdmod
+      TYPE(t_usdus)             :: ud, uddummy
       TYPE(t_lapw)              :: lapw
       CLASS(t_mat), ALLOCATABLE :: zMat
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
       CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
       TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
+      TYPE(t_hub1data)          :: hub1datadummy
 
       ! Variables for HF or fi%hybinp functional calculation
       INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat
@@ -126,6 +127,7 @@ CONTAINS
       END IF
 
       call ud%init(fi%atoms,fi%input%jspins)
+      call uddummy%init(fi%atoms,fi%input%jspins)
       ALLOCATE(eig(fi%input%neig))
       ALLOCATE(bkpt(3))
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
@@ -144,9 +146,11 @@ CONTAINS
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
       CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,td,ud,alpha_hybrid)
-      ! Get matrix elements of perturbed potential in DFPT case.
+      ! Get matrix elements of perturbed potential and modified H/S in DFPT case.
       IF (l_dfpteigen) THEN
+          hub1datadummy = hub1data
           CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag)
+          CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1datadummy,inden,v,vx,fmpi,tdmod,uddummy,alpha_hybrid,.TRUE.)
       END IF
 
       neigBuffer = 0
@@ -199,12 +203,14 @@ CONTAINS
                   select type(smat_unfold)
                   type is (t_mat)
                      smat_unfold=smat
+                     smat_unfold%data_c=CONJG(smat%data_c)
                   end select
                type is (t_mpimat)
                   allocate(t_mpimat::smat_unfold)
                   select type(smat_unfold)
                   type is (t_mpimat)
                      smat_unfold=smat
+                     smat_unfold%data_c=CONJG(smat%data_c)
                   end select
                end select
             END IF
@@ -235,9 +241,6 @@ CONTAINS
               CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, fmpi%diag_sub_comm,ierr)
               ne_all=MIN(fi%input%neig,ne_all)
 #endif
-              IF (.NOT.zMat%l_real) THEN
-                zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
-              END IF
             endif
 
             IF (fmpi%n_rank == 0) THEN

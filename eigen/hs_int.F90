@@ -7,8 +7,18 @@
 MODULE m_hs_int
 CONTAINS
    !Subroutine to construct the interstitial Hamiltonian and overlap matrix
-   SUBROUTINE hs_int(input, noco, nococonv, stars, lapw, fmpi, cell, isp, vpw, &
-                   & smat,hmat)
+   SUBROUTINE hs_int(input, noco, nococonv, stars, lapw, fmpi, bbmat, isp, vpw, &
+                   & smat, hmat)
+      ! Control subroutine for the calculation of Hamiltonian/overlap matrix
+      ! elements in the interstitial. The spin logic and case selections are
+      ! found here while the actual calculation loop is one layer deeper in
+      ! hs_int_direct.
+      !
+      ! <\Phi'|H/S|\Phi>
+      !
+      ! All primed indices are to be understood as corresponding to the Bra
+      ! basis function, e.g. iSpinPr is the left and iSpin the right hand spin.
+
       USE m_types
       USE m_hs_int_direct
 
@@ -18,14 +28,14 @@ CONTAINS
       TYPE(t_noco),     INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_stars),    INTENT(IN)    :: stars
-      TYPE(t_cell),     INTENT(IN)    :: cell
+      REAL,             INTENT(IN)    :: bbmat(3, 3)
       TYPE(t_lapw),     INTENT(IN)    :: lapw
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
       INTEGER,          INTENT(IN)    :: isp
       COMPLEX,          INTENT(IN)    :: vpw(:,:)
       CLASS(t_mat),     INTENT(INOUT) :: smat(:,:),hmat(:,:)
 
-      INTEGER :: ispin, jspin, iispin, jjspin
+      INTEGER :: iSpinPr, iSpin, igSpin, igSpinPr
       INTEGER :: iTkin, fact, iQss
       LOGICAL :: l_smat
 
@@ -35,24 +45,24 @@ CONTAINS
 
       IF (noco%l_noco.AND.isp==2) RETURN !was done already
 
-      DO ispin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
-         iispin=MIN(ispin,SIZE(smat,1))
-         DO jspin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
-            jjspin=MIN(jspin,SIZE(smat,1))
-            IF (ispin.EQ.1.AND.jspin.EQ.2) THEN
+      DO iSpinPr=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
+         igSpinPr=MIN(iSpinPr,SIZE(smat,1))
+         DO iSpin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
+            igSpin=MIN(iSpin,SIZE(smat,1))
+            IF (iSpinPr.EQ.1.AND.iSpin.EQ.2) THEN
                vpw_temp = conjg(vpw(:, 3))
                l_smat   = .FALSE. ! Offdiagonal part --> No step function part.
                iTkin    = 0       ! Offdiagonal part --> No T part.
                fact     = -1      ! (12)-element --> (-1) prefactor
                iQss     = 0       ! No spin-spiral considered (no T).
-            ELSE IF (ispin.EQ.2.AND.jspin.EQ.1) THEN
+            ELSE IF (iSpinPr.EQ.2.AND.iSpin.EQ.1) THEN
                vpw_temp = vpw(:, 3)
                l_smat   = .FALSE.
                iTkin    = 0
                fact     = 1
                iQss     = 0
             ELSE
-               vpw_temp = vpw(:, ispin)
+               vpw_temp = vpw(:, iSpin)
                l_smat   = .TRUE.
                IF (input%l_useapw) THEN
                   iTkin = 1 ! Dirac form.
@@ -63,9 +73,9 @@ CONTAINS
                END IF
                fact     = 1
             END IF
-            CALL hs_int_direct(fmpi, lapw%gvec(:,:,ispin), lapw%gvec(:,:,jspin), &
-                             & lapw%bkpt+iQss*(2*ispin - 3)/2.0*nococonv%qss, lapw%bkpt+iQss*(2*jspin - 3)/2.0*nococonv%qss, &
-                             & lapw%nv(ispin), lapw%nv(jspin), stars, cell, vpw_temp, hmat(jjspin,iispin), smat(jjspin,iispin), l_smat, .FALSE., iTkin, fact)
+            CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:,:,iSpinPr), lapw%gvec(:,:,iSpin), &
+                             & lapw%bkpt+iQss*(2*iSpinPr - 3)/2.0*nococonv%qss, lapw%bkpt+iQss*(2*iSpin - 3)/2.0*nococonv%qss, &
+                             & lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, fact, l_smat, .FALSE., vpw_temp, hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin))
             END DO
       END DO
    END SUBROUTINE hs_int

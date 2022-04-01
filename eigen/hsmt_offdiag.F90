@@ -94,10 +94,10 @@ CONTAINS
                   fjgj%fj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l,l+s,n,ispin,jspin) + &
                   fjgj%gj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l+s,l,n,ispin,jspin) + &
                   fjgj%gj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l+s,l+s,n,ispin,jspin)* sqrt(usdus%ddn(l,n,ispin)*usdus%ddn(l,n,jspin)))
-             hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + chi(1,1,iintsp,jintsp)*fct
-             hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + chi(1,2,iintsp,jintsp)*fct
-             hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + chi(2,1,iintsp,jintsp)*fct
-             hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + chi(2,2,iintsp,jintsp)*fct
+             hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + CONJG(chi(1,1,iintsp,jintsp)*fct)
+             hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + CONJG(chi(1,2,iintsp,jintsp)*fct)
+             hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + CONJG(chi(2,1,iintsp,jintsp)*fct)
+             hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + CONJG(chi(2,2,iintsp,jintsp)*fct)
           ENDDO
           !--->          end loop over l
        ENDDO

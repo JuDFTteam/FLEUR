@@ -3,7 +3,7 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-MODULE m_hsmt
+MODULE m_dfpt_hsmt
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
@@ -19,9 +19,11 @@ CONTAINS
   !! - In the spin-spiral case, a loop over the global spin is performed and the four parts of the matrix are calculated one-by-one
   !! @todo
   !! The off-diagonal contribution in first-variation soc and constraint calculations is still missing
+  ! DFPT: Handle H/S elements with shifted k+q on the lhs i(k+G-k'-G'-q) prefactor through sph,
+  !       V1 elements fully with nonsph. LO?
 
-  SUBROUTINE hsmt(atoms,sym,enpara,&
-       isp,input,fmpi,noco,nococonv,cell,lapw,usdus,td,smat,hmat)
+  SUBROUTINE dfpt_hsmt(atoms,sym,enpara,&
+       isp,input,fmpi,noco,nococonv,cell,lapw,usdus,td,smat,hmat,tdV1)
     USE m_types
     USE m_types_mpimat
     USE m_hsmt_nonsph
@@ -43,7 +45,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_enpara),INTENT(IN)     :: enpara
     TYPE(t_lapw),INTENT(IN)       :: lapw
-    TYPE(t_tlmplm),INTENT(IN)     :: td
+    TYPE(t_tlmplm),INTENT(IN)     :: td, tdV1
     TYPE(t_usdus),INTENT(IN)      :: usdus
     CLASS(t_mat),INTENT(INOUT)    :: smat(:,:),hmat(:,:)
     !     ..
@@ -83,13 +85,10 @@ CONTAINS
           CALL timestop("fjgj coefficients")
           DO jspin=ispin,MERGE(2,isp,noco%l_noco)
             IF (.NOT.noco%l_noco) THEN
-              !This is for collinear calculations: the (1,1) element of the matrices is all
-              !that is needed and allocated
-
               CALL hsmt_sph(n,atoms,fmpi,ispin,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),usdus,fjgj,smat(1,1),hmat(1,1),.FALSE.)
               CALL hsmt_nonsph(n,fmpi,sym,atoms,ispin,jspin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat(1,1),.FALSE.)
               CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ispin,jspin,iintsp,jintsp,hmat(1,1),.FALSE.,smat(1,1))
-            ELSEIF(noco%l_noco.AND..NOT.noco%l_ss) THEN
+            ELSE IF(noco%l_noco.AND..NOT.noco%l_ss) THEN
               !The NOCO but non-spinspiral setup follows:
               !The Matrix-elements are first calculated in the local frame of the atom and
               !stored in tmp-variables. Then these are distributed (rotated) into the 2x2
@@ -118,10 +117,10 @@ CONTAINS
         ENDDO
       END DO
       !$acc end data
-      if (noco%l_noco.AND..NOT.noco%l_ss) then
+      if (noco%l_noco) then
          !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
          !$acc exit data delete(smat_tmp,hmat_tmp)
       endif
       RETURN
-    END SUBROUTINE hsmt
-  END MODULE m_hsmt
+    END SUBROUTINE dfpt_hsmt
+  END MODULE m_dfpt_hsmt

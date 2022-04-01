@@ -9,7 +9,7 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,&
-       jspin,fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid)
+       jspin,fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_dfptmod)
     USE m_tlmplm
     USE m_types
     USE m_radovlp
@@ -29,6 +29,7 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin!physical spin&spin index for data
     REAL,INTENT(IN)      :: alpha_hybrid
+    LOGICAL,INTENT(IN),OPTIONAL :: l_dfptmod
     !     ..
     TYPE(t_potden),INTENT(IN)    :: v,vx,inden
     TYPE(t_tlmplm),INTENT(INOUT) :: td
@@ -39,7 +40,7 @@ CONTAINS
     REAL temp
     INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp,j1,j2
     INTEGER lpl ,mp,n,m,s,i_u,jmin,jmax,i_opc,lh0
-    LOGICAL OK, isRoot, l_call_tlmplm
+    LOGICAL OK, isRoot, l_call_tlmplm, l_dfpt
     COMPLEX :: one
     !     ..
     !     .. Local Arrays ..
@@ -48,6 +49,8 @@ CONTAINS
 
     REAL,PARAMETER:: e_shift_min=0.5
     REAL,PARAMETER:: e_shift_max=65.0
+
+    l_dfpt = PRESENT(l_dfptmod)
 
     !     ..e_shift
     jsp=jspin
@@ -85,7 +88,7 @@ CONTAINS
        !$OMP PRIVATE(lmplm,lp,m,mp,n)&
        !$OMP PRIVATE(OK,s,in,info,i_u,i_opc)&
        !$OMP SHARED(one,nococonv,atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,vx,alpha_hybrid,isRoot,l_call_tlmplm)&
-       !$OMP SHARED(fmpi,input,hub1inp,hub1data,uun21,udn21,dun21,ddn21,opc_corrections,j1,j2)
+       !$OMP SHARED(fmpi,input,hub1inp,hub1data,uun21,udn21,dun21,ddn21,opc_corrections,j1,j2,l_dfpt)
        DO  n = 1,atoms%ntype
           IF (l_call_tlmplm) THEN
               lh0 = MERGE(1,0,jsp<3.and.alpha_hybrid==0)
@@ -143,8 +146,9 @@ CONTAINS
                   td%h_loc_nonsph(lm  ,lm  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lm  ,n,j1,j2) + opc_corrections(i_opc) * m
                   td%h_loc_nonsph(lm+s,lm+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lm+s,n,j1,j2) + opc_corrections(i_opc) * m * ud%ddn(l,n,jsp)
                END DO
-            END DO
-             IF (jsp<3) THEN
+             END DO
+             ! For DFPT, do not decompose
+             IF (jsp<3.AND..NOT.l_dfpt) THEN
                 !Create Cholesky decomposition of local hamiltonian
 
                 !--->    Add diagonal terms to make matrix positive definite
@@ -189,6 +193,11 @@ CONTAINS
                    td%h_loc(lm+s,lm+s,n,jsp,jsp)=td%h_loc(lm+s,lm+s,n,jsp,jsp) + enpara%el0(l,n,jsp)*ud%ddn(l,n,jsp)
                    td%h_loc(lm+s,lm,n,jsp,jsp)=td%h_loc(lm+s,lm,n,jsp,jsp) + 0.5
                    td%h_loc(lm,lm+s,n,jsp,jsp)=td%h_loc(lm,lm+s,n,jsp,jsp) + 0.5
+                   ! For DFPT we need a non-symmetrized local Hamiltonian
+                   IF (l_dfpt) THEN
+                      td%h_loc(lm+s,lm,n,jsp,jsp)=td%h_loc(lm+s,lm,n,jsp,jsp) - 0.5 !+0.0
+                      td%h_loc(lm,lm+s,n,jsp,jsp)=td%h_loc(lm,lm+s,n,jsp,jsp) + 0.5 !+1.0
+                   END IF
                 ENDDO
              ENDDO
           ENDIF

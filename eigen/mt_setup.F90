@@ -7,7 +7,7 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,vTot,vx,fmpi,td,ud,alpha_hybrid)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,nococonv,enpara,hub1inp,hub1data,inden,vTot,vx,fmpi,td,ud,alpha_hybrid,l_dfptmod)
     USE m_types
     USE m_tlmplm_cholesky
     USE m_spnorb
@@ -29,6 +29,7 @@ CONTAINS
     TYPE(t_hub1inp),INTENT(IN)   :: hub1inp
     TYPE(t_hub1data),INTENT(INOUT)::hub1data
     REAl,INTENT(IN)               :: alpha_hybrid
+    LOGICAL,INTENT(IN),OPTIONAL :: l_dfptmod
 
     INTEGER:: jsp
 
@@ -38,7 +39,11 @@ CONTAINS
 
     DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau))
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,fmpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
-       CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,vx,inDen,input,hub1inp,hub1data,td,ud,alpha_hybrid)
+       IF (PRESENT(l_dfptmod)) THEN
+          CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,vx,inDen,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_dfptmod)
+       ELSE
+         CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,vx,inDen,input,hub1inp,hub1data,td,ud,alpha_hybrid)
+      END IF
     END DO
     CALL timestop("tlmplm")
 
