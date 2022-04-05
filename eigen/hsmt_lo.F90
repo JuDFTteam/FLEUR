@@ -16,7 +16,7 @@ MODULE m_hsmt_lo
   PRIVATE
   PUBLIC hsmt_lo
 CONTAINS
-  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_pref,l_fullj,Smat,lapwq)
+  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,iDir,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_pref,l_fullj,Smat,lapwq)
     USE m_hlomat
     USE m_slomat
     USE m_setabc1lo
@@ -43,7 +43,7 @@ CONTAINS
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,INTENT(IN)   :: n
+    INTEGER,INTENT(IN)   :: n,iDir
     INTEGER, INTENT (IN) :: ilSpinPr,ilSpin,igSpinPr,igSpin !spins
     COMPLEX, INTENT(IN)  :: chi
 
@@ -124,20 +124,20 @@ CONTAINS
                   IF (PRESENT(lapwq)) THEN
                      CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
                         ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
-                        igSpinPr,igSpin,chi,smat,l_pref,l_fullj,lapwq)
+                        igSpinPr,igSpin,iDir,chi,smat,l_pref,l_fullj,lapwq)
                   ELSE
                      CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
                         ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
-                        igSpinPr,igSpin,chi,smat,l_pref,l_fullj)
+                        igSpinPr,igSpin,iDir,chi,smat,l_pref,l_fullj)
                   END IF
                END IF
                CALL timestart("hlomat")
                IF (PRESENT(lapwq)) THEN
                   CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_pref,l_fullj,lapwq)
+                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,iDir,chi,hmat,l_pref,l_fullj,lapwq)
                ELSE
                   CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_pref,l_fullj)
+                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,iDir,chi,hmat,l_pref,l_fullj)
                END IF
                CALL timestop("hlomat")
             END IF

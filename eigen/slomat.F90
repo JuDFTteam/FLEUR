@@ -13,7 +13,7 @@ MODULE m_slomat
 CONTAINS
    SUBROUTINE slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
                      isp,ud, alo1,blo1,clo1,fjgj,&
-                     igSpinPr,igSpin,chi,smat,l_pref,l_fullj,lapwq)
+                     igSpinPr,igSpin,iDir,chi,smat,l_pref,l_fullj,lapwq)
     !***********************************************************************
     ! locol stores the number of columns already processed; on parallel
     !       computers this decides, whether the LO-contribution is
@@ -39,7 +39,7 @@ CONTAINS
       TYPE(t_fjgj),INTENT(IN)   :: fjgj
 
       ! Scalar Arguments
-      INTEGER, INTENT (IN)      :: na,ntyp
+      INTEGER, INTENT (IN)      :: na,ntyp,iDir
       INTEGER, INTENT (IN)      :: igSpin,igSpinPr
       COMPLEX, INTENT (IN)      :: chi
       INTEGER, INTENT(IN)       :: isp
@@ -140,7 +140,7 @@ CONTAINS
                      ELSE
                         smat%data_c(kp,locol) = smat%data_c(kp,locol) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
-                                            & * pref(1) * CONJG(cphPr(kp)) * cph(k)
+                                            & * pref(iDir) * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
                   !$acc end loop
@@ -175,7 +175,7 @@ CONTAINS
                            ELSE
                               smat%data_c(lorow,locol) = smat%data_c(lorow,locol) &
                                                      & + chi * invsfct * fact3 * legpol(atoms%llo(lo,ntyp),dotp) &
-                                                     & * pref(1) * CONJG(cphPr(kp)) * cph(k)
+                                                     & * pref(iDir) * CONJG(cphPr(kp)) * cph(k)
                            END IF
                         END DO
                      END IF
@@ -199,7 +199,7 @@ CONTAINS
                      ELSE
                         smat%data_c(lorow,locol) = smat%data_c(lorow,locol) &
                                                & + chi * invsfct * fact1 * legpol(l,dotp) &
-                                               & * pref(1) * CONJG(cphPr(kp)) * cph(k)
+                                               & * pref(iDir) * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
                END IF ! mod(locol-1,n_size) = nrank
