@@ -34,6 +34,7 @@ q-loop:
                   - get the matrix elements of both H and V1 [done]
                   - correct the matrix elements of H:
                     We do not need a symmetrized form (0.5, 0.5) [done]
+                  - desymmetrized form for LO part [WIP]
                hssetup:
                   - get H1 and S1 matrices from the interstitial v1%pw_w [done]
                   - get H1 and S1 matrices from the MT td and tdV1 and enpara [sone]
@@ -41,11 +42,17 @@ q-loop:
                         - nonsph gives a full matrix as we need, but we need to teach
                           it to accept different matching coefficients for different
                           k left and right [done]
+                        - teach it ikG prefactors [WIP]
                      - use hsmt_nonsph for H-elements with perturbed matchings
                         - teach hsmt_ab how to work with i(k+G) prefactors
                      - use hsmt_sph for H/S-elements with perturbed matchings [done]
                         - teach it to comprehend the prefactor
-                     - What about the LOs??
+                     - LO part (hlomat/slomat):
+                        - put in ikG prefactor [done]
+                        - add the missing parts of the rectangular matrix
+                           - bottom left rectangle [revision]
+                           - Full LO-LO section [revision]
+                           - Check the conjugations and usage of tuloulo!
                Analytical Matrix inversion:
                   - write routine that inverts (Hkq-\epsilonk*Skq) in a spectral representation [done]
                z1-calculation:
