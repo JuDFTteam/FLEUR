@@ -46,14 +46,18 @@ CONTAINS
 
       INTEGER :: nn, na, ab_size, l, ll, size_ab_select
       INTEGER :: size_data_c, size_ab, size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
+      INTEGER :: ikGPr, ikG
       REAL    :: rchi
-      COMPLEX :: cchi
+      COMPLEX :: cchi, pref(3)
       LOGICAL :: l_samelapw
 
       COMPLEX, ALLOCATABLE :: ab1(:,:),ab_select(:,:)
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ab2(:,:), h_loc(:,:), data_c(:,:)
 
       TYPE(t_lapw) :: lapwPr
+
+      ! TODO: Rethink the prefactor for DFPT; getting it through abcof does
+      !       not work.
 
       CALL timestart("non-spherical setup")
 
@@ -98,6 +102,9 @@ CONTAINS
          !$OMP END PARALLEL DO
       END IF
       size_data_c = size(hmat%data_c, 1)
+      IF (l_pref) THEN
+         ALLOCATE(data_c(SIZE(hmat%data_c, 1), SIZE(hmat%data_c, 2)))
+      END IF
 #else
       IF (hmat%l_real) THEN
          ALLOCATE(data_c(SIZE(hmat%data_r, 1), SIZE(hmat%data_r, 2)))
@@ -128,7 +135,7 @@ CONTAINS
             ! Denoted in comments as a
             ! [local spin primed -> '; global spin primed -> pr]
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                       & lapw, fjgj, abCoeffs, ab_size, .TRUE., l_pref, iDir)
+                       & lapw, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
 
             IF (l_samelapw.AND.(ilSpinPr==ilSpin)) THEN
                !!$acc update device(ab)
@@ -199,9 +206,9 @@ CONTAINS
                         ! data_c += cchi * ab1 * abselect^H
                         !         = cchi * a^H * H * a
                      END IF
-                  ELSE ! Case for additional q on left vector.
+                  ELSE IF (.NOT.l_pref) THEN ! Case for additional q on left vector.
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., l_pref, iDir)
+                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
                      !!$acc update device (abCoeffs)
 
                      !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
@@ -217,13 +224,47 @@ CONTAINS
                      !$acc end host_data
                      ! data_c += chi * aq * abselect^H
                      !         = chi * aq^H * t * a
+                  ELSE
+                     CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
+                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
+                     !!$acc update device (abCoeffs)
+
+                     !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
+                     IF (set0 .and. nn == 1) THEN
+                        CALL CPP_zgemm("C", "C", lapwPr%nv(igSpin), size_ab_select, ab_size, chi, &
+                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     & CMPLX(0.0, 0.0), data_c, SIZE_data_c)
+                     ELSE
+                        CALL CPP_zgemm("C", "C", lapwPr%nv(igSpin), size_ab_select, ab_size, chi, &
+                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     & CMPLX(1.0, 0.0), data_c, SIZE_data_c)
+                     END IF
+                     !$acc end host_data
+                     DO ikG = fmpi%n_rank + 1, lapw%nv(igSpin), fmpi%n_size
+                        DO  ikGPr = 1, lapw%nv(igSpinPr)
+                           pref = ImagUnit * MATMUL( &
+                              &   lapw%gvec(:,ikG,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
+                              & - lapwPr%gvec(:,ikGPr,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
+#ifdef _OPENACC
+                           CPP_data_c(ikGPr,ikG) = pref(iDir) * data_c(ikGPr,ikG)
+#else
+                           IF (set0 .and. nn == 1) THEN
+                              CPP_data_c(ikGPr,ikG) = pref(iDir) * data_c(ikGPr,ikG)
+                           ELSE
+                              CPP_data_c(ikGPr,ikG) = CPP_data_c(ikGPr,ikG) + pref(iDir) * data_c(ikGPr,ikG)
+                           END IF
+#endif
+                        END DO
+                     END DO
+                     ! data_c += chi * i(G-G'-q) * aq * abselect^H
+                     !         = chi * aq^H * t * a
                   END IF
                ELSE !This is the case of a local off-diagonal contribution.
                   !It is not Hermitian, so we NEED to use zgemm CALL
 
                   ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}
                   CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpin, n, na, cell, &
-                             & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., l_pref, iDir)
+                             & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
                   !!$acc update device(abCoeffs)
 
                   !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
@@ -253,7 +294,7 @@ CONTAINS
                !Second set of abCoeffs is needed
                ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}^{'}
                CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpinPr, n, na, cell, &
-                          & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., l_pref, iDir)
+                          & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
                IF (ilSpinPr==ilSpin) THEN
                   IF (l_samelapw) THEN
                      !!$acc update device (abCoeffs)
