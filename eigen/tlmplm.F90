@@ -5,7 +5,7 @@ MODULE m_tlmplm
 
 CONTAINS
    SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,nococonv,&
-       ilSpinPr,ilSpin,iSpinV,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,one,v1)
+       ilSpinPr,ilSpin,iSpinV,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,one,l_dfpt,v1)
       ! Contruct the local potential matrices
       ! t_{L'L}^{\mu} = \sum_{lh} \int dV u_{l',order'}^{\mu}(r)Y_{l'}^{m'*}(\Omega)
       !                           * V_{lh}(r)Y_{lh}(\Omega)
@@ -44,6 +44,8 @@ CONTAINS
       COMPLEX, INTENT(IN) :: one ! 1 for real part of a component, i if there is an imaginary one.
 
       REAL, OPTIONAL, INTENT(IN) :: v1(:,:) ! DFPT related. Get t of V1, not V.
+
+      LOGICAL, OPTIONAL, INTENT(IN) :: l_dfpt
 
       REAL, ALLOCATABLE :: uvu(:,:), uvd(:,:), dvu(:,:), dvd(:,:)
       REAL, ALLOCATABLE :: f(:,:,:,:), g(:,:,:,:), flo(:,:,:,:)
@@ -191,7 +193,7 @@ CONTAINS
       ! If necessary, set up the t-matrices for the local orbitals as well.
       IF (atoms%nlo(n).GE.1) THEN
          CALL tlo(atoms,sym,sphhar,ilSpinPr,ilSpin,iSpinV,n,enpara,lh0,input,vr0,&
-            na,flo,f,g,ud, td, one)
+            na,flo,f,g,ud, td, one, l_dfpt, PRESENT(v1))
       END IF
    END SUBROUTINE tlmplm
 END MODULE m_tlmplm

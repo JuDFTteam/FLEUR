@@ -13,7 +13,7 @@ MODULE m_slomat
 CONTAINS
    SUBROUTINE slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
                      isp,ud, alo1,blo1,clo1,fjgj,&
-                     igSpinPr,igSpin,chi,smat,l_pref)
+                     igSpinPr,igSpin,chi,smat,l_pref,l_fullj,lapwq)
     !***********************************************************************
     ! locol stores the number of columns already processed; on parallel
     !       computers this decides, whether the LO-contribution is
@@ -48,30 +48,43 @@ CONTAINS
       REAL,   INTENT (IN)       :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
       TYPE(t_usdus),INTENT(IN)  :: ud
       CLASS(t_mat),INTENT(INOUT) :: smat
-      LOGICAL, INTENT(IN) :: l_pref
+      LOGICAL, INTENT(IN) :: l_pref, l_fullj
+
+      TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
 
       ! Local Scalars
       REAL    :: con,dotp,fact1,fact2,fact3,fl2p1
       INTEGER :: invsfct,k ,l,lo,lop,lp,nkvec,nkvecp,kp,i
       INTEGER :: locol,lorow
+      LOGICAL :: l_samelapw
+      COMPLEX :: pref(3)
 
-      COMPLEX,   ALLOCATABLE  :: cph(:,:)
+      COMPLEX,   ALLOCATABLE  :: cphPr(:), cph(:)
 
-      ALLOCATE(cph(MAXVAL(lapw%nv),2))
+      TYPE(t_lapw) :: lapwPr
+
+      l_samelapw = .FALSE.
+      IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
+      IF (.NOT.l_samelapw) THEN
+         lapwPr = lapwq
+      ELSE
+         lapwPr = lapw
+      END IF
+
+      ALLOCATE(cph(MAXVAL(lapw%nv)))
+      ALLOCATE(cphPr(MAXVAL(lapwPr%nv)))
 
       ! TODO: Introduce the logic for different lapw and the full rectangular
       !       instead of triangular construction...
-      
-      DO i=MIN(igSpin,igSpinPr),MAX(igSpin,igSpinPr)
-         ! TODO:
-         ! Implement here the logic for cph from lapwq and [if not later on]
-         ! the ikG prefactor logic. Introduce the idea of different lapw everywhere.
-         CALL lapw%phase_factors(i,atoms%taual(:,na),nococonv%qss,cph(:,i))
-         !IF (l_fullj) THEN
-         !   pref = ImagUnit * MATMUL(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, bmat)
-         !   cfac = pref(idir) * cfac
-         !END IF
-      END DO
+
+      CALL lapw%phase_factors(igSpinPr,atoms%taual(:,na),nococonv%qss,cphPr)
+      IF (l_samelapw) THEN
+         cph = cphPr
+      ELSE
+         CALL lapw%phase_factors(igSpin,atoms%taual(:,na),nococonv%qss,cph)
+      END IF
+
+      pref = CMPLX(1.0,0.0)
 
       IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
          ! If this atom is the first of two atoms related by inversion, the
@@ -86,9 +99,9 @@ CONTAINS
          con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
          !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)&
-         !$acc & copyin(l,lapw,lapw%kvec(:,:,na),ud,clo1(:),dotp,cph(:,:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
-         !$acc copyin(ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
-         !$acc copyin(atoms%nlo(ntyp),lapw%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
+         !$acc & copyin(l,lapw,lapw%kvec(:,:,na),,lapwPr,lapwPr%kvec(:,:,na)ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
+         !$acc copyin(lapwPr%index_lo(:,na),lapwPr%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
+         !$acc copyin(atoms%nlo(ntyp),lapw%nv(:),lapwPr%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
          !$acc default(none)
 
          DO lo = 1,atoms%nlo(ntyp) !loop over all LOs for this atom
@@ -108,28 +121,33 @@ CONTAINS
                   ! Calculate the overlap matrix elements with the regular Flapw
                   ! basis functions
                   !$acc loop gang private(fact2,dotp,kp)
-                  DO kp = 1,lapw%nv(igSpinPr)
+                  DO kp = 1,lapwPr%nv(igSpinPr)
                      fact2 = con * fl2p1 * ( &
                            & fjgj%fj(kp,l,isp,igSpinPr)*(alo1(lo) &
                                                      & + clo1(lo)*ud%uulon(lo,ntyp,isp)) + &
                            & fjgj%gj(kp,l,isp,igSpinPr)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
                                                      & + clo1(lo)*ud%dulon(lo,ntyp,isp)) )
-                     dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapw%gk(:,kp,igSpinPr))
+                     dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
+                     IF (l_pref) THEN
+                        pref = ImagUnit * MATMUL( &
+                           &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
+                           & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
+                     END IF
                      IF (smat%l_real) THEN
                         smat%data_r(kp,locol) = smat%data_r(kp,locol) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
-                                            & * CONJG(cph(kp,igSpinPr)) * cph(k,igSpin)
+                                            & * CONJG(cphPr(kp)) * cph(k)
                      ELSE
                         smat%data_c(kp,locol) = smat%data_c(kp,locol) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
-                                            & * CONJG(cph(kp,igSpinPr)) * cph(k,igSpin)
+                                            & * pref(1) * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
                   !$acc end loop
                   ! Calculate the overlap matrix elements with other local orbitals
                   ! of the same atom, if they have the same l
                   ! TODO: Also go all the way for DFPT.
-                  DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),igSpinPr==igSpin)
+                  DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),igSpinPr==igSpin.AND..NOT.l_fullj)
                      IF (lop==lo) CYCLE !Do later
                      lp = atoms%llo(lop,ntyp)
                      IF (l == lp) THEN
@@ -142,17 +160,22 @@ CONTAINS
                                        & + blo1(lo)*ud%dulon(lop,ntyp,isp) &
                                        & + clo1(lo)*ud%uloulopn(lop,lo,ntyp,isp)) )
                         DO nkvecp = 1,invsfct* (2*lp+1)
-                           kp = lapw%kvec(nkvecp,lop,na)
-                           lorow=lapw%nv(igSpinPr)+lapw%index_lo(lop,na)+nkvecp
-                           dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapw%gk(:,kp,igSpinPr))
+                           kp = lapwPr%kvec(nkvecp,lop,na)
+                           lorow=lapwPr%nv(igSpinPr)+lapwPr%index_lo(lop,na)+nkvecp
+                           dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
+                           IF (l_pref) THEN
+                              pref = ImagUnit * MATMUL( &
+                                 &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
+                                 & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
+                           END IF
                            IF (smat%l_real) THEN
                               smat%data_r(lorow,locol) = smat%data_r(lorow,locol) &
                                                      & + chi * invsfct * fact3 * legpol(atoms%llo(lo,ntyp),dotp) &
-                                                     & * CONJG(cph(kp,igSpinPr)) * cph(k,igSpin)
+                                                     & * CONJG(cphPr(kp)) * cph(k)
                            ELSE
                               smat%data_c(lorow,locol) = smat%data_c(lorow,locol) &
                                                      & + chi * invsfct * fact3 * legpol(atoms%llo(lo,ntyp),dotp) &
-                                                     & * CONJG(cph(kp,igSpinPr)) * cph(k,igSpin)
+                                                     & * pref(1) * CONJG(cphPr(kp)) * cph(k)
                            END IF
                         END DO
                      END IF
@@ -161,17 +184,22 @@ CONTAINS
                   ! orbital with itself
                   lop=lo
                   DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin)
-                     kp = lapw%kvec(nkvecp,lo,na)
-                     lorow = lapw%nv(igSpinPr)+lapw%index_lo(lo,na)+nkvecp
-                     dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapw%gk(:,kp,igSpinPr))
+                     kp = lapwPr%kvec(nkvecp,lo,na)
+                     lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvecp
+                     dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
+                     IF (l_pref) THEN
+                        pref = ImagUnit * MATMUL( &
+                           &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
+                           & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
+                     END IF
                      IF (smat%l_real) THEN
                         smat%data_r(lorow,locol) = smat%data_r(lorow,locol) &
                                                & + chi * invsfct * fact1 * legpol(l,dotp) &
-                                               & * CONJG(cph(kp, igSpinPr)) * cph(k, igSpin)
+                                               & * CONJG(cphPr(kp)) * cph(k)
                      ELSE
                         smat%data_c(lorow,locol) = smat%data_c(lorow,locol) &
                                                & + chi * invsfct * fact1 * legpol(l,dotp) &
-                                               & * CONJG(cph(kp, igSpinPr)) * cph(k, igSpin)
+                                               & * pref(1) * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
                END IF ! mod(locol-1,n_size) = nrank

@@ -100,7 +100,7 @@ CONTAINS
             IF (l_call_tlmplm) THEN
                lh0 = MERGE(1,0,jsp<3.and.alpha_hybrid==0)
 
-               CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,one)
+               CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,one,l_dfpt)
             END IF
             OK = .FALSE.
             cholesky_loop:DO WHILE(.NOT.OK)

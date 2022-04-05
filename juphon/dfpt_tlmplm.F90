@@ -55,7 +55,7 @@ CONTAINS
                     IF (iPart.EQ.1) one = CMPLX(1.0, 0.0); vr1 = v1real%mt(:, :, n, iSpinV1)
                     IF (iPart.EQ.2) one = CMPLX(0.0, 1.0); vr1 = v1imag%mt(:, :, n, iSpinV1)
                     CALL tlmplm(n, sphhar, atoms, sym, enpara, nococonvdummy, iSpinPr, iSpin, iSpinV1, fmpi, &
-                              & vTot, vxdummy, input, hub1inp, hub1data, tdV1, uddummy, 0.0, 0, one, vr1)
+                              & vTot, vxdummy, input, hub1inp, hub1data, tdV1, uddummy, 0.0, 0, one, .TRUE., vr1)
                 END DO
             END DO
 
