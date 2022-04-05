@@ -144,7 +144,7 @@ CONTAINS
                !CALL timestart("hlomat11")
                !CPP_OMP PARALLEL DO DEFAULT(none) &
                !CPP_OMP& SHARED(axPr,bxPr,cxPr,ntyp,ilSpin,ilSpinPr,m,lm,lo,mlo) &
-               !CPP_OMP& SHARED(lapwPr,abCoeffs,abCoeffsPr,ab_size_Pr,igSpinPr) &
+               !CPP_OMP& SHARED(lapwPr,abCoeffsPr,ab_size_Pr,igSpinPr) &
                !CPP_OMP& SHARED(atoms,tlmplm) &
                !CPP_OMP  PRIVATE(lp,mp,lmp,s)
                DO kp = 1, lapwPr%nv(igSpinPr)
@@ -190,7 +190,7 @@ CONTAINS
                            END IF
                        END DO
                      ELSE
-                        DO kp = 1,lapw%nv(igSpinPr)
+                        DO kp = 1,lapwPr%nv(igSpinPr)
                            IF (l_pref) THEN
                               k  =   lapw%kvec(nkvec,lo,na)
                               pref = ImagUnit * MATMUL( &
@@ -218,8 +218,55 @@ CONTAINS
                      ! Jump to the last matrix element of the current row
                   END IF
                END DO
+               ! TODO: Add here lop-kG part (l_fullj).
+               IF (l_fullj) THEN
+                  DO kp = 1, lapw%nv(igSpin)
+                     ax(kp) = CMPLX(0.0,0.0)
+                     bx(kp) = CMPLX(0.0,0.0)
+                     cx(kp) = CMPLX(0.0,0.0)
+                  END DO
+                  !CPP_OMP PARALLEL DO DEFAULT(none) &
+                  !CPP_OMP& SHARED(ax,bx,cx,ntyp,ilSpin,ilSpinPr,m,lm,lo,mlo) &
+                  !CPP_OMP& SHARED(lapw,abCoeffs,ab_size,igSpin) &
+                  !CPP_OMP& SHARED(atoms,tlmplm) &
+                  !CPP_OMP  PRIVATE(lp,mp,lmp,s)
+                  DO kp = 1, lapw%nv(igSpin)
+                     DO lp = 0, atoms%lnonsph(ntyp)
+                        DO mp = -lp, lp
+                           lmp = lp*(lp+1) + mp
+                           s = tlmplm%h_loc2(ntyp)
+                           ax(kp) = ax(kp) + tlmplm%h_loc(lm,lmp,ntyp,ilSpinPr,ilSpin)     * abCoeffs(lmp,kp)
+                           ax(kp) = ax(kp) + tlmplm%h_loc(lm,s+lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(ab_size/2+lmp,kp)
+                           bx(kp) = bx(kp) + tlmplm%h_loc(s+lm,lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(lmp,kp)
+                           bx(kp) = bx(kp) + tlmplm%h_loc(s+lm,s+lmp,ntyp,ilSpinPr,ilSpin) * abCoeffs(ab_size/2+lmp,kp)
+                           cx(kp) = cx(kp) + tlmplm%tulou(lmp,m,lo+mlo,ilSpinPr,ilSpin)    * abCoeffs(lmp,kp)
+                           cx(kp) = cx(kp) + tlmplm%tulod(lmp,m,lo+mlo,ilSpinPr,ilSpin)    * abCoeffs(ab_size/2+lmp,kp)
+                        END DO
+                     END DO
+                  END DO
+                  !CPP_OMP END PARALLEL DO
+                  DO nkvec = 1,invsfct*(2*l+1)
+                     lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
+                     IF (MOD(lorow-1,fmpi%n_size) == fmpi%n_rank) THEN
+                        lorow=(lorow-1)/fmpi%n_size+1
+                           DO k = 1,lapw%nv(igSpin)
+                              IF (l_pref) THEN
+                                 kp   =  lapwPr%kvec(nkvec,lo,na)
+                                 pref = ImagUnit * MATMUL( &
+                                    &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
+                                    & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
+                              END IF
+                              hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
+                                                  & + chi * invsfct * pref(iDir) * ( &
+                                                  & CONJG(abcloPr(1,m,nkvec,lo)) * ax(k) + &
+                                                  & CONJG(abcloPr(2,m,nkvec,lo)) * bx(k) + &
+                                                  & CONJG(abcloPr(3,m,nkvec,lo)) * cx(k) )
+                           END DO
+                        ! Jump to the last matrix element of the current row
+                     END IF
+                  END DO
+               END IF
             END DO
-            ! TODO: Add here lop-kG part (l_fullj).
             ! Calculate the hamiltonian matrix elements with other local
             ! orbitals at the same atom and with itself
             DO nkvec = 1,invsfct* (2*l+1)

@@ -114,6 +114,35 @@ CONTAINS
                         & + 2*clo1(lo)*ud%dulon(lo,ntyp,isp)) + &
                   & clo1(lo)*clo1(lo) )
             DO nkvec = 1,invsfct* (2*l+1) !Each LO can have several functions
+               ! lop-kG part (l_fullj). |====|
+               IF (l_fullj) THEN
+                  lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
+                  kp = lapwPr%kvec(nkvec,lo,na)
+                  !$acc loop gang private(fact2,dotp,kp)
+                  DO k = fmpi%n_rank + 1, lapw%nv(igSpin), fmpi%n_size
+                     fact2 = con * fl2p1 * ( &
+                           & fjgj%fj(k,l,isp,igSpin)*(alo1(lo) &
+                                                  & + clo1(lo)*ud%uulon(lo,ntyp,isp)) + &
+                           & fjgj%gj(k,l,isp,igSpin)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
+                                                  & + clo1(lo)*ud%dulon(lo,ntyp,isp)) )
+                     dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
+                     IF (l_pref) THEN
+                        pref = ImagUnit * MATMUL( &
+                           &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
+                           & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
+                     END IF
+                     IF (smat%l_real) THEN
+                        smat%data_r(lorow,k) = smat%data_r(kp,locol) &
+                                            & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
+                                            & * CONJG(cphPr(kp)) * cph(k)
+                     ELSE
+                        smat%data_c(lorow,k) = smat%data_c(kp,locol) &
+                                            & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
+                                            & * pref(iDir) * CONJG(cphPr(kp)) * cph(k)
+                     END IF
+                  END DO
+                  !$acc end loop
+               END IF
                locol = lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
                IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN
                   locol=(locol-1)/fmpi%n_size+1 !this is the column in local storage!
@@ -146,7 +175,6 @@ CONTAINS
                   !$acc end loop
                   ! Calculate the overlap matrix elements with other local orbitals
                   ! of the same atom, if they have the same l
-                  ! TODO: Also go all the way for DFPT.
                   DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),igSpinPr==igSpin.AND..NOT.l_fullj)
                      IF (lop==lo) CYCLE !Do later
                      lp = atoms%llo(lop,ntyp)
