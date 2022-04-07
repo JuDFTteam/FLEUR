@@ -77,7 +77,7 @@ contains
     ! multipole moments of the interstitial charge density in the spheres
     call pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw(:), potdenType, qlmp )
     IF (l_dfptvgen) THEN
-      CALL dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw(:), qlmp_SF )
+      CALL dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw0(:), qlmp_SF )
       qlmp = qlmp + qlmp_SF
     END IF
 
@@ -326,7 +326,10 @@ contains
 
       nat = 1
       pref = -1
-      IF (iDtype.NE.0) nat = SUM(atoms%neq(:iDtype-1)); pref = 1
+      IF (iDtype.NE.0) THEN
+         nat = SUM(atoms%neq(:iDtype-1))
+         pref = 1
+      END IF
 
       DO n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
          ns = sym%ntypsy(nat)
@@ -421,11 +424,11 @@ contains
          do n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
 
             sk3r = stars%sk3(k) * atoms%rmt(n)
-            call sphbes( atoms%lmax(n) + 1, sk3r, aj )
+            call sphbes( atoms%lmax(n), sk3r, aj )
             rl2 = atoms%rmt(n) ** 2
 
             DO lp = 0, atoms%lmax(n)
-               cil = aj(lp+1) * nqpw * rl2
+               cil = aj(lp) * nqpw * rl2
                ll1p = lp * ( lp + 1 ) + 1
                DO l = MERGE(1, lp - 1, lp.EQ.0), MERGE(1, lp + 1, lp.EQ.0), 2 ! Gaunt selection
                   IF (l.GT.atoms%lmax(n)) CYCLE
