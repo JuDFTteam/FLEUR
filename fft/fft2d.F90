@@ -4,8 +4,8 @@ CONTAINS
        &                 stars,&
        &                 afft2,bfft2,&
        &                 fg,fgi,fgxy,&
-       &                 stride,isn,&
-       &                 firstderiv,secondderiv )
+       &                 isn,&
+       &                 firstderiv,secondderiv,cell )
 
     !*************************************************************
     !*                                                           *
@@ -24,11 +24,12 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     TYPE(t_stars),INTENT(IN) :: stars
-    INTEGER, INTENT (IN) :: isn,stride
+    TYPE(t_cell),INTENT(IN),OPTIONAL:: cell
+    INTEGER, INTENT (IN) :: isn
     REAL                 :: fg,fgi
 
     REAL                  :: afft2(0:9*stars%mx1*stars%mx2-1),bfft2(0:9*stars%mx1*stars%mx2-1)
-    COMPLEX               :: fgxy(stride,stars%ng2-1)
+    COMPLEX               :: fgxy(:)
     REAL,OPTIONAL,INTENT(IN):: firstderiv(3),secondderiv(3)
     
     !... local variables
@@ -38,14 +39,14 @@ CONTAINS
    COMPLEX fg2(stars%ng2)
 
    
-   call grid%init([3*stars%mx2,3*stars%mx2,1])
+   call grid%init([3*stars%mx1,3*stars%mx2,1])
 
     IF (isn>0) THEN
        !  ---> put stars onto the fft-grid
        fg2(1) = CMPLX(fg,fgi)
-       fg2(2:)=fgxy(stride,:)
+       fg2(2:)=fgxy(:)
 
-       call grid%putFieldOnGrid(stars,fg2,firstderiv=firstderiv,secondderiv=secondderiv,l_2d=.true.)
+       call grid%putFieldOnGrid(stars,fg2,cell,firstderiv=firstderiv,secondderiv=secondderiv,l_2d=.true.)
     else
        grid%grid=cmplx(afft2,bfft2)
     endif
@@ -70,7 +71,7 @@ CONTAINS
        fg=REAL(fg2(1))
        fgi=AIMAG(fg2(1))
        DO i=2,stars%ng2
-          fgxy(1,i-1)=fg2(i)
+          fgxy(i-1)=fg2(i)
        ENDDO
     ENDIF
 

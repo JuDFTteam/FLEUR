@@ -117,12 +117,12 @@ CONTAINS
           !idx1=(ivac-1)* ( vacuum%nmzxy * ifftd2 + nmzdiff ) + 1
           DO ip=1,vacuum%nmzxy
             DO js=1,jspins
-              CALL fft2d(stars, rho(idx1:,js),bf2, vacz(ip,ivac,js),0.,&
-              vacxy(ip,:,ivac,js), 1,+1)
+              CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, vacz(ip,ivac,js),0.,&
+              vacxy(ip,:,ivac,js),+1)
             END DO
             IF (l_noco) THEN
               CALL fft2d(stars, mx,my, vacz(ip,ivac,3),vacz(ip,ivac,4), &
-              vacxy(ip,:,ivac,3), 1,+1)
+              vacxy(ip,:,ivac,3),+1)
 
               DO i=0,9*stars%mx1*stars%mx2-1
                 magmom(i,ip)= mx(i)**2 + my(i)**2 + ((rho(i+idx1,1)-rho(i+idx1,2))/2.)**2
@@ -229,16 +229,16 @@ CONTAINS
 
 
 
-                CALL fft2d(stars, rhdx(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[1.,0.,0.])
+                CALL fft2d(stars, rhdx(0,js),bf2, zro,rhti,cqpw,+1,firstderiv=[1.,0.,0.],cell=cell)
                 !TODO    &                 pgft2x)
 
                 rhti = 0.0
                 CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*vacxy)&
-                      stars, rhdy(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.,0.])
+                      stars, rhdy(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.,0.],cell=cell)
 
                 rhti = 0.0
                 CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
-                        stars, rhdz(0,js),bf2, rhtdz(ip,js),rhti,rxydz(ip,1,js), vacuum%nmzxyd,+1)
+                        stars, rhdz(0,js),bf2, rhtdz(ip,js),rhti,rxydz(ip,:,js), +1)
 
                 DO iq=1,stars%ng2-1
                    cqpw(iq)=-vacxy(ip,iq,ivac,js)
@@ -246,15 +246,15 @@ CONTAINS
 
                 rhti = 0.0
                 CALL fft2d(      &          ! d2n/dx2 = FFT(0,-gx^2*vacxy)&
-                       stars, rhdxx(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[1.0,0.,0.],secondderiv=[1.0,0.,0.])
+                       stars, rhdxx(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[1.0,0.,0.],secondderiv=[1.0,0.,0.],cell=cell)
 
                 rhti = 0.0
                 CALL fft2d(       &          ! d2n/dy2 = FFT(0,-gy^2*vacxy)&
-                      stars, rhdyy(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.0,0.],secondderiv=[0.,1.0,0.])
+                      stars, rhdyy(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[0.,1.0,0.],cell=cell)
 
                 rhti = 0.0
                 CALL fft2d(        &         ! d2n/dz2 = FFT(rhtdzz,rxydzz)&
-                       stars, rhdzz(0,js),bf2, rhtdzz(ip,js),rhti,rxydzz(ip,1,js), vacuum%nmzxyd,+1)
+                       stars, rhdzz(0,js),bf2, rhtdzz(ip,js),rhti,rxydzz(ip,:,js), +1)
 
 
                 DO iq=1,stars%ng2-1
@@ -263,11 +263,11 @@ CONTAINS
 
                 rhti = 0.0
                 CALL fft2d(         &         ! d2n/dyz = FFT(0,i*gy*rxydz)&
-                       stars, rhdyz(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.0,0.])
+                       stars, rhdyz(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell)
 
                 rhti = 0.0
                 CALL fft2d(          &        ! d2n/dzx = FFT(0,i*gx*rxydz)&
-                       stars, rhdzx(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[1.,0.0,0.])
+                       stars, rhdzx(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[1.,0.0,0.],cell=cell)
 
                 DO iq=1,stars%ng2-1
                    cqpw(iq)=-vacxy(ip,iq,ivac,js)
@@ -275,7 +275,7 @@ CONTAINS
 
                 rhti = 0.0
                 CALL fft2d(           &    ! d2n/dxy = FFT(0,-gx*gy*vacxy)&
-                      stars, rhdxy(0,js),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.0,0.],secondderiv=[1.,0.0,0.])
+                      stars, rhdxy(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[1.,0.0,0.],cell=cell)
 
              END DO ! js=1,jspins
 
@@ -458,7 +458,7 @@ CONTAINS
           !           ----> 2-d back fft to g space
           !
           bf2=0.0
-          CALL fft2d(stars, v_xc(idx:idx-1+ifft2d,js),bf2, fgz,rhti,fgxy, 1,-1)
+          CALL fft2d(stars, v_xc(idx:idx-1+ifft2d,js),bf2, fgz,rhti,fgxy, -1)
           idx=idx+ifft2d
           !            ----> and add vxc to coulomb potential
           !                  the g||.eq.zero component is added to vxc%vacz

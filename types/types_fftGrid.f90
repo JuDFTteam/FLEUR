@@ -142,7 +142,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
       twod=.false.
       if (present(l_2d)) twoD=l_2d
-      if (twoD.and.this%dimensions(3)>0) call juDFT_error("Bug in putFieldOnGrid: no two-D grid")
+      if (twoD.and.this%dimensions(3)>1) call juDFT_error("Bug in putFieldOnGrid: no two-D grid")
       
       DO z = merge(0,-stars%mx3,twoD), merge(0,stars%mx3,twoD)
          zGrid = MODULO(z, merge(1,this%dimensions(3),twoD)) !always 0 in 2d-case
@@ -162,7 +162,9 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                endif   
                IF (iStar .EQ. 0) CYCLE
                IF (stars%sk3(iStar) .GT. gCutoffInternal) CYCLE
-               IF (twod.and.stars%sk2(istar)>gCutoffInternal) CYCLE
+               IF (twod) THEN
+                  if(stars%sk2(istar)>gCutoffInternal) CYCLE
+               ENDIF   
                xGrid = MODULO(x, this%dimensions(1))
                this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = field(iStar)*fct
             END DO
@@ -192,7 +194,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       
       twod=.false.
       if (present(l_2d)) twoD=l_2d
-      if (twoD.and.this%dimensions(3)>0) call juDFT_error("Bug in takeFieldFromGrid: no two-D grid")
+      if (twoD.and.this%dimensions(3)>1) call juDFT_error("Bug in takeFieldFromGrid: no two-D grid")
       
       field(:) = CMPLX(0.0, 0.0)
       layerDim = this%dimensions(1)*this%dimensions(2)

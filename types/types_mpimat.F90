@@ -637,6 +637,8 @@ CONTAINS
       !END IF
 
       call timestop("mpimat_init")
+#else
+    CALL juDFT_ERROR("No parallel matrix setup without SCALAPACK")
 #endif
    END SUBROUTINE mpimat_init
 

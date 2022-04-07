@@ -85,13 +85,13 @@ CONTAINS
          CALL timestart("Vac divergence")
          div%vacxy=CMPLX(0.0,0.0)
          div%vacz=0.0
-         CALL vac_grad(vacuum,stars,bxc(1),grad,9*stars%mx1*stars%mx2)
+         CALL vac_grad(vacuum,stars,cell,bxc(1),grad,9*stars%mx1*stars%mx2)
          div%vacxy=div%vacxy+grad(1)%vacxy
          div%vacz=div%vacz+grad(1)%vacz
-         CALL vac_grad(vacuum,stars,bxc(2),grad,9*stars%mx1*stars%mx2)
+         CALL vac_grad(vacuum,stars,cell,bxc(2),grad,9*stars%mx1*stars%mx2)
          div%vacxy=div%vacxy+grad(2)%vacxy
          div%vacz=div%vacz+grad(2)%vacz
-         CALL vac_grad(vacuum,stars,bxc(3),grad,9*stars%mx1*stars%mx2)
+         CALL vac_grad(vacuum,stars,cell,bxc(3),grad,9*stars%mx1*stars%mx2)
          div%vacxy=div%vacxy+grad(3)%vacxy
          div%vacz=div%vacz+grad(3)%vacz
          CALL timestop("Vac divergence")
@@ -100,7 +100,7 @@ CONTAINS
 
    END SUBROUTINE divergence
 
-   SUBROUTINE vac_grad(vacuum,stars,den,grad,ifftd2)
+   SUBROUTINE vac_grad(vacuum,stars,cell,den,grad,ifftd2)
 
       USE m_constants
       USE m_grdchlh
@@ -110,6 +110,7 @@ CONTAINS
       IMPLICIT NONE
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: den
       TYPE(t_potden),INTENT(INOUT),DIMENSION(3) :: grad
       !     ..
@@ -192,7 +193,7 @@ CONTAINS
             ! Transform charge and magnetization to real-space.
 
             CALL fft2d(stars, af2(0),bf2, den%vacz(ip,ivac,1),0.,&
-                       den%vacxy(ip,1,ivac,1), vacuum%nmzxyd,+1)
+                       den%vacxy(ip,:,ivac,1),+1)
 
             ! calculate derivatives with respect to x,y in g-space
             ! and transform them to real-space.
@@ -207,15 +208,15 @@ CONTAINS
             ! dn/atoms =  FFT(0,i*gx*den%vacxy)
 
             
-            CALL fft2d(stars, rhdx(0),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[1.,0.0,0.])
+            CALL fft2d(stars, rhdx(0),bf2, zro,rhti,cqpw,+1,firstderiv=[1.,0.0,0.],cell=cell)
 
             rhti = 0.0
             CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*den%vacxy)&
-                        stars, rhdy(0),bf2, zro,rhti,cqpw, 1,+1,firstderiv=[0.,1.0,0.])
+                        stars, rhdy(0),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell)
 
             rhti = 0.0
             CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
-                      stars, rhdz(0),bf2, rhtdz(ip),rhti,rxydz(ip,1), vacuum%nmzxyd,+1)
+                      stars, rhdz(0),bf2, rhtdz(ip),rhti,rxydz(ip,:), +1)
 
             !
             ! set minimal value of af2 to 1.0e-15
@@ -229,9 +230,9 @@ CONTAINS
             !           ----> 2-d back fft to g space
             !
             bf2=0.0
-            CALL fft2d(stars, rhdx,bf2, fgz(1),rhti,fgxy(:,1), 1,-1)
-            CALL fft2d(stars, rhdy,bf2, fgz(2),rhti,fgxy(:,2), 1,-1)
-            CALL fft2d(stars, rhdz,bf2, fgz(3),rhti,fgxy(:,3), 1,-1)
+            CALL fft2d(stars, rhdx,bf2, fgz(1),rhti,fgxy(:,1), -1)
+            CALL fft2d(stars, rhdy,bf2, fgz(2),rhti,fgxy(:,2), -1)
+            CALL fft2d(stars, rhdz,bf2, fgz(3),rhti,fgxy(:,3), -1)
 
             ! the g||.eq.zero component is added to grad%vacz
             !
@@ -347,7 +348,7 @@ CONTAINS
 
       IF (input%film) THEN
          CALL timestart("Vac potential gradient")
-         CALL vac_grad(vacuum,stars,pot,grad,9*stars%mx1*stars%mx2)
+         CALL vac_grad(vacuum,stars,cell,pot,grad,9*stars%mx1*stars%mx2)
          CALL timestart("Vac potential gradient")
       END IF
 

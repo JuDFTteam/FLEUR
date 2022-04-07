@@ -167,8 +167,9 @@
             x(ng) = cmplx(cell%volint,0.0)
             cycle starloop
          ELSE
-  
-            IF (oneD%odi%d1) THEN
+            IF (allocated(stars%ig2)) THEN
+               !Film calculation
+              IF (oneD%odi%d1) THEN
                IF (stars%kv3(3,ng).EQ.0) THEN
                   g = (stars%kv3(1,ng)*cell%bmat(1,1) + stars%kv3(2,ng)*cell%bmat(2,1))**2 + &
                       (stars%kv3(1,ng)*cell%bmat(1,2) + stars%kv3(2,ng)*cell%bmat(2,2))**2
@@ -179,7 +180,7 @@
                ELSE
                   x(ng) = (0.0,0.0)
                END IF
-             ELSE
+              ELSE
                 ig2d = stars%ig2(ig3d)
                 IF (ig2d.EQ.1) THEN
                    g = stars%kv3(3,ng)*cell%bmat(3,3)*cell%z1
@@ -187,8 +188,10 @@
                 ELSE
                    x(ng) = (0.0,0.0)
                 END IF
-             END IF
-
+              END IF
+            ELSE
+               x(ng)=0.0  
+            ENDIF
          END IF
 !        -----> sphere contributions
          s = stars%sk3(ig3d)
