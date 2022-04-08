@@ -4,6 +4,7 @@ MODULE m_fertetra
    USE m_constants
    USE m_juDFT
    USE m_tetrahedronInit
+   USE m_xmlOutput
 
    IMPLICIT NONE
 
@@ -24,6 +25,7 @@ MODULE m_fertetra
       INTEGER :: jspin,jspins,ikpt,it,iBand
       REAL    :: dlow,dup,dfermi,s1,s,chmom,seigvTemp
       REAL    :: lowBound,upperBound,weightSum
+      CHARACTER(LEN=20)    :: attributes(2)
 
 
       jspins = MERGE(1,input%jspins,noco%l_noco)
@@ -143,7 +145,11 @@ MODULE m_fertetra
       END IF
       
       IF ( mpi%irank == 0 ) THEN
-        WRITE (oUnit,FMT=9300) seigvTemp,s1,chmom
+         attributes = ''
+         WRITE(attributes(1),'(f20.10)') seigvTemp
+         WRITE(attributes(2),'(a)') 'Htr'
+         CALL writeXMLElement('sumValenceSingleParticleEnergies',(/'value','units'/),attributes)
+         WRITE (oUnit,FMT=9300) seigvTemp,s1,chmom
       END IF
 9300  FORMAT (/,10x,'sum of valence eigenvalues=',f20.10,5x,&
              'sum of weights=',f10.6,/,10x,'moment=',f12.6)
