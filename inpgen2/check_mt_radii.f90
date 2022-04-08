@@ -116,6 +116,26 @@ CONTAINS
     t_rmt(13:17) = 1.5
     t_rmt(18) = 1.9
 
+    IF(profile%atomSetup.EQ."default2") THEN
+       t_rmt(19:20) = 1.7
+       t_rmt(21:30) = 1.7
+       t_rmt(31:35) = 1.7
+       t_rmt(35) = 1.7
+       t_rmt(37:38) = 1.6
+       t_rmt(39:48) = 2.0
+       t_rmt(49:50) = 1.8
+       t_rmt(51) = 1.8
+       t_rmt(52:53) = 1.8
+       t_rmt(55:56) = 1.6
+       t_rmt(57:70) = 2.0
+       t_rmt(71:80) = 2.1
+       t_rmt(78) = 2.2
+       t_rmt(79:80) = 1.7
+       t_rmt(81:85) = 2.0
+       t_rmt(87:88) = 1.9
+       t_rmt(89:102) = 2.1
+    END IF
+
     IF(profile%atomSetup.EQ."oxides_validation") THEN
        t_rmt(19:20) = 1.7
        t_rmt(21:30) = 1.7
