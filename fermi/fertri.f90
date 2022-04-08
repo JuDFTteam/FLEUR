@@ -19,10 +19,11 @@ MODULE m_fertri
 
    CONTAINS
 
-   SUBROUTINE fertri(input,kpts,irank,ne,jspins,zc,eig,sfac,&
+   SUBROUTINE fertri(input,noco,kpts,irank,ne,jspins,zc,eig,sfac,&
                      ef,seigv,w)
 
       TYPE(t_input), INTENT(IN)    :: input
+      TYPE(t_noco),    INTENT(IN)    :: noco
       TYPE(t_kpts),  INTENT(IN)    :: kpts
       INTEGER,       INTENT(IN)    :: jspins,irank
       REAL,          INTENT(IN)    :: zc,sfac
@@ -33,7 +34,7 @@ MODULE m_fertri
       REAL,          INTENT(INOUT) :: eig(:,:,:)!(neig,nkpt,jspins)
 
       REAL    :: chmom,ct,del,dez,ei,emax,emin,s,s1,workf
-      REAL    :: lb,ub,e_set
+      REAL    :: lb,ub,e_set,seigvTemp
       INTEGER :: i,ic,j,jsp,k,neig
       INTEGER :: nemax(2)
       REAL, PARAMETER :: de = 5.0e-3 !Step for initial search
@@ -173,9 +174,14 @@ MODULE m_fertri
       seigv = sfac*seigv
       chmom = s1 - jspins*s
 
+      seigvTemp = seigv
+      IF (noco%l_soc .AND. (.NOT. noco%l_noco)) THEN
+         seigvTemp = seigvTemp / 2.0
+      END IF
+
       IF (irank == 0) THEN
-         WRITE (oUnit,FMT=8040) seigv,s1,chmom
-8040     FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,&
+         WRITE (oUnit,FMT=8040) seigvTemp,s1,chmom
+8040     FORMAT (/,10x,'sum of valence eigenvalues=',f20.10,5x,&
                   'sum of weights=',f10.6,/,10x,'moment=',f12.6)
       END IF
 

@@ -22,7 +22,7 @@ MODULE m_fertetra
       REAL,                INTENT(INOUT)  :: w(:,:,:)
 
       INTEGER :: jspin,jspins,ikpt,it,iBand
-      REAL    :: dlow,dup,dfermi,s1,s,chmom
+      REAL    :: dlow,dup,dfermi,s1,s,chmom,seigvTemp
       REAL    :: lowBound,upperBound,weightSum
 
 
@@ -136,10 +136,16 @@ MODULE m_fertetra
       ENDDO
       seigv = 2.0/input%jspins*seigv
       chmom = s1 - jspins*s
-      IF ( mpi%irank == 0 ) THEN
-        WRITE (oUnit,FMT=9300) seigv,s1,chmom
+      
+      seigvTemp = seigv
+      IF (noco%l_soc .AND. (.NOT. noco%l_noco)) THEN
+         seigvTemp = seigvTemp / 2.0
       END IF
-9300  FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,&
+      
+      IF ( mpi%irank == 0 ) THEN
+        WRITE (oUnit,FMT=9300) seigvTemp,s1,chmom
+      END IF
+9300  FORMAT (/,10x,'sum of valence eigenvalues=',f20.10,5x,&
              'sum of weights=',f10.6,/,10x,'moment=',f12.6)
 
    END SUBROUTINE fertetra

@@ -86,7 +86,7 @@ CONTAINS
     !     .. Local Scalars ..
     REAL,PARAMETER:: del=1.e-6
     REAL :: efermi,emax,emin,entropy,fermikn,gap,&
-              wfermi,wvals,w_below_emin,w_near_ef,tkb
+              wfermi,wvals,w_below_emin,w_near_ef,tkb, seigvTemp
     INTEGER ink,inkem,j,js,k,kpt,nocc,nocst,i
 
     !     .. Local Arrays ..      
@@ -287,12 +287,16 @@ CONTAINS
     !
 
     seigv = seigv+spindg*DOT_PRODUCT(e(INDEX(:nocst)),we(INDEX(:nocst)))
+    seigvTemp = seigv
+    IF (noco%l_soc .AND. (.NOT. noco%l_noco)) THEN
+       seigvTemp = seigvTemp / 2.0
+    END IF
     IF (fmpi%irank == 0) THEN
        attributes = ''
-       WRITE(attributes(1),'(f20.10)') seigv
+       WRITE(attributes(1),'(f20.10)') seigvTemp
        WRITE(attributes(2),'(a)') 'Htr'
        CALL writeXMLElement('sumValenceSingleParticleEnergies',(/'value','units'/),attributes)
-       WRITE (oUnit,FMT=8040) seigv
+       WRITE (oUnit,FMT=8040) seigvTemp
     END IF
 
 8000 FORMAT (/,10x,'==>efrmhi: not enough wavefunctions.',i10,2e20.10)

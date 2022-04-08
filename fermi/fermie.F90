@@ -240,7 +240,7 @@ CONTAINS
        ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
           CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
        ELSE IF (input%bz_integration==BZINT_METHOD_TRIA) THEN
-          CALL fertri(input,kpts,fmpi%irank, results%neig(:,sslice(1):sslice(2)),nspins,zc,results%eig(:,:,sslice(1):sslice(2)),spindg,&
+          CALL fertri(input,noco,kpts,fmpi%irank, results%neig(:,sslice(1):sslice(2)),nspins,zc,results%eig(:,:,sslice(1):sslice(2)),spindg,&
                results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
        ELSE IF (input%bz_integration==BZINT_METHOD_TETRA) THEN
           CALL fertetra(input,noco,kpts,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
