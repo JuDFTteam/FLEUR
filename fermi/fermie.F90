@@ -87,8 +87,6 @@ CONTAINS
     !     zelec      : number of electrons
     !     spindg     : spindegeneracy (2 in nonmagnetic calculations)
     !     seigv      : weighted sum of the occupied valence eigenvalues
-    !     seigsc     : weighted sum of the semi-core eigenvalues
-    !     seigscv    : sum of seigv and seigsc
     !     ts         : entropy contribution to the free energy
     !
     !***********************************************************************
@@ -105,7 +103,6 @@ CONTAINS
     !
     spindg = 2.0/REAL(input%jspins)
     n = 0
-    results%seigsc = 0.0
     ssc = 0.0
     n_help = 0
     !
@@ -230,7 +227,7 @@ CONTAINS
           ENDIF
        ENDIF
 
-       IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8020) results%ef,nstef,seigv,ws,results%seigsc,ssc
+       IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8020) results%ef,nstef,seigv,ws,ssc
 
        !+po
        results%ts = 0.0
@@ -249,7 +246,6 @@ CONTAINS
           CALL fertetra(input,noco,kpts,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
                         results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
        ENDIF
-       results%seigscv = results%seigsc + results%seigv
 
        IF (mspin == 2) THEN
           WRITE(oUnit,*) "Different Fermi-energies for both spins:"
@@ -275,7 +271,6 @@ CONTAINS
          &       10x,'number of occ. states  (T=0)  :',i11,/,&
          &       10x,'first approx. to seigv (T=0)  :',f11.6,' htr',/,&
          &       10x,'sum of weights of occ. states :',f11.6,/,&
-         &       10x,'sum of semicore eigenvalues   :',f11.6,' htr',/,&
          &       10x,'sum of semicore charge        :',f11.6,' e',/)
   END SUBROUTINE fermie
 END MODULE m_fermie

@@ -14,10 +14,10 @@ CONTAINS
     !     single particle energies
     !     SEIGC  sum of the eigenvalues of the core states
     !            calculated in cdngen.f
-    !     SEIGSCV  sum of the eigenvalues of the semicore and valence states
+    !     SEIGV  sum of the eigenvalues of the semicore and valence states
     !              calculated in fermie.f
     !     TS         : entropy contribution to the free energy
-    !     SEIGC,SEIGSCV, TS are calculated in fermie.f
+    !     SEIGC,SEIGV, TS are calculated in fermie.f
     !     ***************************************************
     !     TE_VCOUL  :   charge density-coulomb potential integral
     !     TE_VEFF:   charge density-effective potential integral
@@ -27,10 +27,10 @@ CONTAINS
     !     VMD :   Madelung term
     !     ***************************************************
     !     TOTE    :   total energy due to all electrons
-    !     TOTE = SEIGC + SEIGSCV + TE_VCOUL/2 -TE_VEFF + TE_EXC + VMD
+    !     TOTE = SEIGC + SEIGV + TE_VCOUL/2 -TE_VEFF + TE_EXC + VMD
     !
     !     if HF calculation/hybinp-functional calculation :
-    !     TOTE = SEIGC + SEIGSCV + TE_VCOUL/2 -TE_VEFF + TE_EXC_loc + VMD - 1/2 E_FOCK
+    !     TOTE = SEIGC + SEIGV + TE_VCOUL/2 -TE_VEFF + TE_EXC_loc + VMD - 1/2 E_FOCK
     !
     !     E_FOCK: sum of diagonal elements of fock matrix
     !
@@ -93,7 +93,7 @@ CONTAINS
        !
        !      ---> sum of eigenvalues (core, semicore and valence states)
        !
-       eigSum = results%seigscv + results%seigc
+       eigSum = results%seigv + results%seigc
        results%tote = eigSum
        WRITE (oUnit,FMT=8010) results%tote
 8010   FORMAT (/,10x,'sum of eigenvalues =',t40,f20.10)
@@ -227,7 +227,7 @@ CONTAINS
        END IF
        CALL openXMLElementFormPoly('sumOfEigenvalues',(/'value'/),(/eigSum/),reshape((/32,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('coreElectrons',(/'value'/),(/results%seigc/),reshape((/32,20/),(/1,2/)))
-       CALL writeXMLElementFormPoly('valenceElectrons',(/'value'/),(/results%seigscv/),reshape((/29,20/),(/1,2/)))
+       CALL writeXMLElementFormPoly('valenceElectrons',(/'value'/),(/results%seigv/),reshape((/29,20/),(/1,2/)))
        CALL closeXMLElement('sumOfEigenvalues')
        CALL writeXMLElementFormPoly('densityCoulombPotentialIntegral',(/'value'/),(/results%te_vcoul/),reshape((/17,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('densityEffectivePotentialIntegral',(/'value'/),(/results%te_veff/),reshape((/15,20/),(/1,2/)))

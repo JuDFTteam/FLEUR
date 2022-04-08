@@ -107,8 +107,6 @@ CONTAINS
     !     zelec      : number of electrons in a window
     !     spindg     : spindegeneracy (2 in nonmagnetic calculations)
     !     seigv      : weighted sum of the occupied valence eigenvalues
-    !     seigsc     : weighted sum of the semi-core eigenvalues
-    !     seigscv    : sum of seigv and seigsc
     !     ts         : entropy contribution to the free energy
     !     tkb        : value of temperature (kt) broadening around fermi
     !                  energy in htr units
@@ -297,11 +295,6 @@ CONTAINS
        WRITE (oUnit,FMT=8040) seigv
     END IF
 
-
-    !
-    ! 7.12.95 r.pentcheva   seigscv = seigsc + seigv   will be
-    ! calculated in fermie
-    !
 8000 FORMAT (/,10x,'==>efrmhi: not enough wavefunctions.',i10,2e20.10)
 8010 FORMAT (10x,'charge neutrality (T=0)     :',f11.6,'    (zero if ',&
          &       'the highest occ. eigenvalue is "entirely" occupied)')
