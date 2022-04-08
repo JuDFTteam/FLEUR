@@ -66,6 +66,7 @@ CONTAINS
       ! Local Scalars
       COMPLEX :: cil
       INTEGER :: i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo
+      INTEGER :: loplo_new, mlolo_new
 
       ! Local Arrays
       REAL :: x(atoms%jmtd),ulovulo(atoms%nlod*(atoms%nlod+1)/2,lh0:sphhar%nlhd)
@@ -169,6 +170,7 @@ CONTAINS
       ! Generate the t-matrix including two local orbitals for LO <= LO'
       ! Loop over LO'
       mlolo = DOT_PRODUCT(atoms%nlo(:ntyp-1),atoms%nlo(:ntyp-1)+1)/2
+      mlolo_new = DOT_PRODUCT(atoms%nlo(:ntyp-1),atoms%nlo(:ntyp-1))
       DO lop = 1,atoms%nlo(ntyp)
          lp = atoms%llo(lop,ntyp)
          DO mp = -lp,lp
@@ -182,13 +184,20 @@ CONTAINS
                   DO lo = 1,lop
                      l = atoms%llo(lo,ntyp)
                      loplo = ((lop-1)*lop)/2 + lo
+                     loplo_new = (lop-1) * atoms%nlo(ntyp) + lo
                      IF ((ABS(l-lpp).LE.lp).AND.(lp.LE.(l+lpp)).AND.(MOD(l+lp+lpp,2).EQ.0).AND.(ABS(m).LE.l)) THEN
                         cil = ImagUnit**(l-lp) * sphhar%clnu(mem,lh,sym%ntypsy(na)) &
                           & * gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
-                        ! TODO: Should this really be conjugated?
-                        ! TODO: How do we need to handle this for DFPT?
                         tlmplm%tuloulo(mp,m,loplo+mlolo,iSpinPr,iSpin) = &
-                      & tlmplm%tuloulo(mp,m,loplo+mlolo,iSpinPr,iSpin) + one * CONJG(cil*ulovulo(loplo,lh))
+                      & tlmplm%tuloulo(mp,m,loplo+mlolo,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
+                        tlmplm%tuloulo_new(mp,m,mlolo_new+loplo_new,iSpinPr,iSpin) = &
+                      & tlmplm%tuloulo_new(mp,m,mlolo_new+loplo_new,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
+                        IF ((lop.NE.lo).AND.(mp.NE.m)) THEN
+                           !loplo = ((lo-1)*lo)/2 + lop
+                           loplo_new = (lo-1) * atoms%nlo(ntyp) + lop
+                           tlmplm%tuloulo_new(m,mp,mlolo_new+loplo_new,iSpinPr,iSpin) = &
+                         & tlmplm%tuloulo_new(m,mp,mlolo_new+loplo_new,iSpinPr,iSpin) + one * CONJG(cil * ulovulo(loplo,lh))
+                        END IF
                      END IF
                   END DO
                END DO
@@ -249,7 +258,7 @@ CONTAINS
                                                         & + usdus%dulon(lo,ntyp,iSpinPr) &
                                                         & * enpara%el0(l,ntyp,iSpinPr) &
                                                         & + 1.0 * usdus%uulon(lo,ntyp,iSpinPr)
-                  ! TODO: Implement boundary term.                           
+                  ! TODO: Implement boundary term.
                   IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
                      CALL juDFT_error("ulo_der>0 for DFPT" ,calledby ="tlo")
                      tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr) !TODO: 1.0 or 0.0?
@@ -271,6 +280,7 @@ CONTAINS
             lp = atoms%llo(lop,ntyp)
             DO lo = atoms%lo1l(lp,ntyp),lop
                loplo = ((lop-1)*lop)/2 + lo
+               loplo_new = (lop-1) * atoms%nlo(ntyp) + lo
                DO m = -lp,lp
                   IF (.NOT.l_dfpt) THEN
                   tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) &
@@ -279,7 +289,23 @@ CONTAINS
                                                               & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
                                                               & + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) &
                                                               & +        usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
+                  tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) = tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) &
+                                                              & + 0.5 * (enpara%ello0(lop,ntyp,iSpinPr) &
+                                                              & +         enpara%ello0(lo,ntyp,iSpinPr)) &
+                                                              & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
+                                                              & + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) &
+                                                              & +        usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
+                  IF (.NOT.lop.EQ.lo) THEN
+                     loplo_new = (lo-1) * atoms%nlo(ntyp) + lop
+                     tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) = tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) &
+                                                                 & + 0.5 * (enpara%ello0(lo,ntyp,iSpinPr) &
+                                                                 & +         enpara%ello0(lop,ntyp,iSpinPr)) &
+                                                                 & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
+                                                                 & + 0.5 * (usdus%ulouilopn(lo,lop,ntyp,iSpinPr) &
+                                                                 & +        usdus%ulouilopn(lop,lo,ntyp,iSpinPr))
+                  END IF
                   ELSE
+                     ! TODO: Add non-symmetrized form of tuloulo_new as well.
                      tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) &
                                                                  & + enpara%ello0(lo,ntyp,iSpinPr) &
                                                                  & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &

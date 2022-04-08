@@ -56,7 +56,7 @@ CONTAINS
     ! Local Scalars
       COMPLEX :: axx,bxx,cxx,dtd,dtu,tdulo,tulod,tulou,tuloulo,utd,utu, tuulo
       INTEGER :: invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i
-      INTEGER :: mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo
+      INTEGER :: mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo,mlolo_new,lolop_new
       INTEGER :: locol,lorow,n,k,ab_size,ab_size_Pr,s
       LOGICAL :: l_samelapw
       COMPLEX :: pref(3)
@@ -107,10 +107,11 @@ CONTAINS
       END IF
       !$acc end data
 
-      mlo=0;mlolo=0
+      mlo=0;mlolo=0;mlolo_new=0
       DO m=1,ntyp-1
          mlo=mlo+atoms%nlo(m)
          mlolo=mlolo+atoms%nlo(m)*(atoms%nlo(m)+1)/2
+         mlolo_new=mlolo_new+atoms%nlo(m)**2
       END DO
 
       IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
@@ -296,14 +297,18 @@ CONTAINS
                               tdulo = tlmplm%tdulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
                               tulou = tlmplm%tulou(lm,mp,lop+mlo,ilSpinPr,ilSpin)
                               tulod = tlmplm%tulod(lm,mp,lop+mlo,ilSpinPr,ilSpin)
-                              ! Note, that lo > lop
-                              ! TODO: Check the validity of this.
+                              ! Note, that lo > lop for non spin spiral calculations
                               IF (lo>lop) THEN
-                                 lolop = ((lo-1)*lo)/2 + lop
-                                 tuloulo = tlmplm%tuloulo(m,mp,lolop+mlolo,ilSpinPr,ilSpin)
+                                 !lolop = ((lo-1)*lo)/2 + lop
+                                 !tuloulo = CONJG(tlmplm%tuloulo(m,mp,lolop+mlolo,ilSpinPr,ilSpin))
+                                 lolop_new = (lo-1) * atoms%nlo(ntyp) + lop
+                                 tuloulo = CONJG(tlmplm%tuloulo_new(m,mp,mlolo_new+lolop_new,ilSpinPr,ilSpin))
+                                 !TODO: The conjugation should not be necessary anymore.
                               ELSE
-                                 lolop = ((lop-1)*lop)/2 + lo
-                                 tuloulo = tlmplm%tuloulo(mp,m,lolop+mlolo,ilSpinPr,ilSpin)
+                                 !lolop = ((lop-1)*lop)/2 + lo
+                                 !tuloulo = tlmplm%tuloulo(mp,m,lolop+mlolo,ilSpinPr,ilSpin)
+                                 lolop_new = (lop-1) * atoms%nlo(ntyp) + lo
+                                 tuloulo = tlmplm%tuloulo_new(mp,m,mlolo_new+lolop_new,ilSpinPr,ilSpin)
                               END IF
 
                               axx = utu     * abclo(1,m,nkvec,lo) &
@@ -363,9 +368,10 @@ CONTAINS
                            tulou = tlmplm%tulou(lm,mp,lo+mlo,ilSpinPr,ilSpin)
                            tulod = tlmplm%tulod(lm,mp,lo+mlo,ilSpinPr,ilSpin)
 
-                           lolo = ((lo-1)*lo)/2 + lo
-
-                           tuloulo = tlmplm%tuloulo(m,mp,lolo+mlolo,ilSpinPr,ilSpin)
+                           !lolo = ((lo-1)*lo)/2 + lo
+                           !tuloulo = tlmplm%tuloulo(mp,m,lolo+mlolo,ilSpinPr,ilSpin)
+                           lolop_new = (lo-1) * atoms%nlo(ntyp) + lo
+                           tuloulo = tlmplm%tuloulo_new(mp,m,mlolo_new+lolop_new,ilSpinPr,ilSpin)
 
                            axx = utu     * abclo(1,m,nkvec,lo) &
                              & + utd     * abclo(2,m,nkvec,lo) &
