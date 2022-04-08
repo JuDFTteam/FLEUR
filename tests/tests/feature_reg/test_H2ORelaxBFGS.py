@@ -25,15 +25,15 @@ def test_H2ORelaxBFGS(execute_fleur, grep_number, grep_exists):
         assert (file1 in res_file_names), f'{file1} missing'
 
     #grep for displacements
-    assert grep_exists(res_files['relax.xml'], "0.2693")
-    assert grep_exists(res_files['relax.xml'], "0.1181")
-    assert grep_exists(res_files['relax.xml'], "0.1396")
+    assert grep_exists(res_files['relax.xml'], "0.2691")
+    assert grep_exists(res_files['relax.xml'], "0.1180")
+    assert grep_exists(res_files['relax.xml'], "0.1397")
 
 
     #grep for forces in different calls
-    assert grep_exists(res_files['relax.xml'], "0.15549")
+    assert grep_exists(res_files['relax.xml'], "0.15544")
     assert grep_exists(res_files['relax.xml'], "0.00567")
-    assert grep_exists(res_files['relax.xml'], "0.07830")
+    assert grep_exists(res_files['relax.xml'], "0.07831")
 
     assert grep_exists(res_files['relax.xml'], "0.0602")
     assert grep_exists(res_files['relax.xml'], "0.0240")
@@ -41,7 +41,7 @@ def test_H2ORelaxBFGS(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['relax.xml'], "0.0181")
     assert grep_exists(res_files['relax.xml'], "0.0323")
-    assert grep_exists(res_files['relax.xml'], "0.0100")
+    assert grep_exists(res_files['relax.xml'], "0.0101")
 
     tenergy = grep_number(res_files['out'], "total energy=", "=")
-    assert abs(tenergy - -75.961957) <= 0.000002
+    assert abs(tenergy - -75.961979) <= 0.000002

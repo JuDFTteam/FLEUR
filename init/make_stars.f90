@@ -36,6 +36,12 @@ CONTAINS
     TYPE(t_oneD),INTENT(inout)::oneD
     TYPE(t_noco),INTENT(in)::noco
     TYPE(t_mpi),INTENT(in)::fmpi
+
+    ! TODO: Add optional bqpt and l_dfpt. The former makes this routine build stars
+    !       around an origin vector q (0 by default) and the latter tells it to build
+    !       a modified step function for use with DFPT.
+    !       Use a dummy oneD, copied input and call the result starsq.
+
     ! Generate stars
     INTEGER :: kimax,kimax2
 

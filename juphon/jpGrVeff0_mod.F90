@@ -293,7 +293,7 @@ module m_jpGrVeff0
       allocate(grVxc0IR(ngdp, 3))
       grVxc0IR(:, :) = cmplx(0., 0.)
       do idir = 1, 3
-        call convolGrRhoKern(stars, ngdp, ngdp, grRho0IR(:, idir), grVxcIRKern, pdG2FouM, pdG2FouM, grVxc0IR(:, idir), 1)
+        call convolGrRhoKern(stars, ngdp, ngdp, idir, grRho0IR(:, idir), grVxcIRKern, pdG2FouM, pdG2FouM, grVxc0IR(:, idir), 1)
       end do
       deallocate(pdG2FouM)
 
@@ -1710,10 +1710,11 @@ subroutine convolMTgrVeff0dKern(atoms, grRho0MT, dKernMTGPts, gWghts, ylm, grVxc
 
 end subroutine convolMTgrVeff0dKern
 
-subroutine convolGrRhoKern(stars, ngdp, ngpqdp, f1IR, f2IR, pdG2FouM, pdG2FouMv, f3IR, iqpt)
+subroutine convolGrRhoKern(stars, ngdp, ngpqdp, iDir, f1IR, f2IR, pdG2FouM, pdG2FouMv, f3IR, iqpt)
 
   use m_cfft
   use m_types
+  use m_npy
 
   implicit none
 
@@ -1724,6 +1725,7 @@ subroutine convolGrRhoKern(stars, ngdp, ngpqdp, f1IR, f2IR, pdG2FouM, pdG2FouMv,
   ! Scalar parameter
   integer,              intent(in)  :: ngdp
   integer,              intent(in)  :: ngpqdp
+    integer,              intent(in)  :: iDir
   integer,              intent(in)  :: iqpt
 
   ! Array parameter

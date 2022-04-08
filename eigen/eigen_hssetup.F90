@@ -70,7 +70,7 @@ CONTAINS
       !Generate interstitial part of Hamiltonian
       ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
       vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
-      CALL hs_int(fi%input, fi%noco, stars, lapw, fmpi, fi%cell, isp, vpw_wTemp, smat, hmat)
+      CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat)
       DEALLOCATE(vpw_wTemp)
 
       CALL timestop("Interstitial part")
@@ -103,8 +103,9 @@ CONTAINS
          if (any(shape(smat) /= 1)) then
             call judft_error("Hybrid doesn't do noco.")
          end if
-
+         smat(1,1)%data_c = CONJG(smat(1,1)%data_c)
          CALL write_eig(hybdat%eig_id, nk, isp, smat=smat(1, 1), n_start=fmpi%n_size, n_end=fmpi%n_rank)
+         smat(1,1)%data_c = CONJG(smat(1,1)%data_c)
       END IF
 
       IF (fi%hybinp%l_hybrid) THEN

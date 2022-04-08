@@ -433,8 +433,8 @@ CONTAINS
       CLASS DEFAULT
          CALL judft_error("Wrong datatype in copy")
       END SELECT
-#else 
-       call judft_error("Distributed matrix without SCALAPCK",calledby="mpimat_copy")      
+#else
+       call judft_error("Distributed matrix without SCALAPACK",calledby="mpimat_copy")      
 #endif
 
       call timestop("mpimat_copy")

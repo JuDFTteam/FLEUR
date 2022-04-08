@@ -285,7 +285,7 @@ def pytest_collection_modifyitems(session, config, items):
     testoffset = config.getoption("testoffset")
     if testoffset is None:
         testoffset = 0
-    print(f'Running every {run_every}st test with offset {testoffset}, others will be skiped.')
+    print(f'Running every {run_every}st test with offset {testoffset}, others will be skipped.')
 
     if not RUN_PARSER_TESTS:
         marker_list = marker_list + ['masci_tools']
@@ -862,7 +862,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig, test_logger
                 print('arg_list:',arg_list)
                 print('env:',run_env)
                 p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=False)
-        
+
         # Check per hand if successful:
         with open(f"{workdir}/stderr", "r") as f_stderr:
                 error_content= f_stderr.read()
