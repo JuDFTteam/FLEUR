@@ -1,11 +1,12 @@
 MODULE m_types_profile
 
    TYPE :: t_profile
-      REAL :: kmax
-      REAL :: kGmaxFactor
-      REAL :: rmtFactor
-      REAL :: lmaxFactor
-      REAL :: fermiSmearing
+      REAL :: kmax ! This is K_max
+      REAL :: kGmaxFactor ! G_max = G_maxXC = K_max * kGmaxFactor
+      REAL :: rmtFactor ! This is a postprocessing factor to reduce the MT radii after their initial calculation
+      REAL :: lmaxFactor ! lmax = Kmax * R_MT * lmaxfactor
+      REAL :: fermiSmearing ! The Fermi smearing energy
+      REAL :: kPDen ! The k-Point density
 
       CHARACTER(LEN=20) :: profileName
       CHARACTER(LEN=50) :: addLOSetup
@@ -35,6 +36,7 @@ MODULE m_types_profile
       this%fermiSmearing = 0.001
       this%addLOSetup = ""
       this%atomSetup = ""
+      this%kPDen = -1.0
 
    END SUBROUTINE initProfile
 
@@ -48,7 +50,7 @@ MODULE m_types_profile
 
 
       INTEGER :: io_stat
-      REAL    :: kmax, kGmaxFactor, rmtFactor, lmaxFactor, fermiSmearing
+      REAL    :: kmax, kGmaxFactor, rmtFactor, lmaxFactor, fermiSmearing, kPDen
       LOGICAL :: l_exist, l_found
 
       CHARACTER(LEN=20) :: name
@@ -57,7 +59,7 @@ MODULE m_types_profile
       CHARACTER(len=8)  :: str
       CHARACTER(LEN=20) :: atomSetup
 
-      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup,fermiSmearing,atomSetup,kGmaxFactor
+      NAMELIST /profile/ name,kmax,rmtFactor,lmaxFactor,addLOSetup,fermiSmearing,atomSetup,kGmaxFactor,kPDen
 
       filename = "profile.config"
 
@@ -82,6 +84,7 @@ MODULE m_types_profile
             lmaxFactor = 1.0
             addLOSetup = ""
             fermiSmearing = 0.001
+            kPDen = -1.0
             atomSetup = ""
             READ(558,profile,iostat=io_stat)
             IF (io_stat.EQ.0) THEN
@@ -93,6 +96,7 @@ MODULE m_types_profile
                   this%lmaxFactor = lmaxFactor
                   this%addLOSetup = TRIM(ADJUSTL(addLOSetup))
                   this%fermiSmearing = fermiSmearing
+                  this%kPDen = kPDen
                   this%atomSetup = TRIM(ADJUSTL(atomSetup))
                   l_found = .TRUE.
                END IF
