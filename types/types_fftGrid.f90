@@ -144,10 +144,11 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
             DO x = -stars%mx1, stars%mx1
                iStar = stars%ig(x, y, z)
                fct=stars%rgphs(x, y, z)
+               ! Removing the (-) kills exactly one test [Fe bct libxc] - but why?
                if (present(firstderiv)) THEN
                   fct=fct*cmplx(0.0,-1*dot_product(firstderiv,matmul(real([x,y,z]),cell%bmat)))
                   if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,matmul(real([x,y,z]),cell%bmat)))
-               endif   
+               endif
                IF (iStar .EQ. 0) CYCLE
                IF (stars%sk3(iStar) .GT. gCutoffInternal) CYCLE
                xGrid = MODULO(x, this%dimensions(1))
