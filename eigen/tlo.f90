@@ -192,11 +192,15 @@ CONTAINS
                       & tlmplm%tuloulo(mp,m,loplo+mlolo,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
                         tlmplm%tuloulo_new(mp,m,mlolo_new+loplo_new,iSpinPr,iSpin) = &
                       & tlmplm%tuloulo_new(mp,m,mlolo_new+loplo_new,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
+                        tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,iSpinPr,iSpin) = &
+                      & tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
                         IF ((lop.NE.lo).AND.(mp.NE.m)) THEN
                            !loplo = ((lo-1)*lo)/2 + lop
                            loplo_new = (lo-1) * atoms%nlo(ntyp) + lop
                            tlmplm%tuloulo_new(m,mp,mlolo_new+loplo_new,iSpinPr,iSpin) = &
                          & tlmplm%tuloulo_new(m,mp,mlolo_new+loplo_new,iSpinPr,iSpin) + one * CONJG(cil * ulovulo(loplo,lh))
+                           tlmplm%tuloulo_newer(m,mp,lo,lop,ntyp,iSpinPr,iSpin) = &
+                         & tlmplm%tuloulo_newer(m,mp,lo,lop,ntyp,iSpinPr,iSpin) + one * CONJG(cil * ulovulo(loplo,lh))
                         END IF
                      END IF
                   END DO
