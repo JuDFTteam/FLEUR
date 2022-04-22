@@ -190,15 +190,15 @@ CONTAINS
                           & * gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
                         tlmplm%tuloulo(mp,m,loplo+mlolo,iSpinPr,iSpin) = &
                       & tlmplm%tuloulo(mp,m,loplo+mlolo,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
-                        tlmplm%tuloulo_new(mp,m,mlolo_new+loplo_new,iSpinPr,iSpin) = &
-                      & tlmplm%tuloulo_new(mp,m,mlolo_new+loplo_new,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
+                     !   tlmplm%tuloulo_new(mp,m,mlolo_new+loplo_new,iSpinPr,iSpin) = &
+                     ! & tlmplm%tuloulo_new(mp,m,mlolo_new+loplo_new,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
                         tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,iSpinPr,iSpin) = &
                       & tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
                         IF ((lop.NE.lo).AND.(mp.NE.m)) THEN
                            !loplo = ((lo-1)*lo)/2 + lop
-                           loplo_new = (lo-1) * atoms%nlo(ntyp) + lop
-                           tlmplm%tuloulo_new(m,mp,mlolo_new+loplo_new,iSpinPr,iSpin) = &
-                         & tlmplm%tuloulo_new(m,mp,mlolo_new+loplo_new,iSpinPr,iSpin) + one * CONJG(cil * ulovulo(loplo,lh))
+                           !loplo_new = (lo-1) * atoms%nlo(ntyp) + lop
+                        !   tlmplm%tuloulo_new(m,mp,mlolo_new+loplo_new,iSpinPr,iSpin) = &
+                        ! & tlmplm%tuloulo_new(m,mp,mlolo_new+loplo_new,iSpinPr,iSpin) + one * CONJG(cil * ulovulo(loplo,lh))
                            tlmplm%tuloulo_newer(m,mp,lo,lop,ntyp,iSpinPr,iSpin) = &
                          & tlmplm%tuloulo_newer(m,mp,lo,lop,ntyp,iSpinPr,iSpin) + one * CONJG(cil * ulovulo(loplo,lh))
                         END IF
@@ -287,33 +287,54 @@ CONTAINS
                loplo_new = (lop-1) * atoms%nlo(ntyp) + lo
                DO m = -lp,lp
                   IF (.NOT.l_dfpt) THEN
-                  tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) &
+                     tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) &
                                                               & + 0.5 * (enpara%ello0(lop,ntyp,iSpinPr) &
                                                               & +         enpara%ello0(lo,ntyp,iSpinPr)) &
                                                               & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
                                                               & + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) &
                                                               & +        usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
-                  tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) = tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) &
+                     !tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) = tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) &
+                     !                                         & + 0.5 * (enpara%ello0(lop,ntyp,iSpinPr) &
+                     !                                         & +         enpara%ello0(lo,ntyp,iSpinPr)) &
+                     !                                         & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
+                     !                                         & + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) &
+                     !                                         & +        usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
+                     tlmplm%tuloulo_newer(m,m,lop,lo,ntyp,iSpinPr,iSpin) = tlmplm%tuloulo_newer(m,m,lop,lo,ntyp,iSpinPr,iSpin) &
                                                               & + 0.5 * (enpara%ello0(lop,ntyp,iSpinPr) &
                                                               & +         enpara%ello0(lo,ntyp,iSpinPr)) &
                                                               & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
                                                               & + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) &
                                                               & +        usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
-                  IF (.NOT.lop.EQ.lo) THEN
-                     loplo_new = (lo-1) * atoms%nlo(ntyp) + lop
-                     tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) = tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) &
+                     IF (.NOT.lop.EQ.lo) THEN
+                        !loplo_new = (lo-1) * atoms%nlo(ntyp) + lop
+                        !tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) = tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) &
+                        !                                         & + 0.5 * (enpara%ello0(lo,ntyp,iSpinPr) &
+                        !                                         & +         enpara%ello0(lop,ntyp,iSpinPr)) &
+                        !                                         & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
+                        !                                         & + 0.5 * (usdus%ulouilopn(lo,lop,ntyp,iSpinPr) &
+                        !                                         & +        usdus%ulouilopn(lop,lo,ntyp,iSpinPr))
+                        tlmplm%tuloulo_newer(m,m,lo,lop,ntyp,iSpinPr,iSpin) = tlmplm%tuloulo_newer(m,m,lo,lop,ntyp,iSpinPr,iSpin) &
                                                                  & + 0.5 * (enpara%ello0(lo,ntyp,iSpinPr) &
                                                                  & +         enpara%ello0(lop,ntyp,iSpinPr)) &
                                                                  & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
                                                                  & + 0.5 * (usdus%ulouilopn(lo,lop,ntyp,iSpinPr) &
                                                                  & +        usdus%ulouilopn(lop,lo,ntyp,iSpinPr))
-                  END IF
+                     END IF
                   ELSE
-                     ! TODO: Add non-symmetrized form of tuloulo_new as well.
-                     tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) &
+                     !tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) &
+                     !                                            & + enpara%ello0(lo,ntyp,iSpinPr) &
+                     !                                            & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
+                     !                                            & + usdus%ulouilopn(lop,lo,ntyp,iSpinPr)
+                     tlmplm%tuloulo_newer(m,m,lop,lo,ntyp,iSpinPr,iSpin) = tlmplm%tuloulo_newer(m,m,lop,lo,ntyp,iSpinPr,iSpin) &
                                                                  & + enpara%ello0(lo,ntyp,iSpinPr) &
                                                                  & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
                                                                  & + usdus%ulouilopn(lop,lo,ntyp,iSpinPr)
+                     IF (.NOT.lop.EQ.lo) THEN
+                        tlmplm%tuloulo_newer(m,m,lo,lop,ntyp,iSpinPr,iSpin) = tlmplm%tuloulo_newer(m,m,lo,lop,ntyp,iSpinPr,iSpin) &
+                                                                    & + enpara%ello0(lop,ntyp,iSpinPr) &
+                                                                    & * usdus%uloulopn(lo,lop,ntyp,iSpinPr) &
+                                                                    & + usdus%ulouilopn(lo,lop,ntyp,iSpinPr)
+                     END IF
                   END IF
                END DO
             END DO
