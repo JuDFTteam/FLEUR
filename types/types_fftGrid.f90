@@ -145,6 +145,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                iStar = stars%ig(x, y, z)
                fct=stars%rgphs(x, y, z)
                ! Removing the (-) kills exactly one test [Fe bct libxc] - but why?
+               ! noco test --> due to real space gradients?
                if (present(firstderiv)) THEN
                   fct=fct*cmplx(0.0,-1*dot_product(firstderiv,matmul(real([x,y,z]),cell%bmat)))
                   if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,matmul(real([x,y,z]),cell%bmat)))
