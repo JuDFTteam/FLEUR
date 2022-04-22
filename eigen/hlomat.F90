@@ -91,7 +91,7 @@ CONTAINS
       !       instead of triangular construction...
       !$acc data create(abcoeffs,abclo,abcoeffsPr,abcloPr)
       !$acc data copyin(alo1,blo1,clo1)
-      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgj,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,.FALSE.,1,abcloPr(:,:,:,:),alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
+      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgj,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr(:,:,:,:),alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
 
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw) THEN
          !$acc kernels present(abcoeffs,abcoeffsPr)
@@ -103,7 +103,7 @@ CONTAINS
          CALL CPP_BLAS_ccopy(SIZE(abcloPr,1)*SIZE(abcloPr,2)*SIZE(abcloPr,3)*SIZE(abcloPr,4),abcloPr(:,:,:,:),1,abclo(:,:,:,:),1)
 #endif
       ELSE
-         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,.FALSE.,1,abclo(:,:,:,:),alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
+         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo(:,:,:,:),alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
       END IF
       !$acc end data
 
@@ -372,8 +372,9 @@ CONTAINS
 
                            !lolo = ((lo-1)*lo)/2 + lo
                            !tuloulo = tlmplm%tuloulo(mp,m,lolo+mlolo,ilSpinPr,ilSpin)
-                           lolop_new = (lo-1) * atoms%nlo(ntyp) + lo
-                           tuloulo = tlmplm%tuloulo_new(mp,m,mlolo_new+lolop_new,ilSpinPr,ilSpin)
+                           !lolop_new = (lo-1) * atoms%nlo(ntyp) + lo
+                           !tuloulo = tlmplm%tuloulo_new(mp,m,mlolo_new+lolop_new,ilSpinPr,ilSpin)
+                           tuloulo = tlmplm%tuloulo_newer(mp,m,lo,lo,ntyp,ilSpinPr,ilSpin)
 
                            axx = utu     * abclo(1,m,nkvec,lo) &
                              & + utd     * abclo(2,m,nkvec,lo) &

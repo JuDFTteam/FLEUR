@@ -10,7 +10,7 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-   SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,l_pref,iDir,abclo,alo1,blo1,clo1)
+   SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
       ! Construct the matching coefficients of the form
       ! a_{l,m,order}^{\mu,\bm{G}}(\bm{k}) = e^{i \bm{K}\cdot\bm{\tau}_{\mu}} *
       !                                      (Y_{l}^{m}(R^{\mu}\bm{K}))^{*} *
@@ -42,8 +42,8 @@ CONTAINS
       TYPE(t_fjgj),     INTENT(IN)    :: fjgj
     !     ..
     !     .. Scalar Arguments ..
-      INTEGER,          INTENT(IN)    :: ilSpin, n, na, igSpin, iDir
-      LOGICAL,          INTENT(IN)    :: l_nonsph, l_pref
+      INTEGER,          INTENT(IN)    :: ilSpin, n, na, igSpin
+      LOGICAL,          INTENT(IN)    :: l_nonsph
       INTEGER,          INTENT(OUT)   :: ab_size
     !     ..
     !     .. Array Arguments ..
@@ -86,12 +86,6 @@ CONTAINS
       ! These two lines should eventually move to the GPU:
       CALL dgemm("N","N", 3, lapw%nv(igSpin), 3, 1.0, bmrot, 3, lapw%vk(:,:,igSpin), 3, 0.0, gkrot, 3)
       CALL ylm4_batched(lmax,gkrot,ylm)
-      IF (l_pref) THEN
-         DO k = 1,lapw%nv(igSpin)
-            ! TODO: With or without sym%mrot? Only bmat^T ?
-            c_ph(k,igSpin) = c_ph(k,igSpin) * ImagUnit * gkrot(iDir,k)
-         END DO
-      END IF
 
 #ifndef _OPENACC
       !$OMP PARALLEL DO DEFAULT(none) &

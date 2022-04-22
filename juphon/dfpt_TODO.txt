@@ -44,7 +44,7 @@ q-loop:
                           k left and right [done]
                         - teach it ikG prefactors [WIP]
                      - use hsmt_nonsph for H-elements with perturbed matchings
-                        - teach hsmt_ab how to work with i(k+G) prefactors
+                        - manually add the necessary prefactors
                      - use hsmt_sph for H/S-elements with perturbed matchings [done]
                         - teach it to comprehend the prefactor
                      - LO part (hlomat/slomat):

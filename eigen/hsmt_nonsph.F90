@@ -135,7 +135,7 @@ CONTAINS
             ! Denoted in comments as a
             ! [local spin primed -> '; global spin primed -> pr]
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                       & lapw, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
+                       & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
 
             IF (l_samelapw.AND.(ilSpinPr==ilSpin)) THEN
                !!$acc update device(ab)
@@ -208,7 +208,7 @@ CONTAINS
                      END IF
                   ELSE IF (.NOT.l_pref) THEN ! Case for additional q on left vector.
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
+                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
                      !!$acc update device (abCoeffs)
 
                      !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
@@ -226,7 +226,7 @@ CONTAINS
                      !         = chi * aq^H * t * a
                   ELSE
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
+                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
                      !!$acc update device (abCoeffs)
 
                      !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
@@ -264,7 +264,7 @@ CONTAINS
 
                   ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}
                   CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpin, n, na, cell, &
-                             & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
+                             & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
                   !!$acc update device(abCoeffs)
 
                   !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
@@ -294,7 +294,7 @@ CONTAINS
                !Second set of abCoeffs is needed
                ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}^{'}
                CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpinPr, n, na, cell, &
-                          & lapwPr, fjgj, abCoeffs, ab_size, .TRUE., .FALSE., iDir)
+                          & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
                IF (ilSpinPr==ilSpin) THEN
                   IF (l_samelapw) THEN
                      !!$acc update device (abCoeffs)
