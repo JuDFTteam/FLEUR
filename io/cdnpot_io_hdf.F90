@@ -241,7 +241,7 @@ MODULE m_cdnpot_io_hdf
       LOGICAL,        INTENT(IN) :: l_CheckBroyd
 
       INTEGER(HID_T)            :: groupID
-      INTEGER                   :: hdfError, ft2_gf_dim, dimsInt(7)
+      INTEGER                   :: hdfError,  dimsInt(7)
       CHARACTER(LEN=30)         :: groupName
       INTEGER(HSIZE_T)          :: dims(7)
       LOGICAL        :: l_exist
@@ -260,9 +260,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: igfft2SpaceID, igfft2SetID
       INTEGER(HID_T)                   :: pgfftSpaceID, pgfftSetID
       INTEGER(HID_T)                   :: pgfft2SpaceID, pgfft2SetID
-      INTEGER(HID_T)                   :: ft2_gfxSpaceID, ft2_gfxSetID
-      INTEGER(HID_T)                   :: ft2_gfySpaceID, ft2_gfySetID
-
+    
       WRITE(groupname,'(a,i0)') '/stars-', starsIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -277,8 +275,7 @@ MODULE m_cdnpot_io_hdf
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
-      ft2_gf_dim = SIZE(stars%ft2_gfx,1)
-
+     
       CALL io_write_attint0(groupID,'structureIndex',structureIndex)
 
       CALL io_write_attreal0(groupID,'gmax',stars%gmax)
@@ -289,7 +286,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(groupID,'mx2',stars%mx2)
       CALL io_write_attint0(groupID,'mx3',stars%mx3)
       CALL io_write_attint0(groupID,'ng3_fft',stars%ng3_fft)
-      CALL io_write_attint0(groupID,'ft2_gf_dim',ft2_gf_dim)
       CALL io_write_attint0(groupID,'od_nq2',oneD%odi%nq2)
 
       dims(:2)=(/3,stars%ng3/)
@@ -374,22 +370,7 @@ MODULE m_cdnpot_io_hdf
 
 
 
-      dims(:1)=(/ft2_gf_dim/)
-      dimsInt=dims
-      CALL h5screate_simple_f(1,dims(:1),ft2_gfxSpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "ft2_gfx", H5T_NATIVE_DOUBLE, ft2_gfxSpaceID, ft2_gfxSetID, hdfError)
-      CALL h5sclose_f(ft2_gfxSpaceID,hdfError)
-      CALL io_write_real1(ft2_gfxSetID,(/1/),dimsInt(:1),stars%ft2_gfx)
-      CALL h5dclose_f(ft2_gfxSetID, hdfError)
-
-      dims(:1)=(/ft2_gf_dim/)
-      dimsInt=dims
-      CALL h5screate_simple_f(1,dims(:1),ft2_gfySpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "ft2_gfy", H5T_NATIVE_DOUBLE, ft2_gfySpaceID, ft2_gfySetID, hdfError)
-      CALL h5sclose_f(ft2_gfySpaceID,hdfError)
-      CALL io_write_real1(ft2_gfySetID,(/1/),dimsInt(:1),stars%ft2_gfy)
-      CALL h5dclose_f(ft2_gfySetID, hdfError)
-
+      
       CALL h5gclose_f(groupID, hdfError)
 
    END SUBROUTINE writeStarsHDF
@@ -404,7 +385,7 @@ MODULE m_cdnpot_io_hdf
 
       INTEGER(HID_T)            :: groupID, generalGroupID
       INTEGER                   :: fileFormatVersion
-      INTEGER                   :: hdfError, ft2_gf_dim,kimax,kimax2
+      INTEGER                   :: hdfError, kimax,kimax2
       INTEGER                   :: dimsInt(7)
       CHARACTER(LEN=30)         :: groupName
       LOGICAL                   :: l_exist
@@ -423,8 +404,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: igfft2SetID
       INTEGER(HID_T)                   :: pgfftSetID
       INTEGER(HID_T)                   :: pgfft2SetID
-      INTEGER(HID_T)                   :: ft2_gfxSetID
-      INTEGER(HID_T)                   :: ft2_gfySetID
+    
 
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
@@ -449,7 +429,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'mx2',stars%mx2)
       CALL io_read_attint0(groupID,'mx3',stars%mx3)
       CALL io_read_attint0(groupID,'ng3_fft',stars%ng3_fft)
-      CALL io_read_attint0(groupID,'ft2_gf_dim',ft2_gf_dim)
       IF(io_attexists(groupID,'od_nq2')) THEN
          CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
       END IF
@@ -467,8 +446,7 @@ MODULE m_cdnpot_io_hdf
       IF(ALLOCATED(stars%nstr2)) DEALLOCATE(stars%nstr2)
       IF(ALLOCATED(stars%phi2)) DEALLOCATE(stars%phi2)
       IF(ALLOCATED(stars%rgphs)) DEALLOCATE(stars%rgphs)
-      IF(ALLOCATED(stars%ft2_gfx)) DEALLOCATE(stars%ft2_gfx)
-      IF(ALLOCATED(stars%ft2_gfy)) DEALLOCATE(stars%ft2_gfy)
+     
 
       ALLOCATE(stars%kv3(3,stars%ng3))
       ALLOCATE(stars%kv2(2,stars%ng2))
@@ -480,8 +458,7 @@ MODULE m_cdnpot_io_hdf
       ALLOCATE(stars%nstr2(stars%ng2))
       ALLOCATE(stars%phi2(stars%ng2))
       ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-      ALLOCATE(stars%ft2_gfx(0:ft2_gf_dim-1))
-      ALLOCATE(stars%ft2_gfy(0:ft2_gf_dim-1))
+     
 
       dimsInt(:2)=(/3,stars%ng3/)
       CALL h5dopen_f(groupID, 'kv3', kv3SetID, hdfError)
@@ -534,15 +511,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5dclose_f(rgphsSetID, hdfError)
 
 
-      dimsInt(:1)=(/ft2_gf_dim/)
-      CALL h5dopen_f(groupID, 'ft2_gfx', ft2_gfxSetID, hdfError)
-      CALL io_read_real1(ft2_gfxSetID,(/1/),dimsInt(:1),stars%ft2_gfx)
-      CALL h5dclose_f(ft2_gfxSetID, hdfError)
-
-      dimsInt(:1)=(/ft2_gf_dim/)
-      CALL h5dopen_f(groupID, 'ft2_gfy', ft2_gfySetID, hdfError)
-      CALL io_read_real1(ft2_gfySetID,(/1/),dimsInt(:1),stars%ft2_gfy)
-      CALL h5dclose_f(ft2_gfySetID, hdfError)
+     
 
       CALL h5gclose_f(groupID, hdfError)
 
