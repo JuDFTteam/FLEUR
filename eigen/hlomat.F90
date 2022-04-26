@@ -305,6 +305,8 @@ CONTAINS
                                  !tuloulo = CONJG(tlmplm%tuloulo_new(m,mp,mlolo_new+lolop_new,ilSpinPr,ilSpin))
                                  tuloulo = CONJG(tlmplm%tuloulo_newer(m,mp,lo,lop,ntyp,ilSpinPr,ilSpin))
                                  !TODO: The conjugation should not be necessary anymore.
+                                 !      But kicking it kills the FePt spin spiral LO test.
+                                 !      [EV_sum check; maybe not quite important]
                               ELSE
                                  !lolop = ((lop-1)*lop)/2 + lo
                                  !tuloulo = tlmplm%tuloulo(mp,m,lolop+mlolo,ilSpinPr,ilSpin)
