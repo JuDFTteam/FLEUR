@@ -32,4 +32,5 @@ juphon/dfpt_hsint.F90
 juphon/dfpt_hsmt.F90
 juphon/dfpt_tlmplm.F90
 juphon/dfpt_eigen_hssetup.F90
+juphon/matrix_pref.F90
 )
