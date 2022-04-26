@@ -17,6 +17,7 @@ q-loop:
                      - make vgen_coulomb take a second (imaginary part) and third
                        (unperturbed) density variable [--> SF elements; done]
                      - make the inner logic understand shifted stars and 2nd den [done(?)]
+                     - make sure the additional q is used explicitely!
                      - add a part constructing Vext1(l=1) instead of Vext(l=0) qlm [done]
                      - add SF qlm construction [done]
                      - make SF qlm construction sensitive to the case (V1: positive
@@ -34,7 +35,7 @@ q-loop:
                   - get the matrix elements of both H and V1 [done]
                   - correct the matrix elements of H:
                     We do not need a symmetrized form (0.5, 0.5) [done]
-                  - desymmetrized form for LO part [WIP]
+                  - desymmetrized form for LO part [done(?)]
                hssetup:
                   - get H1 and S1 matrices from the interstitial v1%pw_w [done]
                   - get H1 and S1 matrices from the MT td and tdV1 and enpara [sone]
@@ -42,17 +43,17 @@ q-loop:
                         - nonsph gives a full matrix as we need, but we need to teach
                           it to accept different matching coefficients for different
                           k left and right [done]
-                        - teach it ikG prefactors [WIP]
                      - use hsmt_nonsph for H-elements with perturbed matchings
-                        - manually add the necessary prefactors
+                        - teach it ikG prefactors [WIP; this is tricky]
+                        - manually add the necessary prefactors [WIP]
                      - use hsmt_sph for H/S-elements with perturbed matchings [done]
-                        - teach it to comprehend the prefactor
+                        - teach it to comprehend the prefactor [done]
                      - LO part (hlomat/slomat):
                         - put in ikG prefactor [done]
                         - add the missing parts of the rectangular matrix
-                           - bottom left rectangle [revision]
-                           - Full LO-LO section [revision]
-                           - Check the conjugations and usage of tuloulo!
+                           - bottom left rectangle [done; revision]
+                           - Full LO-LO section [done; revision]
+                           - Check the conjugations and usage of tuloulo! [done]
                Analytical Matrix inversion:
                   - write routine that inverts (Hkq-\epsilonk*Skq) in a spectral representation [done]
                z1-calculation:
