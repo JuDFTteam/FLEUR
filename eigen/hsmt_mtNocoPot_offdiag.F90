@@ -42,7 +42,7 @@ CONTAINS
 
     chi_one=1.0
     !The spin2,1 matrix is calculated(real part of potential)
-    CALL hsmt_nonsph(n,fmpi,sym,atoms,2,1,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,.FALSE.,1)
+    CALL hsmt_nonsph(n,fmpi,sym,atoms,2,1,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,ud,td,fjgj,n,1,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,.FALSE.)
     !call hmat_tmp%u2l()
     CALL hsmt_spinor(3,n,nococonv,chi) !spinor for off-diagonal part
@@ -56,7 +56,7 @@ CONTAINS
 
     !The spin1,2 matrix is calculated(imag part of potential)
     !chi_one=CMPLX(0.,1.)
-    CALL hsmt_nonsph(n,fmpi,sym,atoms,1,2,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,.FALSE.,1)
+    CALL hsmt_nonsph(n,fmpi,sym,atoms,1,2,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,ud,td,fjgj,n,1,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,.FALSE.)
     !call hmat_tmp%u2l()
 
