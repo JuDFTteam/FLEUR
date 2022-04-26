@@ -17,7 +17,7 @@ MODULE m_hlomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,iDir,chi,hmat,l_pref,l_fullj,lapwq)
+       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,lapwq)
     !
 #include"cpp_double.h"
     USE m_hsmt_ab
@@ -40,7 +40,7 @@ CONTAINS
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: na,ntyp,iDir
+    INTEGER, INTENT (IN) :: na,ntyp
     INTEGER, INTENT (IN) :: ilSpinPr,ilSpin !spin for usdus and tlmplm
     INTEGER, INTENT (IN) :: igSpin,igSpinPr
     COMPLEX, INTENT (IN) :: chi
@@ -49,7 +49,7 @@ CONTAINS
     REAL, INTENT (IN) :: alo1(:,:),blo1(:,:),clo1(:,:)
 
     CLASS(t_mat),INTENT (INOUT) :: hmat
-    LOGICAL, INTENT(IN) :: l_pref, l_fullj
+    LOGICAL, INTENT(IN) :: l_fullj
 
     TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
     !     ..
@@ -59,7 +59,6 @@ CONTAINS
       INTEGER :: mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo,mlolo_new,lolop_new
       INTEGER :: locol,lorow,n,k,ab_size,ab_size_Pr,s
       LOGICAL :: l_samelapw
-      COMPLEX :: pref(3)
 
       ! Local Arrays
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ax(:), bx(:), cx(:)
@@ -76,8 +75,6 @@ CONTAINS
       ELSE
          lapwPr = lapw
       END IF
-
-      pref  = CMPLX(1.0,0.0)
 
       ! Synthesize a and b
       ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))
@@ -192,14 +189,8 @@ CONTAINS
                        END DO
                      ELSE
                         DO kp = 1,lapwPr%nv(igSpinPr)
-                           IF (l_pref) THEN
-                              k  =   lapw%kvec(nkvec,lo,na)
-                              pref = ImagUnit * MATMUL( &
-                                 &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
-                                 & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
-                           END IF
                            hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
-                                               & + chi * invsfct * pref(iDir) * ( &
+                                               & + chi * invsfct * ( &
                                                & abclo(1,m,nkvec,lo) *  axPr(kp) + &
                                                & abclo(2,m,nkvec,lo) *  bxPr(kp) + &
                                                & abclo(3,m,nkvec,lo) *  cxPr(kp) )
@@ -251,14 +242,8 @@ CONTAINS
                      IF (MOD(lorow-1,fmpi%n_size) == fmpi%n_rank) THEN
                         lorow=(lorow-1)/fmpi%n_size+1
                            DO k = 1,lapw%nv(igSpin)
-                              IF (l_pref) THEN
-                                 kp   =  lapwPr%kvec(nkvec,lo,na)
-                                 pref = ImagUnit * MATMUL( &
-                                    &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
-                                    & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
-                              END IF
                               hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
-                                                  & + chi * invsfct * pref(iDir) * ( &
+                                                  & + chi * invsfct * ( &
                                                   & CONJG(abcloPr(1,m,nkvec,lo)) * ax(k) + &
                                                   & CONJG(abcloPr(2,m,nkvec,lo)) * bx(k) + &
                                                   & CONJG(abcloPr(3,m,nkvec,lo)) * cx(k) )
@@ -324,13 +309,7 @@ CONTAINS
                               cxx = tulou   * abclo(1,m,nkvec,lo) &
                                 & + tulod   * abclo(2,m,nkvec,lo) &
                                 & + tuloulo * abclo(3,m,nkvec,lo)
-                              IF (l_pref) THEN
-                                 kp = lapwPr%kvec(nkvecp,lo,na)
-                                 k  =   lapw%kvec(nkvec,lo,na)
-                                 pref = ImagUnit * MATMUL( &
-                                    &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
-                                    & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
-                              END IF
+
                               IF (hmat%l_real) THEN
                                  hmat%data_r(lorow,locol) = hmat%data_r(lorow,locol) &
                                                         & + REAL(chi) * invsfct * ( &
@@ -342,7 +321,7 @@ CONTAINS
                                                         & AIMAG(abcloPr(3,mp,nkvecp,lop))*AIMAG(cxx) )
                               ELSE
                                  hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) &
-                                                        & + chi * invsfct * pref(iDir) * ( &
+                                                        & + chi * ( &
                                                         & CONJG(abcloPr(1,mp,nkvecp,lop)) * axx + &
                                                         & CONJG(abcloPr(2,mp,nkvecp,lop)) * bxx + &
                                                         & CONJG(abcloPr(3,mp,nkvecp,lop)) * cxx )
@@ -387,13 +366,7 @@ CONTAINS
                            cxx = tulou   * abclo(1,m,nkvec,lo) &
                              & + tulod   * abclo(2,m,nkvec,lo) &
                              & + tuloulo * abclo(3,m,nkvec,lo)
-                           IF (l_pref) THEN
-                              kp = lapwPr%kvec(nkvecp,lo,na)
-                              k  =   lapw%kvec(nkvec,lo,na)
-                              pref = ImagUnit * MATMUL( &
-                                 &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
-                                 & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
-                           END IF
+
                            IF (hmat%l_real) THEN
                               hmat%data_r(lorow,locol) = hmat%data_r(lorow,locol) &
                                                      & + REAL(chi) * invsfct * ( &
@@ -405,7 +378,7 @@ CONTAINS
                                                      & AIMAG(abcloPr(3,mp,nkvecp,lo))*AIMAG(cxx) )
                            ELSE
                               hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) &
-                                                     & + chi * invsfct * pref(iDir) * ( &
+                                                     & + chi * invsfct * ( &
                                                      & CONJG(abcloPr(1,mp,nkvecp,lo))*axx + &
                                                      & CONJG(abcloPr(2,mp,nkvecp,lo))*bxx + &
                                                      & CONJG(abcloPr(3,mp,nkvecp,lo))*cxx )

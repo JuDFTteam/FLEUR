@@ -13,7 +13,7 @@ MODULE m_slomat
 CONTAINS
    SUBROUTINE slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
                      isp,ud, alo1,blo1,clo1,fjgj,&
-                     igSpinPr,igSpin,iDir,chi,smat,l_pref,l_fullj,lapwq)
+                     igSpinPr,igSpin,chi,smat,l_fullj,lapwq)
     !***********************************************************************
     ! locol stores the number of columns already processed; on parallel
     !       computers this decides, whether the LO-contribution is
@@ -39,7 +39,7 @@ CONTAINS
       TYPE(t_fjgj),INTENT(IN)   :: fjgj
 
       ! Scalar Arguments
-      INTEGER, INTENT (IN)      :: na,ntyp,iDir
+      INTEGER, INTENT (IN)      :: na,ntyp
       INTEGER, INTENT (IN)      :: igSpin,igSpinPr
       COMPLEX, INTENT (IN)      :: chi
       INTEGER, INTENT(IN)       :: isp
@@ -48,7 +48,7 @@ CONTAINS
       REAL,   INTENT (IN)       :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
       TYPE(t_usdus),INTENT(IN)  :: ud
       CLASS(t_mat),INTENT(INOUT) :: smat
-      LOGICAL, INTENT(IN) :: l_pref, l_fullj
+      LOGICAL, INTENT(IN) :: l_fullj
 
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
 
@@ -57,7 +57,6 @@ CONTAINS
       INTEGER :: invsfct,k ,l,lo,lop,lp,nkvec,nkvecp,kp,i
       INTEGER :: locol,lorow
       LOGICAL :: l_samelapw
-      COMPLEX :: pref(3)
 
       COMPLEX,   ALLOCATABLE  :: cphPr(:), cph(:)
 
@@ -83,8 +82,6 @@ CONTAINS
       ELSE
          CALL lapw%phase_factors(igSpin,atoms%taual(:,na),nococonv%qss,cph)
       END IF
-
-      pref = CMPLX(1.0,0.0)
 
       IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
          ! If this atom is the first of two atoms related by inversion, the
@@ -126,11 +123,7 @@ CONTAINS
                            & fjgj%gj(k,l,isp,igSpin)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
                                                   & + clo1(lo)*ud%dulon(lo,ntyp,isp)) )
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
-                     IF (l_pref) THEN
-                        pref = ImagUnit * MATMUL( &
-                           &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
-                           & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
-                     END IF
+
                      IF (smat%l_real) THEN
                         smat%data_r(lorow,k) = smat%data_r(kp,locol) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
@@ -138,7 +131,7 @@ CONTAINS
                      ELSE
                         smat%data_c(lorow,k) = smat%data_c(kp,locol) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
-                                            & * pref(iDir) * CONJG(cphPr(kp)) * cph(k)
+                                            & * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
                   !$acc end loop
@@ -157,11 +150,7 @@ CONTAINS
                            & fjgj%gj(kp,l,isp,igSpinPr)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
                                                      & + clo1(lo)*ud%dulon(lo,ntyp,isp)) )
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
-                     IF (l_pref) THEN
-                        pref = ImagUnit * MATMUL( &
-                           &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
-                           & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
-                     END IF
+
                      IF (smat%l_real) THEN
                         smat%data_r(kp,locol) = smat%data_r(kp,locol) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
@@ -169,7 +158,7 @@ CONTAINS
                      ELSE
                         smat%data_c(kp,locol) = smat%data_c(kp,locol) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
-                                            & * pref(iDir) * CONJG(cphPr(kp)) * cph(k)
+                                            & * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
                   !$acc end loop
@@ -191,11 +180,7 @@ CONTAINS
                            kp = lapwPr%kvec(nkvecp,lop,na)
                            lorow=lapwPr%nv(igSpinPr)+lapwPr%index_lo(lop,na)+nkvecp
                            dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
-                           IF (l_pref) THEN
-                              pref = ImagUnit * MATMUL( &
-                                 &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
-                                 & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
-                           END IF
+
                            IF (smat%l_real) THEN
                               smat%data_r(lorow,locol) = smat%data_r(lorow,locol) &
                                                      & + chi * invsfct * fact3 * legpol(atoms%llo(lo,ntyp),dotp) &
@@ -203,7 +188,7 @@ CONTAINS
                            ELSE
                               smat%data_c(lorow,locol) = smat%data_c(lorow,locol) &
                                                      & + chi * invsfct * fact3 * legpol(atoms%llo(lo,ntyp),dotp) &
-                                                     & * pref(iDir) * CONJG(cphPr(kp)) * cph(k)
+                                                     & * CONJG(cphPr(kp)) * cph(k)
                            END IF
                         END DO
                      END IF
@@ -215,11 +200,7 @@ CONTAINS
                      kp = lapwPr%kvec(nkvecp,lo,na)
                      lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvecp
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
-                     IF (l_pref) THEN
-                        pref = ImagUnit * MATMUL( &
-                           &   lapw%gvec(:,k,igSpin) + (2*igSpin-3)*nococonv%qss/2 + lapw%bkpt &
-                           & - lapwPr%gvec(:,kp,igSpinPr) - (2*igSpinPr-3)*nococonv%qss/2 - lapwPr%bkpt, cell%bmat)
-                     END IF
+
                      IF (smat%l_real) THEN
                         smat%data_r(lorow,locol) = smat%data_r(lorow,locol) &
                                                & + chi * invsfct * fact1 * legpol(l,dotp) &
@@ -227,7 +208,7 @@ CONTAINS
                      ELSE
                         smat%data_c(lorow,locol) = smat%data_c(lorow,locol) &
                                                & + chi * invsfct * fact1 * legpol(l,dotp) &
-                                               & * pref(iDir) * CONJG(cphPr(kp)) * cph(k)
+                                               & * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
                END IF ! mod(locol-1,n_size) = nrank
