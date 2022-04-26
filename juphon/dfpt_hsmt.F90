@@ -86,7 +86,7 @@ CONTAINS
           DO ilSpin=ilSpinPr,MERGE(2,isp,noco%l_noco)
                IF (.NOT.noco%l_noco) THEN
                   IF (n.EQ.iDtype) THEN
-                     CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat(1,1),hmat(1,1),.FALSE.,.TRUE.,cell%bmat,iDir,lapwq)
+                     CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat(1,1),hmat(1,1),.FALSE.,.TRUE.,lapwq)
                      CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat(1,1),.FALSE.,.TRUE.,iDir,lapwq)
                      CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,iDir,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(1,1),.FALSE.,.TRUE.,.TRUE.,smat(1,1),lapwq)
                   END IF
@@ -97,7 +97,7 @@ CONTAINS
                   IF (ilSpinPr==ilSpin) THEN !local spin-diagonal contribution
                      IF (n.EQ.iDtype) THEN
                         CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,.TRUE.,iDir,lapwq)
-                        CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat_tmp,hmat_tmp,.TRUE.,.TRUE.,cell%bmat,iDir,lapwq)
+                        CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat_tmp,hmat_tmp,.TRUE.,.TRUE.,lapwq)
                         CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,iDir,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.TRUE.,smat_tmp,lapwq)
                      END IF
                      CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,1,chi_one,noco,nococonv,cell,lapw,tdV1,fjgj,hmat_tmp,.FALSE.,.FALSE.,iDir,lapwq)

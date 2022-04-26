@@ -18,7 +18,7 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
-   SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,bmat,idir,lapwq)
+   SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq)
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
@@ -35,12 +35,11 @@ CONTAINS
       TYPE(t_fjgj),     INTENT(IN)    :: fjgj
       CLASS(t_mat),     INTENT(INOUT) :: smat, hmat
       LOGICAL,          INTENT(IN)    :: l_fullj, set0  !if true, initialize the smat matrix with zeros
-      REAL,             INTENT(IN)    :: bmat(3, 3)
 
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
 
       ! Scalar Arguments
-      INTEGER, INTENT(IN) :: n, isp, igSpinPr, igSpin, idir
+      INTEGER, INTENT(IN) :: n, isp, igSpinPr, igSpin
       COMPLEX, INTENT(IN) :: chi
 
       ! Array Arguments
@@ -63,7 +62,6 @@ CONTAINS
       REAL :: dot, fct, fct2
 
       COMPLEX :: cfac
-      COMPLEX :: pref(3)
 
       LOGICAL :: l_samelapw
 
@@ -87,7 +85,7 @@ CONTAINS
       qssAdd   = MERGE(-nococonv%qss/2, +nococonv%qss/2,   igSpin.EQ.1)
       qssAddPr = MERGE(-nococonv%qss/2, +nococonv%qss/2, igSpinPr.EQ.1)
       !$acc  data &
-      !$acc&   copyin(igSpin,igSpinPr,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssAdd,qssAddPr,l_fullj,bmat,idir)&
+      !$acc&   copyin(igSpin,igSpinPr,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssAdd,qssAddPr,l_fullj)&
       !$acc&   copyin(lapw,lapwPr,atoms,fmpi,input,usdus)&
       !$acc&   copyin(lapw%nv,lapw%gvec,lapw%gk,lapwPr%nv,lapwPr%gvec,lapwPr%gk,lapw%bkpt,lapwPr%bkpt)&
       !$acc&   copyin(atoms%lmax,atoms%rmt,atoms%lnonsph,atoms%neq,atoms%taual)&
@@ -101,7 +99,7 @@ CONTAINS
       !$acc loop gang
       DO ikG =  fmpi%n_rank+1, lapw%nv(igSpin), fmpi%n_size
          !$acc loop  vector independent&
-         !$acc &    PRIVATE(ikGPr,ikG0,ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,cfac,pref,dot)
+         !$acc &    PRIVATE(ikGPr,ikG0,ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,cfac,dot)
          DO  ikGPr = 1, MERGE(lapwPr%nv(igSpinPr),MIN(ikG,lapwPr%nv(igSpinPr)),l_fullj)
             ikG0 = (ikG-1)/fmpi%n_size + 1
             ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:) + lapw%bkpt
@@ -171,11 +169,11 @@ CONTAINS
             END DO ! nn
 
             cfac = CMPLX(cph_re,cph_im)
-            ! Prefactor: i * (k + G + qssAdd - k' - G' - qssAdd')
-            IF (l_fullj) THEN
-               pref = ImagUnit * MATMUL(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, bmat)
-               cfac = pref(idir) * cfac
-            END IF
+!            ! Prefactor: i * (k + G + qssAdd - k' - G' - qssAdd')
+!            IF (l_fullj) THEN
+!               pref = ImagUnit * MATMUL(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, bmat)
+!               cfac = pref(idir) * cfac
+!            END IF
 
             IF (smat%l_real) THEN
                IF (set0) THEN
@@ -209,7 +207,7 @@ CONTAINS
       RETURN
    END SUBROUTINE hsmt_sph_acc
 
-   SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,bmat,idir,lapwq)
+   SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq)
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
@@ -226,12 +224,11 @@ CONTAINS
       TYPE(t_fjgj),     INTENT(IN)    :: fjgj
       CLASS(t_mat),     INTENT(INOUT) :: smat, hmat
       LOGICAL,          INTENT(IN)    :: l_fullj, set0  !if true, initialize the smat matrix with zeros
-      REAL,             INTENT(IN)    :: bmat(3, 3)
 
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
 
       ! Scalar Arguments
-      INTEGER, INTENT(IN) :: n, isp, igSpinPr, igSpin, idir
+      INTEGER, INTENT(IN) :: n, isp, igSpinPr, igSpin
       COMPLEX, INTENT(IN) :: chi
 
       ! Array Arguments
@@ -258,7 +255,7 @@ CONTAINS
       REAL, ALLOCATABLE :: cph_re(:), cph_im(:)
       REAL, ALLOCATABLE :: dot(:), fct(:), fct2(:)
 
-      COMPLEX, ALLOCATABLE :: cfac(:), pref(:,:)
+      COMPLEX, ALLOCATABLE :: cfac(:)
 
       INTEGER, PARAMETER :: NVEC = 128
 
@@ -281,13 +278,13 @@ CONTAINS
 
       !$OMP     PARALLEL DEFAULT(NONE)&
       !$OMP     SHARED(lapw,lapwPr,atoms,nococonv,fmpi,input,usdus,smat,hmat)&
-      !$OMP     SHARED(igSpin,igSpinPr,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi,set0,l_fullj,bmat,idir)&
+      !$OMP     SHARED(igSpin,igSpinPr,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi,set0,l_fullj)&
       !$OMP     PRIVATE(ikG0,ikG,ski,ikGPr,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssAdd,qssAddPr,fct2)&
-      !$OMP     PRIVATE(cph_re,cph_im,cfac,dot,pref,nn,tnn,fjkiln,gjkiln)&
+      !$OMP     PRIVATE(cph_re,cph_im,cfac,dot,nn,tnn,fjkiln,gjkiln)&
       !$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
       !$OMP     PRIVATE(VecHelpS,VecHelpH,NVEC_rem)
       ALLOCATE(cph_re(NVEC),cph_im(NVEC),cfac(NVEC))
-      ALLOCATE(dot(NVEC),pref(NVEC,3),fct(NVEC),fct2(NVEC))
+      ALLOCATE(dot(NVEC),fct(NVEC),fct2(NVEC))
       ALLOCATE(plegend(NVEC,0:2))
       ALLOCATE(xlegend(NVEC))
       ALLOCATE(VecHelpS(NVEC),VecHelpH(NVEC))
@@ -367,15 +364,15 @@ CONTAINS
                DO jv = 0, NVEC_rem-1
                   ikGPr = jv + kj_off
                   dot(jv+1) = DOT_PRODUCT(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, tnn(1:3))
-                  pref(jv+1,1:3) = ImagUnit * MATMUL(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, bmat)
+                  !pref(jv+1,1:3) = ImagUnit * MATMUL(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, bmat)
                END DO ! ikGPr
                cph_re(:NVEC_REM) = cph_re(:NVEC_REM) + COS(dot(:NVEC_REM))
                cph_im(:NVEC_REM) = cph_im(:NVEC_REM) + SIN(dot(:NVEC_REM))
                cfac(:NVEC_REM) = CMPLX(cph_re(:NVEC_REM),cph_im(:NVEC_REM))
-               ! Prefactor: i * (k + G + qssAdd - k' - G' - qssAdd')
-               IF (l_fullj) THEN
-                  cfac(:NVEC_REM) = pref(:NVEC_REM, idir) * cfac(:NVEC_REM)
-               END IF
+!               ! Prefactor: i * (k + G + qssAdd - k' - G' - qssAdd')
+!               IF (l_fullj) THEN
+!                  cfac(:NVEC_REM) = pref(:NVEC_REM, idir) * cfac(:NVEC_REM)
+!               END IF
                ! IF (igSpinPr.NE.igSpin) cph_im=-cph_im
             END DO ! nn
 
