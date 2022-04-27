@@ -11,23 +11,30 @@ MODULE m_hsmt_ab
 CONTAINS
 
    SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
-      ! Construct the matching coefficients of the form
-      ! a_{l,m,order}^{\mu,\bm{G}}(\bm{k}) = e^{i \bm{K}\cdot\bm{\tau}_{\mu}} *
-      !                                      (Y_{l}^{m}(R^{\mu}\bm{K}))^{*} *
-      !                                      fjgj
-      ! with \bm{K} = \bm{k + G + \pm q/2}
-      !
-      ! This translates to (e.g. order = 1 == acof):
-      ! fjgj = \frac{4\pi}{\sqrt{\Omega}W} * (udot_{l}(R_{\alpha}) * K * j_{l})^{'}(K R_{\alpha})
-      !                                    -  udot_{l}^{'}(R_{\alpha}) * j_{l})(K R_{\alpha})
-      ! abCoeffs(lm, k)                    = c_ph(k,igSpin) *
-      !                                      CONJG(ylm(lm, k)) *
-      !                                      fjgj%fj(k,l,ilSpin,igSpin)
-      ! A necessary factor i**l is omitted here and instead calculated where
-      ! the coefficients are used.
-      ! Also, fjgj carry information of the global and local spins \sigma_{g}
-      ! and \sigma{\alpha} through a K prefactor [\pm q in K] and the u[dot]
-      ! respectively. The former also appears in the complex phase factor.
+      !> Construct the matching coefficients of the form
+      !! \f{eqnarray*}{
+      !! a_{l,m,p}^{\mu,\bm{G}}(\bm{k}) &=& e^{i \bm{K}\cdot\bm{\tau}_{\mu}}\\
+      !!                                    &*& (Y_{l}^{m}(R^{\mu}\bm{K}))^{*}
+      !!                                    &*& f_{l,p}^{\alpha}(K)
+      !! \f}
+      !! with \f$\bm{K} = \bm{k + G \pm q/2}\f$
+      !!
+      !! For example, for p = 0 == acof this translates to:
+      !! \f{eqnarray*}{
+      !! f_{l,0}^{\alpha}(K) &=& \frac{4\pi}{\sqrt{\Omega}W}\\
+      !!                     &*& (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})\\
+      !!                     &-&  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))
+      !! \f}
+      !! And in the actual code into:
+      !! abCoeffs(lm, k)                    = c_ph(k,igSpin) *
+      !!                                      CONJG(ylm(lm, k)) *
+      !!                                      fjgj%fj(k,l,ilSpin,igSpin)
+      !! A factor of \f$i^l\f$ is omitted here and instead calculated where
+      !! the coefficients are used.
+      !! Also, \f$f_{l,p}^{\alpha}(K)\f$ carries information about the global and
+      !! local spins \sigma_{g} and \sigma{\alpha} through the K prefactor
+      !! [\f$\pm q\f$ in K] and the \f$u/\overset{.}{u}\f$
+      !! respectively. The former also appears in the complex phase factor.
       USE m_constants, ONLY : fpi_const,tpi_const
       USE m_types
       USE m_ylm
@@ -53,8 +60,7 @@ CONTAINS
       REAL,    INTENT(IN),    OPTIONAL :: alo1(:), blo1(:), clo1(:)
 
       INTEGER :: np, k, l, ll1, m, lmax, nkvec, lo, lm, invsfct, lmMin, lmMax, ierr
-      COMPLEX :: term
-      REAL    :: bmrot(3, 3)
+      REAL    :: term, bmrot(3, 3)
       COMPLEX :: c_ph(MAXVAL(lapw%nv), MERGE(2, 1, noco%l_ss.OR.ANY(noco%l_unrestrictMT) &
                                                           & .OR.ANY(noco%l_spinoffd_ldau)))
       LOGICAL :: l_apw, l_abclo
@@ -117,7 +123,7 @@ CONTAINS
          IF (l_abclo) THEN
             ! Determine also the abc coeffs for LOs
             invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
-            term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,igSpin)
+            term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
             !!$acc loop vector private(lo,l,nkvec,ll1,m,lm)
             DO lo = 1,atoms%nlo(n)
                l = atoms%llo(lo,n)
@@ -126,9 +132,9 @@ CONTAINS
                      ll1 = l*(l+1) + 1
                      DO m = -l,l
                         lm = ll1 + m
-                        abclo(1,m+atoms%llod+1,nkvec,lo) = term*CONJG(ylm(lm,k))*alo1(lo)
-                        abclo(2,m+atoms%llod+1,nkvec,lo) = term*CONJG(ylm(lm,k))*blo1(lo)
-                        abclo(3,m+atoms%llod+1,nkvec,lo) = term*CONJG(ylm(lm,k))*clo1(lo)
+                        abclo(1,m+atoms%llod+1,nkvec,lo) = term*c_ph(k,igSpin)*CONJG(ylm(lm,k))*alo1(lo)
+                        abclo(2,m+atoms%llod+1,nkvec,lo) = term*c_ph(k,igSpin)*CONJG(ylm(lm,k))*blo1(lo)
+                        abclo(3,m+atoms%llod+1,nkvec,lo) = term*c_ph(k,igSpin)*CONJG(ylm(lm,k))*clo1(lo)
                      END DO
                   END IF
                END DO

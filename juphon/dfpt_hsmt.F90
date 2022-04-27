@@ -11,6 +11,7 @@ MODULE m_dfpt_hsmt
 CONTAINS
    SUBROUTINE dfpt_hsmt(atoms, sym, enpara, iSpin, iDir, iDtype, input, fmpi, &
                       & noco, nococonv, cell, lapw, lapwq, usdus, td, tdV1, hmat, smat)
+                      
       !> Setup of the MT part of the Hamiltonian and the overlap perturbation matrices
       !! Adapted from hsmt()
       !!
@@ -27,11 +28,11 @@ CONTAINS
       !! in hsmt().
       !!
       !! DFPT-specific variables:
-      !! td, tdV1 - Local matrix elements for the unperturbed Hamiltonian and
+      !! - td, tdV1: Local matrix elements for the unperturbed Hamiltonian and
       !! the perturbed potential respectively.
-      !! lapwq - Set of LAPW basis vectors shifted by q.
-      !! iDir - Displacement direction.
-      !! iDtype - Type of the displaced atom.
+      !! - lapwq: Set of LAPW basis vectors shifted by q.
+      !! - iDir: Displacement direction.
+      !! - iDtype: Type of the displaced atom.
 
       USE m_types
       USE m_types_mpimat
