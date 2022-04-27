@@ -7,7 +7,7 @@
 MODULE m_matrix_pref
 CONTAINS
    SUBROUTINE matrix_pref(fmpi, bmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, &
-                          & iDir, l_smat, hmat_tmp, smat_tmp, hmat, smat)
+                          & iDir, hmat_tmp, smat_tmp, hmat, smat)
       ! Calculates matrix elements of the form
       ! <\phi_{k'G'}|M|\phi_{kG}>
       ! for different use cases in the DFT/DFPT scf loop and operators M.
@@ -39,7 +39,6 @@ CONTAINS
       INTEGER,       INTENT(IN)    :: gvecPr(:, :), gvec(:, :)
       REAL,          INTENT(IN)    :: kvecPr(3), kvec(3)
       INTEGER,       INTENT(IN)    :: nvPr, nv, iDir
-      LOGICAL,       INTENT(IN)    :: l_smat
 
       CLASS(t_mat),  INTENT(IN)    :: hmat_tmp, smat_tmp
       CLASS(t_mat),  INTENT(INOUT) :: hmat, smat
@@ -49,7 +48,7 @@ CONTAINS
 
       !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
       !$OMP SHARED(fmpi, bmat, gvecPr, gvec, kvecPr, kvec) &
-      !$OMP SHARED(nvPr, nv, iDir, l_smat, hmat_tmp, smat_tmp, hmat, smat) &
+      !$OMP SHARED(nvPr, nv, iDir, hmat_tmp, smat_tmp, hmat, smat) &
       !$OMP PRIVATE(ikGPr, ikG, ikG0, pref)
       DO ikG = fmpi%n_rank + 1, nv, fmpi%n_size
          ikG0 = (ikG-1) / fmpi%n_size + 1
@@ -60,10 +59,8 @@ CONTAINS
 
             hmat%data_c(ikGPr, ikG0) = hmat%data_c(ikGPr, ikG0) &
                                    & + pref(iDir) * hmat_tmp%data_c(ikGPr, ikG0)
-            IF (l_smat) THEN
-               smat%data_c(ikGPr, ikG0) = smat%data_c(ikGPr, ikG0) &
-                                      & + pref(iDir) * smat_tmp%data_c(ikGPr, ikG0)
-            END IF
+            smat%data_c(ikGPr, ikG0) = smat%data_c(ikGPr, ikG0) &
+                                   & + pref(iDir) * smat_tmp%data_c(ikGPr, ikG0)
          END DO
       END DO
       !$OMP END PARALLEL DO
