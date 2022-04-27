@@ -13,7 +13,7 @@ CONTAINS
       USE m_types_gpumat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
-      USE m_eigen_redist_matrix
+      USE m_dfpt_eigen_redist_matrix
       USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
 
       IMPLICIT NONE
@@ -78,10 +78,10 @@ CONTAINS
       ! In the parallel case also a redistribution happens
       ALLOCATE (smat_final, mold=smat(1, 1))
       ALLOCATE (hmat_final, mold=smat(1, 1))
-      ! TODO: This is not that trivial for DFPT.
+
       CALL timestart("Matrix redistribution")
-      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat, smat_final)
-      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat, hmat_final, smat_final)
+      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, smat, smat_final)
+      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, hmat, hmat_final, smat_final)
       CALL timestop("Matrix redistribution")
 
    END SUBROUTINE dfpt_eigen_hssetup
