@@ -22,7 +22,7 @@ MODULE m_dfpt
 
 CONTAINS
     SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                  & rho, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0_inp, oldmode, xcpot)
+                  & rho, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0_inp, oldmode, xcpot, hybdat)
 
         TYPE(t_fleurinput), INTENT(IN)  :: fi
         TYPE(t_sphhar),   INTENT(IN)  :: sphhar
@@ -39,9 +39,10 @@ CONTAINS
         ! New input:
         LOGICAL, INTENT(IN)        :: oldmode
         CLASS(t_xcpot), INTENT(IN) :: xcpot
+        TYPE(t_hybdat), INTENT(IN) :: hybdat
 
         TYPE(t_usdus)                 :: usdus
-        TYPE(t_potden)                :: vTotclean, rhoclean
+        TYPE(t_potden)                :: vTotclean, rhoclean, grRho
         TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
         type(t_tlmplm)                :: tdHS0
 
@@ -170,8 +171,14 @@ CONTAINS
                      & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                      & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                      & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-                     & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean, oldmode, xcpot)
+                     & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean, oldmode, xcpot, grRho)
         CALL timestop("juPhon DFPT initialization")
+
+        IF (fi%juPhon%l_jpTest) THEN
+            ! This function will be used to run (parts of) the test suite for
+            ! OG juPhon, as provided by CRG.
+            CALL dfpt_test(fi, sphhar, stars, fmpi, rho, grRho, rho0, grRho0, xcpot, ngdp, recG, grVxcIRKern, ylm, dKernMTGPts, gausWts, hybdat)
+        END IF
         ! < Imagine starting a q-grid-loop here. >
         ! < For now we just select one q-point from the input. >
 
@@ -208,12 +215,6 @@ CONTAINS
         CALL timestart("juPhon DFPT frequency calculation")
         CALL CalculateFrequencies(fi%atoms, fi%juPhon%singleQpt, eigenVals, eigenFreqs)
         CALL timestop("juPhon DFPT frequency calculation")
-
-        IF (fi%juPhon%l_jpTest) THEN
-            ! This function will be used to run (parts of) the test suite for
-            ! OG juPhon, as provided by CRG.
-            CALL dfpt_test()
-        END IF
 
         ! This is where the magic happens. The Sternheimer equation is solved
         ! iteratively, providing the scf part of dfpt calculations.

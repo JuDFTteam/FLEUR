@@ -53,7 +53,7 @@ CONTAINS
       !$OMP SHARED(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec) &
       !$OMP SHARED(nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat) &
       !$OMP PRIVATE(ikGPr, ikG, ikG0, gPrG, gInd, th, ts, phase, bvecPr, bvec, r2)
-      DO  ikG = fmpi%n_rank + 1, nv, fmpi%n_size
+      DO ikG = fmpi%n_rank + 1, nv, fmpi%n_size
          ikG0 = (ikG-1) / fmpi%n_size + 1
          DO  ikGPr = 1, MERGE(nvPr, MIN(ikG, nvPr), l_fullj)
             gPrG = fact * (gvecPr(:, ikGPr) - gvec(:, ikG))
@@ -94,8 +94,8 @@ CONTAINS
                hmat%data_r(ikGPr, ikG0) = REAL(th)
                smat%data_r(ikGPr, ikG0) = REAL(ts)
             ELSE
-               hmat%data_c(ikGPr, ikG0) = th ! This corresponds to the
-               smat%data_c(ikGPr, ikG0) = ts ! conjugation in eigen.
+               hmat%data_c(ikGPr, ikG0) = th
+               smat%data_c(ikGPr, ikG0) = ts
             END IF
          END DO
       END DO

@@ -16,7 +16,7 @@ MODULE m_hsmt_lo
   PRIVATE
   PUBLIC hsmt_lo
 CONTAINS
-  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,Smat)
+  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,Smat,lapwq)
     USE m_hlomat
     USE m_slomat
     USE m_setabc1lo
@@ -35,7 +35,8 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)    :: ud
     TYPE(t_tlmplm),INTENT(IN)   :: tlmplm
     TYPE(t_fjgj),INTENT(IN)     :: fjgj
-    LOGICAL,INTENT(IN)          :: set0  !if true, initialize the LO-part of the matrices with zeros
+    LOGICAL,INTENT(IN)          :: l_fullj, set0  !if true, initialize the LO-part of the matrices with zeros
+    TYPE(t_lapw),OPTIONAL,INTENT(IN) :: lapwq
 
     CLASS(t_mat),INTENT(INOUT)::hmat
     CLASS(t_mat),INTENT(INOUT),OPTIONAL::smat
@@ -119,14 +120,25 @@ CONTAINS
              !--->       hamiltonian matrix, if they are used for this atom.
 
                IF (ilSpinPr==ilSpin) THEN
-                  IF (.NOT.PRESENT(smat)) CALL judft_error("Bug in hsmt_lo, called without smat")
-                  CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
-                     ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
-                     igSpinPr,igSpin,chi,smat)
+                  IF (.NOT.PRESENT(smat).AND..NOT.PRESENT(lapwq)) CALL judft_error("Bug in hsmt_lo, called without smat")
+                  IF (PRESENT(lapwq)) THEN
+                     CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
+                        ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
+                        igSpinPr,igSpin,chi,smat,l_fullj,lapwq)
+                  ELSE
+                     CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
+                        ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
+                        igSpinPr,igSpin,chi,smat,l_fullj)
+                  END IF
                END IF
                CALL timestart("hlomat")
-               CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-                  n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat)
+               IF (PRESENT(lapwq)) THEN
+                  CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
+                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,lapwq)
+               ELSE
+                  CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
+                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj)
+               END IF
                CALL timestop("hlomat")
             END IF
          END IF

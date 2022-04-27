@@ -134,7 +134,7 @@ CONTAINS
          IF (PRESENT(real_data_ptr)) THEN
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, real_data_ptr, (/length/type_size/))
-            call judft_error("hmm fuck")
+            call judft_error("hmm damn")
 #else
             ! In the following allocate a too large length may lead to a segmentation fault in the allocate statement
             ! with before being able to return of an error code.

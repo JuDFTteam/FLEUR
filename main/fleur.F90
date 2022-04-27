@@ -470,7 +470,7 @@ CONTAINS
 
             IF (fi%juPhon%l_dfpt) THEN
                 CALL timestart("juPhon DFPT")
-                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0, .TRUE., xcpot)
+                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0, .TRUE., xcpot, hybdat)
                 CALL timestop("juPhon DFPT")
             END IF
 

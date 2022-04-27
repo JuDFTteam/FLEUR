@@ -86,9 +86,9 @@ CONTAINS
               !This is for collinear calculations: the (1,1) element of the matrices is all
               !that is needed and allocated
 
-              CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat(1,1),hmat(1,1),.FALSE.,.FALSE.,cell%bmat,1)
+              CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat(1,1),hmat(1,1),.FALSE.,.FALSE.)
               CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat(1,1),.FALSE.)
-              CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(1,1),.FALSE.,smat(1,1))
+              CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(1,1),.FALSE.,.FALSE.,smat=smat(1,1))
             ELSEIF(noco%l_noco.AND..NOT.noco%l_ss) THEN
               !The NOCO but non-spinspiral setup follows:
               !The Matrix-elements are first calculated in the local frame of the atom and
@@ -98,9 +98,9 @@ CONTAINS
                 !initialize the non-LO part of hmat_tmp matrix with zeros
                 CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
                 !initialize the smat_tmp matrix with zeros
-                CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat_tmp,hmat_tmp,.TRUE.,.FALSE.,cell%bmat,1)
+                CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat_tmp,hmat_tmp,.TRUE.,.FALSE.)
                 !initialize the LO part of the matrices with zeros
-                CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat_tmp,.TRUE.,smat_tmp)
+                CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,smat=smat_tmp)
                 CALL hsmt_spinor(ilSpinPr,n,nococonv,chi)
                 CALL timestart("hsmt_distspins")
                 CALL hsmt_distspins(chi,smat_tmp,smat)
@@ -121,11 +121,11 @@ CONTAINS
                 DO igSpin=1,2
                   IF (ilSpinPr==ilSpin) THEN !local diagonal spin
                     CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,igSpinPr,igSpin,chi(igSpinPr,igSpin),&
-                    lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat(igSpinPr,igSpin),hmat(igSpinPr,igSpin),.FALSE.,.FALSE.,cell%bmat,1)
+                    lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat(igSpinPr,igSpin),hmat(igSpinPr,igSpin),.FALSE.,.FALSE.)
                     CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,igSpinPr,igSpin,chi(igSpinPr,igSpin),noco,nococonv,cell,&
                     lapw,td,fjgj,hmat(igSpinPr,igSpin),.FALSE.)
                     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,&
-                    n,chi(igSpinPr,igSpin),ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(igSpinPr,igSpin),.FALSE.,smat(igSpinPr,igSpin))
+                    n,chi(igSpinPr,igSpin),ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(igSpinPr,igSpin),.FALSE.,.FALSE.,smat=smat(igSpinPr,igSpin))
                   ELSE
                     IF (any(noco%l_unrestrictMT).OR.noco%l_spinoffd_ldau(n)) call hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,igSpinPr,igSpin,hmat_tmp,hmat)
                     IF (any(noco%l_constrained)) CALL hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat)
