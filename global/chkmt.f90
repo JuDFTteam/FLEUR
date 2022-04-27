@@ -424,6 +424,7 @@ MODULE m_chkmt
                   error = .TRUE.
                   IF (PRESENT(overlap)) overlap(i,k)=atoms%rmt(i)+atoms%rmt(k)-nearestNeighborDists(j,i)
                   WRITE(oUnit,240) i,k,nearestNeighborDists(j,i),atoms%rmt(i),atoms%rmt(k)
+                  IF (.NOT.PRESENT(overlap)) CALL juDFT_error("Overlapping MT-radii of two neighbours detected.",calledby ="chkmt")
                END IF
             END DO
             IF (input%film) THEN
@@ -444,6 +445,7 @@ MODULE m_chkmt
                         WRITE(oUnit,241) i ,na
                         IF (PRESENT(overlap)) overlap(0,i)=MAX(atoms%pos(3,iAtom)+atoms%rmt(i)-vacuum%dvac/2.,atoms%pos(3,iAtom)-atoms%rmt(i)+vacuum%dvac/2.)
                         WRITE(oUnit,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
+                        IF (.NOT.PRESENT(overlap)) CALL juDFT_error("MT is partly inside the vacuum.",calledby ="chkmt")
                      ENDIF
                   ENDIF
                END DO
