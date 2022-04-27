@@ -23,7 +23,7 @@ CONTAINS
       !! \f{eqnarray*}{
       !! f_{l,0}^{\alpha}(K) &=& \frac{4\pi}{\sqrt{\Omega}W}\\
       !!                     &*& (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})\\
-      !!                     &-&  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))
+      !!                     &-&  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))\\
       !! \f}
       !! And in the actual code into:
       !! abCoeffs(lm, k)                    = c_ph(k,igSpin) *
