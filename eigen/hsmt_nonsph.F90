@@ -46,6 +46,7 @@ CONTAINS
 
       INTEGER :: nn, na, ab_size, l, ll, size_ab_select
       INTEGER :: size_data_c, size_ab, size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
+      INTEGER :: ikGPr, ikG
       REAL    :: rchi
       COMPLEX :: cchi
       LOGICAL :: l_samelapw

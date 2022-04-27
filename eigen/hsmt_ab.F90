@@ -20,8 +20,8 @@ CONTAINS
       ! This translates to (e.g. order = 1 == acof):
       ! fjgj = \frac{4\pi}{\sqrt{\Omega}W} * (udot_{l}(R_{\alpha}) * K * j_{l})^{'}(K R_{\alpha})
       !                                    -  udot_{l}^{'}(R_{\alpha}) * j_{l})(K R_{\alpha})
-      ! abCoeffs(lm, k)                    = CONJG(c_ph(k,igSpin)) *
-      !                                      ylm(lm, k) *
+      ! abCoeffs(lm, k)                    = c_ph(k,igSpin) *
+      !                                      CONJG(ylm(lm, k)) *
       !                                      fjgj%fj(k,l,ilSpin,igSpin)
       ! A necessary factor i**l is omitted here and instead calculated where
       ! the coefficients are used.

@@ -21,7 +21,7 @@ CONTAINS
                        & grRho0, vTot0, grVTot0, ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                        & uuilonout, duilonout, ulouilopnout, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                        & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetdout, nocc, rhoclean, oldmode, xcpot)
+                       & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetdout, nocc, rhoclean, oldmode, xcpot, grRho)
 
         USE m_jpGrVeff0, ONLY : GenGrVeff0
         USE m_npy
@@ -45,6 +45,7 @@ CONTAINS
 
         TYPE(t_usdus),    INTENT(OUT) :: usdus
         TYPE(t_jpPotden), INTENT(OUT) :: rho0, grRho0, vTot0, grVTot0
+        TYPE(t_potden),   INTENT(OUT)  :: grRho
 
         INTEGER,          INTENT(OUT) :: ngdp
 
@@ -94,7 +95,7 @@ CONTAINS
         TYPE(t_cdnvalJob) :: cdnvaljob
 
         INTEGER      :: nG, nSpins, nbasfcn, iSpin, ik, iG, indexG, ifind, nk, iType, ilo, l_lo, oqn_l, iGrid, iOrd
-        INTEGER      :: nodeu, noded
+        INTEGER      :: nodeu, noded, xInd, yInd, zInd, iStar
         LOGICAL      :: l_real, addG, harSw, extSw, xcSw, testGoldstein, grRhoTermSw
         REAL         :: bkpt(3), wronk
 
@@ -402,6 +403,20 @@ CONTAINS
         !CALL mt_gradient(input%jspins, atoms, juPhon%jplPlus, vTot0%mt, grVTot0%mt)
         call mt_gradient_old(atoms, sphhar, sym, sphhar%clnu, sphhar%nmem, sphhar%mlh, rho%mt(:, :, :, 1), grRho0%mt(:, :, :, 1, 1, :) )
 
+        CALL grRho%copyPotDen(rho)
+        CALL grRho%resetPotDen()
+
+        DO zInd = -stars%mx3, stars%mx3
+           DO yInd = -stars%mx2, stars%mx2
+              DO xInd = -stars%mx1, stars%mx1
+                 iStar = stars%ig(xInd, yInd, zInd)
+                 IF (iStar.EQ.0) CYCLE
+                 !IF (stars%sk3(iStar).GT.stars%gmax) CYCLE
+                 grRho%pw(iStar,:) = rho%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),cell%bmat)))
+              END DO
+           END DO
+        END DO
+
         ! Gradient of external unperturbed potential without terms canceling in the Sternheimer SCC with the linear variation of the
         ! external potential; see documentation of GenGrVeff0 for details. Required for 1st Sternheimer SCC iteration.
         harSw = .false.
@@ -617,7 +632,7 @@ CONTAINS
 
     END SUBROUTINE lh_to_sh
 
-    SUBROUTINE sh_to_lh(sym, atoms, sphhar, jspins, rhosh, rholhreal, rholhimag)
+    SUBROUTINE sh_to_lh(sym, atoms, sphhar, jspins, radfact, rhosh, rholhreal, rholhimag)
 
         ! WARNING: This routine will not fold back correctly for activated sym-
         !          metry and gradients (rho in l=0 and lattice harmonics do not
@@ -626,12 +641,13 @@ CONTAINS
         TYPE(t_sym),    INTENT(IN)  :: sym
         TYPE(t_atoms),  INTENT(IN)  :: atoms
         TYPE(t_sphhar), INTENT(IN)  :: sphhar
-        INTEGER,        INTENT(IN)  :: jspins
+        INTEGER,        INTENT(IN)  :: jspins, radfact
         COMPLEX,        INTENT(IN)  :: rhosh(:, :, :, :)
         REAL,           INTENT(OUT) :: rholhreal(:, 0:, :, :), rholhimag(:, 0:, :, :)
 
         INTEGER :: iSpin, iType, iEqat, iAtom, ilh, iMem, ilm, iR
         INTEGER :: ptsym, l, m
+        REAL    :: factor
 
         rholhreal = 0.0
         rholhimag = 0.0
@@ -646,12 +662,19 @@ CONTAINS
                         m = sphhar%mlh(iMem, ilh, ptsym)
                         ilm = l * (l+1) + m + 1
                         DO iR = 1, atoms%jri(iType)
+                           IF ((radfact.EQ.0).AND.(l.EQ.0)) THEN
+                               factor = atoms%rmsh(iR, iType) / sfp_const
+                           ELSE IF (radfact.EQ.2) THEN
+                               factor = atoms%rmsh(iR, iType)**2
+                           ELSE
+                               factor = 1.0
+                           END IF
                             rholhreal(iR, ilh, iType, iSpin) = &
                           & rholhreal(iR, ilh, iType, iSpin) + &
-                          &  real(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym)))
+                          &  real(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym))) * factor
                             rholhimag(iR, ilh, iType, iSpin) = &
                           & rholhimag(iR, ilh, iType, iSpin) + &
-                          & aimag(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym)))
+                          & aimag(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym))) * factor
                         END DO
                     END DO
                 END DO

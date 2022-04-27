@@ -58,7 +58,9 @@ CONTAINS
 
       l_libxc=.FALSE.
 
+      IF (ALLOCATED(vTotim%pw)) DEALLOCATE(vTotim%pw)
       ALLOCATE(vTotim%pw,mold=vTot%pw)
+      vTotim%pw = CMPLX(0.0,0.0)
 
       call timestart("init_pw_grid")
       CALL init_pw_grid(stars,sym,cell,xcpot)

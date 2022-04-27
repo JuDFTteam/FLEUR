@@ -77,7 +77,7 @@ contains
     ! multipole moments of the interstitial charge density in the spheres
     call pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw(:), potdenType, qlmp )
     IF (l_dfptvgen) THEN
-      CALL dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw(:), qlmp_SF )
+      CALL dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw0(:), qlmp_SF )
       qlmp = qlmp + qlmp_SF
     END IF
 
@@ -318,15 +318,18 @@ contains
       TYPE(t_sym),    INTENT(IN)    :: sym
       TYPE(t_sphhar), INTENT(IN)    :: sphhar
       INTEGER,        INTENT(IN)    :: iDtype, iDir
-      REAL,           INTENT(IN)    :: rho0(:, :, :)
-      COMPLEX,        INTENT(INOUT) :: qlmo(:, :, :)
+      REAL,           INTENT(IN)    :: rho0(:, 0:, :)
+      COMPLEX,        INTENT(INOUT) :: qlmo(-atoms%lmaxd:,0:, :)
 
       INTEGER :: mb, n, nat, nl, ns, jm, l, lp, m, mp, mVec, pref
       REAL    :: fint, gauntFactor
 
       nat = 1
       pref = -1
-      IF (iDtype.NE.0) nat = SUM(atoms%neq(:iDtype-1)); pref = 1
+      IF (iDtype.NE.0) THEN
+         nat = SUM(atoms%neq(:iDtype-1))
+         pref = 1
+      END IF
 
       DO n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
          ns = sym%ntypsy(nat)
@@ -334,12 +337,13 @@ contains
          DO nl = 0, sphhar%nlh(ns)
             lp = sphhar%llh(nl,ns)
             DO l = MERGE(1, lp - 1, lp.EQ.0), MERGE(1, lp + 1, lp.EQ.0), 2 ! Gaunt selection
+               IF (l.GT.atoms%lmax(n)) CYCLE
                fint = atoms%rmt(n)**l * rho0(jm,nl,n)
                DO mb = 1, sphhar%nmem(nl,ns)
                   mp = sphhar%mlh(mb,nl,ns)
                   DO mVec = -1, 1
                      m = mVec + mp ! Gaunt selection
-                     IF (m.GT.l) CYCLE
+                     IF (ABS(m).GT.l) CYCLE
                      gauntFactor = Gaunt1(l, 1, lp, m, mVec, mp, atoms%lmax(n))
                      qlmo(m, l, n) = qlmo(m, l, n) + c_im(iDir, mVec + 2) * gauntFactor * &
                                                    & sphhar%clnu(mb,nl,ns) * fint * pref
@@ -420,18 +424,19 @@ contains
          do n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
 
             sk3r = stars%sk3(k) * atoms%rmt(n)
-            call sphbes( atoms%lmax(n) + 1, sk3r, aj )
+            call sphbes( atoms%lmax(n), sk3r, aj )
             rl2 = atoms%rmt(n) ** 2
 
             DO lp = 0, atoms%lmax(n)
-               cil = aj(lp+1) * nqpw * rl2
+               cil = aj(lp) * nqpw * rl2
                ll1p = lp * ( lp + 1 ) + 1
                DO l = MERGE(1, lp - 1, lp.EQ.0), MERGE(1, lp + 1, lp.EQ.0), 2 ! Gaunt selection
+                  IF (l.GT.atoms%lmax(n)) CYCLE
                   DO mp = -lp, lp
                      lmp = ll1p + mp
                      DO mVec = -1, 1
                         m = mVec + mp ! Gaunt selection
-                        IF (m.GT.l) CYCLE
+                        IF (ABS(m).GT.l) CYCLE
                         gauntFactor = Gaunt1(l, 1, lp, m, mVec, mp, atoms%lmax(n))
                         qlmp(m,l,n) = qlmp(m,l,n) + c_im(iDir, mVec + 2) * gauntFactor * &
                                                   & cil * atoms%rmt(n)**l * pylm(lmp,n) * pref

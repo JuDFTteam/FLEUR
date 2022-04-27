@@ -41,7 +41,6 @@ MODULE m_rhonmt21
 
       !     .. Local Scalars ..
       COMPLEX coef, cil, coef1
-      COMPLEX, PARAMETER :: mi = (0.0,-1.0)
       COMPLEX :: temp(ne)
 
 #include"cpp_double.h"
@@ -81,7 +80,7 @@ MODULE m_rhonmt21
                      IF (lplow.GT.lphi) CYCLE m_loop
 
                      DO lp = lplow, lphi,2
-                        cil = mi**(l-lp)
+                        cil = ImagUnit**(lp-l)
                         coef1 = cil * sphhar%clnu(jmem,lh,ns)
                         lmp = lp*(lp+1) + mp
 
