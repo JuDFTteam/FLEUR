@@ -3,10 +3,8 @@ exclude_dir: ../cmake
 exclude_dir: ../tests
 exclude_dir: ../build
 exclude_dir: ../build.debug
-exclude: types_dosdata.f90
-exclude: struct_input.f90
+exclude: jpSetupDynMatDeprecated_mod.F90
 exclude: soc_or_ssdw.f90
-exclude: test_FFTW.f90
 src_dir: ../
 output_dir: ./ford-doc
 project: FLEUR
