@@ -25,8 +25,8 @@ CONTAINS
     USE m_grdchlh
     USE m_mkgz
     USE m_mkgxyz3
-    USE m_od_mkgxyz3
-    USE m_od_mkgz
+    !USE m_od_mkgxyz3
+    !USE m_od_mkgz
     USE m_fft2d
 
     IMPLICIT NONE
