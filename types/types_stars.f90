@@ -311,14 +311,16 @@ CONTAINS
       kv(1) = k1
       y_dim: DO k2 = stars%mx2,-stars%mx2,-1
         kv(2) = k2
+        kv(3) = 0
         !Check 2d-star
         IF (stars%i2g(k1,k2)==0) THEN
-            g(:2)=matmul(kv(:2),cell%bmat(:2,:2))
-            s=dot_product(g(:2),g(:2))
+            g=matmul(kv,cell%bmat)
+            s=dot_product(g,g)
             IF (.not.s>gmax2) THEN !in sphere
               stars%ng2=stars%ng2+1
-              CALL spgrot(sym%nop2,sym%symor,sym%mrot(:2,:2,:),sym%tau(:2,:),sym%invtab,kv(:2),kr(:2,:))
+              CALL spgrot(sym%nop2,sym%symor,sym%mrot,sym%tau,sym%invtab,kv,kr)
               DO n = 1,sym%nop2
+                if (kr(3,n).ne.0) cycle
                 stars%i2g(kr(1,n),kr(2,n))=stars%ng2
               ENDDO
             ENDIF

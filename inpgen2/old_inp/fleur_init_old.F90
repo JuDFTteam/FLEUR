@@ -138,12 +138,12 @@ CONTAINS
          stars,oneD,hybinp,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
     !
     IF (xcpot%needs_grad()) THEN
-       ALLOCATE (stars%ft2_gfx(0:kimax2),stars%ft2_gfy(0:kimax2))
+       !ALLOCATE (stars%ft2_gfx(0:kimax2),stars%ft2_gfy(0:kimax2))
        ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
             oneD%pgft1xy(0:oneD%odd%nn2d-1),&
             oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
     ELSE
-       ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
+       !ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
        ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
             oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
     ENDIF

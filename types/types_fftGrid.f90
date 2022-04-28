@@ -99,7 +99,10 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       enddo
       this%gridLength = product(this%dimensions)
    
-      IF (ALLOCATED(this%grid)) DEALLOCATE (this%grid)
+      IF (ALLOCATED(this%grid)) THEN
+         IF (size(this%grid)==this%gridlength) RETURN
+         DEALLOCATE (this%grid)
+      ENDIF   
       ALLOCATE (this%grid(0:this%gridLength - 1), source=CMPLX_NOT_INITALIZED)
    END SUBROUTINE t_fftGrid_init
 

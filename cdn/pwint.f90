@@ -60,13 +60,14 @@
                x = (0.0,0.0)
             END IF
           ELSE
-             ig2d = stars%ig2(ig3d)
-             IF (ig2d.EQ.1) THEN
-                g = stars%kv3(3,ng)*cell%bmat(3,3)*cell%z1
-                x = cmplx(cell%vol*sin(g)/g,0.0)
-             ELSE
-                x = (0.0,0.0)
-             END IF
+            x = (0.0,0.0)
+            if (allocated(stars%ig2)) THEN !film
+                 ig2d = stars%ig2(ig3d)
+                 IF (ig2d.EQ.1) THEN
+                    g = stars%kv3(3,ng)*cell%bmat(3,3)*cell%z1
+                    x = cmplx(cell%vol*sin(g)/g,0.0)
+                 ENDIF
+            END IF
           END IF
 
       END IF
