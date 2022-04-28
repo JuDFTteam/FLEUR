@@ -44,4 +44,4 @@ def test_H2ORelaxBFGS(execute_fleur, grep_number, grep_exists):
     #assert grep_exists(res_files['relax.xml'], "0.0101")
 
     tenergy = grep_number(res_files['out'], "total energy=", "=")
-    assert abs(tenergy - -75.95475) <= 0.000002
+    assert abs(tenergy - -75.95475) <= 0.00002
