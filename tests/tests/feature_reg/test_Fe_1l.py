@@ -28,7 +28,7 @@ def test_Fe_1l_SOCXML(execute_fleur, grep_number, grep_exists):
 
     assert abs(mm - 0.279) <= 0.001
     assert abs(qfix - 1.0) <= 0.0001
-    assert abs(fermi - -0.2450) <= 0.0001
+    assert abs(fermi - -0.2451) <= 0.0001
     assert abs(tenergy - -1272.6885) <= 0.001
 
 @pytest.mark.serial
@@ -53,9 +53,9 @@ def test_Fe_1l_Tria(execute_fleur, grep_number, grep_exists):
     dist = grep_number(res_files['out'], "distance of charge densities for it=", ":")
 
 
-    assert abs(fermi - -0.16919) <= 0.005
-    assert abs(tenergy - -1272.6376271846) <= 0.01
-    assert abs(dist - 9.75) <= 0.5
+    assert abs(fermi - -0.15624) <= 0.005
+    assert abs(tenergy - -1272.616) <= 0.01
+    assert abs(dist - 5.98) <= 0.5
 
 
 @pytest.mark.serial
