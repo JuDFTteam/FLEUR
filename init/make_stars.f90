@@ -50,7 +50,7 @@ CONTAINS
     IF (fmpi%irank==0) THEN
       call timestart("star-setup")
       stars%gmax=input%gmax
-      call stars%dim(sym,cell)
+      call stars%dim(sym,cell,input%film)
       call stars%init(cell,sym,input%film,input%rkmax)
       call timestop("star-setup")
       

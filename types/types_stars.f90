@@ -278,7 +278,10 @@ CONTAINS
     ENDIF     
   END SUBROUTINE init_stars
 
-  subroutine dim_stars(stars,sym,cell)
+  subroutine dim_stars(stars,sym,cell,film)
+    !! determine the key dimensions of the stars:
+    !! mx1,mx2,mx3
+    !! ng3, ng2
     USE m_spgrot
     USE m_types_cell
     USE m_types_sym
@@ -286,6 +289,7 @@ CONTAINS
     CLASS(t_stars),INTENT(INOUT)  :: stars 
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_sym),INTENT(IN)        :: sym 
+    LOGICAL,INTENT(IN)            :: film
     
     INTEGER :: k1,k2,k3,n,kv(3),kr(3,sym%nop)
     REAL    :: s,g(3),gmax2
@@ -340,6 +344,7 @@ CONTAINS
       ENDDO y_dim
     ENDDO x_dim
 
+    if (.not.film) stars%ng2=0
     DEALLOCATE(stars%ig)
     DEALLOCATE(stars%i2g)
     

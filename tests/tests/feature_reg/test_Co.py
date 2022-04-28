@@ -76,10 +76,14 @@ def test_CoUnfold(execute_fleur, grep_exists, grep_number):
 
     if with_hdf:
 		#    assert grep_exists(res_files['out'], "it=  1  is completed")
-        assert grep_exists(res_files['bands_sc.1'], "0.91620.*0.94323")
-        assert grep_exists(res_files['bands_sc.1'], "14.0343.*0.03976")
-        assert grep_exists(res_files['bands_sc.2'], "18.1958.*0.62228")
-        assert grep_exists(res_files['bands_sc.2'], "27.1348.*0.00942")
+        #assert grep_exists(res_files['bands_sc.1'], "0.91620.*0.94323")
+        #assert grep_exists(res_files['bands_sc.1'], "14.0343.*0.03976")
+        #assert grep_exists(res_files['bands_sc.2'], "18.1958.*0.62228")
+        #assert grep_exists(res_files['bands_sc.2'], "27.1348.*0.00942")
+        assert grep_exists(res_files['bands_sc.1'], "-8.9216.*0.94323")
+        assert grep_exists(res_files['bands_sc.1'], "6.028.*0.8807")
+        assert grep_exists(res_files['bands_sc.2'], "10.489.*0.016")
+        assert grep_exists(res_files['bands_sc.2'], "15.513.*0.01174")
     else:
         assert grep_exists(res_files['bands_sc.1'], "-8.9216.*0.94323")
         assert grep_exists(res_files['bands_sc.1'], "6.028.*0.8807")
