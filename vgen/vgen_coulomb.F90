@@ -195,8 +195,7 @@ contains
     call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
-    ! TODO: DFPT here; modify vmts for the vExt perturbation and the
-    !       second potden in --> second potential out.
+
     IF (.NOT.l_dfptvgen) THEN
       call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
