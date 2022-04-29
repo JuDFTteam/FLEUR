@@ -100,6 +100,11 @@ PROGRAM inpgen
          INTEGER(c_int) dropDefaultEConfig
        END FUNCTION dropDefaultEConfig
 
+       FUNCTION dropDefault2EConfig() BIND(C, name="dropDefault2EConfig")
+         USE iso_c_binding
+         INTEGER(c_int) dropDefault2EConfig
+       END FUNCTION dropDefault2EConfig
+
        FUNCTION dropOxidesValidationEConfig() BIND(C, name="dropOxidesValidationEConfig")
          USE iso_c_binding
          INTEGER(c_int) dropOxidesValicationEConfig
@@ -189,6 +194,9 @@ PROGRAM inpgen
       IF(profile%atomSetup.EQ."oxides_validation") THEN
          INQUIRE(file='oxides_validation.econfig',exist=l_exist)
          IF (.NOT.l_exist) idum=dropOxidesValidationEconfig()
+      ELSE IF (profile%atomSetup.EQ."default2") THEN
+         INQUIRE(file='default2.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropDefault2Econfig()
       ELSE
          INQUIRE(file='default.econfig',exist=l_exist)
          IF (.NOT.l_exist) idum=dropDefaultEconfig()

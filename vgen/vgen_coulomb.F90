@@ -55,7 +55,8 @@ contains
     type(t_potden),     intent(inout)            :: vCoul
     type(t_results),    intent(inout), optional  :: results
 
-    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag, dfptvCoulimag, dfptden0
+    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag,  dfptden0
+    TYPE(t_potden),     OPTIONAL, INTENT(INOUT)  :: dfptvCoulimag
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
@@ -77,8 +78,6 @@ contains
 
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
     vCoul%iter = den%iter
-
-
 
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
@@ -196,8 +195,14 @@ contains
 #endif
     ! TODO: DFPT here; modify vmts for the vExt perturbation and the
     !       second potden in --> second potential out.
-    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
-               den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
+    IF (.NOT.l_dfptvgen) THEN
+      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
+                 den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
+    ELSE
+      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
+                 den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
+                 dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir )
+    END IF
     call timestop( "MT-spheres" )
 
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return

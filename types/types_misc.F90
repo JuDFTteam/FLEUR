@@ -24,9 +24,7 @@ MODULE m_types_misc
       REAL, ALLOCATABLE    :: force_old(:,:) !< Forces on all atoms from last iteration
       REAL                 :: ef        !<Fermie energy
       REAL                 :: seigc     !<sum of the core eigenvalues
-      REAL                 :: seigsc    !<weighted sum of the semi-core eigenvalues
       REAL                 :: seigv     !<weighted sum of the occupied valence eigenvalues
-      REAL                 :: seigscv   !<sum of seigv and seigsc
       REAL                 :: ts        !<entropy contribution to the free energy
       REAL                 :: te_vcoul  !<charge density-coulomb potential integral
       REAL                 :: te_veff   !<charge density-effective potential integral
@@ -114,9 +112,7 @@ CONTAINS
       INTEGER                              :: neigd2
 
       thisResults%seigc           = 0.0
-      thisResults%seigsc          = 0.0
       thisResults%seigv           = 0.0
-      thisResults%seigscv         = 0.0
       thisResults%e_ldau          = 0.0
       thisResults%ts              = 0.0
 

@@ -86,7 +86,7 @@ CONTAINS
     !     .. Local Scalars ..
     REAL,PARAMETER:: del=1.e-6
     REAL :: efermi,emax,emin,entropy,fermikn,gap,&
-              wfermi,wvals,w_below_emin,w_near_ef,tkb
+              wfermi,wvals,w_below_emin,w_near_ef,tkb, seigvTemp
     INTEGER ink,inkem,j,js,k,kpt,nocc,nocst,i
 
     !     .. Local Arrays ..      
@@ -107,8 +107,6 @@ CONTAINS
     !     zelec      : number of electrons in a window
     !     spindg     : spindegeneracy (2 in nonmagnetic calculations)
     !     seigv      : weighted sum of the occupied valence eigenvalues
-    !     seigsc     : weighted sum of the semi-core eigenvalues
-    !     seigscv    : sum of seigv and seigsc
     !     ts         : entropy contribution to the free energy
     !     tkb        : value of temperature (kt) broadening around fermi
     !                  energy in htr units
@@ -289,19 +287,18 @@ CONTAINS
     !
 
     seigv = seigv+spindg*DOT_PRODUCT(e(INDEX(:nocst)),we(INDEX(:nocst)))
+    seigvTemp = seigv
+    IF (noco%l_soc .AND. (.NOT. noco%l_noco)) THEN
+       seigvTemp = seigvTemp / 2.0
+    END IF
     IF (fmpi%irank == 0) THEN
        attributes = ''
-       WRITE(attributes(1),'(f20.10)') seigv
+       WRITE(attributes(1),'(f20.10)') seigvTemp
        WRITE(attributes(2),'(a)') 'Htr'
        CALL writeXMLElement('sumValenceSingleParticleEnergies',(/'value','units'/),attributes)
-       WRITE (oUnit,FMT=8040) seigv
+       WRITE (oUnit,FMT=8040) seigvTemp
     END IF
 
-
-    !
-    ! 7.12.95 r.pentcheva   seigscv = seigsc + seigv   will be
-    ! calculated in fermie
-    !
 8000 FORMAT (/,10x,'==>efrmhi: not enough wavefunctions.',i10,2e20.10)
 8010 FORMAT (10x,'charge neutrality (T=0)     :',f11.6,'    (zero if ',&
          &       'the highest occ. eigenvalue is "entirely" occupied)')

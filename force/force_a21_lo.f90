@@ -90,10 +90,16 @@ CONTAINS
                      lolop=DOT_PRODUCT(atoms%nlo(:itype-1),atoms%nlo(:itype-1)+1)/2
                      IF (lo.GE.lop) THEN
                         lolop = (lo-1)*lo/2 + lop + lolop
-                        tuloulo = CONJG(tlmplm%tuloulo(m,mp,lolop,isp,isp))
+                        ! TODO: The tests succeed, but the conjugation is exactly the wrong way around now.
+                        ! EDIT: This is because the prime variables are to the right, not to the left.
+                        tuloulo = tlmplm%tuloulo(m,mp,lolop,isp,isp)
+                        write(7070,*) "old", tuloulo
+                        tuloulo = tlmplm%tuloulo_newer(m,mp,lo,lop,itype,isp,isp)
+                        write(7070,*) "new", tuloulo
                      ELSE
-                        loplo = (lop-1)*lop/2 + lo +lolop
-                        tuloulo = tlmplm%tuloulo(mp,m,loplo,isp,isp)
+                        !loplo = (lop-1)*lop/2 + lo +lolop
+                        !tuloulo = CONJG(tlmplm%tuloulo(mp,m,loplo,isp,isp))
+                        tuloulo = CONJG(tlmplm%tuloulo_newer(mp,m,lop,lo,itype,isp,isp))
                      END IF
                      DO ie = 1,ne
                         DO i = 1,3

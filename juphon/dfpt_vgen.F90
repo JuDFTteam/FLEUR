@@ -143,7 +143,7 @@ CONTAINS
           END IF
           CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                           cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
-                          & den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
+                          & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
       ! d)
       ! TODO: This is so different from the base case, that we build a new suboutine.
