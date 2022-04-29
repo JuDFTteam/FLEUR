@@ -29,5 +29,5 @@ def test_CrystalFieldOutput(execute_fleur, grep_exists, grep_number):
     # The python grep has interprets the E+01 as some expression
     assert grep_exists(res_files['out'], "0.14060E")#+01")
     assert grep_exists(res_files['out'], "0.82207E")#+00")
-    assert grep_exists(res_files['out'], "0.89945E")#+00")
+    assert grep_exists(res_files['out'], "0.89951E")#+00")
     assert grep_exists(res_files['out'], "0.65772E")#+01")

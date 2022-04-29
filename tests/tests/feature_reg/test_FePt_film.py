@@ -46,8 +46,8 @@ def test_FePt_film_SSFT(execute_fleur, grep_number, grep_exists, validate_out_xm
     ev_q1 = grep_number(res_files['out.xml'], 'Entry q="1"', "ev-sum=")
     ev_q2 = grep_number(res_files['out.xml'], 'Entry q="2"', "ev-sum=")
 
-    assert abs(ev_q1 - -5.1963027) <= 0.000001
-    assert abs(ev_q2 - -5.1706272) <= 0.000001
+    assert abs(ev_q1 - -5.196305) <= 0.000001
+    assert abs(ev_q2 - -5.170629) <= 0.000001
 
 
 @pytest.mark.serial
@@ -96,5 +96,5 @@ def test_FePt_film_SSFT_LO(execute_fleur, grep_number, grep_exists, validate_out
     ev_q1 = grep_number(res_files['out.xml'], 'Entry q="1"', "ev-sum=")
     ev_q2 = grep_number(res_files['out.xml'], 'Entry q="2"', "ev-sum=")
 
-    assert abs(ev_q1 - -37.3675172) <= 0.000001
-    assert abs(ev_q2 - -37.3421763) <= 0.000001
+    assert abs(ev_q1 - -37.3675189) <= 0.000001
+    assert abs(ev_q2 - -37.342178) <= 0.000001

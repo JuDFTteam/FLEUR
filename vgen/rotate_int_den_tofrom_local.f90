@@ -147,8 +147,8 @@ CONTAINS
                   !     &                  %igf,odl%pgf,odi%nst2)
                ELSE
                   CALL fft2d(stars,rvacxy(:,imz,ivac,iden),fftwork,&
-                       den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,1,ivac,iden),&
-                       vacuum%nmzxyd,1)
+                       den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,:,ivac,iden),&
+                       1)
                END IF
             END DO
          END DO
@@ -169,7 +169,7 @@ CONTAINS
                !     &               %igf,odl%pgf,odi%nst2)
             ELSE
                CALL fft2d(stars,rvacxy(:,imz,ivac,3),rvacxy(:,imz,ivac,4),&
-                    vz_r,vz_i,den%vacxy(imz,1,ivac,3),vacuum%nmzxyd,1)
+                    vz_r,vz_i,den%vacxy(imz,:,ivac,3),1)
             END IF
          END DO
       END DO
@@ -235,8 +235,8 @@ CONTAINS
                   !     &                  %igf,odl%pgf,odi%nst2)
                ELSE
                   CALL fft2d(stars,rvacxy(:,imz,ivac,jspin),fftwork,&
-                       den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,1,ivac,jspin),&
-                       vacuum%nmzxyd,-1)
+                       den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,:,ivac,jspin),&
+                       -1)
                END IF
             END DO
          END DO
@@ -359,7 +359,7 @@ CONTAINS
                   !     &                  %igf,odl%pgf,odi%nst2)
                ELSE
                   CALL fft2d(stars, vvacxy(:,imz,ivac,jspin),fftwork,&
-                       vTot%vacz(imz,ivac,jspin),vziw,vTot%vacxy(imz,1,ivac,jspin), vacuum%nmzxyd,1)
+                       vTot%vacz(imz,ivac,jspin),vziw,vTot%vacxy(imz,:,ivac,jspin), 1)
                END IF
             END DO
          END DO
@@ -413,7 +413,7 @@ CONTAINS
                   !     &                  %igf,odl%pgf,odi%nst2)
                ELSE
                   CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
-                       vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,1,ivac,ipot), vacuum%nmzxyd,-1)
+                       vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,:,ivac,ipot),-1)
                END IF
             END DO
          END DO
@@ -433,7 +433,7 @@ CONTAINS
                !   &               %igf,odl%pgf,odi%nst2)
             ELSE
                CALL fft2d(stars, vvacxy(:,imz,ivac,3),vvacxy(:,imz,ivac,4),&
-                    vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(imz,1,ivac,3), vacuum%nmzxyd,-1)
+                    vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(imz,:,ivac,3),-1)
             END IF
          END DO
       END DO

@@ -30,10 +30,10 @@ CONTAINS
       !     ..
       !
       n=SIZE(ind)
-      IF (n>SIZE(lv)) CALL judft_error("BUG: incosistent dimensions")
+      IF (n>SIZE(lv)) CALL judft_error("BUG in sort: inconsistent dimensions")
       ALLOCATE(llv(n))
       IF (PRESENT(lv1)) THEN
-         IF (n>SIZE(lv1)) CALL judft_error("BUG: incosistent dimensions")
+         IF (n>SIZE(lv1)) CALL judft_error("BUG in sort: inconsistent dimensions")
          llv=lv1
       ELSE
          llv=(/(1.*i,i=1,n)/)

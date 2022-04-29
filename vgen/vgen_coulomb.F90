@@ -33,8 +33,6 @@ contains
     use m_vvacxy
     use m_vintcz
     use m_checkdopall
-    use m_od_vvac
-    use m_od_vvacis
     use m_convol
     use m_psqpw
     use m_cfft
@@ -100,14 +98,14 @@ contains
       if ( oneD%odi%d1 ) then
         call timestart( "Vacuum" )
         !---> generates the m=0,gz=0 component of the vacuum potential
-        call od_vvac( stars, vacuum, cell, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin) )
+        !call od_vvac( stars, vacuum, cell, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin) )
         !---> generation of the vacuum warped potential components and
         !---> interstitial pw potential
         !---> vvacxy_5.F is a symmetrized potential generator
-        call od_vvacis( oneD%odi%n2d, input, vacuum, oneD%odi%nq2, &
-             oneD%odi%kv, cell, oneD%odi%M, stars, oneD%odi%nst2, &
-             oneD, den%vacz(:,:,ispin), den%vacxy(:,:,:,ispin), psq, &
-             vCoul%vacz(:,:,ispin), sym, vCoul%vacxy(:,:,:,ispin), vCoul%pw(:,ispin) )
+        !call od_vvacis( oneD%odi%n2d, input, vacuum, oneD%odi%nq2, &
+        !     oneD%odi%kv, cell, oneD%odi%M, stars, oneD%odi%nst2, &
+        !     oneD, den%vacz(:,:,ispin), den%vacxy(:,:,:,ispin), psq, &
+        !     vCoul%vacz(:,:,ispin), sym, vCoul%vacxy(:,:,:,ispin), vCoul%pw(:,ispin) )
         call timestop( "Vacuum" )
         !---> generation of the vacuum warped potential components and
       elseif ( input%film .and. .not. oneD%odi%d1 ) then

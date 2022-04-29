@@ -56,7 +56,7 @@ def test_GreensFunction_SphavgFilm(execute_fleur, grep_number, grep_exists):
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ":")
 
     assert abs(spinup_trace - 4.8586) <= 0.0005
-    assert abs(spindown_trace - 2.6644) <= 0.0005
+    assert abs(spindown_trace - 2.64494) <= 0.0005
 
 
 @pytest.mark.serial

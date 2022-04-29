@@ -77,7 +77,7 @@ CONTAINS
 
         DO k = 1, ng3
 
-            CALL spgrot(nop, symor, mrot, tau, invtab, kv3(1, k), kr, ph)
+            CALL spgrot(nop, symor, mrot, tau, invtab, kv3(:, k), kr, ph)
 
             sf(k) = 0.0
 

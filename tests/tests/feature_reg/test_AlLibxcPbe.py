@@ -24,7 +24,7 @@ def test_AlLibxcPbe(execute_fleur, stage_workdir, grep_number, grep_exists):
     tenergy = grep_number(res_files['out'], "    total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for spin  1                 it=    1", ":")
 
-    assert abs(efermi - 0.2847) <= 0.0001
+    assert abs(efermi - 0.2856) <= 0.001
     assert abs(tenergy - -242.820) <= 0.001
     assert abs(dist - 3.869) <= 0.001
 
@@ -43,7 +43,7 @@ def test_AlLibxcPbe(execute_fleur, stage_workdir, grep_number, grep_exists):
     tenergy = grep_number(res_files['out'], "    total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for spin  1                 it=    2", ":")
 
-    assert abs(efermi - 0.2849) <= 0.0001
+    assert abs(efermi - 0.2856) <= 0.001
     assert abs(tenergy - -242.820) <= 0.001
     assert abs(dist - 3.660) <= 0.001
 
@@ -59,6 +59,6 @@ def test_AlLibxcPbe(execute_fleur, stage_workdir, grep_number, grep_exists):
     tenergy = grep_number(res_files['out'], "    total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for spin  1                 it=    2", ":")
 
-    assert abs(efermi - 0.2849) <= 0.0001
+    assert abs(efermi - 0.2856) <= 0.001
     assert abs(tenergy - -242.820) <= 0.001
     assert abs(dist - 3.660) <= 0.001

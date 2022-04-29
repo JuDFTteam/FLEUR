@@ -436,7 +436,7 @@ module m_jpGrVeff0
 !todo review these variables
     real                                     :: analyticalInt
     logical                                  :: expensiveDebug
-#endif DEBUG_MODE
+#endif 
 
     ! Local Array Variables
     complex,        allocatable              :: grRhoIRlm(:, :, :)
@@ -913,7 +913,8 @@ module m_jpGrVeff0
   subroutine vmtsCoul( atoms, cell, ngdp, iatom, itype, harSw, extSw, grVc0IR, grRho0MT, gdp, grVc0MT, testGoldstein, grRhoTermSw)
 
 !#include"recycledRoutines/cpp_double.h"
-    use m_types, only : t_atoms, t_cell
+    use m_types_atoms
+    use m_types_cell
     use m_intgr, only : intgr2LinIntp
     use m_sphbes
 
@@ -1534,7 +1535,8 @@ end subroutine CalcQlmHarSurMT
 subroutine phasy1nSym(atoms, cell, Gvec, qptn, pylm)
 
   use m_ylm_old
-  use m_types
+  use m_types_atoms
+  use m_types_cell
 
   implicit none
 
@@ -1620,7 +1622,7 @@ end subroutine phasy1nSym
 
 subroutine convolMTgrVeff0dKern(atoms, grRho0MT, dKernMTGPts, gWghts, ylm, grVxc0MT)
 
-  use m_types, only : t_atoms
+  use m_types_atoms
 
   implicit none
 

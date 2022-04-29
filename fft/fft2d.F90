@@ -4,8 +4,8 @@ CONTAINS
        &                 stars,&
        &                 afft2,bfft2,&
        &                 fg,fgi,fgxy,&
-       &                 stride,isn,&
-       &                 gfxy )
+       &                 isn,&
+       &                 firstderiv,secondderiv,cell )
 
     !*************************************************************
     !*                                                           *
@@ -20,71 +20,58 @@ CONTAINS
     !*                                                           *
     !*************************************************************
 #include"cpp_double.h"
-    USE m_cfft
+    USE m_types_fftgrid
     USE m_types
     IMPLICIT NONE
     TYPE(t_stars),INTENT(IN) :: stars
-    INTEGER, INTENT (IN) :: isn,stride
+    TYPE(t_cell),INTENT(IN),OPTIONAL:: cell
+    INTEGER, INTENT (IN) :: isn
     REAL                 :: fg,fgi
 
     REAL                  :: afft2(0:9*stars%mx1*stars%mx2-1),bfft2(0:9*stars%mx1*stars%mx2-1)
-    COMPLEX               :: fgxy(stride,stars%ng2-1)
-    REAL,OPTIONAL,INTENT(IN) :: gfxy(0:) !factor to calculate the derivates, i.e. g_x
-
+    COMPLEX               :: fgxy(:)
+    REAL,OPTIONAL,INTENT(IN):: firstderiv(3),secondderiv(3)
+    
     !... local variables
 
-    INTEGER i,ifftd2
-    REAL  scale
-    COMPLEX fg2(stars%ng2)
+   TYPE(t_fftgrid) :: grid
+   INTEGER i
+   COMPLEX fg2(stars%ng2)
 
-    ifftd2=9*stars%mx1*stars%mx2
-    !
-    IF (isn.GT.0) THEN
-       !
+   
+   call grid%init([3*stars%mx1,3*stars%mx2,1])
+
+    IF (isn>0) THEN
        !  ---> put stars onto the fft-grid
-       !
        fg2(1) = CMPLX(fg,fgi)
-       CALL CPP_BLAS_ccopy(stars%ng2-1,fgxy,stride,fg2(2),1)
-       !fg2(2:)=fgxy(1,:)
-       afft2=0.0
-       bfft2=0.0
-       IF (PRESENT(gfxy)) THEN
-          DO i=0,(2*stars%mx1+1)* (2*stars%mx2+1)-1
-             if (stars%igfft2(i,1)==0) cycle
-             afft2(stars%igfft2(i,2))=REAL(fg2(stars%igfft2(i,1))*stars%pgfft2(i))*gfxy(i)
-             bfft2(stars%igfft2(i,2))=AIMAG(fg2(stars%igfft2(i,1))*stars%pgfft2(i))*gfxy(i)
-          ENDDO
-       ELSE
-          DO i=0,(2*stars%mx1+1)* (2*stars%mx2+1)-1
-            if (stars%igfft2(i,1)==0) cycle
-             afft2(stars%igfft2(i,2))=REAL(fg2(stars%igfft2(i,1))*stars%pgfft2(i))
-             bfft2(stars%igfft2(i,2))=AIMAG(fg2(stars%igfft2(i,1))*stars%pgfft2(i))
-          ENDDO
-       ENDIF
-    ENDIF
+       fg2(2:)=fgxy(:)
 
-    !---> now do the fft (isn=+1 : G -> r ; isn=-1 : r -> G)
+       call grid%putFieldOnGrid(stars,fg2,cell,firstderiv=firstderiv,secondderiv=secondderiv,l_2d=.true.)
+    else
+       grid%grid=cmplx(afft2,bfft2)
+    endif
 
-    CALL cfft(afft2,bfft2,ifftd2,3*stars%mx1,3*stars%mx1,isn)
-    CALL cfft(afft2,bfft2,ifftd2,3*stars%mx2,ifftd2,isn)
-
+    call grid%perform_fft(forward=(isn<0))
+    
+    if (isn >0) THEN
+        afft2 = real(grid%grid)
+        bfft2 = aimag(grid%grid)
+      else
+         call grid%takeFieldFromGrid(stars,fg2,l_2d=.true.)
+         !Scaling by stars%nstr is already done in previous call
+         !IF (PRESENT(scaled)) THEN
+         !   IF (.not.scaled) fg3 = fg3*stars%nstr
+         !ENDIF
+      ENDIF   
     IF (isn.LT.0) THEN
        !
        !  ---> collect stars from the fft-grid
        !
-       DO i=1,stars%ng2
-          fg2(i) = CMPLX(0.0,0.0)
-       ENDDO
-       scale=1.0/ifftd2
-       DO i=0,(2*stars%mx1+1)* (2*stars%mx2+1)-1
-          if (stars%igfft2(i,1)==0) cycle
-          fg2(stars%igfft2(i,1))=fg2(stars%igfft2(i,1))+ CONJG( stars%pgfft2(i) ) * &
-               &                 CMPLX(afft2(stars%igfft2(i,2)),bfft2(stars%igfft2(i,2)))
-       ENDDO
-       fg=scale*REAL(fg2(1))/stars%nstr2(1)
-       fgi=scale*AIMAG(fg2(1))/stars%nstr2(1)
+       call grid%takeFieldFromGrid(stars, fg2, l_2d=.true.)
+       fg=REAL(fg2(1))
+       fgi=AIMAG(fg2(1))
        DO i=2,stars%ng2
-          fgxy(1,i-1)=scale*fg2(i)/stars%nstr2(i)
+          fgxy(i-1)=fg2(i)
        ENDDO
     ENDIF
 
