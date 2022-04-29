@@ -282,23 +282,8 @@ CONTAINS
                               tdulo = tlmplm%tdulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
                               tulou = tlmplm%tulou(lm,mp,lop+mlo,ilSpinPr,ilSpin)
                               tulod = tlmplm%tulod(lm,mp,lop+mlo,ilSpinPr,ilSpin)
-                              ! Note, that lo > lop for non spin spiral calculations
-                              IF (lo>lop) THEN
-                                 !lolop = ((lo-1)*lo)/2 + lop
-                                 !tuloulo = CONJG(tlmplm%tuloulo(m,mp,lolop+mlolo,ilSpinPr,ilSpin))
-                                 !lolop_new = (lo-1) * atoms%nlo(ntyp) + lop
-                                 !tuloulo = CONJG(tlmplm%tuloulo_new(m,mp,mlolo_new+lolop_new,ilSpinPr,ilSpin))
-                                 tuloulo = CONJG(tlmplm%tuloulo_newer(m,mp,lo,lop,ntyp,ilSpinPr,ilSpin))
-                                 !TODO: The conjugation should not be necessary anymore.
-                                 !      But kicking it kills the FePt spin spiral LO test.
-                                 !      [EV_sum check; maybe not quite important]
-                              ELSE
-                                 !lolop = ((lop-1)*lop)/2 + lo
-                                 !tuloulo = tlmplm%tuloulo(mp,m,lolop+mlolo,ilSpinPr,ilSpin)
-                                 !lolop_new = (lop-1) * atoms%nlo(ntyp) + lo
-                                 !tuloulo = tlmplm%tuloulo_new(mp,m,mlolo_new+lolop_new,ilSpinPr,ilSpin)
-                                 tuloulo = tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,ilSpinPr,ilSpin)
-                              END IF
+
+                              tuloulo = tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,ilSpinPr,ilSpin)
 
                               axx = utu     * abclo(1,m,nkvec,lo) &
                                 & + utd     * abclo(2,m,nkvec,lo) &
@@ -351,10 +336,6 @@ CONTAINS
                            tulou = tlmplm%tulou(lm,mp,lo+mlo,ilSpinPr,ilSpin)
                            tulod = tlmplm%tulod(lm,mp,lo+mlo,ilSpinPr,ilSpin)
 
-                           !lolo = ((lo-1)*lo)/2 + lo
-                           !tuloulo = tlmplm%tuloulo(mp,m,lolo+mlolo,ilSpinPr,ilSpin)
-                           !lolop_new = (lo-1) * atoms%nlo(ntyp) + lo
-                           !tuloulo = tlmplm%tuloulo_new(mp,m,mlolo_new+lolop_new,ilSpinPr,ilSpin)
                            tuloulo = tlmplm%tuloulo_newer(mp,m,lo,lo,ntyp,ilSpinPr,ilSpin)
 
                            axx = utu     * abclo(1,m,nkvec,lo) &
