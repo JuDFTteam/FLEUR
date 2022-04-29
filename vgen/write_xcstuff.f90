@@ -36,7 +36,7 @@ CONTAINS
          &          sym%invs,sym%invs2,input%film
     WRITE (741)   sphhar%clnu, sphhar%nmem,sphhar%nlh,sphhar%mlh,sphhar%llh,atoms%jri,sym%ntypsy,atoms%neq
     WRITE (741)  stars%mx1,stars%mx2,stars%mx3,stars%ng3,(2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
-    WRITE (741)  stars%igfft,stars%pgfft,stars%nstr
+    !WRITE (741)  stars%igfft,stars%pgfft,stars%nstr
     WRITE (741)  stars%kv3,stars%ig
     CLOSE (741)
     !
@@ -65,12 +65,13 @@ CONTAINS
           WRITE (335,'(2i5)') i, stars%nstr(i)
        ENDDO
        WRITE (335,*)
-       WRITE (335,*) 'igfft', (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
-       WRITE (335,'(3i15)') stars%igfft(:,1)
-       WRITE (335,*) 'second part'
-       WRITE (335,'(3i15)') stars%igfft(:,2)
-       WRITE (335,*) 'pgfft',  (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
-       WRITE (335,'(3f12.6)') stars%pgfft(:)
+       !These do no longer exist TODO!?
+       !WRITE (335,*) 'igfft', (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
+       !WRITE (335,'(3i15)') stars%igfft(:,1)
+       !WRITE (335,*) 'second part'
+       !WRITE (335,'(3i15)') stars%igfft(:,2)
+       !WRITE (335,*) 'pgfft',  (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
+       !WRITE (335,'(3f12.6)') stars%pgfft(:)
        WRITE (335,*)
        WRITE (335,*) 'stars%kimax: ', (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
 

@@ -93,7 +93,6 @@ CONTAINS
     DEALLOCATE(sphhar%nlh)
     ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
     ALLOCATE ( stars%nstr2(stars%ng2),sym%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
-    ALLOCATE ( stars%igfft(0:kimax,2),stars%igfft2(0:kimax2,2) )
     ALLOCATE ( atoms%econf(atoms%ntype) )
     ALLOCATE ( banddos%izlay(banddos%layers,2) )
     ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
@@ -106,7 +105,6 @@ CONTAINS
     ALLOCATE ( atoms%taual(3,atoms%nat),atoms%volmts(atoms%ntype),atoms%zatom(atoms%ntype) )
     ALLOCATE ( stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3)  )
     ALLOCATE ( kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt) )
-    ALLOCATE ( stars%pgfft(0:kimax),stars%pgfft2(0:kimax2) )
     ALLOCATE ( stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
     ALLOCATE ( atoms%bmu(atoms%ntype) )
     deallocate(atoms%l_geo); ALLOCATE ( atoms%l_geo(atoms%ntype) )
@@ -140,12 +138,12 @@ CONTAINS
          stars,oneD,hybinp,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
     !
     IF (xcpot%needs_grad()) THEN
-       ALLOCATE (stars%ft2_gfx(0:kimax2),stars%ft2_gfy(0:kimax2))
+       !ALLOCATE (stars%ft2_gfx(0:kimax2),stars%ft2_gfy(0:kimax2))
        ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
             oneD%pgft1xy(0:oneD%odd%nn2d-1),&
             oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
     ELSE
-       ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
+       !ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
        ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
             oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
     ENDIF

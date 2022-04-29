@@ -27,9 +27,7 @@ CONTAINS
       USE m_types_mat
 #ifdef CPP_ELPA_ONENODE
       USE elpa
-#ifdef CPP_GPU
-      USE nvtx
-#endif
+
 #endif
       IMPLICIT NONE
 
@@ -49,9 +47,7 @@ CONTAINS
 
       call timestart("ELPA 2018 one-node")
 
-#ifdef CPP_GPU
-      call nvtxStartRange("ELPA", 5)
-#endif
+
       err = elpa_init(20180525)
       elpa_obj => elpa_allocate()
 
@@ -77,17 +73,12 @@ CONTAINS
       CALL hmat%add_transpose(hmat)
       CALL smat%add_transpose(smat)
 
-#ifdef CPP_GPU
-      call nvtxStartRange("EigVec", 7)
-#endif
       IF (hmat%l_real) THEN
          CALL elpa_obj%generalized_eigenvectors(hmat%data_r, smat%data_r, eig2, ev_dist%data_r, .FALSE., err)
       ELSE
          CALL elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, ev_dist%data_c, .FALSE., err)
       ENDIF
-#ifdef CPP_GPU
-      call nvtxEndRange!("EigVec",8)
-#endif
+
 
       CALL elpa_deallocate(elpa_obj)
       CALL elpa_uninit()
@@ -100,9 +91,7 @@ CONTAINS
       CALL ev%alloc(hmat%l_real, hmat%matsize1, ne)
       CALL ev%copy(ev_dist, 1, 1)
 
-#ifdef CPP_GPU
-      call nvtxEndRange!("ELPA",7)
-#endif
+
 #endif
       call timestop("ELPA 2018 one-node")
 

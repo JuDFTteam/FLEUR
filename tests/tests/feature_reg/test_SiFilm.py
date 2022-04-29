@@ -38,8 +38,8 @@ def test_SiFilmPlotXML(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn.xsf'], ".39481")
     assert grep_exists(res_files['denIn.xsf'], "2.23341")
     # density values
-    assert grep_exists(res_files['denIn.xsf'], "1.9227") # line 24
-    assert grep_exists(res_files['denIn.xsf'], "7.9875") # line 521
+    assert grep_exists(res_files['denIn.xsf'], "1.9200") # line 24
+    assert grep_exists(res_files['denIn.xsf'], "7.9868") # line 521
     assert grep_exists(res_files['denIn.xsf'], "10.2889") # line 523
 
 @pytest.mark.serial
@@ -90,8 +90,8 @@ def test_SiFilmSlicePlotXML(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['slice.xsf'], ".39481")
     assert grep_exists(res_files['slice.xsf'], "2.23341")
     # density values
-    assert grep_exists(res_files['slice.xsf'], "1.43964")  # line 24
-    assert grep_exists(res_files['slice.xsf'], "2.54654")  # line 289
-    assert grep_exists(res_files['slice.xsf'], "2.86364")  # line 521
-    assert grep_exists(res_files['slice.xsf'], "0.20168")  # line 523
-    assert grep_exists(res_files['slice.xsf'], "3.10848")  # line 3018
+    assert grep_exists(res_files['slice.xsf'], "1.3588")  # line 24
+    assert grep_exists(res_files['slice.xsf'], "2.5717")  # line 289
+    assert grep_exists(res_files['slice.xsf'], "2.8595")  # line 521
+    assert grep_exists(res_files['slice.xsf'], "0.2016")  # line 523
+    assert grep_exists(res_files['slice.xsf'], "3.2038")  # line 3018

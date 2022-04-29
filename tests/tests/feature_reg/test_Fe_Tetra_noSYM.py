@@ -23,4 +23,4 @@ def test_Fe_Tetra_noSYM(execute_fleur, grep_number, grep_exists):
 
     assert abs(fermi - 0.36646) <= 0.005
     assert abs(tenergy - -1272.8002015793) <= 0.00005
-    assert abs(dist - 0.36409) <= 0.0002
+    assert abs(dist - 0.074) <= 0.002
