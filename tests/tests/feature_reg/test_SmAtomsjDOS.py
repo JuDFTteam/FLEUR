@@ -52,7 +52,6 @@ def test_SmAtomjDOS(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['out'], "0.020")
 
     if 'jDOS.1' in res_file_names:
-        assert grep_exists(res_files['jDOS.1'], "0.674817")
-    #    assert grep_exists(res_files['jDOS.1'], "0.300025")
-        assert grep_exists(res_files['jDOS.1'], "0.56598")
-    #    assert grep_exists(res_files['jDOS.1'], "0.263514")
+        assert grep_exists(res_files['jDOS.1'], "0.6748")
+        assert grep_exists(res_files['jDOS.1'], "0.5659")
+       

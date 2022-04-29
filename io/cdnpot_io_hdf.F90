@@ -353,12 +353,21 @@ MODULE m_cdnpot_io_hdf
          CALL h5sclose_f(ig2SpaceID,hdfError)
          CALL io_write_integer1(ig2SetID,(/1/),dimsInt(:1),stars%ig2)
          CALL h5dclose_f(ig2SetID, hdfError)
+
          dims(:1)=(/stars%ng2/)
          dimsInt=dims
          CALL h5screate_simple_f(1,dims(:1),nstr2SpaceID,hdfError)
          CALL h5dcreate_f(groupID, "nstr2", H5T_NATIVE_INTEGER, nstr2SpaceID, nstr2SetID, hdfError)
          CALL h5sclose_f(nstr2SpaceID,hdfError)
          CALL io_write_integer1(nstr2SetID,(/1/),dimsInt(:1),stars%nstr2)
+         CALL h5dclose_f(nstr2SetID, hdfError)
+   
+         dims(:2)=(/2*stars%mx1+1,2*stars%mx2+1/)
+         dimsInt=dims
+         CALL h5screate_simple_f(2,dims(:2),nstr2SpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "i2g", H5T_NATIVE_INTEGER, nstr2SpaceID, nstr2SetID, hdfError)
+         CALL h5sclose_f(nstr2SpaceID,hdfError)
+         CALL io_write_integer2(nstr2SetID,(/1,1/),dimsInt(:2),stars%i2g)
          CALL h5dclose_f(nstr2SetID, hdfError)
    
          !dims(:1)=(/stars%ng2/)
@@ -441,6 +450,7 @@ MODULE m_cdnpot_io_hdf
       IF(ALLOCATED(stars%sk2)) DEALLOCATE(stars%sk2)
       IF(ALLOCATED(stars%ig)) DEALLOCATE(stars%ig)
       IF(ALLOCATED(stars%ig2)) DEALLOCATE(stars%ig2)
+      IF(ALLOCATED(stars%i2g)) DEALLOCATE(stars%i2g)
       IF(ALLOCATED(stars%nstr)) DEALLOCATE(stars%nstr)
       IF(ALLOCATED(stars%nstr2)) DEALLOCATE(stars%nstr2)
       IF(ALLOCATED(stars%phi2)) DEALLOCATE(stars%phi2)
@@ -452,6 +462,7 @@ MODULE m_cdnpot_io_hdf
       ALLOCATE(stars%sk3(stars%ng3))
       ALLOCATE(stars%sk2(stars%ng2))
       ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
+      ALLOCATE(stars%i2g(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2))
       ALLOCATE(stars%ig2(stars%ng3))
       ALLOCATE(stars%nstr(stars%ng3))
       ALLOCATE(stars%nstr2(stars%ng2))
@@ -506,6 +517,10 @@ MODULE m_cdnpot_io_hdf
          CALL io_read_integer1(nstr2SetID,(/1/),dimsInt(:1),stars%nstr2)
          CALL h5dclose_f(nstr2SetID, hdfError)
    
+         dimsInt(:2)=(/2*stars%mx1+1,2*stars%mx2+1/)
+         CALL h5dopen_f(groupID, 'i2g', igSetID, hdfError)
+         CALL io_read_integer2(igSetID,(/1,1/),dimsInt(:2),stars%i2g)
+         CALL h5dclose_f(igSetID, hdfError)
          !dimsInt(:1)=(/stars%ng2/)
          !CALL h5dopen_f(groupID, 'phi2', phi2SetID, hdfError)
          !CALL io_read_real1(phi2SetID,(/1/),dimsInt(:1),stars%phi2)

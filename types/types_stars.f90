@@ -99,6 +99,7 @@ CONTAINS
     CALL mpi_bc(this%sk2,rank,mpi_comm)
     CALL mpi_bc(this%nstr2,rank,mpi_comm)
     CALL mpi_bc(this%ig2,rank,mpi_comm)
+    CALL mpi_bc(this%i2g,rank,mpi_comm)
     CALL mpi_bc(this%phi2,rank,mpi_comm)
     CALL mpi_bc(this%rgphs,rank,mpi_comm)
     CALL mpi_bc(this%r2gphs,rank,mpi_comm)
