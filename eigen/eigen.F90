@@ -31,7 +31,7 @@ CONTAINS
    !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,&
                     enpara,nococonv,mpdata,hybdat,&
-                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,starsq,v1real,v1imag)
+                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,iDir,iDtype,starsq,v1real,v1imag)
 
 #include"cpp_double.h"
       USE m_types
@@ -51,6 +51,7 @@ CONTAINS
       USE m_types_mpimat
       use m_store_load_hybrid
       USE m_dfpt_tlmplm
+      USE m_dfpt_eigen
 
       IMPLICIT NONE
 
@@ -78,8 +79,8 @@ CONTAINS
 
       INTEGER, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
-      REAL,    OPTIONAL, INTENT(IN) :: bqpt
-      INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eig_id
+      REAL,    OPTIONAL, INTENT(IN) :: bqpt(3)
+      INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eig_id, iDir, iDtype
 
       TYPE(t_stars),  OPTIONAL, INTENT(IN) :: starsq
       TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1real, v1imag
@@ -122,7 +123,7 @@ CONTAINS
       ! Modify this from kpts only in DFPT case.
       IF (l_dfpteigen) THEN
           DO nk_i = 1, fi%kpts%nkpt
-              kqpts%bk(3, nk_i) = kqpts%bk(3, nk_i) + bqpt
+              kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
           END DO
       END IF
 
@@ -252,22 +253,22 @@ CONTAINS
 #else
                 n_rank = 0; n_size=1;
 #endif
-                !IF (.NOT.l_dfpteigen) THEN
+                IF (.NOT.l_dfpteigen) THEN
                     CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                                eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
-                !ELSE
-                !    CALL dfpt_eigen()
-                !    RETURN
-                !END IF
+                ELSE
+                    CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+                    CYCLE k_loop
+                END IF
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
-                !IF (.NOT.l_dfpteigen) THEN
+                IF (.NOT.l_dfpteigen) THEN
                     if (fmpi%pe_diag) CALL write_eig(eig_id, nk,jsp,ne_found,&
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
-                !ELSE
-                !    if (fmpi%pe_diag) CALL dfpt_eigen()
-                !    RETURN
-                !END IF
+                ELSE
+                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+                    CYCLE k_loop
+                END IF
             ENDIF
             neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
