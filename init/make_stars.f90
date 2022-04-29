@@ -53,13 +53,13 @@ CONTAINS
       call stars%dim(sym,cell,input%film)
       call stars%init(cell,sym,input%film,input%rkmax)
       call timestop("star-setup")
-      
-      CALL timestart("stepf")
-      ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-      CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi)
-      CALL timestop("stepf")
+    ENDIF    
+    CALL timestart("stepf")
+    ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
+    CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi)
+    CALL timestop("stepf")
   
-   ENDIF
+  
    CALL stars%mpi_bc(fmpi%mpi_comm)
 
 
