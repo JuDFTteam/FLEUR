@@ -10,7 +10,7 @@ MODULE m_make_stars
   PRIVATE
   PUBLIC :: make_stars
 CONTAINS
-  SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,fmpi)
+  SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,fmpi,qvec,iDtype,iDir)
     USE m_stepf
     USE m_types_sym
     USE m_types_atoms
@@ -30,7 +30,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(in)::atoms
     TYPE(t_vacuum),INTENT(in)::vacuum
     TYPE(t_sphhar),INTENT(in)::sphhar
-    TYPE(t_input),INTENT(inout)::input
+    TYPE(t_input),INTENT(in)::input
     TYPE(t_cell),INTENT(in)::cell
     CLASS(t_xcpot),INTENT(in)::xcpot
     TYPE(t_oneD),INTENT(inout)::oneD
@@ -42,6 +42,9 @@ CONTAINS
     !       a modified step function for use with DFPT.
     !       Use a dummy oneD, copied input and call the result starsq.
 
+    REAL, OPTIONAL, INTENT(IN) :: qvec(3)
+    INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
+
     ! Generate stars
     INTEGER :: kimax,kimax2
 
@@ -50,20 +53,26 @@ CONTAINS
     IF (fmpi%irank==0) THEN
       call timestart("star-setup")
       stars%gmax=input%gmax
-      call stars%dim(sym,cell,input%film)
-      call stars%init(cell,sym,input%film,input%rkmax)
+      IF (PRESENT(qvec)) THEN
+         call stars%dim(sym,cell,input%film,qvec)
+         call stars%init(cell,sym,input%film,input%rkmax,qvec)
+      ELSE
+         call stars%dim(sym,cell,input%film)
+         call stars%init(cell,sym,input%film,input%rkmax)
+      END IF
       call timestop("star-setup")
-    ENDIF    
+    ENDIF
     CALL timestart("stepf")
-    ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-    CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi)
+    IF (PRESENT(qvec)) THEN
+      ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
+      CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi,qvec, iDtype, iDir)
+    ELSE
+      ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
+      CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi)
+    END if
     CALL timestop("stepf")
-  
-  
+
    CALL stars%mpi_bc(fmpi%mpi_comm)
-
-
-
 
   END SUBROUTINE make_stars
 END MODULE m_make_stars

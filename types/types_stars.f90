@@ -21,10 +21,10 @@ MODULE m_types_stars
      INTEGER ::mx1
      INTEGER ::mx2
      INTEGER ::mx3
-     
-   
+
+
      INTEGER :: ng3_fft !number of stars in fft-box of size 2*rkmax
-   
+
      !rep. g-vector of star
      INTEGER, ALLOCATABLE ::kv3(:, :)
      !length of star
@@ -53,6 +53,11 @@ MODULE m_types_stars
 
      COMPLEX, ALLOCATABLE :: ustep(:)
      REAL, ALLOCATABLE    :: ufft(:)
+
+     ! q-shifted stuff
+     REAL                 :: center(3) = [0.0,0.0,0.0]
+     REAL,    ALLOCATABLE :: gq(:, :)
+     COMPLEX, ALLOCATABLE :: ufft1(:)
    CONTAINS
      PROCEDURE :: mpi_bc=>mpi_bc_stars
      PROCEDURE :: init=>init_stars
@@ -110,16 +115,18 @@ CONTAINS
 
   END SUBROUTINE mpi_bc_stars
 
-  subroutine init_stars(stars,cell,sym,film,rkmax)
+  subroutine init_stars(stars,cell,sym,film,rkmax,qvec)
     USE m_spgrot
     USE m_types_cell
     USE m_types_sym
     USE m_sort
-    CLASS(t_stars),INTENT(INOUT)  :: stars 
+    CLASS(t_stars),INTENT(INOUT)  :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
-    TYPE(t_sym),INTENT(IN)        :: sym 
+    TYPE(t_sym),INTENT(IN)        :: sym
     LOGICAL,INTENT(IN)            :: film
     REAL,INTENT(IN)               :: rkmax
+
+    REAL, OPTIONAL, INTENT(IN) :: qvec(3)
 
     INTEGER :: k1,k2,k3,n,n1,k
     REAL    :: s,g(3),gmax2
@@ -134,11 +141,11 @@ CONTAINS
     ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
     ALLOCATE(stars%kv3(3,stars%ng3),stars%sk3(stars%ng3),stars%nstr(stars%ng3))
     ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-    
+
     stars%rgphs=0.0
     stars%ig=0
     stars%nstr=0
-    
+
     k=0
     !Generate 3D stars
     x_dim: DO k1 = stars%mx1,-stars%mx1,-1
@@ -150,11 +157,16 @@ CONTAINS
           kv(3) = k3
 
           g=matmul(kv,cell%bmat)
+          IF (PRESENT(qvec)) g = g + matmul(qvec,cell%bmat)
           s=dot_product(g,g)
           if (s>gmax2) cycle z_dim !not in sphere
           k=k+1
           stars%kv3(:,k)=kv
           stars%sk3(k)=sqrt(s)
+          IF (PRESENT(qvec)) THEN
+             stars%gq(:,k)=s
+             stars%center=qvec
+          END IF
           ! secondary key for equal length stars
           gsk3(k) = (stars%mx1+stars%kv3(1,k)) +&
             &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
@@ -166,7 +178,7 @@ CONTAINS
             stars%ig(kr(1,n),kr(2,n),kr(3,n))=k
           ENDDO
         ENDDO z_dim
-      ENDDO y_dim  
+      ENDDO y_dim
     ENDDO x_dim
     if (k.ne.stars%ng3) call judft_error("BUG inconsistency in star setup")
 
@@ -178,7 +190,7 @@ CONTAINS
     DO  k = 1,stars%ng3
       CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),&
       kr,phas)
-      symloop: DO n = 1,sym%nop    
+      symloop: DO n = 1,sym%nop
         stars%ig(kr(1,n),kr(2,n),kr(3,n))=k
         stars%rgphs(kr(1,n),kr(2,n),kr(3,n))=stars%rgphs(kr(1,n),kr(2,n),kr(3,n))+phas(n)
         DO n1 = 1,n-1
@@ -186,7 +198,7 @@ CONTAINS
         ENDDO
         stars%nstr(k)=stars%nstr(k)+1
       ENDDO symloop
-    ENDDO    
+    ENDDO
     !Adjust phases
     if (sym%symor) THEN
       stars%rgphs=1.0
@@ -194,18 +206,18 @@ CONTAINS
       DO k1 = stars%mx1,-stars%mx1,-1
         DO k2 = stars%mx2,-stars%mx2,-1
           DO k3 = stars%mx3,-stars%mx3,-1
-            IF ( stars%ig(k1,k2,k3)==0 ) CYCLE 
+            IF ( stars%ig(k1,k2,k3)==0 ) CYCLE
             stars%rgphs(k1,k2,k3)=stars%rgphs(k1,k2,k3)*stars%nstr(stars%ig(k1,k2,k3))/sym%nop
           enddo
         ENDDO
       ENDDO
-    ENDIF    
+    ENDIF
     !count number of stars in 2*rkmax (stars are ordered)
     associate(i=>stars%ng3_fft)
       DO i=stars%ng3,1,-1
         IF ( stars%sk3(i).LE.2.0*rkmax ) EXIT
       ENDDO
-    end associate 
+    end associate
 
     if (.not.film) return
     !
@@ -216,7 +228,7 @@ CONTAINS
     ALLOCATE(stars%i2g(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2))
     ALLOCATE(stars%ig2(stars%ng3))
     ALLOCATE(stars%igvac(stars%ng2,-stars%mx3:stars%mx3))
-    stars%r2gphs=0.0 
+    stars%r2gphs=0.0
     stars%i2g=0
     stars%nstr2=0
     kv(3)=0
@@ -234,14 +246,14 @@ CONTAINS
         stars%kv2(:,k)=kv(:2)
         stars%sk2(k)=sqrt(s)
         ! secondary key for equal length stars
-        gsk3(k) = (stars%mx1+stars%kv3(1,k)) +(stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) 
+        gsk3(k) = (stars%mx1+stars%kv3(1,k)) +(stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1)
         !Now generate all equivalent g-vectors
         CALL spgrot(sym%nop2,sym%symor,sym%mrot(:2,:2,:),sym%tau(:2,:),sym%invtab,stars%kv2(:2,k),kr(:2,:))
         DO n = 1,sym%nop2
             stars%i2g(kr(1,n),kr(2,n))=k
         ENDDO
-     
-      ENDDO y_dim2  
+
+      ENDDO y_dim2
     ENDDO x_dim2
     if (k.ne.stars%ng2) call judft_error("BUG in init_stars: inconsistency in ng2")
     !sort for increasing length sk2
@@ -252,9 +264,9 @@ CONTAINS
     DO  k = 1,stars%ng2
       DO k3= stars%mx3,-stars%mx3,-1
          stars%igvac(k,k3) = stars%ig(stars%kv2(1,k),stars%kv2(2,k),k3)
-      ENDDO  
+      ENDDO
       CALL spgrot(sym%nop2,sym%symor,sym%mrot(:2,:2,:),sym%tau(:2,:),sym%invtab,stars%kv2(:2,k),kr(:2,:),phas)
-      symloop2: DO n = 1,sym%nop2    
+      symloop2: DO n = 1,sym%nop2
         stars%i2g(kr(1,n),kr(2,n))=k
         stars%r2gphs(kr(1,n),kr(2,n))=stars%r2gphs(kr(1,n),kr(2,n))+phas(n)
         DO n1 = 1,n-1
@@ -265,21 +277,21 @@ CONTAINS
     ENDDO
     DO k=1,stars%ng3
       stars%ig2(k)=stars%i2g(stars%kv3(1,k),stars%kv3(2,k))
-    ENDDO    
+    ENDDO
     !Adjust phases
     IF (sym%symor) THEN
       stars%r2gphs=1.0
     ELSE
       DO k1 = stars%mx1,-stars%mx1,-1
         DO k2 = stars%mx2,-stars%mx2,-1
-          IF ( stars%i2g(k1,k2)==0 ) CYCLE 
+          IF ( stars%i2g(k1,k2)==0 ) CYCLE
           stars%r2gphs(k1,k2)=stars%r2gphs(k1,k2)*stars%nstr2(stars%i2g(k1,k2))/sym%nop2
         ENDDO
       ENDDO
-    ENDIF     
+    ENDIF
   END SUBROUTINE init_stars
 
-  subroutine dim_stars(stars,sym,cell,film)
+  subroutine dim_stars(stars,sym,cell,film,qvec)
     !! determine the key dimensions of the stars:
     !! mx1,mx2,mx3
     !! ng3, ng2
@@ -287,15 +299,17 @@ CONTAINS
     USE m_types_cell
     USE m_types_sym
     USE m_boxdim
-    CLASS(t_stars),INTENT(INOUT)  :: stars 
+    CLASS(t_stars),INTENT(INOUT)  :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
-    TYPE(t_sym),INTENT(IN)        :: sym 
+    TYPE(t_sym),INTENT(IN)        :: sym
     LOGICAL,INTENT(IN)            :: film
-    
+
+    REAL, OPTIONAL, INTENT(IN) :: qvec(3)
+
     INTEGER :: k1,k2,k3,n,kv(3),kr(3,sym%nop)
     REAL    :: s,g(3),gmax2
     REAL    :: arltv1,arltv2,arltv3
-   
+
     gmax2=stars%gmax**2
     CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
 
@@ -305,9 +319,9 @@ CONTAINS
 
     ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
     ALLOCATE(stars%i2g(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2))
-    
-   
-    
+
+
+
     stars%i2g=0
     stars%ig=0
     stars%ng2=0
@@ -329,11 +343,12 @@ CONTAINS
                 stars%i2g(kr(1,n),kr(2,n))=stars%ng2
               ENDDO
             ENDIF
-        ENDIF      
+        ENDIF
         z_dim: DO k3 = stars%mx3,-stars%mx3,-1
           IF ( stars%ig(k1,k2,k3) .NE. 0 ) CYCLE z_dim  ! belongs to another star
           kv(3) = k3
           g=matmul(kv,cell%bmat)
+          IF (PRESENT(qvec)) g = g + matmul(qvec,cell%bmat)
           s=dot_product(g,g)
           if (s>gmax2) cycle z_dim !not in sphere
           stars%ng3=stars%ng3+1
@@ -348,7 +363,7 @@ CONTAINS
     if (.not.film) stars%ng2=0
     DEALLOCATE(stars%ig)
     DEALLOCATE(stars%i2g)
-    
-   
+
+
   END SUBROUTINE dim_stars
 END MODULE m_types_stars

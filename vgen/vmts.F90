@@ -99,7 +99,7 @@ contains
     !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype))
     !$ vtl_loc(:,:) = cmplx(0.0,0.0)
     !$omp do
-    do k = fmpi%irank+2, stars%ng3, fmpi%isize
+    do k = MERGE(fmpi%irank+2,1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
       cp = vpw(k) * stars%nstr(k)
       if ( .not. oneD%odi%d1 ) then
         call phasy1( atoms, stars, sym, cell, k, pylm )

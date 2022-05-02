@@ -2,10 +2,10 @@ MODULE m_stepf
    USE m_juDFT
    USE m_cdn_io
 #ifdef CPP_MPI
-   use mpi 
+   use mpi
 #endif
 CONTAINS
-   SUBROUTINE stepf(sym, stars, atoms, oneD, input, cell, vacuum, fmpi)
+   SUBROUTINE stepf(sym, stars, atoms, oneD, input, cell, vacuum, fmpi, qvec, iDtype, iDir)
       !
       !*********************************************************************
       !     calculates the fourier components of the interstitial step
@@ -31,6 +31,10 @@ CONTAINS
       TYPE(t_cell), INTENT(IN)       :: cell
       TYPE(t_vacuum), INTENT(IN)     :: vacuum
       TYPE(t_mpi), INTENT(IN)        :: fmpi
+
+      REAL,    OPTIONAL, INTENT(IN) :: qvec(3)
+      INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
+
       !     ..
       !     .. Local Scalars ..
       COMPLEX c_c, c_phs
@@ -62,7 +66,11 @@ CONTAINS
       !--->    if step function stored on disc, then just read it in
       !
       l_error = .FALSE.
-      IF (fmpi%irank == 0) CALL readStepfunction(stars, atoms, cell, vacuum, l_error)
+      IF (fmpi%irank == 0 .AND. .NOT.PRESENT(qvec)) THEN
+         CALL readStepfunction(stars, atoms, cell, vacuum, l_error)
+      ELSE IF (PRESENT(qvec)) THEN
+         l_error = .TRUE.
+      END IF
 #ifdef CPP_MPI
       CALL MPI_BCAST(l_error, 1, MPI_LOGICAL, 0, fmpi%mpi_comm, ierr)
 #endif
@@ -83,7 +91,8 @@ CONTAINS
          DO n = 1, atoms%ntype
             c = c + atoms%neq(n)*atoms%volmts(n)/cell%omtil
          ENDDO
-         stars%ustep(1) = CMPLX(dd - c, 0.0)
+
+         IF (.NOT.PRESENT(qvec)) stars%ustep(1) = CMPLX(dd - c, 0.0)
          !--->    G(parallel)=0  (for film)
          IF (input%film .AND. .NOT. oneD%odd%d1) THEN
             DO k = 2, stars%ng3
@@ -110,21 +119,29 @@ CONTAINS
             ENDDO
             !+odim
          ELSE
-            DO k = 2, stars%ng3
+            DO k = MERGE(2,1,.NOT.PRESENT(qvec)), stars%ng3
                stars%ustep(k) = CMPLX(0.0, 0.0)
             END DO
          END IF
          !--->    sphere contributions
          na = 0
-         DO n = 1, atoms%ntype
+         DO n = MERGE(1,iDtype,.NOT.PRESENT(qvec)), MERGE(atoms%ntype,iDtype,.NOT.PRESENT(qvec))
             c = 3.*atoms%volmts(n)/cell%omtil
             !-->     structure factors: loop over equivalent atoms
-            na = na + 1
-            DO k = 2, stars%ng3
-               th = -tpi_const*DOT_PRODUCT(stars%kv3(:, k), atoms%taual(:, na))
-               sf(k) = CMPLX(COS(th), SIN(th))
+            IF (.NOT.PRESENT(qvec)) THEN
+               na = na + 1
+            ELSE
+               na = iDtype
+            END IF
+            DO k = MERGE(2,1,norm2(stars%center)<=1e-8), stars%ng3
+               th = -tpi_const*DOT_PRODUCT(stars%kv3(:, k)+stars%center, atoms%taual(:, na))
+               IF (.NOT.PRESENT(qvec)) THEN
+                  sf(k) = CMPLX(COS(th), SIN(th))
+               ELSE
+                  sf(k) = -ImagUnit*stars%gq(iDir,k)*CMPLX(COS(th), SIN(th))
+               END IF
             END DO
-            DO nn = 2, atoms%neq(n)
+            DO nn = 2, atoms%neq(n) !Should automatically be nn = 2, 1 for DFPT
                na = na + 1
                DO k = 2, stars%ng3
                   th = -tpi_const*DOT_PRODUCT(stars%kv3(:, k), atoms%taual(:, na))
@@ -132,7 +149,7 @@ CONTAINS
                END DO
             END DO
             !--->    update step function
-            DO k = 2, stars%ng3
+            DO k = MERGE(2,1,norm2(stars%center)<=1e-8), stars%ng3
                gs = stars%sk3(k)*atoms%rmt(n)
                stars%ustep(k) = stars%ustep(k) - (c*(SIN(gs)/gs - COS(gs))/(gs*gs))*sf(k)
             ENDDO
@@ -204,6 +221,7 @@ CONTAINS
                ic = i1 + 3*stars%mx1*i2 + 9*stars%mx1*stars%mx2*i3
                gm(1) = REAL(i1)
                IF (2*i1 > 3*stars%mx1) gm(1) = gm(1) - 3.0*stars%mx1
+               ! TODO: (How)do these conditions apply for DFPT?
                !
                !-> use inversion <-> c.c.
                !
@@ -220,6 +238,7 @@ CONTAINS
                IF ((ic1 == im1) .AND. (ic2 == im2)) icm(-ic1, -ic2, ic3) = ic
 #endif
                g = MATMUL(TRANSPOSE(cell%bmat), gm)
+               IF (PRESENT(qvec)) g = g + MATMUL(TRANSPOSE(cell%bmat), qvec)
                g_sqr = DOT_PRODUCT(g, g)
                g_abs = SQRT(g_sqr)
                help = fp_omtil/g_sqr
@@ -242,12 +261,16 @@ CONTAINS
 #endif
                ELSE
                   c_c = CMPLX(0.0, 0.0)
-                  DO n = 1, atoms%ntype
+                  DO n = 1, MERGE(atoms%ntype,iDtype,.NOT.PRESENT(qvec))
                      c_phs = CMPLX(0.0, 0.0)
-                     na = SUM(atoms%neq(:n - 1))
+                     na = MERGE(SUM(atoms%neq(:n - 1)),iDtype,.NOT.PRESENT(qvec))
                      DO nn = 1, atoms%neq(n)
                         th = -tpi_const*DOT_PRODUCT(gm, atoms%taual(:, na + nn))
-                        c_phs = c_phs + EXP(CMPLX(0, th))
+                        IF (.NOT.PRESENT(qvec)) THEN
+                           c_phs = c_phs + EXP(CMPLX(0, th))
+                        ELSE
+                           c_phs = c_phs + (-i*g(iDir))*EXP(CMPLX(0, th))
+                        END IF
                      ENDDO
                      g_rmt = g_abs*atoms%rmt(n)
                      c_c = c_c + atoms%rmt(n)*(SIN(g_rmt)/g_rmt - COS(g_rmt))*c_phs
@@ -261,6 +284,7 @@ CONTAINS
 #endif
                ENDIF
 
+               ! TODO: (How)do these conditions apply for DFPT?
                IF (((i3 .EQ. 3*stars%mx3/2) .OR. (i2 .EQ. 3*stars%mx2/2)) .OR. (i1 .EQ. 3*stars%mx1/2)) THEN
 #ifdef CPP_MPI
                   ufft_local(ic) = 0.0
@@ -346,12 +370,14 @@ CONTAINS
          CALL cfft(stars%ufft, bfft, ifftd, 3*stars%mx2, 9*stars%mx1*stars%mx2, +1)
          CALL cfft(stars%ufft, bfft, ifftd, 3*stars%mx3, ifftd, +1)
 
+         IF (PRESENT(qvec)) stars%ufft1 = CMPLX(stars%ufft,bfft)
+
          DEALLOCATE (bfft, icm)
 #ifdef CPP_MPI
          DEALLOCATE (bfft_local, ufft_local, icm_local)
 #endif
 
-         CALL writeStepfunction(stars)
+         IF (.NOT.PRESENT(qvec)) CALL writeStepfunction(stars)
       ENDIF ! (fmpi%irank == 0)
 
    END SUBROUTINE stepf

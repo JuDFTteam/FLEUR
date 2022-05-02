@@ -7,10 +7,10 @@ q-loop:
    \beta-loop:
       j-loop:
          - generate stars shifted by q with starsq%ustep and starsq%ufft
-           containing not \Theta, but \Theta1
-         - make the Theta1 variables explicitly complex (ufftq,ustepq)
-         - add additional stars%center, that contains q [default: 0]
-         - have an array of G+q vectors as well
+           containing not \Theta, but \Theta1 (done?)
+         - make the Theta1 variables explicitly complex (ufftq,ustepq) (done?)
+         - add additional stars%center, that contains q [default: 0] (done)
+         - have an array of G+q vectors as well (done)
          scf-loop:
             vgen1:
                vgen_coulomb:
