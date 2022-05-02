@@ -5,7 +5,7 @@ module m_vvac
   ! ****************************************************************
   contains
 
-  subroutine vvac( vacuum, stars, cell, sym, input, field, psq, rht, vz, rhobar, sig1dh, vz1dh ,vslope)
+  subroutine vvac( vacuum, stars, cell,  input, field, psq, rht, vz, rhobar, sig1dh, vz1dh ,vslope)
 
     use m_constants
     use m_qsf
@@ -15,8 +15,7 @@ module m_vvac
     type(t_vacuum), intent(in)    :: vacuum
     type(t_stars),  intent(in)    :: stars
     type(t_cell),   intent(in)    :: cell
-    type(t_sym),    intent(in)    :: sym
-
+   
     complex,        intent(out)   :: rhobar
     real,           intent(out)   :: sig1dh, vz1dh
     type(t_input),  intent(in)    :: input
@@ -27,8 +26,8 @@ module m_vvac
     complex,        intent(in)    :: psq(stars%ng3)
     real,           intent(out)   :: vz(vacuum%nmzd,2)
 
-    complex                       :: sumq, vcons
-    real                          :: bj0, bj1, dh, qzh, sigmaa(2)
+    real                          :: sumq
+    real                          :: bj0, bj1, qzh, sigmaa(2)
     integer                       :: ig3, imz, ivac, ncsh
     real                          :: f(vacuum%nmzd), sig(vacuum%nmzd), vtemp(vacuum%nmzd)
     intrinsic cos, sin
@@ -44,28 +43,24 @@ module m_vvac
     ! g=0 vacuum potential due to neutral charge density
     ! inside slab and zero charge density outside
 
-    vcons = - 2. * fpi_const * ImagUnit
-    dh = cell%z1
     rhobar = - psq(1)
-    sumq = cmplx( 0.0, 0.0 )
+    sumq = 0.0
 
     do ig3 = 2, stars%ng3
       if (stars%ig2(ig3) == 1) then           ! select g_|| = 0
-        qzh = stars%kv3(3,ig3) * cell%bmat(3,3) * dh
+        qzh = stars%kv3(3,ig3) * cell%bmat(3,3) * cell%z1
         bj0 = sin(qzh) / qzh
         rhobar = rhobar - psq(ig3) * bj0 * stars%nstr(ig3)
-        if ( .not.( sym%zrfs .or. sym%invs ) ) then
+        if ( vacuum%nvac==2 ) then
           bj1 = ( sin(qzh) - qzh * cos(qzh) ) / ( qzh * qzh )
-          sumq = sumq + bj1 * psq(ig3) * dh * dh
+          sumq = sumq - 2. * fpi_const * ImagUnit * bj1 * psq(ig3) * cell%z1 *cell%z1
         endif
       endif
     enddo
-
-    ivac = 2                        ! lower (ivac=2) vacuum
-    if ( vacuum%nvac == 2 ) then
-      vz(1:vacuum%nmz,ivac) = vcons * sumq
-    endif
-
+    
+    ! lower (nvac=2) vacuum
+    if ( vacuum%nvac == 2 ) vz(1:vacuum%nmz,2) =  sumq
+    
     ! g=0 vacuum potential due to
     ! negative of rhobar + vacuum (g=0) charge ----> v2(z)
 
