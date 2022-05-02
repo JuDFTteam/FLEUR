@@ -49,7 +49,7 @@
 &atom desc="Yttrium (Y)" z=39 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p6 5s2 4d1" lo="4s 4p" /
 &atom desc="Zirconium (Zr)" z=40 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p6 5s2 4d2" lo="4s 4p" /
 &atom desc="Niobium (Nb)" z=41 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p6 5s1 4d4" lo="4s 4p" /
-&atom desc="Molybdenum (Mb)" z=42 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p6 5s1 4d5" lo="4s 4p" /
+&atom desc="Molybdenum (Mo)" z=42 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p6 5s1 4d5" lo="4s 4p" /
 &atom desc="Technetium (Tc)" z=43 econfig="1s2 2s2 2p6 3s2 3p6 3d10|4s2 4p6 5s2 4d5" lo="4s 4p" /
 &atom desc="Ruthenium (Ru)" z=44 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10|4p6 5s1 4d7" lo="4p" /
 &atom desc="Rhodium (Rh)" z=45 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10|4p6 5s1 4d8" lo="4p" /

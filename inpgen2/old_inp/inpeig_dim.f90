@@ -30,7 +30,7 @@
       LOGICAL xyu,l_k
    !     ..
       kpts%nkpt = 0
-      stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
+      !stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
       !cell%aamat=matmul(transpose(cell%amat),cell%amat)
       cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
 !
@@ -96,9 +96,7 @@
             CALL apws_dim(&
                  &                     bk(:),cell,input,noco,oneD,&
                  &                     nv,nv2,kq1,kq2,kq3)
-            stars%kq1_fft = MAX(kq1,stars%kq1_fft)
-            stars%kq2_fft = MAX(kq2,stars%kq2_fft)
-            stars%kq3_fft = MAX(kq3,stars%kq3_fft)
+           
 
 
          ENDDO ! k=pts

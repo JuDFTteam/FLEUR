@@ -121,7 +121,7 @@
 
    <xsd:complexType name="DensityType">
       <xsd:attribute name="ng3" type="xsd:positiveInteger" use="required"/>
-      <xsd:attribute name="ng2" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="ng2" type="xsd:nonNegativeInteger" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="BandsType">

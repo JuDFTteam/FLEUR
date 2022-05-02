@@ -1476,7 +1476,7 @@ module m_jpSternheimer
         close(113)
         close(114)
       !end if
-      write(logUnit, '(a)') 'Continuity of final potential variation for 1st iteration of Sternheimer SCC'
+      write(logUnit, '(a)') 'Continuity of effective potential variation for final iteration of Sternheimer SCC'
       write(logUnit, '(a)') '----------------------------------------------------------------------------'
       call checkjuPhDens1(atoms, cell, ngpqdp, vEff1IRsh, vEff1MT, qpoint, gpqdp, noPts2chCont, logUnit  )
 
@@ -1556,7 +1556,7 @@ module m_jpSternheimer
       call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vEff1IR, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
-      write(logUnit, '(a)') 'Continuity of effective final potential variation for Pulay dynamical matrix'
+      write(logUnit, '(a)') 'Continuity of effective potential variation for Pulay dynamical matrix'
       write(logUnit, '(a)') '----------------------------------------------------------------------------'
       call checkjuPhDens1(atoms, cell, ngpqdp, vEff1IR, vEff1MT, qpoint, gpqdp, noPts2chCont, logUnit  )
 
@@ -1569,7 +1569,7 @@ module m_jpSternheimer
       call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vHar1IR, vHar1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
-      write(logUnit, '(a)') 'Continuity of Hartree final potential variation for surface dynamical matrix'
+      write(logUnit, '(a)') 'Continuity of Hartree potential variation for surface dynamical matrix'
       write(logUnit, '(a)') '----------------------------------------------------------------------------'
       call checkjuPhDens1(atoms, cell, ngpqdp, vHar1IR, vHar1MT, qpoint, gpqdp, noPts2chCont, logUnit  )
 
@@ -1620,7 +1620,7 @@ module m_jpSternheimer
         & vHarNum ) ! add spin
 
 
-      write(logUnit, '(a)') 'Continuity of external final potential variation for Hellmann-Feynman dynamical matrix'
+      write(logUnit, '(a)') 'Continuity of external potential variation for Hellmann-Feynman dynamical matrix'
       write(logUnit, '(a)') '--------------------------------------------------------------------------------------'
       call checkjuPhDens1(atoms, cell, ngpqdp, vExt1IRtemp, vExt1MTtemp, qpoint, gpqdp, noPts2chCont, logUnit  )
 
@@ -1917,7 +1917,7 @@ module m_jpSternheimer
         close(110)
       end if
 
-      write(logUnit, '(a)') 'Continuity of final potential variation for regular iteration of Sternheimer SCC'
+      write(logUnit, '(a)') 'Continuity of effective potential variation for regular iteration of Sternheimer SCC'
       write(logUnit, '(a)') '--------------------------------------------------------------------------------'
       call checkjuPhDens1(atoms, cell, ngdp, vEff1IRsh, vEff1MT, qpoint, gdp, noPts2chCont, logUnit)
 
@@ -3172,8 +3172,8 @@ module m_jpSternheimer
         end if
       end if
 
-      write ( logFileUnit, '(a)' ) "Continuity of the unperturbed potential's gradient:"
-      write(logFileUnit,*)         '---------------------------------------------------'
+      !write ( logFileUnit, '(a)' ) "Continuity of the unperturbed potential's gradient:"
+      !write(logFileUnit,*)         '---------------------------------------------------'
       iatom = 0
       do itype = 1,atomsT%ntype
         do ieq = 1,atomsT%neq(itype)

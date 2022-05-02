@@ -47,7 +47,7 @@ CONTAINS
          judft_error("Lists for theta/phi must have the same length in MAE force theorem calculations")
     DO n=1,SIZE(this%phi)
        CALL soc_sym(sym%nop,sym%mrot,this%theta(n),this%phi(n),cell%amat,error)
-       IF (ANY(error)) CALL judft_error("Force theory choice of SOC-SQA breaks symmetry")
+       IF (ANY(error)) CALL judft_warn("Force theory choice of SOC-SQA breaks symmetry")
     END DO
     ALLOCATE(this%evsum(SIZE(this%phi)))
     this%evsum=0
@@ -125,7 +125,7 @@ CONTAINS
        skip=.FALSE.
        RETURN
     ENDIF
-    this%evsum(this%directions_done)=results%seigv/2.0
+    this%evsum(this%directions_done)=results%seigv
     skip=.TRUE.
   END FUNCTION  mae_eval
 
@@ -136,7 +136,7 @@ CONTAINS
 
     !Locals
     INTEGER:: n
-    CHARACTER(LEN=12):: attributes(3)
+    CHARACTER(LEN=16):: attributes(3)
     IF (this%directions_done==0) THEN
        RETURN
     ENDIF
@@ -151,9 +151,9 @@ CONTAINS
        DO n=1,SIZE(this%evsum)
           WRITE(attributes(1),'(f12.7)') this%theta(n)
           WRITE(attributes(2),'(f12.7)') this%phi(n)
-          WRITE(attributes(3),'(f12.7)') this%evsum(n)
+          WRITE(attributes(3),'(f16.9)') this%evsum(n)
           CALL writeXMLElementForm('Angle',(/'theta ','phi   ','ev-sum'/),attributes,&
-               RESHAPE((/5,3,6,12,12,12/),(/3,2/)))
+               RESHAPE((/5,3,6,12,12,16/),(/3,2/)))
        END DO
        CALL closeXMLElement('Forcetheorem_MAE')
     ENDIF

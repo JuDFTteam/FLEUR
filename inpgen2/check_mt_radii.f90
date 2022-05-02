@@ -108,28 +108,52 @@ CONTAINS
 
     t_rmt(0:103) = 2.3 ! default value
     t_rmt(1) = 1.0
-    t_rmt(2) = 1.5
+    t_rmt(2) = 1.3
     t_rmt(3:4) = 1.3
     t_rmt(5:9) = 1.3
-    t_rmt(10) = 1.9
-    t_rmt(11:12) = 1.7
+    t_rmt(10) = 1.7
+    t_rmt(11:12) = 1.5
     t_rmt(13:17) = 1.5
-    t_rmt(18) = 2.1
+    t_rmt(18) = 1.9
 
-    IF(profile%atomSetup.EQ."oxides_validation") THEN
-       t_rmt(21:30) = 1.8
+    IF(profile%atomSetup.EQ."default2") THEN
+       t_rmt(19:20) = 1.7
+       t_rmt(21:30) = 1.7
        t_rmt(31:35) = 1.7
        t_rmt(35) = 1.7
-       t_rmt(37:38) = 1.9
+       t_rmt(37:38) = 1.6
+       t_rmt(39:48) = 2.0
        t_rmt(49:50) = 1.8
-       t_rmt(51) = 2.3
-       t_rmt(52:53) = 2.2
-       t_rmt(55:56) = 2.0
+       t_rmt(51) = 1.8
+       t_rmt(52:53) = 1.8
+       t_rmt(55:56) = 1.6
+       t_rmt(57:70) = 2.0
        t_rmt(71:80) = 2.1
        t_rmt(78) = 2.2
        t_rmt(79:80) = 1.7
-       t_rmt(81:82) = 2.0
-       t_rmt(87:88) = 2.0
+       t_rmt(81:85) = 2.0
+       t_rmt(87:88) = 1.9
+       t_rmt(89:102) = 2.1
+    END IF
+
+    IF(profile%atomSetup.EQ."oxides_validation") THEN
+       t_rmt(19:20) = 1.7
+       t_rmt(21:30) = 1.7
+       t_rmt(31:35) = 1.7
+       t_rmt(35) = 1.7
+       t_rmt(37:38) = 1.6
+       t_rmt(39:48) = 2.0
+       t_rmt(49:50) = 1.8
+       t_rmt(51) = 1.8
+       t_rmt(52:53) = 1.8
+       t_rmt(55:56) = 1.6
+       t_rmt(57:70) = 2.0
+       t_rmt(71:80) = 2.1
+       t_rmt(78) = 2.2
+       t_rmt(79:80) = 1.7
+       t_rmt(81:85) = 2.0
+       t_rmt(87:88) = 1.9
+       t_rmt(89:102) = 2.1
     END IF
 
     cubeLength = 2*rmtMax+rmtDelta
@@ -343,10 +367,10 @@ CONTAINS
                 minRmts(atoms%nz(typeA)) = rmtFac * dist * facA
                 minRmts(atoms%nz(typeB)) = rmtFac * dist * facB
              ELSE
-                minRmts(atoms%nz(typeA)) = rmtFac * (dist - minRmts(atoms%nz(typeB)))
+                minRmts(atoms%nz(typeA)) = (rmtFac * dist) - minRmts(atoms%nz(typeB))
              END IF
           ELSE IF (minRmts(atoms%nz(typeB)).LT.0.0) THEN
-             minRmts(atoms%nz(typeB)) = rmtFac * (dist - minRmts(atoms%nz(typeA)))
+             minRmts(atoms%nz(typeB)) = (rmtFac * dist) - minRmts(atoms%nz(typeA))
           END IF
           minRmts(atoms%nz(typeA)) = min(minRmts(atoms%nz(typeA)),rmtMaxDefault) ! limit already here 
           minRmts(atoms%nz(typeB)) = min(minRmts(atoms%nz(typeB)),rmtMaxDefault) ! to a reasonable value
@@ -360,6 +384,7 @@ CONTAINS
           END IF
           rmt1(i) = minRmts(atoms%nz(i))
        END DO
+
 
        ! NOTE: The result of this section may be slightly different from the old version
        !       iff the old version would enlarge a MT sphere at this point.

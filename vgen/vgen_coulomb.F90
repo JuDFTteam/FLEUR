@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,  oneD, input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvTotimag, dfptden0, stars2, iDtype, iDir )
+             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -33,8 +33,6 @@ contains
     use m_vvacxy
     use m_vintcz
     use m_checkdopall
-    use m_od_vvac
-    use m_od_vvacis
     use m_convol
     use m_psqpw
     use m_cfft
@@ -57,7 +55,8 @@ contains
     type(t_potden),     intent(inout)            :: vCoul
     type(t_results),    intent(inout), optional  :: results
 
-    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag, dfptvTotimag, dfptden0
+    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag,  dfptden0
+    TYPE(t_potden),     OPTIONAL, INTENT(INOUT)  :: dfptvCoulimag
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
@@ -80,8 +79,6 @@ contains
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
     vCoul%iter = den%iter
 
-
-
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
     IF (.NOT.l_dfptvgen) THEN
@@ -101,14 +98,14 @@ contains
       if ( oneD%odi%d1 ) then
         call timestart( "Vacuum" )
         !---> generates the m=0,gz=0 component of the vacuum potential
-        call od_vvac( stars, vacuum, cell, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin) )
+        !call od_vvac( stars, vacuum, cell, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin) )
         !---> generation of the vacuum warped potential components and
         !---> interstitial pw potential
         !---> vvacxy_5.F is a symmetrized potential generator
-        call od_vvacis( oneD%odi%n2d, input, vacuum, oneD%odi%nq2, &
-             oneD%odi%kv, cell, oneD%odi%M, stars, oneD%odi%nst2, &
-             oneD, den%vacz(:,:,ispin), den%vacxy(:,:,:,ispin), psq, &
-             vCoul%vacz(:,:,ispin), sym, vCoul%vacxy(:,:,:,ispin), vCoul%pw(:,ispin) )
+        !call od_vvacis( oneD%odi%n2d, input, vacuum, oneD%odi%nq2, &
+        !     oneD%odi%kv, cell, oneD%odi%M, stars, oneD%odi%nst2, &
+        !     oneD, den%vacz(:,:,ispin), den%vacxy(:,:,:,ispin), psq, &
+        !     vCoul%vacz(:,:,ispin), sym, vCoul%vacxy(:,:,:,ispin), vCoul%pw(:,ispin) )
         call timestop( "Vacuum" )
         !---> generation of the vacuum warped potential components and
       elseif ( input%film .and. .not. oneD%odi%d1 ) then
@@ -198,8 +195,14 @@ contains
 #endif
     ! TODO: DFPT here; modify vmts for the vExt perturbation and the
     !       second potden in --> second potential out.
-    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
-               den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
+    IF (.NOT.l_dfptvgen) THEN
+      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
+                 den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
+    ELSE
+      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
+                 den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
+                 dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir )
+    END IF
     call timestop( "MT-spheres" )
 
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return

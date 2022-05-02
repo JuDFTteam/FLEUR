@@ -241,7 +241,7 @@ MODULE m_cdnpot_io_hdf
       LOGICAL,        INTENT(IN) :: l_CheckBroyd
 
       INTEGER(HID_T)            :: groupID
-      INTEGER                   :: hdfError, ft2_gf_dim, dimsInt(7)
+      INTEGER                   :: hdfError,  dimsInt(7)
       CHARACTER(LEN=30)         :: groupName
       INTEGER(HSIZE_T)          :: dims(7)
       LOGICAL        :: l_exist
@@ -260,9 +260,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: igfft2SpaceID, igfft2SetID
       INTEGER(HID_T)                   :: pgfftSpaceID, pgfftSetID
       INTEGER(HID_T)                   :: pgfft2SpaceID, pgfft2SetID
-      INTEGER(HID_T)                   :: ft2_gfxSpaceID, ft2_gfxSetID
-      INTEGER(HID_T)                   :: ft2_gfySpaceID, ft2_gfySetID
-
+    
       WRITE(groupname,'(a,i0)') '/stars-', starsIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
@@ -277,8 +275,7 @@ MODULE m_cdnpot_io_hdf
 
       CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
-      ft2_gf_dim = SIZE(stars%ft2_gfx,1)
-
+     
       CALL io_write_attint0(groupID,'structureIndex',structureIndex)
 
       CALL io_write_attreal0(groupID,'gmax',stars%gmax)
@@ -288,19 +285,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(groupID,'mx1',stars%mx1)
       CALL io_write_attint0(groupID,'mx2',stars%mx2)
       CALL io_write_attint0(groupID,'mx3',stars%mx3)
-      CALL io_write_attint0(groupID,'kimax',stars%kimax)
-      CALL io_write_attint0(groupID,'kimax2',stars%kimax2)
-      CALL io_write_attint0(groupID,'kq1_fft',stars%kq1_fft)
-      CALL io_write_attint0(groupID,'kq2_fft',stars%kq2_fft)
-      CALL io_write_attint0(groupID,'kq3_fft',stars%kq3_fft)
-      CALL io_write_attint0(groupID,'kmxq_fft',stars%kmxq_fft)
-      CALL io_write_attint0(groupID,'kxc1_fft',stars%kxc1_fft)
-      CALL io_write_attint0(groupID,'kxc2_fft',stars%kxc2_fft)
-      CALL io_write_attint0(groupID,'kxc3_fft',stars%kxc3_fft)
       CALL io_write_attint0(groupID,'ng3_fft',stars%ng3_fft)
-      CALL io_write_attint0(groupID,'kmxxc_fft',stars%kmxxc_fft)
-      CALL io_write_attint0(groupID,'nxc3_fft',stars%nxc3_fft)
-      CALL io_write_attint0(groupID,'ft2_gf_dim',ft2_gf_dim)
       CALL io_write_attint0(groupID,'od_nq2',oneD%odi%nq2)
 
       dims(:2)=(/3,stars%ng3/)
@@ -311,14 +296,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_integer2(kv3SetID,(/1,1/),dimsInt(:2),stars%kv3)
       CALL h5dclose_f(kv3SetID, hdfError)
 
-      dims(:2)=(/2,stars%ng2/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),kv2SpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "kv2", H5T_NATIVE_INTEGER, kv2SpaceID, kv2SetID, hdfError)
-      CALL h5sclose_f(kv2SpaceID,hdfError)
-      CALL io_write_integer2(kv2SetID,(/1,1/),dimsInt(:2),stars%kv2)
-      CALL h5dclose_f(kv2SetID, hdfError)
-
       dims(:1)=(/stars%ng3/)
       dimsInt=dims
       CALL h5screate_simple_f(1,dims(:1),sk3SpaceID,hdfError)
@@ -326,14 +303,6 @@ MODULE m_cdnpot_io_hdf
       CALL h5sclose_f(sk3SpaceID,hdfError)
       CALL io_write_real1(sk3SetID,(/1/),dimsInt(:1),stars%sk3)
       CALL h5dclose_f(sk3SetID, hdfError)
-
-      dims(:1)=(/stars%ng2/)
-      dimsInt=dims
-      CALL h5screate_simple_f(1,dims(:1),sk2SpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "sk2", H5T_NATIVE_DOUBLE, sk2SpaceID, sk2SetID, hdfError)
-      CALL h5sclose_f(sk2SpaceID,hdfError)
-      CALL io_write_real1(sk2SetID,(/1/),dimsInt(:1),stars%sk2)
-      CALL h5dclose_f(sk2SetID, hdfError)
 
       dims(:3)=(/2*stars%mx1+1,2*stars%mx2+1,2*stars%mx3+1/)
       dimsInt=dims
@@ -345,35 +314,11 @@ MODULE m_cdnpot_io_hdf
 
       dims(:1)=(/stars%ng3/)
       dimsInt=dims
-      CALL h5screate_simple_f(1,dims(:1),ig2SpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "ig2", H5T_NATIVE_INTEGER, ig2SpaceID, ig2SetID, hdfError)
-      CALL h5sclose_f(ig2SpaceID,hdfError)
-      CALL io_write_integer1(ig2SetID,(/1/),dimsInt(:1),stars%ig2)
-      CALL h5dclose_f(ig2SetID, hdfError)
-
-      dims(:1)=(/stars%ng3/)
-      dimsInt=dims
       CALL h5screate_simple_f(1,dims(:1),nstrSpaceID,hdfError)
       CALL h5dcreate_f(groupID, "nstr", H5T_NATIVE_INTEGER, nstrSpaceID, nstrSetID, hdfError)
       CALL h5sclose_f(nstrSpaceID,hdfError)
       CALL io_write_integer1(nstrSetID,(/1/),dimsInt(:1),stars%nstr)
       CALL h5dclose_f(nstrSetID, hdfError)
-
-      dims(:1)=(/stars%ng2/)
-      dimsInt=dims
-      CALL h5screate_simple_f(1,dims(:1),nstr2SpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "nstr2", H5T_NATIVE_INTEGER, nstr2SpaceID, nstr2SetID, hdfError)
-      CALL h5sclose_f(nstr2SpaceID,hdfError)
-      CALL io_write_integer1(nstr2SetID,(/1/),dimsInt(:1),stars%nstr2)
-      CALL h5dclose_f(nstr2SetID, hdfError)
-
-      dims(:1)=(/stars%ng2/)
-      dimsInt=dims
-      CALL h5screate_simple_f(1,dims(:1),phi2SpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "phi2", H5T_NATIVE_DOUBLE, phi2SpaceID, phi2SetID, hdfError)
-      CALL h5sclose_f(phi2SpaceID,hdfError)
-      CALL io_write_real1(phi2SetID,(/1/),dimsInt(:1),stars%phi2)
-      CALL h5dclose_f(phi2SetID, hdfError)
 
       dims(:4)=(/2,2*stars%mx1+1,2*stars%mx2+1,2*stars%mx3+1/)
       dimsInt=dims
@@ -383,54 +328,57 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_complex3(rgphsSetID,(/-1,1,1,1/),dimsInt(:4),stars%rgphs)
       CALL h5dclose_f(rgphsSetID, hdfError)
 
-      dims(:2)=(/stars%kimax+1,2/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),igfftSpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "igfft", H5T_NATIVE_INTEGER, igfftSpaceID, igfftSetID, hdfError)
-      CALL h5sclose_f(igfftSpaceID,hdfError)
-      CALL io_write_integer2(igfftSetID,(/1,1/),dimsInt(:2),stars%igfft(0:stars%kimax,:))
-      CALL h5dclose_f(igfftSetID, hdfError)
+      !Film stuff
+      IF (stars%ng2>0) THEN
+         dims(:2)=(/2,stars%ng2/)
+         dimsInt=dims
+         CALL h5screate_simple_f(2,dims(:2),kv2SpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "kv2", H5T_NATIVE_INTEGER, kv2SpaceID, kv2SetID, hdfError)
+         CALL h5sclose_f(kv2SpaceID,hdfError)
+         CALL io_write_integer2(kv2SetID,(/1,1/),dimsInt(:2),stars%kv2)
+         CALL h5dclose_f(kv2SetID, hdfError)
+      
+         dims(:1)=(/stars%ng2/)
+         dimsInt=dims
+         CALL h5screate_simple_f(1,dims(:1),sk2SpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "sk2", H5T_NATIVE_DOUBLE, sk2SpaceID, sk2SetID, hdfError)
+         CALL h5sclose_f(sk2SpaceID,hdfError)
+         CALL io_write_real1(sk2SetID,(/1/),dimsInt(:1),stars%sk2)
+         CALL h5dclose_f(sk2SetID, hdfError)
 
-      dims(:2)=(/stars%kimax2+1,2/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),igfft2SpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "igfft2", H5T_NATIVE_INTEGER, igfft2SpaceID, igfft2SetID, hdfError)
-      CALL h5sclose_f(igfft2SpaceID,hdfError)
-      CALL io_write_integer2(igfft2SetID,(/1,1/),dimsInt(:2),stars%igfft2(0:stars%kimax2,:))
-      CALL h5dclose_f(igfft2SetID, hdfError)
+         dims(:1)=(/stars%ng3/)
+         dimsInt=dims
+         CALL h5screate_simple_f(1,dims(:1),ig2SpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "ig2", H5T_NATIVE_INTEGER, ig2SpaceID, ig2SetID, hdfError)
+         CALL h5sclose_f(ig2SpaceID,hdfError)
+         CALL io_write_integer1(ig2SetID,(/1/),dimsInt(:1),stars%ig2)
+         CALL h5dclose_f(ig2SetID, hdfError)
 
-      dims(:2)=(/2,stars%kimax+1/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),pgfftSpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "pgfft", H5T_NATIVE_DOUBLE, pgfftSpaceID, pgfftSetID, hdfError)
-      CALL h5sclose_f(pgfftSpaceID,hdfError)
-      CALL io_write_complex1(pgfftSetID,(/-1,1/),dimsInt(:2),stars%pgfft(0:stars%kimax))
-      CALL h5dclose_f(pgfftSetID, hdfError)
+         dims(:1)=(/stars%ng2/)
+         dimsInt=dims
+         CALL h5screate_simple_f(1,dims(:1),nstr2SpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "nstr2", H5T_NATIVE_INTEGER, nstr2SpaceID, nstr2SetID, hdfError)
+         CALL h5sclose_f(nstr2SpaceID,hdfError)
+         CALL io_write_integer1(nstr2SetID,(/1/),dimsInt(:1),stars%nstr2)
+         CALL h5dclose_f(nstr2SetID, hdfError)
+   
+         dims(:2)=(/2*stars%mx1+1,2*stars%mx2+1/)
+         dimsInt=dims
+         CALL h5screate_simple_f(2,dims(:2),nstr2SpaceID,hdfError)
+         CALL h5dcreate_f(groupID, "i2g", H5T_NATIVE_INTEGER, nstr2SpaceID, nstr2SetID, hdfError)
+         CALL h5sclose_f(nstr2SpaceID,hdfError)
+         CALL io_write_integer2(nstr2SetID,(/1,1/),dimsInt(:2),stars%i2g)
+         CALL h5dclose_f(nstr2SetID, hdfError)
+   
+         !dims(:1)=(/stars%ng2/)
+         !dimsInt=dims
+         !CALL h5screate_simple_f(1,dims(:1),phi2SpaceID,hdfError)
+         !CALL h5dcreate_f(groupID, "phi2", H5T_NATIVE_DOUBLE, phi2SpaceID, phi2SetID, hdfError)
+         !CALL h5sclose_f(phi2SpaceID,hdfError)
+         !CALL io_write_real1(phi2SetID,(/1/),dimsInt(:1),stars%phi2)
+         !CALL h5dclose_f(phi2SetID, hdfError)
 
-      dims(:2)=(/2,stars%kimax2+1/)
-      dimsInt=dims
-      CALL h5screate_simple_f(2,dims(:2),pgfft2SpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "pgfft2", H5T_NATIVE_DOUBLE, pgfft2SpaceID, pgfft2SetID, hdfError)
-      CALL h5sclose_f(pgfft2SpaceID,hdfError)
-      CALL io_write_complex1(pgfft2SetID,(/-1,1/),dimsInt(:2),stars%pgfft2(0:stars%kimax2))
-      CALL h5dclose_f(pgfft2SetID, hdfError)
-
-      dims(:1)=(/ft2_gf_dim/)
-      dimsInt=dims
-      CALL h5screate_simple_f(1,dims(:1),ft2_gfxSpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "ft2_gfx", H5T_NATIVE_DOUBLE, ft2_gfxSpaceID, ft2_gfxSetID, hdfError)
-      CALL h5sclose_f(ft2_gfxSpaceID,hdfError)
-      CALL io_write_real1(ft2_gfxSetID,(/1/),dimsInt(:1),stars%ft2_gfx)
-      CALL h5dclose_f(ft2_gfxSetID, hdfError)
-
-      dims(:1)=(/ft2_gf_dim/)
-      dimsInt=dims
-      CALL h5screate_simple_f(1,dims(:1),ft2_gfySpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "ft2_gfy", H5T_NATIVE_DOUBLE, ft2_gfySpaceID, ft2_gfySetID, hdfError)
-      CALL h5sclose_f(ft2_gfySpaceID,hdfError)
-      CALL io_write_real1(ft2_gfySetID,(/1/),dimsInt(:1),stars%ft2_gfy)
-      CALL h5dclose_f(ft2_gfySetID, hdfError)
-
+      ENDIF
       CALL h5gclose_f(groupID, hdfError)
 
    END SUBROUTINE writeStarsHDF
@@ -445,7 +393,7 @@ MODULE m_cdnpot_io_hdf
 
       INTEGER(HID_T)            :: groupID, generalGroupID
       INTEGER                   :: fileFormatVersion
-      INTEGER                   :: hdfError, ft2_gf_dim
+      INTEGER                   :: hdfError, kimax,kimax2
       INTEGER                   :: dimsInt(7)
       CHARACTER(LEN=30)         :: groupName
       LOGICAL                   :: l_exist
@@ -464,8 +412,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)                   :: igfft2SetID
       INTEGER(HID_T)                   :: pgfftSetID
       INTEGER(HID_T)                   :: pgfft2SetID
-      INTEGER(HID_T)                   :: ft2_gfxSetID
-      INTEGER(HID_T)                   :: ft2_gfySetID
+    
 
       CALL h5gopen_f(fileID, '/general', generalGroupID, hdfError)
       ! read in file format version from the header '/general'
@@ -489,22 +436,13 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'mx1',stars%mx1)
       CALL io_read_attint0(groupID,'mx2',stars%mx2)
       CALL io_read_attint0(groupID,'mx3',stars%mx3)
-      CALL io_read_attint0(groupID,'kimax',stars%kimax)
-      CALL io_read_attint0(groupID,'kimax2',stars%kimax2)
-      CALL io_read_attint0(groupID,'kq1_fft',stars%kq1_fft)
-      CALL io_read_attint0(groupID,'kq2_fft',stars%kq2_fft)
-      CALL io_read_attint0(groupID,'kq3_fft',stars%kq3_fft)
-      CALL io_read_attint0(groupID,'kmxq_fft',stars%kmxq_fft)
-      CALL io_read_attint0(groupID,'kxc1_fft',stars%kxc1_fft)
-      CALL io_read_attint0(groupID,'kxc2_fft',stars%kxc2_fft)
-      CALL io_read_attint0(groupID,'kxc3_fft',stars%kxc3_fft)
       CALL io_read_attint0(groupID,'ng3_fft',stars%ng3_fft)
-      CALL io_read_attint0(groupID,'kmxxc_fft',stars%kmxxc_fft)
-      CALL io_read_attint0(groupID,'nxc3_fft',stars%nxc3_fft)
-      CALL io_read_attint0(groupID,'ft2_gf_dim',ft2_gf_dim)
       IF(io_attexists(groupID,'od_nq2')) THEN
          CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
       END IF
+
+      kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
+      kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
 
       IF(ALLOCATED(stars%kv3)) DEALLOCATE(stars%kv3)
       IF(ALLOCATED(stars%kv2)) DEALLOCATE(stars%kv2)
@@ -512,53 +450,35 @@ MODULE m_cdnpot_io_hdf
       IF(ALLOCATED(stars%sk2)) DEALLOCATE(stars%sk2)
       IF(ALLOCATED(stars%ig)) DEALLOCATE(stars%ig)
       IF(ALLOCATED(stars%ig2)) DEALLOCATE(stars%ig2)
+      IF(ALLOCATED(stars%i2g)) DEALLOCATE(stars%i2g)
       IF(ALLOCATED(stars%nstr)) DEALLOCATE(stars%nstr)
       IF(ALLOCATED(stars%nstr2)) DEALLOCATE(stars%nstr2)
       IF(ALLOCATED(stars%phi2)) DEALLOCATE(stars%phi2)
       IF(ALLOCATED(stars%rgphs)) DEALLOCATE(stars%rgphs)
-      IF(ALLOCATED(stars%igfft)) DEALLOCATE(stars%igfft)
-      IF(ALLOCATED(stars%igfft2)) DEALLOCATE(stars%igfft2)
-      IF(ALLOCATED(stars%pgfft)) DEALLOCATE(stars%pgfft)
-      IF(ALLOCATED(stars%pgfft2)) DEALLOCATE(stars%pgfft2)
-      IF(ALLOCATED(stars%ft2_gfx)) DEALLOCATE(stars%ft2_gfx)
-      IF(ALLOCATED(stars%ft2_gfy)) DEALLOCATE(stars%ft2_gfy)
+     
 
       ALLOCATE(stars%kv3(3,stars%ng3))
       ALLOCATE(stars%kv2(2,stars%ng2))
       ALLOCATE(stars%sk3(stars%ng3))
       ALLOCATE(stars%sk2(stars%ng2))
       ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
+      ALLOCATE(stars%i2g(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2))
       ALLOCATE(stars%ig2(stars%ng3))
       ALLOCATE(stars%nstr(stars%ng3))
       ALLOCATE(stars%nstr2(stars%ng2))
       ALLOCATE(stars%phi2(stars%ng2))
       ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-      ALLOCATE(stars%igfft(0:stars%kimax,2))
-      ALLOCATE(stars%igfft2(0:stars%kimax2,2))
-      ALLOCATE(stars%pgfft(0:stars%kimax))
-      ALLOCATE(stars%pgfft2(0:stars%kimax2))
-      ALLOCATE(stars%ft2_gfx(0:ft2_gf_dim-1))
-      ALLOCATE(stars%ft2_gfy(0:ft2_gf_dim-1))
+     
 
       dimsInt(:2)=(/3,stars%ng3/)
       CALL h5dopen_f(groupID, 'kv3', kv3SetID, hdfError)
       CALL io_read_integer2(kv3SetID,(/1,1/),dimsInt(:2),stars%kv3)
       CALL h5dclose_f(kv3SetID, hdfError)
 
-      dimsInt(:2)=(/2,stars%ng2/)
-      CALL h5dopen_f(groupID, 'kv2', kv2SetID, hdfError)
-      CALL io_read_integer2(kv2SetID,(/1,1/),dimsInt(:2),stars%kv2)
-      CALL h5dclose_f(kv2SetID, hdfError)
-
       dimsInt(:1)=(/stars%ng3/)
       CALL h5dopen_f(groupID, 'sk3', sk3SetID, hdfError)
       CALL io_read_real1(sk3SetID,(/1/),dimsInt(:1),stars%sk3)
       CALL h5dclose_f(sk3SetID, hdfError)
-
-      dimsInt(:1)=(/stars%ng2/)
-      CALL h5dopen_f(groupID, 'sk2', sk2SetID, hdfError)
-      CALL io_read_real1(sk2SetID,(/1/),dimsInt(:1),stars%sk2)
-      CALL h5dclose_f(sk2SetID, hdfError)
 
       dimsInt(:3)=(/2*stars%mx1+1,2*stars%mx2+1,2*stars%mx3+1/)
       CALL h5dopen_f(groupID, 'ig', igSetID, hdfError)
@@ -566,59 +486,51 @@ MODULE m_cdnpot_io_hdf
       CALL h5dclose_f(igSetID, hdfError)
 
       dimsInt(:1)=(/stars%ng3/)
-      CALL h5dopen_f(groupID, 'ig2', ig2SetID, hdfError)
-      CALL io_read_integer1(ig2SetID,(/1/),dimsInt(:1),stars%ig2)
-      CALL h5dclose_f(ig2SetID, hdfError)
-
-      dimsInt(:1)=(/stars%ng3/)
       CALL h5dopen_f(groupID, 'nstr', nstrSetID, hdfError)
       CALL io_read_integer1(nstrSetID,(/1/),dimsInt(:1),stars%nstr)
       CALL h5dclose_f(nstrSetID, hdfError)
-
-      dimsInt(:1)=(/stars%ng2/)
-      CALL h5dopen_f(groupID, 'nstr2', nstr2SetID, hdfError)
-      CALL io_read_integer1(nstr2SetID,(/1/),dimsInt(:1),stars%nstr2)
-      CALL h5dclose_f(nstr2SetID, hdfError)
-
-      dimsInt(:1)=(/stars%ng2/)
-      CALL h5dopen_f(groupID, 'phi2', phi2SetID, hdfError)
-      CALL io_read_real1(phi2SetID,(/1/),dimsInt(:1),stars%phi2)
-      CALL h5dclose_f(phi2SetID, hdfError)
 
       dimsInt(:4)=(/2,2*stars%mx1+1,2*stars%mx2+1,2*stars%mx3+1/)
       CALL h5dopen_f(groupID, 'rgphs', rgphsSetID, hdfError)
       CALL io_read_complex3(rgphsSetID,(/-1,1,1,1/),dimsInt(:4),stars%rgphs)
       CALL h5dclose_f(rgphsSetID, hdfError)
 
-      dimsInt(:2)=(/stars%kimax+1,2/)
-      CALL h5dopen_f(groupID, 'igfft', igfftSetID, hdfError)
-      CALL io_read_integer2(igfftSetID,(/1,1/),dimsInt(:2),stars%igfft(0:stars%kimax,:))
-      CALL h5dclose_f(igfftSetID, hdfError)
+      IF (stars%ng2>0) THEN
+         dimsInt(:2)=(/2,stars%ng2/)
+         CALL h5dopen_f(groupID, 'kv2', kv2SetID, hdfError)
+         CALL io_read_integer2(kv2SetID,(/1,1/),dimsInt(:2),stars%kv2)
+         CALL h5dclose_f(kv2SetID, hdfError)
+   
+         dimsInt(:1)=(/stars%ng2/)
+         CALL h5dopen_f(groupID, 'sk2', sk2SetID, hdfError)
+         CALL io_read_real1(sk2SetID,(/1/),dimsInt(:1),stars%sk2)
+         CALL h5dclose_f(sk2SetID, hdfError)
+   
+         dimsInt(:1)=(/stars%ng3/)
+         CALL h5dopen_f(groupID, 'ig2', ig2SetID, hdfError)
+         CALL io_read_integer1(ig2SetID,(/1/),dimsInt(:1),stars%ig2)
+         CALL h5dclose_f(ig2SetID, hdfError)
+   
+   
+         dimsInt(:1)=(/stars%ng2/)
+         CALL h5dopen_f(groupID, 'nstr2', nstr2SetID, hdfError)
+         CALL io_read_integer1(nstr2SetID,(/1/),dimsInt(:1),stars%nstr2)
+         CALL h5dclose_f(nstr2SetID, hdfError)
+   
+         dimsInt(:2)=(/2*stars%mx1+1,2*stars%mx2+1/)
+         CALL h5dopen_f(groupID, 'i2g', igSetID, hdfError)
+         CALL io_read_integer2(igSetID,(/1,1/),dimsInt(:2),stars%i2g)
+         CALL h5dclose_f(igSetID, hdfError)
+         !dimsInt(:1)=(/stars%ng2/)
+         !CALL h5dopen_f(groupID, 'phi2', phi2SetID, hdfError)
+         !CALL io_read_real1(phi2SetID,(/1/),dimsInt(:1),stars%phi2)
+         !CALL h5dclose_f(phi2SetID, hdfError)
+   
+   
+      ENDIF
+      
 
-      dimsInt(:2)=(/stars%kimax2+1,2/)
-      CALL h5dopen_f(groupID, 'igfft2', igfft2SetID, hdfError)
-      CALL io_read_integer2(igfft2SetID,(/1,1/),dimsInt(:2),stars%igfft2(0:stars%kimax2,:))
-      CALL h5dclose_f(igfft2SetID, hdfError)
-
-      dimsInt(:2)=(/2,stars%kimax+1/)
-      CALL h5dopen_f(groupID, 'pgfft', pgfftSetID, hdfError)
-      CALL io_read_complex1(pgfftSetID,(/-1,1/),dimsInt(:2),stars%pgfft(0:stars%kimax))
-      CALL h5dclose_f(pgfftSetID, hdfError)
-
-      dimsInt(:2)=(/2,stars%kimax2+1/)
-      CALL h5dopen_f(groupID, 'pgfft2', pgfft2SetID, hdfError)
-      CALL io_read_complex1(pgfft2SetID,(/-1,1/),dimsInt(:2),stars%pgfft2(0:stars%kimax2))
-      CALL h5dclose_f(pgfft2SetID, hdfError)
-
-      dimsInt(:1)=(/ft2_gf_dim/)
-      CALL h5dopen_f(groupID, 'ft2_gfx', ft2_gfxSetID, hdfError)
-      CALL io_read_real1(ft2_gfxSetID,(/1/),dimsInt(:1),stars%ft2_gfx)
-      CALL h5dclose_f(ft2_gfxSetID, hdfError)
-
-      dimsInt(:1)=(/ft2_gf_dim/)
-      CALL h5dopen_f(groupID, 'ft2_gfy', ft2_gfySetID, hdfError)
-      CALL io_read_real1(ft2_gfySetID,(/1/),dimsInt(:1),stars%ft2_gfy)
-      CALL h5dclose_f(ft2_gfySetID, hdfError)
+     
 
       CALL h5gclose_f(groupID, hdfError)
 

@@ -30,7 +30,7 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for it=    2", ": ")
     dist_spin = grep_number(res_files['out'], "distance of spin densities for it=    2", ": ")
-    
+
     assert abs(tenergy - -2786.95650275) <= 0.001
     assert abs(dist - 8.376682) <= 0.001
     assert abs(dist_spin - 17.14035) <= 0.001
@@ -44,10 +44,10 @@ def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
         should_files.append('banddos.hdf')
     else:
         should_files.append('MCD.1')
-        
+
     for file1 in should_files:
         assert file1 in res_file_names
-    
+
     if not with_hdf:
         assert grep_exists(res_files['MCD.1'], "0.95976")
         assert grep_exists(res_files['MCD.1'], "0.36559")
@@ -76,13 +76,12 @@ def test_CoUnfold(execute_fleur, grep_exists, grep_number):
 
     if with_hdf:
 		#    assert grep_exists(res_files['out'], "it=  1  is completed")
-        assert grep_exists(res_files['bands_sc.1'], "0.91625.*0.94323")
-        assert grep_exists(res_files['bands_sc.1'], "14.03436.*0.039764")
-        assert grep_exists(res_files['bands_sc.2'], "18.195862.*0.622318")
-        assert grep_exists(res_files['bands_sc.2'], "27.134829.*0.009426")
+        assert grep_exists(res_files['bands_sc.1'], "-0.8345.*0.9432")
+        assert grep_exists(res_files['bands_sc.1'], "2.639.*0.5650")
+        assert grep_exists(res_files['bands_sc.2'], "-0.4365.*0.9501")
+        assert grep_exists(res_files['bands_sc.2'], "3.723.*0.1328")
     else:
-        assert grep_exists(res_files['bands_sc.1'], "-8.92164.*0.94323")
-        assert grep_exists(res_files['bands_sc.1'], "6.028964.*0.039764")
-        assert grep_exists(res_files['bands_sc.2'], "10.19046.*0.622318")
-        assert grep_exists(res_files['bands_sc.2'], "19.12943.*0.009426")
-
+        assert grep_exists(res_files['bands_sc.1'], "-8.9216.*0.94323")
+        assert grep_exists(res_files['bands_sc.1'], "6.028.*0.8807")
+        assert grep_exists(res_files['bands_sc.2'], "10.489.*0.016")
+        assert grep_exists(res_files['bands_sc.2'], "15.513.*0.01174")

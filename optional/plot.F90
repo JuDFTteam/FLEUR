@@ -256,17 +256,17 @@ CONTAINS
       ! Fourier transform the diagonal part of the density matrix in the
       ! interstitial (qpw) to real space (ris).
       DO iden = 1,2
-         CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,1)
+         CALL fft3d(ris(0:,iden),fftwork,qpw(1,iden),stars,1)
          IF (ALLOCATED(denmat%pw_w)) THEN
-            CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,1)
+            CALL fft3d(ris2(0:,iden),fftwork,qpww(1,iden),stars,1)
          END IF
       END DO
 
       ! Also do that for the off-diagonal part. Real part goes into index
       ! 3 and imaginary part into index 4.
-      CALL fft3d(ris(0,3),ris(0,4),cdom(1),stars,1)
+      CALL fft3d(ris(0:,3),ris(0:,4),cdom(1),stars,1)
       IF (ALLOCATED(denmat%pw_w)) THEN
-         CALL fft3d(ris2(0,3),ris2(0,4),cdomw(1),stars,1)
+         CALL fft3d(ris2(0:,3),ris2(0:,4),cdomw(1),stars,1)
       END IF
 
       ! Calculate the charge and magnetization densities in the interstitial.
@@ -308,10 +308,10 @@ CONTAINS
       ! reciprocal space.
       DO iden = 1,4
          fftwork=zero
-         CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,-1)
+         CALL fft3d(ris(0:,iden),fftwork,qpw(1,iden),stars,-1)
          fftwork=zero
          IF (ALLOCATED(denmat%pw_w)) THEN
-            CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,-1)
+            CALL fft3d(ris2(0:,iden),fftwork,qpww(1,iden),stars,-1)
          END IF
       END DO
 
@@ -322,8 +322,8 @@ CONTAINS
                DO imz = 1,vacuum%nmzxyd
                   rziw = 0.0
                   CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, &
-                             rht(imz,ivac,iden), rziw, rhtxy(imz,1,ivac,iden), &
-                             vacuum%nmzxyd, 1)
+                             rht(imz,ivac,iden), rziw, rhtxy(imz,:,ivac,iden), &
+                              1)
                END DO
             END DO
          END DO
@@ -334,7 +334,7 @@ CONTAINS
                vz_r = REAL(cdomvz(imz,ivac))
                vz_i = AIMAG(cdomvz(imz,ivac))
                CALL fft2d(stars, rvacxy(0,imz,ivac,3), rvacxy(0,imz,ivac,4), &
-                          vz_r, vz_i, cdomvxy(imz,1,ivac), vacuum%nmzxyd, 1)
+                          vz_r, vz_i, cdomvxy(imz,:,ivac),  1)
             END DO
          END DO
 
@@ -387,8 +387,8 @@ CONTAINS
                DO imz = 1,vacuum%nmzxyd
                   fftwork=zero
                   CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, &
-                             rht(imz,ivac,iden), rziw, rhtxy(imz,1,ivac,iden), &
-                             vacuum%nmzxyd, -1)
+                             rht(imz,ivac,iden), rziw, rhtxy(imz,:,ivac,iden), &
+                              -1)
                END DO
             END DO
          END DO

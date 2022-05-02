@@ -362,7 +362,7 @@ CONTAINS
                 IF (fi%juPhon%l_dfpt) THEN
                     CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
                                enpara, nococonv, mpdata, hybdat, &
-                               iter, eig_id, results, inDen, vToT, vx, hub1data, nvfull, GbasVec_eig, z0)
+                               iter, eig_id, results, inDen, vToT, vx, hub1data, nvfull=nvfull, GbasVec_eig=GbasVec_eig)
                 ELSE
                     CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
                                enpara, nococonv, mpdata, hybdat, &
@@ -419,8 +419,8 @@ CONTAINS
             IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
                input_soc%zelec = fi%input%zelec*2
                CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
-               results%seigscv = results%seigscv/2
-               results%ts = results%ts/2
+               results%seigv = results%seigv / 2.0
+               results%ts = results%ts / 2.0
             ELSE
                CALL fermie(eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, results)
             ENDIF
@@ -470,8 +470,7 @@ CONTAINS
 
             IF (fi%juPhon%l_dfpt) THEN
                 CALL timestart("juPhon DFPT")
-                CALL dfpt(fi%juPhon, fi%sym, fi%oneD, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, &
-                        & fi%kpts, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0, .FALSE., xcpot)
+                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0, .TRUE., xcpot, hybdat)
                 CALL timestop("juPhon DFPT")
             END IF
 

@@ -104,8 +104,7 @@ CONTAINS
          atoms%nlo(n)=len_TRIM(ap(n)%lo)/2
          loLCutoff = 4 ! l cutoff for additional LOs. This l quantum number is already excluded.
          IF (atoms%nz(n).EQ.1) loLCutoff = 2
-         IF (atoms%nz(n).EQ.2) loLCutoff = 3
-         IF ((atoms%nz(n).GE.5).AND.(atoms%nz(n).LE.9)) loLCutoff = 3
+         IF ((atoms%nz(n).GE.2).AND.(atoms%nz(n).LE.9)) loLCutoff = 3
          numlLO(:) = 0
          DO i=1,atoms%nlo(n)
             DO l = 0, 3
@@ -155,8 +154,7 @@ CONTAINS
       DO n=1,atoms%ntype
          loLCutoff = 4 ! l cutoff for additional LOs. This l quantum number is already excluded.
          IF (atoms%nz(n).EQ.1) loLCutoff = 2
-         IF (atoms%nz(n).EQ.2) loLCutoff = 3
-         IF ((atoms%nz(n).GE.5).AND.(atoms%nz(n).LE.9)) loLCutoff = 3 
+         IF ((atoms%nz(n).GE.2).AND.(atoms%nz(n).LE.9)) loLCutoff = 3
          DO i=1,atoms%nlo(n) - addLOs(n)
             DO l = 0, 3
                IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l

@@ -151,8 +151,8 @@ CONTAINS
       enddo
       call finish_mt_grid()
 
-      call init_pw_grid(xcpot%needs_grad(), stars, sym, cell)
-      call pw_from_grid(xcpot%needs_grad(), stars, .False., is, tmp_potden%pw)
+      call init_pw_grid(stars, sym, cell,xcpot)
+      call pw_from_grid( stars, is, tmp_potden%pw)  !THIS CODE SEEMS TO BE BROKEN!!
       call finish_pw_grid()
 
       call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, tmp_potden, &

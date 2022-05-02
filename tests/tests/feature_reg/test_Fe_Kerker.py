@@ -18,4 +18,4 @@ def test_Fe_Kerker(execute_fleur, grep_exists, grep_number):
     assert grep_exists(res_files['out'], "it=  3  is completed")
     dist = grep_number(res_files['out'], "distance of charge densities for it=    3", ":")
 
-    assert abs(dist - 11.747482) <= 0.001
+    assert abs(dist - 11.745805) <= 0.001

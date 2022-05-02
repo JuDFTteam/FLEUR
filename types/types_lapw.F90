@@ -438,7 +438,7 @@ CONTAINS
       !$OMP& PRIVATE(k,th)
       DO k = 1, lapw%nv(iintsp)
          th = DOT_PRODUCT(lapw%gvec(:, k, iintsp) + (iintsp - 1.5)*qss + lapw%bkpt, tau)
-         cph(k) = CMPLX(COS(tpi_const*th), -SIN(tpi_const*th))
+         cph(k) = CMPLX(COS(tpi_const*th), SIN(tpi_const*th))
       END DO
       !$OMP END PARALLEL DO
    END SUBROUTINE lapw_phase_factors

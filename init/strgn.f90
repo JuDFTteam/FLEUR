@@ -45,7 +45,7 @@ CONTAINS
     INTEGER ned1,nint,kdone,i,i_sym,n_sym
     LOGICAL NEW,l_cdn1,l_xcExtended, l_error
     INTEGER kfx,kfy,kfz,kidx,nfftx,nffty,nfftz,kfft
-    INTEGER nfftxy,norm,n1,kidx2,k2i
+    INTEGER nfftxy,norm,n1,kidx2,k2i,kimax,kimax2
     !     ..
     !     .. Local Arrays ..
     REAL,    ALLOCATABLE :: gsk3(:)
@@ -385,8 +385,8 @@ CONTAINS
 
     ENDDO
     !
-    stars%kimax=kidx-1
-    stars%kimax2=kidx2-1
+    kimax=kidx-1
+    kimax2=kidx2-1
     !
     !     count number of members for each star
     !     nstr2 ... members of 2-dim stars
@@ -432,7 +432,7 @@ CONTAINS
                       stars%rgphs(k1,k2,k3) = stars%rgphs(k1,k2,k3) * stars%nstr(k)*pon
                    ENDIF
                    kidx = -90
-                   DO i = 1, stars%kimax
+                   DO i = 1, kimax
                       IF ( stars%igfft(i,2) == kfft ) kidx = i
                    ENDDO
                    IF ( kidx > 0 ) stars%pgfft(kidx)=stars%rgphs(k1,k2,k3)
@@ -464,8 +464,7 @@ CONTAINS
 
     if (l_write) write (oUnit,FMT=8010) stars%gmax,stars%ng3,stars%ng2
     if (l_write) write (oUnit,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
-    if (l_write) write (oUnit,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
-         &  stars%kimax
+    if (l_write) write (oUnit,'('' kimax2,kimax='',2i7,'', (start from 0)'')') kimax2,kimax
 
     if (l_write) write (oUnit,FMT=8040)
 8040 FORMAT(/4x,'no.',5x,'kv3',9x,'sk3',9x,'sk2',5x,&
@@ -525,7 +524,7 @@ CONTAINS
     INTEGER ned1,nint,kdone,i
     LOGICAL NEW,l_cdn1,l_error,l_xcExtended
     INTEGER kfx,kfy,kfz,kidx,nfftx,nffty,nfftz,kfft
-    INTEGER nfftxy,norm,n1,kidx2,k2i
+    INTEGER nfftxy,norm,n1,kidx2,k2i,kimax
     !     ..
     !     .. Local Arrays ..
     REAL, ALLOCATABLE :: gsk3(:)
@@ -699,7 +698,7 @@ CONTAINS
        ENDDO !loop over symmetry operations
     ENDDO ! loop over stars
     !
-    stars%kimax=kidx-1
+    kimax=kidx-1
 
     ! count number of members for each star
     stars%nstr(:) = 0
@@ -727,7 +726,7 @@ CONTAINS
        pon = 1.0 / sym%nop
        !$OMP PARALLEL DO &
        !$OMP DEFAULT(none) &
-       !$OMP SHARED(mxx1,mxx2,mxx3,stars,nfftx,nffty,nfftz,nfftxy,pon) &
+       !$OMP SHARED(mxx1,mxx2,mxx3,stars,nfftx,nffty,nfftz,nfftxy,pon,kimax) &
        !$OMP PRIVATE(k1,k2,k3,k,kfx,kfy,kfz,kfft,kidx,i)
        DO k3 = -mxx3,mxx3
           DO k2 = -mxx2,mxx2
@@ -741,7 +740,7 @@ CONTAINS
                    IF (kfz.LT.0) kfz = kfz+nfftz
                    kfft=kfx + kfy*nfftx + kfz*nfftxy
                    kidx = -90
-                   DO i = 1, stars%kimax
+                   DO i = 1, kimax
                       IF ( stars%igfft(i,2) == kfft ) kidx = i
                    ENDDO
                    IF (kidx > 0 ) stars%pgfft(kidx)=stars%rgphs(k1,k2,k3)
@@ -753,7 +752,7 @@ CONTAINS
     ENDIF
     if ( stars%mx1 < mxx1 .or. stars%mx2 < mxx2 .or. stars%mx3 < mxx3 ) call &
          judft_error("BUG 1 in strgen")
-    stars%ng2 = 2 ; stars%kv2 = 0 ; stars%ig2 = 0 ; stars%kimax2= 0 ; stars%igfft2 = 0
+    stars%ng2 = 2 ; stars%kv2 = 0 ; stars%ig2 = 0 ;  stars%igfft2 = 0
     stars%sk2 = 0.0 ; stars%pgfft2 = 0.0  ; stars%nstr2 = 0
     stars%ft2_gfx = 0.0 ; stars%ft2_gfy = 0.0
 
@@ -774,8 +773,7 @@ CONTAINS
 
     if (l_write) write (oUnit,FMT=8010) stars%gmax,stars%ng3
     if (l_write) write (oUnit,'('' mx1,mx2,mx3='',3i3)') stars%mx1,stars%mx2,stars%mx3
-    if (l_write) write (oUnit,'('' kimax2,kimax='',2i7,'', (start from 0)'')') stars%kimax2,&
-         &  stars%kimax
+    if (l_write) write (oUnit,'('' kimax2,kimax='',2i7,'', (start from 0)'')') 0,kimax
 
     if (l_write) write (oUnit,FMT=8040)
 8040 FORMAT(/6x,'no.',5x,'kv3',9x,'sk3',7x,'nstr'/)

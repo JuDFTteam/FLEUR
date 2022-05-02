@@ -293,7 +293,7 @@ module m_jpGrVeff0
       allocate(grVxc0IR(ngdp, 3))
       grVxc0IR(:, :) = cmplx(0., 0.)
       do idir = 1, 3
-        call convolGrRhoKern(stars, ngdp, ngdp, grRho0IR(:, idir), grVxcIRKern, pdG2FouM, pdG2FouM, grVxc0IR(:, idir), 1)
+        call convolGrRhoKern(stars, ngdp, ngdp, idir, grRho0IR(:, idir), grVxcIRKern, pdG2FouM, pdG2FouM, grVxc0IR(:, idir), 1)
       end do
       deallocate(pdG2FouM)
 
@@ -436,7 +436,7 @@ module m_jpGrVeff0
 !todo review these variables
     real                                     :: analyticalInt
     logical                                  :: expensiveDebug
-#endif DEBUG_MODE
+#endif 
 
     ! Local Array Variables
     complex,        allocatable              :: grRhoIRlm(:, :, :)
@@ -913,7 +913,8 @@ module m_jpGrVeff0
   subroutine vmtsCoul( atoms, cell, ngdp, iatom, itype, harSw, extSw, grVc0IR, grRho0MT, gdp, grVc0MT, testGoldstein, grRhoTermSw)
 
 !#include"recycledRoutines/cpp_double.h"
-    use m_types, only : t_atoms, t_cell
+    use m_types_atoms
+    use m_types_cell
     use m_intgr, only : intgr2LinIntp
     use m_sphbes
 
@@ -1534,7 +1535,8 @@ end subroutine CalcQlmHarSurMT
 subroutine phasy1nSym(atoms, cell, Gvec, qptn, pylm)
 
   use m_ylm_old
-  use m_types
+  use m_types_atoms
+  use m_types_cell
 
   implicit none
 
@@ -1620,7 +1622,7 @@ end subroutine phasy1nSym
 
 subroutine convolMTgrVeff0dKern(atoms, grRho0MT, dKernMTGPts, gWghts, ylm, grVxc0MT)
 
-  use m_types, only : t_atoms
+  use m_types_atoms
 
   implicit none
 
@@ -1708,10 +1710,11 @@ subroutine convolMTgrVeff0dKern(atoms, grRho0MT, dKernMTGPts, gWghts, ylm, grVxc
 
 end subroutine convolMTgrVeff0dKern
 
-subroutine convolGrRhoKern(stars, ngdp, ngpqdp, f1IR, f2IR, pdG2FouM, pdG2FouMv, f3IR, iqpt)
+subroutine convolGrRhoKern(stars, ngdp, ngpqdp, iDir, f1IR, f2IR, pdG2FouM, pdG2FouMv, f3IR, iqpt)
 
   use m_cfft
   use m_types
+  use m_npy
 
   implicit none
 
@@ -1722,6 +1725,7 @@ subroutine convolGrRhoKern(stars, ngdp, ngpqdp, f1IR, f2IR, pdG2FouM, pdG2FouMv,
   ! Scalar parameter
   integer,              intent(in)  :: ngdp
   integer,              intent(in)  :: ngpqdp
+    integer,              intent(in)  :: iDir
   integer,              intent(in)  :: iqpt
 
   ! Array parameter

@@ -15,11 +15,11 @@ CONTAINS
         LOGICAL, INTENT(IN)  :: symor
 
         ! Array arguments:
-        INTEGER, INTENT(IN)  :: k(3), mrot(3, 3, nop), invtab(nop)
-        REAL,    INTENT(IN)  :: tau(3, nop)
+        INTEGER, INTENT(IN)  :: k(:), mrot(:,:, :), invtab(:)
+        REAL,    INTENT(IN)  :: tau(:,:)
 
-        INTEGER,           INTENT(OUT) :: kr(3, nop)
-        COMPLEX, OPTIONAL, INTENT(OUT) :: phas(nop) ! Could be complex!
+        INTEGER,           INTENT(OUT) :: kr(:,:)
+        COMPLEX, OPTIONAL, INTENT(OUT) :: phas(:) ! Could be complex!
 
         ! Local scalars:
         INTEGER :: n, ni
