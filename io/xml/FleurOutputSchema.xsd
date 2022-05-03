@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.35">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.36">
 
    <!--Here the FleurInputSchema is included since the out.xml contains a complete dump of the inp.xml!-->
    <xsd:include schemaLocation="FleurInputSchema.xsd"/>
@@ -21,7 +21,7 @@
 
    <xsd:simpleType name="FleurOutputVersionType">
       <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="0.35"/>
+         <xsd:enumeration value="0.36"/>
       </xsd:restriction>
    </xsd:simpleType>
 
