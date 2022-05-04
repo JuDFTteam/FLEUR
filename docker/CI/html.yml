@@ -17,6 +17,19 @@ pages:
   except:
     - pushes
 
+
+ford:
+  image: iffregistry.fz-juelich.de/fleur/fleur:ford
+  stage: html
+  script:
+    - cd $CI_PROJECT_DIR/build ; make doc
+    - 
+  artifacts:
+    paths:
+      - public
+  except:
+    - pushes
+
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: html
