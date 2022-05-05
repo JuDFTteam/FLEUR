@@ -139,21 +139,14 @@ CONTAINS
       TYPE(t_stars),   INTENT(INOUT) :: stars
       TYPE(t_fftgrid), INTENT(INOUT) :: fftgrid
 
-      COMPLEX, ALLOCATABLE :: field(:)
-
 !#ifdef CPP_MPI
 !      INTEGER :: ierr
 !      CALL MPI_BCAST(stars%ng3, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
 !      CALL MPI_BCAST(stars%ig, stars%ng3, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
 !#endif
 
-      ALLOCATE(field(stars%ng3))
-
       ! Save G coefficients to ustep
-      CALL fftgrid%takeFieldFromGrid(stars, field)
-      ! TODO: Is this needed? I hesitated to put stars as IN and stars%ustep as
-      !       INOUT into the same routine.
-      stars%ustep = field
+      CALL fftgrid%takeFieldFromGrid(stars, stars%ustep)
       stars%ustep = stars%ustep * 3 * stars%mx1 * 3 * stars%mx2 * 3 * stars%mx3
       CALL fftgrid%perform_fft(forward=.FALSE.)
 
