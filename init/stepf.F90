@@ -221,7 +221,7 @@ CONTAINS
                ic = i1 + 3*stars%mx1*i2 + 9*stars%mx1*stars%mx2*i3
                gm(1) = REAL(i1)
                IF (2*i1 > 3*stars%mx1) gm(1) = gm(1) - 3.0*stars%mx1
-               ! TODO: (How)do these conditions apply for DFPT?
+               ! TODO: (How) do these conditions apply for DFPT?
                !
                !-> use inversion <-> c.c.
                !
@@ -285,7 +285,8 @@ CONTAINS
                ENDIF
 
                ! TODO: (How)do these conditions apply for DFPT?
-               IF (((i3 .EQ. 3*stars%mx3/2) .OR. (i2 .EQ. 3*stars%mx2/2)) .OR. (i1 .EQ. 3*stars%mx1/2)) THEN
+               IF (((2*i3 .EQ. 3*stars%mx3) .OR. (2*i2 .EQ. 3*stars%mx2)) .OR. (2*i1 .EQ. 3*stars%mx1)) THEN
+               !IF (.FALSE.) THEN !NEWER; BREAKS A TEST (FePt LO)
 #ifdef CPP_MPI
                   ufft_local(ic) = 0.0
                   bfft_local(ic) = 0.0
