@@ -56,8 +56,9 @@ q-loop:
                Analytical Matrix inversion:
                   - write routine that inverts (Hkq-\epsilonk*Skq) in a spectral representation [done]
                z1-calculation:
-                  - chain together the matrix multiplication z1=-(Hkq-\epsilonk*Skq)^(-1)*(H1-\epsilonk*S1)*z0
+                  - chain together the matrix multiplication z1=-(Hkq-\epsilonk*Skq)^(-1)*(H1-\epsilonk*S1)*z0 [done (inefficient)]
                   - save z1 (and for q=0 \epsilon1) the same way z0 and \epsilon are normally saved [different eig_id!]
+                  - generate said eig_id beforehand [c.f. main: eig_id = open_eig(...)]
             cdngen1:
                - write a control routine that calls only the fundamental necessary parts
                  of the cdngen workflow [no banddos stuff etc.]
