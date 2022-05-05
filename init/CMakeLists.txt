@@ -35,4 +35,5 @@ init/stepf.F90
 #init/strgn.f90
 init/lapw_dim.F90
 init/angles.f90
+init/step_function.F90
 )

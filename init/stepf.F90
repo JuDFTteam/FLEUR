@@ -79,6 +79,7 @@ CONTAINS
       END IF
 
       IF (fmpi%irank == 0) THEN
+         CALL timestart("ustep")
          ALLOCATE (sf(stars%ng3))
          IF (input%film) THEN
             dd = vacuum%dvac*cell%area/cell%omtil
@@ -154,6 +155,8 @@ CONTAINS
                stars%ustep(k) = stars%ustep(k) - (c*(SIN(gs)/gs - COS(gs))/(gs*gs))*sf(k)
             ENDDO
          ENDDO
+         CALL timestop("ustep")
+         CALL timestart("Oldstepf")
       ENDIF ! (fmpi%irank == 0)
 
       !
@@ -269,7 +272,7 @@ CONTAINS
                         IF (.NOT.PRESENT(qvec)) THEN
                            c_phs = c_phs + EXP(CMPLX(0, th))
                         ELSE
-                           c_phs = c_phs + (-i*g(iDir))*EXP(CMPLX(0, th))
+                           c_phs = c_phs + (-ImagUnit*g(iDir))*EXP(CMPLX(0, th))
                         END IF
                      ENDDO
                      g_rmt = g_abs*atoms%rmt(n)
@@ -363,6 +366,9 @@ CONTAINS
             !+odim
 
          ENDIF
+
+         CALL timestop("Oldstepf")
+
          !
          ! --> make fft
          !
