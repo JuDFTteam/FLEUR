@@ -14,7 +14,7 @@ CONTAINS
       !> Construct the matching coefficients of the form
       !! \f{eqnarray*}{
       !! a_{l,m,p}^{\mu,\bm{G}}(\bm{k}) &=& e^{i \bm{K}\cdot\bm{\tau}_{\mu}}\\
-      !!                                    &*& (Y_{l}^{m}(R^{\mu}\bm{K}))^{*}
+      !!                                    &*& (Y_{l}^{m}(R^{\mu}\bm{K}))^{*}\\
       !!                                    &*& f_{l,p}^{\alpha}(K)
       !! \f}
       !! with \f$\bm{K} = \bm{k + G \pm q/2}\f$
