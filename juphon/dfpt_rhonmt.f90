@@ -6,7 +6,7 @@
 
 MODULE m_dfpt_rhonmt
    !> Module adapted from rhonmt21, which in turn was adapted from rhonmt, and
-   !! from rhonmtlo for the lo part.
+   !> from rhonmtlo for the lo part.
    USE m_gaunt,ONLY:gaunt1
    USE m_types_setup
    USE m_types_cdnval
@@ -17,26 +17,26 @@ MODULE m_dfpt_rhonmt
 CONTAINS
 
    !> Subroutine to construct all MT density coefficients for a density perturbation
-   !! in one routine. The spin input dictates, which is gonna be performed.
-   !! The coefficients are of the form
-   !! \f{eqnarray*}{
-   !! d_{l',l,L,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha} &=& \sum_{\nu\bm{k}}\sum_{m\mu(L)}\\
-   !! &*&  c_{L,\mu}^{*}G_{l,l''(L),l'}^{m,m''(\mu),m-m''(\mu)}A_{l',m-m''(\mu),\lambda'}^{\sigma_{\alpha}',\nu\bm{k}}\\
-   !! &*& (2\tilde{f}_{\nu\bm{k}}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}\bm{q},j,\beta~(1)}+\tilde{f}_{\nu\bm{k}\bm{q}}^{j,\beta~(1)}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}}) \\
-   !! \f}
-   !! The k-point loop is performed outside this routine. In contrast to older
-   !! routines, the arrays uunmt etc. and uunmt21 etc. are merged into one
-   !! spin and u-order dependent array.
-   !!
-   !! \f$\sigma_{\alpha}(')\f$: local spin indices \f$\rightarrow\f$ ilSpinPr, ilSpin
-   !! \f$\lambda(')\f$: order of the radial basis function (0: u, 1: d)
-   !! \f$L\f$: Lattice harmonic index
-   !! \f$\mu(L)\f$: Lattice harmonic member index
-   !! \f$c_{L,\mu}\f$: Lattice harmonic coefficients
-   !! \f$\nu\bm{k}\f$: State index (k-point and number of state)
-   !! \f$\bm{q},j,\beta\f$: Perturbation index; q-point, direction and atom
-   !! \f$\tilde{f}_{\nu\bm{k}}\f$: Occupation number (smeared)
-   !! \f$A_{...}^{...}\f$: Summed matching coefficients and eigenvectors [perturbed for A^{(1)}]
+   !> in one routine. The spin input dictates, which is gonna be performed.
+   !> The coefficients are of the form:
+   !> \f{eqnarray*}{
+   !> d_{l',l,L,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha} &=& \sum_{\nu\bm{k}}\sum_{m\mu(L)}\\
+   !> &*&  c_{L,\mu}^{*}G_{l,l''(L),l'}^{m,m''(\mu),m-m''(\mu)}A_{l',m-m''(\mu),\lambda'}^{\sigma_{\alpha}',\nu\bm{k}}\\
+   !> &*& (2\tilde{f}_{\nu\bm{k}}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}\bm{q},j,\beta~(1)}+\tilde{f}_{\nu\bm{k}\bm{q}}^{j,\beta~(1)}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}}) \\
+   !> \f}
+   !> The k-point loop is performed outside this routine. In contrast to older
+   !> routines, the arrays uunmt etc. and uunmt21 etc. are merged into one
+   !> spin and u-order dependent array.
+   !>
+   !> \f$\sigma_{\alpha}(')\f$: local spin indices \f$\rightarrow\f$ ilSpinPr, ilSpin
+   !> \f$\lambda(')\f$: order of the radial basis function (0: u, 1: d)
+   !> \f$L\f$: Lattice harmonic index
+   !> \f$\mu(L)\f$: Lattice harmonic member index
+   !> \f$c_{L,\mu}\f$: Lattice harmonic coefficients
+   !> \f$\nu\bm{k}\f$: State index (k-point and number of state)
+   !> \f$\bm{q},j,\beta\f$: Perturbation index; q-point, direction and atom
+   !> \f$\tilde{f}_{\nu\bm{k}}\f$: Occupation number (smeared)
+   !> \f$A_{...}^{...}\f$: Summed matching coefficients and eigenvectors [perturbed for A^{(1)}]
    SUBROUTINE dfpt_rhonmt(atoms,sphhar,we,we1,ne,ilSpinPr,ilSpin,sym,acof,a1cof,nmt_coeff)
 
       TYPE(t_sym),          INTENT(IN)    :: sym
@@ -46,9 +46,9 @@ CONTAINS
       INTEGER,              INTENT(IN)    :: ne, ilSpinPr, ilSpin
       REAL,                 INTENT(IN)    :: we(:),we1(:)!(nobd)
 
-      COMPLEX, INTENT(IN)    :: acof(:,:,:,:,:)!(nu,lm,iOrd,iAtom,ilSpin) ! TODO: 0: for iOrd?
-      COMPLEX, INTENT(IN)    :: a1cof(:,:,:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
-      COMPLEX, INTENT(INOUT) :: nmt_coeff(:,:,:,:,:,:,:)!llp,lh,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin
+      COMPLEX, INTENT(IN)    :: acof(:,:,0:,:,:)!(nu,lm,iOrd,iAtom,ilSpin) ! TODO: 0: for iOrd?
+      COMPLEX, INTENT(IN)    :: a1cof(:,:,0:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
+      COMPLEX, INTENT(INOUT) :: nmt_coeff(:,:,:,0:,0:,:,:)!llp,lh,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin
 
       COMPLEX coef, cil, coef1
       COMPLEX :: temp(ne)
