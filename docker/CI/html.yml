@@ -22,6 +22,7 @@ pages:
 ford:
   image: iffregistry.fz-juelich.de/fleur/fleur:ford
   stage: html
+  needs: []  
   script:
     - cd $CI_PROJECT_DIR/docs ; ford ford.md
     - mkdir ../public
