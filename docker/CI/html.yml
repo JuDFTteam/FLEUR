@@ -5,12 +5,28 @@ pages:
   needs: 
     - doxygen
     - gfortran-coverage
+    - ford
   script:
     - echo "HTML should be ready from cache..."
     - mv $CI_PROJECT_DIR/docs/Docu_main.html $CI_PROJECT_DIR/public/index.html
   environment:
      name: HTML-Pages
      url: https://fleur.iffgit.fz-juelich.de/fleur
+  artifacts:
+    paths:
+      - public
+  except:
+    - pushes
+
+
+ford:
+  image: iffregistry.fz-juelich.de/fleur/fleur:ford
+  stage: html
+  needs: []  
+  script:
+    - cd $CI_PROJECT_DIR/docs ; ford ford.md
+    - mkdir ../public
+    - mv ford-doc ../public/ford
   artifacts:
     paths:
       - public

@@ -63,6 +63,8 @@ old_inp/rw_noco.f90
 old_inp/rw_symfile.f
 old_inp/spg2set.f
 old_inp/inpeig.f90
+old_inp/strgn_dim.F
+old_inp/prp_xcfft_box.f
 
 ${CMAKE_BINARY_DIR}/include/buildinfo.h
 
@@ -89,7 +91,6 @@ ${FLEUR_SRC}/kpoints/make_tetra.f
 ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/pol_angle.f90
 ${FLEUR_SRC}/math/matmul.f
-${FLEUR_SRC}/init/strgn_dim.F
 ${FLEUR_SRC}/init/spgrot.f90
 ${FLEUR_SRC}/init/mapatom.F90
 ${FLEUR_SRC}/init/od_mapatom.F90
@@ -133,7 +134,6 @@ ${FLEUR_SRC}/init/lhcal.f
 ${FLEUR_SRC}/init/ptsym.f
 ${FLEUR_SRC}/math/gaussp.f
 ${FLEUR_SRC}/init/gtest.f
-${FLEUR_SRC}/init/prp_xcfft_box.f
 ${FLEUR_SRC}/io/xmlOutput.F90
 ${FLEUR_SRC}/global/utility.F90
 ${FLEUR_SRC}/global/radsra.f

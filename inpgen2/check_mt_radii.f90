@@ -367,10 +367,10 @@ CONTAINS
                 minRmts(atoms%nz(typeA)) = rmtFac * dist * facA
                 minRmts(atoms%nz(typeB)) = rmtFac * dist * facB
              ELSE
-                minRmts(atoms%nz(typeA)) = rmtFac * (dist - minRmts(atoms%nz(typeB)))
+                minRmts(atoms%nz(typeA)) = (rmtFac * dist) - minRmts(atoms%nz(typeB))
              END IF
           ELSE IF (minRmts(atoms%nz(typeB)).LT.0.0) THEN
-             minRmts(atoms%nz(typeB)) = rmtFac * (dist - minRmts(atoms%nz(typeA)))
+             minRmts(atoms%nz(typeB)) = (rmtFac * dist) - minRmts(atoms%nz(typeA))
           END IF
           minRmts(atoms%nz(typeA)) = min(minRmts(atoms%nz(typeA)),rmtMaxDefault) ! limit already here 
           minRmts(atoms%nz(typeB)) = min(minRmts(atoms%nz(typeB)),rmtMaxDefault) ! to a reasonable value
@@ -384,6 +384,7 @@ CONTAINS
           END IF
           rmt1(i) = minRmts(atoms%nz(i))
        END DO
+
 
        ! NOTE: The result of this section may be slightly different from the old version
        !       iff the old version would enlarge a MT sphere at this point.
