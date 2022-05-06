@@ -10,31 +10,31 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
+   !> Construct the matching coefficients of the form
+   !! \f{eqnarray*}{
+   !! a_{l,m,p}^{\mu,\bm{G}}(\bm{k}) &=& e^{i \bm{K}\cdot\bm{\tau}_{\mu}}\\
+   !!                                    &*& (Y_{l}^{m}(R^{\mu}\bm{K}))^{*}\\
+   !!                                    &*& f_{l,p}^{\alpha}(K)
+   !! \f}
+   !! with \f$\bm{K} = \bm{k + G \pm q/2}\f$
+   !!
+   !! For example, for p = 0 == acof this translates to:
+   !! \f{eqnarray*}{
+   !! f_{l,0}^{\alpha}(K) &=& \frac{4\pi}{\sqrt{\Omega}W}\\
+   !!                     &*& (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})\\
+   !!                     &-&  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))\\
+   !! \f}
+   !! And in the actual code into:
+   !! abCoeffs(lm, k)                    = c_ph(k,igSpin) *
+   !!                                      CONJG(ylm(lm, k)) *
+   !!                                      fjgj%fj(k,l,ilSpin,igSpin)
+   !! A factor of \f$i^l\f$ is omitted here and instead calculated where
+   !! the coefficients are used.
+   !! Also, \f$f_{l,p}^{\alpha}(K)\f$ carries information about the global and
+   !! local spins \sigma_{g} and \sigma{\alpha} through the K prefactor
+   !! [\f$\pm q\f$ in K] and the \f$u/\overset{.}{u}\f$
+   !! respectively. The former also appears in the complex phase factor.
    SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
-      !> Construct the matching coefficients of the form
-      !! \f{eqnarray*}{
-      !! a_{l,m,p}^{\mu,\bm{G}}(\bm{k}) &=& e^{i \bm{K}\cdot\bm{\tau}_{\mu}}\\
-      !!                                    &*& (Y_{l}^{m}(R^{\mu}\bm{K}))^{*}\\
-      !!                                    &*& f_{l,p}^{\alpha}(K)
-      !! \f}
-      !! with \f$\bm{K} = \bm{k + G \pm q/2}\f$
-      !!
-      !! For example, for p = 0 == acof this translates to:
-      !! \f{eqnarray*}{
-      !! f_{l,0}^{\alpha}(K) &=& \frac{4\pi}{\sqrt{\Omega}W}\\
-      !!                     &*& (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})\\
-      !!                     &-&  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))\\
-      !! \f}
-      !! And in the actual code into:
-      !! abCoeffs(lm, k)                    = c_ph(k,igSpin) *
-      !!                                      CONJG(ylm(lm, k)) *
-      !!                                      fjgj%fj(k,l,ilSpin,igSpin)
-      !! A factor of \f$i^l\f$ is omitted here and instead calculated where
-      !! the coefficients are used.
-      !! Also, \f$f_{l,p}^{\alpha}(K)\f$ carries information about the global and
-      !! local spins \sigma_{g} and \sigma{\alpha} through the K prefactor
-      !! [\f$\pm q\f$ in K] and the \f$u/\overset{.}{u}\f$
-      !! respectively. The former also appears in the complex phase factor.
       USE m_constants, ONLY : fpi_const,tpi_const
       USE m_types
       USE m_ylm
