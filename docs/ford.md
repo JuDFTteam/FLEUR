@@ -5,6 +5,7 @@ exclude_dir: ../build
 exclude_dir: ../build.debug
 exclude: jpSetupDynMatDeprecated_mod.F90
 exclude: soc_or_ssdw.f90
+exclude: jpSternhHF_mod.F90
 src_dir: ../
 output_dir: ./ford-doc
 project: FLEUR
