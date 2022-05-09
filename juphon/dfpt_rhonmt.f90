@@ -16,28 +16,28 @@ MODULE m_dfpt_rhonmt
 
 CONTAINS
 
-   !> Subroutine to construct all MT density coefficients for a density perturbation
-   !> in one routine. The spin input dictates, which is gonna be performed.
-   !> The coefficients are of the form:
-   !> \f{eqnarray*}{
-   !> d_{l',l,L,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha} &=& \sum_{\nu\bm{k}}\sum_{m\mu(L)}\\
-   !> &*&  c_{L,\mu}^{*}G_{l,l''(L),l'}^{m,m''(\mu),m-m''(\mu)}A_{l',m-m''(\mu),\lambda'}^{\sigma_{\alpha}',\nu\bm{k}}\\
-   !> &*& (2\tilde{f}_{\nu\bm{k}}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}\bm{q},j,\beta~(1)}+\tilde{f}_{\nu\bm{k}\bm{q}}^{j,\beta~(1)}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}}) \\
-   !> \f}
-   !> The k-point loop is performed outside this routine. In contrast to older
-   !> routines, the arrays uunmt etc. and uunmt21 etc. are merged into one
-   !> spin and u-order dependent array.
-   !>
-   !> \f$\sigma_{\alpha}(')\f$: local spin indices \f$\rightarrow\f$ ilSpinPr, ilSpin
-   !> \f$\lambda(')\f$: order of the radial basis function (0: u, 1: d)
-   !> \f$L\f$: Lattice harmonic index
-   !> \f$\mu(L)\f$: Lattice harmonic member index
-   !> \f$c_{L,\mu}\f$: Lattice harmonic coefficients
-   !> \f$\nu\bm{k}\f$: State index (k-point and number of state)
-   !> \f$\bm{q},j,\beta\f$: Perturbation index; q-point, direction and atom
-   !> \f$\tilde{f}_{\nu\bm{k}}\f$: Occupation number (smeared)
-   !> \f$A_{...}^{...}\f$: Summed matching coefficients and eigenvectors [perturbed for A^{(1)}]
-   SUBROUTINE dfpt_rhonmt(atoms,sphhar,we,we1,ne,ilSpinPr,ilSpin,sym,acof,a1cof,nmt_coeff)
+   !! Subroutine to construct all MT density coefficients for a density perturbation
+   !! in one routine. The spin input dictates, which is gonna be performed.
+   !! The coefficients are of the form:
+   !! \begin{align*}
+   !! d_{l',l,L,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha} &= \sum_{\nu\bm{k}}\sum_{m\mu(L)}\\
+   !! &*  c_{L,\mu}^{*}G_{l,l''(L),l'}^{m,m''(\mu),m-m''(\mu)}A_{l',m-m''(\mu),\lambda'}^{\sigma_{\alpha}',\nu\bm{k}*}\\
+   !! &* (2\tilde{f}_{\nu\bm{k}}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}\bm{q},j,\beta~(1)}+\tilde{f}_{\nu\bm{k}\bm{q}}^{j,\beta~(1)}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}})
+   !! \end{align}
+   !! The k-point loop is performed outside this routine. In contrast to older
+   !! routines, the arrays uunmt etc. and uunmt21 etc. are merged into one
+   !! spin and u-order dependent array.
+   !!
+   !! \(\sigma_{\alpha}(')\): local spin indices \(\rightarrow\) ilSpinPr, ilSpin
+   !! \(\lambda(')\): order of the radial basis function (0: u, 1: d)
+   !! \(L\): Lattice harmonic index
+   !! \(\mu(L)\): Lattice harmonic member index
+   !! \(c_{L,\mu}\): Lattice harmonic coefficients
+   !! \(\nu\bm{k}\): State index (k-point and number of state)
+   !! \(\bm{q},j,\beta\): Perturbation index; q-point, direction and atom
+   !! \(\tilde{f}_{\nu\bm{k}}\): Occupation number (smeared)
+   !! \(A_{...}^{...}\): Summed matching coefficients and eigenvectors [perturbed for A^{(1)}]
+   SUBROUTINE dfpt_rhonmt(atoms,sphhar,we,we1,ne,ilSpinPr,ilSpin,qpoint,l_dfpt,l_less_effort,sym,acof,a1cof,denCoeffs)
 
       TYPE(t_sym),          INTENT(IN)    :: sym
       TYPE(t_sphhar),       INTENT(IN)    :: sphhar
@@ -45,10 +45,13 @@ CONTAINS
 
       INTEGER,              INTENT(IN)    :: ne, ilSpinPr, ilSpin
       REAL,                 INTENT(IN)    :: we(:),we1(:)!(nobd)
+      REAL,                 INTENT(IN)    :: qpoint(3)
+      LOGICAL,              INTENT(IN)    :: l_dfpt, l_less_effort
 
-      COMPLEX, INTENT(IN)    :: acof(:,:,0:,:,:)!(nu,lm,iOrd,iAtom,ilSpin) ! TODO: 0: for iOrd?
+      COMPLEX, INTENT(IN)    :: acof(:,:,0:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
       COMPLEX, INTENT(IN)    :: a1cof(:,:,0:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
-      COMPLEX, INTENT(INOUT) :: nmt_coeff(:,:,:,0:,0:,:,:)!llp,lh,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin
+
+      TYPE(t_denCoeffs), INTENT(INOUT) :: denCoeffs
 
       COMPLEX coef, cil, coef1
       COMPLEX :: temp(ne)
@@ -63,7 +66,7 @@ CONTAINS
          !$OMP parallel do default(none) &
          !$OMP private(lh,lp,l,lv,mp,m,mv,lm,lmp,llp,llpmax,lphi,lplow) &
          !$OMP private(cil,jmem,coef1,coef,temp,na,nt,nn,natom) &
-         !$OMP shared(sym,we,we1,ne,ns,atoms,sphhar,acof,a1cof,nmt_coeff,ilSpinPr,ilSpin) &
+         !$OMP shared(sym,we,we1,ne,ns,atoms,sphhar,acof,a1cof,denCoeffs,ilSpinPr,ilSpin,l_dfpt,l_less_effort,qpoint) &
          !$OMP collapse(2)
          DO lh = 1, sphhar%nlh(ns)
             DO l = 0, atoms%lmaxd
@@ -93,6 +96,7 @@ CONTAINS
                         cil = ImagUnit**(lp-l)
                         coef1 = cil * sphhar%clnu(jmem,lh,ns)
                         lmp = lp*(lp+1) + mp
+                        IF (lmp>lm.AND.l_less_effort) CYCLE m_loop
 
                         coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
                         IF (ABS(coef) .LT. 1e-12 ) CYCLE
@@ -106,28 +110,30 @@ CONTAINS
                               nt= nt+1
                               IF (sym%ntypsy(nt)==ns) THEN
                                  ! uu/du
-                                 temp(:) = coef * 2 * we(:) * a1cof(:,lm,0,nt,ilSpin)
-                                 nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) = nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) &
+                                 temp(:) = coef * we(:) * a1cof(:,lm,0,nt,ilSpin) ! If not DFPT, this is the base case for rhonmt(21)
+                                 IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
+                                 IF (l_dfpt) THEN
+                                    temp(:) = temp(:) * 2.0
+                                    IF (norm2(qpoint)<=1e-8) THEN
+                                       temp(:) = temp(:) + coef * we1(:) * acof(:,lm,0,nt,ilSpin)
+                                    END IF
+                                 END IF
+                                 denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) &
                                                                         & + dot_product(acof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
-                                 nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) = nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) &
+                                 denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) &
                                                                         & + dot_product(acof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
 
-                                 temp(:) = coef * we1(:) * acof(:,lm,0,nt,ilSpin)
-                                 nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) = nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(acof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
-                                 nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) = nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(acof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
                                  ! dd/ud
-                                 temp(:) = coef * 2 * we(:) * a1cof(:,lm,1,nt,ilSpin)
-                                 nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) = nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) &
+                                 temp(:) = coef * we(:) * a1cof(:,lm,1,nt,ilSpin)
+                                 IF (l_dfpt) THEN
+                                    temp(:) = temp(:) * 2.0
+                                    IF (norm2(qpoint)<=1e-8) THEN
+                                       temp(:) = temp(:) + coef * we1(:) * acof(:,lm,1,nt,ilSpin)
+                                    END IF
+                                 END IF
+                                 denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) &
                                                                         & + dot_product(acof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
-                                 nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) = nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(acof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
-
-                                 temp(:) = coef * we1(:) * acof(:,lm,1,nt,ilSpin)
-                                 nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) = nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(acof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
-                                 nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) = nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) &
+                                 denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) &
                                                                         & + dot_product(acof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
                               ENDIF ! (sym%ntypsy(nt)==ns)
                            ENDDO ! na
@@ -142,7 +148,7 @@ CONTAINS
       END DO ! ns
    END SUBROUTINE dfpt_rhonmt
 
-   SUBROUTINE dfpt_rhonmtlo(atoms,sphhar,sym,ne,we,eigVecCoeffs,denCoeffs,ispin)
+   SUBROUTINE dfpt_rhonmtlo(atoms,sphhar,sym,ne,we,we1,acof,a1cof,locof,lo1cof,denCoeffs,ilSpinPr,ilSpin,l_dfpt,qpoint)
       USE m_gaunt,ONLY:gaunt1
       USE m_types
       use m_constants
@@ -152,23 +158,26 @@ CONTAINS
       TYPE(t_sphhar),       INTENT(IN)    :: sphhar
       TYPE(t_atoms),        INTENT(IN)    :: atoms
       TYPE(t_sym),          INTENT(IN)    :: sym
-      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
-      TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
 
-      INTEGER, INTENT (IN) :: ne, ispin
+      INTEGER, INTENT (IN) :: ne, ilSpinPr, ilSpin
 
-      REAL,    INTENT (IN) :: we(:)!(nobd)
+      REAL,    INTENT (IN) :: we(:),we1(:)!(nobd)
 
-      !COMPLEX, INTENT(IN)    :: acof(:,:,:,:,:)!(nu,lm,iOrd,iAtom,ilSpin) ! TODO: 0: for iOrd?
-      !COMPLEX, INTENT(IN)    :: a1cof(:,:,:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
-      !COMPLEX, INTENT(INOUT) :: nmt_coeff(:,:,:,:,:,:,:)!llp,lh,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin
+      REAL,                 INTENT(IN)    :: qpoint(3)
+      LOGICAL,              INTENT(IN)    :: l_dfpt
 
-      COMPLEX cmv,fact,cf1
-      INTEGER i,jmem,l,lh,lmp,lo,lop,lp,lpmax,lpmax0,lpmin,lpmin0,m,lpp ,mp,mpp,na,neqat0,nn,ntyp
+      COMPLEX, INTENT(IN)    :: acof(:,:,0:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
+      COMPLEX, INTENT(IN)    :: a1cof(:,:,0:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
+      COMPLEX, INTENT(IN)    :: locof(:,:,:,:,:)!(m,nu,ilo,iAtom,ilSpin)
+      COMPLEX, INTENT(IN)    :: lo1cof(:,:,:,:,:)!(m,nu,ilo,iAtom,ilSpin)
+
+      TYPE(t_denCoeffs), INTENT(INOUT) :: denCoeffs
+
+      COMPLEX :: cmv,fact,cf1, cf2
+      INTEGER :: i,jmem,l,lh,lmp,lo,lop,lp,lpmax,lpmax0,lpmin,lpmin0,m,lpp ,mp,mpp,na,neqat0,nn,ntyp
 
       neqat0 = 0
       DO ntyp = 1,atoms%ntype
-         !--->    loop over the lattice harmonics
          DO lh = 1,sphhar%nlh(sym%ntypsy(neqat0+1))
             lpp = sphhar%llh(lh,sym%ntypsy(neqat0+1))
             DO jmem = 1,sphhar%nmem(lh,sym%ntypsy(neqat0+1))
@@ -178,25 +187,13 @@ CONTAINS
                   l = atoms%llo(lo,ntyp)
                   lpmin0 = ABS(l-lpp)
                   lpmax0 = l + lpp
-                  !--->             check that lpmax is smaller than the max l of the
-                  !--->             wavefunction expansion at this atom
+
                   lpmax = MIN(lpmax0,atoms%lmax(ntyp))
-                  !--->             make sure that l + l'' + lpmax is even
                   lpmax = lpmax - MOD(l+lpp+lpmax,2)
                   DO m = -l,l
-
-                     !--->                add flapw - local orbital cross-terms
-
-                     !--->                add terms containing gaunt1(l,lp,lpp,m,mp,mpp)
-                     !--->                note that gaunt1(l,lp,lpp,m,mp,mpp) computes the
-                     !--->                integral of conjg(y(l,m))*y(lp,mp)*y(lpp,mpp),
-                     !--->                however, since the gaunt coef. are real, this is
-                     !--->                the same as int. y(l,m)*conjg(y(lp,mp)*y(lpp,mpp))
                      mp = m - mpp
                      lpmin = MAX(lpmin0,ABS(mp))
-                     !--->                make sure that l + l'' + lpmin is even
-                     lpmin = lpmin + MOD(ABS(lpmax-lpmin),2)
-                     !--->                loop over l'
+                     lpmin = lpmin + MOD(l+lpp+lpmin,2)
                      DO lp = lpmin,lpmax,2
                         lmp = lp* (lp+1) + mp
                         fact = cmv* (ImagUnit** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
@@ -204,21 +201,24 @@ CONTAINS
                         DO nn = 1,atoms%neq(ntyp)
                            na = na + 1
                            DO i = 1,ne
-                              cf1 = fact *  eigVecCoeffs%ccof(m,i,lo,na,ispin)
-                              denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) +&
-                                                                     we(i) * REAL(cf1 * CONJG(eigVecCoeffs%acof(i,lmp,na,ispin)) )
-                              denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) +&
-                                                                     we(i) * REAL(cf1 * CONJG(eigVecCoeffs%bcof(i,lmp,na,ispin)) )
+                              cf1 = fact * we(i) * lo1cof(m,i,lo,na,ilSpin)! If not DFPT, this is the base case for rhonmtlo
+                              IF (l_dfpt) THEN
+                                 cf1 = cf1 * 2.0
+                                 IF (norm2(qpoint)<=1e-8) THEN
+                                    cf1 = cf1 + fact * we1(i) * locof(m,i,lo,na,ilSpin)
+                                 END IF
+                              END IF
+                              denCoeffs%nmt_ulo_coeff(lp,lo,lh,ntyp,0,ilSpinPr,ilSpin) = denCoeffs%nmt_ulo_coeff(lp,lo,lh,ntyp,0,ilSpinPr,ilSpin) &
+                                                                                     & + CONJG(acof(i,lmp,0,na,ilSpinPr)) * cf1
+                              denCoeffs%nmt_ulo_coeff(lp,lo,lh,ntyp,1,ilSpinPr,ilSpin) = denCoeffs%nmt_ulo_coeff(lp,lo,lh,ntyp,1,ilSpinPr,ilSpin) &
+                                                                                     & + CONJG(acof(i,lmp,1,na,ilSpinPr)) * cf1
                            END DO
                         END DO
                      END DO
 
-                     !--->                add terms containing gaunt1(lp,l,lpp,mp,m,mpp)
                      mp = m + mpp
                      lpmin = MAX(lpmin0,ABS(mp))
-                     !--->                make sure that l + l'' + lpmin is even
-                     lpmin = lpmin + MOD(ABS(lpmax-lpmin),2)
-                     !--->                loop over l'
+                     lpmin = lpmin + MOD(l+lpp+lpmin,2)
                      DO lp = lpmin,lpmax,2
                         lmp = lp* (lp+1) + mp
                         fact = cmv* (ImagUnit** (lp-l))*gaunt1(lp,l,lpp,mp,m,mpp,atoms%lmaxd)
@@ -226,20 +226,26 @@ CONTAINS
                         DO nn = 1,atoms%neq(ntyp)
                            na = na + 1
                            DO i = 1,ne
-                              cf1 = fact * CONJG(eigVecCoeffs%ccof(m,i,lo,na,ispin))
-                              denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) +&
-                                                                     we(i) * REAL(cf1 * eigVecCoeffs%acof(i,lmp,na,ispin) )
-                              denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) +&
-                                                                     we(i) * REAL(cf1 * eigVecCoeffs%bcof(i,lmp,na,ispin) )
+                              cf1 = fact * we(i) * a1cof(i,lmp,0,na,ilSpin)! If not DFPT, this is the base case for rhonmtlo
+                              cf2 = fact * we(i) * a1cof(i,lmp,1,na,ilSpin)
+                              IF (l_dfpt) THEN
+                                 cf1 = cf1 * 2.0
+                                 cf2 = cf2 * 2.0
+                                 IF (norm2(qpoint)<=1e-8) THEN
+                                    cf1 = cf1 + fact * we1(i) * acof(i,lmp,0,na,ilSpin)
+                                    cf2 = cf2 + fact * we1(i) * acof(i,lmp,1,na,ilSpin)
+                                 END IF
+                              END IF
+                              denCoeffs%nmt_lou_coeff(lp,lo,lh,ntyp,0,ilSpinPr,ilSpin) = denCoeffs%nmt_lou_coeff(lp,lo,lh,ntyp,0,ilSpinPr,ilSpin) &
+                                                                                     & + CONJG(locof(m,i,lo,na,ilSpinPr)) * cf1
+                              denCoeffs%nmt_lou_coeff(lp,lo,lh,ntyp,1,ilSpinPr,ilSpin) = denCoeffs%nmt_lou_coeff(lp,lo,lh,ntyp,1,ilSpinPr,ilSpin) &
+                                                                                     & + CONJG(locof(m,i,lo,na,ilSpinPr)) * cf2
                            END DO
                         END DO
                      END DO
 
-                     !--->                add local orbital - local orbital terms
                      DO lop = 1,atoms%nlo(ntyp)
                         lp = atoms%llo(lop,ntyp)
-
-                        !--->                   add terms containing gaunt1(l,lp,lpp,m,mp,mpp)
                         mp = m - mpp
                         IF ((ABS(l-lpp).LE.lp) .AND.(lp.LE. (l+lpp)) .AND.(MOD(l+lp+lpp,2).EQ.0) .AND.(ABS(mp).LE.lp)) THEN
                            fact = cmv* (ImagUnit** (l-lp))*gaunt1(l,lp,lpp,m,mp,mpp,atoms%lmaxd)
@@ -247,13 +253,18 @@ CONTAINS
                            DO nn = 1,atoms%neq(ntyp)
                               na = na + 1
                               DO i = 1,ne
-                                 denCoeffs%ccnmt(lop,lo,lh,ntyp,ispin) =&
-                                    denCoeffs%ccnmt(lop,lo,lh,ntyp,ispin) +&
-                                    we(i) * REAL(fact * CONJG(eigVecCoeffs%ccof(mp,i,lop,na,ispin))*eigVecCoeffs%ccof(m,i,lo,na,ispin))
+                                 cf1 = fact * we(i) * lo1cof(m,i,lo,na,ilSpin)! If not DFPT, this is the base case for rhonmtlo
+                                 IF (l_dfpt) THEN
+                                    cf1 = cf1 * 2.0
+                                    IF (norm2(qpoint)<=1e-8) THEN
+                                       cf1 = cf1 + fact * we1(i) * locof(m,i,lo,na,ilSpin)
+                                    END IF
+                                 END IF
+                                 denCoeffs%nmt_lolo_coeff(lop,lo,lh,ntyp,ilSpinPr,ilSpin) = denCoeffs%nmt_lolo_coeff(lop,lo,lh,ntyp,ilSpinPr,ilSpin) &
+                                                                                        & + CONJG(locof(mp,i,lop,na,ilSpinPr)) * cf1
                               END DO
                            END DO
                         END IF
-
                      END DO
                   END DO
                END DO

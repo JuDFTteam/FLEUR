@@ -10,29 +10,29 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-   !> Construct the matching coefficients of the form
-   !! \f{eqnarray*}{
-   !! a_{l,m,p}^{\mu,\bm{G}}(\bm{k}) &=& e^{i \bm{K}\cdot\bm{\tau}_{\mu}}\\
-   !!                                    &*& (Y_{l}^{m}(R^{\mu}\bm{K}))^{*}\\
-   !!                                    &*& f_{l,p}^{\alpha}(K)
-   !! \f}
-   !! with \f$\bm{K} = \bm{k + G \pm q/2}\f$
+   !! Construct the matching coefficients of the form
+   !! \begin{align*}
+   !! a_{l,m,p}^{\mu,\bm{G}}(\bm{k}) &= e^{i \bm{K}\cdot\bm{\tau}_{\mu}}\\
+   !!                                &* (Y_{l}^{m}(R^{\mu}\bm{K}))^{*}\\
+   !!                                &* f_{l,p}^{\alpha}(K)
+   !! \end{align}
+   !! with \(\bm{K} = \bm{k + G \pm q/2}\)
    !!
    !! For example, for p = 0 == acof this translates to:
-   !! \f{eqnarray*}{
-   !! f_{l,0}^{\alpha}(K) &=& \frac{4\pi}{\sqrt{\Omega}W}\\
-   !!                     &*& (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})\\
-   !!                     &-&  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))\\
-   !! \f}
+   !! \begin{align*}
+   !! f_{l,0}^{\alpha}(K) &= \frac{4\pi}{\sqrt{\Omega}W}\\
+   !!                     &* (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})\\
+   !!                     &-  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))\\
+   !! \end{align}
    !! And in the actual code into:
    !! abCoeffs(lm, k)                    = c_ph(k,igSpin) *
    !!                                      CONJG(ylm(lm, k)) *
    !!                                      fjgj%fj(k,l,ilSpin,igSpin)
-   !! A factor of \f$i^l\f$ is omitted here and instead calculated where
+   !! A factor of \(i^l\) is omitted here and instead calculated where
    !! the coefficients are used.
-   !! Also, \f$f_{l,p}^{\alpha}(K)\f$ carries information about the global and
+   !! Also, \(f_{l,p}^{\alpha}(K)\) carries information about the global and
    !! local spins \sigma_{g} and \sigma{\alpha} through the K prefactor
-   !! [\f$\pm q\f$ in K] and the \f$u/\overset{.}{u}\f$
+   !! [\(\pm q\) in K] and the \(u/\overset{.}{u}\)
    !! respectively. The former also appears in the complex phase factor.
    SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
       USE m_constants, ONLY : fpi_const,tpi_const
