@@ -29,11 +29,11 @@ CONTAINS
                 !     -----> sum over occupied bands
                 DO i = 1,ne
                    denCoeffs%uu(l,n,ispin) = denCoeffs%uu(l,n,ispin) +&
-                      we(i) * REAL(eigVecCoeffs%acof(i,lm,natom,ispin)*CONJG(eigVecCoeffs%acof(i,lm,natom,ispin)))
+                      we(i) * REAL(eigVecCoeffs%acof2(i,lm,0,natom,ispin)*CONJG(eigVecCoeffs%acof2(i,lm,0,natom,ispin)))
                    denCoeffs%dd(l,n,ispin) = denCoeffs%dd(l,n,ispin) +&
-                      we(i) * REAL(eigVecCoeffs%bcof(i,lm,natom,ispin)*CONJG(eigVecCoeffs%bcof(i,lm,natom,ispin)))
+                      we(i) * REAL(eigVecCoeffs%acof2(i,lm,1,natom,ispin)*CONJG(eigVecCoeffs%acof2(i,lm,1,natom,ispin)))
                    denCoeffs%du(l,n,ispin) = denCoeffs%du(l,n,ispin) +&
-                      we(i) * REAL(eigVecCoeffs%acof(i,lm,natom,ispin)*CONJG(eigVecCoeffs%bcof(i,lm,natom,ispin)))
+                      we(i) * REAL(eigVecCoeffs%acof2(i,lm,0,natom,ispin)*CONJG(eigVecCoeffs%acof2(i,lm,1,natom,ispin)))
                 ENDDO
              ENDDO
           ENDDO

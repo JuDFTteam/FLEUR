@@ -3,8 +3,8 @@ CONTAINS
    SUBROUTINE force_a12(atoms,nobd,sym,cell,oneD,we,jsp,ne,usdus,eigVecCoeffs, &
                         acoflo,bcoflo,e1cof,e2cof,f_a12,results)
       !--------------------------------------------------------------------------
-      ! Pulay 1st term force contribution à la Rici et al. 
-      ! 
+      ! Pulay 1st term force contribution à la Rici et al.
+      !
       ! Equation A12, Phys. Rev. B 43, 6411
       !--------------------------------------------------------------------------
       USE m_types_setup
@@ -13,7 +13,7 @@ CONTAINS
       USE m_types_cdnval
       USE m_constants
       USE m_juDFT
-    
+
       IMPLICIT NONE
 
       TYPE(t_atoms),        INTENT(IN)    :: atoms
@@ -24,8 +24,8 @@ CONTAINS
       TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
       TYPE(t_results),      INTENT(INOUT) :: results
 
-      INTEGER, INTENT(IN) :: nobd    
-      INTEGER, INTENT(IN) :: jsp, ne 
+      INTEGER, INTENT(IN) :: nobd
+      INTEGER, INTENT(IN) :: jsp, ne
 
       REAL,    INTENT(IN)    :: we(nobd)
       COMPLEX, INTENT(IN)    :: acoflo(-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
@@ -46,7 +46,7 @@ CONTAINS
       REAL aaa(2),bbb(2),ccc(2),ddd(2),eee(2),fff(2),gvint(3),starsum(3),vec(3),vecsum(3)
 
       ! Statement functions
-      REAL    alpha,beta,delta,epslon,gamma,phi 
+      REAL    alpha,beta,delta,epslon,gamma,phi
       INTEGER krondel
 
       ! Kronecker delta for arguments >=0 AND <0
@@ -71,15 +71,15 @@ CONTAINS
 
                ! The local orbitals do not contribute to the term a12, because
                ! they vanish at the MT-boundary. Therefore, the LO-contribution
-               ! to the a and b coefficients has to be subtracted before 
+               ! to the a and b coefficients has to be subtracted before
                ! calculating a12.
 
                DO l1 = 0, atoms%lmax(n)
                   DO m1 = -l1, l1
                      lm1 = l1*(l1+1) + m1
                      DO ie = 1, ne
-                        acof_flapw(ie,lm1) = eigVecCoeffs%acof(ie,lm1,natrun,jsp)
-                        bcof_flapw(ie,lm1) = eigVecCoeffs%bcof(ie,lm1,natrun,jsp)
+                        acof_flapw(ie,lm1) = eigVecCoeffs%acof2(ie,lm1,0,natrun,jsp)
+                        bcof_flapw(ie,lm1) = eigVecCoeffs%acof2(ie,lm1,1,natrun,jsp)
                      END DO
                   END DO
                END DO
@@ -143,12 +143,12 @@ CONTAINS
                   END DO ! m1 (-l1:l1)
                END DO ! l1 (0:atoms%lmax(n))
 
-               ! To complete the k summation over the stars now sum over all 
+               ! To complete the k summation over the stars now sum over all
                ! operations which leave (k+G)*R(natrun)*taual(natrun) invariant.
                ! We sum over ALL these operations and not only the ones needed
                ! for the actual star of k. This should be ok if we divide properly
                ! by the number of operations.
-               ! First, we find the operation S where RS=T. 
+               ! First, we find the operation S where RS=T.
                ! T (like R) leaves the above scalar product invariant (if S=1 then
                ! R=T). R is the operation which generates the position of an equivalent
                ! atom from the position of the representative.
@@ -164,7 +164,7 @@ CONTAINS
                vec(:) = REAL(gv(:)) /atoms%neq(n)
 
                gvint=MATMUL(cell%bmat,vec)/tpi_const
- 
+
                vecsum(:) = zero
 
                !-gb2002
@@ -179,7 +179,7 @@ CONTAINS
                ! Rotation is alreadt done in to_pulay, here we work only in the
                ! coordinate system of the representative atom (natom):
                !!
-        
+
                DO it = 1, sym%invarind(natom)
                   is =sym%invarop(natom,it)
                   isinv = sym%invtab(is)
@@ -210,14 +210,14 @@ CONTAINS
                DO i = 1, 3
                   forc_a12(i) = forc_a12(i) + starsum(i)/sym%invarind(natrun)
                END DO
-             
+
             END DO ! End of natrun loop
 
             ! Add onto existing forces.
 
             ! NOTE: results%force is real and therefore only the real part of
             ! forc_a12 is added. In general, force must be real after the k-star
-            ! summation. Now, we put the proper operations into real space. 
+            ! summation. Now, we put the proper operations into real space.
             ! Problem: What happens if in real space there is no inversion anymore?
             ! But we have inversion in k-space due to time reversal symmetry:
             ! E(k)=E(-k)

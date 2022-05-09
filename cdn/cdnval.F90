@@ -254,7 +254,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,oneD,&
-                    eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
+                    eigVecCoeffs%acof2(:,0:,0,:,ispin),eigVecCoeffs%acof2(:,0:,1,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
 
          IF (atoms%n_u+atoms%n_opc.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))

@@ -57,14 +57,14 @@ MODULE m_jDOS
                   IF(l == 0) THEN
                      !s-states (are not split up by SOC)
                      DO spin = 1, input%jspins
-                        c(0) = c(0) + eigVecCoeffs%acof(iBand,0,natom,spin)*CONJG(eigVecCoeffs%acof(iBand,0,natom,spin)) &
-                                    + eigVecCoeffs%bcof(iBand,0,natom,spin)*CONJG(eigVecCoeffs%bcof(iBand,0,natom,spin)) &
+                        c(0) = c(0) + eigVecCoeffs%acof2(iBand,0,0,natom,spin)*CONJG(eigVecCoeffs%acof2(iBand,0,0,natom,spin)) &
+                                    + eigVecCoeffs%acof2(iBand,0,1,natom,spin)*CONJG(eigVecCoeffs%acof2(iBand,0,1,natom,spin)) &
                                        *usdus%ddn(0,iType,spin)
 
                         DO ilo  = 1, atoms%nlo(iType)
                            IF(atoms%llo(ilo,iType) /= 0) CYCLE
-                           c(0) = c(0) + 2*REAL(eigVecCoeffs%acof(iBand,0,natom,spin)*eigVecCoeffs%ccof(0,iBand,ilo,natom,spin))* usdus%uulon(ilo,iType,spin) &
-                                       + 2*REAL(eigVecCoeffs%bcof(iBand,0,natom,spin)*eigVecCoeffs%ccof(0,iBand,ilo,natom,spin))* usdus%dulon(ilo,iType,spin)
+                           c(0) = c(0) + 2*REAL(eigVecCoeffs%acof2(iBand,0,0,natom,spin)*eigVecCoeffs%ccof(0,iBand,ilo,natom,spin))* usdus%uulon(ilo,iType,spin) &
+                                       + 2*REAL(eigVecCoeffs%acof2(iBand,0,1,natom,spin)*eigVecCoeffs%ccof(0,iBand,ilo,natom,spin))* usdus%dulon(ilo,iType,spin)
                            DO ilop  = 1, atoms%nlo(iType)
                               IF(atoms%llo(ilo,iType) /= 0) CYCLE
                               c(0) = c(0) + eigVecCoeffs%ccof(0,iBand,ilo,natom,spin)*CONJG(eigVecCoeffs%ccof(0,iBand,ilop,natom,spin))*usdus%uloulopn(ilo,ilop,iType,spin)
@@ -93,8 +93,8 @@ MODULE m_jDOS
                            IF(ABS(mup) <= l) THEN
                               lmup   = l*(l+1) + INT(mup)
                               facup = clebsch(REAL(l),0.5,mup,0.5,j,mj)
-                              aup   = facup   * eigVecCoeffs%acof(iBand,lmup  ,natom,1)
-                              bup   = facup   * eigVecCoeffs%bcof(iBand,lmup  ,natom,1)
+                              aup   = facup   * eigVecCoeffs%acof2(iBand,lmup,0,natom,1)
+                              bup   = facup   * eigVecCoeffs%acof2(iBand,lmup,1,natom,1)
                            ELSE
                               aup = 0.0
                               bup = 0.0
@@ -103,8 +103,8 @@ MODULE m_jDOS
                            IF(ABS(mdown) <= l) THEN
                               lmdown = l*(l+1) + INT(mdown)
                               facdown = clebsch(REAL(l),0.5,mdown,-0.5,j,mj)
-                              adown = - facdown * eigVecCoeffs%acof(iBand,lmdown,natom,spin)
-                              bdown = - facdown * eigVecCoeffs%bcof(iBand,lmdown,natom,spin)
+                              adown = - facdown * eigVecCoeffs%acof2(iBand,lmdown,0,natom,spin)
+                              bdown = - facdown * eigVecCoeffs%acof2(iBand,lmdown,1,natom,spin)
                            ELSE
                               adown = 0.0
                               bdown = 0.0

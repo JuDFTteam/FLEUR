@@ -84,9 +84,9 @@ CONTAINS
                          DO i = 1,ne
                             cf1 = fact *  eigVecCoeffs%ccof(m,i,lo,na,ispin)
                             denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) +&
-                                                                   we(i) * REAL(cf1 * CONJG(eigVecCoeffs%acof(i,lmp,na,ispin)) )
+                                                                   we(i) * REAL(cf1 * CONJG(eigVecCoeffs%acof2(i,lmp,0,na,ispin)) )
                             denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) +&
-                                                                   we(i) * REAL(cf1 * CONJG(eigVecCoeffs%bcof(i,lmp,na,ispin)) )
+                                                                   we(i) * REAL(cf1 * CONJG(eigVecCoeffs%acof2(i,lmp,1,na,ispin)) )
                          END DO
                       END DO
                    END DO
@@ -106,9 +106,9 @@ CONTAINS
                          DO i = 1,ne
                             cf1 = fact * CONJG(eigVecCoeffs%ccof(m,i,lo,na,ispin))
                             denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%acnmt(lp,lo,lh,ntyp,ispin) +&
-                                                                   we(i) * REAL(cf1 * eigVecCoeffs%acof(i,lmp,na,ispin) )
+                                                                   we(i) * REAL(cf1 * eigVecCoeffs%acof2(i,lmp,0,na,ispin) )
                             denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) = denCoeffs%bcnmt(lp,lo,lh,ntyp,ispin) +&
-                                                                   we(i) * REAL(cf1 * eigVecCoeffs%bcof(i,lmp,na,ispin) )
+                                                                   we(i) * REAL(cf1 * eigVecCoeffs%acof2(i,lmp,1,na,ispin) )
                          END DO
                       END DO
                    END DO

@@ -363,20 +363,20 @@ FUNCTION rotate_eigveccoeffs_to_rep_atom(this, atoms, sym,lmax) RESULT(rot)
             iop=sym%ngopr(sym%invsatnr(iatom))
             ifac = -1
           ENDIF
-          DO ispin = LBOUND(this%acof,4),UBOUND(this%acof,4)
+          DO ispin = LBOUND(this%acof2,5),UBOUND(this%acof2,5)
              DO l=1,MIN(lmax,atoms%lmax(iType))
                ! c  replaced d_wgn by conjg(d_wgn),FF October 2006
-               DO i=1,SIZE(this%acof,1)
-                 rot%acof(i,l**2:l*(l+2),iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%acof(i,l**2:l*(l+2),iatom,ispin))
-                 rot%bcof(i,l**2:l*(l+2),iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%bcof(i,l**2:l*(l+2),iatom,ispin))
+               DO i=1,SIZE(this%acof2,1)
+                 rot%acof2(i,l**2:l*(l+2),0,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%acof2(i,l**2:l*(l+2),0,iatom,ispin))
+                 rot%acof2(i,l**2:l*(l+2),1,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%acof2(i,l**2:l*(l+2),1,iatom,ispin))
                ENDDO
              ENDDO
           ENDDO
-          DO ispin = LBOUND(this%acof,4),UBOUND(this%acof,4)
+          DO ispin = LBOUND(this%acof2,5),UBOUND(this%acof2,5)
              DO ilo=1,atoms%nlo(itype)
                l=atoms%llo(ilo,itype)
                IF(l.gt.0.AND.l<=lmax) THEN
-                 DO i=1,SIZE(this%acof,1)
+                 DO i=1,SIZE(this%acof2,1)
                      rot%ccof(-l:l,i,ilo,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%ccof(-l:l,i,ilo,iAtom, ispin))
                  ENDDO
                ENDIF

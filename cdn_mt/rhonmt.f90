@@ -33,7 +33,7 @@ CONTAINS
        !$OMP PARALLEL DO DEFAULT(SHARED) &
        !$OMP&  PRIVATE(lv,jmem,mv,cmv,l,lm,mp,m,llpmax,nt,na,nb,lplow0)&
        !$OMP&  PRIVATE(lphi,lplow,lcond,lp,cil,lmp,llp,coef,cconst&
-       !$OMP& ,natom,nn) 
+       !$OMP& ,natom,nn)
        DO  lh = 1,sphhar%nlh(ns)
           lv = sphhar%llh(lh,ns)
           DO  jmem = 1,sphhar%nmem(lh,ns)
@@ -46,10 +46,10 @@ CONTAINS
                    !     -----> set up the lower and upper limit of lp in such a way that
                    !     -----> lp+l+lv is even, lp<=l, and (lp,l,lv) satisfies the
                    !     -----> triangular relation
-                   lplow0 = iabs(l-lv)
+                   lplow0 = abs(l-lv)
                    lphi = l - mod(lv,2)
-                   lplow = max(lplow0,iabs(mp))
-                   lcond = iabs(lphi-lplow)
+                   lplow = max(lplow0,abs(mp))
+                   lcond = abs(lphi-lplow)
                    lplow = lplow + mod(lcond,2)
                    IF (lplow.GT.lphi) CYCLE m_loop
                    DO  lp = lplow,lphi,2
@@ -64,20 +64,20 @@ CONTAINS
                       natom = 0
                       DO  nn = 1,atoms%ntype
                          llpmax = (atoms%lmax(nn)* (atoms%lmax(nn)+3))/2
-                         IF (llp.LE.llpmax) THEN 
+                         IF (llp.LE.llpmax) THEN
                             nt = natom
                             DO  na = 1,atoms%neq(nn)
                                nt = nt + 1
                                IF (sym%ntypsy(nt).EQ.ns) THEN
                                   DO nb = 1,ne
                                      denCoeffs%uunmt(llp,lh,nn,ispin) = denCoeffs%uunmt(llp,lh,nn,ispin)&
-                                          +we(nb)*real(cconst*eigVecCoeffs%acof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%acof(nb,lmp,nt,ispin)))
+                                          +we(nb)*real(cconst*eigVecCoeffs%acof2(nb,lm,0,nt,ispin)*conjg(eigVecCoeffs%acof2(nb,lmp,0,nt,ispin)))
                                      denCoeffs%ddnmt(llp,lh,nn,ispin) = denCoeffs%ddnmt(llp,lh,nn,ispin) +&
-                                          we(nb)*real(cconst*eigVecCoeffs%bcof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%bcof(nb,lmp,nt,ispin)))
+                                          we(nb)*real(cconst*eigVecCoeffs%acof2(nb,lm,1,nt,ispin)*conjg(eigVecCoeffs%acof2(nb,lmp,1,nt,ispin)))
                                      denCoeffs%udnmt(llp,lh,nn,ispin) = denCoeffs%udnmt(llp,lh,nn,ispin) +&
-                                          we(nb)*real(cconst*eigVecCoeffs%acof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%bcof(nb,lmp,nt,ispin)))
+                                          we(nb)*real(cconst*eigVecCoeffs%acof2(nb,lm,0,nt,ispin)*conjg(eigVecCoeffs%acof2(nb,lmp,1,nt,ispin)))
                                      denCoeffs%dunmt(llp,lh,nn,ispin) = denCoeffs%dunmt(llp,lh,nn,ispin) +&
-                                          we(nb)*real(cconst*eigVecCoeffs%bcof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%acof(nb,lmp,nt,ispin)))
+                                          we(nb)*real(cconst*eigVecCoeffs%acof2(nb,lm,1,nt,ispin)*conjg(eigVecCoeffs%acof2(nb,lmp,0,nt,ispin)))
                                   ENDDO
                                ENDIF
                             ENDDO

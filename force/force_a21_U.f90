@@ -7,7 +7,7 @@ MODULE m_forcea21U
 CONTAINS
    SUBROUTINE force_a21_U(atoms,itype,isp,we,ne,usdus,v_mmp,eigVecCoeffs,aveccof,bveccof,cveccof,a21)
       !--------------------------------------------------------------------------
-      ! This subroutine calculates the lda+U contribution to the HF forces, 
+      ! This subroutine calculates the lda+U contribution to the HF forces,
       ! similar to the A21 term, according to eqn. (22) of F. Tran et al.
       ! Comp.Phys.Comm. 179 (2008) 784-790
       !--------------------------------------------------------------------------
@@ -16,7 +16,7 @@ CONTAINS
       USE m_types_setup
       USE m_types_usdus
       USE m_types_cdnval
-    
+
       IMPLICIT NONE
 
       TYPE(t_usdus),        INTENT(IN) :: usdus
@@ -55,23 +55,23 @@ CONTAINS
             lm = l* (l+1) + m
             DO mp = -l,l
                lmp = l* (l+1) + mp
-               v_a = v_mmp(m,mp,i_u) 
-               v_b = v_mmp(m,mp,i_u) * usdus%ddn(l,itype,isp) 
+               v_a = v_mmp(m,mp,i_u)
+               v_b = v_mmp(m,mp,i_u) * usdus%ddn(l,itype,isp)
                DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
                   DO ie = 1,ne
                      DO i = 1,3
-                        p1 = (CONJG(eigVecCoeffs%acof(ie,lm,iatom,isp)) * v_a) * aveccof(i,ie,lmp,iatom)
-                        p2 = (CONJG(eigVecCoeffs%bcof(ie,lm,iatom,isp)) * v_b) * bveccof(i,ie,lmp,iatom) 
+                        p1 = (CONJG(eigVecCoeffs%acof2(ie,lm,0,iatom,isp)) * v_a) * aveccof(i,ie,lmp,iatom)
+                        p2 = (CONJG(eigVecCoeffs%acof2(ie,lm,1,iatom,isp)) * v_b) * bveccof(i,ie,lmp,iatom)
                         a21(i,iatom) = a21(i,iatom) + 2.0*AIMAG(p1 + p2) * we(ie)/atoms%neq(itype)
                      END DO
                   END DO
                END DO
             END DO ! mp
          END DO   ! m
-   
+
          ! If there are also LOs on this atom, with the same l as
          ! the one of LDA+U, add another few terms
- 
+
           DO lo = 1,atoms%nlo(itype)
             IF (l == atoms%llo(lo,itype)) THEN
                DO m = -l,l
@@ -85,9 +85,9 @@ CONTAINS
                         DO ie = 1,ne
                            DO i = 1,3
                               p1 = v_a * (CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * cveccof(i,mp,ie,lo,iatom))
-                              p2 = v_b * (CONJG(eigVecCoeffs%acof(ie,lm,iatom,isp)) * cveccof(i,mp,ie,lo,iatom) + &
+                              p2 = v_b * (CONJG(eigVecCoeffs%acof2(ie,lm,0,iatom,isp)) * cveccof(i,mp,ie,lo,iatom) + &
                                           CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * aveccof(i,ie,lmp,iatom))
-                              p3 = v_c * (CONJG(eigVecCoeffs%bcof(ie,lm,iatom,isp)) * cveccof(i,mp,ie,lo,iatom) + &
+                              p3 = v_c * (CONJG(eigVecCoeffs%acof2(ie,lm,1,iatom,isp)) * cveccof(i,mp,ie,lo,iatom) + &
                                           CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * bveccof(i,ie,lmp,iatom))
                               a21(i,iatom) = a21(i,iatom) + 2.0*AIMAG(p1 + p2 + p3)*we(ie)/atoms%neq(itype)
                            END DO

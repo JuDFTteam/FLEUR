@@ -63,8 +63,8 @@ MODULE m_nmat
                   c_0 = cmplx_0
                   DO i = 1,ne
                      c_0 = c_0 +  we(i) * ( usdus%ddn(l,n,jspin) *&
-                                 conjg(eigVecCoeffs%bcof(i,lmp,natom,jspin))*eigVecCoeffs%bcof(i,lm,natom,jspin) &
-                               + conjg(eigVecCoeffs%acof(i,lmp,natom,jspin))*eigVecCoeffs%acof(i,lm,natom,jspin) )
+                                 conjg(eigVecCoeffs%acof2(i,lmp,1,natom,jspin))*eigVecCoeffs%acof2(i,lm,1,natom,jspin) &
+                               + conjg(eigVecCoeffs%acof2(i,lmp,0,natom,jspin))*eigVecCoeffs%acof2(i,lm,0,natom,jspin) )
                   ENDDO
                   n_tmp(m,mp) = c_0
                ENDDO
@@ -81,11 +81,11 @@ MODULE m_nmat
                         c_0 = cmplx_0
                         DO i = 1,ne
                            c_0 = c_0 +  we(i) * ( usdus%uulon(ilo,n,jspin) * (&
-                                       conjg(eigVecCoeffs%acof(i,lmp,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
-                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%acof(i,lm,natom,jspin) )&
+                                       conjg(eigVecCoeffs%acof2(i,lmp,0,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
+                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%acof2(i,lm,0,natom,jspin) )&
                                      + usdus%dulon(ilo,n,jspin) * (&
-                                       conjg(eigVecCoeffs%bcof(i,lmp,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
-                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%bcof(i,lm,natom,jspin)))
+                                       conjg(eigVecCoeffs%acof2(i,lmp,1,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
+                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%acof2(i,lm,1,natom,jspin)))
                         ENDDO
                         DO ilop = 1, atoms%nlo(n)
                            IF (atoms%llo(ilop,n).EQ.l) THEN
