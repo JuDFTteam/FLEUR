@@ -24,7 +24,7 @@ ford:
   stage: html
   needs: []  
   script:
-    - cd $CI_PROJECT_DIR/docs ; ford ford.md
+    - cd $CI_PROJECT_DIR/docs ; ford -f ford.md
     - mkdir ../public
     - mv ford-doc ../public/ford
   artifacts:
