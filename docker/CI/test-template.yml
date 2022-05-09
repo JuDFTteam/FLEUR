@@ -31,7 +31,3 @@
     paths:
       - $BUILD_FOLDER/Testing
 
-.test-fleur-not-on-push:
-  extends: .test-fleur
-  except:
-    - pushes
