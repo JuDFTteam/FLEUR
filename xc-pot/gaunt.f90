@@ -11,6 +11,10 @@ MODULE m_gaunt
    PUBLIC gaunt1, gaunt2, gaunt_init, gaunt_init2
 CONTAINS
    FUNCTION gaunt1(lp,l,ls,mp,m,ms,lmaxd)
+      !! This is a test for the new FORD documentation.
+      !! In this function we calculate the Gaunt coefficients
+      !! $$ G_{l',l,l''}^{m',m,m''}\equiv\int d\Omega ~ Y_{l'}^{m'}Y_{l}^{m}Y_{l''}^{m''} $$
+
 !*********************************************************************
 !     gaunt computes the integral of conjg(y(lp,mp))*y(l,m)*y(ls,ms)
 !     for lp+l+ls .lt. 2*ngntd
