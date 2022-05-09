@@ -10,21 +10,21 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-   !! Construct the matching coefficients of the form
-   !! \begin{align*}
-   !! a_{l,m,p}^{\mu,\bm{G}}(\bm{k}) &= e^{i \bm{K}\cdot\bm{\tau}_{\mu}}\\
-   !!                                &* (Y_{l}^{m}(R^{\mu}\bm{K}))^{*}\\
+   !! Construct the matching coefficients of the form\\
+   !! $$\begin{aligned}
+   !! a_{l,m,p}^{\mu,\boldsymbol{G}}(\boldsymbol{k}) &= e^{i \boldsymbol{K}\cdot\boldsymbol{\tau}_{\mu}}\\
+   !!                                &* (Y_{l}^{m}(R^{\mu}\boldsymbol{K}))^{*}\\
    !!                                &* f_{l,p}^{\alpha}(K)
-   !! \end{align}
-   !! with \(\bm{K} = \bm{k + G \pm q/2}\)
+   !! \end{aligned}$$
+   !! with \(\boldsymbol{K} = \boldsymbol{k + G \pm q/2}\)
    !!
    !! For example, for p = 0 == acof this translates to:
-   !! \begin{align*}
+   !! $$\begin{aligned}
    !! f_{l,0}^{\alpha}(K) &= \frac{4\pi}{\sqrt{\Omega}W}\\
    !!                     &* (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})\\
-   !!                     &-  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))\\
-   !! \end{align}
-   !! And in the actual code into:
+   !!                     &-  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))
+   !! \end{aligned}$$
+   !! And in the actual code into:\\
    !! abCoeffs(lm, k)                    = c_ph(k,igSpin) *
    !!                                      CONJG(ylm(lm, k)) *
    !!                                      fjgj%fj(k,l,ilSpin,igSpin)

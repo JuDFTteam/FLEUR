@@ -19,24 +19,24 @@ CONTAINS
    !! Subroutine to construct all MT density coefficients for a density perturbation
    !! in one routine. The spin input dictates, which is gonna be performed.
    !! The coefficients are of the form:
-   !! \begin{align*}
-   !! d_{l',l,L,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha} &= \sum_{\nu\bm{k}}\sum_{m\mu(L)}\\
-   !! &*  c_{L,\mu}^{*}G_{l,l''(L),l'}^{m,m''(\mu),m-m''(\mu)}A_{l',m-m''(\mu),\lambda'}^{\sigma_{\alpha}',\nu\bm{k}*}\\
-   !! &* (2\tilde{f}_{\nu\bm{k}}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}\bm{q},j,\beta~(1)}+\tilde{f}_{\nu\bm{k}\bm{q}}^{j,\beta~(1)}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\bm{k}})
-   !! \end{align}
+   !! $$\begin{aligned}
+   !! d_{l',l,L,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha} &= \sum_{\nu\boldsymbol{k}}\sum_{m\mu(L)}\\
+   !! &*  c_{L,\mu}^{*}G_{l,l''(L),l'}^{m,m''(\mu),m-m''(\mu)}A_{l',m-m''(\mu),\lambda'}^{\sigma_{\alpha}',\nu\boldsymbol{k}*}\\
+   !! &* (2\tilde{f}_{\nu\boldsymbol{k}}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{q},j,\beta~(1)}+\tilde{f}_{\nu\boldsymbol{k}\boldsymbol{q}}^{j,\beta~(1)}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}})
+   !! \end{aligned}$$
    !! The k-point loop is performed outside this routine. In contrast to older
    !! routines, the arrays uunmt etc. and uunmt21 etc. are merged into one
-   !! spin and u-order dependent array.
+   !! spin and u-order dependent array.\\
    !!
-   !! \(\sigma_{\alpha}(')\): local spin indices \(\rightarrow\) ilSpinPr, ilSpin
-   !! \(\lambda(')\): order of the radial basis function (0: u, 1: d)
-   !! \(L\): Lattice harmonic index
-   !! \(\mu(L)\): Lattice harmonic member index
-   !! \(c_{L,\mu}\): Lattice harmonic coefficients
-   !! \(\nu\bm{k}\): State index (k-point and number of state)
-   !! \(\bm{q},j,\beta\): Perturbation index; q-point, direction and atom
-   !! \(\tilde{f}_{\nu\bm{k}}\): Occupation number (smeared)
-   !! \(A_{...}^{...}\): Summed matching coefficients and eigenvectors [perturbed for A^{(1)}]
+   !! \(\sigma_{\alpha}(')\): local spin indices \(\rightarrow\) ilSpinPr, ilSpin\\
+   !! \(\lambda(')\): order of the radial basis function (0: u, 1: d)\\
+   !! \(L\): Lattice harmonic index\\
+   !! \(\mu(L)\): Lattice harmonic member index\\
+   !! \(c_{L,\mu}\): Lattice harmonic coefficients\\
+   !! \(\nu\boldsymbol{k}\): State index (k-point and number of state)\\
+   !! \(\boldsymbol{q},j,\beta\): Perturbation index; q-point, direction and atom\\
+   !! \(\tilde{f}_{\nu\boldsymbol{k}}\): Occupation number (smeared)\\
+   !! \(A_{...}^{...}\): Summed matching coefficients and eigenvectors [perturbed for \(A^{(1)}\)]
    SUBROUTINE dfpt_rhonmt(atoms,sphhar,we,we1,ne,ilSpinPr,ilSpin,qpoint,l_dfpt,l_less_effort,sym,acof,a1cof,denCoeffs)
 
       TYPE(t_sym),          INTENT(IN)    :: sym
