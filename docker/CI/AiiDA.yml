@@ -86,5 +86,5 @@ test-aiida-fleur-dev-gfortran-hdf5:
     when: always
     paths:
       - aiida-fleur/tests/
-  except:
-    - pushes
+  rules:
+      - if $CI_TASKS =~ /aiida/    

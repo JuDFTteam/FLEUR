@@ -15,9 +15,9 @@ pages:
   artifacts:
     paths:
       - public
-  except:
-    - pushes
-
+  rules:
+      - if $CI_TASKS =~ /doc/    
+  
 
 ford:
   image: iffregistry.fz-juelich.de/fleur/fleur:ford
@@ -30,9 +30,9 @@ ford:
   artifacts:
     paths:
       - public
-  except:
-    - pushes
-
+  rules:
+      - if $CI_TASKS =~ /doc/    
+  
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: html
@@ -48,13 +48,13 @@ doxygen:
       - build/fleur
       - build/fleur_MPI
       - build/inpgen
-  except:
-    - pushes
-
+  rules:
+      - if $CI_TASKS =~ /doc/    
+  
 
 gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
-  extends: .test-fleur-not-on-push
+  extends: .test-fleur
   stage: html
   needs: []
   variables:
@@ -78,5 +78,7 @@ gfortran-coverage:
   environment:
     name: Coverage
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
-
+  rules:
+      - if $CI_TASKS =~ /doc/    
+  
 
