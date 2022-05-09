@@ -12,7 +12,7 @@ build-intel:
     - make -j 2
   allow_failure: false
   rules:
-      - if $CI_TASKS =~ /intel/
+      - if: $CI_TASKS =~ /intel/
 
 test-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -23,5 +23,5 @@ test-intel:
     - build-intel
   allow_failure: true
   rules:
-      - if $CI_TASKS =~ /intel/    
+      - if: $CI_TASKS =~ /intel/    
   

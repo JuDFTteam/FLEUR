@@ -13,7 +13,7 @@ build-pgi:
     - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make"
   allow_failure: true
   rules:
-      - if $CI_TASKS =~ /nvidia/    
+      - if: $CI_TASKS =~ /nvidia/    
   
 test-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
@@ -24,5 +24,5 @@ test-pgi:
     - build-pgi
   allow_failure: true
   rules:
-      - if $CI_TASKS =~ /nvidia/    
+      - if: $CI_TASKS =~ /nvidia/    
   

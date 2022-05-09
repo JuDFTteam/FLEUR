@@ -16,7 +16,7 @@ pages:
     paths:
       - public
   rules:
-      - if $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /doc/    
   
 
 ford:
@@ -31,7 +31,7 @@ ford:
     paths:
       - public
   rules:
-      - if $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /doc/    
   
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -49,7 +49,7 @@ doxygen:
       - build/fleur_MPI
       - build/inpgen
   rules:
-      - if $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /doc/    
   
 
 gfortran-coverage:
@@ -79,6 +79,6 @@ gfortran-coverage:
     name: Coverage
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
   rules:
-      - if $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /doc/    
   
 
