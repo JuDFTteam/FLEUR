@@ -421,14 +421,14 @@ MODULE m_corespec_eval
 !!!! or, put another way, first index is unprimed (i.e. the outer loop furter down), second index is primed (i.e. the inner loop further down)
 
 !!!! Check what we(1) is and does, if necessary, add a we(1) contribution to all acofs and bcofs
-          csv%dosb(1,1,lm2,lm1,iband) = dble(eigVecCoeffs%acof2(iband,lm2,0,iatom,ispin)*&
-               &conjg(eigVecCoeffs%acof2(iband,lm1,0,iatom,ispin)))!*we(1)
-          csv%dosb(1,2,lm2,lm1,iband) = dble(eigVecCoeffs%acof2(iband,lm2,0,iatom,ispin)*&
-               &conjg(eigVecCoeffs%acof2(iband,lm1,1,iatom,ispin)))
-          csv%dosb(2,1,lm2,lm1,iband) = dble(eigVecCoeffs%acof2(iband,lm2,1,iatom,ispin)*&
-               &conjg(eigVecCoeffs%acof2(iband,lm1,0,iatom,ispin)))
-          csv%dosb(2,2,lm2,lm1,iband) = dble(eigVecCoeffs%acof2(iband,lm2,1,iatom,ispin)*&
-               &conjg(eigVecCoeffs%acof2(iband,lm1,1,iatom,ispin)))!*we(1)*usdus%ddn(l1,csi%atomType,ispin)
+          csv%dosb(1,1,lm2,lm1,iband) = dble(eigVecCoeffs%abcof(iband,lm2,0,iatom,ispin)*&
+               &conjg(eigVecCoeffs%abcof(iband,lm1,0,iatom,ispin)))!*we(1)
+          csv%dosb(1,2,lm2,lm1,iband) = dble(eigVecCoeffs%abcof(iband,lm2,0,iatom,ispin)*&
+               &conjg(eigVecCoeffs%abcof(iband,lm1,1,iatom,ispin)))
+          csv%dosb(2,1,lm2,lm1,iband) = dble(eigVecCoeffs%abcof(iband,lm2,1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%abcof(iband,lm1,0,iatom,ispin)))
+          csv%dosb(2,2,lm2,lm1,iband) = dble(eigVecCoeffs%abcof(iband,lm2,1,iatom,ispin)*&
+               &conjg(eigVecCoeffs%abcof(iband,lm1,1,iatom,ispin)))!*we(1)*usdus%ddn(l1,csi%atomType,ispin)
 !!!!! this has to be checked: is >> ddn << factor necessary !!!!!
 !!!!! Check if we(iband) should be multiplied with everything
         enddo!!$

@@ -78,8 +78,8 @@ CONTAINS
                   DO m1 = -l1, l1
                      lm1 = l1*(l1+1) + m1
                      DO ie = 1, ne
-                        acof_flapw(ie,lm1) = eigVecCoeffs%acof2(ie,lm1,0,natrun,jsp)
-                        bcof_flapw(ie,lm1) = eigVecCoeffs%acof2(ie,lm1,1,natrun,jsp)
+                        acof_flapw(ie,lm1) = eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)
+                        bcof_flapw(ie,lm1) = eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)
                      END DO
                   END DO
                END DO

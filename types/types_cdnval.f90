@@ -79,7 +79,7 @@ PRIVATE
       COMPLEX, ALLOCATABLE :: ccof(:,:,:,:,:)
 
       ! Refactored version:
-      COMPLEX, ALLOCATABLE :: acof2(:,:,:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
+      COMPLEX, ALLOCATABLE :: abcof(:,:,:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
 
       CONTAINS
          PROCEDURE,PASS :: init => eigVecCoeffs_init
@@ -301,18 +301,18 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpi
    LOGICAL,               INTENT(IN)    :: l_bothSpins
 
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
-   IF(ALLOCATED(thisEigVecCoeffs%acof2)) DEALLOCATE(thisEigVecCoeffs%acof2)
+   IF(ALLOCATED(thisEigVecCoeffs%abcof)) DEALLOCATE(thisEigVecCoeffs%abcof)
 
    IF (l_bothSpins) THEN
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
-      ALLOCATE (thisEigVecCoeffs%acof2(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,input%jspins))
    ELSE
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
-      ALLOCATE (thisEigVecCoeffs%acof2(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,jspin:jspin))
    END IF
 
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)
-   thisEigVecCoeffs%acof2 = CMPLX(0.0,0.0)
+   thisEigVecCoeffs%abcof = CMPLX(0.0,0.0)
 
 END SUBROUTINE eigVecCoeffs_init
 
@@ -353,20 +353,20 @@ FUNCTION rotate_eigveccoeffs_to_rep_atom(this, atoms, sym,lmax) RESULT(rot)
             iop=sym%ngopr(sym%invsatnr(iatom))
             ifac = -1
           ENDIF
-          DO ispin = LBOUND(this%acof2,5),UBOUND(this%acof2,5)
+          DO ispin = LBOUND(this%abcof,5),UBOUND(this%abcof,5)
              DO l=1,MIN(lmax,atoms%lmax(iType))
                ! c  replaced d_wgn by conjg(d_wgn),FF October 2006
-               DO i=1,SIZE(this%acof2,1)
-                 rot%acof2(i,l**2:l*(l+2),0,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%acof2(i,l**2:l*(l+2),0,iatom,ispin))
-                 rot%acof2(i,l**2:l*(l+2),1,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%acof2(i,l**2:l*(l+2),1,iatom,ispin))
+               DO i=1,SIZE(this%abcof,1)
+                 rot%abcof(i,l**2:l*(l+2),0,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%abcof(i,l**2:l*(l+2),0,iatom,ispin))
+                 rot%abcof(i,l**2:l*(l+2),1,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%abcof(i,l**2:l*(l+2),1,iatom,ispin))
                ENDDO
              ENDDO
           ENDDO
-          DO ispin = LBOUND(this%acof2,5),UBOUND(this%acof2,5)
+          DO ispin = LBOUND(this%abcof,5),UBOUND(this%abcof,5)
              DO ilo=1,atoms%nlo(itype)
                l=atoms%llo(ilo,itype)
                IF(l.gt.0.AND.l<=lmax) THEN
-                 DO i=1,SIZE(this%acof2,1)
+                 DO i=1,SIZE(this%abcof,1)
                      rot%ccof(-l:l,i,ilo,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%ccof(-l:l,i,ilo,iAtom, ispin))
                  ENDDO
                ENDIF

@@ -38,9 +38,9 @@ CONTAINS
     DO l = 1, atoms%lmax(itype)
       DO i = 1, size(acof,1)
         acof(i,l**2:l*(l+2)) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,1)),&
-        eigVecCoeffs%acof2(i,l**2:l*(l+2),0,na,jsp))
+        eigVecCoeffs%abcof(i,l**2:l*(l+2),0,na,jsp))
         bcof(i,l**2:l*(l+2)) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,1)),&
-        eigVecCoeffs%acof2(i,l**2:l*(l+2),1,na,jsp))
+        eigVecCoeffs%abcof(i,l**2:l*(l+2),1,na,jsp))
       ENDDO
     ENDDO
     DO ilo = 1, atoms%nlo(itype)

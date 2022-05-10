@@ -71,13 +71,13 @@ CONTAINS
                                IF (sym%ntypsy(nt).EQ.ns) THEN
                                   DO nb = 1,ne
                                      denCoeffs%uunmt(llp,lh,nn,ispin) = denCoeffs%uunmt(llp,lh,nn,ispin)&
-                                          +we(nb)*real(cconst*eigVecCoeffs%acof2(nb,lm,0,nt,ispin)*conjg(eigVecCoeffs%acof2(nb,lmp,0,nt,ispin)))
+                                          +we(nb)*real(cconst*eigVecCoeffs%abcof(nb,lm,0,nt,ispin)*conjg(eigVecCoeffs%abcof(nb,lmp,0,nt,ispin)))
                                      denCoeffs%ddnmt(llp,lh,nn,ispin) = denCoeffs%ddnmt(llp,lh,nn,ispin) +&
-                                          we(nb)*real(cconst*eigVecCoeffs%acof2(nb,lm,1,nt,ispin)*conjg(eigVecCoeffs%acof2(nb,lmp,1,nt,ispin)))
+                                          we(nb)*real(cconst*eigVecCoeffs%abcof(nb,lm,1,nt,ispin)*conjg(eigVecCoeffs%abcof(nb,lmp,1,nt,ispin)))
                                      denCoeffs%udnmt(llp,lh,nn,ispin) = denCoeffs%udnmt(llp,lh,nn,ispin) +&
-                                          we(nb)*real(cconst*eigVecCoeffs%acof2(nb,lm,0,nt,ispin)*conjg(eigVecCoeffs%acof2(nb,lmp,1,nt,ispin)))
+                                          we(nb)*real(cconst*eigVecCoeffs%abcof(nb,lm,0,nt,ispin)*conjg(eigVecCoeffs%abcof(nb,lmp,1,nt,ispin)))
                                      denCoeffs%dunmt(llp,lh,nn,ispin) = denCoeffs%dunmt(llp,lh,nn,ispin) +&
-                                          we(nb)*real(cconst*eigVecCoeffs%acof2(nb,lm,1,nt,ispin)*conjg(eigVecCoeffs%acof2(nb,lmp,0,nt,ispin)))
+                                          we(nb)*real(cconst*eigVecCoeffs%abcof(nb,lm,1,nt,ispin)*conjg(eigVecCoeffs%abcof(nb,lmp,0,nt,ispin)))
                                   ENDDO
                                ENDIF
                             ENDDO

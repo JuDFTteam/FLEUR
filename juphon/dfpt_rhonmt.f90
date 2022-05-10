@@ -121,31 +121,31 @@ CONTAINS
                               nt= nt+1
                               IF (sym%ntypsy(nt)==ns) THEN
                                  ! uu/du
-                                 temp(:) = coef * we(:) * eigVecCoeffs1%acof2(:,lm,0,nt,ilSpin) ! If not DFPT, this is the base case for rhonmt(21)
+                                 temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,0,nt,ilSpin) ! If not DFPT, this is the base case for rhonmt(21)
                                  IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
                                  IF (l_dfpt) THEN
                                     temp(:) = temp(:) * 2.0
                                     IF (norm2(qpoint)<=1e-8) THEN
-                                       temp(:) = temp(:) + coef * we1(:) * eigVecCoeffs%acof2(:,lm,0,nt,ilSpin)
+                                       temp(:) = temp(:) + coef * we1(:) * eigVecCoeffs%abcof(:,lm,0,nt,ilSpin)
                                     END IF
                                  END IF
                                  denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(eigVecCoeffs%acof2(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
+                                                                        & + dot_product(eigVecCoeffs%abcof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
                                  denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(eigVecCoeffs%acof2(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
+                                                                        & + dot_product(eigVecCoeffs%abcof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
 
                                  ! dd/ud
-                                 temp(:) = coef * we(:) * eigVecCoeffs1%acof2(:,lm,1,nt,ilSpin)
+                                 temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,1,nt,ilSpin)
                                  IF (l_dfpt) THEN
                                     temp(:) = temp(:) * 2.0
                                     IF (norm2(qpoint)<=1e-8) THEN
-                                       temp(:) = temp(:) + coef * we1(:) * eigVecCoeffs%acof2(:,lm,1,nt,ilSpin)
+                                       temp(:) = temp(:) + coef * we1(:) * eigVecCoeffs%abcof(:,lm,1,nt,ilSpin)
                                     END IF
                                  END IF
                                  denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(eigVecCoeffs%acof2(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
+                                                                        & + dot_product(eigVecCoeffs%abcof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
                                  denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(eigVecCoeffs%acof2(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
+                                                                        & + dot_product(eigVecCoeffs%abcof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
                               ENDIF ! (sym%ntypsy(nt)==ns)
                            ENDDO ! na
                            natom= natom + atoms%neq(nn)
@@ -218,9 +218,9 @@ CONTAINS
                                  END IF
                               END IF
                               denCoeffs%nmt_ulo_coeff(lp,lo,lh,ntyp,0,ilSpinPr,ilSpin) = denCoeffs%nmt_ulo_coeff(lp,lo,lh,ntyp,0,ilSpinPr,ilSpin) &
-                                                                                     & + CONJG(eigVecCoeffs%acof2(i,lmp,0,na,ilSpinPr)) * cf1
+                                                                                     & + CONJG(eigVecCoeffs%abcof(i,lmp,0,na,ilSpinPr)) * cf1
                               denCoeffs%nmt_ulo_coeff(lp,lo,lh,ntyp,1,ilSpinPr,ilSpin) = denCoeffs%nmt_ulo_coeff(lp,lo,lh,ntyp,1,ilSpinPr,ilSpin) &
-                                                                                     & + CONJG(eigVecCoeffs%acof2(i,lmp,1,na,ilSpinPr)) * cf1
+                                                                                     & + CONJG(eigVecCoeffs%abcof(i,lmp,1,na,ilSpinPr)) * cf1
                            END DO
                         END DO
                      END DO
@@ -235,14 +235,14 @@ CONTAINS
                         DO nn = 1,atoms%neq(ntyp)
                            na = na + 1
                            DO i = 1,ne
-                              cf1 = fact * we(i) * eigVecCoeffs1%acof2(i,lmp,0,na,ilSpin)! If not DFPT, this is the base case for rhonmtlo
-                              cf2 = fact * we(i) * eigVecCoeffs1%acof2(i,lmp,1,na,ilSpin)
+                              cf1 = fact * we(i) * eigVecCoeffs1%abcof(i,lmp,0,na,ilSpin)! If not DFPT, this is the base case for rhonmtlo
+                              cf2 = fact * we(i) * eigVecCoeffs1%abcof(i,lmp,1,na,ilSpin)
                               IF (l_dfpt) THEN
                                  cf1 = cf1 * 2.0
                                  cf2 = cf2 * 2.0
                                  IF (norm2(qpoint)<=1e-8) THEN
-                                    cf1 = cf1 + fact * we1(i) * eigVecCoeffs%acof2(i,lmp,0,na,ilSpin)
-                                    cf2 = cf2 + fact * we1(i) * eigVecCoeffs%acof2(i,lmp,1,na,ilSpin)
+                                    cf1 = cf1 + fact * we1(i) * eigVecCoeffs%abcof(i,lmp,0,na,ilSpin)
+                                    cf2 = cf2 + fact * we1(i) * eigVecCoeffs%abcof(i,lmp,1,na,ilSpin)
                                  END IF
                               END IF
                               denCoeffs%nmt_lou_coeff(lp,lo,lh,ntyp,0,ilSpinPr,ilSpin) = denCoeffs%nmt_lou_coeff(lp,lo,lh,ntyp,0,ilSpinPr,ilSpin) &

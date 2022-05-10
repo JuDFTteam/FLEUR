@@ -67,9 +67,9 @@ CONTAINS
                      DO ie = 1,ne
                         DO i = 1,3
                            a21(i,iatom)=a21(i,iatom)+2.0*AIMAG(&
-                                 CONJG(eigVecCoeffs%acof2(ie,lmp,0,iatom,isp))*tuulo&
+                                 CONJG(eigVecCoeffs%abcof(ie,lmp,0,iatom,isp))*tuulo&
                                  *cveccof(i,m,ie,lo,iatom)&
-                                 + CONJG(eigVecCoeffs%acof2(ie,lmp,1,iatom,isp))*tdulo&
+                                 + CONJG(eigVecCoeffs%abcof(ie,lmp,1,iatom,isp))*tdulo&
                                  *cveccof(i,m,ie,lo,iatom)&
                                  + CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
                                  *ctuulo*aveccof(i,ie,lmp,iatom)&
@@ -104,9 +104,9 @@ CONTAINS
                DO ie = 1,ne
                   DO i = 1,3
                      a21(i,iatom)=a21(i,iatom)-2.0*AIMAG(&
-                        (CONJG(eigVecCoeffs%acof2(ie,lm,0,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
+                        (CONJG(eigVecCoeffs%abcof(ie,lm,0,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
                         CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*aveccof(i,ie,lm,iatom))*usdus%uulon(lo,itype,isp)+&
-                        (CONJG(eigVecCoeffs%acof2(ie,lm,1,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
+                        (CONJG(eigVecCoeffs%abcof(ie,lm,1,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
                         CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*bveccof(i,ie,lm,iatom))*&
                         usdus%dulon(lo,itype,isp))*eig(ie)*we(ie)/atoms%neq(itype)
                   END DO

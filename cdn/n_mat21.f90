@@ -51,10 +51,10 @@ MODULE m_nmat21
                   c_0 = cmplx_0
                   DO i = 1,ne
                      c_0 = c_0 +  we(i) * ( &
-                                 conjg(eigVecCoeffs%acof2(i,lmp,0,natom,2))*eigVecCoeffs%acof2(i,lm,0,natom,1) * denCoeffsOffdiag%uu21n(l,n) &
-                               + conjg(eigVecCoeffs%acof2(i,lmp,0,natom,2))*eigVecCoeffs%acof2(i,lm,1,natom,1) * denCoeffsOffdiag%ud21n(l,n) &
-                               + conjg(eigVecCoeffs%acof2(i,lmp,1,natom,2))*eigVecCoeffs%acof2(i,lm,0,natom,1) * denCoeffsOffdiag%du21n(l,n) &
-                               + conjg(eigVecCoeffs%acof2(i,lmp,1,natom,2))*eigVecCoeffs%acof2(i,lm,1,natom,1) * denCoeffsOffdiag%dd21n(l,n))
+                                 conjg(eigVecCoeffs%abcof(i,lmp,0,natom,2))*eigVecCoeffs%abcof(i,lm,0,natom,1) * denCoeffsOffdiag%uu21n(l,n) &
+                               + conjg(eigVecCoeffs%abcof(i,lmp,0,natom,2))*eigVecCoeffs%abcof(i,lm,1,natom,1) * denCoeffsOffdiag%ud21n(l,n) &
+                               + conjg(eigVecCoeffs%abcof(i,lmp,1,natom,2))*eigVecCoeffs%abcof(i,lm,0,natom,1) * denCoeffsOffdiag%du21n(l,n) &
+                               + conjg(eigVecCoeffs%abcof(i,lmp,1,natom,2))*eigVecCoeffs%abcof(i,lm,1,natom,1) * denCoeffsOffdiag%dd21n(l,n))
                   ENDDO
                   n_tmp(m,mp) = c_0
                ENDDO
@@ -71,10 +71,10 @@ MODULE m_nmat21
                         c_0 = cmplx_0
                         DO i = 1,ne
                            c_0 = c_0 +  we(i) * ( &
-                                       conjg(eigVecCoeffs%acof2(i,lmp,0,natom,2))*eigVecCoeffs%ccof(m,i,ilo,natom,1) * denCoeffsOffdiag%uulo21n(l,n) &
-                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,2))*eigVecCoeffs%acof2(i,lm,0,natom,1) * denCoeffsOffdiag%ulou21n(l,n) &
-                                     + conjg(eigVecCoeffs%acof2(i,lmp,1,natom,2))*eigVecCoeffs%ccof(m,i,ilo,natom,1) * denCoeffsOffdiag%dulo21n(l,n) &
-                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,2))*eigVecCoeffs%acof2(i,lm,1,natom,1) * denCoeffsOffdiag%ulod21n(l,n))
+                                       conjg(eigVecCoeffs%abcof(i,lmp,0,natom,2))*eigVecCoeffs%ccof(m,i,ilo,natom,1) * denCoeffsOffdiag%uulo21n(l,n) &
+                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,2))*eigVecCoeffs%abcof(i,lm,0,natom,1) * denCoeffsOffdiag%ulou21n(l,n) &
+                                     + conjg(eigVecCoeffs%abcof(i,lmp,1,natom,2))*eigVecCoeffs%ccof(m,i,ilo,natom,1) * denCoeffsOffdiag%dulo21n(l,n) &
+                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,2))*eigVecCoeffs%abcof(i,lm,1,natom,1) * denCoeffsOffdiag%ulod21n(l,n))
                         ENDDO
                         DO ilop = 1, atoms%nlo(n)
                            IF (atoms%llo(ilop,n).EQ.l) THEN

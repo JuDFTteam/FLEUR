@@ -41,9 +41,9 @@ CONTAINS
                 lm = l* (l+1) + m
                 DO i = 1,ne
                    denCoeffs%aclo(lo,ntyp,ispin) = denCoeffs%aclo(lo,ntyp,ispin) + we(i)*2*&
-                        real(conjg(eigVecCoeffs%acof2(i,lm,0,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
+                        real(conjg(eigVecCoeffs%abcof(i,lm,0,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
                    denCoeffs%bclo(lo,ntyp,ispin) = denCoeffs%bclo(lo,ntyp,ispin) + we(i)*2*&
-                        real(conjg(eigVecCoeffs%acof2(i,lm,1,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
+                        real(conjg(eigVecCoeffs%abcof(i,lm,1,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
                 END DO
              END DO
              !--->       contribution of local orbital - local orbital terms

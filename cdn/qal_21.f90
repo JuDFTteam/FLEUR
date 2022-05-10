@@ -67,10 +67,10 @@ CONTAINS
              ms : DO m = -l,l
                 lm = ll1 + m
                 atoms_loop : DO natom = nt1,nt2
-                   sumaa = sumaa + eigVecCoeffs%acof2(i,lm,0,natom,1)* CONJG(eigVecCoeffs%acof2(i,lm,0,natom,input%jspins))
-                   sumbb = sumbb + eigVecCoeffs%acof2(i,lm,1,natom,1)* CONJG(eigVecCoeffs%acof2(i,lm,1,natom,input%jspins))
-                   sumba = sumba + eigVecCoeffs%acof2(i,lm,0,natom,1) * CONJG(eigVecCoeffs%acof2(i,lm,1,natom,input%jspins))
-                   sumab = sumab + eigVecCoeffs%acof2(i,lm,1,natom,1) * CONJG(eigVecCoeffs%acof2(i,lm,0,natom,input%jspins))
+                   sumaa = sumaa + eigVecCoeffs%abcof(i,lm,0,natom,1)* CONJG(eigVecCoeffs%abcof(i,lm,0,natom,input%jspins))
+                   sumbb = sumbb + eigVecCoeffs%abcof(i,lm,1,natom,1)* CONJG(eigVecCoeffs%abcof(i,lm,1,natom,input%jspins))
+                   sumba = sumba + eigVecCoeffs%abcof(i,lm,0,natom,1) * CONJG(eigVecCoeffs%abcof(i,lm,1,natom,input%jspins))
+                   sumab = sumab + eigVecCoeffs%abcof(i,lm,1,natom,1) * CONJG(eigVecCoeffs%abcof(i,lm,0,natom,input%jspins))
                 ENDDO atoms_loop
              ENDDO ms
              qal21(l,n_dos,i) = sumaa * denCoeffsOffdiag%uu21n(l,ntyp) + sumbb * denCoeffsOffdiag%dd21n(l,ntyp) +&
@@ -95,13 +95,13 @@ CONTAINS
                 lm = ll1 + m
                 DO i = 1, noccbd
                    qbclo(i,lo,n_dos) = qbclo(i,lo,n_dos) +      &
-                        eigVecCoeffs%acof2(i,lm,1,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins))
+                        eigVecCoeffs%abcof(i,lm,1,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins))
                    qbclo(i,lo,n_dos) = qbclo(i,lo,n_dos) +      &
-                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%acof2(i,lm,1,natom,input%jspins))
+                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,input%jspins))
                    qaclo(i,lo,n_dos) = qaclo(i,lo,n_dos) +       &
-                        eigVecCoeffs%acof2(i,lm,0,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins))
+                        eigVecCoeffs%abcof(i,lm,0,natom,1)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,input%jspins))
                    qaclo(i,lo,n_dos) = qaclo(i,lo,n_dos) +       &
-                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%acof2(i,lm,0,natom,input%jspins))
+                        eigVecCoeffs%ccof(m,i,lo,natom,1)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,input%jspins))
                 ENDDO
              ENDDO
              DO lop = 1,atoms%nlo(ntyp)
