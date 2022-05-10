@@ -76,8 +76,6 @@ PRIVATE
 
 
    TYPE t_eigVecCoeffs
-      COMPLEX, ALLOCATABLE :: acof(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: bcof(:,:,:,:)
       COMPLEX, ALLOCATABLE :: ccof(:,:,:,:,:)
 
       ! Refactored version:
@@ -302,25 +300,17 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpi
    INTEGER,               INTENT(IN)    :: jspin, noccbd
    LOGICAL,               INTENT(IN)    :: l_bothSpins
 
-   IF(ALLOCATED(thisEigVecCoeffs%acof)) DEALLOCATE(thisEigVecCoeffs%acof)
-   IF(ALLOCATED(thisEigVecCoeffs%bcof)) DEALLOCATE(thisEigVecCoeffs%bcof)
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
    IF(ALLOCATED(thisEigVecCoeffs%acof2)) DEALLOCATE(thisEigVecCoeffs%acof2)
 
    IF (l_bothSpins) THEN
-      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
-      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%acof2(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,input%jspins))
    ELSE
-      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,jspin:jspin))
-      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,jspin:jspin))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
       ALLOCATE (thisEigVecCoeffs%acof2(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,jspin:jspin))
    END IF
 
-   thisEigVecCoeffs%acof = CMPLX(0.0,0.0)
-   thisEigVecCoeffs%bcof = CMPLX(0.0,0.0)
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)
    thisEigVecCoeffs%acof2 = CMPLX(0.0,0.0)
 
