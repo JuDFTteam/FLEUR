@@ -166,7 +166,7 @@ CONTAINS
    END SUBROUTINE dfpt_rhonmt
 
    SUBROUTINE dfpt_rhonmtlo(atoms,sphhar,sym,ne,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ilSpinPr,ilSpin,l_dfpt,qpoint)
-      !! This is a complementary routine to the one above for \(\lamda(')\ge 2\),
+      !! This is a complementary routine to the one above for \(\lambda(')\ge 2\),
       !! i.e. mixed or pure LO contributions.
       USE m_gaunt,ONLY:gaunt1
       USE m_types

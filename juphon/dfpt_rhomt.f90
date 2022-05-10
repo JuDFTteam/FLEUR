@@ -101,7 +101,7 @@ CONTAINS
    END SUBROUTINE dfpt_rhomt
 
    SUBROUTINE dfpt_rhomtlo(atoms,ne,we,we1,ilSpinPr,ilSpin,qpoint,l_dfpt,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-      !! This is a complementary routine to the one above for \(\lamda(')\ge 2\),
+      !! This is a complementary routine to the one above for \(\lambda(')\ge 2\),
       !! i.e. mixed or pure LO contributions.
 
       USE m_types_atoms
