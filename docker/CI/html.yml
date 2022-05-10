@@ -38,7 +38,7 @@ doxygen:
   stage: html
   needs: []
   script:
-    - cd $CI_PROJECT_DIR ; ./configure GITLAB
+    - cd $CI_PROJECT_DIR ; ./configure.sh GITLAB
     - cd $CI_PROJECT_DIR/build ; make doc
     - mkdir ../public
     - mv docs/html/ ../public/doxygen
