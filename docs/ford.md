@@ -30,8 +30,6 @@ graph_maxdepth: 10
 search: true
 macro: TEST
        LOGIC=.true.
-#extra_mods: json_module: http://jacobwilliams.github.io/json-fortran/
-#            futility: http://cmacmackin.github.io
 license: mit
 
 This is the automatic source code generation using [FORD](https://github.com/Fortran-FOSS-Programmers/ford). Please use it to explore the code. A good start point might be the "main fleur routine" in the module [[m_fleur]].
