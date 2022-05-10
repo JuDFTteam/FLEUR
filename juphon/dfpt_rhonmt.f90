@@ -7,8 +7,9 @@
 MODULE m_dfpt_rhonmt
    !! Module adapted from rhonmt21, which in turn was adapted from rhonmt, and
    !! from rhonmtlo for the lo part.
+   !!
    !! It contains subroutines for the non-LO and LO non-spherical contributions
-   !! to the density coefficients used to construct \(\rho_{L}^{\alpha}(r)\)
+   !! to the density coefficients used to construct \(\rho_{L}^{\alpha}(r)\).
    USE m_gaunt,ONLY:gaunt1
    USE m_types_setup
    USE m_types_cdnval
@@ -32,6 +33,8 @@ CONTAINS
       !! routines, the arrays uunmt etc. and uunmt21 etc. are merged into one
       !! spin and u-order dependent array.
       !!
+      !! \(G_{l,l'',l'}^{m,m'',m'}\): Gaunt coefficient
+      !!
       !! \(\sigma_{\alpha}(')\): local spin indices \(\rightarrow\) ilSpinPr, ilSpin
       !!
       !! \(\lambda(')\): order of the radial basis function (0: u, 1: d)
@@ -46,7 +49,7 @@ CONTAINS
       !!
       !! \(\boldsymbol{q},j,\beta\): Perturbation index; q-point, direction and atom
       !!
-      !! \(\tilde{f}_{\nu\boldsymbol{k}}\): Occupation number (smeared)
+      !! \(\tilde{f}_{\nu\boldsymbol{k}}\): (Smeared) occupation number [perturbed for \(\tilde{f}^{(1)}\)]
       !!
       !! \(A\): Summed matching coefficients and eigenvectors [perturbed for \(A^{(1)}\)]
 
@@ -54,17 +57,20 @@ CONTAINS
       TYPE(t_sphhar),       INTENT(IN)    :: sphhar
       TYPE(t_atoms),        INTENT(IN)    :: atoms
 
-      INTEGER,              INTENT(IN)    :: ne, ilSpinPr, ilSpin
-      REAL,                 INTENT(IN)    :: we(:),we1(:)!(nobd)
-      REAL,                 INTENT(IN)    :: qpoint(3)
+      INTEGER,              INTENT(IN)    :: ne
+      INTEGER,              INTENT(IN)    :: ilSpinPr  !! \(\sigma_{\alpha}^{'}\)
+      INTEGER,              INTENT(IN)    :: ilSpin    !! \(\sigma_{\alpha}\)
+      REAL,                 INTENT(IN)    :: we(ne)    !! \(\tilde{f}_{\nu\boldsymbol{k}}\)
+      REAL,                 INTENT(IN)    :: we1(ne)   !! \(\tilde{f}_{\nu\boldsymbol{k}\boldsymbol{q}}^{j,\beta~(1)}\)
+      REAL,                 INTENT(IN)    :: qpoint(3) !! \(\boldsymbol{q}\)
       LOGICAL,              INTENT(IN)    :: l_dfpt, l_less_effort
 
-      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
-      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs1
+      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs  !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}}\)
+      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs1 !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{q},j,\beta~(1)}\)
 
-      TYPE(t_denCoeffs), INTENT(INOUT) :: denCoeffs
+      TYPE(t_denCoeffs), INTENT(INOUT)    :: denCoeffs !! \(d_{l',l,L,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha}\)
 
-      COMPLEX coef, cil, coef1
+      COMPLEX :: coef, cil, coef1
       COMPLEX :: temp(ne)
 
 !#include"cpp_double.h"
@@ -160,6 +166,8 @@ CONTAINS
    END SUBROUTINE dfpt_rhonmt
 
    SUBROUTINE dfpt_rhonmtlo(atoms,sphhar,sym,ne,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ilSpinPr,ilSpin,l_dfpt,qpoint)
+      !! This is a complementary routine to the one above for \(\lamda(')\ge 2\),
+      !! i.e. mixed or pure LO contributions.
       USE m_gaunt,ONLY:gaunt1
       USE m_types
       use m_constants

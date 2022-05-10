@@ -4,6 +4,8 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_hsmt_ab
+   !! Module to produce matching coefficients.
+
    USE m_juDFT
 
    IMPLICIT NONE
@@ -12,19 +14,15 @@ CONTAINS
 
    SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
       !! Construct the matching coefficients of the form:
-      !! $$\begin{aligned}
-      !! a_{l,m,p}^{\mu,\boldsymbol{G}}(\boldsymbol{k}) &= e^{i \boldsymbol{K}\cdot\boldsymbol{\tau}_{\mu}}\\
-      !! &* (Y_{l}^{m}(R^{\mu}\boldsymbol{K}))^{*}\\
-      !! &* f_{l,p}^{\alpha}(K)
-      !! \end{aligned}$$
-      !! with \(\boldsymbol{K} = \boldsymbol{k + G \pm q/2}\)
+      !! \[a_{l,m,p}^{\mu,\boldsymbol{G}}(\boldsymbol{k}) = e^{i \boldsymbol{K}\cdot\boldsymbol{\tau}_{\mu}}
+      !! Y_{l}^{m*}(R^{\mu}\boldsymbol{K})
+      !! f_{l,p}^{\alpha}(K)\]
+      !! with \(\boldsymbol{K} = \boldsymbol{k + G \pm q/2}\).
       !!
       !! For example, for p = 0 == acof this translates to:
-      !! $$\begin{aligned}
-      !! f_{l,0}^{\alpha}(K) &= \frac{4\pi}{\sqrt{\Omega}W}\\
-      !!                     &* (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})\\
-      !!                     &-  \overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))
-      !! \end{aligned}$$
+      !! \[f_{l,0}^{\alpha}(K) = \frac{4\pi}{\sqrt{\Omega}W}
+      !! (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})
+      !! -\overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))\]
       !! And in the actual code into:
       !!
       !! abCoeffs(lm, k) = c_ph(k,igSpin) * CONJG(ylm(lm, k)) * fjgj%fj(k,l,ilSpin,igSpin)

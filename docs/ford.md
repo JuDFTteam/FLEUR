@@ -3,15 +3,18 @@ exclude_dir: ../cmake
 exclude_dir: ../tests
 exclude_dir: ../build
 exclude_dir: ../build.debug
+exclude_dir: ../external
 exclude: jpSetupDynMatDeprecated_mod.F90
 exclude: soc_or_ssdw.f90
 exclude: jpSternhHF_mod.F90
+include: ../include/
+include: ../init/compileinfo.h
 src_dir: ../
 output_dir: ./ford-doc
 project: FLEUR
 project_website: https://www.flapw.de
 summary: The FLEUR code: All-electron full-potential augmented plane-wave method for DFT.
-author: FLEUR development team 
+author: FLEUR development team
 author_description: FLEUR is developed by an active community mostly based at the [Forschungszentrum Jülich](http://www.fz-juelich.de/pgi/pgi-1/EN/Home/home_node.html).
 email: d.wortmann@fz-juelich.de
 predocmark: >>
