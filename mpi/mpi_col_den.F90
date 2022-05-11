@@ -105,6 +105,12 @@ CONTAINS
     CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%dd(0:,:,jspin), 1)
     DEALLOCATE (r_b)
 
+    n = 4*(atoms%lmaxd+1)*atoms%ntype
+    ALLOCATE(r_b(n))
+    CALL MPI_ALLREDUCE(denCoeffs%mt_coeff(0:,:,0:1,0:1,jspin,jspin),r_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
+    CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,jspin,jspin), 1)
+    DEALLOCATE (r_b)
+
     !--> Collect uunmt,udnmt,dunmt,ddnmt
     n = (((atoms%lmaxd*(atoms%lmaxd+3))/2)+1)*sphhar%nlhd*atoms%ntype
     ALLOCATE(r_b(n))
