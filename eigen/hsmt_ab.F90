@@ -23,7 +23,7 @@ CONTAINS
       !!
       !! For example, for p = 0 == acof this translates to:
       !! \begin{aligned}
-      !! \[f_{l,0}^{\alpha}(K) = \frac{4\pi}{\sqrt{\Omega}W}
+      !! f_{l,0}^{\alpha}(K) = \frac{4\pi}{\sqrt{\Omega}W}
       !! (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})
       !! -\overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))
       !! \end{aligned}
