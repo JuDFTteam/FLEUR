@@ -14,15 +14,19 @@ CONTAINS
 
    SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
       !! Construct the matching coefficients of the form:
-      !! \[a_{l,m,p}^{\mu,\boldsymbol{G}}(\boldsymbol{k}) = e^{i \boldsymbol{K}\cdot\boldsymbol{\tau}_{\mu}}
+      !! \begin{aligned}
+      !! a_{l,m,p}^{\mu,\boldsymbol{G}}(\boldsymbol{k}) = e^{i \boldsymbol{K}\cdot\boldsymbol{\tau}_{\mu}}
       !! Y_{l}^{m*}(R^{\mu}\boldsymbol{K})
-      !! f_{l,p}^{\alpha}(K)\]
+      !! f_{l,p}^{\alpha}(K)
+      !! \end{aligned}
       !! with \(\boldsymbol{K} = \boldsymbol{k + G \pm q/2}\).
       !!
       !! For example, for p = 0 == acof this translates to:
+      !! \begin{aligned}
       !! \[f_{l,0}^{\alpha}(K) = \frac{4\pi}{\sqrt{\Omega}W}
       !! (\overset{.}{u}_{l}(R_{\alpha}) * K * j_{l}^{'}(K R_{\alpha})
-      !! -\overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))\]
+      !! -\overset{.}{u}_{l}^{'}(R_{\alpha}) * j_{l}(K R_{\alpha}))
+      !! \end{aligned}
       !! And in the actual code into:
       !!
       !! abCoeffs(lm, k) = c_ph(k,igSpin) * CONJG(ylm(lm, k)) * fjgj%fj(k,l,ilSpin,igSpin)
@@ -33,11 +37,6 @@ CONTAINS
       !! local spins \(\sigma_{g}\) and \(\sigma_{\alpha}\) through the K prefactor
       !! [\(\pm q\) in K] and the \(u/\overset{.}{u}\)
       !! respectively. The former also appears in the complex phase factor.
-      !! \begin{aligned}
-      !! d_{l,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha} &= \sum_{\nu\boldsymbol{k}}\sum_{m}\\
-      !! &* A_{l,m,\lambda'}^{\sigma_{\alpha}',\nu\boldsymbol{k}*}\\
-      !! &* (2\tilde{f}_{\nu\boldsymbol{k}}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{q},j,\beta~(1)}+\tilde{f}_{\nu\boldsymbol{k}\boldsymbol{q}}^{j,\beta~(1)}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}})
-      !! \end{aligned}
 
       USE m_constants, ONLY : fpi_const,tpi_const
       USE m_types
