@@ -11,7 +11,7 @@ c***************************************c
 
       CONTAINS
       SUBROUTINE wann_uHu_vac(
-     >     chi,l_noco,l_soc,zrfs,jspins,nlotot,qss,nbnd,z1,nmzxyd,
+     >     chi,l_noco,l_soc,jspins,nlotot,qss,nbnd,z1,nmzxyd,
      >     nmzd,n2d,nv2d,k1d,k2d,k3d,n3d,nvac,ig,rgphs,nmzxy,
      >     nmz,delz,ig2,nq2,kv2,area,bmat,bbmat,evac,evac_b,
      >     bkpt,bkpt_b,vzxy,vz,nslibd,nslibd_b,jspin,jspin_b,
@@ -31,7 +31,7 @@ c***************************************c
       TYPE(t_mat), INTENT(IN) :: zMat, zMat_b
 
 c     .. scalar Arguments..
-      logical, intent (in) :: l_noco,l_soc,zrfs
+      logical, intent (in) :: l_noco,l_soc
       integer, intent (in) :: nlotot,jspin_b,n2d,jspins,ico
       integer, intent (in) :: nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n3d,nbnd
       integer, intent (in) :: nmzxy,nmz,nslibd,nslibd_b,nvac
@@ -200,17 +200,17 @@ c...cycle by the vacua
 
       vxy(:,:) = vzxy(:,:,ivac)
       IF(l_noco) THEN ! symmetrization
-       IF (nvac.EQ.1 .and. ivac.EQ.2 .AND.(.NOT.zrfs) ) THEN
-        DO i=1,nmzxy
-         DO igvm2 = 2,nq2
-          igvm2i = ig2(ig(-kv2(1,igvm2),-kv2(2,igvm2),0))
-          vxy_help(igvm2-1) = vxy(i,igvm2i-1)
-         ENDDO
-         DO igvm2 = 2,nq2
-          vxy(i,igvm2-1) = vxy_help(igvm2-1)
-         ENDDO
-        ENDDO
-       ENDIF
+       !IF (nvac.EQ.1 .and. ivac.EQ.2 .AND.(.NOT.zrfs) ) THEN
+       ! DO i=1,nmzxy
+       !  DO igvm2 = 2,nq2
+       !   igvm2i = ig2(ig(-kv2(1,igvm2),-kv2(2,igvm2),0))
+       !   vxy_help(igvm2-1) = vxy(i,igvm2i-1)
+       !  ENDDO
+       !  DO igvm2 = 2,nq2
+       !   vxy(i,igvm2-1) = vxy_help(igvm2-1)
+       !  ENDDO
+       ! ENDDO
+       !ENDIF
       ENDIF
 
       tuu = cmplx(0.,0.)

@@ -80,29 +80,7 @@ CONTAINS
        !     oneD%mrot1(:,:,:) = sym%mrot(:,:,:)
        !     oneD%tau1(:,:) = sym%tau(:,:)
     ELSE IF (oneD%odd%d1) THEN
-       WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
-       WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
-       CALL od_chisym(oneD%odd,oneD%mrot1,oneD%tau1,sym%zrfs,sym%invs,sym%invs2,cell%amat)
-       ALLOCATE (nq1(atoms%nat),lmx1(atoms%nat),nlhtp1(atoms%nat))
-       ii = 1
-       DO i = 1,atoms%ntype
-          DO j = 1,atoms%neq(i)
-             nq1(ii) = 1
-             lmx1(ii) = atoms%lmax(i)
-             ii = ii + 1
-          END DO
-       END DO
-       CALL local_sym(l_write,atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-            atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
-            sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
-            nlhtp1,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
-       sym%nsymt = sphhar%ntypsd
-       ii = 1
-       DO i = 1,atoms%ntype
-          atoms%nlhtyp(i) = nlhtp1(ii)
-          ii = ii + atoms%neq(i)
-       END DO
-       DEALLOCATE (lmx1,nlhtp1)
+      CALL judft_error("OD removed")
     END IF
   END SUBROUTINE make_sphhar
 END MODULE m_make_sphhar

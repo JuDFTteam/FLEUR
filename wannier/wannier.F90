@@ -423,7 +423,7 @@ CONTAINS
             stars%ig,stars%mx1,stars%mx2,stars%mx3,&
             stars%rgphs,sliceplot%slice,&
             sliceplot%kk,sliceplot%nnne,cell%z1,lapw%dim_nv2d(),&
-            vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,&
+            vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,&
             cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
             sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
@@ -470,7 +470,7 @@ CONTAINS
             stars%ig,stars%mx1,stars%mx2,stars%mx3,&
             stars%rgphs,sliceplot%slice,&
             sliceplot%kk,sliceplot%nnne,cell%z1,lapw%dim_nv2d(),&
-            vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,&
+            vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,&
             cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
             sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&

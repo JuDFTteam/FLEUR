@@ -926,9 +926,7 @@ CONTAINS
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spgrp')))
          READ(valueString,*) sym%namgrp
          sym%invs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@invs'))
-         sym%zrfs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zrfs'))
-         sym%invs2 = sym%invs.AND.sym%zrfs
-
+      
          IF (sym%namgrp.EQ.'any ') THEN
             sym%nop = 48
             ! Read in sym.out file if sym%namgrp='any' set.
@@ -969,9 +967,6 @@ CONTAINS
             sym%nop = ord2(n2spg)
             IF (sym%invs) THEN
                sym%nop = 2*sym%nop
-               IF (sym%zrfs.AND.(.NOT.l_c2(n2spg))) sym%nop = 2*sym%nop
-            ELSE
-               IF (sym%zrfs) sym%nop = 2*sym%nop
             END IF
             IF (ALLOCATED(sym%mrot)) THEN
                DEALLOCATE(sym%mrot)
@@ -981,8 +976,8 @@ CONTAINS
                DEALLOCATE(sym%tau)
             END IF
             ALLOCATE(sym%tau(3,sym%nop))
-            CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,cell%latnam,&
-               &                     sym%mrot,sym%tau,sym%nop2,sym%symor)
+            !CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,cell%latnam,&
+            !   &                     sym%mrot,sym%tau,sym%nop2,sym%symor)
          END IF
       END IF
 
@@ -1008,8 +1003,7 @@ CONTAINS
          ALLOCATE(sym%tau(3,sym%nop))
 
          sym%invs = .FALSE.
-         sym%zrfs = .FALSE.
-
+         
          DO k = 1, sym%nop
             absSum = 0
             DO i = 1, 3
@@ -1022,12 +1016,10 @@ CONTAINS
             IF (absSum.EQ.3) THEN
                IF (ALL(sym%tau(:,k).EQ.0.0)) THEN
                   IF ((sym%mrot(1,1,k).EQ.-1).AND.(sym%mrot(2,2,k).EQ.-1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%invs = .TRUE.
-                  IF ((sym%mrot(1,1,k).EQ.1).AND.(sym%mrot(2,2,k).EQ.1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%zrfs = .TRUE.
                END IF
             END IF
          END DO
 
-         sym%invs2 = sym%invs.AND.sym%zrfs
       END IF
 
       xPathA = '/fleurInput/cell/symmetryOperations'
@@ -1179,7 +1171,7 @@ CONTAINS
 
          CALL symproperties(nop48,optype,input%film,sym%nop,multtab,cell%amat,&
             &                        sym%symor,sym%mrot,sym%tau,&
-            &                        invSym,sym%invs,sym%zrfs,sym%invs2,sym%nop,sym%nop2)
+            &                        invSym,sym%invs,.false.,sym%invs2,sym%nop,sym%nop2)
          DEALLOCATE(invOps,multtab,optype)
          IF (.NOT.input%film) sym%nop2=sym%nop
          IF (input%film) THEN
@@ -1192,8 +1184,7 @@ CONTAINS
             END DO
          END IF
       END IF
-      sym%invs2 = sym%invs.AND.sym%zrfs
-
+   
       ALLOCATE (sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat))
       ALLOCATE (sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop))
       ALLOCATE (sym%invsatnr(atoms%nat),sym%d_wgn(-3:3,-3:3,3,sym%nop))
@@ -1202,7 +1193,6 @@ CONTAINS
       vacuum%nmzd = 250
       vacuum%nmzxyd = 100
       vacuum%nvac = 2
-      IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       IF (oneD%odd%d1) vacuum%nvac = 1
       cell%z1 = vacuum%dvac/2
       vacuum%nmz = vacuum%nmzd

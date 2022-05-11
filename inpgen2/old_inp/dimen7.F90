@@ -139,7 +139,6 @@
       ENDIF
 
       vacuum%nvacd = 2
-      IF (sym%zrfs .OR. sym%invs .OR. oneD%odd%d1) vacuum%nvacd = 1
       atoms%llod  = 0
       atoms%lmaxd = 0
       atoms%jmtd  = 0
@@ -222,7 +221,7 @@
          symfh = 94 ; symfn = 'sym.out'
          CALL rw_symfile(rw,symfh,symfn,nopd,cell%bmat,sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
       ELSE
-         CALL spg2set(sym%nop,sym%zrfs,sym%invs,namgrp,latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
+         CALL spg2set(sym%nop,.false.,sym%invs,namgrp,latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
       ENDIF
       sphhar%ntypsd = 0
       IF (.NOT.oneD%odd%d1) THEN
@@ -287,19 +286,19 @@
 !
 ! Dimensioning of the stars
 !
-      IF (input%film.OR.(namgrp.ne.'any ')) THEN
-         CALL strgn1_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-                    sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
-                    stars%ng3,stars%ng2,oneD%odd)
+!      IF (input%film.OR.(namgrp.ne.'any ')) THEN
+!         CALL strgn1_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+!                    sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
+!                    stars%ng3,stars%ng2,oneD%odd)
 
-      ELSE
-         CALL strgn2_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-                    sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
-                    stars%ng3,stars%ng2)
-         oneD%odd%n2d = stars%ng2
-         oneD%odd%nq2 = stars%ng2
-         oneD%odd%nop = sym%nop
-      ENDIF
+!      ELSE
+!         CALL strgn2_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+!                    sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
+!                    stars%ng3,stars%ng2)
+!         oneD%odd%n2d = stars%ng2
+!         oneD%odd%nq2 = stars%ng2
+!         oneD%odd%nop = sym%nop
+!      ENDIF
 
       IF ( xcpot%gmaxxc .le. 10.0**(-6) ) THEN
          WRITE (oUnit,'(" xcpot%gmaxxc=0 : xcpot%gmaxxc=stars%gmax choosen as default value")')

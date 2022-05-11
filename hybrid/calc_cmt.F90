@@ -68,8 +68,8 @@ contains
       endif
       call timestop("alloc abccof")
 
-      CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
-      CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
+      CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell)
+      CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell)
 
       lapw_ikp%nmat = lapw_ikp%nv(jsp) + atoms%nlotot
       if(my_psz /= nbands) then

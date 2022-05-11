@@ -90,7 +90,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    REAL, PARAMETER                      :: degenEps = 0.00001
    REAL, PARAMETER                      :: convCrit = 5.0e-6, occMixParam = 0.5
    REAL, PARAMETER                      :: minOcc = 1.0e-13, minOccB = 1.0e-5
-   LOGICAL                              :: converged, l_qfix, l_restart, l_zref
+   LOGICAL                              :: converged, l_qfix, l_restart
    CHARACTER(LEN=20)                    :: filename
    CHARACTER(LEN=20)                    :: attributes(3)
 
@@ -379,7 +379,6 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    ALLOCATE(hybdat%nbasm(fi%kpts%nkptf))
    ALLOCATE(hybdat%div_vv(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
 
-   l_zref = (fi%sym%zrfs.AND.(SUM(ABS(fi%kpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
    iterHF = 0
    hybdat%l_calhf = .TRUE.
 

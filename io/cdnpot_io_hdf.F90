@@ -1001,7 +1001,6 @@ MODULE m_cdnpot_io_hdf
 
       CALL io_write_attlog0(groupID,'invs2',sym%invs2)
       CALL io_write_attlog0(groupID,'invs',sym%invs)
-      CALL io_write_attlog0(groupID,'zrfs',sym%zrfs)
       CALL io_write_attint0(groupID,'nop',sym%nop)
       CALL io_write_attint0(groupID,'nop2',sym%nop2)
 
@@ -1355,7 +1354,6 @@ MODULE m_cdnpot_io_hdf
 
       CALL io_read_attlog0(groupID,'invs2',sym%invs2)
       CALL io_read_attlog0(groupID,'invs',sym%invs)
-      CALL io_read_attlog0(groupID,'zrfs',sym%zrfs)
       CALL io_read_attint0(groupID,'nop',sym%nop)
       CALL io_read_attint0(groupID,'nop2',sym%nop2)
 

@@ -72,11 +72,7 @@ CONTAINS
     IF (input%film .AND. .NOT.oneD%odi%d1) THEN
        npz = vacuum%nmz + 1
        tail = .TRUE.
-       IF (sym%zrfs .OR. sym%invs) THEN
-          facv = 2.0
-       ELSE
-          facv = 1.0
-       END IF
+       facv=2.0/vacuum%nvac
        tvac = 0.
        tvact = 0.
        !     set array dpz to zero

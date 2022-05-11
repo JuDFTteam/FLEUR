@@ -124,17 +124,8 @@
 
 8010      FORMAT (/,/,4x,10a8,/,/)
           !--->    the menu for namgrp can be found in subroutine spgset
-          WRITE (oUnit,FMT=8030) latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
-8030      FORMAT (' lattice=',a3,/,' name of space group=',a4,/,' inversion symmetry=   ',l1&
-               ,/,' z-reflection symmetry=',l1,/,' vacuum-inversion symm=',l1,/,' jspins=',i1)
-
-          IF (input%film.AND.(sym%invs.OR.sym%zrfs)) THEN
-             IF ( (sym%invs.AND.sym%zrfs).NEQV.sym%invs2 ) THEN
-                WRITE (oUnit,*) 'Settings of inversion and z-reflection symmetry='
-                WRITE (oUnit,*) 'are inconsistent with vacuum-inversion symmetry!'
-                CALL juDFT_error("invs, zrfs and invs2 do not match!",calledby ="inped")
-             ENDIF
-          ENDIF
+        
+          
 
 
           IF (ALL(a1.EQ.0.)) THEN
@@ -158,8 +149,6 @@
           ENDIF
           !-odim
           vacuum%nvac = 2
-          IF (sym%zrfs .OR. sym%invs) vacuum%nvac = 1
-          IF (oneD%odd%d1) vacuum%nvac = 1
           cell%z1 = vacuum%dvac/2
           vacuum%nmz = vacuum%nmzd
           vacuum%delz = 25.0/vacuum%nmz

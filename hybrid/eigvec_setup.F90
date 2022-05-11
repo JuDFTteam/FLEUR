@@ -68,12 +68,10 @@ contains
       type(t_mat) :: tmp
 
 
-      logical  :: l_zref
       integer  :: jsp, ik, nbasfcn, ieig, ierr, root, me
 
       call timestart("bcast zmat")
 
-      l_zref = (fi%sym%zrfs .AND. (SUM(ABS(fi%kpts%bk(3, :fi%kpts%nkpt))) < 1e-9) .AND. .NOT. fi%noco%l_noco)
       select case (eig66_data_mode(hybdat%eig_id) )
       case( mpi_mode)
 #ifdef CPP_MPI

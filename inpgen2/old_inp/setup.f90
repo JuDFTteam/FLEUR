@@ -75,7 +75,7 @@
           IF (namgrp.EQ.'any ') THEN
              CALL rw_symfile('R',94,'sym.out',sym%nop,cell%bmat, sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
           ELSE
-             CALL spg2set(sym%nop,sym%zrfs,sym%invs,namgrp,latnam, sym%mrot,sym%tau,sym%nop2,sym%symor)
+             CALL spg2set(sym%nop,.false.,sym%invs,namgrp,latnam, sym%mrot,sym%tau,sym%nop2,sym%symor)
           ENDIF
           IF (input%film.AND..NOT.sym%symor) CALL juDFT_warn("Films&Symor",hint&
                &     ="Films should be symmorphic",calledby ='setup')

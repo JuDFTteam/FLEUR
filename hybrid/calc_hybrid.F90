@@ -55,7 +55,6 @@ CONTAINS
       integer                  :: j_wp, n_wps, root_comm
       type(t_lapw)             :: lapw
       LOGICAL                  :: init_vex = .TRUE. !In first call we have to init v_nonlocal
-      LOGICAL                  :: l_zref
       character(len=999)       :: msg
       REAL, ALLOCATABLE        :: eig_irr(:, :)
       integer, allocatable     :: vx_loc(:,:), weights(:)
@@ -104,8 +103,7 @@ CONTAINS
 
          !check if z-reflection trick can be used
 
-         l_zref = (fi%sym%zrfs .AND. (SUM(ABS(fi%kpts%bk(3, :fi%kpts%nkpt))) < 1e-9) .AND. .NOT. fi%noco%l_noco)
-
+        
          CALL timestart("Preparation for hybrid functionals")
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")

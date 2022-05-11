@@ -314,10 +314,10 @@ module m_VYukawaFilm
     complex,        intent(out) :: VIq(stars%ng3)
 
     real                        :: partitioning, rz, qz, q
-    integer                     :: irec2, irec3, iz, jz, ivac, iqz, nfft, nzmax, nzmin, nzdh, nLower, nUpper, jvac
+    integer                     :: irec2, irec2r,irec3, iz, jz, ivac, iqz, nfft, nzmax, nzmin, nzdh, nLower, nUpper, jvac
     complex, allocatable        :: VIz(:,:), eta(:,:)
     complex                     :: VIqz(-stars%mx3:stars%mx3,stars%ng2), c_ph(-stars%mx3:stars%mx3,stars%ng2)
-    complex                     :: vcons1(stars%ng3)
+    complex                     :: vcons1(stars%ng3),phas
     real                        :: VIzReal(3*stars%mx3,stars%ng2), VIzImag(3*stars%mx3,stars%ng2)
     real, allocatable           :: exp_m(:,:), exp_p(:,:)
     real, allocatable           :: z(:)
@@ -397,7 +397,7 @@ module m_VYukawaFilm
           case( 1 )
             nUpper = nzmax; nLower =  nzdh + 1; jvac = 1
           case( 2 )
-            nLower = nzmin; nUpper = -nzdh - 1; jvac = 2; if ( sym%invs .or. sym%zrfs ) jvac = 1
+            nLower = nzmin; nUpper = -nzdh - 1; jvac = vacuum%nvac
         end select
         do iz = nLower, nUpper
           rz = ( abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
@@ -411,7 +411,10 @@ module m_VYukawaFilm
             VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVxy(jz,  irec2,jvac) &
                           -       q              * ( q - 2. ) * VVxy(jz+1,irec2,jvac) &
                           + 0.5 * q * ( q - 1. )              * VVxy(jz+2,irec2,jvac)
-            if ( ( sym%invs .and. .not. sym%zrfs ) .and. ivac == 2 ) VIz(iz,irec2) = conjg( VIz(iz,irec2) )
+          if ( vacuum%nvac==1 .and. ivac == 2 ) THEN
+            call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+            VIz(iz,irec2r) = phas*VIz(iz,irec2) 
+          endif  
           end if
         end do
       end do
@@ -667,7 +670,7 @@ module m_VYukawaFilm
     complex,        intent(out) :: VIq(stars%ng3)
 
     real                                               :: partitioning, rz, qz, q, qxy_numerics
-    integer                                            :: irec2, irec3, iz, jz, ivac, iqz, jvac
+    integer                                            :: irec2, irec3, iz, jz, ivac, iqz, jvac,irec2r
     integer                                            :: nfft, nzmax, nzmin, nzdh, nLower, nUpper
     complex, allocatable                               :: VIz(:,:), eta(:,:)
     complex, allocatable                               :: expzqz(:,:)
@@ -678,7 +681,7 @@ module m_VYukawaFilm
     real, allocatable                                  :: quotz(:,:), sinhz(:,:)
     real, allocatable                                  :: z(:)
     real, dimension(stars%ng2)                         :: g_damped, vcons2
-    
+    complex                                            :: phas
 
     ! DEFINITIONS / ALLOCATIONS / INITIALISATIONS
 
@@ -772,7 +775,7 @@ module m_VYukawaFilm
           case( 1 )
             nUpper = nzmax; nLower =  nzdh + 1; jvac = 1
           case( 2 )
-            nLower = nzmin; nUpper = -nzdh - 1; jvac = 2; if ( sym%invs .or. sym%zrfs ) jvac = 1
+            nLower = nzmin; nUpper = -nzdh - 1; jvac = vacuum%nvac
         end select
         do iz = nLower, nUpper
           rz = ( abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
@@ -786,7 +789,10 @@ module m_VYukawaFilm
             VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVxy(jz,  irec2,jvac) &
                           -       q              * ( q - 2. ) * VVxy(jz+1,irec2,jvac) &
                           + 0.5 * q * ( q - 1. )              * VVxy(jz+2,irec2,jvac)
-            if ( ( sym%invs .and. .not. sym%zrfs ) .and. ivac == 2 ) VIz(iz,irec2) = conjg( VIz(iz,irec2) )
+            if ( vacuum%nvac==1 .and. ivac == 2 ) THEN
+              call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+              VIz(iz,irec2r) = phas*VIz(iz,irec2) 
+            endif  
           end if
         end do
       end do

@@ -119,7 +119,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
       complex,parameter :: img=(0.,1.)
       REAL              :: bk(3)
 
-      LOGICAL l_zref,l_real, link_exists
+      LOGICAL l_real, link_exists
       INTEGER jsp,nk,l,itype
       INTEGER numbands, nbasfcn, ndbands !ndbands number of bands without highest (degenerate)
 
@@ -145,8 +145,6 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
     END IF
 
 !     check if z-reflection trick can be used
-      l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
-!     IF (fmpi%n_size > 1) l_zref = .FALSE.
       version = 1
       filename = 'basis.hdf'
 

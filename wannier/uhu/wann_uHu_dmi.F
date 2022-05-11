@@ -32,7 +32,7 @@ c*******************************************c
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
-     >      z1,nv2d,nmzxy,nmz,delz,zrfs,ig2,area,tau,zatom,nq2,kv2,nop2,
+     >      z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,kv2,nop2,
      >      volint,symor,pos,ef,l_soc,
      >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
      >      theta,phi,
@@ -96,7 +96,7 @@ c     ..scalar arguments..
       type (od_inp), intent (in) :: odi
       type (od_sym), intent (in) :: ods
       INTEGER, INTENT (IN) :: eig_idList(wann%nparampts)
-      logical, intent (in) :: invs,invs2,film,slice,symor,zrfs
+      logical, intent (in) :: invs,invs2,film,slice,symor
       logical, intent (in) :: l_real,l_noco,l_ss,l_soc,l_nochi
       logical, intent (in) :: l_ms,l_sgwf,l_socgwf
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
@@ -1379,7 +1379,7 @@ c**************************************c
             ! matrix elements < S | H_{SS} | S' > x chi
             call cpu_time(t0)
             call wann_uHu_vac(
-     >            chi,l_noco,l_soc,zrfs,jspins,nlotot,qpt_i,nbnd,z1,
+     >            chi,l_noco,l_soc,jspins,nlotot,qpt_i,nbnd,z1,
      >            nmzxyd,nmzd,n2d,nv2d,k1d,k2d,k3d,n3d,nvac,ig,
      >            rgphs,nmzxy,nmz,delz,ig2,nq2,kv2,area,bmat,bbmat,
      >            evac(:,jspin),evac(:,jspin_b),
