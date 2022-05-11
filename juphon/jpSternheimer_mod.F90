@@ -2335,7 +2335,7 @@ module m_jpSternheimer
         !& acofKet, bcofKet, ccofKet, atestcofk, btestcofk, idir, ikpt)
 
         nk=fmpi%k_list(ikpt)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, fmpi)
         CALL zMatKet%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
         zMatKet%data_c(:, :) = zKet(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt, 1))
         CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &
@@ -2400,7 +2400,7 @@ module m_jpSternheimer
 !        & atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpq), odi, ods, &
 !        & acofBra, bcofBra, ccofBra)
     nk=fmpi%k_list(ikpq)
-    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, .FALSE., fmpi)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, fmpi)
     CALL zMatBra%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
     zMatBra%data_c(:, :) = zBra(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq))
     CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
@@ -2675,7 +2675,7 @@ module m_jpSternheimer
      ! & acofTilde, bcofTilde, ccofTilde)
 
       nk=fmpi%k_list(ikpq)
-      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, .FALSE., fmpi)
+      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, fmpi)
       CALL zMatTilde%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
       zMatTilde%data_c(:, :) = zTilde(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq))
       CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
@@ -2720,7 +2720,7 @@ module m_jpSternheimer
     !  & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpt), odi, ods, &
     !  & acofBar, bcofBar, ccofBar)
     nk=fmpi%k_list(ikpt)
-    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, .FALSE., fmpi)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, fmpi)
     CALL zMatBar%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
     zMatBar%data_c(:, :) = zBar(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt, 1))
     CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &

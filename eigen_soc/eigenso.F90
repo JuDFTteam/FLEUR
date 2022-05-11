@@ -128,7 +128,7 @@ CONTAINS
     DO nk_i=1,SIZE(fmpi%k_list)
         nk=fmpi%k_list(nk_i)
      !DO nk = fmpi%n_start,n_end,n_stride
-       CALL lapw%init(fi%input,fi%noco, nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell,.FALSE., fmpi)
+       CALL lapw%init(fi%input,fi%noco, nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell, fmpi)
        ALLOCATE( zso(lapw%nv(1)+fi%atoms%nlotot,2*fi%input%neig,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
 

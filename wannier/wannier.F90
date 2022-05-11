@@ -1192,7 +1192,7 @@ CONTAINS
                 ! stored in the eig file on unit 66. the lattice respectively
                 ! plane-wave vectors G(k,q) are saved in (k1,k2,k3).
 
-                CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+                CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,fmpi)
 
           nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
                   CALL zzMat%init(l_real,nbasfcn,input%neig)
@@ -1538,7 +1538,7 @@ CONTAINS
 
                       n_start=1
                       n_end=input%neig
-                      call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+                      call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,cell,fmpi)
 
 
                     nbasfcn_b = MERGE(lapw_b%nv(1)+lapw_b%nv(2)+2*atoms%nlotot,lapw_b%nv(1)+atoms%nlotot,noco%l_noco)
@@ -1765,7 +1765,7 @@ CONTAINS
                       ! moreover, the plane-wave vectors G(k,q+b) are stored
                       ! in (k1_qb,k2_qb,k3_qb) for later use.
 
-                      CALL lapw_qb%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+                      CALL lapw_qb%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,fmpi)
                       CALL cdn_read(&
                            innerEig_idList(iqpt_b),&
                            lapw%dim_nvd(),input%jspins,fmpi%irank,fmpi%isize, &!wannierspin instead of DIMENSION%jspd? !kptibz_b2?&

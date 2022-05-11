@@ -521,7 +521,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
          DO ikpt = 1, fi%kpts%nkpt
 
-            CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,ikpt,fi%cell,l_zref)
+            CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,ikpt,fi%cell)
 
             nbasfcn = 0
             IF(fi%noco%l_noco) then

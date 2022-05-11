@@ -112,7 +112,7 @@ contains
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" )
         call vvac( vacuum, stars, cell,  input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh,vslope )
-        call vvacis( stars, vacuum, sym, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
+        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
         call timestop( "Vacuum" )
       end if
@@ -134,7 +134,7 @@ contains
             i = i + 1
             z = cell%amat(3,3) * i3 * ani
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
-            vintcza = vintcz( stars, vacuum, cell, sym, input, field, z, irec2, psq, &
+            vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vacxy(:,:,:,ispin), vCoul%vacz(:,:,ispin), &
                               rhobar, sig1dh, vz1dh, alphm,vslope )
             af1(i) = real( vintcza )

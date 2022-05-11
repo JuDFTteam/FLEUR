@@ -468,8 +468,7 @@ CONTAINS
                    rho_out(1) = qpwc(1)*cell%z1
                    DO k = 2,stars%ng3
                       IF ((stars%kv3(1,k).EQ.0).AND.(stars%kv3(2,k).EQ.0)) THEN
-                         nz = 1
-                         IF (sym%invs.OR.sym%zrfs) nz = 2
+                         nz = stars%nstr(k) !1
                          g = stars%kv3(3,k) * cell%bmat(3,3)
                          rho_out(1) = rho_out(1) + nz*qpwc(k)*SIN(g*cell%z1)/g
                       ENDIF
@@ -489,8 +488,7 @@ CONTAINS
                 ENDIF
                 !-gu
                 !        nzvac = min(50,nmz)
-                m0 = -stars%mx3
-                IF (sym%zrfs) m0 = 0
+               
                 !
                 !---> loop over 2D stars
                 !
@@ -503,20 +501,15 @@ CONTAINS
                       sign = 3. - 2.*ivac
                       !
                       ! ---> sum over gz-stars
-                      DO 250 kz = m0,stars%mx3
+                      DO 250 kz = -stars%mx3,stars%mx3
                          ig3 = stars%ig(k1,k2,kz)
                          c_ph = stars%rgphs(k1,k2,kz) ! phase factor for invs=T & zrfs=F
                          !        ----> use only stars within the g_max sphere (oct.97 shz)
                          IF (ig3.NE.0) THEN
-                            nz = 1
-                            IF (sym%zrfs) nz = stars%nstr(ig3)/stars%nstr2(k)
                             gz = kz*cell%bmat(3,3)
-                            DO 240 nrz = 1,nz
-                               signz = 3. - 2.*nrz
-                               carg = ImagUnit*sign*signz*gz
-                               VALUE = VALUE + c_ph*qpwc(ig3)* EXP(carg*cell%z1)
-                               slope = slope + c_ph*carg*qpwc(ig3)* EXP(carg*cell%z1)
-240                         ENDDO
+                            carg = ImagUnit*sign*gz
+                            VALUE = VALUE + c_ph*qpwc(ig3)* EXP(carg*cell%z1)
+                            slope = slope + c_ph*carg*qpwc(ig3)* EXP(carg*cell%z1)
                          END IF
 250                   ENDDO
                       ! roa work-around

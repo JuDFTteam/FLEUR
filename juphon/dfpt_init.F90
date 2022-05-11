@@ -156,7 +156,7 @@ CONTAINS
                 bkpt=kpts%bk(:, ik)
 
                 !CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
-                CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, .FALSE., fmpi)
+                CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, fmpi)
                 GbasVec_eig_loc(:, :lapw%nv(iSpin) + atoms%nlotot, ik, iSpin) = lapw%gvec(:, :, iSpin)
 
                 ! Kinda like this for lapw%kvec and nkvec. Irrelevant for now.

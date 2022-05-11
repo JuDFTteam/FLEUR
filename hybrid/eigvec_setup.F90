@@ -81,7 +81,7 @@ contains
             do ik = 1, fi%kpts%nkpt
                if(hybdat%zmat(ik, jsp)%l_participate) then
 
-                  CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ik, fi%cell, l_zref)
+                  CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ik, fi%cell)
                   !allocate tmp array
                   nbasfcn = lapw%hyb_num_bas_fun(fi)
                   call tmp%alloc(fi%sym%invs, nbasfcn, 1)

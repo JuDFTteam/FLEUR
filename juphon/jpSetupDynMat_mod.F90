@@ -2640,7 +2640,7 @@ module m_jpSetupDynMat
         !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
         !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
         nk=fmpi%k_list(ikpq)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
                             usdus, oneD, 1, nmat, aKpq, bKpq, bascof_loKpq)
 
@@ -2655,7 +2655,7 @@ module m_jpSetupDynMat
     !    & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
     !    & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
     nk=fmpi%k_list(ikpt)
-    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
     CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
                         usdus, oneD, 1, nmat, a, b, bascof_lo)
 
@@ -3297,7 +3297,7 @@ module m_jpSetupDynMat
         !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
 
         nk=fmpi%k_list(ikpt)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
                             usdus, oneD, 1, nmat, a, b, bascof_lo)
 
@@ -3314,7 +3314,7 @@ module m_jpSetupDynMat
         !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
 
         nk=fmpi%k_list(ikpq)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
                             usdus, oneD, 1, nmat, aKpq, bKpq, bascof_loKpq)
 
@@ -3773,7 +3773,7 @@ module m_jpSetupDynMat
       !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
       !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
       nk=fmpi%k_list(ikpt)
-      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, .FALSE., fmpi)
+      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, fmpi)
       CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
                           usdus, oneD, 1, nmat, a, b, bascof_lo)
 
@@ -3789,7 +3789,7 @@ module m_jpSetupDynMat
       !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
       !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
       nk=fmpi%k_list(ikpq)
-      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, .FALSE., fmpi)
+      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, fmpi)
       CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
                           usdus, oneD, 1, nmat, aKpq, bKpq, bascof_loKpq)
 

@@ -1975,7 +1975,7 @@ contains
         !  & usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
         !  & usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
         nk=fmpi%k_list(ikpt)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
                             usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
         ab0cof(:, :) = cmplx(0., 0.)
@@ -2247,7 +2247,7 @@ contains
           !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
           !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
           nk=fmpi%k_list(ikpt)
-          CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+          CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
           CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
                               usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
 
@@ -2867,7 +2867,7 @@ contains
         !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
         !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpq), odi, ods, aKpq, bKpq, bascof_loKpq )
         nk=fmpi%k_list(ikpq)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
                             usdus, oneD, 1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
 
@@ -2882,7 +2882,7 @@ contains
         !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
         !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
         nk=fmpi%k_list(ikpt)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell,  fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
                             usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
 
@@ -3183,7 +3183,7 @@ contains
         !& usdus%us, usdus%dus, usdus%uds, usdus%duds, usdus%ddn, sym%invsat, sym%invsatnr, usdus%ulos, usdus%uulon, usdus%dulon, &
         !& usdus%dulos, atoms%llo, atoms%nlo, atoms%l_dulo, atoms%lapw_l, kveclo(:,ikpt), odi, ods, a, b, bascof_lo )
         nk=fmpi%k_list(ikpt)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
                             usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
       ab0cof(:, :) = cmplx(0., 0.)
@@ -3472,7 +3472,7 @@ end subroutine CalcSFintlongname2 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarik
         ! Set up lapw list
         !CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
         nk=fmpi%k_list(ikpt)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
                             usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
         ab0cofKet(:, :) = cmplx(0., 0.)

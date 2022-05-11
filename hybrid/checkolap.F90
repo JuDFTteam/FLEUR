@@ -76,7 +76,7 @@ CONTAINS
       call timestart("checkolap")
       allocate(z(nkpti))
       DO ikpt = 1, nkpti
-         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
          nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
          call z(ikpt)%alloc(sym%invs, nbasfcn, input%neig)
       ENDDO
@@ -253,7 +253,7 @@ CONTAINS
                   carr1 = 0; carr2 = 0; carr3 = 0
 
                   ! calculate k1,k2,k3
-                  CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+                  CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
                   call timestart("pw part")
                   ! PW part
                   !$OMP PARALLEL DO default(none) &

@@ -10,7 +10,7 @@ CONTAINS
    ! Calculate the vacuum contribution to the Hamiltonian and Overlap matrix
    !-----------------------------------------------------------------------------
    SUBROUTINE hsvac(vacuum, stars, fmpi, jsp, input, v, evac, cell, &
-                  & lapw, sym, noco, nococonv, hmat, smat)
+                  & lapw, noco, nococonv, hmat, smat)
 
       USE m_vacfun
       USE m_types
@@ -21,7 +21,6 @@ CONTAINS
       TYPE(t_vacuum),INTENT(IN)     :: vacuum
       TYPE(t_noco),INTENT(IN)       :: noco
       TYPE(t_nococonv),INTENT(IN)       :: nococonv
-      TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_stars),INTENT(IN)      :: stars
       TYPE(t_cell),INTENT(IN)       :: cell
       TYPE(t_lapw),INTENT(IN)       :: lapw
@@ -83,7 +82,7 @@ CONTAINS
                !---> get the wavefunctions and set up the tuuv, etc matrices
                CALL timestart("vacfun")
                CALL vacfun(fmpi, vacuum, stars, input, nococonv, iSpin, iSpinPr, &
-                         & sym, cell, ivac, evac, lapw%bkpt, v%vacxy, v%vacz, kvac, nv2, &
+                         &  cell, ivac, evac, lapw%bkpt, v%vacxy, v%vacz, kvac, nv2, &
                          & tuuv, tddv, tudv, tduv, uz, duz, udz, dudz, ddnv, wronk)
                CALL timestop("vacfun")
 

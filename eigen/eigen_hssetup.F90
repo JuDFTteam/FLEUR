@@ -94,7 +94,7 @@ CONTAINS
       IF (fi%input%film) THEN
          CALL timestart("Vacuum part")
          CALL hsvac(fi%vacuum, stars, fmpi, isp, fi%input, v, enpara%evac, fi%cell, &
-                    lapw, fi%sym, fi%noco, nococonv, hmat, smat)
+                    lapw,  fi%noco, nococonv, hmat, smat)
          CALL timestop("Vacuum part")
       END IF
 

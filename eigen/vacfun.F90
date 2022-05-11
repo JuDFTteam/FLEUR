@@ -6,7 +6,7 @@ MODULE m_vacfun
 CONTAINS
   SUBROUTINE vacfun(&
        fmpi,vacuum,stars,input,nococonv,jspin1,jspin2,&
-       sym, cell,ivac,evac,bkpt, vxy,vz,kvac,nv2,&
+       cell,ivac,evac,bkpt, vxy,vz,kvac,nv2,&
        tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
     !*********************************************************************
     !     determines the necessary values and derivatives on the vacuum
@@ -28,7 +28,6 @@ CONTAINS
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
-    TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_stars),INTENT(IN)       :: stars
     TYPE(t_cell),INTENT(IN)        :: cell
     !     ..

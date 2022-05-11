@@ -133,7 +133,7 @@ CONTAINS
              allocate(hybdat%zmat(fi%kpts%nkptf, fi%input%jspins))
             DO jsp = 1, fi%input%jspins
                DO nk = 1,fi%kpts%nkptf
-                  CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
+                  CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
                   call eigvec_setup(hybdat%zmat(nk, jsp), fi, lapw, work_pack, fmpi, &
                                     hybdat%nbands(nk, jsp), nk, jsp, hybdat%eig_id)
                enddo 
@@ -176,7 +176,7 @@ CONTAINS
              
             DO i = 1,work_pack(jsp)%k_packs(1)%size
                nk = work_pack(jsp)%k_packs(i)%nk
-               CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, l_zref)
+               CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
                CALL hsfock(fi, work_pack(jsp)%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
                            nococonv, stars, results, xcpot, fmpi, vx_tmp(nk, jsp))
                if(work_pack(jsp)%k_packs(i)%submpi%root()) vx_loc(nk, jsp) = fmpi%irank

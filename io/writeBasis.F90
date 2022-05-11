@@ -323,7 +323,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
 !        DO nk = fmpi%n_start,kpts%nkpt,fmpi%n_stride
          DO nk = 1,kpts%nkpt
-            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell,l_zref)
+            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell)
             bk(:) = kpts%bk(:,nk)
             IF(abs(bk(1)).LT.1e-7) bk(1) = abs(bk(1))
             IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))
@@ -461,7 +461,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
        CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
 !      DO nk = fmpi%n_start,kpts%nkpt,fmpi%n_stride
        DO nk = 1,kpts%nkpt
-            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell,l_zref)
+            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell)
             bk(:) = kpts%bk(:,nk)
             IF(abs(bk(1)).LT.1e-7) bk(1) = abs(bk(1))
             IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))

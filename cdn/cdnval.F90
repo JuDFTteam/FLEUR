@@ -226,7 +226,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       ikpt=cdnvalJob%k_list(ikpt_i)
       bkpt=kpts%bk(:,ikpt)
 
-      CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell,.false., fmpi)
+      CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
       skip_t = skip_tt
       ev_list=cdnvaljob%compact_ev_list(ikpt_i,l_empty)
       noccbd = SIZE(ev_list)

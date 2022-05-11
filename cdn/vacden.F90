@@ -1112,14 +1112,14 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
        DEALLOCATE (t_1,te_1,tei_1,u_1,ue_1)
     END IF ! oneD%odi%d1
 
-    IF(vacuum%nvac.EQ.1) THEN
-       den%vacz(:,2,:) = den%vacz(:,1,:)
-       IF (sym%invs) THEN
-          den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
-       ELSE
-          den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
-       END IF
-    END IF
+    !IF(vacuum%nvac.EQ.1) THEN
+    !   den%vacz(:,2,:) = den%vacz(:,1,:)
+    !   IF (sym%invs) THEN
+    !      den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
+    !   ELSE
+    !      den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
+    !   END IF
+    !END IF
 
     CALL timestop("vacden")
 

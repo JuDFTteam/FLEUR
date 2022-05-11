@@ -959,8 +959,7 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       ! get current bkpt vector
 
         CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,kptibz,cell,
-     &    (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &     .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+     &   fmpi)
 
          nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
      &   lapw%nv(1)+atoms%nlotot,noco%l_noco)
@@ -1041,9 +1040,7 @@ c$$$        nslibd=0
 
 
         call lapw_b%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b,
-     &           cell,
-     &          (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &           .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+     &           cell,fmpi)
 
 
             nbasfcn_b = MERGE(lapw_b%nv(1)+lapw_b%nv(2)+2*atoms%nlotot,
@@ -1189,8 +1186,7 @@ c***********************************************************
 !     <                  eigg,zzMat)
 
         call lapw_b2%init(input,noco,nococonv,kpts,atoms,sym,kptibz_b2,
-     &     cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &     .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+     &     cell,fmpi)
 
         nbasfcn_b2 = MERGE(lapw_b2%nv(1)+lapw_b2%nv(2)+2*atoms%nlotot,
      &  lapw_b2%nv(1)+atoms%nlotot,noco%l_noco)

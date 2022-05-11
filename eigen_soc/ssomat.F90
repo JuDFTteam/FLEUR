@@ -97,7 +97,7 @@ CONTAINS
     ENDDO
 
     DO nk=fmpi%irank+1,kpts%nkpt,fmpi%isize
-       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,nk,cell,.false.)
+       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,nk,cell)
        zMat%matsize1=lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot
        zmat%matsize2=input%neig
        zmat%l_real=.FALSE.

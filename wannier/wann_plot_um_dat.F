@@ -559,9 +559,7 @@ c******************************************************************
                 n_end=input%neig
 
                 CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
-     &               kptibz,cell,(sym%zrfs.AND.
-     &               (SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &               .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+     &               kptibz,cell,fmpi)
 
                 nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
      &          lapw%nv(1)+atoms%nlotot,noco%l_noco)
