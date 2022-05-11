@@ -26,6 +26,7 @@ display: public
 source: true
 graph: true
 search: true
+preprocess: false
 macro: TEST
        LOGIC=.true.
 extra_mods: json_module: http://jacobwilliams.github.io/json-fortran/

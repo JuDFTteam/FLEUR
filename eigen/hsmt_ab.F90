@@ -33,6 +33,11 @@ CONTAINS
       !! local spins \(\sigma_{g}\) and \(\sigma_{\alpha}\) through the K prefactor
       !! [\(\pm q\) in K] and the \(u/\overset{.}{u}\)
       !! respectively. The former also appears in the complex phase factor.
+      !! \begin{aligned}
+      !! d_{l,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha} &= \sum_{\nu\boldsymbol{k}}\sum_{m}\\
+      !! &* A_{l,m,\lambda'}^{\sigma_{\alpha}',\nu\boldsymbol{k}*}\\
+      !! &* (2\tilde{f}_{\nu\boldsymbol{k}}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{q},j,\beta~(1)}+\tilde{f}_{\nu\boldsymbol{k}\boldsymbol{q}}^{j,\beta~(1)}A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}})
+      !! \end{aligned}
 
       USE m_constants, ONLY : fpi_const,tpi_const
       USE m_types

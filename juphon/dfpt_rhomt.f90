@@ -78,9 +78,9 @@ CONTAINS
                         END IF
                      END IF
                      denCoeffs%mt_coeff(l,itype,0,0,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,0,0,ilSpinPr, ilSpin) &
-                                                                    & + we(i) * CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
+                                                                    & + CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
                      denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) &
-                                                                    & + we(i) * CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
+                                                                    & + CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
                      ! ud/dd
                      temp = we(i) * eigVecCoeffs1%abcof(i,lm,1,natom,ilSpin)
                      IF (l_dfpt) THEN
@@ -90,9 +90,9 @@ CONTAINS
                         END IF
                      END IF
                      denCoeffs%mt_coeff(l,itype,0,1,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,0,1,ilSpinPr, ilSpin) &
-                                                                    & + we(i) * CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
+                                                                    & + CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
                      denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) &
-                                                                    & + we(i) * CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
+                                                                    & + CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
                   END DO
                END DO
             END DO
@@ -141,9 +141,9 @@ CONTAINS
                         END IF
                      END IF
                      denCoeffs%mt_ulo_coeff(lo,ntyp,0,ilSpinPr,ilSpin) = denCoeffs%mt_ulo_coeff(lo,ntyp,0,ilSpinPr,ilSpin) &
-                                                                     & + we(i) * CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
+                                                                     & + CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
                      denCoeffs%mt_ulo_coeff(lo,ntyp,1,ilSpinPr,ilSpin) = denCoeffs%mt_ulo_coeff(lo,ntyp,1,ilSpinPr,ilSpin) &
-                                                                     & + we(i) * CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
+                                                                     & + CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
                      temp = we(i) * eigVecCoeffs1%abcof(i,lm,0,natom,ilSpin)
                      IF (l_dfpt) THEN
                         temp = temp * 2.0
@@ -152,7 +152,7 @@ CONTAINS
                         END IF
                      END IF
                      denCoeffs%mt_lou_coeff(lo,ntyp,0,ilSpinPr,ilSpin) = denCoeffs%mt_lou_coeff(lo,ntyp,0,ilSpinPr,ilSpin) &
-                                                                     & + we(i) * CONJG(eigVecCoeffs%ccof(m,i,lo,natom,ilSpinPr)) * temp
+                                                                     & + CONJG(eigVecCoeffs%ccof(m,i,lo,natom,ilSpinPr)) * temp
                      temp = we(i) * eigVecCoeffs1%abcof(i,lm,1,natom,ilSpin)
                      IF (l_dfpt) THEN
                         temp = temp * 2.0
@@ -161,7 +161,7 @@ CONTAINS
                         END IF
                      END IF
                      denCoeffs%mt_lou_coeff(lo,ntyp,1,ilSpinPr,ilSpin) = denCoeffs%mt_lou_coeff(lo,ntyp,1,ilSpinPr,ilSpin) &
-                                                                     & + we(i) * CONJG(eigVecCoeffs%ccof(m,i,lo,natom,ilSpinPr)) * temp
+                                                                     & + CONJG(eigVecCoeffs%ccof(m,i,lo,natom,ilSpinPr)) * temp
                   END DO
                END DO
                DO lop = 1,atoms%nlo(ntyp)
@@ -176,7 +176,7 @@ CONTAINS
                               END IF
                            END IF
                            denCoeffs%mt_lolo_coeff(lop,lo,ntyp,ilSpinPr,ilSpin) = denCoeffs%mt_lolo_coeff(lop,lo,ntyp,ilSpinPr,ilSpin) &
-                                                                              & + we(i) * CONJG(eigVecCoeffs%ccof(m,i,lop,natom,ilSpinPr)) * temp
+                                                                              & + CONJG(eigVecCoeffs%ccof(m,i,lop,natom,ilSpinPr)) * temp
                         END DO
                      END DO
                   END IF

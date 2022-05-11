@@ -119,8 +119,13 @@ CONTAINS
                         IF (ABS(coef) .LT. 1e-12 ) CYCLE
                         natom= 0
                         DO nn=1,atoms%ntype
-                           llp= lp*(atoms%lmax(nn)+1)+l+1
-                           llpmax = (atoms%lmax(nn)+1)**2
+                           IF (l_less_effort) THEN
+                              llp = (l* (l+1))/2 + lp
+                              llpmax = (atoms%lmax(nn)* (atoms%lmax(nn)+3))/2
+                           ELSE
+                              llp= lp*(atoms%lmax(nn)+1)+l+1
+                              llpmax = (atoms%lmax(nn)+1)**2
+                           END IF
                            IF(llp.GT.llpmax) CYCLE
                            nt= natom
                            DO na= 1,atoms%neq(nn)
@@ -289,5 +294,5 @@ CONTAINS
          END DO
          neqat0 = neqat0 + atoms%neq(ntyp)
       END DO
-   END SUBROUTINE
+   END SUBROUTINE dfpt_rhonmtlo
 END MODULE m_dfpt_rhonmt
