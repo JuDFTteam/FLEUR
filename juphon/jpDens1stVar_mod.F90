@@ -1068,7 +1068,7 @@ module m_jpDens1stVar
   !> @param[inout]  bcnmt   : LO related, to be done!
   !> @param[inout]  ccnmt   : LO related, to be done!
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine calcKdepValRho1MT( fmpi, oneD, atoms, input, sym, cell, kpts, usdus, results, ikpt, ikpq, idispA, nv, ilst, GbasVec, nobd,&
+  subroutine calcKdepValRho1MT( fmpi,   atoms, input, sym, cell, kpts, usdus, results, ikpt, ikpq, idispA, nv, ilst, GbasVec, nobd,&
       & uu, du, ud, dd, aclo, bclo, cclo, uunmt, udnmt, dunmt, ddnmt, acnmt, bcnmt, ccnmt, z0, z1, kveclo, rbas1, rbas2, ilo2p, &
       & uu2, du2, ud2, dd2, aclo2, bclo2, cclo2, uunmt2, udnmt2, dunmt2, ddnmt2, acnmt2, bcnmt2, ccnmt2 )
 
@@ -1079,7 +1079,7 @@ module m_jpDens1stVar
 
     ! Type parameter
     type(t_mpi),                  intent(in)    :: fmpi
-    type(t_oneD),                  intent(in)    :: oneD
+     
     type(t_atoms),                  intent(in)    :: atoms
     type(t_input),                  intent(in)    :: input
     type(t_sym),                    intent(in)    :: sym
@@ -1136,8 +1136,6 @@ module m_jpDens1stVar
     ! Local type variables !todo beware maybe not take them from fleur_init might be dangerous
     type(t_noco)                                  :: noco
     type(t_nococonv)                                  :: nococonv
-    type(od_inp)                                  :: odi
-    type(od_sym)                                  :: ods
     TYPE(t_lapw) :: lapw
     TYPE (t_mat) :: zMat1, zMatikpG, zMat
 
@@ -1221,7 +1219,7 @@ module m_jpDens1stVar
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL zMat1%init(.FALSE., nv(1, ikpq) + atoms%nlotot, nobd(ikpt))
         zMat1%data_c(:, :) = z1(:nv(1, ikpq) + atoms%nlotot, :nobd(ikpt), idir)
-        CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1, oneD, &
+        CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1,   &
                  & acofz1(:, :, :, idir), bcofz1(:, :, :, idir), &
                  & ccofz1(-atoms%llod:, :, :, :, idir), zMat1)
 
@@ -1258,7 +1256,7 @@ module m_jpDens1stVar
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL zMatikpG%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt))
         zMatikpG%data_c(:, :) = zBar(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt))
-        CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1, oneD, &
+        CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1,   &
                  & acofikpG(:, :, :, idir), bcofikpG(:, :, :, idir), &
                  & ccofikpG(-atoms%llod:, :, :, :, idir), zMatikpG)
     end do
@@ -1283,7 +1281,7 @@ module m_jpDens1stVar
     CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
     CALL zMat%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt))
     zMat%data_c(:, :) = z0(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt))
-    CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1, oneD, &
+    CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt), usdus, noco, nococonv, 1,   &
              & acof, bcof, &
              & ccof, zMat)
 

@@ -18,7 +18,7 @@ MODULE m_winpXML
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, juPhon, &
-      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kptsArray, kptsSelection, enpara, &
+      cell, sym, xcpot, noco,   mpinp, hybinp, kptsArray, kptsSelection, enpara, &
       gfinp, hub1inp, l_explicitIn, l_includeIn, filename)
 
       use m_types_input
@@ -27,7 +27,7 @@ CONTAINS
       use m_types_atoms
       use m_types_vacuum
       use m_types_kpts
-      use m_types_oneD
+       
       use m_types_mpinp
       use m_types_hybinp
       use m_types_gfinp
@@ -56,7 +56,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_vacuum), INTENT(IN)   :: vacuum
       TYPE(t_kpts), INTENT(IN)     :: kptsArray(:)
-      TYPE(t_oneD), INTENT(IN)     :: oneD
+       
 
       TYPE(t_mpinp), INTENT(IN)    :: mpinp
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -209,10 +209,6 @@ CONTAINS
          WRITE (fileNum, 155) mpinp%g_cutoff, mpinp%linear_dep_tol, hybinp%ewaldlambda, hybinp%lexp, hybinp%bands1, hybinp%fftcut
       END IF
 
-      IF (oneD%odd%d1) THEN
-170      FORMAT('      <oneDParams d1="', l1, '" MM="', i0, '" vM="', i0, '" m_cyl="', i0, '" chi="', i0, '" rot="', i0, '" invs1="', l1, '" zrfs1="', l1, '"/>')
-         WRITE (fileNum, 170) oneD%odd%d1, oneD%odd%M, oneD%odd%mb, oneD%odd%m_cyl, oneD%odd%chi, oneD%odd%rot, oneD%odd%invs, oneD%odd%zrfs
-      END IF
 
 !      <expertModes spex="0"  eig66="F" lpr="0" secvar="F" />
 180   FORMAT('      <expertModes spex="', i0, '" secvar="', l1, '"/>')
@@ -530,15 +526,7 @@ WRITE (fileNum, 242) 1.0
             IF (input%film) THEN
                tempTaual(3, na) = cell%amat(3, 3)*tempTaual(3, na)
             END IF
-!+odim in 1D case all the coordinates are given in cartesian YM
-            IF (oneD%odd%d1) THEN
-               !tempTaual(1,na) = tempTaual(1,na)*a1(1)
-               !tempTaual(2,na) = tempTaual(2,na)*a2(2)
-            END IF
-!-odim
-            IF (oneD%odd%d1) THEN
-               call judft_error('1D position output not implemented!')
-            ELSE IF (input%film) THEN
+            IF (input%film) THEN
 !         <filmPos> x/myConstant  y/myConstant  1/myConstant</filmPos>
 340            FORMAT('         <filmPos label="', a20, '">', a, ' ', a, ' ', a, '</filmPos>')
                posString(:) = ''

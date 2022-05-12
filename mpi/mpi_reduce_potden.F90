@@ -10,7 +10,7 @@ MODULE m_mpi_reduce_potden
 #endif
 CONTAINS
 
-  SUBROUTINE mpi_reduce_potden( fmpi, stars, sphhar, atoms, input, vacuum, oneD, noco, potden )
+  SUBROUTINE mpi_reduce_potden( fmpi, stars, sphhar, atoms, input, vacuum,   noco, potden )
 
     ! It is assumed that, if some quantity is allocated for some fmpi rank, that it is also allocated on fmpi rank 0. 
 
@@ -21,7 +21,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_mpi),     INTENT(IN)     :: fmpi
-    TYPE(t_oneD),    INTENT(IN)     :: oneD
+     
     TYPE(t_input),   INTENT(IN)     :: input
     TYPE(t_vacuum),  INTENT(IN)     :: vacuum
     TYPE(t_noco),    INTENT(IN)     :: noco

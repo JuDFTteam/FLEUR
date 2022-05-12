@@ -8,7 +8,7 @@ module m_jpSetupDynMat
 
   contains
 
-  subroutine SetupDynamicMatrix(fmpi, noco, nococonv, oneD, atoms, input, sym, cell, lathar, stars, kpts, qpts, usdus, results, Veff0, iqpt, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, &
+  subroutine SetupDynamicMatrix(fmpi, noco, nococonv,   atoms, input, sym, cell, lathar, stars, kpts, qpts, usdus, results, Veff0, iqpt, ngdp, ngpqdp, gdp, mlh_atom, nmem_atom, clnu_atom, &
       & rho0IRst, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vEff0IR, vEff0MT, rho0MT, E2ndOrdII, El, eig, rbas1, rbas2, &
       & iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, mapKpq2K, kpq2kPrVec, gpqdp, memd_atom, logUnit, vXC0IR, eXCIR, vXC0MT, eXCMT, vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0IR, grRho0MT, grVext0IR, grVext0MT, grVeff0IR, grVeff0MT, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
 
@@ -23,7 +23,7 @@ module m_jpSetupDynMat
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in)  :: atoms
     type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
@@ -189,7 +189,7 @@ module m_jpSetupDynMat
 
     ! Calculate the Pulay contribution to the dynamical matrix
     CALL timestart('dynmat setup Pu')
-    call SetupDynMatPu( fmpi, noco, nococonv, oneD, atoms, stars, lathar, input, sym, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT, &
+    call SetupDynMatPu( fmpi, noco, nococonv,   atoms, stars, lathar, input, sym, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT, &
       & vEff1IR, vEff1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, El, eig, rbas1, rbas2, iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, clnu_atom, nmem_atom,    &
       & mlh_atom, vEff0IR, vEff0MT, kpq2kPrVec, dynMatPu, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, &
       & rho1MTz0 )
@@ -198,7 +198,7 @@ module m_jpSetupDynMat
     ! Calculate the surface contribution to the dynamical matrix
     !!!latest:
     CALL timestart('dynmat setup SF')
-    call dynSF( fmpi, noco, nococonv, oneD, atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
+    call dynSF( fmpi, noco, nococonv,   atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
       & memd_atom, nobd, gdp, mapKpq2K, rbas1(:, :, :, :, 1), rbas2(:, :, :, :, 1), nmem_atom, mlh_atom, clnu_atom, kveclo, iloTable, kpq2kPrVec, nv, ilst, &
       & gBasVec, nRadFun, z, eig, El, rho0IRpw, rho0MT, ngpqdp, gpqdp, rho1IR, rho1MTDelta, vXC0IR, eXCIR, vXC0MT, eXCMT, vExt1IR_final, &
       & vExt1MT, vHar1IR_final, vHar1MT_final, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, vEff0MT, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol, dynMatSf )
@@ -866,7 +866,7 @@ module m_jpSetupDynMat
   !> Equation 6.52 is subdivided in 7.114, 7.115 and 7.118 (all equations from PhD thesis A. Klueppelberg). For every of the latter
   !> equations a respective subroutine is called.
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine SetupDynMatPu(fmpi, noco, nococonv, oneD, atoms, stars, lathar, input, sym, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT,      &
+  subroutine SetupDynMatPu(fmpi, noco, nococonv,   atoms, stars, lathar, input, sym, kpts, qpts, cell, usdus, results, iqpt, ngdp, ngpqdp, gdp, mapKpq2K, rho1IR, rho1MT,      &
       & vEff1IR, vEff1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, El, eig, rbas1, rbas2, iloTable, nv, nobd, ilst, GbasVec, z, kveclo, nRadFun, clnu_atom, nmem_atom,    &
       & mlh_atom, vEff0IR, vEff0MT, kpq2kPrVec, dynMatPu, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, &
       & rho1MTz0 )
@@ -879,7 +879,7 @@ module m_jpSetupDynMat
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),     intent(in)  :: atoms
     type(t_stars),     intent(in)  :: stars
     type(t_sphhar),    intent(in)  :: lathar
@@ -972,7 +972,7 @@ module m_jpSetupDynMat
 
     ! Evaluate valence contribution of H - eps brakets
     CALL timestart('dynmat setup Pu Brakets')
-    call EvalPuHepsBraKetsVal(fmpi, noco, nococonv, oneD, atoms, input, cell, sym, lathar, stars, kpts, qpts, usdus, results, iqpt, nRadFun, vEff0IR, vEff0MT, clnu_atom,&
+    call EvalPuHepsBraKetsVal(fmpi, noco, nococonv,   atoms, input, cell, sym, lathar, stars, kpts, qpts, usdus, results, iqpt, nRadFun, vEff0IR, vEff0MT, clnu_atom,&
     & nmem_atom, mlh_atom, rbas1(:, :, :, :, 1), rbas2(:, :, :, :, 1), El, mapKpq2K, nobd, nv, gBasVec, ilst, kveclo, z, iloTable, &
     & eig, kpq2kPrVec, dynMatPuME )
     CALL timestop('dynmat setup Pu Brakets')
@@ -1523,7 +1523,7 @@ module m_jpSetupDynMat
   !> @todo
   !> Account for the spin.
   !>-------------------------------------------------------------------------------------------------------------------------------------
-  subroutine EvalPuHepsBraKetsVal(fmpi, noco, nococonv, oneD, atoms, input, cell, sym, lathar, stars, kpts, qpts, usdus, results, iqpt, nRadFun, vEff0IR, vEff0MtLh, clnu_atom,&
+  subroutine EvalPuHepsBraKetsVal(fmpi, noco, nococonv,   atoms, input, cell, sym, lathar, stars, kpts, qpts, usdus, results, iqpt, nRadFun, vEff0IR, vEff0MtLh, clnu_atom,&
       & nmem_atom, mlh_atom, rbas1, rbas2, El, mapKpq2K, nobd, nv, gBasVec, ilst, kveclo, z, iloTable, eig, kpq2kPrVec, dynMatPu )
 
     use m_types
@@ -1537,7 +1537,7 @@ module m_jpSetupDynMat
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),              intent(in)  :: atoms
     type(t_input),              intent(in)  :: input
     type(t_sphhar),             intent(in)  :: lathar
@@ -1749,7 +1749,7 @@ module m_jpSetupDynMat
       CALL timestop('Dynmat brakets read z1.')
 
       CALL timestart('Dynmat brakets calc.')
-      call AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, GbasVec, ilst, kveclo, &
+      call AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv,   atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, GbasVec, ilst, kveclo, &
       & mapKpq2K, nobd, z, z1nG, iloTable, nRadFun, eig, kpq2kPrVec, &
       & varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, &
       & dynMatPu )
@@ -2432,7 +2432,7 @@ module m_jpSetupDynMat
   !> Some arrays may be saved in the Heps calculation. we do not need one array for H and one for the overlap we can write into the
   !> heps array at once!
   !>-------------------------------------------------------------------------------------------------------------------------------------
-  subroutine Add2ndOrdWfPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, cell, sym, kpts, qpts, usdus, results, iqpt, ikpt, pMax, lmpMax, eps1DynMatPulTestSw, testComp2ndN1stOrdBasFuncSw, mapKpq2K, eig, nobd, nv, &
+  subroutine Add2ndOrdWfPulayBraKets2DynMat( fmpi, noco, nococonv,   atoms, input, cell, sym, kpts, qpts, usdus, results, iqpt, ikpt, pMax, lmpMax, eps1DynMatPulTestSw, testComp2ndN1stOrdBasFuncSw, mapKpq2K, eig, nobd, nv, &
       & gbas, ilst, kveclo, z, z1nG, nRadFun, iloTable, varphiVarphi, varphiHvarphi, grVarphiVarphiNat, grVarphiHVarphiNat, &
       & lmpT, varphiGrVeff0SphVarphi, varphiHGrvarphiNat, varphiGrVarphiNat, varphiGrVeff0Varphi, dynMatPu )
 
@@ -2447,7 +2447,7 @@ module m_jpSetupDynMat
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in)    :: atoms
     type(t_input),                  intent(in)    :: input
     type(t_cell),                   intent(in)    :: cell
@@ -2490,8 +2490,7 @@ module m_jpSetupDynMat
 
 
     ! Type variable
-    type(od_inp)                                  :: odi
-    type(od_sym)                                  :: ods
+  
     type(t_lapw) :: lapw
 
     ! Scalar variables
@@ -2642,7 +2641,7 @@ module m_jpSetupDynMat
         nk=fmpi%k_list(ikpq)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
-                            usdus, oneD, 1, nmat, aKpq, bKpq, bascof_loKpq)
+                            usdus,   1, nmat, aKpq, bKpq, bascof_loKpq)
 
       nmat = nv(1, ikpt) + atoms%nlotot
       a(:, :, :) = cmplx(0.0, 0.0)
@@ -2657,7 +2656,7 @@ module m_jpSetupDynMat
     nk=fmpi%k_list(ikpt)
     CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
     CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                        usdus, oneD, 1, nmat, a, b, bascof_lo)
+                        usdus,   1, nmat, a, b, bascof_lo)
 
       do iband = 1, nobd(ikpt, 1)
         iDatomA = 0
@@ -3131,7 +3130,7 @@ module m_jpSetupDynMat
   !> @todo
   !> Account for the spin.
   !>-------------------------------------------------------------------------------------------------------------------------------------
-  subroutine Add1stOrdWfPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, gBas, &
+  subroutine Add1stOrdWfPulayBraKets2DynMat( fmpi, noco, nococonv,   atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, gBas, &
       & gBasUnwrap, kveclo, mapKpq2K, nobd, z, z1nG, iloTable, grVarphiVarphiNat, nRadFun, eig, kpq2kPrVec, &
       & grVarphiHvarphiNat, varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, &
       & testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, varphiGrVeff0SphVarphi, varphiHGrvarphiNat, varphiGrVarphiNat, dynMatPu )
@@ -3145,7 +3144,7 @@ module m_jpSetupDynMat
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in)    :: atoms
     type(t_input),                  intent(in)    :: input
     type(t_kpts),                   intent(in)    :: kpts
@@ -3191,8 +3190,7 @@ module m_jpSetupDynMat
     complex,                        intent(inout) :: dynMatPu(:, :)
 
     ! Type variable
-    type(od_inp)                                  :: odi
-    type(od_sym)                                  :: ods
+    
     type(t_lapw) :: lapw
 
     ! Scalar variables
@@ -3299,7 +3297,7 @@ module m_jpSetupDynMat
         nk=fmpi%k_list(ikpt)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                            usdus, oneD, 1, nmat, a, b, bascof_lo)
+                            usdus,   1, nmat, a, b, bascof_lo)
 
       ! Matching coefficients of MT basis functions at k + q = k' (ikpq). In the MT we must not account for the backfolding vector.
       nmat = nv(1, ikpq) + atoms%nlotot
@@ -3316,7 +3314,7 @@ module m_jpSetupDynMat
         nk=fmpi%k_list(ikpq)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
-                            usdus, oneD, 1, nmat, aKpq, bKpq, bascof_loKpq)
+                            usdus,   1, nmat, aKpq, bKpq, bascof_loKpq)
 
       ! Quantities we need later as decoration for the matching coefficients
       kExt(1:3) = matmul(cell%bmat(1:3, 1:3), kpts%bk(1:3, ikpt))
@@ -3619,7 +3617,7 @@ module m_jpSetupDynMat
 
   end subroutine Add1stOrdWfPulayBraKets2DynMat
 
-  subroutine AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv, oneD, atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, gBas, &
+  subroutine AddAlexPulayBraKets2DynMat( fmpi, noco, nococonv,   atoms, input, kpts, qpts, sym, cell, usdus, stars, results, ikpt, iqpt, lmpMax, nRadFunMax, nv, gBas, &
       & gBasUnwrap, kveclo, mapKpq2K, nobd, z, z1nG, iloTable, nRadFun, eig, kpq2kPrVec, &
       & varphiVarphi, varphiHvarphi, vEff0IR, lmpT, eps1DynMatPulTestSw, &
       & testCompTerm3rdBraKetsVarBra, testCompTerm3rdBraKetsVarKet, dynMatPu3rdBraKetHepsSw, dynMatPu )
@@ -3634,7 +3632,7 @@ module m_jpSetupDynMat
     type(t_mpi),                    intent(in)  :: fmpi
     type(t_nococonv),               intent(in)  :: nococonv
     type(t_noco),                   intent(in)  :: noco
-    type(t_oneD),                   intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in)    :: atoms
     type(t_input),                  intent(in)    :: input
     type(t_kpts),                   intent(in)    :: kpts
@@ -3675,8 +3673,6 @@ module m_jpSetupDynMat
     complex,                        intent(inout) :: dynMatPu(:, :)
 
     ! Type variable
-    type(od_inp)                                  :: odi
-    type(od_sym)                                  :: ods
     type(t_lapw) :: lapw
 
     ! Scalar variables
@@ -3775,7 +3771,7 @@ module m_jpSetupDynMat
       nk=fmpi%k_list(ikpt)
       CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, fmpi)
       CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                          usdus, oneD, 1, nmat, a, b, bascof_lo)
+                          usdus,   1, nmat, a, b, bascof_lo)
 
     ! Matching coefficients of MT basis functions at k + q = k' (ikpq). In the MT we must not account for the backfolding vector.
     nmat = nv(1, ikpq) + atoms%nlotot
@@ -3791,7 +3787,7 @@ module m_jpSetupDynMat
       nk=fmpi%k_list(ikpq)
       CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, fmpi)
       CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
-                          usdus, oneD, 1, nmat, aKpq, bKpq, bascof_loKpq)
+                          usdus,   1, nmat, aKpq, bKpq, bascof_loKpq)
 
 
     ! Quantities we need later as decoration for the matching coefficients

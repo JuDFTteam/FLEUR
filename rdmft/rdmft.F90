@@ -323,21 +323,21 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             WRITE(*,*) 'This is not yet implemented!'
             CALL singleStateDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
             CALL cdnval(eig_id,fmpi,fi%kpts,jsp,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
-                        sphhar,fi%sym,vTot,fi%oned,cdnvalJob,singleStateDen,regCharges,dos,vacdos,results,moments,&
+                        sphhar,fi%sym,vTot, cdnvalJob,singleStateDen,regCharges,dos,vacdos,results,moments,&
                         fi%gfinp,fi%hub1inp)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
             filename = ''
             WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
             IF (fmpi%irank.EQ.0) THEN
-               CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,CDN_input_DEN_const,&
+               CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym, CDN_ARCHIVE_TYPE_CDN_const,CDN_input_DEN_const,&
                                  0,-1.0,0.0,-1.0,-1.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
             END IF
             CALL singleStateDen%distribute(fmpi%mpi_comm)
 
             ! For each state calculate Integral over KS effective potential times single state density
             potDenInt = 0.0
-            CALL int_nv(jsp,stars,fi%vacuum,fi%atoms,sphhar,fi%cell,fi%sym,fi%input,fi%oned,vTotTemp,singleStateDen,potDenInt)
+            CALL int_nv(jsp,stars,fi%vacuum,fi%atoms,sphhar,fi%cell,fi%sym,fi%input,vTotTemp,singleStateDen,potDenInt)
             vTotSSDen(iBand,ikpt,jsp) = potDenInt
 
             mt(:,:) = 0.0
@@ -445,14 +445,14 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       DO jspin = 1,jspmax
          CALL cdnvalJob%init(fmpi,fi%input,fi%kpts,fi%noco,results,jspin)
          CALL cdnval(eig_id,fmpi,fi%kpts,jspin,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
-                     sphhar,fi%sym,vTot,fi%oned,cdnvalJob,overallDen,regCharges,dos,vacdos,results,moments,&
+                     sphhar,fi%sym,vTot, cdnvalJob,overallDen,regCharges,dos,vacdos,results,moments,&
                      fi%gfinp,fi%hub1inp)
       END DO
 
-      CALL cdncore(fmpi,fi%oned,fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
+      CALL cdncore(fmpi, fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
                    stars,fi%cell,sphhar,fi%atoms,vTot,overallDen,moments,results)
       IF (fmpi%irank.EQ.0) THEN
-         CALL qfix(fmpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%oned,overallDen,&
+         CALL qfix(fmpi,stars,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell, overallDen,&
                    fi%noco%l_noco,.TRUE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
       END IF
       CALL overallDen%distribute(fmpi%mpi_comm)
@@ -462,7 +462,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       CALL overallVCoul%resetPotDen()
       ALLOCATE(overallVCoul%pw_w(size(overallVCoul%pw,1),size(overallVCoul%pw,2)))
       overallVCoul%pw_w(:,:) = 0.0
-      CALL vgen_coulomb(1,fmpi,fi%oned,fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
+      CALL vgen_coulomb(1,fmpi, fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
       CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1))   ! Is there a problem with a second spin?!
       CALL overallVCoul%distribute(fmpi%mpi_comm)
 
@@ -475,7 +475,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                filename = ''
                WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
                IF (fmpi%irank.EQ.0) THEN
-                  CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym,fi%oned,CDN_ARCHIVE_TYPE_CDN_const,&
+                  CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym, CDN_ARCHIVE_TYPE_CDN_const,&
                                    CDN_input_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
                   CALL singleStateDen%sum_both_spin()!workden)
                END IF
@@ -483,7 +483,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
                ! For each state calculate integral over Coulomb potential times single state density
                potDenInt = 0.0
-               CALL int_nv(1,stars,fi%vacuum,fi%atoms,sphhar,fi%cell,fi%sym,fi%input,fi%oned,vCoul,singleStateDen,potDenInt) ! Is there a problem with a second spin?!
+               CALL int_nv(1,stars,fi%vacuum,fi%atoms,sphhar,fi%cell,fi%sym,fi%input, vCoul,singleStateDen,potDenInt) ! Is there a problem with a second spin?!
                overallVCoulSSDen(iBand,ikpt,jsp) = potDenInt
             END DO
          END DO
@@ -537,7 +537,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             allocate(cmt_nk(hybdat%nbands(ikpt,jsp), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
             if(ierr  /= 0) call judft_error("can't allocate cmt_nk")
             call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                        fi%sym, fi%oneD, zMat, jsp, ikpt, c_phase, cmt_nk)
+                        fi%sym,   zMat, jsp, ikpt, c_phase, cmt_nk)
 
             ALLOCATE (indx_sest(hybdat%nbands(ikpt,jsp), hybdat%nbands(ikpt,jsp)))
             indx_sest = 0
@@ -858,7 +858,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
    CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
-               enpara,fi%cell,fi%noco,nococonv,vTot,results,fi%oned,fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
+               enpara,fi%cell,fi%noco,nococonv,vTot,results, fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy
    rdmftEnergy = 0.0

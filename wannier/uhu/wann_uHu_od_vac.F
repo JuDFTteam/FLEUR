@@ -9,7 +9,7 @@ c***************************************c
       MODULE m_wann_uHu_od_vac
       CONTAINS
       SUBROUTINE wann_uHu_od_vac(
-     >     oneD,vacuum,stars,cell,
+     >      vacuum,stars,cell,
      >     chi,l_noco,l_soc,jspins,nlotot,
      >     nbnd,z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
      >     ig,nmzxy,nmz,delz,ig2,
@@ -31,7 +31,7 @@ c***************************************c
       implicit none
 
 
-      TYPE(t_oneD),INTENT(IN)        :: oneD
+       
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
@@ -195,7 +195,7 @@ c...for the k-point
       qssbti(3,2) = + qss(3)/2.
       DO ispin = 1,1 ! jspins
       CALL od_abvac(
-     >      cell,vacuum,stars,oneD,
+     >      cell,vacuum,stars ,
      >      qssbti(3,jspin),odi%n2d,
      >      wronk,evac,bkpt,odi%M,odi%mb,
      >      vz(1,ivac,jspin2),kvac3,nv2,
@@ -252,7 +252,7 @@ c...for the b-point
 
       DO ispin = 1,1 ! jspins
       call od_abvac(
-     >      cell,vacuum,stars,oneD,
+     >      cell,vacuum,stars ,
      >      qssbti(3,jspin_b),odi%n2d,
      >      wronk,evac_b,bkpt_b,odi%M,odi%mb,
      >      vz(1,ivac,jspin2_b),kvac3_b,nv2_b,

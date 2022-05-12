@@ -21,7 +21,7 @@ c****************************************************************
      >              isize,jspin,
      >              l_ss,l_noco,nrec,fullnkpts,
      >              l_bzsym,l_byindex,l_bynumber,l_byenergy,
-     >              irreduc,odi,band_min,band_max,numbands,
+     >              irreduc,band_min,band_max,numbands,
      >              e1s,e2s,ef,l_paulimag,nkpt,    
      <              nbnd,kpoints,l_gwf,iqpt)
 
@@ -46,7 +46,6 @@ c****************************************************************
 
       logical,intent(in) :: l_byindex,l_bynumber,l_byenergy
       integer,intent(in) :: irreduc(fullnkpts)
-      type (od_inp),intent(in) :: odi
       integer,intent(in) :: band_min,band_max,numbands
       logical,intent(in) :: l_bzsym
       real,intent(in)    :: e1s,e2s,ef
@@ -187,8 +186,7 @@ c****************************************************************
 !        WRITE(*,*)'wann_rw_eig: nkbnd',nkbnd,'nbnd',nbnd 
         if (nkbnd.ge.nbnd) nbnd = nkbnd
 
-        if (odi%d1) kpoints(ikpt) = bkpt(3)
-
+    
       enddo !ikpt
 
       if(l_paulimag)then

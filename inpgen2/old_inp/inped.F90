@@ -28,7 +28,7 @@
       CONTAINS
         SUBROUTINE inped(atoms,vacuum,input,banddos,xcpot,sym,&
                          cell,sliceplot,noco,&
-                         stars,oneD,hybinp,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
+                         stars ,hybinp,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
           USE m_rwinp
           !USE m_chkmt
           USE m_inpnoco
@@ -43,7 +43,7 @@
           USE m_types_sliceplot
           USE m_types_noco
           USE m_types_stars
-          USE m_types_oneD
+           
           USE m_types_hybinp
           USE m_types_kpts
           USE m_constants
@@ -61,7 +61,7 @@
           TYPE(t_sliceplot), INTENT(INOUT) :: sliceplot
           TYPE(t_noco),      INTENT(INOUT) :: noco
           TYPE(t_stars),     INTENT(INOUT) :: stars
-          TYPE(t_oneD),      INTENT(INOUT) :: oneD
+           
           TYPE(t_hybinp),    INTENT(INOUT) :: hybinp
           TYPE(t_kpts),      INTENT(INOUT) :: kpts
           REAL,              INTENT(OUT)   :: a1(3)
@@ -97,7 +97,7 @@
           na = 0
 
           CALL rw_inp('r',atoms,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,oneD,hybinp,kpts, noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)
+               cell,sym,xcpot,noco ,hybinp,kpts, noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
@@ -136,23 +136,14 @@
           IF (scaleCell.EQ.0.0) scaleCell = 1.0
           vacuum%dvac = scaleCell*vacuum%dvac
           dtild = scaleCell*dtild
-          !+odim
-          IF (.NOT.oneD%odd%d1) THEN
              IF ((dtild-vacuum%dvac.LT.0.0).AND.input%film) THEN
                 WRITE(oUnit,'(2(a7,f10.5))') 'dtild:',dtild,' dvac:',vacuum%dvac
                 CALL juDFT_error("dtild < dvac",calledby="inped")
              ENDIF
-          ELSE
-             IF (vacuum%dvac.GE.SQRT(a1(1)**2 + a1(2)**2).OR. vacuum%dvac.GE.SQRT(a2(1)**2 + a2(2)**2)) THEN
-                CALL juDFT_error("one-dim: dvac >= amat(1,1) or amat(2,2)" ,calledby ="inped")
-             END IF
-          ENDIF
-          !-odim
           vacuum%nvac = 2
           cell%z1 = vacuum%dvac/2
           vacuum%nmz = vacuum%nmzd
           vacuum%delz = 25.0/vacuum%nmz
-          IF (oneD%odd%d1) vacuum%delz = 20.0/vacuum%nmz
           IF (vacuum%nmz>vacuum%nmzd)  CALL juDFT_error("nmzd",calledby ="inped")
           vacuum%nmzxy = vacuum%nmzxyd
           IF (vacuum%nmzxy>vacuum%nmzxyd)  CALL juDFT_error("nmzxyd",calledby ="inped")
@@ -175,14 +166,10 @@
           !cell%bbmat=MATMUL(cell%bmat,TRANSPOSE(cell%bmat))
           !cell%omtil = ABS(cell%omtil)
 
-          IF (input%film .AND. .NOT.oneD%odd%d1) THEN
+          IF (input%film ) THEN
              cell%vol = cell%omtil/cell%amat(3,3)*vacuum%dvac
              cell%area = cell%omtil/cell%amat(3,3)
              !-odim
-          ELSEIF (oneD%odd%d1) THEN
-             cell%area = tpi_const*cell%amat(3,3)
-             cell%vol = pi_const*(vacuum%dvac**2)*cell%amat(3,3)/4.
-             !+odim
           ELSE
              cell%vol = cell%omtil
              cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
@@ -325,7 +312,7 @@
              ENDDO  ! l.o. equivalent atoms (n1)
           ENDDO     ! loop over atom-types (n)
 
-          IF (input%film .AND. .NOT.oneD%odd%d1) THEN
+          IF (input%film ) THEN
              !Check if setup is roughly centered
              IF (ABS(MAXVAL(atoms%pos(3,:))+MINVAL(atoms%pos(3,:)))>2.0) &
                   CALL juDFT_warn("Film setup not centered", hint= "The z = 0 plane is the center of the film",calledby="inped")
@@ -336,7 +323,7 @@
           !
           l_gga= xcpot%needs_grad()
           l_test = .TRUE.                  ! only checking, dont use new parameters
-          !CALL chkmt(atoms,input,vacuum,cell,oneD,l_test,l_gga,noel, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
+          !CALL chkmt(atoms,input,vacuum,cell ,l_test,l_gga,noel, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
 
           WRITE (oUnit,FMT=8180) cell%volint
 8180      FORMAT (13x,' volume of interstitial region=',f12.6)

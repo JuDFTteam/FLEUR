@@ -339,12 +339,12 @@ CONTAINS
     pd%mmpMat = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
 !!$#CPP_TODO_copy !code from brysh1,brysh2...
-!!$  SUBROUTINE get_combined_vector(input,stars,atoms,sphhar,noco,vacuum,sym,oneD,&
+!!$  SUBROUTINE get_combined_vector(input,stars,atoms,sphhar,noco,vacuum,sym ,&
 !!$                    den,nmap,nmaph,mapmt,mapvac2,sout)
 !!$    !This was brysh1 before
 !!$    USE m_types
 !!$    IMPLICIT NONE
-!!$    TYPE(t_oneD),INTENT(IN)    :: oneD
+!!$     
 !!$    TYPE(t_input),INTENT(IN)   :: input
 !!$    TYPE(t_vacuum),INTENT(IN)  :: vacuum
 !!$    TYPE(t_noco),INTENT(IN)    :: noco

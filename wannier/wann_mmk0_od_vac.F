@@ -17,7 +17,7 @@ c***************************************************************
       CONTAINS
 
       SUBROUTINE wann_mmk0_od_vac(
-     >      oneD, vacuum, stars, cell,
+     >        vacuum, stars, cell,
      >     l_noco,nlotot,
      >     z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
      >     ig,nmzxy,nmz,delz,ig2,n2d_1,
@@ -38,7 +38,7 @@ c***************************************************************
       TYPE(t_mat), INTENT(IN) :: zMat
 
 
-      TYPE(t_oneD),INTENT(IN)        :: oneD
+       
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
@@ -123,7 +123,7 @@ c     ..local scalars..
       qssbti(3,2) = + qss(3)/2.
       DO ispin = 1,1 ! jspins
       CALL od_abvac(
-     >      cell,vacuum,stars,oneD,
+     >      cell,vacuum,stars ,
      >      qssbti(3,jspin),odi%n2d,
      >      wronk,evac,bkpt,odi%M,odi%mb,
      >      vz,kvac3(:),nv2,

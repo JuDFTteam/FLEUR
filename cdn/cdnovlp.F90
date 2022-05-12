@@ -18,7 +18,7 @@ MODULE m_cdnovlp
    PUBLIC :: cdnovlp 
 CONTAINS
    SUBROUTINE cdnovlp(fmpi, sphhar, stars, atoms, sym, vacuum,cell, input, &
-                      oneD, l_st, jspin, rh, qpw, rhtxy, rho, rht, vpw, vr)
+                        l_st, jspin, rh, qpw, rhtxy, rho, rht, vpw, vr)
       !--------------------------------------------------------------------------
       !     calculates the overlapping core tail density and adds
       !     its contribution to the corresponging components of
@@ -106,7 +106,7 @@ CONTAINS
           TYPE(t_stars),INTENT(IN)    :: stars
           TYPE(t_cell),INTENT(IN)     :: cell
           TYPE(t_sym),INTENT(IN)      :: sym
-          TYPE(t_oneD),INTENT(IN)     :: oneD
+           
           
           TYPE(t_vacuum),INTENT(in):: vacuum
           TYPE(t_input),INTENT(in)::input
@@ -144,7 +144,6 @@ CONTAINS
           REAL    rat(atoms%msh,atoms%ntype)
           COMPLEX gv(3),ycomp1(3,-1:1),ffonat(3,stars%ng3*sym%nop)
           INTEGER mshc(atoms%ntype),ioffset_pT(0:fmpi%isize-1),nkpt_pT(0:fmpi%isize-1)
-          REAL    fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
           LOGICAL l_f2
           INTEGER, ALLOCATABLE :: n1(:),n2(:)
           !     ..
@@ -444,10 +443,10 @@ CONTAINS
           !=====> calculate the fourier transform of the core-pseudocharge
           IF (l_f2) THEN
              CALL ft_of_CorePseudocharge(fmpi,input,atoms,mshc,alpha,tol_14,rh, &
-                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
+                             acoff,stars,method2,rat,cell ,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
           ELSE
              CALL ft_of_CorePseudocharge(fmpi,input,atoms,mshc,alpha,tol_14,rh, &
-                             acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2)
+                             acoff,stars,method2,rat,cell ,sym,qpwc,jspin,l_f2)
           END IF
 
           DO k = 1 , stars%ng3    
@@ -461,7 +460,7 @@ CONTAINS
              !       Describe vacuum by: 
              !       rho(r_||,z,ivac)= sum_n{ rho(n,ivac) * exp(-kappa*(z-z_v)) 
              !                                           * exp(iG(n)r_||) }
-             IF (input%film .AND. .NOT.oneD%odi%d1) THEN
+             IF (input%film ) THEN
                 !+gu
                 dtildh = 0.5 * tpi_const / cell%bmat(3,3)
                 IF (vacuum%nvac.EQ.1) THEN
@@ -547,90 +546,6 @@ CONTAINS
                       ! roa work-around
 270                ENDDO
 280             ENDDO
-             ELSEIF (oneD%odi%d1) THEN
-                !-odim
-                !--->  rho_out is the charge lost between the interstitial and the
-                !--->  rectangular unit cell
-
-                rho_out(1) = cell%vol*qpwc(1)
-
-                DO k = 2,stars%ng3
-                   IF (stars%kv3(3,k).EQ.0) THEN
-                      irec3 = stars%ig(stars%kv3(1,k),stars%kv3(2,k),stars%kv3(3,k))
-                      IF (irec3.NE.0) THEN
-                         irec2 = stars%ig2(irec3)
-                         IF (irec2.NE.1) THEN
-                            g2 = stars%sk2(irec2)
-                            CALL cylbes(oneD%odi%M,g2*cell%z1,fJ)
-                            rho_out(1) = rho_out(1) +&
-                                 &                    qpwc(k)*2.*cell%vol*fJ(1)/(cell%z1*g2)
-                         END IF
-                      END IF
-                   END IF
-                END DO
-
-                rho_out(1) = cell%bmat(3,3)*(qpwc(1)*cell%omtil - rho_out(1))/(tpi_const*tpi_const)
-                !     then we are constructing our radial components of the vacuum
-                !     charge density so that the so that they are continuous in the
-                !     value and slope on the boundary
-                !     value = sum{gpar}[qpw(gz,gpar)exp{-i*m*phi(gpar))J_m(gpar*z1)]
-                !     slope = .......the same...................*gpar*dJ_m(gpar*z1)]
-                !     for determining the rht we need only continuity, because the
-                !     second condition is the charge neutrality of the system
-                !                         Y.Mokrousov
-                DO irec1 = 1,oneD%odi%nq2
-                   VALUE = czero
-                   slope = czero
-                   gzi = oneD%odi%kv(1,irec1)
-                   m = oneD%odi%kv(2,irec1)
-                   DO irec2 = 1,stars%ng2
-                      irec3 = stars%ig(stars%kv2(1,irec2),stars%kv2(2,irec2),gzi)
-                      IF (irec3.NE.0) THEN
-                         g2 = stars%sk2(irec2)
-                         phi = stars%phi2(irec2)
-                         CALL cylbes(oneD%odi%M,g2*cell%z1,fJ)
-                         CALL dcylbs(oneD%odi%M,g2*cell%z1,fJ,dfJ)
-                         VALUE = VALUE + (ImagUnit**m)*qpwc(irec3)*&
-                              &                 EXP(CMPLX(0.,-m*phi))*fJ(m)
-                         slope = slope + (ImagUnit**m)*g2*qpwc(irec3)*&
-                              &                 EXP(CMPLX(0.,-m*phi))*dfJ(m)
-                      END IF
-                   END DO
-
-                   IF (ABS(REAL(VALUE)).GT.zero) THEN
-                      IF (irec1.EQ.1) THEN
-                         qq = REAL(VALUE/rho_out(1))
-                         rkappa = (cell%z1*qq+SQRT(cell%z1*cell%z1*qq*qq + 4*qq))/2.
-                         gamma = rkappa
-                      ELSE
-                         rkappa = gamma
-                         !                  rkappa = -real(slope/value)
-                      END IF
-                      IF (rkappa.LE.zero) rkappa=MIN(rkappa,-tol_14)
-                      IF (rkappa.GT.zero) rkappa=MAX(rkappa,tol_14)
-                      zvac=-LOG(tol_14/cabs(VALUE))/rkappa
-                      nzvac=INT(zvac/vacuum%delz)+1
-                      IF (rkappa.GT.zero .AND. REAL(VALUE).GT.zero) THEN
-                         z = 0.0
-                         IF (irec1.EQ.1) THEN
-                            DO imz = 1,MIN(nzvac,vacuum%nmz)
-                               rht(imz,vacuum%nvac,jspin)=rht(imz,vacuum%nvac,jspin)+&
-                                    &                       VALUE*EXP(-rkappa*z)
-                               z = z + vacuum%delz
-                            END DO
-                         ELSE
-                            DO imz = 1,MIN(nzvac,vacuum%nmzxy)
-                               rhtxy(imz,irec1-1,vacuum%nvac,jspin)=&
-                                    &                          rhtxy(imz,irec1-1,vacuum%nvac,jspin)+&
-                                    &                          VALUE*EXP(-rkappa*z)
-                               z = z + vacuum%delz
-                            END DO
-                         END IF
-                      END IF
-                   END IF
-                END DO
-                !+odim
-
              END IF
              !
              !=====> update density inside the spheres                        
@@ -659,7 +574,7 @@ CONTAINS
 
           CALL qpw_to_nmt(&
                &                sphhar,atoms,stars,&
-               &                sym,cell,oneD,fmpi,&
+               &                sym,cell ,fmpi,&
                &                jspin,l_cutoff,qpwc,&
                &                rho)
 
@@ -681,7 +596,7 @@ CONTAINS
 !***********************************************************************
 
       subroutine ft_of_CorePseudocharge(fmpi,input,atoms,mshc,alpha,&
-            tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
+            tol_14,rh,acoff,stars,method2,rat,cell ,sym,qpwc,jspin,l_f2,vpw,ffonat,force_a4_mt_loc)
 
       !=====> calculate the fourier transform of the core-pseudocharge
       !
@@ -703,7 +618,7 @@ CONTAINS
       integer          ,intent(in) :: method2
       real             ,intent(in) :: rat(atoms%msh,atoms%ntype)
       type(t_cell)     ,intent(in) :: cell
-      type(t_oneD)     ,intent(in) :: oneD
+       
       type(t_sym)      ,intent(in) :: sym
       LOGICAL,         INTENT(IN)  :: l_f2
       COMPLEX,OPTIONAL,INTENT(IN)  :: vpw(:,:),ffonat(:,:)
@@ -758,11 +673,11 @@ CONTAINS
               END IF  
               
               IF (l_f2) THEN     
-                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,reducedStarsCutoff,&
+                 CALL StructureConst_forAtom(nat1,stars ,sym,reducedStarsCutoff,&
                                     atoms%neq(n),atoms%nat,atoms%taual,&
                                     cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
               ELSE
-                 CALL StructureConst_forAtom(nat1,stars,oneD,sym,reducedStarsCutoff,&
+                 CALL StructureConst_forAtom(nat1,stars ,sym,reducedStarsCutoff,&
                                     atoms%neq(n),atoms%nat,atoms%taual,&
                                     cell,qf,qpwc_at,jspin,l_f2,n)              
               END IF
@@ -791,7 +706,7 @@ CONTAINS
        END IF
       end subroutine ft_of_CorePseudocharge
 
-   SUBROUTINE StructureConst_forAtom(nat1,stars,oneD,sym,reducedStarsCutoff,&
+   SUBROUTINE StructureConst_forAtom(nat1,stars ,sym,reducedStarsCutoff,&
                           neq,natd,taual,cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
       ! Calculates the structure constant for each atom of atom type
 
@@ -802,7 +717,7 @@ CONTAINS
 
       integer,       intent(in)  :: nat1
       type(t_stars), intent(in)  :: stars
-      type(t_oneD),  intent(in)  :: oneD
+       
       type(t_sym),   intent(in)  :: sym
       INTEGER,       INTENT(IN)  :: reducedStarsCutoff
       integer,       intent(in)  :: neq,natd, jspin, n
@@ -820,9 +735,9 @@ CONTAINS
 
       ! ..Local arrays
       integer kr(3,sym%nop)
-      real    kro(3,oneD%ods%nop), force_mt_loc(3)
+      real    force_mt_loc(3)
       complex phas(sym%nop), phase, force_is_loc(3)
-      complex phaso(oneD%ods%nop), kcmplx(3)
+      complex  kcmplx(3)
 
       czero = (0.0,0.0)
       qpwc_at(:) = czero
@@ -836,12 +751,12 @@ CONTAINS
       force_mt_loc=0.0
       force_is_loc=cmplx(0.0,0.0)
 !$OMP PARALLEL DO DEFAULT(none) &
-!$OMP SHARED(stars,oneD,sym,reducedStarsCutoff,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw) &
+!$OMP SHARED(stars ,sym,reducedStarsCutoff,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw) &
 !$OMP FIRSTPRIVATE(czero) &
-!$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kro,phaso,kcmplx,phase) &
+!$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kcmplx,phase) &
 !$OMP REDUCTION(+:force_mt_loc,force_is_loc)
       DO  k = 2,reducedStarsCutoff
-         IF (.NOT.oneD%odi%d1) THEN
+         
             CALL spgrot(sym%nop, sym%symor, sym%mrot, sym%tau, sym%invtab, &
                         stars%kv3(:,k), kr, phas)
             
@@ -879,24 +794,7 @@ CONTAINS
                sf = sf / REAL( sym%nop )
                qpwc_at(k) = qpwc_at(k) + sf * qf(k)
             END DO
-         ELSE
-            !-odim
-            CALL od_chirot(oneD%odi,oneD%ods,cell%bmat,stars%kv3(:,k),kro,phaso)
-            nat2 = nat1 + neq - 1
-            DO  nat = nat1,nat2
-               ! sf = cmplx(1.,0.)
-               sf = czero
-               DO  j = 1,oneD%ods%nop
-                  x = -tpi_const * ( kro(1,j)*taual(1,nat) &
-                                   + kro(2,j)*taual(2,nat) &
-                                   + kro(3,j)*taual(3,nat))
-                  sf = sf + CMPLX(COS(x),SIN(x))*phaso(j)
-               END DO
-               sf = sf / REAL( oneD%ods%nop )
-               qpwc_at(k)      = qpwc_at(k)      + sf * qf(k)
-            END DO
-            !+odim
-          END IF
+         
       ENDDO
 !$OMP END PARALLEL DO
 

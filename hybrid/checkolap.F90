@@ -3,7 +3,7 @@ MODULE m_checkolap
 CONTAINS
 
    SUBROUTINE checkolap(atoms, hybdat, mpdata, hybinp, nkpti, kpts, fmpi, &
-                        input, sym, noco, nococonv, oneD, cell, lapw, jsp)
+                        input, sym, noco, nococonv,   cell, lapw, jsp)
       USE m_util, ONLY: chr, sphbessel, harmonicsr
       use m_intgrf, only: intgrf, intgrf_init
       use m_calc_cmt
@@ -30,7 +30,7 @@ CONTAINS
       TYPE(t_cell), INTENT(IN)        :: cell
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
-      type(t_oneD), intent(in)        :: oneD
+       
       TYPE(t_lapw), INTENT(INOUT)     :: lapw
 
       ! - scalars -
@@ -102,7 +102,7 @@ CONTAINS
          ! call timestop("Post read_z Barrier: checkolap")
 #endif
          call calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
-                       sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
+                       sym,   z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
                        cmt(:hybdat%nbands(ikpt,jsp), :, :, ikpt))
       END DO
 

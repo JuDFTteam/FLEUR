@@ -2,7 +2,7 @@ module m_calc_cmt
 
 contains
    subroutine calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
-                       sym, oneD, zmat_ikp, jsp, ik, c_phase, cmt_out, submpi)
+                       sym,   zmat_ikp, jsp, ik, c_phase, cmt_out, submpi)
       use m_types
       use m_judft
       USE m_hyb_abcrot
@@ -22,7 +22,7 @@ contains
       type(t_mpdata), intent(in)      :: mpdata
       type(t_kpts), intent(in)        :: kpts
       type(t_sym), intent(in)         :: sym
-      type(t_oneD), intent(in)        :: oneD
+       
       type(t_mat), intent(in), target :: zmat_ikp ! zmat of parent k-point
                                                ! not sure wether zmat works aswell
       integer, intent(in)          :: jsp
@@ -85,7 +85,7 @@ contains
       endif
 
       CALL abcof(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, noco, nococonv,&
-                 jsp, oneD, acof, bcof, ccof, mat_ptr)
+                 jsp,   acof, bcof, ccof, mat_ptr)
       CALL hyb_abcrot(hybinp, atoms, my_psz, sym, acof, bcof, ccof)
 
       call timestart("copy to cmt")

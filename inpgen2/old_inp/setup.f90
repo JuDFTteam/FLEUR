@@ -2,7 +2,7 @@
       USE m_juDFT
       CONTAINS
         SUBROUTINE setup(atoms,kpts,&
-             sym,oneD, input,cell,enpara,latnam,namgrp)
+             sym , input,cell,enpara,latnam,namgrp)
           !stripped down version    
           !
           !----------------------------------------
@@ -36,7 +36,7 @@
           USE m_types_atoms
           USE m_types_kpts
           USE m_types_sym
-          USE m_types_oned
+           
           USE m_types_input
           USE m_types_cell
           USE m_types_enpara
@@ -61,7 +61,7 @@
           TYPE(t_atoms),INTENT(INOUT)    :: atoms
           TYPE(t_kpts),INTENT(INOUT)     :: kpts
           TYPE(t_sym),INTENT(INOUT)      :: sym
-          TYPE(t_oneD),INTENT(INOUT)     :: oneD
+           
           TYPE(t_input),INTENT(INOUT)    :: input
           TYPE(t_cell),INTENT(INOUT)     :: cell
           TYPE(t_enpara),INTENT(INOUT)   :: enpara
@@ -82,7 +82,7 @@
 
 
           !
-          CALL inpeig(atoms,cell,input,oneD%odd%d1,kpts,enpara,latnam=latnam)
+          CALL inpeig(atoms,cell,input,.false.,kpts,enpara,latnam=latnam)
           !
           !
       

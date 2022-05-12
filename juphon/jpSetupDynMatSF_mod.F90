@@ -6,7 +6,7 @@ module m_dynSF
 
 contains
 
-  subroutine dynSF( fmpi, noco, nococonv, oneD, atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
+  subroutine dynSF( fmpi, noco, nococonv,   atoms, input, stars, cell, results, Veff0, kpts, qpts, lathar, sym, usdus, ngdp, iqpt, logUnit, &
       & memd_atom, nobd, gdp, mapKpq2K, rbas1, rbas2, nmem_atom, mlh_atom, clnu_atom, kveclo, iloTable, kpq2kPrVec, nv, mapGbas, &
       & gBas, nRadFun, z0, eig, El, rho0IRpw, rho0MT, ngpqdp, gpqdp, rho1IRPW, rho1MT, vXC0IRst, eXCIRst, vXC0MTlh, eXCMTlh, &
       & vExt1IR, vExt1MT, vHar1IR, vHar1MT, grRho0IR, grRho0MT, grVeff0IR, grVeff0MT, vEff0MT, grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol, dynMatSf )
@@ -20,7 +20,7 @@ contains
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),                 intent(in)  :: atoms
     type(t_input),                 intent(in)  :: input
     type(t_stars),                 intent(in)  :: stars
@@ -1821,7 +1821,7 @@ contains
 
   end subroutine CalcSFintIRPsigrVeffPsi
 
-  subroutine CalcSFintMTgradPsiHepsPsi( fmpi, noco, nococonv, oneD, atoms, input, cell, kpts, sym, results, usdus, iDtypeB, iDatomB, nRadFun, &
+  subroutine CalcSFintMTgradPsiHepsPsi( fmpi, noco, nococonv,   atoms, input, cell, kpts, sym, results, usdus, iDtypeB, iDatomB, nRadFun, &
       & lmpMax, nobd, nv, gBas, mapGbas, kveclo, z0, eig, hFullVarphi, iloTable, grVarphiChLout, &
       & grVarphiChMout, grVarphiCh1, grVarphiCh2, varphi1, varphi2, surfInt )
 
@@ -1835,7 +1835,7 @@ contains
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in) :: atoms
     type(t_input),                  intent(in) :: input
     type(t_kpts),                   intent(in) :: kpts
@@ -1868,9 +1868,7 @@ contains
     real,                           intent(in)  :: varphi2(:, :, 0:)
     complex,                        intent(out) :: surfInt(:, :)
 
-    ! Type variables
-    type(od_inp)                                :: odi
-    type(od_sym)                                :: ods
+ 
     type(t_lapw) :: lapw
 
     ! Scalar variables
@@ -1977,7 +1975,7 @@ contains
         nk=fmpi%k_list(ikpt)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
+                            usdus,   1, lapw%dim_nvd(), a, b, bascof_lo)
         ab0cof(:, :) = cmplx(0., 0.)
         do iband = 1, nobd(ikpt, 1)
           lmp = 0
@@ -2032,12 +2030,11 @@ contains
 
   end subroutine CalcSFintMTgradPsiHepsPsi
 
-  subroutine CalcSFintMTPsiHepsGradPsi( fmpi, noco, nococonv, oneD, atoms, input, kpts, sym, cell, usdus, results, iDtypeB, iDatomB, varphi1, varphi2, nv, El, gBas, &
+  subroutine CalcSFintMTPsiHepsGradPsi( fmpi, noco, nococonv,   atoms, input, kpts, sym, cell, usdus, results, iDtypeB, iDatomB, varphi1, varphi2, nv, El, gBas, &
       & eig, lmpMax, mapGbas, nRadFun, kveclo, nobd, z0, iloTable, grVarphiChLout, grVarphiChMout, r2grVeff0SphVarphi, vEff0NsphGrVarphi, lmpT, grVarphiCh1, grVarphiCh2, surfInt )
 
     use m_abcof3
     use m_types
-    use m_types_oneD, only : od_inp, od_sym
     USE m_constants
 
     implicit none
@@ -2046,7 +2043,7 @@ contains
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),                 intent(in)  :: atoms
     type(t_input),                 intent(in)  :: input
     type(t_kpts),                  intent(in)  :: kpts
@@ -2083,8 +2080,7 @@ contains
     complex,                       intent(out) :: surfInt(:, :)
 
     ! Type variables
-    type(od_inp)                               :: odi
-    type(od_sym)                               :: ods
+  
     type(t_lapw) :: lapw
 
     ! Scalar variables
@@ -2249,7 +2245,7 @@ contains
           nk=fmpi%k_list(ikpt)
           CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
           CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                              usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
+                              usdus,   1, lapw%dim_nvd(), a, b, bascof_lo)
 
         ab0cof(:, :) = cmplx(0., 0.)
         do iband = 1, nobd(ikpt, 1)
@@ -2673,20 +2669,19 @@ contains
 
   end subroutine CalcSFintIRPsiHepsPsi1
 
-  subroutine CalcSFintlongname1( fmpi, noco, nococonv, oneD, atoms, input, sym, usdus, kpts, cell, results, iqpt, iDtypeB, iDatomB, iDatomA, lmpMax, nRadFun, eig, varphi1, varphi2, hVarphi, &
+  subroutine CalcSFintlongname1( fmpi, noco, nococonv,   atoms, input, sym, usdus, kpts, cell, results, iqpt, iDtypeB, iDatomB, iDatomA, lmpMax, nRadFun, eig, varphi1, varphi2, hVarphi, &
     & mapKpq2K, gBas, mapGbas, nv, kveclo, z0, lmpT, nobd, iloTable, surfInt, testGoldstein ) !CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1ExpCoeffVar
 
     use m_types
     use m_abcof3
-    use m_types_oneD, only : od_inp, od_sym
-
+ 
     implicit none
 
     ! Type parameters
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in)  :: atoms
     type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
@@ -2720,9 +2715,7 @@ contains
     real,                           intent(in)  :: varphi2(:, :, 0:)
     complex,                        intent(out) :: surfInt(:, :)
 
-    ! Type variables
-    type(od_inp)                                :: odi
-    type(od_sym)                                :: ods
+  
     type(t_lapw) :: lapw
 
     ! Scalar variables
@@ -2869,7 +2862,7 @@ contains
         nk=fmpi%k_list(ikpq)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpq), lapw, &
-                            usdus, oneD, 1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
+                            usdus,   1, lapw%dim_nvd(), aKpq, bKpq, bascof_loKpq)
 
       nmat = nv(1, ikpt) + atoms%nlotot
       a(:, :, :) = cmplx(0.0, 0.0)
@@ -2884,7 +2877,7 @@ contains
         nk=fmpi%k_list(ikpt)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell,  fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
+                            usdus,   1, lapw%dim_nvd(), a, b, bascof_lo)
 
       ! Calculate the vector-like large matching coefficients using the first-order wave-function expansion coefficients gained
       ! from solving the Sternheimer equation.
@@ -3026,7 +3019,7 @@ contains
 
   end subroutine CalcSFintlongname1 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1ExpCoeffVar
 
-  subroutine CalcSFintlongname2( fmpi, noco, nococonv, oneD, atoms, input, sym, usdus, kpts, cell, results, lmpMax, iDtypeA,      &
+  subroutine CalcSFintlongname2( fmpi, noco, nococonv,   atoms, input, sym, usdus, kpts, cell, results, lmpMax, iDtypeA,      &
       & iDatomA, nRadFun, eig, hVarphi, gBas, mapGbas, nv, kveclo, z0, nobd, lmpT, iloTable, varphi1, varphi2, surfInt ) ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG
 
     use m_types
@@ -3038,7 +3031,7 @@ contains
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in)  :: atoms
     type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
@@ -3068,9 +3061,7 @@ contains
     real,                           intent(in)  :: varphi2(:, :, 0:)
     complex,                        intent(out) :: surfInt(:, :)
 
-    ! Type variables
-    type(od_inp)                                :: odi
-    type(od_sym)                                :: ods
+   
     type(t_lapw) :: lapw
 
     ! Scalar variables
@@ -3185,7 +3176,7 @@ contains
         nk=fmpi%k_list(ikpt)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
+                            usdus,   1, lapw%dim_nvd(), a, b, bascof_lo)
       ab0cof(:, :) = cmplx(0., 0.)
       do iband = 1, nobd(ikpt, 1)
         lmp = 0
@@ -3307,10 +3298,10 @@ contains
     end do ! ikpt
 end subroutine CalcSFintlongname2 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarikpG
 
-  subroutine CalcSurfintMTPsigrVeff0Psi( fmpi, noco, nococonv, oneD, atoms, input, sym, cell, kpts, usdus, results, lmpMax, iDtypeB, iDatomB, nobd, gbas, &
+  subroutine CalcSurfintMTPsigrVeff0Psi( fmpi, noco, nococonv,   atoms, input, sym, cell, kpts, usdus, results, lmpMax, iDtypeB, iDatomB, nobd, gbas, &
       & mapGbas, nRadFun, nv, z0, kveclo, varphi1, varphi2, grVeff0MT, iloTable, surfInt )
 
-    use m_types_oneD
+     
     use m_types
     use m_abcof3
 
@@ -3320,7 +3311,7 @@ end subroutine CalcSFintlongname2 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarik
     type(t_mpi),                  intent(in)  :: fmpi
     type(t_nococonv),                intent(in)  :: nococonv
     type(t_noco),                intent(in)  :: noco
-    type(t_oneD),                intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in)  :: atoms
     type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
@@ -3349,9 +3340,7 @@ end subroutine CalcSFintlongname2 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarik
     complex,                        intent(in)  :: grVeff0MT(:, :, :, :)
     complex,                        intent(out) :: surfInt(:, :)
 
-    ! Type variables
-    type(od_inp)                                :: odi
-    type(od_sym)                                :: ods
+  
     type(t_lapw) :: lapw
 
     ! Scalar variables
@@ -3474,7 +3463,7 @@ end subroutine CalcSFintlongname2 ! CalcSFintMTPsi1HepsPsiAndPsiHepsPsi1BasVarik
         nk=fmpi%k_list(ikpt)
         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell, fmpi)
         CALL abcof3(input, atoms, sym, 1, cell, kpts%bk(:, ikpt), lapw, &
-                            usdus, oneD, 1, lapw%dim_nvd(), a, b, bascof_lo)
+                            usdus,   1, lapw%dim_nvd(), a, b, bascof_lo)
         ab0cofKet(:, :) = cmplx(0., 0.)
         do iband = 1, nobd(ikpt, 1)
           lmp = 0

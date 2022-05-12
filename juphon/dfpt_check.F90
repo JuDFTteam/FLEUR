@@ -80,11 +80,7 @@ CONTAINS
             CALL judft_error("juPhon doesn't do film systems.")
         END IF
 
-        !oneD
-        IF (fi%oneD%odi%d1) THEN
-            CALL judft_error("juPhon doesn't do 1D systems.")
-        END IF
-
+ 
         !Hybrid/RDMFT
         IF (fi%hybinp%l_hybrid .OR. fi%input%l_rdmft) THEN
             CALL judft_error("juPhon doesn't do hybrid or RDMFT.")

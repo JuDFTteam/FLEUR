@@ -328,20 +328,10 @@ CONTAINS
                 END DO
 
              END IF ! l_noco
-!          if(oneD%odi%d1)then
-!          rd = cell%z1 + vacuum%delz*(ip-1)
-!!$             CALL od_mkgxyz3(&
-!!$                  &           ifftd2,input%jspins,ifftd2,input%jspins,&
-!!$                  &           af2,rd,rhdx,rhdy,rhdz,rhdxx,rhdyy,&
-!!$                  &           rhdzz,rhdyz,rhdzx,rhdxy,&
-!!$                  &           agr,agru,agrd,g2r,g2ru,g2rd,&
-!!$                  &           gggr,gggru,gggrd,gzgr)
-!             CALL judft_error("OneD not implemented")
-!          ELSE
+!        
              idx_loc = idx + (ip-1)* ifftd2
              CALL mkgxyz3(rho(idx_loc:idx_loc+ifftd2-1,:),rhdx,rhdy, rhdz,rhdxx,rhdyy,rhdzz,rhdyz,rhdzx,rhdxy, idx_loc-1,grad)
-!          endif
-
+!        
           END IF ! vxc_is_gga
           !
           ! set minimal value of af2 to 1.0e-13
@@ -405,22 +395,11 @@ CONTAINS
        !c      energy.
 
 
-!          if(oneD%odi%d1)then
-!             CALL od_mkgz(&
-!                              cell%z1,vacuum%nmzxy,vacuum%delz,&
-!                              nmzdiff,jspins,&
-!                              rhtz(vacuum%nmzxy+1,1),rhtz(vacuum%nmzxy+1,jspins),&
-!                              rhtdz(vacuum%nmzxy+1,1), rhtdz(vacuum%nmzxy+1,jspins),&
-!                              rhtdzz(vacuum%nmzxy+1,1),rhtdzz(vacuum%nmzxy+1,jspins),&
-!                              agr,agru,agrd,g2r,g2ru,g2rd,gggr,gggru,gggrd,&
-!                              gzgr)
-!             CALL judft_error("OneD not implemented")
-!          ELSE
+
              CALL mkgz(nmzdiff,jspins, rho(nmz0:,1),rho(nmz0:,jspins),&
              rhtdz(nmz0:,1),rhtdz(nmz0:,jspins),rhtdzz(nmz0:,1),&
                   rhtdzz(nmz0:,jspins),idx,grad)
 
-!          endif
        ENDIF
 
        !       calculate vxc for z now beyond warping region

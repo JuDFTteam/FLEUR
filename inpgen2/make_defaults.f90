@@ -140,8 +140,7 @@ CONTAINS
     ENDIF
     vacuum%nvac = 2
     IF (sym%nop2<sym%nop) vacuum%nvac = 1
-    !IF (oneD%odd%d1) vacuum%nvac = 1
-
+  
     !
     !noco
     !

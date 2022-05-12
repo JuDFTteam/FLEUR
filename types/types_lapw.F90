@@ -349,7 +349,6 @@ CONTAINS
             DO nn = 1, atoms%neq(n)
                na = na + 1
                if (sym%invsat(na) > 1) cycle
-               !np = MERGE(oneD%ods%ngopr(na),sym%invtab(sym%ngopr(na)),oneD%odi%d1)
                np = sym%invtab(sym%ngopr(na))
                CALL priv_vec_for_lo(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
                DO lo = 1, atoms%nlo(n)

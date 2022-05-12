@@ -116,7 +116,7 @@ CONTAINS
 
       ! read in cmt coefficients from direct access file cmt
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                    fi%sym, fi%oneD, z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
+                    fi%sym,  z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
       call timestart("loop over l, l1, l2, n, n1, n2")
       !$acc data copyin(mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&

@@ -185,7 +185,7 @@ CONTAINS
         call createkqMapArrays( fi%kpts, qpts, 0, fi%kpts%nkpt3, [0], mapKpq2K, kpq2kPrVec )
 
         CALL timestart("juPhon DFPT scf loop")
-        call solveSternheimerSCC( fmpi, fi%oneD, fi%atoms, fi%sym, stars, sphhar, fi%cell, enpara, usdus, fi%input, fi%kpts, qpts, results, usdus,      &
+        call solveSternheimerSCC( fmpi,  fi%atoms, fi%sym, stars, sphhar, fi%cell, enpara, usdus, fi%input, fi%kpts, qpts, results, usdus,      &
           & logUnit, ngdp, rbas1, rbas2, kveclo, uuilon, duilon, ulouilopn, &
           & recG, mapKpq2K, results%neig(:, 1), results%eig, GbasVec, ilst, z0, nvfull, El, nradFun, iloTable, nocc, ilo2p, gdp2Ind,     &
           & gdp2iLim, kpq2kPrVec, qpwcG, fi%juPhon%singleQpt, tdHS0, loosetd, ylm, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), grVeff0MT_init, grVeff0MT_main, dKernMTGPts,       &! main --> DM for Alex
@@ -199,7 +199,7 @@ CONTAINS
         CALL timestop("juPhon DFPT Eii2")
 
         CALL timestart("juPhon DFPT dynmat setup")
-        CALL SetupDynamicMatrix( fmpi, fi%noco, nococonv, fi%oneD, fi%atoms, fi%input, fi%sym, fi%cell, sphhar, stars, fi%kpts, qpts, usdus, results, vTotclean, fi%juPhon%singleQpt, ngdp, ngpqdp, recG, sphhar%mlh, sphhar%nmem,&
+        CALL SetupDynamicMatrix( fmpi, fi%noco, nococonv,  fi%atoms, fi%input, fi%sym, fi%cell, sphhar, stars, fi%kpts, qpts, usdus, results, vTotclean, fi%juPhon%singleQpt, ngdp, ngpqdp, recG, sphhar%mlh, sphhar%nmem,&
             & sphhar%clnu, rho%pw, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vTot%pw_w, vTotclean%mt(:, 0:, :, 1),&
             & rhoclean%mt, E2ndOrdII, El, results%eig, rbas1, rbas2, iloTable, nvfull, nocc, ilst, GbasVec, z0, kveclo, nRadFun, mapKpq2K, kpq2kPrVec,       &
             & gpqdp, sphhar%memd, logUnit, vxc%pw, exc%pw(:, 1), vxc%mt, exc%mt(:, 0:, :, 1), vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), &

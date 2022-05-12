@@ -134,7 +134,7 @@ CONTAINS
 
        CALL timestart("eigenso: alineso")
        CALL alineso(eig_id,lapw, fmpi,fi%atoms,fi%sym,fi%kpts,&
-       fi%input,fi%noco,fi%cell,fi%oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
+       fi%input,fi%noco,fi%cell, nk,usdus,rsoc,nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (fmpi%irank.EQ.0) THEN
           WRITE (oUnit,FMT=8010) nk,nsz

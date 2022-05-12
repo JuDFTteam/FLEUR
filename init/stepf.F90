@@ -5,7 +5,7 @@ MODULE m_stepf
    use mpi 
 #endif
 CONTAINS
-   SUBROUTINE stepf(sym, stars, atoms, oneD, input, cell, vacuum, fmpi)
+   SUBROUTINE stepf(sym, stars, atoms,   input, cell, vacuum, fmpi)
       !
       !*********************************************************************
       !     calculates the fourier components of the interstitial step
@@ -26,7 +26,7 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)        :: sym
       TYPE(t_stars), INTENT(INOUT)   :: stars
       TYPE(t_atoms), INTENT(IN)      :: atoms
-      TYPE(t_oneD), INTENT(IN)       :: oneD
+       
       TYPE(t_input), INTENT(IN)      :: input
       TYPE(t_cell), INTENT(IN)       :: cell
       TYPE(t_vacuum), INTENT(IN)     :: vacuum
@@ -74,7 +74,6 @@ CONTAINS
          ALLOCATE (sf(stars%ng3))
          IF (input%film) THEN
             dd = vacuum%dvac*cell%area/cell%omtil
-            IF (oneD%odd%d1) dd = cell%vol/cell%omtil
          ELSE
             dd = 1.0
          END IF
@@ -85,7 +84,7 @@ CONTAINS
          ENDDO
          stars%ustep(1) = CMPLX(dd - c, 0.0)
          !--->    G(parallel)=0  (for film)
-         IF (input%film .AND. .NOT. oneD%odd%d1) THEN
+         IF (input%film ) THEN
             DO k = 2, stars%ng3
                IF (stars%ig2(k) .EQ. 1) THEN
                   th = cell%bmat(3, 3)*stars%kv3(3, k)*cell%z1
@@ -95,20 +94,6 @@ CONTAINS
                END IF
             ENDDO
             !-odim
-         ELSEIF (oneD%odd%d1) THEN
-            DO k = 2, stars%ng3
-               gr = 0.0
-               IF (stars%kv3(3, k) .EQ. 0) THEN
-                  kk = stars%ig2(k)
-                  gr = stars%sk2(kk)
-                  CALL od_cylbes(1, gr*cell%z1, fJ)
-                  stars%ustep(k) = CMPLX(2.*dd*fJ/(gr*cell%z1), 0.)
-               ELSE
-                  stars%ustep(k) = CMPLX(0., 0.)
-               END IF
-
-            ENDDO
-            !+odim
          ELSE
             DO k = 2, stars%ng3
                stars%ustep(k) = CMPLX(0.0, 0.0)
@@ -270,21 +255,7 @@ CONTAINS
                   bfft(ic) = 0.0
 #endif
                ENDIF
-               !-odim
-               IF (oneD%odd%d1) THEN  !!!! fmpi version is not tested yet !!!!
-                  IF (ic .LT. 9*stars%mx1*stars%mx2 .AND. ic .NE. 0) THEN
-                     gx = (cell%bmat(1, 1)*gm(1) + cell%bmat(2, 1)*gm(2))
-                     gy = (cell%bmat(1, 2)*gm(1) + cell%bmat(2, 2)*gm(2))
-                     gr = SQRT(gx**2 + gy**2)
-                     CALL od_cylbes(1, gr*cell%z1, fJ)
-#ifdef CPP_MPI
-                     ufft_local(ic) = ufft_local(ic) + 2*cell%vol*fJ/(gr*cell%z1*cell%omtil)
-#else
-                     stars%ufft(ic) = stars%ufft(ic) + 2*cell%vol*fJ/(gr*cell%z1*cell%omtil)
-#endif
-                  END IF
-               END IF
-               !+odim
+\
             ENDDO
          ENDDO
       ENDDO
@@ -320,7 +291,7 @@ CONTAINS
          !
          ! --> add film-contributions
          !
-         IF (input%film .AND. .NOT. oneD%odd%d1) THEN
+         IF (input%film ) THEN
 
             ifft2d = 9*stars%mx1*stars%mx2
             stars%ufft(0) = stars%ufft(0) + cell%vol*inv_omtil - 1.0
@@ -331,11 +302,6 @@ CONTAINS
                th = cell%bmat(3, 3)*gm(3)*cell%z1
                stars%ufft(i3*ifft2d) = stars%ufft(i3*ifft2d) + cell%vol*inv_omtil*SIN(th)/th
             ENDDO
-
-         ELSEIF (oneD%odd%d1) THEN
-            !-odim
-            stars%ufft(0) = stars%ufft(0) + cell%vol*inv_omtil - 1.0
-            !+odim
 
          ENDIF
          !

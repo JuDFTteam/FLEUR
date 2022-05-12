@@ -8,7 +8,7 @@ MODULE m_checkdopall
 
 CONTAINS
 
-SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
+SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,&
                        cell,potden,ispin)
 
    USE m_sphpts
@@ -27,7 +27,7 @@ SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
    TYPE(t_atoms),INTENT(IN)     :: atoms
    TYPE(t_sym),INTENT(IN)       :: sym
    TYPE(t_vacuum),INTENT(IN)    :: vacuum
-   TYPE(t_oneD),INTENT(IN)      :: oneD
+    
    TYPE(t_cell),INTENT(IN)      :: cell
    TYPE(t_potden),INTENT(IN)    :: potden
 
@@ -40,7 +40,7 @@ SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
 
    CALL timestart("checkDOPAll")
 
-   IF ((input%film).AND.(.NOT.oneD%odi%d1)) THEN
+   IF ((input%film)) THEN
       !--->             vacuum boundaries
       npd = MIN(SIZE(xp,2),25)
       CALL points(xp,npd)
@@ -48,13 +48,8 @@ SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
          signum = 3.0 - 2.0*ivac
          xp(3,:npd) = signum*cell%z1/cell%amat(3,3)
          CALL checkdop(xp,npd,0,0,ivac,1,ispin,atoms,&
-                       sphhar,stars,sym,vacuum,cell,oneD,potden)
+                       sphhar,stars,sym,vacuum,cell ,potden)
       END DO
-   ELSE IF (oneD%odi%d1) THEN
-      npd = min(SIZE(xp,2),25)
-      CALL cylpts(xp,npd,cell%z1)
-      CALL checkdop(xp,npd,0,0,ivac,1,ispin,atoms,&
-                    sphhar,stars,sym,vacuum,cell,oneD,potden)
    END IF
 
    !--->          m.t. boundaries
@@ -62,7 +57,7 @@ SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
    DO n = 1, atoms%ntype
       CALL sphpts(xp,SIZE(xp,2),atoms%rmt(n),atoms%pos(1,nat))
       CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
-                    atoms,sphhar,stars,sym,vacuum,cell,oneD,potden)
+                    atoms,sphhar,stars,sym,vacuum,cell ,potden)
       nat = nat + atoms%neq(n)
    END DO
 

@@ -9,7 +9,7 @@ module m_jpTestDynMatDeprecated
   subroutine TestDynMatDeprecated( atoms, enpara, lathar, sym, cell, kpts, dimens, usdus, input, results, qpts, stars, Veff0,  &
       & logUnit, ngdp, memd_atom, GbasVec, gdp2iLim, kpq2kPrVec, gdp2Ind, gdp, mapKpq2K,    &
       & rho0IR, rho0MT, nv, mapGbas, z0, kveclo, nRadFun, rbas1, rbas2, iloTable, El, eig, nobd, clnu_atom, nmem_atom, mlh_atom,   &
-      & uuilon, duilon, ulouilopn, ilo2p, oneD, vacuum, ne )
+      & uuilon, duilon, ulouilopn, ilo2p,   vacuum, ne )
 
 #include "cppmacro.h"
     use m_types
@@ -31,7 +31,7 @@ module m_jpTestDynMatDeprecated
     type(t_stars),                  intent(in) :: stars
     type(t_potential),              intent(in) :: Veff0
     type(t_vacuum),                 intent(in) :: vacuum
-    type(t_oneD),                   intent(in) :: oneD
+     
 
     ! Scalar parameters
     integer,                        intent(in) :: logUnit
@@ -68,7 +68,7 @@ module m_jpTestDynMatDeprecated
     integer,                        intent(in) :: ne(:)
 
     if ( .false. ) then
-      call testGoldsteinModes( atoms, dimens, kpts, cell, input, results, sym, usdus, lathar, qpts, stars, vacuum, oneD, logUnit, ngdp,          &
+      call testGoldsteinModes( atoms, dimens, kpts, cell, input, results, sym, usdus, lathar, qpts, stars, vacuum,   logUnit, ngdp,          &
         & memd_atom, nv, GbasVec, gdp, mapGbas, nobd, kveclo, mapKpq2K, z0, gdp2Ind, gdp2iLim, kpq2kPrVec, rbas1, rbas2, ilo2p,    &
         & clnu_atom, nmem_atom, mlh_atom, rho0MT, rho0IR )
     end if
@@ -438,7 +438,7 @@ module m_jpTestDynMatDeprecated
   end subroutine plotBasVar1
 
   ! Test whether for for q = 0 the frequencies are zero. Currently only IR HF works.
-  subroutine testGoldsteinModes( atoms, dimens, kpts, cell, input, results, sym, usdus, lathar, qpts, stars, vacuum, oneD, logUnit,&
+  subroutine testGoldsteinModes( atoms, dimens, kpts, cell, input, results, sym, usdus, lathar, qpts, stars, vacuum,   logUnit,&
       & ngdp, memd_atom, nv, gbas, gdp, mapGbas, nobd, kveclo, mapKpq2K, z0, gdp2Ind, gdp2iLim, kpq2kPrVec, rbas1, rbas2, ilo2p,   &
       & clnu_atom, nmem_atom, mlh_atom, rho0MT, rho0IR )
 
@@ -472,7 +472,7 @@ module m_jpTestDynMatDeprecated
     type(t_kpts),                  intent(in)  :: qpts
     type(t_stars),                 intent(in)  :: stars
     type(t_vacuum),                intent(in)  :: vacuum
-    type(t_oneD),                  intent(in)  :: oneD
+     
 
     ! Scalar parameter
     integer,                       intent(in)  :: logUnit
@@ -863,7 +863,7 @@ module m_jpTestDynMatDeprecated
     ! Analytical tests of gradient routine and test of rho with conventional and enhanced method. Also many methods to integrate
     ! the integral vext1 rho1 and working method for MT Goldstone test
     ! Maybe it makes sense to outsource the call later. It was just an auxilliary routine to play around.
-!    call testMTIntegrandsHFDynMat( atoms, stars, input, vacuum, oneD, lathar, sym, cell, ngdp, gdp, clnu_atom, nmem_atom,      &
+!    call testMTIntegrandsHFDynMat( atoms, stars, input, vacuum,   lathar, sym, cell, ngdp, gdp, clnu_atom, nmem_atom,      &
 !      & mlh_atom, w_vExt2IR, vExt2MT, rho1IR, w_vExt1IR, -grVext0MT, E2ndOrdII )
 
     ! This routine was used to derive the correct approach to the HF dynmat integrals
@@ -1167,7 +1167,7 @@ module m_jpTestDynMatDeprecated
   end subroutine testWarpingHFdynMat
 
   ! this is for testGoldstein Modes and irrelevant now
-  subroutine testMTIntegrandsHFDynMat( atoms, stars, input, vacuum, oneD, lathar, sym, cell, ngdp, gdp, clnu_atom, nmem_atom,      &
+  subroutine testMTIntegrandsHFDynMat( atoms, stars, input, vacuum,   lathar, sym, cell, ngdp, gdp, clnu_atom, nmem_atom,      &
         & mlh_atom, w_vExt2IR, vExt2MT, rho1IR, w_vExt1IR, vExt1MT, E2ndOrdII  )
 
     use m_types
@@ -1187,7 +1187,7 @@ module m_jpTestDynMatDeprecated
     type(t_stars),                  intent(in)  :: stars
     type(t_input),                  intent(in)  :: input
     type(t_vacuum),                 intent(in)  :: vacuum
-    type(t_oneD),                   intent(in)  :: oneD
+     
     type(t_sphhar),                 intent(in)  :: lathar
     type(t_sym),                    intent(in)  :: sym
     type(t_cell),                   intent(in)  :: cell
@@ -1271,7 +1271,7 @@ module m_jpTestDynMatDeprecated
     allocate( fReal(atoms%jmtd) )
     allocate( fImag(atoms%jmtd) )
 
-    allocate( rho0IRAlt(stars%ng3,input%jspins), nzxy(vacuum%nmzxyd, oneD%odi%n2d-1,2, input%jspins),                              &
+    allocate( rho0IRAlt(stars%ng3,input%jspins), nzxy(vacuum%nmzxyd, stars%nq2-1,2, input%jspins),                              &
       & nz(vacuum%nmzd, 2, input%jspins), rho0MTAlt(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, input%jspins) )
     allocate( rho0MTAltPure(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, input%jspins),                                                 &
       & testFunction(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, input%jspins) )
@@ -1292,8 +1292,8 @@ module m_jpTestDynMatDeprecated
 
     rewind (iunit)
 
-    call loddop( input%jspins, stars%ng3, oneD%odi%n2d, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,          &
-      & input%jspins, stars%ng3, oneD%odi%nq2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,   &
+    call loddop( input%jspins, stars%ng3, stars%ng2, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,          &
+      & input%jspins, stars%ng3, stars%ng2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,   &
       & lathar%ntypsd, atoms%ntypsy, iunit, atoms%natd, atoms%neq, iop, dop, iter, rho0MTAlt, rho0IRAlt, nz, nzxy, name )
 
     call Fclose(iunit)

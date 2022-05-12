@@ -114,7 +114,7 @@ CONTAINS
          !IF (hybdat%l_subvxc) THEN
          !   CALL subvxc(lapw, fi%kpts%bk(:, nk), fi%input, isp, v%mt(:, 0, :, :), fi%atoms, ud, &
          !               mpdata, hybdat, enpara%el0, enpara%ello0, fi%sym, &
-         !               fi%cell, sphhar, stars, xcpot, fmpi, fi%oneD, hmat(1, 1), vx)
+         !               fi%cell, sphhar, stars, xcpot, fmpi, fi%  hmat(1, 1), vx)
          !END IF
       END IF ! fi%hybinp%l_hybrid
 

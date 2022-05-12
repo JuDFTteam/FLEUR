@@ -7,7 +7,7 @@ MODULE m_alineso
   !----------------------------------------------------------------------
 CONTAINS
   SUBROUTINE alineso(eig_id,lapw,fmpi,atoms,sym,kpts,input,noco,&
-                     cell,oneD, nk, usdus,rsoc,nsize,nmat, eig_so,zso)
+                     cell , nk, usdus,rsoc,nsize,nmat, eig_so,zso)
 
 #include"cpp_double.h"
     USE m_types
@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)         :: fmpi
     TYPE(t_lapw),INTENT(IN)        :: lapw
     
-    TYPE(t_oneD),INTENT(IN)        :: oneD
+     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_sym),INTENT(IN)         :: sym
@@ -155,7 +155,7 @@ CONTAINS
     ALLOCATE (chelp(-atoms%llod :atoms%llod, input%neig,atoms%nlod,nat_l,input%jspins))
     CALL timestart("alineso SOC: -help") 
     CALL hsohelp(atoms,sym,input,lapw,nsz,cell,zmat,usdus,&
-                 zso,noco,oneD,nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
+                 zso,noco ,nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
     CALL timestop("alineso SOC: -help") 
 
     ! set up hamilton matrix

@@ -3,7 +3,7 @@
       CONTAINS
       SUBROUTINE strgn1_dim(
      >                  l_write,gmax,bmat,invs,zrfs,mrot,tau,nop,nop2,
-     <                  k1d,k2d,k3d,n3d,n2d,odd)
+     <                  k1d,k2d,k3d,n3d,n2d)
 c
 c     *********************************************************
 c     generate two- and three-dimensional stars
@@ -12,7 +12,7 @@ c     e. wimmer   nov.1984    c.l.fu  1987
 c     *********************************************************
 
       USE m_constants
-      USE m_types_oneD
+       
       USE m_boxdim
       USE m_spgrot
       USE m_ifft, ONLY : i2357
@@ -35,9 +35,6 @@ c
       INTEGER kv(3),kr(3,nop),inv_du(nop)
       REAL    g(3)
       INTEGER , ALLOCATABLE :: kv2(:,:)
-c-odim
-      TYPE (od_dim), INTENT (INOUT) :: odd
-c+odim
       INTRINSIC int
 
 C---> Determine Gmax box of size mx1, mx2, mx3,
@@ -105,16 +102,13 @@ c
       k2d = mxx2
       k3d = mx3
 #endif
-      IF (odd%d1) THEN
-        k1d = max(k1d,mx1)
-        k2d = max(k2d,mx2)
-      ENDIF
+    
 c
 c     three dimensional stars
       ng3 = 0
       m0 = -mx3
       IF (zrfs .OR. invs) m0 = 0
-      IF (odd%d1 .and. odd%zrfs) m0 = 0
+    
       DO k2 = 1,ng2
          DO k3 = m0,mx3
             DO j = 1,3
@@ -128,44 +122,7 @@ c     three dimensional stars
          END DO
       END DO
       n3d = ng3
-c-odim    modifications due to one-dimensionality, YM
-      IF (odd%d1) THEN
-         j = 0
-         m0 = k3d
-         IF (odd%chi.NE.1 .AND. (odd%invs .OR. odd%zrfs))
-     &        CALL juDFT_error
-     +        ("chiral symmetries are not consistent with invs or zrfs"
-     +        ,calledby ="strgn_dim")
-         IF (odd%zrfs) m0 = 0
-         IF (odd%chi.EQ.1) THEN
-            odd%nop = odd%rot
-            IF (odd%invs .OR. odd%zrfs) odd%nop = odd%nop*2
-            DO k3 = -m0,k3d
-               DO m = -odd%M,odd%M
-                  IF (MOD(m,odd%rot).EQ.0) THEN
-                     j = j+1
-                  END IF
-               END DO
-            END DO
-         ELSEIF (odd%chi.NE.1) THEN
-            odd%nop = odd%chi
-            DO k3 = -m0,k3d
-               DO m = -odd%M,odd%M
-                  IF (MOD(m+(odd%rot)*k3,odd%chi).EQ.0) THEN
-                     j = j+1
-                  END IF
-               END DO
-            END DO
-         END IF
-         odd%n2d = j
-         odd%nq2 = j
-         odd%kimax2 = odd%n2d - 1
-      ELSE
-         odd%n2d = ng2
-         odd%nq2 = ng2
-         odd%nop = nop
-      END IF
-c+odim
+   
 c     listing
       if (l_write) WRITE (oUnit,8000) gmax,n3d,n2d,k1d,k2d,k3d
  8000 FORMAT (' gmax=',f10.6/' n3d=  ',i10/' n2d=  ',i5/' k1d=  ',

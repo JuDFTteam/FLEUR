@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_forcea21
 CONTAINS
-   SUBROUTINE force_a21(input,atoms,sym,oneD,cell,we,jsp,epar,ne,eig,usdus,tlmplm,&
+   SUBROUTINE force_a21(input,atoms,sym ,cell,we,jsp,epar,ne,eig,usdus,tlmplm,&
                         vtot,eigVecCoeffs,aveccof,bveccof,cveccof,f_a21,f_b4,results)
       !--------------------------------------------------------------------------
       ! Pulay 2nd and 3rd term force contributions à la Rici et al.
@@ -44,7 +44,7 @@ CONTAINS
       TYPE(t_input),        INTENT(IN)    :: input
       TYPE(t_atoms),        INTENT(IN)    :: atoms
       TYPE(t_sym),          INTENT(IN)    :: sym
-      TYPE(t_oneD),         INTENT(IN)    :: oneD
+       
       TYPE(t_cell),         INTENT(IN)    :: cell
       TYPE(t_usdus),        INTENT(IN)    :: usdus
       TYPE(t_tlmplm),       INTENT(IN)    :: tlmplm
@@ -240,7 +240,6 @@ CONTAINS
                DO it = 1,sym%invarind(natom)
                   is =sym%invarop(natom,it)
                   isinv = sym%invtab(is)
-                  IF (oneD%odi%d1) isinv = oneD%ods%ngopr(natom)
                      !-gb 2002
                      !  now we have the wanted index of operation with which we have
                      !  to rotate gv. Note gv is given in cart. coordinates but
@@ -249,13 +248,10 @@ CONTAINS
                         vec(i) = zero
                         vec2(i) = zero
                         DO j = 1,3
-                           IF (.NOT.oneD%odi%d1) THEN
+                           
                               vec(i) = vec(i) + sym%mrot(i,j,isinv)*gvint(j)
                               vec2(i) = vec2(i) + sym%mrot(i,j,isinv)*gvint2(j)
-                           ELSE
-                              vec(i) = vec(i) + oneD%ods%mrot(i,j,isinv)*gvint(j)
-                              vec2(i) = vec2(i) + oneD%ods%mrot(i,j,isinv)*gvint2(j)
-                           END IF
+                           
                      END DO
                   END DO
                   DO i = 1,3

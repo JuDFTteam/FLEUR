@@ -8,7 +8,7 @@ MODULE m_aline
   USE m_juDFT
 CONTAINS
   SUBROUTINE aline(eig_id, nk,atoms,sym,&
-       cell,input, jsp,el,usdus,lapw,tlmplm, noco, nococonv,oneD,eig,ne,zMat,hmat,smat)
+       cell,input, jsp,el,usdus,lapw,tlmplm, noco, nococonv ,eig,ne,zMat,hmat,smat)
     !************************************************************************
     !*                                                                      *
     !*     eigensystem-solver for moderatly-well converged potentials       *
@@ -36,7 +36,7 @@ CONTAINS
     USE m_eig66_io
     IMPLICIT NONE
 
-    TYPE(t_oneD),INTENT(IN)        :: oneD
+     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_nococonv),INTENT(IN)    :: nococonv
@@ -136,7 +136,7 @@ CONTAINS
     if (noco%l_soc)  CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
 
     CALL abcof(input,atoms,sym,cell,lapw,ne,&
-         usdus,noco,nococonv,1,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
+         usdus,noco,nococonv,1 ,acof,bcof,ccof,zMat)  ! ispin = 1&
 
 
     !

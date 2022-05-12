@@ -10,7 +10,7 @@ MODULE m_make_stars
   PRIVATE
   PUBLIC :: make_stars
 CONTAINS
-  SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,fmpi)
+  SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot ,noco,fmpi)
     USE m_stepf
     USE m_types_sym
     USE m_types_atoms
@@ -19,7 +19,7 @@ CONTAINS
     USE m_types_input
     USE m_types_cell
     USE m_types_xcpot
-    USE m_types_oned
+     
     USE m_types_mpi
     USE m_types_noco
     USE m_mpi_bc_tool
@@ -33,14 +33,14 @@ CONTAINS
     TYPE(t_input),INTENT(inout)::input
     TYPE(t_cell),INTENT(in)::cell
     CLASS(t_xcpot),INTENT(in)::xcpot
-    TYPE(t_oneD),INTENT(inout)::oneD
+     
     TYPE(t_noco),INTENT(in)::noco
     TYPE(t_mpi),INTENT(in)::fmpi
 
     ! TODO: Add optional bqpt and l_dfpt. The former makes this routine build stars
     !       around an origin vector q (0 by default) and the latter tells it to build
     !       a modified step function for use with DFPT.
-    !       Use a dummy oneD, copied input and call the result starsq.
+    !       Use a dummy   copied input and call the result starsq.
 
     ! Generate stars
     INTEGER :: kimax,kimax2
@@ -56,7 +56,7 @@ CONTAINS
     ENDIF    
     CALL timestart("stepf")
     ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-    CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi)
+    CALL stepf(sym,stars,atoms ,input,cell,vacuum,fmpi)
     CALL timestop("stepf")
   
   

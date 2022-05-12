@@ -10,7 +10,7 @@
       subroutine wann_rmat(
      >          bmat,amat, 
      >          rvecnum,rvec,kpoints,
-     >          jspins_in,nkpts,l_bzsym,film,l_onedimens,
+     >          jspins_in,nkpts,l_bzsym,film,
      >          l_nocosoc,band_min,band_max,neigd,
      >          l_socmmn0,wan90version)
 c***********************************************************
@@ -34,8 +34,7 @@ c***********************************************************
       integer, intent(in) :: nkpts
       logical, intent(in) :: l_bzsym
       logical, intent(in) :: film
-      logical, intent(in) :: l_onedimens
-
+   
       logical, intent(in) :: l_nocosoc
       integer, intent(in) :: band_min(2),band_max(2),neigd
 

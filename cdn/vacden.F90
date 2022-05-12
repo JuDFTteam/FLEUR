@@ -5,7 +5,7 @@ MODULE m_vacden
   !     vacuum charge density. speed up by r. wu 1992
   !     *************************************************************
 CONTAINS
-  SUBROUTINE vacden(vacuum,stars,oneD,kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
+  SUBROUTINE vacden(vacuum,stars,kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
                     gVacMap,we,ikpt,jspin,vz,ne,ev_list,lapw,evac,eig,den,zMat,vacdos,dos)
 
     !***********************************************************************
@@ -51,7 +51,6 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_lapw),INTENT(INOUT)    :: lapw !for some reason the second spin data is reset in noco case
 
-    TYPE(t_oneD),INTENT(IN)       :: oneD
     TYPE(t_banddos),INTENT(IN)    :: banddos
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
@@ -100,7 +99,6 @@ CONTAINS
     !
     !     .. Local Arrays ..
     REAL qssbti(3,2),qssbtii
-    REAL bess(-oneD%odi%mb:oneD%odi%mb),dbss(-oneD%odi%mb:oneD%odi%mb)
     COMPLEX, ALLOCATABLE :: ac(:,:,:),bc(:,:,:),t1jz(:)
     REAL,    ALLOCATABLE :: dt(:),dte(:),du(:),ddu(:,:),due(:)
     REAL,    ALLOCATABLE :: ddue(:,:),t(:),te(:),tei(:,:),dummy(:)
@@ -142,7 +140,6 @@ CONTAINS
     !     **************************************************************************************************
 
     CALL timestart("vacden")
-if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore. Look at status around cb97d0d10d0b8784693683515a1a87ab1b0275cc")
     ALLOCATE ( ac(lapw%dim_nv2d(),input%neig,input%jspins),bc(lapw%dim_nv2d(),input%neig,input%jspins),dt(lapw%dim_nv2d()),&
          &           dte(lapw%dim_nv2d()),du(vacuum%nmzd),ddu(vacuum%nmzd,lapw%dim_nv2d()),due(vacuum%nmzd),&
          &           ddue(vacuum%nmzd,lapw%dim_nv2d()),t(lapw%dim_nv2d()),te(lapw%dim_nv2d()),&
@@ -434,32 +431,6 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
              !--->          the non-warping part of n_21 is calculated together with
              !--->          the warping part of n_21
              DO ispin = 1,input%jspins
-                IF (oneD%odi%d1) THEN
-                   DO  l = 1,nv2(ispin)
-                      DO  m = -oneD%odi%mb,oneD%odi%mb
-                         aa = CMPLX(0.0,0.0)
-                         bb = CMPLX(0.0,0.0)
-                         ba = CMPLX(0.0,0.0)
-                         ab = CMPLX(0.0,0.0)
-                         DO  n = 1,ne
-                            aa = aa + we(n)*CONJG(ac_1(l,m,n,ispin))*ac_1(l,m,n,ispin)
-                            bb = bb + we(n)*CONJG(bc_1(l,m,n,ispin))*bc_1(l,m,n,ispin)
-                            ab = ab + we(n)*CONJG(ac_1(l,m,n,ispin))*bc_1(l,m,n,ispin)
-                            ba = ba + we(n)*CONJG(bc_1(l,m,n,ispin))*ac_1(l,m,n,ispin)
-                            qout = REAL(CONJG(ac_1(l,m,n,ispin))*ac_1(l,m,n,ispin) +&
-                                 tei_1(l,m,ispin)*CONJG(bc_1(l,m,n,ispin))*&
-                                 bc_1(l,m,n,ispin))
-                            vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin)+qout*cell%area
-                            dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin)+qout*cell%area
-                         END DO
-                         DO  jz = 1,vacuum%nmz
-                            ui = u_1(jz,l,m,ispin)
-                            uei = ue_1(jz,l,m,ispin)
-                            den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
-                         END DO
-                      END DO
-                   END DO
-                ELSE
                    DO l = 1,nv2(ispin)
                       aa = 0.0
                       bb = 0.0
@@ -480,34 +451,9 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                          den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                       ENDDO
                    ENDDO
-                END IF ! one-dimensional
+                
              ENDDO
           ELSE
-             IF (oneD%odi%d1) THEN
-                DO  l = 1,nv2(jspin)
-                   DO  m = -oneD%odi%mb,oneD%odi%mb
-                      aa = CMPLX(0.0,0.0)
-                      bb = CMPLX(0.0,0.0)
-                      ba = CMPLX(0.0,0.0)
-                      ab = CMPLX(0.0,0.0)
-                      DO  n = 1,ne
-                         aa = aa + we(n)*CONJG(ac_1(l,m,n,jspin))*ac_1(l,m,n,jspin)
-                         bb = bb + we(n)*CONJG(bc_1(l,m,n,jspin))*bc_1(l,m,n,jspin)
-                         ab = ab + we(n)*CONJG(ac_1(l,m,n,jspin))*bc_1(l,m,n,jspin)
-                         ba = ba + we(n)*CONJG(bc_1(l,m,n,jspin))*ac_1(l,m,n,jspin)
-                         qout = REAL(CONJG(ac_1(l,m,n,jspin))*ac_1(l,m,n,jspin)+&
-                              tei_1(l,m,jspin)*CONJG(bc_1(l,m,n,jspin))*bc_1(l,m,n,jspin))
-                         vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin)+qout*cell%area
-                         dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin)+qout*cell%area
-                      END DO
-                      DO  jz = 1,vacuum%nmz
-                         ui = u_1(jz,l,m,jspin)
-                         uei = ue_1(jz,l,m,jspin)
-                         den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
-                      END DO
-                   END DO
-                END DO
-             ELSE          ! D1
                 DO l = 1,nv2(jspin)
                    aa = CMPLX(0.0,0.0)
                    bb = CMPLX(0.0,0.0)
@@ -528,7 +474,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                       den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                    ENDDO
                 END DO
-             END IF ! D1
+             
           ENDIF
        END IF
        !
@@ -767,49 +713,6 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
              !--->       diagonal elements of the density matrix, n_11 and n_22
              CALL timestart("vacden4_noco")
              DO ispin = 1,input%jspins
-                IF (oneD%odi%d1) THEN
-                   DO l = 1,nv2(ispin)
-                      DO m = -oneD%odi%mb,oneD%odi%mb
-                         lprimee: DO l1 = 1,l-1
-                            mprimee: DO m1 = -oneD%odi%mb,m-1
-                               i3 = kvac3(l,ispin) - kvac3(l1,ispin)
-                               m3 = m-m1
-                               IF (m3.EQ.0 .AND. i3.EQ.0) CYCLE mprimee
-                               IF (iabs(m3).GT.oneD%odi%M) CYCLE mprimee
-                               IF (iabs(i3).GT.stars%mx3) CYCLE lprimee
-                               ind1 = oneD%odi%ig(i3,m3)
-                               ind1p = oneD%odi%ig(-i3,-m3)
-                               IF (ind1.NE.0 .OR. ind1p.NE.0) THEN
-                                  aa = CMPLX(0.,0.)
-                                  bb = CMPLX(0.,0.)
-                                  ba = CMPLX(0.,0.)
-                                  ab = CMPLX(0.,0.)
-                                  DO n = 1,ne
-                                     aa=aa+we(n)*CONJG(ac_1(l1,m1,n,ispin))*ac_1(l,m,n,ispin)
-                                     bb=bb+we(n)*CONJG(bc_1(l1,m1,n,ispin))*bc_1(l,m,n,ispin)
-                                     ab=ab+we(n)*CONJG(ac_1(l1,m1,n,ispin))*bc_1(l,m,n,ispin)
-                                     ba=ba+we(n)*CONJG(bc_1(l1,m1,n,ispin))*ac_1(l,m,n,ispin)
-                                  END DO
-                                  xys1: DO jz = 1,vacuum%nmzxy
-                                     ui = u_1(jz,l,m,ispin)
-                                     uj = u_1(jz,l1,m1,ispin)
-                                     uei = ue_1(jz,l,m,ispin)
-                                     uej = ue_1(jz,l1,m1,ispin)
-                                     t1 = aa*ui*uj + bb*uei*uej + ba*ui*uej + ab*uei*uj
-                                     IF (ind1.NE.0) THEN
-                                        den%vacxy(jz,ind1-1,ivac,ispin) = den%vacxy(jz,ind1-1,ivac,ispin) + t1/ oneD%odi%nst2(ind1)
-                                     END IF
-                                     IF (ind1p.NE.0) THEN
-                                        den%vacxy(jz,ind1p-1,ivac,ispin) = den%vacxy(jz,ind1p-1,ivac,ispin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
-                                     END IF
-
-                                  END DO xys1
-                               END IF   ! ind1 and ind1p =0
-                            END DO mprimee
-                         END DO lprimee
-                      END DO  ! m
-                   END DO   ! l
-                ELSE
                    DO l = 1,nv2(ispin)
                       DO  l1 = 1,l - 1
                          i1 = kvac1(l,ispin) - kvac1(l1,ispin)
@@ -845,66 +748,9 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                          ENDDO
                       ENDDO
                    ENDDO
-                END IF ! oneD%odi%d1
+                
              END DO
              !--->          off-diagonal element of the density matrix, n_21
-             IF (oneD%odi%d1) THEN
-                DO l = 1,nv2(1)
-                   DO m = -oneD%odi%mb,oneD%odi%mb
-                      lprimea: DO l1 = 1,nv2(2)
-                         mprimea: DO m1 = -oneD%odi%mb,oneD%odi%mb
-                            i3 = kvac3(l,1) - kvac3(l1,2)
-                            m3 = m-m1
-                            IF (iabs(m3).GT.oneD%odi%M) CYCLE mprimea
-                            IF (iabs(i3).GT.stars%mx3) CYCLE lprimea
-                            ind1 = oneD%odi%ig(i3,m3)
-                            IF (ind1.NE.0) THEN
-                               IF (m3.EQ.0 .AND. i3.EQ.0) THEN
-                                  aa = CMPLX(0.,0.)
-                                  bb = CMPLX(0.,0.)
-                                  ba = CMPLX(0.,0.)
-                                  ab = CMPLX(0.,0.)
-                                  DO n = 1,ne
-                                     aa=aa+we(n)*CONJG(ac_1(l1,m1,n,2))* ac_1(l,m,n,1)
-                                     bb=bb+we(n)*CONJG(bc_1(l1,m1,n,2))* bc_1(l,m,n,1)
-                                     ab=ab+we(n)*CONJG(ac_1(l1,m1,n,2))* bc_1(l,m,n,1)
-                                     ba=ba+we(n)*CONJG(bc_1(l1,m1,n,2))* ac_1(l,m,n,1)
-                                  END DO
-                                  xys3: DO jz = 1,vacuum%nmzxy
-                                     ui = u_1(jz,l,m,1)
-                                     uj = u_1(jz,l1,m1,2)
-                                     uei = ue_1(jz,l,m,1)
-                                     uej = ue_1(jz,l1,m1,2)
-                                     tempCmplx = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                                     den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
-                                     den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) + AIMAG(tempCmplx)
-                                  END DO xys3
-                               ELSE ! the warped part (ind1 > 1)
-                                  aa = CMPLX(0.,0.)
-                                  bb = CMPLX(0.,0.)
-                                  ba = CMPLX(0.,0.)
-                                  ab = CMPLX(0.,0.)
-                                  DO n = 1,ne
-                                     aa=aa+we(n)*CONJG(ac_1(l1,m1,n,2))* ac_1(l,m,n,1)
-                                     bb=bb+we(n)*CONJG(bc_1(l1,m1,n,2))* bc_1(l,m,n,1)
-                                     ab=ab+we(n)*CONJG(ac_1(l1,m1,n,2))* bc_1(l,m,n,1)
-                                     ba=ba+we(n)*CONJG(bc_1(l1,m1,n,2))* ac_1(l,m,n,1)
-                                  END DO
-                                  xys2: DO jz = 1,vacuum%nmzxy
-                                     ui = u_1(jz,l,m,1)
-                                     uj = u_1(jz,l1,m1,2)
-                                     uei = ue_1(jz,l,m,1)
-                                     uej = ue_1(jz,l1,m1,2)
-                                     t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                                     den%vacxy(jz,ind1-1,ivac,3) = den%vacxy(jz,ind1-1,ivac,3) + t1/oneD%odi%nst2(ind1)
-                                  END DO xys2
-                               END IF  ! the non-warped (ind1 = 1)
-                            END IF   ! ind1.ne.0
-                         END DO mprimea
-                      END DO lprimea
-                   END DO  ! m
-                END DO   ! l
-             ELSE ! oneD%odi%d1
                 DO l = 1,nv2(1)
                    DO  l1 = 1,nv2(2)
                       i1 = kvac1(l,1) - kvac1(l1,2)
@@ -961,54 +807,9 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                       ENDIF
                    ENDDO
                 END DO
-             END IF ! oneD%odi%d1
              CALL timestop("vacden4_noco")
           ELSE                                ! collinear part
-             IF (oneD%odi%d1) THEN
-                DO l = 1,nv2(jspin)
-                   DO m = -oneD%odi%mb,oneD%odi%mb
-                      lprime: DO l1 = 1,l-1
-                         mprime: DO m1 = -oneD%odi%mb,m-1
-                            i3 = kvac3(l,jspin) - kvac3(l1,jspin)
-                            m3 = m-m1
-                            IF (m3.EQ.0 .AND. i3.EQ.0) CYCLE mprime
-                            IF (iabs(m3).GT.oneD%odi%M) CYCLE mprime
-                            IF (iabs(i3).GT.stars%mx3) CYCLE lprime
-                            ind1 = oneD%odi%ig(i3,m3)
-                            ind1p = oneD%odi%ig(-i3,-m3)
-                            IF (ind1.NE.0 .OR. ind1p.NE.0) THEN
-                               aa = CMPLX(0.,0.)
-                               bb = CMPLX(0.,0.)
-                               ba = CMPLX(0.,0.)
-                               ab = CMPLX(0.,0.)
-                               DO n = 1,ne
-                                  aa=aa+we(n)*CONJG(ac_1(l1,m1,n,jspin))* ac_1(l,m,n,jspin)
-                                  bb=bb+we(n)*CONJG(bc_1(l1,m1,n,jspin))* bc_1(l,m,n,jspin)
-                                  ab=ab+we(n)*CONJG(ac_1(l1,m1,n,jspin))* bc_1(l,m,n,jspin)
-                                  ba=ba+we(n)*CONJG(bc_1(l1,m1,n,jspin))* ac_1(l,m,n,jspin)
-                               END DO
-                               xys: DO jz = 1,vacuum%nmzxy
-                                  ui = u_1(jz,l,m,jspin)
-                                  uj = u_1(jz,l1,m1,jspin)
-                                  uei = ue_1(jz,l,m,jspin)
-                                  uej = ue_1(jz,l1,m1,jspin)
-                                  t1 = aa*ui*uj + bb*uei*uej + ba*ui*uej + ab*uei*uj
-                                  IF (ind1.NE.0) THEN
-                                     den%vacxy(jz,ind1-1,ivac,jspin) = den%vacxy(jz,ind1-1,ivac,jspin) + t1/ oneD%odi%nst2(ind1)
-                                  END IF
-                                  IF (ind1p.NE.0) THEN
-                                     den%vacxy(jz,ind1p-1,ivac,jspin) = den%vacxy(jz,ind1p-1,ivac,jspin) + CONJG(t1)/ oneD%odi%nst2(ind1p)
-                                  END IF
-
-                               END DO xys
-                            END IF   ! ind1 and ind1p =0
-                         END DO mprime
-                      END DO lprime
-                   END DO  ! m
-                END DO   ! l
-
-             ELSE         !D1
-
+             
                 !$OMP PARALLEL DEFAULT(none) &
                 !$OMP SHARED(nv2,jspin,kvac1,kvac2,stars,ne,we,vacuum,den,ac,bc,u,ue,ivac) &
                 !$OMP PRIVATE(l1,i1,i2,i3,ig3,phs,ig3p,phsp,ind2,ind2p,n,jz,ui,uj,uei,uej)&
@@ -1058,8 +859,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
                 !$OMP END DO
                 DEALLOCATE(t1jz)
                 !$OMP END PARALLEL
-             END IF ! D1
-          ENDIF
+             ENDIF
        END IF
        !=============================================================
        !
@@ -1107,10 +907,7 @@ if (oneD%odi%d1) call judft_error("BUG: vacden does not handle oneD case anymore
     ENDDO
     DEALLOCATE (ac,bc,dt,dte,du,ddu,due,ddue,t,te,tei,u,ue,v,yy )
 
-    IF (oneD%odi%d1) THEN
-       DEALLOCATE (ac_1,bc_1,dt_1,dte_1,du_1,ddu_1,due_1,ddue_1)
-       DEALLOCATE (t_1,te_1,tei_1,u_1,ue_1)
-    END IF ! oneD%odi%d1
+
 
     !IF(vacuum%nvac.EQ.1) THEN
     !   den%vacz(:,2,:) = den%vacz(:,1,:)

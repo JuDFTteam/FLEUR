@@ -1693,8 +1693,8 @@ CONTAINS
     integer          ,intent(in) :: method2
     real             ,intent(in) :: rat(atoms%msh,atoms%ntype)
     type(t_cell)     ,intent(in) :: cell
-    !type(t_oneD)     ,intent(in) :: oneD
-    type(t_oneD)                 :: oneD
+    ! 
+     
     type(t_sym)      ,intent(in) :: sym
     integer, intent(in) :: ngpqdp
     integer, intent(in) :: gpqdp(:, :)
@@ -1764,8 +1764,8 @@ CONTAINS
 !              END IF
             do ieqat = 1, atoms%neq(n)
               iatom = iatom + 1
-       !     CALL StructureConst_forAtom(nat1,stars,oneD,sym,&
-            CALL StructureConst_forAtom(iatom,stars,oneD,sym,&
+       !     CALL StructureConst_forAtom(nat1,stars ,sym,&
+            CALL StructureConst_forAtom(iatom,stars ,sym,&
                                atoms%neq(n),atoms%nat,atoms%taual, ngpqdp, gpqdp, &
 !                                 cell,qf,qpwc_at)
                                cell,qfG,qpwc_atG)
@@ -1791,7 +1791,7 @@ CONTAINS
 
     end subroutine ft_of_CorePseudocharge
 
-    subroutine StructureConst_forAtom(nat1,stars,oneD, sym,&
+    subroutine StructureConst_forAtom(nat1,stars , sym,&
                         neq,natd,taual,ngpqdp, gpqdp, cell,qfG,qpwc_atG)
 !       calculates structure constant for each atom of atom type
 
@@ -1802,7 +1802,7 @@ CONTAINS
 
      integer          ,intent(in) :: nat1
      type(t_stars)    ,intent(in) :: stars
-     type(t_oneD)     ,intent(in) :: oneD
+      
      type(t_sym)      ,intent(in) :: sym
      integer          ,intent(in) :: neq,natd
      real             ,intent(in) :: taual(3,natd)
@@ -1822,10 +1822,9 @@ CONTAINS
 
 !      ..Local arrays
      integer kr(3,sym%nop)
-!       real    kro(3,oneD%ods%nop)
+!       real    kro(3 %ods%nop)
      complex phas(sym%nop)
-     complex phaso(oneD%ods%nop)
-
+    
     czero = (0.0,0.0)
     !DO k = 1 , stars%ng3
     !    qpwc_at(k) = czero
@@ -1844,9 +1843,9 @@ CONTAINS
     !    then  G>0
     !
 !!$OMP PARALLEL DO DEFAULT(none) &
-!!$OMP SHARED(stars,oneD,sym,neq,natd,nat1,taual,cell,qf,qpwc_at) &
+!!$OMP SHARED(stars ,sym,neq,natd,nat1,taual,cell,qf,qpwc_at) &
 !!$OMP FIRSTPRIVATE(czero) &
-! !$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kro,phaso)
+! !$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kro)
     DO  k = 1,ngpqdp
       ! G=0
       !if (all(gpqdp(:, k) == 0)) then
@@ -1854,7 +1853,7 @@ CONTAINS
       !  cycle
       !end if
     !DO  k = 2,stars%ng3
-!          IF (.NOT.oneD%odi%d1) THEN
+!          
         !    CALL spgrot(&
         !         &                       sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
         !         &                       stars%kv3(:,k),&
@@ -1878,24 +1877,7 @@ CONTAINS
                  !sf = sf / REAL( sym%nop )
                  qpwc_atG(k)      = qpwc_atG(k)      + exp(-tpi_const * iu * dot_product(gpqdp(1:3, k), taual(1:3, nat1))) * qfG(k)
              !ENDDO
-!          ELSE
-!               !-odim
-!               CALL od_chirot(oneD%odi,oneD%ods,cell%bmat,stars%kv3(:,k),kro,phaso)
-!               nat2 = nat1 + neq - 1
-!               DO  nat = nat1,nat2
-!                   !                  sf = cmplx(1.,0.)
-!                   sf = czero
-!                   DO  j = 1,oneD%ods%nop
-!                       x = -tpi_const* ( kro(1,j)*taual(1,nat)&
-!                           &          + kro(2,j)*taual(2,nat)&
-!                           &          + kro(3,j)*taual(3,nat))
-!                       sf = sf + CMPLX(COS(x),SIN(x))*phaso(j)
-!                   ENDDO
-!                   sf = sf / REAL( oneD%ods%nop )
-!                   qpwc_atG(k)      = qpwc_atG(k)      + sf * qfG(k)
-!               ENDDO
-!               !+odim
-!          END IF
+!          
     ENDDO
 !!$OMP END PARALLEL DO
     end subroutine StructureConst_forAtom

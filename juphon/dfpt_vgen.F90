@@ -9,7 +9,7 @@ MODULE m_dfpt_vgen
 CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell,oneD,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,&
+                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,&
                    &starsq,dfptdenimag,dfptvTot,dfptvTotimag,dfptdenreal,iDtype,iDir)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
@@ -45,7 +45,7 @@ CONTAINS
       CLASS(t_xcpot),    INTENT(IN)    :: xcpot
       TYPE(t_hybdat),    INTENT(IN)    :: hybdat
       TYPE(t_mpi),       INTENT(IN)    :: fmpi
-      TYPE(t_oneD),      INTENT(IN)    :: oneD
+       
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_input),     INTENT(IN)    :: input
       TYPE(t_field),     INTENT(IN)    :: field
@@ -115,7 +115,7 @@ CONTAINS
         !       we also add the q in question at the relevant points.
         ! NOTE: The normal stars are also passed as an optional argument, because
         !       they are needed for surface-qlm.
-        CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.FALSE.,workdenReal,vCoul,&
+        CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.FALSE.,workdenReal,vCoul,&
                         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
 
       ! b)
@@ -126,7 +126,7 @@ CONTAINS
       IF (noco%l_noco) THEN
          CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
          denRot=den
-         CALL rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
+         CALL rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,cell,input,noco ,denRot)
          IF (any(noco%l_unrestrictMT)) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)
       END IF
 
@@ -142,7 +142,7 @@ CONTAINS
               IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation(atoms,sphhar,sym,noco,denRot,den1Rot,den1imRot)
           END IF
           CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                          cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
+                          cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                           & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
       ! d)

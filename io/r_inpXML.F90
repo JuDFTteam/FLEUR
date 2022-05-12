@@ -15,7 +15,7 @@ MODULE m_rinpXML
 CONTAINS
    SUBROUTINE r_inpXML(&
       atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
-      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
+      cell,sym,xcpot,noco ,hybrid,kpts,enpara,coreSpecInput,wann,&
       noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
       xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
       l_kpts)
@@ -49,7 +49,7 @@ CONTAINS
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_obsolete),INTENT(INOUT) :: obsolete
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
-      TYPE(t_oneD),INTENT(INOUT)     :: oneD
+       
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_banddos),INTENT(INOUT)  :: banddos
@@ -648,24 +648,7 @@ CONTAINS
          END IF
       END IF
 
-      ! Read in optional 1D parameters if present
-
-      xPathA = '/fleurInput/calculationSetup/oneDParams'
-      numberNodes = xmlGetNumberOfNodes(xPathA)
-
-      oneD%odd%d1 = .FALSE.
-
-      IF (numberNodes.EQ.1) THEN
-         oneD%odd%d1 = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@d1'))
-         oneD%odd%M = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@MM'))
-         oneD%odd%mb = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vM'))
-         oneD%odd%m_cyl = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@m_cyl'))
-         oneD%odd%chi = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@chi'))
-         oneD%odd%rot = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@rot'))
-         oneD%odd%invs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@invs1'))
-         oneD%odd%zrfs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zrfs1'))
-      END IF
-
+ 
       ! Read in optional geometry optimization parameters
 
       xPathA = '/fleurInput/calculationSetup/geometryOptimization'
@@ -1142,14 +1125,9 @@ CONTAINS
       cell%bmat(:,:) = tpi_const*cell%bmat(:,:)
       cell%omtil = ABS(cell%omtil)
 
-      IF (input%film.AND..NOT.oneD%odd%d1) THEN
+      IF (input%film) THEN
          cell%vol = (cell%omtil/cell%amat(3,3))*vacuum%dvac
          cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
-         !-odim
-      ELSE IF (oneD%odd%d1) THEN
-         cell%area = tpi_const*cell%amat(3,3)
-         cell%vol = pi_const*(vacuum%dvac**2)*cell%amat(3,3)/4.0
-         !+odim
       ELSE
          cell%vol = cell%omtil
          cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
@@ -1193,11 +1171,9 @@ CONTAINS
       vacuum%nmzd = 250
       vacuum%nmzxyd = 100
       vacuum%nvac = 2
-      IF (oneD%odd%d1) vacuum%nvac = 1
       cell%z1 = vacuum%dvac/2
       vacuum%nmz = vacuum%nmzd
       vacuum%delz = 25.0/vacuum%nmz
-      IF (oneD%odd%d1) vacuum%delz = 20.0 / vacuum%nmz
       IF (vacuum%nmz.GT.vacuum%nmzd) CALL juDFT_error("nmzd",calledby ="inped")
       vacuum%nmzxy = vacuum%nmzxyd
       IF (vacuum%nmzxy.GT.vacuum%nmzxyd) CALL juDFT_error("nmzxyd",calledby ="inped")

@@ -23,12 +23,12 @@ c*******************************************c
       CONTAINS
       SUBROUTINE wann_uHu(
      >      stars,vacuum,atoms,sphhar,input,kpts,sym,fmpi,
-     >      banddos,oneD,noco,nococonv,cell,vTot,wann,enpara,
+     >      banddos ,noco,nococonv,cell,vTot,wann,enpara,
      >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss,sk2,phi2,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -82,7 +82,7 @@ c*******************************************c
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: fmpi
       TYPE(t_banddos),INTENT(IN)   :: banddos
-      TYPE(t_oneD),INTENT(IN)      :: oneD
+       
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
       TYPE(t_cell),INTENT(IN)      :: cell
@@ -92,8 +92,7 @@ c*******************************************c
 
 c     ..scalar arguments..
       character(len=20),intent(in) :: param_file
-      type (od_inp), intent (in) :: odi
-      type (od_sym), intent (in) :: ods
+  
       INTEGER, INTENT (IN) :: eig_idList(wann%nparampts)
       logical, intent (in) :: invs,invs2,film,slice,symor
       logical, intent (in) :: l_real,l_noco,l_ss,l_soc
@@ -450,7 +449,7 @@ c********************************************************
          allocate(pair_to_do(fullnkpts,nntot))
          call wann_mmnk_symm(input,kpts,
      >     fullnkpts,nntot,bpt,gb,wann%l_bzsym,
-     >     irreduc,mapkoper,l_p0,film,nop,invtab,mrot,odi%d1,
+     >     irreduc,mapkoper,l_p0,film,nop,invtab,mrot,
      >     tau,
      <     pair_to_do,maptopair,kdiff,.false.,param_file)
 
@@ -461,7 +460,7 @@ c********************************************************
          call wann_mmnk_symm(input,kpts,
      >     fullnqpts,nntot_q,bpt_q,gb_q,wann%l_bzsym,
      >     irreduc_q,mapqoper,l_p0,.false.,1,invtab(1),mrot(:,:,1),
-     >     .false.,tau,
+     >     tau,
      <     pair_to_do_q,maptopair_q,qdiff,.true.,param_file)
       endif
 
@@ -471,9 +470,9 @@ cccccccccccccccc   initialize the potential   cccccccccccc
 c*********************************************************
 
       if(.not. l_noco) then
-       allocate ( vpw(n3d,jspd),vzxy(nmzxyd,odi%n2d-1,2,jspd) )
+       allocate ( vpw(n3d,jspd),vzxy(nmzxyd,stars%ng2-1,2,jspd) )
       else
-       allocate ( vpw(n3d,4),vzxy(nmzxyd,odi%n2d-1,2,4) )
+       allocate ( vpw(n3d,4),vzxy(nmzxyd,stars%ng2-1,2,4) )
       endif
 
       allocate (vz(nmzd,2,4))
@@ -513,7 +512,6 @@ c--->    load the interstitial potential
          vpw(:,4) = conjg(vpw(:,3))
          if(film) then
           maxvac=2
-          if(odi%d1)maxvac=1
           DO ivac = 1,maxvac
 c--->       if the two vacuua are equivalent, the potential file has to
 c--->       be backspaced, because the potential is the same at both
@@ -527,17 +525,10 @@ c--->       load the non-warping part of the potential
             READ (npotmatfile)((vz(imz,ivac,ipot),imz=1,nmzd),ipot=1,4)
 
 c--->       load the warping part of the potential
-            if(.not.odi%d1)then
                DO ipot = 1,3
                   READ (npotmatfile)((vzxy(imz,igvm2,ivac,ipot),
      +                           imz=1,nmzxy),igvm2=1,nq2-1)
                ENDDO
-            else
-               DO ipot = 1,3
-                  READ (npotmatfile)((vzxy(imz,igvm2,ivac,ipot),
-     +                           imz=1,nmzxy),igvm2=1,odi%n2d-1)
-               ENDDO
-            endif
             vzxy(:,:,:,4) = conjg(vzxy(:,:,:,3))
           enddo
          endif
@@ -805,7 +796,7 @@ c..   now we want to define the maximum number of the bands by all kpts
      >  l_ss,l_noco,nrec,fullnkpts,
      >  wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
      >  wann%l_byenergy,
-     >  irreduc,odi,wann%band_min(jspin),
+     >  irreduc,wann%band_min(jspin),
      >  wann%band_max(jspin),
      >  numbands,e1s,e2s,efermi,nkpts,
      <  nbnd,l_gwf,iqpt)
@@ -1147,11 +1138,11 @@ c***********************************************************
       ! I think the other variables of lapw are not needed here.
 !TODO
 !      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
-!     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
+!     +           noccbd_b,usdus,noco,jspin,kveclo_b ,
 !     +           acof_b,bcof_b,ccof_b,zMat_b)
 
         CALL abcof(input,atoms,sym,cell,lapw_b,
-     &      noccbd_b,usdus,noco,nococonv,jspin,oneD,
+     &      noccbd_b,usdus,noco,nococonv,jspin ,
      &      acof_b,bcof_b,ccof_b,zMat_b)
 
 
@@ -1286,13 +1277,13 @@ c***********************************************************
       ! I think the other variables of lapw are not needed here.
 !TODO
 !      CALL abcof(input,atoms,noccbd_b2,sym,cell,bkpt_b2,lapw_b2,
-!     +           noccbd_b2,usdus,noco,jspin_b,kveclo_b2,oneD,
+!     +           noccbd_b2,usdus,noco,jspin_b,kveclo_b2 ,
 !     +           acof_b2,bcof_b2,ccof_b2,zMat_b2)
 
 !      DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
 
       CALL abcof(input,atoms,sym,cell,lapw_b2,
-     &    noccbd_b2,usdus,noco,nococonv,jspin,oneD,
+     &    noccbd_b2,usdus,noco,nococonv,jspin ,
      &   acof_b2,bcof_b2,ccof_b2,zMat_b2)
 
       call wann_abinv(atoms,sym,
@@ -1415,7 +1406,7 @@ c      endif
 
 
          ! VAC
-         if ((.not.l_skip_vac) .and. film .and. (.not.odi%d1)) then
+         if ((.not.l_skip_vac) .and. film ) then
 
             call cpu_time(t0)
             call wann_uHu_vac(
@@ -1439,29 +1430,7 @@ c      endif
             call cpu_time(t1)
             t_vac = t_vac + t1 - t0
 
-         elseif ((.not.l_skip_vac) .and. odi%d1) then
-
-            call cpu_time(t0)
-            call wann_uHu_od_vac(
-     >            oneD,vacuum,stars,cell,
-     >            cmplx(1.,0.),l_noco,l_soc,jspins,nlotot,nbnd,z1,
-     >            nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,ig,nmzxy,nmz,
-     >  delz,ig2,bbmat,evac(1,jspin4),evac(1,jspin4_b),lapw_b%bkpt,
-     >  lapw_b2%bkpt,odi,vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
-     >  jspin,jspin_b,doublespin,
-!     >            k1_b,k2_b,k3_b,
-     >   lapw_b%k1(:,:),lapw_b%k2(:,:),lapw_b%k3(:,:),
-!     >            k1_b2,k2_b2,k3_b2,
-     >   lapw_b2%k1(:,:),lapw_b2%k2(:,:),lapw_b2%k3(:,:),
-     >  wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,
-     >            lapw_b%nv,!nv_b,
-     >            lapw_b2%nv,!nv_b2,
-     >            sk2,phi2,omtil,gb(:,ikpt_b,ikpt),
-     >            gb(:,ikpt_b2,ikpt),qpt_i,sign2,
-     >            uHu(:,:,ikpt_b2,ikpt_b,i_rec))
-            call cpu_time(t1)
-            t_vac = t_vac + t1 - t0
-
+   
          endif
 c      if(ikpt.eq.1) then
 c       write(*,*)'VAC',ikpt_b2,ikpt_b
