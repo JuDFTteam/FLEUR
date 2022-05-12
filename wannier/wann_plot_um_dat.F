@@ -35,7 +35,6 @@ c******************************************************************
       use m_wann_rw_eig
       use m_abcof
       use m_wann_2dvacabcof
-      use m_wann_1dvacabcof
       use m_radfun
       use m_radflo
       use m_cdnread
@@ -46,7 +45,6 @@ c******************************************************************
       use m_wann_read_umatrix
       use m_wann_kptsrotate
       use m_wann_plot_vac
-      use m_wann_plot_od_vac
       use m_wann_abinv
 
 

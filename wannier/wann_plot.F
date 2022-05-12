@@ -55,9 +55,7 @@
       USE m_xsf_io
       USE m_wann_plot_vac
       USE m_wann_2dvacabcof
-      USE m_wann_plot_od_vac
-      USE m_wann_1dvacabcof
-
+   
       IMPLICIT NONE
 
       

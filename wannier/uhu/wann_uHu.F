@@ -58,7 +58,6 @@ c*******************************************c
       use m_wann_uHu_int
       use m_wann_uHu_soc
       use m_wann_uHu_vac
-      use m_wann_uHu_od_vac
       use m_wann_uHu_util
       use m_wann_uHu_commat
       use m_wann_write_uHu

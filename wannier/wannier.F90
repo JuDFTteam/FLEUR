@@ -67,8 +67,6 @@ CONTAINS
     USE m_radfun
     USE m_radflo
     USE m_cdnread
-    USE m_wann_mmk0_od_vac
-    USE m_wann_mmkb_od_vac
     USE m_wann_mmk0_vac
     USE m_wann_mmkb_vac
     USE m_wann_updown
