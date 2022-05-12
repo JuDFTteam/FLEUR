@@ -31,8 +31,8 @@ CONTAINS
     USE m_grdchlh
     USE m_mkgz
     USE m_mkgxyz3
-    !USE m_od_mkgxyz3
-    !USE m_od_mkgz
+    ! 
+    ! 
     USE m_fft2d
     use m_vac_tofrom_grid
     USE m_libxc_postprocess_gga

@@ -1798,7 +1798,7 @@ CONTAINS
     USE m_types
     USE m_spgrot
     USE m_constants
-    USE m_od_chirot
+     
 
      integer          ,intent(in) :: nat1
      type(t_stars)    ,intent(in) :: stars

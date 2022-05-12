@@ -126,7 +126,7 @@ module m_jpTestDynMatDeprecated
   subroutine plotBasVar1( atoms, sym, cell, kpts, dimens, usdus, GbasVec, nv, mapGbas, kveclo, nRadFun, rbas1, rbas2, iloTable )
 
     use m_types, only : t_atoms, t_sym, t_cell, t_kpts, t_dimension, t_usdus
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
     use m_jpConstants, only : iu, fpi
     use m_jpPotDensHelper, only : grFlmpYlmPerType
@@ -2510,7 +2510,7 @@ module m_jpTestDynMatDeprecated
     use m_types, only : t_atoms, t_dimension, t_kpts, t_sphhar, t_cell, t_input, t_stars, t_potential, t_sym, t_usdus, t_results
     use mod_juPhonUtils, only : Derivative, CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat, convertStar2G
     use m_jpSetupDynMat, only : CalcGrVarphiHepsGrtVarphiElem, CalcVecBasfMatElems, calcPsi1HepsPsi1IR
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpConstants, only : iu, Tmatrix, Tmatrix_transposed
     use m_abcof3
     use m_jpSetupDynMatSF, only : CalcSFintIRgradPsiHepsPsi, CalcSFintMTgradPsiHepsPsi
@@ -3028,7 +3028,7 @@ write(*, *) 'calchngrv0varphi'
     use m_jpSternhHF, only : calcMEPotIR
     use m_jpPotDensHelper, only : warpIRPot, calcGrR2FinLH
     use m_jpSetupDynMat, only : EvalIntRho1Veff1, CalcGrVarphiHepsGrtVarphiElem
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
     use m_jpSetupDynMatHelper, only : CalcHnGrV0Varphi, CalcFnsphVarphi
 
@@ -3998,7 +3998,7 @@ grVarphiGrtVeff0SphVarphiMeshNat = 0.
     use m_jpTestPotential, only : checkjuPhPots
     use m_jpSetupDynMatHelper, only : CalcFnsphVarphi, CalcFnsphGrVarphi, CalcHnGrV0Varphi
     use m_jpSetupDynMat, only : CalcScalBasfMatElems, CalcSelfAdjCorrection, CalcVecBasfMatElems, calcPsi1HepsPsi1IR, CalcGrVarphiHepsGrtVarphiElem, SetupDynMatHF
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
     use m_jpSternhHF, only : CalcMEPotIR
     use mod_juPhonUtils, only : convertStar2G, Derivative, CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat
@@ -5429,7 +5429,7 @@ end if
     use m_jpSetupDynMatSF, only : CalcHGrVarphi
     use m_jpSetupDynMatHelper, only : CalcHnGrV0Varphi
     use m_jpConstants, only : iu, Tmatrix_transposed
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
 
 
@@ -6485,7 +6485,7 @@ end if
     use mod_juPhonUtils, only : Derivative, CalcChannelsGrFlpNat, CalcChannelsGrGrtFlpNat
     use m_jpSternhHF, only : calcMEPotIR
     use m_jpSetupDynMat, only : CalcGrVarphiHepsGrtVarphiElem, CalcVecBasfMatElems, calcPsi1HepsPsi1IR
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
     use m_jpSetupDynMatHelper, only : CalcHnGrV0Varphi
 

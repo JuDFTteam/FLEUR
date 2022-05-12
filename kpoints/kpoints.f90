@@ -11,7 +11,7 @@ contains
     USE m_types
     USE m_julia
     USE m_kptgen_hybrid
-    USE m_od_kptsgen
+     
     USE m_unfold_band_kpts
   
     implicit none

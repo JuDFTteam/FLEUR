@@ -210,7 +210,7 @@ contains
 #endif
     use m_phasy1
     use m_sphbes
-    use m_od_phasy
+     
     use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK
     use m_types
     use m_DoubleFactorial

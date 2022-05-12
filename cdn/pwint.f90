@@ -7,7 +7,7 @@
       SUBROUTINE pwint(stars,atoms,sym,cell,ng,x)
 
       USE m_spgrot
-      USE m_od_cylbes
+       
       use m_juDFT
       USE m_types 
       USE m_constants
@@ -83,7 +83,7 @@
       SUBROUTINE pwint_all(stars,atoms,sym,cell,x_start,x_end,x)
 
       USE m_spgrot
-      USE m_od_cylbes
+       
       use m_juDFT
       USE m_types 
       USE m_constants

@@ -16,7 +16,6 @@ CONTAINS
       USE m_angles !Phase factors for spin-offdiagonal lda+u
       USE m_constants
       USE m_mapatom
-      USE m_od_mapatom
       use m_ptsym
       USE m_types_sym
       USE m_types_cell

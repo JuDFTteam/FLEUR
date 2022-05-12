@@ -20,7 +20,7 @@
       USE m_rwinp
       USE m_inpnoco
 !      USE m_julia
-!      USE m_od_kptsgen
+!       
       USE m_types_input
       USE m_types_sym
       USE m_types_stars

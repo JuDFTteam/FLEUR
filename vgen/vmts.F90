@@ -38,7 +38,7 @@ contains
     use m_intgr, only : intgr2, sfint
     use m_phasy1
     use m_sphbes
-    use m_od_phasy
+     
     use m_SphBessel
     !$ use omp_lib
     implicit none

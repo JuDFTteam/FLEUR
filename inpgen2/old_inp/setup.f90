@@ -51,9 +51,9 @@
           USE m_inpeig
           !USE m_ylm
           !-odim
-          !USE m_od_mapatom
-          !USE m_od_chisym
-          !USE m_od_strgn1
+          ! 
+          ! 
+          ! 
           !+odim
           IMPLICIT NONE
           !     ..

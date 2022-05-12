@@ -9,7 +9,7 @@ CONTAINS
   SUBROUTINE make_sphhar(l_write,atoms,sphhar,sym,cell )
     USE m_types_setup
     USE m_localsym
-    USE m_od_chisym
+     
     LOGICAL,INTENT(IN) :: l_write
     TYPE(t_atoms),INTENT(inout)::atoms
     TYPE(t_sphhar),INTENT(inout)::sphhar

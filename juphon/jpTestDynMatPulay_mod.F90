@@ -267,7 +267,7 @@ module m_jpTestDynMatPulay
     use m_jpSternhHF, only : tlmplm4V, CalcVsumMT
     use m_jpConstants, only : iu, Tmatrix
     use m_abcof3
-    use m_od_types, only : od_inp, od_sym
+     
     use mod_juPhonUtils, only : Derivative, CalcChannelsGrFlpNat, Fopen, Fclose, calcGrR2FinLh
     use m_jpSetupDynMatHelper, only : CalcHnGrV0Varphi
     use m_jpSetupDynMatSF, only : CalcHGrVarphi, PrepareMTSurfIntDM, CalcSintMT, CalcSintKinEnergOvl
@@ -1075,7 +1075,7 @@ module m_jpTestDynMatPulay
     use m_jpSetupDynMatHelper, only : CalcHnGrV0Varphi
     use m_jpSetupDynMat, only : CalcScalBasfMatElems
     use m_abcof3, only : abcof3
-    use m_od_types, only : od_inp, od_sym
+     
     use mod_juPhonUtils, only : Derivative
     use m_jpSternhPulaySurface, only : tlmplm4H0, calcHS0MT
     use m_abcof
@@ -1767,7 +1767,7 @@ module m_jpTestDynMatPulay
       & z0, nv, kveclo, gBas, nobd, mapGbas, rbas1, rbas2, iloTable, mlh_atom, nmem_atom)
 
     use m_jPConstants, only : iu, fpi
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
     use m_types, only : t_atoms, t_usdus, t_kpts, t_cell, t_sym, t_dimension, t_results, t_sphhar
     use m_intgr, only : intgr3LinIntp
@@ -3042,7 +3042,7 @@ module m_jpTestDynMatPulay
 #include"cppmacro.h"
 
     use m_types, only : t_atoms, t_stars, t_sphhar, t_sym, t_cell, t_kpts, t_dimension, t_usdus, t_enpara, t_input, t_tlmplm
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
     use m_juDFT_NOstopNO, only : juDFT_warn
     use m_jpSternhPulaySurface, only : tlmplm4H0, calcHS0MT
@@ -3464,7 +3464,7 @@ module m_jpTestDynMatPulay
 #include"cppmacro.h"
 
     use m_types, only : t_atoms, t_sphhar, t_sym, t_cell, t_kpts, t_dimension, t_usdus, t_enpara, t_input, t_tlmplm
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
     use m_juDFT_NOstopNO, only : juDFT_warn
     use m_jpSternhPulaySurface, only : tlmplm4H0, calcHS0MT
@@ -4173,7 +4173,7 @@ module m_jpTestDynMatPulay
     use m_types, only : t_atoms, t_sym, t_dimension, t_sphhar, t_stars, t_potential, t_kpts, t_cell, t_input, t_usdus, t_results
     use m_jpConstants, only : iu, Tmatrix, fpi
     use mod_juPhonUtils, only : Derivative, CalcChannelsGrFlpNat, calcGrR2FinLH
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
     use m_gaunt, only : gaunt1
     use m_juDFT_NOstopNO, only : juDFT_warn
@@ -4646,7 +4646,7 @@ module m_jpTestDynMatPulay
     use m_jpSternhHF, only : calcMEPotIR
     use m_jpPotDensHelper, only : warpIRPot, convertStar2G
     use m_jpSetupDynMat, only : CalcGrVarphiHepsGrtVarphiElem
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof3
     use m_jpSetupDynMatHelper, only : CalcHnGrV0Varphi, CalcFnsphVarphi
     use m_juDFT_NOstopNO, only : juDFT_warn

@@ -22,7 +22,7 @@ CONTAINS
       USE m_types_gpumat
       USE m_hs_int
       USE m_hsvac
-      USE m_od_hsvac
+       
       USE m_hsmt
       USE m_eigen_redist_matrix
       USE m_add_vnonlocal

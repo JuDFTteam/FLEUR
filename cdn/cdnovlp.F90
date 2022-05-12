@@ -91,7 +91,7 @@ CONTAINS
           USE m_qpwtonmt
           USE m_cylbes
           USE m_dcylbs
-          USE m_od_cylbes
+           
           USE m_diflgr
           USE m_types
           USE m_intgr, ONLY : intgr3
@@ -713,7 +713,7 @@ CONTAINS
       USE m_types
       USE m_spgrot
       USE m_constants
-      USE m_od_chirot
+       
 
       integer,       intent(in)  :: nat1
       type(t_stars), intent(in)  :: stars
