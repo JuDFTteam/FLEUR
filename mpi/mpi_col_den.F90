@@ -125,7 +125,7 @@ CONTAINS
     DEALLOCATE (r_b)
 
     ! Refactored stuff
-    n = 4*(((atoms%lmaxd+1)**2)+1)*sphhar%nlhd*atoms%ntype
+    n = 4*((atoms%lmaxd+1)**2)*sphhar%nlhd*atoms%ntype
     ALLOCATE(c_b(n))
     CALL MPI_ALLREDUCE(denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,jspin,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
     CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,jspin,jspin), 1)
@@ -499,7 +499,7 @@ CONTAINS
           IF (denCoeffsOffdiag%l_fmpl) THEN
 
              !-->        Full magnetization plots: Collect uunmt21, etc.
-             n = (atoms%lmaxd+1)**2 *sphhar%nlhd*atoms%ntype !TODO: Why not from 0 --> (atoms%lmaxd+1)**2+1?
+             n = (atoms%lmaxd+1)**2 *sphhar%nlhd*atoms%ntype
              ALLOCATE(c_b(n))
              CALL MPI_ALLREDUCE(denCoeffsOffdiag%uunmt21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
              CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffsOffdiag%uunmt21, 1)
@@ -512,7 +512,7 @@ CONTAINS
              DEALLOCATE (c_b)
 
              ! Refactored stuff
-             n = 4*(((atoms%lmaxd+1)**2)+1)*sphhar%nlhd*atoms%ntype
+             n = 4*((atoms%lmaxd+1)**2)*sphhar%nlhd*atoms%ntype
              ALLOCATE(c_b(n))
              CALL MPI_ALLREDUCE(denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,2,1),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
              CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,2,1), 1)

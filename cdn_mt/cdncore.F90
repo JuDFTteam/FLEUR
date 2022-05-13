@@ -134,6 +134,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
                outDen%pw(1,3) = outDen%pw(1,3) + cmplx( -1*momint *cos(nococonv%alph(iType))*sin(nococonv%beta(iType)),&
                !imaginary part rho_21
                                                           momint *sin(nococonv%alph(iType))*sin(nococonv%beta(iType)))
+               !TODO: Should be +,+ for no magic minus.
             END DO
             !pk non-collinear (end)
          END IF

@@ -410,7 +410,7 @@ CONTAINS
          ELSE
             ! add to off-diag. part of density matrix (only non-collinear)
             DO istr = 1, stars%ng3_fft
-               den%pw(istr, 3) = den%pw(istr, 3) + CMPLX(0.0, 1.0)*cwk(istr)
+               den%pw(istr, 3) = den%pw(istr, 3) + CMPLX(0.0, 1.0)*cwk(istr) !TODO: Should be - for no magic minus.
             ENDDO
          ENDIF
       ENDDO
