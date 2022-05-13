@@ -32,7 +32,7 @@ def test_Gd_Hubbard1(execute_fleur, grep_number, grep_exists):
     assert abs(nmmp_occ - 7.0) <= 0.00001
     assert abs(nmmp_el - 0.99753) <= 0.00001
     assert abs(tenergy - -22560.583472) <= 0.00001
-    assert abs(dist - 25.033576) <= 0.0001
+    assert abs(dist - 25.034) <= 0.001
 
 @pytest.mark.soc
 @pytest.mark.edsolver
