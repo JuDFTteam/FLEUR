@@ -511,9 +511,9 @@ MODULE m_hubbard1_setup
 #ifdef CPP_EDSOLVER
                !Open the output file for the solver
                hubbardioUnit = 4000+i_hia
-               OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(hubbard1Outfile)),&
-                  status="old", action="append", iostat=io_error)
-               IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
+               open(unit=hubbardioUnit, file=TRIM(ADJUSTL(hubbard1Outfile)),&
+                    status="old", position="append", action="write", iostat=io_error)
+               if(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
 
                if (trim(adjustl(task)) == 'spectrum') then
                   call EDsolver_dos(hubbardioUnit)
