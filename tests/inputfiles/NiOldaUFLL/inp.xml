@@ -168,7 +168,7 @@
             <stateOccupation state="(3d5/2)" spinUp="2.95000000" spinDown="1.85000000"/>
          </electronConfig>
          <energyParameters s="4" p="4" d="3" f="4"/>
-         <ldaU l="2" U="8.0" J="0.9" l_amf="T"/>
+         <ldaU l="2" U="8.0" J="0.9" l_amf="F"/>
          <lo type="SCLO" l="1" n="3" eDeriv="0"/>
       </species>
       <species name="Oxygen (O)" element="O" atomicNumber="8">
@@ -192,7 +192,7 @@
             <stateOccupation state="(3d5/2)" spinUp="1.85000000" spinDown="2.95000000"/>
          </electronConfig>
          <energyParameters s="4" p="4" d="3" f="4"/>
-         <ldaU l="2" U="8.0" J="0.9" l_amf="T"/>
+         <ldaU l="2" U="8.0" J="0.9" l_amf="F"/>
          <lo type="SCLO" l="1" n="3" eDeriv="0"/>
       </species>
    </atomSpecies>
