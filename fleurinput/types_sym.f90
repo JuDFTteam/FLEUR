@@ -81,7 +81,6 @@ CONTAINS
       CALL mpi_bc(this%symor, rank, mpi_comm)
       CALL mpi_bc(this%invs2, rank, mpi_comm)
       CALL mpi_bc(this%invs, rank, mpi_comm)
-      CALL mpi_bc(this%zrfs, rank, mpi_comm)
       CALL mpi_bc(this%invtab, rank, mpi_comm)
       CALL mpi_bc(this%multab, rank, mpi_comm)
       CALL mpi_bc(this%nop2, rank, mpi_comm)
