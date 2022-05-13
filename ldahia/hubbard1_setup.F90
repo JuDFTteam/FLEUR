@@ -15,7 +15,7 @@ MODULE m_hubbard1_setup
    USE m_rotMMPmat
    use m_xmlOutput
 #ifdef CPP_EDSOLVER
-   USE EDsolver, only: EDsolver_from_cfg
+   USE EDsolver, only: EDsolver_from_cfg, EDsolver_dos, EDsolver_angmom, EDsolver_eigenstates_decomp
 #endif
 #ifdef CPP_MPI
    use mpi
@@ -46,7 +46,7 @@ MODULE m_hubbard1_setup
 
       LOGICAL, PARAMETER :: l_mix = .FALSE.
 
-      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n,i_u
+      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n,i_u,i
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
@@ -74,6 +74,7 @@ MODULE m_hubbard1_setup
       COMPLEX, ALLOCATABLE :: e(:)
       COMPLEX, ALLOCATABLE :: ctmp(:)
       character(len=30) :: attributes(7)
+      character(len=:) :: task
 
       !Check if the EDsolver library is linked
 #ifndef CPP_EDSOLVER
@@ -485,6 +486,56 @@ MODULE m_hubbard1_setup
          write(attributes(2),'(f14.8)') results%last_mmpMatdistance                                    
          call writeXMLElement('hubbard1Distance',['occupationDistance','elementDistance   '], attributes(:2))
          call closeXMLElement('hubbard1Iteration')
+      ENDIF
+
+      !Perform post-provessing if specified
+      IF(results%last_mmpMatdistance <= hub1inp%minMatDistance .AND. &
+         results%last_occdistance    <= hub1inp%minOccDistance) THEN
+
+         do i=1, size(hub1inp%post_process_tasks)
+            task = trim(adjustl(hub1inp%post_process_tasks(i)))
+            if (task == '') cycle
+            
+#ifdef CPP_MPI
+            !Make sure that the ranks are synchronized
+            CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
+#endif
+
+            DO i_hia = i_hia_start, i_hia_end
+               IF(i_hia > atoms%n_hia .OR. i_hia < 1) CYCLE
+      
+               CALL hubbard1_path(atoms,i_hia,folder)
+               CALL timestart("Hubbard 1: EDsolver PostProcess: "//task)
+               !We have to change into the Hubbard1 directory so that the solver routines can read the config
+               CALL CHDIR(TRIM(ADJUSTL(folder)))
+#ifdef CPP_EDSOLVER
+               !Open the output file for the solver
+               hubbardioUnit = 4000+i_hia
+               OPEN(unit=hubbardioUnit, file=TRIM(ADJUSTL(hubbard1Outfile)),&
+                  status="old", action="append", iostat=io_error)
+               IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
+
+               if (task == 'spectrum') then
+                  call EDsolver_dos(hubbardioUnit)
+               else if(task == 'eigen_decomp') then
+                  call EDsolver_eigenstates_decomp(hubbardioUnit)
+               else if(task == 'angmom') then
+                  call EDsolver_angmom(hubbardioUnit)
+               endif
+               
+               CLOSE(hubbardioUnit, iostat=io_error)
+               IF(io_error/=0) CALL juDFT_error("Error in closing EDsolver out file",calledby="hubbard1_setup")
+#endif
+               IF(atoms%n_hia>1) THEN
+                  CALL CHDIR("../../")
+               ELSE
+                  CALL CHDIR("../")
+               ENDIF
+               CALL timestop("Hubbard 1: EDsolver PostProcess: "//task)
+      
+            ENDDO
+
+         enddo
       ENDIF
 
       CALL mpi_bc(hub1data%l_performSpinavg,0,fmpi%mpi_comm)

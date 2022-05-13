@@ -753,6 +753,9 @@
    </xsd:complexType>
 
    <xsd:complexType name="LdaHIAGeneralType">
+      <xsd:all>
+         <xsd:element maxOccurs="1" minOccurs="0" name="postProcess" type="HIAPostProcessList"/>
+      </xsd:all>
       <xsd:attribute name="itmaxHubbard1" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute default="100.0" name="beta" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.01" name="minoccDistance" type="xsd:double" use="optional"/>
@@ -764,6 +767,18 @@
       <xsd:attribute default="T" name="l_correctEtot" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_forceHIAiteration" type="FleurBool" use="optional"/>
    </xsd:complexType>
+
+   <xsd:simpleType name="HIAPostProcessList">
+      <xsd:list itemType="HIAPostProcessEnum"/>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="HIAPostProcessEnum">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="spectrum"/>
+         <xsd:enumeration value="eigen_decomp"/>
+         <xsd:enumeration value="angmom"/>
+      </xsd:restriction>
+   </xsd:simpleType>
 
    <xsd:complexType name="cFCoeffsOutputType">
       <xsd:attribute name="chargeDensity" type="FleurBool" use="required"/>

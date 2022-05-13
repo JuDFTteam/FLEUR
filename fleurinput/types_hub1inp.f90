@@ -41,6 +41,8 @@ MODULE m_types_hub1inp
       CHARACTER(len=100),  ALLOCATABLE :: arg_keys(:,:)
       REAL,                ALLOCATABLE :: arg_vals(:,:)
 
+      CHARACTER(len=100), allocatable :: post_process_tasks(:)
+
       !Switches for arguments that were explicitly given and should not be calculated from DFT
       LOGICAL,ALLOCATABLE :: l_soc_given(:)
       LOGICAL,ALLOCATABLE :: l_ccf_given(:)
@@ -86,6 +88,7 @@ CONTAINS
       CALL mpi_bc(this%arg_vals,rank,mpi_comm)
       CALL mpi_bc(this%l_soc_given,rank,mpi_comm)
       CALL mpi_bc(this%l_ccf_given,rank,mpi_comm)
+      CALL mpi_bc(this%post_process_tasks,rank,mpi_comm)
    END SUBROUTINE mpi_bc_hub1inp
 
    SUBROUTINE read_xml_hub1inp(this, xml)
@@ -96,6 +99,7 @@ CONTAINS
       INTEGER::numberNodes,ntype,n_maxaddArgs
       INTEGER::i_hia,itype,i_exc,i_addArg,i,j,hub1_l,i_cf,l,m
       CHARACTER(len=100)  :: xPathA,xPathB,xPathS,key,tmp_str
+      CHARACTER(len=300)  :: tasks
       REAL::val
 
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
@@ -111,7 +115,9 @@ CONTAINS
       ALLOCATE(this%init_mom(4*ntype,lmaxU_const),source=0.0)
       ALLOCATE(this%n_addArgs(4*ntype),source=0)
       ALLOCATE(this%arg_keys(4*ntype,n_maxaddArgs))
+      ALLOCATE(this%post_process_tasks(4))
       this%arg_keys='' !For some reason source doesn't work here
+      this%post_process_tasks='' !For some reason source doesn't work here
       ALLOCATE(this%arg_vals(4*ntype,n_maxaddArgs),source=0.0)
       ALLOCATE(this%l_soc_given(4*ntype),source=.FALSE.)
       ALLOCATE(this%l_ccf_given(4*ntype),source=.FALSE.)
@@ -132,6 +138,13 @@ CONTAINS
          IF(xml%versionNumber>=34) THEN
             this%l_forceHIAiteration = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_forceHIAiteration'))
          ENDIF
+
+         if(xml%versionNumber>=36) then
+            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'postProcess') == 1) then
+               tasks = xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'postProcess')
+               read(tasks,*) this%post_process_tasks(:)
+            endif
+         endif
       ENDIF
 
       !Read in the additional information given in the ldaHIA tags (exchange splitting and additional keywords)
