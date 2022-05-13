@@ -2,8 +2,7 @@ MODULE m_read_old_inp
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE read_old_inp(input,atoms,cell,stars,sym,noco,vacuum,forcetheo,&
-       sliceplot,banddos,enpara,xcpot,kpts,hybinp,&
-       oneD)
+       sliceplot,banddos,enpara,xcpot,kpts,hybinp)
     USE m_types_input
     USE m_types_atoms
     USE m_types_cell
@@ -16,7 +15,7 @@ CONTAINS
     USE m_types_forcetheo
     USE m_types_kpts
     USE m_types_enpara
-    USE m_types_oneD
+     
     USE m_types_sliceplot
     USE m_types_stars
     USE m_types_sphhar
@@ -34,7 +33,7 @@ CONTAINS
     TYPE(t_banddos),INTENT(OUT):: banddos
     TYPE(t_hybinp) ,INTENT(OUT):: hybinp
     TYPE(t_xcpot_inbuild_nf),INTENT(OUT)::xcpot
-    TYPE(t_oned) ,INTENT(OUT):: oned
+     
     TYPE(t_sliceplot),INTENT(OUT):: sliceplot
     TYPE(t_stars),INTENT(OUT):: stars
     TYPE(t_enpara) ,INTENT(OUT):: enpara
@@ -52,7 +51,7 @@ CONTAINS
     CALL fleur_init_old(&
          input,atoms,sphhar,cell,stars,sym,noco,vacuum,&
          sliceplot,banddos,enpara,xcpot,kpts,hybinp,&
-         oneD,grid) !kpt grid not used...
+          grid) !kpt grid not used...
 
     CALL sym%init(cell,input%film)
 

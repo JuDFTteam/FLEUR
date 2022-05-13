@@ -14,7 +14,7 @@ MODULE m_qfix
   ! rank.
 
 CONTAINS
-  SUBROUTINE qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+  SUBROUTINE qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell ,&
                   den,l_noco,l_printData,l_par,force_fix,fix,fix_pw_only)
 
     USE m_types
@@ -32,7 +32,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_oneD),INTENT(IN)      :: oneD
+     
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_potden),INTENT(INOUT) :: den
     LOGICAL,INTENT(IN)           :: l_noco,l_printData,force_fix,l_par
@@ -55,7 +55,7 @@ CONTAINS
     ! qfix==0 means no qfix was given in inp.xml. 
     ! In this case do nothing except when forced to fix!
     
-    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,l_printData,qtot,qis,fmpi,l_par)
+    CALL cdntot(stars,atoms,sym,vacuum,input,cell ,den,l_printData,qtot,qis,fmpi,l_par)
 
     IF (fmpi%irank.EQ.0) THEN
        !The total nucleii charge
@@ -97,7 +97,7 @@ CONTAINS
        IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
 
        IF(l_printData) CALL openXMLElementNoAttributes('fixedCharges')
-       CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,l_printData,qtot,qis,fmpi,.FALSE.)
+       CALL cdntot(stars,atoms,sym,vacuum,input,cell ,den,l_printData,qtot,qis,fmpi,.FALSE.)
        IF(l_printData) CALL closeXMLElement('fixedCharges')
 
        IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")

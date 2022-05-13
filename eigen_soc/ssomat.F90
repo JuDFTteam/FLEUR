@@ -3,7 +3,7 @@ MODULE m_ssomat
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE ssomat(seigvso,h_so,theta,phi,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results,ef )
+       cell,noco,nococonv, input,fmpi,  enpara,v,results,ef )
     USE m_types_nococonv
     USE m_types_mat
     USE m_types_setup
@@ -27,7 +27,7 @@ CONTAINS
 
     TYPE(t_mpi),INTENT(IN)         :: fmpi
 
-    TYPE(t_oneD),INTENT(IN)        :: oneD
+     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_nococonv),INTENT(IN)    :: nococonv
@@ -97,7 +97,7 @@ CONTAINS
     ENDDO
 
     DO nk=fmpi%irank+1,kpts%nkpt,fmpi%isize
-       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,nk,cell,.false.)
+       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,nk,cell)
        zMat%matsize1=lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot
        zmat%matsize2=input%neig
        zmat%l_real=.FALSE.
@@ -106,7 +106,7 @@ CONTAINS
        CALL read_eig(eig_id,nk,1,neig=ne,eig=eig_shift(:,0,nk,1),zmat=zmat)
        DO jsloc= 1,2
           eig_shift(:,0,nk,1)=0.0 !not needed
-          CALL abcof(input,atoms,sym, cell,lapw,ne,usdus,noco,nococonv,jsloc,oneD, &
+          CALL abcof(input,atoms,sym, cell,lapw,ne,usdus,noco,nococonv,jsloc , &
                acof(:,:,:,jsloc,1),bcof(:,:,:,jsloc,1),ccof(:,:,:,:,jsloc,1),zMat)
        ENDDO
 

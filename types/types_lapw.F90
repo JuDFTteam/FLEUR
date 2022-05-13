@@ -31,7 +31,6 @@ MODULE m_types_lapw
       REAL, ALLOCATABLE::rk(:, :)
       REAL, ALLOCATABLE CPP_MANAGED::gk(:, :, :)
       REAL, ALLOCATABLE::vk(:, :, :)
-      INTEGER, ALLOCATABLE::matind(:, :)
       INTEGER, ALLOCATABLE::index_lo(:, :)
       INTEGER, ALLOCATABLE::kvec(:, :, :)
       INTEGER, ALLOCATABLE::nkvec(:, :)
@@ -150,7 +149,7 @@ CONTAINS
          IF (SIZE(lapw%rk) == nv) THEN
             RETURN !
          ELSE
-            DEALLOCATE (lapw%rk, lapw%gvec, lapw%vk, lapw%gk, lapw%matind)
+            DEALLOCATE (lapw%rk, lapw%gvec, lapw%vk, lapw%gk)
             DEALLOCATE (lapw%k1, lapw%k2, lapw%k3)
          ENDIF
       ENDIF
@@ -161,8 +160,7 @@ CONTAINS
       ALLOCATE (lapw%gvec(3, nv, input%jspins))
       ALLOCATE (lapw%vk(3, nv, input%jspins))
       ALLOCATE (lapw%gk(3, nv, input%jspins))
-      ALLOCATE (lapw%matind(nv, 2))
-
+     
       lapw%rk = 0; lapw%gvec = 0; lapw%nv = 0
    END SUBROUTINE lapw_alloc
 
@@ -176,11 +174,11 @@ CONTAINS
       INTEGER, INTENT(IN) :: nk
       TYPE(t_mpi), INTENT(IN), OPTIONAL:: mpi
 
-      call lapw%lapw_init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
+      call lapw%lapw_init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
    end subroutine t_lapw_init_fi
 
    SUBROUTINE t_lapw_init(lapw, input, noco, nococonv, kpts, atoms, sym, &
-                        nk, cell, l_zref, mpi)
+                        nk, cell,  mpi)
       USE m_types_mpi
       USE m_sort
       USE m_boxdim
@@ -202,7 +200,7 @@ CONTAINS
       !     ..
       !     .. Scalar Arguments ..
       INTEGER, INTENT(IN) :: nk
-      LOGICAL, INTENT(IN)  :: l_zref
+      !LOGICAL, INTENT(IN)  :: l_zref
       !     ..
       !     .. Array Arguments ..
       !     ..
@@ -282,63 +280,6 @@ CONTAINS
          ENDDO
          !--->    determine pairs of K-vectors, where K_z = K'_-z to use
          !--->    z-reflection
-         IF (l_zref) THEN
-            n = 0
-            DO i = 1, lapw%nv(ispin)
-               DO j = 1, i
-                  IF (ALL(lapw%gvec(1:2, i, ispin) .EQ. lapw%gvec(1:2, j, ispin)) .AND. &
-                      (lapw%gvec(3, i, ispin) .EQ. -lapw%gvec(3, j, ispin))) THEN
-                     n = n + 1
-                     lapw%matind(n, 1) = i
-                     lapw%matind(n, 2) = j
-                  ENDIF
-               ENDDO
-            ENDDO
-            nred = n
-            IF (PRESENT(mpi)) THEN
-               IF (mpi%n_size .GT. 1) THEN
-                  !
-                  !--->     order K's in sequence K_1,...K_n | K_0,... | K_-1,....K_-n
-                  !
-                  n_inner = lapw%nv(ispin) - nred
-                  IF (MOD(nred, mpi%n_size) .EQ. 0) THEN
-                     n_bound = nred
-                  ELSE
-                     n_bound = (1 + INT(nred/mpi%n_size))*mpi%n_size
-                  ENDIF
-                  IF (lapw%nv(ispin) - nred + n_bound .GT. SIZE(lapw%gvec, 2)) THEN
-                     CALL juDFT_error("BUG:z-ref & ev || : dimension too small!", calledby="types_lapw")
-                  ENDIF
-
-                  i = 1
-                  j = 1
-                  DO n = 1, nred
-                     IF (lapw%matind(n, 1) .EQ. lapw%matind(n, 2)) THEN
-                        index3(lapw%matind(n, 1)) = n_inner + i
-                        i = i + 1
-                     ELSE
-                        index3(lapw%matind(n, 1)) = j
-                        index3(lapw%matind(n, 2)) = j + n_bound
-                        j = j + 1
-                     ENDIF
-                  ENDDO
-                  !--->          resort the rk,k1,k2,k3 and lapw%matind arrays:
-                  DO n = 1, lapw%nv(ispin)
-                     rk(n) = lapw%rk(n, ispin)
-                     gvec(:, n) = lapw%gvec(:, n, ispin)
-                  ENDDO
-                  DO n = lapw%nv(ispin), 1, -1
-                     lapw%rk(index3(n), ispin) = rk(n)
-                     lapw%gvec(:, index3(n), ispin) = gvec(:, n)
-                  ENDDO
-                  DO n = nred + 1, n_bound
-                     lapw%rk(n, ispin) = lapw%rk(lapw%nv(ispin), ispin)
-                     lapw%gvec(:, n, ispin) = lapw%gvec(:, lapw%nv(ispin), ispin)
-                  ENDDO
-                  lapw%nv(ispin) = lapw%nv(ispin) - nred + n_bound
-               ENDIF
-            ENDIF
-         ENDIF
          DO k = 1, lapw%nv(ispin)
             lapw%vk(:, k, ispin) = lapw%bkpt + lapw%gvec(:, k, ispin) + (ispin - 1.5)*nococonv%qss
             lapw%gk(:, k, ispin) = MATMUL(TRANSPOSE(cell%bmat), lapw%vk(:, k, ispin))/MAX(lapw%rk(k, ispin), 1.0e-30)
@@ -408,7 +349,6 @@ CONTAINS
             DO nn = 1, atoms%neq(n)
                na = na + 1
                if (sym%invsat(na) > 1) cycle
-               !np = MERGE(oneD%ods%ngopr(na),sym%invtab(sym%ngopr(na)),oneD%odi%d1)
                np = sym%invtab(sym%ngopr(na))
                CALL priv_vec_for_lo(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
                DO lo = 1, atoms%nlo(n)

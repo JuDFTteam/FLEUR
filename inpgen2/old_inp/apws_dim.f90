@@ -7,7 +7,7 @@
       MODULE m_apwsdim
       CONTAINS
       SUBROUTINE apws_dim(&
-     &                    bkpt,cell,input,noco,oneD,&
+     &                    bkpt,cell,input,noco ,&
      &                    nv,nv2,kq1d,kq2d,kq3d)
 !
 !*********************************************************************
@@ -22,14 +22,14 @@
       USE m_types_cell
       USE m_types_input
       USE m_types_noco
-      USE m_types_oned
+       
 
       IMPLICIT NONE
       REAL,INTENT(IN)              :: bkpt(3)
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_noco),INTENT(IN)      :: noco
-      TYPE(t_oneD),INTENT(IN)      :: oneD
+       
       INTEGER,INTENT(OUT) :: nv,nv2,kq1d,kq2d,kq3d
 
 
@@ -87,22 +87,6 @@
                END DO
             END DO
          END DO
-!-odim
-         IF (oneD%odd%d1) THEN
-           nv2 = 0
-           s(1) = 0.0
-           s(2) = 0.0
-           DO j3 = -mk3,mk3
-              s(3) = bkpt(3) + j3 + (2*ispin - 3)/2.0*noco%qss_inp(3)
-              !r2 = dotirp(s,s,cell%bbmat)
-              r2 = dot_product(matmul(s,cell%bbmat),s)
-
-              IF (r2.LE.rk2) THEN
-                 nv2 = nv2 + 1
-              END IF
-           END DO
-         END IF
-!+odim
          nvh(ispin)  = nv
          nv2h(ispin) = nv2
       END DO

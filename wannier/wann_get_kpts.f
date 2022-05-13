@@ -9,7 +9,7 @@
       USE m_types
       contains
       subroutine wann_get_kpts(input,kpts,
-     >               l_bzsym,film,l_onedimens,l_readkpts,
+     >               l_bzsym,film,l_readkpts,
      <               nkpts,kpoints)
 c********************************************************
 c     Read in the k-points from kpts/w90kpts file.
@@ -24,7 +24,7 @@ c********************************************************
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_kpts), INTENT(IN)  :: kpts
       logical,intent(in)  :: l_bzsym,film
-      logical,intent(in)  :: l_onedimens,l_readkpts
+      logical,intent(in)  :: l_readkpts
       integer,intent(out) :: nkpts
       real,intent(inout),allocatable  :: kpoints(:,:)
 

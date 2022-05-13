@@ -128,7 +128,7 @@ CONTAINS
     END DO
   END SUBROUTINE read_displacements
 
-  SUBROUTINE apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms,gfinp)
+  SUBROUTINE apply_displacements(cell,input,vacuum ,sym,noco,atoms,gfinp)
     USE m_types
     USE m_chkmt
     USE m_constants
@@ -136,7 +136,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_vacuum),INTENT(IN)  :: vacuum
     TYPE(t_cell),INTENT(IN)    :: cell
-    TYPE(t_oneD),INTENT(IN)    :: oneD
+     
     TYPE(t_sym),INTENT(INOUT)  :: sym
     TYPE(t_noco),INTENT(IN)    :: noco
     type(t_gfinp), intent(in)  :: gfinp
@@ -153,7 +153,7 @@ CONTAINS
     disp=MATMUL(cell%bmat,disp)/tpi_const
     IF (ALL(ABS(disp)<1E-8)) RETURN
     !Fist make sure original MT spheres do not overlap
-    CALL chkmt(atoms,input,vacuum,cell,oneD,.TRUE.,overlap=overlap)
+    CALL chkmt(atoms,input,vacuum,cell ,.TRUE.,overlap=overlap)
     IF(ANY(overlap>0.0)) CALL judft_error("Overlapping MT-spheres in relaxation before even applying any displacement",hint="You messed up your setup")
 
     taual0=atoms%taual !Store original positions
@@ -165,7 +165,7 @@ CONTAINS
        CALL rotate_to_all_sites(disp,atoms,cell,sym,disp_all)
        atoms%taual=taual0+disp_all
        atoms%pos=MATMUL(cell%amat,atoms%taual)
-       CALL chkmt(atoms,input,vacuum,cell,oneD,.TRUE.,overlap=overlap)
+       CALL chkmt(atoms,input,vacuum,cell ,.TRUE.,overlap=overlap)
        IF (ANY(overlap>0.0)) THEN
           IF (ANY(overlap(0,:)>1E-10)) CALL judft_error("Atom spills out into vacuum during relaxation")
           indx=MAXLOC(overlap(1:,:)) !the two indices with the most overlap

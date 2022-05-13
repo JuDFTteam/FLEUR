@@ -19,7 +19,7 @@ c******************************************************************
       subroutine wann_mmnk_symm(input,kpts,
      >               fullnkpts,nntot,bpt,gb,l_bzsym,
      >               irreduc,mapkoper,l_p0,film,nop,
-     >               invtab,mrot,l_onedimens,tau,
+     >               invtab,mrot,tau,
      <               pair_to_do,maptopair,kdiff,l_q,param_file)
 
       USE m_constants
@@ -54,8 +54,7 @@ c******************************************************************
       integer :: oper,oper_b,num_rot,num_conj,repo,repo_b
       integer :: k,kx,ky,repkpt,repkpt_b,repkpt_bb
       integer :: sign,sign_b,ngis,ngis_b
-      logical :: startloop
-      logical :: l_file,l_onedimens
+      logical :: startloop,l_file
       real    :: kpoints(3,fullnkpts)
       real    :: kdiffvec(3)
       integer :: multtab(nop,nop)
@@ -261,7 +260,7 @@ c*****************************************************************
               kpoints(:,:)=kpoints/scale
             ENDIF
 
-            if (film.and..not.l_onedimens) kpoints(3,:)=0.0
+            if (film) kpoints(3,:)=0.0
             close(412)
       endif
 

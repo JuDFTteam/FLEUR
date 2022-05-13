@@ -8,7 +8,7 @@ MODULE m_outcdn
 CONTAINS
 
    SUBROUTINE outcdn(p, n, na, iv, iflag, jsp, l_potential, stars, vacuum, &
-                     sphhar, atoms, sym, cell, oneD, potDen, xdnout)
+                     sphhar, atoms, sym, cell,   potDen, xdnout)
       USE m_types
       USE m_constants
       USE m_angle
@@ -27,7 +27,7 @@ CONTAINS
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_cell),INTENT(IN)      :: cell
-      TYPE(t_oneD),INTENT(IN)      :: oneD
+       
       TYPE(t_potden),INTENT(IN)    :: potDen
 
 
@@ -69,37 +69,8 @@ CONTAINS
          ! Vacuum part:
          xdnout = 0.
 
-         ! -odim
-         IF (oneD%odi%d1) THEN
-            rrr = sqrt( p(1)**2 + p(2)**2 )
-            phi = angle(p(1),p(2))
-            jp3 = (rrr-cell%z1)/vacuum%delz
-            delta = (rrr-cell%z1)/vacuum%delz - jp3
-            ! We count 0 as point 1.
-            jp3 = jp3 + 1
-            IF (jp3.LT.vacuum%nmz) THEN
-               xdnout = potDen%vacz(jp3,ivac,jsp) + delta*(potDen%vacz(jp3+1,ivac,jsp)-potDen%vacz(jp3,ivac,jsp))
-               IF (jp3.LT.vacuum%nmzxy) THEN
-                  xx1 = 0.
-                  xx2 = 0.
-                  DO  k = 2,oneD%odi%nq2
-                     m = oneD%odi%kv(2,k)
-                     gzi = oneD%odi%kv(1,k)
-                     xx1 = xx1 + REAL(potDen%vacxy(jp3,k-1,ivac,jsp)*EXP( &
-                           ImagUnit*m*phi)*EXP(ImagUnit*gzi*cell%bmat(3,3)* &
-                           p(3)))*oneD%odi%nst2(k)
-                     xx2 = xx2 + REAL(potDen%vacxy(jp3+1,k-1,ivac,jsp)*EXP( &
-                           ImagUnit*m*phi)*EXP(ImagUnit*gzi*cell%bmat(3,3)* &
-                           p(3)))*oneD%odi%nst2(k)
-                  END DO
-                  xdnout = xdnout + xx1 + delta* (xx2-xx1)
-               END IF
-            ELSE
-               xdnout = 0.0
-            END IF
-
-         ! +odim
-         ELSE
+         
+         
             IF (p(3).LT.0.0) THEN
                ivac = vacuum%nvac
                IF (sym%invs) THEN
@@ -134,15 +105,13 @@ CONTAINS
                xdnout = 0.0
             END IF
          ! Vacuum part finished.
-         ENDIF
-
+         
          RETURN
       ENDIF
       ! MT part:
 
       nd = sym%ntypsy(na)
       nopa = sym%ngopr(na)
-      IF (oneD%odi%d1) nopa = oneD%ods%ngopr(na)
       sx = 0.0
       DO  i = 1,3
          x(i) = p(i) - atoms%pos(i,na)
@@ -156,11 +125,9 @@ CONTAINS
          DO  i = 1,3
             p(i) = 0.
             DO  j = 1,3
-               IF (.NOT.oneD%odi%d1) THEN
+               
                   p(i) = p(i) + sym%mrot(i,j,nopa)*rcc(j)
-               ELSE
-                  p(i) = p(i) + oneD%ods%mrot(i,j,nopa)*rcc(j)
-               END IF
+               
             END DO
          END DO
          ! Switch back to cartesian units.

@@ -1,7 +1,5 @@
 set(fleur_F77 ${fleur_F77}
 global/fitchk.f
-global/od_cylbes.f
-global/od_phasy.f
 global/radsra.f
 global/radsrd.F
 global/radsrdn.f

@@ -8,7 +8,7 @@ MODULE m_cdncore
 
 CONTAINS
 
-SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
+SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
 
    USE m_constants
@@ -30,7 +30,7 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
 
    TYPE(t_mpi),        INTENT(IN)              :: fmpi
 
-   TYPE(t_oneD),       INTENT(IN)              :: oneD
+    
    TYPE(t_input),      INTENT(IN)              :: input
    TYPE(t_vacuum),     INTENT(IN)              :: vacuum
    TYPE(t_noco),       INTENT(IN)              :: noco
@@ -148,7 +148,7 @@ SUBROUTINE cdncore(fmpi,oneD,input,vacuum,noco,nococonv,sym,&
          IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for ctail")
             !+gu hope this works as well
             CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
-                         cell,input,oneD,l_st,jspin,rh(:,:,jspin),&
+                         cell,input ,l_st,jspin,rh(:,:,jspin),&
                          outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,vTot%pw_w,vTot%mt)
       ELSE IF ((fmpi%irank==0).AND.(.NOT.noco%l_noco)) THEN
          DO iType = 1,atoms%ntype

@@ -288,7 +288,7 @@ module m_jpTestSternheimer
 
     use m_types, only : t_atoms, t_cell, t_sym, t_stars, t_sphhar, t_enpara, t_kpts, t_usdus, t_input, t_dimension, t_tlmplm, t_noco, t_potential
     use m_abcof
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpConstants, only : fpi
     use m_juDFT_NOstopNO, only : juDFT_warn
     use m_jpSternhPulaySurface, only : tlmplm4H0
@@ -497,7 +497,7 @@ module m_jpTestSternheimer
 
     use m_types, only : t_atoms, t_cell, t_sym, t_tlmplm, t_stars, t_kpts, t_usdus, t_input, t_dimension, t_noco
     use m_abcof
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpSternhHF, only : calcMEPotIR, calcVsumMT
 
     use m_juDFT_NOstopNO, only : juDFT_warn
@@ -767,7 +767,7 @@ module m_jpTestSternheimer
 #include "cppmacro.h"
 #include "recycledRoutines/cpp_double.h"
     use m_types, only : t_atoms, t_sym, t_cell, t_sphhar, t_dimension, t_enpara, t_usdus, t_input, t_kpts, t_potential, t_tlmplm, t_noco
-    use m_od_types, only : od_inp, od_sym
+     
     use m_abcof
     use mod_juPhonUtils, only : fopen, fclose
     use m_juDFT_NOstopNO, only : juDFT_warn
@@ -1998,7 +1998,7 @@ integer :: ii
 
     use m_abcof
     use m_types, only : t_atoms, t_sphhar, t_potential, t_kpts, t_sym, t_dimension, t_cell, t_input, t_usdus, t_noco
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpConstants, only : c_im, iu, fpi
     use m_gaunt, only : gaunt1
 
@@ -2627,7 +2627,7 @@ integer :: ii
 
     use m_abcof
     use m_types, only : t_atoms, t_sphhar, t_potential, t_kpts, t_sym, t_dimension, t_cell, t_input, t_usdus, t_noco
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpConstants, only : c_im
     use m_gaunt, only : gaunt1
 
@@ -4021,7 +4021,7 @@ integer :: ii
       & ne, El, nv, nobd, GbasVec, ilst, kveclo, iloTable, z, kpq2kPrVec, eig, nRadFun, iDtype, iDatom, eig1, vEff0MTsh, vEff0IRpwUw )
 
     use m_jpGrVeff0, only : GenGrVeff0
-    use m_od_types, only : od_inp, od_sym
+     
     use m_types, only : t_atoms, t_cell, t_sphhar, t_enpara, t_stars, t_dimension, t_sym, t_input, t_usdus, t_potential, t_kpts, &
                                                                                                        & t_results, t_noco, t_tlmplm
     use m_abcof
@@ -5636,7 +5636,7 @@ integer :: ii
       & ne, kveclo, nRadFun, iloTable, hFullNoAbcofBK, overlapNoAbcofBK, overlap, surfIntMT)
 
     use m_types, only : t_atoms, t_kpts, t_sym, t_dimension, t_cell, t_input, t_usdus, t_noco
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpConstants, only : iu
     use m_abcof
 

@@ -17,7 +17,7 @@ contains
 
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
-       oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot)
+         archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot)
 
     use m_juDFT
     use m_constants
@@ -38,7 +38,7 @@ contains
     USE m_plot
     implicit none
 
-    type(t_oneD),      intent(in)    :: oneD
+     
     type(t_input),     intent(in)    :: input
     type(t_vacuum),    intent(in)    :: vacuum
     type(t_noco),      intent(in)    :: noco
@@ -88,7 +88,7 @@ contains
     ENDIF
 
     CALL timestart("Reading of distances")
-    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,stars,cell,sphhar,atoms,sym)
+    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix ,input,vacuum,noco,stars,cell,sphhar,atoms,sym)
     CALL timestart("read history")
     CALL mixing_history_open(fmpi,input%maxiter)
     CALL timestop("read history")
@@ -99,7 +99,7 @@ contains
     CALL timestop("Reading of distances")
 
     ! Preconditioner for relaxation of Magnetic moments
-    call precond_noco(it,vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm(it))
+    call precond_noco(it,vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm(it))
 
 
     ! KERKER PRECONDITIONER
@@ -107,7 +107,7 @@ contains
        CALL timestart("Preconditioner")
        CALL kerker( field,  fmpi, &
                     stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-                    oneD, inDen, outDen, fsm(it) )
+                      inDen, outDen, fsm(it) )
        !Store modified density in history
        CALL mixing_history_store(fsm(it))
        CALL timestop("Preconditioner")
@@ -194,7 +194,7 @@ contains
 
     call timestart("qfix")
     !fix charge of the new density
-    IF (fmpi%irank==0) CALL qfix(fmpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
+    IF (fmpi%irank==0) CALL qfix(fmpi,stars,atoms,sym,vacuum, sphhar,input,cell ,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
     call timestop("qfix")
 
 
@@ -210,13 +210,13 @@ contains
 
     call timestart("Density output")
     !write out mixed density (but not for a plotting run)
-    IF ((fmpi%irank==0).AND.(sliceplot%iplot==0)) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+    IF ((fmpi%irank==0).AND.(sliceplot%iplot==0)) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen)
 
 #ifdef CPP_HDF
     IF (fmpi%irank==0.and.judft_was_argument("-last_extra")) THEN
        CALL system("rm cdn_last.hdf")
-       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
             1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,&
             inDen,'cdn_last')
        CALL writeCoreDensity(input,atoms,inDen%mtCore,inDen%tec,inDen%qint,'cdn_last')

@@ -9,20 +9,19 @@ MODULE m_make_sym
    PRIVATE
    PUBLIC make_sym
 CONTAINS
-   SUBROUTINE make_sym(sym, cell, atoms, noco, oneD, input, gfinp)
+   SUBROUTINE make_sym(sym, cell, atoms, noco,   input, gfinp)
       !Generates missing symmetry info.
       !tau,mrot and nop have to be specified alread
       USE m_dwigner
       USE m_angles !Phase factors for spin-offdiagonal lda+u
       USE m_constants
       USE m_mapatom
-      USE m_od_mapatom
       use m_ptsym
       USE m_types_sym
       USE m_types_cell
       USE m_types_atoms
       USE m_types_noco
-      USE m_types_oneD
+       
       use m_types_input
       USE m_types_gfinp
       use m_types_fleurinput_base, only: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED
@@ -30,7 +29,7 @@ CONTAINS
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)  :: atoms
       TYPE(t_noco), INTENT(IN)   :: noco
-      TYPE(t_oneD), INTENT(INOUT):: oneD
+       
       TYPE(t_input), INTENT(IN)  :: input
       TYPE(t_gfinp), INTENT(IN)  :: gfinp
 
@@ -68,15 +67,7 @@ CONTAINS
       call ptsym(atoms%ntype, atoms%nat, atoms%neq, atoms%taual, sym%nop, sym%mrot, sym%tau, atoms%lmax, &
                  nsymt, sym%ntypsy, nrot, locops)
 
-      IF (.NOT. oneD%odd%d1) THEN
-         CALL mapatom(sym, atoms, cell, input, noco,gfinp)
-         allocate (oneD%ngopr1(atoms%nat))
-         oneD%ngopr1 = sym%ngopr
-      ELSE
-         CALL juDFT_error("The oneD version is broken here. Compare call to mapatom with old version")
-         CALL mapatom(sym, atoms, cell, input, noco,gfinp)
-         !CALL od_mapatom(oneD,atoms,sym,cell)
-      END IF
-
+      CALL mapatom(sym, atoms, cell, input, noco,gfinp)
+    
    END SUBROUTINE make_sym
 END MODULE m_make_sym

@@ -89,7 +89,7 @@ CONTAINS
       INTEGER jsp,nk,nred,ne_all,ne_found,neigd2
       INTEGER ne, nk_i,n_size,n_rank
       INTEGER isp,i,j,err
-      LOGICAL l_real,l_zref
+      LOGICAL l_real
       INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr
@@ -134,9 +134,7 @@ CONTAINS
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
-      ! check if z-reflection trick can be used
-      l_zref=(fi%sym%zrfs.AND.(SUM(ABS(kqpts%bk(3,:fi%kpts%nkpt))).LT.1e-9).AND..NOT.fi%noco%l_noco)
-      IF (fmpi%n_size > 1) l_zref = .FALSE.
+     
 
       !IF (fmpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
       !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
@@ -177,7 +175,7 @@ CONTAINS
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)
             ! Set up lapw list
-            CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, l_zref, fmpi)
+            CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell,  fmpi)
 
             call timestart("Setup of H&S matrices")
             CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)

@@ -36,9 +36,9 @@ ford:
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: html
-  needs: 
-    - build-gfortran-hdf5
+  needs: []
   script:
+    - cd $CI_PROJECT_DIR ; ./configure.sh GITLAB
     - cd $CI_PROJECT_DIR/build ; make doc
     - mkdir ../public
     - mv docs/html/ ../public/doxygen

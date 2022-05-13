@@ -2,7 +2,7 @@
       USE m_juDFT
       CONTAINS
         SUBROUTINE setup(atoms,kpts,&
-             sym,oneD, input,cell,enpara,latnam,namgrp)
+             sym , input,cell,enpara,latnam,namgrp)
           !stripped down version    
           !
           !----------------------------------------
@@ -36,7 +36,7 @@
           USE m_types_atoms
           USE m_types_kpts
           USE m_types_sym
-          USE m_types_oned
+           
           USE m_types_input
           USE m_types_cell
           USE m_types_enpara
@@ -51,9 +51,9 @@
           USE m_inpeig
           !USE m_ylm
           !-odim
-          !USE m_od_mapatom
-          !USE m_od_chisym
-          !USE m_od_strgn1
+          ! 
+          ! 
+          ! 
           !+odim
           IMPLICIT NONE
           !     ..
@@ -61,7 +61,7 @@
           TYPE(t_atoms),INTENT(INOUT)    :: atoms
           TYPE(t_kpts),INTENT(INOUT)     :: kpts
           TYPE(t_sym),INTENT(INOUT)      :: sym
-          TYPE(t_oneD),INTENT(INOUT)     :: oneD
+           
           TYPE(t_input),INTENT(INOUT)    :: input
           TYPE(t_cell),INTENT(INOUT)     :: cell
           TYPE(t_enpara),INTENT(INOUT)   :: enpara
@@ -75,14 +75,14 @@
           IF (namgrp.EQ.'any ') THEN
              CALL rw_symfile('R',94,'sym.out',sym%nop,cell%bmat, sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
           ELSE
-             CALL spg2set(sym%nop,sym%zrfs,sym%invs,namgrp,latnam, sym%mrot,sym%tau,sym%nop2,sym%symor)
+             CALL spg2set(sym%nop,.false.,sym%invs,namgrp,latnam, sym%mrot,sym%tau,sym%nop2,sym%symor)
           ENDIF
           IF (input%film.AND..NOT.sym%symor) CALL juDFT_warn("Films&Symor",hint&
                &     ="Films should be symmorphic",calledby ='setup')
 
 
           !
-          CALL inpeig(atoms,cell,input,oneD%odd%d1,kpts,enpara,latnam=latnam)
+          CALL inpeig(atoms,cell,input,.false.,kpts,enpara,latnam=latnam)
           !
           !
       

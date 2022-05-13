@@ -10,7 +10,7 @@ MODULE m_fleur_vdW
   PUBLIC fleur_vdW_mCallsen
 CONTAINS
   SUBROUTINE fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,      &
-   cell,sym,oneD,vacuum,results,    &
+   cell,sym ,vacuum,results,    &
    qpw,rho,vpw_total,vr_total)
     !Interface to Juelich vdW-code
     USE m_types
@@ -32,7 +32,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_oneD),INTENT(IN)      :: oneD
+     
     TYPE(t_results),INTENT(INOUT) :: results
     COMPLEX,INTENT(in)     :: qpw(:)
     REAL,INTENT(inout)     :: rho(:,:,:)
@@ -75,7 +75,7 @@ CONTAINS
     atoms_tmp%zatom=0.0
     CALL psqpw(fmpi,&
          atoms_tmp,sphhar,stars,vacuum,&
-         cell,input,sym,oneD,&
+         cell,input,sym ,&
          qpw,rho,(/0.,0./),.TRUE.,2,psq)
 
     !put pseudo charge on real-space grid
@@ -103,7 +103,7 @@ CONTAINS
     !Calculate MT-contribution to the potential
 
     CALL qpw_to_nmt(                                                     &
-         sphhar,atoms,stars,sym,cell,oneD,fmpi,  &
+         sphhar,atoms,stars,sym,cell ,fmpi,  &
          1,4,vpw,vr_total)
 
     WRITE(oUnit,*) "vdW average Potential  :",vpw(1)

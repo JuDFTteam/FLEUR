@@ -13,7 +13,7 @@ MODULE m_forcew
 #endif
 
 CONTAINS
-   SUBROUTINE force_w(fmpi,input,atoms,sym,results,cell,oneD,vacuum)
+   SUBROUTINE force_w(fmpi,input,atoms,sym,results,cell ,vacuum)
       USE m_types
       USE m_constants
       USE m_xmlOutput
@@ -23,7 +23,7 @@ CONTAINS
 
       TYPE(t_mpi),     INTENT(IN)    :: fmpi
       TYPE(t_results), INTENT(INOUT) :: results
-      TYPE(t_oneD),    INTENT(IN)    :: oneD
+       
       TYPE(t_input),   INTENT(IN)    :: input
       TYPE(t_sym),     INTENT(IN)    :: sym
       TYPE(t_cell),    INTENT(IN)    :: cell
@@ -129,7 +129,7 @@ CONTAINS
 
     
 
-      IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,forcetot,results%tote)
+      IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym ,vacuum,forcetot,results%tote)
 
    END SUBROUTINE force_w
 

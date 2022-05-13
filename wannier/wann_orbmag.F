@@ -30,7 +30,7 @@
       use m_radfun
       use m_radflo
       use m_cdnread, only : cdn_read0, cdn_read
-      use m_od_types, only : od_inp, od_sym
+       
       use m_wann_abinv
       use m_wann_kptsrotate
       use m_matmul,only : matmul3,matmul3r

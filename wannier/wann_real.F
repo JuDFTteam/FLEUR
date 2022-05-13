@@ -17,7 +17,7 @@ c     ********************************************************
      >                  natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >                  nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >                  lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >                  omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
+     >                  omtil,amat,bmat,nlod,llod,nlo,llo,
      >                  ff,gg,flo,acof,bcof,ccof,zMat,
      >                  nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
      <                  xdnout)
@@ -40,10 +40,7 @@ C     .. Scalar Arguments ..
       REAL,    INTENT (IN) :: z1,delz,omtil,bkpt(3),qss(3)
       INTEGER, INTENT (IN) :: jspin,addnoco
       COMPLEX, INTENT (OUT):: xdnout
-c-odim
-      TYPE (od_inp), INTENT (IN) :: odi
-      TYPE (od_sym), INTENT (IN) :: ods
-c+odim
+
 C     ..
 C     .. Array Arguments ..
       INTEGER, INTENT (IN) :: ngopr(natd),ntypsy(natd),jri(ntypd)
@@ -150,7 +147,7 @@ c     ----> m.t. part
       nopa = ngopr(na)
       nopa=1
      
-      IF (odi%d1) nopa = ods%ngopr(na)
+   
       sx = 0.0
       DO 50 i = 1,3
          x(i) = p(i) - pos(i,na)
@@ -164,11 +161,8 @@ c... rotate into representative
          DO 70 i = 1,3
             p(i) = 0.
             DO 60 j = 1,3
-              IF (.NOT.odi%d1) THEN
                p(i) = p(i) + mrot(i,j,nopa)*rcc(j)
-              ELSE
-               p(i) = p(i) + ods%mrot(i,j,nopa)*rcc(j)
-              END IF
+            
    60       CONTINUE
    70    CONTINUE
 c... switch back to cartesian units

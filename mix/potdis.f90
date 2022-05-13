@@ -22,7 +22,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)  :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     .. Local Scalars ..
-    REAL fact,facv,rhs,sumis,sumz
+    REAL fact,rhs,sumis,sumz
     COMPLEX phase
     INTEGER i,i1,i2,i3,id2,id3,io,ip,iter,ivac,j,k1,k2,k3,lh,n,&
                  nk12,npz,nt,num,na
@@ -48,7 +48,6 @@ CONTAINS
     nt = (2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)
     nk12 = (2*stars%mx1+1)*(2*stars%mx2+1)
     fact = cell%omtil/REAL(nt)
-    facv = 1.0
     !     ---> reload potentials
     OPEN (9,file='nrp',form='unformatted',status='unknown')
     REWIND 9
@@ -212,8 +211,7 @@ CONTAINS
                 disz(npz-ip) = cell%area*rhv0(ip,ivac,num,1)
              ENDDO
              CALL intgz0(disz,vacuum%delz,vacuum%nmz,sumz,tail)
-             IF (sym%zrfs .OR. sym%invs) facv = 2.0
-             dis(num) = dis(num) + facv*sumz
+             dis(num) = dis(num) + 2.0/vacuum%nvac*sumz
           ENDDO
        END IF
     ENDDO

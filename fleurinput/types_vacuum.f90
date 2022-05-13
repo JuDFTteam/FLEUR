@@ -18,6 +18,8 @@ MODULE m_types_vacuum
   INTEGER ::nmzxyd=100
   INTEGER :: nvac=2
   INTEGER :: nvacd=2
+  INTEGER,allocatable :: mrot2(:,:)
+  REAL,allocatable    :: tau2(:)
   REAL :: delz=0.1
   REAL :: dvac=0.0
 CONTAINS
@@ -46,6 +48,8 @@ SUBROUTINE mpi_bc_vacuum(this,mpi_comm,irank)
  CALL mpi_bc(this%nvacd,rank,mpi_comm)
  CALL mpi_bc(this%delz,rank,mpi_comm)
  CALL mpi_bc(this%dvac,rank,mpi_comm)
+ call mpi_bc(this%tau2,rank,mpi_comm)
+ call mpi_bc(this%mrot2,rank,mpi_comm)
 
 END SUBROUTINE mpi_bc_vacuum
 SUBROUTINE read_xml(this,xml)
@@ -65,8 +69,19 @@ SUBROUTINE vacuum_init(this,sym)
  USE m_types_sym
  CLASS(t_vacuum),INTENT(INOUT)::this
  TYPE(t_sym),INTENT(IN)::sym
-
- IF (sym%invs.OR.sym%zrfs) this%nvac=1
+ 
+ allocate(this%mrot2(2,2),this%tau2(2))  
+ if (sym%nop>sym%nop2) THEN
+   this%nvac=1
+   this%mrot2(1:2,1:2) = sym%mrot(1:2,1:2,sym%nop2+1)
+   this%tau2(1:2) = sym%tau(1:2,sym%invtab(sym%nop2+1))
+ else
+   this%mrot2(1:2,1:2) = sym%mrot(1:2,1:2,1)
+   this%tau2(1:2) = sym%tau(1:2,1)
+ endif   
+   
 END SUBROUTINE vacuum_init
+
+
 
 END MODULE m_types_vacuum

@@ -6,7 +6,7 @@ c********************************************************
          use m_juDFT
       contains
       subroutine wann_1dvacabcof(
-     >    oneD,vacuum,stars,cell,
+     >     vacuum,stars,cell,
      >    nv2d,nslibd,nmzd,nmz,omtil,vz,
      >    nv,bkpt,z1,odi,ods,
      >    nvd,k1,k2,k3,evac,
@@ -16,14 +16,14 @@ c********************************************************
      <    ac,bc,u,ue,addnoco,l_ss,qss,jspin)
 
       use m_types
-      use m_od_abvac
+       
       use m_constants
       use m_cylbes
       use m_dcylbs
       implicit none
 
 
-      TYPE(t_oneD),INTENT(IN)        :: oneD
+       
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
@@ -114,7 +114,7 @@ c********************************************************
          endif
          ispin=1
          call od_abvac(
-     >           cell,vacuum,stars,oneD,
+     >           cell,vacuum,stars ,
      >           qssbti(3,jspin),odi%n2d,wronk,evacp,bkpt,
      >           odi%M,odi%mb,vz(1,nvac),kvac3,nv2,
      >           t(1:,-odi%mb:),dt(1:,-odi%mb:),u(1:,1:,-odi%mb:),

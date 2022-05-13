@@ -445,7 +445,7 @@ module jpTest1stVarDens
 
     use m_types, only : t_atoms, t_stars, t_dimension, t_sym, t_cell, t_kpts, t_usdus, t_input, t_results, t_noco, t_sphhar
     use m_abcof
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpDens1stVar, only : calcVarZContrRho1MT, multRadSolVzcRho1MT
     use m_juDFT_NOstopNO, only : juDFT_warn
     use m_JPConstants, only : fpi
@@ -745,7 +745,7 @@ module jpTest1stVarDens
     use m_abcof
     use m_cotra
     use m_ylm_old
-    use m_od_types, only: od_inp, od_sym
+     
     use m_juDFT_time, only : TimeStart, TimeNOstopNO
 
     implicit none

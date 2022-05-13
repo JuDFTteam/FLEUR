@@ -4,8 +4,6 @@ vgen/grdrsvac.f
 vgen/mkgz.f
 vgen/modcyli.f
 vgen/modcylk.f
-#vgen/od_mkgxyz3.f
-#vgen/od_mkgz.f
 vgen/vacp5_0.f
 vgen/vacp5_z.f
 vgen/visp5_0.f
@@ -25,12 +23,9 @@ vgen/int_nv.F90
 vgen/lhglptg.f90
 vgen/lhglpts.f90
 vgen/mpmom.F90
-#vgen/od_vvac.f90
-#vgen/od_vvacis.f90
 vgen/vgen_coulomb.F90
 vgen/vgen_xcpot.F90
 vgen/vgen_finalize.F90
-#vgen/prp_xcfft_map.f90
 vgen/psqpw.F90
 vgen/rotate_int_den_tofrom_local.f90
 vgen/vintcz.f90

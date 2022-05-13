@@ -103,7 +103,8 @@ CONTAINS
                   DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
                      IF (atoms%lda_u(i)%atomType.EQ.n.AND.atoms%lda_u(i)%l.EQ.l) l_remove=.TRUE.
                   END DO
-               else if(atoms%n_u>0.and.input%ldauNonsphDC) then
+               end if
+               if(atoms%n_u>0.and.input%ldauNonsphDC) then
                   DO i = 1, atoms%n_u
                      IF (atoms%lda_u(i)%atomType.EQ.n.AND.atoms%lda_u(i)%l.EQ.l) l_remove=.TRUE.
                   END DO

@@ -9,7 +9,7 @@ MODULE m_subvxc
 CONTAINS
 
    SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybdat,&
-                     el, ello, sym, cell, sphhar, stars, xcpot, fmpi, oneD, hmat, vx)
+                     el, ello, sym, cell, sphhar, stars, xcpot, fmpi,   hmat, vx)
 
       USE m_judft
       USE m_types
@@ -26,7 +26,7 @@ CONTAINS
 
       CLASS(t_xcpot), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: fmpi
-      TYPE(t_oneD), INTENT(IN)    :: oneD
+       
       TYPE(t_mpdata), intent(inout) :: mpdata
       TYPE(t_hybdat), INTENT(IN) :: hybdat
       TYPE(t_input), INTENT(IN)    :: input
@@ -146,7 +146,7 @@ CONTAINS
          call bascof(ic)%alloc(.false., lapw%dim_nvd(), 2*(atoms%lmaxd*(atoms%lmaxd+2) + 1))
       enddo
       
-      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, &
+      CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus,   &
                   1,lapw%nv(jsp), ahlp, bhlp, bascof_lo)
 
    

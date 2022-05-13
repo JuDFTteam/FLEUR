@@ -28,7 +28,6 @@ c*************************************************************************
       use m_matmul   , only : matmul3,matmul3r
       use m_sphbes
       use m_ylm
-      use m_types, only : od_inp, od_sym
       use m_intgr, only : intgr3
       use m_gaunt, only: gaunt1
 

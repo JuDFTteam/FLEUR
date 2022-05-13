@@ -6,18 +6,18 @@
 
 module m_kpoints
 contains
-  subroutine kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
+  subroutine kpoints( sym,cell,input,noco,banddos,kpts,l_kpts)
     USE m_juDFT
     USE m_types
     USE m_julia
     USE m_kptgen_hybrid
-    USE m_od_kptsgen
+     
     USE m_unfold_band_kpts
   
     implicit none
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sym),INTENT(IN)     :: sym
-    TYPE(t_oneD),INTENT(IN)     :: oneD
+     
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_banddos),INTENT(IN)  :: banddos
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -36,7 +36,6 @@ contains
     END IF
 
     IF (.NOT.l_kpts) THEN
-       IF (.NOT.oneD%odd%d1) THEN
           IF (input%l_wann) THEN
              sym_hlp=sym
              sym_hlp%nop=1
@@ -59,11 +58,7 @@ contains
                CALL julia(sym,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
              END IF
           END IF
-       ELSE
-          CALL juDFT_error('Error: No kpoint set generation for 1D systems yet!', calledby = 'kpoints')
-          CALL od_kptsgen (kpts%nkpt)
-       END IF
-
+      
        !Rescale weights and kpoints
        IF (.not.banddos%unfoldband) THEN
           kpts%wtkpt(:) = kpts%wtkpt(:) / sum(kpts%wtkpt)

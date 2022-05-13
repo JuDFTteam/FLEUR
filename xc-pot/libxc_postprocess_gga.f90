@@ -70,7 +70,7 @@ CONTAINS
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_pw
 
-   SUBROUTINE libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum,oneD,v_xc,grad)
+   SUBROUTINE libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
       USE m_vac_tofrom_grid
       USE m_types
 
@@ -80,7 +80,7 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_stars),INTENT(IN)   :: stars
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
-      TYPE(t_oneD),INTENT(IN)   :: oneD
+       
       REAL,INTENT(INOUT)          :: v_xc(:,:)
       TYPE(t_gradients),INTENT(IN):: grad
 
@@ -90,8 +90,7 @@ CONTAINS
       INTEGER :: nsp,n_sigma,ifftd2
 
       ifftd2 = 9*stars%mx1*stars%mx2
-      IF (oneD%odi%d1) ifftd2 = 9*stars%mx3*oneD%odi%M
-
+    
       nsp=SIZE(v_xc,1) !no of points
       n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !See in _mt routine
       ALLOCATE(rho_dummy(size(v_xc,1),n_sigma))

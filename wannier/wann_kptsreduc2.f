@@ -10,7 +10,7 @@
       subroutine wann_kptsreduc2(
      >               mhp,
      >               nop,mrot,bmat,tau,film,
-     >               l_onedimens,l_nocosoc)
+     >               l_nocosoc)
 c*****************************************************************
 c     Apply the symmetries to reduce the number of k-points.
 c     Frank Freimuth
@@ -26,7 +26,6 @@ c*****************************************************************
       real, intent(in)    :: bmat(3,3)
       real,intent(in)     :: tau(3,nop)
       integer, intent(in) :: mrot(3,3,nop)
-      logical,intent(in)  :: l_onedimens
       logical,intent(in)  :: l_nocosoc
 
       real,allocatable    :: weight(:)
@@ -189,7 +188,7 @@ c      close(117)
       scale=1.000
 
       open(119,file='kpts',form='formatted')
-      if (film.and..not.l_onedimens)then
+      if (film)then
         write(119,'(i5,f20.10,3x,l1)')reduznumk,scale,.false.         
       else
         write(119,'(i5,f20.10)')reduznumk,scale
@@ -212,7 +211,7 @@ c      close(117)
             write(oUnit,*)"irreducible"
             write(oUnit,fmt='(a10,3f9.6)')"internal: ",kpoint(:)/scale
 
-            if (film.and..not.l_onedimens)then
+            if (film)then
                write(119,'(3f10.5)')kpoint(1:2),weight(ikpt)
             else
                write(119,'(4f10.5)')kpoint(:),weight(ikpt)

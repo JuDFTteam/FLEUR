@@ -8,7 +8,7 @@ c     +                                              +
 c     ++++++++++++++++++++++++++++++++++++++++++++++++
       CONTAINS
       SUBROUTINE wann_nocoplot(atoms,slice,nnne,amat,bmat
-     >                        ,nkpts,odi,film,natd,ntypd,jmtd
+     >                        ,nkpts,film,natd,ntypd,jmtd
      >                        ,ntype,neq,pos,jri,rmsh,alph,beta
      >                        ,nqpts,qss,z1,zatom)
 !    *****************************************************
@@ -30,8 +30,7 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
       REAL,    INTENT(IN) :: pos(3,natd),z1,zatom(:)
       REAL,    INTENT(IN) :: alph(ntypd),beta(ntypd)
 
-      TYPE(od_inp), INTENT(in) :: odi
-
+   
       LOGICAL :: twodim,xsf,cartesian
       INTEGER :: nbmin,nbmax,nplot,nplo,nbn
       INTEGER :: nslibd,nkqpts
@@ -131,11 +130,11 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
             write (name3,24) ikpt,nbn,jspin
    24       format (i5.5,'.',i3.3,'.absv.',i1,'.xsf')
             OPEN(600+jspin,file=name1)
-            CALL xsf_WRITE_atoms(600+jspin,atoms,film,odi%d1,amat)
+            CALL xsf_WRITE_atoms(600+jspin,atoms,film,amat)
             OPEN(602+jspin,file=name2)
-            CALL xsf_WRITE_atoms(602+jspin,atoms,film,odi%d1,amat)
+            CALL xsf_WRITE_atoms(602+jspin,atoms,film,amat)
             OPEN(604+jspin,file=name3)
-            CALL xsf_WRITE_atoms(604+jspin,atoms,film,odi%d1,amat)
+            CALL xsf_WRITE_atoms(604+jspin,atoms,film,amat)
             CALL xsf_WRITE_header(600+jspin,twodim,filename,(vec1),
      &       (vec2),(vec3),zero
      $           ,grid)
@@ -166,10 +165,8 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
              ii1 = 3
              ii2 = 3
              ii3 = 3
-             IF (film .AND. .NOT.odi%d1) ii3 = 0
-             IF (odi%d1) THEN
-                ii1 = 0 ; ii2 = 0
-             END IF
+             IF (film ) ii3 = 0
+           
              DO  i1 = -ii1,ii1
               DO  i2 = -ii2,ii2
                DO  i3 = -ii3,ii3

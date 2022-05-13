@@ -120,16 +120,13 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: flm(:, :), z0(:, :, :, :)
       INTEGER, ALLOCATABLE :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
-      IF ((fi%input%preconditioning_param /= 0) .AND. fi%oneD%odi%d1) THEN
-         CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby='fleur')
-      END IF
-
+    
       CALL optional(fmpi, fi%atoms, sphhar, fi%vacuum, &
-                    stars, fi%input, fi%sym, fi%cell, fi%sliceplot, xcpot, fi%noco, fi%oneD)
+                    stars, fi%input, fi%sym, fi%cell, fi%sliceplot, xcpot, fi%noco)
 
       IF (fi%input%l_wann .AND. (fmpi%irank == 0) .AND. (.NOT. wann%l_bs_comf)) THEN
 !       IF(fmpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
-         CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell, fi%oneD, fi%noco, wann)
+         CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell,   fi%noco, wann)
       END IF
 
       iter = 0
@@ -164,22 +161,22 @@ CONTAINS
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
       IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
       IF (any(fi%noco%l_unrestrictMT)) archiveType = CDN_ARCHIVE_TYPE_FFN_const
-      IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%oneD, archiveType, CDN_INPUT_DEN_const, &
+      IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym,   archiveType, CDN_INPUT_DEN_const, &
                                               0, results%ef, results%last_distance, l_qfix, inDen)
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
-      !   CALL initRelax(fi%noco, nococonv, fi%atoms, fi%input, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, inDen)
-         !CALL doRelax(fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
+      !   CALL initRelax(fi%noco, nococonv, fi%atoms, fi%input, fi%vacuum, sphhar, stars, fi%sym,   fi%cell, inDen)
+         !CALL doRelax(fi%vacuum, sphhar, stars, fi%sym,   fi%cell, fi%noco, nococonv, fi%input, fi%atoms, inDen)
       !END IF
       CALL timestart("Qfix")
-      CALL qfix(fmpi, stars, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell, fi%oneD, inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
+      CALL qfix(fmpi, stars, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell,   inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
       !call magMoms(fi%input,fi%atoms,fi%noco,nococonv,den=inDen)
       CALL timestop("Qfix")
       IF (fmpi%irank .EQ. 0) THEN
-         CALL writeDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, fi%oneD, archiveType, CDN_INPUT_DEN_const, &
+         CALL writeDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym,   archiveType, CDN_INPUT_DEN_const, &
                            0, -1.0, results%ef, results%last_mmpmatDistance, results%last_occDistance, .FALSE., inDen)
       END IF
 
-      IF (any(fi%noco%l_alignMT)) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
+      IF (any(fi%noco%l_alignMT)) CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars, fi%sym,   fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
       ! Initialize and load inDen density (end)
 
       ! Initialize potentials (start)
@@ -260,16 +257,16 @@ CONTAINS
 !Plot inden if wanted
          IF (fi%sliceplot%iplot .NE. 0) THEN
             IF (.NOT.fi%sliceplot%slice) THEN
-               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
+               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,   fi%sym, fi%cell, &
                               fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
             ELSE
                CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-                                                       fi%input, fi%sym, fi%oneD,CDN_ARCHIVE_TYPE_CDN_const, &
+                                                       fi%input, fi%sym,  CDN_ARCHIVE_TYPE_CDN_const, &
                                                        CDN_INPUT_DEN_const, 0, rdummy, tempDistance, l_dummy, sliceDen, 'cdn_slice')
                CALL sliceden%distribute(fmpi%mpi_comm)
                call nococonv%mpi_bc(fmpi%mpi_comm)
-               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, fi%cell, &
+               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,   fi%sym, fi%cell, &
                               fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
             END IF
             IF ((fmpi%irank .EQ. 0) .AND. (fi%sliceplot%iplot .EQ. 2)) THEN
@@ -316,7 +313,7 @@ CONTAINS
 
          CALL timestart("generation of potential")
          CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
-                   fi%cell, fi%oneD, fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
+                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
          CALL timestop("generation of potential")
 
          IF (any(fi%noco%l_unrestrictMT) .AND. fi%noco%l_scaleMag) THEN
@@ -406,7 +403,7 @@ CONTAINS
             IF (fi%input%gw .GT. 0) THEN
                IF (fmpi%irank .EQ. 0) THEN
                   CALL writeBasis(input_soc, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, fi%cell, enpara, hub1data, vTot, vCoul, vx, fmpi, &
-                                  results, eig_id, fi%oneD, sphhar, stars, fi%vacuum)
+                                  results, eig_id,   sphhar, stars, fi%vacuum)
                END IF
                IF (fi%input%gw .EQ. 2) THEN
                   CALL juDFT_end("SPEX data written. Fleur ends.", fmpi%irank)
@@ -476,13 +473,13 @@ CONTAINS
 
             !!!juPhon
 
-            IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi, fi%oneD, enpara, vToT, results)) THEN
+            IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi,   enpara, vToT, results)) THEN
                CYCLE forcetheoloop
             ENDIF
 
             !+Wannier functions
             IF ((fi%input%l_wann) .AND. (.NOT. wann%l_bs_comf)) THEN
-               CALL wannier(fmpi, input_soc, fi%kpts, fi%sym, fi%atoms, stars, fi%vacuum, sphhar, fi%oneD, &
+               CALL wannier(fmpi, input_soc, fi%kpts, fi%sym, fi%atoms, stars, fi%vacuum, sphhar,   &
                             wann, fi%noco, nococonv, fi%cell, enpara, fi%banddos, fi%sliceplot, vTot, results, &
                             (/eig_id/), (fi%sym%invs) .AND. (.NOT. fi%noco%l_soc) .AND. (.NOT. fi%noco%l_noco), fi%kpts%nkpt)
             END IF
@@ -510,7 +507,7 @@ CONTAINS
             outDen%iter = inDen%iter
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
-                        enpara, fi%cell, fi%noco, nococonv, vTot, results, fi%oneD, fi%corespecinput, &
+                        enpara, fi%cell, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
                         archiveType, xcpot, outDen, EnergyDen, greensFunction, hub1data,vxc,exc)
             !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
@@ -518,7 +515,7 @@ CONTAINS
             IF (fi%sliceplot%iplot .NE. 0) THEN
                !               CDN including core charge
 
-               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, &
+               CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,   fi%sym, &
                               fi%cell, fi%noco, nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
 
                IF ((fi%sliceplot%iplot .NE. 0) .AND. (fmpi%irank .EQ. 0) .AND. (fi%sliceplot%iplot .LT. 64) .AND. (MODULO(fi%sliceplot%iplot, 2) .NE. 1)) THEN
@@ -570,7 +567,7 @@ CONTAINS
 !!$                reap = .FALSE.
 !!$                CALL timestart("generation of potential (total)")
 !!$                CALL vgen(fi%hybinp,reap,fi%input,xcpot, fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-!!$                     fi%cell,fi%oneD,fi%sliceplot,fmpi, results,fi%noco,outDen,inDenRot,vTot,vx,vCoul)
+!!$                     fi%cell, fi%sliceplot,fmpi, results,fi%noco,outDen,inDenRot,vTot,vx,vCoul)
 !!$                CALL timestop("generation of potential (total)")
 !!$
 !!$                CALL potdis(stars,fi%vacuum,fi%atoms,sphhar, fi%input,fi%cell,fi%sym)
@@ -579,10 +576,10 @@ CONTAINS
             ! total energy
 
             !Rotating from local MT frame in global frame for mixing
-            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, inDen,fmpi)
-            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%oneD, fi%cell, fi%input, fi%atoms, outDen,fmpi,.true.)
+            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym,   fi%cell, fi%input, fi%atoms, inDen,fmpi)
+            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym,   fi%cell, fi%input, fi%atoms, outDen,fmpi,.true.)
             CALL timestart('determination of total energy')
-            CALL totale(fmpi, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%input, fi%noco, fi%cell, fi%oneD, &
+            CALL totale(fmpi, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%input, fi%noco, fi%cell,   &
                         xcpot, hybdat, vTot, vCoul, iter, inDen, results)
             CALL timestop('determination of total energy')
          END DO forcetheoloop
@@ -594,11 +591,11 @@ CONTAINS
          ! mix fi%input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), &
          stars, fi%atoms, sphhar, fi%vacuum, fi%input, &
-         fi%sym, fi%cell, fi%noco,nococonv, fi%oneD, archiveType, xcpot, iter, inDen, outDen, results, hub1data%l_runthisiter, fi%sliceplot)
+         fi%sym, fi%cell, fi%noco,nococonv,   archiveType, xcpot, iter, inDen, outDen, results, hub1data%l_runthisiter, fi%sliceplot)
 
          !Rotating in local MT frame
          CALL toLocalSpinFrame(fmpi,fi%vacuum, sphhar, stars &
-         , fi%sym, fi%oneD, fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
+         , fi%sym,   fi%cell, fi%noco, nococonv, fi%input, fi%atoms, .true.,inDen,.true.)
 
          IF (fmpi%irank == 0) THEN
             WRITE (oUnit, FMT=8130) iter
@@ -679,11 +676,11 @@ CONTAINS
          ! Plots of mixed density
          IF ((fi%sliceplot%iplot .NE. 0)) THEN
             ! CDN including core charge
-            CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%oneD, fi%sym, &
+            CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,   fi%sym, &
                            fi%cell, fi%noco, nococonv, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
            !! CDN subtracted by core charge
-            !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell,fi%oneD,fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
-            !CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fi%oneD, fi%sym, &
+            !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell, fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+            !CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input,   fi%sym, &
             !fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
          END IF
 

@@ -17,7 +17,7 @@ MODULE m_types_fleurinput
   USE m_types_banddos
   USE m_types_mpinp
   USE m_types_hybinp
-  USE m_types_oneD
+   
   USE m_types_coreSpecInput
   USE m_types_wannier
   USE m_types_xcpot
@@ -41,7 +41,7 @@ MODULE m_types_fleurinput
     TYPE(t_banddos)::banddos
     TYPE(t_hybinp)::hybinp
     type(t_mpinp) :: mpinp
-    TYPE(t_oneD)::oneD
+     
     TYPE(t_coreSpecInput)::coreSpecInput
     TYPE(t_forcetheo_data)::forcetheo_data
     TYPE(t_enparaXML)::enparaXML

@@ -12,14 +12,14 @@
       CONTAINS
       SUBROUTINE wann_updown(
      >      wann,fmpi,input,kpts,sym,atoms,stars,vacuum,
-     >      sphhar,oneD,noco,nococonv,cell,vTot,
+     >      sphhar ,noco,nococonv,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_communicatior,l_dulo,l_noco,l_ss,lmaxd,
      >      ntypd,
      >      neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss,sk2,phi2,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -89,7 +89,7 @@ c****************************************************************************
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum
       TYPE(t_sphhar),INTENT(IN) :: sphhar
-      TYPE(t_oneD),INTENT(IN)   :: oneD
+       
       TYPE(t_noco),INTENT(IN)   :: noco
       TYPE(t_nococonv),INTENT(IN):: nococonv
       TYPE(t_cell),INTENT(IN)   :: cell
@@ -131,8 +131,6 @@ c****************************************************************************
       integer, intent (in) :: llh(0:nlhd,ntypsd)
       integer, intent (in) :: lo1l(0:llod,ntypd)
       real,    intent (in) :: sk2(n2d),phi2(n2d)
-      type (od_inp), intent (in) :: odi
-      type (od_sym), intent (in) :: ods
       real, intent(in) :: theta,phi
 
 cccccccccccccccccc   local variables   cccccccccccccccccccc
@@ -515,14 +513,12 @@ c*************************************************************
      >            l_ss,l_noco,nrec,fullnkpts,
      >            wann%l_bzsym,wann%l_byindex,wann%l_bynumber,
      >            wann%l_byenergy,
-     >            irreduc,odi,wann%band_min(jspin),
+     >            irreduc,wann%band_min(jspin),
      >            wann%band_max(jspin),
      >            numbands,
      >            e1s,e2s,efermi,wann%l_pauli,nkpts,
      <            nbnd,kpoints,.false.,-1)
-         if(odi%d1)then
-            kpoints(:)=kpoints(:)*bmat(3,3)
-         endif
+       
       endif!l_p0
 
 ! nbnd is calculated for process zero and is sent here to the others
@@ -862,9 +858,7 @@ c****************************************************************
 
 
         CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
-     &  kptibz,cell,
-     &  (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &  .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+     &  kptibz,cell,fmpi)
 
 
         nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
@@ -1000,7 +994,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       do jspin=1,wannierspin
 
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
-     +      noco,nococonv,min(jspin,input%jspins),oneD,
+     +      noco,nococonv,min(jspin,input%jspins) ,
      +      acof(1:,0:,1:,jspin),
      +              bcof(1:,0:,1:,jspin),ccof(-llod:,1:,1:,1:,jspin),
      +              zMat(jspin))
@@ -1079,7 +1073,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_surfcurr)then
          call wann_surfcurr_int_updown(
-     >       nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
+     >       nv2d,jspin,n3d,nmzxyd,n2d,ntypsd,
      >       ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
      >       nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
      >       invs,invs2,z1,delz,ngopr,ntypsy,jri,
@@ -1246,7 +1240,7 @@ c---> spherical contribution to updown.mmn0-matrix
 
 c---> vacuum contribution to updown.mmn0-matrix
 
-       if (film .and. .not.odi%d1) then
+       if (film ) then
 
 c         call wann_mmk0_vac(
 c     >           z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
@@ -1257,18 +1251,7 @@ c     >           lapw%k3(:,jspin),wannierspin,nvd,
 c     >           nbasfcn,neigd,z,nv,omtil,
 c     <           mmn(1:noccbd,1:noccbd,ikpt))
 
-       elseif (odi%d1) then
-
-c          call wann_mmk0_od_vac(
-c     >           z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
-c     >           ig,nmzxy,nmz,delz,ig2,odi%n2d,
-c     >           bbmat,evac(1,jspin),bkpt,odi%M,odi%mb,
-c     >           vz(:,1,jspin2),odi,
-c     >           nslibd,jspin,lapw%k1(:,jspin),lapw%k2(:,jspin),
-c     >           lapw%k3(:,jspin),wannierspin,nvd,area,
-c     >           nbasfcn,neigd,z,nv,sk2,phi2,omtil,qss,
-c     <           mmn(1:noccbd,1:noccbd,ikpt))
-
+ 
        endif
       endif !l_mmn0
 
