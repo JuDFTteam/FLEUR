@@ -27,10 +27,10 @@ def test_Gd_Hubbard1(execute_fleur, grep_number, grep_exists):
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of spin densities for it=    3", ":")
 
-    assert abs(xisoc - 0.21978) <= 0.00001
+    assert abs(xisoc - 0.2198) <= 0.0001
     assert abs(mumatch - -3.1063151E-002) <= 0.0001
-    assert abs(nmmp_occ - 6.99999999668645) <= 0.00001
-    assert abs(nmmp_el - 0.997526430566068) <= 0.00001
+    assert abs(nmmp_occ - 7.0) <= 0.00001
+    assert abs(nmmp_el - 0.99753) <= 0.00001
     assert abs(tenergy - -22560.583472) <= 0.00001
     assert abs(dist - 25.033576) <= 0.0001
 
