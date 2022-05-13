@@ -84,7 +84,7 @@
       INTEGER  ::nw,idsprs,ncst
       INTEGER ieq,i,k,na,n,ilo
       REAL s3,ah,a,hs2,rest,rdum,rdum1,ellow,elup
-      LOGICAL l_hyb,l_sym,ldum,gauss,tria
+      LOGICAL l_hyb,l_sym,ldum,gauss,tria,invs2
       INTEGER :: ierr, intDummy
 ! ..
 !...  Local Arrays
@@ -153,9 +153,9 @@
  7000 FORMAT (10a8)
 !
       READ (UNIT=5,FMT=7020,END=99,ERR=99)&
-     &     latnam,namgrp,sym%invs,zrfs1,sym%invs2,input%jspins,noco%l_noco
+     &     latnam,namgrp,sym%invs,zrfs1, invs2,input%jspins,noco%l_noco
       WRITE (oUnit,9020)&
-     &     latnam,namgrp,sym%invs,zrfs1,sym%invs2,input%jspins,noco%l_noco
+     &     latnam,namgrp,sym%invs,zrfs1, invs2,input%jspins,noco%l_noco
  7020 FORMAT (a3,1x,a4,6x,l1,6x,l1,7x,l1,8x,i1,8x,l1,5x,l1)
 !
       IF ((latnam.EQ.'squ').OR.(latnam.EQ.'hex').OR.&
@@ -722,7 +722,7 @@
      &        ',ndir=',i2,',secvar=',l1)
       WRITE (5,9010) name
  9010 FORMAT (10a8)
-      WRITE(5,9020) latnam,namgrp,sym%invs,zrfs1,sym%invs2,input%jspins,noco%l_noco
+      WRITE(5,9020) latnam,namgrp,sym%invs,zrfs1, invs2,input%jspins,noco%l_noco
  9020 FORMAT (a3,1x,a4,',invs=',l1,',zrfs=',l1,',invs2=',l1,&
      &       ',jspins=',i1,',l_noco=',l1,',l_J=',l1)
 !
