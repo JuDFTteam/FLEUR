@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.35">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.36">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
 
@@ -20,7 +20,7 @@
 
    <xsd:simpleType name="FleurVersionType">
       <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="0.35"/>
+         <xsd:enumeration value="0.36"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -748,6 +748,7 @@
       <xsd:attribute default="1.00" name="spinf" type="xsd:double" use="optional"/>
       <xsd:attribute default="F" name="l_adjEnpara" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_spinoffd" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="l_nonsphDC" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="LdaHIAGeneralType">

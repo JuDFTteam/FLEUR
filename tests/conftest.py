@@ -860,7 +860,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig, test_logger
                 # otherwise popen thinks 'mpirun -np 2 /path/fleur' is the path to the executable...
                 print('FLEUR execution:')
                 print('arg_list:',arg_list)
-                print('env:',run_env)
+                #print('env:',run_env)
                 p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=False)
 
         # Check per hand if successful:
