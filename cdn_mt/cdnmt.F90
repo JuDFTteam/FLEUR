@@ -125,16 +125,18 @@ CONTAINS
              CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vrTmp,atoms,&
                    f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
              llp = (l* (l+1))/2 + l
+
              DO j = 1,atoms%jri(itype)
-                s = denCoeffs%uu(l,itype,ispin)*( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) )&
-                     +   denCoeffs%dd(l,itype,ispin)*( g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin) )&
-                     + 2*denCoeffs%du(l,itype,ispin)*( f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin) )
+                s = denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)*(f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin)) &
+                  + denCoeffs%mt_coeff(l,itype,0,1,ispin,ispin)*(f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin)) &
+                  + denCoeffs%mt_coeff(l,itype,1,0,ispin,ispin)*(g(j,1,l,ispin)*f(j,1,l,ispin)+g(j,2,l,ispin)*f(j,2,l,ispin)) &
+                  + denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin)*(g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin))
                 rho(j,0,itype,ispin) = rho(j,0,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
                 IF (l.LE.input%lResMax) THEN
                    moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
                 END IF
                 IF(PRESENT(hub1data).AND.l.LE.lmaxU_const) THEN
-                  hub1data%cdn_atomic(j,l,itype,ispin) = hub1data%cdn_atomic(j,l,itype,ispin) + denCoeffs%uu(l,itype,ispin)&
+                  hub1data%cdn_atomic(j,l,itype,ispin) = hub1data%cdn_atomic(j,l,itype,ispin) + denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)&
                                                         *( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) ) &
                                                         *1.0/(atoms%neq(itype)*sfp_const)
                 ENDIF
@@ -149,11 +151,14 @@ CONTAINS
           END DO
 
           CALL rhosphnlo(itype,ispin,input,atoms,sphhar,sym,&
-               usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),&
-               usdus%uulon(:,itype,ispin),enpara%ello0(:,itype,ispin),&
-               vr(:,itype,ispin),denCoeffs%aclo(:,itype,ispin),denCoeffs%bclo(:,itype,ispin),&
-               denCoeffs%cclo(:,:,itype,ispin),denCoeffs%acnmt(0:,:,:,itype,ispin),&
-               denCoeffs%bcnmt(0:,:,:,itype,ispin),denCoeffs%ccnmt(:,:,:,itype,ispin),&
+               usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),usdus%uulon(:,itype,ispin),&
+               enpara%ello0(:,itype,ispin),vr(:,itype,ispin),&
+               REAL(denCoeffs%mt_ulo_coeff(:,itype,0,ispin,ispin)+denCoeffs%mt_lou_coeff(:,itype,0,ispin,ispin)),&
+               REAL(denCoeffs%mt_ulo_coeff(:,itype,1,ispin,ispin)+denCoeffs%mt_lou_coeff(:,itype,1,ispin,ispin)),&
+               REAL(denCoeffs%mt_lolo_coeff(:,:,itype,ispin,ispin)),&
+               REAL(denCoeffs%nmt_ulo_coeff(0:,:,:,itype,0,ispin,ispin)+denCoeffs%nmt_lou_coeff(0:,:,:,itype,0,ispin,ispin)),&
+               REAL(denCoeffs%nmt_ulo_coeff(0:,:,:,itype,1,ispin,ispin)+denCoeffs%nmt_lou_coeff(0:,:,:,itype,1,ispin,ispin)),&
+               REAL(denCoeffs%nmt_lolo_coeff(:,:,:,itype,ispin,ispin)),&
                f(:,:,0:,ispin),g(:,:,0:,ispin),&
                rho(:,0:,itype,ispin),moments,qmtllo)
 
@@ -161,7 +166,7 @@ CONTAINS
           !--->       l-decomposed density for each atom type
           qmtt = 0.0
           DO l = 0,atoms%lmax(itype)
-             qmtl(l,ispin,itype) = ( denCoeffs%uu(l,itype,ispin)+denCoeffs%dd(l,itype,ispin)&
+             qmtl(l,ispin,itype) = ( denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)+denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin)&
                   &              *usdus%ddn(l,itype,ispin) )/atoms%neq(itype) + qmtllo(l)
              qmtt = qmtt + qmtl(l,ispin,itype)
           END DO
@@ -195,14 +200,10 @@ CONTAINS
                    IF(atoms%l_outputCFpot(itype).AND.atoms%l_outputCFremove4f(itype)&
                       .AND.(l.EQ.lcf.AND.lp.EQ.lcf)) CYCLE !Exclude non-spherical contributions for CF
                    DO j = 1,atoms%jri(itype)
-                      s = denCoeffs%uunmt(llp,lh,itype,ispin)*( &
-                           f(j,1,l,ispin)*f(j,1,lp,ispin)+ f(j,2,l,ispin)*f(j,2,lp,ispin) )&
-                           + denCoeffs%ddnmt(llp,lh,itype,ispin)*(g(j,1,l,ispin)*g(j,1,lp,ispin)&
-                           + g(j,2,l,ispin)*g(j,2,lp,ispin) )&
-                           + denCoeffs%udnmt(llp,lh,itype,ispin)*(f(j,1,l,ispin)*g(j,1,lp,ispin)&
-                           + f(j,2,l,ispin)*g(j,2,lp,ispin) )&
-                           + denCoeffs%dunmt(llp,lh,itype,ispin)*(g(j,1,l,ispin)*f(j,1,lp,ispin)&
-                           + g(j,2,l,ispin)*f(j,2,lp,ispin) )
+                      s = denCoeffs%nmt_coeff(llp,lh,itype,0,0,ispin,ispin)*(f(j,1,lp,ispin)*f(j,1,l,ispin)+ f(j,2,lp,ispin)*f(j,2,l,ispin) )&
+                        + denCoeffs%nmt_coeff(llp,lh,itype,0,1,ispin,ispin)*(f(j,1,lp,ispin)*g(j,1,l,ispin)+ f(j,2,lp,ispin)*g(j,2,l,ispin) )&
+                        + denCoeffs%nmt_coeff(llp,lh,itype,1,0,ispin,ispin)*(g(j,1,lp,ispin)*f(j,1,l,ispin)+ g(j,2,lp,ispin)*f(j,2,l,ispin) )&
+                        + denCoeffs%nmt_coeff(llp,lh,itype,1,1,ispin,ispin)*(g(j,1,lp,ispin)*g(j,1,l,ispin)+ g(j,2,lp,ispin)*g(j,2,l,ispin) )
                       rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ s/atoms%neq(itype)
                       IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
                          moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin)+ s/atoms%neq(itype)
@@ -247,11 +248,10 @@ CONTAINS
              DO l = 0,atoms%lmax(itype)
                 llp = (l* (l+1))/2 + l
                 DO j = 1,atoms%jri(itype)
-                   cs = denCoeffsOffdiag%uu21(l,itype)*( f(j,1,l,2)*f(j,1,l,1) +f(j,2,l,2)*f(j,2,l,1) )&
-                        + denCoeffsOffdiag%ud21(l,itype)*( f(j,1,l,2)*g(j,1,l,1) +f(j,2,l,2)*g(j,2,l,1) )&
-                        + denCoeffsOffdiag%du21(l,itype)*( g(j,1,l,2)*f(j,1,l,1) +g(j,2,l,2)*f(j,2,l,1) )&
-                        + denCoeffsOffdiag%dd21(l,itype)*( g(j,1,l,2)*g(j,1,l,1) +g(j,2,l,2)*g(j,2,l,1) )
-                   !rho21(j,0,itype) = rho21(j,0,itype)+ conjg(cs)/(atoms%neq(itype)*sfp_const)
+                   cs = denCoeffs%mt_coeff(l,itype,0,0,2,1)*(f(j,1,l,2)*f(j,1,l,1)+f(j,2,l,2)*f(j,2,l,1)) &
+                      + denCoeffs%mt_coeff(l,itype,0,1,2,1)*(f(j,1,l,2)*g(j,1,l,1)+f(j,2,l,2)*g(j,2,l,1)) &
+                      + denCoeffs%mt_coeff(l,itype,1,0,2,1)*(g(j,1,l,2)*f(j,1,l,1)+g(j,2,l,2)*f(j,2,l,1)) &
+                      + denCoeffs%mt_coeff(l,itype,1,1,2,1)*(g(j,1,l,2)*g(j,1,l,1)+g(j,2,l,2)*g(j,2,l,1))
                    rho21 = cs/(atoms%neq(itype)*sfp_const)
                    rho(j,0,itype,3) = rho(j,0,itype,3) +  REAL(rho21)
                    rho(j,0,itype,4) = rho(j,0,itype,4) + AIMAG(rho21)
@@ -262,6 +262,8 @@ CONTAINS
                 ENDDO
              ENDDO
 
+             ! TODO: Add LOs for offdiag here.
+
              !--->        non-spherical components
              nd = sym%ntypsy(na)
              DO lh = 1,sphhar%nlh(nd)
@@ -270,12 +272,10 @@ CONTAINS
                       llp = lp*(atoms%lmax(itype)+1)+l+1
                       llpb = (MAX(l,lp)* (MAX(l,lp)+1))/2 + MIN(l,lp)
                       DO j = 1,atoms%jri(itype)
-                         cs = denCoeffsOffdiag%uunmt21(llp,lh,itype)*(f(j,1,lp,2)*f(j,1,l,1)&
-                              + f(j,2,lp,2)*f(j,2,l,1) )+ denCoeffsOffdiag%udnmt21(llp,lh,itype)*(f(j,1,lp,2)*g(j,1,l,1)&
-                              + f(j,2,lp,2)*g(j,2,l,1) )+ denCoeffsOffdiag%dunmt21(llp,lh,itype)*(g(j,1,lp,2)*f(j,1,l,1)&
-                              + g(j,2,lp,2)*f(j,2,l,1) )+ denCoeffsOffdiag%ddnmt21(llp,lh,itype)*(g(j,1,lp,2)*g(j,1,l,1)&
-                              + g(j,2,lp,2)*g(j,2,l,1) )
-                         !rho21(j,lh,itype)= rho21(j,lh,itype)+ CONJG(cs)/atoms%neq(itype)
+                         cs = denCoeffs%nmt_coeff(llp,lh,itype,0,0,2,1)*(f(j,1,lp,2)*f(j,1,l,1)+f(j,2,lp,2)*f(j,2,l,1)) &
+                            + denCoeffs%nmt_coeff(llp,lh,itype,0,1,2,1)*(f(j,1,lp,2)*g(j,1,l,1)+f(j,2,lp,2)*g(j,2,l,1)) &
+                            + denCoeffs%nmt_coeff(llp,lh,itype,1,0,2,1)*(g(j,1,lp,2)*f(j,1,l,1)+g(j,2,lp,2)*f(j,2,l,1)) &
+                            + denCoeffs%nmt_coeff(llp,lh,itype,1,1,2,1)*(g(j,1,lp,2)*g(j,1,l,1)+g(j,2,lp,2)*g(j,2,l,1))
                          rho21 = cs/atoms%neq(itype)
                          rho(j,lh,itype,3) = rho(j,lh,itype,3) +  REAL(rho21)
                          rho(j,lh,itype,4) = rho(j,lh,itype,4) + AIMAG(rho21)

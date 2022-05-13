@@ -147,6 +147,7 @@ CONTAINS
 
                                  ! dd/ud
                                  temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,1,nt,ilSpin)
+                                 IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
                                  IF (l_dfpt) THEN
                                     temp(:) = temp(:) * 2.0
                                     IF (norm2(qpoint)<=1e-8) THEN

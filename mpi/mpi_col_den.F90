@@ -109,7 +109,7 @@ CONTAINS
     n = 4*(atoms%lmaxd+1)*atoms%ntype
     ALLOCATE(c_b(n))
     CALL MPI_ALLREDUCE(denCoeffs%mt_coeff(0:,:,0:1,0:1,jspin,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,jspin,jspin), 1)
+    CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,jspin,jspin), 1)
     DEALLOCATE (c_b)
 
     !--> Collect uunmt,udnmt,dunmt,ddnmt
@@ -129,7 +129,7 @@ CONTAINS
     n = 4*(((atoms%lmaxd+1)**2)+1)*sphhar%nlhd*atoms%ntype
     ALLOCATE(c_b(n))
     CALL MPI_ALLREDUCE(denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,jspin,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,jspin,jspin), 1)
+    CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,jspin,jspin), 1)
     DEALLOCATE (c_b)
 
     !--> ener & sqal
@@ -292,9 +292,9 @@ CONTAINS
        n=2*atoms%nlod*atoms%ntype
        ALLOCATE (c_b(n))
        CALL MPI_ALLREDUCE(denCoeffs%mt_ulo_coeff(:,:,0:1,jspin,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_ulo_coeff(:,:,0:1,jspin,jspin), 1)
+       CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_ulo_coeff(:,:,0:1,jspin,jspin), 1)
        CALL MPI_ALLREDUCE(denCoeffs%mt_lou_coeff(:,:,0:1,jspin,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,jspin,jspin), 1)
+       CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,jspin,jspin), 1)
        DEALLOCATE (c_b)
 
        n = atoms%nlod * atoms%nlod * atoms%ntype
@@ -306,8 +306,8 @@ CONTAINS
        ! Refactored stuff
        n = atoms%nlod * atoms%nlod * atoms%ntype
        ALLOCATE (c_b(n))
-       CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,jspin,jspin),c_b,n,CPP_MPI_REAL,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,jspin,jspin), 1)
+       CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,jspin,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
+       CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,jspin,jspin), 1)
        DEALLOCATE (c_b)
 
        n = (atoms%lmaxd+1) * atoms%ntype * atoms%nlod * sphhar%nlhd
@@ -322,9 +322,9 @@ CONTAINS
        n=2*atoms%nlod*atoms%ntype*(atoms%lmaxd+1)*sphhar%nlhd
        ALLOCATE (c_b(n))
        CALL MPI_ALLREDUCE(denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,jspin,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,jspin,jspin), 1)
+       CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,jspin,jspin), 1)
        CALL MPI_ALLREDUCE(denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,jspin,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,jspin,jspin), 1)
+       CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,jspin,jspin), 1)
        DEALLOCATE (c_b)
 
        n = atoms%ntype * sphhar%nlhd * atoms%nlod**2
@@ -337,7 +337,7 @@ CONTAINS
        n = atoms%ntype * sphhar%nlhd * atoms%nlod**2
        ALLOCATE (c_b(n))
        CALL MPI_ALLREDUCE(denCoeffs%nmt_lolo_coeff(:,:,:,:,jspin,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_lolo_coeff(:,:,:,:,jspin,jspin), 1)
+       CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_lolo_coeff(:,:,:,:,jspin,jspin), 1)
        DEALLOCATE (c_b)
 
     ENDIF
@@ -451,9 +451,9 @@ CONTAINS
           n = 4*(atoms%lmaxd+1)*atoms%ntype
           ALLOCATE(c_b(n))
           CALL MPI_ALLREDUCE(denCoeffs%mt_coeff(0:,:,0:1,0:1,2,1),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,2,1), 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,2,1), 1)
           CALL MPI_ALLREDUCE(denCoeffs%mt_coeff(0:,:,0:1,0:1,1,2),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,1,2), 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,1,2), 1)
           DEALLOCATE (c_b)
 
           ! -->     lo,u coeff's:
@@ -473,13 +473,13 @@ CONTAINS
           n=2*atoms%nlod*atoms%ntype
           ALLOCATE (c_b(n))
           CALL MPI_ALLREDUCE(denCoeffs%mt_ulo_coeff(:,:,0:1,2,1),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_ulo_coeff(:,:,0:1,2,1), 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_ulo_coeff(:,:,0:1,2,1), 1)
           CALL MPI_ALLREDUCE(denCoeffs%mt_lou_coeff(:,:,0:1,2,1),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,2,1), 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,2,1), 1)
           CALL MPI_ALLREDUCE(denCoeffs%mt_ulo_coeff(:,:,0:1,1,2),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_ulo_coeff(:,:,0:1,1,2), 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_ulo_coeff(:,:,0:1,1,2), 1)
           CALL MPI_ALLREDUCE(denCoeffs%mt_lou_coeff(:,:,0:1,1,2),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,1,2), 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,1,2), 1)
           DEALLOCATE (c_b)
 
           ! -->     lo,lo' coeff's:
@@ -493,9 +493,9 @@ CONTAINS
           n = atoms%nlod * atoms%nlod * atoms%ntype
           ALLOCATE (c_b(n))
           CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,2,1),c_b,n,CPP_MPI_REAL,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,2,1), 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,2,1), 1)
           CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,1,2),c_b,n,CPP_MPI_REAL,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,1,2), 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,1,2), 1)
           DEALLOCATE (c_b)
 
           IF (denCoeffsOffdiag%l_fmpl) THEN
@@ -517,31 +517,31 @@ CONTAINS
              n = 4*(((atoms%lmaxd+1)**2)+1)*sphhar%nlhd*atoms%ntype
              ALLOCATE(c_b(n))
              CALL MPI_ALLREDUCE(denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,2,1),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-             CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,2,1), 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,2,1), 1)
              CALL MPI_ALLREDUCE(denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,1,2),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-             CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,1,2), 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,1,2), 1)
              DEALLOCATE (c_b)
 
              ! Refactored stuff
              n=2*atoms%nlod*atoms%ntype*(atoms%lmaxd+1)*sphhar%nlhd
              ALLOCATE (c_b(n))
              CALL MPI_ALLREDUCE(denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,2,1),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,2,1), 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,2,1), 1)
              CALL MPI_ALLREDUCE(denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,2,1),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,2,1), 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,2,1), 1)
              CALL MPI_ALLREDUCE(denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,1,2),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,1,2), 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,1,2), 1)
              CALL MPI_ALLREDUCE(denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,1,2),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,1,2), 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,1,2), 1)
              DEALLOCATE (c_b)
 
              ! Refactored stuff
              n = atoms%ntype * sphhar%nlhd * atoms%nlod**2
              ALLOCATE (c_b(n))
              CALL MPI_ALLREDUCE(denCoeffs%nmt_lolo_coeff(:,:,:,:,2,1),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_lolo_coeff(:,:,:,:,2,1), 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_lolo_coeff(:,:,:,:,2,1), 1)
              CALL MPI_ALLREDUCE(denCoeffs%nmt_lolo_coeff(:,:,:,:,1,2),c_b,n,CPP_MPI_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL CPP_BLAS_scopy(n, c_b, 1, denCoeffs%nmt_lolo_coeff(:,:,:,:,1,2), 1)
+             CALL CPP_BLAS_ccopy(n, c_b, 1, denCoeffs%nmt_lolo_coeff(:,:,:,:,1,2), 1)
              DEALLOCATE (c_b)
 
           ENDIF ! fmpl
