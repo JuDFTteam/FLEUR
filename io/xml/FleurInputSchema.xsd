@@ -749,6 +749,7 @@
       <xsd:attribute default="F" name="l_adjEnpara" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_spinoffd" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_nonsphDC" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="l_initialGuess" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="LdaHIAGeneralType">

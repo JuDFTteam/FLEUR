@@ -227,7 +227,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       call move_alloc(mmpmat_tmp,den%mmpmat)
    ENDIF
 
-   IF(atoms%n_u>0.and.fmpi%irank==0) THEN
+   IF(atoms%n_u>0.and.fmpi%irank==0.and.input%ldauInitialGuess) THEN
       !Create initial guess for the density matrix based on the occupations in the inp.xml file
       WRITE(*,*) "Creating initial guess for LDA+U density matrix"
       den%mmpMat = cmplx_0
@@ -251,7 +251,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   m  = mj - ms
                   IF(ABS(m)<=l) then
                      cl = clebsch(REAL(l),0.5,REAL(m),ms,j_state,mj)**2   
-                     den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) = den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) +  MIN(cl,occ_state(ispin))
+                     den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) = den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) + MIN(cl,occ_state(ispin))
                      occ_state(ispin) = MAX(occ_state(ispin)-cl,0.0)
                   endif
                   mj_state = mj_state + 1 
