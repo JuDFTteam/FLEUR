@@ -262,7 +262,7 @@ CONTAINS
                 ENDDO
              ENDDO
 
-             ! TODO: Add LOs for offdiag here.
+             ! TODO: Add LOs for offdiag here (sph. + nsph.).
 
              !--->        non-spherical components
              nd = sym%ntypsy(na)
