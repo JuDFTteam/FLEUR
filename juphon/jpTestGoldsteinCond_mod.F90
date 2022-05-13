@@ -209,7 +209,7 @@ module m_jpTestGoldsteinCond
     use m_jpSetupDynMatHelper, only : CalcHnGrV0Varphi
     use m_jpSetupDynMat, only : CalcScalBasfMatElems, CalcSelfAdjCorrPhi
     use m_abcof3, only : abcof3
-    use m_od_types, only : od_inp, od_sym
+     
     use mod_juPhonUtils, only : Derivative
     use m_juDFT_NOstopNO, only : juDFT_warn
 
@@ -1059,7 +1059,7 @@ module m_jpTestGoldsteinCond
 
     use m_types, only : t_atoms, t_sphhar, t_dimension, t_input, t_stars, t_kpts, t_cell, t_sym, t_usdus, t_enpara, t_noco,        &
                                                                                                                & t_tlmplm, t_results
-    use m_od_types, only : od_inp, od_sym
+     
 
     use m_jpSternhHF, only : CalcMEPotIR, Tlmplm4V, CalcVsumMT
     use m_jpGrVeff0, only : GenGrVeff0

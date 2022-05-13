@@ -9,7 +9,7 @@
       contains 
       subroutine wann_pauli_rs(
      >          rvecnum,rvec,kpoints,
-     >          jspins_in,nkpts,l_bzsym,film,l_onedimens,
+     >          jspins_in,nkpts,l_bzsym,film,
      >          l_soc,band_min,band_max,neigd,
      >          l_socmmn0,l_ndegen,ndegen,wan90version,
      >          l_unformatted)
@@ -67,7 +67,7 @@ c*************************************************
       complex             :: value(4)
       logical             :: um_format
       logical             :: repro_eig
-      logical             :: l_chk,l_proj,l_onedimens
+      logical             :: l_chk,l_proj
       logical             :: have_disentangled
       integer,allocatable :: ndimwin(:,:)
       logical,allocatable :: lwindow(:,:,:)

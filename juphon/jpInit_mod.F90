@@ -110,7 +110,7 @@ module m_jpInit
       & testGauntCoeffSw, testGradLhExpandFuncSw, testContGrVeff0Sw, testWarpingSw, testSternhHSMEtestSw,                          &
       & testSternhSchroedPertTheoSw, testz1Phi0ContSw, testRho1BasCorrSw, testPlotRho03Dsw, testRadSolSw, testKptsWeightSw,        &
       & testCountValElecSw, testVeff0ContSw, testrho0ContSw, testBackRotMTCoordSysSw, testPsi0ContSw, testOverlapSw,               &
-      & testGradRho0PathSw, testEii2LatPeriodQSw, testVarphiHepsVarphiSw, testRho1IRsw, testRho1MTsw, testsActivated, oneD, vacuum,&
+      & testGradRho0PathSw, testEii2LatPeriodQSw, testVarphiHepsVarphiSw, testRho1IRsw, testRho1MTsw, testsActivated,   vacuum,&
       & test1st2ndPulDynMatEps1, test1st2ndPulDynMatCancel, test3rdPulDynMatCancel, testIntVeff1Rho1Val, testGrPsiPsiMatElem,      &
       & testCompareSurfInt, testSplitMTSurfIntSterh, testVeff1IRMESternh, testEps1q0, testVeff1IRMatqBackFold,                     &
       & testVeff1IRqLatPeriod, testGrMatElemPsiHepsPsiGaussTheo, testPsiHepsTildePsi, testGoldsteinRemaining,                      &
@@ -300,7 +300,7 @@ module m_jpInit
     type(t_obsolete)                              :: obsolete
     type(t_jij)                                   :: jij
     type(t_hybrid)                                :: hybrid
-    type(t_oneD)                  , intent(out)                :: oneD
+     
 
     ! Array Variables
     ! uds        : energy derivative of radial solution u at muffin-tin radius
@@ -419,7 +419,7 @@ module m_jpInit
       a1(:) = 0
       a2(:) = 0
       a3(:) = 0
-      call Rw_inp( 'r', atoms, obsolete, vacuum, input, stars, sliceplot, banddos, cell, sym, xcpot, noco, jij, oneD, hybrid, kpts,&
+      call Rw_inp( 'r', atoms, obsolete, vacuum, input, stars, sliceplot, banddos, cell, sym, xcpot, noco, jij,   hybrid, kpts,&
         & noel, namex, relcor, a1, a2, a3, latVecScal )
       cell%amat(:, 1) =  a1(:) * latVecScal
       cell%amat(:, 2) =  a2(:) * latVecScal
@@ -441,7 +441,7 @@ module m_jpInit
       call TimeStart('Init:fleur-init')
       call fleur_init(ivers, mpi, input, dimens, atoms, lathar, cell, stars, sym, &
                      &noco, vacuum, sliceplot, banddos, obsolete, enpara, xcpot, results, &
-                     &jij, kpts, hybrid, oneD, l_opti)
+                     &jij, kpts, hybrid,   l_opti)
       call TimeNOstopNO('Init:fleur-init')
 
 
@@ -489,13 +489,13 @@ module m_jpInit
 !    end if
 
     ! Read converged potentials from Fleur and write some quantities to logfile
-    call ReadPotFleur( atoms, stars, dimens, lathar, input, sym, vacuum, oneD, Veff0, vrCoul, vpwCoul_uw, logUnit )
+    call ReadPotFleur( atoms, stars, dimens, lathar, input, sym, vacuum,   Veff0, vrCoul, vpwCoul_uw, logUnit )
 
     ! Read in xc-potential and xc-energy density both in the IR and the MT
     call ReadXCquantities( atoms, stars, dimens, lathar, vXC0IR, eXCIR, vXC0MT, eXCMT )
 
     ! Read converged density from Fleur and write some quantities to logfile
-    call ReadDensFleur( atoms, sym, lathar, dimens, stars, input, cell, vacuum, oneD, logUnit, rho0IR, rho0MT )
+    call ReadDensFleur( atoms, sym, lathar, dimens, stars, input, cell, vacuum,   logUnit, rho0IR, rho0MT )
     call TimeNOstopNO('Init:readEigPotDens')
 
     ! Generate radial solutions u, udot and u_LO and rearrange them in rbas1 and rbas2. Furthermore, generate overlap integrals of
@@ -1243,7 +1243,7 @@ module m_jpInit
   !> @todo : Potentials for Debugging reasons should be read in within the debugging methods, after that this routine have to be
   !>         cleaned
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine ReadPotFleur( atoms, stars, dimens, lathar, input, sym, vacuum, oneD, V0Fleur, vrCoul, vpwCoul_uw, logUnit )
+  subroutine ReadPotFleur( atoms, stars, dimens, lathar, input, sym, vacuum,   V0Fleur, vrCoul, vpwCoul_uw, logUnit )
 
     use m_types
     use m_loddop
@@ -1260,7 +1260,7 @@ module m_jpInit
     type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
     type(t_vacuum),                 intent(in)  :: vacuum
-    type(t_oneD),                   intent(in)  :: oneD
+     
     type(t_potential),              intent(out) :: V0Fleur
 
     ! Array parameter
@@ -1282,7 +1282,7 @@ module m_jpInit
 
     ! todo review this code after it is clear what this routine should finally read in (only standard effective potential or more)
     allocate(V0Fleur%vpw_uw(stars%ng3, input%jspins), V0Fleur%vpw(stars%ng3,input%jspins), &
-      & V0Fleur%vzxy(vacuum%nmzxyd, oneD%odi%n2d-1,2, input%jspins), V0Fleur%vz(vacuum%nmzd, 2, input%jspins), &
+      & V0Fleur%vzxy(vacuum%nmzxyd, stars%ng2-1,2, input%jspins), V0Fleur%vz(vacuum%nmzd, 2, input%jspins), &
       & V0Fleur%vr(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, input%jspins),V0Fleur%vr0(atoms%jmtd, atoms%ntype, input%jspins))
     allocate(vpwCoul_uw(stars%ng3, input%jspins), vrCoul(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, input%jspins))
 
@@ -1291,8 +1291,8 @@ module m_jpInit
 
     rewind (iunit)
 
-    call loddop(input%jspins, stars%ng3, oneD%odi%n2d, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,           &
-      & input%jspins, stars%ng3, oneD%odi%nq2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,   &
+    call loddop(input%jspins, stars%ng3, stars%ng2, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,           &
+      & input%jspins, stars%ng3, stars%ng2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,   &
       & lathar%ntypsd, atoms%ntypsy, iunit, atoms%nat, atoms%neq, iop, dop, iter, V0Fleur%vr, V0Fleur%vpw_uw, V0Fleur%vz,          &
       & V0Fleur%vzxy, name)
     call fclose(iunit)
@@ -1301,8 +1301,8 @@ module m_jpInit
 
     rewind (iunit)
 
-    call loddop(input%jspins, stars%ng3, oneD%odi%n2d, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,           &
-      & input%jspins, stars%ng3, oneD%odi%nq2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,   &
+    call loddop(input%jspins, stars%ng3, stars%ng2, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,           &
+      & input%jspins, stars%ng3, stars%ng2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,   &
       & lathar%ntypsd, atoms%ntypsy, iunit, atoms%nat, atoms%neq, iop, dop, iter,V0Fleur%vr, V0Fleur%vpw, V0Fleur%vz, V0Fleur%vzxy,&
       & name)
 
@@ -1372,7 +1372,7 @@ module m_jpInit
   !>
   !> @todo : Put rhos into general density type which is similiar to the potential type
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine ReadDensFleur( atoms, sym, lathar, dimens, stars, input, cell, vacuum, oneD, logUnit, rho0IR, rho0MT )
+  subroutine ReadDensFleur( atoms, sym, lathar, dimens, stars, input, cell, vacuum,   logUnit, rho0IR, rho0MT )
 
     use m_types
     use m_loddop
@@ -1391,7 +1391,7 @@ module m_jpInit
     type(t_input),                  intent(in)  :: input
     type(t_cell),                   intent(in)  :: cell
     type(t_vacuum),                 intent(in)  :: vacuum
-    type(t_oneD),                   intent(in)  :: oneD
+     
 
     ! Scalar parameters
     integer,                        intent(in)  :: logUnit
@@ -1417,7 +1417,7 @@ module m_jpInit
     complex,           allocatable              :: nzxy(:,:,:,:)      ! irrelevant for juPhon calcualtion
     real                                        :: qMTs(atoms%ntype)  ! charge of muffin-tins
 
-    allocate( rho0IR(stars%ng3,input%jspins), nzxy(vacuum%nmzxyd, oneD%odi%n2d-1,2, input%jspins), &
+    allocate( rho0IR(stars%ng3,input%jspins), nzxy(vacuum%nmzxyd, stars%ng2-1,2, input%jspins), &
       & nz(vacuum%nmzd, 2, input%jspins), rho0MT(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, input%jspins) )
 
 
@@ -1425,14 +1425,14 @@ module m_jpInit
 
     rewind (iunit)
 
-    call loddop( input%jspins, stars%ng3, oneD%odi%n2d, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,          &
-      & input%jspins, stars%ng3, oneD%odi%nq2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,   &
+    call loddop( input%jspins, stars%ng3, stars%ng2, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,          &
+      & input%jspins, stars%ng3, stars%ng2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,   &
       & lathar%ntypsd, atoms%ntypsy, iunit, atoms%natd, atoms%neq, iop, dop, iter, rho0MT, rho0IR, nz, nzxy, name )
 
     call Fclose(iunit)
 
     ! Calculates charge in IR and complete unit cell
-    call cdntot( stars, atoms, sym, vacuum, input, cell, oneD, rho0IR, rho0MT, qtot, qtotIR, qMTs )
+    call cdntot( stars, atoms, sym, vacuum, input, cell,   rho0IR, rho0MT, qtot, qtotIR, qMTs )
 
     call LogReadcdn1( atoms, qtotIR, qMTs, qtot, logUnit )
 

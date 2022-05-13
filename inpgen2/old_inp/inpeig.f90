@@ -1,7 +1,7 @@
       MODULE m_inpeig
       CONTAINS
       SUBROUTINE inpeig(&
-     &                  atoms,cell,input,l_is_oneD,kpts,enpara,kptsFilename,latnam)
+     &                  atoms,cell,input,l_is_oneD, kpts,enpara,kptsFilename,latnam)
 !*********************************************************************
 !     inputs the necessary quantities for the eigenvalue part (energy
 !     parameters, k-points, wavefunction cutoffs, etc.).

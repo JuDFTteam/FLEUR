@@ -325,7 +325,7 @@ module m_jpTestInput
   !>--------------------------------------------------------------------------------------------------------------------------------------
   subroutine CheckOrthNormRadSol( atoms, sym, input, kpts, usdus, logUnit, rbas1, rbas2, nRadFun, gridf, kveclo, nv )
 
-    use m_od_types, only: od_inp, od_sym
+     
     use m_types, only : t_atoms, t_input, t_kpts, t_usdus, t_sym
     use m_setabc1locdn1
     use m_juDFT_NOstopNO, only : juDFT_warn
@@ -800,7 +800,7 @@ module m_jpTestInput
     use m_abcof
     use m_cotra
     use m_ylm_old
-    use m_od_types, only: od_inp, od_sym
+     
     use m_juDFT_time, only : TimeStart, TimeNOstopNO
 
     implicit none
@@ -1074,7 +1074,7 @@ module m_jpTestInput
 
     use m_JPConstants, only: fpi, iu, tpi
     use m_intgr
-    use m_od_types, only: od_inp, od_sym
+     
     use m_abcof3
     use m_cotra
     use m_types, only : t_atoms, t_cell, t_input, t_sym, t_dimension, t_usdus, t_kpts

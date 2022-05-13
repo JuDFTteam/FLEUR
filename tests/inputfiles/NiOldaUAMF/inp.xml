@@ -5,7 +5,7 @@
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.00000000" Gmax="9.00000000" GmaxXC="9.00000000" numbands="0"/>
-      <scfLoop itmax="25" minDistance=".00001000" maxIterBroyd="15" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+      <scfLoop itmax="12" minDistance=".00001000" maxIterBroyd="15" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
       <xcFunctional name="pbe" relativisticCorrections="F"/>
       <magnetism jspins="2"/>
@@ -18,8 +18,52 @@
       <bzIntegration valenceElectrons="44.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointListSelection listName="default"/>
          <kPointLists>
-            <kPointList name="default" count="1" nx="1" ny="1" nz="1" type="mesh">
-               <kPoint weight="     1.0000000000000">   0.00    0.00    0.00</kPoint>
+            <kPointList name="default" count="45" nx="10" ny="10" nz="6" type="mesh">
+               <kPoint weight="     8.0000000000000">   9.00/20.00    9.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    7.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    5.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    3.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    1.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   7.00/20.00    7.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   7.00/20.00    5.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   7.00/20.00    3.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   7.00/20.00    1.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   5.00/20.00    5.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   5.00/20.00    3.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   5.00/20.00    1.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   3.00/20.00    3.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   3.00/20.00    1.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   1.00/20.00    1.00/20.00    5.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   9.00/20.00    9.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    7.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    5.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    3.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    1.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   7.00/20.00    7.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   7.00/20.00    5.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   7.00/20.00    3.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   7.00/20.00    1.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   5.00/20.00    5.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   5.00/20.00    3.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   5.00/20.00    1.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   3.00/20.00    3.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   3.00/20.00    1.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   1.00/20.00    1.00/20.00    3.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   9.00/20.00    9.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    7.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    5.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    3.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   9.00/20.00    1.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   7.00/20.00    7.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   7.00/20.00    5.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   7.00/20.00    3.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   7.00/20.00    1.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   5.00/20.00    5.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   5.00/20.00    3.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   5.00/20.00    1.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   3.00/20.00    3.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="    16.0000000000000">   3.00/20.00    1.00/20.00    1.00/12.00</kPoint>
+               <kPoint weight="     8.0000000000000">   1.00/20.00    1.00/20.00    1.00/12.00</kPoint>
             </kPointList>
          </kPointLists>
       </bzIntegration>
@@ -139,8 +183,8 @@
          <energyParameters s="2" p="2" d="3" f="4"/>
       </species>
       <species name="Ni-1" element="Ni" atomicNumber="28">
-         <mtSphere radius="2.47000000" gridPoints="661" logIncrement=".01800000"/>
-         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <mtSphere radius="2.47000000" gridPoints="817" logIncrement=".01500000"/>
+         <atomicCutoffs lmax="10" lnonsphr="8"/>
          <electronConfig flipSpins="F">
             <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2)</coreConfig>
             <valenceConfig>(3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>

@@ -10,7 +10,7 @@ CONTAINS
   SUBROUTINE fleur_init_old(&
        input,atoms,sphhar,cell,stars,sym,noco,vacuum,&
        sliceplot,banddos,enpara,xcpot,kpts,hybinp,&
-       oneD,grid)
+        grid)
     USE m_types_input
     USE m_types_atoms
     USE m_types_sphhar
@@ -25,7 +25,7 @@ CONTAINS
     USE m_types_xcpot_inbuild_nofunction
     USE m_types_kpts
     USE m_types_hybinp
-    USE m_types_oned
+     
 
 
     USE m_judft
@@ -51,7 +51,7 @@ CONTAINS
     TYPE(t_xcpot_inbuild_nf),INTENT(OUT)  :: xcpot
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
     TYPE(t_hybinp)   ,INTENT(OUT)  :: hybinp
-    TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
+     
     INTEGER,INTENT(OUT)::grid(3)
 
 
@@ -70,18 +70,9 @@ CONTAINS
     relcor = '            '
 
     CALL dimens(input,sym,stars,atoms,sphhar,vacuum,&
-         kpts,oneD,hybinp)
+         kpts ,hybinp)
     kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
     kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
-    !-odim
-    IF (oneD%odd%d1) THEN
-       oneD%odd%k3 = stars%mx3
-       oneD%odd%nn2d = (2*(oneD%odd%k3) + 1)*(2*(oneD%odd%M) + 1)
-    ELSE
-       oneD%odd%k3 = 0 ; oneD%odd%M =0 ; oneD%odd%nn2d = 1
-       oneD%odd%mb = 0
-    ENDIF
-    !-odim
     ALLOCATE ( atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),atoms%nlhtyp(atoms%ntype))
     deallocate(sphhar%clnu)
     ALLOCATE ( sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd),stars%ustep(stars%ng3) )
@@ -115,15 +106,8 @@ CONTAINS
     ALLOCATE ( sym%d_wgn(-3:3,-3:3,3,sym%nop) )
     ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntype) )
     ALLOCATE ( kpts%ntetra(4,kpts%ntet), kpts%voltet(kpts%ntet))
-    !+odim
-    ALLOCATE ( oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M) )
-    ALLOCATE ( oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d) )
-    ALLOCATE ( oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop) )
-    ALLOCATE ( oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop) )
-    ALLOCATE ( oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1) )
     stars%sk2(:) = 0.0 ; stars%phi2(:) = 0.0
-    !-odim
-
+  
     ! HF/hybinp functionals/EXX
     !ALLOCATE ( hybinp%nindx(0:atoms%lmaxd,atoms%ntype) )
 
@@ -135,20 +119,8 @@ CONTAINS
 
     CALL inped(atoms,vacuum,input,banddos,xcpot,sym,&
          cell,sliceplot,noco,&
-         stars,oneD,hybinp,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
+         stars ,hybinp,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
     !
-    IF (xcpot%needs_grad()) THEN
-       !ALLOCATE (stars%ft2_gfx(0:kimax2),stars%ft2_gfy(0:kimax2))
-       ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
-            oneD%pgft1xy(0:oneD%odd%nn2d-1),&
-            oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
-    ELSE
-       !ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
-       ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
-            oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
-    ENDIF
-    oneD%odd%nq2 = stars%ng2!oneD%odd%n2d
-    oneD%odi%nq2 = oneD%odd%nq2
     !-odim
     namex=xcpot%get_name()
     l_krla = xcpot%data%krla.EQ.1
@@ -156,7 +128,7 @@ CONTAINS
     !Call xcpot%init(namex,l_krla,atoms%ntype)
 
     CALL setup(atoms,kpts,&
-         sym,oneD,input,cell,&
+         sym ,input,cell,&
          enpara,latnam,namgrp)
 
     banddos%l_orb = .FALSE.

@@ -9,7 +9,7 @@
       contains 
       subroutine wann_socmat_rs(
      >          rvecnum,rvec,kpoints,
-     >          jspins_in,nkpts,l_bzsym,film,l_onedimens,
+     >          jspins_in,nkpts,l_bzsym,film,
      >          l_soc,band_min,band_max,neigd,
      >          l_socmmn0,wan90version)
 c*************************************************
@@ -33,7 +33,6 @@ c*************************************************
       logical,intent(in)  :: film
       integer,intent(in)  :: band_min(2),band_max(2),neigd
       logical, intent(in) :: l_socmmn0
-      logical,intent(in)  :: l_onedimens
       integer, intent(in) :: wan90version
 
 

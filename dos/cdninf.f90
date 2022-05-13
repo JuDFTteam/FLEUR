@@ -72,7 +72,6 @@ CONTAINS
 
     DO iband = 1,count(dos%eig(:,ikpt,jspin)<1E99)
        !qvact = sum(vacdos%qvac(iband,:,ikpt,jspin))
-       !IF (sym%invs .OR. sym%zrfs) qvact = 2.0*qvact
        iqvacpc = NINT(qvact*100.0)
        !qvacmt = qvact
        QVACMT=0.0

@@ -2,7 +2,7 @@ MODULE m_fleurinput_postprocess
   USE m_types_fleurinput
 CONTAINS
   SUBROUTINE fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
-    Banddos,Oned,Xcpot,Kpts,gfinp)
+    Banddos ,Xcpot,Kpts,gfinp)
     USE m_juDFT
     USE m_types_fleurinput
     use m_make_sym
@@ -20,7 +20,7 @@ CONTAINS
     TYPE(t_noco),INTENT(INOUT)     ::noco
     TYPE(t_vacuum),INTENT(INOUT)::vacuum
     TYPE(t_banddos),INTENT(IN)  ::banddos
-    TYPE(t_oneD),INTENT(INOUT)  ::oneD
+     
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_kpts),INTENT(INOUT)     ::kpts
     TYPE(t_gfinp),INTENT(IN)    ::gfinp
@@ -31,16 +31,15 @@ CONTAINS
     CALL sym%init(cell,input%film)
     call vacuum%init(sym)
 
-    CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
+    CALL make_sym(sym,cell,atoms,noco ,input,gfinp)
     !call make_xcpot(xcpot,atoms,input)
-    call oneD%init(atoms)
     CALL noco%init(atoms,input%ldauSpinoffd)
 
     call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts)
     ! Check muffin tin radii, only checking, dont use new parameters
-    CALL chkmt(atoms,input,vacuum,cell,oneD,.TRUE.)
+    CALL chkmt(atoms,input,vacuum,cell ,.TRUE.)
     !adjust positions by displacements
-    CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms,gfinp)
+    CALL apply_displacements(cell,input,vacuum ,sym,noco,atoms,gfinp)
 !---------------band unfolding ---------------------
     IF (banddos%unfoldband) THEN
       write (*,*) 'input switch unfolding read'

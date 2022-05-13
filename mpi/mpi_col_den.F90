@@ -14,7 +14,7 @@ MODULE m_mpi_col_den
    use mpi
 #endif
 CONTAINS
-  SUBROUTINE mpi_col_den(fmpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,vacdos,&
+  SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,regCharges,dos,vacdos,&
                          results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
 
 #include"cpp_double.h"
@@ -30,7 +30,7 @@ CONTAINS
 
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: fmpi
-    TYPE(t_oneD),INTENT(IN)      :: oneD
+     
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
@@ -78,7 +78,6 @@ CONTAINS
 
     ! -> Collect den%vacxy(:,:,:,jspin)
     IF (input%film) THEN
-       !n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
        n=size(den%vacxy(:,:,:,jspin))
        ALLOCATE(c_b(n))
        CALL MPI_REDUCE(den%vacxy(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
@@ -411,7 +410,6 @@ CONTAINS
        !
        IF (input%film) THEN
 
-          !n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
           n=size(den%vacxy(:,:,:,3))
           ALLOCATE(c_b(n))
           CALL MPI_REDUCE(den%vacxy(:,:,:,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)

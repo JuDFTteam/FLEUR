@@ -160,7 +160,7 @@ MODULE m_pot_io
 
    END SUBROUTINE readPotential
 
-   SUBROUTINE writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+   SUBROUTINE writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,&
                              iter,pot,fpw)
 
       TYPE(t_stars),INTENT(IN)      :: stars
@@ -171,7 +171,7 @@ MODULE m_pot_io
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_noco),INTENT(IN)       :: noco
-      TYPE(t_oneD),INTENT(IN)       :: oneD
+       
       TYPE(t_potden), INTENT(INOUT) :: pot
 
       INTEGER, INTENT (IN)      :: iter
@@ -200,7 +200,7 @@ MODULE m_pot_io
          CALL openPOT_HDF(fileID,currentStarsIndex,currentLatharmsIndex,&
                           currentStructureIndex,currentStepfunctionIndex)
 
-         CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum, oneD, stars, sphhar, sym,&
+         CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum,   stars, sphhar, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                        currentStepfunctionIndex,l_storeIndices,.TRUE.)
 

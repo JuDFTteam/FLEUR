@@ -4,7 +4,7 @@ module m_vmts
 #endif
 contains
 
-  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vpw, rho, potdenType, vr, rhoIm, vrIm, iDtype, iDir )
+  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vpw, rho, potdenType, vr, rhoIm, vrIm, iDtype, iDir )
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients
@@ -38,7 +38,7 @@ contains
     use m_intgr, only : intgr2, sfint
     use m_phasy1
     use m_sphbes
-    use m_od_phasy
+     
     use m_SphBessel
     !$ use omp_lib
     implicit none
@@ -50,7 +50,7 @@ contains
     type(t_atoms),  intent(in)        :: atoms
     type(t_sym),    intent(in)        :: sym
     type(t_cell),   intent(in)        :: cell
-    type(t_oneD),   intent(in)        :: oneD
+     
     LOGICAL,        INTENT(IN)        :: dosf
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
@@ -93,7 +93,7 @@ contains
 
     ! q/=0 components
     !$omp parallel default( none ) &
-    !$omp& shared( fmpi, stars, vpw, oneD, atoms, sym, cell, sphhar, vtl ) &
+    !$omp& shared( fmpi, stars, vpw,   atoms, sym, cell, sphhar, vtl ) &
     !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
     !$omp& private( vtl_loc )
     !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype))
@@ -101,12 +101,7 @@ contains
     !$omp do
     do k = MERGE(fmpi%irank+2,1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
       cp = vpw(k) * stars%nstr(k)
-      if ( .not. oneD%odi%d1 ) then
         call phasy1( atoms, stars, sym, cell, k, pylm )
-      else
-        call od_phasy( atoms%ntype, stars%ng3, atoms%nat, atoms%lmaxd, atoms%ntype, &
-            atoms%neq, atoms%lmax, atoms%taual, cell%bmat, stars%kv3, k, oneD%odi, oneD%ods, pylm )
-      end if
       nat = 1
       do n = 1, atoms%ntype
         call sphbes( atoms%lmax(n), stars%sk3(k) * atoms%rmt(n), sbf )

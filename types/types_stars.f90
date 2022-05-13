@@ -62,6 +62,7 @@ MODULE m_types_stars
      PROCEDURE :: mpi_bc=>mpi_bc_stars
      PROCEDURE :: init=>init_stars
      PROCEDURE :: dim=>dim_stars
+     PROCEDURE :: map_2nd_vac
   END TYPE t_stars
 CONTAINS
   SUBROUTINE mpi_bc_stars(this,mpi_comm,irank)
@@ -366,4 +367,23 @@ CONTAINS
 
 
   END SUBROUTINE dim_stars
+
+  subroutine map_2nd_vac(stars,vacuum,n2,n2_rot,phas)
+    USE m_constants,ONLY: tpi_const
+    USE m_types_vacuum
+    CLASS(t_stars),INTENT(IN)    :: stars
+    TYPE(t_vacuum),INTENT(IN)    :: vacuum
+    INTEGER,INTENT(IN)           :: n2 
+    INTEGER,INTENT(OUT)          :: n2_rot
+    COMPLEX,INTENT(OUT)          :: phas
+    
+    INTEGER:: kr(2)
+    REAL   :: arg
+    
+    kr = matmul(stars%kv2(:,n2),vacuum%mrot2)
+    n2_rot = stars%i2g(kr(1),kr(2))
+    arg = tpi_const* ( stars%kv2(1,n2)*vacuum%tau2(1) + stars%kv2(2,n2)*vacuum%tau2(2) )
+    phas = cmplx(cos(arg),sin(arg))
+  
+  end subroutine
 END MODULE m_types_stars

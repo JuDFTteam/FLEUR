@@ -81,7 +81,7 @@ CONTAINS
              DO ivac = 1,vacuum%nvac
                 qvact(ivac) = dos%qvac(iband,ivac,ikpt,kspin)
              ENDDO
-             IF (sym%invs .OR. sym%zrfs)    qvact(2) = qvact(1)
+             IF (vacuum%nvac==1)    qvact(2) = qvact(1)
              iqvacpc(:) = nint(qvact(:)*100.0)
              DO j = 1,slab%nsl
                 iqsl(j) = nint((slab%qintsl(j,iband,ikpt,kspin) + slab%qmtsl(j,iband,ikpt,kspin))*100.0) 

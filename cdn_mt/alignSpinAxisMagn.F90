@@ -22,7 +22,7 @@ IMPLICIT NONE
 CONTAINS
 
 !Rotates cdn to global frame at initialization before the scf loop.
-SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell,den)
+SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den)
    TYPE(t_input),     INTENT(IN)    :: input
    TYPE(t_atoms),     INTENT(IN)    :: atoms
    TYPE(t_noco),      INTENT(IN)    :: noco
@@ -31,7 +31,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
    TYPE(t_vacuum),    INTENT(IN)    :: vacuum
    TYPE(t_sphhar),    INTENT(IN)    :: sphhar
    TYPE(t_sym),       INTENT(IN)    :: sym
-   TYPE(t_oneD),      INTENT(IN)    :: oneD
+    
    TYPE(t_cell),      INTENT(IN)    :: cell
    TYPE(t_potden),    INTENT(INOUT) :: den
 
@@ -41,14 +41,14 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
    nococonv%alphPrev=noco%alph_inp
    nococonv%betaPrev=noco%beta_inp
 
-    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,noco%beta_inp,den)
-    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,noco%alph_inp,zeros,den)
+    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,noco%beta_inp,den)
+    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,noco%alph_inp,zeros,den)
     nococonv%alph=zeros
     nococonv%beta=zeros
 
    END SUBROUTINE initRelax
 
-   SUBROUTINE precond_noco(it,vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+   SUBROUTINE precond_noco(it,vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
      use m_types_mixvector
      INTEGER,INTENT(IN)               :: it
      TYPE(t_input),     INTENT(IN)    :: input
@@ -59,7 +59,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
      TYPE(t_sym),       INTENT(IN)    :: sym
-     TYPE(t_oneD),      INTENT(IN)    :: oneD
+      
      TYPE(t_cell),      INTENT(IN)    :: cell
      TYPE(t_potden),    INTENT(IN)    :: inden
      TYPE(t_potden),    INTENT(INOUT) :: outden
@@ -70,16 +70,16 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      select case (noco%mag_mixing_scheme)
      case(1)
        if (it>1) return
-       call precond_noco_anglerotate(vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+       call precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
      case(2)
-       call precond_noco_anglerotate(vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+       call precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
      case(3)
-       call precond_noco_densitymatrix(vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+       call precond_noco_densitymatrix(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
      end select
    END subroutine precond_noco
 
    !Preconditioner to control relaxation of the direction of the magnetic moment
-   SUBROUTINE precond_noco_anglerotate(vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+   SUBROUTINE precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
      use m_types_mixvector
      TYPE(t_input),     INTENT(IN)    :: input
      TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -89,7 +89,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
      TYPE(t_sym),       INTENT(IN)    :: sym
-     TYPE(t_oneD),      INTENT(IN)    :: oneD
+      
      TYPE(t_cell),      INTENT(IN)    :: cell
      TYPE(t_potden),    INTENT(IN)    :: inden
      TYPE(t_potden),    INTENT(INOUT) :: outden
@@ -100,8 +100,8 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      integer                     :: n
      zeros(:) = 0.0
      !Put outden in local frame of inden
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-nococonv%alphPrev,zeros,outden)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-nococonv%betaPrev,outden)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-nococonv%alphPrev,zeros,outden)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-nococonv%betaPrev,outden)
      !rotation angle
      CALL gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,outden,dPhi,dtheta)
      !dphi   = dphi  *(noco%mix_RelaxWeightOffD-1.0)
@@ -120,17 +120,17 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      !ENDDO
 
      !CALL cureTooSmallAngles(atoms,dphi,dtheta)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,dtheta,outden)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dphi,zeros,outden)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,dtheta,outden)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,dphi,zeros,outden)
      !Rotate back in global frame
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,nococonv%betaPrev,outden)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,nococonv%alphPrev,zeros,outden)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,nococonv%betaPrev,outden)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,nococonv%alphPrev,zeros,outden)
 
      CALL gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,outden,dPhi,dtheta)
   
      call delta_den%subPotDen(outden,inden)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-dphi,zeros,delta_den)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-dtheta,delta_den)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-dphi,zeros,delta_den)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-dtheta,delta_den)
 
      call fsm%alloc()
      call fsm%from_density(delta_den)
@@ -138,7 +138,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
    END SUBROUTINE precond_noco_anglerotate
 
       !Preconditioner to control relaxation of the direction of the magnetic moment
-   SUBROUTINE precond_noco_densitymatrix(vacuum,sphhar,stars,sym,oneD,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+   SUBROUTINE precond_noco_densitymatrix(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
      use m_types_mixvector
      TYPE(t_input),     INTENT(IN)    :: input
      TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -148,7 +148,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
      TYPE(t_sym),       INTENT(IN)    :: sym
-     TYPE(t_oneD),      INTENT(IN)    :: oneD
+      
      TYPE(t_cell),      INTENT(IN)    :: cell
      TYPE(t_potden),    INTENT(IN)    :: inden,outden
      TYPE(t_mixvector), INTENT(OUT)   :: fsm
@@ -161,8 +161,8 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      !Put in local frame
      CALL gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,inden,Phi,theta)
      zeros(:) = 0.0
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-phi,zeros,delta_den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-theta,delta_den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-phi,zeros,delta_den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-theta,delta_den)
      !Scale Off-diagonal parts
      DO n=1,atoms%ntype
        delta_den%mt(:,0:,n,3)=delta_den%mt(:,0:,n,3)*noco%mix_RelaxWeightOffD(n)
@@ -170,8 +170,8 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym,oneD,cell
      ENDDO
       !Put back in global frame
      zeros(:) = 0.0
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,theta,delta_den)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,zeros,delta_den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,theta,delta_den)
+     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,phi,zeros,delta_den)
 
      call fsm%alloc()
      call fsm%from_density(delta_den)
@@ -218,7 +218,7 @@ END SUBROUTINE gimmeAngles
 
 !Rotates from global frame into current local frame
 SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
-        ,sym,oneD,cell,noco,nococonv,input,atoms,l_adjust,den,l_update_nococonv)
+        ,sym ,cell,noco,nococonv,input,atoms,l_adjust,den,l_update_nococonv)
 
    TYPE(t_mpi),INTENT(IN)                :: fmpi
    TYPE(t_input), INTENT(IN)             :: input
@@ -229,7 +229,7 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
    TYPE(t_vacuum),INTENT(IN)             :: vacuum
    TYPE(t_sphhar),INTENT(IN)             :: sphhar
    TYPE(t_sym),INTENT(IN)                :: sym
-   TYPE(t_oneD),INTENT(IN)               :: oneD
+    
    TYPE(t_cell),INTENT(IN)               :: cell
    LOGICAL,INTENT(IN)                    :: l_adjust
    TYPE(t_potden),INTENT(INOUT)          :: den
@@ -259,10 +259,10 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
      !enddo
 
   
-     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alphprev,zeros,noco%l_alignMT),merge(nococonv%betaprev,zeros,noco%l_alignMT),Den,toGlobal=.false.)
+     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,merge(nococonv%alphprev,zeros,noco%l_alignMT),merge(nococonv%betaprev,zeros,noco%l_alignMT),Den,toGlobal=.false.)
      
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(-nococonv%alphPrev,zeros,noco%l_alignMT),zeros,den)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(-nococonv%betaPreV,zeros,noco%l_alignMT),den)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,merge(-nococonv%alphPrev,zeros,noco%l_alignMT),zeros,den)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,merge(-nococonv%betaPreV,zeros,noco%l_alignMT),den)
      if (present(l_update_nococonv)) then
        if (l_update_nococonv) THEN
          nococonv%alph=merge(nococonv%alphPrev,nococonv%alph,noco%l_alignMT)
@@ -280,7 +280,7 @@ END SUBROUTINE
 
 !Rotates into the global frame so mixing can be performed without any restrictions. => Compatible with anderson mixing scheme.
 SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
-,sym,oneD,cell,input,atoms, den,fmpi,l_update_nococonv)
+,sym ,cell,input,atoms, den,fmpi,l_update_nococonv)
 
    TYPE(t_mpi),INTENT(IN),OPTIONAL       :: fmpi
    TYPE(t_input), INTENT(IN)             :: input
@@ -291,7 +291,7 @@ SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
    TYPE(t_vacuum),INTENT(IN)             :: vacuum
    TYPE(t_sphhar),INTENT(IN)             :: sphhar
    TYPE(t_sym),INTENT(IN)                :: sym
-   TYPE(t_oneD),INTENT(IN)               :: oneD
+    
    TYPE(t_cell),INTENT(IN)               :: cell
    TYPE(t_potden), INTENT(INOUT)         :: Den
    LOGICAL,OPTIONAL,INTENT(IN)           :: l_update_nococonv
@@ -306,9 +306,9 @@ SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
 
    if (l_irank0) then
      zeros(:)=0.0
-     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),merge(nococonv%beta,zeros,noco%l_alignMT),Den,toGlobal=.true.)
-     !CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
+     CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,merge(nococonv%alph,zeros,noco%l_alignMT),merge(nococonv%beta,zeros,noco%l_alignMT),Den,toGlobal=.true.)
+     !CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
+     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
      ! Nococonv is zero now since rotation has been reverted.
      if (present(l_update_nococonv)) THEN
        if (l_update_nococonv) THEN
@@ -331,7 +331,7 @@ END MODULE m_RelaxSpinAxisMagn
 #ifdef CPP_NEVER
 !Relaxation routine for only relaxing alpha. How it works: See two routines below.
 SUBROUTINE alphaRelax(vacuum,sphhar,stars&
-        ,sym,oneD,cell,noco,nococonv,input,atoms,den)
+        ,sym ,cell,noco,nococonv,input,atoms,den)
    TYPE(t_input),   INTENT(IN)    :: input
    TYPE(t_atoms),   INTENT(IN)    :: atoms
    TYPE(t_noco),    INTENT(IN)    :: noco
@@ -340,7 +340,7 @@ SUBROUTINE alphaRelax(vacuum,sphhar,stars&
    TYPE(t_vacuum),  INTENT(IN)    :: vacuum
    TYPE(t_sphhar),  INTENT(IN)    :: sphhar
    TYPE(t_sym),     INTENT(IN)    :: sym
-   TYPE(t_oneD),    INTENT(IN)    :: oneD
+    
    TYPE(t_cell),    INTENT(IN)    :: cell
    TYPE(t_potden),  INTENT(INOUT) :: den
 
@@ -352,8 +352,8 @@ SUBROUTINE alphaRelax(vacuum,sphhar,stars&
    CALL cureTooSmallAngles(atoms,diffT,diffP)
    diffP=diffP-nococonv%alphPrev
    diffP=diffP*noco%mix_RelaxWeightOffD
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP-nococonv%alphPrev,zeros,den)
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-nococonv%betaRlx,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-diffP-nococonv%alphPrev,zeros,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-nococonv%betaRlx,den)
    nococonv%beta=nococonv%betaRlx
    nococonv%betaPrev=nococonv%betaRlx
    nococonv%alph=nococonv%alphPrev+diffP
@@ -364,7 +364,7 @@ END SUBROUTINE alphaRelax
 
 !Relaxation routine for only relaxing beta. How it works: See one routine below.
 SUBROUTINE betaRelax(vacuum,sphhar,stars&
-        ,sym,oneD,cell,noco,nococonv,input,atoms,den)
+        ,sym ,cell,noco,nococonv,input,atoms,den)
    TYPE(t_input),   INTENT(IN)    :: input
    TYPE(t_atoms),   INTENT(IN)    :: atoms
    TYPE(t_noco),    INTENT(IN)    :: noco
@@ -373,7 +373,7 @@ SUBROUTINE betaRelax(vacuum,sphhar,stars&
    TYPE(t_vacuum),  INTENT(IN)    :: vacuum
    TYPE(t_sphhar),  INTENT(IN)    :: sphhar
    TYPE(t_sym),     INTENT(IN)    :: sym
-   TYPE(t_oneD),    INTENT(IN)    :: oneD
+    
    TYPE(t_cell),    INTENT(IN)    :: cell
    TYPE(t_potden),  INTENT(INOUT) :: den
 
@@ -386,8 +386,8 @@ SUBROUTINE betaRelax(vacuum,sphhar,stars&
    CALL cureTooSmallAngles(atoms,diffT,diffP)
    diffT=diffT-nococonv%betaPrev
    diffT=diffT*noco%mix_RelaxWeightOffD
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-nococonv%alphRlx,zeros,den)
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT-nococonv%betaPrev,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-nococonv%alphRlx,zeros,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-diffT-nococonv%betaPrev,den)
    nococonv%beta=nococonv%betaPrev+diffT
    nococonv%betaPrev=nococonv%beta
    nococonv%alph=nococonv%alphRlx
@@ -400,7 +400,7 @@ END SUBROUTINE betaRelax
 !and the cdn will be manipulated so that the magnetization direction is rotated towards the new magnetization direction by AngularDifference*Weight.
 !If both angles are relaxed: weight=1 direction of magnetization is || to SQA after relaxation.
 SUBROUTINE bothRelax(vacuum,sphhar,stars&
-        ,sym,oneD,cell,noco,nococonv,input,atoms,den)
+        ,sym ,cell,noco,nococonv,input,atoms,den)
    TYPE(t_input),   INTENT(IN)    :: input
    TYPE(t_atoms),   INTENT(IN)    :: atoms
    TYPE(t_noco),    INTENT(IN)    :: noco
@@ -409,7 +409,7 @@ SUBROUTINE bothRelax(vacuum,sphhar,stars&
    TYPE(t_vacuum),  INTENT(IN)    :: vacuum
    TYPE(t_sphhar),  INTENT(IN)    :: sphhar
    TYPE(t_sym),     INTENT(IN)    :: sym
-   TYPE(t_oneD),    INTENT(IN)    :: oneD
+    
    TYPE(t_cell),    INTENT(IN)    :: cell
    TYPE(t_potden),  INTENT(INOUT) :: den
 
@@ -424,8 +424,8 @@ SUBROUTINE bothRelax(vacuum,sphhar,stars&
    diffT=diffT*noco%mix_RelaxWeightOffD
    diffP=diffP-nococonv%alphPrev
    diffP=diffP*noco%mix_RelaxWeightOffD
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-diffP-nococonv%alphPrev,zeros,den)
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,zeros,-diffT-nococonv%betaPrev,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-diffP-nococonv%alphPrev,zeros,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-diffT-nococonv%betaPrev,den)
    nococonv%beta=nococonv%betaPrev+diffT
    nococonv%betaPrev=nococonv%beta
    nococonv%alph=nococonv%alphPrev+diffP

@@ -2,7 +2,7 @@
       USE m_juDFT
       contains
       subroutine wann_get_qpts(
-     >               l_bzsym,film,l_onedimens,l_readqpts,
+     >               l_bzsym,film,l_readqpts,
      <               nqpts,qpoints,param_file)
 c********************************************************
 c     Read in the q-points from qpts file.
@@ -15,7 +15,7 @@ c********************************************************
       implicit none
 
       logical,intent(in)  :: l_bzsym,film
-      logical,intent(in)  :: l_onedimens,l_readqpts
+      logical,intent(in)  :: l_readqpts
       integer,intent(out) :: nqpts
       real,intent(inout)  :: qpoints(:,:)
       character(len=20),intent(in) :: param_file
@@ -68,7 +68,7 @@ c********************************************************
 
       if(l_readqpts)then
          qpoints=qpoints/scale !* 2.0 !2xBZ
-         if(film.and..not.l_onedimens)then 
+         if(film)then 
             qpoints(3,:)=0.0
          endif   
          do iter=1,nqpts

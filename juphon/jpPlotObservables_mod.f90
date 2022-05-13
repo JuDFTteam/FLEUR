@@ -1221,16 +1221,15 @@ module m_jpPlotObservables
       complex,            intent(in) :: rho0IR(:, :)
       real,               intent(in) :: rho0MT(:, :, :, :)
 
-      type(t_oneD)                   :: oneD
+       
       type(t_vacuum)                 :: vacuum
 
-      oneD%odi%d1 = .false.
-      call plotVestPotDens0(oneD, dimens, stars, vacuum, lathar, atoms, input, sym, cell, sliceplot, rho0IR, rho0MT)
+      call plotVestPotDens0(  dimens, stars, vacuum, lathar, atoms, input, sym, cell, sliceplot, rho0IR, rho0MT)
 
     end subroutine plotVestPotDens0Wrap
       ! if 3 plots are chosen vesta can plot it, we still have to find out whether slices are possible in vesta
       !be careful this routine needs
-      SUBROUTINE plotVestPotDens0(oneD,dimension,&
+      SUBROUTINE plotVestPotDens0( dimension,&
      &     stars,vacuum,sphhar,atoms,&
      &     input,sym,cell,sliceplot,&
      &      qpw, rho)
@@ -1242,7 +1241,7 @@ module m_jpPlotObservables
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
-      TYPE(t_oneD),INTENT(IN)     :: oneD
+       
       TYPE(t_dimension),INTENT(IN):: dimension
       TYPE(t_stars),INTENT(IN)    :: stars
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
@@ -1346,7 +1345,7 @@ module m_jpPlotObservables
       IF (xsf) THEN
          OPEN(55,file="plot0.xsf")
          CALL xsf_WRITE_atoms(&
-     &                        55,atoms,input%film,oneD%odi%d1,cell%amat)
+     &                        55,atoms,input%film %odi%d1,cell%amat)
       ENDIF
       !write(*, *) cell%amat
       !<-- Loop over all plots
@@ -1405,7 +1404,7 @@ module m_jpPlotObservables
                                    IF (s<atoms%rmsh(atoms%jri(nt),nt)) THEN
                                       CALL outcdn(&
      &                                     pt,nt,na,0,1,jsp,sliceplot,stars,&
-     &                                     vacuum,sphhar,atoms,sym,cell,oneD, &
+     &                                     vacuum,sphhar,atoms,sym,cell , &
      &                                     qpwCurrent,rhtxy,rhoCurrent,rht,xdnout)
                                       IF (xsf) THEN
                                          write(55,*) xdnout
@@ -1421,7 +1420,7 @@ module m_jpPlotObservables
                     ENDDO !i1
                     CALL outcdn(&
      &                   point,0,0,0,2,jsp,sliceplot,stars,&
-     &                   vacuum,sphhar,atoms,sym,cell,oneD,&
+     &                   vacuum,sphhar,atoms,sym,cell ,&
      &                   qpwCurrent,rhtxy,rhoCurrent,rht,xdnout)
                     IF (xsf) THEN
                        WRITE(55,*) xdnout
@@ -1608,7 +1607,7 @@ module m_jpPlotObservables
                                    IF (s<atoms%rmsh(atoms%jri(nt),nt)) THEN
 !                                      CALL outcdn(&
 !     &                                     pt,nt,na,0,1,jsp,sliceplot,stars,&
-!     &                                     vacuum,sphhar,atoms,sym,cell,oneD, &
+!     &                                     vacuum,sphhar,atoms,sym,cell , &
 !     &                                     qpw,rhtxy,rho,rht,xdnout)
 
                      if (dens) then
@@ -1635,7 +1634,7 @@ module m_jpPlotObservables
                   end if
 !                    CALL outcdn(&
 !     &                   point,0,0,0,2,jsp,sliceplot,stars,&
-!     &                   vacuum,sphhar,atoms,sym,cell,oneD,&
+!     &                   vacuum,sphhar,atoms,sym,cell ,&
 !     &                   qpw,rhtxy,rho,rht,xdnout)
                     IF (xsf) THEN
                        WRITE(55,*) xdnout
@@ -1680,7 +1679,7 @@ module m_jpPlotObservables
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_cell),INTENT(IN)      :: cell
-!      TYPE(t_oneD),INTENT(IN)      :: oneD
+!       
 
 
 !     .. Scalar Arguments ..
@@ -1696,7 +1695,7 @@ module m_jpPlotObservables
       real, intent(in) :: qpt(:)
       integer, intent(in) :: latVec(3)
       COMPLEX, INTENT (IN) :: qpw(:) !(stars%ng3,dimension%jspd)
- !     COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
+ !     COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd %odi%n2d-1,2,dimension%jspd)
       complex,    INTENT (IN) :: rho(:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
  !     REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
       REAL,    INTENT (INOUT) :: p(3)
@@ -1758,7 +1757,6 @@ module m_jpPlotObservables
 
       !nd = atoms%ntypsy(na)
       !nopa = atoms%ngopr(na)
-      !IF (oneD%odi%d1) nopa = oneD%ods%ngopr(na)
       sx = 0.0
       DO  i = 1,3
          x(i) = p(i) - atoms%pos(i,na)
@@ -1773,11 +1771,9 @@ module m_jpPlotObservables
      !    DO  i = 1,3
      !       p(i) = 0.
      !       DO  j = 1,3
-     !         IF (.NOT.oneD%odi%d1) THEN
+     !         
      !          p(i) = p(i) + sym%mrot(i,j,nopa)*rcc(j)
-     !         ELSE
-     !          p(i) = p(i) + oneD%ods%mrot(i,j,nopa)*rcc(j)
-     !         END IF
+     !         
      !    enddo
      !    enddo
 !... !switch back to cartesian units
@@ -1867,7 +1863,7 @@ module m_jpPlotObservables
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_cell),INTENT(IN)      :: cell
-!      TYPE(t_oneD),INTENT(IN)      :: oneD
+!       
 
 
 !     .. Scalar Arguments ..
@@ -1883,7 +1879,7 @@ module m_jpPlotObservables
       real, intent(in) :: qpt(:)
       integer, intent(in) :: latVec(3)
       COMPLEX, INTENT (IN) :: qpw(:) !(stars%ng3,dimension%jspd)
- !     COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
+ !     COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd %odi%n2d-1,2,dimension%jspd)
       complex,    INTENT (IN) :: rho(:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
  !     REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
       REAL,    INTENT (INOUT) :: p(3)
@@ -1945,7 +1941,6 @@ module m_jpPlotObservables
 
       !nd = atoms%ntypsy(na)
       !nopa = atoms%ngopr(na)
-      !IF (oneD%odi%d1) nopa = oneD%ods%ngopr(na)
       sx = 0.0
       DO  i = 1,3
          x(i) = p(i) - atoms%pos(i,na)
@@ -1960,11 +1955,9 @@ module m_jpPlotObservables
      !    DO  i = 1,3
      !       p(i) = 0.
      !       DO  j = 1,3
-     !         IF (.NOT.oneD%odi%d1) THEN
+     !         
      !          p(i) = p(i) + sym%mrot(i,j,nopa)*rcc(j)
-     !         ELSE
-     !          p(i) = p(i) + oneD%ods%mrot(i,j,nopa)*rcc(j)
-     !         END IF
+     !         
      !    enddo
      !    enddo
 !... !switch back to cartesian units

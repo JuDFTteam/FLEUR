@@ -1,6 +1,6 @@
 MODULE m_forcea12
 CONTAINS
-   SUBROUTINE force_a12(atoms,nobd,sym,cell,oneD,we,jsp,ne,usdus,eigVecCoeffs, &
+   SUBROUTINE force_a12(atoms,nobd,sym,cell ,we,jsp,ne,usdus,eigVecCoeffs, &
                         acoflo,bcoflo,e1cof,e2cof,f_a12,results)
       !--------------------------------------------------------------------------
       ! Pulay 1st term force contribution à la Rici et al.
@@ -19,7 +19,7 @@ CONTAINS
       TYPE(t_atoms),        INTENT(IN)    :: atoms
       TYPE(t_sym),          INTENT(IN)    :: sym
       TYPE(t_cell),         INTENT(IN)    :: cell
-      TYPE(t_oneD),         INTENT(IN)    :: oneD
+       
       TYPE(t_usdus),        INTENT(IN)    :: usdus
       TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
       TYPE(t_results),      INTENT(INOUT) :: results
@@ -183,19 +183,16 @@ CONTAINS
                DO it = 1, sym%invarind(natom)
                   is =sym%invarop(natom,it)
                   isinv = sym%invtab(is)
-                  IF (oneD%odi%d1) isinv = oneD%ods%ngopr(natom)
-                  !-gb 2002
+                 !-gb 2002
                   ! Now we have the wanted index of operation with which we have
                   ! to rotate gv. Note gv is given in cart. coordinates but mrot
                   ! acts on internal ones.
                   DO i = 1, 3
                      vec(i) = zero
                      DO j = 1, 3
-                        IF (.NOT.oneD%odi%d1) THEN
+                        
                            vec(i) = vec(i) + sym%mrot(i,j,isinv)*gvint(j)
-                        ELSE
-                           vec(i) = vec(i) + oneD%ods%mrot(i,j,isinv)*gvint(j)
-                        END IF
+                        
                      END DO
                   END DO
 

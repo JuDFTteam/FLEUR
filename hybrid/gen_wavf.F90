@@ -87,7 +87,7 @@ CONTAINS
       ! generate G-vectors, which fulfill |k+G|<rkmax
       ! for all k-points
       DO ikpt = 1, kpts%nkptf
-         CALL lapw(ikpt)%init(input, noco,nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+         CALL lapw(ikpt)%init(input, noco,nococonv, kpts, atoms, sym, ikpt, cell)
       END DO
 
       ! set spherical component of the potential from the previous iteration vr

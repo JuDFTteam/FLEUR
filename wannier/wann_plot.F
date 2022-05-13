@@ -38,8 +38,8 @@
 !     +++++++++++++++++++++++++++++++++++++++++++++++++
       CONTAINS
       SUBROUTINE wann_plot(
-     >     oneD,vacuum,stars,cell,atoms,
-     >     nv2d,jspin,odi,ods,n3d,nmzxyd,n2d,ntypsd,
+     >      vacuum,stars,cell,atoms,
+     >     nv2d,jspin,n3d,nmzxyd,n2d,ntypsd,
      >     ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
      >     nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
      >     invs,invs2,z1,delz,ngopr,ntypsy,jri,pos,zatom,
@@ -55,13 +55,11 @@
       USE m_xsf_io
       USE m_wann_plot_vac
       USE m_wann_2dvacabcof
-      USE m_wann_plot_od_vac
-      USE m_wann_1dvacabcof
-
+   
       IMPLICIT NONE
 
       
-      TYPE(t_oneD),INTENT(IN)        :: oneD
+       
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
@@ -97,9 +95,7 @@
       integer, intent (in) :: k1d,k2d,k3d,ig2(n3d)
       integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       real,    intent (in) :: sk2(n2d),phi2(n2d)
-      TYPE (od_inp), INTENT (IN) :: odi
-      TYPE (od_sym), INTENT (IN) :: ods
-
+    
 !     ..
 !     .. Local Scalars ..
       integer n2,k,j,l
@@ -176,7 +172,7 @@ c         WRITE(20,*) "  filename='plot1' /"
 
 c make preparations for plotting in vacuum
 
-      if(film.and..not.odi%d1)then
+      if(film)then
          allocate ( ac(nv2d,nslibd,2),bc(nv2d,nslibd,2),
      +         u(nmzd,nv2d,nvac),ue(nmzd,nv2d,nvac))
          call wann_2dvacabcof(
@@ -185,21 +181,7 @@ c make preparations for plotting in vacuum
      <         ac,bc,u,ue,addnoco,l_ss,qss,jspin)
       endif
 
-      if (odi%d1)then
-         allocate ( ac_1(nv2d,-odi%mb:odi%mb,nslibd),
-     &              bc_1(nv2d,-odi%mb:odi%mb,nslibd),
-     &              u_1(nmzd,nv2d,-odi%mb:odi%mb),
-     &              ue_1(nmzd,nv2d,-odi%mb:odi%mb) )
-         call wann_1dvacabcof(
-     >         oneD,vacuum,stars,cell,
-     >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:),
-     >         nv,bkpt,z1,odi,ods,
-     >         nvd,k1,k2,k3,evac,
-     >         bbmat,delz,bmat,nbasfcn,neigd,zMat,
-     >         n2d,n3d,ig,nmzxy,nmzxyd,ig2,sk2,phi2,k1d,k2d,k3d,
-     <         ac_1,bc_1,u_1,ue_1,addnoco,l_ss,qss,jspin)
-      endif !preparations for vacuum   
-
+     
 
 
       !<-- Open the plot_inp file for input
@@ -244,11 +226,11 @@ c..loop by the bands
             write (name3,24) ikpt,nbn,jspin
    24       format (i5.5,'.',i3.3,'.absv.',i1,'.xsf')
             OPEN(55,file=name1)
-            CALL xsf_WRITE_atoms(55,atoms,film,odi%d1,amat)
+            CALL xsf_WRITE_atoms(55,atoms,film,amat)
             OPEN(56,file=name2)
-            CALL xsf_WRITE_atoms(56,atoms,film,odi%d1,amat)
+            CALL xsf_WRITE_atoms(56,atoms,film,amat)
             OPEN(57,file=name3)
-            CALL xsf_WRITE_atoms(57,atoms,film,odi%d1,amat)
+            CALL xsf_WRITE_atoms(57,atoms,film,amat)
             CALL xsf_WRITE_header(55,twodim,filename,(vec1),
      &       (vec2),(vec3),zero
      $           ,grid)
@@ -275,7 +257,7 @@ c..loop by the bands
             ENDIF
          ENDIF
 
-         if(film.and..not.odi%d1)then
+         if(film)then
            fas=-bkpt(3)*bmat(3,3)*z1
            factor=cmplx(cos(fas),sin(fas))
          else
@@ -293,10 +275,8 @@ c..loop by the bands
              ii1 = 3
              ii2 = 3
              ii3 = 3
-             IF (film .AND. .NOT.odi%d1) ii3 = 0
-             IF (odi%d1) THEN
-                ii1 = 0 ; ii2 = 0
-             END IF
+             IF (film ) ii3 = 0
+           
              DO  i1 = -ii1,ii1
               DO  i2 = -ii2,ii2
                DO  i3 = -ii3,ii3
@@ -313,7 +293,7 @@ c..loop by the bands
      >                   natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >                   nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >                   lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >                   omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
+     >                   omtil,amat,bmat,nlod,llod,nlo,llo,
      >                   ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >                   ccof(:,nbn,:,:),zMat,
      >                   nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
@@ -334,7 +314,7 @@ c..loop by the bands
               ENDDO
              ENDDO !i1
 !Check for point in vacuum
-             IF (film.AND..NOT.odi%d1.AND.ABS(point(3))>=z1) THEN
+             IF (film.AND.ABS(point(3))>=z1) THEN
                 ivac=1
                 if (point(3).lt. 0.0)ivac=2
                 jvac=ivac
@@ -356,7 +336,7 @@ c     >              n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
 c     >              natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
 c     >              nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
 c     >              lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-c     >              omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
+c     >              omtil,amat,bmat,nlod,llod,nlo,llo,
 c     >              ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
 c     >              ccof(:,nbn,:,:),z(:,nbn),
 c     >              nv,k1,k2,k3,lmd,nbasfcn,
@@ -371,30 +351,14 @@ c     <              xdnout)
               CYCLE xloop
              END IF
             
-             IF (odi%d1) THEN
-              IF (SQRT((pt(1))**2 + (pt(2))**2)>=z1) THEN
-               call wann_plot_od_vac(point,z1,nmzd,nv2d,odi,
-     >            nmz,delz,bmat,bkpt,nvd,nv,omtil,k3,
-     >            ac_1(:,:,nbn),bc_1(:,:,nbn),u_1,ue_1,
-     <            xdnout)
-                xdnout=xdnout*factor
-               IF (xsf) THEN
-                  WRITE(55,*) real(xdnout)
-                  WRITE(56,*) aimag(xdnout)
-                  WRITE(57,*) real(xdnout*conjg(xdnout))
-               ELSE
-                  WRITE (55,8) real(xdnout),aimag(xdnout)
-               ENDIF
-               CYCLE xloop
-              END IF
-             END IF
+            
              CALL wann_real(
      >             point,0,0,0,2,bkpt,nbn,
      >             n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
      >             natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >             nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >             lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >             omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
+     >             omtil,amat,bmat,nlod,llod,nlo,llo,
      >             ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >             ccof(:,nbn,:,:),zMat,
      >             nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
@@ -423,9 +387,7 @@ c..end of the loop by the bands
       CLOSE(18)
       IF (.not.xsf) CLOSE(55)
     8 FORMAT (f20.12,1x,f20.12)
-      if (film.and..not.odi%d1) then
-      deallocate ( ac,bc,u,ue)
-      endif
+
 
       call timestop("wann_plot")
       RETURN

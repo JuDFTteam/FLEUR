@@ -167,7 +167,7 @@ module m_jpTestDynMatSurf
                             & rbas1, rbas2, mlh_atom, rho0IR, rho0MT, gdp, nobd, gbas, mapGbas,&
                             & nv, z0, nRadFun, kveclo, iloTable , kpq2kPrVec)
     use m_types, only : t_atoms, t_sym, t_cell, t_sphhar, t_stars, t_dimension, t_potential, t_kpts, t_results, t_usdus
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpPotDensHelper, only : CalcIRdVxcKern, CalcMTdVxcKern
     use m_jpGrVeff0, only : GenGrVeff0
     use m_jpSetupDynMatSF, only : IRcoeffVeffUv, calcSurfVeff, PrepareMTSurfIntDM, CalcSIntMT
@@ -711,7 +711,7 @@ module m_jpTestDynMatSurf
       & mapKpq2K, logUnit )
 
     use m_types, only : t_atoms, t_dimension, t_stars, t_sym, t_cell, t_kpts, t_input, t_sphhar, t_usdus, t_potential, t_results, t_noco
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpSetupDynMatSF, only : PrepareMTSurfIntDM, CalcSIntMT, calcSurfVeff, CalcSintKinEnergOvl, IRcoeffVeffUv
     use m_jpSternhPulaySurface, only : CalcSintKinEps, CalcSfVeffFast
     use m_jpTestSternheimer, only : PrepareMTSurfInt, CalcSurfIntMT
@@ -1242,7 +1242,7 @@ module m_jpTestDynMatSurf
     use m_jpConstants, only : iu, Tmatrix
     use mod_juPhonUtils, only : Derivative, CalcChannelsGrFlpNat, CalcGrR2FinLH
     use m_jpSetupDynMatSF, only :  IRcoeffVeffUv, CalcSurfVeff, PrepareMTSurfIntDM, CalcSIntMT, CalcSintKinEnergOvl, CalcSFintIRPsi1HepsPsi, CalcSFintIRPsiHepsPsi1
-    use m_od_types, only : od_inp, od_sym
+     
     use m_jpSetupDynMatHelper, only : CalcFnsphGrVarphi, CalcSurfIntIRDynMat, CalcSurfIntMTDynMat
     use m_jpSetupDynMatHelper, only : CalcFnsphVarphi
     use m_abcof3

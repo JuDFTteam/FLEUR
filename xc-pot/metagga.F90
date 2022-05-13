@@ -70,7 +70,7 @@ CONTAINS
 
 
    SUBROUTINE calc_EnergyDen(eig_id, fmpi, kpts, noco,nococonv, input, banddos, cell, atoms, enpara, stars, &
-         vacuum,  sphhar, sym, gfinp, hub1inp, vTot, oneD, results, EnergyDen)
+         vacuum,  sphhar, sym, gfinp, hub1inp, vTot,   results, EnergyDen)
       ! calculates the energy density
       ! EnergyDen = \sum_i n_i(r) \varepsilon_i
       ! where n_i(r) is the one-particle density
@@ -108,7 +108,7 @@ CONTAINS
       TYPE(t_gfinp),     INTENT(in)           :: gfinp
       TYPE(t_hub1inp),   INTENT(in)           :: hub1inp
       TYPE(t_potden),    INTENT(in)           :: vTot
-      TYPE(t_oneD),      INTENT(in)           :: oneD
+       
       TYPE(t_results),   INTENT(in)           :: results
       TYPE(t_potden),    INTENT(inout)        :: EnergyDen
 
@@ -140,7 +140,7 @@ CONTAINS
          CALL calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
 
          CALL cdnval(eig_id, fmpi, kpts, jspin, noco,nococonv, input, banddos, cell, atoms, &
-            enpara, stars, vacuum,  sphhar, sym, vTot, oneD, cdnvalJob, &
+            enpara, stars, vacuum,  sphhar, sym, vTot,   cdnvalJob, &
             EnergyDen, regCharges, dos, vacdos,tmp_results, moments, gfinp, hub1inp)
       ENDDO
 
@@ -242,7 +242,7 @@ CONTAINS
    end subroutine undo_vgen_finalize
 
    subroutine set_kinED(fmpi,   sphhar, atoms, sym,  xcpot, &
-                        input, noco,   stars, vacuum,oned,cell,     den,     EnergyDen, vTot,kinED)
+                        input, noco,   stars, vacuum ,cell,     den,     EnergyDen, vTot,kinED)
       use m_types
       use m_cdn_io
       implicit none
@@ -255,7 +255,7 @@ CONTAINS
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
-      TYPE(t_oneD),INTENT(IN)      :: oneD
+       
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
       TYPE(t_kinED),INTENT(OUT)    :: kinED
@@ -272,7 +272,7 @@ CONTAINS
 #ifdef CPP_LIBXC
       core_den=den
       CALL core_den%resetPotDen
-      call readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
+      call readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,&
                           CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,rdum,tempDistance,ldum,core_den,'cdnc')
       call val_den%subPotDen(den,core_den)

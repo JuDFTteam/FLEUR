@@ -6,7 +6,7 @@
 
 MODULE m_lapwdim
 CONTAINS
-  SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,oneD,forcetheo,atoms,nbasfcn)
+  SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv ,forcetheo,atoms,nbasfcn)
     !
     !*********************************************************************
     !     determines dimensions of the lapw basis set with |k+G|<rkmax.
@@ -21,7 +21,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_nococonv),INTENT(IN)  :: nococonv
     TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_oneD),INTENT(IN)      :: oneD
+     
     CLASS(t_forcetheo),INTENT(IN):: forcetheo
     TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER, INTENT(OUT)         :: nbasfcn
@@ -111,22 +111,7 @@ CONTAINS
                    END DO
                 END DO
              END DO
-             !-odim
-             IF (oneD%odd%d1) THEN
-                nv2 = 0
-                s(1) = 0.0
-                s(2) = 0.0
-                DO j3 = -mk3,mk3
-                   s(3) = bkpt(3) + j3 + (2*ispin - 3)/2.0*qss(3)
-                   !r2 = dotirp(s,s,cell%bbmat)
-                   r2 = dot_product(matmul(s,cell%bbmat),s)
-
-                   IF (r2.LE.rk2) THEN
-                      nv2 = nv2 + 1
-                   END IF
-                END DO
-             END IF
-             !+odim
+        
              nvh(ispin)  = nv
              nv2h(ispin) = nv2
           END DO

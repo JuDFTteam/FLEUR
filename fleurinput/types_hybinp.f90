@@ -110,12 +110,12 @@ CONTAINS
       endif
    END SUBROUTINE read_xml_hybinp
 
-   SUBROUTINE init_hybinp(self, atoms, cell, input, oneD, sym, xcpot)
+   SUBROUTINE init_hybinp(self, atoms, cell, input,   sym, xcpot)
       USE m_dwigner
       use m_types_xcpot
       use m_types_sym
       use m_types_atoms
-      use m_types_oneD
+       
       use m_types_input
       use m_types_cell
 
@@ -124,14 +124,14 @@ CONTAINS
       type(t_atoms), intent(in)      :: atoms
       type(t_cell), intent(in)       :: cell
       type(t_input), intent(in)      :: input
-      type(t_oneD), intent(in)       :: oneD
+       
       type(t_sym), intent(in)        :: sym
       class(t_xcpot), intent(in)     :: xcpot
 
       integer :: isym, iisym, l, m2, m1
 
       IF (xcpot%is_hybrid() .OR. input%l_rdmft) THEN
-         IF (input%film .OR. oneD%odi%d1) THEN
+         IF (input%film ) THEN
             CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
                              calledby="fleur", hint="Use a supercell or a different functional")
          END IF
@@ -167,7 +167,7 @@ CONTAINS
    SUBROUTINE gen_map_hybinp(hybinp, atoms, sym)
       use m_types_atoms
       use m_types_sym
-      use m_types_oneD
+       
       USE m_juDFT
       use m_map_to_unit
       IMPLICIT NONE

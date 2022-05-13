@@ -742,7 +742,7 @@ module m_jpIOnMixing
           !****************************************
 
           ! convolute drho(m) with the metric: |fm1> = w|sm1>
-         ! CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+         ! CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym ,&
          !             mmap,nmaph,mapmt,mapvac2,sm1,fm1,l_pot)
 
           ! calculate the norm of sm1 : <sm1|w|sm1>
@@ -772,7 +772,7 @@ module m_jpIOnMixing
           !****************************************
 
           ! multiply fm1 with metric matrix and store in vm:  w |fm1>
-         ! CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+         ! CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym ,&
          !             mmap,nmaph,mapmt,mapvac2,fm1,vm,l_pot)
 
           ! calculate the norm of fm1 and normalize vm it: vm = wfm1 / <fm1|w|fm1>
@@ -786,7 +786,7 @@ module m_jpIOnMixing
 
           ! calculate vm = alpha*wfm1 -\sum <fm1|w|vi> <fi1|w|vi><vi|
           ! convolute fm1 with the metrik and store in vm
-         ! CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym,oneD,&
+         ! CALL metric(cell,atoms,vacuum,sphhar,input,noco,stars,sym ,&
          !             mmap,nmaph,mapmt,mapvac2,fm1,vm,l_pot)
            call noSymMetric(atoms, stars, cell, idir, ngdp, nmap, nmapMT, gdp, fm1, vm)
 

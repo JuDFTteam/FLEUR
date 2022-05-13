@@ -231,13 +231,13 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writePOTHeaderData
 
-   SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars, oneD, l_checkBroyd)
+   SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars,   l_checkBroyd)
      use m_types_stars
-     use m_types_oneD
+      
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER,        INTENT(IN) :: starsIndex, structureIndex
       TYPE(t_stars),  INTENT(IN) :: stars
-      TYPE(t_oneD),   INTENT(IN) :: oneD
+       
       LOGICAL,        INTENT(IN) :: l_CheckBroyd
 
       INTEGER(HID_T)            :: groupID
@@ -286,7 +286,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(groupID,'mx2',stars%mx2)
       CALL io_write_attint0(groupID,'mx3',stars%mx3)
       CALL io_write_attint0(groupID,'ng3_fft',stars%ng3_fft)
-      CALL io_write_attint0(groupID,'od_nq2',oneD%odi%nq2)
 
       dims(:2)=(/3,stars%ng3/)
       dimsInt=dims
@@ -383,13 +382,13 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writeStarsHDF
 
-   SUBROUTINE readStarsHDF(fileID, starsIndex, stars, oneD)
+   SUBROUTINE readStarsHDF(fileID, starsIndex, stars)
       use m_types_stars
-      use m_types_oneD
+       
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: starsIndex
       TYPE(t_stars),  INTENT(INOUT) :: stars
-      TYPE(t_oneD),   INTENT(INOUT) :: oneD
+       
 
       INTEGER(HID_T)            :: groupID, generalGroupID
       INTEGER                   :: fileFormatVersion
@@ -437,9 +436,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupID,'mx2',stars%mx2)
       CALL io_read_attint0(groupID,'mx3',stars%mx3)
       CALL io_read_attint0(groupID,'ng3_fft',stars%ng3_fft)
-      IF(io_attexists(groupID,'od_nq2')) THEN
-         CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
-      END IF
 
       kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
       kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
@@ -881,12 +877,12 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE peekLatharmsHDF
 
-   SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, structureIndex, l_CheckBroyd)
+   SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum,   sym, structureIndex, l_CheckBroyd)
       use m_types_input
       use m_types_atoms
       use m_types_cell
       use m_types_vacuum
-      use m_types_oned
+       
       use m_types_sym
 
       INTEGER(HID_T), INTENT(IN) :: fileID
@@ -895,7 +891,7 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_atoms), INTENT(IN)  :: atoms
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_vacuum), INTENT(IN) :: vacuum
-      TYPE(t_oneD),INTENT(IN)    :: oneD
+       
       TYPE(t_sym),INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)        :: l_CheckBroyd
 
@@ -997,11 +993,10 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attreal0(groupID,'dvac',vacuum%dvac)
 
 !      IO of od_nq2 has been moved to stars IO
-!      CALL io_write_attint0(groupID,'od_nq2',oneD%odi%nq2)
+!      CALL io_write_attint0(groupID,'od_nq2' %odi%nq2)
 
       CALL io_write_attlog0(groupID,'invs2',sym%invs2)
       CALL io_write_attlog0(groupID,'invs',sym%invs)
-      CALL io_write_attlog0(groupID,'zrfs',sym%zrfs)
       CALL io_write_attint0(groupID,'nop',sym%nop)
       CALL io_write_attint0(groupID,'nop2',sym%nop2)
 
@@ -1240,12 +1235,12 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writeStructureHDF
 
-   SUBROUTINE readStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym,structureIndex)
+   SUBROUTINE readStructureHDF(fileID, input, atoms, cell, vacuum,   sym,structureIndex)
       use m_types_input
       use m_types_atoms
       use m_types_cell
       use m_types_vacuum
-      use m_types_oned
+       
       use m_types_sym
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
@@ -1254,7 +1249,7 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_atoms), INTENT(INOUT)  :: atoms
       TYPE(t_cell), INTENT(INOUT)   :: cell
       TYPE(t_vacuum), INTENT(INOUT) :: vacuum
-      TYPE(t_oneD),INTENT(INOUT)    :: oneD
+       
       TYPE(t_sym),INTENT(INOUT)     :: sym
 
       INTEGER(HID_T)            :: groupID, generalGroupID
@@ -1348,14 +1343,9 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attreal0(groupID,'delz',vacuum%delz)
       CALL io_read_attreal0(groupID,'dvac',vacuum%dvac)
 
-!      IO of od_nq2 has been moved to stars IO starting with fileFormatVersion 32
-      IF(io_attexists(groupID,'od_nq2')) THEN
-         CALL io_read_attint0(groupID,'od_nq2',oneD%odi%nq2)
-      END IF
 
       CALL io_read_attlog0(groupID,'invs2',sym%invs2)
       CALL io_read_attlog0(groupID,'invs',sym%invs)
-      CALL io_read_attlog0(groupID,'zrfs',sym%zrfs)
       CALL io_read_attint0(groupID,'nop',sym%nop)
       CALL io_read_attint0(groupID,'nop2',sym%nop2)
 
@@ -2345,14 +2335,14 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writePotentialHDF
 
-   SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum, oneD,&
+   SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum,  &
                              archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den)
       use m_types_input
       use m_types_stars
       use m_types_sphhar
       use m_types_atoms
       use m_types_vacuum
-      use m_types_oneD
+       
       use m_types_potden
 
       TYPE(t_input),INTENT(IN)     :: input
@@ -2360,7 +2350,7 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_sphhar),INTENT(IN)    :: latharms
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
-      TYPE(t_oneD),INTENT(IN)      :: oneD
+       
       TYPE(t_potden),INTENT(INOUT) :: den
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
@@ -2610,7 +2600,6 @@ MODULE m_cdnpot_io_hdf
       ng2Out = MIN(ng2,stars%ng2)
       nmzOut = MIN(nmz,vacuum%nmz)
       nvacOut = MIN(nvac,vacuum%nvac)
-      od_nq2Out = MIN(od_nq2,oneD%odi%nq2)
       nmzxyOut = MIN(nmzxy,vacuum%nmzxy)
       jspinsOut = MIN(jspins,input%jspins)
 
@@ -2624,7 +2613,6 @@ MODULE m_cdnpot_io_hdf
       IF(stars%ng2.NE.ng2) l_DimChange = .TRUE.
       IF(vacuum%nmz.NE.nmz) l_DimChange = .TRUE.
       IF(vacuum%nvac.NE.nvac) l_DimChange = .TRUE.
-      IF(oneD%odi%nq2.NE.od_nq2) l_DimChange = .TRUE.
       IF(vacuum%nmzxy.NE.nmzxy) l_DimChange = .TRUE.
       IF(input%jspins.NE.jspins) l_DimChange = .TRUE.
 

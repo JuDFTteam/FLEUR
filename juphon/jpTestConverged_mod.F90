@@ -66,7 +66,7 @@ module m_jpTestConverged
       complex,                        intent(in) :: vEff0MTsh(:, :, :, :)
       complex,                        intent(in) :: vEff0IRpwUw(:, :)
 
-      !call TestRhoConverged(atoms, sym, qpts, lathar, dimens, stars, input, cell, vacuum, oneD, ngdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho1IR, rho1MT)
+      !call TestRhoConverged(atoms, sym, qpts, lathar, dimens, stars, input, cell, vacuum,   ngdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho1IR, rho1MT)
       if (.false.) then
         call testGassignmWithQSternheimer( atoms, sym, cell, dimens, input, lathar, enpara, usdus, Veff0, stars, qpts, kpts, results, &
           & logUnit, ngdp, memd_atom, ngdp2km, numAddQs, gdp, rho0IR, rho0MT, mlh_atom, nmem_atom, clnu_atom, rbas1, rbas2, uuilon, &
@@ -494,7 +494,7 @@ module m_jpTestConverged
 
   end subroutine testGassignmWithQ
 
-!  subroutine TestRhoConverged(atoms, sym, qpts, lathar, dimens, stars, input, cell, vacuum, oneD, ngdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho1IR, rho1MT)
+!  subroutine TestRhoConverged(atoms, sym, qpts, lathar, dimens, stars, input, cell, vacuum,   ngdp, gdp, mlh_atom, nmem_atom, clnu_atom, rho1IR, rho1MT)
 !
 !    use m_jpPotDensHelper, only : genPertPotDensGvecs
 !    use m_jpPlotObservables, only : plotPathUCScalar
@@ -515,7 +515,7 @@ module m_jpTestConverged
 !    type(t_input),                  intent(in) :: input
 !    type(t_cell),                   intent(in) :: cell
 !    type(t_vacuum),                 intent(in) :: vacuum
-!    type(t_oneD),                   intent(in) :: oneD
+!     
 !    type(t_kpts),                   intent(in) :: qpts
 !
 !    ! Scalar parameter
@@ -596,7 +596,7 @@ module m_jpTestConverged
 !
 !    ! Load densities from FLEUR
 !    !--------------------------
-!    allocate( rho0IRrd(stars%ng3,input%jspins), rho0IRdd(stars%ng3,input%jspins), nzxy(vacuum%nmzxyd, oneD%odi%n2d-1,2, input%jspins), nz(vacuum%nmzd, 2, input%jspins), &
+!    allocate( rho0IRrd(stars%ng3,input%jspins), rho0IRdd(stars%ng3,input%jspins), nzxy(vacuum%nmzxyd, stars%ng2-1,2, input%jspins), nz(vacuum%nmzd, 2, input%jspins), &
 !      & rho0MTrd(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, input%jspins), rho0MTdd(atoms%jmtd, 0:lathar%nlhd, atoms%ntype, input%jspins) )
 !
 !    ! Load density for neutral supercell
@@ -606,8 +606,8 @@ module m_jpTestConverged
 !    rewind (iunit)
 !
 !    write(*, *) 'foo'
-!    call loddop( input%jspins, stars%ng3, oneD%odi%n2d, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,           &
-!      & input%jspins, stars%ng3, oneD%odi%nq2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,    &
+!    call loddop( input%jspins, stars%ng3, stars%ng2, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,           &
+!      & input%jspins, stars%ng3, stars%ng2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,    &
 !      & lathar%ntypsd, atoms%ntypsy, iunit, atoms%natd, atoms%neq, iop, dop, iter, rho0MTrd, rho0IRrd, nz, nzxy, name )
 !
 !    call Fclose(iunit)
@@ -619,8 +619,8 @@ module m_jpTestConverged
 !
 !    rewind (iunit)
 !
-!    call loddop( input%jspins, stars%ng3, oneD%odi%n2d, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,           &
-!      & input%jspins, stars%ng3, oneD%odi%nq2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,    &
+!    call loddop( input%jspins, stars%ng3, stars%ng2, vacuum%nmzxyd, vacuum%nmzd, atoms%jmtd, lathar%nlhd, atoms%ntype,           &
+!      & input%jspins, stars%ng3, stars%ng2, vacuum%nvac, atoms%ntype, sym%invs, sym%invs2, input%film, lathar%nlh, atoms%jri,    &
 !      & lathar%ntypsd, atoms%ntypsy, iunit, atoms%natd, atoms%neq, iop, dop, iter, rho0MTrd, rho0IRrd, nz, nzxy, name )
 !
 !    call Fclose(iunit)

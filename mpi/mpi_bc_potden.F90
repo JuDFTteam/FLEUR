@@ -9,7 +9,7 @@ MODULE m_mpi_bc_potden
    use mpi
 #endif
 CONTAINS
-   SUBROUTINE mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum,oneD,noco,potden,nococonv)
+   SUBROUTINE mpi_bc_potden(fmpi,stars,sphhar,atoms,input,vacuum ,noco,potden,nococonv)
 
    USE m_types
    USE m_constants
@@ -22,7 +22,7 @@ CONTAINS
    TYPE(t_sphhar),INTENT(IN)     :: sphhar
    TYPE(t_atoms),INTENT(IN)      :: atoms
    TYPE(t_noco),INTENT(IN)       :: noco
-   TYPE(t_oneD),INTENT(IN)       :: oneD
+    
    TYPE(t_potden),INTENT(INOUT)  :: potden
    TYPE(t_nococonv),INTENT(INOUT),optional :: nococonv
 

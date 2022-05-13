@@ -9,7 +9,7 @@ MODULE m_writeBasis
 CONTAINS
 
 SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vTot,vCoul,vx,&
-                      fmpi,results,eig_id,oneD,sphhar,stars,vacuum)
+                      fmpi,results,eig_id ,sphhar,stars,vacuum)
 
    USE m_types
    USE m_juDFT
@@ -47,7 +47,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
       TYPE(t_mpi), INTENT(IN)       :: fmpi
       TYPE(t_results), INTENT(INOUT):: results
       INTEGER, INTENT(IN)           :: eig_id
-      TYPE(t_oneD), INTENT(IN)      :: oneD
+       
 
       TYPE (t_usdus)                :: usdus
       TYPE(t_lapw)                  :: lapw
@@ -119,7 +119,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
       complex,parameter :: img=(0.,1.)
       REAL              :: bk(3)
 
-      LOGICAL l_zref,l_real, link_exists
+      LOGICAL l_real, link_exists
       INTEGER jsp,nk,l,itype
       INTEGER numbands, nbasfcn, ndbands !ndbands number of bands without highest (degenerate)
 
@@ -139,14 +139,12 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 
     !-------------------------write potential--------------------
     IF(input%gw==1) THEN
-       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot,vTot%pw_w)
-       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul,vCoul%pw_w)
-       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx,vx%pw_w)
+       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot,vTot%pw_w)
+       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul,vCoul%pw_w)
+       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,POT_ARCHIVE_TYPE_X_const,vx%iter,vx,vx%pw_w)
     END IF
 
 !     check if z-reflection trick can be used
-      l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
-!     IF (fmpi%n_size > 1) l_zref = .FALSE.
       version = 1
       filename = 'basis.hdf'
 
@@ -323,7 +321,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
 !        DO nk = fmpi%n_start,kpts%nkpt,fmpi%n_stride
          DO nk = 1,kpts%nkpt
-            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell,l_zref)
+            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell)
             bk(:) = kpts%bk(:,nk)
             IF(abs(bk(1)).LT.1e-7) bk(1) = abs(bk(1))
             IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))
@@ -461,7 +459,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
        CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
 !      DO nk = fmpi%n_start,kpts%nkpt,fmpi%n_stride
        DO nk = 1,kpts%nkpt
-            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell,l_zref)
+            CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,nk,cell)
             bk(:) = kpts%bk(:,nk)
             IF(abs(bk(1)).LT.1e-7) bk(1) = abs(bk(1))
             IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))
@@ -483,7 +481,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 !	    	ngopr_temp(i)=sym%ngopr(i)
 !               sym%ngopr(i)=1
 !            END DO
-		CALL abcof(input,atoms,sym,cell,lapw,numbands,usdus,noco,nococonv,jsp,oneD,&
+		CALL abcof(input,atoms,sym,cell,lapw,numbands,usdus,noco,nococonv,jsp,&
 		    eigVecCoeffs%abcof(:,0:,0,:,jsp),eigVecCoeffs%abcof(:,0:,1,:,jsp),&
 		    eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp),zMat,results%eig(:,nk,jsp),force)
 !            DO i=1,atoms%nat
@@ -491,8 +489,8 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 !            END DO
 		CALL abcrot(atoms%ntype,atoms%nat,numbands,atoms%lmaxd,atoms%lmaxd*(atoms%lmaxd+2),atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,&
 		            numbands,atoms%lmax,atoms%nlo,atoms%llo,sym%nop,sym%ngopr,sym%mrot,sym%invsat,sym%invsatnr,cell%bmat,&
-		           oneD%odi,oneD%ods,&
 		           eigVecCoeffs%abcof(:,0:,0,:,jsp),eigVecCoeffs%abcof(:,0:,1,:,jsp),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
+                       
 !-------------------------for spex output: nbasfcn=nv(because lo info not needed) and numbands setting to numbands without highest (degenerat) state--------
 !                nbasfcn= MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
 		ndbands=numbands-1

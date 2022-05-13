@@ -9,7 +9,7 @@ MODULE m_vgen
 CONTAINS
 
    SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell,oneD,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc)
+                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (main routine)
       !
@@ -44,7 +44,7 @@ CONTAINS
       CLASS(t_xcpot),    INTENT(IN)    :: xcpot
       TYPE(t_hybdat),    INTENT(IN)    :: hybdat
       TYPE(t_mpi),       INTENT(IN)    :: fmpi
-      TYPE(t_oneD),      INTENT(IN)    :: oneD
+       
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_input),     INTENT(IN)    :: input
       TYPE(t_field),     INTENT(IN)    :: field
@@ -108,10 +108,10 @@ CONTAINS
       ! Sum up both spins in den into workden:
       CALL den%sum_both_spin(workden)
 
-      CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
+      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
 
       !vdW Potential
-      IF (input%vdw>0) CALL fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,cell,sym,oneD,vacuum,results,workden%pw(:,1),workden%mt(:,:,:,1),vCoul%pw(:,1),vCoul%mt)
+      IF (input%vdw>0) CALL fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,cell,sym ,vacuum,results,workden%pw(:,1),workden%mt(:,:,:,1),vCoul%pw(:,1),vCoul%mt)
 
       ! b)
       CALL vCoul%copy_both_spin(vTot)
@@ -121,12 +121,12 @@ CONTAINS
       IF (noco%l_noco) THEN
          CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
          denRot=den
-         CALL rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
+         CALL rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,cell,input,noco ,denRot)
          IF (any(noco%l_unrestrictMT)) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)
       END IF
 
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                      cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
+                      cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
 
       CALL bfield(input,stars,noco,atoms,field,vTot)
 
@@ -134,7 +134,7 @@ CONTAINS
 
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
-      CALL vgen_finalize(fmpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
+      CALL vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL vTot%distribute(fmpi%mpi_comm)
