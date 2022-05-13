@@ -140,8 +140,8 @@ CONTAINS
          ENDIF
 
          if(xml%versionNumber>=36) then
-            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'postProcess') == 1) then
-               tasks = xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'postProcess/text()')
+            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/postProcess') == 1) then
+               tasks = xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/postProcess/text()')
                numTasks = xml%countStringTokens(tasks)
                deallocate(this%post_process_tasks)
                allocate(this%post_process_tasks(numTasks))
