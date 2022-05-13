@@ -323,6 +323,13 @@ CONTAINS
                   apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
                END IF ! useapw
 
+               IF (l_fullj) THEN
+                  apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%us(l,n,isp)  * usdus%duds(l,n,isp) * gjkiln &
+                                                             & + usdus%us(l,n,isp)  * usdus%dus(l,n,isp)  * fjkiln )
+                  apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%uds(l,n,isp) * usdus%dus(l,n,isp)  * fjkiln &
+                                                             & + usdus%uds(l,n,isp) * usdus%duds(l,n,isp) * gjkiln)
+               END IF
+
                ddnln = usdus%ddn(l,n,isp)
                elall = el(l,n,isp)
 

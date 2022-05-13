@@ -7,9 +7,10 @@ q-loop:
    \beta-loop:
       j-loop:
          - generate stars shifted by q with starsq%ustep and starsq%ufft
-           containing not \Theta, but \Theta1
-         - make the Theta1 variables explicitly complex (ufftq,ustepq)
-         - add additional stars%center, that contains q [default: 0]
+           containing not \Theta, but \Theta1 (done?)
+         - make the Theta1 variables explicitly complex (ufftq,ustepq) (done?)
+         - add additional stars%center, that contains q [default: 0] (done)
+         - have an array of G+q vectors as well (done)
          scf-loop:
             vgen1:
                vgen_coulomb:
@@ -35,41 +36,41 @@ q-loop:
                   - get the matrix elements of both H and V1 [done]
                   - correct the matrix elements of H:
                     We do not need a symmetrized form (0.5, 0.5) [done]
-                  - desymmetrized form for LO part [done(?)]
+                  - desymmetrized form for LO part [done; revision]
                hssetup:
                   - get H1 and S1 matrices from the interstitial v1%pw_w [done]
-                  - get H1 and S1 matrices from the MT td and tdV1 and enpara [sone]
+                  - get H1 and S1 matrices from the MT td and tdV1 and enpara [done]
                      - use hsmt_nonsph for the matrix elements of V1 [done]
                         - nonsph gives a full matrix as we need, but we need to teach
                           it to accept different matching coefficients for different
                           k left and right [done]
                      - use hsmt_nonsph for H-elements with perturbed matchings
-                        - teach it ikG prefactors [WIP; this is tricky]
-                        - manually add the necessary prefactors [WIP]
                      - use hsmt_sph for H/S-elements with perturbed matchings [done]
-                        - teach it to comprehend the prefactor [done]
                      - LO part (hlomat/slomat):
-                        - put in ikG prefactor [done]
                         - add the missing parts of the rectangular matrix
                            - bottom left rectangle [done; revision]
                            - Full LO-LO section [done; revision]
-                           - Check the conjugations and usage of tuloulo! [done]
+                        - Check the conjugations and usage of tuloulo! [done; revision]
+                     - add a postprocess for the perturbation prefactor [done]
+                  - add a redistribution routine to gain the full perturbed matrices [done]
                Analytical Matrix inversion:
                   - write routine that inverts (Hkq-\epsilonk*Skq) in a spectral representation [done]
                z1-calculation:
-                  - chain together the matrix multiplication z1=-(Hkq-\epsilonk*Skq)^(-1)*(H1-\epsilonk*S1)*z0
+                  - chain together the matrix multiplication z1=-(Hkq-\epsilonk*Skq)^(-1)*(H1-\epsilonk*S1)*z0 [done (inefficient)]
                   - save z1 (and for q=0 \epsilon1) the same way z0 and \epsilon are normally saved [different eig_id!]
+                  - generate said eig_id beforehand [c.f. main: eig_id = open_eig(...)]
             cdngen1:
-                  - a lot of work
+               - write a control routine that calls only the fundamental necessary parts
+                 of the cdngen workflow [no banddos stuff etc.]
             mixing:
                - Add MT-density imaginary part and make sure the IR-part is
                  handled correctly (4 indices)
          end scf-loop
+         dynmat-row construction:
+            - HF
+            - k-dependent (IBC)
+            - SF
       end j-loop
-      dynmat-row construction:
-         - HF
-         - k-dependent (IBC)
-         - SF
    end \beta-loop
-   (dynmat-constuction)
+   (alternately: full dynmat-constuction)
 end q-loop

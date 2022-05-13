@@ -6,36 +6,32 @@
 
 MODULE m_dfpt_eigen_hssetup
 CONTAINS
-   SUBROUTINE dfpt_eigen_hssetup(isp, fmpi, fi, mpdata, results, xcpot, enpara, nococonv, starsq, sphhar, &
-                            ud, td, tdV1, vTot1, lapw, lapwq, nk, iDir, iDtype, smat_final, hmat_final)
+   SUBROUTINE dfpt_eigen_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, &
+                            ud, td, tdV1, vTot1, lapw, lapwq, iDir, iDtype, smat_final, hmat_final)
       USE m_types
       USE m_types_mpimat
       USE m_types_gpumat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
-      USE m_eigen_redist_matrix
-      USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
+      USE m_dfpt_eigen_redist_matrix
 
       IMPLICIT NONE
 
-      INTEGER, INTENT(IN)           :: isp
-      TYPE(t_mpi), INTENT(IN)       :: fmpi
-      type(t_fleurinput), intent(in)    :: fi
-      type(t_mpdata), intent(inout):: mpdata
-      type(t_results), intent(inout):: results
-      class(t_xcpot), intent(in)   :: xcpot
-      TYPE(t_stars), INTENT(IN)     :: starsq
-      TYPE(t_enpara), INTENT(IN)    :: enpara
-      TYPE(t_nococonv), INTENT(IN)  :: nococonv
-      TYPE(t_sphhar), INTENT(IN)    :: sphhar
-      TYPE(t_usdus), INTENT(INout)  :: ud
-      TYPE(t_tlmplm), INTENT(IN)    :: td, tdV1
-      TYPE(t_lapw), INTENT(IN)      :: lapw, lapwq
-      TYPE(t_potden), INTENT(IN)    :: vTot1
-      integer, intent(in)          :: nk, iDir, iDtype
+      INTEGER,            INTENT(IN)     :: isp
+      TYPE(t_mpi),        INTENT(IN)     :: fmpi
+      type(t_fleurinput), INTENT(IN)     :: fi
+      TYPE(t_stars),      INTENT(IN)     :: starsq
+      TYPE(t_enpara),     INTENT(IN)     :: enpara
+      TYPE(t_nococonv),   INTENT(IN)     :: nococonv
+      TYPE(t_usdus),      INTENT(IN)     :: ud
+      TYPE(t_tlmplm),     INTENT(IN)     :: td, tdV1
+      TYPE(t_lapw),       INTENT(IN)     :: lapw, lapwq
+      TYPE(t_potden),     INTENT(IN)     :: vTot1
+      INTEGER,            INTENT(IN)     :: iDir, iDtype
       CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
 
       CLASS(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
+
       INTEGER :: i, j, nspins
 
       nspins = MERGE(2, 1, fi%noco%l_noco)
@@ -53,10 +49,9 @@ CONTAINS
       END DO
 
       CALL timestart("Interstitial part")
-      !Generate interstitial part of Hamiltonian
       CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, smat, hmat)
-
       CALL timestop("Interstitial part")
+
       CALL timestart("MT part")
       DO i = 1, nspins; DO j = 1, nspins
             !$acc enter data copyin(hmat(i,j),smat(i,j))
@@ -78,10 +73,10 @@ CONTAINS
       ! In the parallel case also a redistribution happens
       ALLOCATE (smat_final, mold=smat(1, 1))
       ALLOCATE (hmat_final, mold=smat(1, 1))
-      ! TODO: This is not that trivial for DFPT.
+
       CALL timestart("Matrix redistribution")
-      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat, smat_final)
-      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat, hmat_final, smat_final)
+      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, smat, smat_final)
+      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, hmat, hmat_final, smat_final)
       CALL timestop("Matrix redistribution")
 
    END SUBROUTINE dfpt_eigen_hssetup

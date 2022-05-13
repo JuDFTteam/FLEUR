@@ -123,7 +123,7 @@ SUBROUTINE denCoeffsOffdiag_init(thisDenCoeffsOffdiag, atoms, noco,sphhar,l_jDOS
       ALLOCATE (thisDenCoeffsOffdiag%uloulop21n(1,1,1))
    END IF
 
-   IF (noco%l_mperp.AND.l_fmpl) THEN
+   IF (noco%l_mperp.AND.l_fmpl) THEN ! TODO: Why not 0:(atoms%lmaxd+1)**2?
       ALLOCATE (thisDenCoeffsOffdiag%uunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
       ALLOCATE (thisDenCoeffsOffdiag%udnmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))
       ALLOCATE (thisDenCoeffsOffdiag%dunmt21((atoms%lmaxd+1)**2,sphhar%nlhd,atoms%ntype))

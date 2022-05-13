@@ -59,6 +59,15 @@ PRIVATE
       REAL, ALLOCATABLE    :: bcnmt(:,:,:,:,:)
       REAL, ALLOCATABLE    :: ccnmt(:,:,:,:,:)
 
+      ! Refactored version for DFPT and more generalization:
+      COMPLEX, ALLOCATABLE :: mt_coeff(:,:,:,:,:,:)!(l,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin)
+      COMPLEX, ALLOCATABLE :: mt_ulo_coeff(:,:,:,:,:)!(lo,iAtom,iOrd,ilSpinPr,ilSpin)
+      COMPLEX, ALLOCATABLE :: mt_lou_coeff(:,:,:,:,:)!(lo,iAtom,iOrd,ilSpinPr,ilSpin)
+      COMPLEX, ALLOCATABLE :: mt_lolo_coeff(:,:,:,:,:)!(lop,lo,iAtom,ilSpinPr,ilSpin)
+      COMPLEX, ALLOCATABLE :: nmt_coeff(:,:,:,:,:,:,:)!(llp,lh,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin)
+      COMPLEX, ALLOCATABLE :: nmt_ulo_coeff(:,:,:,:,:,:,:)!(lp,ilo,lh,iAtom,iOrd,ilSpinPr,ilSpin)
+      COMPLEX, ALLOCATABLE :: nmt_lou_coeff(:,:,:,:,:,:,:)!(lp,ilo,lh,iAtom,iOrd,ilSpinPr,ilSpin)
+      COMPLEX, ALLOCATABLE :: nmt_lolo_coeff(:,:,:,:,:,:)!(lop,lo,lh,iAtom,ilSpinPr,ilSpin)
 
       CONTAINS
       PROCEDURE,PASS :: init => denCoeffs_init
@@ -67,9 +76,10 @@ PRIVATE
 
 
    TYPE t_eigVecCoeffs
-      COMPLEX, ALLOCATABLE :: acof(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: bcof(:,:,:,:)
       COMPLEX, ALLOCATABLE :: ccof(:,:,:,:,:)
+
+      ! Refactored version:
+      COMPLEX, ALLOCATABLE :: abcof(:,:,:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
 
       CONTAINS
          PROCEDURE,PASS :: init => eigVecCoeffs_init
@@ -92,10 +102,6 @@ PRIVATE
       CONTAINS
          PROCEDURE,PASS :: init => moments_init
    END TYPE t_moments
-
-
-
-
 
    TYPE t_cdnvalJob
       LOGICAL              :: l_evp
@@ -237,6 +243,18 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
    ALLOCATE (thisDenCoeffs%bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
    ALLOCATE (thisDenCoeffs%ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
 
+   ! Refactored version for DFPT and more generalization:
+   llpd = (atoms%lmaxd+1)**2
+   ALLOCATE(thisDenCoeffs%mt_coeff(0:atoms%lmaxd,atoms%ntype,0:1,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
+   ALLOCATE(thisDenCoeffs%mt_ulo_coeff(atoms%nlod,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
+   ALLOCATE(thisDenCoeffs%mt_lou_coeff(atoms%nlod,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
+   ALLOCATE(thisDenCoeffs%mt_lolo_coeff(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end,jsp_start:jsp_end))
+
+   ALLOCATE(thisDenCoeffs%nmt_coeff(0:llpd,sphhar%nlhd,atoms%ntype,0:1,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
+   ALLOCATE(thisDenCoeffs%nmt_ulo_coeff(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
+   ALLOCATE(thisDenCoeffs%nmt_lou_coeff(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
+   ALLOCATE(thisDenCoeffs%nmt_lolo_coeff(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end,jsp_start:jsp_end))
+
    thisDenCoeffs%uu = 0.0
    thisDenCoeffs%dd = 0.0
    thisDenCoeffs%du = 0.0
@@ -253,6 +271,16 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
    thisDenCoeffs%acnmt = 0.0
    thisDenCoeffs%bcnmt = 0.0
    thisDenCoeffs%ccnmt = 0.0
+
+   ! Refactored version for DFPT and more generalization:
+   thisDenCoeffs%mt_coeff = CMPLX(0.0,0.0)!(l,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin)
+   thisDenCoeffs%mt_ulo_coeff = CMPLX(0.0,0.0)!(lo,iAtom,iOrd,ilSpinPr,ilSpin)
+   thisDenCoeffs%mt_lou_coeff = CMPLX(0.0,0.0)!(lo,iAtom,iOrd,ilSpinPr,ilSpin)
+   thisDenCoeffs%mt_lolo_coeff = CMPLX(0.0,0.0)!(lop,lo,iAtom,ilSpinPr,ilSpin)
+   thisDenCoeffs%nmt_coeff = CMPLX(0.0,0.0)
+   thisDenCoeffs%nmt_ulo_coeff = CMPLX(0.0,0.0)
+   thisDenCoeffs%nmt_lou_coeff = CMPLX(0.0,0.0)
+   thisDenCoeffs%nmt_lolo_coeff = CMPLX(0.0,0.0)
 
 END SUBROUTINE denCoeffs_init
 
@@ -273,23 +301,19 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpi
    INTEGER,               INTENT(IN)    :: jspin, noccbd
    LOGICAL,               INTENT(IN)    :: l_bothSpins
 
-   IF(ALLOCATED(thisEigVecCoeffs%acof)) DEALLOCATE(thisEigVecCoeffs%acof)
-   IF(ALLOCATED(thisEigVecCoeffs%bcof)) DEALLOCATE(thisEigVecCoeffs%bcof)
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
+   IF(ALLOCATED(thisEigVecCoeffs%abcof)) DEALLOCATE(thisEigVecCoeffs%abcof)
 
    IF (l_bothSpins) THEN
-      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
-      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,input%jspins))
    ELSE
-      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,jspin:jspin))
-      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,jspin:jspin))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,jspin:jspin))
    END IF
 
-   thisEigVecCoeffs%acof = CMPLX(0.0,0.0)
-   thisEigVecCoeffs%bcof = CMPLX(0.0,0.0)
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)
+   thisEigVecCoeffs%abcof = CMPLX(0.0,0.0)
 
 END SUBROUTINE eigVecCoeffs_init
 
@@ -330,20 +354,20 @@ FUNCTION rotate_eigveccoeffs_to_rep_atom(this, atoms, sym,lmax) RESULT(rot)
             iop=sym%ngopr(sym%invsatnr(iatom))
             ifac = -1
           ENDIF
-          DO ispin = LBOUND(this%acof,4),UBOUND(this%acof,4)
+          DO ispin = LBOUND(this%abcof,5),UBOUND(this%abcof,5)
              DO l=1,MIN(lmax,atoms%lmax(iType))
                ! c  replaced d_wgn by conjg(d_wgn),FF October 2006
-               DO i=1,SIZE(this%acof,1)
-                 rot%acof(i,l**2:l*(l+2),iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%acof(i,l**2:l*(l+2),iatom,ispin))
-                 rot%bcof(i,l**2:l*(l+2),iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%bcof(i,l**2:l*(l+2),iatom,ispin))
+               DO i=1,SIZE(this%abcof,1)
+                 rot%abcof(i,l**2:l*(l+2),0,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%abcof(i,l**2:l*(l+2),0,iatom,ispin))
+                 rot%abcof(i,l**2:l*(l+2),1,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%abcof(i,l**2:l*(l+2),1,iatom,ispin))
                ENDDO
              ENDDO
           ENDDO
-          DO ispin = LBOUND(this%acof,4),UBOUND(this%acof,4)
+          DO ispin = LBOUND(this%abcof,5),UBOUND(this%abcof,5)
              DO ilo=1,atoms%nlo(itype)
                l=atoms%llo(ilo,itype)
                IF(l.gt.0.AND.l<=lmax) THEN
-                 DO i=1,SIZE(this%acof,1)
+                 DO i=1,SIZE(this%abcof,1)
                      rot%ccof(-l:l,i,ilo,iAtom, ispin) = ifac**l * matmul(conjg(sym%d_wgn(-l:l,-l:l,l,iop)),this%ccof(-l:l,i,ilo,iAtom, ispin))
                  ENDDO
                ENDIF

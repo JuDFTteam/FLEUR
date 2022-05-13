@@ -194,7 +194,7 @@ CONTAINS
                      ! & tlmplm%tuloulo_new(mp,m,mlolo_new+loplo_new,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
                         tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,iSpinPr,iSpin) = &
                       & tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,iSpinPr,iSpin) + one * cil * ulovulo(loplo,lh)
-                        IF ((lop.NE.lo).AND.(mp.NE.m)) THEN
+                        IF (lop.NE.lo) THEN
                            !loplo = ((lo-1)*lo)/2 + lop
                            !loplo_new = (lo-1) * atoms%nlo(ntyp) + lop
                         !   tlmplm%tuloulo_new(m,mp,mlolo_new+loplo_new,iSpinPr,iSpin) = &

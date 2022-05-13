@@ -205,34 +205,43 @@ CONTAINS
                                                   & + abclo(2,m,nkvec,lo) * ud%duds(l,ntyp,ilSpin) &
                                                   & + abclo(3,m,nkvec,lo) * ud%dulos(lo,ntyp,ilSpin)) )
                            END IF
+                           IF (l_fullj.AND.ilSpinPr.EQ.ilSpin) THEN
+                              hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
+                                                  & + 0.5 * atoms%rmt(ntyp)**2 &
+                                                  & * chi * invsfct * &
+                                                  & (CONJG(abCoeffsPr(lm,kp))              * ud%us(l,ntyp,ilSpin)   + &
+                                                  &  CONJG(abCoeffsPr(ab_size_Pr/2+lm,kp)) * ud%uds(l,ntyp,ilSpin)) * &
+                                                  & ( abclo(1,m,nkvec,lo) * ud%dus(l,ntyp,ilSpin)  &
+                                                  & + abclo(2,m,nkvec,lo) * ud%duds(l,ntyp,ilSpin) &
+                                                  & + abclo(3,m,nkvec,lo) * ud%dulos(lo,ntyp,ilSpin))
+                           END IF
                         END DO
                      END IF
                      ! Jump to the last matrix element of the current row
                   END IF
                END DO
-               ! TODO: Add here lop-kG part (l_fullj).
                IF (l_fullj) THEN
-                  DO kp = 1, lapw%nv(igSpin)
-                     ax(kp) = CMPLX(0.0,0.0)
-                     bx(kp) = CMPLX(0.0,0.0)
-                     cx(kp) = CMPLX(0.0,0.0)
+                  DO k = 1, lapw%nv(igSpin)
+                     ax(k) = CMPLX(0.0,0.0)
+                     bx(k) = CMPLX(0.0,0.0)
+                     cx(k) = CMPLX(0.0,0.0)
                   END DO
                   !CPP_OMP PARALLEL DO DEFAULT(none) &
                   !CPP_OMP& SHARED(ax,bx,cx,ntyp,ilSpin,ilSpinPr,m,lm,lo,mlo) &
                   !CPP_OMP& SHARED(lapw,abCoeffs,ab_size,igSpin) &
                   !CPP_OMP& SHARED(atoms,tlmplm) &
                   !CPP_OMP  PRIVATE(lp,mp,lmp,s)
-                  DO kp = 1, lapw%nv(igSpin)
+                  DO k = 1, lapw%nv(igSpin)
                      DO lp = 0, atoms%lnonsph(ntyp)
                         DO mp = -lp, lp
                            lmp = lp*(lp+1) + mp
                            s = tlmplm%h_loc2(ntyp)
-                           ax(kp) = ax(kp) + tlmplm%h_loc(lm,lmp,ntyp,ilSpinPr,ilSpin)     * abCoeffs(lmp,kp)
-                           ax(kp) = ax(kp) + tlmplm%h_loc(lm,s+lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(ab_size/2+lmp,kp)
-                           bx(kp) = bx(kp) + tlmplm%h_loc(s+lm,lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(lmp,kp)
-                           bx(kp) = bx(kp) + tlmplm%h_loc(s+lm,s+lmp,ntyp,ilSpinPr,ilSpin) * abCoeffs(ab_size/2+lmp,kp)
-                           cx(kp) = cx(kp) + tlmplm%tulou(lmp,m,lo+mlo,ilSpinPr,ilSpin)    * abCoeffs(lmp,kp)
-                           cx(kp) = cx(kp) + tlmplm%tulod(lmp,m,lo+mlo,ilSpinPr,ilSpin)    * abCoeffs(ab_size/2+lmp,kp)
+                           ax(k) = ax(k) + tlmplm%h_loc(lm,lmp,ntyp,ilSpinPr,ilSpin)     * abCoeffs(lmp,k)
+                           ax(k) = ax(k) + tlmplm%h_loc(lm,s+lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(ab_size/2+lmp,k)
+                           bx(k) = bx(k) + tlmplm%h_loc(s+lm,lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(lmp,k)
+                           bx(k) = bx(k) + tlmplm%h_loc(s+lm,s+lmp,ntyp,ilSpinPr,ilSpin) * abCoeffs(ab_size/2+lmp,k)
+                           cx(k) = cx(k) + tlmplm%tulou(lmp,m,lo+mlo,ilSpinPr,ilSpin)    * abCoeffs(lmp,k)
+                           cx(k) = cx(k) + tlmplm%tulod(lmp,m,lo+mlo,ilSpinPr,ilSpin)    * abCoeffs(ab_size/2+lmp,k)
                         END DO
                      END DO
                   END DO
@@ -242,13 +251,12 @@ CONTAINS
                      IF (MOD(lorow-1,fmpi%n_size) == fmpi%n_rank) THEN
                         lorow=(lorow-1)/fmpi%n_size+1
                            DO k = 1,lapw%nv(igSpin)
-                              hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
+                              hmat%data_c(lorow,k) = hmat%data_c(lorow,k) &
                                                   & + chi * invsfct * ( &
                                                   & CONJG(abcloPr(1,m,nkvec,lo)) * ax(k) + &
                                                   & CONJG(abcloPr(2,m,nkvec,lo)) * bx(k) + &
                                                   & CONJG(abcloPr(3,m,nkvec,lo)) * cx(k) )
                            END DO
-                        ! Jump to the last matrix element of the current row
                      END IF
                   END DO
                END IF
@@ -282,23 +290,8 @@ CONTAINS
                               tdulo = tlmplm%tdulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
                               tulou = tlmplm%tulou(lm,mp,lop+mlo,ilSpinPr,ilSpin)
                               tulod = tlmplm%tulod(lm,mp,lop+mlo,ilSpinPr,ilSpin)
-                              ! Note, that lo > lop for non spin spiral calculations
-                              IF (lo>lop) THEN
-                                 !lolop = ((lo-1)*lo)/2 + lop
-                                 !tuloulo = CONJG(tlmplm%tuloulo(m,mp,lolop+mlolo,ilSpinPr,ilSpin))
-                                 !lolop_new = (lo-1) * atoms%nlo(ntyp) + lop
-                                 !tuloulo = CONJG(tlmplm%tuloulo_new(m,mp,mlolo_new+lolop_new,ilSpinPr,ilSpin))
-                                 tuloulo = CONJG(tlmplm%tuloulo_newer(m,mp,lo,lop,ntyp,ilSpinPr,ilSpin))
-                                 !TODO: The conjugation should not be necessary anymore.
-                                 !      But kicking it kills the FePt spin spiral LO test.
-                                 !      [EV_sum check; maybe not quite important]
-                              ELSE
-                                 !lolop = ((lop-1)*lop)/2 + lo
-                                 !tuloulo = tlmplm%tuloulo(mp,m,lolop+mlolo,ilSpinPr,ilSpin)
-                                 !lolop_new = (lop-1) * atoms%nlo(ntyp) + lo
-                                 !tuloulo = tlmplm%tuloulo_new(mp,m,mlolo_new+lolop_new,ilSpinPr,ilSpin)
-                                 tuloulo = tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,ilSpinPr,ilSpin)
-                              END IF
+
+                              tuloulo = tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,ilSpinPr,ilSpin)
 
                               axx = utu     * abclo(1,m,nkvec,lo) &
                                 & + utd     * abclo(2,m,nkvec,lo) &
@@ -351,10 +344,6 @@ CONTAINS
                            tulou = tlmplm%tulou(lm,mp,lo+mlo,ilSpinPr,ilSpin)
                            tulod = tlmplm%tulod(lm,mp,lo+mlo,ilSpinPr,ilSpin)
 
-                           !lolo = ((lo-1)*lo)/2 + lo
-                           !tuloulo = tlmplm%tuloulo(mp,m,lolo+mlolo,ilSpinPr,ilSpin)
-                           !lolop_new = (lo-1) * atoms%nlo(ntyp) + lo
-                           !tuloulo = tlmplm%tuloulo_new(mp,m,mlolo_new+lolop_new,ilSpinPr,ilSpin)
                            tuloulo = tlmplm%tuloulo_newer(mp,m,lo,lo,ntyp,ilSpinPr,ilSpin)
 
                            axx = utu     * abclo(1,m,nkvec,lo) &

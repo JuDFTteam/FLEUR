@@ -76,8 +76,8 @@ CONTAINS
     !****************************************************
     !
 
-    ALLOCATE(acof(size(eigVecCoeffs%acof,1),0:size(eigVecCoeffs%acof,2)-1))
-    ALLOCATE(bcof(size(eigVecCoeffs%bcof,1),0:size(eigVecCoeffs%bcof,2)-1))
+    ALLOCATE(acof(size(eigVecCoeffs%abcof,1),0:size(eigVecCoeffs%abcof,2)-1))
+    ALLOCATE(bcof(size(eigVecCoeffs%abcof,1),0:size(eigVecCoeffs%abcof,2)-1))
     ALLOCATE(ccof(-atoms%llod:atoms%llod,size(eigVecCoeffs%ccof,2),size(eigVecCoeffs%ccof,3)))
 
     DO   ityp = 1,atoms%ntype
@@ -92,8 +92,8 @@ CONTAINS
           IF (ANY((/banddos%alpha(mt),banddos%beta(mt),banddos%gamma(mt)/).NE.0.0)) THEN
             CALL abcrot2(ityp,mt,atoms,banddos,eigVecCoeffs,jspin,acof,bcof,ccof) ! rotate ab-coeffs
           ELSE
-            acof=eigVecCoeffs%acof(:,:,mt,jspin)
-            bcof=eigVecCoeffs%bcof(:,:,mt,jspin)
+            acof=eigVecCoeffs%abcof(:,:,0,mt,jspin)
+            bcof=eigVecCoeffs%abcof(:,:,1,mt,jspin)
             ccof=eigVecCoeffs%ccof(:,:,:,mt,jspin)
           ENDIF
           !find index for dos

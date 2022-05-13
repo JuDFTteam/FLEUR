@@ -117,7 +117,7 @@ contains
     end do
 
     ! q=0 term: see (A12) (Coulomb case) or (A13) (Yukawa case)
-    if( fmpi%irank == 0 ) then
+    if( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8) then
     s = 0.
     do n = 1, atoms%ntype
       if ( potdenType /= POTDEN_TYPE_POTYUK ) then
@@ -135,7 +135,8 @@ contains
 
     call timestart("loop")
     !$omp parallel do default( shared ) private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
-    do k = fmpi%irank+2, stars%ng3, fmpi%isize
+
+    do k = MERGE(fmpi%irank+2,fmpi%irank+1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
       call phasy1( atoms, stars, sym, cell, k, pylm )
       sa = 0.
       do n = 1, atoms%ntype
@@ -168,6 +169,8 @@ contains
     end if
     deallocate( c_b )
 #endif
+
+    IF (l_dfptvgen) RETURN
 
     if ( fmpi%irank == 0 ) then
       if ( potdenType == POTDEN_TYPE_POTYUK ) return

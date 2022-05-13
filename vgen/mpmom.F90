@@ -77,7 +77,7 @@ contains
     ! multipole moments of the interstitial charge density in the spheres
     call pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw(:), potdenType, qlmp )
     IF (l_dfptvgen) THEN
-      CALL dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw0(:), qlmp_SF )
+      CALL dfpt_pw_moments_SF( fmpi, stars2, atoms, cell, sym, iDtype, iDir, qpw0(:), qlmp_SF )
       qlmp = qlmp + qlmp_SF
     END IF
 
@@ -240,7 +240,7 @@ contains
 
     qpw = qpw_in(:stars%ng3)
     qlmp = 0.0
-    if ( fmpi%irank == 0 ) then
+    if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
       do n = 1, atoms%ntype
         if ( potdenType /= POTDEN_TYPE_POTYUK ) then
@@ -262,12 +262,12 @@ contains
 !    !$omp private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, l, cil, ll1, m, lm, k ) &
 !    !$omp private( il, kl ) &
 !    !$omp reduction( +:qlmp )
-    do k = fmpi%irank+2, stars%ng3, fmpi%isize
-      call phasy1( atoms, stars, sym, cell, k, pylm ) ! TODO: Make sure stars%center is considered correctly!
-    
+
+    do k = MERGE(fmpi%irank+2,fmpi%irank+1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
+      call phasy1( atoms, stars, sym, cell, k, pylm )
       nqpw = qpw(k) * stars%nstr(k)
       do n = 1, atoms%ntype
-        sk3r = stars%sk3(k) * atoms%rmt(n) ! TODO: Make sure stars%sk3 considers stars%center so DFPT works
+        sk3r = stars%sk3(k) * atoms%rmt(n)
         call sphbes( atoms%lmax(n) + 1, sk3r, aj )
         rl2 = atoms%rmt(n) ** 2
         if ( potdenType == POTDEN_TYPE_POTYUK ) then

@@ -481,15 +481,16 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 !	    	ngopr_temp(i)=sym%ngopr(i)
 !               sym%ngopr(i)=1
 !            END DO
-		CALL abcof(input,atoms,sym,cell,lapw,numbands,usdus,noco,nococonv,jsp ,&
-		    eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),&
+		CALL abcof(input,atoms,sym,cell,lapw,numbands,usdus,noco,nococonv,jsp,&
+		    eigVecCoeffs%abcof(:,0:,0,:,jsp),eigVecCoeffs%abcof(:,0:,1,:,jsp),&
 		    eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp),zMat,results%eig(:,nk,jsp),force)
 !            DO i=1,atoms%nat
 !	     	sym%ngopr(i)=ngopr_temp(i)
 !            END DO
 		CALL abcrot(atoms%ntype,atoms%nat,numbands,atoms%lmaxd,atoms%lmaxd*(atoms%lmaxd+2),atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,&
 		            numbands,atoms%lmax,atoms%nlo,atoms%llo,sym%nop,sym%ngopr,sym%mrot,sym%invsat,sym%invsatnr,cell%bmat,&
-		           eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
+		           eigVecCoeffs%abcof(:,0:,0,:,jsp),eigVecCoeffs%abcof(:,0:,1,:,jsp),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
+                       
 !-------------------------for spex output: nbasfcn=nv(because lo info not needed) and numbands setting to numbands without highest (degenerat) state--------
 !                nbasfcn= MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
 		ndbands=numbands-1
@@ -600,10 +601,10 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 			  lmn = 0
 			  do l = 0,atoms%lmax(n)
 			    do m = -l,l
-			      cof(1,lmn+1,na,:) = real ( eigVecCoeffs%acof(:numbands,lm,na,jsp) * img**l )
-			      cof(1,lmn+2,na,:) = real ( eigVecCoeffs%bcof(:numbands,lm,na,jsp) * img**l )
-			      cof(2,lmn+1,na,:) = aimag ( eigVecCoeffs%acof(:numbands,lm,na,jsp) * img**l )
-			      cof(2,lmn+2,na,:) = aimag ( eigVecCoeffs%bcof(:numbands,lm,na,jsp) * img**l )
+			      cof(1,lmn+1,na,:) = real ( eigVecCoeffs%abcof(:numbands,lm,0,na,jsp) * img**l )
+			      cof(1,lmn+2,na,:) = real ( eigVecCoeffs%abcof(:numbands,lm,1,na,jsp) * img**l )
+			      cof(2,lmn+1,na,:) = aimag ( eigVecCoeffs%abcof(:numbands,lm,0,na,jsp) * img**l )
+			      cof(2,lmn+2,na,:) = aimag ( eigVecCoeffs%abcof(:numbands,lm,1,na,jsp) * img**l )
 			      lm  = lm  + 1
 			      lmn = lmn + 2
 			      do i = 1,atoms%nlo(n)

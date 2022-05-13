@@ -8,27 +8,9 @@ MODULE m_matrix_pref
 CONTAINS
    SUBROUTINE matrix_pref(fmpi, bmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, &
                           & iDir, hmat_tmp, smat_tmp, hmat, smat)
-      ! Calculates matrix elements of the form
-      ! <\phi_{k'G'}|M|\phi_{kG}>
-      ! for different use cases in the DFT/DFPT scf loop and operators M.
-      !
-      ! The spin loop and distinction is found on a higher level and translates
-      ! into new switches.
-      !
-      ! DFT:
-      ! M = \Theta_{IR} * (T + V) goes into hmat, M = \Theta_{IR} into smat.
-      ! [vpw = \Theta_{IR} * V]
-      ! [stars%ustep = \Theta_{IR}]
-      ! [l_smat = F for offdiags]
-      ! [iTkin = 0 for offdiags, 1 for l_useapw, 2 else]
-      !
-      ! DFPT:
-      ! M = \Theta_{IR}^{(1)} * (T + V) + \Theta_{IR} * V^{(1)} goes into hmat,
-      ! M = \Theta_{IR}^{(1)} into smat.
-      ! [vpw = \Theta_{IR}^{(1)} * V + \Theta_{IR} * V^{(1)}]
-      ! [stars%ustep = \Theta_{IR}^{(1)}]
-      ! [l_smat = F for offdiags]
-      ! [iTkin = 0 for offdiags, 1 else]
+      !> Decoratetes matrix elements of the form
+      !! <\phi_{kG'q}|M|\phi_{kG}>
+      !! with a prefactor i(G-G'-q).
 
       USE m_types
 

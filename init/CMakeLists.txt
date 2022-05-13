@@ -23,4 +23,5 @@ init/spgrot.f90
 init/stepf.F90
 init/lapw_dim.F90
 init/angles.f90
+init/step_function.F90
 )

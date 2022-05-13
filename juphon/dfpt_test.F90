@@ -164,6 +164,9 @@ CONTAINS
 
       ! Further test ideas:
 
+      ! Calculate gradV with gradRho and i*gradRho. Should give i*gradV in the
+      ! second case if everything is alright [careful: gradVext!].
+
       ! V1 tests: wait for starsq to be implemented/test with gradRho for now.
       !harSw    = .FALSE.
       !extSw    = .TRUE.

@@ -99,7 +99,7 @@ contains
     !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype))
     !$ vtl_loc(:,:) = cmplx(0.0,0.0)
     !$omp do
-    do k = fmpi%irank+2, stars%ng3, fmpi%isize
+    do k = MERGE(fmpi%irank+2,1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
       cp = vpw(k) * stars%nstr(k)
         call phasy1( atoms, stars, sym, cell, k, pylm )
       nat = 1
@@ -218,29 +218,6 @@ contains
             END DO
          END DO
       END IF
-      ! TODO: Modify for DFPT case.
-      !grVeff0
-      !if ( extSw ) then
-      !  do lm = 2, 4
-      !    do imesh = 1, atoms%jri(itype)
-      !      grVc0MT(imesh, lm, idir) = grVc0MT(imesh, lm, idir) + 1 / atoms%rmsh(imesh, itype)**2 &
-      !        & * ( 1 - (atoms%rmsh(imesh, itype) / atoms%rmt(itype))**3)
-      !          * c_im(idir, lm - 1)  * 3 / 4 / pi_const * prefactor
-      !    end do
-      !  end do
-      !end if
-      !veff1
-      !if (extSw.and.vExtFull) then
-      !  if ( iatom == iDatom ) then
-      !    do lm = 2, 4
-      !      do imesh = 1, atoms%jri(itype)
-      !        vr(imesh, lm) = vr(imesh, lm) - 1 / atoms%rmsh(imesh, itype)**2
-      !          * ( 1 - (atoms%rmsh(imesh, itype) / atoms%rmt(itype))**3 )
-      !          * c_im(idirec, lm - 1) * atoms%zatom(itype)
-      !      end do
-      !    end do
-      !  end if
-      !end if
     end if
     end if
 

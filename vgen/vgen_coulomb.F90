@@ -62,7 +62,7 @@ contains
 
     complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
-    integer                                      :: lh, n, nzst1
+    integer                                      :: lh, n, nzst1, first_star
     integer                                      :: imz, imzxy, ichsmrg, ivfft
     integer                                      :: l, nat
     real                                         :: ani, g3, z, sig1dh, vz1dh
@@ -167,7 +167,8 @@ contains
           ! there is a better option now using qfix in mix
         else
           vCoul%pw(1,ispin) = cmplx(0.0,0.0)
-          vCoul%pw(2:stars%ng3,ispin) = fpi_const * psq(2:stars%ng3) / stars%sk3(2:stars%ng3) ** 2
+          first_star = MERGE(2,1,norm2(stars%center)<=1e-8)
+          vCoul%pw(first_star:stars%ng3,ispin) = fpi_const * psq(first_star:stars%ng3) / stars%sk3(first_star:stars%ng3) ** 2
         end if
       end if
     call timestop("interstitial")
@@ -180,8 +181,7 @@ contains
     call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
-    ! TODO: DFPT here; modify vmts for the vExt perturbation and the
-    !       second potden in --> second potential out.
+
     IF (.NOT.l_dfptvgen) THEN
       call vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
