@@ -11,7 +11,7 @@
       SUBROUTINE abcrot(
      >                 ntypd,natd,neigd,lmaxd,lmd,llod,nlod,ntype,neq,
      >                 neig,lmax,nlo,llo,nop,ngopr,mrot,invsat,invsatnr,
-     >                 bmat,odi,ods,
+     >                 bmat,
      X                 acof,bcof,ccof)
 C     ***************************************************************
 C     * This routine transforms a/b/cof which are given wrt rotated *
@@ -38,10 +38,7 @@ C     .. Array Arguments ..
       COMPLEX, INTENT (INOUT) :: acof(neigd,0:lmd,natd)
       COMPLEX, INTENT (INOUT) :: bcof(neigd,0:lmd,natd)
       COMPLEX, INTENT (INOUT) :: ccof(-llod:llod,neigd,nlod,natd)
-c-odim
-      TYPE (od_inp), INTENT (IN) :: odi
-      TYPE (od_sym), INTENT (IN) :: ods
-c+odim
+
 C     ..
 C     .. Local Scalars ..
       INTEGER itype,ineq,iatom,iop,ilo,i,l,m,lm,lmp,ifac
@@ -52,36 +49,23 @@ C
 
       IF ( .NOT.ALLOCATED(d_wgn) ) THEN    !calculate d_wgn only once
         PRINT*,"calculate wigner-matrix"
-        IF (.NOT.odi%d1) THEN
           ALLOCATE (d_wgn(-lmaxd:lmaxd,-lmaxd:lmaxd,lmaxd,nop))
           d_wgn = CMPLX(0.0,0.0) ! Initialization is done to avoid complaints by Lord Valgrind
           CALL d_wigner(nop,mrot,bmat,lmaxd,d_wgn)
-        ELSE
-          ALLOCATE (d_wgn(-lmaxd:lmaxd,-lmaxd:lmaxd,lmaxd,ods%nop))
-          d_wgn = CMPLX(0.0,0.0) ! Initialization is done to avoid complaints by Lord Valgrind
-          CALL d_wigner(ods%nop,ods%mrot,bmat,lmaxd,d_wgn)
-        ENDIF
       ENDIF
 
       iatom=0
       DO itype=1,ntype
         DO ineq=1,neq(itype)
           iatom=iatom+1
-          IF (.NOT.odi%d1) THEN
              iop=ngopr(iatom)
-          ELSE
-             iop=ods%ngopr(iatom)
-          ENDIF
+        
 C                                    l                        l    l
 C inversion of spherical harmonics: Y (pi-theta,pi+phi) = (-1)  * Y (theta,phi)
 C                                    m                             m
           ifac = 1
           IF(invsat(iatom).EQ.2) THEN
-            IF (.NOT.odi%d1) THEN
                iop=ngopr(invsatnr(iatom))
-            ELSE
-               iop=ods%ngopr(invsatnr(iatom))
-            ENDIF
             ifac = -1 
           ENDIF
           DO l=1,lmax(itype)

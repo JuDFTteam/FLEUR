@@ -3,7 +3,7 @@ MODULE m_checkolap
 CONTAINS
 
    SUBROUTINE checkolap(atoms, hybdat, mpdata, hybinp, nkpti, kpts, fmpi, &
-                        input, sym, noco, nococonv, oneD, cell, lapw, jsp)
+                        input, sym, noco, nococonv,   cell, lapw, jsp)
       USE m_util, ONLY: chr, sphbessel, harmonicsr
       use m_intgrf, only: intgrf, intgrf_init
       use m_calc_cmt
@@ -30,7 +30,7 @@ CONTAINS
       TYPE(t_cell), INTENT(IN)        :: cell
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
-      type(t_oneD), intent(in)        :: oneD
+       
       TYPE(t_lapw), INTENT(INOUT)     :: lapw
 
       ! - scalars -
@@ -76,7 +76,7 @@ CONTAINS
       call timestart("checkolap")
       allocate(z(nkpti))
       DO ikpt = 1, nkpti
-         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
          nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
          call z(ikpt)%alloc(sym%invs, nbasfcn, input%neig)
       ENDDO
@@ -102,7 +102,7 @@ CONTAINS
          ! call timestop("Post read_z Barrier: checkolap")
 #endif
          call calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
-                       sym, oneD, z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
+                       sym,   z(kpts%bkp(ikpt)), jsp, ikpt, c_phase, &
                        cmt(:hybdat%nbands(ikpt,jsp), :, :, ikpt))
       END DO
 
@@ -253,7 +253,7 @@ CONTAINS
                   carr1 = 0; carr2 = 0; carr3 = 0
 
                   ! calculate k1,k2,k3
-                  CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, sym%zrfs)
+                  CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
                   call timestart("pw part")
                   ! PW part
                   !$OMP PARALLEL DO default(none) &

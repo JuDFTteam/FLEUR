@@ -9,14 +9,14 @@ MODULE m_make_atomic_defaults
   IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE make_atomic_defaults(input,vacuum,profile,cell,oneD,atoms,enpara)
+   SUBROUTINE make_atomic_defaults(input,vacuum,profile,cell ,atoms,enpara)
       USE m_check_mt_radii
       USE m_atompar
       USE m_types_atoms
       USE m_types_input
       USE m_types_vacuum
       USE m_types_cell
-      USE m_types_oneD
+       
       USE m_constants
       USE m_types_enpara
       USE m_types_profile
@@ -27,7 +27,7 @@ CONTAINS
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_vacuum),INTENT(IN)     :: vacuum
       TYPE(t_cell),INTENT(IN)       :: cell
-      TYPE(t_oneD),INTENT(IN)       :: oneD
+       
 
       INTEGER :: i,l,id,n,nn,qn,iLO
       INTEGER :: loLCutoff
@@ -73,7 +73,7 @@ CONTAINS
       atoms%lda_u%l = -1 ;  atoms%relax(:,:) = 1
 
       !Determine MT-radii
-      CALL check_mt_radii(atoms,input,vacuum,cell,oneD,profile,.false.,atoms%rmt)
+      CALL check_mt_radii(atoms,input,vacuum,cell ,profile,.false.,atoms%rmt)
 
       IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
          atoms%rmt(:) = atoms%rmt(:) * profile%rmtFactor

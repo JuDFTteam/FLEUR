@@ -314,7 +314,7 @@ CONTAINS
    SUBROUTINE init_metric(vacuum, stars)
       USE m_metrz0
       IMPLICIT NONE
-      !TYPE(t_oned),   INTENT(in) :: oneD
+      ! 
       TYPE(t_vacuum), INTENT(in) :: vacuum
       TYPE(t_stars), INTENT(in) :: stars
 
@@ -366,7 +366,6 @@ CONTAINS
          dvol = cell%area*vacuum%delz
          ! nvac=1 if (zrfs.or.invs)
          IF (vacuum%nvac .EQ. 1) dvol = dvol + dvol
-         !IF (oneD%odi%d1) dvol = cell%area*vacuum%delz
          DO ivac = 1, vacuum%nvac
             ! G||=0 components
             !
@@ -375,11 +374,9 @@ CONTAINS
             CALL metr_z0(vacuum%nmz, wght)
             DO iz = 1, vacuum%nmz
                i = i + 1
-               !IF (oneD%odi%d1) THEN
-               !   g_vac(i) = wght(iz)*dvol*(cell%z1 + (iz - 1)*vacuum%delz)
-               !ELSE
+               ! 
                g_vac(i) = wght(iz)*dvol
-               !END IF
+               !
             END DO
             ! G||.ne.0 components
             !
@@ -387,18 +384,13 @@ CONTAINS
             CALL metr_z0(vacuum%nmzxy, wght)
             DO iv2c = 1, iv2
                DO k2 = 1, stars%ng2 - 1
-                  !IF (oneD%odi%d1) THEN
-                  !   DO iz = 1, vacuum%nmzxy
-                  !      i = i + 1
-                  !      g_vac(i) = wght(iz)*oneD%odi%nst2(k2)*dvol*(cell%z1 + (iz - 1)*vacuum%delz)
-                  !   END DO
-                  !ELSE
+                  ! 
                   volnstr2 = dvol*stars%nstr2(k2)
                   DO iz = 1, vacuum%nmzxy
                      i = i + 1
                      g_vac(i) = wght(iz)*volnstr2
                   END DO
-                  !END IF
+                  !
                END DO
             END DO
          END DO
@@ -454,12 +446,12 @@ CONTAINS
 #endif
    END SUBROUTINE init_storage_mpi
 
-   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix, oneD, input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i)
+   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix,   input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i)
       USE m_types
       IMPLICIT NONE
       INTEGER, INTENT(IN)               :: comm_mpi
       LOGICAL, INTENT(IN)               :: l_densitymatrix
-      TYPE(t_oneD), INTENT(IN)          :: oneD
+       
       TYPE(t_input), INTENT(IN)         :: input
       TYPE(t_vacuum), INTENT(IN), TARGET :: vacuum
       TYPE(t_noco), INTENT(IN)          :: noco

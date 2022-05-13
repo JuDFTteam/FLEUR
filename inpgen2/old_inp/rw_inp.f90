@@ -9,7 +9,7 @@
       CONTAINS
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,oneD,hybinp,kpts,&
+     &                  cell,sym,xcpot,noco ,hybinp,kpts,&
      &                  noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)!,name_opt)
 
 !*********************************************************************
@@ -24,7 +24,7 @@
       USE m_types_atoms
       USE m_types_vacuum
       USE m_types_kpts
-      USE m_types_oneD
+       
       USE m_types_hybinp
       USE m_types_cell
       USE m_types_banddos
@@ -44,7 +44,7 @@
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
-      TYPE(t_oneD),INTENT(INOUT)     :: oneD
+       
       TYPE(t_hybinp),INTENT(INOUT)   :: hybinp
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_banddos),INTENT(INOUT)  :: banddos
@@ -84,7 +84,7 @@
       INTEGER  ::nw,idsprs,ncst
       INTEGER ieq,i,k,na,n,ilo
       REAL s3,ah,a,hs2,rest,rdum,rdum1,ellow,elup
-      LOGICAL l_hyb,l_sym,ldum,gauss,tria
+      LOGICAL l_hyb,l_sym,ldum,gauss,tria,invs2
       INTEGER :: ierr, intDummy
 ! ..
 !...  Local Arrays
@@ -153,9 +153,9 @@
  7000 FORMAT (10a8)
 !
       READ (UNIT=5,FMT=7020,END=99,ERR=99)&
-     &     latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+     &     latnam,namgrp,sym%invs,zrfs1, invs2,input%jspins,noco%l_noco
       WRITE (oUnit,9020)&
-     &     latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+     &     latnam,namgrp,sym%invs,zrfs1, invs2,input%jspins,noco%l_noco
  7020 FORMAT (a3,1x,a4,6x,l1,6x,l1,7x,l1,8x,i1,8x,l1,5x,l1)
 !
       IF ((latnam.EQ.'squ').OR.(latnam.EQ.'hex').OR.&
@@ -321,14 +321,9 @@
          READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
          IF (ch_test.EQ.'igg') THEN                      ! GGA 2nd line
            GOTO 76
-         ELSEIF (ch_test.EQ.'&od') THEN                  ! continue with 1D
-           GOTO 78
          ELSE
-           oneD%odd%d1 = .false.
            GOTO 77
          ENDIF
-      ELSEIF (ch_test.EQ.'&od') THEN                  ! continue with 1D
-         GOTO 78
       ELSEIF ( ch_test .eq. 'gcu' ) then              ! HF
         BACKSPACE (5)
         call judft_warn("hybinp parameters not supported in old input")
@@ -338,7 +333,6 @@
  7999   FORMAT (6x,f8.5,6x,f10.8,8x,i2,6x,i2,7x,i4)
  9999   FORMAT ('gcutm=',f8.5,',mtol=',f10.8,',lambda=',i2,&
      &          ',lexp=',i2,',bands=',i4)
-         oneD%odd%d1 = .false.
          goto 76
       ELSE
          GOTO 77
@@ -346,23 +340,12 @@
 !-odim
       READ (UNIT=5,FMT=7182,END=99,ERR=99) ch_test
  7182 FORMAT (a3)
-   78 IF (ch_test.EQ.'&od') THEN
-        BACKSPACE (5)
-        READ (5,odim)
-        oneD%odd%d1 = d1 ; oneD%odd%mb = vM ; oneD%odd%M = MM ; oneD%odd%m_cyl = m_cyl
-        oneD%odd%chi = chi ; oneD%odd%rot = rot
-        oneD%odd%invs = invs1 ; oneD%odd%zrfs = zrfs1
-        WRITE (oUnit,8182) d1,MM,vM,m_cyl,chi,rot,invs1,zrfs1
-      END IF
+  
 !+odim
       GOTO 76
    77 BACKSPACE (5)                                ! continue with atoms
    76 IF (ch_test /= '&od') THEN
         WRITE (oUnit,*) '   '
-        oneD%odd%d1 = .false.
-        oneD%odd%M = 1 ; oneD%odd%mb = 1 ; oneD%odd%m_cyl = 1
-        oneD%odd%chi = 1 ; oneD%odd%rot = 1
-        oneD%odd%invs = .FALSE. ; oneD%odd%zrfs = .FALSE.
       END IF
       READ (UNIT=5,FMT=*,END=99,ERR=99) atoms%ntype
       WRITE (oUnit,9050) atoms%ntype
@@ -445,13 +428,7 @@
                atoms%taual(i,na) = atoms%taual(i,na)/scpos
             ENDDO
             IF (.not.input%film) atoms%taual(3,na) = atoms%taual(3,na)/scpos
-!+odim
-! in 1D case all the coordinates are given cartesian'ly
-            IF (oneD%odd%d1) THEN
-               atoms%taual(1,na) = atoms%taual(1,na)/a1(1)
-               atoms%taual(2,na) = atoms%taual(2,na)/a2(2)
-            END IF
-!-odim
+           
          ENDDO
          READ (5,*)
          WRITE (oUnit,9060)
@@ -745,7 +722,7 @@
      &        ',ndir=',i2,',secvar=',l1)
       WRITE (5,9010) name
  9010 FORMAT (10a8)
-      WRITE(5,9020) latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+      WRITE(5,9020) latnam,namgrp,sym%invs,zrfs1, invs2,input%jspins,noco%l_noco
  9020 FORMAT (a3,1x,a4,',invs=',l1,',zrfs=',l1,',invs2=',l1,&
      &       ',jspins=',i1,',l_noco=',l1,',l_J=',l1)
 !
@@ -807,15 +784,9 @@
 
 
 !-odim
-      IF (oneD%odd%d1) THEN
-        WRITE (5,8182) oneD%odd%d1,oneD%odd%M,oneD%odd%mb,&
-     &                      oneD%odd%m_cyl,oneD%odd%chi,oneD%odd%rot,oneD%odd%invs,oneD%odd%zrfs
- 8182   FORMAT ('&odim d1=',l1,',MM=',i3,',vM=',i3,&
-     &          ',m_cyl=',i3,',chi=',i3,',rot=',i3,&
-     &          ',invs1=',l1,',zrfs1=',l1,'/')
-      ELSE
+      
         WRITE (5,*) '   '
-      END IF
+      
 !+odim
       WRITE (5,9050) atoms%ntype
  9050 FORMAT (i3)
@@ -878,12 +849,7 @@
             ENDDO
             IF (.NOT.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
             IF (input%film) atoms%taual(3,na) = a3(3)*atoms%taual(3,na)/scaleCell
-!+odim in 1D case all the coordinates are given in cartesian YM
-            IF (oneD%odd%d1) THEN
-               atoms%taual(1,na) = atoms%taual(1,na)*a1(1)
-               atoms%taual(2,na) = atoms%taual(2,na)*a2(2)
-            END IF
-!-odim
+
             WRITE (5,9100) (atoms%taual(i,na),i=1,3),scpos
  9100       FORMAT (4f10.6)
          ENDDO

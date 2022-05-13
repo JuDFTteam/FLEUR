@@ -96,7 +96,7 @@ CONTAINS
         ! Get the required eigenvectors and values at k for occupied bands:
         bkpt = fi%kpts%bk(:, nk)
 
-        CALL lapw%init(input, noco, nococonv, fi%kpts, atoms, sym, nk, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, fi%kpts, atoms, sym, nk, cell, fmpi)
 
         noccbd = COUNT(results%w_iks(:,:,jsp)*2.0/input%jspins>1.e-8)
         nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)

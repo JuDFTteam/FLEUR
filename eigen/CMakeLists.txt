@@ -18,8 +18,6 @@ eigen/mt_setup.F90
 eigen/eigen_hssetup.F90
 eigen/hsmt.F90
 eigen/hsvac.F90
-eigen/od_hsvac.F90
-eigen/od_vacfun.f90
 eigen/orthoglo.F90
 eigen/rad_ovlp.f90
 eigen/setabc1lo.f90

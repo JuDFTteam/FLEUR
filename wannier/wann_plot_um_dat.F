@@ -17,14 +17,14 @@ c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
      >          kpts,stars,vacuum,atoms,sphhar,input,sym,fmpi,
-     >          oneD,noco,nococonv,cell,vTot,enpara,eig_id,l_real,
+     >           noco,nococonv,cell,vTot,enpara,eig_id,l_real,
      >          mpi_communicator,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
      >          neigd,natd,nop,nvd,jspd,llod,nlod,ntype,
      >          omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >          invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >          beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >          beta,qss,sk2,phi2,irank,isize,n3d,nmzxyd,nmzd,
      >          jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >          ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >          ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -35,7 +35,6 @@ c******************************************************************
       use m_wann_rw_eig
       use m_abcof
       use m_wann_2dvacabcof
-      use m_wann_1dvacabcof
       use m_radfun
       use m_radflo
       use m_cdnread
@@ -46,7 +45,6 @@ c******************************************************************
       use m_wann_read_umatrix
       use m_wann_kptsrotate
       use m_wann_plot_vac
-      use m_wann_plot_od_vac
       use m_wann_abinv
 
 
@@ -68,7 +66,7 @@ c******************************************************************
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: fmpi
       TYPE(t_lapw)      :: lapw
-      TYPE(t_oneD),INTENT(IN)      :: oneD
+       
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
       TYPE(t_cell),INTENT(IN)      :: cell
@@ -107,8 +105,7 @@ c******************************************************************
       integer :: n_start, n_end
 c-odim
       real,    intent (in) :: sk2(n2d),phi2(n2d)
-      type (od_inp), intent (in) :: odi
-      type (od_sym), intent (in) :: ods
+
 c+odim
       logical l_spreadcal
       complex, allocatable::spreads(:,:)
@@ -559,9 +556,7 @@ c******************************************************************
                 n_end=input%neig
 
                 CALL lapw%init(input,noco,nococonv,kpts,atoms,sym,
-     &               kptibz,cell,(sym%zrfs.AND.
-     &               (SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
-     &               .AND..NOT.noco%l_noco.and.fmpi%n_size==1),fmpi)
+     &               kptibz,cell,fmpi)
 
                 nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,
      &          lapw%nv(1)+atoms%nlotot,noco%l_noco)
@@ -643,7 +638,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       ngopr1(:)=1
 
       CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
-     >           noco,nococonv,jspin,oneD,acof,bcof,ccof,zMat)
+     >           noco,nococonv,jspin ,acof,bcof,ccof,zMat)
 
       call wann_abinv(atoms,sym,
      X        acof,bcof,ccof)
@@ -652,7 +647,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 c***********************************************************************
 c make preparations for plotting in vacuum
 c***********************************************************************
-      if (film.and. .not.odi%d1)then
+      if (film)then
          allocate ( ac(nv2d,nslibd,2),bc(nv2d,nslibd,2),
      +         u(nmzd,nv2d,nvac),ue(nmzd,nv2d,nvac))
          call wann_2dvacabcof(
@@ -663,20 +658,7 @@ c***********************************************************************
      >         neigd,zMat,
      <         ac,bc,u,ue,addnoco,l_ss,qss,jspin)
       endif !preparations for vacuum
-      if (odi%d1)then
-         allocate ( ac_1(nv2d,-odi%mb:odi%mb,nslibd),
-     &              bc_1(nv2d,-odi%mb:odi%mb,nslibd),
-     &              u_1(nmzd,nv2d,-odi%mb:odi%mb),
-     &              ue_1(nmzd,nv2d,-odi%mb:odi%mb) )
-         call wann_1dvacabcof(
-     >         oneD,vacuum,stars,cell,
-     >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:,jspin2),
-     >         nv(jspin),bkpt,z1,odi,ods,
-     >    nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),enpara%evac0(:,jspin),
-     >         bbmat,delz,bmat,nbasfcn,neigd,zMat,
-     >         n2d,n3d,ig,nmzxy,nmzxyd,ig2,sk2,phi2,k1d,k2d,k3d,
-     <         ac_1,bc_1,u_1,ue_1,addnoco,l_ss,qss,jspin)
-      endif !preparations for vacuum
+   
 c**************************************************************************
 c**************************************************************************
 
@@ -706,10 +688,7 @@ c**************************************************************************
              ii1 = 3
              ii2 = 3
              ii3 = 3
-             IF (film .AND. .NOT.odi%d1) ii3 = 0
-             IF (odi%d1) THEN
-                ii1 = 0 ; ii2 = 0
-             END IF
+             IF (film ) ii3 = 0
              DO  i1 = -ii1,ii1
               DO  i2 = -ii2,ii2
                DO  i3 = -ii3,ii3
@@ -726,7 +705,7 @@ c**************************************************************************
      >                   natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >                   nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >                   lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >                   omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
+     >                   omtil,amat,bmat,nlod,llod,nlo,llo,
      >                   ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >                   ccof(:,nbn,:,:),zMat,
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),
@@ -743,7 +722,7 @@ c**************************************************************************
               ENDDO
              ENDDO !i1
 !Check for point in vacuum
-             IF (film.AND..NOT.odi%d1.AND.ABS(point(3))>=z1) THEN
+             IF (film.AND.ABS(point(3))>=z1) THEN
                 ivac=1
                 if (point(3).lt. 0.0)ivac=2
                 jvac=ivac
@@ -762,24 +741,14 @@ c**************************************************************************
               CYCLE xloop
              END IF
 
-             IF (odi%d1) THEN
-              IF (SQRT((pt(1))**2 + (pt(2))**2)>=z1) THEN
-               call wann_plot_od_vac(point,z1,nmzd,nv2d,odi,
-     >            nmz,delz,bmat,bkpt,nvd,nv(jspin),omtil,k3(:,jspin),
-     >            ac_1(:,:,nbn),bc_1(:,:,nbn),u_1,ue_1,
-     <            xdnout)
-                wannierfunc(:,posi)=
-     =wannierfunc(:,posi)+xdnout*u_matrix(counter,:,ikpt)*factor
-                CYCLE xloop
-              END IF
-             END IF
+             
              CALL wann_real(
      >             point,0,0,0,2,bkpt,nbn,
      >             n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
      >             natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
      >             nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
      >             lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >             omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
+     >             omtil,amat,bmat,nlod,llod,nlo,llo,
      >             ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >             ccof(:,nbn,:,:),zMat,
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),
@@ -804,8 +773,8 @@ c..end of the loop by the bands
 
 
       if(film)then
-         if (.not.odi%d1) deallocate(ac,bc,u,ue)
-         if (odi%d1) deallocate(ac_1,bc_1,u_1,ue_1)
+         deallocate(ac,bc,u,ue)
+         
       endif
 
 
@@ -897,11 +866,11 @@ c***************************************************************
             write (name3,24) nplo,jspin
    24       format (i3.3,'.absv.',i1,'.xsf')
             OPEN(55,file=name1)
-            CALL xsf_WRITE_atoms(55,atoms,film,odi%d1,amat)
+            CALL xsf_WRITE_atoms(55,atoms,film,amat)
             OPEN(56,file=name2)
-            CALL xsf_WRITE_atoms(56,atoms,film,odi%d1,amat)
+            CALL xsf_WRITE_atoms(56,atoms,film,amat)
             OPEN(57,file=name3)
-            CALL xsf_WRITE_atoms(57,atoms,film,odi%d1,amat)
+            CALL xsf_WRITE_atoms(57,atoms,film,amat)
             CALL xsf_WRITE_header(55,twodim,filename,vec1,vec2,vec3,zero
      $           ,grid)
             CALL xsf_WRITE_header(56,twodim,filename,vec1,vec2,vec3,zero

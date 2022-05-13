@@ -44,7 +44,6 @@
          <xsd:element name="magnetism" type="MagnetismType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisIRType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="soc" type="SOCType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="oneDParams" type="OneDParamType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="expertModes" type="ExpertModeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="geometryOptimization" type="GeometryOptimizerType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaU" type="LdaUGeneralType"/>
@@ -90,16 +89,7 @@
       <xsd:attribute default="1.0" name="mag_scale" type="FleurDouble" use="optional"/>
    </xsd:complexType>
 
-   <xsd:complexType name="OneDParamType">
-      <xsd:attribute name="d1" type="FleurBool"/>
-      <xsd:attribute name="MM" type="xsd:integer"/>
-      <xsd:attribute name="vM" type="xsd:integer"/>
-      <xsd:attribute name="m_cyl" type="xsd:integer"/>
-      <xsd:attribute name="chi" type="xsd:integer"/>
-      <xsd:attribute name="rot" type="xsd:integer"/>
-      <xsd:attribute name="invs1" type="FleurBool"/>
-      <xsd:attribute name="zrfs1" type="FleurBool"/>
-   </xsd:complexType>
+  
 
    <xsd:complexType name="CoreElectronsType">
       <xsd:attribute name="ctail" type="FleurBool" use="required"/>

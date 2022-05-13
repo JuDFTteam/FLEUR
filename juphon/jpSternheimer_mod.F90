@@ -226,7 +226,7 @@ module m_jpSternheimer
   !> Spin is hard-coded
   !>
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine solveSternheimerSCC( fmpi, oneD, atoms, sym, stars, lathar, cell, enpara, uds, input, kpts, qpts, results, usdus, logUnit,&
+  subroutine solveSternheimerSCC( fmpi,   atoms, sym, stars, lathar, cell, enpara, uds, input, kpts, qpts, results, usdus, logUnit,&
     & ngdp, rbas1, rbas2, kveclo, uuilon, duilon, ulouilopn, gdp, mapKpq2K, ne, eig, gbas, mapGbas, z, nv, El, nRadFun, iloTable, &
     & nobd, ilo2p, gdp2Ind, gdp2iLim, kpq2kPrVec, qpwcG, iqpt, tdHS0, loosetd, ylm, grRho0IR, grRho0MT, grVeff0MT_init, grVeff0MT_main, &
     & dKernMTGPts, vxc1IRKern, rho1MTCoreDispAt, gausWts, rho1IRDS, rho1MT, vExt1MT, vEff1IR_final, vEff1MT_final, &
@@ -247,7 +247,7 @@ module m_jpSternheimer
 
     ! Type parameters
     type(t_mpi),                  intent(in)  :: fmpi
-    type(t_oneD),                  intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in)  :: atoms
     type(t_sym),                    intent(in)  :: sym
     type(t_stars),                  intent(in)  :: stars
@@ -862,37 +862,37 @@ module m_jpSternheimer
 
             ! todo Due to performance reasons we do not make a loop over idir (array of types, type of arrays) is that good?
             if (.false.) then
-            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVx, loosetdx1, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVx, loosetdx1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 1, ngdp, nobd, z1nG(:, :, 1), nlo_atom, recEdiffME, kpq2kPrVec, tdVx2, loosetdx2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp, haa, dhaa, rbas1, mat_elH(:, :, 1), mat_elS)
               mat_elS(:, :) = cmplx(0., 0.)
-            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVy, loosetdy1, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVy, loosetdy1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 2, ngdp, nobd, z1nG(:, :, 2), nlo_atom, recEdiffME, kpq2kPrVec, tdVy2, loosetdy2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp, haa, dhaa, rbas1, mat_elH(:, :, 2), mat_elS)
               mat_elS(:, :) = cmplx(0., 0.)
-            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVz, loosetdz1, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVz, loosetdz1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 3, ngdp, nobd, z1nG(:, :, 3), nlo_atom, recEdiffME, kpq2kPrVec, tdVz2, loosetdz2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp, haa, dhaa, rbas1, mat_elH(:, :, 3), mat_elS)
             else
-            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVx, loosetdx1, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVx, loosetdx1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 1, ngdp, nobd, z1nG(:, :, 1), nlo_atom, recEdiffME, kpq2kPrVec, tdVx2, loosetdx2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp)
 
-            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVy, loosetdy1, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVy, loosetdy1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 2, ngdp, nobd, z1nG(:, :, 2), nlo_atom, recEdiffME, kpq2kPrVec, tdVy2, loosetdy2, cutContr, &
               & surfIntVFast, ngpqdp, gpqdp, maxlmp)
 
-            call solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVz, loosetdz1, stars, gdp, ne, nv, vEff1IR, &
+            call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVz, loosetdz1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 3, ngdp, nobd, z1nG(:, :, 3), nlo_atom, recEdiffME, kpq2kPrVec, tdVz2, loosetdz2, cutContr, &
@@ -917,11 +917,11 @@ module m_jpSternheimer
 
             ! Calculate the k-dependent parts of the density. By looping over the k-points, we perform the sum over the k-points.
             if (sternFinIt) then
-              call calcKdepValRho1MT( fmpi, oneD, atoms, input, sym, cell, kpts, usdus, results, ikpt, mapKpq2K(ikpt, iqpt), iDatom, nv, &
+              call calcKdepValRho1MT( fmpi,   atoms, input, sym, cell, kpts, usdus, results, ikpt, mapKpq2K(ikpt, iqpt), iDatom, nv, &
                 & mapGbas, gBas, nobd(:, 1), uu, du, ud, dd, aclo, bclo, cclo, uunmt, udnmt, dunmt, ddnmt, acnmt, bcnmt, ccnmt, &
                 & z(:, :, ikpt, ispin), z1nG, kveclo, rbas1, rbas2, ilo2p, uu2, du2, ud2, dd2, aclo2, bclo2, cclo2, uunmt2, udnmt2, dunmt2, ddnmt2, acnmt2, bcnmt2, ccnmt2 )
             else
-              call calcKdepValRho1MT( fmpi, oneD, atoms, input, sym, cell, kpts, usdus, results, ikpt, mapKpq2K(ikpt, iqpt), iDatom, nv, &
+              call calcKdepValRho1MT( fmpi,   atoms, input, sym, cell, kpts, usdus, results, ikpt, mapKpq2K(ikpt, iqpt), iDatom, nv, &
                 & mapGbas, gBas, nobd(:, 1), uu, du, ud, dd, aclo, bclo, cclo, uunmt, udnmt, dunmt, ddnmt, acnmt, bcnmt, ccnmt, &
                 & z(:, :, ikpt, ispin), z1nG, kveclo, rbas1, rbas2, ilo2p )
             end if
@@ -2086,12 +2086,12 @@ module m_jpSternheimer
   !> @todo spin
   !> @todo cutcontr and eigBra?
   !---------------------------------------------------------------------------------------------------------------------------------
-  subroutine solveSternheimerEq( fmpi, oneD, atoms, input, sym, cell, kpts, qpts, usdus, td4HS0, loosetd, td4V, loosetd1, stars,  gdp, ne, nv, vEff1IR, eigKet,&
+  subroutine solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, usdus, td4HS0, loosetd, td4V, loosetd1, stars,  gdp, ne, nv, vEff1IR, eigKet,&
       & eigBra, El, nRadFun, iloTable, ilst, GbasVec, zKet, zBra, kveclo, iDtype, iDatom, ikpt, ikpq, iqpt, idir, ngdp, nobd, z1G, &
       & nlo_atom, recEdiffME, kpq2kPrVec, td4V2, loosetd2, cutContr, surfIntVFast, ngpqdp, gpqdp, maxlmp , haa, dhaa, rbas1, mat_elH, mat_elS)
 
     use m_types
-    USE m_types_oneD
+     
     use m_abcof, only : abcof
     use m_abcof3
     use m_jpSternhHF, only : calcMEPotIR, calcVsumMT
@@ -2104,7 +2104,7 @@ module m_jpSternheimer
 
     ! Type parameter
     type(t_mpi),                  intent(in)  :: fmpi
-    type(t_oneD),                  intent(in)  :: oneD
+     
     type(t_atoms),                  intent(in)  :: atoms
     type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
@@ -2159,8 +2159,7 @@ module m_jpSternheimer
     ! Type parameters
     type(t_noco)                                :: noco
     type(t_nococonv)                            :: nococonv
-    type(od_inp)                                :: odi
-    type(od_sym)                                :: ods
+   
     TYPE(t_lapw) :: lapw
     TYPE (t_mat) :: zMatKet, zMatBra, zMatTilde, zMatBar
 
@@ -2335,10 +2334,10 @@ module m_jpSternheimer
         !& acofKet, bcofKet, ccofKet, atestcofk, btestcofk, idir, ikpt)
 
         nk=fmpi%k_list(ikpt)
-        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, .FALSE., fmpi)
+        CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, fmpi)
         CALL zMatKet%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
         zMatKet%data_c(:, :) = zKet(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt, 1))
-        CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &
+        CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1,   &
                  & acofKet(:, 0:, :), bcofKet(:, 0:, :), &
                  & ccofKet(-atoms%llod:, :, :, :), zMatKet)
         !CALL save_npy("acofKet.npy", acofKet)
@@ -2400,10 +2399,10 @@ module m_jpSternheimer
 !        & atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpq), odi, ods, &
 !        & acofBra, bcofBra, ccofBra)
     nk=fmpi%k_list(ikpq)
-    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, .FALSE., fmpi)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, fmpi)
     CALL zMatBra%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
     zMatBra%data_c(:, :) = zBra(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq))
-    CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
+    CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1,   &
             & acofBra(:, 0:, :), bcofBra(:, 0:, :), &
             & ccofBra(-atoms%llod:, :, :, :), zMatBra)
     !CALL save_npy("acofBra.npy", acofBra)
@@ -2675,10 +2674,10 @@ module m_jpSternheimer
      ! & acofTilde, bcofTilde, ccofTilde)
 
       nk=fmpi%k_list(ikpq)
-      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, .FALSE., fmpi)
+      CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpq, cell, fmpi)
       CALL zMatTilde%init(.FALSE., nv(1, ikpq) + atoms%nlotot, ne(ikpq))
       zMatTilde%data_c(:, :) = zTilde(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq))
-      CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1, oneD, &
+      CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1,   &
                & acofTilde(:, 0:, :), bcofTilde(:, 0:, :), &
                & ccofTilde(-atoms%llod:, :, :, :), zMatTilde)
       !CALL save_npy("acofTilde.npy", acofTilde)
@@ -2720,10 +2719,10 @@ module m_jpSternheimer
     !  & atoms%l_dulo, atoms%lapw_l, noco%l_noco, noco%l_ss, 1, nococonv%alph, nococonv%beta, nococonv%qss, kveclo(:, ikpt), odi, ods, &
     !  & acofBar, bcofBar, ccofBar)
     nk=fmpi%k_list(ikpt)
-    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, .FALSE., fmpi)
+    CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, fmpi)
     CALL zMatBar%init(.FALSE., nv(1, ikpt) + atoms%nlotot, nobd(ikpt, 1))
     zMatBar%data_c(:, :) = zBar(:nv(1, ikpt) + atoms%nlotot, :nobd(ikpt, 1))
-    CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1, oneD, &
+    CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1,   &
              & acofBar(:, 0:, :), bcofBar(:, 0:, :), &
              & ccofBar(-atoms%llod:, :, :, :), zMatBar)
     !CALL save_npy("acofBar.npy", acofBar)

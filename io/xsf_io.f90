@@ -15,7 +15,7 @@ MODULE m_xsf_io
 
 CONTAINS
   !<-- S:S: xsf_WRITE_atoms(fileno,film,amat,neq(:ntype),zatom(:ntype),pos)
-  SUBROUTINE xsf_WRITE_atoms(fileno,atoms,film,od,amat,forceAllAtoms)
+  SUBROUTINE xsf_WRITE_atoms(fileno,atoms,film,amat,forceAllAtoms)
     !-----------------------------------------------
     !     Writes the crystal dimensions&atomic positions
     !           (last modified: 2004-00-00) D. Wortmann
@@ -25,7 +25,6 @@ CONTAINS
     INTEGER,INTENT(IN)     :: fileno
     TYPE(t_atoms),INTENT(IN):: atoms
     LOGICAL,INTENT(IN)      :: film
-    LOGICAL,INTENT(IN)     :: od
     REAL,INTENT(IN)        :: amat(3,3)
     REAL, OPTIONAL, INTENT(IN) :: forceAllAtoms(3,atoms%nat)
     !>
@@ -33,11 +32,7 @@ CONTAINS
     INTEGER             :: n,nn,na
     !>
     IF (film) THEN
-       IF (od) THEN
-          WRITE(fileno,*) "POLYMERE"
-       ELSE
           WRITE(fileno,*) "SLAB"
-       ENDIF
     ELSE
        WRITE(fileno,*) "CRYSTAL"
     ENDIF

@@ -6,7 +6,7 @@
 
 MODULE m_pwden
 CONTAINS
-   SUBROUTINE pwden(stars, kpts, banddos, oneD, input, fmpi, noco, nococonv, cell, atoms, sym, &
+   SUBROUTINE pwden(stars, kpts, banddos,   input, fmpi, noco, nococonv, cell, atoms, sym, &
                     ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos)
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       !     In this subroutine the star function expansion coefficients of
@@ -52,7 +52,7 @@ CONTAINS
 
       TYPE(t_lapw), INTENT(IN)       :: lapw
       TYPE(t_mpi), INTENT(IN)        :: fmpi
-      TYPE(t_oneD), INTENT(IN)       :: oneD
+       
       TYPE(t_banddos), INTENT(IN)    :: banddos
       TYPE(t_input), INTENT(IN)      :: input
       TYPE(t_noco), INTENT(IN)       :: noco
@@ -250,7 +250,7 @@ CONTAINS
                   cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
                END DO
                DO istr = 1, stars%ng3_fft
-                  CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
+                  CALL pwint(stars, atoms, sym,   cell, istr, x)
                   dos%qis(ev_list(nu), ikpt, 1) = dos%qis(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
                   dos%qTot(ev_list(nu), ikpt, 1) = dos%qTot(ev_list(nu), ikpt, 1) + REAL(cwk(istr)*x)/cell%omtil
                ENDDO
@@ -260,7 +260,7 @@ CONTAINS
                   cwk(istr) = REAL(stars%nstr(istr))*cwk(istr)
                END DO
                DO istr = 1, stars%ng3_fft
-                  CALL pwint(stars, atoms, sym, oneD, cell, istr, x)
+                  CALL pwint(stars, atoms, sym,   cell, istr, x)
                   dos%qis(ev_list(nu), ikpt, input%jspins) = dos%qis(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil
                   dos%qTot(ev_list(nu), ikpt, input%jspins) = dos%qTot(ev_list(nu), ikpt, input%jspins) + REAL(cwk(istr)*x)/cell%omtil
                ENDDO
@@ -317,7 +317,7 @@ CONTAINS
                   cwk = CMPLX(0.0,0.0)
                   CALL state%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
                   starCharges = CMPLX(0.0,0.0)
-                  CALL pwint_all(stars,atoms,sym,oneD,cell,1,stars%ng3,starCharges)
+                  CALL pwint_all(stars,atoms,sym ,cell,1,stars%ng3,starCharges)
                   starCharges(:) = starCharges(:) * cwk(:) * stars%nstr(:) / cell%omtil
                   dos%qis(ev_list(nu), ikpt, jSpin) = dos%qis(ev_list(nu), ikpt, jSpin) + REAL(SUM(starCharges(:)))
                   dos%qTot(ev_list(nu), ikpt, jSpin) = dos%qTot(ev_list(nu), ikpt, jSpin) + REAL(SUM(starCharges(:)))

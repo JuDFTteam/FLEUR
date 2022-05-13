@@ -22,7 +22,7 @@ CONTAINS
       USE m_types_gpumat
       USE m_hs_int
       USE m_hsvac
-      USE m_od_hsvac
+       
       USE m_hsmt
       USE m_eigen_redist_matrix
       USE m_add_vnonlocal
@@ -94,7 +94,7 @@ CONTAINS
       IF (fi%input%film) THEN
          CALL timestart("Vacuum part")
          CALL hsvac(fi%vacuum, stars, fmpi, isp, fi%input, v, enpara%evac, fi%cell, &
-                    lapw, fi%sym, fi%noco, nococonv, hmat, smat)
+                    lapw,  fi%noco, nococonv, hmat, smat)
          CALL timestop("Vacuum part")
       END IF
 
@@ -114,7 +114,7 @@ CONTAINS
          !IF (hybdat%l_subvxc) THEN
          !   CALL subvxc(lapw, fi%kpts%bk(:, nk), fi%input, isp, v%mt(:, 0, :, :), fi%atoms, ud, &
          !               mpdata, hybdat, enpara%el0, enpara%ello0, fi%sym, &
-         !               fi%cell, sphhar, stars, xcpot, fmpi, fi%oneD, hmat(1, 1), vx)
+         !               fi%cell, sphhar, stars, xcpot, fmpi, fi%  hmat(1, 1), vx)
          !END IF
       END IF ! fi%hybinp%l_hybrid
 

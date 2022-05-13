@@ -14,7 +14,7 @@ use mpi
 CONTAINS
 
 SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
-                  vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,vacdos,results,&
+                  vacuum,sphhar,sym,vTot ,cdnvalJob,den,regCharges,dos,vacdos,results,&
                   moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
 
    !************************************************************************************
@@ -73,7 +73,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_mpi),           INTENT(IN)    :: fmpi
 
-   TYPE(t_oneD),          INTENT(IN)    :: oneD
+    
    TYPE(t_enpara),        INTENT(IN)    :: enpara
    TYPE(t_banddos),       INTENT(IN)    :: banddos
    TYPE(t_input),         INTENT(IN)    :: input
@@ -185,7 +185,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
-   !IF (l_dosNdir.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
    IF (banddos%l_mcd.AND..NOT.PRESENT(mcd)) CALL juDFT_error("mcd is missing",calledby ="cdnval")
 
    ! calculation of core spectra (EELS) initializations -start-
@@ -226,7 +225,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       ikpt=cdnvalJob%k_list(ikpt_i)
       bkpt=kpts%bk(:,ikpt)
 
-      CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell,.false., fmpi)
+      CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
       skip_t = skip_tt
       ev_list=cdnvaljob%compact_ev_list(ikpt_i,l_empty)
       noccbd = SIZE(ev_list)
@@ -253,7 +252,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
-         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,oneD,&
+         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin ,&
                     eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
 
@@ -298,7 +297,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (input%l_f) THEN
            CALL tlmplm%init(atoms,input%jspins,.FALSE.)
            CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,vtot,den,input,hub1inp,hub1data,tlmplm,usdus,0.0)
-           CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
+           CALL force%addContribsA21A12(input,atoms,sym,cell ,enpara,&
            usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,lapw%gvec(1,:,:),lapw%gvec(2,:,:),lapw%gvec(3,:,:),bkpt)
          ENDIF
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
@@ -322,13 +321,13 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
-         CALL pwden(stars,kpts,banddos,oneD,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
+         CALL pwden(stars,kpts,banddos ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
                     jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-         IF (PRESENT(slab).AND.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
+         IF (PRESENT(slab).AND.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab ,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
-            CALL vacden(vacuum,stars,oneD, kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
+            CALL vacden(vacuum,stars , kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
                         gVacMap,we,ikpt,jspin,vTot%vacz,noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,vacdos,dos)
          END IF
       END IF
@@ -342,7 +341,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(fmpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,vacdos,&
+      CALL mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,ispin,regCharges,dos,vacdos,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
    END DO
 #endif
@@ -366,7 +365,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (input%cdinf) THEN
             WRITE (oUnit,FMT=8210) ispin
 8210        FORMAT (/,5x,'check continuity of cdn for spin=',i2)
-            CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
+            CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,cell,den,ispin)
          END IF
          IF (input%l_f) CALL force_a8(input,atoms,sym,sphhar,ispin,vTot%mt(:,:,:,ispin),den%mt,force,fmpi,results)
       END DO

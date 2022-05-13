@@ -11,7 +11,7 @@ CONTAINS
   ! The subroutine abcof calculates the A, B, and C coefficients for the
   ! eigenfunctions. Also some force contributions can be calculated.
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
-                   noco,nococonv,jspin,oneD, acof,bcof,ccof,zMat,eig,force)
+                   noco,nococonv,jspin , acof,bcof,ccof,zMat,eig,force)
 #ifdef _OPENACC
 #ifdef __PGI
     use cublas
@@ -38,7 +38,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)             :: input
     TYPE(t_usdus),INTENT(IN)             :: usdus
     TYPE(t_lapw),INTENT(IN)              :: lapw
-    TYPE(t_oneD),INTENT(IN)              :: oneD
+     
     TYPE(t_noco),INTENT(IN)              :: noco
     TYPE(t_nococonv),INTENT(IN)          :: nococonv
     TYPE(t_sym),INTENT(IN)               :: sym
@@ -240,16 +240,12 @@ CONTAINS
                    tmk = tpi_const * DOT_PRODUCT(fk(:),atoms%taual(:,iAtom))
                    phase = CMPLX(COS(tmk),SIN(tmk))
 
-                   IF (oneD%odi%d1) THEN
-                      inap = oneD%ods%ngopr(iAtom)
-                      fkr = MATMUL(TRANSPOSE(oneD%ods%mrot(:,:,inap)),fk(:))
-                      fgr = MATMUL(TRANSPOSE(oneD%ods%mrot(:,:,inap)),fg(:))
-                   ELSE
+                    
                       nap = sym%ngopr(iAtom)
                       inap = sym%invtab(nap)
                       fkr = MATMUL(TRANSPOSE(sym%mrot(:,:,inap)),fk(:))
                       fgr = MATMUL(TRANSPOSE(sym%mrot(:,:,inap)),fg(:))
-                   END IF
+                   
                    fkp = MATMUL(fkr,cell%bmat)
                    fgp = MATMUL(fgr,cell%bmat)
 
@@ -325,14 +321,11 @@ CONTAINS
                    ELSE
                       s2h_e(:ne,iLAPW) = (s2h-eig(:ne)) * workTrans_c(:ne,iLAPW)
                    ENDIF
-                   IF (oneD%odi%d1) THEN
-                      inap = oneD%ods%ngopr(iAtom)
-                      fgr = MATMUL(TRANSPOSE(oneD%ods%mrot(:,:,inap)),fg(:))
-                   ELSE
+                    
                       nap = sym%ngopr(iAtom)
                       inap = sym%invtab(nap)
                       fgr = MATMUL(TRANSPOSE(sym%mrot(:,:,inap)),fg(:))
-                   END IF
+                   
                    fgpl(:,iLAPW) = MATMUL(fgr,cell%bmat)
                 ENDDO
 

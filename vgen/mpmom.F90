@@ -24,7 +24,7 @@ module m_mpmom
 #endif
 contains
 
-  subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm,l_coreCharge,&
+  subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm,l_coreCharge,&
                   & rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
 
     use m_types
@@ -33,7 +33,7 @@ contains
 
     type(t_input),   intent(in)   :: input
     type(t_mpi),     intent(in)   :: fmpi
-    type(t_oneD),    intent(in)   :: oneD
+     
     type(t_sym),     intent(in)   :: sym
     type(t_stars),   intent(in)   :: stars
     type(t_cell),    intent(in)   :: cell
@@ -75,7 +75,7 @@ contains
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
-    call pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw(:), potdenType, qlmp )
+    call pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw(:), potdenType, qlmp )
     IF (l_dfptvgen) THEN
       CALL dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw0(:), qlmp_SF )
       qlmp = qlmp + qlmp_SF
@@ -201,8 +201,8 @@ contains
   end subroutine mt_moments
 
 
-!  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw, potdenType, qlmp_out )
-  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw_in, potdenType, qlmp_out )
+!  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw, potdenType, qlmp_out )
+  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw_in, potdenType, qlmp_out )
     ! multipole moments of the interstitial charge in the spheres
 
 #ifdef CPP_MPI
@@ -210,7 +210,7 @@ contains
 #endif
     use m_phasy1
     use m_sphbes
-    use m_od_phasy
+     
     use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK
     use m_types
     use m_DoubleFactorial
@@ -219,7 +219,7 @@ contains
 
     type(t_input),    intent(in)   :: input
     type(t_mpi),      intent(in)   :: fmpi
-    type(t_oneD),     intent(in)   :: oneD
+     
     type(t_sym),      intent(in)   :: sym
     type(t_stars),    intent(in)   :: stars
     type(t_cell),     intent(in)   :: cell
@@ -234,7 +234,6 @@ contains
     real                           :: sk3r, rl2
     real                           :: aj(0:maxval( atoms%lmax ) + 1 )
     complex                        :: qpw(stars%ng3)
-    logical                        :: od
     real                           :: il(0:maxval( atoms%lmax ) + 1 )
     real                           :: kl(0:maxval( atoms%lmax ) + 1 )
     complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
@@ -258,20 +257,14 @@ contains
 #endif
 
     ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
-    od = oneD%odi%d1
 !    !$omp parallel do if(atoms%ntype < 600) default( none ) &
-!    !$omp shared( fmpi, atoms, stars, oneD, sym, cell, input, potdenType, od, qpw) &
+!    !$omp shared( fmpi, atoms, stars,   sym, cell, input, potdenType,  qpw) &
 !    !$omp private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, l, cil, ll1, m, lm, k ) &
 !    !$omp private( il, kl ) &
 !    !$omp reduction( +:qlmp )
     do k = fmpi%irank+2, stars%ng3, fmpi%isize
-      if ( od ) then
-        call od_phasy( atoms%ntype, stars%ng3, atoms%nat, atoms%lmaxd, atoms%ntype, &
-             atoms%neq, atoms%lmax, atoms%taual, cell%bmat, stars%kv3, k, oneD%odi, oneD%ods, pylm)
-      else
-        call phasy1( atoms, stars, sym, cell, k, pylm ) ! TODO: Make sure stars%center is considered correctly!
-      end if
-
+      call phasy1( atoms, stars, sym, cell, k, pylm ) ! TODO: Make sure stars%center is considered correctly!
+    
       nqpw = qpw(k) * stars%nstr(k)
       do n = 1, atoms%ntype
         sk3r = stars%sk3(k) * atoms%rmt(n) ! TODO: Make sure stars%sk3 considers stars%center so DFPT works

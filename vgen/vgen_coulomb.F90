@@ -12,7 +12,7 @@ module m_vgen_coulomb
 #endif
 contains
 
-  subroutine vgen_coulomb( ispin, fmpi,  oneD, input, field, vacuum, sym, stars, &
+  subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
              cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
@@ -41,7 +41,7 @@ contains
     integer,            intent(in)               :: ispin
     type(t_mpi),        intent(in)               :: fmpi
 
-    type(t_oneD),       intent(in)               :: oneD
+     
     type(t_input),      intent(in)               :: input
     type(t_field),      intent(in)               :: field
     type(t_vacuum),     intent(in)               :: vacuum
@@ -82,10 +82,10 @@ contains
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
     IF (.NOT.l_dfptvgen) THEN
-        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
+        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
             & den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq )
     ELSE
-        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
+        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
             & den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq,&
             & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) )
     END IF
@@ -95,24 +95,11 @@ contains
 
     ! VACUUM POTENTIAL
     if ( fmpi%irank == 0 ) then
-      if ( oneD%odi%d1 ) then
-        call timestart( "Vacuum" )
-        !---> generates the m=0,gz=0 component of the vacuum potential
-        !call od_vvac( stars, vacuum, cell, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin) )
-        !---> generation of the vacuum warped potential components and
-        !---> interstitial pw potential
-        !---> vvacxy_5.F is a symmetrized potential generator
-        !call od_vvacis( oneD%odi%n2d, input, vacuum, oneD%odi%nq2, &
-        !     oneD%odi%kv, cell, oneD%odi%M, stars, oneD%odi%nst2, &
-        !     oneD, den%vacz(:,:,ispin), den%vacxy(:,:,:,ispin), psq, &
-        !     vCoul%vacz(:,:,ispin), sym, vCoul%vacxy(:,:,:,ispin), vCoul%pw(:,ispin) )
-        call timestop( "Vacuum" )
-        !---> generation of the vacuum warped potential components and
-      elseif ( input%film .and. .not. oneD%odi%d1 ) then
+      if ( input%film ) then
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" )
         call vvac( vacuum, stars, cell,  input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh,vslope )
-        call vvacis( stars, vacuum, sym, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
+        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
         call timestop( "Vacuum" )
       end if
@@ -124,7 +111,7 @@ contains
       write(oUnit, fmt=8010 )
 8010  format (/,5x,'coulomb potential in the interstitial region:')
       ! in case of a film:
-      if ( input%film .and. .not.oneD%odi%d1 ) then
+      if ( input%film ) then
         ! create v(z) for each 2-d reciprocal vector
         ivfft = 3 * stars%mx3
         ani = 1.0 / real( ivfft )
@@ -134,7 +121,7 @@ contains
             i = i + 1
             z = cell%amat(3,3) * i3 * ani
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
-            vintcza = vintcz( stars, vacuum, cell, sym, input, field, z, irec2, psq, &
+            vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vacxy(:,:,:,ispin), vCoul%vacz(:,:,ispin), &
                               rhobar, sig1dh, vz1dh, alphm,vslope )
             af1(i) = real( vintcza )
@@ -196,10 +183,10 @@ contains
     ! TODO: DFPT here; modify vmts for the vExt perturbation and the
     !       second potden in --> second potential out.
     IF (.NOT.l_dfptvgen) THEN
-      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
+      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
     ELSE
-      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
+      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
                  dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir )
     END IF
@@ -210,7 +197,7 @@ contains
     if ( fmpi%irank == 0 ) then
       CHECK_CONTINUITY: if ( input%vchk ) then ! TODO: We could use this for DFPT as well if we
         call timestart( "checking" )           !       passed an optional to checkDOPAll and modded
-        call checkDOPAll( input,  sphhar, stars, atoms, sym, vacuum, oneD, & ! slightly.
+        call checkDOPAll( input,  sphhar, stars, atoms, sym, vacuum,   & ! slightly.
                           cell, vCoul, ispin )
         call timestop( "checking" )
       end if CHECK_CONTINUITY
@@ -224,7 +211,7 @@ contains
           !       convolute ufft and pot: F(G) = \sum_(G') U(G - G') V(G')
           call convol( stars, vCoul%pw_w(:,ispin), vCoul%pw(:,ispin))
           results%te_vcoul = 0.0
-          call int_nv( ispin, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, &
+          call int_nv( ispin, stars, vacuum, atoms, sphhar, cell, sym, input,   &
                        vCoul, den, results%te_vcoul )
 
           write(oUnit, fmt=8030 ) results%te_vcoul

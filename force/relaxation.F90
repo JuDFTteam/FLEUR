@@ -17,7 +17,7 @@ MODULE m_relaxation
    PUBLIC relaxation !This is the interface. Below there are internal subroutines for bfgs, simple mixing, CG ...
 
 CONTAINS
-   SUBROUTINE relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,force_new,energies_new)
+   SUBROUTINE relaxation(fmpi,input,atoms,cell,sym ,vacuum,force_new,energies_new)
       ! This routine uses the current force,energies and atomic positions to
       ! generate a displacement in a relaxation step.
       ! The history is taken into account by read_relax from m_relaxio
@@ -35,7 +35,7 @@ CONTAINS
       TYPE(t_input),  INTENT(IN) :: input
       TYPE(t_atoms),  INTENT(IN) :: atoms
       TYPE(t_sym),    INTENT(IN) :: sym
-      TYPE(t_oneD),   INTENT(IN) :: oneD
+       
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_cell),   INTENT(IN) :: cell
       REAL,           INTENT(IN) :: force_new(:,:), energies_new !data for this iteration
@@ -140,7 +140,7 @@ CONTAINS
             CALL rotate_to_all_sites(tempDisplace,atoms_non_displaced,cell,sym,dispAll)
             tempAtoms%taual(:,:)=atoms_non_displaced%taual(:,:)+dispAll(:,:)
             tempAtoms%pos=MATMUL(cell%amat,tempAtoms%taual)
-            CALL chkmt(tempAtoms,input,vacuum,cell,oneD,.TRUE.,overlap=overlap)
+            CALL chkmt(tempAtoms,input,vacuum,cell ,.TRUE.,overlap=overlap)
 
             IF (ANY(overlap.GT.0.0)) THEN
                numDispReduce = numDispReduce + 1
@@ -159,7 +159,7 @@ CONTAINS
 
          ! Structure in xsf-format
          OPEN (55,file="struct-relax.xsf",status='replace')
-         CALL xsf_WRITE_atoms(55,tempAtoms,input%film,.FALSE.,cell%amat)
+         CALL xsf_WRITE_atoms(55,tempAtoms,input%film,cell%amat)
          CLOSE (55)
       END IF
 

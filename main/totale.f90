@@ -6,7 +6,7 @@
 MODULE m_totale
 CONTAINS
   SUBROUTINE totale(fmpi,atoms,sphhar,stars,vacuum, &
-       sym,input,noco,cell,oneD, xcpot,hybdat,vTot,vCoul,it,den,results)
+       sym,input,noco,cell , xcpot,hybdat,vTot,vCoul,it,den,results)
     !
     !     ***************************************************
     !     subroutine calculates the total energy
@@ -57,7 +57,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)          :: fmpi
     TYPE(t_results),INTENT(INOUT)   :: results
     CLASS(t_xcpot),INTENT(IN)       :: xcpot
-    TYPE(t_oneD),INTENT(IN)         :: oneD
+     
     TYPE(t_hybdat),INTENT(IN)       :: hybdat
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
@@ -86,7 +86,7 @@ CONTAINS
     REAL dpj(atoms%jmtd),mt(atoms%jmtd,atoms%ntype)
     CHARACTER(LEN=20) :: attributes(3)
 
-    !CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    !CALL den%init(stars,atoms,sphhar,vacuum,noco ,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
     IF (fmpi%irank==0) THEN
        WRITE (oUnit,FMT=8000)
 8000   FORMAT (/,/,/,5x,'t o t a l  e n e r g y')
@@ -135,7 +135,7 @@ CONTAINS
        !archiveType = CDN_ARCHIVE_TYPE_CDN1_const
        !IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_CDN_const
 
-       !CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+       !CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,&
        !                 CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
 
@@ -269,7 +269,7 @@ CONTAINS
           CALL exit_sf(jsp,atoms,results%force)
        END DO
     END IF
-    CALL force_w(fmpi,input,atoms,sym,results,cell,oneD,vacuum)
+    CALL force_w(fmpi,input,atoms,sym,results,cell ,vacuum)
 
   END SUBROUTINE totale
 END MODULE m_totale

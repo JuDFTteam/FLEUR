@@ -10,13 +10,13 @@ MODULE m_check_mt_radii
   !  Check muffin tin radii and determine a reasonable choice for MTRs.
   !---------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE check_mt_radii(atoms,input,vacuum,cell,oneD,profile,l_test,rmt1,overlap)
+  SUBROUTINE check_mt_radii(atoms,input,vacuum,cell ,profile,l_test,rmt1,overlap)
 
     USE m_types_input
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_cell
-    USE m_types_oneD
+     
     USE m_types_profile
     USE m_constants
 
@@ -30,7 +30,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN) :: input
     TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_cell),INTENT(IN)  :: cell
-    TYPE(t_oneD),INTENT(IN)  :: oneD
+     
     TYPE(t_profile),INTENT(IN)    :: profile
     LOGICAL, INTENT (IN)     :: l_test
     !     ..
@@ -421,22 +421,14 @@ CONTAINS
           IF (input%film) THEN
              DO na = 1, atoms%neq(i)
                 iAtom = iAtom + 1
-                IF (oneD%odd%d1) THEN
-                   IF ((sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2)+&
-                        atoms%rmt(i)).GT.vacuum%dvac/2.) THEN
-                      error=.TRUE.
-                      WRITE(oUnit,241) i ,na
-                      WRITE(oUnit,*) sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2),&
-                           atoms%rmt(i),vacuum%dvac/2.
-                   END IF
-                ELSE
+                
                    IF (((atoms%pos(3,iAtom)+atoms%rmt(i)).GT. vacuum%dvac/2.).OR.&
                         ((atoms%pos(3,iAtom)-atoms%rmt(i)).LT.-vacuum%dvac/2.)) THEN
                       error=.TRUE.
                       WRITE(oUnit,241) i ,na
                       IF (PRESENT(overlap)) overlap(0,i)=MAX(atoms%pos(3,iAtom)+atoms%rmt(i)-vacuum%dvac/2.,atoms%pos(3,iAtom)-atoms%rmt(i)+vacuum%dvac/2.)
                       WRITE(oUnit,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
-                   ENDIF
+                   
                 ENDIF
              END DO
           END IF

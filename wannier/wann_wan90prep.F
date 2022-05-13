@@ -15,7 +15,7 @@ c**********************************************************
       CONTAINS
       SUBROUTINE wann_wan90prep(input,kpts,
      >      jspins,amat,bmat,natd,taual_inp,zatom,ntype,
-     >      ntypd,neq,l_bzsym,film,l_onedimens,l_ms,l_sgwf,l_socgwf,
+     >      ntypd,neq,l_bzsym,film,l_ms,l_sgwf,l_socgwf,
      >      aux_latt_const,param_file,l_dim,wan90version)
 
       USE m_wann_postproc_setup
@@ -44,7 +44,7 @@ c**********************************************************
       real,intent(in)     :: taual_inp(3,natd)
       real,intent(in)     :: zatom(ntype)
       integer,intent(in)  :: neq(ntypd)
-      logical,intent(in)  :: l_onedimens
+     
       integer,intent(in)  :: wan90version
 
 
@@ -108,11 +108,11 @@ c**********************************************************
 c     Read in kpoints from kpts/w90kpts file.
 c**********************************************************
       call wann_get_kpts(input,kpts,
-     >         l_bzsym,film,l_onedimens,.false.,
+     >         l_bzsym,film,.false.,
      <         nkpts,kpoints)
       allocate(kpoints(3,nkpts))
       call wann_get_kpts(input,kpts,
-     >         l_bzsym,film,l_onedimens,.true.,
+     >         l_bzsym,film,.true.,
      <         nkpts,kpoints)
 
 
@@ -121,13 +121,11 @@ c     Read in qpoints from qpts file.
 c**********************************************************
       IF(l_sgwf.or.l_socgwf)THEN
       call wann_get_qpts(
-!     >         l_bzsym,film,l_onedimens,.false.,
-     >         .false.,.false.,.false.,.false.,
+     >         .false.,.false.,.false.,
      <         nqpts,qpoints,param_file)
       allocate(qpoints(3,nqpts))
       call wann_get_qpts(
-!     >         l_bzsym,film,l_onedimens,.true.,
-     >         .false.,.false.,.false.,.true.,
+     >         .false.,.false.,.true.,
      <         nqpts,qpoints,param_file)
       ELSE
          allocate(qpoints(3,1))
@@ -142,7 +140,7 @@ c*********************************************************
 
 
       taual=taual_inp
-      if(film.and.l_onedimens)then
+      if(film)then
          do n=1,natd
            taual(1,n)=taual_inp(1,n)+0.5
            taual(2,n)=taual_inp(2,n)+0.5

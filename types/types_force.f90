@@ -111,7 +111,7 @@ CONTAINS
 
   END SUBROUTINE force_init2
 
-  SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell,oneD,enpara,&
+  SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell ,enpara,&
        usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,k1,k2,k3,bkpt)
 
     USE m_types_setup
@@ -135,7 +135,7 @@ CONTAINS
     TYPE(t_atoms),        INTENT(IN)    :: atoms
     TYPE(t_sym),          INTENT(IN)    :: sym
     TYPE(t_cell),         INTENT(IN)    :: cell
-    TYPE(t_oneD),         INTENT(IN)    :: oneD
+     
     TYPE(t_enpara),       INTENT(IN)    :: enpara
     TYPE(t_usdus),        INTENT(IN)    :: usdus
     TYPE(t_tlmplm),       INTENT(IN)    :: tlmplm
@@ -156,7 +156,7 @@ CONTAINS
     IF (.NOT.input%l_useapw) THEN
 
        IF (input%f_level.LT.2) THEN
-          CALL force_a12(atoms,noccbd,sym,cell,oneD,&
+          CALL force_a12(atoms,noccbd,sym,cell ,&
                we,ispin,noccbd,usdus,eigVecCoeffs,thisForce%acoflo,thisForce%bcoflo,&
                thisForce%e1cof,thisForce%e2cof,thisForce%f_a12,results)
        ELSE ! Klueppelberg (force level 2)
@@ -167,7 +167,7 @@ CONTAINS
           END IF
        END IF
     END IF
-    CALL force_a21(input,atoms,sym,oneD,cell,we,ispin,&
+    CALL force_a21(input,atoms,sym ,cell,we,ispin,&
          enpara%el0(0:,:,ispin),noccbd,eig,usdus,tlmplm,vtot,eigVecCoeffs,&
          thisForce%aveccof,thisForce%bveccof,thisForce%cveccof,&
          thisForce%f_a21,thisForce%f_b4,results)

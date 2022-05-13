@@ -128,7 +128,7 @@ program juPhon
   type(t_usdus)                   :: usdus
   type(t_results)                 :: results
   type(t_tlmplm)                  :: tdHS0
-  type(t_oneD) :: oneD
+   
   type(t_vacuum) :: vacuum
 
   ! Scalar variables
@@ -316,7 +316,7 @@ program juPhon
     & testGradLhExpandFuncSw, testContGrVeff0Sw, testWarpingSw, testSternhHSMEtestSw, testSternhSchroedPertTheoSw,                 &
     & testz1Phi0ContSw, testRho1BasCorrSw, testPlotRho03Dsw, testRadSolSw, testKptsWeightSw, testCountValElecSw, testVeff0ContSw,  &
     & testrho0ContSw, testBackRotMTCoordSysSw, testPsi0ContSw, testOverlapSw, testGradRho0PathSw, testEii2LatPeriodQSw,                     &
-    & testVarphiHepsVarphiSw, testRho1IRsw, testRho1MTsw, testsActivated, oneD, vacuum,          &
+    & testVarphiHepsVarphiSw, testRho1IRsw, testRho1MTsw, testsActivated,   vacuum,          &
     & test1st2ndPulDynMatEps1, test1st2ndPulDynMatCancel, test3rdPulDynMatCancel, testIntVeff1Rho1Val,                             &
     & testGrPsiPsiMatElem, testCompareSurfInt, testSplitMTSurfIntSterh, testVeff1IRMESternh,                   &
     & testEps1q0, testVeff1IRMatqBackFold, testVeff1IRqLatPeriod, testGrMatElemPsiHepsPsiGaussTheo, testPsiHepsTildePsi,           &
@@ -377,7 +377,7 @@ program juPhon
 !      call TestDynMatDeprecated( atoms, enpara, lathar, sym, cell, kpts, dimens, usdus, input, results, qpts, stars, Veff0,        &
 !        &  logUnit, ngdp, memd_atom, GbasVec, gdp2iLim, kpq2kPrVec, gdp2Ind, gdp, mapKpq2K,                          &
 !        & rho0IR, rho0MT, nv, ilst, z, kveclo, nRadFun, rbas1, rbas2, iloTable, El, eig, nobd, clnu_atom, nmem_atom, mlh_atom,     &
-!        & uuilon, duilon, ulouilopn, ilo2p, oneD, vacuum, ne )
+!        & uuilon, duilon, ulouilopn, ilo2p,   vacuum, ne )
 !    end if
 
     write(*, '(a)') 'Tests finished'

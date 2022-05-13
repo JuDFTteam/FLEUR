@@ -77,7 +77,7 @@ CONTAINS
                                  & 0.0*grRho0%pw(:, 1, 1 ,:), 0.0*grRho0%mt(:, :, :, 1, 1, :), gWghts, ylm, dKernMTGPts, grVxcIRKern, &
                                  & testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MT_juPhon )
 
-      CALL vgen_coulomb(1, fmpi, fi%oneD, fi%input, fi%field, fi%vacuum, fi%sym, stars, fi%cell, &
+      CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, stars, fi%cell, &
                       & sphhar, fi%atoms, .FALSE., workdenReal, vCoul, &
                       & dfptdenimag=workdenImag, dfptvCoulimag=dfptvCoulimag,dfptden0=rho,stars2=stars,iDtype=0,iDir=1)
 
@@ -111,7 +111,7 @@ CONTAINS
       workdenReal%pw = grRho%pw
       CALL sh_to_lh(fi%sym, fi%atoms, sphhar, 1, 2, grRho0%mt(:, :, :, :, 1, 1), workdenReal%mt, workdenImag%mt)
 
-      CALL vgen_coulomb(1, fmpi, fi%oneD, fi%input, fi%field, fi%vacuum, fi%sym, stars, fi%cell, &
+      CALL vgen_coulomb(1, fmpi,  fi%input, fi%field, fi%vacuum, fi%sym, stars, fi%cell, &
                       & sphhar, fi%atoms, .FALSE., workdenReal, vCoul, &
                       & dfptdenimag=workdenImag, dfptvCoulimag=dfptvCoulimag,dfptden0=dummyrho,stars2=stars,iDtype=0,iDir=1)
 
@@ -145,7 +145,7 @@ CONTAINS
                                  & testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MT_juPhon )
 
       CALL vgen_xcpot(hybdat,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                     fi%cell,fi%oneD,fi%sliceplot,fmpi,fi%noco,rho,rho,dummyrho,vCoul,dummyrho2,dummyrho3,dummyrho4, &
+                     fi%cell,fi%sliceplot,fmpi,fi%noco,rho,rho,dummyrho,vCoul,dummyrho2,dummyrho3,dummyrho4, &
                      & den1Rot=workdenReal, den1Rotimag=workdenImag, dfptvTotimag=dfptvCoulimag,starsq=stars)
 
       CALL lh_to_sh(fi%sym, fi%atoms, sphhar, 1, 1, vCoul%mt, dummypot%mt)
@@ -177,7 +177,7 @@ CONTAINS
       !            & gdp, vEff1IRsh, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, &
       !            & iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
       !CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-      !               cell,oneD,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
+      !               cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
       !               & den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
       CALL juDFT_end("Phonon tests finished.")

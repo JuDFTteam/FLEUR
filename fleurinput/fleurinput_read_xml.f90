@@ -3,7 +3,7 @@ MODULE m_fleurinput_read_xml
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_read_xml(xmlOUTFileID,cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,wann,&
+       sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
        xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,juPhon,old_version)
     USE m_types_xml
     integer,INTENT(IN)               :: xmlOUTFileID
@@ -18,7 +18,7 @@ CONTAINS
     TYPE(t_banddos),INTENT(OUT),OPTIONAL::banddos
     TYPE(t_mpinp), INTENT(OUT), OPTIONAL :: mpinp
     TYPE(t_hybinp),INTENT(OUT),OPTIONAL::hybinp
-    TYPE(t_oneD),INTENT(OUT),OPTIONAL::oneD
+     
     TYPE(t_coreSpecInput),INTENT(OUT),OPTIONAL::coreSpecInput
     TYPE(t_wann),INTENT(OUT),OPTIONAL::wann
     CLASS(t_xcpot),INTENT(OUT),OPTIONAL::xcpot
@@ -53,7 +53,6 @@ CONTAINS
     if (present(banddos)) call banddos%read_xml(xml)
     if (present(mpinp)) call mpinp%read_xml(xml)
     if (present(hybinp)) call hybinp%read_xml(xml)
-    if (present(oneD)) call oneD%read_xml(xml)
     if (present(coreSpecInput)) call coreSpecInput%read_xml(xml)
     if (present(wann)) call wann%read_xml(xml)
     if (present(xcpot)) call xcpot%read_xml(xml)

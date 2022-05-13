@@ -26,7 +26,7 @@ MODULE m_flipcdn
 !     *******************************************************
    CONTAINS
 
-   SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,optDen,toGlobal)
+   SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,phi,theta,optDen,toGlobal)
       !USE m_rotdenmat
       USE m_rotMMPmat
       USE m_constants
@@ -42,7 +42,7 @@ MODULE m_flipcdn
       TYPE(t_input),INTENT(IN)    :: input
       TYPE(t_sym),INTENT(IN)      :: sym
       TYPE(t_noco),INTENT(IN)     :: noco
-      TYPE(t_oneD),INTENT(IN)     :: oneD
+       
       TYPE(t_cell),INTENT(IN)     :: cell
       REAL, OPTIONAL, INTENT(IN)  :: phi(atoms%ntype)
       REAL, OPTIONAL, INTENT(IN)  :: theta(atoms%ntype)
@@ -101,7 +101,7 @@ MODULE m_flipcdn
          opt=.FALSE.
          CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
          ! read the charge density
-         CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+         CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,&
                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,den)
       ELSE
          den=optDen
@@ -224,7 +224,7 @@ MODULE m_flipcdn
       END IF
 
       ! write the spin-polarized density
-       IF(input%lflip) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+       IF(input%lflip) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
                                          1,-1.0,0.0,-1.0,-1.0,.FALSE.,den)
        IF(opt) optDen%mt=den%mt
 

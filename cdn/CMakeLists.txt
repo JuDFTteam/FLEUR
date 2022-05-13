@@ -1,6 +1,5 @@
 set(fleur_F77 ${fleur_F77}
 cdn/diflgr.f
-cdn/od_chirot.f
 cdn/rcerf.f
 cdn/rot_den_mat.f
 )
@@ -14,8 +13,6 @@ cdn/int_21lo.f90
 cdn/m_perp.f90
 cdn/n_mat.f90
 cdn/n_mat21.f90
-cdn/od_abvac.f90
-#cdn/prp_qfft_map.f90
 cdn/pwden.F90
 cdn/pwint.f90
 cdn/pwint_sl.f90
