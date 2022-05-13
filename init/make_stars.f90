@@ -21,7 +21,6 @@ CONTAINS
       USE m_types_input
       USE m_types_cell
       USE m_types_xcpot
-      USE m_types_oned
       USE m_types_mpi
       USE m_types_noco
       USE m_mpi_bc_tool
@@ -36,14 +35,13 @@ CONTAINS
       TYPE(t_input),INTENT(in)::input
       TYPE(t_cell),INTENT(in)::cell
       CLASS(t_xcpot),INTENT(in)::xcpot
-      TYPE(t_oneD),INTENT(inout)::oneD
       TYPE(t_noco),INTENT(in)::noco
       TYPE(t_mpi),INTENT(in)::fmpi
 
       ! TODO: Add optional bqpt and l_dfpt. The former makes this routine build stars
       !       around an origin vector q (0 by default) and the latter tells it to build
       !       a modified step function for use with DFPT.
-      !       Use a dummy oneD, copied input and call the result starsq.
+      !       Use copied input and call the result starsq.
 
       REAL, OPTIONAL, INTENT(IN) :: qvec(3)
       INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
@@ -67,16 +65,16 @@ CONTAINS
       CALL timestart("stepf")
       IF (PRESENT(qvec)) THEN
          !ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-         !CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi,qvec, iDtype, iDir)
+         !CALL stepf(sym,stars,atoms,input,cell,vacuum,fmpi,qvec, iDtype, iDir)
          ! CALL new routines for +q
       ELSE
          ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-         CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,fmpi)
+         CALL stepf(sym,stars,atoms,input,cell,vacuum,fmpi)
       END IF
 
       ! New routines for the stepfunction.
       !IF (fmpi%irank == 0) THEN
-      !   CALL stepf_analytical(sym, stars, atoms, oneD, input, cell, fmpi, fftgrid)
+      !   CALL stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid)
       !   CALL stepf_stars(stars,fftgrid)
       !END IF
       CALL timestop("stepf")
