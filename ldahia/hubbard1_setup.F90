@@ -74,7 +74,7 @@ MODULE m_hubbard1_setup
       COMPLEX, ALLOCATABLE :: e(:)
       COMPLEX, ALLOCATABLE :: ctmp(:)
       character(len=30) :: attributes(7)
-      character(len=:) :: task
+      character(len=30) :: task
 
       !Check if the EDsolver library is linked
 #ifndef CPP_EDSOLVER
@@ -493,8 +493,8 @@ MODULE m_hubbard1_setup
          results%last_occdistance    <= hub1inp%minOccDistance) THEN
 
          do i=1, size(hub1inp%post_process_tasks)
-            task = trim(adjustl(hub1inp%post_process_tasks(i)))
-            if (task == '') cycle
+            task = hub1inp%post_process_tasks(i)
+            if (trim(adjustl(task)) == '') cycle
             
 #ifdef CPP_MPI
             !Make sure that the ranks are synchronized
@@ -505,7 +505,7 @@ MODULE m_hubbard1_setup
                IF(i_hia > atoms%n_hia .OR. i_hia < 1) CYCLE
       
                CALL hubbard1_path(atoms,i_hia,folder)
-               CALL timestart("Hubbard 1: EDsolver PostProcess: "//task)
+               CALL timestart("Hubbard 1: EDsolver PostProcess: "//trim(adjustl(task)))
                !We have to change into the Hubbard1 directory so that the solver routines can read the config
                CALL CHDIR(TRIM(ADJUSTL(folder)))
 #ifdef CPP_EDSOLVER
@@ -515,11 +515,11 @@ MODULE m_hubbard1_setup
                   status="old", action="append", iostat=io_error)
                IF(io_error/=0) CALL juDFT_error("Error in opening EDsolver out file",calledby="hubbard1_setup")
 
-               if (task == 'spectrum') then
+               if (trim(adjustl(task)) == 'spectrum') then
                   call EDsolver_dos(hubbardioUnit)
-               else if(task == 'eigen_decomp') then
+               else if(trim(adjustl(task)) == 'eigen_decomp') then
                   call EDsolver_eigenstates_decomp(hubbardioUnit)
-               else if(task == 'angmom') then
+               else if(trim(adjustl(task)) == 'angmom') then
                   call EDsolver_angmom(hubbardioUnit)
                endif
                
@@ -531,7 +531,7 @@ MODULE m_hubbard1_setup
                ELSE
                   CALL CHDIR("../")
                ENDIF
-               CALL timestop("Hubbard 1: EDsolver PostProcess: "//task)
+               CALL timestop("Hubbard 1: EDsolver PostProcess: "//trim(adjustl(task)))
       
             ENDDO
 
