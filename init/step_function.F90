@@ -18,7 +18,6 @@ CONTAINS
 #include"cpp_double.h"
 
       USE m_constants
-      USE m_od_cylbes
 
       TYPE(t_sym),   INTENT(IN) :: sym
       TYPE(t_stars), INTENT(IN) :: stars
@@ -104,15 +103,6 @@ CONTAINS
                   fftgrid%grid(gInd) = CMPLX(0.0,0.0)
                END IF
 
-               IF (oneD%odd%d1) THEN ! fmpi version untested, but obsolete anyway
-                  IF (gInd<layerDim.AND.gInd.NE.0) THEN
-                     gExtx = (cell%bmat(1, 1)*x + cell%bmat(2, 1)*y)
-                     gExty = (cell%bmat(1, 2)*x + cell%bmat(2, 2)*y)
-                     radg  = SQRT(gExtx**2 + gExty**2)
-                     CALL od_cylbes(1, radg*cell%z1, fJ)
-                     fftgrid%grid(gInd) = fftgrid%grid(gInd) + 2*cell%vol*fJ/(radg*cell%z1*cell%omtil)
-                  END IF
-               END IF
             END DO x_loop ! 0, 3*stars%mx1 - 1
          END DO ! 0, 3*stars%mx2 - 1
       END DO ! 0, 3*stars%mx3 - 1
@@ -120,14 +110,12 @@ CONTAINS
       IF (fmpi%irank == 0) THEN
          IF (input%film) THEN
             fftgrid%grid(0) = fftgrid%grid(0) + cell%vol*inv_omtil - 1.0
-            IF (.NOT.oneD%odd%d1) THEN
-               DO z2 = 1, 3*stars%mx3 - 1
-                  gInt(3) = REAL(z2)
-                  IF (gInt(3) > 1.5*stars%mx3) gInt(3) = gInt(3) - 3.0 * stars%mx3
-                  th = cell%bmat(3, 3)*gInt(3)*cell%z1
-                  fftgrid%grid(z2*layerDim) = fftgrid%grid(z2*layerDim) + cell%vol*inv_omtil*SIN(th)/th
-               END DO
-            END IF
+            DO z2 = 1, 3*stars%mx3 - 1
+               gInt(3) = REAL(z2)
+               IF (gInt(3) > 1.5*stars%mx3) gInt(3) = gInt(3) - 3.0 * stars%mx3
+               th = cell%bmat(3, 3)*gInt(3)*cell%z1
+               fftgrid%grid(z2*layerDim) = fftgrid%grid(z2*layerDim) + cell%vol*inv_omtil*SIN(th)/th
+            END DO
          END IF
       END IF
 
