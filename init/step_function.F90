@@ -12,7 +12,7 @@ MODULE m_step_function
    IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE stepf_analytical(sym, stars, atoms, oneD, input, cell, fmpi, fftgrid, qvec, iDtype, iDir)
+   SUBROUTINE stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir)
       !> Construct the analytical representation of the step function on a big
       !! reciprocal grid.
 #include"cpp_double.h"
@@ -22,7 +22,6 @@ CONTAINS
       TYPE(t_sym),   INTENT(IN) :: sym
       TYPE(t_stars), INTENT(IN) :: stars
       TYPE(t_atoms), INTENT(IN) :: atoms
-      TYPE(t_oneD),  INTENT(IN) :: oneD
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_cell),  INTENT(IN) :: cell
       TYPE(t_mpi),   INTENT(IN) :: fmpi
