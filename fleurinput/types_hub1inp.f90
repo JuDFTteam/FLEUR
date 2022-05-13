@@ -96,7 +96,7 @@ CONTAINS
       CLASS(t_hub1inp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
-      INTEGER::numberNodes,ntype,n_maxaddArgs
+      INTEGER::numberNodes,ntype,n_maxaddArgs, numTasks
       INTEGER::i_hia,itype,i_exc,i_addArg,i,j,hub1_l,i_cf,l,m
       CHARACTER(len=100)  :: xPathA,xPathB,xPathS,key,tmp_str
       CHARACTER(len=300)  :: tasks
@@ -141,8 +141,13 @@ CONTAINS
 
          if(xml%versionNumber>=36) then
             if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'postProcess') == 1) then
-               tasks = xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'postProcess')
-               read(tasks,*) this%post_process_tasks(:)
+               tasks = xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'postProcess/text()')
+               numTasks = xml%countStringTokens(tasks)
+               deallocate(this%post_process_tasks)
+               allocate(this%post_process_tasks(numTasks))
+               do i = 1, numTasks
+                  this%post_process_tasks(i) = xml%popFirstStringToken(tasks)
+               enddo
             endif
          endif
       ENDIF
