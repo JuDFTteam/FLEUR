@@ -13,7 +13,7 @@ MODULE m_cdnmtlo
   !***********************************************************************
 CONTAINS
   SUBROUTINE cdnmtlo(itype,ilSpinPr,ilSpin,input,atoms,sphhar,sym, usdus, noco,&
-       ello,vr, denCoeffs, f,g, rho,moments,qmtllo, rhoIm, f2, g2)
+       ello,vr, denCoeffs, f,g, rho, qmtllo, moments, rhoIm, f2, g2)
 
     USE m_constants, ONLY : c_light,sfp_const
     USE m_types
@@ -42,7 +42,7 @@ CONTAINS
     REAL,    INTENT (INOUT) :: rho(:,0:)
     REAL, OPTIONAL, INTENT(INOUT) :: rhoIm(:,0:)
     REAL, OPTIONAL, INTENT (IN) :: f2(:,:,0:),g2(:,:,0:)
-    TYPE(t_moments), INTENT(INOUT) :: moments
+    TYPE(t_moments), OPTIONAL, INTENT(INOUT) :: moments
 
     INTEGER, PARAMETER :: lcf=3
     !     ..
@@ -127,21 +127,37 @@ CONTAINS
     END DO
 
     !---> add the contribution of the local orbitals and flapw - lo cross-
-    !---> terms to the spherical chargedensity inside the muffin tins.
+    !---> terms to the spherical charge density inside the muffin tins.
 
     DO lo = 1,atoms%nlo(itype)
        l = atoms%llo(lo,itype)
        llp = (l* (l+1))/2 + l
        DO j = 1,atoms%jri(itype)
-          write(5005,*) jsp_start, jsp_end, ilSpinPr, ilSpin
-          ctemp = (denCoeffs%mt_ulo_coeff(lo,itype,0,ilSpinPr,ilSpin)+denCoeffs%mt_lou_coeff(lo,itype,0,ilSpinPr,ilSpin)) &
-                * (fPr(j,1,l)*flo(j,1,lo,ilSpin)+fPr(j,2,l)*flo(j,2,lo,ilSpin)) &
-                + (denCoeffs%mt_ulo_coeff(lo,itype,1,ilSpinPr,ilSpin)+denCoeffs%mt_lou_coeff(lo,itype,1,ilSpinPr,ilSpin)) &
-                * (gPr(j,1,l)*flo(j,1,lo,ilSpin)+gPr(j,2,l)*flo(j,2,lo,ilSpin))
-          rho(j,0) = rho(j,0) + c_2 * REAL(ctemp)
-          IF (PRESENT(rhoIm)) rhoIm(j,0) = rhoIm(j,0) + c_2 * AIMAG(ctemp)
-          IF (l.LE.input%lResMax.AND.ilSpinPr.EQ.ilSpin) THEN
-             moments%rhoLRes(j,0,llp,itype,ilSpin) = moments%rhoLRes(j,0,llp,itype,ilSpin) + c_2 * REAL(ctemp)
+          IF (.NOT.PRESENT(rhoIm)) THEN
+             ctemp = (denCoeffs%mt_ulo_coeff(lo,itype,0,ilSpinPr,ilSpin)+denCoeffs%mt_lou_coeff(lo,itype,0,ilSpinPr,ilSpin)) &
+                   * (fPr(j,1,l)*flo(j,1,lo,ilSpin)+fPr(j,2,l)*flo(j,2,lo,ilSpin)) &
+                   + (denCoeffs%mt_ulo_coeff(lo,itype,1,ilSpinPr,ilSpin)+denCoeffs%mt_lou_coeff(lo,itype,1,ilSpinPr,ilSpin)) &
+                   * (gPr(j,1,l)*flo(j,1,lo,ilSpin)+gPr(j,2,l)*flo(j,2,lo,ilSpin))
+             rho(j,0) = rho(j,0) + c_2 * REAL(ctemp)
+          ELSE
+             ctemp = denCoeffs%mt_ulo_coeff(lo,itype,0,ilSpinPr,ilSpin) &
+                  * (fPr(j,1,l)*flo(j,1,lo,ilSpin)+fPr(j,2,l)*flo(j,2,lo,ilSpin)) &
+                  + denCoeffs%mt_ulo_coeff(lo,itype,1,ilSpinPr,ilSpin) &
+                  * (gPr(j,1,l)*flo(j,1,lo,ilSpin)+gPr(j,2,l)*flo(j,2,lo,ilSpin)) &
+                  + denCoeffs%mt_lou_coeff(lo,itype,0,ilSpinPr,ilSpin) &
+                  * (f(j,1,l)*flo(j,1,lo,ilSpinPr)+f(j,2,l)*flo(j,2,lo,ilSpinPr)) &
+                  + denCoeffs%mt_lou_coeff(lo,itype,1,ilSpinPr,ilSpin) &
+                  * (g(j,1,l)*flo(j,1,lo,ilSpinPr)+g(j,2,l)*flo(j,2,lo,ilSpinPr))
+            rho(j,0) = rho(j,0) + c_2 * REAL(ctemp)
+            rhoIm(j,0) = rhoIm(j,0) + c_2 * AIMAG(ctemp)
+          END IF
+          IF (l.LE.input%lResMax.AND.PRESENT(moments)) THEN
+             IF (ilSpinPr==ilSpin) THEN
+                moments%rhoLRes(j,0,llp,itype,ilSpin) = moments%rhoLRes(j,0,llp,itype,ilSpin) + c_2 * REAL(ctemp)
+             ELSE
+                moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3) + c_2 *  REAL(ctemp)
+                moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4) + c_2 * AIMAG(ctemp)
+             END IF
           END IF
        END DO
        DO lop = 1,atoms%nlo(itype)
@@ -151,8 +167,13 @@ CONTAINS
                      * (flo(j,1,lop,ilSpinPr)*flo(j,1,lo,ilSpin)+flo(j,2,lop,ilSpinPr)*flo(j,2,lo,ilSpin))
                 rho(j,0) = rho(j,0) + REAL(ctemp)
                 IF (PRESENT(rhoIm)) rhoIm(j,0) = rhoIm(j,0) + AIMAG(ctemp)
-                IF (l.LE.input%lResMax.AND.ilSpinPr.EQ.ilSpin) THEN
-                   moments%rhoLRes(j,0,llp,itype,ilSpin) = moments%rhoLRes(j,0,llp,itype,ilSpin) + REAL(ctemp)
+                IF (l.LE.input%lResMax.AND.PRESENT(moments)) THEN
+                   IF (ilSpinPr==ilSpin) THEN
+                      moments%rhoLRes(j,0,llp,itype,ilSpin) = moments%rhoLRes(j,0,llp,itype,ilSpin) + REAL(ctemp)
+                   ELSE
+                      moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3) + REAL(ctemp)
+                      moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4) + AIMAG(ctemp)
+                   END IF
                 END IF
              END DO
           END IF
@@ -170,15 +191,33 @@ CONTAINS
                 .AND.(l.EQ.lcf.AND.lp.EQ.lcf).AND.ilSpinPr.EQ.ilSpin) CYCLE !Exclude non-spherical contributions for CF
              llp = (MAX(l,lp)* (MAX(l,lp)+1))/2 + MIN(l,lp)
              DO j = 1,atoms%jri(itype)
-                ctemp = c_1 &
-                      * ((denCoeffs%nmt_ulo_coeff(lp,lo,lh,itype,0,ilSpinPr,ilSpin)+denCoeffs%nmt_lou_coeff(lp,lo,lh,itype,0,ilSpinPr,ilSpin)) &
-                      * (fPr(j,1,lp)*flo(j,1,lo,ilSpin)+fPr(j,2,lp)*flo(j,2,lo,ilSpin)) &
-                      +  (denCoeffs%nmt_ulo_coeff(lp,lo,lh,itype,1,ilSpinPr,ilSpin)+denCoeffs%nmt_lou_coeff(lp,lo,lh,itype,1,ilSpinPr,ilSpin)) &
-                      * (gPr(j,1,lp)*flo(j,1,lo,ilSpin)+gPr(j,2,lp)*flo(j,2,lo,ilSpin)))
-                rho(j,lh) = rho(j,lh) + REAL(ctemp)
-                IF (PRESENT(rhoIm)) rhoIm(j,0) = rhoIm(j,0) + AIMAG(ctemp)
-                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax).AND.ilSpinPr.EQ.ilSpin) THEN
-                   moments%rhoLRes(j,lh,llp,itype,ilSpin) = moments%rhoLRes(j,lh,llp,itype,ilSpin) + REAL(ctemp)
+                IF (.NOT.PRESENT(rhoIm)) THEN
+                   ctemp = c_1 &
+                         * ((denCoeffs%nmt_ulo_coeff(lp,lo,lh,itype,0,ilSpinPr,ilSpin)+denCoeffs%nmt_lou_coeff(lp,lo,lh,itype,0,ilSpinPr,ilSpin)) &
+                         * (fPr(j,1,lp)*flo(j,1,lo,ilSpin)+fPr(j,2,lp)*flo(j,2,lo,ilSpin)) &
+                         +  (denCoeffs%nmt_ulo_coeff(lp,lo,lh,itype,1,ilSpinPr,ilSpin)+denCoeffs%nmt_lou_coeff(lp,lo,lh,itype,1,ilSpinPr,ilSpin)) &
+                         * (gPr(j,1,lp)*flo(j,1,lo,ilSpin)+gPr(j,2,lp)*flo(j,2,lo,ilSpin)))
+                   rho(j,lh) = rho(j,lh) + REAL(ctemp)
+                ELSE
+                   ctemp = c_1 &
+                         * (denCoeffs%nmt_ulo_coeff(lp,lo,lh,itype,0,ilSpinPr,ilSpin) &
+                         * (fPr(j,1,lp)*flo(j,1,lo,ilSpin)+fPr(j,2,lp)*flo(j,2,lo,ilSpin)) &
+                         +  denCoeffs%nmt_ulo_coeff(lp,lo,lh,itype,1,ilSpinPr,ilSpin) &
+                         * (gPr(j,1,lp)*flo(j,1,lo,ilSpin)+gPr(j,2,lp)*flo(j,2,lo,ilSpin)) &
+                         +  denCoeffs%nmt_lou_coeff(lp,lo,lh,itype,0,ilSpinPr,ilSpin) &
+                         * (f(j,1,lp)*flo(j,1,lo,ilSpinPr)+f(j,2,lp)*flo(j,2,lo,ilSpinPr)) &
+                         +  denCoeffs%nmt_lou_coeff(lp,lo,lh,itype,1,ilSpinPr,ilSpin) &
+                         * (g(j,1,lp)*flo(j,1,lo,ilSpinPr)+g(j,2,lp)*flo(j,2,lo,ilSpinPr)))
+                   rho(j,lh) = rho(j,lh) + REAL(ctemp)
+                   rhoIm(j,0) = rhoIm(j,0) + AIMAG(ctemp)
+                END IF
+                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax).AND.PRESENT(moments)) THEN
+                   IF (ilSpinPr==ilSpin) THEN
+                      moments%rhoLRes(j,lh,llp,itype,ilSpin) = moments%rhoLRes(j,lh,llp,itype,ilSpin) + REAL(ctemp)
+                   ELSE
+                      moments%rhoLRes(j,lh,llp,itype,3) = moments%rhoLRes(j,lh,llp,itype,3) + REAL(ctemp)
+                      moments%rhoLRes(j,lh,llp,itype,4) = moments%rhoLRes(j,lh,llp,itype,4) + AIMAG(ctemp)
+                   END IF
                 END IF
              END DO
           END DO
@@ -192,8 +231,13 @@ CONTAINS
                 ctemp = c_1 * denCoeffs%nmt_lolo_coeff(lop,lo,lh,itype,ilSpinPr,ilSpin) * (flo(j,1,lop,ilSpinPr)*flo(j,1,lo,ilSpin)+flo(j,2,lop,ilSpinPr)*flo(j,2,lo,ilSpin))
                 rho(j,lh) = rho(j,lh) + REAL(ctemp)
                 IF (PRESENT(rhoIm)) rhoIm(j,0) = rhoIm(j,0) + AIMAG(ctemp)
-                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax).AND.ilSpinPr.EQ.ilSpin) THEN
-                   moments%rhoLRes(j,lh,llp,itype,ilSpin) = moments%rhoLRes(j,lh,llp,itype,ilSpin) + REAL(ctemp)
+                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax).AND.PRESENT(moments)) THEN
+                   IF (ilSpinPr==ilSpin) THEN
+                      moments%rhoLRes(j,lh,llp,itype,ilSpin) = moments%rhoLRes(j,lh,llp,itype,ilSpin) + REAL(ctemp)
+                   ELSE
+                      moments%rhoLRes(j,lh,llp,itype,3) = moments%rhoLRes(j,lh,llp,itype,3) + REAL(ctemp)
+                      moments%rhoLRes(j,lh,llp,itype,4) = moments%rhoLRes(j,lh,llp,itype,4) + AIMAG(ctemp)
+                   END IF
                 END IF
              END DO
           END DO

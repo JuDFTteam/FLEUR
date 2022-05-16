@@ -153,7 +153,7 @@ CONTAINS
           CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
                enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
                f(:,:,0:,ispin),g(:,:,0:,ispin),&
-               rho(:,0:,itype,ispin),moments,qmtllo)
+               rho(:,0:,itype,ispin),qmtllo,moments=moments)
 
 
           !--->       l-decomposed density for each atom type
@@ -256,7 +256,10 @@ CONTAINS
                 ENDDO
              ENDDO
 
-             ! TODO: Add LOs for offdiag here (sph. + nsph.).
+             !CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
+               !  enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                ! f(:,:,0:,1),g(:,:,0:,1),&
+                 !rho(:,0:,itype,3),qmtllo,moments=moments, rhoIm=rho(:,0:,itype,4), f(:,:,0:,2), g(:,:,0:,2))
 
              !--->        non-spherical components
              nd = sym%ntypsy(na)
