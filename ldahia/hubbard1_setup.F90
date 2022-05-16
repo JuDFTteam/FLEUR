@@ -15,7 +15,9 @@ MODULE m_hubbard1_setup
    USE m_rotMMPmat
    use m_xmlOutput
 #ifdef CPP_EDSOLVER
-   USE EDsolver, only: EDsolver_from_cfg, EDsolver_dos, EDsolver_angmom, EDsolver_eigenstates_decomp
+   use EDsolver, only: EDsolver_from_cfg
+   use EDsolver, only: EDsolver_dos, EDsolver_angmom, EDsolver_eigenstates_decomp
+   use EDsolver, only: EDsolver_angmom_decomp
 #endif
 #ifdef CPP_MPI
    use mpi
