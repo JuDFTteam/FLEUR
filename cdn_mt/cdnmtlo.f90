@@ -90,8 +90,8 @@ CONTAINS
        END DO
     END IF
 
-    jsp_start = MERGE(1,ilSpin,ilSpinPr==ilSpin)
-    jsp_end   = MERGE(2,ilSpin,ilSpinPr==ilSpin)
+    jsp_start = MERGE(ilSpin,1,ilSpinPr==ilSpin)
+    jsp_end   = MERGE(ilSpin,2,ilSpinPr==ilSpin)
 
     IF (noco%l_mperp) THEN
        ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,input%jspins) )
@@ -209,7 +209,7 @@ CONTAINS
                          +  denCoeffs%nmt_lou_coeff(lp,lo,lh,itype,1,ilSpinPr,ilSpin) &
                          * (g(j,1,lp)*flo(j,1,lo,ilSpinPr)+g(j,2,lp)*flo(j,2,lo,ilSpinPr)))
                    rho(j,lh) = rho(j,lh) + REAL(ctemp)
-                   rhoIm(j,0) = rhoIm(j,0) + AIMAG(ctemp)
+                   rhoIm(j,lh) = rhoIm(j,lh) + AIMAG(ctemp)
                 END IF
                 IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax).AND.PRESENT(moments)) THEN
                    IF (ilSpinPr==ilSpin) THEN
@@ -230,7 +230,7 @@ CONTAINS
              DO j = 1,atoms%jri(itype)
                 ctemp = c_1 * denCoeffs%nmt_lolo_coeff(lop,lo,lh,itype,ilSpinPr,ilSpin) * (flo(j,1,lop,ilSpinPr)*flo(j,1,lo,ilSpin)+flo(j,2,lop,ilSpinPr)*flo(j,2,lo,ilSpin))
                 rho(j,lh) = rho(j,lh) + REAL(ctemp)
-                IF (PRESENT(rhoIm)) rhoIm(j,0) = rhoIm(j,0) + AIMAG(ctemp)
+                IF (PRESENT(rhoIm)) rhoIm(j,lh) = rhoIm(j,lh) + AIMAG(ctemp)
                 IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax).AND.PRESENT(moments)) THEN
                    IF (ilSpinPr==ilSpin) THEN
                       moments%rhoLRes(j,lh,llp,itype,ilSpin) = moments%rhoLRes(j,lh,llp,itype,ilSpin) + REAL(ctemp)

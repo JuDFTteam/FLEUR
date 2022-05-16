@@ -257,9 +257,11 @@ CONTAINS
              ENDDO
 
              !CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
-               !  enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
-                ! f(:,:,0:,1),g(:,:,0:,1),&
-                 !rho(:,0:,itype,3),qmtllo,moments=moments, rhoIm=rho(:,0:,itype,4), f(:,:,0:,2), g(:,:,0:,2))
+             !             enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+             !             f(:,:,0:,1),g(:,:,0:,1),&
+             !             rho(:,0:,itype,3),qmtllo,moments=moments,&
+             !             rhoIm=rho(:,0:,itype,4), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
+             !Note: qmtllo is irrelevant here
 
              !--->        non-spherical components
              nd = sym%ntypsy(na)
