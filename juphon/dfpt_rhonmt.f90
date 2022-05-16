@@ -128,12 +128,16 @@ CONTAINS
                               llp= lp*(atoms%lmax(nn)+1)+l
                               llpmax = ((atoms%lmax(nn)+1)**2)-1
                            END IF
-                           IF(llp.GT.llpmax) CYCLE typeloop
+
+                           IF(llp.GT.llpmax) THEN
+                              natom = natom + atoms%neq(nn)
+                              CYCLE typeloop
+                           END IF
+
                            nt= natom
                            DO na= 1,atoms%neq(nn)
                               nt= nt+1
                               IF (sym%ntypsy(nt)==ns) THEN
-                                 write(5004,*) nn,l
                                  ! uu/du
                                  temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,0,nt,ilSpin) ! If not DFPT, this is the base case for rhonmt(21)
                                  IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
@@ -163,7 +167,7 @@ CONTAINS
                                                                         & + dot_product(eigVecCoeffs%abcof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
                               ENDIF ! (sym%ntypsy(nt)==ns)
                            ENDDO ! na
-                           natom= natom + atoms%neq(nn)
+                           natom = natom + atoms%neq(nn)
                         END DO typeloop! nn
                      END DO
                   END DO m_loop ! m
