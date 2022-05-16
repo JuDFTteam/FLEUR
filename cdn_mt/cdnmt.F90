@@ -153,12 +153,6 @@ CONTAINS
           CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,&
                usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),usdus%uulon(:,itype,ispin),&
                enpara%ello0(:,itype,ispin),vr(:,itype,ispin),denCoeffs,&
-               REAL(denCoeffs%mt_ulo_coeff(:,itype,0,ispin,ispin)+denCoeffs%mt_lou_coeff(:,itype,0,ispin,ispin)),&
-               REAL(denCoeffs%mt_ulo_coeff(:,itype,1,ispin,ispin)+denCoeffs%mt_lou_coeff(:,itype,1,ispin,ispin)),&
-               REAL(denCoeffs%mt_lolo_coeff(:,:,itype,ispin,ispin)),&
-               REAL(denCoeffs%nmt_ulo_coeff(0:,:,:,itype,0,ispin,ispin)+denCoeffs%nmt_lou_coeff(0:,:,:,itype,0,ispin,ispin)),&
-               REAL(denCoeffs%nmt_ulo_coeff(0:,:,:,itype,1,ispin,ispin)+denCoeffs%nmt_lou_coeff(0:,:,:,itype,1,ispin,ispin)),&
-               REAL(denCoeffs%nmt_lolo_coeff(:,:,:,itype,ispin,ispin)),&
                f(:,:,0:,ispin),g(:,:,0:,ispin),&
                rho(:,0:,itype,ispin),moments,qmtllo)
 
