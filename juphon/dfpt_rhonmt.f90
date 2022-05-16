@@ -70,7 +70,7 @@ CONTAINS
 
       TYPE(t_denCoeffs), INTENT(INOUT)    :: denCoeffs !! \(d_{l',l,L,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha}\)
 
-      COMPLEX :: coef, cil, coef1
+      COMPLEX :: coef, cil, cmv
       COMPLEX :: temp(ne)
 
 !#include"cpp_double.h"
@@ -82,14 +82,15 @@ CONTAINS
       DO ns=1,sym%nsymt
          !$OMP parallel do default(none) &
          !$OMP private(lh,lp,l,lv,mp,m,mv,lm,lmp,llp,llpmax,lphi,lplow) &
-         !$OMP private(cil,jmem,coef1,coef,temp,na,nt,nn,natom) &
-         !$OMP shared(sym,we,we1,ne,ns,atoms,sphhar,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ilSpinPr,ilSpin,l_dfpt,l_less_effort,qpoint) &
-         !$OMP collapse(2)
+         !$OMP private(cil,jmem,cmv,coef,temp,na,nt,nn,natom) &
+         !$OMP shared(sym,we,we1,ne,ns,atoms,sphhar,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ilSpinPr,ilSpin,l_dfpt,l_less_effort,qpoint)
+         ! !$OMP collapse(2)
          DO lh = 1, sphhar%nlh(ns)
-            DO l = 0, atoms%lmaxd
-               lv = sphhar%llh(lh,ns)
-               DO jmem = 1, sphhar%nmem(lh,ns)
-                  mv = sphhar%mlh(jmem,lh,ns)
+            lv = sphhar%llh(lh,ns)
+            DO jmem = 1, sphhar%nmem(lh,ns)
+               mv = sphhar%mlh(jmem,lh,ns)
+               cmv = conjg(sphhar%clnu(jmem,lh,ns))
+               DO l = 0, atoms%lmaxd
                   m_loop: DO m = -l,l
                      lm= l*(l+1) + m
                      mp = m - mv
@@ -102,6 +103,8 @@ CONTAINS
                      !--->  make sure that l + l'' + lphi is even
                      lphi = lphi - MOD(l+lv+lphi,2)
 
+                     IF(l_less_effort) lphi = l - mod(lv,2)
+
                      lplow = abs(l-lv)
                      lplow = MAX(lplow,ABS(mp))
                      !---> make sure that l + l'' + lplow is even
@@ -110,27 +113,27 @@ CONTAINS
                      IF (lplow.GT.lphi) CYCLE m_loop
 
                      DO lp = lplow, lphi,2
-                        cil = ImagUnit**(lp-l)
-                        coef1 = cil * sphhar%clnu(jmem,lh,ns)
+                        cil = ImagUnit**(l-lp)
                         lmp = lp*(lp+1) + mp
                         IF (lmp>lm.AND.l_less_effort) CYCLE m_loop
 
-                        coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
-                        IF (ABS(coef) .LT. 1e-12 ) CYCLE
+                        coef=  cmv * cil * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd)
+                        !IF (ABS(coef) .LT. 1e-12 ) CYCLE
                         natom= 0
-                        DO nn=1,atoms%ntype
+                        typeloop: DO nn=1,atoms%ntype
                            IF (l_less_effort) THEN
                               llp = (l* (l+1))/2 + lp
                               llpmax = (atoms%lmax(nn)* (atoms%lmax(nn)+3))/2
                            ELSE
-                              llp= lp*(atoms%lmax(nn)+1)+l+1
-                              llpmax = (atoms%lmax(nn)+1)**2
+                              llp= lp*(atoms%lmax(nn)+1)+l
+                              llpmax = ((atoms%lmax(nn)+1)**2)-1
                            END IF
-                           IF(llp.GT.llpmax) CYCLE
+                           IF(llp.GT.llpmax) CYCLE typeloop
                            nt= natom
                            DO na= 1,atoms%neq(nn)
                               nt= nt+1
                               IF (sym%ntypsy(nt)==ns) THEN
+                                 write(5004,*) nn,l
                                  ! uu/du
                                  temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,0,nt,ilSpin) ! If not DFPT, this is the base case for rhonmt(21)
                                  IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
@@ -161,7 +164,7 @@ CONTAINS
                               ENDIF ! (sym%ntypsy(nt)==ns)
                            ENDDO ! na
                            natom= natom + atoms%neq(nn)
-                        END DO ! nn
+                        END DO typeloop! nn
                      END DO
                   END DO m_loop ! m
                END DO ! jmem
