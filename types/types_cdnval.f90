@@ -244,7 +244,7 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
    ALLOCATE (thisDenCoeffs%ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
 
    ! Refactored version for DFPT and more generalization:
-   llpd = (atoms%lmaxd+1)**2
+   llpd = ((atoms%lmaxd+1)**2)-1
    ALLOCATE(thisDenCoeffs%mt_coeff(0:atoms%lmaxd,atoms%ntype,0:1,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
    ALLOCATE(thisDenCoeffs%mt_ulo_coeff(atoms%nlod,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
    ALLOCATE(thisDenCoeffs%mt_lou_coeff(atoms%nlod,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
