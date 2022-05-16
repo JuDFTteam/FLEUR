@@ -150,9 +150,8 @@ CONTAINS
              qmtllo(l) = 0.0
           END DO
 
-          CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,&
-               usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),usdus%uulon(:,itype,ispin),&
-               enpara%ello0(:,itype,ispin),vr(:,itype,ispin),denCoeffs,&
+          CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
+               enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
                f(:,:,0:,ispin),g(:,:,0:,ispin),&
                rho(:,0:,itype,ispin),moments,qmtllo)
 
