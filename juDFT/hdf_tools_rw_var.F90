@@ -53,9 +53,9 @@ CONTAINS
      &     ("Variable could not be created:"//name)
       CALL io_createvar(gid, name, H5T_NATIVE_DOUBLE, SHAPE(var), varid)
       IF (PRESENT(transprop)) THEN
-         CALL io_WRITE(varid, (/1/), SHAPE(var), var, transprop)
+         CALL io_WRITE(varid, (/1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_WRITE(varid, (/1/), SHAPE(var), var)
+         CALL io_WRITE(varid, (/1/), SHAPE(var), name, var)
       END IF
 
       CALL h5dclose_f(varid, hdferr)
@@ -85,9 +85,9 @@ CONTAINS
      &     ("Variable could not be created:"//name)
       CALL io_createvar(gid, name, H5T_NATIVE_DOUBLE, SHAPE(var), varid)
       IF (PRESENT(transprop)) THEN
-         CALL io_WRITE(varid, (/1, 1/), SHAPE(var), var, transprop)
+         CALL io_WRITE(varid, (/1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_WRITE(varid, (/1, 1/), SHAPE(var), var)
+         CALL io_WRITE(varid, (/1, 1/), SHAPE(var), name, var)
       END IF
       CALL h5dclose_f(varid, hdferr)
 
@@ -117,9 +117,9 @@ CONTAINS
       CALL io_createvar(gid, name, H5T_NATIVE_DOUBLE, SHAPE(var), varid)
 
       IF (PRESENT(transprop)) THEN
-         CALL io_WRITE(varid, (/1, 1, 1/), SHAPE(var), var, transprop)
+         CALL io_WRITE(varid, (/1, 1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_WRITE(varid, (/1, 1, 1/), SHAPE(var), var)
+         CALL io_WRITE(varid, (/1, 1, 1/), SHAPE(var), name, var)
       END IF
       CALL h5dclose_f(varid, hdferr)
 
@@ -148,9 +148,9 @@ CONTAINS
      &     ("Variable could not be created:"//name)
       CALL io_createvar(gid, name, H5T_NATIVE_DOUBLE, SHAPE(var), varid)
       IF (PRESENT(transprop)) THEN
-         CALL io_WRITE(varid, (/1, 1, 1, 1/), SHAPE(var), var, transprop)
+         CALL io_WRITE(varid, (/1, 1, 1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_WRITE(varid, (/1, 1, 1, 1/), SHAPE(var), var)
+         CALL io_WRITE(varid, (/1, 1, 1, 1/), SHAPE(var), name, var)
       END IF
       CALL h5dclose_f(varid, hdferr)
 
@@ -185,9 +185,9 @@ CONTAINS
      &     ("Variable could not be created:"//name)
       CALL io_createvar(gid, name, H5T_NATIVE_INTEGER, SHAPE(var), varid)
       IF (PRESENT(transprop)) THEN
-         CALL io_WRITE(varid, (/1/), SHAPE(var), var, transprop)
+         CALL io_WRITE(varid, (/1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_WRITE(varid, (/1/), SHAPE(var), var)
+         CALL io_WRITE(varid, (/1/), SHAPE(var), name, var)
       END IF
       CALL h5dclose_f(varid, hdferr)
 
@@ -216,9 +216,9 @@ CONTAINS
      &     ("Variable could not be created:"//name)
       CALL io_createvar(gid, name, H5T_NATIVE_INTEGER, SHAPE(var), varid)
       IF (PRESENT(transprop)) THEN
-         CALL io_WRITE(varid, (/1, 1/), SHAPE(var), var, transprop)
+         CALL io_WRITE(varid, (/1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_WRITE(varid, (/1, 1/), SHAPE(var), var)
+         CALL io_WRITE(varid, (/1, 1/), SHAPE(var), name, var)
       END IF
       CALL h5dclose_f(varid, hdferr)
 
@@ -247,9 +247,9 @@ CONTAINS
      &     ("Variable could not be created:"//name)
       CALL io_createvar(gid, name, H5T_NATIVE_INTEGER, SHAPE(var), varid)
       IF (PRESENT(transprop)) THEN
-         CALL io_WRITE(varid, (/1, 1, 1/), SHAPE(var), var, transprop)
+         CALL io_WRITE(varid, (/1, 1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_WRITE(varid, (/1, 1, 1/), SHAPE(var), var)
+         CALL io_WRITE(varid, (/1, 1, 1/), SHAPE(var), name, var)
       END IF
       CALL h5dclose_f(varid, hdferr)
 
@@ -278,9 +278,9 @@ CONTAINS
      &     ("Variable could not be created:"//name)
       CALL io_createvar(gid, name, H5T_NATIVE_INTEGER, SHAPE(var), varid)
       IF (PRESENT(transprop)) THEN
-         CALL io_WRITE(varid, (/1, 1, 1, 1/), SHAPE(var), var, transprop)
+         CALL io_WRITE(varid, (/1, 1, 1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_WRITE(varid, (/1, 1, 1, 1/), SHAPE(var), var)
+         CALL io_WRITE(varid, (/1, 1, 1, 1/), SHAPE(var), name, var)
       END IF
       CALL h5dclose_f(varid, hdferr)
 
@@ -322,9 +322,9 @@ CONTAINS
      &     ("Not enough data in:"//name)
       CALL h5sclose_f(fspace, hdferr)
       IF (PRESENT(transprop)) THEN
-         CALL io_read(varid, (/1/), SHAPE(var), var, transprop)
+         CALL io_read(varid, (/1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_read(varid, (/1/), SHAPE(var), var)
+         CALL io_read(varid, (/1/), SHAPE(var), name, var)
       END IF
       CALL h5dclose_f(varid, hdferr)
 
@@ -360,9 +360,9 @@ CONTAINS
      &     ("Not enough data in:"//name)
       CALL h5sclose_f(fspace, hdferr)
       IF (PRESENT(transprop)) THEN
-         CALL io_read(varid, (/1, 1/), SHAPE(var), var, transprop)
+         CALL io_read(varid, (/1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_read(varid, (/1, 1/), SHAPE(var), var)
+         CALL io_read(varid, (/1, 1/), SHAPE(var), name, var)
       END IF
 
       CALL h5dclose_f(varid, hdferr)
@@ -399,9 +399,9 @@ CONTAINS
      &     ("Not enough data in:"//name)
       CALL h5sclose_f(fspace, hdferr)
       IF (PRESENT(transprop)) THEN
-         CALL io_read(varid, (/1, 1, 1/), SHAPE(var), var, transprop)
+         CALL io_read(varid, (/1, 1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_read(varid, (/1, 1, 1/), SHAPE(var), var)
+         CALL io_read(varid, (/1, 1, 1/), SHAPE(var), name, var)
       END IF
 
       CALL h5dclose_f(varid, hdferr)
@@ -438,9 +438,9 @@ CONTAINS
      &     ("Not enough data in:"//name)
       CALL h5sclose_f(fspace, hdferr)
       IF (PRESENT(transprop)) THEN
-         CALL io_read(varid, (/1, 1, 1, 1/), SHAPE(var), var, transprop)
+         CALL io_read(varid, (/1, 1, 1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_read(varid, (/1, 1, 1, 1/), SHAPE(var), var)
+         CALL io_read(varid, (/1, 1, 1, 1/), SHAPE(var), name, var)
       END IF
 
       CALL h5dclose_f(varid, hdferr)
@@ -483,9 +483,9 @@ CONTAINS
      &     ("Not enough data in:"//name)
       CALL h5sclose_f(fspace, hdferr)
       IF (PRESENT(transprop)) THEN
-         CALL io_read(varid, (/1/), SHAPE(var), var, transprop)
+         CALL io_read(varid, (/1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_read(varid, (/1/), SHAPE(var), var)
+         CALL io_read(varid, (/1/), SHAPE(var), name, var)
       END IF
 
       CALL h5dclose_f(varid, hdferr)
@@ -522,9 +522,9 @@ CONTAINS
      &     ("Not enough data in:"//name)
       CALL h5sclose_f(fspace, hdferr)
       IF (PRESENT(transprop)) THEN
-         CALL io_read(varid, (/1, 1/), SHAPE(var), var, transprop)
+         CALL io_read(varid, (/1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_read(varid, (/1, 1/), SHAPE(var), var)
+         CALL io_read(varid, (/1, 1/), SHAPE(var), name, var)
       END IF
 
       CALL h5dclose_f(varid, hdferr)
@@ -561,9 +561,9 @@ CONTAINS
      &     ("Not enough data in:"//name)
       CALL h5sclose_f(fspace, hdferr)
       IF (PRESENT(transprop)) THEN
-         CALL io_read(varid, (/1, 1, 1/), SHAPE(var), var, transprop)
+         CALL io_read(varid, (/1, 1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_read(varid, (/1, 1, 1/), SHAPE(var), var)
+         CALL io_read(varid, (/1, 1, 1/), SHAPE(var), name, var)
       END IF
 
       CALL h5dclose_f(varid, hdferr)
@@ -599,9 +599,9 @@ CONTAINS
      &     ("Not enough data in:"//name)
       CALL h5sclose_f(fspace, hdferr)
       IF (PRESENT(transprop)) THEN
-         CALL io_read(varid, (/1, 1, 1, 1/), SHAPE(var), var, transprop)
+         CALL io_read(varid, (/1, 1, 1, 1/), SHAPE(var), name, var, transprop)
       ELSE
-         CALL io_read(varid, (/1, 1, 1, 1/), SHAPE(var), var)
+         CALL io_read(varid, (/1, 1, 1, 1/), SHAPE(var), name, var)
       END IF
 
       CALL h5dclose_f(varid, hdferr)
