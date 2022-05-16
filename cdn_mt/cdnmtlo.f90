@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_rhosphnlo
+MODULE m_cdnmtlo
   !***********************************************************************
   ! Add the local orbital contributions to the charge density. The
   ! corresponding summation of the pure apw contribuions is done in
@@ -12,8 +12,8 @@ MODULE m_rhosphnlo
   ! Philipp Kurz 99/04
   !***********************************************************************
 CONTAINS
-  SUBROUTINE rhosphnlo(itype,ispin,input,atoms,sphhar,sym, uloulopn,dulon,uulon,&
-       ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,moments,qmtllo)
+  SUBROUTINE cdnmtlo(itype,ilSpinPr,ilSpin,input,atoms,sphhar,sym, uloulopn,dulon,uulon,&
+       ello,vr, denCoeffs, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,moments,qmtllo)
 
     USE m_constants, ONLY : c_light,sfp_const
     USE m_types
@@ -26,10 +26,11 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_sym),INTENT(IN)      :: sym
+    TYPE (t_denCoeffs),        INTENT(IN) :: denCoeffs
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,    INTENT (IN) :: itype, ispin
+    INTEGER,    INTENT (IN) :: itype, ilSpinPr, ilSpin
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: aclo(:),bclo(:),cclo(:,:)
@@ -104,8 +105,8 @@ CONTAINS
                  (aclo(lo) * ( f(j,1,l)*flo(j,1,lo) +f(j,2,l)*flo(j,2,lo) ) +&
                  bclo(lo) * ( g(j,1,l)*flo(j,1,lo) +g(j,2,l)*flo(j,2,lo) ) )
           rho(j,0) = rho(j,0) + temp
-          IF (l.LE.input%lResMax) THEN
-             moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + temp
+          IF (l.LE.input%lResMax.AND.ilSpinPr.EQ.ilSpin) THEN
+             moments%rhoLRes(j,0,llp,itype,ilSpin) = moments%rhoLRes(j,0,llp,itype,ilSpin) + temp
           END IF
        END DO
        DO lop = 1,atoms%nlo(itype)
@@ -114,8 +115,8 @@ CONTAINS
                 temp = c_2 * cclo(lop,lo) *&
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
                 rho(j,0) = rho(j,0) + temp
-                IF (l.LE.input%lResMax) THEN
-                   moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + temp
+                IF (l.LE.input%lResMax.AND.ilSpinPr.EQ.ilSpin) THEN
+                   moments%rhoLRes(j,0,llp,itype,ilSpin) = moments%rhoLRes(j,0,llp,itype,ilSpin) + temp
                 END IF
              END DO
           END IF
@@ -137,8 +138,8 @@ CONTAINS
                      acnmt(lp,lo,lh) * (f(j,1,lp)*flo(j,1,lo) +f(j,2,lp)*flo(j,2,lo) ) +&
                      bcnmt(lp,lo,lh) * (g(j,1,lp)*flo(j,1,lo) +g(j,2,lp)*flo(j,2,lo) ) )
                 rho(j,lh) = rho(j,lh) + temp
-                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
-                   moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + temp
+                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax).AND.ilSpinPr.EQ.ilSpin) THEN
+                   moments%rhoLRes(j,lh,llp,itype,ilSpin) = moments%rhoLRes(j,lh,llp,itype,ilSpin) + temp
                 END IF
              END DO
           END DO
@@ -152,8 +153,8 @@ CONTAINS
                 temp = c_1 * ccnmt(lop,lo,lh) *&
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
                 rho(j,lh) = rho(j,lh) + temp
-                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
-                   moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + temp
+                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax).AND.ilSpinPr.EQ.ilSpin) THEN
+                   moments%rhoLRes(j,lh,llp,itype,ilSpin) = moments%rhoLRes(j,lh,llp,itype,ilSpin) + temp
                 END IF
              END DO
           END DO
@@ -161,5 +162,5 @@ CONTAINS
     END DO
     DEALLOCATE (flo,glo)
 
-  END SUBROUTINE rhosphnlo
-END MODULE m_rhosphnlo
+  END SUBROUTINE cdnmtlo
+END MODULE m_cdnmtlo

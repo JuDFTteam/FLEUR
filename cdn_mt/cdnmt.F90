@@ -16,7 +16,7 @@ CONTAINS
 
     USE m_types
     USE m_constants
-    USE m_rhosphnlo
+    USE m_cdnmtlo
     USE m_radfun
     USE m_orbmom2
     USE m_xmlOutput
@@ -150,9 +150,9 @@ CONTAINS
              qmtllo(l) = 0.0
           END DO
 
-          CALL rhosphnlo(itype,ispin,input,atoms,sphhar,sym,&
+          CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,&
                usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),usdus%uulon(:,itype,ispin),&
-               enpara%ello0(:,itype,ispin),vr(:,itype,ispin),&
+               enpara%ello0(:,itype,ispin),vr(:,itype,ispin),denCoeffs,&
                REAL(denCoeffs%mt_ulo_coeff(:,itype,0,ispin,ispin)+denCoeffs%mt_lou_coeff(:,itype,0,ispin,ispin)),&
                REAL(denCoeffs%mt_ulo_coeff(:,itype,1,ispin,ispin)+denCoeffs%mt_lou_coeff(:,itype,1,ispin,ispin)),&
                REAL(denCoeffs%mt_lolo_coeff(:,:,itype,ispin,ispin)),&
