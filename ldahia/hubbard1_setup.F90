@@ -521,6 +521,8 @@ MODULE m_hubbard1_setup
                   call EDsolver_eigenstates_decomp(hubbardioUnit)
                else if(trim(adjustl(task)) == 'angmom') then
                   call EDsolver_angmom(hubbardioUnit)
+               else if(trim(adjustl(task)) == 'angmom_decomp') then
+                  call EDsolver_angmom_decomp(hubbardioUnit)
                endif
                
                CLOSE(hubbardioUnit, iostat=io_error)
