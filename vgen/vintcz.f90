@@ -12,6 +12,7 @@ CONTAINS
 
     USE m_constants
     USE m_types
+    USE m_ExpSave
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..
@@ -158,29 +159,5 @@ CONTAINS
 
   END FUNCTION vintcz
 
-  PURE REAL FUNCTION exp_save(x)
-    ! replace exp by a function that does not under/overflow dw09
-    IMPLICIT NONE
-    REAL   ,INTENT(IN)     :: x
-    REAL, PARAMETER ::    maxexp = LOG(2.0)*MAXEXPONENT(2.0)
-    REAL, PARAMETER ::    minexp = LOG(2.0)*MINEXPONENT(2.0)
-
-    IF ( ABS(x)>minexp .AND. ABS(x)<maxexp ) THEN
-       exp_SAVE = EXP(x)
-    ELSE
-       IF ( x > 0 ) THEN
-          IF ( x > minexp ) THEN
-             exp_save = EXP(maxexp)
-          ELSE
-             exp_save = EXP(minexp)
-          ENDIF
-       ELSE
-          IF ( -x > minexp ) THEN
-             exp_save = EXP(-maxexp)
-          ELSE
-             exp_save = EXP(-minexp)
-          ENDIF
-       ENDIF
-    ENDIF
-  END FUNCTION exp_save
+ 
 END MODULE m_vintcz
