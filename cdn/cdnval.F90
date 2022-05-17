@@ -75,7 +75,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_mpi),           INTENT(IN)    :: fmpi
 
-    
    TYPE(t_enpara),        INTENT(IN)    :: enpara
    TYPE(t_banddos),       INTENT(IN)    :: banddos
    TYPE(t_input),         INTENT(IN)    :: input
@@ -292,7 +291,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
                               denCoeffsOffdiag,eigVecCoeffs,jDOS)
             ENDIF
          ENDIF
-         CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
          CALL dfpt_rhomt(atoms,we,we,noccbd,ispin,ispin,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
          CALL dfpt_rhonmt(atoms,sphhar,we,we,noccbd,ispin,ispin,[0.0,0.0,0.0],.FALSE.,.TRUE.,sym,eigVecCoeffs,eigVecCoeffs,denCoeffs)
          CALL dfpt_rhomtlo(atoms,noccbd,we,we,ispin,ispin,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
@@ -310,7 +308,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       END DO ! end loop over ispin
       IF (noco%l_mperp) then
         call timestart("denCoeffsOffdiag%calcCoefficients")
-        CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
         CALL dfpt_rhomt(atoms,we,we,noccbd,2,1,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
         CALL dfpt_rhonmt(atoms,sphhar,we,we,noccbd,2,1,[0.0,0.0,0.0],.FALSE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs,denCoeffs)
         CALL dfpt_rhomtlo(atoms,noccbd,we,we,2,1,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)

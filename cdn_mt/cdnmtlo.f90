@@ -61,8 +61,8 @@ CONTAINS
 
       REAL :: filo(atoms%jmtd,2)
 
-      REAL,    ALLOCATABLE :: flo(:,:,:,:),glo(:,:)
-      REAL,    ALLOCATABLE :: fPr(:,:,:),gPr(:,:,:)
+      REAL, ALLOCATABLE :: flo(:,:,:,:),glo(:,:)
+      REAL, ALLOCATABLE :: fPr(:,:,:),gPr(:,:,:)
 
       c = c_light(1.0)
       c_1 = 1.0 / atoms%neq(itype)
