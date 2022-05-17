@@ -26,6 +26,7 @@ CONTAINS
       USE m_mpi_bc_tool
       USE m_types_stars
       USE m_step_function
+      USE m_mpi_bc_tool
 
       CLASS(t_stars),INTENT(INOUT) :: stars
       TYPE(t_sym),INTENT(in)::sym
@@ -65,11 +66,11 @@ CONTAINS
       END IF
 
       !The following broadcasts are needed for the step function generation and the allocations above it.
-      CALL MPI_BCAST(stars%mx1, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_BCAST(stars%mx2, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_BCAST(stars%mx3, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_BCAST(stars%ng3, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-
+      call mpi_bc(stars%mx1,0,fmpi%mpi_comm)
+      call mpi_bc(stars%mx2,0,fmpi%mpi_comm)
+      call mpi_bc(stars%mx3,0,fmpi%mpi_comm)
+      call mpi_bc(stars%ng3,0,fmpi%mpi_comm)
+      
       CALL timestart("stepf")
       IF (PRESENT(qvec)) THEN
          !ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
