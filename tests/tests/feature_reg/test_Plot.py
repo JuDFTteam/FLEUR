@@ -34,16 +34,16 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['denIn_A2.xsf'], "2.86600") #lattice constant
     assert grep_exists(res_files['denIn_A2.xsf'], "1.43300") #atom position
-    assert grep_exists(res_files['denIn_A2.xsf'], "1.55851") #line 19: 1.5585126056320757E-002 --> 1.5561550916526704E-002
-    assert grep_exists(res_files['denIn_A2.xsf'], "0.12627") #line 373: 0.12627294308505568    --> 0.12627294308505571
-    assert grep_exists(res_files['denIn_A2.xsf'], "0.12725") #line 363: 0.12725278698501802    --> 0.12725278698501805
+    assert grep_exists(res_files['denIn_A2.xsf'], "1.55615") #line 19: 1.5561550916526704E-002
+    assert grep_exists(res_files['denIn_A2.xsf'], "0.12627") #line 373: 0.12627294308505571
+    assert grep_exists(res_files['denIn_A2.xsf'], "0.12725") #line 363: 0.12725278698501805
 
 
     assert grep_exists(res_files['vTot_f.xsf'], "2.86600")    #lattice constant
     assert grep_exists(res_files['vTot_f.xsf'], "1.43300")    #atom position
-    assert grep_exists(res_files['vTot_f.xsf'], "4035743.16") #line 19: -4035743.1676590880    --> -4035743.1676590880
-    assert grep_exists(res_files['vTot_f.xsf'], "10.44663")   #line 20: -10.446631929661454    --> -10.446631929875359
-    assert grep_exists(res_files['vTot_f.xsf'], "4.62361")    #line 129: -4.6236187702542262   --> -4.6236187704471376
+    assert grep_exists(res_files['vTot_f.xsf'], "4035743.16") #line 19: -4035743.1676590880
+    assert grep_exists(res_files['vTot_f.xsf'], "10.44663")   #line 20: -10.446631929875359
+    assert grep_exists(res_files['vTot_f.xsf'], "4.62361")    #line 129: -4.6236187704471376
 
     # 3D Vectorplot section
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.86600") #lattice constant
@@ -51,15 +51,15 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111") #line 18 first coordinate: 2.22911111111
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444") #line 21 second coordinate: 0.31844444444
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.015585") #line 101 second value: 0.01558512606     --> 0.01556155092
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.42575")  #line 102 third value:  0.42575826806     --> 0.42575826806
+    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.015561") #line 101 second value: 0.01556155092
+    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425758")  #line 102 third value:  0.42575826806
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555") #line 109 first coordinate: 2.54755555556
 
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "2.86600") #lattice constant
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "1.43300") #atom position
 
     assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.318444") #line 12 first coordinate: 0.31844444444
-    assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.029060") #line 291 third value: -0.02906010287   --> -0.02906010288
+    assert grep_exists(res_files['vTot_A_vec_plot.xsf'], "0.029060") #line 291 third value: -0.02906010288
 
 
 @pytest.mark.plot
@@ -100,8 +100,8 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111") #line 18 first coordinate: 2.22911111111
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444") #line 21 second coordinate: 0.31844444444
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.015585") #line 101 second value: 0.01558512606     --> 0.01556155092
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425758") #line 102 third value:  0.42575826806     --> 0.42575826806
+    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.015561") #line 101 second value: 0.01556155092
+    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425758") #line 102 third value:  0.42575826806
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555") #line 109 first coordinate: 2.54755555556
 
     # Stage 3
@@ -118,7 +118,7 @@ def test_PlotOnlyMT(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn_A_vec_plotOnlyMT.xsf'], r"0\.00000000.*0\.00000000.*0\.00000000.*0\.00000000") #line 15
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.229111") #line 18 first coordinate: 2.22911111111
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.318444") #line 21 second coordinate: 0.31844444444
-    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425758") #line 102 third value: 0.42575826806  --> 0.42575826806
+    assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "0.425758") #line 102 third value: 0.42575826806
     assert grep_exists(res_files['denIn_A_vec_plot.xsf'], "2.547555") #line 109 first coordinate: 2.54755555556
 
     # Stage 4
