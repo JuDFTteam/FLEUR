@@ -126,7 +126,7 @@ CONTAINS
          !$acc & copyin(lapw%index_lo(:,na),lapwPr%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,ilSpinPr,ilSpin),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
          !$acc & copyin(ud,ud%us(:,ntyp,ilSpin),ud%uds(:,ntyp,ilSpin),ud%dus(:,ntyp,ilSpin),ud%dulos(:,ntyp,ilSpin),ud%duds(:,ntyp,ilSpin))&
          !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
-         !$acc & create(ax,bx,cx)&
+         !$acc & create(ax,bx,cx,axpr,bxpr,cxpr)&
          !$acc & default(none)
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
