@@ -96,7 +96,7 @@ CONTAINS
          con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
          !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)&
-         !$acc & copyin(l,lapw,lapw%kvec(:,:,na),,lapwPr,lapwPr%kvec(:,:,na)ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
+         !$acc & copyin(l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
          !$acc & copyin(lapwPr%index_lo(:,na),lapwPr%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
          !$acc & copyin(atoms%nlo(ntyp),lapw%nv(:),lapwPr%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
          !$acc & default(none)
