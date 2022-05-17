@@ -111,7 +111,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
-   LOGICAL :: l_orbcomprot, l_real, l_corespec, l_empty
+   LOGICAL :: l_real, l_corespec, l_empty
 
    ! Local Arrays
    REAL,ALLOCATABLE :: we(:),eig(:)
@@ -168,7 +168,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    CALL usdus%init(atoms,input%jspins)
    CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
    ! The last entry in denCoeffsOffdiag%init is l_fmpl. It is meant as a switch to a plot of the full magnet.
-   ! density without the atomic sphere approximation for the magnet. density. It is not completely implemented (TODO: lo's missing).
+   ! density without the atomic sphere approximation for the magnet. density.
    CALL denCoeffsOffdiag%init(atoms,noco,sphhar,banddos%l_jDOS,any(noco%l_unrestrictMT).OR.noco%l_mperp)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
@@ -362,10 +362,11 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       ENDIF
    ENDIF
 
-   CALL cdnmt(fmpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
-              vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1inp,jDOS,hub1data)
-
    IF (fmpi%irank==0) THEN
+      CALL timestart("cdnmt")
+      CALL cdnmt(input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
+                 vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,den%mt,hub1inp,moments,jDOS,hub1data)
+      CALL timestop("cdnmt")
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end
          IF (input%cdinf) THEN

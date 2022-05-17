@@ -11,8 +11,8 @@ MODULE m_cdnmt
    !! Philipp Kurz 2000-02-03
 CONTAINS
 
-  SUBROUTINE cdnmt(fmpi,jspd,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
-                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1inp,jDOS,hub1data)
+  SUBROUTINE cdnmt(jspd,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
+                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,rho,hub1inp,moments,jDOS,hub1data)
       !! Current situation:
       !!
       !! This routine calculates density contributions
@@ -35,7 +35,6 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_input),             INTENT(IN)    :: input
-      TYPE(t_mpi),               INTENT(IN)    :: fmpi
       TYPE(t_usdus),             INTENT(INOUT) :: usdus !in fact only the lo part is intent(in)
       TYPE(t_noco),              INTENT(IN)    :: noco
       TYPE(t_sphhar),            INTENT(IN)    :: sphhar
@@ -44,12 +43,12 @@ CONTAINS
       TYPE(t_enpara),            INTENT(IN)    :: enpara
       TYPE(t_banddos),           INTENT(IN)    :: banddos
       TYPE(t_hub1inp),           INTENT(IN)    :: hub1inp
-      TYPE(t_moments),           INTENT(INOUT) :: moments
       TYPE (t_orb),              INTENT(IN)    :: orb
       TYPE (t_denCoeffs),        INTENT(IN)    :: denCoeffs
       TYPE (t_denCoeffsOffdiag), INTENT(IN)    :: denCoeffsOffdiag
 
       TYPE(t_jDOS),     OPTIONAL, INTENT(IN)    :: jDOS
+      TYPE(t_moments),  OPTIONAL, INTENT(INOUT) :: moments
       TYPE(t_hub1data), OPTIONAL, INTENT(INOUT) :: hub1data
 
       INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
@@ -70,9 +69,6 @@ CONTAINS
 
       REAL, ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
 
-      CALL timestart("cdnmt")
-
-      IF (fmpi%irank==0) THEN
          IF (noco%l_mperp) THEN
             IF (denCoeffsOffdiag%l_fmpl) THEN
                rho(:,:,:,3:4) = CMPLX(0.0,0.0)
@@ -102,8 +98,10 @@ CONTAINS
             DO i = 1, itype - 1
                na = na + atoms%neq(i)
             END DO
-            !Spherical component
+
             DO ispin = jsp_start,jsp_end
+               !Spherical component
+               CALL timestart("cdnmt spherical diagonal")
                DO l = 0,atoms%lmax(itype)
                   !Check if the orbital is treated with Hubbard 1
                   l_hia=.FALSE.
@@ -132,7 +130,7 @@ CONTAINS
                        + denCoeffs%mt_coeff(l,itype,1,0,ispin,ispin)*(g(j,1,l,ispin)*f(j,1,l,ispin)+g(j,2,l,ispin)*f(j,2,l,ispin)) &
                        + denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin)*(g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin)))
                      rho(j,0,itype,ispin) = rho(j,0,itype,ispin) + s/(atoms%neq(itype)*sfp_const)
-                     IF (l<=input%lResMax) THEN
+                     IF (l<=input%lResMax.AND.PRESENT(moments)) THEN
                         moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + s/(atoms%neq(itype)*sfp_const)
                      END IF
                      IF(PRESENT(hub1data).AND.l<=lmaxU_const) THEN
@@ -143,17 +141,20 @@ CONTAINS
                      END IF
                   END DO
                END DO
+               CALL timestop("cdnmt spherical diagonal")
 
                !Add the contribution of LO-LO and LAPW-LO cross-terms to rho and
                !qmtl. The latter are stored in qmtllo.
                DO l = 0,atoms%lmaxd
                   qmtllo(l) = 0.0
                END DO
-
+               IF (PRESENT(moments)) THEN
+               CALL timestart("cdnmt LO diagonal")
                CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
                             enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
                             f(:,:,0:,ispin),g(:,:,0:,ispin),&
                             rho(:,0:,itype,ispin),qmtllo,moments=moments)
+               CALL timestop("cdnmt LO diagonal")
 
                !l-decomposed density for each atom type
                qmtt = 0.0
@@ -163,6 +164,14 @@ CONTAINS
                   qmtt = qmtt + qmtl(l,ispin,itype)
                END DO
                moments%chmom(itype,ispin) = qmtt
+               ELSE
+               CALL timestart("cdnmt LO diagonal")
+               CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
+                            enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                            f(:,:,0:,ispin),g(:,:,0:,ispin),&
+                            rho(:,0:,itype,ispin),qmtllo)
+               CALL timestop("cdnmt LO diagonal")
+               END IF
 
                !Get the magnetic moment for the shells where we defined additional exchange splittings for DFT+Hubbard 1
                IF(PRESENT(hub1data)) THEN
@@ -176,13 +185,14 @@ CONTAINS
                END IF
 
                !Spherical angular component for the SOC contribution
-               IF (noco%l_soc) THEN
+               IF (noco%l_soc.AND.PRESENT(moments)) THEN
                   CALL orbmom2(atoms,itype,ispin,usdus%ddn(0:,itype,ispin),&
                                orb,usdus%uulon(:,itype,ispin),usdus%dulon(:,itype,ispin),&
                                usdus%uloulopn(:,:,itype,ispin),moments%clmom(:,itype,ispin))!keep
                END IF
 
                !Non-spherical components
+               CALL timestart("cdnmt non-spherical diagonal")
                nd = sym%ntypsy(na)
                DO lh = 1,sphhar%nlh(nd)
                   DO l = 0,atoms%lmax(itype)
@@ -199,17 +209,18 @@ CONTAINS
                              + denCoeffs%nmt_coeff(llp,lh,itype,1,0,ispin,ispin)*(g(j,1,lp,ispin)*f(j,1,l,ispin)+ g(j,2,lp,ispin)*f(j,2,l,ispin)) &
                              + denCoeffs%nmt_coeff(llp,lh,itype,1,1,ispin,ispin)*(g(j,1,lp,ispin)*g(j,1,l,ispin)+ g(j,2,lp,ispin)*g(j,2,l,ispin)))
                            rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ s/atoms%neq(itype)
-                           IF ((l<=input%lResMax).AND.(lp<=input%lResMax)) THEN
+                           IF ((l<=input%lResMax).AND.(lp<=input%lResMax).AND.PRESENT(moments)) THEN
                               moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + s/atoms%neq(itype)
                            END IF
                         END DO
                      END DO
                   END DO
                END DO
+               CALL timestop("cdnmt non-spherical diagonal")
             END DO ! end of spin loop (ispin = jsp_start,jsp_end)
 
             IF (noco%l_mperp) THEN
-
+               IF (PRESENT(moments)) THEN
                !Calculate the off-diagonal integrated density
                DO l = 0, atoms%lmax(itype)
                   moments%qa21(itype) = moments%qa21(itype) + CONJG( &
@@ -230,12 +241,14 @@ CONTAINS
                                            denCoeffsOffdiag%uloulop21n(ilo,ilop,itype) )/atoms%neq(itype)
                   END DO
                END DO
+               END IF
 
                !The following part can be used to calculate the full spherical
                !and non-spherical parts of the off-diagonal magnetization
                !density.
                IF (denCoeffsOffdiag%l_fmpl) THEN
                   !Spherical components for the off-diagonal density
+                  CALL timestart("cdnmt spherical off-diagonal")
                   DO l = 0,atoms%lmax(itype)
                      llp = (l* (l+1))/2 + l
                      DO j = 1, atoms%jri(itype)
@@ -246,24 +259,39 @@ CONTAINS
                         rho21 = cs/(atoms%neq(itype)*sfp_const)
                         rho(j,0,itype,3) = rho(j,0,itype,3) +  REAL(rho21)
                         rho(j,0,itype,4) = rho(j,0,itype,4) + AIMAG(rho21)
-                        IF (l<=input%lResMax) THEN
+                        IF (l<=input%lResMax.AND.PRESENT(moments)) THEN
                            moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3)+  REAL(cs/(atoms%neq(itype)*sfp_const))
                            moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4)+ AIMAG(cs/(atoms%neq(itype)*sfp_const))
                         END IF
                      END DO
                   END DO
+                  CALL timestop("cdnmt spherical off-diagonal")
 
                   !New feature: LOs for the offdiagonal density.
                   !Add the contribution of LO-LO and LAPW-LO cross-terms to rho for
                   !the offdiagonal magnetism.
+                  IF (PRESENT(moments)) THEN
+                  CALL timestart("cdnmt LO off-diagonal")
                   CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
                                enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
                                f(:,:,0:,1),g(:,:,0:,1),&
                                rho(:,0:,itype,3),qmtllo,moments=moments,&
                                rhoIm=rho(:,0:,itype,4), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
                   !Note: qmtllo is irrelevant here
+                  CALL timestop("cdnmt LO off-diagonal")
+                  ELSE
+                  CALL timestart("cdnmt LO off-diagonal")
+                  CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
+                               enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                               f(:,:,0:,1),g(:,:,0:,1),&
+                               rho(:,0:,itype,3),qmtllo,&
+                               rhoIm=rho(:,0:,itype,4), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
+                  !Note: qmtllo is irrelevant here
+                  CALL timestop("cdnmt LO off-diagonal")
+                  END IF
 
                   !Non-spherical components for the off-diagonal density
+                  CALL timestart("cdnmt non-spherical off-diagonal")
                   nd = sym%ntypsy(na)
                   DO lh = 1,sphhar%nlh(nd)
                      DO l = 0,atoms%lmax(itype)
@@ -278,7 +306,7 @@ CONTAINS
                               rho21 = cs/atoms%neq(itype)
                               rho(j,lh,itype,3) = rho(j,lh,itype,3) +  REAL(rho21)
                               rho(j,lh,itype,4) = rho(j,lh,itype,4) + AIMAG(rho21)
-                              IF ((l<=input%lResMax).AND.(lp<=input%lResMax)) THEN
+                              IF ((l<=input%lResMax).AND.(lp<=input%lResMax).AND.PRESENT(moments)) THEN
                                  moments%rhoLRes(j,lh,llpb,itype,3)= moments%rhoLRes(j,lh,llpb,itype,3) +  REAL(cs/atoms%neq(itype))
                                  moments%rhoLRes(j,lh,llpb,itype,4)= moments%rhoLRes(j,lh,llpb,itype,4) + AIMAG(cs/atoms%neq(itype))
                               END IF
@@ -286,12 +314,15 @@ CONTAINS
                         END DO
                      END DO
                   END DO
+                  CALL timestop("cdnmt non-spherical off-diagonal")
                END IF ! denCoeffsOffdiag%l_fmpl
             END IF ! noco%l_mperp
          END DO ! end of loop over atom types
          !$OMP END DO
          DEALLOCATE (f,g)
          !$OMP END PARALLEL
+
+         IF (.NOT.PRESENT(moments)) RETURN
 
          WRITE (oUnit,FMT=8000)
 8000     FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&
@@ -348,8 +379,5 @@ CONTAINS
                END DO
             END IF
          END IF
-      END IF !(fmpi%irank==0) THEN
-      CALL timestop("cdnmt")
-
    END SUBROUTINE cdnmt
 END MODULE m_cdnmt
