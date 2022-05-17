@@ -30,7 +30,8 @@ test-gfortran-hdf5:
   rules:
     - if: $CI_TASKS
       when: never
-    - if: $CI_TASKS =~ /gfortran/  
+    - if: $CI_TASKS =~ /gfortran/
+    - when: on_success  
 
 fast-test-gfortran-hdf5: 
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
