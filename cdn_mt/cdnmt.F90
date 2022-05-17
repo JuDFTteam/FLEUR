@@ -55,7 +55,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj,n_dos
     INTEGER ilo,ilop,i,i_hia,i_exc
-    REAL s,wronk,sumlm,qmtt
+    REAL s,wronk,qmtt
     COMPLEX cs
     LOGICAL l_hia,l_performSpinavg
     !     ..
@@ -127,18 +127,20 @@ CONTAINS
              llp = (l* (l+1))/2 + l
 
              DO j = 1,atoms%jri(itype)
-                s = denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)*(f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin)) &
+                s = REAL( &
+                    denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)*(f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin)) &
                   + denCoeffs%mt_coeff(l,itype,0,1,ispin,ispin)*(f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin)) &
                   + denCoeffs%mt_coeff(l,itype,1,0,ispin,ispin)*(g(j,1,l,ispin)*f(j,1,l,ispin)+g(j,2,l,ispin)*f(j,2,l,ispin)) &
-                  + denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin)*(g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin))
+                  + denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin)*(g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin)))
                 rho(j,0,itype,ispin) = rho(j,0,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
                 IF (l.LE.input%lResMax) THEN
                    moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
                 END IF
                 IF(PRESENT(hub1data).AND.l.LE.lmaxU_const) THEN
-                  hub1data%cdn_atomic(j,l,itype,ispin) = hub1data%cdn_atomic(j,l,itype,ispin) + denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)&
-                                                        *( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) ) &
-                                                        *1.0/(atoms%neq(itype)*sfp_const)
+                  hub1data%cdn_atomic(j,l,itype,ispin) = hub1data%cdn_atomic(j,l,itype,ispin) &
+                                                       + REAL(denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)) &
+                                                       * (f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin)) &
+                                                       * 1.0/(atoms%neq(itype)*sfp_const)
                 ENDIF
              ENDDO
           ENDDO
@@ -159,8 +161,8 @@ CONTAINS
           !--->       l-decomposed density for each atom type
           qmtt = 0.0
           DO l = 0,atoms%lmax(itype)
-             qmtl(l,ispin,itype) = ( denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)+denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin)&
-                  &              *usdus%ddn(l,itype,ispin) )/atoms%neq(itype) + qmtllo(l)
+             qmtl(l,ispin,itype) = REAL(denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)+denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin) &
+                                 * usdus%ddn(l,itype,ispin))/atoms%neq(itype) + qmtllo(l)
              qmtt = qmtt + qmtl(l,ispin,itype)
           END DO
           moments%chmom(itype,ispin) = qmtt
@@ -195,10 +197,11 @@ CONTAINS
 
                    DO j = 1,atoms%jri(itype)
                       s = 0.0
-                      s = denCoeffs%nmt_coeff(llp,lh,itype,0,0,ispin,ispin)*(f(j,1,lp,ispin)*f(j,1,l,ispin)+ f(j,2,lp,ispin)*f(j,2,l,ispin))&
+                      s = REAL( &
+                          denCoeffs%nmt_coeff(llp,lh,itype,0,0,ispin,ispin)*(f(j,1,lp,ispin)*f(j,1,l,ispin)+ f(j,2,lp,ispin)*f(j,2,l,ispin))&
                         + denCoeffs%nmt_coeff(llp,lh,itype,0,1,ispin,ispin)*(f(j,1,lp,ispin)*g(j,1,l,ispin)+ f(j,2,lp,ispin)*g(j,2,l,ispin))&
                         + denCoeffs%nmt_coeff(llp,lh,itype,1,0,ispin,ispin)*(g(j,1,lp,ispin)*f(j,1,l,ispin)+ g(j,2,lp,ispin)*f(j,2,l,ispin))&
-                        + denCoeffs%nmt_coeff(llp,lh,itype,1,1,ispin,ispin)*(g(j,1,lp,ispin)*g(j,1,l,ispin)+ g(j,2,lp,ispin)*g(j,2,l,ispin))
+                        + denCoeffs%nmt_coeff(llp,lh,itype,1,1,ispin,ispin)*(g(j,1,lp,ispin)*g(j,1,l,ispin)+ g(j,2,lp,ispin)*g(j,2,l,ispin)))
                       rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ s/atoms%neq(itype)
                       IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
                          moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin)+ s/atoms%neq(itype)
