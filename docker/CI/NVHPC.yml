@@ -34,7 +34,7 @@ build-nvhpc-gpu:
       - build.nvgpu
     expire_in: 12h
   script:
-    - bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -gpu acc:cc60 -l nvgpu ; cd build.nvgpu; make"
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -gpu acc:cc60 -l nvgpu ; cd build.nvgpu; make"
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
