@@ -92,13 +92,13 @@ contains
     end if
 
     ! q/=0 components
-    !$omp parallel default( none ) &
-    !$omp& shared( fmpi, stars, vpw,   atoms, sym, cell, sphhar, vtl ) &
-    !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
-    !$omp& private( vtl_loc )
-    !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype))
-    !$ vtl_loc(:,:) = cmplx(0.0,0.0)
-    !$omp do
+!    !$omp parallel default( none ) &
+!    !$omp& shared( fmpi, stars, vpw,   atoms, sym, cell, sphhar, vtl ) &
+!    !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
+!    !$omp& private( vtl_loc )
+!    !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype))
+!    !$ vtl_loc(:,:) = cmplx(0.0,0.0)
+!    !$omp do
     do k = MERGE(fmpi%irank+2,1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
       cp = vpw(k) * stars%nstr(k)
         call phasy1( atoms, stars, sym, cell, k, pylm )
@@ -114,20 +114,20 @@ contains
             lm = l * ( l + 1 ) + m + 1
             sm = sm + conjg( sphhar%clnu(jm,lh,nd) ) * pylm(lm,n)
           end do
-          !$ if (.false.) then
+!          !$ if (.false.) then
           vtl(lh,n) = vtl(lh,n) + cp * sbf(l) * sm
-          !$ end if
-          !$ vtl_loc(lh,n) = vtl_loc(lh,n) + cp * sbf(l) * sm
+!          !$ end if
+!          !$ vtl_loc(lh,n) = vtl_loc(lh,n) + cp * sbf(l) * sm
         end do
         nat = nat + atoms%neq(n)
       end do
     end do
-    !$omp end do
-    !$omp critical
-    !$ vtl = vtl + vtl_loc
-    !$omp end critical
-    !$ deallocate(vtl_loc)
-    !$omp end parallel
+!    !$omp end do
+!    !$omp critical
+!    !$ vtl = vtl + vtl_loc
+!    !$omp end critical
+!    !$ deallocate(vtl_loc)
+!    !$omp end parallel
 #ifdef CPP_MPI
     n1 = ( sphhar%nlhd + 1 ) * atoms%ntype
     allocate( c_b(n1) )
