@@ -54,10 +54,6 @@ CONTAINS
       INTEGER ierr
       INTEGER, ALLOCATABLE :: icm_local(:, :, :)
       REAL, ALLOCATABLE :: ufft_local(:), bfft_local(:)
-
-      CALL MPI_BCAST(stars%mx1, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_BCAST(stars%mx2, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_BCAST(stars%mx3, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
 #endif
 
       ifftd = 27*stars%mx1*stars%mx2*stars%mx3
