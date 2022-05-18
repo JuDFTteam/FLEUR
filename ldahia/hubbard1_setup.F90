@@ -17,7 +17,7 @@ MODULE m_hubbard1_setup
 #ifdef CPP_EDSOLVER
    use EDsolver, only: EDsolver_from_cfg
    use EDsolver, only: EDsolver_dos, EDsolver_angmom, EDsolver_eigenstates_decomp
-   use EDsolver, only: EDsolver_angmom_decomp
+   use EDsolver, only: EDsolver_jm_expansion
 #endif
 #ifdef CPP_MPI
    use mpi
@@ -523,8 +523,8 @@ MODULE m_hubbard1_setup
                   call EDsolver_eigenstates_decomp(hubbardioUnit)
                else if(trim(adjustl(task)) == 'angmom') then
                   call EDsolver_angmom(hubbardioUnit)
-               else if(trim(adjustl(task)) == 'angmom_decomp') then
-                  call EDsolver_angmom_decomp(hubbardioUnit)
+               else if(trim(adjustl(task)) == 'jm_expansion') then
+                  call EDsolver_jm_expansion(hubbardioUnit)
                endif
                
                CLOSE(hubbardioUnit, iostat=io_error)

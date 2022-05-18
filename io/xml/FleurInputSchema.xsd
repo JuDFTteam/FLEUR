@@ -777,7 +777,7 @@
          <xsd:enumeration value="spectrum"/>
          <xsd:enumeration value="eigen_decomp"/>
          <xsd:enumeration value="angmom"/>
-         <xsd:enumeration value="angmom_decomp"/>
+         <xsd:enumeration value="jm_expansion"/>
       </xsd:restriction>
    </xsd:simpleType>
 
