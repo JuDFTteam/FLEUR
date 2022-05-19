@@ -19,7 +19,6 @@ contains
   subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
        &     qpw, rho, rht, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
 
-#include"cpp_double.h"
 #ifdef CPP_MPI
     use mpi
 #endif
@@ -89,9 +88,9 @@ contains
     call timestop("mpmom")
 #ifdef CPP_MPI
     psq(:) = cmplx( 0.0, 0.0 )
-    call MPI_BCAST( qpw, size(qpw), CPP_MPI_COMPLEX, 0, fmpi%mpi_comm, ierr )
+    call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
     nd = ( 2 * atoms%lmaxd + 1 ) * ( atoms%lmaxd + 1 ) * atoms%ntype
-    call MPI_BCAST( qlm, nd, CPP_MPI_COMPLEX, 0, fmpi%MPI_COMM, ierr )
+    call MPI_BCAST( qlm, nd, MPI_DOUBLE_COMPLEX, 0, fmpi%MPI_COMM, ierr )
 #endif
 
     ! prefactor in (A10) (Coulomb case) or (A11) (Yukawa case)
@@ -163,7 +162,7 @@ contains
     call timestop("loop")
 #ifdef CPP_MPI
     allocate( c_b(stars%ng3) )
-    call MPI_REDUCE( psq, c_b, stars%ng3, CPP_MPI_COMPLEX, MPI_SUM, 0, fmpi%MPI_COMM, ierr )
+    call MPI_REDUCE( psq, c_b, stars%ng3, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%MPI_COMM, ierr )
     if ( fmpi%irank == 0 ) then
        psq(:stars%ng3) = c_b(:stars%ng3)
     end if

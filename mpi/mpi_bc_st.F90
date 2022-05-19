@@ -37,7 +37,6 @@ CONTAINS
   !*********************************************************************
   SUBROUTINE mpi_col_st(fmpi,atoms,sphhar,rho)
     !
-#include"cpp_double.h"
     USE m_types
     IMPLICIT NONE
 

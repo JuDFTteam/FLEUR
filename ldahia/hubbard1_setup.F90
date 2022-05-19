@@ -22,8 +22,6 @@ MODULE m_hubbard1_setup
 #endif
    IMPLICIT NONE
 
-#include"cpp_double.h"
-
    CHARACTER(len=30), PARAMETER :: hubbard1CalcFolder = "Hubbard1"
    CHARACTER(len=30), PARAMETER :: hubbard1Outfile    = "out"
 
@@ -391,8 +389,8 @@ MODULE m_hubbard1_setup
       !Collect the density matrix to rank 0
       n = SIZE(mmpMat)
       ALLOCATE(ctmp(n))
-      CALL MPI_REDUCE(mmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-      IF(fmpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
+      CALL MPI_REDUCE(mmpMat,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+      IF(fmpi%irank.EQ.0) CALL zcopy(n,ctmp,1,mmpMat,1)
       DEALLOCATE(ctmp)
 #endif
 
