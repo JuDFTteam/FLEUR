@@ -32,7 +32,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_input),INTENT(IN)     :: input
-     
+
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_potden),INTENT(INOUT) :: den
     LOGICAL,INTENT(IN)           :: l_noco,l_printData,force_fix,l_par
@@ -52,9 +52,9 @@ CONTAINS
     ELSE
        IF (MOD(input%qfix,2)==0.AND..NOT.force_fix) RETURN
     ENDIF
-    ! qfix==0 means no qfix was given in inp.xml. 
+    ! qfix==0 means no qfix was given in inp.xml.
     ! In this case do nothing except when forced to fix!
-    
+
     CALL cdntot(stars,atoms,sym,vacuum,input,cell ,den,l_printData,qtot,qis,fmpi,l_par)
 
     IF (fmpi%irank.EQ.0) THEN
@@ -88,14 +88,14 @@ CONTAINS
        ! TODO: This looks spooky.
        ! a) All noco quantities are already included in the fix above.
        ! b) Below, MT is missing.
-       IF (l_noco) THEN
+       !IF (l_noco) THEN
           !fix also the off-diagonal part of the density matrix
-          den%pw(:stars%ng3,3) = fix*den%pw(:stars%ng3,3)
-          IF (input%film.AND.fixtotal) THEN
-             den%vacz(:,:,3:4) = fix*den%vacz(:,:,3:4)
-             den%vacxy(:,:,:,3) = fix*den%vacxy(:,:,:,3)
-          END IF
-       END IF
+          !den%pw(:stars%ng3,3) = fix*den%pw(:stars%ng3,3)
+          !IF (input%film.AND.fixtotal) THEN
+             !den%vacz(:,:,3:4) = fix*den%vacz(:,:,3:4)
+             !den%vacxy(:,:,:,3) = fix*den%vacxy(:,:,:,3)
+          !END IF
+       !END IF
 
        IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
 
