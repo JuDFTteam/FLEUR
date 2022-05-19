@@ -152,7 +152,7 @@ CONTAINS
           call fftgrid%putFieldOnGrid(stars,den_pw(:,3),cell,gmax)
           call fftgrid%perform_fft(forward=.false.)
           mx=real(fftgrid%grid)
-          my=aimag(fftgrid%grid)
+          my=aimag(fftgrid%grid) ! TODO: There is NO magic minus here. This is so scuffed....
 
           DO i=0,MIN(SIZE(rho,1),size(mx))-1
              rhotot= 0.5*( rho(i,1) + rho(i,2) )

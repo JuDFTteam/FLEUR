@@ -85,6 +85,9 @@ CONTAINS
           WRITE (oUnit,FMT=8001) zc,fix
        ENDIF
 
+       ! TODO: This looks spooky.
+       ! a) All noco quantities are already included in the fix above.
+       ! b) Below, MT is missing.
        IF (l_noco) THEN
           !fix also the off-diagonal part of the density matrix
           den%pw(:stars%ng3,3) = fix*den%pw(:stars%ng3,3)
