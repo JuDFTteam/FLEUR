@@ -16,7 +16,7 @@ CONTAINS
       !     also set up FFT of U(G) on a (-2G:+2G) grid for convolutions
       !
       !*********************************************************************
-#include"cpp_double.h"
+
       USE m_cfft
       USE m_constants
        
@@ -285,8 +285,8 @@ CONTAINS
       ENDDO
 
 #ifdef CPP_MPI
-      CALL MPI_REDUCE(ufft_local, stars%ufft, ifftd, CPP_MPI_REAL, MPI_SUM, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_REDUCE(bfft_local, bfft, ifftd, CPP_MPI_REAL, MPI_SUM, 0, fmpi%mpi_comm, ierr)
+      CALL MPI_REDUCE(ufft_local, stars%ufft, ifftd, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr)
+      CALL MPI_REDUCE(bfft_local, bfft, ifftd, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr)
       CALL MPI_REDUCE(icm_local, icm, size(icm), MPI_INTEGER, MPI_SUM, 0, fmpi%mpi_comm, ierr)
 #endif
 

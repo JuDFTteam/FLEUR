@@ -8,7 +8,7 @@ CONTAINS
     !                                             Yu.M. Koroteev
     !             From pwden_old.F and pwint.F by  c.l.fu
     !     *******************************************************
-#include"cpp_double.h"
+
     USE m_pwintsl
     USE m_types
     USE m_types_slab

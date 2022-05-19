@@ -6,7 +6,6 @@ CONTAINS
       !     subroutine constructs the a,b coefficients of the linearized
       !     m.t. wavefunctions for each band and atom.       c.l. fu
       !     ************************************************************
-#include "cpp_double.h"
 
       USE m_constants, ONLY: tpi_const
       USE m_setabc1locdn1

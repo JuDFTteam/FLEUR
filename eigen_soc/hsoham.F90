@@ -16,7 +16,6 @@ CONTAINS
        nat_start,nat_stop,n_rank,n_size,SUB_COMM,&
        hsomtx)
 
-#include"cpp_double.h"
     USE m_types
     IMPLICIT NONE
 #ifdef CPP_MPI
@@ -203,9 +202,9 @@ CONTAINS
     CALL MPI_BARRIER(SUB_COMM,ierr(1))
     n = 4*nsz(1)*nsz(input%jspins)
     ALLOCATE(c_buf(n))
-    CALL MPI_REDUCE(hsomtx,c_buf,n,CPP_MPI_COMPLEX,MPI_SUM,0,SUB_COMM,ierr(2))
+    CALL MPI_REDUCE(hsomtx,c_buf,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0,SUB_COMM,ierr(2))
     IF (n_rank.EQ.0) THEN
-        CALL CPP_BLAS_ccopy(n,c_buf,1,hsomtx,1)
+        CALL zcopy(n,c_buf,1,hsomtx,1)
     ENDIF
     DEALLOCATE(c_buf)
 #endif
