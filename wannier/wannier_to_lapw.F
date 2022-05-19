@@ -49,7 +49,6 @@ c******************************************************************
 
 
       implicit none
-#include "cpp_double.h"
 
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_lapw),INTENT(IN)   :: lapw

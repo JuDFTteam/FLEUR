@@ -17,7 +17,6 @@ c***************************************c
      >     bkpt,bkpt_b,vzxy,vz,nslibd,nslibd_b,jspin,jspin_b,
      >     ico,k1,k2,k3,k1_b,k2_b,k3_b,jspd,nvd,nbasfcn,neigd,
      >     zMat,zMat_b,nv,nv_b,omtil,gb,gb2,sign2,uHu)
-#include "cpp_double.h"
 
       USE m_types
       use m_constants, only : pimach
@@ -600,61 +599,61 @@ c        enddo
       enddo ! l
 
       if(.false.) then
-      call CPP_BLAS_cgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    ac_b(1,1),nv2d,tuu(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','T',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','T',nslibd,nslibd_b,nv2d,chi,
      >                    ac(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    bc_b(1,1),nv2d,tud(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','T',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','T',nslibd,nslibd_b,nv2d,chi,
      >                    ac(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    ac_b(1,1),nv2d,tdu(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','T',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','T',nslibd,nslibd_b,nv2d,chi,
      >                    bc(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    bc_b(1,1),nv2d,tdd(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','T',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','T',nslibd,nslibd_b,nv2d,chi,
      >                    bc(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
       endif
 
       if(.true.)then ! standard so far
-      call CPP_BLAS_cgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    ac_b(1,1),nv2d,tuu(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','C',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','C',nslibd,nslibd_b,nv2d,chi,
      >                    ac(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    bc_b(1,1),nv2d,tud(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','C',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','C',nslibd,nslibd_b,nv2d,chi,
      >                    ac(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    ac_b(1,1),nv2d,tdu(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','C',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','C',nslibd,nslibd_b,nv2d,chi,
      >                    bc(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    bc_b(1,1),nv2d,tdd(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','C',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','C',nslibd,nslibd_b,nv2d,chi,
      >                    bc(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
       endif

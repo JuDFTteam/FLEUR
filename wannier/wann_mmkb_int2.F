@@ -8,7 +8,7 @@
      >               nv_b,z_b,nslibd_b,
      >               nbnd,rgphs,ustep,ig,gb,
      <               mmnk)
-#include "cpp_double.h"
+
       implicit none
       integer, intent(in) :: addnoco,addnoco2
       integer, intent(in) :: nvd,n3d,k1(nvd),k2(nvd),k3(nvd)
