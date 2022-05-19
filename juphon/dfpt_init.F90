@@ -1717,7 +1717,6 @@ CONTAINS
 !      external mpi_bcast
 !      complex :: qpwc_loc(stars%ng3)
 !      integer :: ierr
-!#include "cpp_double.h"
 !      include "mpif.h"
 !#endif
 

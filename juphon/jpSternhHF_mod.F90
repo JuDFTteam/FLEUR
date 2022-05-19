@@ -123,9 +123,8 @@ module m_jpSternhHF
       integer                                    :: nfft(3)
 
       ! For BLAS
-#include"cpp_double.h"
-      complex                                       CPP_BLAS_cdotc
-      external                                      CPP_BLAS_cdotc
+      complex                                       zdotc
+      external                                      zdotc
 
 #ifdef CPP_FFTW
       ! For FFTW
@@ -316,7 +315,7 @@ module m_jpSternhHF
          ! We convoluted the Psiket with the warped potential so have in principle the multiplication of two quantities in the
          ! interstitial which have to be multiplied by an omtil still.
          ! conjugation of cdotc zBra is being conjugated automatically
-            MeVeff1IR(j,i) = MeVeff1IR(j, i) + CPP_BLAS_cdotc(nmatBra, zBra(1, j),1, vThetaZ, 1)!nmatBra von bra!
+            MeVeff1IR(j,i) = MeVeff1IR(j, i) + zdotc(nmatBra, zBra(1, j),1, vThetaZ, 1)!nmatBra von bra!
          end do
 
       end do
