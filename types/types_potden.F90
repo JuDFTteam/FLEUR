@@ -239,6 +239,10 @@ CONTAINS
 
     ! implicit allocation would break the bounds staring at 0
     if(.not. allocated(PotDen3%mt)) allocate(PotDen3%mt, mold=PotDen1%mt)
+    
+    ! The following allocates are countermeasures to valgrind complaints
+    if(.not. allocated(PotDen3%vacz)) allocate(PotDen3%vacz, mold=PotDen1%vacz)
+    if(.not. allocated(PotDen3%vacxy)) allocate(PotDen3%vacxy, mold=PotDen1%vacxy)
 
     PotDen3%mt         = PotDen1%mt - PotDen2%mt
     PotDen3%pw         = PotDen1%pw - PotDen2%pw
@@ -261,6 +265,10 @@ CONTAINS
 
     ! implicit allocation would break the bounds staring at 0
     if(.not. allocated(PotDenCopy%mt)) allocate(PotDenCopy%mt, mold=PotDen%mt)
+    
+    ! The following allocates are countermeasures to valgrind complaints
+    if(.not. allocated(PotDenCopy%vacz)) allocate(PotDenCopy%vacz, mold=PotDen%vacz)
+    if(.not. allocated(PotDenCopy%vacxy)) allocate(PotDenCopy%vacxy, mold=PotDen%vacxy)
 
     PotDenCopy%mt         = PotDen%mt
     PotDenCopy%pw         = PotDen%pw

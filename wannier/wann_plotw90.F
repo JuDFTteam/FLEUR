@@ -107,7 +107,6 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       real,    allocatable :: we(:)
 
-#include "cpp_double.h"
 #ifdef CPP_MPI
       integer ierr(3)
       integer cpu_index

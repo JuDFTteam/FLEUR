@@ -50,7 +50,6 @@ c******************************************************************
 
       implicit none
 
-#include "cpp_double.h"
 #ifdef CPP_MPI
       integer mpiierr
       integer cpu_index
@@ -792,13 +791,13 @@ c      call MPI_BARRIER(mpi_communicator,ierr)
         do ikpt=1,fullnkpts
          if(mod(ikpt-1,isize).eq.cpu_index)then
            call MPI_RECV(knorm(ikpt,1:num_bands),num_bands,
-     &             CPP_MPI_REAL,cpu_index,
+     &             MPI_DOUBLE_PRECISION,cpu_index,
      &        ikpt,mpi_communicator,stt,mpiierr)
          endif !processors
         enddo !ikpt
            call MPI_RECV(wannierfunc_temp(1:num_wann,1:mesh),
      &         num_wann*mesh,
-     &             CPP_MPI_COMPLEX,cpu_index,
+     &             MPI_DOUBLE_COMPLEX,cpu_index,
      &        cpu_index+fullnkpts,mpi_communicator,stt,mpiierr)
            wannierfunc(:,:)=wannierfunc(:,:)+
      &                   wannierfunc_temp(:,:)
@@ -812,12 +811,12 @@ c      call MPI_BARRIER(mpi_communicator,ierr)
        do ikpt=1,fullnkpts
         if(mod(ikpt-1,isize).eq.irank)then
              call MPI_SEND(knorm(ikpt,1:num_bands),num_bands,
-     &           CPP_MPI_REAL,0,ikpt,mpi_communicator,mpiierr)
+     &           MPI_DOUBLE_PRECISION,0,ikpt,mpi_communicator,mpiierr)
         endif !processors
        enddo !ikpt
              call MPI_SEND(wannierfunc(1:num_wann,1:mesh),
-     &        num_wann*mesh,
-     & CPP_MPI_COMPLEX,0,fullnkpts+irank,mpi_communicator,mpiierr)
+     &        num_wann*mesh,MPI_DOUBLE_COMPLEX,
+     &        0,fullnkpts+irank,mpi_communicator,mpiierr)
 
 
 

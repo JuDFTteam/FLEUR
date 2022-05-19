@@ -236,7 +236,6 @@ CONTAINS
     PRINT *,"jcoef2 has still to be reimplemented"
 #ifdef CPP_NEVER
       USE m_nshell
-#include"cpp_double.h"
       IMPLICIT NONE
 
 c     .. Scalar arguments ..

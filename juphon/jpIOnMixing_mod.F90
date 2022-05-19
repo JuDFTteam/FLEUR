@@ -62,10 +62,9 @@ module m_jpIOnMixing
     complex,           allocatable               :: rho1IRin(:)
     complex,           allocatable               :: rho1MTin(:, :, :)
 
-#include "cpp_double.h"
     !External functions
-    real CPP_BLAS_sdot
-    external CPP_BLAS_sdot
+    real ddot
+    external ddot
 
     ! In first iteration we have a first guess for the linear density variation (only external contribution) which we don't mix but
     ! use immediately for the next iteration after writing it to disc. As the first mixing is between the second and third iteration, we
@@ -138,15 +137,15 @@ module m_jpIOnMixing
     distI= 0.0
  !   distIR = 0.0
  !   distRI = 0.0
-    distR = CPP_BLAS_sdot(nmap / 2, fsm(1), 2, sm(1), 2)
-    distI = CPP_BLAS_sdot(nmap / 2, fsm(2), 2, sm(2), 2)
-!    distR = CPP_BLAS_sdot(nmap / 2, fsmMet(1), 2, sm(1), 2)
-!    distI = CPP_BLAS_sdot(nmap / 2, fsmMet(2), 2, sm(2), 2)
-!    distIR = CPP_BLAS_sdot(nmap / 2, fsmMet(1), 2, sm(2), 2)
-!    distRI = CPP_BLAS_sdot(nmap / 2, fsmMet(2), 2, sm(1), 2)
+    distR = ddot(nmap / 2, fsm(1), 2, sm(1), 2)
+    distI = ddot(nmap / 2, fsm(2), 2, sm(2), 2)
+!    distR = ddot(nmap / 2, fsmMet(1), 2, sm(1), 2)
+!    distI = ddot(nmap / 2, fsmMet(2), 2, sm(2), 2)
+!    distIR = ddot(nmap / 2, fsmMet(1), 2, sm(2), 2)
+!    distRI = ddot(nmap / 2, fsmMet(2), 2, sm(1), 2)
     lastDistance(idir, iDatom, iqpt) = cmplx(1000 * sqrt( abs( (distR / cell%vol ) )), 1000 * sqrt( abs( distI / cell%vol ) ))
 !    lastDistance(idir, iDatom, iqpt) = cmplx(1000 * sqrt( abs( (distR - distI) / cell%vol ) ), 1000 * sqrt( abs( (distIR + distRI) / cell%vol ) ))
-!    distR = CPP_BLAS_sdot(nmap, fsmMet(1), 1, sm(1), 1)
+!    distR = ddot(nmap, fsmMet(1), 1, sm(1), 1)
 !    lastDistance(idir, iDatom, iqpt) = cmplx(1000 * sqrt( abs( distR / cell%vol ) ), 1000 * sqrt( abs( distR / cell%vol ) ))
 
 
@@ -668,13 +667,12 @@ module m_jpIOnMixing
     REAL, ALLOCATABLE :: am(:)
     REAL, ALLOCATABLE :: fm1(:),sm1(:),ui(:),um(:),vi(:),vm(:)
 
-#include "cpp_double.h"
     ! External Functions
-    REAL CPP_BLAS_sdot
-    EXTERNAL CPP_BLAS_sdot
+    REAL ddot
+    EXTERNAL ddot
 
     ! External Subroutines
-    EXTERNAL CPP_BLAS_saxpy,CPP_BLAS_sscal
+    EXTERNAL daxpy,dscal
 
     dfivi = zero
 
@@ -720,7 +718,7 @@ module m_jpIOnMixing
     IF (mit.EQ.1) THEN
        !     update for rho for mit=1 is straight mixing
        !     sm = sm + alpha*fm
-       CALL CPP_BLAS_saxpy(nmap,input%alpha,fm,1,sm,1)
+       CALL daxpy(nmap,input%alpha,fm,1,sm,1)
     ELSE
        !     |vi> = w|vi>
        !     loop to generate um : um = sm1 + alpha*fm1 - \sum <fm1|w|vi> ui
@@ -730,9 +728,9 @@ module m_jpIOnMixing
           CALL readUVec(input,hybdat,nmap,it-mit,mit,ui, idir, iqpt, iDatom)
           CALL readVVec(input,hybdat,nmap,it-mit,mit,dfivi,vi, idir, iqpt, iDatom)
 
-          am(it) = CPP_BLAS_sdot(nmap,vi,1,fm1,1)
+          am(it) = ddot(nmap,vi,1,fm1,1)
           ! calculate um(:) = -am(it)*ui(:) + um
-          CALL CPP_BLAS_saxpy(nmap,-am(it),ui,1,um,1)
+          CALL daxpy(nmap,-am(it),ui,1,um,1)
           WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it)
        END DO
 
@@ -746,25 +744,25 @@ module m_jpIOnMixing
          !             mmap,nmaph,mapmt,mapvac2,sm1,fm1,l_pot)
 
           ! calculate the norm of sm1 : <sm1|w|sm1>
-          smnorm = CPP_BLAS_sdot(nmap,sm1,1,fm1,1)
+          smnorm = ddot(nmap,sm1,1,fm1,1)
 
           ! generate vm = alpha*sm1  - \sum <ui|w|sm1> vi
           vm(:) = input%alpha * fm1(:)
           DO it = 2,iread
              CALL readUVec(input,hybdat,nmap,it-mit,mit,ui, idir, iqpt, iDatom)
              CALL readVVec(input,hybdat,nmap,it-mit,mit,dfivi,vi, idir, iqpt, iDatom)
-             bm = CPP_BLAS_sdot(nmap,ui,1,fm1,1)
+             bm = ddot(nmap,ui,1,fm1,1)
              ! calculate vm(:) = -bm*vi(:) + vm
-             CALL CPP_BLAS_saxpy(nmap,-bm,vi,1,vm,1)
+             CALL daxpy(nmap,-bm,vi,1,vm,1)
              !write(6,FMT='(5x,"<ui|w|Fm> for it",i2,5x,f10.6)') it, bm
           END DO
 
           ! complete evaluation of vm
           ! vmnorm = <um|w|sm1>-<sm1|w|sm1>
-          vmnorm = CPP_BLAS_sdot(nmap,fm1,1,um,1) - smnorm
+          vmnorm = ddot(nmap,fm1,1,um,1) - smnorm
           ! if (vmnorm.lt.tol_10) NOstopNO
 
-          CALL CPP_BLAS_sscal(nmap,one/vmnorm,vm,1)
+          CALL dscal(nmap,one/vmnorm,vm,1)
 
        ELSE IF (input%imix.EQ.5) THEN
           !****************************************
@@ -776,8 +774,8 @@ module m_jpIOnMixing
          !             mmap,nmaph,mapmt,mapvac2,fm1,vm,l_pot)
 
           ! calculate the norm of fm1 and normalize vm it: vm = wfm1 / <fm1|w|fm1>
-          vmnorm = one / CPP_BLAS_sdot(nmap,fm1,1,vm,1)
-          CALL CPP_BLAS_sscal(nmap,vmnorm,vm,1)
+          vmnorm = one / ddot(nmap,fm1,1,vm,1)
+          CALL dscal(nmap,vmnorm,vm,1)
 
        ELSE IF (input%imix.EQ.7) THEN
           !****************************************
@@ -793,14 +791,14 @@ module m_jpIOnMixing
           DO it = 2,iread
              CALL readVVec(input,hybdat,nmap,it-mit,mit,dfivi,vi, idir, iqpt, iDatom)
              ! calculate vm(:) = -am(it)*dfivi*vi(:) + vm
-             CALL CPP_BLAS_saxpy(nmap,-am(it)*dfivi,vi,1,vm,1)
+             CALL daxpy(nmap,-am(it)*dfivi,vi,1,vm,1)
           END DO
 
-          vmnorm = CPP_BLAS_sdot(nmap,fm1,1,vm,1)
+          vmnorm = ddot(nmap,fm1,1,vm,1)
           ! if (vmnorm.lt.tol_10) NOstopNO
 
           ! calculate vm(:) = (1.0/vmnorm)*vm(:)
-          CALL CPP_BLAS_sscal(nmap,one/vmnorm,vm,1)
+          CALL dscal(nmap,one/vmnorm,vm,1)
 
           ! save dfivi(mit) for next iteration
           dfivi = vmnorm
@@ -817,9 +815,9 @@ module m_jpIOnMixing
 
        ! update rho(m+1)
        ! calculate <fm|w|vm>
-       fmvm = CPP_BLAS_sdot(nmap,vm,1,fm,1)
+       fmvm = ddot(nmap,vm,1,fm,1)
        ! calculate sm(:) = (1.0-fmvm)*ui(:) + sm
-       CALL CPP_BLAS_saxpy(nmap,one-fmvm,um,1,sm,1)
+       CALL daxpy(nmap,one-fmvm,um,1,sm,1)
     END IF
 
     DEALLOCATE (fm1,sm1,ui,um,vi,vm,am)

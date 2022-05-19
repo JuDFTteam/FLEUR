@@ -54,7 +54,6 @@ CONTAINS
     USE m_radsra
     USE m_radsrdn
     USE m_differ
-#include "cpp_double.h"
     USE m_types
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(INOUT):: usdus !lo part is calculated here

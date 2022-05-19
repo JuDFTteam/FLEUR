@@ -71,7 +71,7 @@ c****************************************************************************
       use m_wann_surfcurr_int_updown
 #endif
       IMPLICIT NONE
-#include "cpp_double.h"
+
 #ifdef CPP_MPI
       integer ierr
       integer cpu_index

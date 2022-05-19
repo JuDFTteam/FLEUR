@@ -465,7 +465,7 @@ module m_jp2ndOrdQuant
     integer                                 :: iDeqat
     integer                                 :: iDatom
 
-    complex(kind=16) :: kindTest
+    !complex(kind=16) :: kindTest ?? This is not portable 
 
     ! Array variables
     ! lmax is 2, so the upper limit of lm is (2 + 1)**3 = 9

@@ -4090,9 +4090,9 @@ module m_jpSetupDynMat
       complex                       :: vThetaZ(SIZE(z1Bra(:)))
       complex                       :: thetaZ(SIZE(z1Bra(:)))
       complex                       :: thetaZ2(SIZE(z1Bra(:)))
-#include"cpp_double.h"
-      complex  CPP_BLAS_cdotc
-      external CPP_BLAS_cdotc
+
+      complex  zdotc
+      external zdotc
 
       intrinsic isign,real,cmplx,aimag,conjg
 
@@ -4347,11 +4347,11 @@ module m_jpSetupDynMat
       ! todo symmetric or non-symmetric version?
       s = cmplx(0.0, 0.0)
       h = cmplx(0.0, 0.0)
-      s = CPP_BLAS_cdotc(nmat,z1Bra(1), 1,thetaZ,1)
+      s = zdotc(nmat,z1Bra(1), 1,thetaZ,1)
       ! factor 0.5 from kinetic energy
-      h = 0.5 * CPP_BLAS_cdotc(nmat,z1Bra(1), 1,thetaZ2,1)
+      h = 0.5 * zdotc(nmat,z1Bra(1), 1,thetaZ2,1)
       ! veffIR
-      h = h + CPP_BLAS_cdotc(nmat,z1Bra(1),1,vThetaZ,1)
+      h = h + zdotc(nmat,z1Bra(1),1,vThetaZ,1)
       hepsIR = h - eig(iband, ikpt, 1) * s!nmat von bra!
       !changed end
 #ifdef CPP_FFTW

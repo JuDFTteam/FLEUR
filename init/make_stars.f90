@@ -26,6 +26,7 @@ CONTAINS
       USE m_mpi_bc_tool
       USE m_types_stars
       USE m_step_function
+      USE m_mpi_bc_tool
 
       CLASS(t_stars),INTENT(INOUT) :: stars
       TYPE(t_sym),INTENT(in)::sym
@@ -45,6 +46,8 @@ CONTAINS
 
       REAL, OPTIONAL, INTENT(IN) :: qvec(3)
       INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
+      
+      INTEGER :: ierr
 
       TYPE(t_fftgrid) :: fftgrid
 
@@ -62,13 +65,20 @@ CONTAINS
          CALL timestop("star-setup")
       END IF
 
+      !The following broadcasts are needed for the step function generation and the allocations above it.
+      call mpi_bc(stars%mx1,0,fmpi%mpi_comm)
+      call mpi_bc(stars%mx2,0,fmpi%mpi_comm)
+      call mpi_bc(stars%mx3,0,fmpi%mpi_comm)
+      call mpi_bc(stars%ng3,0,fmpi%mpi_comm)
+      
       CALL timestart("stepf")
       IF (PRESENT(qvec)) THEN
          !ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
          !CALL stepf(sym,stars,atoms,input,cell,vacuum,fmpi,qvec, iDtype, iDir)
          ! CALL new routines for +q
       ELSE
-         ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
+         ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
+         ALLOCATE (stars%ustep(stars%ng3))
          CALL stepf(sym,stars,atoms,input,cell,vacuum,fmpi)
       END IF
 

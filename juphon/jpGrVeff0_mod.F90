@@ -716,8 +716,6 @@ module m_jpGrVeff0
    !--------------------------------------------------------------------------------------------------------------------------------------
    subroutine PsqpwVeclp1(atoms, cell, ngdp, grRho0IR, harSw, extSw, gdp, qlmGrVc0, psqGrVc0)
 
-!#include "recycledRoutines/cpp_double.h"
-
      use m_types, only : t_atoms, t_cell
      use m_sphbes
 
@@ -912,7 +910,6 @@ module m_jpGrVeff0
    !--------------------------------------------------------------------------------------------------------------------------------------
   subroutine vmtsCoul( atoms, cell, ngdp, iatom, itype, harSw, extSw, grVc0IR, grRho0MT, gdp, grVc0MT, testGoldstein, grRhoTermSw)
 
-!#include"recycledRoutines/cpp_double.h"
     use m_types_atoms
     use m_types_cell
     use m_intgr, only : intgr2LinIntp
@@ -1226,7 +1223,6 @@ subroutine psqpwVecExt(atoms, cell, gdp, ngdp, psq)
 !  of convenience, the sum over all atoms is already evaluated.
 ! *************************************************************************************
 
-!#include "recycledRoutines/cpp_double.h"
 use m_sphbes
 use m_types
 

@@ -839,7 +839,7 @@ CONTAINS
       !                                    Okt. 2020                        |
       !                                    U.Alekseeva                      |
       !---------------------------------------------------------------------+
-#include"./cpp_double.h"
+
       CLASS(t_mat), INTENT(INOUT) ::mat_in
       CLASS(t_mat), INTENT(INOUT) ::mat_out
       ! ..
@@ -997,7 +997,7 @@ CONTAINS
                ! send section: local rows i with mod(i-1,np) = np_s will be sent to proc np_s
 
                IF (np_s .NE. n_rank) THEN
-                  CALL MPI_ISEND(cs_el(1, np_s), n_send(np_s), CPP_MPI_COMPLEX, &
+                  CALL MPI_ISEND(cs_el(1, np_s), n_send(np_s), MPI_DOUBLE_COMPLEX, &
                                  np_s, n_rank, SUB_COMM, req_s, ierr)
                END IF
 
@@ -1005,7 +1005,7 @@ CONTAINS
                ! ... skipped, if update matrix from local data:
 
                IF (np_r .NE. n_rank) THEN
-                  CALL MPI_IRECV(cr_el, n_recv(np_r), CPP_MPI_COMPLEX, MPI_ANY_SOURCE, np_r, SUB_COMM, req_r, ierr)
+                  CALL MPI_IRECV(cr_el, n_recv(np_r), MPI_DOUBLE_COMPLEX, MPI_ANY_SOURCE, np_r, SUB_COMM, req_r, ierr)
                   CALL MPI_WAIT(req_s, stt, ierr)
                   CALL MPI_WAIT(req_r, stt, ierr)
                   DO ki = 1, n_recv(np_r)

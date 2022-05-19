@@ -43,7 +43,6 @@ MODULE m_rhonmt21
       COMPLEX coef, cil, coef1
       COMPLEX :: temp(ne)
 
-#include"cpp_double.h"
       COMPLEX CPP_BLAS_cdotc
       EXTERNAL CPP_BLAS_cdotc
 

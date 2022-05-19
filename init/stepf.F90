@@ -16,7 +16,7 @@ CONTAINS
       !     also set up FFT of U(G) on a (-2G:+2G) grid for convolutions
       !
       !*********************************************************************
-#include"cpp_double.h"
+
       USE m_cfft
       USE m_constants
        
@@ -54,10 +54,6 @@ CONTAINS
       INTEGER ierr
       INTEGER, ALLOCATABLE :: icm_local(:, :, :)
       REAL, ALLOCATABLE :: ufft_local(:), bfft_local(:)
-
-      CALL MPI_BCAST(stars%mx1, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_BCAST(stars%mx2, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_BCAST(stars%mx3, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
 #endif
 
       ifftd = 27*stars%mx1*stars%mx2*stars%mx3
@@ -289,8 +285,8 @@ CONTAINS
       ENDDO
 
 #ifdef CPP_MPI
-      CALL MPI_REDUCE(ufft_local, stars%ufft, ifftd, CPP_MPI_REAL, MPI_SUM, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_REDUCE(bfft_local, bfft, ifftd, CPP_MPI_REAL, MPI_SUM, 0, fmpi%mpi_comm, ierr)
+      CALL MPI_REDUCE(ufft_local, stars%ufft, ifftd, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr)
+      CALL MPI_REDUCE(bfft_local, bfft, ifftd, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr)
       CALL MPI_REDUCE(icm_local, icm, size(icm), MPI_INTEGER, MPI_SUM, 0, fmpi%mpi_comm, ierr)
 #endif
 

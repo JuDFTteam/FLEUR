@@ -64,7 +64,7 @@ c*******************************************c
       USE m_eig66_io
 
       IMPLICIT NONE
-#include "cpp_double.h"
+
 #ifdef CPP_MPI
       integer ierr(3)
       integer cpu_index

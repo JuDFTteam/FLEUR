@@ -8,7 +8,6 @@ MODULE m_hsmt_distspins
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE hsmt_distspins(chi,mat_tmp,mat)
-#include"cpp_double.h"
     USE m_types
     COMPLEX,INTENT(in)        :: chi(2,2)
     CLASS(t_mat),INTENT(IN)    :: mat_tmp

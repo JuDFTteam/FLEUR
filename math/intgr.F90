@@ -24,13 +24,11 @@ MODULE m_intgr
   !                                                            m. weinert
   !**********************************************************************
 
-#include"cpp_double.h"
-
   IMPLICIT NONE
 
   !INTRINSIC exp,log
   INTERFACE
-    REAL FUNCTION CPP_BLAS_sdot( n, f1, is1, f2, is2 )
+    REAL FUNCTION ddot( n, f1, is1, f2, is2 )
       INTEGER, INTENT (IN) :: n, is1, is2
       REAL,    INTENT (IN) :: f1(n), f2(n)
     END FUNCTION
@@ -43,7 +41,6 @@ MODULE m_intgr
   interface intgz1Reverse
     module procedure intgz1RealReverse, intgz1ComplexReverse
   end interface
-
 
   INTEGER, PARAMETER, PRIVATE :: nr  = 7 , nr1 = 6
   REAL,    PARAMETER, PRIVATE :: h0 = 140.
@@ -105,7 +102,7 @@ MODULE m_intgr
         yr(i) = r(i)*y(i)
       ENDDO
       DO j = 1,n0 - 1
-        z = z + h*CPP_BLAS_sdot(7,a(1,j),1,yr,1)/60480.
+        z = z + h*ddot(7,a(1,j),1,yr,1)/60480.
       ENDDO
     ENDIF
     r(1) = r(n0)
@@ -119,7 +116,7 @@ MODULE m_intgr
       DO i = 1,nr
         yr(i) = h*ih(i)*r(i)/h0
       ENDDO
-      z = z + CPP_BLAS_sdot(nr,yr,1,y(n0),1)
+      z = z + ddot(nr,yr,1,y(n0),1)
       n0 = n0 + nr1
       r(1) = r(nr)
     ENDDO
@@ -161,7 +158,7 @@ MODULE m_intgr
       rr = dr*rr
     ENDDO
     DO j = 1,nr - 2
-      z(j+1) = z(j) + h*CPP_BLAS_sdot(7,a(1,j),1,yr,1)/60480.
+      z(j+1) = z(j) + h*ddot(7,a(1,j),1,yr,1)/60480.
     ENDDO
     !
     !--->    simpson integration, j>nr-1
@@ -170,7 +167,7 @@ MODULE m_intgr
       r(i) = h*ih(i)*r(i)/h0
     ENDDO
     DO j = nr,jri
-      z(j) = z(j-nr1) + CPP_BLAS_sdot(nr,r,1,y(j-nr1),1)
+      z(j) = z(j-nr1) + ddot(nr,r,1,y(j-nr1),1)
       DO i = 1,7
         r(i) = dr*r(i)
       ENDDO
@@ -211,7 +208,7 @@ MODULE m_intgr
       yr(i) = rmsh(i)*y(i)
     ENDDO
     DO j = 1,nr - 2
-      z(j+1) = z(j) + h*CPP_BLAS_sdot(7,a(1,j),1,yr,1)/60480.
+      z(j+1) = z(j) + h*ddot(7,a(1,j),1,yr,1)/60480.
     ENDDO
     !
     !--->    simpson integration, j>nr-1
@@ -220,7 +217,7 @@ MODULE m_intgr
       r(i) = h*ih(i)*r(i)/h0
     ENDDO
     DO j = nr,jri
-      z(j) = z(j-nr1) + CPP_BLAS_sdot(nr,r,1,y(j-nr1),1)
+      z(j) = z(j-nr1) + ddot(nr,r,1,y(j-nr1),1)
       DO i = 1,7
         r(i) = dr*r(i)
       ENDDO
@@ -381,7 +378,7 @@ END SUBROUTINE intgr3_modern
     yl = 0.0
     IF (n0.GT.1) THEN
       DO j = 1, n0 - 1
-        yl = yl + CPP_BLAS_sdot(7,a(1,j),1,y,1)
+        yl = yl + ddot(7,a(1,j),1,y,1)
       ENDDO
       yl = h*yl/60480.
     END IF
@@ -438,7 +435,7 @@ END SUBROUTINE intgr3_modern
     !
     DO j = 1,nr - 2
       yl = 0
-      yl = yl + CPP_BLAS_sdot(7,a(1,j),1,y,1)
+      yl = yl + ddot(7,a(1,j),1,y,1)
       z(j+1) = z(j) + h*yl/60480.
     ENDDO
     !
@@ -577,7 +574,7 @@ END SUBROUTINE intgr3_modern
             END DO
             z1 = 0.
             DO j = 1, n0 - 1
-               z1 = z1 + CPP_BLAS_sdot(7,a(1,j),1,yr,1)
+               z1 = z1 + ddot(7,a(1,j),1,yr,1)
             END DO
             z = z + z1 * h / 60480.
          END IF
@@ -591,7 +588,7 @@ END SUBROUTINE intgr3_modern
             DO i = 1,nr
                yr(i) = ih1(i)*r(i+n0-1)
             END DO
-            z = z + CPP_BLAS_sdot(nr,yr,1,y(n0),1)
+            z = z + ddot(nr,yr,1,y(n0),1)
             n0 = n0 + nr1
          END DO
 
@@ -619,7 +616,7 @@ END SUBROUTINE intgr3_modern
         END DO
 
         DO j = 1,nr - 2
-            z(j+1) = z(j) + h*CPP_BLAS_sdot(7,a(1,j),1,yr,1)/60480.
+            z(j+1) = z(j) + h*ddot(7,a(1,j),1,yr,1)/60480.
         END DO
 
         DO i = 1,nr
@@ -627,7 +624,7 @@ END SUBROUTINE intgr3_modern
         END DO
 
         DO j = nr,jri
-            z(j) = z(j-nr1) + CPP_BLAS_sdot(nr,r,1,y(j-nr1),1)
+            z(j) = z(j-nr1) + ddot(nr,r,1,y(j-nr1),1)
             DO i = 1,7
                 r(i) = dr*r(i)
             END DO

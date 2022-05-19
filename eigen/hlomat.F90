@@ -18,8 +18,7 @@ MODULE m_hlomat
 CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
        ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,lapwq)
-    !
-#include"cpp_double.h"
+
     USE m_hsmt_ab
     USE m_types
 !    USE m_types_mpimat
@@ -96,8 +95,8 @@ CONTAINS
          abclo(:,:,:,:)=abcloPr(:,:,:,:)
          !$acc end kernels
 #ifndef _OPENACC
-         CALL CPP_BLAS_ccopy(SIZE(abCoeffsPr,1)*SIZE(abCoeffsPr,2),abCoeffsPr(:,:),1,abCoeffs(:,:),1)
-         CALL CPP_BLAS_ccopy(SIZE(abcloPr,1)*SIZE(abcloPr,2)*SIZE(abcloPr,3)*SIZE(abcloPr,4),abcloPr(:,:,:,:),1,abclo(:,:,:,:),1)
+         CALL zcopy(SIZE(abCoeffsPr,1)*SIZE(abCoeffsPr,2),abCoeffsPr(:,:),1,abCoeffs(:,:),1)
+         CALL zcopy(SIZE(abcloPr,1)*SIZE(abcloPr,2)*SIZE(abcloPr,3)*SIZE(abcloPr,4),abcloPr(:,:,:,:),1,abclo(:,:,:,:),1)
 #endif
       ELSE
          CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo(:,:,:,:),alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
@@ -126,7 +125,7 @@ CONTAINS
          !$acc & copyin(lapw%index_lo(:,na),lapwPr%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,ilSpinPr,ilSpin),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
          !$acc & copyin(ud,ud%us(:,ntyp,ilSpin),ud%uds(:,ntyp,ilSpin),ud%dus(:,ntyp,ilSpin),ud%dulos(:,ntyp,ilSpin),ud%duds(:,ntyp,ilSpin))&
          !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
-         !$acc & create(ax,bx,cx)&
+         !$acc & create(ax,bx,cx,axpr,bxpr,cxpr)&
          !$acc & default(none)
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)

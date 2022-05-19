@@ -15,7 +15,6 @@ c     ************************************************************
 c     subroutine constructs the a,b coefficients of the linearized
 c     m.t. wavefunctions for each band and atom.       c.l. fu
 c     ************************************************************
-#include "cpp_double.h"
 
       USE m_constants
       USE m_setabc1locdn

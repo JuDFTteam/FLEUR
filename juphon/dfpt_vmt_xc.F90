@@ -11,7 +11,6 @@ USE m_judft
 
 CONTAINS
    SUBROUTINE dfpt_vmt_xc(fmpi,sphhar,atoms,den,den1,den1im,xcpot,input,sym,noco,vTot,dfptvTotimag)
-#include"cpp_double.h"
       use m_libxc_postprocess_gga
       USE m_mt_tofrom_grid
       USE m_types_xcpot_inbuild
@@ -110,8 +109,8 @@ CONTAINS
 
       CALL finish_mt_grid()
 #ifdef CPP_MPI
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,dfptvTotimag%mt,SIZE(dfptvTotimag%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,dfptvTotimag%mt,SIZE(dfptvTotimag%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
       !
       RETURN

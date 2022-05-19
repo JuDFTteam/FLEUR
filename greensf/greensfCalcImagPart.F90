@@ -24,8 +24,6 @@ MODULE m_greensfCalcImagPart
       TYPE(t_greensfBZintCoeffs),INTENT(IN)     :: greensfBZintCoeffs
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
 
-#include"cpp_double.h"
-
       INTEGER  :: ikpt_i,ikpt,nBands,jsp,i_gf,nLO,imatSize
       INTEGER  :: l,lp,m,mp,iBand,ie,j,eGrid_start,eGrid_end
       INTEGER  :: indUnique,i_elem,imat,iLO,iLOp,i_elemLO,i_elem_imag,i_elemLO_imag
@@ -207,32 +205,32 @@ MODULE m_greensfCalcImagPart
 
                   ENDDO!ib
                   IF(l_sphavg.AND..NOT.l_kresolved_int) THEN
-                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%sphavg(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%sphavg(:,m,mp,i_elem_imag,spin_ind),1)
                   ELSE IF(.NOT.l_kresolved_int) THEN
-                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%uu(:,m,mp,i_elem_imag,spin_ind),1)
-                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,2),1,greensfImagPart%dd(:,m,mp,i_elem_imag,spin_ind),1)
-                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,3),1,greensfImagPart%ud(:,m,mp,i_elem_imag,spin_ind),1)
-                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,4),1,greensfImagPart%du(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%uu(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,2),1,greensfImagPart%dd(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,3),1,greensfImagPart%ud(:,m,mp,i_elem_imag,spin_ind),1)
+                     CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,4),1,greensfImagPart%du(:,m,mp,i_elem_imag,spin_ind),1)
 
                      IF(nLO>0) THEN
                         imat = 0
                         DO iLO = 1, nLO
                            imat = imat + 4
-                           CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,imat+1),1,greensfImagPart%uulo(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
-                           CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,imat+2),1,greensfImagPart%ulou(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
-                           CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,imat+3),1,greensfImagPart%dulo(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
-                           CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,imat+4),1,greensfImagPart%ulod(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
+                           CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,imat+1),1,greensfImagPart%uulo(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
+                           CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,imat+2),1,greensfImagPart%ulou(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
+                           CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,imat+3),1,greensfImagPart%dulo(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
+                           CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,imat+4),1,greensfImagPart%ulod(:,m,mp,iLO,i_elemLO_imag,spin_ind),1)
                         ENDDO
                         imat = 0
                         DO iLO = 1, nLO
                            DO iLOp = 1, nLO
                               imat = imat + 1
-                              CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,4 + 4*nLO+imat),1,greensfImagPart%uloulop(:,m,mp,iLO,iLOp,i_elemLO_imag,spin_ind),1)
+                              CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,4 + 4*nLO+imat),1,greensfImagPart%uloulop(:,m,mp,iLO,iLOp,i_elemLO_imag,spin_ind),1)
                            ENDDO
                         ENDDO
                      ENDIF
                   ELSE
-                     CALL CPP_BLAS_caxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%sphavg_k(:,m,mp,i_elem_imag,spin_ind,ikpt_i),1)
+                     CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%sphavg_k(:,m,mp,i_elem_imag,spin_ind,ikpt_i),1)
                   ENDIF
 
                ENDDO!m
