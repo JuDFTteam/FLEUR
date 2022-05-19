@@ -477,7 +477,7 @@ CONTAINS
          rhtxy(1:,1:,1:,:) = rhtxy(1:,1:,1:,:)/2.0
 
          rho(:,0:,1:,3) = -rho(:,0:,1:,3)
-         qpw(1:,3) = -qpw(1:,3)
+         qpw(1:,3) = -qpw(1:,3) ! TODO: This is a consequence of the magic minus.
          rht(1:,1:,3) = -rht(1:,1:,3)
          rhtxy(1:,1:,1:,3) = -rhtxy(1:,1:,1:,3)
 
