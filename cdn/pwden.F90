@@ -278,6 +278,7 @@ CONTAINS
             END DO
             ELSE
                !TODO: This looks ultra different for DFPT.
+               !TODO: Only touch this once the magic minus is fully consistent.
             END IF
 
             ! In a non-collinear calculation the interstitial charge
@@ -337,7 +338,8 @@ CONTAINS
                chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
             END DO
             ELSE
-               !TODO: This looks ultra different for DFPT.
+               chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
+               IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
             END IF
 
             IF (input%l_f) THEN
@@ -482,6 +484,12 @@ CONTAINS
                den%pw(istr, 3) = den%pw(istr, 3) - ImagUnit*cwk(istr)
                ! TODO: This is a magic minus. It should be + ImagUnit*cwk(istr)
             ENDDO
+            IF (l_dfpt) THEN
+               ! TODO: Only touch this once the magic minus is fully consistent.
+               DO istr = 1, stars%ng3_fft
+                  den%pw(istr, 4) = den%pw(istr, 4) + ImagUnit*cwk(istr)
+               ENDDO
+            END IF
          ENDIF
       ENDDO
 

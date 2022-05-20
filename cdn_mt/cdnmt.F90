@@ -12,7 +12,7 @@ MODULE m_cdnmt
 CONTAINS
 
   SUBROUTINE cdnmt(jspd,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
-                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,rho,hub1inp,moments,jDOS,hub1data)
+                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,rho,hub1inp,moments,jDOS,hub1data,rhoIm)
       !! Current situation:
       !!
       !! This routine calculates density contributions
@@ -55,12 +55,13 @@ CONTAINS
 
       REAL, INTENT    (IN) :: vr(atoms%jmtd,atoms%ntype,jspd)
       REAL, INTENT (INOUT) :: rho(:,0:,:,:)!(toms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd)
+      REAL, OPTIONAL, INTENT(INOUT) :: rhoIm(:,0:,:,:)
 
       INTEGER, PARAMETER :: lcf=3
 
       INTEGER :: itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj,n_dos
       INTEGER :: ilo,ilop,i,i_hia,i_exc
-      REAL    :: s,wronk,qmtt
+      REAL    :: wronk,qmtt
       COMPLEX :: cs, rho21
       LOGICAL :: l_hia,l_performSpinavg
 
@@ -80,10 +81,10 @@ CONTAINS
 
          qmtl = 0
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(usdus,rho,moments,qmtl,hub1inp,hub1data) &
+         !$OMP SHARED(usdus,rho,moments,qmtl,hub1inp,hub1data,rhoIm) &
          !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_performSpinavg)&
          !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd,input,sym)&
-         !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)&
+         !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)&
          !$OMP PRIVATE(l_hia,vrTmp)
          IF (noco%l_mperp) THEN
             ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
@@ -124,14 +125,15 @@ CONTAINS
                   llp = (l*(l+1))/2 + l
 
                   DO j = 1,atoms%jri(itype)
-                     s = REAL( &
-                         denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)*(f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin)) &
-                       + denCoeffs%mt_coeff(l,itype,0,1,ispin,ispin)*(f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin)) &
-                       + denCoeffs%mt_coeff(l,itype,1,0,ispin,ispin)*(g(j,1,l,ispin)*f(j,1,l,ispin)+g(j,2,l,ispin)*f(j,2,l,ispin)) &
-                       + denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin)*(g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin)))
-                     rho(j,0,itype,ispin) = rho(j,0,itype,ispin) + s/(atoms%neq(itype)*sfp_const)
-                     IF (l<=input%lResMax.AND.PRESENT(moments)) THEN
-                        moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + s/(atoms%neq(itype)*sfp_const)
+                     cs = denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)*(f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin)) &
+                        + denCoeffs%mt_coeff(l,itype,0,1,ispin,ispin)*(f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin)) &
+                        + denCoeffs%mt_coeff(l,itype,1,0,ispin,ispin)*(g(j,1,l,ispin)*f(j,1,l,ispin)+g(j,2,l,ispin)*f(j,2,l,ispin)) &
+                        + denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin)*(g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin))
+                     rho(j,0,itype,ispin) = rho(j,0,itype,ispin) + REAL(cs)/(atoms%neq(itype)*sfp_const)
+                     IF (l<=input%lResMax.AND.PRESENT(moments)) THEN !DFT case
+                        moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + REAL(cs)/(atoms%neq(itype)*sfp_const)
+                     ELSE IF (.NOT.PRESENT(moments)) THEN
+                        rhoIm(j,0,itype,ispin) = rhoIm(j,0,itype,ispin) + AIMAG(cs)/(atoms%neq(itype)*sfp_const)
                      END IF
                      IF(PRESENT(hub1data).AND.l<=lmaxU_const) THEN
                         hub1data%cdn_atomic(j,l,itype,ispin) = hub1data%cdn_atomic(j,l,itype,ispin) &
@@ -148,29 +150,30 @@ CONTAINS
                DO l = 0,atoms%lmaxd
                   qmtllo(l) = 0.0
                END DO
-               IF (PRESENT(moments)) THEN
-               CALL timestart("cdnmt LO diagonal")
-               CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
-                            enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
-                            f(:,:,0:,ispin),g(:,:,0:,ispin),&
-                            rho(:,0:,itype,ispin),qmtllo,moments=moments)
-               CALL timestop("cdnmt LO diagonal")
+               IF (PRESENT(moments)) THEN !DFT case
+                  CALL timestart("cdnmt LO diagonal")
+                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
+                               enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                               f(:,:,0:,ispin),g(:,:,0:,ispin),&
+                               rho(:,0:,itype,ispin),qmtllo,moments=moments)
+                  CALL timestop("cdnmt LO diagonal")
 
-               !l-decomposed density for each atom type
-               qmtt = 0.0
-               DO l = 0,atoms%lmax(itype)
-                  qmtl(l,ispin,itype) = REAL(denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)+denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin) &
-                                      * usdus%ddn(l,itype,ispin))/atoms%neq(itype) + qmtllo(l)
-                  qmtt = qmtt + qmtl(l,ispin,itype)
-               END DO
-               moments%chmom(itype,ispin) = qmtt
-               ELSE
-               CALL timestart("cdnmt LO diagonal")
-               CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
-                            enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
-                            f(:,:,0:,ispin),g(:,:,0:,ispin),&
-                            rho(:,0:,itype,ispin),qmtllo)
-               CALL timestop("cdnmt LO diagonal")
+                  !l-decomposed density for each atom type
+                  qmtt = 0.0
+                  DO l = 0,atoms%lmax(itype)
+                     qmtl(l,ispin,itype) = REAL(denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)+denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin) &
+                                         * usdus%ddn(l,itype,ispin))/atoms%neq(itype) + qmtllo(l)
+                     qmtt = qmtt + qmtl(l,ispin,itype)
+                  END DO
+                  moments%chmom(itype,ispin) = qmtt
+               ELSE !DFPT case
+                  CALL timestart("cdnmt LO diagonal")
+                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
+                               enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                               f(:,:,0:,ispin),g(:,:,0:,ispin),&
+                               rho(:,0:,itype,ispin),qmtllo,&
+                               rhoIm=rhoIm(:,0:,itype,ispin), f2=f(:,:,0:,ispin), g2=g(:,:,0:,ispin))
+                  CALL timestop("cdnmt LO diagonal")
                END IF
 
                !Get the magnetic moment for the shells where we defined additional exchange splittings for DFT+Hubbard 1
@@ -202,15 +205,16 @@ CONTAINS
                            .AND.(l==lcf.AND.lp==lcf)) CYCLE !Exclude non-spherical contributions for CF
 
                         DO j = 1,atoms%jri(itype)
-                           s = 0.0
-                           s = REAL( &
-                               denCoeffs%nmt_coeff(llp,lh,itype,0,0,ispin,ispin)*(f(j,1,lp,ispin)*f(j,1,l,ispin)+ f(j,2,lp,ispin)*f(j,2,l,ispin)) &
-                             + denCoeffs%nmt_coeff(llp,lh,itype,0,1,ispin,ispin)*(f(j,1,lp,ispin)*g(j,1,l,ispin)+ f(j,2,lp,ispin)*g(j,2,l,ispin)) &
-                             + denCoeffs%nmt_coeff(llp,lh,itype,1,0,ispin,ispin)*(g(j,1,lp,ispin)*f(j,1,l,ispin)+ g(j,2,lp,ispin)*f(j,2,l,ispin)) &
-                             + denCoeffs%nmt_coeff(llp,lh,itype,1,1,ispin,ispin)*(g(j,1,lp,ispin)*g(j,1,l,ispin)+ g(j,2,lp,ispin)*g(j,2,l,ispin)))
-                           rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ s/atoms%neq(itype)
-                           IF ((l<=input%lResMax).AND.(lp<=input%lResMax).AND.PRESENT(moments)) THEN
-                              moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + s/atoms%neq(itype)
+                           cs = 0.0
+                           cs = denCoeffs%nmt_coeff(llp,lh,itype,0,0,ispin,ispin)*(f(j,1,lp,ispin)*f(j,1,l,ispin)+ f(j,2,lp,ispin)*f(j,2,l,ispin)) &
+                              + denCoeffs%nmt_coeff(llp,lh,itype,0,1,ispin,ispin)*(f(j,1,lp,ispin)*g(j,1,l,ispin)+ f(j,2,lp,ispin)*g(j,2,l,ispin)) &
+                              + denCoeffs%nmt_coeff(llp,lh,itype,1,0,ispin,ispin)*(g(j,1,lp,ispin)*f(j,1,l,ispin)+ g(j,2,lp,ispin)*f(j,2,l,ispin)) &
+                              + denCoeffs%nmt_coeff(llp,lh,itype,1,1,ispin,ispin)*(g(j,1,lp,ispin)*g(j,1,l,ispin)+ g(j,2,lp,ispin)*g(j,2,l,ispin))
+                           rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ REAL(cs)/atoms%neq(itype)
+                           IF ((l<=input%lResMax).AND.(lp<=input%lResMax).AND.PRESENT(moments)) THEN !DFT case
+                              moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + REAL(cs)/atoms%neq(itype)
+                           ELSE IF (.NOT.PRESENT(moments)) THEN
+                              rhoIm(j,lh,itype,ispin) = rhoIm(j,lh,itype,ispin)+ AIMAG(cs)/atoms%neq(itype)
                            END IF
                         END DO
                      END DO
@@ -258,7 +262,18 @@ CONTAINS
                            + denCoeffs%mt_coeff(l,itype,1,1,2,1)*(g(j,1,l,2)*g(j,1,l,1)+g(j,2,l,2)*g(j,2,l,1))
                         rho21 = cs/(atoms%neq(itype)*sfp_const)
                         rho(j,0,itype,3) = rho(j,0,itype,3) +  REAL(rho21)
-                        rho(j,0,itype,4) = rho(j,0,itype,4) + AIMAG(rho21)
+                        IF (PRESENT(moments)) THEN
+                           rho(j,0,itype,4) = rho(j,0,itype,4) + AIMAG(rho21)
+                        ELSE
+                           rhoIm(j,0,itype,3) = rhoIm(j,0,itype,3) + AIMAG(rho21)
+                           cs = denCoeffs%mt_coeff(l,itype,0,0,1,2)*(f(j,1,l,1)*f(j,1,l,2)+f(j,2,l,1)*f(j,2,l,2)) &
+                              + denCoeffs%mt_coeff(l,itype,0,1,1,2)*(f(j,1,l,1)*g(j,1,l,2)+f(j,2,l,1)*g(j,2,l,2)) &
+                              + denCoeffs%mt_coeff(l,itype,1,0,1,2)*(g(j,1,l,1)*f(j,1,l,2)+g(j,2,l,1)*f(j,2,l,2)) &
+                              + denCoeffs%mt_coeff(l,itype,1,1,1,2)*(g(j,1,l,1)*g(j,1,l,2)+g(j,2,l,1)*g(j,2,l,2))
+                           rho21 = cs/(atoms%neq(itype)*sfp_const)
+                           rho(j,0,itype,4) = rho(j,0,itype,4) +  REAL(rho21)
+                           rhoIm(j,0,itype,4) = rhoIm(j,0,itype,4) +  AIMAG(rho21)
+                        END IF
                         IF (l<=input%lResMax.AND.PRESENT(moments)) THEN
                            moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3)+  REAL(cs/(atoms%neq(itype)*sfp_const))
                            moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4)+ AIMAG(cs/(atoms%neq(itype)*sfp_const))
@@ -270,24 +285,29 @@ CONTAINS
                   !New feature: LOs for the offdiagonal density.
                   !Add the contribution of LO-LO and LAPW-LO cross-terms to rho for
                   !the offdiagonal magnetism.
-                  IF (PRESENT(moments)) THEN
-                  CALL timestart("cdnmt LO off-diagonal")
-                  CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
-                               enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
-                               f(:,:,0:,1),g(:,:,0:,1),&
-                               rho(:,0:,itype,3),qmtllo,moments=moments,&
-                               rhoIm=rho(:,0:,itype,4), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
-                  !Note: qmtllo is irrelevant here
-                  CALL timestop("cdnmt LO off-diagonal")
+                  IF (PRESENT(moments)) THEN !DFT case
+                     CALL timestart("cdnmt LO off-diagonal")
+                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
+                                  enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                                  f(:,:,0:,1),g(:,:,0:,1),&
+                                  rho(:,0:,itype,3),qmtllo,moments=moments,&
+                                  rhoIm=rho(:,0:,itype,4), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
+                     !Note: qmtllo is irrelevant here
+                     CALL timestop("cdnmt LO off-diagonal")
                   ELSE
-                  CALL timestart("cdnmt LO off-diagonal")
-                  CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
-                               enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
-                               f(:,:,0:,1),g(:,:,0:,1),&
-                               rho(:,0:,itype,3),qmtllo,&
-                               rhoIm=rho(:,0:,itype,4), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
-                  !Note: qmtllo is irrelevant here
-                  CALL timestop("cdnmt LO off-diagonal")
+                     CALL timestart("cdnmt LO off-diagonal")
+                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
+                                  enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                                  f(:,:,0:,1),g(:,:,0:,1),&
+                                  rho(:,0:,itype,3),qmtllo,&
+                                  rhoIm=rhoIm(:,0:,itype,3), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
+                     CALL cdnmtlo(itype,1,2,input,atoms,sphhar,sym,usdus,noco,&
+                                  enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                                  f(:,:,0:,2),g(:,:,0:,2),&
+                                  rho(:,0:,itype,4),qmtllo,&
+                                  rhoIm=rhoIm(:,0:,itype,4), f2=f(:,:,0:,1), g2=g(:,:,0:,1))
+                     !Note: qmtllo is irrelevant here
+                     CALL timestop("cdnmt LO off-diagonal")
                   END IF
 
                   !Non-spherical components for the off-diagonal density

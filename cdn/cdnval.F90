@@ -365,7 +365,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    IF (fmpi%irank==0) THEN
       CALL timestart("cdnmt")
       CALL cdnmt(input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
-                 vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,den%mt,hub1inp,moments,jDOS,hub1data)
+                 vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,den%mt,hub1inp,moments,jDOS,hub1data=hub1data)
       CALL timestop("cdnmt")
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end

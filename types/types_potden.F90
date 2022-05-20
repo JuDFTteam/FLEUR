@@ -273,7 +273,7 @@ CONTAINS
 
   end subroutine copyPotDen
 
-  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,jspins,potden_type)
+  SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,jspins,potden_type,l_dfpt)
     USE m_judft
     USE m_types_atoms
     USE m_types_stars
@@ -289,13 +289,18 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_noco),INTENT(IN)  :: noco
     INTEGER,INTENT(IN)       :: jspins, potden_type
+    LOGICAL, OPTIONAL, INTENT(IN) :: l_dfpt
 
+    LOGICAL :: do_dfpt
+
+    do_dfpt = .FALSE.
+    IF (PRESENT(l_dfpt)) do_dfpt = l_dfpt
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
          atoms%n_denmat,jspins,noco%l_noco,noco%l_mperp,potden_type,&
-         vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         vacuum%nmzd,vacuum%nmzxyd,stars%ng2,do_dfpt)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d,do_dfpt)
     USE m_constants
     USE m_judft
     IMPLICIT NONE
@@ -303,8 +308,13 @@ CONTAINS
     INTEGER,INTENT(IN)          :: ng3,jmtd,coreMsh,nlhd,ntype,n_u,jspins,potden_type
     LOGICAL,INTENT(IN)          :: nocoExtraDim,nocoExtraMTDim
     INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
+    LOGICAL,OPTIONAL,INTENT(IN) :: do_dfpt
 
     INTEGER:: err(4)
+    LOGICAL :: l_dfpt
+
+    l_dfpt = .FALSE.
+    IF (PRESENT(do_dfpt)) l_dfpt = do_dfpt
 
     err=0
     pd%iter=0
@@ -317,7 +327,11 @@ CONTAINS
     IF(ALLOCATED(pd%tec)) DEALLOCATE (pd%tec)
     IF(ALLOCATED(pd%mtCore)) DEALLOCATE (pd%mtCore)
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
-    ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
+    IF (l_dfpt) THEN
+      ALLOCATE (pd%pw(ng3,MERGE(4,jspins,nocoExtraDim)),stat=err(1))
+    ELSE
+      ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
+    END IF
     ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
@@ -344,7 +358,7 @@ CONTAINS
 !!$    !This was brysh1 before
 !!$    USE m_types
 !!$    IMPLICIT NONE
-!!$     
+!!$
 !!$    TYPE(t_input),INTENT(IN)   :: input
 !!$    TYPE(t_vacuum),INTENT(IN)  :: vacuum
 !!$    TYPE(t_noco),INTENT(IN)    :: noco
