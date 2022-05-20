@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !-------------------------------------------------------------------------------
 MODULE m_step_function
-   !> Contains revised subroutines to construct the step function \f$\Theta(r)\f$
+   !! Contains revised subroutines to construct the step function \f$\Theta(r)\f$
    !! both on a fine real space grid as well as in \f$G<G_{max}\f$ space.
    USE m_juDFT
    USE m_types
@@ -13,7 +13,7 @@ MODULE m_step_function
 
 CONTAINS
    SUBROUTINE stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir)
-      !> Construct the analytical representation of the step function on a big
+      !! Construct the analytical representation of the step function on a big
       !! reciprocal grid.
 #include"cpp_double.h"
 
