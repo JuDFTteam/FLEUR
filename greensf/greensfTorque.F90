@@ -13,8 +13,6 @@ MODULE m_greensfTorque
 
    IMPLICIT NONE
 
-#include"cpp_double.h"
-
    CONTAINS
 
    SUBROUTINE greensfTorque(greensFunction,gfinp,fmpi,sphhar,atoms,sym,noco,nococonv,input,f,g,flo,vTot)
@@ -228,8 +226,8 @@ MODULE m_greensfTorque
       !Collect the torque to rank 0
       n = SIZE(torque)
       ALLOCATE(rtmp(n))
-      CALL MPI_REDUCE(torque,rtmp,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-      IF(fmpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,rtmp,1,torque,1)
+      CALL MPI_REDUCE(torque,rtmp,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+      IF(fmpi%irank.EQ.0) CALL dcopy(n,rtmp,1,torque,1)
       DEALLOCATE(rtmp)
 #endif
 

@@ -73,10 +73,6 @@ CONTAINS
       COMPLEX :: coef, cil, cmv
       COMPLEX :: temp(ne)
 
-!#include"cpp_double.h"
-!      COMPLEX CPP_BLAS_cdotc
-!      EXTERNAL CPP_BLAS_cdotc
-
       INTEGER jmem,l,lh,llp,llpmax,lm,lmp,lp,lv,m, mp,mv,na,natom,nn,ns,nt,lphi,lplow
 
       DO ns=1,sym%nsymt

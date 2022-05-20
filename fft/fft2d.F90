@@ -19,7 +19,7 @@ CONTAINS
     !* stars%pgfft2(i)   contains the phases of the G-vectors of sph.  *
     !*                                                           *
     !*************************************************************
-#include"cpp_double.h"
+
     USE m_types_fftgrid
     USE m_types
     IMPLICIT NONE

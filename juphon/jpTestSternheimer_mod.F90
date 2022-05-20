@@ -765,7 +765,6 @@ module m_jpTestSternheimer
     & ulouilopn, GbasVec, ilst, nv, ne, nobd, El, iloTable, nRadFun, kveclo, ilo2p, clnu_atom, nmem_atom, mlh_atom, vEff0MTsh )
 
 #include "cppmacro.h"
-#include "recycledRoutines/cpp_double.h"
     use m_types, only : t_atoms, t_sym, t_cell, t_sphhar, t_dimension, t_enpara, t_usdus, t_input, t_kpts, t_potential, t_tlmplm, t_noco
      
     use m_abcof
@@ -4958,7 +4957,6 @@ integer :: ii
       &GbasBra, GbasKet, gdp, vEff0IR, zBra, zKet, surfInt, kpq2kPrVec )
 
 #include "recycledRoutines/cpp_arch.h"
-#include "recycledRoutines/cpp_double.h"
 
     use m_types
     use m_ylm_old

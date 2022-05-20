@@ -105,8 +105,6 @@ CONTAINS
 
     SUBROUTINE dfpt_vmts( fmpi, atoms, cell, vpw, rho, vr, iDatom, iDtype, iDir, gqdp, ngqdp, qvec, l_ext)
 
-#include"cpp_double.h"
-
         USE m_constants
         USE m_types
         USE m_intgr, only : intgr2LinIntp
@@ -194,7 +192,7 @@ CONTAINS
 #ifdef CPP_MPI
         n1 = (atoms%lmaxd + 1)**2 * atoms%nat
         ALLOCATE( c_b(n1) )
-        CALL MPI_REDUCE( vtl, c_b, n1, CPP_MPI_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
+        CALL MPI_REDUCE( vtl, c_b, n1, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
         IF ( fmpi%irank == 0 ) vtl = reshape( c_b, (/(atoms%lmaxd + 1)**2,atoms%nat/) )
         DEALLOCATE( c_b )
 #endif
@@ -245,8 +243,6 @@ CONTAINS
     END SUBROUTINE dfpt_vmts
 
     SUBROUTINE dfpt_psqpw(fmpi, atoms, cell, qpw, rho, rho0MTsh, rho0IRpw, psq, l_ext, iDatom, iDtype, ngqdp, gqdp, ngdp, gdp, qvec)
-
-#include"cpp_double.h"
 
 #ifdef CPP_MPI
         USE mpi
@@ -299,9 +295,9 @@ CONTAINS
 
 #ifdef CPP_MPI
         psq(:, :) = cmplx(0.0, 0.0)
-        CALL MPI_BCAST( qpw, size(qpw), CPP_MPI_COMPLEX, 0, fmpi%mpi_comm, ierr )
+        CALL MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
         nd = (atoms%lmaxd + 1)**2 * atoms%nat * 3
-        CALL MPI_BCAST( qlm, nd, CPP_MPI_COMPLEX, 0, fmpi%MPI_COMM, ierr )
+        CALL MPI_BCAST( qlm, nd, MPI_DOUBLE_COMPLEX, 0, fmpi%MPI_COMM, ierr )
 #endif
 
         pn = 0.0
@@ -354,7 +350,7 @@ CONTAINS
 
 #ifdef CPP_MPI
         ALLOCATE(c_b(3 * ngqdp))
-        CALL MPI_REDUCE( psq, c_b, 3 * ngqdp, CPP_MPI_COMPLEX, MPI_SUM, 0, fmpi%MPI_COMM, ierr )
+        CALL MPI_REDUCE( psq, c_b, 3 * ngqdp, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%MPI_COMM, ierr )
         IF ( fmpi%irank == 0 ) THEN
             psq = reshape(c_b, (/3,ngqdp/))
         END IF

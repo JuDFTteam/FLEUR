@@ -107,7 +107,7 @@ CONTAINS
     USE m_eig66_io
 
     IMPLICIT NONE
-#include "cpp_double.h"
+
 #ifdef CPP_MPI
     INTEGER ierr(3)
     INTEGER cpu_index
@@ -2234,7 +2234,7 @@ CONTAINS
                 length=nwfs*nwfs
                 CALL MPI_REDUCE(&
                      hwfr,hwfr2,length,&
-                     CPP_MPI_COMPLEX,MPI_SUM,0,&
+                     MPI_DOUBLE_COMPLEX,MPI_SUM,0,&
                      fmpi%mpi_comm,ierr(1))
                 hwfr=hwfr2
                 DEALLOCATE(hwfr2)

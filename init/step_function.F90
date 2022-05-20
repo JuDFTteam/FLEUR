@@ -15,7 +15,6 @@ CONTAINS
    SUBROUTINE stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir)
       !! Construct the analytical representation of the step function on a big
       !! reciprocal grid.
-#include"cpp_double.h"
 
       USE m_constants
 

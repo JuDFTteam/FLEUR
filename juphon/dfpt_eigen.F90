@@ -17,7 +17,6 @@ CONTAINS
 
    SUBROUTINE dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1, lapwq, td, tdV1, ud, zMatq, eigq, bqpt, neigq, eig_id, dfpt_eig_id, iDir, iDtype)
 
-#include"cpp_double.h"
       USE m_types
       USE m_constants
       USE m_dfpt_eigen_hssetup

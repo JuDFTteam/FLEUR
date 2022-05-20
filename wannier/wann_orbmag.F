@@ -42,7 +42,6 @@
 #endif
 
       IMPLICIT NONE
-#include "cpp_double.h"
 #ifdef CPP_MPI
       integer ierr(3)
       integer cpu_index

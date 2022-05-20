@@ -186,52 +186,51 @@ MODULE m_types_greensf
          CLASS(t_greensf),     INTENT(INOUT) :: this
          INTEGER,              INTENT(IN)    :: mpi_communicator
 #ifdef CPP_MPI
-#include"cpp_double.h"
          INTEGER:: ierr,n
          COMPLEX,ALLOCATABLE::ctmp(:)
 
          IF(ALLOCATED(this%gmmpMat)) THEN
             n = SIZE(this%gmmpMat)
             ALLOCATE(ctmp(n))
-            CALL MPI_ALLREDUCE(this%gmmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat,1)
+            CALL MPI_ALLREDUCE(this%gmmpMat,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL zcopy(n,ctmp,1,this%gmmpMat,1)
             DEALLOCATE(ctmp)
          ELSE IF(ALLOCATED(this%gmmpMat_k)) THEN
             n = SIZE(this%gmmpMat_k)
             ALLOCATE(ctmp(n))
-            CALL MPI_ALLREDUCE(this%gmmpMat_k,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_ccopy(n,ctmp,1,this%gmmpMat_k,1)
+            CALL MPI_ALLREDUCE(this%gmmpMat_k,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL zcopy(n,ctmp,1,this%gmmpMat_k,1)
             DEALLOCATE(ctmp)
          ELSE
             n = SIZE(this%uu)
             ALLOCATE(ctmp(n))
-            CALL MPI_ALLREDUCE(this%uu,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_ccopy(n,ctmp,1,this%uu,1)
-            CALL MPI_ALLREDUCE(this%ud,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_ccopy(n,ctmp,1,this%ud,1)
-            CALL MPI_ALLREDUCE(this%du,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_ccopy(n,ctmp,1,this%du,1)
-            CALL MPI_ALLREDUCE(this%dd,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-            CALL CPP_BLAS_ccopy(n,ctmp,1,this%dd,1)
+            CALL MPI_ALLREDUCE(this%uu,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL zcopy(n,ctmp,1,this%uu,1)
+            CALL MPI_ALLREDUCE(this%ud,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL zcopy(n,ctmp,1,this%ud,1)
+            CALL MPI_ALLREDUCE(this%du,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL zcopy(n,ctmp,1,this%du,1)
+            CALL MPI_ALLREDUCE(this%dd,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+            CALL zcopy(n,ctmp,1,this%dd,1)
             DEALLOCATE(ctmp)
 
             IF(ALLOCATED(this%uulo)) THEN
                n = SIZE(this%uulo)
                ALLOCATE(ctmp(n))
-               CALL MPI_ALLREDUCE(this%uulo,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-               CALL CPP_BLAS_ccopy(n,ctmp,1,this%uulo,1)
-               CALL MPI_ALLREDUCE(this%ulou,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-               CALL CPP_BLAS_ccopy(n,ctmp,1,this%ulou,1)
-               CALL MPI_ALLREDUCE(this%dulo,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-               CALL CPP_BLAS_ccopy(n,ctmp,1,this%dulo,1)
-               CALL MPI_ALLREDUCE(this%ulod,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-               CALL CPP_BLAS_ccopy(n,ctmp,1,this%ulod,1)
+               CALL MPI_ALLREDUCE(this%uulo,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL zcopy(n,ctmp,1,this%uulo,1)
+               CALL MPI_ALLREDUCE(this%ulou,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL zcopy(n,ctmp,1,this%ulou,1)
+               CALL MPI_ALLREDUCE(this%dulo,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL zcopy(n,ctmp,1,this%dulo,1)
+               CALL MPI_ALLREDUCE(this%ulod,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL zcopy(n,ctmp,1,this%ulod,1)
                DEALLOCATE(ctmp)
 
                n = SIZE(this%uloulop)
                ALLOCATE(ctmp(n))
-               CALL MPI_ALLREDUCE(this%uloulop,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,mpi_communicator,ierr)
-               CALL CPP_BLAS_ccopy(n,ctmp,1,this%uloulop,1)
+               CALL MPI_ALLREDUCE(this%uloulop,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,mpi_communicator,ierr)
+               CALL zcopy(n,ctmp,1,this%uloulop,1)
                DEALLOCATE(ctmp)
             ENDIF
          ENDIF

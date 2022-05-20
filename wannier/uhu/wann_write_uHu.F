@@ -43,7 +43,6 @@ c**************************c
 #ifdef CPP_MPI
       integer :: ierr
       integer :: stt(MPI_STATUS_SIZE)
-#include "cpp_double.h"
 #endif
 
       if(isize.gt.1) then
