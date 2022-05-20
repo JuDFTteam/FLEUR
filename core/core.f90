@@ -10,6 +10,12 @@ MODULE m_core
       USE m_cnodes
       USE m_coredir
       USE m_ccsdnt
+      USE m_rsimp
+      USE m_cfnorm
+      USE m_coreerr
+      USE m_corehff
+      USE m_nwrfst
+      USE m_rinvgj
 
       IMPLICIT NONE
 
@@ -34,20 +40,13 @@ MODULE m_core
       CHARACTER txtl(0:3)
       CHARACTER*3 txtk(4)
 
-      REAL rsimp
-      EXTERNAL rsimp
-
-      EXTERNAL cfnorm,coreerr,corehff,nwrfst,rinvgj
-
-      INTRINSIC abs,exp,iabs,int,sign
-
       DATA txtl/'s','p','d','f'/
       DATA txtk/'1/2','3/2','5/2','7/2'/
 !      DATA nqntab/1,2,2,3,3,3,4,4,4,4,5,5,5,6,6/
 !      DATA lqntab/0,0,1,0,1,2,0,1,2,3,0,1,2,0,1/
-      DATA tolvar/1.0E-12/
-      DATA dvstep/0.010/
-      DATA itermax/150/
+      tolvar = 1.0e-12
+      dvstep = 0.010
+      itermax = 150
 
       nrmax = mrad
       DO n = 1,nrmax

@@ -49,8 +49,6 @@ CONTAINS
       REAL bt(msh),vt(msh)
       INTEGER nqntab(15),lqntab(15)
 
-!      INTRINSIC exp,log
-
       nshell = 0
       ic = 0 ; n_old = -1 ; l_old = -1
       DO WHILE (ntab(ic+1).GT.0) 
