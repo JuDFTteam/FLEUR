@@ -263,7 +263,7 @@ CONTAINS
                CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                        fi%input, fi%sym,  CDN_ARCHIVE_TYPE_CDN_const, &
-                                                       CDN_INPUT_DEN_const, 0, rdummy, tempDistance, l_dummy, sliceDen, 'cdn_slice')
+                                                       CDN_INPUT_DEN_const, 0, rdummy, tempDistance, l_dummy, sliceDen, inFilename='cdn_slice')
                CALL sliceden%distribute(fmpi%mpi_comm)
                call nococonv%mpi_bc(fmpi%mpi_comm)
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,   fi%sym, fi%cell, &
