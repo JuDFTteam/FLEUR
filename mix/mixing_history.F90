@@ -13,21 +13,31 @@ MODULE m_mixing_history
   PUBLIC :: mixing_history_open,mixing_history_close,mixing_history_limit
 CONTAINS
 
-  SUBROUTINE mixing_history_open(mpi,maxiter)
+  SUBROUTINE mixing_history_open(mpi,maxiter,basename)
     USE m_types,ONLY:t_mpi
     INTEGER,INTENT(IN)    :: maxiter
     TYPE(t_mpi),INTENT(in):: mpi
 
-    CHARACTER(len=20):: filename
+    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+
+    CHARACTER(len=35):: filename
     LOGICAL          :: l_fileexist
     INTEGER          :: n
 
 
     IF (iter_stored>0) RETURN ! History in memory found, no need to do IO
     IF (mpi%isize>1) THEN
-       WRITE(filename,'(a,i0)') "mixing_history.",mpi%irank
+       IF (.NOT.PRESENT(basename)) THEN
+         WRITE(filename,'(a,i0)') "mixing_history.",mpi%irank
+       ELSE
+          WRITE(filename,'(a,i0)') TRIM(basename)//"_mixing_history.",mpi%irank
+       END IF
     ELSE
-       filename="mixing_history"
+       IF (.NOT.PRESENT(basename)) THEN
+          filename="mixing_history"
+       ELSE
+          filename=TRIM(basename)//"mixing_history"
+       END IF
     ENDIF
     INQUIRE(file=filename,exist=l_fileexist)
     IF (.NOT.l_fileexist) RETURN !No previous data

@@ -446,12 +446,12 @@ CONTAINS
 #endif
    END SUBROUTINE init_storage_mpi
 
-   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix,   input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i)
+   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix,   input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i, l_dfpt)
       USE m_types
       IMPLICIT NONE
       INTEGER, INTENT(IN)               :: comm_mpi
       LOGICAL, INTENT(IN)               :: l_densitymatrix
-       
+
       TYPE(t_input), INTENT(IN)         :: input
       TYPE(t_vacuum), INTENT(IN), TARGET :: vacuum
       TYPE(t_noco), INTENT(IN)          :: noco
@@ -461,7 +461,9 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN), TARGET  :: atoms_i
       TYPE(t_sym), INTENT(IN), TARGET    :: sym_i
 
-      INTEGER::js, n, len
+      LOGICAL, INTENT(IN) :: l_dfpt
+
+      INTEGER :: js, n, len
 
       !Store pointers to data-types
       IF (ASSOCIATED(atoms)) RETURN !was done before...
@@ -483,11 +485,12 @@ CONTAINS
             !Now calculate the length of the vectors
             IF (pw_here) THEN
                pw_start(js) = pw_length + 1
-               IF (sym%invs .AND. js < 3) THEN
+               IF (sym%invs .AND. js < 3 .AND. .NOT. l_dfpt) THEN
                   pw_length = pw_length + stars%ng3
                ELSE
                   pw_length = pw_length + 2*stars%ng3
                ENDIF
+               IF (l_dfpt) pw_length = pw_length + 2*stars%ng3
             ENDIF
             pw_stop(js) = pw_length
             IF (mt_here) THEN
@@ -495,13 +498,21 @@ CONTAINS
                len = 0
                !This PE stores some(or all) MT data
                DO n = mt_rank + 1, atoms%ntype, mt_size
-                  len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                  IF (l_dfpt) THEN
+                     len = len + 2*(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                  ELSE
+                     len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                  END IF
                ENDDO
                mt_length_g = MAX(len, mt_length_g)
                IF (js == 3) THEN
                   !need to store imaginary part as well...
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     IF (l_dfpt) THEN
+                        len = len + 2*(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     ELSE
+                        len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     END IF
                   ENDDO
                ENDIF
                IF (js < 3 .OR. any(noco%l_unrestrictMT)) mt_length = mt_length + len

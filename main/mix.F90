@@ -17,7 +17,8 @@ contains
 
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
-         archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot)
+         archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot,&
+         inDenIm, outDenIm, dfpt_tag)
 
     use m_juDFT
     use m_constants
@@ -61,11 +62,15 @@ contains
     LOGICAL,           INTENT(IN)    :: l_writehistory
     LOGICAL,           INTENT(IN)    :: l_runhia
 
+    type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
+
+    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: dfpt_tag
+
     real                             :: fix
     type(t_potden)                   :: resDen, vYukawa
     TYPE(t_mixvector),ALLOCATABLE    :: sm(:), fsm(:)
     TYPE(t_mixvector)                :: fsm_mag
-    LOGICAL                          :: l_densitymatrix,l_firstItU
+    LOGICAL                          :: l_densitymatrix,l_firstItU, l_dfpt
     INTEGER                          :: it,maxiter
     INTEGER                          :: indStart_noDenmatmixing, indEnd_noDenmatmixing
 
@@ -73,10 +78,11 @@ contains
     CALL timestart("Charge Density Mixing")
     l_densitymatrix=.FALSE.
     l_firstItU=.FALSE.
+    l_dfpt = PRESENT(dfpt_tag)
     !The density/potential matrices for DFT+U are split into two parts
     ! 1:atoms%n_u Are the elements for normal DFT+U
     ! atoms%n_u+1:atoms%n_u+atoms%n_hia are the elements for DFT+Hubbard 1
-    ! atoms%n_u+atoms%n_hia+1:atoms%n_u+atoms%n_hia+atoms%n_opc are the elements fro DFT+OPC
+    ! atoms%n_u+atoms%n_hia+1:atoms%n_u+atoms%n_hia+atoms%n_opc are the elements for DFT+OPC
     !The latter are never mixed and held constant
     indStart_noDenmatmixing = atoms%n_u + 1
     indEnd_noDenmatmixing = atoms%n_u + atoms%n_hia + atoms%n_opc
@@ -88,9 +94,14 @@ contains
     ENDIF
 
     CALL timestart("Reading of distances")
-    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix ,input,vacuum,noco,stars,cell,sphhar,atoms,sym)
+    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix ,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt)
     CALL timestart("read history")
-    CALL mixing_history_open(fmpi,input%maxiter)
+    IF (.NOT.l_dfpt) THEN
+      CALL mixing_history_open(fmpi,input%maxiter)
+    ELSE
+      CALL mixing_history_open(fmpi,input%maxiter,dfpt_tag)
+    END IF
+
     CALL timestop("read history")
     maxiter=MERGE(1,input%maxiter,input%imix==0)
     CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
