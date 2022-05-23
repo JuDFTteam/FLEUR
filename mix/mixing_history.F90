@@ -83,13 +83,15 @@ CONTAINS
   END SUBROUTINE mixing_history_close
 
 
-  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it)
+  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,inDenIm,outDenIm)
     USE m_types
     implicit none
     INTEGER,INTENT(in)::imix,maxiter
     type(t_potden),intent(inout)::inden,outden
     type(t_mixvector),ALLOCATABLE::sm(:),fsm(:)
     INTEGER,INTENT(out)::it
+
+    type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
 
     INTEGER:: n
 

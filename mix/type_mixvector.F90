@@ -124,14 +124,16 @@ CONTAINS
       l_pot = .FALSE. !Is this a potential?
    END SUBROUTINE mixvector_reset
 
-   SUBROUTINE mixvector_from_density(vec, den, swapspin)
+   SUBROUTINE mixvector_from_density(vec, den, swapspin, denIm)
       USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(INOUT)    :: vec
       TYPE(t_potden), INTENT(inout)    :: Den
       LOGICAL, INTENT(IN), OPTIONAL         :: swapspin
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
       INTEGER:: js, ii, n, l, iv, j, mmpSize
       CALL den%DISTRIBUTE(mix_mpi_comm)
+      IF (PRESENT(denIm)) CALL denIm%DISTRIBUTE(mix_mpi_comm)
       DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
          j = js
          IF (PRESENT(swapspin)) THEN
@@ -141,9 +143,13 @@ CONTAINS
             !PW part
             IF (pw_here) THEN
                vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(den%pw(:, j))
-               IF ((.NOT. sym%invs) .OR. (js == 3)) THEN
+               IF ((.NOT. sym%invs) .OR. (js == 3).OR.PRESENT(denIm)) THEN
                   vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(den%pw(:, j))
                ENDIF
+               IF ((js == 3).AND.PRESENT(denIm)) THEN
+                  vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1) =  REAL(den%pw(:, 4))
+                  vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1) = AIMAG(den%pw(:, 4))
+               END IF
             ENDIF
             IF (vac_here) THEN
                !This PE stores vac-data

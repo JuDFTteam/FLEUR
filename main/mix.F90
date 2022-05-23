@@ -104,7 +104,11 @@ contains
 
     CALL timestop("read history")
     maxiter=MERGE(1,input%maxiter,input%imix==0)
-    CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
+    IF (.NOT.l_dfpt) THEN
+      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
+    ELSE
+      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,inDenIm,outDenIm)
+    END IF
 
     CALL distance(fmpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag)
     CALL timestop("Reading of distances")
@@ -205,7 +209,7 @@ contains
 
     call timestart("qfix")
     !fix charge of the new density
-    IF (fmpi%irank==0) CALL qfix(fmpi,stars,atoms,sym,vacuum, sphhar,input,cell ,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
+    IF (fmpi%irank==0.AND..NOT.l_dfpt) CALL qfix(fmpi,stars,atoms,sym,vacuum, sphhar,input,cell ,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
     call timestop("qfix")
 
 
