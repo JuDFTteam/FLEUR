@@ -1567,7 +1567,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den, denIm)
+                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,denIm)
       use m_types_input
       use m_types_potden
       TYPE(t_input),    INTENT(IN) :: input
@@ -2400,7 +2400,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePotentialHDF
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum,  &
-                             archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den)
+                             archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm)
       use m_types_input
       use m_types_stars
       use m_types_sphhar
@@ -2424,6 +2424,8 @@ MODULE m_cdnpot_io_hdf
       REAL,    INTENT (OUT)        :: fermiEnergy
       REAL,    INTENT (INOUT)      :: lastDistance
       LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
+
+      TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
 
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER               :: previousDensityIndex, jspins, jspinsmmp
@@ -2454,6 +2456,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)        :: ldaopc_lSetID
       INTEGER(HID_T)        :: ldaopc_nSetID
       INTEGER(HID_T)        :: mmpMatSetID
+      INTEGER(HID_T)        :: frImSpaceID, frImSetID, frOffImSetID, frOffImSpaceID, cdom12SpaceID, cdom12SetID
 
       INTEGER, ALLOCATABLE  :: ldau_AtomType(:), ldau_l(:), ldau_l_amf(:)
       INTEGER, ALLOCATABLE  :: ldaopc_AtomType(:), ldaopc_l(:), ldaopc_n(:)
@@ -2729,6 +2732,18 @@ MODULE m_cdnpot_io_hdf
       frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
       DEALLOCATE(frTemp)
 
+      IF (PRESENT(denIm)) THEN
+         denIm%mt = 0.0
+         ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:jspins))
+         dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
+         CALL h5dopen_f(groupID, 'frIm', frImSetID, hdfError)
+         CALL io_read_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"frImTemp",frTemp(:,:,:,:))
+         CALL h5dclose_f(frImSetID, hdfError)
+         denIm%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
+         frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
+         DEALLOCATE(frTemp)
+      END IF
+
       IF ((localDensityType.EQ.DENSITY_TYPE_FFN_IN_const).OR.(localDensityType.EQ.DENSITY_TYPE_FFN_OUT_const)) THEN
          ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:2))
          dimsInt(:4)=(/jmtd,nlhd+1,ntype,2/)
@@ -2738,8 +2753,17 @@ MODULE m_cdnpot_io_hdf
          den%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,3:4) =&
             frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:2)
          DEALLOCATE(frTemp)
+         IF (PRESENT(denIm)) THEN
+            ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:2))
+            dimsInt(:4)=(/jmtd,nlhd+1,ntype,2/)
+            CALL h5dopen_f(groupID, 'froffIm', frOffImSetID, hdfError)
+            CALL io_read_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"frImTemp",frTemp(:,:,:,1:2))
+            CALL h5dclose_f(frOffImSetID, hdfError)
+            denIm%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,3:4) =&
+               frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:2)
+            DEALLOCATE(frTemp)
+         END IF
       END IF
-
 
       den%pw = CMPLX(0.0,0.0)
       ALLOCATE(fpwTemp(ng3,jspins))
@@ -2783,6 +2807,17 @@ MODULE m_cdnpot_io_hdf
          CALL h5dclose_f(cdomSetID, hdfError)
          den%pw(1:ng3Out,3) = cdomTemp(1:ng3Out)
          DEALLOCATE(cdomTemp)
+
+         IF (PRESENT(denIm)) THEN
+            den%pw(:,4) = CMPLX(0.0,0.0)
+            ALLOCATE(cdomTemp(ng3))
+            dimsInt(:2)=(/2,ng3/)
+            CALL h5dopen_f(groupID, 'cdom12', cdom12SetID, hdfError)
+            CALL io_read_complex1(cdom12SetID,(/-1,1/),dimsInt(:2),"cdom12Temp",cdomTemp)
+            CALL h5dclose_f(cdom12SetID, hdfError)
+            den%pw(1:ng3Out,4) = cdomTemp(1:ng3Out)
+            DEALLOCATE(cdomTemp)
+         END IF
 
          IF (l_film) THEN
             den%vacz(:,:,3:4) = 0.0
