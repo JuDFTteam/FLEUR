@@ -5,12 +5,12 @@
 !--------------------------------------------------------------------------------
 module m_distance
 contains
-  SUBROUTINE distance(irank,vol,jspins,fsm,inden,outden,results,fsm_mag)
+  SUBROUTINE distance(irank,vol,jspins,fsm,inden,outden,results,fsm_mag,l_dfpt)
     use m_types
     use m_types_mixvector
     USE m_constants
     use m_xmlOutput
- 
+
     implicit none
     integer,intent(in)             :: irank,jspins
     real,intent(in)                :: vol
@@ -18,12 +18,13 @@ contains
     TYPE(t_potden),INTENT(INOUT)   :: inden,outden
     TYPE(t_results),INTENT(INOUT)  :: results
     type(t_mixvector),INTENT(OUT)  :: fsm_mag
-    
+    LOGICAL,            INTENT(IN) :: l_dfpt
+
     integer         ::js
     REAL            :: dist(6) !1:up,2:down,3:spinoff,4:total,5:magnet,6:noco
     TYPE(t_mixvector)::fmMet
     character(len=100)::attributes(2)
-    
+
     CALL fmMet%alloc()
     IF (jspins==2) THEN
        CALL fsm_mag%alloc()
@@ -33,8 +34,8 @@ contains
        fsm_mag=fsm_mag-fmMet
     ENDIF
     ! Apply metric w to fsm and store in fmMet:  w |fsm>
-    fmMet=fsm%apply_metric()
-  
+    fmMet=fsm%apply_metric(l_dfpt)
+
     dist(:) = 0.0
     DO js = 1,jspins
        dist(js) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),js)
@@ -45,22 +46,22 @@ contains
        dist(4) = dist(1) + dist(2) + 2.0e0*dist(3)
        dist(5) = dist(1) + dist(2) - 2.0e0*dist(3)
     ENDIF
-    
+
     results%last_distance=maxval(1000*SQRT(ABS(dist/vol)))
     if (irank>0) return
     !calculate the distance of charge densities for each spin
     CALL openXMLElement('densityConvergence',(/'units'/),(/'me/bohr^3'/))
-    
-    DO js = 1,jspins         
+
+    DO js = 1,jspins
        attributes = ''
        WRITE(attributes(1),'(i0)') js
        WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(js)/vol))
        CALL writeXMLElementForm('chargeDensity',(/'spin    ','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
        WRITE (oUnit,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/vol))
     END DO
-    
+
     IF (SIZE(outden%pw,2)>2) WRITE (oUnit,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6)/vol))
-    
+
     !calculate the distance of total charge and spin density
     !|rho/m(o) - rho/m(i)| = |rh1(o) -rh1(i)|+ |rh2(o) -rh2(i)| +/_
     !                        +/_2<rh2(o) -rh2(i)|rh1(o) -rh1(i)>
@@ -71,7 +72,7 @@ contains
             (/1000*SQRT(ABS(dist(5)/vol))/),reshape((/19,20/),(/1,2/)))
        WRITE (oUnit,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/vol))
        WRITE (oUnit,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/vol))
-       
+
        !dist/vol should always be >= 0 ,
        !but for dist=0 numerically you might obtain dist/vol < 0
        !(e.g. when calculating non-magnetic systems with jspins=2).

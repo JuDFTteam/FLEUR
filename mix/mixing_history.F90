@@ -104,8 +104,13 @@ CONTAINS
     allocate(sm(it),fsm(it))
     CALL sm(it)%alloc()
     CALL fsm(it)%alloc()
-    CALL sm(it)%from_density(inDen)
-    CALL fsm(it)%from_density(outDen)
+    IF (.NOT.PRESENT(inDenIm)) THEN
+      CALL sm(it)%from_density(inDen)
+      CALL fsm(it)%from_density(outDen)
+    ELSE
+      CALL sm(it)%from_density(inDen,denIm=inDenIm)
+      CALL fsm(it)%from_density(outDen,denIm=outDenIm)
+    END IF
     !store the difference fsm - sm in fsm
     fsm(it) = fsm(it) - sm(it)
     do n=1,it-1 !Copy from storage

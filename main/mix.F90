@@ -110,7 +110,7 @@ contains
       CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,inDenIm,outDenIm)
     END IF
 
-    CALL distance(fmpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag)
+    CALL distance(fmpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag,l_dfpt)
     CALL timestop("Reading of distances")
 
     ! Preconditioner for relaxation of Magnetic moments
@@ -142,24 +142,24 @@ contains
     CASE(7)
        IF (fmpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0)' ) &
             'GENERALIZED ANDERSON MIXING: alpha=',input%alpha," History-length=",it-1
-       Call broyden(input%alpha,fsm,sm)
+       Call broyden(input%alpha,fsm,sm,l_dfpt)
     CASE(9)
        IF (fmpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
-       CALL pulay(input%alpha,fsm,sm,0)
+       CALL pulay(input%alpha,fsm,sm,0,l_dfpt)
     CASE(11)
        IF (fmpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'PERIODIC PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
-       CALL pulay(input%alpha,fsm,sm,input%maxiter)
+       CALL pulay(input%alpha,fsm,sm,input%maxiter,l_dfpt)
     CASE(13)
        IF (fmpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'RESTARTED PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
-       CALL pulay(input%alpha,fsm,sm,0)
+       CALL pulay(input%alpha,fsm,sm,0,l_dfpt)
        IF (it==input%maxiter) CALL mixing_history_limit(0) !Restarting Pulay
     CASE(15)
        IF (fmpi%irank==0) WRITE(oUnit, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'ADAPTED PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
-       CALL a_pulay(input%alpha,fsm,sm)
+       CALL a_pulay(input%alpha,fsm,sm,l_dfpt)
     CASE DEFAULT
        CALL judft_error("Unknown Mixing schema")
     END SELECT
