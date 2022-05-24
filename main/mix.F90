@@ -39,7 +39,7 @@ contains
     USE m_plot
     implicit none
 
-     
+
     type(t_input),     intent(in)    :: input
     type(t_vacuum),    intent(in)    :: vacuum
     type(t_noco),      intent(in)    :: noco
@@ -110,7 +110,12 @@ contains
       CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,inDenIm,outDenIm)
     END IF
 
-    CALL distance(fmpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag,l_dfpt)
+    IF (.NOT.l_dfpt) THEN
+      CALL distance(fmpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag)
+    ELSE
+      ! TODO: For now dfpt_distance handles Re/Im separately. Maybe that is not all to necessary.
+      CALL dfpt_distance(fmpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,inDenIm,outDenIm,results,fsm_Mag)
+    END IF
     CALL timestop("Reading of distances")
 
     ! Preconditioner for relaxation of Magnetic moments

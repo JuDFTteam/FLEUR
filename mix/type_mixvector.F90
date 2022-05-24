@@ -52,6 +52,7 @@ MODULE m_types_mixvector
       PROCEDURE :: to_density => mixvector_to_density
       PROCEDURE :: apply_metric => mixvector_metric
       PROCEDURE :: multiply_dot_mask
+      PROCEDURE :: dfpt_multiply_dot_mask
       PROCEDURE :: read_unformatted
       PROCEDURE :: write_unformatted
       PROCEDURE :: allocated => mixvector_allocated
@@ -327,6 +328,10 @@ CONTAINS
                ENDIF
                IF ((js == 3) .AND. l_dfpt) THEN
                   pw(:) = CMPLX(vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1), vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1))
+                  CALL convol(stars, pw_w, pw)
+                  pw_w = pw_w*cell%omtil
+                  mvec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1) =  REAL(pw_w)
+                  mvec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1) = AIMAG(pw_w)
                END IF
             ENDIF
             IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
@@ -339,10 +344,10 @@ CONTAINS
                   ENDIF
                ELSE
                   mvec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1)
-                  mvec%vec_mt(mt_start(js) + SIZE(g_mt):mt_stop(js)) = g_mt*vec%vec_mt(mt_start(js) + SIZE(g_mt):mt_stop(js))
+                  mvec%vec_mt(mt_start(js) + SIZE(g_mt):mt_start(js) + 2*SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js) + SIZE(g_mt):mt_start(js) + 2*SIZE(g_mt) - 1)
                   IF (js == 3) THEN
-                     mvec%vec_mt(mt_stop(js)+1:mt_stop(js) + SIZE(g_mt)) = g_mt*vec%vec_mt(mt_stop(js)+1:mt_stop(js) + SIZE(g_mt))
-                     mvec%vec_mt(mt_stop(js) + SIZE(g_mt) + 1:mt_stop(js) + 2*SIZE(g_mt)) = g_mt*vec%vec_mt(mt_stop(js) + SIZE(g_mt) + 1:mt_stop(js) + 2*SIZE(g_mt))
+                     mvec%vec_mt(mt_start(js) + 2*SIZE(g_mt):mt_start(js) + 3*SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js) + 2*SIZE(g_mt):mt_start(js) + 3*SIZE(g_mt) - 1)
+                     mvec%vec_mt(mt_start(js) + 3*SIZE(g_mt):mt_start(js) + 4*SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js) + 3*SIZE(g_mt):mt_start(js) + 4*SIZE(g_mt) - 1)
                   ENDIF
                END IF
             ENDIF
@@ -539,7 +544,7 @@ CONTAINS
                ELSE
                   pw_length = pw_length + 2*stars%ng3
                ENDIF
-               IF (l_dfpt) pw_length = pw_length + 2*stars%ng3
+               IF (l_dfpt.AND.js==3) pw_length = pw_length + 2*stars%ng3
             ENDIF
             pw_stop(js) = pw_length
             IF (mt_here) THEN
@@ -702,6 +707,69 @@ CONTAINS
       dprod = dprod_tmp
 #endif
    END FUNCTION multiply_dot_mask
+
+   SUBROUTINE dfpt_multiply_dot_mask(vec1, vec2, mask, spin, dprod1, dprod2)
+      CLASS(t_mixvector), INTENT(IN)::vec1
+      TYPE(t_mixvector),  INTENT(IN)::vec2
+
+      LOGICAL, INTENT(IN)    :: mask(2)
+      INTEGER, INTENT(IN)    :: spin
+      REAL,    INTENT(INOUT) :: dprod1(2)
+
+      REAL, OPTIONAL, INTENT(INOUT) :: dprod2(2)
+
+      REAL :: dprod1_tmp, dprod2_tmp
+      INTEGER:: js, ierr
+
+      dprod1 = 0.0
+      IF (PRESENT(dprod2)) dprod2 = 0.0
+
+      DO js = 1, 2
+         IF (mask(1) .AND. (spin == js) .AND. pw_start(js) > 0) THEN
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_pw(pw_start(js):pw_stop(js)/2), &
+                                                vec2%vec_pw(pw_start(js):pw_stop(js)/2))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/2+1:pw_stop(js)), &
+                                                vec2%vec_pw(pw_stop(js)/2+1:pw_stop(js)))
+         END IF
+         IF (mask(2) .AND. (spin == js) .AND. mt_start(js) > 0) &
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)/2), &
+                                                vec2%vec_mt(mt_start(js):mt_stop(js)/2))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:mt_stop(js)), &
+                                                vec2%vec_mt(mt_stop(js)/2+1:mt_stop(js)))
+      END DO
+
+      IF (js==3.AND.PRESENT(dprod2)) THEN
+         IF (mask(1) .AND. pw_start(js) > 0) THEN
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_pw(pw_start(js):pw_stop(js)/4), &
+                                                vec2%vec_pw(pw_start(js):pw_stop(js)/4))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/4+1:pw_stop(js)/2), &
+                                                vec2%vec_pw(pw_stop(js)/4+1:pw_stop(js)/2))
+            dprod2(1) = dprod2(1) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/2+1:3*pw_stop(js)/4), &
+                                                vec2%vec_pw(pw_stop(js)/2+1:3*pw_stop(js)/4))
+            dprod2(2) = dprod2(2) + DOT_PRODUCT(vec1%vec_pw(3*pw_stop(js)/4+1:pw_stop(js)), &
+                                                vec2%vec_pw(3*pw_stop(js)/4+1:pw_stop(js)))
+         END IF
+         IF (mask(2) .AND. pw_start(js) > 0) THEN
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)/4), &
+                                                vec2%vec_mt(mt_start(js):mt_stop(js)/4))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/4+1:mt_stop(js)/2), &
+                                                vec2%vec_mt(mt_stop(js)/4+1:mt_stop(js)/2))
+            dprod2(1) = dprod2(1) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:3*mt_stop(js)/4), &
+                                                vec2%vec_mt(mt_stop(js)/2+1:3*mt_stop(js)/4))
+            dprod2(2) = dprod2(2) + DOT_PRODUCT(vec1%vec_mt(3*mt_stop(js)/4+1:mt_stop(js)), &
+                                                vec2%vec_mt(3*mt_stop(js)/4+1:mt_stop(js)))
+         END IF
+      END IF
+
+#ifdef CPP_MPI
+      CALL MPI_ALLREDUCE(dprod1, dprod1_tmp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
+      dprod1 = dprod1_tmp
+      IF (PRESENT(dprod2)) THEN
+         CALL MPI_ALLREDUCE(dprod2, dprod2_tmp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
+         dprod2 = dprod2_tmp
+      END IF
+#endif
+   END SUBROUTINE dfpt_multiply_dot_mask
 
    FUNCTION mixvector_allocated(self) RESULT(l_array)
       IMPLICIT NONE
