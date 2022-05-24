@@ -963,7 +963,6 @@ MODULE m_types_greensf
          ENDIF
 
          l_full = .NOT.PRESENT(spin)
-         IF(l_full.AND.SIZE(this%gmmpMat,4)>=3) CALL juDFT_error("Not implemented", calledby="set_gf")
          !Determine matsize for the result gmat (if spin is given only return this digonal element)
          matsize1 = (2*l+1) * MERGE(2,1,l_full)
          matsize2 = (2*lp+1) * MERGE(2,1,l_full)
