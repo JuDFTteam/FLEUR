@@ -118,12 +118,13 @@ contains
     END IF
     CALL timestop("Reading of distances")
 
-    ! Preconditioner for relaxation of Magnetic moments
-    call precond_noco(it,vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm(it))
-
+    IF (.NOT.l_dfpt) THEN
+      ! Preconditioner for relaxation of Magnetic moments
+      call precond_noco(it,vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm(it))
+    END IF
 
     ! KERKER PRECONDITIONER
-    IF( input%preconditioning_param /= 0 )  THEN
+    IF( input%preconditioning_param /= 0 .AND. .NOT.l_dfpt)  THEN
        CALL timestart("Preconditioner")
        CALL kerker( field,  fmpi, &
                     stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
@@ -176,7 +177,11 @@ contains
     IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
     IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
-    CALL sm(it)%to_density(inDen)
+    IF (.NOT.l_dfpt) THEN
+      CALL sm(it)%to_density(inDen)
+    ELSE
+      CALL sm(it)%to_density(inDen,inDenIm)
+    END IF
     IF (atoms%n_u>0.AND.l_firstItU) THEN
        !No density matrix was present
        !but is now created...
@@ -217,8 +222,6 @@ contains
     IF (fmpi%irank==0.AND..NOT.l_dfpt) CALL qfix(fmpi,stars,atoms,sym,vacuum, sphhar,input,cell ,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
     call timestop("qfix")
 
-
-
     IF(vacuum%nvac.EQ.1) THEN
        inDen%vacz(:,2,:) = inDen%vacz(:,1,:)
        IF (sym%invs) THEN
@@ -230,11 +233,17 @@ contains
 
     call timestart("Density output")
     !write out mixed density (but not for a plotting run)
-    IF ((fmpi%irank==0).AND.(sliceplot%iplot==0)) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
+    IF ((fmpi%irank==0).AND.(sliceplot%iplot==0).AND..NOT.l_dfpt) THEN
+      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen)
+    ELSE IF ((fmpi%irank==0).AND.(sliceplot%iplot==0).AND.l_dfpt) THEN
+      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
+         1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag,denIm=inDenIm)
+    END IF
 
 #ifdef CPP_HDF
-    IF (fmpi%irank==0.and.judft_was_argument("-last_extra")) THEN
+    ! TODO: Could be a neat option for DFPT as well.
+    IF (fmpi%irank==0.and.judft_was_argument("-last_extra").AND..NOT.l_dfpt) THEN
        CALL system("rm cdn_last.hdf")
        CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
             1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,&

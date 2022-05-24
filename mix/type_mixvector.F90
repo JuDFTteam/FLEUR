@@ -227,21 +227,28 @@ CONTAINS
 
    END SUBROUTINE mixvector_from_density
 
-   SUBROUTINE mixvector_to_density(vec, den)
+   SUBROUTINE mixvector_to_density(vec, den, denIm)
       USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN)    :: vec
       TYPE(t_potden), INTENT(INOUT) :: Den
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
       INTEGER:: js, ii, n, l, iv, mmpSize
+      LOGICAL :: l_dfpt
+
+      l_dfpt = PRESENT(denIm)
 
       DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
          IF (spin_here(js)) THEN
             !PW part
             IF (pw_here) THEN
-               IF (sym%invs .AND. js < 3) THEN
+               IF (sym%invs .AND. js < 3 .AND. .NOT. l_dfpt) THEN
                   den%pw(:, js) = vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1)
                ELSE
                   den%pw(:, js) = CMPLX(vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1), vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1))
+                  IF (l_dfpt.AND.js==3) THEN
+                     den%pw(:, 4) = CMPLX(vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1), vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1))
+                  END IF
                ENDIF
             ENDIF
             IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
@@ -253,6 +260,14 @@ CONTAINS
                      ii = ii + atoms%jri(n)
                   ENDDO
                ENDDO
+               IF (l_dfpt) THEN
+                  DO n = mt_rank + 1, atoms%ntype, mt_size
+                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        denIm%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
+                        ii = ii + atoms%jri(n)
+                     ENDDO
+                  ENDDO
+               END IF
                IF (js == 3) THEN !Imaginary part comes as 4th spin
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
@@ -260,6 +275,14 @@ CONTAINS
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
+                  IF (l_dfpt) THEN
+                     DO n = mt_rank + 1, atoms%ntype, mt_size
+                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                           denIm%mt(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
+                           ii = ii + atoms%jri(n)
+                        ENDDO
+                     ENDDO
+                  END IF
                ENDIF
             ENDIF
             IF (vac_here) THEN
