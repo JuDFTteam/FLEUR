@@ -279,7 +279,7 @@ CONTAINS
                 WRITE(oUnit,'(30F11.7)') (help(k,i),k=1,i)
              ENDDO
           END IF
-          CALL CPP_LAPACK_ssyev('N','U',j,help,atoms%nlod+2,ulo,dulo, i)
+          CALL dsyev('N','U',j,help,atoms%nlod+2,ulo,dulo, i)
           IF(i/=0)  CALL juDFT_error("ssyev failed.",calledby ="radflo")
           IF ( loutput ) THEN
              WRITE(oUnit,'(30F11.7)') (ulo(i),i=1,j)
