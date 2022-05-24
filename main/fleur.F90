@@ -357,11 +357,11 @@ CONTAINS
             CALL timestop("Updating energy parameters")
             IF (.not. fi%input%eig66(1)) THEN
                 IF (fi%juPhon%l_dfpt) THEN
-                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
+                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo,&
                                enpara, nococonv, mpdata, hybdat, &
                                iter, eig_id, results, inDen, vToT, vx, hub1data, nvfull=nvfull, GbasVec_eig=GbasVec_eig)
                 ELSE
-                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, &
+                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo,&
                                enpara, nococonv, mpdata, hybdat, &
                                iter, eig_id, results, inDen, vToT, vx, hub1data)
                 END IF

@@ -44,7 +44,9 @@ CONTAINS
 
     INTEGER:: n,na,ni,nj,j
     REAL,PARAMETER:: eps=1E-5
-
+   
+    this%l_needs_vectors=.false.
+   
     this%qvec=qvec
     this%thetaj=thetaj
 

@@ -29,7 +29,7 @@ CONTAINS
    !    processing to gain the perturbed eigenvalues and eigenvectors.
    ! e) The latter are the actual output for the routine when used for DFPT. They are saved
    !    the same way as the eigenvalues before, but for a shifted eig_id.
-   SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,&
+   SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,&
                     enpara,nococonv,mpdata,hybdat,&
                     iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,iDir,iDtype,starsq,v1real,v1imag)
 
@@ -58,7 +58,7 @@ CONTAINS
       TYPE(t_results),INTENT(INOUT):: results
       CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_mpi),INTENT(IN)       :: fmpi
-
+      CLASS(t_forcetheo),INTENT(IN):: forcetheo
       TYPE(t_mpdata), intent(inout):: mpdata
       TYPE(t_hybdat), INTENT(INOUT):: hybdat
       TYPE(t_enpara),INTENT(INOUT) :: enpara
@@ -251,8 +251,12 @@ CONTAINS
                 n_rank = 0; n_size=1;
 #endif
                 IF (.NOT.l_dfpteigen) THEN
-                    CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
-                               eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
+                  if (forcetheo%l_needs_vectors) then 
+                     print *,"Vectors needed"
+                     call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
+                  else
+                     CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
+                  endif
                 ELSE
                     CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
                     CYCLE k_loop
@@ -260,7 +264,7 @@ CONTAINS
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
                 IF (.NOT.l_dfpteigen) THEN
-                    if (fmpi%pe_diag) CALL write_eig(eig_id, nk,jsp,ne_found,&
+                    if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 ELSE
                     if (fmpi%pe_diag) CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)

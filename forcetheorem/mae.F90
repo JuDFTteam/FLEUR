@@ -39,7 +39,8 @@ CONTAINS
 
     INTEGER::n
     LOGICAL::error(sym%nop)
-
+    this%l_needs_vectors=.false.
+   
     this%phi=phi
     this%theta=theta
 
