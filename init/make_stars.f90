@@ -39,14 +39,9 @@ CONTAINS
       TYPE(t_noco),INTENT(in)::noco
       TYPE(t_mpi),INTENT(in)::fmpi
 
-      ! TODO: Add optional bqpt and l_dfpt. The former makes this routine build stars
-      !       around an origin vector q (0 by default) and the latter tells it to build
-      !       a modified step function for use with DFPT.
-      !       Use copied input and call the result starsq.
-
       REAL, OPTIONAL, INTENT(IN) :: qvec(3)
       INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
-      
+
       INTEGER :: ierr
 
       TYPE(t_fftgrid) :: fftgrid
@@ -70,12 +65,14 @@ CONTAINS
       call mpi_bc(stars%mx2,0,fmpi%mpi_comm)
       call mpi_bc(stars%mx3,0,fmpi%mpi_comm)
       call mpi_bc(stars%ng3,0,fmpi%mpi_comm)
-      
+
       CALL timestart("stepf")
       IF (PRESENT(qvec)) THEN
-         !ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-         !CALL stepf(sym,stars,atoms,input,cell,vacuum,fmpi,qvec, iDtype, iDir)
-         ! CALL new routines for +q
+         IF (fmpi%irank == 0) THEN
+            ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
+            CALL stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir)
+            CALL stepf_stars(stars,fftgrid,qvec)
+         END IF
       ELSE
          ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
          ALLOCATE (stars%ustep(stars%ng3))

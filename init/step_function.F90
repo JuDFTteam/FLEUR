@@ -68,6 +68,9 @@ CONTAINS
             gInt(2) = REAL(y)
             IF (2*y > 3*stars%mx2) gInt(2) = gInt(2) - 3.0*stars%mx2
             x_loop: DO x = 0, 3*stars%mx1 - 1
+               ! TODO: Maybe add the possibility to skip calculations for elements
+               !       that are already available by inversion; problematic when
+               !       parallelized. Also: parallelize!
                gInt(1) = REAL(x)
                IF (2*x > 3*stars%mx1) gInt(1) = gInt(1) - 3.0*stars%mx1
                gInd = x + 3*stars%mx1*y + layerDim*z
@@ -96,7 +99,6 @@ CONTAINS
                END DO
                fftgrid%grid(gInd) = help * c_c
 
-               !IF (((z  .EQ. 3*stars%mx3/2) .OR. (y  .EQ. 3*stars%mx2/2)) .OR. (x  .EQ. 3*stars%mx1/2)) THEN
                IF (((2*z  .EQ. 3*stars%mx3) .OR. (2*y  .EQ. 3*stars%mx2)) .OR. (2*x  .EQ. 3*stars%mx1)) THEN
                   fftgrid%grid(gInd) = CMPLX(0.0,0.0)
                END IF
@@ -120,10 +122,11 @@ CONTAINS
       CALL timestop("New stepf")
    END SUBROUTINE
 
-   SUBROUTINE stepf_stars(stars,fftgrid)
+   SUBROUTINE stepf_stars(stars,fftgrid,qvec)
 
       TYPE(t_stars),   INTENT(INOUT) :: stars
       TYPE(t_fftgrid), INTENT(INOUT) :: fftgrid
+      REAL,    OPTIONAL, INTENT(IN) :: qvec(3)
 
 !#ifdef CPP_MPI
 !      INTEGER :: ierr
@@ -136,7 +139,11 @@ CONTAINS
       stars%ustep = stars%ustep * 3 * stars%mx1 * 3 * stars%mx2 * 3 * stars%mx3
       CALL fftgrid%perform_fft(forward=.FALSE.)
 
-      stars%ufft=fftgrid%grid
+      IF (.NOT.PRESENT(qvec)) THEN
+         stars%ufft=fftgrid%grid
+      ELSE
+         stars%ufft1=fftgrid%grid
+      END IF
 
    END SUBROUTINE
 END MODULE m_step_function
