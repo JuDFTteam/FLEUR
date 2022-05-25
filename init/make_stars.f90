@@ -12,7 +12,7 @@ MODULE m_make_stars
    PRIVATE
    PUBLIC :: make_stars
 CONTAINS
-   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,noco,fmpi,qvec,iDtype,iDir)
+   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir)
       USE m_stepf
       USE m_types_sym
       USE m_types_atoms
@@ -20,7 +20,6 @@ CONTAINS
       USE m_types_sphhar
       USE m_types_input
       USE m_types_cell
-      USE m_types_xcpot
       USE m_types_mpi
       USE m_types_noco
       USE m_mpi_bc_tool
@@ -35,7 +34,6 @@ CONTAINS
       TYPE(t_sphhar),INTENT(in)::sphhar
       TYPE(t_input),INTENT(in)::input
       TYPE(t_cell),INTENT(in)::cell
-      CLASS(t_xcpot),INTENT(in)::xcpot
       TYPE(t_noco),INTENT(in)::noco
       TYPE(t_mpi),INTENT(in)::fmpi
 
