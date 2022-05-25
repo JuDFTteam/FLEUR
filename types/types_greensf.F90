@@ -672,17 +672,13 @@ MODULE m_types_greensf
 
             IF(ispin<3) THEN
                gmat%data_c((ispin-1)*matsize1+1:ispin*matsize1,(ispin-1)*matsize2+1:ispin*matsize2) = gmat_spin%data_c
-            ELSE IF(ispin.EQ.3) THEN
-               gmat%data_c(1:matsize1,matsize2+1:2*matsize2) = gmat_spin%data_c
-               gmat%data_c(matsize1+1:2*matsize1,1:matsize2) = conjg(transpose(gmat_spin%data_c))
             ELSE
-               gmat%data_c(1:matsize1,matsize2+1:2*matsize2) = ImagUnit*conjg(gmat_spin%data_c)
-               gmat%data_c(matsize1+1:2*matsize1,1:matsize2) = -ImagUnit*transpose(gmat_spin%data_c)
+               gmat%data_c(matsize1+1:2*matsize1,1:matsize2) = gmat_spin%data_c
+               gmat%data_c(1:matsize1,matsize2+1:2*matsize2) = conjg(transpose(gmat_spin%data_c))
             ENDIF
          ENDDO
 
          IF(nspins==1) gmat%data_c = gmat%data_c * 0.5
-
 
       END SUBROUTINE getFullMatrix_gf
 
@@ -989,15 +985,12 @@ MODULE m_types_greensf
                IF(ispin < 3) THEN
                   spin1 = ispin
                   spin2 = ispin
-               ELSE IF(ispin.EQ.3) THEN
+               ELSE
                   spin1 = 2
                   spin2 = 1
-               ELSE
-                  spin1 = 1
-                  spin2 = 2
                ENDIF
-               ind1_start = (spin2-1)*(2*l+1)
-               ind2_start = (spin1-1)*(2*lp+1)
+               ind1_start = (spin1-1)*(2*l+1)
+               ind2_start = (spin2-1)*(2*lp+1)
             ELSE
                ind1_start = 0
                ind2_start = 0
