@@ -48,7 +48,7 @@ CONTAINS
          judft_error("Lists for theta/phi must have the same length in MAE force theorem calculations")
     DO n=1,SIZE(this%phi)
        CALL soc_sym(sym%nop,sym%mrot,this%theta(n),this%phi(n),cell%amat,error)
-       IF (ANY(error)) CALL judft_warn("Force theory choice of SOC-SQA breaks symmetry")
+       IF (ANY(error)) CALL judft_warn("Force theorem choice of SOC-SQA breaks symmetry")
     END DO
     ALLOCATE(this%evsum(SIZE(this%phi)))
     this%evsum=0
