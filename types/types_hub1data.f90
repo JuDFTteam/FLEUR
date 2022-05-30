@@ -110,12 +110,7 @@ MODULE m_types_hub1data
                   IF(ABS(hub1inp%cfCoeffs(i_hia,lcoeff,mcoeff)).LT.1e-12) CYCLE
                   DO m = -l,l
                      DO mp = -l,l
-                        !TODO: The (-1)**mp term comes from the fact that gaunt1
-                        !should calculate the integral of three spherical harmonics
-                        !with the first one complex conjugated. However, the complex
-                        !conjugation is only reflected in the selection rules at the top
-                        !and the prefactor is omitted
-                        gaunt_coef = (-1)**mp * gaunt1(l,lcoeff,l,mp,mcoeff,m,6)
+                        gaunt_coef = gaunt1(l,lcoeff,l,mp,mcoeff,m,6)
                         IF(ABS(gaunt_coef).LT.1e-12) CYCLE
                         this%ccfmat(i_hia,m,mp) = &
                            this%ccfmat(i_hia,m,mp) + sfp_const/sqrt(2*lcoeff+1.0) * gaunt_coef &
