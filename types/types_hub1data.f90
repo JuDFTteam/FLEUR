@@ -118,7 +118,7 @@ MODULE m_types_hub1data
                         gaunt_coef = (-1)**mp * gaunt1(l,lcoeff,l,mp,mcoeff,m,6)
                         IF(ABS(gaunt_coef).LT.1e-12) CYCLE
                         this%ccfmat(i_hia,m,mp) = &
-                           this%ccfmat(i_hia,m,mp) + sfp_const/sqrt(2*lcoeff+1) * gaunt_coef &
+                           this%ccfmat(i_hia,m,mp) + sfp_const/sqrt(2*lcoeff+1.0) * gaunt_coef &
                                                     * hub1inp%cfCoeffs(i_hia,lcoeff,mcoeff) &
                                                     * boltzmann_const
                      ENDDO
