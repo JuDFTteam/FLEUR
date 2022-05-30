@@ -99,6 +99,7 @@ MODULE m_types_gfinp
 
       !Arrays to indicate that certain Green's Functions are used for special calculations
       INTEGER, ALLOCATABLE :: hiaElem(:)
+      INTEGER, ALLOCATABLE :: hiaFitElem(:)
       INTEGER, ALLOCATABLE :: torqueElem(:,:)
       INTEGER, ALLOCATABLE :: numTorqueElems(:)
    CONTAINS
@@ -151,6 +152,7 @@ CONTAINS
       CALL mpi_bc(this%elup,rank,mpi_comm)
       CALL mpi_bc(this%numberContours,rank,mpi_comm)
       CALL mpi_bc(this%hiaElem,rank,mpi_comm)
+      CALL mpi_bc(this%hiaFitElem,rank,mpi_comm)
       CALL mpi_bc(this%torqueElem,rank,mpi_comm)
       CALL mpi_bc(this%numTorqueElems,rank,mpi_comm)
 
@@ -401,6 +403,7 @@ CONTAINS
       n_hia = 0
 
       ALLOCATE(this%hiaElem(4*ntype))
+      ALLOCATE(this%hiaFitElem(4*ntype))
       ALLOCATE(this%numTorqueElems(ntype),source=0)
       ALLOCATE(this%torqueElem(ntype,(lmaxU_const+1)**2),source=-1)
 
@@ -504,6 +507,40 @@ CONTAINS
                              fixedCutoff=fixedCutoff,k_resolved=.FALSE.)
             n_hia = n_hia + 1
             this%hiaElem(n_hia) = i_gf
+            this%hiaFitElem(n_hia) = -1
+
+            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/greensfFit')==1) then
+               label = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/greensfFit/@contour')))
+               iContour = this%find_contour(TRIM(ADJUSTL(label)))
+               cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/greensfFit/@kkintgrCutoff')))
+               IF(TRIM(ADJUSTL(cutoffArg))=="calc") THEN
+                  l_fixedCutoffset = .FALSE.
+               ELSE
+                  fixedCutoff = evaluateFirstOnly(TRIM(ADJUSTL(cutoffArg)))
+                  l_fixedCutoffset = .TRUE.
+               ENDIF
+
+               !Check that the given contour starts below ef and ends above ef
+               !And is a semicircular contour
+               if (this%contour(iContour)%shape /= CONTOUR_SEMICIRCLE_CONST) then
+                  call juDFT_error("The Greensfunction used for determining the local hamiltonian has"// &
+                                   "to be on a semicircular contour.", calledby="read_xml_gfinp")
+               endif
+               if (this%contour(iContour)%eb >= 0.0) then
+                  call juDFT_error("Then GreensFunction used for determining the local hamiltonian has"// &
+                                   "to be start below the Fermi level.", calledby="read_xml_gfinp")
+               endif
+               if (this%contour(iContour)%et <= 0.0) then
+                  call juDFT_error("Then GreensFunction used for determining the local hamiltonian has"// &
+                                   "to be end above the Fermi level.", calledby="read_xml_gfinp")
+               endif
+            
+               !Hubbard 1 GF has to be spherically averaged
+               i_gf =  this%add(l,itype,iContour,.TRUE.,l_fixedCutoffset=l_fixedCutoffset,&
+                                fixedCutoff=fixedCutoff,k_resolved=.FALSE.)
+               
+               this%hiaFitElem(n_hia) = i_gf
+            endif
          ENDDO
 
          WRITE(xPathA,*) TRIM(ADJUSTL(xPathS))//'/torqueCalculation'

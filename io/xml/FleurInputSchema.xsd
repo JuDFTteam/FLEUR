@@ -517,6 +517,7 @@
 
    <xsd:complexType name="LdaHubbard1Type">
       <xsd:sequence>
+         <xsd:element maxOccurs="1" minOccurs="0" name="greensfFit" type="GreensFFitType"/>
          <xsd:element maxOccurs="3" minOccurs="0" name="exc" type="ExcType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="cFCoeff" type="cFCoeffInputType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="addArg"  type="SolverArgType"/>
@@ -530,6 +531,11 @@
       <xsd:attribute default="calc" name="init_occ"      type="ManualCutoffType" use="optional"/>
       <xsd:attribute default="calc" name="kkintgrCutoff" type="ManualKKintgrCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="GreensFFitType">
+      <xsd:attribute name="contour" type="xsd:string"/>
+      <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualKKintgrCutoffType" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ExcType">

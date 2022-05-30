@@ -77,7 +77,7 @@ MODULE m_greensfPostProcess
          !-------------------------------------------------------------
          !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
          IF(atoms%n_hia.GT.0 .AND. ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
-           !CALL crystal_field(atoms,gfinp,input,noco,nococonv,greensfImagPart,vTot,results%ef,hub1data)
+           !CALL crystal_field(atoms,gfinp,input,noco,nococonv,greensFunction,vTot,results%ef,hub1data)
          ENDIF
 
          !Onsite exchange Splitting from difference of center of mass of the bands
