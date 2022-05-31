@@ -23,7 +23,7 @@ contains
     ENDIF
     !
 
-    l_standard_euler_angles=.FALSE.	
+    l_standard_euler_angles=.TRUE.	
 
     sgm1 = is1
     sgm2 = is2

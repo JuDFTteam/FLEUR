@@ -38,7 +38,7 @@ CONTAINS
     REAL,INTENT(in)                     :: q(:,:)
     REAL,INTENT(IN)                     :: theta(:),phi(:),ef_shifts(:)
     INTEGER,INTENT(IN)                  :: ntype
-
+    this%l_needs_vectors=.true.
     this%theta=theta
     this%phi=phi
     this%ef=ef_shifts

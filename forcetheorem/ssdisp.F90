@@ -35,7 +35,8 @@ CONTAINS
 
     ALLOCATE(this%qvec(3,SIZE(q,2)))
     this%qvec=q
-
+    this%l_needs_vectors=.false.
+   
     ALLOCATE(this%evsum(SIZE(q,2)))
     this%evsum=0
   END SUBROUTINE ssdisp_init

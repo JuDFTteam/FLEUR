@@ -62,7 +62,7 @@ set(Fleur_uses_ELEMENTAL FALSE)
 set(Linker_Flags Linker_Flags \"-L$ENV{ELEMENTAL_ROOT}/lib -lEL -lpmrrr -llapack-addons -lstdc++\")
 
 #additional Preprocessor flags
-set(CPP_Flags \"-DCPP_DOUBLE\")
+# set(CPP_Flags \"-DCPP_DOUBLE\")
 
 #we used a custom toolchain
 set(Fleur_custom_toolchain TRUE)
