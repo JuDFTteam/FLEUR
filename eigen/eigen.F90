@@ -252,7 +252,6 @@ CONTAINS
 #endif
                 IF (.NOT.l_dfpteigen) THEN
                   if (forcetheo%l_needs_vectors) then 
-                     print *,"Vectors needed"
                      call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                   else
                      CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
