@@ -280,7 +280,7 @@ CONTAINS
          rho_21i = ris(imesh,4)
          rhotot  = rho_11 + rho_22
          mx      =  2*rho_21r
-         my      = -2*rho_21i
+         my      = -2*rho_21i ! TODO: This is a magic minus. It should be 2*rho_21i.
          mz      = (rho_11-rho_22)
          ris(imesh,1) = rhotot
          ris(imesh,2) = mx
@@ -294,7 +294,7 @@ CONTAINS
             rho_21i = ris2(imesh,4)
             rhotot  = rho_11 + rho_22
             mx      =  2*rho_21r
-            my      = -2*rho_21i
+            my      = -2*rho_21i ! TODO: This is a magic minus. It should be 2*rho_21i.
             mz      = (rho_11-rho_22)
             ris2(imesh,1) = rhotot
             ris2(imesh,2) = mx
@@ -477,7 +477,7 @@ CONTAINS
          rhtxy(1:,1:,1:,:) = rhtxy(1:,1:,1:,:)/2.0
 
          rho(:,0:,1:,3) = -rho(:,0:,1:,3)
-         qpw(1:,3) = -qpw(1:,3)
+         qpw(1:,3) = -qpw(1:,3) ! TODO: This is a consequence of the magic minus.
          rht(1:,1:,3) = -rht(1:,1:,3)
          rhtxy(1:,1:,1:,3) = -rhtxy(1:,1:,1:,3)
 
@@ -507,7 +507,7 @@ CONTAINS
             ALLOCATE (myden%pw_w, mold=myden%pw)
             ALLOCATE (mzden%pw_w, mold=mzden%pw)
             qpww(1:,:) = qpww(1:,:)/2.0
-            qpww(1:,3) = -qpww(1:,3)
+            qpww(1:,3) = -qpww(1:,3) ! TODO: This is a consequence of the magic minus.
             cden%pw_w(1:,1) = qpww(1:,1)
             mxden%pw_w(1:,1) = qpww(1:,2)
             myden%pw_w(1:,1) = qpww(1:,3)

@@ -160,7 +160,7 @@ CONTAINS
       CALL make_sphhar(fmpi%irank == 0, fi%atoms, sphhar, fi%sym, fi%cell)
       ! Store structure data (has to be performed before calling make_stars)
       CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum,  fi%sym, fmpi, sphhar, fi%noco)
-      CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, xcpot,   fi%noco, fmpi)
+      CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)

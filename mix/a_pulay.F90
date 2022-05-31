@@ -4,7 +4,7 @@ MODULE m_a_pulay
   REAL :: distance(3)
   PUBLIC a_pulay
 CONTAINS
-  SUBROUTINE a_pulay(alpha,fm,sm)
+  SUBROUTINE a_pulay(alpha,fm,sm,l_dfpt)
     USE m_pulay
     USE m_types_mat
     USE m_types_mixvector
@@ -13,7 +13,7 @@ CONTAINS
     REAL,INTENT(IN)                 :: alpha
     TYPE(t_mixvector),INTENT(IN)    :: fm(:)
     TYPE(t_mixvector),INTENT(INOUT) :: sm(:)
-
+    LOGICAL,            INTENT(IN) :: l_dfpt
 
     REAL    :: fac(2)=(/1.0,0.5/)
     INTEGER,parameter :: parallel_images=2
@@ -37,43 +37,44 @@ CONTAINS
           local_length=local_length+1
           local_hist(local_length)=i
        ENDDO
-       
+
        IF (local_length>maxiter) THEN !recreate to enable cross-image mixing
           local_length=hlen+1-parallel_images
           local_hist(1)=image
           local_hist(2:local_length)=(/(i,i=parallel_images+1,hlen)/)
        END IF
-       sm(hlen)=simple_pulay(alpha*fac(image),fm(local_hist(:local_length)),sm(local_hist(:local_length)))
+       sm(hlen)=simple_pulay(alpha*fac(image),fm(local_hist(:local_length)),sm(local_hist(:local_length)),l_dfpt)
        IF (hlen==parallel_images*(maxiter+1)) CALL mixing_history_limit(parallel_images)
     case(2)
        local_length=hlen-image
        local_hist(1:local_length)=(/(i,i=1,local_length)/)
        local_length=local_length+1
        local_hist(local_length)=hlen
-       sm(hlen)=simple_pulay(alpha*fac(image),fm(local_hist(:local_length)),sm(local_hist(:local_length)))
+       sm(hlen)=simple_pulay(alpha*fac(image),fm(local_hist(:local_length)),sm(local_hist(:local_length)),l_dfpt)
        IF (hlen==parallel_images*(maxiter)) CALL mixing_history_limit(parallel_images)
     END SELECT
 
     PRINT *,"P:",local_hist(:local_length)
-    
-    
+
+
   END SUBROUTINE a_pulay
 
-  FUNCTION simple_pulay(alpha,fm,sm)RESULT(sm_out)
+  FUNCTION simple_pulay(alpha,fm,sm,l_dfpt)RESULT(sm_out)
     USE m_types_mixvector
     IMPLICIT NONE
     REAL,INTENT(IN)                 :: alpha
     TYPE(t_mixvector),INTENT(IN)    :: fm(:)
     TYPE(t_mixvector),INTENT(IN)    :: sm(:)
+    LOGICAL,            INTENT(IN) :: l_dfpt
     TYPE(t_mixvector)               :: sm_out
-    
-    
+
+
     TYPE(t_mixvector)   :: mdf
     REAL,ALLOCATABLE    :: a(:,:),b(:),work(:)
     INTEGER,ALLOCATABLE :: ipiv(:)
     INTEGER             :: n,nn,info,lwork,hlen
-    
-    
+
+
 
     hlen=SIZE(sm)
     IF (hlen==1) THEN
@@ -83,7 +84,7 @@ CONTAINS
 
     ALLOCATE(a(hlen+1,hlen+1),b(hlen+1),ipiv(hlen+1),work((hlen+1)**2))
     DO n=1,hlen
-       mdf=fm(n)%apply_metric()
+       mdf=fm(n)%apply_metric(l_dfpt)
        DO nn=1,n
           a(n,nn)=mdf.dot.fm(nn)
           a(nn,n)=a(n,nn)

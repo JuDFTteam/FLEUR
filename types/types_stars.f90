@@ -113,6 +113,11 @@ CONTAINS
     CALL mpi_bc(this%ustep,rank,mpi_comm)
     CALL mpi_bc(this%ufft,rank,mpi_comm)
 
+    CALL mpi_bc(this%center(1),rank,mpi_comm)
+    CALL mpi_bc(this%center(2),rank,mpi_comm)
+    CALL mpi_bc(this%center(3),rank,mpi_comm)
+    CALL mpi_bc(this%gq,rank,mpi_comm)
+    CALL mpi_bc(this%ufft1,rank,mpi_comm)
 
   END SUBROUTINE mpi_bc_stars
 
