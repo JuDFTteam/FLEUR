@@ -22,7 +22,7 @@ MODULE m_dfpt
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0_inp, oldmode, xcpot, hybdat)
+                 & rho, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, oldmode, xcpot, hybdat, mpdata, forcetheo)
 
       TYPE(t_fleurinput), INTENT(IN)  :: fi
       TYPE(t_sphhar),   INTENT(IN)  :: sphhar
@@ -31,21 +31,24 @@ CONTAINS
       TYPE(t_kpts),     INTENT(IN)  :: qpts
       TYPE(t_mpi),      INTENT(IN)  :: fmpi
       TYPE(t_results),  INTENT(INOUT)  :: results
-      TYPE(t_enpara),   INTENT(IN)  :: enpara
+      TYPE(t_enpara),   INTENT(INOUT)  :: enpara
       TYPE(t_potden),   INTENT(IN)  :: rho, vTot, vCoul, vxc, exc
       INTEGER,          INTENT(IN)  :: eig_id
       INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
-      COMPLEX,          INTENT(IN)  :: z0_inp(:, :, :, :)
+
       ! New input:
       LOGICAL, INTENT(IN)        :: oldmode
       CLASS(t_xcpot), INTENT(IN) :: xcpot
-      TYPE(t_hybdat), INTENT(IN) :: hybdat
+      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
+      TYPE(t_mpdata),     INTENT(INOUT) :: mpdata
+      CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
 
       TYPE(t_usdus)                 :: usdus
       TYPE(t_potden)                :: vTotclean, rhoclean, grRho
-      TYPE(t_potden)                :: grRho3(3), grVtot3(3), rho1, vTot1, rho1Im, vTot1Im
+      TYPE(t_potden)                :: grRho3(3), grVtot3(3)
       TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
       TYPE(t_tlmplm)                :: tdHS0
+      TYPE(t_results)               :: results1
 
         integer                       :: logUnit = 100
         integer                       :: ngpqdp
@@ -109,7 +112,9 @@ CONTAINS
         integer,      allocatable :: mapKpq2K(:, :)
         integer,      allocatable :: kpq2kPrVec(:, :, :)
 
-        INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir
+        REAL, ALLOCATABLE :: dynmatrow(:)
+
+        INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype
 
         CHARACTER(len=20) :: dfpt_tag
 
@@ -141,17 +146,18 @@ CONTAINS
       ALLOCATE(q_list(5))
       q_list = [1, 10, 19, 28, 37]! 512 k-points: \Gamma to X
 
+      ALLOCATE(dynmatrow(3*fi%atoms%ntype))
       DO iQ = 1, SIZE(q_list)
-         DO iType = 1, fi%atoms%ntype
+         DO iDtype = 1, fi%atoms%ntype
             DO iDir = 1, 3
                dfpt_tag = ''
-               WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', iQ, '_b', iType, '_j', iDir
+               WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
                WRITE(8001,*) dfpt_tag
                ! This is where the magic happens. The Sternheimer equation is solved
                ! iteratively, providing the scf part of dfpt calculations.
-               CALL dfpt_sternheimer(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                                     rho, vTot, grRho3(iDir), grVtot3(iDir), q_list, iQ, iType, iDir, &
-                                     rho1, vTot1, rho1Im, vTot1Im)
+               CALL dfpt_sternheimer(fi, xcpot, sphhar, stars, nococonv, qpts, fmpi, results, enpara, hybdat, mpdata, forcetheo, &
+                                     rho, vTot, grRho3(iDir), grVtot3(iDir), q_list(iQ), iDtype, iDir, &
+                                     dfpt_tag, eig_id, results1, dynmatrow)
                ! Once the first order quantities are converged, we can construct all
                ! additional quantities necessary and from that the dynamical matrix.
                CALL dfpt_dynmat()

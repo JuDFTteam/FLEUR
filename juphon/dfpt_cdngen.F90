@@ -10,7 +10,7 @@ MODULE m_dfpt_cdngen
 CONTAINS
 
 SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
-                  kpts,kqpts,atoms,sphhar,starsq,sym,gfinp,hub1inp,&
+                  kpts,atoms,sphhar,starsq,sym,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,resultsdummy, resultsdummy1,&
                   archiveType, xcpot,outDen,outDenIm,q_dfpt)
 
@@ -29,16 +29,16 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
    ! Type instance arguments
    TYPE(t_results),INTENT(INOUT)    :: resultsdummy, resultsdummy1
    TYPE(t_mpi),INTENT(IN)           :: fmpi
-   TYPE(t_enpara),INTENT(INOUT)     :: enpara
+   TYPE(t_enpara),INTENT(IN)        :: enpara
    TYPE(t_banddos),INTENT(IN)       :: banddosdummy
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_vacuum),INTENT(IN)        :: vacuum
    TYPE(t_noco),INTENT(IN)          :: noco
-   TYPE(t_nococonv),INTENT(INOUT)   :: nococonv
+   TYPE(t_nococonv),INTENT(IN)      :: nococonv
    TYPE(t_sym),INTENT(IN)           :: sym
    TYPE(t_stars),INTENT(IN)         :: starsq
    TYPE(t_cell),INTENT(IN)          :: cell
-   TYPE(t_kpts),INTENT(IN)          :: kpts, kqpts
+   TYPE(t_kpts),INTENT(IN)          :: kpts
    TYPE(t_sphhar),INTENT(IN)        :: sphhar
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_potden),INTENT(IN)        :: vTot
@@ -58,14 +58,21 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
    TYPE(t_vacdos),TARGET          :: vacdosdummy
    TYPE(t_moments)                :: moments
    TYPE(t_cdnvalJob)       :: cdnvalJob, cdnvalJob1
+   TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
 
    !Local Scalars
    REAL                  :: fix, qtot, dummy,eFermiPrev
    INTEGER               :: jspin, ierr
    INTEGER               :: dim_idx
-   INTEGER               :: n
+   INTEGER               :: n, iK
 
    LOGICAL               :: l_error,Perform_metagga
+
+   kqpts = kpts
+   ! Modify this from kpts only in DFPT case.
+   DO iK = 1, kpts%nkpt
+      kqpts%bk(:, iK) = kqpts%bk(:, iK) + q_dfpt
+   END DO
 
    ! Initialization section
    CALL moments%init(fmpi,input,sphhar,atoms)

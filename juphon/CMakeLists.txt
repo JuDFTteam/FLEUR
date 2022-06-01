@@ -39,4 +39,5 @@ juphon/dfpt_rhomt.f90
 juphon/dfpt_rhonmt.f90
 juphon/dfpt_cdnval.F90
 juphon/dfpt_cdngen.F90
+juphon/dfpt_fermie.F90
 )

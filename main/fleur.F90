@@ -113,8 +113,6 @@ CONTAINS
       INTEGER :: ierr
 #endif
 
-      REAL,    ALLOCATABLE :: flh(:, :), flh2(:, :)
-      COMPLEX, ALLOCATABLE :: flm(:, :), z0(:, :, :, :)
       ! TODO: This is temporarily necessary dfpt stuff. Remove asap.
       INTEGER, ALLOCATABLE :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
@@ -165,7 +163,7 @@ CONTAINS
       IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
       IF (ANY(fi%noco%l_unrestrictMT)) archiveType = CDN_ARCHIVE_TYPE_FFN_const
 
-      IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+      IF (fmpi%irank==0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                               fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                               results%ef, results%last_distance, l_qfix, inDen)
 
@@ -304,7 +302,7 @@ CONTAINS
             END SELECT
 
 #ifdef CPP_MPI
-            Call MPI_Barrier(fmpi%mpi_comm, ierr)
+            CALL MPI_Barrier(fmpi%mpi_comm, ierr)
 #endif
             IF (hybdat%l_calhf) THEN
                CALL mixing_history_reset(fmpi)
@@ -486,7 +484,7 @@ CONTAINS
                ! Sideline the actual scf loop for a phonon calculation.
                ! It is assumed that the density was converged beforehand.
                 CALL timestart("juPhon DFPT")
-                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0, .TRUE., xcpot, hybdat)
+                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, .TRUE., xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
             END IF
 

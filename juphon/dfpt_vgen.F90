@@ -9,7 +9,7 @@ MODULE m_dfpt_vgen
 CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,&
+                   cell ,sliceplot,fmpi,results,noco,nococonv,den,vTot,&
                    &starsq,dfptdenimag,dfptvTot,dfptvTotimag,dfptdenreal,iDtype,iDir)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
@@ -45,20 +45,20 @@ CONTAINS
       CLASS(t_xcpot),    INTENT(IN)    :: xcpot
       TYPE(t_hybdat),    INTENT(IN)    :: hybdat
       TYPE(t_mpi),       INTENT(IN)    :: fmpi
-       
+
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_input),     INTENT(IN)    :: input
       TYPE(t_field),     INTENT(IN)    :: field
       TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_nococonv),  INTENT(INOUT) :: nococonv
+      TYPE(t_nococonv),  INTENT(IN)    :: nococonv
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
       TYPE(t_atoms),     INTENT(IN)    :: atoms
-      TYPE(t_potden),    INTENT(IN)    :: EnergyDen
-      TYPE(t_potden),    INTENT(INOUT) :: den, vTot, dfptvTot
+      TYPE(t_potden),    INTENT(IN)    :: vTot
+      TYPE(t_potden),    INTENT(INOUT) :: den, dfptvTot
 
       TYPE(t_stars),  OPTIONAL, INTENT(IN)    :: starsq
       TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: dfptdenimag, dfptvTotimag, dfptdenreal
@@ -66,7 +66,7 @@ CONTAINS
       INTEGER, OPTIONAL, INTENT(IN)           :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
       TYPE(t_potden)                   :: workden, denRot, workdenImag, workdenReal, den1Rot, den1imRot
-      TYPE(t_potden)                   :: vCoul, dfptvCoulimag, vxc, exc, vx
+      TYPE(t_potden)                   :: vCoul, dfptvCoulimag, vxc, exc, vx, EnergyDen
 
       INTEGER :: i, js
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)

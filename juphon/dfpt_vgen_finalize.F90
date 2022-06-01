@@ -24,13 +24,14 @@ CONTAINS
 
         TYPE(t_mpi),      INTENT(IN)    :: fmpi
         TYPE(t_noco),     INTENT(IN)    :: noco
-        TYPE(t_nococonv), INTENT(INOUT) :: nococonv
+        TYPE(t_nococonv), INTENT(IN)    :: nococonv
         TYPE(t_sym),      INTENT(IN)    :: sym
         TYPE(t_stars),    INTENT(IN)    :: stars, starsq
         TYPE(t_atoms),    INTENT(IN)    :: atoms
         TYPE(t_input),    INTENT(IN)    :: input
         TYPE(t_sphhar),   INTENT(IN)    :: sphhar
-        TYPE(t_potden),   INTENT(INOUT) :: vTot, vTot1, vTot1imag, denRot, den1Rot, den1imRot
+        TYPE(t_potden),   INTENT(IN)    :: vTot
+        TYPE(t_potden),   INTENT(INOUT) :: vTot1, vTot1imag, denRot, den1Rot, den1imRot
 
         INTEGER                         :: i, js, ifft3
         REAL,    ALLOCATABLE :: fftwork(:), vre(:), v1re(:), v1im(:)
