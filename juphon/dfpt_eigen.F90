@@ -15,7 +15,7 @@ MODULE m_dfpt_eigen
 
 CONTAINS
 
-   SUBROUTINE dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1, lapwq, td, tdV1, ud, zMatq, eigq, bqpt, neigq, eig_id, dfpt_eig_id, iDir, iDtype)
+   SUBROUTINE dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1, lapwq, td, tdV1, ud, zMatq, eigq, bqpt, neigq, eig_id, dfpt_eig_id, iDir, iDtype)
 
       USE m_types
       USE m_constants
@@ -30,7 +30,6 @@ CONTAINS
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
-      TYPE(t_kpts), INTENT(IN) :: kqpts ! basically kpts, but with q added onto each one.
       TYPE(t_results),INTENT(IN):: results
       TYPE(t_mpi),INTENT(IN)       :: fmpi
       TYPE(t_enpara),INTENT(IN) :: enpara
@@ -42,11 +41,10 @@ CONTAINS
       TYPE(t_usdus)  ,INTENT(IN)           :: ud
       CLASS(t_mat), INTENT(IN)     :: zMatq
       REAL,         INTENT(IN)     :: eigq(:), bqpt(3)
-      INTEGER,      INTENT(IN)     :: neigq, eig_id, dfpt_eig_id, iDir, iDtype
+      INTEGER,      INTENT(IN)     :: neigq, eig_id, dfpt_eig_id, iDir, iDtype, nk, jsp
 
-      INTEGER jsp,nk
-      INTEGER ne, nk_i,n_size,n_rank
-      INTEGER isp,i,j,err
+      INTEGER n_size,n_rank
+      INTEGER i,err
       LOGICAL l_real
 
       INTEGER              :: ierr
@@ -77,13 +75,18 @@ CONTAINS
       noccbd = COUNT(results%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
       nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
 
+      IF (fmpi%n_size == 1) THEN
+         ALLOCATE (t_mat::zMatk)
+      ELSE
+         ALLOCATE (t_mpimat::zMatk)
+      END IF
       CALL zMatk%init(l_real,nbasfcn,noccbd)
       ALLOCATE(ev_list(noccbd))
       ev_list = (/(i, i=1,noccbd, 1)/)
 
       CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
 
-      CALL invert_HepsS(fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, l_real, invHepsS)
+      CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, l_real, invHepsS)
 
       ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
       CALL timestart("Setup of matrix perturbations")

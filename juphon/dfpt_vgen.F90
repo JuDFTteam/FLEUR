@@ -71,6 +71,12 @@ CONTAINS
       INTEGER :: i, js
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
 
+      vCoul = vTot
+      vx = vTot
+      vxc = vTot
+      exc = vTot
+      dfptvCoulimag = vTot
+
       IF (fmpi%irank==0) WRITE (oUnit,FMT=8000)
       IF (fmpi%irank==0) WRITE (oUnit,FMT=8001)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
@@ -81,6 +87,7 @@ CONTAINS
       CALL vx%resetPotDen()
       CALL vxc%resetPotDen()
       CALL exc%resetPotDen()
+      CALL dfptvCoulimag%resetPotDen()
 
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
@@ -123,24 +130,21 @@ CONTAINS
       CALL dfptvCoulimag%copy_both_spin(dfptvTotimag)
 
       ! c)
+      CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
+      denRot=den
+      CALL den1Rot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
+      CALL den1imRot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
+      den1Rot=dfptdenreal
+      den1imRot=dfptdenimag
       IF (noco%l_noco) THEN
-         CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
-         denRot=den
          CALL rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,cell,input,noco ,denRot)
          IF (any(noco%l_unrestrictMT)) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)
+         !Functions that construct the spin-dependent perturbed densities
+         !from the perturbed charge and (vectorial) magnetization density/
+         !perturbed density matrix. Also saves the perturbed angles.
+          CALL get_int_local_perturbation(sym, stars, atoms, sphhar, input, denRot, den1Rot, den1imRot, starsq)
+          IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation(atoms,sphhar,sym,noco,denRot,den1Rot,den1imRot)
       END IF
-
-          IF (noco%l_noco) THEN
-              !Functions that construct the spin-dependent perturbed densities
-              !from the perturbed charge and (vectorial) magnetization density/
-              !perturbed density matrix. Also saves the perturbed angles.
-              CALL den1Rot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
-              CALL den1imRot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
-              den1Rot=dfptdenreal
-              den1imRot=dfptdenimag
-              CALL get_int_local_perturbation(sym, stars, atoms, sphhar, input, denRot, den1Rot, den1imRot, starsq)
-              IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation(atoms,sphhar,sym,noco,denRot,den1Rot,den1imRot)
-          END IF
           CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                           cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                           & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)

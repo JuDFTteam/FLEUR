@@ -83,9 +83,9 @@ CONTAINS
                help = fp_omtil/g2
 
                c_c = CMPLX(0.0, 0.0)
-               DO n = 1, MERGE(atoms%ntype,iDtype,.NOT.PRESENT(qvec))
+               DO n = MERGE(1,iDtype,.NOT.PRESENT(qvec)), MERGE(atoms%ntype,iDtype,.NOT.PRESENT(qvec))
                   c_phs = CMPLX(0.0, 0.0)
-                  na = MERGE(SUM(atoms%neq(:n - 1)),iDtype,.NOT.PRESENT(qvec))
+                  na = MERGE(SUM(atoms%neq(:n - 1)),iDtype-1,.NOT.PRESENT(qvec))
                   DO nn = 1, atoms%neq(n)
                      th = -tpi_const*DOT_PRODUCT(gInt, atoms%taual(:, na + nn))
                      IF (.NOT.PRESENT(qvec)) THEN

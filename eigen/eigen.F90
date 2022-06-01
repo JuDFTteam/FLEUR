@@ -85,10 +85,9 @@ CONTAINS
       TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1real, v1imag
 
       ! Local Scalars
-      INTEGER jsp,nk,nred,ne_all,ne_found,neigd2
-      INTEGER ne, nk_i,n_size,n_rank
-      INTEGER isp,i,j,err
-      LOGICAL l_real
+      INTEGER jsp,nk,ne_all,ne_found,neigd2
+      INTEGER nk_i,n_size,n_rank
+      INTEGER err
       INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr
@@ -133,7 +132,7 @@ CONTAINS
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
-     
+
 
       !IF (fmpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
       !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
@@ -258,7 +257,7 @@ CONTAINS
                      CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
                   endif
                 ELSE
-                    CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+                    CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
                     CYCLE k_loop
                 END IF
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
@@ -267,7 +266,7 @@ CONTAINS
                     if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 ELSE
-                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
                     CYCLE k_loop
                 END IF
             ENDIF
@@ -294,6 +293,8 @@ CONTAINS
             ENDIF
          END DO  k_loop
       END DO ! spin loop ends
+
+      IF (l_dfpteigen) RETURN
 
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI

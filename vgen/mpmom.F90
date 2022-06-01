@@ -33,7 +33,7 @@ contains
 
     type(t_input),   intent(in)   :: input
     type(t_mpi),     intent(in)   :: fmpi
-     
+
     type(t_sym),     intent(in)   :: sym
     type(t_stars),   intent(in)   :: stars
     type(t_cell),    intent(in)   :: cell
@@ -210,7 +210,7 @@ contains
 #endif
     use m_phasy1
     use m_sphbes
-     
+
     use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK
     use m_types
     use m_DoubleFactorial
@@ -219,7 +219,7 @@ contains
 
     type(t_input),    intent(in)   :: input
     type(t_mpi),      intent(in)   :: fmpi
-     
+
     type(t_sym),      intent(in)   :: sym
     type(t_stars),    intent(in)   :: stars
     type(t_cell),     intent(in)   :: cell
@@ -319,8 +319,9 @@ contains
 
       nat = 1
       pref = -1
+
       IF (iDtype.NE.0) THEN
-         nat = SUM(atoms%neq(:iDtype-1))
+         nat = iDtype
          pref = 1
       END IF
 

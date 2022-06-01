@@ -9,13 +9,15 @@ MODULE m_invert_HepsS
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE invert_HepsS(atoms, noco, juPhon, lapwkpr, zMatkpr, eignukpr, eignuk, nekpr, nocck, l_real, invHepsS)
+    SUBROUTINE invert_HepsS(fmpi, atoms, noco, juPhon, lapwkpr, zMatkpr, eignukpr, eignuk, nekpr, nocck, l_real, invHepsS)
         ! Subroutine to calculate (H-\epsilon_{\nu k} S)^(-1) as
         ! z_{k'}(\epsilon_{k'}-\epsilon_{\nu k})^(-1)z_{k'}^H, i.e.
         ! in the spectral representation.
 
         USE m_types
+        USE m_types_mpimat
 
+        TYPE(t_mpi),INTENT(IN)       :: fmpi
         TYPE(t_atoms),   INTENT(IN) :: atoms
         TYPE(t_noco),    INTENT(IN) :: noco
         TYPE(t_juPhon),  INTENT(IN) :: juPhon
@@ -31,7 +33,11 @@ CONTAINS
         INTEGER :: nbasfcn, nu, iGpr, iG, nupr
         REAL    :: deps, invdeps
 
-        ALLOCATE(invHepsS(nocck))
+        IF (fmpi%n_size == 1) THEN
+          ALLOCATE (t_mat::invHepsS(nocck))
+        ELSE
+          ALLOCATE (t_mpimat::invHepsS(nocck))
+        END IF
 
         nbasfcn = MERGE(lapwkpr%nv(1)+lapwkpr%nv(2)+2*atoms%nlotot,lapwkpr%nv(1)+atoms%nlotot,noco%l_noco)
         DO nu = 1, nocck

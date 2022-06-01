@@ -152,7 +152,7 @@ CONTAINS
             DO iDir = 1, 3
                dfpt_tag = ''
                WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
-               WRITE(8001,*) dfpt_tag
+               !WRITE(8001,*) dfpt_tag
                ! This is where the magic happens. The Sternheimer equation is solved
                ! iteratively, providing the scf part of dfpt calculations.
                CALL dfpt_sternheimer(fi, xcpot, sphhar, stars, nococonv, qpts, fmpi, results, enpara, hybdat, mpdata, forcetheo, &

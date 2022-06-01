@@ -45,12 +45,11 @@ CONTAINS
         !$OMP PRIVATE(n,one,iSpinV1,iSpinPr,iSpin,vr1,offs)&
         !$OMP SHARED(noco,nococonvdummy,atoms,sym,sphhar,enpara,tdV1,uddummy,vTot,vxdummy,v1real,v1imag)&
         !$OMP SHARED(fmpi,input,hub1inp,hub1data)
-        DO  n = 1,atoms%ntype
+        DO n = 1,atoms%ntype
             DO iSpinV1 = 1, MERGE(4, input%jspins, any(noco%l_unrestrictMT))
-                IF (iSpinV1.EQ.1) iSpinPr = 1; iSpin = 1
-                IF (iSpinV1.EQ.2) iSpinPr = 2; iSpin = 2
-                IF (iSpinV1.EQ.3) iSpinPr = 2; iSpin = 1
-                IF (iSpinV1.EQ.4) iSpinPr = 1; iSpin = 2
+                iSpinPr = 1; iSpin = 1
+                IF (iSpinV1.EQ.2.OR.iSpinV1.EQ.3) iSpinPr = 2
+                IF (iSpinV1.EQ.2.OR.iSpinV1.EQ.4) iSpin   = 2
                 DO iPart = 1, 2
                     IF (iPart.EQ.1) one = CMPLX(1.0, 0.0); vr1 = v1real%mt(:, :, n, iSpinV1)
                     IF (iPart.EQ.2) one = CMPLX(0.0, 1.0); vr1 = v1imag%mt(:, :, n, iSpinV1)

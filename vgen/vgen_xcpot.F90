@@ -47,7 +47,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)              :: hybdat
       TYPE(t_mpi), INTENT(IN)              :: fmpi
 
-       
+
       TYPE(t_sliceplot), INTENT(IN)              :: sliceplot
       TYPE(t_input), INTENT(IN)              :: input
       TYPE(t_vacuum), INTENT(IN)              :: vacuum
@@ -100,7 +100,7 @@ CONTAINS
             CALL timestart("Vxc in vacuum")
 
             ifftd2 = 9*stars%mx1*stars%mx2
-          
+
             !IF (.NOT. xcpot%needs_grad()) THEN  ! LDA
 
             CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc)

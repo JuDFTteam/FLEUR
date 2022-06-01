@@ -146,6 +146,7 @@ CONTAINS
 
     ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
     ALLOCATE(stars%kv3(3,stars%ng3),stars%sk3(stars%ng3),stars%nstr(stars%ng3))
+    IF (PRESENT(qvec)) ALLOCATE(stars%gq(3,stars%ng3))
     ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
 
     stars%rgphs=0.0
@@ -378,17 +379,17 @@ CONTAINS
     USE m_types_vacuum
     CLASS(t_stars),INTENT(IN)    :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
-    INTEGER,INTENT(IN)           :: n2 
+    INTEGER,INTENT(IN)           :: n2
     INTEGER,INTENT(OUT)          :: n2_rot
     COMPLEX,INTENT(OUT)          :: phas
-    
+
     INTEGER:: kr(2)
     REAL   :: arg
-    
+
     kr = matmul(stars%kv2(:,n2),vacuum%mrot2)
     n2_rot = stars%i2g(kr(1),kr(2))
     arg = tpi_const* ( stars%kv2(1,n2)*vacuum%tau2(1) + stars%kv2(2,n2)*vacuum%tau2(2) )
     phas = cmplx(cos(arg),sin(arg))
-  
+
   end subroutine
 END MODULE m_types_stars

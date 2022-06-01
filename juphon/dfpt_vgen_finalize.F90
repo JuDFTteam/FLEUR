@@ -46,7 +46,7 @@ CONTAINS
                vre = 0.0; v1re = 0.0; v1im = 0.0
                CALL fft3d(v1re, v1im, vTot1%pw(:, js), starsq, +1)
                CALL fft3d(vre, fftwork, vTot%pw(:, js), stars, +1)
-               v1full = CMPLX(v1re,v1im) * stars%ufft + vre * starsq%ufft!-q
+               v1full = CMPLX(v1re,v1im) * stars%ufft + vre * starsq%ufft1!-q
                v1re =  REAL(v1full)
                v1im = AIMAG(v1full)
                CALL fft3d(v1re, v1im, vTot1%pw_w(:, js), starsq, -1)
