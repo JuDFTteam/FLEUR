@@ -28,6 +28,8 @@ MODULE m_types_hub1data
 
       REAL, ALLOCATABLE :: cdn_atomic(:,:,:,:) !atomic contribution to the charge density
                                                !is used to calculate CF coefficients in writeCFoutput
+      REAL, ALLOCATABLE :: cdn_spherical(:,:,:,:) !spherical contribution to the charge density
+                                                  !is used to calculate CF coefficients in writeCFoutput
 
       CONTAINS
 
@@ -100,6 +102,7 @@ MODULE m_types_hub1data
       ENDDO
 
       ALLOCATE (this%cdn_atomic(atoms%jmtd,0:lmaxU_const,atoms%ntype,input%jspins),source=0.0)
+      ALLOCATE (this%cdn_spherical(atoms%jmtd,0:lmaxU_const,atoms%ntype,input%jspins),source=0.0)
 
       ALLOCATE (this%ccfmat(MAX(1,atoms%n_hia),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=0.0)
       IF(ANY(ABS(hub1inp%ccf(:)).GT.1e-12)) THEN
@@ -144,6 +147,7 @@ MODULE m_types_hub1data
       CALL mpi_bc(this%xi,rank,mpi_comm)
       CALL mpi_bc(this%ccfmat,rank,mpi_comm)
       CALL mpi_bc(this%cdn_atomic,rank,mpi_comm)
+      CALL mpi_bc(this%cdn_spherical,rank,mpi_comm)
 
    END SUBROUTINE hub1data_mpi_bc
 

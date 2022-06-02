@@ -158,7 +158,7 @@ MODULE m_cfOutput_hdf
 
    END SUBROUTINE writeCFpot
 
-   SUBROUTINE writeCFcdn(fileID, atoms,iType, n4f)
+   SUBROUTINE writeCFcdn(fileID, atoms,iType, n4f, spherical_cdn)
 
       USE m_types_atoms
       USE m_types_input
@@ -168,6 +168,7 @@ MODULE m_cfOutput_hdf
       TYPE(t_atoms),    INTENT(IN)  :: atoms
       INTEGER,          INTENT(IN)  :: iType
       REAL,             INTENT(IN)  :: n4f(:)
+      real, optional,   intent(in)  :: spherical_cdn(:)
 
       INTEGER(HID_T) :: cdnGroupID
       INTEGER(HID_T) :: rmeshDataSpaceID,rmeshDataSetID
@@ -207,6 +208,16 @@ MODULE m_cfOutput_hdf
       CALL h5sclose_f(cdnDataSpaceID,hdfError)
       CALL io_write_real1(cdnDataSetID,[1],dimsInt(:1),"n4f",n4f(:atoms%jri(iType)))
       CALL h5dclose_f(cdnDataSetID, hdfError)
+
+      if (present(spherical_cdn)) then
+         dims(:1)=[atoms%jri(iType)]
+         dimsInt=dims
+         CALL h5screate_simple_f(1,dims(:1),cdnDataSpaceID,hdfError)
+         CALL h5dcreate_f(cdnGroupID, "cdn_spherical", H5T_NATIVE_DOUBLE, cdnDataSpaceID, cdnDataSetID, hdfError)
+         CALL h5sclose_f(cdnDataSpaceID,hdfError)
+         CALL io_write_real1(cdnDataSetID,[1],dimsInt(:1),"n4f_spherical",spherical_cdn(:atoms%jri(iType)))
+         CALL h5dclose_f(cdnDataSetID, hdfError)
+      endif
 
       CALL h5gclose_f(cdnGroupID, hdfError)
 

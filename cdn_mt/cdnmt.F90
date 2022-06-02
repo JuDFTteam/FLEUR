@@ -136,10 +136,13 @@ CONTAINS
                    moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
                 END IF
                 IF(PRESENT(hub1data).AND.l.LE.lmaxU_const) THEN
-                  hub1data%cdn_atomic(j,l,itype,ispin) = hub1data%cdn_atomic(j,l,itype,ispin) + denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)&
+                  hub1data%cdn_atomic(j,l,itype,ispin) = denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)&
                                                         *( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) ) &
                                                         *1.0/(atoms%neq(itype)*sfp_const)
-                ENDIF
+                  
+
+                  hub1data%cdn_spherical(j,l,itype,ispin) = s/(atoms%neq(itype)*sfp_const)
+                 ENDIF
              ENDDO
           ENDDO
 

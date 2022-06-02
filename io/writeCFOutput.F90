@@ -33,10 +33,10 @@ MODULE m_writeCFOutput
 #endif
 
       INTEGER :: iType,l,m,lm,io_error,iGrid,ispin
-      REAL    :: n_0Norm
+      REAL    :: n_0Norm, sphericalNorm
       COMPLEX, ALLOCATABLE :: vlm(:,:,:)
       REAL,    ALLOCATABLE :: f(:,:,:),g(:,:,:),flo(:,:,:)
-      REAL :: n_0(fi%atoms%jmtd)
+      REAL :: n_0(fi%atoms%jmtd), n_spherical(fi%atoms%jmtd)
 
       !Dummy variables to avoid accidental changes to them in vgen
       TYPE(t_results)   :: results_dummy
@@ -77,9 +77,16 @@ MODULE m_writeCFOutput
             CALL intgr3(n_0,fi%atoms%rmsh(:,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),n_0Norm)
             n_0 = n_0/n_0Norm
 
+            n_spherical = 0.0
+            DO ispin = 1, fi%input%jspins
+               n_spherical(:) = n_spherical(:) + hub1data%cdn_spherical(:,lcf,iType,ispin)
+            ENDDO
+            CALL intgr3(n_spherical,fi%atoms%rmsh(:,iType),fi%atoms%dx(iType),fi%atoms%jri(iType),sphericalNorm)
+            n_spherical = n_spherical/sphericalNorm
+
             IF(fmpi%irank==0) THEN
 #ifdef CPP_HDF
-               CALL writeCFcdn(cfFileID, fi%atoms, iType, n_0)
+               CALL writeCFcdn(cfFileID, fi%atoms, iType, n_0, spherical_cdn=n_spherical)
 #else
                !Stupid text output
                OPEN(unit=29,file='n4f.'//int2str(iType)//'.dat',status='replace',&
