@@ -52,6 +52,7 @@ MODULE m_types_mixvector
       PROCEDURE :: to_density => mixvector_to_density
       PROCEDURE :: apply_metric => mixvector_metric
       PROCEDURE :: multiply_dot_mask
+      PROCEDURE :: dfpt_multiply_dot_mask
       PROCEDURE :: read_unformatted
       PROCEDURE :: write_unformatted
       PROCEDURE :: allocated => mixvector_allocated
@@ -124,14 +125,16 @@ CONTAINS
       l_pot = .FALSE. !Is this a potential?
    END SUBROUTINE mixvector_reset
 
-   SUBROUTINE mixvector_from_density(vec, den, swapspin)
+   SUBROUTINE mixvector_from_density(vec, den, swapspin, denIm)
       USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(INOUT)    :: vec
       TYPE(t_potden), INTENT(inout)    :: Den
       LOGICAL, INTENT(IN), OPTIONAL         :: swapspin
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
       INTEGER:: js, ii, n, l, iv, j, mmpSize
       CALL den%DISTRIBUTE(mix_mpi_comm)
+      IF (PRESENT(denIm)) CALL denIm%DISTRIBUTE(mix_mpi_comm)
       DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
          j = js
          IF (PRESENT(swapspin)) THEN
@@ -141,9 +144,13 @@ CONTAINS
             !PW part
             IF (pw_here) THEN
                vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(den%pw(:, j))
-               IF ((.NOT. sym%invs) .OR. (js == 3)) THEN
+               IF ((.NOT. sym%invs) .OR. (js == 3).OR.PRESENT(denIm)) THEN
                   vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(den%pw(:, j))
                ENDIF
+               IF ((js == 3).AND.PRESENT(denIm)) THEN
+                  vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1) =  REAL(den%pw(:, 4))
+                  vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1) = AIMAG(den%pw(:, 4))
+               END IF
             ENDIF
             IF (vac_here) THEN
                !This PE stores vac-data
@@ -166,20 +173,49 @@ CONTAINS
             IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                !This PE stores some(or all) MT data
                ii = mt_start(js) - 1
-               DO n = mt_rank + 1, atoms%ntype, mt_size
-                  DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-                     vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, j)
-                     ii = ii + atoms%jri(n)
-                  ENDDO
-               ENDDO
-               IF (js == 3) THEN !Imaginary part
+               IF (.NOT.PRESENT(denIm)) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, 4)
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, j)
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
-               ENDIF
+                  IF (js == 3) THEN !Imaginary part
+                     DO n = mt_rank + 1, atoms%ntype, mt_size
+                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, 4)
+                           ii = ii + atoms%jri(n)
+                        ENDDO
+                     ENDDO
+                  ENDIF
+               ELSE ! DFPT mixing
+                  DO n = mt_rank + 1, atoms%ntype, mt_size
+                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, j)
+                        ii = ii + atoms%jri(n)
+                     END DO
+                  END DO
+                  DO n = mt_rank + 1, atoms%ntype, mt_size
+                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, j)
+                        ii = ii + atoms%jri(n)
+                     END DO
+                  END DO
+                  IF (js == 3) THEN !Imaginary part
+                     DO n = mt_rank + 1, atoms%ntype, mt_size
+                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, 4)
+                           ii = ii + atoms%jri(n)
+                        END DO
+                     END DO
+                     DO n = mt_rank + 1, atoms%ntype, mt_size
+                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, 4)
+                           ii = ii + atoms%jri(n)
+                        END DO
+                     END DO
+                  END IF
+               END IF
             ENDIF
             IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
                mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, j))
@@ -191,21 +227,28 @@ CONTAINS
 
    END SUBROUTINE mixvector_from_density
 
-   SUBROUTINE mixvector_to_density(vec, den)
+   SUBROUTINE mixvector_to_density(vec, den, denIm)
       USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN)    :: vec
       TYPE(t_potden), INTENT(INOUT) :: Den
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
       INTEGER:: js, ii, n, l, iv, mmpSize
+      LOGICAL :: l_dfpt
+
+      l_dfpt = PRESENT(denIm)
 
       DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
          IF (spin_here(js)) THEN
             !PW part
             IF (pw_here) THEN
-               IF (sym%invs .AND. js < 3) THEN
+               IF (sym%invs .AND. js < 3 .AND. .NOT. l_dfpt) THEN
                   den%pw(:, js) = vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1)
                ELSE
                   den%pw(:, js) = CMPLX(vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1), vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1))
+                  IF (l_dfpt.AND.js==3) THEN
+                     den%pw(:, 4) = CMPLX(vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1), vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1))
+                  END IF
                ENDIF
             ENDIF
             IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
@@ -217,6 +260,14 @@ CONTAINS
                      ii = ii + atoms%jri(n)
                   ENDDO
                ENDDO
+               IF (l_dfpt) THEN
+                  DO n = mt_rank + 1, atoms%ntype, mt_size
+                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        denIm%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
+                        ii = ii + atoms%jri(n)
+                     ENDDO
+                  ENDDO
+               END IF
                IF (js == 3) THEN !Imaginary part comes as 4th spin
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
@@ -224,6 +275,14 @@ CONTAINS
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
+                  IF (l_dfpt) THEN
+                     DO n = mt_rank + 1, atoms%ntype, mt_size
+                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                           denIm%mt(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
+                           ii = ii + atoms%jri(n)
+                        ENDDO
+                     ENDDO
+                  END IF
                ENDIF
             ENDIF
             IF (vac_here) THEN
@@ -259,12 +318,14 @@ CONTAINS
 
    END SUBROUTINE mixvector_to_density
 
-   FUNCTION mixvector_metric(vec) RESULT(mvec)
+   FUNCTION mixvector_metric(vec,l_dfpt) RESULT(mvec)
       USE m_types
       USE m_convol
       IMPLICIT NONE
-      CLASS(t_mixvector), INTENT(IN)    :: vec
-      TYPE(t_mixvector)                :: mvec
+      CLASS(t_mixvector), INTENT(IN) :: vec
+      LOGICAL,            INTENT(IN) :: l_dfpt
+
+      TYPE(t_mixvector)              :: mvec
 
       INTEGER:: js, ii, n, l, iv
       COMPLEX, ALLOCATABLE::pw(:), pw_w(:)
@@ -277,7 +338,7 @@ CONTAINS
             !PW part
             IF (pw_here) THEN
                !Put back on g-grid and use convol
-               IF (sym%invs .AND. js < 3) THEN
+               IF (sym%invs .AND. js < 3 .AND. .NOT. l_dfpt) THEN
                   pw(:) = vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1)
                ELSE
                   pw(:) = CMPLX(vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1), vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1))
@@ -285,17 +346,33 @@ CONTAINS
                CALL convol(stars, pw_w, pw)
                pw_w = pw_w*cell%omtil
                mvec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(pw_w)
-               IF ((.NOT. sym%invs) .OR. (js == 3)) THEN
+               IF ((.NOT. sym%invs) .OR. (js == 3) .OR. l_dfpt) THEN
                   mvec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(pw_w)
                ENDIF
+               IF ((js == 3) .AND. l_dfpt) THEN
+                  pw(:) = CMPLX(vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1), vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1))
+                  CALL convol(stars, pw_w, pw)
+                  pw_w = pw_w*cell%omtil
+                  mvec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1) =  REAL(pw_w)
+                  mvec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1) = AIMAG(pw_w)
+               END IF
             ENDIF
             IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                !This PE stores some(or all) MT data
-               mvec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1)
-               IF (js == 3) THEN
-                  !Here we have a the imaginary part as well
-                  mvec%vec_mt(mt_start(js) + SIZE(g_mt):mt_stop(js)) = g_mt*vec%vec_mt(mt_start(js) + SIZE(g_mt):mt_stop(js))
-               ENDIF
+               IF (.NOT.l_dfpt) THEN
+                  mvec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1)
+                  IF (js == 3) THEN
+                     !Here we have a the imaginary part as well
+                     mvec%vec_mt(mt_start(js) + SIZE(g_mt):mt_stop(js)) = g_mt*vec%vec_mt(mt_start(js) + SIZE(g_mt):mt_stop(js))
+                  ENDIF
+               ELSE
+                  mvec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js):mt_start(js) + SIZE(g_mt) - 1)
+                  mvec%vec_mt(mt_start(js) + SIZE(g_mt):mt_start(js) + 2*SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js) + SIZE(g_mt):mt_start(js) + 2*SIZE(g_mt) - 1)
+                  IF (js == 3) THEN
+                     mvec%vec_mt(mt_start(js) + 2*SIZE(g_mt):mt_start(js) + 3*SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js) + 2*SIZE(g_mt):mt_start(js) + 3*SIZE(g_mt) - 1)
+                     mvec%vec_mt(mt_start(js) + 3*SIZE(g_mt):mt_start(js) + 4*SIZE(g_mt) - 1) = g_mt*vec%vec_mt(mt_start(js) + 3*SIZE(g_mt):mt_start(js) + 4*SIZE(g_mt) - 1)
+                  ENDIF
+               END IF
             ENDIF
             IF (vac_here) THEN
                mvec%vec_vac(vac_start(js):vac_start(js) + SIZE(g_vac) - 1) = g_vac*vec%vec_vac(vac_start(js):vac_start(js) + SIZE(g_vac) - 1)
@@ -314,9 +391,9 @@ CONTAINS
    SUBROUTINE init_metric(vacuum, stars)
       USE m_metrz0
       IMPLICIT NONE
-      ! 
+      !
       TYPE(t_vacuum), INTENT(in) :: vacuum
-      TYPE(t_stars), INTENT(in) :: stars
+      TYPE(t_stars),  INTENT(in) :: stars
 
       INTEGER:: i, n, l, j, ivac, iz, iv2c, k2, iv2
       REAL:: dxn, dxn2, dxn4, dvol, volnstr2
@@ -374,7 +451,7 @@ CONTAINS
             CALL metr_z0(vacuum%nmz, wght)
             DO iz = 1, vacuum%nmz
                i = i + 1
-               ! 
+               !
                g_vac(i) = wght(iz)*dvol
                !
             END DO
@@ -384,7 +461,7 @@ CONTAINS
             CALL metr_z0(vacuum%nmzxy, wght)
             DO iv2c = 1, iv2
                DO k2 = 1, stars%ng2 - 1
-                  ! 
+                  !
                   volnstr2 = dvol*stars%nstr2(k2)
                   DO iz = 1, vacuum%nmzxy
                      i = i + 1
@@ -446,12 +523,12 @@ CONTAINS
 #endif
    END SUBROUTINE init_storage_mpi
 
-   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix,   input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i)
+   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix,   input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i, l_dfpt)
       USE m_types
       IMPLICIT NONE
       INTEGER, INTENT(IN)               :: comm_mpi
       LOGICAL, INTENT(IN)               :: l_densitymatrix
-       
+
       TYPE(t_input), INTENT(IN)         :: input
       TYPE(t_vacuum), INTENT(IN), TARGET :: vacuum
       TYPE(t_noco), INTENT(IN)          :: noco
@@ -461,7 +538,9 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN), TARGET  :: atoms_i
       TYPE(t_sym), INTENT(IN), TARGET    :: sym_i
 
-      INTEGER::js, n, len
+      LOGICAL, INTENT(IN) :: l_dfpt
+
+      INTEGER :: js, n, len
 
       !Store pointers to data-types
       IF (ASSOCIATED(atoms)) RETURN !was done before...
@@ -483,11 +562,12 @@ CONTAINS
             !Now calculate the length of the vectors
             IF (pw_here) THEN
                pw_start(js) = pw_length + 1
-               IF (sym%invs .AND. js < 3) THEN
+               IF (sym%invs .AND. js < 3 .AND. .NOT. l_dfpt) THEN
                   pw_length = pw_length + stars%ng3
                ELSE
                   pw_length = pw_length + 2*stars%ng3
                ENDIF
+               IF (l_dfpt.AND.js==3) pw_length = pw_length + 2*stars%ng3
             ENDIF
             pw_stop(js) = pw_length
             IF (mt_here) THEN
@@ -495,13 +575,21 @@ CONTAINS
                len = 0
                !This PE stores some(or all) MT data
                DO n = mt_rank + 1, atoms%ntype, mt_size
-                  len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                  IF (l_dfpt) THEN
+                     len = len + 2*(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                  ELSE
+                     len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                  END IF
                ENDDO
                mt_length_g = MAX(len, mt_length_g)
                IF (js == 3) THEN
                   !need to store imaginary part as well...
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     IF (l_dfpt) THEN
+                        len = len + 2*(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     ELSE
+                        len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     END IF
                   ENDDO
                ENDIF
                IF (js < 3 .OR. any(noco%l_unrestrictMT)) mt_length = mt_length + len
@@ -642,6 +730,69 @@ CONTAINS
       dprod = dprod_tmp
 #endif
    END FUNCTION multiply_dot_mask
+
+   SUBROUTINE dfpt_multiply_dot_mask(vec1, vec2, mask, spin, dprod1, dprod2)
+      CLASS(t_mixvector), INTENT(IN)::vec1
+      TYPE(t_mixvector),  INTENT(IN)::vec2
+
+      LOGICAL, INTENT(IN)    :: mask(2)
+      INTEGER, INTENT(IN)    :: spin
+      REAL,    INTENT(INOUT) :: dprod1(2)
+
+      REAL, OPTIONAL, INTENT(INOUT) :: dprod2(2)
+
+      REAL :: dprod1_tmp, dprod2_tmp
+      INTEGER:: js, ierr
+
+      dprod1 = 0.0
+      IF (PRESENT(dprod2)) dprod2 = 0.0
+
+      DO js = 1, 2
+         IF (mask(1) .AND. (spin == js) .AND. pw_start(js) > 0) THEN
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_pw(pw_start(js):pw_stop(js)/2), &
+                                                vec2%vec_pw(pw_start(js):pw_stop(js)/2))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/2+1:pw_stop(js)), &
+                                                vec2%vec_pw(pw_stop(js)/2+1:pw_stop(js)))
+         END IF
+         IF (mask(2) .AND. (spin == js) .AND. mt_start(js) > 0) &
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)/2), &
+                                                vec2%vec_mt(mt_start(js):mt_stop(js)/2))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:mt_stop(js)), &
+                                                vec2%vec_mt(mt_stop(js)/2+1:mt_stop(js)))
+      END DO
+
+      IF (js==3.AND.PRESENT(dprod2)) THEN
+         IF (mask(1) .AND. pw_start(js) > 0) THEN
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_pw(pw_start(js):pw_stop(js)/4), &
+                                                vec2%vec_pw(pw_start(js):pw_stop(js)/4))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/4+1:pw_stop(js)/2), &
+                                                vec2%vec_pw(pw_stop(js)/4+1:pw_stop(js)/2))
+            dprod2(1) = dprod2(1) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/2+1:3*pw_stop(js)/4), &
+                                                vec2%vec_pw(pw_stop(js)/2+1:3*pw_stop(js)/4))
+            dprod2(2) = dprod2(2) + DOT_PRODUCT(vec1%vec_pw(3*pw_stop(js)/4+1:pw_stop(js)), &
+                                                vec2%vec_pw(3*pw_stop(js)/4+1:pw_stop(js)))
+         END IF
+         IF (mask(2) .AND. pw_start(js) > 0) THEN
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)/4), &
+                                                vec2%vec_mt(mt_start(js):mt_stop(js)/4))
+            dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/4+1:mt_stop(js)/2), &
+                                                vec2%vec_mt(mt_stop(js)/4+1:mt_stop(js)/2))
+            dprod2(1) = dprod2(1) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:3*mt_stop(js)/4), &
+                                                vec2%vec_mt(mt_stop(js)/2+1:3*mt_stop(js)/4))
+            dprod2(2) = dprod2(2) + DOT_PRODUCT(vec1%vec_mt(3*mt_stop(js)/4+1:mt_stop(js)), &
+                                                vec2%vec_mt(3*mt_stop(js)/4+1:mt_stop(js)))
+         END IF
+      END IF
+
+#ifdef CPP_MPI
+      CALL MPI_ALLREDUCE(dprod1, dprod1_tmp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
+      dprod1 = dprod1_tmp
+      IF (PRESENT(dprod2)) THEN
+         CALL MPI_ALLREDUCE(dprod2, dprod2_tmp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
+         dprod2 = dprod2_tmp
+      END IF
+#endif
+   END SUBROUTINE dfpt_multiply_dot_mask
 
    FUNCTION mixvector_allocated(self) RESULT(l_array)
       IMPLICIT NONE

@@ -11,7 +11,7 @@ MODULE m_broyden
   !     fm1   : output minus inputcharge density of iteration m-1
   !################################################################
 CONTAINS
-  SUBROUTINE broyden(alpha,fm,sm)
+  SUBROUTINE broyden(alpha,fm,sm,l_dfpt)
     USE m_types
     USE m_types_mixvector
     IMPLICIT NONE
@@ -19,6 +19,7 @@ CONTAINS
     real,INTENT(IN)                 :: alpha
     TYPE(t_mixvector),INTENT(IN)    :: fm(:)
     TYPE(t_mixvector),INTENT(INOUT) :: sm(:)
+    LOGICAL,            INTENT(IN) :: l_dfpt
 
     ! Locals
     INTEGER           :: n,it,hlen
@@ -70,7 +71,7 @@ CONTAINS
 
        ! calculate vm = alpha*wfm1 -\sum <fm1|w|vi> <fi1|w|vi><vi|
        ! convolute fm1 with the metrik and store in vm
-       vm=fm1%apply_metric()
+       vm=fm1%apply_metric(l_dfpt)
        call timestart("Broyden-2.loop")
        DO it = n-2,1,-1
           vi=v_store(it)

@@ -274,7 +274,7 @@ CONTAINS
       CALL core_den%resetPotDen
       call readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,&
                           CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                           0,rdum,tempDistance,ldum,core_den,'cdnc')
+                           0,rdum,tempDistance,ldum,core_den,inFilename='cdnc')
       call val_den%subPotDen(den,core_den)
 
       call vTot_corrected%copyPotDen(vTot)
