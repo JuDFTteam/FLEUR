@@ -110,9 +110,9 @@ MODULE m_types_selfen
          !The DFT+U correction is in the global frame of real space
          !For the calculation of the impurity greens function we shift into the local frame
          IF(noco%l_noco) THEN
-            vmmp_local = rotMMPmat(vmmp,0.0,-nococonv%beta(atomType),-nococonv%alph(atomType),l)
+            vmmp_local = rotMMPmat(vmmp,nococonv%alph(atomType),nococonv%beta(atomType),0.0,l,inverse=.true.)
          ELSE IF(noco%l_soc) THEN
-            vmmp_local = rotMMPmat(vmmp,0.0,-nococonv%theta,-nococonv%phi,l)
+            vmmp_local = rotMMPmat(vmmp,nococonv%phi,nococonv%theta,0.0,l,inverse=.true.)
          ELSE
             vmmp_local = vmmp
          ENDIF

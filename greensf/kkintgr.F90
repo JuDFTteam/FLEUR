@@ -358,6 +358,8 @@ MODULE m_kkintgr
 
       nz  = integration_weights(iContour)%matsize2
       ne  = integration_weights(iContour)%matsize1
+      transA = 'T'
+      IF(l_conjg) transA = 'C'
 
       IF(methods(iContour)==method_direct) THEN
          CALL zgemm(transA,'N',&
