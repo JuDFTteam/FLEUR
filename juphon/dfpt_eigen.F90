@@ -83,9 +83,10 @@ CONTAINS
       CALL zMatk%init(l_real,nbasfcn,noccbd)
       ALLOCATE(ev_list(noccbd))
       ev_list = (/(i, i=1,noccbd, 1)/)
+      ALLOCATE(eigk(noccbd))
+      ALLOCATE(eigs1(noccbd))
 
       CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
-
       CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, l_real, invHepsS)
 
       ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
@@ -94,6 +95,11 @@ CONTAINS
       CALL timestop("Setup of matrix perturbations")
 
       nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
+      IF (fmpi%n_size == 1) THEN
+         ALLOCATE (t_mat::zMat1)
+      ELSE
+         ALLOCATE (t_mpimat::zMat1)
+      END IF
       CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
 
       ALLOCATE(tempVec(nbasfcnq))

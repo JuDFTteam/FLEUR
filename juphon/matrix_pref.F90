@@ -26,7 +26,7 @@ CONTAINS
       CLASS(t_mat),  INTENT(INOUT) :: hmat, smat
 
       INTEGER :: ikGPr, ikG, ikG0
-      REAL    :: pref(3)
+      COMPLEX :: pref(3)
 
       !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
       !$OMP SHARED(fmpi, bmat, gvecPr, gvec, kvecPr, kvec) &
@@ -38,7 +38,7 @@ CONTAINS
             pref = gvec(:, ikG) + kvec
             pref = pref - gvecPr(:, ikGPr) - kvecPr
             pref = ImagUnit * MATMUL(pref, bmat)
-
+            
             hmat%data_c(ikGPr, ikG0) = hmat%data_c(ikGPr, ikG0) &
                                    & + pref(iDir) * hmat_tmp%data_c(ikGPr, ikG0)
             smat%data_c(ikGPr, ikG0) = smat%data_c(ikGPr, ikG0) &
