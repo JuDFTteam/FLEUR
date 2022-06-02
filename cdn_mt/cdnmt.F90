@@ -141,7 +141,7 @@ CONTAINS
                                                              * (f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin)) &
                                                              * 1.0/(atoms%neq(itype)*sfp_const)
                         
-                        hub1data%cdn_spherical(j,l,itype,ispin) = s/(atoms%neq(itype)*sfp_const)
+                        hub1data%cdn_spherical(j,l,itype,ispin) = real(cs)/(atoms%neq(itype)*sfp_const)
                      END IF
                   END DO
                END DO
