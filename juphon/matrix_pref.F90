@@ -34,11 +34,11 @@ CONTAINS
       !$OMP PRIVATE(ikGPr, ikG, ikG0, pref)
       DO ikG = fmpi%n_rank + 1, nv, fmpi%n_size
          ikG0 = (ikG-1) / fmpi%n_size + 1
-         DO  ikGPr = 1, nvPr
+         DO ikGPr = 1, nvPr
             pref = gvec(:, ikG) + kvec
             pref = pref - gvecPr(:, ikGPr) - kvecPr
             pref = ImagUnit * MATMUL(pref, bmat)
-            
+
             hmat%data_c(ikGPr, ikG0) = hmat%data_c(ikGPr, ikG0) &
                                    & + pref(iDir) * hmat_tmp%data_c(ikGPr, ikG0)
             smat%data_c(ikGPr, ikG0) = smat%data_c(ikGPr, ikG0) &

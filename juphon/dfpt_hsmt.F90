@@ -64,7 +64,7 @@ CONTAINS
 
       TYPE(t_fjgj) :: fjgj
 
-      INTEGER :: ilSpinPr, ilSpin
+      INTEGER :: ilSpinPr, ilSpin, nspins, i, j
       INTEGER :: igSpinPr, igSpin, n
       COMPLEX :: chi(2,2),chi_one
 
@@ -83,15 +83,26 @@ CONTAINS
          !$acc enter data copyin(smat_tmp,hmat_tmp)create(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
       END IF
 
-      h1mat_tmp = hmat
-      s1mat_tmp = smat
+      nspins = MERGE(2, 1, noco%l_noco)
+      IF (fmpi%n_size == 1) THEN
+         ALLOCATE (t_mat::s1mat_tmp(nspins, nspins), h1mat_tmp(nspins, nspins))
+      ELSE
+         ALLOCATE (t_mpimat::s1mat_tmp(nspins, nspins), h1mat_tmp(nspins, nspins))
+      END IF
 
-      DO ilSpinPr = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
-         DO ilSpin = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
-            CALL h1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
-            CALL s1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
+      DO i = 1, nspins
+         DO j = 1, nspins
+            CALL s1mat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL h1mat_tmp(i, j)%init(s1mat_tmp(i, j))
          END DO
       END DO
+
+      !DO ilSpinPr = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
+      !   DO ilSpin = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
+      !      CALL h1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
+      !      CALL s1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
+      !   END DO
+      !END DO
 
       CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,iSpin,noco)
       !$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
