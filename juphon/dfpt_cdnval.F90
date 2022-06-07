@@ -210,7 +210,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(fmpi,sphhar,atoms,stars,vacuumdummy,input,noco,ispin,regChargesdummy,dosdummy,vacdosdummy,&
+      CALL mpi_col_den(fmpi,sphhar,atoms,stars,vacuumdummy,input,noco,ispin,dosdummy,vacdosdummy,&
                        resultsdummy,denCoeffs,orbdummy,denCoeffsOffdiag,den)
    END DO
 #endif
