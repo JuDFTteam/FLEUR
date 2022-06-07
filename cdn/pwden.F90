@@ -333,12 +333,14 @@ CONTAINS
                CALL fft_interface(3, stateq%dimensions(:), stateq%grid, forw, stateqIndices)
             END IF
             IF (.NOT.l_dfpt) THEN
-            DO ir = 0, chargeDen%gridLength - 1
-               chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
-            END DO
+               DO ir = 0, chargeDen%gridLength - 1
+                  chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
+               END DO
             ELSE
-               chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
-               IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+               DO ir = 0, chargeDen%gridLength - 1
+                  chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
+                  IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+               END DO
             END IF
 
             IF (input%l_f) THEN

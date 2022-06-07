@@ -40,6 +40,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 #endif
    USE m_dfpt_rhomt
    USE m_dfpt_rhonmt
+   USE m_genMTBasis
 
    IMPLICIT NONE
 
@@ -71,7 +72,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    REAL, INTENT(IN) :: q_dfpt(3)
 
    ! Local Scalars
-   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,iType
    INTEGER :: iErr,nbands,noccbd,nbands1
    INTEGER :: skip_t,skip_tt,nbasfcn
    LOGICAL :: l_real
@@ -80,6 +81,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    COMPLEX ::  f_b8_dummy(3, atoms%ntype)
    REAL,ALLOCATABLE :: we(:),eig(:),we1(:),eig1(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
+   REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
    TYPE (t_lapw)              :: lapw, lapwq
    TYPE (t_orb)               :: orbdummy
@@ -107,6 +109,10 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       jsp_end   = jspin
    END IF
 
+   ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)) ! Deallocation before mpi_col_den
+   ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
+   ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
+
    ! Initializations
    CALL usdus%init(atoms,input%jspins)
    CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
@@ -116,6 +122,13 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    !CALL orbdummy%init(atoms,noco,jsp_start,jsp_end)
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
+
+   DO iType = 1, atoms%ntype
+      DO ispin = 1, input%jspins
+         CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
+      END DO
+   END DO
+   DEALLOCATE (f,g,flo)
 
    skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
    IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
@@ -127,7 +140,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       ikpt=cdnvalJob%k_list(ikpt_i)
 
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
-      CALL lapw%init(input,noco,nococonv, kqpts,atoms,sym,ikpt,cell, fmpi)
+      CALL lapwq%init(input,noco,nococonv, kqpts,atoms,sym,ikpt,cell, fmpi)
 
       skip_t = skip_tt
       ev_list=cdnvaljob%compact_ev_list(ikpt_i,.FALSE.)

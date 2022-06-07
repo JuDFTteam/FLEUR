@@ -11,7 +11,7 @@ MODULE m_dfpt_hsmt
 CONTAINS
    SUBROUTINE dfpt_hsmt(atoms, sym, enpara, iSpin, iDir, iDtype, input, fmpi, &
                       & noco, nococonv, cell, lapw, lapwq, usdus, td, tdV1, hmat, smat)
-                      
+
       !> Setup of the MT part of the Hamiltonian and the overlap perturbation matrices
       !! Adapted from hsmt()
       !!
@@ -183,12 +183,15 @@ CONTAINS
          END DO
       END DO
       !$acc end data
+
       ! TODO: Does this need some ACC magic?
       DO igSpinPr=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
          DO igSpin=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
             CALL matrix_pref(fmpi, cell%bmat, lapwq%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapwq%bkpt, lapw%bkpt, &
                            & lapwq%nv(igSpinPr), lapw%nv(igSpin), iDir, &
                            & h1mat_tmp(igSpinPr,igSpin), s1mat_tmp(igSpinPr,igSpin), hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin))
+            CALL h1mat_tmp(igSpinPr,igSpin)%free()
+            CALL s1mat_tmp(igSpinPr,igSpin)%free()
          END DO
       END DO
       IF (noco%l_noco) THEN

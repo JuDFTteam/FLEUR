@@ -151,8 +151,10 @@ CONTAINS
       END IF
 
       neigBuffer = 0
-      results%neig = 0
-      results%eig = 1.0e300
+      IF (.NOT.l_dfpteigen) THEN
+         results%neig = 0
+         results%eig = 1.0e300
+      END IF
       eigBuffer = 1.0e300
       unfoldingBuffer = CMPLX(0.0,0.0)
       nvBuffer = 0
@@ -258,6 +260,10 @@ CONTAINS
                   endif
                 ELSE
                     CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+#if defined(CPP_MPI)
+                    CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
+                    CALL timestop("EV output")
                     CYCLE k_loop
                 END IF
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
@@ -267,6 +273,10 @@ CONTAINS
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 ELSE
                     if (fmpi%pe_diag) CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+#if defined(CPP_MPI)
+                    CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
+                    CALL timestop("EV output")
                     CYCLE k_loop
                 END IF
             ENDIF
