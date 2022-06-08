@@ -706,7 +706,7 @@ CONTAINS
       dcprod, nk, bandi1, bandf1, bandi2, bandf2, lwrite, &
       input, atoms, mpdata, hybinp, &
       cell, &
-      hybdat, kpts, sym, noco, nococonv, lapw, oneD, &
+      hybdat, kpts, sym, noco, nococonv, lapw,   &
       jsp, &
       eig_irr)
 
@@ -726,7 +726,7 @@ CONTAINS
       type(t_nococonv), intent(in) :: nococonv
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
-      type(t_oneD), intent(in)   :: oneD
+       
 
 !     - scalars -
       INTEGER, INTENT(IN)      ::  nk, bandi1, bandf1, bandi2, bandf2
@@ -748,7 +748,7 @@ CONTAINS
       dcprod = cmplx_0
       CALL momentum_matrix(dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
          input, atoms, mpdata, hybinp, cell, hybdat, kpts, sym, noco,nococonv, lapw, &
-         oneD,jsp)
+          jsp)
 
       !                                                __
       !  Calculate expansion coefficients -i < uj | \/ | ui > / ( ei - ej ) for periodic function ui
@@ -780,7 +780,7 @@ CONTAINS
 !
    SUBROUTINE momentum_matrix(momentum, nk, bandi1, bandf1, bandi2, bandf2, &
                               input, atoms, mpdata, hybinp, &
-                              cell, hybdat, kpts, sym, noco,nococonv, lapw, oneD, jsp)
+                              cell, hybdat, kpts, sym, noco,nococonv, lapw,   jsp)
       USE m_olap
       USE m_wrapper
       USE m_util, only: derivative
@@ -802,7 +802,7 @@ CONTAINS
       type(t_nococonv), intent(in)::nococonv
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
-      type(t_oneD), intent(in)   :: oneD
+       
 
 !     - scalars -
       INTEGER, INTENT(IN)      ::  bandi1, bandf1, bandi2, bandf2
@@ -845,7 +845,7 @@ CONTAINS
       if(nk /= kpts%bkp(nk)) call juDFT_error("We should be reading the parent z-mat here!")
       call read_z(atoms, cell, hybdat, kpts, sym, noco, nococonv,  input, nk, jsp, z, c_phase=c_phase)
       call calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
-                          sym, oneD, z, jsp, nk, c_phase, cmt)
+                          sym,   z, jsp, nk, c_phase, cmt)
 
       ! read in z coefficients from direct access file z at kpoint nk
 

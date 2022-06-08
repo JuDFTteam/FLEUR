@@ -37,7 +37,7 @@ PROGRAM inpgen
   USE m_types_gfinp
   USE m_types_hub1inp
   USE m_types_enpara
-  USE m_types_oneD
+   
   USE m_types_sliceplot
   USE m_types_stars
   use m_read_old_inp
@@ -68,7 +68,7 @@ PROGRAM inpgen
       TYPE(t_enpara)   :: enpara
       TYPE(t_forcetheo):: forcetheo
       TYPE(t_kpts), ALLOCATABLE :: kpts(:)
-      TYPE(t_oned)     :: oned
+       
       TYPE(t_sliceplot):: sliceplot
       TYPE(t_stars)    :: stars
       TYPE(t_gfinp)    :: gfinp
@@ -100,6 +100,16 @@ PROGRAM inpgen
          INTEGER(c_int) dropDefaultEConfig
        END FUNCTION dropDefaultEConfig
 
+       FUNCTION dropDefault2EConfig() BIND(C, name="dropDefault2EConfig")
+         USE iso_c_binding
+         INTEGER(c_int) dropDefault2EConfig
+       END FUNCTION dropDefault2EConfig
+
+       FUNCTION dropOxidesValEConfig() BIND(C, name="dropOxidesValidationEConfig")
+         USE iso_c_binding
+         INTEGER(c_int) dropOxidesValEConfig
+       END FUNCTION dropOxidesValEConfig
+
        FUNCTION dropProfiles() BIND(C, name="dropProfiles")
          USE iso_c_binding
          INTEGER(c_int) dropProfiles
@@ -112,8 +122,6 @@ PROGRAM inpgen
       CALL inpgen_help()
       l_explicit=judft_was_argument("-explicit")
 
-      INQUIRE(file='default.econfig',exist=l_exist)
-      IF (.NOT.l_exist) idum=dropDefaultEconfig()
       INQUIRE(file='profile.config',exist=l_exist)
       IF (.NOT.l_exist) idum=dropProfiles()
 
@@ -183,17 +191,28 @@ PROGRAM inpgen
          CALL profile%load(TRIM(ADJUSTL(judft_string_for_argument("-profile"))))
       END IF
 
+      IF(profile%atomSetup.EQ."oxides_validation") THEN
+         INQUIRE(file='oxides_validation.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropOxidesValEconfig()
+      ELSE IF (profile%atomSetup.EQ."default2") THEN
+         INQUIRE(file='default2.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropDefault2Econfig()
+      ELSE
+         INQUIRE(file='default.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropDefaultEconfig()
+      END IF
+
       IF (judft_was_argument("-inp")) THEN
          l_kptsInitialized(:) = .FALSE.
          call read_old_inp(input,atoms,cell,stars,sym,noco,vacuum,forcetheo,&
-              sliceplot,banddos,enpara,xcpot,kpts(1),hybinp, oneD)
+              sliceplot,banddos,enpara,xcpot,kpts(1),hybinp)
          l_fullinput=.TRUE.
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
          l_fullinput=.true. !will be set to false if old inp.xml is read
          l_oldinpXML=.true.
          call Fleurinput_read_xml(0,cell,sym,atoms,input,noco,vacuum,sliceplot=Sliceplot,banddos=Banddos,&
-                                  hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,&
+                                  hybinp=hybinp, xcpot=Xcpot,kptsSelection=kptsSelection,&
                                   kptsArray=kpts,enparaXML=enparaXML,old_version=l_oldinpXML)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
@@ -230,7 +249,7 @@ PROGRAM inpgen
 
          !All atom related parameters are set here. Note that some parameters might
          !have been set in the read_input call before by adding defaults to the atompar module
-         CALL make_atomic_defaults(input,vacuum,profile,cell,oneD,atoms,enpara)
+         CALL make_atomic_defaults(input,vacuum,profile,cell ,atoms,enpara)
 
          !Set all defaults that have not been specified before or can not be specified in inpgen
          CALL make_defaults(atoms,sym,cell,vacuum,input,stars,xcpot,profile,noco,banddos,mpinp,hybinp)
@@ -273,7 +292,7 @@ PROGRAM inpgen
                            kptsBZintegration(iKpts),kptsGamma(ikpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
          if(hybinp%l_hybrid .and. kpts(iKpts)%kptsKind == KPTS_KIND_MESH) then
             call timestart("Hybrid setup BZ")
-            CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
+            CALL make_sym(sym,cell,atoms,noco ,input,gfinp)
             call kpts(ikpts)%init(sym, input%film,.true.,.FALSE.)
             call timestop("Hybrid setup BZ")
          endif
@@ -303,7 +322,7 @@ PROGRAM inpgen
          IF(l_exist) CALL system('mv '//trim(filename)//' '//trim(filename)//'_old')
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos, juPhon,&
-              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
+              cell,sym,xcpot,noco ,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
               hub1inp,l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
@@ -399,7 +418,7 @@ PROGRAM inpgen
 
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
-      CALL xsf_WRITE_atoms(55,atoms,input%film,.FALSE.,cell%amat)
+      CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat)
       CLOSE (55)
       CLOSE(oUnit)
 

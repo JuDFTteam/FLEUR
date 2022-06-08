@@ -1,6 +1,6 @@
       SUBROUTINE parawrite(&
      &                     sym,stars,atoms,sphhar,vacuum,&
-     &                     kpts,oneD,input)
+     &                     kpts ,input)
 
       USE m_types
       USE m_constants
@@ -12,7 +12,7 @@
       
       TYPE(t_vacuum),INTENT(INOUT) :: vacuum
       TYPE(t_kpts),INTENT(IN)      :: kpts
-      TYPE(t_oneD),INTENT(IN)      :: oneD
+       
       TYPE(t_input),INTENT(IN)     :: input
    
      
@@ -92,14 +92,10 @@
 
  8220 FORMAT(6x,'parameter (nlod=',i3,',llod=',i3,')')
 
-      IF (oneD%odd%d1) THEN
-        WRITE (oUnit,'(6x,''One-dimensional parameters'')')
-        WRITE (oUnit,8230) oneD%odd%mb,oneD%odd%M,oneD%odd%m_cyl,oneD%odd%chi,oneD%odd%rot,&
-     &                           oneD%odd%nop,oneD%odd%n2d,oneD%odd%d1
-      ELSE
+      
         WRITE (oUnit,'(6x,''One-dimensional parameters'')')
         WRITE (oUnit,8230) 0,0,0,0,0,sym%nop,stars%ng2,.false.
-      END IF
+      
 
  8230   FORMAT (6x,'parameter (vM=',i3,',MM=',i3,',m_cyl=',i3,&
      &                       ',chi=',i3,&

@@ -83,8 +83,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests --mock-regenerate-test-data
   allow_failure: true
   artifacts:
-    when: on_failure
+    when: always
     paths:
       - aiida-fleur/tests/
-  except:
-    - pushes
+  rules:
+      - if: $CI_TASKS =~ /aiida/    

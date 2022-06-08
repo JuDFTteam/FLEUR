@@ -14,7 +14,7 @@ MODULE m_chkmt
 !---------------------------------------------------------------------
    CONTAINS
 
-   SUBROUTINE chkmt(atoms,input,vacuum,cell,oneD,l_test,&
+   SUBROUTINE chkmt(atoms,input,vacuum,cell ,l_test,&
              l_gga,noel, kmax,dtild,dvac1,lmax1,jri1,rmt1,dx1,&!optional, if l_gga and ... are present suggestions are calculated
              overlap)!this is optional, if present and l_test the routine returns the overlaps and does not stop
 
@@ -31,7 +31,7 @@ MODULE m_chkmt
       TYPE(t_input),INTENT(IN) :: input
       TYPE(t_vacuum),INTENT(IN):: vacuum
       TYPE(t_cell),INTENT(IN)  :: cell
-      TYPE(t_oneD),INTENT(IN)  :: oneD
+       
       CHARACTER*3, INTENT (IN),OPTIONAL :: noel(atoms%ntype)
       LOGICAL, INTENT (IN),OPTIONAL     :: l_gga
       LOGICAL, INTENT (IN)     ::l_test
@@ -368,11 +368,9 @@ MODULE m_chkmt
          DO i = 1, atoms%ntype
             DO na = 1, atoms%neq(i)
                iAtom = iAtom + 1
-               IF (oneD%odd%d1) THEN
-                  dvac1 = MAX(dvac1, SQRT(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2)+rmt1(i))
-               ELSE
+               
                   dvac1 = MAX(dvac1, ABS(atoms%pos(3,iAtom))+rmt1(i))
-               END IF
+               
             END DO
          END DO
          dvac1 = 2.0 * (dvac1+0.3)
@@ -424,28 +422,22 @@ MODULE m_chkmt
                   error = .TRUE.
                   IF (PRESENT(overlap)) overlap(i,k)=atoms%rmt(i)+atoms%rmt(k)-nearestNeighborDists(j,i)
                   WRITE(oUnit,240) i,k,nearestNeighborDists(j,i),atoms%rmt(i),atoms%rmt(k)
+                  IF (.NOT.PRESENT(overlap)) CALL juDFT_error("Overlapping MT-radii of two neighbours detected.",calledby ="chkmt")
                END IF
             END DO
             IF (input%film) THEN
                DO na = 1, atoms%neq(i)
                   iAtom = iAtom + 1
-                  IF (oneD%odd%d1) THEN
-                     IF ((sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2)+&
-                         atoms%rmt(i)).GT.vacuum%dvac/2.) THEN
-                        error=.TRUE.
-                        WRITE(oUnit,241) i ,na
-                        WRITE(oUnit,*) sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2),&
-                                   atoms%rmt(i),vacuum%dvac/2.
-                     END IF
-                  ELSE
+                 
                      IF (((atoms%pos(3,iAtom)+atoms%rmt(i)).GT. vacuum%dvac/2.).OR.&
                          ((atoms%pos(3,iAtom)-atoms%rmt(i)).LT.-vacuum%dvac/2.)) THEN
                         error=.TRUE.
                         WRITE(oUnit,241) i ,na
                         IF (PRESENT(overlap)) overlap(0,i)=MAX(atoms%pos(3,iAtom)+atoms%rmt(i)-vacuum%dvac/2.,atoms%pos(3,iAtom)-atoms%rmt(i)+vacuum%dvac/2.)
                         WRITE(oUnit,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
+                        IF (.NOT.PRESENT(overlap)) CALL juDFT_error("MT is partly inside the vacuum.",calledby ="chkmt")
                      ENDIF
-                  ENDIF
+                 
                END DO
             END IF
          END DO

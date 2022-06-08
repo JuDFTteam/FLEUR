@@ -14,35 +14,40 @@ MODULE m_vdWfleur_grimme
     REAL,    DIMENSION(:,:),POINTER :: coord_cart
     END TYPE atom_data
     
+    real,allocatable:: force_stored(:,:)
+    real            :: energy_stored
     PUBLIC :: vdw_fleur_grimme
 
     CONTAINS
-    SUBROUTINE vdW_fleur_grimme(atoms,sym,cell,film,e_vdW,f_vdW)
-        USE m_constants,only:oUnit
-        USE m_types,only: t_atoms,t_cell,t_sym,t_xcpot
+    SUBROUTINE vdW_fleur_grimme(input,atoms,sym,cell,e_vdW,f_vdW)
+        USE m_constants,only:oUnit,tpi_const
+        USE m_types,only: t_atoms,t_cell,t_sym,t_input
         USE DFT_D2,  ONLY: driver_DFT_D2
         USE DFT_D3,  ONLY: driver_DFT_D3
        
         IMPLICIT NONE
+        TYPE(t_input),INTENT(IN) :: input
         TYPE(t_atoms),INTENT(IN) :: atoms
         TYPE(t_cell),INTENT(IN)  :: cell
         TYPE(t_sym),INTENT(IN)   :: sym
 
-        LOGICAL, INTENT (IN) :: film
         REAL,    INTENT (OUT) :: e_vdW,f_vdW(:,:)
         
         INTEGER  :: NrAtomType,nsize,max_cyc,iop
-        INTEGER  :: NrAtoms,i,j,i1,i2,na
+        INTEGER  :: NrAtoms,i,j,i1,i2,na,na1
         INTEGER,SAVE:: irep(3)=0 !will be determined at first call and reused later
-        REAL :: start,finish,toler,delta
+        REAL :: start,finish,delta
         REAL :: test(3,8),brmin(3),brmax(3),force_i(3),f_rot(3)
-        LOGICAL l_D2,l_in_au,l_exist
+        LOGICAL l_D2,l_in_au
         TYPE(atom_data) :: atom,atom_new
         REAL, ALLOCATABLE :: ener(:),force_vdW(:,:),force_max(:,:)
         
-                   
-        max_cyc=merge(20,1,all(irep==0)) ! max. tries for bigger supercells
-        toler = 0.0005            ! energy tolerance required (eV)
+        if (allocated(force_stored)) THEN
+            e_vdw=energy_stored
+            f_vdw=force_stored
+            return !vdW contribution already calculated
+        endif           
+        max_cyc=merge(40,1,all(irep==0)) ! max. tries for bigger supercells
         ALLOCATE ( ener(max_cyc) )
         
         l_D2 = .false.
@@ -62,7 +67,7 @@ MODULE m_vdWfleur_grimme
             DO i2 = 1,atoms%neq(i1)
                 na = na + 1
                 atom%atomic_number(na) = NINT(atoms%zatom(i1))
-                atom%coord_bravais(:,na)=matmul(cell%bmat,atoms%pos(:,na))
+                atom%coord_bravais(:,na)=matmul(cell%bmat,atoms%pos(:,na))/tpi_const
                 atom%coord_cart(:,na)= atoms%pos(:,na)
             ENDDO
         ENDDO
@@ -84,7 +89,7 @@ MODULE m_vdWfleur_grimme
             brmax(:) = maxval(test(:,1:8),2) 
             
             irep(:) = 45.0 / (brmax(:)-brmin(:))
-            IF (film) irep(3) = 0
+            IF (input%film) irep(3) = 0
             
         ENDIF
         
@@ -114,19 +119,18 @@ MODULE m_vdWfleur_grimme
                 DO i1=1,NrAtoms
                     WRITE (oUnit,'(a15,i4,a3,3f15.9)') 'Delta vdW force',i1,' : ',force_max(i1,nsize)-force_max(i1,nsize-1)
                 ENDDO
-                IF (abs(delta) < toler) EXIT cyc
+                IF (abs(delta) < input%vdw_tol) EXIT cyc
             ENDIF
         ENDIF
         
         irep(1:2) = irep(1:2) + 1
-        IF (.not.film) irep(3) =  irep(3) + 1
+        IF (.not.input%film) irep(3) =  irep(3) + 1
     ENDDO cyc
     
-    IF (abs(delta) > toler) THEN
+    IF (abs(delta) > input%vdW_tol) THEN
         WRITE (oUnit,*) 'vdW did not converge with cell size!'
         e_vdW = 0.0
     ELSE
-        CALL cpu_time(finish)
         WRITE (oUnit,'(a13,3i5,a4,f12.3,a5)') 'vdW converged',irep(:)
         e_vdW = ener(nsize)/27.21138386
         WRITE ( oUnit,8060) e_vdW
@@ -142,11 +146,24 @@ MODULE m_vdWfleur_grimme
         DO i2 = 1,atoms%neq(i1)   ! here symmetrization should be done
             na = na + 1
             iop = sym%ngopr(na) ! invtab(ngopr(na))
-            force_i=matmul(cell%bmat,force_vdW(:,na))
+            force_i=matmul(cell%bmat,force_vdW(:,na))/tpi_const
             f_rot=f_rot+matmul(real(sym%mrot(:,:,iop)),force_i)
         ENDDO
-        f_vdW(:,i1)=matmul(cell%amat,f_rot)/atoms%neq(i1)
+        f_rot=f_rot/atoms%neq(i1)
+        na1 = na - atoms%neq(i1) + 1
+        force_i(:) = f_rot(:)
+        IF (sym%invarind(na1) > 1) THEN
+          DO i2 = 2, sym%invarind(na1)
+            iop = sym%invarop(na1,i2)
+            force_i=force_i+matmul(sym%mrot(:,:,iop),f_rot)
+          ENDDO
+          force_i(:) = force_i(:) / sym%invarind(na1)
+        ENDIF
+
+        f_vdW(:,i1)=matmul(cell%amat,force_i)
     ENDDO
+    force_stored=f_vdW !Automatic allocate!
+    energy_stored=e_vdw
     !
 END SUBROUTINE vdW_fleur_grimme
 !

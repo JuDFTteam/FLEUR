@@ -69,7 +69,7 @@ MODULE m_cfOutput_hdf
          CALL h5screate_simple_f(2,dims(:2),bravaisMatrixSpaceID,hdfError)
          CALL h5dcreate_f(generalGroupID, "bravaisMatrix", H5T_NATIVE_DOUBLE, bravaisMatrixSpaceID, bravaisMatrixSetID, hdfError)
          CALL h5sclose_f(bravaisMatrixSpaceID,hdfError)
-         CALL io_write_real2(bravaisMatrixSetID,(/1,1/),dimsInt(:2),cell%amat)
+         CALL io_write_real2(bravaisMatrixSetID,(/1,1/),dimsInt(:2),"amat",cell%amat)
          CALL h5dclose_f(bravaisMatrixSetID, hdfError)
 
          CALL h5gclose_f(generalGroupID, hdfError)
@@ -133,7 +133,7 @@ MODULE m_cfOutput_hdf
       CALL h5screate_simple_f(1,dims(:1),rmeshDataSpaceID,hdfError)
       CALL h5dcreate_f(potGroupID, "rmesh", H5T_NATIVE_DOUBLE, rmeshDataSpaceID, rmeshDataSetID, hdfError)
       CALL h5sclose_f(rmeshDataSpaceID,hdfError)
-      CALL io_write_real1(rmeshDataSetID,[1],dimsInt(:1),atoms%rmsh(:atoms%jri(iType),iType))
+      CALL io_write_real1(rmeshDataSetID,[1],dimsInt(:1),"rmsh",atoms%rmsh(:atoms%jri(iType),iType))
       CALL h5dclose_f(rmeshDataSetID, hdfError)
 
       DO l = 2, 6, 2
@@ -148,7 +148,7 @@ MODULE m_cfOutput_hdf
             CALL h5screate_simple_f(3,dims(:3),vlmDataSpaceID,hdfError)
             CALL h5dcreate_f(vlmGroupID, "vlm", H5T_NATIVE_DOUBLE, vlmDataSpaceID, vlmDataSetID, hdfError)
             CALL h5sclose_f(vlmDataSpaceID,hdfError)
-            CALL io_write_complex2(vlmDataSetID,[-1,1,1],dimsInt(:3),vlm(:atoms%jri(iType),lm,:))
+            CALL io_write_complex2(vlmDataSetID,[-1,1,1],dimsInt(:3),"vlm",vlm(:atoms%jri(iType),lm,:))
             CALL h5dclose_f(vlmDataSetID, hdfError)
 
             CALL h5gclose_f(vlmGroupID, hdfError)
@@ -197,7 +197,7 @@ MODULE m_cfOutput_hdf
       CALL h5screate_simple_f(1,dims(:1),rmeshDataSpaceID,hdfError)
       CALL h5dcreate_f(cdnGroupID, "rmesh", H5T_NATIVE_DOUBLE, rmeshDataSpaceID, rmeshDataSetID, hdfError)
       CALL h5sclose_f(rmeshDataSpaceID,hdfError)
-      CALL io_write_real1(rmeshDataSetID,[1],dimsInt(:1),atoms%rmsh(:atoms%jri(iType),iType))
+      CALL io_write_real1(rmeshDataSetID,[1],dimsInt(:1),"rmsh",atoms%rmsh(:atoms%jri(iType),iType))
       CALL h5dclose_f(rmeshDataSetID, hdfError)
 
       dims(:1)=[atoms%jri(iType)]
@@ -205,7 +205,7 @@ MODULE m_cfOutput_hdf
       CALL h5screate_simple_f(1,dims(:1),cdnDataSpaceID,hdfError)
       CALL h5dcreate_f(cdnGroupID, "cdn", H5T_NATIVE_DOUBLE, cdnDataSpaceID, cdnDataSetID, hdfError)
       CALL h5sclose_f(cdnDataSpaceID,hdfError)
-      CALL io_write_real1(cdnDataSetID,[1],dimsInt(:1),n4f(:atoms%jri(iType)))
+      CALL io_write_real1(cdnDataSetID,[1],dimsInt(:1),"n4f",n4f(:atoms%jri(iType)))
       CALL h5dclose_f(cdnDataSetID, hdfError)
 
       CALL h5gclose_f(cdnGroupID, hdfError)

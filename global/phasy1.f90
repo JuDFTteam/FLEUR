@@ -44,8 +44,8 @@ CONTAINS
                   stars%kv3(:,k), kr, phas)
 
       ALLOCATE ( ylm( (atoms%lmaxd+1)**2, sym%nop ) )
-      DO j = 1,sym%nop
-          rg=matmul(kr(:,j),cell%bmat)
+      DO j = 1,sym%nop !center/=0 only works for sym = 1
+          rg=matmul(real(kr(:,j))+stars%center,cell%bmat)
           CALL ylm4(atoms%lmaxd, rg, ylm(:,j))!keep
       ENDDO
       ylm = conjg( ylm )
@@ -56,7 +56,7 @@ CONTAINS
                pylm(lm,n) = cmplx(0.,0.)
          ENDDO
          DO j = 1,sym%nop
-            x = tpi_const* dot_product(real(kr(:,j)),atoms%taual(:,na))
+            x = tpi_const* dot_product(real(kr(:,j))+stars%center,atoms%taual(:,na))
             sf = cmplx(cos(x),sin(x))*phas(j)
             DO l = 0,atoms%lmax(n)
                ll1 = l*(l+1) + 1

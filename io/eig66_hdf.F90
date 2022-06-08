@@ -96,9 +96,9 @@ CONTAINS
       access_prp = H5P_DEFAULT_f
       creation_prp = H5P_DEFAULT_f
 #endif
-      
+
       if(l_olap) call juDFT_error("olap not implemented for hdf5")
-      
+
       CALL priv_find_data(id, d)
       IF (PRESENT(filename)) d%fname = filename
       CALL eig66_data_storedefault(d, jspins, nkpts, nmat, neig, l_real, l_soc)
@@ -199,11 +199,11 @@ CONTAINS
       IF (.NOT. PRESENT(list)) THEN
          ! read all eigenvectors
          CALL io_read_real2(d%evsetid, (/1, 1, 1, nk, jspin/), &
-                            (/1, nmat, SIZE(z, 2), 1, 1/), z(:nmat, :))
+                            (/1, nmat, SIZE(z, 2), 1, 1/), "evec", z(:nmat, :))
       ELSE
          DO i = 1, SIZE(list)
             CALL io_read_real1(d%evsetid, (/1, 1, list(i), nk, jspin/),&
-                 &                      (/1, nmat, 1, 1, 1/), z(:nmat, i))
+                 &                      (/1, nmat, 1, 1, 1/), "evec", z(:nmat, i))
          ENDDO
       END IF
 
@@ -242,7 +242,7 @@ CONTAINS
 
       call timestart("write neig_total")
       IF (PRESENT(neig_total)) THEN
-         CALL io_write_integer0(d%neigsetid, (/nk, jspin/), (/1, 1/), neig_total)
+         CALL io_write_integer0(d%neigsetid, (/nk, jspin/), (/1, 1/), "neig_total", neig_total)
       ENDIF
       call timestop("write neig_total")
 
@@ -313,7 +313,7 @@ CONTAINS
          ! read all eigenvectors
          ALLOCATE (z1(2, nmat, SIZE(z, 2)))
          CALL io_read_real3(d%evsetid, (/1, 1, 1, nk, jspin/),&
-              &                      (/2, nmat, SIZE(z, 2), 1, 1/), z1)
+              &                      (/2, nmat, SIZE(z, 2), 1, 1/), "z1", z1)
          DO i = 1, SIZE(z, 2)
             z(:, i) = CMPLX(z1(1, :, i), z1(2, :, i))
          ENDDO
@@ -321,7 +321,7 @@ CONTAINS
          ALLOCATE (z1(2, nmat, 1))
          DO i = 1, SIZE(list)
             CALL io_read_real3(d%evsetid, (/1, 1, list(i), nk, jspin/),&
-             &                      (/2, nmat, 1, 1, 1/), z1)
+             &                      (/2, nmat, 1, 1, 1/), "z1", z1)
             z(:, i) = CMPLX(z1(1, :, 1), z1(2, :, 1))
          ENDDO
       END IF
@@ -353,7 +353,7 @@ CONTAINS
                CALL juDFT_error("eig66_hdf$readeig", calledby="eig66_hdf")
             ENDIF
             CALL io_read_real1(d%energysetid, (/1, nk, jspin/), (/neig, 1, 1/),&
-                 &                      eig(:neig))
+                 &                      "eig", eig(:neig))
          ENDIF
       ENDIF
 
@@ -368,4 +368,3 @@ CONTAINS
    END SUBROUTINE read_eig
 
 END MODULE
-

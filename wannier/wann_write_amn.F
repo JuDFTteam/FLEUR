@@ -51,7 +51,6 @@ c**********************************************************
 #ifdef CPP_MPI
       integer :: ierr(3)
       integer :: stt(MPI_STATUS_SIZE)
-#include "cpp_double.h"
 #endif
 
 #ifdef CPP_MPI
@@ -68,7 +67,7 @@ c******************************************************
           if(mod(ikpt-1,isize).eq.cpu_index)then
            call MPI_RECV(
      &             amn(1:nbnd,1:nwfs,ikpt),nbnd*nwfs,
-     &             CPP_MPI_COMPLEX,cpu_index,
+     &             MPI_DOUBLE_COMPLEX,cpu_index,
      &             ikpt,fmpi_comm,stt,ierr(1))
           endif !processors
          enddo !cpu_index
@@ -76,7 +75,7 @@ c******************************************************
          if(mod(ikpt-1,isize).eq.irank)then
            call MPI_SEND(
      &             amn(1:nbnd,1:nwfs,ikpt),nbnd*nwfs,
-     &             CPP_MPI_COMPLEX,0,
+     &             MPI_DOUBLE_COMPLEX,0,
      &             ikpt,fmpi_comm,ierr(1))
          endif !processors
         endif ! l_p0

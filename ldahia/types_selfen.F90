@@ -53,7 +53,7 @@ MODULE m_types_selfen
          CLASS(t_selfen),     INTENT(INOUT) :: this
          INTEGER,             INTENT(IN)    :: mpi_communicator
 #ifdef CPP_MPI
-#include"cpp_double.h"
+
          INTEGER:: ierr,irank,n
          COMPLEX,ALLOCATABLE::ctmp(:)
          REAL, ALLOCATABLE :: rtmp(:)
@@ -62,14 +62,14 @@ MODULE m_types_selfen
 
          n = SIZE(this%muMatch)
          ALLOCATE(rtmp(n))
-         CALL MPI_REDUCE(this%muMatch,rtmp,n,CPP_MPI_REAL,MPI_SUM,0,mpi_communicator,ierr)
+         CALL MPI_REDUCE(this%muMatch,rtmp,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,mpi_communicator,ierr)
          IF(irank.EQ.0) this%muMatch = reshape(rtmp,[n])
          DEALLOCATE(rtmp)
 
          n = SIZE(this%data)
          ALLOCATE(ctmp(n))
-         CALL MPI_REDUCE(this%data,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,mpi_communicator,ierr)
-         IF(irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,this%data,1)
+         CALL MPI_REDUCE(this%data,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_communicator,ierr)
+         IF(irank.EQ.0) CALL zcopy(n,ctmp,1,this%data,1)
          DEALLOCATE(ctmp)
 #endif
 

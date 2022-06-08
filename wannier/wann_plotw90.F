@@ -15,7 +15,7 @@ c       last update: 27.10.2006 by FF
 c******************************************************************
       CONTAINS
       SUBROUTINE wann_plotw90(
-     >      mpi,stars,vacuum,atoms,sphhar,input,sym,cell,lapw,noco,oneD,
+     >      mpi,stars,vacuum,atoms,sphhar,input,sym,cell,lapw,noco ,
      >      eig_id,l_real,
      >      bandswitch,band_min,band_max,num_bands,
      >      num_wann,l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -56,7 +56,7 @@ c******************************************************************
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_lapw),INTENT(IN)      :: lapw
       TYPE(t_noco),INTENT(IN)      :: noco
-      TYPE(t_oneD),INTENT(IN)      :: oneD
+       
  
       integer,intent(in)   :: bandswitch
       integer,intent(in)   :: band_min
@@ -107,7 +107,6 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       real,    allocatable :: we(:)
 
-#include "cpp_double.h"
 #ifdef CPP_MPI
       integer ierr(3)
       integer cpu_index
@@ -576,7 +575,7 @@ c...generation of the A,B,C coefficients in the spheres
 c...for the lapws and local orbitals, summed by the basis functions 
 
       CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,
-     +           noccbd,usdus,noco,jspin,kveclo,oneD,
+     +           noccbd,usdus,noco,jspin,kveclo ,
      +           acof,bcof,ccof,zMat)
 
       call abcrot(

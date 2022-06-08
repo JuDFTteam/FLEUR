@@ -13,18 +13,17 @@ MODULE m_forcew
 #endif
 
 CONTAINS
-   SUBROUTINE force_w(fmpi,input,atoms,sym,results,cell,oneD,vacuum)
+   SUBROUTINE force_w(fmpi,input,atoms,sym,results,cell ,vacuum)
       USE m_types
       USE m_constants
       USE m_xmlOutput
       USE m_relaxation
       USE m_rotate_forces
-      USE m_vdWfleur_grimme
       IMPLICIT NONE
 
       TYPE(t_mpi),     INTENT(IN)    :: fmpi
       TYPE(t_results), INTENT(INOUT) :: results
-      TYPE(t_oneD),    INTENT(IN)    :: oneD
+       
       TYPE(t_input),   INTENT(IN)    :: input
       TYPE(t_sym),     INTENT(IN)    :: sym
       TYPE(t_cell),    INTENT(IN)    :: cell
@@ -33,9 +32,8 @@ CONTAINS
 
       REAL maxAbsForceDist
       INTEGER i, jsp, n, nat1, ierr
-      REAL eps_force,e_vdW
+      REAL eps_force
       LOGICAL :: l_new, l_forceConverged
-      REAL,ALLOCATABLE:: f_vdW(:,:)
       REAL forcetot(3,atoms%ntype)
       CHARACTER(LEN=20) :: attributes(7)
 
@@ -66,14 +64,18 @@ CONTAINS
          IF (input%l_f) CALL openXMLElement('totalForcesOnRepresentativeAtoms',(/'units'/),(/'Htr/bohr'/))
          nat1 = 1
          forcetot = 0.0
+         if (allocated(results%force_vdw)) THEN
+            forcetot=forcetot+results%force_vdw
+            write(oUnit,*) "vdW forces included in total force"
+         endif
+
          DO n = 1,atoms%ntype
             IF (atoms%l_geo(n)) THEN
                DO jsp = 1,input%jspins
-                  DO i = 1,3
-                     forcetot(i,n) = forcetot(i,n) + results%force(i,n,jsp)
-                  END DO
+                  forcetot(:,n) = forcetot(:,n) + results%force(:,n,jsp)
                END DO
 
+               
                WRITE (oUnit,FMT=8010) n, (atoms%pos(i,nat1),i=1,3), &
                                          (forcetot(i,n),i=1,3)
 
@@ -125,14 +127,9 @@ CONTAINS
                             atoms%taual,sym%tau,forcetot)
       END IF
 
-      IF (l_forceConverged.and.btest(input%vdW,0)) THEN
-         ALLOCATE(f_vdW,mold=forcetot)
-         call vdW_fleur_grimme(atoms,sym,cell,input%film,e_vdW,f_vdW)
-         forcetot=forcetot+f_vdW
-         results%tote=results%tote+e_vdW
-      ENDIF
+    
 
-      IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym,oneD,vacuum,forcetot,results%tote)
+      IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym ,vacuum,forcetot,results%tote)
 
    END SUBROUTINE force_w
 

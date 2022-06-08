@@ -19,8 +19,8 @@ c***************************************************************
      >     l_q, sign_q,
      <     mmn)
       use m_constants, only : pimach
-      use m_od_types, only : od_inp
-      use m_od_abvac
+       
+       
       use m_cylbes
       use m_dcylbs
       use m_intgr, only : intgz0

@@ -28,7 +28,7 @@ MODULE m_vmt_xc
    CONTAINS
       SUBROUTINE vmt_xc(fmpi,sphhar,atoms,&
                         den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc,vxc)
-#include"cpp_double.h"
+
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
          USE m_types_xcpot_inbuild
@@ -199,10 +199,10 @@ MODULE m_vmt_xc
 
          CALL finish_mt_grid()
 #ifdef CPP_MPI
-         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,SIZE(vx%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
-         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
-         CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
-         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),CPP_MPI_REAL,MPI_SUM,fmpi%mpi_comm,ierr)
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vx%mt,SIZE(vx%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
          !
          RETURN

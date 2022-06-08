@@ -90,8 +90,8 @@ contains
             call judft_error("this doesn't match ptr mat")
          endif 
          
-         CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell, sym%zrfs)
-         CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell, sym%zrfs)
+         CALL lapw_ik%init(input, noco, nococonv, kpts, atoms, sym, ik, cell)
+         CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell)
          call waveftrafo_gen_zmat(ptr_mat, ikp, iop, kpts, sym, jsp, &
                                   size(p_list), lapw_ikp, lapw_ik, z_out, &
                                   c_phase)

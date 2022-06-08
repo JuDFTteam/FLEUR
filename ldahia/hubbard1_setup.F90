@@ -13,6 +13,7 @@ MODULE m_hubbard1_setup
    USE m_mpi_bc_tool
    USE m_greensf_io
    USE m_rotMMPmat
+   use m_xmlOutput
 #ifdef CPP_EDSOLVER
    USE EDsolver, only: EDsolver_from_cfg
 #endif
@@ -20,8 +21,6 @@ MODULE m_hubbard1_setup
    use mpi
 #endif
    IMPLICIT NONE
-
-#include"cpp_double.h"
 
    CHARACTER(len=30), PARAMETER :: hubbard1CalcFolder = "Hubbard1"
    CHARACTER(len=30), PARAMETER :: hubbard1Outfile    = "out"
@@ -47,7 +46,7 @@ MODULE m_hubbard1_setup
 
       LOGICAL, PARAMETER :: l_mix = .FALSE.
 
-      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n
+      INTEGER :: i_hia,nType,l,occDFT_INT,ispin,m,i_exc,n,i_u
       INTEGER :: io_error,ierr
       INTEGER :: indStart,indEnd
       INTEGER :: hubbardioUnit
@@ -74,6 +73,7 @@ MODULE m_hubbard1_setup
       COMPLEX :: dcpot(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3)
       COMPLEX, ALLOCATABLE :: e(:)
       COMPLEX, ALLOCATABLE :: ctmp(:)
+      character(len=30) :: attributes(7)
 
       !Check if the EDsolver library is linked
 #ifndef CPP_EDSOLVER
@@ -88,6 +88,8 @@ MODULE m_hubbard1_setup
 
 
       IF(fmpi%irank.EQ.0) THEN
+         write(attributes(1),'(i0)') hub1data%iter
+         call openXMLElement('hubbard1Iteration',['number'], attributes(:1))
          !-------------------------------------------
          ! Create the Input for the Hubbard 1 Solver
          !-------------------------------------------
@@ -135,6 +137,14 @@ MODULE m_hubbard1_setup
                      ENDDO
                   ENDDO
                ENDIF
+
+               !For the first iteration we just consider the diagonal elements of the density matrix
+               mmpMat(:,:,i_hia,:) = cmplx_0
+               do ispin = 1, input%jspins
+                  do m = -l, l
+                     mmpMat(m,m,i_hia,ispin) = occDFT(i_hia,ispin)/real(2*l+1)
+                  enddo
+               enddo
 
                DO i_exc = 1, hub1inp%n_exc(i_hia)
                   IF(hub1inp%init_mom(i_hia,i_exc) > -9e98) THEN
@@ -210,6 +220,37 @@ MODULE m_hubbard1_setup
             !Copy the bath file to the Hubbard 1 solver if its present
             IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(folder)))
 
+            !Create XML output for the solver parameters
+            write(attributes(1), '(i0)') nType
+            write(attributes(2), '(i0)') l
+            write(attributes(3), '(f14.8)') mu_dc(1)
+            write(attributes(4), '(i0)') occDFT_INT    
+            write(attributes(5), '(a)') 'eV'                                        
+            call openXMLElement('solverParameters', ['atomType   ', 'l          ', 'chemPot    ', 'occupation ', 'energy_unit'], attributes(:5))
+            
+            write(attributes(1), '(f14.8)') f0(i_hia)
+            write(attributes(2), '(f14.8)') f2(i_hia)
+            write(attributes(3), '(f14.8)') f4(i_hia)
+            write(attributes(4), '(f14.8)') f6(i_hia)
+            call writeXMLElementNoAttributes('slaterParameters',attributes(:4))
+            
+            do i_exc = 1, hub1inp%n_exc(i_hia)
+               write(attributes(1), '(i0)') hub1inp%exc_l(i_hia,i_exc)
+               write(attributes(2), '(f14.8)') hub1inp%exc(i_hia,i_exc)
+               write(attributes(3), '(f14.8)') hub1data%mag_mom(i_hia,i_exc)
+               call writeXMLElement('exchange',['l     ', 'J     ', 'moment'],attributes(:3))
+            enddo
+            write(attributes(1), '(f14.8)') hub1data%xi(i_hia)
+            call writeXMLElement('socParameter',['value'],attributes(:1))
+
+            IF(ABS(hub1inp%ccf(i_hia)).GT.1e-12) THEN
+               write(attributes(1), '(f14.8)') hub1inp%ccf(i_hia)
+               CALL writeXMLElementMatrixFormPoly('crystalField',['factor'],attributes(:1),&
+                                                  reshape([6,14],[1,2]),&
+                                                  hub1data%ccfmat(i_hia,-l:l,-l:l)*hartree_to_ev_const*hub1inp%ccf(i_hia))
+            ENDIF
+
+            call closeXMLElement('solverParameters')
             !-------------------------------------------------------
             ! Write the main config files
             !-------------------------------------------------------
@@ -348,8 +389,8 @@ MODULE m_hubbard1_setup
       !Collect the density matrix to rank 0
       n = SIZE(mmpMat)
       ALLOCATE(ctmp(n))
-      CALL MPI_REDUCE(mmpMat,ctmp,n,CPP_MPI_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-      IF(fmpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n,ctmp,1,mmpMat,1)
+      CALL MPI_REDUCE(mmpMat,ctmp,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+      IF(fmpi%irank.EQ.0) CALL zcopy(n,ctmp,1,mmpMat,1)
       DEALLOCATE(ctmp)
 #endif
 
@@ -422,6 +463,28 @@ MODULE m_hubbard1_setup
                hub1data%l_performSpinavg = .FALSE.
             ENDIF
          ENDIF
+         CALL openXMLElementNoAttributes('hubbard1DensityMatrix')
+         DO ispin = 1, SIZE(den%mmpMat,4)
+            DO i_hia = 1, atoms%n_hia
+               i_u = atoms%n_u + i_hia
+               attributes = ''
+               WRITE(attributes(1),'(i0)') ispin
+               WRITE(attributes(2),'(i0)') atoms%lda_u(i_u)%atomType
+               WRITE(attributes(3),'(i0)') i_hia
+               WRITE(attributes(4),'(i0)') atoms%lda_u(i_u)%l
+               WRITE(attributes(5),'(f15.8)') atoms%lda_u(i_u)%u
+               WRITE(attributes(6),'(f15.8)') atoms%lda_u(i_u)%j
+               WRITE(attributes(7),'(2f15.8)') selfen(i_hia)%muMatch(:)
+               CALL writeXMLElementMatrixPoly('densityMatrixFor',&
+                                             ['spin    ','atomType','hiaIndex','l       ','U       ','J       ','muMatch '],&
+                                             attributes,den%mmpMat(-l:l,-l:l,i_u,ispin))
+            END DO
+         END DO
+         CALL closeXMLElement('hubbard1DensityMatrix')
+         write(attributes(1),'(f14.8)') results%last_occdistance
+         write(attributes(2),'(f14.8)') results%last_mmpMatdistance                                    
+         call writeXMLElement('hubbard1Distance',['occupationDistance','elementDistance   '], attributes(:2))
+         call closeXMLElement('hubbard1Iteration')
       ENDIF
 
       CALL mpi_bc(hub1data%l_performSpinavg,0,fmpi%mpi_comm)

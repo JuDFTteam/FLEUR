@@ -20,18 +20,18 @@ MODULE m_types_misc
 
    TYPE t_results
       REAL, ALLOCATABLE    :: force(:,:,:)   !< Forces calculated on all atoms (for each spin)
+      REAL, ALLOCATABLE    :: force_vdw(:,:)   !< vdw-Forces calculated on all atoms (for each spin)
       REAL, ALLOCATABLE    :: force_old(:,:) !< Forces on all atoms from last iteration
       REAL                 :: ef        !<Fermie energy
       REAL                 :: seigc     !<sum of the core eigenvalues
-      REAL                 :: seigsc    !<weighted sum of the semi-core eigenvalues
       REAL                 :: seigv     !<weighted sum of the occupied valence eigenvalues
-      REAL                 :: seigscv   !<sum of seigv and seigsc
       REAL                 :: ts        !<entropy contribution to the free energy
       REAL                 :: te_vcoul  !<charge density-coulomb potential integral
       REAL                 :: te_veff   !<charge density-effective potential integral
       REAL                 :: te_exc    !<charge density-ex-corr.energy density integral
       REAL                 :: e_ldau    !<total energy contribution of LDA+U
       REAL                 :: e_ldaopc    !<total energy contribution of LDA+OP
+      REAL                 :: e_vdw=0.0
       REAL                 :: tote
       REAL                 :: last_distance
       REAL                 :: last_mmpMatdistance !Distance measure for LDA+HIA
@@ -112,9 +112,7 @@ CONTAINS
       INTEGER                              :: neigd2
 
       thisResults%seigc           = 0.0
-      thisResults%seigsc          = 0.0
       thisResults%seigv           = 0.0
-      thisResults%seigscv         = 0.0
       thisResults%e_ldau          = 0.0
       thisResults%ts              = 0.0
 

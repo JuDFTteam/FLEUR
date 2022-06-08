@@ -4,7 +4,7 @@
       SUBROUTINE dimen7(&
      &                  input,sym,stars,&
      &                  atoms,sphhar,vacuum,&
-     &                  kpts,oneD,hybinp,cell)
+     &                  kpts ,hybinp,cell)
 
 !
 ! This program reads the input files of the flapw-programm (inp & kpts)
@@ -20,7 +20,7 @@
       USE m_rwinp
       USE m_inpnoco
 !      USE m_julia
-!      USE m_od_kptsgen
+!       
       USE m_types_input
       USE m_types_sym
       USE m_types_stars
@@ -28,7 +28,7 @@
       USE m_types_sphhar
       USE m_types_vacuum
       USE m_types_kpts
-      USE m_types_oneD
+       
       USE m_types_hybinp
       USE m_types_cell
       USE m_types_noco
@@ -55,7 +55,7 @@
 
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
-      TYPE(t_oneD),INTENT(INOUT)     :: oneD
+       
       TYPE(t_hybinp),INTENT(INOUT)   :: hybinp
       TYPE(t_cell),INTENT(INOUT)     :: cell
 
@@ -127,7 +127,7 @@
 !
       CALL rw_inp('r',&
      &            atoms,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,oneD,hybinp,kpts,&
+     &                  cell,sym,xcpot,noco ,hybinp,kpts,&
      &                  noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)
 
 !---> pk non-collinear
@@ -139,7 +139,6 @@
       ENDIF
 
       vacuum%nvacd = 2
-      IF (sym%zrfs .OR. sym%invs .OR. oneD%odd%d1) vacuum%nvacd = 1
       atoms%llod  = 0
       atoms%lmaxd = 0
       atoms%jmtd  = 0
@@ -202,9 +201,6 @@
       cell%amat(:,3) = a3(:)*scaleCell
       CALL inv3(cell%amat,cell%bmat,cell%omtil)
       IF (input%film) cell%omtil = cell%omtil/cell%amat(3,3)*vacuum%dvac
-!-odim
-      IF (oneD%odd%d1) cell%omtil = cell%amat(3,3)*pimach()*(vacuum%dvac**2)/4.
-!+odim
       cell%bmat=tpi_const*cell%bmat
 
       na = 0
@@ -222,40 +218,15 @@
          symfh = 94 ; symfn = 'sym.out'
          CALL rw_symfile(rw,symfh,symfn,nopd,cell%bmat,sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
       ELSE
-         CALL spg2set(sym%nop,sym%zrfs,sym%invs,namgrp,latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
+         CALL spg2set(sym%nop,.false.,sym%invs,namgrp,latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
       ENDIF
       sphhar%ntypsd = 0
-      IF (.NOT.oneD%odd%d1) THEN
         CALL local_sym(.false.,atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
                        atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
                        atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
                        atoms%nlhtyp,sphhar%nlh,sphhar%llh,&
                        sphhar%nmem,sphhar%mlh,sphhar%clnu)
-!-odim
-      ELSEIF (oneD%odd%d1) THEN
-        ntp1 = atoms%nat
-        ALLOCATE (nq1(ntp1),lmx1(ntp1),nlhtp1(ntp1))
-        ii = 1
-        nq1=1
-        DO i = 1,atoms%ntype
-          DO j = 1,atoms%neq(i)
-            lmx1(ii) = atoms%lmax(i)
-            ii = ii + 1
-          END DO
-        END DO
-        CALL local_sym(.false.,atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-              atoms%nat,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
-              sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
-              sphhar%nlh,sphhar%llh,sphhar%nmem,&
-              sphhar%mlh,sphhar%clnu)
-        ii = 1
-        DO i = 1,atoms%ntype
-          atoms%nlhtyp(i) = nlhtp1(ii)
-          ii = ii + atoms%neq(i)
-        END DO
-        DEALLOCATE (nq1,lmx1,nlhtp1)
-      END IF
-!+odim
+
 !
 ! Check if symmetry is compatible with SOC or SSDW
 !
@@ -287,19 +258,16 @@
 !
 ! Dimensioning of the stars
 !
-      IF (input%film.OR.(namgrp.ne.'any ')) THEN
-         CALL strgn1_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-                    sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
-                    stars%ng3,stars%ng2,oneD%odd)
+!      IF (input%film.OR.(namgrp.ne.'any ')) THEN
+!         CALL strgn1_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+!                    sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
+!                    stars%ng3,stars%ng2 %odd)
 
-      ELSE
-         CALL strgn2_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-                    sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
-                    stars%ng3,stars%ng2)
-         oneD%odd%n2d = stars%ng2
-         oneD%odd%nq2 = stars%ng2
-         oneD%odd%nop = sym%nop
-      ENDIF
+!      ELSE
+!         CALL strgn2_dim(.false.,stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+!                    sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
+!                    stars%ng3,stars%ng2)
+!      ENDIF
 
       IF ( xcpot%gmaxxc .le. 10.0**(-6) ) THEN
          WRITE (oUnit,'(" xcpot%gmaxxc=0 : xcpot%gmaxxc=stars%gmax choosen as default value")')
@@ -307,20 +275,16 @@
          xcpot%gmaxxc=stars%gmax
       END IF
 
-      CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
+      !CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
 !
 ! k-point generator provides kpts-file, if it's missing:
 !
       IF (.not.l_kpts) THEN
-       IF (.NOT.oneD%odd%d1) THEN
-          IF(l_gamma ) THEN
+         IF(l_gamma ) THEN
          call judft_error("gamma swtich not supported in old inp file anymore",calledby="dimen7")
          ELSE
 !         CALL julia(sym,cell,input,noco,banddos,kpts,.false.,.FALSE.)
          ENDIF
-       ELSE
-!        CALL od_kptsgen (kpts%nkpt)
-       ENDIF
       ELSE
         IF(input%gw.eq.2) THEN
           INQUIRE(file='QGpsi',exist=l_kpts) ! Use QGpsi if it exists ot
@@ -359,14 +323,14 @@
 !
 ! now proceed as usual
 !
-      CALL inpeig_dim(input,cell,noco,oneD,kpts,stars,latnam)
+      CALL inpeig_dim(input,cell,noco ,kpts,stars,latnam)
       banddos%layers = max(banddos%layers,1)
       atoms%ntype = atoms%ntype
       IF (noco%l_noco) input%neig = 2*input%neig
 
       atoms%nlod = max(atoms%nlod,2) ! for chkmt
       input%jspins=input%jspins
-      !CALL parawrite(sym,stars,atoms,sphhar,vacuum,kpts,oneD,input)
+      !CALL parawrite(sym,stars,atoms,sphhar,vacuum,kpts ,input)
 
       DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,sym%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%bmu,noel,&

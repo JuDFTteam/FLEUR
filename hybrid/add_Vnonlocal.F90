@@ -81,19 +81,19 @@ CONTAINS
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
 
-      nbasfcn = lapw%nv(jsp) + fi%atoms%nlotot          
+      nbasfcn = lapw%nv(jsp) + fi%atoms%nlotot
       IF (hmat%l_real) THEN
          DO i = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
             i0=(i-1)/fmpi%n_size+1
-            DO  j = 1,MIN(i,hmat%matsize1) 
+            DO  j = 1,MIN(i,hmat%matsize1)
                hmat%data_r(j,i0) = hmat%data_r(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_r(j, i0)
             enddo
          enddo
-      else         
+      else
          DO i = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
             i0=(i-1)/fmpi%n_size+1
-            DO  j = 1,MIN(i,hmat%matsize1) 
-               hmat%data_c(j,i0) = hmat%data_c(j, i0) - a_ex * hybdat%v_x(nk, jsp)%data_c(j, i0)
+            DO  j = 1,MIN(i,hmat%matsize1)
+               hmat%data_c(j,i0) = hmat%data_c(j, i0) - a_ex * CONJG(hybdat%v_x(nk, jsp)%data_c(j, i0))
             enddo
          enddo
       endif
@@ -117,7 +117,7 @@ CONTAINS
 
       ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen.F90
-      
+
       exch = 0
       select type(vx =>hybdat%v_x(nk, jsp))
       class is (t_mat)
@@ -145,7 +145,7 @@ CONTAINS
          endif
 #ifdef CPP_MPI
          call MPI_Bcast(exch(iband), 1, MPI_DOUBLE_COMPLEX, pe_iband, fmpi%sub_comm, ierr)
-#endif 
+#endif
          IF (iband <= hybdat%nobd(nk,jsp)) THEN
             results%te_hfex%valence = results%te_hfex%valence - real(a_ex*results%w_iks(iband, nk, jsp)*exch(iband))
          END IF

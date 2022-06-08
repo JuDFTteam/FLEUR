@@ -44,7 +44,9 @@ CONTAINS
 
     INTEGER:: n,na,ni,nj,j
     REAL,PARAMETER:: eps=1E-5
-
+   
+    this%l_needs_vectors=.false.
+   
     this%qvec=qvec
     this%thetaj=thetaj
 
@@ -194,7 +196,7 @@ CONTAINS
 
 
   FUNCTION jij_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,fmpi,  enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
     IMPLICIT NONE
@@ -203,7 +205,7 @@ CONTAINS
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: fmpi
 
-    TYPE(t_oneD),INTENT(IN)        :: oneD
+     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_nococonv),INTENT(IN)    :: nococonv
@@ -236,7 +238,6 @@ CONTAINS
     PRINT *,"jcoef2 has still to be reimplemented"
 #ifdef CPP_NEVER
       USE m_nshell
-#include"cpp_double.h"
       IMPLICIT NONE
 
 c     .. Scalar arguments ..

@@ -95,7 +95,7 @@ CONTAINS
           CASE('inpu')
              CALL process_input(line,input%film,sym%symor,cartesian,hybinp%l_hybrid)
           CASE('atom')
-             CALL read_atom_params_old(98,ap)
+             CALL read_atom_params_old(98,ap,profile)
              CALL add_atompar(ap)
           CASE('qss ')
              CALL process_qss(line,noco)
@@ -176,6 +176,15 @@ CONTAINS
           ENDIF
        ENDIF
     END DO readloop
+    
+    IF ((ikpts.EQ.0).AND.(profile%kPDen.GT.0.0)) THEN
+       iKpts = iKpts + 1
+       line = ''
+       WRITE(line,'(a,f12.4,a,f15.10,a)') '&kpt gamma=T den=', profile%kPDen, ' tkb=', profile%fermiSmearing, ' /'
+       WRITE(*,*) 'kPDen: ', profile%kPDen
+       WRITE(*,'(a)') TRIM(line)
+       CALL process_kpts(line,kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts),kptsBZintegration(iKpts),kptsGamma(ikpts),input%tkb)
+    END IF
 
     IF (.NOT.ALLOCATED(atom_pos).OR.SUM(ABS(a1))==0.0) CALL judft_error("input not complete")
 

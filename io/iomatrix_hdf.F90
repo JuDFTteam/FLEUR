@@ -32,9 +32,9 @@ CONTAINS
     SELECT TYPE(mat)
     TYPE is (t_mat)
        IF (mat%l_real) THEN
-          CALL io_read(did,(/1,1,1,nrec/),(/1,mat%matsize1,mat%matsize2,1/),mat%data_r)
+          CALL io_read(did,(/1,1,1,nrec/),(/1,mat%matsize1,mat%matsize2,1/),"data_r",mat%data_r)
        ELSE
-          CALL io_read(did,(/-1,1,1,nrec/),(/1,mat%matsize1,mat%matsize2,1/),mat%data_c)
+          CALL io_read(did,(/-1,1,1,nrec/),(/1,mat%matsize1,mat%matsize2,1/),"data_c",mat%data_c)
        END IF
     TYPE is (t_mpimat)
        ALLOCATE(dat(MERGE(1,2,mat%l_real),mat%matsize1,mat%matsize2,1))
@@ -70,10 +70,10 @@ CONTAINS
     SELECT TYPE(mat)
     TYPE is (t_mat)
        IF (mat%l_real) THEN
-          CALL io_write(did,(/1,1,1,rec/),(/1,mat%matsize1,mat%matsize2,1/),mat%data_r)
+          CALL io_write(did,(/1,1,1,rec/),(/1,mat%matsize1,mat%matsize2,1/),"data_r",mat%data_r)
        ELSE
-          CALL io_write(did,(/1,1,1,rec/),(/1,mat%matsize1,mat%matsize2,1/),REAL(mat%data_c))
-          CALL io_write(did,(/2,1,1,rec/),(/1,mat%matsize1,mat%matsize2,1/),AIMAG(mat%data_c))
+          CALL io_write(did,(/1,1,1,rec/),(/1,mat%matsize1,mat%matsize2,1/),"data_c_re",REAL(mat%data_c))
+          CALL io_write(did,(/2,1,1,rec/),(/1,mat%matsize1,mat%matsize2,1/),"data_c_im",AIMAG(mat%data_c))
        END IF
     TYPE is (t_mpimat)
        ALLOCATE(dat(MERGE(1,2,mat%l_real),mat%matsize1,mat%matsize2,1))

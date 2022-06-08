@@ -22,9 +22,7 @@ CONTAINS
     !           by inversion.
     ! CF Replaced (unstable) Gram-Schmidt by diagonalization.
     !*********************************************************************
-    !
-#include"cpp_double.h"
-    !
+
     USE m_types_fleurinput
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)   :: atoms
@@ -44,9 +42,9 @@ CONTAINS
     !     .. Local Arrays ..
     REAL eig(nkvec),rwork(3*nkvec)
     REAL olap_r(nkvec,nkvec)
-    EXTERNAL CPP_LAPACK_ssyev
+    EXTERNAL dsyev
     COMPLEX olap_c(nkvec,nkvec),work(2*nkvec)
-    EXTERNAL CPP_LAPACK_cheev
+    EXTERNAL zheev
 
     IF (l_lo2) THEN
        dim = 2* (2*l+1)
@@ -66,10 +64,10 @@ CONTAINS
        ENDDO
     ENDDO
     IF (l_real) THEN
-       CALL CPP_LAPACK_ssyev('N','U',nkvec,olap_r,nkvec,eig, rwork,3*nkvec,i)
+       CALL dsyev('N','U',nkvec,olap_r,nkvec,eig, rwork,3*nkvec,i)
        IF(i/=0)  CALL juDFT_error("(S,D)SYEV failed.","orthoglo")
     ELSE
-       CALL CPP_LAPACK_cheev('N','U',nkvec,olap_c,nkvec,eig, work,2*nkvec,rwork,i)
+       CALL zheev('N','U',nkvec,olap_c,nkvec,eig, work,2*nkvec,rwork,i)
        IF(i/=0)  CALL juDFT_error("(C,Z)HEEV failed.","orthoglo")
     ENDIF
     IF(eig(1).LT.linindq) THEN

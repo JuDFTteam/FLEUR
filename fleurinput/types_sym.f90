@@ -24,8 +24,6 @@ MODULE m_types_sym
       LOGICAL ::invs2 = .FALSE.
       !Inversion-sym
       LOGICAL ::invs = .FALSE.
-      !Z-refls. sym
-      LOGICAL ::zrfs = .FALSE.
       !inverse operation (nop)
       INTEGER, ALLOCATABLE::invtab(:)
       !multiplication table
@@ -83,7 +81,6 @@ CONTAINS
       CALL mpi_bc(this%symor, rank, mpi_comm)
       CALL mpi_bc(this%invs2, rank, mpi_comm)
       CALL mpi_bc(this%invs, rank, mpi_comm)
-      CALL mpi_bc(this%zrfs, rank, mpi_comm)
       CALL mpi_bc(this%invtab, rank, mpi_comm)
       CALL mpi_bc(this%multab, rank, mpi_comm)
       CALL mpi_bc(this%nop2, rank, mpi_comm)
@@ -217,6 +214,7 @@ CONTAINS
       INTEGER :: mrotaux(3, 3, sym%nop)
       REAL    :: tauaux(3, sym%nop)
       LOGICAL :: zorth           ! true, if z-axis is othorgonal
+      LOGICAL :: zrfs,invs2
       REAL, PARAMETER  :: eps12 = 1.0e-12
 
       IF (sym%nop == 0) CALL judft_error("BUG in calling sym%init. mrot,tau&nop have to be set before")
@@ -231,7 +229,7 @@ CONTAINS
       sym%symor = .NOT. (ANY(ABS(sym%tau(:, :sym%nop)) > eps12))
 
       sym%invs = .FALSE.
-      sym%zrfs = .FALSE.
+       zrfs = .FALSE.
       sym%invs2 = .FALSE.
       invsop = 0
       zrfsop = 0
@@ -249,7 +247,7 @@ CONTAINS
             !---> check for z-reflection
             IF (sym%mrot(3, 3, n) == -1 .AND. ALL(ABS(sym%tau(:, n)) < eps12)) THEN
                zrfsop = n
-               sym%zrfs = .TRUE.
+                zrfs = .TRUE.
             ENDIF
          ENDIF
          IF (optype(n) == 2) THEN
@@ -267,7 +265,7 @@ CONTAINS
       ELSE
          zorth = .FALSE.
          ! reset the following...
-         sym%zrfs = .FALSE.
+          zrfs = .FALSE.
          sym%invs2 = .FALSE.
       ENDIF
       IF (film .AND. ((.NOT. zorth))) &
@@ -294,7 +292,7 @@ CONTAINS
          ENDDO
 
          magicinv = 0
-         IF (sym%zrfs) magicinv = zrfsop
+         IF ( zrfs) magicinv = zrfsop
          IF (sym%invs) magicinv = invsop
          usedop = 1
 

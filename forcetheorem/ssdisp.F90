@@ -35,7 +35,8 @@ CONTAINS
 
     ALLOCATE(this%qvec(3,SIZE(q,2)))
     this%qvec=q
-
+    this%l_needs_vectors=.false.
+   
     ALLOCATE(this%evsum(SIZE(q,2)))
     this%evsum=0
   END SUBROUTINE ssdisp_init
@@ -152,7 +153,7 @@ CONTAINS
   END SUBROUTINE ssdisp_dist
 
   FUNCTION ssdisp_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,fmpi,  enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
     IMPLICIT NONE
@@ -161,7 +162,7 @@ CONTAINS
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: fmpi
 
-    TYPE(t_oneD),INTENT(IN)        :: oneD
+     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_nococonv),INTENT(IN)   :: nococonv

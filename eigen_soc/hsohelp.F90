@@ -17,7 +17,7 @@ MODULE m_hsohelp
   !
 CONTAINS
   SUBROUTINE hsohelp(atoms,sym,input,lapw,nsz, cell,&
-       zmat,usdus, zso,noco,oneD,&
+       zmat,usdus, zso,noco ,&
        nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
     !
     USE m_abcof_soc
@@ -30,7 +30,7 @@ CONTAINS
     INTEGER ierr(3)
 #endif
     
-    TYPE(t_oneD),INTENT(IN)        :: oneD
+     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_sym),INTENT(IN)         :: sym
@@ -85,7 +85,7 @@ CONTAINS
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,input%neig))
           zMat_local%data_c(:,:) = zso(:,1:input%neig,ispin)
           CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
-               usdus, noco,ispin,oneD,nat_start,nat_stop,nat_l,&
+               usdus, noco,ispin ,nat_start,nat_stop,nat_l,&
                acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%data_c)
           !
@@ -111,7 +111,7 @@ CONTAINS
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,input%neig))
           zMat_local%data_c(:,:) = zmat(ispin)%data_c(:,:)
           CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
-               usdus,noco,ispin,oneD,nat_start,nat_stop,nat_l,&
+               usdus,noco,ispin ,nat_start,nat_stop,nat_l,&
                acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
           DEALLOCATE(zMat_local%data_c)
           !

@@ -120,7 +120,7 @@ CONTAINS
       allocate(cmt_nk(hybdat%nbands(nk,jsp), hybdat%maxlmindx, fi%atoms%nat), stat=ierr)
       if(ierr  /= 0) call judft_error("can't allocate cmt_nk")
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, &
-                   fi%sym, fi%oneD, hybdat%zmat(nk,jsp)%mat, jsp, nk, c_phase_k, cmt_nk, k_pack%submpi)
+                   fi%sym,  hybdat%zmat(nk,jsp)%mat, jsp, nk, c_phase_k, cmt_nk, k_pack%submpi)
 
 
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)

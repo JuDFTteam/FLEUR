@@ -5,13 +5,13 @@
 !                  m. weinert   jan. 1987
 !*********************************************************************
       CONTAINS
-      SUBROUTINE inpeig_dim(input,cell,noco, oneD,kpts,stars,latnam)
+      SUBROUTINE inpeig_dim(input,cell,noco,  kpts,stars,latnam)
 
       USE m_constants, ONLY : pi_const,tpi_const
       USE m_types_input
       USE m_types_cell
       USE m_types_noco
-      USE m_types_oneD
+       
       USE m_types_kpts
       USE m_types_stars
       use m_apwsdim
@@ -22,7 +22,7 @@
       TYPE(t_stars),INTENT(INOUT)     :: stars
 
       TYPE(t_kpts),INTENT(INOUT)      :: kpts
-      TYPE(t_oneD),INTENT(INOUT)      :: oneD
+       
       CHARACTER(len=*),INTENT(IN)     :: latnam
 
       INTEGER nk,i,nv,nv2,j,kq1,kq2,kq3
@@ -30,7 +30,7 @@
       LOGICAL xyu,l_k
    !     ..
       kpts%nkpt = 0
-      stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
+      !stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
       !cell%aamat=matmul(transpose(cell%amat),cell%amat)
       cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
 !
@@ -59,16 +59,13 @@
          IF (scale.EQ.0.0) scale = 1.0
 
          DO nk = 1,kpts%nkpt
-            IF(input%film.AND..NOT.oneD%odd%d1) THEN
+            IF(input%film) THEN
                READ (41,fmt=8080) (bk(i),i=1,2)
 8080           FORMAT (3f10.5)
             ELSE
                READ (41,fmt=8030) (bk(i),i=1,3)
             ENDIF
-            IF (oneD%odd%d1) THEN
-               bk(1) = 0.
-               bk(2) = 0.
-            ELSEIF (input%film .AND. .NOT.oneD%odd%d1) THEN
+            IF (input%film) THEN
                bk(3) = 0.0
                IF (xyu) THEN
                   !            transform to cartesian coordinates
@@ -94,11 +91,9 @@
                bk(i) = bk(i)/scale
             ENDDO
             CALL apws_dim(&
-                 &                     bk(:),cell,input,noco,oneD,&
+                 &                     bk(:),cell,input,noco ,&
                  &                     nv,nv2,kq1,kq2,kq3)
-            stars%kq1_fft = MAX(kq1,stars%kq1_fft)
-            stars%kq2_fft = MAX(kq2,stars%kq2_fft)
-            stars%kq3_fft = MAX(kq3,stars%kq3_fft)
+           
 
 
          ENDDO ! k=pts

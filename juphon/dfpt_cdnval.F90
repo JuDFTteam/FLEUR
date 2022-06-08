@@ -1,0 +1,216 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
+MODULE m_dfpt_cdnval
+
+USE m_juDFT
+#ifdef CPP_MPI
+use mpi
+#endif
+
+CONTAINS
+
+SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
+                  vacuumdummy,sphhar,sym,vTot ,cdnvalJob,den,dosdummy,vacdosdummy,&
+                  hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, denIm)
+
+   !************************************************************************************
+   !     This is the FLEUR valence density generator
+   !******** ABBREVIATIONS *************************************************************
+   !     noccbd   : number of occupied bands
+   !     pallst   : if set to .true. bands above the Fermi-Energy are taken into account
+   !     ener     : band energy averaged over all bands and k-points,
+   !                wheighted with the l-like charge of each atom type
+   !     sqal     : l-like charge of each atom type. sum over all k-points and bands
+   !************************************************************************************
+
+   USE m_types
+   USE m_constants
+   USE m_eig66_io
+   USE m_abcof
+   USE m_pwden
+   USE m_cdnmt       ! calculate the density and orbital moments etc.
+   USE m_types_dos
+   USE m_types_vacdos
+#ifdef CPP_MPI
+   USE m_mpi_col_den ! collect density data from parallel nodes
+#endif
+   USE m_dfpt_rhomt
+   USE m_dfpt_rhonmt
+
+   IMPLICIT NONE
+
+   TYPE(t_mpi),           INTENT(IN)    :: fmpi
+
+   TYPE(t_enpara),        INTENT(IN)    :: enpara
+   TYPE(t_banddos),       INTENT(IN)    :: banddosdummy
+   TYPE(t_dos),           INTENT(INOUT) :: dosdummy
+   TYPE(t_vacdos),        INTENT(INOUT) :: vacdosdummy
+   TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_vacuum),        INTENT(IN)    :: vacuumdummy
+   TYPE(t_noco),          INTENT(IN)    :: noco
+   TYPE(t_nococonv),      INTENT(IN)    :: nococonv
+   TYPE(t_sym),           INTENT(IN)    :: sym
+   TYPE(t_stars),         INTENT(IN)    :: stars
+   TYPE(t_cell),          INTENT(IN)    :: cell
+   TYPE(t_kpts),          INTENT(IN)    :: kpts, kqpts
+   TYPE(t_sphhar),        INTENT(IN)    :: sphhar
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_hub1inp),       INTENT(IN)    :: hub1inp
+   TYPE(t_potden),        INTENT(IN)    :: vTot
+   TYPE(t_cdnvalJob),     INTENT(IN)    :: cdnvalJob, cdnvalJob1
+   TYPE(t_results),       INTENT(INOUT) :: resultsdummy, resultsdummy1
+   TYPE(t_potden),        INTENT(INOUT) :: den, denIm
+
+   ! Scalar Arguments
+   INTEGER,               INTENT(IN)    :: eig_id, dfpt_eig_id, jspin
+
+   REAL, INTENT(IN) :: q_dfpt(3)
+
+   ! Local Scalars
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
+   INTEGER :: iErr,nbands,noccbd,nbands1
+   INTEGER :: skip_t,skip_tt,nbasfcn
+   LOGICAL :: l_real
+
+   ! Local Arrays
+   COMPLEX ::  f_b8_dummy(3, atoms%ntype)
+   REAL,ALLOCATABLE :: we(:),eig(:),we1(:),eig1(:)
+   INTEGER,ALLOCATABLE :: ev_list(:)
+
+   TYPE (t_lapw)              :: lapw, lapwq
+   TYPE (t_orb)               :: orbdummy
+   TYPE (t_denCoeffs)         :: denCoeffs
+   TYPE (t_denCoeffsOffdiag)  :: denCoeffsOffdiag
+   TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1
+   TYPE (t_usdus)             :: usdus
+   TYPE (t_mat)               :: zMat, zMat1
+   TYPE(t_regionCharges)      :: regChargesdummy
+
+   CALL timestart("dfpt_cdnval")
+
+   call timestart("init")
+   l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco).AND.atoms%n_hia==0
+
+   IF (noco%l_mperp) THEN
+      ! when the off-diag. part of the density matrix, i.e. m_x and
+      ! m_y, is calculated inside the muffin-tins (l_mperp = T), cdnval
+      ! is called only once. therefore, several spin loops have been
+      ! added. if l_mperp = F, these loops run only from jspin - jspin.
+      jsp_start = 1
+      jsp_end   = 2
+   ELSE
+      jsp_start = jspin
+      jsp_end   = jspin
+   END IF
+
+   ! Initializations
+   CALL usdus%init(atoms,input%jspins)
+   CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
+   ! The last entry in denCoeffsOffdiag%init is l_fmpl. It is meant as a switch to a plot of the full magnet.
+   ! density without the atomic sphere approximation for the magnet. density.
+   CALL denCoeffsOffdiag%init(atoms,noco,sphhar,banddosdummy%l_jDOS,any(noco%l_unrestrictMT).OR.noco%l_mperp)
+   !CALL orbdummy%init(atoms,noco,jsp_start,jsp_end)
+
+   IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
+
+   skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
+   IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
+
+   jsp = MERGE(1,jspin,noco%l_noco)
+   call timestop("init")
+
+   DO ikpt_i = 1,size(cdnvalJob%k_list)
+      ikpt=cdnvalJob%k_list(ikpt_i)
+
+      CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
+      CALL lapw%init(input,noco,nococonv, kqpts,atoms,sym,ikpt,cell, fmpi)
+
+      skip_t = skip_tt
+      ev_list=cdnvaljob%compact_ev_list(ikpt_i,.FALSE.)
+      noccbd = SIZE(ev_list)
+
+      we  = cdnvalJob%weights(ev_list,ikpt)
+      we1  = cdnvalJob1%weights(ev_list,ikpt)
+      eig = resultsdummy%eig(ev_list,ikpt,jsp)
+      eig1 = resultsdummy1%eig(ev_list,ikpt,jsp)
+
+      IF (cdnvalJob%l_evp) THEN
+         IF (minval(ev_list) > skip_tt) skip_t = 0
+         IF (maxval(ev_list) <= skip_tt) skip_t = noccbd
+         IF ((minval(ev_list) <= skip_tt).AND.(maxval(ev_list) > skip_tt)) skip_t = mod(skip_tt,noccbd)
+      END IF
+
+      nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+      CALL zMat%init(l_real,nbasfcn,noccbd)
+      CALL zMat1%init(.FALSE.,nbasfcn,noccbd)
+      CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat)
+      CALL read_eig(dfpt_eig_id,ikpt,jsp,list=ev_list,neig=nbands1,zmat=zMat1)
+      !IF (.NOT.(nbands==nbands1)) Problem?
+#ifdef CPP_MPI
+      CALL MPI_BARRIER(fmpi%mpi_comm,iErr) ! Synchronizes the RMA operations
+#endif
+
+      IF (noccbd.LE.0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
+
+      ! valence density in the atomic spheres
+      CALL eigVecCoeffs%init(input,atoms,jspin,noccbd,noco%l_mperp)
+      CALL eigVecCoeffs1%init(input,atoms,jspin,noccbd,noco%l_mperp)
+
+      DO ispin = jsp_start, jsp_end
+         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
+                    eigVecCoeffs%abcof(:,0:,0,:,ispin),eigVecCoeffs%abcof(:,0:,1,:,ispin),&
+                    eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat)
+         CALL abcof(input,atoms,sym,cell,lapwq,noccbd,usdus,noco,nococonv,ispin,&
+                    eigVecCoeffs1%abcof(:,0:,0,:,ispin),eigVecCoeffs1%abcof(:,0:,1,:,ispin),&
+                    eigVecCoeffs1%ccof(-atoms%llod:,:,:,:,ispin),zMat1)
+
+         CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,q_dfpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+         CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,q_dfpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+         CALL dfpt_rhomtlo(atoms,noccbd,we,we1,ispin,ispin,q_dfpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+         CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,q_dfpt)
+
+      END DO ! end loop over ispin
+      IF (noco%l_mperp) then
+        call timestart("denCoeffsOffdiag%calcCoefficients")
+        CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,q_dfpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+        CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,2,1,q_dfpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+        CALL dfpt_rhomtlo(atoms,noccbd,we,we1,2,1,q_dfpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+        CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,q_dfpt)
+        CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,q_dfpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+        CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,1,2,q_dfpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+        CALL dfpt_rhomtlo(atoms,noccbd,we,we1,1,2,q_dfpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+        CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,q_dfpt)
+        call timestop("denCoeffsOffdiag%calcCoefficients")
+      endif
+
+      ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
+      IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
+         ! valence density in the interstitial region
+         CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
+                    jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,q_dfpt,lapwq,we1,zMat1)
+      END IF
+   END DO ! end of k-point loop
+
+#ifdef CPP_MPI
+   DO ispin = jsp_start,jsp_end
+      CALL mpi_col_den(fmpi,sphhar,atoms,stars,vacuumdummy,input,noco,ispin,regChargesdummy,dosdummy,vacdosdummy,&
+                       resultsdummy,denCoeffs,orbdummy,denCoeffsOffdiag,den)
+   END DO
+#endif
+
+   IF (fmpi%irank==0) THEN
+      CALL timestart("cdnmt")
+      CALL cdnmt(input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddosdummy,&
+                 vTot%mt(:,0,:,:),denCoeffs,usdus,orbdummy,denCoeffsOffdiag,den%mt,hub1inp,rhoIm=denIm%mt)
+      CALL timestop("cdnmt")
+   END IF
+
+   CALL timestop("dfpt_cdnval")
+
+END SUBROUTINE dfpt_cdnval
+
+END MODULE m_dfpt_cdnval

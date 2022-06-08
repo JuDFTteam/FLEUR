@@ -25,7 +25,7 @@ c****************************************c
      >        acof_b,bcof_b,ccof_b,bkpt_b,bkpt,gb_b,gb_b2,
      >        tuu,tud,tdu,tdd,tuulo,tulou,tdulo,tulod,tuloulo,
      >        kdiff,kdiff2,nntot,nntot2,uHu)
-#include "cpp_double.h"
+
       USE m_juDFT
       use m_constants, only : pimach
       use m_matmul   , only : matmul3,matmul3r
@@ -134,35 +134,35 @@ c...set up phase factors ( 4pi e^{ib2\tau} 4pi e^{-ib1\tau} )
 
 
 c...apw-apw
-         call CPP_BLAS_cgemm('T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
+         call zgemm('T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
      >                    tuu(0,0,n,indexx),lmd2,
      >                    acof_b(1,0,na),nslibd_b,
      >                    cmplx(0.0),mat(0,1),lmd2)
-         call CPP_BLAS_cgemm('N','N',nslibd,nslibd_b,lmd2,chi,
+         call zgemm('N','N',nslibd,nslibd_b,lmd2,chi,
      >                    acof(1,0,na),nslibd,mat(0,1),lmd2,
      >                    cmplx(1.0),uHu,nbnd)
 
-         call CPP_BLAS_cgemm('T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
+         call zgemm('T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
      >                    tud(0,0,n,indexx),lmd2,
      >                    bcof_b(1,0,na),nslibd_b,
      >                    cmplx(0.0),mat(0,1),lmd2)
-         call CPP_BLAS_cgemm('N','N',nslibd,nslibd_b,lmd2,chi,
+         call zgemm('N','N',nslibd,nslibd_b,lmd2,chi,
      >                    acof(1,0,na),nslibd,mat(0,1),lmd2,
      >                    cmplx(1.0),uHu,nbnd)
 
-         call CPP_BLAS_cgemm('T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
+         call zgemm('T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
      >                    tdu(0,0,n,indexx),lmd2,
      >                    acof_b(1,0,na),nslibd_b,
      >                    cmplx(0.0),mat(0,1),lmd2)
-         call CPP_BLAS_cgemm('N','N',nslibd,nslibd_b,lmd2,chi,
+         call zgemm('N','N',nslibd,nslibd_b,lmd2,chi,
      >                    bcof(1,0,na),nslibd,mat(0,1),lmd2,
      >                    cmplx(1.0),uHu,nbnd)
 
-         call CPP_BLAS_cgemm('T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
+         call zgemm('T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
      >                    tdd(0,0,n,indexx),lmd2,
      >                    bcof_b(1,0,na),nslibd_b,
      >                    cmplx(0.0),mat(0,1),lmd2)
-         call CPP_BLAS_cgemm('N','N',nslibd,nslibd_b,lmd2,chi,
+         call zgemm('N','N',nslibd,nslibd_b,lmd2,chi,
      >                    bcof(1,0,na),nslibd,mat(0,1),lmd2,
      >                    cmplx(1.0),uHu,nbnd)
 

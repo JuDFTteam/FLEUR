@@ -21,8 +21,6 @@ MODULE m_kkintgr
    USE m_smooth
    USE m_lorentzian_smooth
 
-#include"cpp_double.h"
-
    IMPLICIT NONE
 
    PRIVATE
@@ -184,7 +182,7 @@ MODULE m_kkintgr
          transA = 'T'
          IF(l_conjg) transA = 'C'
 
-         CALL CPP_BLAS_cgemm(transA,'N',&
+         CALL zgemm(transA,'N',&
                            nz,1,ne,&
                            CMPLX(-del/pi_const,0.0),&
                            integration_weights(iContour)%data_c,ne,&
@@ -212,14 +210,14 @@ MODULE m_kkintgr
             CALL timestop('kkintgr: smoothing')
          ENDIF
 
-         CALL CPP_BLAS_cgemm('T','N',&
+         CALL zgemm('T','N',&
                              nz,1,ne,&
                              cmplx_1,&
                              integration_weights(iContour)%data_c(:,:nz),ne,&
                              smoothed,ne,&
                              cmplx_0,&
                              g,nz)         
-         CALL CPP_BLAS_cgemm('T','N',&
+         CALL zgemm('T','N',&
                              nz,1,ne,&
                              cmplx_1,&
                              integration_weights(iContour)%data_c(:,nz+1:),ne,&
@@ -266,7 +264,7 @@ MODULE m_kkintgr
       IF(l_conjg) transA = 'C'
 
       IF(methods(iContour)==method_direct) THEN
-         CALL CPP_BLAS_cgemm(transA,'N',&
+         CALL zgemm(transA,'N',&
                            nz,(2*lmaxU_const+1)**2,ne,&
                            CMPLX(-del/pi_const,0.0),&
                            integration_weights(iContour)%data_c,ne,&
@@ -311,14 +309,14 @@ MODULE m_kkintgr
             CALL timestop('kkintgr: smoothing')
          ENDIF
 
-         CALL CPP_BLAS_cgemm('T','N',&
+         CALL zgemm('T','N',&
                               nz,(2*lmaxU_const+1)**2,ne,&
                               cmplx_1,&
                               integration_weights(iContour)%data_c(:,:nz),ne,&
                               smoothed,ne,&
                               cmplx_0,&
                               g,nz)         
-         CALL CPP_BLAS_cgemm('T','N',&
+         CALL zgemm('T','N',&
                               nz,(2*lmaxU_const+1)**2,ne,&
                               cmplx_1,&
                               integration_weights(iContour)%data_c(:,nz+1:),ne,&
@@ -362,7 +360,7 @@ MODULE m_kkintgr
       ne  = integration_weights(iContour)%matsize1
 
       IF(methods(iContour)==method_direct) THEN
-         CALL CPP_BLAS_cgemm(transA,'N',&
+         CALL zgemm(transA,'N',&
                            nz,(2*lmaxU_const+1)**2*SIZE(im,4),ne,&
                            CMPLX(-del/pi_const,0.0),&
                            integration_weights(iContour)%data_c,ne,&
@@ -411,14 +409,14 @@ MODULE m_kkintgr
             CALL timestop('kkintgr: smoothing')
          ENDIF
 
-         CALL CPP_BLAS_cgemm('T','N',&
+         CALL zgemm('T','N',&
                               nz,(2*lmaxU_const+1)**2*SIZE(smoothed,4),ne,&
                               cmplx_1,&
                               integration_weights(iContour)%data_c(:,:nz),ne,&
                               smoothed,ne,&
                               cmplx_0,&
                               g,nz)         
-         CALL CPP_BLAS_cgemm('T','N',&
+         CALL zgemm('T','N',&
                               nz,(2*lmaxU_const+1)**2*SIZE(smoothed,4),ne,&
                               cmplx_1,&
                               integration_weights(iContour)%data_c(:,nz+1:),ne,&

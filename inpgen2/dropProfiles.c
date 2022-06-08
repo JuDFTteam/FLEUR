@@ -9,8 +9,8 @@
 #include "profileConfig.h"
 
 /*
- * This method together with the variables defined in default_econfig.h
- * writes out the file default.econfig.
+ * This method together with the variables defined in profileConfig.h
+ * writes out the file profile.config.
  */
 int dropProfiles()
 {

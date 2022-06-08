@@ -121,7 +121,7 @@ MODULE m_banddos_io
       CALL h5screate_simple_f(2,dims(:2),bravaisMatrixSpaceID,hdfError)
       CALL h5dcreate_f(cellGroupID, "bravaisMatrix", H5T_NATIVE_DOUBLE, bravaisMatrixSpaceID, bravaisMatrixSetID, hdfError)
       CALL h5sclose_f(bravaisMatrixSpaceID,hdfError)
-      CALL io_write_real2(bravaisMatrixSetID,(/1,1/),dimsInt(:2),cell%amat)
+      CALL io_write_real2(bravaisMatrixSetID,(/1,1/),dimsInt(:2),"amat",cell%amat)
       CALL h5dclose_f(bravaisMatrixSetID, hdfError)
 
       dims(:2)=(/3,3/)
@@ -129,7 +129,7 @@ MODULE m_banddos_io
       CALL h5screate_simple_f(2,dims(:2),reciprocalCellSpaceID,hdfError)
       CALL h5dcreate_f(cellGroupID, "reciprocalCell", H5T_NATIVE_DOUBLE, reciprocalCellSpaceID, reciprocalCellSetID, hdfError)
       CALL h5sclose_f(reciprocalCellSpaceID,hdfError)
-      CALL io_write_real2(reciprocalCellSetID,(/1,1/),dimsInt(:2),cell%bmat)
+      CALL io_write_real2(reciprocalCellSetID,(/1,1/),dimsInt(:2),"bmar",cell%bmat)
       CALL h5dclose_f(reciprocalCellSetID, hdfError)
 
       dims(:3)=(/3,3,sym%nop/)
@@ -137,7 +137,7 @@ MODULE m_banddos_io
       CALL h5screate_simple_f(3,dims(:3),rotMatricesSpaceID,hdfError)
       CALL h5dcreate_f(cellGroupID, "symRotMatrices", H5T_NATIVE_INTEGER, rotMatricesSpaceID, rotMatricesSetID, hdfError)
       CALL h5sclose_f(rotMatricesSpaceID,hdfError)
-      CALL io_write_integer3(rotMatricesSetID,(/1,1,1/),dimsInt(:3),sym%mrot(:,:,:sym%nop))
+      CALL io_write_integer3(rotMatricesSetID,(/1,1,1/),dimsInt(:3),"mrot",sym%mrot(:,:,:sym%nop))
       CALL h5dclose_f(rotMatricesSetID, hdfError)
 
       dims(:2)=(/3,sym%nop/)
@@ -145,7 +145,7 @@ MODULE m_banddos_io
       CALL h5screate_simple_f(2,dims(:2),transVecsSpaceID,hdfError)
       CALL h5dcreate_f(cellGroupID, "symTransVecs", H5T_NATIVE_DOUBLE, transVecsSpaceID, transVecsSetID, hdfError)
       CALL h5sclose_f(transVecsSpaceID,hdfError)
-      CALL io_write_real2(transVecsSetID,(/1,1/),dimsInt(:2),sym%tau(:,:sym%nop))
+      CALL io_write_real2(transVecsSetID,(/1,1/),dimsInt(:2),"tau",sym%tau(:,:sym%nop))
       CALL h5dclose_f(transVecsSetID, hdfError)
 
       CALL h5gclose_f(cellGroupID, hdfError)
@@ -168,7 +168,7 @@ MODULE m_banddos_io
       CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
       CALL h5dcreate_f(atomsGroupID, "positions", H5T_NATIVE_DOUBLE, atomPosSpaceID, atomPosSetID, hdfError)
       CALL h5sclose_f(atomPosSpaceID,hdfError)
-      CALL io_write_real2(atomPosSetID,(/1,1/),dimsInt(:2),atoms%taual)
+      CALL io_write_real2(atomPosSetID,(/1,1/),dimsInt(:2),"taual",atoms%taual)
       CALL h5dclose_f(atomPosSetID, hdfError)
 
       dims(:1)=(/atoms%nat/)
@@ -176,7 +176,7 @@ MODULE m_banddos_io
       CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
       CALL h5dcreate_f(atomsGroupID, "atomicNumbers", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
       CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
-      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),atomicNumbers)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),"atomicNumbers",atomicNumbers)
       CALL h5dclose_f(atomicNumbersSetID, hdfError)
 
       dims(:1)=(/atoms%nat/)
@@ -184,7 +184,7 @@ MODULE m_banddos_io
       CALL h5screate_simple_f(1,dims(:1),equivAtomsClassSpaceID,hdfError)
       CALL h5dcreate_f(atomsGroupID, "equivAtomsGroup", H5T_NATIVE_INTEGER, equivAtomsClassSpaceID, equivAtomsClassSetID, hdfError)
       CALL h5sclose_f(equivAtomsClassSpaceID,hdfError)
-      CALL io_write_integer1(equivAtomsClassSetID,(/1/),dimsInt(:1),equivAtomsGroup)
+      CALL io_write_integer1(equivAtomsClassSetID,(/1/),dimsInt(:1),"equivAtomsGroup",equivAtomsGroup)
       CALL h5dclose_f(equivAtomsClassSetID, hdfError)
 
       CALL h5gclose_f(atomsGroupID, hdfError)
@@ -199,7 +199,7 @@ MODULE m_banddos_io
       CALL h5screate_simple_f(2,dims(:2),kptCoordSpaceID,hdfError)
       CALL h5dcreate_f(kptsGroupID, "coordinates", H5T_NATIVE_DOUBLE, kptCoordSpaceID, kptCoordSetID, hdfError)
       CALL h5sclose_f(kptCoordSpaceID,hdfError)
-      CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),kpts%bk)
+      CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),"bk",kpts%bk)
       CALL h5dclose_f(kptCoordSetID, hdfError)
 
       dims(:1)=(/kpts%nkpt/)
@@ -207,7 +207,7 @@ MODULE m_banddos_io
       CALL h5screate_simple_f(1,dims(:1),kptWeightSpaceID,hdfError)
       CALL h5dcreate_f(kptsGroupID, "weights", H5T_NATIVE_DOUBLE, kptWeightSpaceID, kptWeightSetID, hdfError)
       CALL h5sclose_f(kptWeightSpaceID,hdfError)
-      CALL io_write_real1(kptWeightSetID,(/1/),dimsInt(:1),kpts%wtkpt)
+      CALL io_write_real1(kptWeightSetID,(/1/),dimsInt(:1),"wtkpt",kpts%wtkpt)
       CALL h5dclose_f(kptWeightSetID, hdfError)
 
       IF (ALLOCATED(kpts%specialPointIndices)) THEN
@@ -230,7 +230,7 @@ MODULE m_banddos_io
          CALL h5screate_simple_f(1,dims(:1),kptsSPIndicesSpaceID,hdfError)
          CALL h5dcreate_f(kptsGroupID, "specialPointIndices", H5T_NATIVE_INTEGER, kptsSPIndicesSpaceID, kptsSPIndicesSetID, hdfError)
          CALL h5sclose_f(kptsSPIndicesSpaceID,hdfError)
-         CALL io_write_integer1(kptsSPIndicesSetID,(/1/),dimsInt(:1),kpts%specialPointIndices)
+         CALL io_write_integer1(kptsSPIndicesSetID,(/1/),dimsInt(:1),"indices",kpts%specialPointIndices)
          CALL h5dclose_f(kptsSPIndicesSetID, hdfError)
       END IF
 

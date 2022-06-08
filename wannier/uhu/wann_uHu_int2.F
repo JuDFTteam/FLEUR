@@ -7,7 +7,7 @@
      >               k1_b,k2_b,k3_b,
      >               nv_b,
      >               rgphs,ustep,ig,gb,uHu)
-#include "cpp_double.h"
+
       implicit none
       integer, intent(in) :: nvd,n3d,k1(nvd),k2(nvd),k3(nvd)
       integer, intent(in) :: nv

@@ -9,14 +9,14 @@ MODULE m_make_atomic_defaults
   IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE make_atomic_defaults(input,vacuum,profile,cell,oneD,atoms,enpara)
+   SUBROUTINE make_atomic_defaults(input,vacuum,profile,cell ,atoms,enpara)
       USE m_check_mt_radii
       USE m_atompar
       USE m_types_atoms
       USE m_types_input
       USE m_types_vacuum
       USE m_types_cell
-      USE m_types_oneD
+       
       USE m_constants
       USE m_types_enpara
       USE m_types_profile
@@ -27,12 +27,15 @@ CONTAINS
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_vacuum),INTENT(IN)     :: vacuum
       TYPE(t_cell),INTENT(IN)       :: cell
-      TYPE(t_oneD),INTENT(IN)       :: oneD
+       
 
       INTEGER :: i,l,id,n,nn,qn,iLO
+      INTEGER :: loLCutoff
       INTEGER :: element_species(120)
       INTEGER :: addLOs(atoms%ntype)
-      INTEGER :: addHDSCLOs(atoms%ntype)
+      INTEGER :: numLOs(10,0:3)
+      INTEGER :: numlLO(0:3)
+      INTEGER :: inequivalentNLO
 
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
       TYPE(t_atompar):: ap(atoms%ntype)
@@ -57,7 +60,6 @@ CONTAINS
       ALLOCATE(atoms%llo(99,atoms%ntype));atoms%llo=-1!will be redone later
 
       addLOs(:) = 0
-      addHDSCLOs(:) = 0
       atoms%lapw_l=0
       atoms%speciesname=""
 
@@ -71,7 +73,7 @@ CONTAINS
       atoms%lda_u%l = -1 ;  atoms%relax(:,:) = 1
 
       !Determine MT-radii
-      CALL check_mt_radii(atoms,input,vacuum,cell,oneD,.false.,atoms%rmt)
+      CALL check_mt_radii(atoms,input,vacuum,cell ,profile,.false.,atoms%rmt)
 
       IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
          atoms%rmt(:) = atoms%rmt(:) * profile%rmtFactor
@@ -84,11 +86,11 @@ CONTAINS
       DO n=1,atoms%ntype
          id=NINT((atoms%zatom(n)-atoms%nz(n))*100)
          IF (id>0) THEN
-            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),id)
+            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),profile,id)
             !This specific atom also has a rmt given?
 !            IF (ap(n)%id==id.AND.ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          ELSE
-            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n))   
+            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),profile)   
          ENDIF
          IF (ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          CALL ap(n)%add_defaults()
@@ -100,19 +102,27 @@ CONTAINS
          !atoms%bmu(n))=ap(n)%bmu
          !local orbitals
          atoms%nlo(n)=len_TRIM(ap(n)%lo)/2
-         IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
-            addLOs(n) = 4 - atoms%nlo(n)
-         END IF
-         IF (INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDSCLOs").NE.0) THEN
-            addHDSCLOs(n) = atoms%nlo(n)
-         END IF
-         atoms%nlo(n) = atoms%nlo(n) + addLOs(n) + addHDSCLOs(n)
+         loLCutoff = 4 ! l cutoff for additional LOs. This l quantum number is already excluded.
+         IF (atoms%nz(n).EQ.1) loLCutoff = 2
+         IF ((atoms%nz(n).GE.2).AND.(atoms%nz(n).LE.9)) loLCutoff = 3
+         numlLO(:) = 0
          DO i=1,atoms%nlo(n)
             DO l = 0, 3
                !Setting of llo will be redone below
-               IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l
+               IF (ap(n)%lo(2*i:2*i) == lotype(l)) THEN
+                  atoms%llo(i,n) = l
+                  numlLO(l) = numlLO(l) + 1
+               END IF
             ENDDO
          ENDDO
+         inequivalentNLO = 0
+         DO l = 0, 3
+            IF(numlLO(l).NE.0) inequivalentNLO = inequivalentNLO + 1
+         END DO
+         IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
+            addLOs(n) = loLCutoff - inequivalentNLO
+         END IF
+         atoms%nlo(n) = atoms%nlo(n) + addLOs(n)
          CALL atoms%econf(n)%init(ap(n)%econfig)
          if (abs(ap(n)%bmu)>1E-8.and.input%jspins.ne.1) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
          !atoms%ncst(n)=econfig_count_core(econfig)
@@ -129,6 +139,7 @@ CONTAINS
 
          IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
             atoms%lmax(n) = NINT(profile%kmax*profile%lmaxFactor*atoms%rmt(n))
+            atoms%lnonsph(n) = MIN( MAX(atoms%lmax(n)-2,3) , 8 )
          END IF
 
       END DO
@@ -141,23 +152,19 @@ CONTAINS
 
       CALL enpara%init(atoms%ntype,atoms%nlod,2,.TRUE.,atoms%nz)
       DO n=1,atoms%ntype
-         DO i=1,atoms%nlo(n) - addLOs(n) - addHDSCLOs(n)
+         loLCutoff = 4 ! l cutoff for additional LOs. This l quantum number is already excluded.
+         IF (atoms%nz(n).EQ.1) loLCutoff = 2
+         IF ((atoms%nz(n).GE.2).AND.(atoms%nz(n).LE.9)) loLCutoff = 3
+         DO i=1,atoms%nlo(n) - addLOs(n)
             DO l = 0, 3
                IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l
             ENDDO
          ENDDO
-         CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo,addLOs)
-
-         DO i = 1, addHDSCLOs(n)
-            iLO = atoms%nlo(n) - addLOs(n) - addHDSCLOs(n) + i
-            atoms%llo(iLO,n) = atoms%llo(i,n)
-            atoms%ulo_der(iLO,n) = 1
-            enpara%qn_ello(iLO,n,:) = enpara%qn_ello(i,n,1)
-         END DO
+         CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo)
 
          IF ((INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHELOs_noSC").NE.0).OR.(INDEX(TRIM(ADJUSTL(profile%addLOSetup)),"addHDLOs_noSC").NE.0)) THEN
             i = 0
-            DO l = 0, 3
+            DO l = 0, loLCutoff - 1
                IF(ANY(atoms%llo(1:atoms%nlo(n)-addLOs(n),n).EQ.l)) CYCLE
                iLO = atoms%nlo(n) - addLOs(n) + 1 + i
                qn = -(enpara%qn_el(l,n,1)+1)
@@ -170,6 +177,19 @@ CONTAINS
                i = i + 1
             END DO
          END IF
+
+         numLOs(:,:) = 0
+         DO iLO = 1,atoms%nlo(n) - addLOs(n)
+            ! If the main quantum number of the LO is larger than that of the
+            ! LAPW basis we make it a HELO type LO.
+            l = atoms%llo(iLO,n)
+            qn = enpara%qn_ello(iLO,n,1)
+            IF (qn.GT.enpara%qn_el(l,n,1)) enpara%qn_ello(iLO,n,1) = -qn
+            ! Adjust ulo_der for multiple LOs for the same qn, l.
+            atoms%ulo_der(iLO,n) = numLOs(ABS(qn),l)
+            numLOs(ABS(qn),l) = numLOs(ABS(qn),l) + 1
+         END DO
+
       END DO
 
 

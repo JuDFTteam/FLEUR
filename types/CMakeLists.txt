@@ -18,6 +18,7 @@ types/types_greensf.F90
 types/types_hub1data.f90
 types/types_hybdat.F90
 types/types_hybmpi.F90
+types/types_jpPotden.F90
 types/types_lapw.F90
 types/types_mat.F90
 types/types_misc.F90

@@ -30,7 +30,7 @@ MODULE m_checkMMPmat
 
       changed_elements = .FALSE.
 
-      maxOcc = 2.0/input%jspins
+      maxOcc = (2 + 0.1)/input%jspins
       DO i_u = indStart, indEnd
          l = atoms%lda_u(i_u)%l
          !Check the diagonal elements

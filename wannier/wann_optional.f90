@@ -7,7 +7,7 @@
 MODULE m_wann_optional
   USE m_juDFT
 CONTAINS
-  SUBROUTINE wann_optional(fmpi,input,kpts,atoms,sym,cell,oneD,noco,wann)
+  SUBROUTINE wann_optional(fmpi,input,kpts,atoms,sym,cell ,noco,wann)
     !**************************************************
     !     Make preparations for the calculation of
     !     Wannier functions.
@@ -33,7 +33,7 @@ CONTAINS
     TYPE(t_atoms),     INTENT(IN)    :: atoms
     TYPE(t_sym),       INTENT(IN)    :: sym
     TYPE(t_cell),      INTENT(IN)    :: cell
-    TYPE(t_oneD),      INTENT(IN)    :: oneD
+     
     TYPE(t_noco),      INTENT(IN)    :: noco
     TYPE(t_wann),      INTENT(IN)    :: wann
 
@@ -73,7 +73,7 @@ CONTAINS
     !-----find Wannier-irreducible part of BZ
     IF(wann%l_kptsreduc)THEN
           if(fmpi%irank==0)then
-       CALL wann_kptsreduc(sym%nop,sym%mrot,cell%bmat,sym%tau,input%film, oneD%odi%d1,l_nocosoc)
+       CALL wann_kptsreduc(sym%nop,sym%mrot,cell%bmat,sym%tau,input%film, l_nocosoc)
               endif
        l_stopopt=.TRUE.
     ENDIF
@@ -81,7 +81,7 @@ CONTAINS
     !-----find Wannier-irreducible part of BZ
     IF(wann%l_kptsreduc2)THEN
           if(fmpi%irank==0)then
-       CALL wann_kptsreduc2(wann%mhp, sym%nop,sym%mrot,cell%bmat,sym%tau,input%film, oneD%odi%d1,l_nocosoc)
+       CALL wann_kptsreduc2(wann%mhp, sym%nop,sym%mrot,cell%bmat,sym%tau,input%film, l_nocosoc)
               endif
        l_stopopt=.TRUE.
     ENDIF
@@ -90,7 +90,7 @@ CONTAINS
     IF(wann%l_prepwan90)THEN
           if(fmpi%irank==0)then
        CALL wann_wan90prep(input,kpts, input%jspins,cell%amat,cell%bmat, atoms%nat,atoms%taual,&
-            atoms%zatom,atoms%ntype, atoms%ntype,atoms%neq,wann%l_bzsym,input%film, oneD%odi%d1,&
+            atoms%zatom,atoms%ntype, atoms%ntype,atoms%neq,wann%l_bzsym,input%film,&
             wann%l_ms,wann%l_sgwf,wann%l_socgwf, wann%aux_latt_const,wann%param_file,wann%l_dim, &
             wann%wan90version)
                    endif

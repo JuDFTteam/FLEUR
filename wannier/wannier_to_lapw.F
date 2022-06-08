@@ -20,7 +20,7 @@ c******************************************************************
       contains
       subroutine wannier_to_lapw(
      >      mpi_communicatior,eig_id,l_real,
-     >      input,lapw,oneD,noco,nococonv,sym,cell,atoms,stars,vacuum,
+     >      input,lapw ,noco,nococonv,sym,cell,atoms,stars,vacuum,
      >      sphhar,
      >      vTot,
      >      l_soc,unigrid,sortrule,band_min,band_max,
@@ -28,7 +28,7 @@ c******************************************************************
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
      >      invsat,invsatnr,nkpt,taual,rmt,amat,bmat,bbmat,alph,
-     >      beta,qss,sk2,phi2,odi,ods,irank,isize,n3d,nmzxyd,nmzd,
+     >      beta,qss,sk2,phi2,irank,isize,n3d,nmzxyd,nmzd,
      >      jmtd,nlhd,nq3,nvac,invs,invs2,film,nlh,jri,ntypsd,
      >      ntypsy,jspins,nkptd,dx,n2d,rmsh,e1s,e2s,ulo_der,
      >      ustep,ig,k1d,k2d,k3d,rgphs,slice,kk,nnne,
@@ -49,11 +49,10 @@ c******************************************************************
 
 
       implicit none
-#include "cpp_double.h"
 
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_lapw),INTENT(IN)   :: lapw
-      TYPE(t_oneD),INTENT(IN)   :: oneD
+       
       TYPE(t_noco),INTENT(IN)   :: noco
       TYPE(t_nococonv),INTENT(IN):: nococonv
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -100,8 +99,7 @@ c******************************************************************
       integer, intent(in):: wan90version
 c-odim
       real,    intent (in) :: sk2(n2d),phi2(n2d)
-      type (od_inp), intent (in) :: odi
-      type (od_sym), intent (in) :: ods
+   
 c+odim
       logical l_spreadcal
       complex, allocatable::spreads(:,:)
@@ -550,12 +548,12 @@ c...generation of the A,B,C coefficients in the spheres
 c...for the lapws and local orbitals, summed by the basis functions
 
       CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
-     +           noco,nococonv,jspin,oneD,acof,bcof,ccof,zMat)
+     +           noco,nococonv,jspin ,acof,bcof,ccof,zMat)
 
       call abcrot(
      >        ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
      >        noccbd,lmax,nlo,llo,nop,ngopr,mrot,invsat,invsatnr,
-     >                 bmat,odi,ods,
+     >                 bmat,
      X                 acof,bcof,ccof)
 
 c***************************************************************

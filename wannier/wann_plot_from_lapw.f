@@ -13,7 +13,7 @@ c     Frank Freimuth, October2006
 c****************************************************************
       CONTAINS
 
-      SUBROUTINE wann_plot_from_lapw(nv2d,jspins,odi,ods,n3d,nmzxyd,n2d,
+      SUBROUTINE wann_plot_from_lapw(nv2d,jspins,n3d,nmzxyd,n2d,
      >     ntypsd,
      >     ntype,lmaxd,jmtd,natd,nmzd,neq,nq3,nvac,
      >     nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
@@ -21,7 +21,6 @@ c****************************************************************
      >     lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,nnne,kk,
      >     nlod,llod,lmd,omtil,nlo,llo)
 
-      USE m_types, ONLY : od_inp, od_sym
       USE m_xsf_io
       USE m_wann_lapw_int_plot
       USE m_wann_lapw_sph_plot
@@ -43,8 +42,6 @@ c****************************************************************
       REAL,    INTENT (IN) :: zatom(:),amat(3,3),bmat(3,3),pos(3,natd)
       REAL,    INTENT (IN) :: rmsh(jmtd,ntype),tau(3,nop)
       REAL,    INTENT (IN) :: bbmat(3,3)
-      TYPE (od_inp), INTENT (IN) :: odi
-      TYPE (od_sym), INTENT (IN) :: ods
       integer nplo,nplot,nbn,nbmin,nbmax,ix,iy,iz,ii1,ii2,ii3,i1,i2,i3
       integer nt,na,nq,ivac,jvac
       real amat_old(3,3)
@@ -272,10 +269,7 @@ c$$$#endif
              ii1 = cell1
              ii2 = cell2
              ii3 = cell3
-             IF (film .AND. .NOT.odi%d1) ii3 = 0
-             IF (odi%d1) THEN
-                ii1 = 0 ; ii2 = 0
-             END IF
+             IF (film) ii3 = 0
              DO  i1 = -ii1,ii1
               DO  i2 = -ii2,ii2
                DO  i3 = -ii3,ii3
@@ -309,7 +303,7 @@ c$$$#endif
               ENDDO
              ENDDO !i1
 !Check for point in vacuum
-             IF (film.AND..NOT.odi%d1.AND.ABS(point(3))>=z1) THEN
+             IF (film.AND.ABS(point(3))>=z1) THEN
                 ivac=1
                 if (point(3).lt. 0.0)ivac=2
                 jvac=ivac
@@ -332,19 +326,7 @@ c     call wann_plot_vac
               CYCLE xloop
              END IF
             
-             IF (odi%d1) THEN
-              IF (SQRT((pt(1))**2 + (pt(2))**2)>=z1) THEN
-c     call wann_real
-               IF (xsf) THEN
-                  WRITE(55,*) real(xdnout)
-                  WRITE(56,*) aimag(xdnout)
-                  WRITE(57,*) real(xdnout*conjg(xdnout))
-               ELSE
-                  WRITE (55,8) real(xdnout),aimag(xdnout)
-               ENDIF
-               CYCLE xloop
-              END IF
-             END IF
+            
                call wann_lapw_int_plot(point,bmat,unigrid,
      >            wannint(:,:,:,nbn),
      <            xdnout)

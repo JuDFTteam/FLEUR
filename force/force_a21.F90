@@ -5,24 +5,24 @@
 !--------------------------------------------------------------------------------
 MODULE m_forcea21
 CONTAINS
-   SUBROUTINE force_a21(input,atoms,sym,oneD,cell,we,jsp,epar,ne,eig,usdus,tlmplm,&
+   SUBROUTINE force_a21(input,atoms,sym ,cell,we,jsp,epar,ne,eig,usdus,tlmplm,&
                         vtot,eigVecCoeffs,aveccof,bveccof,cveccof,f_a21,f_b4,results)
       !--------------------------------------------------------------------------
       ! Pulay 2nd and 3rd term force contributions à la Rici et al.
-      ! 
-      ! Equation A17 and A20 combined, Phys. Rev. B 43, 6411 
-      ! 
+      !
+      ! Equation A17 and A20 combined, Phys. Rev. B 43, 6411
+      !
       ! Note1: We do NOT include the i**l factors in the alm, blm coming from
       ! to_pulay anymore. Therefore, we can use matrix elements from file 28, 38
       ! DIRECTLY.
-      ! 
+      !
       ! Note2: The present version only yields forces for the highest energy window
       ! (=valence states). If semicore forces are wanted as well the tmas and tmat
       ! files have to be saved, indexed and properly used here in force_a21.
-      ! 
-      ! 22/june/97: Probably found symmetrization error replacing S^-1 by S 
+      !
+      ! 22/june/97: Probably found symmetrization error replacing S^-1 by S
       ! (IS instead of isinv)
-      ! 
+      !
       ! Force contribution B4 added following
       ! Madsen, Blaha, Schwarz, Sjostedt, Nordstrom
       ! GMadsen FZJ 20/3-01
@@ -44,7 +44,7 @@ CONTAINS
       TYPE(t_input),        INTENT(IN)    :: input
       TYPE(t_atoms),        INTENT(IN)    :: atoms
       TYPE(t_sym),          INTENT(IN)    :: sym
-      TYPE(t_oneD),         INTENT(IN)    :: oneD
+       
       TYPE(t_cell),         INTENT(IN)    :: cell
       TYPE(t_usdus),        INTENT(IN)    :: usdus
       TYPE(t_tlmplm),       INTENT(IN)    :: tlmplm
@@ -107,10 +107,10 @@ CONTAINS
                               dtu = CONJG(tlmplm%h_loc(lm2,lm1+tlmplm%h_loc2(n),n,jsp,jsp))
                               DO i = 1,3
                                  a21(i,natrun) = a21(i,natrun) + 2.0*&
-                                    AIMAG( CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utu*aveccof(i,ie,lm2,natrun)&
-                                    +CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utd*bveccof(i,ie,lm2,natrun)&
-                                    +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtu*aveccof(i,ie,lm2,natrun)&
-                                    +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
+                                    AIMAG( CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)) *utu*aveccof(i,ie,lm2,natrun)&
+                                    +CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)) *utd*bveccof(i,ie,lm2,natrun)&
+                                    +CONJG(eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)) *dtu*aveccof(i,ie,lm2,natrun)&
+                                    +CONJG(eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
                               END DO ! i (spatial directions)
                            END DO ! natrun
                         END DO ! m2
@@ -124,10 +124,10 @@ CONTAINS
                      DO i = 1,3
                         DO natrun = natom,natom + atoms%neq(n) - 1
                            a21(i,natrun) = a21(i,natrun) + 2.0*AIMAG(&
-                               CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp))*utu*aveccof(i,ie,lm1,natrun)&
-                              +CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp))*utd*bveccof(i,ie,lm1,natrun)&
-                              +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp))*dtu*aveccof(i,ie,lm1,natrun)&
-                              +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp))*dtd*bveccof(i,ie,lm1,natrun)&
+                               CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp))*utu*aveccof(i,ie,lm1,natrun)&
+                              +CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp))*utd*bveccof(i,ie,lm1,natrun)&
+                              +CONJG(eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp))*dtu*aveccof(i,ie,lm1,natrun)&
+                              +CONJG(eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp))*dtd*bveccof(i,ie,lm1,natrun)&
                               )*we(ie) /atoms%neq(n)
                         END DO
                      END DO
@@ -154,14 +154,14 @@ CONTAINS
                            DO natrun = natom,natom + atoms%neq(n) - 1
                               b4(i,natrun) = b4(i,natrun) + 0.5 *&
                                  we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)*usdus%us(l1,n,jsp)&
-                                 +eigVecCoeffs%bcof(ie,lm1,natrun,jsp)*usdus%uds(l1,n,jsp))*&
+                                 CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)*usdus%us(l1,n,jsp)&
+                                 +eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)*usdus%uds(l1,n,jsp))*&
                                  (aveccof(i,ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
                                  +bveccof(i,ie,lm1,natrun)*usdus%duds(l1,n,jsp) )&
                                  -CONJG(aveccof(i,ie,lm1,natrun)*usdus%us(l1,n,jsp)&
                                  +bveccof(i,ie,lm1,natrun)*usdus%uds(l1,n,jsp) )*&
-                                 (eigVecCoeffs%acof(ie,lm1,natrun,jsp)*usdus%dus(l1,n,jsp)&
-                                 +eigVecCoeffs%bcof(ie,lm1,natrun,jsp)*usdus%duds(l1,n,jsp)) )
+                                 (eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)*usdus%dus(l1,n,jsp)&
+                                 +eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)*usdus%duds(l1,n,jsp)) )
                            END DO
                         END DO
                      END DO
@@ -175,8 +175,8 @@ CONTAINS
                            DO natrun = natom,natom + atoms%neq(n) - 1
                               b4(i,natrun) = b4(i,natrun) + 0.5 *&
                                  we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG( eigVecCoeffs%acof(ie,lm1,natrun,jsp)* usdus%us(l1,n,jsp)&
-                                 + eigVecCoeffs%bcof(ie,lm1,natrun,jsp)* usdus%uds(l1,n,jsp) ) *&
+                                 CONJG( eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)* usdus%us(l1,n,jsp)&
+                                 + eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)* usdus%uds(l1,n,jsp) ) *&
                                  cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp)&
                                  + CONJG(eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)*usdus%ulos(lo,n,jsp)) *&
                                  ( aveccof(i,ie,lm1,natrun)* usdus%dus(l1,n,jsp)&
@@ -186,8 +186,8 @@ CONTAINS
                                  + bveccof(i,ie,lm1,natrun) *usdus%uds(l1,n,jsp) ) *&
                                  eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)  *usdus%dulos(lo,n,jsp)&
                                  + CONJG(cveccof(i,m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
-                                 ( eigVecCoeffs%acof(ie,lm1,natrun,jsp)*usdus%dus(l1,n,jsp)&
-                                 + eigVecCoeffs%bcof(ie,lm1,natrun,jsp)*usdus%duds(l1,n,jsp)&
+                                 ( eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)*usdus%dus(l1,n,jsp)&
+                                 + eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)*usdus%duds(l1,n,jsp)&
                                  + eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)*usdus%dulos(lo,n,jsp) ) ) )
                            END DO
                         END DO
@@ -240,7 +240,6 @@ CONTAINS
                DO it = 1,sym%invarind(natom)
                   is =sym%invarop(natom,it)
                   isinv = sym%invtab(is)
-                  IF (oneD%odi%d1) isinv = oneD%ods%ngopr(natom)
                      !-gb 2002
                      !  now we have the wanted index of operation with which we have
                      !  to rotate gv. Note gv is given in cart. coordinates but
@@ -249,13 +248,10 @@ CONTAINS
                         vec(i) = zero
                         vec2(i) = zero
                         DO j = 1,3
-                           IF (.NOT.oneD%odi%d1) THEN
+                           
                               vec(i) = vec(i) + sym%mrot(i,j,isinv)*gvint(j)
                               vec2(i) = vec2(i) + sym%mrot(i,j,isinv)*gvint2(j)
-                           ELSE
-                              vec(i) = vec(i) + oneD%ods%mrot(i,j,isinv)*gvint(j)
-                              vec2(i) = vec2(i) + oneD%ods%mrot(i,j,isinv)*gvint2(j)
-                           END IF
+                           
                      END DO
                   END DO
                   DO i = 1,3
@@ -277,7 +273,7 @@ CONTAINS
 
             ! NOTE: results%force is real and therefore only the real part of
             ! forc_a21 is added. In general, force must be real after the k-star
-            ! summation. Now, we put the proper operations into real space. 
+            ! summation. Now, we put the proper operations into real space.
             ! Problem: What happens if in real space there is no inversion anymore?
             ! But we have inversion in k-space due to time reversal symmetry:
             ! E(k)=E(-k)

@@ -35,7 +35,7 @@ module m_VYukawaFilm
 
 
 
-  subroutine VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, den, &
+  subroutine VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, den, &
                           VYukawa )
 
     use m_constants
@@ -52,7 +52,7 @@ module m_VYukawaFilm
     type(t_mpi),        intent(in)    :: fmpi
     type(t_atoms),      intent(in)    :: atoms 
     type(t_sphhar),     intent(in)    :: sphhar
-    type(t_oneD),       intent(in)    :: oneD
+     
     type(t_noco),       intent(in)    :: noco
     type(t_potden),     intent(inout) :: den
 
@@ -66,7 +66,7 @@ module m_VYukawaFilm
  
     ! PSEUDO-CHARGE DENSITY
 
-    call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym, oneD, &
+    call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
                 den%pw(:,1), den%mt(:,:,:,1), den%vacz(:,:,1), .false., VYukawa%potdenType, &
                 psq )
 
@@ -110,14 +110,14 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, .FALSE., &
+    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   .FALSE., &
                VYukawa%pw(:,1), den%mt(:,0:,:,1), VYukawa%potdenType, &
                VYukawa%mt(:,0:,:,1) )
 
  
     ! MODIFICATION FOR CHARGE NEUTRALITY
 
-    call VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, &
+    call VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, &
                         den, &
                         VYukawa )
 
@@ -314,10 +314,10 @@ module m_VYukawaFilm
     complex,        intent(out) :: VIq(stars%ng3)
 
     real                        :: partitioning, rz, qz, q
-    integer                     :: irec2, irec3, iz, jz, ivac, iqz, nfft, nzmax, nzmin, nzdh, nLower, nUpper, jvac
+    integer                     :: irec2, irec2r,irec3, iz, jz, ivac, iqz, nfft, nzmax, nzmin, nzdh, nLower, nUpper, jvac
     complex, allocatable        :: VIz(:,:), eta(:,:)
     complex                     :: VIqz(-stars%mx3:stars%mx3,stars%ng2), c_ph(-stars%mx3:stars%mx3,stars%ng2)
-    complex                     :: vcons1(stars%ng3)
+    complex                     :: vcons1(stars%ng3),phas
     real                        :: VIzReal(3*stars%mx3,stars%ng2), VIzImag(3*stars%mx3,stars%ng2)
     real, allocatable           :: exp_m(:,:), exp_p(:,:)
     real, allocatable           :: z(:)
@@ -397,7 +397,7 @@ module m_VYukawaFilm
           case( 1 )
             nUpper = nzmax; nLower =  nzdh + 1; jvac = 1
           case( 2 )
-            nLower = nzmin; nUpper = -nzdh - 1; jvac = 2; if ( sym%invs .or. sym%zrfs ) jvac = 1
+            nLower = nzmin; nUpper = -nzdh - 1; jvac = vacuum%nvac
         end select
         do iz = nLower, nUpper
           rz = ( abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
@@ -411,7 +411,10 @@ module m_VYukawaFilm
             VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVxy(jz,  irec2,jvac) &
                           -       q              * ( q - 2. ) * VVxy(jz+1,irec2,jvac) &
                           + 0.5 * q * ( q - 1. )              * VVxy(jz+2,irec2,jvac)
-            if ( ( sym%invs .and. .not. sym%zrfs ) .and. ivac == 2 ) VIz(iz,irec2) = conjg( VIz(iz,irec2) )
+          if ( vacuum%nvac==1 .and. ivac == 2 ) THEN
+            call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+            VIz(iz,irec2r) = phas*VIz(iz,irec2) 
+          endif  
           end if
         end do
       end do
@@ -667,7 +670,7 @@ module m_VYukawaFilm
     complex,        intent(out) :: VIq(stars%ng3)
 
     real                                               :: partitioning, rz, qz, q, qxy_numerics
-    integer                                            :: irec2, irec3, iz, jz, ivac, iqz, jvac
+    integer                                            :: irec2, irec3, iz, jz, ivac, iqz, jvac,irec2r
     integer                                            :: nfft, nzmax, nzmin, nzdh, nLower, nUpper
     complex, allocatable                               :: VIz(:,:), eta(:,:)
     complex, allocatable                               :: expzqz(:,:)
@@ -678,7 +681,7 @@ module m_VYukawaFilm
     real, allocatable                                  :: quotz(:,:), sinhz(:,:)
     real, allocatable                                  :: z(:)
     real, dimension(stars%ng2)                         :: g_damped, vcons2
-    
+    complex                                            :: phas
 
     ! DEFINITIONS / ALLOCATIONS / INITIALISATIONS
 
@@ -772,7 +775,7 @@ module m_VYukawaFilm
           case( 1 )
             nUpper = nzmax; nLower =  nzdh + 1; jvac = 1
           case( 2 )
-            nLower = nzmin; nUpper = -nzdh - 1; jvac = 2; if ( sym%invs .or. sym%zrfs ) jvac = 1
+            nLower = nzmin; nUpper = -nzdh - 1; jvac = vacuum%nvac
         end select
         do iz = nLower, nUpper
           rz = ( abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0
@@ -786,7 +789,10 @@ module m_VYukawaFilm
             VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVxy(jz,  irec2,jvac) &
                           -       q              * ( q - 2. ) * VVxy(jz+1,irec2,jvac) &
                           + 0.5 * q * ( q - 1. )              * VVxy(jz+2,irec2,jvac)
-            if ( ( sym%invs .and. .not. sym%zrfs ) .and. ivac == 2 ) VIz(iz,irec2) = conjg( VIz(iz,irec2) )
+            if ( vacuum%nvac==1 .and. ivac == 2 ) THEN
+              call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+              VIz(iz,irec2r) = phas*VIz(iz,irec2) 
+            endif  
           end if
         end do
       end do
@@ -823,7 +829,7 @@ module m_VYukawaFilm
 
 
 
-  subroutine VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, den, &
+  subroutine VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, den, &
                             VYukawa )
 
     ! This subroutine adds a potential to the previously computed Yukawa
@@ -851,7 +857,7 @@ module m_VYukawaFilm
     type(t_mpi),        intent(in)    :: fmpi
     type(t_atoms),      intent(in)    :: atoms
     type(t_sphhar),     intent(in)    :: sphhar
-    type(t_oneD),       intent(in)    :: oneD
+     
     type(t_noco),       intent(in)    :: noco
     type(t_potden),     intent(inout) :: den
     type(t_potden),     intent(inout) :: VYukawa
@@ -897,7 +903,7 @@ module m_VYukawaFilm
     end do
 
     ! integrate the potential over the film region
-    call integrate_cdn( stars, atoms, sym, vacuum, input, cell, oneD, VYukawaModification, q, qis, qmt, qvac, qtot, qistot  )
+    call integrate_cdn( stars, atoms, sym, vacuum, input, cell,   VYukawaModification, q, qis, qmt, qvac, qtot, qistot  )
     q0 = qtot / cell%area
     ldh = input%preconditioning_param * dh
     qhat = ( q0 / ( 2 * dh ) ) / ( sinh(ldh) / ( ldh * cosh( ldh ) ) - 1 )
@@ -951,7 +957,7 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, oneD, .FALSE., &
+    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   .FALSE., &
                VYukawaModification%pw(:,1), den%mt(:,0:,:,1), VYukawaModification%potdenType, &
                VYukawaModification%mt(:,0:,:,1) )
 

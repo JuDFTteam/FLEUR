@@ -142,7 +142,7 @@ CONTAINS
             CALL priv_new_timer("Total Run")
             l_debug = judft_was_Argument("-debugtime")
          ENDIF
-
+         
          DO n = 1, current_timer%n_subtimers
             IF (TRIM(ttimer) == TRIM(current_timer%subtimer(n)%p%name)) THEN
                current_timer => current_timer%subtimer(n)%p
@@ -165,7 +165,8 @@ CONTAINS
    !<-- S:timestop(timer)
 
    SUBROUTINE timestop(ttimer)
-      !$ use omp_lib
+     !$ use omp_lib
+    
       implicit none
       CHARACTER(LEN=*), INTENT(IN) :: ttimer
 
@@ -193,7 +194,6 @@ CONTAINS
          current_timer%starttime = -1
 
          CALL priv_debug_output(" stopped ", current_timer%name)
-
          current_timer => current_timer%parenttimer
       endif
    END SUBROUTINE timestop
@@ -204,6 +204,9 @@ CONTAINS
 #ifdef CPP_MPI
       USE mpi
 #endif
+#ifdef CPP_NVTX      
+      use nvtx
+#endif      
       IMPLICIT NONE
       CHARACTER(LEN=*), INTENT(IN):: startstop, name
 #ifdef CPP_MPI
@@ -211,6 +214,14 @@ CONTAINS
       LOGICAL:: l_mpi
 #endif
       IF (.NOT. l_debug) RETURN
+#ifdef CPP_NVTX
+      if (index(startstop,"started")>0) THEN
+         call nvtxStartRange(name)
+      else
+         call nvtxEndRange
+      endif
+#endif      
+      
       if (debugtimestart < 0) debugtimestart = cputime()
 #ifdef CPP_MPI
       CALL MPI_INITIALIZED(l_mpi,ierr)

@@ -135,8 +135,8 @@ CONTAINS
      endif
 
      scale=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@scale'))
-     path=trim(path)//'/bravaisMatrix'
-     if (xml%GetNumberOfNodes(path)>0) then
+     if (xml%GetNumberOfNodes(trim(path)//'/bravaisMatrix')>0) then
+       path=trim(path)//'/bravaisMatrix'
        valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-1')))
        this%amat(1,1) = evaluateFirst(valueString)
        this%amat(2,1) = evaluateFirst(valueString)
@@ -155,8 +155,20 @@ CONTAINS
        this%amat(1,1)=10.0
        this%amat(2,2)=10.0
        this%amat(3,3)=10.0
+     elseif (xml%getNumberOfNodes(trim(path)//'/bravaisMatrixFilm')==1) THEN
+      if (dvac==0) call judft_error("A film-mode Bravais Matrix can only be given for dvac>0 (filmLattice must be given)")
+      this%amat=0.0
+      path=trim(path)//'/bravaisMatrixFilm'
+      valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-1')))
+       this%amat(1,1) = evaluateFirst(valueString)
+       this%amat(2,1) = evaluateFirst(valueString)
+       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-2')))
+       this%amat(1,2) = evaluateFirst(valueString)
+       this%amat(2,2) = evaluateFirst(valueString)
      endif
      IF (dvac>0) THEN
+        if (any(abs(this%amat(1:2,3))>1E-10).or.any(abs(this%amat(3,1:2))>1E-10)) CALL judft_error("In film mode the Bravais-Lattice must be 2D")
+        if (abs(this%amat(3,3))>1E10) print *,"WARNING, in film-mode the z-coordinate of the Bravais matrix is ignored. Consider using the 2D matrix input"
         this%amat(3,3)=dtild
      ENDIF
      this%amat=this%amat*scale

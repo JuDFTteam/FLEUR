@@ -1,9 +1,9 @@
 MODULE m_rhomt21
   !     ***************************************************************
   !     perform the sum over m (for each l) and bands to set up the
-  !     coefficient of spherical charge densities in subroutine 
-  !     cdnval                                 
-  !     for offdiagonal matrix-elements in case of noncollinear magnetism 
+  !     coefficient of spherical charge densities in subroutine
+  !     cdnval
+  !     for offdiagonal matrix-elements in case of noncollinear magnetism
   !     FF
   !     ***************************************************************
 CONTAINS
@@ -18,7 +18,7 @@ CONTAINS
     TYPE(t_eigVecCoeffs),INTENT(IN)    :: eigVecCoeffs
 
     !     .. Scalar Arguments ..
-    INTEGER,             INTENT(IN)    :: ne 
+    INTEGER,             INTENT(IN)    :: ne
 
     !     .. Array Arguments ..
     REAL,                INTENT(IN)    :: we(:)!(nobd)
@@ -46,10 +46,10 @@ CONTAINS
                 lm = l* (l+1) + m
                 !--->           sum over occupied bands
                 DO i = 1,ne
-                   uu21(l,itype) = uu21(l,itype) + we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,1))*eigVecCoeffs%acof(i,lm,natom,2)
-                   ud21(l,itype) = ud21(l,itype) + we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,1))*eigVecCoeffs%bcof(i,lm,natom,2)
-                   du21(l,itype) = du21(l,itype) + we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,1))*eigVecCoeffs%acof(i,lm,natom,2)
-                   dd21(l,itype) = dd21(l,itype) + we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,1))*eigVecCoeffs%bcof(i,lm,natom,2)
+                   uu21(l,itype) = uu21(l,itype) + we(i)* CONJG(eigVecCoeffs%abcof(i,lm,0,natom,2))*eigVecCoeffs%abcof(i,lm,0,natom,1)
+                   ud21(l,itype) = ud21(l,itype) + we(i)* CONJG(eigVecCoeffs%abcof(i,lm,0,natom,2))*eigVecCoeffs%abcof(i,lm,1,natom,1)
+                   du21(l,itype) = du21(l,itype) + we(i)* CONJG(eigVecCoeffs%abcof(i,lm,1,natom,2))*eigVecCoeffs%abcof(i,lm,0,natom,1)
+                   dd21(l,itype) = dd21(l,itype) + we(i)* CONJG(eigVecCoeffs%abcof(i,lm,1,natom,2))*eigVecCoeffs%abcof(i,lm,1,natom,1)
                 ENDDO ! i = 1,ne
              ENDDO   ! m = -l,l
           ENDDO     ! l
@@ -62,10 +62,10 @@ CONTAINS
              DO m = -l,l
                 lm = l* (l+1) + m
                 DO i = 1,ne
-                   uulo21(lo,itype) = uulo21(lo,itype) + we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,1))*eigVecCoeffs%ccof(m,i,lo,natom,2)
-                   dulo21(lo,itype) = dulo21(lo,itype) + we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,1))*eigVecCoeffs%ccof(m,i,lo,natom,2)
-                   ulou21(lo,itype) = ulou21(lo,itype) + we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,2))*eigVecCoeffs%ccof(m,i,lo,natom,1)
-                   ulod21(lo,itype) = ulod21(lo,itype) + we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,2))*eigVecCoeffs%ccof(m,i,lo,natom,1)
+                   uulo21(lo,itype) = uulo21(lo,itype) + we(i)* CONJG(eigVecCoeffs%abcof(i,lm,0,natom,2))*eigVecCoeffs%ccof(m,i,lo,natom,1)
+                   dulo21(lo,itype) = dulo21(lo,itype) + we(i)* CONJG(eigVecCoeffs%abcof(i,lm,1,natom,2))*eigVecCoeffs%ccof(m,i,lo,natom,1)
+                   ulou21(lo,itype) = ulou21(lo,itype) + we(i)* CONJG(eigVecCoeffs%abcof(i,lm,0,natom,1))*eigVecCoeffs%ccof(m,i,lo,natom,2)
+                   ulod21(lo,itype) = ulod21(lo,itype) + we(i)* CONJG(eigVecCoeffs%abcof(i,lm,1,natom,1))*eigVecCoeffs%ccof(m,i,lo,natom,2)
                 ENDDO
              ENDDO
              !--->         contribution of local orbital - local orbital terms

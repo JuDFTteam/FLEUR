@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.35">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.36">
 
    <!--Here the FleurInputSchema is included since the out.xml contains a complete dump of the inp.xml!-->
    <xsd:include schemaLocation="FleurInputSchema.xsd"/>
@@ -21,7 +21,7 @@
 
    <xsd:simpleType name="FleurOutputVersionType">
       <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="0.35"/>
+         <xsd:enumeration value="0.36"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -121,7 +121,7 @@
 
    <xsd:complexType name="DensityType">
       <xsd:attribute name="ng3" type="xsd:positiveInteger" use="required"/>
-      <xsd:attribute name="ng2" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="ng2" type="xsd:nonNegativeInteger" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="BandsType">
@@ -163,6 +163,7 @@
       <xsd:sequence>
          <!--These tags can occur in a iteration/Forcetheorem iteration/!-->
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="OutEnergyParameterType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="hubbard1Iteration" type="Hubbard1Type"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="eigenvalues" type="EigenvaluesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="bandgap" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="sumValenceSingleParticleEnergies" type="SingleValueType"/>
@@ -528,7 +529,7 @@
 
    <xsd:complexType name="DensityMatrixForType">
       <xsd:simpleContent>
-         <xsd:extension base="StringVecType">
+         <xsd:extension base="FortranComplexVecType">
             <xsd:attribute name="spin" type="xsd:integer" use="required"/>
             <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
             <xsd:attribute name="uIndex" type="xsd:integer" use="required"/>
@@ -537,6 +538,68 @@
             <xsd:attribute name="J" type="xsd:double" use="required"/>
          </xsd:extension>
       </xsd:simpleContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="DensityMatrixForHubbard1Type">
+      <xsd:simpleContent>
+         <xsd:extension base="FortranComplexVecType">
+            <xsd:attribute name="spin" type="xsd:integer" use="required"/>
+            <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+            <xsd:attribute name="hiaIndex" type="xsd:integer" use="required"/>
+            <xsd:attribute name="l" type="xsd:integer" use="required"/>
+            <xsd:attribute name="U" type="xsd:double" use="required"/>
+            <xsd:attribute name="J" type="xsd:double" use="required"/>
+            <xsd:attribute name="muMatch" type="DoubleVecType" use="required"/>
+         </xsd:extension>
+      </xsd:simpleContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Hubbard1Type">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="solverParameters" type="Hubbard1ParametersType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="hubbard1DensityMatrix" type="Hubbard1DensityMatrixType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="hubbard1Distance" type="Hubbard1DistanceType"/>
+      </xsd:sequence>
+      <xsd:attribute name='number' type='xsd:positiveInteger' use='required'/>
+   </xsd:complexType>
+
+   <xsd:complexType name="Hubbard1ParametersType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="1" minOccurs="0" name="slaterParameters" type="FleurDouble4DVecType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="exchange" type="Hubbard1ExchangeType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="socParameter" type="SingleValueType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="crystalField" type="CrystalFieldMatrixType"/>
+      </xsd:sequence>
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+      <xsd:attribute name="l" type="xsd:integer" use="required"/>
+      <xsd:attribute name="chemPot" type="xsd:double" use="required"/>
+      <xsd:attribute name="occupation" type="xsd:integer" use="required"/>
+      <xsd:attribute name="energy_unit" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="Hubbard1ExchangeType">
+      <xsd:attribute name="l" type="xsd:integer" use="required"/>
+      <xsd:attribute name="J" type="xsd:double" use="required"/>
+      <xsd:attribute name="moment" type="xsd:double" use="required"/>
+   </xsd:complexType>
+   
+   <xsd:complexType name="Hubbard1DensityMatrixType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="densityMatrixFor" type="DensityMatrixForHubbard1Type"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="CrystalFieldMatrixType">
+      <xsd:simpleContent>
+         <xsd:extension base="DoubleVecType">
+            <xsd:attribute name="factor" type="xsd:double" use="required"/>
+         </xsd:extension>
+      </xsd:simpleContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="Hubbard1DistanceType">
+      <xsd:attribute name="occupationDistance" type="xsd:double" use="required"/>
+      <xsd:attribute name="elementDistance" type="xsd:double" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="RDMFTOutType">
@@ -568,6 +631,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="chargeDenXCDenIntegral" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="FockExchangeEnergyValence" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="FockExchangeEnergyCore" type="SingleValueType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="vdWEnergy" type="SingleValueType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="atomTypeDependentContributions" type="AtomTypeDependentContributionsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="dftUCorrection" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="tkbTimesEntropy" type="SingleValueType"/>
@@ -653,6 +717,21 @@
          <xsd:enumeration value="JIJ"/>
          <xsd:enumeration value="DMI"/>
       </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- Cannot be in the FleurInputSchema.xsd since we still support older FleurInputSchemas -->
+   <xsd:simpleType name="FleurDouble4DVecType">
+      <xsd:restriction base="FleurDoubleVecType">
+         <xsd:length value="4"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="FortranComplexVecType">
+      <xsd:list itemType="FortranComplex"/>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="FortranComplex">
+      <xsd:restriction base="xsd:string"/>
    </xsd:simpleType>
 
 </xsd:schema>
