@@ -708,7 +708,7 @@ CONTAINS
                      term1 = con1 * (atoms%rmt(ntype)**2.0) / 2.0
                      cwork(0, 1, lo, iintsp) = term1 / sqrt(2.0*tpi_const)
                      norm = DOT_PRODUCT(cwork(0:0, 1, lo, iintsp),cwork(0:0, 1, lo, iintsp))
-!                     cwork(0:0, 1, lo, iintsp) = cwork(0:0, 1, lo, iintsp) / SQRT(norm)
+                     cwork(0:0, 1, lo, iintsp) = cwork(0:0, 1, lo, iintsp) / SQRT(norm)
                      IF ((sym%invsat(na) .EQ. 1) .OR. (sym%invsat(na) .EQ. 2)) THEN
                         cwork(1, 1, lo, iintsp) = conjg(term1) / sqrt(2.0*tpi_const)
                      END IF
@@ -726,7 +726,7 @@ CONTAINS
                            cwork(m, nkvec(lo, iintsp), lo, iintsp) = term1 * ylm(lm)
                         END DO
                         norm = DOT_PRODUCT(cwork(-l:l, 1, lo, iintsp),cwork(-l:l, 1, lo, iintsp))
-!                        cwork(-l:l, 1, lo, iintsp) = cwork(-l:l, 1, lo, iintsp) / SQRT(norm)
+                        cwork(-l:l, 1, lo, iintsp) = cwork(-l:l, 1, lo, iintsp) / SQRT(norm)
                         CALL orthoglo(input%l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .FALSE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
                         IF (linind) THEN
                            lapw%kvec(nkvec(lo, iintsp), lo, na) = k
@@ -750,7 +750,7 @@ CONTAINS
                         minIndex = -l - l
                         maxIndex = l + l + 1
                         norm = DOT_PRODUCT(cwork(-2*l:2*l+1, 1, lo, iintsp),cwork(-2*l:2*l+1, 1, lo, iintsp))
-!                        cwork(-2*l:2*l+1, 1, lo, iintsp) = cwork(-2*l:2*l+1, 1, lo, iintsp) / SQRT(norm)
+                        cwork(-2*l:2*l+1, 1, lo, iintsp) = cwork(-2*l:2*l+1, 1, lo, iintsp) / SQRT(norm)
                         CALL orthoglo(input%l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .TRUE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
                         IF (linind) THEN
                            lapw%kvec(nkvec(lo, iintsp), lo, na) = k
