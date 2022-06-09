@@ -20,8 +20,8 @@ juphon/jpVeff1_mod.F90
 juphon/jpDens1stVar_mod.F90
 juphon/ylm4_old.f90
 juphon/dfpt_vgen.F90
-juphon/dfpt_vgen_coulomb.F90
-juphon/dfpt_vgen_xcpot.F90
+#juphon/dfpt_vgen_coulomb.F90
+#juphon/dfpt_vgen_xcpot.F90
 juphon/invert_HepsS.F90
 juphon/get_int_perturbation.f90
 juphon/get_mt_perturbation.f90

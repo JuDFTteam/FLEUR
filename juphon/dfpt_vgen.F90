@@ -9,7 +9,7 @@ MODULE m_dfpt_vgen
 CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell ,sliceplot,fmpi,results,noco,nococonv,den,vTot,&
+                   cell ,sliceplot,fmpi,noco,nococonv,den,vTot,&
                    &starsq,dfptdenimag,dfptvTot,dfptvTotimag,dfptdenreal,iDtype,iDir)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
@@ -41,7 +41,6 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_results),   INTENT(INOUT) :: results
       CLASS(t_xcpot),    INTENT(IN)    :: xcpot
       TYPE(t_hybdat),    INTENT(IN)    :: hybdat
       TYPE(t_mpi),       INTENT(IN)    :: fmpi
@@ -107,8 +106,6 @@ CONTAINS
       ALLOCATE(vCoul%pw_w(SIZE(vCoul%pw,1),size(vCoul%pw,2)))
       vCoul%pw_w = CMPLX(0.0,0.0)
 
-      results%force=0.0
-
         CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
         CALL workDenReal%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
         CALL workDenImag%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
@@ -145,14 +142,20 @@ CONTAINS
           CALL get_int_local_perturbation(sym, stars, atoms, sphhar, input, denRot, den1Rot, den1imRot, starsq)
           IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation(atoms,sphhar,sym,noco,denRot,den1Rot,den1imRot)
       END IF
-          CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+
+         ! Skip vxc for rho(1)=0, i.e. starting potential
+          IF (ANY(ABS(denRot%pw)>1E-12)) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                           cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                           & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
-      ! d)
-      ! TODO: This is so different from the base case, that we build a new suboutine.
-      CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq)
-      !DEALLOCATE(vcoul%pw_w)
+      IF (iDtype/=0) THEN
+         ! d)
+         ! TODO: This is so different from the base case, that we build a new suboutine.
+         CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq)
+         !DEALLOCATE(vcoul%pw_w)
+      ELSE
+         ! TODO: Write here something for the gradient. It does not need pw-stuff.
+      END IF
 
       CALL dfptvTot%distribute(fmpi%mpi_comm)
       CALL dfptvTotimag%distribute(fmpi%mpi_comm)

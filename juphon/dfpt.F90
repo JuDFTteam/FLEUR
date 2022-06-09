@@ -17,6 +17,9 @@ MODULE m_dfpt
    USE m_jpSetupDynMat,     only : SetupDynamicMatrix
    USE m_jpProcessDynMat!,   only : DiagonalizeDynMat, CalculateFrequencies
    USE m_juDFT_stop, only : juDFT_error
+   USE m_vgen_coulomb
+   USE m_dfpt_vgen
+   USE m_convol
 
    IMPLICIT NONE
 
@@ -32,7 +35,8 @@ CONTAINS
       TYPE(t_mpi),      INTENT(IN)  :: fmpi
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_enpara),   INTENT(INOUT)  :: enpara
-      TYPE(t_potden),   INTENT(IN)  :: rho, vTot, vCoul, vxc, exc
+      TYPE(t_potden),   INTENT(INOUT)  :: rho
+      TYPE(t_potden),   INTENT(IN)  :: vTot, vCoul, vxc, exc
       INTEGER,          INTENT(IN)  :: eig_id
       INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
@@ -44,8 +48,8 @@ CONTAINS
       CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
 
       TYPE(t_usdus)                 :: usdus
-      TYPE(t_potden)                :: vTotclean, rhoclean, grRho
-      TYPE(t_potden)                :: grRho3(3), grVtot3(3)
+      TYPE(t_potden)                :: vTotclean, rhoclean, grRho, grvextdummy, imagrhodummy
+      TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVext3(3)
       TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
       TYPE(t_tlmplm)                :: tdHS0
       TYPE(t_results)               :: results1
@@ -109,12 +113,14 @@ CONTAINS
         complex,            allocatable :: vHar1MT_final(:, :, :, :, :)
         complex,            allocatable :: vXc1MTDelta(:, :, :, :, :)
         complex,            allocatable :: vXc1MTq0(:, :, :, :, :)
+        COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :)
         integer,      allocatable :: mapKpq2K(:, :)
         integer,      allocatable :: kpq2kPrVec(:, :, :)
 
         REAL, ALLOCATABLE :: dynmatrow(:)
 
         INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype
+        INTEGER :: iStar, xInd, yInd, zInd
 
         CHARACTER(len=20) :: dfpt_tag
 
@@ -148,6 +154,52 @@ CONTAINS
       ALLOCATE(q_list(5))
       q_list = [1, 10, 19, 28, 37]! 512 k-points: \Gamma to X
 
+      ALLOCATE(grrhodummy(fi%atoms%jmtd, (fi%atoms%lmaxd+1)**2, fi%atoms%nat, SIZE(rho%mt,4), 3))
+
+      CALL imagrhodummy%copyPotDen(rho)
+      CALL imagrhodummy%resetPotDen()
+      CALL grvextdummy%copyPotDen(rho)
+      DO iDir = 1, 3
+         CALL grRho3(iDir)%copyPotDen(rho)
+         CALL grRho3(iDir)%resetPotDen()
+         CALL grVext3(iDir)%copyPotDen(vTot)
+         CALL grVext3(iDir)%resetPotDen()
+         CALL grVtot3(iDir)%copyPotDen(vTot)
+         CALL grVtot3(iDir)%resetPotDen()
+         ! Generate the external potential perturbation.
+         ! imagrhodummy = 0
+         CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, stars, fi%cell, &
+                         & sphhar, fi%atoms, .FALSE., imagrhodummy, grVext3(iDir), &
+                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars,iDtype=0,iDir=iDir)
+         ! TODO: Will we need this?
+         !ALLOCATE(grVext3(iDir)%pw_w,mold=grVext3(iDir)%pw)
+         !CALL convol(stars, grVext3(iDir)%pw_w(:,1), grVext3(iDir)%pw(:,1))
+      END DO
+
+      DO iSpin = 1, SIZE(rho%mt,4)
+         CALL mt_gradient_old(fi%atoms, sphhar, fi%sym, sphhar%clnu, sphhar%nmem, sphhar%mlh, rho%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
+      END DO
+
+      DO zInd = -stars%mx3, stars%mx3
+         DO yInd = -stars%mx2, stars%mx2
+            DO xInd = -stars%mx1, stars%mx1
+               iStar = stars%ig(xInd, yInd, zInd)
+               IF (iStar.EQ.0) CYCLE
+               grRho3(1)%pw(iStar,:) = rho%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi%cell%bmat)))
+               grRho3(2)%pw(iStar,:) = rho%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi%cell%bmat)))
+               grRho3(3)%pw(iStar,:) = rho%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi%cell%bmat)))
+            END DO
+         END DO
+      END DO
+
+      DO iDir = 1, 3
+         CALL sh_to_lh(fi%sym, fi%atoms, sphhar, SIZE(rho%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
+         CALL imagrhodummy%resetPotDen()
+         CALL dfpt_vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
+                        fi%cell, fi%sliceplot, fmpi, fi%noco, nococonv, rho, vTot, &
+                        stars, imagrhodummy, grVtot3(iDir), grvextdummy, grRho3(iDir), 0, iDir)
+      END DO
+
       ALLOCATE(dynmatrow(3*fi%atoms%ntype))
       DO iQ = 1, SIZE(q_list)
          DO iDtype = 1, fi%atoms%ntype
@@ -158,7 +210,7 @@ CONTAINS
                ! This is where the magic happens. The Sternheimer equation is solved
                ! iteratively, providing the scf part of dfpt calculations.
                CALL dfpt_sternheimer(fi, xcpot, sphhar, stars, nococonv, qpts, fmpi, results, enpara, hybdat, mpdata, forcetheo, &
-                                     rho, vTot, grRho3(iDir), grVtot3(iDir), q_list(iQ), iDtype, iDir, &
+                                     rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                      dfpt_tag, eig_id, results1, dynmatrow)
                ! Once the first order quantities are converged, we can construct all
                ! additional quantities necessary and from that the dynamical matrix.

@@ -582,6 +582,7 @@ CONTAINS
                   END IF
                ENDDO
                mt_length_g = MAX(len, mt_length_g)
+               IF (l_dfpt) mt_length_g = mt_length_g / 2
                IF (js == 3) THEN
                   !need to store imaginary part as well...
                   DO n = mt_rank + 1, atoms%ntype, mt_size

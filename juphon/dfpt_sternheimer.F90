@@ -20,7 +20,7 @@ IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, nococonv, qpts, fmpi, results, enpara, hybdat, mpdata, &
-                               forcetheo, rho, vTot, grRho, grVtot, iQ, iDType, iDir, dfpt_tag, eig_id, &
+                               forcetheo, rho, vTot, grRho, grVtot, grVext, iQ, iDType, iDir, dfpt_tag, eig_id, &
                                results1, dynmatrow)
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       CLASS(t_xcpot),     INTENT(IN)    :: xcpot
@@ -34,7 +34,7 @@ CONTAINS
       TYPE(t_mpdata),     INTENT(INOUT) :: mpdata
       CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
       TYPE(t_enpara),     INTENT(INOUT)    :: enpara
-      TYPE(t_potden),     INTENT(IN)    :: rho, vTot, grRho, grVtot
+      TYPE(t_potden),     INTENT(IN)    :: rho, vTot, grRho, grVtot, grVext
 
       REAL, INTENT(INOUT) :: dynmatrow(:)
 
@@ -63,6 +63,7 @@ CONTAINS
       banddosdummy = fi%banddos
 
       CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)
+      starsq%ufft = stars%ufft
       CALL denIn1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
       CALL denIn1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
 
@@ -122,14 +123,26 @@ CONTAINS
          CALL denIn1Im%distribute(fmpi%mpi_comm)
 
          CALL timestart("Generation of potential perturbation")
-         CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                         fi%cell ,fi%sliceplot,fmpi,results,fi%noco,nococonv,denIn1,vTot,&
-                         &starsq,denIn1Im,vTot1,vTot1Im,rho_loc,iDtype,iDir)
+         IF (strho) THEN
+            CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,denIn1,vTot,&
+                           starsq,denIn1Im,vTot1,vTot1Im,denIn1,iDtype,iDir)
+         ELSE
+            CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,denIn1,vTot,&
+                           starsq,denIn1Im,vTot1,vTot1Im,rho_loc,iDtype,iDir)
+         END IF
          CALL timestop("Generation of potential perturbation")
 
 #ifdef CPP_MPI
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
+
+         IF (strho) THEN
+            vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVext%mt(:,0:,iDtype,:)
+         ELSE
+            vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
+         END IF
 
          CALL timestart("H1 generation (total)")
 
@@ -167,10 +180,16 @@ CONTAINS
 
          IF (strho) THEN
             strho = .FALSE.
+            denIn1 = denOut1
+            denIn1Im = denOut1Im
+            denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+            write(*,*) "Starting perturbation generated."
             CYCLE scfloop
          END IF
 
          field2 = fi%field
+
+         denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
 
          ! mix input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsq, &
