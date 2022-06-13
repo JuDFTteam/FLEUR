@@ -58,7 +58,7 @@ CONTAINS
 
          DO jsp = 1, nspins
             DO k = 1, kpts%nkpt
-               DO j = 1, results%neig(k,jsp)
+               DO j = 1, results%neig(k,jsp) !TODO: Only need noccbd
                   x = (results%eig(j,k,jsp)-efermi)/input%tkb
                   sxm(j,k,jsp) = sfermi(-x)
                   ef_num = ef_num + results%w_iks(j,k,jsp) * sxm(j,k,jsp) * results1%eig(j,k,jsp)

@@ -42,12 +42,12 @@ CONTAINS
         nbasfcn = MERGE(lapwkpr%nv(1)+lapwkpr%nv(2)+2*atoms%nlotot,lapwkpr%nv(1)+atoms%nlotot,noco%l_noco)
         DO nu = 1, nocck
            CALL invHepsS(nu)%init(l_real, nbasfcn, nbasfcn)
-            DO iG = 1, nbasfcn
-               DO nupr = 1, nekpr
-                  DO iGpr = 1, nbasfcn
-                        deps = eignukpr(nupr)-eignuk(nu)
-                        invdeps = 0.0
-                        IF (deps.GT.juPhon%eDiffcut) invdeps = 1.0 / deps
+           DO nupr = 1, nekpr
+             deps = eignukpr(nupr)-eignuk(nu)
+             invdeps = 0.0
+             IF (deps.GT.juPhon%eDiffcut) invdeps = 1.0 / deps
+             DO iG = 1, nbasfcn
+               DO iGpr = 1, nbasfcn
                         IF (l_real) THEN
                             invHepsS(nu)%data_r(iGpr,iG) = zMatkpr%data_r(iGpr, nupr) * &
                                                          & zMatkpr%data_r(iG, nupr) * invdeps

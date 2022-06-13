@@ -110,6 +110,7 @@ CONTAINS
       DO n = 1, atoms%ntype
          DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco)
             CALL timestart("fjgj coefficients")
+            ! TODO: For q/=0 we need fjgj for lapwq...
             CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,n,ilSpinPr)
             !$acc update device(fjgj%fj,fjgj%gj)
             CALL timestop("fjgj coefficients")

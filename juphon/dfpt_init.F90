@@ -423,7 +423,7 @@ CONTAINS
         extSw = .true.
         xcSw = .false.
         testGoldstein = .false.
-        grRhoTermSw = .false.
+        grRhoTermSw = .TRUE.
         call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
                        & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
                        & testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MT_init )

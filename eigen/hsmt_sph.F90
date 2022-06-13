@@ -348,6 +348,7 @@ CONTAINS
 
                fct(:NVEC_REM)  = plegend(:NVEC_REM,l3) * fl2p1(l) * ( fjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) &
                                                                   & + gjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr)*ddnln )
+
                IF (.NOT.l_fullj) THEN
                   fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) &
                                                                            & + fjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr) )
@@ -358,7 +359,7 @@ CONTAINS
                VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
                VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)
 
-               IF (input%l_useapw) THEN
+               IF (input%l_useapw.OR.(l_fullj.AND.l==0)) THEN
                   VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) + &
                                                                                       & apw_lo2*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr) )
                END IF ! useapw
@@ -371,15 +372,10 @@ CONTAINS
                DO jv = 0, NVEC_rem-1
                   ikGPr = jv + kj_off
                   dot(jv+1) = DOT_PRODUCT(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, tnn(1:3))
-                  !pref(jv+1,1:3) = ImagUnit * MATMUL(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, bmat)
                END DO ! ikGPr
                cph_re(:NVEC_REM) = cph_re(:NVEC_REM) + COS(dot(:NVEC_REM))
                cph_im(:NVEC_REM) = cph_im(:NVEC_REM) + SIN(dot(:NVEC_REM))
                cfac(:NVEC_REM) = CMPLX(cph_re(:NVEC_REM),cph_im(:NVEC_REM))
-!               ! Prefactor: i * (k + G + qssAdd - k' - G' - qssAdd')
-!               IF (l_fullj) THEN
-!                  cfac(:NVEC_REM) = pref(:NVEC_REM, idir) * cfac(:NVEC_REM)
-!               END IF
                ! IF (igSpinPr.NE.igSpin) cph_im=-cph_im
             END DO ! nn
 

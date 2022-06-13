@@ -252,13 +252,13 @@ CONTAINS
                 n_rank = 0; n_size=1;
 #endif
                 IF (.NOT.l_dfpteigen) THEN
-                  if (forcetheo%l_needs_vectors) then 
+                  if (forcetheo%l_needs_vectors) then
                      call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                   else
                      CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
                   endif
                 ELSE
-                    CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+                    CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
 #if defined(CPP_MPI)
                     CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
@@ -271,7 +271,7 @@ CONTAINS
                     if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 ELSE
-                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
 #if defined(CPP_MPI)
                     CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
