@@ -15,7 +15,7 @@ CONTAINS
 
 SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
                   vacuumdummy,sphhar,sym,vTot ,cdnvalJob,den,dosdummy,vacdosdummy,&
-                  hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, denIm)
+                  hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, iDtype, iDir, denIm)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -67,12 +67,12 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE(t_potden),        INTENT(INOUT) :: den, denIm
 
    ! Scalar Arguments
-   INTEGER,               INTENT(IN)    :: eig_id, dfpt_eig_id, jspin
+   INTEGER,               INTENT(IN)    :: eig_id, dfpt_eig_id, jspin, iDtype, iDir
 
    REAL, INTENT(IN) :: q_dfpt(3)
 
    ! Local Scalars
-   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,iType
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,iType,ikG
    INTEGER :: iErr,nbands,noccbd,nbands1
    INTEGER :: skip_t,skip_tt,nbasfcn
    LOGICAL :: l_real
@@ -87,9 +87,9 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE (t_orb)               :: orbdummy
    TYPE (t_denCoeffs)         :: denCoeffs
    TYPE (t_denCoeffsOffdiag)  :: denCoeffsOffdiag
-   TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1
+   TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1, eigVecCoeffsPref
    TYPE (t_usdus)             :: usdus
-   TYPE (t_mat)               :: zMat, zMat1
+   TYPE (t_mat)               :: zMat, zMat1, zMatPref
    TYPE(t_regionCharges)      :: regChargesdummy
 
    CALL timestart("dfpt_cdnval")
@@ -160,8 +160,16 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
       CALL zMat%init(l_real,nbasfcn,noccbd)
       CALL zMat1%init(.FALSE.,nbasfcn,noccbd)
+      CALL zMatPref%init(.FALSE.,nbasfcn,noccbd)
+
       CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat)
       CALL read_eig(dfpt_eig_id,ikpt,jsp,list=ev_list,neig=nbands1,zmat=zMat1)
+
+      ! TODO: Implement correct spin logic here! Only collinear operational for now!
+      DO ikG = 1, lapw%nv(jsp)
+         zMatPref%data_c(ikG,:) = ImagUnit * lapw%vk(iDir, ikG, jsp) * zMat%data_c(ikG, :)
+      END DO
+
       !IF (.NOT.(nbands==nbands1)) Problem?
 #ifdef CPP_MPI
       CALL MPI_BARRIER(fmpi%mpi_comm,iErr) ! Synchronizes the RMA operations
@@ -174,12 +182,19 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       CALL eigVecCoeffs1%init(input,atoms,jspin,noccbd,noco%l_mperp)
 
       DO ispin = jsp_start, jsp_end
+         ! TODO: This spin logic might hold for noco.
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
                     eigVecCoeffs%abcof(:,0:,0,:,ispin),eigVecCoeffs%abcof(:,0:,1,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat)
          CALL abcof(input,atoms,sym,cell,lapwq,noccbd,usdus,noco,nococonv,ispin,&
                     eigVecCoeffs1%abcof(:,0:,0,:,ispin),eigVecCoeffs1%abcof(:,0:,1,:,ispin),&
                     eigVecCoeffs1%ccof(-atoms%llod:,:,:,:,ispin),zMat1)
+         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
+                    eigVecCoeffsPref%abcof(:,0:,0,:,ispin),eigVecCoeffsPref%abcof(:,0:,1,:,ispin),&
+                    eigVecCoeffsPref%ccof(-atoms%llod:,:,:,:,ispin),zMatPref)
+
+         eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)
+         eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) = eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) + eigVecCoeffsPref%ccof(-atoms%llod:,:,:,iDtype,ispin)
 
          CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,q_dfpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
          CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,q_dfpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
