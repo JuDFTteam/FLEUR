@@ -175,7 +175,7 @@ CONTAINS
          CALL dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
                           fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                           enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
-                          archiveType,xcpot,denOut1,denOut1Im,bqpt)
+                          archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir)
          CALL timestop("generation of new charge density (total)")
 
          IF (strho) THEN
