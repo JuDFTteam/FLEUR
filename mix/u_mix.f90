@@ -140,6 +140,7 @@ MODULE m_umix
 
       CALL openXMLElementNoAttributes('ldaUDensityMatrixConvergence')
       DO jsp = 1, SIZE(dist)
+         if (jsp > 2 .and. .not.any(noco%l_spinoffd_ldau)) cycle
          attributes = ''
          WRITE(attributes(1),'(i0)') jsp
          WRITE(attributes(2),'(f13.6)') dist(jsp)
