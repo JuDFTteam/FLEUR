@@ -139,8 +139,8 @@ CONTAINS
        IF (input%lflip) THEN
 
           CALL timestart('optional: flip magnetic moments')
-          CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell)
-          !
+          CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,toGlobal=.true.)
+          print *,"TODO,toGlobal in optional should be removed"
           CALL timestop('optional: flip magnetic moments')
        END IF
 

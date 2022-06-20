@@ -207,7 +207,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       END IF
    END IF
 
-   CALL cdntot(stars,atoms,sym,vacuum,input,cell ,outDen,.TRUE.,qtot,dummy,fmpi,.TRUE.)
+   CALL cdntot(stars,nococonv,atoms,sym,vacuum,input,cell ,outDen,.TRUE.,qtot,dummy,fmpi,.TRUE.)
    IF (fmpi%irank.EQ.0) THEN
       CALL closeXMLElement('valenceDensity')
    END IF ! fmpi%irank = 0
@@ -268,13 +268,15 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('allElectronCharges')
-   CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell ,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
+   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
    IF (fmpi%irank == 0) THEN
       CALL closeXMLElement('allElectronCharges')
 
       IF (input%jspins == 2) THEN
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
-         CALL magMoms(input,atoms,noco,nococonv,vTot,moments)
+         !CALL magMoms(input,atoms,noco,nococonv,vTot,moments)
+         CALL magMoms(input,atoms,noco,nococonv,vTot,den=outDen)
+         
          if (sym%nop==1.and..not.input%film) call magMultipoles(sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.

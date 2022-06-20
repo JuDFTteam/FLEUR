@@ -127,7 +127,7 @@ contains
     IF( input%preconditioning_param /= 0 .AND. .NOT.l_dfpt)  THEN
        CALL timestart("Preconditioner")
        CALL kerker( field,  fmpi, &
-                    stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+                    stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
                       inDen, outDen, fsm(it) )
        !Store modified density in history
        CALL mixing_history_store(fsm(it))
@@ -219,7 +219,7 @@ contains
 
     call timestart("qfix")
     !fix charge of the new density
-    IF (fmpi%irank==0.AND..NOT.l_dfpt) CALL qfix(fmpi,stars,atoms,sym,vacuum, sphhar,input,cell ,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
+    IF (fmpi%irank==0.AND..NOT.l_dfpt) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum, sphhar,input,cell ,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
     call timestop("qfix")
 
     IF(vacuum%nvac.EQ.1) THEN

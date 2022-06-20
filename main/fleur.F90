@@ -168,6 +168,8 @@ CONTAINS
       IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                               fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                               results%ef, results%last_distance, l_qfix, inDen)
+      
+                                              
 
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
          !CALL initRelax(fi%noco, nococonv, fi%atoms, fi%input, fi%vacuum, sphhar, stars, fi%sym,   fi%cell, inDen)
@@ -175,7 +177,7 @@ CONTAINS
       !END IF
 
       CALL timestart("Qfix main")
-      CALL qfix(fmpi, stars, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell,   inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
+      CALL qfix(fmpi, stars,nococonv, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell,   inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
       !CALL magMoms(fi%input,fi%atoms,fi%noco,nococonv,den=inDen)
       CALL timestop("Qfix main")
 

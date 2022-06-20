@@ -46,7 +46,12 @@ SUBROUTINE magMoms(input,atoms,noco,nococonv,vTot,moments,den)
                 'majority valence and total density',/)
    8010 FORMAT (i13,2x,3e20.8,5x,2e20.8)
 
-   WRITE (oUnit,FMT=8020)
+   write(ounit,*)
+   write(oUnit,'(a,19x,a,19x,a,19x,a)') "Magnetic moments |","Global Frame","  | ","Local Frame"
+   write(oUnit,*) "------------------------------------------------------------------------------------------------------------------------"
+   write(oUnit,'(a,5x,a,2(" | ",5(a,5x)))') "Atom ","|m|   ","mx   ","my   ","mz   ","alpha","beta ","mx   ","my   ","mz   ","alpha","beta "
+   
+   !WRITE (oUnit,FMT=8020)
 
    CALL openXMLElement('magneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
    DO iType = 1, atoms%ntype
@@ -61,7 +66,7 @@ SUBROUTINE magMoms(input,atoms,noco,nococonv,vTot,moments,den)
          return !no data found
       endif   
       smom = up-down
-      WRITE (oUnit,FMT=8030) iType,smom, up,down
+      !WRITE (oUnit,FMT=8030) iType,smom, up,down
       attributes = ''
       WRITE(attributes(1),'(i0)') iType
       WRITE(attributes(2),'(f15.10)') smom
@@ -92,7 +97,8 @@ SUBROUTINE magMoms(input,atoms,noco,nococonv,vTot,moments,den)
    8020 FORMAT (/,/,2x,'-->  magnetic moments in the spheres:',/,2x,&
                 'mm -->   type',t22,'moment',t33,'spin-up',t43,'spin-down')
    8030 FORMAT (2x,'--> mm',i8,2x,3f12.5)
-
+   write(oUnit,*) "------------------------------------------------------------------------------------------------------------------------"
+   write(oUnit,*)
 END SUBROUTINE magMoms
 
 END MODULE m_magMoms
