@@ -212,7 +212,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    endif
 
    ! Check the normalization of total density
-   CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell ,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
+   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
    !Rotate density into global frame if l_alignSQA
    IF (any(noco%l_alignMT)) then
      allocate(nococonv%beta(atoms%ntype),nococonv%alph(atoms%ntype))

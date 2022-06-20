@@ -35,7 +35,7 @@ module m_VYukawaFilm
 
 
 
-  subroutine VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, den, &
+  subroutine VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,den, &
                           VYukawa )
 
     use m_constants
@@ -54,6 +54,7 @@ module m_VYukawaFilm
     type(t_sphhar),     intent(in)    :: sphhar
      
     type(t_noco),       intent(in)    :: noco
+    type(t_nococonv),   intent(in)    :: nococonv
     type(t_potden),     intent(inout) :: den
 
     type(t_potden),     intent(inout) :: VYukawa
@@ -117,7 +118,7 @@ module m_VYukawaFilm
  
     ! MODIFICATION FOR CHARGE NEUTRALITY
 
-    call VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, &
+    call VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,&
                         den, &
                         VYukawa )
 
@@ -829,7 +830,7 @@ module m_VYukawaFilm
 
 
 
-  subroutine VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, den, &
+  subroutine VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,den, &
                             VYukawa )
 
     ! This subroutine adds a potential to the previously computed Yukawa
@@ -845,12 +846,13 @@ module m_VYukawaFilm
     use m_types
     use m_vmts
     use m_constants
-    use m_cdntot
+    USE m_cdntot
     use m_cfft
     implicit none
 
     type(t_stars),      intent(in)    :: stars
     type(t_vacuum),     intent(in)    :: vacuum
+    type(t_nococonv),  intent(in)    :: nococonv
     type(t_cell),       intent(in)    :: cell
     type(t_sym),        intent(in)    :: sym
     type(t_input),      intent(in)    :: input
@@ -903,7 +905,7 @@ module m_VYukawaFilm
     end do
 
     ! integrate the potential over the film region
-    call integrate_cdn( stars, atoms, sym, vacuum, input, cell,   VYukawaModification, q, qis, qmt, qvac, qtot, qistot  )
+    call integrate_cdn( stars,nococonv, atoms, sym, vacuum, input, cell,   VYukawaModification, q, qis, qmt, qvac, qtot, qistot  )
     q0 = qtot / cell%area
     ldh = input%preconditioning_param * dh
     qhat = ( q0 / ( 2 * dh ) ) / ( sinh(ldh) / ( ldh * cosh( ldh ) ) - 1 )

@@ -7,7 +7,7 @@ MODULE m_cdntot
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
 CONTAINS
-   SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell , integrand, &
+   SUBROUTINE integrate_cdn(stars,nococonv,atoms,sym,vacuum,input,cell , integrand, &
                                    q, qis, qmt, qvac, qtot, qistot, fmpi)
       ! if called with fmpi variable, distribute the calculation of the pwint 
       ! over fmpi processes in fmpi%mpi_comm
@@ -19,6 +19,7 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
       TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_nococonv),INTENT(IN):: nococonv
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -30,9 +31,10 @@ CONTAINS
                                    qvac(2,input%jspins), qtot, qistot
       TYPE(t_mpi),INTENT(IN),OPTIONAL :: fmpi
       INTEGER                   :: jsp, j, ivac, nz, n, irank, nsize, intstart, intstop, chunk_size, leftover
-      REAL                      :: q2(vacuum%nmz), w, rht1(vacuum%nmzd,2,input%jspins)
+      REAL                      :: q2(vacuum%nmz), w(4), rht1(vacuum%nmzd,2,input%jspins)
       REAL                      :: sum_over_ng3
       COMPLEX,ALLOCATABLE       :: x(:) !(1:stars%ng3), may be distributed over fmpi ranks
+      COMPLEX                   :: w_off
 #ifdef CPP_MPI
       INTEGER ierr
 #endif
@@ -50,17 +52,30 @@ CONTAINS
       q=0.0
       qis=0.0
       qmt=0.0
-      DO jsp = 1,input%jspins
-         IF (irank.EQ.0) THEN
-            q(jsp) = 0.0
+      IF (irank.EQ.0) THEN   
 !     -----mt charge
             DO n = 1,atoms%ntype
-               CALL intgr3(integrand%mt(:,0,n,jsp),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),w)
-               qmt(n, jsp) = w*sfp_const
-               q(jsp) = q(jsp) + atoms%neq(n)*qmt(n,jsp)
+               DO jsp=1,size(integrand%mt,4)
+                   CALL intgr3(integrand%mt(:,0,n,jsp),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),w(jsp))
+               enddo
+               if (size(integrand%pw)>2) THEN 
+                  !this is a noco-calculation
+                  if (size(integrand%mt,4)==4) THEN
+                     w_off=cmplx(w(3),w(4))
+                  else  
+                     w_off=0.0
+                  endif
+                  !rotate into global frame
+                  call nococonv%rotdenmat(n,w(1),w(2),w_off,toGlobal=.true.)
+               endif
+               DO jsp=1,input%jspins       
+                  qmt(n, jsp) = w(jsp)*sfp_const
+                  q(jsp) = q(jsp) + atoms%neq(n)*qmt(n,jsp)
+               ENDDO   
             ENDDO
+         IF (input%film) THEN
 !     -----vacuum region
-            IF (input%film) THEN
+            DO jsp = 1,input%jspins        
                DO ivac = 1,vacuum%nvac
                   DO nz = 1,vacuum%nmz
                      rht1(nz,ivac,jsp) =  integrand%vacz(nz,ivac,jsp)
@@ -69,11 +84,12 @@ CONTAINS
                   qvac(ivac,jsp) = q2(1)*cell%area
                   
                      q(jsp) = q(jsp) + qvac(ivac,jsp)*2./real(vacuum%nvac)
-                  
                ENDDO
-            END IF
-         END IF ! irank = 0
+            enddo
+         END IF
+      END IF ! irank = 0
 
+      DO jsp = 1,input%jspins
 !     -----is region
          chunk_size = stars%ng3/nsize
          leftover = stars%ng3 - chunk_size*nsize
@@ -148,13 +164,14 @@ CONTAINS
       call pw_from_grid( stars, is, tmp_potden%pw)  !THIS CODE SEEMS TO BE BROKEN!!
       call finish_pw_grid()
 
-      call integrate_cdn(stars,atoms,sym,vacuum,input,cell , tmp_potden, &
-                                   q, qis, qmt, qvac, qtot, qistot)
+      call judft_error("Bug, integrate_realspace in cdntot")
+      !call integrate_cdn(stars,atoms,sym,vacuum,input,cell , tmp_potden, &
+      !                             q, qis, qmt, qvac, qtot, qistot)
 
       call print_cdn_inte(q, qis, qmt, qvac, qtot, qistot, hint)
    END SUBROUTINE integrate_realspace
 
-   SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell ,&
+   SUBROUTINE cdntot(stars,nococonv,atoms,sym,vacuum,input,cell ,&
                      den,l_printData,qtot,qistot,fmpi,l_par)
 
       USE m_types
@@ -163,6 +180,7 @@ CONTAINS
 
 !     .. Scalar Arguments ..
       TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_nococonv),INTENT(IN):: nococonv
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_vacuum),INTENT(IN) :: vacuum
@@ -182,10 +200,10 @@ CONTAINS
 
       CALL timestart("cdntot")
       IF (l_par) THEN
-         CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell , den, &
+         CALL integrate_cdn(stars,nococonv,atoms,sym,vacuum,input,cell , den, &
                                    q, qis, qmt, qvac, qtot, qistot, fmpi)
       ELSE
-         CALL integrate_cdn(stars,atoms,sym,vacuum,input,cell , den, &
+         CALL integrate_cdn(stars,nococonv,atoms,sym,vacuum,input,cell , den, &
                                    q, qis, qmt, qvac, qtot, qistot)
       ENDIF
 
