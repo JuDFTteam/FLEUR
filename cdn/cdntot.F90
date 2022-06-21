@@ -58,7 +58,7 @@ CONTAINS
                DO jsp=1,size(integrand%mt,4)
                    CALL intgr3(integrand%mt(:,0,n,jsp),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),w(jsp))
                enddo
-               if (size(integrand%pw)>2) THEN 
+               if (size(integrand%pw,2)>2) THEN 
                   !this is a noco-calculation
                   if (size(integrand%mt,4)==4) THEN
                      w_off=cmplx(w(3),w(4))

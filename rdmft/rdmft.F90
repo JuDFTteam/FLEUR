@@ -452,7 +452,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       CALL cdncore(fmpi, fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
                    stars,fi%cell,sphhar,fi%atoms,vTot,overallDen,moments,results)
       IF (fmpi%irank.EQ.0) THEN
-         CALL qfix(fmpi,stars,nococonv,xfi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell, overallDen,&
+         CALL qfix(fmpi,stars,nococonv,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell, overallDen,&
                    fi%noco%l_noco,.TRUE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
       END IF
       CALL overallDen%distribute(fmpi%mpi_comm)
