@@ -57,8 +57,8 @@ CONTAINS
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
 
-      rho_loc = rho
-      vx = vTot
+      CALL rho_loc%copyPotDen(rho)
+      CALL vx%copyPotDen(vTot)
 
       banddosdummy = fi%banddos
 
@@ -129,8 +129,8 @@ CONTAINS
                            starsq,denIn1Im,vTot1,vTot1Im,denIn1,iDtype,iDir)
          ELSE
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,denIn1,vTot,&
-                           starsq,denIn1Im,vTot1,vTot1Im,rho_loc,iDtype,iDir)
+                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
+                           starsq,denIn1Im,vTot1,vTot1Im,denIn1,iDtype,iDir)
          END IF
          CALL timestop("Generation of potential perturbation")
 

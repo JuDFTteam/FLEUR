@@ -9,7 +9,7 @@ MODULE m_invert_HepsS
    IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE invert_HepsS(fmpi, atoms, noco, juPhon, lapwkpr, zMatkpr, eignukpr, eignuk, nekpr, nocck, l_real, invHepsS)
+   SUBROUTINE invert_HepsS(fmpi, atoms, noco, juPhon, lapwkpr, zMatkpr, eignukpr, eignuk, nekpr, nocck, l_real, invHepsS, invE)
       !! Subroutine to calculate \((H-\epsilon_{\nu k} S)^{-1}\) as
       !! \(z_{k'}(\epsilon_{k'}-\epsilon_{\nu k})^(-1)z_{k'}^H\), i.e.
       !! in the spectral representation.
@@ -29,23 +29,28 @@ CONTAINS
       LOGICAL,         INTENT(IN) :: l_real
 
       CLASS(t_mat), ALLOCATABLE, INTENT(OUT) :: invHepsS(:)
+      CLASS(t_mat), ALLOCATABLE, INTENT(OUT) :: invE(:)
 
       INTEGER :: nbasfcn, nu, iGpr, iG, nupr
       REAL    :: deps, invdeps
 
       IF (fmpi%n_size == 1) THEN
          ALLOCATE (t_mat::invHepsS(nocck))
+         ALLOCATE (t_mat::invE(nocck))
       ELSE
          ALLOCATE (t_mpimat::invHepsS(nocck))
+         ALLOCATE (t_mpimat::invE(nocck))
       END IF
 
       nbasfcn = MERGE(lapwkpr%nv(1)+lapwkpr%nv(2)+2*atoms%nlotot,lapwkpr%nv(1)+atoms%nlotot,noco%l_noco)
       DO nu = 1, nocck
          CALL invHepsS(nu)%init(l_real, nbasfcn, nbasfcn)
+         CALL invE(nu)%init(.TRUE., nekpr, nekpr)
          DO nupr = 1, nekpr
             deps = eignukpr(nupr)-eignuk(nu)
             IF (ABS(deps)<juPhon%eDiffcut) CYCLE
             invdeps = 1.0 / deps
+            invE(nu)%data_r(nupr,nupr) = invdeps
             DO iG = 1, nbasfcn
                DO iGpr = 1, nbasfcn
                   IF (l_real) THEN

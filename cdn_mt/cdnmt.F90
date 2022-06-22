@@ -199,8 +199,9 @@ CONTAINS
                nd = sym%ntypsy(na)
                DO lh = 1,sphhar%nlh(nd)
                   DO l = 0,atoms%lmax(itype)
-                     DO lp = 0,l
+                     DO lp = 0,MERGE(l,atoms%lmax(itype),PRESENT(moments))
                         llp = (l* (l+1))/2 + lp
+                        IF (.NOT.PRESENT(moments)) llp = lp*(atoms%lmax(itype)+1)+l
                         IF(atoms%l_outputCFpot(itype).AND.atoms%l_outputCFremove4f(itype)&
                            .AND.(l==lcf.AND.lp==lcf)) CYCLE !Exclude non-spherical contributions for CF
 

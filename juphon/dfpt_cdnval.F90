@@ -76,6 +76,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    INTEGER :: iErr,nbands,noccbd,nbands1
    INTEGER :: skip_t,skip_tt,nbasfcn
    LOGICAL :: l_real
+   REAL    :: gExt(3)
 
    ! Local Arrays
    COMPLEX ::  f_b8_dummy(3, atoms%ntype)
@@ -90,7 +91,6 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1, eigVecCoeffsPref
    TYPE (t_usdus)             :: usdus
    TYPE (t_mat)               :: zMat, zMat1, zMatPref
-   TYPE(t_regionCharges)      :: regChargesdummy
 
    CALL timestart("dfpt_cdnval")
 
@@ -167,7 +167,9 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
       ! TODO: Implement correct spin logic here! Only collinear operational for now!
       DO ikG = 1, lapw%nv(jsp)
-         zMatPref%data_c(ikG,:) = ImagUnit * lapw%vk(iDir, ikG, jsp) * zMat%data_c(ikG, :)
+         ! TODO: Transpose bmat or not?
+         gExt = MATMUL(cell%bmat,lapw%vk(:, ikG, jsp))
+         zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_c(ikG, :)
       END DO
 
       !IF (.NOT.(nbands==nbands1)) Problem?
@@ -180,6 +182,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,atoms,jspin,noccbd,noco%l_mperp)
       CALL eigVecCoeffs1%init(input,atoms,jspin,noccbd,noco%l_mperp)
+      CALL eigVecCoeffsPref%init(input,atoms,jspin,noccbd,noco%l_mperp)
 
       DO ispin = jsp_start, jsp_end
          ! TODO: This spin logic might hold for noco.

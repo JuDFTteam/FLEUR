@@ -60,10 +60,10 @@ CONTAINS
       INTEGER                   :: dealloc_stat, nbasfcnq, nbasfcn, neigk, noccbd
       character(len=300)        :: errmsg
       INTEGER, ALLOCATABLE      :: ev_list(:)
-      COMPLEX, ALLOCATABLE      :: tempVec(:)
+      COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:)
       REAL,    ALLOCATABLE      :: eigk(:), eigs1(:)
 
-      CLASS(t_mat), ALLOCATABLE :: invHepsS(:)
+      CLASS(t_mat), ALLOCATABLE :: invHepsS(:), invE(:)
 
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
@@ -87,7 +87,7 @@ CONTAINS
       ALLOCATE(eigs1(noccbd))
 
       CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
-      CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, l_real, invHepsS)
+      CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, l_real, invHepsS, invE)
 
       ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
       CALL timestart("Setup of matrix perturbations")
@@ -103,13 +103,19 @@ CONTAINS
       CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
 
       ALLOCATE(tempVec(nbasfcnq))
+      ALLOCATE(tempMat1(nbasfcnq))
+      ALLOCATE(tempMat2(neigq))
 
       !TODO: Optimize this with (SCA)LAPACK CALLS
       DO nu = 1, noccbd
          IF (l_real) THEN
             tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
+            tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
+            tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
          ELSE
             tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
+            tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
+            tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
          END IF
 
          IF (norm2(bqpt).LT.1e-8) THEN
@@ -124,9 +130,9 @@ CONTAINS
          END IF
 
          IF (l_real) THEN
-            zMat1%data_c(:nbasfcnq,nu) = -MATMUL(invHepsS(nu)%data_r,tempVec)
+            zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
          ELSE
-            zMat1%data_c(:nbasfcnq,nu) = -MATMUL(invHepsS(nu)%data_c,tempVec)
+            zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
          END IF
       END DO
 

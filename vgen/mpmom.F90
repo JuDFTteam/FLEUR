@@ -75,7 +75,8 @@ contains
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
-    call pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw(:), potdenType, qlmp )
+    call pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw(:), potdenType, qlmp , l_dfptvgen)
+
     IF (l_dfptvgen) THEN
       CALL dfpt_pw_moments_SF( fmpi, stars2, atoms, cell, sym, iDtype, iDir, qpw0(:), qlmp_SF )
       qlmp = qlmp + qlmp_SF
@@ -202,7 +203,7 @@ contains
 
 
 !  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw, potdenType, qlmp_out )
-  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw_in, potdenType, qlmp_out )
+  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw_in, potdenType, qlmp_out, l_dfptvgen )
     ! multipole moments of the interstitial charge in the spheres
 
 #ifdef CPP_MPI
@@ -227,6 +228,7 @@ contains
     complex,          intent(in)   :: qpw_in(:)
     integer,          intent(in)   :: potdenType
     complex,          intent(out)  :: qlmp_out(-atoms%lmaxd:,0:,:)
+    LOGICAL,          INTENT(IN)   :: l_dfptvgen
 
     integer                        :: n, k, l, ll1, lm, ierr, m
     complex                        :: sk3i, cil, nqpw
@@ -240,7 +242,8 @@ contains
 
     qpw = qpw_in(:stars%ng3)
     qlmp = 0.0
-    if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8) then
+    !if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8) then
+    if ( fmpi%irank == 0 .AND. .NOT. l_dfptvgen) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
       do n = 1, atoms%ntype
         if ( potdenType /= POTDEN_TYPE_POTYUK ) then
