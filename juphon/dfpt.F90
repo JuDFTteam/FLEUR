@@ -197,7 +197,7 @@ CONTAINS
          CALL imagrhodummy%resetPotDen()
          CALL dfpt_vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                         fi%cell, fi%sliceplot, fmpi, fi%noco, nococonv, rho, vTot, &
-                        stars, imagrhodummy, grVtot3(iDir), grvextdummy, grRho3(iDir), 0, iDir)
+                        stars, imagrhodummy, grVtot3(iDir), grvextdummy, grRho3(iDir), 0, iDir, [1,1])
       END DO
 
       ALLOCATE(dynmatrow(3*fi%atoms%ntype))
