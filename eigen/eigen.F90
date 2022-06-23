@@ -31,7 +31,7 @@ CONTAINS
    !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,&
                     enpara,nococonv,mpdata,hybdat,&
-                    iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,iDir,iDtype,starsq,v1real,v1imag)
+                    iter,eig_id,results,inden,v,vx,hub1data,killcont,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,iDir,iDtype,starsq,v1real,v1imag)
 
       USE m_types
       USE m_constants
@@ -75,6 +75,8 @@ CONTAINS
       ! Scalar Arguments
       INTEGER,INTENT(IN)    :: iter
       INTEGER,INTENT(IN)    :: eig_id
+
+      INTEGER, OPTIONAL, INTENT(IN) :: killcont(6)
 
       INTEGER, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
@@ -258,7 +260,7 @@ CONTAINS
                      CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
                   endif
                 ELSE
-                    CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+                    CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype, killcont)
 #if defined(CPP_MPI)
                     CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
@@ -271,7 +273,7 @@ CONTAINS
                     if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 ELSE
-                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
+                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype, killcont)
 #if defined(CPP_MPI)
                     CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif

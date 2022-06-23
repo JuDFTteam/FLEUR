@@ -46,7 +46,7 @@ CONTAINS
       INTEGER :: ierr
 #endif
 
-      INTEGER :: archiveType, dfpt_eig_id, iter
+      INTEGER :: archiveType, dfpt_eig_id, iter, killcont(6)
       REAL    :: bqpt(3)
       LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho
 
@@ -57,6 +57,7 @@ CONTAINS
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
 
+      killcont = [1,1,1,1,1,1]
       CALL rho_loc%copyPotDen(rho)
       CALL vx%copyPotDen(vTot)
 
@@ -146,6 +147,9 @@ CONTAINS
             vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
          END IF
 
+         IF (.NOT.strho) THEN
+            killcont = [1,1,1,1,1,1]
+         END IF
          CALL timestart("H1 generation (total)")
 
          CALL timestart("eigen")
@@ -154,7 +158,7 @@ CONTAINS
             CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
                        hybdat, iter, eig_id, results, rho, vTot, vx, hub1data, &
                        bqpt=bqpt, dfpt_eig_id=dfpt_eig_id, iDir=iDir, iDtype=iDtype, &
-                       starsq=starsq, v1real=vTot1, v1imag=vTot1Im)
+                       starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont)
          END IF
          CALL timestop("eigen")
          CALL timestop("H1 generation (total)")

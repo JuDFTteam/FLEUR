@@ -411,6 +411,7 @@ module m_jpSternheimer
     complex,           allocatable              :: vEff1IR(:, :)
     integer,           allocatable              :: gpqdp2Ind(:, :, :) ! Deprecated
     integer                                     :: gpqdp2iLim(2, 3) ! Deprecated
+    INTEGER                                     :: killcont(9)
     logical                                     :: converged(3)
     integer,           allocatable              :: gdpIndex(:, :, :) ! Will substitute shifted G-set
     character(len=24)                           :: filename
@@ -857,46 +858,50 @@ module m_jpSternheimer
                 & mapGbas, z, iDtype, iDatom, surfIntVFast)
             end if
 
+            !CALL save_npy("H0.npy",mat_elH)
+
             !CALL save_npy('surfIntVFast.npy',surfIntVFast)
             !stop
 
+            killcont = [1,1,1,1,1,0,1,1,1]
+            IF (.NOT.stern1stIt) killcont = [1,1,1,1,1,0,1,1,1]
             ! todo Due to performance reasons we do not make a loop over idir (array of types, type of arrays) is that good?
             if (.false.) then
             call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVx, loosetdx1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 1, ngdp, nobd, z1nG(:, :, 1), nlo_atom, recEdiffME, kpq2kPrVec, tdVx2, loosetdx2, cutContr, &
-              & surfIntVFast, ngpqdp, gpqdp, maxlmp, haa, dhaa, rbas1, mat_elH(:, :, 1), mat_elS)
+              & surfIntVFast, ngpqdp, gpqdp, maxlmp, killcont, haa, dhaa, rbas1, mat_elH(:, :, 1), mat_elS)
               mat_elS(:, :) = cmplx(0., 0.)
             call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVy, loosetdy1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 2, ngdp, nobd, z1nG(:, :, 2), nlo_atom, recEdiffME, kpq2kPrVec, tdVy2, loosetdy2, cutContr, &
-              & surfIntVFast, ngpqdp, gpqdp, maxlmp, haa, dhaa, rbas1, mat_elH(:, :, 2), mat_elS)
+              & surfIntVFast, ngpqdp, gpqdp, maxlmp, killcont, haa, dhaa, rbas1, mat_elH(:, :, 2), mat_elS)
               mat_elS(:, :) = cmplx(0., 0.)
             call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVz, loosetdz1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 3, ngdp, nobd, z1nG(:, :, 3), nlo_atom, recEdiffME, kpq2kPrVec, tdVz2, loosetdz2, cutContr, &
-              & surfIntVFast, ngpqdp, gpqdp, maxlmp, haa, dhaa, rbas1, mat_elH(:, :, 3), mat_elS)
+              & surfIntVFast, ngpqdp, gpqdp, maxlmp, killcont, haa, dhaa, rbas1, mat_elH(:, :, 3), mat_elS)
             else
             call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVx, loosetdx1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 1, ngdp, nobd, z1nG(:, :, 1), nlo_atom, recEdiffME, kpq2kPrVec, tdVx2, loosetdx2, cutContr, &
-              & surfIntVFast, ngpqdp, gpqdp, maxlmp)
+              & surfIntVFast, ngpqdp, gpqdp, maxlmp, killcont)
 
             call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVy, loosetdy1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 2, ngdp, nobd, z1nG(:, :, 2), nlo_atom, recEdiffME, kpq2kPrVec, tdVy2, loosetdy2, cutContr, &
-              & surfIntVFast, ngpqdp, gpqdp, maxlmp)
+              & surfIntVFast, ngpqdp, gpqdp, maxlmp, killcont)
 
             call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVz, loosetdz1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
               & mapKpq2K(ikpt, iqpt), iqpt, 3, ngdp, nobd, z1nG(:, :, 3), nlo_atom, recEdiffME, kpq2kPrVec, tdVz2, loosetdz2, cutContr, &
-              & surfIntVFast, ngpqdp, gpqdp, maxlmp)
+              & surfIntVFast, ngpqdp, gpqdp, maxlmp, killcont)
             end if
 
             !DEALLOCATE(loosetdx1, loosetdy1, loosetdz1, loosetdx2, loosetdy2, loosetdz2)
@@ -2088,7 +2093,7 @@ module m_jpSternheimer
   !---------------------------------------------------------------------------------------------------------------------------------
   subroutine solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, usdus, td4HS0, loosetd, td4V, loosetd1, stars,  gdp, ne, nv, vEff1IR, eigKet,&
       & eigBra, El, nRadFun, iloTable, ilst, GbasVec, zKet, zBra, kveclo, iDtype, iDatom, ikpt, ikpq, iqpt, idir, ngdp, nobd, z1G, &
-      & nlo_atom, recEdiffME, kpq2kPrVec, td4V2, loosetd2, cutContr, surfIntVFast, ngpqdp, gpqdp, maxlmp , haa, dhaa, rbas1, mat_elH, mat_elS)
+      & nlo_atom, recEdiffME, kpq2kPrVec, td4V2, loosetd2, cutContr, surfIntVFast, ngpqdp, gpqdp, maxlmp, killcont, haa, dhaa, rbas1, mat_elH, mat_elS)
 
     use m_types
      
@@ -2129,6 +2134,7 @@ module m_jpSternheimer
     integer,                        intent(in)  :: maxlmp
 
     ! Array parameter
+    INTEGER, INTENT(IN) :: killcont(9)
     integer,                        intent(in)  :: gdp(:, :)
     integer,                        intent(in)  :: ne(:)
     integer,                        intent(in)  :: nv(:, :)
@@ -2194,7 +2200,7 @@ module m_jpSternheimer
     complex,           allocatable              :: zTilde(:, :)
     complex,           allocatable              :: mCoefK(:, :, :)
     complex,           allocatable              :: mCoefB(:, :, :)
-    complex ,          allocatable              :: z1Band(:, :)
+    complex ,          allocatable              :: z1Band(:, :), hepss1band(:, :)
     complex ,          allocatable              :: vSumMT(:, :)
     complex,           allocatable              :: mCoefKv(:, :)
     complex,           allocatable              :: mCoefBv(:, :)
@@ -2833,20 +2839,33 @@ module m_jpSternheimer
     ! Sum up right side multiplied with inverted left side in Sternheimer equation for given direction and k-point, k+q-point.
     ! As we do not support polyatomic metals currently, epsilon1 is not added here, but tested to be zero in a seperate test.
     allocate( z1Band( ne(ikpq), nobd(ikpt,1) ) )
+    ALLOCATE(hepss1band(ne(ikpq),nobd(ikpt,1)))
     z1Band(:, :) = cmplx(0., 0.)
+    hepss1band(:, :) = cmplx(0., 0.)
     do nBand = 1, nobd(ikpt, 1)
       do pBand = 1, ne(ikpq) ! pBand >> nBand
-        z1Band(pBand, nBand) =  -recEdiffME(pBand, nBand) * (&
-          &Veff1IRMat(pBand, nBand) &
-          & + vSumMT(pBand, nBand)&
-          & + h0MTBv(pBand, nBand) &
-          & - eigKet(nBand) * s0MTBv(pBand, nBand) &
-          & + h0MTKv(pBand, nBand) &
-          & -  eigKet(nBand) * s0MTKv(pBand, nBand)                &
-          & +  surfIntTeps(pBand, nBand) &
-          & + surfIntVFast(pBand, nBand, idir) &
-          & - eigKet(nBand) * surfInt(pBand, nBand) &
-          & )
+         hepss1band(pBand, nBand) = 1.0 * ( &
+                                  &   killcont(1) * Veff1IRMat(pBand, nBand) &
+                                  & + killcont(2) * vSumMT(pBand, nBand) &
+                                  & + killcont(3) * h0MTBv(pBand, nBand) &
+                                  & + killcont(4) * h0MTKv(pBand, nBand) &
+                                  & + killcont(5) * surfIntTeps(pBand, nBand) &
+                                  & + killcont(6) * surfIntVFast(pBand, nBand, idir) &
+                                  & - killcont(7) * eigKet(nBand) * s0MTBv(pBand, nBand) &
+                                  & - killcont(8) * eigKet(nBand) * s0MTKv(pBand, nBand) &
+                                  & - killcont(9) * eigKet(nBand) * surfInt(pBand, nBand) &
+                                  & )
+         z1Band(pBand, nBand) = -recEdiffME(pBand, nBand) * ( &
+                              &   killcont(1) * Veff1IRMat(pBand, nBand) &
+                              & + killcont(2) * vSumMT(pBand, nBand) &
+                              & + killcont(3) * h0MTBv(pBand, nBand) &
+                              & + killcont(4) * h0MTKv(pBand, nBand) &
+                              & + killcont(5) * surfIntTeps(pBand, nBand) &
+                              & + killcont(6) * surfIntVFast(pBand, nBand, idir) &
+                              & - killcont(7) * eigKet(nBand) * s0MTBv(pBand, nBand) &
+                              & - killcont(8) * eigKet(nBand) * s0MTKv(pBand, nBand) &
+                              & - killcont(9) * eigKet(nBand) * surfInt(pBand, nBand) &
+                              & )
 
         !if (present(mat_elH).and..false.) then
         !  z1Band(pBand, nBand) = -recEdiffME(pBand, nBand) * &

@@ -15,7 +15,7 @@ MODULE m_dfpt_eigen
 
 CONTAINS
 
-   SUBROUTINE dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1, lapwq, td, tdV1, ud, zMatq, eigq, bqpt, neigq, eig_id, dfpt_eig_id, iDir, iDtype)
+   SUBROUTINE dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1, lapwq, td, tdV1, ud, zMatq, eigq, bqpt, neigq, eig_id, dfpt_eig_id, iDir, iDtype, killcont)
 
       USE m_types
       USE m_constants
@@ -41,7 +41,7 @@ CONTAINS
       TYPE(t_usdus)  ,INTENT(IN)           :: ud
       CLASS(t_mat), INTENT(IN)     :: zMatq
       REAL,         INTENT(IN)     :: eigq(:), bqpt(3)
-      INTEGER,      INTENT(IN)     :: neigq, eig_id, dfpt_eig_id, iDir, iDtype, nk, jsp
+      INTEGER,      INTENT(IN)     :: neigq, eig_id, dfpt_eig_id, iDir, iDtype, nk, jsp, killcont(6)
 
       INTEGER n_size,n_rank
       INTEGER i,err
@@ -91,7 +91,7 @@ CONTAINS
 
       ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
       CALL timestart("Setup of matrix perturbations")
-      CALL dfpt_eigen_hssetup(jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,v1,lapw,lapwq,iDir,iDtype,smat,hmat)
+      CALL dfpt_eigen_hssetup(jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,v1,lapw,lapwq,iDir,iDtype,smat,hmat,nk,killcont)
       CALL timestop("Setup of matrix perturbations")
 
       nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)

@@ -7,7 +7,7 @@
 MODULE m_dfpt_hs_int
 CONTAINS
    ! Constructs the interstitial perturbed Hamiltonian and overlap matrix
-   SUBROUTINE dfpt_hs_int(noco, starsq, lapwq, lapw, fmpi, bbmat, isp, vpw, smat, hmat)
+   SUBROUTINE dfpt_hs_int(noco, starsq, lapwq, lapw, fmpi, bbmat, isp, vpw, smat, hmat, killcont)
 
       USE m_types
       USE m_hs_int_direct
@@ -19,7 +19,7 @@ CONTAINS
       REAL, INTENT(IN)              :: bbmat(3, 3)
       TYPE(t_lapw),INTENT(IN)       :: lapwq, lapw
       TYPE(t_mpi),INTENT(IN)        :: fmpi
-      INTEGER,INTENT(IN)            :: isp
+      INTEGER,INTENT(IN)            :: isp, killcont(3)
       COMPLEX,INTENT(IN)            :: vpw(:, :)
       CLASS(t_mat),INTENT(INOUT)     :: smat(:,:),hmat(:,:)
 
@@ -47,14 +47,15 @@ CONTAINS
             iMat = MERGE(iSpin, 1, noco%l_noco)
             iTkin = 0
             ! 1, 2, 3, 4 == 11, 22, 21, 12:
-            IF ((iSpinPr.EQ.1).AND.(iSpin.EQ.1)) vpw_temp = vpw(:, 1)
-            IF ((iSpinPr.EQ.2).AND.(iSpin.EQ.2)) vpw_temp = vpw(:, 2)
-            IF ((iSpinPr.EQ.2).AND.(iSpin.EQ.1)) vpw_temp = vpw(:, 3)
-            IF ((iSpinPr.EQ.1).AND.(iSpin.EQ.2)) vpw_temp = vpw(:, 4)
+            IF ((iSpinPr.EQ.1).AND.(iSpin.EQ.1)) vpw_temp = vpw(:, 1) * killcont(1)
+            IF ((iSpinPr.EQ.2).AND.(iSpin.EQ.2)) vpw_temp = vpw(:, 2) * killcont(1)
+            IF ((iSpinPr.EQ.2).AND.(iSpin.EQ.1)) vpw_temp = vpw(:, 3) * killcont(1)
+            IF ((iSpinPr.EQ.1).AND.(iSpin.EQ.2)) vpw_temp = vpw(:, 4) * killcont(1)
 
             l_smat = iSpinPr.EQ.iSpin
+            IF (killcont(3)==0) l_smat = .FALSE.
 
-            IF (iSpinPr.EQ.iSpin) iTkin = 1
+            IF (iSpinPr.EQ.iSpin) iTkin = 1 * killcont(2)
 
             CALL hs_int_direct(fmpi, starsq, bbmat, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
                              & lapwq%bkpt, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
