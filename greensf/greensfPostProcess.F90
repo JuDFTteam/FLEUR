@@ -81,7 +81,8 @@ MODULE m_greensfPostProcess
          ENDIF
 
          !Onsite exchange Splitting from difference of center of mass of the bands
-         CALL excSplitting(gfinp,atoms,input,scalarGF,greensfImagPart,results%ef)
+         !and the integral over Bxc
+         CALL excSplitting(gfinp,atoms,input,scalarGF,greensfImagPart,results%ef, vTot)
 
          !-------------------------------------------------------
          ! Occupation matrix (only for diagonal onsite elements)

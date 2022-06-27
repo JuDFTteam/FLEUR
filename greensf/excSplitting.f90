@@ -1,15 +1,16 @@
 MODULE m_excSplitting
 
-   USE m_types
-   USE m_constants
-   USE m_trapz
-   USE m_xmlOutput
+   use m_types
+   use m_constants
+   use m_trapz
+   use m_xmlOutput
+   use m_intgr
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE excSplitting(gfinp,atoms,input,scalarGF,greensfImagPart,ef)
+   SUBROUTINE excSplitting(gfinp,atoms,input,scalarGF,greensfImagPart,ef,vTot)
 
       TYPE(t_gfinp),             INTENT(IN)  :: gfinp
       TYPE(t_atoms),             INTENT(IN)  :: atoms
@@ -17,14 +18,37 @@ MODULE m_excSplitting
       TYPE(t_scalarGF),          INTENT(IN)  :: scalarGF(:)
       TYPE(t_greensfImagPart),   INTENT(IN)  :: greensfImagPart
       REAL,                      INTENT(IN)  :: ef
+      type(t_potden),            intent(in)  :: vTot
 
       INTEGER :: i_gf,i_elem,i_elemLO,ispin,m,l,atomType,nLO,iLO,iLOp
       LOGICAL :: l_sphavg
-      REAL    :: excSplit,del
+      REAL    :: excSplit,del,delta
       REAL, ALLOCATABLE :: eMesh(:)
       COMPLEX, ALLOCATABLE :: imag(:,:,:)
       REAL, ALLOCATABLE :: intCOM(:,:), intNorm(:,:)
+      REAL, ALLOCATABLE :: bxc(:)
       CHARACTER(LEN=20) :: attributes(4)
+      CALL openXMLElementNoAttributes('onSiteExchangeSplitting')
+
+      !Calculate the onsite exchange splitting from Bxc
+      allocate(bxc(atoms%jmtd), source=0.0)
+      do atomType = 1, atoms%ntype
+         !Get the Bxc part of the potential
+         !L=0 of potential has an additional rescaling of r/sqrt(4pi)
+         !The sqrt(4pi) is the part of the integral over the angular part
+         bxc(:atoms%jri(atomType)) = (vTot%mt(:atoms%jri(atomType),0,atomType,1) - vTot%mt(:atoms%jri(atomType),0,atomType,2))/2.0 &
+                                    * sfp_const/atoms%rmsh(:atoms%jri(atomType),atomType)
+         
+         CALL intgr3(bxc,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),delta)
+
+         attributes = ''
+         WRITE(attributes(1),'(i0)') atomType
+         WRITE(attributes(2),'(f12.7)') delta * hartree_to_ev_const
+         WRITE(attributes(3),'(a2)') 'eV'
+         CALL writeXMLElementForm('bxcIntegral',['atomType','Delta   ','units   '],&
+                                  attributes(:3),reshape([8,1,5,5,6,1,12,2],[3,2]))
+
+      enddo
 
       IF(.NOT.gfinp%checkOnsite()) RETURN
 
@@ -38,8 +62,6 @@ MODULE m_excSplitting
       WRITE(oUnit,9000)
 9000  FORMAT(/,'Onsite Exchange Splitting (from imag. part of GF)')
       WRITE(oUnit,'(A)') '---------------------------------------------------'
-
-      CALL openXMLElementNoAttributes('onSiteExchangeSplitting')
 
       DO i_gf = 1, gfinp%n
 
