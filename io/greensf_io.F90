@@ -59,7 +59,7 @@ MODULE m_greensf_io
       INTEGER           :: dimsInt(7)
       INTEGER(HSIZE_T)  :: dims(7)
 
-      version = 7
+      version = 8
       IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
@@ -105,6 +105,44 @@ MODULE m_greensf_io
       CALL io_write_real2(reciprocalCellSetID,(/1,1/),dimsInt(:2),"bmat",cell%bmat)
       CALL h5dclose_f(reciprocalCellSetID, hdfError)
 
+      iAtom = 0
+      DO iType = 1, atoms%ntype
+         DO j = 1, atoms%neq(iType)
+            iAtom = iAtom + 1
+            atomicNumbers(iAtom) = atoms%nz(iType)
+            equivAtomsGroup(iAtom) = iType
+         END DO
+      END DO
+
+      CALL h5gcreate_f(fileID, '/atoms', atomsGroupID, hdfError)
+      CALL io_write_attint0(atomsGroupID,'nAtoms',atoms%nat)
+      CALL io_write_attint0(atomsGroupID,'nTypes',atoms%ntype)
+
+      dims(:2)=(/3,atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "positions", H5T_NATIVE_DOUBLE, atomPosSpaceID, atomPosSetID, hdfError)
+      CALL h5sclose_f(atomPosSpaceID,hdfError)
+      CALL io_write_real2(atomPosSetID,(/1,1/),dimsInt(:2),"taual",atoms%taual)
+      CALL h5dclose_f(atomPosSetID, hdfError)
+
+      dims(:1)=(/atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "atomicNumbers", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),"atomicNumbers",atomicNumbers)
+      CALL h5dclose_f(atomicNumbersSetID, hdfError)
+
+      dims(:1)=(/atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),equivAtomsClassSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "equivAtomsGroup", H5T_NATIVE_INTEGER, equivAtomsClassSpaceID, equivAtomsClassSetID, hdfError)
+      CALL h5sclose_f(equivAtomsClassSpaceID,hdfError)
+      CALL io_write_integer1(equivAtomsClassSetID,(/1/),dimsInt(:1),"equivAtomsGroup",equivAtomsGroup)
+      CALL h5dclose_f(equivAtomsClassSetID, hdfError)
+
+      CALL h5gclose_f(atomsGroupID, hdfError)
 
       CALL h5gcreate_f(generalGroupID, 'kpts', kptsGroupID, hdfError)
 
