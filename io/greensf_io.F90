@@ -49,7 +49,7 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
       INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
       INTEGER(HID_T)    :: atomsGroupID
-      INTEGER(HID_T)    :: atomPosSpaceID, atomsPosSetID
+      INTEGER(HID_T)    :: atomPosSpaceID, atomPosSetID
       INTEGER(HID_T)    :: atomicNumbersSpaceID, atomicNumbersSetID
       INTEGER(HID_T)    :: equivAtomsClassSpaceID, equivAtomsClassSetID
 
