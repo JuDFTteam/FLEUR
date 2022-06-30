@@ -48,6 +48,10 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
       INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
       INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
+      INTEGER(HID_T)    :: atomsGroupID
+      INTEGER(HID_T)    :: atomPosSpaceID, atomsPosSetID
+      INTEGER(HID_T)    :: atomicNumbersSpaceID, atomicNumbersSetID
+      INTEGER(HID_T)    :: equivAtomsClassSpaceID, equivAtomsClassSetID
 
       INTEGER(HID_T)    :: stringTypeID
       INTEGER(SIZE_T)   :: stringLength
@@ -58,6 +62,10 @@ MODULE m_greensf_io
       REAL              :: eFermiPrev
       INTEGER           :: dimsInt(7)
       INTEGER(HSIZE_T)  :: dims(7)
+      INTEGER           :: j, iAtom, iType
+
+      INTEGER           :: atomicNumbers(atoms%nat)
+      INTEGER           :: equivAtomsGroup(atoms%nat)
 
       version = 8
       IF(PRESENT(inFilename)) THEN
