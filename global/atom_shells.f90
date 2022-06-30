@@ -19,7 +19,7 @@ MODULE m_atom_shells
    CONTAINS
 
    SUBROUTINE construct_atom_shells(referenceAtom, nshells, atoms, cell, sym, film, shellDistances,&
-                                    shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells)
+                                    shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells, only_elements)
 
       !----------------------------------------------------------------------------------------------
       !Construct neighbour shells around a given reference atom
@@ -50,6 +50,7 @@ MODULE m_atom_shells
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: shellOps(:,:)
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: numAtomsShell(:)
       INTEGER,             INTENT(OUT)  :: generatedShells
+      integer, optional,   intent(in)   :: only_elements(:)
 
       REAL, PARAMETER :: eps = 1e-5
 
@@ -81,7 +82,7 @@ MODULE m_atom_shells
          !Calculate the vectors and distances to neighbours in the next
          !extension of unit cells
          CALL calculate_next_neighbours(referenceAtom, atoms, cell%amat, film, newNeighbours, newAtoms,&
-                                        newDiffs, newDistances, num_cells)
+                                        newDiffs, newDistances, num_cells, only_elements=only_elements)
 
          WRITE(oUnit,'(A,I0)') "New neighbours found: ", newNeighbours
 
@@ -242,7 +243,7 @@ MODULE m_atom_shells
 
 
    SUBROUTINE calculate_next_neighbours(referenceAtom, atoms, amat, film, neighboursFound, neighbourAtoms,&
-                                        neighbourDiffs, neighbourDistances, lastBorder)
+                                        neighbourDiffs, neighbourDistances, lastBorder, only_elements)
 
       !Calculate the distances and vectors to neighbour atoms to a reference atom in a
       !supercell
@@ -261,6 +262,7 @@ MODULE m_atom_shells
       REAL,    ALLOCATABLE, INTENT(OUT)   :: neighbourDiffs(:,:)
       REAL,    ALLOCATABLE, INTENT(OUT)   :: neighbourDistances(:)
       INTEGER,              INTENT(INOUT) :: lastBorder
+      integer, optional,    intent(in)    :: only_elements(:)
 
       INTEGER :: maxNeighbours,iAtom,refAt,identicalAtoms,i,j,k,n,na,zmax
       REAL :: amatDet, currentDist
@@ -309,6 +311,7 @@ MODULE m_atom_shells
 
                   iAtom = 0
                   DO n = 1, atoms%ntype
+                     if (size(only_elements) /= 0 .and. .not.any(only_elements(:)==atoms%nz(n))) cycle
                      DO na = 1, atoms%neq(n)
                         iAtom = iAtom + 1
                         pos(:) = posCart(:,iAtom) + offsetPos(:)

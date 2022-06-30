@@ -101,6 +101,8 @@ MODULE m_types_gfinp
       INTEGER, ALLOCATABLE :: hiaElem(:)
       INTEGER, ALLOCATABLE :: torqueElem(:,:)
       INTEGER, ALLOCATABLE :: numTorqueElems(:)
+      INTEGER, ALLOCATABLE :: intersiteAtomicNumberSelection(:,:)
+      INTEGER, ALLOCATABLE :: numintersiteAtomicNumberSelection(:)
    CONTAINS
       PROCEDURE :: read_xml             => read_xml_gfinp
       PROCEDURE :: mpi_bc               => mpi_bc_gfinp
@@ -153,6 +155,8 @@ CONTAINS
       CALL mpi_bc(this%hiaElem,rank,mpi_comm)
       CALL mpi_bc(this%torqueElem,rank,mpi_comm)
       CALL mpi_bc(this%numTorqueElems,rank,mpi_comm)
+      call mpi_bc(this%intersiteAtomicNumberSelection,rank,mpi_comm)
+      call mpi_bc(this%numintersiteAtomicNumberSelection,rank,mpi_comm)
 
 #ifdef CPP_MPI
       CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -298,9 +302,9 @@ CONTAINS
       TYPE(t_xml),INTENT(INOUT) ::xml
 
       INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF,nshells
-      INTEGER :: i,l,lp,iContour,iContourp
+      INTEGER :: i,l,lp,iContour,iContourp, atomicNumber, shellAtomicNumberSelection
       REAL    :: fixedCutoff
-      CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str
+      CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str, shellElement
       CHARACTER(len=1),PARAMETER :: spdf(0:3) = ['s','p','d','f']
       LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg,l_kresolved,l_kresolved_int, l_found
       LOGICAL :: lp_calc(0:3,0:3)
@@ -403,6 +407,8 @@ CONTAINS
       ALLOCATE(this%hiaElem(4*ntype))
       ALLOCATE(this%numTorqueElems(ntype),source=0)
       ALLOCATE(this%torqueElem(ntype,(lmaxU_const+1)**2),source=-1)
+      ALLOCATE(this%intersiteAtomicNumberSelection(ntype,(lmaxU_const+1)**2),source=-1)
+      ALLOCATE(this%numintersiteAtomicNumberSelection((lmaxU_const+1)**2*ntype),source=0)
 
       DO itype = 1, ntype
          xPathS=xml%speciesPath(itype)
@@ -423,6 +429,23 @@ CONTAINS
             ELSE
                l_kresolved = .FALSE.
             ENDIF
+            IF(xml%versionNumber>=36) THEN
+               shellElement = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@shellElement')))
+            ELSE
+               shellElement = 'all'
+            ENDIF
+            shellAtomicNumberSelection = -1
+            if (trim(adjustl(shellElement))/='all') then
+               do atomicNumber = 1, size(namat_const)
+                  if (trim(adjustl(shellElement))==namat_const(atomicNumber)) then
+                     shellAtomicNumberSelection = atomicNumber
+                     exit
+                  else if(atomicNumber == size(namat_const)) then
+                     CALL juDFT_error("Error reading in gf-information: Wrong Atomic number selection given value is not a chemical element",&
+                                      calledby="read_xml_gfinp")
+                  endif
+               enddo
+            endif
             refL = -1
             SELECT CASE(TRIM(ADJUSTL(cutoffArg)))
             CASE('calc')
@@ -451,6 +474,10 @@ CONTAINS
                      IF(.NOT.lp_calc(lp,l)) CYCLE
                      i_gf =  this%add(l,itype,iContour,l_sphavg,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
                                       fixedCutoff=fixedCutoff,nshells=nshells,k_resolved=l_kresolved)
+                     if (nshells /= 0 .and. shellAtomicNumberSelection /= -1) THEN
+                        this%numintersiteAtomicNumberSelection(i_gf) = this%numintersiteAtomicNumberSelection(i_gf) + 1
+                        this%intersiteAtomicNumberSelection(i_gf,this%numintersiteAtomicNumberSelection(i_gf)) = shellAtomicNumberSelection
+                     endif                 
                   ENDDO
                ENDDO
             ENDIF
@@ -464,6 +491,10 @@ CONTAINS
                   IF(.NOT.lp_calc(l,l)) CYCLE
                   i_gf =  this%add(l,itype,iContour,l_sphavg,l_fixedCutoffset=l_fixedCutoffset,&
                                    fixedCutoff=fixedCutoff,nshells=nshells,k_resolved=l_kresolved)
+                  if (nshells /= 0 .and. shellAtomicNumberSelection /= -1) THEN
+                     this%numintersiteAtomicNumberSelection(i_gf) = this%numintersiteAtomicNumberSelection(i_gf) + 1
+                     this%intersiteAtomicNumberSelection(i_gf,this%numintersiteAtomicNumberSelection(i_gf)) = shellAtomicNumberSelection
+                  endif
                ENDDO
             ENDIF
 
@@ -605,7 +636,7 @@ CONTAINS
       INTEGER :: hiaElem(atoms%n_hia), intersite_elems(this%n), shells(this%n)
       LOGICAL :: written(atoms%nType), l_kresolved
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
-      INTEGER, ALLOCATABLE :: atomTypepList(:),atomTypepList1(:)
+      INTEGER, ALLOCATABLE :: atomTypepList(:),atomTypepList1(:), atomicNumberSelection(:)
 
       IF(this%n==0) RETURN !Nothing to do here
 
@@ -634,10 +665,11 @@ CONTAINS
 
          refCutoff = MERGE(i_gf,refCutoff,refCutoff==-1) !If no refCutoff is set for the intersite element
                                                          !we take the onsite element as reference
-
+         atomicNumberSelection = this%intersiteAtomicNumberSelection(i_gf,:this%numintersiteAtomicNumberSelection(i_gf))
          CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
                                         this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,input,&
-                                        .NOT.written(atomType),nOtherAtoms,atomTypepList)
+                                        .NOT.written(atomType),nOtherAtoms,atomTypepList,&
+                                        atomicNumberSelection=atomicNumberSelection)
          written(atomType) = .TRUE.
 
          !Add the other atomtypes (i,j) -> (j,i)
@@ -650,10 +682,17 @@ CONTAINS
                                    fixedCutoff=this%elem(i_gf)%fixedCutoff)
 
             WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
-
-            CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
-                                           this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
-                                           .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
+            
+            if (size(atomicNumberSelection) /= 0) then
+               CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
+                                             this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
+                                             .NOT.written(atomType),nOtherAtoms1,atomTypepList1,&
+                                             atomicNumberSelection=(/atoms%nz(atomType)/))
+            else
+               CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
+                                             this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
+                                             .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
+            endif
 
          ENDDO
       ENDDO
@@ -917,7 +956,7 @@ CONTAINS
    END FUNCTION find_symmetry_rotated_bzcoeffs_gfinp
 
    SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_kresolved,l_fixedCutoffset,fixedCutoff,&
-                                          refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList)
+                                          refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList,atomicNumberSelection)
 
       USE m_types_atoms
       USE m_types_cell
@@ -946,6 +985,7 @@ CONTAINS
       LOGICAL,             INTENT(IN)     :: l_write
       INTEGER,             INTENT(OUT)    :: nOtherAtoms
       INTEGER,ALLOCATABLE, INTENT(OUT)    :: atomTypepList(:) !Which other atomtypes were added (not equal to refAtom)
+      integer,optional,    intent(in)     :: atomicNumberSelection(:) !Which other atom should be considered
 
       INTEGER :: generatedShells, ishellAtom, ishell, i_gf, repr, repr_ops, atomTypep
       REAL    :: repr_diff(3)
@@ -959,7 +999,7 @@ CONTAINS
       CALL timestart("Green's Function: Add nearest Neighbors")
 
       CALL construct_atom_shells(refAtom, nshells, atoms, cell, sym, input%film, shellDistances,&
-                                 shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells)
+                                 shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells, only_elements=atomicNumberSelection)
 
       ALLOCATE(atomTypepList(atoms%ntype),source=0)
       nOtherAtoms = 0
