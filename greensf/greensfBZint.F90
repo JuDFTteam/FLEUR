@@ -11,12 +11,12 @@ MODULE m_greensfBZint
 
    CONTAINS
 
-   SUBROUTINE greensfBZint(ikpt_i,ikpt,nBands,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
+   SUBROUTINE greensfBZint(ikpt,nBands,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
                            scalarGF,eigVecCoeffs,greensfBZintCoeffs)
 
-      INTEGER,                   INTENT(IN)     :: ikpt_i,ikpt        !current k-point index in cdnvaljob%k_list and current k-point
-      INTEGER,                   INTENT(IN)     :: nBands             !Bands handled on this rank
-      INTEGER,                   INTENT(IN)     :: jspin              !spin index
+      INTEGER,                   INTENT(IN)     :: ikpt        ! current k-point
+      INTEGER,                   INTENT(IN)     :: nBands      !Bands handled on this rank
+      INTEGER,                   INTENT(IN)     :: jspin       !spin index
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
       TYPE(t_sym),               INTENT(IN)     :: sym
       TYPE(t_atoms),             INTENT(IN)     :: atoms
@@ -46,7 +46,7 @@ MODULE m_greensfBZint
       spin_start = MERGE(1           ,spin_start,noco%l_mperp.AND..NOT.gfinp%l_mperp)
       spin_end   = MERGE(input%jspins,spin_end  ,noco%l_mperp.AND..NOT.gfinp%l_mperp)
 
-
+      call greensfBZintCoeffs%reset()
       eigVecCoeffs_rot = eigVecCoeffs%rotate_to_rep_atom(atoms,sym,lmaxU_const)
 
       CALL timestart("Green's Function: Brillouin-Zone-Integration")
@@ -165,10 +165,10 @@ MODULE m_greensfBZint
 
 #ifndef CPP_NOTYPEPROCINOMP
                            !$omp critical
-                           CALL greensfBZintCoeffs%add_contribution(i_elem, i_elemLO, ikpt_i, iBand, ispin, nLO, imat, l_sphavg, imSym)
+                           CALL greensfBZintCoeffs%add_contribution(i_elem, i_elemLO, iBand, ispin, nLO, imat, l_sphavg, imSym)
                            !$omp end critical
 #else
-                           CALL greensfBZintCoeffs%add_contribution(i_elem, i_elemLO, ikpt_i, iBand, ispin, nLO, imat, l_sphavg, imSym)
+                           CALL greensfBZintCoeffs%add_contribution(i_elem, i_elemLO, iBand, ispin, nLO, imat, l_sphavg, imSym)
 #endif
                         ENDDO
                      ENDDO
