@@ -137,7 +137,7 @@ MODULE m_greensfBZint
 #ifndef CPP_NOTYPEPROCINOMP
                      !$omp parallel default(none) &
                      !$omp shared(sym,kpts,atoms,greensfBZintCoeffs,im,nococonv,noco,atomType,imatSize,nBands) &
-                     !$omp shared(l_intersite,l,lp,natom,ispin,iop,atomDiff,i_elem,i_elemLO,ikpt,ikpt_i,nLO,l_sphavg) &
+                     !$omp shared(l_intersite,l,lp,natom,ispin,iop,atomDiff,i_elem,i_elemLO,ikpt,nLO,l_sphavg) &
                      !$omp private(imat,iBand,imSym)
 #endif
                      ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
