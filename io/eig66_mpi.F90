@@ -107,7 +107,7 @@ CONTAINS
          INTEGER:: e, iError
          INTEGER(MPI_ADDRESS_KIND) :: length
          INTEGER                   :: type_size
-         CHARACTER(LEN=100)        :: errorString
+         CHARACTER(LEN=150)        :: errorString
 
          length = 0
          IF (PRESENT(real_data_ptr)) THEN
@@ -123,7 +123,8 @@ CONTAINS
             CALL MPI_TYPE_SIZE(MPI_INTEGER, type_size, e)
          ENDIF
          IF (length .NE. 1) CALL judft_error("Bug in eig66_mpi:create_memory")
-         length = MAX(1, slot_size*local_slots)
+         length = local_slots
+         length = MAX(1, length*slot_size)
 
          iError = 0
 #ifdef CPP_MPI_ALLOC
@@ -163,8 +164,8 @@ CONTAINS
 #endif
          IF(iError.NE.0) THEN
             ! See comment above the related allocate statements. This error handler is not always reached.
-            WRITE(errorString,*) 'Allocation of array for communication failed. Needed number of elements:  slot_size ',&
-                                 slot_size, ' x ', local_slots, 'local slots.'
+            WRITE(errorString,'(a,i13,a,i13,a)') 'Allocation of array for communication failed. Needed number of elements:  slot_size ',&
+                                 slot_size, ' x ', local_slots, ' local slots.'
             CALL juDFT_error(TRIM(ADJUSTL(errorString)), calledby='eig66_mpi')
          END IF
 
