@@ -123,6 +123,12 @@ CONTAINS
             CALL MPI_TYPE_SIZE(MPI_INTEGER, type_size, e)
          ENDIF
          IF (length .NE. 1) CALL judft_error("Bug in eig66_mpi:create_memory")
+         
+         ! Note: In the following lines there are two assignments to length. The reason why
+         !       this is split up into two lines is that the product in the 2nd line otherwise
+         !       would contain only two "normal" integers. length is an integer of a different
+         !       kind and has a larger value range. If it would not be part of the product there
+         !       would be integer overflows under certain workloads.
          length = local_slots
          length = MAX(1, length*slot_size)
 
