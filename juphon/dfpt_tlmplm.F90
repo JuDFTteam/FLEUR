@@ -51,8 +51,10 @@ CONTAINS
                 IF (iSpinV1.EQ.2.OR.iSpinV1.EQ.3) iSpinPr = 2
                 IF (iSpinV1.EQ.2.OR.iSpinV1.EQ.4) iSpin   = 2
                 DO iPart = 1, 2
-                    IF (iPart.EQ.1) one = CMPLX(1.0, 0.0); vr1 = v1real%mt(:, :, n, iSpinV1)
-                    IF (iPart.EQ.2) one = CMPLX(0.0, 1.0); vr1 = v1imag%mt(:, :, n, iSpinV1)
+                    IF (iPart.EQ.1) one = CMPLX(1.0, 0.0)
+                    IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, iSpinV1)
+                    IF (iPart.EQ.2) one = CMPLX(0.0, 1.0)
+                    IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, iSpinV1)
                     CALL tlmplm(n, sphhar, atoms, sym, enpara, nococonvdummy, iSpinPr, iSpin, iSpinV1, fmpi, &
                               & vTot, vxdummy, input, hub1inp, hub1data, tdV1, uddummy, 0.0, 0, one, .TRUE., vr1)
                 END DO
