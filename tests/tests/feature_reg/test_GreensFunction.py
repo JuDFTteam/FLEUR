@@ -584,3 +584,34 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
     assert grep_exists(res_files['out'], r"\-0\.0371 [\-\s]0\.0000")
     assert grep_exists(res_files['out'], r"\-0\.0172 [\-\s]0\.0000")
 
+
+@pytest.mark.bulk
+@pytest.mark.greensfunction
+@pytest.mark.magnetism
+@pytest.mark.serial
+def test_GreensFunction_IntersiteShellConstruction(execute_fleur, grep_exists):
+    """Fleur Greens Function intersite multiple shells
+    Simple test of the intersite green's function calculation in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals for the 5 nearest neighbours. This forces the shell construction algorithm to
+       do a bit more work. Ensure that the obtained occupation matrices
+       look as expected
+    """
+    test_file_folder = './inputfiles/GreensFunction_IntersiteShellConstruction/'
+
+    res_files = execute_fleur(test_file_folder,cmdline_param=['-check']) #Only run the initializations
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    #Check for the right shell being selected
+    assert grep_exists(res_files['out'], r"Green's Function Elements: 2445\s")
+    #These are entries in the table of generated GF elements
+    assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
+    assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
+    assert grep_exists(res_files['out'], "2110 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  5.000  0.000 -4.000")
+    #This element was missed by the previous completeness detection
+    assert grep_exists(res_files['out'], "2125 | 2/2  |    1/    1 |       1 |      T |         1 |      2110(31)      |      F(F)  | -9.000 -5.000 -5.000")
+    assert grep_exists(res_files['out'], "2422 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  4.000  4.000 -4.000")
+    assert grep_exists(res_files['out'], "2445 | 2/2  |    1/    1 |       1 |      T |         1 |      2422(46)      |      F(F)  | -8.000 -8.000 -4.000")

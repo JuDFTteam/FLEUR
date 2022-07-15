@@ -56,9 +56,8 @@ MODULE m_atom_shells
 
       INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells
       INTEGER :: ishell,i,iAtom,atomTypep,refAt,completed_atom_shells
-      LOGICAL :: l_unfinished_shell,l_found_shell,l_add
-      REAL :: min_distance_to_border(3), distance,distance_to_border, lastDist
-      REAL :: leftBorder(3),rightBorder(3),refPos(3)
+      LOGICAL :: l_unfinished_shell,l_found_shell,l_add, shell_finished
+      REAL :: lastDist
 
       INTEGER, ALLOCATABLE :: newAtoms(:,:), distIndexList(:)
       REAL,    ALLOCATABLE :: newDiffs(:,:), newDistances(:)
@@ -171,39 +170,22 @@ MODULE m_atom_shells
             !We look if there can possibly be more elements outside the currently
             !chosen quadrant of cells
 
-            min_distance_to_border = 9e99
-            DO refAt = SUM(atoms%neq(:referenceAtom-1)) + 1, SUM(atoms%neq(:referenceAtom))
-               refPos(:) = atoms%taual(:,refAt)
-
-               DO i = 1, 3
-                  !Distance to border in direction of lattice vector
-                  leftBorder  = cell%amat(:,i) * (num_cells + refPos(i))
-                  rightBorder = cell%amat(:,i) * (num_cells + 1 - refPos(i))
-                  distance_to_border = MIN(norm2(leftBorder),norm2(rightBorder))
-                  IF(distance_to_border<min_distance_to_border(i)) THEN
-                     min_distance_to_border(i) = distance_to_border
-                  ENDIF
-               ENDDO
-            ENDDO
-
             lastDist = 0.0
             atomShells1 = 0
             completed_atom_shells = 0
             DO ishell = 1, actualShells
                IF(shellDistances(ishell)-lastDist > eps) THEN
                   atomShells1 = atomShells1 + 1
-                  IF(ALL(min_distance_to_border(:)-SQRT(shellDistances(ishell)) > eps)) THEN
+                  shell_finished = enough_neighbouring_cells(cell, film, num_cells, SQRT(shellDistances(ishell)))
+                  if (shell_finished) then
                      completed_atom_shells = completed_atom_shells + 1
-                  ENDIF 
-                  IF(atomShells1==nshells) THEN
-                     !-1e-12 to avoid uneccesary calculations where both are equla to numerical precision
-                     IF(ALL(min_distance_to_border(:)-SQRT(shellDistances(ishell)) > eps)) THEN
-                        WRITE(oUnit,'(A)') "Shells finished."
+                     if (atomShells1==nshells) then
+                        write(oUnit,'(A)') "Shells finished."
                         l_unfinished_shell = .FALSE.
-                     ENDIF
-                     EXIT
-                  ENDIF
-               ENDIF
+                        exit
+                     endif
+                  endif
+               endif
                lastDist = shellDistances(ishell)  
             ENDDO
             WRITE(oUnit,'(A,I0)') 'Distance shells complete: ', completed_atom_shells
@@ -585,5 +567,52 @@ MODULE m_atom_shells
       ENDIF
 
    END SUBROUTINE alloc_shells
+
+   logical function enough_neighbouring_cells(cell, film, num_cells, distance)
+
+      !Adpated from brzone2
+      !Determines whether the given shell of a certain distance fits into
+      !the "supercell" constructed in these routines
+
+      type(t_cell), intent(in) :: cell
+      logical,      intent(in) :: film
+      integer,      intent(in) :: num_cells
+      real,         intent(in) :: distance
+
+      real, parameter :: distance_padding = 1.01
+
+      real :: required_distance
+      integer :: zmax, required_cells, i,j,k,ipiv,info
+      real :: solutions(3,1)
+      real :: equationSystem(3,3)
+
+      required_distance = distance * distance_padding
+
+      zmax = num_cells
+      if(film) zmax = 0
+
+      required_cells = 0
+      do i = -num_cells, num_cells, 2*num_cells
+         do j = -num_cells, num_cells, 2*num_cells
+            do k = -zmax, zmax, 2*zmax
+               solutions(1,1) = i * required_distance
+               solutions(2,1) = j * required_distance
+               solutions(3,1) = k * required_distance
+
+               equationSystem(:,:) = transpose(cell%amat) * num_cells
+               ipiv = 0
+               info = 0
+               call dgetrf(3,3, equationSystem,3,ipiv,info)
+               call dgetrs('N',3,1,equationSystem,3,ipiv,solutions,3,info)
+               ! I assume that info == 0: The reciprocal lattice vectors should be linearly independent.
+               if(required_cells < abs(solutions(1,1))) required_cells = ceiling(abs(solutions(1,1)))
+               if(required_cells < abs(solutions(2,1))) required_cells = ceiling(abs(solutions(2,1)))
+               if(required_cells < abs(solutions(3,1))) required_cells = ceiling(abs(solutions(3,1)))
+            enddo
+         enddo
+      enddo
+      enough_neighbouring_cells = num_cells >= required_cells
+
+   end function
 
 END MODULE m_atom_shells

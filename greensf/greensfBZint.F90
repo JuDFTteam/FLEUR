@@ -28,7 +28,7 @@ MODULE m_greensfBZint
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_greensfBZintCoeffs),INTENT(INOUT)  :: greensfBZintCoeffs
 
-      INTEGER :: i_gf,l,lp,atomType,atomTypep
+      INTEGER :: i_gf,l,lp,atomType,atomTypep,i_gf_rot
       INTEGER :: natom,natomp,natomp_start,natomp_end,natom_start,natom_end
       INTEGER :: i_elem,i_elemLO,nLO,imatSize,imat,iBand,iop
       INTEGER :: spin1,spin2,ispin,spin_start,spin_end,atom,atomp
@@ -102,8 +102,9 @@ MODULE m_greensfBZint
                   ! natomp_rot = sym%mapped_atom(iop,natomp)
 
                   IF(l_intersite) THEN
-                     i_elem = gfinp%find_symmetry_rotated_bzcoeffs(atoms,sym,i_gf,iop,l_sphavg)
-                     i_elemLO = gfinp%find_symmetry_rotated_bzcoeffs(atoms,sym,i_gf,iop,l_sphavg,lo=.TRUE.)
+                     i_gf_rot = gfinp%find_symmetry_rotated_greensf(atoms,sym,i_gf,iop,distinct_kresolved_int=.false.)
+                     i_elem   = gfinp%uniqueElements(atoms,max_index=i_gf_rot,l_sphavg=l_sphavg)
+                     i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf_rot,lo=.TRUE.,l_sphavg=l_sphavg)
                   ENDIF
 
                   DO ispin = spin_start, spin_end

@@ -111,7 +111,7 @@ MODULE m_types_gfinp
       PROCEDURE :: find_gfelem_simple
       PROCEDURE :: find_gfelem_type
       GENERIC   :: find                 => find_gfelem_simple, find_gfelem_type
-      PROCEDURE :: find_symmetry_rotated_bzcoeffs => find_symmetry_rotated_bzcoeffs_gfinp
+      PROCEDURE :: find_symmetry_rotated_greensf => find_symmetry_rotated_greensf_gfinp
       PROCEDURE :: find_contour         => find_contour
       PROCEDURE :: add                  => add_gfelem
       PROCEDURE :: addNearestNeighbours => addNearestNeighbours_gfelem
@@ -630,7 +630,7 @@ CONTAINS
       TYPE(t_cell),     INTENT(IN)     :: cell
       TYPE(t_input),    INTENT(IN)     :: input
 
-      INTEGER :: i_gf,l,lp,atomType,iContour,refCutoff
+      INTEGER :: i_gf,l,lp,atomType,iContour,refCutoff,i_gf_rot,iop
       INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref,n_intersite, i_inter
       LOGICAL :: l_sphavg, l_all_kresolved, l_kresolved_radial
       INTEGER :: hiaElem(atoms%n_hia), intersite_elems(this%n), shells(this%n)
@@ -769,6 +769,21 @@ CONTAINS
       ENDDO
       WRITE(oUnit,'(/)')
 9000  FORMAT(I5, " | ",I1,"/",I1,"  |",I5,"/",I5," | ",I7," | ",l6," | ", I9," | ", I9,"(",I2,")      | ",l6,"(",l1,")  |",3f7.3)
+
+
+      !Check the closure of the the intersite element
+      !It should be possible to find all symmetry rotated equivalents
+      !of intersite greensfunctions
+      do i_gf = 1, this%n
+         if(this%elem(i_gf)%isIntersite()) then
+            do iop = 1, sym%nop
+               !this function will raise an error if the rotated equivalent cannot be found
+               i_gf_rot = this%find_symmetry_rotated_greensf(atoms,sym,i_gf,iop,distinct_kresolved_int=.false.)
+            enddo
+         endif
+      enddo
+
+
 
    END SUBROUTINE init_gfinp
 
@@ -917,7 +932,7 @@ CONTAINS
 
    END FUNCTION add_gfelem
 
-   INTEGER FUNCTION find_symmetry_rotated_bzcoeffs_gfinp(this, atoms, sym, i_gf, iop, l_sphavg, lo) RESULT(i_elem_rot)
+   INTEGER FUNCTION find_symmetry_rotated_greensf_gfinp(this, atoms, sym, i_gf, iop, distinct_kresolved_int, l_found) RESULT(i_gf_rot)
 
       USE m_types_sym
       USE m_types_atoms
@@ -926,13 +941,14 @@ CONTAINS
       TYPE(t_atoms),          INTENT(IN)  :: atoms
       TYPE(t_sym),            INTENT(IN)  :: sym
       INTEGER,                INTENT(IN)  :: i_gf, iop
-      LOGICAL,                INTENT(IN)  :: l_sphavg
-      LOGICAL, OPTIONAL,      INTENT(IN)  :: lo
+      LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_kresolved_int
+      logical, optional,      intent(out)  :: l_found
 
       TYPE(t_gfelementtype) :: gfelem_rot
-      LOGICAL :: loArg
+      LOGICAL :: loArg, l_foundLocal
       REAL    :: diff(3)
-      INTEGER :: atom_rot, atom_rotp, i_gf_rot, iop_arg
+      INTEGER :: atom_rot, atom_rotp, iop_arg
+      character(len=300) :: message
 
 
       IF(.NOT.this%elem(i_gf)%isIntersite()) CALL juDFT_error("find_symmetry_rotated_bzcoeffs should only be used for Intersite Green's functions", calledby='find_symmetry_rotated_bzcoeffs')
@@ -950,11 +966,22 @@ CONTAINS
       gfelem_rot%atom = atom_rot
       gfelem_rot%atomp = atom_rotp
 
-      i_gf_rot = this%find(gfelem_rot,distinct_kresolved_int=.FALSE.)
-      i_elem_rot = this%uniqueElements(atoms,max_index=i_gf_rot,l_sphavg=l_sphavg, lo=lo)
+      i_gf_rot = this%find(gfelem_rot,distinct_kresolved_int=distinct_kresolved_int, l_found=l_foundLocal)
 
-   END FUNCTION find_symmetry_rotated_bzcoeffs_gfinp
+      if (.not.l_foundLocal) then
+         if(present(l_found)) then
+            l_found = l_foundLocal
+         else
+            write(message,"(a,i0,a,i0)") "Element: ", i_gf, " iop: ", iop
+            call juDFT_error("Could not find symmetry rotated Greens function element"// new_line("a") // &
+                             trim(adjustl(message)), &
+                             hint="This is a bug in FLEUR, please report",&
+                             calledby="find_symmetry_rotated_greensf")
+         endif
+      endif
 
+   END FUNCTION find_symmetry_rotated_greensf_gfinp
+   
    SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_kresolved,l_fixedCutoffset,fixedCutoff,&
                                           refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList,atomicNumberSelection)
 
