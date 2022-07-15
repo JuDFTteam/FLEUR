@@ -747,7 +747,7 @@ CONTAINS
                   IF (nApproach.GT.nApproachEnd) THEN
                      WRITE (oUnit, FMT=*) 'vec_for_lo did not find enough linearly independent'
                      WRITE (oUnit, FMT=*) 'clo coefficient-vectors. the linear independence'
-                     WRITE (oUnit, FMT=*) 'quality, linindq, is set: ', linindq
+                     WRITE (oUnit, FMT=*) 'quality, linindq, is set: ', linindqEnd
                      WRITE (oUnit, FMT=*) 'this value might be to large.'
                      WRITE (*, *) 'Atom: ', na, 'type: ', ntype, 'nv: ', lapw%nv, 'lo: ', lo, 'l: ', atoms%llo(lo, ntype)
                      CALL juDFT_error("not enough lin. indep. clo-vectors", calledby="vec_for_lo")
