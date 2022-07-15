@@ -742,7 +742,7 @@ CONTAINS
 
       REAL, OPTIONAL, INTENT(INOUT) :: dprod2(2)
 
-      REAL :: dprod1_tmp, dprod2_tmp
+      REAL :: dprod1_tmp(2), dprod2_tmp(2)
       INTEGER:: js, ierr
 
       dprod1 = 0.0
@@ -755,11 +755,12 @@ CONTAINS
             dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/2+1:pw_stop(js)), &
                                                 vec2%vec_pw(pw_stop(js)/2+1:pw_stop(js)))
          END IF
-         IF (mask(2) .AND. (spin == js) .AND. mt_start(js) > 0) &
+         IF (mask(2) .AND. (spin == js) .AND. mt_start(js) > 0) THEN
             dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)/2), &
                                                 vec2%vec_mt(mt_start(js):mt_stop(js)/2))
             dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:mt_stop(js)), &
                                                 vec2%vec_mt(mt_stop(js)/2+1:mt_stop(js)))
+         END IF
       END DO
 
       IF (js==3.AND.PRESENT(dprod2)) THEN
@@ -786,10 +787,10 @@ CONTAINS
       END IF
 
 #ifdef CPP_MPI
-      CALL MPI_ALLREDUCE(dprod1, dprod1_tmp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
+      CALL MPI_ALLREDUCE(dprod1, dprod1_tmp, 2, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
       dprod1 = dprod1_tmp
       IF (PRESENT(dprod2)) THEN
-         CALL MPI_ALLREDUCE(dprod2, dprod2_tmp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
+         CALL MPI_ALLREDUCE(dprod2, dprod2_tmp, 2, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
          dprod2 = dprod2_tmp
       END IF
 #endif
