@@ -582,7 +582,8 @@ MODULE m_atom_shells
       real, parameter :: distance_padding = 1.01
 
       real :: required_distance
-      integer :: zmax, required_cells, i,j,k,ipiv,info
+      integer :: zmax, required_cells, i,j,k,info
+      integer :: ipiv(3)
       real :: solutions(3,1)
       real :: equationSystem(3,3)
 
