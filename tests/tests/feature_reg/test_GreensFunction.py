@@ -590,12 +590,11 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
 @pytest.mark.magnetism
 @pytest.mark.serial
 def test_GreensFunction_IntersiteShellConstruction(execute_fleur, grep_exists):
-    """Fleur Greens Function intersite multiple shells
-    Simple test of the intersite green's function calculation in FLEUR with one step:
-    1. Generate starting density, run 1 Iteration and calculate Green's function
-       for d-orbitals for the 5 nearest neighbours. This forces the shell construction algorithm to
-       do a bit more work. Ensure that the obtained occupation matrices
-       look as expected
+    """Fleur Greens Function intersite shell construction
+    Simple test of the intersite green's function initialization
+    1. Generate the needed Green's function to calculate the J_ij for 60 shells at a different
+       distance. Only run till after initialization (-check flag) and check that
+       the Green's function table in the out file looks as expected
     """
     test_file_folder = './inputfiles/GreensFunction_IntersiteShellConstruction/'
 
