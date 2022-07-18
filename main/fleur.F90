@@ -168,6 +168,7 @@ CONTAINS
       IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                               fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                               results%ef, results%last_distance, l_qfix, inDen)
+      call mpi_bc(results%last_distance, 0, fmpi%mpi_comm)
 
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
          !CALL initRelax(fi%noco, nococonv, fi%atoms, fi%input, fi%vacuum, sphhar, stars, fi%sym,   fi%cell, inDen)
