@@ -355,9 +355,11 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
       IF(greensfImagPart%l_calc) THEN
+         call timestart("Green's function: Imag Part collect")
          do ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
             CALL greensfImagPart%collect(ispin,fmpi%mpi_comm)
          enddo
+         call timestop("Green's function: Imag Part collect")
       ENDIF
    ENDIF
 
