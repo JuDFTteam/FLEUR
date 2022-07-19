@@ -21,13 +21,19 @@ CONTAINS
     REAL,INTENT(in):: displace(:,:)
 
     INTEGER :: no_steps,n,ntype,step
+
+    CHARACTER(len=100):: path,p,str,filename_add
+
+    filename_add = ""
+    IF (judft_was_argument("-add_name")) filename_add = TRIM(judft_string_for_argument("-add_name"))//"_"
+    
     No_steps=SIZE(positions,3)
     ntype=SIZE(positions,2)
     IF (ntype.NE.SIZE(forces,2).OR.ntype.NE.SIZE(displace,2).OR.&
          no_steps.NE.SIZE(forces,3).OR.no_steps.NE.SIZE(energies))THEN
        CALL judft_error("BUG in relax_io")
     ENDIF
-    OPEN(765,file="relax.xml",status="replace")
+    OPEN(765,file=TRIM(filename_add)//"relax.xml",status="replace")
     WRITE(765,*) "<!-- Attention, absolute coordinates used here -->"
     WRITE(765,*) "<relaxation>"
     !write current set of displacements
@@ -63,10 +69,12 @@ CONTAINS
     REAL,ALLOCATABLE::rtmp(:,:,:)
     INTEGER:: no_steps
     INTEGER:: ntype,step,n
-    CHARACTER(len=100):: path,p,str
+    CHARACTER(len=100):: path,p,str,filename_add
 
     TYPE(t_xml)::xml
-    call xml%init()
+    filename_add = ""
+    IF (judft_was_argument("-add_name")) filename_add = TRIM(judft_string_for_argument("-add_name"))//"_"
+    CALL xml%init(filename_add)
     no_steps=xml%GetNumberOfNodes('/fleurInput/relaxation/relaxation-history/step')
     ntype=SIZE(positions,2)
     IF (no_steps==0) THEN
@@ -136,7 +144,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_vacuum),INTENT(IN)  :: vacuum
     TYPE(t_cell),INTENT(IN)    :: cell
-     
+
     TYPE(t_sym),INTENT(INOUT)  :: sym
     TYPE(t_noco),INTENT(IN)    :: noco
     type(t_gfinp), intent(in)  :: gfinp

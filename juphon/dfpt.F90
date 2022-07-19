@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_dfpt
-   USE m_juDFT_time
+   USE m_juDFT
    USE m_constants
    USE m_types
    USE m_dfpt_check
@@ -20,6 +20,7 @@ MODULE m_dfpt
    USE m_vgen_coulomb
    USE m_dfpt_vgen
    USE m_convol
+   USE m_fleur_init
 
    IMPLICIT NONE
 
@@ -53,6 +54,21 @@ CONTAINS
       TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
       TYPE(t_tlmplm)                :: tdHS0
       TYPE(t_results)               :: results1
+
+      ! Desymmetrized type variables:
+      TYPE(t_mpi)        :: fmpi_nosym
+      TYPE(t_fleurinput) :: fi_nosym
+      TYPE(t_sphhar)     :: sphhar_nosym
+      TYPE(t_stars)      :: stars_nosym
+      TYPE(t_nococonv)   :: nococonv_nosym
+      TYPE(t_enpara)     :: enpara_nosym
+      TYPE(t_results)    :: results_nosym
+      TYPE(t_wann)       :: wann_nosym
+      TYPE(t_hybdat)     :: hybdat_nosym
+      TYPE(t_mpdata)     :: mpdata_nosym
+
+      CLASS(t_xcpot),     ALLOCATABLE :: xcpot_nosym
+      CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_nosym
 
         integer                       :: logUnit = 100
         integer                       :: ngpqdp
@@ -126,6 +142,9 @@ CONTAINS
 
         INTEGER, ALLOCATABLE :: q_list(:)
 
+        CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
+                        enpara_nosym, xcpot_nosym, results_nosym, wann_nosym, hybdat_nosym, mpdata_nosym, &
+                        TRIM(judft_string_for_argument("-add_name"))//"_")
 #ifndef CPP_FFTW
         call juDFT_error('juPhon is only usable with fftw support.', calledby='dfpt')
 #endif

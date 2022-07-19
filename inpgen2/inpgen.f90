@@ -37,7 +37,7 @@ PROGRAM inpgen
   USE m_types_gfinp
   USE m_types_hub1inp
   USE m_types_enpara
-   
+
   USE m_types_sliceplot
   USE m_types_stars
   use m_read_old_inp
@@ -68,7 +68,7 @@ PROGRAM inpgen
       TYPE(t_enpara)   :: enpara
       TYPE(t_forcetheo):: forcetheo
       TYPE(t_kpts), ALLOCATABLE :: kpts(:)
-       
+
       TYPE(t_sliceplot):: sliceplot
       TYPE(t_stars)    :: stars
       TYPE(t_gfinp)    :: gfinp
@@ -79,7 +79,7 @@ PROGRAM inpgen
 
       INTEGER            :: idum, kptsUnit, inpOldUnit, ios, inpgenIUnit
       INTEGER            :: iKpts, numKpts, numKptsPath, numNodes, numAddKptsSets, iPoint
-      CHARACTER(len=100) :: filename
+      CHARACTER(len=100) :: filename, filename_add
       CHARACTER(len=200) :: xPath
       CHARACTER(len=800) :: line
       CHARACTER(LEN=40)  :: kptsSelection(3)
@@ -122,14 +122,17 @@ PROGRAM inpgen
       CALL inpgen_help()
       l_explicit=judft_was_argument("-explicit")
 
+      filename_add = ""
+      IF (judft_was_argument("-add_name")) filename_add = TRIM(judft_string_for_argument("-add_name"))//"_"
+
       INQUIRE(file='profile.config',exist=l_exist)
       IF (.NOT.l_exist) idum=dropProfiles()
 
       OPEN(oUnit,file='out')
 
-      INQUIRE(file='inp.xml',exist=l_inpxml)
+      INQUIRE(file=TRIM(filename_add)//'inp.xml',exist=l_inpxml)
       IF (l_inpxml.AND..NOT.(judft_was_argument("-inp.xml").or.judft_was_argument("-overwrite")))&
-           CALL judft_error("inp.xml exists and can not be overwritten")
+           CALL judft_error(TRIM(filename_add)//"inp.xml exists and can not be overwritten")
 
       numKpts = 1
       numKptsPath = 0
@@ -138,7 +141,7 @@ PROGRAM inpgen
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
          l_fullinput = .TRUE.
-         CALL xml%init(l_fullinput)
+         CALL xml%init(filename_add,l_fullinput)
          numKpts = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList')
          DO iKpts = 1, numKpts
             xPath = ''
@@ -211,7 +214,7 @@ PROGRAM inpgen
          !not yet
          l_fullinput=.true. !will be set to false if old inp.xml is read
          l_oldinpXML=.true.
-         call Fleurinput_read_xml(0,cell,sym,atoms,input,noco,vacuum,sliceplot=Sliceplot,banddos=Banddos,&
+         call Fleurinput_read_xml(0,filename_add,cell,sym,atoms,input,noco,vacuum,sliceplot=Sliceplot,banddos=Banddos,&
                                   hybinp=hybinp, xcpot=Xcpot,kptsSelection=kptsSelection,&
                                   kptsArray=kpts,enparaXML=enparaXML,old_version=l_oldinpXML)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
@@ -316,15 +319,15 @@ PROGRAM inpgen
       IF (.NOT.l_inpxml.or.judft_was_argument("-overwrite").or.l_oldinpXML) THEN
          !the inp.xml file
          !CALL dump_FleurInputSchema()
-         filename="inp.xml"
+         filename=TRIM(filename_add)//"inp.xml"
          if (judft_was_argument("-o")) filename=juDFT_string_for_argument("-o")
          INQUIRE(file=filename,exist=l_exist)
          IF(l_exist) CALL system('mv '//trim(filename)//' '//trim(filename)//'_old')
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos, juPhon,&
               cell,sym,xcpot,noco ,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
-              hub1inp,l_explicit,l_include,filename)
-         if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
+              hub1inp,l_explicit,l_include,filename,filename_add)
+         if (.not.l_include(2)) CALL sym%print_XML(99,TRIM(filename_add)//"sym.xml")
       ENDIF
 
       inpOldUnit = 39
@@ -332,9 +335,9 @@ PROGRAM inpgen
          kptsUnit = 38
          INQUIRE(file='kpts.xml',exist=l_exist)
          IF((.NOT.l_exist).AND.judft_was_argument("-inp.xml")) THEN
-            CALL system('mv inp.xml inp_old.xml')
-            OPEN (inpOldUnit, file="inp_old.xml", action="read")
-            OPEN (kptsUnit, file="inp.xml", action="write")
+            CALL system('mv '//TRIM(filename_add)//'inp.xml '//TRIM(filename_add)//'inp_old.xml')
+            OPEN (inpOldUnit, file=TRIM(filename_add)//"inp_old.xml", action="read")
+            OPEN (kptsUnit, file=TRIM(filename_add)//"inp.xml", action="write")
             ios = 0
             DO WHILE(ios==0)
                READ(inpOldUnit,'(a)',iostat=ios) line
@@ -342,7 +345,7 @@ PROGRAM inpgen
                WRITE(kptsUnit,'(a)') TRIM(line)
             END DO
          ELSE
-            OPEN (kptsUnit, file="kpts.xml", action="write")
+            OPEN (kptsUnit, file=TRIM(filename_add)//"kpts.xml", action="write")
          END IF
 
          WRITE (kptsUnit, '(a)') "         <kPointLists>"
@@ -371,7 +374,7 @@ PROGRAM inpgen
       IF(judft_was_argument("-f").AND..NOT.juDFT_was_argument("-noInpgenComment")) THEN
          filename = juDFT_string_for_argument("-f")
          OPEN (inpgenIUnit,file=TRIM(filename),action="read")
-         OPEN (inpOldUnit, file="inp.xml", action="write", status='old', access='append')
+         OPEN (inpOldUnit, file=TRIM(filename_add)//"inp.xml", action="write", status='old', access='append')
          WRITE(inpOldUnit,'(a)') ''
          WRITE(inpOldUnit,'(a)') '<!-- Initial (original) inpgen input (only for documentation purposes):'
          ios = 0
