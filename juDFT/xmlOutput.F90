@@ -73,6 +73,7 @@ MODULE m_judft_xmlOutput
       maintag=tag
 
       maxNumElements = 10
+      IF (ALLOCATED(elementList)) DEALLOCATE(elementList)
       ALLOCATE(elementList(maxNumElements))
       elementList = ''
       currentElementIndex = 0
