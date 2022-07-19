@@ -142,6 +142,9 @@ CONTAINS
 
         INTEGER, ALLOCATABLE :: q_list(:)
 
+        fmpi_nosym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
+        fmpi_nosym%mpi_comm = fmpi%mpi_comm
+        
         CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
                         enpara_nosym, xcpot_nosym, results_nosym, wann_nosym, hybdat_nosym, mpdata_nosym, &
                         TRIM(judft_string_for_argument("-add_name"))//"_")
