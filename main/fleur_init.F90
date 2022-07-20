@@ -97,7 +97,9 @@ CONTAINS
       CALL hdf_init()
 #endif
       IF (fmpi%irank .EQ. 0) THEN
-         INQUIRE(file="out.xml", exist=l_exist)
+         filename_add_loc = ""
+         IF (PRESENT(filename_add)) filename_add_loc = filename_add
+         INQUIRE(file=TRIM(filename_add_loc)//"out.xml", exist=l_exist)
          IF (l_exist) THEN
             tempFilename = "outHistError.xml"
             DO i = 1, 999
@@ -113,7 +115,7 @@ CONTAINS
                CALL juDFT_warn("No free out-???.xml file places for storing old out.xml files!")
             END IF
          END IF
-         CALL startFleur_XMLOutput()
+         CALL startFleur_XMLOutput(filename_add_loc)
          outxmlFileID = getXMLOutputUnitNumber()
          IF (judft_was_argument("-info")) THEN
             CLOSE (oUnit)
@@ -142,8 +144,6 @@ CONTAINS
       ALLOCATE (t_xcpot_inbuild::xcpot)
       !Only PE==0 reads the fi%input and does basic postprocessing
       IF (fmpi%irank .EQ. 0) THEN
-         filename_add_loc = ""
-         IF (PRESENT(filename_add)) filename_add_loc = filename_add
          CALL fleurinput_read_xml(outxmlFileID, filename_add_loc, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
                                   sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &

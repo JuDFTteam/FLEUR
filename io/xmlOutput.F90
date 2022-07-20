@@ -20,7 +20,7 @@ MODULE m_xmlOutput
  
    CONTAINS
 
-   SUBROUTINE startfleur_XMLOutput()
+   SUBROUTINE startfleur_XMLOutput(filename_add)
      USE m_judft_xmloutput
       USE m_juDFT_args
       USE m_juDFT_usage
@@ -34,6 +34,7 @@ MODULE m_xmlOutput
       
       IMPLICIT NONE
 
+      CHARACTER(len=100), INTENT(IN) :: filename_add
 
       INTEGER           :: err, isize
       INTEGER           :: numFlags
@@ -52,7 +53,7 @@ MODULE m_xmlOutput
       CHARACTER(LEN=1000) :: compile_flagsTemp,link_flagsTemp,line
       CHARACTER(LEN=20) :: attributes(7)
       
-      CALL startxmloutput("out.xml","fleurOutput")
+      CALL startxmloutput(TRIM(filename_add)//"out.xml","fleurOutput")
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
       CALL get_compile_desc(gitdesc,githash,gitbranch,compile_date,compile_user,compile_host,compile_flags,link_flags)
       gitdescTemp = gitdesc
