@@ -31,6 +31,7 @@ oxides_validation_econfig.h
 profileConfig.h
 
 inpgen_help.f90
+inpgen_version.f90
 inpgen.f90
 bravais_symm.f90
 make_crystal.f90
@@ -68,6 +69,7 @@ old_inp/prp_xcfft_box.f
 
 ${CMAKE_BINARY_DIR}/include/buildinfo.h
 
+${FLEUR_SRC}/main/fleur_dropxmlschema.f90
 ${FLEUR_SRC}/init/make_sym.f90
 ${FLEUR_SRC}/init/angles.f90
 ${FLEUR_SRC}/init/compile_descr.F90
