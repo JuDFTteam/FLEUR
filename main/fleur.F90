@@ -484,7 +484,7 @@ CONTAINS
                ! Sideline the actual scf loop for a phonon calculation.
                ! It is assumed that the density was converged beforehand.
                 CALL timestart("juPhon DFPT")
-                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, .TRUE., xcpot, hybdat, mpdata, forcetheo)
+                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, inDen, vTot, vxc, exc, eig_id, nvfull, .FALSE., xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
             END IF
 
