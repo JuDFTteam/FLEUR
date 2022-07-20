@@ -17,7 +17,7 @@ MODULE m_dfpt_init
 
 CONTAINS
     SUBROUTINE dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, &
-                       & kpts, fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, &
+                       & kpts, fmpi, results, enpara, rho, vTot, eig_id, nvfull, usdus, rho0, &
                        & grRho0, vTot0, grVTot0, ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                        & uuilonout, duilonout, ulouilopnout, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                        & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
@@ -41,7 +41,7 @@ CONTAINS
         TYPE(t_enpara),   INTENT(IN)  :: enpara
         TYPE(t_potden),   INTENT(IN)  :: rho, vTot, rhoclean
         INTEGER,          INTENT(IN)  :: eig_id
-        INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
+        INTEGER,          INTENT(IN)  :: nvfull(:, :)
 
         TYPE(t_usdus),    INTENT(OUT) :: usdus
         TYPE(t_jpPotden), INTENT(OUT) :: rho0, grRho0, vTot0, grVTot0

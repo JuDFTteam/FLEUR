@@ -26,27 +26,28 @@ MODULE m_dfpt
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, oldmode, xcpot, hybdat, mpdata, forcetheo)
+                 & rho, vTot, vxc, exc, eig_id, nvfull, oldmode, xcpot, hybdat, mpdata, forcetheo)
 
-      TYPE(t_fleurinput), INTENT(IN)  :: fi
-      TYPE(t_sphhar),   INTENT(IN)  :: sphhar
-      TYPE(t_stars),    INTENT(IN)  :: stars
-      TYPE(t_nococonv), INTENT(IN)  :: nococonv
-      TYPE(t_kpts),     INTENT(IN)  :: qpts
-      TYPE(t_mpi),      INTENT(IN)  :: fmpi
-      TYPE(t_results),  INTENT(INOUT)  :: results
-      TYPE(t_enpara),   INTENT(INOUT)  :: enpara
-      TYPE(t_potden),   INTENT(INOUT)  :: rho
-      TYPE(t_potden),   INTENT(IN)  :: vTot, vCoul, vxc, exc
-      INTEGER,          INTENT(IN)  :: eig_id
-      INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
+      TYPE(t_mpi),        INTENT(IN)     :: fmpi
+      TYPE(t_fleurinput), INTENT(IN)     :: fi
+      TYPE(t_sphhar),     INTENT(IN)     :: sphhar
+      TYPE(t_stars),      INTENT(IN)     :: stars
+      TYPE(t_nococonv),   INTENT(IN)     :: nococonv
+      TYPE(t_enpara),     INTENT(INOUT)  :: enpara
+      TYPE(t_results),    INTENT(INOUT)  :: results
+      TYPE(t_hybdat),     INTENT(INOUT)  :: hybdat
+      TYPE(t_mpdata),     INTENT(INOUT)  :: mpdata
 
-      ! New input:
-      LOGICAL, INTENT(IN)        :: oldmode
-      CLASS(t_xcpot), INTENT(IN) :: xcpot
-      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
-      TYPE(t_mpdata),     INTENT(INOUT) :: mpdata
-      CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
+      CLASS(t_xcpot),     INTENT(IN)     :: xcpot
+      CLASS(t_forcetheo), INTENT(INOUT)  :: forcetheo
+
+      TYPE(t_kpts),       INTENT(IN)  :: qpts !Possibly replace this by fi_nosym%kpts [read correctly!]
+
+      TYPE(t_potden),   INTENT(INOUT) :: rho
+      TYPE(t_potden),   INTENT(IN)    :: vTot, vxc, exc
+      INTEGER,          INTENT(IN)    :: eig_id
+      INTEGER,          INTENT(IN)    :: nvfull(:, :)
+      LOGICAL,          INTENT(IN)    :: oldmode
 
       TYPE(t_usdus)                 :: usdus
       TYPE(t_potden)                :: vTotclean, rhoclean, grRho, grvextdummy, imagrhodummy
@@ -276,7 +277,7 @@ CONTAINS
         ! refer to each atom respectively. So this will explode for iatom > 1. This is easily fixed.
         CALL timestart("juPhon DFPT initialization")
         CALL dfpt_init(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, fi%kpts, &
-                     & fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, grRho0, vTot0, grVTot0, &
+                     & fmpi, results, enpara, rho, vTot, eig_id, nvfull, usdus, rho0, grRho0, vTot0, grVTot0, &
                      & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                      & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                      & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
