@@ -146,6 +146,7 @@ CONTAINS
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop')
+       WRITE (*, *) "Finished last Forcetheorem Loop"
        attributes = ''
        WRITE(attributes(1),'(i5)') SIZE(this%evsum)
        WRITE(attributes(2),'(a)') 'Htr'
