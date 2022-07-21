@@ -31,12 +31,12 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - pip3 install pytest masci-tools
     - pip3 install aiida-core
     # needed for workflow tests
-    - pip3 install git+https://github.com/aiidateam/aiida-testing.git@export_cache
+    - pip3 install git+https://github.com/JuDFTteam/aiida-testing.git@export_cache_config
     #- pip3 install git+https://github.com/JuDFTteam/aiida-fleur.git@develop.[testing]
     - git clone https://github.com/JuDFTteam/aiida-fleur.git
     - cd aiida-fleur
     # Remove cache dirs
-    - git checkout develop
+    - git checkout maintain/more-regression-tests
     - pip3 install .[testing]
     - rm -rf tests/workflows/calculations tests/workflows/caches
     - rm -rf tests/calculation/data_dir
@@ -78,12 +78,12 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - cat .aiida-testing-config.yml
     - ls -la local_exe/
     #Copy testfile for SCF workchain from fleur tests
-    - cp files/workflow_test_files/inp_scf.xml files/inpxml/Si/inp.xml
+    #- cp files/workflow_test_files/inp_scf.xml files/inpxml/Si/inp.xml
     # run tests
     - pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests --mock-regenerate-test-data
   allow_failure: true
   artifacts:
-    when: on_failure
+    when: always
     paths:
       - aiida-fleur/tests/
   except:
