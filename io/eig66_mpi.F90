@@ -74,26 +74,26 @@ CONTAINS
       ELSE
          CALL priv_create_memory(slot_size, local_slots, d%zc_handle, cmplx_data_ptr=d%zc_data)
       ENDIF
-      
-      if (l_olap) then
-         !The eigenvectors
+
+      !The eigenvectors
+      IF (l_olap) THEN   
          local_slots = COUNT(d%pe_olap == d%irank)
          slot_size = nmat
          IF (l_real .AND. .NOT. l_soc) THEN
             CALL priv_create_memory(slot_size, local_slots, d%olap_r_handle, real_data_ptr=d%olap_r_data)
          ELSE
             CALL priv_create_memory(slot_size, local_slots, d%olap_c_handle, cmplx_data_ptr=d%olap_c_data)
-          ENDIF
+         ENDIF
       ENDIF
 
       IF (PRESENT(filename) .AND. .NOT. create) CALL judft_error("Storing of data not implemented for MPI case", calledby="eig66_mpi.F")
       CALL MPI_BARRIER(MPI_COMM, e)
       CALL timestop("create data spaces in ei66_mpi")
 
-      if (d%irank==0) then
+      IF (d%irank==0) THEN
         arg=TRIM(juDFT_string_for_argument("-eig"))
         IF (index(arg,"init")>0) CALL priv_readfromfileDA()
-      endif
+      ENDIF
 
    CONTAINS
       SUBROUTINE priv_create_memory(slot_size, local_slots, handle, int_data_ptr, real_data_ptr, cmplx_data_ptr)
@@ -187,7 +187,7 @@ CONTAINS
          REAL    :: eig(d%size_eig)
          TYPE(t_mat)::zmat
 
-         call zmat%alloc(d%l_real,d%nmat,d%size_eig)
+         CALL zmat%alloc(d%l_real,d%nmat,d%size_eig)
 
          tmp_id = eig66_data_newid(DA_mode)
          CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, .false., filename)
@@ -215,10 +215,10 @@ CONTAINS
          IF (delete) WRITE (*, *) "No deallocation of memory implemented in eig66_mpi"
       ENDIF
 
-      if (d%irank==0) then
+      IF (d%irank==0) THEN
         arg=TRIM(juDFT_string_for_argument("-eig"))
         IF (index(arg,"save")>0) CALL priv_writetofileDA()
-      endif
+      ENDIF
       CONTAINS
       SUBROUTINE priv_writetofileDA()
          USE m_eig66_DA, ONLY: open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig
@@ -228,7 +228,7 @@ CONTAINS
          REAL    :: eig(d%size_eig)
          TYPE(t_mat)::zmat
 
-         call zmat%alloc(d%l_real,d%nmat,d%size_eig)
+         CALL zmat%alloc(d%l_real,d%nmat,d%size_eig)
 
          tmp_id = eig66_data_newid(DA_mode)
          CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, .false.)
@@ -316,8 +316,8 @@ CONTAINS
          ENDDO
       ENDIF
 
-      if(allocated(tmp_real))  deallocate(tmp_real)
-      if(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
+      IF(allocated(tmp_real))  deallocate(tmp_real)
+      IF(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
 
       IF (PRESENT(smat)) THEN
          tmp_size = smat%matsize1
@@ -445,8 +445,8 @@ CONTAINS
          ENDDO
       ENDIF
 
-      if(allocated(tmp_real))  deallocate(tmp_real)
-      if(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
+      IF(allocated(tmp_real))  deallocate(tmp_real)
+      IF(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
       !write the overlap
       !all procceses participate
       IF (PRESENT(smat)) THEN
