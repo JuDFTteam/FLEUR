@@ -94,7 +94,7 @@ CONTAINS
        if (.not.noco%l_soc) call judft_error("Force theorem mode for MAE requires l_soc=T")
        !noco%l_soc=.true.
        IF (fmpi%irank .EQ. 0) THEN
-          WRITE (*, *) "Finished a Forcetheorem Loop"
+          WRITE (*, *) "Started a Forcetheorem Loop"
           IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop')
           WRITE(attributes(1),'(a)') 'MAE'
           WRITE(attributes(2),'(i5)') this%directions_done
