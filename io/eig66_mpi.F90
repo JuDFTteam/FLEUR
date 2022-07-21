@@ -74,14 +74,16 @@ CONTAINS
       ELSE
          CALL priv_create_memory(slot_size, local_slots, d%zc_handle, cmplx_data_ptr=d%zc_data)
       ENDIF
-
-      !The eigenvectors
-      local_slots = COUNT(d%pe_olap == d%irank)
-      slot_size = nmat
-      IF (l_real .AND. .NOT. l_soc) THEN
-         CALL priv_create_memory(slot_size, local_slots, d%olap_r_handle, real_data_ptr=d%olap_r_data)
-      ELSE
-         CALL priv_create_memory(slot_size, local_slots, d%olap_c_handle, cmplx_data_ptr=d%olap_c_data)
+      
+      if (l_olap) then
+         !The eigenvectors
+         local_slots = COUNT(d%pe_olap == d%irank)
+         slot_size = nmat
+         IF (l_real .AND. .NOT. l_soc) THEN
+            CALL priv_create_memory(slot_size, local_slots, d%olap_r_handle, real_data_ptr=d%olap_r_data)
+         ELSE
+            CALL priv_create_memory(slot_size, local_slots, d%olap_c_handle, cmplx_data_ptr=d%olap_c_data)
+          ENDIF
       ENDIF
 
       IF (PRESENT(filename) .AND. .NOT. create) CALL judft_error("Storing of data not implemented for MPI case", calledby="eig66_mpi.F")
