@@ -21,6 +21,7 @@ MODULE m_dfpt
    USE m_dfpt_vgen
    USE m_convol
    USE m_fleur_init
+   USE m_desymmetrizer
 
    IMPLICIT NONE
 
@@ -50,7 +51,7 @@ CONTAINS
       LOGICAL,          INTENT(IN)    :: oldmode
 
       TYPE(t_usdus)                 :: usdus
-      TYPE(t_potden)                :: vTotclean, rhoclean, grRho, grvextdummy, imagrhodummy
+      TYPE(t_potden)                :: vTotclean, rhoclean, grRho, grvextdummy, imagrhodummy, rho_nosym
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVext3(3)
       TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
       TYPE(t_tlmplm)                :: tdHS0
@@ -151,6 +152,11 @@ CONTAINS
         CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
                         enpara_nosym, xcpot_nosym, results_nosym, wann_nosym, hybdat_nosym, mpdata_nosym, &
                         inp_pref)
+
+        CALL rho_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_DEN,.FALSE.)
+
+        CALL desymmetrize_pw(fi%sym, stars, stars_nosym, rho%pw, rho_nosym%pw)
+        CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, rho%mt, rho_nosym%mt)
 #ifndef CPP_FFTW
         call juDFT_error('juPhon is only usable with fftw support.', calledby='dfpt')
 #endif

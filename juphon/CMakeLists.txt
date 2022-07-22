@@ -40,4 +40,5 @@ juphon/dfpt_rhonmt.f90
 juphon/dfpt_cdnval.F90
 juphon/dfpt_cdngen.F90
 juphon/dfpt_fermie.F90
+juphon/desymmetrizer.f90
 )
