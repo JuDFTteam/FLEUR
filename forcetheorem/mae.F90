@@ -85,6 +85,7 @@ CONTAINS
           RETURN
        ENDIF
        !OK, now we start the MAE-loop
+       this%l_in_forcetheo_loop = .true.
        this%directions_done=this%directions_done+1
        mae_next_job=(this%directions_done<=SIZE(this%phi)) !still angles to do
        IF (.NOT.mae_next_job) RETURN

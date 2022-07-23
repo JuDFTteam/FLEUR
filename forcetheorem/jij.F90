@@ -128,7 +128,7 @@ CONTAINS
     ENDIF
 
     !OK, now we start the JIJ-loop
-
+    this%l_in_forcetheo_loop = .true.
     this%loopindex=this%loopindex+1
     jij_next_job=(this%loopindex<=this%no_loops) !still loops to do...
     IF (.NOT.jij_next_job) RETURN
