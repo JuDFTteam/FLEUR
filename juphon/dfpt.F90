@@ -21,7 +21,10 @@ MODULE m_dfpt
    USE m_dfpt_vgen
    USE m_convol
    USE m_fleur_init
+   USE m_npy
    USE m_desymmetrizer
+   USE m_outcdn
+   USE m_plot
 
    IMPLICIT NONE
 
@@ -141,22 +144,121 @@ CONTAINS
         INTEGER :: iStar, xInd, yInd, zInd
 
         CHARACTER(len=20)  :: dfpt_tag
-        CHARACTER(len=100) :: inp_pref 
+        CHARACTER(len=100) :: inp_pref
 
         INTEGER, ALLOCATABLE :: q_list(:)
+
+        ! Desym-tests:
+        INTEGER :: ix, iy, iz, grid(3), iv_old, iflag_old, iv_new, iflag_new
+        INTEGER :: iType_old, iAtom_old, iType_new, iAtom_new, inversionOp
+        REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new, atom_shift(3)
+
+        INTEGER, PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
+        REAL,    PARAMETER :: eps7 = 1.0e-7
+
+        IF (fi%sym%nop>1) THEN
+        WRITE(*,*) "Gonna desym now!"
+        grid = 31
 
         inp_pref = ADJUSTL("desym_")
         fmpi_nosym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
         fmpi_nosym%mpi_comm = fmpi%mpi_comm
-        
+
         CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
                         enpara_nosym, xcpot_nosym, results_nosym, wann_nosym, hybdat_nosym, mpdata_nosym, &
                         inp_pref)
 
         CALL rho_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_DEN,.FALSE.)
 
+        ! TODO: Correctly account for such a shift in the desymmetrization.
+!        inversionOp = -1
+!        symOpLoop: DO iSym = 1, sym%nop
+!           IF (ALL(sym%mrot(:,:,iSym)==invs_matrix)) THEN
+!              inversionOp = iSym
+!              EXIT symOpLoop
+!           END IF
+!        END DO symOpLoop
+
+!        atom_shift = 0.0
+!        IF (inversionOp.GT.0) THEN
+!           IF(ANY(ABS(sym%tau(:,inversionOp)).GT.eps7).and..not.(film.and.ABS(sym%tau(3,inversionOp))>eps7)) THEN
+!              atom_shift = 0.5*sym%tau(:,inversionOp)
+!           END IF
+!        END IF
+
         CALL desymmetrize_pw(fi%sym, stars, stars_nosym, rho%pw, rho_nosym%pw)
         CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, rho%mt, rho_nosym%mt)
+
+        CALL desymmetrize_types()
+
+        IF (.FALSE.) THEN
+        DO iz = 0, grid(3)-1
+           DO iy = 0, grid(2)-1
+             DO ix = 0, grid(1)-1
+                 old_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
+                             fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
+                             fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)
+
+                 new_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
+                             fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
+                             fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)! - &
+                             !atom_shift
+
+                 ! Set region specific parameters for point
+                 ! Get MT sphere for point if point is in MT sphere
+                 CALL getMTSphere(fi%input,fi%cell,fi%atoms,old_point,iType_old,iAtom_old,pt_old)
+                 CALL getMTSphere(fi_nosym%input,fi_nosym%cell,fi_nosym%atoms,new_point,iType_new,iAtom_new,pt_new)
+                 IF (iAtom_old.NE.0) THEN
+                    iv_old = 0
+                    iflag_old = 1
+                 ELSE
+                    iv_old = 0
+                    iflag_old = 2
+                    pt_old(:) = old_point(:)
+                 END IF
+                 IF (iAtom_new.NE.0) THEN
+                    iv_new = 0
+                    iflag_new = 1
+                 ELSE
+                    iv_new = 0
+                    iflag_new = 2
+                    pt_new(:) = new_point(:)
+                 END IF
+                 WRITE(*,*) ix, iy, iz
+                 WRITE(9002,*) "----------------"
+                 WRITE(9002,*) ix, iy, iz
+                 WRITE(9002,*) iv_old, iflag_old, pt_old
+                 WRITE(9003,*) "----------------"
+                 WRITE(9003,*) ix, iy, iz
+                 WRITE(9003,*) iv_new, iflag_new, pt_new
+
+                 ! Old point:
+                 CALL outcdn(pt_old,iType_old,iAtom_old,iv_old,iflag_old,1,.FALSE.,stars,&
+                                fi%vacuum,sphhar,fi%atoms,fi%sym,fi%cell ,&
+                                rho,xdnout_old)!(ix,iy,iz))
+                 ! New point:
+                 CALL outcdn(pt_new,iType_new,iAtom_new,iv_old,iflag_old,1,.FALSE.,stars_nosym,&
+                                fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                                rho_nosym,xdnout_new)!(ix,iy,iz))
+                 WRITE(9002,*) xdnout_old
+                 WRITE(9003,*) xdnout_new
+             END DO !x-loop
+           END DO !y-loop
+        END DO !z-loop
+        CALL save_npy("sym_on_rhopw.npy",rho%pw)
+        CALL save_npy("sym_off_rhopw.npy",rho_nosym%pw)
+        CALL save_npy("sym_on_rhomt.npy",rho%mt)
+        CALL save_npy("sym_off_rhomt.npy",rho_nosym%mt)
+        !STOP
+        END IF
+        END IF
+
+        !CALL save_npy("rho_"//int2str(fi%sym%nop)//"_pw.npy",rho%pw)
+        !CALL save_npy("rho_"//int2str(fi%sym%nop)//"_mt.npy",rho%mt)
+        !CALL save_npy("vTot_"//int2str(fi%sym%nop)//"_pw.npy",vTot%pw)
+        !CALL save_npy("vTot_"//int2str(fi%sym%nop)//"_mt.npy",vTot%mt)
+        !STOP
+
 #ifndef CPP_FFTW
         call juDFT_error('juPhon is only usable with fftw support.', calledby='dfpt')
 #endif

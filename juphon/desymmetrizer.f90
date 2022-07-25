@@ -93,4 +93,8 @@ CONTAINS
       END DO ! iAtom_new
 
    END SUBROUTINE
+
+   SUBROUTINE desymmetrize_types()
+
+   END SUBROUTINE
 END MODULE
