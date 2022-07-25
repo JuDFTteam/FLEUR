@@ -480,14 +480,6 @@ CONTAINS
             CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
 
-            IF (fi%juPhon%l_dfpt) THEN
-               ! Sideline the actual scf loop for a phonon calculation.
-               ! It is assumed that the density was converged beforehand.
-                CALL timestart("juPhon DFPT")
-                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, inDen, vTot, vxc, exc, eig_id, nvfull, .FALSE., xcpot, hybdat, mpdata, forcetheo)
-                CALL timestop("juPhon DFPT")
-            END IF
-
             IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi,   enpara, vToT, results)) THEN
                CYCLE forcetheoloop
             END IF
@@ -567,6 +559,13 @@ CONTAINS
 #endif
             CALL timestop("generation of new charge density (total)")
 
+            IF (fi%juPhon%l_dfpt) THEN
+               ! Sideline the actual scf loop for a phonon calculation.
+               ! It is assumed that the density was converged beforehand.
+                CALL timestart("juPhon DFPT")
+                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, exc, eig_id, nvfull, .FALSE., xcpot, hybdat, mpdata, forcetheo)
+                CALL timestop("juPhon DFPT")
+            END IF
 
             !CRYSTAL FIELD OUTPUT
             IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
