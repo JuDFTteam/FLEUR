@@ -57,9 +57,11 @@ CONTAINS
 !#endif
   END SUBROUTINE mixing_history_open
 
-  SUBROUTINE mixing_history_close(mpi)
+  SUBROUTINE mixing_history_close(mpi,basename)
     USE m_types,ONLY:t_mpi
     TYPE(t_mpi),INTENT(in):: mpi
+
+    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
 
     CHARACTER(len=20):: filename
     INTEGER          :: n
@@ -67,9 +69,17 @@ CONTAINS
 
     IF (iter_stored==0) RETURN ! Nothing found to be stored
     IF (mpi%isize>1) THEN
-       WRITE(filename,'(a,i0)') "mixing_history.",mpi%irank
+       IF (.NOT.PRESENT(basename)) THEN
+          WRITE(filename,'(a,i0)') "mixing_history.",mpi%irank
+       ELSE
+          WRITE(filename,'(a,i0)') TRIM(basename)//"mixing_history.",mpi%irank
+       END IF
     ELSE
-       filename="mixing_history"
+       IF (.NOT.PRESENT(basename)) THEN
+          filename="mixing_history"
+       ELSE
+          filename=TRIM(basename)//"mixing_history"
+       END IF
     ENDIF
     OPEN(888,file=filename,form='unformatted',status='replace')
     WRITE(888) iter_stored

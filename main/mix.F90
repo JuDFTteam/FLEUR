@@ -254,7 +254,11 @@ contains
     call timestop("Density output")
     inDen%iter = inDen%iter + 1
 
-    IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi)
+    IF (.NOT.l_dfpt) THEN
+       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi)
+    ELSE
+       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi,dfpt_tag)
+    END IF
 
     CALL timestop("Postprocessing")
     CALL timestop("Charge Density Mixing")
