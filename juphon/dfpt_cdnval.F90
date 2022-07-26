@@ -15,7 +15,7 @@ CONTAINS
 
 SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
                   vacuumdummy,sphhar,sym,vTot ,cdnvalJob,den,dosdummy,vacdosdummy,&
-                  hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, iDtype, iDir, denIm)
+                  hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, iDtype, iDir, denIm, l_real)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -68,6 +68,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, dfpt_eig_id, jspin, iDtype, iDir
+   LOGICAL,               INTENT(IN)    :: l_real
 
    REAL, INTENT(IN) :: q_dfpt(3)
 
@@ -75,7 +76,6 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,iType,ikG
    INTEGER :: iErr,nbands,noccbd,nbands1
    INTEGER :: skip_t,skip_tt,nbasfcn
-   LOGICAL :: l_real
    REAL    :: gExt(3)
 
    ! Local Arrays
@@ -95,7 +95,6 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    CALL timestart("dfpt_cdnval")
 
    call timestart("init")
-   l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco).AND.atoms%n_hia==0
 
    IF (noco%l_mperp) THEN
       ! when the off-diag. part of the density matrix, i.e. m_x and
@@ -169,7 +168,11 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       DO ikG = 1, lapw%nv(jsp)
          ! TODO: Transpose bmat or not?
          gExt = MATMUL(cell%bmat,lapw%vk(:, ikG, jsp))
-         zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_c(ikG, :)
+         IF (zMat%l_real) THEN
+            zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_r(ikG, :)
+         ELSE
+            zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_c(ikG, :)
+         END IF
       END DO
 
       !IF (.NOT.(nbands==nbands1)) Problem?

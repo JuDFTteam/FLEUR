@@ -21,7 +21,7 @@ IMPLICIT NONE
 CONTAINS
    SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, nococonv, qpts, fmpi, results, enpara, hybdat, mpdata, &
                                forcetheo, rho, vTot, grRho, grVtot, grVext, iQ, iDType, iDir, dfpt_tag, eig_id, &
-                               results1, dynmatrow)
+                               l_real, results1, dynmatrow)
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       CLASS(t_xcpot),     INTENT(IN)    :: xcpot
       TYPE(t_sphhar),     INTENT(IN)    :: sphhar
@@ -33,7 +33,7 @@ CONTAINS
       TYPE(t_hybdat),     INTENT(INOUT) :: hybdat
       TYPE(t_mpdata),     INTENT(INOUT) :: mpdata
       CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
-      TYPE(t_enpara),     INTENT(INOUT)    :: enpara
+      TYPE(t_enpara),     INTENT(INOUT) :: enpara
       TYPE(t_potden),     INTENT(IN)    :: rho, vTot, grRho, grVtot, grVext
 
       REAL, INTENT(INOUT) :: dynmatrow(:)
@@ -41,6 +41,8 @@ CONTAINS
       TYPE(t_potden) :: denIn1, vTot1, denIn1Im, vTot1Im, denOut1, denOut1Im, vx, rho_loc
 
       INTEGER, INTENT(IN) :: iQ, iDtype, iDir, eig_id
+      LOGICAL, INTENT(IN) :: l_real
+      CHARACTER(len=20), INTENT(IN) :: dfpt_tag
 
 #ifdef CPP_MPI
       INTEGER :: ierr
@@ -48,9 +50,7 @@ CONTAINS
 
       INTEGER :: archiveType, dfpt_eig_id, iter, killcont(6)
       REAL    :: bqpt(3)
-      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho
-
-      CHARACTER(len=20), INTENT(IN) :: dfpt_tag
+      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone
 
       TYPE(t_stars)    :: starsq
       TYPE(t_hub1data) :: hub1data
@@ -60,6 +60,8 @@ CONTAINS
       killcont = [1,1,1,1,1,1]
       CALL rho_loc%copyPotDen(rho)
       CALL vx%copyPotDen(vTot)
+      ALLOCATE(vx%pw_w, mold=vx%pw)
+      vx%pw_w = vTot%pw_w
 
       banddosdummy = fi%banddos
 
@@ -79,6 +81,7 @@ CONTAINS
 
       IF (fmpi%irank == 0) THEN
          strho = .NOT.l_exist
+         onedone = .NOT.strho
       END IF
 
 #ifdef CPP_MPI
@@ -97,21 +100,22 @@ CONTAINS
       CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
       dfpt_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                             .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+                             .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
 
       bqpt = qpts%bk(:, iQ)
 
-#ifdef CPP_CHASE
-      CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
-#endif
+!#ifdef CPP_CHASE
+!      CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
+!#endif
 
       l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
-         IF (.NOT.strho) iter = iter + 1
+         !IF (.NOT.strho) iter = iter + 1 TODO: Eventually this will be right.
+         IF (onedone) iter = iter + 1
          l_lastIter = l_lastIter.OR.(iter.EQ.fi%input%itmax)
 
          CALL timestart("Iteration")
-         IF (fmpi%irank==0.AND..NOT.strho) THEN
+         IF (fmpi%irank==0.AND.onedone) THEN
             WRITE (oUnit, FMT=8100) iter
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
@@ -158,7 +162,7 @@ CONTAINS
             CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
                        hybdat, iter, eig_id, results, rho, vTot, vx, hub1data, &
                        bqpt=bqpt, dfpt_eig_id=dfpt_eig_id, iDir=iDir, iDtype=iDtype, &
-                       starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont)
+                       starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
          END IF
          CALL timestop("eigen")
          CALL timestop("H1 generation (total)")
@@ -181,7 +185,7 @@ CONTAINS
          CALL dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
                           fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                           enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
-                          archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir)
+                          archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real)
          CALL timestop("generation of new charge density (total)")
 
          IF (strho) THEN

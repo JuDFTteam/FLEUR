@@ -12,7 +12,7 @@ CONTAINS
 SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
                   kpts,atoms,sphhar,starsq,sym,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,resultsdummy, resultsdummy1,&
-                  archiveType, xcpot,outDen,outDenIm,q_dfpt,iDtype,iDir)
+                  archiveType, xcpot,outDen,outDenIm,q_dfpt,iDtype,iDir,l_real)
 
    use m_types_vacdos
    USE m_types
@@ -48,7 +48,8 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
    TYPE(t_potden),INTENT(INOUT)     :: outDen, outDenIm
 
    !Scalar Arguments
-   INTEGER, INTENT (IN)             :: eig_id, dfpt_eig_id, archiveType, iDtype, iDir
+   INTEGER, INTENT(IN)              :: eig_id, dfpt_eig_id, archiveType, iDtype, iDir
+   LOGICAL, INTENT(IN)              :: l_real
 
    REAL, INTENT(IN) :: q_dfpt(3)
 
@@ -90,7 +91,7 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
       CALL cdnvalJob1%init(fmpi,input,kqpts,noco,resultsdummy1,jspin)
       CALL dfpt_cdnval(eig_id, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
                        vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
-                        hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, iDtype, iDir, outDenIm)
+                        hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, iDtype, iDir, outDenIm, l_real)
    END DO
 
    ! TODO: Implement this appropriately.

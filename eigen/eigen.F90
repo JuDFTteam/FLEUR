@@ -29,9 +29,9 @@ CONTAINS
    !    processing to gain the perturbed eigenvalues and eigenvectors.
    ! e) The latter are the actual output for the routine when used for DFPT. They are saved
    !    the same way as the eigenvalues before, but for a shifted eig_id.
-   SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,&
-                    enpara,nococonv,mpdata,hybdat,&
-                    iter,eig_id,results,inden,v,vx,hub1data,killcont,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,iDir,iDtype,starsq,v1real,v1imag)
+   SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,&
+                    mpdata,hybdat,iter,eig_id,results,inden,v,vx,hub1data,&
+                    killcont,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,iDir,iDtype,starsq,v1real,v1imag,l_real)
 
       USE m_types
       USE m_constants
@@ -82,6 +82,7 @@ CONTAINS
 
       REAL,    OPTIONAL, INTENT(IN) :: bqpt(3)
       INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eig_id, iDir, iDtype
+      LOGICAL, OPTIONAL, INTENT(IN) :: l_real
 
       TYPE(t_stars),  OPTIONAL, INTENT(IN) :: starsq
       TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1real, v1imag
@@ -133,8 +134,6 @@ CONTAINS
       ALLOCATE(bkpt(3))
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
-
-
 
       !IF (fmpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
       !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
@@ -260,7 +259,8 @@ CONTAINS
                      CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
                   endif
                 ELSE
-                    CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype, killcont)
+                    CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, &
+                                    zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real)
 #if defined(CPP_MPI)
                     CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
@@ -273,7 +273,9 @@ CONTAINS
                     if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 ELSE
-                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype, killcont)
+                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, &
+                                                      tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, &
+                                                      iDir, iDtype, killcont, l_real)
 #if defined(CPP_MPI)
                     CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif

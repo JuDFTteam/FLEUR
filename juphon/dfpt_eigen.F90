@@ -15,7 +15,7 @@ MODULE m_dfpt_eigen
 
 CONTAINS
 
-   SUBROUTINE dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1, lapwq, td, tdV1, ud, zMatq, eigq, bqpt, neigq, eig_id, dfpt_eig_id, iDir, iDtype, killcont)
+   SUBROUTINE dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1, lapwq, td, tdV1, ud, zMatq, eigq, bqpt, neigq, eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real)
 
       USE m_types
       USE m_constants
@@ -26,6 +26,7 @@ CONTAINS
       USE m_xmlOutput
       USE m_types_mpimat
       USE m_invert_HepsS
+      USE m_npy
 
       IMPLICIT NONE
 
@@ -42,10 +43,10 @@ CONTAINS
       CLASS(t_mat), INTENT(IN)     :: zMatq
       REAL,         INTENT(IN)     :: eigq(:), bqpt(3)
       INTEGER,      INTENT(IN)     :: neigq, eig_id, dfpt_eig_id, iDir, iDtype, nk, jsp, killcont(6)
+      LOGICAL,      INTENT(IN)     :: l_real
 
       INTEGER n_size,n_rank
       INTEGER i,err
-      LOGICAL l_real
 
       INTEGER              :: ierr
 
@@ -65,7 +66,7 @@ CONTAINS
 
       CLASS(t_mat), ALLOCATABLE :: invHepsS(:), invE(:)
 
-      l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
+      CALL timestart("dfpt_eigen")
 
       ! Get the required eigenvectors and values at k for occupied bands:
       bkpt = fi%kpts%bk(:, nk)
@@ -86,8 +87,10 @@ CONTAINS
       ALLOCATE(eigk(noccbd))
       ALLOCATE(eigs1(noccbd))
 
+      CALL timestart("Read eigenstuff at k")
       CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
-      CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, l_real, invHepsS, invE)
+      CALL timestop("Read eigenstuff at k")
+      CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invHepsS, invE)
 
       ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
       CALL timestart("Setup of matrix perturbations")
@@ -108,28 +111,39 @@ CONTAINS
 
       !TODO: Optimize this with (SCA)LAPACK CALLS
       DO nu = 1, noccbd
-         IF (l_real) THEN
+         IF (l_real) THEN ! l_real for zMatk
             tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
-            tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
-            tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
+            IF (nk==1) CALL save_npy("new_zKet_"//int2str(nk)//".npy",zMatk%data_r)
          ELSE
             tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
-            tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
-            tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
+            IF (nk==1) CALL save_npy("new_zKet_"//int2str(nk)//".npy",zMatk%data_c)
          END IF
 
-         IF (norm2(bqpt).LT.1e-8) THEN
-            IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
-            IF (l_real) THEN
-               eigs1 = DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
-            ELSE
-               eigs1 = DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
-            END IF
+         IF (zMatq%l_real) THEN ! l_real for zMatq
+            tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
+            IF (nk==1) CALL save_npy("new_zBra_"//int2str(nk)//".npy",zMatq%data_r)
          ELSE
-            eigs1 = 0
+            tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
+            IF (nk==1) CALL save_npy("new_zBra_"//int2str(nk)//".npy",zMatq%data_c)
          END IF
+         IF (nk==1) CALL save_npy("new_hepss1band_"//int2str(nk)//"_"//int2str(nu)//".npy", tempMat1)
 
-         IF (l_real) THEN
+         tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
+         IF (nk==1) CALL save_npy("new_z1band_"//int2str(nk)//"_"//int2str(nu)//".npy",tempMat2)
+
+         ! TODO: Reactivate this!
+         !IF (norm2(bqpt).LT.1e-8) THEN
+         !   IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
+         !   IF (l_real) THEN
+         !      eigs1 = DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
+         !   ELSE
+         !      eigs1 = DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
+         !   END IF
+         !ELSE
+            eigs1 = 0
+         !END IF
+         !IF (nk==1) CALL save_npy("new_eig1_"//int2str(nk)//".npy",eigs1)
+         IF (zMatq%l_real) THEN
             zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
          ELSE
             zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
@@ -146,7 +160,7 @@ CONTAINS
 !#endif
 
       ! Output results
-      CALL timestart("EV output")
+      CALL timestart("EV1 output")
 
       IF (fmpi%n_rank == 0) THEN
 #ifdef CPP_MPI
@@ -167,7 +181,7 @@ CONTAINS
         ! RMA synchronization
         CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
-        CALL timestop("EV output")
+        CALL timestop("EV1 output")
 
         IF (ALLOCATED(zmatk)) THEN
           CALL zMatk%free()
@@ -184,6 +198,8 @@ CONTAINS
           !END DO
           !DEALLOCATE(invHepsS)
         !END IF
+
+        CALL timestop("dfpt_eigen")
 
    END SUBROUTINE dfpt_eigen
 END MODULE m_dfpt_eigen

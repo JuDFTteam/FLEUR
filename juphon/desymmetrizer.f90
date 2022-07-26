@@ -42,7 +42,7 @@ CONTAINS
       REAL, INTENT(IN)    :: rhomt(:,0:,:,:)
       REAL, INTENT(INOUT) :: rhomt_nosym(:,0:,:,:)
 
-      INTEGER :: iAtom_new, iAtom_old, i_test, iType_old, nd_old, nd_new, iOp, m_wigner
+      INTEGER :: iAtom_new, iAtom_old, iType_old, nd_old, nd_new, iOp, m_wigner
       INTEGER :: iLH_new, llh_new, iMem_new, mlh_new, iLH_old, llh_old, iMem_old, mlh_old
       REAL    :: tau_new(3), tau_old(3)
       COMPLEX :: clnu_new, clnu_old, d_wigner_elem
@@ -57,7 +57,6 @@ CONTAINS
 
          DO iAtom_old = 1, atoms%nat
             tau_old = atoms%pos(:, iAtom_old)
-            i_test = iAtom_old
             IF (norm2(tau_new-tau_old)<1e-5) EXIT
          END DO
 
@@ -94,7 +93,107 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE desymmetrize_types()
+   SUBROUTINE desymmetrize_types(input, input_nosym, atoms, atoms_nosym, noco, nococonv, nococonv_nosym, enpara, enpara_nosym, results, results_nosym)
+      USE m_types_lapw
+
+      TYPE(t_input),    INTENT(IN) :: input, input_nosym
+      TYPE(t_atoms),    INTENT(IN) :: atoms, atoms_nosym
+      TYPE(t_noco),     INTENT(IN) :: noco
+      TYPE(t_nococonv), INTENT(IN) :: nococonv
+      TYPE(t_enpara),   INTENT(IN) :: enpara
+      TYPE(t_results),  INTENT(IN) :: results
+      TYPE(t_nococonv), INTENT(INOUT) :: nococonv_nosym
+      TYPE(t_enpara),   INTENT(INOUT) :: enpara_nosym
+      TYPE(t_results),  INTENT(INOUT) :: results_nosym
+
+      INTEGER :: neigd2, neigd2_nosym, iAtom_new, iAtom_old, iType_old
+      REAL    :: tau_new(3), tau_old(3)
+
+      ! TODO: Thes two should be identical!
+      neigd2       = MIN(input%neig,lapw_dim_nbasfcn)
+      neigd2_nosym = MIN(input_nosym%neig,lapw_dim_nbasfcn)
+      IF (neigd2/=neigd2_nosym) WRITE(*,*) "neigd2 /= itself!!"
+
+      IF (noco%l_soc.AND.(.NOT.noco%l_noco)) neigd2 = 2*neigd2
+
+      ! Scalar/presized array quantities:
+      nococonv_nosym%theta = nococonv%theta
+      nococonv_nosym%phi   = nococonv%phi
+      nococonv_nosym%qss   = nococonv%qss
+
+      enpara_nosym%evac      = enpara%evac
+      enpara_nosym%evac1     = enpara%evac1
+      enpara_nosym%enmix     = enpara%enmix
+      enpara_nosym%lchg_v    = enpara%lchg_v
+      enpara_nosym%epara_min = enpara%epara_min
+      enpara_nosym%ready     = enpara%ready
+      enpara_nosym%floating  = enpara%floating
+
+      results_nosym%ef       = results%ef
+      results_nosym%seigc    = results%seigc
+      results_nosym%seigv    = results%seigv
+      results_nosym%ts       = results%ts
+      results_nosym%te_vcoul = results%te_vcoul
+      results_nosym%te_veff  = results%te_veff
+      results_nosym%te_exc   = results%te_exc
+      results_nosym%e_ldau   = results%e_ldau
+      results_nosym%e_ldaopc = results%e_ldaopc
+      results_nosym%e_vdw    = results%e_vdw
+      results_nosym%tote     = results%tote
+      results_nosym%bandgap  = results%bandgap
+      results_nosym%te_hfex  = results%te_hfex
+
+      results_nosym%te_hfex_loc         = results%te_hfex_loc
+      results_nosym%last_distance       = results%last_distance
+      results_nosym%last_mmpMatdistance = results%last_mmpMatdistance
+      results_nosym%last_occdistance    = results%last_occdistance
+
+      ! Allocated arrays:
+      results_nosym%unfolding_weights = results%unfolding_weights
+      results_nosym%w_iks             = results%w_iks
+      results_nosym%eig               = results%eig
+      results_nosym%neig              = results%neig
+      IF(input%l_rdmft) THEN
+         results_nosym%w_iksRDMFT = results_nosym%w_iksRDMFT
+      END IF
+
+      ! Atom loop:
+      DO iAtom_new = 1, atoms_nosym%ntype ! Same as atoms_nosym%nat
+         tau_new = atoms_nosym%pos(:, iAtom_new) ! Position of this atom in the unsymmetrized system
+
+         DO iAtom_old = 1, atoms%nat
+            tau_old = atoms%pos(:, iAtom_old)
+            IF (norm2(tau_new-tau_old)<1e-5) EXIT
+         END DO
+
+         iType_old = atoms%itype(iAtom_old)
+
+         enpara_nosym%el0(:,iAtom_new,:)   = enpara%el0(:,iType_old,:)
+         enpara_nosym%el1(:,iAtom_new,:)   = enpara%el1(:,iType_old,:)
+         enpara_nosym%ello0(:,iAtom_new,:) = enpara%ello0(:,iType_old,:)
+         enpara_nosym%ello1(:,iAtom_new,:) = enpara%ello1(:,iType_old,:)
+
+         enpara_nosym%skiplo(iAtom_new,:)    = enpara%skiplo(iType_old,:)
+         enpara_nosym%lchange(:,iAtom_new,:) = enpara%lchange(:,iType_old,:)
+         enpara_nosym%llochg(:,iAtom_new,:)  = enpara%llochg(:,iType_old,:)
+
+         ! TODO: This is most DEFINITELY faulty, but we shouldn't fix it until
+         !       the noco rotation logic itself is 100% cleaned up.
+         IF (noco%l_noco) THEN
+            nococonv_nosym%alph(iAtom_new)     = nococonv%alph(iType_old)
+            nococonv_nosym%alphRlx(iAtom_new)  = nococonv%alphRlx(iType_old)
+            nococonv_nosym%alphPrev(iAtom_new) = nococonv%alphPrev(iType_old)
+            nococonv_nosym%beta(iAtom_new)     = nococonv%beta(iType_old)
+            nococonv_nosym%betaRlx(iAtom_new)  = nococonv%betaRlx(iType_old)
+            nococonv_nosym%betaPrev(iAtom_new) = nococonv%betaPrev(iType_old)
+
+            nococonv_nosym%b_con(2,iAtom_new) = nococonv%b_con(2,iType_old)
+         END IF
+      END DO
+
+      ! Omitted:
+      ! results%force already exists as a desymmetrization function in force_w(?)
+      ! results%force_old/_vdw as above
 
    END SUBROUTINE
 END MODULE
