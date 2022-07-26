@@ -315,7 +315,7 @@ MODULE m_types_greensfCoeffs
 
          if(allocated(this%uulo)) then
             elements_per_batch = SIZE(this%uulo,1)*SIZE(this%uulo,2)*SIZE(this%uulo,3)*SIZE(this%uulo,4)
-            n_elements = SIZE(this%uu,5)
+            n_elements = SIZE(this%uulo,5)
             ALLOCATE(ctmp(elements_per_batch*batch_size))
             do i_batch = 1, ceiling(n_elements/real(batch_size))
                start = (i_batch-1) * batch_size + 1
@@ -337,7 +337,7 @@ MODULE m_types_greensfCoeffs
          if(allocated(this%uloulop)) then
             elements_per_batch = SIZE(this%uloulop,1)*SIZE(this%uloulop,2)*SIZE(this%uloulop,3)*SIZE(this%uloulop,4)&
                                  *SIZE(this%uloulop,5)
-            n_elements = SIZE(this%uu,6)
+            n_elements = SIZE(this%uloulop,6)
             ALLOCATE(ctmp(elements_per_batch*batch_size))
             do i_batch = 1, ceiling(n_elements/real(batch_size))
                start = (i_batch-1) * batch_size + 1
