@@ -36,8 +36,8 @@ MODULE m_excSplitting
          !Get the Bxc part of the potential
          !L=0 of potential has an additional rescaling of r/sqrt(4pi)
          !The sqrt(4pi) is the part of the integral over the angular part
-         bxc(:atoms%jri(atomType)) = (vTot%mt(:atoms%jri(atomType),0,atomType,1) - vTot%mt(:atoms%jri(atomType),0,atomType,2))/2.0 &
-                                    * sfp_const*atoms%rmsh(:atoms%jri(atomType),atomType)
+         bxc(:atoms%jri(atomType)) = (vTot%mt(:atoms%jri(atomType),0,atomType,2) - vTot%mt(:atoms%jri(atomType),0,atomType,1))/2.0 &
+                                    * atoms%rmsh(:atoms%jri(atomType),atomType)
          
          CALL intgr3(bxc,atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),delta)
 
