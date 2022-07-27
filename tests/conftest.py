@@ -1276,7 +1276,7 @@ def collect_all_judft_messages():
      ]
 
     grep_results = []
-    grep_string = '(judft_error|error_output)'
+    grep_string = '(judft_error|error_output|errorString)'
     # fortran is not case sensitive, sometimes output is programmed line before.
     # maybe use real grep instead of this python implementation...
     for folder in src_folders:
