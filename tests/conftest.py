@@ -1301,33 +1301,17 @@ def collect_all_judft_messages():
     all_messages = []
     # there are all combinations of strings all over the place in the fleur src
     for judft_string in grep_results:
+        if re.search(r'calledby\s*=', judft_string):
+            judft_string = judft_string.split('calledby', maxsplit=1)[0]
+        if re.search(r'hint\s*=', judft_string):
+            judft_string = judft_string.split('hint', maxsplit=1)[0]
+
         ju_str = judft_string.split('"')
         if len(ju_str) == 1:
             ju_str = judft_string.split("'")
             if len(ju_str) == 1:
                 # ignore this one
                 continue
-        string = ''
-        for s in judft_string:
-            string = string + s
-        # if calledby is used the split is always different, therefore we split calledby.
-        if re.search('calledby', string):
-            ju_str1 = string.split('calledby')[0]
-            ju_str = ju_str1.split('"')
-            if len(ju_str) == 1:
-                ju_str = ju_str1.split("'")
-                if len(ju_str) == 1:
-                    # ignore this one
-                    continue
-            try:
-                message = ju_str[-2]
-            except IndexError: # In the source code both strings sings are used
-                # We are missing some, but currently we do not care
-                print(ju_str)
-                message = None
-                continue
-
-        else:
-            message = ju_str[-2]
+        message = ju_str[-2]
         all_messages.append(message)
     return list(set(all_messages))
