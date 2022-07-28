@@ -547,7 +547,7 @@ module m_jpIOnMixing
     integer                    :: ieqat
     integer                    :: oqn_l
     integer                    :: mqn_m
-    integer                    :: iMVec
+    integer                    :: iMVec, iMVec2
     integer                    :: iMVecMT
     integer                    :: iG
     integer                    :: imesh
@@ -574,7 +574,8 @@ module m_jpIOnMixing
           do mqn_m = -oqn_l, oqn_l
             iMVec = iMVec + 1
             ! 1st-point weight: 1
-            g(iMVec) = dxn * atoms%rmsh(1,itype)*3
+            !g(iMVec) = dxn * atoms%rmsh(1,itype)*3
+            g(iMVec) = dxn * atoms%rmsh(1,itype)**3
             do imesh = 2, atoms%jri(itype) - 1, 2
               iMVec = iMVec + 2
               ! periodically changing weight: 4 and 2
@@ -612,8 +613,14 @@ module m_jpIOnMixing
      ! write(*, *) 'nicht 1/omtil'
     end do
     ! MT
-    do iMVecMT = iMVec + 1, nmap
-      MetMixVec(iMVecMT) = g(iMVecMT - iMVec) * mixVec(iMVecMT)
+    !do iMVecMT = iMVec + 1, nmap
+      !MetMixVec(iMVecMT) = g(iMVecMT - iMVec) * mixVec(iMVecMT)
+    !end do
+    iMVec2 = 0
+    do iMVecMT = iMVec + 1, nmap, 2
+      iMVec2 = iMVec2 + 1
+      MetMixVec(iMVecMT) = g(iMVec2) * mixVec(iMVecMT)
+      MetMixVec(iMVecMT+1) = g(iMVec2) * mixVec(iMVecMT+1)
     end do
 
   end subroutine noSymMetric
