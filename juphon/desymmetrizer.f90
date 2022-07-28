@@ -9,7 +9,7 @@ MODULE m_desymmetrizer
    IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE desymmetrize_pw(sym, stars, stars_nosym, rhopw, rhopw_nosym)
+   SUBROUTINE desymmetrize_pw(sym, stars, stars_nosym, rhopw, rhopw_nosym, rhopw_w, rhopw_w_nosym)
       USE m_spgrot
 
       TYPE(t_sym),   INTENT(IN) :: sym
@@ -17,6 +17,9 @@ CONTAINS
 
       COMPLEX, INTENT(IN)     :: rhopw(:,:)
       COMPLEX, INTENT(INOUT)  :: rhopw_nosym(:,:)
+
+      COMPLEX, OPTIONAL, INTENT(IN)     :: rhopw_w(:,:)
+      COMPLEX, OPTIONAL, INTENT(INOUT)  :: rhopw_w_nosym(:,:)
 
       INTEGER :: iStar, iStar_nosym, iSym
       INTEGER :: kr(3,sym%nop)
@@ -26,6 +29,7 @@ CONTAINS
          DO iSym = 1, sym%nop
             iStar_nosym = stars_nosym%ig(kr(1,iSym),kr(2,iSym),kr(3,iSym))
             rhopw_nosym(iStar_nosym,:) = rhopw(iStar,:) * stars%rgphs(kr(1,iSym),kr(2,iSym),kr(3,iSym))
+            IF (PRESENT(rhopw_w)) rhopw_w_nosym(iStar_nosym,:) = rhopw_w(iStar,:) * stars%rgphs(kr(1,iSym),kr(2,iSym),kr(3,iSym))
          END DO
       END DO
 

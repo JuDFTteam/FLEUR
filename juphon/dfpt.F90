@@ -190,18 +190,21 @@ CONTAINS
 !           END IF
 !        END IF
 
+        ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
+        vTot_nosym%pw_w = CMPLX(0.0,0.0)
+
         CALL desymmetrize_pw(fi%sym, stars, stars_nosym, rho%pw, rho_nosym%pw)
-        CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vTot%pw, vTot_nosym%pw)
+        CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vTot%pw, vTot_nosym%pw, vTot%pw_w, vTot_nosym%pw_w)
         CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, rho%mt, rho_nosym%mt)
         CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, vTot%mt, vTot_nosym%mt)
 
         CALL desymmetrize_types(fi%input, fi_nosym%input, fi%atoms, fi_nosym%atoms, fi%noco, &
                                 nococonv, nococonv_nosym, enpara, enpara_nosym, results, results_nosym)
 
-        ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
-        DO iSpin = 1, SIZE(vTot_nosym%pw,2)
-           CALL convol(stars_nosym, vTot_nosym%pw_w(:,iSpin), vTot_nosym%pw(:,iSpin))
-        END DO
+        !ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
+        !DO iSpin = 1, SIZE(vTot_nosym%pw,2)
+           !CALL convol(stars_nosym, vTot_nosym%pw_w(:,iSpin), vTot_nosym%pw(:,iSpin))
+        !END DO
 
         IF (.FALSE.) THEN
         DO iz = 0, grid(3)-1
@@ -339,10 +342,10 @@ CONTAINS
          CALL mt_gradient_old(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, sphhar_nosym%clnu, sphhar_nosym%nmem, sphhar_nosym%mlh, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
       END DO
 
-      DO zInd = -stars%mx3, stars%mx3
-         DO yInd = -stars%mx2, stars%mx2
-            DO xInd = -stars%mx1, stars%mx1
-               iStar = stars%ig(xInd, yInd, zInd)
+      DO zInd = -stars_nosym%mx3, stars_nosym%mx3
+         DO yInd = -stars_nosym%mx2, stars_nosym%mx2
+            DO xInd = -stars_nosym%mx1, stars_nosym%mx1
+               iStar = stars_nosym%ig(xInd, yInd, zInd)
                IF (iStar.EQ.0) CYCLE
                grRho3(1)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
                grRho3(2)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
