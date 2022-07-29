@@ -43,7 +43,7 @@ MODULE m_greensfCalcRealPart
       INTEGER :: contourShape, iContour
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: ikpt, ikpt_i
-      LOGICAL :: l_fixedCutoffset,l_sphavg,l_kresolved_int,l_kresolved
+      LOGICAL :: l_fixedCutoffset,l_sphavg,l_kresolved
       REAL    :: del,eb,fixedCutoff,bk(3)
       REAL,    ALLOCATABLE :: eMesh(:)
       COMPLEX, ALLOCATABLE :: gmat(:,:,:),imag(:,:,:)
@@ -64,7 +64,7 @@ MODULE m_greensfCalcRealPart
             l_fixedCutoffset = g(i_gf)%elem%l_fixedCutoffset
             fixedCutoff      = g(i_gf)%elem%fixedCutoff
             refCutoff        = g(i_gf)%elem%refCutoff
-            l_kresolved_int = g(i_gf)%elem%l_kresolved_int
+            l_kresolved      = g(i_gf)%elem%l_kresolved
 
             IF(refCutoff /= -1) CYCLE
 
@@ -74,13 +74,13 @@ MODULE m_greensfCalcRealPart
                CYCLE
             ENDIF
 
-            IF(.NOT.gfinp%isUnique(i_gf,distinct_kresolved_int=.TRUE.)) THEN
-               indUnique = gfinp%getUniqueElement(i_gf,distinct_kresolved_int=.TRUE.)
+            IF(.NOT.gfinp%isUnique(i_gf,imag_part=.true.)) THEN
+               indUnique = gfinp%getUniqueElement(i_gf,imag_part=.true.)
                !This cutoff was already calculated
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(indUnique,:,:)
             ELSE
-               i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
-               IF(.NOT.g(i_gf)%elem%isOffDiag().AND.g(i_gf)%elem%countLOs(atoms)==0 .AND..NOT. l_kresolved_int) THEN
+               i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved=l_kresolved)
+               IF(.NOT.g(i_gf)%elem%isOffDiag().AND.g(i_gf)%elem%countLOs(atoms)==0 .AND..NOT. l_kresolved) THEN
                   !
                   !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
                   ! with LOs I just use a fixed cutoff or reference otherwise I would need to check whether
@@ -107,17 +107,17 @@ MODULE m_greensfCalcRealPart
          !Getting reference Cutoffs and perform scaling
          DO i_gf = 1, gfinp%n
             refCutoff       = g(i_gf)%elem%refCutoff
-            l_kresolved_int = g(i_gf)%elem%l_kresolved_int
+            l_kresolved = g(i_gf)%elem%l_kresolved
             l_sphavg = g(i_gf)%elem%l_sphavg
-            i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
-            i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int,lo=.TRUE.)
+            i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved=l_kresolved)
+            i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved=l_kresolved,lo=.TRUE.)
             nLO = g(i_gf)%elem%countLOs(atoms)
 
             IF(refCutoff/=-1) THEN
                !Overwrite cutoff with reference from other elements
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(refCutoff,:,:)
             ENDIF
-            CALL greensfImagPart%scale(i_elem,i_elemLO,l_sphavg,nLO,k_resolved=l_kresolved_int)
+            CALL greensfImagPart%scale(i_elem,i_elemLO,l_sphavg,nLO,k_resolved=l_kresolved)
          ENDDO
          CALL timestop("Green's Function: Integration Cutoff")
       ENDIF
@@ -147,10 +147,10 @@ MODULE m_greensfCalcRealPart
          iContour = g(i_gf)%elem%iContour
          nLO = g(i_gf)%elem%countLOs(atoms)
          IF(g(i_gf)%elem%representative_elem > 0) CYCLE
-         IF(g(i_gf)%elem%l_kresolved_int) CYCLE
+         IF(g(i_gf)%elem%l_kresolved) CYCLE
 
-         i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=.FALSE.)
-         i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved_int=.FALSE.)
+         i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved=.FALSE.)
+         i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved=.FALSE.)
 
          CALL timestart("Green's Function: Kramer-Kronigs-Integration")
          DO jspin = spin_start, spin_end
@@ -196,7 +196,7 @@ MODULE m_greensfCalcRealPart
       ENDDO
       CALL kkintgr_free()
 
-      IF(ANY(gfinp%elem(:)%l_kresolved_int)) THEN
+      IF(ANY(gfinp%elem(:)%l_kresolved)) THEN
          CALL gfinp%distribute_elements(fmpi%n_rank, fmpi%n_size, nspins, i_gf_start, i_gf_end, spin_start, spin_end, k_resolved=.TRUE.)
          !Initialize kkintgr_module variables
          DO i_gf = i_gf_start, i_gf_end
@@ -220,10 +220,10 @@ MODULE m_greensfCalcRealPart
                iContour = g(i_gf)%elem%iContour
                nLO = g(i_gf)%elem%countLOs(atoms)
                IF(g(i_gf)%elem%representative_elem > 0) CYCLE
-               IF(.NOT.g(i_gf)%elem%l_kresolved_int) CYCLE
+               IF(.NOT.g(i_gf)%elem%l_kresolved) CYCLE
 
-               i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=.TRUE.)
-               i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved_int=.TRUE.)
+               i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved=.TRUE.)
+               i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,lo=.TRUE.,l_kresolved=.TRUE.)
 
                IF(.NOT.l_kresolved) ALLOCATE(gmat(SIZE(g(i_gf)%contour%e),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), source=cmplx_0)
 
@@ -233,12 +233,7 @@ MODULE m_greensfCalcRealPart
 
                      IF(l_sphavg) THEN
                         imag = greensfImagPart%applyCutoff(i_elem,i_gf,jspin,l_sphavg,ikpt=ikpt_i)
-                        IF(l_kresolved) THEN
-                           CALL kkintgr(imag,ipm==2,g(i_gf)%gmmpMat_k(:,:,:,jspin,ipm,ikpt),iContour)
-                        ELSE
-                           CALL kkintgr(imag,ipm==2,gmat,iContour)
-                           g(i_gf)%gmmpMat(:,:,:,jspin,ipm) = g(i_gf)%gmmpMat(:,:,:,jspin,ipm) + gmat
-                        ENDIF
+                        CALL kkintgr(imag,ipm==2,g(i_gf)%gmmpMat_k(:,:,:,jspin,ipm,ikpt),iContour)
                      ELSE
                         CALL juDFT_error("No Green's function with k-resolution and radial dependence implemented")
                      ENDIF

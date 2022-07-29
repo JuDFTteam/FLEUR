@@ -61,7 +61,7 @@ MODULE m_crystalfield
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
 
          i_gf = gfinp%hiaElem(i_hia)
-         i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=.TRUE., l_kresolved_int=.TRUE.)
+         i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=.TRUE., l_kresolved=.false.)
          !---------------------------------------------------------
          ! Perform the integration
          !---------------------------------------------------------

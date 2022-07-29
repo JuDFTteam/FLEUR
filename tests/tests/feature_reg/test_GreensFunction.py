@@ -456,8 +456,8 @@ def test_GreensFunction_IntersiteSingleShell(execute_fleur, grep_number, grep_ex
     #Check for the right shell being selected
     assert grep_exists(res_files['out'], r"Green's Function Elements: 9\s")
     #These are entries in the table of generated GF elements
-    assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
-    assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
+    assert grep_exists(res_files['out'], r"2 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]         F  [|]  1.000  1.000  1.000")
+    assert grep_exists(res_files['out'], r"3 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]         2\( 2\)      [|]         F  [|] -1.000  0.000  0.000")
 
 
     #Check trace of representative element
@@ -518,10 +518,10 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
     #Check for the right shell being selected
     assert grep_exists(res_files['out'], r"Green's Function Elements: 59\s")
     #These are entries in the table of generated GF elements
-    assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
-    assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
-    assert grep_exists(res_files['out'], "52 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  2.000  2.000  2.000")
-    assert grep_exists(res_files['out'], "59 | 2/2  |    1/    1 |       1 |      T |         1 |        52(22)      |      F(F)  |  0.000  0.000  2.000")
+    assert grep_exists(res_files['out'], r"2 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]         F  [|]  1.000  1.000  1.000")
+    assert grep_exists(res_files['out'], r"3 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]         2\( 2\)      [|]         F  [|] -1.000  0.000  0.000")
+    assert grep_exists(res_files['out'], r"52 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        -1\(-1\)      [|]         F  [|]  2.000  2.000  2.000")
+    assert grep_exists(res_files['out'], r"59 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        52\(22\)      [|]         F  [|]  0.000  0.000  2.000")
 
     #Check first shell again
     #Check trace of representative element
@@ -607,10 +607,10 @@ def test_GreensFunction_IntersiteShellConstruction(execute_fleur, grep_exists):
     #Check for the right shell being selected
     assert grep_exists(res_files['out'], r"Green's Function Elements: 2445\s")
     #These are entries in the table of generated GF elements
-    assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
-    assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
-    assert grep_exists(res_files['out'], "2110 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  5.000  0.000 -4.000")
+    assert grep_exists(res_files['out'], r"2 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]         F  [|]  1.000  1.000  1.000")
+    assert grep_exists(res_files['out'], r"3 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]         2\( 2\)      [|]         F  [|] -1.000  0.000  0.000")
+    assert grep_exists(res_files['out'], r"2110 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]         F  [|]  5.000  0.000 -4.000")
     #This element was missed by the previous completeness detection
-    assert grep_exists(res_files['out'], "2125 | 2/2  |    1/    1 |       1 |      T |         1 |      2110(31)      |      F(F)  | -9.000 -5.000 -5.000")
-    assert grep_exists(res_files['out'], "2422 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  4.000  4.000 -4.000")
-    assert grep_exists(res_files['out'], "2445 | 2/2  |    1/    1 |       1 |      T |         1 |      2422(46)      |      F(F)  | -8.000 -8.000 -4.000")
+    assert grep_exists(res_files['out'], r"2125 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]      2110\(31\)      [|]         F  [|] -9.000 -5.000 -5.000")
+    assert grep_exists(res_files['out'], r"2422 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]         F  [|]  4.000  4.000 -4.000")
+    assert grep_exists(res_files['out'], r"2445 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]      2422\(46\)      [|]         F  [|] -8.000 -8.000 -4.000")

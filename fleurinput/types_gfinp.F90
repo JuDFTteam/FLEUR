@@ -44,8 +44,6 @@ MODULE m_types_gfinp
 
       !K-resolved switches
       LOGICAL :: l_kresolved = .FALSE. !Should the Greens function be calculated k-resolved
-      LOGICAL :: l_kresolved_int = .FALSE. !Should the Greens function be calculated k-resolved up after the Kramers-Kronig
-                                           !Transformation (Intersite elements)
    CONTAINS
       PROCEDURE :: init                => init_gfelem
       PROCEDURE :: countLOs            => countLOs_gfelem !Count the local orbitals attached to the element
@@ -53,6 +51,7 @@ MODULE m_types_gfinp
       PROCEDURE :: isIntersite         => isIntersite_gfelem !Is this element intersite (either unequal atomypes or non zero atomDiff)
       PROCEDURE :: equals              => equals_gfelem !Is the element equal to another (For deduplicating added elements)
       PROCEDURE :: equals_coefficients => equals_coefficients_gfelem !Is the element equal to another from the perspective of the BZ Coefficients
+      PROCEDURE :: equals_imagpart     => equals_imagpart_gfelem !Is the element equal to another from the perspective of the Imaginary part
    END TYPE t_gfelementtype
 
    TYPE t_contourInp
@@ -185,7 +184,6 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%atom,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%atomp,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_kresolved,rank,mpi_comm)
-         CALL mpi_bc(this%elem(n)%l_kresolved_int,rank,mpi_comm)
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
@@ -224,7 +222,7 @@ CONTAINS
       IF(PRESENT(k_resolved)) k_resolved_arg = k_resolved
 
 
-      n_elems = COUNT(.NOT.this%elem(:)%l_kresolved_int)
+      n_elems = COUNT(.NOT.this%elem(:)%l_kresolved)
       IF(k_resolved_arg) THEN
          n_elems = this%n - n_elems
       ENDIF
@@ -280,9 +278,9 @@ CONTAINS
       currentIndex = 0
       DO i_gf = 1, this%n
          IF(k_resolved_arg) THEN
-            IF(.NOT.this%elem(i_gf)%l_kresolved_int) CYCLE
+            IF(.NOT.this%elem(i_gf)%l_kresolved) CYCLE
          ELSE
-            IF(this%elem(i_gf)%l_kresolved_int) CYCLE
+            IF(this%elem(i_gf)%l_kresolved) CYCLE
          ENDIF
          currentIndex = currentIndex + 1
          IF(currentIndex.EQ.i_elem_start) THEN
@@ -308,7 +306,7 @@ CONTAINS
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str, shellElement
       CHARACTER(len=1),PARAMETER :: spdf(0:3) = ['s','p','d','f']
-      LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg,l_kresolved,l_kresolved_int, l_found, l_magneticshell
+      LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg,l_kresolved, l_found, l_magneticshell
       LOGICAL :: lp_calc(0:3,0:3)
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'
@@ -515,7 +513,7 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1 .AND.ANY(lp_calc)) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.,k_resolved_int=.FALSE.,nshells=nshells,l_found=l_found)
+               refGF = this%find(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.,nshells=nshells,l_found=l_found)
                IF(.NOT.l_found) THEN
                   refGF = this%add(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.)
                ENDIF
@@ -593,14 +591,14 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1 .AND.ANY(lp_calc)) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,.FALSE.,k_resolved=.FALSE.,k_resolved_int=.FALSE., l_found=l_found)
+               refGF = this%find(refL,itype,iContour,.FALSE.,k_resolved=.FALSE., l_found=l_found)
                IF(.NOT.l_found) THEN
                   refGF = this%add(refL,itype,iContour,.FALSE.,k_resolved=.FALSE.)
                ENDIF
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf = this%find(l,itype,iContour,.FALSE.,lp=lp,k_resolved=.FALSE.,k_resolved_int=.FALSE.)
+                     i_gf = this%find(l,itype,iContour,.FALSE.,lp=lp,k_resolved=.FALSE.)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -779,11 +777,10 @@ CONTAINS
          WRITE(oUnit,9000) i_gf, this%elem(i_gf)%l,this%elem(i_gf)%lp,this%elem(i_gf)%atomType,this%elem(i_gf)%atomTypep,&
                            this%elem(i_gf)%iContour,this%elem(i_gf)%l_sphavg,this%elem(i_gf)%refCutoff,&
                            this%elem(i_gf)%representative_elem,this%elem(i_gf)%representative_op, &
-                           this%elem(i_gf)%l_kresolved, this%elem(i_gf)%l_kresolved_int, &
-                           this%elem(i_gf)%atomDiff(:)
+                           this%elem(i_gf)%l_kresolved, this%elem(i_gf)%atomDiff(:)
       ENDDO
       WRITE(oUnit,'(/)')
-9000  FORMAT(I5, " | ",I1,"/",I1,"  |",I5,"/",I5," | ",I7," | ",l6," | ", I9," | ", I9,"(",I2,")      | ",l6,"(",l1,")  |",3f7.3)
+9000  FORMAT(I5, " | ",I1,"/",I1,"  |",I5,"/",I5," | ",I7," | ",l6," | ", I9," | ", I9,"(",I2,")      | ",l9,"  |",3f7.3)
 
 
       !Check the closure of the the intersite element
@@ -793,7 +790,7 @@ CONTAINS
          if(this%elem(i_gf)%isIntersite()) then
             do iop = 1, sym%nop
                !this function will raise an error if the rotated equivalent cannot be found
-               i_gf_rot = this%find_symmetry_rotated_greensf(atoms,sym,i_gf,iop,distinct_kresolved_int=.false.)
+               i_gf_rot = this%find_symmetry_rotated_greensf(atoms,sym,i_gf,iop)
             enddo
          endif
       enddo
@@ -802,40 +799,45 @@ CONTAINS
 
    END SUBROUTINE init_gfinp
 
-   PURE LOGICAL FUNCTION isUnique_gfinp(this,index, distinct_kresolved_int, distinct_symmetry_equivalent_diffs)
+   PURE LOGICAL FUNCTION isUnique_gfinp(this,index, imag_part, distinct_symmetry_equivalent_diffs)
       !Return whether the given element is the first with the combination
       !of l lp, atomType, atomTypep, l_sphavg, l_kresolved
 
       CLASS(t_gfinp),   INTENT(IN)  :: this
       INTEGER,          INTENT(IN)  :: index
-      LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_kresolved_int
+      LOGICAL, OPTIONAL,INTENT(IN)  :: imag_part
       LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_symmetry_equivalent_diffs
 
       INTEGER :: i_gf, uniqueIndex
 
-      uniqueIndex = this%getuniqueElement(index, distinct_kresolved_int, distinct_symmetry_equivalent_diffs)
+      uniqueIndex = this%getuniqueElement(index, imag_part, distinct_symmetry_equivalent_diffs)
       isunique_gfinp = uniqueIndex == index
 
    END FUNCTION isUnique_gfinp
 
-   PURE INTEGER FUNCTION getuniqueElement_gfinp(this, index, distinct_kresolved_int, distinct_symmetry_equivalent_diffs) Result(uniqueIndex)
+   PURE INTEGER FUNCTION getuniqueElement_gfinp(this, index, imag_part, distinct_symmetry_equivalent_diffs) Result(uniqueIndex)
 
       CLASS(t_gfinp),   INTENT(IN)  :: this
       INTEGER,          INTENT(IN)  :: index
-      LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_kresolved_int
+      LOGICAL, OPTIONAL,INTENT(IN)  :: imag_part
       LOGICAL, OPTIONAL,INTENT(IN)  :: distinct_symmetry_equivalent_diffs
 
+      logical :: imag_part_arg
+
+      imag_part_arg = .false.
+      if (present(imag_part)) imag_part_arg = imag_part
+
       DO uniqueIndex = 1, index
-         !If the element has a representative element set it can not be unique
-         !IF(this%elem(uniqueIndex)%representative_elem>0) CYCLE
-         IF(this%elem(uniqueIndex)%equals_coefficients(this%elem(index), distinct_kresolved_int, distinct_symmetry_equivalent_diffs)) THEN
-            RETURN
-         ENDIF
+         if (imag_part_arg) then
+            if(this%elem(uniqueIndex)%equals_imagpart(this%elem(index))) return
+         else
+            if(this%elem(uniqueIndex)%equals_coefficients(this%elem(index), distinct_symmetry_equivalent_diffs)) return
+         endif
       ENDDO
 
    END FUNCTION getuniqueElement_gfinp
 
-   INTEGER FUNCTION uniqueElements_gfinp(this,atoms, max_index, l_sphavg, lo, l_kresolved_int,maxLO) Result(uniqueElements)
+   INTEGER FUNCTION uniqueElements_gfinp(this,atoms, max_index, l_sphavg, lo, l_kresolved, maxLO) Result(uniqueElements)
 
       USE m_types_atoms
 
@@ -844,15 +846,15 @@ CONTAINS
       INTEGER, OPTIONAL,INTENT(IN)     :: max_index
       LOGICAL, OPTIONAL,INTENT(IN)     :: l_sphavg !uniqueElements are determined separately for radial dependence and spherically averaging
       LOGICAL, OPTIONAL,INTENT(IN)     :: lo       !We are interested in unique LO elems (radial dependence)
-      LOGICAL, OPTIONAL,INTENT(IN)     :: l_kresolved_int !K-resolved until the Kramers Kronig Integration
+      LOGICAL, OPTIONAL,INTENT(IN)     :: l_kresolved !K-resolved
       INTEGER, OPTIONAL,INTENT(INOUT)  :: maxLO    !Maximum number of Elements associated with a GF element
 
       INTEGER :: maxGF,nLO
       INTEGER :: i_gf
-      LOGICAL :: l_sphavgArg, l_sphavgElem,loArg, resolvedArg, l_kresolved_int_elem
-      LOGICAL :: distinct_kresolved_int
+      LOGICAL :: l_sphavgArg, l_sphavgElem,loArg, resolvedArg, l_kresolved_elem
+      LOGICAL :: distinct_kresolved
 
-      distinct_kresolved_int = PRESENT(l_kresolved_int)
+      distinct_kresolved = PRESENT(l_kresolved)
 
       !Process optional switches and arguments
       l_sphavgArg = .TRUE.
@@ -873,15 +875,15 @@ CONTAINS
       !Count the unique Elements before maxGF
       DO i_gf = 1, maxGF
          l_sphavgElem  = this%elem(i_gf)%l_sphavg
-         l_kresolved_int_elem  = this%elem(i_gf)%l_kresolved_int
+         l_kresolved_elem  = this%elem(i_gf)%l_kresolved
 
          IF(l_sphavgElem .neqv. l_sphavgArg) CYCLE
 
-         IF(distinct_kresolved_int) THEN
-            IF(l_kresolved_int_elem .neqv. l_kresolved_int) CYCLE
+         IF(distinct_kresolved) THEN
+            IF(l_kresolved_elem .neqv. l_kresolved) CYCLE
          ENDIF
 
-         IF(.NOT.this%isUnique(i_gf,distinct_kresolved_int)) CYCLE
+         IF(.NOT.this%isUnique(i_gf, imag_part=distinct_kresolved)) CYCLE
 
          IF(loArg) THEN
             IF(.NOT.l_sphavgElem) THEN
@@ -947,7 +949,7 @@ CONTAINS
 
    END FUNCTION add_gfelem
 
-   INTEGER FUNCTION find_symmetry_rotated_greensf_gfinp(this, atoms, sym, i_gf, iop, distinct_kresolved_int, l_found) RESULT(i_gf_rot)
+   INTEGER FUNCTION find_symmetry_rotated_greensf_gfinp(this, atoms, sym, i_gf, iop, l_found) RESULT(i_gf_rot)
 
       USE m_types_sym
       USE m_types_atoms
@@ -956,7 +958,6 @@ CONTAINS
       TYPE(t_atoms),          INTENT(IN)  :: atoms
       TYPE(t_sym),            INTENT(IN)  :: sym
       INTEGER,                INTENT(IN)  :: i_gf, iop
-      LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_kresolved_int
       logical, optional,      intent(out)  :: l_found
 
       TYPE(t_gfelementtype) :: gfelem_rot
@@ -981,7 +982,7 @@ CONTAINS
       gfelem_rot%atom = atom_rot
       gfelem_rot%atomp = atom_rotp
 
-      i_gf_rot = this%find(gfelem_rot,distinct_kresolved_int=distinct_kresolved_int, l_found=l_foundLocal)
+      i_gf_rot = this%find(gfelem_rot, l_found=l_foundLocal)
 
       if (.not.l_foundLocal) then
          if(present(l_found)) then
@@ -1102,7 +1103,7 @@ CONTAINS
    END SUBROUTINE addNearestNeighbours_gfelem
 
    INTEGER FUNCTION find_gfelem_simple(this,l,atomType,iContour,l_sphavg,lp,atomTypep,&
-                                       nshells,atomDiff,k_resolved,k_resolved_int,l_found) result(i_gf)
+                                       nshells,atomDiff,k_resolved,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -1117,29 +1118,22 @@ CONTAINS
       INTEGER, OPTIONAL,   INTENT(IN)    :: nshells
       REAL,    OPTIONAL,   INTENT(IN)    :: atomDiff(:)
       LOGICAL, OPTIONAL,   INTENT(IN)    :: k_resolved
-      LOGICAL, OPTIONAL,   INTENT(IN)    :: k_resolved_int
       LOGICAL, OPTIONAL,   INTENT(INOUT) :: l_found    !If this switch is not provided the program
                                                        !will assume that the element has to be present and
                                                        !terminate with an error message if the
                                                        !element is not found (for adding elements)
 
-      LOGICAL :: search, distinct_kresolved_int
+      LOGICAL :: search
       TYPE(t_gfelementtype) :: elem_to_find
 
-      distinct_kresolved_int = PRESENT(k_resolved_int)
-
       CALL elem_to_find%init(l,atomType,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
-                             nshells=nshells,atomDiff=atomDiff,k_resolved=k_resolved)
-      IF(distinct_kresolved_int) THEN
-         elem_to_find%l_kresolved_int = k_resolved_int
-      ENDIF
+                             nshells=nshells,atomDiff=atomDiff, k_resolved=k_resolved)
 
-      i_gf = this%find(elem_to_find, l_found=l_found, &
-                       distinct_kresolved_int=distinct_kresolved_int)
+      i_gf = this%find(elem_to_find, l_found=l_found)
 
    END FUNCTION find_gfelem_simple
 
-   INTEGER FUNCTION find_gfelem_type(this,elem,l_found, distinct_kresolved_int) result(i_gf)
+   INTEGER FUNCTION find_gfelem_type(this,elem,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -1150,7 +1144,6 @@ CONTAINS
                                                           !will assume that the element has to be present and
                                                           !terminate with an error message if the
                                                           !element is not found (for adding elements)
-      LOGICAL, OPTIONAL,      INTENT(IN)    :: distinct_kresolved_int
 
       LOGICAL :: search
 
@@ -1173,7 +1166,7 @@ CONTAINS
                                 calledby="find_gfelem")
             ENDIF
          ENDIF
-         IF(.NOT.elem%equals(this%elem(i_gf), distinct_k_resolved=distinct_kresolved_int)) CYCLE
+         IF(.NOT.elem%equals(this%elem(i_gf))) CYCLE
 
          !If we are here we found the element
          IF(PRESENT(l_found)) l_found=.TRUE.
@@ -1350,7 +1343,6 @@ CONTAINS
       ENDIF
       IF(PRESENT(k_resolved)) THEN
          this%l_kresolved = k_resolved
-         this%l_kresolved_int = k_resolved
       ENDIF
       IF(PRESENT(atomDiff)) THEN
          this%atomDiff(:) = atomDiff(:)
@@ -1378,17 +1370,13 @@ CONTAINS
 
    END SUBROUTINE init_gfelem
 
-   PURE LOGICAL FUNCTION equals_coefficients_gfelem(this, other, distinct_k_resolved, distinct_symmetry_equivalent_diffs)
+   PURE LOGICAL FUNCTION equals_coefficients_gfelem(this, other, distinct_symmetry_equivalent_diffs)
 
       CLASS(t_gfelementtype), INTENT(IN)  :: this
       TYPE(t_gfelementtype),  INTENT(IN)  :: other
-      LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_k_resolved
       LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_symmetry_equivalent_diffs
 
-      LOGICAL distinct_k_resolved_arg, distinct_symmetry_equivalent_diffs_arg
-
-      distinct_k_resolved_arg = .TRUE.
-      IF(PRESENT(distinct_k_resolved)) distinct_k_resolved_arg = distinct_k_resolved
+      LOGICAL distinct_symmetry_equivalent_diffs_arg
 
       distinct_symmetry_equivalent_diffs_arg = .FALSE.
       IF(PRESENT(distinct_symmetry_equivalent_diffs)) distinct_symmetry_equivalent_diffs_arg = distinct_symmetry_equivalent_diffs
@@ -1400,10 +1388,6 @@ CONTAINS
       IF(this%atomType.NE.other%atomType) RETURN
       IF(this%atomTypep.NE.other%atomTypep) RETURN
       IF(this%l_sphavg .neqv. other%l_sphavg) RETURN
-      IF(this%l_kresolved .neqv. other%l_kresolved) RETURN
-      IF(distinct_k_resolved_arg) then
-         IF(this%l_kresolved_int .neqv. other%l_kresolved_int) RETURN
-      ENDIF
       IF(ANY(ABS(this%atomDiff(:)-other%atomDiff(:)).GT.ATOMDIFF_EPS)) THEN
          IF(distinct_symmetry_equivalent_diffs_arg) RETURN
          IF(this%representative_elem < 0 .AND. other%representative_elem < 0) RETURN
@@ -1421,18 +1405,29 @@ CONTAINS
 
    END FUNCTION equals_coefficients_gfelem
 
-   PURE LOGICAL FUNCTION equals_gfelem(this, other, distinct_k_resolved)
+   pure logical function equals_imagpart_gfelem(this, other)
+
+      class(t_gfelementtype), intent(in)  :: this
+      type(t_gfelementtype),  intent(in)  :: other
+
+      equals_imagpart_gfelem = .false.
+      if(.NOT.this%equals_coefficients(other, distinct_symmetry_equivalent_diffs=.TRUE.)) return
+      if(this%l_kresolved .neqv. other%l_kresolved) return
+      equals_imagpart_gfelem = .true.
+
+   end function
+
+   PURE LOGICAL FUNCTION equals_gfelem(this, other)
 
       CLASS(t_gfelementtype), INTENT(IN)  :: this
       TYPE(t_gfelementtype),  INTENT(IN)  :: other
-      LOGICAL, OPTIONAL,      INTENT(IN)  :: distinct_k_resolved
 
       equals_gfelem = .FALSE.
       !We need to check the atomDiff explicitly, since the deduplication
       !on the coefficient level has some extra symmetry considerations
       !that should not influence the deduplication. It just influences how
       !many brillouin zone integegrations need to be performed
-      IF(.NOT.this%equals_coefficients(other, distinct_k_resolved, distinct_symmetry_equivalent_diffs=.TRUE.)) RETURN
+      IF(.NOT.this%equals_imagpart(other)) RETURN
       IF(this%iContour.NE.other%iContour) RETURN
       equals_gfelem = .TRUE.
 
