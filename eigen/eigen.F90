@@ -194,7 +194,7 @@ CONTAINS
             IF(ne_all > lapw%nmat) ne_all = lapw%nmat
 
             !Try to symmetrize matrix
-            CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat)
+            CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat,l_dfpteigen)
 
             IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                select type(smat)
