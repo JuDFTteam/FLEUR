@@ -28,7 +28,7 @@ MODULE m_greensfCalcImagPart
       INTEGER  :: nBands,jsp,i_gf,nLO,imatSize, spin_start, spin_end, spin_ind
       INTEGER  :: l,lp,m,mp,iBand,ie,j,eGrid_start,eGrid_end
       INTEGER  :: indUnique,i_elem,imat,iLO,iLOp,i_elemLO,i_elem_imag,i_elemLO_imag
-      LOGICAL  :: l_zero,l_sphavg,l_kresolved
+      LOGICAL  :: l_zero,l_sphavg,l_kresolved_int,l_kresolved
       REAL     :: del,eb,wtkpt
       COMPLEX  :: fac,weight
       REAL,    ALLOCATABLE :: eig(:)
@@ -78,15 +78,17 @@ MODULE m_greensfCalcImagPart
             l  = gfinp%elem(i_gf)%l
             lp = gfinp%elem(i_gf)%lp
             l_sphavg = gfinp%elem(i_gf)%l_sphavg
+            l_kresolved_int = gfinp%elem(i_gf)%l_kresolved_int
             l_kresolved = gfinp%elem(i_gf)%l_kresolved
 
-            IF(.NOT.gfinp%isUnique(i_gf, imag_part=.true.)) CYCLE
+
+            IF(.NOT.gfinp%isUnique(i_gf, distinct_kresolved_int=.TRUE.)) CYCLE
 
             i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg)
             i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf,lo=.TRUE.,l_sphavg=l_sphavg)
 
-            i_elem_imag = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved=l_kresolved)
-            i_elemLO_imag = gfinp%uniqueElements(atoms,max_index=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,l_kresolved=l_kresolved)
+            i_elem_imag = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
+            i_elemLO_imag = gfinp%uniqueElements(atoms,max_index=i_gf,lo=.TRUE.,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
 
             nLO = 0
             imatSize = 1
@@ -100,7 +102,7 @@ MODULE m_greensfCalcImagPart
 
             !$OMP parallel default(none) &
             !$OMP shared(input,gfinp,greensfBZintCoeffs,greensfImagPart) &
-            !$OMP shared(i_elem,i_elemLO,i_elem_imag,i_elemLO_imag,nLO,l,lp,nBands,eMesh,l_sphavg,imatSize,l_kresolved)&
+            !$OMP shared(i_elem,i_elemLO,i_elem_imag,i_elemLO_imag,nLO,l,lp,nBands,eMesh,l_sphavg,imatSize,l_kresolved_int,l_kresolved)&
             !$OMP shared(del,eb,eig,weights,indBound,fac,wtkpt,spin_ind,ikpt_i) &
             !$OMP private(ie,iLO,iLOp,imat,m,mp,iBand,j,eGrid_start,eGrid_end,weight,imag,l_zero)
             ALLOCATE(imag(SIZE(eMesh),imatSize),source=cmplx_0)
@@ -206,9 +208,9 @@ MODULE m_greensfCalcImagPart
                      ENDIF
 
                   ENDDO!ib
-                  IF(l_sphavg.AND..NOT.l_kresolved) THEN
+                  IF(l_sphavg.AND..NOT.l_kresolved_int) THEN
                      CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%sphavg(:,m,mp,i_elem_imag,spin_ind),1)
-                  ELSE IF(.NOT.l_kresolved) THEN
+                  ELSE IF(.NOT.l_kresolved_int) THEN
                      CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,1),1,greensfImagPart%uu(:,m,mp,i_elem_imag,spin_ind),1)
                      CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,2),1,greensfImagPart%dd(:,m,mp,i_elem_imag,spin_ind),1)
                      CALL zaxpy(SIZE(eMesh),cmplx_1,imag(:,3),1,greensfImagPart%ud(:,m,mp,i_elem_imag,spin_ind),1)

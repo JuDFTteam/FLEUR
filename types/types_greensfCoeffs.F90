@@ -229,10 +229,10 @@ MODULE m_types_greensfCoeffs
          this%l_calc = l_calc
 
           !Determine number of unique gf elements
-         uniqueElementsSphavg  = gfinp%uniqueElements(atoms,l_sphavg=.TRUE.,l_kresolved=.FALSE.) !How many spherically averaged elements
-         uniqueElementsRadial  = gfinp%uniqueElements(atoms,l_sphavg=.FALSE.,l_kresolved=.FALSE.) !How many elements with radial dependence
+         uniqueElementsSphavg  = gfinp%uniqueElements(atoms,l_sphavg=.TRUE.,l_kresolved_int=.FALSE.) !How many spherically averaged elements
+         uniqueElementsRadial  = gfinp%uniqueElements(atoms,l_sphavg=.FALSE.,l_kresolved_int=.FALSE.) !How many elements with radial dependence
 
-         uniqueElementsSphavg_kres = gfinp%uniqueElements(atoms,l_sphavg=.TRUE.,l_kresolved=.TRUE.) !How many spherically averaged elements with k-resolution
+         uniqueElementsSphavg_kres = gfinp%uniqueElements(atoms,l_sphavg=.TRUE.,l_kresolved_int=.TRUE.) !How many spherically averaged elements with k-resolution
 
          ALLOCATE (this%kkintgr_cutoff(gfinp%n,input%jspins,2),source=0)
          IF(uniqueElementsSphavg>0) THEN
@@ -246,7 +246,7 @@ MODULE m_types_greensfCoeffs
             ALLOCATE (this%ud(gfinp%ne,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,spin_dim),source=cmplx_0)
             ALLOCATE (this%scalingFactorRadial(uniqueElementsRadial,input%jspins),source=1.0)
 
-            uniqueElementsLO = gfinp%uniqueElements(atoms,lo=.TRUE.,l_sphavg=.FALSE.,maxLO=maxLO, l_kresolved=.FALSE.)
+            uniqueElementsLO = gfinp%uniqueElements(atoms,lo=.TRUE.,l_sphavg=.FALSE.,maxLO=maxLO, l_kresolved_int=.FALSE.)
             IF(uniqueElementsLO>0) THEN
                ALLOCATE (this%uulo(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=cmplx_0)
                ALLOCATE (this%ulou(gfinp%ne,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,spin_dim),source=cmplx_0)

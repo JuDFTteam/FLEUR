@@ -102,7 +102,7 @@ MODULE m_greensfBZint
                   ! natomp_rot = sym%mapped_atom(iop,natomp)
 
                   IF(l_intersite) THEN
-                     i_gf_rot = gfinp%find_symmetry_rotated_greensf(atoms,sym,i_gf,iop)
+                     i_gf_rot = gfinp%find_symmetry_rotated_greensf(atoms,sym,i_gf,iop,distinct_kresolved_int=.false.)
                      i_elem   = gfinp%uniqueElements(atoms,max_index=i_gf_rot,l_sphavg=l_sphavg)
                      i_elemLO = gfinp%uniqueElements(atoms,max_index=i_gf_rot,lo=.TRUE.,l_sphavg=l_sphavg)
                   ENDIF
