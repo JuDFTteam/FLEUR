@@ -19,7 +19,8 @@ MODULE m_atom_shells
    CONTAINS
 
    SUBROUTINE construct_atom_shells(referenceAtom, nshells, atoms, cell, sym, film, shellDistances,&
-                                    shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells, only_elements)
+                                    shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells, &
+                                    only_elements, only_magnetic)
 
       !----------------------------------------------------------------------------------------------
       !Construct neighbour shells around a given reference atom
@@ -51,6 +52,7 @@ MODULE m_atom_shells
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: numAtomsShell(:)
       INTEGER,             INTENT(OUT)  :: generatedShells
       integer, optional,   intent(in)   :: only_elements(:)
+      logical, optional,   intent(in)   :: only_magnetic
 
       REAL, PARAMETER :: eps = 1e-5
 
@@ -81,7 +83,8 @@ MODULE m_atom_shells
          !Calculate the vectors and distances to neighbours in the next
          !extension of unit cells
          CALL calculate_next_neighbours(referenceAtom, atoms, cell%amat, film, newNeighbours, newAtoms,&
-                                        newDiffs, newDistances, num_cells, only_elements=only_elements)
+                                        newDiffs, newDistances, num_cells, only_elements=only_elements,&
+                                        only_magnetic=only_magnetic)
 
          WRITE(oUnit,'(A,I0)') "New neighbours found: ", newNeighbours
 
@@ -225,7 +228,8 @@ MODULE m_atom_shells
 
 
    SUBROUTINE calculate_next_neighbours(referenceAtom, atoms, amat, film, neighboursFound, neighbourAtoms,&
-                                        neighbourDiffs, neighbourDistances, lastBorder, only_elements)
+                                        neighbourDiffs, neighbourDistances, lastBorder, only_elements,&
+                                        only_magnetic)
 
       !Calculate the distances and vectors to neighbour atoms to a reference atom in a
       !supercell
@@ -245,13 +249,18 @@ MODULE m_atom_shells
       REAL,    ALLOCATABLE, INTENT(OUT)   :: neighbourDistances(:)
       INTEGER,              INTENT(INOUT) :: lastBorder
       integer, optional,    intent(in)    :: only_elements(:)
+      logical, optional,    intent(in)    :: only_magnetic
 
       INTEGER :: maxNeighbours,iAtom,refAt,identicalAtoms,i,j,k,n,na,zmax
       REAL :: amatDet, currentDist
       REAL :: tau(3),refPos(3),offsetPos(3),currentDiff(3),pos(3)
       REAL :: invAmat(3,3),posCart(3,atoms%nat)
+      logical :: only_magnetic_arg
 
       CALL timestart('Atom shells: Calculate neighbours')
+
+      only_magnetic_arg = .true.
+      if(present(only_magnetic)) only_magnetic_arg = only_magnetic
 
       CALL inv3(amat,invAmat,amatDet)
 
@@ -293,7 +302,11 @@ MODULE m_atom_shells
 
                   iAtom = 0
                   DO n = 1, atoms%ntype
+                     !Ignore atoms which are not of the specified element
                      if (size(only_elements) /= 0 .and. .not.any(only_elements(:)==atoms%nz(n))) cycle
+                     !Ignore non-magnetic atoms
+                     if (only_magnetic_arg .and. .not.atoms%econf(n)%is_polarized() .and. abs(atoms%bmu(n))<1e-5) cycle
+                     
                      DO na = 1, atoms%neq(n)
                         iAtom = iAtom + 1
                         pos(:) = posCart(:,iAtom) + offsetPos(:)

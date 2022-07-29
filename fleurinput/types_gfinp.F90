@@ -103,6 +103,7 @@ MODULE m_types_gfinp
       INTEGER, ALLOCATABLE :: numTorqueElems(:)
       INTEGER, ALLOCATABLE :: intersiteAtomicNumberSelection(:,:)
       INTEGER, ALLOCATABLE :: numintersiteAtomicNumberSelection(:)
+      logical, allocatable :: intersiteOnlyMagneticAtoms(:)
    CONTAINS
       PROCEDURE :: read_xml             => read_xml_gfinp
       PROCEDURE :: mpi_bc               => mpi_bc_gfinp
@@ -157,6 +158,7 @@ CONTAINS
       CALL mpi_bc(this%numTorqueElems,rank,mpi_comm)
       call mpi_bc(this%intersiteAtomicNumberSelection,rank,mpi_comm)
       call mpi_bc(this%numintersiteAtomicNumberSelection,rank,mpi_comm)
+      call mpi_bc(this%intersiteOnlyMagneticAtoms, rank, mpi_comm)
 
 #ifdef CPP_MPI
       CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -306,7 +308,7 @@ CONTAINS
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str, shellElement
       CHARACTER(len=1),PARAMETER :: spdf(0:3) = ['s','p','d','f']
-      LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg,l_kresolved,l_kresolved_int, l_found
+      LOGICAL :: l_gfinfo_given,l_fixedCutoffset,l_sphavg,l_kresolved,l_kresolved_int, l_found, l_magneticshell
       LOGICAL :: lp_calc(0:3,0:3)
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'
@@ -409,6 +411,7 @@ CONTAINS
       ALLOCATE(this%torqueElem(ntype,(lmaxU_const+1)**2),source=-1)
       ALLOCATE(this%intersiteAtomicNumberSelection(ntype,(lmaxU_const+1)**2),source=-1)
       ALLOCATE(this%numintersiteAtomicNumberSelection((lmaxU_const+1)**2*ntype),source=0)
+      allocate(this%intersiteOnlyMagneticAtoms((lmaxU_const+1)**2*ntype), source=.false.)
 
       DO itype = 1, ntype
          xPathS=xml%speciesPath(itype)
@@ -446,6 +449,11 @@ CONTAINS
                   endif
                enddo
             endif
+            IF(xml%versionNumber>=36) THEN
+               l_magneticshell = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magneticShells'))
+            ELSE
+               l_magneticshell = .true.
+            ENDIF
             refL = -1
             SELECT CASE(TRIM(ADJUSTL(cutoffArg)))
             CASE('calc')
@@ -477,7 +485,10 @@ CONTAINS
                      if (nshells /= 0 .and. shellAtomicNumberSelection /= -1) THEN
                         this%numintersiteAtomicNumberSelection(i_gf) = this%numintersiteAtomicNumberSelection(i_gf) + 1
                         this%intersiteAtomicNumberSelection(i_gf,this%numintersiteAtomicNumberSelection(i_gf)) = shellAtomicNumberSelection
-                     endif                 
+                     endif
+                     if (nshells /= 0) THEN
+                        this%intersiteOnlyMagneticAtoms(i_gf) = l_magneticshell
+                     endif              
                   ENDDO
                ENDDO
             ENDIF
@@ -494,6 +505,9 @@ CONTAINS
                   if (nshells /= 0 .and. shellAtomicNumberSelection /= -1) THEN
                      this%numintersiteAtomicNumberSelection(i_gf) = this%numintersiteAtomicNumberSelection(i_gf) + 1
                      this%intersiteAtomicNumberSelection(i_gf,this%numintersiteAtomicNumberSelection(i_gf)) = shellAtomicNumberSelection
+                  endif
+                  if (nshells /= 0) THEN
+                     this%intersiteOnlyMagneticAtoms(i_gf) = l_magneticshell
                   endif
                ENDDO
             ENDIF
@@ -632,7 +646,7 @@ CONTAINS
 
       INTEGER :: i_gf,l,lp,atomType,iContour,refCutoff,i_gf_rot,iop
       INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref,n_intersite, i_inter
-      LOGICAL :: l_sphavg, l_all_kresolved, l_kresolved_radial
+      LOGICAL :: l_sphavg, l_all_kresolved, l_kresolved_radial, magneticShell
       INTEGER :: hiaElem(atoms%n_hia), intersite_elems(this%n), shells(this%n)
       LOGICAL :: written(atoms%nType), l_kresolved
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
@@ -666,10 +680,11 @@ CONTAINS
          refCutoff = MERGE(i_gf,refCutoff,refCutoff==-1) !If no refCutoff is set for the intersite element
                                                          !we take the onsite element as reference
          atomicNumberSelection = this%intersiteAtomicNumberSelection(i_gf,:this%numintersiteAtomicNumberSelection(i_gf))
+         magneticShell = this%intersiteOnlyMagneticAtoms(i_gf)
          CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
                                         this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,input,&
                                         .NOT.written(atomType),nOtherAtoms,atomTypepList,&
-                                        atomicNumberSelection=atomicNumberSelection)
+                                        atomicNumberSelection=atomicNumberSelection,magneticShell=magneticShell)
          written(atomType) = .TRUE.
 
          !Add the other atomtypes (i,j) -> (j,i)
@@ -687,11 +702,11 @@ CONTAINS
                CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
                                              this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
                                              .NOT.written(atomType),nOtherAtoms1,atomTypepList1,&
-                                             atomicNumberSelection=(/atoms%nz(atomType)/))
+                                             atomicNumberSelection=(/atoms%nz(atomType)/),magneticShell=magneticShell)
             else
                CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
                                              this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
-                                             .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
+                                             .NOT.written(atomType),nOtherAtoms1,atomTypepList1,magneticShell=magneticShell)
             endif
 
          ENDDO
@@ -983,7 +998,8 @@ CONTAINS
    END FUNCTION find_symmetry_rotated_greensf_gfinp
    
    SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_kresolved,l_fixedCutoffset,fixedCutoff,&
-                                          refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList,atomicNumberSelection)
+                                          refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList,atomicNumberSelection,&
+                                          magneticShell)
 
       USE m_types_atoms
       USE m_types_cell
@@ -1013,6 +1029,7 @@ CONTAINS
       INTEGER,             INTENT(OUT)    :: nOtherAtoms
       INTEGER,ALLOCATABLE, INTENT(OUT)    :: atomTypepList(:) !Which other atomtypes were added (not equal to refAtom)
       integer,optional,    intent(in)     :: atomicNumberSelection(:) !Which other atom should be considered
+      logical,optional,    intent(in)     :: magneticShell
 
       INTEGER :: generatedShells, ishellAtom, ishell, i_gf, repr, repr_ops, atomTypep
       REAL    :: repr_diff(3)
@@ -1026,7 +1043,8 @@ CONTAINS
       CALL timestart("Green's Function: Add nearest Neighbors")
 
       CALL construct_atom_shells(refAtom, nshells, atoms, cell, sym, input%film, shellDistances,&
-                                 shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells, only_elements=atomicNumberSelection)
+                                 shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells,&
+                                 only_elements=atomicNumberSelection, only_magnetic=magneticShell)
 
       ALLOCATE(atomTypepList(atoms%ntype),source=0)
       nOtherAtoms = 0
