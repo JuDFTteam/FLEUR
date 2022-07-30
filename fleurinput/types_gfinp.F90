@@ -18,6 +18,16 @@ MODULE m_types_gfinp
 
    REAL,    PARAMETER :: ATOMDIFF_EPS = 1e-5
 
+   type t_jij_construction_options
+
+      integer :: nshells = 0
+      integer :: startFromShell = 0
+      integer :: numAtomicNumberSelection = 0
+      integer :: atomicNumberSelection(10) = 0
+      logical :: l_magneticshell = .true.
+
+   end type
+
    TYPE t_gfelementtype
       !defines the l and atomType elements for given greens function element
       !(used for mapping index in gfinp%elem)
@@ -46,6 +56,8 @@ MODULE m_types_gfinp
       LOGICAL :: l_kresolved = .FALSE. !Should the Greens function be calculated k-resolved
       LOGICAL :: l_kresolved_int = .FALSE. !Should the Greens function be calculated k-resolved up after the Kramers-Kronig
                                            !Transformation (Intersite elements)
+
+      type(t_jij_construction_options) :: jij_options
    CONTAINS
       PROCEDURE :: init                => init_gfelem
       PROCEDURE :: countLOs            => countLOs_gfelem !Count the local orbitals attached to the element
@@ -128,7 +140,7 @@ MODULE m_types_gfinp
       PROCEDURE :: checkOffdiagonal     => checkOffdiagonal_gfinp !Offdiagonal Element (not Onsite)
    END TYPE t_gfinp
 
-   PUBLIC t_gfinp, t_contourInp, t_gfelementtype
+   PUBLIC t_gfinp, t_contourInp, t_gfelementtype, t_jij_construction_options
    PUBLIC CONTOUR_RECTANGLE_CONST, CONTOUR_SEMICIRCLE_CONST, CONTOUR_DOS_CONST
 
 CONTAINS
@@ -156,9 +168,6 @@ CONTAINS
       CALL mpi_bc(this%hiaElem,rank,mpi_comm)
       CALL mpi_bc(this%torqueElem,rank,mpi_comm)
       CALL mpi_bc(this%numTorqueElems,rank,mpi_comm)
-      call mpi_bc(this%intersiteAtomicNumberSelection,rank,mpi_comm)
-      call mpi_bc(this%numintersiteAtomicNumberSelection,rank,mpi_comm)
-      call mpi_bc(this%intersiteOnlyMagneticAtoms, rank, mpi_comm)
 
 #ifdef CPP_MPI
       CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -186,6 +195,11 @@ CONTAINS
          CALL mpi_bc(this%elem(n)%atomp,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_kresolved,rank,mpi_comm)
          CALL mpi_bc(this%elem(n)%l_kresolved_int,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%jij_options%nshells,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%jij_options%startFromShell,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%jij_options%numAtomicNumberSelection,rank,mpi_comm)
+         CALL mpi_bc(this%elem(n)%jij_options%l_magneticshell,rank,mpi_comm)
+         CALL mpi_bc(rank,mpi_comm,this%elem(n)%jij_options%atomicNumberSelection)
       ENDDO
       DO n=1,this%numberContours
          CALL mpi_bc(this%contour(n)%shape,rank,mpi_comm)
@@ -303,7 +317,7 @@ CONTAINS
       CLASS(t_gfinp), INTENT(INOUT):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
-      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF,nshells
+      INTEGER :: numberNodes,ntype,itype,n_hia,i_gf,refL,refGF,nshells,startFromShell
       INTEGER :: i,l,lp,iContour,iContourp, atomicNumber, shellAtomicNumberSelection
       REAL    :: fixedCutoff
       CHARACTER(len=200)  :: xPathA,xPathS,label,cutoffArg,str, shellElement
@@ -427,6 +441,11 @@ CONTAINS
             iContour = this%find_contour(TRIM(ADJUSTL(label)))
             cutoffArg = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kkintgrCutoff')))
             nshells = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nshells'))
+            IF(xml%versionNumber>=36) THEN
+               startFromShell = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@startFromShell'))
+            else
+               startFromShell= 0
+            endif
             IF(xml%versionNumber>=35) THEN
                l_kresolved = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@k_resolved'))
             ELSE
@@ -481,14 +500,18 @@ CONTAINS
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
                      i_gf =  this%add(l,itype,iContour,l_sphavg,lp=lp,l_fixedCutoffset=l_fixedCutoffset,&
-                                      fixedCutoff=fixedCutoff,nshells=nshells,k_resolved=l_kresolved)
-                     if (nshells /= 0 .and. shellAtomicNumberSelection /= -1) THEN
-                        this%numintersiteAtomicNumberSelection(i_gf) = this%numintersiteAtomicNumberSelection(i_gf) + 1
-                        this%intersiteAtomicNumberSelection(i_gf,this%numintersiteAtomicNumberSelection(i_gf)) = shellAtomicNumberSelection
-                     endif
-                     if (nshells /= 0) THEN
-                        this%intersiteOnlyMagneticAtoms(i_gf) = l_magneticshell
-                     endif              
+                                      fixedCutoff=fixedCutoff,k_resolved=l_kresolved)
+                     if (nshells /=0) then
+                        if (startFromShell > nshells) call juDFT_error("Invalid value for startFromShell: startFromShell>nshells", calledby="read_xml_gfinp")
+                        this%elem(i_gf)%jij_options%nshells = nshells
+                        this%elem(i_gf)%jij_options%startFromShell = startFromShell
+                        this%elem(i_gf)%jij_options%l_magneticshell = l_magneticshell
+                     
+                        if (shellAtomicNumberSelection /= -1) THEN
+                           this%elem(i_gf)%jij_options%numAtomicNumberSelection = this%elem(i_gf)%jij_options%numAtomicNumberSelection + 1
+                           this%elem(i_gf)%jij_options%atomicNumberSelection(this%elem(i_gf)%jij_options%numAtomicNumberSelection) = shellAtomicNumberSelection
+                        endif 
+                     endif          
                   ENDDO
                ENDDO
             ENDIF
@@ -501,13 +524,17 @@ CONTAINS
                   lp_calc(l,l) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@'//spdf(l)))
                   IF(.NOT.lp_calc(l,l)) CYCLE
                   i_gf =  this%add(l,itype,iContour,l_sphavg,l_fixedCutoffset=l_fixedCutoffset,&
-                                   fixedCutoff=fixedCutoff,nshells=nshells,k_resolved=l_kresolved)
-                  if (nshells /= 0 .and. shellAtomicNumberSelection /= -1) THEN
-                     this%numintersiteAtomicNumberSelection(i_gf) = this%numintersiteAtomicNumberSelection(i_gf) + 1
-                     this%intersiteAtomicNumberSelection(i_gf,this%numintersiteAtomicNumberSelection(i_gf)) = shellAtomicNumberSelection
-                  endif
-                  if (nshells /= 0) THEN
-                     this%intersiteOnlyMagneticAtoms(i_gf) = l_magneticshell
+                                   fixedCutoff=fixedCutoff,k_resolved=l_kresolved)
+                  if (nshells /=0) then
+                     if (startFromShell > nshells) call juDFT_error("Invalid value for startFromShell: startFromShell>nshells", calledby="read_xml_gfinp")
+                     this%elem(i_gf)%jij_options%nshells = nshells
+                     this%elem(i_gf)%jij_options%startFromShell = startFromShell
+                     this%elem(i_gf)%jij_options%l_magneticshell = l_magneticshell
+                  
+                     if (shellAtomicNumberSelection /= -1) THEN
+                        this%elem(i_gf)%jij_options%numAtomicNumberSelection = this%elem(i_gf)%jij_options%numAtomicNumberSelection + 1
+                        this%elem(i_gf)%jij_options%atomicNumberSelection(this%elem(i_gf)%jij_options%numAtomicNumberSelection) = shellAtomicNumberSelection
+                     endif 
                   endif
                ENDDO
             ENDIF
@@ -515,14 +542,14 @@ CONTAINS
             !Find the reference element
             IF(refL /= -1 .AND.ANY(lp_calc)) THEN
                !Find the element
-               refGF = this%find(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.,k_resolved_int=.FALSE.,nshells=nshells,l_found=l_found)
+               refGF = this%find(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.,k_resolved_int=.FALSE.,l_found=l_found)
                IF(.NOT.l_found) THEN
                   refGF = this%add(refL,itype,iContour,l_sphavg,k_resolved=.FALSE.)
                ENDIF
                DO l = 0,lmaxU_const
                   DO lp = 0,lmaxU_const
                      IF(.NOT.lp_calc(lp,l)) CYCLE
-                     i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp,nshells=nshells,k_resolved=l_kresolved)
+                     i_gf = this%find(l,itype,iContour,l_sphavg,lp=lp,k_resolved=l_kresolved)
                      IF(i_gf==refGF) CYCLE
                      this%elem(i_gf)%refCutoff = refGF
                   ENDDO
@@ -645,46 +672,26 @@ CONTAINS
       TYPE(t_input),    INTENT(IN)     :: input
 
       INTEGER :: i_gf,l,lp,atomType,iContour,refCutoff,i_gf_rot,iop
-      INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref,n_intersite, i_inter
-      LOGICAL :: l_sphavg, l_all_kresolved, l_kresolved_radial, magneticShell
-      INTEGER :: hiaElem(atoms%n_hia), intersite_elems(this%n), shells(this%n)
+      INTEGER :: refCutoff1,nOtherAtoms,nOtherAtoms1,iOtherAtom,lref
+      LOGICAL :: l_sphavg, l_all_kresolved, l_kresolved_radial
+      INTEGER :: hiaElem(atoms%n_hia)
       LOGICAL :: written(atoms%nType), l_kresolved
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
-      INTEGER, ALLOCATABLE :: atomTypepList(:),atomTypepList1(:), atomicNumberSelection(:)
+      type(t_gfelementtype) :: reference_elem
+      INTEGER, ALLOCATABLE :: atomTypepList(:),atomTypepList1(:)
 
       IF(this%n==0) RETURN !Nothing to do here
 
-      n_intersite = 0
-      shells = 0
-      intersite_elems = -1
       written = .FALSE.
-      !Find the elements for which we need to compute the nearest neighbours
       DO i_gf = 1, this%n
-         IF(this%elem(i_gf)%atomTypep<0) THEN
-            n_intersite = n_intersite + 1
-            intersite_elems(n_intersite) = i_gf
-            shells(n_intersite) = ABS(this%elem(i_gf)%atomTypep)
-            this%elem(i_gf)%atomTypep = this%elem(i_gf)%atomType
-         ENDIF
-      ENDDO
-      DO i_inter = 1, n_intersite
-         i_gf = intersite_elems(i_inter)
-         l  = this%elem(i_gf)%l
-         lp = this%elem(i_gf)%lp
-         atomType  = this%elem(i_gf)%atomType
-         iContour = this%elem(i_gf)%iContour
+         if (this%elem(i_gf)%jij_options%nshells == 0) cycle
+         atomType = this%elem(i_gf)%atomType
          refCutoff = this%elem(i_gf)%refCutoff
-         l_sphavg = this%elem(i_gf)%l_sphavg
-         l_kresolved = this%elem(i_gf)%l_kresolved
-
+         reference_elem = this%elem(i_gf)
          refCutoff = MERGE(i_gf,refCutoff,refCutoff==-1) !If no refCutoff is set for the intersite element
                                                          !we take the onsite element as reference
-         atomicNumberSelection = this%intersiteAtomicNumberSelection(i_gf,:this%numintersiteAtomicNumberSelection(i_gf))
-         magneticShell = this%intersiteOnlyMagneticAtoms(i_gf)
-         CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
-                                        this%elem(i_gf)%fixedCutoff,refCutoff,atoms,cell,sym,input,&
-                                        .NOT.written(atomType),nOtherAtoms,atomTypepList,&
-                                        atomicNumberSelection=atomicNumberSelection,magneticShell=magneticShell)
+         CALL this%addNearestNeighbours(atomType,reference_elem,refCutoff,atoms,cell,sym,input,&
+                                        .NOT.written(atomType),nOtherAtoms,atomTypepList)
          written(atomType) = .TRUE.
 
          !Add the other atomtypes (i,j) -> (j,i)
@@ -692,21 +699,19 @@ CONTAINS
             atomType = atomTypepList(iOtherAtom)
             !First add the reference cutoff element
             lref = this%elem(refCutoff)%l
-            refCutoff1 =  this%add(lref,atomType,iContour,l_sphavg,k_resolved=.FALSE.,&
-                                   l_fixedCutoffset=this%elem(i_gf)%l_fixedCutoffset,&
-                                   fixedCutoff=this%elem(i_gf)%fixedCutoff)
+            refCutoff1 =  this%add(lref,atomType,reference_elem%iContour,reference_elem%l_sphavg,k_resolved=.FALSE.,&
+                                   l_fixedCutoffset=reference_elem%l_fixedCutoffset,&
+                                   fixedCutoff=reference_elem%fixedCutoff)
 
             WRITE(oUnit,'(A,i0)') 'Adding shells for atom: ', atomType
             
-            if (size(atomicNumberSelection) /= 0) then
-               CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
-                                             this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
+            if (reference_elem%jij_options%numAtomicNumberSelection /= 0) then
+               CALL this%addNearestNeighbours(atomType,reference_elem,refCutoff1,atoms,cell,sym,input,&
                                              .NOT.written(atomType),nOtherAtoms1,atomTypepList1,&
-                                             atomicNumberSelection=(/atoms%nz(atomType)/),magneticShell=magneticShell)
+                                             atomicNumberSelection=(/atoms%nz(reference_elem%atomType)/))
             else
-               CALL this%addNearestNeighbours(shells(i_inter),l,lp,atomType,l_sphavg,iContour,l_kresolved,this%elem(i_gf)%l_fixedCutoffset,&
-                                             this%elem(i_gf)%fixedCutoff,refCutoff1,atoms,cell,sym,input,&
-                                             .NOT.written(atomType),nOtherAtoms1,atomTypepList1,magneticShell=magneticShell)
+               CALL this%addNearestNeighbours(atomType,reference_elem,refCutoff1,atoms,cell,sym,input,&
+                                             .NOT.written(atomType),nOtherAtoms1,atomTypepList1)
             endif
 
          ENDDO
@@ -900,7 +905,7 @@ CONTAINS
    END FUNCTION uniqueElements_gfinp
 
    INTEGER FUNCTION add_gfelem(this,l,atomType,iContour,l_sphavg,lp,atomTypep,atomDiff,&
-                               l_fixedCutoffset,fixedCutoff,nshells,k_resolved,atom,atomp) Result(i_gf)
+                               l_fixedCutoffset,fixedCutoff,k_resolved,atom,atomp) Result(i_gf)
 
       CLASS(t_gfinp),      INTENT(INOUT)  :: this
       INTEGER,             INTENT(IN)     :: l
@@ -912,7 +917,6 @@ CONTAINS
       REAL,    OPTIONAL,   INTENT(IN)     :: atomDiff(:)
       LOGICAL, OPTIONAL,   INTENT(IN)     :: l_fixedCutoffset
       REAL,    OPTIONAL,   INTENT(IN)     :: fixedCutoff
-      INTEGER, OPTIONAL,   INTENT(IN)     :: nshells
       LOGICAL, OPTIONAL,   INTENT(IN)     :: k_resolved
       INTEGER, OPTIONAL,   INTENT(IN)     :: atom, atomp
 
@@ -921,7 +925,7 @@ CONTAINS
       TYPE(t_gfelementtype), ALLOCATABLE :: gfelem(:)
 
       CALL new_element%init(l,atomType,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
-                            nshells=nshells,atomDiff=atomDiff,k_resolved=k_resolved,&
+                            atomDiff=atomDiff,k_resolved=k_resolved,&
                             l_fixedCutoffset=l_fixedCutoffset,fixedCutoff=fixedCutoff,&
                             atom=atom,atomp=atomp)
 
@@ -997,9 +1001,8 @@ CONTAINS
 
    END FUNCTION find_symmetry_rotated_greensf_gfinp
    
-   SUBROUTINE addNearestNeighbours_gfelem(this,nshells,l,lp,refAtom,l_sphavg,iContour,l_kresolved,l_fixedCutoffset,fixedCutoff,&
-                                          refCutoff,atoms,cell,sym,input,l_write,nOtherAtoms,atomTypepList,atomicNumberSelection,&
-                                          magneticShell)
+   SUBROUTINE addNearestNeighbours_gfelem(this,refAtom,elem,refCutoff,atoms,cell,sym,input,l_write,&
+                                          nOtherAtoms,atomTypepList,atomicNumberSelection)
 
       USE m_types_atoms
       USE m_types_cell
@@ -1011,15 +1014,8 @@ CONTAINS
       !reference atom and do not need to consider all distances between all atoms
 
       CLASS(t_gfinp),      INTENT(INOUT)  :: this
-      INTEGER,             INTENT(IN)     :: nshells !How many nearest neighbour shells are requested
-      INTEGER,             INTENT(IN)     :: l
-      INTEGER,             INTENT(IN)     :: lp
-      INTEGER,             INTENT(IN)     :: refAtom !which is the reference atom
-      LOGICAL,             INTENT(IN)     :: l_sphavg
-      INTEGER,             INTENT(IN)     :: iContour
-      LOGICAL,             INTENT(IN)     :: l_kresolved
-      LOGICAL,             INTENT(IN)     :: l_fixedCutoffset
-      REAL,                INTENT(IN)     :: fixedCutoff
+      integer,             intent(in)     :: refAtom
+      type(t_gfelementtype),INTENT(IN)    :: elem
       INTEGER,             INTENT(IN)     :: refCutoff
       TYPE(t_atoms),       INTENT(IN)     :: atoms
       TYPE(t_cell),        INTENT(IN)     :: cell
@@ -1029,7 +1025,6 @@ CONTAINS
       INTEGER,             INTENT(OUT)    :: nOtherAtoms
       INTEGER,ALLOCATABLE, INTENT(OUT)    :: atomTypepList(:) !Which other atomtypes were added (not equal to refAtom)
       integer,optional,    intent(in)     :: atomicNumberSelection(:) !Which other atom should be considered
-      logical,optional,    intent(in)     :: magneticShell
 
       INTEGER :: generatedShells, ishellAtom, ishell, i_gf, repr, repr_ops, atomTypep
       REAL    :: repr_diff(3)
@@ -1038,17 +1033,21 @@ CONTAINS
       REAL,    ALLOCATABLE :: shellDiffs(:,:,:)
       INTEGER, ALLOCATABLE :: shellAtoms(:,:,:)
       INTEGER, ALLOCATABLE :: shellOps(:,:)
-      INTEGER, ALLOCATABLE :: numAtomsShell(:)
+      INTEGER, ALLOCATABLE :: numAtomsShell(:), atomicNumberSelectionArg(:)
 
       CALL timestart("Green's Function: Add nearest Neighbors")
 
-      CALL construct_atom_shells(refAtom, nshells, atoms, cell, sym, input%film, shellDistances,&
+      atomicNumberSelectionArg = elem%jij_options%atomicNumberSelection(:elem%jij_options%numAtomicNumberSelection)
+      if (present(atomicNumberSelection)) atomicNumberSelectionArg = atomicNumberSelection
+
+      CALL construct_atom_shells(refAtom, elem%jij_options%nshells, atoms, cell, sym, input%film, shellDistances,&
                                  shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells,&
-                                 only_elements=atomicNumberSelection, only_magnetic=magneticShell)
+                                 only_elements=atomicNumberSelectionArg,&
+                                 only_magnetic=elem%jij_options%l_magneticshell,&
+                                 start_from_shell=elem%jij_options%startFromShell)
 
       ALLOCATE(atomTypepList(atoms%ntype),source=0)
       nOtherAtoms = 0
-
       DO ishell = 1, generatedShells
          IF(l_write) THEN
             WRITE(oUnit,'(/,A,f14.8)') 'Adding shell with distance: ', shellDistances(ishell)
@@ -1063,9 +1062,9 @@ CONTAINS
          DO ishellAtom = 1, numAtomsShell(ishell)
 
             atomTypep = atoms%itype(shellAtoms(2,ishellAtom,ishell))
-            i_gf =  this%add(l,refAtom,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,k_resolved=l_kresolved,&
-                             atomDiff=shellDiffs(:,ishellAtom,ishell),l_fixedCutoffset=l_fixedCutoffset,&
-                             fixedCutoff=fixedCutoff,atom=shellAtoms(1,ishellAtom,ishell),atomp = shellAtoms(2,ishellAtom,ishell))
+            i_gf =  this%add(elem%l,refAtom,elem%iContour,elem%l_sphavg,lp=elem%lp,atomTypep=atomTypep,k_resolved=elem%l_kresolved,&
+                             atomDiff=shellDiffs(:,ishellAtom,ishell),l_fixedCutoffset=elem%l_fixedCutoffset,&
+                             fixedCutoff=elem%fixedCutoff,atom=shellAtoms(1,ishellAtom,ishell),atomp=shellAtoms(2,ishellAtom,ishell))
             IF(repr == 0) THEN
                repr = i_gf
                repr_diff = shellDiffs(:,ishellAtom,ishell)
@@ -1102,7 +1101,7 @@ CONTAINS
    END SUBROUTINE addNearestNeighbours_gfelem
 
    INTEGER FUNCTION find_gfelem_simple(this,l,atomType,iContour,l_sphavg,lp,atomTypep,&
-                                       nshells,atomDiff,k_resolved,k_resolved_int,l_found) result(i_gf)
+                                       atomDiff,k_resolved,k_resolved_int,l_found) result(i_gf)
 
       !Maps between the four indices (l,lp,nType,nTypep) and the position in the
       !gf arrays
@@ -1114,7 +1113,6 @@ CONTAINS
       LOGICAL,             INTENT(IN)    :: l_sphavg
       INTEGER, OPTIONAL,   INTENT(IN)    :: lp
       INTEGER, OPTIONAL,   INTENT(IN)    :: atomTypep
-      INTEGER, OPTIONAL,   INTENT(IN)    :: nshells
       REAL,    OPTIONAL,   INTENT(IN)    :: atomDiff(:)
       LOGICAL, OPTIONAL,   INTENT(IN)    :: k_resolved
       LOGICAL, OPTIONAL,   INTENT(IN)    :: k_resolved_int
@@ -1129,7 +1127,7 @@ CONTAINS
       distinct_kresolved_int = PRESENT(k_resolved_int)
 
       CALL elem_to_find%init(l,atomType,iContour,l_sphavg,lp=lp,atomTypep=atomTypep,&
-                             nshells=nshells,atomDiff=atomDiff,k_resolved=k_resolved)
+                             atomDiff=atomDiff,k_resolved=k_resolved)
       IF(distinct_kresolved_int) THEN
          elem_to_find%l_kresolved_int = k_resolved_int
       ENDIF
@@ -1295,7 +1293,7 @@ CONTAINS
       ENDDO
    END FUNCTION checkOffdiagonal_gfinp
 
-   SUBROUTINE init_gfelem(this,l,atomType,iContour,l_sphavg,lp,nshells,atomTypep,k_resolved,atomDiff,l_fixedCutoffset,fixedCutoff,atom,atomp)
+   SUBROUTINE init_gfelem(this,l,atomType,iContour,l_sphavg,lp,atomTypep,k_resolved,atomDiff,l_fixedCutoffset,fixedCutoff,atom,atomp)
 
       CLASS(t_gfelementtype), INTENT(INOUT)  :: this
       INTEGER,                INTENT(IN)     :: l
@@ -1307,15 +1305,8 @@ CONTAINS
       REAL,    OPTIONAL,      INTENT(IN)     :: atomDiff(:)
       LOGICAL, OPTIONAL,      INTENT(IN)     :: l_fixedCutoffset
       REAL,    OPTIONAL,      INTENT(IN)     :: fixedCutoff
-      INTEGER, OPTIONAL,      INTENT(IN)     :: nshells
       LOGICAL, OPTIONAL,      INTENT(IN)     :: k_resolved
       INTEGER, OPTIONAL,      INTENT(IN)     :: atom, atomp
-
-      IF(PRESENT(nshells).AND.PRESENT(atomTypep)) THEN
-         CALL juDFT_error("Conflicting arguments: nshells and nTypep given",&
-                          hint="This is a bug in FLEUR, please report",&
-                          calledby="init_gfelem")
-      ENDIF
 
       IF(PRESENT(atom).OR.PRESENT(atomp)) THEN
          IF(.NOT.(PRESENT(atom).AND.PRESENT(atomp))) THEN
@@ -1334,14 +1325,7 @@ CONTAINS
       ELSE
          this%lp = l
       ENDIF
-      IF(PRESENT(nshells)) THEN
-         IF(nshells/=0) THEN
-            !Temporary index to mark later in gfinp%init
-            this%atomTypep = -nshells
-         ELSE
-            this%atomTypep = atomType
-         ENDIF
-      ELSE IF(PRESENT(atomTypep)) THEN
+      IF(PRESENT(atomTypep)) THEN
          !Explicit declaration of element
          this%atomTypep = atomTypep
       ELSE

@@ -20,7 +20,7 @@ MODULE m_atom_shells
 
    SUBROUTINE construct_atom_shells(referenceAtom, nshells, atoms, cell, sym, film, shellDistances,&
                                     shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells, &
-                                    only_elements, only_magnetic)
+                                    only_elements, only_magnetic, start_from_shell)
 
       !----------------------------------------------------------------------------------------------
       !Construct neighbour shells around a given reference atom
@@ -53,11 +53,12 @@ MODULE m_atom_shells
       INTEGER,             INTENT(OUT)  :: generatedShells
       integer, optional,   intent(in)   :: only_elements(:)
       logical, optional,   intent(in)   :: only_magnetic
+      integer, optional,   intent(in)   :: start_from_shell
 
       REAL, PARAMETER :: eps = 1e-5
 
-      INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells
-      INTEGER :: ishell,i,iAtom,atomTypep,refAt,completed_atom_shells
+      INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells, start_from_shell_arg
+      INTEGER :: ishell,i,iAtom,atomTypep,refAt,completed_atom_shells, startShell
       LOGICAL :: l_unfinished_shell,l_found_shell,l_add, shell_finished
       REAL :: lastDist
 
@@ -72,6 +73,11 @@ MODULE m_atom_shells
                         array_size = atoms%nat * atoms%neq(referenceAtom) * 27)
 
       WRITE(oUnit,'(/,/,A,I0,A,I0)') "Generating ", nshells, " shells for atomType: ", referenceAtom
+
+      start_from_shell_arg = 1
+      if(present(start_from_shell)) start_from_shell_arg = max(1,start_from_shell)
+      if (start_from_shell_arg /= 1) WRITE(oUnit,'(A,I0,A)') "Dismissing the first ", start_from_shell_arg, " shells"
+      if (start_from_shell_arg>nshells) call juDFT_error("start_from_shell > nshells", calledby="construct_atom_shells")
 
       atomShells = 0
       actualShells = 0
@@ -203,6 +209,9 @@ MODULE m_atom_shells
       DO ishell = 1, actualShells
          IF(shellDistances(ishell)-lastDist > eps) atomShells1 = atomShells1 + 1
          lastDist = shellDistances(ishell)
+         if(atomShells1==start_from_shell_arg) then
+            startShell = ishell
+         endif
          IF(atomShells1>nshells) THEN
             generatedShells = ishell - 1
             EXIT
@@ -218,6 +227,12 @@ MODULE m_atom_shells
                           calledby="atom_shells")
       ENDIF
 
+      !Dismiss the shells before startShells
+      shellAtoms(:,:,1:generatedShells-startShell+1) = shellAtoms(:,:,startShell:generatedShells)
+      shellDiffs(:,:,1:generatedShells-startShell+1) = shellDiffs(:,:,startShell:generatedShells)
+      shellDistances(1:generatedShells-startShell+1) = shellDistances(startShell:generatedShells)
+      numAtomsShell(1:generatedShells-startShell+1) = numAtomsShell(startShell:generatedShells)
+      generatedShells = generatedShells-startShell+1
       ALLOCATE(shellOps(SIZE(shellDistances),SIZE(shellDistances)), source=0)
       !Symmetry reduction (modernized and modified version of nshell.f from v26)
       CALL apply_sym_to_shell(generatedShells, atoms, sym, shellAtoms, shellDiffs, shellDistances, numAtomsShell, shellOps)
