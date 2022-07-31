@@ -176,7 +176,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    !Greens function always considers the empty states
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
       IF(greensfImagPart%l_calc) THEN
-         CALL greensfBZintCoeffs%init(gfinp,atoms,noco,jsp_start,jsp_end,SIZE(cdnvalJob%ev_list))
+         CALL greensfBZintCoeffs%init(gfinp,atoms,noco,SIZE(cdnvalJob%ev_list))
          CALL greensfCalcScalarProducts(gfinp,atoms,input,enpara,noco,sphhar,vTot,fmpi,hub1data=hub1data,&
                                         scalarProducts=scalarGF)
       ENDIF
@@ -316,10 +316,12 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
          IF(greensfImagPart%l_calc) THEN
-            CALL greensfBZint(ikpt,noccbd,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
-                              scalarGF,eigVecCoeffs,greensfBZintCoeffs)
-            CALL greensfCalcImagPart_single_kpt(ikpt,ikpt_i,ev_list,jspin,gfinp,atoms,input,kpts,noco,fmpi,&
-                              results,greensfBZintCoeffs,greensfImagPart)
+            do ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
+               CALL greensfBZint(ikpt,noccbd,ispin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
+                                 scalarGF,eigVecCoeffs,greensfBZintCoeffs)
+               CALL greensfCalcImagPart_single_kpt(ikpt,ikpt_i,ev_list,ispin,gfinp,atoms,input,kpts,noco,fmpi,&
+                                 results,greensfBZintCoeffs,greensfImagPart)
+            enddo
          ENDIF
       ENDIF
 

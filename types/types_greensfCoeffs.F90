@@ -18,23 +18,23 @@ MODULE m_types_greensfCoeffs
 
          !Contains only the coefficients for each kpt and band handled by the current mpi rank
 
-         COMPLEX, ALLOCATABLE :: sphavg(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: sphavg(:,:,:,:)
 
          ! These arrays are only used in the case we want the green's function with radial dependence
-         COMPLEX, ALLOCATABLE :: uu(:,:,:,:,:)
-         COMPLEX, ALLOCATABLE :: dd(:,:,:,:,:)
-         COMPLEX, ALLOCATABLE :: du(:,:,:,:,:)
-         COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: uu(:,:,:,:)
+         COMPLEX, ALLOCATABLE :: dd(:,:,:,:)
+         COMPLEX, ALLOCATABLE :: du(:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ud(:,:,:,:)
 
          !LO-Valence Contribution
-         COMPLEX, ALLOCATABLE :: uulo(:,:,:,:,:,:)
-         COMPLEX, ALLOCATABLE :: ulou(:,:,:,:,:,:)
-         COMPLEX, ALLOCATABLE :: dulo(:,:,:,:,:,:)
-         COMPLEX, ALLOCATABLE :: ulod(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: uulo(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ulou(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: dulo(:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ulod(:,:,:,:,:)
 
          !LO-LO contribution
          !Here we need to compress the (lo,lop) index pair into one index because PGI allows a max of 7 indices
-         COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: uloulop(:,:,:,:,:)
 
          CONTAINS
             PROCEDURE, PASS :: init             => greensfBZintCoeffs_init
@@ -88,47 +88,40 @@ MODULE m_types_greensfCoeffs
 
    CONTAINS
 
-      SUBROUTINE greensfBZintCoeffs_init(this,gfinp,atoms,noco,jsp_start,jsp_end,nbands)
+      SUBROUTINE greensfBZintCoeffs_init(this,gfinp,atoms,noco,nbands)
 
          CLASS(t_greensfBZintCoeffs),  INTENT(INOUT)  :: this
          TYPE(t_gfinp),                INTENT(IN)     :: gfinp
          TYPE(t_atoms),                INTENT(IN)     :: atoms
          TYPE(t_noco),                 INTENT(IN)     :: noco
-         INTEGER,                      INTENT(IN)     :: jsp_start,jsp_end
          INTEGER,                      INTENT(IN)     :: nbands !number of kpts and bands handled by this rank
 
          INTEGER lmax, uniqueElementsSphavg,uniqueElementsRadial, maxSpin,uniqueElementsLO,maxLO
 
          lmax = lmaxU_const
 
-         IF(gfinp%l_mperp.AND.jsp_end==2) THEN
-            maxSpin = 3
-         ELSE
-            maxSpin = jsp_end
-         ENDIF
-
          !Determine number of unique gf elements
          uniqueElementsSphavg  = gfinp%uniqueElements(atoms,l_sphavg=.TRUE.) !How many spherically averaged elements
          uniqueElementsRadial  = gfinp%uniqueElements(atoms,l_sphavg=.FALSE.) !How many elements with radial dependence
 
          IF(uniqueElementsSphavg>0) THEN
-            ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsSphavg,jsp_start:maxSpin),source=cmplx_0)
+            ALLOCATE (this%sphavg(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsSphavg),source=cmplx_0)
          ENDIF
          IF(uniqueElementsRadial>0) THEN
-            ALLOCATE (this%uu(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,jsp_start:maxSpin),source=cmplx_0)
-            ALLOCATE (this%dd(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,jsp_start:maxSpin),source=cmplx_0)
-            ALLOCATE (this%du(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,jsp_start:maxSpin),source=cmplx_0)
-            ALLOCATE (this%ud(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial,jsp_start:maxSpin),source=cmplx_0)
+            ALLOCATE (this%uu(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial),source=cmplx_0)
+            ALLOCATE (this%dd(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial),source=cmplx_0)
+            ALLOCATE (this%du(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial),source=cmplx_0)
+            ALLOCATE (this%ud(nbands,-lmax:lmax,-lmax:lmax,uniqueElementsRadial),source=cmplx_0)
 
             uniqueElementsLO = gfinp%uniqueElements(atoms,lo=.TRUE.,l_sphavg=.FALSE.,maxLO=maxLO)
 
             IF(uniqueElementsLO>0) THEN
-               ALLOCATE (this%uulo(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,jsp_start:maxSpin),source=cmplx_0)
-               ALLOCATE (this%ulou(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,jsp_start:maxSpin),source=cmplx_0)
-               ALLOCATE (this%dulo(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,jsp_start:maxSpin),source=cmplx_0)
-               ALLOCATE (this%ulod(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO,jsp_start:maxSpin),source=cmplx_0)
+               ALLOCATE (this%uulo(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO),source=cmplx_0)
+               ALLOCATE (this%ulou(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO),source=cmplx_0)
+               ALLOCATE (this%dulo(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO),source=cmplx_0)
+               ALLOCATE (this%ulod(nbands,-lmax:lmax,-lmax:lmax,maxLO,uniqueElementsLO),source=cmplx_0)
 
-               ALLOCATE (this%uloulop(nbands,-lmax:lmax,-lmax:lmax,maxLO**2,uniqueElementsLO,jsp_start:maxSpin),source=cmplx_0)
+               ALLOCATE (this%uloulop(nbands,-lmax:lmax,-lmax:lmax,maxLO**2,uniqueElementsLO),source=cmplx_0)
             ENDIF
          ENDIF
 
@@ -155,10 +148,10 @@ MODULE m_types_greensfCoeffs
 
       end subroutine
 
-      SUBROUTINE greensfBZintCoeffs_add_contribution(this, i_elem, i_elemLO, iBand, ispin, nLO, imat, l_sphavg, contribution)
+      SUBROUTINE greensfBZintCoeffs_add_contribution(this, i_elem, i_elemLO, iBand, nLO, imat, l_sphavg, contribution)
 
          CLASS(t_greensfBZintCoeffs),  INTENT(INOUT)   :: this
-         INTEGER,                      INTENT(IN)      :: i_elem,i_elemLO,ispin,nLO,iBand,imat
+         INTEGER,                      INTENT(IN)      :: i_elem,i_elemLO,nLO,iBand,imat
          LOGICAL,                      INTENT(IN)      :: l_sphavg
          COMPLEX,                      INTENT(IN)      :: contribution(-lmaxU_const:,-lmaxU_const:)
 
@@ -166,46 +159,46 @@ MODULE m_types_greensfCoeffs
 
          IF(l_sphavg) THEN
             !Spherically averaged (already multiplied with scalar products)
-            this%sphavg(iBand,:,:,i_elem,ispin) = &
-               this%sphavg(iBand,:,:,i_elem,ispin) + contribution
+            this%sphavg(iBand,:,:,i_elem) = &
+               this%sphavg(iBand,:,:,i_elem) + contribution
          ELSE IF(imat.EQ.1) THEN
             !imat 1-4: coefficients for Valence-Valence contribution
-            this%uu(iBand,:,:,i_elem,ispin) = &
-               this%uu(iBand,:,:,i_elem,ispin) + contribution
+            this%uu(iBand,:,:,i_elem) = &
+               this%uu(iBand,:,:,i_elem) + contribution
          ELSE IF(imat.EQ.2) THEN
-            this%dd(iBand,:,:,i_elem,ispin) = &
-               this%dd(iBand,:,:,i_elem,ispin) + contribution
+            this%dd(iBand,:,:,i_elem) = &
+               this%dd(iBand,:,:,i_elem) + contribution
          ELSE IF(imat.EQ.3) THEN
-            this%ud(iBand,:,:,i_elem,ispin) = &
-               this%ud(iBand,:,:,i_elem,ispin) + contribution
+            this%ud(iBand,:,:,i_elem) = &
+               this%ud(iBand,:,:,i_elem) + contribution
          ELSE IF(imat.EQ.4) THEN
-            this%du(iBand,:,:,i_elem,ispin) = &
-               this%du(iBand,:,:,i_elem,ispin) + contribution
+            this%du(iBand,:,:,i_elem) = &
+               this%du(iBand,:,:,i_elem) + contribution
          ELSE IF((imat-4.0)/2.0<=nLO) THEN
             !imat 5 - 4+2*numberofLOs: coefficients for Valence-LO contribution
             iLO = CEILING(REAL(imat-4.0)/2.0)
             IF(MOD(imat-4,2)==1) THEN
-               this%uulo(iBand,:,:,iLO,i_elemLO,ispin) = &
-                  this%uulo(iBand,:,:,iLO,i_elemLO,ispin) + contribution
+               this%uulo(iBand,:,:,iLO,i_elemLO) = &
+                  this%uulo(iBand,:,:,iLO,i_elemLO) + contribution
             ELSE IF(MOD(imat-4,2)==0) THEN
-               this%dulo(iBand,:,:,iLO,i_elemLO,ispin) = &
-                  this%dulo(iBand,:,:,iLO,i_elemLO,ispin) + contribution
+               this%dulo(iBand,:,:,iLO,i_elemLO) = &
+                  this%dulo(iBand,:,:,iLO,i_elemLO) + contribution
             ENDIF
          ELSE IF((imat-4.0)/2.0<=2.0*nLO) THEN
             !imat 4+2*numberofLOs+1 - 4+4*numberofLOs: coefficients for LO-Valence contribution
             iLO = CEILING(REAL(imat-4.0-2*nLO)/2.0)
             IF(MOD(imat-4-2*nLO,2)==1) THEN
-               this%ulou(iBand,:,:,iLO,i_elemLO,ispin) = &
-                  this%ulou(iBand,:,:,iLO,i_elemLO,ispin) + contribution
+               this%ulou(iBand,:,:,iLO,i_elemLO) = &
+                  this%ulou(iBand,:,:,iLO,i_elemLO) + contribution
             ELSE IF(MOD(imat-4-2*nLO,2)==0) THEN
-               this%ulod(iBand,:,:,iLO,i_elemLO,ispin) = &
-                  this%ulod(iBand,:,:,iLO,i_elemLO,ispin) + contribution
+               this%ulod(iBand,:,:,iLO,i_elemLO) = &
+                  this%ulod(iBand,:,:,iLO,i_elemLO) + contribution
             ENDIF
          ELSE
             !imat 4+4*numberofLOs+1 - 4+4*numberofLOs+numberofLOs**2: coefficients for LO-LO contribution
             iLO = imat - 4 - 4*nLO
-            this%uloulop(iBand,:,:,iLO,i_elemLO,ispin) = &
-                  this%uloulop(iBand,:,:,iLO,i_elemLO,ispin) + contribution
+            this%uloulop(iBand,:,:,iLO,i_elemLO) = &
+                  this%uloulop(iBand,:,:,iLO,i_elemLO) + contribution
          ENDIF
 
       END SUBROUTINE greensfBZintCoeffs_add_contribution
