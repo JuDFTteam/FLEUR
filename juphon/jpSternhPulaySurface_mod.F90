@@ -1397,7 +1397,7 @@ module m_jpSternhPulaySurface
   !---------------------------------------------------------------------------------------------------------------------------------
   subroutine IRcoeffVeffUv( atoms, stars, cell, iDtype, iDatom, ngdp, coScale, gdp, veffUvIR, vEff0IRpwUw )
 
-    use m_gaunt, only : gaunt1
+    use m_gaunt, only : gaunt2
     use m_sphbes
     use m_ylm_old
     use m_types, only : t_atoms, t_stars, t_cell
@@ -1446,7 +1446,7 @@ module m_jpSternhPulaySurface
     !todo discuss cutoffs!
     lmaxScale = coScale * atoms%lmax(iDtype)
 
-    if ( coScale /= 1 ) CALL juDFT_error('Overthink norm of ylm',calledby ="IRcoeffVeffUv")
+    !if ( coScale /= 1 ) CALL juDFT_error('Overthink norm of ylm',calledby ="IRcoeffVeffUv")
 
     allocate( sbes(0:lmaxScale) )
     allocate( ylm((lmaxScale + 1)**2) )
@@ -1483,13 +1483,14 @@ module m_jpSternhPulaySurface
           lm = oqn_l * (oqn_l + 1) + 1 + mqn_m
           factLM = factL * conjg(ylm(lm))
           do mqn_m1p = -1, 1
-            do oqn_l2p = abs(oqn_l - 1), min(oqn_l + 1, atoms%lmax(iDtype))
+            !do oqn_l2p = abs(oqn_l - 1), min(oqn_l + 1, atoms%lmax(iDtype))
+            do oqn_l2p = abs(oqn_l - 1), min(oqn_l + 1, lmaxScale)
               if (mod(oqn_l+oqn_l2p,2).eq.0) cycle ! quite superfluous
               mqn_m2p = mqn_m + mqn_m1p
               ! Despite Gaunt selection rule |m''|< l''
               if ( abs(mqn_m2p) > oqn_l2p ) cycle
               lm2p = oqn_l2p * (oqn_l2p + 1) + 1 + mqn_m2p
-              gauntCoeff = gaunt1( oqn_l2p, 1, oqn_l, mqn_m2p, mqn_m1p, mqn_m, lmaxScale )
+              gauntCoeff = gaunt2( oqn_l2p, 1, oqn_l, mqn_m2p, mqn_m1p, mqn_m, lmaxScale )
               do idir = 1, 3
                 veffUvIR(idir, lm2p) = veffUvIR(idir, lm2p) + factLM * c_im(idir, mqn_m1p + 2) * gauntCoeff
               end do ! idir
@@ -1534,7 +1535,7 @@ module m_jpSternhPulaySurface
       & surfInt, mat_el )
 
     use m_types, only : t_atoms, t_input, t_kpts, t_cell
-    use m_gaunt, only : gaunt1
+    use m_gaunt, only : gaunt2
     use m_ylm_old
     use m_sphbes
 
@@ -1632,7 +1633,7 @@ module m_jpSternhPulaySurface
       surfIntG(:, :, :) = cmplx(0., 0.)
     end if
 
-    if ( coScale /= 1 ) CALL juDFT_error('ylmNorm is not correctly set in calcSfVeffFast',calledby ="calcSfVeffFast")
+    !if ( coScale /= 1 ) CALL juDFT_error('ylmNorm is not correctly set in calcSfVeffFast',calledby ="calcSfVeffFast")
 
     pref = -fpi_const**2 / cell%omtil * atoms%rmt(iDtype)**2
     ! Calculate wavefunction at k, start with basis function part
@@ -1726,13 +1727,14 @@ module m_jpSternhPulaySurface
           do mqn_m = -oqn_l, oqn_l
             lm = lm_pre + mqn_m
             ! Gaunt selection rules, but cutoff at lmax
-            do oqn_l1p = abs( oqn_l2p - oqn_l ), min(oqn_l2p + oqn_l, atoms%lmax(iDtype))
+            !do oqn_l1p = abs( oqn_l2p - oqn_l ), min(oqn_l2p + oqn_l, atoms%lmax(iDtype))
+            do oqn_l1p = abs( oqn_l2p - oqn_l ), min(oqn_l2p + oqn_l, lmaxScaled)
               lm1pPre = oqn_l1p * (oqn_l1p + 1) + 1
               ! Gaunt selection rules
               mqn_m1p = mqn_m2p + mqn_m
               if ( abs(mqn_m1p) > oqn_l1p ) cycle
               lm1p = lm1pPre + mqn_m1p
-              gauntCoeff = gaunt1(oqn_l1p, oqn_l2p, oqn_l, mqn_m1p, mqn_m2p, mqn_m, lmaxScaled)
+              gauntCoeff = gaunt2(oqn_l1p, oqn_l2p, oqn_l, mqn_m1p, mqn_m2p, mqn_m, lmaxScaled)
               do idir = 1, 3
                 do ibandK = 1, nobd(ikpt, 1)
                   do ibandB = 1, ne(ikpq)

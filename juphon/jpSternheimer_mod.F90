@@ -247,7 +247,7 @@ module m_jpSternheimer
 
     ! Type parameters
     type(t_mpi),                  intent(in)  :: fmpi
-     
+
     type(t_atoms),                  intent(in)  :: atoms
     type(t_sym),                    intent(in)  :: sym
     type(t_stars),                  intent(in)  :: stars
@@ -484,6 +484,10 @@ module m_jpSternheimer
       end do ! iG
     end if
 
+    ! Scaling cutoff parameter for surface integral in IR that is Rayleigh expanded, Aaron claims for the forces, it has to be
+    ! 2 lmax?
+    coScale = 1.
+
     !todo check the dimensions of the arrays
     allocate( rho1IRDS(ngpqdp, 3, atoms%nat) )
     allocate( rho1IRDSplus(ngpqdp, 3) )
@@ -531,7 +535,7 @@ module m_jpSternheimer
     allocate( aclo2(atoms%nlod, atoms%nat, 3), bclo2(atoms%nlod, atoms%nat, 3), cclo2(atoms%nlod, atoms%nlod, atoms%nat, 3) )
     allocate( lastDistance(3, atoms%nat, qpts%nkpt) )
     allocate( rho1IRctC(ngpqdp, atoms%nat, 3), rho1MTctC(atoms%jmtd, (atoms%lmaxd + 1)**2, atoms%nat, 3, atoms%nat) )
-    allocate( veffUvIR(3, (atoms%lmaxd + 1)**2) )
+    allocate( veffUvIR(3, (coScale*atoms%lmaxd + 1)**2) )
     !todo here a nobdMax could be introduced
     allocate( surfIntVFast(input%neig, maxval(nobd), 3) )
     allocate( z1nG(SIZE(z(:,1,1,1)), input%neig, 3) ) ! todo segfault in abcof if second argument not like this, this can be optimized
@@ -596,10 +600,6 @@ module m_jpSternheimer
     z1nG(:, :, :)                = cmplx(0., 0.)
     recEdiffME(:, :)             = 0.
     cutContr(:, :)               = 0.
-
-    ! Scaling cutoff parameter for surface integral in IR that is Rayleigh expanded, Aaron claims for the forces, it has to be
-    ! 2 lmax?
-    coScale = 1.
 
     ! This array stores which direction of displacement is already converged
     converged(:) = .false.
