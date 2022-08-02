@@ -623,7 +623,7 @@ MODULE m_atom_shells
       required_cells = 0
       do i = -num_cells, num_cells, 2*num_cells
          do j = -num_cells, num_cells, 2*num_cells
-            do k = -zmax, zmax, 2*zmax
+            do k = -zmax, zmax, max(1,2*zmax)
                solutions(1,1) = i * required_distance
                solutions(2,1) = j * required_distance
                solutions(3,1) = k * required_distance
