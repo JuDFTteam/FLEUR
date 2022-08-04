@@ -72,11 +72,12 @@ CONTAINS
       INTEGER :: i, js
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
 
-      vCoul = vTot
+
+      vCoul = dfptvTot
       vx = vTot
       vxc = vTot
       exc = vTot
-      dfptvCoulimag = vTot
+      dfptvCoulimag = dfptvTot
 
       IF (fmpi%irank==0) WRITE (oUnit,FMT=8000)
       IF (fmpi%irank==0) WRITE (oUnit,FMT=8001)
@@ -152,11 +153,11 @@ CONTAINS
 
       IF (iDtype/=0) THEN
          ! d)
-         ! TODO: This is so different from the base case, that we build a new suboutine.
+         ! TODO: This is so different from the base case, that we build a new subroutine.
          CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq,killcont)
          !DEALLOCATE(vcoul%pw_w)
       ELSE
-         ! TODO: Write here something for the gradient. It does not need pw-stuff.
+         ! TODO: Write here something for the gradient. It does not need pw(_w)-stuff.
       END IF
 
       CALL dfptvTot%distribute(fmpi%mpi_comm)

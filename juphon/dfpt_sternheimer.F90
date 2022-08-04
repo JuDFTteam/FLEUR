@@ -38,7 +38,7 @@ CONTAINS
 
       REAL, INTENT(INOUT) :: dynmatrow(:)
 
-      TYPE(t_potden) :: denIn1, vTot1, denIn1Im, vTot1Im, denOut1, denOut1Im, vx, rho_loc
+      TYPE(t_potden) :: denIn1, vTot1, denIn1Im, vTot1Im, denOut1, denOut1Im, vx, rho_loc, rho_loc0
 
       INTEGER, INTENT(IN) :: iQ, iDtype, iDir, eig_id
       LOGICAL, INTENT(IN) :: l_real
@@ -59,6 +59,8 @@ CONTAINS
 
       killcont = [1,1,1,1,1,1]
       CALL rho_loc%copyPotDen(rho)
+      CALL rho_loc0%copyPotDen(rho)
+      CALL rho_loc0%resetPotDen()
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
       vx%pw_w = vTot%pw_w
@@ -96,6 +98,8 @@ CONTAINS
                                                       results%ef, results%last_distance, l_dummy, denIn1,  &
                                                       inFilename=TRIM(dfpt_tag),denIm=denIn1Im)
 
+      IF (fmpi%irank==0.AND..NOT.l_exist) denIn1%iter = 1
+
       CALL vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
       CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
@@ -110,7 +114,7 @@ CONTAINS
 
       l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
-         !IF (.NOT.strho) iter = iter + 1 TODO: Eventually this will be right.
+         !IF (.NOT.strho) iter = iter + 1 !TODO: Eventually this will be right.
          IF (onedone) iter = iter + 1
          l_lastIter = l_lastIter.OR.(iter.EQ.fi%input%itmax)
 
@@ -130,13 +134,13 @@ CONTAINS
          CALL timestart("Generation of potential perturbation")
          IF (strho) THEN
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,denIn1,vTot,&
-                           starsq,denIn1Im,vTot1,vTot1Im,denIn1,iDtype,iDir,[1,0])
+                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
+                           starsq,denIn1Im,vTot1,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
                            ! TODO: Set this back to [1,1]!
          ELSE
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im,vTot1,vTot1Im,denIn1,iDtype,iDir,[1,0])
+                           starsq,denIn1Im,vTot1,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
                            ! TODO: Set this back to [1,1]!
          END IF
          CALL timestop("Generation of potential perturbation")
@@ -197,16 +201,26 @@ CONTAINS
             CYCLE scfloop
          END IF
 
+         IF (.NOT.onedone) THEN
+            onedone = .TRUE.
+            denIn1 = denOut1
+            denIn1Im = denOut1Im
+            denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+            write(*,*) "1st 'real' density perturbation generated."
+            CYCLE scfloop
+         END IF
+
+
          field2 = fi%field
-
-         denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
-
+         ! First mixing in the 2nd "real" iteration.
+         denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
          ! mix input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsq, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, denIn1, denOut1, results1, .FALSE., fi%sliceplot,&
                          denIn1Im, denOut1Im, dfpt_tag)
 
+         denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
 8130        FORMAT(/, 5x, '******* it=', i3, '  is completed********', /,/)

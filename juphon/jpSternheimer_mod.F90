@@ -1464,7 +1464,8 @@ module m_jpSternheimer
       harSw = .true.
       extSw = .true.
       xcSw = .true.
-      vExtFull = .false.!true for Alex
+      !vExtFull = .false.
+      vExtFull = .true. ! comparison
       vHarNum = .false.
 
       !if (.false.) then
@@ -1906,7 +1907,9 @@ module m_jpSternheimer
       harSw = .true.
       extSw = .true.
       xcSw = .true.
-      vExtFull = .false.!.true. for Alex
+      !vExtFull = .false.
+      !xcSw = .false. ! comparison
+      vExtFull = .true. ! comparison
       vHarNum = .false.
 
       if (.false.) then

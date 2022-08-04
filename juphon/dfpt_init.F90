@@ -423,7 +423,8 @@ CONTAINS
         extSw = .true.
         xcSw = .false.
         testGoldstein = .false.
-        grRhoTermSw = .TRUE.
+        !grRhoTermSw = .false.
+        grRhoTermSw = .TRUE. ! comparison
         call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
                        & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
                        & testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MT_init )
@@ -480,7 +481,9 @@ CONTAINS
         harSw = .true.
         extSw = .true.
         xcSw = .true.
-        grRhoTermSw = .false.
+        !grRhoTermSw = .false.
+        !xcSw = .false. ! comparison
+        grRhoTermSw = .true. ! comparison
         testGoldstein = .false.
         call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
                        & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &

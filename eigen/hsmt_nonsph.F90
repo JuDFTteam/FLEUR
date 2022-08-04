@@ -10,7 +10,7 @@ MODULE m_hsmt_nonsph
    PUBLIC hsmt_nonsph
 
 CONTAINS
-   SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,igSpinPr,igSpin,chi,noco,nococonv,cell,lapw,td,fjgj,hmat,set0,lapwq)
+   SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,igSpinPr,igSpin,chi,noco,nococonv,cell,lapw,td,fjgj,hmat,set0,lapwq,fjgjq)
       USE m_hsmt_fjgj
       USE m_types
       USE m_hsmt_ab
@@ -42,7 +42,7 @@ CONTAINS
       CLASS(t_mat),INTENT(INOUT)     ::hmat
 
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq ! Additional set of lapw, in case
-                                                   ! the left and right ones differ.
+      TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq ! the left and right ones differ.
 
       INTEGER :: nn, na, ab_size, l, ll, size_ab_select
       INTEGER :: size_data_c, size_ab, size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
@@ -54,7 +54,9 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: ab1(:,:),ab_select(:,:)
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ab2(:,:), h_loc(:,:), data_c(:,:)
 
+      COMPLEX, ALLOCATABLE :: abCoeffsPr(:,:)
       TYPE(t_lapw) :: lapwPr
+      TYPE(t_fjgj) :: fjgjPr
 
       CALL timestart("non-spherical setup")
 
@@ -62,8 +64,10 @@ CONTAINS
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
          lapwPr = lapwq
+         fjgjPr = fjgjq
       ELSE
          lapwPr = lapw
+         fjgjPr = fjgj
       END IF
 
       size_ab = maxval(lapw%nv)
@@ -77,10 +81,13 @@ CONTAINS
       ALLOCATE(ab_select(size_ab_select, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
       ALLOCATE(abCoeffs(2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)),&
              & ab1(size_ab, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
+      ! TODO: Check, whether this is necessary or shifting to
+      !       max(MAXVAL(lapwq%nv),MAXVAL(lapw%nv)) in abCoeffs isalso enough.
+      ALLOCATE(abCoeffsPr(2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2, MAXVAL(lapwPr%nv)))
 
       IF (igSpinPr.NE.igSpin) THEN
-         ALLOCATE(ab2(lapw%nv(igSpinPr), 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
-         size_ab2 = lapw%nv(igSpinPr)
+         ALLOCATE(ab2(lapwq%nv(igSpinPr), 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
+         size_ab2 = lapwq%nv(igSpinPr)
       ELSE
          ALLOCATE(ab2(1,1))
          size_ab2 = 1
@@ -113,7 +120,7 @@ CONTAINS
       h_loc = td%h_loc_nonsph(0:, 0:, n, ilSpinPr, ilSpin)
 
 #ifdef _OPENACC
-      !$acc enter data create(ab2,ab1,abCoeffs,data_c,ab_select)copyin(h_loc)
+      !$acc enter data create(ab2,ab1,abCoeffs,abCoeffsPr,data_c,ab_select)copyin(h_loc)
       !$acc kernels present(data_c) default(none)
       data_c(:, :)=0.0
       !$acc end kernels
@@ -202,17 +209,17 @@ CONTAINS
                      END IF
                   ELSE ! Case for additional q on left vector.
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                                & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
-                     !!$acc update device (abCoeffs)
+                                & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
+                     !!$acc update device (abCoeffsPr)
 
-                     !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
+                     !$acc host_data use_device(abCoeffsPr,data_c,ab1,ab_select)
                      IF (set0 .and. nn == 1) THEN
                         CALL CPP_zgemm("C", "C", lapwPr%nv(igSpin), size_ab_select, ab_size, chi, &
-                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     & abCoeffsPr, SIZE(abCoeffsPr, 1), ab_select, size_ab_select, &
                                      & CMPLX(0.0, 0.0), CPP_data_c, SIZE_data_c)
                      ELSE
                         CALL CPP_zgemm("C", "C", lapwPr%nv(igSpin), size_ab_select, ab_size, chi, &
-                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     & abCoeffsPr, SIZE(abCoeffsPr, 1), ab_select, size_ab_select, &
                                      & CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                      END IF
                      !$acc end host_data
@@ -224,18 +231,18 @@ CONTAINS
 
                   ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}
                   CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpin, n, na, cell, &
-                             & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
-                  !!$acc update device(abCoeffs)
+                             & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
+                  !!$acc update device(abCoeffsPr)
 
                   !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
                   IF (set0 .and. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
                      CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), size_ab_select, ab_size, chi, &
-                                  & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                  & abCoeffsPr, SIZE(abCoeffsPr, 1), ab_select, size_ab_select, &
                                   & CMPLX(0.0, 0.0), CPP_data_c, SIZE_data_c)
                   ELSE
                      CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), size_ab_select, ab_size, chi, &
-                                  & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                  & abCoeffsPr, SIZE(abCoeffsPr, 1), ab_select, size_ab_select, &
                                   & CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                   END IF
                   !$acc end host_data
@@ -254,13 +261,13 @@ CONTAINS
                !Second set of abCoeffs is needed
                ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}^{'}
                CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpinPr, n, na, cell, &
-                          & lapwPr, fjgj, abCoeffs, ab_size, .TRUE.)
+                          & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
                IF (ilSpinPr==ilSpin) THEN
                   IF (l_samelapw) THEN
                      !!$acc update device (abCoeffs)
                      !$acc host_data use_device(abCoeffs,h_loc,ab2)
                      CALL CPP_zgemm("C", "N", lapwPr%nv(igSpinPr), ab_size, ab_size, CMPLX(1.0, 0.0), &
-                                  & abCoeffs, SIZE(abCoeffs, 1), h_loc, size(td%h_loc_nonsph, 1), &
+                                  & abCoeffsPr, SIZE(abCoeffsPr, 1), h_loc, size(td%h_loc_nonsph, 1), &
                                   & CMPLX(0.0, 0.0), ab2, size_ab2)
                      !$acc end host_data
                      !Multiply for Hamiltonian
@@ -279,11 +286,11 @@ CONTAINS
                      IF (set0 .AND. nn == 1) THEN
                         !CPP_data_c = CMPLX(0.0,0.0)
                         CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
-                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     & abCoeffsPr, SIZE(abCoeffsPr, 1), ab_select, size_ab_select, &
                                      & CMPLX(0.0, 0.0), CPP_data_c, SIZE_data_c)
                      ELSE
                         CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
-                                     & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                     & abCoeffsPr, SIZE(abCoeffsPr, 1), ab_select, size_ab_select, &
                                      CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                      END IF
                      !$acc end host_data
@@ -297,11 +304,11 @@ CONTAINS
                   IF (set0 .AND. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
                      CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
-                                  & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                  & abCoeffsPr, SIZE(abCoeffsPr, 1), ab_select, size_ab_select, &
                                   & CMPLX(0.0, 0.0), CPP_data_c, SIZE_data_c)
                   ELSE
                      CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
-                                  & abCoeffs, SIZE(abCoeffs, 1), ab_select, size_ab_select, &
+                                  & abCoeffsPr, SIZE(abCoeffsPr, 1), ab_select, size_ab_select, &
                                   CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                   END IF
                   !$acc end host_data
@@ -340,7 +347,7 @@ CONTAINS
       END IF
 #endif
 
-      !$acc exit data delete(ab2,ab1,abCoeffs,data_c,ab_select,h_loc)
+      !$acc exit data delete(ab2,ab1,abCoeffs,abCoeffsPr,data_c,ab_select,h_loc)
 
       CALL timestop("non-spherical setup")
    END SUBROUTINE hsmt_nonsph

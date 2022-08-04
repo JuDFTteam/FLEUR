@@ -75,7 +75,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    ! Local Scalars
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,iType,ikG
    INTEGER :: iErr,nbands,noccbd,nbands1
-   INTEGER :: skip_t,skip_tt,nbasfcn
+   INTEGER :: skip_t,skip_tt,nbasfcn,nbasfcnq
    REAL    :: gExt(3)
 
    ! Local Arrays
@@ -157,8 +157,9 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       END IF
 
       nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
+      nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*atoms%nlotot,lapwq%nv(1)+atoms%nlotot,noco%l_noco)
       CALL zMat%init(l_real,nbasfcn,noccbd)
-      CALL zMat1%init(.FALSE.,nbasfcn,noccbd)
+      CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
       CALL zMatPref%init(.FALSE.,nbasfcn,noccbd)
 
       CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat)

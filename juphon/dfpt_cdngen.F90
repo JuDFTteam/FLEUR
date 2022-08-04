@@ -83,8 +83,8 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
    CALL dosdummy%init(input,atoms,kpts,banddosdummy,resultsdummy%eig)
    CALL vacdosdummy%init(input,atoms,kpts,banddosdummy,resultsdummy%eig)
 
-   CALL outDen%init(starsq, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN,.TRUE.)
-   CALL outDenIm%init(starsq, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
+   !CALL outDen%init(starsq, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN,.TRUE.)
+   !CALL outDenIm%init(starsq, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
 
    DO jspin = 1,merge(1,input%jspins,noco%l_mperp)
       CALL cdnvalJob%init(fmpi,input,kpts,noco,resultsdummy,jspin)

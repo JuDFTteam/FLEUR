@@ -18,7 +18,7 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
-   SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq)
+   SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq,fjgjq)
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
@@ -37,6 +37,7 @@ CONTAINS
       LOGICAL,          INTENT(IN)    :: l_fullj, set0  !if true, initialize the smat matrix with zeros
 
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
+      TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
 
       ! Scalar Arguments
       INTEGER, INTENT(IN) :: n, isp, igSpinPr, igSpin
@@ -207,7 +208,7 @@ CONTAINS
       RETURN
    END SUBROUTINE hsmt_sph_acc
 
-   SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq)
+   SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq, fjgjq)
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
@@ -226,6 +227,7 @@ CONTAINS
       LOGICAL,          INTENT(IN)    :: l_fullj, set0  !if true, initialize the smat matrix with zeros
 
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
+      TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
 
       ! Scalar Arguments
       INTEGER, INTENT(IN) :: n, isp, igSpinPr, igSpin
@@ -244,6 +246,7 @@ CONTAINS
       LOGICAL :: l_samelapw
 
       TYPE(t_lapw) :: lapwPr
+      TYPE(t_fjgj) :: fjgjPr
 
       ! Local Arrays
       REAL :: fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
@@ -266,8 +269,10 @@ CONTAINS
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
          lapwPr = lapwq
+         fjgjPr = fjgjq
       ELSE
          lapwPr = lapw
+         fjgjPr = fjgj
       END IF
       !call nvtxStartRange("hsmt_sph",1)
       DO l = 0,atoms%lmaxd
@@ -278,7 +283,7 @@ CONTAINS
 
       !$OMP     PARALLEL DEFAULT(NONE)&
       !$OMP     SHARED(lapw,lapwPr,atoms,nococonv,fmpi,input,usdus,smat,hmat)&
-      !$OMP     SHARED(igSpin,igSpinPr,n,fleg1,fleg2,fjgj,isp,fl2p1,el,e_shift,chi,set0,l_fullj)&
+      !$OMP     SHARED(igSpin,igSpinPr,n,fleg1,fleg2,fjgj,fjgjPr,isp,fl2p1,el,e_shift,chi,set0,l_fullj)&
       !$OMP     PRIVATE(ikG0,ikG,ski,ikGPr,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssAdd,qssAddPr,fct2)&
       !$OMP     PRIVATE(cph_re,cph_im,cfac,dot,nn,tnn,fjkiln,gjkiln)&
       !$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
@@ -346,22 +351,23 @@ CONTAINS
                                       & - fleg2(l-1)*plegend(:NVEC_REM,modulo(l-2,3))
                END IF ! l
 
-               fct(:NVEC_REM)  = plegend(:NVEC_REM,l3) * fl2p1(l) * ( fjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) &
-                                                                  & + gjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr)*ddnln )
+               fct(:NVEC_REM)  = plegend(:NVEC_REM,l3) * fl2p1(l) * ( fjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr) &
+                                                                  & + gjkiln*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr)*ddnln )
 
                IF (.NOT.l_fullj) THEN
-                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) &
-                                                                           & + fjkiln*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr) )
+                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * 0.5 * ( gjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr) &
+                                                                           & + fjkiln*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr) )
                ELSE
-                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * gjkiln*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr)
+                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * gjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr)
                END IF
 
                VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
                VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)
 
-               IF (input%l_useapw.OR.(l_fullj.AND.l==0)) THEN
-                  VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgj%fj(kj_off:kj_vec,l,isp,igSpinPr) + &
-                                                                                      & apw_lo2*fjgj%gj(kj_off:kj_vec,l,isp,igSpinPr) )
+               !IF (input%l_useapw.OR.(l_fullj.AND.l==0)) THEN
+               IF (input%l_useapw.OR.l_fullj) THEN ! correction
+                  VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr) + &
+                                                                                      & apw_lo2*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr) )
                END IF ! useapw
             END DO ! l
             ! Set up phase factors

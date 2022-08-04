@@ -52,6 +52,7 @@ q-loop:
                            - bottom left rectangle [done; revision]
                            - Full LO-LO section [done; revision]
                         - Check the conjugations and usage of tuloulo! [done; revision]
+                        - add fjgjq
                      - add a postprocess for the perturbation prefactor [done]
                   - add a redistribution routine to gain the full perturbed matrices [done]
                Analytical Matrix inversion:
