@@ -86,8 +86,8 @@ CONTAINS
       ALLOCATE(abCoeffsPr(2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2, MAXVAL(lapwPr%nv)))
 
       IF (igSpinPr.NE.igSpin) THEN
-         ALLOCATE(ab2(lapwq%nv(igSpinPr), 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
-         size_ab2 = lapwq%nv(igSpinPr)
+         ALLOCATE(ab2(lapwPr%nv(igSpinPr), 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
+         size_ab2 = lapwPr%nv(igSpinPr)
       ELSE
          ALLOCATE(ab2(1,1))
          size_ab2 = 1
