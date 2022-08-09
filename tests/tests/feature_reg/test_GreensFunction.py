@@ -588,6 +588,7 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
 @pytest.mark.greensfunction
 @pytest.mark.magnetism
 @pytest.mark.serial
+@pytest.mark.outxml_parser_xfail
 def test_GreensFunction_IntersiteShellConstruction(execute_fleur, grep_exists):
     """Fleur Greens Function intersite shell construction
     Simple test of the intersite green's function initialization
@@ -633,6 +634,7 @@ def test_GreensFunction_IntersiteShellConstruction(execute_fleur, grep_exists):
 @pytest.mark.greensfunction
 @pytest.mark.magnetism
 @pytest.mark.serial
+@pytest.mark.outxml_parser_xfail
 def test_GreensFunction_IntersiteShellConstructionFilm(execute_fleur, grep_exists):
     """Fleur Greens Function intersite shell construction
     Simple test of the intersite green's function initialization
