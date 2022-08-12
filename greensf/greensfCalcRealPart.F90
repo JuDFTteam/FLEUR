@@ -133,7 +133,7 @@ MODULE m_greensfCalcRealPart
          IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
          contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
 
-         CALL kkintgr_init(eMesh,g(i_gf)%contour%e,g(i_gf)%elem%iContour,gfinp%numberContours, contourShape)
+         CALL kkintgr_init(eMesh,g(i_gf)%contour%e,g(i_gf)%elem%iContour,gfinp%numberContours, contourShape, gfinp%additional_smearing)
       ENDDO
 
       DO i_gf = i_gf_start, i_gf_end
@@ -202,7 +202,7 @@ MODULE m_greensfCalcRealPart
          DO i_gf = i_gf_start, i_gf_end
             IF(i_gf.LT.1 .OR. i_gf.GT.gfinp%n) CYCLE !Make sure to not produce segfaults with mpi
             contourShape = gfinp%contour(g(i_gf)%elem%iContour)%shape
-            CALL kkintgr_init(eMesh,g(i_gf)%contour%e,g(i_gf)%elem%iContour,gfinp%numberContours, contourShape)
+            CALL kkintgr_init(eMesh,g(i_gf)%contour%e,g(i_gf)%elem%iContour,gfinp%numberContours, contourShape, gfinp%additional_smearing)
          ENDDO
          CALL timestart("Green's Function: K-Resolved Kramer-Kronigs-Integration")
          DO ikpt_i = 1, SIZE(fmpi%k_list)
