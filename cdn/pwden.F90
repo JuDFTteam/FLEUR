@@ -192,7 +192,7 @@ CONTAINS
          CALL state%fillStateIndexArray(lapw,jspin,stateIndices)
          IF (l_dfpt) THEN
             ALLOCATE(stateqIndices(lapwq%nv(jspin)))
-            CALL stateq%fillStateIndexArray(lapw,jspin,stateqIndices)
+            CALL stateq%fillStateIndexArray(lapwq,jspin,stateqIndices)
          END IF
       ENDIF
 

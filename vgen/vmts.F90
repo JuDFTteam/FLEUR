@@ -86,7 +86,8 @@ contains
 
 
     ! q=0 component
-    if ( fmpi%irank == 0 ) then
+    ! TODO: Generally deactivate for DFPT?
+    if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8) then
       vtl(0,1:atoms%ntype) = sfp_const * vpw(1)
     end if
 
@@ -98,7 +99,7 @@ contains
 !    !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype))
 !    !$ vtl_loc(:,:) = cmplx(0.0,0.0)
 !    !$omp do
-    do k = MERGE(fmpi%irank+2,1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
+    do k = MERGE(fmpi%irank+2,fmpi%irank+1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
       cp = vpw(k) * stars%nstr(k)
         call phasy1( atoms, stars, sym, cell, k, pylm )
       nat = 1
