@@ -144,21 +144,7 @@ CONTAINS
     !
     !noco
     !
-
-    ALLOCATE ( noco%alph_inp(atoms%ntype), noco%beta_inp(atoms%ntype))
-    noco%qss_inp = MERGE(noco%qss_inp, [0.0, 0.0, 0.0], noco%l_ss)
-    noco%alph_inp(:) = 0.0
-    noco%beta_inp(:) = 0.0
-    ALLOCATE(noco%l_constrained(atoms%ntype))
-    noco%l_constrained(:) = .FALSE.
-    ALLOCATE(noco%l_unrestrictMT(atoms%ntype))
-    noco%l_unrestrictMT(:) = .FALSE.
-    ALLOCATE(noco%l_alignMT(atoms%ntype))
-    noco%l_alignMT(:)=.false.
-    ALLOCATE(noco%mix_RelaxWeightOffD(atoms%ntype))
-    noco%mix_RelaxWeightOffD(:)=1.0
-    noco%mag_mixing_scheme=0
-
+    
     !
     !hybinp
     !

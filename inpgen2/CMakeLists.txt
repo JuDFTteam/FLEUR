@@ -38,6 +38,7 @@ make_crystal.f90
 make_spacegroup.f90
 check_mt_radii.f90
 make_atom_groups.f90
+make_magnetism.f90
 make_defaults.f90
 process_lattice_namelist.f90
 atompar.F90
