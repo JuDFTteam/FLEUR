@@ -227,7 +227,7 @@ MODULE m_types_noco
       ALLOCATE(this%alph_inp(ntype),this%beta_inp(ntype))
       this%alph_inp=0.0;this%beta_inp=0.0
       ALLOCATE(this%socscale(ntype))
-      this%socscale=0.0
+      this%socscale=1.0
 
       IF (numberNodes.EQ.1) THEN
          this%l_ss = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_ss'))
