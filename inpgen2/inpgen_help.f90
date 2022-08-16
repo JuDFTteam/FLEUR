@@ -37,6 +37,8 @@ CONTAINS
     call new_argument(0,"-no_send","Do not send usage data","")
     CALL new_argument(0,"-overwrite","Overwrite inp.xml if present","")
     CALL new_argument(0,"-h","Print this help message","")
+    CALL new_argument(0,"-version","Show important version information about the inpgen executable","")
+    CALL new_argument(0,"-dropXMLSchema","Write out the default XML schema files","")
     CALL new_argument(0,"-trace","Try to generate a traceback in case of an error","")
     CALL new_argument(0,"-debugtime","Write the start/stop of all timers to the console","")
     CALL new_argument(0,"-all_times","Write json files of timing for all PE, not only for PE=0","")
@@ -78,6 +80,8 @@ CONTAINS
     CALL print_argument("-nosym")
     CALL print_argument("-noKsym")
     CALL print_argument("-trace")
+    CALL print_argument("-version")
+    CALL print_argument("-dropXMLSchema")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"
 

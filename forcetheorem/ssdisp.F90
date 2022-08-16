@@ -88,6 +88,7 @@ CONTAINS
        RETURN
     ENDIF
     !OK, now we start the SSDISP-loop
+    this%l_in_forcetheo_loop = .true.
     this%q_done=this%q_done+1
     ssdisp_next_job=(this%q_done<=SIZE(this%qvec,2)) !still q-vectors to do
     IF (.NOT.ssdisp_next_job) RETURN

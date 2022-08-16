@@ -39,7 +39,7 @@ def test_fleur_mt_inpxml_parser(request, fleur_test_name, test_file, parser_test
 
 @pytest.mark.fleur_parser
 @pytest.mark.masci_tools
-def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, parser_testdir):
+def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, expected_failure, parser_testdir):
     """
     For each folder (parametrization happens in conftest.py) in parser test,
     try if the fleur parser in masci-tools can handle the parsing without
@@ -69,8 +69,11 @@ def test_fleur_mt_outxml_parser(request, fleur_test_name, test_file, parser_test
     assert out_dict is not None
     assert isinstance(out_dict, dict)
     assert out_dict != {}
-    assert parser_info['parser_errors'] == []
-    assert parser_info['parser_critical'] == []
+    if expected_failure:
+        assert parser_info['parser_errors'] != []
+    else:
+        assert parser_info['parser_errors'] == []
+    assert parser_info['parser_critical'] == [] #Critical errors should not happen in any case
     warning_set = set(parser_info['parser_warnings']).difference(KNOWN_WARNINGS)
     if warning_set != set():
         print(warning_set)#Maybe better to write to a file

@@ -496,6 +496,7 @@
 
    <xsd:complexType name="OnSiteExchangeSplittingType">
       <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="bxcIntegral" type="BxcIntegralType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="excSplit" type="ExcSplitType"/>
       </xsd:sequence>
    </xsd:complexType>
@@ -517,6 +518,12 @@
    <xsd:complexType name="ExcSplitType">
       <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
       <xsd:attribute name="l" type="xsd:integer" use="required"/>
+      <xsd:attribute name="Delta" type="xsd:double" use="required"/>
+      <xsd:attribute name="units" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="BxcIntegralType">
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
       <xsd:attribute name="Delta" type="xsd:double" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="required"/>
    </xsd:complexType>

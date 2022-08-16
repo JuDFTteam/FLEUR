@@ -16,6 +16,8 @@ PROGRAM inpgen
 !----------------------------------------------------------------------------+
   USE m_juDFT
   USE m_inpgen_help
+  use m_inpgen_version
+  use m_fleur_dropxmlschema
   USE m_read_inpgen_input
   USE m_make_crystal
   USE m_make_atomic_defaults
@@ -121,6 +123,8 @@ PROGRAM inpgen
 
       !Start program and greet user
       CALL inpgen_help()
+      call inpgen_version()
+      call fleur_dropxmlschema()
       l_explicit=judft_was_argument("-explicit")
 
       INQUIRE(file='profile.config',exist=l_exist)

@@ -77,12 +77,12 @@
       <atomGroup species="Fe-1">
          <filmPos label="                 222">.0000000000 .0000000000 -.9964250044</filmPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams  alpha=".00000000" beta="1.570796326" />
+         <nocoParams  alpha=".00000000" beta="0.0" />
       </atomGroup>
       <atomGroup species="Pt-1">
          <filmPos label="                   2">1.000/2.000 1.000/2.000 .9964250044</filmPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams  alpha=".00000000" beta="1.570796326" />
+         <nocoParams  alpha=".00000000" beta="0.0" />
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F"  slice="F" >

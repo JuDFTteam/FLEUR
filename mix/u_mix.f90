@@ -82,6 +82,7 @@ MODULE m_umix
          WRITE (oUnit,'(a,f12.6)') 'n_mmp distance =',dist(1)
       ELSE
          DO jsp = 1, SIZE(n_mmp_in,4)
+            if (jsp > 2 .and. .not.any(noco%l_spinoffd_ldau)) cycle
             WRITE (oUnit,9000) 'n_mmp distance spin ',jsp,' =',dist(jsp)
 9000        FORMAT(a,I1,a,f12.6)
          ENDDO
@@ -139,6 +140,7 @@ MODULE m_umix
 
       CALL openXMLElementNoAttributes('ldaUDensityMatrixConvergence')
       DO jsp = 1, SIZE(dist)
+         if (jsp > 2 .and. .not.any(noco%l_spinoffd_ldau)) cycle
          attributes = ''
          WRITE(attributes(1),'(i0)') jsp
          WRITE(attributes(2),'(f13.6)') dist(jsp)

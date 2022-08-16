@@ -88,7 +88,7 @@ CONTAINS
       INTEGER jsp,nk,nred,ne_all,ne_found,neigd2
       INTEGER ne, nk_i,n_size,n_rank
       INTEGER isp,i,j,err
-      LOGICAL l_real
+      LOGICAL l_real, l_needs_vectors
       INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr
@@ -118,6 +118,10 @@ CONTAINS
 
       l_dfpteigen = PRESENT(bqpt)
 
+      l_needs_vectors = .true.
+      if (forcetheo%l_in_forcetheo_loop) then
+         l_needs_vectors = forcetheo%l_needs_vectors
+      endif
       kqpts = fi%kpts
       ! Modify this from kpts only in DFPT case.
       IF (l_dfpteigen) THEN
@@ -251,7 +255,7 @@ CONTAINS
                 n_rank = 0; n_size=1;
 #endif
                 IF (.NOT.l_dfpteigen) THEN
-                  if (forcetheo%l_needs_vectors) then 
+                  if (l_needs_vectors) then 
                      call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                   else
                      CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
@@ -263,7 +267,7 @@ CONTAINS
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
                 IF (.NOT.l_dfpteigen) THEN
-                    if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
+                    if (fmpi%pe_diag.and.l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 ELSE
                     if (fmpi%pe_diag) CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
