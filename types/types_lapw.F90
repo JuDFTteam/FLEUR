@@ -605,9 +605,10 @@ CONTAINS
       !     ..
       !     .. Local Scalars ..
       COMPLEX term1, norm
-      REAL th, con1
+      REAL th, con1, linindq, linindqStart, linindqEnd, numK, stepSize
       INTEGER l, lo, mind, ll1, lm, iintsp, k, nkmin, lmp, m, nintsp, k_start, k_end, minIndex, maxIndex, increment
-      LOGICAL linind, enough, l_lo1
+      INTEGER nApproach, nApproachEnd
+      LOGICAL linind, enough, l_lo1, l_norm
       !     ..
       !     .. Local Arrays ..
       INTEGER :: nkvec(atoms%nlod, 2)
@@ -620,7 +621,6 @@ CONTAINS
       !     ..
       !     .. Data statements ..
       REAL, PARAMETER :: eps = 1.0E-8
-      REAL, PARAMETER :: linindq = 1.0e-6
 
       con1 = fpi_const/SQRT(cell%omtil)
       nintsp = MERGE(2, 1, noco%l_ss)
@@ -665,121 +665,193 @@ CONTAINS
       ! by just comparing the indices of the two K vectors. From the top this
       ! would require a more elaborate comparison.
 
-      k_start = MIN(lapw%nv(1), lapw%nv(nintsp))
-      k_end = 1
-      increment = -1
+      nApproachEnd = 8
 
       IF (noco%l_ss) THEN
-         k_start = 2  ! avoid k=1 !!! GB16
-         k_end = MIN(lapw%nv(1), lapw%nv(nintsp))
-         increment = 1
+         nApproachEnd = 4
       END IF
 
       DO lo = 1, atoms%nlo(ntype)
-         k = k_start - increment
          enough = .FALSE.
+         nApproach = 0
          DO WHILE (.NOT.enough)
-            enough = .FALSE.
-            k = k + increment
-            IF ((k.GT.MAX(k_start,k_end)).OR.(k.LT.MIN(k_start,k_end))) THEN
-               WRITE (oUnit, FMT=*) 'vec_for_lo did not find enough linearly independent'
-               WRITE (oUnit, FMT=*) 'clo coefficient-vectors. the linear independence'
-               WRITE (oUnit, FMT=*) 'quality, linindq, is set: ', linindq
-               WRITE (oUnit, FMT=*) 'this value might be to large.'
-               WRITE (*, *) 'Atom: ', na, 'type: ', ntype, 'nv: ', lapw%nv, 'lo: ', lo, 'l: ', atoms%llo(lo, ntype)
-               CALL juDFT_error("not enough lin. indep. clo-vectors", calledby="vec_for_lo")
-            END IF
-
-            DO iintsp = 1, nintsp
-
-               vmult(:) = gkrot(:, k, iintsp)
-               CALL ylm4(atoms%lnonsph(ntype), vmult, ylm)
-               l_lo1 = .false.
-               IF ((lapw%rk(k, iintsp) .LT. eps) .AND. (.not. noco%l_ss)) THEN
-                  l_lo1 = .true.
-               ELSE
-                  l_lo1 = .false.
+            nApproach = nApproach + 1
+            nkvec(lo, :) = 0
+            cwork(:,:,lo,:) = CMPLX(0.0, 0.0)
+            k_start = 2
+            k_end = 2
+            increment = 1
+            SELECT CASE (nApproach)
+               CASE (1)
+                  k_start = 2  ! avoid k=1 !!! GB16
+                  k_end = MIN(lapw%nv(1), lapw%nv(nintsp))
+                  increment = 1
+                  l_norm = .FALSE.
+                  linindqStart = 1.0e-6
+                  linindqEnd = 1.0e-6
+               CASE (2)
+                  k_start = 2  ! avoid k=1 !!! GB16
+                  k_end = MIN(lapw%nv(1), lapw%nv(nintsp))
+                  increment = 1
+                  l_norm = .TRUE.
+                  linindqStart = 1.0e-6
+                  linindqEnd = 1.0e-6
+               CASE (3)
+                  k_start = 2  ! avoid k=1 !!! GB16
+                  k_end = MIN(lapw%nv(1), lapw%nv(nintsp))
+                  increment = 1
+                  l_norm = .FALSE.
+                  linindqStart = 2.0e-5
+                  linindqEnd = 1.0e-6
+               CASE (4)
+                  k_start = 2  ! avoid k=1 !!! GB16
+                  k_end = MIN(lapw%nv(1), lapw%nv(nintsp))
+                  increment = 1
+                  l_norm = .TRUE.
+                  linindqStart = 2.0e-5
+                  linindqEnd = 1.0e-6
+               CASE (5)
+                  k_start = MIN(lapw%nv(1), lapw%nv(nintsp))
+                  k_end = 1
+                  increment = -1
+                  l_norm = .FALSE.
+                  linindqStart = 1.0e-6
+                  linindqEnd = 1.0e-6
+               CASE (6)
+                  k_start = MIN(lapw%nv(1), lapw%nv(nintsp))
+                  k_end = 1
+                  increment = -1
+                  l_norm = .TRUE.
+                  linindqStart = 1.0e-6
+                  linindqEnd = 1.0e-6
+               CASE (7)
+                  k_start = MIN(lapw%nv(1), lapw%nv(nintsp))
+                  k_end = 1
+                  increment = -1
+                  l_norm = .FALSE.
+                  linindqStart = 2.0e-5
+                  linindqEnd = 1.0e-6
+               CASE (8)
+                  k_start = MIN(lapw%nv(1), lapw%nv(nintsp))
+                  k_end = 1
+                  increment = -1
+                  l_norm = .TRUE.
+                  linindqStart = 2.0e-5
+                  linindqEnd = 1.0e-6
+            END SELECT
+            k = k_start - increment
+            DO WHILE (.NOT.enough)
+               enough = .FALSE.
+               k = k + increment
+               IF ((k.GT.MAX(k_start,k_end)).OR.(k.LT.MIN(k_start,k_end))) THEN
+                  IF (nApproach.GT.nApproachEnd) THEN
+                     WRITE (oUnit, FMT=*) 'vec_for_lo did not find enough linearly independent'
+                     WRITE (oUnit, FMT=*) 'clo coefficient-vectors. the linear independence'
+                     WRITE (oUnit, FMT=*) 'quality, linindq, is set: ', linindqEnd
+                     WRITE (oUnit, FMT=*) 'this value might be to large.'
+                     WRITE (*, *) 'Atom: ', na, 'type: ', ntype, 'nv: ', lapw%nv, 'lo: ', lo, 'l: ', atoms%llo(lo, ntype)
+                     CALL juDFT_error("not enough lin. indep. clo-vectors", calledby="vec_for_lo")
+                  END IF
+                  EXIT
                END IF
 
-               IF (l_lo1) THEN
-                  IF ((nkvec(lo, iintsp) .EQ. 0) .AND. (atoms%llo(lo, ntype) .EQ. 0)) THEN
-                     nkvec(lo, iintsp) = 1
-                     lapw%kvec(nkvec(lo, iintsp), lo, na) = k
-                     term1 = con1 * (atoms%rmt(ntype)**2.0) / 2.0
-                     cwork(0, 1, lo, iintsp) = term1 / sqrt(2.0*tpi_const)
-                     norm = DOT_PRODUCT(cwork(0:0, 1, lo, iintsp),cwork(0:0, 1, lo, iintsp))
-!                     cwork(0:0, 1, lo, iintsp) = cwork(0:0, 1, lo, iintsp) / SQRT(norm)
-                     IF ((sym%invsat(na) .EQ. 1) .OR. (sym%invsat(na) .EQ. 2)) THEN
-                        cwork(1, 1, lo, iintsp) = conjg(term1) / sqrt(2.0*tpi_const)
-                     END IF
-                     
-                  END IF
-               ELSE
-                  term1 = con1 * ((atoms%rmt(ntype)**2.0)/2.0) * CMPLX(rph(k, iintsp), cph(k, iintsp))
-                  IF (sym%invsat(na) .EQ. 0) THEN
-                     IF ((nkvec(lo, iintsp)) .LT. (2*atoms%llo(lo, ntype) + 1)) THEN
-                        nkvec(lo, iintsp) = nkvec(lo, iintsp) + 1
-                        l = atoms%llo(lo, ntype)
-                        ll1 = l*(l + 1) + 1
-                        DO m = -l, l
-                           lm = ll1 + m
-                           cwork(m, nkvec(lo, iintsp), lo, iintsp) = term1 * ylm(lm)
-                        END DO
-                        norm = DOT_PRODUCT(cwork(-l:l, 1, lo, iintsp),cwork(-l:l, 1, lo, iintsp))
-!                        cwork(-l:l, 1, lo, iintsp) = cwork(-l:l, 1, lo, iintsp) / SQRT(norm)
-                        CALL orthoglo(input%l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .FALSE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
-                        IF (linind) THEN
-                           lapw%kvec(nkvec(lo, iintsp), lo, na) = k
-                        ELSE
-                           nkvec(lo, iintsp) = nkvec(lo, iintsp) - 1
-                        END IF
-                     END IF
-                  ELSE IF ((sym%invsat(na) .EQ. 1) .OR. (sym%invsat(na) .EQ. 2)) THEN
-                     IF (nkvec(lo, iintsp) .LT. 2*(2*atoms%llo(lo, ntype) + 1)) THEN
-                        nkvec(lo, iintsp) = nkvec(lo, iintsp) + 1
-                        l = atoms%llo(lo, ntype)
-                        ll1 = l*(l + 1) + 1
-                        DO m = -l, l
-                           lm = ll1 + m
-                           mind = -l + m
-                           cwork(mind, nkvec(lo, iintsp), lo, iintsp) = term1 * ylm(lm)
-                           mind = l + 1 + m
-                           lmp = ll1 - m
-                           cwork(mind, nkvec(lo, iintsp), lo, iintsp) = ((-1)**(l + m))*CONJG(term1*ylm(lmp))
-                        END DO
-                        minIndex = -l - l
-                        maxIndex = l + l + 1
-                        norm = DOT_PRODUCT(cwork(-2*l:2*l+1, 1, lo, iintsp),cwork(-2*l:2*l+1, 1, lo, iintsp))
-!                        cwork(-2*l:2*l+1, 1, lo, iintsp) = cwork(-2*l:2*l+1, 1, lo, iintsp) / SQRT(norm)
-                        CALL orthoglo(input%l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .TRUE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
-                        IF (linind) THEN
-                           lapw%kvec(nkvec(lo, iintsp), lo, na) = k
-                        ELSE
-                           nkvec(lo, iintsp) = nkvec(lo, iintsp) - 1
-                        END IF
-                     END IF
+               DO iintsp = 1, nintsp
 
+                  vmult(:) = gkrot(:, k, iintsp)
+                  CALL ylm4(atoms%lnonsph(ntype), vmult, ylm)
+                  l_lo1 = .false.
+                  IF ((lapw%rk(k, iintsp) .LT. eps) .AND. (.not. noco%l_ss)) THEN
+                     l_lo1 = .true.
+                  ELSE
+                     l_lo1 = .false.
                   END IF
+
+                  numK = MERGE(2*atoms%llo(lo, ntype)+1,2*(2*atoms%llo(lo, ntype)+1),sym%invsat(na).EQ.0)
+
+                  IF (l_lo1) THEN
+                     IF ((nkvec(lo, iintsp) .EQ. 0) .AND. (atoms%llo(lo, ntype) .EQ. 0)) THEN
+                        nkvec(lo, iintsp) = 1
+                        lapw%kvec(nkvec(lo, iintsp), lo, na) = k
+                        term1 = con1 * (atoms%rmt(ntype)**2.0) / 2.0
+                        cwork(0, 1, lo, iintsp) = term1 / sqrt(2.0*tpi_const)
+                        norm = DOT_PRODUCT(cwork(0:0, 1, lo, iintsp),cwork(0:0, 1, lo, iintsp))
+                        IF (l_norm) cwork(0:0, 1, lo, iintsp) = cwork(0:0, 1, lo, iintsp) / SQRT(norm)
+                        IF ((sym%invsat(na) .EQ. 1) .OR. (sym%invsat(na) .EQ. 2)) THEN
+                           cwork(1, 1, lo, iintsp) = conjg(term1) / sqrt(2.0*tpi_const)
+                        END IF
+                     
+                     END IF
+                  ELSE
+                     term1 = con1 * ((atoms%rmt(ntype)**2.0)/2.0) * CMPLX(rph(k, iintsp), cph(k, iintsp))
+                     IF (sym%invsat(na) .EQ. 0) THEN
+                        IF ((nkvec(lo, iintsp)) .LT. (2*atoms%llo(lo, ntype) + 1)) THEN
+                           nkvec(lo, iintsp) = nkvec(lo, iintsp) + 1
+                           l = atoms%llo(lo, ntype)
+                           ll1 = l*(l + 1) + 1
+                           DO m = -l, l
+                              lm = ll1 + m
+                              cwork(m, nkvec(lo, iintsp), lo, iintsp) = term1 * ylm(lm)
+                           END DO
+                           norm = DOT_PRODUCT(cwork(-l:l, 1, lo, iintsp),cwork(-l:l, 1, lo, iintsp))
+                           IF (l_norm) cwork(-l:l, 1, lo, iintsp) = cwork(-l:l, 1, lo, iintsp) / SQRT(norm)
+                           stepSize = (REAL(linindqStart - linindqEnd)) / numK
+                           linindq = (numK - (REAL(nkvec(lo, iintsp) + 1))) * stepSize + linindqEnd
+                           CALL orthoglo(input%l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .FALSE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
+                           IF (linind) THEN
+                              lapw%kvec(nkvec(lo, iintsp), lo, na) = k
+                           ELSE
+                              nkvec(lo, iintsp) = nkvec(lo, iintsp) - 1
+                           END IF
+                        END IF
+                     ELSE IF ((sym%invsat(na) .EQ. 1) .OR. (sym%invsat(na) .EQ. 2)) THEN
+                        IF (nkvec(lo, iintsp) .LT. 2*(2*atoms%llo(lo, ntype) + 1)) THEN
+                           nkvec(lo, iintsp) = nkvec(lo, iintsp) + 1
+                           l = atoms%llo(lo, ntype)
+                           ll1 = l*(l + 1) + 1
+                           DO m = -l, l
+                              lm = ll1 + m
+                              mind = -l + m
+                              cwork(mind, nkvec(lo, iintsp), lo, iintsp) = term1 * ylm(lm)
+                              mind = l + 1 + m
+                              lmp = ll1 - m
+                              cwork(mind, nkvec(lo, iintsp), lo, iintsp) = ((-1)**(l + m))*CONJG(term1*ylm(lmp))
+                           END DO
+                           minIndex = -l - l
+                           maxIndex = l + l + 1
+                           norm = DOT_PRODUCT(cwork(-2*l:2*l+1, 1, lo, iintsp),cwork(-2*l:2*l+1, 1, lo, iintsp))
+                           IF (l_norm) cwork(-2*l:2*l+1, 1, lo, iintsp) = cwork(-2*l:2*l+1, 1, lo, iintsp) / SQRT(norm)
+                           stepSize = (REAL(linindqStart - linindqEnd)) / numK
+                           linindq = (numK - (REAL(nkvec(lo, iintsp) + 1))) * stepSize + linindqEnd
+                           CALL orthoglo(input%l_real, atoms, nkvec(lo, iintsp), lo, l, linindq, .TRUE., cwork(-2*atoms%llod, 1, 1, iintsp), linind)
+                           IF (linind) THEN
+                              lapw%kvec(nkvec(lo, iintsp), lo, na) = k
+                           ELSE
+                              nkvec(lo, iintsp) = nkvec(lo, iintsp) - 1
+                           END IF
+                        END IF
+
+                     END IF
+                  END IF
+               END DO
+
+               enough = .TRUE.
+               IF (nkvec(lo, 1) .EQ. nkvec(lo, nintsp)) THEN   ! k-vec accepted by both spin channels
+                  IF (sym%invsat(na) .EQ. 0) THEN
+                     IF (nkvec(lo, 1) .LT. (2*atoms%llo(lo, ntype) + 1)) THEN
+                        enough = .FALSE.
+                     ENDIF
+                  ELSE
+                     IF (nkvec(lo, 1) .LT. (2*(2*atoms%llo(lo, ntype) + 1))) THEN
+                        enough = .FALSE.
+                     ENDIF
+                  ENDIF
+               ELSE
+                  nkmin = MIN(nkvec(lo, 1), nkvec(lo, nintsp)) ! try another k-vec
+                  nkvec(lo, 1) = nkmin
+                  nkvec(lo, nintsp) = nkmin
+                  enough = .FALSE.
                END IF
             END DO
-
-            enough = .TRUE.
-            IF (nkvec(lo, 1) .EQ. nkvec(lo, nintsp)) THEN   ! k-vec accepted by both spin channels
-               IF (sym%invsat(na) .EQ. 0) THEN
-                  IF (nkvec(lo, 1) .LT. (2*atoms%llo(lo, ntype) + 1)) THEN
-                     enough = .FALSE.
-                  ENDIF
-               ELSE
-                  IF (nkvec(lo, 1) .LT. (2*(2*atoms%llo(lo, ntype) + 1))) THEN
-                     enough = .FALSE.
-                  ENDIF
-               ENDIF
-            ELSE
-               nkmin = MIN(nkvec(lo, 1), nkvec(lo, nintsp)) ! try another k-vec
-               nkvec(lo, 1) = nkmin
-               nkvec(lo, nintsp) = nkmin
-               enough = .FALSE.
-            END IF
          END DO
       END DO
 

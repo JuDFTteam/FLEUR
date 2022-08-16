@@ -85,6 +85,7 @@ CONTAINS
           RETURN
        ENDIF
        !OK, now we start the MAE-loop
+       this%l_in_forcetheo_loop = .true.
        this%directions_done=this%directions_done+1
        mae_next_job=(this%directions_done<=SIZE(this%phi)) !still angles to do
        IF (.NOT.mae_next_job) RETURN
@@ -94,6 +95,7 @@ CONTAINS
        if (.not.noco%l_soc) call judft_error("Force theorem mode for MAE requires l_soc=T")
        !noco%l_soc=.true.
        IF (fmpi%irank .EQ. 0) THEN
+          WRITE (*, *) "Started a Forcetheorem Loop"
           IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop')
           WRITE(attributes(1),'(a)') 'MAE'
           WRITE(attributes(2),'(i5)') this%directions_done
@@ -145,6 +147,7 @@ CONTAINS
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop')
+       WRITE (*, *) "Finished last Forcetheorem Loop"
        attributes = ''
        WRITE(attributes(1),'(i5)') SIZE(this%evsum)
        WRITE(attributes(2),'(a)') 'Htr'

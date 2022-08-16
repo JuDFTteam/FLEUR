@@ -559,6 +559,9 @@
       <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualKKintgrCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
       <xsd:attribute default="F"       name="k_resolved" type="FleurBool" use="optional"/>
+      <xsd:attribute default="all"     name="shellElement" type="xsd:string" use="optional"/>
+      <xsd:attribute default="T"       name="magneticShells" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0"       name="startFromShell" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="TorqueGFType">

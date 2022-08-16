@@ -249,9 +249,13 @@ def pytest_generate_tests(metafunc):
         required_markers = markers - default_markers
         #Here we could select tests based on the markers of the Test (at the moment we just discard the marker info here)
         #This is useful for the eventual tests of banddos parsers, nmmpmat parser, ...
-        test_info = {(info[0], info[1]) for info in test_info if all(marker in info[2:] for marker in required_markers)}
-
-        metafunc.parametrize('fleur_test_name, test_file', test_info, ids=[info[0] for info in test_info])
+        
+        if 'outxml' in metafunc.function.__name__:
+            test_info = {(info[0], info[1], 'outxml_parser_xfail' in info[2:]) for info in test_info if all(marker in info[2:] for marker in required_markers)}
+            metafunc.parametrize('fleur_test_name, test_file, expected_failure', test_info, ids=[info[0] for info in test_info])
+        else:
+            test_info = {(info[0], info[1]) for info in test_info if all(marker in info[2:] for marker in required_markers)}
+            metafunc.parametrize('fleur_test_name, test_file', test_info, ids=[info[0] for info in test_info])
 
 
 # To modify the collected tests AFTER collections
@@ -376,6 +380,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "wannier5: test for fleur using wannier 5D calculations")
     config.addinivalue_line("markers", "masci_tools: tests which use functions from masci-tools repo")
     config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
+    config.addinivalue_line("markers", "outxml_parser_xfail: tests for which the outxml_parser is expected to output some error message")
 
     # solvers, ffts and other libs
     config.addinivalue_line("markers", "edsolver: test needing the edsolver")
@@ -1276,7 +1281,7 @@ def collect_all_judft_messages():
      ]
 
     grep_results = []
-    grep_string = '(judft_error|error_output)'
+    grep_string = '(judft_error|error_output|errorString)'
     # fortran is not case sensitive, sometimes output is programmed line before.
     # maybe use real grep instead of this python implementation...
     for folder in src_folders:
@@ -1301,33 +1306,17 @@ def collect_all_judft_messages():
     all_messages = []
     # there are all combinations of strings all over the place in the fleur src
     for judft_string in grep_results:
+        if re.search(r'calledby\s*=', judft_string):
+            judft_string = judft_string.split('calledby', maxsplit=1)[0]
+        if re.search(r'hint\s*=', judft_string):
+            judft_string = judft_string.split('hint', maxsplit=1)[0]
+
         ju_str = judft_string.split('"')
         if len(ju_str) == 1:
             ju_str = judft_string.split("'")
             if len(ju_str) == 1:
                 # ignore this one
                 continue
-        string = ''
-        for s in judft_string:
-            string = string + s
-        # if calledby is used the split is always different, therefore we split calledby.
-        if re.search('calledby', string):
-            ju_str1 = string.split('calledby')[0]
-            ju_str = ju_str1.split('"')
-            if len(ju_str) == 1:
-                ju_str = ju_str1.split("'")
-                if len(ju_str) == 1:
-                    # ignore this one
-                    continue
-            try:
-                message = ju_str[-2]
-            except IndexError: # In the source code both strings sings are used
-                # We are missing some, but currently we do not care
-                print(ju_str)
-                message = None
-                continue
-
-        else:
-            message = ju_str[-2]
+        message = ju_str[-2]
         all_messages.append(message)
     return list(set(all_messages))

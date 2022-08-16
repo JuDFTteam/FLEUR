@@ -132,6 +132,8 @@ CONTAINS
 
     SUBROUTINE fleur_job_init(l_mpi_multithreaded)
       USE m_fleur_help
+      use m_fleur_version
+      use m_fleur_dropxmlschema
       use m_judft
       USE m_constants
         logical, intent(out) :: l_mpi_multithreaded
@@ -182,6 +184,8 @@ CONTAINS
 #endif
         IF (irank==0) THEN
            CALL fleur_help()
+           call fleur_version()
+           call fleur_dropxmlschema()
         END IF
     END SUBROUTINE
 

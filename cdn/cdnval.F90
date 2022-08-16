@@ -176,8 +176,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    !Greens function always considers the empty states
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
       IF(greensfImagPart%l_calc) THEN
-         CALL greensfBZintCoeffs%init(gfinp,atoms,noco,jsp_start,jsp_end,&
-                                      SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
+         CALL greensfBZintCoeffs%init(gfinp,atoms,noco,SIZE(cdnvalJob%ev_list))
          CALL greensfCalcScalarProducts(gfinp,atoms,input,enpara,noco,sphhar,vTot,fmpi,hub1data=hub1data,&
                                         scalarProducts=scalarGF)
       ENDIF
@@ -317,8 +316,12 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
          IF(greensfImagPart%l_calc) THEN
-            CALL greensfBZint(ikpt_i,ikpt,noccbd,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
-                              scalarGF,eigVecCoeffs,greensfBZintCoeffs)
+            do ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
+               CALL greensfBZint(ikpt,noccbd,ispin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
+                                 scalarGF,eigVecCoeffs,greensfBZintCoeffs)
+               CALL greensfCalcImagPart_single_kpt(ikpt,ikpt_i,ev_list,ispin,gfinp,atoms,input,kpts,noco,fmpi,&
+                                 results,greensfBZintCoeffs,greensfImagPart)
+            enddo
          ENDIF
       ENDIF
 
@@ -354,11 +357,11 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
       IF(greensfImagPart%l_calc) THEN
-         !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
-         DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
-            CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,fmpi,&
-                                     results,greensfBZintCoeffs,greensfImagPart)
-         ENDDO
+         call timestart("Green's function: Imag Part collect")
+         do ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
+            CALL greensfImagPart%collect(ispin,fmpi%mpi_comm)
+         enddo
+         call timestop("Green's function: Imag Part collect")
       ENDIF
    ENDIF
 
