@@ -6,7 +6,7 @@ MODULE m_make_atom_groups
   !     Modified by GM (2016)
   !********************************************************************
 CONTAINS
-  SUBROUTINE make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms)
+  SUBROUTINE make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms,inpgen_atom_for_type)
     !Use the symmetry to generate correct mapping of atoms into types
     USE m_types_sym
     USE m_types_cell
@@ -19,6 +19,7 @@ CONTAINS
     REAL,INTENT(in)            :: atomid(:)
     CHARACTER(len=*),INTENT(in):: atomlabel(:)
     TYPE(t_atoms),INTENT(out)  :: atoms
+    INTEGER,INTENT(OUT)        :: inpgen_atom_for_type(:)
 
     INTEGER, ALLOCATABLE :: natype(:),natrep(:),ity(:)  ! or  'nat'
     INTEGER              :: ntypm,n,i,j,ntype
@@ -51,6 +52,7 @@ CONTAINS
     DO i =1,SIZE(atomid)
        IF ( natype(i) .NE. 0 ) CYCLE
        ntype = ntype + 1   ! new atom type
+       inpgen_atom_for_type(ntype)=i
        natype(i) = ntype   ! atom type
        natrep(i) = i       ! this is the representative
        !--->    rotate representative and get symmetry equavalent atoms

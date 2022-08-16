@@ -124,7 +124,14 @@ CONTAINS
          END IF
          atoms%nlo(n) = atoms%nlo(n) + addLOs(n)
          CALL atoms%econf(n)%init(ap(n)%econfig)
-         if (abs(ap(n)%bmu)>1E-8.and.input%jspins.ne.1) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
+         
+         !set magnetic moment
+         if (abs(atoms%bmu(n))>1E-5) THEN
+            call atoms%econf(n)%set_initial_moment(atoms%bmu(n))
+            write(atoms%speciesName(n),"(a10,f0.3)") ap(n)%desc,atoms%bmu(n)
+         else   
+            if (abs(ap(n)%bmu)>1E-8.and.input%jspins.ne.1) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
+         endif   
          !atoms%ncst(n)=econfig_count_core(econfig)
      ! rounding
          atoms%dx(n)   = REAL(NINT(atoms%dx(n)   * 1000) / 1000.)
