@@ -121,14 +121,12 @@ CONTAINS
                 dplegend(:NVEC_rem,l3)=REAL(l)*plegend(:NVEC_rem,MODULO(l-1,3))+xlegend(:NVEC_rem)*dplegend(:NVEC_rem,MODULO(l-1,3))
              END IF ! l
              DO j1=1,2
-                fjkiln = fjgj%fj(ki,l,j1,1)
-                gjkiln = fjgj%gj(ki,l,j1,1)
                 DO j2=1,2      
                   fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
-                  fjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                  fjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                  gjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                  gjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                  fjgj%fj(ki,l,j2,1)*fjgj%fj(kj_off:kj_vec,l,j1,1) *td%rsoc%rsopp(n,l,j2,j1) + &
+                  fjgj%fj(ki,l,j2,1)*fjgj%gj(kj_off:kj_vec,l,j1,1) *td%rsoc%rsoppd(n,l,j2,j1) + &
+                  fjgj%gj(ki,l,j2,1)*fjgj%fj(kj_off:kj_vec,l,j1,1) *td%rsoc%rsopdp(n,l,j2,j1) + &
+                  fjgj%gj(ki,l,j2,1)*fjgj%gj(kj_off:kj_vec,l,j1,1) *td%rsoc%rsopdpd(n,l,j2,j1)) &
                   * angso(:NVEC_rem,j1,j2) 
 #if false
    !Code snipplet useful for debugging only
@@ -161,10 +159,10 @@ CONTAINS
                         fct(1)=angso2*fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2)
                   END BLOCK     
 #endif
-                  hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
-                   hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
-                   hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
-                   hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
+                  hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) - chi(1,1,j1,j2)*fct(:NVEC_rem)
+                  hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) - chi(1,2,j1,j2)*fct(:NVEC_rem)
+                  hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) - chi(2,1,j1,j2)*fct(:NVEC_rem)
+                  hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) - chi(2,2,j1,j2)*fct(:NVEC_rem)
                 ENDDO
              ENDDO
           !--->          end loop over l

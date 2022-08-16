@@ -65,12 +65,16 @@ CONTAINS
      rho11=chmom(1)
      rho22=chmom(2)
      rho21=qa21
-     call nococonv%rotdenmat(itype, rho11,rho22,rho21, toGlobal=.true.)
+     if (noco%l_noco) then
+         call nococonv%rotdenmat(itype, rho11,rho22,rho21, toGlobal=.true.)
+     else
+         call nococonv%rotdenmat(nococonv%phi,nococonv%theta,rho11,rho22,rho21, toGlobal=.true.)
+     endif   
      magmomG=nococonv%denmat_to_mag(rho11,rho22,rho21)
      !now also give output in global frame
      !call nococonv%rot_magvec(itype,magmom,toGlobal=.true.)
      CALL pol_angle(magmomG(1),magmomG(2),magmomG(3),betah,alphh,.true.)
-     call priv_output_moments(itype,magmomG(1:3),betah,alphh,magmomL(1:3),betaL,alphaL,noco%l_mperp)
+     call priv_output_moments(itype,magmomG(1:3),betah,alphh,magmomL(1:3),betaL,alphaL,noco)
      
 
 
@@ -156,23 +160,28 @@ CONTAINS
 
   END SUBROUTINE 
 
-  subroutine priv_output_moments(itype,magmom,beta,alpha,magmomL,betaL,alphaL,l_mperp)
+  subroutine priv_output_moments(itype,magmom,beta,alpha,magmomL,betaL,alphaL,noco)
    USE m_xmlOutput
    USE m_constants
+   USE m_types_noco
    integer,intent(in):: itype 
    real,intent(in)   :: magmom(3),beta,alpha
    real,intent(in)   :: magmomL(3),betaL,alphaL
-   logical,intent(in):: l_mperp
+   type(t_noco),intent(in):: noco
+   
    
 
    character(len=15):: label 
    character(len=30):: attributes(2)      
    
-   if (l_mperp) THEN
+   if (noco%l_mperp) THEN
       write(oUnit,'(i6,1x,f9.6,2(" | ",5(f9.6,1x)),"  mm ")') itype,sqrt(dot_product(magmom(1:3),magmom(1:3))),magmom,beta,alpha,magmomL,betaL,alphaL
-   else
+   elseif (noco%l_noco.or.noco%l_soc) THEN
       write(oUnit,'(i6,1x,f9.6," | ",5(f9.6,1x)," |    ---       ---    ",f9.6,"    ---          ---           mm ")') &
-      itype,sqrt(dot_product(magmom(1:3),magmom(1:3))),magmom,beta,alpha,magmomL(3)
+       itype,sqrt(dot_product(magmom(1:3),magmom(1:3))),magmom,beta,alpha,magmomL(3)
+   else
+      write(oUnit,'(i6,1x,f9.6," |     ---       ---       ---       ---          ---   |    ---       ---       ---       ---          ---           mm ")') &
+      itype,sqrt(dot_product(magmom(1:3),magmom(1:3)))
    endif
    WRITE(attributes(1),'(i0)') iType
    WRITE(attributes(2),'(3(f9.5,1x))') magmom(1),magmom(2),magmom(3)
