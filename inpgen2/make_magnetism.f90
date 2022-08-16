@@ -33,10 +33,10 @@ module m_make_magnetism
         ALLOCATE(noco%mix_RelaxWeightOffD(atoms%ntype))
         noco%mix_RelaxWeightOffD(:)=1.0
         noco%mag_mixing_scheme=0
-      
+        Allocate(atoms%bmu(atoms%ntype))
+        atoms%bmu=0.0
 
         if (all(abs(mag_mom)<1E-5)) RETURN !No magnetic moments given
-        Allocate(atoms%bmu(atoms%ntype))
         input%jspins=2
         !check if we have a collinear setup
         if (all(abs(mag_mom(2:,:))<1E-5)) THEN
