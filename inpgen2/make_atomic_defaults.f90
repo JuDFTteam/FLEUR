@@ -9,7 +9,7 @@ MODULE m_make_atomic_defaults
   IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE make_atomic_defaults(input,vacuum,profile,cell ,atoms,enpara)
+   SUBROUTINE make_atomic_defaults(input,vacuum,profile,cell,atoms,enpara)
       USE m_check_mt_radii
       USE m_atompar
       USE m_types_atoms
@@ -127,8 +127,14 @@ CONTAINS
          
          !set magnetic moment
          if (abs(atoms%bmu(n))>1E-5) THEN
-            call atoms%econf(n)%set_initial_moment(atoms%bmu(n))
-            write(atoms%speciesName(n),"(a10,f0.3)") ap(n)%desc,atoms%bmu(n)
+            if (abs(atoms%bmu(n))>100) THEN 
+               !take only sign of magnetic moment
+               call atoms%econf(n)%set_initial_moment(sign(ap(n)%bmu,atoms%bmu(n)))
+               write(atoms%speciesName(n),"(a10,a)") ap(n)%desc,merge(" up"," dn",atoms%bmu(n)>0)
+            else
+               call atoms%econf(n)%set_initial_moment(atoms%bmu(n))
+               write(atoms%speciesName(n),"(a10,f0.3)") ap(n)%desc,atoms%bmu(n)
+            endif   
          else   
             if (abs(ap(n)%bmu)>1E-8.and.input%jspins.ne.1) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
          endif   

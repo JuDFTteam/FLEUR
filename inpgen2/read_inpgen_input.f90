@@ -144,17 +144,21 @@ CONTAINS
                 atom_pos(1,i)=evaluatefirst(line)
                 atom_pos(2,i)=evaluatefirst(line)
                 atom_pos(3,i)=evaluatefirst(line)
-                !check if a label is present (must be in double-quotes)
+                !check if a label is present 
                 line=trim(adjustl(line))
-                IF (index(line,'"')==1) THEN
-                  line=line(2:)
-                  IF (index(line,'"')==0) CALL judft_error("Syntax error in label"//line)
-                  atom_Label(i) = line(:index(line,'"')-1)
-                  line=line(index(line,'"')+1:)
-                ELSE
-                   WRITE(atom_Label(i),'(i0)') i
-                END IF
-                !now check if there is a magnetic moment
+                WRITE(atom_Label(i),'(i0)') i !default label
+                IF (line.ne."") THEN
+                  if (index(line,':')/=1) THEN
+                     if (index(line,':')==0) THEN
+                        atom_Label(i)=line  !no more magnetic info
+                     else
+                        atom_Label(i)=trim(line(:index(line,':')-1))  !index up to :
+                     endif
+                  endif
+                endif        
+                !Remove : if present
+                line=line(index(line,':')+1:)
+                !now read the magnetic moment
                 mag_mom(1,i)=evaluatefirst(line)
                 mag_mom(2,i)=evaluatefirst(line)
                 mag_mom(3,i)=evaluatefirst(line)

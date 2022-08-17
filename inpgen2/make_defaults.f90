@@ -49,6 +49,7 @@ CONTAINS
     !
     IF (input%jspins==1.AND.(noco%l_ss.OR.noco%l_noco)) CALL judft_error("You cannot run a non-collinear calculation with a single spin, set jspins=2")
     IF (noco%l_ss) noco%l_noco = .TRUE.
+    IF (noco%l_noco) input%ctail=.FALSE.
     !check for magnetism
     DO n = 1, atoms%ntype
        IF (ANY(atoms%econf(n)%occupation(:, 1) .NE. atoms%econf(n)%occupation(:, 2))) THEN
