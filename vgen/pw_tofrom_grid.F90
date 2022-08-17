@@ -97,7 +97,7 @@ CONTAINS
 
     INTEGER      :: js,i,idm,ig,ndm,jdm,j
     REAL         :: rhotot,mmx,mmy,mmz,theta,phi,fd(3),sd(3)
-    COMPLEX      :: ci,rho21
+    COMPLEX      :: rho21
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: cqpw(:,:),ph_wrk(:)
     REAL,    ALLOCATABLE :: bf3(:)
@@ -109,7 +109,6 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: exi(:)
 
     LOGICAL, PARAMETER :: l_rdm=.true.
-    ci=cmplx(0.,1.)
 
     ! Allocate arrays
     ALLOCATE( bf3(0:griddim-1))
@@ -152,7 +151,7 @@ CONTAINS
           call fftgrid%putFieldOnGrid(stars,den_pw(:,3),cell,gmax)
           call fftgrid%perform_fft(forward=.false.)
           mx=real(fftgrid%grid)
-          my=aimag(fftgrid%grid)
+          my=aimag(fftgrid%grid) ! TODO: There is NO magic minus here. This is so scuffed....
 
           DO i=0,MIN(SIZE(rho,1),size(mx))-1
              rhotot= 0.5*( rho(i,1) + rho(i,2) )
@@ -168,7 +167,7 @@ CONTAINS
                 cossqu(i) = cos(0.5*theta)**2
                 sinsqu(i) = sin(0.5*theta)**2
                 sincos(i) = 2.0*sin(0.5*theta)*cos(0.5*theta)
-                exi(i)    = exp(-ci*phi)
+                exi(i)    = exp(-ImagUnit*phi)
              ENDIF
           END DO
        ENDIF
@@ -218,7 +217,7 @@ CONTAINS
 
              DO i=0,griddim-1 ! project on magnetization axis
                 DO idm=1,3
-                   rho21 = der(i,idm,3) + ci * der(i,idm,4)
+                   rho21 = der(i,idm,3) + ImagUnit * der(i,idm,4)
                    rhd1(i,1,idm) = cossqu(i) * der(i,idm,1) + &
                                    sincos(i) * real( exi(i)*rho21 ) + &
                                    sinsqu(i) * der(i,idm,2)
@@ -235,7 +234,7 @@ CONTAINS
                 CALL grdrsis( der(:,idm,4),cell,fftgrid%dimensions, dder(:,:,idm,4) )
                 DO i=0,griddim-1 ! project on magnetization axis
                   DO jdm=1,3
-                    rho21 = dder(i,jdm,idm,3) + ci * dder(i,jdm,idm,4)
+                    rho21 = dder(i,jdm,idm,3) + ImagUnit * dder(i,jdm,idm,4)
                     rhdd(i,1,jdm,idm) = cossqu(i) * dder(i,jdm,idm,1) + &
                                     sincos(i) * real( exi(i)*rho21 ) + &
                                     sinsqu(i) * dder(i,jdm,idm,2)

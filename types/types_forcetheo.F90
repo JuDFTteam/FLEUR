@@ -21,13 +21,15 @@
 !! forcetheorem/mae.F90
 
 MODULE m_types_forcetheo
-  USE m_juDFT
+  USE m_juDFT 
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_forcetheo
   TYPE :: t_forcetheo
-     LOGICAL,PRIVATE :: firstloop
-     LOGICAL :: l_IO
+     LOGICAL,PRIVATE :: firstloop=.false.
+     LOGICAL :: l_IO=.true.
+     LOGICAL :: l_needs_vectors=.true.
+     logical :: l_in_forcetheo_loop=.false.
    CONTAINS
      PROCEDURE :: start   =>forcetheo_start
      PROCEDURE :: next_job=>forcetheo_next_job

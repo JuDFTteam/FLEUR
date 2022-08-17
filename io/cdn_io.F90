@@ -136,7 +136,7 @@ CONTAINS
 
 
   SUBROUTINE readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-       relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename)
+       relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename,denIm)
 
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -157,6 +157,8 @@ CONTAINS
     LOGICAL, INTENT (OUT)     :: l_qfix
 
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
+
+    TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
 
     ! local variables
     INTEGER            :: mode, datend, k, i, iVac, j, iUnit, l, numLines, ioStatus, iofl
@@ -239,14 +241,24 @@ CONTAINS
           CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
-          CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
-               fermiEnergy,lastDistance,l_qfix,l_DimChange,den)
+          IF (PRESENT(denIm)) THEN
+             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
+                 fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm)
+          ELSE
+             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
+                 fermiEnergy,lastDistance,l_qfix,l_DimChange,den)
+          END IF
 
           CALL closeCDNPOT_HDF(fileID)
 
           IF(l_DimChange) THEN
-             CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-                  1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den)
+             IF (PRESENT(denIm)) THEN
+                CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
+                     1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den,denIm=denIm)
+             ELSE
+                CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
+                     1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den)
+             END IF
           END IF
        ELSE
           INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
@@ -375,7 +387,7 @@ CONTAINS
   END SUBROUTINE readDensity
 
   SUBROUTINE writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-       relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename)
+       relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename,denIm)
 
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
@@ -398,6 +410,7 @@ CONTAINS
 
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
 
+    TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
 
     TYPE(t_stars)        :: starsTemp
     TYPE(t_vacuum)       :: vacuumTemp
@@ -513,10 +526,17 @@ CONTAINS
           END IF
        END IF
 
+       IF (PRESENT(denIm)) THEN
        CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
             currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
             currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-            occDistance,l_qfix,den%iter+relCdnIndex,den)
+            occDistance,l_qfix,den%iter+relCdnIndex,den,denIm)
+       ELSE
+          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
+               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
+               currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
+               occDistance,l_qfix,den%iter+relCdnIndex,den)
+       END IF
 
        IF(l_storeIndices) THEN
           CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&

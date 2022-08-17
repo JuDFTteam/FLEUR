@@ -24,8 +24,6 @@ MODULE m_alinemuff
 CONTAINS
   SUBROUTINE aline_muff(atoms,input,sym, cell, jsp,ne, usdus,td, bkpt,lapw, eig,z_r,z_c,realdata)
 
-#include"cpp_double.h"
-
     USE m_types
     USE m_constants
     USE m_hnonmuff
@@ -56,11 +54,9 @@ CONTAINS
     REAL h(ne*(ne+1)/2),help(3*ne),z1(ne,ne)
     !     ..
     !     .. External Functions ..
-    REAL CPP_BLAS_sdot
-    EXTERNAL CPP_BLAS_sdot
-    !     ..
-    !     .. External Subroutines ..
-    EXTERNAL CPP_LAPACK_ssygv
+    REAL ddot
+    EXTERNAL ddot
+
     LOGICAL l_real
 
     l_real=present(z_r)
@@ -81,12 +77,12 @@ CONTAINS
     !---> DIAGONALIZE THE HAMILTONIAN USING LIBRARY-ROUTINES
 #ifdef CPP_ESSL
     !---> ESSL call, IBM AIX
-    CALL CPP_LAPACK_sspev (21, h, eig,z1, ne,ne,help,3*ne)
+    CALL dspev (21, h, eig,z1, ne,ne,help,3*ne)
 #else
     !---> LAPACK call
-    CALL CPP_LAPACK_sspev ('V','U',ne, h, eig,z1, ne,help, info)
+    CALL dspev ('V','U',ne, h, eig,z1, ne,help, info)
     WRITE (oUnit,FMT=8000) info
-8000 FORMAT (' AFTER CPP_LAPACK_sspev: info=',i4)
+8000 FORMAT (' AFTER dspev: info=',i4)
 #endif
 
     !---> store eigenvectors on array z
@@ -94,12 +90,12 @@ CONTAINS
        if (l_real) THEN
           help(:ne)=z_r(i,:ne)
           DO j = 1,ne
-             z_r(i,j) = CPP_BLAS_sdot(ne,help,1,z1(1,j),1)
+             z_r(i,j) = ddot(ne,help,1,z1(1,j),1)
           END DO
        else
           help(:ne)=z_c(i,:ne)
           DO j = 1,ne
-             z_c(i,j) = CPP_BLAS_sdot(ne,help,1,z1(1,j),1)
+             z_c(i,j) = ddot(ne,help,1,z1(1,j),1)
           END DO
        endif
     END DO

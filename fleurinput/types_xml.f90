@@ -45,7 +45,7 @@ MODULE m_types_xml
       PROCEDURE, NOPASS :: FreeResources
    END TYPE t_xml
    PUBLIC t_xml, evaluateFirstOnly, EvaluateFirst, evaluateFirstBoolOnly, evaluateFirstIntOnly, &
-      evaluateList
+      evaluateList, drop_schema_files
 
 CONTAINS
    subroutine set_basepath(xml, xpath)
@@ -55,12 +55,11 @@ CONTAINS
       xml%basepath = xpath
    end subroutine
 
-   subroutine validate_with_schema(version, output_version)
+   subroutine drop_schema_files(version, output_version)
       USE iso_c_binding
       character(len=4, kind=c_char), intent(in):: version
       character(len=4, kind=c_char), intent(in):: output_version
       integer :: errorStatus
-      character(len=200, KIND=c_char):: schemaFilename
       INTERFACE
          FUNCTION dropInputSchema(version) BIND(C, name="dropInputSchema")
             USE iso_c_binding
@@ -77,6 +76,7 @@ CONTAINS
             CHARACTER(kind=c_char) ::version
          END FUNCTION dropOutputSchema
       END INTERFACE
+      
       !Now validate with schema
       errorStatus = 0
       errorStatus = dropInputSchema(version//C_NULL_CHAR)
@@ -92,6 +92,16 @@ CONTAINS
          WRITE (*, *) 'Cannot print out FleurOutputSchema.xsd for version '//version
       END IF
 
+   end subroutine
+
+   subroutine validate_with_schema(version, output_version)
+      use iso_c_binding
+      character(len=4, kind=c_char), intent(in):: version
+      character(len=4, kind=c_char), intent(in):: output_version
+      integer :: errorStatus
+      character(len=200, KIND=c_char):: schemaFilename
+     
+      call drop_schema_files(version, output_version)
       schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
       CALL ParseSchema(schemaFilename)
       CALL ValidateDoc()

@@ -35,7 +35,6 @@ c**********************************************************
 #ifdef CPP_MPI
       integer :: ierr(3)
       integer :: stt(MPI_STATUS_SIZE)
-#include "cpp_double.h"
 #endif
 
 #ifdef CPP_MPI
@@ -52,7 +51,7 @@ c******************************************************
           do ikpt_b=1,nntot_q !nearest neighbors
              call MPI_RECV(
      &               mmnk_q(1:nbnd,1:nbnd,ikpt_b,ikpt),nbnd*nbnd,
-     &               CPP_MPI_COMPLEX,cpu_index,5*fullnkpts,
+     &               MPI_DOUBLE_COMPLEX,cpu_index,5*fullnkpts,
      &               MPI_COMM_WORLD,stt,ierr(1))
 
           enddo !nearest neighbors
@@ -63,7 +62,7 @@ c******************************************************
          do ikpt_b=1,nntot_q !loop over nearest neighbors
             call MPI_SEND(
      &              mmnk_q(1:nbnd,1:nbnd,ikpt_b,ikpt),
-     &              nbnd*nbnd,CPP_MPI_COMPLEX,0,5*fullnkpts,
+     &              nbnd*nbnd,MPI_DOUBLE_COMPLEX,0,5*fullnkpts,
      &              MPI_COMM_WORLD,ierr(1))
          enddo !loop over nearest neighbors
         endif !processors

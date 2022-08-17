@@ -36,7 +36,7 @@ c***********************************************************************
      >        acof_b,bcof_b,ccof_b,gb,bkpt,ujug,ujdg,djug,djdg,ujulog,
      >        djulog,ulojug,ulojdg,ulojulog,kdiff,nntot,chi,
      =        mmn)
-#include "cpp_double.h"
+
       use m_juDFT
       use m_constants, only : pimach
       use m_matmul   , only : matmul3,matmul3r
@@ -130,38 +130,38 @@ c...set up phase factors ( e^{ib\tau} )
          cph = 2*tpi*sin(th)
 
 c...contributions from the apws
-         call CPP_BLAS_cgemm(
+         call zgemm(
      >          'T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
      >          ujug(0,0,n,nene),lmd2,acof_b(1,0,na),nslibd_b,
      >          cmplx(0.0),mat(0,1),lmd2)
-         call CPP_BLAS_cgemm(
+         call zgemm(
      >          'N','N',nslibd,nslibd_b,lmd2,chi(n),
      >          acof(1,0,na),nslibd,mat(0,1),lmd2,
      >          cmplx(1.0),mmn,nbnd)
 
-         call CPP_BLAS_cgemm(
+         call zgemm(
      >          'T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
      >          ujdg(0,0,n,nene),lmd2,bcof_b(1,0,na),nslibd_b,
      >          cmplx(0.0),mat(0,1),lmd2)
-         call CPP_BLAS_cgemm(
+         call zgemm(
      >          'N','N',nslibd,nslibd_b,lmd2,chi(n),
      >          acof(1,0,na),nslibd,mat(0,1),lmd2,
      >          cmplx(1.0),mmn,nbnd)
 
-         call CPP_BLAS_cgemm(
+         call zgemm(
      >          'T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
      >          djug(0,0,n,nene),lmd2,acof_b(1,0,na),nslibd_b,
      >          cmplx(0.0),mat(0,1),lmd2)
-         call CPP_BLAS_cgemm(
+         call zgemm(
      >          'N','N',nslibd,nslibd_b,lmd2,chi(n),
      >          bcof(1,0,na),nslibd,mat(0,1),lmd2,
      >          cmplx(1.0),mmn,nbnd)
 
-         call CPP_BLAS_cgemm(
+         call zgemm(
      >          'T','C',lmd2,nslibd_b,lmd2,cmplx(rph,cph),
      >          djdg(0,0,n,nene),lmd2,bcof_b(1,0,na),nslibd_b,
      >          cmplx(0.0),mat(0,1),lmd2)
-         call CPP_BLAS_cgemm(
+         call zgemm(
      >          'N','N',nslibd,nslibd_b,lmd2,chi(n),
      >          bcof(1,0,na),nslibd,mat(0,1),lmd2,
      >          cmplx(1.0),mmn,nbnd)

@@ -26,6 +26,7 @@ MODULE m_types_econfig
      GENERIC   :: init => init_num,init_simple,init_nz,init_all
      PROCEDURE :: set_occupation
      PROCEDURE :: set_initial_moment
+     procedure :: is_polarized
      PROCEDURE :: broadcast
      PROCEDURE :: get_state_string
      PROCEDURE :: get_states_for_orbital
@@ -310,9 +311,7 @@ CONTAINS
     INTEGER:: n
     REAL   :: p,el
 
-    DO n=1,econf%num_states
-       IF (ABS(econf%occupation(n,1)-econf%occupation(n,2))>1E-5) CALL judft_error("Could not add a moment to an already polarized configuration")
-    END DO
+    if (econf%is_polarized()) CALL judft_error("Could not add a moment to an already polarized configuration")
 
     p=bmu/2.0
     DO n=econf%num_states,1,-1
@@ -331,8 +330,15 @@ CONTAINS
     END DO
   END SUBROUTINE set_initial_moment
 
+  pure logical function is_polarized(econf)
+   class(t_econfig), intent(in) :: econf
+   integer :: n
 
-
+   is_polarized = .false.
+   DO n=1,econf%num_states
+      IF (ABS(econf%occupation(n,1)-econf%occupation(n,2))>1E-5) is_polarized = .true.
+   END DO
+  end function
 
   SUBROUTINE extract_next(str,n,kappa)
     CHARACTER(len=*),INTENT(INOUT) :: str

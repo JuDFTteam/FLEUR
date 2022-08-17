@@ -33,7 +33,7 @@
    </cell>
    <atomSpecies>
       <species name="O-1" element="O" atomicNumber="8">
-         <mtSphere radius="1.05000000" gridPoints="429" logIncrement=".02400000"/>
+         <mtSphere radius="1.00000000" gridPoints="429" logIncrement=".02400000"/>
          <atomicCutoffs lmax="6" lnonsphr="4"/>
          <electronConfig>
             <coreConfig>(1s1/2)</coreConfig>

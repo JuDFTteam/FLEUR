@@ -32,7 +32,6 @@ contains
   ! F. Tran, P. Blaha: Phys. Rev. B 83, 235118(2011)
   !-------------------------------------------------------------------------
 
-#include"cpp_double.h"
     use m_constants
     use m_types
     use m_intgr, only : intgr2, sfint
@@ -131,7 +130,7 @@ contains
 #ifdef CPP_MPI
     n1 = ( sphhar%nlhd + 1 ) * atoms%ntype
     allocate( c_b(n1) )
-    call MPI_REDUCE( vtl, c_b, n1, CPP_MPI_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
+    call MPI_REDUCE( vtl, c_b, n1, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
     if ( fmpi%irank == 0 ) vtl = reshape( c_b, (/sphhar%nlhd+1,atoms%ntype/) )
     deallocate( c_b )
 #endif

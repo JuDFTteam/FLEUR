@@ -11,6 +11,7 @@ q-loop:
          - make the Theta1 variables explicitly complex (ufftq,ustepq) (done?)
          - add additional stars%center, that contains q [default: 0] (done)
          - have an array of G+q vectors as well (done)
+         - write the skeleton structure for the scf loop
          scf-loop:
             vgen1:
                vgen_coulomb:
@@ -61,7 +62,10 @@ q-loop:
                   - generate said eig_id beforehand [c.f. main: eig_id = open_eig(...)]
             cdngen1:
                - write a control routine that calls only the fundamental necessary parts
-                 of the cdngen workflow [no banddos stuff etc.]
+                 of the cdngen workflow [no banddos stuff etc.] [done; dfpt_cdngen and dfpt_cdnval]
+               - adapt the base level density routines to work with DFPT input
+                 [done via some refactoring {cdnmt and pwden}; additionally, LOs are now also present for noco, but
+                  the noco DFPT-case (as well as noco in itself) must be revised considering magic minuses]
             mixing:
                - Add MT-density imaginary part and make sure the IR-part is
                  handled correctly (4 indices)

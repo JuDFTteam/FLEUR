@@ -29,11 +29,10 @@ CONTAINS
    !    processing to gain the perturbed eigenvalues and eigenvectors.
    ! e) The latter are the actual output for the routine when used for DFPT. They are saved
    !    the same way as the eigenvalues before, but for a shifted eig_id.
-   SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,&
+   SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,&
                     enpara,nococonv,mpdata,hybdat,&
                     iter,eig_id,results,inden,v,vx,hub1data,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,iDir,iDtype,starsq,v1real,v1imag)
 
-#include"cpp_double.h"
       USE m_types
       USE m_constants
       USE m_eigen_hssetup
@@ -59,7 +58,7 @@ CONTAINS
       TYPE(t_results),INTENT(INOUT):: results
       CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_mpi),INTENT(IN)       :: fmpi
-
+      CLASS(t_forcetheo),INTENT(IN):: forcetheo
       TYPE(t_mpdata), intent(inout):: mpdata
       TYPE(t_hybdat), INTENT(INOUT):: hybdat
       TYPE(t_enpara),INTENT(INOUT) :: enpara
@@ -89,7 +88,7 @@ CONTAINS
       INTEGER jsp,nk,nred,ne_all,ne_found,neigd2
       INTEGER ne, nk_i,n_size,n_rank
       INTEGER isp,i,j,err
-      LOGICAL l_real
+      LOGICAL l_real, l_needs_vectors
       INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr
@@ -119,6 +118,10 @@ CONTAINS
 
       l_dfpteigen = PRESENT(bqpt)
 
+      l_needs_vectors = .true.
+      if (forcetheo%l_in_forcetheo_loop) then
+         l_needs_vectors = forcetheo%l_needs_vectors
+      endif
       kqpts = fi%kpts
       ! Modify this from kpts only in DFPT case.
       IF (l_dfpteigen) THEN
@@ -252,8 +255,11 @@ CONTAINS
                 n_rank = 0; n_size=1;
 #endif
                 IF (.NOT.l_dfpteigen) THEN
-                    CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
-                               eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
+                  if (l_needs_vectors) then 
+                     call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
+                  else
+                     CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
+                  endif
                 ELSE
                     CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
                     CYCLE k_loop
@@ -261,7 +267,7 @@ CONTAINS
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
                 IF (.NOT.l_dfpteigen) THEN
-                    if (fmpi%pe_diag) CALL write_eig(eig_id, nk,jsp,ne_found,&
+                    if (fmpi%pe_diag.and.l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
                                   n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
                 ELSE
                     if (fmpi%pe_diag) CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
@@ -296,7 +302,7 @@ CONTAINS
 #ifdef CPP_MPI
       IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
          results%unfolding_weights = CMPLX(0.0,0.0)
-       CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),CPP_MPI_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+       CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       END IF
       CALL MPI_ALLREDUCE(neigBuffer,results%neig,fi%kpts%nkpt*fi%input%jspins,MPI_INTEGER,MPI_SUM,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)

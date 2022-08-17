@@ -331,7 +331,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
             IF (fmpi%irank.EQ.0) THEN
                CALL writeDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym, CDN_ARCHIVE_TYPE_CDN_const,CDN_input_DEN_const,&
-                                 0,-1.0,0.0,-1.0,-1.0,.FALSE.,singleStateDen,TRIM(ADJUSTL(filename)))
+                                 0,-1.0,0.0,-1.0,-1.0,.FALSE.,singleStateDen,inFilename=TRIM(ADJUSTL(filename)))
             END IF
             CALL singleStateDen%distribute(fmpi%mpi_comm)
 
@@ -476,7 +476,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                WRITE(filename,'(a,i1.1,a,i4.4,a,i5.5)') 'cdn-', jsp, '-', ikpt, '-', iBand
                IF (fmpi%irank.EQ.0) THEN
                   CALL readDensity(stars,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym, CDN_ARCHIVE_TYPE_CDN_const,&
-                                   CDN_input_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,singleStateDen,TRIM(ADJUSTL(filename)))
+                                   CDN_input_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,singleStateDen,inFilename=TRIM(ADJUSTL(filename)))
                   CALL singleStateDen%sum_both_spin()!workden)
                END IF
                CALL singleStateDen%distribute(fmpi%mpi_comm)

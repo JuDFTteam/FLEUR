@@ -10,7 +10,7 @@ MODULE m_xcxal
 !     Called in case of icorr=0 : nonspin-polarized exchange-correlation
 !       potential with the X-alpha method
 
-!     We caclulate  V_x = alpha V_{x,Slater}  where alpha = 2/3
+!     We calculate  V_x = alpha V_{x,Slater}  where alpha = 2/3
 !     i.e. the output corresponds to the Gaspar result for the
 !     local approximation to the Hartree-Fock method.
 

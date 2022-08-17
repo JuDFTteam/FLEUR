@@ -24,9 +24,12 @@ def test_judft_messages_aiida_interface(collect_all_judft_messages_f):
     aiida_fleur_parsed_messages = [
         #(r'cgroup out-of-memory handler', True), # This is not in fleur
         #('Out Of Memory', True),  # This is not in fleur
+        ('Allocation of array for communication failed', True),
         ('Atom spills out into vacuum during relaxation', True),
         ('Error checking M.T. radii', True),
-        ('Overlapping MT-spheres during relaxation: ', True)]
+        ('Overlapping MT-spheres during relaxation: ', True),
+        ('FLEUR is not linked against libxc', True),
+        ('No solver linked for Hubbard 1', True)]
 
     judft_error_message_list = collect_all_judft_messages_f()
     print(judft_error_message_list)

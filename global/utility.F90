@@ -26,12 +26,23 @@ MODULE m_utility
    SUBROUTINE getPrecision(precisionString)
       IMPLICIT NONE
       CHARACTER(LEN=*), INTENT(OUT) :: precisionString
-#ifdef CPP_DOUBLE                
-      precisionString = 'DOUBLE'        
-#else
-      precisionString = 'SINGLE'
-      CALL juDFT_warn("You compiled with single precision, this is most probably wrong!",calledby ="dimens")
-#endif
+      
+      REAL    :: dummy
+      INTEGER :: realLength
+      
+      dummy = 0.0
+      realLength = STORAGE_SIZE(dummy)
+      
+      IF(realLength.EQ.64) THEN
+         precisionString = 'DOUBLE'        
+      ELSE IF (realLength.EQ.32) THEN
+!         precisionString = 'SINGLE'
+         CALL juDFT_error("You compiled with single precision, this is most probably wrong!",calledby ="dimens")
+      ELSE
+         WRITE(*,*) 'real length: ', realLength
+         CALL juDFT_error("You compiled with unknown precision, this is most probably wrong!",calledby ="dimens")
+      END IF
+
    END SUBROUTINE getPrecision
 
    SUBROUTINE getTargetStructureProperties(specifiers, numSpecifiers)

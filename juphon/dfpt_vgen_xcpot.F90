@@ -124,7 +124,6 @@ CONTAINS
    END SUBROUTINE dfpt_vis_xc
 
    SUBROUTINE dfpt_vmt_xc(fmpi,atoms,ylm,gWghts,fxcMT,jspins, iDatom, den, vTot)
-#include"cpp_double.h"
 
       USE m_types
 
@@ -170,7 +169,7 @@ CONTAINS
       END DO
 
 #ifdef CPP_MPI
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),CPP_MPI_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
       RETURN
   END SUBROUTINE dfpt_vmt_xc

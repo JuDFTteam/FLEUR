@@ -18,8 +18,7 @@ MODULE m_hlomat
 CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
        ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,lapwq)
-    !
-#include"cpp_double.h"
+
     USE m_hsmt_ab
     USE m_types
 !    USE m_types_mpimat
@@ -96,8 +95,8 @@ CONTAINS
          abclo(:,:,:,:)=abcloPr(:,:,:,:)
          !$acc end kernels
 #ifndef _OPENACC
-         CALL CPP_BLAS_ccopy(SIZE(abCoeffsPr,1)*SIZE(abCoeffsPr,2),abCoeffsPr(:,:),1,abCoeffs(:,:),1)
-         CALL CPP_BLAS_ccopy(SIZE(abcloPr,1)*SIZE(abcloPr,2)*SIZE(abcloPr,3)*SIZE(abcloPr,4),abcloPr(:,:,:,:),1,abclo(:,:,:,:),1)
+         CALL zcopy(SIZE(abCoeffsPr,1)*SIZE(abCoeffsPr,2),abCoeffsPr(:,:),1,abCoeffs(:,:),1)
+         CALL zcopy(SIZE(abcloPr,1)*SIZE(abcloPr,2)*SIZE(abcloPr,3)*SIZE(abcloPr,4),abcloPr(:,:,:,:),1,abclo(:,:,:,:),1)
 #endif
       ELSE
          CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo(:,:,:,:),alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))

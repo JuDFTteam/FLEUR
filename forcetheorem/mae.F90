@@ -39,7 +39,8 @@ CONTAINS
 
     INTEGER::n
     LOGICAL::error(sym%nop)
-
+    this%l_needs_vectors=.true.
+   
     this%phi=phi
     this%theta=theta
 
@@ -47,7 +48,7 @@ CONTAINS
          judft_error("Lists for theta/phi must have the same length in MAE force theorem calculations")
     DO n=1,SIZE(this%phi)
        CALL soc_sym(sym%nop,sym%mrot,this%theta(n),this%phi(n),cell%amat,error)
-       IF (ANY(error)) CALL judft_warn("Force theory choice of SOC-SQA breaks symmetry")
+       IF (ANY(error)) CALL judft_warn("Force theorem choice of SOC-SQA breaks symmetry")
     END DO
     ALLOCATE(this%evsum(SIZE(this%phi)))
     this%evsum=0
@@ -84,6 +85,7 @@ CONTAINS
           RETURN
        ENDIF
        !OK, now we start the MAE-loop
+       this%l_in_forcetheo_loop = .true.
        this%directions_done=this%directions_done+1
        mae_next_job=(this%directions_done<=SIZE(this%phi)) !still angles to do
        IF (.NOT.mae_next_job) RETURN
@@ -93,6 +95,7 @@ CONTAINS
        if (.not.noco%l_soc) call judft_error("Force theorem mode for MAE requires l_soc=T")
        !noco%l_soc=.true.
        IF (fmpi%irank .EQ. 0) THEN
+          WRITE (*, *) "Started a Forcetheorem Loop"
           IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop')
           WRITE(attributes(1),'(a)') 'MAE'
           WRITE(attributes(2),'(i5)') this%directions_done
@@ -144,6 +147,7 @@ CONTAINS
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop')
+       WRITE (*, *) "Finished last Forcetheorem Loop"
        attributes = ''
        WRITE(attributes(1),'(i5)') SIZE(this%evsum)
        WRITE(attributes(2),'(a)') 'Htr'
