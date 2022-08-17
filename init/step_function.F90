@@ -74,7 +74,12 @@ CONTAINS
                gInt(1) = REAL(x)
                IF (2*x > 3*stars%mx1) gInt(1) = gInt(1) - 3.0*stars%mx1
                gInd = x + 3*stars%mx1*y + layerDim*z
-               IF (ALL([x,y,z]==0)) CYCLE x_loop
+
+               IF (PRESENT(qvec)) THEN
+                  IF (ALL([x,y,z]==0).AND.norm2(qvec)<1e-9) CYCLE x_loop
+               ELSE
+                  IF (ALL([x,y,z]==0)) CYCLE x_loop
+               END IF
 
                gExt = MATMUL(TRANSPOSE(cell%bmat), gInt)
                IF (PRESENT(qvec)) gExt = gExt + MATMUL(TRANSPOSE(cell%bmat), qvec)
@@ -87,10 +92,11 @@ CONTAINS
                   c_phs = CMPLX(0.0, 0.0)
                   na = MERGE(SUM(atoms%neq(:n - 1)),iDtype-1,.NOT.PRESENT(qvec))
                   DO nn = 1, atoms%neq(n)
-                     th = -tpi_const*DOT_PRODUCT(gInt, atoms%taual(:, na + nn))
                      IF (.NOT.PRESENT(qvec)) THEN
+                        th = -tpi_const*DOT_PRODUCT(gInt, atoms%taual(:, na + nn))
                         c_phs = c_phs + EXP(CMPLX(0, th))
                      ELSE
+                        th = -tpi_const*DOT_PRODUCT(gInt+qvec, atoms%taual(:, na + nn))
                         c_phs = c_phs + (-ImagUnit*gExt(iDir))*EXP(CMPLX(0, th))
                      END IF
                   END DO

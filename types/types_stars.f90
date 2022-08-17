@@ -171,7 +171,7 @@ CONTAINS
           stars%kv3(:,k)=kv
           stars%sk3(k)=sqrt(s)
           IF (PRESENT(qvec)) THEN
-             stars%gq(:,k)=s
+             stars%gq(:,k)=g
              stars%center=qvec
           END IF
           ! secondary key for equal length stars
@@ -193,6 +193,7 @@ CONTAINS
     CALL sort(index,stars%sk3,gsk3)
     stars%kv3=stars%kv3(:,index)
     stars%sk3=stars%sk3(index)
+    IF (PRESENT(qvec)) stars%gq=stars%gq(:,index)
     ! set up the pointers and phases for 3d stars
     DO  k = 1,stars%ng3
       CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),&
