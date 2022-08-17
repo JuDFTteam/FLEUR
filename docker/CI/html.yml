@@ -1,6 +1,6 @@
 
 pages:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: deploy
   needs: 
     - doxygen
@@ -34,7 +34,7 @@ ford:
       - if: $CI_TASKS =~ /doc/    
   
 doxygen:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: html
   needs: []
   script:
@@ -53,7 +53,7 @@ doxygen:
   
 
 gfortran-coverage:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   stage: html
   needs: []

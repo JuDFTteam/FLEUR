@@ -1,5 +1,5 @@
 build-gfortran-serial:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
   script:
     - cd $CI_PROJECT_DIR
@@ -14,7 +14,7 @@ build-gfortran-serial:
     - if: $CI_TASKS =~ /serial/    
   
 build-gfortran-hdf5-serial:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
   artifacts:
      paths:
@@ -29,7 +29,7 @@ build-gfortran-hdf5-serial:
       - if: $CI_TASKS =~ /serial/    
 
 test-gfortran-serial:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   needs: 
     - build-gfortran-serial

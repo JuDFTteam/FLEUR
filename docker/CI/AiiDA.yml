@@ -2,7 +2,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
   # This is to test the develop executables and all test input files against
   # the develop branch of aiida-fleur. This will execute workflows regression tests
   # with the compiled fleur executable.
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: test
   needs: 
     - build-gfortran-hdf5-serial
