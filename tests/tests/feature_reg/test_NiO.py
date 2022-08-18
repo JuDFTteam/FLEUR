@@ -27,8 +27,11 @@ def test_NiOldaUAMF(execute_fleur, grep_number, grep_exists):
     dist = grep_number(res_files['out'], "distance of charge densities for it=   12", ":")
     efermi = grep_number(res_files['out'], "first approx. to ef", ":")
     bandgap = grep_number(res_files['out'], "bandgap", ":")
-    mm_atom1 = grep_number(res_files['out'], "mm       1", " 1 ")
-    mm_atom3 = grep_number(res_files['out'], "mm       3", " 3 ")
+    mm_atom1 = grep_number(res_files['out.xml'], 'magneticMoment atomType="1"','moment="')
+    mm_atom3 = grep_number(res_files['out.xml'], 'magneticMoment atomType="3"','moment="')
+    
+    #mm_atom1 = grep_number(res_files['out'], "mm       1", " 1 ")
+    #mm_atom3 = grep_number(res_files['out'], "mm       3", " 3 ")
 
     assert abs(tenergy - -3189.615) <= 0.001
     assert abs(dist - 0.33) <= 0.01
@@ -63,9 +66,11 @@ def test_NiOldaUFLL(execute_fleur, grep_number, grep_exists):
     dist = grep_number(res_files['out'], "distance of charge densities for it=   12", ":")
     efermi = grep_number(res_files['out'], "first approx. to ef", ":")
     bandgap = grep_number(res_files['out'], "bandgap", ":")
-    mm_atom1 = grep_number(res_files['out'], "mm       1", " 1 ")
-    mm_atom3 = grep_number(res_files['out'], "mm       3", " 3 ")
-
+    #mm_atom1 = grep_number(res_files['out'], "mm       1", " 1 ")
+    #mm_atom3 = grep_number(res_files['out'], "mm       3", " 3 ")
+    mm_atom1 = grep_number(res_files['out.xml'], 'magneticMoment atomType="1"','moment="')
+    mm_atom3 = grep_number(res_files['out.xml'], 'magneticMoment atomType="3"','moment="')
+    
     assert abs(tenergy - -3191.458) <= 0.001
     assert abs(dist - 0.58) <= 0.01
     assert abs(efermi - 0.207) <= 0.001

@@ -76,12 +76,12 @@ def test_Fe_bcc_SF_LDA(execute_fleur, grep_number, grep_exists):
     magmom = grep_number(res_files['out'], "Magmom before SF", "mz=")
     bfield_before = grep_number(res_files['out'], "Bfield before SF", "Bz=")
     bfield_after = grep_number(res_files['out'], "Bfield after SF", "Bz=")
-    mz = grep_number(res_files['out'], "local frame: mx=", "mz=")
+    mz = grep_number(res_files['out.xml'], 'magneticMoment atomType="2"', 'moment="')
 
     assert abs(magmom - 2.37929) <= 0.001
     assert abs(bfield_before - -1.17291) <= 0.001
     assert abs(bfield_after - -1.08379) <= 0.001
-    assert abs(mz - 1.99149) <= 0.001
+    assert abs(mz - 1.992) <= 0.001
 
 @pytest.mark.bulk
 @pytest.mark.magnetism
