@@ -26,7 +26,8 @@ def test_Fe_bct_LibXC(execute_fleur, grep_number, grep_exists):
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for it=    3", ":")
-    mm = grep_number(res_files['out'], "mm       2", "mm       2")
+    mm = grep_number(res_files['out.xml'], 'magneticMoment atomType="2"','moment="')
+    #mm = grep_number(res_files['out'], "mm       2", "mm       2")
 
     assert abs(qfix - 1.0) <= 0.00001
     assert abs(fermi - 0.338) <= 0.005
@@ -60,7 +61,7 @@ def test_Fe_bct_LOXML(execute_fleur, grep_number, grep_exists):
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for it=", ":")
-    mm = grep_number(res_files['out'], "mm       2", "mm       2")
+    mm = grep_number(res_files['out.xml'], 'magneticMoment atomType="2"','moment="')
 
     assert abs(qfix - 1.0) <= 0.00001
     assert abs(fermi - 0.341) <= 0.01
@@ -94,13 +95,14 @@ def test_Fe_bct_SOCXML(execute_fleur, grep_number, grep_exists):
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for it=   20", ":")
-    mm = grep_number(res_files['out'], "mm       2", "mm       2")
+    mm = grep_number(res_files['out.xml'], 'magneticMoment atomType="2"','moment="')
+    #mm = grep_number(res_files['out'], "mm       2", "mm       2")
 
     assert abs(qfix - 1.0) <= 0.00001
     assert abs(fermi - 0.326) <= 0.005
     assert abs(tenergy - -2545.607623611) <= 0.005
     assert abs(dist - 0.00003) <= 0.1
-    assert abs(mm - 0.05411) <= 0.01
+    assert abs(mm - 1.7491) <= 0.01
 
 @pytest.mark.serial
 @pytest.mark.bulk
@@ -129,7 +131,8 @@ def test_Fe_bctXML(execute_fleur, grep_number, grep_exists):
     fermi = grep_number(res_files['out'], "new fermi energy", ":")
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densities for it=   20", ":")
-    mm = grep_number(res_files['out'], "mm       2", "mm       2")
+    #mm = grep_number(res_files['out'], "mm       2", "mm       2")
+    mm = grep_number(res_files['out.xml'], 'magneticMoment atomType="2"','moment="')
 
     assert abs(qfix - 1.0) <= 0.00001 #, 'qfix'
     assert abs(fermi - 0.326) <= 0.005 #, 'Fermi energy'
