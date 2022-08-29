@@ -12,7 +12,7 @@ MODULE m_step_function
    IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir)
+   SUBROUTINE stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir, iOrd, stepf_array)
       !! Construct the analytical representation of the step function on a big
       !! reciprocal grid.
 
@@ -28,10 +28,13 @@ CONTAINS
       TYPE(t_fftgrid), INTENT(OUT) :: fftgrid
 
       REAL,    OPTIONAL, INTENT(IN) :: qvec(3)
-      INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
+      INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir, iOrd
+
+      COMPLEX, OPTIONAL, INTENT(INOUT) :: stepf_array(:,:,:)
 
       INTEGER :: x, y, z, z2, z_min, z_max
-      INTEGER :: layerDim, ifftd, gInd, n, na, nn
+      INTEGER :: layerDim, ifftd, gInd, n, na, nn, iDir_loc
+      INTEGER :: n_lims(2), dir_lims(2)
       REAL    :: th, inv_omtil, fJ
       REAL    :: g2, absg, absgr, help, fp_omtil, radg, gExtx, gExty
       REAL    :: r_c, r_phs
@@ -61,6 +64,17 @@ CONTAINS
       z_min = 0
       z_max = 3*stars%mx3 - 1
 
+      n_lims = [1, atoms%ntype]
+      dir_lims = [1, 1]
+
+      IF (PRESENT(qvec)) THEN
+         n_lims(1) = MERGE(1,          iDtype,PRESENT(stepf_array).AND.iOrd==1)
+         n_lims(2) = MERGE(atoms%ntype,iDtype,PRESENT(stepf_array).AND.iOrd==1)
+
+         dir_lims(1) = MERGE(1,iDir,PRESENT(stepf_array))
+         dir_lims(2) = MERGE(3,iDir,PRESENT(stepf_array))
+      END IF
+
       DO z = z_min, z_max
          gInt(3) = REAL(z)
          IF (2*z > 3*stars%mx3) gInt(3) = gInt(3) - 3.0*stars%mx3
@@ -88,25 +102,43 @@ CONTAINS
                help = fp_omtil/g2
 
                c_c = CMPLX(0.0, 0.0)
-               DO n = MERGE(1,iDtype,.NOT.PRESENT(qvec)), MERGE(atoms%ntype,iDtype,.NOT.PRESENT(qvec))
-                  c_phs = CMPLX(0.0, 0.0)
-                  na = MERGE(SUM(atoms%neq(:n - 1)),iDtype-1,.NOT.PRESENT(qvec))
-                  DO nn = 1, atoms%neq(n)
-                     IF (.NOT.PRESENT(qvec)) THEN
-                        th = -tpi_const*DOT_PRODUCT(gInt, atoms%taual(:, na + nn))
-                        c_phs = c_phs + EXP(CMPLX(0, th))
-                     ELSE
-                        th = -tpi_const*DOT_PRODUCT(gInt+qvec, atoms%taual(:, na + nn))
-                        c_phs = c_phs + (-ImagUnit*gExt(iDir))*EXP(CMPLX(0, th))
+
+               DO n = n_lims(1), n_lims(2)
+                  DO iDir_loc = dir_lims(1), dir_lims(2)
+                     c_phs = CMPLX(0.0, 0.0)
+                     na = MERGE(SUM(atoms%neq(:n - 1)),iDtype-1,.NOT.PRESENT(qvec))
+                     DO nn = 1, atoms%neq(n)
+                        IF (.NOT.PRESENT(qvec)) THEN
+                           th = -tpi_const*DOT_PRODUCT(gInt, atoms%taual(:, na + nn))
+                           c_phs = c_phs + EXP(CMPLX(0, th))
+                        ELSE
+                           th = -tpi_const*DOT_PRODUCT(gInt+qvec, atoms%taual(:, na + nn))
+                           IF (iOrd==1) THEN
+                              c_phs = c_phs + (-ImagUnit*gExt(iDir_loc))*EXP(CMPLX(0, th))
+                           ELSE
+                              c_phs = c_phs + (-gExt(iDir)*gExt(iDir_loc))*EXP(CMPLX(0, th))
+                           END IF
+                        END IF
+                     END DO
+                     absgr = absg*atoms%rmt(n)
+                     c_c = c_c + atoms%rmt(n)*(SIN(absgr)/absgr - COS(absgr))*c_phs
+
+                     IF (PRESENT(stepf_array)) THEN
+                        stepf_array(gInd, n, iDir_loc) = c_c
                      END IF
                   END DO
-                  absgr = absg*atoms%rmt(n)
-                  c_c = c_c + atoms%rmt(n)*(SIN(absgr)/absgr - COS(absgr))*c_phs
                END DO
-               fftgrid%grid(gInd) = help * c_c
 
-               IF (((2*z  .EQ. 3*stars%mx3) .OR. (2*y  .EQ. 3*stars%mx2)) .OR. (2*x  .EQ. 3*stars%mx1)) THEN
-                  fftgrid%grid(gInd) = CMPLX(0.0,0.0)
+               IF (.NOT.PRESENT(stepf_array)) THEN
+                  fftgrid%grid(gInd) = help * c_c
+
+                  IF (((2*z  .EQ. 3*stars%mx3) .OR. (2*y  .EQ. 3*stars%mx2)) .OR. (2*x  .EQ. 3*stars%mx1)) THEN
+                     fftgrid%grid(gInd) = CMPLX(0.0,0.0)
+                  END IF
+               ELSE
+                  IF (((2*z  .EQ. 3*stars%mx3) .OR. (2*y  .EQ. 3*stars%mx2)) .OR. (2*x  .EQ. 3*stars%mx1)) THEN
+                     stepf_array(gInd, :, :) = CMPLX(0.0,0.0)
+                  END IF
                END IF
 
             END DO x_loop ! 0, 3*stars%mx1 - 1
