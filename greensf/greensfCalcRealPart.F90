@@ -23,9 +23,12 @@ MODULE m_greensfCalcRealPart
 
    IMPLICIT NONE
 
+   private
+   public greensfCalcRealPart
+
    CONTAINS
 
-   SUBROUTINE greensfCalcRealPart(atoms,gfinp,sym,input,noco,kpts,fmpi,ef,greensfImagPart,g)
+   SUBROUTINE greensfCalcRealPart(atoms,gfinp,sym,input,enpara,noco,kpts,fmpi,ef,greensfImagPart,g)
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_gfinp),             INTENT(IN)     :: gfinp
@@ -34,6 +37,7 @@ MODULE m_greensfCalcRealPart
       TYPE(t_kpts),              INTENT(IN)     :: kpts
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_mpi),               INTENT(IN)     :: fmpi
+      type(t_enpara),            intent(in)     :: enpara
       REAL,                      INTENT(IN)     :: ef
       TYPE(t_greensfImagPart),   INTENT(INOUT)  :: greensfImagPart
       TYPE(t_greensf),           INTENT(INOUT)  :: g(:)
@@ -42,7 +46,7 @@ MODULE m_greensfCalcRealPart
       INTEGER :: jspin,nspins,ipm,lp,refCutoff
       INTEGER :: contourShape, iContour
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
-      INTEGER :: ikpt, ikpt_i
+      INTEGER :: ikpt, ikpt_i, refElem
       LOGICAL :: l_fixedCutoffset,l_sphavg,l_kresolved_int,l_kresolved
       REAL    :: del,eb,fixedCutoff,bk(3)
       REAL,    ALLOCATABLE :: eMesh(:)
@@ -80,19 +84,29 @@ MODULE m_greensfCalcRealPart
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(indUnique,:,:)
             ELSE
                i_elem = gfinp%uniqueElements(atoms,max_index=i_gf,l_sphavg=l_sphavg,l_kresolved_int=l_kresolved_int)
-               IF(.NOT.g(i_gf)%elem%isOffDiag().AND.g(i_gf)%elem%countLOs(atoms)==0 .AND..NOT. l_kresolved_int) THEN
+               IF(.not. g(i_gf)%elem%isOffDiag() .and. &
+                  .not. has_sclos(g(i_gf)%elem, atoms,enpara) .and. &
+                  .not. l_kresolved_int) THEN
                   !
-                  !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
-                  ! with LOs I just use a fixed cutoff or reference otherwise I would need to check whether
-                  ! the LO lies in the energy boundary and raise the expected number of states accordingly
+                  !Check the integral over the PDOS to define a cutoff for the Kramer-Kronigs-Integration
+                  ! with SCLOs I just use a fixed cutoff or reference otherwise I would need to check whether
+                  ! the SCLO lies in the energy boundary and raise the expected number of states accordingly
                   IF(l_sphavg) THEN
                      CALL kk_cutoff(greensfImagPart%sphavg(:,:,:,i_elem,:),noco,gfinp%l_mperp,l,input%jspins,&
                                     eMesh,greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorSphavg(i_elem,:))
-                  ELSE
+                  ELSE IF(g(i_gf)%elem%countLOs(atoms)==0) then
                      !Onsite element with radial dependence
                      CALL kk_cutoffRadial(greensfImagPart%uu(:,:,:,i_elem,:),greensfImagPart%ud(:,:,:,i_elem,:),&
                                           greensfImagPart%du(:,:,:,i_elem,:),greensfImagPart%dd(:,:,:,i_elem,:),&
                                           noco,g(i_gf)%scalarProducts,gfinp%l_mperp,l,input,eMesh,&
+                                          greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorRadial(i_elem,:))
+                  ELSE
+                     CALL kk_cutoffRadialLO(greensfImagPart%uu(:,:,:,i_elem,:),greensfImagPart%ud(:,:,:,i_elem,:),&
+                                          greensfImagPart%du(:,:,:,i_elem,:),greensfImagPart%dd(:,:,:,i_elem,:),&
+                                          greensfImagPart%uulo(:,:,:,:,i_elem,:),greensfImagPart%dulo(:,:,:,:,i_elem,:),&
+                                          greensfImagPart%ulou(:,:,:,:,i_elem,:),greensfImagPart%ulod(:,:,:,:,i_elem,:),&
+                                          greensfImagPart%uloulop(:,:,:,:,:,i_elem,:),&
+                                          atoms,noco,g(i_gf)%scalarProducts,gfinp%l_mperp,l,g(i_gf)%elem%atomType,input,eMesh,&
                                           greensfImagPart%kkintgr_cutoff(i_gf,:,:),greensfImagPart%scalingFactorRadial(i_elem,:))
                   ENDIF
                ELSE
@@ -116,7 +130,17 @@ MODULE m_greensfCalcRealPart
             IF(refCutoff/=-1) THEN
                !Overwrite cutoff with reference from other elements
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(refCutoff,:,:)
+               
+               ! refElem = gfinp%getUniqueElement(refCutoff,distinct_kresolved_int=.TRUE.)
+               ! if (l_sphavg .and. .not. l_kresolved_int) then
+               !    greensfImagPart%scalingFactorSphavg(i_elem,:) = greensfImagPart%scalingFactorSphavg(refElem,:)
+               ! else if(.not.l_sphavg) then
+               !    greensfImagPart%scalingFactorRadial(i_elem,:) = greensfImagPart%scalingFactorRadial(refElem,:)
+               ! else
+               !    greensfImagPart%scalingFactorSphavgKres(i_elem,:) = greensfImagPart%scalingFactorSphavgKres(refElem,:)
+               ! endif
             ENDIF
+            if(.NOT.gfinp%isUnique(i_gf,distinct_kresolved_int=.TRUE.)) cycle
             CALL greensfImagPart%scale(i_elem,i_elemLO,l_sphavg,nLO,k_resolved=l_kresolved_int)
          ENDDO
          CALL timestop("Green's Function: Integration Cutoff")
@@ -277,4 +301,32 @@ MODULE m_greensfCalcRealPart
       ENDDO
 
    END SUBROUTINE greensfCalcRealPart
+
+   logical function has_sclos(elem,atoms, enpara)
+
+      type(t_gfelementtype), intent(in) :: elem
+      type(t_atoms),         intent(in) :: atoms
+      type(t_enpara),        intent(in) :: enpara
+
+      integer :: ilo
+
+      has_sclos = .false.
+      DO ilo = 1, atoms%nlo(elem%atomType)
+         if(atoms%llo(ilo,elem%atomType).NE.elem%l) cycle
+         !Check for HELO (negative energy parameter) and HDLO (eDeriv > 0)
+         if(all(enpara%qn_ello(ilo,elem%atomType,:)<0).or.atoms%ulo_der(ilo, elem%atomType)>=1) cycle
+         has_sclos = .true.
+      ENDDO
+
+      IF(elem%l.NE.elem%lp.OR.elem%atomType.NE.elem%atomTypep) THEN
+         DO ilo = 1, atoms%nlo(elem%atomTypep)
+            if(atoms%llo(ilo,elem%atomTypep).NE.elem%lp) cycle
+            !Check for HELO (negative energy parameter) and HDLO (eDeriv > 0)
+            if(all(enpara%qn_ello(ilo,elem%atomTypep,:)<0).or.atoms%ulo_der(ilo, elem%atomTypep)>=1) cycle
+            has_sclos = .true.
+         ENDDO
+      ENDIF
+
+   end function
+
 END MODULE m_greensfCalcRealPart

@@ -188,6 +188,28 @@ def test_GreensFunctionRadial_LO(execute_fleur, grep_number, grep_exists):
     assert abs(cont_reg_sup1 - 3.1921) <= 0.0005
     assert abs(cont_reg_sdown1 - 3.2135) <= 0.0005
 
+    # Stage 3 with only a HDLO on the orbital
+
+    res_files = execute_fleur(test_file_folder, only_copy=[['inp-3.xml', 'inp.xml'], 'JUDFT_WARN_ONLY'])
+    res_file_names = list(res_files.keys())
+    should_files = ['out']
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
+    for file1 in should_files:
+        assert (file1 in res_file_names), f'{file1} missing'
+
+    # now test output (Occupations are different because of different LO setup and it is the second iteration but consistent with mt charges)
+
+    assert grep_exists(res_files['out'], "it=  1  is completed")
+    cont_reg_sup2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":", res_index=-2)
+    cont_reg_sdown2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":", res_index=-2)
+    cont_reg_sup1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":")
+    cont_reg_sdown1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":")
+
+    assert abs(cont_reg_sup2 - 4.1237) <= 0.0005
+    assert abs(cont_reg_sdown2 - 1.9298) <= 0.0005
+    assert abs(cont_reg_sup1 - 4.1237) <= 0.0005
+    assert abs(cont_reg_sdown1 - 1.9298) <= 0.0005
 
 @pytest.mark.bulk
 @pytest.mark.greensfunction
