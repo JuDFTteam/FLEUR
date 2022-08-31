@@ -30,7 +30,7 @@ CONTAINS
       REAL,    OPTIONAL, INTENT(IN) :: qvec(3)
       INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir, iOrd
 
-      COMPLEX, OPTIONAL, INTENT(INOUT) :: stepf_array(:,:,:)
+      COMPLEX, OPTIONAL, INTENT(INOUT) :: stepf_array(0:,:,:)
 
       INTEGER :: x, y, z, z2, z_min, z_max
       INTEGER :: layerDim, ifftd, gInd, n, na, nn, iDir_loc
@@ -124,7 +124,7 @@ CONTAINS
                      c_c = c_c + atoms%rmt(n)*(SIN(absgr)/absgr - COS(absgr))*c_phs
 
                      IF (PRESENT(stepf_array)) THEN
-                        stepf_array(gInd, n, iDir_loc) = c_c
+                        stepf_array(gInd, n, iDir_loc) = help * c_c
                      END IF
                   END DO
                END DO
