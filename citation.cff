@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+title: FLEUR
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Daniel
+    family-names: Wortmann
+    email: d.wortmann@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-2248-1904'
+identifiers:
+  - type: doi
+    value: someDOI needed!
+    description: DOI of the software publication
+repository-code: 'https://iffgit.fz-juelich.de/fleur/fleur'
+url: 'https://www.flapw.de'
+abstract: >-
+  FLEUR is an all-electron DFT code based on the
+  full-potential linearized augmented plane-wave
+  method (FLAPW). It is mainly developed at the
+  Forschungsentrum Jülich, Germany and available for
+  the materials research community.
+keywords:
+  - DFT
+  - All-electron
+  - FLAPW
+  - Density functional theory
+license: MIT
