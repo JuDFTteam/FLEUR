@@ -23,15 +23,20 @@ def test_CuBulkXML(execute_fleur, grep_exists, grep_number, stage_for_parser_tes
     
     assert validate_out_xml_file(res_files['out.xml'])
 
-    assert grep_exists(res_files['out'], "it=  1  is completed")
-    fermi = grep_number(res_files['out'], "new fermi energy", ":")
-    tenergy = grep_number(res_files['out'], "total energy=", "=")
-    dist = grep_number(res_files['out'], "distance of charge densitie", "1:")
 
-    assert abs(fermi - 0.4233) <= 0.001
-    assert abs(tenergy - -3305.016) <= 0.001
-    assert abs(dist - 45.8259) <= 0.001
+    #assert grep_exists(res_files['out'], "it=  1  is completed")
+    #fermi = grep_number(res_files['out'], "new fermi energy", ":")
+    #tenergy = grep_number(res_files['out'], "total energy=", "=")
+    #dist = grep_number(res_files['out'], "distance of charge densitie", "1:")
 
+    #assert abs(fermi - 0.4233) <= 0.001
+    #assert abs(tenergy - -3305.016) <= 0.001
+    #assert abs(dist - 45.8259) <= 0.001
+
+    assert check_outxml(res_files['out.xml'],test_file_folder+"out.xml",[
+        ["FermiEnergy","value",-1,0.001],
+        ["freeEnergy","value",-1,0.001]
+    ])
 
 @pytest.mark.fleur
 @pytest.mark.bulk

@@ -992,6 +992,45 @@ def grep_exists(test_logger):
 
 
 @pytest.fixture
+def check_outxml(test_logger):
+    """retruns the check_outxml function
+    """
+    def _check_outxml(filepath,reffilepath,checks):
+        """ TODO
+        """
+        ok=True
+        test_logger.info(f'Checking out.xml file:{filepath} against values in {reffilepath}')
+        from xml.etree import ElementTree
+        try:
+            outxml=ElementTree.parse(filepath)
+            refxml=ElementTree.parse(reffilepath)
+        except:
+            test_logger.error("Either out.xml or the reference could not be read/parsed")
+            return False
+        for check in checks:
+            element=check[0]
+            attrib=check[1]
+            index=check[2]
+            tol=check[3]
+            try:
+                e1=outxml.findall(".//"+element+"/")[index]
+                if attrib:
+                    e1=e1[attrib]
+                e2=refxml.findall(".//"+element+"/") #no index here!
+                if attrib:
+                    e2=e2[attrib]
+            except:
+                test_logger.error(f"Element,index,attrib not found: {element} {index} {attrib}")
+                return False
+            if abs(float(e1)-float(e2))>tol:
+                test_logger.info(f"Check failed for {element} {index} {attrib}")
+                test_logger.info(f"Value: {e1}  Reference: {e2} Tol: {tol}")
+                ok=False
+            else:
+                test_logger.info("Check passed for {element} {index} {attrib}")           
+        return ok
+    return _check_outxml
+@pytest.fixture
 def grep_number(test_logger):
     """returns the grep number function
     """
