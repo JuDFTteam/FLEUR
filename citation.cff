@@ -26,6 +26,13 @@ authors:
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0002-0971-8735'
+  - given-names: Henning
+    family-names: Janssen
+    email: he.janssen@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0003-3558-9487'
 identifiers:
   - type: doi
     value: someDOI needed!
