@@ -12,13 +12,20 @@ authors:
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0002-2248-1904'
-      - given-names: Robin  
+  - given-names: Robin  
     family-names: Hilgers
     email: r.hilgers@fz-juelich.de
     affiliation: >-
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0002-3443-5032'
+  - given-names: Alexander  
+    family-names: Neukirchen
+    email: a.neukirchen@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-0971-8735'
 identifiers:
   - type: doi
     value: someDOI needed!
