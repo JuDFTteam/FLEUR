@@ -12,6 +12,13 @@ authors:
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0002-2248-1904'
+      - given-names: Robin  
+    family-names: Hilgers
+    email: r.hilgers@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-3443-5032'
 identifiers:
   - type: doi
     value: someDOI needed!
@@ -29,4 +36,5 @@ keywords:
   - All-electron
   - FLAPW
   - Density functional theory
+  - FLEUR
 license: MIT
