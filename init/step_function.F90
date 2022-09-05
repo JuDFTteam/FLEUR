@@ -125,6 +125,7 @@ CONTAINS
 
                      IF (PRESENT(stepf_array)) THEN
                         stepf_array(gInd, n, iDir_loc) = help * c_c
+                        c_c = CMPLX(0.0, 0.0)
                      END IF
                   END DO
                END DO
