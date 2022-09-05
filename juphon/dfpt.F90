@@ -55,7 +55,8 @@ CONTAINS
 
       TYPE(t_usdus)                 :: usdus
       TYPE(t_potden)                :: vTotclean, rhoclean, grRho, grvextdummy, imagrhodummy, rho_nosym, vTot_nosym
-      TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVext3(3)
+      TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
+      TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im ! q-quantities
       TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
       TYPE(t_tlmplm)                :: tdHS0
       TYPE(t_results)               :: results1
@@ -64,7 +65,7 @@ CONTAINS
       TYPE(t_mpi)        :: fmpi_nosym
       TYPE(t_fleurinput) :: fi_nosym
       TYPE(t_sphhar)     :: sphhar_nosym
-      TYPE(t_stars)      :: stars_nosym
+      TYPE(t_stars)      :: stars_nosym, starsq
       TYPE(t_nococonv)   :: nococonv_nosym
       TYPE(t_enpara)     :: enpara_nosym
       TYPE(t_results)    :: results_nosym
@@ -138,7 +139,7 @@ CONTAINS
         integer,      allocatable :: mapKpq2K(:, :)
         integer,      allocatable :: kpq2kPrVec(:, :, :)
 
-        REAL, ALLOCATABLE :: dynmatrow(:)
+        COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
 
         INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype
         INTEGER :: iStar, xInd, yInd, zInd
@@ -147,7 +148,7 @@ CONTAINS
         CHARACTER(len=20)  :: dfpt_tag
         CHARACTER(len=100) :: inp_pref
 
-        INTEGER, ALLOCATABLE :: q_list(:)
+        INTEGER, ALLOCATABLE :: q_list(:), dfpt_eig_id_list(:)
 
         ! Desym-tests:
         INTEGER :: ix, iy, iz, grid(3), iv_old, iflag_old, iv_new, iflag_new
@@ -313,7 +314,7 @@ CONTAINS
 
       ! TODO: This is a test set of qpoints for a fixed fcc system.
       !       We need to read out actual q-points at some point.
-      ALLOCATE(q_list(5))
+      ALLOCATE(q_list(5),dfpt_eig_id_list(5))
       q_list = [1, 10, 19, 28, 37]! 512 k-points: \Gamma to X
 
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
@@ -328,6 +329,8 @@ CONTAINS
          CALL grVext3(iDir)%resetPotDen()
          CALL grVtot3(iDir)%copyPotDen(vTot_nosym)
          CALL grVtot3(iDir)%resetPotDen()
+         CALL grVC3(iDir)%copyPotDen(vTot_nosym)
+         CALL grVC3(iDir)%resetPotDen()
          ! Generate the external potential perturbation.
          ! imagrhodummy = 0
          CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
@@ -360,20 +363,40 @@ CONTAINS
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi_nosym%cell, fi_nosym%sliceplot, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
+         CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
+                        fi_nosym%cell, fi_nosym%sliceplot, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
+                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
       END DO
 
-      ALLOCATE(dynmatrow(3*fi_nosym%atoms%ntype))
+
+      ALLOCATE(dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
       DO iQ = 1, 1!SIZE(q_list)
          DO iDtype = 1, fi_nosym%atoms%ntype
             DO iDir = 1,1!1, 3
                dfpt_tag = ''
                WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
-               !WRITE(8001,*) dfpt_tag
+               WRITE(*,*) '-------------------------'
+               WRITE(*,*) 'Starting calculation for:'
+               WRITE(*,*) ' q         = ', qpts%bk(:,q_list(iQ))
+               WRITE(*,*) ' atom      = ', iDtype
+               WRITE(*,*) ' direction = ', iDir
+
+               IF (fmpi_nosym%irank==0) THEN
+                  CALL starsq%reset_stars()
+                  CALL denIn1%reset_dfpt()
+                  CALL denIn1Im%reset_dfpt()
+                  CALL vTot1%reset_dfpt()
+                  CALL vTot1Im%reset_dfpt()
+                  CALL vC1%reset_dfpt()
+                  CALL vC1Im%reset_dfpt()
+               END IF
+               ! TODO: Broadcast this.
                ! This is where the magic happens. The Sternheimer equation is solved
                ! iteratively, providing the scf part of dfpt calculations.
-               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, qpts, fmpi_nosym, results_nosym, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
+               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts, fmpi_nosym, results_nosym, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
                                      rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
-                                     dfpt_tag, eig_id, l_real, results1, dynmatrow)
+                                     dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), &
+                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
                ! Once the first order quantities are converged, we can construct all
                ! additional quantities necessary and from that the dynamical matrix.
                CALL dfpt_dynmat()

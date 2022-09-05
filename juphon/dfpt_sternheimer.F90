@@ -19,13 +19,15 @@ MODULE m_dfpt_sternheimer
 IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, nococonv, qpts, fmpi, results, enpara, hybdat, mpdata, &
+   SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, enpara, hybdat, mpdata, &
                                forcetheo, rho, vTot, grRho, grVtot, grVext, iQ, iDType, iDir, dfpt_tag, eig_id, &
-                               l_real, results1, dynmatrow)
+                               l_real, results1, dfpt_eig_id, &
+                               denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       CLASS(t_xcpot),     INTENT(IN)    :: xcpot
       TYPE(t_sphhar),     INTENT(IN)    :: sphhar
       TYPE(t_stars),      INTENT(IN)    :: stars
+      TYPE(t_stars),      INTENT(INOUT) :: starsq
       TYPE(t_nococonv),   INTENT(IN)    :: nococonv
       TYPE(t_kpts),       INTENT(IN)    :: qpts
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
@@ -36,23 +38,24 @@ CONTAINS
       TYPE(t_enpara),     INTENT(INOUT) :: enpara
       TYPE(t_potden),     INTENT(IN)    :: rho, vTot, grRho, grVtot, grVext
 
-      REAL, INTENT(INOUT) :: dynmatrow(:)
+      TYPE(t_potden), INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
 
-      TYPE(t_potden) :: denIn1, vTot1, denIn1Im, vTot1Im, denOut1, denOut1Im, vx, rho_loc, rho_loc0
+      TYPE(t_potden) :: denOut1, denOut1Im, vx, rho_loc, rho_loc0
 
       INTEGER, INTENT(IN) :: iQ, iDtype, iDir, eig_id
       LOGICAL, INTENT(IN) :: l_real
       CHARACTER(len=20), INTENT(IN) :: dfpt_tag
 
+      INTEGER, INTENT(OUT) :: dfpt_eig_id
+
 #ifdef CPP_MPI
       INTEGER :: ierr
 #endif
 
-      INTEGER :: archiveType, dfpt_eig_id, iter, killcont(6)
+      INTEGER :: archiveType, iter, killcont(6)
       REAL    :: bqpt(3)
-      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone
+      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_exitus
 
-      TYPE(t_stars)    :: starsq
       TYPE(t_hub1data) :: hub1data
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
@@ -93,7 +96,7 @@ CONTAINS
       iter = 0
       l_cont = (iter < fi%input%itmax)
 
-      IF (fmpi%irank==0.AND.l_exist) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+      IF (fmpi%irank==0.AND.l_exist) CALL readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                                       results%ef, results%last_distance, l_dummy, denIn1,  &
                                                       inFilename=TRIM(dfpt_tag),denIm=denIn1Im)
@@ -102,6 +105,9 @@ CONTAINS
 
       CALL vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
       CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+
+      CALL vC1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
+      CALL vC1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
       dfpt_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
                              .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
@@ -143,6 +149,14 @@ CONTAINS
                            starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
                            ! TODO: Set this back to [1,1]!
          END IF
+
+         IF (final_SH_it) THEN
+            CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
+                           starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0])
+            write(*,*) "VC1 filled"
+         END IF
+
          CALL timestop("Generation of potential perturbation")
 
 #ifdef CPP_MPI
