@@ -10,7 +10,7 @@ CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    cell ,sliceplot,fmpi,noco,nococonv,den,vTot,&
-                   &starsq,dfptdenimag,dfptvTot,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont)
+                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
       !
@@ -58,6 +58,8 @@ CONTAINS
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_potden),    INTENT(IN)    :: vTot
       TYPE(t_potden),    INTENT(INOUT) :: den, dfptvTot
+
+      LOGICAL, INTENT(IN) :: l_xc
 
       TYPE(t_stars),  OPTIONAL, INTENT(IN)    :: starsq
       TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: dfptdenimag, dfptvTotimag, dfptdenreal
@@ -147,11 +149,11 @@ CONTAINS
       END IF
 
          ! Skip vxc for rho(1)=0, i.e. starting potential
-          IF (ANY(ABS(denRot%pw)>1E-12)) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+          IF (ANY(ABS(den1Rot%pw)>1E-12).AND.l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                           cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                           & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
-      IF (iDtype/=0) THEN
+      IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)
          ! TODO: This is so different from the base case, that we build a new subroutine.
          CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq,killcont)

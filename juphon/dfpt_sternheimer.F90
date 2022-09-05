@@ -135,12 +135,12 @@ CONTAINS
          IF (strho) THEN
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
-                           starsq,denIn1Im,vTot1,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
+                           starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
                            ! TODO: Set this back to [1,1]!
          ELSE
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im,vTot1,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
+                           starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
                            ! TODO: Set this back to [1,1]!
          END IF
          CALL timestop("Generation of potential perturbation")

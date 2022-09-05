@@ -359,7 +359,7 @@ CONTAINS
          CALL imagrhodummy%resetPotDen()
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi_nosym%cell, fi_nosym%sliceplot, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVtot3(iDir), grvextdummy, grRho3(iDir), 0, iDir, [1,1])
+                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
       END DO
 
       ALLOCATE(dynmatrow(3*fi_nosym%atoms%ntype))
