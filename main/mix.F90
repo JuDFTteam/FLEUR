@@ -94,6 +94,7 @@ contains
     ENDIF
 
     CALL timestart("Reading of distances")
+    IF (iteration==1) CALL mixvector_reset(.TRUE.)
     CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix ,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt)
     CALL timestart("read history")
     IF (.NOT.l_dfpt) THEN
@@ -107,6 +108,7 @@ contains
     IF (.NOT.l_dfpt) THEN
       CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
     ELSE
+      IF (iteration==1) CALL dfpt_mixing_history_reset()
       CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,inDenIm,outDenIm)
     END IF
 

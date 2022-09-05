@@ -102,10 +102,12 @@ CONTAINS
       call timestop("write_mixing")
    END SUBROUTINE write_unformatted
 
-   SUBROUTINE mixvector_reset()
+   SUBROUTINE mixvector_reset(fullreset)
       IMPLICIT NONE
+      LOGICAL, OPTIONAL, INTENT(IN) :: fullreset
       atoms => NULL()
       sym => NULL()
+      IF (PRESENT(fullreset)) stars => NULL()
       IF (ALLOCATED(g_mt)) DEALLOCATE (g_mt)
       IF (ALLOCATED(g_vac)) DEALLOCATE (g_vac)
       IF (ALLOCATED(g_misc)) DEALLOCATE (g_misc)
