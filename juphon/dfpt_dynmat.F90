@@ -244,9 +244,10 @@ CONTAINS
             ! Calculate the contributions to the dynamical matrix that stem
             ! from terms related to occupation numbers and the eigenenergies.
             CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
-                                         stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
-                                         eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
-                                         theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), qvec, l_real)
+                                   stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
+                                   eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
+                                   theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
+                                   qvec, l_real, dyn_row_eigen(col_index))
 
             !STOP
          END DO
@@ -362,7 +363,7 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                 stars, starsq, sphhar, inden, hub1data, vx, v, v1real, v1imag, &
                                 eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
-                                theta1_pw0, theta1_pw, bqpt, l_real, killcont)
+                                theta1_pw0, theta1_pw, bqpt, l_real, eigen_term, killcont)
 
       USE m_types
       USE m_constants
@@ -402,6 +403,8 @@ CONTAINS
       REAL,    INTENT(IN) :: bqpt(3)
       LOGICAL, INTENT(IN) :: l_real
 
+      COMPLEX, INTENT(INOUT) :: eigen_term
+
       INTEGER, OPTIONAL, INTENT(IN) :: killcont(6)
 
       ! Local Scalars
@@ -426,6 +429,14 @@ CONTAINS
       ! Variables for HF or fi%hybinp functional calculation
       INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat
       character(len=300)        :: errmsg
+
+      INTEGER :: iEig
+      COMPLEX :: we_loop, we1_loop, eig_loop, eig1_loop
+
+      COMPLEX, ALLOCATABLE :: tempVec(:), tempVecq(:), z_loop(:)
+
+      COMPLEX  zdotc
+      EXTERNAL zdotc
 
       kqpts = fi%kpts
 
@@ -464,6 +475,9 @@ CONTAINS
             CALL zMat%init(l_real,nbasfcn,noccbd)
             CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
 
+            ALLOCATE(tempVec(nbasfcn),tempVecq(nbasfcnq))
+            ALLOCATE(z_loop(nbasfcn))
+
             CALL read_eig(eig_id,     nk,jsp,neig=nbands,zmat=zMat)
             CALL read_eig(dfpt_eig_id,nk,jsp,neig=nbands1,zmat=zMat1)
 
@@ -472,6 +486,31 @@ CONTAINS
                                      ud, td, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
                                      smat1, hmat1, smat1q, hmat1q, smat2, hmat2, nk, killcont)
             CALL timestop("Setup of H&S matrices")
+
+            DO iEig = 1, noccbd
+               eig_loop  = eig(iEig)
+               eig1_loop = eig1(iEig)
+               we_loop   = (2.0/fi%input%jspins)*we(iEig)
+               we1_loop  = (2.0/fi%input%jspins)*we1(iEig)
+               IF (l_real) THEN
+                  z_loop    = CMPLX(1.0,0.0)*zMat%data_r(:,iEig)
+               ELSE
+                  z_loop    = zMat%data_c(:,iEig)
+               END IF
+               CALL zgemv('N',nbasfcn,nbasfcn,-we_loop*eig1_loop,smat1,nbasfcn,z_loop,1,CMPLX(0.0,0.0),tempVec,1)
+               CALL zgemv('N',nbasfcn,nbasfcn,-we1_loop*eig_loop,smat1,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
+               CALL zgemv('N',nbasfcn,nbasfcn,-we_loop,smat2,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
+               CALL zgemv('N',nbasfcn,nbasfcn,we_loop,hmat2,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
+               CALL zgemv('N',nbasfcn,nbasfcn,we1_loop,hmat1,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
+               eigen_term = eigen_term + zdotc(nbasfcn,z_loop,1,tempVec,1)
+
+               CALL zgemv('N',nbasfcnq,nbasfcn,-2*we_loop*eig_loop,smat1q,nbasfcnq,z_loop,1,CMPLX(0.0,0.0),tempVecq,1)
+               CALL zgemv('N',nbasfcnq,nbasfcn,2*we_loop,hmat1q,nbasfcnq,z_loop,1,CMPLX(1.0,0.0),tempVecq,1)
+               eigen_term = eigen_term + zdotc(nbasfcnq,zMat1%data_c(:,iEig),1,tempVecq,1)
+            END DO
+
+            DEALLOCATE(tempVec,tempVecq)
+            DEALLOCATE(z_loop)
 
             ! Output results
             CALL timestart("EV output")

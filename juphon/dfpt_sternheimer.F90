@@ -224,6 +224,13 @@ CONTAINS
             CYCLE scfloop
          END IF
 
+         IF (final_SH_it) THEN
+            denIn1 = denOut1
+            denIn1Im = denOut1Im
+            l_cont = .FALSE.
+            write(*,*) "Final Sternheimer iteration finished."
+            CYCLE scfloop
+         END IF
 
          field2 = fi%field
          ! First mixing in the 2nd "real" iteration.
@@ -251,6 +258,9 @@ CONTAINS
          ! MetaGGAs need a at least 2 iterations
          l_cont = l_cont .AND. ((fi%input%mindistance <= results1%last_distance))
          !CALL check_time_for_next_iteration(iter, l_cont)
+
+         final_SH_it = fi%input%mindistance > results1%last_distance
+         l_cont = l_cont .OR. final_SH_it
 
       END DO scfloop ! DO WHILE (l_cont)
 
