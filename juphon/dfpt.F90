@@ -405,8 +405,6 @@ CONTAINS
                                      dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), &
                                      denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
                ! Once the first order quantities are converged, we can construct all
-               ! additional quantities necessary and from that the dynamical matrix.
-               CALL dfpt_dynmat()
                ! additional necessary quantities and from that the dynamical matrix.
                CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot, nococonv, hybdat, fmpi_nosym, qpts, q_list(iQ), iDtype, iDir, &
                                     eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&

@@ -63,4 +63,55 @@ CONTAINS
          END DO
       END DO
    END SUBROUTINE dfpt_hs_int
+
+   SUBROUTINE dfpt_dynmat_hs_int(noco, starsq, stars, lapwq, lapw, fmpi, bbmat, isp, theta1_pw0, theta1_pw, smat1, hmat1, smat1q, hmat1q, smat2, hmat2, killcont)
+
+      USE m_types
+      USE m_hs_int_direct
+
+      IMPLICIT NONE
+
+      TYPE(t_noco),INTENT(IN)       :: noco
+      TYPE(t_stars),INTENT(IN)      :: starsq, stars
+      REAL, INTENT(IN)              :: bbmat(3, 3)
+      TYPE(t_lapw),INTENT(IN)       :: lapwq, lapw
+      TYPE(t_mpi),INTENT(IN)        :: fmpi
+      INTEGER, INTENT(IN)           :: isp, killcont(2)
+      COMPLEX, INTENT(IN)           :: theta1_pw0(:), theta1_pw(:)
+      CLASS(t_mat),INTENT(INOUT)    :: smat1(:,:),hmat1(:,:),smat1q(:,:),hmat1q(:,:),smat2(:,:),hmat2(:,:)
+
+      INTEGER :: iSpinPr,iSpin, iMatPr, iMat, iTkin
+      LOGICAL :: l_smat
+      COMPLEX, ALLOCATABLE :: vpw_temp(:), vpwq_temp(:)
+
+      IF (noco%l_noco.AND.isp.EQ.2) RETURN !was done already
+
+      ALLOCATE(vpw_temp(SIZE(stars%ustep, 1)))
+      ALLOCATE(vpwq_temp(SIZE(starsq%ustep, 1)))
+
+      DO iSpinPr = MERGE(1, isp, noco%l_noco), MERGE(2, isp, noco%l_noco)
+         iMatPr = MERGE(iSpinPr, 1, noco%l_noco)
+         DO iSpin=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
+            iMat = MERGE(iSpin, 1, noco%l_noco)
+            iTkin = 0
+
+            vpw_temp = CMPLX(0.0,0.0)
+
+            l_smat = iSpinPr.EQ.iSpin
+            IF (killcont(2)==0) l_smat = .FALSE.
+
+            IF (iSpinPr.EQ.iSpin) iTkin = killcont(1)
+
+            CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
+                             & lapw%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
+                             & l_smat, .TRUE., vpw_temp, hmat1(iMatPr, iMat), smat1(iMatPr, iMat), theta1_pw0)
+            CALL hs_int_direct(fmpi, starsq, bbmat, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
+                             & lapwq%bkpt, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
+                             & l_smat, .TRUE., vpwq_temp, hmat1q(iMatPr, iMat), smat1q(iMatPr, iMat), theta1_pw)
+            CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
+                             & lapw%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
+                             & l_smat, .TRUE., vpw_temp, hmat2(iMatPr, iMat), smat2(iMatPr, iMat), theta1_pw0)
+         END DO
+      END DO
+   END SUBROUTINE dfpt_dynmat_hs_int
 END MODULE m_dfpt_hs_int

@@ -140,10 +140,10 @@ CONTAINS
             pwwq = CMPLX(0.0,0.0)
             CALL dfpt_convol_direct(stars, starsq, stars%ustep, denIn1_pw, pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, pwwq, vExt1%pw(:,1), dyn_row_HF(col_index))
-            CALL save_npy("den1.npy",denIn1_pw)
-            CALL save_npy("pwwq1.npy",pwwq)
-            CALL save_npy("v1.npy",vExt1%pw(:,1))
-            write(*,*) dyn_row_HF(col_index)
+            !CALL save_npy("den1.npy",denIn1_pw)
+            !CALL save_npy("pwwq1.npy",pwwq)
+            !CALL save_npy("v1.npy",vExt1%pw(:,1))
+            !write(*,*) dyn_row_HF(col_index)
             ! MT integral:
             DO iType = 1, fi%atoms%ntype
                CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), dyn_row_HF(col_index))
@@ -156,17 +156,17 @@ CONTAINS
             rho_pw = 0.5*(rho%pw(:,1)+rho%pw(:,fi%input%jspins))
             CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_row,iDir_row), pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, pwwq, vExt1%pw(:,1), dyn_row_HF(col_index))
-            CALL save_npy("pwwq2.npy",pwwq)
-            CALL save_npy("v2.npy",vExt1%pw(:,1))
-            write(*,*) dyn_row_HF(col_index)
+            !CALL save_npy("pwwq2.npy",pwwq)
+            !CALL save_npy("v2.npy",vExt1%pw(:,1))
+            !write(*,*) dyn_row_HF(col_index)
             ! MT:
             grRho_mt = -(grRho3(iDir_row)%mt(:,0:,:,1)+grRho3(iDir_row)%mt(:,0:,:,fi%input%jspins))
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_row, grRho_mt, 0*grRho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), dyn_row_HF(col_index))
-            write(*,*) dyn_row_HF(col_index)
+            !write(*,*) dyn_row_HF(col_index)
             ! SF:
             rho_mt = rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins)
             CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_row, iDtype_row, rho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), dyn_row_HF(col_index))
-            write(*,*) dyn_row_HF(col_index)
+            !write(*,*) dyn_row_HF(col_index)
 
             IF (iDtype_row==iDtype_col) THEN
                ! Get V_{ext}(1) for \alpha, i, q=0 with gradient cancellation
@@ -180,10 +180,10 @@ CONTAINS
                rho_pw = 0.5*(grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))
                CALL dfpt_convol_direct(stars, stars, rho_pw, stars%ustep, pww)
                CALL dfpt_int_pw(stars, fi%cell, pww, vExt1%pw(:,1), dyn_row_HF(col_index))
-               CALL save_npy("den3.npy",rho_pw)
-               CALL save_npy("pwwq3.npy",pww)
-               CALL save_npy("v3.npy",vExt1%pw(:,1))
-               write(*,*) dyn_row_HF(col_index)
+               !CALL save_npy("den3.npy",rho_pw)
+               !CALL save_npy("pwwq3.npy",pww)
+               !CALL save_npy("v3.npy",vExt1%pw(:,1))
+               !write(*,*) dyn_row_HF(col_index)
                grRho_mt = 0.5*(grRho3(iDir_row)%mt(:,0:,:,1)+grRho3(iDir_row)%mt(:,0:,:,fi%input%jspins))
                rho_mt = -0.5*(rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))
                DO iType = 1, fi%atoms%ntype
@@ -191,13 +191,13 @@ CONTAINS
                   rho_pw = -0.5*(rho%pw(:,1)+rho%pw(:,fi%input%jspins))
                   CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iType,iDir_row), pww)
                   CALL dfpt_int_pw(stars, fi%cell, pww, vExt1%pw(:,1), dyn_row_HF(col_index))
-                  CALL save_npy("pwwq4.npy",pww)
-                  CALL save_npy("v4.npy",vExt1%pw(:,1))
-                  write(*,*) dyn_row_HF(col_index)
+                  !CALL save_npy("pwwq4.npy",pww)
+                  !CALL save_npy("v4.npy",vExt1%pw(:,1))
+                  !write(*,*) dyn_row_HF(col_index)
                   CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, grRho_mt, 0*grRho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), dyn_row_HF(col_index))
-                  write(*,*) dyn_row_HF(col_index)
+                  !write(*,*) dyn_row_HF(col_index)
                   CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_row, iType, rho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), dyn_row_HF(col_index))
-                  write(*,*) dyn_row_HF(col_index)
+                  !write(*,*) dyn_row_HF(col_index)
                END DO
             END IF
             ! Miscellaneous integrals:
@@ -205,17 +205,17 @@ CONTAINS
             rho_pw = 0.5*(rho%pw(:,1)+rho%pw(:,fi%input%jspins))
             CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_col,iDir_col), pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, vC1%pw(:,1), pwwq, dyn_row_misc(col_index))
-            CALL save_npy("pwwq5.npy",pwwq)
-            CALL save_npy("v5.npy",vC1%pw(:,1))
-            write(*,*) dyn_row_misc(col_index)
+            !CALL save_npy("pwwq5.npy",pwwq)
+            !CALL save_npy("v5.npy",vC1%pw(:,1))
+            !write(*,*) dyn_row_misc(col_index)
             DO iSpin = 1, fi%input%jspins
                pwwq = CMPLX(0.0,0.0)
                ! TODO: Ensure, that vTot/denIn1 is diagonal here, not 2x2.
                CALL dfpt_convol_direct(stars, starsq, vTot%pw(:, iSpin), theta1_pw(:,iDtype_col,iDir_col), pwwq)
                CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq, dyn_row_misc(col_index))
-               CALL save_npy("pwwq6.npy",pwwq)
-               CALL save_npy("v6.npy",denIn1%pw(:,1))
-               write(*,*) dyn_row_misc(col_index)
+               !CALL save_npy("pwwq6.npy",pwwq)
+               !CALL save_npy("v6.npy",denIn1%pw(:,1))
+               !write(*,*) dyn_row_misc(col_index)
             END DO
             IF (iDtype_row==iDtype_col) THEN
                !pww = CMPLX(0.0,0.0)
@@ -227,17 +227,17 @@ CONTAINS
                rho_pw = 0.5*(rho%pw(:,1)+rho%pw(:,fi%input%jspins))
                CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iDtype_col,iDir_col), pww)
                CALL dfpt_int_pw(stars, fi%cell, pww, grVC3(iDir_row)%pw(:,1), dyn_row_misc(col_index))
-               CALL save_npy("pwwq7.npy",pww)
-               CALL save_npy("v7.npy",grVC3(iDir_row)%pw(:,1))
-               write(*,*) dyn_row_misc(col_index)
+               !CALL save_npy("pwwq7.npy",pww)
+               !CALL save_npy("v7.npy",grVC3(iDir_row)%pw(:,1))
+               !write(*,*) dyn_row_misc(col_index)
                DO iSpin = 1, fi%input%jspins
                   pww = CMPLX(0.0,0.0)
                   ! TODO: Ensure, that vTot/gradrho is diagonal here, not 2x2.
                   CALL dfpt_convol_direct(stars, stars, vTot%pw(:,iSpin), theta1_pw0(:,iDtype_col,iDir_col), pww)
                   CALL dfpt_int_pw(stars, fi%cell, pww, grRho3(iDir_row)%pw(:,iSpin), dyn_row_misc(col_index))
-                  CALL save_npy("pwwq8.npy",pww)
-                  CALL save_npy("v8.npy",grRho3(iDir_row)%pw(:,1))
-                  write(*,*) dyn_row_misc(col_index)
+                  !CALL save_npy("pwwq8.npy",pww)
+                  !CALL save_npy("v8.npy",grRho3(iDir_row)%pw(:,1))
+                  !write(*,*) dyn_row_misc(col_index)
                END DO
             END IF
 
@@ -246,7 +246,7 @@ CONTAINS
             CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                          stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
                                          eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
-                                         qvec, l_real)
+                                         theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), qvec, l_real)
 
             !STOP
          END DO
@@ -362,7 +362,7 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                 stars, starsq, sphhar, inden, hub1data, vx, v, v1real, v1imag, &
                                 eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
-                                bqpt, l_real, killcont)
+                                theta1_pw0, theta1_pw, bqpt, l_real, killcont)
 
       USE m_types
       USE m_constants
@@ -397,6 +397,7 @@ CONTAINS
 
       ! Scalar Arguments
       INTEGER, INTENT(IN)    :: eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row
+      COMPLEX,            INTENT(IN)     :: theta1_pw0(:), theta1_pw(:)
 
       REAL,    INTENT(IN) :: bqpt(3)
       LOGICAL, INTENT(IN) :: l_real
@@ -420,6 +421,7 @@ CONTAINS
       TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
       TYPE(t_hub1data)          :: hub1datadummy
       TYPE (t_mat)              :: zMat, zMat1
+      CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2
 
       ! Variables for HF or fi%hybinp functional calculation
       INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat
@@ -466,7 +468,9 @@ CONTAINS
             CALL read_eig(dfpt_eig_id,nk,jsp,neig=nbands1,zmat=zMat1)
 
             CALL timestart("Setup of H&S matrices")
-            CALL dfpt_dynmat_hssetup()
+            CALL dfpt_dynmat_hssetup(jsp, fmpi, fi, enpara, nococonv, starsq, stars, &
+                                     ud, td, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
+                                     smat1, hmat1, smat1q, hmat1q, smat2, hmat2, nk, killcont)
             CALL timestop("Setup of H&S matrices")
 
             ! Output results
@@ -516,11 +520,97 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE dfpt_dynmat_hssetup()
-      USE m_hsmt_fjgj
-      USE m_hsmt_sph
-      USE m_hsmt_nonsph
-      USE m_hsmt_lo
-      USE m_hs_int_direct
+   SUBROUTINE dfpt_dynmat_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, stars, &
+                            ud, td, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
+                            smat1_final, hmat1_final, smat1q_final, hmat1q_final, smat2_final, hmat2_final, nk, killcont)
+      USE m_types
+      USE m_types_mpimat
+      USE m_types_gpumat
+      USE m_dfpt_hs_int
+      USE m_dfpt_hsmt
+      USE m_dfpt_eigen_redist_matrix
+
+      IMPLICIT NONE
+
+      INTEGER,            INTENT(IN)     :: isp
+      TYPE(t_mpi),        INTENT(IN)     :: fmpi
+      type(t_fleurinput), INTENT(IN)     :: fi
+      TYPE(t_stars),      INTENT(IN)     :: starsq, stars
+      TYPE(t_enpara),     INTENT(IN)     :: enpara
+      TYPE(t_nococonv),   INTENT(IN)     :: nococonv
+      TYPE(t_usdus),      INTENT(IN)     :: ud
+      TYPE(t_tlmplm),     INTENT(IN)     :: td, tdV1
+      TYPE(t_lapw),       INTENT(IN)     :: lapw, lapwq
+      INTEGER,            INTENT(IN)     :: iDir_row, iDtype_row, iDir_col, iDtype_col
+      COMPLEX,            INTENT(IN)     :: theta1_pw0(:), theta1_pw(:)
+      CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat1_final, hmat1_final, smat1q_final, hmat1q_final, smat2_final, hmat2_final
+      INTEGER,      INTENT(IN)     :: nk, killcont(6)
+
+      CLASS(t_mat), ALLOCATABLE :: smat1(:, :), hmat1(:, :), smat1q(:, :), hmat1q(:, :), smat2(:, :), hmat2(:, :)
+
+      INTEGER :: i, j, nspins
+
+      nspins = MERGE(2, 1, fi%noco%l_noco)
+      IF (fmpi%n_size == 1) THEN
+         ALLOCATE (t_mat::smat1(nspins, nspins), hmat1(nspins, nspins))
+         ALLOCATE (t_mat::smat1q(nspins, nspins), hmat1q(nspins, nspins))
+         ALLOCATE (t_mat::smat2(nspins, nspins), hmat2(nspins, nspins))
+      ELSE
+         ALLOCATE (t_mpimat::smat1(nspins, nspins), hmat1(nspins, nspins))
+         ALLOCATE (t_mpimat::smat1q(nspins, nspins), hmat1q(nspins, nspins))
+         ALLOCATE (t_mpimat::smat2(nspins, nspins), hmat2(nspins, nspins))
+      END IF
+
+      DO i = 1, nspins
+         DO j = 1, nspins
+            CALL smat1(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL hmat1(i, j)%init(smat1(i, j))
+            CALL smat1q(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL hmat1q(i, j)%init(smat1q(i, j))
+            CALL smat2(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL hmat2(i, j)%init(smat2(i, j))
+         END DO
+      END DO
+
+      CALL timestart("Interstitial part")
+      CALL dfpt_dynmat_hs_int(fi%noco, starsq, stars, lapwq, lapw, fmpi, fi%cell%bbmat, isp, theta1_pw0, theta1_pw, &
+                              smat1, hmat1, smat1q, hmat1q, smat2, hmat2, killcont(2:3))
+      CALL timestop("Interstitial part")
+
+      CALL timestart("MT part")
+      DO i = 1, nspins; DO j = 1, nspins
+            !$acc enter data copyin(hmat(i,j),smat(i,j))
+            !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
+      END DO; END DO
+      !CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir, iDtype, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
+      !                      lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(4:6))
+      DO i = 1, nspins; DO j = 1, nspins; if (hmat1(1, 1)%l_real) THEN
+            !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
+            !$acc exist data delete(hmat(i,j),smat(i,j))
+         ELSE
+            !$acc exit data copyout(hmat(i,j)%data_c,smat(i,j)%data_c) delete(hmat(i,j)%data_r,smat(i,j)%data_r)
+            !$acc exist data delete(hmat(i,j),smat(i,j))
+         END IF; END DO; END DO
+      CALL timestop("MT part")
+
+      !Now copy the data into final matrix
+      ! Collect the four fi%noco parts into a single matrix
+      ! In collinear case only a copy is done
+      ! In the parallel case also a redistribution happens
+      ALLOCATE (smat1_final, mold=smat1(1, 1))
+      ALLOCATE (hmat1_final, mold=smat1(1, 1))
+      ALLOCATE (smat1q_final, mold=smat1q(1, 1))
+      ALLOCATE (hmat1q_final, mold=smat1q(1, 1))
+      ALLOCATE (smat2_final, mold=smat2(1, 1))
+      ALLOCATE (hmat2_final, mold=smat2(1, 1))
+
+      CALL timestart("Matrix redistribution")
+      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat1, smat1_final)
+      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat1, hmat1_final, smat1_final)
+      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, smat1q, smat1q_final)
+      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
+      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat2, smat2_final)
+      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat2, hmat2_final, smat2_final)
+      CALL timestop("Matrix redistribution")
    END SUBROUTINE
 END MODULE m_dfpt_dynmat
