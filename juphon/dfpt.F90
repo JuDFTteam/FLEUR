@@ -76,6 +76,8 @@ CONTAINS
       CLASS(t_xcpot),     ALLOCATABLE :: xcpot_nosym
       CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_nosym
 
+      COMPLEX, ALLOCATABLE :: exc_pw_nosym(:,:), vCoul_pw_nosym(:,:)
+
         integer                       :: logUnit = 100
         integer                       :: ngpqdp
 
@@ -193,11 +195,16 @@ CONTAINS
 
         ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
         vTot_nosym%pw_w = CMPLX(0.0,0.0)
+        ALLOCATE(exc_pw_nosym(SIZE(vTot_nosym%pw,1),1))
+        ALLOCATE(vCoul_pw_nosym(SIZE(vTot_nosym%pw,1),1))
 
         CALL desymmetrize_pw(fi%sym, stars, stars_nosym, rho%pw, rho_nosym%pw)
         CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vTot%pw, vTot_nosym%pw, vTot%pw_w, vTot_nosym%pw_w)
         CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, rho%mt, rho_nosym%mt)
         CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, vTot%mt, vTot_nosym%mt)
+
+        CALL desymmetrize_pw(fi%sym, stars, stars_nosym, exc%pw, exc_pw_nosym)
+        CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vCoul%pw, vCoul_pw_nosym)
 
         CALL desymmetrize_types(fi%input, fi_nosym%input, fi%atoms, fi_nosym%atoms, fi%noco, &
                                 nococonv, nococonv_nosym, enpara, enpara_nosym, results, results_nosym)
