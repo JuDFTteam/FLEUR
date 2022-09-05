@@ -63,6 +63,7 @@ MODULE m_types_stars
      PROCEDURE :: init=>init_stars
      PROCEDURE :: dim=>dim_stars
      PROCEDURE :: map_2nd_vac
+     PROCEDURE :: reset_stars
   END TYPE t_stars
 CONTAINS
   SUBROUTINE mpi_bc_stars(this,mpi_comm,irank)
@@ -393,4 +394,29 @@ CONTAINS
     phas = cmplx(cos(arg),sin(arg))
 
   end subroutine
+
+  SUBROUTINE reset_stars(stars)
+     CLASS(t_stars), INTENT(INOUT) :: stars
+
+     stars%gmax=0.0
+     stars%center = [0.0,0.0,0.0]
+     IF (ALLOCATED(stars%kv3)) DEALLOCATE(stars%kv3)
+     IF (ALLOCATED(stars%sk3)) DEALLOCATE(stars%sk3)
+     IF (ALLOCATED(stars%ig)) DEALLOCATE(stars%ig)
+     IF (ALLOCATED(stars%nstr)) DEALLOCATE(stars%nstr)
+     IF (ALLOCATED(stars%rgphs)) DEALLOCATE(stars%rgphs)
+     IF (ALLOCATED(stars%ustep)) DEALLOCATE(stars%ustep)
+     IF (ALLOCATED(stars%ufft)) DEALLOCATE(stars%ufft)
+     IF (ALLOCATED(stars%gq)) DEALLOCATE(stars%gq)
+     IF (ALLOCATED(stars%ufft1)) DEALLOCATE(stars%ufft1)
+     IF (ALLOCATED(stars%kv2)) DEALLOCATE(stars%kv2)
+     IF (ALLOCATED(stars%sk2)) DEALLOCATE(stars%sk2)
+     IF (ALLOCATED(stars%nstr2)) DEALLOCATE(stars%nstr2)
+     IF (ALLOCATED(stars%i2g)) DEALLOCATE(stars%i2g)
+     IF (ALLOCATED(stars%ig2)) DEALLOCATE(stars%ig2)
+     IF (ALLOCATED(stars%igvac)) DEALLOCATE(stars%igvac)
+     IF (ALLOCATED(stars%phi2)) DEALLOCATE(stars%phi2)
+     IF (ALLOCATED(stars%r2gphs)) DEALLOCATE(stars%r2gphs)
+
+  END SUBROUTINE
 END MODULE m_types_stars
