@@ -30,7 +30,7 @@ MODULE m_dfpt
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho, vTot, vxc, exc, eig_id, nvfull, oldmode, xcpot, hybdat, mpdata, forcetheo)
+                 & rho, vTot, vxc, exc, vCoul, eig_id, nvfull, oldmode, xcpot, hybdat, mpdata, forcetheo)
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -48,7 +48,7 @@ CONTAINS
       TYPE(t_kpts),       INTENT(IN)  :: qpts !Possibly replace this by fi_nosym%kpts [read correctly!]
 
       TYPE(t_potden),   INTENT(INOUT) :: rho
-      TYPE(t_potden),   INTENT(IN)    :: vTot, vxc, exc
+      TYPE(t_potden),   INTENT(IN)    :: vTot, vxc, exc, vCoul
       INTEGER,          INTENT(IN)    :: eig_id
       INTEGER,          INTENT(IN)    :: nvfull(:, :)
       LOGICAL,          INTENT(IN)    :: oldmode
