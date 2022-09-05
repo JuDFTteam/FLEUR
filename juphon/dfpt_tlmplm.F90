@@ -7,7 +7,7 @@
 MODULE m_dfpt_tlmplm
 
 CONTAINS
-   SUBROUTINE dfpt_tlmplm(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag)
+   SUBROUTINE dfpt_tlmplm(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,conj_V,iDtype_col)
       USE m_types
       USE m_tlmplm
 
@@ -27,7 +27,11 @@ CONTAINS
 
       TYPE(t_potden), INTENT(IN) :: v1real, v1imag
 
-      INTEGER :: iSpinV1, iSpinPr, iSpin, iPart, n, offs
+      LOGICAL, INTENT(IN) :: conj_V
+
+      INTEGER, INTENT(IN), OPTIONAL :: iDtype_col
+
+      INTEGER :: iSpinV1, iSpinPr, iSpin, iPart, n, offs, nlims(2)
       COMPLEX :: one
 
       REAL, ALLOCATABLE :: vr1(:, :)
@@ -41,20 +45,40 @@ CONTAINS
         call uddummy%init(atoms,input%jspins)
         CALL timestart("tlmplm")
         CALL tdV1%init(atoms,input%jspins,.FALSE.)
+
+        nlims(1) = 1
+        nlims(2) = atoms%ntype
+        IF (PRESENT(iDtype_col)) nlims = iDtype_col
+
         !$OMP PARALLEL DO DEFAULT(NONE)&
         !$OMP PRIVATE(n,one,iSpinV1,iSpinPr,iSpin,vr1,offs)&
-        !$OMP SHARED(noco,nococonvdummy,atoms,sym,sphhar,enpara,tdV1,uddummy,vTot,vxdummy,v1real,v1imag)&
+        !$OMP SHARED(noco,nococonvdummy,atoms,sym,sphhar,enpara,tdV1,uddummy,vTot,vxdummy,v1real,v1imag,conj_V,nlims)&
         !$OMP SHARED(fmpi,input,hub1inp,hub1data)
-        DO n = 1,atoms%ntype
+        DO n = nlims(1), nlims(2)
             DO iSpinV1 = 1, MERGE(4, input%jspins, any(noco%l_unrestrictMT))
                 iSpinPr = 1; iSpin = 1
                 IF (iSpinV1.EQ.2.OR.iSpinV1.EQ.3) iSpinPr = 2
                 IF (iSpinV1.EQ.2.OR.iSpinV1.EQ.4) iSpin   = 2
                 DO iPart = 1, 2
-                    IF (iPart.EQ.1) one = CMPLX(1.0, 0.0)
-                    IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, iSpinV1)
-                    IF (iPart.EQ.2) one = CMPLX(0.0, 1.0)
-                    IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, iSpinV1)
+                    IF (.NOT.conj_V) THEN
+                       IF (iPart.EQ.1) one = CMPLX(1.0, 0.0)
+                       IF (iPart.EQ.2) one = CMPLX(0.0, 1.0)
+                       IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, iSpinV1)
+                       IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, iSpinV1)
+                    ELSE
+                       IF (iPart.EQ.1) one = CMPLX(1.0, 0.0)
+                       IF (iPart.EQ.2) one = CMPLX(0.0,-1.0)
+                       IF (iSpinV1==1.OR.iSpinV1==2) THEN
+                          IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, iSpinV1)
+                          IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, iSpinV1)
+                       ELSE IF (iSpinV1==3) THEN
+                          IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, 4)
+                          IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, 4)
+                       ELSE
+                          IF (iPart.EQ.1) vr1 = v1real%mt(:, :, n, 3)
+                          IF (iPart.EQ.2) vr1 = v1imag%mt(:, :, n, 3)
+                       END IF
+                    END IF
                     CALL tlmplm(n, sphhar, atoms, sym, enpara, nococonvdummy, iSpinPr, iSpin, iSpinV1, fmpi, &
                               & vTot, vxdummy, input, hub1inp, hub1data, tdV1, uddummy, 0.0, 0, one, .TRUE., vr1)
                 END DO
