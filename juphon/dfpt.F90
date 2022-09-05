@@ -407,6 +407,13 @@ CONTAINS
                ! Once the first order quantities are converged, we can construct all
                ! additional quantities necessary and from that the dynamical matrix.
                CALL dfpt_dynmat()
+               ! additional necessary quantities and from that the dynamical matrix.
+               CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot, nococonv, hybdat, fmpi_nosym, qpts, q_list(iQ), iDtype, iDir, &
+                                    eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
+                                    rho_nosym, vTot_nosym, exc_pw_nosym, vCoul_pw_nosym, grRho3, grVext3, grVC3, grVtot3, &
+                                    denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:))
+               write(*,*) "dynmat row for ", dfpt_tag
+               write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
             END DO
          END DO
       END DO
