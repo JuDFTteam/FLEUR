@@ -82,4 +82,36 @@ CONTAINS
 
    END SUBROUTINE dfpt_convol
 
+   SUBROUTINE dfpt_convol_direct(stars, starsq, pw, pwq, pww)
+      USE m_types_fftGrid
+      USE m_juDFT
+      USE m_types_stars
+
+      IMPLICIT NONE
+
+      TYPE(t_stars), INTENT(IN) :: stars, starsq
+
+      COMPLEX, INTENT(IN)    :: pw(:), pwq(:)
+      COMPLEX, INTENT(INOUT) :: pww(:)
+
+      TYPE(t_fftgrid) :: fftgrid, fftgridq
+
+      CALL fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
+      CALL fftgridq%init((/3*starsq%mx1,3*starsq%mx2,3*starsq%mx3/))
+
+      IF (SIZE(fftgridq%grid)/=SIZE(fftgrid%grid)) CALL judft_error("Size mismatch in dfpt_convol (3)!")
+
+      CALL fftgrid%putFieldOnGrid(stars,pw)
+      CALL fftgridq%putFieldOnGrid(starsq,pwq)
+      CALL fftgrid%perform_fft(forward=.false.)
+      CALL fftgridq%perform_fft(forward=.false.)
+
+      fftgrid%grid = fftgrid%grid*fftgridq%grid
+
+      CALL fftgrid%perform_fft(forward=.true.)
+      CALL fftgrid%takeFieldFromGrid(stars,pww)
+      pww = pww*stars%nstr
+
+   END SUBROUTINE dfpt_convol_direct
+
 END MODULE m_convol
