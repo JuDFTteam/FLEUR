@@ -17,7 +17,7 @@ MODULE m_hlomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,lapwq)
+       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,lapwq,fjgjq)
 
     USE m_hsmt_ab
     USE m_types
@@ -51,6 +51,7 @@ CONTAINS
     LOGICAL, INTENT(IN) :: l_fullj
 
     TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
+    TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
     !     ..
     ! Local Scalars
       COMPLEX :: axx,bxx,cxx,dtd,dtu,tdulo,tulod,tulou,tuloulo,utd,utu, tuulo
@@ -66,13 +67,16 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: abcloPr(:,:,:,:)
 
       TYPE(t_lapw) :: lapwPr
+      TYPE(t_fjgj) :: fjgjPr
 
       l_samelapw = .FALSE.
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
          lapwPr = lapwq
+         fjgjPr = fjgjq
       ELSE
          lapwPr = lapw
+         fjgjPr = fjgj
       END IF
 
       ! Synthesize a and b
@@ -83,11 +87,9 @@ CONTAINS
       ALLOCATE(axPr(MAXVAL(lapwPr%nv)),bxPr(MAXVAL(lapwPr%nv)),cxPr(MAXVAL(lapwPr%nv)))
       ALLOCATE(abcloPr(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
 
-      ! TODO: Introduce the logic for different lapw and the full rectangular
-      !       instead of triangular construction...
       !$acc data create(abcoeffs,abclo,abcoeffsPr,abcloPr)
       !$acc data copyin(alo1,blo1,clo1)
-      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgj,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr(:,:,:,:),alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
+      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr(:,:,:,:),alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
 
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw) THEN
          !$acc kernels present(abcoeffs,abcoeffsPr)

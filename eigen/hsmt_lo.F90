@@ -16,7 +16,7 @@ MODULE m_hsmt_lo
   PRIVATE
   PUBLIC hsmt_lo
 CONTAINS
-  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,Smat,lapwq)
+  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,Smat,lapwq,fjgjq)
     USE m_hlomat
     USE m_slomat
     USE m_setabc1lo
@@ -37,6 +37,7 @@ CONTAINS
     TYPE(t_fjgj),INTENT(IN)     :: fjgj
     LOGICAL,INTENT(IN)          :: l_fullj, set0  !if true, initialize the LO-part of the matrices with zeros
     TYPE(t_lapw),OPTIONAL,INTENT(IN) :: lapwq
+    TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
 
     CLASS(t_mat),INTENT(INOUT)::hmat
     CLASS(t_mat),INTENT(INOUT),OPTIONAL::smat
@@ -124,7 +125,7 @@ CONTAINS
                   IF (PRESENT(lapwq)) THEN
                      CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
                         ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
-                        igSpinPr,igSpin,chi,smat,l_fullj,lapwq)
+                        igSpinPr,igSpin,chi,smat,l_fullj,lapwq,fjgjq)
                   ELSE
                      CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
                         ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
@@ -134,7 +135,7 @@ CONTAINS
                CALL timestart("hlomat")
                IF (PRESENT(lapwq)) THEN
                   CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,lapwq)
+                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,lapwq,fjgjq)
                ELSE
                   CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
                      n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj)
