@@ -125,11 +125,11 @@ CONTAINS
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
 
                      IF (smat%l_real) THEN
-                        smat%data_r(lorow,k) = smat%data_r(kp,locol) &
+                        smat%data_r(lorow,(k-1) / fmpi%n_size + 1) = smat%data_r(kp,locol) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
                                             & * CONJG(cphPr(kp)) * cph(k)
                      ELSE
-                        smat%data_c(lorow,k) = smat%data_c(kp,locol) &
+                        smat%data_c(lorow,(k-1) / fmpi%n_size + 1) = smat%data_c(kp,locol) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
                                             & * CONJG(cphPr(kp)) * cph(k)
                      END IF
