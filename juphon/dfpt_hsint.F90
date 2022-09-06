@@ -64,7 +64,7 @@ CONTAINS
       END DO
    END SUBROUTINE dfpt_hs_int
 
-   SUBROUTINE dfpt_dynmat_hs_int(noco, starsq, stars, lapwq, lapw, fmpi, bbmat, isp, theta1_pw0, theta1_pw, smat1, hmat1, smat1q, hmat1q, smat2, hmat2, killcont)
+   SUBROUTINE dfpt_dynmat_hs_int(noco, starsq, stars, lapwq, lapw, fmpi, bbmat, isp, theta1_pw0, theta1_pw, smat1, hmat1, smat1q, hmat1q, killcont)
 
       USE m_types
       USE m_hs_int_direct
@@ -78,7 +78,7 @@ CONTAINS
       TYPE(t_mpi),INTENT(IN)        :: fmpi
       INTEGER, INTENT(IN)           :: isp, killcont(2)
       COMPLEX, INTENT(IN)           :: theta1_pw0(:), theta1_pw(:)
-      CLASS(t_mat),INTENT(INOUT)    :: smat1(:,:),hmat1(:,:),smat1q(:,:),hmat1q(:,:),smat2(:,:),hmat2(:,:)
+      CLASS(t_mat),INTENT(INOUT)    :: smat1(:,:),hmat1(:,:),smat1q(:,:),hmat1q(:,:)!,smat2(:,:),hmat2(:,:)
 
       INTEGER :: iSpinPr,iSpin, iMatPr, iMat, iTkin
       LOGICAL :: l_smat
@@ -108,9 +108,9 @@ CONTAINS
             CALL hs_int_direct(fmpi, starsq, bbmat, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
                              & lapwq%bkpt, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
                              & l_smat, .TRUE., vpwq_temp, hmat1q(iMatPr, iMat), smat1q(iMatPr, iMat), theta1_pw)
-            CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
-                             & lapw%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
-                             & l_smat, .TRUE., vpw_temp, hmat2(iMatPr, iMat), smat2(iMatPr, iMat), theta1_pw0)
+            !CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
+            !                 & lapw%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
+            !                 & l_smat, .TRUE., vpw_temp, hmat2(iMatPr, iMat), smat2(iMatPr, iMat), theta1_pw0)
          END DO
       END DO
    END SUBROUTINE dfpt_dynmat_hs_int

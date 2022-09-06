@@ -147,7 +147,7 @@ CONTAINS
             ! MT integral:
             DO iType = 1, fi%atoms%ntype
                CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), dyn_row_HF(col_index))
-               write(*,*) dyn_row_HF(col_index)
+               !write(*,*) dyn_row_HF(col_index)
             END DO
 
             ! Various V_ext integrals:
@@ -241,13 +241,16 @@ CONTAINS
                END DO
             END IF
 
+            write(*,*) qvec, iDtype_row, iDir_row, iDtype_col, iDir_col
+            write(*,*) "HF:", dyn_row_HF(col_index)+dyn_row_misc(col_index)
+
             ! Calculate the contributions to the dynamical matrix that stem
             ! from terms related to occupation numbers and the eigenenergies.
             CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                    stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
                                    eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                    theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
-                                   qvec, l_real, dyn_row_eigen(col_index))
+                                   qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1])
 
             !STOP
          END DO
@@ -613,7 +616,7 @@ CONTAINS
 
       CALL timestart("Interstitial part")
       CALL dfpt_dynmat_hs_int(fi%noco, starsq, stars, lapwq, lapw, fmpi, fi%cell%bbmat, isp, theta1_pw0, theta1_pw, &
-                              smat1, hmat1, smat1q, hmat1q, smat2, hmat2, killcont(2:3))
+                              smat1, hmat1, smat1q, hmat1q, killcont(2:3))
       CALL timestop("Interstitial part")
 
       CALL timestart("MT part")
@@ -621,8 +624,8 @@ CONTAINS
             !$acc enter data copyin(hmat(i,j),smat(i,j))
             !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
       END DO; END DO
-      !CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir, iDtype, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
-      !                      lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(4:6))
+      CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
+                            lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(4:6))
       DO i = 1, nspins; DO j = 1, nspins; if (hmat1(1, 1)%l_real) THEN
             !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
             !$acc exist data delete(hmat(i,j),smat(i,j))
