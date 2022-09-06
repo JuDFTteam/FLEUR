@@ -198,8 +198,8 @@ CONTAINS
       ! TODO: Does this need some ACC magic?
       DO igSpinPr=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
          DO igSpin=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
-            CALL matrix_pref(fmpi, cell%bmat, lapwq%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapwq%bkpt, lapw%bkpt, &
-                           & lapwq%nv(igSpinPr), lapw%nv(igSpin), iDir, &
+            CALL matrix_pref(fmpi, atoms, cell%bmat, lapwq%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapwq, lapw, &
+                           & lapwq%nv(igSpinPr), lapw%nv(igSpin), iDtype, iDir, &
                            & h1mat_tmp(igSpinPr,igSpin), s1mat_tmp(igSpinPr,igSpin), hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin),killcont(2:3))
             CALL h1mat_tmp(igSpinPr,igSpin)%free()
             CALL s1mat_tmp(igSpinPr,igSpin)%free()
