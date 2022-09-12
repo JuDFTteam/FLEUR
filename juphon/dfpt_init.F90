@@ -526,7 +526,7 @@ CONTAINS
         INTEGER,       INTENT(IN)  :: nG
 
         COMPLEX,       INTENT(IN)  :: rhostar(:, :)
-        COMPLEX,       INTENT(OUT) :: rhopw(:, :, :, :)
+        COMPLEX,       INTENT(OUT) :: rhopw(:, :)
 
         INTEGER                    :: iStar, iG, iGx, iGy, iGz, iSpin
 
@@ -534,13 +534,13 @@ CONTAINS
 
         DO iSpin = 1, jspins
             iG = 0
-            DO iGz= -stars%mx3, stars%mx3
+            DO iGx = -stars%mx1, stars%mx1
                 DO iGy = -stars%mx2, stars%mx2
-                    DO iGx = -stars%mx1, stars%mx1
+                    DO iGz= -stars%mx3, stars%mx3
                         iStar = stars%ig(iGx, iGy, iGz)
                         IF (iStar.NE.0) THEN
                             iG = iG + 1
-                            rhopw(iG, iSpin, 1, 1) = rhostar(iStar, iSpin) &
+                            rhopw(iG, iSpin) = rhostar(iStar, iSpin) &
                                     ! & * stars%rgphs(iGx, iGy, iGz) & TODO
                                     & * stars%nstr(iStar) / sym%nop
                         END IF

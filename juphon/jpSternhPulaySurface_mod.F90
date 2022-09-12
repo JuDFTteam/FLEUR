@@ -734,7 +734,7 @@ module m_jpSternhPulaySurface
     !allocate(hsurf,mold=h)
     !hsurf(:, :) = cmplx(0., 0.)
 
-    if (.FALSE..and.present(almkg)) then
+    if (present(mat_elH).and.present(almkg)) then
       allocate(ax2(nvk), bx2(nvk),ax3(nvk), bx3(nvk))
       ax2(:) = cmplx(0., 0.)
       bx2(:) = cmplx(0., 0.)
@@ -826,7 +826,7 @@ module m_jpSternhPulaySurface
               !                                        & + conjg(mCoefBp(pBand, lmlo))   * utd2 * mCoefKb(nBand, lmlo+1) &
               !                                        & + conjg(mCoefBp(pBand, lmlo+1)) * dtu2 * mCoefKb(nBand, lmlo) &
               !                                        & + conjg(mCoefBp(pBand, lmlo+1)) * dtd2 * mCoefKb(nBand, lmlo+1)
-              if (.FALSE.) then
+              if (.TRUE.) then ! comparison
                 h(pBand, nBand) = h(pBand, nBand) + conjg(mCoefBp(pBand, lmlo))   * utu2 * mCoefKb(nBand, lmlo) &
                                                 & + conjg(mCoefBp(pBand, lmlo))   * utd2 * mCoefKb(nBand, lmlo+1) &
                                                 & + conjg(mCoefBp(pBand, lmlo+1)) * dtu2 * mCoefKb(nBand, lmlo) &
@@ -837,7 +837,7 @@ module m_jpSternhPulaySurface
           end do ! pband
         end do ! nband
 
-        if (.FALSE..and.present(almkg)) then
+        if (present(mat_elH).and.present(almkg)) then
           do iG=1, nvk
             do iGq=1, nvkq
               sEl = 0
@@ -902,7 +902,7 @@ module m_jpSternhPulaySurface
         !ax4 = cmplx(0., 0.)
         !bx4 = cmplx(0., 0.)
 
-        if (.FALSE.) then
+        if (present(mat_elH)) then
           ax2 = cmplx(0., 0.)
           bx2 = cmplx(0., 0.)
           ax3 = cmplx(0., 0.)
@@ -938,7 +938,8 @@ module m_jpSternhPulaySurface
                 dtu2=0.5*usdus%uds(lB,1,1)*usdus%dus(lB,1,1)*atoms%rmt(1)**2
                 dtd2=0.5*usdus%uds(lB,1,1)*usdus%duds(lB,1,1)*atoms%rmt(1)**2
 
-                if (.FALSE..and.(lB.eq.lK.and.mB.eq.mK)) then
+                if (.TRUE..and.(lB.eq.lK.and.mB.eq.mK)) then ! comparison
+                !if (.FALSE..and.(lB.eq.lK.and.mB.eq.mK)) then
                   utu=utu+utu2
                   utd=utd+utd2
                   dtu=dtu+dtu2
@@ -1060,7 +1061,7 @@ module m_jpSternhPulaySurface
                 end if
 
               end do ! nBand
-              if (.FALSE..and.present(almkg)) then
+              if (present(mat_elH).and.present(almkg)) then
                 do iG=1, nvk
                   ax2(iG) = ax2(iG) + utu*almkg(lmK+1, iG) + utd*blmkg(lmK+1, iG)
                   bx2(iG) = bx2(iG) + dtu*almkg(lmK+1, iG) + dtd*blmkg(lmK+1, iG)
@@ -1103,7 +1104,7 @@ module m_jpSternhPulaySurface
             end if
           end do !pBand
         end do ! nBand
-        if (.FALSE..and.present(almkg)) then
+        if (present(mat_elH).and.present(almkg)) then
           do iGq=1, nvkq
             do iG=1, nvk
               hSumG(iGq,iG)=hSumG(iGq,iG)+conjg(almkgq(lmB+1, iGq))*ax3(iG)+ &
@@ -1265,7 +1266,7 @@ module m_jpSternhPulaySurface
     sIntTeps(:, :) = cmplx(0., 0.)
     sInt(:, :) = cmplx(0., 0.)
 
-    if (.FALSE.) then
+    if (present(mat_elS)) then
       allocate(surfIntTG(nv(ikpq), nv(ikpt)))
       allocate(surfIntSG(nv(ikpq), nv(ikpt)))
       surfIntTG(:, :) = cmplx(0., 0.)
@@ -1319,7 +1320,9 @@ module m_jpSternhPulaySurface
       do iBband = 1, nrBraBands
         do iKbas = 1, nv(ikpt)
           do iBbas = 1, nv(ikpq)
-            if (.FALSE.) then
+            !if (present(mat_elS)) then
+            if (.TRUE.) then ! comparison
+            !if (.false.) then
               sIntTeps(iBband, iKband) = sIntTeps(iBband, iKband) + constPreFacs  &
                 & * conjg(zBra(iBbas, iBband)) * (kinEffect2(iBbas,iKbas)) * basisTemp(iBbas, iKbas) * zKet(iKbas, iKband)
               !CRGfix
@@ -1337,14 +1340,14 @@ module m_jpSternhPulaySurface
       end do !iKband
     end do ! iBband
 
-    if (.FALSE.) then
-      if (ikpt.eq.1.and.iDdir.eq.1) then
-        open(109,file='000_ME_eThet1_IR',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
-        open(110,file='000_ME_Thet1_IR',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
-      else
-        open(109,file='000_ME_eThet1_IR',form='FORMATTED',action='WRITE',position='append',status='UNKNOWN')
-        open(110,file='000_ME_Thet1_IR',form='FORMATTED',action='WRITE',position='append',status='UNKNOWN')
-      end if
+    if (present(mat_elS)) then
+      !if (ikpt.eq.1.and.iDdir.eq.1) then
+      !  open(109,file='000_ME_eThet1_IR',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
+      !  open(110,file='000_ME_Thet1_IR',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
+      !else
+      !  open(109,file='000_ME_eThet1_IR',form='FORMATTED',action='WRITE',position='append',status='UNKNOWN')
+      !  open(110,file='000_ME_Thet1_IR',form='FORMATTED',action='WRITE',position='append',status='UNKNOWN')
+      !end if
       do iG=1, nv(ikpt)
         do iGq=1, nv(ikpq)
           surfIntTG(iGq,iG)=constPreFacs*kinEffect2(iGq,iG)*basisTemp(iGq, iG)
@@ -1355,8 +1358,8 @@ module m_jpSternhPulaySurface
           !write(110,*) real(surfIntSG(iGq,iG)), aimag(surfIntSG(iGq,iG))
         end do
       end do
-      close(109)
-      close(110)
+      !close(109)
+      !close(110)
 
     end if
 
@@ -1532,12 +1535,13 @@ module m_jpSternhPulaySurface
   !> @param[out) surfInt : Calculates the potential part of the surface integral Psi_k+q^IR (H - eps) Psi_k^IR
   !---------------------------------------------------------------------------------------------------------------------------------
   subroutine calcSfVeffFast( atoms, input, kpts, qpts, cell, ikpt, ikpq, iqpt, kpq2kPrVec, coScale, gbas, zeta, nv, ne, nobd, ilst, z, iDtype, iDatom, &
-      & surfInt, mat_el )
+      & surfInt, ngdp, gdp, vEff0IRpwUw, mat_el )
 
     use m_types, only : t_atoms, t_input, t_kpts, t_cell
     use m_gaunt, only : gaunt2
     use m_ylm_old
     use m_sphbes
+    USE m_npy
 
     implicit none
 
@@ -1564,13 +1568,16 @@ module m_jpSternhPulaySurface
     integer,                   intent(in)  :: ne(:)
     integer,                   intent(in)  :: nobd(:, :)
     integer,                   intent(in)  :: ilst(:, :, :)
-    complex,                  intent(in)  :: z(:, :, :, :)
+    complex,                   intent(in)  :: z(:, :, :, :)
     complex,                   intent(out) :: surfInt(:, :, :)
+    integer,                   intent(in)  :: ngdp
+    integer,                   intent(in)  :: gdp(:, :)
+    complex,                   intent(in)  :: vEff0IRpwUw(:, :)
     complex, optional,         intent(inout) :: mat_el(:,:,:)
 
     ! Scalar variables
     real                                   :: pref, pref2
-    complex                                :: phaseFac
+    complex                                :: phaseFac, pref3
     integer                                :: ibandK
     integer                                :: ibandB
     integer                                :: oqn_l
@@ -1578,7 +1585,7 @@ module m_jpSternhPulaySurface
     complex                                :: factL
     integer                                :: mqn_m
     integer                                :: lm
-    integer                                :: iG, iGq
+    integer                                :: iG, iGq, iGpp
     integer                                :: idir
     integer                                :: oqn_l2p
     integer                                :: lm2pPre
@@ -1598,6 +1605,7 @@ module m_jpSternhPulaySurface
     complex,       allocatable             :: psiBCoeff(:, :)
     complex,       allocatable             :: basCoeff(:, :)
     complex,       allocatable             :: coeffkg(:, :), coeffkgq(:, :), surfIntG(:,:,:)
+    complex,       allocatable             :: surfIntG2(:,:,:), surfIntG3(:,:,:)
     complex,       allocatable             :: ylm(:)
     real,          allocatable             :: sbes(:)
     real,          allocatable             :: gk(:,:), gkq(:,:)
@@ -1622,15 +1630,19 @@ module m_jpSternhPulaySurface
 
     surfInt(:, :, :) = cmplx(0., 0.)
 
-    if (.FALSE.) then
+    if (present(mat_el)) then
       allocate( coeffkg(nv(1, ikpt), (lmaxScaled + 1)**2) )
       allocate( coeffkgq(nv(1, ikpq), (lmaxScaled + 1)**2) )
       allocate( gk(3,nv(1, ikpt)))
       allocate( gkq(3,nv(1, ikpq)))
       allocate(surfIntG(nv(1, ikpq),nv(1, ikpt),3))
+      allocate(surfIntG2(nv(1, ikpq),nv(1, ikpt),3))
+      allocate(surfIntG3(nv(1, ikpq),nv(1, ikpt),3))
       coeffkg(:, :) = cmplx(0., 0.)
       coeffkgq(:, :) = cmplx(0., 0.)
       surfIntG(:, :, :) = cmplx(0., 0.)
+      surfIntG2(:, :, :) = cmplx(0., 0.)
+      surfIntG3(:, :, :) = cmplx(0., 0.)
     end if
 
     !if ( coScale /= 1 ) CALL juDFT_error('ylmNorm is not correctly set in calcSfVeffFast',calledby ="calcSfVeffFast")
@@ -1641,7 +1653,7 @@ module m_jpSternhPulaySurface
       gpk(1:3) = gbas(1:3, ilst(iG, ikpt, 1)) + kpts%bk(1:3, ikpt)
       phaseFac = exp( ImagUnit * tpi_const * dot_product(gpk(:), atoms%taual(1:3, iDatom)) )
       gpkCart(1:3) = matmul( cell%bmat(1:3, 1:3), gpk(1:3) )
-      if (.FALSE.) then
+      if (present(mat_el)) then
         gk(1:3,iG) = gpkCart(1:3)
       end if
       ylm(:) = cmplx(0., 0.)
@@ -1659,9 +1671,9 @@ module m_jpSternhPulaySurface
       end do ! oqn_l
     end do ! iG
 
-    if (.FALSE.) then
-      coeffkg(:,:)=basCoeff(:nv(1, ikpt),:)
-    end if
+    !if (present(mat_el)) then
+      !coeffkg(:,:)=basCoeff(:nv(1, ikpt),:)
+    !end if
 
     ! Multiply the wave function expansion coefficients
     do oqn_l = 0, lmaxScaled
@@ -1683,7 +1695,7 @@ module m_jpSternhPulaySurface
 
       gpkCart(1:3) = matmul( cell%bmat(1:3, 1:3), gpk(1:3) )
 
-      if (.FALSE.) then
+      if (present(mat_el)) then
         gkq(1:3,iG) = gpkCart(1:3)
       end if
 
@@ -1702,9 +1714,9 @@ module m_jpSternhPulaySurface
       end do ! oqn_l
     end do ! iG
 
-    if (.FALSE.) then
-      coeffkgq(:,:)=basCoeff(:nv(1, ikpq),:)
-    end if
+    !if (present(mat_el)) then
+      !coeffkgq(:,:)=basCoeff(:nv(1, ikpq),:)
+    !end if
 
     ! Multiply the wave function expansion coefficients
     do oqn_l = 0, lmaxScaled
@@ -1744,11 +1756,11 @@ module m_jpSternhPulaySurface
                 end do ! ibandK
 
                 !if (.FALSE.) then
-                !  do iGq=1, nv(1, ikpq)
-                !    do iG=1, nv(1, ikpt)
-                !      surfIntG(iGq,iG,idir)=surfIntG(iGq,iG,idir)+pref*zeta(idir,lm2p)*gauntCoeff*coeffkgq(iGq,lm1p)*coeffkg(iG,lm)
-                !    end do
-                !  end do
+                  !do iGq=1, nv(1, ikpq)
+                   ! do iG=1, nv(1, ikpt)
+                     ! surfIntG(iGq,iG,idir)=surfIntG(iGq,iG,idir)+pref*zeta(idir,lm2p)*gauntCoeff*coeffkgq(iGq,lm1p)*coeffkg(iG,lm)
+                   ! end do
+                  !end do
                 !end if
 
               end do ! idir
@@ -1758,36 +1770,84 @@ module m_jpSternhPulaySurface
       end do ! mqn_m2p
     end do ! oqn_l2p
 
-    if (.FALSE.) then
-      pref2 = -fpi_const / cell%omtil * atoms%rmt(iDtype)**2
-      do iG = 1, nv(1, ikpt)
-        do iGq = 1, nv(1, ikpq)
-          GGqInt(1:3) = Gbas(1:3, ilst(iG, ikpt, 1)) - Gbas(1:3, ilst(iGq, ikpq, 1)) &
-                    & - qpts%bk(1:3, iqpt) - kpq2kPrVec(1:3, ikpt, iqpt)
-          GGqCart(1:3) = matmul(cell%bmat(1:3, 1:3), GGqInt(1:3))
+    !if (.TRUE..AND.present(mat_el)) then
+!      pref2 = -fpi_const / cell%omtil * atoms%rmt(iDtype)**2
+!      do iG = 1, nv(1, ikpt)
+!        do iGq = 1, nv(1, ikpq)
+!          GGqInt(1:3) = Gbas(1:3, ilst(iG, ikpt, 1)) - Gbas(1:3, ilst(iGq, ikpq, 1)) &
+!                    & - qpts%bk(1:3, iqpt) - kpq2kPrVec(1:3, ikpt, iqpt)
+!          GGqCart(1:3) = matmul(cell%bmat(1:3, 1:3), GGqInt(1:3))
+!
+!          GGqNorm = norm2(GGqCart(:))
+!
+!          ylm(:) = cmplx(0., 0.)
+!          call ylm4(lmaxScaled, GGqCart, ylm)
+!
+!          sbes(:) = 0.
+!          call sphbes(lmaxScaled, GGqNorm * atoms%rmt(iDtype), sbes)
+!
+!          sumL = (0., 0.)
+!          do oqn_l=0, lmaxScaled
+!            lm_pre = oqn_l * (oqn_l + 1) + 1
+!            factL = ImagUnit**oqn_l * sbes(oqn_l) * exp(ImagUnit * tpi_const * dot_product(real(GGqInt(1:3)), atoms%taual(1:3, iDatom)))
+!            sumM = (0., 0.)
+!            do mqn_m = -oqn_l, oqn_l
+!              lm = lm_pre + mqn_m
+!              sumM(:) = sumM(:) + zeta(:,lm) * ylm(lm)
+!            end do
+!            sumL(:) = sumL(:) + factL*sumM(:)
+!          end do
+!          surfIntG2(iGq,iG,:) = pref2 * sumL(:)
+!        end do
+!      end do
 
-          GGqNorm = norm2(GGqCart(:))
+!      pref3 = -fpi_const * ImagUnit / cell%omtil * atoms%rmt(iDtype)**2
+!      do iGpp = 1, ngdp
+!         do iG = 1, nv(1, ikpt)
+!            do iGq = 1, nv(1, ikpq)
+!               GGqInt(1:3) = Gbas(1:3, ilst(iG, ikpt, 1)) - Gbas(1:3, ilst(iGq, ikpq, 1)) &
+!                           & - qpts%bk(1:3, iqpt) - kpq2kPrVec(1:3, ikpt, iqpt) &
+!                           & + gdp(1:3, iGpp)
+!               !write(9009,*) GGqInt
+!               GGqCart(1:3) = matmul(cell%bmat(1:3, 1:3), GGqInt(1:3))
+!               !write(9009,*) GGqCart
+!               GGqNorm = norm2(GGqCart(:))
+!               !write(9009,*) GGqNorm
+!               ylm(:) = cmplx(0., 0.)
+!               call ylm4(1, GGqCart, ylm(:4))
+!               !write(9009,*) ylm(:4)
+!               sbes(:) = 0.
+!               call sphbes(1, GGqNorm * atoms%rmt(iDtype), sbes(:1))
+!               !write(9009,*) sbes(:1)
+!               sumL = (0., 0.)
+!               lm_pre = 1 * (1 + 1) + 1
+!               factL = vEff0IRpwUw(iGpp, 1) * sbes(1) * exp(ImagUnit * tpi_const * dot_product(real(GGqInt(1:3)), atoms%taual(1:3, iDatom)))
+!               !write(9009,*) factL
+!               sumM = (0., 0.)
+!               do mqn_m = -1, 1
+!                 lm = lm_pre + mqn_m
+!                 sumM(:) = sumM(:) + c_im(:, mqn_m + 2) * ylm(lm)
+!                 !write(9009,*) "............................."
+!                 !write(9009,*) c_im(:, mqn_m + 2)
+!                 !write(9009,*) ylm(lm)
+!                 !write(9009,*) "............................."
+!               end do
+!               !write(9009,*) sumM
+!              sumL(:) = sumL(:) + factL*sumM
+!              !write(9009,*) sumL
+!              surfIntG3(iGq,iG,:) = surfIntG3(iGq,iG,:) + pref3 * sumL(:)
+!              !write(9009,*) surfIntG3(iGq,iG,:)
+!              !write(9009,*) "-----------------------------"
+!          end do
+!        end do
+!      end do
 
-          ylm(:) = cmplx(0., 0.)
-          call ylm4(lmaxScaled, GGqCart, ylm)
+!      IF (ikpt==1) CALL save_npy("surf_1_3.npy",surfIntG)
+!      IF (ikpt==1) CALL save_npy("surf_2_3.npy",surfIntG2)
+!      IF (ikpt==1) CALL save_npy("surf_3_3.npy",surfIntG3)
 
-          sbes(:) = 0.
-          call sphbes(lmaxScaled, GGqNorm * atoms%rmt(iDtype), sbes)
+!!!!!STOP
 
-          sumL = (0., 0.)
-          do oqn_l=0, lmaxScaled
-            lm_pre = oqn_l * (oqn_l + 1) + 1
-            factL = ImagUnit**oqn_l * sbes(oqn_l) * exp(ImagUnit * tpi_const * dot_product(real(GGqInt(1:3)), atoms%taual(1:3, iDatom)))
-            sumM = (0., 0.)
-            do mqn_m = -oqn_l, oqn_l
-              lm = lm_pre + mqn_m
-              sumM(:) = sumM(:) + conjg(zeta(:,lm)) * conjg(ylm(lm))
-            end do
-            sumL(:) = sumL(:) + factL*sumM(:)
-          end do
-          surfIntG(iGq,iG,:) = pref2 * sumL(:)
-        end do
-      end do
       !if (ikpt.eq.1) then
       !  open(109,file='000_ME_kGprqkG',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
       !  open(110,file='000_ME_V0Thet1_IR',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
@@ -1811,7 +1871,7 @@ module m_jpSternhPulaySurface
       !end do
       !close(109)
       !close(110)
-    end if
+    !end if
     if (present(mat_el)) then
       mat_el(:,:,:) = mat_el(:,:,:) + surfIntG(:,:,:)
     end if

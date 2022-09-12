@@ -333,8 +333,8 @@ module m_jpSternheimer
     logical                                     :: stern1stIt ! true, if 1st Sternheimer cycle iteration
     logical                                     :: stern2ndIt ! true, if 1st Sternheimer cycle iteration
     logical                                     :: sternRegIt ! true, if not 1st or final Sternheimer cycle iteration
-    logical                                     :: sternFinIt
-    integer                                     :: iatom
+    logical                                     :: sternFinIt, l_dummy, l_exitus
+    integer                                     :: iatom, iBas
     integer                                     :: iDtype
     integer                                     :: ieqat
     integer                                     :: ispin
@@ -419,7 +419,7 @@ module m_jpSternheimer
 
     complex                                     :: haa((atoms%lmaxd+1)**2,2,0:atoms%lmaxd,2,0:atoms%lmaxd), &
                                                   dhaa((atoms%lmaxd+1)**2,2,0:atoms%lmaxd,2,0:atoms%lmaxd)
-    real                                        :: vEff0MTrsh(atoms%jmtd,(atoms%lmaxd+1)**2,atoms%nat,input%jspins)
+    real                                        :: vEff0MTrsh(atoms%jmtd,(atoms%lmaxd+1)**2,atoms%nat,input%jspins), gExt(3)
     complex, allocatable :: mat_elH(:,:,:)
     complex, allocatable :: mat_elS(:,:)
 
@@ -486,7 +486,7 @@ module m_jpSternheimer
 
     ! Scaling cutoff parameter for surface integral in IR that is Rayleigh expanded, Aaron claims for the forces, it has to be
     ! 2 lmax?
-    coScale = 1.
+    coScale = 1.!2.!1.
 
     !todo check the dimensions of the arrays
     allocate( rho1IRDS(ngpqdp, 3, atoms%nat) )
@@ -698,6 +698,7 @@ module m_jpSternheimer
                                                                                                                   &atoms%ntype) /) )
 
         do ! self-consistency loop
+          INQUIRE(file="old_rho1_mixed_mt.npy",exist=l_exitus)
           iterations = iterations + 1
 
           ! Knowing the index of the currently displaced atom and the phonon q-vector, we can now calculate the first variation of
@@ -839,7 +840,7 @@ module m_jpSternheimer
             z1nG = cmplx(0.0, 0.0)
             ! Due to performance reasons we do not make a loop over idir (array of types, type of arrays)
 
-            if (.false.) then
+            if (.FALSE.) then
               allocate(mat_elH(nv(1,mapKpq2K(ikpt, iqpt)),nv(1,ikpt),3))
               allocate(mat_elS(nv(1,mapKpq2K(ikpt, iqpt)),nv(1,ikpt)))
               mat_elH(:, :, :) = cmplx(0., 0.)
@@ -848,25 +849,31 @@ module m_jpSternheimer
 
             ! Calculate effective potential part of IR surface integral within Sternheimer equation
             surfIntVFast(:, :, :) = cmplx(0., 0.)
-            if (.false.) then
+            if (.FALSE.) then
               call calcSfVeffFast( atoms, input, kpts, qpts, cell, ikpt, mapKpq2K(ikpt, iqpt), iqpt, kpq2kPrVec, &
                 & coScale, gbas, veffUvIR, nv, ne, nobd, &
-                & mapGbas, z, iDtype, iDatom, surfIntVFast, mat_elH )
+                & mapGbas, z, iDtype, iDatom, surfIntVFast, ngdp, gdp, vEff0IRpwUw, mat_elH )
             else
                call calcSfVeffFast( atoms, input, kpts, qpts, cell, ikpt, mapKpq2K(ikpt, iqpt), iqpt, kpq2kPrVec, &
                 & coScale, gbas, veffUvIR, nv, ne, nobd, &
-                & mapGbas, z, iDtype, iDatom, surfIntVFast)
+                & mapGbas, z, iDtype, iDatom, surfIntVFast, ngdp, gdp, vEff0IRpwUw)
             end if
+            !STOP
 
             !CALL save_npy("H0.npy",mat_elH)
 
             !CALL save_npy('surfIntVFast.npy',surfIntVFast)
             !stop
 
-            killcont = [1,1,1,1,1,0,1,1,1]
-            IF (.NOT.stern1stIt) killcont = [1,1,1,1,1,0,1,1,1]
+            !killcont = [0,1,1,1,0,0,1,1,0] ! MT works fine.
+            !killcont = [0,0,0,0,0,1,0,0,0] ! problematic
+            !killcont = [1,0,0,0,1,0,0,0,1] ! IR works fine
+            !killcont = [1,1,1,1,0,0,1,1,0] q/=0 working
+            !killcont = [1,1,1,1,1,0,1,1,1] ! only non-problematic
+            !killcont = [1,1,1,1,1,0,1,1,1] ! comparison
+            killcont = [1,1,1,1,1,1,1,1,1]
             ! todo Due to performance reasons we do not make a loop over idir (array of types, type of arrays) is that good?
-            if (.false.) then
+            if (.FALSE.) then
             call solveSternheimerEq( fmpi,   atoms, input, sym, cell, kpts, qpts, uds, tdHS0, loosetd, tdVx, loosetdx1, stars, gdp, ne, nv, vEff1IR, &
               & eig(:, ikpt, ispin), eig(:, mapKpq2K(ikpt, iqpt), ispin), El, nRadFun, iloTable, mapGbas, gbas, &
               & z(:, :, ikpt, ispin), z(:, :, mapKpq2K(ikpt,iqpt), ispin), kveclo(:, :), iDtype, iDatom, ikpt, &
@@ -906,13 +913,25 @@ module m_jpSternheimer
 
             !DEALLOCATE(loosetdx1, loosetdy1, loosetdz1, loosetdx2, loosetdy2, loosetdz2)
 
-            if (.false.) then
+            if (.FALSE.) then
               deallocate(mat_elH,mat_elS)
             end if
 
             if ( sternFinIt ) then
               call storeZ1nG( atoms, ikpt, iqpt, mapKpq2K, iDatom, nobd, nv, z1nG )
             end if
+
+            !! TODO: Test!
+            !z1nG = cmplx(0.0,0.0)
+            !DO iBas = 1, nv(1, ikpt)
+            !   ! TODO: Transpose bmat or not?
+            !   gExt = MATMUL(cell%bmat,gbas(:, mapGbas(iBas, ikpt, 1)) + kpts%bk(:, ikpt))
+            !   z1nG(iBas,:nobd(ikpt, 1),1) = -ImagUnit * gExt(1) * z(iBas, :nobd(ikpt, 1), ikpt, ispin)
+            !   z1nG(iBas,:nobd(ikpt, 1),2) = -ImagUnit * gExt(2) * z(iBas, :nobd(ikpt, 1), ikpt, ispin)
+            !   z1nG(iBas,:nobd(ikpt, 1),3) = -ImagUnit * gExt(3) * z(iBas, :nobd(ikpt, 1), ikpt, ispin)
+            !END DO
+
+            !IF (ikpt==1) CALL save_npy("zzz_old_z1nG.npy",z1nG)
 
             ! Calculate k-dependent contributions of rho1 and perform a sum over k (outer loop within this very routine)
             do idir = 1, 3
@@ -1023,6 +1042,25 @@ module m_jpSternheimer
             end do ! itype
           end do ! idir
 
+
+         ! IF (stern1stIt) THEN
+         !    CALL save_npy("old_rho1_start_mt.npy",rho1MTplus)
+         !    CALL save_npy("old_rho1_start_pw.npy",rho1IRDSplus)
+         !    CALL save_npy("old_grRho_mt.npy",grRho0MT)
+         !    CALL save_npy("old_grRho_pw.npy",grRho0IR)
+         !    CALL save_npy("radii.npy",atoms%rmsh)
+         !    !STOP
+          !ELSE IF (stern2ndIt) THEN
+         !    CALL save_npy("old_rho1_it1_mt.npy",rho1MTplus)
+         !    CALL save_npy("old_rho1_it1_pw.npy",rho1IRDSplus)
+         !    !STOP
+          !ELSE IF (.NOT.l_exitus) THEN
+            ! CALL save_npy("old_rho1_it2_mt.npy",rho1MTplus)
+             !CALL save_npy("old_rho1_it2_pw.npy",rho1IRDSplus)
+          !END IF
+
+          !STOP
+
           !if (.false.) then
             !close(109)
             !close(110)
@@ -1035,6 +1073,14 @@ module m_jpSternheimer
           ! After the Sternheimer equation is converged we jump out of the convergence loop having written out the effective
           ! potential variation, the change of the Kohn--Sham wavefunctions and the variation of the density to hard disk
           if ( sternFinIt ) then
+            CALL save_npy("overconverged_den_mt_old_1.npy",rho1MTplus(:,:,:,1))
+            CALL save_npy("overconverged_den_pw_old_1.npy",rho1IRDSplus(:,1))
+            !CALL save_npy("overconverged_den_mt_old_2.npy",rho1MTplus(:,:,:,2))
+            !CALL save_npy("overconverged_den_pw_old_2.npy",rho1IRDSplus(:,2) + grRho0IR(:,2))
+            !CALL save_npy("overconverged_den_mt_old_3.npy",rho1MTplus(:,:,:,3))
+            !CALL save_npy("overconverged_den_pw_old_3.npy",rho1IRDSplus(:,3) + grRho0IR(:,3))
+            CALL save_npy("intheend_gradrho_pw.npy",grRho0IR)
+            CALL save_npy("intheend_gradrho_mt.npy",grRho0MT(:,:,1,:))
             write(*, '(a)') 'Sternheimer self-consistency cycle terminated!'
             exit
           end if
@@ -1056,12 +1102,28 @@ module m_jpSternheimer
 
             end if
 
+            l_dummy = stern2ndIt
             call UpdNCheckDens( atoms, stars, cell, input, ngpqdp, stern1stIt, stern2ndIt, sternRegIt, converged(idir), iDatom, &
               & iqpt, idir, gpqdp, lastDistance, rho1IRDSplus(:, idir), rho1MTplus(:, :, :, idir) )
+
+
+
+              IF (.NOT.stern1stIt.AND..NOT.l_dummy.AND..NOT.stern2ndIt) THEN
+               CALL save_npy("old_rho1_mixed_mt.npy",rho1MTplus(:, :, :, 1))
+               CALL save_npy("old_rho1_mixed_pw.npy",rho1IRDSplus(:, 1))
+
+               !STOP
+              END IF
 
           end do ! idir
 
           if (all(converged)) then
+            CALL save_npy("converged_den_mt_old_1.npy",rho1MTplus(:,:,:,1))
+            CALL save_npy("converged_den_pw_old_1.npy",rho1IRDSplus(:,1))
+            !CALL save_npy("converged_den_mt_old_2.npy",rho1MTplus(:,:,:,2))
+            !CALL save_npy("converged_den_pw_old_2.npy",rho1IRDSplus(:,2))
+            !CALL save_npy("converged_den_mt_old_3.npy",rho1MTplus(:,:,:,3))
+            !CALL save_npy("converged_den_pw_old_3.npy",rho1IRDSplus(:,3))
             write(*, '(a)') 'Converged linear density variation. Final run of Sternheimer self-consistency cycle!'
             sternFinIt = .true.
           end if
@@ -1247,6 +1309,7 @@ module m_jpSternheimer
 
     use m_types, only : t_atoms, t_input, t_stars, t_cell
     use m_jpVeff1, only : GenVeff1
+    USE m_npy
 
     implicit none
 
@@ -1381,6 +1444,8 @@ module m_jpSternheimer
       call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vEff1IRsh, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
+       CALL save_npy("old_v1_start_pw.npy",vEff1IRsh)
+
       if (.false.) then
         close(109)
         close(110)
@@ -1431,6 +1496,10 @@ module m_jpSternheimer
           end do
         end do
       end do
+
+      CALL save_npy("old_v1plus_start_mt.npy",sumVMTs)
+
+      !STOP
 
       if (.false.) then
         close(109)
@@ -1920,6 +1989,7 @@ module m_jpSternheimer
       call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, VextFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vEff1IRsh, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
+        !CALL save_npy("old_v1_it1_mt.npy",vEff1MT)
       if (.false.) then
         close(109)
         close(110)
@@ -1962,6 +2032,9 @@ module m_jpSternheimer
           end do
         end do
       end do
+
+      !CALL save_npy("old_v1plus_it1_mt.npy",sumVMTs)
+      !CALL save_npy("old_v1_it1_pw.npy",vEff1IRsh)
       !if (.false.) then
         close(109)
         !NOstopNO!1st iteration NOstopNO.
@@ -2099,7 +2172,7 @@ module m_jpSternheimer
       & nlo_atom, recEdiffME, kpq2kPrVec, td4V2, loosetd2, cutContr, surfIntVFast, ngpqdp, gpqdp, maxlmp, killcont, haa, dhaa, rbas1, mat_elH, mat_elS)
 
     use m_types
-     
+
     use m_abcof, only : abcof
     use m_abcof3
     use m_jpSternhHF, only : calcMEPotIR, calcVsumMT
@@ -2107,12 +2180,14 @@ module m_jpSternheimer
     use m_juDFT_stop, only : juDFT_warn
     !use m_intgr, only : intgr3LinIntp
     use m_gaunt, only : gaunt1
+    USE m_hsmt_ab
+    USE m_hsmt_fjgj
 
     implicit none
 
     ! Type parameter
     type(t_mpi),                  intent(in)  :: fmpi
-     
+
     type(t_atoms),                  intent(in)  :: atoms
     type(t_input),                  intent(in)  :: input
     type(t_sym),                    intent(in)  :: sym
@@ -2168,9 +2243,10 @@ module m_jpSternheimer
     ! Type parameters
     type(t_noco)                                :: noco
     type(t_nococonv)                            :: nococonv
-   
+
     TYPE(t_lapw) :: lapw
     TYPE (t_mat) :: zMatKet, zMatBra, zMatTilde, zMatBar
+    TYPE(t_fjgj) :: fjgj
 
     ! Array parameters
     integer,           allocatable              :: ngoprI(:)
@@ -2208,7 +2284,7 @@ module m_jpSternheimer
     complex,           allocatable              :: mCoefKv(:, :)
     complex,           allocatable              :: mCoefBv(:, :)
     complex,           allocatable              :: surfIntTeps(:, :)
-    complex,           allocatable              :: surfInt(:, :)
+    complex,           allocatable              :: surfInt(:, :), abcoeffs(:,:)
     real                                        :: Gext(3)
     real                                        :: GpqCart(3)
     complex                                     :: a1(2*(atoms%lmaxd+1)**2,nv(1,ikpq)), b1(2*(atoms%lmaxd+1)**2,nv(1,ikpt))
@@ -2233,7 +2309,7 @@ module m_jpSternheimer
     integer                                     :: pband
     integer :: nk
 
-    integer :: n1,n2, l, io, igp, lp, jo, lm2, k
+    integer :: n1,n2, l, io, igp, lp, jo, lm2, k, ab_size
     integer :: m, mp, ngp, ngpq, lmmax, i, iG, iGq
     logical :: didwe
     real    :: tempReal, tempImag, t2
@@ -2262,6 +2338,7 @@ module m_jpSternheimer
     vEff1IRMat(:, :) = cmplx(0., 0.)
     ! nmat has to be the dimension of the bras due to the concept of calcMEPotIR
     nmat = nv(1, ikpq) + atoms%nlotot
+    !mat_elH = cmplx(0., 0.)
     if (present(mat_elH)) then
       call calcMEPotIR( stars, GbasVec(:, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(:, ilst(:nv(1, ikpt), ikpt, 1)), nv, &
         & vEff1IR(:,idir), zBra, zKet, gdp, nmat, ne(ikpq), nobd(ikpt,1), ikpt, iqpt, ikpq, ngdp, vEff1IRMat, kpq2kPrVec, idir, mat_elH)
@@ -2269,6 +2346,8 @@ module m_jpSternheimer
       call calcMEPotIR( stars, GbasVec(:, ilst(:nv(1, ikpq), ikpq, 1)), GbasVec(:, ilst(:nv(1, ikpt), ikpt, 1)), nv, &
         & vEff1IR(:,idir), zBra, zKet, gdp, nmat, ne(ikpq), nobd(ikpt,1), ikpt, iqpt, ikpq, ngdp, vEff1IRMat, kpq2kPrVec)
     end if
+
+    !IF (PRESENT(mat_elH)) CALL save_npy("H1.npy",mat_elH)
 
     ! Calculate <ψ_{k'n'}^{(0)}|V^{(1)}_{eff}(q)|ψ_{kn}^{(0)}>_{allMT}
     ! -------------------------------------------------------------
@@ -2349,6 +2428,13 @@ module m_jpSternheimer
         CALL abcof(input, atoms, sym, cell, lapw, nobd(ikpt, 1), usdus, noco, nococonv, 1,   &
                  & acofKet(:, 0:, :), bcofKet(:, 0:, :), &
                  & ccofKet(-atoms%llod:, :, :, :), zMatKet)
+        if (present(mat_elH)) ALLOCATE(abCoeffs(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
+        if (present(mat_elH)) CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,1,noco)
+        if (present(mat_elH)) CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,1,1)
+        if (present(mat_elH)) CALL hsmt_ab(sym,atoms,noco,nococonv,1,1,1,1,cell,lapw,fjgj,abCoeffs,ab_size,.FALSE.)
+        if (present(mat_elH)) atestcofk = abCoeffs(:(atoms%lmaxd+1)**2,:nv(1,ikpt))
+        if (present(mat_elH)) btestcofk = abCoeffs((atoms%lmaxd+1)**2+1:,:nv(1,ikpt))
+        if (present(mat_elH)) DEALLOCATE(abcoeffs)
         !CALL save_npy("acofKet.npy", acofKet)
 
       !if (idir.eq.1) then
@@ -2414,10 +2500,17 @@ module m_jpSternheimer
     CALL abcof(input, atoms, sym, cell, lapw, ne(ikpq), usdus, noco, nococonv, 1,   &
             & acofBra(:, 0:, :), bcofBra(:, 0:, :), &
             & ccofBra(-atoms%llod:, :, :, :), zMatBra)
+
+            if (present(mat_elH)) ALLOCATE(abCoeffs(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
+            if (present(mat_elH)) CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,1,1)
+           if (present(mat_elH)) CALL hsmt_ab(sym,atoms,noco,nococonv,1,1,1,1,cell,lapw,fjgj,abCoeffs,ab_size,.FALSE.)
+           if (present(mat_elH)) atestcofkq = abCoeffs(:(atoms%lmaxd+1)**2,:nv(1,ikpq))
+           if (present(mat_elH)) btestcofkq = abCoeffs((atoms%lmaxd+1)**2+1:,:nv(1,ikpq))
+           if (present(mat_elH)) DEALLOCATE(abCoeffs)
     !CALL save_npy("acofBra.npy", acofBra)
 !    end if
 
-    if (.false.) then
+    if (present(mat_elH)) then
       ngp=nv(1, ikpt)
       ngpq=nv(1, ikpq)
       lmmax=(atoms%lmaxd+1)**2
@@ -2439,12 +2532,12 @@ module m_jpSternheimer
       end do
 
       if (.false.) then
-      if (idir.eq.1) then
-        if (ikpt.eq.1) then
-          open(109,file='000_zs',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
-          open(110,file='000_tlmplm0',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
-          open(111,file='000_tlmplm1',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
-        end if
+        if (idir.eq.1) then
+          if (ikpt.eq.1) then
+            open(109,file='000_zs',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
+            open(110,file='000_tlmplm0',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
+            open(111,file='000_tlmplm1',form='FORMATTED',action='WRITE',position='append',status='REPLACE')
+          end if
         i=0
         do lp=0,atoms%lmaxd
           do mp=-lp,lp
@@ -2574,8 +2667,8 @@ module m_jpSternheimer
         close(109)
         close(110)
         close(111)
+        end if
       end if
-    end if
     end if
     ! Rearrange acofs, bcofs, ccofs ensuring an consistent handling of LO terms within the loop the structure compared to LAPWs.
     ! The lmp index is comparable to the lm index but for every lm combination it includes also an index that runs over the
@@ -2620,12 +2713,13 @@ module m_jpSternheimer
     allocate( vSumMT(ne(ikpq), nobd(ikpt, 1) ) )
     vSumMT(:, :) = cmplx(0., 0.)
 
-    if (.false.) then
-      inquire(file='000_tlmplm1x',exist=didwe)
+!mat_elH = cmplx(0., 0.)
+    if (present(mat_elH)) then
+      !inquire(file='000_tlmplm1x',exist=didwe)
 
-      if (.not.didwe) then
-        open(111,file='000_tlmplm1x',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
-      end if
+      !if (.not.didwe) then
+        !open(111,file='000_tlmplm1x',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
+      !end if
 
       if (present(mat_elH)) then
       call calcVsumMT( atoms, td4V, td4V2, loosetd1, loosetd2, ikpt, ikpq, ne, nobd, mCoefB, mCoefK, nRadFun, iloTable, nlo_atom, vSumMT, &
@@ -2634,12 +2728,14 @@ module m_jpSternheimer
       call calcVsumMT( atoms, td4V, td4V2, loosetd1, loosetd2, ikpt, ikpq, ne, nobd, mCoefB, mCoefK, nRadFun, iloTable, nlo_atom, vSumMT, &
                        idir, nv(1, ikpt), nv(1, ikpq) , atestcofk, btestcofk, atestcofkq, btestcofkq)
       end if
-      if (.not.didwe) then
-        close(111)
-      end if
+      !if (.not.didwe) then
+        !close(111)
+      !end if
     else
       call calcVsumMT( atoms, td4V, td4V2, loosetd1, loosetd2, ikpt, ikpq, ne, nobd, mCoefB, mCoefK, nRadFun, iloTable, nlo_atom, vSumMT )
     end if
+
+    !IF (PRESENT(mat_elH)) CALL save_npy("H2.npy",mat_elH)
 
     ! Calculate <\tilde{ψ}_{k'n'}^{(0)}|H|ψ_{kn}^{(0)}>_{MT} and <ψ_{k'n'}^{(0)}|H|\tilde{ψ}_{kn}^{(0)}>_{MT} and additionally the
     ! overlaps <\tilde{ψ}_{k'n'}^{(0)}|ψ_{kn}^{(0)}>_{MT} and <ψ_{k'n'}^{(0)}|\tilde{ψ}_{kn}^{(0)}>_{MT}
@@ -2776,13 +2872,15 @@ module m_jpSternheimer
     s0MTKv(:, :) = cmplx(0., 0.)
     ! Calculate <\tilde{ψ}_{k'n'}^{(0)}|H|ψ_{kn}^{(0)}>_{MT} given the tlmplm integrals of the non-spherical potential as well as
     ! the overlap <\tilde{ψ}_{k'n'}^{(0)}|ψ_{kn}^{(0)}>_{MT}
-    if (.false.) then
-      inquire(file='000_tlmplm0',exist=didwe)
+    if (present(mat_elH)) then
+      !inquire(file='000_tlmplm0',exist=didwe)
 
-      if (.not.didwe) then
-        open(111,file='000_tlmplm0',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
-      end if
+      !if (.not.didwe) then
+        !open(111,file='000_tlmplm0',form='FORMATTED',position='append',action='WRITE',status='UNKNOWN')
+      !end if
 
+!mat_elH = cmplx(0., 0.)
+!mat_elS = cmplx(0., 0.)
       if (present(mat_elH)) then
       call calcHS0MT( atoms, usdus, td4HS0, loosetd, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefBv, mCoefK(:, :, iDatom), nRadFun, &
         & iloTable, nlo_atom, s0MTBv, h0MTBv, &
@@ -2794,13 +2892,18 @@ module m_jpSternheimer
         & idir,nv(1,ikpt),nv(1,ikpq),atestcofk,btestcofk,atestcofkq,btestcofkq,datestcofk,dbtestcofk,datestcofkq,dbtestcofkq)
       end if
 
-      if (.not.didwe) then
-        close(111)
-      end if
+      !if (.not.didwe) then
+        !close(111)
+      !end if
     else
       call calcHS0MT( atoms, usdus, td4HS0, loosetd, ikpt, ikpq, iDtype, iDatom, ne, nobd, El, mCoefBv, mCoefK(:, :, iDatom), nRadFun, &
         & iloTable, nlo_atom, s0MTBv, h0MTBv )
     end if
+
+    !IF (ikpt==1) CALL save_npy("old_tH.npy",loosetd)
+
+    !IF (PRESENT(mat_elH)) CALL save_npy("H3.npy",mat_elH)
+    !IF (PRESENT(mat_elH)) CALL save_npy("S3.npy",mat_elS)
 
     ! Calculate <ψ_{k'n'}^{(0)}|H|\tilde{ψ}_{kn}^{(0)}>_{MT} given the tlmplm integrals of the non-spherical potential as well as
     ! the overlap <ψ_{k'n'}^{(0)}|\tilde{ψ}_{kn}^{(0)}>_{MT}
@@ -2816,6 +2919,8 @@ module m_jpSternheimer
     surfIntTeps(:, :) = cmplx(0., 0.)
     surfInt(:, :) = cmplx(0., 0.)
 
+   ! mat_elH = cmplx(0., 0.)
+   ! mat_elS = cmplx(0., 0.)
     if (present(mat_elH)) then
     call calcSintKinEps(atoms, cell, kpts, qpts, iDtype, iDatom, nobd(ikpt,1), ne(ikpq), ikpt, ikpq, iqpt, idir, nv(1, :), GbasVec,&
       & ilst, zBra, zKet, surfIntTeps, surfInt, kpq2kPrVec, mat_elH, mat_elS)
@@ -2824,9 +2929,14 @@ module m_jpSternheimer
       & ilst, zBra, zKet, surfIntTeps, surfInt, kpq2kPrVec)
     end if
 
+    !IF (PRESENT(mat_elH)) CALL save_npy("H4.npy",mat_elH)
+    !IF (PRESENT(mat_elH)) CALL save_npy("S4.npy",mat_elS)
+
     if (present(mat_elH)) then
       hMatBand(:,:) = cmplx(0.0,0.0)
       sMatBand(:,:) = cmplx(0.0,0.0)
+      !IF (ikpt==1) CALL save_npy("old_h_"//int2str(ikpt)//".npy",mat_elH)
+      !IF (ikpt==1) CALL save_npy("old_s_"//int2str(ikpt)//".npy",mat_elS)
       do iGq=1,nv(1,ikpq)
         do iG=1,nv(1,ikpt)
           do nBand = 1, nobd(ikpt, 1)
@@ -2890,6 +3000,15 @@ module m_jpSternheimer
     z1G(:nv(1, ikpq) + atoms%nlotot, :nobd(ikpt,1)) = matmul( zBra(:nv(1, ikpq) + atoms%nlotot, :ne(ikpq)), &
                                                                                                 & z1Band(:ne(ikpq), :nobd(ikpt,1)) )
 
+    !IF (ikpt==1.AND.idir.eq.1) CALL save_npy("old_z1band_"//int2str(ikpt)//".npy",-z1Band)
+    !IF (ikpt==1.AND.idir.eq.1) CALL save_npy("old_hepss1band_"//int2str(ikpt)//".npy",hepss1band)
+    !IF (ikpt==1.AND.idir.eq.1) CALL save_npy("old_recE_"//int2str(ikpt)//".npy",recEdiffME)
+    !IF (ikpt==1.AND.idir.eq.1) CALL save_npy("old_zBra_"//int2str(ikpt)//".npy",zBra)
+    !IF (ikpt==1.AND.idir.eq.1) CALL save_npy("old_zKet_"//int2str(ikpt)//".npy",zKet)
+    !IF (ikpt==1.AND.idir.eq.1) CALL save_npy("old_z1_"//int2str(ikpt)//".npy",z1G)
+
+    !STOP
+
     !if (.false.) then
 !      if (ikpt.eq.1.and.idir.eq.1) then
 !        open(109,file='000_z1',form='FORMATTED',position='append',action='WRITE',status='REPLACE')
@@ -2924,8 +3043,10 @@ module m_jpSternheimer
 
     !if (.FALSE.) then
       deallocate(z1Band)
+      DEALLOCATE(hepss1band)
     !end if
 
+    !STOP
   end subroutine solveSternheimerEq
 
   subroutine genPertPotDensGvecs( stars, cell, input, ngpqdp, ngpqdp2km, qpoint, gpqdp, gpqdp2Ind, gpqdp2iLim )
