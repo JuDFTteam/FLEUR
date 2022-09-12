@@ -83,6 +83,8 @@ CONTAINS
    END SUBROUTINE dfpt_convol
 
    SUBROUTINE dfpt_convol_direct(stars, starsq, pw, pwq, pwwq)
+      ! TODO: Should probably be replaced by a "finer" function with full
+      !       G-grid for ustep(1)
       USE m_types_fftGrid
       USE m_juDFT
       USE m_types_stars

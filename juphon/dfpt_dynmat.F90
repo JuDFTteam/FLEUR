@@ -129,6 +129,8 @@ CONTAINS
 
             ! IR integral:
             pwwq = CMPLX(0.0,0.0)
+            ! TODO: Should probably be replaced by a "finer" function with full
+            !       G-grid for ustep(1)
             CALL dfpt_convol_direct(stars, starsq, stars%ustep, vExt1%pw(:,1), pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
