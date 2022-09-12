@@ -135,8 +135,10 @@ CONTAINS
             ! abCoeffs for \sigma_{\alpha} and \sigma_{g}
             ! Denoted in comments as a
             ! [local spin primed -> '; global spin primed -> pr]
+            CALL timestart("hsmt_ab_1")
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                        & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
+            CALL timestop("hsmt_ab_1")
 
             IF (l_samelapw.AND.(ilSpinPr==ilSpin)) THEN
                !!$acc update device(ab)
@@ -208,9 +210,11 @@ CONTAINS
                         !         = cchi * a^H * H * a
                      END IF
                   ELSE ! Case for additional q on left vector.
+                     CALL timestart("hsmt_ab_2")
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                                 & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
                      !!$acc update device (abCoeffsPr)
+                     CALL timestop("hsmt_ab_2")
 
                      !$acc host_data use_device(abCoeffsPr,data_c,ab1,ab_select)
                      IF (set0 .and. nn == 1) THEN
@@ -230,9 +234,11 @@ CONTAINS
                   !It is not Hermitian, so we NEED to use zgemm CALL
 
                   ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}
+                  CALL timestart("hsmt_ab_3")
                   CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpin, n, na, cell, &
                              & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
                   !!$acc update device(abCoeffsPr)
+                  CALL timestop("hsmt_ab_3")
 
                   !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
                   IF (set0 .and. nn == 1) THEN
@@ -260,8 +266,10 @@ CONTAINS
             ELSE  !here the l_ss off-diagonal part starts
                !Second set of abCoeffs is needed
                ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}^{'}
+               CALL timestart("hsmt_ab_4")
                CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpinPr, n, na, cell, &
                           & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
+               CALL timestop("hsmt_ab_4")
                IF (ilSpinPr==ilSpin) THEN
                   IF (l_samelapw) THEN
                      !!$acc update device (abCoeffs)
