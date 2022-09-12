@@ -200,10 +200,10 @@ CONTAINS
                      td%h_loc(lm+s,lm,n,jsp,jsp)   = td%h_loc(lm+s,lm,n,jsp,jsp)   + 0.5 ! Symmetrized from 0.0
                      td%h_loc(lm+s,lm+s,n,jsp,jsp) = td%h_loc(lm+s,lm+s,n,jsp,jsp) + enpara%el0(l,n,jsp)*ud%ddn(l,n,jsp)
                      ! For DFPT we need a non-symmetrized local Hamiltonian
-                     IF (l_dfpt) THEN
-                        td%h_loc(lm,lm+s,n,jsp,jsp) = td%h_loc(lm,lm+s,n,jsp,jsp) + 0.5 !+1.0
-                        td%h_loc(lm+s,lm,n,jsp,jsp) = td%h_loc(lm+s,lm,n,jsp,jsp) - 0.5 !+0.0
-                     END IF
+                     !IF (l_dfpt) THEN
+                     !   td%h_loc(lm,lm+s,n,jsp,jsp) = td%h_loc(lm,lm+s,n,jsp,jsp) + 0.5 !+1.0
+                     !   td%h_loc(lm+s,lm,n,jsp,jsp) = td%h_loc(lm+s,lm,n,jsp,jsp) - 0.5 !+0.0
+                     !END IF
                   END DO
                END DO
             END IF

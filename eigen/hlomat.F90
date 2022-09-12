@@ -207,8 +207,10 @@ CONTAINS
                                                   & + abclo(3,m,nkvec,lo) * ud%dulos(lo,ntyp,ilSpin)) )
                            END IF
                            IF (l_fullj.AND.ilSpinPr.EQ.ilSpin) THEN
+                              ! TODO: Is it 0.25 or 0.5?
                               hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
-                                                  & + 0.5 * atoms%rmt(ntyp)**2 &
+                                                  !& + 0.5 * atoms%rmt(ntyp)**2 &
+                                                  & + 0.25 * atoms%rmt(ntyp)**2 &
                                                   & * chi * invsfct * &
                                                   & (CONJG(abCoeffsPr(lm,kp))              * ud%us(l,ntyp,ilSpin)   + &
                                                   &  CONJG(abCoeffsPr(ab_size_Pr/2+lm,kp)) * ud%uds(l,ntyp,ilSpin)) * &
@@ -251,13 +253,25 @@ CONTAINS
                      lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
                      IF (MOD(lorow-1,fmpi%n_size) == fmpi%n_rank) THEN
                         lorow=(lorow-1)/fmpi%n_size+1
-                           DO k = 1,lapw%nv(igSpin)
-                              hmat%data_c(lorow,k) = hmat%data_c(lorow,k) &
-                                                  & + chi * invsfct * ( &
-                                                  & CONJG(abcloPr(1,m,nkvec,lo)) * ax(k) + &
-                                                  & CONJG(abcloPr(2,m,nkvec,lo)) * bx(k) + &
-                                                  & CONJG(abcloPr(3,m,nkvec,lo)) * cx(k) )
-                           END DO
+                        DO k = 1,lapw%nv(igSpin)
+                           hmat%data_c(lorow,k) = hmat%data_c(lorow,k) &
+                                              & + chi * invsfct * ( &
+                                              & CONJG(abcloPr(1,m,nkvec,lo)) * ax(k) + &
+                                              & CONJG(abcloPr(2,m,nkvec,lo)) * bx(k) + &
+                                              & CONJG(abcloPr(3,m,nkvec,lo)) * cx(k) )
+                           IF (ilSpinPr.EQ.ilSpin) THEN
+                              ! TODO: Is it 0.25 or 0.5?
+                              hmat%data_c(lorow,k) = hmat%data_c(kp,locol) &
+                                                 & + 0.25 * atoms%rmt(ntyp)**2 &
+                                                 & * chi * invsfct * &
+                                                 & ( CONJG(abcloPr(1,m,nkvec,lo)) * ud%dus(l,ntyp,ilSpin)       &
+                                                 & + CONJG(abcloPr(2,m,nkvec,lo)) * ud%duds(l,ntyp,ilSpin)      &
+                                                 & + CONJG(abcloPr(3,m,nkvec,lo)) * ud%dulos(lo,ntyp,ilSpin)) * &
+                                                 & (abCoeffs(lm,k)                * ud%us(l,ntyp,ilSpin)   + &
+                                                 &  abCoeffs(ab_size/2+lm,k)      * ud%uds(l,ntyp,ilSpin))
+
+                           END IF
+                        END DO
                      END IF
                   END DO
                END IF

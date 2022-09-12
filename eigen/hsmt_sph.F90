@@ -329,10 +329,13 @@ CONTAINS
                END IF ! useapw
 
                IF (l_fullj) THEN
-                  apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%us(l,n,isp)  * usdus%duds(l,n,isp) * gjkiln &
-                                                             & + usdus%us(l,n,isp)  * usdus%dus(l,n,isp)  * fjkiln )
-                  apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%uds(l,n,isp) * usdus%dus(l,n,isp)  * fjkiln &
-                                                             & + usdus%uds(l,n,isp) * usdus%duds(l,n,isp) * gjkiln)
+                  !apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%us(l,n,isp)  * usdus%duds(l,n,isp) * gjkiln &
+                  !                                           & + usdus%us(l,n,isp)  * usdus%dus(l,n,isp)  * fjkiln )
+                  !apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%uds(l,n,isp) * usdus%dus(l,n,isp)  * fjkiln &
+                  !                                           & + usdus%uds(l,n,isp) * usdus%duds(l,n,isp) * gjkiln)
+                  w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
+                  apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
+                  apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
                END IF
 
                ddnln = usdus%ddn(l,n,isp)
@@ -354,7 +357,8 @@ CONTAINS
                fct(:NVEC_REM)  = plegend(:NVEC_REM,l3) * fl2p1(l) * ( fjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr) &
                                                                   & + gjkiln*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr)*ddnln )
 
-               IF (.NOT.l_fullj) THEN
+               !IF (.NOT.l_fullj) THEN
+               IF (.TRUE.) THEN
                   fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * 0.5 * ( gjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr) &
                                                                            & + fjkiln*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr) )
                ELSE
