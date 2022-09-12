@@ -162,6 +162,14 @@ CONTAINS
 
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
+      !IF (fi%juPhon%l_jpCheck) THEN
+    !      ! This function will be used to check the validity of juPhon's
+    !      ! input. I.e. check, whether all prohibited switches are off and,
+    !      ! once there is more expertise considering this topic, check whether
+    !      ! the cutoffs are chosen appropriately.
+    !      CALL dfpt_check(fi_nosym, xcpot_nosym)
+     ! END IF
+
       IF (fi%sym%nop>1) THEN
          WRITE(*,*) "Desymmetrization needed. Going ahead!"
          ! Grid size for desym quality test:
@@ -296,6 +304,13 @@ CONTAINS
          vTot_nosym      = vTot
       END IF
 
+      ! TODO: Maybe rather replace this by switches filtered into dfpt_routines.
+      ! IF (fi%juPhon%l_jpTest) THEN
+           ! This function will be used to run (parts of) the test suite for
+           ! OG juPhon, as provided by CRG.
+           !CALL dfpt_test(fi, sphhar, stars, fmpi, rho, grRho, rho0, grRho0, xcpot, ngdp, recG, grVxcIRKern, ylm, dKernMTGPts, gausWts, hybdat)
+      !END IF
+
 !#ifndef CPP_FFTW
 !        call juDFT_error('juPhon is only usable with fftw support.', calledby='dfpt')
 !#endif
@@ -321,6 +336,7 @@ CONTAINS
 
       ! TODO: This is a test set of qpoints for a fixed fcc system.
       !       We need to read out actual q-points at some point.
+      !       And it needs to be handled properly.
       ALLOCATE(q_list(5),dfpt_eig_id_list(5))
       q_list = [1, 10, 19, 28, 37]! 512 k-points: \Gamma to X
 
@@ -338,7 +354,7 @@ CONTAINS
          CALL grVtot3(iDir)%resetPotDen()
          CALL grVC3(iDir)%copyPotDen(vTot_nosym)
          CALL grVC3(iDir)%resetPotDen()
-         ! Generate the external potential perturbation.
+         ! Generate the external potential gradient.
          CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
@@ -435,13 +451,6 @@ CONTAINS
          CALL timestop("Frequency calculation")
          DEALLOCATE(eigenVals, eigenVecs, eigenFreqs)
       END DO
-        IF (fi%juPhon%l_jpCheck) THEN
-            ! This function will be used to check the validity of juPhon's
-            ! input. I.e. check, whether all prohibited switches are off and,
-            ! once there is more expertise considering this topic, check whether
-            ! the cutoffs are chosen appropriately.
-            CALL dfpt_check(fi_nosym, xcpot_nosym)
-        END IF
 
         ! Construct potential without the l=0 prefactor.
         !CALL vTotclean%copyPotDen(vTot)
@@ -477,10 +486,7 @@ CONTAINS
          !            & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
          !            & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean, oldmode, xcpot, grRho)
         !CALL timestop("juPhon DFPT initialization")
-            ! This function will be used to run (parts of) the test suite for
-            ! OG juPhon, as provided by CRG.
-            CALL dfpt_test(fi, sphhar, stars, fmpi, rho, grRho, rho0, grRho0, xcpot, ngdp, recG, grVxcIRKern, ylm, dKernMTGPts, gausWts, hybdat)
-        END IF
+
         ! < Imagine starting a q-grid-loop here. >
         ! < For now we just select one q-point from the input. >
 
