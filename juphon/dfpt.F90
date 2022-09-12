@@ -9,12 +9,12 @@ MODULE m_dfpt
    USE m_types
    USE m_dfpt_check
    USE m_dfpt_test
-   USE m_dfpt_init
+   !USE m_dfpt_init
    USE m_dfpt_sternheimer
    USE m_dfpt_dynmat
-   USE m_jpSternheimer,     only : solveSternheimerSCC
+   !USE m_jpSternheimer,     only : solveSternheimerSCC
    USE m_jp2ndOrdQuant,     only : CalcIIEnerg2
-   USE m_jpSetupDynMat,     only : SetupDynamicMatrix
+   !USE m_jpSetupDynMat,     only : SetupDynamicMatrix
    USE m_jpProcessDynMat!,   only : DiagonalizeDynMat, CalculateFrequencies
    USE m_juDFT_stop, only : juDFT_error
    USE m_vgen_coulomb
@@ -60,6 +60,7 @@ CONTAINS
       TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
       TYPE(t_tlmplm)                :: tdHS0
       TYPE(t_results)               :: results1
+      TYPE(t_kpts)                  :: qpts_loc
 
       ! Desymmetrized type variables:
       TYPE(t_mpi)        :: fmpi_nosym
@@ -188,20 +189,20 @@ CONTAINS
 
          ! TODO: Correctly account for such a shift in the desymmetrization.
          ! For now: Just build input, that does not necessitate a shift.
-!        inversionOp = -1
-!        symOpLoop: DO iSym = 1, sym%nop
-!           IF (ALL(sym%mrot(:,:,iSym)==invs_matrix)) THEN
-!              inversionOp = iSym
-!              EXIT symOpLoop
-!           END IF
-!        END DO symOpLoop
+         !        inversionOp = -1
+         !        symOpLoop: DO iSym = 1, sym%nop
+         !           IF (ALL(sym%mrot(:,:,iSym)==invs_matrix)) THEN
+         !              inversionOp = iSym
+         !              EXIT symOpLoop
+         !           END IF
+         !        END DO symOpLoop
 
-!        atom_shift = 0.0
-!        IF (inversionOp.GT.0) THEN
-!           IF(ANY(ABS(sym%tau(:,inversionOp)).GT.eps7).and..not.(film.and.ABS(sym%tau(3,inversionOp))>eps7)) THEN
-!              atom_shift = 0.5*sym%tau(:,inversionOp)
-!           END IF
-!        END IF
+         !        atom_shift = 0.0
+         !        IF (inversionOp.GT.0) THEN
+         !           IF(ANY(ABS(sym%tau(:,inversionOp)).GT.eps7).and..not.(film.and.ABS(sym%tau(3,inversionOp))>eps7)) THEN
+         !              atom_shift = 0.5*sym%tau(:,inversionOp)
+         !           END IF
+         !        END IF
 
          ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
          vTot_nosym%pw_w = CMPLX(0.0,0.0)
@@ -337,8 +338,35 @@ CONTAINS
       ! TODO: This is a test set of qpoints for a fixed fcc system.
       !       We need to read out actual q-points at some point.
       !       And it needs to be handled properly.
-      ALLOCATE(q_list(5),dfpt_eig_id_list(5))
-      q_list = [1, 10, 19, 28, 37]! 512 k-points: \Gamma to X
+      !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
+      !q_list = [1, 10, 19, 28, 37]! 512 k-points: \Gamma to X
+
+      qpts_loc = qpts
+
+      qpts_loc%bk(:,1) = [0.0,1.0,1.0]*0.025*0.0
+      qpts_loc%bk(:,2) = [0.0,1.0,1.0]*0.025*1.0
+      qpts_loc%bk(:,3) = [0.0,1.0,1.0]*0.025*2.0
+      qpts_loc%bk(:,4) = [0.0,1.0,1.0]*0.025*3.0
+      qpts_loc%bk(:,5) = [0.0,1.0,1.0]*0.025*4.0
+      qpts_loc%bk(:,6) = [0.0,1.0,1.0]*0.025*5.0
+      qpts_loc%bk(:,7) = [0.0,1.0,1.0]*0.025*6.0
+      qpts_loc%bk(:,8) = [0.0,1.0,1.0]*0.025*7.0
+      qpts_loc%bk(:,9) = [0.0,1.0,1.0]*0.025*8.0
+      qpts_loc%bk(:,10) = [0.0,1.0,1.0]*0.025*9.0
+      qpts_loc%bk(:,11) = [0.0,1.0,1.0]*0.025*10.0
+      qpts_loc%bk(:,12) = [0.0,1.0,1.0]*0.025*11.0
+      qpts_loc%bk(:,13) = [0.0,1.0,1.0]*0.025*12.0
+      qpts_loc%bk(:,14) = [0.0,1.0,1.0]*0.025*13.0
+      qpts_loc%bk(:,15) = [0.0,1.0,1.0]*0.025*14.0
+      qpts_loc%bk(:,16) = [0.0,1.0,1.0]*0.025*15.0
+      qpts_loc%bk(:,17) = [0.0,1.0,1.0]*0.025*16.0
+      qpts_loc%bk(:,18) = [0.0,1.0,1.0]*0.025*17.0
+      qpts_loc%bk(:,19) = [0.0,1.0,1.0]*0.025*18.0
+      qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.025*19.0
+      qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.025*20.0
+
+      ALLOCATE(q_list(21),dfpt_eig_id_list(21))
+      q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21] ! \Gamma to X in 20 steps.
 
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
@@ -392,7 +420,7 @@ CONTAINS
       DO iQ = 1, SIZE(q_list)
          CALL timestart("Eii2")
          CALL old_get_Gvecs(stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, recG, .false.)
-         CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts, stars, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
+         CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
          CALL timestop("Eii2")
          DO iDtype = 1, fi_nosym%atoms%ntype
             DO iDir = 1, 3
@@ -400,7 +428,7 @@ CONTAINS
                WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
                WRITE(*,*) '-------------------------'
                WRITE(*,*) 'Starting calculation for:'
-               WRITE(*,*) ' q         = ', qpts%bk(:,q_list(iQ))
+               WRITE(*,*) ' q         = ', qpts_loc%bk(:,q_list(iQ))
                WRITE(*,*) ' atom      = ', iDtype
                WRITE(*,*) ' direction = ', iDir
 
@@ -418,7 +446,7 @@ CONTAINS
                ! This is where the magic happens. The Sternheimer equation is solved
                ! iteratively, providing the scf part of dfpt calculations.
                CALL timestart("Sternheimer")
-               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts, fmpi_nosym, results_nosym, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
+               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
                                      rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                      dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), &
                                      denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
@@ -427,7 +455,7 @@ CONTAINS
                CALL timestart("Dynmat")
                ! Once the first order quantities are converged, we can construct all
                ! additional necessary quantities and from that the dynamical matrix.
-               CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts, q_list(iQ), iDtype, iDir, &
+               CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
                                     eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
                                     rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:))
@@ -443,7 +471,7 @@ CONTAINS
          DEALLOCATE(recG)
          WRITE(*,*) '-------------------------'
          CALL timestart("Dynmat diagonalization")
-         CALL DiagonalizeDynMat(fi%atoms, qpts, fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ))
+         CALL DiagonalizeDynMat(fi%atoms, qpts_loc, fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ))
          CALL timestop("Dynmat diagonalization")
 
          CALL timestart("Frequency calculation")
