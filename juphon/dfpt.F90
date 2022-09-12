@@ -78,93 +78,94 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE :: exc_pw_nosym(:,:), vCoul_pw_nosym(:,:)
 
-        integer                       :: logUnit = 100
-        integer                       :: ngpqdp
+      !integer                       :: logUnit = 100
+      !integer                       :: ngpqdp
 
-        COMPLEX, ALLOCATABLE          :: loosetd(:, :, :, :)
-        REAL,             ALLOCATABLE :: El(:, :, :, :)
-        INTEGER,          ALLOCATABLE :: recG(:, :), GbasVec(:, :), ilst(:, :, :)
-        INTEGER                       :: ngdp2km
-        INTEGER,          ALLOCATABLE :: gdp2Ind(:, :, :)
-        INTEGER                       :: gdp2iLim(2, 3)
-        INTEGER,          ALLOCATABLE :: nRadFun(:, :), iloTable(:, :, :), ilo2p(:, :)
-        REAL,             ALLOCATABLE :: uuilon(:, :)
-        REAL,             ALLOCATABLE :: duilon(:, :)
-        REAL,             ALLOCATABLE :: ulouilopn(:, :, :)
-        INTEGER,          ALLOCATABLE :: kveclo(:,:)
-        REAL,             ALLOCATABLE :: rbas1(:, :, :, :, :)
-        REAL,             ALLOCATABLE :: rbas2(:, :, :, :, :)
-        REAL,             ALLOCATABLE :: gridf(:, :)
-        COMPLEX,          ALLOCATABLE :: z0(:, :, :, :)
-        complex,           allocatable :: grVxcIRKern(:)
-        real,              allocatable :: dKernMTGPts(:, :, :)
-        real,              allocatable :: gausWts(:)
-        complex,           allocatable :: ylm(:, :)
-        complex,           allocatable :: qpwcG(:, :)
-        complex,           allocatable :: rho1MTCoreDispAt(:, :, :, :)
-        complex,           allocatable :: grVeff0MT_init(:, :, :, :)
-        complex,           allocatable :: grVeff0MT_main(:, :, :, :)
-        complex,           allocatable :: grVext0IR_DM(:, :)
-        complex,           allocatable :: grVext0MT_DM(:, :, :, :)
-        complex,           allocatable :: grVCoul0IR_DM_SF(:, :)
-        complex,           allocatable :: grVCoul0MT_DM_SF(:, :, :, :)
-        complex,           allocatable :: grVeff0IR_DM(:, :)
-        complex,           allocatable :: grVeff0MT_DM(:, :, :, :)
-        complex,           allocatable :: dynMat(:, :)
-        complex,           allocatable :: E2ndOrdII(:, :)
-        complex,           allocatable :: eigenFreqs(:)
-        real,              allocatable :: eigenVals(:)
-        complex,           allocatable :: eigenVecs(:, :)
-        integer,           allocatable :: gpqdp(:, :)
-        INTEGER,           ALLOCATABLE :: nocc(:, :)
-        complex,            allocatable :: rho1IR(:, :, :)
-        complex,            allocatable :: rho1MT(:, :, :, :, :)
-        complex,            allocatable :: rho1MTDelta(:, :, :, :, :)
-        complex,            allocatable :: rho1MTz0(:, :, :, :)
-        complex,            allocatable :: vCoul1IRtempNoVol(:, :)
-        complex,            allocatable :: vCoul1MTtempNoVol(:, :, :, :)
-        complex,            allocatable :: vEff1IR(:, :, :)
-        complex,            allocatable :: vEff1MT(:, :, :, :, :)
-        complex,            allocatable :: vEff1MTnoVol(:, :, :, :, :)
-        complex,            allocatable :: vExt1IR_final(:, :, :)
-        complex,            allocatable :: vExt1MT(:, :, :, :, :)
-        complex,            allocatable :: vExt1MTDelta(:, :, :, :, :)
-        complex,            allocatable :: vExt1MTq0(:, :, :, :, :)
-        complex,            allocatable :: vExt1noqIR_final(:, :, :)
-        complex,            allocatable :: vHar1IR_final(:, :, :)
-        complex,            allocatable :: vHar1MTDelta(:, :, :, :, :)
-        complex,            allocatable :: vHar1MTq0(:, :, :, :, :)
-        complex,            allocatable :: vHar1MT_final(:, :, :, :, :)
-        complex,            allocatable :: vXc1MTDelta(:, :, :, :, :)
-        complex,            allocatable :: vXc1MTq0(:, :, :, :, :)
-        COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :)
-        integer,      allocatable :: mapKpq2K(:, :)
-        integer,      allocatable :: kpq2kPrVec(:, :, :)
+      !COMPLEX, ALLOCATABLE          :: loosetd(:, :, :, :)
+      !REAL,             ALLOCATABLE :: El(:, :, :, :)
+      INTEGER,          ALLOCATABLE :: recG(:, :)!, GbasVec(:, :), ilst(:, :, :)
+      INTEGER                       :: ngdp2km
+      !INTEGER,          ALLOCATABLE :: gdp2Ind(:, :, :)
+      !INTEGER                       :: gdp2iLim(2, 3)
+      !INTEGER,          ALLOCATABLE :: nRadFun(:, :), iloTable(:, :, :), ilo2p(:, :)
+      !REAL,             ALLOCATABLE :: uuilon(:, :)
+      !REAL,             ALLOCATABLE :: duilon(:, :)
+      !REAL,             ALLOCATABLE :: ulouilopn(:, :, :)
+      !INTEGER,          ALLOCATABLE :: kveclo(:,:)
+      !REAL,             ALLOCATABLE :: rbas1(:, :, :, :, :)
+      !REAL,             ALLOCATABLE :: rbas2(:, :, :, :, :)
+      !REAL,             ALLOCATABLE :: gridf(:, :)
+      !COMPLEX,          ALLOCATABLE :: z0(:, :, :, :)
+      !complex,           allocatable :: grVxcIRKern(:)
+      !real,              allocatable :: dKernMTGPts(:, :, :)
+      !real,              allocatable :: gausWts(:)
+      !complex,           allocatable :: ylm(:, :)
+      !complex,           allocatable :: qpwcG(:, :)
+      !complex,           allocatable :: rho1MTCoreDispAt(:, :, :, :)
+      !complex,           allocatable :: grVeff0MT_init(:, :, :, :)
+      !complex,           allocatable :: grVeff0MT_main(:, :, :, :)
+      !complex,           allocatable :: grVext0IR_DM(:, :)
+      !complex,           allocatable :: grVext0MT_DM(:, :, :, :)
+      !complex,           allocatable :: grVCoul0IR_DM_SF(:, :)
+      !complex,           allocatable :: grVCoul0MT_DM_SF(:, :, :, :)
+      !complex,           allocatable :: grVeff0IR_DM(:, :)
+      !complex,           allocatable :: grVeff0MT_DM(:, :, :, :)
+      !complex,           allocatable :: dynMat(:, :)
+      complex,           allocatable :: E2ndOrdII(:, :)
+      complex,           allocatable :: eigenFreqs(:)
+      real,              allocatable :: eigenVals(:)
+      complex,           allocatable :: eigenVecs(:, :)
+      !integer,           allocatable :: gpqdp(:, :)
+      !INTEGER,           ALLOCATABLE :: nocc(:, :)
+      !complex,            allocatable :: rho1IR(:, :, :)
+      !complex,            allocatable :: rho1MT(:, :, :, :, :)
+      !complex,            allocatable :: rho1MTDelta(:, :, :, :, :)
+      !complex,            allocatable :: rho1MTz0(:, :, :, :)
+      !complex,            allocatable :: vCoul1IRtempNoVol(:, :)
+      !complex,            allocatable :: vCoul1MTtempNoVol(:, :, :, :)
+      !complex,            allocatable :: vEff1IR(:, :, :)
+      !complex,            allocatable :: vEff1MT(:, :, :, :, :)
+      !complex,            allocatable :: vEff1MTnoVol(:, :, :, :, :)
+      !complex,            allocatable :: vExt1IR_final(:, :, :)
+      !complex,            allocatable :: vExt1MT(:, :, :, :, :)
+      !complex,            allocatable :: vExt1MTDelta(:, :, :, :, :)
+      !complex,            allocatable :: vExt1MTq0(:, :, :, :, :)
+      !complex,            allocatable :: vExt1noqIR_final(:, :, :)
+      !complex,            allocatable :: vHar1IR_final(:, :, :)
+      !complex,            allocatable :: vHar1MTDelta(:, :, :, :, :)
+      !complex,            allocatable :: vHar1MTq0(:, :, :, :, :)
+      !complex,            allocatable :: vHar1MT_final(:, :, :, :, :)
+      !complex,            allocatable :: vXc1MTDelta(:, :, :, :, :)
+      !complex,            allocatable :: vXc1MTq0(:, :, :, :, :)
+      COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :)
+      !integer,      allocatable :: mapKpq2K(:, :)
+      !integer,      allocatable :: kpq2kPrVec(:, :, :)
 
-        COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
+      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
 
-        INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype
-        INTEGER :: iStar, xInd, yInd, zInd
-        LOGICAL :: l_real
+      INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype
+      INTEGER :: iStar, xInd, yInd, zInd
+      LOGICAL :: l_real
 
-        CHARACTER(len=20)  :: dfpt_tag
-        CHARACTER(len=100) :: inp_pref
+      CHARACTER(len=20)  :: dfpt_tag
+      CHARACTER(len=100) :: inp_pref
 
-        INTEGER, ALLOCATABLE :: q_list(:), dfpt_eig_id_list(:)
+      INTEGER, ALLOCATABLE :: q_list(:), dfpt_eig_id_list(:)
 
-        ! Desym-tests:
-        INTEGER :: ix, iy, iz, grid(3), iv_old, iflag_old, iv_new, iflag_new
-        INTEGER :: iType_old, iAtom_old, iType_new, iAtom_new, inversionOp
-        REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new, atom_shift(3)
+      ! Desym-tests:
+      INTEGER :: ix, iy, iz, grid(3), iv_old, iflag_old, iv_new, iflag_new
+      INTEGER :: iType_old, iAtom_old, iType_new, iAtom_new, inversionOp
+      REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new, atom_shift(3)
 
-        INTEGER, PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
-        REAL,    PARAMETER :: eps7 = 1.0e-7
+      !INTEGER, PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
+      !REAL,    PARAMETER :: eps7 = 1.0e-7
 
-        l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
+      l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
-        IF (fi%sym%nop>1) THEN
-        WRITE(*,*) "Gonna desym now!"
-        grid = 21
+      IF (fi%sym%nop>1) THEN
+         WRITE(*,*) "Desymmetrization needed. Going ahead!"
+         ! Grid size for desym quality test:
+         grid = 21
 
         inp_pref = ADJUSTL("desym_")
         fmpi_nosym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
