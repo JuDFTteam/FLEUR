@@ -82,7 +82,7 @@ CONTAINS
       ALLOCATE(abCoeffs(2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)),&
              & ab1(size_ab, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
       ! TODO: Check, whether this is necessary or shifting to
-      !       max(MAXVAL(lapwq%nv),MAXVAL(lapw%nv)) in abCoeffs isalso enough.
+      !       max(MAXVAL(lapwq%nv),MAXVAL(lapw%nv)) in abCoeffs is also enough.
       ALLOCATE(abCoeffsPr(2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2, MAXVAL(lapwPr%nv)))
 
       IF (igSpinPr.NE.igSpin) THEN
