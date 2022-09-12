@@ -30,7 +30,7 @@ CONTAINS
                 RETURN
              ENDIF
 
-             IF (fmpi%irank==0) THEN
+             IF (fmpi%irank==0.AND..NOT.force_sym) THEN
                 PRINT *,"Complex matrix made real"
                 WRITE(oUnit,*) "Complex matrix made real"
              END IF
