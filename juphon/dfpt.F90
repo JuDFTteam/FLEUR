@@ -378,6 +378,10 @@ CONTAINS
 
       ALLOCATE(dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
       DO iQ = 1, 1!SIZE(q_list)
+         CALL timestart("Eii2")
+         CALL old_get_Gvecs(stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, recG, .false.)
+         CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts, stars, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
+         CALL timestop("Eii2")
          DO iDtype = 1, fi_nosym%atoms%ntype
             DO iDir = 1,1!1, 3
                dfpt_tag = ''
@@ -398,22 +402,42 @@ CONTAINS
                   CALL vC1Im%reset_dfpt()
                END IF
                ! TODO: Broadcast this.
+               WRITE(*,*) '-------------------------'
                ! This is where the magic happens. The Sternheimer equation is solved
                ! iteratively, providing the scf part of dfpt calculations.
+               CALL timestart("Sternheimer")
                CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts, fmpi_nosym, results_nosym, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
                                      rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                      dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), &
                                      denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
+               CALL timestop("Sternheimer")
+               WRITE(*,*) '-------------------------'
+               CALL timestart("Dynmat")
                ! Once the first order quantities are converged, we can construct all
                ! additional necessary quantities and from that the dynamical matrix.
                CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts, q_list(iQ), iDtype, iDir, &
                                     eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
                                     rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:))
+               CALL timestop("Dynmat")
+               dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + E2ndOrdII(3 *(iDtype-1)+iDir,:)
+               write(9989,*) E2ndOrdII(3 *(iDtype-1)+iDir,1)
+               write(9989,*) E2ndOrdII(3 *(iDtype-1)+iDir,2)
+               write(9989,*) E2ndOrdII(3 *(iDtype-1)+iDir,3)
                write(*,*) "dynmat row for ", dfpt_tag
                write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
             END DO
          END DO
+         DEALLOCATE(recG)
+         WRITE(*,*) '-------------------------'
+         CALL timestart("Dynmat diagonalization")
+         CALL DiagonalizeDynMat(fi%atoms, qpts, fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ))
+         CALL timestop("Dynmat diagonalization")
+
+         CALL timestart("Frequency calculation")
+         CALL CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs)
+         CALL timestop("Frequency calculation")
+         DEALLOCATE(eigenVals, eigenVecs, eigenFreqs)
       END DO
         IF (fi%juPhon%l_jpCheck) THEN
             ! This function will be used to check the validity of juPhon's
@@ -688,4 +712,57 @@ CONTAINS
       enddo
       deallocate ( prim,expo )
     end function kgv
+
+    subroutine old_get_Gvecs(starsT, cellT, inputT, ngdp, ngdp2km, gdp, testMode )
+
+      use m_juDFT
+
+      type(t_stars),          intent(in)   :: starsT
+      type(t_cell),           intent(in)   :: cellT
+      type(t_input),          intent(in)   :: inputT
+
+      integer,                intent(out)  :: ngdp
+      integer,                intent(out)  :: ngdp2km
+      logical,                intent(in)   :: testMode
+
+      integer,  allocatable,  intent(out)  :: gdp(:, :)
+
+      integer                              :: Gx, Gy, Gz, iG
+      integer                              :: ngrest
+
+      integer                              :: gdptemp2kmax(3, (2 * starsT%mx1 + 1) * (2 * starsT%mx2 + 1) * (2 * starsT%mx3 +  1))
+      integer                              :: gdptemprest(3, (2 * starsT%mx1 + 1) * (2 * starsT%mx2 + 1) * (2 * starsT%mx3 +  1))
+      integer                              :: Gint(3)
+      real                                 :: Gext(3)
+
+      ngdp = 0
+      gdptemp2kmax = 0
+      gdptemprest = 0
+      ngdp2km = 0
+      ngrest = 0
+
+      do Gx = -starsT%mx1, starsT%mx1
+        do Gy = -starsT%mx2, starsT%mx2
+          do Gz = -starsT%mx3, starsT%mx3
+            Gint = [Gx, Gy, Gz]
+            Gext =  matmul(cellT%bmat, Gint)
+            if (norm2(Gext) <= inputT%gmax) then
+              ngdp = ngdp + 1
+              ! Sort G-vectors
+              if ( norm2(Gext) <= 2 * inputT%rkmax ) then
+                ngdp2km = ngdp2km + 1
+                gdptemp2kmax(:, ngdp2km) = Gint(:)
+              else
+                ngrest = ngrest + 1
+                gdptemprest(:, ngrest) = Gint(:)
+              end if
+            endif
+          enddo !Gz
+        enddo !Gy
+      enddo !Gx
+      allocate(gdp(3, ngdp))
+      gdp(:, :ngdp2km) = gdptemp2kmax(:, :ngdp2km)
+      gdp(:, ngdp2km + 1 : ngdp) = gdptemprest(:, :ngrest)
+
+    end subroutine old_get_Gvecs
 END MODULE m_dfpt
