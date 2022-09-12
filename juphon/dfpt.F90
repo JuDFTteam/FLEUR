@@ -448,23 +448,23 @@ CONTAINS
         END IF
 
         ! Construct potential without the l=0 prefactor.
-        CALL vTotclean%copyPotDen(vTot)
-        CALL rhoclean%copyPotDen(rho)
+        !CALL vTotclean%copyPotDen(vTot)
+        !CALL rhoclean%copyPotDen(rho)
 
-        DO iSpin = 1, fi%input%jspins
-            DO iType = 1, fi%atoms%ntype
-                DO ilh = 0, sphhar%nlhd
-                    DO iR = 1, fi%atoms%jri(iType)
-                        IF (ilh.EQ.0) THEN
-                            vTotclean%mt(iR, 0, iType, iSpin) &
-                        & = vTotclean%mt(iR, 0, iType, iSpin) * sqrt(fpi_const) / fi%atoms%rmsh(iR, iType)
-                        END IF
-                        rhoclean%mt(iR, ilh, iType, iSpin) &
-                    & = rhoclean%mt(iR, ilh, iType, iSpin) / fi%atoms%rmsh(iR, iType) / fi%atoms%rmsh(iR, iType)
-                    END DO
-                END DO
-            END DO
-        END DO
+        !DO iSpin = 1, fi%input%jspins
+         !   DO iType = 1, fi%atoms%ntype
+         !       DO ilh = 0, sphhar%nlhd
+         !           DO iR = 1, fi%atoms%jri(iType)
+         !               IF (ilh.EQ.0) THEN
+         !                   vTotclean%mt(iR, 0, iType, iSpin) &
+         !               & = vTotclean%mt(iR, 0, iType, iSpin) * sqrt(fpi_const) / fi%atoms%rmsh(iR, iType)
+         !               END IF
+         !               rhoclean%mt(iR, ilh, iType, iSpin) &
+         !           & = rhoclean%mt(iR, ilh, iType, iSpin) / fi%atoms%rmsh(iR, iType) / fi%atoms%rmsh(iR, iType)
+         !           END DO
+         !       END DO
+         !   END DO
+        !END DO
 
         ! This routine will initialize everything for juPhon that isn't already
         ! provided by the FLEUR code/must be provieded in a modified way.
@@ -473,16 +473,14 @@ CONTAINS
         ! constructed elsewhere, within the q-loop.
         ! TODO: I ignored the actual significance of clnu_atom etc. They are not type-dependent, but actually
         ! refer to each atom respectively. So this will explode for iatom > 1. This is easily fixed.
-        CALL timestart("juPhon DFPT initialization")
-        CALL dfpt_init(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, fi%kpts, &
-                     & fmpi, results, enpara, rho, vTot, eig_id, nvfull, usdus, rho0, grRho0, vTot0, grVTot0, &
-                     & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
-                     & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
-                     & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-                     & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean, oldmode, xcpot, grRho)
-        CALL timestop("juPhon DFPT initialization")
-
-        IF (fi%juPhon%l_jpTest) THEN
+       ! CALL timestart("juPhon DFPT initialization")
+        !CALL dfpt_init(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, fi%kpts, &
+         !            & fmpi, results, enpara, rho, vTot, eig_id, nvfull, usdus, rho0, grRho0, vTot0, grVTot0, &
+         !            & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
+         !            & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
+         !            & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
+         !            & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean, oldmode, xcpot, grRho)
+        !CALL timestop("juPhon DFPT initialization")
             ! This function will be used to run (parts of) the test suite for
             ! OG juPhon, as provided by CRG.
             CALL dfpt_test(fi, sphhar, stars, fmpi, rho, grRho, rho0, grRho0, xcpot, ngdp, recG, grVxcIRKern, ylm, dKernMTGPts, gausWts, hybdat)
@@ -490,39 +488,41 @@ CONTAINS
         ! < Imagine starting a q-grid-loop here. >
         ! < For now we just select one q-point from the input. >
 
-        call createkqMapArrays( fi%kpts, qpts, 0, fi%kpts%nkpt3, [0], mapKpq2K, kpq2kPrVec )
+        !STOP
 
-        CALL timestart("juPhon DFPT scf loop")
-        call solveSternheimerSCC( fmpi,  fi%atoms, fi%sym, stars, sphhar, fi%cell, enpara, usdus, fi%input, fi%kpts, qpts, results, usdus,      &
-          & logUnit, ngdp, rbas1, rbas2, kveclo, uuilon, duilon, ulouilopn, &
-          & recG, mapKpq2K, results%neig(:, 1), results%eig, GbasVec, ilst, z0, nvfull, El, nradFun, iloTable, nocc, ilo2p, gdp2Ind,     &
-          & gdp2iLim, kpq2kPrVec, qpwcG, fi%juPhon%singleQpt, tdHS0, loosetd, ylm, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), grVeff0MT_init, grVeff0MT_main, dKernMTGPts,       &! main --> DM for Alex
-          & grVxcIRKern, rho1MTCoreDispAt, gausWts, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, fi%juPhon%oneSternhCycle, ngpqdp, gpqdp,&
-          & vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, &
-          & vXc1MTq0, rho0%pw(:, :, 1, 1), rho0%mt(:, :, :, :, 1, 1), vTot0%pw(:, :, 1, 1), fi%juPhon%noPtsCon, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
-        CALL timestop("juPhon DFPT scf loop")
+        !call createkqMapArrays( fi%kpts, qpts, 0, fi%kpts%nkpt3, [0], mapKpq2K, kpq2kPrVec )
 
-        CALL timestart("juPhon DFPT Eii2")
-        CALL CalcIIEnerg2(fi%atoms, fi%cell, qpts, stars, fi%input, fi%juPhon%singleQpt, ngdp, recG, E2ndOrdII)
-        CALL timestop("juPhon DFPT Eii2")
+        !CALL timestart("juPhon DFPT scf loop")
+        !call solveSternheimerSCC( fmpi,  fi%atoms, fi%sym, stars, sphhar, fi%cell, enpara, usdus, fi%input, fi%kpts, qpts, results, usdus,      &
+         ! & logUnit, ngdp, rbas1, rbas2, kveclo, uuilon, duilon, ulouilopn, &
+         ! & recG, mapKpq2K, results%neig(:, 1), results%eig, GbasVec, ilst, z0, nvfull, El, nradFun, iloTable, nocc, ilo2p, gdp2Ind,     &
+         ! & gdp2iLim, kpq2kPrVec, qpwcG, q_list(2), tdHS0, loosetd, ylm, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), grVeff0MT_init, grVeff0MT_main, dKernMTGPts,       &
+         ! & grVxcIRKern, rho1MTCoreDispAt, gausWts, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, fi%juPhon%oneSternhCycle, ngpqdp, gpqdp,&
+         ! & vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, &
+         ! & vXc1MTq0, rho0%pw(:, :, 1, 1), rho0%mt(:, :, :, :, 1, 1), vTot0%pw(:, :, 1, 1), fi%juPhon%noPtsCon, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
+        !CALL timestop("juPhon DFPT scf loop")
 
-        CALL timestart("juPhon DFPT dynmat setup")
-        CALL SetupDynamicMatrix( fmpi, fi%noco, nococonv,  fi%atoms, fi%input, fi%sym, fi%cell, sphhar, stars, fi%kpts, qpts, usdus, results, vTotclean, fi%juPhon%singleQpt, ngdp, ngpqdp, recG, sphhar%mlh, sphhar%nmem,&
-            & sphhar%clnu, rho%pw, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vTot%pw_w, vTotclean%mt(:, 0:, :, 1),&
-            & rhoclean%mt, E2ndOrdII, El, results%eig, rbas1, rbas2, iloTable, nvfull, nocc, ilst, GbasVec, z0, kveclo, nRadFun, mapKpq2K, kpq2kPrVec,       &
-            & gpqdp, sphhar%memd, logUnit, vxc%pw, exc%pw(:, 1), vxc%mt, exc%mt(:, 0:, :, 1), vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), &
-            & grVext0IR_DM, grVext0MT_DM, grVeff0IR_DM, grVeff0MT_DM, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, &
-            & vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, &
-            & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol)
-        CALL timestop("juPhon DFPT dynmat setup")
+        !CALL timestart("juPhon DFPT Eii2")
+        !CALL CalcIIEnerg2(fi%atoms, fi%cell, qpts, stars, fi%input, q_list(2), ngdp, recG, E2ndOrdII)
+        !CALL timestop("juPhon DFPT Eii2")
 
-        CALL timestart("juPhon DFPT dynmat diagonalization")
-        CALL DiagonalizeDynMat(fi%atoms, qpts, fi%juPhon%calcEigenVec, dynMat, eigenVals, eigenVecs, fi%juPhon%singleQpt)
-        CALL timestop("juPhon DFPT dynmat diagonalization")
+        !CALL timestart("juPhon DFPT dynmat setup")
+        !CALL SetupDynamicMatrix( fmpi, fi%noco, nococonv,  fi%atoms, fi%input, fi%sym, fi%cell, sphhar, stars, fi%kpts, qpts, usdus, results, vTotclean, q_list(2), ngdp, ngpqdp, recG, sphhar%mlh, sphhar%nmem,&
+         !   & sphhar%clnu, rho%pw, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vTot%pw_w, vTotclean%mt(:, 0:, :, 1),&
+         !   & rhoclean%mt, E2ndOrdII, El, results%eig, rbas1, rbas2, iloTable, nvfull, nocc, ilst, GbasVec, z0, kveclo, nRadFun, mapKpq2K, kpq2kPrVec,       &
+         !   & gpqdp, sphhar%memd, logUnit, vxc%pw, exc%pw(:, 1), vxc%mt, exc%mt(:, 0:, :, 1), vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), &
+         !   & grVext0IR_DM, grVext0MT_DM, grVeff0IR_DM, grVeff0MT_DM, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, &
+         !   & vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, &
+         !   & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol)
+        !CALL timestop("juPhon DFPT dynmat setup")
 
-        CALL timestart("juPhon DFPT frequency calculation")
-        CALL CalculateFrequencies(fi%atoms, fi%juPhon%singleQpt, eigenVals, eigenFreqs)
-        CALL timestop("juPhon DFPT frequency calculation")
+        !CALL timestart("juPhon DFPT dynmat diagonalization")
+        !CALL DiagonalizeDynMat(fi%atoms, qpts, fi%juPhon%calcEigenVec, dynMat, eigenVals, eigenVecs, q_list(2))
+        !CALL timestop("juPhon DFPT dynmat diagonalization")
+
+        !CALL timestart("juPhon DFPT frequency calculation")
+        !CALL CalculateFrequencies(fi%atoms, q_list(2), eigenVals, eigenFreqs)
+        !CALL timestop("juPhon DFPT frequency calculation")
 
         ! < Imagine ending a q-grid-loop here. >
 
