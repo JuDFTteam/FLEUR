@@ -290,12 +290,6 @@ CONTAINS
            vTot_nosym      = vTot
         END IF
 
-        !CALL save_npy("rho_"//int2str(fi%sym%nop)//"_pw.npy",rho%pw)
-        !CALL save_npy("rho_"//int2str(fi%sym%nop)//"_mt.npy",rho%mt)
-        !CALL save_npy("vTot_"//int2str(fi%sym%nop)//"_pw.npy",vTot%pw)
-        !CALL save_npy("vTot_"//int2str(fi%sym%nop)//"_mt.npy",vTot%mt)
-        !STOP
-
 #ifndef CPP_FFTW
         call juDFT_error('juPhon is only usable with fftw support.', calledby='dfpt')
 #endif
