@@ -54,6 +54,13 @@ authors:
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0001-7939-226X'
+  - given-names: Christian-Roman
+    family-names: Gerhorst
+    email: c.gerhorst@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0001-8984-4258'
 identifiers:
   - type: doi
     value: someDOI needed!
