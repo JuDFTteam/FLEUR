@@ -15,7 +15,7 @@ CONTAINS
 
    SUBROUTINE dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
                               eig_id, dfpt_eig_id, enpara, mpdata, results, results1, l_real, &
-                              rho, vTot, exc, vCoul, grRho3, grVext3, grVC3, grVtot3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row)
+                              rho, vTot, grRho3, grVext3, grVC3, grVtot3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row)
       USE m_step_function
       USE m_convol
       USE m_dfpt_vgen
@@ -42,7 +42,6 @@ CONTAINS
 
       INTEGER, INTENT(IN) :: iQ, iDtype_row, iDir_row, eig_id, dfpt_eig_id
 
-      COMPLEX, INTENT(IN)    :: exc(:,:), vCoul(:,:)
       COMPLEX, INTENT(INOUT) :: dyn_row(:)
 
       TYPE(t_fftgrid) :: fftgrid_dummy
