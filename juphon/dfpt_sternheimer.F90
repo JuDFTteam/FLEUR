@@ -87,6 +87,7 @@ CONTAINS
       IF (fmpi%irank == 0) THEN
          strho = .NOT.l_exist
          onedone = .NOT.strho
+         final_SH_it = .FALSE.
       END IF
 
 #ifdef CPP_MPI
@@ -255,12 +256,10 @@ CONTAINS
 #endif
 
          l_cont = l_cont .AND. (iter < fi%input%itmax)
-         ! MetaGGAs need a at least 2 iterations
          l_cont = l_cont .AND. ((fi%input%mindistance <= results1%last_distance))
-         !CALL check_time_for_next_iteration(iter, l_cont)
 
          final_SH_it = fi%input%mindistance > results1%last_distance
-         l_cont = l_cont .OR. final_SH_it
+         l_cont = l_cont .OR. final_SH_it ! DO one more iteration so V1, z1 and rho1 match
 
       END DO scfloop ! DO WHILE (l_cont)
 

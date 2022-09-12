@@ -96,6 +96,7 @@ CONTAINS
             iTkin = 0
 
             vpw_temp = CMPLX(0.0,0.0)
+            vpwq_temp = CMPLX(0.0,0.0)
 
             l_smat = iSpinPr.EQ.iSpin
             IF (killcont(2)==0) l_smat = .FALSE.

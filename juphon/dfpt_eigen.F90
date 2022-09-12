@@ -113,36 +113,29 @@ CONTAINS
       DO nu = 1, noccbd
          IF (l_real) THEN ! l_real for zMatk
             tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
-            IF (nk==1) CALL save_npy("new_zKet_"//int2str(nk)//".npy",zMatk%data_r)
          ELSE
             tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
-            IF (nk==1) CALL save_npy("new_zKet_"//int2str(nk)//".npy",zMatk%data_c)
          END IF
 
          IF (zMatq%l_real) THEN ! l_real for zMatq
             tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
-            IF (nk==1) CALL save_npy("new_zBra_"//int2str(nk)//".npy",zMatq%data_r)
          ELSE
             tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
-            IF (nk==1) CALL save_npy("new_zBra_"//int2str(nk)//".npy",zMatq%data_c)
          END IF
-         IF (nk==1) CALL save_npy("new_hepss1band_"//int2str(nk)//"_"//int2str(nu)//".npy", tempMat1)
 
          tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
-         IF (nk==1) CALL save_npy("new_z1band_"//int2str(nk)//"_"//int2str(nu)//".npy",tempMat2)
 
-         ! TODO: Reactivate this!
-         !IF (norm2(bqpt).LT.1e-8) THEN
-         !   IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
-         !   IF (l_real) THEN
-         !      eigs1 = DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
-         !   ELSE
-         !      eigs1 = DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
-         !   END IF
-         !ELSE
+         IF (norm2(bqpt).LT.1e-8) THEN
+            IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
+            IF (l_real) THEN
+               eigs1 = DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
+            ELSE
+               eigs1 = DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
+            END IF
+         ELSE
             eigs1 = 0
-         !END IF
-         !IF (nk==1) CALL save_npy("new_eig1_"//int2str(nk)//".npy",eigs1)
+         END IF
+
          IF (zMatq%l_real) THEN
             zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
          ELSE

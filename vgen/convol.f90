@@ -82,7 +82,7 @@ CONTAINS
 
    END SUBROUTINE dfpt_convol
 
-   SUBROUTINE dfpt_convol_direct(stars, starsq, pw, pwq, pww)
+   SUBROUTINE dfpt_convol_direct(stars, starsq, pw, pwq, pwwq)
       USE m_types_fftGrid
       USE m_juDFT
       USE m_types_stars
@@ -92,7 +92,7 @@ CONTAINS
       TYPE(t_stars), INTENT(IN) :: stars, starsq
 
       COMPLEX, INTENT(IN)    :: pw(:), pwq(:)
-      COMPLEX, INTENT(INOUT) :: pww(:)
+      COMPLEX, INTENT(INOUT) :: pwwq(:)
 
       TYPE(t_fftgrid) :: fftgrid, fftgridq
 
@@ -109,8 +109,8 @@ CONTAINS
       fftgrid%grid = fftgrid%grid*fftgridq%grid
 
       CALL fftgrid%perform_fft(forward=.true.)
-      CALL fftgrid%takeFieldFromGrid(stars,pww)
-      pww = pww*stars%nstr
+      CALL fftgrid%takeFieldFromGrid(starsq,pwwq)
+      pwwq = pwwq*starsq%nstr
 
    END SUBROUTINE dfpt_convol_direct
 
