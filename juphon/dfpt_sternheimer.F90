@@ -125,7 +125,7 @@ CONTAINS
          IF (onedone) iter = iter + 1
          l_lastIter = l_lastIter.OR.(iter.EQ.fi%input%itmax)
 
-         CALL timestart("Iteration")
+         CALL timestart("Sternheimer Iteration")
          IF (fmpi%irank==0.AND.onedone) THEN
             WRITE (oUnit, FMT=8100) iter
 8100        FORMAT(/, 10x, '   iter=  ', i5)
@@ -143,19 +143,16 @@ CONTAINS
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                            starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
-                           ! TODO: Set this back to [1,1]!
          ELSE
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
-                           ! TODO: Set this back to [1,1]!
          END IF
 
          IF (final_SH_it) THEN
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0])
-            write(*,*) "VC1 filled"
          END IF
 
          CALL timestop("Generation of potential perturbation")
@@ -170,9 +167,6 @@ CONTAINS
             vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
          END IF
 
-         IF (.NOT.strho) THEN
-            killcont = [1,1,1,1,1,1]
-         END IF
          CALL timestart("H1 generation (total)")
 
          CALL timestart("eigen")
@@ -193,10 +187,12 @@ CONTAINS
          CALL timestart("Fermi energy and occupation derivative")
          CALL dfpt_fermie(eig_id,dfpt_eig_id,fmpi,fi%kpts,fi%input,fi%noco,results,results1)
          CALL timestop("Fermi energy and occupation derivative")
+
 #ifdef CPP_MPI
          CALL MPI_BCAST(results1%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
          CALL MPI_BCAST(results1%w_iks, SIZE(results1%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
+
          CALL timestart("generation of new charge density (total)")
          CALL denOut1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
          CALL denOut1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
@@ -213,6 +209,7 @@ CONTAINS
             denIn1Im = denOut1Im
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             write(*,*) "Starting perturbation generated."
+            CALL timestop("Sternheimer Iteration")
             CYCLE scfloop
          END IF
 
@@ -222,6 +219,7 @@ CONTAINS
             denIn1Im = denOut1Im
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             write(*,*) "1st 'real' density perturbation generated."
+            CALL timestop("Sternheimer Iteration")
             CYCLE scfloop
          END IF
 
@@ -230,10 +228,12 @@ CONTAINS
             denIn1Im = denOut1Im
             l_cont = .FALSE.
             write(*,*) "Final Sternheimer iteration finished."
+            CALL timestop("Sternheimer Iteration")
             CYCLE scfloop
          END IF
 
          field2 = fi%field
+
          ! First mixing in the 2nd "real" iteration.
          denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
          ! mix input and output densities
@@ -243,12 +243,13 @@ CONTAINS
                          denIn1Im, denOut1Im, dfpt_tag)
 
          denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
 8130        FORMAT(/, 5x, '******* it=', i3, '  is completed********', /,/)
             WRITE (*, *) "Iteration:", iter, " Distance:", results1%last_distance
          END IF ! fmpi%irank==0
-         CALL timestop("Iteration")
+         CALL timestop("Sternheimer Iteration")
 
 #ifdef CPP_MPI
          CALL MPI_BCAST(results1%last_distance, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
