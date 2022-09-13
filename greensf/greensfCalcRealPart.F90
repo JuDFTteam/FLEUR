@@ -131,14 +131,14 @@ MODULE m_greensfCalcRealPart
                !Overwrite cutoff with reference from other elements
                greensfImagPart%kkintgr_cutoff(i_gf,:,:) = greensfImagPart%kkintgr_cutoff(refCutoff,:,:)
                
-               ! refElem = gfinp%getUniqueElement(refCutoff,distinct_kresolved_int=.TRUE.)
-               ! if (l_sphavg .and. .not. l_kresolved_int) then
-               !    greensfImagPart%scalingFactorSphavg(i_elem,:) = greensfImagPart%scalingFactorSphavg(refElem,:)
-               ! else if(.not.l_sphavg) then
-               !    greensfImagPart%scalingFactorRadial(i_elem,:) = greensfImagPart%scalingFactorRadial(refElem,:)
-               ! else
-               !    greensfImagPart%scalingFactorSphavgKres(i_elem,:) = greensfImagPart%scalingFactorSphavgKres(refElem,:)
-               ! endif
+               refElem = gfinp%getUniqueElement(refCutoff,distinct_kresolved_int=.TRUE.)
+               if (l_sphavg .and. .not. l_kresolved_int) then
+                  greensfImagPart%scalingFactorSphavg(i_elem,:) = greensfImagPart%scalingFactorSphavg(refElem,:)
+               else if(.not.l_sphavg) then
+                  greensfImagPart%scalingFactorRadial(i_elem,:) = greensfImagPart%scalingFactorRadial(refElem,:)
+               else
+                  greensfImagPart%scalingFactorSphavgKres(i_elem,:) = greensfImagPart%scalingFactorSphavgKres(refElem,:)
+               endif
             ENDIF
             if(.NOT.gfinp%isUnique(i_gf,distinct_kresolved_int=.TRUE.)) cycle
             CALL greensfImagPart%scale(i_elem,i_elemLO,l_sphavg,nLO,k_resolved=l_kresolved_int)
