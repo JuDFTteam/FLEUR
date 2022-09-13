@@ -61,27 +61,30 @@ CONTAINS
     COMPLEX  :: chi(2,2)
     COMPLEX  :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2),d(2,2)
 
-    !     isigma= -i * sigma, where sigma is Pauli matrix
+    !     isigma= i * sigma, where sigma is Pauli matrix
     isigma = CMPLX(0.0,0.0)
 
-    isigma(1,2,1)=CMPLX(0.0,-1.0)  !     (0  1)   ( 0  i)
-    isigma(2,1,1)=CMPLX(0.0,-1.0)  ! i * (1  0) = ( i  0)
-    isigma(1,2,2)=CMPLX(-1.0,0.0)  !     (0 -i)   ( 0  1) 
-    isigma(2,1,2)=CMPLX(1.0,0.0)   ! i * (i  0) = (-1  0) 
-    isigma(1,1,3)=CMPLX(0.0,-1.0)  !     (1  0)   ( i  0)
-    isigma(2,2,3)=CMPLX(0.0,1.0)   ! i * (0 -1) = ( 0 -i)
+    isigma(1,2,1)=CMPLX(0.0,1.0)  !     (0  1)   ( 0  i)
+    isigma(2,1,1)=CMPLX(0.0,1.0)  ! i * (1  0) = ( i  0)
+    isigma(1,2,2)=CMPLX(1.0,0.0)  !     (0 -i)   ( 0  1) 
+    isigma(2,1,2)=CMPLX(-1.0,0.0)   ! i * (i  0) = (-1  0) 
+    isigma(1,1,3)=CMPLX(0.0,1.0)  !     (1  0)   ( i  0)
+    isigma(2,2,3)=CMPLX(0.0,-1.0)   ! i * (0 -1) = ( 0 -i)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
     !chi=conjg(nococonv%umat(n))
     chi=nococonv%umat(n)
 
-    !isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),((chi))))
-    !isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),((chi))))
-    !isigma_z=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,3),((chi))))
-    isigma_x=MATMUL(chi, MATMUL(isigma(:,:,1),conjg(transpose(chi))))
-    isigma_y=MATMUL(chi, MATMUL(isigma(:,:,2),conjg(transpose(chi))))
-    isigma_z=MATMUL(chi, MATMUL(isigma(:,:,3),conjg(transpose(chi))))
+    isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),((chi))))
+    isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),((chi))))
+    isigma_z=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,3),((chi))))
+    !isigma_x=MATMUL(chi, MATMUL(isigma(:,:,1),conjg(transpose(chi))))
+    !isigma_y=MATMUL(chi, MATMUL(isigma(:,:,2),conjg(transpose(chi))))
+    !isigma_z=MATMUL(chi, MATMUL(isigma(:,:,3),conjg(transpose(chi))))
+    
+    
+    
     !chi=conjg(nococonv%umat(n))
     DO j1=1,2
        DO j2=1,2
