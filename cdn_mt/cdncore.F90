@@ -125,27 +125,14 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
             !charge (star 0), taking into account the direction of
             !magnetisation of this atom
             DO iType = 1,atoms%ntype
-               !rhoint = (qint(iType,1) + qint(iType,2)) /(cell%volint * input%jspins * 2.0)
-               !momint = (qint(iType,1) - qint(iType,2)) /(cell%volint * input%jspins * 2.0)
                rho11=qint(iType,1)/(cell%volint * input%jspins)
                rho22=qint(iType,2)/(cell%volint * input%jspins)
-               rho11=(rho11+rho22)/2; rho22=rho11; print *,"CORE-TAIL!!" !!core tail non spin-pol.
                rho21=0.0
-               call nococonv%rotdenmat(itype,rho11,rho22,rho21,toGlobal=.true.)
+               call nococonv%rotdenmat(itype,rho11,rho22,rho21,toGlobal=.false.) !Todo: shouldn'1 this be toGlobal=.true.???
                outDen%pw(1,1) = outDen%pw(1,1)+rho11
                outDen%pw(1,2) = outDen%pw(1,2)+rho22
                outDen%pw(1,3) = outDen%pw(1,3)+rho21
-               !rho_11
-               !outDen%pw(1,1) = outDen%pw(1,1) + rhoint + momint*cos(nococonv%beta(iType))
-               !rho_22
-               !outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(nococonv%beta(iType))
-               !real part rho_21
-               !outDen%pw(1,3) = outDen%pw(1,3) + cmplx( momint *cos(nococonv%alph(iType))*sin(nococonv%beta(iType)),&
-               !imaginary part rho_21
-               !                                           momint *sin(nococonv%alph(iType))*sin(nococonv%beta(iType)))
-               ! TODO: This is a magic minus. It should be
-               ! cmplx( momint *cos(nococonv%alph(iType))*sin(nococonv%beta(iType)),&
-               !        momint *sin(nococonv%alph(iType))*sin(nococonv%beta(iType)))
+             
             END DO
             !pk non-collinear (end)
          END IF
