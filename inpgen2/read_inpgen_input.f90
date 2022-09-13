@@ -99,6 +99,8 @@ CONTAINS
              CALL add_atompar(ap)
           CASE('qss ')
              CALL process_qss(line,noco)
+          CASE('scf ')
+             CALL process_scf(line,input)
           CASE('soc ')
              CALL process_soc(line,noco)
           CASE('shif')
@@ -185,6 +187,11 @@ CONTAINS
              READ(98,"(a)",iostat=ios) line
              IF (ios.NE.0) CALL judft_error(("Error reading bravais matrix"))
              SCALE(1)=evaluatefirst(line);SCALE(2)=evaluatefirst(line);SCALE(3)=evaluatefirst(line)
+             if (abs(scale(1)-int(scale(1)))<1E-10.and.abs(scale(2))<1E-10.and.abs(scale(3))<1E-10) THEN
+               !This line was already the line sepcifying the number of atoms
+               scale=1.0
+               backspace(98)
+             endif  
              mat=0.0
           ENDIF
        ENDIF
@@ -386,6 +393,22 @@ CONTAINS
     IF (ANY([cal_symm, checkinp,oldfleur])) CALL judft_error("Switches cal_symm, checkinp,oldfleur no longer supported")
   END SUBROUTINE process_input
 
+  SUBROUTINE process_scf(line,input)
+   USE m_types_input
+   CHARACTER(len=*),INTENT(in)::line
+   TYPE(t_input),INTENT(INOUT)::input
+   INTEGER:: itmax,ios
+   REAL   :: alpha,precond
+   NAMELIST /scf/ itmax,alpha,precond
+   itmax=input%itmax
+   alpha=input%alpha
+   precond=input%preconditioning_param
+   read(line,scf,iostat=ios)
+   IF (ios.NE.0) CALL judft_error(("Error reading:" //TRIM(line)))
+   input%itmax=itmax
+   input%alpha=alpha
+   input%preconditioning_param=precond
+  END subroutine 
   SUBROUTINE process_qss(line,noco)
     USE m_types_noco
     CHARACTER(len=*),INTENT(in)::line
