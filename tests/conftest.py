@@ -995,7 +995,7 @@ def grep_exists(test_logger):
 def check_outxml(test_logger):
     """retruns the check_outxml function
     """
-    def _check_outxml(filepath,reffilepath,checks):
+    def _check_outxml(filepath,reffilepath,checks,skip_noref=False):
         """ TODO
         """
         ok=True
@@ -1012,24 +1012,100 @@ def check_outxml(test_logger):
             attrib=check[1]
             index=check[2]
             tol=check[3]
-            try:
-                e1=outxml.findall(".//"+element+"/")[index]
+            try:            
+                e2=refxml.findall(".//"+element)[index]
                 if attrib:
-                    e1=e1[attrib]
-                e2=refxml.findall(".//"+element+"/") #no index here!
-                if attrib:
-                    e2=e2[attrib]
+                    e2=e2.attrib[attrib]
             except:
-                test_logger.error(f"Element,index,attrib not found: {element} {index} {attrib}")
-                return False
-            if abs(float(e1)-float(e2))>tol:
-                test_logger.info(f"Check failed for {element} {index} {attrib}")
-                test_logger.info(f"Value: {e1}  Reference: {e2} Tol: {tol}")
-                ok=False
+                test_logger.info(f"Element,index,attrib not found: {element} {index} {attrib} in reference")
+                if not skip_noref: return False
             else:
-                test_logger.info("Check passed for {element} {index} {attrib}")           
+                try:
+                    e1=outxml.findall(".//"+element)[index]
+                    if attrib:
+                        e1=e1.attrib[attrib]
+                except:
+                    test_logger.error(f"Element,index,attrib not found: {element} {index} {attrib} in out.xml")
+                    return False
+                if abs(float(e1)-float(e2))>tol:
+                    test_logger.info(f"Check failed for {element} {index} {attrib}")
+                    test_logger.info(f"Value: {e1}  Reference: {e2} Tol: {tol}")
+                    ok=False
+                else:
+                    test_logger.info(f"Check passed for {element} {index} {attrib}")           
         return ok
     return _check_outxml
+
+@pytest.fixture
+def check_all_outxml(test_logger,check_outxml):
+    """returns the check_all_outxml function
+    """
+    def _check_all_outxml(filepath,reffilepath):
+        """ Performs all default checks on out.xml
+        """
+        from xml.etree import ElementTree
+        refxml=ElementTree.parse(reffilepath)
+        checks=[
+            ["FermiEnergy","value",-1,0.001],
+            ["bandgap","value",-1,0.001],
+            ["totalEnergy","value",-1,0.001],
+            ["sumValenceSingleParticleEnergies","value",-1,0.001],
+            ["chargeDensity","distance",-1,0.001], #last spind only
+            ["mtCharge","total",-1,0.001],
+            ["state","energy",-1,0.001], #check core state
+            ["densityConvergence/spinDensity","distance",-1,0.001],
+            ["magneticMoment","moment",-1.,0.001]
+            ]
+        return check_outxml(filepath,reffilepath,checks,skip_noref=True)
+    return _check_all_outxml        
+
+@pytest.fixture
+def check_hdf(test_logger):
+    """returns the check_hdf function
+    """
+    def _check_hdf(filename,reffile,tol=0.001):
+        """ use h5diff to compare two hdf files
+        """
+        import subprocess
+        if subprocess.run(["which","h5diff"]).returncode == 0:
+            return subprocess.run(["h5diff",f"-d {tol}",filename,reffile]).returncode
+        else:
+            test_logger.info(f"No h5diff found to compare {filename} to {reffile}")
+            return True
+    return _check_hdf
+
+@pytest.fixture
+def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_xml_file,check_hdf):
+    """returns the default_fleur_test function
+    """
+    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=None):
+        """ docu
+        """
+        test_logger.info(f"Starting a default fleur test for {testname}")           
+        test_file_folder = os.path.join('./inputfiles/',testname)
+        ref_out_xml=os.path.join(test_file_folder,"out.xml")
+        res_files = execute_fleur(test_file_folder)
+        should_files = ['out.xml', 'out']
+        if files: should_files=should_files+files
+        res_file_names = list(res_files.keys())
+
+        # Test if all files are there
+        for file1 in should_files:
+            assert file1 in res_file_names
+    
+        if not validate_out_xml_file(res_files['out.xml']): pytest.fail("validating out_xml_failed")
+        if not check_all_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out_xml_failed in basic test")
+        if checks and not check_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out.xml failed in advanced test")
+        #compare cdn files 
+        if hdf_checks:
+            for hdf in hdf_checks:
+                if hdf in res_file_names:
+                    if not check_hdf(res_files[hdf],os.path.join(test_file_folder,hdf)): pytest.fail(f"checking failed for HDF file:{cdn}")
+                else:
+                    test_logger.info(f"HDF file not found: {hdf}, probably no HDF build")  
+        return res_files
+    return _default_fleur_test    
+
 @pytest.fixture
 def grep_number(test_logger):
     """returns the grep number function
