@@ -100,7 +100,7 @@ MODULE m_greensfPostProcess
 
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, cell, kpts)
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, sym, cell, kpts,sphhar, vtot=vTot)
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, nococonv, noco, cell,&
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
                                u=f,udot=g,ulo=flo)
