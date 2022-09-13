@@ -123,6 +123,7 @@ CONTAINS
     REAL ::  e_up(0:3,atoms%ntype)
     REAL ::  elo_lo(atoms%nlod,atoms%ntype)
     REAL ::  elo_up(atoms%nlod,atoms%ntype)
+    REAL,ALLOCATABLE :: v_mt(:)
 
 #ifdef CPP_MPI
     INTEGER :: ierr
@@ -137,14 +138,16 @@ CONTAINS
     DO jsp = 1,input%jspins
        !$OMP PARALLEL DO DEFAULT(none) &
        !$OMP SHARED(atoms,enpara,jsp,l_done,v,lo_done,e_lo,e_up,elo_lo,elo_up) &
-       !$OMP PRIVATE(n,l,ilo)
+       !$OMP PRIVATE(n,l,ilo,v_mt)
        !! First calculate energy paramter from quantum numbers if these are given...
        !! l_done stores the index of those energy parameter updated
        DO n = 1, atoms%ntype
+          v_mt=v%mt(:,0,n,jsp)
+          if (atoms%l_nonpolbas(n)) v_mt=(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2
           DO l = 0,3
              IF( enpara%qn_el(l,n,jsp).ne.0)THEN
                 l_done(l,n,jsp) = .TRUE.
-                enpara%el0(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,v%mt(:,0,n,jsp),e_lo(l,n),e_up(l,n))
+                enpara%el0(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,v_mt,e_lo(l,n),e_up(l,n))
                 IF( l .EQ. 3 ) THEN
                    enpara%el0(4:,n,jsp) = enpara%el0(3,n,jsp)
                    l_done(4:,n,jsp) = .TRUE.
@@ -158,7 +161,7 @@ CONTAINS
              l = atoms%llo(ilo,n)
              IF( enpara%qn_ello(ilo,n,jsp).NE.0) THEN
                 lo_done(ilo,n,jsp) = .TRUE.
-                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,v%mt(:,0,n,jsp),elo_lo(ilo,n),elo_up(ilo,n))
+                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,v_mt,elo_lo(ilo,n),elo_up(ilo,n))
              ELSE
                 lo_done(ilo,n,jsp) = .FALSE.
              ENDIF
