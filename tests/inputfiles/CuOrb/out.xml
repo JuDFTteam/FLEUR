@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.36">
    <programVersion version="fleur 35">
-      <compilationInfo date="2022-09-13T10:29:48" user="wortmann" host="iffcluster1901.iff.kfa-juelich.de" flag="-mkl -mkl -qopenmp -assume byterecl -no-wrap-margin -r8 -qopenmp" link="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R6.0-536-g2659d1a-dirty" branch="noco-soc" lastCommitHash="2659d1a963815bc08fafe65a1a5ede46a71364a3"/>
+      <compilationInfo date="2022-09-13T14:06:15" user="" host="runner-57l8mpwt-project-19-concurrent-2xpffg" flag="-I/opt/include -I/usr/include -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero -fdefault-real-8 -fdefault-double-8 -fopenmp" link="-lwannier;-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3;/usr/lib/x86_64-linux-gnu/libxml2.so;/usr/lib/x86_64-linux-gnu/liblapack.so;/usr/lib/x86_64-linux-gnu/libblas.so;-lxcf90;-lxc"/>
+      <gitInfo version="MaX-R6.0-542-g9b2b2847c" branch="HEAD" lastCommitHash="9b2b2847c8240738a33ad06eb4e458947c4cf917"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
-      <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
+      <additionalCompilerFlags>CPP_MPI             CPP_HDF            CPP_WANN</additionalCompilerFlags>
    </programVersion>
    <parallelSetup>
-      <openMP ompThreads="1"/>
-      <mpi mpiProcesses="2"/>
-      <mem memoryPerNode="131958984 kB"/>
+      <openMP ompThreads="2"/>
+      <mpi mpiProcesses="1"/>
+      <mem memoryPerNode="131838196 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2022/09/13" time="14:04:48" zone="+0200"/>
+   <startDateAndTime date="2022/09/13" time="14:16:08" zone="+0000"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.34">
      <comment>
@@ -353,13 +353,13 @@
          <FermiEnergy value="0.4239194885" units="Htr"/>
          <valenceDensity>
             <mtCharges spin="1">
-               <mtCharge atomType="1" total="9.7271264" s="0.4667261" p="0.5225960" d="8.7032451" f="0.0275365"/>
-               <mtCharge atomType="2" total="9.7133617" s="0.4675052" p="0.5221108" d="8.6892128" f="0.0275303"/>
+               <mtCharge atomType="1" total="9.7346919" s="0.4671241" p="0.5220660" d="8.7109464" f="0.0275331"/>
+               <mtCharge atomType="2" total="9.7057962" s="0.4671072" p="0.5226408" d="8.6815115" f="0.0275338"/>
             </mtCharges>
             <spinDependentCharge spin="1" total="22.0000000" interstitial="2.5595119" mtSpheres="19.4404881"/>
             <totalCharge value="22.0000000006"/>
          </valenceDensity>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2022/09/13" time="14:04:50" zone="+0200"/>
+   <endDateAndTime date="2022/09/13" time="14:16:10" zone="+0000"/>
 </fleurOutput>

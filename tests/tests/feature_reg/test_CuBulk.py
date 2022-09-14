@@ -49,7 +49,7 @@ def test_CuDOSXML(default_fleur_test):
     1.Generate a starting density, run 1 iteration, and generate DOS. Ensure that the files are created.
 
     """
-    assert default_fleur_test("CuDOSXML")
+    assert default_fleur_test("CuDOSXML",hdf_checks=["banddos.hdf"])
     
 
 @pytest.mark.fleur
