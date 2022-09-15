@@ -658,7 +658,7 @@ CONTAINS
          CALL timestart("setup tetraList")
          allocate(kpts%tetraList( MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)&
                                  *MERGE(6,24,input%film),kpts%nkpt),source=0)
-         !!$OMP parallel do default(none) private(ikpt,ntet,itet) shared(kpts)
+         !$OMP parallel do default(none) private(ikpt,ntet,itet) shared(kpts)
          do ikpt = 1, kpts%nkpt
             ntet = 0
             do itet = 1, kpts%ntet
@@ -668,7 +668,7 @@ CONTAINS
                ENDIF
             enddo
          enddo
-         !!$OMP end parallel do
+         !$OMP end parallel do
          CALL timestop("setup tetraList")
       END IF
 
@@ -752,10 +752,10 @@ CONTAINS
       ENDIF
 
       !Set up the tetrahedrons
-      !!$omp parallel do default(none) &
-      !!$omp shared(grid,p,ntetraCube,kpts,tetra,film,ntetraAll) &
-      !!$omp private(k1,k2,k3,kcorn,itetra,startIndex,kpt_tetra,ind) &
-      !!$omp collapse(3)
+      !$omp parallel do default(none) &
+      !$omp shared(grid,p,ntetraCube,kpts,tetra,film,ntetraAll) &
+      !$omp private(k1,k2,k3,kcorn,itetra,startIndex,kpt_tetra,ind) &
+      !$omp collapse(3)
       DO k3 = 0, MERGE(grid(3)-1,0,grid(3).NE.0)
          DO k2 = 0, grid(2)-1
             DO k1 = 0, grid(1)-1
@@ -782,7 +782,7 @@ CONTAINS
             ENDDO
          ENDDO
       ENDDO
-      !!$omp end parallel do
+      !$omp end parallel do
 
       !Check for symmetry equivalent tetrahedra
       kpts%ntet = 0
