@@ -89,7 +89,7 @@ SUBROUTINE magMoms(input,atoms,noco,nococonv,vTot,moments,den)
       !calculate the perpendicular part of the local moment
       !and relax the angle of the local moment or calculate
       !the constraint B-field.
-      if(noco%l_noco)  CALL m_perp(atoms,iType,noco,nococonv,(/up,down/),off_diag,vTot)
+      CALL m_perp(atoms,iType,noco,nococonv,(/up,down/),off_diag,vTot)
          
    END DO
    CALL closeXMLElement('magneticMomentsInMTSpheres')
