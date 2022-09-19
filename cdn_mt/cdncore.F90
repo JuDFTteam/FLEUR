@@ -129,7 +129,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
                !momint = (qint(iType,1) - qint(iType,2)) /(cell%volint * input%jspins * 2.0)
                rho11=qint(iType,1)/(cell%volint * input%jspins)
                rho22=qint(iType,2)/(cell%volint * input%jspins)
-               rho11=(rho11+rho22)/2; rho22=rho11; print *,"CORE-TAIL!!" !!core tail non spin-pol.
+               rho11=(rho11+rho22)/2; rho22=rho11!; print *,"CORE-TAIL!!" !!core tail non spin-pol.
                rho21=0.0
                call nococonv%rotdenmat(itype,rho11,rho22,rho21,toGlobal=.true.)
                outDen%pw(1,1) = outDen%pw(1,1)+rho11
