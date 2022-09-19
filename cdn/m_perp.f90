@@ -176,7 +176,7 @@ CONTAINS
    endif
    WRITE(attributes(1),'(i0)') iType
    WRITE(attributes(2),'(3(f9.7,1x))') magmom(1),magmom(2),magmom(3)
-   label=trim(merge("globalMagMoment","localMagMoment ",global))
+   label="globalMagMoment"
    CALL writeXMLElementFormPoly(label,(/'atomType','vec     '/),&
                    attributes,reshape((/8,3,6,30/),(/2,2/)))
    WRITE(attributes(2),'(3(f9.5,1x))') magmomL(1),magmomL(2),magmomL(3)

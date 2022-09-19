@@ -1,5 +1,8 @@
 #this file stores settings to be used in the testing-system
 
+#remove some test temporarily
+set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} disabled")
+
 #some test need specific FLEUR features
 if (NOT FLEUR_USE_HDF5)
     set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} hdf")

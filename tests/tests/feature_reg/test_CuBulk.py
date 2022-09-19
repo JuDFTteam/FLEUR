@@ -38,6 +38,7 @@ def test_CuBulkLibXC(default_fleur_test):
     """
     assert default_fleur_test('CuBulkLibXC')
 
+@pytest.mark.disabled
 @pytest.mark.serial
 @pytest.mark.fleur
 @pytest.mark.bulk
@@ -51,7 +52,7 @@ def test_CuDOSXML(default_fleur_test):
     """
     assert default_fleur_test("CuDOSXML",hdf_checks=["banddos.hdf"])
     
-
+@pytest.mark.disabled
 @pytest.mark.fleur
 @pytest.mark.bulk
 @pytest.mark.xml

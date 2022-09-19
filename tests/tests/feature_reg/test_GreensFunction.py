@@ -289,7 +289,7 @@ def test_GreensFunction_HoAtom_SQA_phi(execute_fleur, grep_number, grep_exists):
     assert abs(spinup_trace - 6.9375) <= 0.0005
     assert abs(spindown_trace - 3.9556) <= 0.0005
 
-
+@pytest.mark.disabled
 @pytest.mark.bulk
 @pytest.mark.greensfunction
 @pytest.mark.magnetism
@@ -329,7 +329,6 @@ def test_GreensFunction_rotated_SQA_noco(execute_fleur, grep_number, grep_exists
 
     assert abs(spinup_trace - 6.9375) <= 0.0005
     assert abs(spindown_trace - 3.9609) <= 0.0005
-
 
 @pytest.mark.serial
 @pytest.mark.greensfunction
@@ -376,6 +375,7 @@ def test_GreensFunction_mperp_xdir(execute_fleur, grep_number, grep_exists):
     assert abs(spinoffdy_trace_atom2 - 0.0000) <= 0.0005
 
 
+@pytest.mark.disabled
 @pytest.mark.serial
 @pytest.mark.greensfunction
 @pytest.mark.non_collinear
