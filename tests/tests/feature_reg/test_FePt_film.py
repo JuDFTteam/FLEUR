@@ -1,6 +1,7 @@
 
 import pytest
 
+@pytest.mark.disabled
 @pytest.mark.serial
 @pytest.mark.film
 @pytest.mark.magnetism
@@ -41,7 +42,7 @@ def test_FePt_film_SSFT(default_fleur_test, execute_fleur, grep_number, grep_exi
     assert abs(ev_q1 - -5.197) <= 0.002
     assert abs(ev_q2 - -5.168) <= 0.002
 
-
+@pytest.mark.disabled
 @pytest.mark.serial
 @pytest.mark.film
 @pytest.mark.magnetism
