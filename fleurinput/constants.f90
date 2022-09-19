@@ -33,8 +33,8 @@ MODULE m_constants
   REAL,             PARAMETER :: bohr_to_angstrom_const=0.529177210903 ! value from https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
                                                                        ! 0.529177210903(80)
   REAL,             PARAMETER :: eVac0Default_const = -0.25
-  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 35'
-  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 6.0          (www.max-centre.eu)'
+  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 36'
+  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 6.1          (www.max-centre.eu)'
   REAL, PARAMETER             :: boltzmann_const = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
   INTEGER, PARAMETER :: POTDEN_TYPE_OTHER        = 0    ! POTDEN_TYPE <= 0 ==> undefined
