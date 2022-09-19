@@ -70,13 +70,13 @@ CONTAINS
           !
           DO js = 1,input%jspins
              CALL fft2d(stars, af2(0,js),bf2, den%vacz(ip,ivac,js),rhti,&
-                  den%vacxy(ip,1,ivac,js), vacuum%nmzxyd,+1)
+                  den%vacxy(ip,:,ivac,js),+1)
           END DO
 
           IF (noco%l_noco) THEN 
 
              CALL fft2d(stars, mx,my, den%vacz(ip,ivac,3),den%vacz(ip,ivac,4),&
-                                 den%vacxy(ip,1,ivac,3), vacuum%nmzxyd,1)
+                                 den%vacxy(ip,:,ivac,3),1)
              DO i=0,9*stars%mx1*stars%mx2-1 
                 chdens= (af2(i,1)+af2(i,2))/2.  
                 magmom= mx(i)**2 + my(i)**2 + ((af2(i,1)-af2(i,2))/2.)**2 
@@ -96,7 +96,7 @@ CONTAINS
              !            ----> 2-d back fft to g space
              !
              bf2=0.0
-             CALL fft2d(stars, v_xc(0,js),bf2, fgz,rhti,fgxy, 1,-1)
+             CALL fft2d(stars, v_xc(0,js),bf2, fgz,rhti,fgxy, -1)
              !
              !            ----> and add vxc to coulomb potential
              !            the G||.eq.zero component is added to vz
@@ -118,7 +118,7 @@ CONTAINS
              !     ----> 2-d back fft to g space
              !
              bf2=0.0
-             CALL fft2d(stars, e_xc,bf2, exc%vacz(ip,ivac,1),rhti,exc%vacxy(ip,1,ivac,1), vacuum%nmzxyd,-1)
+             CALL fft2d(stars, e_xc,bf2, exc%vacz(ip,ivac,1),rhti,exc%vacxy(ip,:,ivac,1), -1)
           ENDIF
 
        ENDDO

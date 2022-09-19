@@ -27,6 +27,7 @@ MODULE m_types_nococonv
       procedure:: chi_pass
       procedure:: chi_explicit
       generic :: chi => chi_pass, chi_explicit
+      generic :: umat => chi_pass, chi_explicit
       !Routines to rotate density matrix
       procedure:: rotdenmat_mat, rotdenmat_denmat
       procedure:: rotdenmat_explicit_mat, rotdenmat_explicit_denmat
@@ -76,14 +77,14 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
       chi_pass = nococonv%chi_explicit(nococonv%alph(n), nococonv%beta(n))
    end function
 
-   function chi_explicit(nococonv, alpha, beta) result(chi)
+   pure function chi_explicit(nococonv, alpha, beta) result(chi)
       class(t_nococonv), intent(in) :: nococonv
       REAL, INTENT(IN) :: alpha, beta
       COMPLEX         :: chi(2, 2)
-      chi(1, 1) = exp(ImagUnit*alpha/2)*cos(beta/2)
-      chi(2, 1) = -EXP(-ImagUnit*alpha/2)*SIN(beta/2)
-      chi(1, 2) = EXP(ImagUnit*alpha/2)*SIN(beta/2)
-      chi(2, 2) = EXP(-ImagUnit*alpha/2)*COS(beta/2)
+      chi(1, 1) =  EXP( ImagUnit*alpha/2)*COS(beta/2)
+      chi(2, 1) = -EXP( ImagUnit*alpha/2)*SIN(beta/2)
+      chi(1, 2) =  EXP(-ImagUnit*alpha/2)*SIN(beta/2)
+      chi(2, 2) =  EXP(-ImagUnit*alpha/2)*COS(beta/2)
    end function
 
    function denmat_to_mag_mat(nococonv, mat) result(mag)

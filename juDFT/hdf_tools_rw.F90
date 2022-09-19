@@ -96,7 +96,7 @@ CONTAINS
       CALL io_check("io_read_real0 !", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_read_real1(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_real1(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -104,6 +104,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(OUT)    ::DATA(:)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -126,7 +127,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s /= SIZE(DATA)) CALL hdf_err('mismatch of sizes')
+      IF (s /= SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -144,7 +145,7 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE io_read_real2(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_real2(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
       IMPLICIT NONE
@@ -152,6 +153,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  :: did
       INTEGER, INTENT(IN)  :: start(:), ncount(:)
       REAL, INTENT(OUT) :: DATA(:, :)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER(HID_T), INTENT(IN), OPTIONAL :: transprop
 ! locals
       INTEGER(HSIZE_t) :: dims(7), foffset(SIZE(start))
@@ -178,7 +180,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err('mismatch of sizes')
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -196,13 +198,14 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE io_read_real3(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_real3(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(OUT)    ::DATA(:, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -228,7 +231,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -246,13 +249,14 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE io_read_real4(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_real4(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
       IMPLICIT NONE
 
       INTEGER(HID_T), INTENT(IN)  :: did
       INTEGER, INTENT(IN)  :: start(:), ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL, INTENT(OUT) :: DATA(:, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL :: transprop
 ! locals
@@ -277,7 +281,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -294,7 +298,7 @@ CONTAINS
       CALL io_check("io_read_real4 !", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_read_real5(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_real5(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -302,6 +306,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(OUT)    ::DATA(:, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -327,7 +332,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -345,7 +350,7 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE io_read_real6(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_real6(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -353,6 +358,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(OUT)    ::DATA(:, :, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -378,7 +384,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -398,7 +404,7 @@ CONTAINS
 
 !----------------------------------------------------------------------
 
-   SUBROUTINE io_write_real0(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_real0(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -407,6 +413,7 @@ CONTAINS
 !arguments
       INTEGER(HID_T), INTENT(IN)  :: did
       INTEGER, INTENT(IN)  :: start(:), ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(IN)  :: DATA
       INTEGER(HID_T), INTENT(IN), OPTIONAL :: transprop
 !locals
@@ -432,7 +439,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. 1) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. 1) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
 !do I/O
       CALL h5dget_space_f(                                              &
      &                    did, fspace, hdferr)
@@ -455,7 +462,7 @@ CONTAINS
 
 !----------------------------------------------------------------------
 
-   SUBROUTINE io_write_real1(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_real1(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -464,6 +471,7 @@ CONTAINS
 !arguments
       INTEGER(HID_T), INTENT(IN)  :: did
       INTEGER, INTENT(IN)  :: start(:), ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(IN)  :: DATA(:)
       INTEGER(HID_T), INTENT(IN), OPTIONAL :: transprop
 !locals
@@ -489,7 +497,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("Mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
 
 !do I/O
       CALL h5dget_space_f(                                              &
@@ -514,7 +522,7 @@ CONTAINS
 
 !----------------------------------------------------------------------
 
-   SUBROUTINE io_write_real2(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_real2(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -522,6 +530,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(IN)    ::DATA(:, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -546,7 +555,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -562,13 +571,14 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE io_write_real3(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_real3(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
       IMPLICIT NONE
 
       INTEGER(HID_T), INTENT(IN) :: did
       INTEGER, INTENT(IN) :: start(:), ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL, INTENT(IN) :: DATA(:, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL :: transprop
 !  locals
@@ -593,7 +603,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -608,7 +618,7 @@ CONTAINS
       CALL io_check("io_write_real3 !", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_write_real4(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_real4(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -616,6 +626,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(IN)    ::DATA(:, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -639,7 +650,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -655,7 +666,7 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE io_write_real5(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_real5(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -663,6 +674,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(IN)    ::DATA(:, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -688,7 +700,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -703,7 +715,7 @@ CONTAINS
       CALL io_check("io_write_real5 !", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_write_real6(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_real6(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -711,6 +723,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       REAL(rkind), INTENT(IN)    ::DATA(:, :, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -736,7 +749,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -807,7 +820,7 @@ CONTAINS
       CALL io_check("io_read_integer0 !", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_read_integer1(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_integer1(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -815,6 +828,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(OUT)    ::DATA(:)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -839,7 +853,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -856,7 +870,7 @@ CONTAINS
       CALL io_check("io_read_integer1 !", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_read_integer2(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_integer2(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -864,6 +878,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(OUT)    ::DATA(:, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -888,7 +903,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -905,7 +920,7 @@ CONTAINS
       CALL io_check("io_read_integer2 !", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_read_integer3(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_integer3(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -913,6 +928,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(OUT)    ::DATA(:, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -937,7 +953,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -954,7 +970,7 @@ CONTAINS
       CALL io_check("io_read_integer3 !", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_read_integer4(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_integer4(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -962,6 +978,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(OUT)    ::DATA(:, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -985,7 +1002,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -1003,7 +1020,7 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE io_read_integer5(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_integer5(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -1011,6 +1028,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(OUT)    ::DATA(:, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -1036,7 +1054,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -1053,7 +1071,7 @@ CONTAINS
       CALL io_check("io_read_integer5 !", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_read_integer6(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_read_integer6(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -1061,6 +1079,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(OUT)    ::DATA(:, :, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -1086,7 +1105,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -1103,7 +1122,7 @@ CONTAINS
       CALL io_check("io_read_integer6 !", hdferr)
    END SUBROUTINE
 !----------------------------------------------------------------------
-   SUBROUTINE io_write_integer0(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_integer0(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -1113,6 +1132,7 @@ CONTAINS
       ! setid
       INTEGER(HID_T), INTENT(IN)  :: did
       INTEGER, INTENT(IN)  :: start(:), ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(IN)  :: DATA
       INTEGER(HID_T), INTENT(IN), OPTIONAL:: transprop
 
@@ -1141,7 +1161,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. 1) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. 1) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
 
 !do I/O
       CALL h5dget_space_f(                                              &
@@ -1164,7 +1184,7 @@ CONTAINS
    END SUBROUTINE io_write_integer0
 
 !----------------------------------------------------------------------
-   SUBROUTINE io_write_integer1(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_integer1(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -1174,6 +1194,7 @@ CONTAINS
       ! setid
       INTEGER(HID_T), INTENT(IN)  :: did
       INTEGER, INTENT(IN)  :: start(:), ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       ! 1-dim
       INTEGER, INTENT(IN)  :: DATA(:)
       INTEGER(HID_T), INTENT(IN), OPTIONAL:: transprop
@@ -1201,7 +1222,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
 
 !do I/O
       CALL h5dget_space_f(                                              &
@@ -1225,7 +1246,7 @@ CONTAINS
 
 !----------------------------------------------------------------------
 
-   SUBROUTINE io_write_integer2(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_integer2(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -1233,6 +1254,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(IN)    ::DATA(:, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -1257,7 +1279,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -1272,7 +1294,7 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE io_write_integer3(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_integer3(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -1280,6 +1302,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(IN)    ::DATA(:, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -1304,7 +1327,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -1318,7 +1341,7 @@ CONTAINS
       CALL io_check("io_write_integer3:", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_write_integer4(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_integer4(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -1326,6 +1349,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(IN)    ::DATA(:, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -1349,7 +1373,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -1363,7 +1387,7 @@ CONTAINS
       CALL io_check("io_write_integer4:", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_write_integer5(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_integer5(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -1371,6 +1395,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(IN)    ::DATA(:, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -1396,7 +1421,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -1410,7 +1435,7 @@ CONTAINS
       CALL io_check("io_write_integer5:", hdferr)
    END SUBROUTINE
 
-   SUBROUTINE io_write_integer6(did, start, ncount, DATA, transprop)
+   SUBROUTINE io_write_integer6(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
       USE hdf5
 
@@ -1418,6 +1443,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       INTEGER, INTENT(IN)    ::DATA(:, :, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::transprop
       !locals
@@ -1443,7 +1469,7 @@ CONTAINS
       DO n = 1, SIZE(ncount)
          IF (ncount(n) > 0) s = s*ncount(n)
       END DO
-      IF (s .NE. SIZE(DATA)) CALL hdf_err("mismatch of sizes")
+      IF (s .NE. SIZE(DATA)) CALL hdf_err(TRIM('mismatch of sizes for '//dat_tag))
       !DO IO
       CALL h5dget_space_f(did, fspace, hdferr)
       CALL h5sselect_hyperslab_f(fspace, H5S_SELECT_SET_F, foffset, fncount &
@@ -1463,7 +1489,7 @@ CONTAINS
 !
 !*****************************************************************
 
-   SUBROUTINE io_read_complex0(did, start, ncount, DATA, trans)
+   SUBROUTINE io_read_complex0(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1471,6 +1497,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(OUT)    ::DATA
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1484,10 +1511,10 @@ CONTAINS
          foffset = 1
          fncount = 2
       END WHERE
-      CALL io_read_real1(did, foffset, fncount, a, trans)
+      CALL io_read_real1(did, foffset, fncount, dat_tag, a, trans)
       DATA = CMPLX(a(1), a(2))
    END SUBROUTINE
-   SUBROUTINE io_read_complex1(did, start, ncount, DATA, trans)
+   SUBROUTINE io_read_complex1(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1495,6 +1522,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(OUT)    ::DATA(:)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1510,24 +1538,25 @@ CONTAINS
 
       if (start(1) < 0) then
          ALLOCATE (A(2, SIZE(DATA, 1)))
-         CALL io_read_real2(did, foffset, fncount, a, trans)
+         CALL io_read_real2(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(1, :), a(2, :))
       else
          ALLOCATE (A(SIZE(DATA, 1), 2))
-         CALL io_read_real2(did, foffset, fncount, a, trans)
+         CALL io_read_real2(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(:, 1), a(:, 2))
       end if
       DEALLOCATE (a)
    END SUBROUTINE
 !----------------------------------------------------------------------
 
-   SUBROUTINE io_read_complex2(did, start, ncount, DATA, trans)
+   SUBROUTINE io_read_complex2(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
       IMPLICIT NONE
 ! arguments
       INTEGER(HID_T), INTENT(IN)  :: did
       INTEGER, INTENT(IN)  :: start(:), ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX, INTENT(OUT) :: DATA(:, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL :: trans
 ! locals
@@ -1545,20 +1574,20 @@ CONTAINS
       if (count(start < 0) .ne. 1) call judft_error("Wrong no of negatives")
       if (start(1) < 0) then
          ALLOCATE (A(2, SIZE(DATA, 1), size(data, 2)))
-         CALL io_read_real3(did, foffset, fncount, a, trans)
+         CALL io_read_real3(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(1, :, :), a(2, :, :))
       else if (start(2) < 0) then
          ALLOCATE (A(SIZE(DATA, 1), 2, size(data, 2)))
-         CALL io_read_real3(did, foffset, fncount, a, trans)
+         CALL io_read_real3(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(:, 1, :), a(:, 2, :))
       else
          ALLOCATE (A(SIZE(DATA, 1), size(data, 2), 2))
-         CALL io_read_real3(did, foffset, fncount, a, trans)
+         CALL io_read_real3(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(:, :, 1), a(:, :, 2))
       end if
       DEALLOCATE (a)
    END SUBROUTINE
-   SUBROUTINE io_read_complex3(did, start, ncount, DATA, trans)
+   SUBROUTINE io_read_complex3(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1566,6 +1595,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(OUT)    ::DATA(:, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1583,18 +1613,18 @@ CONTAINS
       if (count(start < 0) .ne. 1) call judft_error("Wrong no of negatives")
       if (start(1) < 0) then
          ALLOCATE (A(2, SIZE(DATA, 1), size(data, 2), size(data, 3)))
-         CALL io_read_real4(did, foffset, fncount, a, trans)
+         CALL io_read_real4(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(1, :, :, :), a(2, :, :, :))
       else if (start(4) < 0) then
          ALLOCATE (A(SIZE(DATA, 1), size(data, 2), size(data, 3), 2))
-         CALL io_read_real4(did, foffset, fncount, a, trans)
+         CALL io_read_real4(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(:, :, :, 1), a(:, :, :, 2))
       else
          call judft_error("Wrong position of negative")
       end if
       DEALLOCATE (a)
    END SUBROUTINE
-   SUBROUTINE io_read_complex4(did, start, ncount, DATA, trans)
+   SUBROUTINE io_read_complex4(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1602,6 +1632,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(OUT)    ::DATA(:, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1619,18 +1650,18 @@ CONTAINS
       if (count(start < 0) /= 1) call judft_error("Wrong no of negatives")
       if (start(1) < 0) then
          ALLOCATE (A(2, SIZE(DATA, 1), size(data, 2), size(data, 3), size(data, 4)))
-         CALL io_read_real5(did, foffset, fncount, a, trans)
+         CALL io_read_real5(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(1, :, :, :, :), a(2, :, :, :, :))
       else if (start(5) < 0) then
          ALLOCATE (A(SIZE(DATA, 1), size(data, 2), size(data, 3), size(data, 4), 2))
-         CALL io_read_real5(did, foffset, fncount, a, trans)
+         CALL io_read_real5(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(:, :, :, :, 1), a(:, :, :, :, 2))
       else
          call judft_error("Wrong position of negative")
       end if
       DEALLOCATE (a)
    END SUBROUTINE
-   SUBROUTINE io_read_complex5(did, start, ncount, DATA, trans)
+   SUBROUTINE io_read_complex5(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1638,6 +1669,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(OUT)    ::DATA(:, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1655,18 +1687,18 @@ CONTAINS
       if (count(start < 0) /= 1) call judft_error("Wrong no of negatives")
       if (start(1) < 0) then
          ALLOCATE (A(2, SIZE(DATA, 1), size(data, 2), size(data, 3), size(data, 4), size(data, 5)))
-         CALL io_read_real6(did, foffset, fncount, a, trans)
+         CALL io_read_real6(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(1, :, :, :, :, :), a(2, :, :, :, :, :))
       else if (start(6) < 0) then
          ALLOCATE (A(SIZE(DATA, 1), size(data, 2), size(data, 3), size(data, 4), size(data, 5), 2))
-         CALL io_read_real6(did, foffset, fncount, a, trans)
+         CALL io_read_real6(did, foffset, fncount, dat_tag, a, trans)
          DATA = CMPLX(a(:, :, :, :, :, 1), a(:, :, :, :, :, 2))
       else
          call judft_error("Wrong position of negative")
       end if
       DEALLOCATE (a)
    END SUBROUTINE
-   SUBROUTINE io_write_complex0(did, start, ncount, DATA, trans)
+   SUBROUTINE io_write_complex0(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1674,6 +1706,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(IN)    ::DATA
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1689,10 +1722,10 @@ CONTAINS
       END WHERE
       a(1) = real(data)
       a(2) = aimag(data)
-      CALL io_write_real1(did, foffset, fncount, a, trans)
+      CALL io_write_real1(did, foffset, fncount, dat_tag, a, trans)
 
    END SUBROUTINE
-   SUBROUTINE io_write_complex1(did, start, ncount, DATA, trans)
+   SUBROUTINE io_write_complex1(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1700,6 +1733,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(IN)    ::DATA(:)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1714,9 +1748,9 @@ CONTAINS
          foffset = 1
          fncount = 2
       END WHERE
-      CALL io_write_real2(did, foffset, fncount, a, trans)
+      CALL io_write_real2(did, foffset, fncount, dat_tag, a, trans)
    END SUBROUTINE
-   SUBROUTINE io_write_complex2(did, start, ncount, DATA, trans)
+   SUBROUTINE io_write_complex2(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1724,6 +1758,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(IN)    ::DATA(:, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1739,10 +1774,10 @@ CONTAINS
       END WHERE
       a(1, :, :) = real(data)
       a(2, :, :) = aimag(data)
-      CALL io_write_real3(did, foffset, fncount, a, trans)
+      CALL io_write_real3(did, foffset, fncount, dat_tag, a, trans)
    END SUBROUTINE
 
-   SUBROUTINE io_write_complex3(did, start, ncount, DATA, trans)
+   SUBROUTINE io_write_complex3(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1750,6 +1785,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(IN)    ::DATA(:, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1767,9 +1803,9 @@ CONTAINS
          foffset = 1
          fncount = 2
       END WHERE
-      CALL io_write_real4(did, foffset, fncount, a, trans)
+      CALL io_write_real4(did, foffset, fncount, dat_tag, a, trans)
    END SUBROUTINE
-   SUBROUTINE io_write_complex4(did, start, ncount, DATA, trans)
+   SUBROUTINE io_write_complex4(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1777,6 +1813,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(IN)    ::DATA(:, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1794,9 +1831,9 @@ CONTAINS
          foffset = 1
          fncount = 2
       END WHERE
-      CALL io_write_real5(did, foffset, fncount, a, trans)
+      CALL io_write_real5(did, foffset, fncount, dat_tag, a, trans)
    END SUBROUTINE
-   SUBROUTINE io_write_complex5(did, start, ncount, DATA, trans)
+   SUBROUTINE io_write_complex5(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
       USE hdf5
 
@@ -1804,6 +1841,7 @@ CONTAINS
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
      &     ncount(:)
+      CHARACTER*(*), INTENT(IN)   ::dat_tag
       COMPLEX(rkind), INTENT(IN)    ::DATA(:, :, :, :, :)
       INTEGER(HID_T), INTENT(IN), OPTIONAL::trans
       !locals
@@ -1821,7 +1859,7 @@ CONTAINS
          foffset = 1
          fncount = 2
       END WHERE
-      CALL io_write_real6(did, foffset, fncount, a, trans)
+      CALL io_write_real6(did, foffset, fncount, dat_tag, a, trans)
    END SUBROUTINE
 
    !>

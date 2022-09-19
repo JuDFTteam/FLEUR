@@ -94,7 +94,7 @@ CONTAINS
           END DO
           DO i=-stars%mx1, stars%mx1
              DO j=-stars%mx2,stars%mx2
-                WRITE (87,'(i2,1x,e12.4)') stars%ig2(stars%ig(i,j,0)),stars%rgphs(i,j,0)
+                !WRITE (87,'(i2,1x,e12.4)') stars%ig2(stars%ig(i,j,0)),stars%rgphs(i,j,0)
              END DO
           END DO
        END IF

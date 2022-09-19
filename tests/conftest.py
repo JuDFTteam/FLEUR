@@ -249,9 +249,13 @@ def pytest_generate_tests(metafunc):
         required_markers = markers - default_markers
         #Here we could select tests based on the markers of the Test (at the moment we just discard the marker info here)
         #This is useful for the eventual tests of banddos parsers, nmmpmat parser, ...
-        test_info = {(info[0], info[1]) for info in test_info if all(marker in info[2:] for marker in required_markers)}
-
-        metafunc.parametrize('fleur_test_name, test_file', test_info, ids=[info[0] for info in test_info])
+        
+        if 'outxml' in metafunc.function.__name__:
+            test_info = {(info[0], info[1], 'outxml_parser_xfail' in info[2:]) for info in test_info if all(marker in info[2:] for marker in required_markers)}
+            metafunc.parametrize('fleur_test_name, test_file, expected_failure', test_info, ids=[info[0] for info in test_info])
+        else:
+            test_info = {(info[0], info[1]) for info in test_info if all(marker in info[2:] for marker in required_markers)}
+            metafunc.parametrize('fleur_test_name, test_file', test_info, ids=[info[0] for info in test_info])
 
 
 # To modify the collected tests AFTER collections
@@ -285,7 +289,7 @@ def pytest_collection_modifyitems(session, config, items):
     testoffset = config.getoption("testoffset")
     if testoffset is None:
         testoffset = 0
-    print(f'Running every {run_every}st test with offset {testoffset}, others will be skiped.')
+    print(f'Running every {run_every}st test with offset {testoffset}, others will be skipped.')
 
     if not RUN_PARSER_TESTS:
         marker_list = marker_list + ['masci_tools']
@@ -376,6 +380,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "wannier5: test for fleur using wannier 5D calculations")
     config.addinivalue_line("markers", "masci_tools: tests which use functions from masci-tools repo")
     config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
+    config.addinivalue_line("markers", "outxml_parser_xfail: tests for which the outxml_parser is expected to output some error message")
 
     # solvers, ffts and other libs
     config.addinivalue_line("markers", "edsolver: test needing the edsolver")
@@ -858,8 +863,11 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig, test_logger
             with open(f"{workdir}/{stderr}", "bw") as f_stderr:
                 # we parse the whole string and execute in shell,
                 # otherwise popen thinks 'mpirun -np 2 /path/fleur' is the path to the executable...
+                print('FLEUR execution:')
+                print('arg_list:',arg_list)
+                #print('env:',run_env)
                 p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=False)
-        
+
         # Check per hand if successful:
         with open(f"{workdir}/stderr", "r") as f_stderr:
                 error_content= f_stderr.read()
@@ -982,6 +990,121 @@ def grep_exists(test_logger):
 
     return _grep_exists
 
+
+@pytest.fixture
+def check_outxml(test_logger):
+    """retruns the check_outxml function
+    """
+    def _check_outxml(filepath,reffilepath,checks,skip_noref=False):
+        """ TODO
+        """
+        ok=True
+        test_logger.info(f'Checking out.xml file:{filepath} against values in {reffilepath}')
+        from xml.etree import ElementTree
+        try:
+            outxml=ElementTree.parse(filepath)
+            refxml=ElementTree.parse(reffilepath)
+        except:
+            test_logger.error("Either out.xml or the reference could not be read/parsed")
+            return False
+        for check in checks:
+            element=check[0]
+            attrib=check[1]
+            index=check[2]
+            tol=check[3]
+            try:            
+                e2=refxml.findall(".//"+element)[index]
+                if attrib:
+                    e2=e2.attrib[attrib]
+            except:
+                test_logger.info(f"Element,index,attrib not found: {element} {index} {attrib} in reference")
+                if not skip_noref: return False
+            else:
+                try:
+                    e1=outxml.findall(".//"+element)[index]
+                    if attrib:
+                        e1=e1.attrib[attrib]
+                except:
+                    test_logger.error(f"Element,index,attrib not found: {element} {index} {attrib} in out.xml")
+                    return False
+                if abs(float(e1)-float(e2))>tol:
+                    test_logger.info(f"Check failed for {element} {index} {attrib}")
+                    test_logger.info(f"Value: {e1}  Reference: {e2} Tol: {tol}")
+                    ok=False
+                else:
+                    test_logger.info(f"Check passed for {element} {index} {attrib}")           
+        return ok
+    return _check_outxml
+
+@pytest.fixture
+def check_all_outxml(test_logger,check_outxml):
+    """returns the check_all_outxml function
+    """
+    def _check_all_outxml(filepath,reffilepath):
+        """ Performs all default checks on out.xml
+        """
+        from xml.etree import ElementTree
+        refxml=ElementTree.parse(reffilepath)
+        checks=[
+            ["FermiEnergy","value",-1,0.001],
+            ["bandgap","value",-1,0.001],
+            ["totalEnergy","value",-1,0.001],
+            ["sumValenceSingleParticleEnergies","value",-1,0.001],
+            ["chargeDensity","distance",-1,0.001], #last spind only
+            ["mtCharge","total",-1,0.001],
+            ["state","energy",-1,0.001], #check core state
+            ["densityConvergence/spinDensity","distance",-1,0.001],
+            ["magneticMoment","moment",-1.,0.001]
+            ]
+        return check_outxml(filepath,reffilepath,checks,skip_noref=True)
+    return _check_all_outxml        
+
+@pytest.fixture
+def check_hdf(test_logger):
+    """returns the check_hdf function
+    """
+    def _check_hdf(filename,reffile,tol=0.001):
+        """ use h5diff to compare two hdf files
+        """
+        import subprocess
+        if subprocess.run(["which","h5diff"]).returncode == 0:
+            return subprocess.run(["h5diff",f"-d {tol}",filename,reffile]).returncode
+        else:
+            test_logger.info(f"No h5diff found to compare {filename} to {reffile}")
+            return True
+    return _check_hdf
+
+@pytest.fixture
+def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_xml_file,check_hdf):
+    """returns the default_fleur_test function
+    """
+    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=None):
+        """ docu
+        """
+        test_logger.info(f"Starting a default fleur test for {testname}")           
+        test_file_folder = os.path.join('./inputfiles/',testname)
+        ref_out_xml=os.path.join(test_file_folder,"out.xml")
+        res_files = execute_fleur(test_file_folder)
+        should_files = ['out.xml', 'out']
+        if files: should_files=should_files+files
+        res_file_names = list(res_files.keys())
+
+        # Test if all files are there
+        for file1 in should_files:
+            assert file1 in res_file_names
+    
+        if not validate_out_xml_file(res_files['out.xml']): pytest.fail("validating out_xml_failed")
+        if not check_all_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out_xml_failed in basic test")
+        if checks and not check_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out.xml failed in advanced test")
+        #compare cdn files 
+        if hdf_checks:
+            for hdf in hdf_checks:
+                if hdf in res_file_names:
+                    if not check_hdf(res_files[hdf],os.path.join(test_file_folder,hdf)): pytest.fail(f"checking failed for HDF file:{cdn}")
+                else:
+                    test_logger.info(f"HDF file not found: {hdf}, probably no HDF build")  
+        return res_files
+    return _default_fleur_test    
 
 @pytest.fixture
 def grep_number(test_logger):
@@ -1273,7 +1396,7 @@ def collect_all_judft_messages():
      ]
 
     grep_results = []
-    grep_string = '(judft_error|error_output)'
+    grep_string = '(judft_error|error_output|errorString)'
     # fortran is not case sensitive, sometimes output is programmed line before.
     # maybe use real grep instead of this python implementation...
     for folder in src_folders:
@@ -1298,33 +1421,17 @@ def collect_all_judft_messages():
     all_messages = []
     # there are all combinations of strings all over the place in the fleur src
     for judft_string in grep_results:
+        if re.search(r'calledby\s*=', judft_string):
+            judft_string = judft_string.split('calledby', maxsplit=1)[0]
+        if re.search(r'hint\s*=', judft_string):
+            judft_string = judft_string.split('hint', maxsplit=1)[0]
+
         ju_str = judft_string.split('"')
         if len(ju_str) == 1:
             ju_str = judft_string.split("'")
             if len(ju_str) == 1:
                 # ignore this one
                 continue
-        string = ''
-        for s in judft_string:
-            string = string + s
-        # if calledby is used the split is always different, therefore we split calledby.
-        if re.search('calledby', string):
-            ju_str1 = string.split('calledby')[0]
-            ju_str = ju_str1.split('"')
-            if len(ju_str) == 1:
-                ju_str = ju_str1.split("'")
-                if len(ju_str) == 1:
-                    # ignore this one
-                    continue
-            try:
-                message = ju_str[-2]
-            except IndexError: # In the source code both strings sings are used
-                # We are missing some, but currently we do not care
-                print(ju_str)
-                message = None
-                continue
-
-        else:
-            message = ju_str[-2]
+        message = ju_str[-2]
         all_messages.append(message)
     return list(set(all_messages))

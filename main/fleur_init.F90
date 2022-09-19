@@ -32,7 +32,6 @@ CONTAINS
       USE m_writeOutHeader
       !USE m_fleur_init_old
       USE m_types_xcpot_inbuild
-      USE m_prpxcfft
       USE m_make_stars
       USE m_make_sphhar
       USE m_convn
@@ -141,16 +140,16 @@ CONTAINS
       !Only PE==0 reads the fi%input and does basic postprocessing
       IF (fmpi%irank .EQ. 0) THEN
          CALL fleurinput_read_xml(outxmlFileID, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
-                                  sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, oneD=fi%oneD, coreSpecInput=fi%coreSpecInput, &
+                                  sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
-                                  enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp)
+                                  enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, juPhon=fi%juPhon)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
-                                     fi%banddos, fi%oneD, Xcpot, fi%kpts, fi%gfinp)
+                                     fi%banddos,   Xcpot, fi%kpts, fi%gfinp)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
-                             fi%sliceplot, fi%banddos, fi%mpinp, fi%hybinp, fi%oneD, fi%coreSpecInput, Wann, &
-                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm)
+                             fi%sliceplot, fi%banddos, fi%mpinp, fi%hybinp,   fi%coreSpecInput, Wann, &
+                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%juPhon)
       !Remaining init is done using all PE
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
       CALL nococonv%init(fi%noco)
@@ -158,15 +157,14 @@ CONTAINS
       !CALL ylmnorm_init(MAX(fi%atoms%lmaxd, 2*fi%hybinp%lexp))
       CALL gaunt_init(fi%atoms%lmaxd + 1)
       CALL enpara%init_enpara(fi%atoms, fi%input%jspins, fi%input%film, enparaXML)
-      CALL make_sphhar(fmpi%irank == 0, fi%atoms, sphhar, fi%sym, fi%cell, fi%oneD)
+      CALL make_sphhar(fmpi%irank == 0, fi%atoms, sphhar, fi%sym, fi%cell)
       ! Store structure data (has to be performed before calling make_stars)
-      CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum, fi%oneD, fi%sym, fmpi, sphhar, fi%noco)
-      CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, xcpot, fi%oneD, fi%noco, fmpi)
+      CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum,  fi%sym, fmpi, sphhar, fi%noco)
+      CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
-      CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv, fi%oneD, forcetheo, fi%atoms, nbasfcn)
+      CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
-      CALL fi%oneD%init(fi%atoms) !call again, because make_stars modified it :-)
-      CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input, fi%oneD, fi%sym, xcpot)
+      CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input,   fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
       IF(.NOT.fi%banddos%band.AND..NOT.fi%banddos%dos) THEN
          IF(fi%noco%l_soc.OR.fi%noco%l_ss) l_timeReversalCheck = .TRUE.
@@ -175,14 +173,13 @@ CONTAINS
       CALL fi%kpts%initTetra(fi%input, fi%cell, fi%sym, fi%noco%l_soc .OR. fi%noco%l_ss)
       IF (fmpi%irank == 0) CALL fi%gfinp%init(fi%atoms, fi%sym, fi%noco, fi%cell, fi%input)
       CALL fi%gfinp%mpi_bc(fmpi%mpi_comm) !THis has to be rebroadcasted because there could be new gf elements after init_gfinp
-      CALL prp_xcfft(fmpi, stars, fi%input, fi%cell, xcpot)
       CALL convn(fmpi%irank == 0, fi%atoms, stars)
       IF (fmpi%irank == 0) CALL e_field(fi%atoms, stars, fi%sym, fi%vacuum, fi%cell, fi%input, fi%field%efield)
       IF (fmpi%isize > 1) CALL fi%field%mpi_bc(fmpi%mpi_comm, 0)
 
       !At some point this should be enabled for fi%noco as well
       IF (.NOT. fi%noco%l_noco) &
-         CALL transform_by_moving_atoms(fmpi, stars, fi%atoms, fi%vacuum, fi%cell, fi%sym, sphhar, fi%input, fi%oneD, fi%noco)
+         CALL transform_by_moving_atoms(fmpi, stars,fi%atoms, fi%vacuum, fi%cell, fi%sym, sphhar, fi%input,   fi%noco, nococonv)
 
       !
       !--> determine more dimensions
@@ -190,7 +187,7 @@ CONTAINS
 
       IF (fmpi%irank .EQ. 0) THEN
          CALL writeOutParameters(fmpi, fi%input, fi%sym, stars, fi%atoms, fi%vacuum, fi%kpts, &
-                                 fi%oneD, fi%hybinp, fi%cell, fi%banddos, fi%sliceplot, xcpot, &
+                                   fi%hybinp, fi%cell, fi%banddos, fi%sliceplot, xcpot, &
                                  fi%noco, enpara, sphhar)
          CALL fleur_info(fi%kpts)
          CALL deleteDensities()

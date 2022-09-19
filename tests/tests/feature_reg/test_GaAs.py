@@ -71,8 +71,8 @@ def test_GaAsMultiUForceXML(execute_fleur, grep_number, grep_exists):
     tenergy = grep_number(res_files['out'], "total energy=", "=")
     dist = grep_number(res_files['out'], "distance of charge densitie", "1:")
 
-    assert abs(tenergy - -4205.455) <= 0.001
-    assert abs(dist - 6.644939) <= 0.0001
+    assert abs(tenergy - -4205.211) <= 0.001
+    assert abs(dist - 6.98) <= 0.01
 
     # Stage 2
     res_files = execute_fleur(test_file_folder, only_copy=[['inp-2.xml', 'inp.xml'], 'n_mmp_mat'], rm_files=['mixing_history'])

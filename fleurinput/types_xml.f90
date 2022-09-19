@@ -22,7 +22,7 @@ MODULE m_types_xml
       INTEGER:: id
       character(len=200):: basepath = ""
       integer           :: versionNumber = 0
-      INTEGER           :: currentversionNumber = 35 !parameters are not allowed here
+      INTEGER           :: currentversionNumber = 36 !parameters are not allowed here
    CONTAINS
       PROCEDURE        :: init
       PROCEDURE        :: GetNumberOfNodes
@@ -45,7 +45,7 @@ MODULE m_types_xml
       PROCEDURE, NOPASS :: FreeResources
    END TYPE t_xml
    PUBLIC t_xml, evaluateFirstOnly, EvaluateFirst, evaluateFirstBoolOnly, evaluateFirstIntOnly, &
-      evaluateList
+      evaluateList, drop_schema_files
 
 CONTAINS
    subroutine set_basepath(xml, xpath)
@@ -55,12 +55,11 @@ CONTAINS
       xml%basepath = xpath
    end subroutine
 
-   subroutine validate_with_schema(version, output_version)
+   subroutine drop_schema_files(version, output_version)
       USE iso_c_binding
       character(len=4, kind=c_char), intent(in):: version
       character(len=4, kind=c_char), intent(in):: output_version
       integer :: errorStatus
-      character(len=200, KIND=c_char):: schemaFilename
       INTERFACE
          FUNCTION dropInputSchema(version) BIND(C, name="dropInputSchema")
             USE iso_c_binding
@@ -77,6 +76,7 @@ CONTAINS
             CHARACTER(kind=c_char) ::version
          END FUNCTION dropOutputSchema
       END INTERFACE
+      
       !Now validate with schema
       errorStatus = 0
       errorStatus = dropInputSchema(version//C_NULL_CHAR)
@@ -92,6 +92,16 @@ CONTAINS
          WRITE (*, *) 'Cannot print out FleurOutputSchema.xsd for version '//version
       END IF
 
+   end subroutine
+
+   subroutine validate_with_schema(version, output_version)
+      use iso_c_binding
+      character(len=4, kind=c_char), intent(in):: version
+      character(len=4, kind=c_char), intent(in):: output_version
+      integer :: errorStatus
+      character(len=200, KIND=c_char):: schemaFilename
+     
+      call drop_schema_files(version, output_version)
       schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
       CALL ParseSchema(schemaFilename)
       CALL ValidateDoc()
@@ -423,7 +433,10 @@ CONTAINS
          !PRINT *,xpatha
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          !PRINT *,"Q:",valueString
-         READ (valueString, *) q(1, i), q(2, i), q(3, i)
+         q(1,i)=evaluateFirstOnly(valueString)
+         q(2,i)=evaluateFirstOnly(valueString)
+         q(3,i)=evaluateFirstOnly(valueString)
+         !READ (valueString, *) q(1, i), q(2, i), q(3, i)
       END DO
    END FUNCTION read_q_list
 

@@ -66,7 +66,7 @@ CONTAINS
          call timestart("eig stuff")
          DO nk = 1, fi%kpts%nkpt
             nrec1 = fi%kpts%nkpt*(jsp - 1) + nk
-            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
 
             eig_irr(:, nk) = results%eig(:, nk, jsp)
@@ -87,7 +87,7 @@ CONTAINS
          ALLOCATE (hybdat%pntgptd(3))
          hybdat%pntgptd = 0
          DO nk = 1, fi%kpts%nkptf
-            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
             do n_dim = 1,3
                hybdat%pntgptd(n_dim) = MAXVAL([(ABS(lapw%gvec(n_dim,i,jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(n_dim)])
             end do
@@ -99,7 +99,7 @@ CONTAINS
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation pntgpt')
          hybdat%pntgpt = 0
          DO nk = 1, fi%kpts%nkptf
-            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fi%sym%zrfs)
+            CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
             DO i = 1, lapw%nv(jsp)
                hybdat%pntgpt(lapw%gvec(1,i,jsp), lapw%gvec(2,i,jsp), lapw%gvec(3,i,jsp), nk) = i
             END DO

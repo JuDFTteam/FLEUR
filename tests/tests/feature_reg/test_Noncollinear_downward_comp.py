@@ -36,7 +36,7 @@ def test_Noncollinear_downward_compatible(execute_fleur, grep_number, grep_exist
     
 
     tenergy = grep_number(res_files['out'], "total energy=", "=")
-    assert abs(tenergy - -1270.4873) <= 0.0001
+    assert abs(tenergy - -1270.4874) <= 0.0001
 
     # Stage 3
     res_files = execute_fleur(test_file_folder, only_copy=['inp.xml'], rm_files=['cdn.hdf', 'mixing_history'])
@@ -67,4 +67,4 @@ def test_Noncollinear_downward_compatible(execute_fleur, grep_number, grep_exist
 
     dist = grep_number(res_files['out'], "distance of charge densities for it=    4", ":")
 
-    assert abs(dist - 130.55) <= 0.01
+    assert abs(dist - 130.38) <= 0.01

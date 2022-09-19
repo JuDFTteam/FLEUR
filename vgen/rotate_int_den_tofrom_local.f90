@@ -15,7 +15,7 @@ MODULE m_rotate_int_den_tofrom_local
 CONTAINS
    
    SUBROUTINE rotate_int_den_to_local(sym, stars, atoms, sphhar, vacuum, cell, &
-                                      input, noco, oneD, den)
+                                      input, noco,   den)
 
       !--------------------------------------------------------------------------
       ! This subroutine calculates the spin-up and -down density in the intersti-
@@ -46,7 +46,7 @@ CONTAINS
       USE m_polangle
     
       TYPE(t_noco),   INTENT(IN)    :: noco
-      TYPE(t_oneD),   INTENT(IN)    :: oneD
+       
       TYPE(t_input),  INTENT(IN)    :: input
       TYPE(t_vacuum), INTENT(IN)    :: vacuum
       TYPE(t_sym),    INTENT(IN)    :: sym
@@ -71,7 +71,6 @@ CONTAINS
       ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
       IF (input%film) THEN
          ifft2 = 9*stars%mx1*stars%mx2
-         IF (oneD%odi%d1) ifft2 = 9*stars%mx3*oneD%odi%M
       ELSE
          ifft2=0
       END IF
@@ -105,7 +104,7 @@ CONTAINS
          rho_21r  = ris(imesh,3)
          rho_21i  = ris(imesh,4)
          mx       =  2*rho_21r
-         my       = -2*rho_21i
+         my       = -2*rho_21i ! TODO: This is a magic minus.
          mz       = rho_11 - rho_22
          magmom   = SQRT(mx**2 + my**2 + mz**2)
          rhotot   = rho_11 + rho_22
@@ -139,17 +138,11 @@ CONTAINS
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
                rziw = 0.0
-               IF (oneD%odi%d1) THEN
-                  CALL judft_error("oneD not implemented",calledby="rhodirgen")
-                  !CALL fft2d(oneD%k3,odi%M,odi%n2d,rvacxy(0,imz,ivac,iden),fftwork,&
-                  !           den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,1,ivac,iden),&
-                  !           vacuum,odi%nq2,odi%kimax2,1,&
-                  !     &                  %igf,odl%pgf,odi%nst2)
-               ELSE
+                
                   CALL fft2d(stars,rvacxy(:,imz,ivac,iden),fftwork,&
-                       den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,1,ivac,iden),&
-                       vacuum%nmzxyd,1)
-               END IF
+                       den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,:,ivac,iden),&
+                       1)
+               
             END DO
          END DO
       END DO
@@ -160,17 +153,10 @@ CONTAINS
             rziw = 0.0
             vz_r = den%vacz(imz,ivac,3)
             vz_i = den%vacz(imz,ivac,4)
-            IF (oneD%odi%d1) THEN
-               CALL judft_error("oneD not implemented",calledby="rhodirgen")
-               !CALL fft2d(oneD%k3,odi%M,odi%n2d,&
-               !           rvacxy(0,imz,ivac,3),rvacxy(0,imz,ivac,4),&
-               !           vz_r,vz_i,den%vacxy(imz,1,ivac,3),&
-               !           vacuum,odi%nq2,odi%kimax2,1,&
-               !     &               %igf,odl%pgf,odi%nst2)
-            ELSE
+             
                CALL fft2d(stars,rvacxy(:,imz,ivac,3),rvacxy(:,imz,ivac,4),&
-                    vz_r,vz_i,den%vacxy(imz,1,ivac,3),vacuum%nmzxyd,1)
-            END IF
+                    vz_r,vz_i,den%vacxy(imz,:,ivac,3),1)
+            
          END DO
       END DO
 
@@ -226,18 +212,11 @@ CONTAINS
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
                fftwork=0.0
-               IF (oneD%odi%d1) THEN
-                  CALL judft_error("oneD not implemented",calledby="rhodirgen")
-                  !CALL fft2d(oneD%k3,odi%M,odi%n2d,&
-                  !           rvacxy(0,imz,ivac,jspin),fftwork,&
-                  !           den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,1,ivac,jspin),&
-                  !           vacuum,odi%nq2,odi%kimax2,-1,&
-                  !     &                  %igf,odl%pgf,odi%nst2)
-               ELSE
+                
                   CALL fft2d(stars,rvacxy(:,imz,ivac,jspin),fftwork,&
-                       den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,1,ivac,jspin),&
-                       vacuum%nmzxyd,-1)
-               END IF
+                       den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,:,ivac,jspin),&
+                       -1)
+               
             END DO
          END DO
       END DO
@@ -272,7 +251,7 @@ CONTAINS
       !      later four components of matrix potential all stored in real space
       !--------------------------------------------------------------------------
 
-      !TYPE(t_oneD),  INTENT(IN)     :: oneD
+      ! 
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_vacuum), INTENT(IN)    :: vacuum
       TYPE(t_sym),    INTENT(IN)    :: sym
@@ -348,19 +327,10 @@ CONTAINS
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
                vziw = 0.0
-               !IF (oneD%odi%d1) THEN
-               IF (.FALSE.) THEN
-                  CALL judft_error("oneD not implemented",calledby="rotate_int_den_from_local")
-                  !                  CALL fft2d(&
-                  !     &                 oneD%k3,odi%M,odi%n2d,&
-                  !     &                 vvacxy(0,imz,ivac,jspin),fftwork,&
-                  !     &                 vz(imz,ivac,jspin),vziw,vxy(imz,1,ivac,jspin),&
-                  !     &                 vacuum,odi%nq2,odi%kimax2,1,&
-                  !     &                  %igf,odl%pgf,odi%nst2)
-               ELSE
+               ! 
                   CALL fft2d(stars, vvacxy(:,imz,ivac,jspin),fftwork,&
-                       vTot%vacz(imz,ivac,jspin),vziw,vTot%vacxy(imz,1,ivac,jspin), vacuum%nmzxyd,1)
-               END IF
+                       vTot%vacz(imz,ivac,jspin),vziw,vTot%vacxy(imz,:,ivac,jspin), 1)
+               
             END DO
          END DO
       END DO
@@ -402,19 +372,10 @@ CONTAINS
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
                fftwork=0.0
-               !IF (oneD%odi%d1) THEN
-               IF (.FALSE.) THEN
-                  CALL judft_error("oneD not implemented",calledby="rotate_int_den_from_local")
-                  !                CALL fft2d(&
-                  !     &                 oneD%k3,odi%M,odi%n2d,&
-                  !     &                 vvacxy(0,imz,ivac,ipot),fftwork,&
-                  !     &                 vz(imz,ivac,ipot),vziw,vxy(imz,1,ivac,ipot),&
-                  !     &                 vacuum,odi%nq2,odi%kimax2,-1,&
-                  !     &                  %igf,odl%pgf,odi%nst2)
-               ELSE
+               ! 
                   CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
-                       vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,1,ivac,ipot), vacuum%nmzxyd,-1)
-               END IF
+                       vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,:,ivac,ipot),-1)
+               
             END DO
          END DO
       END DO
@@ -422,19 +383,10 @@ CONTAINS
       DO ivac = 1,vacuum%nvac
          DO imz = 1,vacuum%nmzxyd
             fftwork=0.0
-            !IF (oneD%odi%d1) THEN
-            IF (.FALSE.) THEN
-            CALL judft_error("oneD not implemented",calledby="rotate_int_den_from_local")
-               !              CALL fft2d(&
-               !   &              oneD%k3,odi%M,odi%n2d,&
-               !   &              vvacxy(0,imz,ivac,3),vvacxy(0,imz,ivac,4),&
-               !   &              vz(imz,ivac,3),vz(imz,ivac,4),vxy(imz,1,ivac,3),&
-               !   &              vacuum,odi%nq2,odi%kimax2,-1,&
-               !   &               %igf,odl%pgf,odi%nst2)
-            ELSE
+            ! 
                CALL fft2d(stars, vvacxy(:,imz,ivac,3),vvacxy(:,imz,ivac,4),&
-                    vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(imz,1,ivac,3), vacuum%nmzxyd,-1)
-            END IF
+                    vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(imz,:,ivac,3),-1)
+            
          END DO
       END DO
 

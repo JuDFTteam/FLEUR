@@ -8,7 +8,7 @@ MODULE m_aline
   USE m_juDFT
 CONTAINS
   SUBROUTINE aline(eig_id, nk,atoms,sym,&
-       cell,input, jsp,el,usdus,lapw,tlmplm, noco, nococonv,oneD,eig,ne,zMat,hmat,smat)
+       cell,input, jsp,el,usdus,lapw,tlmplm, noco, nococonv ,eig,ne,zMat,hmat,smat)
     !************************************************************************
     !*                                                                      *
     !*     eigensystem-solver for moderatly-well converged potentials       *
@@ -28,7 +28,6 @@ CONTAINS
     !*                                                     Gustav           * *                                                                      *
     !************************************************************************
 
-#include"cpp_double.h"
     USE m_types
     USE m_constants
     USE m_abcof
@@ -36,7 +35,7 @@ CONTAINS
     USE m_eig66_io
     IMPLICIT NONE
 
-    TYPE(t_oneD),INTENT(IN)        :: oneD
+     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_nococonv),INTENT(IN)    :: nococonv
@@ -68,13 +67,13 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:),ccof(:,:,:,:)
 
     REAL,    ALLOCATABLE :: help_r(:),h_r(:,:),s_r(:,:)
-    REAL     CPP_BLAS_sdot
-    EXTERNAL CPP_BLAS_sdot,CPP_BLAS_sspmv
+    REAL     ddot
+    EXTERNAL ddot
 
     COMPLEX,   PARAMETER :: one_c=(1.0,0.0), zro_c=(0.0,0.0)
     COMPLEX, ALLOCATABLE :: help_c(:),h_c(:,:),s_c(:,:)
-    COMPLEX  CPP_BLAS_cdotc
-    EXTERNAL CPP_BLAS_cdotc,CPP_BLAS_chpmv
+    COMPLEX  zdotc
+    EXTERNAL zdotc
     REAL,    ALLOCATABLE :: rwork(:)
 
     LOGICAL:: l_real
@@ -136,7 +135,7 @@ CONTAINS
     if (noco%l_soc)  CALL juDFT_error("no SOC & reduced diagonalization",calledby="aline")
 
     CALL abcof(input,atoms,sym,cell,lapw,ne,&
-         usdus,noco,nococonv,1,oneD,acof,bcof,ccof,zMat)  ! ispin = 1&
+         usdus,noco,nococonv,1 ,acof,bcof,ccof,zMat)  ! ispin = 1&
 
 
     !
@@ -156,10 +155,10 @@ CONTAINS
     !
     IF (l_real) THEN
        !---> LAPACK call
-       CALL CPP_LAPACK_ssygv(1,'V','L',ne,h_r,input%neig,s_r,input%neig,eig,help_r,lhelp,info)
+       CALL dsygv(1,'V','L',ne,h_r,input%neig,s_r,input%neig,eig,help_r,lhelp,info)
     ELSE
        ALLOCATE ( rwork(MAX(1,3*ne-2)) )
-       CALL CPP_LAPACK_chegv(1,'V','L',ne,h_c,input%neig,s_c,input%neig,eig,help_c,lhelp,rwork,info)
+       CALL zhegv(1,'V','L',ne,h_c,input%neig,s_c,input%neig,eig,help_c,lhelp,rwork,info)
        DEALLOCATE ( rwork )
     ENDIF
     IF (info /= 0) THEN
@@ -173,7 +172,7 @@ CONTAINS
        ENDIF
        CALL juDFT_error("Diagonalisation failed",calledby ='aline')
     ENDIF
-8000 FORMAT (' AFTER CPP_LAPACK_ssygv: info=',i4)
+8000 FORMAT (' AFTER dsygv: info=',i4)
     CALL timestop("aline: seclr4")
 
     DO i = 1,lapw%nmat
@@ -185,9 +184,9 @@ CONTAINS
        DO j = 1,ne
           IF (l_real) THEN
              !--->       for LAPACK call
-             zMat%data_r(i,j) = CPP_BLAS_sdot(ne,help_r,1,h_r(1,j),1)
+             zMat%data_r(i,j) = ddot(ne,help_r,1,h_r(1,j),1)
           ELSE
-             zMat%data_c(i,j) = CPP_BLAS_cdotc(ne,help_c,1,h_c(1,j),1)
+             zMat%data_c(i,j) = zdotc(ne,help_c,1,h_c(1,j),1)
           ENDIF
        END DO
     END DO

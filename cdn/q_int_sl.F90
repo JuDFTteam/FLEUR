@@ -1,21 +1,21 @@
 MODULE m_qintsl
   USE m_juDFT
 CONTAINS
-  SUBROUTINE q_int_sl(isp,ikpt,stars,atoms,sym,cell,ne,ev_list,lapw,slab,oneD,zMat)
+  SUBROUTINE q_int_sl(isp,ikpt,stars,atoms,sym,cell,ne,ev_list,lapw,slab ,zMat)
     !     *******************************************************
     !     calculate the charge of the En(k) state
     !     in the interstitial region of each leyer
     !                                             Yu.M. Koroteev
     !             From pwden_old.F and pwint.F by  c.l.fu
     !     *******************************************************
-#include"cpp_double.h"
+
     USE m_pwintsl
     USE m_types
     USE m_types_slab
     IMPLICIT NONE
 
     TYPE(t_lapw),INTENT(IN)   :: lapw
-    TYPE(t_oneD),INTENT(IN)   :: oneD
+     
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_stars),INTENT(IN)  :: stars
     TYPE(t_cell),INTENT(IN)   :: cell
@@ -38,7 +38,6 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: stfunint(:,:),z_z(:)
 
     !     ..
-    IF (oneD%odi%d1) CALL juDFT_error("well, does not work with 1D. Not clear how to define a layer.",calledby ="q_int_sl")
     !
     !     calculate the star function expansion coefficients of
     !     the plane wave charge density for each En(k)

@@ -7,7 +7,7 @@
       MODULE m_modcyli
       use m_juDFT
 
-c     generates modified bessel functions I_m for a given x and 
+c     generates modified bessel functions I_m for a given x and
 c     order m
 c                Y.Mokrousov, 21 oct 2002
       CONTAINS
@@ -33,7 +33,7 @@ c                Y.Mokrousov, 21 oct 2002
       intrinsic abs,int,sqrt
 
       m = int(abs(m1))
-     
+
       iJ = 0.
       if (x.lt.zero)  CALL juDFT_error("x.lt.zero",calledby="modcyli")
       if (x.eq.zero) then
@@ -81,9 +81,9 @@ c           write (*,*) '>12,>6n2'
             return
          else
             mass = int( m + 10 + x )
-            allocate ( aux(0:mass) )       
+            allocate ( aux(0:mass) )
             aux(mass) = 0.0
-            aux(mass-1) = 1.0e-22  
+            aux(mass-1) = 1.0e-22
             do i=mass-2,0,-1
                aux(i) = 2*(i+1)*aux(i+1)/x + aux(i+2)
 c               if (i.lt.m .and. x.gt.6*qm .and. i.ne.0) then
@@ -94,8 +94,8 @@ c               end if
             end do
             quot = aux(0)
             if (x.le.twelve) then
-c               write (*,*) 'fucking here'
-               fact1 = 1.                                             
+c               write (*,*) 'kinda here'
+               fact1 = 1.
                iJ0 = 1.
                do i=1,31
                   fact1 = fact1*i

@@ -33,7 +33,7 @@ CONTAINS
       REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
       !     ..
       !     .. Local Scalars ..
-      REAL eig,fj,fl,fn,q,rad,rhos,rhs,sea,sume,t2
+      REAL eig,fj,fl,fn,qOutside,rad,rhos,rhs,sea,sume,t2
       REAL d,dxx,rn,rnot,z,t1,rr,r,lambd,c,bmu,weight, aux_weight
       INTEGER i,j,jatom,korb,n,ncmsh,nm,nm1,nst ,l,ierr
       !     ..
@@ -198,25 +198,26 @@ CONTAINS
 
          !     ---> simpson integration
          rad = atoms%rmt(jatom)
-         q = rad*rhoss(nm)/2.
+         ! qOutside is the charge ousides a single MT sphere of the onsidered atom type
+         qOutside = rad*rhoss(nm)/2.
          DO  nm1 = nm + 1,ncmsh - 1,2
             rad = d*rad
-            q = q + 2*rad*rhoss(nm1)
+            qOutside = qOutside + 2*rad*rhoss(nm1)
             rad = d*rad
-            q = q + rad*rhoss(nm1+1)
+            qOutside = qOutside + rad*rhoss(nm1+1)
          ENDDO
-         q = 2*q*dxx/3
+         qOutside = 2*qOutside*dxx/3
          !+sb
-         WRITE (oUnit,FMT=8020) q/input%jspins
+         WRITE (oUnit,FMT=8020) qOutside/input%jspins
          !-sb
-         qint(jatom,jspin) = q*atoms%neq(jatom)
+         qint(jatom,jspin) = qOutside*atoms%neq(jatom)
          attributes = ''
          WRITE(attributes(1),'(i0)') jatom
          WRITE(attributes(2),'(i0)') NINT(z)
          WRITE(attributes(3),'(i0)') jspin
          WRITE(attributes(4),'(f18.10)') tec(jatom,jspin)
          WRITE(attributes(5),'(f18.10)') sume
-         WRITE(attributes(6),'(f9.6)') q/input%jspins
+         WRITE(attributes(6),'(f9.6)') qOutside/input%jspins
          CALL openXMLElementForm('coreStates',(/'atomType     ','atomicNumber ','spin         ','kinEnergy    ',&
                                                 'eigValSum    ','lostElectrons'/),&
                                  attributes,RESHAPE((/8,12,4,9,9,13,6,3,1,18,18,9/),(/6,2/)))

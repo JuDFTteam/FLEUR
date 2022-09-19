@@ -3,8 +3,8 @@ MODULE m_fleurinput_read_xml
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_read_xml(xmlOUTFileID,cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,old_version)
+       sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
+       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,juPhon,old_version)
     USE m_types_xml
     integer,INTENT(IN)               :: xmlOUTFileID
     TYPE(t_cell),INTENT(OUT),OPTIONAL::cell
@@ -18,7 +18,7 @@ CONTAINS
     TYPE(t_banddos),INTENT(OUT),OPTIONAL::banddos
     TYPE(t_mpinp), INTENT(OUT), OPTIONAL :: mpinp
     TYPE(t_hybinp),INTENT(OUT),OPTIONAL::hybinp
-    TYPE(t_oneD),INTENT(OUT),OPTIONAL::oneD
+     
     TYPE(t_coreSpecInput),INTENT(OUT),OPTIONAL::coreSpecInput
     TYPE(t_wann),INTENT(OUT),OPTIONAL::wann
     CLASS(t_xcpot),INTENT(OUT),OPTIONAL::xcpot
@@ -28,6 +28,7 @@ CONTAINS
     TYPE(t_kpts),ALLOCATABLE,INTENT(INOUT),OPTIONAL::kptsArray(:)
     TYPE(t_gfinp),INTENT(OUT),OPTIONAL::gfinp
     TYPE(t_hub1inp),INTENT(OUT),OPTIONAL::hub1inp
+    TYPE(t_juPhon),INTENT(OUT),OPTIONAL::juPhon
     CHARACTER(LEN=40),INTENT(OUT),OPTIONAL::kptsSelection(3)
     LOGICAL,INTENT(INOUT),OPTIONAL :: old_version
 
@@ -52,7 +53,6 @@ CONTAINS
     if (present(banddos)) call banddos%read_xml(xml)
     if (present(mpinp)) call mpinp%read_xml(xml)
     if (present(hybinp)) call hybinp%read_xml(xml)
-    if (present(oneD)) call oneD%read_xml(xml)
     if (present(coreSpecInput)) call coreSpecInput%read_xml(xml)
     if (present(wann)) call wann%read_xml(xml)
     if (present(xcpot)) call xcpot%read_xml(xml)
@@ -61,6 +61,16 @@ CONTAINS
     if (present(kpts)) CALL kpts%read_xml(xml)
     if (present(gfinp)) CALL gfinp%read_xml(xml)
     if (present(hub1inp)) CALL hub1inp%read_xml(xml)
+    if (present(juPhon)) THEN
+        CALL juPhon%read_xml(xml)
+        IF (juPhon%kgqmax.LE.0.0) THEN
+            juPhon%kgqmax = input%rkmax
+        END IF
+
+        IF (juPhon%gqmax.LE.0.0) THEN
+            juPhon%gqmax = input%gmax
+        END IF
+    end if
     IF (present(kptsSelection).and.xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointListSelection')>0) THEN
        kptsSelection(:) = ''
        kptsSelection(1) = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/cell/bzIntegration/kPointListSelection/@listName')))

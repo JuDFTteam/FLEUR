@@ -6,7 +6,7 @@
 MODULE m_totale
 CONTAINS
   SUBROUTINE totale(fmpi,atoms,sphhar,stars,vacuum, &
-       sym,input,noco,cell,oneD, xcpot,hybdat,vTot,vCoul,it,den,results)
+       sym,input,noco,cell , xcpot,hybdat,vTot,vCoul,it,den,results)
     !
     !     ***************************************************
     !     subroutine calculates the total energy
@@ -14,10 +14,10 @@ CONTAINS
     !     single particle energies
     !     SEIGC  sum of the eigenvalues of the core states
     !            calculated in cdngen.f
-    !     SEIGSCV  sum of the eigenvalues of the semicore and valence states
+    !     SEIGV  sum of the eigenvalues of the semicore and valence states
     !              calculated in fermie.f
     !     TS         : entropy contribution to the free energy
-    !     SEIGC,SEIGSCV, TS are calculated in fermie.f
+    !     SEIGC,SEIGV, TS are calculated in fermie.f
     !     ***************************************************
     !     TE_VCOUL  :   charge density-coulomb potential integral
     !     TE_VEFF:   charge density-effective potential integral
@@ -27,10 +27,10 @@ CONTAINS
     !     VMD :   Madelung term
     !     ***************************************************
     !     TOTE    :   total energy due to all electrons
-    !     TOTE = SEIGC + SEIGSCV + TE_VCOUL/2 -TE_VEFF + TE_EXC + VMD
+    !     TOTE = SEIGC + SEIGV + TE_VCOUL/2 -TE_VEFF + TE_EXC + VMD
     !
     !     if HF calculation/hybinp-functional calculation :
-    !     TOTE = SEIGC + SEIGSCV + TE_VCOUL/2 -TE_VEFF + TE_EXC_loc + VMD - 1/2 E_FOCK
+    !     TOTE = SEIGC + SEIGV + TE_VCOUL/2 -TE_VEFF + TE_EXC_loc + VMD - 1/2 E_FOCK
     !
     !     E_FOCK: sum of diagonal elements of fock matrix
     !
@@ -57,7 +57,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)          :: fmpi
     TYPE(t_results),INTENT(INOUT)   :: results
     CLASS(t_xcpot),INTENT(IN)       :: xcpot
-    TYPE(t_oneD),INTENT(IN)         :: oneD
+     
     TYPE(t_hybdat),INTENT(IN)       :: hybdat
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
@@ -86,14 +86,14 @@ CONTAINS
     REAL dpj(atoms%jmtd),mt(atoms%jmtd,atoms%ntype)
     CHARACTER(LEN=20) :: attributes(3)
 
-    !CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+    !CALL den%init(stars,atoms,sphhar,vacuum,noco ,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
     IF (fmpi%irank==0) THEN
        WRITE (oUnit,FMT=8000)
 8000   FORMAT (/,/,/,5x,'t o t a l  e n e r g y')
        !
        !      ---> sum of eigenvalues (core, semicore and valence states)
        !
-       eigSum = results%seigscv + results%seigc
+       eigSum = results%seigv + results%seigc
        results%tote = eigSum
        WRITE (oUnit,FMT=8010) results%tote
 8010   FORMAT (/,10x,'sum of eigenvalues =',t40,f20.10)
@@ -135,7 +135,7 @@ CONTAINS
        !archiveType = CDN_ARCHIVE_TYPE_CDN1_const
        !IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_CDN_const
 
-       !CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+       !CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,&
        !                 CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
 
@@ -227,7 +227,7 @@ CONTAINS
        END IF
        CALL openXMLElementFormPoly('sumOfEigenvalues',(/'value'/),(/eigSum/),reshape((/32,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('coreElectrons',(/'value'/),(/results%seigc/),reshape((/32,20/),(/1,2/)))
-       CALL writeXMLElementFormPoly('valenceElectrons',(/'value'/),(/results%seigscv/),reshape((/29,20/),(/1,2/)))
+       CALL writeXMLElementFormPoly('valenceElectrons',(/'value'/),(/results%seigv/),reshape((/29,20/),(/1,2/)))
        CALL closeXMLElement('sumOfEigenvalues')
        CALL writeXMLElementFormPoly('densityCoulombPotentialIntegral',(/'value'/),(/results%te_vcoul/),reshape((/17,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('densityEffectivePotentialIntegral',(/'value'/),(/results%te_veff/),reshape((/15,20/),(/1,2/)))
@@ -269,7 +269,7 @@ CONTAINS
           CALL exit_sf(jsp,atoms,results%force)
        END DO
     END IF
-    CALL force_w(fmpi,input,atoms,sym,results,cell,oneD,vacuum)
+    CALL force_w(fmpi,input,atoms,sym,results,cell ,vacuum)
 
   END SUBROUTINE totale
 END MODULE m_totale

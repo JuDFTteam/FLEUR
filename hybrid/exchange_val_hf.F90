@@ -423,7 +423,7 @@ CONTAINS
 
          IF (zero_order) THEN
             CALL dwavefproducts(dcprod, ik, 1, hybdat%nbands(ik,jsp), 1, hybdat%nbands(ik,jsp), .false., fi%input, fi%atoms, mpdata, fi%hybinp, &
-                                fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, lapw, fi%oneD, jsp, eig_irr)
+                                fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv, lapw,  jsp, eig_irr)
 
             ! make dcprod hermitian
             DO n1 = 1, hybdat%nbands(ik,jsp)

@@ -11,14 +11,17 @@ build-intel:
     - cd build.intel
     - make -j 2
   allow_failure: false
-  except:
-    - pushes
+  rules:
+      - if: $CI_TASKS =~ /intel/
 
 test-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
-  extends: .test-fleur-not-on-push
+  extends: .test-fleur
   variables:
     BUILD_FOLDER: "build.intel"
   needs: 
     - build-intel
   allow_failure: true
+  rules:
+      - if: $CI_TASKS =~ /intel/    
+  

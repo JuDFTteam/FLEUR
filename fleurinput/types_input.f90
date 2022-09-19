@@ -79,6 +79,8 @@ MODULE m_types_input
   REAL    :: ldauSpinf=1.0
   LOGICAL :: ldauAdjEnpara=.FALSE.
   LOGICAL :: ldauSpinoffd=.FALSE.
+  LOGICAL :: ldauNonsphDC=.FALSE.
+  LOGICAL :: ldauInitialGuess=.FALSE.
   LOGICAL :: l_rdmft=.FALSE.
   REAL    :: rdmftOccEps=0.0
   INTEGER :: rdmftStatesBelow=0
@@ -161,6 +163,8 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%ldauSpinf,rank,mpi_comm)
    CALL mpi_bc(this%ldauAdjEnpara,rank,mpi_comm)
    CALL mpi_bc(this%ldauSpinoffd,rank,mpi_comm)
+   CALL mpi_bc(this%ldauNonsphDC,rank,mpi_comm)
+   CALL mpi_bc(this%ldauInitialGuess,rank,mpi_comm)
    CALL mpi_bc(this%l_rdmft,rank,mpi_comm)
    CALL mpi_bc(this%rdmftOccEps,rank,mpi_comm)
    CALL mpi_bc(this%rdmftStatesBelow,rank,mpi_comm)
@@ -351,6 +355,10 @@ SUBROUTINE read_xml_input(this,xml)
       this%ldauAdjEnpara = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_adjEnpara'))
       IF(xml%versionNumber>=35) THEN
         this%ldauSpinoffd = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_spinoffd'))
+      ENDIF
+      IF(xml%versionNumber>=36) THEN
+         this%ldauNonsphDC = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_nonsphDC'))
+         this%ldauInitialGuess = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_initialGuess'))
       ENDIF
    END IF
    ! Read in RDMFT parameters

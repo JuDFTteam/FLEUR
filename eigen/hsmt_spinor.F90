@@ -5,53 +5,49 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_hsmt_spinor
-  IMPLICIT NONE
+   IMPLICIT NONE
 CONTAINS
 
+   !The spinors are calculated both in hssphn_sph & hssphn_nonsph, hence this is a
+   !common subroutine
+  SUBROUTINE hsmt_spinor(iSpinNum, n, nococonv, chi_mat)
+      USE m_types
+      USE m_constants
 
-  !The spinors are calculated both in hssphn_sph & hssphn_nonsph, hence this is a
-  !common subroutine
-  SUBROUTINE hsmt_spinor(isp,n,nococonv,chi_mat)
-    USE m_types
-    use m_constants
-    IMPLICIT NONE
+      TYPE(t_nococonv), INTENT(IN)  :: nococonv
+      INTEGER,          INTENT(IN)  :: iSpinNum, n
+      COMPLEX,          INTENT(OUT) :: chi_mat(2,2)
 
-    TYPE(t_nococonv),INTENT(IN)      :: nococonv
-    INTEGER,INTENT(IN)           :: isp, n
-    COMPLEX,INTENT(OUT)          :: chi_mat(2,2)
+      INTEGER           :: iSpinPr, iSpin
+      COMPLEX           :: umat(2,2)
 
-    INTEGER           :: isp1,isp2
-    COMPLEX           :: chi(2,2)
+      !--->       set up the spinors of this atom within global
+      !--->       spin-coordinateframe
+      umat = nococonv%umat(n)
+      !--->       and determine the prefactors for the Hamitonian- and
+      !--->       overlapp-matrix elements
+      IF (iSpinNum<3) THEN
+         iSpinPr = iSpinNum
+         iSpin   = iSpinNum
+      ELSE IF(iSpinNum==3) THEN
+         iSpinPr = 2
+         iSpin   = 1
+      ELSE
+         iSpinPr = 1
+         iSpin   = 2
+      ENDIF
 
-    !--->       set up the spinors of this atom within global
-    !--->       spin-coordinateframe
-    chi=nococonv%chi(n)
-    !--->       and determine the prefactors for the Hamitonian- and
-    !--->       overlapp-matrix elements
-    IF (isp<3) THEN
-       isp1=isp
-       isp2=isp
-    ELSEIF(isp==3) THEN
-       isp1=2
-       isp2=1
-    ELSE
-       isp1=1
-       isp2=2
-    ENDIF
+      chi_mat(1, 1) = umat(1,iSpinPr)*CONJG(umat(1,iSpin))
+      chi_mat(1, 2) = umat(1,iSpinPr)*CONJG(umat(2,iSpin))
+      chi_mat(2, 1) = umat(2,iSpinPr)*CONJG(umat(1,iSpin))
+      chi_mat(2, 2) = umat(2,iSpinPr)*CONJG(umat(2,iSpin))
 
-    chi_mat(1,1) = chi(1,isp1)*CONJG(chi(1,isp2))
-    chi_mat(2,1) = chi(2,isp1)*CONJG(chi(1,isp2))
-    chi_mat(2,2) = chi(2,isp1)*CONJG(chi(2,isp2))
-    chi_mat(1,2) = chi(1,isp1)*CONJG(chi(2,isp2))
-
-
-
-  END SUBROUTINE hsmt_spinor
+   END SUBROUTINE hsmt_spinor
 
   SUBROUTINE hsmt_spinor_soc(n,ki,nococonv,lapw,chi_so,angso,kj_start,kj_end)
     USE m_types
     use m_constants
-    IMPLICIT NONE
+
     TYPE(t_nococonv),INTENT(IN)      :: nococonv
     TYPE(t_lapw),INTENT(IN)      :: lapw
     INTEGER,INTENT(IN)           :: n,ki
@@ -66,18 +62,18 @@ CONTAINS
     COMPLEX  :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2),d(2,2)
 
     !     isigma= i * sigma, where sigma is Pauli matrix
-    isigma=CMPLX(0.0,0.0)
-    isigma(1,2,1)=CMPLX(0.0,1.0)
-    isigma(2,1,1)=CMPLX(0.0,1.0)
-    isigma(1,2,2)=CMPLX(-1.0,0.0)
-    isigma(2,1,2)=CMPLX(1.0,0.0)
-    isigma(1,1,3)=CMPLX(0.0,-1.0)
-    isigma(2,2,3)=CMPLX(0.0,1.0)
+    isigma = CMPLX(0.0,0.0)
+
+    isigma(1,2,1)=CMPLX(0.0,1.0)   !     (0  1)   ( 0  i)
+    isigma(2,1,1)=CMPLX(0.0,1.0)   ! i * (1  0) = ( i  0)
+    isigma(1,2,2)=CMPLX(-1.0,0.0)  !     (0 -i)   ( 0  1) !!!!!!!!!
+    isigma(2,1,2)=CMPLX(1.0,0.0)   ! i * (i  0) = (-1  0) !!!!!!!!!
+    isigma(1,1,3)=CMPLX(0.0,-1.0)  !     (1  0)   ( i  0)
+    isigma(2,2,3)=CMPLX(0.0,1.0)   ! i * (0 -1) = ( 0 -i)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-    chi=nococonv%chi(n)
-    
+    chi=conjg(nococonv%umat(n))
 
     isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),((chi))))
     isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),((chi))))

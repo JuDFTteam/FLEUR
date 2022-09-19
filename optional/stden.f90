@@ -15,7 +15,7 @@ CONTAINS
 
 
 SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
-                 input,cell,xcpot,noco,oneD)
+                 input,cell,xcpot,noco )
 
    USE m_juDFT_init
    USE m_types
@@ -39,7 +39,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    TYPE(t_sym),INTENT(IN)      :: sym
    TYPE(t_stars),INTENT(IN)    :: stars
    TYPE(t_noco),INTENT(IN)     :: noco
-   TYPE(t_oneD),INTENT(IN)     :: oneD
+    
    TYPE(t_input),INTENT(IN)    :: input
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
    TYPE(t_cell),INTENT(IN)     :: cell
@@ -201,20 +201,24 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
 
    DO ispin = 1, input%jspins
       CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
-                   cell,input,oneD,l_st,ispin,rh1(:,:,ispin),&
+                   cell,input ,l_st,ispin,rh1(:,:,ispin),&
                    den%pw,den%vacxy,den%mt,den%vacz)
       !roa-
    END DO
-
+    
+   if (noco%l_noco) THEN
+      den%pw(:,1)=(den%pw(:,1)+den%pw(:,2))*0.5
+      den%pw(:,2)=den%pw(:,1)
+   endif
 
    ! Check the normalization of total density
-   CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
+   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
    !Rotate density into global frame if l_alignSQA
    IF (any(noco%l_alignMT)) then
      allocate(nococonv%beta(atoms%ntype),nococonv%alph(atoms%ntype))
      nococonv%beta=noco%beta_inp
      nococonv%alph=noco%alph_inp
-     CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym, oneD, cell, input, atoms, Den)
+     CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym,   cell, input, atoms, Den)
      Allocate(pw_tmp(size(den%pw,1),3))
      pw_tmp=0.0
      pw_tmp(:,:size(den%pw,2))=den%pw
@@ -227,7 +231,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       call move_alloc(mmpmat_tmp,den%mmpmat)
    ENDIF
 
-   IF(atoms%n_u>0.and.fmpi%irank==0) THEN
+   IF(atoms%n_u>0.and.fmpi%irank==0.and.input%ldauInitialGuess) THEN
       !Create initial guess for the density matrix based on the occupations in the inp.xml file
       WRITE(*,*) "Creating initial guess for LDA+U density matrix"
       den%mmpMat = cmplx_0
@@ -251,7 +255,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   m  = mj - ms
                   IF(ABS(m)<=l) then
                      cl = clebsch(REAL(l),0.5,REAL(m),ms,j_state,mj)**2   
-                     den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) = den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) +  MIN(cl,occ_state(ispin))
+                     den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) = den%mmpMat(m,m,i_u,MIN(ispin,input%jspins)) + MIN(cl,occ_state(ispin))
                      occ_state(ispin) = MAX(occ_state(ispin)-cl,0.0)
                   endif
                   mj_state = mj_state + 1 
@@ -289,15 +293,19 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
 
       ! Write superposed density onto density file
       den%iter = 0
-
-      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
+ 
+      if (noco%l_noco) THEN
+         den%pw(:,1)=(den%pw(:,1)+den%pw(:,2))*0.5
+         den%pw(:,2)=den%pw(:,1)
+      endif
+      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,&
           merge(CDN_ARCHIVE_TYPE_FFN_const,CDN_ARCHIVE_TYPE_CDN1_const,any(noco%l_alignMT)),&
           CDN_INPUT_DEN_const,1,-1.0,0.0,-1.0,-1.0,.TRUE.,den)
       ! Check continuity
       IF (input%vchk) THEN
          DO ispin = 1, input%jspins
             WRITE (oUnit,'(a8,i2)') 'spin No.',ispin
-            CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
+            CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,&
                            cell,den,ispin)
          END DO ! ispin = 1, input%jspins
       END IF ! input%vchk
@@ -383,9 +391,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   denz1 = den%vacz(1,ivac,ispin)          ! get estimate for potential at vacuum boundary
                   CALL xcpot%get_vxc(1,denz1,vacpot,vacxpot)
                   ! seems to be the best choice for 1D not to substract vacpar
-                  IF (.NOT.oneD%odi%d1) THEN
-                     vacpot = vacpot - fpi_const*vacpar(ivac)
-                  END IF
+                  vacpot = vacpot - fpi_const*vacpar(ivac)
                   vacpar(ivac) = vacpot(1,1)
                END DO
                IF (vacuum%nvac.EQ.1) vacpar(2) = vacpar(1)

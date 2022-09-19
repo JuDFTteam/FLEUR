@@ -12,7 +12,7 @@ MODULE m_make_dos
   !
 CONTAINS
   SUBROUTINE make_dos(kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,results,eigdos,oneD)
+                      sliceplot,noco,sym,cell,results,eigdos )
     USE m_types
     USE m_constants
     USE m_cdn_io
@@ -26,7 +26,7 @@ CONTAINS
     IMPLICIT NONE
 
 
-    TYPE(t_oneD),INTENT(IN)      :: oneD
+     
     TYPE(t_banddos),INTENT(IN)   :: banddos
     TYPE(t_sliceplot),INTENT(IN) :: sliceplot
     TYPE(t_input),INTENT(IN)     :: input

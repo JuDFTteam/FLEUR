@@ -1,8 +1,5 @@
 set(fleur_F77 ${fleur_F77}
-#wannier/abcof_small.F
 wannier/eulerrot.f
-#wannier/w90kpunktgen.f
-wannier/wann_1dvacabcof.F
 wannier/wann_2dvacabcof.F
 wannier/wann_amn.f
 wannier/wann_dipole2.f
@@ -19,9 +16,7 @@ wannier/wann_get_qpts.f
 wannier/wann_gwf_anglmom.f
 wannier/wann_gwf_auxbrav.F
 wannier/wann_gwf_auxovlp.F
-#wannier/wann_gwf_commat2.f
 wannier/wann_gwf_commat.f
-#wannier/wann_gwf_commat_old.f
 wannier/wann_gwf_tools.f
 wannier/wann_gwf_write_mmnk.F
 wannier/wann_hopping.F
@@ -34,23 +29,17 @@ wannier/wann_kptsrotate.F
 wannier/wann_lapw_int_plot.f
 wannier/wann_lapw_sph_plot.f
 wannier/wann_maxbnd.F
-wannier/wann_mmk0_od_vac.F
 wannier/wann_mmk0_sph.f
 wannier/wann_mmk0_updown_sph.f
 wannier/wann_mmk0_updown_sph_at.f
 wannier/wann_mmk0_vac.F
-#wannier/wann_mmkb_int2.F
 wannier/wann_mmkb_int.F
-#wannier/wann_mmkb_od_vac2.F
-wannier/wann_mmkb_od_vac.F
-#wannier/wann_mmkb_sph2.F
 wannier/wann_mmkb_sph.F
 wannier/wann_mmkb_vac.F
 wannier/wann_mmnk_symm.f
 wannier/wann_nabla_pauli_rs.f
 wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
-#wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
 wannier/wann_pauliat_rs.f
 wannier/wann_gabeffgagaunt.f
@@ -63,7 +52,6 @@ wannier/wann_plot_from_lapw.f
 wannier/wann_plot_symm.f
 wannier/wann_plot_um_dat.F
 wannier/wann_plot_vac.F
-#wannier/wann_plotw90.F
 wannier/wann_postproc_setup4.F
 wannier/wann_postproc_setup5.F
 wannier/wann_postproc_setup.F
@@ -94,7 +82,6 @@ wannier/wann_write_matrix6.F
 wannier/wann_write_mmnk2.F
 wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F
-wannier/wann_plot_od_vac.F
 wannier/bs_comfort.F
 wannier/wann_socmatvec_rs.F
 )

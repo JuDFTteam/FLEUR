@@ -6,7 +6,7 @@ MODULE m_vacfun
 CONTAINS
   SUBROUTINE vacfun(&
        fmpi,vacuum,stars,input,nococonv,jspin1,jspin2,&
-       sym, cell,ivac,evac,bkpt, vxy,vz,kvac,nv2,&
+       cell,ivac,evac,bkpt, vxy,vz,kvac,nv2,&
        tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
     !*********************************************************************
     !     determines the necessary values and derivatives on the vacuum
@@ -16,7 +16,6 @@ CONTAINS
     !               m. weinert
     !*********************************************************************
 
-#include"cpp_double.h"
     USE m_constants
     USE m_intgr, ONLY : intgz0
     USE m_vacuz
@@ -28,7 +27,6 @@ CONTAINS
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
-    TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_stars),INTENT(IN)       :: stars
     TYPE(t_cell),INTENT(IN)        :: cell
     !     ..
@@ -248,14 +246,14 @@ CONTAINS
        nbuf = size(tuuv_loc)
 #ifdef CPP_MPI
        ALLOCATE(tv_gather_buf(nbuf*fmpi%n_size))
-       CALL MPI_ALLGATHER(tuuv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
-       CALL CPP_BLAS_ccopy(size(tuuv),tv_gather_buf,1,tuuv,1)
-       CALL MPI_ALLGATHER(tduv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
-       CALL CPP_BLAS_ccopy(size(tduv),tv_gather_buf,1,tduv,1)
-       CALL MPI_ALLGATHER(tudv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
-       CALL CPP_BLAS_ccopy(size(tudv),tv_gather_buf,1,tudv,1)
-       CALL MPI_ALLGATHER(tddv_loc,nbuf,CPP_MPI_COMPLEX,tv_gather_buf,nbuf,CPP_MPI_COMPLEX,fmpi%sub_comm,ierr)
-       CALL CPP_BLAS_ccopy(size(tddv),tv_gather_buf,1,tddv,1)
+       CALL MPI_ALLGATHER(tuuv_loc,nbuf,MPI_DOUBLE_COMPLEX,tv_gather_buf,nbuf,MPI_DOUBLE_COMPLEX,fmpi%sub_comm,ierr)
+       CALL zcopy(size(tuuv),tv_gather_buf,1,tuuv,1)
+       CALL MPI_ALLGATHER(tduv_loc,nbuf,MPI_DOUBLE_COMPLEX,tv_gather_buf,nbuf,MPI_DOUBLE_COMPLEX,fmpi%sub_comm,ierr)
+       CALL zcopy(size(tduv),tv_gather_buf,1,tduv,1)
+       CALL MPI_ALLGATHER(tudv_loc,nbuf,MPI_DOUBLE_COMPLEX,tv_gather_buf,nbuf,MPI_DOUBLE_COMPLEX,fmpi%sub_comm,ierr)
+       CALL zcopy(size(tudv),tv_gather_buf,1,tudv,1)
+       CALL MPI_ALLGATHER(tddv_loc,nbuf,MPI_DOUBLE_COMPLEX,tv_gather_buf,nbuf,MPI_DOUBLE_COMPLEX,fmpi%sub_comm,ierr)
+       CALL zcopy(size(tddv),tv_gather_buf,1,tddv,1)
        DEALLOCATE (tv_gather_buf)
 #endif
     ENDIF

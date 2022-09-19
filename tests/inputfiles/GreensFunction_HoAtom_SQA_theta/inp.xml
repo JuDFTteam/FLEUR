@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.34">
+<fleurInput fleurInputVersion="0.36">
    <comment>
       Ho      
    </comment>
@@ -12,7 +12,7 @@
       <soc l_soc="T" theta="Pi/2.0" phi="0.0" spav="F"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
-      <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+      <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000" l_initialGuess="T"/>
       <greensFunction l_mperp="F">
          <realAxis ne="5400" ellow="-1.0" elup="1.0"/>
          <contourSemicircle n="128" eb="-0.99" et="0.0" alpha="0.25"/>

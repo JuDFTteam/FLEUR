@@ -15,7 +15,7 @@ def test_SiFilmPlotXML(execute_fleur, grep_number, grep_exists):
     test_file_folder = './inputfiles/SiFilmPlotXML/'
 
     # Stage 1
-    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.out']) #kpts.xml 
+    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.out']) #kpts.xml
     res_file_names = list(res_files.keys())
     should_files = ['out']
     for file1 in should_files:
@@ -38,9 +38,9 @@ def test_SiFilmPlotXML(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['denIn.xsf'], ".39481")
     assert grep_exists(res_files['denIn.xsf'], "2.23341")
     # density values
-    assert grep_exists(res_files['denIn.xsf'], "1.9231395") # line 24
-    assert grep_exists(res_files['denIn.xsf'], "7.9874788") # line 521
-    assert grep_exists(res_files['denIn.xsf'], "10.2889353") # line 523
+    assert grep_exists(res_files['denIn.xsf'], "1.9200") # line 24
+    assert grep_exists(res_files['denIn.xsf'], "7.9868") # line 521
+    assert grep_exists(res_files['denIn.xsf'], "10.2889") # line 523
 
 @pytest.mark.serial
 @pytest.mark.film
@@ -90,8 +90,8 @@ def test_SiFilmSlicePlotXML(execute_fleur, grep_number, grep_exists):
     assert grep_exists(res_files['slice.xsf'], ".39481")
     assert grep_exists(res_files['slice.xsf'], "2.23341")
     # density values
-    assert grep_exists(res_files['slice.xsf'], "1.4394462")  # line 24
-    assert grep_exists(res_files['slice.xsf'], "2.5458992")  # line 289
-    assert grep_exists(res_files['slice.xsf'], "2.8636324")  # line 521
-    assert grep_exists(res_files['slice.xsf'], "0.2016973")  # line 523
-    assert grep_exists(res_files['slice.xsf'], "3.1082596")  # line 3018
+    assert grep_exists(res_files['slice.xsf'], "1.3588")  # line 24
+    assert grep_exists(res_files['slice.xsf'], "2.5717")  # line 289
+    assert grep_exists(res_files['slice.xsf'], "2.8595")  # line 521
+    assert grep_exists(res_files['slice.xsf'], "0.2016")  # line 523
+    assert grep_exists(res_files['slice.xsf'], "3.2038")  # line 3018

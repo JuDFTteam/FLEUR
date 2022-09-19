@@ -24,7 +24,8 @@ module m_mpmom
 #endif
 contains
 
-  subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm,l_coreCharge )
+  subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm,l_coreCharge,&
+                  & rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
 
     use m_types
     USE m_constants
@@ -32,7 +33,7 @@ contains
 
     type(t_input),   intent(in)   :: input
     type(t_mpi),     intent(in)   :: fmpi
-    type(t_oneD),    intent(in)   :: oneD
+     
     type(t_sym),     intent(in)   :: sym
     type(t_stars),   intent(in)   :: stars
     type(t_cell),    intent(in)   :: cell
@@ -44,18 +45,41 @@ contains
     complex,         intent(out)  :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     LOGICAL, OPTIONAL, INTENT(IN) :: l_coreCharge
 
+    REAL, OPTIONAL, INTENT(IN)          :: rhoimag(:,0:,:), rho0(:,0:,:)
+    INTEGER, OPTIONAL, INTENT(IN)       :: iDtype, iDir ! DFPT: Type and direction of displaced atom
+    COMPLEX, OPTIONAL, INTENT(IN)       :: qpw0(:)
+    TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
+
     integer                       :: j, jm, lh, mb, mem, mems, n, nd, l, nat, m
     complex                       :: qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     complex                       :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    complex                       :: qlmp_SF(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+
+    LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
+
+    l_dfptvgen = PRESENT(stars2)
 
     ! multipole moments of original charge density
     if ( fmpi%irank == 0 ) then
+      qlmo = 0.0
 !      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
-      call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
+      IF (.NOT.l_dfptvgen) THEN
+          call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
+      ELSE
+          ! qlmo for the real part of rho1:
+          call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge=.FALSE.)
+          ! qlmo for the imaginary part of rho1 and the perturbation of vExt in the displaced atom:
+          call mt_moments( input, atoms, sym,sphhar, rhoimag(:,:,:), potdenType,qlmo,l_coreCharge=.TRUE.,l_rhoimag=.TRUE.,iDtype=iDtype,iDir=iDir)
+          CALL dfpt_mt_moments_SF(atoms, sym, sphhar, iDtype, iDir, rho0(:,:,:), qlmo)
+      END IF
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
-    call pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw(:), potdenType, qlmp )
+    call pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw(:), potdenType, qlmp )
+    IF (l_dfptvgen) THEN
+      CALL dfpt_pw_moments_SF( fmpi, stars2, atoms, cell, sym, iDtype, iDir, qpw0(:), qlmp_SF )
+      qlmp = qlmp + qlmp_SF
+    END IF
 
     if ( fmpi%irank == 0 ) then
       ! see (A14)
@@ -84,7 +108,7 @@ contains
 
 
 !  subroutine mt_moments( input, atoms, sphhar, rho, potdenType, qlmo )
-  subroutine mt_moments( input, atoms, sym,sphhar, rho, potdenType,qlmo,l_coreCharge)
+  subroutine mt_moments( input, atoms, sym,sphhar, rho, potdenType,qlmo,l_coreCharge,l_rhoimag,iDtype,iDir)
     ! multipole moments of original charge density
     ! see (A15) (Coulomb case) or (A17) (Yukawa case)
 
@@ -102,14 +126,19 @@ contains
     type(t_sym),    intent(in)        :: sym
     real,           intent(in)        :: rho(: ,0:, :)
     integer,        intent(in)        :: potdenType
-    complex,        intent(out)       :: qlmo(-atoms%lmaxd:,0:,:)
-    LOGICAL, OPTIONAL, INTENT(IN)     :: l_coreCharge
+    complex,        intent(inout)     :: qlmo(-atoms%lmaxd:,0:,:)
+    LOGICAL, OPTIONAL, INTENT(IN)     :: l_coreCharge,l_rhoimag
+    INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
     integer                           :: n, ns, jm, nl, l, j, mb, m, nat, i, imax, lmax
     real                              :: fint
     real                              :: f( maxval( atoms%jri ) )
     real, allocatable, dimension(:,:) :: il, kl
     LOGICAL                           :: l_subtractCoreCharge
+
+    LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
+
+    l_dfptvgen = PRESENT(iDtype)
 
     if ( potdenType == POTDEN_TYPE_POTYUK ) then
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
@@ -119,7 +148,6 @@ contains
     if ( potdenType == POTDEN_TYPE_POTYUK ) l_subtractCoreCharge = .FALSE.
     IF(PRESENT(l_coreCharge)) l_subtractCoreCharge = l_coreCharge
 
-    qlmo = 0.0
     nat = 1
     do n = 1, atoms%ntype
       ns = sym%ntypsy(nat)
@@ -134,7 +162,7 @@ contains
       end if
       do nl = 0, sphhar%nlh(ns)
         l = sphhar%llh(nl,ns)
-        if(jm < 2) call juDFT_error("This would be uninit in integr3.")
+        if(jm < 2) call juDFT_error("This would be uninit in intgr3.")
         do j = 1, jm
           if ( potdenType /= POTDEN_TYPE_POTYUK ) then
             f(j) = atoms%rmsh(j,n) ** l * rho(j,nl,n)
@@ -148,12 +176,24 @@ contains
         end if
         do mb = 1, sphhar%nmem(nl,ns)
           m = sphhar%mlh(mb,nl,ns)
-          qlmo(m,l,n) = qlmo(m,l,n) + sphhar%clnu(mb,nl,ns) * fint
+          IF (.NOT.PRESENT(l_rhoimag)) THEN
+              qlmo(m,l,n) = qlmo(m,l,n) + sphhar%clnu(mb,nl,ns) * fint
+          ELSE
+              qlmo(m,l,n) = qlmo(m,l,n) + ImagUnit*sphhar%clnu(mb,nl,ns) * fint
+          END IF
         end do
       end do
 !      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
       if (l_subtractCoreCharge) then
-        qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n) / sfp_const
+        IF (.NOT.l_dfptvgen) THEN
+            qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n) / sfp_const
+        ELSE
+            IF ((n.EQ.iDtype)) THEN
+                qlmo(-1:1,1,n) = qlmo(-1:1,1,n) - 3.0 / fpi_const * atoms%zatom(n) * c_im(iDir, :)
+            ELSE IF ((0.EQ.iDtype)) THEN
+                qlmo(-1:1,1,n) = qlmo(-1:1,1,n) + 3.0 / fpi_const * atoms%zatom(n) * c_im(iDir, :)
+            END IF
+        END IF
       end if
       nat = nat + atoms%neq(n)
     end do
@@ -161,8 +201,8 @@ contains
   end subroutine mt_moments
 
 
-!  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw, potdenType, qlmp_out )
-  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym, oneD, qpw_in, potdenType, qlmp_out )
+!  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw, potdenType, qlmp_out )
+  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw_in, potdenType, qlmp_out )
     ! multipole moments of the interstitial charge in the spheres
 
 #ifdef CPP_MPI
@@ -170,7 +210,7 @@ contains
 #endif
     use m_phasy1
     use m_sphbes
-    use m_od_phasy
+     
     use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK
     use m_types
     use m_DoubleFactorial
@@ -179,7 +219,7 @@ contains
 
     type(t_input),    intent(in)   :: input
     type(t_mpi),      intent(in)   :: fmpi
-    type(t_oneD),     intent(in)   :: oneD
+     
     type(t_sym),      intent(in)   :: sym
     type(t_stars),    intent(in)   :: stars
     type(t_cell),     intent(in)   :: cell
@@ -194,14 +234,13 @@ contains
     real                           :: sk3r, rl2
     real                           :: aj(0:maxval( atoms%lmax ) + 1 )
     complex                        :: qpw(stars%ng3)
-    logical                        :: od
     real                           :: il(0:maxval( atoms%lmax ) + 1 )
     real                           :: kl(0:maxval( atoms%lmax ) + 1 )
     complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
     qpw = qpw_in(:stars%ng3)
     qlmp = 0.0
-    if ( fmpi%irank == 0 ) then
+    if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
       do n = 1, atoms%ntype
         if ( potdenType /= POTDEN_TYPE_POTYUK ) then
@@ -218,20 +257,14 @@ contains
 #endif
 
     ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
-    od = oneD%odi%d1
 !    !$omp parallel do if(atoms%ntype < 600) default( none ) &
-!    !$omp shared( fmpi, atoms, stars, oneD, sym, cell, input, potdenType, od, qpw) &
+!    !$omp shared( fmpi, atoms, stars,   sym, cell, input, potdenType,  qpw) &
 !    !$omp private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, l, cil, ll1, m, lm, k ) &
 !    !$omp private( il, kl ) &
 !    !$omp reduction( +:qlmp )
-    do k = fmpi%irank+2, stars%ng3, fmpi%isize
-      if ( od ) then
-        call od_phasy( atoms%ntype, stars%ng3, atoms%nat, atoms%lmaxd, atoms%ntype, &
-             atoms%neq, atoms%lmax, atoms%taual, cell%bmat, stars%kv3, k, oneD%odi, oneD%ods, pylm)
-      else
-        call phasy1( atoms, stars, sym, cell, k, pylm )
-      end if
 
+    do k = MERGE(fmpi%irank+2,fmpi%irank+1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
+      call phasy1( atoms, stars, sym, cell, k, pylm )
       nqpw = qpw(k) * stars%nstr(k)
       do n = 1, atoms%ntype
         sk3r = stars%sk3(k) * atoms%rmt(n)
@@ -258,7 +291,7 @@ contains
         end do                  ! l = 0, atoms%lmax(n)
       end do                    ! n = 1, atoms%ntype
     end do                      ! k = 2, stars%ng3
-!    !$omp end parallel do 
+!    !$omp end parallel do
 #ifdef CPP_MPI
     CALL MPI_REDUCE( qlmp, qlmp_out, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, fmpi%mpi_comm, ierr )
 #else
@@ -266,5 +299,184 @@ contains
 #endif
 
   end subroutine pw_moments
+
+   SUBROUTINE dfpt_mt_moments_SF(atoms, sym, sphhar, iDtype, iDir, rho0, qlmo)
+      USE m_types
+      USE m_gaunt, only : Gaunt1
+      USE m_constants
+
+      IMPLICIT NONE
+
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      TYPE(t_sym),    INTENT(IN)    :: sym
+      TYPE(t_sphhar), INTENT(IN)    :: sphhar
+      INTEGER,        INTENT(IN)    :: iDtype, iDir
+      REAL,           INTENT(IN)    :: rho0(:, 0:, :)
+      COMPLEX,        INTENT(INOUT) :: qlmo(-atoms%lmaxd:,0:, :)
+
+      INTEGER :: mb, n, nat, nl, ns, jm, l, lp, m, mp, mVec, pref
+      REAL    :: fint, gauntFactor
+
+      nat = 1
+      pref = -1
+      IF (iDtype.NE.0) THEN
+         nat = SUM(atoms%neq(:iDtype-1))
+         pref = 1
+      END IF
+
+      DO n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
+         ns = sym%ntypsy(nat)
+         jm = atoms%jri(n)
+         DO nl = 0, sphhar%nlh(ns)
+            lp = sphhar%llh(nl,ns)
+            DO l = MERGE(1, lp - 1, lp.EQ.0), MERGE(1, lp + 1, lp.EQ.0), 2 ! Gaunt selection
+               IF (l.GT.atoms%lmax(n)) CYCLE
+               fint = atoms%rmt(n)**l * rho0(jm,nl,n)
+               DO mb = 1, sphhar%nmem(nl,ns)
+                  mp = sphhar%mlh(mb,nl,ns)
+                  DO mVec = -1, 1
+                     m = mVec + mp ! Gaunt selection
+                     IF (ABS(m).GT.l) CYCLE
+                     gauntFactor = Gaunt1(l, 1, lp, m, mVec, mp, atoms%lmax(n))
+                     qlmo(m, l, n) = qlmo(m, l, n) + c_im(iDir, mVec + 2) * gauntFactor * &
+                                                   & sphhar%clnu(mb,nl,ns) * fint * pref
+                  END DO ! mVec
+               END DO ! mb
+            END DO ! l
+         END DO ! nl
+         nat = nat + atoms%neq(n)
+      END DO ! n
+
+   END SUBROUTINE dfpt_mt_moments_SF
+
+   SUBROUTINE dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw_in, qlmp_SF )
+
+#ifdef CPP_MPI
+          use mpi
+#endif
+          use m_phasy1
+          use m_sphbes
+          use m_constants
+          use m_types
+          USE m_gaunt, only : Gaunt1
+
+          implicit none
+
+      type(t_mpi),      intent(in)   :: fmpi
+      type(t_sym),      intent(in)   :: sym
+      type(t_stars),    intent(in)   :: stars
+      type(t_cell),     intent(in)   :: cell
+      type(t_atoms),    intent(in)   :: atoms
+      INTEGER,       INTENT(IN)    :: iDtype, iDir
+      complex,          intent(in)   :: qpw_in(:)
+      complex,          intent(out)  :: qlmp_SF(-atoms%lmaxd:,0:,:)
+
+      integer                        :: n, k, l, ll1p, lmp, ierr, m, lp, mp, mVec, pref
+      complex                        :: cil, nqpw
+      complex                        :: pylm(( maxval( atoms%lmax ) + 1 ) ** 2, atoms%ntype)
+      real                           :: sk3r, rl2
+      real                           :: aj(0:maxval( atoms%lmax ) + 1 )
+      complex                        :: qpw(stars%ng3)
+      complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+
+!      TYPE(t_atoms), INTENT(IN)    :: atoms
+!      TYPE(t_cell),  INTENT(IN)    :: cell
+!      INTEGER,       INTENT(IN)    :: ngdp
+
+!      INTEGER,       INTENT(IN)    :: gdp(:, :)
+!      COMPLEX,       INTENT(IN)    :: rho0IRpw(:)
+!      COMPLEX,       INTENT(INOUT) :: qlmp(:, :,:)
+
+!      INTEGER :: iG, l, m, lp, mp, m2p, lm, lmp, iDir
+!      COMPLEX :: pref, phaseFac, temp1, temp2, temp3
+      REAL    :: gauntFactor
+
+      qpw = qpw_in(:stars%ng3)
+      qlmp = 0.0
+
+      pref = -1
+      IF (iDtype.NE.0) pref = 1
+
+      if ( fmpi%irank == 0 ) then
+         do n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
+            DO mVec = -1, 1
+               qlmp(mVec,1,n) = pref * c_im(iDir, mVec + 2) * qpw(1) * stars%nstr(1) * atoms%rmt(n)**3
+            END DO
+         end do
+      end if
+
+#ifdef CPP_MPI
+      call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
+#endif
+
+      do k = fmpi%irank+2, stars%ng3, fmpi%isize
+         call phasy1( atoms, stars, sym, cell, k, pylm )
+
+         nqpw = qpw(k) * stars%nstr(k)
+
+         do n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
+
+            sk3r = stars%sk3(k) * atoms%rmt(n)
+            call sphbes( atoms%lmax(n), sk3r, aj )
+            rl2 = atoms%rmt(n) ** 2
+
+            DO lp = 0, atoms%lmax(n)
+               cil = aj(lp) * nqpw * rl2
+               ll1p = lp * ( lp + 1 ) + 1
+               DO l = MERGE(1, lp - 1, lp.EQ.0), MERGE(1, lp + 1, lp.EQ.0), 2 ! Gaunt selection
+                  IF (l.GT.atoms%lmax(n)) CYCLE
+                  DO mp = -lp, lp
+                     lmp = ll1p + mp
+                     DO mVec = -1, 1
+                        m = mVec + mp ! Gaunt selection
+                        IF (ABS(m).GT.l) CYCLE
+                        gauntFactor = Gaunt1(l, 1, lp, m, mVec, mp, atoms%lmax(n))
+                        qlmp(m,l,n) = qlmp(m,l,n) + c_im(iDir, mVec + 2) * gauntFactor * &
+                                                  & cil * atoms%rmt(n)**l * pylm(lmp,n) * pref
+                     END DO ! mVec
+                  END DO ! mp
+               END DO ! l
+            END DO ! lp
+         END DO ! n = 1, atoms%ntype
+      END DO ! k = 2, stars%ng3
+
+#ifdef CPP_MPI
+      CALL MPI_REDUCE( qlmp, qlmp_SF, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, fmpi%mpi_comm, ierr )
+#else
+      qlmp_SF = qlmp
+#endif
+
+!      pref = fpi_const * atoms%rmt(iDtype) * atoms%rmt(iDtype)
+!      DO iG = 1, ngdp
+!          gext = matmul(cell%bmat, real(gdp(:, iG)))
+!          gnorm = norm2(gExt)
+
+!          call ylm4( atoms%lmax(iDtype), gExt(1:3), ylm )
+!          call sphbes(atoms%lmax(iDtype), gnorm * atoms%rmt(iDtype), sbes)
+
+!          phaseFac = exp( ImagUnit * tpi_const * dot_product(gdp(:, iG), atoms%taual(:, iDatom)))
+
+!          DO l = 0, atoms%lmax(iDtype)
+!             temp1 = pref * phaseFac * atoms%rmt(iDtype)**l * rho0IRpw(iG)
+!             DO m = -l, l
+!                  lm = l * (l + 1) + m + 1
+!                  DO lp = 0, atoms%lmax(iDtype)
+!                      temp2 = temp1 * sbes(lp) * ImagUnit**lp
+!                      DO mp = -lp, lp
+!                          lmp = lp * (lp + 1) + mp + 1
+!                          temp3 = temp2 * conjg(ylm(lmp))
+!                          DO m2p = -1, 1
+!                              gauntFactor = Gaunt1( l, lp, 1, m, mp, m2p, atoms%lmax(iDtype))
+!                              DO iDir = 1, 3
+!                                  qlmp(lm, iDatom, iDir) = qlmp(lm, iDatom, iDir) + c_im(iDir, m2p + 2) * gauntFactor * temp3
+!                              END DO ! iDir
+!                          END DO ! m2p
+!                      END DO ! mp
+!                  END DO ! lp
+!             END DO ! m
+!          END DO ! l
+!      END DO ! iG
+
+   END SUBROUTINE dfpt_pw_moments_SF
 
 end module m_mpmom

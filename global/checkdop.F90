@@ -1,7 +1,7 @@
       MODULE m_checkdop
       CONTAINS
         SUBROUTINE checkdop(p,np,n,na,ivac,iflag,jsp,atoms,sphhar,stars,sym,&
-                            vacuum,cell,oneD,potden)
+                            vacuum,cell,potden)
           ! ************************************************************
           !     subroutines checks the continuity of coulomb           *
           !     potential or valence charge density                    *
@@ -29,7 +29,6 @@
           TYPE(t_atoms),INTENT(IN)     :: atoms
           TYPE(t_sym),INTENT(IN)       :: sym
           TYPE(t_vacuum),INTENT(IN)    :: vacuum
-          TYPE(t_oneD),INTENT(IN)      :: oneD
           TYPE(t_cell),INTENT(IN)      :: cell
           TYPE(t_potden),INTENT(IN)    :: potden
 
@@ -63,15 +62,9 @@
           IF (.NOT.iflag.LT.0) THEN
              !     ---> Interstitial part
              DO j = 1,np
-                IF (.NOT.oneD%odi%d1) THEN
-                   rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
-                   CALL starf3(sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,p(:,j),sym%invtab,sf3)!keep
-                ENDIF
+                rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
+                CALL starf3(sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,p(:,j),sym%invtab,sf3)!keep
                 !
-                IF (oneD%odi%d1) THEN
-                   rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
-                   CALL starf3(sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,rcc,sym%invtab,sf3)!keep
-                ENDIF
                 v1(j) = 0.0
                 DO k = 1,stars%ng3
                    v1(j) = v1(j) + REAL(potden%pw(k,jsp)*sf3(k))*stars%nstr(k)
@@ -84,33 +77,14 @@
                 WRITE (oUnit,FMT=8000) ivac
              ENDIF
              DO  j = 1,np
-                IF (.NOT.oneD%odi%d1) THEN
                    CALL starf2(sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1:3,j),sym%invtab,sf2)!keep
                    v2(j) = potden%vacz(1,ivac,jsp)
                    DO  k = 2,stars%ng2
                       v2(j) = v2(j) + REAL(potden%vacxy(1,k-1,ivac,jsp)*sf2(k))*stars%nstr2(k)
                    ENDDO
-                ELSE
-                   !-odim
-                   v2(j) = potden%vacz(1,ivac,jsp)
-                   phi = angle(p(1,j),p(2,j))
-                   DO  k = 2,oneD%odi%nq2
-                      m = oneD%odi%kv(2,k)
-                      gz = oneD%odi%kv(1,k)
-                      v2(j) = v2(j) + REAL(potden%vacxy(1,k-1,ivac,jsp)*&
-                           &           EXP(ic*m*phi)*EXP(ic*cell%bmat(3,3)*gz*p(3,j)))*oneD%odi%nst2(k)
-                   ENDDO
-                   !+odim
-                END IF
-                IF (oneD%odi%d1) THEN
-                   rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
-
-                   WRITE (oUnit,FMT=8020)  rcc,(p(i,j),i=1,3),v1(j),v2(j)
-                ELSE
                    rcc=MATMUL(cell%amat,p(:,j))
                    WRITE (oUnit,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)
-                ENDIF
-             ENDDO
+              ENDDO
              CALL fitchk(v1(:np),v2(:np),av,rms,dms)
              WRITE (oUnit,FMT=8030) av,rms,dms
              RETURN
@@ -136,10 +110,6 @@
           IF (l_cdn) ir2 = 1.0 / ( atoms%rmt(n)*atoms%rmt(n) )
           nd = sym%ntypsy(na)
           nopa = sym%ngopr(na)
-          IF (oneD%odi%d1) THEN
-             nopa = oneD%ods%ngopr(na)
-             nopa = oneD%ods%invtab(nopa)
-          END IF
           DO j = 1,np
              DO i = 1,3
                 x(i) = p(i,j) - atoms%pos(i,na)
@@ -151,11 +121,7 @@
                 DO i = 1,3               ! rotate into representative
                    ri(i) = 0.
                    DO k = 1,3
-                      IF (oneD%odi%d1) THEN
-                         ri(i) = ri(i) + oneD%ods%mrot(i,k,nopa)*rcc(k)
-                      ELSE
                          ri(i) = ri(i) + sym%mrot(i,k,nopa)*rcc(k)
-                      END IF
                    ENDDO
                 ENDDO
                 x=MATMUL(cell%amat,ri)

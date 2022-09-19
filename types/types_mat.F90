@@ -4,7 +4,6 @@ MODULE m_types_mat
    use cusolverDn
    use cublas
 #endif
-#include"cpp_double.h"
    USE m_judft
    use m_constants
    IMPLICIT NONE
@@ -88,8 +87,8 @@ CONTAINS
             IF (.true.) then !in No openacc case always use OpenMP version
 #endif
                !$OMP parallel do collapse(2) shared (mat,mat2,a_r) default(none)
-               DO i=1,mat%matsize1
-                  DO j=1,mat%matsize2
+               DO j=1,mat%matsize2
+                  DO i=1,mat%matsize1
                      mat%data_r(i,j)=mat%data_r(i,j)+a_r*mat2%data_r(i,j)
                   ENDDO
                ENDDO
@@ -107,12 +106,15 @@ CONTAINS
             IF (.true.) then !in No openacc case always use OpenMP version
 #endif
                !$OMP parallel do collapse(2) shared (mat,mat2,a_c) default(none)
-               DO i=1,mat%matsize1
-                  DO j=1,mat%matsize2
-                     mat%data_c(i,j)=mat%data_c(i,j)+a_c*mat2%data_c(i,j)
+               DO j=1,mat%matsize2
+                  DO i=1,mat%matsize1
+                    mat%data_c(i,j)=mat%data_c(i,j)+a_c*mat2%data_c(i,j)
                   ENDDO
                ENDDO
                !$OMP end parallel do
+               !DO j=1,mat%matsize2
+               !    call caxpy(mat%matsize1,a_c,mat2%data_c(:,j),1,mat%data_c(:,j),1)
+               !ENDDO
             ENDIF
          ENDIF
    END SUBROUTINE
@@ -1081,9 +1083,9 @@ CONTAINS
       INTEGER :: i
 
       IF (mat%l_real) THEN
-         call CPP_LAPACK_slaset("A",mat%matsize1,mat%matsize2,0.0,0.0,mat%data_r,mat%matsize1)
+         call dlaset("A",mat%matsize1,mat%matsize2,0.0,0.0,mat%data_r,mat%matsize1)
       ELSE
-         call CPP_LAPACK_claset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1)
+         call zlaset("A",mat%matsize1,mat%matsize2,cmplx(0.0,0.0),cmplx(0.0,0.0),mat%data_c,mat%matsize1)
       ENDIF
 #ifdef _OPENACC
       IF (mat%l_real) THEN

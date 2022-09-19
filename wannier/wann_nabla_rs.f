@@ -9,7 +9,7 @@
       contains 
       subroutine wann_nabla_rs(
      >          rvecnum,rvec,kpoints,
-     >          jspins_in,nkpts,l_bzsym,film,l_onedimens,
+     >          jspins_in,nkpts,l_bzsym,film,
      >          l_soc,band_min,band_max,neigd,
      >          l_socmmn0,wan90version)
 c*************************************************
@@ -30,8 +30,7 @@ c*************************************************
       integer, intent(in) :: nkpts
       logical, intent(in) :: l_bzsym
       logical, intent(in) :: film
-      logical, intent(in) :: l_onedimens
-
+     
       logical, intent(in) :: l_soc
       integer, intent(in) :: band_min(2),band_max(2),neigd
 
@@ -123,7 +122,7 @@ c$$$      do ikpt = 1,nkpts
 c$$$         read(177,*)kpoints(:,ikpt)
 c$$$      enddo 
 c$$$
-c$$$      if(film.and..not.l_onedimens)then
+c$$$      if(film)then
 c$$$         kpoints(3,:)=0.0
 c$$$      endif   
 c$$$      kpoints=kpoints/scale

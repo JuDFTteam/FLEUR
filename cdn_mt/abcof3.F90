@@ -1,12 +1,11 @@
 MODULE m_abcof3
 CONTAINS
    SUBROUTINE abcof3(input, atoms, sym, jspin, cell, bkpt, lapw, &
-                     usdus, oneD, band_l, band_u, a, b, bascof_lo)
+                     usdus,   band_l, band_u, a, b, bascof_lo)
       !     ************************************************************
       !     subroutine constructs the a,b coefficients of the linearized
       !     m.t. wavefunctions for each band and atom.       c.l. fu
       !     ************************************************************
-#include "cpp_double.h"
 
       USE m_constants, ONLY: tpi_const
       USE m_setabc1locdn1
@@ -19,7 +18,7 @@ CONTAINS
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_usdus), INTENT(IN)   :: usdus
       TYPE(t_lapw), INTENT(IN)   :: lapw
-      TYPE(t_oneD), INTENT(IN)   :: oneD
+       
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)  :: atoms
@@ -122,22 +121,16 @@ CONTAINS
                IF ((sym%invsat(natom) .EQ. 0) .OR. (sym%invsat(natom) .EQ. 1)) THEN
                   tmk = tpi_const*dot_product(fk(:), atoms%taual(:, natom))
                   phase = cmplx(cos(tmk), sin(tmk))
-                  IF (oneD%odi%d1) THEN
-                     inap = oneD%ods%ngopr(natom)
-                     !                nap = ods%ngopr(natom)
-                     !               inap = ods%invtab(nap)
-                  ELSE
+                   
                      nap = sym%ngopr(natom)
                      inap = sym%invtab(nap)
-                  END IF
+                  
                   DO j = 1, 3
                      fkr(j) = 0.
                      DO i = 1, 3
-                        IF (oneD%odi%d1) THEN
-                           fkr(j) = fkr(j) + fk(i)*oneD%ods%mrot(i, j, inap)
-                        ELSE
+                         
                            fkr(j) = fkr(j) + fk(i)*sym%mrot(i, j, inap)
-                        END IF
+                        
                      enddo
                   enddo
                   !transform fkr from reciprocal internal into reciprocal cartesian coordinates

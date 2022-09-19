@@ -785,7 +785,7 @@
      &                  stars,&
      &                  rhoRS, rhoRSimag,&
      &                  fg, fgi,&
-     &                  efield%rhoEF(:,ivac), 1, -1)
+     &                  efield%rhoEF(:,ivac),  -1)
 !           FFT gives the the average charge per grid point
 !           while sig_b stores the (total) charge per sheet
             IF (efield%dirichlet .and. ABS (fg) > 1.0e-15) THEN

@@ -45,6 +45,31 @@ CONTAINS
 !This file is created by cmake at time of build
 #include "buildinfo.h"
 
+      gitdesc = removenuls(gitdesc)
+      githash = removenuls(githash)
+      compile_date = removenuls(compile_date)
+      compile_user = removenuls(compile_user)
+      compile_host = removenuls(compile_host)
+      gitbranch = removenuls(gitbranch)
+      compile_flags = removenuls(compile_flags)
+      link_flags = removenuls(link_flags)
+
+      contains
+
+      function removenuls( string)
+         character(len=*) :: string
+         character(len=len(string)) :: removenuls
+
+         integer :: pos
+
+         pos = index( string, achar(0) )
+         if ( pos > 0 ) then
+            removenuls = string(1:pos-1)
+         else
+            removenuls = string
+         endif
+      end function removenuls
+
    END subroutine get_compile_desc
 end MODULE m_compile_descr
 

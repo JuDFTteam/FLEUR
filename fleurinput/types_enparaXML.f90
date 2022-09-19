@@ -104,14 +104,13 @@ CONTAINS
 
   END SUBROUTINE read_xml_enpara
 
-  SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,eConfigStr,loStr,addLOs)
+  SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,eConfigStr,loStr)
     USE m_types_atoms
     !sets the energy parameters according to simple electronic config string and lo string
     CLASS(t_enparaXML),INTENT(inout) :: enpara
     TYPE(t_atoms),INTENT(IN)         :: atoms
     INTEGER,INTENT(in)               :: ntype
     CHARACTER(len=*),INTENT(in)      :: eConfigStr, loStr
-    INTEGER, INTENT(IN)              :: addLOs(atoms%ntype)
 
     CHARACTER(len=100):: val_str, coreStr
     character         :: ch

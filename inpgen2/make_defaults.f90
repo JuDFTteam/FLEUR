@@ -43,12 +43,13 @@ CONTAINS
     TYPE(t_hybinp), INTENT(INOUT)           :: hybinp
 
     INTEGER :: n
-    REAL    :: min_dtild
+    REAL    :: min_dtild, kmaxGmaxFactor, kmaxGmaxXCFactor
     !
     !input
     !
     IF (input%jspins==1.AND.(noco%l_ss.OR.noco%l_noco)) CALL judft_error("You cannot run a non-collinear calculation with a single spin, set jspins=2")
     IF (noco%l_ss) noco%l_noco = .TRUE.
+    IF (noco%l_noco) input%ctail=.FALSE.
     !check for magnetism
     DO n = 1, atoms%ntype
        IF (ANY(atoms%econf(n)%occupation(:, 1) .NE. atoms%econf(n)%occupation(:, 2))) THEN
@@ -68,8 +69,13 @@ CONTAINS
        input%rkmax = round_to_deci(input%rkmax, 1)
     ENDIF
 
+    kmaxGmaxFactor = 3.0
+    kmaxGmaxXCFactor = 3.0
+
     IF(TRIM(ADJUSTL(profile%profileName)).NE."default") THEN
        input%rkmax = profile%kmax
+       kmaxGmaxFactor = profile%kGmaxFactor
+       kmaxGmaxXCFactor = profile%kGmaxFactor
     ELSE IF (input%rkmax > 4.5) THEN
        PRINT *, "WARNING, large default rkmax has been reduced. Check input"
        input%rkmax = 4.5
@@ -77,16 +83,17 @@ CONTAINS
 
     IF (noco%l_ss) input%ctail = .FALSE.
     input%zelec = DOT_PRODUCT(atoms%econf(:)%valence_electrons, atoms%neq(:))
+
     !
     ! stars
     !
-    stars%gmax = MERGE(stars%gmax, round_to_deci(3.0*input%rkmax, 1), stars%gmax > 0)
+    stars%gmax = MERGE(stars%gmax, round_to_deci(kmaxGmaxFactor*input%rkmax, 1), stars%gmax > 0)
     input%gmax = stars%gmax
 
     !
     !xcpot
     !
-    xcpot%gmaxxc = MERGE(xcpot%gmaxxc, round_to_deci(3.0*input%rkmax,1), xcpot%gmaxxc > 0)
+    xcpot%gmaxxc = MERGE(xcpot%gmaxxc, round_to_deci(kmaxGmaxXCFactor*input%rkmax,1), xcpot%gmaxxc > 0)
     xcpot%gmaxxc = MIN(input%gmax,xcpot%gmaxxc)
 
     xcpot%l_inbuild = .TRUE.
@@ -133,27 +140,12 @@ CONTAINS
        END IF
     ENDIF
     vacuum%nvac = 2
-    IF (sym%zrfs .OR. sym%invs) vacuum%nvac = 1
-    !IF (oneD%odd%d1) vacuum%nvac = 1
-
+    IF (sym%nop2<sym%nop) vacuum%nvac = 1
+  
     !
     !noco
     !
-
-    ALLOCATE ( noco%alph_inp(atoms%ntype), noco%beta_inp(atoms%ntype))
-    noco%qss_inp = MERGE(noco%qss_inp, [0.0, 0.0, 0.0], noco%l_ss)
-    noco%alph_inp(:) = 0.0
-    noco%beta_inp(:) = 0.0
-    ALLOCATE(noco%l_constrained(atoms%ntype))
-    noco%l_constrained(:) = .FALSE.
-    ALLOCATE(noco%l_unrestrictMT(atoms%ntype))
-    noco%l_unrestrictMT(:) = .FALSE.
-    ALLOCATE(noco%l_alignMT(atoms%ntype))
-    noco%l_alignMT(:)=.false.
-    ALLOCATE(noco%mix_RelaxWeightOffD(atoms%ntype))
-    noco%mix_RelaxWeightOffD(:)=1.0
-    noco%mag_mixing_scheme=0
-
+    
     !
     !hybinp
     !

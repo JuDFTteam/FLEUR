@@ -54,7 +54,6 @@ c**********************************************************
 #ifdef CPP_MPI
       integer :: ierr
       integer :: stt(MPI_STATUS_SIZE)
-#include "cpp_double.h"
 #endif
 
 #ifdef CPP_MPI
@@ -72,7 +71,7 @@ c******************************************************
            if(pair_to_do(ikpt,ikpt_b).ne.0)then
              call MPI_RECV(
      &               mmnk(1:nbnd,1:nbnd,ikpt_b,ikpt),nbnd*nbnd,
-     &               CPP_MPI_COMPLEX,cpu_index,5*fullnkpts+
+     &               MPI_DOUBLE_COMPLEX,cpu_index,5*fullnkpts+
      &          pair_to_do(ikpt,ikpt_b),mpi_communicatior,stt,ierr)
 
            endif !pairtodo
@@ -85,7 +84,7 @@ c******************************************************
           if(pair_to_do(ikpt,ikpt_b).ne.0)then
             call MPI_SEND(
      &              mmnk(1:nbnd,1:nbnd,ikpt_b,ikpt),
-     &              nbnd*nbnd,CPP_MPI_COMPLEX,0,5*fullnkpts+
+     &              nbnd*nbnd,MPI_DOUBLE_COMPLEX,0,5*fullnkpts+
      &              pair_to_do(ikpt,ikpt_b),mpi_communicatior,ierr)
           endif !pairtodo
          enddo !loop over nearest neighbors

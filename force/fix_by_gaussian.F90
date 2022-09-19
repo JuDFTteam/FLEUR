@@ -8,7 +8,7 @@ MODULE m_fix_by_gaussian
    USE m_judft
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE fix_by_gaussian(shift,atoms,stars,fmpi,sym,vacuum,sphhar,input,oned,cell,noco,den)
+   SUBROUTINE fix_by_gaussian(shift,atoms,nococonv,stars,fmpi,sym,vacuum,sphhar,input ,cell,noco,den)
       ! The idea of this fix is to add an Gaussian to the INT which make the charge flat at the
       ! MT-boundary and to shift this Gaussian with the displacement.
       USE m_qfix
@@ -19,11 +19,12 @@ CONTAINS
       REAL,           INTENT(IN)    :: shift(:,:)
       TYPE(t_mpi),    INTENT(IN)    :: fmpi
       TYPE(t_atoms),  INTENT(IN)    :: atoms
+      type(t_nococonv),INTENT(IN)   :: nococonv
       TYPE(t_sym),    INTENT(IN)    :: sym
       TYPE(t_vacuum), INTENT(IN)    :: vacuum
       TYPE(t_sphhar), INTENT(IN)    :: sphhar
       TYPE(t_input),  INTENT(IN)    :: input
-      TYPE(t_oneD),   INTENT(IN)    :: oneD
+       
       TYPE(t_cell),   INTENT(IN)    :: cell
       TYPE(t_noco),   INTENT(IN)    :: noco
       TYPE(t_stars),  INTENT(IN)    :: stars
@@ -69,7 +70,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,noco%l_noco,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.true.)
+      CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,den,noco%l_noco,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.true.)
    END SUBROUTINE fix_by_gaussian
 
    FUNCTION gaussian_r(r,alpha)   

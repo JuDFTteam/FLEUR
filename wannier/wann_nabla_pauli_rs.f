@@ -16,7 +16,7 @@ c*************************************************
       contains 
       subroutine wann_nabla_pauli_rs(
      >               rvecnum,rvec,kpoints,
-     >               jspins_in,nkpts,l_bzsym,film,l_onedimens,
+     >               jspins_in,nkpts,l_bzsym,film,
      >               l_soc,band_min,band_max,neigd,
      >               l_socmmn0,wan90version)
 
@@ -65,7 +65,7 @@ c      real                :: kpoints(3,nkpts)
       complex             :: value(4)
       logical             :: um_format
       logical             :: repro_eig
-      logical             :: l_chk,l_proj,l_onedimens
+      logical             :: l_chk,l_proj
       logical             :: have_disentangled
       integer,allocatable :: ndimwin(:)
       logical,allocatable :: lwindow(:,:)
@@ -124,7 +124,7 @@ c$$$      do ikpt = 1,nkpts
 c$$$         read(177,*)kpoints(:,ikpt)
 c$$$      enddo 
 c$$$
-c$$$      if(film.and..not.l_onedimens)then
+c$$$      if(film)then
 c$$$         kpoints(3,:)=0.0
 c$$$      endif   
 c$$$      kpoints=kpoints/scale
@@ -268,7 +268,7 @@ c$$$         hopmin_z=-5;hopmax_z=5
 c$$$         hopmin_x=0;hopmax_x=0
 c$$$         hopmin_y=0;hopmax_y=0
 c$$$         rvecnum=(hopmax_z-hopmin_z+1)
-c$$$         if(.not.l_onedimens.and.film)then
+c$$$         if(film)then
 c$$$           hopmin_x=-5;hopmax_x=5
 c$$$           hopmin_y=-5;hopmax_y=5
 c$$$           hopmin_z=0;     hopmax_z=0

@@ -73,8 +73,8 @@ CONTAINS
       ! Fourier transform the diagonal part of the density matrix in the
       ! interstitial (qpw) to real space (ris).
       DO iden = 1,4
-         CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,1)
-         CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,1)
+         CALL fft3d(ris(0:,iden),fftwork,qpw(1,iden),stars,1)
+         CALL fft3d(ris2(0:,iden),fftwork,qpww(1,iden),stars,1)
       END DO
 
       DO imesh = 0,ifft3-1
@@ -101,13 +101,13 @@ CONTAINS
 
       DO iden = 1,2
          fftwork=zero
-         CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,-1)
+         CALL fft3d(ris(0:,iden),fftwork,qpw(1,iden),stars,-1)
          fftwork=zero
-         CALL fft3d(ris2(0,iden),fftwork,qpww(1,iden),stars,-1)
+         CALL fft3d(ris2(0:,iden),fftwork,qpww(1,iden),stars,-1)
       END DO
 
-      CALL fft3d(ris(0,3),ris(0,4),qpw(1,3),stars,-1)
-      CALL fft3d(ris2(0,3),ris2(0,4),qpww(1,3),stars,-1)
+      CALL fft3d(ris(0:,3),ris(0:,4),qpw(1,3),stars,-1)
+      CALL fft3d(ris2(0:,3),ris2(0:,4),qpww(1,3),stars,-1)
 
       CALL vMat%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
                                       atoms%ntype,atoms%n_u,2,.TRUE.,.TRUE.,&

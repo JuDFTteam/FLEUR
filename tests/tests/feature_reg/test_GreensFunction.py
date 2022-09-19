@@ -56,7 +56,7 @@ def test_GreensFunction_SphavgFilm(execute_fleur, grep_number, grep_exists):
     spindown_trace = grep_number(res_files['out'], "Spin-Down trace:", ":")
 
     assert abs(spinup_trace - 4.8586) <= 0.0005
-    assert abs(spindown_trace - 2.6652) <= 0.0005
+    assert abs(spindown_trace - 2.64494) <= 0.0005
 
 
 @pytest.mark.serial
@@ -188,6 +188,28 @@ def test_GreensFunctionRadial_LO(execute_fleur, grep_number, grep_exists):
     assert abs(cont_reg_sup1 - 3.1921) <= 0.0005
     assert abs(cont_reg_sdown1 - 3.2135) <= 0.0005
 
+    # Stage 3 with only a HDLO on the orbital
+
+    res_files = execute_fleur(test_file_folder, only_copy=[['inp-3.xml', 'inp.xml'], 'JUDFT_WARN_ONLY'])
+    res_file_names = list(res_files.keys())
+    should_files = ['out']
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
+    for file1 in should_files:
+        assert (file1 in res_file_names), f'{file1} missing'
+
+    # now test output (Occupations are different because of different LO setup and it is the second iteration but consistent with mt charges)
+
+    assert grep_exists(res_files['out'], "it=  1  is completed")
+    cont_reg_sup2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":", res_index=-2)
+    cont_reg_sdown2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":", res_index=-2)
+    cont_reg_sup1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":")
+    cont_reg_sdown1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":")
+
+    assert abs(cont_reg_sup2 - 4.1237) <= 0.0005
+    assert abs(cont_reg_sdown2 - 1.9298) <= 0.0005
+    assert abs(cont_reg_sup1 - 4.1237) <= 0.0005
+    assert abs(cont_reg_sdown1 - 1.9298) <= 0.0005
 
 @pytest.mark.bulk
 @pytest.mark.greensfunction
@@ -267,7 +289,7 @@ def test_GreensFunction_HoAtom_SQA_phi(execute_fleur, grep_number, grep_exists):
     assert abs(spinup_trace - 6.9375) <= 0.0005
     assert abs(spindown_trace - 3.9556) <= 0.0005
 
-
+@pytest.mark.disabled
 @pytest.mark.bulk
 @pytest.mark.greensfunction
 @pytest.mark.magnetism
@@ -308,7 +330,6 @@ def test_GreensFunction_rotated_SQA_noco(execute_fleur, grep_number, grep_exists
     assert abs(spinup_trace - 6.9375) <= 0.0005
     assert abs(spindown_trace - 3.9609) <= 0.0005
 
-
 @pytest.mark.serial
 @pytest.mark.greensfunction
 @pytest.mark.non_collinear
@@ -344,16 +365,17 @@ def test_GreensFunction_mperp_xdir(execute_fleur, grep_number, grep_exists):
     spinoffdy_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(y\):", ":")
 
     assert abs(spinup_trace_atom1 - 4.5242) <= 0.0005
-    assert abs(spindn_trace_atom1 - 2.3679) <= 0.0005
-    assert abs(spinoffdx_trace_atom1 - 0.5994) <= 0.0005
+    assert abs(spindn_trace_atom1 - 2.3726) <= 0.0005
+    assert abs(spinoffdx_trace_atom1 - 0.601) <= 0.0005
     assert abs(spinoffdy_trace_atom1 - 0.0000) <= 0.0005
 
-    assert abs(spinup_trace_atom2 - 4.5214) <= 0.0005
-    assert abs(spindn_trace_atom2 - 2.38) <= 0.0005
-    assert abs(spinoffdx_trace_atom2 + 0.6027) <= 0.0005
+    assert abs(spinup_trace_atom2 - 4.5242) <= 0.0005
+    assert abs(spindn_trace_atom2 - 2.3726) <= 0.0005
+    assert abs(spinoffdx_trace_atom2 + 0.601) <= 0.0005
     assert abs(spinoffdy_trace_atom2 - 0.0000) <= 0.0005
 
 
+@pytest.mark.disabled
 @pytest.mark.serial
 @pytest.mark.greensfunction
 @pytest.mark.non_collinear
@@ -389,13 +411,13 @@ def test_GreensFunction_mperp_ydir(execute_fleur, grep_number, grep_exists):
     spinoffdy_trace_atom2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Offd trace \(y\):", ":")
 
     assert abs(spinup_trace_atom1 - 4.5242) <= 0.0005
-    assert abs(spindn_trace_atom1 - 2.3679) <= 0.0005
+    assert abs(spindn_trace_atom1 - 2.3726) <= 0.0005
     assert abs(spinoffdx_trace_atom1 - 0.0000) <= 0.0005
-    assert abs(spinoffdy_trace_atom1 + 0.5994) <= 0.0005
+    assert abs(spinoffdy_trace_atom1 + 0.601) <= 0.0005
 
-    assert abs(spinup_trace_atom2 - 4.5214) <= 0.0005
-    assert abs(spindn_trace_atom2 - 2.38) <= 0.0005
-    assert abs(spinoffdx_trace_atom2 + 0.6027) <= 0.0005
+    assert abs(spinup_trace_atom2 - 4.5242) <= 0.0005
+    assert abs(spindn_trace_atom2 - 2.3726) <= 0.0005
+    assert abs(spinoffdx_trace_atom2 + 0.601) <= 0.0005
     assert abs(spinoffdy_trace_atom2 - 0.0000) <= 0.0005
 
 
@@ -456,9 +478,8 @@ def test_GreensFunction_IntersiteSingleShell(execute_fleur, grep_number, grep_ex
     #Check for the right shell being selected
     assert grep_exists(res_files['out'], r"Green's Function Elements: 9\s")
     #These are entries in the table of generated GF elements
-    assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
-    assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
-
+    assert grep_exists(res_files['out'], r"2 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  1.000  1.000  1.000")
+    assert grep_exists(res_files['out'], r"3 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]         2\( 2\)      [|]      F\(F\)  [|] \-1.000 [\-\s]0.000 [\-\s]0.000")
 
     #Check trace of representative element
     spinup_trace_element1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":", res_index=-8)
@@ -518,10 +539,10 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
     #Check for the right shell being selected
     assert grep_exists(res_files['out'], r"Green's Function Elements: 59\s")
     #These are entries in the table of generated GF elements
-    assert grep_exists(res_files['out'], "2 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  1.000  1.000  1.000")
-    assert grep_exists(res_files['out'], "3 | 2/2  |    1/    1 |       1 |      T |         1 |         2( 2)      |      F(F)  | -1.000  0.000  0.000")
-    assert grep_exists(res_files['out'], "52 | 2/2  |    1/    1 |       1 |      T |         1 |        -1(-1)      |      F(F)  |  2.000  2.000  2.000")
-    assert grep_exists(res_files['out'], "59 | 2/2  |    1/    1 |       1 |      T |         1 |        52(22)      |      F(F)  |  0.000  0.000  2.000")
+    assert grep_exists(res_files['out'], r"2 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  1.000  1.000  1.000")
+    assert grep_exists(res_files['out'], r"3 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]         2\( 2\)      [|]      F\(F\)  [|] \-1.000 [\-\s]0.000 [\-\s]0.000")
+    assert grep_exists(res_files['out'], r"52 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        -1\(-1\)      [|]      F\(F\)  [|]  2.000  2.000  2.000")
+    assert grep_exists(res_files['out'], r"59 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        52\(22\)      [|]      F\(F\)  [|] [\-\s]0.000 [\-\s]0.000  2.000")
 
     #Check first shell again
     #Check trace of representative element
@@ -584,3 +605,77 @@ def test_GreensFunction_IntersiteMultipleShells(execute_fleur, grep_number, grep
     assert grep_exists(res_files['out'], r"\-0\.0371 [\-\s]0\.0000")
     assert grep_exists(res_files['out'], r"\-0\.0172 [\-\s]0\.0000")
 
+
+@pytest.mark.bulk
+@pytest.mark.greensfunction
+@pytest.mark.magnetism
+@pytest.mark.serial
+@pytest.mark.outxml_parser_xfail
+def test_GreensFunction_IntersiteShellConstruction(execute_fleur, grep_exists):
+    """Fleur Greens Function intersite shell construction
+    Simple test of the intersite green's function initialization
+    1. Generate the needed Green's function to calculate the J_ij for 60 shells at a different
+       distance. Only run till after initialization (-check flag) and check that
+       the Green's function table in the out file looks as expected
+    """
+    test_file_folder = './inputfiles/GreensFunction_IntersiteShellConstruction/'
+
+    res_files = execute_fleur(test_file_folder,cmdline_param=['-check'], only_copy=['inp.xml']) #Only run the initializations
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    #Check for the right shell being selected
+    assert grep_exists(res_files['out'], r"Green's Function Elements: 2445\s")
+    #These are entries in the table of generated GF elements
+    assert grep_exists(res_files['out'], r"2 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  1.000  1.000  1.000")
+    assert grep_exists(res_files['out'], r"3 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]         2\( 2\)      [|]      F\(F\)  [|] \-1.000 [\-\s]0.000  0.000")
+    assert grep_exists(res_files['out'], r"2110 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  5.000 [\-\s]0.000 \-4.000")
+    #This element was missed by the previous completeness detection
+    assert grep_exists(res_files['out'], r"2125 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]      2110\(31\)      [|]      F\(F\)  [|] \-9.000 \-5.000 \-5.000")
+    assert grep_exists(res_files['out'], r"2422 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  4.000  4.000 \-4.000")
+    assert grep_exists(res_files['out'], r"2445 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]      2422\(46\)      [|]      F\(F\)  [|] \-8.000 \-8.000 \-4.000")
+
+    res_files = execute_fleur(test_file_folder,cmdline_param=['-check'], only_copy=[['inp_start_from.xml', 'inp.xml']]) #Only run the initializations
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    #Check for the right shell being selected
+    assert grep_exists(res_files['out'], r"Green's Function Elements: 45\s")
+    #These are entries in the table of generated GF elements
+    assert grep_exists(res_files['out'], r"2 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  1.000 [\-\s]0.000 \-1.000")
+    assert grep_exists(res_files['out'], r"6 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]         2\( 8\)      [|]      F\(F\)  [|]  1.000  1.000  2.000")
+    assert grep_exists(res_files['out'], r"38 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  2.000  2.000  2.000")
+    assert grep_exists(res_files['out'], r"45 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        38\(22\)      [|]      F\(F\)  [|] [\-\s]0.000 [\-\s]0.000  2.000")
+
+
+@pytest.mark.bulk
+@pytest.mark.greensfunction
+@pytest.mark.magnetism
+@pytest.mark.serial
+@pytest.mark.outxml_parser_xfail
+def test_GreensFunction_IntersiteShellConstructionFilm(execute_fleur, grep_exists):
+    """Fleur Greens Function intersite shell construction
+    Simple test of the intersite green's function initialization
+    1. Generate the needed Green's function to calculate the J_ij for 60 shells at a different
+       distance. Only run till after initialization (-check flag) and check that
+       the Green's function table in the out file looks as expected
+    """
+    test_file_folder = './inputfiles/GreensFunction_IntersiteShellConstructionFilm/'
+
+    res_files = execute_fleur(test_file_folder,cmdline_param=['-check'], only_copy=['inp.xml']) #Only run the initializations
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    #Check for the right shell being selected
+    assert grep_exists(res_files['out'], r"Green's Function Elements: 373\s")
+    #These are entries in the table of generated GF elements
+    assert grep_exists(res_files['out'], r"2 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  1.000 [\-\s]0.000 [\-\s]0.000")
+    assert grep_exists(res_files['out'], r"3 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]         2\(\ 2\)      [|]      F\(F\)  [|] -1.000 [\-\s]0.000 [\-\s]0.000")
+    assert grep_exists(res_files['out'], r"366 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  9.000  6.000 [\-\s]0.000")
+    assert grep_exists(res_files['out'], r"373 [|] 2/2  [|]    1/    1 [|]       1 [|]      T [|]         1 [|]       366\( 8\)      [|]      F\(F\)  [|]  6.000  9.000 [\-\s]0.000")
