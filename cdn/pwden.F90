@@ -160,8 +160,8 @@ CONTAINS
             IF (l_dfpt) THEN
                ALLOCATE(stateqIndices(lapwq%nv(1)))
                ALLOCATE(stateBqIndices(lapwq%nv(2)))
-               CALL stateq%fillStateIndexArray(lapw,1,stateqIndices)
-               CALL stateBq%fillStateIndexArray(lapw,2,stateBqIndices)
+               CALL stateq%fillStateIndexArray(lapwq,1,stateqIndices)
+               CALL stateBq%fillStateIndexArray(lapwq,2,stateBqIndices)
             END IF
          ELSE
             ALLOCATE(stateIndices(lapw%nv(jspin)))
@@ -171,8 +171,8 @@ CONTAINS
             IF (l_dfpt) THEN
                ALLOCATE(stateqIndices(lapwq%nv(jspin)))
                ALLOCATE(stateBqIndices(lapwq%nv(jspin)))
-               CALL stateq%fillStateIndexArray(lapw,jspin,stateqIndices)
-               CALL stateBq%fillStateIndexArray(lapw,jspin,stateBqIndices)
+               CALL stateq%fillStateIndexArray(lapwq,jspin,stateqIndices)
+               CALL stateBq%fillStateIndexArray(lapwq,jspin,stateBqIndices)
             END IF
          ENDIF
       ELSE
