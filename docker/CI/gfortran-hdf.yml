@@ -1,5 +1,5 @@
 build-gfortran-hdf5:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
   artifacts:
      paths:
@@ -20,7 +20,7 @@ build-gfortran-hdf5:
     
 
 test-gfortran-hdf5: 
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   variables:
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
@@ -34,7 +34,7 @@ test-gfortran-hdf5:
     - when: on_success  
 
 fast-test-gfortran-hdf5: 
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   stage: fast-test
   variables:

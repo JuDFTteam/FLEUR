@@ -796,6 +796,8 @@
       <xsd:attribute default="1300" name="ne" type="xsd:nonNegativeInteger"/>
       <xsd:attribute default="-2.0" name="ellow" type="xsd:double"/>
       <xsd:attribute default="2.0" name="elup" type="xsd:double"/>
+      <xsd:attribute default="0.0" name="smearingEnergy" type="xsd:double"/>
+      <xsd:attribute default="0.0" name="smearingTemperature" type="xsd:double"/>
    </xsd:complexType>
 
    <xsd:complexType name="EContourRectangleType">

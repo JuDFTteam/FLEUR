@@ -359,7 +359,7 @@ CONTAINS
             END DO
             IF (ALL(greensFunction(fi%gfinp%hiaElem)%l_calc)) THEN
                hub1data%iter = hub1data%iter + 1
-               CALL hubbard1_setup(fi%atoms, fi%cell, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, fi%kpts, nococonv, vTot, &
+               CALL hubbard1_setup(fi%atoms, fi%cell, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, fi%kpts, sphhar, fi%sym, nococonv, vTot, &
                                    greensFunction(fi%gfinp%hiaElem), hub1data, results, inDen)
             ELSE
                IF (fmpi%irank .EQ. 0) WRITE (*, *) 'Not all Greens Functions available: Running additional iteration'

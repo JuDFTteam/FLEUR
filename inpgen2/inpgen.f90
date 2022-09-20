@@ -383,7 +383,12 @@ PROGRAM inpgen
          OPEN (inpgenIUnit,file=TRIM(filename),action="read")
          OPEN (inpOldUnit, file="inp.xml", action="write", status='old', access='append')
          WRITE(inpOldUnit,'(a)') ''
-         WRITE(inpOldUnit,'(a)') '<!-- Initial (original) inpgen input (only for documentation purposes):'
+         WRITE(inpOldUnit,'(a)') '<!--'
+         WRITE(inpOldUnit,'(a)') 'Command line when calling inpgen (only for documentation purposes):'
+         CALL GET_COMMAND(line)
+         WRITE(inpOldUnit,'(a)') TRIM(line)
+         WRITE(inpOldUnit,'(a)') ''
+         WRITE(inpOldUnit,'(a)') 'Initial (original) inpgen input (only for documentation purposes):'
          ios = 0
          DO WHILE(ios==0)
             READ(inpgenIUnit,'(a)',iostat=ios) line
@@ -392,6 +397,7 @@ PROGRAM inpgen
          WRITE(inpOldUnit,'(a)') '-->'
          CLOSE (inpOldUnit)
          CLOSE (inpgenIUnit)
+         line = ""
       END IF
 
 100   FORMAT (a20,a15,i10,3x,a)

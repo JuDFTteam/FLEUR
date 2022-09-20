@@ -1,6 +1,6 @@
 #create the docker images for the CI and push them to the registry
 
-for image in oneAPI NVHPC AOMP
+for image in oneAPI NVHPC AOMP gfortran
 do
    cd $image
    docker build -t iffregistry.fz-juelich.de/fleur/fleur:$image .

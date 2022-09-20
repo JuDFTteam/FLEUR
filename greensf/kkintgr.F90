@@ -48,11 +48,12 @@ MODULE m_kkintgr
 
    CONTAINS
 
-   SUBROUTINE kkintgr_init(eMesh, contour, iContour, nContour, shape)
+   SUBROUTINE kkintgr_init(eMesh, contour, iContour, nContour, shape, additional_smearing)
 
       REAL,          INTENT(IN)     :: eMesh(:)    !Energy grid on the real axis
       COMPLEX,       INTENT(IN)     :: contour(:)  !Complex energy contour
       INTEGER,       INTENT(IN)     :: iContour,nContour,shape
+      real,          intent(in)     :: additional_smearing
 
       INTEGER :: iz,izp,i,n1,n2
       REAL :: y
@@ -78,6 +79,7 @@ MODULE m_kkintgr
             integration_weights(iContour)%data_c(1,iz) = integration_weights(iContour)%data_c(1,iz)/2.0
             integration_weights(iContour)%data_c(SIZE(eMesh),iz) = integration_weights(iContour)%data_c(SIZE(eMesh),iz)/2.0
          ENDDO
+         sigma(iContour) = additional_smearing
       ELSE IF(int_method(shape) == method_maclaurin) THEN
          
          IF(ANY(ABS(AIMAG(contour)-AIMAG(contour(1)))>1e-12)) THEN
@@ -146,7 +148,7 @@ MODULE m_kkintgr
       DO iContour = 1, SIZE(integration_weights)
          IF(integration_weights(iContour)%allocated()) CALL integration_weights(iContour)%free()
       ENDDO
-
+      del = -1.0
       DEALLOCATE(integration_weights,methods,energy_grid,sigma)
 
    END SUBROUTINE kkintgr_free
@@ -178,52 +180,52 @@ MODULE m_kkintgr
       nz  = integration_weights(iContour)%matsize2
       ne  = integration_weights(iContour)%matsize1
 
-      IF(methods(iContour)==method_direct) THEN
-         transA = 'T'
-         IF(l_conjg) transA = 'C'
+      smoothed = im
+      IF(ABS(sigma(iContour)).GT.1e-12) THEN
+         CALL timestart('kkintgr: smoothing')
+         SELECT CASE (TRIM(ADJUSTL(smooth_method)))
+         CASE('lorentzian')
+            CALL lorentzian_smooth(energy_grid,smoothed,sigma(iContour),ne)
+         CASE('gaussian')
+            CALL smooth(energy_grid,smoothed,sigma(iContour),ne)
+         CASE DEFAULT
+            CALL juDFT_error("No valid smooth_method set",&
+                           hint="This is a bug in FLEUR, please report",&
+                           calledby="kkintgr")
+         END SELECT
 
+         CALL timestop('kkintgr: smoothing')
+      ENDIF
+
+      transA = 'T'
+      IF(l_conjg) transA = 'C'
+
+      IF(methods(iContour)==method_direct) THEN
          CALL zgemm(transA,'N',&
-                           nz,1,ne,&
-                           CMPLX(-del/pi_const,0.0),&
-                           integration_weights(iContour)%data_c,ne,&
-                           im,ne,&
-                           cmplx_0,&
-                           g,nz)
+                    nz,1,ne,&
+                    CMPLX(-del/pi_const,0.0),&
+                    integration_weights(iContour)%data_c,ne,&
+                    smoothed,ne,&
+                    cmplx_0,&
+                    g,nz)
       ELSE IF(methods(iContour)==method_maclaurin) THEN
 
          nz  = INT(integration_weights(iContour)%matsize2/2)
 
-         smoothed = im
-         IF(ABS(sigma(iContour)).GT.1e-12) THEN
-            CALL timestart('kkintgr: smoothing')
-            SELECT CASE (TRIM(ADJUSTL(smooth_method)))
-            CASE('lorentzian')
-               CALL lorentzian_smooth(energy_grid,smoothed,sigma(iContour),ne)
-            CASE('gaussian')
-               CALL smooth(energy_grid,smoothed,sigma(iContour),ne)
-            CASE DEFAULT
-               CALL juDFT_error("No valid smooth_method set",&
-                              hint="This is a bug in FLEUR, please report",&
-                              calledby="kkintgr")
-            END SELECT
-
-            CALL timestop('kkintgr: smoothing')
-         ENDIF
-
          CALL zgemm('T','N',&
-                             nz,1,ne,&
-                             cmplx_1,&
-                             integration_weights(iContour)%data_c(:,:nz),ne,&
-                             smoothed,ne,&
-                             cmplx_0,&
-                             g,nz)         
+                    nz,1,ne,&
+                    cmplx_1,&
+                    integration_weights(iContour)%data_c(:,:nz),ne,&
+                    smoothed,ne,&
+                    cmplx_0,&
+                    g,nz)         
          CALL zgemm('T','N',&
-                             nz,1,ne,&
-                             cmplx_1,&
-                             integration_weights(iContour)%data_c(:,nz+1:),ne,&
-                             smoothed,ne,&
-                             cmplx_1,&
-                             g,nz)
+                    nz,1,ne,&
+                    cmplx_1,&
+                    integration_weights(iContour)%data_c(:,nz+1:),ne,&
+                    smoothed,ne,&
+                    cmplx_1,&
+                    g,nz)
 
          IF(l_conjg) g = conjg(g)
 
@@ -260,69 +262,69 @@ MODULE m_kkintgr
       nz  = integration_weights(iContour)%matsize2
       ne  = integration_weights(iContour)%matsize1
 
+      ALLOCATE(smoothed(SIZE(im,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+      smoothed = im
+      IF(ABS(sigma(iContour)).GT.1e-12) THEN
+         CALL timestart('kkintgr: smoothing')
+         SELECT CASE (TRIM(ADJUSTL(smooth_method)))
+         CASE('lorentzian')
+            !$OMP parallel do default(none) collapse(2) &
+            !$OMP shared(energy_grid, smoothed,sigma,ne,iContour) &
+            !$OMP private(m,mp)
+            DO mp = -lmaxU_const, lmaxU_const
+               DO m = -lmaxU_const, lmaxU_const
+                  CALL lorentzian_smooth(energy_grid,smoothed(:,m,mp),sigma(iContour),ne)
+               ENDDO
+            ENDDO
+            !$OMP end parallel do
+         CASE('gaussian')
+            !$OMP parallel do default(none) collapse(2) &
+            !$OMP shared(energy_grid, smoothed,sigma,ne,iContour) &
+            !$OMP private(m,mp)
+            DO mp = -lmaxU_const, lmaxU_const
+               DO m = -lmaxU_const, lmaxU_const
+                  CALL smooth(energy_grid,smoothed(:,m,mp),sigma(iContour),ne)
+               ENDDO
+            ENDDO
+            !$OMP end parallel do
+         CASE DEFAULT
+            CALL juDFT_error("No valid smooth_method set",&
+                           hint="This is a bug in FLEUR, please report",&
+                           calledby="kkintgr")
+         END SELECT
+
+         CALL timestop('kkintgr: smoothing')
+      ENDIF
+
       transA = 'T'
       IF(l_conjg) transA = 'C'
 
       IF(methods(iContour)==method_direct) THEN
          CALL zgemm(transA,'N',&
-                           nz,(2*lmaxU_const+1)**2,ne,&
-                           CMPLX(-del/pi_const,0.0),&
-                           integration_weights(iContour)%data_c,ne,&
-                           im,ne,&
-                           cmplx_0,&
-                           g,nz)
+                    nz,(2*lmaxU_const+1)**2,ne,&
+                    CMPLX(-del/pi_const,0.0),&
+                    integration_weights(iContour)%data_c,ne,&
+                    smoothed,ne,&
+                    cmplx_0,&
+                    g,nz)
       ELSE IF(methods(iContour)==method_maclaurin) THEN
 
          nz  = INT(integration_weights(iContour)%matsize2/2)
 
-         ALLOCATE(smoothed(SIZE(im,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
-         smoothed = im
-         IF(ABS(sigma(iContour)).GT.1e-12) THEN
-            CALL timestart('kkintgr: smoothing')
-            SELECT CASE (TRIM(ADJUSTL(smooth_method)))
-            CASE('lorentzian')
-               !$OMP parallel do default(none) collapse(2) &
-               !$OMP shared(energy_grid, smoothed,sigma,ne,iContour) &
-               !$OMP private(m,mp)
-               DO mp = -lmaxU_const, lmaxU_const
-                  DO m = -lmaxU_const, lmaxU_const
-                     CALL lorentzian_smooth(energy_grid,smoothed(:,m,mp),sigma(iContour),ne)
-                  ENDDO
-               ENDDO
-               !$OMP end parallel do
-            CASE('gaussian')
-               !$OMP parallel do default(none) collapse(2) &
-               !$OMP shared(energy_grid, smoothed,sigma,ne,iContour) &
-               !$OMP private(m,mp)
-               DO mp = -lmaxU_const, lmaxU_const
-                  DO m = -lmaxU_const, lmaxU_const
-                     CALL smooth(energy_grid,smoothed(:,m,mp),sigma(iContour),ne)
-                  ENDDO
-               ENDDO
-               !$OMP end parallel do
-            CASE DEFAULT
-               CALL juDFT_error("No valid smooth_method set",&
-                              hint="This is a bug in FLEUR, please report",&
-                              calledby="kkintgr")
-            END SELECT
-
-            CALL timestop('kkintgr: smoothing')
-         ENDIF
-
          CALL zgemm('T','N',&
-                              nz,(2*lmaxU_const+1)**2,ne,&
-                              cmplx_1,&
-                              integration_weights(iContour)%data_c(:,:nz),ne,&
-                              smoothed,ne,&
-                              cmplx_0,&
-                              g,nz)         
+                    nz,(2*lmaxU_const+1)**2,ne,&
+                    cmplx_1,&
+                    integration_weights(iContour)%data_c(:,:nz),ne,&
+                    smoothed,ne,&
+                    cmplx_0,&
+                    g,nz)         
          CALL zgemm('T','N',&
-                              nz,(2*lmaxU_const+1)**2,ne,&
-                              cmplx_1,&
-                              integration_weights(iContour)%data_c(:,nz+1:),ne,&
-                              smoothed,ne,&
-                              cmplx_1,&
-                              g,nz)
+                    nz,(2*lmaxU_const+1)**2,ne,&
+                    cmplx_1,&
+                    integration_weights(iContour)%data_c(:,nz+1:),ne,&
+                    smoothed,ne,&
+                    cmplx_1,&
+                    g,nz)
 
          IF(l_conjg) g = conjg(g)
 
@@ -359,70 +361,73 @@ MODULE m_kkintgr
       nz  = integration_weights(iContour)%matsize2
       ne  = integration_weights(iContour)%matsize1
 
+      ALLOCATE(smoothed(SIZE(im,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(im,4)))
+      smoothed = im
+      IF(ABS(sigma(iContour)).GT.1e-12) THEN
+         CALL timestart('kkintgr: smoothing')
+         SELECT CASE (TRIM(ADJUSTL(smooth_method)))
+         CASE('lorentzian')
+            !$OMP parallel do default(none) collapse(3) &
+            !$OMP shared(energy_grid, smoothed,sigma,ne,iContour) &
+            !$OMP private(m,mp,i)
+            DO i = 1, SIZE(smoothed,4)
+               DO mp = -lmaxU_const, lmaxU_const
+                  DO m = -lmaxU_const, lmaxU_const
+                     CALL lorentzian_smooth(energy_grid,smoothed(:,m,mp,i),sigma(iContour),ne)
+                  ENDDO
+               ENDDO
+            ENDDO
+            !$OMP end parallel do
+         CASE('gaussian')
+            !$OMP parallel do default(none) collapse(3) &
+            !$OMP shared(energy_grid, smoothed,sigma,ne,iContour) &
+            !$OMP private(m,mp)
+            DO i = 1, SIZE(smoothed,4)
+               DO mp = -lmaxU_const, lmaxU_const
+                  DO m = -lmaxU_const, lmaxU_const
+                     CALL smooth(energy_grid,smoothed(:,m,mp,i),sigma(iContour),ne)
+                  ENDDO
+               ENDDO
+            ENDDO
+            !$OMP end parallel do
+         CASE DEFAULT
+            CALL juDFT_error("No valid smooth_method set",&
+                           hint="This is a bug in FLEUR, please report",&
+                           calledby="kkintgr")
+         END SELECT
+
+         CALL timestop('kkintgr: smoothing')
+      ENDIF
+
+      transA = 'T'
+      IF(l_conjg) transA = 'C'
+
       IF(methods(iContour)==method_direct) THEN
          CALL zgemm(transA,'N',&
-                           nz,(2*lmaxU_const+1)**2*SIZE(im,4),ne,&
-                           CMPLX(-del/pi_const,0.0),&
-                           integration_weights(iContour)%data_c,ne,&
-                           im,ne,&
-                           cmplx_0,&
-                           g,nz)
+                    nz,(2*lmaxU_const+1)**2*SIZE(im,4),ne,&
+                    CMPLX(-del/pi_const,0.0),&
+                    integration_weights(iContour)%data_c,ne,&
+                    smoothed,ne,&
+                    cmplx_0,&
+                    g,nz)
       ELSE IF(methods(iContour)==method_maclaurin) THEN
 
          nz  = INT(integration_weights(iContour)%matsize2/2)
 
-         ALLOCATE(smoothed(SIZE(im,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(im,4)))
-         smoothed = im
-         IF(ABS(sigma(iContour)).GT.1e-12) THEN
-            CALL timestart('kkintgr: smoothing')
-            SELECT CASE (TRIM(ADJUSTL(smooth_method)))
-            CASE('lorentzian')
-               !$OMP parallel do default(none) collapse(3) &
-               !$OMP shared(energy_grid, smoothed,sigma,ne,iContour) &
-               !$OMP private(m,mp,i)
-               DO i = 1, SIZE(smoothed,4)
-                  DO mp = -lmaxU_const, lmaxU_const
-                     DO m = -lmaxU_const, lmaxU_const
-                        CALL lorentzian_smooth(energy_grid,smoothed(:,m,mp,i),sigma(iContour),ne)
-                     ENDDO
-                  ENDDO
-               ENDDO
-               !$OMP end parallel do
-            CASE('gaussian')
-               !$OMP parallel do default(none) collapse(3) &
-               !$OMP shared(energy_grid, smoothed,sigma,ne,iContour) &
-               !$OMP private(m,mp)
-               DO i = 1, SIZE(smoothed,4)
-                  DO mp = -lmaxU_const, lmaxU_const
-                     DO m = -lmaxU_const, lmaxU_const
-                        CALL smooth(energy_grid,smoothed(:,m,mp,i),sigma(iContour),ne)
-                     ENDDO
-                  ENDDO
-               ENDDO
-               !$OMP end parallel do
-            CASE DEFAULT
-               CALL juDFT_error("No valid smooth_method set",&
-                              hint="This is a bug in FLEUR, please report",&
-                              calledby="kkintgr")
-            END SELECT
-
-            CALL timestop('kkintgr: smoothing')
-         ENDIF
-
          CALL zgemm('T','N',&
-                              nz,(2*lmaxU_const+1)**2*SIZE(smoothed,4),ne,&
-                              cmplx_1,&
-                              integration_weights(iContour)%data_c(:,:nz),ne,&
-                              smoothed,ne,&
-                              cmplx_0,&
-                              g,nz)         
+                    nz,(2*lmaxU_const+1)**2*SIZE(smoothed,4),ne,&
+                    cmplx_1,&
+                    integration_weights(iContour)%data_c(:,:nz),ne,&
+                    smoothed,ne,&
+                    cmplx_0,&
+                    g,nz)         
          CALL zgemm('T','N',&
-                              nz,(2*lmaxU_const+1)**2*SIZE(smoothed,4),ne,&
-                              cmplx_1,&
-                              integration_weights(iContour)%data_c(:,nz+1:),ne,&
-                              smoothed,ne,&
-                              cmplx_1,&
-                              g,nz)
+                    nz,(2*lmaxU_const+1)**2*SIZE(smoothed,4),ne,&
+                    cmplx_1,&
+                    integration_weights(iContour)%data_c(:,nz+1:),ne,&
+                    smoothed,ne,&
+                    cmplx_1,&
+                    g,nz)
 
          IF(l_conjg) g = conjg(g)
 

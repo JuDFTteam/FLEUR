@@ -106,6 +106,7 @@ MODULE m_types_gfinp
       INTEGER :: ne    = 2700
       REAL    :: ellow = -1.0
       REAL    :: elup  =  1.0
+      real    :: additional_smearing = 0.0
       INTEGER :: numberContours = 0
       TYPE(t_contourInp), ALLOCATABLE :: contour(:)
 
@@ -164,6 +165,7 @@ CONTAINS
       CALL mpi_bc(this%ne,rank,mpi_comm)
       CALL mpi_bc(this%ellow,rank,mpi_comm)
       CALL mpi_bc(this%elup,rank,mpi_comm)
+      CALL mpi_bc(this%additional_smearing,rank,mpi_comm)
       CALL mpi_bc(this%numberContours,rank,mpi_comm)
       CALL mpi_bc(this%hiaElem,rank,mpi_comm)
       CALL mpi_bc(this%torqueElem,rank,mpi_comm)
@@ -344,6 +346,13 @@ CONTAINS
          this%ne = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ne'))
          this%ellow = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ellow'))
          this%elup = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@elup'))
+         if (xml%versionNumber >= 36) then
+            this%additional_smearing = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@smearingEnergy'))
+            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@smearingTemperature') == 1) then
+               if (abs(this%additional_smearing) > 1e-12) call juDFT_error('only specify either smearingEnergy or smearingTemperature, not both', calledby='read_xml_gfinp')
+               this%additional_smearing = boltzmann_Const * evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@smearingTemperature'))
+            endif
+         endif
 
          !Read in the complex energy contours
 

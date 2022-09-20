@@ -25,16 +25,20 @@ MODULE m_greensf_io
 
    CONTAINS
 
-   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, cell, kpts, inFilename)
+   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, sym, cell, kpts, sphhar,inFilename, vtot)
 
       USE m_types
       USE m_cdn_io
+      use m_lattHarmsSphHarmsConv
 
       TYPE(t_input),                INTENT(IN)  :: input
       TYPE(t_gfinp),                INTENT(IN)  :: gfinp
       TYPE(t_atoms),                INTENT(IN)  :: atoms
+      type(t_sym),                  intent(in)  :: sym
       TYPE(t_cell),                 INTENT(IN)  :: cell
       TYPE(t_kpts),                 INTENT(IN)  :: kpts
+      type(t_sphhar),               intent(in)  :: sphhar
+      TYPE(t_potden), optional,     INTENT(IN)  :: vtot
       CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: inFilename
       INTEGER(HID_T),               INTENT(OUT) :: fileID
 
@@ -52,6 +56,7 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: atomPosSpaceID, atomPosSetID
       INTEGER(HID_T)    :: atomicNumbersSpaceID, atomicNumbersSetID
       INTEGER(HID_T)    :: equivAtomsClassSpaceID, equivAtomsClassSetID
+      INTEGER(HID_T)    :: bxcGroupID, bxcSpaceID, bxcSetID
 
       INTEGER(HID_T)    :: stringTypeID
       INTEGER(SIZE_T)   :: stringLength
@@ -66,8 +71,10 @@ MODULE m_greensf_io
 
       INTEGER           :: atomicNumbers(atoms%nat)
       INTEGER           :: equivAtomsGroup(atoms%nat)
+      real, ALLOCATABLE :: bxc_mt(:,:,:)
+      complex, allocatable :: bxc_lm(:,:,:)
 
-      version = 8
+      version = 9
       IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
@@ -199,6 +206,32 @@ MODULE m_greensf_io
       END IF
 
       CALL h5gclose_f(kptsGroupID, hdfError)
+
+      if (present(vtot)) then
+         !Write out bxc
+         CALL h5gcreate_f(fileID, '/bxc', bxcGroupID, hdfError)
+
+         allocate(bxc_mt(size(vtot%mt,1), 0:size(vtot%mt,2)-1, size(vtot%mt,3)))
+         ALLOCATE(bxc_lm(atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%ntype),source=cmplx_0)
+         bxc_mt = (vtot%mt(:,0:,:,2) - vtot%mt(:,0:,:,1))/2.0
+         do iType = 1, atoms%ntype
+            !L=0 of potential has an additional rescaling of r/sqrt(4pi)
+            bxc_mt(:atoms%jri(iType),0,iType) = bxc_mt(:atoms%jri(iType),0,iType) *&
+                                               sfp_const/atoms%rmsh(:atoms%jri(iType),iType)
+            CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, bxc_mt(:,0:,iType), bxc_lm(:,:,itype))
+         enddo
+
+         dims(:4)=(/2,atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%ntype/)
+         dimsInt=dims
+         CALL h5screate_simple_f(4,dims(:4),bxcSpaceID,hdfError)
+         CALL h5dcreate_f(bxcGroupID, "data", H5T_NATIVE_DOUBLE, bxcSpaceID, bxcSetID, hdfError)
+         CALL h5sclose_f(bxcSpaceID,hdfError)
+         CALL io_write_complex3(bxcSetID,[-1,1,1,1],dimsInt(:4),"data",bxc_lm)
+         CALL h5dclose_f(bxcSetID, hdfError)
+
+         CALL h5gclose_f(bxcGroupID, hdfError)
+      endif
+
       CALL h5gclose_f(generalGroupID, hdfError)
 
    END SUBROUTINE openGreensFFile
