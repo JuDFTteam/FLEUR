@@ -343,15 +343,15 @@ CONTAINS
 
       qpts_loc = qpts
 
-      qpts_loc%bk(:,1) = [0.0,1.0,1.0]*0.025*0.0
-      qpts_loc%bk(:,2) = [0.0,1.0,1.0]*0.025*1.0
-      qpts_loc%bk(:,3) = [0.0,1.0,1.0]*0.025*2.0
-      qpts_loc%bk(:,4) = [0.0,1.0,1.0]*0.025*3.0
-      qpts_loc%bk(:,5) = [0.0,1.0,1.0]*0.025*4.0
-      qpts_loc%bk(:,6) = [0.0,1.0,1.0]*0.025*5.0
-      qpts_loc%bk(:,7) = [0.0,1.0,1.0]*0.025*6.0
-      qpts_loc%bk(:,8) = [0.0,1.0,1.0]*0.025*7.0
-      qpts_loc%bk(:,9) = [0.0,1.0,1.0]*0.025*8.0
+      qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.025*0.0
+      qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.025*1.0
+      qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.025*2.0
+      qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.025*3.0
+      qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.025*4.0
+      qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*0.025*5.0
+      qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*0.025*6.0
+      qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*0.025*7.0
+      qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*0.025*8.0
       qpts_loc%bk(:,10) = [0.0,1.0,1.0]*0.025*9.0
       qpts_loc%bk(:,11) = [0.0,1.0,1.0]*0.025*10.0
       qpts_loc%bk(:,12) = [0.0,1.0,1.0]*0.025*11.0
@@ -365,9 +365,14 @@ CONTAINS
       qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.025*19.0
       qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.025*20.0
 
-      ALLOCATE(q_list(21),dfpt_eig_id_list(21))
-      q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21] ! \Gamma to X in 20 steps.
-
+      !ALLOCATE(q_list(21),dfpt_eig_id_list(21))
+      !ALLOCATE(q_list(1),dfpt_eig_id_list(1))
+      ALLOCATE(q_list(5),dfpt_eig_id_list(5))
+      !q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21] ! \Gamma to X in 20 steps.
+      !q_list = [21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
+      !q_list = [21,1,11,16,6,19,18,14,13,9,8,4,3,20,17,15,12,10,7,5,2]
+      !q_list = [13]
+      q_list = [1,6,11,16,21]
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
       CALL imagrhodummy%copyPotDen(rho_nosym)
@@ -423,6 +428,7 @@ CONTAINS
          CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
          CALL timestop("Eii2")
          DO iDtype = 1, fi_nosym%atoms%ntype
+            !DO iDir = 1, 1
             DO iDir = 1, 3
                dfpt_tag = ''
                WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
@@ -451,6 +457,9 @@ CONTAINS
                                      dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), &
                                      denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
                CALL timestop("Sternheimer")
+
+               !CYCLE
+
                WRITE(*,*) '-------------------------'
                CALL timestart("Dynmat")
                ! Once the first order quantities are converged, we can construct all

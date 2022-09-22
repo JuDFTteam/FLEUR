@@ -15,6 +15,7 @@ MODULE m_dfpt_sternheimer
    USE m_constants
    USE m_cdn_io
    USE m_eig66_io
+   !USE m_npy
 
 IMPLICIT NONE
 
@@ -60,7 +61,10 @@ CONTAINS
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
 
+      ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
+      !killcont = [1,0,0,0,0,0]
       killcont = [1,1,1,1,1,1]
+
       CALL rho_loc%copyPotDen(rho)
       CALL rho_loc0%copyPotDen(rho)
       CALL rho_loc0%resetPotDen()
@@ -163,6 +167,11 @@ CONTAINS
 
          IF (strho) THEN
             vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVext%mt(:,0:,iDtype,:)
+            !CALL save_npy(TRIM(dfpt_tag)//"vExt1pw.npy",vTot1%pw(:,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"vExt1mtre.npy",vTot1%mt(:,0:,1,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"vExt1mtim.npy",vTot1Im%mt(:,0:,1,1))
+            !CALL timestop("Sternheimer Iteration")
+            !RETURN
          ELSE
             vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
          END IF
@@ -210,6 +219,10 @@ CONTAINS
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             write(*,*) "Starting perturbation generated."
             CALL timestop("Sternheimer Iteration")
+            !CALL save_npy(TRIM(dfpt_tag)//"rho1pw.npy",denOut1%pw(:,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"rho1mtre.npy",denOut1%mt(:,0:,1,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
+            !RETURN
             CYCLE scfloop
          END IF
 

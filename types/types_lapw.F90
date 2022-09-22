@@ -100,7 +100,7 @@ CONTAINS
       INTEGER j1, j2, j3, mk1, mk2, mk3, nv, addX, addY, addZ
       INTEGER ispin, nvh(2)
 
-      REAL arltv1, arltv2, arltv3, rkm, rk2, r2, s(3)
+      REAL arltv1, arltv2, arltv3, rkm, rk2, r2, s(3), sonlyg(3)
       ! ..
       !
       !------->          ABBREVIATIONS
@@ -136,7 +136,9 @@ CONTAINS
             DO j2 = -mk2 - addY, mk2 + addY
                DO j3 = -mk3 - addZ, mk3 + addZ
                   s = lapw%bkpt + (/j1, j2, j3/) + (2*ispin - 3)/2.0*nococonv%qss
+                  sonlyg = (/j1, j2, j3/)
                   r2 = dot_PRODUCT(MATMUL(s, cell%bbmat), s)
+                  !r2 = dot_PRODUCT(MATMUL(sonlyg, cell%bbmat), sonlyg)
                   IF (r2 .LE. rk2) nv = nv + 1
                END DO
             END DO
@@ -205,12 +207,12 @@ CONTAINS
       !     .. Array Arguments ..
       !     ..
       !     .. Local Scalars ..
-      REAL arltv1, arltv2, arltv3, r2, rk2, rkm, r2q, gla, eps, t
+      REAL arltv1, arltv2, arltv3, r2, rk2, rkm, r2q, gla, eps, t, r2g
       INTEGER i, j, j1, j2, j3, k, l, mk1, mk2, mk3, n, ispin, gmi, m, nred, n_inner, n_bound, itt(3), addX, addY, addZ
       !     ..
       !     .. Local Arrays ..
-      REAL                :: s(3), sq(3)
-      REAL, ALLOCATABLE    :: rk(:), rkq(:), rkqq(:)
+      REAL                :: s(3), sq(3), sg(3)
+      REAL, ALLOCATABLE    :: rk(:), rkq(:), rkqq(:), rg(:)
       INTEGER, ALLOCATABLE :: gvec(:, :), index3(:)
 
       call timestart("t_lapw_init")
@@ -229,6 +231,7 @@ CONTAINS
 
       ALLOCATE (gvec(3, SIZE(lapw%gvec, 2)))
       ALLOCATE (rk(SIZE(lapw%gvec, 2)), rkq(SIZE(lapw%gvec, 2)), rkqq(SIZE(lapw%gvec, 2)))
+      ALLOCATE (rg(SIZE(lapw%gvec, 2)))
       ALLOCATE (index3(SIZE(lapw%gvec, 2)))
 
       !---> Determine rkmax box of size mk1, mk2, mk3,
@@ -255,13 +258,17 @@ CONTAINS
                DO j3 = -mk3 - addZ, mk3 + addZ
                   s = lapw%bkpt + (/j1, j2, j3/) + (2*ispin - 3)/2.0*nococonv%qss
                   sq = lapw%bkpt + (/j1, j2, j3/)
+                  sg = (/j1, j2, j3/)
                   r2 = dot_PRODUCT(s, MATMUL(s, cell%bbmat))
                   r2q = dot_PRODUCT(sq, MATMUL(sq, cell%bbmat))
+                  r2g = dot_PRODUCT(sg, MATMUL(sg, cell%bbmat))
                   IF (r2 .LE. rk2) THEN
+                  !IF (r2g .LE. rk2) THEN
                      n = n + 1
                      gvec(:, n) = (/j1, j2, j3/)
                      rk(n) = SQRT(r2)
                      rkq(n) = SQRT(r2q)
+                     rg(n) = SQRT(r2g)
                   END IF
                ENDDO
             ENDDO
@@ -274,6 +281,7 @@ CONTAINS
                       (mk3 + gvec(3, k))*(2*mk1 + 1)*(2*mk2 + 1)
          ENDDO
          CALL sort(index3(:lapw%nv(ispin)), rkq, rkqq)
+         !CALL sort(index3(:lapw%nv(ispin)), rg, rkqq)
          DO n = 1, lapw%nv(ispin)
             lapw%gvec(:, n, ispin) = gvec(:, index3(n))
             lapw%rk(n, ispin) = rk(index3(n))

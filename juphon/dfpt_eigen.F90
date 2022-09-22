@@ -26,7 +26,7 @@ CONTAINS
       USE m_xmlOutput
       USE m_types_mpimat
       USE m_invert_HepsS
-      USE m_npy
+      !USE m_npy
 
       IMPLICIT NONE
 
@@ -59,14 +59,17 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
 
       INTEGER                   :: dealloc_stat, nbasfcnq, nbasfcn, neigk, noccbd
+      !INTEGER                   :: k_selection(8)
       character(len=300)        :: errmsg
       INTEGER, ALLOCATABLE      :: ev_list(:)
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:)
       REAL,    ALLOCATABLE      :: eigk(:), eigs1(:)
 
-      CLASS(t_mat), ALLOCATABLE :: invHepsS(:), invE(:)
+      CLASS(t_mat), ALLOCATABLE :: invHepsS(:), invE(:), matE(:)
 
       CALL timestart("dfpt_eigen")
+
+      !k_selection = [1,2,23,202,293,430,511,512]
 
       ! Get the required eigenvectors and values at k for occupied bands:
       bkpt = fi%kpts%bk(:, nk)
@@ -90,12 +93,15 @@ CONTAINS
       CALL timestart("Read eigenstuff at k")
       CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
       CALL timestop("Read eigenstuff at k")
-      CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invHepsS, invE)
+      CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invHepsS, invE, matE)
 
       ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
       CALL timestart("Setup of matrix perturbations")
       CALL dfpt_eigen_hssetup(jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,v1,lapw,lapwq,iDir,iDtype,smat,hmat,nk,killcont)
       CALL timestop("Setup of matrix perturbations")
+
+      !IF (nk==1) CALL save_npy(int2str(dfpt_eig_id-eig_id)//"H.npy",hmat%data_c)
+      !IF (nk==1) CALL save_npy(int2str(dfpt_eig_id-eig_id)//"S.npy",smat%data_c)
 
       nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
       IF (fmpi%n_size == 1) THEN
@@ -141,7 +147,31 @@ CONTAINS
          ELSE
             zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
          END IF
+
+         !IF (ANY(nk==k_selection)) THEN
+         !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)
+         !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_HS1band.npy",tempMat1)
+         !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_matE.npy",matE(nu)%data_r)
+         !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_invE.npy",invE(nu)%data_r)
+         !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1band.npy",tempMat2)
+         !END IF
       END DO
+
+      !IF (ANY(nk==k_selection)) THEN
+      !   IF (l_real) THEN ! l_real for zMatk
+      !      CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_zMatk.npy",zMatk%data_r)
+      !   ELSE
+      !      CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_zMatk.npy",zMatk%data_c)
+      !   END IF
+
+      !   IF (zMatq%l_real) THEN ! l_real for zMatq
+      !      CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_zMatkq.npy",zMatq%data_r)
+      !   ELSE
+      !      CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_zMatkq.npy",zMatq%data_c)
+      !   END IF
+
+      !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"z1.npy",zMat1%data_c)
+      !END IF
 
       CALL smat%free()
       CALL hmat%free()

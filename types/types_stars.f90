@@ -136,18 +136,18 @@ CONTAINS
     REAL, OPTIONAL, INTENT(IN) :: qvec(3)
 
     INTEGER :: k1,k2,k3,n,n1,k
-    REAL    :: s,g(3),gmax2
+    REAL    :: s,g(3),gmax2,sq
     INTEGER :: kr(3,sym%nop),kv(3)
     COMPLEX :: phas(sym%nop)
     INTEGER,ALLOCATABLE :: index(:)
-    REAL,ALLOCATABLE :: gsk3(:)
+    REAL,ALLOCATABLE :: gsk3(:), sk3q(:)
 
     gmax2=stars%gmax**2
     allocate(gsk3(stars%ng3),index(stars%ng3))
 
     ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
     ALLOCATE(stars%kv3(3,stars%ng3),stars%sk3(stars%ng3),stars%nstr(stars%ng3))
-    IF (PRESENT(qvec)) ALLOCATE(stars%gq(3,stars%ng3))
+    IF (PRESENT(qvec)) ALLOCATE(stars%gq(3,stars%ng3),sk3q(stars%ng3))
     ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
 
     stars%rgphs=0.0
@@ -165,20 +165,31 @@ CONTAINS
           kv(3) = k3
 
           g=matmul(kv,cell%bmat)
-          IF (PRESENT(qvec)) g = g + matmul(qvec,cell%bmat)
+          !IF (PRESENT(qvec)) g = g + matmul(qvec,cell%bmat) !!!!!!!!!!
           s=dot_product(g,g)
-          if (s>gmax2) cycle z_dim !not in sphere
+          !if (s>gmax2) cycle z_dim !not in sphere !!!!!!!!!!!!!
+          sq=s
+          IF (PRESENT(qvec)) THEN
+             g = g + matmul(qvec,cell%bmat)
+             sq=dot_product(g,g)
+          END IF
+
+          if (sq>gmax2) cycle z_dim !not in sphere
           k=k+1
           stars%kv3(:,k)=kv
           stars%sk3(k)=sqrt(s)
+
           IF (PRESENT(qvec)) THEN
              stars%gq(:,k)=g
+             sk3q(k)=sqrt(sq)
              stars%center=qvec
           END IF
+
           ! secondary key for equal length stars
           gsk3(k) = (stars%mx1+stars%kv3(1,k)) +&
             &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
             &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
+
           !Now generate all equivalent g-vectors
           CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),&
                              kr)
@@ -195,6 +206,7 @@ CONTAINS
     stars%kv3=stars%kv3(:,index)
     stars%sk3=stars%sk3(index)
     IF (PRESENT(qvec)) stars%gq=stars%gq(:,index)
+    IF (PRESENT(qvec)) stars%sk3=sk3q(index)
     ! set up the pointers and phases for 3d stars
     DO  k = 1,stars%ng3
       CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),&
