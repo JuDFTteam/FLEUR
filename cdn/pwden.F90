@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
    SUBROUTINE pwden(stars, kpts, banddos,   input, fmpi, noco, nococonv, cell, atoms, sym, &
-                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1)
+                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, qimag)
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       !     In this subroutine the star function expansion coefficients of
       !     the plane wave charge density is determined.
@@ -75,6 +75,7 @@ CONTAINS
       COMPLEX, INTENT(INOUT) ::  f_b8(3, atoms%ntype)
 
       REAL,         OPTIONAL, INTENT(IN) :: q_dfpt(3), we1(:)
+      COMPLEX,      OPTIONAL, INTENT(INOUT) :: qimag(stars%ng3)
       TYPE(t_mat),  OPTIONAL, INTENT(IN) :: zMat1
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
 
@@ -82,7 +83,7 @@ CONTAINS
       TYPE(t_fftGrid) :: state, stateB, stateq, stateBq, StateDeriv, ekinGrid, chargeDen, rhomatGrid(4)
       TYPE(t_fftGrid) :: stepFct
       INTEGER nu, iv, ir, istr, i, j
-      INTEGER idens, ndens, ispin
+      INTEGER idens, ndens, ispin, iGp, iG, gVec(3), gInd
       REAL q0, q0_11, q0_22, norm, xk(3)
       REAL s, stateRadius, stateFFTRadius, stateFFTExtendedRadius
       COMPLEX x
@@ -96,7 +97,7 @@ CONTAINS
       INTEGER, ALLOCATABLE :: stateBqIndices(:)
       INTEGER, ALLOCATABLE :: fieldSphereIndices(:)
       REAL wtf(ne), wtf1(ne)
-      COMPLEX tempState(lapw%nv(jspin)), starCharges(stars%ng3)
+      COMPLEX tempState(lapw%nv(jspin)), starCharges(stars%ng3), z0(lapw%nv(jspin))
       COMPLEX, ALLOCATABLE :: cwk(:), ecwk(:)
 
       ! subroutines
@@ -231,6 +232,25 @@ CONTAINS
       IF ((noco%l_noco).AND.(ikpt.LE.fmpi%isize)) THEN
          dos%qis = 0.0
       END IF
+
+      ELSE
+         DO iGp = 1, lapw%nv(jspin)
+            DO iG = 1, lapwq%nv(jspin)
+               gVec = lapw%gvec(:, iG, jspin) - lapwq%gvec(:, iGp, jspin)
+               gInd = stars%ig(gVec(1), gVec(2), gVec(3))
+
+               IF (gInd.EQ.0) CYCLE
+
+               DO nu = 1, ne
+                  IF (zmat%l_real) THEN
+                     z0 = CMPLX(1.0,0.0)*zMat%data_r(:lapw%nv(jspin), nu)
+                  ELSE
+                     z0 = zMat%data_c(:lapw%nv(jspin), nu)
+                  END IF
+                  qimag(gInd) = qimag(gInd) + 2*we(nu)*CONJG(z0(iGp))*zMat1%data_c(iG, nu)/cell%omtil
+               END DO
+            END DO
+         END DO
       END IF
 
       wtf(:ne) = we(:ne)/cell%omtil
