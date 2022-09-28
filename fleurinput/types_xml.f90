@@ -433,9 +433,9 @@ CONTAINS
          !PRINT *,xpatha
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          !PRINT *,"Q:",valueString
-         q(1,i)=evaluateFirstOnly(valueString)
-         q(2,i)=evaluateFirstOnly(valueString)
-         q(3,i)=evaluateFirstOnly(valueString)
+         q(1,i)=evaluateFirst(valueString)
+         q(2,i)=evaluateFirst(valueString)
+         q(3,i)=evaluateFirst(valueString)
          !READ (valueString, *) q(1, i), q(2, i), q(3, i)
       END DO
    END FUNCTION read_q_list
