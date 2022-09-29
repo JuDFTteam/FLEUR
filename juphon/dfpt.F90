@@ -394,7 +394,10 @@ CONTAINS
       END DO
 
       DO iSpin = 1, SIZE(rho_nosym%mt,4)
-         CALL mt_gradient_old(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, sphhar_nosym%clnu, sphhar_nosym%nmem, sphhar_nosym%mlh, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
+         !CALL mt_gradient_old(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, sphhar_nosym%clnu, sphhar_nosym%nmem, sphhar_nosym%mlh, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
+         !CALL save_npy("theoldgradient.npy",grrhodummy)
+         CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
+         !CALL save_npy("thenewgradient.npy",grrhodummy)
       END DO
 
       DO zInd = -stars_nosym%mx3, stars_nosym%mx3
@@ -571,186 +574,186 @@ CONTAINS
 
     END SUBROUTINE dfpt
 
-    subroutine createkqMapArrays( kpts, qpts, nrAddQs, kSetDim, addQnkptis, mapKpq2K, kpq2kPrVec )
+!    subroutine createkqMapArrays( kpts, qpts, nrAddQs, kSetDim, addQnkptis, mapKpq2K, kpq2kPrVec )
+!
+!      use m_types
+!      use m_juDFT_stop, only : juDFT_error
+!
+!      implicit none
+!
+!      ! Type parameters
+!      type(t_kpts),              intent(in)  :: kpts
+!      type(t_kpts),              intent(in)  :: qpts
+!
+!      ! Array parameter
+!      integer,                   intent(in)  :: addQnkptis(:)
+!      integer,                   intent(in)  :: kSetDim(:)
+!      integer,      allocatable, intent(out) :: mapKpq2K(:, :)
+!      integer,      allocatable, intent(out) :: kpq2kPrVec(:, :, :)
+!
+!      ! Scalar parameter
+!      integer,                   intent(in)  :: nrAddQs
+!
+!      ! Array variable
+!      integer,      allocatable              :: mapK2Ind(:, :, :) ! takes components of kpts%bk * lcm and gives its index
+!      integer,      allocatable              :: mapK2mK(:)
+!      integer                                :: kpqNomin(3)       ! helps to find k + q mapped back to Brillouin zone
+!      real                                   :: kpqTemp(3)        ! helps to find k + q mapped back to Brillouin zone
+!      character(len=1024)                    :: errorMessage      ! stores error message for error output
+!
+!      ! Scalar variable
+!      integer                                :: ikpt              ! loop variable
+!      integer                                :: maxKcomp(3)       ! stores maximal k-point component * lcm
+!      integer                                :: idir              ! loop variable
+!      integer                                :: iqpt              ! loop variable
+!      integer                                :: nkptShift         ! stores shift of shifted k-point set
+!      integer                                :: ikptSh            ! loop variable
+!      logical                                :: matchFound        ! is true if index for k + q is found
+!      real :: lcm
+!
+!      lcm = real( kgv(kSetDim, 3) )
+!
+!      ! Determine maximal value of k-vector per direction in internal representation for allocation of mapKpq2K array and allocate it
+!      maxKcomp = 0
+!      do idir = 1, 3
+!        maxKcomp(idir) = maxval( kpts%bk(idir, :kpts%nkpt) * lcm )
+!      end do
+!      allocate( mapK2Ind(0:maxKcomp(1), 0:maxKcomp(2), 0:maxKcomp(3)) )
+!      mapK2Ind = 0
+!      allocate( mapKpq2K(kpts%nkpt, qpts%nkptf + nrAddQs) )
+!
+!      ! Fill up array which stores the index of a given k-point
+!      do ikpt = 1, kpts%nkpt
+!        mapK2Ind(nint(kpts%bk(1, ikpt) * lcm), nint(kpts%bk(2, ikpt) * lcm), nint(kpts%bk(3, ikpt) * lcm)) = ikpt
+!      end do
+!
+!      ! Determine k-point on which k + q can be folded back and determine the respective reciprocal lattice vector.
+!      ! The absolute value of every coordinate of the reciprocal lattice vector can be 1 maximally.
+!      allocate( kpq2kPrVec(3, kpts%nkpt, qpts%nkpt) )
+!      kpq2kPrVec = 0
+!      do iqpt = 1, qpts%nkpt
+!        do ikpt = 1, kpts%nkpt
+!          kpqNomin = 0
+!          do idir = 1, 3
+!            kpqNomin(idir) = nint( mod( kpts%bk(idir, ikpt) + qpts%bk(idir, iqpt), 1. ) * lcm )
+!            !kpqNomin(idir) = nint(lcm*kpts%bk(idir, ikpt) + lcm*qpts%bk(idir, iqpt))
+!            ! Is in 1st Brillouin zone
+!            if (abs(real(kpqNomin(idir)) / real(lcm) - (kpts%bk(idir, ikpt) + qpts%bk(idir, iqpt))) < 1e-5) then
+!            !if (kpqNomin(idir).lt.int(lcm)) then
+!              kpq2kPrVec(idir, ikpt, iqpt) = 0
+!            ! Has to be backfolded
+!            else
+!              kpq2kPrVec(idir, ikpt, iqpt) = -1
+!            end if
+!          end do
+!          if(.false.) then
+!            write(1005, '(i5, i5, 3(i5))') iqpt, ikpt, kpq2kPrVec(:, ikpt, iqpt)
+!          end if
+!          mapKpq2K(ikpt, iqpt) = mapK2Ind( kpqNomin(1), kpqNomin(2), kpqNomin(3) )
+!          !mapKpq2K(ikpt, iqpt) = mapK2Ind( mod(kpqNomin(1),int(lcm)), mod(kpqNomin(2),int(lcm)), mod(kpqNomin(3),int(lcm)) )
+!        end do
+!      end do
+!
+!      ! For this found k-vector equals to k + q, determine the index and fill up array which connects the kpts indices of the k and q
+!      ! qpoint with the index of the k-vector equals to k + q.
+!      nkptShift = 0
+!      matchFound = .false.
+!      do iqpt = qpts%nkpt + 1, qpts%nkpt + nrAddQs
+!        do ikpt = 1, kpts%nkpt
+!          kpqTemp(:) = modulo1r( kpts%bk(:, ikpt) + qpts%bk(:, iqpt) )
+!          do ikptSh = 1, addQnkptis(iqpt - qpts%nkpt)
+!            if ( norm2( kpts%bk(:, kpts%nkpt + ikptSh + nkptShift) - kpqTemp(:) ) < 1e-7 ) then
+!              mapKpq2K(ikpt, iqpt) = kpts%nkpt + nkptShift + ikptSh
+!              matchFound = .true.
+!              exit
+!            end if
+!          end do
+!          if ( .not.matchFound ) then
+!            write (errorMessage, '(a,1x,i3)') 'no match for k+q-point', kpqTemp
+!            call juDFT_error( errorMessage, calledby='createkqMapArrays', hint='Please check k-points, q-points and mapKpq2K array!' )
+!          else
+!            matchFound = .false.
+!          end if
+!        end do
+!        nkptShift = nkptShift + addQnkptis(iqpt - qpts%nkpt)
+!      end do
+!
+!      if (.false.) then
+!        ! Finds out which k' results when sending k to -k and then backfolding into 1st Brillouin zone.
+!        do ikpt = 1, kpts%nkpt
+!          do idir = 1, 3
+!            if ( kpts%bk(idir, ikpt)==0 ) then
+!              kpqTemp(idir) = kpts%bk(idir, ikpt)
+!            else
+!              kpqTemp(idir) = -kpts%bk(idir, ikpt) + 1
+!            end if
+!          end do ! idir
+!          mapK2mK(ikpt) = mapK2Ind(int(kpqTemp(1) * lcm), int(kpqTemp(2) * lcm), int(kpqTemp(3) * lcm))
+!        end do ! ikpt
+!      end if
+!
+!    end subroutine createkqMapArrays
 
-      use m_types
-      use m_juDFT_stop, only : juDFT_error
+!    function modulo1r(kpoint)
+!      implicit none
+!      real(8), intent(in) :: kpoint(3)
+!      real(8)             :: modulo1r(3)
+!      integer             :: i
+!
+!      modulo1r = modulo (kpoint , 1d0)
+!
+!      do i = 1,3
+!        if(abs(1-abs(modulo1r(i))).lt.1d-13) modulo1r(i) = 0d0
+!      enddo
+!    end function modulo1r
 
-      implicit none
-
-      ! Type parameters
-      type(t_kpts),              intent(in)  :: kpts
-      type(t_kpts),              intent(in)  :: qpts
-
-      ! Array parameter
-      integer,                   intent(in)  :: addQnkptis(:)
-      integer,                   intent(in)  :: kSetDim(:)
-      integer,      allocatable, intent(out) :: mapKpq2K(:, :)
-      integer,      allocatable, intent(out) :: kpq2kPrVec(:, :, :)
-
-      ! Scalar parameter
-      integer,                   intent(in)  :: nrAddQs
-
-      ! Array variable
-      integer,      allocatable              :: mapK2Ind(:, :, :) ! takes components of kpts%bk * lcm and gives its index
-      integer,      allocatable              :: mapK2mK(:)
-      integer                                :: kpqNomin(3)       ! helps to find k + q mapped back to Brillouin zone
-      real                                   :: kpqTemp(3)        ! helps to find k + q mapped back to Brillouin zone
-      character(len=1024)                    :: errorMessage      ! stores error message for error output
-
-      ! Scalar variable
-      integer                                :: ikpt              ! loop variable
-      integer                                :: maxKcomp(3)       ! stores maximal k-point component * lcm
-      integer                                :: idir              ! loop variable
-      integer                                :: iqpt              ! loop variable
-      integer                                :: nkptShift         ! stores shift of shifted k-point set
-      integer                                :: ikptSh            ! loop variable
-      logical                                :: matchFound        ! is true if index for k + q is found
-      real :: lcm
-
-      lcm = real( kgv(kSetDim, 3) )
-
-      ! Determine maximal value of k-vector per direction in internal representation for allocation of mapKpq2K array and allocate it
-      maxKcomp = 0
-      do idir = 1, 3
-        maxKcomp(idir) = maxval( kpts%bk(idir, :kpts%nkpt) * lcm )
-      end do
-      allocate( mapK2Ind(0:maxKcomp(1), 0:maxKcomp(2), 0:maxKcomp(3)) )
-      mapK2Ind = 0
-      allocate( mapKpq2K(kpts%nkpt, qpts%nkptf + nrAddQs) )
-
-      ! Fill up array which stores the index of a given k-point
-      do ikpt = 1, kpts%nkpt
-        mapK2Ind(nint(kpts%bk(1, ikpt) * lcm), nint(kpts%bk(2, ikpt) * lcm), nint(kpts%bk(3, ikpt) * lcm)) = ikpt
-      end do
-
-      ! Determine k-point on which k + q can be folded back and determine the respective reciprocal lattice vector.
-      ! The absolute value of every coordinate of the reciprocal lattice vector can be 1 maximally.
-      allocate( kpq2kPrVec(3, kpts%nkpt, qpts%nkpt) )
-      kpq2kPrVec = 0
-      do iqpt = 1, qpts%nkpt
-        do ikpt = 1, kpts%nkpt
-          kpqNomin = 0
-          do idir = 1, 3
-            kpqNomin(idir) = nint( mod( kpts%bk(idir, ikpt) + qpts%bk(idir, iqpt), 1. ) * lcm )
-            !kpqNomin(idir) = nint(lcm*kpts%bk(idir, ikpt) + lcm*qpts%bk(idir, iqpt))
-            ! Is in 1st Brillouin zone
-            if (abs(real(kpqNomin(idir)) / real(lcm) - (kpts%bk(idir, ikpt) + qpts%bk(idir, iqpt))) < 1e-5) then
-            !if (kpqNomin(idir).lt.int(lcm)) then
-              kpq2kPrVec(idir, ikpt, iqpt) = 0
-            ! Has to be backfolded
-            else
-              kpq2kPrVec(idir, ikpt, iqpt) = -1
-            end if
-          end do
-          if(.false.) then
-            write(1005, '(i5, i5, 3(i5))') iqpt, ikpt, kpq2kPrVec(:, ikpt, iqpt)
-          end if
-          mapKpq2K(ikpt, iqpt) = mapK2Ind( kpqNomin(1), kpqNomin(2), kpqNomin(3) )
-          !mapKpq2K(ikpt, iqpt) = mapK2Ind( mod(kpqNomin(1),int(lcm)), mod(kpqNomin(2),int(lcm)), mod(kpqNomin(3),int(lcm)) )
-        end do
-      end do
-
-      ! For this found k-vector equals to k + q, determine the index and fill up array which connects the kpts indices of the k and q
-      ! qpoint with the index of the k-vector equals to k + q.
-      nkptShift = 0
-      matchFound = .false.
-      do iqpt = qpts%nkpt + 1, qpts%nkpt + nrAddQs
-        do ikpt = 1, kpts%nkpt
-          kpqTemp(:) = modulo1r( kpts%bk(:, ikpt) + qpts%bk(:, iqpt) )
-          do ikptSh = 1, addQnkptis(iqpt - qpts%nkpt)
-            if ( norm2( kpts%bk(:, kpts%nkpt + ikptSh + nkptShift) - kpqTemp(:) ) < 1e-7 ) then
-              mapKpq2K(ikpt, iqpt) = kpts%nkpt + nkptShift + ikptSh
-              matchFound = .true.
-              exit
-            end if
-          end do
-          if ( .not.matchFound ) then
-            write (errorMessage, '(a,1x,i3)') 'no match for k+q-point', kpqTemp
-            call juDFT_error( errorMessage, calledby='createkqMapArrays', hint='Please check k-points, q-points and mapKpq2K array!' )
-          else
-            matchFound = .false.
-          end if
-        end do
-        nkptShift = nkptShift + addQnkptis(iqpt - qpts%nkpt)
-      end do
-
-      if (.false.) then
-        ! Finds out which k' results when sending k to -k and then backfolding into 1st Brillouin zone.
-        do ikpt = 1, kpts%nkpt
-          do idir = 1, 3
-            if ( kpts%bk(idir, ikpt)==0 ) then
-              kpqTemp(idir) = kpts%bk(idir, ikpt)
-            else
-              kpqTemp(idir) = -kpts%bk(idir, ikpt) + 1
-            end if
-          end do ! idir
-          mapK2mK(ikpt) = mapK2Ind(int(kpqTemp(1) * lcm), int(kpqTemp(2) * lcm), int(kpqTemp(3) * lcm))
-        end do ! ikpt
-      end if
-
-    end subroutine createkqMapArrays
-
-    function modulo1r(kpoint)
-      implicit none
-      real(8), intent(in) :: kpoint(3)
-      real(8)             :: modulo1r(3)
-      integer             :: i
-
-      modulo1r = modulo (kpoint , 1d0)
-
-      do i = 1,3
-        if(abs(1-abs(modulo1r(i))).lt.1d-13) modulo1r(i) = 0d0
-      enddo
-    end function modulo1r
-
-    function kgv(iarr,n)
-      implicit none
-      integer              :: kgv
-      integer, intent(in)  :: n,iarr(n)
-      logical              :: lprim(2:maxval(iarr))
-      integer, allocatable :: prim(:),expo(:)
-      integer              :: nprim,marr
-      integer              :: i,j,ia,k
-      ! Determine prime numbers
-      marr  = maxval(iarr)
-      lprim = .true.
-      do i = 2,marr
-        j = 2
-        do while (i*j.le.marr)
-          lprim(i*j) = .false.
-          j          = j + 1
-        enddo
-      enddo
-      nprim = count(lprim)
-      allocate ( prim(nprim),expo(nprim) )
-      j = 0
-      do i = 2,marr
-        if(lprim(i)) then
-          j       = j + 1
-          prim(j) = i
-        endif
-      enddo
-      ! Determine least common multiple
-      expo = 0
-      do i = 1,n
-        ia = iarr(i)
-        if(ia.eq.0) cycle
-        do j = 1,nprim
-          k = 0
-          do while(ia/prim(j)*prim(j).eq.ia)
-            k  = k + 1
-            ia = ia / prim(j)
-          enddo
-          expo(j) = max(expo(j),k)
-        enddo
-      enddo
-      kgv = 1
-      do j = 1,nprim
-        kgv = kgv * prim(j)**expo(j)
-      enddo
-      deallocate ( prim,expo )
-    end function kgv
+!    function kgv(iarr,n)
+!      implicit none
+!      integer              :: kgv
+!      integer, intent(in)  :: n,iarr(n)
+!      logical              :: lprim(2:maxval(iarr))
+!      integer, allocatable :: prim(:),expo(:)
+!      integer              :: nprim,marr
+!      integer              :: i,j,ia,k
+!      ! Determine prime numbers
+!      marr  = maxval(iarr)
+!      lprim = .true.
+!      do i = 2,marr
+!        j = 2
+!        do while (i*j.le.marr)
+!          lprim(i*j) = .false.
+!          j          = j + 1
+!        enddo
+!      enddo
+!      nprim = count(lprim)
+!      allocate ( prim(nprim),expo(nprim) )
+!      j = 0
+!      do i = 2,marr
+!        if(lprim(i)) then
+!          j       = j + 1
+!          prim(j) = i
+!        endif
+!      enddo
+!      ! Determine least common multiple
+!      expo = 0
+!      do i = 1,n
+!        ia = iarr(i)
+!        if(ia.eq.0) cycle
+!        do j = 1,nprim
+!          k = 0
+!          do while(ia/prim(j)*prim(j).eq.ia)
+!            k  = k + 1
+!            ia = ia / prim(j)
+!          enddo
+!          expo(j) = max(expo(j),k)
+!        enddo
+!      enddo
+!      kgv = 1
+!      do j = 1,nprim
+!        kgv = kgv * prim(j)**expo(j)
+!      enddo
+!      deallocate ( prim,expo )
+!    end function kgv
 
     subroutine old_get_Gvecs(starsT, cellT, inputT, ngdp, ngdp2km, gdp, testMode )
 
@@ -804,4 +807,149 @@ CONTAINS
       gdp(:, ngdp2km + 1 : ngdp) = gdptemprest(:, :ngrest)
 
     end subroutine old_get_Gvecs
+
+    subroutine mt_gradient_new(atoms, sphhar, sym, r2FlhMt, GrFshMt)
+
+      use m_gaunt, only : gaunt1
+
+      type(t_atoms),               intent(in)  :: atoms
+      type(t_sphhar),              intent(in)  :: sphhar
+      type(t_sym),                 intent(in)  :: sym
+
+      real,                        intent(in)  :: r2FlhMt(:, 0:, :)
+      complex,                     intent(out) :: GrFshMt(:, :, :, :)
+
+      real                                     :: pfac
+      real                                     :: tGaunt
+      integer                                  :: itype
+      integer                                  :: imesh
+      integer                                  :: mqn_m
+      integer                                  :: oqn_l
+      integer                                  :: mqn_mpp
+      integer                                  :: lm
+      integer                                  :: symType
+      integer                                  :: ilh
+      integer                                  :: imem
+
+      real,           allocatable              :: rDerFlhMt(:)
+      complex,        allocatable              :: r2GrFshMtNat(:, :, :, :)
+
+      allocate( r2GrFshMtNat(atoms%jmtd, ( atoms%lmaxd + 1)**2, atoms%nat, 3) )
+      allocate( rDerFlhMt(atoms%jmtd) )
+      GrFshMt = cmplx(0., 0.)
+      r2GrFshMtNat = cmplx(0., 0.)
+      rDerFlhMt = 0.
+
+      pfac = sqrt( fpi_const / 3. )
+      do mqn_mpp = -1, 1
+        do itype = 1, atoms%ntype
+            symType = sym%ntypsy(itype)
+            do ilh = 0, sphhar%nlh(symType)
+              oqn_l = sphhar%llh(ilh, symType)
+              do imem = 1, sphhar%nmem(ilh,symType)
+                mqn_m = sphhar%mlh(imem,ilh,symType)
+
+                ! l + 1 block
+                ! oqn_l - 1 to l, so oqn_l should be < lmax not <= lmax
+                if ( ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 ) .and. ( abs(mqn_m) <= oqn_l ) .and. (oqn_l < atoms%lmax(itype)) ) then
+                  lm = ( oqn_l + 1 ) * ( oqn_l + 2 ) + 1 + mqn_m - mqn_mpp
+                  call derivative_loc( r2FlhMt(:, ilh, itype), itype, atoms, rDerFlhMt )
+                  tGaunt = Gaunt1( oqn_l + 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd )
+                  do imesh = 1, atoms%jri(itype)
+                    r2GrFshMtNat(imesh, lm, itype, mqn_mpp + 2) = r2GrFshMtNat(imesh, lm, itype, mqn_mpp + 2) + pfac * (-1)**mqn_mpp &
+                      &* tGaunt * (rDerFlhMt(imesh) * sphhar%clnu(imem,ilh,symType) &
+                      &- ((oqn_l + 2) * r2FlhMt(imesh, ilh, itype) * sphhar%clnu(imem,ilh,symType) / atoms%rmsh(imesh, itype)))
+                  end do ! imesh
+                end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 ) .and. ( abs(mqn_m) <= oqn_l )
+
+                ! l - 1 block
+                if ( ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 ) .and. ( abs(mqn_m) <= oqn_l ) ) then
+                  if ( oqn_l - 1 == -1 ) then
+                    write (*, *) 'oqn_l too low'
+                  end if
+                  lm = (oqn_l - 1) * oqn_l + 1 + mqn_m - mqn_mpp
+                  ! This is also a trade of between storage and performance, because derivative is called redundantly, maybe store it?
+                  call derivative_loc( r2FlhMt(:, ilh, itype), itype, atoms, rDerFlhMt )
+                  tGaunt = Gaunt1( oqn_l - 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd )
+                  do imesh = 1, atoms%jri(itype)
+                    r2GrFshMtNat(imesh, lm, itype, mqn_mpp + 2) = r2GrFshMtNat(imesh, lm, itype, mqn_mpp + 2) + pfac * (-1)**mqn_mpp &
+                      & * tGaunt * (rDerFlhMt(imesh)  * sphhar%clnu(imem,ilh,symType) &
+                      & + ((oqn_l - 1) * r2FlhMt(imesh, ilh, itype) * sphhar%clnu(imem,ilh,symType) / atoms%rmsh(imesh, itype)))
+                  end do ! imesh
+                end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 ) .and. ( abs(mqn_m) <= oqn_l )
+              end do ! imem
+            end do ! ilh
+        end do ! itype
+      end do ! mqn_mpp
+
+      ! Conversion from natural to cartesian coordinates
+      do itype = 1, atoms%ntype
+          do oqn_l = 0, atoms%lmax(itype)
+            do mqn_m = -oqn_l, oqn_l
+              lm = oqn_l * (oqn_l + 1) + 1 + mqn_m
+              do imesh = 1, atoms%jri(itype)
+                grFshMt(imesh, lm, itype, 1:3) = matmul( Tmatrix0(1:3, 1:3), r2GrFshMtNat(imesh, lm, itype, 1:3) ) / atoms%rmsh(imesh, itype)**2
+              end do
+            end do ! mqn_m
+          end do ! oqn_l
+      end do ! itype
+
+   end subroutine mt_gradient_new
+
+   subroutine derivative_loc(f, itype, atoms, df)
+
+      integer,       intent(in)  :: itype
+      type(t_atoms), intent(in)  :: atoms
+      real,          intent(in)  :: f(atoms%jri(itype))
+      real,          intent(out) :: df(atoms%jri(itype))
+      real                       :: h, r, d21, d32, d43, d31, d42, d41, df1, df2, s
+      real                       :: y0, y1, y2
+      integer                    :: i, n
+
+      n = atoms%jri(itype)
+      h = atoms%dx(itype)
+      r = atoms%rmsh(1, itype)
+
+      ! use Lagrange interpolation of 3rd order (and averaging) for points 3 to n
+      d21 = r * (exp(h)-1) ; d32 = d21 * exp(h) ; d43 = d32 * exp(h)
+      d31 = d21 + d32      ; d42 = d32 + d43
+      d41 = d31 + d43
+      df(1) =   d31*d41 / (d21*d32*d42) * f(2) + ( -1d0/d21 - 1d0/d31 - 1d0/d41) * f(1)&
+     &        - d21*d41 / (d31*d32*d43) * f(3) + d21*d31 / (d41*d42*d43) * f(4)
+      df(2) = - d32*d42 / (d21*d31*d41) * f(1) + (  1d0/d21 - 1d0/d32 - 1d0/d42) * f(2)&
+     &        + d21*d42 / (d31*d32*d43) * f(3) - d21*d32 / (d41*d42*d43) * f(4)
+      df1   =   d32*d43 / (d21*d31*d41) * f(1) - d31*d43 / (d21*d32*d42) * f(2) +&
+     &  ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(3) + d31*d32 / (d41*d42*d43) * f(4)
+      do i = 3, n - 2
+         d21 = d32 ; d32 = d43 ; d43 = d43 * exp(h)
+         d31 = d42 ; d42 = d42 * exp(h)
+         d41 = d41 * exp(h)
+         df2   = - d32*d42 / (d21*d31*d41) * f(i-1) + ( 1d0/d21 - 1d0/d32 - 1d0/d42) * f(i) + &
+     &             d21*d42 / (d31*d32*d43) * f(i+1) - d21*d32 / (d41*d42*d43) * f(i+2)
+         df(i) = ( df1 + df2 ) / 2
+         df1   = d32*d43 / (d21*d31*d41) * f(i-1) - d31*d43 / (d21*d32*d42) * f(i) +&
+     &    ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(i+1) + d31*d32 / (d41*d42*d43) * f(i+2)
+      enddo
+      df(n-1) = df1
+      df(n)   = - d42*d43 / (d21*d31*d41) * f(n-3) + d41*d43 / (d21*d32*d42) * f(n-2) -&
+     &            d41*d42 / (d31*d32*d43) * f(n-1) + ( 1d0/d41 + 1d0/d42 + 1d0/d43 ) * f(n)
+      ! for first two points use Lagrange interpolation of second order for log(f(i))
+      ! or, as a fall-back, Lagrange interpolation with the conditions f(1), f(2), f(3), f'(3).
+      s = sign(1d0,f(1))
+      if(sign(1d0,f(2)) /= s .or. sign(1d0,f(3))  /= s .or. any(abs(f(:3)) < 1e0)) then
+         d21   = r * (exp(h)-1)
+         d32   = d21 * exp(h)
+         d31   = d21 + d32
+         s     = df(3) / (d31*d32) - f(1) / (d21*d31**2) + f(2) / (d21*d32**2) - f(3) / (d31**2*d32) - f(3) / (d31*d32**2)
+         df(1) = - (d21+d31) / (d21*d31) * f(1) + d31 / (d21*d32) * f(2) - d21 / (d31*d32) * f(3) + d21*d31 * s
+
+         df(2) = - (d21-d32) / (d21*d32) * f(2) - d32 / (d21*d31) * f(1) + d21 / (d31*d32) * f(3) - d21*d32 * s
+      else
+         y0    = log(abs(f(1)))
+         y1    = log(abs(f(2)))
+         y2    = log(abs(f(3)))
+         df(1) = ( - 3*y0/2 + 2*y1 - y2/2 ) * f(1) / (h*r)
+         df(2) = (y2-y0)/2                  * f(2) / (h*r*exp(h))
+      endif
+   end subroutine derivative_loc
 END MODULE m_dfpt

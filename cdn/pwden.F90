@@ -236,7 +236,7 @@ CONTAINS
       ELSE
          DO iGp = 1, lapw%nv(jspin)
             DO iG = 1, lapwq%nv(jspin)
-               gVec = lapw%gvec(:, iG, jspin) - lapwq%gvec(:, iGp, jspin)
+               gVec = lapwq%gvec(:, iG, jspin) - lapw%gvec(:, iGp, jspin)
                gInd = stars%ig(gVec(1), gVec(2), gVec(3))
 
                IF (gInd.EQ.0) CYCLE

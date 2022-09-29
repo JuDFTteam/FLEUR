@@ -336,7 +336,7 @@ contains
             fft%bfft = aimag(dat(:,i))
       
             isn = merge(-1, 1, fft%forw)
-            CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(1),fft% length(1), isn)
+            CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(1), fft%length(1), isn)
             CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(2), fft%length(1)*fft%length(2), isn)
             CALL cfft(fft%afft, fft%bfft, size_dat, fft%length(3), size_dat, isn)
             dat(:,i) = cmplx(fft%afft, fft%bfft)
