@@ -233,7 +233,7 @@ CONTAINS
          dos%qis = 0.0
       END IF
 
-      ELSE
+      ELSE IF (.FALSE.) THEN
          DO iGp = 1, lapw%nv(jspin)
             DO iG = 1, lapwq%nv(jspin)
                gVec = lapwq%gvec(:, iG, jspin) - lapw%gvec(:, iGp, jspin)

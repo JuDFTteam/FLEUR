@@ -365,14 +365,54 @@ CONTAINS
       qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.025*19.0
       qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.025*20.0
 
+      qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.00625*0.0
+      qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.00625*1.0
+      qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.00625*2.0
+      qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.00625*3.0
+      qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.00625*4.0
+      qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*0.00625*5.0
+      qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*0.00625*6.0
+      qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*0.00625*7.0
+      qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*0.00625*8.0
+      qpts_loc%bk(:,10) = [0.0,1.0,1.0]*0.00625*9.0
+      qpts_loc%bk(:,11) = [0.0,1.0,1.0]*0.00625*10.0
+      qpts_loc%bk(:,12) = [0.0,1.0,1.0]*0.00625*11.0
+      qpts_loc%bk(:,13) = [0.0,1.0,1.0]*0.00625*12.0
+      qpts_loc%bk(:,14) = [0.0,1.0,1.0]*0.00625*13.0
+      qpts_loc%bk(:,15) = [0.0,1.0,1.0]*0.00625*14.0
+      qpts_loc%bk(:,16) = [0.0,1.0,1.0]*0.00625*15.0
+      qpts_loc%bk(:,17) = [0.0,1.0,1.0]*0.00625*16.0
+      qpts_loc%bk(:,18) = [0.0,1.0,1.0]*0.00625*17.0
+      qpts_loc%bk(:,19) = [0.0,1.0,1.0]*0.00625*18.0
+      qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.00625*19.0
+      qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.00625*20.0
+
+      qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.125*0.0
+      qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.125*1.0
+      qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.125*2.0
+      qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.125*3.0
+      qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.125*4.0
+
+      qpts_loc%bk(:,6)  = [1.0,1.0,0.0]*0.125*4.0
+      qpts_loc%bk(:,7)  = [1.0,1.0,0.0]*0.125*3.0
+      qpts_loc%bk(:,8)  = [1.0,1.0,0.0]*0.125*2.0
+      qpts_loc%bk(:,9)  = [1.0,1.0,0.0]*0.125*1.0
+
+      qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*1.0
+      qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*2.0
+      qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*3.0
+      qpts_loc%bk(:,13) = [1.0,1.0,1.0]*0.125*4.0
+
+      ALLOCATE(q_list(13),dfpt_eig_id_list(13))
+      q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13]
       !ALLOCATE(q_list(21),dfpt_eig_id_list(21))
       !ALLOCATE(q_list(1),dfpt_eig_id_list(1))
-      ALLOCATE(q_list(5),dfpt_eig_id_list(5))
+      !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
       !q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21] ! \Gamma to X in 20 steps.
       !q_list = [21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
       !q_list = [21,1,11,16,6,19,18,14,13,9,8,4,3,20,17,15,12,10,7,5,2]
       !q_list = [13]
-      q_list = [1,6,11,16,21]
+      !q_list = [1,6,11,16,21]
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
       CALL imagrhodummy%copyPotDen(rho_nosym)
@@ -388,6 +428,7 @@ CONTAINS
          CALL grVC3(iDir)%copyPotDen(vTot_nosym)
          CALL grVC3(iDir)%resetPotDen()
          ! Generate the external potential gradient.
+         write(oUnit, *) "grVext", iDir
          CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
@@ -415,9 +456,11 @@ CONTAINS
       DO iDir = 1, 3
          CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
          CALL imagrhodummy%resetPotDen()
+         write(oUnit, *) "grVeff", iDir
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi_nosym%cell, fi_nosym%sliceplot, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
+         write(oUnit, *) "grVC", iDir
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi_nosym%cell, fi_nosym%sliceplot, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])

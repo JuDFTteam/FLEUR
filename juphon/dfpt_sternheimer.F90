@@ -144,16 +144,19 @@ CONTAINS
 
          CALL timestart("Generation of potential perturbation")
          IF (strho) THEN
+            write(oUnit, *) "vExt1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                            starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
          ELSE
+            write(oUnit, *) "vEff1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
          END IF
 
          IF (final_SH_it) THEN
+            write(oUnit, *) "vC1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0])
