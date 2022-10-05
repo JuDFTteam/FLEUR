@@ -550,7 +550,7 @@ CONTAINS
          CALL timestart("Frequency calculation")
          CALL CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs)
          CALL timestop("Frequency calculation")
-         DEALLOCATE(eigenVals, eigenVecs, eigenFreqs)
+         DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
       END DO
 
         ! Construct potential without the l=0 prefactor.
