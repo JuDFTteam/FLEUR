@@ -329,7 +329,7 @@ module m_jp2ndOrdQuant
     E2ndOrdIIatQ0 = cmplx(0.0, 0.0)
 
     ! Call the routine for q = 0
-    call CalcIIEnerg2MatElem(atoms, cell, qpts%bk(1:3, 1), ngdp, gdp, E2ndOrdIIatQ0)
+    call CalcIIEnerg2MatElem(atoms, cell, [0.0,0.0,0.0], ngdp, gdp, E2ndOrdIIatQ0)
 
     ! Call the routine for finite q
     call CalcIIEnerg2MatElem(atoms, cell, -qpts%bk(1:3, iqpt), ngpqdp, gpqdp, E2ndOrdIIatFinQ)
