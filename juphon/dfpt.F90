@@ -403,6 +403,22 @@ CONTAINS
       qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*3.0
       qpts_loc%bk(:,13) = [1.0,1.0,1.0]*0.125*4.0
 
+      qpts_loc%bk(:,1)  = [0.0,0.0,1.0]*0.125*4.0
+      qpts_loc%bk(:,2)  = [0.0,0.0,1.0]*0.125*3.0
+      qpts_loc%bk(:,3)  = [0.0,0.0,1.0]*0.125*2.0
+      qpts_loc%bk(:,4)  = [0.0,0.0,1.0]*0.125*1.0
+      qpts_loc%bk(:,5)  = [0.0,0.0,1.0]*0.125*0.0
+
+      qpts_loc%bk(:,6)  = [-1.0,1.0,1.0]*0.125*1.0
+      qpts_loc%bk(:,7)  = [-1.0,1.0,1.0]*0.125*2.0
+      qpts_loc%bk(:,8)  = [-1.0,1.0,1.0]*0.125*3.0
+      qpts_loc%bk(:,9)  = [-1.0,1.0,1.0]*0.125*4.0
+
+      qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*4.0
+      qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*3.0
+      qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*2.0
+      qpts_loc%bk(:,13) = [1.0,1.0,1.0]*0.125*1.0
+
       ALLOCATE(q_list(13),dfpt_eig_id_list(13))
       q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13]
       !ALLOCATE(q_list(21),dfpt_eig_id_list(21))
@@ -472,6 +488,9 @@ CONTAINS
          CALL timestart("Eii2")
          CALL old_get_Gvecs(stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, recG, .false.)
          CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
+         write(8989,*) qpts_loc%bk(:,q_list(iQ))
+         write(8989,*) E2ndOrdII
+         CYCLE
          CALL timestop("Eii2")
          DO iDtype = 1, fi_nosym%atoms%ntype
             !DO iDir = 1, 1
@@ -516,11 +535,10 @@ CONTAINS
                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:))
                CALL timestop("Dynmat")
                dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + E2ndOrdII(3 *(iDtype-1)+iDir,:)
-               write(9989,*) E2ndOrdII(3 *(iDtype-1)+iDir,1)
-               write(9989,*) E2ndOrdII(3 *(iDtype-1)+iDir,2)
-               write(9989,*) E2ndOrdII(3 *(iDtype-1)+iDir,3)
+               write(9989,*) "Eii2:", E2ndOrdII(3 *(iDtype-1)+iDir,:)
                write(*,*) "dynmat row for ", dfpt_tag
                write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+               !STOP
             END DO
          END DO
          DEALLOCATE(recG)
