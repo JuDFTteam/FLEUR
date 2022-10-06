@@ -126,7 +126,7 @@ MODULE m_greensfBZint
 #ifndef CPP_NOTYPEPROCINOMP
                !$omp parallel default(none) &
                !$omp shared(sym,kpts,atoms,greensfBZintCoeffs,im,nococonv,noco,atomType,imatSize,nBands) &
-               !$omp shared(l_intersite,l,lp,natom,spin_ind,iop,atomDiff,i_elem,i_elemLO,ikpt,nLO,l_sphavg) &
+               !$omp shared(l_intersite,l,lp,natom,natomp,spin_ind,iop,atomDiff,i_elem,i_elemLO,ikpt,nLO,l_sphavg) &
                !$omp private(imat,iBand,imSym)
 #endif
                ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
@@ -138,7 +138,8 @@ MODULE m_greensfBZint
 
                      IF(l_intersite) THEN
                         imSym = ImagUnit**(l-lp)/REAL(sym%nop) * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(spin_ind.EQ.3),&
-                                                                           bk=kpts%bk(:,ikpt),atomDiff=atomDiff,sym_op_list=[iop])
+                                                                           bk=kpts%bk(:,ikpt),atomDiff=atomDiff,&
+                                                                           taualdiff=atoms%taual(:,natom) - atoms%taual(:,natomp),sym_op_list=[iop])
                      ELSE
                         imSym = ImagUnit**(l-lp)/atoms%neq(atomType) * symMMPmat(im(:,:,iBand,imat),sym,natom,l,lp=lp,phase=(spin_ind.EQ.3))
                      ENDIF
