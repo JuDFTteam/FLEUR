@@ -108,11 +108,11 @@ CONTAINS
       dyn_row_HF    = CMPLX(0.0,0.0)
       dyn_row_eigen = CMPLX(0.0,0.0)
 
-      denIn1_pw  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-input%jspins)
-      denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-input%jspins)
+      denIn1_pw  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+      denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
       ! Get "full" denIn1:
-      denIn1_mt(:,0:,iDtype_row) = denIn1_mt(:,0:,iDtype_row) - (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-input%jspins)
-      denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-input%jspins)
+      denIn1_mt(:,0:,iDtype_row) = denIn1_mt(:,0:,iDtype_row) - (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
+      denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
 
       DO iDtype_col = 1, fi%atoms%ntype
          DO iDir_col = 1, 3
@@ -141,7 +141,7 @@ CONTAINS
             ! If we use gradient cancellation, remove it from rho1
             IF (.NOT.bare_mode) denIn1_mt(:,0:,iDtype_row) = &
                                 denIn1_mt(:,0:,iDtype_row) + &
-                                (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-input%jspins)
+                                (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
             DO iType = 1, fi%atoms%ntype
                CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -150,12 +150,12 @@ CONTAINS
             END DO
             IF (.NOT.bare_mode) denIn1_mt(:,0:,iDtype_row) = &
                                 denIn1_mt(:,0:,iDtype_row) - &
-                                (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-input%jspins)
+                                (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
 
             ! Various V_ext integrals:
             ! IR:
             pwwq = CMPLX(0.0,0.0)
-            rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-input%jspins)
+            rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
             CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_row,iDir_row), pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, pwwq, vExt1%pw(:,1), tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -163,13 +163,13 @@ CONTAINS
             tempval = CMPLX(0.0,0.0)
 
             ! MT:
-            grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-input%jspins)
+            grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_col, denIn1_mt, denIn1_mt_Im, grRho_mt, 0*grRho_mt, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "MT rho1 grVC", tempval
             tempval = CMPLX(0.0,0.0)
 
-            grRho_mt = -(grRho3(iDir_col)%mt(:,0:,:,1)+grRho3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-input%jspins)
+            grRho_mt = -(grRho3(iDir_col)%mt(:,0:,:,1)+grRho3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_col, vC1%mt(:,0:,:,1), vC1Im%mt(:,0:,:,1), grRho_mt, 0*grRho_mt, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "MT grRho V1C", tempval
@@ -177,7 +177,7 @@ CONTAINS
 
             IF (.NOT.bare_mode) THEN
                IF (.NOT.bare_mode) vExt1%mt(:,0:,iDtype_col,:) = vExt1%mt(:,0:,iDtype_col,:) + grVext3(iDir_col)%mt(:,0:,iDtype_col,:)
-               grRho_mt = -(grRho3(iDir_row)%mt(:,0:,:,1)+grRho3(iDir_row)%mt(:,0:,:,fi%input%jspins))/(3.0-input%jspins)
+               grRho_mt = -(grRho3(iDir_row)%mt(:,0:,:,1)+grRho3(iDir_row)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
                CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_row, grRho_mt, 0*grRho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                write(9989,*) "MT correction grRho V1ext", tempval
@@ -186,7 +186,7 @@ CONTAINS
             END IF
 
             ! SF:
-            rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-input%jspins)
+            rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_row, iDtype_row, rho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "SF rho Vext1", tempval
@@ -199,7 +199,7 @@ CONTAINS
 
             ! Miscellaneous integrals:
             pwwq = CMPLX(0.0,0.0)
-            rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-input%jspins)
+            rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
             CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_col,iDir_col), pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, vC1%pw(:,1), pwwq, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -224,14 +224,14 @@ CONTAINS
 
                ! Integrals:
                pww = CMPLX(0.0,0.0)
-               rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-input%jspins)
+               rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
                CALL dfpt_convol_direct(stars, stars, stars%ustep, vExt1%pw(:,1), pww)
                CALL dfpt_int_pw(stars, fi%cell, rho_pw, pww, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                write(9989,*) "IR grRho V1ext0", tempval
                tempval = CMPLX(0.0,0.0)
-               rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-input%jspins)
-               rho_pw = -(rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-input%jspins)
+               rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+               rho_pw = -(rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
                DO iType = 1, fi%atoms%ntype
                   pww = CMPLX(0.0,0.0)
                   CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iType,iDir_row), pww)
@@ -241,7 +241,7 @@ CONTAINS
                   tempval = CMPLX(0.0,0.0)
 
                   IF (.NOT.bare_mode) vExt1%mt(:,0:,iDtype_col,:) = vExt1%mt(:,0:,iDtype_col,:) + grVext3(iDir_col)%mt(:,0:,iDtype_col,:)
-                  grRho_mt = (grRho3(iDir_row)%mt(:,0:,:,1)+grRho3(iDir_row)%mt(:,0:,:,fi%input%jspins))/(3.0-input%jspins)
+                  grRho_mt = (grRho3(iDir_row)%mt(:,0:,:,1)+grRho3(iDir_row)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
                   CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, grRho_mt, 0*grRho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   write(9989,*) "MT grRho V1ext0", tempval
@@ -254,14 +254,14 @@ CONTAINS
                   tempval = CMPLX(0.0,0.0)
                END DO
 
-               grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-input%jspins)
+               grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
                CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_row, iDType_row, rho_mt, grRho_mt, 0*grRho_mt, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                write(9989,*) "SF rho grVC", tempval
                tempval = CMPLX(0.0,0.0)
 
                pww = CMPLX(0.0,0.0)
-               rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-input%jspins)
+               rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
                CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iDtype_col,iDir_col), pww)
                CALL dfpt_int_pw(stars, fi%cell, grVC3(iDir_row)%pw(:,1), pww, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
