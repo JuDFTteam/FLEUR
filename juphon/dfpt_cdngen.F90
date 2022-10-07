@@ -86,6 +86,7 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
    !CALL outDen%init(starsq, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN,.TRUE.)
    !CALL outDenIm%init(starsq, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
 
+   CALL timestart("dfpt_cdngen: cdnval")
    DO jspin = 1,merge(1,input%jspins,noco%l_mperp)
       CALL cdnvalJob%init(fmpi,input,kpts,noco,resultsdummy,jspin)
       CALL cdnvalJob1%init(fmpi,input,kqpts,noco,resultsdummy1,jspin)
@@ -93,6 +94,7 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
                        vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
                         hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, iDtype, iDir, outDenIm, l_real)
    END DO
+   CALL timestop("dfpt_cdngen: cdnval")
 
    ! TODO: Implement this appropriately.
    !CALL timestart("cdngen: cdncore")

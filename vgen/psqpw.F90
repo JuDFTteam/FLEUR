@@ -51,9 +51,9 @@ contains
     complex,            intent(out) :: psq(stars%ng3)
 
     REAL, OPTIONAL, INTENT(IN)      :: rhoimag(atoms%jmtd,0:sphhar%nlhd,atoms%ntype), rho0(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    COMPLEX, OPTIONAL, INTENT(IN)   :: qpw0(stars%ng3)
 
     TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
+    COMPLEX, OPTIONAL, INTENT(IN)   :: qpw0(:)
 
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 

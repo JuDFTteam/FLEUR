@@ -181,7 +181,7 @@ CONTAINS
 
          CALL timestart("H1 generation (total)")
 
-         CALL timestart("eigen")
+         CALL timestart("dfpt eigen")
 
          IF (.NOT. fi%input%eig66(1)) THEN
             CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
@@ -189,8 +189,8 @@ CONTAINS
                        bqpt=bqpt, dfpt_eig_id=dfpt_eig_id, iDir=iDir, iDtype=iDtype, &
                        starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
          END IF
-         CALL timestop("eigen")
          CALL timestop("H1 generation (total)")
+         CALL timestop("dfpt eigen")
 
 #ifdef CPP_MPI
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)

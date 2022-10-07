@@ -65,7 +65,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:)
       REAL,    ALLOCATABLE      :: eigk(:), eigs1(:)
 
-      CLASS(t_mat), ALLOCATABLE :: invHepsS(:), invE(:), matE(:)
+      CLASS(t_mat), ALLOCATABLE :: invE(:), matE(:)
 
       CALL timestart("dfpt_eigen")
 
@@ -93,7 +93,10 @@ CONTAINS
       CALL timestart("Read eigenstuff at k")
       CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
       CALL timestop("Read eigenstuff at k")
-      CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invHepsS, invE, matE)
+
+      CALL timestart("Energy inversion")
+      CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invE, matE)
+      CALL timestop("Energy inversion")
 
       ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
       CALL timestart("Setup of matrix perturbations")
@@ -214,13 +217,6 @@ CONTAINS
           CALL zMat1%free()
           DEALLOCATE(zMat1)
         END IF
-        !TODO: Is this ok?
-        !IF (ALLOCATED(invHepsS(1))) THEN
-          !DO nu = 1, noccbd
-             !CALL invHepsS(nu)%free()
-          !END DO
-          !DEALLOCATE(invHepsS)
-        !END IF
 
         CALL timestop("dfpt_eigen")
 
