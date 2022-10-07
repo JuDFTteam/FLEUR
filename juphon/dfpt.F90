@@ -490,7 +490,7 @@ CONTAINS
          CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
          write(8989,*) qpts_loc%bk(:,q_list(iQ))
          write(8989,*) E2ndOrdII
-         CYCLE
+         !CYCLE
          CALL timestop("Eii2")
          DO iDtype = 1, fi_nosym%atoms%ntype
             !DO iDir = 1, 1
