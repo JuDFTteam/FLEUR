@@ -189,8 +189,8 @@ CONTAINS
                        bqpt=bqpt, dfpt_eig_id=dfpt_eig_id, iDir=iDir, iDtype=iDtype, &
                        starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
          END IF
-         CALL timestop("H1 generation (total)")
          CALL timestop("dfpt eigen")
+         CALL timestop("H1 generation (total)")
 
 #ifdef CPP_MPI
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
