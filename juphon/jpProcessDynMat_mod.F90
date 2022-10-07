@@ -97,9 +97,9 @@ module m_jpProcessDynMat
     write(*, '(a)')       '==================================='
     write(*, '(a)')
     write(*, '(a)') 'Original Dynamical Matrix'
-    write(*, '(3(2(es16.8,1x),3x))') a(1, :)
-    write(*, '(3(2(es16.8,1x),3x))') a(2, :)
-    write(*, '(3(2(es16.8,1x),3x))') a(3, :)
+    DO ii = 1, lda
+      write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
+    END DO
 
 !    write(*, '(a)') 'Deviation from Hermiticity'
 !    write(*, '(3(2(es16.8,1x),3x))') a(1, :) - dynMat(1, :)
@@ -110,9 +110,9 @@ module m_jpProcessDynMat
     write(109, '(a)')       '==================================='
     write(109, '(a)')
     write(109, '(a)') 'Original Dynamical Matrix'
-    write(109, '(3(2(es16.8,1x),3x))') a(1, :)
-    write(109, '(3(2(es16.8,1x),3x))') a(2, :)
-    write(109, '(3(2(es16.8,1x),3x))') a(3, :)
+    DO ii = 1, lda
+      write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
+    END DO
 
 !    write(1000, '(a)') 'Deviation from Hermiticity'
 !    write(1000, '(3(2(es16.8,1x),3x))') a(1, :) - dynMat(1, :)
@@ -153,18 +153,12 @@ module m_jpProcessDynMat
 
     if ( calcEv ) then
       !todo make the output nicer
-      write(*, '(3(2(es16.8,1x),3x))') a(1, :)
-      write(*, *)
-      write(*, '(3(2(es16.8,1x),3x))') a(2, :)
-      write(*, *)
-      write(*, '(3(2(es16.8,1x),3x))') a(3, :)
-      write(*, *)
-      write(109, '(3(2(es16.8,1x),3x))') a(1, :)
-      write(109, *)
-      write(109, '(3(2(es16.8,1x),3x))') a(2, :)
-      write(109, *)
-      write(109, '(3(2(es16.8,1x),3x))') a(3, :)
-      write(109, *)
+      DO ii = 1, lda
+        write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
+        write(*, *)
+        write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
+        write(109, *)
+      END DO
     else
       a(:, :) = cmplx(0., 0.)
     end if
@@ -196,6 +190,7 @@ module m_jpProcessDynMat
 
     ! Array variables
     character(len=11)                         :: filenameTemp
+    REAL                                      :: atomic_mass_array(118)
 
     if (iqpt < 10) then
       write(filenameTemp, '("dynMatq=00",i1)') iqpt
@@ -210,28 +205,47 @@ module m_jpProcessDynMat
     eigenFreqs = 0.
     itype = 1
 
-    if (atoms%nz(itype) == 10) then ! Neon
-      write(*, *) 'Mass for Neon'
-      massInElectronMasses = 20.18 * 1836.15 ! For Neon: 20.18 * 1836.15 m_e
-    else if (atoms%nz(itype) == 13) then ! Aluminium
-      write(*, *) 'Mass for Aluminium'
-      massInElectronMasses = 26.982 * 1836.15 ! For Aluminium : 26.982 * 1836.15 m_e
-    else if (atoms%nz(itype) == 18) then ! Argon
-      write(*, *) 'Mass for Argon'
-      massInElectronMasses = 39.948 * 1836.15 ! For Argon : 39.948 * 1836.15 m_e
-    else if (atoms%nz(itype) == 27) then ! Cobalt
-      write(*, *) 'Mass for Cobalt'
-      massInElectronMasses = 58.933 * 1836.15 ! For Cobalt : 58.933 * 1836.15 m_e
-    else if (atoms%nz(itype) == 29) then ! Copper
-      write(*, *) 'Mass for Copper'
-      massInElectronMasses = 63.546 * 1836.15 ! For Copper : 63.546 * 1836.15 m_e
-    else if (atoms%nz(itype) == 42) then ! Molybdenum
-      write(*, *) 'Mass for Molybdenum'
-      massInElectronMasses = 95.951 * 1836.15 ! For Molybdenum : 95.951 * 1836.15 m_e
-    else if (atoms%nz(itype) == 79) then ! Gold
-      write(*, *) 'Mass for Gold'
-      massInElectronMasses = 196.967 * 1836.15 ! For Gold : 196.967 * 1836.15 m_e
-    end if
+    atomic_mass_array = [1.01, 4.00, 6.94, 9.01, 10.81, 12.01, 14.01, 16.00, 19.00, 20.18, &      ! up to neon
+                      & 22.99, 24.31, 26.98, 28.09, 30.97, 32.06, 35.45, 39.95, &                 ! up to argon
+                      & 39.10, 40.08, 44.96, 47.87, 50.94, 52.00, 54.94, 55.85, 58.93, &          ! up to iron
+                      & 58.69, 63.55, 65.38, 69.72, 72.63, 74.92, 78.97, 79.90, 83.80, &          ! up to krypton
+                      & 85.47, 87.62, 88.91, 91.22, 92.91, 95.95, 97.40, 101.07, 102.91, &        ! up to ruthenium
+                      & 106.42, 107.87, 112.41, 114.82, 118.71, 121.76, 127.60, 126.90, 131.29, & ! up to xenon
+                      & 132.91, 137.33, 138.91, 140.12, 140.91, 144.24, 146.00, 150.36, 151.96, & ! up to europium
+                      & 157.25, 158.93, 162.50, 164.93, 167.26, 168.93, 173.05, 174.97, 178.49, & ! up to hafnium
+                      & 180.95, 183.84, 186.21, 190.23, 192.22, 195.08, 196.97, 200.59, 204.38, & ! up to thallium
+                      & 207.20, 208.98, 209.98, 210.00, 222.00, 223.00, 226.00, 227.00, 232.04, & ! up to thorium
+                      & 231.04, 238.03, 237.00, 244.00, 243.00, 247.00, 247.00, 251.00, 252.00, & ! up to einsteinium
+                      & 257.00, 258.00, 259.00, 262.00, 267.00, 269.00, 270.00, 272.00, 273.00, & ! up to hassium
+                      & 277.00, 281.00, 281.00, 285.00, 286.00, 289.00, 288.00, 293.00, 294.00, 294.00]
+
+    !if (atoms%nz(itype) == 10) then ! Neon
+      !write(*, *) 'Mass for Neon'
+      !massInElectronMasses = 20.18 * 1836.15 ! For Neon: 20.18 * 1836.15 m_e
+    !else if (atoms%nz(itype) == 13) then ! Aluminium
+      !write(*, *) 'Mass for Aluminium'
+      !massInElectronMasses = 26.982 * 1836.15 ! For Aluminium : 26.982 * 1836.15 m_e
+    !else if (atoms%nz(itype) == 18) then ! Argon
+      !write(*, *) 'Mass for Argon'
+      !massInElectronMasses = 39.948 * 1836.15 ! For Argon : 39.948 * 1836.15 m_e
+    !else if (atoms%nz(itype) == 27) then ! Cobalt
+      !write(*, *) 'Mass for Cobalt'
+      !massInElectronMasses = 58.933 * 1836.15 ! For Cobalt : 58.933 * 1836.15 m_e
+    !else if (atoms%nz(itype) == 29) then ! Copper
+      !write(*, *) 'Mass for Copper'
+      !massInElectronMasses = 63.546 * 1836.15 ! For Copper : 63.546 * 1836.15 m_e
+    !else if (atoms%nz(itype) == 42) then ! Molybdenum
+      !write(*, *) 'Mass for Molybdenum'
+      !massInElectronMasses = 95.951 * 1836.15 ! For Molybdenum : 95.951 * 1836.15 m_e
+    !else if (atoms%nz(itype) == 79) then ! Gold
+      !write(*, *) 'Mass for Gold'
+      !massInElectronMasses = 196.967 * 1836.15 ! For Gold : 196.967 * 1836.15 m_e
+    !end if
+
+    ! TODO: This will all no longer work for systems with different types of atoms;
+    !       the mass prefactors need to be accounted for in the dynamical matrix
+    !       for their respective displacements!
+    massInElectronMasses = atomic_mass_array(atoms%nz(itype)) * 1836.15
 
     convFact = 4.35974472220e-18 / (5.2918e-11)**2 / 9.1093837015e-31 / massInElectronMasses
 
