@@ -163,7 +163,8 @@ CONTAINS
             tempval = CMPLX(0.0,0.0)
 
             ! MT:
-            grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+            !grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+            grRho_mt = grVC3(iDir_col)%mt(:,0:,:,1)
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_col, denIn1_mt, denIn1_mt_Im, grRho_mt, 0*grRho_mt, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "MT rho1 grVC", tempval
