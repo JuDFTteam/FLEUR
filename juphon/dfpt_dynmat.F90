@@ -167,17 +167,29 @@ CONTAINS
 
             ! MT:
             !grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+            IF (.NOT.bare_mode) denIn1_mt(:,0:,iDtype_row) = &
+                                denIn1_mt(:,0:,iDtype_row) + &
+                                (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
             grRho_mt = grVC3(iDir_col)%mt(:,0:,:,1)
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_col, denIn1_mt, denIn1_mt_Im, grRho_mt, 0*grRho_mt, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "MT rho1 grVC                  ", tempval
             tempval = CMPLX(0.0,0.0)
+            IF (.NOT.bare_mode) denIn1_mt(:,0:,iDtype_row) = &
+                                denIn1_mt(:,0:,iDtype_row) - &
+                                (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
 
+            IF (.NOT.bare_mode) vC1%mt(:,0:,iDtype_row,1) = &
+                                vC1%mt(:,0:,iDtype_row,1) + &
+                                grVC3(iDir_row)%mt(:,0:,iDtype_row,1)
             grRho_mt = -(grRho3(iDir_col)%mt(:,0:,:,1)+grRho3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_col, vC1%mt(:,0:,:,1), vC1Im%mt(:,0:,:,1), grRho_mt, 0*grRho_mt, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "MT grRho V1C                  ", tempval
             tempval = CMPLX(0.0,0.0)
+            IF (.NOT.bare_mode) vC1%mt(:,0:,iDtype_row,1) = &
+                                vC1%mt(:,0:,iDtype_row,1) - &
+                                grVC3(iDir_row)%mt(:,0:,iDtype_row,1)
 
             IF (.NOT.bare_mode) THEN
                IF (.NOT.bare_mode) vExt1%mt(:,0:,iDtype_col,:) = vExt1%mt(:,0:,iDtype_col,:) + grVext3(iDir_col)%mt(:,0:,iDtype_col,:)
@@ -196,10 +208,16 @@ CONTAINS
             write(9989,*) "SF rho Vext1                  ", tempval
             tempval = CMPLX(0.0,0.0)
 
+            IF (.NOT.bare_mode) vC1%mt(:,0:,iDtype_row,1) = &
+                                vC1%mt(:,0:,iDtype_row,1) + &
+                                grVC3(iDir_row)%mt(:,0:,iDtype_row,1)
             CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_col, iDtype_col, rho_mt, vC1%mt(:,0:,:,1), -vC1Im%mt(:,0:,:,1), tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "SF rho VC1                    ", tempval
             tempval = CMPLX(0.0,0.0)
+            IF (.NOT.bare_mode) vC1%mt(:,0:,iDtype_row,1) = &
+                                vC1%mt(:,0:,iDtype_row,1) - &
+                                grVC3(iDir_row)%mt(:,0:,iDtype_row,1)
 
             ! Miscellaneous integrals:
             pwwq = CMPLX(0.0,0.0)
@@ -264,11 +282,11 @@ CONTAINS
                END DO
                write(9989,*) "End atom loop"
 
-               grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
-               CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_row, iDType_row, rho_mt, grRho_mt, 0*grRho_mt, tempval)
-               dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               write(9989,*) "SF rho grVC                   ", tempval
-               tempval = CMPLX(0.0,0.0)
+               !grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+               !CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_row, iDType_row, rho_mt, grRho_mt, 0*grRho_mt, tempval)
+               !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+               !write(9989,*) "SF rho grVC                   ", tempval
+               !tempval = CMPLX(0.0,0.0)
 
                pww = CMPLX(0.0,0.0)
                rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
