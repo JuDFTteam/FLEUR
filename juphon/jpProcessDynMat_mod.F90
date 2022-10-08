@@ -111,7 +111,7 @@ module m_jpProcessDynMat
     write(109, '(a)')
     write(109, '(a)') 'Original Dynamical Matrix'
     DO ii = 1, lda
-      write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
+      write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
     END DO
 
 !    write(1000, '(a)') 'Deviation from Hermiticity'
