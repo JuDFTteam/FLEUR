@@ -61,6 +61,8 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: rho_pw(:), denIn1_pw(:)
       REAL,    ALLOCATABLE :: rho_mt(:,:,:), grRho_mt(:,:,:), denIn1_mt(:,:,:), denIn1_mt_Im(:,:,:)
 
+      type(t_fft) :: fft
+
       bare_mode = .FALSE.
 
       ALLOCATE(dyn_row_HF(SIZE(dyn_row)), dyn_row_eigen(SIZE(dyn_row)))
@@ -94,9 +96,14 @@ CONTAINS
             fftgrid_dummy%grid = theta1full(0:, iType, iDir)
             CALL fftgrid_dummy%takeFieldFromGrid(starsq, theta1_pw(:, iType, iDir))
             theta1_pw(:, iType, iDir) = theta1_pw(:, iType, iDir) * 3 * starsq%mx1 * 3 * starsq%mx2 * 3 * starsq%mx3
+            CALL fftgrid_dummy%perform_fft(forward=.false.)
+            theta1full(0:, iType, iDir) = fftgrid_dummy%grid
+
             fftgrid_dummy%grid = theta1full0(0:, iType, iDir)
             CALL fftgrid_dummy%takeFieldFromGrid(stars, theta1_pw0(:, iType, iDir))
             theta1_pw0(:, iType, iDir) = theta1_pw0(:, iType, iDir) * 3 * stars%mx1 * 3 * stars%mx2 * 3 * stars%mx3
+            CALL fftgrid_dummy%perform_fft(forward=.false.)
+            theta1full0(0:, iType, iDir) = fftgrid_dummy%grid
          END DO
       END DO
 
