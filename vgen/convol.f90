@@ -126,7 +126,7 @@ CONTAINS
       INTEGER,       INTENT(IN) :: resultstar
       TYPE(t_stars), INTENT(IN) :: stars, starsfull
 
-      COMPLEX, INTENT(IN)    :: pw(:), pwfull(:)
+      COMPLEX, INTENT(IN)    :: pw(:), pwfull(0:)
       COMPLEX, INTENT(INOUT) :: pww(:)
 
       TYPE(t_fftgrid) :: fftgrid, fftgridfin

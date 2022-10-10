@@ -168,6 +168,8 @@ CONTAINS
             CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_row,iDir_row), pwwq)
             pwwq2 = CMPLX(0.0,0.0)
             CALL dfpt_convol_big(2, stars, starsq, rho_pw, theta1full(0:, iDtype_row, iDir_row), pwwq2)
+            CALL save_npy("pwwq_old.npy",pwwq)
+            CALL save_npy("pwwq_new.npy",pwwq2)
             CALL dfpt_int_pw(starsq, fi%cell, pwwq, vExt1%pw(:,1), tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "IR Theta1 rho V1ext           ", tempval
