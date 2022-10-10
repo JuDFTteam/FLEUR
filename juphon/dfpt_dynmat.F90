@@ -132,7 +132,8 @@ CONTAINS
             pwwq = CMPLX(0.0,0.0)
             ! TODO: Should probably be replaced by a "finer" function with full
             !       G-grid for ustep(1)
-            CALL dfpt_convol_direct(stars, starsq, stars%ustep, vExt1%pw(:,1), pwwq)
+            !CALL dfpt_convol_direct(stars, starsq, stars%ustep, vExt1%pw(:,1), pwwq)
+            CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), stars%ustep, pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "IR rho1 V1ext                 ", tempval
@@ -159,7 +160,8 @@ CONTAINS
             ! IR:
             pwwq = CMPLX(0.0,0.0)
             rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-            CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_row,iDir_row), pwwq)
+            !CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_row,iDir_row), pwwq)
+            CALL dfpt_convol_big(2, stars, starsq, rho_pw, theta1full(0:, iDtype_row, iDir_row), pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, pwwq, vExt1%pw(:,1), tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "IR Theta1 rho V1ext           ", tempval
@@ -222,7 +224,8 @@ CONTAINS
             ! Miscellaneous integrals:
             pwwq = CMPLX(0.0,0.0)
             rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-            CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_col,iDir_col), pwwq)
+            !CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_col,iDir_col), pwwq)
+            CALL dfpt_convol_big(2, stars, starsq, rho_pw, theta1full(0:, iDtype_col, iDir_col), pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, vC1%pw(:,1), pwwq, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "IR V1C rho Theta1             ", tempval
@@ -232,7 +235,8 @@ CONTAINS
                write(9989,*) "Loop spin:", iSpin
                pwwq = CMPLX(0.0,0.0)
                ! TODO: Ensure, that vTot/denIn1 is diagonal here, not 2x2.
-               CALL dfpt_convol_direct(stars, starsq, vTot%pw(:, iSpin), theta1_pw(:,iDtype_col,iDir_col), pwwq)
+               !CALL dfpt_convol_direct(stars, starsq, vTot%pw(:, iSpin), theta1_pw(:,iDtype_col,iDir_col), pwwq)
+               CALL dfpt_convol_big(2, stars, starsq, vTot%pw(:, iSpin), theta1full(0:, iDtype_col, iDir_col), pwwq)
                CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                write(9989,*) "IR rho1 vTot Theta1           ", tempval
@@ -251,7 +255,8 @@ CONTAINS
                ! Integrals:
                pww = CMPLX(0.0,0.0)
                rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-               CALL dfpt_convol_direct(stars, stars, stars%ustep, vExt1%pw(:,1), pww)
+               !CALL dfpt_convol_direct(stars, stars, stars%ustep, vExt1%pw(:,1), pww)
+               CALL dfpt_convol_big(1, stars, stars, vExt1%pw(:,1), stars%ustep, pww)
                CALL dfpt_int_pw(stars, fi%cell, rho_pw, pww, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                write(9989,*) "IR grRho V1ext0               ", tempval
@@ -261,7 +266,8 @@ CONTAINS
                DO iType = 1, fi%atoms%ntype
                   write(9989,*) "Loop atom:", iType
                   pww = CMPLX(0.0,0.0)
-                  CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iType,iDir_row), pww)
+                  !CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iType,iDir_row), pww)
+                  CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full0(0:, iDtype_row, iDir_row), pww)
                   CALL dfpt_int_pw(stars, fi%cell, pww, vExt1%pw(:,1), tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   write(9989,*) "IR Theta1 rho V1ext0          ", tempval
@@ -290,7 +296,8 @@ CONTAINS
 
                pww = CMPLX(0.0,0.0)
                rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-               CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iDtype_col,iDir_col), pww)
+               !CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iDtype_col,iDir_col), pww)
+               CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full0(0:, iDtype_row, iDir_row), pww)
                CALL dfpt_int_pw(stars, fi%cell, grVC3(iDir_row)%pw(:,1), pww, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                write(9989,*) "IR grVC rho Theta1            ", tempval
@@ -300,7 +307,8 @@ CONTAINS
                   write(9989,*) "Loop spin:", iSpin
                   pww = CMPLX(0.0,0.0)
                   ! TODO: Ensure, that vTot/gradrho is diagonal here, not 2x2.
-                  CALL dfpt_convol_direct(stars, stars, vTot%pw(:,iSpin), theta1_pw0(:,iDtype_col,iDir_col), pww)
+                  !CALL dfpt_convol_direct(stars, stars, vTot%pw(:,iSpin), theta1_pw0(:,iDtype_col,iDir_col), pww)
+                  CALL dfpt_convol_big(1, stars, stars, vTot%pw(:,iSpin), theta1_pw0(0:,iDtype_col,iDir_col), pww)
                   CALL dfpt_int_pw(stars, fi%cell, pww, grRho3(iDir_row)%pw(:,iSpin), tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   write(9989,*) "IR grRho vTot Theta1          ", tempval
