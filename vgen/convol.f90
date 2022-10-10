@@ -116,4 +116,43 @@ CONTAINS
 
    END SUBROUTINE dfpt_convol_direct
 
+   SUBROUTINE dfpt_convol_big(resultstar, stars, starsfull, pw, pwfull, pww)
+      USE m_types_fftGrid
+      USE m_juDFT
+      USE m_types_stars
+
+      IMPLICIT NONE
+
+      INTEGER,       INTENT(IN) :: resultstar
+      TYPE(t_stars), INTENT(IN) :: stars, starsfull
+
+      COMPLEX, INTENT(IN)    :: pw(:), pwfull(:)
+      COMPLEX, INTENT(INOUT) :: pww(:)
+
+      TYPE(t_fftgrid) :: fftgrid, fftgridfin
+
+      CALL fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
+
+      IF (SIZE(pwfull)/=SIZE(fftgrid%grid)) CALL judft_error("Size mismatch in dfpt_convol (4)!")
+
+      CALL fftgrid%putFieldOnGrid(stars,pw)
+      CALL fftgrid%perform_fft(forward=.false.)
+
+      IF (resultstar==1) THEN
+         fftgrid%grid = fftgrid%grid*pwfull
+         CALL fftgrid%perform_fft(forward=.true.)
+         CALL fftgrid%takeFieldFromGrid(stars,pww)
+         pww = pww*stars%nstr
+      ELSE IF (resultstar==2) THEN
+         CALL fftgridfin%init((/3*starsfull%mx1,3*starsfull%mx2,3*starsfull%mx3/))
+         fftgridfin%grid = fftgrid%grid*pwfull
+         CALL fftgridfin%perform_fft(forward=.true.)
+         CALL fftgridfin%takeFieldFromGrid(starsfull,pww)
+         pww = pww*starsfull%nstr
+      ELSE
+         CALL judft_error("Impossible star index!")
+      END IF
+
+   END SUBROUTINE dfpt_convol_big
+
 END MODULE m_convol
