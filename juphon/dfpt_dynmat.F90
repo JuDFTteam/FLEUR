@@ -586,9 +586,12 @@ CONTAINS
       CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag,.TRUE.,iDtype_col)
       CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1datadummy,inden,v,vx,fmpi,tdmod,uddummy,0.0,.TRUE.)
 
+      write(8998,*) iDtype_row, iDir_row, iDtype_col, iDir_col
       DO jsp = MERGE(1,1,fi%noco%l_noco), MERGE(1,fi%input%jspins,fi%noco%l_noco)
+         write(8998,*) jsp
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk = fmpi%k_list(nk_i)
+            write(8998,*) nk
 
             CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell,fmpi)
             CALL lapwq%init(fi%input,fi%noco,nococonv,kqpts,fi%atoms,fi%sym,nk,fi%cell,fmpi)
@@ -646,6 +649,9 @@ CONTAINS
 
                eigen_term = eigen_term + zdotc(nbasfcn,z_loop,1,tempVec,1)
 
+               write(8998,*) iEig
+               write(8998,*) zdotc(nbasfcn,z_loop,1,tempVec,1)
+
                CALL CPP_zgemv('N',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z_loop,1,CMPLX(0.0,0.0),tempVecq,1)
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z1_loop,1,CMPLX(0.0,0.0),tempVec,1)
                CALL CPP_zgemv('N',nbasfcnq,nbasfcn,we_loop,hmat1q%data_c,nbasfcnq,z_loop,1,CMPLX(1.0,0.0),tempVecq,1)
@@ -653,6 +659,9 @@ CONTAINS
 
                eigen_term = eigen_term + zdotc(nbasfcnq,z1_loop,1,tempVecq,1)
                eigen_term = eigen_term + zdotc(nbasfcn,z_loop,1,tempVec,1)
+
+               write(8998,*) zdotc(nbasfcnq,z1_loop,1,tempVecq,1)
+               write(8998,*) zdotc(nbasfcn,z_loop,1,tempVec,1)
             END DO
 
             DEALLOCATE(tempVec,tempVecq)
