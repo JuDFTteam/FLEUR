@@ -298,7 +298,7 @@ CONTAINS
                   pww = CMPLX(0.0,0.0)
                   CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iType,iDir_row), pww)
                   pww2 = CMPLX(0.0,0.0)
-                  CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full0(0:, iDtype_row, iDir_row), pww2)
+                  CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full0(0:, iType, iDir_row), pww2)
                   CALL dfpt_int_pw(stars, fi%cell, pww, vExt1%pw(:,1), tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   write(9989,*) "IR Theta1 rho V1ext0          ", tempval
