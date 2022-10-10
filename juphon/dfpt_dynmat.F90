@@ -133,7 +133,7 @@ CONTAINS
             ! TODO: Should probably be replaced by a "finer" function with full
             !       G-grid for ustep(1)
             !CALL dfpt_convol_direct(stars, starsq, stars%ustep, vExt1%pw(:,1), pwwq)
-            CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), stars%ufft, pwwq)
+            CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq)
             CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             write(9989,*) "IR rho1 V1ext                 ", tempval
@@ -256,7 +256,7 @@ CONTAINS
                pww = CMPLX(0.0,0.0)
                rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
                !CALL dfpt_convol_direct(stars, stars, stars%ustep, vExt1%pw(:,1), pww)
-               CALL dfpt_convol_big(1, stars, stars, vExt1%pw(:,1), stars%ufft, pww)
+               CALL dfpt_convol_big(1, stars, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pww)
                CALL dfpt_int_pw(stars, fi%cell, rho_pw, pww, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                write(9989,*) "IR grRho V1ext0               ", tempval
