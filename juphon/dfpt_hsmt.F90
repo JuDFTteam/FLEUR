@@ -241,7 +241,7 @@ CONTAINS
       TYPE(t_usdus),    INTENT(IN)    :: usdus
       CLASS(t_mat),     INTENT(INOUT) :: hmat1(:,:),smat1(:,:), hmat1q(:,:),smat1q(:,:), hmat2(:,:),smat2(:,:)
 
-      INTEGER, INTENT(IN) :: iSpin, iDir_row, iDtype_row, iDir_col, iDtype_col, nk, killcont(3)
+      INTEGER, INTENT(IN) :: iSpin, iDir_row, iDtype_row, iDir_col, iDtype_col, nk, killcont(7)
 
       TYPE(t_fjgj) :: fjgj, fjgjq
 
@@ -390,18 +390,18 @@ CONTAINS
             CALL s1qmat_tmp(igSpinPr,igSpin)%free()
             CALL matrix_pref(fmpi, atoms, cell%bmat, lapw%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapw, lapw, &
                            & lapw%nv(igSpinPr), lapw%nv(igSpin), iDtype_col, iDir_col, &
-                           & h1mat_tmp(igSpinPr,igSpin), s1mat_tmp(igSpinPr,igSpin), hmat1(igSpinPr,igSpin), smat1(igSpinPr,igSpin),killcont(2:3))
+                           & h1mat_tmp(igSpinPr,igSpin), s1mat_tmp(igSpinPr,igSpin), hmat1(igSpinPr,igSpin), smat1(igSpinPr,igSpin),killcont(4:5))
             CALL h1mat_tmp(igSpinPr,igSpin)%free()
             CALL s1mat_tmp(igSpinPr,igSpin)%free()
             CALL matrix_pref(fmpi, atoms, cell%bmat, lapw%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapw, lapw, &
                            & lapw%nv(igSpinPr), lapw%nv(igSpin), iDtype_col, iDir_col, &
-                           & h2mat_tmp(igSpinPr,igSpin), s2mat_tmp(igSpinPr,igSpin), hmat2(igSpinPr,igSpin), smat2(igSpinPr,igSpin),killcont(2:3))
+                           & h2mat_tmp(igSpinPr,igSpin), s2mat_tmp(igSpinPr,igSpin), hmat2(igSpinPr,igSpin), smat2(igSpinPr,igSpin),[1,0])
             CALL h2mat_tmp(igSpinPr,igSpin)%free()
             CALL s2mat_tmp(igSpinPr,igSpin)%free()
             IF (iDtype_row==iDtype_col) THEN
                CALL matrix_pref(fmpi, atoms, cell%bmat, lapw%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapw, lapw, &
                               & lapw%nv(igSpinPr), lapw%nv(igSpin), iDtype_row, iDir_row, &
-                              & hmat1(igSpinPr,igSpin), smat1(igSpinPr,igSpin), hmat2(igSpinPr,igSpin), smat2(igSpinPr,igSpin),killcont(2:3))
+                              & hmat1(igSpinPr,igSpin), smat1(igSpinPr,igSpin), hmat2(igSpinPr,igSpin), smat2(igSpinPr,igSpin),killcont(6:7))
             END IF
          END DO
       END DO

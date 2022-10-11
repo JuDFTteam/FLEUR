@@ -76,7 +76,7 @@ CONTAINS
       REAL, INTENT(IN)              :: bbmat(3, 3)
       TYPE(t_lapw),INTENT(IN)       :: lapwq, lapw
       TYPE(t_mpi),INTENT(IN)        :: fmpi
-      INTEGER, INTENT(IN)           :: isp, killcont(2)
+      INTEGER, INTENT(IN)           :: isp, killcont(4)
       COMPLEX, INTENT(IN)           :: theta1_pw0(:), theta1_pw(:)
       CLASS(t_mat),INTENT(INOUT)    :: smat1(:,:),hmat1(:,:),smat1q(:,:),hmat1q(:,:)!,smat2(:,:),hmat2(:,:)
 
@@ -106,6 +106,10 @@ CONTAINS
             CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
                              & lapw%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
                              & l_smat, .TRUE., vpw_temp, hmat1(iMatPr, iMat), smat1(iMatPr, iMat), theta1_pw0)
+
+            IF (killcont(4)==0) l_smat = .FALSE.
+
+            IF (iSpinPr.EQ.iSpin) iTkin = killcont(3)
             CALL hs_int_direct(fmpi, starsq, bbmat, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
                              & lapwq%bkpt, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
                              & l_smat, .TRUE., vpwq_temp, hmat1q(iMatPr, iMat), smat1q(iMatPr, iMat), theta1_pw)

@@ -368,7 +368,7 @@ CONTAINS
                                    stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
                                    eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                    theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
-                                   qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1])
+                                   qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1,1,1,1,1,1])
             write(9989,*) "eigen:", dyn_row_eigen(col_index)
          END DO
       END DO
@@ -534,7 +534,7 @@ CONTAINS
 
       COMPLEX, INTENT(INOUT) :: eigen_term
 
-      INTEGER, OPTIONAL, INTENT(IN) :: killcont(6)
+      INTEGER, OPTIONAL, INTENT(IN) :: killcont(11)
 
       ! Local Scalars
       INTEGER jsp,nk,ne_all,ne_found,neigd2
@@ -720,7 +720,7 @@ CONTAINS
       INTEGER,            INTENT(IN)     :: iDir_row, iDtype_row, iDir_col, iDtype_col
       COMPLEX,            INTENT(IN)     :: theta1_pw0(:), theta1_pw(:)
       CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat1_final, hmat1_final, smat1q_final, hmat1q_final, smat2_final, hmat2_final
-      INTEGER,      INTENT(IN)     :: nk, killcont(6)
+      INTEGER,      INTENT(IN)     :: nk, killcont(11)
 
       CLASS(t_mat), ALLOCATABLE :: smat1(:, :), hmat1(:, :), smat1q(:, :), hmat1q(:, :), smat2(:, :), hmat2(:, :)
 
@@ -750,7 +750,7 @@ CONTAINS
 
       CALL timestart("Interstitial part")
       CALL dfpt_dynmat_hs_int(fi%noco, starsq, stars, lapwq, lapw, fmpi, fi%cell%bbmat, isp, theta1_pw0, theta1_pw, &
-                              smat1, hmat1, smat1q, hmat1q, killcont(2:3))
+                              smat1, hmat1, smat1q, hmat1q, killcont(1:4))
       CALL timestop("Interstitial part")
 
       CALL timestart("MT part")
@@ -759,7 +759,7 @@ CONTAINS
             !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
       END DO; END DO
       CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
-                            lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(4:6))
+                            lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11))
       DO i = 1, nspins; DO j = 1, nspins; if (hmat1(1, 1)%l_real) THEN
             !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
             !$acc exist data delete(hmat(i,j),smat(i,j))
