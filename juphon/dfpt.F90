@@ -25,12 +25,14 @@ MODULE m_dfpt
    USE m_desymmetrizer
    USE m_outcdn
    USE m_plot
+   USE m_eigen
+   USE m_fermie
 
    IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho, vTot, vxc, exc, vCoul, eig_id, nvfull, oldmode, xcpot, hybdat, mpdata, forcetheo)
+                 & rho, vTot, vxc, exc, vCoul, eig_id, oldmode, xcpot, hybdat, mpdata, forcetheo)
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -50,17 +52,18 @@ CONTAINS
       TYPE(t_potden),   INTENT(INOUT) :: rho
       TYPE(t_potden),   INTENT(IN)    :: vTot, vxc, exc, vCoul
       INTEGER,          INTENT(IN)    :: eig_id
-      INTEGER,          INTENT(IN)    :: nvfull(:, :)
       LOGICAL,          INTENT(IN)    :: oldmode
 
       TYPE(t_usdus)                 :: usdus
+      TYPE(t_hub1data) :: hub1data
       TYPE(t_potden)                :: vTotclean, rhoclean, grRho, grvextdummy, imagrhodummy, rho_nosym, vTot_nosym
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im ! q-quantities
       TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
       TYPE(t_tlmplm)                :: tdHS0
-      TYPE(t_results)               :: results1
+      TYPE(t_results)               :: q_results, results1
       TYPE(t_kpts)                  :: qpts_loc
+      TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
 
       ! Desymmetrized type variables:
       TYPE(t_mpi)        :: fmpi_nosym
@@ -145,7 +148,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
 
       INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype
-      INTEGER :: iStar, xInd, yInd, zInd
+      INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr
       LOGICAL :: l_real
 
       CHARACTER(len=20)  :: dfpt_tag
@@ -316,6 +319,7 @@ CONTAINS
 !        call juDFT_error('juPhon is only usable with fftw support.', calledby='dfpt')
 !#endif
 
+      CALL q_results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
       CALL results1%init(fi_nosym%input, fi_nosym%atoms, fi_nosym%kpts, fi_nosym%noco)
 
       !WRITE (oUnit,*) '------------------------------------------------------'
@@ -485,6 +489,12 @@ CONTAINS
 
       ALLOCATE(dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
       DO iQ = 1, SIZE(q_list)
+         kqpts = fi%kpts
+         ! Modify this from kpts only in DFPT case.
+         DO ikpt = 1, fi%kpts%nkpt
+            kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qpts_loc%bk(:,q_list(iQ))
+         END DO
+
          CALL timestart("Eii2")
          CALL old_get_Gvecs(stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, recG, .false.)
          CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
@@ -492,6 +502,25 @@ CONTAINS
          write(8989,*) E2ndOrdII
          !CYCLE
          CALL timestop("Eii2")
+         q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                           .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+
+         CALL q_results%reset_results(fi%input)
+
+         CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+                    hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
+                    qpts_loc%bk(:,q_list(iQ)))
+
+         ! Fermi level and occupancies
+
+         CALL timestart("determination of fermi energy")
+         CALL fermie(q_eig_id, fmpi, kqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, q_results)
+         CALL timestop("determination of fermi energy")
+
+#ifdef CPP_MPI
+            CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+#endif
          DO iDtype = 1, fi_nosym%atoms%ntype
             !DO iDir = 1, 1
             DO iDir = 1, 3
@@ -517,9 +546,9 @@ CONTAINS
                ! This is where the magic happens. The Sternheimer equation is solved
                ! iteratively, providing the scf part of dfpt calculations.
                CALL timestart("Sternheimer")
-               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
+               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
                                      rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
-                                     dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), &
+                                     dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), q_eig_id, &
                                      denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
                CALL timestop("Sternheimer")
 
@@ -551,6 +580,9 @@ CONTAINS
          CALL CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs)
          CALL timestop("Frequency calculation")
          DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+
+         CALL close_eig(q_eig_id)
+
       END DO
 
         ! Construct potential without the l=0 prefactor.

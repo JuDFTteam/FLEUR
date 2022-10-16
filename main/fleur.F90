@@ -113,9 +113,6 @@ CONTAINS
       INTEGER :: ierr
 #endif
 
-      ! TODO: This is temporarily necessary dfpt stuff. Remove asap.
-      INTEGER, ALLOCATABLE :: nvfull(:, :), GbasVec_eig(:, :, :, :)
-
       ! Check, whether we already have a suitable density file and if not,
       ! generate a starting density.
       CALL optional(fmpi, fi%atoms, sphhar, fi%vacuum, stars, fi%input, &
@@ -385,15 +382,8 @@ CONTAINS
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN
-               IF (fi%juPhon%l_dfpt) THEN
-                  ! TODO: This is old juPhon dfpt and soon to be refactored out.
-                  CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
-                             hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data, &
-                             nvfull=nvfull, GbasVec_eig=GbasVec_eig)
-                ELSE
-                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
-                               hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
-                END IF
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+                          hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
             END IF
             ! TODO: What is commented out here and should it perhaps be removed?
 ! !$          eig_idList(pc) = eig_id
@@ -563,7 +553,7 @@ CONTAINS
                ! Sideline the actual scf loop for a phonon calculation.
                ! It is assumed that the density was converged beforehand.
                 CALL timestart("juPhon DFPT")
-                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, exc, vCoul, eig_id, nvfull, .FALSE., xcpot, hybdat, mpdata, forcetheo)
+                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, exc, vCoul, eig_id, .FALSE., xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
             END IF
 

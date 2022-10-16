@@ -31,7 +31,7 @@ CONTAINS
    !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,&
                     mpdata,hybdat,iter,eig_id,results,inden,v,vx,hub1data,&
-                    killcont,nvfull,GbasVec_eig,bqpt,dfpt_eig_id,iDir,iDtype,starsq,v1real,v1imag,l_real)
+                    bqpt)
 
       USE m_types
       USE m_constants
@@ -49,8 +49,6 @@ CONTAINS
       USE m_unfold_band_kpts !used for unfolding bands
       USE m_types_mpimat
       use m_store_load_hybrid
-      USE m_dfpt_tlmplm
-      USE m_dfpt_eigen
 
       IMPLICIT NONE
 
@@ -76,16 +74,7 @@ CONTAINS
       INTEGER,INTENT(IN)    :: iter
       INTEGER,INTENT(IN)    :: eig_id
 
-      INTEGER, OPTIONAL, INTENT(IN) :: killcont(6)
-
-      INTEGER, OPTIONAL, ALLOCATABLE, INTENT(OUT) :: nvfull(:, :), GbasVec_eig(:, :, :, :)
-
       REAL,    OPTIONAL, INTENT(IN) :: bqpt(3)
-      INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eig_id, iDir, iDtype
-      LOGICAL, OPTIONAL, INTENT(IN) :: l_real
-
-      TYPE(t_stars),  OPTIONAL, INTENT(IN) :: starsq
-      TYPE(t_potden), OPTIONAL, INTENT(IN) :: v1real, v1imag
 
       ! Local Scalars
       INTEGER jsp,nk,ne_all,ne_found,neigd2
@@ -98,12 +87,12 @@ CONTAINS
 
       COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),fi%kpts%nkpt,fi%input%jspins) ! needed for unfolding bandstructure fmpi case
 
-      INTEGER, ALLOCATABLE :: nvBuffer(:,:), nvBufferTemp(:,:), nvfullBuffer(:,:), GbasVecBuffer(:, :, :, :)
+      INTEGER, ALLOCATABLE :: nvBuffer(:,:), nvBufferTemp(:,:)
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
-      TYPE(t_tlmplm)            :: td, tdV1, tdmod
-      TYPE(t_usdus)             :: ud, uddummy
+      TYPE(t_tlmplm)            :: td
+      TYPE(t_usdus)             :: ud
       TYPE(t_lapw)              :: lapw
       CLASS(t_mat), ALLOCATABLE :: zMat
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
@@ -116,20 +105,16 @@ CONTAINS
       character(len=300)        :: errmsg
       real                      :: alpha_hybrid
 
-      LOGICAL                   :: l_dfpteigen
-
-      l_dfpteigen = PRESENT(bqpt)
-
       kqpts = fi%kpts
       ! Modify this from kpts only in DFPT case.
-      IF (l_dfpteigen) THEN
+      IF (PRESENT(bqpt)) THEN
           DO nk_i = 1, fi%kpts%nkpt
               kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
           END DO
       END IF
 
       call ud%init(fi%atoms,fi%input%jspins)
-      call uddummy%init(fi%atoms,fi%input%jspins)
+
       ALLOCATE(eig(fi%input%neig))
       ALLOCATE(bkpt(3))
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
@@ -144,39 +129,20 @@ CONTAINS
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
       CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,td,ud,alpha_hybrid)
-      ! Get matrix elements of perturbed potential and modified H/S in DFPT case.
-      IF (l_dfpteigen) THEN
-          hub1datadummy = hub1data
-          CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag,.FALSE.)
-          CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1datadummy,inden,v,vx,fmpi,tdmod,uddummy,alpha_hybrid,.TRUE.)
-      END IF
 
       neigBuffer = 0
-      IF (.NOT.l_dfpteigen) THEN
-         results%neig = 0
-         results%eig = 1.0e300
-      END IF
+      results%neig = 0
+      results%eig = 1.0e300
       eigBuffer = 1.0e300
       unfoldingBuffer = CMPLX(0.0,0.0)
       nvBuffer = 0
       nvBufferTemp = 0
 
-      IF (PRESENT(nvfull)) THEN
-          ALLOCATE(nvfull(MERGE(1,fi%input%jspins,fi%noco%l_noco), fi%kpts%nkpt))
-          nvfull = 0
-          ALLOCATE(nvfullBuffer(MERGE(1,fi%input%jspins,fi%noco%l_noco), fi%kpts%nkpt))
-          nvfullBuffer = 0
-          ALLOCATE(GbasVec_eig(3, fi%input%neig, fi%kpts%nkpt, MERGE(1,fi%input%jspins,fi%noco%l_noco)))
-          GbasVec_eig = 0
-          ALLOCATE(GbasVecBuffer(3, fi%input%neig, fi%kpts%nkpt, MERGE(1,fi%input%jspins,fi%noco%l_noco)))
-          GbasVecBuffer = 0
-      END IF
-
       DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)
             ! Set up lapw list
-            CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell,  fmpi)
+            CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
 
             call timestart("Setup of H&S matrices")
             CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
@@ -184,17 +150,12 @@ CONTAINS
 
             nvBuffer(nk,jsp) = lapw%nv(jsp)
 
-            IF (PRESENT(nvfull)) THEN
-                nvfullBuffer(jsp, nk) = lapw%nv(jsp) + fi%atoms%nlotot
-                GbasVecBuffer(:, :lapw%nv(jsp), nk, jsp) = lapw%gvec(:, :lapw%nv(jsp), jsp)
-            END IF
-
             ne_all=fi%input%neig
             IF(ne_all < 0) ne_all = lapw%nmat
             IF(ne_all > lapw%nmat) ne_all = lapw%nmat
 
             !Try to symmetrize matrix
-            CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat,l_dfpteigen)
+            CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat,.FALSE.)
 
             IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                select type(smat)
@@ -252,36 +213,16 @@ CONTAINS
 #else
                 n_rank = 0; n_size=1;
 #endif
-                IF (.NOT.l_dfpteigen) THEN
-                  if (forcetheo%l_needs_vectors) then
-                     call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
-                  else
-                     CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
-                  endif
-                ELSE
-                    CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, tdmod, tdV1, ud, &
-                                    zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real)
-#if defined(CPP_MPI)
-                    CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
-                    CALL timestop("EV output")
-                    CYCLE k_loop
-                END IF
+
+                if (forcetheo%l_needs_vectors) then
+                  call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
+                else
+                  CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
+                endif
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
-                IF (.NOT.l_dfpteigen) THEN
-                    if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
-                                  n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
-                ELSE
-                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, jsp, nk, results, fmpi, enpara, nococonv, starsq, v1real, lapw, &
-                                                      tdmod, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, &
-                                                      iDir, iDtype, killcont, l_real)
-#if defined(CPP_MPI)
-                    CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
-                    CALL timestop("EV output")
-                    CYCLE k_loop
-                END IF
+                if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
+                    n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
             ENDIF
             neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
@@ -307,8 +248,6 @@ CONTAINS
          END DO  k_loop
       END DO ! spin loop ends
 
-      IF (l_dfpteigen) RETURN
-
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
       IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
@@ -318,20 +257,12 @@ CONTAINS
       CALL MPI_ALLREDUCE(neigBuffer,results%neig,fi%kpts%nkpt*fi%input%jspins,MPI_INTEGER,MPI_SUM,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(nvBuffer(:,:),nvBufferTemp(:,:),size(nvbuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
-      IF (PRESENT(nvfull)) THEN
-          CALL MPI_ALLREDUCE(nvfullBuffer(:,:),nvfull(:,:),size(nvfullBuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
-          CALL MPI_ALLREDUCE(GbasVecBuffer(:,:,:,:),GbasVec_eig(:,:,:,:),size(GbasVecBuffer),MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
-      END IF
       CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #else
       results%neig(:,:) = neigBuffer(:,:)
       results%eig(:neigd2,:,:) = eigBuffer(:neigd2,:,:)
       results%unfolding_weights(:,:,:) = unfoldingBuffer(:,:,:)
       nvBufferTemp(:,:) = nvBuffer(:,:)
-      IF (PRESENT(nvfull)) THEN
-          nvfull(:,:) = nvfullBuffer(:,:)
-          GbasVec_eig(:,:,:,:) = GbasVecBuffer(:,:,:,:)
-      END IF
 #endif
 
       IF(fmpi%irank.EQ.0) THEN
@@ -344,7 +275,6 @@ CONTAINS
             END DO
          END DO
       END IF
-
 
       IF( fi%input%jspins .EQ. 1 .AND. fi%hybinp%l_hybrid ) THEN
          results%te_hfex%valence = 2*results%te_hfex%valence

@@ -7,7 +7,7 @@ MODULE m_dfpt_sternheimer
    USE m_types
    USE m_make_stars
    USE m_vgen
-   USE m_eigen
+   USE m_dfpt_eigen_new
    USE m_dfpt_cdngen
    USE m_dfpt_vgen
    USE m_dfpt_fermie
@@ -20,9 +20,9 @@ MODULE m_dfpt_sternheimer
 IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, enpara, hybdat, mpdata, &
+   SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, mpdata, &
                                forcetheo, rho, vTot, grRho, grVtot, grVext, iQ, iDType, iDir, dfpt_tag, eig_id, &
-                               l_real, results1, dfpt_eig_id, &
+                               l_real, results1, dfpt_eig_id, q_eig_id, &
                                denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       CLASS(t_xcpot),     INTENT(IN)    :: xcpot
@@ -32,7 +32,7 @@ CONTAINS
       TYPE(t_nococonv),   INTENT(IN)    :: nococonv
       TYPE(t_kpts),       INTENT(IN)    :: qpts
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
-      TYPE(t_results),    INTENT(INOUT) :: results, results1
+      TYPE(t_results),    INTENT(INOUT) :: results, resultsq, results1
       TYPE(t_hybdat),     INTENT(INOUT) :: hybdat
       TYPE(t_mpdata),     INTENT(INOUT) :: mpdata
       CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
@@ -43,7 +43,7 @@ CONTAINS
 
       TYPE(t_potden) :: denOut1, denOut1Im, vx, rho_loc, rho_loc0
 
-      INTEGER, INTENT(IN) :: iQ, iDtype, iDir, eig_id
+      INTEGER, INTENT(IN) :: iQ, iDtype, iDir, eig_id, q_eig_id
       LOGICAL, INTENT(IN) :: l_real
       CHARACTER(len=20), INTENT(IN) :: dfpt_tag
 
@@ -183,12 +183,14 @@ CONTAINS
 
          CALL timestart("dfpt eigen")
 
-         IF (.NOT. fi%input%eig66(1)) THEN
-            CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
-                       hybdat, iter, eig_id, results, rho, vTot, vx, hub1data, &
-                       bqpt=bqpt, dfpt_eig_id=dfpt_eig_id, iDir=iDir, iDtype=iDtype, &
-                       starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
-         END IF
+         !IF (.NOT. fi%input%eig66(1)) THEN
+         !   CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+         !              hybdat, iter, eig_id, results, rho, vTot, vx, hub1data, &
+         !              bqpt=bqpt, dfpt_eig_id=dfpt_eig_id, iDir=iDir, iDtype=iDtype, &
+         !              starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
+         !END IF
+         CALL dfpt_eigen_new(fi, sphhar, results, resultsq, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+                             vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real)
          CALL timestop("dfpt eigen")
          CALL timestop("H1 generation (total)")
 

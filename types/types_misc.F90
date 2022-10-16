@@ -47,6 +47,7 @@ MODULE m_types_misc
 
    CONTAINS
       PROCEDURE,PASS :: init => results_init
+      PROCEDURE      :: reset_results
    END TYPE t_results
 
    TYPE t_zMat
@@ -153,5 +154,46 @@ CONTAINS
       END IF
 
    END SUBROUTINE results_init
+
+   SUBROUTINE reset_results(thisResults, input)
+      USE m_types_input
+
+      IMPLICIT NONE
+
+      CLASS(t_results),      INTENT(INOUT) :: thisResults
+
+      TYPE(t_input),         INTENT(IN)    :: input
+
+      thisResults%seigc           = 0.0
+      thisResults%seigv           = 0.0
+      thisResults%e_ldau          = 0.0
+      thisResults%ts              = 0.0
+
+      thisResults%te_vcoul        = 0.0
+      thisResults%te_veff         = 0.0
+      thisResults%te_exc          = 0.0
+      thisResults%te_hfex%valence = 0.0
+      thisResults%te_hfex%core    = 0.0
+      thisResults%te_hfex_loc     = 0.0
+
+      thisResults%tote            = 0.0
+      thisResults%last_distance   = -1.0
+      thisResults%last_mmpMatdistance = -1.0
+      thisResults%last_occdistance    = -1.0
+      thisResults%bandgap         = 0.0
+      thisResults%ef              = 0.0
+
+      thisResults%force = 0.0
+      thisResults%force_old = 0.0
+      thisResults%w_iks = 0.0
+      thisResults%neig = 0
+      thisResults%eig = 0.0
+
+      ! Irrelevant
+      IF(input%l_rdmft) THEN
+         thisResults%w_iksRDMFT = 0.0
+      END IF
+
+   END SUBROUTINE
 
 END MODULE m_types_misc
