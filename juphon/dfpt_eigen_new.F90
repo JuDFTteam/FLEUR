@@ -67,10 +67,10 @@ CONTAINS
       INTEGER                   :: dealloc_stat, nbasfcnq, nbasfcn, neigk, neigq, noccbd, noccbdq
       character(len=300)        :: errmsg
       INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:), k_selection(:)
-      COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:)
-      REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:)
+      COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:)
+      REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), killfloat(:,:)
 
-      CLASS(t_mat), ALLOCATABLE :: invE(:), matE(:)
+      CLASS(t_mat), ALLOCATABLE :: invE(:), matOcc(:)
 
       CALL timestart("dfpt_eigen")
 
@@ -114,12 +114,15 @@ CONTAINS
                   ALLOCATE (t_mpimat::zMatk)
                   ALLOCATE (t_mpimat::zMatq)
                END IF
+
                CALL zMatk%init(l_real,nbasfcn,noccbd)
                CALL zMatq%init(l_real,nbasfcnq,nbasfcnq)
+
                ALLOCATE(ev_list(noccbd))
                ev_list = (/(i, i=1,noccbd, 1)/)
                ALLOCATE(q_ev_list(noccbdq))
                q_ev_list = (/(i, i=1,nbasfcnq, 1)/)
+
                ALLOCATE(eigk(noccbd))
                ALLOCATE(eigq(nbasfcnq))
                ALLOCATE(eigs1(noccbd))
@@ -130,7 +133,7 @@ CONTAINS
                CALL timestop("Read eigenstuff at k/k+q")
 
                CALL timestart("Energy inversion")
-               CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invE, matE)
+               CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invE, noccbdq, 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, matOcc)
                CALL timestop("Energy inversion")
 
                ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
@@ -144,17 +147,27 @@ CONTAINS
                   ALLOCATE (t_mpimat::zMat1)
                END IF
                CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
+               ALLOCATE(z1H,mold=zMat1%data_c)
+               ALLOCATE(z1S,mold=zMat1%data_c)
 
                ALLOCATE(tempVec(nbasfcnq))
                ALLOCATE(tempMat1(nbasfcnq))
                ALLOCATE(tempMat2(neigq))
+               ALLOCATE(killfloat(noccbd,noccbd))
 
                !TODO: Optimize this with (SCA)LAPACK CALLS
                DO nu = 1, noccbd
+                  killfloat = matOcc(nu)%data_r(:noccbd,:noccbd)
+                  !IF (l_real) THEN ! l_real for zMatk
+                  !   tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
+                  !ELSE
+                  !   tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
+                  !END IF
+
                   IF (l_real) THEN ! l_real for zMatk
-                     tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
+                     tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_r(:nbasfcn,nu))
                   ELSE
-                     tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
+                     tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_c(:nbasfcn,nu))
                   END IF
 
                   IF (zMatq%l_real) THEN ! l_real for zMatq
@@ -162,6 +175,12 @@ CONTAINS
                   ELSE
                      tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
                   END IF
+
+                  !!IF (zMatq%l_real) THEN ! l_real for zMatq
+                  !!   tempMat1(noccbd+1:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r(:,noccbd+1:nbasfcnq)),tempvec)
+                  !!ELSE
+                  !!   tempMat1(noccbd+1:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c(:,noccbd+1:nbasfcnq))),tempvec)
+                  !!END IF
 
                   tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
 
@@ -176,11 +195,39 @@ CONTAINS
                      eigs1 = 0
                   END IF
 
+                  !IF (zMatq%l_real) THEN
+                  !   zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
+                  !ELSE
+                  !   zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
+                  !END IF
+
                   IF (zMatq%l_real) THEN
-                     zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
+                     z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
                   ELSE
-                     zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
+                     z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
                   END IF
+
+                  IF (l_real) THEN ! l_real for zMatk
+                     tempVec(:nbasfcnq) = MATMUL(-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
+                  ELSE
+                     tempVec(:nbasfcnq) = MATMUL(-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
+                  END IF
+
+                  IF (zMatq%l_real) THEN ! l_real for zMatq
+                     tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
+                  ELSE
+                     tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
+                  END IF
+
+                  tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
+
+                  IF (zMatq%l_real) THEN
+                     z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
+                  ELSE
+                     z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
+                  END IF
+
+                  zMat1%data_c(:nbasfcnq,nu) = z1H(:nbasfcnq,nu) + z1S(:nbasfcnq,nu)
 
                   IF (ANY(nk==k_selection)) THEN
                      CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)
@@ -248,6 +295,9 @@ CONTAINS
                  IF (ALLOCATED(tempVec)) DEALLOCATE(tempVec)
                  IF (ALLOCATED(tempMat1)) DEALLOCATE(tempMat1)
                  IF (ALLOCATED(tempMat2)) DEALLOCATE(tempMat2)
+                 IF (ALLOCATED(killfloat)) DEALLOCATE(killfloat)
+                 IF (ALLOCATED(z1H)) DEALLOCATE(z1H)
+                 IF (ALLOCATED(z1S)) DEALLOCATE(z1S)
                  IF (ALLOCATED(zmatk)) THEN
                    CALL zMatk%free()
                    DEALLOCATE(zMatk)
