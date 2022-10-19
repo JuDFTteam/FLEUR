@@ -24,6 +24,7 @@ MODULE m_types_juPhon
       REAL    :: gqmax     = -1.0    ! Alternative maximum for |G+q|
       REAL    :: eps_pert  = 0.00001 ! Convergence criterion
       REAL    :: eDiffcut  = 1e-12   ! Cutoff for energy differences
+      REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
       REAL    :: qpt_ph(3)           ! Debug q
 
       INTEGER :: singleQpt       = 1
@@ -219,6 +220,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%eDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@eDiffcut'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@fDiffcut')
+
+         IF (numberNodes == 1) THEN
+           this%fDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@fDiffcut'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@singleQpt')
