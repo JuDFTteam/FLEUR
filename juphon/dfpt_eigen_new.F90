@@ -15,7 +15,8 @@ MODULE m_dfpt_eigen_new
 
 CONTAINS
 
-   SUBROUTINE dfpt_eigen_new(fi, sphhar, results, resultsq, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real)
+   SUBROUTINE dfpt_eigen_new(fi, sphhar, results, resultsq, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
+                             eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, dfpt_tag)
 
       USE m_types
       USE m_constants
@@ -43,6 +44,7 @@ CONTAINS
       REAL,         INTENT(IN)     :: bqpt(3)
       INTEGER,      INTENT(IN)     :: eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont(6)
       LOGICAL,      INTENT(IN)     :: l_real
+      CHARACTER(len=20), INTENT(IN) :: dfpt_tag
 
       INTEGER n_size,n_rank
       INTEGER i,err,nk,jsp,nk_i
@@ -64,13 +66,16 @@ CONTAINS
 
       INTEGER                   :: dealloc_stat, nbasfcnq, nbasfcn, neigk, neigq, noccbd, noccbdq
       character(len=300)        :: errmsg
-      INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:)
+      INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:), k_selection(:)
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:)
       REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), killfloat(:,:)
 
       CLASS(t_mat), ALLOCATABLE :: invE(:), matOcc(:)
 
       CALL timestart("dfpt_eigen")
+
+      ALLOCATE(k_selection(7))
+      k_selection = [1,45,77,255,366,412,512] 
 
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
@@ -224,30 +229,30 @@ CONTAINS
 
                   zMat1%data_c(:nbasfcnq,nu) = z1H(:nbasfcnq,nu) + z1S(:nbasfcnq,nu)
 
-                  !IF (nk==366) THEN
-                  !   CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)
-                  !   CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"_HS1band.npy",tempMat1)
-                  !   CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"_matE.npy",matE(nu)%data_r)
-                  !   CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"_invE.npy",invE(nu)%data_r)
-                  !   CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1band.npy",tempMat2)
-                  !END IF
+                  IF (ANY(nk==k_selection)) THEN
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_HS1band.npy",tempMat1)
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_matE.npy",matE(nu)%data_r)
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_invE.npy",invE(nu)%data_r)
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1band.npy",tempMat2)
+                  END IF
                END DO
 
-               !IF (nk==366) THEN
-               !   IF (l_real) THEN ! l_real for zMatk
-               !      CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_zMatk.npy",zMatk%data_r)
-               !   ELSE
-               !      CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_zMatk.npy",zMatk%data_c)
-               !   END IF
+               IF (ANY(nk==k_selection)) THEN
+                  IF (l_real) THEN ! l_real for zMatk
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_zMatk.npy",zMatk%data_r)
+                  ELSE
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_zMatk.npy",zMatk%data_c)
+                  END IF
 
-               !   IF (zMatq%l_real) THEN ! l_real for zMatq
-               !      CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_zMatkq.npy",zMatq%data_r)
-               !   ELSE
-               !      CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_zMatkq.npy",zMatq%data_c)
-               !   END IF
+                  IF (zMatq%l_real) THEN ! l_real for zMatq
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_zMatkq.npy",zMatq%data_r)
+                  ELSE
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_zMatkq.npy",zMatq%data_c)
+                  END IF
 
-               !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_z1.npy",zMat1%data_c)
-               !END IF
+                  CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_z1.npy",zMat1%data_c)
+               END IF
 
                CALL smat%free()
                CALL hmat%free()
