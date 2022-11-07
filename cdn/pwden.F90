@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
    SUBROUTINE pwden(stars, kpts, banddos,   input, fmpi, noco, nococonv, cell, atoms, sym, &
-                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, qimag)
+                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, qimag, iDir)
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       !     In this subroutine the star function expansion coefficients of
       !     the plane wave charge density is determined.
@@ -78,6 +78,7 @@ CONTAINS
       COMPLEX,      OPTIONAL, INTENT(INOUT) :: qimag(stars%ng3)
       TYPE(t_mat),  OPTIONAL, INTENT(IN) :: zMat1
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
+      INTEGER,      OPTIONAL, INTENT(IN) :: iDir
 
       ! local variables
       TYPE(t_fftGrid) :: state, stateB, stateq, stateBq, StateDeriv, ekinGrid, chargeDen, rhomatGrid(4)
@@ -513,6 +514,8 @@ CONTAINS
             END IF
          ENDIF
       ENDDO
+
+      IF (PRESENT(qimag)) qimag = cwk
 
       DEALLOCATE (cwk, ecwk)
 

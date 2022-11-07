@@ -80,7 +80,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    REAL    :: gExt(3)
 
    ! Local Arrays
-   COMPLEX ::  f_b8_dummy(3, atoms%ntype), qimag(stars%ng3)
+   COMPLEX ::  f_b8_dummy(3, atoms%ntype), qimag(kpts%nkpt,stars%ng3)
    REAL,ALLOCATABLE :: we(:),eig(:),we1(:),eig1(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
@@ -227,11 +227,11 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
          CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
-                    jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,q_dfpt,lapwq,we1,zMat1,qimag)
+                    jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,q_dfpt,lapwq,we1,zMat1,qimag(ikpt,:),iDir)
       END IF
    END DO ! end of k-point loop
 
-   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"qimag.npy",qimag)
+   CALL save_npy(int2str(den%iter)//"_"//int2str(iDir)//"_qimag.npy",qimag)
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
