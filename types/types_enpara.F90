@@ -10,7 +10,7 @@ MODULE m_types_enpara
   IMPLICIT NONE
   PRIVATE
   TYPE,extends(t_enparaxml):: t_enpara
-     REAL, ALLOCATABLE CPP_MANAGED   :: el0(:,:,:)
+     REAL, ALLOCATABLE    :: el0(:,:,:)
      REAL                 :: evac(2,2)
      REAL, ALLOCATABLE    :: ello0(:,:,:)
      REAL, ALLOCATABLE    :: el1(:,:,:)

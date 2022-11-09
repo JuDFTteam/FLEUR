@@ -133,8 +133,8 @@ CONTAINS
       COMPLEX                          :: hessian(3, 3)
       COMPLEX                          :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk,jsp))
       COMPLEX                          :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
-      COMPLEX, ALLOCATABLE CPP_MANAGED :: phase_vv(:, :), c_coul_wavf(:,:), dot_result_c(:,:)
-      REAL, ALLOCATABLE CPP_MANAGED    :: r_coul_wavf(:,:), dot_result_r(:,:)
+      COMPLEX, ALLOCATABLE  :: phase_vv(:, :), c_coul_wavf(:,:), dot_result_c(:,:)
+      REAL, ALLOCATABLE     :: r_coul_wavf(:,:), dot_result_r(:,:)
       LOGICAL                          :: occup(fi%input%neig), conjg_mtir
 #ifdef _OPENACC
       real, allocatable    :: cprod_vv_r(:,:)
