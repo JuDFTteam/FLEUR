@@ -128,8 +128,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,atoms,kpts,results%eig)
    CALL jDOS%init(input,banddos,atoms,kpts,results%eig)
 
-   if (banddos%dos.or.banddos%band) then
-     allocate(eigdos(count((/banddos%dos.or.banddos%band,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
+   if (banddos%dos.or.banddos%band.or.input%cdinf) then
+     allocate(eigdos(count((/banddos%dos.or.banddos%band.or.input%cdinf,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
      n=2
      eigdos(1)%p=>dos
      if (banddos%vacdos) THEN

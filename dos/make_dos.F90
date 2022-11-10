@@ -99,7 +99,7 @@ CONTAINS
     ENDIF
 
     IF (input%cdinf) then
-      call cdninf(input,sym,noco,atoms,vacuum,cell,kpts,eigdos(1)%p)
+      call cdninf(input,sym,noco,atoms,vacuum,cell,kpts,eigdos)
     endif
 
     IF (banddos%dos) THEN
