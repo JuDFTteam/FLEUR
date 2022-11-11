@@ -23,7 +23,7 @@ CONTAINS
 
       !--->       set up the spinors of this atom within global
       !--->       spin-coordinateframe
-      umat = nococonv%umat(n)
+      umat = nococonv%umat(n) 
       !--->       and determine the prefactors for the Hamitonian- and
       !--->       overlapp-matrix elements
       IF (iSpinNum<3) THEN
@@ -74,15 +74,17 @@ CONTAINS
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
     !chi=conjg(nococonv%umat(n))
+
     chi=nococonv%umat(n)
 
-    isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),((chi))))
-    isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),((chi))))
-    isigma_z=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,3),((chi))))
+    isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),chi))
+    isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),chi))
+    isigma_z=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,3),chi))
     !isigma_x=MATMUL(chi, MATMUL(isigma(:,:,1),conjg(transpose(chi))))
     !isigma_y=MATMUL(chi, MATMUL(isigma(:,:,2),conjg(transpose(chi))))
     !isigma_z=MATMUL(chi, MATMUL(isigma(:,:,3),conjg(transpose(chi))))
     
+
     
     
     !chi=conjg(nococonv%umat(n))

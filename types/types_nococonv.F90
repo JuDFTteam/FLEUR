@@ -85,6 +85,7 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
       chi(2, 1) = -EXP( ImagUnit*alpha/2)*SIN(beta/2)
       chi(1, 2) =  EXP(-ImagUnit*alpha/2)*SIN(beta/2)
       chi(2, 2) =  EXP(-ImagUnit*alpha/2)*COS(beta/2)
+      chi=transpose(conjg(chi))
    end function
 
    function denmat_to_mag_mat(nococonv, mat) result(mag)

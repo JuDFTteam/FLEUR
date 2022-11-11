@@ -245,7 +245,7 @@ CONTAINS
               DO kj = 1,lapw%nv(1)
                 cph(kj) = cph(kj) +&
                 CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,1),tnn)),&
-                SIN(DOT_PRODUCT(lapw%gvec(:,kj,1)-ski,tnn)))
+                SIN(DOT_PRODUCT(ski-lapw%gvec(:,kj,1),tnn)))
               END DO
               !Set up spinors...
               CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso,1,size(angso,1))
@@ -263,10 +263,10 @@ CONTAINS
                     clo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopplo(n,lo,j1,j2) + &
                     clo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
                     * angso(kj,j1,j2)
-                    hmat(1,1)%data_c(kj,locol_loc)=hmat(1,1)%data_c(kj,locol_loc) + CONJG(chi(1,1,j1,j2)*fct)
-                    hmat(1,2)%data_c(kj,locol_loc)=hmat(1,2)%data_c(kj,locol_loc) + CONJG(chi(1,2,j1,j2)*fct)
-                    hmat(2,1)%data_c(kj,locol_loc)=hmat(2,1)%data_c(kj,locol_loc) + CONJG(chi(2,1,j1,j2)*fct)
-                    hmat(2,2)%data_c(kj,locol_loc)=hmat(2,2)%data_c(kj,locol_loc) + CONJG(chi(2,2,j1,j2)*fct)
+                    hmat(1,1)%data_c(kj,locol_loc)=hmat(1,1)%data_c(kj,locol_loc) + chi(1,1,j1,j2)*fct
+                    hmat(1,2)%data_c(kj,locol_loc)=hmat(1,2)%data_c(kj,locol_loc) + chi(1,2,j1,j2)*fct
+                    hmat(2,1)%data_c(kj,locol_loc)=hmat(2,1)%data_c(kj,locol_loc) + chi(2,1,j1,j2)*fct
+                    hmat(2,2)%data_c(kj,locol_loc)=hmat(2,2)%data_c(kj,locol_loc) + chi(2,2,j1,j2)*fct
                   ENDDO
                   !Update LO-LO part
                   DO ilo=1,atoms%nlo(n)
@@ -286,10 +286,10 @@ CONTAINS
                         clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)+ &
                         clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoploplop(n,lo,ilo,j1,j2)) &
                        * angso(kj,j1,j2)
-                        hmat(1,1)%data_c(lorow,locol_loc)=hmat(1,1)%data_c(lorow,locol_loc) + CONJG(chi(1,1,j1,j2)*fct)
-                        hmat(1,2)%data_c(lorow,locol_loc)=hmat(1,2)%data_c(lorow,locol_loc) + CONJG(chi(1,2,j1,j2)*fct)
-                        hmat(2,1)%data_c(lorow,locol_loc)=hmat(2,1)%data_c(lorow,locol_loc) + CONJG(chi(2,1,j1,j2)*fct)
-                        hmat(2,2)%data_c(lorow,locol_loc)=hmat(2,2)%data_c(lorow,locol_loc) + CONJG(chi(2,2,j1,j2)*fct)
+                        hmat(1,1)%data_c(lorow,locol_loc)=hmat(1,1)%data_c(lorow,locol_loc) + chi(1,1,j1,j2)*fct
+                        hmat(1,2)%data_c(lorow,locol_loc)=hmat(1,2)%data_c(lorow,locol_loc) + chi(1,2,j1,j2)*fct
+                        hmat(2,1)%data_c(lorow,locol_loc)=hmat(2,1)%data_c(lorow,locol_loc) + chi(2,1,j1,j2)*fct
+                        hmat(2,2)%data_c(lorow,locol_loc)=hmat(2,2)%data_c(lorow,locol_loc) + chi(2,2,j1,j2)*fct
                       ENDDO
                     ENDIF
                   ENDDO
