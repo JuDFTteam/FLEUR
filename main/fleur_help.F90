@@ -33,7 +33,6 @@ CONTAINS
     WRITE(*,'(a)')"The following command line options are known:"
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control the input:"
-    CALL print_argument("-toXML")
     CALL print_argument("-xmlXPath")
     CALL print_argument("-dropXMLSchema")
     WRITE(*,'(a)')""
@@ -85,7 +84,6 @@ CONTAINS
   SUBROUTINE add_fleur_arguments()
     USE m_check_arguments
 
-    CALL new_argument(0,"-toXML","Convert an old 'inp' file into the new XML format","")
     CALL new_argument(1,"-xmlXPath","modify the xml-xpath of the inp.xml file","")
     CALL new_argument(0,"-dropXMLSchema","Write out the default XML schema files","")
     !Control the job
