@@ -3,9 +3,6 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-#ifndef CPP_MANAGED
-#define CPP_MANAGED
-#endif
 MODULE m_types_atoms
   USE m_juDFT
   USE m_types_econfig
@@ -83,7 +80,7 @@ MODULE m_types_atoms
   !Calculate forces for this atom?
   LOGICAL, ALLOCATABLE :: l_geo(:)
   !MT-Radius (ntype)
-  REAL, ALLOCATABLE CPP_MANAGED::rmt(:)
+  REAL, ALLOCATABLE::rmt(:)
   !log increment(ntype)
   REAL, ALLOCATABLE::dx(:)
   !vol of MT(ntype)
@@ -97,7 +94,7 @@ MODULE m_types_atoms
   !pos of atom (absol) (3,nat)
   REAL, ALLOCATABLE::pos(:, :)
   !pos of atom (relat)(3,nat)
-  REAL, ALLOCATABLE CPP_MANAGED::taual(:, :)
+  REAL, ALLOCATABLE::taual(:, :)
   !labels
   CHARACTER(LEN=20), ALLOCATABLE :: label(:)
   CHARACTER(len=20), ALLOCATABLE :: speciesName(:)

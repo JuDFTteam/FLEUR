@@ -511,6 +511,70 @@ def test_GreensFunction_IntersiteSingleShell(execute_fleur, grep_number, grep_ex
     assert grep_exists(res_files['out'], r" 0\.1206 [\-\s]0\.0000")
 
 
+@pytest.mark.parametrize('filename',['inp_nogamma.xml','inp_gamma.xml'])
+@pytest.mark.bulk
+@pytest.mark.greensfunction
+@pytest.mark.magnetism
+@pytest.mark.serial
+def test_GreensFunction_GammaNoGamma(execute_fleur, grep_number, grep_exists, filename):
+    """Fleur Greens Function intersite single shell
+    Simple test of the intersite green's function calculation in FLEUR with one step:
+    1. Generate starting density, run 1 Iteration and calculate Green's function
+       for d-orbitals for the nearest neighbours. Ensure that the obtained occupation matrices
+       look as expected
+    """
+    test_file_folder = './inputfiles/GreensFunction_IntersiteGammaNoGamma/'
+
+    res_files = execute_fleur(test_file_folder,only_copy=[[filename, 'inp.xml']])
+    should_files = ['out']
+    res_file_names = list(res_files.keys())
+    if 'cdn.hdf' in res_file_names:
+        should_files.append('greensf.hdf')
+    for file1 in should_files:
+        assert file1 in res_file_names
+
+    assert grep_exists(res_files['out'], "it=  1  is completed")
+
+    #Check for the right shell being selected
+    assert grep_exists(res_files['out'], r"Green's Function Elements: 18\s")
+    #These are entries in the table of generated GF elements
+    assert grep_exists(res_files['out'], r"3 [|] 2/2  [|]    1/    2 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  0.500  0.500  0.500")
+    assert grep_exists(res_files['out'], r"4 [|] 2/2  [|]    1/    2 [|]       1 [|]      T [|]         1 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  0.500  0.500 \-0.500")
+    assert grep_exists(res_files['out'], r"11 [|] 2/2  [|]    2/    1 [|]       1 [|]      T [|]         2 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  0.500  0.500  0.500")
+    assert grep_exists(res_files['out'], r"12 [|] 2/2  [|]    2/    1 [|]       1 [|]      T [|]         2 [|]        \-1\(\-1\)      [|]      F\(F\)  [|]  0.500  0.500 \-0.500")
+
+
+    #Check trace of representative element
+    spinup_trace_element1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":", res_index=-16)
+    spindn_trace_element1 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":", res_index=-16)
+    #Check trace of a symmetry equivalent element
+    spinup_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Up trace:", ":")
+    spindn_trace_element2 = grep_number(res_files['out'], r"l--> 2 Contour\(default\)    Spin-Down trace:", ":")
+
+    assert abs(spinup_trace_element1 - 0.2422) <= 0.0005
+    assert abs(spindn_trace_element1 - 0.0351) <= 0.0005
+
+    assert abs(spinup_trace_element2 - 0.2422) <= 0.0005
+    assert abs(spindn_trace_element2 - 0.0351) <= 0.0005
+
+    #Check some matrix elements of the occupation matrix
+    assert grep_exists(res_files['out'], " 0.0611  0.0611")
+    assert grep_exists(res_files['out'], " 0.0611 -0.0611")
+    assert grep_exists(res_files['out'], "-0.0611  0.0611")
+    assert grep_exists(res_files['out'], "-0.0611 -0.0611")
+
+    assert grep_exists(res_files['out'], " 0.0599  0.0599")
+    assert grep_exists(res_files['out'], " 0.0599 -0.0599")
+    assert grep_exists(res_files['out'], "-0.0599  0.0599")
+    assert grep_exists(res_files['out'], "-0.0599 -0.0599")
+
+    assert grep_exists(res_files['out'], r" 0\.0142 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r" 0\.0713 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r"\-0\.2260 [\-\s]0\.0000")
+    assert grep_exists(res_files['out'], r" 0\.1624 [\-\s]0\.0000")
+
+
+
 
 @pytest.mark.bulk
 @pytest.mark.greensfunction

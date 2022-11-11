@@ -26,10 +26,10 @@ MODULE m_types_lapw
       INTEGER, ALLOCATABLE:: k1(:, :)
       INTEGER, ALLOCATABLE:: k2(:, :)
       INTEGER, ALLOCATABLE:: k3(:, :)
-      INTEGER, ALLOCATABLE CPP_MANAGED:: gvec(:, :, :) !replaces k1,k2,k3
+      INTEGER, ALLOCATABLE:: gvec(:, :, :) !replaces k1,k2,k3
       INTEGER, ALLOCATABLE:: kp(:, :)
       REAL, ALLOCATABLE::rk(:, :)
-      REAL, ALLOCATABLE CPP_MANAGED::gk(:, :, :)
+      REAL, ALLOCATABLE::gk(:, :, :)
       REAL, ALLOCATABLE::vk(:, :, :)
       INTEGER, ALLOCATABLE::index_lo(:, :)
       INTEGER, ALLOCATABLE::kvec(:, :, :)
