@@ -16,7 +16,7 @@ do
 	-cmake) shift;cmake=$1;;
 	-external) shift;external_lib="$external_lib $1";;
 	-hdf5) shift; CLI_USE_HDF5=$1;;
-  -libxml2) shift;; CLI_COMPILE_LIBXML=$1;;
+  -libxml2) shift; CLI_COMPILE_LIBXML=$1;;
 	-wannier) shift; CLI_USE_WANNIER=$1;;
         -edsolver) shift; CLI_USE_EDSOLVER=$1;;
 	-kplib)  CLI_USE_KPLIB=1;;
