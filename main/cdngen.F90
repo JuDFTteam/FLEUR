@@ -36,9 +36,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_qfix
    USE m_genNewNocoInp
    USE m_xmlOutput
-   USE m_magMoms
    USE m_magMultipoles
-   USE m_orbMagMoms
+   USE m_magmoments
    USE m_resMoms
    USE m_cdncore
    USE m_make_dos
@@ -274,16 +273,12 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
       IF (input%jspins == 2) THEN
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
-         !CALL magMoms(input,atoms,noco,nococonv,vTot,moments)
-         CALL magMoms(input,atoms,noco,nococonv,vTot,den=outDen)
-         
+         CALL spinMoments(input,atoms,noco,nococonv,den=outDen)
+         CALL orbMoments(input,atoms,noco,nococonv,moments)
+
          if (sym%nop==1.and..not.input%film) call magMultipoles(sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
-         IF (ANY(noco%l_alignMT).OR.any(noco%l_constrained)) THEN
-          !  CALL genNewNocoInp(input,atoms,noco,noco_new)
-         END IF
-         IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,nococonv,moments%clmom)
       END IF
    END IF ! fmpi%irank == 0
    Perform_metagga = Allocated(Energyden%Mt) &

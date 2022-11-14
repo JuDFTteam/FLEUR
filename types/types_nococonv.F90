@@ -38,7 +38,8 @@ MODULE m_types_nococonv
       !function to construct density matrix from magnetisaztion vector
       procedure:: mag_to_denmat
       !Rotate magnetisation vector
-      procedure :: rot_magvec
+      procedure :: rot_magvec_ntype,rot_magvec_explicit
+      generic   :: rot_magvec =>rot_magvec_ntype,rot_magvec_explicit
       procedure :: avg_moments
       procedure :: mpi_bc => mpi_bc_nococonv
    end TYPE
@@ -116,7 +117,7 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
       mag(3) = r11 - r22
    end function
 
-   subroutine rot_magvec(nococonv, n, mag, toGlobal)
+   subroutine rot_magvec_ntype(nococonv, n, mag, toGlobal)
       CLASS(t_nococonv), INTENT(IN) :: nococonv
       INTEGER, INTENT(IN)           :: n
       REAL, INTENT(INOUT)      :: mag(0:3)
@@ -128,6 +129,19 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
       call nococonv%rotdenmat(n, mat, toGlobal)
       mag = nococonv%denmat_to_mag(mat)
    end subroutine
+   
+   subroutine rot_magvec_explicit(nococonv, alpha, beta, mag, toGlobal)
+   CLASS(t_nococonv), INTENT(IN) :: nococonv
+   REAL, INTENT(IN)           :: alpha,beta
+   REAL, INTENT(INOUT)      :: mag(0:3)
+   LOGICAL, INTENT(IN), OPTIONAL  :: toGlobal
+
+   complex :: mat(2, 2)
+
+   mat = nococonv%mag_to_denmat(mag)
+   call nococonv%rotdenmat(alpha,beta, mat, toGlobal)
+   mag = nococonv%denmat_to_mag(mat)
+end subroutine
 
    subroutine rotdenmat_mat(nococonv, n, mat, toGlobal)
       CLASS(t_nococonv), INTENT(IN) :: nococonv

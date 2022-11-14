@@ -19,8 +19,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    USE m_coredr
    USE m_types
    USE m_xmlOutput
-   USE m_magMoms
-   USE m_orbMagMoms
+
 #ifdef CPP_MPI
    USE m_mpi_bc_coreden
 #endif
