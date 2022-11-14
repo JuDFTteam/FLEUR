@@ -67,6 +67,11 @@ if (JUDFT_USE_HDF5)
       target_link_libraries(juDFT PUBLIC hdf5_fortran-static)
   endif()
 endif()
+
+if (JUDFT_COMPILE_LIBXML2)
+     target_link_libraries(juDFT PUBLIC LibXml2)
+endif() 
+
 if (JUDFT_USE_HDF5MPI)
   if (JUDFT_USE_MPI)
     target_compile_definitions(juDFT PUBLIC CPP_HDFMPI)
