@@ -69,7 +69,8 @@ if (JUDFT_USE_HDF5)
 endif()
 
 if (JUDFT_COMPILE_LIBXML2)
-     target_link_libraries(juDFT PUBLIC LibXml2)
+     target_link_libraries(juDFT PUBLIC LibXml2::LibXml2)
+     set(Xml2_LIBS "-lxml2")
 endif() 
 
 if (JUDFT_USE_HDF5MPI)
