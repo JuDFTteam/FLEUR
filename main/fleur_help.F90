@@ -72,6 +72,7 @@ CONTAINS
     CALL print_argument("-last_extra")
     CALL print_argument("-sd")
     CALL print_argument("-delden")
+    CALL print_argument("-storeSF")
 #endif
     WRITE (*,'(a)') "Options for privacy sensitive users"
     CALL print_argument("-no_send")
@@ -156,6 +157,7 @@ CONTAINS
     CALL new_argument(0,"-last_extra","Generate an additional file cdn_last.hdf that contains only the last density","")
     CALL new_argument(2,"-sd","use starting density N, where N is the index of the density according to -info","")
     CALL new_argument(1,"-delden","delete densities (either an index N, a range N-M or the keyword 'allbutlast' should be given)","")
+    CALL new_argument(0,"-storeSF","Store the stepfunction in the charge density file to avoid its recalculation when restarting Fleur.","")
     !GPU parameter
     CALL new_argument(0,"-gpu","Use GPU for computing","")
   END SUBROUTINE add_fleur_arguments

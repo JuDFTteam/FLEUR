@@ -575,6 +575,9 @@ MODULE m_cdnpot_io_hdf
       INTEGER                   :: dimsInt(7)
       LOGICAL                   :: l_exist
 
+
+      IF(stepfunctionIndex.EQ.0) RETURN
+
       WRITE(groupname,'(a,i0)') '/stepfunction-', stepfunctionIndex
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
