@@ -319,13 +319,15 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_integer1(nstrSetID,(/1/),dimsInt(:1),"nstr",stars%nstr)
       CALL h5dclose_f(nstrSetID, hdfError)
 
-      dims(:4)=(/2,2*stars%mx1+1,2*stars%mx2+1,2*stars%mx3+1/)
-      dimsInt=dims
-      CALL h5screate_simple_f(4,dims(:4),rgphsSpaceID,hdfError)
-      CALL h5dcreate_f(groupID, "rgphs", H5T_NATIVE_DOUBLE, rgphsSpaceID, rgphsSetID, hdfError)
-      CALL h5sclose_f(rgphsSpaceID,hdfError)
-      CALL io_write_complex3(rgphsSetID,(/-1,1,1,1/),dimsInt(:4),"rgphs",stars%rgphs)
-      CALL h5dclose_f(rgphsSetID, hdfError)
+
+! I comment out reading and writing of the rgphs array because it is large and the read-in array is nowhere used.
+!      dims(:4)=(/2,2*stars%mx1+1,2*stars%mx2+1,2*stars%mx3+1/)
+!      dimsInt=dims
+!      CALL h5screate_simple_f(4,dims(:4),rgphsSpaceID,hdfError)
+!      CALL h5dcreate_f(groupID, "rgphs", H5T_NATIVE_DOUBLE, rgphsSpaceID, rgphsSetID, hdfError)
+!      CALL h5sclose_f(rgphsSpaceID,hdfError)
+!      CALL io_write_complex3(rgphsSetID,(/-1,1,1,1/),dimsInt(:4),"rgphs",stars%rgphs)
+!      CALL h5dclose_f(rgphsSetID, hdfError)
 
       !Film stuff
       IF (stars%ng2>0) THEN
@@ -486,10 +488,11 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_integer1(nstrSetID,(/1/),dimsInt(:1),"nstr",stars%nstr)
       CALL h5dclose_f(nstrSetID, hdfError)
 
-      dimsInt(:4)=(/2,2*stars%mx1+1,2*stars%mx2+1,2*stars%mx3+1/)
-      CALL h5dopen_f(groupID, 'rgphs', rgphsSetID, hdfError)
-      CALL io_read_complex3(rgphsSetID,(/-1,1,1,1/),dimsInt(:4),"rgphs",stars%rgphs)
-      CALL h5dclose_f(rgphsSetID, hdfError)
+! I comment out reading and writing of the rgphs array because it is large and the read-in array is nowhere used.
+!      dimsInt(:4)=(/2,2*stars%mx1+1,2*stars%mx2+1,2*stars%mx3+1/)
+!      CALL h5dopen_f(groupID, 'rgphs', rgphsSetID, hdfError)
+!      CALL io_read_complex3(rgphsSetID,(/-1,1,1,1/),dimsInt(:4),"rgphs",stars%rgphs)
+!      CALL h5dclose_f(rgphsSetID, hdfError)
 
       IF (stars%ng2>0) THEN
          dimsInt(:2)=(/2,stars%ng2/)
