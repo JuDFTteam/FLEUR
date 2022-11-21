@@ -36,7 +36,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - git clone https://github.com/JuDFTteam/aiida-fleur.git
     - cd aiida-fleur
     # Remove cache dirs
-    - git checkout maintain/more-regression-tests
+    - git checkout port-changes-for-aiida-fleurv2
     - pip3 install .[testing]
     - rm -rf tests/workflows/calculations tests/workflows/caches
     - rm -rf tests/calculation/data_dir
