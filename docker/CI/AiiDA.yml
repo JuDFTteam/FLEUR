@@ -29,7 +29,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - echo -e "\e[0Ksection_start:`date +%s`:test-dependencies[collapsed=true]\r\e[0KInstalling Aiida-fleur system dependencies"
     - pip3 install --upgrade wheel setuptools
     - pip3 install pytest masci-tools
-    - pip3 install aiida-core
+    - pip3 install aiida-core<2
     # needed for workflow tests
     - pip3 install git+https://github.com/JuDFTteam/aiida-testing.git@export_cache_config
     #- pip3 install git+https://github.com/JuDFTteam/aiida-fleur.git@develop.[testing]
