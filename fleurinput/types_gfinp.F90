@@ -711,7 +711,7 @@ CONTAINS
 
       IF(ANY(this%numTorqueElems(:)>0)) THEN
          IF(input%jspins.NE.2) CALL juDFT_error("Torque calculation only for magnetic systems", calledby="init_gfinp")
-         IF(.NOT.noco%l_mperp.or.this%l_mperp) &
+         IF(.NOT.noco%l_mperp.or..NOT.this%l_mperp) &
             CALL juDFT_error("Torque calculation only with l_mperp=T (both noco and greensfunction)", &
                              calledby="init_gfinp")
          IF(sym%nop>1) CALL juDFT_warn("Torque calculation only without symmetries", calledby="init_gfinp")
