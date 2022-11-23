@@ -62,7 +62,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
       --db-backend="${AIIDA_DB_BACKEND}"
       --db-host="postgres"
       --db-username="${POSTGRES_USER}"
-      --db-password="${POSTGRES_PASSWORD}" || exit 1
+      --db-password="${POSTGRES_PASSWORD}" 
+      --test-profile || exit 1
     - verdi status || exit 1
     - export AIIDA_TEST_PROFILE="${AIIDA_PROFILE}"
     # Maybe also copy all current input files from fleur tests to run them through
