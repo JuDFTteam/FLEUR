@@ -52,7 +52,6 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - pwd
     - cd ./tests/
     - export PATH=$PATH:/root/.local/bin
-    - reentry scan 
     - >
       verdi quicksetup --non-interactive
       --profile="${AIIDA_PROFILE}"
