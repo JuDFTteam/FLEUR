@@ -1889,8 +1889,8 @@ CONTAINS
       REAL, INTENT(IN)     :: bmat(:,:)
       REAL, INTENT(IN)     :: taual(:,:)
       REAL, INTENT(IN)     :: wl_iks(:)
-      REAL, INTENT(IN)     :: cprod_r(:,:,:)
-      COMPLEX, INTENT(IN)  :: cprod_c(:,:,:)
+      REAL, INTENT(IN)     :: cprod_r(:,:)
+      COMPLEX, INTENT(IN)  :: cprod_c(:,:)
       LOGICAL, INTENT(IN)   :: l_real
 
       ! return type definition
@@ -1947,15 +1947,15 @@ CONTAINS
                if (l_real) THEN
                   cprod_fourier_trafo_r(igpt, iobd0, iband1) = &
                      ! muffin tin contribution
-                     dot_product(fourier_trafo(:nbasp, igpt), cprod_r(:nbasp, iobd0, iband1)) &
+                     dot_product(fourier_trafo(:nbasp, igpt), cprod_r(:nbasp, iobd0 + psize * (iband1 - 1))) &
                      ! interstitial contribution (interstitial is kronecker_G,G')
-                     + cprod_r(nbasp + igpt, iobd0, iband1)
+                     + cprod_r(nbasp + igpt, iobd0 + psize * (iband1 - 1))
                else
                   cprod_fourier_trafo_c(igpt, iobd0, iband1) = &
                      ! muffin tin contribution
-                     dot_product(cprod_c(:nbasp, iobd0, iband1), fourier_trafo(:nbasp, igpt)) &
+                     dot_product(cprod_c(:nbasp, iobd0 + psize * (iband1 - 1)), fourier_trafo(:nbasp, igpt)) &
                      ! interstitial contribution (interstitial is kronecker_G,G')
-                     + CONJG(cprod_c(nbasp + igpt, iobd0, iband1))
+                     + CONJG(cprod_c(nbasp + igpt, iobd0 + psize *(iband1 - 1)))
                endif
             END DO
          END DO
