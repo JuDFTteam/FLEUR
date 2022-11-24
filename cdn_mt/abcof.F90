@@ -418,17 +418,16 @@ CONTAINS
           IF (sym%invsat(iAtom).EQ.1) THEN
              CALL timestart("invsym atoms")
              jAtom = sym%invsatnr(iAtom)
-             phase = EXP(tpi_const*ImagUnit*DOT_PRODUCT(atoms%taual(:,jAtom) + atoms%taual(:,iAtom),lapw%bkpt))
              DO ilo = 1,atoms%nlo(iType)
                 l = atoms%llo(ilo,iType)
                 DO m = -l,l
                    inv_f = (-1)**(m+l)
                    DO ie = 1,ne
-                      ccof(m,ie,ilo,jatom) = inv_f * phase * CONJG( ccof(-m,ie,ilo,iatom))
+                      ccof(m,ie,ilo,jatom) = inv_f * CONJG( ccof(-m,ie,ilo,iatom))
                       IF(l_force) THEN
-                         force%acoflo(m,ie,ilo,jatom) = inv_f * phase * CONJG(force%acoflo(-m,ie,ilo,iatom))
-                         force%bcoflo(m,ie,ilo,jatom) = inv_f * phase * CONJG(force%bcoflo(-m,ie,ilo,iatom))
-                         force%cveccof(:,m,ie,ilo,jatom) = -inv_f * phase * CONJG(force%cveccof(:,-m,ie,ilo,iatom))
+                         force%acoflo(m,ie,ilo,jatom) = inv_f * CONJG(force%acoflo(-m,ie,ilo,iatom))
+                         force%bcoflo(m,ie,ilo,jatom) = inv_f * CONJG(force%bcoflo(-m,ie,ilo,iatom))
+                         force%cveccof(:,m,ie,ilo,jatom) = -inv_f * CONJG(force%cveccof(:,-m,ie,ilo,iatom))
                       END IF
                    END DO
                 END DO
@@ -439,13 +438,13 @@ CONTAINS
                    lm  = ll1 + m
                    lmp = ll1 - m
                    inv_f = (-1)**(m+l)
-                   acof(:ne,lm,jAtom) = inv_f * phase * CONJG(acof(:ne,lmp,iAtom))
-                   bcof(:ne,lm,jAtom) = inv_f * phase * CONJG(bcof(:ne,lmp,iAtom))
+                   acof(:ne,lm,jAtom) = inv_f * CONJG(acof(:ne,lmp,iAtom))
+                   bcof(:ne,lm,jAtom) = inv_f * CONJG(bcof(:ne,lmp,iAtom))
                    IF (atoms%l_geo(iType).AND.l_force) THEN
-                      force%e1cof(:ne,lm,jAtom) = inv_f * phase * CONJG(force%e1cof(:ne,lmp,iAtom))
-                      force%e2cof(:ne,lm,jAtom) = inv_f * phase * CONJG(force%e2cof(:ne,lmp,iAtom))
-                      force%aveccof(:,:ne,lm,jAtom) = -inv_f * phase * CONJG(force%aveccof(:,:ne,lmp,iAtom))
-                      force%bveccof(:,:ne,lm,jAtom) = -inv_f * phase * CONJG(force%bveccof(:,:ne,lmp,iAtom))
+                      force%e1cof(:ne,lm,jAtom) = inv_f * CONJG(force%e1cof(:ne,lmp,iAtom))
+                      force%e2cof(:ne,lm,jAtom) = inv_f * CONJG(force%e2cof(:ne,lmp,iAtom))
+                      force%aveccof(:,:ne,lm,jAtom) = -inv_f * CONJG(force%aveccof(:,:ne,lmp,iAtom))
+                      force%bveccof(:,:ne,lm,jAtom) = -inv_f * CONJG(force%bveccof(:,:ne,lmp,iAtom))
                    END IF
                 END DO
              END DO
