@@ -31,6 +31,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - pip3 install --upgrade pytest masci-tools
     # needed for workflow tests
     - pip3 install git+https://github.com/JuDFTteam/aiida-testing.git@export_cache_config
+    - pip3 install --no-deps git+https://github.com/aiidateam/aiida-common-workflows.git@master
     #- pip3 install git+https://github.com/JuDFTteam/aiida-fleur.git@develop.[testing]
     - git clone https://github.com/JuDFTteam/aiida-fleur.git
     - cd aiida-fleur
