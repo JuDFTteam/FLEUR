@@ -7,7 +7,6 @@
 MODULE m_trafo
    use m_judft
    use m_glob_tofrom_loc
-   use m_types
    use m_constants
 CONTAINS
 
@@ -17,7 +16,13 @@ CONTAINS
 
       USE m_constants
       USE m_wrapper
-      USE m_types
+      USE m_types_mpdata
+      USE m_types_hybinp
+      USE m_types_hybdat
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
+      USE m_types_lapw
       USE m_juDFT
       IMPLICIT NONE
 
@@ -156,7 +161,11 @@ CONTAINS
       use m_juDFT
       USE m_constants
       USE m_wrapper
-      USE m_types
+      USE m_types_mpdata
+      USE m_types_hybinp
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
       IMPLICIT NONE
 
       TYPE(t_mpdata), INTENT(IN) :: mpdata
@@ -274,7 +283,14 @@ CONTAINS
       use m_juDFT
       USE m_constants
       USE m_wrapper
-      USE m_types
+      USE m_types_mat
+      USE m_types_input
+      USE m_types_mpdata
+      USE m_types_hybinp
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
+      USE m_types_lapw
       IMPLICIT NONE
 
       type(t_mat), intent(in)     :: z_in
@@ -432,7 +448,10 @@ CONTAINS
       use m_juDFT
       USE m_constants
       USE m_wrapper
-      USE m_types
+      USE m_types_mat
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_lapw
       IMPLICIT NONE
 
       type(t_mat), intent(in)     :: z_in
@@ -547,7 +566,8 @@ CONTAINS
    ! (Array mat is overwritten! )
 
    SUBROUTINE symmetrize_mpimat(fi, fmpi, mpimat, start_dim, end_dim, imode, lreal, nindxm)
-      USE m_types
+      USE m_types_fleurinput
+      USE m_types_mpi
       use m_constants
       IMPLICIT NONE
       type(t_fleurinput), intent(in)  :: fi
@@ -681,7 +701,8 @@ CONTAINS
 
    SUBROUTINE symmetrize(mat, dim1, dim2, imode,&
                          atoms, lcutm, maxlcutm, nindxm, sym)
-      USE m_types
+      USE m_types_atoms
+      USE m_types_sym
       use m_constants
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -766,7 +787,8 @@ CONTAINS
    SUBROUTINE desymmetrize(mat, dim1, dim2, &
                            atoms, lcutm, maxlcutm, nindxm, sym)
 
-      USE m_types
+      USE m_types_sym
+      USE m_types_atoms
       IMPLICIT NONE
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -837,7 +859,10 @@ CONTAINS
    ! isym maps kpts%bkp(ikpt) on ikpt
 
    subroutine bra_trafo(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin, vecout)
-      use m_types
+      use m_types_fleurinput
+      USE m_types_mpdata
+      USE m_types_hybdat
+      USE m_types_mat
       use m_constants
       use m_judft
       implicit none
@@ -859,7 +884,9 @@ CONTAINS
    end subroutine bra_trafo
 
    subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, matin_r, matout_r)
-      use m_types
+      use m_types_fleurinput
+      USE m_types_mpdata
+      USE m_types_hybdat
       use m_constants
       use m_judft
       implicit none
@@ -919,9 +946,11 @@ CONTAINS
    end subroutine bra_trafo_real
 
    subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, vecin_c, vecout_c)
-      use m_types
       use m_constants
       use m_judft
+      use m_types_fleurinput
+      USE m_types_mpdata
+      USE m_types_hybdat
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -945,6 +974,12 @@ CONTAINS
    subroutine bra_trafo_core(nbands, ikpt, psize, sym, &
                              mpdata, hybinp, hybdat, kpts, atoms, igptm2_list, vecin1, vecout1)
       use m_constants
+      USE m_types_mpdata
+      USE m_types_hybinp
+      use m_types_hybdat
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
       implicit none
       type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)  :: hybinp
@@ -1079,6 +1114,9 @@ CONTAINS
    end subroutine bra_trafo_core
 
    subroutine find_corresponding_g(sym, kpts, mpdata, ikpt, igptm2_list)
+      use m_types_sym
+      USE m_types_kpts
+      USE m_types_mpdata
       implicit none
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
@@ -1200,7 +1238,11 @@ CONTAINS
 
       USE m_constants
       USE m_util
-      USE m_types
+      USE m_types_mpdata
+      USE m_types_hybinp
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
       IMPLICIT NONE
       type(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
