@@ -17,6 +17,7 @@ c new method for improved stability (l_new=t) gb'19
 c***********************************************************************
 
       use m_constants
+      use m_types_nococonv
       IMPLICIT NONE
 
 C     .. Scalar Arguments ..
@@ -34,6 +35,11 @@ C     ..
 C     .. Local Arrays ..
       COMPLEX u2(2,2),rho(2,2),rhoh(2,2)
 C     ..
+
+      type(t_nococonv):: nococonv
+
+      call nococonv%rotdenmat(alph,beta,rho11,rho22,rho21,.true.)
+      return
       l_new = .true.
 
       IF (l_new) THEN

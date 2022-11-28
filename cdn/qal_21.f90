@@ -142,10 +142,11 @@ CONTAINS
        !
        ! rotate into global frame
        !
-       chi(1,1) =  EXP(-ImagUnit*nococonv%alph(ntyp)/2)*COS(nococonv%beta(ntyp)/2)
-       chi(1,2) = -EXP(-ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
-       chi(2,1) =  EXP( ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
-       chi(2,2) =  EXP( ImagUnit*nococonv%alph(ntyp)/2)*COS(nococonv%beta(ntyp)/2)
+       !chi(1,1) =  EXP(-ImagUnit*nococonv%alph(ntyp)/2)*COS(nococonv%beta(ntyp)/2)
+       !chi(1,2) = -EXP(-ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
+       !chi(2,1) =  EXP( ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
+       !chi(2,2) =  EXP( ImagUnit*nococonv%alph(ntyp)/2)*COS(nococonv%beta(ntyp)/2)
+       chi=nococonv%chi(ntyp)
        state : DO i = 1, noccbd
           lls : DO l = 0,3
              CALL rot_den_mat(nococonv%alph(ntyp),nococonv%beta(ntyp),&

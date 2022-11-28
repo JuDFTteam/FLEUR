@@ -118,6 +118,7 @@ MODULE m_types_atoms
   LOGICAL, ALLOCATABLE :: l_outputCFremove4f(:)
   !special
   LOGICAL, ALLOCATABLE :: lda_atom(:)
+  LOGICAL, ALLOCATABLE :: l_nonpolbas(:) !use non-spin-polarized basis for this atom
 CONTAINS
   PROCEDURE :: init=>init_atoms
   PROCEDURE :: nsp => calc_nsp_atom
@@ -185,6 +186,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%l_outputCFremove4f,rank,mpi_comm)
  call mpi_bc(this%itype,rank,mpi_comm)
  CALL mpi_bc(this%lda_atom, rank, mpi_comm)
+ CALL mpi_bc(this%l_nonpolbas, rank, mpi_comm)
 
 #ifdef CPP_MPI
  CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -296,6 +298,8 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%ulo_der(this%nlod,this%ntype))
  ALLOCATE(this%speciesname(this%ntype))
  ALLOCATE(this%lda_atom(this%ntype))
+ ALLOCATE(this%l_nonpolbas(this%ntype))
+ this%l_nonpolbas=.FALSE.
  this%lda_atom = .FALSE.
  this%lapw_l(:) = -1
  this%n_u = 0
@@ -345,6 +349,8 @@ SUBROUTINE read_xml_atoms(this,xml)
     CALL readAtomAttribute(xml,n,'/atomicCutoffs/@lmaxAPW',this%lapw_l(n))
     !special
     CALL readAtomAttribute(xml,n,'/special/@lda',this%lda_atom(n))
+    CALL readAtomAttribute(xml,n,'/special/@nonSpinPolBasis',this%l_nonpolbas(n))
+    
     !force type
     xpath=''
     IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/force')==1) xpath=xpaths

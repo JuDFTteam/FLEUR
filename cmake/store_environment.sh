@@ -74,6 +74,11 @@ then
     echo "set(CLI_FLEUR_USE_HDF5 $CLI_USE_HDF5)"  >>config.cmake
 fi
 
+if [ "$CLI_COMPILE_LIBXML" ]
+then 
+    echo "set(CLI_FLEUR_COMPILE_LIBXML2 $CLI_COMPILE_LIBXML)"  >>config.cmake
+fi
+
 if [ "$CLI_USE_MPI" ]
 then
     echo "set(CLI_FLEUR_USE_MPI $CLI_USE_MPI)"  >>config.cmake

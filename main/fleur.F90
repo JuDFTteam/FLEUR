@@ -73,7 +73,7 @@ CONTAINS
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
-      USE m_magmoms
+ 
 
 !$    USE omp_lib
 
