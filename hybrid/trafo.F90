@@ -569,6 +569,12 @@ CONTAINS
       USE m_types_fleurinput
       USE m_types_mpi
       use m_constants
+
+#ifdef CPP_MPI
+      USE mpi
+#endif
+
+
       IMPLICIT NONE
       type(t_fleurinput), intent(in)  :: fi
       type(t_mpi), intent(in)         :: fmpi
