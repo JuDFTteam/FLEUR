@@ -107,7 +107,7 @@ MODULE m_tetrahedronInit
                if (num_degenerate_states>1) THEN
                   last_band=iband+num_degenerate_states-1
                   !Make sure all weights are equal
-                  weights(:,iband:last_band)=sum(weights(:,iband:last_band))/num_degenerate_states
+                  weights(iband:last_band,ikpt)=sum(weights(iband:last_band,ikpt))/num_degenerate_states
                   iband=iband+num_degenerate_states
                endif
                iband=iband+1
