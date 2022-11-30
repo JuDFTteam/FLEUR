@@ -108,7 +108,7 @@ MODULE m_tetrahedronInit
                   last_band=iband+num_degenerate_states-1
                   !Make sure all weights are equal
                   weights(iband:last_band,ikpt)=sum(weights(iband:last_band,ikpt))/num_degenerate_states
-                  iband=iband+num_degenerate_states
+                  iband=last_band
                endif
                iband=iband+1
             enddo
@@ -133,7 +133,7 @@ MODULE m_tetrahedronInit
       REAL,             INTENT(IN)  :: eMesh(:)
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
-      INTEGER :: itet,iband,ncorn,ie,icorn,ntet,num_degenerate_states, last_band
+      INTEGER :: itet,iband,ncorn,ie,icorn,ntet,num_degenerate_states, last_band,i
       LOGICAL :: l_dos, l_bounds_pres, l_resWeights_pres
       REAL    :: etetra(SIZE(kpts%ntetra,1),neig,SIZE(kpts%tetraList,1)),del,vol
       REAL, ALLOCATABLE :: dos_weights(:)
@@ -142,6 +142,7 @@ MODULE m_tetrahedronInit
       REAL, ALLOCATABLE :: calc_weights(:,:)
       REAL, ALLOCATABLE :: calc_weights_thread(:,:),resWeights_thread(:,:)
       REAL, ALLOCATABLE :: calc_eMesh(:)
+      real, allocatable :: mean_weight(:)
 
       !Extract the right eigenvalues
       IF(kpts%tetraList(1,ikpt)==0) CALL juDFT_error("No tetrahedrons in tetraList", calledby="tetrahedronInit")
@@ -173,11 +174,13 @@ MODULE m_tetrahedronInit
       IF(l_dos) THEN
          ALLOCATE(calc_weights(SIZE(eMesh)+2,neig),source=0.0)
          ALLOCATE(calc_eMesh(SIZE(eMesh)+2),source=0.0)
+         ALLOCATE(mean_weight(SIZE(eMesh)+2),source=0.0)
          del = eMesh(2)-eMesh(1)
          calc_eMesh = [eMesh(1)-del,eMesh(:),eMesh(SIZE(eMesh))+del]
       ELSE
          ALLOCATE(calc_weights(SIZE(eMesh),neig),source=0.0)
          ALLOCATE(calc_eMesh(SIZE(eMesh)),source=0.0)
+         ALLOCATE(mean_weight(SIZE(eMesh)),source=0.0)
          calc_eMesh = eMesh
       ENDIF
 
@@ -231,8 +234,11 @@ MODULE m_tetrahedronInit
          if (num_degenerate_states>1) THEN
             last_band=iband+num_degenerate_states-1
             !Make sure all weights are equal
-            calc_weights(:,iband:last_band)=sum(calc_weights(:,iband:last_band))/num_degenerate_states
-            iband=iband+num_degenerate_states
+            mean_weight = sum(calc_weights(:,iband:last_band), dim=2)/num_degenerate_states
+            do i = iband, last_band
+               calc_weights(:,i) = mean_weight
+            enddo
+            iband=last_band
          endif
          iband=iband+1
       enddo
