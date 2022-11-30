@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.36">
    <programVersion version="fleur 36">
-      <compilationInfo date="2022-11-24T16:51:34" user="" host="runner-5v8uszuq-project-19-concurrent-0tsjxf" flag="-I/opt/include -I/usr/include -fdefault-real-8 -fdefault-double-8 -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero" link="-lwannier;-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3;/usr/lib/x86_64-linux-gnu/libxml2.so;/usr/lib/x86_64-linux-gnu/liblapack.so;/usr/lib/x86_64-linux-gnu/libblas.so;-lxcf90;-lxc"/>
-      <gitInfo version="MaX-R6.1-15-g67b68acd3" branch="HEAD" lastCommitHash="67b68acd3732ce0f9b17f5bbfd7f5988d0fb6216"/>
+      <compilationInfo date="2022-11-30T11:36:29" user="janssen" host="mb-janssen" flag="-fopenmp -fdefault-real-8 -fdefault-double-8 -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero" link="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libxml2.tbd;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/Accelerate.framework;-lm;-ldl"/>
+      <gitInfo version="MaX-R6.1-65-g233a6b9ad-dirty" branch="develop" lastCommitHash="233a6b9ad02d10e3ad77de2953a924bd9fecd753"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
-      <additionalCompilerFlags>CPP_MPI             CPP_HDF            CPP_WANN</additionalCompilerFlags>
    </programVersion>
    <parallelSetup>
-      <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="131768312 kB"/>
+      <openMP ompThreads="8"/>
+      <mem memoryPerNode="unknown"/>
    </parallelSetup>
-   <startDateAndTime date="2022/11/24" time="17:01:20" zone="+0000"/>
+   <startDateAndTime date="2022/11/30" time="13:49:05" zone="+0100"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.34">
      <comment>
@@ -348,17 +347,17 @@
                        0.9399670249        0.9413260801        1.1775145446
             </eigenvaluesAt>
          </eigenvalues>
-         <sumValenceSingleParticleEnergies value="9.3820545657" units="Htr"/>
+         <sumValenceSingleParticleEnergies value="6.5680221748" units="Htr"/>
          <FermiEnergy value="0.4239194885" units="Htr"/>
          <valenceDensity>
             <mtCharges spin="1">
-               <mtCharge atomType="1" total="13.8196391" s="0.6616505" p="0.7729417" d="12.3361659" f="0.0386822"/>
-               <mtCharge atomType="2" total="13.8196391" s="0.6616505" p="0.7729417" d="12.3361659" f="0.0386822"/>
+               <mtCharge atomType="1" total="9.7202441" s="0.4671156" p="0.5223534" d="8.6962289" f="0.0275334"/>
+               <mtCharge atomType="2" total="9.7202441" s="0.4671156" p="0.5223534" d="8.6962289" f="0.0275334"/>
             </mtCharges>
-            <spinDependentCharge spin="1" total="31.3225965" interstitial="3.6833182" mtSpheres="27.6392783"/>
-            <totalCharge value="31.3225964648"/>
+            <spinDependentCharge spin="1" total="22.0000000" interstitial="2.5595119" mtSpheres="19.4404881"/>
+            <totalCharge value="22.0000000006"/>
          </valenceDensity>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2022/11/24" time="17:01:21" zone="+0000"/>
+   <endDateAndTime date="2022/11/30" time="13:49:15" zone="+0100"/>
 </fleurOutput>

@@ -170,7 +170,7 @@ MODULE m_fertri
                if (j>1) THEN
                   j=j-1
                   !Make sure all weights are equal
-                  w(i:i+j,k,jsp)=sum(w(i:i+j,k,jsp))/j
+                  w(i:i+j,k,jsp)=sum(w(i:i+j,k,jsp))/(j+1)
                   i=i+j
                endif
                i=i+1   
