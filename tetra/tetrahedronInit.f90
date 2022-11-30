@@ -31,6 +31,7 @@ MODULE m_tetrahedronInit
    END INTERFACE
 
    REAL, PARAMETER :: weightCutoff=1e-14
+   real, parameter :: tol_degeneracy=1e-9
 
    CONTAINS
 
@@ -44,7 +45,7 @@ MODULE m_tetrahedronInit
       REAL, OPTIONAL,INTENT(INOUT) :: weightSum
       REAL, OPTIONAL,INTENT(INOUT) :: weights(:,:)
 
-      INTEGER :: ikpt,ncorn,itet,icorn,iband
+      INTEGER :: ikpt,ncorn,itet,icorn,iband,num_degenerate_states,last_band
       REAL    :: w(1),etetra(SIZE(kpts%ntetra,1)),vol(kpts%ntet)
       logical :: l_weights_pres, l_weightsum_pres
 
@@ -92,6 +93,28 @@ MODULE m_tetrahedronInit
       ENDDO
       !$OMP end parallel do
 
+      if (l_weights_pres) then
+         !find degenerate states
+         do ikpt=1,kpts%nkpt
+            iband = 1
+            do while(iband<neig)
+               num_degenerate_states=1
+               do while (abs(eig(iband,ikpt)-eig(iband+num_degenerate_states,ikpt))<tol_degeneracy)
+                  num_degenerate_states=num_degenerate_states+1
+                  if (iband+num_degenerate_states>neig) exit
+               enddo
+
+               if (num_degenerate_states>1) THEN
+                  last_band=iband+num_degenerate_states-1
+                  !Make sure all weights are equal
+                  weights(:,iband:last_band)=sum(weights(:,iband:last_band))/num_degenerate_states
+                  iband=iband+num_degenerate_states
+               endif
+               iband=iband+1
+            enddo
+         enddo
+      endif
+
    END SUBROUTINE getWeightKpoints
 
    SUBROUTINE getWeightEnergyMesh(kpts,input,ikpt,eig,neig,eMesh,weights,resWeights,bounds,dos)
@@ -110,7 +133,7 @@ MODULE m_tetrahedronInit
       REAL,             INTENT(IN)  :: eMesh(:)
       LOGICAL,OPTIONAL, INTENT(IN)  :: dos
 
-      INTEGER :: itet,iband,ncorn,ie,icorn,ntet
+      INTEGER :: itet,iband,ncorn,ie,icorn,ntet,num_degenerate_states, last_band
       LOGICAL :: l_dos, l_bounds_pres, l_resWeights_pres
       REAL    :: etetra(SIZE(kpts%ntetra,1),neig,SIZE(kpts%tetraList,1)),del,vol
       REAL, ALLOCATABLE :: dos_weights(:)
@@ -195,6 +218,24 @@ MODULE m_tetrahedronInit
       DEALLOCATE(calc_weights_thread)
       IF(l_resWeights_pres) DEALLOCATE(resWeights_thread)
       !$OMP end parallel
+
+      !find degenerate states
+      iband = 1
+      do while(iband<neig)
+         num_degenerate_states=1
+         do while (abs(eig(iband,ikpt)-eig(iband+num_degenerate_states,ikpt))<tol_degeneracy)
+            num_degenerate_states=num_degenerate_states+1
+            if (iband+num_degenerate_states>neig) exit
+         enddo
+
+         if (num_degenerate_states>1) THEN
+            last_band=iband+num_degenerate_states-1
+            !Make sure all weights are equal
+            calc_weights(:,iband:last_band)=sum(calc_weights(:,iband:last_band))/num_degenerate_states
+            iband=iband+num_degenerate_states
+         endif
+         iband=iband+1
+      enddo
 
       weights = 0.0
       l_bounds_pres = PRESENT(bounds)
