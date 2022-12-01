@@ -232,7 +232,6 @@ CONTAINS
                ! in Fourier space
                !! REIMPLEMENTING (notes in lab book)
                IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-                  call judft_error("HSE not implemented")
                   iband1 = hybdat%nobd(ikqpt, jsp)
 
                   exch_vv = exch_vv + &
