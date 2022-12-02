@@ -240,8 +240,8 @@ CONTAINS
                                                    fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                                                    mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
                                                    hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
-                                                   fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :), &
-                                                   cprod_vv_c(:hybdat%nbasm(iq), :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
+                                                   fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv%data_r(:, :), &
+                                                   cprod_vv%data_c(:, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
                END IF
 
                ! the Coulomb matrix is only evaluated at the irrecuible k-points

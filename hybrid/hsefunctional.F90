@@ -1644,22 +1644,23 @@ CONTAINS
    ! coulomb  - Coulomb matrix which is changed
    SUBROUTINE change_coulombmatrix( &
       ! Input
-      rmsh, rmt, dx, jri, jmtd, nkptf, nkptd, nkpti, bk, &
+      rmsh, rmt, dx, jri, jmtd, nkptf, nkpti, bk, &
       bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
       nindxm, maxindxm, g, ngptm, pgptm, gptmd, &
       basm, lexp, maxbasm, nbasm, invsat, invsatnr, irank, &
       ! Input & output
-      coulomb)
+      coul)
 
       USE m_trafo, ONLY: symmetrize
       USE m_wrapper, ONLY: packmat, unpackmat
       USE m_olap, ONLY: olap_pw
+      USE m_types_mat
 
       IMPLICIT NONE
 
       ! scalar input
       INTEGER, INTENT(IN)    :: natd, ntype, maxlcutm, lexp
-      INTEGER, INTENT(IN)    :: jmtd, nkptf, nkptd, nkpti
+      INTEGER, INTENT(IN)    :: jmtd, nkptf, nkpti
       INTEGER, INTENT(IN)    :: maxindxm
       INTEGER, INTENT(IN)    :: gptmd, irank
       INTEGER, INTENT(IN)    :: maxbasm
@@ -1681,13 +1682,9 @@ CONTAINS
       REAL, INTENT(IN)       :: bmat(:,:)
       REAL, INTENT(IN)       :: taual(:,:)
 
-      ! array inout
-#ifdef CPP_INVERSION
-      REAL, INTENT(INOUT)    :: coulomb(:,:)
-#else
-      COMPLEX, INTENT(INOUT) :: coulomb(:,:)
-#endif
-
+      !  inout
+      CLASS(t_mat), INTENT(INOUT), ALLOCATABLE :: coul(:)
+      
       ! private scalars
       INTEGER                :: ikpt, itype, ieq, il, im, iindxm, idum, n1, n2, ok    ! counters and other helper variables
       INTEGER                :: noGPts, nbasp                                 ! no used g-vectors, no MT functions
@@ -1701,7 +1698,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: coulmat(:, :)                                 ! helper array to symmetrize coulomb
 
       ! Check size of arrays
-      IF (nkpti > nkptd) call juDFT_error( 'hsefunctional: missmatch in dimension of arrays')
       nbasp = maxbasm - MAXVAL(ngptm)
       IF (ANY(nbasm - ngptm /= nbasp)) call juDFT_error( 'hsefunctional: wrong assignment of nbasp')
 
@@ -1794,7 +1790,8 @@ CONTAINS
                          nindxm, natd, invsat, invsatnr)
 #endif
          ! add the changes to the Coulomb matrix
-         coulomb(:nbasm(ikpt)*(nbasm(ikpt) + 1)/2, ikpt) = packmat(coulmat) + coulomb(:nbasm(ikpt)*(nbasm(ikpt) + 1)/2, ikpt)
+         coul(ikpt)%data_c = coulmat + coul(ikpt)%data_c
+
          deallocate(coulmat)
 
       END DO
