@@ -2132,8 +2132,8 @@ CONTAINS
    ! The function f is a product of core and valence function
    ! (note: in the code f is defined with an additional 1/r factor)
    !
-   SUBROUTINE exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsest, &
-                               indx_sest, a_ex, results, cmt, mat_ex)
+   SUBROUTINE exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsymop, &
+                               nsest, indx_sest, a_ex, results, cmt, mat_ex)
 
       USE m_types
       USE m_constants
@@ -2152,8 +2152,7 @@ CONTAINS
       TYPE(t_mat), INTENT(INOUT)     :: mat_ex
 
 !   -scalars -
-      INTEGER, INTENT(IN)      ::  jsp
-      INTEGER, INTENT(IN)      ::  nk
+      INTEGER, INTENT(IN)      ::  nk, nsymop, jsp
       REAL, INTENT(IN)         ::  a_ex
 
 !   - arrays -
@@ -2163,14 +2162,13 @@ CONTAINS
 !   - local scalars -
       INTEGER, PARAMETER      ::  ncut = 5                  ! cut-off value of n-summation
       INTEGER                 ::  cn                        ! counter for n-summation
-      REAL                    ::  d_ln(fi%atoms%jmtd, 0:lmaxd, 0:ncut) ! expansion coefficients of erfc(wr)/r
+      REAL                    ::  d_ln(fi%atoms%jmtd, 0:fi%atoms%lmaxd, 0:ncut) ! expansion coefficients of erfc(wr)/r
       ! in Legendre polynomials
 
       INTEGER                 ::  iatom, ieq, itype, ic, l, l1, l2, &
                                  ll, lm, m, m1, m2, p1, p2, n, n1, n2, nn2, i, j
       INTEGER                 ::  iband1, iband2, ndb1, ndb2, ic1, ic2
       REAL                    ::  rdum
-      REAL                    ::  sum_offdia
       COMPLEX                 ::  cdum
 
 !   - local arrays -
@@ -2182,10 +2180,10 @@ CONTAINS
       REAL, ALLOCATABLE        ::  fprod(:, :), fprod2(:, :)
       REAL, ALLOCATABLE        ::  integral(:, :)
 
-      COMPLEX                 ::  exchange(hybdat%nbands, hybdat%nbands)
+      COMPLEX                 ::  exchange(hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
       COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
 
-      LOGICAL                 ::  ldum(hybdat%nbands, hybdat%nbands)
+      LOGICAL                 ::  ldum(hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
 
       ! check if a_ex is consistent
 !     IF ( a_ex /= aMix_HSE ) st--op 'hsefunctional: inconsistent mixing!'
@@ -2235,7 +2233,7 @@ CONTAINS
 
                      ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                     allocate(integral(n, n), carr(n, hybdat%nbands), &
+                     allocate(integral(n, n), carr(n, hybdat%nbands(nk,jsp)), &
                                carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
 
                      DO i = 1, n
@@ -2276,7 +2274,7 @@ CONTAINS
 
                            carr = 0
                            ic = 0
-                           DO n1 = 1, hybdat%nbands
+                           DO n1 = 1, hybdat%nbands(nk,jsp)
 
                               DO i = 1, n
                                  ll = larr(i)
@@ -2314,18 +2312,15 @@ CONTAINS
 !      END IF
 !#endif
 
-      DO n1 = 1, hybdat%nobd(nk)
-         results%te_hfex_core =results%te_hfex_core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1)
+      DO n1 = 1, hybdat%nobd(nk,jsp)
+         results%te_hfex%core =results%te_hfex%core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1)
       END DO
 
       ! add the core-valence contribution to the exchange matrix mat_ex
 
-      ic = 0
-      sum_offdia = 0
-      DO n1 = 1, hybdat%nbands
+      DO n1 = 1, hybdat%nbands(nk,jsp)
          DO n2 = 1, n1
-            ic = ic + 1
-            mat_ex(ic) = mat_ex(ic) + CONJG(exchange(n2, n1))/fi%kpts%nsymop
+            mat_ex%data_c(n2, n1) = mat_ex%data_c(n2, n1) + CONJG(exchange(n2, n1))/nsymop
          END DO
       END DO
 
@@ -2515,7 +2510,7 @@ CONTAINS
       ! add core exchange contributions to the te_hfex
 
       DO icst1 = 1, ncstd
-         results%te_hfex = results%te_hfex - a_ex*fi%kpts%wtkpt(nk)*exch(icst1, icst1)
+         results%te_hfex%core = results%te_hfex%core - a_ex*fi%kpts%wtkpt(nk)*exch(icst1, icst1)
       END DO
 
    END SUBROUTINE exchange_ccccHSE
