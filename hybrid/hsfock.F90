@@ -145,20 +145,11 @@ CONTAINS
       ! calculate contribution from the core states to the HF exchange
       CALL timestart("core exchange calculation")
       IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-         CALL exchange_vccvHSE(
-                               nk,bk(:,nk),nkptd,nkptf,nkpti,ntype,
-                               neq,natd,lmax,lmaxd,nindx,maxindx,lmaxc,
-                               nindxc,maxindxc,core1,core2,lcutm,maxlmindx,
-                               bas1,bas2,jmtd,rmsh,dx,jri,jspd,jsp,
-                               maxfac,fac,sfac,nv,neigd,nbasfcn,nbands,
-                               gridf,nsymop,nsest,indx_sest,irank,
-                               a_ex,nobd,w_iks,mat_ex,te_hfex%core )
-         CALL exchange_ccccHSE(
-                               nk,nkpti,nw,nwd,ntype,neq,natd,lmaxcd,lmaxc,
-                               nindxc,maxindxc,ncst,ncstd,jmtd,jri,
-                               rmsh,dx,lmaxd,core1,core2,bk(:,nk),gridf,
-                               invsat,invsatnr,wtkpt,maxfac,fac,a_ex,irank,
-                               te_hfex%core)
+         CALL exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsest, indx_sest, &
+                               a_ex, results, cmt, mat_ex)
+         
+         CALL exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
+      
       ELSE
          CALL exchange_vccv1(nk, fi, mpdata, hybdat, jsp, &
                            lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, cmt_nk, ex)

@@ -2132,130 +2132,102 @@ CONTAINS
    ! The function f is a product of core and valence function
    ! (note: in the code f is defined with an additional 1/r factor)
    !
-   SUBROUTINE exchange_vccvHSE(nk, bkpt, nkptd, nkpt, nkpti, ntype, neq, natd, &
-                               lmax, lmaxd, nindx, maxindx, lmaxc, nindxc, &
-                               maxindxc, core1, core2, lcutm, maxlmindx, &
-                               bas1, bas2, jmtd, rmsh, dx, jri, jspd, jsp, &
-                               maxfac, fac, sfac, nv, neigd, nbasfcn, nbands, &
-                               gridf, nsymop, nsest, indx_sest, irank, &
-                               a_ex, nobd, w_iks, &
-                               mat_ex, te_hfex_core)
+   SUBROUTINE exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsest, &
+                               indx_sest, a_ex, results, cmt, mat_ex)
 
+      USE m_types
       USE m_constants
       USE m_util
       USE m_intgrf
       USE m_wrapper
+      USE m_types
 
       IMPLICIT NONE
 
+      TYPE(t_fleurinput), INTENT(IN) :: fi
+      TYPE(t_mpdata), INTENT(IN)     :: mpdata
+      TYPE(t_hybdat), INTENT(IN)     :: hybdat
+      TYPE(t_lapw), INTENT(IN)       :: lapw
+      TYPE(t_results), INTENT(INOUT) :: results
+      TYPE(t_mat), INTENT(INOUT)     :: mat_ex
+
 !   -scalars -
-      INTEGER, INTENT(IN)      ::  ntype, jmtd, lmaxd, jspd, jsp, neigd
-      INTEGER, INTENT(IN)      ::  maxfac, nbands, maxlmindx, natd, &
-                                  maxindxc, nk, maxindx, nbasfcn
-      INTEGER, INTENT(IN)      ::  nkptd, nkpt, nkpti, irank
-      INTEGER, INTENT(IN)      ::  nsymop
-      REAL, INTENT(IN)      ::  a_ex
-      REAL, INTENT(INOUT)   ::  te_hfex_core
+      INTEGER, INTENT(IN)      ::  jsp
+      INTEGER, INTENT(IN)      ::  nk
+      REAL, INTENT(IN)         ::  a_ex
 
 !   - arrays -
-      INTEGER, INTENT(IN)      ::  neq(:), lcutm(:), lmax(:), &
-                                  lmaxc(:), jri(:), nv(:), &
-                                  nindxc(0:MAXVAL(lmaxc), ntype), &
-                                  nindx(0:lmaxd, ntype)
       INTEGER, INTENT(IN)      ::  nsest(:), indx_sest(:,:)
-      INTEGER, INTENT(IN)      ::  nobd(:)
-      REAL, INTENT(IN)         ::  rmsh(:,:), dx(:)
-      REAL, INTENT(IN)         ::  bas1(jmtd, maxindx, 0:lmaxd, ntype), &
-                                  bas2(jmtd, maxindx, 0:lmaxd, ntype)
-      REAL, INTENT(IN)         ::  core1(jmtd, maxindxc, 0:MAXVAL(lmaxc), ntype), &
-                                  core2(jmtd, maxindxc, 0:MAXVAL(lmaxc), ntype)
-      REAL, INTENT(IN)         ::  fac(0:maxfac), sfac(0:maxfac)
-      REAL, INTENT(IN)         ::  bkpt(:)
-      REAL, INTENT(IN)         ::  gridf(:,:)
-      REAL, INTENT(IN)         ::  w_iks(:,:,:)
-
-#ifdef CPP_INVERSION
-      REAL, INTENT(INOUT)  ::  mat_ex(:)
-#else
-      COMPLEX, INTENT(INOUT)  ::  mat_ex(:)
-#endif
-      INTEGER, PARAMETER      ::  ncut = 5                  ! cut-off value of n-summation
-      INTEGER                 ::  cn                        ! counter for n-summation
-      REAL                    ::  d_ln(jmtd, 0:lmaxd, 0:ncut) ! expansion coefficients of erfc(wr)/r
-      ! in Legendre polynomials
+      COMPLEX, INTENT(IN)      ::  cmt(:, :, :)
 
 !   - local scalars -
+      INTEGER, PARAMETER      ::  ncut = 5                  ! cut-off value of n-summation
+      INTEGER                 ::  cn                        ! counter for n-summation
+      REAL                    ::  d_ln(fi%atoms%jmtd, 0:lmaxd, 0:ncut) ! expansion coefficients of erfc(wr)/r
+      ! in Legendre polynomials
+
       INTEGER                 ::  iatom, ieq, itype, ic, l, l1, l2, &
                                  ll, lm, m, m1, m2, p1, p2, n, n1, n2, nn2, i, j
       INTEGER                 ::  iband1, iband2, ndb1, ndb2, ic1, ic2
-      INTEGER                 ::  irecl_cmt
-
       REAL                    ::  rdum
       REAL                    ::  sum_offdia
-
       COMPLEX                 ::  cdum
+
 !   - local arrays -
       INTEGER, ALLOCATABLE     ::  larr(:), larr2(:)
       INTEGER, ALLOCATABLE     ::  parr(:), parr2(:)
 
-      REAL                    ::  sum_primf(jmtd), integrand(jmtd)
-      REAL                    ::  primf1(jmtd), primf2(jmtd)
+      REAL                    ::  sum_primf(fi%atoms%jmtd), integrand(fi%atoms%jmtd)
+      REAL                    ::  primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd)
       REAL, ALLOCATABLE        ::  fprod(:, :), fprod2(:, :)
       REAL, ALLOCATABLE        ::  integral(:, :)
 
-      COMPLEX                 ::  cmt(neigd, maxlmindx, natd)
-      COMPLEX                 ::  exchange(nbands, nbands)
+      COMPLEX                 ::  exchange(hybdat%nbands, hybdat%nbands)
       COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
 
-      LOGICAL                 ::  ldum(nbands, nbands)
+      LOGICAL                 ::  ldum(hybdat%nbands, hybdat%nbands)
 
       ! check if a_ex is consistent
 !     IF ( a_ex /= aMix_HSE ) st--op 'hsefunctional: inconsistent mixing!'
 
-      ! read in mt wavefunction coefficients from file cmt
-      irecl_cmt = neigd*maxlmindx*natd*16
-      OPEN (unit=777, file='cmt', form='unformatted', access='direct', recl=irecl_cmt)
-      READ (777, rec=nk) cmt(:, :, :)
-      CLOSE (777)
-
-      allocate(fprod(jmtd, 5), larr(5), parr(5))
+      allocate(fprod(fi%atoms%jmtd, 5), larr(5), parr(5))
 
       exchange = 0
       iatom = 0
       rdum = 0
-      DO itype = 1, ntype
+      DO itype = 1, fi%atoms%ntype
          ! Calculate the expansion coefficients of the potential in Legendre polynomials
-         d_ln(:, :lcutm(itype), :) = calculate_coefficients(rmsh(:, itype), lcutm(itype), ncut, fac)
-         DO ieq = 1, neq(itype)
+         d_ln(:, :fi%hybinp%lcutm1(itype), :) = calculate_coefficients(fi%atoms%rmsh(:, itype), fi%hybinp%lcutm1(itype), ncut, hybdat%fac)
+         DO ieq = 1, fi%atoms%neq(itype)
             iatom = iatom + 1
-            DO l1 = 0, lmaxc(itype)
-               DO p1 = 1, nindxc(l1, itype)
+            DO l1 = 0, hybdat%lmaxc(itype)
+               DO p1 = 1, hybdat%nindxc(l1, itype)
 
-                  DO l = 0, lcutm(itype)
+                  DO l = 0, fi%hybinp%lcutm1(itype)
 
                      ! Define core-valence product functions
 
                      n = 0
-                     DO l2 = 0, lmax(itype)
+                     DO l2 = 0, fi%atoms%lmax(itype)
                         IF (l < ABS(l1 - l2) .OR. l > l1 + l2) CYCLE
 
-                        DO p2 = 1, nindx(l2, itype)
+                        DO p2 = 1, mpdata%num_radbasfn(l2, itype)
                            n = n + 1
                            m = SIZE(fprod, 2)
                            IF (n > m) THEN
-                              allocate(fprod2(jmtd, m), larr2(m), parr2(m))
+                              allocate(fprod2(fi%atoms%jmtd, m), larr2(m), parr2(m))
                               fprod2 = fprod; larr2 = larr; parr2 = parr
                               deallocate(fprod, larr, parr)
-                              allocate(fprod(jmtd, m + 5), larr(m + 5), parr(m + 5))
+                              allocate(fprod(fi%atoms%jmtd, m + 5), larr(m + 5), parr(m + 5))
                               fprod(:, :m) = fprod2
                               larr(:m) = larr2
                               parr(:m) = parr2
                               deallocate(fprod2, larr2, parr2)
                            END IF
-                           fprod(:, n) = (core1(:, p1, l1, itype) &
-                                          *bas1(:, p2, l2, itype) &
-                                          + core2(:, p1, l1, itype) &
-                                          *bas2(:, p2, l2, itype))/rmsh(:, itype)
+                           fprod(:, n) = (hybdat%core1(:, p1, l1, itype) &
+                                          *hybdat%bas1(:, p2, l2, itype) &
+                                          + hybdat%core2(:, p1, l1, itype) &
+                                          *hybdat%bas2(:, p2, l2, itype))/fi%atoms%rmsh(:, itype)
                            larr(n) = l2
                            parr(n) = p2
                         END DO
@@ -2263,8 +2235,8 @@ CONTAINS
 
                      ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                     allocate(integral(n, n), carr(n, nbands), &
-                               carr2(n, nv(jsp)), carr3(n, nv(jsp)))
+                     allocate(integral(n, n), carr(n, hybdat%nbands), &
+                               carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
 
                      DO i = 1, n
                         ! Initialization of n Summation
@@ -2274,14 +2246,14 @@ CONTAINS
                            primf1 = 0.0
                            primf2 = 0.0
                            ! Calculate integral for 0 < r' < r
-                           CALL primitivef(primf1, fprod(:, i)*rmsh(:, itype)**(l + 2*cn + 1), &
-                                           rmsh, dx, jri, jmtd, itype, ntype)
+                           CALL primitivef(primf1, fprod(:, i)*fi%atoms%rmsh(:, itype)**(l + 2*cn + 1), &
+                                           fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, itype, fi%atoms%ntype)
                            ! Calculate integral for r < r' < R
-                           CALL primitivef(primf2, d_ln(:, l, cn)*fprod(:, i)/rmsh(:, itype)**(l + 2*cn), &
-                                           rmsh, dx, jri, jmtd, -itype, ntype)  ! -itype is to enforce inward integration
+                           CALL primitivef(primf2, d_ln(:, l, cn)*fprod(:, i)/fi%atoms%rmsh(:, itype)**(l + 2*cn), &
+                                           fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, -itype, fi%atoms%ntype)  ! -itype is to enforce inward integration
                            ! Multiplication with appropriate prefactors
-                           primf1 = primf1/rmsh(:, itype)**(l + 2*cn)*d_ln(:, l, cn)
-                           primf2 = primf2*rmsh(:, itype)**(l + 2*cn + 1)
+                           primf1 = primf1/fi%atoms%rmsh(:, itype)**(l + 2*cn)*d_ln(:, l, cn)
+                           primf2 = primf2*fi%atoms%rmsh(:, itype)**(l + 2*cn + 1)
                            ! Summation over n
                            sum_primf = sum_primf + primf1 + primf2
                         END DO
@@ -2291,7 +2263,7 @@ CONTAINS
                            call juDFT_error("stop the following line has to be reimplemented:")
                            ! integral(i, j) = fpi_const/(2*l + 1)* &
                            !                  intgrf(integrand, jri, jmtd, rmsh, &
-                           !                         dx, ntype, itype, gridf)
+                           !                         dx, ntype, itype, hybdat%gridf)
                         END DO
 
                      END DO
@@ -2304,17 +2276,17 @@ CONTAINS
 
                            carr = 0
                            ic = 0
-                           DO n1 = 1, nbands
+                           DO n1 = 1, hybdat%nbands
 
                               DO i = 1, n
                                  ll = larr(i)
                                  IF (ABS(m2) > ll) CYCLE
 
-                                 lm = SUM([((2*l2 + 1)*nindx(l2, itype), l2=0, ll - 1)]) &
-                                      + (m2 + ll)*nindx(ll, itype) + parr(i)
+                                 lm = SUM([((2*l2 + 1)*mpdata%num_radbasfn(l2, itype), l2=0, ll - 1)]) &
+                                      + (m2 + ll)*mpdata%num_radbasfn(ll, itype) + parr(i)
 
                                  carr(i, n1) = cmt(n1, lm, iatom) &
-                                               *gaunt(l1, ll, l, m1, m2, m, maxfac, fac, sfac)
+                                               *gaunt(l1, ll, l, m1, m2, m, hybdat%maxfac, hybdat%fac, hybdat%sfac)
 
                               END DO
                               DO n2 = 1, nsest(n1)!n1
@@ -2334,26 +2306,26 @@ CONTAINS
          END DO
       END DO
 
-#ifdef CPP_INVERSION
-      IF (ANY(ABS(aimag(exchange)) > 10.0**-10)) THEN
-         IF (irank == 0) WRITE (oUnit, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
-         WRITE (*, *) MAXVAL(ABS(aimag(exchange)))
-         call juDFT_error( 'exchangeCore: Unusually large imaginary component.')
-      END IF
-#endif
+!#ifdef CPP_INVERSION
+!      IF (ANY(ABS(aimag(exchange)) > 10.0**-10)) THEN
+!         IF (irank == 0) WRITE (oUnit, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
+!         WRITE (*, *) MAXVAL(ABS(aimag(exchange)))
+!         call juDFT_error( 'exchangeCore: Unusually large imaginary component.')
+!      END IF
+!#endif
 
-      DO n1 = 1, nobd(nk)
-         te_hfex_core = te_hfex_core - a_ex*w_iks(n1, nk, jsp)*exchange(n1, n1)
+      DO n1 = 1, hybdat%nobd(nk)
+         results%te_hfex_core =results%te_hfex_core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1)
       END DO
 
       ! add the core-valence contribution to the exchange matrix mat_ex
 
       ic = 0
       sum_offdia = 0
-      DO n1 = 1, nbands
+      DO n1 = 1, hybdat%nbands
          DO n2 = 1, n1
             ic = ic + 1
-            mat_ex(ic) = mat_ex(ic) + CONJG(exchange(n2, n1))/nsymop
+            mat_ex(ic) = mat_ex(ic) + CONJG(exchange(n2, n1))/fi%kpts%nsymop
          END DO
       END DO
 
@@ -2384,15 +2356,9 @@ CONTAINS
    ! The function f is a product of core and valence function
    ! (note: in the code f is defined with an additional 1/r factor)
    !
-   SUBROUTINE exchange_ccccHSE( &
-      ! Input
-      nk, nkpti, nw, nwd, ntype, neq, natd, lmaxcd, lmaxc, &
-      nindxc, maxindxc, ncst, ncstd, jmtd, jri, &
-      rmsh, dx, lmaxd, core1, core2, bkpt, gridf, &
-      invsat, invsatnr, wtkpt, maxfac, fac, a_ex, irank, &
-      ! Output
-      te_hfex)
+   SUBROUTINE exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
 
+      USE m_types
       USE m_constants
       USE m_util
       use m_intgrf
@@ -2401,28 +2367,14 @@ CONTAINS
       USE m_trafo
 
       IMPLICIT NONE
-
+      
+      TYPE(t_fleurinput), INTENT(IN) :: fi
+      TYPE(t_hybdat), INTENT(IN)     :: hybdat
+      TYPE(t_results), INTENT(INOUT) :: results
       ! - scalars -
-      INTEGER, INTENT(IN)    ::  nk, nkpti, nw, nwd, ntype, natd, ncstd
-      INTEGER, INTENT(IN)    ::  lmaxcd, lmaxd, irank
-      INTEGER, INTENT(IN)    ::  jmtd, maxindxc, maxfac
+      INTEGER, INTENT(IN)    ::  nk, ncstd
 
       REAL, INTENT(IN)    ::  a_ex
-      REAL, INTENT(INOUT) ::  te_hfex
-
-      ! - arays -
-      INTEGER, INTENT(IN)    ::  neq(:), ncst(:), lmaxc(:)
-      INTEGER, INTENT(IN)    ::  nindxc(0:lmaxcd, ntype)
-      INTEGER, INTENT(IN)    ::  jri(:)
-      INTEGER, INTENT(IN)    ::  invsat(:), invsatnr(:)
-
-      REAL, INTENT(IN)    ::  rmsh(:,:), dx(:)
-      REAL, INTENT(IN)    ::  core1(jmtd, maxindxc, 0:lmaxcd, ntype), &
-                             core2(jmtd, maxindxc, 0:lmaxcd, ntype)
-      REAL, INTENT(IN)    ::  bkpt(:)
-      REAL, INTENT(IN)    ::  gridf(:,:)
-      REAL, INTENT(IN)    ::  wtkpt(:,:)
-      REAL, INTENT(IN)    ::  fac(0:maxfac)
 
       ! - local scalars -
       INTEGER               ::  itype, ieq, icst, icst1, icst2, iatom, iatom0
@@ -2432,13 +2384,13 @@ CONTAINS
 
       REAL                  ::  rdum, rdum1
       ! - local arrays -
-      INTEGER               ::  point(maxindxc, -lmaxcd:lmaxcd, 0:lmaxcd, natd)
-      REAL                  ::  rprod(jmtd), primf1(jmtd), primf2(jmtd), sum_primf(jmtd), integrand(jmtd)
+      INTEGER               ::  point(hybdat%maxindxc, -hybdat%lmaxcd:hybdat%lmaxcd, 0:hybdat%lmaxcd, fi%atoms%nat)
+      REAL                  ::  rprod(fi%atoms%jmtd), primf1(fi%atoms%jmtd), primf2(fi%atoms%jmtd), sum_primf(fi%atoms%jmtd), integrand(fi%atoms%jmtd)
       COMPLEX               ::  exch(ncstd, ncstd)
 
       INTEGER, PARAMETER    ::  ncut = 5                     ! cut-off value of n-summation
       INTEGER               ::  cn                           ! counter for n-summation
-      REAL                  ::  d_ln(jmtd, 0:2*lmaxcd, 0:ncut) ! expansion coefficients of erfc(wr)/r
+      REAL                  ::  d_ln(fi%atoms%jmtd, 0:2*hybdat%lmaxcd, 0:ncut) ! expansion coefficients of erfc(wr)/r
       ! in Legendre polynomials
       CHARACTER*100         :: outtext
 
@@ -2454,12 +2406,12 @@ CONTAINS
       ! set up point
       icst = 0
       iatom = 0
-      DO itype = 1, ntype
-         DO ieq = 1, neq(itype)
+      DO itype = 1, fi%atoms%ntype
+         DO ieq = 1, fi%atoms%neq(itype)
             iatom = iatom + 1
-            DO l = 0, lmaxc(itype)
+            DO l = 0, hybdat%lmaxc(itype)
                DO m = -l, l
-                  DO n = 1, nindxc(l, itype)
+                  DO n = 1, hybdat%nindxc(l, itype)
                      icst = icst + 1
                      point(n, m, l, iatom) = icst
                   END DO
@@ -2468,17 +2420,17 @@ CONTAINS
          END DO
       END DO
 
-      llmax = 2*lmaxcd
+      llmax = 2*hybdat%lmaxcd
       exch = 0
       iatom0 = 0
-      DO itype = 1, ntype
+      DO itype = 1, fi%atoms%ntype
          ! Calculate the expansion coefficients of the potential in Legendre polynomials
-         d_ln(:, 0:2*lmaxc(itype), :) = calculate_coefficients(rmsh(:, itype), 2*lmaxc(itype), ncut, fac)
+         d_ln(:, 0:2*hybdat%lmaxc(itype), :) = calculate_coefficients(fi%atoms%rmsh(:, itype), 2*hybdat%lmaxc(itype), ncut, hybdat%fac)
 
-         DO l1 = 0, lmaxc(itype)  ! left core state
+         DO l1 = 0, hybdat%lmaxc(itype)  ! left core state
 
-            DO l2 = 0, lmaxc(itype)  ! right core state
-               DO l = 0, lmaxc(itype)   ! occupied core state
+            DO l2 = 0, hybdat%lmaxc(itype)  ! right core state
+               DO l = 0, hybdat%lmaxc(itype)   ! occupied core state
 
                   DO ll = ABS(l1 - l), l1 + l
                      IF (ll < ABS(l - l2) .OR. ll > l + l2) CYCLE
@@ -2493,10 +2445,10 @@ CONTAINS
                            IF (ABS(mm) > ll) CYCLE
                            rdum = fpi_const/(2*ll + 1)*gaunt1(l, ll, l1, m, mm, m1, llmax)*gaunt1(l, ll, l2, m, mm, m2, llmax)
 
-                           DO n = 1, nindxc(l, itype)
-                              DO n2 = 1, nindxc(l2, itype)
-                                 rprod(:) = (core1(:, n, l, itype)*core1(:, n2, l2, itype) &
-                                             + core2(:, n, l, itype)*core2(:, n2, l2, itype))/rmsh(:, itype)
+                           DO n = 1, hybdat%nindxc(l, itype)
+                              DO n2 = 1, hybdat%nindxc(l2, itype)
+                                 rprod(:) = (hybdat%core1(:, n, l, itype)*hybdat%core1(:, n2, l2, itype) &
+                                             + hybdat%core2(:, n, l, itype)*hybdat%core2(:, n2, l2, itype))/fi%atoms%rmsh(:, itype)
 
                                  ! Initialization of n Summation
                                  sum_primf = 0.0
@@ -2505,29 +2457,29 @@ CONTAINS
                                     primf1 = 0.0
                                     primf2 = 0.0
                                     ! Calculate integral for 0 < r' < r
-                                    CALL primitivef(primf1, rprod(:)*rmsh(:, itype)**(ll + 2*cn + 1), rmsh, dx, jri, jmtd, itype, ntype)
+                                    CALL primitivef(primf1, rprod(:)*fi%atoms%rmsh(:, itype)**(ll + 2*cn + 1), fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, itype, fi%atoms%ntype)
                                     ! Calculate integral for r < r' < R
                                     !-itype is to enforce inward integration
-                                    CALL primitivef(primf2, d_ln(:, ll, cn)*rprod(:)/rmsh(:, itype)**(ll + 2*cn), rmsh, dx, jri, jmtd, -itype, ntype)
+                                    CALL primitivef(primf2, d_ln(:, ll, cn)*rprod(:)/fi%atoms%rmsh(:, itype)**(ll + 2*cn), fi%atoms%rmsh, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, -itype, fi%atoms%ntype)
                                     ! Multiplication with appropriate prefactors
-                                    primf1 = primf1/rmsh(:, itype)**(ll + 2*cn)*d_ln(:, ll, cn)
-                                    primf2 = primf2*rmsh(:, itype)**(ll + 2*cn + 1)
+                                    primf1 = primf1/fi%atoms%rmsh(:, itype)**(ll + 2*cn)*d_ln(:, ll, cn)
+                                    primf2 = primf2*fi%atoms%rmsh(:, itype)**(ll + 2*cn + 1)
                                     ! Summation over n
                                     sum_primf = sum_primf + primf1 + primf2
                                  END DO
 
-                                 DO n1 = 1, nindxc(l1, itype)
+                                 DO n1 = 1, hybdat%nindxc(l1, itype)
 
-                                    rprod(:) = (core1(:, n, l, itype)*core1(:, n1, l1, itype) &
-                                                + core2(:, n, l, itype)*core2(:, n1, l1, itype))/rmsh(:, itype)
+                                    rprod(:) = (hybdat%core1(:, n, l, itype)*hybdat%core1(:, n1, l1, itype) &
+                                                + hybdat%core2(:, n, l, itype)*hybdat%core2(:, n1, l1, itype))/fi%atoms%rmsh(:, itype)
 
                                     integrand = rprod*sum_primf
 
                                     call juDFT_error("stop the following line has to be reimplemented:")
-                                    !rdum1 = rdum*intgrf(integrand, jri, jmtd, rmsh, dx, ntype, itype, gridf)
+                                    !rdum1 = rdum*intgrf(integrand, fi%atoms%jri, fi%atoms%jmtd, fi%atoms%rmsh, fi%atoms%dx, fi%atoms%ntype, itype, hybdat%gridf)
 
                                     iatom = iatom0
-                                    DO ieq = 1, neq(itype)
+                                    DO ieq = 1, fi%atoms%neq(itype)
                                        iatom = iatom + 1
                                        icst1 = point(n1, m1, l1, iatom)
                                        icst2 = point(n2, m2, l2, iatom)
@@ -2546,24 +2498,24 @@ CONTAINS
                END DO  !l
             END DO  !l2
          END DO  !l1
-         iatom0 = iatom0 + neq(itype)
+         iatom0 = iatom0 + fi%atoms%neq(itype)
       END DO  !itype
 
 # ifdef CPP_INVERSION
       CALL symmetrize(exch, ncstd, ncstd, 3, &
-                      ntype, ntype, neq, lmaxc, lmaxcd, &
-                      nindxc, natd, invsat, invsatnr)
+                      fi%atoms%ntype, fi%atoms%ntype, fi%atoms%neq, hybdat%lmaxc, hybdat%lmaxcd, &
+                      hybdat%nindxc, fi%atoms%nat, fi%sym%invsat, fi%sym%invsatnr)
       IF (ANY(ABS(aimag(exch)) > 1E-6)) call juDFT_error( 'exchange_cccc: exch possesses significant imaginary part')
 # endif
 !   DO icst = 1,ncstd
 !     IF ( irank == 0 ) &
-!       WRITE(oUnit,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')bkpt,icst,REAL(exch(icst,icst))*(-27.211608)
+!       WRITE(oUnit,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')fi%kpts%bkpt,icst,REAL(exch(icst,icst))*(-27.211608)
 !   END DO
 
       ! add core exchange contributions to the te_hfex
 
       DO icst1 = 1, ncstd
-         te_hfex = te_hfex - a_ex*wtkpt(nk, nw)*exch(icst1, icst1)
+         results%te_hfex = results%te_hfex - a_ex*fi%kpts%wtkpt(nk)*exch(icst1, icst1)
       END DO
 
    END SUBROUTINE exchange_ccccHSE
