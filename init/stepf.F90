@@ -37,15 +37,15 @@ CONTAINS
 
       !     ..
       !     .. Local Scalars ..
-      COMPLEX c_c, c_phs
-      REAL c, dd, gs, th, inv_omtil, r_phs
+      COMPLEX c_c, c_phs, sf
+      REAL factorA, dd, gs, th, inv_omtil, r_phs
       REAL g_rmt, g_sqr, help, g_abs, fp_omtil, r_c, gr, gx, gy
-      INTEGER i, k, n, na, nn, i1, i2, i3, ic, ifft2d, ifftd, kk
+      INTEGER i, iType, na, naInit, nn, i1, i2, i3, ic, ifft2d, ifftd, kk
+      INTEGER iStar, iStarStart, iStarEnd
       INTEGER ic1, ic2, ic3, icc, im1, im2, im3, loopstart
-      LOGICAL l_error
+      LOGICAL l_error, presentQvec
       !     ..
       !     .. Local Arrays ..
-      COMPLEX, ALLOCATABLE:: sf(:)
       REAL g(3), gm(3), fJ
       REAL, ALLOCATABLE :: bfft(:)
       INTEGER, ALLOCATABLE :: icm(:, :, :)
@@ -74,71 +74,94 @@ CONTAINS
          RETURN
       END IF
 
+      stars%ustep(:) = CMPLX(0.0,0.0)
+      presentQvec = PRESENT(qvec)
+
       IF (fmpi%irank == 0) THEN
          CALL timestart("ustep")
-         ALLOCATE (sf(stars%ng3))
          IF (input%film) THEN
             dd = vacuum%dvac*cell%area/cell%omtil
          ELSE
             dd = 1.0
          END IF
          !--->    G=0 star
-         c = 0.0
-         DO n = 1, atoms%ntype
-            c = c + atoms%neq(n)*atoms%volmts(n)/cell%omtil
+         factorA = 0.0
+         DO iType = 1, atoms%ntype
+            factorA = factorA + atoms%neq(iType)*atoms%volmts(iType)/cell%omtil
          ENDDO
 
-         IF (.NOT.PRESENT(qvec)) stars%ustep(1) = CMPLX(dd - c, 0.0)
+         IF (.NOT.presentQvec) stars%ustep(1) = CMPLX(dd - factorA, 0.0)
          !--->    G(parallel)=0  (for film)
          IF (input%film ) THEN
-            DO k = 2, stars%ng3
-               IF (stars%ig2(k) .EQ. 1) THEN
-                  th = cell%bmat(3, 3)*stars%kv3(3, k)*cell%z1
-                  stars%ustep(k) = CMPLX(cell%vol*SIN(th)/th/cell%omtil, 0.0)
-               ELSE
-                  stars%ustep(k) = CMPLX(0.0, 0.0)
+            DO iStar = 2, stars%ng3
+               IF (stars%ig2(iStar) .EQ. 1) THEN
+                  th = cell%bmat(3, 3)*stars%kv3(3, iStar)*cell%z1
+                  stars%ustep(iStar) = CMPLX(cell%vol*SIN(th)/th/cell%omtil, 0.0)
                END IF
             ENDDO
-            !-odim
-         ELSE
-            DO k = MERGE(2,1,.NOT.PRESENT(qvec)), stars%ng3
-               stars%ustep(k) = CMPLX(0.0, 0.0)
-            END DO
          END IF
+
          !--->    sphere contributions
-         na = 0
-         DO n = MERGE(1,iDtype,.NOT.PRESENT(qvec)), MERGE(atoms%ntype,iDtype,.NOT.PRESENT(qvec))
-            c = 3.*atoms%volmts(n)/cell%omtil
+
+         ! Treat 1st star separately:
+
+         iStar = 1
+         DO iType = MERGE(1,iDtype,.NOT.presentQvec), MERGE(atoms%ntype,iDtype,.NOT.presentQvec)
             !-->     structure factors: loop over equivalent atoms
-            IF (.NOT.PRESENT(qvec)) THEN
-               na = na + 1
-            ELSE
-               na = iDtype
+            naInit = SUM(atoms%neq(:iType - 1)) + 1
+            factorA = 3.*atoms%volmts(iType)/cell%omtil
+
+            IF(norm2(stars%center).GT.1.0e-8) THEN
+               th = -tpi_const*DOT_PRODUCT(stars%kv3(:,iStar)+stars%center, atoms%taual(:, naInit))
+               sf = MERGE(-ImagUnit*stars%gq(iDir,iStar)*CMPLX(COS(th), SIN(th)), CMPLX(COS(th), SIN(th)), presentQvec)
+               gs = stars%sk3(iStar)*atoms%rmt(iType)
+               stars%ustep(iStar) = stars%ustep(iStar) - (factorA*(SIN(gs)/gs - COS(gs))/(gs*gs))*sf
             END IF
-            DO k = MERGE(2,1,norm2(stars%center)<=1e-8), stars%ng3
-               th = -tpi_const*DOT_PRODUCT(stars%kv3(:, k)+stars%center, atoms%taual(:, na))
-               IF (.NOT.PRESENT(qvec)) THEN
-                  sf(k) = CMPLX(COS(th), SIN(th))
-               ELSE
-                  sf(k) = -ImagUnit*stars%gq(iDir,k)*CMPLX(COS(th), SIN(th))
-               END IF
-            END DO
-            DO nn = 2, atoms%neq(n) !Should automatically be nn = 2, 1 for DFPT
-               na = na + 1
-               DO k = 2, stars%ng3
-                  th = -tpi_const*DOT_PRODUCT(stars%kv3(:, k), atoms%taual(:, na))
-                  sf(k) = sf(k) + CMPLX(COS(th), SIN(th))
+         END DO
+      END IF
+
+      iStarStart = 2
+      iStarEnd = stars%ng3
+!#ifdef CPP_MPI
+!      !calculate loop boundaries for the MPI parallelization
+!      chunk_size = (stars%ng3-1) / fmpi%isize
+!#endif
+      IF (fmpi%irank == 0) THEN
+         ! Now the other stars:
+!$OMP PARALLEL DO DEFAULT(none) & 
+!$OMP SHARED(atoms,stars,cell,iStarStart,iStarEnd,iDType,iDir,presentQvec) &
+!$OMP PRIVATE(iStar,iType,naInit,factorA,th,sf,nn,na,gs)
+         DO iStar = iStarStart, iStarEnd
+            DO iType = MERGE(1,iDtype,.NOT.presentQvec), MERGE(atoms%ntype,iDtype,.NOT.presentQvec)
+               !-->     structure factors: loop over equivalent atoms
+               naInit = SUM(atoms%neq(:iType - 1)) + 1
+
+               factorA = 3.0 * atoms%volmts(iType) / cell%omtil
+
+               th = -tpi_const*DOT_PRODUCT(stars%kv3(:,iStar)+stars%center, atoms%taual(:, naInit))
+               sf = MERGE(-ImagUnit*stars%gq(iDir,iStar)*CMPLX(COS(th), SIN(th)), CMPLX(COS(th), SIN(th)), presentQvec)
+
+               DO nn = 2, atoms%neq(iType) !Should automatically be nn = 2, 1 for DFPT
+                  na = naInit + nn - 1
+                  th = -tpi_const * DOT_PRODUCT(stars%kv3(:,iStar), atoms%taual(:, na))
+                  sf = sf + CMPLX(COS(th), SIN(th))
                END DO
-            END DO
-            !--->    update step function
-            DO k = MERGE(2,1,norm2(stars%center)<=1e-8), stars%ng3
-               gs = stars%sk3(k)*atoms%rmt(n)
-               stars%ustep(k) = stars%ustep(k) - (c*(SIN(gs)/gs - COS(gs))/(gs*gs))*sf(k)
+
+               gs = stars%sk3(iStar)*atoms%rmt(iType)
+               stars%ustep(iStar) = stars%ustep(iStar) - (factorA*(SIN(gs)/gs - COS(gs))/(gs*gs))*sf
             ENDDO
          ENDDO
+!$OMP END PARALLEL DO
+!#ifdef CPP_MPI
+!   ! sum reduce stars%ustep over all MPI ranks
+!#endif
+      END IF
+      IF (fmpi%irank == 0) THEN
          CALL timestop("ustep")
          CALL timestart("Oldstepf")
-      ENDIF ! (fmpi%irank == 0)
+      END IF ! (fmpi%irank == 0)
+
+
 
       !
       ! --> set up stepfunction on fft-grid:
@@ -166,14 +189,14 @@ CONTAINS
 
 #ifdef CPP_MPI
       IF (fmpi%irank == 0) THEN
-         DO n = 1, atoms%ntype
-            ufft_local(0) = ufft_local(0) + atoms%neq(n)*atoms%volmts(n)
+         DO iType = 1, atoms%ntype
+            ufft_local(0) = ufft_local(0) + atoms%neq(iType)*atoms%volmts(iType)
          ENDDO
          ufft_local(0) = 1.0 - ufft_local(0)*inv_omtil
       ENDIF
 #else
-      DO n = 1, atoms%ntype
-         stars%ufft(0) = stars%ufft(0) + atoms%neq(n)*atoms%volmts(n)
+      DO n = iType, atoms%ntype
+         stars%ufft(0) = stars%ufft(0) + atoms%neq(iType)*atoms%volmts(iType)
       ENDDO
       stars%ufft(0) = 1.0 - stars%ufft(0)*inv_omtil
 #endif
@@ -228,15 +251,15 @@ CONTAINS
                help = fp_omtil/g_sqr
                IF (sym%invs) THEN
                   r_c = 0.0
-                  DO n = 1, atoms%ntype
+                  DO iType = 1, atoms%ntype
                      r_phs = 0.0
-                     na = SUM(atoms%neq(:n - 1))
-                     DO nn = 1, atoms%neq(n)
+                     na = SUM(atoms%neq(:iType - 1))
+                     DO nn = 1, atoms%neq(iType)
                         th = -tpi_const*DOT_PRODUCT(gm, atoms%taual(:, na + nn))
                         r_phs = r_phs + COS(th)
                      ENDDO
-                     g_rmt = g_abs*atoms%rmt(n)
-                     r_c = r_c + atoms%rmt(n)*(SIN(g_rmt)/g_rmt - COS(g_rmt))*r_phs
+                     g_rmt = g_abs*atoms%rmt(iType)
+                     r_c = r_c + atoms%rmt(iType)*(SIN(g_rmt)/g_rmt - COS(g_rmt))*r_phs
                   ENDDO
 #ifdef CPP_MPI
                   ufft_local(ic) = help*r_c
@@ -245,10 +268,10 @@ CONTAINS
 #endif
                ELSE
                   c_c = CMPLX(0.0, 0.0)
-                  DO n = 1, MERGE(atoms%ntype,iDtype,.NOT.PRESENT(qvec))
+                  DO iType = 1, MERGE(atoms%ntype,iDtype,.NOT.PRESENT(qvec))
                      c_phs = CMPLX(0.0, 0.0)
-                     na = MERGE(SUM(atoms%neq(:n - 1)),iDtype,.NOT.PRESENT(qvec))
-                     DO nn = 1, atoms%neq(n)
+                     na = MERGE(SUM(atoms%neq(:iType - 1)),iDtype,.NOT.PRESENT(qvec))
+                     DO nn = 1, atoms%neq(iType)
                         th = -tpi_const*DOT_PRODUCT(gm, atoms%taual(:, na + nn))
                         IF (.NOT.PRESENT(qvec)) THEN
                            c_phs = c_phs + EXP(CMPLX(0, th))
@@ -256,8 +279,8 @@ CONTAINS
                            c_phs = c_phs + (-ImagUnit*g(iDir))*EXP(CMPLX(0, th))
                         END IF
                      ENDDO
-                     g_rmt = g_abs*atoms%rmt(n)
-                     c_c = c_c + atoms%rmt(n)*(SIN(g_rmt)/g_rmt - COS(g_rmt))*c_phs
+                     g_rmt = g_abs*atoms%rmt(iType)
+                     c_c = c_c + atoms%rmt(iType)*(SIN(g_rmt)/g_rmt - COS(g_rmt))*c_phs
                   ENDDO
 #ifdef CPP_MPI
                   ufft_local(ic) = help*REAL(c_c)
