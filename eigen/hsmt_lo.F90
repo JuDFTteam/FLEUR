@@ -67,7 +67,7 @@ CONTAINS
        !CPP_OMP SHARED(fmpi,l,lapw,hmat,smat,jintsp) &
        !CPP_OMP PRIVATE(nkvec,kp)
        !CPP_OMP DO
-       !CPP_ACC kernels present(hmat,hmat%data_r,hmat%data_c)
+       !CPP_ACC kernels present(hmat,hmat%data_r,hmat%data_c)copyin(fmpi,lapw,lapw%nv)
        DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
           IF( nkvec > lapw%nv(jintsp)) THEN
              kp=(nkvec-1)/fmpi%n_size+1
@@ -82,7 +82,7 @@ CONTAINS
        !CPP_OMP END DO
        IF ( present(smat)) THEN
           !CPP_OMP DO
-          !CPP_ACC kernels present(smat,smat%data_r,smat%data_c)
+          !CPP_ACC kernels present(smat,smat%data_r,smat%data_c)copyin(fmpi,lapw,lapw%nv)
           DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
              IF( nkvec > lapw%nv(jintsp)) THEN
                 kp=(nkvec-1)/fmpi%n_size+1
