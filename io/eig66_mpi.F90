@@ -76,22 +76,24 @@ CONTAINS
       ENDIF
 
       !The eigenvectors
-      local_slots = COUNT(d%pe_olap == d%irank)
-      slot_size = nmat
-      IF (l_real .AND. .NOT. l_soc) THEN
-         CALL priv_create_memory(slot_size, local_slots, d%olap_r_handle, real_data_ptr=d%olap_r_data)
-      ELSE
-         CALL priv_create_memory(slot_size, local_slots, d%olap_c_handle, cmplx_data_ptr=d%olap_c_data)
+      IF (l_olap) THEN   
+         local_slots = COUNT(d%pe_olap == d%irank)
+         slot_size = nmat
+         IF (l_real .AND. .NOT. l_soc) THEN
+            CALL priv_create_memory(slot_size, local_slots, d%olap_r_handle, real_data_ptr=d%olap_r_data)
+         ELSE
+            CALL priv_create_memory(slot_size, local_slots, d%olap_c_handle, cmplx_data_ptr=d%olap_c_data)
+         ENDIF
       ENDIF
 
       IF (PRESENT(filename) .AND. .NOT. create) CALL judft_error("Storing of data not implemented for MPI case", calledby="eig66_mpi.F")
       CALL MPI_BARRIER(MPI_COMM, e)
       CALL timestop("create data spaces in ei66_mpi")
 
-      if (d%irank==0) then
+      IF (d%irank==0) THEN
         arg=TRIM(juDFT_string_for_argument("-eig"))
         IF (index(arg,"init")>0) CALL priv_readfromfileDA()
-      endif
+      ENDIF
 
    CONTAINS
       SUBROUTINE priv_create_memory(slot_size, local_slots, handle, int_data_ptr, real_data_ptr, cmplx_data_ptr)
@@ -107,7 +109,7 @@ CONTAINS
          INTEGER:: e, iError
          INTEGER(MPI_ADDRESS_KIND) :: length
          INTEGER                   :: type_size
-         CHARACTER(LEN=100)        :: errorString
+         CHARACTER(LEN=150)        :: errorString
 
          length = 0
          IF (PRESENT(real_data_ptr)) THEN
@@ -123,7 +125,14 @@ CONTAINS
             CALL MPI_TYPE_SIZE(MPI_INTEGER, type_size, e)
          ENDIF
          IF (length .NE. 1) CALL judft_error("Bug in eig66_mpi:create_memory")
-         length = MAX(1, slot_size*local_slots)
+         
+         ! Note: In the following lines there are two assignments to length. The reason why
+         !       this is split up into two lines is that the product in the 2nd line otherwise
+         !       would contain only two "normal" integers. length is an integer of a different
+         !       kind and has a larger value range. If it would not be part of the product there
+         !       would be integer overflows under certain workloads.
+         length = local_slots
+         length = MAX(1, length*slot_size)
 
          iError = 0
 #ifdef CPP_MPI_ALLOC
@@ -134,7 +143,7 @@ CONTAINS
          IF (PRESENT(real_data_ptr)) THEN
 #ifdef CPP_MPI_ALLOC
             CALL C_F_POINTER(ptr, real_data_ptr, (/length/type_size/))
-            call judft_error("hmm fuck")
+            call judft_error("hmm damn")
 #else
             ! In the following allocate a too large length may lead to a segmentation fault in the allocate statement
             ! with before being able to return of an error code.
@@ -163,8 +172,8 @@ CONTAINS
 #endif
          IF(iError.NE.0) THEN
             ! See comment above the related allocate statements. This error handler is not always reached.
-            WRITE(errorString,*) 'Allocation of array for communication failed. Needed number of elements:  slot_size ',&
-                                 slot_size, ' x ', local_slots, 'local slots.'
+            WRITE(errorString,'(a,i13,a,i13,a)') 'Allocation of array for communication failed. Needed number of elements:  slot_size ',&
+                                 slot_size, ' x ', local_slots, ' local slots.'
             CALL juDFT_error(TRIM(ADJUSTL(errorString)), calledby='eig66_mpi')
          END IF
 
@@ -178,7 +187,7 @@ CONTAINS
          REAL    :: eig(d%size_eig)
          TYPE(t_mat)::zmat
 
-         call zmat%alloc(d%l_real,d%nmat,d%size_eig)
+         CALL zmat%alloc(d%l_real,d%nmat,d%size_eig)
 
          tmp_id = eig66_data_newid(DA_mode)
          CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, .false., filename)
@@ -206,10 +215,10 @@ CONTAINS
          IF (delete) WRITE (*, *) "No deallocation of memory implemented in eig66_mpi"
       ENDIF
 
-      if (d%irank==0) then
+      IF (d%irank==0) THEN
         arg=TRIM(juDFT_string_for_argument("-eig"))
         IF (index(arg,"save")>0) CALL priv_writetofileDA()
-      endif
+      ENDIF
       CONTAINS
       SUBROUTINE priv_writetofileDA()
          USE m_eig66_DA, ONLY: open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig
@@ -219,7 +228,7 @@ CONTAINS
          REAL    :: eig(d%size_eig)
          TYPE(t_mat)::zmat
 
-         call zmat%alloc(d%l_real,d%nmat,d%size_eig)
+         CALL zmat%alloc(d%l_real,d%nmat,d%size_eig)
 
          tmp_id = eig66_data_newid(DA_mode)
          CALL open_eig_DA(tmp_id, d%nmat, d%neig, d%nkpts, d%jspins, .FALSE., d%l_real, d%l_soc, .false.)
@@ -307,8 +316,8 @@ CONTAINS
          ENDDO
       ENDIF
 
-      if(allocated(tmp_real))  deallocate(tmp_real)
-      if(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
+      IF(allocated(tmp_real))  deallocate(tmp_real)
+      IF(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
 
       IF (PRESENT(smat)) THEN
          tmp_size = smat%matsize1
@@ -436,8 +445,8 @@ CONTAINS
          ENDDO
       ENDIF
 
-      if(allocated(tmp_real))  deallocate(tmp_real)
-      if(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
+      IF(allocated(tmp_real))  deallocate(tmp_real)
+      IF(allocated(tmp_cmplx)) deallocate(tmp_cmplx)
       !write the overlap
       !all procceses participate
       IF (PRESENT(smat)) THEN

@@ -16,11 +16,14 @@ PROGRAM inpgen
 !----------------------------------------------------------------------------+
   USE m_juDFT
   USE m_inpgen_help
+  use m_inpgen_version
+  use m_fleur_dropxmlschema
   USE m_read_inpgen_input
   USE m_make_crystal
   USE m_make_atomic_defaults
   USE m_make_defaults
   USE m_make_kpoints
+  USE m_make_magnetism
   USE m_winpxml
   USE m_xsf_io
   USE m_types_input
@@ -37,7 +40,7 @@ PROGRAM inpgen
   USE m_types_gfinp
   USE m_types_hub1inp
   USE m_types_enpara
-  USE m_types_oneD
+   
   USE m_types_sliceplot
   USE m_types_stars
   use m_read_old_inp
@@ -51,7 +54,7 @@ PROGRAM inpgen
 
       IMPLICIT NONE
 
-      REAL,    ALLOCATABLE :: atompos(:, :),atomid(:)
+      REAL,    ALLOCATABLE :: atompos(:, :),atomid(:),mag_mom(:,:)
       CHARACTER(len=20), ALLOCATABLE :: atomLabel(:)
       LOGICAL               :: l_fullinput,l_explicit,l_inpxml,l_include(4)
 
@@ -68,7 +71,7 @@ PROGRAM inpgen
       TYPE(t_enpara)   :: enpara
       TYPE(t_forcetheo):: forcetheo
       TYPE(t_kpts), ALLOCATABLE :: kpts(:)
-      TYPE(t_oned)     :: oned
+       
       TYPE(t_sliceplot):: sliceplot
       TYPE(t_stars)    :: stars
       TYPE(t_gfinp)    :: gfinp
@@ -100,6 +103,16 @@ PROGRAM inpgen
          INTEGER(c_int) dropDefaultEConfig
        END FUNCTION dropDefaultEConfig
 
+       FUNCTION dropDefault2EConfig() BIND(C, name="dropDefault2EConfig")
+         USE iso_c_binding
+         INTEGER(c_int) dropDefault2EConfig
+       END FUNCTION dropDefault2EConfig
+
+       FUNCTION dropOxidesValEConfig() BIND(C, name="dropOxidesValidationEConfig")
+         USE iso_c_binding
+         INTEGER(c_int) dropOxidesValEConfig
+       END FUNCTION dropOxidesValEConfig
+
        FUNCTION dropProfiles() BIND(C, name="dropProfiles")
          USE iso_c_binding
          INTEGER(c_int) dropProfiles
@@ -110,10 +123,10 @@ PROGRAM inpgen
 
       !Start program and greet user
       CALL inpgen_help()
+      call inpgen_version()
+      call fleur_dropxmlschema()
       l_explicit=judft_was_argument("-explicit")
 
-      INQUIRE(file='default.econfig',exist=l_exist)
-      IF (.NOT.l_exist) idum=dropDefaultEconfig()
       INQUIRE(file='profile.config',exist=l_exist)
       IF (.NOT.l_exist) idum=dropProfiles()
 
@@ -183,17 +196,28 @@ PROGRAM inpgen
          CALL profile%load(TRIM(ADJUSTL(judft_string_for_argument("-profile"))))
       END IF
 
+      IF(profile%atomSetup.EQ."oxides_validation") THEN
+         INQUIRE(file='oxides_validation.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropOxidesValEconfig()
+      ELSE IF (profile%atomSetup.EQ."default2") THEN
+         INQUIRE(file='default2.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropDefault2Econfig()
+      ELSE
+         INQUIRE(file='default.econfig',exist=l_exist)
+         IF (.NOT.l_exist) idum=dropDefaultEconfig()
+      END IF
+
       IF (judft_was_argument("-inp")) THEN
          l_kptsInitialized(:) = .FALSE.
          call read_old_inp(input,atoms,cell,stars,sym,noco,vacuum,forcetheo,&
-              sliceplot,banddos,enpara,xcpot,kpts(1),hybinp, oneD)
+              sliceplot,banddos,enpara,xcpot,kpts(1),hybinp)
          l_fullinput=.TRUE.
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
          l_fullinput=.true. !will be set to false if old inp.xml is read
          l_oldinpXML=.true.
          call Fleurinput_read_xml(0,cell,sym,atoms,input,noco,vacuum,sliceplot=Sliceplot,banddos=Banddos,&
-                                  hybinp=hybinp,oned=Oned,xcpot=Xcpot,kptsSelection=kptsSelection,&
+                                  hybinp=hybinp, xcpot=Xcpot,kptsSelection=kptsSelection,&
                                   kptsArray=kpts,enparaXML=enparaXML,old_version=l_oldinpXML)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
@@ -204,8 +228,10 @@ PROGRAM inpgen
          !read the input
          l_kptsInitialized(:) = .FALSE.
          ALLOCATE (sliceplot%plot(1))
-         CALL read_inpgen_input(profile,atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
+         CALL read_inpgen_input(profile,atompos,atomid,mag_mom,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
                                 kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+
+
          IF(input%film) sliceplot%plot(1)%zero(3) = -0.5
          IF (l_addPath) THEN
             l_check = .TRUE.
@@ -226,11 +252,14 @@ PROGRAM inpgen
       ENDIF
       IF (.NOT.l_fullinput) THEN
          !First we determine the spacegoup and map the atoms to groups
-         CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,cell,sym,atoms)
+         CALL make_crystal(input%film,atomid,atompos,mag_mom,atomlabel,vacuum%dvac,noco,cell,sym,atoms)
+
+         !Generate magnetic settings
+         CALL make_magnetism(input,noco,atoms,mag_mom)
 
          !All atom related parameters are set here. Note that some parameters might
          !have been set in the read_input call before by adding defaults to the atompar module
-         CALL make_atomic_defaults(input,vacuum,profile,cell,oneD,atoms,enpara)
+         CALL make_atomic_defaults(input,vacuum,profile,cell ,atoms,enpara)
 
          !Set all defaults that have not been specified before or can not be specified in inpgen
          CALL make_defaults(atoms,sym,cell,vacuum,input,stars,xcpot,profile,noco,banddos,mpinp,hybinp)
@@ -273,7 +302,7 @@ PROGRAM inpgen
                            kptsBZintegration(iKpts),kptsGamma(ikpts),kpts_str(iKpts),kptsName(iKpts),kptsPath(iKpts))
          if(hybinp%l_hybrid .and. kpts(iKpts)%kptsKind == KPTS_KIND_MESH) then
             call timestart("Hybrid setup BZ")
-            CALL make_sym(sym,cell,atoms,noco,oneD,input,gfinp)
+            CALL make_sym(sym,cell,atoms,noco ,input,gfinp)
             call kpts(ikpts)%init(sym, input%film,.true.,.FALSE.)
             call timestop("Hybrid setup BZ")
          endif
@@ -303,7 +332,7 @@ PROGRAM inpgen
          IF(l_exist) CALL system('mv '//trim(filename)//' '//trim(filename)//'_old')
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos, juPhon,&
-              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
+              cell,sym,xcpot,noco ,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
               hub1inp,l_explicit,l_include,filename)
          if (.not.l_include(2)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
@@ -354,7 +383,12 @@ PROGRAM inpgen
          OPEN (inpgenIUnit,file=TRIM(filename),action="read")
          OPEN (inpOldUnit, file="inp.xml", action="write", status='old', access='append')
          WRITE(inpOldUnit,'(a)') ''
-         WRITE(inpOldUnit,'(a)') '<!-- Initial (original) inpgen input (only for documentation purposes):'
+         WRITE(inpOldUnit,'(a)') '<!--'
+         WRITE(inpOldUnit,'(a)') 'Command line when calling inpgen (only for documentation purposes):'
+         CALL GET_COMMAND(line)
+         WRITE(inpOldUnit,'(a)') TRIM(line)
+         WRITE(inpOldUnit,'(a)') ''
+         WRITE(inpOldUnit,'(a)') 'Initial (original) inpgen input (only for documentation purposes):'
          ios = 0
          DO WHILE(ios==0)
             READ(inpgenIUnit,'(a)',iostat=ios) line
@@ -363,6 +397,7 @@ PROGRAM inpgen
          WRITE(inpOldUnit,'(a)') '-->'
          CLOSE (inpOldUnit)
          CLOSE (inpgenIUnit)
+         line = ""
       END IF
 
 100   FORMAT (a20,a15,i10,3x,a)
@@ -399,7 +434,7 @@ PROGRAM inpgen
 
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
-      CALL xsf_WRITE_atoms(55,atoms,input%film,.FALSE.,cell%amat)
+      CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat)
       CLOSE (55)
       CLOSE(oUnit)
 

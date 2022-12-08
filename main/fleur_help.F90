@@ -33,14 +33,15 @@ CONTAINS
     WRITE(*,'(a)')"The following command line options are known:"
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control the input:"
-    CALL print_argument("-toXML")
     CALL print_argument("-xmlXPath")
+    CALL print_argument("-dropXMLSchema")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Output options:"
     CALL print_argument("-no_out")
     CALL print_argument("-minimalOutput")
     CALL print_argument("-genEnpara")
     CALL print_argument("-h")
+    call print_argument("-version")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control FLEUR job:"
 #ifdef CPP_GPU
@@ -70,6 +71,7 @@ CONTAINS
     CALL print_argument("-last_extra")
     CALL print_argument("-sd")
     CALL print_argument("-delden")
+    CALL print_argument("-storeSF")
 #endif
     WRITE (*,'(a)') "Options for privacy sensitive users"
     CALL print_argument("-no_send")
@@ -83,8 +85,8 @@ CONTAINS
   SUBROUTINE add_fleur_arguments()
     USE m_check_arguments
 
-    CALL new_argument(0,"-toXML","Convert an old 'inp' file into the new XML format","")
     CALL new_argument(1,"-xmlXPath","modify the xml-xpath of the inp.xml file","")
+    CALL new_argument(0,"-dropXMLSchema","Write out the default XML schema files","")
     !Control the job
     CALL new_argument(0,"-check","run in check mode, i.e. stop after init","")
     CALL new_argument(0,"-info","Print out information on recommended parallelization and available charge densities","")
@@ -146,12 +148,14 @@ CONTAINS
     CALL new_argument(0,"-noco","write out noco parameters in all outputs for inp.xml","")
     CALL new_argument(0,"-greensf","write out green's function parameters in all outputs for inp.xml","")
     CALL new_argument(0,"-h","Print this message","")
+    CALL new_argument(0,"-version","Show important version information about the fleur executable","")
     CALL new_argument(0,"-no_send","Do not send usage data","")
     !HDF density
     CALL new_argument(0,"-no_cdn_hdf","Disable HDF charge density mode (activated by default if HDF5 is available)","")
     CALL new_argument(0,"-last_extra","Generate an additional file cdn_last.hdf that contains only the last density","")
     CALL new_argument(2,"-sd","use starting density N, where N is the index of the density according to -info","")
     CALL new_argument(1,"-delden","delete densities (either an index N, a range N-M or the keyword 'allbutlast' should be given)","")
+    CALL new_argument(0,"-storeSF","Store the stepfunction in the charge density file to avoid its recalculation when restarting Fleur.","")
     !GPU parameter
     CALL new_argument(0,"-gpu","Use GPU for computing","")
   END SUBROUTINE add_fleur_arguments

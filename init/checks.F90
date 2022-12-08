@@ -111,6 +111,12 @@ MODULE m_checks
        if (abs(maxpos-minpos)>2.0) call judft_warn("Your film setup is not centered around zero",hint="Using a non-centred setup can lead to numerical problems. Please check your setup an try to ensure that the center of your film is at z=0")
      endif
 
+     IF(banddos%unfoldBand.AND.noco%l_soc.AND..NOT.noco%l_noco) THEN
+        IF(banddos%unfoldUseOlap) THEN
+           CALL juDFT_error("Band unfolding for 2nd variation SOC is only implemented without incorporating the overlap matrix.", hint="You have to set the optional /output/unfoldingBand/@useOlap switch to F.", calledby ="check_input_switches")
+        END IF
+     END IF
+
    END SUBROUTINE check_input_switches
 
   END MODULE m_checks

@@ -5,14 +5,14 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 function clone_from_git(){
      rm -rf $DIR/configure.sh
     cd $DIR
-    git init .	
-    git remote add -f origin  https://iffgit.fz-juelich.de/fleur/fleur.git 
+    git init .
+    git remote add -f origin  https://iffgit.fz-juelich.de/fleur/fleur.git
     git checkout release
     echo "Current FLEUR source code obtained from iffgit.fz-juelich.de"
     echo "Restart the configure.sh script"
     exit
     }
-    
+
 function check_git(){
     git_found=`which git`
     ping -q -c1 -W1 iffgit.fz-juelich.de
@@ -58,7 +58,6 @@ fi
 
 #variables to store arguments
 
-all_tests=0
 machine=""
 label=""
 backup=0
@@ -73,7 +72,7 @@ echo "------------ Welcome to the FLEUR configuration script -------------"
 . $DIR/cmake/process_arguments.sh
 
 
-if [ $gitupdate -gt 0 ] 
+if [ $gitupdate -gt 0 ]
 then
     update_git
 fi
@@ -104,7 +103,7 @@ fi
 
 if [ $debug -gt 0 ]
 then
-   echo "Debug version will be build"
+   echo "Debug version will be built"
    BUILD=Debug
    buildname="$buildname.debug"
 else
@@ -124,7 +123,7 @@ then
         cd $buildname
         for file in *
         do
-          if [[ "$file" == "external" ]] || [[ "$file" == "Testing" ]] 
+          if [[ "$file" == "external" ]] || [[ "$file" == "Testing" ]]
           then
             echo "Keeping $file directory"
           else
@@ -132,13 +131,13 @@ then
           fi
         done
         cd -
-    fi  
+    fi
 else
    mkdir $buildname
 fi
 cd $buildname
 
-#Now check the machine and set some defaults 
+#Now check the machine and set some defaults
 if [[ $machine =~ FLEUR_CONFIG_MACHINE ]]
 then
     machine=$FLEUR_CONFIG_MACHINE
@@ -175,7 +174,7 @@ done
 . $DIR/cmake/store_environment.sh
 
 
-${cmake} $CMAKE_OPTIONS -Dall_tests=$all_tests $NINJAARG -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
+${cmake} $CMAKE_OPTIONS $NINJAARG -DCMAKE_BUILD_TYPE=$BUILD $DIR 2>&1 |tee configure.out
 
 cd -
 

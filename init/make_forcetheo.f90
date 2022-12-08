@@ -29,6 +29,7 @@ contains
        ALLOCATE(t_forcetheo_ssdisp::forcetheo)
     CASE default
        ALLOCATE(t_forcetheo::forcetheo)
+       forcetheo=t_forcetheo()
     END SELECT
 
     SELECT TYPE(forcetheo)

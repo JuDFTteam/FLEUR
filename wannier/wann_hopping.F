@@ -9,7 +9,7 @@
       contains 
       subroutine wann_hopping(
      >          rvecnum,rvec,kpoints,
-     >          jspins_in,nkpts,l_bzsym,film,l_onedimens,
+     >          jspins_in,nkpts,l_bzsym,film,
      >          l_soc,band_min,band_max,neigd,
      >          l_socmmn0,l_ndegen,ndegen,wan90version,
      >          l_unformatted)
@@ -33,7 +33,7 @@ c      use m_wann_wigner_seitz
       integer, intent(in) :: jspins_in
       integer, intent(in) :: nkpts
       logical, intent(in) :: l_bzsym,l_soc
-      logical, intent(in) :: film,l_onedimens
+      logical, intent(in) :: film
       integer, intent(in) :: band_min(2),band_max(2),neigd
       logical, intent(in) :: l_socmmn0
       logical, intent(in) :: l_ndegen

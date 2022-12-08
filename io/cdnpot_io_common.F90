@@ -26,14 +26,14 @@ MODULE m_cdnpot_io_common
 
    CONTAINS
 
-   SUBROUTINE compareStars(stars, refStars, oneD, refOneD, l_same)
+   SUBROUTINE compareStars(stars, refStars,   l_same)
       use m_types_stars
-      use m_types_oneD
+       
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_stars),INTENT(IN)  :: refStars
-      TYPE(t_oneD), INTENT(IN)  :: oneD
-      TYPE(t_oneD), INTENT(IN)  :: refOneD
+       
+       
 
       LOGICAL,      INTENT(OUT) :: l_same
 
@@ -45,8 +45,7 @@ MODULE m_cdnpot_io_common
       IF(stars%mx1.NE.refStars%mx1) l_same = .FALSE.
       IF(stars%mx2.NE.refStars%mx2) l_same = .FALSE.
       IF(stars%mx3.NE.refStars%mx3) l_same = .FALSE.
-      IF(oneD%odi%nq2.NE.refOneD%odi%nq2) l_same = .FALSE.
-
+     
    END SUBROUTINE compareStars
 
    SUBROUTINE compareStepfunctions(stars, refStars, l_same)
@@ -151,14 +150,14 @@ MODULE m_cdnpot_io_common
    END SUBROUTINE compareLatharms
 
 #ifdef CPP_HDF
-   SUBROUTINE checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum, oneD, stars, latharms, sym,&
+   SUBROUTINE checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum,   stars, latharms, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                                        currentStepfunctionIndex,l_storeIndices,l_CheckBroyd)
       use m_types_atoms
       use m_types_input
       use m_types_cell
       use m_types_vacuum
-      use m_types_oneD
+       
       use m_types_stars
       use m_types_sphhar
       use m_types_sym
@@ -167,7 +166,7 @@ MODULE m_cdnpot_io_common
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_cell), INTENT(IN)  :: cell
       TYPE(t_vacuum),INTENT(IN) :: vacuum
-      TYPE(t_oneD),INTENT(IN)   :: oneD
+       
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_sphhar),INTENT(IN) :: latharms
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -184,7 +183,7 @@ MODULE m_cdnpot_io_common
       TYPE(t_sphhar)       :: latharmsTemp
       TYPE(t_input)        :: inputTemp
       TYPE(t_cell)         :: cellTemp
-      TYPE(t_oneD)         :: oneDTemp
+       
       TYPE(t_sym)          :: symTemp
 
       INTEGER                    :: starsIndexTemp, structureIndexTemp
@@ -196,33 +195,33 @@ MODULE m_cdnpot_io_common
       IF(currentStructureIndex.EQ.0) THEN
          currentStructureIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym,currentStructureIndex,l_CheckBroyd)
+         CALL writeStructureHDF(fileID, input, atoms, cell, vacuum,   sym,currentStructureIndex,l_CheckBroyd)
       ELSE
-         CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, currentStructureIndex)
+         CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp,  symTemp, currentStructureIndex)
          CALL compareStructure(input, atoms, vacuum, cell, sym, inputTemp, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same)
 
          IF(.NOT.l_same) THEN
             currentStructureIndex = currentStructureIndex + 1
             l_storeIndices = .TRUE.
             l_writeAll = .TRUE.
-            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex,l_CheckBroyd)
+            CALL writeStructureHDF(fileID, input, atoms, cell, vacuum,   sym, currentStructureIndex,l_CheckBroyd)
          END IF
       END IF
       IF (currentStarsIndex.EQ.0) THEN
          currentStarsIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars, oneD, l_CheckBroyd)
+         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,   l_CheckBroyd)
       ELSE
          CALL peekStarsHDF(fileID, currentStarsIndex, structureIndexTemp)
          l_same = structureIndexTemp.EQ.currentStructureIndex
          IF(l_same) THEN
-            CALL readStarsHDF(fileID, currentStarsIndex, starsTemp, oneDTemp)
-            CALL compareStars(stars, starsTemp, oneD, oneDTemp, l_same)
+            CALL readStarsHDF(fileID, currentStarsIndex, starsTemp)
+            CALL compareStars(stars, starsTemp, l_same)
          END IF
          IF((.NOT.l_same).OR.l_writeAll) THEN
             currentStarsIndex = currentStarsIndex + 1
             l_storeIndices = .TRUE.
-            CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars, oneD, l_CheckBroyd)
+            CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,   l_CheckBroyd)
          END IF
       END IF
       IF (currentLatharmsIndex.EQ.0) THEN
@@ -243,10 +242,12 @@ MODULE m_cdnpot_io_common
          END IF
       END IF
       IF(currentStepfunctionIndex.EQ.0) THEN
-         currentStepfunctionIndex = 1
-         l_storeIndices = .TRUE.
-         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
-                                   currentStructureIndex, stars,l_CheckBroyd)
+         IF (judft_was_argument("-storeSF")) THEN
+            currentStepfunctionIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
+                                      currentStructureIndex, stars,l_CheckBroyd)
+         END IF
       ELSE
          CALL peekStepfunctionHDF(fileID, currentStepfunctionIndex, starsIndexTemp, structureIndexTemp)
          l_same = (starsIndexTemp.EQ.currentStarsIndex).AND.(structureIndexTemp.EQ.currentStructureIndex)
@@ -255,10 +256,15 @@ MODULE m_cdnpot_io_common
             CALL compareStepfunctions(stars, starsTemp, l_same)
          END IF
          IF((.NOT.l_same).OR.l_writeAll) THEN
-            currentStepfunctionIndex = currentStepfunctionIndex + 1
             l_storeIndices = .TRUE.
-            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
-                                      currentStructureIndex, stars,l_CheckBroyd)
+! I comment out the IF condition. At the moment the logic is if there already is a stepfunction stored, we store more.
+!            IF (judft_was_argument("-storeSF")) THEN
+               currentStepfunctionIndex = currentStepfunctionIndex + 1
+               CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
+                                         currentStructureIndex, stars,l_CheckBroyd)
+!            ELSE
+!               currentStepfunctionIndex = 0 ! This is not safe, because one might resume to storing stepfunctions which would result in using index 1 twice.
+!            END IF
          END IF
       END IF
 

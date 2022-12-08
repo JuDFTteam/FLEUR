@@ -18,10 +18,12 @@ MODULE m_types_tlmplm
      COMPLEX,ALLOCATABLE :: tdulo(:,:,:,:,:)
      !(0:lmd,-llod:llod,mlotot,tspin)
      COMPLEX,ALLOCATABLE :: tuulo(:,:,:,:,:)
-     COMPLEX,ALLOCATABLE :: ulotu(:,:,:,:,:)
-     COMPLEX,ALLOCATABLE :: ulotd(:,:,:,:,:)
+     COMPLEX,ALLOCATABLE :: tulou(:,:,:,:,:)
+     COMPLEX,ALLOCATABLE :: tulod(:,:,:,:,:)
      !(0:lmd,-llod:llod,mlotot,tspin)
      COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:,:)
+     COMPLEX,ALLOCATABLE :: tuloulo_new(:,:,:,:,:)
+     COMPLEX,ALLOCATABLE :: tuloulo_newer(:,:,:,:,:,:,:)
      !(-llod:llod,-llod:llod,mlolotot,tspin)
      COMPLEX,ALLOCATABLE :: h_loc(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
      INTEGER,ALLOCATABLE :: h_loc2(:)
@@ -33,6 +35,8 @@ MODULE m_types_tlmplm
      !COMPLEX,ALLOCATABLE :: h_loc_sp(:,:,:,:)   !l,lp,ntype,ispin,jspin
      !COMPLEX,ALLOCATABLE :: h_locLO(:,:,:,:,:)  !lm+mlo,mlo,ntype,ispin,jspin
      TYPE(t_rsoc)        :: rsoc
+     ! For juPhon:
+     INTEGER,ALLOCATABLE :: ind(:,:,:,:)
    CONTAINS
      PROCEDURE,PASS :: init => tlmplm_init
   END TYPE t_tlmplm
@@ -45,7 +49,7 @@ CONTAINS
     TYPE(t_atoms)                :: atoms
     INTEGER,INTENT(in)           :: jspins
     LOGICAL,INTENT(IN)           :: l_offdiag
-    INTEGER :: err(9),lmd,mlolotot
+    INTEGER :: err(11),lmd,mlolotot
     err = 0
     mlolotot=DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2
     lmd=atoms%lmaxd*(atoms%lmaxd+2)
@@ -54,17 +58,20 @@ CONTAINS
     td%h_loc2=atoms%lmax*(atoms%lmax+2)+1
     td%h_loc2_nonsph=atoms%lnonsph*(atoms%lnonsph+2)+1
     IF (ALLOCATED(td%h_loc)) &
-         DEALLOCATE(td%tdulo,td%tuulo,td%ulotd,td%ulotu,&
-         td%tuloulo,td%h_loc,td%e_shift,td%h_off,td%h_loc_nonsph)
+         DEALLOCATE(td%tdulo,td%tuulo,td%tulod,td%tulou,&
+         td%tuloulo,td%tuloulo_new,td%tuloulo_newer,td%h_loc,td%e_shift,td%h_off,td%h_loc_nonsph)
     !    ALLOCATE(td%tuu(0:lmplmd,ntype,jspins),stat=err)
     !    ALLOCATE(td%tud(0:lmplmd,ntype,jspins),stat=err)
     !    ALLOCATE(td%tdd(0:lmplmd,ntype,jspins),stat=err)
     !    ALLOCATE(td%tdu(0:lmplmd,ntype,jspins),stat=err)
     ALLOCATE(td%tdulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(1));td%tdulo=0.0
     ALLOCATE(td%tuulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(2));td%tuulo=0.0
-    ALLOCATE(td%ulotd(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(8));td%ulotd=0.0
-    ALLOCATE(td%ulotu(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(9));td%ulotu=0.0
+    ALLOCATE(td%tulod(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(8));td%tulod=0.0
+    ALLOCATE(td%tulou(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(9));td%tulou=0.0
     ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,MAX(mlolotot,1),jspins,jspins), stat=err(3));td%tuloulo=0.0
+    mlolotot = DOT_PRODUCT(atoms%nlo,atoms%nlo)
+    ALLOCATE(td%tuloulo_new(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,MAX(mlolotot,1),jspins,jspins), stat=err(10));td%tuloulo_new=0.0
+    ALLOCATE(td%tuloulo_newer(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,atoms%nlod,atoms%nlod,atoms%ntype,jspins,jspins), stat=err(11));td%tuloulo_newer=0.0
     ALLOCATE(td%h_loc(0:2*lmd+1,0:2*lmd+1,atoms%ntype,jspins,jspins),stat=err(5));td%h_loc=0.0
     ALLOCATE(td%h_loc_nonsph(0:MAXVAL(td%h_loc2_nonsph)*2-1,0:MAXVAL(td%h_loc2_nonsph)*2-1,atoms%ntype,jspins,jspins),stat=err(6));td%h_loc_nonsph=0.0
 

@@ -1,13 +1,12 @@
 MODULE m_abcof_soc
 CONTAINS
   SUBROUTINE abcof_soc(input,atoms,sym, cell,lapw,ne,usdus,&
-                   noco,jspin,oneD,nat_start,nat_stop,nat_l,&
+                   noco,jspin ,nat_start,nat_stop,nat_l,&
                    acof,bcof,ccof,zMat)
     !     ************************************************************
     !     subroutine constructs the a,b coefficients of the linearized
     !     m.t. wavefunctions for each band and atom.       c.l. fu
     !     ************************************************************
-#include "cpp_double.h"
 
     USE m_constants, ONLY : tpi_const
     USE m_setabc1lo
@@ -20,7 +19,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_usdus),INTENT(IN)  :: usdus
     TYPE(t_lapw),INTENT(IN)   :: lapw
-    TYPE(t_oneD),INTENT(IN)   :: oneD
+     
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
@@ -112,7 +111,7 @@ CONTAINS
                 !$OMP& DEFAULT(none)&
                 !$OMP& PRIVATE(k,i,work_r,work_c,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,na2,nbasf,&
                 !$OMP& j,fkp,fgp,ylm,ll1,m,c_0,c_1,c_2,lmp,inv_f,lm,term1,ctmp,acof_l,bcof_l,ccof_l)&
-                !$OMP& SHARED(n,nn,natom,natom_l,noco,atoms,sym,cell,oneD,lapw,nvmax,ne,zMat,usdus,iintsp,&
+                !$OMP& SHARED(n,nn,natom,natom_l,noco,atoms,sym,cell ,lapw,nvmax,ne,zMat,usdus,iintsp,&
                 !$OMP& alo1,blo1,clo1,jatom,jspin,apw,const,nbasf0,acof,bcof,ccof,nat_start,nat_stop)
                 !$   ALLOCATE(acof_l(size(acof,1),0:size(acof,2)-1),bcof_l(size(bcof,1),0:size(bcof,2)-1))
                 !$   ALLOCATE(ccof_l(-atoms%llod:atoms%llod,size(ccof,2),size(ccof,3)))

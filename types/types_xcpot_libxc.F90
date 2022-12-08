@@ -44,6 +44,7 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc => xcpot_get_vxc
       PROCEDURE        :: get_exc => xcpot_get_exc
+      PROCEDURE        :: get_fxc => xcpot_get_fxc
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       !Not             overloeaded...
       PROCEDURE        :: init => xcpot_init
@@ -433,6 +434,40 @@ CONTAINS
 
 #endif
    END SUBROUTINE xcpot_get_exc
+
+   SUBROUTINE xcpot_get_fxc(xcpot, jspins, rh, fxc)
+      USE, INTRINSIC :: IEEE_ARITHMETIC
+      use iso_c_binding
+
+      IMPLICIT NONE
+
+      CLASS(t_xcpot_libxc), INTENT(IN)  :: xcpot
+      INTEGER,              INTENT(IN)  :: jspins
+      REAL,                 INTENT(IN)  :: rh(:, :)
+      REAL,                 INTENT(OUT) :: fxc(:, :)
+
+#ifdef CPP_LIBXC
+      REAL,ALLOCATABLE  :: fxc_tmp(:,:), fx_tmp(:,:)
+
+      integer(kind=c_size_t)           :: idx
+
+      !libxc uses the spin as a first index, hence we have to transpose....
+      ALLOCATE (fxc_tmp(SIZE(fxc, 2), SIZE(fxc, 1))); fxc_tmp = 0.0
+      ALLOCATE (fx_tmp(SIZE(fxc, 2), SIZE(fxc, 1))); fx_tmp = 0.0
+
+      IF (xcpot%needs_grad().OR.xcpot%exc_is_MetaGGA()) THEN
+         CALL judft_error("Bug: You called get_fxc for a (meta)GGA potential. This is not implemented (yet?).")
+      ELSE  !LDA potentials
+         CALL xc_f90_lda_fxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fx_tmp)
+         IF (xcpot%func_vxc_id_c > 0) THEN
+            CALL xc_f90_lda_fxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fxc_tmp)
+            fxc_tmp = fxc_tmp + fx_tmp
+         ENDIF
+      ENDIF
+      fxc = TRANSPOSE(fxc_tmp)
+
+#endif
+   END SUBROUTINE xcpot_get_fxc
 
    SUBROUTINE xcpot_alloc_gradients(ngrid, jspins, grad)
       INTEGER, INTENT(IN)         :: jspins, ngrid

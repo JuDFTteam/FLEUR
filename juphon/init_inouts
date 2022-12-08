@@ -1,0 +1,151 @@
+Moved to juPhonType (set to defaults; read from inp.xml in the future):
+integer,                          intent(out) :: iqpt
+real,                             intent(out) :: paPoX
+real,                             intent(out) :: paPoY
+real,                             intent(out) :: paPoZ
+logical,                          intent(out) :: harSw
+logical,                          intent(out) :: extSw
+logical,                          intent(out) :: xcSw
+logical,                          intent(out) :: calcEigenVec
+logical,                          intent(out) :: oneSternhCycle
+logical,                          intent(out) :: recipLengthUnit
+logical,                          intent(out) :: onlyTests
+logical,                          intent(out) :: testsActivated
+integer,                          intent(out) :: noPtsCon
+integer,                          intent(out) :: numAddQs
+logical,                          intent(out) :: testCompareGrVeff0FleurSw
+logical,                          intent(out) :: testVeff1Sw
+logical,                          intent(out) :: testUnfoldStarsSw
+logical,                          intent(out) :: testRadDerivativeSw
+logical,                          intent(out) :: testGauntCoeffSw
+logical,                          intent(out) :: testGradLhExpandFuncSw
+logical,                          intent(out) :: testContGrVeff0Sw
+logical,                          intent(out) :: testWarpingSw
+logical,                          intent(out) :: testSternhHSMEtestSw
+logical,                          intent(out) :: testSternhSchroedPertTheoSw
+logical,                          intent(out) :: testz1Phi0ContSw
+logical,                          intent(out) :: testRho1BasCorrSw
+logical,                          intent(out) :: testPlotRho03Dsw
+logical,                          intent(out) :: testRadSolSw
+logical,                          intent(out) :: testKptsWeightSw
+logical,                          intent(out) :: testCountValElecSw
+logical,                          intent(out) :: testVeff0ContSw
+logical,                          intent(out) :: testrho0ContSw
+logical,                          intent(out) :: testBackRotMTCoordSysSw
+logical,                          intent(out) :: testRho1IRsw
+logical,                          intent(out) :: testRho1MTsw
+logical,                          intent(out) :: testPsi0ContSw
+logical,                          intent(out) :: testOverlapSw
+logical,                          intent(out) :: testGradRho0PathSw
+logical,                          intent(out) :: testEii2LatPeriodQSw
+logical,                          intent(out) :: testVarphiHepsVarphiSw
+logical,                          intent(out) :: test1st2ndPulDynMatEps1
+logical,                          intent(out) :: test1st2ndPulDynMatCancel
+logical,                          intent(out) :: test3rdPulDynMatCancel
+logical,                          intent(out) :: testIntVeff1Rho1Val
+logical,                          intent(out) :: testGrPsiPsiMatElem
+logical,                          intent(out) :: testCompareSurfInt
+logical,                          intent(out) :: testSplitMTSurfIntSterh
+logical,                          intent(out) :: testVeff1IRMESternh
+logical,                          intent(out) :: testEps1q0
+logical,                          intent(out) :: testVeff1IRMatqBackFold
+logical,                          intent(out) :: testVeff1IRqLatPeriod
+logical,                          intent(out) :: testGrMatElemPsiHepsPsiGaussTheo
+logical,                          intent(out) :: testPsiHepsTildePsi
+logical,                          intent(out) :: testGoldsteinRemaining
+logical,                          intent(out) :: testR2orNotWfMtGradNgrNTensGrOvls
+logical,                          intent(out) :: testComp3ArgSFIntsSw
+logical,                          intent(out) :: testComp2ArgSFIntsSw
+logical,                          intent(out) :: testGoldsteinSurfSw
+logical,                          intent(out) :: testComp2ArgGrSFIntsSw
+logical,                          intent(out) :: testIRIntegralSw
+logical,                          intent(out) :: testIR3rdMatElemSw
+logical,                          intent(out) :: testActionHgrPhiSw
+logical,                          intent(out) :: testXCintegrals
+logical,                          intent(out) :: testEii2PsDens
+
+Gained organically from scf-workflow:
+type(t_atoms),                    intent(out) :: atoms
+type(t_cell),                     intent(out) :: cell
+type(t_sym),                      intent(out) :: sym
+type(t_stars),                    intent(out) :: stars
+type(t_sphhar),                   intent(out) :: lathar
+type(t_input),                    intent(out) :: input
+type(t_enpara),                   intent(out) :: enpara
+type(t_results),                  intent(out) :: results
+type(t_kpts),                     intent(out) :: kpts
+integer,            allocatable,  intent(out) :: ne(:) [results]
+real,               allocatable,  intent(out) :: eig(:,:,:) [results]
+integer,            allocatable,  intent(out) :: mlh_atom(:,:,:) [sphhar]
+integer,            allocatable,  intent(out) :: nmem_atom(:, :) [sphhar]
+complex,            allocatable,  intent(out) :: clnu_atom(:,:,:) [sphhar]
+integer,                          intent(out) :: memd_atom [sphhar]
+complex,            allocatable,  intent(out) :: rho0IR(:,:)
+real,               allocatable,  intent(out) :: rho0MT(:,:,:,:)
+"type(t_potential),                intent(out) :: Veff0"
+type(t_kpts),                     intent(out) :: qpts [copy kpts for now]
+complex,            allocatable,  intent(out) :: vXC0IR(:, :)
+complex,            allocatable,  intent(out) :: eXCIR(:)
+real,               allocatable,  intent(out) :: vXC0MT(:, :, :, :)
+real,               allocatable,  intent(out) :: eXCMT(:, :, :)
+real,               allocatable,  intent(out) :: vrCoul(:, :, :, :)
+complex,            allocatable,  intent(out) :: vpwCoul_uw(:, :)
+
+Gained from new optionals in scf-workflow:
+integer,            allocatable,  intent(out) :: nv(:, :)
+
+Calculated/Read in dfpt_init:
+complex,            allocatable,  intent(out) :: rho0MTsh(:, :, :, :)
+integer,                          intent(out) :: ngdp
+integer,            allocatable,  intent(out) :: GbasVec(:, :)
+integer,            allocatable,  intent(out) :: ilst(:, :, :)
+MCOMPLEX,           allocatable,  intent(out) :: z(:,:,:,:)
+complex,            allocatable,  intent(out) :: rho0IRpw(:, :)
+integer,            allocatable,  intent(out) :: gdp(:,:)
+integer,            allocatable,  intent(out) :: nobd(:, :)
+integer,            allocatable,  intent(out) :: nRadFun(:,:)
+integer,            allocatable,  intent(out) :: iloTable(:, :, :)
+integer,            allocatable,  intent(out) :: ilo2p(:, :)
+real,               allocatable,  intent(out) :: rbas1(:,:,:,:,:)
+real,               allocatable,  intent(out) :: rbas2(:,:,:,:,:)
+type(t_usdus),                    intent(out) :: usdus
+real,               allocatable,  intent(out) :: uuilon(:, :) [usdus; last dim=1]
+real,               allocatable,  intent(out) :: duilon(:, :) [usdus; last dim=1]
+real,               allocatable,  intent(out) :: ulouilopn(:, :, :) [usdus; last dim=1]
+real,               allocatable,  intent(out) :: gridf(:, :)
+integer,                          intent(out) :: ngdp2km
+integer,            allocatable,  intent(out) :: gdp2Ind(:, :, :)
+integer,                          intent(out) :: gdp2iLim(2, 3)
+complex,           allocatable, intent(out) :: grVxcIRKern(:)
+real,              allocatable, intent(out) :: dKernMTGPts(:, :, :)
+real,              allocatable, intent(out) :: gausWts(:)
+complex,           allocatable, intent(out) :: ylm(:, :)
+complex,           allocatable, intent(out) :: rho1MTCoreDispAt(:, :, :, :)
+complex,           allocatable, intent(out) :: qpwcG(:, :)
+type(t_tlmplm),                 intent(out) :: tdHS0 [another loose array needed adding]
+integer,            allocatable,  intent(out) :: kveclo(:,:) [dirty hack]
+complex,            allocatable,  intent(out) :: vEff0MTsh(:, :, :, :)
+complex,            allocatable,  intent(out) :: vEff0IRpw(:, :)
+complex,            allocatable,  intent(out) :: vEff0IRPwUw(:, :)
+real,               allocatable,  intent(out) :: El(:, :, :, :) [from enpara]
+complex,           allocatable, intent(out) :: grRho0IR(:, :)
+complex,           allocatable, intent(out) :: grRho0MT(:, :, :, :)
+complex,           allocatable, intent(out) :: grVeff0MT_init(:, :, :, :)
+complex,           allocatable, intent(out) :: grVeff0MT_main(:, :, :, :)
+complex,           allocatable, intent(out) :: grVext0IR_DM(:, :)
+complex,           allocatable, intent(out) :: grVext0MT_DM(:, :, :, :)
+complex,           allocatable, intent(out) :: grVCoul0IR_DM_SF(:, :)
+complex,           allocatable, intent(out) :: grVCoul0MT_DM_SF(:, :, :, :)
+complex,           allocatable, intent(out) :: grVeff0IR_DM(:, :)
+complex,           allocatable, intent(out) :: grVeff0MT_DM(:, :, :, :)
+complex,           allocatable, intent(out) :: grVeff0MT_DMhxc(:, :, :, :)
+
+To be calculated for each q:
+integer,            allocatable,  intent(out) :: kpq2kPrVec(:, :, :)
+integer,            allocatable,  intent(out) :: mapKpq2K(:, :)
+
+Deprecated and need to be sausaged in/out:
+type(t_dimension),                intent(out) :: dimens
+
+Irrelevant (for now):
+type(t_xcpot),                    intent(out) :: xcpot

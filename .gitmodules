@@ -16,3 +16,6 @@
 [submodule "external/hdf5-git"]
 	path = external/hdf5-git
 	url = https://github.com/HDFGroup/hdf5.git
+[submodule "external/libxml2-git"]
+	path = external/libxml2-git
+	url = https://gitlab.gnome.org/GNOME/libxml2.git

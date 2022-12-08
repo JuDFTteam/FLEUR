@@ -53,7 +53,7 @@ CONTAINS
     INTEGER i,l,lo,lop ,natom,nn,ntyp,m,n_dos
     INTEGER nt1,nt2,lm,n,ll1,ipol,icore,index
     REAL fac
-    COMPLEX suma,sumb,sumab,sumba
+    COMPLEX suma,sumb,sumab,sumba,sumaa,sumbb
     !     ..
     !     .. Local Arrays ..
     REAL qlo(noccbd,atoms%nlod,atoms%nlod,atoms%ntype)
@@ -77,11 +77,11 @@ CONTAINS
     !
     !         DO 140 i = (skip_t+1),ne    ! this I need for all states
     DO i = 1,ne              ! skip in next loop
-       nt1 = 1
        DO n_dos = 1,size(banddos%dos_typelist)
          n=banddos%dos_typelist(n_dos)
          atomTypeCovered(n) = .TRUE.
          fac = 1./atoms%neq(n)
+         nt1 = sum(atoms%neq(:n-1))+1
          nt2 = nt1 + atoms%neq(n) - 1
          DO l = 0,3
            suma = CMPLX(0.,0.)
@@ -89,26 +89,25 @@ CONTAINS
            ll1 = l* (l+1)
            DO m = -l,l
              lm = ll1 + m
-             IF ( .NOT.banddos%l_mcd ) THEN
+             DO natom = nt1,nt2
+                 suma = suma + eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
+                 sumb = sumb + eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
+             ENDDO
+             IF (banddos%l_mcd) THEN
+               sumaa = CMPLX(0.,0.) ; sumab = CMPLX(0.,0.)
+               sumbb = CMPLX(0.,0.) ; sumba = CMPLX(0.,0.)
                DO natom = nt1,nt2
-                 suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
-                 sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
-               ENDDO
-             ELSE
-               suma = CMPLX(0.,0.) ; sumab = CMPLX(0.,0.)
-               sumb = CMPLX(0.,0.) ; sumba = CMPLX(0.,0.)
-               DO natom = nt1,nt2
-                 suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
-                 sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
-                 sumab= sumab + eigVecCoeffs%acof(i,lm,natom,jsp) *CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
-                 sumba= sumba + eigVecCoeffs%bcof(i,lm,natom,jsp) *CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
+                 sumaa = suma + eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
+                 sumbb = sumb + eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
+                 sumab= sumab + eigVecCoeffs%abcof(i,lm,0,natom,jsp) *CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
+                 sumba= sumba + eigVecCoeffs%abcof(i,lm,1,natom,jsp) *CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
                ENDDO
                DO icore = 1, mcd%ncore(n)
                  DO ipol = 1, 3
                    index = 3*(n_dos-1) + ipol
                    mcd%mcd(index,icore,ev_list(i),ikpt,jsp)=mcd%mcd(index,icore,ev_list(i),ikpt,jsp) + fac*(&
-                   suma * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1)  +&
-                   sumb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2)  +&
+                   sumaa * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1)  +&
+                   sumbb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2)  +&
                    sumab* CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,1)  +&
                    sumba* CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,2)  )
                  ENDDO
@@ -126,23 +125,22 @@ CONTAINS
            DO m = -l,l
              lm = ll1 + m
              DO natom = nt1,nt2
-                suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
-                sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
+                suma = suma + eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
+                sumb = sumb + eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
              ENDDO
            ENDDO
            dos%qTot(ev_list(i),ikpt,jsp) = dos%qTot(ev_list(i),ikpt,jsp) + (suma+sumb*usdus%ddn(l,n,jsp))
          ENDDO
 
-         nt1 = nt1 + atoms%neq(n)
+         
        ENDDO
     ENDDO
 
-    nt1 = 1
     DO n = 1, atoms%ntype
        IF(atomTypeCovered(n)) THEN
-          nt1 = nt1 + atoms%neq(n)
           CYCLE
        END IF
+       nt1=sum(atoms%neq(:n-1))+1
        nt2 = nt1 + atoms%neq(n) - 1
        DO i = 1,ne              ! skip in next loop
          DO l = 0, atoms%lmax(n)
@@ -152,14 +150,13 @@ CONTAINS
            DO m = -l,l
              lm = ll1 + m
              DO natom = nt1,nt2
-                suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
-                sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
+                suma = suma + eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
+                sumb = sumb + eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
              ENDDO
            ENDDO
            dos%qTot(ev_list(i),ikpt,jsp) = dos%qTot(ev_list(i),ikpt,jsp) + (suma+sumb*usdus%ddn(l,n,jsp))
          ENDDO
        ENDDO
-       nt1 = nt1 + atoms%neq(n)
     ENDDO
 
 
@@ -175,8 +172,8 @@ CONTAINS
             suma = CMPLX(0.,0.)
             sumb = CMPLX(0.,0.)
             DO natom = sum(atoms%neq(:n-1))+1,sum(atoms%neq(:n))
-              suma=suma+dot_product(eigVecCoeffs%acof(i,l* (l+1)-l:l* (l+1)+l,natom,jsp),eigVecCoeffs%acof(i,l* (l+1)-l:l* (l+1)+l,natom,jsp))
-              sumb=sumb+dot_product(eigVecCoeffs%bcof(i,l* (l+1)-l:l* (l+1)+l,natom,jsp),eigVecCoeffs%bcof(i,l* (l+1)-l:l* (l+1)+l,natom,jsp))
+              suma=suma+dot_product(eigVecCoeffs%abcof(i,l* (l+1)-l:l* (l+1)+l,0,natom,jsp),eigVecCoeffs%abcof(i,l* (l+1)-l:l* (l+1)+l,0,natom,jsp))
+              sumb=sumb+dot_product(eigVecCoeffs%abcof(i,l* (l+1)-l:l* (l+1)+l,1,natom,jsp),eigVecCoeffs%abcof(i,l* (l+1)-l:l* (l+1)+l,1,natom,jsp))
             ENDDO
             regCharges%ener(l,n,jsp) = regCharges%ener(l,n,jsp) + (suma+sumb*usdus%ddn(l,n,jsp))/atoms%neq(n)*we(i)*eig(i)
             regCharges%sqal(l,n,jsp) = regCharges%sqal(l,n,jsp) + (suma+sumb*usdus%ddn(l,n,jsp))/atoms%neq(n)*we(i)
@@ -203,7 +200,7 @@ CONTAINS
     DO ntyp=1,atoms%ntype
        DO nn = 1,atoms%neq(ntyp)
          natom=sum(atoms%neq(:ntyp-1))
-         natom = natom + 1
+         natom = natom + nn
           DO lo = 1,atoms%nlo(ntyp)
              l = atoms%llo(lo,ntyp)
              ll1 = l* (l+1)
@@ -211,11 +208,11 @@ CONTAINS
                 lm = ll1 + m
                 DO i = 1,ne
                    qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +REAL(&
-                        eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))+&
-                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp)) )
+                        eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))+&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp)) )
                    qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) + REAL(&
-                        eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))+&
-                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp)) )
+                        eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))+&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp)) )
                 ENDDO
              ENDDO
              DO lop = 1,atoms%nlo(ntyp)

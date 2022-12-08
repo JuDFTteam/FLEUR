@@ -60,7 +60,7 @@ CONTAINS
                       .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
 
       call timestart("init_pw_grid")
-      CALL init_pw_grid(xcpot%needs_grad(),stars,sym,cell)
+      CALL init_pw_grid(stars,sym,cell,xcpot)
       call timestop("init_pw_grid")
 
       !Put the charge on the grid, in GGA case also calculate gradients
@@ -109,9 +109,9 @@ CONTAINS
       v_xc2=v_xc
       !Put the potentials in rez. space.
       call timestart("pw_from_grid")
-      CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_xc,vTot%pw,vTot%pw_w)
-      CALL  pw_from_grid(xcpot%needs_grad(),stars,.false.,v_xc2,vxc%pw)
-      CALL  pw_from_grid(xcpot%needs_grad(),stars,.true.,v_x,vx%pw,vx%pw_w)
+      CALL  pw_from_grid(stars,v_xc,vTot%pw,vTot%pw_w)
+      CALL  pw_from_grid(stars,v_xc2,vxc%pw)
+      CALL  pw_from_grid(stars,v_x,vx%pw,vx%pw_w)
       call timestop("pw_from_grid")
 
       !calculate the ex.-cor energy density
@@ -130,7 +130,7 @@ CONTAINS
          call timestop("get_exc")
 #endif
          call timestart("pw_from_grid")
-         CALL pw_from_grid(xcpot%needs_grad(),stars,.TRUE.,e_xc,exc%pw,exc%pw_w)
+         CALL pw_from_grid(stars,e_xc,exc%pw,exc%pw_w)
          call timestop("pw_from_grid")
       ENDIF
 

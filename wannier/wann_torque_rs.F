@@ -1,11 +1,11 @@
       module m_wann_torque_rs
         use m_juDFT
       contains 
-      subroutine wann_torque_rs(
+      subroutine wann_torque_rs( 
      >          ntype,neq,rvecnum,rvec,kpoints,
-     >          jspins_in,nkpts,l_bzsym,film,l_onedimens,
+     >          jspins_in,nkpts,l_bzsym,film,
      >          l_soc,band_min,band_max,neigd,
-     >          l_socmmn0,l_ndegen,ndegen,wan90version,
+     >          l_ndegen,ndegen,wan90version,
      >          l_unformatted)
 c*************************************************
 c     Calculate the matrix elements of the 
@@ -30,11 +30,10 @@ c*************************************************
       integer, intent(in) :: nkpts
       logical, intent(in) :: l_bzsym,l_soc
       logical, intent(in) :: film
-      logical, intent(in) :: l_onedimens
+      
 
       integer, intent(in) :: band_min(2),band_max(2),neigd
 
-      logical, intent(in) :: l_socmmn0
       logical, intent(in) :: l_ndegen
       integer, intent(in) :: ndegen(:)
       integer, intent(in) :: wan90version

@@ -133,6 +133,7 @@ CONTAINS
       WRITE(961,"(A)") '}'
       CLOSE(961)
 
+#ifdef CPP_SEND_USAGE      
       IF (judft_was_argument("-no_send")) THEN
          PRINT *,"As requested by command line option usage data was not send, please send usage.json manually"
       ELSE
@@ -152,9 +153,9 @@ CONTAINS
 #else
          CALL system('curl --output /dev/null -m 5 -X POST -H "Content-Type: application/json" -d @usage.json https://docker.iff.kfa-juelich.de/fleur-usage-stats/')
 #endif
-
 #endif
       ENDIF
+#endif
 !#else
 !    PRINT *,"No usage data collected"
 !#endif

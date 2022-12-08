@@ -14,7 +14,7 @@ use mpi
 CONTAINS
 
 SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
-                  vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,vacdos,results,&
+                  vacuum,sphhar,sym,vTot ,cdnvalJob,den,regCharges,dos,vacdos,results,&
                   moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
 
    !************************************************************************************
@@ -67,13 +67,14 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
+   USE m_dfpt_rhomt
+   USE m_dfpt_rhonmt
 
    IMPLICIT NONE
 
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_mpi),           INTENT(IN)    :: fmpi
 
-   TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_enpara),        INTENT(IN)    :: enpara
    TYPE(t_banddos),       INTENT(IN)    :: banddos
    TYPE(t_input),         INTENT(IN)    :: input
@@ -110,14 +111,13 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
-   LOGICAL :: l_orbcomprot, l_real, l_corespec, l_empty
+   LOGICAL :: l_real, l_corespec, l_empty
 
    ! Local Arrays
    REAL,ALLOCATABLE :: we(:),eig(:)
    REAL :: bkpt(3)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-
 
    TYPE (t_lapw)              :: lapw
    TYPE (t_orb)               :: orb
@@ -168,7 +168,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    CALL usdus%init(atoms,input%jspins)
    CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
    ! The last entry in denCoeffsOffdiag%init is l_fmpl. It is meant as a switch to a plot of the full magnet.
-   ! density without the atomic sphere approximation for the magnet. density. It is not completely implemented (lo's missing).
+   ! density without the atomic sphere approximation for the magnet. density.
    CALL denCoeffsOffdiag%init(atoms,noco,sphhar,banddos%l_jDOS,any(noco%l_unrestrictMT).OR.noco%l_mperp)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
@@ -176,8 +176,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    !Greens function always considers the empty states
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
       IF(greensfImagPart%l_calc) THEN
-         CALL greensfBZintCoeffs%init(gfinp,atoms,noco,jsp_start,jsp_end,&
-                                      SIZE(cdnvalJob%k_list),SIZE(cdnvalJob%ev_list))
+         CALL greensfBZintCoeffs%init(gfinp,atoms,noco,SIZE(cdnvalJob%ev_list))
          CALL greensfCalcScalarProducts(gfinp,atoms,input,enpara,noco,sphhar,vTot,fmpi,hub1data=hub1data,&
                                         scalarProducts=scalarGF)
       ENDIF
@@ -185,7 +184,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
 
    IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
-   !IF (l_dosNdir.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
    IF (banddos%l_mcd.AND..NOT.PRESENT(mcd)) CALL juDFT_error("mcd is missing",calledby ="cdnval")
 
    ! calculation of core spectra (EELS) initializations -start-
@@ -226,7 +224,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       ikpt=cdnvalJob%k_list(ikpt_i)
       bkpt=kpts%bk(:,ikpt)
 
-      CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell,.false., fmpi)
+      CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
       skip_t = skip_tt
       ev_list=cdnvaljob%compact_ev_list(ikpt_i,l_empty)
       noccbd = SIZE(ev_list)
@@ -253,8 +251,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
-         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,oneD,&
-                    eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
+         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
+                    eigVecCoeffs%abcof(:,0:,0,:,ispin),eigVecCoeffs%abcof(:,0:,1,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
 
          IF (atoms%n_u+atoms%n_opc.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))
@@ -292,13 +290,16 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
                               denCoeffsOffdiag,eigVecCoeffs,jDOS)
             ENDIF
          ENDIF
-         CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
+         CALL dfpt_rhomt(atoms,we,we,noccbd,ispin,ispin,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+         CALL dfpt_rhonmt(atoms,sphhar,we,we,noccbd,ispin,ispin,[0.0,0.0,0.0],.FALSE.,.TRUE.,sym,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+         CALL dfpt_rhomtlo(atoms,noccbd,we,we,ispin,ispin,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+         CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we,eigVecCoeffs,eigVecCoeffs,denCoeffs,ispin,ispin,.FALSE.,[0.0,0.0,0.0])
 
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) THEN
            CALL tlmplm%init(atoms,input%jspins,.FALSE.)
            CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,vtot,den,input,hub1inp,hub1data,tlmplm,usdus,0.0)
-           CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
+           CALL force%addContribsA21A12(input,atoms,sym,cell ,enpara,&
            usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,lapw%gvec(1,:,:),lapw%gvec(2,:,:),lapw%gvec(3,:,:),bkpt)
          ENDIF
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
@@ -306,14 +307,21 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       END DO ! end loop over ispin
       IF (noco%l_mperp) then
         call timestart("denCoeffsOffdiag%calcCoefficients")
-        CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
+        CALL dfpt_rhomt(atoms,we,we,noccbd,2,1,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+        CALL dfpt_rhonmt(atoms,sphhar,we,we,noccbd,2,1,[0.0,0.0,0.0],.FALSE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+        CALL dfpt_rhomtlo(atoms,noccbd,we,we,2,1,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+        CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we,eigVecCoeffs,eigVecCoeffs,denCoeffs,2,1,.FALSE.,[0.0,0.0,0.0])
         call timestop("denCoeffsOffdiag%calcCoefficients")
       endif
 
       IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
          IF(greensfImagPart%l_calc) THEN
-            CALL greensfBZint(ikpt_i,ikpt,noccbd,jspin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
-                              scalarGF,eigVecCoeffs,greensfBZintCoeffs)
+            do ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
+               CALL greensfBZint(ikpt,noccbd,ispin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
+                                 scalarGF,eigVecCoeffs,greensfBZintCoeffs)
+               CALL greensfCalcImagPart_single_kpt(ikpt,ikpt_i,ev_list,ispin,gfinp,atoms,input,kpts,noco,fmpi,&
+                                 results,greensfBZintCoeffs,greensfImagPart)
+            enddo
          ENDIF
       ENDIF
 
@@ -322,13 +330,13 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
-         CALL pwden(stars,kpts,banddos,oneD,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
+         CALL pwden(stars,kpts,banddos ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
                     jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-         IF (PRESENT(slab).AND.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
+         IF (PRESENT(slab).AND.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab ,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
-            CALL vacden(vacuum,stars,oneD, kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
+            CALL vacden(vacuum,stars , kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
                         gVacMap,we,ikpt,jspin,vTot%vacz,noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,vacdos,dos)
          END IF
       END IF
@@ -342,31 +350,32 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(fmpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,vacdos,&
+      CALL mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,ispin,regCharges,dos,vacdos,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
    END DO
 #endif
 
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
       IF(greensfImagPart%l_calc) THEN
-         !Perform the Brillouin zone integration to obtain the imaginary part of the Green's Function
-         DO ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
-            CALL greensfCalcImagPart(cdnvalJob,ispin,gfinp,atoms,input,kpts,noco,fmpi,&
-                                     results,greensfBZintCoeffs,greensfImagPart)
-         ENDDO
+         call timestart("Green's function: Imag Part collect")
+         do ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
+            CALL greensfImagPart%collect(ispin,fmpi%mpi_comm)
+         enddo
+         call timestop("Green's function: Imag Part collect")
       ENDIF
    ENDIF
 
-   CALL cdnmt(fmpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
-              vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1inp,jDOS,hub1data)
-
    IF (fmpi%irank==0) THEN
+      CALL timestart("cdnmt")
+      CALL cdnmt(input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
+                 vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,den%mt,hub1inp,moments,jDOS,hub1data=hub1data)
+      CALL timestop("cdnmt")
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end
          IF (input%cdinf) THEN
             WRITE (oUnit,FMT=8210) ispin
 8210        FORMAT (/,5x,'check continuity of cdn for spin=',i2)
-            CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
+            CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,cell,den,ispin)
          END IF
          IF (input%l_f) CALL force_a8(input,atoms,sym,sphhar,ispin,vTot%mt(:,:,:,ispin),den%mt,force,fmpi,results)
       END DO

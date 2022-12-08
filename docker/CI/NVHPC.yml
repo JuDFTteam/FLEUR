@@ -12,14 +12,43 @@ build-pgi:
   script:
     - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make"
   allow_failure: true
-  except:
-    - pushes 
-
+  rules:
+      - if: $CI_TASKS =~ /nvidia/    
+  
 test-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
-  extends: .test-fleur-not-on-push
+  extends: .test-fleur
   variables:
     BUILD_FOLDER: build.pgi
   needs: 
     - build-pgi
   allow_failure: true
+  rules:
+      - if: $CI_TASKS =~ /nvidia/    
+  
+build-nvhpc-gpu:
+  image:   
+  stage: build
+  artifacts:
+    paths:
+      - build.nvgpu
+    expire_in: 12h
+  script:
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -gpu acc:cc60 -l nvgpu ; cd build.nvgpu; make"
+  allow_failure: true
+  rules:
+    - if: $CI_TASKS =~ /gpu/
+
+test-nvhpc-gpu:
+  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  extends: .test-fleur
+  tags:
+     - rtx2080ti
+  variables:
+    BUILD_FOLDER: build.nvgpu
+  needs: 
+    - build-nvhpc-gpu
+  allow_failure: true
+  rules:
+      - if: $CI_TASKS =~ /gpu/    
+  

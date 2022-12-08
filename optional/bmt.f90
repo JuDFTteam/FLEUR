@@ -2,7 +2,7 @@ MODULE m_bmt
 contains
   SUBROUTINE bmt(&
        & stars,input,noco,atoms,sphhar,vacuum,&
-       & cell,sym,oneD)
+       & cell,sym )
 
     USE m_constants
     USE m_types
@@ -19,7 +19,7 @@ contains
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_sym),INTENT(IN)      :: sym
-    TYPE(t_oneD),INTENT(IN)     :: oneD
+     
 
     TYPE(t_potden) :: den
 
@@ -49,7 +49,7 @@ contains
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     END IF
 
-    CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+    CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,&
                      CDN_INPUT_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,den)
 
     IF ( typmag < atoms%ntype ) THEN

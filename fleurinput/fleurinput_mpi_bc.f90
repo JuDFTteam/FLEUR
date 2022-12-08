@@ -3,8 +3,8 @@ MODULE m_fleurinput_mpi_bc
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,rank)
+       sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
+       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,juPhon,rank)
     USE m_types_xml
 
 
@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_banddos),INTENT(INOUT)::banddos
     TYPE(t_mpinp), INTENT(INOUT):: mpinp
     TYPE(t_hybinp),INTENT(INOUT)::hybinp
-    TYPE(t_oneD),INTENT(INOUT)::oneD
+     
     TYPE(t_coreSpecInput),INTENT(INOUT)::coreSpecInput
     TYPE(t_wann),INTENT(INOUT)::wann
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
@@ -28,6 +28,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(INOUT)::kpts
     TYPE(t_gfinp),INTENT(INOUT)::gfinp
     TYPE(t_hub1inp),INTENT(INOUT)::hub1inp
+    TYPE(t_juPhon),INTENT(INOUT)::juPhon
     INTEGER,INTENT(IN)::mpi_comm
     INTEGER,OPTIONAL,INTENT(IN)::rank
 
@@ -43,7 +44,6 @@ CONTAINS
     CALL banddos%mpi_bc(mpi_comm,rank)
     CALL hybinp%mpi_bc(mpi_comm,rank)
     CALL mpinp%mpi_bc(mpi_comm, rank)
-    CALL oneD%mpi_bc(mpi_comm,rank)
     CALL coreSpecInput%mpi_bc(mpi_comm,rank)
     CALL wann%mpi_bc(mpi_comm,rank)
     CALL forcetheo_data%mpi_bc(mpi_comm,rank)
@@ -52,6 +52,7 @@ CONTAINS
     CALL gfinp%mpi_bc(mpi_comm,rank)
     CALL hub1inp%mpi_bc(mpi_comm,rank)
     CALL xcpot%mpi_bc(mpi_comm,rank)
+    CALL juPhon%mpi_bc(mpi_comm,rank)
 
   END SUBROUTINE fleurinput_mpi_bc
 END MODULE m_fleurinput_mpi_bc

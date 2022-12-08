@@ -11,13 +11,12 @@ c***************************************c
 
       CONTAINS
       SUBROUTINE wann_uHu_vac(
-     >     chi,l_noco,l_soc,zrfs,jspins,nlotot,qss,nbnd,z1,nmzxyd,
+     >     chi,l_noco,l_soc,jspins,nlotot,qss,nbnd,z1,nmzxyd,
      >     nmzd,n2d,nv2d,k1d,k2d,k3d,n3d,nvac,ig,rgphs,nmzxy,
      >     nmz,delz,ig2,nq2,kv2,area,bmat,bbmat,evac,evac_b,
      >     bkpt,bkpt_b,vzxy,vz,nslibd,nslibd_b,jspin,jspin_b,
      >     ico,k1,k2,k3,k1_b,k2_b,k3_b,jspd,nvd,nbasfcn,neigd,
      >     zMat,zMat_b,nv,nv_b,omtil,gb,gb2,sign2,uHu)
-#include "cpp_double.h"
 
       USE m_types
       use m_constants, only : pimach
@@ -31,7 +30,7 @@ c***************************************c
       TYPE(t_mat), INTENT(IN) :: zMat, zMat_b
 
 c     .. scalar Arguments..
-      logical, intent (in) :: l_noco,l_soc,zrfs
+      logical, intent (in) :: l_noco,l_soc
       integer, intent (in) :: nlotot,jspin_b,n2d,jspins,ico
       integer, intent (in) :: nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n3d,nbnd
       integer, intent (in) :: nmzxy,nmz,nslibd,nslibd_b,nvac
@@ -200,17 +199,17 @@ c...cycle by the vacua
 
       vxy(:,:) = vzxy(:,:,ivac)
       IF(l_noco) THEN ! symmetrization
-       IF (nvac.EQ.1 .and. ivac.EQ.2 .AND.(.NOT.zrfs) ) THEN
-        DO i=1,nmzxy
-         DO igvm2 = 2,nq2
-          igvm2i = ig2(ig(-kv2(1,igvm2),-kv2(2,igvm2),0))
-          vxy_help(igvm2-1) = vxy(i,igvm2i-1)
-         ENDDO
-         DO igvm2 = 2,nq2
-          vxy(i,igvm2-1) = vxy_help(igvm2-1)
-         ENDDO
-        ENDDO
-       ENDIF
+       !IF (nvac.EQ.1 .and. ivac.EQ.2 .AND.(.NOT.zrfs) ) THEN
+       ! DO i=1,nmzxy
+       !  DO igvm2 = 2,nq2
+       !   igvm2i = ig2(ig(-kv2(1,igvm2),-kv2(2,igvm2),0))
+       !   vxy_help(igvm2-1) = vxy(i,igvm2i-1)
+       !  ENDDO
+       !  DO igvm2 = 2,nq2
+       !   vxy(i,igvm2-1) = vxy_help(igvm2-1)
+       !  ENDDO
+       ! ENDDO
+       !ENDIF
       ENDIF
 
       tuu = cmplx(0.,0.)
@@ -600,61 +599,61 @@ c        enddo
       enddo ! l
 
       if(.false.) then
-      call CPP_BLAS_cgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    ac_b(1,1),nv2d,tuu(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','T',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','T',nslibd,nslibd_b,nv2d,chi,
      >                    ac(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    bc_b(1,1),nv2d,tud(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','T',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','T',nslibd,nslibd_b,nv2d,chi,
      >                    ac(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    ac_b(1,1),nv2d,tdu(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','T',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','T',nslibd,nslibd_b,nv2d,chi,
      >                    bc(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('C','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    bc_b(1,1),nv2d,tdd(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','T',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','T',nslibd,nslibd_b,nv2d,chi,
      >                    bc(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
       endif
 
       if(.true.)then ! standard so far
-      call CPP_BLAS_cgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    ac_b(1,1),nv2d,tuu(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','C',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','C',nslibd,nslibd_b,nv2d,chi,
      >                    ac(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    bc_b(1,1),nv2d,tud(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','C',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','C',nslibd,nslibd_b,nv2d,chi,
      >                    ac(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    ac_b(1,1),nv2d,tdu(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','C',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','C',nslibd,nslibd_b,nv2d,chi,
      >                    bc(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
 
-      call CPP_BLAS_cgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
+      call zgemm('T','N',nslibd_b,nv2d,nv2d,cmplx(area),
      >                    bc_b(1,1),nv2d,tdd(1,1),nv2d,cmplx(0.0),
      >                    mat(1,1),nslibd_b)
-      call CPP_BLAS_cgemm('T','C',nslibd,nslibd_b,nv2d,chi,
+      call zgemm('T','C',nslibd,nslibd_b,nv2d,chi,
      >                    bc(1,1),nv2d,mat(1,1),nslibd_b,cmplx(1.0),
      >                    uHu,nbnd)
       endif

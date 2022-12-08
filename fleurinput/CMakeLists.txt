@@ -7,7 +7,7 @@ include("../cmake/Generate_Schema.cmake")
 
 add_library(fleurinput	 STATIC
 fleurinput_read_xml.f90    fleurinput_mpi_bc.f90
-types_fleurinput_base.F90  types_input.f90      types_oneD.f90
+types_fleurinput_base.F90  types_input.f90      
 types_coreSpecInput.f90    types_hybinp.f90     types_noco.f90
 types_vacuum.f90           types_banddos.f90    types_wannier.f90
 types_cell.f90             types_kpts.F90       types_fleurinput.f90
@@ -34,3 +34,4 @@ target_compile_definitions(fleurinput PUBLIC ${FLEUR_DEFINITIONS})
 target_link_libraries(fleurinput ${FLEUR_LINK_LIBRARIES})
 target_link_libraries(fleurinput juDFT)
 set_target_properties(fleurinput PROPERTIES Fortran_MODULE_DIRECTORY modules/fleurinput)
+set_source_files_properties(types_kpts.F90 PROPERTIES COMPILE_FLAGS -O0)

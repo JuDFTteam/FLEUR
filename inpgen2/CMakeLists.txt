@@ -22,17 +22,23 @@ endif()
 
 add_executable(inpgen2 ${externallibs}
 dropDefaults.c
+dropDefault2EConfig.c
+dropOxidesValidationEConfig.c
 dropProfiles.c
 default_econfig.h
+default2_econfig.h
+oxides_validation_econfig.h
 profileConfig.h
 
 inpgen_help.f90
+inpgen_version.f90
 inpgen.f90
 bravais_symm.f90
 make_crystal.f90
 make_spacegroup.f90
 check_mt_radii.f90
 make_atom_groups.f90
+make_magnetism.f90
 make_defaults.f90
 process_lattice_namelist.f90
 atompar.F90
@@ -59,9 +65,12 @@ old_inp/rw_noco.f90
 old_inp/rw_symfile.f
 old_inp/spg2set.f
 old_inp/inpeig.f90
+old_inp/strgn_dim.F
+old_inp/prp_xcfft_box.f
 
 ${CMAKE_BINARY_DIR}/include/buildinfo.h
 
+${FLEUR_SRC}/main/fleur_dropxmlschema.f90
 ${FLEUR_SRC}/init/make_sym.f90
 ${FLEUR_SRC}/init/angles.f90
 ${FLEUR_SRC}/init/compile_descr.F90
@@ -85,11 +94,9 @@ ${FLEUR_SRC}/kpoints/make_tetra.f
 ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/pol_angle.f90
 ${FLEUR_SRC}/math/matmul.f
-${FLEUR_SRC}/init/strgn_dim.F
-${FLEUR_SRC}/init/spgrot.f
+${FLEUR_SRC}/init/spgrot.f90
 ${FLEUR_SRC}/init/mapatom.F90
-${FLEUR_SRC}/init/od_mapatom.F90
-#${FLEUR_SRC}/init/convn_dim.f
+
 
 ${FLEUR_SRC}/types/types_nococonv.F90
 ${FLEUR_SRC}/types/types_mat.F90
@@ -129,7 +136,6 @@ ${FLEUR_SRC}/init/lhcal.f
 ${FLEUR_SRC}/init/ptsym.f
 ${FLEUR_SRC}/math/gaussp.f
 ${FLEUR_SRC}/init/gtest.f
-${FLEUR_SRC}/init/prp_xcfft_box.f
 ${FLEUR_SRC}/io/xmlOutput.F90
 ${FLEUR_SRC}/global/utility.F90
 ${FLEUR_SRC}/global/radsra.f
@@ -164,6 +170,9 @@ endif()
 set_target_properties(inpgen2 PROPERTIES LINKER_LANGUAGE Fortran)
 
 file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h)
+file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/default2_econfig.h)
+file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/oxides_validation_econfig.h)
+file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/profileConfig.h)
 find_program(XXD_PROG xxd)
 
 if (XXD_PROG)
@@ -173,6 +182,20 @@ if (XXD_PROG)
     DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/default.econfig
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
     COMMENT "Putting current default.econfig into default_econfig.h")
+
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
+    COMMAND ${XXD_PROG} -i default2.econfig ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/default2.econfig
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
+    COMMENT "Putting current default2.econfig into default2_econfig.h")
+
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+    COMMAND ${XXD_PROG} -i oxides_validation.econfig ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/oxides_validation.econfig
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
+    COMMENT "Putting current oxides_validation.econfig into oxides_validation_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
@@ -186,6 +209,18 @@ else()
     COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of default_econfig.h")
+
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
+    COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/default2_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
+    COMMENT "No xxd found using backup")
+    message("No xxd command found! Using backup of oxides_validation_econfig.h")
+
+    ADD_CUSTOM_COMMAND(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+    COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/oxides_validation_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+    COMMENT "No xxd found using backup")
+    message("No xxd command found! Using backup of oxides_validation_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h

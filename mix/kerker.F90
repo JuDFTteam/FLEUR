@@ -8,8 +8,8 @@ MODULE m_kerker
 CONTAINS
 
   SUBROUTINE kerker( field,  fmpi, &
-       stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-       oneD, inDen, outDen, precon_v  )
+       stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
+         inDen, outDen, precon_v  )
 
     !Implementation of the Kerker preconditioner by M.Hinzen
 
@@ -23,10 +23,11 @@ CONTAINS
 
     IMPLICIT NONE
 
-    TYPE(t_oneD),      INTENT(in)    :: oneD
+     
     TYPE(t_input),     INTENT(in)    :: input
     TYPE(t_vacuum),    INTENT(in)    :: vacuum
     TYPE(t_noco),      INTENT(in)    :: noco
+    TYPE(t_nococonv),      INTENT(in)    :: nococonv
     TYPE(t_sym),       INTENT(in)    :: sym
     TYPE(t_stars),     INTENT(in)    :: stars
     TYPE(t_cell),      INTENT(in)    :: cell
@@ -61,7 +62,7 @@ CONTAINS
     END IF MPI0_b
     CALL resDen%distribute(fmpi%mpi_comm)
     IF ( .NOT. input%film ) THEN
-       CALL vgen_coulomb( 1, fmpi,  oneD, input, field, vacuum, sym, stars, cell, &
+       CALL vgen_coulomb( 1, fmpi,    input, field, vacuum, sym, stars, cell, &
             sphhar, atoms, .FALSE., resDen, vYukawa )
     ELSE
        call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
@@ -70,7 +71,7 @@ CONTAINS
        end if
        CALL resDenMod%distribute(fmpi%mpi_comm)
        vYukawa%iter = resDen%iter
-       CALL VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, oneD, noco, resDenMod, &
+       CALL VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,resDenMod, &
             vYukawa )
     END IF
 
@@ -88,8 +89,9 @@ CONTAINS
        IF( input%jspins == 2 ) CALL resDen%ChargeAndMagnetisationToSpins()
        ! fix the preconditioned density
        CALL outDen%addPotDen( resDen, inDen )
-       CALL qfix(fmpi,stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .FALSE., l_par=.FALSE., force_fix=.TRUE., fix=fix )
+       CALL qfix(fmpi,stars,nococonv, atoms, sym, vacuum, sphhar, input, cell,   outDen, noco%l_noco, .FALSE., l_par=.FALSE., force_fix=.TRUE., fix=fix )
        CALL resDen%subPotDen( outDen, inDen )
+       resDen%mmpMat = outDen%mmpMat - inDen%mmpMat
     END IF MPI0_c
     CALL precon_v%from_density(resden)
 

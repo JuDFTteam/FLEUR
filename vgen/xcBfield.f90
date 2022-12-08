@@ -101,7 +101,7 @@ CONTAINS
 
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,vScal,vCorr)
+   SUBROUTINE sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input ,sym,cell,noco,aVec,vScal,vCorr)
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
@@ -128,7 +128,7 @@ CONTAINS
       TYPE(t_sphhar),               INTENT(IN)     :: sphhar
       TYPE(t_vacuum),               INTENT(IN)     :: vacuum
       TYPE(t_input),                INTENT(IN)     :: input
-      TYPE(t_oneD),                 INTENT(IN)     :: oneD
+       
       TYPE(t_sym),                  INTENT(IN)     :: sym
       TYPE(t_cell),                 INTENT(IN)     :: cell
       TYPE(t_noco),                 INTENT(IN)     :: noco
@@ -164,7 +164,7 @@ CONTAINS
       phi%pw_w = CMPLX(0.0,0.0)
 
       CALL timestart("Building potential")
-      CALL vgen_coulomb(1,fmpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
+      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
       CALL timestop("Building potential")
 
       DO i=1,3
@@ -177,12 +177,12 @@ CONTAINS
       CALL divpotgrad(input,stars,atloc,sphhar,vacuum,sym,cell,noco,phi,cvec)
       CALL timestop("Building correction field")
 
-      CALL init_pw_grid(.FALSE.,stars,sym,cell)
+      CALL init_pw_grid(stars,sym,cell)
       DO i=1,3
          CALL pw_to_grid(.FALSE.,1,.FALSE.,stars,cell,cvec(i)%pw,tmp_grad,rho=intden)
          cvec(i)%pw=CMPLX(0.0,0.0)
          cvec(i)%pw_w=CMPLX(0.0,0.0)
-         CALL pw_from_grid(.FALSE.,stars,.TRUE.,intden,cvec(i)%pw,cvec(i)%pw_w)
+         CALL pw_from_grid(stars,intden,cvec(i)%pw,cvec(i)%pw_w)
          DEALLOCATE(intden)
       END DO !i
       CALL finish_pw_grid()

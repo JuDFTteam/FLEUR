@@ -1,9 +1,0 @@
-$test_name="FeBCCSFLDA: Sourcefree magnetism and magnetization scaling";
-$test_code="Fleur";
-$test_stages=1;
-$test_desc=<<EOF
-Simple test of Fleur with one step:
-1.Generate a starting density in z-direction, calculate the potential and make it sourcefree. Check for the correct transformed magnetic field. And the correct resulting magnetization.
-EOF
-;
-

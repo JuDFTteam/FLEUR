@@ -4,7 +4,7 @@ MODULE m_intnv
   !     and potential in the unit cell
   !     ************************************************
 CONTAINS
-  SUBROUTINE int_nv(ispin,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,vpot,den,RESULT)
+  SUBROUTINE int_nv(ispin,stars,vacuum,atoms,sphhar,cell,sym,input ,vpot,den,RESULT)
 
     USE m_types
     USE m_constants
@@ -22,7 +22,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_input),INTENT(IN)  :: input
-    TYPE(t_oneD),INTENT(IN)   :: oneD
+     
     TYPE(t_potden),INTENT(IN) :: vpot,den
 
   
@@ -69,14 +69,10 @@ CONTAINS
     !
     ! *********** VACUUM REGION**************
     !
-    IF (input%film .AND. .NOT.oneD%odi%d1) THEN
+    IF (input%film ) THEN
        npz = vacuum%nmz + 1
        tail = .TRUE.
-       IF (sym%zrfs .OR. sym%invs) THEN
-          facv = 2.0
-       ELSE
-          facv = 1.0
-       END IF
+       facv=2.0/vacuum%nvac
        tvac = 0.
        tvact = 0.
        !     set array dpz to zero
@@ -99,34 +95,7 @@ CONTAINS
        WRITE (oUnit,FMT=8040) tvact
 8040   FORMAT (/,10x,'vacuum :',t40,f20.10)
        RESULT = RESULT + tvact
-    ELSEIF (oneD%odi%d1) THEN
-       !-odim
-       npz = vacuum%nmz +1
-       tail = .TRUE.
-       tvac = 0.
-       tvact = 0.
-       !     set array dpz to zero
-       dpz=0.0
-       DO  ip = 1,vacuum%nmz
-          dpz(npz-ip) = (cell%z1+vacuum%delz*(ip-1))*&
-               &                    den%vacz(ip,vacuum%nvac,ispin)*vpot%vacz(ip,vacuum%nvac,ispin)
-          !          ---> WARPING REGION
-       ENDDO
-       DO  k2 = 2,oneD%odi%nq2
-          DO  ip = 1,vacuum%nmzxy
-             dpz(npz-ip) = dpz(npz-ip)+&
-                  &             (cell%z1+vacuum%delz*(ip-1))*&
-                  &             den%vacxy(ip,k2-1,vacuum%nvac,ispin)*&
-                  &             CONJG(vpot%vacxy(ip,k2-1,vacuum%nvac,ispin))
-          ENDDO
-       ENDDO
-
-       CALL intgz0(dpz,vacuum%delz,vacuum%nmz,tvac,tail)
-       tvact = tvact + cell%area*tvac
-       WRITE (oUnit,FMT=8041) tvact
-8041   FORMAT (/,10x,'vacuum :',t40,f20.10)
-       RESULT = RESULT + tvact
-       !+odim
+    
     END IF
 
   END SUBROUTINE int_nv

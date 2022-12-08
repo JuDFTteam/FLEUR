@@ -51,7 +51,7 @@ c*************************************************************
 #ifdef CPP_MPI
       integer :: ierr(3)
       integer :: stt(MPI_STATUS_SIZE)
-#include "cpp_double.h"
+
 #endif
 
 #ifdef CPP_MPI
@@ -73,7 +73,7 @@ c**********************************************************
      &             matrix4(1:num_dims,1:num_bands1,
      &             1:num_bands2,ikpt),
      &             num_bands1*num_bands2*num_dims,
-     &             CPP_MPI_COMPLEX,cpu_index,
+     &             MPI_DOUBLE_COMPLEX,cpu_index,
      &             ikpt,fmpi_comm,stt,ierr(1))
           endif !processors
          enddo !cpu_index
@@ -83,7 +83,7 @@ c**********************************************************
      &             matrix4(1:num_dims,1:num_bands1,
      &             1:num_bands2,ikpt),
      &             num_bands1*num_bands2*num_dims,
-     &             CPP_MPI_COMPLEX,0,
+     &             MPI_DOUBLE_COMPLEX,0,
      &             ikpt,fmpi_comm,ierr(1))
          endif !processors
         endif ! l_p0

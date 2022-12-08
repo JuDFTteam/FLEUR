@@ -10,13 +10,14 @@ MODULE m_check_mt_radii
   !  Check muffin tin radii and determine a reasonable choice for MTRs.
   !---------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE check_mt_radii(atoms,input,vacuum,cell,oneD,l_test,rmt1,overlap)
+  SUBROUTINE check_mt_radii(atoms,input,vacuum,cell ,profile,l_test,rmt1,overlap)
 
     USE m_types_input
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_cell
-    USE m_types_oneD
+     
+    USE m_types_profile
     USE m_constants
 
     USE m_sort
@@ -29,7 +30,8 @@ CONTAINS
     TYPE(t_input),INTENT(IN) :: input
     TYPE(t_vacuum),INTENT(IN):: vacuum
     TYPE(t_cell),INTENT(IN)  :: cell
-    TYPE(t_oneD),INTENT(IN)  :: oneD
+     
+    TYPE(t_profile),INTENT(IN)    :: profile
     LOGICAL, INTENT (IN)     :: l_test
     !     ..
     !     .. Array Arguments ..
@@ -103,8 +105,57 @@ CONTAINS
     ELSE
        rmtFac = 0.975
     ENDIF
+
     t_rmt(0:103) = 2.3 ! default value
-    t_rmt(1) = 1.0 ; t_rmt(5:9) = 1.3 ; t_rmt(16:17) = 1.8
+    t_rmt(1) = 1.0
+    t_rmt(2) = 1.3
+    t_rmt(3:4) = 1.3
+    t_rmt(5:9) = 1.3
+    t_rmt(10) = 1.7
+    t_rmt(11:12) = 1.5
+    t_rmt(13:17) = 1.5
+    t_rmt(18) = 1.9
+
+    IF(profile%atomSetup.EQ."default2") THEN
+       t_rmt(19:20) = 1.7
+       t_rmt(21:30) = 1.7
+       t_rmt(31:35) = 1.7
+       t_rmt(35) = 1.7
+       t_rmt(37:38) = 1.6
+       t_rmt(39:48) = 2.0
+       t_rmt(49:50) = 1.8
+       t_rmt(51) = 1.8
+       t_rmt(52:53) = 1.8
+       t_rmt(55:56) = 1.6
+       t_rmt(57:70) = 2.0
+       t_rmt(71:80) = 2.1
+       t_rmt(78) = 2.2
+       t_rmt(79:80) = 1.7
+       t_rmt(81:85) = 2.0
+       t_rmt(87:88) = 1.9
+       t_rmt(89:102) = 2.1
+    END IF
+
+    IF(profile%atomSetup.EQ."oxides_validation") THEN
+       t_rmt(19:20) = 1.7
+       t_rmt(21:30) = 1.7
+       t_rmt(31:35) = 1.7
+       t_rmt(35) = 1.7
+       t_rmt(37:38) = 1.6
+       t_rmt(39:48) = 2.0
+       t_rmt(49:50) = 1.8
+       t_rmt(51) = 1.8
+       t_rmt(52:53) = 1.8
+       t_rmt(55:56) = 1.6
+       t_rmt(57:70) = 2.0
+       t_rmt(71:80) = 2.1
+       t_rmt(78) = 2.2
+       t_rmt(79:80) = 1.7
+       t_rmt(81:85) = 2.0
+       t_rmt(87:88) = 1.9
+       t_rmt(89:102) = 2.1
+    END IF
+
     cubeLength = 2*rmtMax+rmtDelta
     maxCubeAtoms = (FLOOR(cubeLength / (0.7*2.0*rmtMin)) + 1)**3
     error  = .FALSE.
@@ -316,10 +367,10 @@ CONTAINS
                 minRmts(atoms%nz(typeA)) = rmtFac * dist * facA
                 minRmts(atoms%nz(typeB)) = rmtFac * dist * facB
              ELSE
-                minRmts(atoms%nz(typeA)) = rmtFac * (dist - minRmts(atoms%nz(typeB)))
+                minRmts(atoms%nz(typeA)) = (rmtFac * dist) - minRmts(atoms%nz(typeB))
              END IF
           ELSE IF (minRmts(atoms%nz(typeB)).LT.0.0) THEN
-             minRmts(atoms%nz(typeB)) = rmtFac * (dist - minRmts(atoms%nz(typeA)))
+             minRmts(atoms%nz(typeB)) = (rmtFac * dist) - minRmts(atoms%nz(typeA))
           END IF
           minRmts(atoms%nz(typeA)) = min(minRmts(atoms%nz(typeA)),rmtMaxDefault) ! limit already here 
           minRmts(atoms%nz(typeB)) = min(minRmts(atoms%nz(typeB)),rmtMaxDefault) ! to a reasonable value
@@ -333,6 +384,7 @@ CONTAINS
           END IF
           rmt1(i) = minRmts(atoms%nz(i))
        END DO
+
 
        ! NOTE: The result of this section may be slightly different from the old version
        !       iff the old version would enlarge a MT sphere at this point.
@@ -369,22 +421,14 @@ CONTAINS
           IF (input%film) THEN
              DO na = 1, atoms%neq(i)
                 iAtom = iAtom + 1
-                IF (oneD%odd%d1) THEN
-                   IF ((sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2)+&
-                        atoms%rmt(i)).GT.vacuum%dvac/2.) THEN
-                      error=.TRUE.
-                      WRITE(oUnit,241) i ,na
-                      WRITE(oUnit,*) sqrt(atoms%pos(1,iAtom)**2+atoms%pos(2,iAtom)**2),&
-                           atoms%rmt(i),vacuum%dvac/2.
-                   END IF
-                ELSE
+                
                    IF (((atoms%pos(3,iAtom)+atoms%rmt(i)).GT. vacuum%dvac/2.).OR.&
                         ((atoms%pos(3,iAtom)-atoms%rmt(i)).LT.-vacuum%dvac/2.)) THEN
                       error=.TRUE.
                       WRITE(oUnit,241) i ,na
                       IF (PRESENT(overlap)) overlap(0,i)=MAX(atoms%pos(3,iAtom)+atoms%rmt(i)-vacuum%dvac/2.,atoms%pos(3,iAtom)-atoms%rmt(i)+vacuum%dvac/2.)
                       WRITE(oUnit,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
-                   ENDIF
+                   
                 ENDIF
              END DO
           END IF

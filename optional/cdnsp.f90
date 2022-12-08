@@ -13,7 +13,7 @@
 !     magnetic case. changes only in mt-part - r.pentcheva Jan'96
 !     *******************************************************
       CONTAINS
-        SUBROUTINE cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
+        SUBROUTINE cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco ,cell)
 
           USE m_intgr, ONLY : intgr3
           USE m_constants
@@ -28,7 +28,7 @@
           TYPE(t_input),INTENT(IN)     :: input
           TYPE(t_sym),INTENT(IN)       :: sym
           TYPE(t_noco),INTENT(IN)      :: noco
-          TYPE(t_oneD),INTENT(IN)      :: oneD
+           
           TYPE(t_cell),INTENT(IN)      :: cell
 
 
@@ -58,7 +58,7 @@
           input_jsp%jspins=1
           CALL readCoreDensity(input_jsp,atoms,rhoc,tec,qintc)
 
-          CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input_jsp,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+          CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input_jsp,sym ,CDN_ARCHIVE_TYPE_CDN1_const,&
                            CDN_INPUT_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,den)
 
           qval = 0.
@@ -125,7 +125,7 @@
           CALL writeCoreDensity(input,atoms,rhoc,tec,qintc)
 
           !     ----> write the spin-polarized density
-          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN1_const,&
                             CDN_INPUT_DEN_const,0,-1.0,0.0,-1.0,-1.0,.FALSE.,den)
           !
           !     -----> This part is only used for testing th e magnetic moment in

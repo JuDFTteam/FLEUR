@@ -11,7 +11,7 @@ CONTAINS
   ! The subroutine abcof calculates the A, B, and C coefficients for the
   ! eigenfunctions. Also some force contributions can be calculated.
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
-                   noco,nococonv,jspin,oneD, acof,bcof,ccof,zMat,eig,force)
+                   noco,nococonv,jspin , acof,bcof,ccof,zMat,eig,force)
 #ifdef _OPENACC
 #ifdef __PGI
     use cublas
@@ -38,7 +38,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)             :: input
     TYPE(t_usdus),INTENT(IN)             :: usdus
     TYPE(t_lapw),INTENT(IN)              :: lapw
-    TYPE(t_oneD),INTENT(IN)              :: oneD
+     
     TYPE(t_noco),INTENT(IN)              :: noco
     TYPE(t_nococonv),INTENT(IN)          :: nococonv
     TYPE(t_sym),INTENT(IN)               :: sym
@@ -133,7 +133,7 @@ CONTAINS
        CALL setabc1lo(atoms,iType,usdus,jspin,alo1,blo1,clo1)
 
           ! generate the spinors (chi)
-       IF(noco%l_noco) ccchi=nococonv%chi(itype)
+       IF(noco%l_noco) ccchi=conjg(nococonv%umat(itype))
 
 
        nintsp = 1
@@ -212,7 +212,7 @@ CONTAINS
 
 
              !$acc host_data use_device(work_c,abCoeffs,abTemp)
-             CALL zgemm_acc("T","C",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
+             CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
              !$acc end host_data
 
              !stop "DEBUG"
@@ -240,16 +240,12 @@ CONTAINS
                    tmk = tpi_const * DOT_PRODUCT(fk(:),atoms%taual(:,iAtom))
                    phase = CMPLX(COS(tmk),SIN(tmk))
 
-                   IF (oneD%odi%d1) THEN
-                      inap = oneD%ods%ngopr(iAtom)
-                      fkr = MATMUL(TRANSPOSE(oneD%ods%mrot(:,:,inap)),fk(:))
-                      fgr = MATMUL(TRANSPOSE(oneD%ods%mrot(:,:,inap)),fg(:))
-                   ELSE
+                    
                       nap = sym%ngopr(iAtom)
                       inap = sym%invtab(nap)
                       fkr = MATMUL(TRANSPOSE(sym%mrot(:,:,inap)),fk(:))
                       fgr = MATMUL(TRANSPOSE(sym%mrot(:,:,inap)),fg(:))
-                   END IF
+                   
                    fkp = MATMUL(fkr,cell%bmat)
                    fgp = MATMUL(fgr,cell%bmat)
 
@@ -302,8 +298,8 @@ CONTAINS
                          lm = ll1 + m
                          lmp = ll1 - m
                          inv_f = (-1)**(l-m)
-                         acof(:,lmp,jatom)=acof(:,lmp,jatom)+inv_f*matmul(abCoeffs(lm+1,:),work_c(:nvmax,:))
-                         bcof(:,lmp,jatom)=bcof(:,lmp,jatom)+inv_f*matmul(abCoeffs(lm+1+abSize,:),work_c(:nvmax,:))
+                         acof(:,lmp,jatom)=acof(:,lmp,jatom)+inv_f*matmul(CONJG(abCoeffs(lm+1,:)),work_c(:nvmax,:)) !TODO: Is this conjugation costly?
+                         bcof(:,lmp,jatom)=bcof(:,lmp,jatom)+inv_f*matmul(CONJG(abCoeffs(lm+1+abSize,:)),work_c(:nvmax,:)) !TODO: Is this conjugation costly?
                          !CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW),1, acof(:,lmp,jatom),1)
                          !CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
                        END DO
@@ -325,21 +321,18 @@ CONTAINS
                    ELSE
                       s2h_e(:ne,iLAPW) = (s2h-eig(:ne)) * workTrans_c(:ne,iLAPW)
                    ENDIF
-                   IF (oneD%odi%d1) THEN
-                      inap = oneD%ods%ngopr(iAtom)
-                      fgr = MATMUL(TRANSPOSE(oneD%ods%mrot(:,:,inap)),fg(:))
-                   ELSE
+                    
                       nap = sym%ngopr(iAtom)
                       inap = sym%invtab(nap)
                       fgr = MATMUL(TRANSPOSE(sym%mrot(:,:,inap)),fg(:))
-                   END IF
+                   
                    fgpl(:,iLAPW) = MATMUL(fgr,cell%bmat)
                 ENDDO
 
-                helpMat_c = abCoeffs(1+abSize:,:)
+                helpMat_c = CONJG(abCoeffs(1+abSize:,:)) !TODO: Is this conjugation costly?
                 workTrans_cf = 0.0
 
-                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,size(abcoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
+                CALL zgemm("N","T",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,size(abcoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
                 CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,helpMat_c,size(helpMat_c,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
                 DO i =1,3
                    IF (zmat%l_real) THEN
@@ -351,7 +344,7 @@ CONTAINS
                          workTrans_cf(:,iLAPW) = workTrans_c(:,iLAPW) * fgpl(i,iLAPW)
                       ENDDO
                    ENDIF
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,size(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
+                   CALL zgemm("N","T",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,size(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%aveccof(i,:,:,iAtom) = force%aveccof(i,:,:,iAtom) + helpMat_force(:,:)
                    CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,size(helpMat_c,1),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
@@ -363,8 +356,8 @@ CONTAINS
                          ll1 = l* (l+1)
                          DO m = -l,l
                             lm = ll1 + m
-                            c_1 = CONJG(abCoeffs(lm+1,iLAPW))
-                            c_2 = CONJG(abCoeffs(lm+1+abSize,iLAPW))
+                            c_1 = abCoeffs(lm+1,iLAPW)
+                            c_2 = abCoeffs(lm+1+abSize,iLAPW)
                             jatom = sym%invsatnr(iAtom)
                             lmp = ll1 - m
                             inv_f = (-1)**(l-m)
@@ -425,17 +418,16 @@ CONTAINS
           IF (sym%invsat(iAtom).EQ.1) THEN
              CALL timestart("invsym atoms")
              jAtom = sym%invsatnr(iAtom)
-             phase = EXP(tpi_const*ImagUnit*DOT_PRODUCT(atoms%taual(:,jAtom) + atoms%taual(:,iAtom),lapw%bkpt))
              DO ilo = 1,atoms%nlo(iType)
                 l = atoms%llo(ilo,iType)
                 DO m = -l,l
                    inv_f = (-1)**(m+l)
                    DO ie = 1,ne
-                      ccof(m,ie,ilo,jatom) = inv_f * phase * CONJG( ccof(-m,ie,ilo,iatom))
+                      ccof(m,ie,ilo,jatom) = inv_f * CONJG( ccof(-m,ie,ilo,iatom))
                       IF(l_force) THEN
-                         force%acoflo(m,ie,ilo,jatom) = inv_f * phase * CONJG(force%acoflo(-m,ie,ilo,iatom))
-                         force%bcoflo(m,ie,ilo,jatom) = inv_f * phase * CONJG(force%bcoflo(-m,ie,ilo,iatom))
-                         force%cveccof(:,m,ie,ilo,jatom) = -inv_f * phase * CONJG(force%cveccof(:,-m,ie,ilo,iatom))
+                         force%acoflo(m,ie,ilo,jatom) = inv_f * CONJG(force%acoflo(-m,ie,ilo,iatom))
+                         force%bcoflo(m,ie,ilo,jatom) = inv_f * CONJG(force%bcoflo(-m,ie,ilo,iatom))
+                         force%cveccof(:,m,ie,ilo,jatom) = -inv_f * CONJG(force%cveccof(:,-m,ie,ilo,iatom))
                       END IF
                    END DO
                 END DO
@@ -446,13 +438,13 @@ CONTAINS
                    lm  = ll1 + m
                    lmp = ll1 - m
                    inv_f = (-1)**(m+l)
-                   acof(:ne,lm,jAtom) = inv_f * phase * CONJG(acof(:ne,lmp,iAtom))
-                   bcof(:ne,lm,jAtom) = inv_f * phase * CONJG(bcof(:ne,lmp,iAtom))
+                   acof(:ne,lm,jAtom) = inv_f * CONJG(acof(:ne,lmp,iAtom))
+                   bcof(:ne,lm,jAtom) = inv_f * CONJG(bcof(:ne,lmp,iAtom))
                    IF (atoms%l_geo(iType).AND.l_force) THEN
-                      force%e1cof(:ne,lm,jAtom) = inv_f * phase * CONJG(force%e1cof(:ne,lmp,iAtom))
-                      force%e2cof(:ne,lm,jAtom) = inv_f * phase * CONJG(force%e2cof(:ne,lmp,iAtom))
-                      force%aveccof(:,:ne,lm,jAtom) = -inv_f * phase * CONJG(force%aveccof(:,:ne,lmp,iAtom))
-                      force%bveccof(:,:ne,lm,jAtom) = -inv_f * phase * CONJG(force%bveccof(:,:ne,lmp,iAtom))
+                      force%e1cof(:ne,lm,jAtom) = inv_f * CONJG(force%e1cof(:ne,lmp,iAtom))
+                      force%e2cof(:ne,lm,jAtom) = inv_f * CONJG(force%e2cof(:ne,lmp,iAtom))
+                      force%aveccof(:,:ne,lm,jAtom) = -inv_f * CONJG(force%aveccof(:,:ne,lmp,iAtom))
+                      force%bveccof(:,:ne,lm,jAtom) = -inv_f * CONJG(force%bveccof(:,:ne,lmp,iAtom))
                    END IF
                 END DO
              END DO

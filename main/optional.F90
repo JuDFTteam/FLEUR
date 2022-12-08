@@ -10,7 +10,7 @@ MODULE m_optional
 #endif
 CONTAINS
   SUBROUTINE OPTIONAL(fmpi, atoms,sphhar,vacuum,&
-       stars,input,sym, cell, sliceplot, xcpot, noco, oneD)
+       stars,input,sym, cell, sliceplot, xcpot, noco)
     !
     !----------------------------------------
     ! this routine is called by: fleur.F90
@@ -68,7 +68,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_stars),INTENT(IN)    :: stars
-    TYPE(t_oneD),INTENT(IN)     :: oneD
+     
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
@@ -118,7 +118,7 @@ CONTAINS
        END IF
        IF (stateCheck.AND.(input%jspins.EQ.2)) CALL juDFT_warn("You're setting up a spin-polarized calculation (jspins=2) without any actual polarization given in the systems occupation. You're sure you want that?", calledby = "optional")
        CALL stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
-                  input,cell,xcpot,noco,oneD)
+                  input,cell,xcpot,noco )
        !
        !input%total=strho
        CALL timestop("generation of start-density")
@@ -129,7 +129,7 @@ CONTAINS
        !
        IF (input%swsp) THEN
           CALL timestart("optional: spin polarized density")
-          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
+          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco ,cell)
           !
           CALL timestop("optional: spin polarized density")
        END IF
@@ -139,15 +139,15 @@ CONTAINS
        IF (input%lflip) THEN
 
           CALL timestart('optional: flip magnetic moments')
-          CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
-          !
+          CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,toGlobal=.true.)
+          print *,"TODO,toGlobal in optional should be removed"
           CALL timestop('optional: flip magnetic moments')
        END IF
 
 
 
        IF (input%l_bmt) THEN
-          CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym,oneD)
+          CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym )
        ENDIF
 
     ENDIF ! fmpi%irank == 0

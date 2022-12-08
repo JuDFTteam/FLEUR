@@ -111,7 +111,7 @@ MODULE m_writeCFOutput
 
             nococonv_dummy = nococonv
             CALL vgen(hybdat, fi%field, fi%input, xcpot, atoms_dummy, sphhar, stars, fi%vacuum, fi%sym, &
-                      fi%cell, fi%oneD, fi%sliceplot, fmpi, results_dummy, fi%noco, nococonv_dummy,&
+                      fi%cell,  fi%sliceplot, fmpi, results_dummy, fi%noco, nococonv_dummy,&
                       EnergyDen, inDenCF, vCF, vx, vCoul, vxc, exc)
 
 

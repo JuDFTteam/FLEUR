@@ -687,15 +687,14 @@ CONTAINS
 
 
       INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i,j,k,l
-      INTEGER :: jtet,icorn,startIndex,itet,iperm
+      INTEGER :: jtet,icorn,startIndex,itet
       REAL    :: vol,volbz,diag(2),minKpt(3)
       INTEGER :: iarr(3)
       LOGICAL :: l_new,l_equal_kpoints
       INTEGER, ALLOCATABLE :: tetra(:,:)
       INTEGER, ALLOCATABLE :: ntetraAll(:,:)
-      INTEGER, ALLOCATABLE :: kcorn(:)
+      INTEGER, ALLOCATABLE :: kcorn(:), kpt_tetra(:), ind(:)
       INTEGER, ALLOCATABLE :: p(:,:,:)
-      INTEGER, ALLOCATABLE :: perm(:,:)
 
       !Determine the decomposition of each individual cube
       ! and the total volume of the brillouin zone
@@ -703,43 +702,20 @@ CONTAINS
          volbz = cell%bmat(1,1)*cell%bmat(2,2)-cell%bmat(1,2)*cell%bmat(2,1)
          ALLOCATE(tetra(3,2),source=0)
          ALLOCATE(kcorn(4),source=0)
+         ALLOCATE(kpt_tetra(3),source=0)
+         ALLOCATE(ind(3),source=0)
          ntetraCube = 2
          tetra = reshape ( [ 1,2,3, 2,3,4], [ 3,2 ] )
          diag = cell%bmat(:2,2)/grid(:2) - cell%bmat(:2,1) / grid(:2)
          vol =  sum(diag*diag)/4.0
-         ALLOCATE(perm(3,6))
-         iperm = 0
-         DO i = 1, 3
-            DO j = 1, 3
-               IF(j.EQ.i) CYCLE
-               DO k = 1, 3
-                  IF(k.EQ.j.OR.k.EQ.i) CYCLE
-                  iperm = iperm + 1
-                  perm(:,iperm) = [i,j,k]
-               ENDDO
-            ENDDO
-         ENDDO
       ELSE
          volbz = ABS(det(cell%bmat))
          ALLOCATE(tetra(4,24),source=0)
          ALLOCATE(kcorn(8),source=0)
+         ALLOCATE(kpt_tetra(4),source=0)
+         ALLOCATE(ind(4),source=0)
          !Choose the tetrahedra decomposition along the shortest diagonal
          CALL get_tetra(cell,grid,ntetraCube,vol,tetra)
-         ALLOCATE(perm(4,24))
-         iperm = 0
-         DO i = 1, 4
-            DO j = 1, 4
-               IF(j.EQ.i) CYCLE
-               DO k = 1, 4
-                  IF(k.EQ.j.OR.k.EQ.i) CYCLE
-                  DO l = 1, 4
-                     IF(l.EQ.k.OR.l.EQ.j.OR.l.EQ.i) CYCLE
-                     iperm = iperm + 1
-                     perm(:,iperm) = [i,j,k,l]
-                  ENDDO
-               ENDDO
-            ENDDO
-         ENDDO
       ENDIF
 
       !We shift the k-points by this vector only for the pointer array
@@ -778,7 +754,7 @@ CONTAINS
       !Set up the tetrahedrons
       !$omp parallel do default(none) &
       !$omp shared(grid,p,ntetraCube,kpts,tetra,film,ntetraAll) &
-      !$omp private(k1,k2,k3,kcorn,itetra,startIndex) &
+      !$omp private(k1,k2,k3,kcorn,itetra,startIndex,kpt_tetra,ind) &
       !$omp collapse(3)
       DO k3 = 0, MERGE(grid(3)-1,0,grid(3).NE.0)
          DO k2 = 0, grid(2)-1
@@ -799,7 +775,9 @@ CONTAINS
                !Now divide the cube into tetrahedra
                startIndex = (k3*grid(2)*grid(1)+k2*grid(1)+k1) * ntetraCube
                DO itetra = 1, ntetraCube
-                  ntetraAll(:,startIndex + itetra) = kpts%bkp(kcorn(tetra(:,itetra)))
+                  kpt_tetra = kpts%bkp(kcorn(tetra(:,itetra)))
+                  ind = sort_int(kpts%bkp(kcorn(tetra(:,itetra))))
+                  ntetraAll(:,startIndex + itetra) = kpt_tetra(ind(:))
                ENDDO
             ENDDO
          ENDDO
@@ -811,20 +789,11 @@ CONTAINS
       DO itet = 1, ntetraCube*PRODUCT(grid(:MERGE(2,3,film)))
          l_new = .TRUE.
          tetraLoop: DO jtet = 1, kpts%ntet
-            l_equal_kpoints = .TRUE.
-            DO icorn = 1, SIZE(ntetra,1)
-               IF(ALL(ntetra(:,jtet).NE.ntetraAll(icorn,itet))) THEN
-                  l_equal_kpoints = .FALSE.
-               ENDIF
-            ENDDO
-            IF(.NOT.l_equal_kpoints) CYCLE !There is at least one kpoint completely different
-            DO iperm = 1, SIZE(perm,2)
-               IF(ALL(ntetraAll(perm(:,iperm),itet)-ntetra(:,jtet).EQ.0)) THEN
-                  voltet(jtet) = voltet(jtet) + vol
-                  l_new = .FALSE.
-                  EXIT tetraLoop
-               ENDIF
-            ENDDO
+            if(all(ntetraAll(:,itet)-ntetra(:,jtet).EQ.0)) then
+               voltet(jtet) = voltet(jtet) + vol
+               l_new = .false.
+               exit tetraLoop
+            endif
          ENDDO tetraLoop
          IF(l_new) THEN !This tetrahedron has no symmetry equivalents yet
             kpts%ntet = kpts%ntet+1
@@ -844,6 +813,33 @@ CONTAINS
       !Rescale volumes for IO to inp.xml
       !(so weights dont get to small for IO with dense meshes)
       voltet = voltet * kpts%ntet
+   
+      contains
+
+      pure function sort_int(arr) result(ind)
+
+         integer, intent(in) :: arr(:)
+         integer :: ind(size(arr))
+
+         integer i,j
+         integer tmp
+
+
+         DO i = 1, size(arr)
+            ind(i) = i
+         ENDDO
+
+         DO i = 1, size(arr)-1
+            DO j = i+1, size(arr)
+               IF (arr(ind(i)).GT.arr(ind(j))) THEN
+                  tmp = ind(i)
+                  ind(i) = ind(j)
+                  ind(j) = tmp
+               ENDIF
+            ENDDO
+         ENDDO
+
+      end function
 
    END SUBROUTINE tetrahedron_regular
 
@@ -963,14 +959,12 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)     :: sym
       LOGICAL, INTENT(IN)         :: l_timeReversalCheck
       !  - local scalars -
-      INTEGER                 ::  ic, iop, ikpt, ikpt1, nkptfCheck
-      LOGICAL                 ::  l_found
+      INTEGER                  ::  iop, nkptfCheck
 
       !  - local arrays -
       INTEGER, ALLOCATABLE     ::  iarr(:)
-      REAL                     ::  rrot(3, 3, 2*sym%nop), rotkpt(3)
+      REAL                     ::  rrot(3, 3, 2*sym%nop)
       REAL, ALLOCATABLE        ::  rarr1(:, :)
-      REAL, PARAMETER          :: eps = 1e-8
 
       INTEGER:: nsym, ID_mat(3, 3)
       call timestart("gen_bz")
@@ -990,27 +984,9 @@ CONTAINS
             rrot(:, :, iop) = TRANSPOSE(sym%mrot(:, :, sym%invtab(iop)))
          END DO
 
-         !Add existing vectors to list of full vectors
-         ic = 0
-         DO iop = 1, nsym
-            DO ikpt = 1, kpts%nkpt
-               rotkpt = MATMUL(rrot(:, :, iop), kpts%to_first_bz(kpts%bk(:, ikpt)))
-               !transform back into 1st-BZ (Do not use nint to deal properly with inaccuracies)
-               rotkpt = kpts%to_first_bz(rotkpt)
-               DO ikpt1 = 1, ic
-                  IF (all(abs(kpts%bkf(:, ikpt1) - rotkpt) < 1e-06)) EXIT
-               END DO
+         CALL gen_bz_internal(kpts, sym, rrot, nsym)
 
-               IF (ikpt1 > ic) THEN !new point
-                  ic = ic + 1
-                  kpts%bkf(:, ic) = rotkpt
-                  kpts%bkp(ic) = ikpt
-                  kpts%bksym(ic) = iop
-               END IF
-            END DO
-         END DO
-
-         nkptfCheck = ic
+         nkptfCheck = kpts%nkptf
 
          DEALLOCATE (kpts%bksym)
          DEALLOCATE (kpts%bkp)
@@ -1032,27 +1008,8 @@ CONTAINS
          END IF
       END DO
 
-      !Add existing vectors to list of full vectors
-      ic = 0
-      DO iop = 1, nsym
-         DO ikpt = 1, kpts%nkpt
-            rotkpt = MATMUL(rrot(:, :, iop), kpts%to_first_bz(kpts%bk(:, ikpt)))
-            !transform back into 1st-BZ (Do not use nint to deal properly with inaccuracies)
-            rotkpt = kpts%to_first_bz(rotkpt)
-            DO ikpt1 = 1, ic
-               IF (all(abs(kpts%bkf(:, ikpt1) - rotkpt) < 1e-06)) EXIT
-            END DO
-
-            IF (ikpt1 > ic) THEN !new point
-               ic = ic + 1
-               kpts%bkf(:, ic) = rotkpt
-               kpts%bkp(ic) = ikpt
-               kpts%bksym(ic) = iop
-            END IF
-         END DO
-      END DO
-
-      kpts%nkptf = ic
+      CALL gen_bz_internal(kpts, sym, rrot, nsym)
+      
       IF(l_timeReversalCheck) THEN
          IF(nkptfCheck.NE.kpts%nkptf) THEN
             CALL juDFT_warn("k-point set is not compatible to missing time-reversal symmetry in calculation.",calledby="gen_bz")
@@ -1077,6 +1034,91 @@ CONTAINS
       DEALLOCATE (rarr1)
       call timestop("gen_bz")
    END SUBROUTINE gen_bz
+   
+   SUBROUTINE gen_bz_internal(kpts, sym, rrot, nsym)
+      USE m_juDFT
+      USE m_types_sym
+      TYPE(t_kpts), INTENT(INOUT) :: kpts
+      TYPE(t_sym), INTENT(IN)     :: sym
+      REAL, INTENT(IN)            :: rrot(3, 3, 2*sym%nop)
+      INTEGER, INTENT(IN)         :: nsym
+      !  - local scalars -
+      INTEGER                 ::  ic, iop, ikpt, ikpt1
+      INTEGER                 ::  binX, binY, binZ, maxBinSize, iParent
+
+      !  - local arrays -
+      INTEGER, ALLOCATABLE     ::  nkptInBin(:,:,:)
+      INTEGER, ALLOCATABLE     ::  kptParentBins(:,:,:,:)
+      REAL                     ::  rotkpt(3)
+      REAL, PARAMETER          ::  eps = 1e-5
+      REAL, PARAMETER          ::  sameKPTEps = 1.0e-6
+
+      !Add existing vectors to list of full vectors
+      !For a DFPT test calculation, this broke --> set additional .FALSE.
+      IF (((kpts%kptsKind.EQ.KPTS_KIND_MESH).OR.(kpts%kptsKind.EQ.KPTS_KIND_SPEX_MESH)).AND.(.NOT.ANY(kpts%nkpt3(:).EQ.0))) THEN
+         ALLOCATE (nkptInBin(-(kpts%nkpt3(1)+1):(kpts%nkpt3(1)+1),-(kpts%nkpt3(2)+1):(kpts%nkpt3(2)+1),-(kpts%nkpt3(3)+1):(kpts%nkpt3(3)+1)))
+         nkptInBin = 0
+         DO ikpt = 1, kpts%nkpt
+            binX = FLOOR((kpts%bk(1,ikpt)*kpts%nkpt3(1))+eps)
+            binY = FLOOR((kpts%bk(2,ikpt)*kpts%nkpt3(2))+eps)
+            binZ = FLOOR((kpts%bk(3,ikpt)*kpts%nkpt3(3))+eps)
+            nkptInBin(binX,binY,binZ) = nkptInBin(binX,binY,binZ) + 1
+         END DO
+         maxBinSize = MAXVAL(nkptInBin) + 2
+         DEALLOCATE (nkptInBin) 
+         ALLOCATE (kptParentBins(maxBinSize,-(kpts%nkpt3(1)+1):(kpts%nkpt3(1)+1),-(kpts%nkpt3(2)+1):(kpts%nkpt3(2)+1),-(kpts%nkpt3(3)+1):(kpts%nkpt3(3)+1)))
+         kptParentBins = 0
+         ic = 0
+         DO iop = 1, nsym
+            DO ikpt = 1, kpts%nkpt
+               rotkpt = MATMUL(rrot(:, :, iop), kpts%to_first_bz(kpts%bk(:, ikpt)))
+               !transform back into 1st-BZ (Do not use nint to deal properly with inaccuracies)
+               rotkpt = kpts%to_first_bz(rotkpt)
+               binX = FLOOR((rotkpt(1)*kpts%nkpt3(1))+eps)
+               binY = FLOOR((rotkpt(2)*kpts%nkpt3(2))+eps)
+               binZ = FLOOR((rotkpt(3)*kpts%nkpt3(3))+eps)
+               DO iParent = 1, maxBinSize
+                  IF (kptParentBins(iParent,binX,binY,binZ).EQ.0) THEN
+                     ic = ic + 1
+                     kptParentBins(iParent,binX,binY,binZ) = ic
+                     kpts%bkf(:, ic) = rotkpt
+                     kpts%bkp(ic) = ikpt
+                     kpts%bksym(ic) = iop
+                     EXIT
+                  ELSE
+                     IF (all(abs(kpts%bkf(:,kptParentBins(iParent,binX,binY,binZ)) - rotkpt) < sameKPTEps)) EXIT
+                  END IF
+               END DO
+               IF (iParent.GT.maxBinSize) THEN
+                  WRITE(*,*) 'bin size: ', maxBinSize
+                  CALL juDFT_error("Bin size too small", calledby='types_kpts%gen_bz')
+               END IF
+            END DO
+         END DO
+         DEALLOCATE (kptParentBins)
+      ELSE
+         ic = 0
+         DO iop = 1, nsym
+            DO ikpt = 1, kpts%nkpt
+               rotkpt = MATMUL(rrot(:, :, iop), kpts%to_first_bz(kpts%bk(:, ikpt)))
+               !transform back into 1st-BZ (Do not use nint to deal properly with inaccuracies)
+               rotkpt = kpts%to_first_bz(rotkpt)
+               DO ikpt1 = 1, ic
+                  IF (all(abs(kpts%bkf(:, ikpt1) - rotkpt) < sameKPTEps)) EXIT
+               END DO
+
+               IF (ikpt1 > ic) THEN !new point
+                  ic = ic + 1
+                  kpts%bkf(:, ic) = rotkpt
+                  kpts%bkp(ic) = ikpt
+                  kpts%bksym(ic) = iop
+               END IF
+            END DO
+         END DO
+      END IF
+      
+      kpts%nkptf = ic
+   END SUBROUTINE gen_bz_internal
 
    function nkpt3_kpts(kpts) result(nkpt3)
       implicit none

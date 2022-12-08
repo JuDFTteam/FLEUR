@@ -22,7 +22,6 @@ CONTAINS
     !
     !----------------------------------------------------
     !
-#include"cpp_double.h"
     USE m_juDFT
     USE m_constants
     USE m_types_mpimat
@@ -51,7 +50,7 @@ CONTAINS
     INTEGER              :: num,num1,num2,liwork,lwork2,np0,mq0,np,myid
     INTEGER              :: iceil, numroc, nn, nb
     INTEGER, ALLOCATABLE :: ifail(:), iclustr(:)
-    REAL                 :: abstol,orfac=1.E-4,CPP_LAPACK_slamch
+    REAL                 :: abstol,orfac=1.E-4,dlamch
     REAL,ALLOCATABLE     :: eig2(:), gap(:)
     REAL,    ALLOCATABLE :: work2_r(:)
     COMPLEX, ALLOCATABLE :: work2_c(:)
@@ -59,7 +58,7 @@ CONTAINS
     TYPE(t_mpimat):: ev_dist
     
     EXTERNAL iceil, numroc
-    EXTERNAL CPP_LAPACK_slamch
+    EXTERNAL dlamch
     
     
     SELECT TYPE(hmat)
@@ -75,7 +74,7 @@ CONTAINS
 
     num=ne !no of states solved for
     
-    abstol=2.0*CPP_LAPACK_slamch('S') ! PDLAMCH gave an error on ZAMpano
+    abstol=2.0*dlamch('S') ! PDLAMCH gave an error on ZAMpano
 
     CALL ev_dist%init(hmat)
 
@@ -130,7 +129,7 @@ CONTAINS
     !
     IF (hmat%l_real) THEN
        uplo='U'
-       CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,&
+       CALL pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,&
             hmat%blacsdata%blacs_desc,smat%data_r,1,1,smat%blacsdata%blacs_desc,&
             0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_r,1,1,&
             ev_dist%blacsdata%blacs_desc,work2_r,-1,iwork,-1,ifail,iclustr, gap,ierr)
@@ -152,7 +151,7 @@ CONTAINS
           CALL juDFT_error('Failed to allocated "rwork"', calledby ='chani')
        ENDIF
        
-       CALL CPP_LAPACK_pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,&
+       CALL pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,&
             hmat%blacsdata%blacs_desc,smat%data_c,1,1, smat%blacsdata%blacs_desc,&
             0.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_c,1,1,&
             ev_dist%blacsdata%blacs_desc,work2_c,-1,rwork,-1,iwork,-1,ifail,iclustr,&
@@ -191,12 +190,12 @@ CONTAINS
     !
     CALL timestart("SCALAPACK call")
     if (hmat%l_real) THEN
-       CALL CPP_LAPACK_pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,hmat%blacsdata%blacs_desc,smat%data_r,1,1, smat%blacsdata%blacs_desc,&
+       CALL pdsygvx(1,'V','I','U',hmat%global_size1,hmat%data_r,1,1,hmat%blacsdata%blacs_desc,smat%data_r,1,1, smat%blacsdata%blacs_desc,&
             1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_r,1,1,&
             ev_dist%blacsdata%blacs_desc,work2_r,lwork2,iwork,liwork,ifail,iclustr,&
             gap,ierr)
     else
-       CALL CPP_LAPACK_pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,hmat%blacsdata%blacs_desc,smat%data_c,1,1, smat%blacsdata%blacs_desc,&
+       CALL pzhegvx(1,'V','I','U',hmat%global_size1,hmat%data_c,1,1,hmat%blacsdata%blacs_desc,smat%data_c,1,1, smat%blacsdata%blacs_desc,&
             1.0,1.0,1,num,abstol,num1,num2,eig2,orfac,ev_dist%data_c,1,1,&
             ev_dist%blacsdata%blacs_desc,work2_c,lwork2,rwork,lrwork,iwork,liwork,&
             ifail,iclustr,gap,ierr)

@@ -13,7 +13,8 @@ MODULE m_vgen_xcpot
 CONTAINS
 
    SUBROUTINE vgen_xcpot(hybdat, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
-                          cell, oneD, sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results)
+                          cell,   sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results, &
+                          den1Rot, den1Rotimag, dfptvTotimag, starsq)
 
       !     ***********************************************************
       !     FLAPW potential generator                           *
@@ -34,9 +35,10 @@ CONTAINS
       USE m_checkdopall
       USE m_cdn_io
       USE m_convol
-      USE m_cdntot
       USE m_intgr
       USE m_metagga
+      USE m_dfpt_vmt_xc
+      USE m_dfpt_vis_xc
 
       IMPLICIT NONE
 
@@ -44,7 +46,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)              :: hybdat
       TYPE(t_mpi), INTENT(IN)              :: fmpi
 
-      TYPE(t_oneD), INTENT(IN)              :: oneD
+       
       TYPE(t_sliceplot), INTENT(IN)              :: sliceplot
       TYPE(t_input), INTENT(IN)              :: input
       TYPE(t_vacuum), INTENT(IN)              :: vacuum
@@ -57,6 +59,9 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)              :: den, denRot, EnergyDen
       TYPE(t_potden), INTENT(INOUT)           :: vTot, vx, vxc, exc
       TYPE(t_results), INTENT(INOUT), OPTIONAL :: results
+      TYPE(t_potden), INTENT(IN), OPTIONAL     :: den1Rot, den1Rotimag
+      TYPE(t_potden), INTENT(INOUT), OPTIONAL  :: dfptvTotimag
+      TYPE(t_stars), INTENT(IN), OPTIONAL      :: starsq
 
       ! Local type instances
       TYPE(t_potden)    :: workDen, veff
@@ -67,12 +72,15 @@ CONTAINS
       ! Local Scalars
       INTEGER :: ifftd, ifftd2, ifftxc3d, ispin, i, iType
       REAL    :: dpdot
+      LOGICAL :: l_dfptvgen
 #ifdef CPP_MPI
       integer:: ierr
 #endif
 
+      l_dfptvgen = PRESENT(starsq)
+
       call set_kinED(fmpi, sphhar, atoms, sym,  xcpot, &
-      input, noco, stars,vacuum,oned, cell, Den, EnergyDen, vTot,kinED)
+      input, noco, stars,vacuum , cell, Den, EnergyDen, vTot,kinED)
 
       IF (PRESENT(results)) THEN
          CALL veff%init(stars, atoms, sphhar, vacuum, noco, input%jspins, 1)
@@ -91,36 +99,21 @@ CONTAINS
             CALL timestart("Vxc in vacuum")
 
             ifftd2 = 9*stars%mx1*stars%mx2
-            IF (oneD%odi%d1) ifftd2 = 9*stars%mx3*oneD%odi%M
-
+          
             !IF (.NOT. xcpot%needs_grad()) THEN  ! LDA
 
-            !   IF (.NOT. oneD%odi%d1) THEN
-            !      CALL vvacxc(ifftd2, stars, vacuum, xcpot, input, noco, Den, vTot, exc)
-            !   ELSE
-            !      CALL judft_error("OneD broken")
-                  ! CALL vvacxc(stars,oneD%M,vacuum,odi%n2d,ifftd2,&
-                  !             xcpot,input,odi%nq2,odi%nst2,den,noco,odi%kimax2%igf,&
-                  !             odl%pgf,vTot%vacxy,vTot%vacz,excxy,excz)
-            !   END IF
-            !ELSE      ! GGA
-            !   IF (oneD%odi%d1) THEN
-            !      CALL judft_error("OneD broken")
-                  ! CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
-                  !              cell,xcpot,input,workDen, ichsmrg,&
-                  !              vTot%vacxy,vTot%vacz,rhmn, exc%vacxy,exc%vacz)
-
-            !   ELSE
-            !      CALL vvacxcg(ifftd2, stars, vacuum, noco, oneD, cell, xcpot, input,  Den, vTot, exc)
-            !   END IF
-            !END IF
-            CALL vvac_xc(ifftd2, stars, vacuum, noco, oneD, cell, xcpot, input,  Den, vTot, exc)
+            CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc)
             CALL timestop("Vxc in vacuum")
          END IF
 
          ! interstitial region
          CALL timestart("Vxc in interstitial")
-            CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc, vxc)
+         IF (.NOT.l_dfptvgen) THEN
+             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc, vxc)
+         ELSE
+             ! TODO: This is different enough to warrant a separate subroutine, right?
+             CALL dfpt_vis_xc(stars, starsq, sym, cell, denRot, den1Rot, xcpot, input, vTot)
+         END IF
          CALL timestop("Vxc in interstitial")
       END IF !irank==0
 
@@ -132,15 +125,19 @@ CONTAINS
          CALL timestart("Vxc in MT")
       END IF
 
-      CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
-                  EnergyDen,kinED, noco,vTot, vx, exc, vxc)
+      IF (.NOT.l_dfptvgen) THEN
+          CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
+                      EnergyDen,kinED, noco,vTot, vx, exc, vxc)
+      ELSE
+          CALL dfpt_vmt_xc(fmpi,sphhar,atoms,denRot,den1Rot,den1Rotimag,xcpot,input,sym,noco,vTot,dfptvTotimag)
+      END IF
 
       ! add MT EXX potential to vr
       IF (fmpi%irank == 0) THEN
          CALL timestop("Vxc in MT")
 
          ! check continuity of total potential
-         IF (input%vchk) CALL checkDOPAll(input,  sphhar, stars, atoms, sym, vacuum, oneD, cell, vTot, 1)
+         IF (input%vchk) CALL checkDOPAll(input,  sphhar, stars, atoms, sym, vacuum,   cell, vTot, 1)
 
          ! TOTAL
          IF (PRESENT(results)) THEN
@@ -154,7 +151,7 @@ CONTAINS
             veff = vTot
             IF (xcpot%is_hybrid() .AND. hybdat%l_subvxc) THEN
                DO ispin = 1, input%jspins
-                  CALL convol(stars, vx%pw_w(:, ispin), vx%pw(:, ispin), stars%ufft)
+                  CALL convol(stars, vx%pw_w(:, ispin), vx%pw(:, ispin))
                END DO
                veff%pw = vTot%pw - xcpot%get_exchange_weight()*vx%pw
                veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight()*vx%pw_w
@@ -172,7 +169,7 @@ CONTAINS
             DO ispin = 1, input%jspins
                WRITE (oUnit, FMT=8050) ispin
 8050           FORMAT(/, 10x, 'density-effective potential integrals for spin ', i2,/)
-               CALL int_nv(ispin, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, veff, workden, results%te_veff)
+               CALL int_nv(ispin, stars, vacuum, atoms, sphhar, cell, sym, input,   veff, workden, results%te_veff)
             END DO
 
             IF (xcpot%is_hybrid() .AND. hybdat%l_subvxc) THEN
@@ -207,7 +204,7 @@ CONTAINS
 8070        FORMAT(/, 10x, 'charge density-energy density integrals',/)
 
             results%te_exc = 0.0
-            CALL int_nv(1, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, exc, workDen, results%te_exc)
+            CALL int_nv(1, stars, vacuum, atoms, sphhar, cell, sym, input,   exc, workDen, results%te_exc)
             WRITE (oUnit, FMT=8080) results%te_exc
 
 8080        FORMAT(/, 10x, 'total charge density-energy density integral :', t40, ES20.10)

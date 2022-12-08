@@ -1,5 +1,8 @@
 #this file stores settings to be used in the testing-system
 
+#remove some test temporarily
+set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} disabled")
+
 #some test need specific FLEUR features
 if (NOT FLEUR_USE_HDF5)
     set(PYTEST_TEST_EXCL_FLAGS "${PYTEST_TEST_EXCL_FLAGS} hdf")
@@ -81,20 +84,20 @@ endif()
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/run_tests.sh CONTENT
 "#!/usr/bin/env bash
 ADDOPTS_ENV=\${PYTEST_ADDOPTS}
-PYTEST_ADDOPTS=\"${CMAKE_SOURCE_DIR}/tests/new_pytest_system --build_dir=${CMAKE_BINARY_DIR} \${ADDOPTS_ENV}\"
+PYTEST_ADDOPTS=\"${CMAKE_SOURCE_DIR}/tests --build_dir=${CMAKE_BINARY_DIR} \${ADDOPTS_ENV}\"
 PYTHON_EXECUTABLE=\"${FLEUR_PYTHON}\"
 if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
   PYTHON_EXECUTABLE=\${juDFT_PYTHON}
 fi
 mkdir -p Testing
-PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $PYTHON_EXECUTABLE -m pytest \"$@\" | tee Testing/pytest_session.stdout
+PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $PYTHON_EXECUTABLE -m pytest \"$@\" | tee -i Testing/pytest_session.stdout
 exit \${PIPESTATUS[0]}")
 add_custom_target(pytest ALL
                   COMMAND chmod +x run_tests.sh
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                   COMMENT "Making test script executable")
 
-add_custom_target(test_new
+add_custom_target(test
                   COMMAND sh run_tests.sh
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                   COMMENT "Making 'make test' run the python script executable")

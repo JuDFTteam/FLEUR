@@ -13,7 +13,7 @@ MODULE m_vvac_xc
   !     for the gradient contribution.   t.a. 1996
   !-----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE vvac_xc(ifftd2,stars,vacuum,noco,oneD,cell,xcpot,input,den, vxc,exc)
+  SUBROUTINE vvac_xc(ifftd2,stars,vacuum,noco ,cell,xcpot,input,den, vxc,exc)
 
     !-----------------------------------------------------------------------
     !     instead of vvacxcor.f: the different exchange-correlation
@@ -31,15 +31,15 @@ CONTAINS
     USE m_grdchlh
     USE m_mkgz
     USE m_mkgxyz3
-    USE m_od_mkgxyz3
-    USE m_od_mkgz
+    ! 
+    ! 
     USE m_fft2d
     use m_vac_tofrom_grid
     USE m_libxc_postprocess_gga
     IMPLICIT NONE
 
     CLASS(t_xcpot),INTENT(IN)    :: xcpot
-    TYPE(t_oneD),INTENT(IN)      :: oneD
+     
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
@@ -90,8 +90,8 @@ CONTAINS
     TYPE IS (t_xcpot_libxc)
        l_libxc=.TRUE.
        IF (xcpot%needs_grad()) THEN
-          CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum,oneD,v_xc,grad)
-          CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum,oneD,v_x,grad)
+          CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
+          CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_x,grad)
        END IF
     END SELECT
 

@@ -39,7 +39,8 @@ CONTAINS
 
     INTEGER::n
     LOGICAL::error(sym%nop)
-
+    this%l_needs_vectors=.true.
+   
     this%phi=phi
     this%theta=theta
 
@@ -47,7 +48,7 @@ CONTAINS
          judft_error("Lists for theta/phi must have the same length in MAE force theorem calculations")
     DO n=1,SIZE(this%phi)
        CALL soc_sym(sym%nop,sym%mrot,this%theta(n),this%phi(n),cell%amat,error)
-       IF (ANY(error)) CALL judft_error("Force theory choice of SOC-SQA breaks symmetry")
+       IF (ANY(error)) CALL judft_warn("Force theorem choice of SOC-SQA breaks symmetry")
     END DO
     ALLOCATE(this%evsum(SIZE(this%phi)))
     this%evsum=0
@@ -84,6 +85,7 @@ CONTAINS
           RETURN
        ENDIF
        !OK, now we start the MAE-loop
+       this%l_in_forcetheo_loop = .true.
        this%directions_done=this%directions_done+1
        mae_next_job=(this%directions_done<=SIZE(this%phi)) !still angles to do
        IF (.NOT.mae_next_job) RETURN
@@ -93,6 +95,7 @@ CONTAINS
        if (.not.noco%l_soc) call judft_error("Force theorem mode for MAE requires l_soc=T")
        !noco%l_soc=.true.
        IF (fmpi%irank .EQ. 0) THEN
+          WRITE (*, *) "Started a Forcetheorem Loop"
           IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop')
           WRITE(attributes(1),'(a)') 'MAE'
           WRITE(attributes(2),'(i5)') this%directions_done
@@ -101,7 +104,7 @@ CONTAINS
   END FUNCTION mae_next_job
 
   FUNCTION mae_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,fmpi,  enpara,v,results)RESULT(skip)
     USE m_types
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
@@ -109,7 +112,7 @@ CONTAINS
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: fmpi
 
-    TYPE(t_oneD),INTENT(IN)        :: oneD
+     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_nococonv),INTENT(IN)    :: nococonv
@@ -125,7 +128,7 @@ CONTAINS
        skip=.FALSE.
        RETURN
     ENDIF
-    this%evsum(this%directions_done)=results%seigv/2.0
+    this%evsum(this%directions_done)=results%seigv
     skip=.TRUE.
   END FUNCTION  mae_eval
 
@@ -136,7 +139,7 @@ CONTAINS
 
     !Locals
     INTEGER:: n
-    CHARACTER(LEN=12):: attributes(3)
+    CHARACTER(LEN=16):: attributes(3)
     IF (this%directions_done==0) THEN
        RETURN
     ENDIF
@@ -144,6 +147,7 @@ CONTAINS
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop')
+       WRITE (*, *) "Finished last Forcetheorem Loop"
        attributes = ''
        WRITE(attributes(1),'(i5)') SIZE(this%evsum)
        WRITE(attributes(2),'(a)') 'Htr'
@@ -151,9 +155,9 @@ CONTAINS
        DO n=1,SIZE(this%evsum)
           WRITE(attributes(1),'(f12.7)') this%theta(n)
           WRITE(attributes(2),'(f12.7)') this%phi(n)
-          WRITE(attributes(3),'(f12.7)') this%evsum(n)
+          WRITE(attributes(3),'(f16.9)') this%evsum(n)
           CALL writeXMLElementForm('Angle',(/'theta ','phi   ','ev-sum'/),attributes,&
-               RESHAPE((/5,3,6,12,12,12/),(/3,2/)))
+               RESHAPE((/5,3,6,12,12,16/),(/3,2/)))
        END DO
        CALL closeXMLElement('Forcetheorem_MAE')
     ENDIF

@@ -38,7 +38,7 @@ CONTAINS
     REAL,INTENT(in)                     :: q(:,:)
     REAL,INTENT(IN)                     :: theta(:),phi(:),ef_shifts(:)
     INTEGER,INTENT(IN)                  :: ntype
-
+    this%l_needs_vectors=.true.
     this%theta=theta
     this%phi=phi
     this%ef=ef_shifts
@@ -91,6 +91,7 @@ CONTAINS
        RETURN
     ENDIF
     !OK, now we start the DMI-loop
+    this%l_in_forcetheo_loop = .true.
     this%q_done=this%q_done+1
     dmi_next_job=(this%q_done<=SIZE(this%qvec,2)) !still q-vectors to do
     IF (.NOT.dmi_next_job) RETURN
@@ -185,7 +186,7 @@ CONTAINS
   END SUBROUTINE dmi_dist
 
   FUNCTION dmi_eval(this,eig_id,atoms,kpts,sym,&
-       cell,noco,nococonv, input,fmpi, oneD,enpara,v,results)RESULT(skip)
+       cell,noco,nococonv, input,fmpi,  enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
     IMPLICIT NONE
@@ -194,7 +195,7 @@ CONTAINS
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: fmpi
 
-    TYPE(t_oneD),INTENT(IN)        :: oneD
+     
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_nococonv),INTENT(IN)    :: nococonv
@@ -210,7 +211,7 @@ CONTAINS
     IF (this%q_done==0) RETURN
 
     CALL ssomat(this%evsum(:,:,this%q_done),this%h_so(:,:,:,this%q_done),this%theta,this%phi,eig_id,atoms,kpts,sym,&
-                cell,noco,nococonv, input,fmpi, oneD,enpara,v,results,this%ef+results%ef)
+                cell,noco,nococonv, input,fmpi,  enpara,v,results,this%ef+results%ef)
     skip=.TRUE.
 
   END FUNCTION  dmi_eval

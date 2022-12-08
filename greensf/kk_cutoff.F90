@@ -112,7 +112,10 @@ MODULE m_kk_cutoff
             WRITE(*,*) "INTEGRAL OVER projDOS with cutoff: ", integral
 #endif
             !Copy cutoff to second spin if only one was calculated
-            IF(spins_cut.EQ.1 .AND. jspins.EQ.2) cutoff(2,2) = cutoff(1,2)
+            IF(spins_cut.EQ.1 .AND. jspins.EQ.2) THEN
+               cutoff(2,2) = cutoff(1,2)
+               scalingFactor(2) = scalingFactor(1)
+            ENDIF
          ENDIF
       ENDDO
 
@@ -166,5 +169,77 @@ MODULE m_kk_cutoff
 
 
    END SUBROUTINE kk_cutoffRadial
+
+   SUBROUTINE kk_cutoffRadialLO(uu,ud,du,dd,uulo,dulo,ulou,ulod,uloulop,atoms,noco,scalarGF,l_mperp,&
+                              l,atomtype,input,eMesh,cutoff,scalingFactor)
+
+      COMPLEX,                   INTENT(IN)     :: uu(:,-lmaxU_const:,-lmaxU_const:,:)
+      COMPLEX,                   INTENT(IN)     :: ud(:,-lmaxU_const:,-lmaxU_const:,:)
+      COMPLEX,                   INTENT(IN)     :: du(:,-lmaxU_const:,-lmaxU_const:,:)
+      COMPLEX,                   INTENT(IN)     :: dd(:,-lmaxU_const:,-lmaxU_const:,:)
+      COMPLEX,                   INTENT(IN)     :: uulo(:,-lmaxU_const:,-lmaxU_const:,:,:)
+      COMPLEX,                   INTENT(IN)     :: dulo(:,-lmaxU_const:,-lmaxU_const:,:,:)
+      COMPLEX,                   INTENT(IN)     :: ulou(:,-lmaxU_const:,-lmaxU_const:,:,:)
+      COMPLEX,                   INTENT(IN)     :: ulod(:,-lmaxU_const:,-lmaxU_const:,:,:)
+      COMPLEX,                   INTENT(IN)     :: uloulop(:,-lmaxU_const:,-lmaxU_const:,:,:,:)
+      TYPE(t_noco),              INTENT(IN)     :: noco
+      type(t_atoms),             intent(in)     :: atoms
+      TYPE(t_scalarGF),          INTENT(IN)     :: scalarGF
+      LOGICAL,                   INTENT(IN)     :: l_mperp
+      INTEGER,                   INTENT(IN)     :: l, atomtype
+      TYPE(t_input),             INTENT(IN)     :: input
+      REAL,                      INTENT(IN)     :: eMesh(:)
+      INTEGER,                   INTENT(INOUT)  :: cutoff(:,:)
+      REAL,                      INTENT(INOUT)  :: scalingFactor(:)
+
+      COMPLEX, ALLOCATABLE :: im(:,:,:,:)
+
+      INTEGER :: jspin,m,mp,spin1,spin2,ilo,ilop,iLO_ind,iLOp_ind
+
+      !calculate the spherical average from the original greens function
+      ALLOCATE(im(SIZE(uu,1),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(uu,4)),source=cmplx_0)
+      DO jspin = 1, SIZE(im,4)
+         IF(jspin < 3) THEN
+            spin1 = jspin
+            spin2 = jspin
+         ELSE
+            spin1 = 2
+            spin2 = 1
+         ENDIF
+         !$OMP parallel do default(none) &
+         !$OMP shared(scalarGF,jspin,spin1,spin2,l,im,uu,ud,du,dd,atoms) &
+         !$OMP shared(uulo,ulou,ulod,dulo,uloulop,atomtype) &
+         !$OMP private(m,mp,ilo,ilop,iLO_ind,iLOp_ind) collapse(2)
+         DO m = -l,l
+            DO mp = -l,l
+               im(:,m,mp,jspin) =     uu(:,m,mp,jspin) * scalarGF%uun(spin1,spin2) &
+                                    + ud(:,m,mp,jspin) * scalarGF%udn(spin1,spin2) &
+                                    + du(:,m,mp,jspin) * scalarGF%dun(spin1,spin2) &
+                                    + dd(:,m,mp,jspin) * scalarGF%ddn(spin1,spin2)
+               iLO_ind = 0
+               DO ilo = 1, atoms%nlo(atomType)
+                  IF(atoms%llo(ilo,atomType).NE.l) CYCLE
+                  iLO_ind = iLO_ind + 1
+                  im(:,m,mp,jspin) =   im(:,m,mp,jspin) &
+                                    + uulo(:,m,mp,iLO_ind,jspin) * scalarGF%uulon(ilo,spin1,spin2) &
+                                    + dulo(:,m,mp,iLO_ind,jspin) * scalarGF%dulon(ilo,spin1,spin2) &
+                                    + ulou(:,m,mp,iLO_ind,jspin) * scalarGF%uloun(ilo,spin1,spin2) &
+                                    + ulod(:,m,mp,iLO_ind,jspin) * scalarGF%ulodn(ilo,spin1,spin2)
+                  iLOp_ind = 0
+                  DO ilop = 1, atoms%nlo(atomType)
+                     IF(atoms%llo(ilop,atomType).NE.l) CYCLE
+                     iLOp_ind = iLOp_ind + 1
+                     im(:,m,mp,jspin) =   im(:,m,mp,jspin) &
+                                       + uloulop(:,m,mp,iLO_ind,iLOp_ind,jspin) * scalarGF%uloulopn(ilo,ilop,spin1,spin2)
+                  ENDDO
+               enddo
+            enddo
+         ENDDO
+         !$OMP end parallel do
+      ENDDO
+
+      CALL kk_cutoff(im,noco,l_mperp,l,input%jspins,eMesh,cutoff,scalingFactor)
+
+   END SUBROUTINE kk_cutoffRadialLO
 
 END MODULE m_kk_cutoff

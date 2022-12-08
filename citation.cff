@@ -1,0 +1,82 @@
+cff-version: 1.2.0
+title: FLEUR
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Daniel
+    family-names: Wortmann
+    email: d.wortmann@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-2248-1904'
+  - given-names: Gregor
+    family-names: Michalicek
+    email: g.michalicek@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0003-4719-188X'
+  - given-names: Robin  
+    family-names: Hilgers
+    email: r.hilgers@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-3443-5032'
+  - given-names: Alexander  
+    family-names: Neukirchen
+    email: a.neukirchen@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-0971-8735'
+  - given-names: Henning
+    family-names: Janssen
+    email: he.janssen@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0003-3558-9487'
+  - given-names: Uliana
+    family-names: Grytsiuk
+    email: u.alekseeva@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0003-3231-6192'
+  - given-names: Jens
+    family-names: Broeder
+    email: j.broeder@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0001-7939-226X'
+  - given-names: Christian-Roman
+    family-names: Gerhorst
+    email: c.gerhorst@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0001-8984-4258'
+identifiers:
+  - type: doi
+    value: someDOI needed!
+    description: DOI of the software publication
+repository-code: 'https://iffgit.fz-juelich.de/fleur/fleur'
+url: 'https://www.flapw.de'
+abstract: >-
+  FLEUR is an all-electron DFT code based on the
+  full-potential linearized augmented plane-wave
+  method (FLAPW). It is mainly developed at the
+  Forschungsentrum Jülich, Germany and available for
+  the materials research community.
+keywords:
+  - DFT
+  - All-electron
+  - FLAPW
+  - Density functional theory
+  - FLEUR
+license: MIT
