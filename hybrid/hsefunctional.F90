@@ -2135,12 +2135,17 @@ CONTAINS
    SUBROUTINE exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsymop, &
                                nsest, indx_sest, a_ex, results, cmt, mat_ex)
 
-      USE m_types
+      USE m_types_fleurinput
+      USE m_types_mpdata
+      USE m_types_hybdat
+      USE m_types_lapw
+      USE m_types_misc
+      USE m_types_mat
+
       USE m_constants
       USE m_util
       USE m_intgrf
       USE m_wrapper
-      USE m_types
 
       IMPLICIT NONE
 
@@ -2258,10 +2263,7 @@ CONTAINS
                         DO j = 1, n
                            ! Integration over r
                            integrand = fprod(:, j)*sum_primf
-                           call juDFT_error("stop the following line has to be reimplemented:")
-                           ! integral(i, j) = fpi_const/(2*l + 1)* &
-                           !                  intgrf(integrand, jri, jmtd, rmsh, &
-                           !                         dx, ntype, itype, hybdat%gridf)
+                           integral(i, j) = fpi_const/(2*l + 1) * intgrf(integrand, fi%atoms, itype, hybdat%gridf)
                         END DO
 
                      END DO
@@ -2353,7 +2355,10 @@ CONTAINS
    !
    SUBROUTINE exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
 
-      USE m_types
+      USE m_types_fleurinput
+      USE m_types_hybdat
+      USE m_types_misc
+
       USE m_constants
       USE m_util
       use m_intgrf
@@ -2470,8 +2475,7 @@ CONTAINS
 
                                     integrand = rprod*sum_primf
 
-                                    call juDFT_error("stop the following line has to be reimplemented:")
-                                    !rdum1 = rdum*intgrf(integrand, fi%atoms%jri, fi%atoms%jmtd, fi%atoms%rmsh, fi%atoms%dx, fi%atoms%ntype, itype, hybdat%gridf)
+                                    rdum1 = rdum*intgrf(integrand, fi%atoms, itype, hybdat%gridf)
 
                                     iatom = iatom0
                                     DO ieq = 1, fi%atoms%neq(itype)
