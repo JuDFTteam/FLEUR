@@ -118,19 +118,10 @@ CONTAINS
       END IF
 
       ! Now the other stars:
-      iStarStart = 2
-      iStarEnd = stars%ng3
+
+      CALL calcIndexBounds(fmpi,2, stars%ng3, iStarStart, iStarEnd)
+
 #ifdef CPP_MPI
-      !calculate loop boundaries for the MPI parallelization
-      chunk_size = (stars%ng3-1) / fmpi%isize
-      leftover_size = modulo(stars%ng3 - 1, fmpi%isize)
-      IF (fmpi%irank < leftover_size) THEN
-         iStarStart = fmpi%irank*(chunk_size + 1) + 2
-         iStarEnd = (fmpi%irank + 1)*(chunk_size + 1) + 1
-      ELSE
-         iStarStart = leftover_size*(chunk_size + 1) + 2 + (fmpi%irank - leftover_size)*chunk_size
-         iStarEnd = (iStarStart + chunk_size) - 1
-      ENDIF
       IF(.NOT.ALLOCATED(stars%sk3)) ALLOCATE(stars%sk3(stars%ng3))
       CALL MPI_BCAST(stars%sk3, stars%ng3, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
       IF(.NOT.ALLOCATED(stars%kv3)) ALLOCATE(stars%kv3(3,stars%ng3))
@@ -216,19 +207,8 @@ CONTAINS
       stars%ufft(0) = 1.0 - stars%ufft(0)*inv_omtil
 #endif
 
-      i3_start = 0
-      i3_end = im3
-#ifdef CPP_MPI
-      chunk_size = (im3 + 1)/fmpi%isize
-      leftover_size = modulo(im3 + 1, fmpi%isize)
-      IF (fmpi%irank < leftover_size) THEN
-         i3_start = fmpi%irank*(chunk_size + 1)
-         i3_end = (fmpi%irank + 1)*(chunk_size + 1) - 1
-      ELSE
-         i3_start = leftover_size*(chunk_size + 1) + (fmpi%irank - leftover_size)*chunk_size
-         i3_end = (i3_start + chunk_size) - 1
-      ENDIF
-#endif
+      CALL calcIndexBounds(fmpi,0, im3, i3_start, i3_end)
+
       DO i3 = i3_start, i3_end
          gm(3) = REAL(i3)
          DO i2 = 0, 3*stars%mx2 - 1
