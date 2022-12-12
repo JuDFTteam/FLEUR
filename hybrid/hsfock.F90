@@ -102,7 +102,7 @@ CONTAINS
 
       complex                  :: c_phase_k(hybdat%nbands(k_pack%nk ,jsp))
       REAL                     :: wl_iks(fi%input%neig, fi%kpts%nkptf)
-      TYPE(t_mat)              :: ex
+      TYPE(t_mat)              :: mat_ex
 
       CALL timestart("total time hsfock")
       nk = k_pack%nk 
@@ -138,24 +138,21 @@ CONTAINS
 
       ! calculate contribution from valence electrons to the
       ! HF exchange
-      ex%l_real = fi%sym%invs
+      mat_ex%l_real = fi%sym%invs
       CALL exchange_valence_hf(k_pack, fi, fmpi, hybdat%zmat(nk,jsp)%mat, mpdata, jsp, hybdat, lapw, eig_irr, results, &
-                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, ex)
+                               n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
       
       ! calculate contribution from the core states to the HF exchange
       CALL timestart("core exchange calculation")
       IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-         WRITE(1234,*) "hello 1"
-         FLUSH(1234)
          CALL exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsymop, nsest, indx_sest, &
-                               a_ex, results, cmt_nk, ex)
-         WRITE(1234,*) "hello 2"
-         FLUSH(1234)
+                               a_ex, results, cmt_nk, mat_ex)
+
          CALL exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
       
       ELSE
          CALL exchange_vccv1(nk, fi, mpdata, hybdat, jsp, &
-                           lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, cmt_nk, ex)
+                           lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, cmt_nk, mat_ex)
 
          if(k_pack%submpi%root()) then
             CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
@@ -164,7 +161,7 @@ CONTAINS
 
       CALL timestop("core exchange calculation")
       if(k_pack%submpi%root()) then
-         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, ex, vx_tmp)
+         call ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, hybdat%zmat(nk,jsp)%mat, mat_ex, vx_tmp)
          call vx_tmp%u2l()
       ELSE  
 #ifdef CPP_MPI
