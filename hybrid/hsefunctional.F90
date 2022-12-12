@@ -1097,53 +1097,51 @@ CONTAINS
 
       gPts(:, :) = g(:, pgptm(1:noGPts))
 #ifndef __PGI
+      gpoints: DO cg=1, noGPts
+         ntypesA: DO cn=1, ntype
+         ! Calculate the phase factor exp(-iGR) for all atoms
+         DO ci=1,neq(cn)
+         expIGR(cg, cn, ci) = EXP(-r2Pi*img*DOT_PRODUCT(taual(:, natdPtr(cn) + ci), gPts(:, cg)))
+         muffintin(cg, :, :, cn, ci) = r4Pi_sVol*expIGR(cg, cn, ci)
+         END DO
 
-      gpoints:FORALL (cg=1:noGPts)
-      ntypesA:FORALL (cn=1:ntype)
-      ! Calculate the phase factor exp(-iGR) for all atoms
-      FORALL (ci=1:neq(cn))
-      expIGR(cg, cn, ci) = EXP(-r2Pi*img*DOT_PRODUCT(taual(:, natdPtr(cn) + ci), gPts(:, cg)))
-      muffintin(cg, :, :, cn, ci) = r4Pi_sVol*expIGR(cg, cn, ci)
-      END FORALL
+         ! Multiplication with i^-L
+         DO cl=0,lcutm(cn)
+         muffintin(cg, :, cl*cl + 1:(cl + 1)*(cl + 1), cn, :) = muffintin(cg, :, cl*cl + 1:(cl + 1)*(cl + 1), cn, :)/imgl(cl)
+         END DO
+         END DO ntypesA
 
-      ! Multiplication with i^-L
-      FORALL (cl=0:lcutm(cn))
-      muffintin(cg, :, cl*cl + 1:(cl + 1)*(cl + 1), cn, :) = muffintin(cg, :, cl*cl + 1:(cl + 1)*(cl + 1), cn, :)/imgl(cl)
-      END FORALL
+         ! Calculate the k+G, abs(k+G), and abs(k+G)^2
+         k_G(:, cg) = MATMUL(gPts(:, cg) + bk(:), bmat(:, :))
+         AbsK_G2(cg) = SUM(k_G(:, cg)**2)
+         AbsK_G(cg) = SQRT(AbsK_G2(cg))
 
-      END FORALL ntypesA
+         ! Spherical harmonics are calculated for all lm's and k+G's
+         Ylm(cg, :) = calcYlm(k_G(:, cg), maxlcutm)
 
-      ! Calculate the k+G, abs(k+G), and abs(k+G)^2
-      k_G(:, cg) = MATMUL(gPts(:, cg) + bk(:), bmat(:, :))
-      AbsK_G2(cg) = SUM(k_G(:, cg)**2)
-      AbsK_G(cg) = SQRT(AbsK_G2(cg))
+         ! Perform the integration in eq.[2] for all muffin-tins
+         ntypesB:DO cn=1,ntype
 
-      ! Spherical harmonics are calculated for all lm's and k+G's
-      Ylm(cg, :) = calcYlm(k_G(:, cg), maxlcutm)
+            ! Multiplication with the spherical harmonic
+            DO cl=1,(lcutm(cn) + 1)**2
+               muffintin(cg, :, cl, cn, :) = muffintin(cg, :, cl, cn, :)*Ylm(cg, cl)
+            END DO
 
-      ! Perform the integration in eq.[2] for all muffin-tins
-      ntypesB:FORALL (cn=1:ntype)
+         ! Calculate the spherical bessel function
+            DO cr=1,jri(cn)
+               sphbesK_Gr(cg, cr, :, cn) = calcSphBes(AbsK_G(cg)*rmsh(cr, cn), maxlcutm)
+            END DO
+         ! integrate the function and multiplicate to the result
+            DO cl=0,lcutm(cn)
+               DO ci=1,nindxm(cl, cn)
+                  intgrMT(cg, ci, cl, cn) = pure_intgrf(rmsh(:, cn)*basm(:, ci, cl, cn)* &
+                                             sphbesK_Gr(cg, :, cl, cn), jri, jmtd, rmsh, dx, ntype, cn, gridf)
+                  muffintin(cg, ci, cl*cl + 1:(cl + 1)*(cl + 1), cn, :) = &
+                     muffintin(cg, ci, cl*cl + 1:(cl + 1)*(cl + 1), cn, :)*intgrMT(cg, ci, cl, cn)%value
+               END DO
+            END DO
 
-      ! Multiplication with the spherical harmonic
-      FORALL (cl=1:(lcutm(cn) + 1)**2)
-      muffintin(cg, :, cl, cn, :) = muffintin(cg, :, cl, cn, :)*Ylm(cg, cl)
-      END FORALL
-
-      ! Calculate the spherical bessel function
-      FORALL (cr=1:jri(cn))
-      sphbesK_Gr(cg, cr, :, cn) = calcSphBes(AbsK_G(cg)*rmsh(cr, cn), maxlcutm)
-      END FORALL
-      ! integrate the function and multiplicate to the result
-      FORALL (cl=0:lcutm(cn))
-      FORALL (ci=1:nindxm(cl, cn))
-      intgrMT(cg, ci, cl, cn) = pure_intgrf(rmsh(:, cn)*basm(:, ci, cl, cn)* &
-                                            sphbesK_Gr(cg, :, cl, cn), jri, jmtd, rmsh, dx, ntype, cn, gridf)
-      muffintin(cg, ci, cl*cl + 1:(cl + 1)*(cl + 1), cn, :) = &
-         muffintin(cg, ci, cl*cl + 1:(cl + 1)*(cl + 1), cn, :)*intgrMT(cg, ci, cl, cn)%value
-      END FORALL
-      END FORALL
-
-      END FORALL ntypesB
+         END DO ntypesB
 
 ! calculate the overlap with the interstitial basis function
 !                                                      -----
@@ -1156,14 +1154,14 @@ CONTAINS
 !                                                                                                      V
 !                                                                                                     I_a
       ! Calculate the difference of the G vectors and its absolute value
-      FORALL (cg2=1:gptmd)
+      DO cg2=1,gptmd
 
       gPts_gptm(:, cg, cg2) = gPts(:, cg) - g(:, cg2)
       abs_dg(cg, cg2) = gptnorm(gPts_gptm(:, cg, cg2), bmat)
 
-      END FORALL
+      END DO
 
-      END FORALL gpoints
+      END DO gpoints
 
       ! Check if any of the integrations failed and abort if one did
       IF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_ERROR)) THEN
@@ -1183,7 +1181,7 @@ CONTAINS
       sumInter_atom = DOT_PRODUCT(rmt**3, neq)/3.0
       interstitial = 1.0 - r4Pi_Vol*sumInter_atom
       ELSEWHERE
-      sumInter_atom = calculateSummation(abs_dg, gPts_gptm)
+      sumInter_atom = 0 ! calculateSummation(abs_dg, gPts_gptm)
       interstitial = -r4Pi_Vol*sumInter_atom
       END WHERE
 
@@ -1238,20 +1236,20 @@ CONTAINS
          COMPLEX             :: expIdGR(noGPts, gptmd, ntype, MAXVAL(neq))   ! exp(-i(gPts-g)R)
          COMPLEX             :: sumExpIdGR(noGPts, gptmd, ntype)            ! sum over atom of same type
 
-         atoms:FORALL (cn=1:ntype)
+         atoms:DO cn=1,ntype
          !                                                         -i(G-G_I)R_a
          ! Calculate for all similar atoms (same type) the factor e
          ! use that the G vectors and atomic positions are given in internal units
-         FORALL (ci=1:neq(cn))
+         DO ci=1,neq(cn)
          expIdGR(:, :, cn, ci) = EXP(-r2pi*img*my_dot_product(gPts_gptm(:, :, :), taual(:, natdPtr(cn) + ci)))
-         END FORALL
+         END DO
          ! Add all factors for atoms of the same type
          sumExpIdGR(:, :, cn) = my_sum(expIdGR(:, :, cn, :))
 
          ! Calculate the inter-atom factor which is the same for all atoms of the same type
          abs_dgR(:, :, cn) = abs_dg*rmt(cn)
          inter_atom(:, :, cn) = (SIN(abs_dgR(:, :, cn)) - abs_dgR(:, :, cn)*COS(abs_dgR(:, :, cn)))/abs_dg**3
-         END FORALL atoms
+         END DO atoms
 
          ! Add the factors of all atoms together
          calculateSummation = my_dot_product(sumExpIdGR, inter_atom)
@@ -1456,21 +1454,21 @@ CONTAINS
 
          gPts(:, :) = g(:, pgptm(1:noGPts))
 
-         gpoints:FORALL (cg=1:noGPts)
-         ntypesA:FORALL (cn=1:ntype)
+         gpoints:DO cg=1,noGPts
+         ntypesA:DO cn=1,ntype
 
          ! Calculate the phase factor exp(-iGR) for all atoms
-         FORALL (ci=1:neq(cn))
+         DO ci=1,neq(cn)
          expIGR(cg, cn, ci) = EXP(-r2Pi*img*DOT_PRODUCT(taual(:, natdPtr(cn) + ci), gPts(:, cg)))
          muffintin(cg, :, :, cn, ci) = r4Pi_sVol*expIGR(cg, cn, ci)
-         END FORALL
+         END DO
 
          ! Multiplication with i^-L
-         FORALL (cl=0:lcutm(cn))
+         DO cl=0,lcutm(cn)
          muffintin(cg, :, cl*cl + 1:(cl + 1)*(cl + 1), cn, :) = muffintin(cg, :, cl*cl + 1:(cl + 1)*(cl + 1), cn, :)/imgl(cl)
-         END FORALL
+         END DO
 
-         END FORALL ntypesA
+         END DO ntypesA
 
          ! Calculate the k+G, abs(k+G), and abs(k+G)^2
          k_G(:, cg) = MATMUL(gPts(:, cg) + bk(:), bmat(:, :))
@@ -1481,30 +1479,30 @@ CONTAINS
          Ylm(cg, :) = calcYlm(k_G(:, cg), maxlcutm)
 
          ! Perform the integration in eq.[2] for all muffin-tins
-         ntypesB:FORALL (cn=1:ntype)
+         ntypesB:DO cn=1,ntype
 
          ! Multiplication with the spherical harmonic
-         FORALL (cl=1:(lcutm(cn) + 1)**2)
+         DO cl=1,(lcutm(cn) + 1)**2
          muffintin(cg, :, cl, cn, :) = muffintin(cg, :, cl, cn, :)*Ylm(cg, cl)
-         END FORALL
+         END DO
 
          ! Calculate the spherical bessel function
-         FORALL (cr=1:jri(cn))
+         DO cr=1,jri(cn)
          sphbesK_Gr(cg, cr, :, cn) = calcSphBes(AbsK_G(cg)*rmsh(cr, cn), maxlcutm)
-         END FORALL
+         END DO
          ! integrate the function and multiplicate to the result
-         FORALL (cl=0:lcutm(cn))
-         FORALL (ci=1:nindxm(cl, cn))
+         DO cl=0,lcutm(cn)
+         DO ci=1,nindxm(cl, cn)
          intgrMT(cg, ci, cl, cn) = pure_intgrf(rmsh(:, cn)*basm(:, ci, cl, cn)* &
                                                sphbesK_Gr(cg, :, cl, cn), jri, jmtd, rmsh, dx, ntype, cn, gridf)
          muffintin(cg, ci, cl*cl + 1:(cl + 1)*(cl + 1), cn, :) = &
             muffintin(cg, ci, cl*cl + 1:(cl + 1)*(cl + 1), cn, :)*intgrMT(cg, ci, cl, cn)%value
-         END FORALL
-         END FORALL
+         END DO
+         END DO
 
-         END FORALL ntypesB
+         END DO ntypesB
 
-         END FORALL gpoints
+         END DO gpoints
 
          ! Check if any of the integrations failed and abort if one did
          IF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_ERROR)) THEN
@@ -2214,7 +2212,7 @@ CONTAINS
                      DO l2 = 0, fi%atoms%lmax(itype)
                         IF (l < ABS(l1 - l2) .OR. l > l1 + l2) CYCLE
 
-                        DO p2 = 1, mpdata%num_radbasfn(l2, itype)
+                        DO p2 = 1, mpdata%num_radfun_per_l(l2, itype)
                            n = n + 1
                            m = SIZE(fprod, 2)
                            IF (n > m) THEN
@@ -2282,8 +2280,8 @@ CONTAINS
                                  ll = larr(i)
                                  IF (ABS(m2) > ll) CYCLE
 
-                                 lm = SUM([((2*l2 + 1)*mpdata%num_radbasfn(l2, itype), l2=0, ll - 1)]) &
-                                      + (m2 + ll)*mpdata%num_radbasfn(ll, itype) + parr(i)
+                                 lm = SUM([((2*l2 + 1)*mpdata%num_radfun_per_l(l2, itype), l2=0, ll - 1)]) &
+                                      + (m2 + ll)*mpdata%num_radfun_per_l(ll, itype) + parr(i)
 
                                  carr(i, n1) = cmt(n1, lm, iatom) &
                                                *gaunt(l1, ll, l, m1, m2, m, hybdat%maxfac, hybdat%fac, hybdat%sfac)
