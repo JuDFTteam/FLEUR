@@ -87,7 +87,11 @@ CONTAINS
             factorA = factorA + atoms%neq(iType)*atoms%volmts(iType)/cell%omtil
          ENDDO
 
+         ! Treat 1st star separately:
+
          ustepLocal(1) = CMPLX(dd - factorA, 0.0)
+
+         ! Film contributions:
          !--->    G(parallel)=0  (for film)
          IF (input%film ) THEN
             DO iStar = 2, stars%ng3
@@ -97,24 +101,6 @@ CONTAINS
                END IF
             ENDDO
          END IF
-
-         !--->    sphere contributions
-
-         ! Treat 1st star separately:
-
-         iStar = 1
-         DO iType = 1, atoms%ntype
-            !-->     structure factors: loop over equivalent atoms
-            naInit = SUM(atoms%neq(:iType - 1)) + 1
-            factorA = 3.*atoms%volmts(iType)/cell%omtil
-
-            IF(norm2(stars%center).GT.1.0e-8) THEN
-               th = -tpi_const*DOT_PRODUCT(stars%kv3(:,iStar)+stars%center, atoms%taual(:, naInit))
-               sf = CMPLX(COS(th), SIN(th))
-               gs = stars%sk3(iStar)*atoms%rmt(iType)
-               ustepLocal(iStar) = ustepLocal(iStar) - (factorA*(SIN(gs)/gs - COS(gs))/(gs*gs))*sf
-            END IF
-         END DO
       END IF
 
       ! Now the other stars:
@@ -134,14 +120,12 @@ CONTAINS
       DO iStar = iStarStart, iStarEnd
          DO iType = 1, atoms%ntype
             !-->     structure factors: loop over equivalent atoms
-            naInit = SUM(atoms%neq(:iType - 1)) + 1
+            naInit = SUM(atoms%neq(:iType - 1))
             factorA = 3.0 * atoms%volmts(iType) / cell%omtil
+            sf = CMPLX(0.0,0.0)
 
-            th = -tpi_const*DOT_PRODUCT(stars%kv3(:,iStar)+stars%center, atoms%taual(:, naInit))
-            sf = CMPLX(COS(th), SIN(th))
-
-            DO nn = 2, atoms%neq(iType) !Should automatically be nn = 2, 1 for DFPT
-               na = naInit + nn - 1
+            DO nn = 1, atoms%neq(iType) !Should automatically be nn = 2, 1 for DFPT
+               na = naInit + nn
                th = -tpi_const * DOT_PRODUCT(stars%kv3(:,iStar), atoms%taual(:, na))
                sf = sf + CMPLX(COS(th), SIN(th))
             END DO
