@@ -2318,11 +2318,11 @@ CONTAINS
 
       ! add the core-valence contribution to the exchange matrix mat_ex
 
-      DO n1 = 1, hybdat%nbands(nk,jsp)
-         DO n2 = 1, n1
-            mat_ex%data_c(n2, n1) = mat_ex%data_c(n2, n1) + CONJG(exchange(n2, n1))/nsymop
-         END DO
-      END DO
+      IF (mat_ex%l_real) THEN
+         mat_ex%data_r = mat_ex%data_r + exchange/nsymop
+      ELSE
+         mat_ex%data_c = mat_ex%data_c + CONJG(exchange)/nsymop
+      END IF
 
    END SUBROUTINE exchange_vccvHSE
 
