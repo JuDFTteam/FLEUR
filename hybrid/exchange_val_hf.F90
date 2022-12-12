@@ -137,18 +137,9 @@ CONTAINS
       REAL, ALLOCATABLE     :: r_coul_wavf(:,:), dot_result_r(:,:)
       LOGICAL                          :: occup(fi%input%neig), conjg_mtir
 
-      real, allocatable    :: cprod_vv_r(:,:)
-      complex, allocatable :: cprod_vv_c(:,:)
-#ifdef _OPENACC
-#define CPP_cprod_r cprod_vv_r 
-#define CPP_cprod_c cprod_vv_c 
-
-#else 
-
 #define CPP_cprod_r cprod_vv%data_r
 #define CPP_cprod_c cprod_vv%data_c
 
-#endif
       type(t_mat)          :: cprod_vv, carr3_vv
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
