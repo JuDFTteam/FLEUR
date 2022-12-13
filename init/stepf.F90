@@ -185,7 +185,7 @@ CONTAINS
          ufft_local(0) = 1.0 - ufft_local(0)*inv_omtil
       ENDIF
 #else
-      DO n = iType, atoms%ntype
+      DO iType =1, atoms%ntype
          stars%ufft(0) = stars%ufft(0) + atoms%neq(iType)*atoms%volmts(iType)
       ENDDO
       stars%ufft(0) = 1.0 - stars%ufft(0)*inv_omtil
