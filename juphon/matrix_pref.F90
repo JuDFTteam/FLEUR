@@ -6,7 +6,7 @@
 
 MODULE m_matrix_pref
 CONTAINS
-   SUBROUTINE matrix_pref(fmpi, atoms, bmat, gvecPr, gvec, lapwPr, lapw, nvPr, nv, &
+   SUBROUTINE matrix_pref(fmpi, atoms, bmat, gvecPr, gvec, lapwPr, lapw, nk, nvPr, nv, &
                           & iDtype, iDir, hmat_tmp, smat_tmp, hmat, smat, killcont)
       !> Decoratetes matrix elements of the form
       !! <\phi_{kG'q}|M|\phi_{kG}>
@@ -21,7 +21,7 @@ CONTAINS
       TYPE(t_lapw),  INTENT(IN)    :: lapwPr, lapw
       REAL,          INTENT(IN)    :: bmat(3, 3)
       INTEGER,       INTENT(IN)    :: gvecPr(:, :), gvec(:, :)
-      INTEGER,       INTENT(IN)    :: nvPr, nv, iDtype, iDir, killcont(2)
+      INTEGER,       INTENT(IN)    :: nk, nvPr, nv, iDtype, iDir, killcont(2)
 
       CLASS(t_mat),  INTENT(IN)    :: hmat_tmp, smat_tmp
       CLASS(t_mat),  INTENT(INOUT) :: hmat, smat
@@ -33,7 +33,7 @@ CONTAINS
 
       !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
       !$OMP SHARED(fmpi, atoms, bmat, gvecPr, gvec, lapwPr, lapw, killcont) &
-      !$OMP SHARED(nvPr, nv, iDir, hmat_tmp, smat_tmp, hmat, smat, iDtype) &
+      !$OMP SHARED(nk, nvPr, nv, iDir, hmat_tmp, smat_tmp, hmat, smat, iDtype) &
       !$OMP PRIVATE(ikGPr, ikG, ikG0, pref) &
       !$OMP PRIVATE(iLo, l, imLo, ikLo, ikGLo, ikGLo0) &
       !$OMP PRIVATE(iLoPr, lPr, imLoPr, ikLoPr, ikGLoPr)
@@ -42,9 +42,19 @@ CONTAINS
          DO ikGPr = 1, nvPr + atoms%nlo(iDtype)
             IF (ikGPr<=nvPr.AND.ikG<=nv) THEN
                pref = gvec(:, ikG) + lapw%bkpt
-               pref = pref - gvecPr(:, ikGPr) - lapwPr%bkpt
-               pref = ImagUnit * MATMUL(pref, bmat)
-
+               pref = pref - gvecPr(:, ikGPr) - lapwPr%bkpt - lapwPr%qphon
+               pref = ImagUnit * MATMUL(bmat, pref)
+               !IF (nk==40) THEN
+               !  write(9456,*) "---------------"
+               !  write(9456,*) iDir, ikGPr, ikG
+               !  write(9456,*) gvecPr(:, ikGPr)
+               !  write(9456,*) lapwPr%bkpt
+               !  write(9456,*) gvec(:, ikG)
+               !  write(9456,*) lapw%bkpt
+               !  write(9456,*) bmat
+               !  write(9456,*) pref
+               !  write(9456,*) smat_tmp%data_c(ikGPr, ikG0)
+               !END IF
                hmat%data_c(ikGPr, ikG0) = hmat%data_c(ikGPr, ikG0) &
                                       & + killcont(1) * pref(iDir) * hmat_tmp%data_c(ikGPr, ikG0)
                smat%data_c(ikGPr, ikG0) = smat%data_c(ikGPr, ikG0) &
@@ -59,7 +69,7 @@ CONTAINS
                      ikGLo0 = (ikGLo-1)/fmpi%n_size+1
 
                      pref = gvec(:,ikLo) + lapw%bkpt
-                     pref = pref - gvecPr(:, ikGPr) - lapwPr%bkpt
+                     pref = pref - gvecPr(:, ikGPr) - lapwPr%bkpt - lapwPr%qphon
                      pref = ImagUnit * MATMUL(pref, bmat)
 
                      hmat%data_c(ikGPr, ikGLo0) = hmat%data_c(ikGPr, ikGLo0) &
@@ -76,7 +86,7 @@ CONTAINS
                   ikGLoPr = nvPr + lapwPr%index_lo(iLoPr,iDtype) + imLoPr
 
                   pref = gvec(:, ikG) + lapw%bkpt
-                  pref = pref - gvec(:,ikLoPr) - lapwPr%bkpt
+                  pref = pref - gvec(:,ikLoPr) - lapwPr%bkpt - lapwPr%qphon
                   pref = ImagUnit * MATMUL(pref, bmat)
 
                   hmat%data_c(ikGLoPr, ikG0) = hmat%data_c(ikGLoPr, ikG0) &
@@ -100,7 +110,7 @@ CONTAINS
                         ikGLoPr = nvPr + lapwPr%index_lo(iLoPr,iDtype) + imLoPr
 
                         pref = gvec(:,ikLo) + lapw%bkpt
-                        pref = pref - gvec(:,ikLoPr) - lapwPr%bkpt
+                        pref = pref - gvec(:,ikLoPr) - lapwPr%bkpt - lapwPr%qphon
                         pref = ImagUnit * MATMUL(pref, bmat)
 
                         hmat%data_c(ikGLoPr, ikGLo0) = hmat%data_c(ikGLoPr, ikGLo0) &

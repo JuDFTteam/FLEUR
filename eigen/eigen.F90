@@ -31,7 +31,7 @@ CONTAINS
    !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,&
                     mpdata,hybdat,iter,eig_id,results,inden,v,vx,hub1data,&
-                    bqpt)
+                    bqpt, hmat_out, smat_out)
 
       USE m_types
       USE m_constants
@@ -75,9 +75,10 @@ CONTAINS
       INTEGER,INTENT(IN)    :: eig_id
 
       REAL,    OPTIONAL, INTENT(IN) :: bqpt(3)
+      CLASS(t_mat), OPTIONAL, INTENT(INOUT) :: hmat_out, smat_out
 
       ! Local Scalars
-      INTEGER jsp,nk,ne_all,ne_found,neigd2
+      INTEGER jsp,nk,ne_all,ne_found,neigd2,dim_mat
       INTEGER nk_i,n_size,n_rank
       INTEGER err
       INTEGER :: solver=0
@@ -87,7 +88,7 @@ CONTAINS
 
       COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),fi%kpts%nkpt,fi%input%jspins) ! needed for unfolding bandstructure fmpi case
 
-      INTEGER, ALLOCATABLE :: nvBuffer(:,:), nvBufferTemp(:,:)
+      INTEGER, ALLOCATABLE :: nvBuffer(:,:), nvBufferTemp(:,:), k_selection(:)
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
@@ -105,9 +106,19 @@ CONTAINS
       character(len=300)        :: errmsg
       real                      :: alpha_hybrid
 
+      REAL :: qphon(3)
+
+      !ALLOCATE(k_selection(16))
+      !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
+      ALLOCATE(k_selection(1))
+      !k_selection = [40,61,453]
+      k_selection = [1000]
+
       kqpts = fi%kpts
+      qphon = [0.0, 0.0, 0.0]
       ! Modify this from kpts only in DFPT case.
       IF (PRESENT(bqpt)) THEN
+          qphon = bqpt
           DO nk_i = 1, fi%kpts%nkpt
               kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
           END DO
@@ -141,13 +152,42 @@ CONTAINS
       DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)
+
             ! Set up lapw list
-            CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
+            !CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
+            CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi, qphon)
 
             call timestart("Setup of H&S matrices")
             CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
+            IF (PRESENT(hmat_out)) THEN
+               IF (hmat_out%l_real) THEN
+                  dim_mat = SIZE(smat%data_r(:,1))
+
+                  CALL smat_out%init(.TRUE., dim_mat, dim_mat, fmpi%sub_comm, .false.)
+                  CALL hmat_out%init(smat_out)
+
+                  hmat_out%data_r(:dim_mat,:dim_mat) = hmat%data_r
+                  smat_out%data_r(:dim_mat,:dim_mat) = smat%data_r
+               ELSE
+                  dim_mat = SIZE(smat%data_c(:,1))
+                  
+                  CALL smat_out%init(.FALSE., dim_mat, dim_mat, fmpi%sub_comm, .false.)
+                  CALL hmat_out%init(smat_out)
+
+                  hmat_out%data_c(:dim_mat,:dim_mat) = hmat%data_c
+                  smat_out%data_c(:dim_mat,:dim_mat) = smat%data_c
+               END IF
+            END IF
+
+            IF (ANY(nk==k_selection)) THEN
+               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_h0.npy",hmat%data_r)
+               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_s0.npy",smat%data_r)
+               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_vk.npy",lapw%vk)
+               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_gvec.npy",lapw%gvec)
+               write(9530,*) nk, lapw%bkpt, qphon
+            END IF
             nvBuffer(nk,jsp) = lapw%nv(jsp)
 
             ne_all=fi%input%neig
@@ -155,7 +195,10 @@ CONTAINS
             IF(ne_all > lapw%nmat) ne_all = lapw%nmat
 
             !Try to symmetrize matrix
-            CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat,.FALSE.)
+            !CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat,.FALSE.)
+            IF (.NOT.PRESENT(bqpt)) THEN
+               CALL symmetrize_matrix(fmpi,fi%noco,fi%kpts,nk,hmat,smat,.FALSE.)
+            END IF
 
             IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                select type(smat)
@@ -264,6 +307,7 @@ CONTAINS
       results%unfolding_weights(:,:,:) = unfoldingBuffer(:,:,:)
       nvBufferTemp(:,:) = nvBuffer(:,:)
 #endif
+      !CALL save_npy(int2str(eig_id)//"_eig0.npy",results%eig(:neigd2,:,1))
 
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,'(a)') ''

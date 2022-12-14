@@ -9,7 +9,8 @@ MODULE m_invert_HepsS
    IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE invert_HepsS(fmpi, atoms, noco, juPhon, lapwkpr, zMatkpr, eignukpr, eignuk, nekpr, nocck, l_real, invE, nocckq, wk, wkq, matOcc)
+   SUBROUTINE invert_HepsS(fmpi, atoms, noco, juPhon, lapwkpr, zMatkpr, eignukpr, eignuk, nekpr, nocck, l_real, invE, nocckq, wk, &
+                           wkq, matOcc, ikpt)
       !! Subroutine to calculate \((H-\epsilon_{\nu k} S)^{-1}\) as
       !! \(z_{k'}(\epsilon_{k'}-\epsilon_{\nu k})^(-1)z_{k'}^H\), i.e.
       !! in the spectral representation.
@@ -24,7 +25,7 @@ CONTAINS
       TYPE(t_lapw),    INTENT(IN) :: lapwkpr
       CLASS(t_mat),    INTENT(IN) :: zMatkpr
 
-      INTEGER,         INTENT(IN) :: nekpr, nocck, nocckq
+      INTEGER,         INTENT(IN) :: nekpr, nocck, nocckq, ikpt
       REAL,            INTENT(IN) :: eignukpr(:), eignuk(:), wk(:), wkq(:)
       LOGICAL,         INTENT(IN) :: l_real
 
@@ -48,12 +49,18 @@ CONTAINS
          CALL matOcc(nu)%init(.TRUE., nocckq, nocckq)
          DO nupr = 1, nekpr
             deps = eignukpr(nupr)-eignuk(nu)
+            write(6666,*) eignukpr(nupr)
+            write(6666,*) eignuk(nu)
+            write(6666,*) deps
+            write(6666,*) "-------"
             IF (ABS(deps)<juPhon%eDiffcut) CYCLE
+            !IF (ikpt==1) CYCLE
+            !IF (ABS(deps)<1e-7) CYCLE
             invdeps = 1.0 / deps
             invE(nu)%data_r(nupr,nupr) = invdeps
             IF (nupr<=nocck) THEN
                dwks = wkq(nupr) - wk(nu)
-               IF (ABS(dwks)>=juPhon%fDiffcut) matOcc(nu)%data_r(nupr,nupr) = 1.0
+               !IF (ABS(dwks)>=juPhon%fDiffcut) matOcc(nu)%data_r(nupr,nupr) = 1.0
             END IF
          END DO
       END DO

@@ -7,6 +7,7 @@ MODULE m_dfpt
    USE m_juDFT
    USE m_constants
    USE m_types
+   USE m_types_mpimat
    USE m_dfpt_check
    USE m_dfpt_test
    !USE m_dfpt_init
@@ -80,6 +81,8 @@ CONTAINS
       CLASS(t_xcpot),     ALLOCATABLE :: xcpot_nosym
       CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_nosym
 
+      CLASS(t_mat), ALLOCATABLE :: smatq(:,:), hmatq(:,:)
+
       !COMPLEX, ALLOCATABLE :: exc_pw_nosym(:,:), vCoul_pw_nosym(:,:)
 
       !integer                       :: logUnit = 100
@@ -147,7 +150,7 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
 
-      INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype
+      INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype, nspins
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr
       LOGICAL :: l_real
 
@@ -165,6 +168,13 @@ CONTAINS
       !REAL,    PARAMETER :: eps7 = 1.0e-7
 
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
+
+      nspins = MERGE(2, 1, fi%noco%l_noco)
+      IF (fmpi%n_size == 1) THEN
+         ALLOCATE (t_mat::smatq(fi%kpts%nkpt, nspins), hmatq(fi%kpts%nkpt, nspins))
+      ELSE
+         ALLOCATE (t_mpimat::smatq(fi%kpts%nkpt, nspins), hmatq(fi%kpts%nkpt, nspins))
+      END IF
 
       !IF (fi%juPhon%l_jpCheck) THEN
     !      ! This function will be used to check the validity of juPhon's
@@ -391,16 +401,36 @@ CONTAINS
       qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.00625*19.0
       qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.00625*20.0
 
+      ! fcc Gamma-X path in 1/16
+      !qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/16
+      !qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/16
+      !qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*2.0/16
+      !qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*3.0/16
+      !qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*4.0/16
+      !qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*5.0/16
+      !qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*6.0/16
+      !qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*7.0/16
+      !qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*8.0/16
+
+      !ALLOCATE(q_list(4),dfpt_eig_id_list(4))
+      !q_list = [2,4,6,8]
+
       qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.125*0.0
       qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.125*1.0
       qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.125*2.0
       qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.125*3.0
+      !!qpts_loc%bk(:,3)  = [1.0,1.0,0.0]*0.125*4.0
+      !!qpts_loc%bk(:,4)  = [1.0,0.0,1.0]*0.125*4.0
       qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.125*4.0
 
-      qpts_loc%bk(:,6)  = [1.0,1.0,0.0]*0.125*4.0
-      qpts_loc%bk(:,7)  = [1.0,1.0,0.0]*0.125*3.0
-      qpts_loc%bk(:,8)  = [1.0,1.0,0.0]*0.125*2.0
-      qpts_loc%bk(:,9)  = [1.0,1.0,0.0]*0.125*1.0
+      !!qpts_loc%bk(:,6)  = [-1.0,-1.0,0.0]*0.125*4.0
+      !!qpts_loc%bk(:,7)  = [-1.0,0.0,-1.0]*0.125*4.0
+      !!qpts_loc%bk(:,8)  = [0.0,-1.0,-1.0]*0.125*4.0
+
+      qpts_loc%bk(:,6)  = [1.0,1.0,2.0]*0.125*4.0
+      qpts_loc%bk(:,7)  = [1.0,1.0,2.0]*0.125*3.0
+      qpts_loc%bk(:,8)  = [1.0,1.0,2.0]*0.125*2.0
+      qpts_loc%bk(:,9)  = [1.0,1.0,2.0]*0.125*1.0
 
       qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*1.0
       qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*2.0
@@ -425,14 +455,27 @@ CONTAINS
 
       ALLOCATE(q_list(13),dfpt_eig_id_list(13))
       q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13]
+      
       !ALLOCATE(q_list(21),dfpt_eig_id_list(21))
       !ALLOCATE(q_list(1),dfpt_eig_id_list(1))
       !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
       !q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21] ! \Gamma to X in 20 steps.
       !q_list = [21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
       !q_list = [21,1,11,16,6,19,18,14,13,9,8,4,3,20,17,15,12,10,7,5,2]
-      !q_list = [13]
+      !q_list = [5]
       !q_list = [1,6,11,16,21]
+
+      !qpts_loc%bk(:,1) = [1.0,1.0,1.0]*1.0/16
+      !qpts_loc%bk(:,2) = [1.0,1.0,1.0]*2.0/16
+      !qpts_loc%bk(:,3) = [1.0,1.0,1.0]*3.0/16
+      !qpts_loc%bk(:,4) = [1.0,1.0,1.0]*4.0/16
+      !qpts_loc%bk(:,5) = -[1.0,1.0,1.0]*1.0/16
+      !qpts_loc%bk(:,6) = -[1.0,1.0,1.0]*2.0/16
+      !qpts_loc%bk(:,7) = -[1.0,1.0,1.0]*3.0/16
+      !qpts_loc%bk(:,8) = -[1.0,1.0,1.0]*4.0/16
+      !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
+      !q_list = [1,2,3,4,5]
+
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
       CALL imagrhodummy%copyPotDen(rho_nosym)
@@ -486,9 +529,24 @@ CONTAINS
                         stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
       END DO
 
+      !CALL save_npy("grVext_mt_x.npy",grVext3(1)%mt)
+      !CALL save_npy("grVext_mt_y.npy",grVext3(2)%mt)
+      !CALL save_npy("grVext_mt_z.npy",grVext3(3)%mt)
+      !CALL save_npy("grVext_pw_x.npy",grVext3(1)%pw)
+      !CALL save_npy("grVext_pw_y.npy",grVext3(2)%pw)
+      !CALL save_npy("grVext_pw_z.npy",grVext3(3)%pw)
+      !CALL save_npy("grRho_sh.npy",grrhodummy)
+      !CALL save_npy("grRho_mt_x.npy",grRho3(1)%mt)
+      !CALL save_npy("grRho_mt_y.npy",grRho3(2)%mt)
+      !CALL save_npy("grRho_mt_z.npy",grRho3(3)%mt)
+      !CALL save_npy("grRho_pw_x.npy",grRho3(1)%pw)
+      !CALL save_npy("grRho_pw_y.npy",grRho3(2)%pw)
+      !CALL save_npy("grRho_pw_z.npy",grRho3(3)%pw)
+      !STOP
 
       ALLOCATE(dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
-      DO iQ = 1, SIZE(q_list)
+      DO iQ = 5,5!1, SIZE(q_list)
+         CALL timestart("q-point")
          kqpts = fi%kpts
          ! Modify this from kpts only in DFPT case.
          DO ikpt = 1, fi%kpts%nkpt
@@ -502,6 +560,8 @@ CONTAINS
          write(8989,*) E2ndOrdII
          !CYCLE
          CALL timestop("Eii2")
+
+         CALL timestart("Eigenstuff at k+q")
          q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
                            .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
 
@@ -521,9 +581,14 @@ CONTAINS
             CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
+         
+         CALL timestop("Eigenstuff at k+q")
+
          DO iDtype = 1, fi_nosym%atoms%ntype
+            CALL timestart("Typeloop")
             !DO iDir = 1, 1
             DO iDir = 1, 3
+               CALL timestart("Dirloop")
                dfpt_tag = ''
                WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
                WRITE(*,*) '-------------------------'
@@ -547,10 +612,11 @@ CONTAINS
                ! iteratively, providing the scf part of dfpt calculations.
                CALL timestart("Sternheimer")
                CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
-                                     rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
+                                     rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
                                      dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), q_eig_id, &
-                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
+                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)!, hmatq, smatq)
                CALL timestop("Sternheimer")
+               !CALL save_npy(dfpt_tag//"gqvec.npy",starsq%gq)
 
                !CYCLE
 
@@ -568,9 +634,12 @@ CONTAINS
                write(*,*) "dynmat row for ", dfpt_tag
                write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                !STOP
+               CALL timestop("Dirloop")
             END DO
+            CALL timestop("Typeloop")
          END DO
          DEALLOCATE(recG)
+         !CYCLE
          WRITE(*,*) '-------------------------'
          CALL timestart("Dynmat diagonalization")
          CALL DiagonalizeDynMat(fi%atoms, qpts_loc, fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ))
@@ -582,6 +651,8 @@ CONTAINS
          DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
 
          CALL close_eig(q_eig_id)
+
+         CALL timestop("q-point")
 
       END DO
 

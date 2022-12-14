@@ -103,7 +103,7 @@ CONTAINS
          !$acc &    PRIVATE(ikGPr,ikG0,ski,plegend,tnn,vechelps,vechelph,xlegend,fjkiln,gjkiln,ddnln,elall,l3,l,fct,fct2,cph_re,cph_im,cfac,dot)
          DO  ikGPr = 1, MERGE(lapwPr%nv(igSpinPr),MIN(ikG,lapwPr%nv(igSpinPr)),l_fullj)
             ikG0 = (ikG-1)/fmpi%n_size + 1
-            ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:) + lapw%bkpt
+            ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:) + lapw%bkpt + lapw%qphon
 
             ! Update overlap and l-diagonal hamiltonian matrix
             VecHelpS = 0.0
@@ -162,7 +162,7 @@ CONTAINS
             DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
                tnn(1:3) = tpi_const*atoms%taual(1:3,nn)
 
-               dot = DOT_PRODUCT(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, tnn(1:3))
+               dot = DOT_PRODUCT(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt - lapwPr%qphon, tnn(1:3))
 
                cph_re = cph_re + COS(dot)
                cph_im = cph_im + SIN(dot)
@@ -299,7 +299,7 @@ CONTAINS
       DO ikG =  fmpi%n_rank+1, lapw%nv(igSpin), fmpi%n_size
          kj_end = MERGE(lapwPr%nv(igSpinPr),min(ikG,lapwPr%nv(igSpinPr)),l_fullj)
          ikG0 = (ikG-1)/fmpi%n_size + 1
-         ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:) + lapw%bkpt
+         ski = lapw%gvec(:,ikG,igSpin) + qssAdd(:) + lapw%bkpt + lapw%qphon
          DO kj_off = 1, lapwPr%nv(igSpinPr), NVEC
             NVEC_rem = NVEC
             kj_vec = kj_off - 1 + NVEC
@@ -381,7 +381,7 @@ CONTAINS
                tnn(1:3) = tpi_const*atoms%taual(1:3,nn)
                DO jv = 0, NVEC_rem-1
                   ikGPr = jv + kj_off
-                  dot(jv+1) = DOT_PRODUCT(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt, tnn(1:3))
+                  dot(jv+1) = DOT_PRODUCT(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt - lapwPr%qphon, tnn(1:3))
                END DO ! ikGPr
                cph_re(:NVEC_REM) = cph_re(:NVEC_REM) + COS(dot(:NVEC_REM))
                cph_im(:NVEC_REM) = cph_im(:NVEC_REM) + SIN(dot(:NVEC_REM))

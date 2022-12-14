@@ -7,7 +7,7 @@
 MODULE m_dfpt_hs_int
 CONTAINS
    ! Constructs the interstitial perturbed Hamiltonian and overlap matrix
-   SUBROUTINE dfpt_hs_int(noco, starsq, lapwq, lapw, fmpi, bbmat, isp, vpw, smat, hmat, killcont)
+   SUBROUTINE dfpt_hs_int(noco, starsq, lapwq, lapw, fmpi, bbmat, isp, vpw, hmat, smat, killcont)
 
       USE m_types
       USE m_hs_int_direct
@@ -58,7 +58,7 @@ CONTAINS
             IF (iSpinPr.EQ.iSpin) iTkin = 1 * killcont(2)
 
             CALL hs_int_direct(fmpi, starsq, bbmat, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
-                             & lapwq%bkpt, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
+                             & lapwq%bkpt + lapwq%qphon, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
                              & l_smat, .TRUE., vpw_temp, hmat(iMatPr, iMat), smat(iMatPr, iMat))
          END DO
       END DO
@@ -111,7 +111,7 @@ CONTAINS
 
             IF (iSpinPr.EQ.iSpin) iTkin = killcont(3)
             CALL hs_int_direct(fmpi, starsq, bbmat, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
-                             & lapwq%bkpt, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
+                             & lapwq%bkpt + lapwq%qphon, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
                              & l_smat, .TRUE., vpwq_temp, hmat1q(iMatPr, iMat), smat1q(iMatPr, iMat), theta1_pw)
             !CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
             !                 & lapw%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
