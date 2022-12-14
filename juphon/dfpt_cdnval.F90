@@ -13,7 +13,7 @@ use mpi
 
 CONTAINS
 
-SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
+SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
                   vacuumdummy,sphhar,sym,vTot ,cdnvalJob,den,dosdummy,vacdosdummy,&
                   hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, iDtype, iDir, denIm, l_real)
 
@@ -68,7 +68,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE(t_potden),        INTENT(INOUT) :: den, denIm
 
    ! Scalar Arguments
-   INTEGER,               INTENT(IN)    :: eig_id, dfpt_eig_id, jspin, iDtype, iDir
+   INTEGER,               INTENT(IN)    :: eig_id, eig_id_q, dfpt_eig_id, jspin, iDtype, iDir
    LOGICAL,               INTENT(IN)    :: l_real
 
    REAL, INTENT(IN) :: q_dfpt(3)
@@ -91,7 +91,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE (t_denCoeffsOffdiag)  :: denCoeffsOffdiag
    TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1, eigVecCoeffsPref
    TYPE (t_usdus)             :: usdus
-   TYPE (t_mat)               :: zMat, zMat1, zMatPref
+   TYPE (t_mat)               :: zMat, zMat1, zMatPref, zMatq
 
    CALL timestart("dfpt_cdnval")
 
@@ -140,13 +140,16 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       ikpt=cdnvalJob%k_list(ikpt_i)
 
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
-      CALL lapwq%init(input,noco,nococonv, kqpts,atoms,sym,ikpt,cell, fmpi)
+      !CALL lapwq%init(input,noco,nococonv, kqpts,atoms,sym,ikpt,cell, fmpi)
+      CALL lapwq%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi, q_dfpt)
 
       skip_t = skip_tt
       ev_list=cdnvaljob%compact_ev_list(ikpt_i,.FALSE.)
       noccbd = SIZE(ev_list)
 
       we  = cdnvalJob%weights(ev_list,ikpt)
+      !write(4996,*) we
+      !IF (norm2(kpts%bk(:,ikpt))<1E-7) we = 0
       we1  = cdnvalJob1%weights(ev_list,ikpt)
       eig = resultsdummy%eig(ev_list,ikpt,jsp)
       eig1 = resultsdummy1%eig(ev_list,ikpt,jsp)
@@ -162,18 +165,25 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       CALL zMat%init(l_real,nbasfcn,noccbd)
       CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
       CALL zMatPref%init(.FALSE.,nbasfcn,noccbd)
+      !CALL zMatPref%init(.FALSE.,nbasfcnq,noccbd)
+      !CALL zMatq%init(l_real,nbasfcnq,noccbd)
 
       CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat)
+      !CALL read_eig(eig_id_q,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMatq)
       CALL read_eig(dfpt_eig_id,ikpt,jsp,list=ev_list,neig=nbands1,zmat=zMat1)
 
       ! TODO: Implement correct spin logic here! Only collinear operational for now!
       DO ikG = 1, lapw%nv(jsp)
+      !DO ikG = 1, lapwq%nv(jsp)
          ! TODO: Transpose bmat or not?
          gExt = MATMUL(cell%bmat,lapw%vk(:, ikG, jsp))
+         !gExt = MATMUL(cell%bmat,lapwq%vk(:, ikG, jsp))
          IF (zMat%l_real) THEN
             zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_r(ikG, :)
+            !zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMatq%data_r(ikG, :)
          ELSE
             zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_c(ikG, :)
+            !zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMatq%data_c(ikG, :)
          END IF
       END DO
 
@@ -200,9 +210,14 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
                     eigVecCoeffsPref%abcof(:,0:,0,:,ispin),eigVecCoeffsPref%abcof(:,0:,1,:,ispin),&
                     eigVecCoeffsPref%ccof(-atoms%llod:,:,:,:,ispin),zMatPref)
+         !CALL abcof(input,atoms,sym,cell,lapwq,noccbd,usdus,noco,nococonv,ispin,&
+         !           eigVecCoeffsPref%abcof(:,0:,0,:,ispin),eigVecCoeffsPref%abcof(:,0:,1,:,ispin),&
+         !           eigVecCoeffsPref%ccof(-atoms%llod:,:,:,:,ispin),zMatPref)
 
+         !IF (norm2(kpts%bk(:,ikpt))<1E-7) eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = CMPLX(0.0,0.0)
          eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)
          eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) = eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) + eigVecCoeffsPref%ccof(-atoms%llod:,:,:,iDtype,ispin)
+         !IF (norm2(kpts%bk(:,ikpt))<1E-7) eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = CMPLX(0.0,0.0)
 
          CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,q_dfpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
          CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,q_dfpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
@@ -226,12 +241,13 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
+         !IF (norm2(kpts%bk(:,ikpt))<1E-7) we = 0
          CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
                     jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,q_dfpt,lapwq,we1,zMat1,qimag(ikpt,:),iDir)
       END IF
    END DO ! end of k-point loop
 
-   CALL save_npy(int2str(den%iter)//"_"//int2str(iDir)//"_qimag.npy",qimag)
+   !CALL save_npy(int2str(den%iter)//"_"//int2str(iDir)//"_qimag.npy",qimag)
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end

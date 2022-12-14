@@ -17,7 +17,7 @@ MODULE m_hlomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,lapwq,fjgjq)
+       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
 
     USE m_hsmt_ab
     USE m_types
@@ -48,7 +48,7 @@ CONTAINS
     REAL, INTENT (IN) :: alo1(:,:),blo1(:,:),clo1(:,:)
 
     CLASS(t_mat),INTENT (INOUT) :: hmat
-    LOGICAL, INTENT(IN) :: l_fullj
+    LOGICAL, INTENT(IN) :: l_fullj, l_ham
 
     TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
     TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
@@ -206,7 +206,7 @@ CONTAINS
                                                   & + abclo(2,m,nkvec,lo) * ud%duds(l,ntyp,ilSpin) &
                                                   & + abclo(3,m,nkvec,lo) * ud%dulos(lo,ntyp,ilSpin)) )
                            END IF
-                           IF (l_fullj.AND.ilSpinPr.EQ.ilSpin) THEN
+                           IF (l_ham.AND.l_fullj.AND.ilSpinPr.EQ.ilSpin) THEN
                               ! TODO: Is it 0.25 or 0.5?
                               hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
                                                   !& + 0.5 * atoms%rmt(ntyp)**2 &
@@ -259,9 +259,9 @@ CONTAINS
                                               & CONJG(abcloPr(1,m,nkvec,lo)) * ax(k) + &
                                               & CONJG(abcloPr(2,m,nkvec,lo)) * bx(k) + &
                                               & CONJG(abcloPr(3,m,nkvec,lo)) * cx(k) )
-                           IF (ilSpinPr.EQ.ilSpin) THEN
+                           IF (l_ham.AND.ilSpinPr.EQ.ilSpin) THEN
                               ! TODO: Is it 0.25 or 0.5?
-                              hmat%data_c(lorow,k) = hmat%data_c(kp,locol) &
+                              hmat%data_c(lorow,k) = hmat%data_c(lorow,k) &
                                                  & + 0.25 * atoms%rmt(ntyp)**2 &
                                                  & * chi * invsfct * &
                                                  & ( CONJG(abcloPr(1,m,nkvec,lo)) * ud%dus(l,ntyp,ilSpin)       &

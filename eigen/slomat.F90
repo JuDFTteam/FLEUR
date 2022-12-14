@@ -80,7 +80,7 @@ CONTAINS
       ! TODO: Introduce the logic for different lapw and the full rectangular
       !       instead of triangular construction...
 
-      CALL lapw%phase_factors(igSpinPr,atoms%taual(:,na),nococonv%qss,cphPr)
+      CALL lapwPr%phase_factors(igSpinPr,atoms%taual(:,na),nococonv%qss,cphPr)
       IF (l_samelapw) THEN
          cph = cphPr
       ELSE
@@ -129,11 +129,11 @@ CONTAINS
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
 
                      IF (smat%l_real) THEN
-                        smat%data_r(lorow,(k-1) / fmpi%n_size + 1) = smat%data_r(kp,locol) &
+                        smat%data_r(lorow,(k-1) / fmpi%n_size + 1) = smat%data_r(lorow,(k-1) / fmpi%n_size + 1) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
                                             & * CONJG(cphPr(kp)) * cph(k)
                      ELSE
-                        smat%data_c(lorow,(k-1) / fmpi%n_size + 1) = smat%data_c(kp,locol) &
+                        smat%data_c(lorow,(k-1) / fmpi%n_size + 1) = smat%data_c(lorow,(k-1) / fmpi%n_size + 1) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
                                             & * CONJG(cphPr(kp)) * cph(k)
                      END IF

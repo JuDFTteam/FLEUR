@@ -150,7 +150,14 @@ CONTAINS
          ELSE
             zMat1%data_c(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
          END IF
-
+        
+         !IF (nk==366) THEN
+          !           CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"tempVec.npy",tempVec)
+           !          CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"HS1band.npy",tempMat1)
+            !         CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"matE.npy",matE(nu)%data_r)
+             !        CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"invE.npy",invE(nu)%data_r)
+              !       CALL save_npy(int2str((dfpt_eig_id-eig_id)/2)//"_"//int2str(nk)//"_"//int2str(nu)//"z1band.npy",tempMat2)
+               !   END IF
          !IF (ANY(nk==k_selection)) THEN
          !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)
          !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_HS1band.npy",tempMat1)
@@ -159,6 +166,22 @@ CONTAINS
          !   CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1band.npy",tempMat2)
          !END IF
       END DO
+
+      !IF (nk==366) THEN
+       !           IF (l_real) THEN ! l_real for zMatk
+        !             CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"zMatk.npy",zMatk%data_r)
+         !         ELSE
+          !           CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"zMatk.npy",zMatk%data_c)
+           !       END IF
+
+            !      IF (zMatq%l_real) THEN ! l_real for zMatq
+             !        CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"zMatkq.npy",zMatq%data_r)
+              !    ELSE
+               !      CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"zMatkq.npy",zMatq%data_c)
+                !  END IF
+
+                 ! CALL save_npy(int2str(dfpt_eig_id-eig_id)//"_"//int2str(nk)//"z1.npy",zMat1%data_c)
+               !END IF
 
       !IF (ANY(nk==k_selection)) THEN
       !   IF (l_real) THEN ! l_real for zMatk

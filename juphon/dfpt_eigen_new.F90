@@ -72,10 +72,12 @@ CONTAINS
 
       CLASS(t_mat), ALLOCATABLE :: invE(:), matOcc(:)
 
-      CALL timestart("dfpt_eigen")
-
-      ALLOCATE(k_selection(7))
-      k_selection = [1,45,77,255,366,412,512] 
+      !ALLOCATE(k_selection(16))
+      !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40] 
+      ALLOCATE(k_selection(1))
+      !ALLOCATE(k_selection(3))
+      !k_selection = [40,61,453]
+      k_selection = [1000]
 
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
@@ -94,12 +96,14 @@ CONTAINS
       DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
                nk=fmpi%k_list(nk_i)
+               write(4444,*) nk_i, nk
 
                ! Get the required eigenvectors and values at k for occupied bands:
                bkpt = fi%kpts%bk(:, nk)
 
                CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
-               CALL lapwq%init(fi%input, fi%noco, nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
+               !CALL lapwq%init(fi%input, fi%noco, nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
+               CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
                noccbd  = COUNT(results%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
                noccbdq = COUNT(resultsq%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
@@ -130,16 +134,25 @@ CONTAINS
                CALL timestart("Read eigenstuff at k/k+q")
                CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
                CALL read_eig(q_eig_id, nk, jsp, list=q_ev_list, neig=neigq, eig=eigq, zmat=zMatq)
+               !write(5555,*) nk
+               !write(5555,*) neigq
+               !write(5555,*) eigq
                CALL timestop("Read eigenstuff at k/k+q")
 
                CALL timestart("Energy inversion")
-               CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invE, noccbdq, 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, matOcc)
+               CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invE, noccbdq, &
+                                 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, matOcc, nk)
                CALL timestop("Energy inversion")
 
                ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
                CALL timestart("Setup of matrix perturbations")
-               CALL dfpt_eigen_hssetup(jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,v1real,lapw,lapwq,iDir,iDtype,smat,hmat,nk,killcont)
+               CALL dfpt_eigen_hssetup(jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
                CALL timestop("Setup of matrix perturbations")
+
+               IF (ANY(nk==k_selection)) THEN
+                  CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_h1.npy",hmat%data_c)
+                  CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_s1.npy",smat%data_c)
+               END IF 
 
                IF (fmpi%n_size == 1) THEN
                   ALLOCATE (t_mat::zMat1)
@@ -149,6 +162,8 @@ CONTAINS
                CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
                ALLOCATE(z1H,mold=zMat1%data_c)
                ALLOCATE(z1S,mold=zMat1%data_c)
+               z1H = CMPLX(0.0,0.0)
+               z1S = CMPLX(0.0,0.0)
 
                ALLOCATE(tempVec(nbasfcnq))
                ALLOCATE(tempMat1(nbasfcnq))
@@ -156,8 +171,9 @@ CONTAINS
                ALLOCATE(killfloat(noccbd,noccbd))
 
                !TODO: Optimize this with (SCA)LAPACK CALLS
+               CALL timestart("Matrix multiplications")
                DO nu = 1, noccbd
-                  killfloat = matOcc(nu)%data_r(:noccbd,:noccbd)
+                  !killfloat = matOcc(nu)%data_r(:noccbd,:noccbd)
                   !IF (l_real) THEN ! l_real for zMatk
                   !   tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
                   !ELSE
@@ -176,13 +192,23 @@ CONTAINS
                      tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
                   END IF
 
-                  !!IF (zMatq%l_real) THEN ! l_real for zMatq
-                  !!   tempMat1(noccbd+1:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r(:,noccbd+1:nbasfcnq)),tempvec)
-                  !!ELSE
-                  !!   tempMat1(noccbd+1:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c(:,noccbd+1:nbasfcnq))),tempvec)
-                  !!END IF
+                  IF (ANY(nk==k_selection)) THEN
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_h1band.npy",tempMat1)
+                  END IF
 
+                  !!!!!! Experimental:
+                  !tempMat1 = CMPLX(0.0,0.0)
+                  !IF (zMatq%l_real) THEN ! l_real for zMatq
+                  !   tempMat1(noccbd+1:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r(:,noccbd+1:nbasfcnq)),tempvec)
+                  !ELSE
+                  !   tempMat1(noccbd+1:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c(:,noccbd+1:nbasfcnq))),tempvec)
+                  !END IF
+                  !IF (nk==1) tempMat1(:noccbd) = CMPLX(0.0,0.0)
                   tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
+
+                  IF (ANY(nk==k_selection)) THEN
+                  !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Hband.npy",tempMat2)
+                  END IF
 
                   IF (norm2(bqpt).LT.1e-8) THEN
                      IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
@@ -219,8 +245,15 @@ CONTAINS
                      tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
                   END IF
 
-                  tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
+                  IF (ANY(nk==k_selection)) THEN
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_s1band.npy",tempMat1)
+                  END IF
 
+                  !IF (nk==1) tempMat1(:noccbd) = CMPLX(0.0,0.0)
+                  tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
+                  !IF (ANY(nk==k_selection)) THEN
+                  !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Sband.npy",tempMat2)
+                  !END IF
                   IF (zMatq%l_real) THEN
                      z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
                   ELSE
@@ -230,11 +263,11 @@ CONTAINS
                   zMat1%data_c(:nbasfcnq,nu) = z1H(:nbasfcnq,nu) + z1S(:nbasfcnq,nu)
 
                   IF (ANY(nk==k_selection)) THEN
-                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)
-                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_HS1band.npy",tempMat1)
-                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_matE.npy",matE(nu)%data_r)
-                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_invE.npy",invE(nu)%data_r)
-                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1band.npy",tempMat2)
+                     !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)
+                     !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_HS1band.npy",tempMat1)
+                     !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_matE.npy",matE(nu)%data_r)
+                     !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_invE.npy",invE(nu)%data_r)
+                     !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1band.npy",tempMat2)
                   END IF
                END DO
 
@@ -250,9 +283,13 @@ CONTAINS
                   ELSE
                      CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_zMatkq.npy",zMatq%data_c)
                   END IF
-
+                  
+                  !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_z1H.npy",z1H)
+                  !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_z1S.npy",z1S)
                   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_z1.npy",zMat1%data_c)
                END IF
+
+               CALL timestop("Matrix multiplications")
 
                CALL smat%free()
                CALL hmat%free()
@@ -313,8 +350,6 @@ CONTAINS
 
           END DO  k_loop
         END DO ! spin loop ends
-
-        CALL timestop("dfpt_eigen")
 
    END SUBROUTINE dfpt_eigen_new
 END MODULE m_dfpt_eigen_new

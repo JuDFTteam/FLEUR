@@ -7,7 +7,7 @@
 MODULE m_dfpt_eigen_hssetup
 CONTAINS
    SUBROUTINE dfpt_eigen_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, &
-                            ud, td, tdV1, vTot1, lapw, lapwq, iDir, iDtype, smat_final, hmat_final, nk, killcont)
+                            ud, td, tdV1, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
       USE m_types
       USE m_types_mpimat
       USE m_types_gpumat
@@ -50,7 +50,7 @@ CONTAINS
       END DO
 
       CALL timestart("Interstitial part")
-      CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, smat, hmat, killcont(1:3))
+      CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, hmat, smat, killcont(1:3))
       CALL timestop("Interstitial part")
 
       CALL timestart("MT part")

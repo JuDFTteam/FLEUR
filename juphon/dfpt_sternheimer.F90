@@ -21,7 +21,7 @@ IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, mpdata, &
-                               forcetheo, rho, vTot, grRho, grVtot, grVext, iQ, iDType, iDir, dfpt_tag, eig_id, &
+                               forcetheo, rho, vTot, grRho, grVtot, grVext, grVC, iQ, iDType, iDir, dfpt_tag, eig_id, &
                                l_real, results1, dfpt_eig_id, q_eig_id, &
                                denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
       TYPE(t_fleurinput), INTENT(IN)    :: fi
@@ -37,7 +37,7 @@ CONTAINS
       TYPE(t_mpdata),     INTENT(INOUT) :: mpdata
       CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
       TYPE(t_enpara),     INTENT(INOUT) :: enpara
-      TYPE(t_potden),     INTENT(IN)    :: rho, vTot, grRho, grVtot, grVext
+      TYPE(t_potden),     INTENT(IN)    :: rho, vTot, grRho, grVtot, grVext, grVC
 
       TYPE(t_potden), INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
 
@@ -64,6 +64,7 @@ CONTAINS
       ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
       !killcont = [1,0,0,0,0,0]
       killcont = [1,1,1,1,1,1]
+      !killcont = [0,0,0,0,0,1]
 
       CALL rho_loc%copyPotDen(rho)
       CALL rho_loc0%copyPotDen(rho)
@@ -155,11 +156,14 @@ CONTAINS
                            starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
          END IF
 
-         IF (final_SH_it) THEN
+         IF (final_SH_it) THEN !!!!!!!!!!!!!!!!!!!!!!!!!!!
+         !IF (.NOT.strho) THEN
             write(oUnit, *) "vC1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0])
+           !!!!!!!!!!!!!!!!!!!!!!
+           !denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
          END IF
 
          CALL timestop("Generation of potential perturbation")
@@ -170,19 +174,24 @@ CONTAINS
 
          IF (strho) THEN
             vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVext%mt(:,0:,iDtype,:)
-            !CALL save_npy(TRIM(dfpt_tag)//"vExt1pw.npy",vTot1%pw(:,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"vExt1mtre.npy",vTot1%mt(:,0:,1,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"vExt1mtim.npy",vTot1Im%mt(:,0:,1,1))
+            CALL save_npy(TRIM(dfpt_tag)//"vExt1pw.npy",vTot1%pw)
+            CALL save_npy(TRIM(dfpt_tag)//"vExt1mtre.npy",vTot1%mt)
+            CALL save_npy(TRIM(dfpt_tag)//"vExt1mtim.npy",vTot1Im%mt)
             !CALL timestop("Sternheimer Iteration")
             !RETURN
          ELSE
+            !vC1%mt(:,0:,iDtype,:) = vC1%mt(:,0:,iDtype,:) + grVC%mt(:,0:,iDtype,:)
+            !CALL save_npy(TRIM(dfpt_tag)//"vC1pw.npy",vC1%pw(:,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"vC1mtre.npy",vC1%mt(:,0:,1,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"vC1mtim.npy",vC1Im%mt(:,0:,1,1))
+            !vC1%mt(:,0:,iDtype,:) = vC1%mt(:,0:,iDtype,:) - grVC%mt(:,0:,iDtype,:)
             vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
-            CALL save_npy(TRIM(dfpt_tag)//"_vEff1pw.npy",vTot1%pw(:,1))
-            CALL save_npy(TRIM(dfpt_tag)//"_vEff1mtre.npy",vTot1%mt(:,0:,1,1))
-            CALL save_npy(TRIM(dfpt_tag)//"_vEff1mtim.npy",vTot1Im%mt(:,0:,1,1))
+            CALL save_npy(TRIM(dfpt_tag)//"vEff1pw.npy",vTot1%pw(:,1))
+            CALL save_npy(TRIM(dfpt_tag)//"vEff1mtre.npy",vTot1%mt(:,0:,1,1))
+            CALL save_npy(TRIM(dfpt_tag)//"vEff1mtim.npy",vTot1Im%mt(:,0:,1,1))
+            !CALL timestop("Sternheimer Iteration")
+            !RETURN
          END IF
-
-         CALL timestart("H1 generation (total)")
 
          CALL timestart("dfpt eigen")
 
@@ -193,9 +202,8 @@ CONTAINS
          !              starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
          !END IF
          CALL dfpt_eigen_new(fi, sphhar, results, resultsq, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
-                             vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real)
+                             vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, dfpt_tag)
          CALL timestop("dfpt eigen")
-         CALL timestop("H1 generation (total)")
 
 #ifdef CPP_MPI
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
@@ -214,7 +222,7 @@ CONTAINS
          CALL denOut1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
          CALL denOut1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
          denOut1%iter = denIn1%iter
-         CALL dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
+         CALL dfpt_cdngen(eig_id,q_eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
                           fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                           enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
                           archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real)
@@ -227,9 +235,10 @@ CONTAINS
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             write(*,*) "Starting perturbation generated."
             CALL timestop("Sternheimer Iteration")
-            !CALL save_npy(TRIM(dfpt_tag)//"rho1pw.npy",denOut1%pw(:,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"rho1mtre.npy",denOut1%mt(:,0:,1,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
+            CALL save_npy(TRIM(dfpt_tag)//"rho1pw.npy",denOut1%pw)
+            CALL save_npy(TRIM(dfpt_tag)//"rho1mtre.npy",denOut1%mt)
+            CALL save_npy(TRIM(dfpt_tag)//"rho1mtim.npy",denOut1Im%mt)
+            !STOP
             !RETURN
             CYCLE scfloop
          END IF
@@ -264,10 +273,12 @@ CONTAINS
          ! First mixing in the 2nd "real" iteration.
          denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
          ! mix input and output densities
+         CALL timestart("DFPT mixing")
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsq, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, denIn1, denOut1, results1, .FALSE., fi%sliceplot,&
                          denIn1Im, denOut1Im, dfpt_tag)
+         CALL timestop("DFPT mixing")
 
          denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
 
