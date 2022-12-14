@@ -177,6 +177,9 @@ CONTAINS
             !RETURN
          ELSE
             vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
+            CALL save_npy(TRIM(dfpt_tag)//"_vEff1pw.npy",vTot1%pw(:,1))
+            CALL save_npy(TRIM(dfpt_tag)//"_vEff1mtre.npy",vTot1%mt(:,0:,1,1))
+            CALL save_npy(TRIM(dfpt_tag)//"_vEff1mtim.npy",vTot1Im%mt(:,0:,1,1))
          END IF
 
          CALL timestart("H1 generation (total)")
@@ -235,6 +238,9 @@ CONTAINS
             onedone = .TRUE.
             denIn1 = denOut1
             denIn1Im = denOut1Im
+            CALL save_npy(TRIM(dfpt_tag)//"_rho1pw.npy",denOut1%pw(:,1))
+            CALL save_npy(TRIM(dfpt_tag)//"_rho1mtre.npy",denOut1%mt(:,0:,1,1))
+            CALL save_npy(TRIM(dfpt_tag)//"_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             write(*,*) "1st 'real' density perturbation generated."
             CALL timestop("Sternheimer Iteration")
@@ -245,6 +251,9 @@ CONTAINS
             denIn1 = denOut1
             denIn1Im = denOut1Im
             l_cont = .FALSE.
+            CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1pw.npy",denOut1%pw(:,1))
+            CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtre.npy",denOut1%mt(:,0:,1,1))
+            CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
             write(*,*) "Final Sternheimer iteration finished."
             CALL timestop("Sternheimer Iteration")
             CYCLE scfloop
