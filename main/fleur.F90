@@ -105,7 +105,7 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
-      LOGICAL :: l_forceTheorem, l_lastIter
+      LOGICAL :: l_forceTheorem, l_lastIter, l_exist
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
 
@@ -687,6 +687,16 @@ CONTAINS
          ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
             l_cont = .FALSE.
          END IF
+         
+         ! IF file JUDFT_NO_MORE_ITERATIONS is present in the directory, don't do any more iterations
+         IF(fmpi%irank.EQ.0) THEN
+            l_exist = .FALSE.
+            INQUIRE (file='JUDFT_NO_MORE_ITERATIONS', exist=l_exist)
+            IF (l_exist) l_cont = .FALSE.
+         END IF
+#ifdef CPP_MPI
+         CALL MPI_BCAST(l_cont,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+#endif
 
          ! TODO: What is commented out here and should it perhaps be removed?
          !CALL writeTimesXML()
