@@ -175,7 +175,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="slaterIntegrals" type="SlaterIntegralsListType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMagneticMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="rdmft" type="RDMFTOutType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
@@ -452,6 +452,8 @@
    <xsd:complexType name="MTOrbMagneticMomentsType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="orbMagMoment" type="MagneticMomentType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="globalMagMoment" type="MagneticMomentVecType"/>         
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="localMagMoment" type="MagneticMomentVecType"/>   
       </xsd:sequence>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>
