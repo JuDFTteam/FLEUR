@@ -67,6 +67,7 @@ gfortran-coverage:
       - make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
   after_script:
+      - cd $CI_PROJECT_DIR/build.coverage
       - lcov --capture  -d CMakeFiles -o after.info
       - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
       - genhtml combined.info --output-directory html_out
