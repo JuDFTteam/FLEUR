@@ -107,8 +107,7 @@ CONTAINS
                 ENDIF
                 !--->        loop over lapws
 #ifndef CPP_OLDINTEL
-                !$OMP PARALLEL &
-                !$OMP& DEFAULT(none)&
+                !$OMP PARALLEL DEFAULT(none)&
                 !$OMP& PRIVATE(k,i,work_r,work_c,fg,fk,s,r1,fj,dfj,l,df,wronk,tmk,phase,lo,nkvec,na2,nbasf,&
                 !$OMP& j,fkp,fgp,ylm,ll1,m,c_0,c_1,c_2,lmp,inv_f,lm,term1,ctmp,acof_l,bcof_l,ccof_l)&
                 !$OMP& SHARED(n,nn,natom,natom_l,noco,atoms,sym,cell ,lapw,nvmax,ne,zMat,usdus,iintsp,&

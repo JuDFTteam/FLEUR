@@ -21,7 +21,7 @@ contains
       logical :: l_problem
 
 
-      !$omp parallel shared(cpu) private(me, num_threads, mycpu)
+      !$omp parallel shared(cpu) private(me, num_threads, mycpu) default(none)
 !$    if (.false.) then
       me = 0
       num_threads = 1
@@ -40,10 +40,10 @@ contains
       l_problem = .False.
       do i = 1,size(cpu)
          if(count(cpu(i) == cpu) /= 1) then
-            WRITE(*,*) "The OMP parallelism seems to be weird"
+            WRITE(*,*) "The OpenMP parallelism seems to be weird"
             WRITE(*,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // &
                        " on cpu " // int2str(cpu(i))
-            WRITE(oUnit,*) "The OMP parallelism seems to be weird"
+            WRITE(oUnit,*) "The OpenMP parallelism seems to be weird"
             WRITE(oUnit,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // &
                            " on cpu " // int2str(cpu(i))
 

@@ -1,8 +1,6 @@
 #!/bin/sh
-if  git rev-parse -q --verify MERGE_HEAD
-then
-    echo "In merge state"
-else  
+check_for_stop(){
+#check for stop commands introduced
 if git diff-index --cached HEAD -U0 | grep -q -i -w -E '^\+.* STOP'
 then 
   git diff-index --cached HEAD -U0 -GSTOP
@@ -18,4 +16,55 @@ the --no-verify option.
 EOF
     exit 1
 fi
+}
+
+check_for_copyright(){  
+#check for copyright statement in new files
+for f in `git diff --cached --name-only --diff-filter=A`
+do
+  echo $f
+  if ! grep "Copyright" $f
+  then
+  cat <<\EOF
+
+It looks like you introduced a file to the git which does not contain
+the Copyright statement. Please correct this!
+
+If this is actually a false alarm, please commit again with
+the --no-verify option.
+
+EOF
+    exit 1
+   fi   
+  done
+}
+
+check_for_omp_without_default(){  
+#check if default clause is present on omp parallel constructs
+for f in `git diff --cached --name-only --diff-filter=A`
+do
+  echo $f
+  if grep -i "omp parallel" $f|grep -vi default
+  then
+  cat <<\EOF
+
+In FLEUR all $OMP PARALLEL constructs should contain a DEFAULT statement (on the same line).
+
+If this is actually a false alarm, please commit again with
+the --no-verify option.
+
+EOF
+    exit 1
+   fi   
+  done
+}
+
+
+if  git rev-parse -q --verify MERGE_HEAD
+then
+    echo "In merge state"
+else
+  check_for_stop
+  check_for_copyright
+  check_for_omp_without_default
 fi
