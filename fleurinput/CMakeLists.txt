@@ -34,4 +34,8 @@ target_compile_definitions(fleurinput PUBLIC ${FLEUR_DEFINITIONS})
 target_link_libraries(fleurinput ${FLEUR_LINK_LIBRARIES})
 target_link_libraries(fleurinput juDFT)
 set_target_properties(fleurinput PROPERTIES Fortran_MODULE_DIRECTORY modules/fleurinput)
+
 set_source_files_properties(types_kpts.F90 PROPERTIES COMPILE_FLAGS -O0)
+if (CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC")
+set_source_files_properties(fleurinput/types_kpts.F90 PROPERTIES COMPILE_FLAGS "-nomp")
+endif()    
