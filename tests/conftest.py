@@ -1068,7 +1068,11 @@ def check_hdf(test_logger):
         """
         import subprocess
         if subprocess.run(["which","h5diff"]).returncode == 0:
-            return subprocess.run(["h5diff",f"-d {tol}",filename,reffile]).returncode
+            test_logger.info(f" Comparing {filename} to {reffile}")
+            sp=subprocess.run(["h5diff",f"-d {tol}",filename,reffile] ,capture_output=True,text=True)
+            test_logger.info(f"{sp.stdout}")
+            test_logger.info(f"{sp.stderr}")
+            return sp.returncode==0
         else:
             test_logger.info(f"No h5diff found to compare {filename} to {reffile}")
             return True
@@ -1100,7 +1104,7 @@ def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_x
         if hdf_checks:
             for hdf in hdf_checks:
                 if hdf in res_file_names:
-                    if not check_hdf(res_files[hdf],os.path.join(test_file_folder,hdf)): pytest.fail(f"checking failed for HDF file:{cdn}")
+                    if not check_hdf(res_files[hdf],os.path.join(test_file_folder,hdf)): pytest.fail(f"checking failed for HDF file:{hdf}")
                 else:
                     test_logger.info(f"HDF file not found: {hdf}, probably no HDF build")  
         return res_files

@@ -16,7 +16,6 @@ def test_Fe_fccXML(default_fleur_test):
     """
     assert default_fleur_test('Fe_fccXML')
 
-@pytest.mark.disabled
 @pytest.mark.magnetism
 @pytest.mark.soc
 @pytest.mark.lo

@@ -1,12 +1,11 @@
 
 import pytest
 
-@pytest.mark.disabled
 @pytest.mark.serial
 @pytest.mark.film
 @pytest.mark.magnetism
 @pytest.mark.spinspiral
-def test_FePt_film_SSFT(default_fleur_test, execute_fleur, grep_number, grep_exists, validate_out_xml_file):
+def test_FePt_film_SSFT(default_fleur_test):
     """Fe monolayer fcc (110): spin spiral energy
 
     Simple test of Fleur with two steps:
@@ -21,34 +20,16 @@ def test_FePt_film_SSFT(default_fleur_test, execute_fleur, grep_number, grep_exi
     same. If it is true, just adjust q1 and	q2 values in test.run2.
     Otherwise there	seems to be a bug.
     """
-    # Stage 1
-    assert default_fleur_test('FePt_film_SSFT')
+    assert default_fleur_test('FePt_film_SSFT/stage1')
+    assert default_fleur_test('FePt_film_SSFT/stage2')
 
-    # Stage 2
-    test_file_folder='./inputfiles/FePt_film_SSFT/'
-    files = [['inp2.xml', 'inp.xml'], 'JUDFT_WARN_ONLY']
-    res_files = execute_fleur(test_file_folder, only_copy=files, rm_files=['mixing_history'])
-    should_files = ['out.xml']
-    res_file_names = list(res_files.keys())
-    for file1 in should_files:
-        assert file1 in res_file_names
-    
-    assert validate_out_xml_file(res_files['out.xml'])
 
-    assert grep_exists(res_files['out.xml'], "Forcetheorem_SSDISP qvectors=")
-    ev_q1 = grep_number(res_files['out.xml'], 'Entry q="1"', "ev-sum=")
-    ev_q2 = grep_number(res_files['out.xml'], 'Entry q="2"', "ev-sum=")
-
-    assert abs(ev_q1 - -5.197) <= 0.002
-    assert abs(ev_q2 - -5.168) <= 0.002
-
-@pytest.mark.disabled
 @pytest.mark.serial
 @pytest.mark.film
 @pytest.mark.magnetism
 @pytest.mark.spinspiral
 @pytest.mark.lo
-def test_FePt_film_SSFT_LO(execute_fleur, grep_number, grep_exists, validate_out_xml_file):
+def test_FePt_film_SSFT_LO(default_fleur_test):
     """Fe monolayer fcc (110): spin spiral energy with LO
 
     Simple test of Fleur with two steps:
@@ -63,31 +44,5 @@ def test_FePt_film_SSFT_LO(execute_fleur, grep_number, grep_exists, validate_out
     same. If it is true, just adjust q1 and	q2 values in test.run2.
     Otherwise there	seems to be a bug.
     """
-    test_file_folder = './inputfiles/FePt_film_SSFT_LO/'
-
-    # Stage 1
-    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml'])
-    should_files = ['out']
-    res_file_names = list(res_files.keys())
-    for file1 in should_files:
-        assert file1 in res_file_names
-    
-    tenergy = grep_number(res_files['out'], "total energy=", "=")
-    assert abs(tenergy - -19706.9922262005) <= 0.0001
-
-    # Stage 2
-    files = [['inp2.xml', 'inp.xml'], 'JUDFT_WARN_ONLY']
-    res_files = execute_fleur(test_file_folder, only_copy=files, rm_files=['mixing_history'])
-    should_files = ['out.xml']
-    res_file_names = list(res_files.keys())
-    for file1 in should_files:
-        assert file1 in res_file_names
-    
-    assert validate_out_xml_file(res_files['out.xml'])
-
-    assert grep_exists(res_files['out.xml'], "Forcetheorem_SSDISP qvectors=")
-    ev_q1 = grep_number(res_files['out.xml'], 'Entry q="1"', "ev-sum=")
-    ev_q2 = grep_number(res_files['out.xml'], 'Entry q="2"', "ev-sum=")
-
-    assert abs(ev_q1 - -37.368) <= 0.002
-    assert abs(ev_q2 - -37.342) <= 0.002
+    assert default_fleur_test('FePt_film_SSFT_LO/stage1')
+    assert default_fleur_test('FePt_film_SSFT_LO/stage2')

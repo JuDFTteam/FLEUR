@@ -7,81 +7,27 @@ import pytest
 @pytest.mark.xml
 @pytest.mark.dos
 @pytest.mark.mcd
-def test_CoMCDXML(execute_fleur, grep_exists, grep_number):
+def test_CoMCDXML(default_fleur_test):
     """Fleur Co MCD XML
     Simple test of Fleur with two steps:
     1.Generate a starting density and run 2 iterations
     2.Calculate and verify MCD spectra
     """
-    test_file_folder = './inputfiles/CoMCDXML/'
 
     # Stage 1
-    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.out'])
-    res_file_names = list(res_files.keys())
-    should_files = ['out']
-    with_hdf = False
-    if 'cdn.hdf' in res_file_names:
-        with_hdf = True
-    else:
-        should_files.append('cdn1')
-    for file1 in should_files:
-        assert file1 in res_file_names
-
-    tenergy = grep_number(res_files['out'], "total energy=", "=")
-    dist = grep_number(res_files['out'], "distance of charge densities for it=    2", ": ")
-    dist_spin = grep_number(res_files['out'], "distance of spin densities for it=    2", ": ")
-
-    assert abs(tenergy - -2786.95650275) <= 0.001
-    assert abs(dist - 8.376682) <= 0.001
-    assert abs(dist_spin - 17.14035) <= 0.001
-
-
+    assert default_fleur_test("CoMCDXML/stage1")
+    
     # Stage 2
-    res_files = execute_fleur(test_file_folder, only_copy=[['inp2.xml', 'inp.xml']])
-    res_file_names = list(res_files.keys())
-    should_files = []
-    if with_hdf:
-        should_files.append('banddos.hdf')
-    else:
-        should_files.append('MCD.1')
+    assert default_fleur_test("CoMCDXML/stage2",hdf_checks=["banddos.hdf"])
 
-    for file1 in should_files:
-        assert file1 in res_file_names
-
-    if not with_hdf:
-        assert grep_exists(res_files['MCD.1'], "0.95976")
-        assert grep_exists(res_files['MCD.1'], "0.36559")
-
+  
 
 @pytest.mark.fleur
 @pytest.mark.bulk
 @pytest.mark.band
-def test_CoUnfold(execute_fleur, grep_exists, grep_number):
+def test_CoUnfold(default_fleur_test):
     """Co band unfolding test
     Simple test of Fleur with one step:
     1.Generate a starting density and run 1 iteration with band unfolding and compare several quantities
     """
-    test_file_folder = './inputfiles/CoUnfold/'
-
-    res_files = execute_fleur(test_file_folder, only_copy=['inp.xml', 'sym.xml'], mpi_procs=3)
-    res_file_names = list(res_files.keys())
-    should_files = ['out', 'bands_sc.1', 'bands_sc.2']
-    for file1 in should_files:
-        assert file1 in res_file_names
-
-    if 'cdn.hdf' in res_file_names:
-        with_hdf = True
-    else:
-        with_hdf = False
-
-    if with_hdf:
-		#    assert grep_exists(res_files['out'], "it=  1  is completed")
-        assert grep_exists(res_files['bands_sc.1'], "-0.8345.*0.9432")
-        assert grep_exists(res_files['bands_sc.1'], "2.639.*0.5650")
-        assert grep_exists(res_files['bands_sc.2'], "-0.4365.*0.9501")
-        assert grep_exists(res_files['bands_sc.2'], "3.723.*0.1328")
-    else:
-        assert grep_exists(res_files['bands_sc.1'], "-8.9216.*0.94323")
-        assert grep_exists(res_files['bands_sc.1'], "6.028.*0.8807")
-        assert grep_exists(res_files['bands_sc.2'], "10.489.*0.016")
-        assert grep_exists(res_files['bands_sc.2'], "15.513.*0.01174")
+    assert default_fleur_test("CoUnfold",hdf_checks=["banddos.hdf"])
