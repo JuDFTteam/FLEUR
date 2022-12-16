@@ -27,7 +27,9 @@ test-pgi:
       - if: $CI_TASKS =~ /nvidia/    
   
 build-nvhpc-gpu:
-  image:   
+  image:  
+  tags:
+     - rtx2080ti 
   stage: build
   artifacts:
     paths:
@@ -40,7 +42,7 @@ build-nvhpc-gpu:
     - if: $CI_TASKS =~ /gpu/
 
 test-nvhpc-gpu:
-  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  image: 
   extends: .test-fleur
   tags:
      - rtx2080ti
