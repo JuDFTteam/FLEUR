@@ -65,12 +65,12 @@ gfortran-coverage:
       - ./configure.sh -l coverage -flags --coverage GITLAB
       - cd build.coverage
       - make -j 4
-      - lcov --exclude "*.inc" --capture --initial -d CMakeFiles -o baseline.info
+      - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --exclude "*.inc" --capture --initial -d CMakeFiles -o baseline.info
   after_script:
       - cd $CI_PROJECT_DIR/build.coverage
-      - lcov --exclude "*.inc" --capture  -d CMakeFiles -o after.info
-      - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
-      - mkdir ../public;genhtml combined.info --output-directory ../public/coverage_html
+      - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --exclude "*.inc" --capture  -d CMakeFiles -o after.info
+      - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --add-tracefile baseline.info --add-tracefile after.info -o combined.info
+      - mkdir ../public;genhtml --output-directory ../public/coverage_html --title "FLEUR test coverage" --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf combined.info 
   allow_failure: true
   artifacts:
     paths:
