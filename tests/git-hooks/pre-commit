@@ -20,7 +20,7 @@ fi
 
 check_for_copyright(){  
 #check for copyright statement in new files
-for f in `git diff --cached --name-only --diff-filter=A`
+for f in `git diff --cached --name-only --diff-filter=A|grep -vi \.f `
 do
   echo $f
   if ! grep "Copyright" $f
