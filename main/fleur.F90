@@ -628,8 +628,7 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
-         CALL priv_geo_end(fmpi)
-
+       
          l_cont = .TRUE.
          IF (fi%hybinp%l_hybrid) THEN
             IF (hybdat%l_calhf) THEN
@@ -732,49 +731,7 @@ CONTAINS
       CALL juDFT_end("all done", fmpi%irank)
 
    CONTAINS
-      SUBROUTINE priv_geo_end(fmpi)
-         TYPE(t_mpi), INTENT(IN) :: fmpi
 
-         LOGICAL :: l_exist
-
-         ! Check if a new input was generated
-         INQUIRE (file='inp_new', exist=l_exist)
-         IF (l_exist) THEN
-            CALL juDFT_end(" GEO new inp created ! ", fmpi%irank)
-         END IF
-
-         ! Check for inp.xml
-         INQUIRE (file='inp_new.xml', exist=l_exist)
-         IF (.NOT. l_exist) RETURN
-
-         IF (fmpi%irank == 0) THEN
-            CALL system('mv inp.xml inp_old.xml')
-            CALL system('mv inp_new.xml inp.xml')
-            INQUIRE (file='qfix', exist=l_exist)
-            IF (l_exist) THEN
-               CALL juDFT_end(" GEO new inp created ! ", fmpi%irank)
-            END IF
-
-            ! Check for inp.xml
-            INQUIRE (file='inp_new.xml', exist=l_exist)
-            IF (.NOT. l_exist) RETURN
-
-            IF (fmpi%irank == 0) THEN
-               CALL system('mv inp.xml inp_old.xml')
-               CALL system('mv inp_new.xml inp.xml')
-               INQUIRE (file='qfix', exist=l_exist)
-               IF (l_exist) THEN
-                  OPEN (2, file='qfix')
-                  WRITE (2, *) "F"
-                  CLOSE (2)
-                  PRINT *, "qfix set to F"
-               END IF
-               CALL mixing_history_reset(fmpi)
-            END IF
-            CALL mixing_history_reset(fmpi)
-         END IF
-         CALL juDFT_end(" GEO new inp.xml created ! ", fmpi%irank)
-      END SUBROUTINE priv_geo_end
 
    END SUBROUTINE fleur_execute
 END MODULE m_fleur
