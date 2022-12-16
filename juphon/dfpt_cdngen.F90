@@ -21,7 +21,6 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
    USE m_dfpt_cdnval
    USE m_cdn_io
    USE m_wrtdop
-   USE m_genNewNocoInp
    USE m_cdncore
 
    IMPLICIT NONE

@@ -34,7 +34,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_wrtdop
    USE m_cdntot
    USE m_qfix
-   USE m_genNewNocoInp
    USE m_xmlOutput
    USE m_magMultipoles
    USE m_magmoments
