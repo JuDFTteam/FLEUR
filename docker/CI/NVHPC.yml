@@ -28,8 +28,6 @@ test-pgi:
   
 build-nvhpc-gpu:
   image:  
-  tags:
-     - rtx2080ti 
   stage: build
   artifacts:
     paths:
@@ -40,6 +38,7 @@ build-nvhpc-gpu:
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
+
 
 test-nvhpc-gpu:
   image: 
@@ -52,5 +51,5 @@ test-nvhpc-gpu:
     - build-nvhpc-gpu
   allow_failure: true
   rules:
-      - if: $CI_TASKS =~ /gpu/    
+      - if: $CI_TASKS =~ /broken/    
   
