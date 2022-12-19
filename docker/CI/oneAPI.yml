@@ -68,7 +68,7 @@ build-intel-debug:
   rules:
       - if: $CI_TASKS =~ /debug/
 
-test-intel:
+test-intel-debug:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
   extends: .test-fleur
   variables:
