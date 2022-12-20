@@ -13,7 +13,7 @@ build-gfortran12-hdf5:
   rules:
     - if: $CI_TASKS
       when: never
-    - if: $CI_TASKS =~ /gfortran12/  
+    - if: $CI_TASKS =~ /gfort12/  
     - when: on_success
 
 
@@ -29,7 +29,7 @@ fast-test-gfortran12-hdf5:
   rules:
     - if: $CI_TASKS
       when: never
-    - if: $CI_TASKS =~ /gfortran12/  
+    - if: $CI_TASKS =~ /gfort12/  
     - when: on_success
  
 
@@ -45,5 +45,5 @@ test-gfortran12-hdf5:
   rules:
     - if: $CI_TASKS
       when: never
-    - if: $CI_TASKS =~ /gfortran12/
+    - if: $CI_TASKS =~ /gfort12/
     - when: on_success  
