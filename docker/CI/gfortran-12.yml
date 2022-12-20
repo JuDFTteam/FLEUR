@@ -11,10 +11,7 @@ build-gfortran12-hdf5:
     - cd build.gfortran12
     - make -j 2
   rules:
-    - if: $CI_TASKS
-      when: never
     - if: $CI_TASKS =~ /gfort12/  
-    - when: on_success
 
 
 fast-test-gfortran12-hdf5: 
@@ -27,10 +24,7 @@ fast-test-gfortran12-hdf5:
   needs: 
     - build-gfortran12-hdf5
   rules:
-    - if: $CI_TASKS
-      when: never
     - if: $CI_TASKS =~ /gfort12/  
-    - when: on_success
  
 
 test-gfortran12-hdf5: 
@@ -43,7 +37,4 @@ test-gfortran12-hdf5:
     - fast-test-gfortran12-hdf5
     - build-gfortran12-hdf5
   rules:
-    - if: $CI_TASKS
-      when: never
     - if: $CI_TASKS =~ /gfort12/
-    - when: on_success  
