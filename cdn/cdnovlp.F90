@@ -235,7 +235,7 @@ CONTAINS
              ycomp1(3,1) = czero
 
              ALLOCATE ( vr2(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
-
+             vr2=0.0
              ! the l = 0 component of the potential is multiplied by r/sqrt(4 pi), 
              ! for simple use, this is corrected here
              DO n = 1,atoms%ntype
@@ -259,7 +259,7 @@ CONTAINS
                 DO lh = 0,sphhar%nlh(nd)
                    maxl = max(maxl,sphhar%llh(lh,nd))
                 END DO ! lh
-                ALLOCATE ( bsl(0:maxl,atoms%jmtd),integrand(atoms%jmtd,0:maxl) )
+                ALLOCATE ( bsl(0:maxl,atoms%jmtd),integrand(atoms%jmtd,0:maxl) ) ; bsl=0.0
                 g = -0.1 ! g is the norm of a star and can't be negative, this is to initialize a check if the norm between stars has changed
 
                 ! on each processor, calculate a certain consecutive set of k

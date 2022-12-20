@@ -601,6 +601,7 @@ CONTAINS
          END IF
 
          ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
+         voltet=0.0
          l_tria = .FALSE.
          CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
          !IF (sym%invs) THEN

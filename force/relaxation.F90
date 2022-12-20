@@ -65,7 +65,7 @@ CONTAINS
          ALLOCATE(energies(1));energies(1)=energies_new
          ALLOCATE(displace(3,atoms%ntype),old_displace(3,atoms%ntype))
          ALLOCATE(tempDisplace(3,atoms%ntype),totalDisplace(3,atoms%ntype))
-
+         totalDisplace=0.0
          ! Remove force components that are not selected for relaxation
          DO iType = 1, atoms%ntype
             IF (atoms%l_geo(iType)) THEN
