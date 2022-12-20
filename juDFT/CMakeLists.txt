@@ -49,7 +49,7 @@ check_arguments.F90
 check_para.F90
 xmlOutput.F90
 round.f90
-npy.f90
+npy.F90
 round.f90
 internalParams.f90
 )

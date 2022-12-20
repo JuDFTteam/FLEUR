@@ -37,7 +37,7 @@ build-intel-ifx:
     - FC=ifx ./configure.sh -l intel.ifx
     - cd build.intel.ifx
     - make -j 2
-  allow_failure: false
+  allow_failure: true
   rules:
       - if: $CI_TASKS =~ /intel/
 
