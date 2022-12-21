@@ -23,9 +23,41 @@ MODULE m_types_dos
      PROCEDURE      :: get_num_spins
      PROCEDURE      :: get_num_weights
      PROCEDURE      :: get_weight_name
+     PROCEDURE      :: sym_weights
   END TYPE t_dos
 
 CONTAINS
+
+  subroutine sym_weights(this)
+    class(t_dos),intent(inout):: this
+
+    REAL,ALLOCATABLE:: qal_sum(:,:)
+    integer:: ispin,ikpt,i,j,k
+
+    DO ispin=1,size(this%eig,3)
+      DO ikpt=1,size(this%eig,2)   
+      ! Make sure equivalent states have same weight
+      i=1   
+      DO while(i<size(this%eig,1))
+         j=1
+         do while (abs(this%eig(i,ikpt,ispin)-this%eig(i+j,ikpt,ispin))<1E-7)
+            j=j+1
+            if (i+j>size(this%eig,1)) exit
+         ENDDO
+         if (j>1) THEN
+            j=j-1
+            !Make sure all weights are equal
+            qal_sum=sum(this%qal(:,:,i:i+j,ikpt,ispin),dim=3)/(j+1)
+            do k=0,j
+              this%qal(:,:,i+k,ikpt,ispin)=qal_sum
+            ENDDO  
+            i=i+j
+         endif
+         i=i+1   
+      enddo 
+   ENDDO
+ENDDO
+end subroutine
 
   integer function get_num_weights(this)
     class(t_dos),intent(in):: this

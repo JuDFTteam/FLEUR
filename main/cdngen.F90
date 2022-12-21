@@ -199,6 +199,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
       IF (fmpi%irank == 0) THEN
          CALL timestart("cdngen: dos")
+         if (banddos%dos.or.banddos%band) call dos%sym_weights()
          CALL make_dos(kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,sym,cell,results,eigdos )
          CALL timestop("cdngen: dos")
