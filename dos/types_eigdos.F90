@@ -30,6 +30,7 @@ MODULE m_types_eigdos
     procedure          :: write_dos
     procedure          :: write_band
     procedure          :: write_EVData
+    procedure          :: sym_weights
   END TYPE
 
   type::t_eigdos_list
@@ -58,6 +59,9 @@ MODULE m_types_eigdos
     end function
   end interface
 CONTAINS
+    subroutine sym_weights(this)
+      class(t_eigdos),INTENT(INOUT):: this 
+    end subroutine
 
   function get_neig(this)
     CLASS(t_eigdos),INTENT(IN)::this
