@@ -48,11 +48,9 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: ustepLocal(:)
       INTEGER, ALLOCATABLE :: icm(:, :, :)
       INTEGER :: i3_start, i3_end, chunk_size, leftover_size
-#ifdef CPP_MPI
       INTEGER ierr
       INTEGER, ALLOCATABLE :: icm_local(:, :, :)
       REAL, ALLOCATABLE :: ufft_local(:), bfft_local(:)
-#endif
 
       ifftd = 27*stars%mx1*stars%mx2*stars%mx3
       !     ..
@@ -124,7 +122,7 @@ CONTAINS
             factorA = 3.0 * atoms%volmts(iType) / cell%omtil
             sf = CMPLX(0.0,0.0)
 
-            DO nn = 1, atoms%neq(iType) !Should automatically be nn = 2, 1 for DFPT
+            DO nn = 1, atoms%neq(iType)
                na = naInit + nn
                th = -tpi_const * DOT_PRODUCT(stars%kv3(:,iStar), atoms%taual(:, na))
                sf = sf + CMPLX(COS(th), SIN(th))
@@ -156,20 +154,16 @@ CONTAINS
       !
       ! --> set up stepfunction on fft-grid:
       !
-#ifdef CPP_MPI
       ALLOCATE (bfft_local(0:ifftd - 1), ufft_local(0:ifftd - 1))
       bfft_local = 0.0
       ufft_local = 0.0
-#endif
 
       ALLOCATE (bfft(0:ifftd - 1))
       im1 = CEILING(1.5*stars%mx1); im2 = CEILING(1.5*stars%mx2); im3 = CEILING(1.5*stars%mx3)
       ALLOCATE (icm(-im1:im1, -im2:im2, -im3:im3))
       icm = 0
-#ifdef CPP_MPI
       ALLOCATE (icm_local(-im1:im1, -im2:im2, -im3:im3))
       icm_local = 0
-#endif
 
       inv_omtil = 1.0/cell%omtil
       fp_omtil = -fpi_const*inv_omtil
@@ -177,19 +171,12 @@ CONTAINS
       stars%ufft = 0.0
       bfft = 0.0
 
-#ifdef CPP_MPI
       IF (fmpi%irank == 0) THEN
          DO iType = 1, atoms%ntype
             ufft_local(0) = ufft_local(0) + atoms%neq(iType)*atoms%volmts(iType)
          ENDDO
          ufft_local(0) = 1.0 - ufft_local(0)*inv_omtil
       ENDIF
-#else
-      DO iType =1, atoms%ntype
-         stars%ufft(0) = stars%ufft(0) + atoms%neq(iType)*atoms%volmts(iType)
-      ENDDO
-      stars%ufft(0) = 1.0 - stars%ufft(0)*inv_omtil
-#endif
 
       CALL calcIndexBounds(fmpi,0, im3, i3_start, i3_end)
 
@@ -207,22 +194,12 @@ CONTAINS
                ic = i1 + 3*stars%mx1*i2 + 9*stars%mx1*stars%mx2*i3
                gm(1) = REAL(i1)
                IF (2*i1 > 3*stars%mx1) gm(1) = gm(1) - 3.0*stars%mx1
-               ! TODO: (How) do these conditions apply for DFPT?
-               !
-               !-> use inversion <-> c.c.
-               !
+
                ic1 = NINT(gm(1)); ic2 = NINT(gm(2)); ic3 = NINT(gm(3))
-#ifdef CPP_MPI
                icm_local(ic1, ic2, ic3) = ic
                IF (ic1 == im1) icm_local(-ic1, ic2, ic3) = ic
                IF (ic2 == im2) icm_local(ic1, -ic2, ic3) = ic
                IF ((ic1 == im1) .AND. (ic2 == im2)) icm_local(-ic1, -ic2, ic3) = ic
-#else
-               icm(ic1, ic2, ic3) = ic
-               IF (ic1 == im1) icm(-ic1, ic2, ic3) = ic
-               IF (ic2 == im2) icm(ic1, -ic2, ic3) = ic
-               IF ((ic1 == im1) .AND. (ic2 == im2)) icm(-ic1, -ic2, ic3) = ic
-#endif
                g = MATMUL(TRANSPOSE(cell%bmat), gm)
                g_sqr = DOT_PRODUCT(g, g)
                g_abs = SQRT(g_sqr)
@@ -239,11 +216,7 @@ CONTAINS
                      g_rmt = g_abs*atoms%rmt(iType)
                      r_c = r_c + atoms%rmt(iType)*(SIN(g_rmt)/g_rmt - COS(g_rmt))*r_phs
                   ENDDO
-#ifdef CPP_MPI
                   ufft_local(ic) = help*r_c
-#else
-                  stars%ufft(ic) = help*r_c
-#endif
                ELSE
                   c_c = CMPLX(0.0, 0.0)
                   DO iType = 1, atoms%ntype
@@ -256,27 +229,14 @@ CONTAINS
                      g_rmt = g_abs*atoms%rmt(iType)
                      c_c = c_c + atoms%rmt(iType)*(SIN(g_rmt)/g_rmt - COS(g_rmt))*c_phs
                   ENDDO
-#ifdef CPP_MPI
                   ufft_local(ic) = help*REAL(c_c)
                   bfft_local(ic) = help*AIMAG(c_c)
-#else
-                  stars%ufft(ic) = help*REAL(c_c)
-                  bfft(ic) = help*AIMAG(c_c)
-#endif
                ENDIF
 
-               ! TODO: (How)do these conditions apply for DFPT?
                IF (((2*i3 .EQ. 3*stars%mx3) .OR. (2*i2 .EQ. 3*stars%mx2)) .OR. (2*i1 .EQ. 3*stars%mx1)) THEN
-               !IF (.FALSE.) THEN !NEWER; BREAKS A TEST (FePt LO)
-#ifdef CPP_MPI
                   ufft_local(ic) = 0.0
                   bfft_local(ic) = 0.0
-#else
-                  stars%ufft(ic) = 0.0
-                  bfft(ic) = 0.0
-#endif
                ENDIF
-\
             ENDDO
          ENDDO
       ENDDO
@@ -285,6 +245,10 @@ CONTAINS
       CALL MPI_REDUCE(ufft_local, stars%ufft, ifftd, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr)
       CALL MPI_REDUCE(bfft_local, bfft, ifftd, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr)
       CALL MPI_REDUCE(icm_local, icm, size(icm), MPI_INTEGER, MPI_SUM, 0, fmpi%mpi_comm, ierr)
+#else
+      stars%ufft(:) = ufft_local(:)
+      bfft(:) = bfft_local(:)
+      icm(:,:,:) = icm_local(:,:,:)
 #endif
 
       IF (fmpi%irank == 0) THEN
@@ -337,9 +301,7 @@ CONTAINS
          CALL cfft(stars%ufft, bfft, ifftd, 3*stars%mx3, ifftd, +1)
 
          DEALLOCATE (bfft, icm)
-#ifdef CPP_MPI
          DEALLOCATE (bfft_local, ufft_local, icm_local)
-#endif
 
          CALL writeStepfunction(stars)
       ENDIF ! (fmpi%irank == 0)
