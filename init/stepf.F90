@@ -299,6 +299,7 @@ CONTAINS
          ENDIF
 
          CALL timestop("Oldstepf")
+         CALL timestart("FFT - step function")
 
          !
          ! --> make fft
@@ -310,6 +311,8 @@ CONTAINS
 
          DEALLOCATE (bfft, icm)
          DEALLOCATE (bfft_local, ufft_local, icm_local)
+
+         CALL timestop("FFT - step function")
 
          CALL writeStepfunction(stars)
       ENDIF ! (fmpi%irank == 0)
