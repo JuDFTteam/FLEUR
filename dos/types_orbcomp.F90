@@ -25,35 +25,8 @@ CONTAINS
 
   subroutine sym_weights(this)
     class(t_orbcomp),intent(inout):: this
-    REAL,ALLOCATABLE:: qmtp_sum(:)
-    REAL,ALLOCATABLE:: comp_sum(:,:)
-    integer:: ispin,ikpt,i,j,k
-
-    DO ispin=1,size(this%eig,3)
-      DO ikpt=1,size(this%eig,2)   
-      ! Make sure equivalent states have same weight
-      i=1   
-      DO while(i<size(this%eig,1))
-         j=1
-         do while (abs(this%eig(i,ikpt,ispin)-this%eig(i+j,ikpt,ispin))<1E-5)
-            j=j+1
-            if (i+j>size(this%eig,1)) exit
-         ENDDO
-         if (j>1) THEN
-            j=j-1
-            !Make sure all weights are equal
-            qmtp_sum=sum(this%qmtp(i:i+j,:,ikpt,ispin),dim=1)/(j+1)
-            comp_sum=sum(this%comp(i:i+j,:,:,ikpt,ispin),dim=1)/(j+1)
-            do k=0,j
-              this%qmtp(i+k,:,ikpt,ispin)=qmtp_sum
-              this%comp(i+k,:,:,ikpt,ispin)=comp_sum
-            ENDDO  
-            i=i+j
-         endif
-         i=i+1   
-      enddo 
-      enddo  
-    enddo  
+    integer:: i,j
+    return !This is done later in get_weights
     end subroutine
 
 
@@ -92,8 +65,11 @@ CONTAINS
     DO na=1,size(this%comp,3)
       DO i= 1, 23
         ind = ind+1
-        if (ind==id) get_weight_eig=this%comp(:,i,na,:,:)*this%qmtp(:,na,:,:)/10000.
-        if (ind>id) return
+        if (ind==id) THEN
+            get_weight_eig=this%comp(:,i,na,:,:)*this%qmtp(:,na,:,:)/10000.
+            call this%sym_weights_eigdos(get_weight_eig)
+            return
+        ENDIF
       ENDDO
     ENDDO
   end function
