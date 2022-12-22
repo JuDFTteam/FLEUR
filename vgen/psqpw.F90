@@ -59,7 +59,7 @@ contains
 
     complex                         :: psint, sa, sl, sm
     real                            :: f, fact, fpo, gz, p, qvac, rmtl, s, fJ, gr, g
-    integer                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz
+    integer                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz, kStart, kEnd
     complex                         :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     complex                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     real                            :: q2(vacuum%nmzd)
@@ -132,26 +132,30 @@ contains
     ! q/=0 term: see (A10) (Coulomb case) or (A11) (Yukawa case)
     fpo = 1. / cell%omtil
 
-    call timestart("loop")
-    !$omp parallel do default( shared ) private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
+    call timestart("loop in psqpw")
 
-    do k = MERGE(fmpi%irank+2,fmpi%irank+1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
+    CALL calcIndexBounds(fmpi, MERGE(2,1,norm2(stars%center)<=1e-8), stars%ng3, kStart, kEnd)
+    !$OMP parallel do default( NONE ) &
+    !$OMP SHARED(atoms,stars,sym,cell,kStart,kEnd,psq,qpw,qlm,pn,fpo) &
+    !$OMP private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
+    do k = kStart, kEnd
       call phasy1( atoms, stars, sym, cell, k, pylm )
-      sa = 0.
+      sa = 0.0
       do n = 1, atoms%ntype
         ncvn = atoms%ncv(n)
         call sphbes( ncvn + 1 , stars%sk3(k) * atoms%rmt(n), aj )
         sl = 0.
         do l = 0, atoms%lmax(n)
-          if ( l >= ncvn ) go to 60
-          n1 = ncvn - l + 1
-          ll1 = l * ( l + 1 ) + 1
-          sm = 0.
-          do m = -l, l
-            lm = ll1 + m
-            sm = sm + qlm(m,l,n) * conjg( pylm(lm,n) )
-          end do
-60        sl = sl + pn(l,n) / ( stars%sk3(k) ** n1 ) * aj( ncvn + 1 ) * sm
+          IF(l.LT.ncvn) THEN
+             n1 = ncvn - l + 1
+             ll1 = l * ( l + 1 ) + 1
+             sm = 0.
+             do m = -l, l
+               lm = ll1 + m
+               sm = sm + qlm(m,l,n) * conjg( pylm(lm,n) )
+             end do
+          END IF
+        sl = sl + pn(l,n) / ( stars%sk3(k) ** n1 ) * aj( ncvn + 1 ) * sm
         end do
         sa = sa + atoms%neq(n) * sl
       end do
@@ -159,7 +163,7 @@ contains
     end do
     !$omp end parallel do
 
-    call timestop("loop")
+    call timestop("loop in psqpw")
 #ifdef CPP_MPI
     allocate( c_b(stars%ng3) )
     call MPI_REDUCE( psq, c_b, stars%ng3, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%MPI_COMM, ierr )
