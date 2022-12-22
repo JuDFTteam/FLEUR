@@ -209,6 +209,12 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    if (noco%l_noco) THEN
       den%pw(:,1)=(den%pw(:,1)+den%pw(:,2))*0.5
       den%pw(:,2)=den%pw(:,1)
+      if (input%film) THEN
+         den%vacz(:,:,1)=(den%vacz(:,:,1)+den%vacz(:,:,2))*0.5
+         den%vacz(:,:,2)=den%vacz(:,:,1)
+         den%vacxy(:,:,:,1)=(den%vacxy(:,:,:,1)+den%vacxy(:,:,:,2))*0.5
+         den%vacxy(:,:,:,2)=den%vacxy(:,:,:,1)
+      endif   
    endif
 
    ! Check the normalization of total density
