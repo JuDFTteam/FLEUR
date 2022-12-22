@@ -113,7 +113,7 @@ CONTAINS
 #endif
 
 !$OMP PARALLEL DO DEFAULT(none) & 
-!$OMP SHARED(atoms,stars,cell,ustepLocal,iStarStart,iStarEnd,fmpi) &
+!$OMP SHARED(atoms,stars,cell,ustepLocal,iStarStart,iStarEnd) &
 !$OMP PRIVATE(iStar,iType,naInit,factorA,th,sf,nn,na,gs)
       DO iStar = iStarStart, iStarEnd
          DO iType = 1, atoms%ntype
@@ -159,7 +159,9 @@ CONTAINS
       ufft_local = 0.0
 
       ALLOCATE (bfft(0:ifftd - 1))
-      im1 = CEILING(1.5*stars%mx1); im2 = CEILING(1.5*stars%mx2); im3 = CEILING(1.5*stars%mx3)
+      im1 = CEILING(1.5*stars%mx1)
+      im2 = CEILING(1.5*stars%mx2)
+      im3 = CEILING(1.5*stars%mx3)
       ALLOCATE (icm(-im1:im1, -im2:im2, -im3:im3))
       icm = 0
       ALLOCATE (icm_local(-im1:im1, -im2:im2, -im3:im3))
@@ -180,6 +182,9 @@ CONTAINS
 
       CALL calcIndexBounds(fmpi,0, im3, i3_start, i3_end)
 
+!$OMP PARALLEL DO DEFAULT(none) &
+!$OMP SHARED(atoms,stars,cell,sym,bfft_local,ufft_local,icm_local,i3_start,i3_end,im1,im2,im3,fp_omtil,inv_omtil) &
+!$OMP PRIVATE(i3,gm,i2,loopstart,i1,ic,na,gs,ic1,ic2,ic3,g,g_sqr,g_abs,help,r_c,iType,r_phs,nn,th,g_rmt,c_c,c_phs)
       DO i3 = i3_start, i3_end
          gm(3) = REAL(i3)
          DO i2 = 0, 3*stars%mx2 - 1
@@ -195,7 +200,9 @@ CONTAINS
                gm(1) = REAL(i1)
                IF (2*i1 > 3*stars%mx1) gm(1) = gm(1) - 3.0*stars%mx1
 
-               ic1 = NINT(gm(1)); ic2 = NINT(gm(2)); ic3 = NINT(gm(3))
+               ic1 = NINT(gm(1))
+               ic2 = NINT(gm(2))
+               ic3 = NINT(gm(3))
                icm_local(ic1, ic2, ic3) = ic
                IF (ic1 == im1) icm_local(-ic1, ic2, ic3) = ic
                IF (ic2 == im2) icm_local(ic1, -ic2, ic3) = ic
@@ -240,6 +247,7 @@ CONTAINS
             ENDDO
          ENDDO
       ENDDO
+!$OMP END PARALLEL DO
 
 #ifdef CPP_MPI
       CALL MPI_REDUCE(ufft_local, stars%ufft, ifftd, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr)
