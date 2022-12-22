@@ -89,10 +89,10 @@ CONTAINS
           !---> in a spin-spiral calculation different basis sets are used for
           !---> the two spin directions, because the cutoff radius is defined
           !---> by |G + k +/- qss/2| < rkmax.
-         addX = abs(NINT((bkpt(1) + (2*ispin - 3)/2.0*qss(1))/arltv1))
-         addY = abs(NINT((bkpt(2) + (2*ispin - 3)/2.0*qss(2))/arltv2))
-         addZ = abs(NINT((bkpt(3) + (2*ispin - 3)/2.0*qss(3))/arltv2))
           DO ispin = 1,2
+             addX = abs(NINT((bkpt(1) + (2*ispin - 3)/2.0*qss(1))/arltv1))
+             addY = abs(NINT((bkpt(2) + (2*ispin - 3)/2.0*qss(2))/arltv2))
+             addZ = abs(NINT((bkpt(3) + (2*ispin - 3)/2.0*qss(3))/arltv2))
              nv = 0
              nv2 = 0
              DO j1 = -mk1-addX,mk1+addX
