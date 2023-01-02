@@ -48,7 +48,7 @@ CONTAINS
 
         nlims(1) = 1
         nlims(2) = atoms%ntype
-        IF (PRESENT(iDtype_col)) nlims = iDtype_col
+        IF (PRESENT(iDtype_col)) nlims = [iDtype_col,iDtype_col]
 
         !$OMP PARALLEL DO DEFAULT(NONE)&
         !$OMP PRIVATE(n,one,iSpinV1,iSpinPr,iSpin,vr1,offs)&
