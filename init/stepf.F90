@@ -21,6 +21,7 @@ CONTAINS
       USE m_constants
        
       USE m_types
+      USE m_mpi_reduce_tool
       IMPLICIT NONE
       !     ..
       TYPE(t_sym), INTENT(IN)        :: sym
@@ -134,12 +135,8 @@ CONTAINS
       ENDDO
 !$OMP END PARALLEL DO
 
-#ifdef CPP_MPI
-   ! sum reduce stars%ustep over all MPI ranks
-   CALL MPI_REDUCE(ustepLocal, stars%ustep, stars%ng3, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr)
-#else
-   stars%ustep(:) = ustepLocal(:)
-#endif
+      CALL mpi_sum_reduce(ustepLocal, stars%ustep, stars%ng3, fmpi%mpi_comm)
+
       DEALLOCATE(ustepLocal)
 
       IF (fmpi%irank == 0) THEN
@@ -249,15 +246,9 @@ CONTAINS
       ENDDO
 !$OMP END PARALLEL DO
 
-#ifdef CPP_MPI
-      CALL MPI_REDUCE(ufft_local, stars%ufft, ifftd, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_REDUCE(bfft_local, bfft, ifftd, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr)
-      CALL MPI_REDUCE(icm_local, icm, size(icm), MPI_INTEGER, MPI_SUM, 0, fmpi%mpi_comm, ierr)
-#else
-      stars%ufft(:) = ufft_local(:)
-      bfft(:) = bfft_local(:)
-      icm(:,:,:) = icm_local(:,:,:)
-#endif
+      CALL mpi_sum_reduce(ufft_local,stars%ufft,ifftd,fmpi%mpi_comm)
+      CALL mpi_sum_reduce(bfft_local,bfft,ifftd,fmpi%mpi_comm)
+      CALL mpi_sum_reduce(icm_local,icm,size(icm),fmpi%mpi_comm)
 
       IF (fmpi%irank == 0) THEN
          ic = 9*stars%mx1*stars%mx2*(im3 + 1)
