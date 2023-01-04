@@ -76,6 +76,7 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
    ! Local Scalars
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,iType,ikG
    INTEGER :: iErr,nbands,noccbd,nbands1
+   INTEGER :: iErr,nbands,noccbd,nbands1,iLo,l,imLo,ikLo,ikGLo
    INTEGER :: skip_t,skip_tt,nbasfcn,nbasfcnq
    REAL    :: gExt(3)
 
