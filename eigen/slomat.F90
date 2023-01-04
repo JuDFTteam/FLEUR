@@ -200,7 +200,7 @@ CONTAINS
                   ! Calculate the overlap matrix elements of one local
                   ! orbital with itself
                   lop=lo
-                  DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin)
+                  DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin.AND..NOT.l_fullj)
                      kp = lapwPr%kvec(nkvecp,lo,na)
                      lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvecp
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))

@@ -341,7 +341,7 @@ CONTAINS
                   ! Calculate the Hamiltonian matrix elements of one local
                   ! orbital with itself
                   lop=lo
-                  DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin)
+                  DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin.AND..NOT.l_fullj)
                      lorow=lapwPr%nv(igSpinPr)+lapwPr%index_lo(lop,na)+nkvecp
                      DO m = -l,l
                         lm = l* (l+1) + m
@@ -386,6 +386,7 @@ CONTAINS
                                                      & CONJG(abcloPr(1,mp,nkvecp,lo))*axx + &
                                                      & CONJG(abcloPr(2,mp,nkvecp,lo))*bxx + &
                                                      & CONJG(abcloPr(3,mp,nkvecp,lo))*cxx )
+                              !TODO: Should there be an Ekin sufrace term here as well? 
                            END IF
                         END DO
                      END DO

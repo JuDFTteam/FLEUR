@@ -440,6 +440,7 @@ CONTAINS
          IF (noco%l_noco) THEN
             CALL rhomatGrid(idens)%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
          ELSE
+            ! TODO: Shouldn't there be a starsq here for DFPT?
             CALL chargeDen%takeFieldFromGrid(stars, cwk, stateFFTRadius+0.0005)
             IF (input%l_f) THEN
                CALL ekinGrid%takeFieldFromGrid(stars, ecwk, stateFFTRadius+0.0005)
@@ -486,6 +487,7 @@ CONTAINS
             ! add to spin-up or -down density (collinear & non-collinear)
             ispin = jspin
             IF (noco%l_noco) ispin = idens
+            ! TODO: Shouldn't there be a starsq here for DFPT?
             DO istr = 1, stars%ng3_fft
                den%pw(istr, ispin) = den%pw(istr, ispin) + cwk(istr)
             ENDDO

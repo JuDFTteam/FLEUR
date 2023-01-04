@@ -86,7 +86,7 @@ CONTAINS
                   ikGLoPr = nvPr + lapwPr%index_lo(iLoPr,iDtype) + imLoPr
 
                   pref = gvec(:, ikG) + lapw%bkpt
-                  pref = pref - gvec(:,ikLoPr) - lapwPr%bkpt - lapwPr%qphon
+                  pref = pref - gvecPr(:,ikLoPr) - lapwPr%bkpt - lapwPr%qphon
                   pref = ImagUnit * MATMUL(pref, bmat)
 
                   hmat%data_c(ikGLoPr, ikG0) = hmat%data_c(ikGLoPr, ikG0) &
@@ -110,7 +110,7 @@ CONTAINS
                         ikGLoPr = nvPr + lapwPr%index_lo(iLoPr,iDtype) + imLoPr
 
                         pref = gvec(:,ikLo) + lapw%bkpt
-                        pref = pref - gvec(:,ikLoPr) - lapwPr%bkpt - lapwPr%qphon
+                        pref = pref - gvecPr(:,ikLoPr) - lapwPr%bkpt - lapwPr%qphon
                         pref = ImagUnit * MATMUL(pref, bmat)
 
                         hmat%data_c(ikGLoPr, ikGLo0) = hmat%data_c(ikGLoPr, ikGLo0) &
