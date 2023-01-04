@@ -166,7 +166,7 @@ contains
     end do
     !$omp end parallel do
 
-    CALL mpi_sum_reduce(psq_local,psq,stars%ng3,fmpi%MPI_COMM)
+    CALL mpi_sum_reduce(psq_local,psq,fmpi%MPI_COMM)
 
     call timestop("loop in psqpw")
 

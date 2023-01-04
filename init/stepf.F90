@@ -135,7 +135,7 @@ CONTAINS
       ENDDO
 !$OMP END PARALLEL DO
 
-      CALL mpi_sum_reduce(ustepLocal, stars%ustep, stars%ng3, fmpi%mpi_comm)
+      CALL mpi_sum_reduce(ustepLocal, stars%ustep, fmpi%mpi_comm)
 
       DEALLOCATE(ustepLocal)
 
@@ -246,9 +246,9 @@ CONTAINS
       ENDDO
 !$OMP END PARALLEL DO
 
-      CALL mpi_sum_reduce(ufft_local,stars%ufft,ifftd,fmpi%mpi_comm)
-      CALL mpi_sum_reduce(bfft_local,bfft,ifftd,fmpi%mpi_comm)
-      CALL mpi_sum_reduce(icm_local,icm,size(icm),fmpi%mpi_comm)
+      CALL mpi_sum_reduce(ufft_local,stars%ufft,fmpi%mpi_comm)
+      CALL mpi_sum_reduce(bfft_local,bfft,fmpi%mpi_comm)
+      CALL mpi_sum_reduce(icm_local,icm,fmpi%mpi_comm)
 
       IF (fmpi%irank == 0) THEN
          ic = 9*stars%mx1*stars%mx2*(im3 + 1)

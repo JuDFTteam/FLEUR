@@ -26,51 +26,60 @@ MODULE m_mpi_reduce_tool
    
    ! INTEGER SUBROUTINES:
    
-   SUBROUTINE mpi_sum_reduce_int1(sourceArray, targetArray, numElements, mpi_comm)
+   SUBROUTINE mpi_sum_reduce_int1(sourceArray, targetArray, mpi_comm)
       IMPLICIT NONE
       INTEGER, INTENT(IN)    :: sourceArray(:)
       INTEGER, INTENT(INOUT) :: targetArray(:)
-      INTEGER, INTENT(IN)    :: numElements
       INTEGER, INTENT(IN)    :: mpi_comm
 
-      INTEGER:: ierr=0
+      INTEGER :: ierr=0
+      INTEGER :: length
+
+      length = SIZE(sourceArray)
+      IF(length.NE.SIZE(targetArray)) CALL judft_error("MPI_REDUCE failed: Array size mismatch.")
 
 #ifdef CPP_MPI
-      CALL MPI_REDUCE(sourceArray, targetArray, numElements, MPI_INTEGER, MPI_SUM, 0, mpi_comm, ierr)
+      CALL MPI_REDUCE(sourceArray, targetArray, length, MPI_INTEGER, MPI_SUM, 0, mpi_comm, ierr)
 #else
       targetArray(:) = sourceArray(:)
 #endif
       IF (ierr.NE.0) CALL judft_error("MPI_REDUCE failed")
    END SUBROUTINE mpi_sum_reduce_int1
    
-   SUBROUTINE mpi_sum_reduce_int2(sourceArray, targetArray, numElements, mpi_comm)
+   SUBROUTINE mpi_sum_reduce_int2(sourceArray, targetArray, mpi_comm)
       IMPLICIT NONE
       INTEGER, INTENT(IN)    :: sourceArray(:,:)
       INTEGER, INTENT(INOUT) :: targetArray(:,:)
-      INTEGER, INTENT(IN)    :: numElements
       INTEGER, INTENT(IN)    :: mpi_comm
 
-      INTEGER:: ierr=0
+      INTEGER :: ierr=0
+      INTEGER :: length
+
+      length = SIZE(sourceArray)
+      IF(length.NE.SIZE(targetArray)) CALL judft_error("MPI_REDUCE failed: Array size mismatch.")
 
 #ifdef CPP_MPI
-      CALL MPI_REDUCE(sourceArray, targetArray, numElements, MPI_INTEGER, MPI_SUM, 0, mpi_comm, ierr)
+      CALL MPI_REDUCE(sourceArray, targetArray, length, MPI_INTEGER, MPI_SUM, 0, mpi_comm, ierr)
 #else
       targetArray(:,:) = sourceArray(:,:)
 #endif
       IF (ierr.NE.0) CALL judft_error("MPI_REDUCE failed")
    END SUBROUTINE mpi_sum_reduce_int2
    
-   SUBROUTINE mpi_sum_reduce_int3(sourceArray, targetArray, numElements, mpi_comm)
+   SUBROUTINE mpi_sum_reduce_int3(sourceArray, targetArray, mpi_comm)
       IMPLICIT NONE
       INTEGER, INTENT(IN)    :: sourceArray(:,:,:)
       INTEGER, INTENT(INOUT) :: targetArray(:,:,:)
-      INTEGER, INTENT(IN)    :: numElements
       INTEGER, INTENT(IN)    :: mpi_comm
 
-      INTEGER:: ierr=0
+      INTEGER :: ierr=0
+      INTEGER :: length
+
+      length = SIZE(sourceArray)
+      IF(length.NE.SIZE(targetArray)) CALL judft_error("MPI_REDUCE failed: Array size mismatch.")
 
 #ifdef CPP_MPI
-      CALL MPI_REDUCE(sourceArray, targetArray, numElements, MPI_INTEGER, MPI_SUM, 0, mpi_comm, ierr)
+      CALL MPI_REDUCE(sourceArray, targetArray, length, MPI_INTEGER, MPI_SUM, 0, mpi_comm, ierr)
 #else
       targetArray(:,:,:) = sourceArray(:,:,:)
 #endif
@@ -79,17 +88,20 @@ MODULE m_mpi_reduce_tool
    
    ! REAL SUBROUTINES:
    
-   SUBROUTINE mpi_sum_reduce_real1(sourceArray, targetArray, numElements, mpi_comm)
+   SUBROUTINE mpi_sum_reduce_real1(sourceArray, targetArray, mpi_comm)
       IMPLICIT NONE
       REAL,    INTENT(IN)    :: sourceArray(:)
       REAL,    INTENT(INOUT) :: targetArray(:)
-      INTEGER, INTENT(IN)    :: numElements
       INTEGER, INTENT(IN)    :: mpi_comm
 
-      INTEGER:: ierr=0
+      INTEGER :: ierr=0
+      INTEGER :: length
+
+      length = SIZE(sourceArray)
+      IF(length.NE.SIZE(targetArray)) CALL judft_error("MPI_REDUCE failed: Array size mismatch.")
 
 #ifdef CPP_MPI
-      CALL MPI_REDUCE(sourceArray, targetArray, numElements, MPI_DOUBLE_PRECISION, MPI_SUM, 0, mpi_comm, ierr)
+      CALL MPI_REDUCE(sourceArray, targetArray, length, MPI_DOUBLE_PRECISION, MPI_SUM, 0, mpi_comm, ierr)
 #else
       targetArray(:) = sourceArray(:)
 #endif
@@ -98,17 +110,20 @@ MODULE m_mpi_reduce_tool
 
    ! COMPLEX SUBROUTINES:
 
-   SUBROUTINE mpi_sum_reduce_complex1(sourceArray, targetArray, numElements, mpi_comm)
+   SUBROUTINE mpi_sum_reduce_complex1(sourceArray, targetArray, mpi_comm)
       IMPLICIT NONE
       COMPLEX, INTENT(IN)    :: sourceArray(:)
       COMPLEX, INTENT(INOUT) :: targetArray(:)
-      INTEGER, INTENT(IN)    :: numElements
       INTEGER, INTENT(IN)    :: mpi_comm
 
-      INTEGER:: ierr=0
+      INTEGER :: ierr=0
+      INTEGER :: length
+
+      length = SIZE(sourceArray)
+      IF(length.NE.SIZE(targetArray)) CALL judft_error("MPI_REDUCE failed: Array size mismatch.")
 
 #ifdef CPP_MPI
-      CALL MPI_REDUCE(sourceArray, targetArray, numElements, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, mpi_comm, ierr)
+      CALL MPI_REDUCE(sourceArray, targetArray, length, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, mpi_comm, ierr)
 #else
       targetArray(:) = sourceArray(:)
 #endif
