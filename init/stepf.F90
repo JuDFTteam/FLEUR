@@ -1,9 +1,6 @@
 MODULE m_stepf
    USE m_juDFT
    USE m_cdn_io
-#ifdef CPP_MPI
-   use mpi
-#endif
 CONTAINS
    SUBROUTINE stepf(sym, stars, atoms, input, cell, vacuum, fmpi)
       !
@@ -21,6 +18,7 @@ CONTAINS
       USE m_constants
        
       USE m_types
+      USE m_mpi_bc_tool
       USE m_mpi_reduce_tool
       IMPLICIT NONE
       !     ..
@@ -62,9 +60,9 @@ CONTAINS
       IF (fmpi%irank == 0) THEN
          CALL readStepfunction(stars, atoms, cell, vacuum, l_error)
       END IF
-#ifdef CPP_MPI
-      CALL MPI_BCAST(l_error, 1, MPI_LOGICAL, 0, fmpi%mpi_comm, ierr)
-#endif
+      
+      CALL mpi_bc(l_error, 0, fmpi%mpi_comm)
+
       IF (.NOT. l_error) THEN
          RETURN
       END IF
@@ -106,12 +104,8 @@ CONTAINS
 
       CALL calcIndexBounds(fmpi,2, stars%ng3, iStarStart, iStarEnd)
 
-#ifdef CPP_MPI
-      IF(.NOT.ALLOCATED(stars%sk3)) ALLOCATE(stars%sk3(stars%ng3))
-      CALL MPI_BCAST(stars%sk3, stars%ng3, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-      IF(.NOT.ALLOCATED(stars%kv3)) ALLOCATE(stars%kv3(3,stars%ng3))
-      CALL MPI_BCAST(stars%kv3, 3*stars%ng3, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-#endif
+      CALL mpi_bc(stars%sk3, 0, fmpi%mpi_comm)
+      CALL mpi_bc(stars%kv3, 0, fmpi%mpi_comm)
 
 !$OMP PARALLEL DO DEFAULT(none) & 
 !$OMP SHARED(atoms,stars,cell,ustepLocal,iStarStart,iStarEnd) &
