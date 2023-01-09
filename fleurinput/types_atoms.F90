@@ -49,6 +49,8 @@ MODULE m_types_atoms
   INTEGER, ALLOCATABLE ::nz(:)
   !atoms per type
   INTEGER, ALLOCATABLE::neq(:)
+  ! first atom of a given atom type
+  INTEGER, ALLOCATABLE :: firstAtom(:)
   ! type of each atom itype(atoms%nat) used for OMP unrolling
   INTEGER, ALLOCATABLE::itype(:)
   !radial grid points
@@ -155,6 +157,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%msh,rank,mpi_comm)
  CALL mpi_bc(this%nz,rank,mpi_comm)
  CALL mpi_bc(this%neq,rank,mpi_comm)
+ CALL mpi_bc(this%firstAtom,rank,mpi_comm)
  CALL mpi_bc(this%jri,rank,mpi_comm)
  CALL mpi_bc(this%lmax,rank,mpi_comm)
  CALL mpi_bc(this%lnonsph,rank,mpi_comm)
@@ -282,6 +285,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%bmu(this%ntype))
  ALLOCATE(this%relax(3,this%ntype))
  ALLOCATE(this%neq(this%ntype));this%neq=0
+ ALLOCATE(this%firstAtom(this%ntype))
  ALLOCATE(this%taual(3,this%nat))
  ALLOCATE(this%label(this%nat))
  ALLOCATE(this%pos(3,this%nat))
@@ -509,11 +513,14 @@ SUBROUTINE read_xml_atoms(this,xml)
     END DO
  ENDDO
 
+ na = 1
  this%nlotot = 0
  DO n = 1, this%ntype
+    this%firstAtom(n) = na
     DO l = 1,this%nlo(n)
        this%nlotot = this%nlotot + this%neq(n) * ( 2*this%llo(l,n) + 1 )
     ENDDO
+    na = na + this%neq(n)
  ENDDO
 
  ! Check the LO stuff and call setlomap (from inped):
