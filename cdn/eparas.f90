@@ -81,7 +81,7 @@ CONTAINS
          n=banddos%dos_typelist(n_dos)
          atomTypeCovered(n) = .TRUE.
          fac = 1./atoms%neq(n)
-         nt1 = sum(atoms%neq(:n-1))+1
+         nt1 = atoms%firstAtom(n)
          nt2 = nt1 + atoms%neq(n) - 1
          DO l = 0,3
            suma = CMPLX(0.,0.)
@@ -140,7 +140,7 @@ CONTAINS
        IF(atomTypeCovered(n)) THEN
           CYCLE
        END IF
-       nt1=sum(atoms%neq(:n-1))+1
+       nt1 = atoms%firstAtom(n)
        nt2 = nt1 + atoms%neq(n) - 1
        DO i = 1,ne              ! skip in next loop
          DO l = 0, atoms%lmax(n)
@@ -171,7 +171,7 @@ CONTAINS
           DO i = (skip_t+1),noccbd
             suma = CMPLX(0.,0.)
             sumb = CMPLX(0.,0.)
-            DO natom = sum(atoms%neq(:n-1))+1,sum(atoms%neq(:n))
+            DO natom = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
               suma=suma+dot_product(eigVecCoeffs%abcof(i,l* (l+1)-l:l* (l+1)+l,0,natom,jsp),eigVecCoeffs%abcof(i,l* (l+1)-l:l* (l+1)+l,0,natom,jsp))
               sumb=sumb+dot_product(eigVecCoeffs%abcof(i,l* (l+1)-l:l* (l+1)+l,1,natom,jsp),eigVecCoeffs%abcof(i,l* (l+1)-l:l* (l+1)+l,1,natom,jsp))
             ENDDO

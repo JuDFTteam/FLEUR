@@ -56,7 +56,7 @@ CONTAINS
     states : DO i = 1, noccbd
        DO n_dos=1,size(banddos%dos_typelist)
          ntyp=banddos%dos_typelist(n_dos)
-         nt1 = sum(atoms%neq(:ntyp-1))+1
+         nt1 = atoms%firstAtom(ntyp)
          nt2 = nt1 + atoms%neq(ntyp) - 1
           ls : DO l = 0,3
              IF (i==1) THEN
@@ -85,7 +85,7 @@ CONTAINS
 
     DO n_dos=1,SIZE(banddos%dos_typelist)
     ntyp = banddos%dos_typelist(n_dos)
-       natom=sum(atoms%neq(:ntyp-1))
+       natom = atoms%firstAtom(ntyp) - 1
        DO nn = 1,atoms%neq(ntyp)
           natom = natom + 1
           DO lo = 1,atoms%nlo(ntyp)

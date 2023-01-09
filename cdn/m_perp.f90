@@ -47,7 +47,7 @@ CONTAINS
     !     .. Local Arrays ..
     REAL b_xc_h(atoms%jmtd),b_xav(atoms%ntype)
 
-    irepAtom=sum(atoms%neq(:itype-1))+1
+    irepAtom=atoms%firstAtom(itype)
     ! angles in nocoinp file are (alph-alphdiff)
      IF (noco%l_ss) THEN
        alphdiff = 2.0*pi_const*(nococonv%qss(1)*atoms%taual(1,iRepAtom) + &
