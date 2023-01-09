@@ -113,7 +113,7 @@ CONTAINS
       DO iStar = iStarStart, iStarEnd
          DO iType = 1, atoms%ntype
             !-->     structure factors: loop over equivalent atoms
-            naInit = SUM(atoms%neq(:iType - 1))
+            naInit = atoms%firstAtom(iType) - 1
             factorA = 3.0 * atoms%volmts(iType) / cell%omtil
             sf = CMPLX(0.0,0.0)
 
@@ -206,7 +206,7 @@ CONTAINS
                   r_c = 0.0
                   DO iType = 1, atoms%ntype
                      r_phs = 0.0
-                     na = SUM(atoms%neq(:iType - 1))
+                     na = atoms%firstAtom(iType) - 1
                      DO nn = 1, atoms%neq(iType)
                         th = -tpi_const*DOT_PRODUCT(gm, atoms%taual(:, na + nn))
                         r_phs = r_phs + COS(th)
@@ -219,7 +219,7 @@ CONTAINS
                   c_c = CMPLX(0.0, 0.0)
                   DO iType = 1, atoms%ntype
                      c_phs = CMPLX(0.0, 0.0)
-                     na = SUM(atoms%neq(:iType - 1))
+                     na = atoms%firstAtom(iType) - 1
                      DO nn = 1, atoms%neq(iType)
                         th = -tpi_const*DOT_PRODUCT(gm, atoms%taual(:, na + nn))
                         c_phs = c_phs + EXP(CMPLX(0, th))

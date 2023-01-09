@@ -316,7 +316,7 @@ CONTAINS
       denloc=pot
 
       DO iType=1,atoms%ntype
-         lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:iType - 1)) + 1))
+         lhmax=sphhar%nlh(sym%ntypsy(atoms%firstAtom(iType)))
          DO lh=0, lhmax
             denloc%mt(:,lh,iType,1) = denloc%mt(:,lh,iType,1)*atoms%rmsh(:, iType)**2
          END DO ! lh

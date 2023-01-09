@@ -89,7 +89,7 @@ CONTAINS
          jspV=jspins
       END IF
 
-      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+      nd = sym%ntypsy(atoms%firstAtom(n))
       nsp = atoms%nsp()
 
       !General Allocations
@@ -275,7 +275,7 @@ CONTAINS
       call timestart("mt_from_grid")
 
       nsp = atoms%nsp()
-      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+      nd = sym%ntypsy(atoms%firstAtom(n))
 
       DO js = 1, jspins
          !

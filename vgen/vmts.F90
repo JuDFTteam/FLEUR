@@ -60,7 +60,7 @@ contains
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir
 
     complex                           :: cp, sm
-    integer                           :: i, jm, k, l, lh, n, nd, lm, n1, nat, m, imax, lmax, iAtom, iMem, ptsym
+    integer                           :: i, jm, k, l, lh, n, nd, lm, n1, m, imax, lmax, iMem, ptsym
     complex                           :: vtl(0:sphhar%nlhd, atoms%ntype)
     complex                           :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     real                              :: green_factor, termsR, pref
@@ -93,7 +93,7 @@ contains
     ! q/=0 components
 !    !$omp parallel default( none ) &
 !    !$omp& shared( fmpi, stars, vpw,   atoms, sym, cell, sphhar, vtl ) &
-!    !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
+!    !$omp& private( k, cp, pylm, n, sbf, nd, lh, sm, jm, m, lm, l ) &
 !    !$omp& private( vtl_loc )
 !    !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype))
 !    !$ vtl_loc(:,:) = cmplx(0.0,0.0)
@@ -101,10 +101,9 @@ contains
     do k = MERGE(fmpi%irank+2,1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
       cp = vpw(k) * stars%nstr(k)
         call phasy1( atoms, stars, sym, cell, k, pylm )
-      nat = 1
       do n = 1, atoms%ntype
         call sphbes( atoms%lmax(n), stars%sk3(k) * atoms%rmt(n), sbf )
-        nd = sym%ntypsy(nat)
+        nd = sym%ntypsy(atoms%firstAtom(n))
         do lh = 0, sphhar%nlh(nd)
           l = sphhar%llh(lh,nd)
           sm = (0.0,0.0)
@@ -118,7 +117,6 @@ contains
 !          !$ end if
 !          !$ vtl_loc(lh,n) = vtl_loc(lh,n) + cp * sbf(l) * sm
         end do
-        nat = nat + atoms%neq(n)
       end do
     end do
 !    !$omp end do
@@ -143,9 +141,8 @@ contains
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
     end if
 
-    nat = 1
     do n = 1, atoms%ntype
-      nd = sym%ntypsy(nat)
+      nd = sym%ntypsy(atoms%firstAtom(n))
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(nd), nd)
       if ( potdenType == POTDEN_TYPE_POTYUK ) then
@@ -188,7 +185,6 @@ contains
                                                 + green_2(1:imax) *            integral_1(1:imax)   )
         END IF
       end do
-      nat = nat + atoms%neq(n)
     end do
     if ( potdenType == POTDEN_TYPE_POTYUK ) then
       deallocate( il, kl )
@@ -202,8 +198,7 @@ contains
       ELSE
          ! DFPT case:
          DO n = MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
-            iAtom = SUM(atoms%neq(:n-1)) + 1
-            ptsym = sym%ntypsy(iAtom)
+            ptsym = sym%ntypsy(atoms%firstAtom(n))
             pref = MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
             DO lh = 1, 3
                l = sphhar%llh(lh, ptsym)
