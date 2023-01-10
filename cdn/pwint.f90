@@ -59,25 +59,21 @@
       END IF
 !     -----> sphere contributions
       s = stars%sk3(ig3d)
-      na = 1
 
-         CALL spgrot(&
-     &           sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
-     &           stars%kv3(:,ig3d),&
-     &           kr,ph)
-          DO  n = 1,atoms%ntype
-            srmt = s*atoms%rmt(n)
-            sfs = (0.0,0.0)
-            DO  nn = 1,sym%nop
-               arg = tpi_const * dot_product(real(kr(:,nn)),atoms%taual(:,na))
-               sfs = sfs + cmplx(cos(arg),sin(arg))*ph(nn)
-            ENDDO
-            sfs = sfs/sym%nop
-!     -----3*ji(gr)/gr term
-            s1 = 3.* (sin(srmt)/srmt-cos(srmt))/ (srmt*srmt)
-            x = x - atoms%volmts(n)*atoms%neq(n)*s1*sfs
-            na = na + atoms%neq(n)
+      CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,ig3d),kr,ph)
+      DO n = 1,atoms%ntype
+         na = atoms%firstAtom(n)
+         srmt = s*atoms%rmt(n)
+         sfs = (0.0,0.0)
+         DO  nn = 1,sym%nop
+            arg = tpi_const * dot_product(real(kr(:,nn)),atoms%taual(:,na))
+            sfs = sfs + cmplx(cos(arg),sin(arg))*ph(nn)
          ENDDO
+         sfs = sfs/sym%nop
+!     -----3*ji(gr)/gr term
+         s1 = 3.* (sin(srmt)/srmt-cos(srmt))/ (srmt*srmt)
+         x = x - atoms%volmts(n)*atoms%neq(n)*s1*sfs
+      ENDDO
 
       END SUBROUTINE pwint
       SUBROUTINE pwint_all(stars,atoms,sym,cell,x_start,x_end,x)
@@ -144,26 +140,21 @@
          END IF
 !        -----> sphere contributions
          s = stars%sk3(ig3d)
-         na = 1
 
-            CALL spgrot( &
-                sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
-                stars%kv3(:,ng),&
-                kr,ph)
-            DO  n = 1,atoms%ntype
-               srmt = s*atoms%rmt(n)
-               sfs = (0.0,0.0)
-               DO  nn = 1,sym%nop
-                 arg = tpi_const* (kr(1,nn)*atoms%taual(1,na)+kr(2,nn)*atoms%taual(2,na)+&
-     &                 kr(3,nn)*atoms%taual(3,na))
-                 sfs = sfs + exp(cmplx(0.0,arg))*ph(nn)
-               ENDDO
-               sfs = sfs/sym%nop
-!     -----3*ji(gr)/gr term
-               s1 = 3.* (sin(srmt)/srmt-cos(srmt))/ (srmt*srmt)
-               x(ng) = x(ng) - atoms%volmts(n)*atoms%neq(n)*s1*sfs
-               na = na + atoms%neq(n)
+         CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,ng),kr,ph)
+         DO n = 1,atoms%ntype
+            na = atoms%firstAtom(n)
+            srmt = s*atoms%rmt(n)
+            sfs = (0.0,0.0)
+            DO nn = 1,sym%nop
+               arg = tpi_const* (kr(1,nn)*atoms%taual(1,na)+kr(2,nn)*atoms%taual(2,na)+kr(3,nn)*atoms%taual(3,na))
+               sfs = sfs + exp(cmplx(0.0,arg))*ph(nn)
             ENDDO
+            sfs = sfs/sym%nop
+!     -----3*ji(gr)/gr term
+            s1 = 3.* (sin(srmt)/srmt-cos(srmt))/ (srmt*srmt)
+            x(ng) = x(ng) - atoms%volmts(n)*atoms%neq(n)*s1*sfs
+         ENDDO
       ENDDO starloop
 !$OMP end parallel do
 

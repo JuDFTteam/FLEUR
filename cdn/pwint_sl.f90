@@ -60,8 +60,8 @@ CONTAINS
     !     -----> sphere contributions
     !
     s = stars%sk3(ig3d)
-    nat = 1
     DO n = 1,atoms%ntype
+       nat = atoms%firstAtom(n)
        srmt = s*atoms%rmt(n)
        CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab, kv, kr,ph)
        sfs = (0.0,0.0)
@@ -75,7 +75,6 @@ CONTAINS
        !
        s1 = 3.* (SIN(srmt)/srmt-COS(srmt))/ (srmt*srmt)
        x = x - atoms%volmts(n)*nmtsl1(n)*s1*sfs
-       nat = nat + atoms%neq(n)
     ENDDO
     !
   END SUBROUTINE pwint_sl

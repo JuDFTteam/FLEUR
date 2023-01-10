@@ -249,8 +249,8 @@ CONTAINS
 
              ! (f)orce(f)actor(on)(at)oms calculation, parallelization in k
              ffonat = czero
-             nat = 1
              DO n = 1, atoms%ntype
+                nat = atoms%firstAtom(n)
                 nd = sym%ntypsy(nat)
                 ! find maximal l of the potential for atom (type) n
                 ! directly reading max(llh(:,nd)) is only possible if llh is initialized to zero
@@ -301,7 +301,6 @@ CONTAINS
                    kp = kp+1
                 END DO ! k stars
                 DEALLOCATE ( bsl,integrand )
-                nat = nat+atoms%neq(n)
              END DO ! n atom type
 
              ! collect the entries of ffonat calculated by the different processors
@@ -364,8 +363,8 @@ CONTAINS
           !       differentiable density at the sphere boundary.
           !       IF mshc = jri  either core tail too small or no core (i.e. H)
           !
-          nat = 1
           DO  n = 1,atoms%ntype
+              nat = atoms%firstAtom(n)
               nd = sym%ntypsy(nat)
               IF ((mshc(n).GT.atoms%jri(n)).AND.((atoms%econf(n)%num_core_states.GT.0).OR.l_st)) THEN
 
@@ -430,7 +429,6 @@ CONTAINS
                 ELSE
                    alpha(n) = 0.0
               ENDIF
-              nat = nat + atoms%neq(n)
           ENDDO
           !
           IF (fmpi%irank ==0) THEN
@@ -664,13 +662,8 @@ CONTAINS
                                  rh(:,n),alpha(n),stars,cell,acoff(n),qf)
 
               ! (2) structure constant for each atom of atom type
-            
-              nat1 = 1
-              IF (n>1) THEN
-                 DO k = 1, n-1
-                    nat1 = nat1 + atoms%neq(k)
-                 END DO
-              END IF  
+              
+              nat1 = atoms%firstAtom(n)
               
               IF (l_f2) THEN     
                  CALL StructureConst_forAtom(nat1,stars ,sym,reducedStarsCutoff,&
