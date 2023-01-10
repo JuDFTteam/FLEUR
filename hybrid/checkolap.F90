@@ -155,7 +155,7 @@ CONTAINS
                END DO
 
                lm = sum([(mpdata%num_radfun_per_l(j, itype)*(2*j + 1), j=0, l - 1)])
-               iatom = sum(atoms%neq(1:itype - 1)) + 1 ! take first of group of equivalent atoms
+               iatom = atoms%firstAtom(itype)
                DO m = -l, l
                   olapcv = 0
                   DO j = 1, mpdata%num_radfun_per_l(l, itype)

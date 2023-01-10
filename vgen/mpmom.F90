@@ -317,14 +317,13 @@ contains
       INTEGER :: mb, n, nat, nl, ns, jm, l, lp, m, mp, mVec, pref
       REAL    :: fint, gauntFactor
 
-      nat = 1
       pref = -1
       IF (iDtype.NE.0) THEN
-         nat = SUM(atoms%neq(:iDtype-1))
          pref = 1
       END IF
 
       DO n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
+         nat = atoms%firstAtom(n)
          ns = sym%ntypsy(nat)
          jm = atoms%jri(n)
          DO nl = 0, sphhar%nlh(ns)
@@ -344,7 +343,6 @@ contains
                END DO ! mb
             END DO ! l
          END DO ! nl
-         nat = nat + atoms%neq(n)
       END DO ! n
 
    END SUBROUTINE dfpt_mt_moments_SF

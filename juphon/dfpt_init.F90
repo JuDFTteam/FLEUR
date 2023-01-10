@@ -654,7 +654,7 @@ CONTAINS
 
         DO iSpin = 1, jspins
             DO iType = 1, atoms%ntype
-                iAtom = SUM(atoms%neq(:iType-1)) + 1
+                iAtom = atoms%firstAtom(iType)
                 ptsym = sym%ntypsy(iAtom)
                 DO ilh = 0, sphhar%nlh(ptsym)
                     l = sphhar%llh(iLH, ptsym)

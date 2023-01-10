@@ -175,14 +175,14 @@ CONTAINS
                ii = mt_start(js) - 1
                IF (.NOT.PRESENT(denIm)) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, j)
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
                   IF (js == 3) THEN !Imaginary part
                      DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                            vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, 4)
                            ii = ii + atoms%jri(n)
                         ENDDO
@@ -190,26 +190,26 @@ CONTAINS
                   ENDIF
                ELSE ! DFPT mixing
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, j)
                         ii = ii + atoms%jri(n)
                      END DO
                   END DO
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, j)
                         ii = ii + atoms%jri(n)
                      END DO
                   END DO
                   IF (js == 3) THEN !Imaginary part
                      DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                            vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, 4)
                            ii = ii + atoms%jri(n)
                         END DO
                      END DO
                      DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                            vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, 4)
                            ii = ii + atoms%jri(n)
                         END DO
@@ -255,14 +255,14 @@ CONTAINS
                !This PE stores some(or all) MT data
                ii = mt_start(js)
                DO n = mt_rank + 1, atoms%ntype, mt_size
-                  DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                  DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                      den%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                      ii = ii + atoms%jri(n)
                   ENDDO
                ENDDO
                IF (l_dfpt) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         denIm%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                         ii = ii + atoms%jri(n)
                      ENDDO
@@ -270,14 +270,14 @@ CONTAINS
                END IF
                IF (js == 3) THEN !Imaginary part comes as 4th spin
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         den%mt(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
                   IF (l_dfpt) THEN
                      DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                            denIm%mt(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                            ii = ii + atoms%jri(n)
                         ENDDO
@@ -407,7 +407,7 @@ CONTAINS
             dxn = atoms%neq(n)*atoms%dx(n)/3.0
             dxn2 = 2.0*dxn
             dxn4 = 4.0*dxn
-            DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+            DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                i = i + 1
                g_mt(i) = dxn/atoms%rmsh(1, n)
                IF (.NOT. l_pot) THEN
@@ -576,9 +576,9 @@ CONTAINS
                !This PE stores some(or all) MT data
                DO n = mt_rank + 1, atoms%ntype, mt_size
                   IF (l_dfpt) THEN
-                     len = len + 2*(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     len = len + 2*(sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
                   ELSE
-                     len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     len = len + (sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
                   END IF
                ENDDO
                mt_length_g = MAX(len, mt_length_g)
@@ -586,9 +586,9 @@ CONTAINS
                   !need to store imaginary part as well...
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      IF (l_dfpt) THEN
-                        len = len + 2*(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                        len = len + 2*(sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
                      ELSE
-                        len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                        len = len + (sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
                      END IF
                   ENDDO
                ENDIF

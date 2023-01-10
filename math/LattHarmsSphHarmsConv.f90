@@ -17,7 +17,7 @@ CONTAINS
 
       INTEGER :: iAtom, iLH, ns, l, iM, m, lm, iR
 
-      iAtom = SUM(atoms%neq(:iType-1)) + 1
+      iAtom = atoms%firstAtom(iType)
       ns = sym%ntypsy(iAtom)
 
       funcSphHarms = CMPLX(0.0,0.0)
@@ -48,7 +48,7 @@ SUBROUTINE sphHarmsRepToLattHarms(sym, atoms, lattHarms, iType, funcSphHarms, fu
 
       INTEGER :: iAtom, iLH, ns, l, iM, m, lm, iR
 
-      iAtom = SUM(atoms%neq(:iType-1)) + 1
+      iAtom = atoms%firstAtom(iType)
       ns = sym%ntypsy(iAtom)
 
       funcLattHarms = 0.0

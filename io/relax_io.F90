@@ -175,12 +175,12 @@ CONTAINS
           WRITE(*,*) "Attention: Overlapping MT-spheres. Reduced displacement by 10%"
           WRITE(*,*) indx,overlap(indx(1),indx(2))
           WRITE(oUnit,'(a,2(i0,1x),f12.8)') "Attention, overlapping MT-spheres: ",indx,overlap(indx(1),indx(2))
-          ! WRITE(error_output, '(3a,f12.8,a)') "Overlapping MT-spheres during relaxation: ", atoms%label(sum(atoms%neq(:indx(1)-1))+1),&
-          ! &atoms%label(sum(atoms%neq(:indx(2)-1))+1), overlap(indx(1),indx(2)),&
+          ! WRITE(error_output, '(3a,f12.8,a)') "Overlapping MT-spheres during relaxation: ", atoms%label(atoms%firstAtom(indx(1))),&
+          ! &atoms%label(atoms%firstAtom(indx(2))), overlap(indx(1),indx(2)),&
           ! &NEW_LINE('A')//"Treat as an error: writing rescaled displacements to relax.xml is not implemented"
           error_output = "Overlapping MT-spheres during relaxation: " // NEW_LINE('A') // &
-                         strip(atoms%label(sum(atoms%neq(:indx(1)-1))+1)) // " " // &
-                         strip(atoms%label(sum(atoms%neq(:indx(2)-1))+1)) // &
+                         strip(atoms%label(atoms%firstAtom(indx(1)))) // " " // &
+                         strip(atoms%label(atoms%firstAtom(indx(2)))) // &
                          " olap: "//float2str(overlap(indx(1),indx(2)))//NEW_LINE('A')//&
                          "Treat as an error: writing rescaled displacements to relax.xml is not implemented"
           CALL judft_error(error_output)
@@ -209,9 +209,9 @@ CONTAINS
 
 
     DO iType = 1, atoms%ntype
-       startAtom = SUM(atoms%neq(:iType-1))+1
+       startAtom = atoms%firstAtom(iType)
        tau0=atoms%taual(:,startAtom)
-       DO iAtom = startAtom, SUM(atoms%neq(:iType))
+       DO iAtom = startAtom, startAtom + atoms%neq(iType) - 1
           jop = sym%invtab(sym%ngopr(iAtom))
           tau0_rot=MATMUL(1.*sym%mrot(:,:,jop),tau0)+sym%tau(:,jop) !translation will cancel, included for clarity
           tau_rot=MATMUL(1.*sym%mrot(:,:,jop),tau0+disp(:,iType))+sym%tau(:,jop)
