@@ -199,7 +199,7 @@ CONTAINS
 
     DO ntyp=1,atoms%ntype
        DO nn = 1,atoms%neq(ntyp)
-         natom=sum(atoms%neq(:ntyp-1))
+         natom = atoms%firstAtom(ntyp) - 1
          natom = natom + nn
           DO lo = 1,atoms%nlo(ntyp)
              l = atoms%llo(lo,ntyp)

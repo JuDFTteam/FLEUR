@@ -102,11 +102,9 @@ CONTAINS
                vr0(:,2)=vr0(:,1)
             else
                vr0=vr(:,itype,:)
-            ENDIF   
-            na = 1
-            DO i = 1, itype - 1
-               na = na + atoms%neq(i)
-            END DO
+            ENDIF
+            
+            na = atoms%firstAtom(itype)
 
             DO ispin = jsp_start,jsp_end
                !Spherical component
@@ -378,7 +376,7 @@ CONTAINS
 8200           FORMAT(/,5x,'j-decomposed charge',/,t6,'atom',t15,'s',t24,'p1/2',t33,'p3/2',&
                       t42,'d3/2',t51,'d5/2',t60,'f5/2',t69,'f7/2')
                DO itype = 1, atoms%ntype
-                  natom = SUM(atoms%neq(:itype-1)) + 1
+                  natom = atoms%firstAtom(itype)
                   IF (.NOT.banddos%dos_atom(natom)) CYCLE
                   !Find index for dos.
                   DO n_dos = 1, size(banddos%dos_atomlist)
