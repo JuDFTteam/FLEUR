@@ -92,7 +92,7 @@ CONTAINS
           CALL setabc1lo(atoms,n,usdus,jspin,alo1,blo1,clo1)
           !  ----> loop over equivalent atoms
           DO nn = 1,atoms%neq(n)
-             natom = SUM(atoms%neq(:n-1)) + nn
+             natom = atoms%firstAtom(n) - 1 + nn
              IF ((natom.GE.nat_start).AND.(natom.LE.nat_stop)) THEN
                 natom_l = natom_l + 1
                 IF (sym%invsat(natom).EQ.2) THEN
