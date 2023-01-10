@@ -76,7 +76,7 @@ CONTAINS
        !--->             set up phase factors
        cph = 0.0
        ski = lapw%gvec(:,ki,iintsp) + qssbti
-       DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+       DO nn = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
           tnn = tpi_const*atoms%taual(:,nn)
           DO kj = 1,ki
              cph(kj) = cph(kj) +&

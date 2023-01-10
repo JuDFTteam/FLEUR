@@ -120,7 +120,7 @@ CONTAINS
 #endif
 
       DO nn = 1,atoms%neq(n)
-         na = SUM(atoms%neq(:n-1)) + nn
+         na = atoms%firstAtom(n) - 1 + nn
          IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
             rchi = MERGE(REAL(chi), REAL(chi)*2, (sym%invsat(na)==0))
             cchi = MERGE(chi, chi*2, (sym%invsat(na)==0))

@@ -87,7 +87,7 @@ CONTAINS
           !--->             set up phase factors
           cph = 0.0
           ski = lapw%gvec(:,ki,1)
-          DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+          DO nn = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
              tnn = tpi_const*atoms%taual(:,nn)
              DO jv = 1,NVEC_rem
                 kj = kj_off - 1 + jv
@@ -210,7 +210,7 @@ CONTAINS
     blo1=blo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
     clo1=clo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
 
-    DO na=sum(atoms%neq(:n-1))+1,sum(atoms%neq(:n))
+    DO na = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
       IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
         !--->    if this atom is the first of two atoms related by inversion,
         !--->    the contributions to the overlap matrix of both atoms are added

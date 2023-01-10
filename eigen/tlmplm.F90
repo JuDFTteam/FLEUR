@@ -94,7 +94,7 @@ CONTAINS
          CALL genMTBasis(atoms,enpara,v,fmpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo(:,:,:,i),hub1data=hub1data)
       END DO
 
-      na = SUM(atoms%neq(:n-1)) + 1
+      na = atoms%firstAtom(n)
       nsym = sym%ntypsy(na)
       nh = sphhar%nlh(nsym)
 

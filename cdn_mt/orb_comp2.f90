@@ -80,13 +80,13 @@ CONTAINS
     ALLOCATE(bcof(size(eigVecCoeffs%abcof,1),0:size(eigVecCoeffs%abcof,2)-1))
     ALLOCATE(ccof(-atoms%llod:atoms%llod,size(eigVecCoeffs%ccof,2),size(eigVecCoeffs%ccof,3)))
 
-    DO   ityp = 1,atoms%ntype
+    DO ityp = 1,atoms%ntype
        ddn0 = usdus%ddn(0,ityp,jspin)
        ddn1 = usdus%ddn(1,ityp,jspin)
        ddn2 = usdus%ddn(2,ityp,jspin)
        ddn3 = usdus%ddn(3,ityp,jspin)
-       DO  imt=1,atoms%neq(ityp)
-          mt=sum(atoms%neq(:ityp-1))+1
+       DO imt=1,atoms%neq(ityp)
+          mt = atoms%firstAtom(ityp)
           if (.not.banddos%dos_atom(mt)) cycle
           !assign and rotate if requested the abcofs
           IF (ANY((/banddos%alpha(mt),banddos%beta(mt),banddos%gamma(mt)/).NE.0.0)) THEN

@@ -100,7 +100,7 @@ CONTAINS
        !CPP_OMP END PARALLEL
     ENDIF
 
-    na = SUM(atoms%neq(:n-1))
+    na = atoms%firstAtom(n) - 1
     DO nn = 1,atoms%neq(n)
        na = na + 1
        IF ((sym%invsat(na).EQ.0) .OR. (sym%invsat(na).EQ.1)) THEN
