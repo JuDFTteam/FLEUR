@@ -59,25 +59,42 @@ CONTAINS
                                       & + killcont(1) * pref(iDir) * hmat_tmp%data_c(ikGPr, ikG0)
                smat%data_c(ikGPr, ikG0) = smat%data_c(ikGPr, ikG0) &
                                       & + killcont(2) * pref(iDir) * smat_tmp%data_c(ikGPr, ikG0)
-            ELSE IF (ikGPr<=nvPr.AND.ikG>nv) THEN
-               iLo = ikG-nv
-               l = atoms%llo(iLo, iDtype)
-               DO imLo = 1, 2*l+1
-                  ikLo = lapw%kvec(imLo,iLo,iDtype)
-                  ikGLo = nv + lapw%index_lo(iLo,iDtype) + imLo
-                  IF (MOD(ikGLo-1,fmpi%n_size) == fmpi%n_rank) THEN
-                     ikGLo0 = (ikGLo-1)/fmpi%n_size+1
+            ELSE IF (ikGPr<=nvPr.AND.ikG==nv+1) THEN
 
-                     pref = gvec(:,ikLo) + lapw%bkpt
+               DO iLo = 1, atoms%nlo(iDtype)
+                  DO imLo = 1, lapw%nkvec(iLo,iDtype)
+                     ikLo = lapw%kvec(imLo,iLo,iDtype)
+                     ikGLo = nv + lapw%index_lo(iLo,iDtype) + imLo
+
+                     pref = 0*gvec(:,ikLo) + 0*lapw%bkpt
                      pref = pref - gvecPr(:, ikGPr) - lapwPr%bkpt - lapwPr%qphon
                      pref = ImagUnit * MATMUL(pref, bmat)
 
-                     hmat%data_c(ikGPr, ikGLo0) = hmat%data_c(ikGPr, ikGLo0) &
-                                            & + killcont(1) * pref(iDir) * hmat_tmp%data_c(ikGPr, ikGLo0)
-                     smat%data_c(ikGPr, ikGLo0) = smat%data_c(ikGPr, ikGLo0) &
-                                            & + killcont(2) * pref(iDir) * smat_tmp%data_c(ikGPr, ikGLo0)
-                  END IF
-               END DO
+                     hmat%data_c(ikGPr, ikGLo) = hmat%data_c(ikGPr, ikGLo) &
+                                            & + killcont(1) * pref(iDir) * hmat_tmp%data_c(ikGPr, ikGLo)
+                     smat%data_c(ikGPr, ikGLo) = smat%data_c(ikGPr, ikGLo) &
+                                            & + killcont(2) * pref(iDir) * smat_tmp%data_c(ikGPr, ikGLo)
+                  END DO
+               END DO ! loop over LOs
+
+               !iLo = ikG-nv
+               !l = atoms%llo(iLo, iDtype)
+               !DO imLo = 1, 2*l+1
+               !   ikLo = lapw%kvec(imLo,iLo,iDtype)
+               !   ikGLo = nv + lapw%index_lo(iLo,iDtype) + imLo
+               !   IF (MOD(ikGLo-1,fmpi%n_size) == fmpi%n_rank) THEN
+               !      ikGLo0 = (ikGLo-1)/fmpi%n_size+1
+
+               !      pref = gvec(:,ikLo) + lapw%bkpt
+               !      pref = pref - gvecPr(:, ikGPr) - lapwPr%bkpt - lapwPr%qphon
+               !      pref = ImagUnit * MATMUL(pref, bmat)
+
+               !      hmat%data_c(ikGPr, ikGLo0) = hmat%data_c(ikGPr, ikGLo0) &
+               !                             & + killcont(1) * pref(iDir) * hmat_tmp%data_c(ikGPr, ikGLo0)
+               !      smat%data_c(ikGPr, ikGLo0) = smat%data_c(ikGPr, ikGLo0) &
+               !                             & + killcont(2) * pref(iDir) * smat_tmp%data_c(ikGPr, ikGLo0)
+               !   END IF
+               !END DO
             ELSE IF (ikGPr>nvPr.AND.ikG<=nv) THEN
                iLoPr = ikGPr-nvPr
                lPr = atoms%llo(iLoPr, iDtype)
@@ -86,7 +103,7 @@ CONTAINS
                   ikGLoPr = nvPr + lapwPr%index_lo(iLoPr,iDtype) + imLoPr
 
                   pref = gvec(:, ikG) + lapw%bkpt
-                  pref = pref - gvecPr(:,ikLoPr) - lapwPr%bkpt - lapwPr%qphon
+                  pref = pref - 0*gvecPr(:,ikLoPr) - 0*lapwPr%bkpt - 0*lapwPr%qphon
                   pref = ImagUnit * MATMUL(pref, bmat)
 
                   hmat%data_c(ikGLoPr, ikG0) = hmat%data_c(ikGLoPr, ikG0) &
@@ -94,7 +111,7 @@ CONTAINS
                   smat%data_c(ikGLoPr, ikG0) = smat%data_c(ikGLoPr, ikG0) &
                                            & + killcont(2) * pref(iDir) * smat_tmp%data_c(ikGLoPr, ikG0)
                END DO
-            ELSE
+            ELSE IF (ikGPr>nvPr.AND.ikG>nv) THEN
                iLoPr = ikGPr-nvPr
                lPr = atoms%llo(iLoPr, iDtype)
                iLo = ikG-nv
@@ -111,7 +128,7 @@ CONTAINS
 
                         pref = gvec(:,ikLo) + lapw%bkpt
                         pref = pref - gvecPr(:,ikLoPr) - lapwPr%bkpt - lapwPr%qphon
-                        pref = ImagUnit * MATMUL(pref, bmat)
+                        pref = 0*ImagUnit * MATMUL(pref, bmat)
 
                         hmat%data_c(ikGLoPr, ikGLo0) = hmat%data_c(ikGLoPr, ikGLo0) &
                                                  & + killcont(1) * pref(iDir) * hmat_tmp%data_c(ikGLoPr, ikGLo0)
