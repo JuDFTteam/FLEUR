@@ -19,9 +19,7 @@ module m_mpmom
   !     or see the original paper for the normal Coulomb case only:
   !     M. Weinert: J.Math.Phys. 22(11) (1981) p.2434 eq. (10)-(15)
   !     ***********************************************************
-#ifdef CPP_MPI
-  use mpi
-#endif
+
 contains
 
   subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm,l_coreCharge,&
@@ -204,9 +202,8 @@ contains
   subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw_in, potdenType, qlmp_out )
     ! multipole moments of the interstitial charge in the spheres
 
-#ifdef CPP_MPI
-    use mpi
-#endif
+    use m_mpi_bc_tool
+    use m_mpi_reduce_tool
     use m_phasy1
     use m_sphbes
      
@@ -232,11 +229,12 @@ contains
     complex                        :: pylm(( maxval( atoms%lmax ) + 1 ) ** 2, atoms%ntype)
     real                           :: sk3r, rl2
     real                           :: aj(0:maxval( atoms%lmax ) + 1 )
-    complex                        :: qpw(stars%ng3)
+    complex, ALLOCATABLE           :: qpw(:)
     real                           :: il(0:maxval( atoms%lmax ) + 1 )
     real                           :: kl(0:maxval( atoms%lmax ) + 1 )
     complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
+    ALLOCATE(qpw(stars%ng3))
     qpw = qpw_in(:stars%ng3)
     qlmp = 0.0
     if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8) then
@@ -251,9 +249,7 @@ contains
       end do
     end if
 
-#ifdef CPP_MPI
-    call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
-#endif
+    call mpi_bc(qpw,0,fmpi%mpi_comm)
 
     ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
 !    !$omp parallel do if(atoms%ntype < 600) default( none ) &
@@ -291,11 +287,7 @@ contains
       end do                    ! n = 1, atoms%ntype
     end do                      ! k = 2, stars%ng3
 !    !$omp end parallel do
-#ifdef CPP_MPI
-    CALL MPI_REDUCE( qlmp, qlmp_out, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, fmpi%mpi_comm, ierr )
-#else
-    qlmp_out = qlmp
-#endif
+    CALL mpi_sum_reduce(qlmp, qlmp_out, fmpi%mpi_comm)
 
   end subroutine pw_moments
 
@@ -348,16 +340,15 @@ contains
 
    SUBROUTINE dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw_in, qlmp_SF )
 
-#ifdef CPP_MPI
-          use mpi
-#endif
-          use m_phasy1
-          use m_sphbes
-          use m_constants
-          use m_types
-          USE m_gaunt, only : Gaunt1
+      use m_mpi_bc_tool
+      use m_mpi_reduce_tool
+      use m_phasy1
+      use m_sphbes
+      use m_constants
+      use m_types
+      USE m_gaunt, only : Gaunt1
 
-          implicit none
+      implicit none
 
       type(t_mpi),      intent(in)   :: fmpi
       type(t_sym),      intent(in)   :: sym
@@ -373,7 +364,7 @@ contains
       complex                        :: pylm(( maxval( atoms%lmax ) + 1 ) ** 2, atoms%ntype)
       real                           :: sk3r, rl2
       real                           :: aj(0:maxval( atoms%lmax ) + 1 )
-      complex                        :: qpw(stars%ng3)
+      complex, ALLOCATABLE           :: qpw(:)
       complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
 !      TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -388,6 +379,7 @@ contains
 !      COMPLEX :: pref, phaseFac, temp1, temp2, temp3
       REAL    :: gauntFactor
 
+      ALLOCATE (qpw(stars%ng3))
       qpw = qpw_in(:stars%ng3)
       qlmp = 0.0
 
@@ -402,9 +394,7 @@ contains
          end do
       end if
 
-#ifdef CPP_MPI
-      call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
-#endif
+      call mpi_bc(qpw,0,fmpi%mpi_comm)
 
       do k = fmpi%irank+2, stars%ng3, fmpi%isize
          call phasy1( atoms, stars, sym, cell, k, pylm )
@@ -437,11 +427,7 @@ contains
          END DO ! n = 1, atoms%ntype
       END DO ! k = 2, stars%ng3
 
-#ifdef CPP_MPI
-      CALL MPI_REDUCE( qlmp, qlmp_SF, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, fmpi%mpi_comm, ierr )
-#else
-      qlmp_SF = qlmp
-#endif
+      CALL mpi_sum_reduce(qlmp, qlmp_SF, fmpi%mpi_comm)
 
 !      pref = fpi_const * atoms%rmt(iDtype) * atoms%rmt(iDtype)
 !      DO iG = 1, ngdp
