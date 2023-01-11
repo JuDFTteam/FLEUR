@@ -85,17 +85,16 @@ contains
       ! see (A14)
       qlm = qlmo - qlmp
       ! output section
-      nat = 1
       do n = 1, atoms%ntype
-        write(oUnit, fmt=8000 ) n
-        do l = 0, atoms%lmax(n)
-           do m = -l, l
-              if ( qlmo(m,l,n)/=CMPLX(0.0) .or. qlmp(m,l,n)/=CMPLX(0.0) ) then
-                 write(oUnit, fmt=8010 ) l, m, qlmo(m,l,n), qlmp(m,l,n)
-              end if
-           end do
-        end do
-        nat = nat + atoms%neq(n)
+         nat = atoms%firstAtom(n)
+         write(oUnit, fmt=8000 ) n
+         do l = 0, atoms%lmax(n)
+            do m = -l, l
+               if ( qlmo(m,l,n)/=CMPLX(0.0) .or. qlmp(m,l,n)/=CMPLX(0.0) ) then
+                  write(oUnit, fmt=8010 ) l, m, qlmo(m,l,n), qlmp(m,l,n)
+               end if
+            end do
+         end do
       end do
 
 8000   FORMAT (/,10x,'multipole moments for atom type=',i5,/,/,t3,'l',t7,&

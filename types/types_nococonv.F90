@@ -256,10 +256,9 @@ end subroutine
             !--->    that means that the moments are "in line" with the spin-spiral
             !--->    (beta = qss * taual). note: this means that only atoms within
             !--->    a plane perpendicular to qss can be equivalent!
-            na = 1
             DO iType = 1, atoms%ntype
+               na = atoms%firstAtom(iType)
                nococonv%alph(iType) = noco%alph_inp(iType) + tpi_const*dot_product(nococonv%qss, atoms%taual(:, na))
-               na = na + atoms%neq(iType)
             END DO
          END IF
       ELSE

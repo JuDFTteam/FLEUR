@@ -63,8 +63,8 @@
              IF (nn/=atoms%ntype) CALL juDFT_error("nn.NE.ntype",calledby =&
                   &       "loddop" )
 
-             na = 1
-             DO  n = 1,nn
+             DO n = 1,nn
+                na = atoms%firstAtom(n)
                 READ (nu,END=200,ERR=200) namaux,ndum,jrin,rmtn,dxn
                 READ (nu,END=200,ERR=200) ntydum,nlhn
                 !+gu
@@ -92,8 +92,6 @@
                       READ (nu,END=200,ERR=200) dummy
                    ENDDO
                 ENDIF
-
-                na = na + atoms%neq(n)
              ENDDO
              IF (jsp<=SIZE(fpw,2)) THEN
                 READ (nu,END=200,ERR=200) nq3n

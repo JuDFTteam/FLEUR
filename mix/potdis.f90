@@ -75,8 +75,8 @@ CONTAINS
     END IF
     DO  num = 1,input%jspins
        !     ----> m.t. part
-       na = 1
        DO n = 1,atoms%ntype
+          na = atoms%firstAtom(n)
           rh(:atoms%jri(n))=rhsp(:atoms%jri(n),0,n,num,1)*rhsp(:atoms%jri(n),0,n,num,1) *fpi_const
           CALL intgr3(rh,atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),pdis(0,n,num))
           pdis(4,n,num)=pdis(0,n,num)
@@ -90,7 +90,6 @@ CONTAINS
           pdis(:,n,num) = pdis(:,n,num)*atoms%neq(n)
           dis(num)=dis(num)+SUM(pdis(:,n,num))
           pdis(:,n,num) = SQRT(pdis(:,n,num)/atoms%volmts(n))*1000.
-          na = na + atoms%neq(n)
        ENDDO
        !     ----> interstitial part
        !         ---> create density in the real space

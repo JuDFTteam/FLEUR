@@ -178,8 +178,8 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       !roa+
       ! use cdnovlp to generate total density out of atom densities
       DO ispin = 1, input%jspins
-         nat = 1
          DO n = 1,atoms%ntype
+            nat = atoms%firstAtom(n)
             DO i = 1, jrc(n)
                rh1(i,n,ispin) = rh(i,n,ispin)*fpi_const*rat(i,n)**2
             END DO
@@ -194,7 +194,6 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   den%mt(j,k,n,ispin) = 0.e0
                END DO
             END DO
-            nat = nat + atoms%neq(n)
          END DO
       END DO ! ispin
    END IF ! fmpi%irank == 0

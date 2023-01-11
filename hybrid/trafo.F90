@@ -82,9 +82,9 @@ CONTAINS
 ! MT coefficients
       cmt_out = 0
       iatom = 0
-      iiatom = 0
 
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
@@ -117,7 +117,6 @@ CONTAINS
                lm0 = lm2
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
 ! PW coefficients
@@ -217,9 +216,9 @@ CONTAINS
       ! MT coefficients
       cmt_out = 0
       iatom = 0
-      iiatom = 0
 
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
@@ -253,7 +252,6 @@ CONTAINS
                lm0 = lm2
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
       ! If phase and inversion-sym. is true,
@@ -339,9 +337,9 @@ CONTAINS
       ! MT coefficients
       cmt_out = 0
       iatom = 0
-      iiatom = 0
 
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
@@ -375,7 +373,6 @@ CONTAINS
                lm0 = lm2
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
       ! PW coefficients
