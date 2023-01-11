@@ -66,12 +66,11 @@ CONTAINS
        IF (fixtotal) THEN
           !-roa
           fix = zc/qtot
-          na = 1
           DO n = 1,atoms%ntype
+             na = atoms%firstAtom(n)
              lh = sphhar%nlh(sym%ntypsy(na))
              jm = atoms%jri(n)
              den%mt(:jm,0:lh,n,:) = fix*den%mt(:jm,0:lh,n,:)
-             na = na + atoms%neq(n)
           ENDDO
           den%pw(:stars%ng3,:) = fix*den%pw(:stars%ng3,:)
           IF (input%film) THEN

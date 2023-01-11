@@ -55,8 +55,8 @@ CONTAINS
 
       WRITE  (oUnit,*)
  
-      na = 1
-      DO  n = 1, atoms%ntype
+      DO n = 1, atoms%ntype
+         na = atoms%firstAtom(n)
          IF (atoms%l_geo(n)) THEN
             nd = sym%ntypsy(na)
 
@@ -242,7 +242,6 @@ CONTAINS
 8020        FORMAT (' FX_A8=',2f10.6,' FY_A8=',2f10.6,' FZ_A8=',2f10.6)
 
          END IF
-         na = na + atoms%neq(n)
       END DO
 
       ! Write out the result of a12, a21, b4 and b8
