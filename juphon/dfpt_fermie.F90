@@ -64,6 +64,10 @@ CONTAINS
                   sxm(j,k,jsp) = sfermi(-x)
                   ef_num = ef_num + results%w_iks(j,k,jsp) * sxm(j,k,jsp) * results1%eig(j,k,jsp)
                   ef_den = ef_den + results%w_iks(j,k,jsp) * sxm(j,k,jsp)
+                  write(5557,*) jsp, k, j
+                  write(5557,*) results%w_iks(j,k,jsp)
+                  write(5557,*) sxm(j,k,jsp)
+                  write(5557,*) results1%eig(j,k,jsp)
                END DO
             END DO
          END DO
@@ -73,6 +77,7 @@ CONTAINS
          results1%w_iks(:noccbd,:,1:nspins) = -results%w_iks(:noccbd,:,1:nspins) &
                                       * sxm(:noccbd,:,1:nspins) &
                                       * (results1%eig(:noccbd,:,1:nspins)-results1%ef)/input%tkb
+         write(5558,*) results1%w_iks(:noccbd,:,1:nspins)
       END IF
 
       RETURN
