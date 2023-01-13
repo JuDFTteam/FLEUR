@@ -173,6 +173,7 @@ CONTAINS
                !TODO: Optimize this with (SCA)LAPACK CALLS
                CALL timestart("Matrix multiplications")
                DO nu = 1, noccbd
+                  eigs1 = 0.0
                   !killfloat = matOcc(nu)%data_r(:noccbd,:noccbd)
                   !IF (l_real) THEN ! l_real for zMatk
                   !   tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
@@ -250,6 +251,8 @@ CONTAINS
                      eigs1 = 0
                   END IF
 
+                  results1%eig(nu,nk,jsp) = eigs1(nu)
+
                   IF (zMatq%l_real) THEN ! l_real for zMatq
                      tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
                   ELSE
@@ -284,7 +287,7 @@ CONTAINS
 
                IF (ANY(nk==k_selection)) THEN
                results1%neig = results%neig
-               results1%eig(:noccbd,nk,jsp) = eigs1
+               !results1%eig(:noccbd,nk,jsp) = eigs1
 
                   IF (l_real) THEN ! l_real for zMatk
                      CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_zMatk.npy",zMatk%data_r)
