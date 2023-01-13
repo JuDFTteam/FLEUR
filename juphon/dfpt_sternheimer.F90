@@ -202,7 +202,7 @@ CONTAINS
          !              bqpt=bqpt, dfpt_eig_id=dfpt_eig_id, iDir=iDir, iDtype=iDtype, &
          !              starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
          !END IF
-         CALL dfpt_eigen_new(fi, sphhar, results, resultsq, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+         CALL dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
                              vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, dfpt_tag)
          CALL timestop("dfpt eigen")
 

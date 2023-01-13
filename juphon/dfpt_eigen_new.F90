@@ -15,7 +15,7 @@ MODULE m_dfpt_eigen_new
 
 CONTAINS
 
-   SUBROUTINE dfpt_eigen_new(fi, sphhar, results, resultsq, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
+   SUBROUTINE dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
                              eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, dfpt_tag)
 
       USE m_types
@@ -35,7 +35,7 @@ CONTAINS
 
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_sphhar),     INTENT(IN)       :: sphhar
-      TYPE(t_results),INTENT(INOUT):: results, resultsq
+      TYPE(t_results),INTENT(INOUT):: results, resultsq, results1
       TYPE(t_mpi),INTENT(IN)       :: fmpi
       TYPE(t_enpara),INTENT(IN) :: enpara
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
@@ -213,9 +213,9 @@ CONTAINS
                   IF (norm2(bqpt).LT.1e-8) THEN
                      IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
                      IF (l_real) THEN
-                        eigs1 = DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
+                        eigs1(nu) = DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
                      ELSE
-                        eigs1 = DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
+                        eigs1(nu) = DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
                      END IF
                   ELSE
                      eigs1 = 0
@@ -237,6 +237,17 @@ CONTAINS
                      tempVec(:nbasfcnq) = MATMUL(-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
                   ELSE
                      tempVec(:nbasfcnq) = MATMUL(-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
+                  END IF
+
+                  IF (norm2(q_loop).LT.1e-8) THEN
+                     IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
+                     IF (l_real) THEN
+                        eigs1(nu) = eigs1(nu) + DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
+                     ELSE
+                        eigs1(nu) = eigs1(nu) + DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
+                     END IF
+                  ELSE
+                     eigs1 = 0
                   END IF
 
                   IF (zMatq%l_real) THEN ! l_real for zMatq
@@ -272,6 +283,9 @@ CONTAINS
                END DO
 
                IF (ANY(nk==k_selection)) THEN
+               results1%neig = results%neig
+               results1%eig(:noccbd,nk,jsp) = eigs1
+
                   IF (l_real) THEN ! l_real for zMatk
                      CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_zMatk.npy",zMatk%data_r)
                   ELSE
