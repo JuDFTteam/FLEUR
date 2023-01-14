@@ -203,6 +203,7 @@ contains
     ! multipole moments of the interstitial charge in the spheres
 
     use m_utility
+    use m_omp_checker
     use m_mpi_bc_tool
     use m_mpi_reduce_tool
     use m_phasy1
@@ -245,7 +246,7 @@ contains
     call mpi_bc(qpw,0,fmpi%mpi_comm)
 
     firstStar = MERGE(2,1,norm2(stars%center)<=1e-8)
-    maxBunchSize = 6*getNumberOfThreads() ! This bunch size is kind of a magic number detrmined from some
+    maxBunchSize = 2*getNumberOfThreads() ! This bunch size is kind of a magic number detrmined from some
                                           ! naive performance tests for a 64 atom unit cell
     CALL calcNumberComputationBunches(firstStar, stars%ng3, maxBunchSize, numBunches)
     CALL calcIndexBounds(fmpi, 0, numBunches-1, firstIndexRank, lastIndexRank)

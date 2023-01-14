@@ -120,13 +120,4 @@ MODULE m_utility
 
    END SUBROUTINE calcComputationBunchBounds
 
-   INTEGER FUNCTION getNumberOfThreads()
-      !$ use omp_lib
-      IMPLICIT NONE
-      INTEGER :: numThreads
-      numThreads = 1
-      !$ numThreads = omp_get_num_threads()
-      getNumberOfThreads = numThreads
-   END FUNCTION getNumberOfThreads
-
 END MODULE m_utility

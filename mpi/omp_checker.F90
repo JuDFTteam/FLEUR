@@ -63,4 +63,16 @@ contains
 #endif
 
    end subroutine omp_checker
+
+   INTEGER FUNCTION getNumberOfThreads()
+      !$ use omp_lib
+      IMPLICIT NONE
+      INTEGER :: numThreads
+      numThreads = 1
+      !$omp parallel
+!$    numThreads = omp_get_num_threads()
+      !$omp end parallel
+      getNumberOfThreads = numThreads
+   END FUNCTION getNumberOfThreads
+
 end module m_omp_checker
