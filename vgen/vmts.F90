@@ -88,7 +88,7 @@ contains
 
     firstStar = MERGE(2,1,norm2(stars%center)<=1e-8)
     maxBunchSize = 2*getNumberOfThreads() ! This bunch size is kind of a magic number determined from some
-                                          ! naive performance tests for a 64 atom unit cell (still to do)
+                                          ! naive performance tests for a 64 atom unit cell
     CALL calcNumberComputationBunches(firstStar, stars%ng3, maxBunchSize, numBunches)
     CALL calcIndexBounds(fmpi, 0, numBunches-1, firstIndexRank, lastIndexRank)
 
