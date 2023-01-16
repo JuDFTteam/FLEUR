@@ -85,7 +85,7 @@ CONTAINS
        ddn1 = usdus%ddn(1,ityp,jspin)
        ddn2 = usdus%ddn(2,ityp,jspin)
        ddn3 = usdus%ddn(3,ityp,jspin)
-       DO mt=1,atoms%firstAtom(ityp),atoms%firstAtoms(ityp)+atoms%neq(ityp)-1
+       DO mt=1,atoms%firstAtom(ityp),atoms%firstAtom(ityp)+atoms%neq(ityp)-1
           
           if (.not.banddos%dos_atom(mt)) cycle
           !assign and rotate if requested the abcofs
