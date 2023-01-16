@@ -86,6 +86,8 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    rh = 0.0
    rhoss = 0.0
 
+   CALL timestart("stden - init")
+
    IF (fmpi%irank == 0) THEN
       ! if sigma is not 0.0, then divide this charge among all atoms
       !TODO: reactivate efields
@@ -198,6 +200,8 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       END DO ! ispin
    END IF ! fmpi%irank == 0
 
+   CALL timestop("stden - init")
+
    DO ispin = 1, input%jspins
       CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
                    cell,input ,l_st,ispin,rh1(:,:,ispin),&
@@ -217,7 +221,10 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    endif
 
    ! Check the normalization of total density
+   CALL timestart("stden - qfix")
    CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
+   CALL timestop("stden - qfix")
+   CALL timestart("stden - finalize")
    !Rotate density into global frame if l_alignSQA
    IF (any(noco%l_alignMT)) then
      allocate(nococonv%beta(atoms%ntype),nococonv%alph(atoms%ntype))
@@ -235,6 +242,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       mmpmat_tmp(:,:,:,:size(den%mmpmat,4)) = den%mmpmat
       call move_alloc(mmpmat_tmp,den%mmpmat)
    ENDIF
+
 
    IF(atoms%n_u>0.and.fmpi%irank==0.and.input%ldauInitialGuess) THEN
       !Create initial guess for the density matrix based on the occupations in the inp.xml file
@@ -418,6 +426,8 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    DEALLOCATE ( rhoss )
    deallocate(den%vacz)
    deallocate(den%vacxy)
+
+   CALL timestop("stden - finalize")
 
  END SUBROUTINE stden
 
