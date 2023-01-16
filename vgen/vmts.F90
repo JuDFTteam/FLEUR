@@ -65,7 +65,6 @@ contains
     complex                           :: cp, sm
     integer                           :: i, jm, k, l, lh, n, nd, lm, m, imax, lmax, iMem, ptsym
     integer                           :: maxBunchSize, numBunches, iBunch, firstStar, iTempArray
-    integer                           :: firstIndexRank, lastIndexRank, firstIndexBunch, lastIndexBunch
     complex                           :: temp
     complex                           :: vtl(0:sphhar%nlhd, atoms%ntype)
     complex                           :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
@@ -77,6 +76,7 @@ contains
     real, allocatable, dimension(:,:) :: il, kl
     LOGICAL                           :: l_dfptvgen
     COMPLEX, ALLOCATABLE              :: vtlStars(:,:,:), vtlLocal(:,:)
+    TYPE(t_parallelLoop)              :: mpiLoop, ompLoop
 
     l_dfptvgen = PRESENT(rhoIm)
 
@@ -90,19 +90,20 @@ contains
     maxBunchSize = 2*getNumberOfThreads() ! This bunch size is kind of a magic number determined from some
                                           ! naive performance tests for a 64 atom unit cell
     CALL calcNumberComputationBunches(firstStar, stars%ng3, maxBunchSize, numBunches)
-    CALL calcIndexBounds(fmpi, 0, numBunches-1, firstIndexRank, lastIndexRank)
+
+    CALL mpiLoop%init(fmpi%irank,fmpi%isize,0, numBunches-1)
 
     ALLOCATE(vtlStars(0:sphhar%nlhd,atoms%ntype,maxBunchSize))
     vtlStars = CMPLX(0.0,0.0)
 
     ! q/=0 components
-    DO iBunch = firstIndexRank, lastIndexRank
-       CALL calcComputationBunchBounds(numBunches, iBunch, firstStar, stars%ng3, firstIndexBunch, lastIndexBunch)
+    DO iBunch = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
+       CALL ompLoop%init(iBunch,numBunches,firstStar,stars%ng3)
        !$OMP parallel do default( NONE ) &
-       !$OMP SHARED(atoms,stars,sym,cell,sphhar,firstIndexBunch,lastIndexBunch,vpw,vtlStars,potdenType) &
+       !$OMP SHARED(ompLoop,atoms,stars,sym,cell,sphhar,vpw,vtlStars,potdenType) &
        !$OMP private(iTempArray,cp,pylm,n,sbf,nd,lh,l,sm,jm,m,lm)
-       do k = firstIndexBunch, lastIndexBunch
-          iTempArray = k - firstIndexBunch + 1
+       do k = ompLoop%bunchMinIndex, ompLoop%bunchMaxIndex
+          iTempArray = k - ompLoop%bunchMinIndex + 1
           cp = vpw(k) * stars%nstr(k)
           call phasy1( atoms, stars, sym, cell, k, pylm )
           do n = 1, atoms%ntype
