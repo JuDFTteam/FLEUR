@@ -145,7 +145,7 @@ CONTAINS
             CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
             CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq, tempval)
             !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-            write(9989,*) "IR rho1 V1ext                 ", tempval
+            !write(9989,*) "IR rho1 V1ext                 ", tempval
             tempval = CMPLX(0.0,0.0)
             CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -180,7 +180,7 @@ CONTAINS
             !CALL save_npy("pwwq_new.npy",pwwq2)
             CALL dfpt_int_pw(starsq, fi%cell, pwwq, vExt1%pw(:,1), tempval)
             !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-            write(9989,*) "IR Theta1 rho V1ext           ", tempval
+            !write(9989,*) "IR Theta1 rho V1ext           ", tempval
             tempval = CMPLX(0.0,0.0)
             CALL dfpt_int_pw(starsq, fi%cell, pwwq2, vExt1%pw(:,1), tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -249,7 +249,7 @@ CONTAINS
             CALL dfpt_convol_big(2, stars, starsq, rho_pw, theta1full(0:, iDtype_col, iDir_col), pwwq2)
             CALL dfpt_int_pw(starsq, fi%cell, vC1%pw(:,1), pwwq, tempval)
             !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-            write(9989,*) "IR V1C rho Theta1             ", tempval
+            !write(9989,*) "IR V1C rho Theta1             ", tempval
             tempval = CMPLX(0.0,0.0)
             CALL dfpt_int_pw(starsq, fi%cell, vC1%pw(:,1), pwwq2, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -265,7 +265,7 @@ CONTAINS
                CALL dfpt_convol_big(2, stars, starsq, vTot%pw(:, iSpin), theta1full(0:, iDtype_col, iDir_col), pwwq2)
                CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq, tempval)
                !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               write(9989,*) "IR rho1 vTot Theta1           ", tempval
+               !write(9989,*) "IR rho1 vTot Theta1           ", tempval
                tempval = CMPLX(0.0,0.0)
                CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq2, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -290,7 +290,7 @@ CONTAINS
                CALL dfpt_convol_big(1, stars, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pww2)
                CALL dfpt_int_pw(stars, fi%cell, rho_pw, pww, tempval)
                !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               write(9989,*) "IR grRho V1ext0               ", tempval
+               !write(9989,*) "IR grRho V1ext0               ", tempval
                tempval = CMPLX(0.0,0.0)
                CALL dfpt_int_pw(stars, fi%cell, rho_pw, pww2, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -306,7 +306,7 @@ CONTAINS
                   CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full0(0:, iType, iDir_row), pww2)
                   CALL dfpt_int_pw(stars, fi%cell, pww, vExt1%pw(:,1), tempval)
                   !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-                  write(9989,*) "IR Theta1 rho V1ext0          ", tempval
+                  !write(9989,*) "IR Theta1 rho V1ext0          ", tempval
                   tempval = CMPLX(0.0,0.0)
                   CALL dfpt_int_pw(stars, fi%cell, pww2, vExt1%pw(:,1), tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -341,7 +341,7 @@ CONTAINS
                CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full0(0:, iDtype_col, iDir_col), pww2)
                CALL dfpt_int_pw(stars, fi%cell, grVC3(iDir_row)%pw(:,1), pww, tempval)
                !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               write(9989,*) "IR grVC rho Theta1            ", tempval
+               !write(9989,*) "IR grVC rho Theta1            ", tempval
                tempval = CMPLX(0.0,0.0)
                CALL dfpt_int_pw(stars, fi%cell, grVC3(iDir_row)%pw(:,1), pww2, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
@@ -357,9 +357,9 @@ CONTAINS
                   CALL dfpt_convol_big(1, stars, stars, vTot%pw(:,iSpin), theta1full0(0:,iDtype_col,iDir_col), pww2)
                   CALL dfpt_int_pw(stars, fi%cell, pww, grRho3(iDir_row)%pw(:,iSpin), tempval)
                   !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-                  write(9989,*) "IR grRho vTot Theta1          ", tempval
+                  !write(9989,*) "IR grRho vTot Theta1          ", tempval
                   tempval = CMPLX(0.0,0.0)
-                  CALL dfpt_int_pw(stars, fi%cell, pww2, grRho3(iDir_row)%pw(:,iSpin), tempval)
+                  CALL dfpt_int_pw(stars, fi%cell, grRho3(iDir_row)%pw(:,iSpin), pww2, tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   write(9989,*) "IR grRho vTot Theta1 new      ", tempval
                   tempval = CMPLX(0.0,0.0)
@@ -574,10 +574,14 @@ CONTAINS
 
       REAL,    ALLOCATABLE :: kGqExt(:,:)
 
+      INTEGER, ALLOCATABLE :: k_selection(:)
+
       COMPLEX  zdotc
       EXTERNAL zdotc
 
       kqpts = fi%kpts
+      ALLOCATE(k_selection(16))
+      k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
 
       DO nk_i = 1, fi%kpts%nkpt
          kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt

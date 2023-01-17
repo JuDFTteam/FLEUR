@@ -295,7 +295,7 @@ CONTAINS
                               lmp = lp* (lp+1) + mp
                               s = tlmplm%h_loc2(ntyp)
                               ! Note, that xtx are the t-matrices and NOT their
-                              ! repsective complex conjugates as in hssphn !TODO: outdated comment?
+                              ! respective complex conjugates as in hssphn !TODO: outdated comment?
                               utu = tlmplm%h_loc(lmp,lm,ntyp,ilSpinPr,ilSpin)
                               dtu = tlmplm%h_loc(lmp+s,lm,ntyp,ilSpinPr,ilSpin)
                               utd = tlmplm%h_loc(lmp,lm+s,ntyp,ilSpinPr,ilSpin)
@@ -386,7 +386,7 @@ CONTAINS
                                                      & CONJG(abcloPr(1,mp,nkvecp,lo))*axx + &
                                                      & CONJG(abcloPr(2,mp,nkvecp,lo))*bxx + &
                                                      & CONJG(abcloPr(3,mp,nkvecp,lo))*cxx )
-                              !TODO: Should there be an Ekin sufrace term here as well? 
+                              !TODO: Should there be an Ekin sufrace term here as well?
                            END IF
                         END DO
                      END DO

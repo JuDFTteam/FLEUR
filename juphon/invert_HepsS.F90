@@ -49,10 +49,10 @@ CONTAINS
          CALL matOcc(nu)%init(.TRUE., nocckq, nocckq)
          DO nupr = 1, nekpr
             deps = eignukpr(nupr)-eignuk(nu)
-            write(6666,*) eignukpr(nupr)
-            write(6666,*) eignuk(nu)
-            write(6666,*) deps
-            write(6666,*) "-------"
+            !write(6666,*) eignukpr(nupr)
+            !write(6666,*) eignuk(nu)
+            !write(6666,*) deps
+            !write(6666,*) "-------"
             IF (ABS(deps)<juPhon%eDiffcut) CYCLE
             !IF (ikpt==1) CYCLE
             !IF (ABS(deps)<1e-7) CYCLE

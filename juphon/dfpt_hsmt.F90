@@ -276,8 +276,12 @@ CONTAINS
       INTEGER :: igSpinPr, igSpin
       COMPLEX :: chi(2,2),chi_one
 
+      INTEGER, ALLOCATABLE :: k_selection(:)
       CLASS(t_mat), ALLOCATABLE :: smat_tmp, hmat_tmp, s1mat_tmp(:,:), h1mat_tmp(:,:)
       CLASS(t_mat), ALLOCATABLE :: s1qmat_tmp(:,:), h1qmat_tmp(:,:), s2mat_tmp(:,:), h2mat_tmp(:,:)
+
+      ALLOCATE(k_selection(16))
+      k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
 
       IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
          IF (fmpi%n_size==1) THEN

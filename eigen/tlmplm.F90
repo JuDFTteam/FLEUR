@@ -184,7 +184,7 @@ CONTAINS
                      td%h_loc(lmp,lm+s,n,ilSpinPr,ilSpin)   =  td%h_loc(lmp,lm+s,n,ilSpinPr,ilSpin)   + one*cil*uvd(lpl,lh)
                      td%h_loc(lmp+s,lm,n,ilSpinPr,ilSpin)   =  td%h_loc(lmp+s,lm,n,ilSpinPr,ilSpin)   + one*cil*dvu(lpl,lh)
                      td%h_loc(lmp+s,lm+s,n,ilSpinPr,ilSpin) =  td%h_loc(lmp+s,lm+s,n,ilSpinPr,ilSpin) + one*cil*dvd(lpl,lh)
-                     ! Use the fact that the t matrices are Hermitian by definition to contruct the upper triangle as well.
+                     ! Use the fact that the t matrices are Hermitian by definition to construct the upper triangle as well.
                      IF (lm.NE.lmp) THEN
                         td%h_loc(lm,lmp,n,ilSpinPr,ilSpin)     =  td%h_loc(lm,lmp,n,ilSpinPr,ilSpin)     + one*CONJG(cil*uvu(lpl,lh))
                         td%h_loc(lm,lmp+s,n,ilSpinPr,ilSpin)   =  td%h_loc(lm,lmp+s,n,ilSpinPr,ilSpin)   + one*CONJG(cil*dvu(lpl,lh))

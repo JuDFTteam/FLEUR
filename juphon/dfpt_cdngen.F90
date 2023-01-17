@@ -12,7 +12,7 @@ CONTAINS
 SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
                   kpts,atoms,sphhar,starsq,sym,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,resultsdummy, resultsdummy1,&
-                  archiveType, xcpot,outDen,outDenIm,q_dfpt,iDtype,iDir,l_real)
+                  archiveType, xcpot,outDen,outDenIm,bqpt,iDtype,iDir,l_real)
 
    use m_types_vacdos
    USE m_types
@@ -51,7 +51,7 @@ SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuu
    INTEGER, INTENT(IN)              :: eig_id, eig_id_q, dfpt_eig_id, archiveType, iDtype, iDir
    LOGICAL, INTENT(IN)              :: l_real
 
-   REAL, INTENT(IN) :: q_dfpt(3)
+   REAL, INTENT(IN) :: bqpt(3)
 
    ! Local type instances
    TYPE(t_regionCharges)          :: regCharges
@@ -59,7 +59,7 @@ SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuu
    TYPE(t_vacdos),TARGET          :: vacdosdummy
    TYPE(t_moments)                :: moments
    TYPE(t_cdnvalJob)       :: cdnvalJob, cdnvalJob1
-   TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
+   !TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
 
    !Local Scalars
    REAL                  :: fix, qtot, dummy,eFermiPrev
@@ -69,11 +69,11 @@ SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuu
 
    LOGICAL               :: l_error,Perform_metagga
 
-   kqpts = kpts
-   ! Modify this from kpts only in DFPT case.
-   DO iK = 1, kpts%nkpt
-      kqpts%bk(:, iK) = kqpts%bk(:, iK) + q_dfpt
-   END DO
+   !kqpts = kpts
+   !! Modify this from kpts only in DFPT case.
+   !DO iK = 1, kpts%nkpt
+   !   kqpts%bk(:, iK) = kqpts%bk(:, iK) + bqpt
+   !END DO
 
    ! Initialization section
    CALL moments%init(fmpi,input,sphhar,atoms)
@@ -89,10 +89,10 @@ SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuu
    CALL timestart("dfpt_cdngen: cdnval")
    DO jspin = 1,merge(1,input%jspins,noco%l_mperp)
       CALL cdnvalJob%init(fmpi,input,kpts,noco,resultsdummy,jspin)
-      CALL cdnvalJob1%init(fmpi,input,kqpts,noco,resultsdummy1,jspin)
+      CALL cdnvalJob1%init(fmpi,input,kpts,noco,resultsdummy1,jspin)
       CALL dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
                        vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
-                        hub1inp,kqpts, cdnvalJob1, resultsdummy, resultsdummy1, q_dfpt, iDtype, iDir, outDenIm, l_real)
+                        hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, outDenIm, l_real)
    END DO
    CALL timestop("dfpt_cdngen: cdnval")
 

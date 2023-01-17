@@ -96,7 +96,6 @@ CONTAINS
       DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
                nk=fmpi%k_list(nk_i)
-               write(4444,*) nk_i, nk
 
                ! Get the required eigenvectors and values at k for occupied bands:
                bkpt = fi%kpts%bk(:, nk)
@@ -140,7 +139,7 @@ CONTAINS
                CALL timestop("Read eigenstuff at k/k+q")
 
                CALL timestart("Energy inversion")
-               CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, neigq, noccbd, zMatq%l_real, invE, noccbdq, &
+               CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, nbasfcnq, noccbd, zMatq%l_real, invE, noccbdq, &
                                  2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, matOcc, nk)
                CALL timestop("Energy inversion")
 
@@ -167,7 +166,7 @@ CONTAINS
 
                ALLOCATE(tempVec(nbasfcnq))
                ALLOCATE(tempMat1(nbasfcnq))
-               ALLOCATE(tempMat2(neigq))
+               ALLOCATE(tempMat2(nbasfcnq))
                ALLOCATE(killfloat(noccbd,noccbd))
 
                !TODO: Optimize this with (SCA)LAPACK CALLS
@@ -205,7 +204,7 @@ CONTAINS
                   !   tempMat1(noccbd+1:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c(:,noccbd+1:nbasfcnq))),tempvec)
                   !END IF
                   !IF (nk==1) tempMat1(:noccbd) = CMPLX(0.0,0.0)
-                  tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
+                  tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
 
                   IF (ANY(nk==k_selection)) THEN
                   !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Hband.npy",tempMat2)
@@ -229,9 +228,9 @@ CONTAINS
                   !END IF
 
                   IF (zMatq%l_real) THEN
-                     z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
+                     z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
                   ELSE
-                     z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
+                     z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
                   END IF
 
                   IF (l_real) THEN ! l_real for zMatk
@@ -264,14 +263,14 @@ CONTAINS
                   END IF
 
                   !IF (nk==1) tempMat1(:noccbd) = CMPLX(0.0,0.0)
-                  tempMat2(:neigq) = MATMUL(invE(nu)%data_r,tempMat1)
+                  tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
                   !IF (ANY(nk==k_selection)) THEN
                   !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Sband.npy",tempMat2)
                   !END IF
                   IF (zMatq%l_real) THEN
-                     z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:neigq))
+                     z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
                   ELSE
-                     z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:neigq))
+                     z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
                   END IF
 
                   zMat1%data_c(:nbasfcnq,nu) = z1H(:nbasfcnq,nu) + z1S(:nbasfcnq,nu)
