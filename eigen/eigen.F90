@@ -261,38 +261,16 @@ CONTAINS
 #else
                 n_rank = 0; n_size=1;
 #endif
-<<<<<<< eigen/eigen.F90
-                IF (.NOT.l_dfpteigen) THEN
-                  if (l_needs_vectors) then 
-                     call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
-                  else
-                     CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
-                  endif
-                ELSE
-                    CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
-                    CYCLE k_loop
-                END IF
-                eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
-            ELSE
-                IF (.NOT.l_dfpteigen) THEN
-                    if (fmpi%pe_diag.and.l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
-                                  n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
-                ELSE
-                    if (fmpi%pe_diag) CALL dfpt_eigen(fi, kqpts, results, fmpi, enpara, nococonv, starsq, v1real, lapw, td, tdV1, ud, zMat, eig(:ne_all), bqpt, ne_all, eig_id, dfpt_eig_id, iDir, iDtype)
-                    CYCLE k_loop
-                END IF
-=======
 
-                if (forcetheo%l_needs_vectors) then
+                if (l_needs_vectors) then 
                   call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                 else
                   CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
-                endif
-                eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
+               endif
+               eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
-                if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
+                if (fmpi%pe_diag.and.l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
                     n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
->>>>>>> eigen/eigen.F90
             ENDIF
             neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
