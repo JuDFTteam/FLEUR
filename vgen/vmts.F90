@@ -34,8 +34,6 @@ contains
 
     use m_constants
     use m_types
-    use m_utility
-    use m_omp_checker
     use m_mpi_reduce_tool
     use m_intgr, only : intgr2, sfint
     use m_phasy1
@@ -91,7 +89,7 @@ contains
                                           ! naive performance tests for a 64 atom unit cell
     CALL calcNumberComputationBunches(firstStar, stars%ng3, maxBunchSize, numBunches)
 
-    CALL mpiLoop%init(fmpi%irank,fmpi%isize,0, numBunches-1)
+    CALL mpiLoop%init(fmpi%irank,fmpi%isize,0,numBunches-1)
 
     ALLOCATE(vtlStars(0:sphhar%nlhd,atoms%ntype,maxBunchSize))
     vtlStars = CMPLX(0.0,0.0)

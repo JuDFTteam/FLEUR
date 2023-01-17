@@ -202,8 +202,6 @@ contains
   subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw_in, potdenType, qlmp_out )
     ! multipole moments of the interstitial charge in the spheres
 
-    use m_utility
-    use m_omp_checker
     use m_mpi_bc_tool
     use m_mpi_reduce_tool
     use m_phasy1
@@ -228,7 +226,6 @@ contains
 
     integer                        :: n, k, l, ll1, lm, ierr, m
     integer                        :: maxBunchSize, numBunches, iBunch, firstStar, iTempArray
-    integer                        :: firstIndexRank, lastIndexRank, firstIndexBunch, lastIndexBunch
     complex                        :: sk3i, cil, nqpw, temp
     complex                        :: pylm(( maxval( atoms%lmax ) + 1 ) ** 2, atoms%ntype)
     real                           :: sk3r, rl2
@@ -238,6 +235,7 @@ contains
     real                           :: kl(0:maxval( atoms%lmax ) + 1 )
     complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     complex, ALLOCATABLE           :: qlmpStars(:,:,:,:)
+    TYPE(t_parallelLoop)           :: mpiLoop, ompLoop
 
     ALLOCATE(qpw(stars%ng3))
     qpw = qpw_in(:stars%ng3)
@@ -249,18 +247,18 @@ contains
     maxBunchSize = 2*getNumberOfThreads() ! This bunch size is kind of a magic number detrmined from some
                                           ! naive performance tests for a 64 atom unit cell
     CALL calcNumberComputationBunches(firstStar, stars%ng3, maxBunchSize, numBunches)
-    CALL calcIndexBounds(fmpi, 0, numBunches-1, firstIndexRank, lastIndexRank)
 
     ALLOCATE(qlmpStars(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype,maxBunchSize))
     qlmpStars = CMPLX(0.0,0.0)
 
-    DO iBunch = firstIndexRank, lastIndexRank
-       CALL calcComputationBunchBounds(numBunches, iBunch, firstStar, stars%ng3, firstIndexBunch, lastIndexBunch)
+    CALL mpiLoop%init(fmpi%irank,fmpi%isize,0,numBunches-1)
+    DO iBunch = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
+       CALL ompLoop%init(iBunch,numBunches,firstStar,stars%ng3)
        !$OMP parallel do default( NONE ) &
-       !$OMP SHARED(input,atoms,stars,sym,cell,firstIndexBunch,lastIndexBunch,qpw,qlmpStars,potdenType) &
+       !$OMP SHARED(input,atoms,stars,sym,cell,ompLoop,qpw,qlmpStars,potdenType) &
        !$OMP private(iTempArray,pylm,nqpw,n,sk3r,aj,rl2,il,kl,sk3i,l,cil,ll1,m,lm)
-       do k = firstIndexBunch, lastIndexBunch
-          iTempArray = k - firstIndexBunch + 1
+       do k = ompLoop%bunchMinIndex, ompLoop%bunchMaxIndex
+          iTempArray = k - ompLoop%bunchMinIndex + 1
           call phasy1( atoms, stars, sym, cell, k, pylm )
           nqpw = qpw(k) * stars%nstr(k)
           do n = 1, atoms%ntype

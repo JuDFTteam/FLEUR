@@ -81,43 +81,4 @@ MODULE m_utility
 #endif
    END SUBROUTINE getAdditionalCompilationFlags
 
-   SUBROUTINE calcNumberComputationBunches(minIndex, maxIndex, maxBunchSize, numBunches)
-
-      IMPLICIT NONE
-
-      INTEGER, INTENT(IN)  :: minIndex
-      INTEGER, INTENT(IN)  :: maxIndex
-      INTEGER, INTENT(IN)  :: maxBunchSize
-      INTEGER, INTENT(OUT) :: numBunches
-
-      REAL :: length
-
-      length = maxIndex - minIndex + 1
-      numBunches = CEILING(length/(REAL(maxBunchSize)))
-
-   END SUBROUTINE calcNumberComputationBunches
-
-   SUBROUTINE calcComputationBunchBounds(numBunches, iBunch, firstIndexOverall, lastIndexOverall, firstIndexBunch, lastIndexBunch)
-
-      IMPLICIT NONE
-
-      INTEGER, INTENT(IN)            :: numBunches, iBunch
-      INTEGER, INTENT(IN)            :: firstIndexOverall, lastIndexOverall
-      INTEGER, INTENT(OUT)           :: firstIndexBunch, lastIndexBunch
-
-      INTEGER :: chunkSize, leftoverSize, length
-
-      length = lastIndexOverall - firstIndexOverall + 1
-      chunkSize = length / numBunches
-      leftoverSize = MODULO(length, numBunches)
-      IF (iBunch < leftoverSize) THEN
-         firstIndexBunch = iBunch*(chunkSize + 1) + firstIndexOverall
-         lastIndexBunch = (iBunch + 1)*(chunkSize + 1) + firstIndexOverall - 1
-      ELSE
-         firstIndexBunch = leftoverSize*(chunkSize + 1) + firstIndexOverall + (iBunch - leftoverSize)*chunkSize
-         lastIndexBunch = (firstIndexBunch + chunkSize) - 1
-      ENDIF
-
-   END SUBROUTINE calcComputationBunchBounds
-
 END MODULE m_utility

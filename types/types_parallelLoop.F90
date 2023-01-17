@@ -45,4 +45,31 @@ CONTAINS
       ENDIF
    END SUBROUTINE t_parallelLoop_init
 
+   SUBROUTINE calcNumberComputationBunches(minIndex, maxIndex, maxBunchSize, numBunches)
+
+      IMPLICIT NONE
+
+      INTEGER, INTENT(IN)  :: minIndex
+      INTEGER, INTENT(IN)  :: maxIndex
+      INTEGER, INTENT(IN)  :: maxBunchSize
+      INTEGER, INTENT(OUT) :: numBunches
+
+      REAL :: length
+
+      length = maxIndex - minIndex + 1
+      numBunches = CEILING(length/(REAL(maxBunchSize)))
+
+   END SUBROUTINE calcNumberComputationBunches
+
+   INTEGER FUNCTION getNumberOfThreads()
+      !$ use omp_lib
+      IMPLICIT NONE
+      INTEGER :: numThreads
+      numThreads = 1
+      !$omp parallel
+      !$ numThreads = omp_get_num_threads()
+      !$omp end parallel
+      getNumberOfThreads = numThreads
+   END FUNCTION getNumberOfThreads
+
 END MODULE m_types_parallelLoop
