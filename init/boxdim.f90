@@ -83,7 +83,7 @@ CONTAINS
 
       DO j = 1, 3
          IF (det(j, j) < eps) THEN
-            CALL juDFT_error(" oxdim: determinant. Problem with det(" &
+            CALL juDFT_error("boxdim: determinant. Problem with det(" &
                              //int2str(j) // ","//int2str(j) // ")", calledby="boxdim")
          END IF
       ENDDO

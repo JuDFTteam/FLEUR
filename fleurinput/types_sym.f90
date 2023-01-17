@@ -18,7 +18,7 @@ MODULE m_types_sym
       INTEGER, ALLOCATABLE::mrot(:, :, :)
       !translation vectors (3,nop)
       REAL, ALLOCATABLE::tau(:, :)
-      !Symophic group
+      !Symorphic group
       LOGICAL ::symor = .FALSE.
       !2D-inv-sym
       LOGICAL ::invs2 = .FALSE.

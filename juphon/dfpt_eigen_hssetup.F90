@@ -7,7 +7,7 @@
 MODULE m_dfpt_eigen_hssetup
 CONTAINS
    SUBROUTINE dfpt_eigen_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, &
-                            ud, td, tdV1, vTot1, lapw, lapwq, iDir, iDtype, smat_final, hmat_final)
+                            ud, td, tdV1, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
       USE m_types
       USE m_types_mpimat
       USE m_types_gpumat
@@ -29,6 +29,7 @@ CONTAINS
       TYPE(t_potden),     INTENT(IN)     :: vTot1
       INTEGER,            INTENT(IN)     :: iDir, iDtype
       CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
+      INTEGER,      INTENT(IN)     :: nk, killcont(6)
 
       CLASS(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
 
@@ -49,7 +50,7 @@ CONTAINS
       END DO
 
       CALL timestart("Interstitial part")
-      CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, smat, hmat)
+      CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, hmat, smat, killcont(1:3))
       CALL timestop("Interstitial part")
 
       CALL timestart("MT part")
@@ -57,7 +58,7 @@ CONTAINS
             !$acc enter data copyin(hmat(i,j),smat(i,j))
             !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
       END DO; END DO
-      CALL dfpt_hsmt(fi%atoms, fi%sym, enpara, isp, iDir, iDtype, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, lapwq, ud, td, tdV1, hmat, smat)
+      CALL dfpt_hsmt(fi%atoms, fi%sym, enpara, isp, iDir, iDtype, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, lapwq, ud, td, tdV1, hmat, smat, nk, killcont(4:6))
       DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
             !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
             !$acc exist data delete(hmat(i,j),smat(i,j))

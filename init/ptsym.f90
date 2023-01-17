@@ -1,5 +1,5 @@
-      MODULE m_ptsym
-      use m_juDFT
+MODULE m_ptsym
+   USE m_juDFT
 !********************************************************************
 !     determines the point group symmetry for each representative
 !     atom and then check whether there are several with the same
@@ -18,31 +18,27 @@
 !             nrot      number of operations for each symmetry kind
 !             locops    mapping of operations to space group list
 !*********************************************************************
-
-      CONTAINS
-
-      SUBROUTINE ptsym(
-     >                 ntype,natd,neq,pos,nops,mrot,tau,lmax,
-     <                 nsymt,typsym,nrot,locops)
+CONTAINS
+   SUBROUTINE ptsym(ntype,natd,neq,pos,nops,mrot,tau,lmax,nsymt,typsym,nrot,locops)
 
       USE m_constants
 
       IMPLICIT NONE
 
-      INTEGER, INTENT (IN) :: ntype,neq(ntype),natd
-      INTEGER, INTENT (IN) :: nops,mrot(3,3,nops),lmax(ntype)
-      REAL,    INTENT (IN) :: tau(3,nops),pos(3,natd)
+      INTEGER, INTENT(IN) :: ntype, neq(ntype), natd
+      INTEGER, INTENT(IN) :: nops, mrot(3,3,nops), lmax(ntype)
+      REAL,    INTENT(IN) :: tau(3,nops), pos(3,natd)
 
-      INTEGER, INTENT(OUT) :: locops(nops,natd),nrot(natd)
-      INTEGER, INTENT(OUT) :: nsymt,typsym(natd)
+      INTEGER, INTENT(OUT) :: nsymt
+      INTEGER, INTENT(OUT) :: typsym(natd), nrot(natd), locops(nops,natd)
 
       REAL, PARAMETER :: eps=1.e-7
 
-      INTEGER :: iop,irot,n,na,nn,nsym
-      INTEGER :: indsym(natd),indsym1(natd)
-      REAL    :: v(3),sv(3)
+      INTEGER :: iop, irot, n, na, nn, nsym
+      INTEGER :: indsym(natd), indsym1(natd)
+      REAL    :: v(3), sv(3)
 
-!--->    loop over representative atoms
+      ! loop over representative atoms
       na = 1
       DO n = 1,ntype
           v(:) = pos(:,na)
@@ -58,24 +54,22 @@
 !--->       this operation belongs to the point group
             iop = iop + 1
             locops(iop,na) = irot
-          ENDDO
+          END DO
 
           nrot(na) = iop
           na = na + neq(n)
-      ENDDO
+      END DO
 
 !--->    check that the number of operations in local groups are correct
       na = 1
       DO n = 1, ntype
           IF ( neq(n)*nrot(na) .NE. nops ) THEN
         WRITE (oUnit,'(/a,i3)') ' symmetry is incorrect for atom',na
-        WRITE (oUnit,'(" neq=",i3,", nrot=",i3,", nops=",i3)')            
-     &               neq(n),nrot(na),nops
-            CALL juDFT_error("symmetry is incorrect for some atomp"
-     +           ,calledby ="ptsym")
-          ENDIF
+        WRITE (oUnit,'(" neq=",i3,", nrot=",i3,", nops=",i3)') neq(n),nrot(na),nops
+            CALL juDFT_error("symmetry is incorrect for some atomp",calledby ="ptsym")
+          END IF
           na = na + neq(n)
-      ENDDO
+      END DO
 
 !--->    now determine unique symmetry kinds
 
@@ -86,7 +80,7 @@
 
       na = 1
       atom_loop: DO n = 1, ntype
-        IF (na > 1) THEN 
+        IF (na > 1) THEN
 
           symm_loop: DO nsym = 1, nsymt
             IF ( nrot(na) .NE. nrot(indsym(nsym)) ) CYCLE
@@ -94,8 +88,8 @@
             DO irot=1,nrot(na)
                IF(locops(irot,na).NE.locops(irot,indsym(nsym))) THEN
                   CYCLE symm_loop  ! try next symmetry type
-               ENDIF
-            ENDDO
+               END IF
+            END DO
             IF ( lmax(n).NE.lmax(indsym1(nsym)) ) CYCLE
 
 !--->    same symmetry as a previous one:
@@ -104,10 +98,10 @@
             equi : DO nn = 2, neq(n)
                typsym(na) = nsym
                na = na + 1
-            ENDDO equi
+            END DO equi
             CYCLE atom_loop   ! go to next atom
 
-          ENDDO symm_loop
+          END DO symm_loop
 
 !--->       new symmetry kind
           nsymt = nsymt + 1
@@ -115,23 +109,23 @@
           indsym(nsymt) = na
           indsym1(nsymt) = n
 
-        ENDIF
+        END IF
         na = na + 1
-        equi_loop : DO nn = 2, neq(n) 
+        equi_loop : DO nn = 2, neq(n)
            typsym(na) = nsymt
            na = na + 1
-        ENDDO equi_loop
+        END DO equi_loop
 
-      ENDDO atom_loop
+      END DO atom_loop
 
 !--->    pack locops array
       DO n = 2, nsymt
          nrot(n) = nrot(indsym(n))
          DO irot = 1,nrot(n)
             locops(irot,n) = locops(irot,indsym(n))
-         ENDDO
-      ENDDO
+         END DO
+      END DO
 
       RETURN
-      END SUBROUTINE ptsym
-      END MODULE m_ptsym
+   END SUBROUTINE ptsym
+END MODULE m_ptsym

@@ -235,7 +235,7 @@ CONTAINS
              DO lo = 1, atoms%nlo(iType)
                 DO nkvec = 1, lapw%nkvec(lo,iAtom)
                    iLAPW = lapw%kvec(nkvec,lo,iAtom)
-                   fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
+                   fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss + lapw%qPhon
                    fk = lapw%bkpt + fg(:)
                    tmk = tpi_const * DOT_PRODUCT(fk(:),atoms%taual(:,iAtom))
                    phase = CMPLX(COS(tmk),SIN(tmk))

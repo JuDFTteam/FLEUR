@@ -218,7 +218,8 @@ CONTAINS
             l = atoms%llo(lo,ntyp)
             DO m = -l,l
                lm = l* (l+1) + m
-               IF (.NOT.l_dfpt) THEN
+               !IF (.NOT.l_dfpt) THEN
+               IF (.TRUE.) THEN
                   tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) &
                                                         & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
                                                         & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
@@ -286,7 +287,8 @@ CONTAINS
                loplo = ((lop-1)*lop)/2 + lo
                loplo_new = (lop-1) * atoms%nlo(ntyp) + lo
                DO m = -lp,lp
-                  IF (.NOT.l_dfpt) THEN
+                  !IF (.NOT.l_dfpt) THEN
+                  IF (.TRUE.) THEN
                      tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) &
                                                               & + 0.5 * (enpara%ello0(lop,ntyp,iSpinPr) &
                                                               & +         enpara%ello0(lo,ntyp,iSpinPr)) &

@@ -35,6 +35,7 @@ MODULE m_types_lapw
       INTEGER, ALLOCATABLE::kvec(:, :, :)
       INTEGER, ALLOCATABLE::nkvec(:, :)
       REAL   :: bkpt(3)
+      REAL   :: qphon(3)
    CONTAINS
       procedure       :: lapw_init => t_lapw_init
       procedure       :: lapw_init_fi => t_lapw_init_fi
@@ -100,7 +101,7 @@ CONTAINS
       INTEGER j1, j2, j3, mk1, mk2, mk3, nv, addX, addY, addZ
       INTEGER ispin, nvh(2)
 
-      REAL arltv1, arltv2, arltv3, rkm, rk2, r2, s(3)
+      REAL arltv1, arltv2, arltv3, rkm, rk2, r2, s(3), sonlyg(3)
       ! ..
       !
       !------->          ABBREVIATIONS
@@ -128,15 +129,17 @@ CONTAINS
       !---> by |G + k +/- qss/2| < rkmax.
       nvh(2) = 0
       DO ispin = 1, MERGE(2, 1, noco%l_ss)
-         addX = abs(NINT((lapw%bkpt(1) + (2*ispin - 3)/2.0*nococonv%qss(1))/arltv1))
-         addY = abs(NINT((lapw%bkpt(2) + (2*ispin - 3)/2.0*nococonv%qss(2))/arltv2))
-         addZ = abs(NINT((lapw%bkpt(3) + (2*ispin - 3)/2.0*nococonv%qss(3))/arltv3))
+         addX = abs(NINT((lapw%bkpt(1) + (2*ispin - 3)/2.0*nococonv%qss(1)+lapw%qphon(1))/arltv1))
+         addY = abs(NINT((lapw%bkpt(2) + (2*ispin - 3)/2.0*nococonv%qss(2)+lapw%qPhon(2))/arltv2))
+         addZ = abs(NINT((lapw%bkpt(3) + (2*ispin - 3)/2.0*nococonv%qss(3)+lapw%qphon(3))/arltv3))
          nv = 0
          DO j1 = -mk1 - addX, mk1 + addX
             DO j2 = -mk2 - addY, mk2 + addY
                DO j3 = -mk3 - addZ, mk3 + addZ
-                  s = lapw%bkpt + (/j1, j2, j3/) + (2*ispin - 3)/2.0*nococonv%qss
+                  s = lapw%bkpt + (/j1, j2, j3/) + (2*ispin - 3)/2.0*nococonv%qss + lapw%qphon
+                  sonlyg = (/j1, j2, j3/)
                   r2 = dot_PRODUCT(MATMUL(s, cell%bbmat), s)
+                  !r2 = dot_PRODUCT(MATMUL(sonlyg, cell%bbmat), sonlyg)
                   IF (r2 .LE. rk2) nv = nv + 1
                END DO
             END DO
@@ -153,7 +156,7 @@ CONTAINS
             DEALLOCATE (lapw%k1, lapw%k2, lapw%k3)
          ENDIF
       ENDIF
-      ALLOCATE (lapw%k1(nv, input%jspins)) !shpuld be removed
+      ALLOCATE (lapw%k1(nv, input%jspins)) !should be removed
       ALLOCATE (lapw%k2(nv, input%jspins)) !
       ALLOCATE (lapw%k3(nv, input%jspins)) !
       ALLOCATE (lapw%rk(nv, input%jspins))
@@ -164,7 +167,7 @@ CONTAINS
       lapw%rk = 0; lapw%gvec = 0; lapw%nv = 0
    END SUBROUTINE lapw_alloc
 
-   subroutine t_lapw_init_fi(lapw, fi, nococonv, nk, mpi) 
+   subroutine t_lapw_init_fi(lapw, fi, nococonv, nk, mpi, dfpt_q) 
       USE m_types_mpi
       use m_types_fleurinput
       implicit none 
@@ -173,12 +176,25 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       INTEGER, INTENT(IN) :: nk
       TYPE(t_mpi), INTENT(IN), OPTIONAL:: mpi
+      REAL, INTENT(IN), OPTIONAL :: dfpt_q(3)
 
-      call lapw%lapw_init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
+      IF (PRESENT(mpi)) THEN
+         IF (PRESENT(dfpt_q)) THEN
+            call lapw%lapw_init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, mpi, dfpt_q)
+         ELSE
+            call lapw%lapw_init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, mpi)
+         END IF
+      ELSE
+         IF (PRESENT(dfpt_q)) THEN
+            call lapw%lapw_init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, dfpt_q=dfpt_q)
+         ELSE
+            call lapw%lapw_init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
+         END IF
+      END IF  
    end subroutine t_lapw_init_fi
 
    SUBROUTINE t_lapw_init(lapw, input, noco, nococonv, kpts, atoms, sym, &
-                        nk, cell,  mpi)
+                        nk, cell,  mpi, dfpt_q)
       USE m_types_mpi
       USE m_sort
       USE m_boxdim
@@ -197,6 +213,8 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_mpi), INTENT(IN), OPTIONAL:: mpi
       CLASS(t_lapw), INTENT(INOUT)    :: lapw
+
+      REAL, INTENT(IN), OPTIONAL :: dfpt_q(3)
       !     ..
       !     .. Scalar Arguments ..
       INTEGER, INTENT(IN) :: nk
@@ -205,12 +223,12 @@ CONTAINS
       !     .. Array Arguments ..
       !     ..
       !     .. Local Scalars ..
-      REAL arltv1, arltv2, arltv3, r2, rk2, rkm, r2q, gla, eps, t
+      REAL arltv1, arltv2, arltv3, r2, rk2, rkm, r2q, gla, eps, t, r2g, r2phon
       INTEGER i, j, j1, j2, j3, k, l, mk1, mk2, mk3, n, ispin, gmi, m, nred, n_inner, n_bound, itt(3), addX, addY, addZ
       !     ..
       !     .. Local Arrays ..
-      REAL                :: s(3), sq(3)
-      REAL, ALLOCATABLE    :: rk(:), rkq(:), rkqq(:)
+      REAL                :: s(3), sq(3), sg(3), qphon(3), sphon(3)
+      REAL, ALLOCATABLE    :: rk(:), rkq(:), rkqq(:), rg(:)
       INTEGER, ALLOCATABLE :: gvec(:, :), index3(:)
 
       call timestart("t_lapw_init")
@@ -219,6 +237,9 @@ CONTAINS
       !---> the two spin directions, because the cutoff radius is defined
       !---> by |G + k +/- qss/2| < rkmax.
 
+      lapw%qphon = [0.0,0.0,0.0]
+      IF (PRESENT(dfpt_q)) lapw%qphon = dfpt_q
+      
       IF (nk > kpts%nkpt) THEN
          lapw%bkpt(:) = kpts%bkf(:, nk)
       ELSE
@@ -229,6 +250,7 @@ CONTAINS
 
       ALLOCATE (gvec(3, SIZE(lapw%gvec, 2)))
       ALLOCATE (rk(SIZE(lapw%gvec, 2)), rkq(SIZE(lapw%gvec, 2)), rkqq(SIZE(lapw%gvec, 2)))
+      ALLOCATE (rg(SIZE(lapw%gvec, 2)))
       ALLOCATE (index3(SIZE(lapw%gvec, 2)))
 
       !---> Determine rkmax box of size mk1, mk2, mk3,
@@ -245,23 +267,27 @@ CONTAINS
       rk2 = input%rkmax*input%rkmax
       !---> if too many basis functions, reduce rkmax
       spinloop: DO ispin = 1, input%jspins
-         addX = abs(NINT((lapw%bkpt(1) + (2*ispin - 3)/2.0*nococonv%qss(1))/arltv1))
-         addY = abs(NINT((lapw%bkpt(2) + (2*ispin - 3)/2.0*nococonv%qss(2))/arltv2))
-         addZ = abs(NINT((lapw%bkpt(3) + (2*ispin - 3)/2.0*nococonv%qss(3))/arltv3))
+         addX = abs(NINT((lapw%bkpt(1) + (2*ispin - 3)/2.0*nococonv%qss(1)+lapw%qphon(1))/arltv1))
+         addY = abs(NINT((lapw%bkpt(2) + (2*ispin - 3)/2.0*nococonv%qss(2)+lapw%qphon(2))/arltv2))
+         addZ = abs(NINT((lapw%bkpt(3) + (2*ispin - 3)/2.0*nococonv%qss(3)+lapw%qphon(3))/arltv3))
          !--->    obtain vectors
          n = 0
          DO j1 = -mk1 - addX, mk1 + addX
             DO j2 = -mk2 - addY, mk2 + addY
                DO j3 = -mk3 - addZ, mk3 + addZ
-                  s = lapw%bkpt + (/j1, j2, j3/) + (2*ispin - 3)/2.0*nococonv%qss
+                  s = lapw%bkpt + (/j1, j2, j3/) + (2*ispin - 3)/2.0*nococonv%qss + lapw%qphon
                   sq = lapw%bkpt + (/j1, j2, j3/)
+                  sg = (/j1, j2, j3/)
                   r2 = dot_PRODUCT(s, MATMUL(s, cell%bbmat))
                   r2q = dot_PRODUCT(sq, MATMUL(sq, cell%bbmat))
+                  r2g = dot_PRODUCT(sg, MATMUL(sg, cell%bbmat))
                   IF (r2 .LE. rk2) THEN
+                  !IF (r2g .LE. rk2) THEN
                      n = n + 1
                      gvec(:, n) = (/j1, j2, j3/)
                      rk(n) = SQRT(r2)
                      rkq(n) = SQRT(r2q)
+                     rg(n) = SQRT(r2g)
                   END IF
                ENDDO
             ENDDO
@@ -274,6 +300,7 @@ CONTAINS
                       (mk3 + gvec(3, k))*(2*mk1 + 1)*(2*mk2 + 1)
          ENDDO
          CALL sort(index3(:lapw%nv(ispin)), rkq, rkqq)
+         !CALL sort(index3(:lapw%nv(ispin)), rg, rkqq)
          DO n = 1, lapw%nv(ispin)
             lapw%gvec(:, n, ispin) = gvec(:, index3(n))
             lapw%rk(n, ispin) = rk(index3(n))
@@ -281,7 +308,7 @@ CONTAINS
          !--->    determine pairs of K-vectors, where K_z = K'_-z to use
          !--->    z-reflection
          DO k = 1, lapw%nv(ispin)
-            lapw%vk(:, k, ispin) = lapw%bkpt + lapw%gvec(:, k, ispin) + (ispin - 1.5)*nococonv%qss
+            lapw%vk(:, k, ispin) = lapw%bkpt + lapw%gvec(:, k, ispin) + (ispin - 1.5)*nococonv%qss + lapw%qphon
             lapw%gk(:, k, ispin) = MATMUL(TRANSPOSE(cell%bmat), lapw%vk(:, k, ispin))/MAX(lapw%rk(k, ispin), 1.0e-30)
          ENDDO
 
@@ -377,7 +404,7 @@ CONTAINS
       !$OMP& SHARED(lapw,iintsp,tau,qss,cph)&
       !$OMP& PRIVATE(k,th)
       DO k = 1, lapw%nv(iintsp)
-         th = DOT_PRODUCT(lapw%gvec(:, k, iintsp) + (iintsp - 1.5)*qss + lapw%bkpt, tau)
+         th = DOT_PRODUCT(lapw%gvec(:, k, iintsp) + (iintsp - 1.5)*qss + lapw%bkpt + lapw%qphon, tau)
          cph(k) = CMPLX(COS(tpi_const*th), SIN(tpi_const*th))
       END DO
       !$OMP END PARALLEL DO
@@ -436,7 +463,7 @@ CONTAINS
 
          !--->    set up phase factors
          DO k = 1, lapw%nv(iintsp)
-            th = tpi_const*DOT_PRODUCT((/lapw%k1(k, iintsp), lapw%k2(k, iintsp), lapw%k3(k, iintsp)/) + qssbti, atoms%taual(:, na))
+            th = tpi_const*DOT_PRODUCT((/lapw%k1(k, iintsp), lapw%k2(k, iintsp), lapw%k3(k, iintsp)/) + qssbti + lapw%qphon, atoms%taual(:, na))
             rph(k, iintsp) = COS(th)
             cph(k, iintsp) = -SIN(th)
          END DO

@@ -89,7 +89,7 @@
       <xsd:attribute default="1.0" name="mag_scale" type="FleurDouble" use="optional"/>
    </xsd:complexType>
 
-  
+
 
    <xsd:complexType name="CoreElectronsType">
       <xsd:attribute name="ctail" type="FleurBool" use="required"/>
@@ -161,7 +161,7 @@
       <xsd:attribute name="dTilda" type="FleurDouble" use="required"/>
    </xsd:complexType>
 
-  
+
    <xsd:complexType name="VacuumEnergyParameterType">
       <xsd:attribute name="vacuum" type="xsd:integer" use="required"/>
       <xsd:attribute name="spinUp" type="FleurDouble" use="required"/>
@@ -1083,6 +1083,7 @@
       <xsd:attribute name="gqmax" type="FleurDouble" use="optional"/>
       <xsd:attribute name="eps_pert" type="FleurDouble" use="optional"/>
       <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="fDiffcut" type="FleurDouble" use="optional"/>
       <xsd:attribute name="singleQpt" type="xsd:positiveInteger" use="optional"/>
    </xsd:complexType>
 

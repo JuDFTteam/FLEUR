@@ -350,8 +350,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,ispin,regCharges,dos,vacdos,&
-                       results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
+      CALL mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,ispin,dos,vacdos,&
+                       results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS)
    END DO
 #endif
 

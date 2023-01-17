@@ -17,7 +17,7 @@ MODULE m_hlomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,lapwq)
+       ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
 
     USE m_hsmt_ab
     USE m_types
@@ -48,9 +48,10 @@ CONTAINS
     REAL, INTENT (IN) :: alo1(:,:),blo1(:,:),clo1(:,:)
 
     CLASS(t_mat),INTENT (INOUT) :: hmat
-    LOGICAL, INTENT(IN) :: l_fullj
+    LOGICAL, INTENT(IN) :: l_fullj, l_ham
 
     TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
+    TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
     !     ..
     ! Local Scalars
       COMPLEX :: axx,bxx,cxx,dtd,dtu,tdulo,tulod,tulou,tuloulo,utd,utu, tuulo
@@ -66,13 +67,16 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: abcloPr(:,:,:,:)
 
       TYPE(t_lapw) :: lapwPr
+      TYPE(t_fjgj) :: fjgjPr
 
       l_samelapw = .FALSE.
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
          lapwPr = lapwq
+         fjgjPr = fjgjq
       ELSE
          lapwPr = lapw
+         fjgjPr = fjgj
       END IF
 
       ! Synthesize a and b
@@ -83,11 +87,9 @@ CONTAINS
       ALLOCATE(axPr(MAXVAL(lapwPr%nv)),bxPr(MAXVAL(lapwPr%nv)),cxPr(MAXVAL(lapwPr%nv)))
       ALLOCATE(abcloPr(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
 
-      ! TODO: Introduce the logic for different lapw and the full rectangular
-      !       instead of triangular construction...
       !$acc data create(abcoeffs,abclo,abcoeffsPr,abcloPr)
       !$acc data copyin(alo1,blo1,clo1)
-      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgj,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr(:,:,:,:),alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
+      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr(:,:,:,:),alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
 
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw) THEN
          !$acc kernels present(abcoeffs,abcoeffsPr)
@@ -204,9 +206,11 @@ CONTAINS
                                                   & + abclo(2,m,nkvec,lo) * ud%duds(l,ntyp,ilSpin) &
                                                   & + abclo(3,m,nkvec,lo) * ud%dulos(lo,ntyp,ilSpin)) )
                            END IF
-                           IF (l_fullj.AND.ilSpinPr.EQ.ilSpin) THEN
+                           IF (l_ham.AND.l_fullj.AND.ilSpinPr.EQ.ilSpin) THEN
+                              ! TODO: Is it 0.25 or 0.5?
                               hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
-                                                  & + 0.5 * atoms%rmt(ntyp)**2 &
+                                                  !& + 0.5 * atoms%rmt(ntyp)**2 &
+                                                  & + 0.25 * atoms%rmt(ntyp)**2 &
                                                   & * chi * invsfct * &
                                                   & (CONJG(abCoeffsPr(lm,kp))              * ud%us(l,ntyp,ilSpin)   + &
                                                   &  CONJG(abCoeffsPr(ab_size_Pr/2+lm,kp)) * ud%uds(l,ntyp,ilSpin)) * &
@@ -249,13 +253,25 @@ CONTAINS
                      lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
                      IF (MOD(lorow-1,fmpi%n_size) == fmpi%n_rank) THEN
                         lorow=(lorow-1)/fmpi%n_size+1
-                           DO k = 1,lapw%nv(igSpin)
+                        DO k = 1,lapw%nv(igSpin)
+                           hmat%data_c(lorow,k) = hmat%data_c(lorow,k) &
+                                              & + chi * invsfct * ( &
+                                              & CONJG(abcloPr(1,m,nkvec,lo)) * ax(k) + &
+                                              & CONJG(abcloPr(2,m,nkvec,lo)) * bx(k) + &
+                                              & CONJG(abcloPr(3,m,nkvec,lo)) * cx(k) )
+                           IF (l_ham.AND.ilSpinPr.EQ.ilSpin) THEN
+                              ! TODO: Is it 0.25 or 0.5?
                               hmat%data_c(lorow,k) = hmat%data_c(lorow,k) &
-                                                  & + chi * invsfct * ( &
-                                                  & CONJG(abcloPr(1,m,nkvec,lo)) * ax(k) + &
-                                                  & CONJG(abcloPr(2,m,nkvec,lo)) * bx(k) + &
-                                                  & CONJG(abcloPr(3,m,nkvec,lo)) * cx(k) )
-                           END DO
+                                                 & + 0.25 * atoms%rmt(ntyp)**2 &
+                                                 & * chi * invsfct * &
+                                                 & ( CONJG(abcloPr(1,m,nkvec,lo)) * ud%dus(l,ntyp,ilSpin)       &
+                                                 & + CONJG(abcloPr(2,m,nkvec,lo)) * ud%duds(l,ntyp,ilSpin)      &
+                                                 & + CONJG(abcloPr(3,m,nkvec,lo)) * ud%dulos(lo,ntyp,ilSpin)) * &
+                                                 & (abCoeffs(lm,k)                * ud%us(l,ntyp,ilSpin)   + &
+                                                 &  abCoeffs(ab_size/2+lm,k)      * ud%uds(l,ntyp,ilSpin))
+
+                           END IF
+                        END DO
                      END IF
                   END DO
                END IF
@@ -279,7 +295,7 @@ CONTAINS
                               lmp = lp* (lp+1) + mp
                               s = tlmplm%h_loc2(ntyp)
                               ! Note, that xtx are the t-matrices and NOT their
-                              ! repsective complex conjugates as in hssphn !TODO: outdated comment?
+                              ! respective complex conjugates as in hssphn !TODO: outdated comment?
                               utu = tlmplm%h_loc(lmp,lm,ntyp,ilSpinPr,ilSpin)
                               dtu = tlmplm%h_loc(lmp+s,lm,ntyp,ilSpinPr,ilSpin)
                               utd = tlmplm%h_loc(lmp,lm+s,ntyp,ilSpinPr,ilSpin)
@@ -325,7 +341,7 @@ CONTAINS
                   ! Calculate the Hamiltonian matrix elements of one local
                   ! orbital with itself
                   lop=lo
-                  DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin)
+                  DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin.AND..NOT.l_fullj)
                      lorow=lapwPr%nv(igSpinPr)+lapwPr%index_lo(lop,na)+nkvecp
                      DO m = -l,l
                         lm = l* (l+1) + m
@@ -370,6 +386,7 @@ CONTAINS
                                                      & CONJG(abcloPr(1,mp,nkvecp,lo))*axx + &
                                                      & CONJG(abcloPr(2,mp,nkvecp,lo))*bxx + &
                                                      & CONJG(abcloPr(3,mp,nkvecp,lo))*cxx )
+                              !TODO: Should there be an Ekin sufrace term here as well?
                            END IF
                         END DO
                      END DO

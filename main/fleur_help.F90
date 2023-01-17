@@ -53,6 +53,7 @@ CONTAINS
     CALL print_argument("-j")
     CALL print_argument("-f")
     CALL print_argument("-n_min_size")
+    CALL print_argument("-add_name")
     CALL print_argument("-fft")
     CALL print_argument("-diag")
     CALL print_argument("-eig")
@@ -94,6 +95,7 @@ CONTAINS
     CALL new_argument(1,"-j","Distribute MPI ranks to run subjobs (Format PE:DIR meaning run with PE in directory DIR)","")
     CALL new_argument(1,"-f","Obtain info on subjobs from file","")
     CALL new_argument(2,"-n_min_size","Try to use at least specified number of PE in eigenvalue parallelization","")
+    CALL new_argument(1,"-add_name","file descriptor that will be put before the output file names","")
     CALL new_argument(1,"-fft","library used for Fast Fourier Transformations","inbuilt"&
 #ifdef CPP_FFTW
     //",fftw"&
@@ -133,7 +135,7 @@ CONTAINS
          //",hdf"&
 #endif
          )
-    CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","") 
+    CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","")
     CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","")
     !Debugging
     CALL new_argument(0,"-warn_only","Continue execution after a warning message","")

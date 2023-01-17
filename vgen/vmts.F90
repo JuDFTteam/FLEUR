@@ -138,12 +138,12 @@ contains
     !$OMP END PARALLEL DO
     
     ! q=0 component
-    if ( fmpi%irank == 0 ) then
+    if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8 ) then
        DO n = 1, atoms%ntype
           vtlLocal(0,n) = vtlLocal(0,n) + sfp_const * vpw(1)
        END DO
     end if
-    
+
     CALL mpi_sum_reduce(vtlLocal, vtl,fmpi%mpi_comm)
 
     ! SPHERE INTERIOR CONTRIBUTION to the coefficients calculated from the

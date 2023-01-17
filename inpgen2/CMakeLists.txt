@@ -133,7 +133,7 @@ ${FLEUR_SRC}/init/ifft235.f90
 ${FLEUR_SRC}/kpoints/gkptwgt.f90
 ${FLEUR_SRC}/init/local_sym.f
 ${FLEUR_SRC}/init/lhcal.f
-${FLEUR_SRC}/init/ptsym.f
+${FLEUR_SRC}/init/ptsym.f90
 ${FLEUR_SRC}/math/gaussp.f
 ${FLEUR_SRC}/init/gtest.f
 ${FLEUR_SRC}/io/xmlOutput.F90

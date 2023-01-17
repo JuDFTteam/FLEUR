@@ -7,8 +7,8 @@
 MODULE m_relaxation
    USE m_judft
 
-#ifdef CPP_MPI 
-   USE mpi 
+#ifdef CPP_MPI
+   USE mpi
 #endif
 
    IMPLICIT NONE
@@ -35,7 +35,7 @@ CONTAINS
       TYPE(t_input),  INTENT(IN) :: input
       TYPE(t_atoms),  INTENT(IN) :: atoms
       TYPE(t_sym),    INTENT(IN) :: sym
-       
+
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_cell),   INTENT(IN) :: cell
       REAL,           INTENT(IN) :: force_new(:,:), energies_new !data for this iteration
@@ -48,15 +48,19 @@ CONTAINS
       INTEGER           :: iType, ierr, numDispReduce
       LOGICAL           :: l_conv
 
+      CHARACTER(len=100):: filename_add
+
       ! To calculate the current displacement
       TYPE(t_xml)   :: xml
       TYPE(t_atoms) :: atoms_non_displaced
       TYPE(t_atoms) :: tempAtoms
 
       IF (fmpi%irank==0) THEN
-         CALL xml%init()
+         filename_add = ""
+         IF (judft_was_argument("-add_name")) filename_add = TRIM(judft_string_for_argument("-add_name"))//"_"
+         CALL xml%init(filename_add)
          ALLOCATE(pos(3,atoms%ntype,1));
-         
+
          DO iType = 1, atoms%ntype
             pos(:,iType,1)=atoms%pos(:,atoms%firstAtom(iType))
          END DO
@@ -179,7 +183,7 @@ CONTAINS
    SUBROUTINE simple_step(alpha,maxdisp,force,displace)
 
       IMPLICIT NONE
-      
+
       REAL, INTENT(IN)  :: alpha,maxdisp
       REAL, INTENT(IN)  :: force(:,:,:)
       REAL, INTENT(OUT) :: displace(:,:)

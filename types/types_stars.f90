@@ -63,6 +63,7 @@ MODULE m_types_stars
      PROCEDURE :: init=>init_stars
      PROCEDURE :: dim=>dim_stars
      PROCEDURE :: map_2nd_vac
+     PROCEDURE :: reset_stars
   END TYPE t_stars
 CONTAINS
   SUBROUTINE mpi_bc_stars(this,mpi_comm,irank)
@@ -135,17 +136,18 @@ CONTAINS
     REAL, OPTIONAL, INTENT(IN) :: qvec(3)
 
     INTEGER :: k1,k2,k3,n,n1,k
-    REAL    :: s,g(3),gmax2
+    REAL    :: s,g(3),gmax2,sq
     INTEGER :: kr(3,sym%nop),kv(3)
     COMPLEX :: phas(sym%nop)
     INTEGER,ALLOCATABLE :: index(:)
-    REAL,ALLOCATABLE :: gsk3(:)
+    REAL,ALLOCATABLE :: gsk3(:), sk3q(:)
 
     gmax2=stars%gmax**2
     allocate(gsk3(stars%ng3),index(stars%ng3))
 
     ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
     ALLOCATE(stars%kv3(3,stars%ng3),stars%sk3(stars%ng3),stars%nstr(stars%ng3))
+    IF (PRESENT(qvec)) ALLOCATE(stars%gq(3,stars%ng3),sk3q(stars%ng3))
     ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
 
     stars%rgphs=0.0
@@ -163,20 +165,31 @@ CONTAINS
           kv(3) = k3
 
           g=matmul(kv,cell%bmat)
-          IF (PRESENT(qvec)) g = g + matmul(qvec,cell%bmat)
+          !IF (PRESENT(qvec)) g = g + matmul(qvec,cell%bmat) !!!!!!!!!!
           s=dot_product(g,g)
-          if (s>gmax2) cycle z_dim !not in sphere
+          !if (s>gmax2) cycle z_dim !not in sphere !!!!!!!!!!!!!
+          sq=s
+          IF (PRESENT(qvec)) THEN
+             g = g + matmul(qvec,cell%bmat)
+             sq=dot_product(g,g)
+          END IF
+
+          if (sq>gmax2) cycle z_dim !not in sphere
           k=k+1
           stars%kv3(:,k)=kv
           stars%sk3(k)=sqrt(s)
+
           IF (PRESENT(qvec)) THEN
-             stars%gq(:,k)=s
+             stars%gq(:,k)=g
+             sk3q(k)=sqrt(sq)
              stars%center=qvec
           END IF
+
           ! secondary key for equal length stars
           gsk3(k) = (stars%mx1+stars%kv3(1,k)) +&
             &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
             &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
+
           !Now generate all equivalent g-vectors
           CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),&
                              kr)
@@ -192,6 +205,8 @@ CONTAINS
     CALL sort(index,stars%sk3,gsk3)
     stars%kv3=stars%kv3(:,index)
     stars%sk3=stars%sk3(index)
+    IF (PRESENT(qvec)) stars%gq=stars%gq(:,index)
+    IF (PRESENT(qvec)) stars%sk3=sk3q(index)
     ! set up the pointers and phases for 3d stars
     DO  k = 1,stars%ng3
       CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),&
@@ -378,17 +393,42 @@ CONTAINS
     USE m_types_vacuum
     CLASS(t_stars),INTENT(IN)    :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
-    INTEGER,INTENT(IN)           :: n2 
+    INTEGER,INTENT(IN)           :: n2
     INTEGER,INTENT(OUT)          :: n2_rot
     COMPLEX,INTENT(OUT)          :: phas
-    
+
     INTEGER:: kr(2)
     REAL   :: arg
-    
+
     kr = matmul(stars%kv2(:,n2),vacuum%mrot2)
     n2_rot = stars%i2g(kr(1),kr(2))
     arg = tpi_const* ( stars%kv2(1,n2)*vacuum%tau2(1) + stars%kv2(2,n2)*vacuum%tau2(2) )
     phas = cmplx(cos(arg),sin(arg))
-  
+
   end subroutine
+
+  SUBROUTINE reset_stars(stars)
+     CLASS(t_stars), INTENT(INOUT) :: stars
+
+     stars%gmax=0.0
+     stars%center = [0.0,0.0,0.0]
+     IF (ALLOCATED(stars%kv3)) DEALLOCATE(stars%kv3)
+     IF (ALLOCATED(stars%sk3)) DEALLOCATE(stars%sk3)
+     IF (ALLOCATED(stars%ig)) DEALLOCATE(stars%ig)
+     IF (ALLOCATED(stars%nstr)) DEALLOCATE(stars%nstr)
+     IF (ALLOCATED(stars%rgphs)) DEALLOCATE(stars%rgphs)
+     IF (ALLOCATED(stars%ustep)) DEALLOCATE(stars%ustep)
+     IF (ALLOCATED(stars%ufft)) DEALLOCATE(stars%ufft)
+     IF (ALLOCATED(stars%gq)) DEALLOCATE(stars%gq)
+     IF (ALLOCATED(stars%ufft1)) DEALLOCATE(stars%ufft1)
+     IF (ALLOCATED(stars%kv2)) DEALLOCATE(stars%kv2)
+     IF (ALLOCATED(stars%sk2)) DEALLOCATE(stars%sk2)
+     IF (ALLOCATED(stars%nstr2)) DEALLOCATE(stars%nstr2)
+     IF (ALLOCATED(stars%i2g)) DEALLOCATE(stars%i2g)
+     IF (ALLOCATED(stars%ig2)) DEALLOCATE(stars%ig2)
+     IF (ALLOCATED(stars%igvac)) DEALLOCATE(stars%igvac)
+     IF (ALLOCATED(stars%phi2)) DEALLOCATE(stars%phi2)
+     IF (ALLOCATED(stars%r2gphs)) DEALLOCATE(stars%r2gphs)
+
+  END SUBROUTINE
 END MODULE m_types_stars

@@ -8,7 +8,7 @@ q-loop:
       j-loop:
          - generate stars shifted by q with starsq%ustep and starsq%ufft
            containing not \Theta, but \Theta1 (done?)
-         - make the Theta1 variables explicitly complex (ufftq,ustepq) (done?)
+         - make the Theta1 variables explicitly complex (ufftq,ustepq) (done)
          - add additional stars%center, that contains q [default: 0] (done)
          - have an array of G+q vectors as well (done)
          - write the skeleton structure for the scf loop
@@ -45,21 +45,23 @@ q-loop:
                         - nonsph gives a full matrix as we need, but we need to teach
                           it to accept different matching coefficients for different
                           k left and right [done]
-                     - use hsmt_nonsph for H-elements with perturbed matchings
+                     - use hsmt_nonsph for H-elements with perturbed matchings [done]
                      - use hsmt_sph for H/S-elements with perturbed matchings [done]
                      - LO part (hlomat/slomat):
                         - add the missing parts of the rectangular matrix
                            - bottom left rectangle [done; revision]
                            - Full LO-LO section [done; revision]
                         - Check the conjugations and usage of tuloulo! [done; revision]
+                        - add fjgjq [done]
                      - add a postprocess for the perturbation prefactor [done]
+                        - add it for LOs as well [done]
                   - add a redistribution routine to gain the full perturbed matrices [done]
                Analytical Matrix inversion:
                   - write routine that inverts (Hkq-\epsilonk*Skq) in a spectral representation [done]
                z1-calculation:
                   - chain together the matrix multiplication z1=-(Hkq-\epsilonk*Skq)^(-1)*(H1-\epsilonk*S1)*z0 [done (inefficient)]
-                  - save z1 (and for q=0 \epsilon1) the same way z0 and \epsilon are normally saved [different eig_id!]
-                  - generate said eig_id beforehand [c.f. main: eig_id = open_eig(...)]
+                  - save z1 (and for q=0 \epsilon1) the same way z0 and \epsilon are normally saved [different eig_id!] [done]
+                  - generate said eig_id beforehand [c.f. main: eig_id = open_eig(...)] [done]
             cdngen1:
                - write a control routine that calls only the fundamental necessary parts
                  of the cdngen workflow [no banddos stuff etc.] [done; dfpt_cdngen and dfpt_cdnval]
@@ -71,10 +73,9 @@ q-loop:
                  handled correctly (4 indices)
          end scf-loop
          dynmat-row construction:
-            - HF
+            - HF [done]
             - k-dependent (IBC)
-            - SF
+            - SF [done, but married with HF for integrals]
       end j-loop
    end \beta-loop
-   (alternately: full dynmat-constuction)
 end q-loop

@@ -11,6 +11,7 @@ MODULE m_mixing_history
   TYPE(t_mixvector),ALLOCATABLE::sm_store(:),fsm_store(:)
   PUBLIC :: mixing_history,mixing_history_reset,mixing_history_store
   PUBLIC :: mixing_history_open,mixing_history_close,mixing_history_limit
+  PUBLIC :: dfpt_mixing_history_reset
 CONTAINS
 
   SUBROUTINE mixing_history_open(mpi,maxiter,basename)
@@ -57,21 +58,35 @@ CONTAINS
 !#endif
   END SUBROUTINE mixing_history_open
 
-  SUBROUTINE mixing_history_close(mpi)
+  SUBROUTINE mixing_history_close(mpi,basename)
     USE m_types,ONLY:t_mpi
     TYPE(t_mpi),INTENT(in):: mpi
 
-    CHARACTER(len=20):: filename
+    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+
+    CHARACTER(len=35):: filename
     INTEGER          :: n
 
 
     IF (iter_stored==0) RETURN ! Nothing found to be stored
     IF (mpi%isize>1) THEN
-       WRITE(filename,'(a,i0)') "mixing_history.",mpi%irank
+       IF (.NOT.PRESENT(basename)) THEN
+          WRITE(filename,'(a,i0)') "mixing_history.",mpi%irank
+       ELSE
+          WRITE(filename,'(a,i0)') TRIM(basename)//"_mixing_history.",mpi%irank
+       END IF
     ELSE
-       filename="mixing_history"
+       IF (.NOT.PRESENT(basename)) THEN
+          filename="mixing_history"
+       ELSE
+          filename=TRIM(basename)//"_mixing_history"
+       END IF
     ENDIF
-    OPEN(888,file=filename,form='unformatted',status='replace')
+    IF (.NOT.PRESENT(basename)) THEN
+      OPEN(888,file=filename,form='unformatted',status='replace')
+    ELSE
+      OPEN(888,file=filename,form='unformatted',status='unknown')
+    END IF
     WRITE(888) iter_stored
     DO n=1,iter_stored
       call sm_store(n)%write_unformatted(888)
@@ -152,4 +167,11 @@ CONTAINS
     TYPE(t_mixvector),INTENT(IN)::fsm
     IF (iter_stored>0) fsm_store(iter_stored)=fsm
   END SUBROUTINE mixing_history_store
+
+  SUBROUTINE dfpt_mixing_history_reset()
+    IMPLICIT NONE
+    iter_stored=0
+    IF (ALLOCATED(sm_store)) DEALLOCATE(sm_store,fsm_store)
+END SUBROUTINE dfpt_mixing_history_reset
+
 end MODULE m_mixing_history

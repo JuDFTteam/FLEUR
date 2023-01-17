@@ -20,8 +20,8 @@ juphon/jpVeff1_mod.F90
 juphon/jpDens1stVar_mod.F90
 juphon/ylm4_old.f90
 juphon/dfpt_vgen.F90
-juphon/dfpt_vgen_coulomb.F90
-juphon/dfpt_vgen_xcpot.F90
+#juphon/dfpt_vgen_coulomb.F90
+#juphon/dfpt_vgen_xcpot.F90
 juphon/invert_HepsS.F90
 juphon/get_int_perturbation.f90
 juphon/get_mt_perturbation.f90
@@ -34,9 +34,12 @@ juphon/dfpt_tlmplm.F90
 juphon/dfpt_eigen_hssetup.F90
 juphon/matrix_pref.F90
 juphon/dfpt_eigen_redist_matrix.f90
-juphon/dfpt_eigen.F90
+#juphon/dfpt_eigen.F90
 juphon/dfpt_rhomt.f90
 juphon/dfpt_rhonmt.f90
 juphon/dfpt_cdnval.F90
 juphon/dfpt_cdngen.F90
+juphon/dfpt_fermie.F90
+juphon/desymmetrizer.f90
+juphon/dfpt_eigen_new.F90
 )

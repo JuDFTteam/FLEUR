@@ -13,7 +13,7 @@ MODULE m_slomat
 CONTAINS
    SUBROUTINE slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
                      isp,ud, alo1,blo1,clo1,fjgj,&
-                     igSpinPr,igSpin,chi,smat,l_fullj,lapwq)
+                     igSpinPr,igSpin,chi,smat,l_fullj,lapwq,fjgjq)
     !***********************************************************************
     ! locol stores the number of columns already processed; on parallel
     !       computers this decides, whether the LO-contribution is
@@ -51,6 +51,7 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_fullj
 
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
+      TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
 
       ! Local Scalars
       REAL    :: con,dotp,fact1,fact2,fact3,fl2p1
@@ -61,13 +62,16 @@ CONTAINS
       COMPLEX,   ALLOCATABLE  :: cphPr(:), cph(:)
 
       TYPE(t_lapw) :: lapwPr
+      TYPE(t_fjgj) :: fjgjPr
 
       l_samelapw = .FALSE.
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
          lapwPr = lapwq
+         fjgjPr = fjgjq
       ELSE
          lapwPr = lapw
+         fjgjPr = fjgj
       END IF
 
       ALLOCATE(cph(MAXVAL(lapw%nv)))
@@ -76,7 +80,7 @@ CONTAINS
       ! TODO: Introduce the logic for different lapw and the full rectangular
       !       instead of triangular construction...
 
-      CALL lapw%phase_factors(igSpinPr,atoms%taual(:,na),nococonv%qss,cphPr)
+      CALL lapwPr%phase_factors(igSpinPr,atoms%taual(:,na),nococonv%qss,cphPr)
       IF (l_samelapw) THEN
          cph = cphPr
       ELSE
@@ -95,7 +99,7 @@ CONTAINS
 
          con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
-         !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,smat,smat%data_c,smat%data_r)&
+         !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,fjgjPr,fjgjPr%fj,fjgjPr%gj,smat,smat%data_c,smat%data_r)&
          !$acc & copyin(l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
          !$acc & copyin(lapwPr%index_lo(:,na),lapwPr%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
          !$acc & copyin(atoms%nlo(ntyp),lapw%nv(:),lapwPr%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
@@ -125,11 +129,11 @@ CONTAINS
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
 
                      IF (smat%l_real) THEN
-                        smat%data_r(lorow,k) = smat%data_r(kp,locol) &
+                        smat%data_r(lorow,(k-1) / fmpi%n_size + 1) = smat%data_r(lorow,(k-1) / fmpi%n_size + 1) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
                                             & * CONJG(cphPr(kp)) * cph(k)
                      ELSE
-                        smat%data_c(lorow,k) = smat%data_c(kp,locol) &
+                        smat%data_c(lorow,(k-1) / fmpi%n_size + 1) = smat%data_c(lorow,(k-1) / fmpi%n_size + 1) &
                                             & + chi * invsfct * fact2 * legpol(atoms%llo(lo,ntyp),dotp) &
                                             & * CONJG(cphPr(kp)) * cph(k)
                      END IF
@@ -145,9 +149,9 @@ CONTAINS
                   !$acc loop gang private(fact2,dotp,kp)
                   DO kp = 1,lapwPr%nv(igSpinPr)
                      fact2 = con * fl2p1 * ( &
-                           & fjgj%fj(kp,l,isp,igSpinPr)*(alo1(lo) &
+                           & fjgjPr%fj(kp,l,isp,igSpinPr)*(alo1(lo) &
                                                      & + clo1(lo)*ud%uulon(lo,ntyp,isp)) + &
-                           & fjgj%gj(kp,l,isp,igSpinPr)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
+                           & fjgjPr%gj(kp,l,isp,igSpinPr)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
                                                      & + clo1(lo)*ud%dulon(lo,ntyp,isp)) )
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
 
@@ -196,7 +200,7 @@ CONTAINS
                   ! Calculate the overlap matrix elements of one local
                   ! orbital with itself
                   lop=lo
-                  DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin)
+                  DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin.AND..NOT.l_fullj)
                      kp = lapwPr%kvec(nkvecp,lo,na)
                      lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvecp
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
