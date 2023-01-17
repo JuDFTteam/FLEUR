@@ -258,7 +258,7 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
          ! valence density in the interstitial region
          !IF (norm2(kpts%bk(:,ikpt))<1E-7) we = 0
          CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
-                    jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,q_dfpt,lapwq,we1,zMat1,qimag(ikpt,:),iDir)
+                    jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,qimag(ikpt,:),iDir)
       END IF
    END DO ! end of k-point loop
 
