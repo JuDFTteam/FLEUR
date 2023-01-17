@@ -239,7 +239,7 @@ CONTAINS
                      tempVec(:nbasfcnq) = MATMUL(-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
                   END IF
 
-                  IF (norm2(q_loop).LT.1e-8) THEN
+                  IF (norm2(bqpt).LT.1e-8) THEN
                      IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
                      IF (l_real) THEN
                         eigs1(nu) = eigs1(nu) + DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
