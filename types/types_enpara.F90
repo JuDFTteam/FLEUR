@@ -92,7 +92,7 @@ CONTAINS
   !> This subroutine adjusts the energy parameters to the potential. In particular, it
   !! calculated them in case of qn_el>-1,qn_ello>-1
   !! Before this was done in lodpot.F
-  SUBROUTINE update(enpara,fmpi_comm,atoms,vacuum,input,v,hub1data)
+  SUBROUTINE update(enpara,fmpi,atoms,vacuum,input,v,hub1data)
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_input
@@ -101,75 +101,114 @@ CONTAINS
     USE m_types_potden
     USE m_types_hub1data
     USE m_find_enpara
+    USE m_types_parallelLoop
+    USE m_types_mpi
+    USE m_mpi_reduce_tool
+    USE m_mpi_bc_tool
 #ifdef CPP_MPI
     USE mpi
 #endif
+
     CLASS(t_enpara),INTENT(inout):: enpara
-    INTEGER,INTENT(IN)          :: fmpi_comm
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_vacuum),INTENT(IN)   :: vacuum
-    TYPE(t_potden),INTENT(IN)   :: v
+    TYPE(t_mpi),INTENT(IN)       :: fmpi
+    TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_input),INTENT(IN)     :: input
+    TYPE(t_vacuum),INTENT(IN)    :: vacuum
+    TYPE(t_potden),INTENT(IN)    :: v
     TYPE(t_hub1data),INTENT(IN)  :: hub1data
 
 
     LOGICAL ::  l_enpara
     LOGICAL ::  l_done(0:atoms%lmaxd,atoms%ntype,input%jspins)
     LOGICAL ::  lo_done(atoms%nlod,atoms%ntype,input%jspins)
+    LOGICAL ::  l_doneLocal(0:atoms%lmaxd,atoms%ntype,input%jspins)
+    LOGICAL ::  lo_doneLocal(atoms%nlod,atoms%ntype,input%jspins)
     REAL    ::  vbar,vz0,rj,tr
-    INTEGER ::  n,jsp,l,ilo,j,ivac,irank,i
+    INTEGER ::  n,jsp,l,ilo,j,ivac,irank,i,ierr
     CHARACTER(LEN=20)    :: attributes(5)
     REAL ::  e_lo(0:3,atoms%ntype)!Store info on branches to do IO after OMP
     REAL ::  e_up(0:3,atoms%ntype)
     REAL ::  elo_lo(atoms%nlod,atoms%ntype)
     REAL ::  elo_up(atoms%nlod,atoms%ntype)
+    REAL ::  e_lo_local(0:3,atoms%ntype)!Store info on branches to do IO after OMP
+    REAL ::  e_up_local(0:3,atoms%ntype)
+    REAL ::  elo_lo_local(atoms%nlod,atoms%ntype)
+    REAL ::  elo_up_local(atoms%nlod,atoms%ntype)
+    REAL ::  el0Local(0:atoms%lmaxd,atoms%ntype,input%jspins)
+    REAL ::  ello0Local(atoms%nlod,atoms%ntype,input%jspins)
     REAL,ALLOCATABLE :: v_mt(:)
+    TYPE(t_parallelLoop) mpiLoop
 
-#ifdef CPP_MPI
-    INTEGER :: ierr
-    CALL MPI_COMM_RANK(fmpi_comm,irank,ierr)
-#else
-    irank=0
-#endif
-    IF (irank  == 0) CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
+    IF (fmpi%irank  == 0) CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
 
-    l_done = .FALSE.;lo_done=.FALSE.
-    elo_lo = 0.0; elo_up = 0.0
+    el0Local = 0.0
+    ello0Local = 0.0
+    l_doneLocal = .FALSE.
+    lo_doneLocal =.FALSE.
     DO jsp = 1,input%jspins
+       e_lo_local = 0.0
+       e_up_local =  0.0
+       elo_lo_local = 0.0
+       elo_up_local = 0.0
+
+       CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%ntype)
        !$OMP PARALLEL DO DEFAULT(none) &
-       !$OMP SHARED(atoms,enpara,jsp,l_done,v,lo_done,e_lo,e_up,elo_lo,elo_up) &
+       !$OMP SHARED(mpiLoop,atoms,enpara,jsp,l_doneLocal,v,lo_doneLocal,e_lo_local,e_up_local,elo_lo_local,elo_up_local,el0Local,ello0Local) &
        !$OMP PRIVATE(n,l,ilo,v_mt)
-       !! First calculate energy paramter from quantum numbers if these are given...
+       !! First calculate energy parameter from quantum numbers if these are given...
        !! l_done stores the index of those energy parameter updated
-       DO n = 1, atoms%ntype
+       DO n = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
           v_mt=v%mt(:,0,n,jsp)
           if (atoms%l_nonpolbas(n)) v_mt=(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2
           DO l = 0,3
-             IF( enpara%qn_el(l,n,jsp).ne.0)THEN
-                l_done(l,n,jsp) = .TRUE.
-                enpara%el0(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,v_mt,e_lo(l,n),e_up(l,n))
+             IF( enpara%qn_el(l,n,jsp).ne.0) THEN
+                l_doneLocal(l,n,jsp) = .TRUE.
+                el0Local(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,v_mt,e_lo_local(l,n),e_up_local(l,n))
                 IF( l .EQ. 3 ) THEN
-                   enpara%el0(4:,n,jsp) = enpara%el0(3,n,jsp)
-                   l_done(4:,n,jsp) = .TRUE.
+                   el0Local(4:,n,jsp) = el0Local(3,n,jsp)
+                   l_doneLocal(4:,n,jsp) = .TRUE.
                 END IF
              ELSE
-                l_done(l,n,jsp) = .FALSE.
+                l_doneLocal(l,n,jsp) = .FALSE.
+                el0Local(l,n,jsp) = enpara%el0(l,n,jsp)
+                IF(l .EQ. 3) THEN
+                   el0Local(4:,n,jsp) = enpara%el0(4:,n,jsp)
+                END IF
              END IF
           ENDDO ! l
           ! Now for the lo's
           DO ilo = 1, atoms%nlo(n)
              l = atoms%llo(ilo,n)
              IF( enpara%qn_ello(ilo,n,jsp).NE.0) THEN
-                lo_done(ilo,n,jsp) = .TRUE.
-                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,v_mt,elo_lo(ilo,n),elo_up(ilo,n))
+                lo_doneLocal(ilo,n,jsp) = .TRUE.
+                ello0Local(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,v_mt,elo_lo_local(ilo,n),elo_up_local(ilo,n))
              ELSE
-                lo_done(ilo,n,jsp) = .FALSE.
+                ello0Local(ilo,n,jsp) = enpara%ello0(ilo,n,jsp)
+                lo_doneLocal(ilo,n,jsp) = .FALSE.
              ENDIF
           ENDDO
        ENDDO ! n
        !$OMP END PARALLEL DO
+       CALL mpi_sum_reduce(el0Local(0:,:,jsp),enpara%el0(0:,:,jsp),fmpi%mpi_comm)
+       CALL mpi_sum_reduce(ello0Local(:,:,jsp),enpara%ello0(:,:,jsp),fmpi%mpi_comm)
+       CALL mpi_sum_reduce(e_lo_local,e_lo,fmpi%mpi_comm)
+       CALL mpi_sum_reduce(e_up_local,e_up,fmpi%mpi_comm)
+       CALL mpi_sum_reduce(elo_lo_local,elo_lo,fmpi%mpi_comm)
+       CALL mpi_sum_reduce(elo_up_local,elo_up,fmpi%mpi_comm)
+       CALL mpi_lor_reduce(l_doneLocal(:,:,jsp),l_done(:,:,jsp),fmpi%mpi_comm)
+       CALL mpi_lor_reduce(lo_doneLocal(:,:,jsp),lo_done(:,:,jsp),fmpi%mpi_comm)
+       CALL mpi_bc(enpara%el0,0,fmpi%mpi_comm)
+       CALL mpi_bc(enpara%ello0,0,fmpi%mpi_comm)
+#ifdef CPP_MPI
+       CALL MPI_BCAST(e_lo,SIZE(e_lo),MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+       CALL MPI_BCAST(e_up,SIZE(e_up),MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+       CALL MPI_BCAST(elo_lo,SIZE(elo_lo),MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+       CALL MPI_BCAST(elo_up,SIZE(elo_up),MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+       CALL MPI_BCAST(l_done,SIZE(l_done),MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+       CALL MPI_BCAST(lo_done,SIZE(lo_done),MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+#endif
 
-       IF (irank==0) THEN
+       IF (fmpi%irank==0) THEN
          WRITE(oUnit,*)
          WRITE(oUnit,*) "Updated energy parameters for spin:",jsp
          !Same loop for IO
@@ -195,7 +234,7 @@ CONTAINS
              j = atoms%jri(n) - (LOG(4.0)/atoms%dx(n)+1.51)
              rj = atoms%rmt(n)*EXP(atoms%dx(n)* (j-atoms%jri(n)))
              vbar = v%mt(j,0,n,jsp)/rj
-             IF (irank.EQ.0) THEN
+             IF (fmpi%irank.EQ.0) THEN
                 WRITE (oUnit,'('' spin'',i2,'', atom type'',i3,'' ='',f12.6,''   r='',f8.5)') jsp,n,vbar,rj
              ENDIF
              DO l = 0,atoms%lmax(n)
@@ -229,7 +268,7 @@ CONTAINS
              vz0 = 0.0
              IF (enpara%floating) THEN
                 vz0 = v%vacz(1,ivac,jsp)
-                IF (irank.EQ.0) THEN
+                IF (fmpi%irank.EQ.0) THEN
                    WRITE (oUnit,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0
                 ENDIF
              ENDIF
@@ -237,7 +276,7 @@ CONTAINS
              IF (.NOT.l_enpara) THEN
                 enpara%evac(ivac,jsp) = v%vacz(vacuum%nmz,ivac,jsp) + enpara%evac0(ivac,jsp)
              END IF
-             IF (irank.EQ.0) THEN
+             IF (fmpi%irank.EQ.0) THEN
                 attributes = ''
                 WRITE(attributes(1),'(i0)') ivac
                 WRITE(attributes(2),'(i0)') jsp
@@ -258,7 +297,7 @@ CONTAINS
        !Set the energy parameters to the same value
        !We want the shell where Hubbard 1 is applied to
        !be non spin-polarized
-       IF(irank.EQ.0) THEN
+       IF(fmpi%irank.EQ.0) THEN
           WRITE(oUnit,FMT=*)
           WRITE(oUnit,"(A)") "For Hubbard 1 we treat the correlated shell to be non spin-polarized"
        ENDIF
@@ -274,7 +313,7 @@ CONTAINS
             enpara%el0(4:,n,1) = enpara%el0(3,n,1)
             enpara%el0(4:,n,2) = enpara%el0(3,n,1)
           ENDIF
-          IF(irank.EQ.0) WRITE(oUnit,"(A,I3,A,I1,A,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1)
+          IF(fmpi%irank.EQ.0) WRITE(oUnit,"(A,I3,A,I1,A,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1)
        ENDDO
     ENDIF
 
@@ -294,7 +333,7 @@ CONTAINS
                 tr = tr + REAL(v%mmpMat(i,i,j,jsp))
              ENDDO
              enpara%el0(l,n,jsp) = enpara%el0(l,n,jsp) + tr/REAL(2*l+1)
-             IF(irank.EQ.0) WRITE(oUnit,"(A,I3,A,I1,A,I1,A,f16.10)")&
+             IF(fmpi%irank.EQ.0) WRITE(oUnit,"(A,I3,A,I1,A,I1,A,f16.10)")&
                                "New energy parameter atom ", n, " l ", l, " spin ", jsp,"--> ", enpara%el0(l,n,jsp)
           ENDDO
        ENDDO
@@ -303,7 +342,7 @@ CONTAINS
 !    enpara%ready=(ALL(enpara%el0>-1E99).AND.ALL(enpara%ello0>-1E99))
     enpara%epara_min=MIN(MINVAL(enpara%el0),MINVAL(enpara%ello0))
 
-    IF (irank  == 0) CALL closeXMLElement('energyParameters')
+    IF (fmpi%irank  == 0) CALL closeXMLElement('energyParameters')
   END SUBROUTINE update
 
   SUBROUTINE READ(enpara,atoms,jspins,film,l_required)
