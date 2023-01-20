@@ -30,7 +30,7 @@ CONTAINS
     USE m_types_profile
 
     TYPE(t_profile),INTENT(IN)     :: profile
-    REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:),mag_mom(0:,:)
+    REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:),mag_mom(:,:)
     CHARACTER(len=20), ALLOCATABLE,INTENT(OUT) :: atom_Label(:)
     CHARACTER(len=40),INTENT(OUT)  :: kpts_str(:)
     CHARACTER(len=40),INTENT(out)  :: kptsName(:)
