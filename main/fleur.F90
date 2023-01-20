@@ -379,7 +379,7 @@ CONTAINS
             CALL timestart("eigen")
 
             CALL timestart("Updating energy parameters")
-            CALL enpara%update(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
+            CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN
