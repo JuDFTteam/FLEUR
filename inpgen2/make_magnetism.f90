@@ -14,7 +14,7 @@ module m_make_magnetism
         TYPE(t_input),INTENT(INOUT):: input
         TYPE(t_noco),INTENT(INOUT) :: noco 
         TYPE(t_atoms),INTENT(INOUT):: atoms 
-        REAL,INTENT(IN)            :: mag_mom(:,:)
+        REAL,INTENT(IN)            :: mag_mom(0:,:)
 
         INTEGER:: n 
 
@@ -39,7 +39,7 @@ module m_make_magnetism
         if (all(abs(mag_mom)<1E-5)) RETURN !No magnetic moments given
         input%jspins=2
         !check if we have a collinear setup
-        if (all(abs(mag_mom(2:,:))<1E-5)) THEN
+        if (all(abs(mag_mom(2:,:))<1E-5).and.all(mag_mom(0,:)==0)) THEN
             atoms%bmu(:)=mag_mom(1,:)
             RETURN
         endif
@@ -48,8 +48,14 @@ module m_make_magnetism
         noco%l_noco=.true. 
         
         DO n=1,atoms%ntype
-            atoms%bmu(n)=sqrt(dot_product(mag_mom(:,n),mag_mom(:,n))) !set mag moment to absolute value
-            call pol_angle(mag_mom(1,n),mag_mom(2,n),mag_mom(3,n), noco%beta_inp(n), noco%alph_inp(n),.true.)
+            if (mag_mom(0,n)==0) THEN
+                atoms%bmu(n)=sqrt(dot_product(mag_mom(:,n),mag_mom(:,n))) !set mag moment to absolute value
+                call pol_angle(mag_mom(1,n),mag_mom(2,n),mag_mom(3,n), noco%beta_inp(n), noco%alph_inp(n),.true.)
+            else !angle are given
+                noco%alph_inp(n)=mag_mom(1,n)
+                noco%beta_inp(n)=mag_mom(2,n)
+                atoms%bmu(n)=mag_mom(3,n)
+            endif      
         ENDDO
     END subroutine
 END module            
