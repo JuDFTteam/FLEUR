@@ -61,12 +61,12 @@ CONTAINS
                       coef = 2.*gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd)
                       IF (lmp.EQ.lm) coef = coef/2.
                       cconst = coef* (cil*cmv)
-                      natom = 0
-                      DO  nn = 1,atoms%ntype
+                      DO nn = 1,atoms%ntype
+                         natom = atoms%firstAtom(nn) - 1
                          llpmax = (atoms%lmax(nn)* (atoms%lmax(nn)+3))/2
                          IF (llp.LE.llpmax) THEN
                             nt = natom
-                            DO  na = 1,atoms%neq(nn)
+                            DO na = 1,atoms%neq(nn)
                                nt = nt + 1
                                IF (sym%ntypsy(nt).EQ.ns) THEN
                                   DO nb = 1,ne
@@ -82,7 +82,6 @@ CONTAINS
                                ENDIF
                             ENDDO
                          ENDIF
-                         natom = natom + atoms%neq(nn)
                       ENDDO
                    ENDDO
                 ENDDO m_loop

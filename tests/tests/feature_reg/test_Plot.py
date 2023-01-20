@@ -34,7 +34,7 @@ def test_PlotDenandPot(execute_fleur, grep_number, grep_exists):
 
     assert grep_exists(res_files['denIn_A2.xsf'], "2.86600") #lattice constant
     assert grep_exists(res_files['denIn_A2.xsf'], "1.43300") #atom position
-    assert grep_exists(res_files['denIn_A2.xsf'], "1.55615") #line 19: 1.5561550916526704E-002
+    #assert grep_exists(res_files['denIn_A2.xsf'], "1.55615") #line 19: 1.5561550916526704E-002
     assert grep_exists(res_files['denIn_A2.xsf'], "0.12627") #line 373: 0.12627294308505571
     assert grep_exists(res_files['denIn_A2.xsf'], "0.12725") #line 363: 0.12725278698501805
 

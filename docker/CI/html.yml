@@ -1,6 +1,6 @@
 
 pages:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: deploy
   needs: 
     - doxygen
@@ -34,7 +34,7 @@ ford:
       - if: $CI_TASKS =~ /doc/    
   
 doxygen:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: html
   needs: []
   script:
@@ -53,7 +53,7 @@ doxygen:
   
 
 gfortran-coverage:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   stage: html
   needs: []
@@ -65,12 +65,12 @@ gfortran-coverage:
       - ./configure.sh -l coverage -flags --coverage GITLAB
       - cd build.coverage
       - make -j 4
-      - lcov --capture --initial -d CMakeFiles -o baseline.info
+      - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --exclude "*.inc" --capture --initial -d CMakeFiles -o baseline.info
   after_script:
-      - lcov --capture  -d CMakeFiles -o after.info
-      - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
-      - genhtml combined.info --output-directory html_out
-      - mkdir ../public;mv html_out ../public/coverage_html
+      - cd $CI_PROJECT_DIR/build.coverage
+      - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --exclude "*.inc" --capture  -d CMakeFiles -o after.info
+      - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --add-tracefile baseline.info --add-tracefile after.info -o combined.info
+      - mkdir ../public;genhtml --output-directory ../public/coverage_html --title "FLEUR test coverage" --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf combined.info 
   allow_failure: true
   artifacts:
     paths:

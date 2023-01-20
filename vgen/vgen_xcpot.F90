@@ -35,7 +35,6 @@ CONTAINS
       USE m_checkdopall
       USE m_cdn_io
       USE m_convol
-      USE m_cdntot
       USE m_intgr
       USE m_metagga
       USE m_dfpt_vmt_xc

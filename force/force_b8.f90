@@ -29,14 +29,14 @@ CONTAINS
       COMPLEX, INTENT(INOUT) :: f_b8(3,atoms%ntype)
       REAL,    INTENT(INOUT) :: force(:,:,:)
 
-      INTEGER g(3),nst,stg(3,sym%nop),ia,istr,i,j,jj,jneq
+      INTEGER g(3),nst,stg(3,sym%nop),ia,istr,i,j,jj,iType
       REAL    fj(0:atoms%lmaxd),rotkzz(3),rstg(3,sym%nop)
       REAL    frmt,gl,pha,s
       COMPLEX taup(sym%nop),factor,fact,fstar(3),fsur2(3)
    
-      ia=1
-      DO jneq=1,atoms%ntype
-         frmt = 2.0*tpi_const*atoms%rmt(jneq)**2
+      DO iType=1,atoms%ntype
+         ia = atoms%firstAtom(iType)
+         frmt = 2.0*tpi_const*atoms%rmt(iType)**2
          fsur2(1:3) = cmplx(0.0,0.0)         
 
          ! Skip G=(0,0,0) [no contribution to ekin]
@@ -45,7 +45,7 @@ CONTAINS
             fstar(:) = cmplx(0.0,0.0)
             CALL stern(sym,cell,g, nst,stg,taup,gl,rstg)
 
-            CALL sphbes(atoms%lmax(jneq),atoms%rmt(jneq)*gl,fj)
+            CALL sphbes(atoms%lmax(iType),atoms%rmt(iType)*gl,fj)
             fact = ecwk(istr) * fj(1) / gl
 
             DO jj=1,nst
@@ -63,10 +63,9 @@ CONTAINS
             END DO
          END DO
          DO i=1,3
-            f_b8(i,jneq) = f_b8(i,jneq) + fsur2(i)
-            force(i,jneq,jspin) = force(i,jneq,jspin) + real(fsur2(i))
+            f_b8(i,iType) = f_b8(i,iType) + fsur2(i)
+            force(i,iType,jspin) = force(i,iType,jspin) + real(fsur2(i))
          END DO
-         ia=ia+atoms%neq(jneq)
       END DO
 
    END SUBROUTINE force_b8

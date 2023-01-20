@@ -56,7 +56,7 @@ CONTAINS
     states : DO i = 1, noccbd
        DO n_dos=1,size(banddos%dos_typelist)
          ntyp=banddos%dos_typelist(n_dos)
-         nt1 = sum(atoms%neq(:ntyp-1))+1
+         nt1 = atoms%firstAtom(ntyp)
          nt2 = nt1 + atoms%neq(ntyp) - 1
           ls : DO l = 0,3
              IF (i==1) THEN
@@ -85,7 +85,7 @@ CONTAINS
 
     DO n_dos=1,SIZE(banddos%dos_typelist)
     ntyp = banddos%dos_typelist(n_dos)
-       natom=sum(atoms%neq(:ntyp-1))
+       natom = atoms%firstAtom(ntyp) - 1
        DO nn = 1,atoms%neq(ntyp)
           natom = natom + 1
           DO lo = 1,atoms%nlo(ntyp)
@@ -142,10 +142,11 @@ CONTAINS
        !
        ! rotate into global frame
        !
-       chi(1,1) =  EXP(-ImagUnit*nococonv%alph(ntyp)/2)*COS(nococonv%beta(ntyp)/2)
-       chi(1,2) = -EXP(-ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
-       chi(2,1) =  EXP( ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
-       chi(2,2) =  EXP( ImagUnit*nococonv%alph(ntyp)/2)*COS(nococonv%beta(ntyp)/2)
+       !chi(1,1) =  EXP(-ImagUnit*nococonv%alph(ntyp)/2)*COS(nococonv%beta(ntyp)/2)
+       !chi(1,2) = -EXP(-ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
+       !chi(2,1) =  EXP( ImagUnit*nococonv%alph(ntyp)/2)*SIN(nococonv%beta(ntyp)/2)
+       !chi(2,2) =  EXP( ImagUnit*nococonv%alph(ntyp)/2)*COS(nococonv%beta(ntyp)/2)
+       chi=nococonv%chi(ntyp)
        state : DO i = 1, noccbd
           lls : DO l = 0,3
              CALL rot_den_mat(nococonv%alph(ntyp),nococonv%beta(ntyp),&

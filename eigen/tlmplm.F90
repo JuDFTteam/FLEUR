@@ -5,7 +5,7 @@ MODULE m_tlmplm
 
 CONTAINS
    SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,nococonv,&
-       ilSpinPr,ilSpin,iSpinV,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,lh0,one,l_dfpt,v1)
+       ilSpinPr,ilSpin,iSpinV,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,l_dfpt,v1)
       ! Contruct the local potential matrices
       ! t_{L'L}^{\mu} = \sum_{lh} \int dV u_{l',order'}^{\mu}(r)Y_{l'}^{m'*}(\Omega)
       !                           * V_{lh}(r)Y_{lh}(\Omega)
@@ -38,7 +38,7 @@ CONTAINS
       TYPE(t_usdus),    INTENT(INOUT) :: ud
 
       ! Indices of atom type, local spins, accessed spin of V and where to start summing lattice harmonics.
-      INTEGER, INTENT(IN) :: n, ilSpinPr, ilSpin, iSpinV, lh0
+      INTEGER, INTENT(IN) :: n, ilSpinPr, ilSpin, iSpinV
       REAL,    INTENT(IN) :: alpha_hybrid
 
       COMPLEX, INTENT(IN) :: one ! 1 for real part of a component, i if there is an imaginary one.
@@ -53,7 +53,7 @@ CONTAINS
 
       COMPLEX :: cil
       REAL    :: temp
-      INTEGER :: i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmx,lp,info,in
+      INTEGER :: i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmx,lp,info,in,lh0
       INTEGER :: lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,lplmax
       LOGICAL :: l_remove
 
@@ -68,10 +68,19 @@ CONTAINS
       ALLOCATE(flo(atoms%jmtd,2,atoms%nlod,2))
       ALLOCATE( vr0(SIZE(v%mt,1),0:SIZE(v%mt,2)-1))
 
+      !check if we need a l=0 contribution
+      lh0 = MERGE(1,0,iSpinV<3.and.alpha_hybrid==0)
+      if (atoms%l_nonpolbas(n)) lh0=0 !non-spin-pol basis
+      if (PRESENT(v1)) lh0=0  !DFPT code-path
+
       IF (.NOT.PRESENT(v1)) THEN
          vr0 = v%mt(:,:,n,iSpinV)
          IF (iSpinV<3) THEN
             vr0(:,0)=0.0
+            IF (atoms%l_nonpolbas(n)) THEN
+               vr0(:,0)=v%mt(:,0,n,iSpinV)-(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2.0
+               vr0(:,0)= vr0(:,0)/atoms%rmsh(:atoms%jri(n),n)*sfp_const
+            ENDIF
             IF (alpha_hybrid.NE.0) vr0=vr0-alpha_hybrid*vx%mt(:,:,n,iSpinV)
          ELSE
             vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(iSpinV-2,n) !Add constraining field
@@ -80,11 +89,12 @@ CONTAINS
          vr0=v1
       END IF
 
+
       DO i = MIN(ilSpinPr,ilSpin),MAX(ilSpinPr,ilSpin)
          CALL genMTBasis(atoms,enpara,v,fmpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo(:,:,:,i),hub1data=hub1data)
       END DO
 
-      na = SUM(atoms%neq(:n-1)) + 1
+      na = atoms%firstAtom(n)
       nsym = sym%ntypsy(na)
       nh = sphhar%nlh(nsym)
 

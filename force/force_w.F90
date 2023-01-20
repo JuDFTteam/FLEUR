@@ -40,8 +40,8 @@ CONTAINS
       ! Write spin-dependent forces
 
       IF (fmpi%irank==0) THEN
-         nat1 = 1
          DO n = 1, atoms%ntype
+            nat1 = atoms%firstAtom(n)
             IF (atoms%l_geo(n)) THEN
                IF (input%jspins.EQ.2) THEN
                   DO jsp = 1,input%jspins
@@ -54,7 +54,6 @@ CONTAINS
                        'X=',f7.3,3x,'Y=',f7.3,3x,'Z=',f7.3,5x,&
                        ' FX_SP =',f9.6,' FY_SP =',f9.6,' FZ_SP =',f9.6)
             END IF
-            nat1 = nat1 + atoms%neq(n)
          END DO
 
          ! Write total forces
@@ -62,7 +61,6 @@ CONTAINS
 
 8005     FORMAT (/,' ***** TOTAL FORCES ON ATOMS ***** ',/)
          IF (input%l_f) CALL openXMLElement('totalForcesOnRepresentativeAtoms',(/'units'/),(/'Htr/bohr'/))
-         nat1 = 1
          forcetot = 0.0
          if (allocated(results%force_vdw)) THEN
             forcetot=forcetot+results%force_vdw
@@ -70,6 +68,7 @@ CONTAINS
          endif
 
          DO n = 1,atoms%ntype
+            nat1 = atoms%firstAtom(n)
             IF (atoms%l_geo(n)) THEN
                DO jsp = 1,input%jspins
                   forcetot(:,n) = forcetot(:,n) + results%force(:,n,jsp)
@@ -98,7 +97,6 @@ CONTAINS
                         RESHAPE((/8,1,1,1,3,3,3,6,12,12,12,12,12,12/),(/7,2/)))
                END IF
             END IF
-            nat1 = nat1 + atoms%neq(n)
          END DO
          IF (input%l_f) CALL closeXMLElement('totalForcesOnRepresentativeAtoms')
 

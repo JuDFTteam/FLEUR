@@ -61,7 +61,9 @@ CONTAINS
           ENDIF
        ENDDO
        DO jspin = 1,input%jspins
-          vrTmp = vr(:,jspin)
+          !TODO: here genMTBasis should be used
+         vrTmp = vr(:,jspin)
+         if (atoms%l_nonpolbas(ntyp)) vrTmp = (vr(:,1)+vr(:,2))/2.0
           IF(l_hia.AND.input%jspins.EQ.2) THEN
              IF(PRESENT(hub1data)) THEN
                 IF(hub1data%l_performSpinavg) vrTmp = (vr(:,1)+vr(:,2))/2.0
@@ -138,9 +140,11 @@ CONTAINS
           IF (atoms%llo(ilo,ntyp).EQ.l) THEN
 
              DO jspin = 1,input%jspins
+               vrTmp = vr(:,jspin)
+               if (atoms%l_nonpolbas(ntyp)) vrTmp = (vr(:,1)+vr(:,2))/2.0
                 e = enpara%ello0(ilo,ntyp,jspin)
                 CALL radsra(&
-                     e,l,vr(:,jspin),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
+                     e,l,vrtmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                      usdus%ulos(ilo,ntyp,jspin),usdus%dulos(ilo,ntyp,jspin),&
                      nodeu,plo(:,jspin),qlo(:,jspin))
 
@@ -153,7 +157,7 @@ CONTAINS
                    i = atoms%ulo_der(ilo,ntyp)
                    IF(atoms%l_dulo(ilo,ntyp)) i=1
                    CALL radsrdn(&
-                        e,l,vr(:,jspin),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
+                        e,l,vrtmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                         usdus%ulos(ilo,ntyp,jspin),duds1,ddn1,noded,glo,filo,&!filo is a dummy array&
                         pqlo,usdus%dulos(ilo,ntyp,jspin),i)
                    ddn1 = SQRT(ddn1)
@@ -201,9 +205,11 @@ CONTAINS
                 IF (atoms%llo(ilop,ntyp).EQ.l) THEN
 
                    DO jspin = 1,input%jspins
+                     vrTmp = vr(:,jspin)
+                     if (atoms%l_nonpolbas(ntyp)) vrTmp = (vr(:,1)+vr(:,2))/2.0
                       e = enpara%ello0(ilop,ntyp,jspin)
                       CALL radsra(&
-                           e,l,vr(:,jspin),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
+                           e,l,vrtmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                            ulops,dulops,nodeu,plop(:,jspin),q(:,1))
                       !+apw+lo
                       IF (atoms%l_dulo(ilo,ntyp).OR.atoms%ulo_der(ilo,ntyp).GE.1) THEN ! calculate orthogonal energy derivative at e
@@ -214,7 +220,7 @@ CONTAINS
                          i = atoms%ulo_der(ilo,ntyp)
                          IF(atoms%l_dulo(ilo,ntyp)) i=1
                          CALL radsrdn(&
-                              e,l,vr(:,jspin),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
+                              e,l,vrtmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                               ulops,duds1,ddn1,noded,glo,filo,&!filo is a dummy array&
                               pqlo,dulops,i)
                          plop(1:atoms%jri(ntyp),jspin) = glo(1:atoms%jri(ntyp),1)

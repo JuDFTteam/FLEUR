@@ -2,7 +2,7 @@
 try_compile(FLEUR_USE_WANN ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_Wannier90.f90
 	    LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
-
+set(FLEUR_WANNIER90_LIBRARIES ${FLEUR_LIBRARIES}) 
 foreach(ADD_String "-lwannier" )
    if (NOT FLEUR_USE_WANN)
      set(TEST_LIBRARIES "${ADD_String};${FLEUR_LIBRARIES}")

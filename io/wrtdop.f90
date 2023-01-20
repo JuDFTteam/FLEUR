@@ -43,11 +43,11 @@
           !          WRITE (oUnit,FMT=8000) name
 8000      FORMAT (' wrtdop title:',10a8)
           WRITE (nu) iop,dop,it
-          DO  jsp = 1,SIZE(fr,4)
+          DO jsp = 1,SIZE(fr,4)
              WRITE (nu) jsp
              WRITE (nu) atoms%ntype
-             na = 1
-             DO  n = 1,atoms%ntype
+             DO n = 1,atoms%ntype
+                na = atoms%firstAtom(n)
                 izn = atoms%zatom(n) + 0.01
                 WRITE (nu) namat_const(izn),n,atoms%jri(n),atoms%rmt(n),atoms%dx(n)
                 WRITE (nu) sym%ntypsy(na),sphhar%nlh(sym%ntypsy(na))
@@ -55,7 +55,6 @@
                    WRITE (nu) lh
                    WRITE (nu) (fr(i,lh,n,jsp),i=1,atoms%jri(n))
                 ENDDO
-                na = na + atoms%neq (n)
              ENDDO
              IF (jsp<=SIZE(fpw,2)) THEN
                 WRITE (nu) stars%ng3

@@ -57,7 +57,7 @@ CONTAINS
                lmp = l* (l+1) + mp
                v_a = v_mmp(m,mp,i_u)
                v_b = v_mmp(m,mp,i_u) * usdus%ddn(l,itype,isp)
-               DO iatom = sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
+               DO iatom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                   DO ie = 1,ne
                      DO i = 1,3
                         p1 = (CONJG(eigVecCoeffs%abcof(ie,lm,0,iatom,isp)) * v_a) * aveccof(i,ie,lmp,iatom)
@@ -81,7 +81,7 @@ CONTAINS
                      v_a = v_mmp(m,mp,i_u)
                      v_b = v_mmp(m,mp,i_u) * usdus%uulon(lo,itype,isp)
                      v_c = v_mmp(m,mp,i_u) * usdus%dulon(lo,itype,isp)
-                     DO iatom =  sum(atoms%neq(:itype-1))+1,sum(atoms%neq(:itype))
+                     DO iatom =  atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                         DO ie = 1,ne
                            DO i = 1,3
                               p1 = v_a * (CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * cveccof(i,mp,ie,lo,iatom))

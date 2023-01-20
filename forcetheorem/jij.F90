@@ -59,9 +59,9 @@ CONTAINS
     this%no_loops=0
     DO n=1,SIZE(this%qvec,2)
        DO ni=1,atoms%ntype
-          IF (ABS(atoms%bmu(ni))<eps) CYCLE !no magnetic atom
+          IF (ABS(atoms%bmu(ni))<eps.and..not.atoms%econf(ni)%is_polarized()) CYCLE !no magnetic atom
           DO nj=ni,atoms%ntype
-             IF (ABS(atoms%bmu(nj))<eps) CYCLE !no magnetic atom
+             IF (ABS(atoms%bmu(nj))<eps.and..not.atoms%econf(nj)%is_polarized()) CYCLE !no magnetic atom
              DO j=1,MERGE(1,2,ni==nj) !phase factor
                 !new config found
                 this%no_loops=this%no_loops+1
@@ -73,6 +73,9 @@ CONTAINS
           END DO
        END DO
     END DO
+    if (this%no_loops == 0) then
+      call judft_error("No configurations for Jij calculation set. Make sure you have magnetic atoms in the unit cell")
+    endif
 
     ALLOCATE(this%evsum(this%no_loops))
     this%evsum=0
@@ -128,7 +131,7 @@ CONTAINS
     ENDIF
 
     !OK, now we start the JIJ-loop
-
+    this%l_in_forcetheo_loop = .true.
     this%loopindex=this%loopindex+1
     jij_next_job=(this%loopindex<=this%no_loops) !still loops to do...
     IF (.NOT.jij_next_job) RETURN
@@ -149,7 +152,7 @@ CONTAINS
 
     !rotate according to q-vector
     DO n = 1,atoms%ntype
-       nococonv%alph(n) = nococonv%alph(n) + tpi_const*DOT_PRODUCT(nococonv%qss,atoms%taual(:,SUM(atoms%neq(:n-1))+1))
+       nococonv%alph(n) = nococonv%alph(n) + tpi_const*DOT_PRODUCT(nococonv%qss,atoms%taual(:,atoms%firstAtom(n)))
     ENDDO
 
     IF (.NOT.this%l_io) RETURN

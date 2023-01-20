@@ -62,14 +62,14 @@ CONTAINS
          ALLOCATE(pos(3,atoms%ntype,1));
 
          DO iType = 1, atoms%ntype
-            pos(:,iType,1)=atoms%pos(:,SUM(atoms%neq(:iType-1))+1)
+            pos(:,iType,1)=atoms%pos(:,atoms%firstAtom(iType))
          END DO
 
          ALLOCATE(force(3,atoms%ntype,1)); force(:,:,1)=force_new
          ALLOCATE(energies(1));energies(1)=energies_new
          ALLOCATE(displace(3,atoms%ntype),old_displace(3,atoms%ntype))
          ALLOCATE(tempDisplace(3,atoms%ntype),totalDisplace(3,atoms%ntype))
-
+         totalDisplace=0.0
          ! Remove force components that are not selected for relaxation
          DO iType = 1, atoms%ntype
             IF (atoms%l_geo(iType)) THEN
@@ -121,8 +121,8 @@ CONTAINS
          CALL atoms_non_displaced%init(cell)
 
          DO iType = 1, atoms%ntype
-            old_displace(:,iType) = atoms%pos(:,SUM(atoms%neq(:iType-1))+1) - &
-                                    atoms_non_displaced%pos(:,SUM(atoms%neq(:iType-1))+1)
+            old_displace(:,iType) = atoms%pos(:,atoms%firstAtom(iType)) - &
+                                    atoms_non_displaced%pos(:,atoms%firstAtom(iType))
          END DO
 
          tempAtoms = atoms_non_displaced

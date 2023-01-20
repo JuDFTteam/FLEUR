@@ -31,12 +31,14 @@ oxides_validation_econfig.h
 profileConfig.h
 
 inpgen_help.f90
+inpgen_version.f90
 inpgen.f90
 bravais_symm.f90
 make_crystal.f90
 make_spacegroup.f90
 check_mt_radii.f90
 make_atom_groups.f90
+make_magnetism.f90
 make_defaults.f90
 process_lattice_namelist.f90
 atompar.F90
@@ -68,6 +70,7 @@ old_inp/prp_xcfft_box.f
 
 ${CMAKE_BINARY_DIR}/include/buildinfo.h
 
+${FLEUR_SRC}/main/fleur_dropxmlschema.f90
 ${FLEUR_SRC}/init/make_sym.f90
 ${FLEUR_SRC}/init/angles.f90
 ${FLEUR_SRC}/init/compile_descr.F90
@@ -108,6 +111,7 @@ ${FLEUR_SRC}/types/types_sphhar.f90
 ${FLEUR_SRC}/types/types_tlmplm.F90
 ${FLEUR_SRC}/types/types_misc.F90
 ${FLEUR_SRC}/types/types_mpimat.F90
+${FLEUR_SRC}/types/types_parallelLoop.F90
 ${FLEUR_SRC}/types/types_potden.F90
 ${FLEUR_SRC}/types/types_enpara.F90
 ${FLEUR_SRC}/types/types_setup.F90
@@ -146,6 +150,8 @@ ${FLEUR_SRC}/math/trapz.f90
 ${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90
 ${FLEUR_SRC}/init/boxdim.f90
+${FLEUR_SRC}/mpi/mpi_reduce_tool.F90
+${FLEUR_SRC}/fleurinput/mpi_bc_tool.F90
 )
 
 set_source_files_properties(${CMAKE_BINARY_DIR}/include/buildinfo.h PROPERTIES GENERATED TRUE)

@@ -82,9 +82,9 @@ CONTAINS
 ! MT coefficients
       cmt_out = 0
       iatom = 0
-      iiatom = 0
 
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
@@ -117,7 +117,6 @@ CONTAINS
                lm0 = lm2
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
 ! PW coefficients
@@ -217,9 +216,9 @@ CONTAINS
       ! MT coefficients
       cmt_out = 0
       iatom = 0
-      iiatom = 0
 
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
@@ -253,7 +252,6 @@ CONTAINS
                lm0 = lm2
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
       ! If phase and inversion-sym. is true,
@@ -339,9 +337,9 @@ CONTAINS
       ! MT coefficients
       cmt_out = 0
       iatom = 0
-      iiatom = 0
 
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
@@ -375,7 +373,6 @@ CONTAINS
                lm0 = lm2
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
       ! PW coefficients
@@ -703,7 +700,7 @@ CONTAINS
 !     - local arrays -
       COMPLEX               ::  carr(max(dim1, dim2)), cfac = sqrt(0.5)*ImagUnit
 
-      call timestart("symmetrize")
+!      call timestart("symmetrize")
       ic = 0
       i = 0
 
@@ -757,7 +754,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      call timestop("symmetrize")
+!      call timestop("symmetrize")
    END SUBROUTINE symmetrize
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -787,7 +784,7 @@ CONTAINS
 !     - local arrays -
       COMPLEX                 ::  carr(max(dim1, dim2))
 
-      call timestart("desymmetrize")
+!      call timestart("desymmetrize")
       ic = 0
       istart = 0
       DO itype = 1, atoms%ntype
@@ -829,7 +826,7 @@ CONTAINS
             endif
          END DO
       END DO
-      call timestop("desymmetrize")
+!      call timestop("desymmetrize")
    END SUBROUTINE desymmetrize
 
    ! bra_trafo1 rotates cprod at kpts%bkp(ikpt)(<=> not irreducible k-point) to cprod at ikpt (bkp(kpts%bkp(ikpt))), which is the
@@ -970,8 +967,8 @@ CONTAINS
       COMPLEX                 :: dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), &
                                       -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
 
-      call timestart("bra_trafo_core")
-      call timestart("setup")
+!      call timestart("bra_trafo_core")
+!      call timestart("setup")
       IF (kpts%bksym(ikpt) <= sym%nop) THEN
          inviop = sym%invtab(kpts%bksym(ikpt))
          rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
@@ -996,10 +993,10 @@ CONTAINS
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g = nint(rkpthlp - rkpt)
-      call timestop("setup")
+!      call timestop("setup")
 
       !test
-      call timestart("test")
+!      call timestart("test")
       nrkpt = 0
       DO i = 1, kpts%nkptf
          IF (maxval(abs(rkpt - kpts%bkf(:, i))) <= 1E-06) THEN
@@ -1015,10 +1012,10 @@ CONTAINS
 
          call judft_error('bra_trafo: rotation failed')
       END IF
-      call timestop("test")
+!      call timestop("test")
 
 !     Define pointer to first mixed-basis functions (with m = -l)
-      call timestart("def pointer to first mpb")
+!      call timestart("def pointer to first mpb")
       i = 0
       do ic = 1, atoms%nat
          itype = atoms%itype(ic)
@@ -1030,11 +1027,11 @@ CONTAINS
             i = i + mpdata%num_radbasfn(l, itype)*2*l
          END DO
       END DO
-      call timestop("def pointer to first mpb")
+!      call timestop("def pointer to first mpb")
 
 !     Multiplication
       ! MT
-      call timestart("MT part")
+!      call timestart("MT part")
       cexp = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
       !$OMP parallel do default(none) private(ic, itype, cdum, l, nn, n, i1, i2, j1, j2, i)&
       !$OMP shared(atoms, cexp, hybinp, kpts, mpdata, pnt, dwgn, vecin1, vecout1, ikpt, g, nbands, psize)
@@ -1059,10 +1056,10 @@ CONTAINS
          END DO
       END DO
       !$OMP end parallel do
-      call timestop("MT part")
+!      call timestop("MT part")
 
       ! PW
-      call timestart("PW part")
+!      call timestart("PW part")
       !$OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
       !$OMP shared(vecout1, vecin1, mpdata, ikpt, igptm2_list, kpts, rrot, g, hybdat, trans, nbands, psize)
       DO igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
@@ -1074,8 +1071,8 @@ CONTAINS
          vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
       END DO
       !$OMP end parallel do
-      call timestop("PW part")
-      call timestop("bra_trafo_core")
+!      call timestop("PW part")
+!      call timestop("bra_trafo_core")
    end subroutine bra_trafo_core
 
    subroutine find_corresponding_g(sym, kpts, mpdata, ikpt, igptm2_list)
@@ -1090,7 +1087,7 @@ CONTAINS
       integer :: g(3), rrot(3, 3)
       REAL    :: rkpt(3), rkpthlp(3)
 
-      call timestart("find correpsonding g")
+      call timestart("find corresponding g")
       call timestart("setup")
       IF (kpts%bksym(ikpt) <= sym%nop) THEN
          rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
@@ -1135,7 +1132,7 @@ CONTAINS
          igptm2_list(igptm) = igptm2
       enddo
       !$OMP end parallel do
-      call timestop("find correpsonding g")
+      call timestop("find corresponding g")
    end subroutine find_corresponding_g
 
    ! Determines common phase factor (with unit norm)

@@ -1372,7 +1372,7 @@ module m_jpInit
   !>
   !> @todo : Put rhos into general density type which is similiar to the potential type
   !>--------------------------------------------------------------------------------------------------------------------------------
-  subroutine ReadDensFleur( atoms, sym, lathar, dimens, stars, input, cell, vacuum,   logUnit, rho0IR, rho0MT )
+  subroutine ReadDensFleur( atoms, nococonv,sym, lathar, dimens, stars, input, cell, vacuum,   logUnit, rho0IR, rho0MT )
 
     use m_types
     use m_loddop
@@ -1384,6 +1384,7 @@ module m_jpInit
 
     ! Type parameters
     type(t_atoms),                  intent(in)  :: atoms
+    type(t_nococonv)                intent(in)  :: nococonv
     type(t_sym),                    intent(in)  :: sym
     type(t_sphhar),                 intent(in)  :: lathar
     type(t_dimension),              intent(in)  :: dimens
@@ -1432,7 +1433,7 @@ module m_jpInit
     call Fclose(iunit)
 
     ! Calculates charge in IR and complete unit cell
-    call cdntot( stars, atoms, sym, vacuum, input, cell,   rho0IR, rho0MT, qtot, qtotIR, qMTs )
+    call cdntot( stars, nococonv, atoms, sym, vacuum, input, cell,   rho0IR, rho0MT, qtot, qtotIR, qMTs )
 
     call LogReadcdn1( atoms, qtotIR, qMTs, qtot, logUnit )
 

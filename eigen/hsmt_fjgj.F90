@@ -9,7 +9,7 @@ MODULE m_hsmt_fjgj
 
   PRIVATE
   TYPE t_fjgj
-    REAL,ALLOCATABLE CPP_MANAGED     :: fj(:,:,:,:),gj(:,:,:,:)
+    REAL,ALLOCATABLE    :: fj(:,:,:,:),gj(:,:,:,:)
   CONTAINS
     procedure :: alloc
     procedure :: calculate => hsmt_fjgj_cpu

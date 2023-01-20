@@ -85,8 +85,8 @@ MODULE m_rhonmt21
 
                         coef=  CONJG(coef1 * gaunt1(l,lv,lp,m,mv,mp,atoms%lmaxd))
                         IF (ABS(coef) .LT. 1e-12 ) CYCLE
-                        natom= 0
                         DO nn=1,atoms%ntype
+                           natom = atoms%firstAtom(nn) - 1
                            llp= lp*(atoms%lmax(nn)+1)+l+1
                            llpmax = (atoms%lmax(nn)+1)**2
                            IF(llp.GT.llpmax) CYCLE
@@ -109,7 +109,6 @@ MODULE m_rhonmt21
                                  ddnmt21(llp,lh,nn) = ddnmt21(llp,lh,nn) + dot_product(eigVecCoeffs%abcof(:ne,lmp,1,nt,2),temp(:ne))
                               ENDIF ! (sym%ntypsy(nt)==ns)
                            ENDDO ! na
-                           natom= natom + atoms%neq(nn)
                         ENDDO ! nn
                      ENDDO
                   ENDDO m_loop ! m

@@ -170,10 +170,8 @@ module m_vvacxy
             call qsf( vacuum%delz, fib, beta(1,ivac,2,irec2), vacuum%nmzxy, 1 )
           end do 
         enddo
-        do irec2 = 2, stars%ng2
-          g = stars%sk2(irec2)
-          vcons = tpi_const / g
         
+        do irec2 = 2, stars%ng2
           alphm(irec2-1,1) = cmplx( alpha(vacuum%nmzxy,1,1,irec2), alpha(vacuum%nmzxy,1,2,irec2) )
           if ( vacuum%nvac == 1 ) then
             call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
@@ -181,6 +179,12 @@ module m_vvacxy
           else
             alphm(irec2-1,2) = cmplx( alpha(vacuum%nmzxy,2,1,irec2), alpha(vacuum%nmzxy,2,2,irec2) )
           end if
+        enddo
+
+        do irec2 = 2, stars%ng2
+          g = stars%sk2(irec2)
+          vcons = tpi_const / g
+                 
           do ivac = 1, vacuum%nvac
             z = cell%z1
             if ( ivac == 1 ) alph0 = alphm(irec2-1,2)

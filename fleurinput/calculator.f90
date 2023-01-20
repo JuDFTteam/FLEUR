@@ -20,7 +20,7 @@ MODULE m_calculator
    CHARACTER(len=10), SAVE, ALLOCATABLE  :: var_names(:)
    REAL, ALLOCATABLE, SAVE               :: var_values(:)
    INTEGER, SAVE                         :: n_vars
-   INTEGER, PARAMETER                    :: num_predef = 9
+   INTEGER, PARAMETER                    :: num_predef = 11
    LOGICAL, SAVE                         :: initialized = .false.
 
 CONTAINS
@@ -96,6 +96,11 @@ CONTAINS
       var_values(8) = 1.0 / 27.211386245988
       var_names(9) = 'Ry'
       var_values(9) = 0.5
+      var_names(10) = 'up'
+      var_values(10) = 999
+      var_names(11) = 'down'
+      var_values(11) = -999
+      
    END subroutine priv_init
 
 !<-- S: priv_increase_storage()

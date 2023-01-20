@@ -242,10 +242,12 @@ MODULE m_cdnpot_io_common
          END IF
       END IF
       IF(currentStepfunctionIndex.EQ.0) THEN
-         currentStepfunctionIndex = 1
-         l_storeIndices = .TRUE.
-         CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
-                                   currentStructureIndex, stars,l_CheckBroyd)
+         IF (judft_was_argument("-storeSF")) THEN
+            currentStepfunctionIndex = 1
+            l_storeIndices = .TRUE.
+            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
+                                      currentStructureIndex, stars,l_CheckBroyd)
+         END IF
       ELSE
          CALL peekStepfunctionHDF(fileID, currentStepfunctionIndex, starsIndexTemp, structureIndexTemp)
          l_same = (starsIndexTemp.EQ.currentStarsIndex).AND.(structureIndexTemp.EQ.currentStructureIndex)
@@ -254,10 +256,15 @@ MODULE m_cdnpot_io_common
             CALL compareStepfunctions(stars, starsTemp, l_same)
          END IF
          IF((.NOT.l_same).OR.l_writeAll) THEN
-            currentStepfunctionIndex = currentStepfunctionIndex + 1
             l_storeIndices = .TRUE.
-            CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
-                                      currentStructureIndex, stars,l_CheckBroyd)
+! I comment out the IF condition. At the moment the logic is if there already is a stepfunction stored, we store more.
+!            IF (judft_was_argument("-storeSF")) THEN
+               currentStepfunctionIndex = currentStepfunctionIndex + 1
+               CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex,&
+                                         currentStructureIndex, stars,l_CheckBroyd)
+!            ELSE
+!               currentStepfunctionIndex = 0 ! This is not safe, because one might resume to storing stepfunctions which would result in using index 1 twice.
+!            END IF
          END IF
       END IF
 

@@ -60,8 +60,8 @@ CONTAINS
 
       CALL timestart("force_a12")
 
-      natom = 1
-      DO  n = 1, atoms%ntype
+      DO n = 1, atoms%ntype
+         natom = atoms%firstAtom(n)
          IF (atoms%l_geo(n)) THEN
             forc_a12(:) = czero
 
@@ -229,7 +229,6 @@ CONTAINS
             END DO
 
          END IF
-         natom = natom + atoms%neq(n)
       END DO
 
       ! The result is written in force_a8.

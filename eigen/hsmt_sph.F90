@@ -89,7 +89,7 @@ CONTAINS
       !$acc&   copyin(igSpin,igSpinPr,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssAdd,qssAddPr,l_fullj)&
       !$acc&   copyin(lapw,lapwPr,atoms,fmpi,input,usdus)&
       !$acc&   copyin(lapw%nv,lapw%gvec,lapw%gk,lapwPr%nv,lapwPr%gvec,lapwPr%gk,lapw%bkpt,lapwPr%bkpt)&
-      !$acc&   copyin(atoms%lmax,atoms%rmt,atoms%lnonsph,atoms%neq,atoms%taual)&
+      !$acc&   copyin(atoms%lmax,atoms%rmt,atoms%lnonsph,atoms%firstAtom,atoms%neq,atoms%taual)&
       !$acc&   copyin(fmpi%n_size,fmpi%n_rank)&
       !$acc&   copyin(input%l_useapw)&
       !$acc&   copyin(usdus%dus,usdus%uds,usdus%us,usdus%ddn,usdus%duds)&
@@ -159,7 +159,7 @@ CONTAINS
             ! Set up phase factors
             cph_re = 0.0
             cph_im = 0.0
-            DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+            DO nn = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
                tnn(1:3) = tpi_const*atoms%taual(1:3,nn)
 
                dot = DOT_PRODUCT(ski(1:3) - lapwPr%gvec(1:3,ikGPr,igSpinPr) - qssAddPr(1:3) - lapwPr%bkpt - lapwPr%qphon, tnn(1:3))
@@ -377,7 +377,7 @@ CONTAINS
             ! Set up phase factors
             cph_re = 0.0
             cph_im = 0.0
-            DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+            DO nn = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
                tnn(1:3) = tpi_const*atoms%taual(1:3,nn)
                DO jv = 0, NVEC_rem-1
                   ikGPr = jv + kj_off

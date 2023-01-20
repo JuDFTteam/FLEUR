@@ -75,7 +75,7 @@ CONTAINS
       IF (fmpi%n_size==1) Then
          size_ab_select=size_ab
       ELSE
-         size_ab_select=lapwPr%num_local_cols(igSpinPr)
+         size_ab_select=lapwPr%num_local_cols(igSpin)
       END IF
 
       ALLOCATE(ab_select(size_ab_select, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
@@ -127,7 +127,7 @@ CONTAINS
 #endif
 
       DO nn = 1,atoms%neq(n)
-         na = SUM(atoms%neq(:n-1)) + nn
+         na = atoms%firstAtom(n) - 1 + nn
          IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
             rchi = MERGE(REAL(chi), REAL(chi)*2, (sym%invsat(na)==0))
             cchi = MERGE(chi, chi*2, (sym%invsat(na)==0))

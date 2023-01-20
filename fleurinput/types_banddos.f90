@@ -156,7 +156,13 @@ CONTAINS
     allocate(neq(xml%get_ntype()), source=0)
     ALLOCATE(this%unfoldTransMat(3,3))
 
-    this%dos_atom=(all_atoms.and.(this%dos.or.this%band))
+    !check if cdinf is given
+    IF (xml%GetNumberOfNodes('/fleurInput/output/checks').EQ.1) THEN
+      this%dos_atom= evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/checks/@cdinf'))
+    else
+      this%dos_atom=.false.
+    endif
+    this%dos_atom=(all_atoms.and.(this%dos.or.this%band.or.this%dos_atom))
     na = 0
     IF (xml%versionNumber > 31) then
     DO iType = 1, xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')

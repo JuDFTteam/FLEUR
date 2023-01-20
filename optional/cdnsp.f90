@@ -62,12 +62,12 @@
                            CDN_INPUT_DEN_const,0,fermiEnergyTemp,tempDistance,l_qfix,den)
 
           qval = 0.
-          na = 1
           !
           !     ---> set jspins=2
           jsp_new = 2
           !
           DO n = 1,atoms%ntype
+             na = atoms%firstAtom(n)
              DO j = 1,atoms%jri(n)
                 den%mt(j,0,n,1) = den%mt(j,0,n,1) - rhoc(j,n,1)/sfp
              ENDDO
@@ -84,7 +84,6 @@
                    den%mt(j,lh,n,1)       =  p(n)*den%mt(j,lh,n,1)
                 ENDDO
              ENDDO
-             na = na + atoms%neq(n)
           ENDDO
           DO k = 1,stars%ng3
              den%pw(k,jsp_new) = 0.5 * den%pw(k,1)

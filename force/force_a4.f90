@@ -51,8 +51,8 @@ CONTAINS
       CALL readCoreDensity(input,atoms,rhoc,tec,qintc)
 
       DO jsp = 1, input%jspins
-         na = 1
          DO n = 1, atoms%ntype
+            na = atoms%firstAtom(n)
             IF (atoms%l_geo(n)) THEN
                nd = sym%ntypsy(na)
 
@@ -143,7 +143,6 @@ CONTAINS
 8020           FORMAT (' FX_A4=',2f10.6,' FY_A4=',2f10.6,' FZ_A4=',2f10.6)
 
             END IF ! atoms%l_geo(n)
-            na = na + atoms%neq(n)
          END DO ! n (1:atoms%ntype)
       END DO ! jsp (1:input%jpins)
 
