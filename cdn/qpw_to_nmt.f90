@@ -57,11 +57,10 @@ CONTAINS
     !----> cut-off l-expansion of non-spherical charge contribution
     !      from coretails of neighboring atom for l> l_cutoff
     !
-    na = 1
     DO n = 1,atoms%ntype
+       na = atoms%firstAtom(n)
        lmx(n) = MIN( atoms%lmax(n) , l_cutoff )
        ntypsy_o(n) = sym%ntypsy(na)
-       na = na + atoms%neq(n)
     END DO
     !
     !----> identify atoms with the same radial mesh

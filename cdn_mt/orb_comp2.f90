@@ -51,7 +51,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: ccof(:,:,:)
 
     !	..Local Scalars
-    INTEGER  n,mt,ityp,imt,lm,lo,n_dos
+    INTEGER  n,mt,ityp,lm,lo,n_dos
     INTEGER  l,lme,nate,lmaxe,jspe,nobc,nei
     REAL     summed,cf
     REAL     ddn0,ddn1,ddn2,ddn3,ddn12,ddn22,ddn32
@@ -80,13 +80,13 @@ CONTAINS
     ALLOCATE(bcof(size(eigVecCoeffs%abcof,1),0:size(eigVecCoeffs%abcof,2)-1))
     ALLOCATE(ccof(-atoms%llod:atoms%llod,size(eigVecCoeffs%ccof,2),size(eigVecCoeffs%ccof,3)))
 
-    DO   ityp = 1,atoms%ntype
+    DO ityp = 1,atoms%ntype
        ddn0 = usdus%ddn(0,ityp,jspin)
        ddn1 = usdus%ddn(1,ityp,jspin)
        ddn2 = usdus%ddn(2,ityp,jspin)
        ddn3 = usdus%ddn(3,ityp,jspin)
-       DO  imt=1,atoms%neq(ityp)
-          mt=sum(atoms%neq(:ityp-1))+1
+       DO mt=1,atoms%firstAtom(ityp),atoms%firstAtom(ityp)+atoms%neq(ityp)-1
+          
           if (.not.banddos%dos_atom(mt)) cycle
           !assign and rotate if requested the abcofs
           IF (ANY((/banddos%alpha(mt),banddos%beta(mt),banddos%gamma(mt)/).NE.0.0)) THEN
@@ -348,7 +348,7 @@ CONTAINS
              orbcomp%comp(ev_list(n),:,n_dos,ikpt,jspin) = comp(:)*cf
              !----------------------------------------------------
           ENDDO ! bands (n)
-       ENDDO    ! atoms (imt) -> mt (=atoms%nat)
+       ENDDO    ! atoms  mt (=atoms%nat)
     ENDDO       ! types (ityp)
     !
   END SUBROUTINE orb_comp

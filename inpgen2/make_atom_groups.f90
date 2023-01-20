@@ -6,7 +6,7 @@ MODULE m_make_atom_groups
   !     Modified by GM (2016)
   !********************************************************************
 CONTAINS
-  SUBROUTINE make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms)
+  SUBROUTINE make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms,inpgen_atom_for_type)
     !Use the symmetry to generate correct mapping of atoms into types
     USE m_types_sym
     USE m_types_cell
@@ -19,6 +19,7 @@ CONTAINS
     REAL,INTENT(in)            :: atomid(:)
     CHARACTER(len=*),INTENT(in):: atomlabel(:)
     TYPE(t_atoms),INTENT(out)  :: atoms
+    INTEGER,INTENT(OUT)        :: inpgen_atom_for_type(:)
 
     INTEGER, ALLOCATABLE :: natype(:),natrep(:),ity(:)  ! or  'nat'
     INTEGER              :: ntypm,n,i,j,ntype
@@ -51,6 +52,7 @@ CONTAINS
     DO i =1,SIZE(atomid)
        IF ( natype(i) .NE. 0 ) CYCLE
        ntype = ntype + 1   ! new atom type
+       inpgen_atom_for_type(ntype)=i
        natype(i) = ntype   ! atom type
        natrep(i) = i       ! this is the representative
        !--->    rotate representative and get symmetry equavalent atoms
@@ -74,17 +76,23 @@ CONTAINS
     atoms%nat=SIZE(atomid)
 
     ALLOCATE(atoms%neq(ntype),atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),atoms%zatom(ntype),atoms%label(atoms%nat))
+    ALLOCATE(atoms%firstAtom(ntype))
 
     atoms%neq(1:ntype) = 0
     DO n=1,atoms%nat
        atoms%neq( natype(n) ) = atoms%neq( natype(n) ) + 1
        atoms%zatom( natype(n) ) = atomid(n)
     ENDDO
+    atoms%firstAtom(:) = 0
+    atoms%firstAtom(1) = 1
+    DO n = 2, ntype
+       atoms%firstAtom(n) = atoms%firstAtom(n-1) + atoms%neq(n-1)
+    END DO
     DO n=1,atoms%ntype
-      atoms%taual(1,sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atompos(1,:),natype==n)
-      atoms%taual(2,sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atompos(2,:),natype==n)
-      atoms%taual(3,sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atompos(3,:),natype==n)
-      atoms%label(sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atomlabel(:),natype==n)
+      atoms%taual(1,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1)=pack(atompos(1,:),natype==n)
+      atoms%taual(2,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1)=pack(atompos(2,:),natype==n)
+      atoms%taual(3,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1)=pack(atompos(3,:),natype==n)
+      atoms%label(atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1)=pack(atomlabel(:),natype==n)
     enddo
     WHERE ( ABS( atoms%taual ) < eps12 ) atoms%taual = 0.00
 

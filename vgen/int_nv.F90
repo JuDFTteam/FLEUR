@@ -52,8 +52,8 @@ CONTAINS
     !   ******************M.T. SPHERES*******************
     !
     tmt = 0.
-    nat = 1
     DO n = 1,atoms%ntype
+       nat = atoms%firstAtom(n)
        DO lh = 0,sphhar%nlh(sym%ntypsy(nat))
           DO j = 1,atoms%jri(n)
              dpj(j) = den%mt(j,lh,n,ispin)*vpot%mt(j,lh,n,ispin)
@@ -61,7 +61,6 @@ CONTAINS
           CALL intgr3(dpj,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),dpdot)
           tmt = tmt + dpdot*atoms%neq(n)
        ENDDO
-       nat = nat + atoms%neq(n)
     ENDDO
     WRITE (oUnit,FMT=8030) tmt
 8030 FORMAT (/,10x,'muffin tin spheres :',t40,ES20.10)

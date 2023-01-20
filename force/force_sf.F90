@@ -106,8 +106,8 @@ CONTAINS
 
       force_is = 0.0
 
-      natom = 1
       DO itype = 1,atoms%ntype
+         natom = atoms%firstAtom(itype)
          r2  = atoms%rmt(itype)**2
          rho = 0.0
          V   = 0.0
@@ -155,8 +155,6 @@ CONTAINS
                END DO ! lp
             END DO ! m
          END DO ! l
-
-         natom = natom + atoms%neq(itype)
       END DO ! itype
 
       DEALLOCATE ( bsl,rho,V )
@@ -220,9 +218,8 @@ CONTAINS
       d2 = 0
 
       ! Calculate forces: For each atom, loop over all lattice harmonics.
-      natom = 1
       DO itype = 1,atoms%ntype
-
+         natom = atoms%firstAtom(itype)
          nd = sym%ntypsy(natom)
 
          DO lh = 0,sphhar%nlh(nd)
@@ -270,8 +267,6 @@ CONTAINS
             END DO ! lhp
 
          END DO ! lh
-
-         natom = natom + atoms%neq(itype)
       END DO ! itype
 
       CALL timestop("Force level 3 (MT)")

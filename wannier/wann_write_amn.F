@@ -53,13 +53,13 @@ c**********************************************************
       integer :: stt(MPI_STATUS_SIZE)
 #endif
 
+      call timestart("wann_write_amn")
 #ifdef CPP_MPI
 c******************************************************
 c     Collect contributions to the amn matrix from the
 c     various processors.
 c******************************************************
 
-      call timestart("wann_write_amn")
       if(isize.ne.1)then
        do ikpt=1,fullnkpts
         if(l_p0)then

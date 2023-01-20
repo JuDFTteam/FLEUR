@@ -16,11 +16,14 @@ PROGRAM inpgen
 !----------------------------------------------------------------------------+
   USE m_juDFT
   USE m_inpgen_help
+  use m_inpgen_version
+  use m_fleur_dropxmlschema
   USE m_read_inpgen_input
   USE m_make_crystal
   USE m_make_atomic_defaults
   USE m_make_defaults
   USE m_make_kpoints
+  USE m_make_magnetism
   USE m_winpxml
   USE m_xsf_io
   USE m_types_input
@@ -51,7 +54,7 @@ PROGRAM inpgen
 
       IMPLICIT NONE
 
-      REAL,    ALLOCATABLE :: atompos(:, :),atomid(:)
+      REAL,    ALLOCATABLE :: atompos(:, :),atomid(:),mag_mom(:,:)
       CHARACTER(len=20), ALLOCATABLE :: atomLabel(:)
       LOGICAL               :: l_fullinput,l_explicit,l_inpxml,l_include(4)
 
@@ -120,6 +123,8 @@ PROGRAM inpgen
 
       !Start program and greet user
       CALL inpgen_help()
+      call inpgen_version()
+      call fleur_dropxmlschema()
       l_explicit=judft_was_argument("-explicit")
 
       filename_add = ""
@@ -226,8 +231,10 @@ PROGRAM inpgen
          !read the input
          l_kptsInitialized(:) = .FALSE.
          ALLOCATE (sliceplot%plot(1))
-         CALL read_inpgen_input(profile,atompos,atomid,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
+         CALL read_inpgen_input(profile,atompos,atomid,mag_mom,atomlabel,kpts_str,kptsName,kptsPath,kptsBZintegration,&
                                 kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
+
+
          IF(input%film) sliceplot%plot(1)%zero(3) = -0.5
          IF (l_addPath) THEN
             l_check = .TRUE.
@@ -248,7 +255,10 @@ PROGRAM inpgen
       ENDIF
       IF (.NOT.l_fullinput) THEN
          !First we determine the spacegoup and map the atoms to groups
-         CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,cell,sym,atoms)
+         CALL make_crystal(input%film,atomid,atompos,mag_mom,atomlabel,vacuum%dvac,noco,cell,sym,atoms)
+
+         !Generate magnetic settings
+         CALL make_magnetism(input,noco,atoms,mag_mom)
 
          !All atom related parameters are set here. Note that some parameters might
          !have been set in the read_input call before by adding defaults to the atompar module
@@ -376,7 +386,12 @@ PROGRAM inpgen
          OPEN (inpgenIUnit,file=TRIM(filename),action="read")
          OPEN (inpOldUnit, file=TRIM(filename_add)//"inp.xml", action="write", status='old', access='append')
          WRITE(inpOldUnit,'(a)') ''
-         WRITE(inpOldUnit,'(a)') '<!-- Initial (original) inpgen input (only for documentation purposes):'
+         WRITE(inpOldUnit,'(a)') '<!--'
+         WRITE(inpOldUnit,'(a)') 'Command line when calling inpgen (only for documentation purposes):'
+         CALL GET_COMMAND(line)
+         WRITE(inpOldUnit,'(a)') TRIM(line)
+         WRITE(inpOldUnit,'(a)') ''
+         WRITE(inpOldUnit,'(a)') 'Initial (original) inpgen input (only for documentation purposes):'
          ios = 0
          DO WHILE(ios==0)
             READ(inpgenIUnit,'(a)',iostat=ios) line
@@ -385,6 +400,7 @@ PROGRAM inpgen
          WRITE(inpOldUnit,'(a)') '-->'
          CLOSE (inpOldUnit)
          CLOSE (inpgenIUnit)
+         line = ""
       END IF
 
 100   FORMAT (a20,a15,i10,3x,a)

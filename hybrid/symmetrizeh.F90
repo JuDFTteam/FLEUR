@@ -97,8 +97,8 @@ CONTAINS
       allocate(map(nsymop, atoms%nat))
       map = 0
       iatom = 0
-      iiatom = 0
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
             DO isym = 1, nsymop
@@ -113,7 +113,6 @@ CONTAINS
                map(isym, iatom) = iatom1
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
       ! initialze pointer_apw and the apw part of cfac

@@ -44,12 +44,12 @@ CONTAINS
     l_write = .TRUE.
     IF(PRESENT(l_writeArg)) l_write = l_writeArg
 
-    l_performSpinavg = .FALSE.
+    l_performSpinavg = .false.
     IF(PRESENT(hub1data)) l_performSpinavg = hub1data%l_performSpinavg
 
     l_write=l_write .and. fmpi%irank==0
     !$ l_write = l_write .and. omp_get_num_threads()==1
-
+    
 
     IF (l_write) WRITE (oUnit,FMT=8000) iType
 
@@ -61,14 +61,14 @@ CONTAINS
              l_hia=.TRUE.
           ENDIF
        ENDDO
-
        !In the case of a spin-polarized calculation with Hubbard 1 we want to treat
        !the correlated orbitals with a non-spin-polarized basis
-       IF(l_hia.AND.SIZE(vTot%mt,4).GT.1 .AND. l_performSpinavg) THEN
-          vrTmp = (vTot%mt(:,0,iType,1) + vTot%mt(:,0,iType,2))/2.0
+       IF((l_hia.AND.SIZE(vTot%mt,4).GT.1 .AND. l_performSpinavg).or.atoms%l_nonpolbas(itype)) THEN
+         vrTmp = (vTot%mt(:,0,iType,1) + vTot%mt(:,0,iType,2))/2.0
        ELSE
-          vrTmp = vTot%mt(:,0,iType,jspin)
+         vrTmp = vTot%mt(:,0,iType,jspin)
        ENDIF
+   
        CALL radfun(l,iType,jspin,enpara%el0(l,iType,jspin),vrTmp,atoms,&
             f(1,1,l),g(1,1,l),usdus,nodeu,noded,wronk)
        IF (l_write) THEN
@@ -79,7 +79,7 @@ CONTAINS
 
     ! Generate the extra wavefunctions for the local orbitals, if there are any.
     IF (atoms%nlo(iType).GE.1) THEN
-       CALL radflo(atoms,iType,jspin,enpara%ello0(1,1,jspin),vTot%mt(:,0,iType,jspin),f,g,fmpi,&
+       CALL radflo(atoms,iType,jspin,enpara%ello0(1,1,jspin),vrtmp,f,g,fmpi,&
             usdus,usdus%uuilon(1,1,jspin),usdus%duilon(1,1,jspin),usdus%ulouilopn(1,1,1,jspin),flo)
     END IF
 

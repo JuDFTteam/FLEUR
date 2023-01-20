@@ -56,7 +56,7 @@ MODULE m_greensfPostProcess
       ! Obtain the real part of the Green's Function via the Kramers Kronig Integration
       !--------------------------------------------------------------------------------
       CALL timestart("Green's Function: Real Part")
-      CALL greensfCalcRealPart(atoms,gfinp,sym,input,noco,kpts,mpi,results%ef,&
+      CALL greensfCalcRealPart(atoms,gfinp,sym,input,enpara,noco,kpts,mpi,results%ef,&
                                greensfImagPart,greensFunction)
       CALL timestop("Green's Function: Real Part")
 
@@ -81,7 +81,8 @@ MODULE m_greensfPostProcess
          ENDIF
 
          !Onsite exchange Splitting from difference of center of mass of the bands
-         CALL excSplitting(gfinp,atoms,input,scalarGF,greensfImagPart,results%ef)
+         !and the integral over Bxc
+         CALL excSplitting(gfinp,atoms,input,scalarGF,greensfImagPart,results%ef, vTot)
 
          !-------------------------------------------------------
          ! Occupation matrix (only for diagonal onsite elements)
@@ -99,7 +100,7 @@ MODULE m_greensfPostProcess
 
 #ifdef CPP_HDF
          CALL timestart("Green's Function: IO/Write")
-         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, cell, kpts)
+         CALL openGreensFFile(greensf_fileID, input, gfinp, atoms, sym, cell, kpts,sphhar, vtot=vTot)
          CALL writeGreensFData(greensf_fileID, input, gfinp, atoms, nococonv, noco, cell,&
                                GREENSF_GENERAL_CONST, greensFunction, mmpmat,&
                                u=f,udot=g,ulo=flo)

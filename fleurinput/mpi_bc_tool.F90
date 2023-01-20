@@ -15,7 +15,7 @@ MODULE m_mpi_bc_tool
   !This interface is used to broadcast data. On the recieving PE the data-array is first allocated to
   !have the same shape as the one on irank
   INTERFACE mpi_bc
-     MODULE PROCEDURE  mpi_bc_int,mpi_bc_int1,mpi_bc_int2,mpi_bc_int3,mpi_bc_int4,mpi_bc_int5
+     MODULE PROCEDURE  mpi_bc_int,mpi_bc_int1,mpi_bc_int2,mpi_bc_int3,mpi_bc_int4,mpi_bc_int5, mpi_bc_int_fixed1
      MODULE PROCEDURE  mpi_bc_real_3,mpi_bc_real_fixed2,mpi_bc_real,mpi_bc_real1,mpi_bc_real2,mpi_bc_real3,mpi_bc_real4,mpi_bc_real5,mpi_bc_real6,mpi_bc_real7
      MODULE PROCEDURE  mpi_bc_complex,mpi_bc_complex1,mpi_bc_complex2,mpi_bc_complex3,mpi_bc_complex4,mpi_bc_complex5,mpi_bc_complex6,mpi_bc_complex7
      MODULE PROCEDURE  mpi_bc_logical,mpi_bc_logical1,mpi_bc_logical2
@@ -255,6 +255,19 @@ CONTAINS
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_int5
+
+  SUBROUTINE mpi_bc_int_fixed1(irank,mpi_comm,i1)!Special routine for non-allocatable 1d arrays
+   IMPLICIT NONE
+   integer,INTENT(INOUT)   :: i1(:)
+   INTEGER,INTENT(IN)   :: mpi_comm,irank
+
+   INTEGER:: ierr=0
+#ifdef CPP_MPI
+
+   CALL MPI_BCAST(i1,SIZE(i1),MPI_INTEGER,irank,mpi_comm,ierr)
+#endif
+   IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
+ END SUBROUTINE mpi_bc_int_fixed1
 
   !
   ! now the same for reals

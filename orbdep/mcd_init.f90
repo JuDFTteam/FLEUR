@@ -47,7 +47,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
 
-    if (.not.any(banddos%dos_atom(sum(atoms%neq(:itype-1))+1:sum(atoms%neq(:itype))))) return
+    if (.not.any(banddos%dos_atom(atoms%firstAtom(itype):atoms%firstAtom(itype)+atoms%neq(itype)-1))) return
 
     c = c_light(1.0)
     ALLOCATE ( gc(atoms%jri(itype),atoms%econf(itype)%num_core_states,input%jspins) )

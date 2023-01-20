@@ -36,7 +36,7 @@ MODULE m_types_mpi
    END INTERFACE juDFT_win_create
 
    PRIVATE
-   PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi, set_root_comm
+   PUBLIC :: juDFT_win_create, judft_comm_split, judft_comm_split_type, t_mpi, set_root_comm, calcIndexBounds
 contains
    subroutine t_mpi_set_root_comm(fmpi)
       implicit none
@@ -287,4 +287,27 @@ contains
                        error_str(1:str_len))
 #endif
    end subroutine judft_mpi_error_handler
+
+   SUBROUTINE calcIndexBounds(fmpi,firstIndexOverall, lastIndexOverall, firstIndexRank, lastIndexRank)
+
+      IMPLICIT NONE
+
+      TYPE(t_mpi), INTENT(IN)        :: fmpi
+      INTEGER, INTENT(IN)            :: firstIndexOverall, lastIndexOverall
+      INTEGER, INTENT(OUT)           :: firstIndexRank, lastIndexRank
+
+      INTEGER :: chunkSize, leftoverSize, length
+
+      length = lastIndexOverall - firstIndexOverall + 1
+      chunkSize = length / fmpi%isize
+      leftoverSize = MODULO(length, fmpi%isize)
+      IF (fmpi%irank < leftoverSize) THEN
+         firstIndexRank = fmpi%irank*(chunkSize + 1) + firstIndexOverall
+         lastIndexRank = (fmpi%irank + 1)*(chunkSize + 1) + firstIndexOverall - 1
+      ELSE
+         firstIndexRank = leftoverSize*(chunkSize + 1) + firstIndexOverall + (fmpi%irank - leftoverSize)*chunkSize
+         lastIndexRank = (firstIndexRank + chunkSize) - 1
+      ENDIF
+   END SUBROUTINE calcIndexBounds
+
 END MODULE m_types_mpi

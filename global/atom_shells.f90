@@ -19,7 +19,8 @@ MODULE m_atom_shells
    CONTAINS
 
    SUBROUTINE construct_atom_shells(referenceAtom, nshells, atoms, cell, sym, film, shellDistances,&
-                                    shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells)
+                                    shellDiffs, shellAtoms, shellOps, numAtomsShell, generatedShells, &
+                                    only_elements, only_magnetic, start_from_shell)
 
       !----------------------------------------------------------------------------------------------
       !Construct neighbour shells around a given reference atom
@@ -50,14 +51,16 @@ MODULE m_atom_shells
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: shellOps(:,:)
       INTEGER, ALLOCATABLE,INTENT(OUT)  :: numAtomsShell(:)
       INTEGER,             INTENT(OUT)  :: generatedShells
+      integer, optional,   intent(in)   :: only_elements(:)
+      logical, optional,   intent(in)   :: only_magnetic
+      integer, optional,   intent(in)   :: start_from_shell
 
       REAL, PARAMETER :: eps = 1e-5
 
-      INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells
-      INTEGER :: ishell,i,iAtom,atomTypep,refAt,completed_atom_shells
-      LOGICAL :: l_unfinished_shell,l_found_shell,l_add
-      REAL :: min_distance_to_border(3), distance,distance_to_border, lastDist
-      REAL :: leftBorder(3),rightBorder(3),refPos(3)
+      INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells, start_from_shell_arg
+      INTEGER :: ishell,i,iAtom,atomTypep,refAt,completed_atom_shells, startShell
+      LOGICAL :: l_unfinished_shell,l_found_shell,l_add, shell_finished
+      REAL :: lastDist
 
       INTEGER, ALLOCATABLE :: newAtoms(:,:), distIndexList(:)
       REAL,    ALLOCATABLE :: newDiffs(:,:), newDistances(:)
@@ -71,6 +74,11 @@ MODULE m_atom_shells
 
       WRITE(oUnit,'(/,/,A,I0,A,I0)') "Generating ", nshells, " shells for atomType: ", referenceAtom
 
+      start_from_shell_arg = 1
+      if(present(start_from_shell)) start_from_shell_arg = max(1,start_from_shell)
+      if (start_from_shell_arg /= 1) WRITE(oUnit,'(A,I0,A)') "Dismissing the first ", start_from_shell_arg, " shells"
+      if (start_from_shell_arg>nshells) call juDFT_error("start_from_shell > nshells", calledby="construct_atom_shells")
+
       atomShells = 0
       actualShells = 0
       num_cells = 0
@@ -81,7 +89,8 @@ MODULE m_atom_shells
          !Calculate the vectors and distances to neighbours in the next
          !extension of unit cells
          CALL calculate_next_neighbours(referenceAtom, atoms, cell%amat, film, newNeighbours, newAtoms,&
-                                        newDiffs, newDistances, num_cells)
+                                        newDiffs, newDistances, num_cells, only_elements=only_elements,&
+                                        only_magnetic=only_magnetic)
 
          WRITE(oUnit,'(A,I0)') "New neighbours found: ", newNeighbours
 
@@ -170,39 +179,22 @@ MODULE m_atom_shells
             !We look if there can possibly be more elements outside the currently
             !chosen quadrant of cells
 
-            min_distance_to_border = 9e99
-            DO refAt = SUM(atoms%neq(:referenceAtom-1)) + 1, SUM(atoms%neq(:referenceAtom))
-               refPos(:) = atoms%taual(:,refAt)
-
-               DO i = 1, 3
-                  !Distance to border in direction of lattice vector
-                  leftBorder  = cell%amat(:,i) * (num_cells + refPos(i))
-                  rightBorder = cell%amat(:,i) * (num_cells + 1 - refPos(i))
-                  distance_to_border = MIN(norm2(leftBorder),norm2(rightBorder))
-                  IF(distance_to_border<min_distance_to_border(i)) THEN
-                     min_distance_to_border(i) = distance_to_border
-                  ENDIF
-               ENDDO
-            ENDDO
-
             lastDist = 0.0
             atomShells1 = 0
             completed_atom_shells = 0
             DO ishell = 1, actualShells
                IF(shellDistances(ishell)-lastDist > eps) THEN
                   atomShells1 = atomShells1 + 1
-                  IF(ALL(min_distance_to_border(:)-SQRT(shellDistances(ishell)) > eps)) THEN
+                  shell_finished = enough_neighbouring_cells(cell, film, num_cells, SQRT(shellDistances(ishell)))
+                  if (shell_finished) then
                      completed_atom_shells = completed_atom_shells + 1
-                  ENDIF 
-                  IF(atomShells1==nshells) THEN
-                     !-1e-12 to avoid uneccesary calculations where both are equla to numerical precision
-                     IF(ALL(min_distance_to_border(:)-SQRT(shellDistances(ishell)) > eps)) THEN
-                        WRITE(oUnit,'(A)') "Shells finished."
+                     if (atomShells1==nshells) then
+                        write(oUnit,'(A)') "Shells finished."
                         l_unfinished_shell = .FALSE.
-                     ENDIF
-                     EXIT
-                  ENDIF
-               ENDIF
+                        exit
+                     endif
+                  endif
+               endif
                lastDist = shellDistances(ishell)  
             ENDDO
             WRITE(oUnit,'(A,I0)') 'Distance shells complete: ', completed_atom_shells
@@ -217,6 +209,9 @@ MODULE m_atom_shells
       DO ishell = 1, actualShells
          IF(shellDistances(ishell)-lastDist > eps) atomShells1 = atomShells1 + 1
          lastDist = shellDistances(ishell)
+         if(atomShells1==start_from_shell_arg) then
+            startShell = ishell
+         endif
          IF(atomShells1>nshells) THEN
             generatedShells = ishell - 1
             EXIT
@@ -232,6 +227,12 @@ MODULE m_atom_shells
                           calledby="atom_shells")
       ENDIF
 
+      !Dismiss the shells before startShells
+      shellAtoms(:,:,1:generatedShells-startShell+1) = shellAtoms(:,:,startShell:generatedShells)
+      shellDiffs(:,:,1:generatedShells-startShell+1) = shellDiffs(:,:,startShell:generatedShells)
+      shellDistances(1:generatedShells-startShell+1) = shellDistances(startShell:generatedShells)
+      numAtomsShell(1:generatedShells-startShell+1) = numAtomsShell(startShell:generatedShells)
+      generatedShells = generatedShells-startShell+1
       ALLOCATE(shellOps(SIZE(shellDistances),SIZE(shellDistances)), source=0)
       !Symmetry reduction (modernized and modified version of nshell.f from v26)
       CALL apply_sym_to_shell(generatedShells, atoms, sym, shellAtoms, shellDiffs, shellDistances, numAtomsShell, shellOps)
@@ -242,7 +243,8 @@ MODULE m_atom_shells
 
 
    SUBROUTINE calculate_next_neighbours(referenceAtom, atoms, amat, film, neighboursFound, neighbourAtoms,&
-                                        neighbourDiffs, neighbourDistances, lastBorder)
+                                        neighbourDiffs, neighbourDistances, lastBorder, only_elements,&
+                                        only_magnetic)
 
       !Calculate the distances and vectors to neighbour atoms to a reference atom in a
       !supercell
@@ -261,13 +263,19 @@ MODULE m_atom_shells
       REAL,    ALLOCATABLE, INTENT(OUT)   :: neighbourDiffs(:,:)
       REAL,    ALLOCATABLE, INTENT(OUT)   :: neighbourDistances(:)
       INTEGER,              INTENT(INOUT) :: lastBorder
+      integer, optional,    intent(in)    :: only_elements(:)
+      logical, optional,    intent(in)    :: only_magnetic
 
       INTEGER :: maxNeighbours,iAtom,refAt,identicalAtoms,i,j,k,n,na,zmax
       REAL :: amatDet, currentDist
       REAL :: tau(3),refPos(3),offsetPos(3),currentDiff(3),pos(3)
       REAL :: invAmat(3,3),posCart(3,atoms%nat)
+      logical :: only_magnetic_arg
 
       CALL timestart('Atom shells: Calculate neighbours')
+
+      only_magnetic_arg = .true.
+      if(present(only_magnetic)) only_magnetic_arg = only_magnetic
 
       CALL inv3(amat,invAmat,amatDet)
 
@@ -296,7 +304,7 @@ MODULE m_atom_shells
       END DO
 
       neighboursFound = 0
-      DO refAt = SUM(atoms%neq(:referenceAtom-1)) + 1, SUM(atoms%neq(:referenceAtom))
+      DO refAt = atoms%firstAtom(referenceAtom), atoms%firstAtom(referenceAtom) + atoms%neq(referenceAtom) - 1
          refPos(:) = posCart(:,refAt)
          identicalAtoms = 0
          DO i = -lastBorder, lastBorder
@@ -309,6 +317,11 @@ MODULE m_atom_shells
 
                   iAtom = 0
                   DO n = 1, atoms%ntype
+                     !Ignore atoms which are not of the specified element
+                     if (size(only_elements) /= 0 .and. .not.any(only_elements(:)==atoms%nz(n))) cycle
+                     !Ignore non-magnetic atoms
+                     if (only_magnetic_arg .and. .not.atoms%econf(n)%is_polarized() .and. abs(atoms%bmu(n))<1e-5) cycle
+                     
                      DO na = 1, atoms%neq(n)
                         iAtom = iAtom + 1
                         pos(:) = posCart(:,iAtom) + offsetPos(:)
@@ -376,8 +389,8 @@ MODULE m_atom_shells
 
          !Take the representative element of the shell
          shellDiffAux = 0.0
-         refAtom = SUM(atoms%neq(:atoms%itype(shellAtoms(1,1,current_shell))-1)) + 1
-         refAtomp = SUM(atoms%neq(:atoms%itype(shellAtoms(2,1,current_shell))-1)) + 1
+         refAtom = atoms%firstAtom(atoms%itype(shellAtoms(1,1,current_shell)))
+         refAtomp = atoms%firstAtom(atoms%itype(shellAtoms(2,1,current_shell)))
          DO ishellAtom = 1, numAtomsShell(current_shell)
             IF(shellAtoms(1,ishellAtom,current_shell) == refAtom.AND.&
                shellAtoms(2,ishellAtom,current_shell) == refAtomp) THEN
@@ -582,5 +595,53 @@ MODULE m_atom_shells
       ENDIF
 
    END SUBROUTINE alloc_shells
+
+   logical function enough_neighbouring_cells(cell, film, num_cells, distance)
+
+      !Adpated from brzone2
+      !Determines whether the given shell of a certain distance fits into
+      !the "supercell" constructed in these routines
+
+      type(t_cell), intent(in) :: cell
+      logical,      intent(in) :: film
+      integer,      intent(in) :: num_cells
+      real,         intent(in) :: distance
+
+      real, parameter :: distance_padding = 1.01
+
+      real :: required_distance
+      integer :: zmax, required_cells, i,j,k,info
+      integer :: ipiv(3)
+      real :: solutions(3,1)
+      real :: equationSystem(3,3)
+
+      required_distance = distance * distance_padding
+
+      zmax = num_cells
+      if(film) zmax = 0
+
+      required_cells = 0
+      do i = -num_cells, num_cells, 2*num_cells
+         do j = -num_cells, num_cells, 2*num_cells
+            do k = -zmax, zmax, max(1,2*zmax)
+               solutions(1,1) = i * required_distance
+               solutions(2,1) = j * required_distance
+               solutions(3,1) = k * required_distance
+
+               equationSystem(:,:) = transpose(cell%amat) * num_cells
+               ipiv = 0
+               info = 0
+               call dgetrf(3,3, equationSystem,3,ipiv,info)
+               call dgetrs('N',3,1,equationSystem,3,ipiv,solutions,3,info)
+               ! I assume that info == 0: The reciprocal lattice vectors should be linearly independent.
+               if(required_cells < abs(solutions(1,1))) required_cells = ceiling(abs(solutions(1,1)))
+               if(required_cells < abs(solutions(2,1))) required_cells = ceiling(abs(solutions(2,1)))
+               if(required_cells < abs(solutions(3,1))) required_cells = ceiling(abs(solutions(3,1)))
+            enddo
+         enddo
+      enddo
+      enough_neighbouring_cells = num_cells >= required_cells
+
+   end function
 
 END MODULE m_atom_shells

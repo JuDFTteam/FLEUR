@@ -4,7 +4,7 @@ MODULE m_make_crystal
   !      generate space group operations from lattice information
   !********************************************************************
 CONTAINS
-  SUBROUTINE make_crystal(film, atomid,atompos,atomlabel,dvac,noco,&
+  SUBROUTINE make_crystal(film, atomid,atompos,mag_mom,atomlabel,dvac,noco,&
        cell,sym,atoms)
 
     USE m_types_cell
@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_cell),INTENT(inout)   ::cell
     TYPE(t_sym),INTENT(inout) ::sym !symor is checked
     TYPE(t_atoms),INTENT(out) ::atoms
-
+    REAL,ALLOCATABLE,INTENT(INOUT)::mag_mom(:,:)
 
     !===> Local Variables
     INTEGER :: i,j,k,n,m,na,nt,inversionOp
@@ -36,7 +36,8 @@ CONTAINS
     REAL    :: rest, det
     REAL,PARAMETER :: eps7 = 1.0e-7
     INTEGER,PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
-
+    INTEGER,ALLOCATABLE :: inpgen_atom_for_type(:)
+    REAL,ALLOCATABLE    :: mag_mom_tmp(:,:)
 
 
     !generate basic atom type
@@ -89,7 +90,7 @@ CONTAINS
     END DO
 
     !--->    calculate space group symmetry
-    CALL make_spacegroup(film,noco,cell,atompos,atomid,sym)
+    CALL make_spacegroup(film,noco,cell,atompos,atomid,mag_mom,sym)
     ! Check whether there is an inversion center that is not at the
     ! origin and if one is found shift the crystal such that the
     ! inversion is with respect to the origin. Then recalculate
@@ -111,7 +112,7 @@ CONTAINS
              atompos(:,k) = atompos(:,k) - 0.5*sym%tau(:,inversionOp) ! GB`18
              atompos(:,k) = atompos(:,k) - ANINT( atompos(:,k) - eps7 )
           END DO
-          CALL make_spacegroup(film,noco,cell,atompos,atomid,sym)
+          CALL make_spacegroup(film,noco,cell,atompos,atomid,mag_mom,sym)
        END IF
     END IF
 
@@ -119,7 +120,17 @@ CONTAINS
     CALL sym%init(cell,film)
 
     !Generate basic atom type
-    CALL make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms)
+    ALLOCATE(inpgen_atom_for_type(size(atomid)))
+    CALL make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms,inpgen_atom_for_type)
+
+    !assign magnetic moments to types
+    allocate(mag_mom_tmp(0:3,atoms%ntype))
+    DO nt=1,atoms%ntype
+      mag_mom_tmp(:,nt)=mag_mom(:,inpgen_atom_for_type(nt))
+    enddo
+    call move_alloc(mag_mom_tmp,mag_mom)
+
+   
 
     !--->    determine a set of generators for this group
     !CALL generator(sym%nop,sym%mrot,sym%tau,6,0)
@@ -130,12 +141,11 @@ CONTAINS
     WRITE (oUnit,'(" atom types =",i5/,"      total =",i5)') atoms%ntype,atoms%nat
     WRITE (oUnit,'(/,7x,"lattice coordinates",15x,"(scaled) Cartesian coordinates   atom")')
 
-    na = 0
     DO nt=1,atoms%ntype
+       na = atoms%firstAtom(nt) - 1
        DO n=1,atoms%neq(nt)
           WRITE (oUnit,'(3f10.6,10x,3f10.6,i7)') atoms%taual(:,na+n),atoms%pos(:,na+n),na+n
        ENDDO
-       na = na + atoms%neq(nt)
     ENDDO
 
     RETURN

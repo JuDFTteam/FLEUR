@@ -78,9 +78,10 @@ CONTAINS
       CLASS(t_mat), OPTIONAL, INTENT(INOUT) :: hmat_out, smat_out
 
       ! Local Scalars
-      INTEGER jsp,nk,ne_all,ne_found,neigd2,dim_mat
-      INTEGER nk_i,n_size,n_rank
-      INTEGER err
+      INTEGER jsp,nk,nred,ne_all,ne_found,neigd2,dim_mat
+      INTEGER ne, nk_i,n_size,n_rank
+      INTEGER isp,i,j,err
+      LOGICAL l_real, l_needs_vectors
       INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr
@@ -114,6 +115,10 @@ CONTAINS
       !k_selection = [40,61,453]
       k_selection = [1000]
 
+      l_needs_vectors = .true.
+      if (forcetheo%l_in_forcetheo_loop) then
+         l_needs_vectors = forcetheo%l_needs_vectors
+      endif
       kqpts = fi%kpts
       qphon = [0.0, 0.0, 0.0]
       ! Modify this from kpts only in DFPT case.
@@ -257,14 +262,14 @@ CONTAINS
                 n_rank = 0; n_size=1;
 #endif
 
-                if (forcetheo%l_needs_vectors) then
+                if (l_needs_vectors) then 
                   call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                 else
                   CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
-                endif
-                eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
+               endif
+               eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
-                if (fmpi%pe_diag.and.forcetheo%l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
+                if (fmpi%pe_diag.and.l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
                     n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
             ENDIF
             neigBuffer(nk,jsp) = ne_found

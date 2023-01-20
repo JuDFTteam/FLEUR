@@ -1,4 +1,5 @@
 set(fleur_F90 ${fleur_F90}
+   mpi/mpi_reduce_tool.F90
    mpi/mpi_bc_xcpot.F90
    mpi/setupMPI.F90
    mpi/omp_checker.F90

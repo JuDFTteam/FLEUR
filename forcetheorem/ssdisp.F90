@@ -88,6 +88,7 @@ CONTAINS
        RETURN
     ENDIF
     !OK, now we start the SSDISP-loop
+    this%l_in_forcetheo_loop = .true.
     this%q_done=this%q_done+1
     ssdisp_next_job=(this%q_done<=SIZE(this%qvec,2)) !still q-vectors to do
     IF (.NOT.ssdisp_next_job) RETURN
@@ -96,7 +97,7 @@ CONTAINS
     nococonv%qss=this%qvec(:,this%q_done)
     !Modify the alpha-angles
     DO iType = 1,atoms%ntype
-       nococonv%alph(iType) = noco%alph_inp(iType) + tpi_const*dot_PRODUCT(nococonv%qss,atoms%taual(:,SUM(atoms%neq(:itype-1))+1))
+       nococonv%alph(iType) = noco%alph_inp(iType) + tpi_const*dot_PRODUCT(nococonv%qss,atoms%taual(:,atoms%firstAtom(itype)))
     END DO
     IF (.NOT.this%l_io) RETURN
     IF (fmpi%irank .EQ. 0) THEN

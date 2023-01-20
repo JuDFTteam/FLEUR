@@ -73,8 +73,8 @@ CONTAINS
     !-----> lapw-lapw-Terms
     DO i = 1,SIZE(acof,1)            
        DO j = 1,SIZE(acof,1)
-          nt1 = 1
           DO n = 1,atoms%ntype
+             nt1 = atoms%firstAtom(n)
              nt2 = nt1 + atoms%neq(n) - 1
              DO l = 0,atoms%lmax(n)
                 suma_z = CMPLX(0.,0.); sumb_z = CMPLX(0.,0.)
@@ -115,7 +115,6 @@ CONTAINS
                 sumb_y=CMPLX(0.0,-0.5)*(sumb_p-sumb_m)
                 mmn(2,j,i) = mmn(2,j,i) + (suma_y+sumb_y*usdus%ddn(l,n,jspin))
              ENDDO ! l
-             nt1 = nt1 + atoms%neq(n)
           ENDDO ! n
        ENDDO ! j
     ENDDO ! i

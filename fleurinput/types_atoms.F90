@@ -3,9 +3,6 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-#ifndef CPP_MANAGED
-#define CPP_MANAGED
-#endif
 MODULE m_types_atoms
   USE m_juDFT
   USE m_types_econfig
@@ -52,6 +49,8 @@ MODULE m_types_atoms
   INTEGER, ALLOCATABLE ::nz(:)
   !atoms per type
   INTEGER, ALLOCATABLE::neq(:)
+  ! first atom of a given atom type
+  INTEGER, ALLOCATABLE :: firstAtom(:)
   ! type of each atom itype(atoms%nat) used for OMP unrolling
   INTEGER, ALLOCATABLE::itype(:)
   !radial grid points
@@ -83,7 +82,7 @@ MODULE m_types_atoms
   !Calculate forces for this atom?
   LOGICAL, ALLOCATABLE :: l_geo(:)
   !MT-Radius (ntype)
-  REAL, ALLOCATABLE CPP_MANAGED::rmt(:)
+  REAL, ALLOCATABLE::rmt(:)
   !log increment(ntype)
   REAL, ALLOCATABLE::dx(:)
   !vol of MT(ntype)
@@ -97,7 +96,7 @@ MODULE m_types_atoms
   !pos of atom (absol) (3,nat)
   REAL, ALLOCATABLE::pos(:, :)
   !pos of atom (relat)(3,nat)
-  REAL, ALLOCATABLE CPP_MANAGED::taual(:, :)
+  REAL, ALLOCATABLE::taual(:, :)
   !labels
   CHARACTER(LEN=20), ALLOCATABLE :: label(:)
   CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
@@ -121,6 +120,7 @@ MODULE m_types_atoms
   LOGICAL, ALLOCATABLE :: l_outputCFremove4f(:)
   !special
   LOGICAL, ALLOCATABLE :: lda_atom(:)
+  LOGICAL, ALLOCATABLE :: l_nonpolbas(:) !use non-spin-polarized basis for this atom
 CONTAINS
   PROCEDURE :: init=>init_atoms
   PROCEDURE :: nsp => calc_nsp_atom
@@ -157,6 +157,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%msh,rank,mpi_comm)
  CALL mpi_bc(this%nz,rank,mpi_comm)
  CALL mpi_bc(this%neq,rank,mpi_comm)
+ CALL mpi_bc(this%firstAtom,rank,mpi_comm)
  CALL mpi_bc(this%jri,rank,mpi_comm)
  CALL mpi_bc(this%lmax,rank,mpi_comm)
  CALL mpi_bc(this%lnonsph,rank,mpi_comm)
@@ -188,6 +189,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%l_outputCFremove4f,rank,mpi_comm)
  call mpi_bc(this%itype,rank,mpi_comm)
  CALL mpi_bc(this%lda_atom, rank, mpi_comm)
+ CALL mpi_bc(this%l_nonpolbas, rank, mpi_comm)
 
 #ifdef CPP_MPI
  CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -283,6 +285,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%bmu(this%ntype))
  ALLOCATE(this%relax(3,this%ntype))
  ALLOCATE(this%neq(this%ntype));this%neq=0
+ ALLOCATE(this%firstAtom(this%ntype))
  ALLOCATE(this%taual(3,this%nat))
  ALLOCATE(this%label(this%nat))
  ALLOCATE(this%pos(3,this%nat))
@@ -299,6 +302,8 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%ulo_der(this%nlod,this%ntype))
  ALLOCATE(this%speciesname(this%ntype))
  ALLOCATE(this%lda_atom(this%ntype))
+ ALLOCATE(this%l_nonpolbas(this%ntype))
+ this%l_nonpolbas=.FALSE.
  this%lda_atom = .FALSE.
  this%lapw_l(:) = -1
  this%n_u = 0
@@ -348,6 +353,8 @@ SUBROUTINE read_xml_atoms(this,xml)
     CALL readAtomAttribute(xml,n,'/atomicCutoffs/@lmaxAPW',this%lapw_l(n))
     !special
     CALL readAtomAttribute(xml,n,'/special/@lda',this%lda_atom(n))
+    CALL readAtomAttribute(xml,n,'/special/@nonSpinPolBasis',this%l_nonpolbas(n))
+    
     !force type
     xpath=''
     IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/force')==1) xpath=xpaths
@@ -506,11 +513,14 @@ SUBROUTINE read_xml_atoms(this,xml)
     END DO
  ENDDO
 
+ na = 1
  this%nlotot = 0
  DO n = 1, this%ntype
+    this%firstAtom(n) = na
     DO l = 1,this%nlo(n)
        this%nlotot = this%nlotot + this%neq(n) * ( 2*this%llo(l,n) + 1 )
     ENDDO
+    na = na + this%neq(n)
  ENDDO
 
  ! Check the LO stuff and call setlomap (from inped):

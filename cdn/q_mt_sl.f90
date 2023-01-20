@@ -49,8 +49,8 @@ CONTAINS
     !
     !         DO 140 i = (skip_t+1),ne    ! this I need for all states
     DO i = 1,ne              ! skip in next loop
-       nt1 = 1
        DO n = 1,atoms%ntype
+          nt1 = atoms%firstAtom(n)
           fac = 1./atoms%neq(n)
           nt2 = nt1 + atoms%neq(n) - 1
           sabd = 0.0
@@ -69,7 +69,6 @@ CONTAINS
              sabd = sabd + ss
           enddo
           qmt(n,i) = sabd*fac
-          nt1 = nt1 + atoms%neq(n)
        enddo
     enddo
     !
@@ -82,30 +81,28 @@ CONTAINS
     !---> density for each local orbital and valence state
     !
     natom = 0
-    DO ntyp = 1,atoms%ntype
-       DO nn = 1,atoms%neq(ntyp)
-          natom = natom + 1
-          DO lo = 1,atoms%nlo(ntyp)
-             l = atoms%llo(lo,ntyp)
-             ll1 = l* (l+1)
-             DO i = 1,ne
-                DO m = -l,l
-                   lm = ll1 + m
-                   qlo(i,lo,ntyp) = qlo(i,lo,ntyp) +&
-                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))
-                   qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +&
-                        eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
-                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
-                   qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) +&
-                        eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
-                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
-                ENDDO
+    DO natom = 1, atoms%nat
+       ntyp = atoms%itype(natom)
+       DO lo = 1,atoms%nlo(ntyp)
+          l = atoms%llo(lo,ntyp)
+          ll1 = l* (l+1)
+          DO i = 1,ne
+             DO m = -l,l
+                lm = ll1 + m
+                qlo(i,lo,ntyp) = qlo(i,lo,ntyp) +&
+                     eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))
+                qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +&
+                     eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
+                     eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
+                qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) +&
+                     eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
+                     eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
              ENDDO
           ENDDO
        ENDDO
     ENDDO
-    natom = 1
     DO ntyp = 1,atoms%ntype
+       natom = atoms%firstAtom(ntyp)
        IF (sym%invsat(natom).EQ.1) THEN
           DO lo = 1,atoms%nlo(ntyp)
              DO i = 1,ne
@@ -113,7 +110,6 @@ CONTAINS
              ENDDO
           ENDDO
        ENDIF
-       natom = natom + atoms%neq(ntyp)
     ENDDO
     !
     !--->  l-decomposed density for each valence state

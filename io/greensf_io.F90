@@ -25,16 +25,20 @@ MODULE m_greensf_io
 
    CONTAINS
 
-   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, cell, kpts, inFilename)
+   SUBROUTINE openGreensFFile(fileID, input, gfinp, atoms, sym, cell, kpts, sphhar,inFilename, vtot)
 
       USE m_types
       USE m_cdn_io
+      use m_lattHarmsSphHarmsConv
 
       TYPE(t_input),                INTENT(IN)  :: input
       TYPE(t_gfinp),                INTENT(IN)  :: gfinp
       TYPE(t_atoms),                INTENT(IN)  :: atoms
+      type(t_sym),                  intent(in)  :: sym
       TYPE(t_cell),                 INTENT(IN)  :: cell
       TYPE(t_kpts),                 INTENT(IN)  :: kpts
+      type(t_sphhar),               intent(in)  :: sphhar
+      TYPE(t_potden), optional,     INTENT(IN)  :: vtot
       CHARACTER(len=*), OPTIONAL,   INTENT(IN)  :: inFilename
       INTEGER(HID_T),               INTENT(OUT) :: fileID
 
@@ -48,6 +52,11 @@ MODULE m_greensf_io
       INTEGER(HID_T)    :: kptsSPIndicesSpaceID, kptsSPIndicesSetID
       INTEGER(HID_T)    :: bravaisMatrixSpaceID, bravaisMatrixSetID
       INTEGER(HID_T)    :: reciprocalCellSpaceID, reciprocalCellSetID
+      INTEGER(HID_T)    :: atomsGroupID
+      INTEGER(HID_T)    :: atomPosSpaceID, atomPosSetID
+      INTEGER(HID_T)    :: atomicNumbersSpaceID, atomicNumbersSetID
+      INTEGER(HID_T)    :: equivAtomsClassSpaceID, equivAtomsClassSetID
+      INTEGER(HID_T)    :: bxcGroupID, bxcSpaceID, bxcSetID
 
       INTEGER(HID_T)    :: stringTypeID
       INTEGER(SIZE_T)   :: stringLength
@@ -58,8 +67,14 @@ MODULE m_greensf_io
       REAL              :: eFermiPrev
       INTEGER           :: dimsInt(7)
       INTEGER(HSIZE_T)  :: dims(7)
+      INTEGER           :: j, iAtom, iType
 
-      version = 7
+      INTEGER           :: atomicNumbers(atoms%nat)
+      INTEGER           :: equivAtomsGroup(atoms%nat)
+      real, ALLOCATABLE :: bxc_mt(:,:,:)
+      complex, allocatable :: bxc_lm(:,:,:)
+
+      version = 9
       IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
@@ -105,6 +120,44 @@ MODULE m_greensf_io
       CALL io_write_real2(reciprocalCellSetID,(/1,1/),dimsInt(:2),"bmat",cell%bmat)
       CALL h5dclose_f(reciprocalCellSetID, hdfError)
 
+      iAtom = 0
+      DO iType = 1, atoms%ntype
+         DO j = 1, atoms%neq(iType)
+            iAtom = iAtom + 1
+            atomicNumbers(iAtom) = atoms%nz(iType)
+            equivAtomsGroup(iAtom) = iType
+         END DO
+      END DO
+
+      CALL h5gcreate_f(fileID, '/atoms', atomsGroupID, hdfError)
+      CALL io_write_attint0(atomsGroupID,'nAtoms',atoms%nat)
+      CALL io_write_attint0(atomsGroupID,'nTypes',atoms%ntype)
+
+      dims(:2)=(/3,atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(2,dims(:2),atomPosSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "positions", H5T_NATIVE_DOUBLE, atomPosSpaceID, atomPosSetID, hdfError)
+      CALL h5sclose_f(atomPosSpaceID,hdfError)
+      CALL io_write_real2(atomPosSetID,(/1,1/),dimsInt(:2),"taual",atoms%taual)
+      CALL h5dclose_f(atomPosSetID, hdfError)
+
+      dims(:1)=(/atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),atomicNumbersSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "atomicNumbers", H5T_NATIVE_INTEGER, atomicNumbersSpaceID, atomicNumbersSetID, hdfError)
+      CALL h5sclose_f(atomicNumbersSpaceID,hdfError)
+      CALL io_write_integer1(atomicNumbersSetID,(/1/),dimsInt(:1),"atomicNumbers",atomicNumbers)
+      CALL h5dclose_f(atomicNumbersSetID, hdfError)
+
+      dims(:1)=(/atoms%nat/)
+      dimsInt=dims
+      CALL h5screate_simple_f(1,dims(:1),equivAtomsClassSpaceID,hdfError)
+      CALL h5dcreate_f(atomsGroupID, "equivAtomsGroup", H5T_NATIVE_INTEGER, equivAtomsClassSpaceID, equivAtomsClassSetID, hdfError)
+      CALL h5sclose_f(equivAtomsClassSpaceID,hdfError)
+      CALL io_write_integer1(equivAtomsClassSetID,(/1/),dimsInt(:1),"equivAtomsGroup",equivAtomsGroup)
+      CALL h5dclose_f(equivAtomsClassSetID, hdfError)
+
+      CALL h5gclose_f(atomsGroupID, hdfError)
 
       CALL h5gcreate_f(generalGroupID, 'kpts', kptsGroupID, hdfError)
 
@@ -153,6 +206,32 @@ MODULE m_greensf_io
       END IF
 
       CALL h5gclose_f(kptsGroupID, hdfError)
+
+      if (present(vtot)) then
+         !Write out bxc
+         CALL h5gcreate_f(fileID, '/bxc', bxcGroupID, hdfError)
+
+         allocate(bxc_mt(size(vtot%mt,1), 0:size(vtot%mt,2)-1, size(vtot%mt,3)))
+         ALLOCATE(bxc_lm(atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%ntype),source=cmplx_0)
+         bxc_mt = (vtot%mt(:,0:,:,2) - vtot%mt(:,0:,:,1))/2.0
+         do iType = 1, atoms%ntype
+            !L=0 of potential has an additional rescaling of r/sqrt(4pi)
+            bxc_mt(:atoms%jri(iType),0,iType) = bxc_mt(:atoms%jri(iType),0,iType) *&
+                                               sfp_const/atoms%rmsh(:atoms%jri(iType),iType)
+            CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, bxc_mt(:,0:,iType), bxc_lm(:,:,itype))
+         enddo
+
+         dims(:4)=(/2,atoms%jmtd,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%ntype/)
+         dimsInt=dims
+         CALL h5screate_simple_f(4,dims(:4),bxcSpaceID,hdfError)
+         CALL h5dcreate_f(bxcGroupID, "data", H5T_NATIVE_DOUBLE, bxcSpaceID, bxcSetID, hdfError)
+         CALL h5sclose_f(bxcSpaceID,hdfError)
+         CALL io_write_complex3(bxcSetID,[-1,1,1,1],dimsInt(:4),"data",bxc_lm)
+         CALL h5dclose_f(bxcSetID, hdfError)
+
+         CALL h5gclose_f(bxcGroupID, hdfError)
+      endif
+
       CALL h5gclose_f(generalGroupID, hdfError)
 
    END SUBROUTINE openGreensFFile

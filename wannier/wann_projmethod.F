@@ -82,6 +82,8 @@ c        liwork = 2 + 6*nwfs
          allocate (work(lwork),rwork(lrwork),iwork(liwork))
 
          jobz = 'V' ; uplo = 'L' ; n = nwfs ; lda = nwfs
+  
+         vec=omn
 
          call zheevd(jobz,uplo,n,vec,lda,ei,work,lwork,
      &             rwork,lrwork,iwork,liwork,info)

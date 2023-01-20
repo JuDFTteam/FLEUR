@@ -44,8 +44,8 @@ CONTAINS
     !---> |l - l''| <= l' <= l + l'' (triangular condition)
     !---> m' + m'' = m and l + l' + l'' even
 
-    neqat0 = 0
     DO ntyp = 1,atoms%ntype
+       neqat0 = atoms%firstAtom(ntyp) - 1
        !--->    loop over the lattice harmonics
        DO lh = 1,sphhar%nlh(sym%ntypsy(neqat0+1))
           lpp = sphhar%llh(lh,sym%ntypsy(neqat0+1))
@@ -137,7 +137,6 @@ CONTAINS
              END DO
           END DO
        END DO
-       neqat0 = neqat0 + atoms%neq(ntyp)
     END DO
 
   END SUBROUTINE rhonmtlo

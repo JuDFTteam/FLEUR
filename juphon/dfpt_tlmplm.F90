@@ -80,7 +80,7 @@ CONTAINS
                        END IF
                     END IF
                     CALL tlmplm(n, sphhar, atoms, sym, enpara, nococonvdummy, iSpinPr, iSpin, iSpinV1, fmpi, &
-                              & vTot, vxdummy, input, hub1inp, hub1data, tdV1, uddummy, 0.0, 0, one, .TRUE., vr1)
+                              & vTot, vxdummy, input, hub1inp, hub1data, tdV1, uddummy, 0.0, one, .TRUE., vr1)
                 END DO
             END DO
 

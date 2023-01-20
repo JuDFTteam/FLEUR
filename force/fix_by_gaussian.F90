@@ -8,7 +8,7 @@ MODULE m_fix_by_gaussian
    USE m_judft
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE fix_by_gaussian(shift,atoms,stars,fmpi,sym,vacuum,sphhar,input ,cell,noco,den)
+   SUBROUTINE fix_by_gaussian(shift,atoms,nococonv,stars,fmpi,sym,vacuum,sphhar,input ,cell,noco,den)
       ! The idea of this fix is to add an Gaussian to the INT which make the charge flat at the
       ! MT-boundary and to shift this Gaussian with the displacement.
       USE m_qfix
@@ -19,6 +19,7 @@ CONTAINS
       REAL,           INTENT(IN)    :: shift(:,:)
       TYPE(t_mpi),    INTENT(IN)    :: fmpi
       TYPE(t_atoms),  INTENT(IN)    :: atoms
+      type(t_nococonv),INTENT(IN)   :: nococonv
       TYPE(t_sym),    INTENT(IN)    :: sym
       TYPE(t_vacuum), INTENT(IN)    :: vacuum
       TYPE(t_sphhar), INTENT(IN)    :: sphhar
@@ -55,7 +56,7 @@ CONTAINS
                DO k=2,stars%ng3
                   gauss=A_fac*gaussian_g(stars%sk3(k),alpha)
                   CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),kr,phas)
-                  DO nat=SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+                  DO nat = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
                      sf=0.0
                      DO  j = 1,sym%nop
                         x=-tpi_const*DOT_PRODUCT(1.*kr(:,j),atoms%taual(:,nat))
@@ -69,7 +70,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell ,den,noco%l_noco,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.true.)
+      CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,den,noco%l_noco,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.true.)
    END SUBROUTINE fix_by_gaussian
 
    FUNCTION gaussian_r(r,alpha)   

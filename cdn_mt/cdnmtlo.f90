@@ -191,7 +191,7 @@ CONTAINS
 
       ! Add the contribution of LO-LAPW and LO-LO cross-terms to the non-spherical
       ! charge density inside the Muffin Tins.
-      DO lh = 1,sphhar%nlh(sym%ntypsy(sum(atoms%neq(:itype-1))+1))
+      DO lh = 1,sphhar%nlh(sym%ntypsy(atoms%firstAtom(itype)))
          DO lp = 0,atoms%lmax(itype)
             DO lo = 1,atoms%nlo(itype)
                l = atoms%llo(lo,itype)
