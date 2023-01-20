@@ -75,7 +75,7 @@ CONTAINS
       IF (fmpi%n_size==1) Then
          size_ab_select=size_ab
       ELSE
-         size_ab_select=lapwPr%num_local_cols(igSpinPr)
+         size_ab_select=lapwPr%num_local_cols(igSpin)
       END IF
 
       ALLOCATE(ab_select(size_ab_select, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
