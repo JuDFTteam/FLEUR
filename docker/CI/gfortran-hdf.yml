@@ -24,7 +24,7 @@ test-gfortran-hdf5:
   extends: .test-fleur
   variables:
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
-    markers: "not masci_tools"
+    skip_markers: "masci_tools"
   needs: 
     - fast-test-gfortran-hdf5
     - build-gfortran-hdf5
