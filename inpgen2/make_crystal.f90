@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_cell),INTENT(inout)   ::cell
     TYPE(t_sym),INTENT(inout) ::sym !symor is checked
     TYPE(t_atoms),INTENT(out) ::atoms
-    REAL,ALLOCATABLE,INTENT(INOUT)::mag_mom(0:,:)
+    REAL,ALLOCATABLE,INTENT(INOUT)::mag_mom(:,:)
 
     !===> Local Variables
     INTEGER :: i,j,k,n,m,na,nt,inversionOp
@@ -37,7 +37,7 @@ CONTAINS
     REAL,PARAMETER :: eps7 = 1.0e-7
     INTEGER,PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
     INTEGER,ALLOCATABLE :: inpgen_atom_for_type(:)
-    REAL,ALLOCATABLE    :: mag_mom_tmp(0:,:)
+    REAL,ALLOCATABLE    :: mag_mom_tmp(:,:)
 
 
     !generate basic atom type
