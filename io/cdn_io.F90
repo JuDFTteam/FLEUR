@@ -577,6 +577,7 @@ CONTAINS
           sphharTemp%nlhd = sphhar%nlhd
           vacuumTemp%nmzd = vacuum%nmzd
           atomsTemp%ntype = atoms%ntype
+          atomsTemp%firstAtom=atoms%firstAtom
           ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
           sphharTemp%nlh(:) = sphhar%nlh(:)
           ALLOCATE (symTemp%ntypsy(SIZE(sym%ntypsy)))

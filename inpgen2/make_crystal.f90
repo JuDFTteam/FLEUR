@@ -124,7 +124,7 @@ CONTAINS
     CALL make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms,inpgen_atom_for_type)
 
     !assign magnetic moments to types
-    allocate(mag_mom_tmp(3,atoms%ntype))
+    allocate(mag_mom_tmp(0:3,atoms%ntype))
     DO nt=1,atoms%ntype
       mag_mom_tmp(:,nt)=mag_mom(:,inpgen_atom_for_type(nt))
     enddo
