@@ -78,8 +78,10 @@ CONTAINS
    integer                          :: blocksize,nstart,nstop,noff,i,ii,ierr
    class(t_mat),pointer             :: m_to,m_from
    COMPLEX,ALLOCATABLE              :: tmp(:,:)
-   
-   if (m1%matsize1>m1%matsize2) THEN
+   LOGICAL                          :: one2two
+
+
+   if (m1%matsize1>m2%matsize1) THEN
       m_to=>m2
       m_from=>m1
    else
