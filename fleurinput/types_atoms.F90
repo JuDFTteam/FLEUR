@@ -18,12 +18,24 @@ MODULE m_types_atoms
       INTEGER :: atomType=0 ! The atom type to which this U parameter belongs
       LOGICAL :: l_amf=.FALSE. ! logical switch to choose the "around mean field" LDA+U limit
   END TYPE t_utype
+
+  TYPE t_vtype
+      INTEGER :: atomIndex ! The atom index (not the type).
+      INTEGER :: numOtherAtoms
+      INTEGER :: thisAtomL, otherAtomL
+      REAL    :: V
+      INTEGER, ALLOCATABLE :: otherAtomIndices(:) ! dimension: numOtherAtoms; contains atom indices, not atom type indices
+      INTEGER, ALLOCATABLE :: atomShifts(:,:) ! dimension: 3, numOtheratoms: contains shifts in terms of multiples of lattice vectors
+  END TYPE t_vtype
+
   TYPE t_opctype
       SEQUENCE
       INTEGER :: l=-1,n=-1
       INTEGER :: atomType=0 ! The atom type to which this U parameter belongs
   END TYPE t_opctype
+
   TYPE,EXTENDS(t_fleurinput_base):: t_atoms
+
      !<no of types
   INTEGER :: ntype=-1
   !<total-no of atoms
@@ -38,6 +50,8 @@ MODULE m_types_atoms
   INTEGER :: n_denmat=0
   ! no of lda+us
   INTEGER ::n_u=0
+  ! no of lda+vs
+  INTEGER ::n_v=0                                              ! <--- LDA+V
   ! no of lda+hubbard1s
   INTEGER :: n_hia=0
   ! no of lda+orbital polarization corrections
