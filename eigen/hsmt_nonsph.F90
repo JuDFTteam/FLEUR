@@ -240,7 +240,7 @@ CONTAINS
                   !!$acc update device(abCoeffsPr)
                   CALL timestop("hsmt_ab_3")
 
-                  !$acc host_data use_device(abCoeffs,data_c,ab1,ab_select)
+                  !$acc host_data use_device(abCoeffsPr,data_c,ab1,ab_select)
                   IF (set0 .and. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
                      CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), size_ab_select, ab_size, chi, &
@@ -273,7 +273,7 @@ CONTAINS
                IF (ilSpinPr==ilSpin) THEN
                   IF (l_samelapw) THEN
                      !!$acc update device (abCoeffs)
-                     !$acc host_data use_device(abCoeffs,h_loc,ab2)
+                     !$acc host_data use_device(abCoeffsPr,h_loc,ab2)
                      CALL CPP_zgemm("C", "N", lapwPr%nv(igSpinPr), ab_size, ab_size, CMPLX(1.0, 0.0), &
                                   & abCoeffsPr, SIZE(abCoeffsPr, 1), h_loc, size(td%h_loc_nonsph, 1), &
                                   & CMPLX(0.0, 0.0), ab2, size_ab2)
@@ -290,7 +290,7 @@ CONTAINS
                      ! data_c += chi * ab2 * ab_select^H
                      !         = chi * aPr'^H * H * a
                   ELSE
-                     !$acc host_data use_device(abCoeffs,data_c,ab_select)
+                     !$acc host_data use_device(abCoeffsPr,data_c,ab_select)
                      IF (set0 .AND. nn == 1) THEN
                         !CPP_data_c = CMPLX(0.0,0.0)
                         CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &
@@ -308,7 +308,7 @@ CONTAINS
                      !         = cchi * aqPr'^H * t * a
                   END IF
                ELSE
-                  !$acc host_data use_device(abCoeffs,ab1,data_c,ab_select)
+                  !$acc host_data use_device(abCoeffsPr,ab1,data_c,ab_select)
                   IF (set0 .AND. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
                      CALL CPP_zgemm("C", "C", lapwPr%nv(igSpinPr), lapwPr%num_local_cols(igSpin), ab_size, cchi, &

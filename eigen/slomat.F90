@@ -32,11 +32,11 @@ CONTAINS
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sym),INTENT(IN)    :: sym
-      TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_lapw),INTENT(IN),Target   :: lapw
       TYPE(t_mpi),INTENT(IN)    :: fmpi
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_nococonv),INTENT(IN)   :: nococonv
-      TYPE(t_fjgj),INTENT(IN)   :: fjgj
+      TYPE(t_fjgj),INTENT(IN),target   :: fjgj
 
       ! Scalar Arguments
       INTEGER, INTENT (IN)      :: na,ntyp
@@ -50,8 +50,8 @@ CONTAINS
       CLASS(t_mat),INTENT(INOUT) :: smat
       LOGICAL, INTENT(IN) :: l_fullj
 
-      TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
-      TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
+      TYPE(t_lapw), OPTIONAL, TARGET, INTENT(IN) :: lapwq
+      TYPE(t_fjgj), OPTIONAL, Target, INTENT(IN) :: fjgjq
 
       ! Local Scalars
       REAL    :: con,dotp,fact1,fact2,fact3,fl2p1
@@ -61,19 +61,19 @@ CONTAINS
 
       COMPLEX,   ALLOCATABLE  :: cphPr(:), cph(:)
 
-      TYPE(t_lapw) :: lapwPr
-      TYPE(t_fjgj) :: fjgjPr
+      TYPE(t_lapw),pointer :: lapwPr
+      TYPE(t_fjgj),pointer :: fjgjPr
 
       l_samelapw = .FALSE.
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
-         lapwPr = lapwq
-         fjgjPr = fjgjq
+         lapwPr => lapwq
+         fjgjPr => fjgjq
       ELSE
-         lapwPr = lapw
-         fjgjPr = fjgj
+         lapwPr => lapw
+         fjgjPr => fjgj
       END IF
-
+      
       ALLOCATE(cph(MAXVAL(lapw%nv)))
       ALLOCATE(cphPr(MAXVAL(lapwPr%nv)))
 
@@ -99,8 +99,8 @@ CONTAINS
 
          con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
-         !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,fjgjPr,fjgjPr%fj,fjgjPr%gj,smat,smat%data_c,smat%data_r)&
-         !$acc & copyin(l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
+         !$acc kernels present(smat,smat%data_c,smat%data_r)&
+         !$acc & copyin(fjgj,fjgj%fj,fjgj%gj,fjgjPr,fjgjPr%fj,fjgjPr%gj,l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
          !$acc & copyin(lapwPr%index_lo(:,na),lapwPr%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
          !$acc & copyin(atoms%nlo(ntyp),lapw%nv(:),lapwPr%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
          !$acc & default(none)
@@ -220,6 +220,7 @@ CONTAINS
          END DO
          !$acc end kernels
       END IF
+    
    END SUBROUTINE slomat
 
    PURE REAL FUNCTION legpol(l,arg)
