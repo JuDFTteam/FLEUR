@@ -153,6 +153,7 @@ CONTAINS
                   if (index(line,':')/=1) THEN
                      if (index(line,':')==0) THEN
                         atom_Label(i)=line  !no more magnetic info
+                        line=""
                      else
                         atom_Label(i)=trim(line(:index(line,':')-1))  !index up to :
                      endif
