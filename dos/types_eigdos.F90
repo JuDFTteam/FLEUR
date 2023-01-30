@@ -30,6 +30,7 @@ MODULE m_types_eigdos
     procedure          :: write_dos
     procedure          :: write_band
     procedure          :: write_EVData
+    procedure          :: sym_weights,sym_weights_eigdos
   END TYPE
 
   type::t_eigdos_list
@@ -58,6 +59,38 @@ MODULE m_types_eigdos
     end function
   end interface
 CONTAINS
+  subroutine sym_weights(this)
+    class(t_eigdos),INTENT(INOUT):: this 
+  end subroutine
+
+  subroutine sym_weights_eigdos(this,weight)
+    !Subroutine to make all weights equal for degenerate states
+    class(t_eigdos),INTENT(IN):: this 
+    real,intent(inout)        :: weight(:,:,:)
+
+    INTEGER:: ispin,ikpt,i,j
+
+    DO ispin=1,size(this%eig,3)
+      DO ikpt=1,size(this%eig,2)   
+        ! Make sure equivalent states have same weight
+        i=1   
+        DO while(i<size(this%eig,1))
+         j=1
+         do while (abs(this%eig(i,ikpt,ispin)-this%eig(i+j,ikpt,ispin))<1E-5)
+            j=j+1
+            if (i+j>size(this%eig,1)) exit
+         ENDDO
+         if (j>1) THEN
+            j=j-1
+            !Make sure all weights are equal
+            weight(i:i+j,ikpt,ispin)=sum(weight(i:i+j,ikpt,ispin))/(j+1)
+            i=i+j
+         endif
+         i=i+1   
+        enddo 
+      ENDDO
+    ENDDO
+  end subroutine
 
   function get_neig(this)
     CLASS(t_eigdos),INTENT(IN)::this

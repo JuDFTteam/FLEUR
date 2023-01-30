@@ -72,7 +72,7 @@ CONTAINS
       summe = 0.0
       t_omp = 0.0
    
-      !$omp parallel reduction(+: t_omp)
+      !$omp parallel reduction(+: t_omp) default(shared)
       omp_threads = 1
       !$ omp_threads = OMP_GET_NUM_THREADS()
       t_omp = 1.0
@@ -105,7 +105,7 @@ CONTAINS
          write (*,*) "t_seq = ", t_seq
          write (*,*) "Summe = ", summe
 
-         call juDFT_warn("OMP parallelization underperform with a parallel efficiency of " // &
+         call juDFT_warn("OpenMP parallelization underperform with a parallel efficiency of " // &
             float2str(t_seq/t_omp), hint="check if your slurm files is set properly")
          parallel_ok = .False.
       endif

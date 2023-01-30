@@ -19,8 +19,16 @@ MODULE m_types_orbcomp
          PROCEDURE      :: get_num_weights
          PROCEDURE      :: get_weight_eig
          PROCEDURE      :: get_weight_name
+         PROCEDURE      :: sym_weights
    END TYPE t_orbcomp
 CONTAINS
+
+  subroutine sym_weights(this)
+    class(t_orbcomp),intent(inout):: this
+    integer:: i,j
+    return !This is done later in get_weights
+    end subroutine
+
 
   integer function get_num_weights(this)
     class(t_orbcomp),intent(in):: this
@@ -57,8 +65,11 @@ CONTAINS
     DO na=1,size(this%comp,3)
       DO i= 1, 23
         ind = ind+1
-        if (ind==id) get_weight_eig=this%comp(:,i,na,:,:)*this%qmtp(:,na,:,:)/10000.
-        if (ind>id) return
+        if (ind==id) THEN
+            get_weight_eig=this%comp(:,i,na,:,:)*this%qmtp(:,na,:,:)/10000.
+            call this%sym_weights_eigdos(get_weight_eig)
+            return
+        ENDIF
       ENDDO
     ENDDO
   end function

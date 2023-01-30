@@ -56,7 +56,7 @@ CONTAINS
     !     .. Local Arrays ..
     REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     CALL timestart("LO setup")
-
+    call timestart("Preparation")
     IF (set0) THEN
        SELECT TYPE (hmat)
        TYPE IS (t_mpimat)
@@ -69,7 +69,7 @@ CONTAINS
        !CPP_OMP SHARED(fmpi,l,lapw,hmat,smat,igSpin) &
        !CPP_OMP PRIVATE(nkvec,kp)
        !CPP_OMP DO
-       !CPP_ACC kernels present(hmat,hmat%data_r,hmat%data_c)
+       !CPP_ACC kernels present(hmat,hmat%data_r,hmat%data_c)copyin(fmpi,lapw,lapw%nv)
        DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
           IF( nkvec > lapw%nv(igSpin)) THEN
              kp=(nkvec-1)/fmpi%n_size+1
@@ -84,7 +84,7 @@ CONTAINS
        !CPP_OMP END DO
        IF ( present(smat)) THEN
           !CPP_OMP DO
-          !CPP_ACC kernels present(smat,smat%data_r,smat%data_c)
+          !CPP_ACC kernels present(smat,smat%data_r,smat%data_c)copyin(fmpi,lapw,lapw%nv)
           DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
              IF( nkvec > lapw%nv(igSpin)) THEN
                 kp=(nkvec-1)/fmpi%n_size+1
@@ -100,8 +100,9 @@ CONTAINS
        ENDIF
        !CPP_OMP END PARALLEL
     ENDIF
-
-    na = SUM(atoms%neq(:n-1))
+    call timestop("Preparation")
+    
+    na = atoms%firstAtom(n) - 1
     DO nn = 1,atoms%neq(n)
        na = na + 1
        IF ((sym%invsat(na).EQ.0) .OR. (sym%invsat(na).EQ.1)) THEN
@@ -119,7 +120,7 @@ CONTAINS
 
              !--->       add the local orbital contribution to the overlap and
              !--->       hamiltonian matrix, if they are used for this atom.
-
+               call timestart("slomat")
                IF (ilSpinPr==ilSpin) THEN
                   IF (.NOT.PRESENT(smat)) THEN
                      IF (.NOT.PRESENT(lapwq)) CALL judft_error("Bug in hsmt_lo, called without smat")
@@ -135,6 +136,7 @@ CONTAINS
                      END IF
                   END IF
                END IF
+               call timestop("slomat")
                CALL timestart("hlomat")
                IF (PRESENT(lapwq)) THEN
                   CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&

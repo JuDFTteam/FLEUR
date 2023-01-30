@@ -27,7 +27,7 @@ eigen/tlmplm.F90
 #eigen/tlmplm_store.F90
 eigen/tlo.f90
 eigen/vacfun.F90
-eigen/eigen_redist_matrix.f90
+eigen/eigen_redist_matrix.F90
 eigen/hs_int_direct.F90
 )
 #if (FLEUR_USE_GPU)

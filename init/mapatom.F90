@@ -84,8 +84,8 @@
 
       WRITE (oUnit,FMT=8000)
  8000 FORMAT (/,/,5x,'group operations on equivalent atoms:')
-      nat1 = 1
       DO n = 1,atoms%ntype
+         nat1 = atoms%firstAtom(n)
          nat2 = nat1 + atoms%neq(n) - 1
          sym%ngopr(nat1) = 1
 !+gu
@@ -159,9 +159,6 @@
 !
 ! end of equivalent atoms
        ENDDO
-!
-         nat1 = nat1 + atoms%neq(n)
-!
 ! end of different types of atoms
     ENDDO
 
@@ -185,14 +182,14 @@
          ALLOCATE(sym%mapped_atom(sym%nop,atoms%nat),source=0)
 
          DO n = 1 , atoms%ntype
-            DO nat = SUM(atoms%neq(:n-1)) + 1, SUM(atoms%neq(:n))
+            DO nat = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
 
                DO iop = 1, sym%nop
                   gamr = matmul(sym%mrot(:,:,iop), atoms%taual(:,nat))
                   gamr = gamr + sym%tau(:,iop)
 
                   icount = 0
-                  DO natp = SUM(atoms%neq(:n-1)) + 1, SUM(atoms%neq(:n))
+                  DO natp = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
                      gammap = gamr - atoms%taual(:,natp)
                      IF (icount.EQ.0) THEN
                         DO j3 = -2,2
@@ -279,8 +276,8 @@
       IF (.not.(noco%l_soc.and.atoms%n_u+atoms%n_opc>0) .and. atoms%n_hia==0) THEN
       IF (sym%invs) THEN
          WRITE (oUnit,FMT=*)
-         nat1 = 1
          DO n = 1,atoms%ntype
+            nat1 = atoms%firstAtom(n)
             nat2 = nat1 + atoms%neq(n) - 1
             DO na = nat1,nat2 - 1
                IF (sym%invsat(na).EQ.0.AND..NOT.noco%l_noco) THEN
@@ -309,7 +306,6 @@
                END DO naloop
                END IF
             END DO
-            nat1 = nat1 + atoms%neq(n)
          END DO
       WRITE (oUnit,FMT=*) sym%invsat
  9000 FORMAT ('atom type',i3,': atom',i3,' can be mapped into atom',i3,&

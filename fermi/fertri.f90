@@ -36,7 +36,7 @@ MODULE m_fertri
 
       REAL    :: chmom,ct,del,dez,ei,emax,emin,s,s1,workf
       REAL    :: lb,ub,e_set,seigvTemp
-      INTEGER :: i,ic,j,jsp,k,neig
+      INTEGER :: i,ic,j,jsp,k,neig,jj
       INTEGER :: nemax(2)
       CHARACTER(LEN=20)    :: attributes(2)
       REAL, PARAMETER :: de = 5.0e-3 !Step for initial search
@@ -45,7 +45,7 @@ MODULE m_fertri
          WRITE (oUnit,FMT=8000)
 8000     FORMAT (/,/,10x,'linear triangular method')
       END IF
-
+      w=0.0
       !
       !--->   clear w and set eig=-9999.9
       e_set = -9999.9
@@ -157,9 +157,30 @@ MODULE m_fertri
 !        ENDDO
 !     ENDDO
 
+      !find degenerate states
+     DO jsp=1,jspins
+         DO k=1,kpts%nkpt
+            i=1   
+            DO while(i<nemax(jsp))
+               j=1
+               do while (abs(eig(i,k,jsp)-eig(i+j,k,jsp))<1E-9)
+                  j=j+1
+                  if (i+j>nemax(jsp)) exit
+               ENDDO
+               if (j>1) THEN
+                  j=j-1
+                  !Make sure all weights are equal
+                  w(i:i+j,k,jsp)=sum(w(i:i+j,k,jsp))/(j+1)
+                  i=i+j
+               endif
+               i=i+1   
+            enddo      
+         enddo
+      enddo
       !
       !--->   obtain sum of weights and valence eigenvalues
       !
+      
       s1 = 0.
       seigv = 0.
       DO jsp = 1,jspins

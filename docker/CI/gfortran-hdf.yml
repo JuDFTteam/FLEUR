@@ -1,5 +1,5 @@
 build-gfortran-hdf5:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
   artifacts:
      paths:
@@ -20,10 +20,11 @@ build-gfortran-hdf5:
     
 
 test-gfortran-hdf5: 
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   variables:
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
+    skip_markers: "masci_tools"
   needs: 
     - fast-test-gfortran-hdf5
     - build-gfortran-hdf5
@@ -34,7 +35,7 @@ test-gfortran-hdf5:
     - when: on_success  
 
 fast-test-gfortran-hdf5: 
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   stage: fast-test
   variables:
@@ -46,3 +47,20 @@ fast-test-gfortran-hdf5:
       when: never
     - if: $CI_TASKS =~ /gfortran/  
     - when: on_success
+
+masci-test-gfortran-hdf5: 
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  extends: .test-fleur
+  variables:
+    juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self"
+    markers: "masci_tools"
+  needs: 
+    - build-gfortran-hdf5
+  allow_failure: true
+  rules:
+    - if: $CI_TASKS
+      when: never
+    - if: $CI_TASKS =~ /gfortran/  
+    - when: on_success
+
+

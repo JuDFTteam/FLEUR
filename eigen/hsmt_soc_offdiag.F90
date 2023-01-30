@@ -87,13 +87,13 @@ CONTAINS
           !--->             set up phase factors
           cph = 0.0
           ski = lapw%gvec(:,ki,1)
-          DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+          DO nn = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
              tnn = tpi_const*atoms%taual(:,nn)
              DO jv = 1,NVEC_rem
                 kj = kj_off - 1 + jv
                 dot(jv) = DOT_PRODUCT(ski(1:3)-lapw%gvec(1:3,kj,1),tnn(1:3))
              END DO
-             cph(:NVEC_rem) = cph(:NVEC_rem) + CMPLX(COS(dot(:NVEC_rem)),-SIN(dot(:NVEC_rem)))
+             cph(:NVEC_rem) = cph(:NVEC_rem) + CMPLX(COS(dot(:NVEC_rem)),SIN(dot(:NVEC_rem)))
           END DO
 
           !--->       x for legendre polynomials
@@ -121,19 +121,18 @@ CONTAINS
                 dplegend(:NVEC_rem,l3)=REAL(l)*plegend(:NVEC_rem,MODULO(l-1,3))+xlegend(:NVEC_rem)*dplegend(:NVEC_rem,MODULO(l-1,3))
              END IF ! l
              DO j1=1,2
-                fjkiln = fjgj%fj(ki,l,j1,1)
-                gjkiln = fjgj%gj(ki,l,j1,1)
-                DO j2=1,2
-                   fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
-                        fjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                        fjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                        gjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                        gjkiln*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
-                        * angso(:NVEC_rem,j1,j2)
-                   hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + CONJG(chi(1,1,j1,j2)*fct(:NVEC_rem))
-                   hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + CONJG(chi(1,2,j1,j2)*fct(:NVEC_rem))
-                   hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + CONJG(chi(2,1,j1,j2)*fct(:NVEC_rem))
-                   hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + CONJG(chi(2,2,j1,j2)*fct(:NVEC_rem))
+                DO j2=1,2      
+                  fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
+                  fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
+                  fjgj%fj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
+                  fjgj%gj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
+                  fjgj%gj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                  * angso(:NVEC_rem,j1,j2)
+
+                  hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
+                  hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
+                  hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
+                  hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
                 ENDDO
              ENDDO
           !--->          end loop over l
@@ -211,7 +210,7 @@ CONTAINS
     blo1=blo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
     clo1=clo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
 
-    DO na=sum(atoms%neq(:n-1))+1,sum(atoms%neq(:n))
+    DO na = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
       IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
         !--->    if this atom is the first of two atoms related by inversion,
         !--->    the contributions to the overlap matrix of both atoms are added
@@ -246,7 +245,7 @@ CONTAINS
               DO kj = 1,lapw%nv(1)
                 cph(kj) = cph(kj) +&
                 CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,1),tnn)),&
-                SIN(DOT_PRODUCT(lapw%gvec(:,kj,1)-ski,tnn)))
+                SIN(DOT_PRODUCT(ski-lapw%gvec(:,kj,1),tnn)))
               END DO
               !Set up spinors...
               CALL hsmt_spinor_soc(n,ki,nococonv,lapw,chi,angso,1,size(angso,1))
@@ -264,10 +263,10 @@ CONTAINS
                     clo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopplo(n,lo,j1,j2) + &
                     clo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
                     * angso(kj,j1,j2)
-                    hmat(1,1)%data_c(kj,locol_loc)=hmat(1,1)%data_c(kj,locol_loc) + CONJG(chi(1,1,j1,j2)*fct)
-                    hmat(1,2)%data_c(kj,locol_loc)=hmat(1,2)%data_c(kj,locol_loc) + CONJG(chi(1,2,j1,j2)*fct)
-                    hmat(2,1)%data_c(kj,locol_loc)=hmat(2,1)%data_c(kj,locol_loc) + CONJG(chi(2,1,j1,j2)*fct)
-                    hmat(2,2)%data_c(kj,locol_loc)=hmat(2,2)%data_c(kj,locol_loc) + CONJG(chi(2,2,j1,j2)*fct)
+                    hmat(1,1)%data_c(kj,locol_loc)=hmat(1,1)%data_c(kj,locol_loc) + chi(1,1,j1,j2)*fct
+                    hmat(1,2)%data_c(kj,locol_loc)=hmat(1,2)%data_c(kj,locol_loc) + chi(1,2,j1,j2)*fct
+                    hmat(2,1)%data_c(kj,locol_loc)=hmat(2,1)%data_c(kj,locol_loc) + chi(2,1,j1,j2)*fct
+                    hmat(2,2)%data_c(kj,locol_loc)=hmat(2,2)%data_c(kj,locol_loc) + chi(2,2,j1,j2)*fct
                   ENDDO
                   !Update LO-LO part
                   DO ilo=1,atoms%nlo(n)
@@ -287,10 +286,10 @@ CONTAINS
                         clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)+ &
                         clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoploplop(n,lo,ilo,j1,j2)) &
                        * angso(kj,j1,j2)
-                        hmat(1,1)%data_c(lorow,locol_loc)=hmat(1,1)%data_c(lorow,locol_loc) + CONJG(chi(1,1,j1,j2)*fct)
-                        hmat(1,2)%data_c(lorow,locol_loc)=hmat(1,2)%data_c(lorow,locol_loc) + CONJG(chi(1,2,j1,j2)*fct)
-                        hmat(2,1)%data_c(lorow,locol_loc)=hmat(2,1)%data_c(lorow,locol_loc) + CONJG(chi(2,1,j1,j2)*fct)
-                        hmat(2,2)%data_c(lorow,locol_loc)=hmat(2,2)%data_c(lorow,locol_loc) + CONJG(chi(2,2,j1,j2)*fct)
+                        hmat(1,1)%data_c(lorow,locol_loc)=hmat(1,1)%data_c(lorow,locol_loc) + chi(1,1,j1,j2)*fct
+                        hmat(1,2)%data_c(lorow,locol_loc)=hmat(1,2)%data_c(lorow,locol_loc) + chi(1,2,j1,j2)*fct
+                        hmat(2,1)%data_c(lorow,locol_loc)=hmat(2,1)%data_c(lorow,locol_loc) + chi(2,1,j1,j2)*fct
+                        hmat(2,2)%data_c(lorow,locol_loc)=hmat(2,2)%data_c(lorow,locol_loc) + chi(2,2,j1,j2)*fct
                       ENDDO
                     ENDIF
                   ENDDO
@@ -307,3 +306,35 @@ CONTAINS
     RETURN
   END SUBROUTINE hsmt_soc_offdiag_LO
 END MODULE m_hsmt_soc_offdiag
+
+#if false
+   !Code snipplet useful for debugging only
+                  fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
+                  fjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) ) &
+                  * angso(:NVEC_rem,j1,j2) 
+             
+                  BLOCK
+                    use m_anglso
+                    USE m_ylm
+                    INTEGER :: m1,m2,is1,is2,lm1,lm2
+                    COMPLEX :: soangl(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,-atoms%lmaxd:atoms%lmaxd,2),angso2
+                    COMPLEX :: ylm1( (atoms%lmaxd+1)**2 ), ylm2( (atoms%lmaxd+1)**2 )
+                    INTEGER :: ispjsp(2)
+                    if (kj_off/=kj_vec) call judft_error("DEBUG Problem")
+                    DATA ispjsp/1,-1/
+                         CALL ylm4(l,lapw%gk(:,ki,1),ylm1)
+                         CALL ylm4(l,lapw%gk(:,kj,1),ylm2)
+                         angso2=0.0
+                         is1=ispjsp(j1)
+                         is2=ispjsp(j2)
+                         DO m1=-l,l
+                            lm1=l*(l+1)+m1+1
+                            DO m2=-l,l
+                              lm2=l*(l+1)+m2+1
+                              angso2=angso2+ylm1(lm1)*conjg(ylm2(lm2))* &
+                                 anglso(nococonv%beta(n),nococonv%alph(n),l,m1,is1,l,m2,is2)
+                           ENDDO
+                        ENDDO
+                        fct(1)=angso2*fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2)
+                  END BLOCK     
+#endif

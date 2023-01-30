@@ -18,8 +18,8 @@ MODULE m_types_mat
       LOGICAL :: l_real                     !>Store either real or complex data
       INTEGER :: matsize1 = -1                !> matsize1=size(data_?,1),i.e. no of rows
       INTEGER :: matsize2 = -1                !> matsize2=size(data_?,2),i.e. no of columns
-      REAL, ALLOCATABLE CPP_MANAGED    :: data_r(:, :)
-      COMPLEX, ALLOCATABLE CPP_MANAGED :: data_c(:, :)
+      REAL, ALLOCATABLE    :: data_r(:, :)
+      COMPLEX, ALLOCATABLE :: data_c(:, :)
    CONTAINS
       PROCEDURE        :: alloc => t_mat_alloc                !> allocate the data-arrays
       PROCEDURE        :: multiply => t_mat_multiply            !> do a matrix-matrix multiply
@@ -87,8 +87,8 @@ CONTAINS
             IF (.true.) then !in No openacc case always use OpenMP version
 #endif
                !$OMP parallel do collapse(2) shared (mat,mat2,a_r) default(none)
-               DO i=1,mat%matsize1
-                  DO j=1,mat%matsize2
+               DO j=1,mat%matsize2
+                  DO i=1,mat%matsize1
                      mat%data_r(i,j)=mat%data_r(i,j)+a_r*mat2%data_r(i,j)
                   ENDDO
                ENDDO
@@ -106,12 +106,15 @@ CONTAINS
             IF (.true.) then !in No openacc case always use OpenMP version
 #endif
                !$OMP parallel do collapse(2) shared (mat,mat2,a_c) default(none)
-               DO i=1,mat%matsize1
-                  DO j=1,mat%matsize2
-                     mat%data_c(i,j)=mat%data_c(i,j)+a_c*mat2%data_c(i,j)
+               DO j=1,mat%matsize2
+                  DO i=1,mat%matsize1
+                    mat%data_c(i,j)=mat%data_c(i,j)+a_c*mat2%data_c(i,j)
                   ENDDO
                ENDDO
                !$OMP end parallel do
+               !DO j=1,mat%matsize2
+               !    call caxpy(mat%matsize1,a_c,mat2%data_c(:,j),1,mat%data_c(:,j),1)
+               !ENDDO
             ENDIF
          ENDIF
    END SUBROUTINE
@@ -1108,9 +1111,9 @@ CONTAINS
       character(len=*)         :: filename
 
       if (mat%l_real) then
-         call save_npy(filename, mat%data_r)
+         !call save_npy(filename, mat%data_r)
       else
-         call save_npy(filename, mat%data_c)
+         !call save_npy(filename, mat%data_c)
       endif
    end subroutine t_mat_save_npy
 

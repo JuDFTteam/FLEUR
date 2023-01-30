@@ -29,6 +29,7 @@ MODULE m_types_forcetheo
      LOGICAL,PRIVATE :: firstloop=.false.
      LOGICAL :: l_IO=.true.
      LOGICAL :: l_needs_vectors=.true.
+     logical :: l_in_forcetheo_loop=.false.
    CONTAINS
      PROCEDURE :: start   =>forcetheo_start
      PROCEDURE :: next_job=>forcetheo_next_job

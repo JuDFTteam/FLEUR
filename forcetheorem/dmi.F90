@@ -91,6 +91,7 @@ CONTAINS
        RETURN
     ENDIF
     !OK, now we start the DMI-loop
+    this%l_in_forcetheo_loop = .true.
     this%q_done=this%q_done+1
     dmi_next_job=(this%q_done<=SIZE(this%qvec,2)) !still q-vectors to do
     IF (.NOT.dmi_next_job) RETURN
@@ -100,7 +101,7 @@ CONTAINS
     if (.not.noco%l_spav) call judft_warn("l_spav=T should be set in DMI force theorem mode")
     !Modify the alpha-angles
     DO iType = 1,atoms%ntype
-       nococonv%alph(iType) = noco%alph_inp(iType) + tpi_const*dot_PRODUCT(nococonv%qss,atoms%taual(:,SUM(atoms%neq(:itype-1))+1))
+       nococonv%alph(iType) = noco%alph_inp(iType) + tpi_const*dot_PRODUCT(nococonv%qss,atoms%taual(:,atoms%firstAtom(itype)))
     END DO
     IF (.NOT.this%l_io) RETURN
 

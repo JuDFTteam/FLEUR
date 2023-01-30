@@ -1,5 +1,5 @@
 build-gfortran-serial:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
   script:
     - cd $CI_PROJECT_DIR
@@ -14,7 +14,7 @@ build-gfortran-serial:
     - if: $CI_TASKS =~ /serial/    
   
 build-gfortran-hdf5-serial:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: build
   artifacts:
      paths:
@@ -29,7 +29,7 @@ build-gfortran-hdf5-serial:
       - if: $CI_TASKS =~ /serial/    
 
 test-gfortran-serial:
-  image: iffregistry.fz-juelich.de/fleur/fleur:latest
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   needs: 
     - build-gfortran-serial
@@ -38,4 +38,31 @@ test-gfortran-serial:
     markers: "serial"
   rules:
     - if: $CI_TASKS =~ /serial/    
+  
+  
+build-gfortran-hdf5-debug:
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  stage: build
+  artifacts:
+     paths:
+       - build.debug
+     expire_in: 12h
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -m GITLAB -mpi FALSE -d -flags "-fcheck=all -finit-real=snan -finit-derived"
+    - cd build.debug
+    - make -j 2
+  rules:
+      - if: $CI_TASKS =~ /debug/    
+
+test-gfortran-serial-debug:
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  extends: .test-fleur
+  needs: 
+    - build-gfortran-hdf5-debug
+  variables:
+    BUILD_FOLDER: build.debug
+    markers: "serial"
+  rules:
+    - if: $CI_TASKS =~ /debug/    
   

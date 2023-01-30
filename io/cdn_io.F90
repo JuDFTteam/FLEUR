@@ -577,6 +577,7 @@ CONTAINS
           sphharTemp%nlhd = sphhar%nlhd
           vacuumTemp%nmzd = vacuum%nmzd
           atomsTemp%ntype = atoms%ntype
+          atomsTemp%firstAtom=atoms%firstAtom
           ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
           sphharTemp%nlh(:) = sphhar%nlh(:)
           ALLOCATE (symTemp%ntypsy(SIZE(sym%ntypsy)))
@@ -1009,7 +1010,7 @@ CONTAINS
 #endif
   END SUBROUTINE storeStructureIfNew
 
-  SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, sym, sphhar,input ,noco)
+  SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, sym, sphhar,input ,noco,nococonv)
     USE m_types
     USE m_constants
     USE m_qfix
@@ -1024,6 +1025,8 @@ CONTAINS
      
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_nococonv),INTENT(IN)     :: nococonv
+    
     TYPE(t_stars),INTENT(IN)    :: stars
 
     !Locals
@@ -1102,13 +1105,13 @@ CONTAINS
        SELECT CASE(input%qfix)
        CASE (0,1) !just qfix the density
           IF (fmpi%irank==0) WRITE(oUnit,*) "Using qfix to adjust density"
-          IF (fmpi%irank==0) CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell ,&
+          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,&
                den,noco%l_noco,.FALSE.,.FALSE.,force_fix=.TRUE.,fix=fix)
        CASE(2,3)
-          IF (fmpi%irank==0) CALL qfix(fmpi,stars,atoms,sym,vacuum,sphhar,input,cell ,&
+          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,&
                den,noco%l_noco,.FALSE.,.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.TRUE.)
        CASE(4,5)
-          IF (fmpi%irank==0) CALL fix_by_gaussian(shifts,atoms,stars,fmpi,sym,vacuum,sphhar,input ,cell,noco,den)
+          IF (fmpi%irank==0) CALL fix_by_gaussian(shifts,atoms,nococonv,stars,fmpi,sym,vacuum,sphhar,input ,cell,noco,den)
        CASE default
           CALL judft_error("Wrong choice of qfix in input")
        END SELECT
@@ -1326,11 +1329,12 @@ CONTAINS
 #ifdef CPP_HDF
        CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-
-       currentStepfunctionIndex = currentStepfunctionIndex + 1
-       CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, currentStructureIndex, stars,.TRUE.)
-       CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-            currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+       IF((judft_was_argument("-storeSF")).OR.(currentStepfunctionIndex.NE.0)) THEN
+          currentStepfunctionIndex = currentStepfunctionIndex + 1
+          CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, currentStructureIndex, stars,.TRUE.)
+          CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                  currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+       END IF
 
        CALL closeCDNPOT_HDF(fileID)
 #endif

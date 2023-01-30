@@ -122,7 +122,7 @@ CONTAINS
             !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf, g_ptr)
 #endif
 
-            call timestart("alloc&init")
+!            call timestart("alloc&init")
             allocate (prod(0:stepf%gridLength - 1, psize), stat=ok)
             if (ok /= 0) call juDFT_error("can't alloc prod")
             allocate (psi_k(0:stepf%gridLength - 1, 1), stat=ok)
@@ -131,7 +131,7 @@ CONTAINS
             call fft%init(stepf%dimensions, .true., batch_size=psize, l_gpu=.True.)
             call grid%init(fi%cell, fi%sym, gcutoff)
             call wavef2rs_fft%init(grid%dimensions, .false., batch_size=1, l_gpu=.True.)
-            call timestop("alloc&init")
+!            call timestop("alloc&init")
 
             !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec)&
             !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, grid, grid%dimensions, jsp)&

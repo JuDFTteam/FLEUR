@@ -227,7 +227,7 @@ MODULE m_types_noco
       ALLOCATE(this%alph_inp(ntype),this%beta_inp(ntype))
       this%alph_inp=0.0;this%beta_inp=0.0
       ALLOCATE(this%socscale(ntype))
-      this%socscale=0.0
+      this%socscale=1.0
 
       IF (numberNodes.EQ.1) THEN
          this%l_ss = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_ss'))
@@ -273,7 +273,13 @@ MODULE m_types_noco
      INTEGER :: i_u, atomType
 
      IF (noco%l_noco .AND. (ABS(noco%theta_inp)>1E-5.OR.ABS(noco%phi_inp)>1E-5)) &
-           CALL judft_warn("You specified a theta/phi angle for SOC in a Noco-calculation. These angles are used only in non-Noco SOC calculations.")
+           CALL judft_warn("You specified a theta/phi angle for SOC in a noco-calculation. These angles are used only in non-Noco SOC calculations.")
+
+     IF (.NOT.noco%l_noco) THEN
+        IF (ANY(noco%alph_inp(1:atoms%ntype).NE.0.0).OR.ANY(noco%beta_inp(1:atoms%ntype).NE.0.0)) THEN
+           CALL judft_warn("You specified noco-calculation alpha/beta angles unequal to 0.0 but don't perform a noco-calculation.")
+        END IF
+     END IF
 
  
      IF(l_spinoffd_ldau) THEN

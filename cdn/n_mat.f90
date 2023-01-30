@@ -50,7 +50,7 @@ MODULE m_nmat
          endif
 
          ll1 = (l+1)*l
-         DO natom = SUM(atoms%neq(:n-1))+1, SUM(atoms%neq(:n))
+         DO natom = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
             n_tmp = cmplx_0
             !
             !  prepare n_mat in local frame (in noco-calculations this depends

@@ -23,9 +23,24 @@ MODULE m_types_dos
      PROCEDURE      :: get_num_spins
      PROCEDURE      :: get_num_weights
      PROCEDURE      :: get_weight_name
+     PROCEDURE      :: sym_weights
   END TYPE t_dos
 
 CONTAINS
+
+subroutine sym_weights(this)
+  class(t_dos),intent(inout):: this
+
+  integer:: i,j
+
+  DO i=0,size(this%qal,1)-1
+    DO j=1,size(this%qal,2)
+      call this%sym_weights_eigdos(this%qal(i,j,:,:,:))
+    enddo
+  ENDDO  
+  call this%sym_weights_eigdos(this%qis(:,:,:))
+  call this%sym_weights_eigdos(this%qtot(:,:,:))
+end subroutine
 
   integer function get_num_weights(this)
     class(t_dos),intent(in):: this

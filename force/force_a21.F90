@@ -80,8 +80,8 @@ CONTAINS
 
       ALLOCATE(a21(3,atoms%nat),b4(3,atoms%nat) )
 
-      natom = 1
-      DO  n = 1,atoms%ntype
+      DO n = 1,atoms%ntype
+         natom = atoms%firstAtom(n)
          IF (atoms%l_geo(n)) THEN
             forc_a21(:) = czero
             forc_b4(:) = czero
@@ -289,7 +289,6 @@ CONTAINS
             END DO
 
          END IF ! l_geo(n)
-         natom = natom + atoms%neq(n)
       END DO
 
       ! The result is written in force_a8.

@@ -23,10 +23,11 @@ MODULE m_types_nococonv
    CONTAINS
       procedure:: init => t_nococonv_init
       procedure:: init_ss => t_nococonv_initss
-      !Routines to obtain umat transformation matrix
-      procedure:: umat_pass
-      procedure:: umat_explicit
-      generic :: umat => umat_pass, umat_explicit
+      !Routines to obtain chi transformation matrix
+      procedure:: chi_pass
+      procedure:: chi_explicit
+      generic :: chi => chi_pass, chi_explicit
+      generic :: umat => chi_pass, chi_explicit
       !Routines to rotate density matrix
       procedure:: rotdenmat_mat, rotdenmat_denmat
       procedure:: rotdenmat_explicit_mat, rotdenmat_explicit_denmat
@@ -37,7 +38,8 @@ MODULE m_types_nococonv
       !function to construct density matrix from magnetisaztion vector
       procedure:: mag_to_denmat
       !Rotate magnetisation vector
-      procedure :: rot_magvec
+      procedure :: rot_magvec_ntype,rot_magvec_explicit
+      generic   :: rot_magvec =>rot_magvec_ntype,rot_magvec_explicit
       procedure :: avg_moments
       procedure :: mpi_bc => mpi_bc_nococonv
    end TYPE
@@ -69,21 +71,22 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
 
  END SUBROUTINE mpi_bc_nococonv
 
-   function umat_pass(nococonv, n)
+   function chi_pass(nococonv, n)
       CLASS(t_nococonv), INTENT(IN)  :: nococonv
       INTEGER, INTENT(IN)           :: n
-      COMPLEX                      :: umat_pass(2, 2)
-      umat_pass = nococonv%umat_explicit(nococonv%alph(n), nococonv%beta(n))
+      COMPLEX                      :: chi_pass(2, 2)
+      chi_pass = nococonv%chi_explicit(nococonv%alph(n), nococonv%beta(n))
    end function
 
-   function umat_explicit(nococonv, alpha, beta) result(umat)
+   pure function chi_explicit(nococonv, alpha, beta) result(chi)
       class(t_nococonv), intent(in) :: nococonv
       REAL, INTENT(IN) :: alpha, beta
-      COMPLEX         :: umat(2, 2)
-      umat(1, 1) =  EXP(-ImagUnit*alpha/2)*COS(beta/2)
-      umat(2, 1) = -EXP( ImagUnit*alpha/2)*SIN(beta/2)
-      umat(1, 2) =  EXP(-ImagUnit*alpha/2)*SIN(beta/2)
-      umat(2, 2) =  EXP( ImagUnit*alpha/2)*COS(beta/2)
+      COMPLEX         :: chi(2, 2)
+      chi(1, 1) =  EXP( ImagUnit*alpha/2)*COS(beta/2)
+      chi(2, 1) = -EXP( ImagUnit*alpha/2)*SIN(beta/2)
+      chi(1, 2) =  EXP(-ImagUnit*alpha/2)*SIN(beta/2)
+      chi(2, 2) =  EXP(-ImagUnit*alpha/2)*COS(beta/2)
+      chi=transpose(conjg(chi))
    end function
 
    function denmat_to_mag_mat(nococonv, mat) result(mag)
@@ -109,12 +112,12 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
       complex, intent(in):: r21
       real :: mag(0:3)
       mag(0) = r11 + r22
-      mag(1) = -2*Real(r21)
+      mag(1) = 2*Real(r21)
       mag(2) = 2*Aimag(r21)
       mag(3) = r11 - r22
    end function
 
-   subroutine rot_magvec(nococonv, n, mag, toGlobal)
+   subroutine rot_magvec_ntype(nococonv, n, mag, toGlobal)
       CLASS(t_nococonv), INTENT(IN) :: nococonv
       INTEGER, INTENT(IN)           :: n
       REAL, INTENT(INOUT)      :: mag(0:3)
@@ -126,6 +129,19 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
       call nococonv%rotdenmat(n, mat, toGlobal)
       mag = nococonv%denmat_to_mag(mat)
    end subroutine
+   
+   subroutine rot_magvec_explicit(nococonv, alpha, beta, mag, toGlobal)
+   CLASS(t_nococonv), INTENT(IN) :: nococonv
+   REAL, INTENT(IN)           :: alpha,beta
+   REAL, INTENT(INOUT)      :: mag(0:3)
+   LOGICAL, INTENT(IN), OPTIONAL  :: toGlobal
+
+   complex :: mat(2, 2)
+
+   mat = nococonv%mag_to_denmat(mag)
+   call nococonv%rotdenmat(alpha,beta, mat, toGlobal)
+   mag = nococonv%denmat_to_mag(mat)
+end subroutine
 
    subroutine rotdenmat_mat(nococonv, n, mat, toGlobal)
       CLASS(t_nococonv), INTENT(IN) :: nococonv
@@ -178,9 +194,9 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
       COMPLEX r21n
       if (present(toGlobal)) THEN
          if (toGlobal) THEN
-            r11n = 0.5*(1.0 + cos(beta))*rho11 + sin(beta)*real(rho21) + 0.5*(1.0 - cos(beta))*rho22
-            r22n = 0.5*(1.0 - cos(beta))*rho11 - sin(beta)*real(rho21) + 0.5*(1.0 + cos(beta))*rho22
-            r21n = CMPLX(cos(alph), -sin(alph))*(-0.5*sin(beta)*(rho11 - rho22) + cos(beta)*real(rho21) + cmplx(0.0, aimag(rho21)))
+            r11n = 0.5*(1.0 + cos(beta))*rho11 - sin(beta)*real(rho21) + 0.5*(1.0 - cos(beta))*rho22
+            r22n = 0.5*(1.0 - cos(beta))*rho11 + sin(beta)*real(rho21) + 0.5*(1.0 + cos(beta))*rho22
+            r21n = CMPLX(cos(alph), sin(alph))*(0.5*sin(beta)*(rho11 - rho22) + cos(beta)*real(rho21) + cmplx(0.0, aimag(rho21)))
             rho11 = r11n
             rho22 = r22n
             rho21 = r21n
@@ -188,9 +204,9 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
             RETURN
          end if
       end if
-      r11n = -sin(beta)*(cos(alph)*real(rho21) - sin(alph)*AIMAG(rho21)) + (rho11 - rho22)*0.5*(1 + cos(beta)) + rho22
-      r22n = sin(beta)*(cos(alph)*real(rho21) - sin(alph)*AIMAG(rho21)) + (rho22 - rho11)*0.5*(1 + cos(beta)) + rho11
-      r21n = (cos(alph)*real(rho21) - sin(alph)*AIMAG(rho21))*(1 + cos(beta)) + 0.5*sin(beta)*(rho11 - rho22) - cmplx(cos(alph), -sin(alph))*conjg(rho21)
+      r11n = sin(beta)*(cos(alph)*real(rho21) + sin(alph)*AIMAG(rho21)) + (rho11 - rho22)*0.5*(1 + cos(beta)) + rho22
+      r22n = -sin(beta)*(cos(alph)*real(rho21) + sin(alph)*AIMAG(rho21)) + (rho22 - rho11)*0.5*(1 + cos(beta)) + rho11
+      r21n = (cos(alph)*real(rho21) + sin(alph)*AIMAG(rho21))*(1 + cos(beta)) - 0.5*sin(beta)*(rho11 - rho22) - cmplx(cos(alph), sin(alph))*conjg(rho21)
       rho11 = r11n
       rho22 = r22n
       rho21 = r21n
@@ -240,10 +256,9 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
             !--->    that means that the moments are "in line" with the spin-spiral
             !--->    (beta = qss * taual). note: this means that only atoms within
             !--->    a plane perpendicular to qss can be equivalent!
-            na = 1
             DO iType = 1, atoms%ntype
+               na = atoms%firstAtom(iType)
                nococonv%alph(iType) = noco%alph_inp(iType) + tpi_const*dot_product(nococonv%qss, atoms%taual(:, na))
-               na = na + atoms%neq(iType)
             END DO
          END IF
       ELSE

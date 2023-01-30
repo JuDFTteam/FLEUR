@@ -389,6 +389,7 @@
    <xsd:complexType name="SpecialType">
      <xsd:attribute name="lda" type="FleurBool" use="optional" default="F"/>
      <xsd:attribute name="socscale" type="FleurDouble" use="optional" default="1.0"/>
+     <xsd:attribute name="nonSpinPolBasis" type="FleurBool" use="optional" default="F"/> 
      <xsd:attribute name="b_field_mt" type="FleurDouble" use="optional" default="0.0"/>
      <xsd:attribute name="vca_charge" type="FleurDouble" use="optional" default="0.0"/>
    </xsd:complexType>
@@ -559,6 +560,9 @@
       <xsd:attribute default="calc"    name="kkintgrCutoff" type="ManualKKintgrCutoffType" use="optional"/>
       <xsd:attribute default="default" name="label" type="xsd:string" use="optional"/>
       <xsd:attribute default="F"       name="k_resolved" type="FleurBool" use="optional"/>
+      <xsd:attribute default="all"     name="shellElement" type="xsd:string" use="optional"/>
+      <xsd:attribute default="T"       name="magneticShells" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0"       name="startFromShell" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="TorqueGFType">
@@ -792,6 +796,8 @@
       <xsd:attribute default="1300" name="ne" type="xsd:nonNegativeInteger"/>
       <xsd:attribute default="-2.0" name="ellow" type="xsd:double"/>
       <xsd:attribute default="2.0" name="elup" type="xsd:double"/>
+      <xsd:attribute default="0.0" name="smearingEnergy" type="xsd:double"/>
+      <xsd:attribute default="0.0" name="smearingTemperature" type="xsd:double"/>
    </xsd:complexType>
 
    <xsd:complexType name="EContourRectangleType">

@@ -10,7 +10,7 @@ cdn/cdnval.F90
 cdn/eparas.f90
 cdn/int_21.f90
 cdn/int_21lo.f90
-cdn/m_perp.f90
+cdn/MagMoments.F90
 cdn/n_mat.f90
 cdn/n_mat21.f90
 cdn/pwden.F90
@@ -23,5 +23,4 @@ cdn/qpw_to_nmt.f90
 cdn/slab_dim.f90
 cdn/slabgeom.f90
 cdn/vacden.F90
-cdn/genNewNocoInp.f90
 )

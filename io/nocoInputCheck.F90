@@ -123,6 +123,10 @@ MODULE m_nocoInputCheck
       CALL juDFT_error("l_spinoffd='T' for ldaU and l_noco='F' makes no sense.",calledby='nocoInputCheck')
     END IF
 
+    IF (noco%l_ss .and. noco%l_soc) THEN
+      CALL juDFT_error("You use l_soc='T' and l_ss='T'.",hint="In a spin-spiral calculation SOC cannot be used. These are incompatible features. Please see the documentation for details.",calledby='nocoInputCheck')
+    END IF
+
    END SUBROUTINE nocoInputCheck
 
 END MODULE m_nocoInputCheck

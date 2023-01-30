@@ -49,6 +49,7 @@ CONTAINS
     !
     IF (input%jspins==1.AND.(noco%l_ss.OR.noco%l_noco)) CALL judft_error("You cannot run a non-collinear calculation with a single spin, set jspins=2")
     IF (noco%l_ss) noco%l_noco = .TRUE.
+    IF (noco%l_noco) input%ctail=.FALSE.
     !check for magnetism
     DO n = 1, atoms%ntype
        IF (ANY(atoms%econf(n)%occupation(:, 1) .NE. atoms%econf(n)%occupation(:, 2))) THEN
@@ -122,7 +123,7 @@ CONTAINS
        IF (vacuum%dvac<=abs(cell%amat(3,3))) THEN
           min_dtild=0.0
           DO n=1,atoms%ntype
-             min_dtild=MAX(MAXVAL(ABS(atoms%pos(3,SUM(atoms%neq(:n-1))+1:SUM(atoms%neq(:n))))+atoms%rmt(n)),min_dtild)
+             min_dtild=MAX(MAXVAL(ABS(atoms%pos(3,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1))+atoms%rmt(n)),min_dtild)
           ENDDO
           IF (ABS(vacuum%dvac)<=abs(cell%amat(3,3)))THEN
              vacuum%dvac=2*min_dtild+0.2
@@ -144,21 +145,7 @@ CONTAINS
     !
     !noco
     !
-
-    ALLOCATE ( noco%alph_inp(atoms%ntype), noco%beta_inp(atoms%ntype))
-    noco%qss_inp = MERGE(noco%qss_inp, [0.0, 0.0, 0.0], noco%l_ss)
-    noco%alph_inp(:) = 0.0
-    noco%beta_inp(:) = 0.0
-    ALLOCATE(noco%l_constrained(atoms%ntype))
-    noco%l_constrained(:) = .FALSE.
-    ALLOCATE(noco%l_unrestrictMT(atoms%ntype))
-    noco%l_unrestrictMT(:) = .FALSE.
-    ALLOCATE(noco%l_alignMT(atoms%ntype))
-    noco%l_alignMT(:)=.false.
-    ALLOCATE(noco%mix_RelaxWeightOffD(atoms%ntype))
-    noco%mix_RelaxWeightOffD(:)=1.0
-    noco%mag_mixing_scheme=0
-
+    
     !
     !hybinp
     !

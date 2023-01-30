@@ -73,7 +73,7 @@ CONTAINS
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
-      USE m_magmoms
+ 
 
 !$    USE omp_lib
 
@@ -105,7 +105,7 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
-      LOGICAL :: l_forceTheorem, l_lastIter
+      LOGICAL :: l_forceTheorem, l_lastIter, l_exist
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
 
@@ -163,6 +163,7 @@ CONTAINS
       IF (fmpi%irank==0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                               fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                               results%ef, results%last_distance, l_qfix, inDen)
+      call mpi_bc(results%last_distance, 0, fmpi%mpi_comm)
 
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
          !CALL initRelax(fi%noco, nococonv, fi%atoms, fi%input, fi%vacuum, sphhar, stars, fi%sym,   fi%cell, inDen)
@@ -170,7 +171,7 @@ CONTAINS
       !END IF
 
       CALL timestart("Qfix main")
-      CALL qfix(fmpi, stars, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell,   inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
+      CALL qfix(fmpi, stars,nococonv, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell,   inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
       !CALL magMoms(fi%input,fi%atoms,fi%noco,nococonv,den=inDen)
       CALL timestop("Qfix main")
 
@@ -353,7 +354,7 @@ CONTAINS
             END DO
             IF (ALL(greensFunction(fi%gfinp%hiaElem)%l_calc)) THEN
                hub1data%iter = hub1data%iter + 1
-               CALL hubbard1_setup(fi%atoms, fi%cell, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, fi%kpts, nococonv, vTot, &
+               CALL hubbard1_setup(fi%atoms, fi%cell, fi%gfinp, fi%hub1inp, fi%input, fmpi, fi%noco, fi%kpts, sphhar, fi%sym, nococonv, vTot, &
                                    greensFunction(fi%gfinp%hiaElem), hub1data, results, inDen)
             ELSE
                IF (fmpi%irank .EQ. 0) WRITE (*, *) 'Not all Greens Functions available: Running additional iteration'
@@ -378,7 +379,7 @@ CONTAINS
             CALL timestart("eigen")
 
             CALL timestart("Updating energy parameters")
-            CALL enpara%update(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
+            CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN
@@ -615,8 +616,7 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
-         CALL priv_geo_end(fmpi)
-
+       
          l_cont = .TRUE.
          IF (fi%hybinp%l_hybrid) THEN
             IF (hybdat%l_calhf) THEN
@@ -674,6 +674,16 @@ CONTAINS
          ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
             l_cont = .FALSE.
          END IF
+         
+         ! IF file JUDFT_NO_MORE_ITERATIONS is present in the directory, don't do any more iterations
+         IF(fmpi%irank.EQ.0) THEN
+            l_exist = .FALSE.
+            INQUIRE (file='JUDFT_NO_MORE_ITERATIONS', exist=l_exist)
+            IF (l_exist) l_cont = .FALSE.
+         END IF
+#ifdef CPP_MPI
+         CALL MPI_BCAST(l_cont,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+#endif
 
          ! TODO: What is commented out here and should it perhaps be removed?
          !CALL writeTimesXML()
@@ -709,49 +719,7 @@ CONTAINS
       CALL juDFT_end("all done", fmpi%irank)
 
    CONTAINS
-      SUBROUTINE priv_geo_end(fmpi)
-         TYPE(t_mpi), INTENT(IN) :: fmpi
 
-         LOGICAL :: l_exist
-
-         ! Check if a new input was generated
-         INQUIRE (file='inp_new', exist=l_exist)
-         IF (l_exist) THEN
-            CALL juDFT_end(" GEO new inp created ! ", fmpi%irank)
-         END IF
-
-         ! Check for inp.xml
-         INQUIRE (file='inp_new.xml', exist=l_exist)
-         IF (.NOT. l_exist) RETURN
-
-         IF (fmpi%irank == 0) THEN
-            CALL system('mv inp.xml inp_old.xml')
-            CALL system('mv inp_new.xml inp.xml')
-            INQUIRE (file='qfix', exist=l_exist)
-            IF (l_exist) THEN
-               CALL juDFT_end(" GEO new inp created ! ", fmpi%irank)
-            END IF
-
-            ! Check for inp.xml
-            INQUIRE (file='inp_new.xml', exist=l_exist)
-            IF (.NOT. l_exist) RETURN
-
-            IF (fmpi%irank == 0) THEN
-               CALL system('mv inp.xml inp_old.xml')
-               CALL system('mv inp_new.xml inp.xml')
-               INQUIRE (file='qfix', exist=l_exist)
-               IF (l_exist) THEN
-                  OPEN (2, file='qfix')
-                  WRITE (2, *) "F"
-                  CLOSE (2)
-                  PRINT *, "qfix set to F"
-               END IF
-               CALL mixing_history_reset(fmpi)
-            END IF
-            CALL mixing_history_reset(fmpi)
-         END IF
-         CALL juDFT_end(" GEO new inp.xml created ! ", fmpi%irank)
-      END SUBROUTINE priv_geo_end
 
    END SUBROUTINE fleur_execute
 END MODULE m_fleur

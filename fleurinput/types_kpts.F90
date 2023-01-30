@@ -601,6 +601,7 @@ CONTAINS
          END IF
 
          ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
+         voltet=0.0
          l_tria = .FALSE.
          CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
          !IF (sym%invs) THEN
@@ -687,15 +688,14 @@ CONTAINS
 
 
       INTEGER :: ntetraCube,k1,k2,k3,ikpt,itetra,i,j,k,l
-      INTEGER :: jtet,icorn,startIndex,itet,iperm
+      INTEGER :: jtet,icorn,startIndex,itet
       REAL    :: vol,volbz,diag(2),minKpt(3)
       INTEGER :: iarr(3)
       LOGICAL :: l_new,l_equal_kpoints
       INTEGER, ALLOCATABLE :: tetra(:,:)
       INTEGER, ALLOCATABLE :: ntetraAll(:,:)
-      INTEGER, ALLOCATABLE :: kcorn(:)
+      INTEGER, ALLOCATABLE :: kcorn(:), kpt_tetra(:), ind(:)
       INTEGER, ALLOCATABLE :: p(:,:,:)
-      INTEGER, ALLOCATABLE :: perm(:,:)
 
       !Determine the decomposition of each individual cube
       ! and the total volume of the brillouin zone
@@ -703,43 +703,20 @@ CONTAINS
          volbz = cell%bmat(1,1)*cell%bmat(2,2)-cell%bmat(1,2)*cell%bmat(2,1)
          ALLOCATE(tetra(3,2),source=0)
          ALLOCATE(kcorn(4),source=0)
+         ALLOCATE(kpt_tetra(3),source=0)
+         ALLOCATE(ind(3),source=0)
          ntetraCube = 2
          tetra = reshape ( [ 1,2,3, 2,3,4], [ 3,2 ] )
          diag = cell%bmat(:2,2)/grid(:2) - cell%bmat(:2,1) / grid(:2)
          vol =  sum(diag*diag)/4.0
-         ALLOCATE(perm(3,6))
-         iperm = 0
-         DO i = 1, 3
-            DO j = 1, 3
-               IF(j.EQ.i) CYCLE
-               DO k = 1, 3
-                  IF(k.EQ.j.OR.k.EQ.i) CYCLE
-                  iperm = iperm + 1
-                  perm(:,iperm) = [i,j,k]
-               ENDDO
-            ENDDO
-         ENDDO
       ELSE
          volbz = ABS(det(cell%bmat))
          ALLOCATE(tetra(4,24),source=0)
          ALLOCATE(kcorn(8),source=0)
+         ALLOCATE(kpt_tetra(4),source=0)
+         ALLOCATE(ind(4),source=0)
          !Choose the tetrahedra decomposition along the shortest diagonal
          CALL get_tetra(cell,grid,ntetraCube,vol,tetra)
-         ALLOCATE(perm(4,24))
-         iperm = 0
-         DO i = 1, 4
-            DO j = 1, 4
-               IF(j.EQ.i) CYCLE
-               DO k = 1, 4
-                  IF(k.EQ.j.OR.k.EQ.i) CYCLE
-                  DO l = 1, 4
-                     IF(l.EQ.k.OR.l.EQ.j.OR.l.EQ.i) CYCLE
-                     iperm = iperm + 1
-                     perm(:,iperm) = [i,j,k,l]
-                  ENDDO
-               ENDDO
-            ENDDO
-         ENDDO
       ENDIF
 
       !We shift the k-points by this vector only for the pointer array
@@ -778,7 +755,7 @@ CONTAINS
       !Set up the tetrahedrons
       !$omp parallel do default(none) &
       !$omp shared(grid,p,ntetraCube,kpts,tetra,film,ntetraAll) &
-      !$omp private(k1,k2,k3,kcorn,itetra,startIndex) &
+      !$omp private(k1,k2,k3,kcorn,itetra,startIndex,kpt_tetra,ind) &
       !$omp collapse(3)
       DO k3 = 0, MERGE(grid(3)-1,0,grid(3).NE.0)
          DO k2 = 0, grid(2)-1
@@ -799,7 +776,9 @@ CONTAINS
                !Now divide the cube into tetrahedra
                startIndex = (k3*grid(2)*grid(1)+k2*grid(1)+k1) * ntetraCube
                DO itetra = 1, ntetraCube
-                  ntetraAll(:,startIndex + itetra) = kpts%bkp(kcorn(tetra(:,itetra)))
+                  kpt_tetra = kpts%bkp(kcorn(tetra(:,itetra)))
+                  ind = sort_int(kpts%bkp(kcorn(tetra(:,itetra))))
+                  ntetraAll(:,startIndex + itetra) = kpt_tetra(ind(:))
                ENDDO
             ENDDO
          ENDDO
@@ -811,20 +790,11 @@ CONTAINS
       DO itet = 1, ntetraCube*PRODUCT(grid(:MERGE(2,3,film)))
          l_new = .TRUE.
          tetraLoop: DO jtet = 1, kpts%ntet
-            l_equal_kpoints = .TRUE.
-            DO icorn = 1, SIZE(ntetra,1)
-               IF(ALL(ntetra(:,jtet).NE.ntetraAll(icorn,itet))) THEN
-                  l_equal_kpoints = .FALSE.
-               ENDIF
-            ENDDO
-            IF(.NOT.l_equal_kpoints) CYCLE !There is at least one kpoint completely different
-            DO iperm = 1, SIZE(perm,2)
-               IF(ALL(ntetraAll(perm(:,iperm),itet)-ntetra(:,jtet).EQ.0)) THEN
-                  voltet(jtet) = voltet(jtet) + vol
-                  l_new = .FALSE.
-                  EXIT tetraLoop
-               ENDIF
-            ENDDO
+            if(all(ntetraAll(:,itet)-ntetra(:,jtet).EQ.0)) then
+               voltet(jtet) = voltet(jtet) + vol
+               l_new = .false.
+               exit tetraLoop
+            endif
          ENDDO tetraLoop
          IF(l_new) THEN !This tetrahedron has no symmetry equivalents yet
             kpts%ntet = kpts%ntet+1
@@ -844,6 +814,33 @@ CONTAINS
       !Rescale volumes for IO to inp.xml
       !(so weights dont get to small for IO with dense meshes)
       voltet = voltet * kpts%ntet
+   
+      contains
+
+      pure function sort_int(arr) result(ind)
+
+         integer, intent(in) :: arr(:)
+         integer :: ind(size(arr))
+
+         integer i,j
+         integer tmp
+
+
+         DO i = 1, size(arr)
+            ind(i) = i
+         ENDDO
+
+         DO i = 1, size(arr)-1
+            DO j = i+1, size(arr)
+               IF (arr(ind(i)).GT.arr(ind(j))) THEN
+                  tmp = ind(i)
+                  ind(i) = ind(j)
+                  ind(j) = tmp
+               ENDIF
+            ENDDO
+         ENDDO
+
+      end function
 
    END SUBROUTINE tetrahedron_regular
 
