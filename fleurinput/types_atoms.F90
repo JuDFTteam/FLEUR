@@ -118,6 +118,7 @@ MODULE m_types_atoms
   !lda+hubbard1 information is attached behind lda+u
   !so the dimension actually used is atoms%n_u+atoms%n_hia
   TYPE(t_utype), ALLOCATABLE::lda_u(:)
+  TYPE(t_vtype), ALLOCATABLE::lda_v(:)
   TYPE(t_opctype), ALLOCATABLE::lda_opc(:)
   INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
   !flipSpinTheta and flipSpinPhi are the angles which are given
