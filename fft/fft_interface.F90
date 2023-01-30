@@ -18,7 +18,7 @@ CONTAINS
 
       integer :: size_dat
       type(t_fft) :: fft
-
+      call timestart("FFT_interface")
       size_dat = product(length)
       if (size(dat) .ne. size_dat) call juDFT_error('array bounds are inconsistent', calledby='fft_interface')
       if (dimen .ne. 3) call juDFT_error('sorry, not implemented yet for this value of dimen', calledby='fft_interface')
@@ -26,7 +26,7 @@ CONTAINS
       call fft%init(length, forw, indices)
       call fft%exec(dat)
       call fft%free()
-
+      call timestop("FFT_interface")
    end subroutine fft_interface
 
  

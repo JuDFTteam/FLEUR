@@ -78,11 +78,11 @@ CONTAINS
         endif
     endif
 
-    !$acc kernels default(none) present(acof,bcof,ccof,alo1,blo1,clo1,ccchi,ylm)create(ctmp) &
-    !$acc copyin(work,na,term1,l,ne,ll1,sym,sym%invsat,noco)
-    !$acc loop seq private(i,m,lm,ctmp,na2,lmp)
+    !!$acc kernels default(none) present(acof,bcof,ccof,alo1,blo1,clo1,ccchi,ylm)create(ctmp) &
+    !!$acc copyin(work,na,term1,l,ne,ll1,sym,sym%invsat,noco)
+    !!$acc loop seq private(i,m,lm,ctmp,na2,lmp)
     DO i = 1,ne
-      !$acc loop seq
+      !!$acc loop seq
       DO m = -l,l
           lm = ll1 + m
           ctmp=term1*conjg(ylm(ll1+m+1))*work(i)
@@ -98,10 +98,10 @@ CONTAINS
              ccof(-m,i,lo,na2) = ccof(-m,i,lo,na2) +ctmp*clo1(lo)
           ENDIF
         END DO
-        !$acc end loop
+        !!$acc end loop
     END DO
-    !$acc end loop
-    !$acc end kernels
+    !!$acc end loop
+    !!$acc end kernels
 
     IF (l_force) THEN
       DO i = 1,ne
