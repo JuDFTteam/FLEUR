@@ -80,11 +80,7 @@ CONTAINS
       END IF
 
       ! Synthesize a and b
-      if (l_fullj) THEN 
-         ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))
-      else
-         ALLOCATE(abCoeffs(0,0))
-      ENDIF      
+      
       ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
       ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))      
       ALLOCATE(abCoeffsPr(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapwPr%nv)))
@@ -98,10 +94,11 @@ CONTAINS
       !we need the "unprimed" abcoeffs
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw) THEN
          !$acc kernels present(abcoeffs,abcoeffsPr,abclo,abcloPr)
-         if (l_fullj) abcoeffs=abcoeffsPr 
+         if (l_fullj) abcoeffs=abcoeffsPr !TODO automatic alloc on GPU????
          abclo(:,:,:,:)=abcloPr(:,:,:,:) 
          !$acc end kernels
-      ELSE            
+      ELSE     
+         ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))       
          CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
       END IF
    
