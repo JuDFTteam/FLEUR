@@ -92,6 +92,7 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
    TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1, eigVecCoeffsPref
    TYPE (t_usdus)             :: usdus
    TYPE (t_mat)               :: zMat, zMat1, zMatPref, zMatq
+   TYPE(t_kpts)               :: kpts_mod
 
    CALL timestart("dfpt_cdnval")
 
@@ -134,6 +135,20 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
    IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
 
    jsp = MERGE(1,jspin,noco%l_noco)
+
+   kpts_mod = kpts
+   DO ikpt_i = 1, kpts%nkpt
+      ikpt=fmpi%k_list(ikpt_i)
+      bkpt = kpts%bk(:, ikpt)
+      DO iqdir = 1, 3
+         !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5) bkpt(iqdir) = bkpt(iqdir) - 1.0
+         !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5) bkpt(iqdir) = bkpt(iqdir) + 1.0
+         !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) - 1.0
+         !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) + 1.0
+      END DO
+      kpts_mod%bk(:, ikpt) = bkpt
+   END DO
+
    call timestop("init")
 
    DO ikpt_i = 1,size(cdnvalJob%k_list)
@@ -141,7 +156,8 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
 
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
       !CALL lapwq%init(input,noco,nococonv, kqpts,atoms,sym,ikpt,cell, fmpi)
-      CALL lapwq%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi, bqpt)
+      !CALL lapwq%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi, bqpt)
+      CALL lapwq%init(input,noco,nococonv, kpts_mod,atoms,sym,ikpt,cell, fmpi, bqpt)
 
       skip_t = skip_tt
       ev_list=cdnvaljob%compact_ev_list(ikpt_i,.FALSE.)
