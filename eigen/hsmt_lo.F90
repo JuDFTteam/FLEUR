@@ -56,7 +56,7 @@ CONTAINS
     !     .. Local Arrays ..
     REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     CALL timestart("LO setup")
-
+    call timestart("Preparation")
     IF (set0) THEN
        SELECT TYPE (hmat)
        TYPE IS (t_mpimat)
@@ -100,7 +100,8 @@ CONTAINS
        ENDIF
        !CPP_OMP END PARALLEL
     ENDIF
-
+    call timestop("Preparation")
+    
     na = atoms%firstAtom(n) - 1
     DO nn = 1,atoms%neq(n)
        na = na + 1
@@ -119,7 +120,7 @@ CONTAINS
 
              !--->       add the local orbital contribution to the overlap and
              !--->       hamiltonian matrix, if they are used for this atom.
-
+               call timestart("slomat")
                IF (ilSpinPr==ilSpin) THEN
                   IF (.NOT.PRESENT(smat)) THEN
                      IF (.NOT.PRESENT(lapwq)) CALL judft_error("Bug in hsmt_lo, called without smat")
@@ -135,6 +136,7 @@ CONTAINS
                      END IF
                   END IF
                END IF
+               call timestop("slomat")
                CALL timestart("hlomat")
                IF (PRESENT(lapwq)) THEN
                   CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
