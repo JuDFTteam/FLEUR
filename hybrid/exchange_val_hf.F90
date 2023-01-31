@@ -230,7 +230,7 @@ CONTAINS
                                                    fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
                                                    fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                                                    mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-                                                   hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
+                                                   hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, ibando, psize, indx_sest, &
                                                    fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv%data_r(:, :), &
                                                    cprod_vv%data_c(:, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
                END IF
