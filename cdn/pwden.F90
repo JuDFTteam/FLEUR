@@ -259,7 +259,7 @@ CONTAINS
 
       ! LOOP OVER OCCUPIED STATES
       DO nu = 1, ne
-
+         
          ! Do inverse FFT of state and add related charge density to overall charge density on real-space mesh.
          IF (noco%l_noco) THEN
             forw = .FALSE.
@@ -349,7 +349,9 @@ CONTAINS
             ! The following FFT is a general complex to complex FFT
             ! For zmat%l_real this should be turned into a real to real FFT at some point
             ! Note: For the moment also no zero-indices for SpFFT provided
+            !$acc data copy(state%grid)
             CALL fft_interface(3, state%dimensions(:), state%grid, forw, stateIndices)
+            !$acc end data
             IF (l_dfpt) THEN
                CALL fft_interface(3, stateq%dimensions(:), stateq%grid, forw, stateqIndices)
             END IF
@@ -410,6 +412,7 @@ CONTAINS
             END IF
          END IF
       END DO
+      
       ! END OUTER LOOP OVER STATES NU
 
       ! Perform FFT transform of charge density to reciprocal space.
