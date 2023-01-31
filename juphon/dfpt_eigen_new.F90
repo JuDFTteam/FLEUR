@@ -47,11 +47,11 @@ CONTAINS
       CHARACTER(len=20), INTENT(IN) :: dfpt_tag
 
       INTEGER n_size,n_rank
-      INTEGER i,err,nk,jsp,nk_i
+      INTEGER i,err,nk,jsp,nk_i,iqdir
 
       INTEGER              :: ierr
 
-      REAL :: bkpt(3)
+      REAL :: bkpt(3), q_loop(3)
 
       INTEGER                   :: nu
 
@@ -60,7 +60,7 @@ CONTAINS
       TYPE(t_hub1data) :: hub1data
       TYPE(t_usdus)             :: ud
       TYPE(t_lapw)              :: lapw, lapwq
-      TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
+      TYPE(t_kpts)              :: kpts_mod !kqpts ! basically kpts, but with q added onto each one.
       CLASS(t_mat), ALLOCATABLE :: zMatk, zMatq, zMat1
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
 
@@ -84,10 +84,25 @@ CONTAINS
       vx%pw_w = vTot%pw_w
 
       call ud%init(fi%atoms,fi%input%jspins)
-      kqpts = fi%kpts
+      !kqpts = fi%kpts
+      !! Modify this from kpts only in DFPT case.
+      !DO nk_i = 1, fi%kpts%nkpt
+      !   kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
+      !END DO
+
+      kpts_mod = fi%kpts
       ! Modify this from kpts only in DFPT case.
       DO nk_i = 1, fi%kpts%nkpt
-         kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
+         !kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
+         nk=fmpi%k_list(nk_i)
+         bkpt = fi%kpts%bk(:, nk)
+         DO iqdir = 1, 3
+            !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5) bkpt(iqdir) = bkpt(iqdir) - 1.0
+            !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5) bkpt(iqdir) = bkpt(iqdir) + 1.0
+            !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) - 1.0
+            !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) + 1.0
+         END DO
+         kpts_mod%bk(:, nk) = bkpt
       END DO
 
       CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,.FALSE.)
@@ -98,11 +113,13 @@ CONTAINS
                nk=fmpi%k_list(nk_i)
 
                ! Get the required eigenvectors and values at k for occupied bands:
-               bkpt = fi%kpts%bk(:, nk)
+               bkpt = kpts_mod%bk(:, nk)
+
+               q_loop = bqpt
 
                CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
                !CALL lapwq%init(fi%input, fi%noco, nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
-               CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
+               CALL lapwq%init(fi%input, fi%noco, nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, q_loop)
 
                noccbd  = COUNT(results%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
                noccbdq = COUNT(resultsq%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
@@ -210,7 +227,7 @@ CONTAINS
                   !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Hband.npy",tempMat2)
                   END IF
 
-                  IF (norm2(bqpt).LT.1e-8) THEN
+                  IF (norm2(q_loop).LT.1e-8) THEN
                      IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
                      IF (l_real) THEN
                         eigs1(nu) = DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
@@ -239,7 +256,8 @@ CONTAINS
                      tempVec(:nbasfcnq) = MATMUL(-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
                   END IF
 
-                  IF (norm2(bqpt).LT.1e-8) THEN
+
+                  IF (norm2(q_loop).LT.1e-8) THEN
                      IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
                      IF (l_real) THEN
                         eigs1(nu) = eigs1(nu) + DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)

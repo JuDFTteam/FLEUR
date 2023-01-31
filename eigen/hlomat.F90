@@ -251,8 +251,8 @@ CONTAINS
                   !CPP_OMP END PARALLEL DO
                   DO nkvec = 1,invsfct*(2*l+1)
                      lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
-                     IF (MOD(lorow-1,fmpi%n_size) == fmpi%n_rank) THEN
-                        lorow=(lorow-1)/fmpi%n_size+1
+                     !IF (MOD(lorow-1,fmpi%n_size) == fmpi%n_rank) THEN
+                        !lorow=(lorow-1)/fmpi%n_size+1
                         DO k = 1,lapw%nv(igSpin)
                            hmat%data_c(lorow,k) = hmat%data_c(lorow,k) &
                                               & + chi * invsfct * ( &
@@ -272,7 +272,7 @@ CONTAINS
 
                            END IF
                         END DO
-                     END IF
+                     !END IF
                   END DO
                END IF
             END DO

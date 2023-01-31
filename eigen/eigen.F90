@@ -99,11 +99,11 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: zMat
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
       CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
-      TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
+      TYPE(t_kpts)              :: kpts_mod!kqpts ! basically kpts, but with q added onto each one.
       TYPE(t_hub1data)          :: hub1datadummy
 
       ! Variables for HF or fi%hybinp functional calculation
-      INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat
+      INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat, iqdir
       character(len=300)        :: errmsg
       real                      :: alpha_hybrid
 
@@ -115,24 +115,35 @@ CONTAINS
       !k_selection = [40,61,453]
       k_selection = [1000]
 
+
+      !kqpts = fi%kpts
+      kpts_mod = fi%kpts
+
       l_needs_vectors = .true.
       if (forcetheo%l_in_forcetheo_loop) then
          l_needs_vectors = forcetheo%l_needs_vectors
       endif
-      kqpts = fi%kpts
-      qphon = [0.0, 0.0, 0.0]
+
       ! Modify this from kpts only in DFPT case.
+      ALLOCATE(bkpt(3))
       IF (PRESENT(bqpt)) THEN
-          qphon = bqpt
           DO nk_i = 1, fi%kpts%nkpt
-              kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
+              !kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
+              nk=fmpi%k_list(nk_i)
+              bkpt = fi%kpts%bk(:, nk)
+              DO iqdir = 1, 3
+                 !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5) bkpt(iqdir) = bkpt(iqdir) - 1.0
+                 !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5) bkpt(iqdir) = bkpt(iqdir) + 1.0
+                 !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) - 1.0
+                 !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) + 1.0
+              END DO
+              kpts_mod%bk(:, nk) = bkpt
           END DO
       END IF
 
       call ud%init(fi%atoms,fi%input%jspins)
 
       ALLOCATE(eig(fi%input%neig))
-      ALLOCATE(bkpt(3))
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
@@ -158,9 +169,10 @@ CONTAINS
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)
 
+            bkpt = kpts_mod%bk(:, nk)
             ! Set up lapw list
             !CALL lapw%init(fi%input,fi%noco,nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
-            CALL lapw%init(fi%input,fi%noco,nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi, qphon)
+            CALL lapw%init(fi%input,fi%noco,nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
             call timestart("Setup of H&S matrices")
             CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
@@ -177,7 +189,7 @@ CONTAINS
                   smat_out%data_r(:dim_mat,:dim_mat) = smat%data_r
                ELSE
                   dim_mat = SIZE(smat%data_c(:,1))
-                  
+
                   CALL smat_out%init(.FALSE., dim_mat, dim_mat, fmpi%sub_comm, .false.)
                   CALL hmat_out%init(smat_out)
 
@@ -202,7 +214,7 @@ CONTAINS
             !Try to symmetrize matrix
             !CALL symmetrize_matrix(fmpi,fi%noco,kqpts,nk,hmat,smat,.FALSE.)
             IF (.NOT.PRESENT(bqpt)) THEN
-               CALL symmetrize_matrix(fmpi,fi%noco,fi%kpts,nk,hmat,smat,.FALSE.)
+               CALL symmetrize_matrix(fmpi,fi%noco,kpts_mod,nk,hmat,smat,.FALSE.)
             END IF
 
             IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
@@ -262,7 +274,7 @@ CONTAINS
                 n_rank = 0; n_size=1;
 #endif
 
-                if (l_needs_vectors) then 
+                if (l_needs_vectors) then
                   call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                 else
                   CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
@@ -282,7 +294,7 @@ CONTAINS
             IF (fi%banddos%unfoldband .AND. (.NOT. fi%noco%l_soc)) THEN
                IF(modulo (fi%kpts%nkpt,fmpi%n_size).NE.0) call juDFT_error("number fi%kpts needs to be multiple of number fmpi threads",&
                    hint=errmsg, calledby="eigen.F90")
-               CALL calculate_plot_w_n(fi%banddos,fi%cell,fi%kpts,zMat,lapw,nk,jsp,eig,results,fi%input,fi%atoms,unfoldingBuffer,fmpi,fi%noco%l_soc,smat_unfold=smat_unfold)
+               CALL calculate_plot_w_n(fi%banddos,fi%cell,kpts_mod,zMat,lapw,nk,jsp,eig,results,fi%input,fi%atoms,unfoldingBuffer,fmpi,fi%noco%l_soc,smat_unfold=smat_unfold)
                CALL smat_unfold%free()
                DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
                if(dealloc_stat /= 0) call juDFT_error("deallocate failed for smat_unfold",&
