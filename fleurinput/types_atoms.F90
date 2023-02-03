@@ -275,7 +275,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  CLASS(t_atoms),INTENT(INOUT):: this
  TYPE(t_xml),INTENT(INOUT)    :: xml
 
- CHARACTER(len=200):: xpaths,xpathg,xpath,valueString,lstring,nstring,core,valence
+ CHARACTER(len=200):: xpaths,xpathg,xpath,xpathA,valueString,lstring,nstring,core,valence
  INTEGER           :: i,j,numberNodes,ilo,lNumCount,nNumCount,l,n,itype,na,jrc,numU
  INTEGER,ALLOCATABLE::lNumbers(:),nNumbers(:)
  LOGICAL           :: relaxx,relaxy,relaxz,l_flipElectronConfigSpins
@@ -648,6 +648,36 @@ END DO
  this%lmaxd=MAXVAL(this%lmax)
 
  ALLOCATE(this%nlhtyp(xml%get_ntype()))
+
+
+   ! Read LDA+V input
+
+   this%n_v = 0
+   IF (xml%GetNumberOfNodes('/fleurInput/ldaV').EQ.1) THEN
+      numberNodes = xml%GetNumberOfNodes('/fleurInput/ldaV/ldaVRegion')
+      IF (numberNodes.GT.0) THEN
+         this%n_v = numberNodes
+         ALLOCATE(this%lda_v(numberNodes))
+         DO i = 1, this%n_v
+            WRITE(xPath,*) '/fleurInput/ldaV/ldaVRegion[',i,']'
+            numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPath))//'/ldaVPair')
+            this%lda_v(i)%atomIndex = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@refAtom'))
+            this%lda_v(i)%thisAtomL = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@refAtomL'))
+            this%lda_v(i)%otherAtomL = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@otherAtomL'))
+            this%lda_v(i)%V = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@V'))
+            ALLOCATE(this%lda_v(i)%otherAtomIndices(numberNodes))
+            ALLOCATE(this%lda_v(i)%atomShifts(3,numberNodes))
+            DO j = 1, numberNodes
+               WRITE(xPathA,*) TRIM(ADJUSTL(xPath))//'/ldaVPair[',j,']'
+               this%lda_v(i)%otherAtomIndices(j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@otherAtom'))
+               this%lda_v(i)%atomShifts(1,j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@shiftX'))
+               this%lda_v(i)%atomShifts(2,j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@shiftY'))
+               this%lda_v(i)%atomShifts(3,j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@shiftZ'))
+            END DO
+         END DO
+      END IF
+   END IF
+
 END SUBROUTINE read_xml_atoms
 
 
