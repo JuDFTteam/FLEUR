@@ -77,7 +77,7 @@ CONTAINS
             tempPosIntern(:) = atoms%taual(:,atoms%lda_v(i)%otherAtomIndices(j)) + atoms%lda_v(i)%atomShifts(:,j)
             tempPos(:) = MATMUL(cell%amat,tempPosIntern(:))
             tempPos(:) = tempPos(:) - atoms%pos(:,atoms%lda_v(i)%atomIndex)
-            distance = SQRT(norm2(tempPos))
+            distance = norm2(tempPos)
             WRITE(oUnit,'(a,i5,a,3i3,a,f15.8)') 'otherAtom= ', atoms%lda_v(i)%otherAtomIndices(j), ' shift= ', atoms%lda_v(i)%atomShifts(:,j), ' distance= ', distance
          END DO
       END DO
