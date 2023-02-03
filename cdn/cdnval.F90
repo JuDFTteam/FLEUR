@@ -69,6 +69,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 #endif
    USE m_dfpt_rhomt
    USE m_dfpt_rhonmt
+   USE m_nIJmat
 
    IMPLICIT NONE
 
@@ -256,10 +257,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
 
          IF (atoms%n_u+atoms%n_opc.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))
-         !n_mat(atoms,sym,ne,usdus,jspin,we,eigVecCoeffs,n_mmp)
-         !nIJ_mat(atoms,ne,usdus,jspin,we,eigVecCoeffs,cell,kpts,kptindx,nIJ_llp_mmp) 
-         !ask about the output
-         !IF (atoms%n_v) CALL nIJ_mat(atoms,noccbd,usdus,ispin,we,eigVecCoeffs,cell,kpts,ikpt_i,nIJ_llp_mmp)
+         IF (atoms%n_v.GT.0) CALL nIJ_mat(atoms,noccbd,usdus,ispin,we,eigVecCoeffs,cell,kpts,ikpt_i,den%nIJ_llp_mmp(:,:,:,ispin))
          IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) THEN
             call timestart("n_mat21")
             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
