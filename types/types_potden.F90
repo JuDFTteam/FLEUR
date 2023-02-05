@@ -31,6 +31,8 @@ MODULE m_types_potden
 
      ! For density matrix and associated potential matrix
      COMPLEX, ALLOCATABLE :: mmpMat(:,:,:,:)
+     ! additional density matrix for LDA+v
+     COMPLEX, ALLOCATABLE :: nIJ_llp_mmp(:,:,:,:) ! m, m', i_pair, i_spin
 
      !this type contains two init routines that should be used to allocate
      !memory. You can either specify the datatypes or give the dimensions as integers
