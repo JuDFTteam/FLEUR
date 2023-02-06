@@ -6,6 +6,7 @@ MODULE m_nIJmat
 
       USE m_types
       USE m_constants
+      USE m_juDFT
 
       IMPLICIT NONE
 
@@ -20,6 +21,11 @@ MODULE m_nIJmat
 
       INTEGER i,i_v,i_pair,atom1,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,matom1,matom2,lm1atom1,lm1atom2
       COMPLEX c_0
+
+      WRITE(2000,*) 'POINT A'
+      FLUSH(2000)
+
+      call timestart("nIJ_mat")
 
       i_pair=1 !counts number of pairs
         DO i_v = 1,atoms%n_v  !loop over pairs which are corrected by U+V 
@@ -45,9 +51,15 @@ MODULE m_nIJmat
                         nIJ_llp_mmp(matom1,matom2,i_pair)= c_0
                     ENDDO
                 ENDDO
-                WRITE *,'the inter-site mat is ', nIJ_llp_mmp(matom1,matom2,i_pair)
+                WRITE (*,*) 'the inter-site mat is ', nIJ_llp_mmp(matom1,matom2,i_pair)
                 i_pair=i_pair+1
             ENDDO
         ENDDO
+
+       call timestop("metric")
+
+      WRITE(2000,*) 'POINT B'
+      FLUSH(2000)
+
     END SUBROUTINE nIJ_mat
 END MODULE m_nIJmat
