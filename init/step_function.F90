@@ -106,7 +106,8 @@ CONTAINS
                DO n = n_lims(1), n_lims(2)
                   DO iDir_loc = dir_lims(1), dir_lims(2)
                      c_phs = CMPLX(0.0, 0.0)
-                     na = MERGE(atoms%firstAtom(n) - 1,iDtype,.NOT.PRESENT(qvec))
+                     na = atoms%firstAtom(n) - 1
+                     !na = MERGE(atoms%firstAtom(n) - 1,iDtype,.NOT.PRESENT(qvec))
                      DO nn = 1, atoms%neq(n)
                         IF (.NOT.PRESENT(qvec)) THEN
                            th = -tpi_const*DOT_PRODUCT(gInt, atoms%taual(:, na + nn))

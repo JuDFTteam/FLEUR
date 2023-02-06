@@ -115,8 +115,8 @@ CONTAINS
 
       CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,iSpin,noco)
       CALL fjgjq%alloc(MAXVAL(lapwq%nv),atoms%lmaxd,iSpin,noco)
-      !$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
-      !$acc data copyin(fjgjq) create(fjgjq%fj,fjgjq%gj)
+      !!$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
+      !!$acc data copyin(fjgjq) create(fjgjq%fj,fjgjq%gj)
       igSpinPr = 1; igSpin = 1; chi_one = 1.0 ! Defaults in non-noco case
       DO n = 1, atoms%ntype
          DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco)
@@ -213,7 +213,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      !$acc end data
+      !!$acc end data
 
       IF (ANY(nk==k_selection)) THEN
          CALL save_npy("test_"//int2str(iDir)//"_"//int2str(nk)//"_h0.npy",h1mat_tmp(1,1)%data_c)
@@ -409,6 +409,7 @@ CONTAINS
             END IF
          END DO
       END DO
+      !$acc end data
       !$acc end data
 
       ! TODO: Does this need some ACC magic?

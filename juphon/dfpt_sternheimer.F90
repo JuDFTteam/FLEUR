@@ -211,7 +211,12 @@ CONTAINS
 #endif
 
          CALL timestart("Fermi energy and occupation derivative")
-         CALL dfpt_fermie(eig_id,dfpt_eig_id,fmpi,fi%kpts,fi%input,fi%noco,results,results1)
+         IF (norm2(bqpt)<1e-8) THEN
+            CALL dfpt_fermie(eig_id,dfpt_eig_id,fmpi,fi%kpts,fi%input,fi%noco,results,results1)
+         ELSE
+            results1%ef = 0.0
+            results1%w_iks = 0.0
+         END IF
          CALL timestop("Fermi energy and occupation derivative")
 
 #ifdef CPP_MPI

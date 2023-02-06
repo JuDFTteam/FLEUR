@@ -26,15 +26,15 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_lapw),INTENT(IN)   :: lapw
+    TYPE(t_lapw),INTENT(IN),TARGET   :: lapw
     TYPE(t_mpi),INTENT(IN)    :: fmpi
     TYPE(t_usdus),INTENT(IN)  :: ud
     TYPE(t_tlmplm),INTENT(IN) :: tlmplm
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_nococonv),INTENT(IN)   :: nococonv
-    TYPE(t_fjgj),INTENT(IN)   :: fjgj
+    TYPE(t_nococonv),INTENT(IN),TARGET   :: nococonv
+    TYPE(t_fjgj),INTENT(IN),TARGET   :: fjgj
 
 
     !     ..
@@ -50,8 +50,8 @@ CONTAINS
     CLASS(t_mat),INTENT (INOUT) :: hmat
     LOGICAL, INTENT(IN) :: l_fullj, l_ham
 
-    TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
-    TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
+    TYPE(t_lapw), OPTIONAL, INTENT(IN),TARGET :: lapwq
+    TYPE(t_fjgj), OPTIONAL, INTENT(IN),TARGET :: fjgjq
     !     ..
     ! Local Scalars
       COMPLEX :: axx,bxx,cxx,dtd,dtu,tdulo,tulod,tulou,tuloulo,utd,utu, tuulo
@@ -66,44 +66,42 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: abCoeffsPr(:,:), axPr(:), bxPr(:), cxPr(:)
       COMPLEX, ALLOCATABLE :: abcloPr(:,:,:,:)
 
-      TYPE(t_lapw) :: lapwPr
-      TYPE(t_fjgj) :: fjgjPr
+      TYPE(t_lapw) ,POINTER:: lapwPr
+      TYPE(t_fjgj) ,POINTER:: fjgjPr
 
       l_samelapw = .FALSE.
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
-         lapwPr = lapwq
-         fjgjPr = fjgjq
+         lapwPr => lapwq
+         fjgjPr => fjgjq
       ELSE
-         lapwPr = lapw
-         fjgjPr = fjgj
+         lapwPr => lapw
+         fjgjPr => fjgj
       END IF
 
       ! Synthesize a and b
-      ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))
-      ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
+      
       ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
+      ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))      
       ALLOCATE(abCoeffsPr(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapwPr%nv)))
       ALLOCATE(axPr(MAXVAL(lapwPr%nv)),bxPr(MAXVAL(lapwPr%nv)),cxPr(MAXVAL(lapwPr%nv)))
       ALLOCATE(abcloPr(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
 
       !$acc data create(abcoeffs,abclo,abcoeffsPr,abcloPr)
-      !$acc data copyin(alo1,blo1,clo1)
-      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr(:,:,:,:),alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
+      !$acc data copyin(alo1,blo1,clo1,fjgjPr,fjgjpr%fj,fjgjpr%gj)
+      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr,alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
 
+      !we need the "unprimed" abcoeffs
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw) THEN
-         !$acc kernels present(abcoeffs,abcoeffsPr)
-         abcoeffs(:,:)=abcoeffsPr(:,:)
-         abclo(:,:,:,:)=abcloPr(:,:,:,:)
+         !$acc kernels present(abcoeffs,abcoeffsPr,abclo,abcloPr)
+         if (l_fullj) abcoeffs=abcoeffsPr !TODO automatic alloc on GPU????
+         abclo(:,:,:,:)=abcloPr(:,:,:,:) 
          !$acc end kernels
-#ifndef _OPENACC
-         CALL zcopy(SIZE(abCoeffsPr,1)*SIZE(abCoeffsPr,2),abCoeffsPr(:,:),1,abCoeffs(:,:),1)
-         CALL zcopy(SIZE(abcloPr,1)*SIZE(abcloPr,2)*SIZE(abcloPr,3)*SIZE(abcloPr,4),abcloPr(:,:,:,:),1,abclo(:,:,:,:),1)
-#endif
-      ELSE
-         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo(:,:,:,:),alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
+      ELSE     
+         ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))       
+         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
       END IF
-      !$acc end data
+   
 
       mlo=0;mlolo=0;mlolo_new=0
       DO m=1,ntyp-1
@@ -122,9 +120,11 @@ CONTAINS
          IF (sym%invsat(na) == 0) invsfct = 1
          IF (sym%invsat(na) == 1) invsfct = 2
 
-         !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo) &
-         !$acc & copyin(atoms,lapw,lapwPr,tlmplm,tlmplm%tulou,tlmplm%tulod,tlmplm%h_loc(:,:,ntyp,ilSpinPr,ilSpin),lapw%nv(:),lapwPr%nv(:),tlmplm%tdulo(:,:,:,ilSpinPr,ilSpin),tlmplm%tuloulo(:,:,:,ilSpinPr,ilSpin),atoms%rmt(ntyp))&
-         !$acc & copyin(lapw%index_lo(:,na),lapwPr%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,ilSpinPr,ilSpin),atoms%llo(:,ntyp),atoms%nlo(ntyp),atoms%lnonsph(ntyp))&
+         !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo,abcoeffsPr,abcloPr) &
+         !$acc & copyin(atoms,lapw,lapwPr,tlmplm,tlmplm%tulou,tlmplm%tulod,tlmplm%h_loc(:,:,ntyp,ilSpinPr,ilSpin),lapw%nv(:),lapwPr%nv(:))&
+         !$acc & copyin(tlmplm%tdulo(:,:,:,ilSpinPr,ilSpin),tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin),atoms%rmt(ntyp))&
+         !$acc & copyin(lapw%index_lo(:,na),lapwPr%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,ilSpinPr,ilSpin),atoms%llo(:,ntyp),atoms%nlo(ntyp))&
+         !$acc & copyin(atoms%lnonsph(ntyp))&
          !$acc & copyin(ud,ud%us(:,ntyp,ilSpin),ud%uds(:,ntyp,ilSpin),ud%dus(:,ntyp,ilSpin),ud%dulos(:,ntyp,ilSpin),ud%duds(:,ntyp,ilSpin))&
          !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
          !$acc & create(ax,bx,cx,axpr,bxpr,cxpr)&
@@ -251,8 +251,8 @@ CONTAINS
                   !CPP_OMP END PARALLEL DO
                   DO nkvec = 1,invsfct*(2*l+1)
                      lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
-                     IF (MOD(lorow-1,fmpi%n_size) == fmpi%n_rank) THEN
-                        lorow=(lorow-1)/fmpi%n_size+1
+                     !IF (MOD(lorow-1,fmpi%n_size) == fmpi%n_rank) THEN
+                        !lorow=(lorow-1)/fmpi%n_size+1
                         DO k = 1,lapw%nv(igSpin)
                            hmat%data_c(lorow,k) = hmat%data_c(lorow,k) &
                                               & + chi * invsfct * ( &
@@ -272,7 +272,7 @@ CONTAINS
 
                            END IF
                         END DO
-                     END IF
+                     !END IF
                   END DO
                END IF
             END DO
@@ -377,8 +377,8 @@ CONTAINS
                                                      &  REAL(abcloPr(1,mp,nkvecp,lo))* REAL(axx) + &
                                                      & AIMAG(abcloPr(1,mp,nkvecp,lo))*AIMAG(axx) + &
                                                      &  REAL(abcloPr(2,mp,nkvecp,lo))* REAL(bxx) + &
-                                                     & AIMAG(abcloPr(2,mp,nkvecp,lo))*AIMAG(bxx) + &
-                                                     &  REAL(abcloPr(3,mp,nkvecp,lo))* REAL(cxx) + &
+                                                     & AIMAG(abcloPr(2,mp,nkvecp,lo))*AIMAG(bxx)  + &
+                                                     &  REAL(abcloPr(3,mp,nkvecp,lo)) * REAL(cxx) + &
                                                      & AIMAG(abcloPr(3,mp,nkvecp,lo))*AIMAG(cxx) )
                            ELSE
                               hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) &
@@ -396,6 +396,7 @@ CONTAINS
          END DO ! end of lo = 1,atoms%nlo loop
          !$acc end kernels
       END IF
+      !$acc end data
       !$acc end data
    END SUBROUTINE hlomat
 END MODULE m_hlomat

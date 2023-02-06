@@ -507,12 +507,12 @@ CONTAINS
       USE m_dfpt_tlmplm
       USE m_npy
 
-#ifdef _OPENACC
-         USE cublas
-#define CPP_zgemv cublaszgemv
-#else
+!#ifdef _OPENACC
+!         USE cublas
+!#define CPP_zgemv cublaszgemv
+!#else
 #define CPP_zgemv zgemv
-#endif
+!#endif
 
       IMPLICIT NONE
 
@@ -548,7 +548,7 @@ CONTAINS
       INTEGER jsp,nk,ne_all,ne_found,neigd2
       INTEGER nk_i,n_size,n_rank
       INTEGER err
-
+      REAL :: q_loop(3)
       ! Local Arrays
       INTEGER              :: ierr, nbands, nbands1, nbasfcn, nbasfcnq, noccbd
 
@@ -558,7 +558,7 @@ CONTAINS
       TYPE(t_tlmplm)            :: td, tdV1, tdmod
       TYPE(t_usdus)             :: ud, uddummy
       TYPE(t_lapw)              :: lapw, lapwq
-      TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
+      TYPE(t_kpts)              :: kpts_mod !kqpts ! basically kpts, but with q added onto each one.
       TYPE(t_hub1data)          :: hub1datadummy
       TYPE (t_mat)              :: zMat, zMat1
       CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2
@@ -567,7 +567,9 @@ CONTAINS
       INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat
       character(len=300)        :: errmsg
 
-      INTEGER :: iEig, ikGq
+      INTEGER :: iEig, ikGq, iqdir
+      INTEGER :: imlo, ilo, iklo, l, ikg, ikglo !!! Test!
+      REAL :: gext(3)
       COMPLEX :: we_loop, we1_loop, eig_loop, eig1_loop
 
       COMPLEX, ALLOCATABLE :: tempVec(:), tempVecq(:), z_loop(:), z1_loop(:), ztest_loop(:)
@@ -579,18 +581,29 @@ CONTAINS
       COMPLEX  zdotc
       EXTERNAL zdotc
 
-      kqpts = fi%kpts
       ALLOCATE(k_selection(16))
       k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
+      !kqpts = fi%kpts
 
+      kpts_mod = fi%kpts
+      ! Modify this from kpts only in DFPT case.
+      ALLOCATE(bkpt(3))
       DO nk_i = 1, fi%kpts%nkpt
-         kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
+         !kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
+         nk=fmpi%k_list(nk_i)
+         bkpt = fi%kpts%bk(:, nk)
+         DO iqdir = 1, 3
+            !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5) bkpt(iqdir) = bkpt(iqdir) - 1.0
+            !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5) bkpt(iqdir) = bkpt(iqdir) + 1.0
+            !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) - 1.0
+            !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) + 1.0
+         END DO
+         kpts_mod%bk(:, nk) = bkpt
       END DO
 
       call ud%init(fi%atoms,fi%input%jspins)
       call uddummy%init(fi%atoms,fi%input%jspins)
       ALLOCATE(eig(fi%input%neig))
-      ALLOCATE(bkpt(3))
 
       CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,td,ud,0.0)
       ! Get matrix elements of perturbed potential and modified H/S in DFPT case.
@@ -605,9 +618,12 @@ CONTAINS
             nk = fmpi%k_list(nk_i)
             !write(8998,*) nk
 
+            bkpt = kpts_mod%bk(:, nk)
+            q_loop = bqpt
+
             CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell,fmpi)
             !CALL lapwq%init(fi%input,fi%noco,nococonv,kqpts,fi%atoms,fi%sym,nk,fi%cell,fmpi)
-            CALL lapwq%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell,fmpi,bqpt)
+            CALL lapwq%init(fi%input,fi%noco,nococonv,kpts_mod,fi%atoms,fi%sym,nk,fi%cell,fmpi,q_loop)
 
             ALLOCATE(kGqExt(3,lapwq%nv(1)))
             DO ikGq = 1, lapwq%nv(1)
@@ -633,6 +649,32 @@ CONTAINS
 
             CALL read_eig(eig_id,     nk,jsp,neig=nbands,zmat=zMat)
             CALL read_eig(dfpt_eig_id,nk,jsp,neig=nbands1,zmat=zMat1)
+
+            !!!! Test:
+            !DO ikG = 1, lapw%nv(jsp)
+            !   gExt = MATMUL(fi%cell%bmat,lapw%vk(:, ikG, jsp))
+            !   IF (zMat%l_real) THEN
+            !      zMat1%data_c(ikG,:) = -ImagUnit * gExt(idir_row) * zMat%data_r(ikG, :noccbd)
+            !   ELSE
+            !      zMat1%data_c(ikG,:) = -ImagUnit * gExt(idir_row) * zMat%data_c(ikG, :noccbd)
+            !   END IF
+            !END DO
+
+            !DO ikG = lapw%nv(jsp) + 1, lapw%nv(jsp) + fi%atoms%nlo(iDtype_row)
+            !   iLo = ikG-lapw%nv(jsp)
+            !   l = fi%atoms%llo(iLo, iDtype_row)
+            !   DO imLo = 1, 2*l+1
+            !      ikLo = lapw%kvec(imLo,iLo,iDtype_row)
+            !      ikGLo = lapw%nv(jsp) + lapw%index_lo(iLo,iDtype_row) + imLo
+            !         gExt = MATMUL(fi%cell%bmat,lapw%vk(:,ikLo, jsp))
+            !         IF (zMat%l_real) THEN
+            !            zMat1%data_c(ikGLo,:) = -ImagUnit * gExt(idir_row) * zMat%data_r(ikGLo, :)
+            !         ELSE
+            !            zMat1%data_c(ikGLo,:) = -ImagUnit * gExt(idir_row) * zMat%data_c(ikGLo, :)
+            !         END IF
+            !   END DO
+            !   gExt = MATMUL(fi%cell%bmat,lapw%vk(:, ikG, jsp))
+            !END DO
 
             CALL timestart("Setup of H&S matrices")
             CALL dfpt_dynmat_hssetup(jsp, fmpi, fi, enpara, nococonv, starsq, stars, &
@@ -774,17 +816,17 @@ CONTAINS
 
       CALL timestart("MT part")
       DO i = 1, nspins; DO j = 1, nspins
-            !$acc enter data copyin(hmat(i,j),smat(i,j))
-            !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
+            !!$acc enter data copyin(hmat(i,j),smat(i,j))
+            !!$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
       END DO; END DO
       CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
                             lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11))
       DO i = 1, nspins; DO j = 1, nspins; if (hmat1(1, 1)%l_real) THEN
-            !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
-            !$acc exist data delete(hmat(i,j),smat(i,j))
+            !!$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
+            !!$acc exist data delete(hmat(i,j),smat(i,j))
          ELSE
-            !$acc exit data copyout(hmat(i,j)%data_c,smat(i,j)%data_c) delete(hmat(i,j)%data_r,smat(i,j)%data_r)
-            !$acc exist data delete(hmat(i,j),smat(i,j))
+            !!$acc exit data copyout(hmat(i,j)%data_c,smat(i,j)%data_c) delete(hmat(i,j)%data_r,smat(i,j)%data_r)
+            !!$acc exit data delete(hmat(i,j),smat(i,j))
          END IF; END DO; END DO
       CALL timestop("MT part")
 

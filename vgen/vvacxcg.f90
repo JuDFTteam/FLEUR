@@ -78,7 +78,7 @@ CONTAINS
 
     if (xcpot%needs_grad()) CALL xcpot%alloc_gradients(ngrid,input%jspins,grad)
     allocate(rho(ngrid,input%jspins),v_xc(ngrid,input%jspins),v_x(ngrid,input%jspins))
-
+    rho=0.0
     call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vacxy(:,:,:,:),den%vacz,stars,rho,grad)
 
 
