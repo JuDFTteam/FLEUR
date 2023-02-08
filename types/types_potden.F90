@@ -281,6 +281,7 @@ CONTAINS
     PotDenCopy%tec        = PotDen%tec
     PotDenCopy%mtCore     = PotDen%mtCore
     PotDenCopy%mmpMat     = PotDen%mmpMat
+    PotDenCopy%nIJ_llp_mmp= PotDen%nIJ_llp_mmp
 
   end subroutine copyPotDen
 
@@ -307,16 +308,16 @@ CONTAINS
     do_dfpt = .FALSE.
     IF (PRESENT(l_dfpt)) do_dfpt = l_dfpt
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
-         atoms%n_denmat,jspins,noco%l_noco,noco%l_mperp,potden_type,&
+         atoms%n_denmat,atoms%n_vPairs,jspins,noco%l_noco,noco%l_mperp,potden_type,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2,do_dfpt)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d,do_dfpt)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d,do_dfpt)
     USE m_constants
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
-    INTEGER,INTENT(IN)          :: ng3,jmtd,coreMsh,nlhd,ntype,n_u,jspins,potden_type
+    INTEGER,INTENT(IN)          :: ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,potden_type
     LOGICAL,INTENT(IN)          :: nocoExtraDim,nocoExtraMTDim
     INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
     LOGICAL,OPTIONAL,INTENT(IN) :: do_dfpt
@@ -338,6 +339,8 @@ CONTAINS
     IF(ALLOCATED(pd%tec)) DEALLOCATE (pd%tec)
     IF(ALLOCATED(pd%mtCore)) DEALLOCATE (pd%mtCore)
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
+    IF(ALLOCATED(pd%nIJ_llp_mmp)) DEALLOCATE (pd%nIJ_llp_mmp)
+
     IF (l_dfpt) THEN
       ALLOCATE (pd%pw(ng3,MERGE(4,jspins,nocoExtraDim)),stat=err(1))
     ELSE
@@ -352,6 +355,7 @@ CONTAINS
     ALLOCATE (pd%mtCore(coreMsh,ntype,jspins))
 
     ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraMTDim)))
+    ALLOCATE (pd%nIJ_llp_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_vPairs),MERGE(3,jspins,nocoExtraMTDim)))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
@@ -362,6 +366,7 @@ CONTAINS
     pd%tec = 0.0
     pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
+    pd%nIJ_llp_mmp = CMPLX(0.0,0.0)
   END SUBROUTINE init_potden_simple
 !!$#CPP_TODO_copy !code from brysh1,brysh2...
 !!$  SUBROUTINE get_combined_vector(input,stars,atoms,sphhar,noco,vacuum,sym ,&

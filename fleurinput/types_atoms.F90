@@ -52,6 +52,7 @@ MODULE m_types_atoms
   INTEGER ::n_u=0
   ! no of lda+vs
   INTEGER ::n_v=0                                              ! <--- LDA+V
+  INTEGER ::n_vPairs=0
   ! no of lda+hubbard1s
   INTEGER :: n_hia=0
   ! no of lda+orbital polarization corrections
@@ -653,6 +654,7 @@ END DO
    ! Read LDA+V input
 
    this%n_v = 0
+   this%n_vPairs = 0
    IF (xml%GetNumberOfNodes('/fleurInput/ldaV').EQ.1) THEN
       numberNodes = xml%GetNumberOfNodes('/fleurInput/ldaV/ldaVRegion')
       IF (numberNodes.GT.0) THEN
@@ -669,6 +671,7 @@ END DO
             ALLOCATE(this%lda_v(i)%atomShifts(3,numberNodes))
             DO j = 1, numberNodes
                WRITE(xPathA,*) TRIM(ADJUSTL(xPath))//'/ldaVPair[',j,']'
+               this%n_vPairs = this%n_vPairs + 1
                this%lda_v(i)%otherAtomIndices(j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@otherAtom'))
                this%lda_v(i)%atomShifts(1,j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@shiftX'))
                this%lda_v(i)%atomShifts(2,j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@shiftY'))

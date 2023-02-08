@@ -22,10 +22,10 @@ MODULE m_nIJmat
       INTEGER i,i_v,i_pair,atom1,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,matom1,matom2,lm1atom1,lm1atom2
       COMPLEX c_0
 
-      WRITE(2000,*) 'POINT A'
-      FLUSH(2000)
+      !WRITE(2000,*) 'POINT A'
+      !FLUSH(2000)
 
-      call timestart("nIJ_mat")
+       call timestart("nIJ_mat")
 
       i_pair=1 !counts number of pairs
         DO i_v = 1,atoms%n_v  !loop over pairs which are corrected by U+V 
@@ -49,17 +49,20 @@ MODULE m_nIJmat
                              *(usdus%ddn(latom1,natom1,jspin))**0.5) * EXP(cmplx(0.0,-1.0)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),kpts%bk(:,kptindx)))
                         ENDDO
                         nIJ_llp_mmp(matom1,matom2,i_pair)= c_0
+!                        WRITE (*,*) 'pair number', i_pair
+!                        WRITE (*,*) 'm of atom 1', matom1
+!                        WRITE (*,*) 'm of atom 2', matom2
+!                        WRITE (*,*) 'the inter-site mat is ', nIJ_llp_mmp(matom1,matom2,i_pair)
                     ENDDO
                 ENDDO
-                WRITE (*,*) 'the inter-site mat is ', nIJ_llp_mmp(matom1,matom2,i_pair)
                 i_pair=i_pair+1
             ENDDO
         ENDDO
 
-       call timestop("metric")
+       call timestop("nIJ_mat")
 
-      WRITE(2000,*) 'POINT B'
-      FLUSH(2000)
+      !WRITE(2000,*) 'POINT B'
+      !FLUSH(2000)
 
     END SUBROUTINE nIJ_mat
 END MODULE m_nIJmat
