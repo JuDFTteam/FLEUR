@@ -2191,6 +2191,9 @@ CONTAINS
       ! check if a_ex is consistent
 !     IF ( a_ex /= aMix_HSE ) st--op 'hsefunctional: inconsistent mixing!'
 
+      ! print out screening parameter
+      WRITE (*,*) 'Screening parameter: ', omega_HSE
+
       allocate(fprod(fi%atoms%jmtd, 5), larr(5), parr(5))
 
       exchange = 0
