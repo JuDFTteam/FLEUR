@@ -632,7 +632,7 @@ CONTAINS
                                     rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:))
                CALL timestop("Dynmat")
-               dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + E2ndOrdII(3 *(iDtype-1)+iDir,:)
+               dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
                write(9989,*) "Eii2:", E2ndOrdII(3 *(iDtype-1)+iDir,:)
                write(*,*) "dynmat row for ", dfpt_tag
                write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)

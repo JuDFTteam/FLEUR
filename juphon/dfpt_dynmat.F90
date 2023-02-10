@@ -381,7 +381,7 @@ CONTAINS
          END DO
       END DO
 
-      dyn_row = dyn_row_HF + dyn_row_eigen
+      dyn_row = conjg(dyn_row_HF) + dyn_row_eigen
 
    END SUBROUTINE dfpt_dynmat_row
 
@@ -555,7 +555,7 @@ CONTAINS
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eig1(:), we(:), we1(:)
 
-      TYPE(t_tlmplm)            :: tdV1, tdmod
+      TYPE(t_tlmplm)            :: tdV1, tdmod, td
       TYPE(t_usdus)             :: ud, uddummy
       TYPE(t_lapw)              :: lapw, lapwq
       TYPE(t_kpts)              :: kpts_mod !kqpts ! basically kpts, but with q added onto each one.
@@ -605,10 +605,10 @@ CONTAINS
       call uddummy%init(fi%atoms,fi%input%jspins)
       ALLOCATE(eig(fi%input%neig))
 
-      !CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,td,ud,0.0)
+      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,td,ud,0.0)
       ! Get matrix elements of perturbed potential and modified H/S in DFPT case.
       hub1datadummy = hub1data
-      CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag,.TRUE.,iDtype_col)
+      CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag,.FALSE.,iDtype_col)
       CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1datadummy,inden,v,vx,fmpi,tdmod,uddummy,0.0,.TRUE.)
 
       !write(8998,*) iDtype_row, iDir_row, iDtype_col, iDir_col
@@ -643,7 +643,7 @@ CONTAINS
             CALL zMat%init(l_real,nbasfcn,noccbd)
             CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
 
-            ALLOCATE(tempVec(nbasfcn),tempVecq(nbasfcnq))
+            ALLOCATE(tempVec(nbasfcn))!,tempVecq(nbasfcnq))
             ALLOCATE(z_loop(nbasfcn),z1_loop(nbasfcnq))
             ALLOCATE(ztest_loop(nbasfcn))
 
@@ -708,25 +708,16 @@ CONTAINS
 
                eigen_term = eigen_term + zdotc(nbasfcn,z_loop,1,tempVec,1)
 
-               write(5555,*) eig_loop, eig1_loop, we_loop, we1_loop
-               IF (nk==1.AND.iEig==1) write(8998,*) iDtype_row, iDir_row, iDtype_col, iDir_col
-               write(8998,*) nk, iEig
-               write(8998,*) zdotc(nbasfcn,z_loop,1,tempVec,1)
-
-               CALL CPP_zgemv('N',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z_loop,1,CMPLX(0.0,0.0),tempVecq,1)
+               !CALL CPP_zgemv('N',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z_loop,1,CMPLX(0.0,0.0),tempVecq,1)
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z1_loop,1,CMPLX(0.0,0.0),tempVec,1)
-               CALL CPP_zgemv('N',nbasfcnq,nbasfcn,we_loop,hmat1q%data_c,nbasfcnq,z_loop,1,CMPLX(1.0,0.0),tempVecq,1)
+               !CALL CPP_zgemv('N',nbasfcnq,nbasfcn,we_loop,hmat1q%data_c,nbasfcnq,z_loop,1,CMPLX(1.0,0.0),tempVecq,1)
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,we_loop,hmat1q%data_c,nbasfcnq,z1_loop,1,CMPLX(1.0,0.0),tempVec,1)
 
-               eigen_term = eigen_term + zdotc(nbasfcnq,z1_loop,1,tempVecq,1)
-               eigen_term = eigen_term + zdotc(nbasfcn,z_loop,1,tempVec,1)
-               IF (nk==1) write(5964,*) eigen_term
-               !write(6999,*) eigen_term
-               write(8998,*) zdotc(nbasfcnq,z1_loop,1,tempVecq,1)
-               write(8998,*) zdotc(nbasfcn,z_loop,1,tempVec,1)
+               !eigen_term = eigen_term + zdotc(nbasfcnq,z1_loop,1,tempVecq,1)
+               eigen_term = eigen_term + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
             END DO
 
-            DEALLOCATE(tempVec,tempVecq)
+            DEALLOCATE(tempVec)!,tempVecq)
             DEALLOCATE(z_loop,z1_loop)
             DEALLOCATE(ztest_loop,kGqExt)
             CALL smat1%free()
@@ -755,7 +746,6 @@ CONTAINS
             !ENDIF
          END DO  k_loop
       END DO ! spin loop ends
-
    END SUBROUTINE
 
    SUBROUTINE dfpt_dynmat_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, stars, &
