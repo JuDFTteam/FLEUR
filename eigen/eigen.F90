@@ -39,7 +39,7 @@ CONTAINS
       USE m_pot_io
       USE m_eigen_diag
       !USE m_hsefunctional
-      USE m_mt_setup
+      USE m_local_Hamiltonian
       USE m_util
       !USE m_icorrkeys
       USE m_eig66_io, ONLY : write_eig, read_eig
@@ -155,8 +155,7 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,td,ud,alpha_hybrid)
-
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
       neigBuffer = 0
       results%neig = 0
       results%eig = 1.0e300

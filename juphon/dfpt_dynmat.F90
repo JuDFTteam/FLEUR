@@ -499,7 +499,7 @@ CONTAINS
       USE m_eigen_hssetup
       USE m_pot_io
       USE m_eigen_diag
-      USE m_mt_setup
+      USE m_local_hamiltonian
       USE m_util
       USE m_eig66_io, ONLY : write_eig, read_eig
       USE m_xmlOutput
@@ -604,12 +604,14 @@ CONTAINS
       call ud%init(fi%atoms,fi%input%jspins)
       call uddummy%init(fi%atoms,fi%input%jspins)
       ALLOCATE(eig(fi%input%neig))
-
-      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,td,ud,0.0)
+    
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0)
       ! Get matrix elements of perturbed potential and modified H/S in DFPT case.
       hub1datadummy = hub1data
       CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag,.TRUE.,iDtype_col)
-      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1datadummy,inden,v,vx,fmpi,tdmod,uddummy,0.0,.TRUE.)
+
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1datadummy,tdmod,uddummy,0.0,.true.)
+
 
       !write(8998,*) iDtype_row, iDir_row, iDtype_col, iDir_col
       DO jsp = MERGE(1,1,fi%noco%l_noco), MERGE(1,fi%input%jspins,fi%noco%l_noco)

@@ -123,7 +123,7 @@ CONTAINS
          !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo,abcoeffsPr,abcloPr) &
          !$acc & copyin(atoms,lapw,lapwPr,tlmplm,tlmplm%tulou,tlmplm%tulod,tlmplm%h_loc(:,:,ntyp,ilSpinPr,ilSpin),lapw%nv(:),lapwPr%nv(:))&
          !$acc & copyin(tlmplm%tdulo(:,:,:,ilSpinPr,ilSpin),tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin),atoms%rmt(ntyp))&
-         !$acc & copyin(lapw%index_lo(:,na),lapwPr%index_lo(:,na),tlmplm%h_loc2,tlmplm%tuulo(:,:,:,ilSpinPr,ilSpin),atoms%llo(:,ntyp),atoms%nlo(ntyp))&
+         !$acc & copyin(lapw%index_lo(:,na),lapwPr%index_lo(:,na),tlmplm%h_loc2,atoms%llo(:,ntyp),atoms%nlo(ntyp))&
          !$acc & copyin(atoms%lnonsph(ntyp))&
          !$acc & copyin(ud,ud%us(:,ntyp,ilSpin),ud%uds(:,ntyp,ilSpin),ud%dus(:,ntyp,ilSpin),ud%dulos(:,ntyp,ilSpin),ud%duds(:,ntyp,ilSpin))&
          !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
@@ -135,33 +135,24 @@ CONTAINS
             ! Flapw basis-functions
             DO m = -l,l
                lm = l* (l+1) + m
-               DO kp = 1, lapwPr%nv(igSpinPr)
-                  axPr(kp) = CMPLX(0.0,0.0)
-                  bxPr(kp) = CMPLX(0.0,0.0)
-                  cxPr(kp) = CMPLX(0.0,0.0)
-               END DO
-               !CALL timestart("hlomat11")
-               !CPP_OMP PARALLEL DO DEFAULT(none) &
-               !CPP_OMP& SHARED(axPr,bxPr,cxPr,ntyp,ilSpin,ilSpinPr,m,lm,lo,mlo) &
-               !CPP_OMP& SHARED(lapwPr,abCoeffsPr,ab_size_Pr,igSpinPr) &
-               !CPP_OMP& SHARED(atoms,tlmplm) &
-               !CPP_OMP  PRIVATE(lp,mp,lmp,s)
-               DO kp = 1, lapwPr%nv(igSpinPr)
-                  DO lp = 0, atoms%lnonsph(ntyp)
-                     DO mp = -lp, lp
-                        lmp = lp*(lp+1) + mp
-                        s = tlmplm%h_loc2(ntyp)
-                        axPr(kp) = axPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%h_loc(lmp,lm,ntyp,ilSpinPr,ilSpin)
-                        axPr(kp) = axPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%h_loc(s+lmp,lm,ntyp,ilSpinPr,ilSpin)
-                        bxPr(kp) = bxPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%h_loc(lmp,s+lm,ntyp,ilSpinPr,ilSpin)
-                        bxPr(kp) = bxPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%h_loc(s+lmp,s+lm,ntyp,ilSpinPr,ilSpin)
-                        cxPr(kp) = cxPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%tuulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
-                        cxPr(kp) = cxPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%tdulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
-                     END DO
-                  END DO
-               END DO
-               !CPP_OMP END PARALLEL DO
-               !CALL timestop("hlomat11")
+               s = tlmplm%h_loc2(ntyp) 
+               axPr = matmul(transpose(conjg(abCoeffsPr(:,:))),tlmplm%h_loc_LO(:,lm,ntyp,ilSpinPr,ilSpin))
+               bxPr = matmul(transpose(conjg(abCoeffsPr(:,:))),tlmplm%h_loc_LO(:,s+lm,ntyp,ilSpinPr,ilSpin))
+               cxPr = matmul(transpose(conjg(abCoeffsPr(:,:))),tlmplm%h_LO(:,m,lo+mlo,ilSpinPr,ilSpin))
+                  
+               !DO kp = 1, lapwPr%nv(igSpinPr)
+               !   DO lp = 0, atoms%lnonsph(ntyp)
+               !      DO mp = -lp, lp
+               !         lmp = lp*(lp+1) + mp
+               !         axPr(kp) = axPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%h_loc(lmp,lm,ntyp,ilSpinPr,ilSpin)
+               !         axPr(kp) = axPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%h_loc(s+lmp,lm,ntyp,ilSpinPr,ilSpin)
+               !         bxPr(kp) = bxPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%h_loc(lmp,s+lm,ntyp,ilSpinPr,ilSpin)
+               !         bxPr(kp) = bxPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%h_loc(s+lmp,s+lm,ntyp,ilSpinPr,ilSpin)
+               !         cxPr(kp) = cxPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%tuulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
+               !         cxPr(kp) = cxPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%tdulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
+               !      END DO
+               !   END DO
+               !END DO
                DO nkvec = 1,invsfct*(2*l+1)
                   locol= lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec ! This is the column of the matrix
                   IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN ! Only this MPI rank calculates this column
@@ -170,12 +161,9 @@ CONTAINS
                         DO kp = 1,lapwPr%nv(igSpinPr)
                            hmat%data_r(kp,locol) = hmat%data_r(kp,locol) &
                                                & + REAL(chi) * invsfct * (&
-                              REAL(abclo(1,m,nkvec,lo))* REAL(axPr(kp)) -&
-                              AIMAG(abclo(1,m,nkvec,lo))*AIMAG(axPr(kp)) +&
-                              REAL(abclo(2,m,nkvec,lo))* REAL(bxPr(kp)) -&
-                              AIMAG(abclo(2,m,nkvec,lo))*AIMAG(bxPr(kp)) +&
-                              REAL(abclo(3,m,nkvec,lo))* REAL(cxPr(kp)) -&
-                              AIMAG(abclo(3,m,nkvec,lo))*AIMAG(cxPr(kp)) )
+                                               & abclo(1,m,nkvec,lo) *  axPr(kp) + &
+                                               & abclo(2,m,nkvec,lo) *  bxPr(kp) + &
+                                               & abclo(3,m,nkvec,lo) *  cxPr(kp) )
                            IF (input%l_useapw) THEN
                               ! APWlo
                               hmat%data_r(kp,locol) = hmat%data_r(kp,locol) &
@@ -239,10 +227,10 @@ CONTAINS
                         DO mp = -lp, lp
                            lmp = lp*(lp+1) + mp
                            s = tlmplm%h_loc2(ntyp)
-                           ax(k) = ax(k) + tlmplm%h_loc(lm,lmp,ntyp,ilSpinPr,ilSpin)     * abCoeffs(lmp,k)
-                           ax(k) = ax(k) + tlmplm%h_loc(lm,s+lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(ab_size/2+lmp,k)
-                           bx(k) = bx(k) + tlmplm%h_loc(s+lm,lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(lmp,k)
-                           bx(k) = bx(k) + tlmplm%h_loc(s+lm,s+lmp,ntyp,ilSpinPr,ilSpin) * abCoeffs(ab_size/2+lmp,k)
+                           ax(k) = ax(k) + tlmplm%h_loc_LO(lm,lmp,ntyp,ilSpinPr,ilSpin)     * abCoeffs(lmp,k)
+                           ax(k) = ax(k) + tlmplm%h_loc_LO(lm,s+lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(ab_size/2+lmp,k)
+                           bx(k) = bx(k) + tlmplm%h_loc_LO(s+lm,lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(lmp,k)
+                           bx(k) = bx(k) + tlmplm%h_loc_LO(s+lm,s+lmp,ntyp,ilSpinPr,ilSpin) * abCoeffs(ab_size/2+lmp,k)
                            cx(k) = cx(k) + tlmplm%tulou(lmp,m,lo+mlo,ilSpinPr,ilSpin)    * abCoeffs(lmp,k)
                            cx(k) = cx(k) + tlmplm%tulod(lmp,m,lo+mlo,ilSpinPr,ilSpin)    * abCoeffs(ab_size/2+lmp,k)
                         END DO
@@ -293,7 +281,7 @@ CONTAINS
                            lm = l*(l+1) + m
                            DO mp = -lp,lp
                               lmp = lp* (lp+1) + mp
-                              s = tlmplm%h_loc2(ntyp)
+                              s = tlmplm%h_loc2_nonsph(ntyp)
                               ! Note, that xtx are the t-matrices and NOT their
                               ! respective complex conjugates as in hssphn !TODO: outdated comment?
                               utu = tlmplm%h_loc(lmp,lm,ntyp,ilSpinPr,ilSpin)
@@ -301,8 +289,8 @@ CONTAINS
                               utd = tlmplm%h_loc(lmp,lm+s,ntyp,ilSpinPr,ilSpin)
                               dtd = tlmplm%h_loc(lmp+s,lm+s,ntyp,ilSpinPr,ilSpin)
 
-                              tuulo = tlmplm%tuulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
-                              tdulo = tlmplm%tdulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
+                              tuulo = tlmplm%h_LO(lmp,m,lo+mlo,ilSpinPr,ilSpin)
+                              tdulo = tlmplm%h_LO(lmp+s,m,lo+mlo,ilSpinPr,ilSpin)
                               tulou = tlmplm%tulou(lm,mp,lop+mlo,ilSpinPr,ilSpin)
                               tulod = tlmplm%tulod(lm,mp,lop+mlo,ilSpinPr,ilSpin)
 
@@ -354,8 +342,8 @@ CONTAINS
                            utd = tlmplm%h_loc(lmp,lm+s,ntyp,ilSpinPr,ilSpin)
                            dtd = tlmplm%h_loc(lmp+s,lm+s,ntyp,ilSpinPr,ilSpin)
 
-                           tuulo = tlmplm%tuulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
-                           tdulo = tlmplm%tdulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
+                           tuulo = tlmplm%h_LO(lmp,m,lo+mlo,ilSpinPr,ilSpin)
+                           tdulo = tlmplm%h_LO(s+lmp,m,lo+mlo,ilSpinPr,ilSpin)
                            tulou = tlmplm%tulou(lm,mp,lo+mlo,ilSpinPr,ilSpin)
                            tulod = tlmplm%tulod(lm,mp,lo+mlo,ilSpinPr,ilSpin)
 
