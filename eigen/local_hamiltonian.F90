@@ -290,7 +290,7 @@ CONTAINS
    END SUBROUTINE
 
 
-    subroutine restrict_to_lnonsph(mat,s,s2,mat_nonsph)
+    subroutine restrict_to_lnonsph(mat,s2,s,mat_nonsph)
         COMPLEX,INTENT(IN)   :: mat(:,:)
         INTEGER,INTENT(IN)   :: s,s2
         COMPLEX,INTENT(OUT)  :: mat_nonsph(:,:)
