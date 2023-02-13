@@ -291,9 +291,9 @@ CONTAINS
 
 
     subroutine restrict_to_lnonsph(mat,s2,s,mat_nonsph)
-        COMPLEX,INTENT(IN)   :: mat(:,:)
+        COMPLEX,INTENT(IN)   :: mat(0:,:)
         INTEGER,INTENT(IN)   :: s,s2
-        COMPLEX,INTENT(OUT)  :: mat_nonsph(:,:)
+        COMPLEX,INTENT(OUT)  :: mat_nonsph(0:,:)
         ! Set up local hamiltonian
         mat_nonsph(0:s-1,0:s-1)    = mat(0:s-1,0:s-1)
         mat_nonsph(s:s+s-1,0:s-1)  = mat(s2:s+s2-1,0:s-1)
