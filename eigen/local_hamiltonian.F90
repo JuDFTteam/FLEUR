@@ -241,7 +241,7 @@ CONTAINS
     USE m_types
     TYPE(t_atoms),    INTENT(IN)    :: atoms
     TYPE(t_usdus),INTENT(IN)        :: ud
-    COMPLEX,INTENT(INOUT)           :: matrix(:,:,:)
+    COMPLEX,INTENT(INOUT)           :: matrix(0:,0:,:)
     REAL, INTENT(OUT)               :: e_shift(:)
     INTEGER,INTENT(IN)              :: jsp
 
@@ -257,23 +257,24 @@ CONTAINS
       s=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+1
       info=1
       cholesky_loop:DO WHILE(info.ne.0)
-         mat=matrix(:,:,n)
+         mat=matrix(0:,0:,n)
+         !Mat is now using a lower bound of 1!!
          ! Add shift onto the diagonal terms to make matrix positive definite
          DO lp = 0,atoms%lnonsph(n)
                DO mp = -lp,lp
-               lmp = lp* (lp+1) + mp
+               lmp = lp* (lp+1) + mp +1
                mat(lmp,lmp)=e_shift(n)+mat(lmp,lmp)
                mat(lmp+s,lmp+s)=e_shift(n)*ud%ddn(lp,n,jsp)+mat(lmp+s,lmp+s)
                END DO
          END DO
-         IF (lmp+1.NE.s) CALL judft_error("BUG in local_Hamiltonian:cholesky")
+         IF (lmp.NE.s) CALL judft_error("BUG in local_Hamiltonian:cholesky")
 
          ! Perform cholesky decomposition
          CALL zpotrf("L",2*s,mat(:,:),SIZE(mat,1),info)
 
          ! Set upper part to zero
-         DO l=0,2*s-1
-               DO lp=0,l-1
+         DO l=1,2*s
+               DO lp=1,l-1
                mat(lp,l)=0.0
                END DO
          END DO
@@ -285,15 +286,15 @@ CONTAINS
                END IF
          END IF
       END DO cholesky_loop
-      matrix(:,:,n)=mat
+      matrix(0:,0:,n)=mat
    ENDDO   
    END SUBROUTINE
 
 
     subroutine restrict_to_lnonsph(mat,s2,s,mat_nonsph)
-        COMPLEX,INTENT(IN)   :: mat(0:,:)
+        COMPLEX,INTENT(IN)   :: mat(0:,0:)
         INTEGER,INTENT(IN)   :: s,s2
-        COMPLEX,INTENT(OUT)  :: mat_nonsph(0:,:)
+        COMPLEX,INTENT(OUT)  :: mat_nonsph(0:,0:)
         ! Set up local hamiltonian
         mat_nonsph(0:s-1,0:s-1)    = mat(0:s-1,0:s-1)
         mat_nonsph(s:s+s-1,0:s-1)  = mat(s2:s+s2-1,0:s-1)
