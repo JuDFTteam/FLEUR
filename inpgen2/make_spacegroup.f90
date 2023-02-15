@@ -130,7 +130,7 @@ CONTAINS
     DO n=2, SIZE(atomid)
        lnew = .TRUE.
        DO i=1,n-1
-          IF ( ABS( atomid(i)-atomid(n) ) < eps7 .AND. (ALL(ABS(mag_mom(1:3,i)-mag_mom(:,n))<eps7)) ) THEN
+          IF ( ABS( atomid(i)-atomid(n) ) < eps7 .AND. (ALL(ABS(mag_mom(1:3,i)-mag_mom(1:3,n))<eps7)) ) THEN
              ity(n) = ity(i)
              lnew = .FALSE.
              EXIT
