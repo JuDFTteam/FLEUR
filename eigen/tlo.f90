@@ -140,7 +140,7 @@ CONTAINS
                lpmax0 = l + lpp
                ! Check that lpmax is smaller than the max l of the
                ! wavefunction expansion at this atom
-               lpmax = MIN(lpmax0,atoms%lmax(ntyp))
+               lpmax = MIN(lpmax0,atoms%lnonsph(ntyp))
                ! Make sure that l + l'' + lpmax is even
                lpmax = lpmax - MOD(l+lpp+lpmax,2)
                DO mem = 1,sphhar%nmem(lh,sym%ntypsy(na))
