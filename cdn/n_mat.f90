@@ -37,7 +37,8 @@ MODULE m_nmat
       COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       !
       ! calculate n_mat:
-      !
+      PRINT *,'Hello'
+      WRITE (*,*) 'Hello'
       DO i_u = 1,atoms%n_u+atoms%n_opc
          if(i_u>atoms%n_u) then
             i_denmat = i_u + atoms%n_hia

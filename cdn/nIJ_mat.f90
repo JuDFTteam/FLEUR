@@ -18,6 +18,7 @@ MODULE m_nIJmat
       INTEGER,             INTENT(IN)     :: ne,jspin,kptindx
       REAL,                INTENT(IN)     :: we(:)
       COMPLEX,             INTENT(INOUT)  :: nIJ_llp_mmp(:,:,:)!!(-latom1:latom1(to save m1),-latom2:latom2,i_pair)
+     
 
       INTEGER i,i_v,i_pair,atom1,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,matom1,matom2,lm1atom1,lm1atom2
       COMPLEX c_0
@@ -27,7 +28,7 @@ MODULE m_nIJmat
 
        call timestart("nIJ_mat")
 
-      i_pair=1 !counts number of pairs
+        i_pair=1 !counts number of pairs
         DO i_v = 1,atoms%n_v  !loop over pairs which are corrected by U+V 
             natom1=atoms%lda_v(i_v)%atomIndex
             latom1=atoms%lda_v(i_v)%thisAtomL
@@ -43,16 +44,17 @@ MODULE m_nIJmat
                         c_0=cmplx_0
                         Do i=1,ne    
                              c_0 = c_0 + we(i) * ( conjg(eigVecCoeffs%abcof(i,lm1atom2,0,natom2,jspin))*eigVecCoeffs%abcof(i,lm1atom1,0,natom1,jspin) &
-                             +conjg(eigVecCoeffs%abcof(i,lm1atom2,0,natom2,jspin))*eigVecCoeffs%abcof(i,lm1atom1,1,natom1,jspin)*(usdus%ddn(latom1,natom1,jspin)**0.5) &
-                             +conjg(eigVecCoeffs%abcof(i,lm1atom2,1,natom2,jspin))*eigVecCoeffs%abcof(i,lm1atom1,0,natom1,jspin)*(usdus%ddn(latom2,natom2,jspin)**0.5) &
-                             +conjg(eigVecCoeffs%abcof(i,lm1atom2,1,natom2,jspin))*eigVecCoeffs%abcof(i,lm1atom1,1,natom1,jspin)*(usdus%ddn(latom2,natom2,jspin)**0.5) &
-                             *(usdus%ddn(latom1,natom1,jspin))**0.5) * EXP(cmplx(0.0,-1.0)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),kpts%bk(:,kptindx)))
+                             +conjg(eigVecCoeffs%abcof(i,lm1atom2,0,natom2,jspin))*eigVecCoeffs%abcof(i,lm1atom1,1,natom1,jspin)*(usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5) &
+                             +conjg(eigVecCoeffs%abcof(i,lm1atom2,1,natom2,jspin))*eigVecCoeffs%abcof(i,lm1atom1,0,natom1,jspin)*(usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5) &
+                             +conjg(eigVecCoeffs%abcof(i,lm1atom2,1,natom2,jspin))*eigVecCoeffs%abcof(i,lm1atom1,1,natom1,jspin)*(usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5) &
+                             *(usdus%ddn(latom1,atoms%itype(natom1),jspin))**0.5) * EXP(cmplx(0.0,-tpi_const)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),kpts%bk(:,kptindx)))
                         ENDDO
                         nIJ_llp_mmp(matom1,matom2,i_pair)= c_0
-!                        WRITE (*,*) 'pair number', i_pair
-!                        WRITE (*,*) 'm of atom 1', matom1
-!                        WRITE (*,*) 'm of atom 2', matom2
-!                        WRITE (*,*) 'the inter-site mat is ', nIJ_llp_mmp(matom1,matom2,i_pair)
+                        print *,'pair number',i_pair
+                        WRITE (*,*) 'pair number', i_pair
+                        WRITE (*,*) 'm of atom 1', matom1
+                        WRITE (*,*) 'm of atom 2', matom2
+                        WRITE (*,*) 'the inter-site mat is ', nIJ_llp_mmp(matom1,matom2,i_pair)
                     ENDDO
                 ENDDO
                 i_pair=i_pair+1
