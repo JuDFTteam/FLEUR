@@ -667,6 +667,7 @@ END DO
             this%lda_v(i)%thisAtomL = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@refAtomL'))
             this%lda_v(i)%otherAtomL = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@otherAtomL'))
             this%lda_v(i)%V = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@V'))
+            this%lda_v(i)%numOtherAtoms = numberNodes
             ALLOCATE(this%lda_v(i)%otherAtomIndices(numberNodes))
             ALLOCATE(this%lda_v(i)%atomShifts(3,numberNodes))
             DO j = 1, numberNodes
