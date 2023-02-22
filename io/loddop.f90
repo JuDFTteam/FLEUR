@@ -60,8 +60,7 @@
           DO  jsp = 1,input%jspins
              READ (nu,END=200,ERR=200) jspdum
              READ (nu,END=200,ERR=200) nn
-             IF (nn/=atoms%ntype) CALL juDFT_error("nn.NE.ntype",calledby =&
-                  &       "loddop" )
+             IF (nn/=atoms%ntype) CALL juDFT_error("Number of atom groups in Fleur input file and in the charge density file don't match.",calledby="loddop" )
 
              DO n = 1,nn
                 na = atoms%firstAtom(n)
