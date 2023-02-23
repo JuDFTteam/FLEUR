@@ -137,7 +137,7 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
    jsp = MERGE(1,jspin,noco%l_noco)
 
    kpts_mod = kpts
-   DO ikpt_i = 1, kpts%nkpt
+   DO ikpt_i = 1, size(cdnvalJob%k_list)
       ikpt=fmpi%k_list(ikpt_i)
       bkpt = kpts%bk(:, ikpt)
       DO iqdir = 1, 3
@@ -203,21 +203,21 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
          END IF
       END DO
 
-      DO ikG = lapw%nv(jsp) + 1, lapw%nv(jsp) + atoms%nlo(iDtype)
-         iLo = ikG-lapw%nv(jsp)
-         l = atoms%llo(iLo, iDtype)
-         DO imLo = 1, 2*l+1
-            ikLo = lapw%kvec(imLo,iLo,iDtype)
-            ikGLo = lapw%nv(jsp) + lapw%index_lo(iLo,iDtype) + imLo
-            !gExt = MATMUL(cell%bmat,lapw%vk(:,ikLo, jsp))
-            gExt = MATMUL(cell%bmat,lapw%bkpt)
-            IF (zMat%l_real) THEN
-               zMatPref%data_c(ikGLo,:) = ImagUnit * gExt(idir) * zMat%data_r(ikGLo, :)
-            ELSE
-               zMatPref%data_c(ikGLo,:) = ImagUnit * gExt(idir) * zMat%data_c(ikGLo, :)
-            END IF
-         END DO
-      END DO
+      !DO ikG = lapw%nv(jsp) + 1, lapw%nv(jsp) + atoms%nlo(iDtype)
+      !   iLo = ikG-lapw%nv(jsp)
+      !   l = atoms%llo(iLo, iDtype)
+      !   DO imLo = 1, 2*l+1
+      !      ikLo = lapw%kvec(imLo,iLo,iDtype)
+      !      ikGLo = lapw%nv(jsp) + lapw%index_lo(iLo,iDtype) + imLo
+      !      !gExt = MATMUL(cell%bmat,lapw%vk(:,ikLo, jsp))
+      !      gExt = MATMUL(cell%bmat,lapw%bkpt)
+      !      IF (zMat%l_real) THEN
+      !         zMatPref%data_c(ikGLo,:) = ImagUnit * gExt(idir) * zMat%data_r(ikGLo, :)
+      !      ELSE
+      !         zMatPref%data_c(ikGLo,:) = ImagUnit * gExt(idir) * zMat%data_c(ikGLo, :)
+      !      END IF
+      !   END DO
+      !END DO
 
       !IF (.NOT.(nbands==nbands1)) Problem?
 #ifdef CPP_MPI

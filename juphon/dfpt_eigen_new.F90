@@ -92,7 +92,7 @@ CONTAINS
 
       kpts_mod = fi%kpts
       ! Modify this from kpts only in DFPT case.
-      DO nk_i = 1, fi%kpts%nkpt
+      DO nk_i = 1, size(fmpi%k_list)
          !kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
          nk=fmpi%k_list(nk_i)
          bkpt = fi%kpts%bk(:, nk)

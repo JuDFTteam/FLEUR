@@ -97,6 +97,8 @@ CONTAINS
 
 #ifdef CPP_MPI
       CALL MPI_BCAST(strho,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(onedone,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(final_SH_it,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
 
       iter = 0
@@ -194,6 +196,12 @@ CONTAINS
             !RETURN
          END IF
 
+         CALL vTot1%distribute(fmpi%mpi_comm)
+
+#ifdef CPP_MPI
+         CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
+#endif
+
          CALL timestart("dfpt eigen")
 
          !IF (.NOT. fi%input%eig66(1)) THEN
@@ -239,7 +247,7 @@ CONTAINS
             denIn1 = denOut1
             denIn1Im = denOut1Im
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
-            write(*,*) "Starting perturbation generated."
+            IF (fmpi%irank==0) write(*,*) "Starting perturbation generated."
             CALL timestop("Sternheimer Iteration")
             CALL save_npy(TRIM(dfpt_tag)//"rho1pw.npy",denOut1%pw)
             CALL save_npy(TRIM(dfpt_tag)//"rho1mtre.npy",denOut1%mt)
@@ -257,7 +265,7 @@ CONTAINS
             CALL save_npy(TRIM(dfpt_tag)//"_rho1mtre.npy",denOut1%mt(:,0:,1,1))
             CALL save_npy(TRIM(dfpt_tag)//"_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
-            write(*,*) "1st 'real' density perturbation generated."
+            IF (fmpi%irank==0) write(*,*) "1st 'real' density perturbation generated."
             CALL timestop("Sternheimer Iteration")
             CYCLE scfloop
          END IF
@@ -269,15 +277,28 @@ CONTAINS
             CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1pw.npy",denOut1%pw(:,1))
             CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtre.npy",denOut1%mt(:,0:,1,1))
             CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
-            write(*,*) "Final Sternheimer iteration finished."
+            IF (fmpi%irank==0) write(*,*) "Final Sternheimer iteration finished."
             CALL timestop("Sternheimer Iteration")
             CYCLE scfloop
          END IF
+
+         CALL denIn1%distribute(fmpi%mpi_comm)
+
+#ifdef CPP_MPI
+         CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
+#endif
+
 
          field2 = fi%field
 
          ! First mixing in the 2nd "real" iteration.
          denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
+         CALL denIn1%distribute(fmpi%mpi_comm)
+
+#ifdef CPP_MPI
+         CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
+#endif
+
          ! mix input and output densities
          CALL timestart("DFPT mixing")
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsq, &
@@ -287,6 +308,12 @@ CONTAINS
          CALL timestop("DFPT mixing")
 
          denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+
+         CALL denIn1%distribute(fmpi%mpi_comm)
+
+#ifdef CPP_MPI
+         CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
+#endif
 
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter

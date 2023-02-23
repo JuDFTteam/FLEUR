@@ -590,12 +590,14 @@ CONTAINS
             DO iDir = 1, 3
                CALL timestart("Dirloop")
                dfpt_tag = ''
-               WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
-               WRITE(*,*) '-------------------------'
-               WRITE(*,*) 'Starting calculation for:'
-               WRITE(*,*) ' q         = ', qpts_loc%bk(:,q_list(iQ))
-               WRITE(*,*) ' atom      = ', iDtype
-               WRITE(*,*) ' direction = ', iDir
+               
+               IF (fmpi%irank==0) THEN
+                  WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+                  WRITE(*,*) 'Starting calculation for:'
+                  WRITE(*,*) ' q         = ', qpts_loc%bk(:,q_list(iQ))
+                  WRITE(*,*) ' atom      = ', iDtype
+                  WRITE(*,*) ' direction = ', iDir
+               END IF
 
                IF (fmpi_nosym%irank==0) THEN
                   CALL starsq%reset_stars()
@@ -607,7 +609,7 @@ CONTAINS
                   CALL vC1Im%reset_dfpt()
                END IF
                ! TODO: Broadcast this.
-               WRITE(*,*) '-------------------------'
+               IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                ! This is where the magic happens. The Sternheimer equation is solved
                ! iteratively, providing the scf part of dfpt calculations.
                CALL timestart("Sternheimer")
@@ -623,7 +625,7 @@ CONTAINS
                   CYCLE
                END IF
 
-               WRITE(*,*) '-------------------------'
+               IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                CALL timestart("Dynmat")
                ! Once the first order quantities are converged, we can construct all
                ! additional necessary quantities and from that the dynamical matrix.
@@ -634,8 +636,8 @@ CONTAINS
                CALL timestop("Dynmat")
                dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
                write(9989,*) "Eii2:", E2ndOrdII(3 *(iDtype-1)+iDir,:)
-               write(*,*) "dynmat row for ", dfpt_tag
-               write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+               IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
+               IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                !STOP
                CALL timestop("Dirloop")
             END DO
@@ -648,15 +650,17 @@ CONTAINS
             CYCLE
          END IF
 
-         WRITE(*,*) '-------------------------'
-         CALL timestart("Dynmat diagonalization")
-         CALL DiagonalizeDynMat(fi%atoms, qpts_loc, fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ))
-         CALL timestop("Dynmat diagonalization")
+         IF (fmpi%irank==0) THEN
+            WRITE(*,*) '-------------------------'
+            CALL timestart("Dynmat diagonalization")
+            CALL DiagonalizeDynMat(fi%atoms, qpts_loc, fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ))
+            CALL timestop("Dynmat diagonalization")
 
-         CALL timestart("Frequency calculation")
-         CALL CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs)
-         CALL timestop("Frequency calculation")
-         DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+            CALL timestart("Frequency calculation")
+            CALL CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs)
+            CALL timestop("Frequency calculation")
+            DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+         END IF
 
          CALL close_eig(q_eig_id)
 

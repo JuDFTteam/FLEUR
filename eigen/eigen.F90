@@ -127,7 +127,7 @@ CONTAINS
       ! Modify this from kpts only in DFPT case.
       ALLOCATE(bkpt(3))
       IF (PRESENT(bqpt)) THEN
-          DO nk_i = 1, fi%kpts%nkpt
+          DO nk_i = 1, size(fmpi%k_list)
               !kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
               nk=fmpi%k_list(nk_i)
               bkpt = fi%kpts%bk(:, nk)

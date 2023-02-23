@@ -48,7 +48,7 @@ CONTAINS
       TYPE(t_potden)  :: rho_dummy, rho1_dummy, vExt1, vExt1Im
       TYPE(t_hub1data) :: hub1data
 
-      INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin
+      INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin, ierr
       COMPLEX :: tempval
       LOGICAL :: bare_mode
 
@@ -381,6 +381,10 @@ CONTAINS
          END DO
       END DO
 
+#ifdef CPP_MPI
+          CALL MPI_ALLREDUCE(MPI_IN_PLACE,dyn_row_eigen,SIZE(dyn_row_eigen),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+#endif
+
       dyn_row = conjg(dyn_row_HF) + dyn_row_eigen
 
    END SUBROUTINE dfpt_dynmat_row
@@ -588,7 +592,7 @@ CONTAINS
       kpts_mod = fi%kpts
       ! Modify this from kpts only in DFPT case.
       ALLOCATE(bkpt(3))
-      DO nk_i = 1, fi%kpts%nkpt
+      DO nk_i = 1, size(fmpi%k_list)
          !kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
          nk=fmpi%k_list(nk_i)
          bkpt = fi%kpts%bk(:, nk)
