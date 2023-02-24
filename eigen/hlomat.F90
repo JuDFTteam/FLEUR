@@ -136,9 +136,9 @@ CONTAINS
             DO m = -l,l
                lm = l* (l+1) + m
                s = tlmplm%h_loc2(ntyp) 
-               axPr = matmul(transpose(conjg(abCoeffsPr(:,:))),tlmplm%h_loc_LO(:,lm,ntyp,ilSpinPr,ilSpin))
-               bxPr = matmul(transpose(conjg(abCoeffsPr(:,:))),tlmplm%h_loc_LO(:,s+lm,ntyp,ilSpinPr,ilSpin))
-               cxPr = matmul(transpose(conjg(abCoeffsPr(:,:))),tlmplm%h_LO(:,m,lo+mlo,ilSpinPr,ilSpin))
+               axPr = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,lm,ntyp,ilSpinPr,ilSpin))
+               bxPr = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,s+lm,ntyp,ilSpinPr,ilSpin))
+               cxPr = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_LO(0:2*s-1,m,lo+mlo,ilSpinPr,ilSpin))
                   
                !DO kp = 1, lapwPr%nv(igSpinPr)
                !   DO lp = 0, atoms%lnonsph(ntyp)
