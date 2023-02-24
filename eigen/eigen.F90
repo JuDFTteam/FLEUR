@@ -265,8 +265,8 @@ CONTAINS
                 ! Only process 0 writes out the value of ne_all and the
                 ! eigenvalues.
 #ifdef CPP_MPI
-                call MPI_COMM_RANK(fmpi%diag_sub_comm,n_rank,err)
-                call MPI_COMM_SIZE(fmpi%diag_sub_comm,n_size,err)
+                call MPI_COMM_RANK(fmpi%diag_sub_comm,n_rank,ierr)
+                call MPI_COMM_SIZE(fmpi%diag_sub_comm,n_size,ierr)
 #else
                 n_rank = 0; n_size=1;
 #endif
