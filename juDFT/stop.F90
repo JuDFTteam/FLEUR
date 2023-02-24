@@ -228,6 +228,7 @@ CONTAINS
        WRITE(0,*) "Stop message:"
        WRITE(0,*) "  ",message
        WRITE(0,*) "*****************************************"
+       call flush(0)
     ENDIF
     CALL writetimes()
     CALL print_memory_info(0,.true.)
