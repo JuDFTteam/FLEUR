@@ -78,10 +78,9 @@ CONTAINS
       CLASS(t_mat), OPTIONAL, INTENT(INOUT) :: hmat_out, smat_out
 
       ! Local Scalars
-      INTEGER jsp,nk,nred,ne_all,ne_found,neigd2,dim_mat
-      INTEGER ne, nk_i,n_size,n_rank
-      INTEGER isp,i,j,err
-      LOGICAL l_real, l_needs_vectors
+      INTEGER jsp,nk,ne_all,ne_found,neigd2,dim_mat
+      INTEGER nk_i,n_size,n_rank
+      LOGICAL l_needs_vectors
       INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr
@@ -100,10 +99,9 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
       CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
       TYPE(t_kpts)              :: kpts_mod!kqpts ! basically kpts, but with q added onto each one.
-      TYPE(t_hub1data)          :: hub1datadummy
-
+    
       ! Variables for HF or fi%hybinp functional calculation
-      INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat, iqdir
+      INTEGER                   :: dealloc_stat, iqdir
       character(len=300)        :: errmsg
       real                      :: alpha_hybrid
 

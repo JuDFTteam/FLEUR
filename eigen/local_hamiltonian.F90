@@ -45,8 +45,8 @@ CONTAINS
       LOGICAL, INTENT(IN),OPTIONAL :: l_dfptmod
 
       ! Local Scalars
-      INTEGER :: i,l,lm,lmp,lp,info,in,j1,j2,jsp
-      INTEGER :: mp,n,m,s,i_u,jmin,jmax,i_opc
+      INTEGER :: l,lm,j1,j2,jsp
+      INTEGER :: n,m,s
       COMPLEX :: one
 
       CALL timestart("local_hamiltonian")
