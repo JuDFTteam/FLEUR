@@ -226,7 +226,7 @@ CONTAINS
                      DO lp = 0, atoms%lnonsph(ntyp)
                         DO mp = -lp, lp
                            lmp = lp*(lp+1) + mp
-                           s = tlmplm%h_loc2(ntyp)
+                           s = tlmplm%h_loc2_nonsph(ntyp)
                            ax(k) = ax(k) + tlmplm%h_loc_LO(lm,lmp,ntyp,ilSpinPr,ilSpin)     * abCoeffs(lmp,k)
                            ax(k) = ax(k) + tlmplm%h_loc_LO(lm,s+lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(ab_size/2+lmp,k)
                            bx(k) = bx(k) + tlmplm%h_loc_LO(s+lm,lmp,ntyp,ilSpinPr,ilSpin)   * abCoeffs(lmp,k)
@@ -335,7 +335,7 @@ CONTAINS
                         lm = l* (l+1) + m
                         DO mp = -l,l
                           lmp = l*(l+1) + mp
-                           s = tlmplm%h_loc2(ntyp)
+                           s = tlmplm%h_loc2_nonsph(ntyp)
 
                            utu = tlmplm%h_loc(lmp,lm,ntyp,ilSpinPr,ilSpin)
                            dtu = tlmplm%h_loc(lmp+s,lm,ntyp,ilSpinPr,ilSpin)
