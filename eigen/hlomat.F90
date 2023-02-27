@@ -136,20 +136,24 @@ CONTAINS
             DO m = -l,l
                lm = l* (l+1) + m
                s = tlmplm%h_loc2_nonsph(ntyp) 
+               print*, s,ab_size_pr/2
                axPr = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,lm,ntyp,ilSpinPr,ilSpin))
                bxPr = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,s+lm,ntyp,ilSpinPr,ilSpin))
                cxPr = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_LO(0:2*s-1,m,lo+mlo,ilSpinPr,ilSpin))
-                  
+              
+               !axpr=0.0
+               !bxpr=0.0
+               !cxpr=0.0
                !DO kp = 1, lapwPr%nv(igSpinPr)
                !   DO lp = 0, atoms%lnonsph(ntyp)
                !      DO mp = -lp, lp
                !         lmp = lp*(lp+1) + mp
-               !         axPr(kp) = axPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%h_loc(lmp,lm,ntyp,ilSpinPr,ilSpin)
-               !         axPr(kp) = axPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%h_loc(s+lmp,lm,ntyp,ilSpinPr,ilSpin)
-               !         bxPr(kp) = bxPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%h_loc(lmp,s+lm,ntyp,ilSpinPr,ilSpin)
-               !         bxPr(kp) = bxPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%h_loc(s+lmp,s+lm,ntyp,ilSpinPr,ilSpin)
-               !         cxPr(kp) = cxPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%tuulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
-               !         cxPr(kp) = cxPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%tdulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
+                        !axPr(kp) = axPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%h_loc_LO(lmp,lm,ntyp,ilSpinPr,ilSpin)
+                        !axPr(kp) = axPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%h_loc_LO(s+lmp,lm,ntyp,ilSpinPr,ilSpin)
+                        !bxPr(kp) = bxPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%h_loc_LO(lmp,s+lm,ntyp,ilSpinPr,ilSpin)
+                        !bxPr(kp) = bxPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%h_loc_LO(s+lmp,s+lm,ntyp,ilSpinPr,ilSpin)
+                        !cxPr(kp) = cxPr(kp) + CONJG(abCoeffsPr(lmp,kp))             *tlmplm%tuulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
+                        !cxPr(kp) = cxPr(kp) + CONJG(abCoeffsPr(ab_size_Pr/2+lmp,kp))*tlmplm%tdulo(lmp,m,lo+mlo,ilSpinPr,ilSpin)
                !      END DO
                !   END DO
                !END DO
@@ -284,10 +288,10 @@ CONTAINS
                               s = tlmplm%h_loc2_nonsph(ntyp)
                               ! Note, that xtx are the t-matrices and NOT their
                               ! respective complex conjugates as in hssphn !TODO: outdated comment?
-                              utu = tlmplm%h_loc(lmp,lm,ntyp,ilSpinPr,ilSpin)
-                              dtu = tlmplm%h_loc(lmp+s,lm,ntyp,ilSpinPr,ilSpin)
-                              utd = tlmplm%h_loc(lmp,lm+s,ntyp,ilSpinPr,ilSpin)
-                              dtd = tlmplm%h_loc(lmp+s,lm+s,ntyp,ilSpinPr,ilSpin)
+                              utu = tlmplm%h_loc_LO(lmp,lm,ntyp,ilSpinPr,ilSpin)
+                              dtu = tlmplm%h_loc_LO(lmp+s,lm,ntyp,ilSpinPr,ilSpin)
+                              utd = tlmplm%h_loc_LO(lmp,lm+s,ntyp,ilSpinPr,ilSpin)
+                              dtd = tlmplm%h_loc_LO(lmp+s,lm+s,ntyp,ilSpinPr,ilSpin)
 
                               tuulo = tlmplm%h_LO(lmp,m,lo+mlo,ilSpinPr,ilSpin)
                               tdulo = tlmplm%h_LO(lmp+s,m,lo+mlo,ilSpinPr,ilSpin)
@@ -337,11 +341,11 @@ CONTAINS
                           lmp = l*(l+1) + mp
                            s = tlmplm%h_loc2_nonsph(ntyp)
 
-                           utu = tlmplm%h_loc(lmp,lm,ntyp,ilSpinPr,ilSpin)
-                           dtu = tlmplm%h_loc(lmp+s,lm,ntyp,ilSpinPr,ilSpin)
-                           utd = tlmplm%h_loc(lmp,lm+s,ntyp,ilSpinPr,ilSpin)
-                           dtd = tlmplm%h_loc(lmp+s,lm+s,ntyp,ilSpinPr,ilSpin)
-
+                           utu = tlmplm%h_loc_LO(lmp,lm,ntyp,ilSpinPr,ilSpin)
+                           dtu = tlmplm%h_loc_LO(lmp+s,lm,ntyp,ilSpinPr,ilSpin)
+                           utd = tlmplm%h_loc_LO(lmp,lm+s,ntyp,ilSpinPr,ilSpin)
+                           dtd = tlmplm%h_loc_LO(lmp+s,lm+s,ntyp,ilSpinPr,ilSpin)
+                           
                            tuulo = tlmplm%h_LO(lmp,m,lo+mlo,ilSpinPr,ilSpin)
                            tdulo = tlmplm%h_LO(s+lmp,m,lo+mlo,ilSpinPr,ilSpin)
                            tulou = tlmplm%tulou(lm,mp,lo+mlo,ilSpinPr,ilSpin)
