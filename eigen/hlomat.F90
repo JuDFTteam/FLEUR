@@ -136,7 +136,6 @@ CONTAINS
             DO m = -l,l
                lm = l* (l+1) + m
                s = tlmplm%h_loc2_nonsph(ntyp) 
-               print*, s,ab_size_pr/2
                axPr = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,lm,ntyp,ilSpinPr,ilSpin))
                bxPr = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,s+lm,ntyp,ilSpinPr,ilSpin))
                cxPr = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_LO(0:2*s-1,m,lo+mlo,ilSpinPr,ilSpin))

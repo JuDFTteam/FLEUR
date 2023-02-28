@@ -191,8 +191,8 @@ CONTAINS
       
       END IF
    
-      !$OMP PARALLEL DO DEFAULT(NONE) private(n,s,l,lp,m,lm,mp,lmp)&
-      !$OMP shared(atoms,mat_half,l_lomatrix,v,mat,uun21,udn21,dun21,ddn21,j1,j2,ud,jsp)
+      !!$OMP PARALLEL DO DEFAULT(NONE) private(n,s,l,lp,m,lm,mp,lmp)&
+      !!$OMP shared(atoms,mat_half,l_lomatrix,v,mat,uun21,udn21,dun21,ddn21,j1,j2,ud,jsp)
       DO i_u=1,atoms%n_u+atoms%n_hia
          if (l_lomatrix.and..not.atoms%lda_u(i_u)%use_lo) cycle
          n=atoms%lda_u(i_u)%atomType
@@ -202,9 +202,9 @@ CONTAINS
          lp = atoms%lda_u(i_u)%l
          
          DO m = -l,l
-            lm = l* (l+1) + m
+            lm = l* (l+1) + m +1 !indexing from 1
             DO mp = -lp,lp
-               lmp = lp*(lp+1) + mp
+               lmp = lp*(lp+1) + mp +1 !indexing from 1
                IF (j1==j2) THEN
                   mat(lm  ,lmp  ,n,j1,j2) = mat(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
                   mat(lm+s,lmp+s,n,j1,j2) = mat(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
@@ -223,14 +223,14 @@ CONTAINS
             END DO
          END DO
       END DO
-      !$OMP end parallel do
+      !!$OMP end parallel do
       DO i_opc=1,atoms%n_opc
          n=atoms%lda_opc(i_opc)%atomType
          s=mat_half(n)
          ! Found an "OPC" for this atom type
          l=atoms%lda_opc(i_opc)%l
          DO m = -l,l
-            lm = l*(l+1) + m
+            lm = l*(l+1) + m +1 !indexing from 1
             mat(lm  ,lm  ,n,j1,j2) = mat(lm  ,lm  ,n,j1,j2) + opc_corrections(i_opc) * m
             mat(lm+s,lm+s,n,j1,j2) = mat(lm+s,lm+s,n,j1,j2) + opc_corrections(i_opc) * m * ud%ddn(l,n,jsp)
          END DO
