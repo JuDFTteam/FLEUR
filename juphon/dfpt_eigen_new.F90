@@ -28,7 +28,7 @@ CONTAINS
       USE m_types_mpimat
       USE m_invert_HepsS
       USE m_dfpt_tlmplm
-      USE m_mt_setup
+      USE m_local_hamiltonian
       !USE m_npy
 
       IMPLICIT NONE
@@ -106,7 +106,9 @@ CONTAINS
       END DO
 
       CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,.FALSE.)
-      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,vTot,vx,fmpi,td,ud,0.0,.TRUE.)
+
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0,.TRUE.)
+      
 
       DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)

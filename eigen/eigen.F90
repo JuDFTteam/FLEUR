@@ -39,7 +39,7 @@ CONTAINS
       USE m_pot_io
       USE m_eigen_diag
       !USE m_hsefunctional
-      USE m_mt_setup
+      USE m_local_Hamiltonian
       USE m_util
       !USE m_icorrkeys
       USE m_eig66_io, ONLY : write_eig, read_eig
@@ -78,10 +78,9 @@ CONTAINS
       CLASS(t_mat), OPTIONAL, INTENT(INOUT) :: hmat_out, smat_out
 
       ! Local Scalars
-      INTEGER jsp,nk,nred,ne_all,ne_found,neigd2,dim_mat
-      INTEGER ne, nk_i,n_size,n_rank
-      INTEGER isp,i,j,err
-      LOGICAL l_real, l_needs_vectors
+      INTEGER jsp,nk,ne_all,ne_found,neigd2,dim_mat
+      INTEGER nk_i,n_size,n_rank
+      LOGICAL l_needs_vectors
       INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr
@@ -100,10 +99,9 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
       CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
       TYPE(t_kpts)              :: kpts_mod!kqpts ! basically kpts, but with q added onto each one.
-      TYPE(t_hub1data)          :: hub1datadummy
-
+    
       ! Variables for HF or fi%hybinp functional calculation
-      INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat, iqdir
+      INTEGER                   :: dealloc_stat, iqdir
       character(len=300)        :: errmsg
       real                      :: alpha_hybrid
 
@@ -155,8 +153,7 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1data,inden,v,vx,fmpi,td,ud,alpha_hybrid)
-
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
       neigBuffer = 0
       results%neig = 0
       results%eig = 1.0e300
@@ -268,8 +265,8 @@ CONTAINS
                 ! Only process 0 writes out the value of ne_all and the
                 ! eigenvalues.
 #ifdef CPP_MPI
-                call MPI_COMM_RANK(fmpi%diag_sub_comm,n_rank,err)
-                call MPI_COMM_SIZE(fmpi%diag_sub_comm,n_size,err)
+                call MPI_COMM_RANK(fmpi%diag_sub_comm,n_rank,ierr)
+                call MPI_COMM_SIZE(fmpi%diag_sub_comm,n_size,ierr)
 #else
                 n_rank = 0; n_size=1;
 #endif
