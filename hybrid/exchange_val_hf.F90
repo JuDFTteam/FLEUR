@@ -223,16 +223,17 @@ CONTAINS
                ! in Fourier space
                !! REIMPLEMENTING (notes in lab book)
                IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+                  CALL timestart("hse: dynamic hse adjustment")
                   iband1 = hybdat%nobd(ikqpt, jsp)
-
                   exch_vv = exch_vv + &
-                            dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
-                                                   fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
+                            dynamic_hse_adjustment(fi%atoms, fi%kpts%bkf(:, iq), iq, &
+                                                   fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, &
                                                    fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                                                    mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
                                                    hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, ibando, psize, indx_sest, &
-                                                   fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv%data_r(:, :), &
+                                                   fi%sym, fmpi%irank, cprod_vv%data_r(:, :), &
                                                    cprod_vv%data_c(:, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
+                  CALL timestop("hse: dynamic hse adjustment")
                END IF
 
                ! the Coulomb matrix is only evaluated at the irrecuible k-points

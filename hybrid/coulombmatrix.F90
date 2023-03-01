@@ -805,15 +805,17 @@ CONTAINS
          ! The HSE functional is realized subtracting erf/r from
          ! the normal Coulomb matrix
          !
-         CALL change_coulombmatrix(fi%atoms%rmsh,fi%atoms%rmt,fi%atoms%dx,fi%atoms%jri,fi%atoms%jmtd,&
+         CALL timestart("hse: change coulombmatrix")
+         CALL change_coulombmatrix(fi%atoms,&
                                    fi%kpts%nkptf,fi%kpts%nkpt,fi%kpts%bk,&
-                                   fi%cell%bmat,fi%cell%vol,fi%atoms%ntype,fi%atoms%neq,& 
-                                   fi%atoms%nat,fi%atoms%taual,fi%hybinp%lcutm1,&
+                                   fi%cell%bmat,fi%cell%vol,& 
+                                   fi%hybinp%lcutm1,&
                                    maxval(fi%hybinp%lcutm1),mpdata%num_radbasfn,&
                                    maxval(mpdata%num_radbasfn),mpdata%g,mpdata%n_g,mpdata%gptm_ptr,&
                                    mpdata%num_gpts(),mpdata%radbasfn_mt,&
-                                   fi%hybinp%lexp,maxval(hybdat%nbasm),hybdat%nbasm,fi%sym%invsat,&
-                                   fi%sym%invsatnr,fmpi%irank,coul)
+                                   fi%hybinp%lexp,maxval(hybdat%nbasm),hybdat%nbasm,fi%sym, &
+                                   fmpi%irank,coul)
+         CALL timestop("hse: change coulombmatrix")
       ELSE
          ! check for gamma
          if(any(fmpi%k_list == 1)) then

@@ -145,10 +145,14 @@ CONTAINS
       ! calculate contribution from the core states to the HF exchange
       CALL timestart("core exchange calculation")
       IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+         CALL timestart("hse: exchange vccv")
          CALL exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsymop, nsest, indx_sest, &
-                               a_ex, results, cmt_nk, mat_ex)
+                               fmpi%irank, a_ex, results, cmt_nk, mat_ex)
+         CALL timestop("hse: exchange vccv")
 
+         CALL timestart("hse: exchange cccc")
          CALL exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
+         CALL timestop("hse: exchange cccc")
       
       ELSE
          CALL exchange_vccv1(nk, fi, mpdata, hybdat, jsp, &
