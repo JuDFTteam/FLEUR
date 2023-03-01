@@ -175,7 +175,7 @@ CONTAINS
       REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
       REAL, ALLOCATABLE :: opc_corrections(:)
 
-      IF(atoms%n_u+atoms%n_hia==0) return !No LDA+U
+      IF(atoms%n_u+atoms%n_hia+atoms%n_opc==0) return !No LDA+U
 
       IF (j1.ne.j2) THEN
          !Calculate overlap integrals for the off-diagonal LDA+U contributions
