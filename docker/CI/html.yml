@@ -77,9 +77,10 @@ gfortran-coverage:
   artifacts:
     paths:
       - public
-    coverage_report:
-      coverage_format: cobertura
-      path: build.coverage/coverage.xml  
+    reports:  
+      coverage_report:
+        coverage_format: cobertura
+        path: build.coverage/coverage.xml  
   environment:
     name: Coverage
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
