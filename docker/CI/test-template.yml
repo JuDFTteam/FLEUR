@@ -26,10 +26,10 @@
       fi
     - echo "Pytest Options= ${PYTEST_ADDOPTS}"
     - ./run_tests.sh
-    - cp report.html public
+
   artifacts:
     when: always
     paths:
       - $BUILD_FOLDER/Testing
-      - public
+      - $BUILD_FOLDER/report.html
 
