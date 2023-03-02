@@ -50,8 +50,35 @@ LOGGER = logging.getLogger(__name__)
 # C: One can also run non python tests, so we could if we want to run the old tests as they are...
 # https://docs.pytest.org/en/stable/example/nonpython.html
 
+#some modifications for pytest_html
 
+def pytest_html_report_title(report):
+    report.title = "Pytest report for FLEUR!"
 
+def pytest_html_results_summary(prefix, summary, postfix):
+    import re
+    from py.xml import html
+    with open("configure.out","r") as f:
+        out=False
+        summary=[]
+        for s in f:
+            m=re.search("-- The Fortran compiler identification is (.*)",s)
+            if m:summary.append(html.p("Compiler:",m.groups()[0]))
+            if re.search("serial version.*TRUE",s): summary.append(html.p("MPI:FALSE"))
+            if re.search("parallel version.*TRUE",s): summary.append(html.p("MPI:TRUE"))
+            if re.search("Compile GPU.*TRUE",s): summary.append(html.p("GPU:TRUE"))
+        prefix.extend(summary)
+                    
+from py.xml import html
+def pytest_html_results_table_header(cells):
+    cells.insert(2, html.th("Description"))
+    cells.pop()
+
+def pytest_html_results_table_row(report, cells):
+    cells.insert(2, html.td(report.description))
+    cells.pop()
+
+   
 ######### Helpers ############
 # C: By using os.path instead of pathlib, this will prob fail on Windows
 
@@ -371,6 +398,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "eels: test with eels")
     config.addinivalue_line("markers", "gw: test for gw interface")
     config.addinivalue_line("markers", "interface: tests testing some interface")
+    config.addinivalue_line("markers", "noco: tests testing the noco part")
 
     # main libs
     config.addinivalue_line("markers", "hdf: tests needing hdf")
@@ -527,6 +555,8 @@ def pytest_runtest_makereport(item, call):
     # execute all other hooks to obtain the report object
     outcome = yield
     rep = outcome.get_result()
+    rep.description = item.function.__doc__
+    #outcome.force_result(rep) 
 
     # set a report attribute for each phase of a call, which can
     # be "setup", "call", "teardown"
@@ -1082,13 +1112,15 @@ def check_hdf(test_logger):
 def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_xml_file,check_hdf):
     """returns the default_fleur_test function
     """
-    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=None):
+    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=None,clean=False):
         """ docu
         """
         test_logger.info(f"Starting a default fleur test for {testname}")           
+        rm_files=[]
+        if clean: rm_files=['.']
         test_file_folder = os.path.join('./inputfiles/',testname)
         ref_out_xml=os.path.join(test_file_folder,"out.xml")
-        res_files = execute_fleur(test_file_folder)
+        res_files = execute_fleur(test_file_folder,rm_files=rm_files)
         should_files = ['out.xml', 'out']
         if files: should_files=should_files+files
         res_file_names = list(res_files.keys())
