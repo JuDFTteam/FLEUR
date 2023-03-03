@@ -1017,30 +1017,30 @@ CONTAINS
       COMPLEX, INTENT(INOUT) :: interstitial(noGPts, gptmd)                  ! interstistial overlap intergral
 
       ! private scalars
-      INTEGER                :: cg, cg2, ci, cl, cn, cr                          ! counter variables
-      REAL                   ::  r2Pi, r4Pi, pi_omega2                   !  2*Pi, 4*Pi, Pi/omega^2
-      REAL                   :: sVol, r4Pi_sVol, r4Pi_Vol                   ! sqrt(vol), 4*Pi/sqrt(Vol), 4*Pi/Vol
+      INTEGER                :: cg, cg2, ci, cl, cn, cr                      ! counter variables
+      REAL                   ::  r2Pi, r4Pi, pi_omega2                       !  2*Pi, 4*Pi, Pi/omega^2
+      REAL                   :: sVol, r4Pi_sVol, r4Pi_Vol                    ! sqrt(vol), 4*Pi/sqrt(Vol), 4*Pi/Vol
       REAL                   :: omega, r1_omega2, r1_4omega2
-!     REAL,    PARAMETER     :: omega = omega_VHSE()                        ! omega of the HSE functional
-!     REAL,    PARAMETER     :: r1_omega2  = 1.0 / omega**2                 ! 1/omega^2
-!     REAL,    PARAMETER     :: r1_4omega2 = 0.25 * r1_omega2               ! 1/(4 omega^2)
+!     REAL,    PARAMETER     :: omega = omega_VHSE()                         ! omega of the HSE functional
+!     REAL,    PARAMETER     :: r1_omega2  = 1.0 / omega**2                  ! 1/omega^2
+!     REAL,    PARAMETER     :: r1_4omega2 = 0.25 * r1_omega2                ! 1/(4 omega^2)
       COMPLEX, PARAMETER     :: img = (0.0, 1.0)                             ! i
 
       ! private arrays
       INTEGER                :: gPts(3, noGPts)                              ! g vectors (internal units)
-      INTEGER                :: gPts_gptm(3, noGpts, gptmd)                   ! gPts - g
-      INTEGER                :: natdPtr(ntype + 1)                            ! pointer to all atoms of one type
-      REAL, ALLOCATABLE   :: gridf(:, :)                                  ! grid for radial integration
+      INTEGER                :: gPts_gptm(3, noGpts, gptmd)                  ! gPts - g
+      INTEGER                :: natdPtr(ntype + 1)                           ! pointer to all atoms of one type
+      REAL, ALLOCATABLE   :: gridf(:, :)                                     ! grid for radial integration
       REAL                   :: k_G(3, noGPts)                               ! k + G
       REAL                   :: AbsK_G(noGPts), AbsK_G2(noGPts)              ! abs(k+G), abs(k+G)^2
-      REAL                   :: arg(noGPts)                                 ! abs(k+G)^2 / (4*omega^2)
-      REAL                   :: sphbesK_Gr(noGPts, jmtd, 0:maxlcutm, ntype)    ! spherical bessel function of abs(k+G)r
-      TYPE(intgrf_out)       :: intgrMT(noGPts, maxindxm, 0:maxlcutm, ntype)   ! integration in muffin-tin
-      REAL                   :: abs_dg(noGpts, gptmd)                        ! abs(gPts - g)
-      COMPLEX                :: imgl(0:maxlcutm)                            ! i^l
-      COMPLEX                :: Ylm(noGPts, (maxlcutm + 1)**2)                 ! spherical harmonics for k+G and all lm
-      COMPLEX                :: expIGR(noGPts, ntype, MAXVAL(neq))            ! exp(-iGR) for all atom types
-      COMPLEX                :: sumInter_atom(noGpts, gptmd)                 ! sum over inter-atom factors
+      REAL                   :: arg(noGPts)                                  ! abs(k+G)^2 / (4*omega^2)
+      REAL                   :: sphbesK_Gr(noGPts, jmtd, 0:maxlcutm, ntype)  ! spherical bessel function of abs(k+G)r
+      TYPE(intgrf_out)       :: intgrMT(noGPts, maxindxm, 0:maxlcutm, ntype) ! integration in muffin-tin
+      REAL                   :: abs_dg(noGPts, gptmd)                        ! abs(gPts - g)
+      COMPLEX                :: imgl(0:maxlcutm)                             ! i^l
+      COMPLEX                :: Ylm(noGPts, (maxlcutm + 1)**2)               ! spherical harmonics for k+G and all lm
+      COMPLEX                :: expIGR(noGPts, ntype, MAXVAL(neq))           ! exp(-iGR) for all atom types
+      COMPLEX                :: sumInter_atom(noGPts, gptmd)                 ! sum over inter-atom factors
 
       ! Calculate helper variables
       r2Pi = 2.0*pi_const
@@ -1231,10 +1231,16 @@ CONTAINS
          REAL, INTENT(IN)    :: abs_dg(:,:)
          COMPLEX             :: calculateSummation(noGPts, gptmd)
          INTEGER             :: cn, ci                                     ! counter variables
+         REAL                :: masked(noGPts, gptmd)
          REAL                :: abs_dgR(noGPts, gptmd, ntype)               ! abs(gPts - g)*R (R: radius MT)
          REAL                :: inter_atom(noGPts, gptmd, ntype)            ! inter-atom interaction for interstitial
          COMPLEX             :: expIdGR(noGPts, gptmd, ntype, MAXVAL(neq))   ! exp(-i(gPts-g)R)
          COMPLEX             :: sumExpIdGR(noGPts, gptmd, ntype)            ! sum over atom of same type
+         WHERE (abs_dg /= 0)
+            masked = abs_dg
+         ELSEWHERE
+            masked = 1.0
+         END WHERE
 
          atoms:DO cn=1,ntype
             !                                                         -i(G-G_I)R_a
@@ -1248,7 +1254,7 @@ CONTAINS
          
             ! Calculate the inter-atom factor which is the same for all atoms of the same type
             abs_dgR(:, :, cn) = abs_dg*rmt(cn)
-            inter_atom(:, :, cn) = (SIN(abs_dgR(:, :, cn)) - abs_dgR(:, :, cn)*COS(abs_dgR(:, :, cn)))/abs_dg**3
+            inter_atom(:, :, cn) = (SIN(abs_dgR(:, :, cn)) - abs_dgR(:, :, cn)*COS(abs_dgR(:, :, cn)))/masked**3
          END DO atoms
          ! Add the factors of all atoms together
          calculateSummation = my_dot_product(sumExpIdGR, inter_atom)
@@ -1317,11 +1323,13 @@ CONTAINS
       USE m_util, ONLY: sphbessel
       use m_intgrf, only: pure_intgrf, intgrf_init, intgrf_out,  NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
       USE m_trafo, ONLY: symmetrize
+      USE m_types_atoms
+      USE m_types_sym
 
       IMPLICIT NONE
 
       TYPE(t_atoms), INTENT(IN) :: atoms
-      TYPE(t_sym), INTENT(IN) :: sym
+      TYPE(t_sym), INTENT(IN)   :: sym
 
       ! scalar input
       INTEGER, INTENT(IN)    :: maxlcutm
@@ -1377,7 +1385,7 @@ CONTAINS
                                           (maxlcutm + 1)**2, atoms%ntype, MAXVAL(atoms%neq))
 
       COMPLEX                :: sym_muffintin(nbasp, noGPts)                 ! symmetrized muffin tin
-
+      COMPLEX                :: transposed_sym_mt(noGPts, nbasp)
       LOGICAL, SAVE          :: first_entry = .TRUE.                        ! allocate arrays in first entry
 
       ! allocate arrays in first entry reuse later
@@ -1563,11 +1571,13 @@ CONTAINS
             DO ci = 1, nbasp
                sym_muffintin(ci, :noGPts) = muffintin(:, ptrN(ci), ptrLM(ci), ptrType(ci), ptrEq(ci))
             END DO
+            transposed_sym_mt = TRANSPOSE(sym_muffintin)
             DO cg = 1, noGPts
-               CALL symmetrize(sym_muffintin(:, cg:cg), nbasp, 1, 2, &
+               CALL symmetrize(transposed_sym_mt(cg:cg, :), 1, nbasp, 2, &
                             atoms, lcutm, maxlcutm, &
                             nindxm, sym)
             END DO
+            sym_muffintin = TRANSPOSE(transposed_sym_mt)
             ! store the fourier transform of the muffin tin basis
             known_fourier_trafo(:, :, ikpt) = REAL(sym_muffintin)
          ELSE
@@ -1649,12 +1659,14 @@ CONTAINS
       USE m_trafo, ONLY: symmetrize
       USE m_wrapper, ONLY: packmat, unpackmat
       USE m_olap, ONLY: olap_pw
+      USE m_types_atoms
       USE m_types_mat
+      USE m_types_sym
 
       IMPLICIT NONE
       
-      TYPE(t_sym), INTENT(IN)  :: sym
       TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_sym), INTENT(IN)  :: sym
 
       ! scalar input
       INTEGER, INTENT(IN)    :: maxlcutm, lexp
@@ -1870,6 +1882,8 @@ CONTAINS
       USE m_trafo, ONLY: symmetrize
       USE m_olap, ONLY: olap_pw, olap_pwp
       USE m_wrapper, ONLY: packmat
+      USE m_types_atoms
+      USE m_types_sym
 
       IMPLICIT NONE
 
