@@ -71,11 +71,11 @@ def pytest_html_results_summary(prefix, summary, postfix):
                     
 from py.xml import html
 def pytest_html_results_table_header(cells):
-    cells.insert(2, html.th("Description"))
+    cells.insert(1, html.th("Description"))
     cells.pop()
 
 def pytest_html_results_table_row(report, cells):
-    cells.insert(2, html.td(report.description))
+    cells.insert(1, html.td(report.description))
     cells.pop()
 
    
@@ -555,14 +555,17 @@ def pytest_runtest_makereport(item, call):
     # execute all other hooks to obtain the report object
     outcome = yield
     rep = outcome.get_result()
-    rep.description = item.function.__doc__
+    try:
+        rep.description=item.callspec.params["desc"]
+    except: 
+        rep.description = item.function.__doc__
     #outcome.force_result(rep) 
 
     # set a report attribute for each phase of a call, which can
     # be "setup", "call", "teardown"
 
     setattr(item, "rep_" + rep.when, rep)
-
+                              
 
 @pytest.fixture(scope='function', autouse=True)
 def base_test_case(request, work_dir, failed_dir, clean_workdir, cleanup,
@@ -1112,33 +1115,40 @@ def check_hdf(test_logger):
 def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_xml_file,check_hdf):
     """returns the default_fleur_test function
     """
-    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=None,clean=False):
+    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=[],clean=False):
         """ docu
         """
         test_logger.info(f"Starting a default fleur test for {testname}")           
-        rm_files=[]
-        if clean: rm_files=['.']
-        test_file_folder = os.path.join('./inputfiles/',testname)
-        ref_out_xml=os.path.join(test_file_folder,"out.xml")
-        res_files = execute_fleur(test_file_folder,rm_files=rm_files)
-        should_files = ['out.xml', 'out']
-        if files: should_files=should_files+files
-        res_file_names = list(res_files.keys())
+        #Check if we have several stages
+        stages=[]
+        for i in range(1,8):
+            if os.path.isdir(f"./inputfiles/{testname}/stage{i}"): stages.append(f"./inputfiles/{testname}/stage{i}")
+        if stages==[]:
+            stages=[f"./inputfiles/{testname}"]
+        for test_file_folder in stages:        
+            rm_files=[]
+            if clean: rm_files=['.']
+            ref_out_xml=os.path.join(test_file_folder,"out.xml")
+            res_files = execute_fleur(test_file_folder,rm_files=rm_files)
+            should_files = ['out.xml', 'out']
+            if files: should_files=should_files+files
+            res_file_names = list(res_files.keys())
 
-        # Test if all files are there
-        for file1 in should_files:
-            assert file1 in res_file_names
-    
-        if not validate_out_xml_file(res_files['out.xml']): pytest.fail("validating out_xml_failed")
-        if not check_all_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out_xml_failed in basic test")
-        if checks and not check_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out.xml failed in advanced test")
-        #compare cdn files 
-        if hdf_checks:
-            for hdf in hdf_checks:
-                if hdf in res_file_names:
-                    if not check_hdf(res_files[hdf],os.path.join(test_file_folder,hdf)): pytest.fail(f"checking failed for HDF file:{hdf}")
-                else:
-                    test_logger.info(f"HDF file not found: {hdf}, probably no HDF build")  
+            # Test if all files are there
+            for file1 in should_files:
+                assert file1 in res_file_names
+        
+            if not validate_out_xml_file(res_files['out.xml']): pytest.fail("validating out_xml_failed")
+            if not check_all_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out_xml_failed in basic test")
+            if checks and not check_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out.xml failed in advanced test")
+            #compare cdn files 
+            if not ("banddos.hdf" in hdf_checks) and os.path.isfile(f"{test_file_folder}/banddos.hdf"): hdf_checks.append("banddos.hdf")
+            if hdf_checks:
+                for hdf in hdf_checks:
+                    if hdf in res_file_names:
+                        if not check_hdf(res_files[hdf],os.path.join(test_file_folder,hdf)): pytest.fail(f"checking failed for HDF file:{hdf}")
+                    else:
+                        test_logger.info(f"HDF file not found: {hdf}, probably no HDF build")  
         return res_files
     return _default_fleur_test    
 

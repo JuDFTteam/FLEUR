@@ -1,0 +1,95 @@
+Regression tests for FLEUR
+================
+To create a test please append the table at the end of this file
+
+Testset: Basic
+------
+|Description|directory name|marks|
+|-----------|--------------|------|
+Bulk Cu one iteration,bandstructure|basic/CuBand|fast,band,bulk
+Bulk Cu one iteration|basic/CuBulk|fast,bulk
+Bulk Cu one iteration,DOS|basic/CuDOS|fast,bulk,dos
+Bulk Cu one iteration,DOS,Orbital decomp.|basic/CuOrb|fast,bulk,dos,orbcomp
+Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd
+Bulk Co, bandstructure, unfolding|basic/CoUnfold|band,bulk
+Bulk Fe, Kerker preconditioner|basic/Fe_Kerker|bulk
+Bulk Fe fcc with relativistic core solver|basic/Fe_fcc_kcrel|
+Bulk PTO|basic/PTO|bulk
+Bulk PTO, SOC|basic/PTO-SOC|bulk,soc
+Bulk Fe, Tetrahedon method|basic/Fe_Tetra_nosym|bulk
+LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau
+LDA+U with fully localized double counting and magnetism|basic/NiOldaUFLL|bulk,ldau
+
+
+Testset: Films
+|Description|directory name|marks|
+|-----------|--------------|------|
+Fe Monolayer SOC|film/Fe_1l_SOC|soc
+Fe Monolayer|film/Fe_1l|
+Fe Monolayer Triangular method|film/Fe_1l_Tria|
+Si Film, plotting|film/SiFilmPlot|
+Si Film, plotting,slicing|film/SiFilmSlicePlot|
+
+
+
+Testset: Forces
+------------
+|Description|directory name|marks|
+|-----------|--------------|------|
+Bulk GaAs, Relaxation, LDA+U|forces/GaAsMultiUForce|bulk,ldau
+Bulk VO2, Relaxation         |forces/VO2_forces|bulk
+Bulk VO2, Relaxation, different force levels         |forces/VO2_force_levels|bulk
+Bulk H2O, Relaxtion using BFGS|forces/H2ORelaxBFGS|bulk
+
+Testset: Noco
+----------
+|Description|directory name|marks|hdf-files
+|-----------|--------------|------|-----
+Fe bct,noco, SOCL|noco/Fe_bct_SOC|bulk,soc
+Fe bct,noco, LOs|noco/Fe_bct_LO|bulk
+Fe bct,noco|noco/Fe_bct|bulk
+Fe bct,noco,libxc|noco/Fe_bct_LibXC|bulk,libxc
+Noco, one atom, mag. in x direction|noco/1atx|bulk
+Noco, one atom, mag. in y direction|noco/1aty|bulk
+Noco, one atom, mag. in z direction|noco/1atz|bulk
+Noco, one atom, mag. in non-sym direction|noco/1at|bulk
+Noco,SOC, one atom, mag. in x direction|noco/1atSOCx|bulk,soc
+Noco,SOC, one atom, mag. in y direction|noco/1atSOCy|bulk,soc
+Noco,SOC, one atom, mag. in z direction|noco/1atSOCz|bulk,soc
+Noco,SOC, one atom, mag. in non-sym direction|noco/1atSOC|bulk,soc
+Fe fcc spin-spiral|noco/Fe_fcc|bulk
+Iron LO's and SOC test in FFN|noco/FeFFNLOsSOC/bulk,soc
+Fe monolayer fcc (110): spin spiral energy|noco/FePt_film_SSFT|film,spinspiral,forcetheorem
+Fe monolayer fcc (110): spin spiral energy, with LO|noco/FePt_film_SSFT_LO|film,spinspiral,forcetheorem
+Fe bcc, Flipcdn and noco in MT,x-dir|noco/Fe_bcc_FlipcdnXLDA|bulk
+Fe bcc, Flipcdn and noco in MT,y-dir|noco/Fe_bcc_FlipcdnYLDA|bulk
+
+
+Testset: Experimental
+----------
+|Description|directory name|marks|hdf-files
+|-----------|--------------|------|-----
+Test of the orbital polarization correction|extra/Fe_bcc_OPC|bulk,soc
+Sourcefree magnetism and magnetization scaling|extra/Fe_bcc_SF_LDA|bulk
+Bulk Cu one iteration|extra/CuBulkLibXC|fast,libxc,bulk
+Bulk Al one iteration, LibXC|extra/Al_libxc_PBE|bulk,libxc
+Test of GW interface 1 |extra/gw1Interface|bulk
+Test of GW interface 2 |extra/gw2Interface|bulk
+Sm jDOS decomposition|extra/SmAtomjDOS|bulk,dos
+
+Testset: Hybrid-Functionals
+----------
+|Description|directory name|marks|
+|-----------|--------------|------|
+GaAs PBE0|hybrid/GaAsHybridPBE0|bulk
+Fe PBE0|hybrid/FeHybridPBE0|bulk
+Co PBE0|hybrid/CoHybridPBE0|bulk
+KCl PBE0|hybrid/KClHybridPBE0|bulk
+Mn Noinversion, PBE0|hybrid/MnHybridNoinv|bulk
+
+
+
+Testset: Greenfunctions
+----------
+|Description|directory name|marks|
+|-----------|--------------|------|
