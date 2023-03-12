@@ -1076,6 +1076,8 @@ def check_all_outxml(test_logger,check_outxml):
     def _check_all_outxml(filepath,reffilepath):
         """ Performs all default checks on out.xml
         """
+        with open(filepath+".check","w") as f:
+            f.write(reffilepath)
         from xml.etree import ElementTree
         refxml=ElementTree.parse(reffilepath)
         checks=[
