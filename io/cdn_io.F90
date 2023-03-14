@@ -442,6 +442,7 @@ CONTAINS
     INTEGER           :: stepfunctionIndexTemp
     INTEGER           :: jspinsTemp
     INTEGER           :: date, time, dateTemp, timeTemp
+    INTEGER           :: iSpin, iV, iPair, iAtom1, iAtom2
     REAL              :: fermiEnergyTemp, distanceTemp
     LOGICAL           :: l_qfixTemp, l_CheckBroyd
     CHARACTER(LEN=30) :: archiveName
@@ -715,6 +716,39 @@ CONTAINS
              WRITE (69,'(7f20.13)') den%mmpMat(:,:,:,:)
              CLOSE (69)
           END IF
+       END IF
+    END IF
+
+    !write density matrix for LDA+V to nIJ_mmp_mat_out file
+    IF((inOrOutCDN.EQ.CDN_INPUT_DEN_const).AND.(relCdnIndex.EQ.1).AND.&
+       ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).OR.&
+         (archiveType.EQ.CDN_ARCHIVE_TYPE_FFN_const))) THEN
+       IF(atoms%n_v.GT.0) THEN
+          filename = 'nIJ_mmp_mat'
+          IF (mode.EQ.CDN_HDF5_MODE) THEN
+             filename = 'nIJ_mmp_mat_out'
+          END IF
+
+          IF ((mode.EQ.CDN_HDF5_MODE).AND..NOT.(input%ldauLinMix.AND.(input%ldauMixParam.EQ.0.0))) THEN
+             INQUIRE(file='nIJ_mmp_mat',exist=l_exist)
+             IF(l_exist) THEN
+                CALL system('mv nIJ_mmp_mat nIJ_mmp_mat_old')
+                PRINT *,"nIJ_mmp_mat moved to nIJ_mmp_mat_old"
+             END IF
+          END IF
+          OPEN (79,file=TRIM(ADJUSTL(filename)),status='replace',form='formatted')
+          DO iSpin = 1, input%jspins
+             iPair = 0
+             DO iV = 1, atoms%n_v
+                iAtom1 = atoms%lda_v(iV)%atomIndex
+                DO iAtom2 = 1, atoms%lda_v(iV)%numOtherAtoms
+                   iPair = iPair + 1
+                   WRITE(79,'(5i7)') iSpin, iV, iPair, iAtom1, iAtom2
+                   WRITE (79,'(7f20.13)') den%mmpMat(:,:,iV,iSpin)
+                END DO
+             END DO
+          END DO
+          CLOSE (79)
        END IF
     END IF
 
