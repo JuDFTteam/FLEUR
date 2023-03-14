@@ -14,12 +14,13 @@ Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd
 Bulk Co, bandstructure, unfolding|basic/CoUnfold|band,bulk
 Bulk Fe, Kerker preconditioner|basic/Fe_Kerker|bulk
 Bulk Fe fcc with relativistic core solver|basic/Fe_fcc_kcrel|
+Si with LOs|basic/SiLO|bulk
 Bulk PTO|basic/PTO|bulk
 Bulk PTO, SOC|basic/PTO-SOC|bulk,soc
 Bulk Fe, Tetrahedon method|basic/Fe_Tetra_nosym|bulk
 LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau
 LDA+U with fully localized double counting and magnetism|basic/NiOldaUFLL|bulk,ldau
-
+Crystal field output|basic/CrystalFieldOutput|bulk
 
 Testset: Films
 |Description|directory name|marks|
@@ -63,7 +64,7 @@ Fe monolayer fcc (110): spin spiral energy|noco/FePt_film_SSFT|film,spinspiral,f
 Fe monolayer fcc (110): spin spiral energy, with LO|noco/FePt_film_SSFT_LO|film,spinspiral,forcetheorem
 Fe bcc, Flipcdn and noco in MT,x-dir|noco/Fe_bcc_FlipcdnXLDA|bulk
 Fe bcc, Flipcdn and noco in MT,y-dir|noco/Fe_bcc_FlipcdnYLDA|bulk
-
+relaxation feature of FFN in the MT|noco/RelaxMT|bulk
 
 Testset: Experimental
 ----------
@@ -76,6 +77,14 @@ Bulk Al one iteration, LibXC|extra/Al_libxc_PBE|bulk,libxc
 Test of GW interface 1 |extra/gw1Interface|bulk
 Test of GW interface 2 |extra/gw2Interface|bulk
 Sm jDOS decomposition|extra/SmAtomjDOS|bulk,dos
+C: simple test for the Wannier code|extra/Cwann|bulk,wannier
+TiO2 EELS spectrum|extra/TiO2eels|bulk,eels
+Hubbard1 using SOC|extra/Gd_Hubbard1|bulk
+Hubbard1 without sym|extra/Gd_Hubbard1_noSYM|bulk
+diamond for one k-point with scan|extra/Diamond_SCAN|bulk,libxc
+3D vector plots of the magnetization|extra/PlotOnlyMT|bulk,plot
+density and potential plots, vector plots|extra/PlotDenandPot|bulk,plot
+
 
 Testset: Hybrid-Functionals
 ----------

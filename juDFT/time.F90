@@ -330,6 +330,31 @@ CONTAINS
 
    !<-- S:writetimes()
 
+   SUBROUTINE priv_add_system_description(outstr)
+#ifdef CPP_MPI
+      use mpi 
+#endif   
+      use m_judft_sysinfo         
+      use m_judft_string
+      IMPLICIT NONE
+      CHARACTER(len=:), allocatable, INTENT(INOUT) :: outstr
+
+      integer:: irank,isize,err
+      CHARACTER(len=1), PARAMETER   :: nl=NEW_LINE("A")
+     !defaults
+      irank=0
+      isize=0
+#ifdef CPP_MPI
+      CALL MPI_COMM_RANK(irank,MPI_COMM_WORLD,err)
+      CALL MPI_COMM_SIZE(isize,MPI_COMM_WORLD,err)
+#endif
+      outstr=outstr//'"uname"       : "'//uname()//'",'//nl
+      outstr=outstr//'"mpi-tasks"   : '//int2str(isize)//','//nl
+      if (irank/=0) outstr=outstr//'"mpi-rank" : '//int2str(irank)//','//nl
+      outstr=outstr//'"omp-threads" : '//int2str(num_openmp())//','//nl
+      outstr=outstr//'"gpus"        : '//int2str(num_gpu())//','//nl
+   end subroutine
+
    RECURSIVE SUBROUTINE priv_genjson(timer, level, outstr, opt_idstr)
       use m_judft_string
       IMPLICIT NONE
@@ -361,8 +386,14 @@ CONTAINS
       ENDIF
 
       if(level > 1 ) outstr = outstr // nl
-      outstr = outstr // idstr // "{"
-      idstr = idstr // repeat(" ", indent_spaces)
+      if (outstr=="") then
+         outstr="{"//nl
+         call priv_add_system_description(outstr)
+      else
+         outstr = outstr // idstr // "{"
+         idstr = idstr // repeat(" ", indent_spaces)
+      endif   
+      
 
       outstr = outstr // nl // idstr // '"timername" : "' // trim(timername)         // '",'
       outstr = outstr // nl // idstr // '"totaltime" : '  // float2str(time)
