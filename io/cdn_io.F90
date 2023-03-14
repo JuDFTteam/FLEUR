@@ -744,7 +744,7 @@ CONTAINS
                 DO iAtom2 = 1, atoms%lda_v(iV)%numOtherAtoms
                    iPair = iPair + 1
                    WRITE(79,'(5i7)') iSpin, iV, iPair, iAtom1, iAtom2
-                   WRITE (79,'(7f20.13)') den%mmpMat(:,:,iV,iSpin)
+                   WRITE (79,'(7f20.13)') den%nIJ_llp_mmp(:,:,iPair,iSpin)
                 END DO
              END DO
           END DO
