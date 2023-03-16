@@ -16,24 +16,37 @@ def read_tests(testset):
         "ldau":pytest.mark.ldau,
         "libxc":pytest.mark.libxc,
         "forcetheorem":pytest.mark.forcetheorem,
-        "dos":pytest.mark.dos
+        "plot":pytest.mark.plot,
+        "wannier":pytest.mark.wannier,
+        "eels":pytest.mark.eels,
+        "dos":pytest.mark.dos,
+        "edsolver":pytest.mark.edsolver,
+        "spinspiral":pytest.mark.spinspiral,
+        "hdf":pytest.mark.hdf
     }
     import os
     import re
     test_list=[]
     with open(os.path.dirname(os.path.abspath(__file__))+"/tests.md") as file:
         for s in file:
-            m=s.split("|")
-            if len(m)==3:
-                dir=m[1]
-                desc=m[0]
+            #all active tests should be in lines starting with |+|
+            if s.startswith("|+|"):
+                m=s.split("|")
+                #Split the table: 
+                #m[0]: empty, m[1]=+ due to start of line
+                #m[2]: description, m[3]:directory name, m[4]: marks for pytest
+                dir=m[3]
+                desc=m[2]
+                #use name of directory for testsetname & test-id 
                 testsetname,id=dir.split("/")
+                #extract marks
                 marks=[]
-                for mark in m[2].split(","):
+                for mark in m[4].split(","):
                     mark=mark.strip()
-                if mark:
-                    marks.append(mark_list[mark])
-                    if testsetname==testset:
-                        test_list.append(pytest.param(dir,desc,marks=marks,id=id))    
+                    if len(mark)>1:
+                        marks.append(mark_list[mark])
+                #only use this test if it matches the testset-name given
+                if testsetname==testset:
+                    test_list.append(pytest.param(dir,desc,marks=marks,id=id))    
     return test_list                        
 

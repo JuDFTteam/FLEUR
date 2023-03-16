@@ -4,9 +4,17 @@ with open("Testing/pytest_session.stdout","r") as f:
     reg_file=re.compile("out.xml file:(\S+) against values in \.(\S+)")
     reg_testname=re.compile("________ (\S+) _________")
     reg_failed=re.compile("Check failed for ")
+    reg_not_present=re.compile("No such file or directory: '\.(.*)'")
     out_test=""
     out_comp=""
     for s in f:
+        m=reg_not_present.search(s)
+        if m:
+            out_test="Testing/failed_test_results/"+testdir+"/out.xml"
+            out_comp="../tests"+m.groups()[0]
+            print("Copy:",out_test,out_comp)
+            shutil.copy(out_test,out_comp)
+        
         m=reg_testname.search(s)
         if m:
             testdir=m.groups()[0]

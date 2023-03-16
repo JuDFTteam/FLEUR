@@ -302,7 +302,6 @@ def pytest_collection_modifyitems(session, config, items):
     filename = 'pytest_incl.py'
     path = config.getoption("build_dir")
     test_dir_path = os.path.dirname(os.path.abspath(__file__))
-
     confile = os.path.abspath(os.path.join(test_dir_path, path))
     confile = os.path.join(confile, filename)
     marker_list = read_cmake_config(confile)
@@ -399,7 +398,8 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "gw: test for gw interface")
     config.addinivalue_line("markers", "interface: tests testing some interface")
     config.addinivalue_line("markers", "noco: tests testing the noco part")
-
+    config.addinivalue_line("markers", "forcetheorem: test forcetheorem modes")
+ 
     # main libs
     config.addinivalue_line("markers", "hdf: tests needing hdf")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
@@ -1124,9 +1124,14 @@ def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_x
         #Check if we have several stages
         stages=[]
         for i in range(1,8):
-            if os.path.isdir(f"./inputfiles/{testname}/stage{i}"): stages.append(f"./inputfiles/{testname}/stage{i}")
+            if os.path.isdir(test_dir()+f"/inputfiles/{testname}/stage{i}"): 
+                stages.append(f"./inputfiles/{testname}/stage{i}")
+            else:
+                test_logger.info(f"Not found:"+test_dir()+"/inputfiles/{testname}/stage{i}")  
         if stages==[]:
             stages=[f"./inputfiles/{testname}"]
+        else:
+            test_logger.info("Found several stages:"+str(len(stages)))    
         for test_file_folder in stages:        
             rm_files=[]
             if clean: rm_files=['.']
