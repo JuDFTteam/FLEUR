@@ -96,6 +96,13 @@ CONTAINS
        if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
        deallocate(ctmp)
     endif
+    if (allocated(this%nIJ_llp_mmp)) then
+       ALLOCATE(ctmp(size(this%nIJ_llp_mmp)))
+       CALL MPI_REDUCE(this%nIJ_llp_mmp,ctmp,size(this%nIJ_llp_mmp),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       if (irank==0) this%nIJ_llp_mmp=reshape(ctmp,shape(this%nIJ_llp_mmp))
+       deallocate(ctmp)
+    endif
+
 #endif
   end subroutine collect
 
@@ -116,6 +123,7 @@ CONTAINS
     IF (ALLOCATED(this%vacz)) call mpi_bc(this%vacz,0,fmpi_comm)
     IF (ALLOCATED(this%vacxy)) CALL mpi_bc(this%vacxy,0,fmpi_comm)
     IF (ALLOCATED(this%mmpMat)) CALL mpi_bc(this%mmpMat,0,fmpi_comm)
+    IF (ALLOCATED(this%nIJ_llp_mmp)) CALL mpi_bc(this%nIJ_llp_mmp,0,fmpi_comm)
 #endif
   end subroutine distribute
 
@@ -556,6 +564,7 @@ CONTAINS
     pd%tec = 0.0
     pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
+    pd%nIJ_llp_mmp = CMPLX(0.0,0.0)
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE resetPotDen
 

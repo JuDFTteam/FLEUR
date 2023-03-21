@@ -49,12 +49,12 @@ MODULE m_nIJmat
                              +conjg(eigVecCoeffs%abcof(i,lm1atom2,1,natom2,jspin))*eigVecCoeffs%abcof(i,lm1atom1,1,natom1,jspin)*(usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5) &
                              *(usdus%ddn(latom1,atoms%itype(natom1),jspin))**0.5) * EXP(cmplx(0.0,-tpi_const)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),kpts%bk(:,kptindx)))
                         ENDDO
-                        nIJ_llp_mmp(matom1,matom2,i_pair)= c_0
+                        nIJ_llp_mmp(matom1,matom2,i_pair) = nIJ_llp_mmp(matom1,matom2,i_pair) + c_0
                         print *,'pair number',i_pair
                         WRITE (*,*) 'pair number', i_pair
                         WRITE (*,*) 'm of atom 1', matom1
                         WRITE (*,*) 'm of atom 2', matom2
-                        WRITE (*,*) 'the inter-site mat is ', nIJ_llp_mmp(matom1,matom2,i_pair)
+                        WRITE (*,*) 'the inter-site mat is ', c_0
                     ENDDO
                 ENDDO
                 i_pair=i_pair+1
