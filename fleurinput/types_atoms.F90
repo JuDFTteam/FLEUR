@@ -17,6 +17,7 @@ MODULE m_types_atoms
       INTEGER :: l=-1        ! the l quantum number to which this U parameter belongs
       INTEGER :: atomType=0 ! The atom type to which this U parameter belongs
       LOGICAL :: l_amf=.FALSE. ! logical switch to choose the "around mean field" LDA+U limit
+      LOGICAL :: use_lo=.FALSE.
   END TYPE t_utype
 
   TYPE t_vtype

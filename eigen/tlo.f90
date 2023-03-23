@@ -65,7 +65,7 @@ CONTAINS
 
       ! Local Scalars
       COMPLEX :: cil
-      INTEGER :: i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo
+      INTEGER :: i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo,s
       INTEGER :: loplo_new, mlolo_new
 
       ! Local Arrays
@@ -128,6 +128,7 @@ CONTAINS
 
       ! Loop over the local orbitals
       mlo=SUM(atoms%nlo(:ntyp-1))
+      s=tlmplm%h_loc2_nonsph(ntyp)
       DO lo = 1,atoms%nlo(ntyp)
          l = atoms%llo(lo,ntyp)
          DO m = -l,l
@@ -139,7 +140,7 @@ CONTAINS
                lpmax0 = l + lpp
                ! Check that lpmax is smaller than the max l of the
                ! wavefunction expansion at this atom
-               lpmax = MIN(lpmax0,atoms%lmax(ntyp))
+               lpmax = MIN(lpmax0,atoms%lnonsph(ntyp))
                ! Make sure that l + l'' + lpmax is even
                lpmax = lpmax - MOD(l+lpp+lpmax,2)
                DO mem = 1,sphhar%nmem(lh,sym%ntypsy(na))
@@ -153,10 +154,12 @@ CONTAINS
                      lmp = lp* (lp+1) + mp
                      cil = ImagUnit**(l-lp) * sphhar%clnu(mem,lh,sym%ntypsy(na)) &
                        & * gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)
-                       tlmplm%tuulo(lmp,m,lo+mlo,iSpinPr,iSpin) = &
+                     tlmplm%tuulo(lmp,m,lo+mlo,iSpinPr,iSpin) = &
                      & tlmplm%tuulo(lmp,m,lo+mlo,iSpinPr,iSpin) + one * cil * uvulo(lo,lp,lh)
-                       tlmplm%tdulo(lmp,m,lo+mlo,iSpinPr,iSpin) = &
+                     tlmplm%tdulo(lmp,m,lo+mlo,iSpinPr,iSpin) = &
                      & tlmplm%tdulo(lmp,m,lo+mlo,iSpinPr,iSpin) + one * cil * dvulo(lo,lp,lh)
+                     tlmplm%h_LO(lmp,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lmp,m,lo+mlo,iSpinPr,iSpin) + one * cil * uvulo(lo,lp,lh)
+                     tlmplm%h_LO(lmp+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lmp+s,m,lo+mlo,iSpinPr,iSpin) + one * cil * dvulo(lo,lp,lh)
                        tlmplm%tulou(lmp,m,lo+mlo,iSpinPr,iSpin) = &
                      & tlmplm%tulou(lmp,m,lo+mlo,iSpinPr,iSpin) + one * CONJG(cil*uvulo(lo,lp,lh))
                        tlmplm%tulod(lmp,m,lo+mlo,iSpinPr,iSpin) = &
@@ -221,12 +224,19 @@ CONTAINS
                !IF (.NOT.l_dfpt) THEN
                IF (.TRUE.) THEN
                   tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) &
-                                                        & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
-                                                        & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
+                         + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
+                        * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
+                  tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin) + &
+                        + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
+                        * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
                   tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) &
-                                                        & + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
-                                                        & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
-                                                        & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
+                      + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
+                      * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
+                      + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
+                  tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin) + &
+                      + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
+                      * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
+                      + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
                   tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) &
                                                         & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
                                                         & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
@@ -237,12 +247,17 @@ CONTAINS
                   IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
                      tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr)
                      tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr)
+                     tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr)
+                     tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr)
+
                      tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr)
                      tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr)
                   END IF
                   !+apw_lo
                   IF (atoms%l_dulo(lo,ntyp)) THEN
+                     tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5
                      tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5
+                     tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)= 0.0
                      tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = 0.0
                      tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5
                      tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = 0.0
@@ -250,12 +265,19 @@ CONTAINS
                   !+apw_lo
                ELSE
                   tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) &
-                                                        & + usdus%uulon(lo,ntyp,iSpinPr) &
-                                                        & * enpara%ello0(lo,ntyp,iSpinPr)
+                      + usdus%uulon(lo,ntyp,iSpinPr) &
+                      * enpara%ello0(lo,ntyp,iSpinPr)
+                      tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)&
+                      + usdus%uulon(lo,ntyp,iSpinPr) &
+                     * enpara%ello0(lo,ntyp,iSpinPr)
                   tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) &
-                                                        & + usdus%dulon(lo,ntyp,iSpinPr) &
-                                                        & * enpara%ello0(lo,ntyp,iSpinPr) &
-                                                        & + 0.0 * usdus%uulon(lo,ntyp,iSpinPr)
+                     + usdus%dulon(lo,ntyp,iSpinPr) &
+                     * enpara%ello0(lo,ntyp,iSpinPr) &
+                     + 0.0 * usdus%uulon(lo,ntyp,iSpinPr)
+                     tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)&
+                     + usdus%dulon(lo,ntyp,iSpinPr) &
+                     * enpara%ello0(lo,ntyp,iSpinPr) &
+                     + 0.0 * usdus%uulon(lo,ntyp,iSpinPr)
                   tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) &
                                                         & + usdus%uulon(lo,ntyp,iSpinPr) &
                                                         & * enpara%el0(l,ntyp,iSpinPr)
@@ -268,12 +290,16 @@ CONTAINS
                      CALL juDFT_error("ulo_der>0 for DFPT" ,calledby ="tlo")
                      tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr) !TODO: 1.0 or 0.0?
                      tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr) !TODO: 1.0 or 0.0?
+                     tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr)
+                     tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr)
                      tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr) !TODO: 1.0 or 0.0?
                      tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr) !TODO: 1.0 or 0.0?
                   END IF
                   IF (atoms%l_dulo(lo,ntyp)) THEN
                      CALL juDFT_error("l_dulo for DFPT" ,calledby ="tlo")
                      tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5
+                     tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)+0.5
+                     tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)=0.0
                      tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = 0.0
                      tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5
                      tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = 0.0
@@ -342,5 +368,6 @@ CONTAINS
             END DO
          END DO
       END IF
+     
    END SUBROUTINE tlo
 END MODULE m_tlo
