@@ -7,34 +7,11 @@ MODULE m_cusolver_diag
   USE m_types_mat
   USE m_types_mpimat
   USE m_judft
-#ifdef CPP_GPU  
-  USE m_types_gpumat
+#ifdef CPP_CUSOLVER
+  use cusolverDn  
 #endif  
   IMPLICIT NONE
   PRIVATE
-#ifdef CPP_CUSOLVER
-  INTERFACE
-     SUBROUTINE cusolver_real(H,S,n,ne,tol,max_sweeps,eig,z) BIND(C,name="cusolver_real") 
-      USE iso_c_binding
-      IMPLICIT NONE
-      REAL(c_double)         :: H(*),S(*)
-      INTEGER(c_int),VALUE   :: n,ne,max_sweeps
-      REAL(c_double),VALUE   :: tol
-      REAL(c_double)         :: eig(*),z(*)
-    END SUBROUTINE cusolver_real
- END INTERFACE
- INTERFACE
-    SUBROUTINE cusolver_complex(H,S,n,ne,tol,max_sweeps,eig,z) BIND(C,name="cusolver_real") 
-      USE iso_c_binding
-      IMPLICIT NONE
-      COMPLEX(c_double)      :: H(*),S(*)
-      INTEGER(c_int),VALUE   :: n,ne,max_sweeps
-      REAL(c_double),VALUE   :: tol
-      REAL(c_double)         :: eig(*)
-      COMPLEX(c_double)      :: z(*)
-    END SUBROUTINE cusolver_complex
- END INTERFACE
-#endif
  PUBLIC cusolver_diag
 
 CONTAINS
@@ -47,16 +24,54 @@ CONTAINS
     REAL,INTENT(OUT)           :: eig(:)
 
 #ifdef CPP_CUSOLVER
-    INTEGER,PARAMETER:: max_sweeps=15
-    REAL             :: tol=1E-7
-    
-    
+    INTEGER                 :: istat,ne_found,lwork_d,devinfo
+    real,allocatable        :: work_d(:)
+    type(cusolverDnHandle)  :: handle        
+
+    istat = cusolverDnCreate(handle)
+    if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('handle creation failed')
+
     ALLOCATE(t_mat::zmat)
     CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne)
     IF (hmat%l_real) THEN
-       CALL cusolver_real(hmat%data_r,smat%data_r,smat%matsize1,ne,tol,max_sweeps,eig,zmat%data_r)
+      !$ACC DATA copyin(smat%data_r)COPY(hmat%data_r)COPYOUT(eig)
+      !$ACC HOST_DATA USE_DEVICE(smat%data_r,hmat%data_r,eig)
+      istat = cusolverDnDsygvdx_bufferSize(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, CUBLAS_FILL_MODE_UPPER, hmat%matsize1, hmat%data_r, hmat%matsize1, &
+      smat%data_r, smat%matsize1, 0.0, 0.0, 1, ne, ne_found, eig, lwork_d)
+      if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('cusolverDnZhegvdx_buffersize failed')
+      allocate(work_d(lwork_d))
+      !$ACC DATA create(work_d)
+      !$ACC HOST_DATA USE_DEVICE(work_d)
+      istat = cusolverDnDsygvdx(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, CUBLAS_FILL_MODE_UPPER, hmat%matsize1, hmat%data_r, hmat%matsize1, &
+      smat%data_r, smat%matsize1, 0.0, 0.0, 1, ne, ne_found, eig, work_d,lwork_d,devinfo)
+      !$ACC END HOST_DATA
+      !$ACC END HOST_DATA
+      !$ACC END DATA
+      !$ACC END DATA
+      if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('cusolverDnZhegvdx failed')
+      ne=ne_found
+      CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne_found)
+      zmat%data_c=hmat%data_c(:,:ne_found)
+    
     ELSE
-       CALL cusolver_complex(hmat%data_c,smat%data_c,smat%matsize1,ne,tol,max_sweeps,eig,zmat%data_c)
+      !$ACC DATA copyin(smat%data_r)COPY(hmat%data_r)COPYOUT(eig)
+      !$ACC HOST_DATA USE_DEVICE(smat%data_r,hmat%data_r,eig)
+      istat = cusolverDnZhegvdx_bufferSize(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, CUBLAS_FILL_MODE_UPPER, hmat%matsize1, hmat%data_c, hmat%matsize1, &
+      smat%data_c, smat%matsize1, 0.0, 0.0, 1, ne, ne_found, eig, lwork_d)
+      if (istat /= CUSOLVER_STATUS_SUCCESS) write(*,*) 'cusolverDnZhegvdx_buffersize failed'
+      allocate(work_d(lwork_d))
+      !$ACC DATA create(work_d)
+      !$ACC HOST_DATA USE_DEVICE(work_d)
+      istat = cusolverDnZhegvdx(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, CUBLAS_FILL_MODE_UPPER, hmat%matsize1, hmat%data_c, hmat%matsize1, &
+      smat%data_c, smat%matsize1, 0.0, 0.0, 1, ne, ne_found, eig, work_d,lwork_d,devinfo)
+      !$ACC END HOST_DATA
+      !$ACC END HOST_DATA
+      !$ACC END DATA
+      !$ACC END DATA
+      if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('cusolverDnZhegvdx failed')
+      ne=ne_found
+      CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne_found)
+      zmat%data_c=hmat%data_c(:,:ne_found)
     END IF
 #endif
        
