@@ -26,6 +26,21 @@ MODULE m_judft_xmlOutput
    CHARACTER(len=15) :: maintag
    CHARACTER(LEN= 40), ALLOCATABLE :: elementList(:)
 
+   interface writeXMLElementFormPoly
+      module procedure  writeXMLElementFormPoly_int,writeXMLElementFormPoly_real,writeXMLElementFormPoly_LOG,writeXMLElementFormPoly_char
+   end interface   
+
+   interface writeXMLElementPoly
+      module procedure  writeXMLElementPoly_int,writeXMLElementPoly_real,writeXMLElementPoly_LOG,writeXMLElementPoly_char
+   end interface   
+
+   interface openXMLElementPoly
+      module procedure  openXMLElementPoly_int,openXMLElementPoly_real,openXMLElementPoly_LOG,openXMLElementPoly_char
+   end interface   
+   interface openXMLElementFormPoly
+      module procedure  openXMLElementFormPoly_int,openXMLElementFormPoly_real,openXMLElementFormPoly_LOG,openXMLElementFormPoly_char
+   end interface   
+
    PUBLIC startXMLOutput, endXMLOutput
    PUBLIC writeXMLElementFormPoly, writeXMLElementPoly
    PUBLIC writeXMLElementForm, writeXMLElement
@@ -115,12 +130,12 @@ MODULE m_judft_xmlOutput
       CLOSE(xmlOutputUnit)
    END SUBROUTINE endXMLOutput
 
-   SUBROUTINE writeXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths,contentList)
+   SUBROUTINE writeXMLElementFormPoly_int(elementName,attributeNames,attributeValues,lengths,contentList)
       IMPLICIT NONE
 
       CHARACTER(LEN=*), INTENT(IN)           :: elementName
       CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
-      CLASS(*),         INTENT(IN)           :: attributeValues(:)
+      INTEGER,         INTENT(IN)           :: attributeValues(:)
       INTEGER,          INTENT(IN)           :: lengths(:,:)
       CLASS(*),         INTENT(IN), OPTIONAL :: contentList(1:)
 
@@ -139,20 +154,7 @@ MODULE m_judft_xmlOutput
       charContentList = ''
 
       DO i = 1, SIZE(attributeValues)
-         SELECT TYPE (attributeValues)
-           TYPE IS(INTEGER)
                WRITE(charAttributeValues(i),'(i0)') attributeValues(i)
-            TYPE IS(REAL)
-               WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
-            TYPE IS(LOGICAL)
-               WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
-
-            TYPE IS(CHARACTER(LEN=*))
-               WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
-            CLASS DEFAULT
-               STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
-
-         END SELECT
       END DO
 
       IF (PRESENT(contentList)) THEN
@@ -178,15 +180,171 @@ MODULE m_judft_xmlOutput
          CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths)
       END IF
 
-   END SUBROUTINE writeXMLElementFormPoly
+   END SUBROUTINE writeXMLElementFormPoly_int
 
-   SUBROUTINE writeXMLElementPoly(elementName,attributeNames,attributeValues,contentList)
+   SUBROUTINE writeXMLElementFormPoly_real(elementName,attributeNames,attributeValues,lengths,contentList)
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
+      REAL,             INTENT(IN)           :: attributeValues(:)
+      INTEGER,          INTENT(IN)           :: lengths(:,:)
+      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(1:)
+
+      CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
+      CHARACTER(LEN= 30), ALLOCATABLE :: charContentList(:)
+      INTEGER                         :: i
+
+      ALLOCATE(charAttributeValues(SIZE(attributeValues)))
+      IF (PRESENT(contentList)) THEN
+         ALLOCATE(charContentList(SIZE(contentList)))
+      ELSE
+         ALLOCATE(charContentList(1))
+      END IF
+
+      charAttributeValues = ''
+      charContentList = ''
+
+      DO i = 1, SIZE(attributeValues)
+               WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
+      END DO
+
+      IF (PRESENT(contentList)) THEN
+         DO i = 1, SIZE(contentList)
+            SELECT TYPE(contentList)
+               TYPE IS(INTEGER)
+
+                  WRITE(charContentList(i),'(i0)') contentList(i)
+               TYPE IS(REAL)
+                  WRITE(charContentList(i),'(f19.10)') contentList(i)
+               TYPE IS(LOGICAL)
+                  WRITE(charContentList(i),'(l1)') contentList(i)
+               TYPE IS(CHARACTER(LEN=*))
+                  WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
+               CLASS DEFAULT
+                  STOP 'Type of contentList not allowed'
+
+            END SELECT
+         END DO
+         CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths,charContentList)
+         DEALLOCATE(charContentList,charAttributeValues)
+      ELSE
+         CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths)
+      END IF
+
+   END SUBROUTINE writeXMLElementFormPoly_real
+
+   SUBROUTINE writeXMLElementFormPoly_LOG(elementName,attributeNames,attributeValues,lengths,contentList)
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
+      LOGICAL ,         INTENT(IN)           :: attributeValues(:)
+      INTEGER,          INTENT(IN)           :: lengths(:,:)
+      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(1:)
+
+      CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
+      CHARACTER(LEN= 30), ALLOCATABLE :: charContentList(:)
+      INTEGER                         :: i
+
+      ALLOCATE(charAttributeValues(SIZE(attributeValues)))
+      IF (PRESENT(contentList)) THEN
+         ALLOCATE(charContentList(SIZE(contentList)))
+      ELSE
+         ALLOCATE(charContentList(1))
+      END IF
+
+      charAttributeValues = ''
+      charContentList = ''
+
+      DO i = 1, SIZE(attributeValues)
+               WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
+      END DO
+
+      IF (PRESENT(contentList)) THEN
+         DO i = 1, SIZE(contentList)
+            SELECT TYPE(contentList)
+               TYPE IS(INTEGER)
+
+                  WRITE(charContentList(i),'(i0)') contentList(i)
+               TYPE IS(REAL)
+                  WRITE(charContentList(i),'(f19.10)') contentList(i)
+               TYPE IS(LOGICAL)
+                  WRITE(charContentList(i),'(l1)') contentList(i)
+               TYPE IS(CHARACTER(LEN=*))
+                  WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
+               CLASS DEFAULT
+                  STOP 'Type of contentList not allowed'
+
+            END SELECT
+         END DO
+         CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths,charContentList)
+         DEALLOCATE(charContentList,charAttributeValues)
+      ELSE
+         CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths)
+      END IF
+
+   END SUBROUTINE writeXMLElementFormPoly_LOG
+
+   SUBROUTINE writeXMLElementFormPoly_Char(elementName,attributeNames,attributeValues,lengths,contentList)
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeValues(:)
+      INTEGER,          INTENT(IN)           :: lengths(:,:)
+      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(1:)
+
+      CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
+      CHARACTER(LEN= 30), ALLOCATABLE :: charContentList(:)
+      INTEGER                         :: i
+
+      ALLOCATE(charAttributeValues(SIZE(attributeValues)))
+      IF (PRESENT(contentList)) THEN
+         ALLOCATE(charContentList(SIZE(contentList)))
+      ELSE
+         ALLOCATE(charContentList(1))
+      END IF
+
+      charAttributeValues = ''
+      charContentList = ''
+
+      DO i = 1, SIZE(attributeValues)
+               WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
+          END DO
+
+      IF (PRESENT(contentList)) THEN
+         DO i = 1, SIZE(contentList)
+            SELECT TYPE(contentList)
+               TYPE IS(INTEGER)
+
+                  WRITE(charContentList(i),'(i0)') contentList(i)
+               TYPE IS(REAL)
+                  WRITE(charContentList(i),'(f19.10)') contentList(i)
+               TYPE IS(LOGICAL)
+                  WRITE(charContentList(i),'(l1)') contentList(i)
+               TYPE IS(CHARACTER(LEN=*))
+                  WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
+               CLASS DEFAULT
+                  STOP 'Type of contentList not allowed'
+
+            END SELECT
+         END DO
+         CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths,charContentList)
+         DEALLOCATE(charContentList,charAttributeValues)
+      ELSE
+         CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths)
+      END IF
+
+   END SUBROUTINE writeXMLElementFormPoly_char
+
+   SUBROUTINE writeXMLElementPoly_int(elementName,attributeNames,attributeValues,contentList)
 
       IMPLICIT NONE
 
       CHARACTER(LEN=*), INTENT(IN)           :: elementName
       CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
-      CLASS(*),         INTENT(IN)           :: attributeValues(:)
+      INTEGER,         INTENT(IN)           :: attributeValues(:)
       CLASS(*),         INTENT(IN), OPTIONAL :: contentList(:)
 
       INTEGER, ALLOCATABLE :: lengths(:,:)
@@ -199,10 +357,82 @@ MODULE m_judft_xmlOutput
 
       ALLOCATE(lengths(MAX(SIZE(attributeNames),contentListSize),3))
       lengths = 0
-      CALL writeXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths,contentList)
+      CALL writeXMLElementFormPoly_int(elementName,attributeNames,attributeValues,lengths,contentList)
       DEALLOCATE(lengths)
 
-   END SUBROUTINE writeXMLElementPoly
+   END SUBROUTINE writeXMLElementPoly_int
+
+   SUBROUTINE writeXMLElementPoly_real(elementName,attributeNames,attributeValues,contentList)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
+      REAL,             INTENT(IN)           :: attributeValues(:)
+      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(:)
+
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+      INTEGER              :: contentListSize
+
+      contentListSize = 0
+      IF (PRESENT(contentList)) THEN
+         contentListSize = SIZE(contentList)
+      END IF
+
+      ALLOCATE(lengths(MAX(SIZE(attributeNames),contentListSize),3))
+      lengths = 0
+      CALL writeXMLElementFormPoly_real(elementName,attributeNames,attributeValues,lengths,contentList)
+      DEALLOCATE(lengths)
+
+   END SUBROUTINE writeXMLElementPoly_real
+
+   SUBROUTINE writeXMLElementPoly_LOG(elementName,attributeNames,attributeValues,contentList)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
+      LOGICAL,          INTENT(IN)           :: attributeValues(:)
+      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(:)
+
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+      INTEGER              :: contentListSize
+
+      contentListSize = 0
+      IF (PRESENT(contentList)) THEN
+         contentListSize = SIZE(contentList)
+      END IF
+
+      ALLOCATE(lengths(MAX(SIZE(attributeNames),contentListSize),3))
+      lengths = 0
+      CALL writeXMLElementFormPoly_LOG(elementName,attributeNames,attributeValues,lengths,contentList)
+      DEALLOCATE(lengths)
+
+   END SUBROUTINE writeXMLElementPoly_LOG
+
+   SUBROUTINE writeXMLElementPoly_char(elementName,attributeNames,attributeValues,contentList)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*), INTENT(IN)           :: elementName
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
+      CHARACTER(LEN=*), INTENT(IN)           :: attributeValues(:)
+      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(:)
+
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+      INTEGER              :: contentListSize
+
+      contentListSize = 0
+      IF (PRESENT(contentList)) THEN
+         contentListSize = SIZE(contentList)
+      END IF
+
+      ALLOCATE(lengths(MAX(SIZE(attributeNames),contentListSize),3))
+      lengths = 0
+      CALL writeXMLElementFormPoly_char(elementName,attributeNames,attributeValues,lengths,contentList)
+      DEALLOCATE(lengths)
+
+   END SUBROUTINE writeXMLElementPoly_char
 
    SUBROUTINE writeXMLElementForm(elementName,attributeNames,attributeValues,lengths,contentList)
 
@@ -538,13 +768,13 @@ MODULE m_judft_xmlOutput
       END DO
    END SUBROUTINE fillContentLineList
 
-   SUBROUTINE openXMLElementPoly(elementName,attributeNames,attributeValues)
+   SUBROUTINE openXMLElementPoly_INT(elementName,attributeNames,attributeValues)
 
       IMPLICIT NONE
 
       CHARACTER(LEN=*)             :: elementName
       CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
-      CLASS(*),         INTENT(IN) :: attributeValues(:)
+      INTEGER,          INTENT(IN) :: attributeValues(:)
 
       INTEGER, ALLOCATABLE :: lengths(:,:)
 
@@ -553,14 +783,65 @@ MODULE m_judft_xmlOutput
       CALL openXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths)
       DEALLOCATE(lengths)
 
-   END SUBROUTINE openXMLElementPoly
+   END SUBROUTINE openXMLElementPoly_int
 
-   SUBROUTINE openXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths)
+   SUBROUTINE openXMLElementPoly_REAL(elementName,attributeNames,attributeValues)
+
       IMPLICIT NONE
 
       CHARACTER(LEN=*)             :: elementName
       CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
-      CLASS(*),         INTENT(IN) :: attributeValues(:)
+      REAL,             INTENT(IN) :: attributeValues(:)
+
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+
+      ALLOCATE(lengths(SIZE(attributeNames),2))
+      lengths = 0
+      CALL openXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths)
+      DEALLOCATE(lengths)
+
+   END SUBROUTINE openXMLElementPoly_real
+
+   SUBROUTINE openXMLElementPoly_LOG(elementName,attributeNames,attributeValues)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*)             :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      LOGICAL,          INTENT(IN) :: attributeValues(:)
+
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+
+      ALLOCATE(lengths(SIZE(attributeNames),2))
+      lengths = 0
+      CALL openXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths)
+      DEALLOCATE(lengths)
+
+   END SUBROUTINE openXMLElementPoly_LOG
+
+   SUBROUTINE openXMLElementPoly_char(elementName,attributeNames,attributeValues)
+
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*)             :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      CHARACTER(LEN=*), INTENT(IN) :: attributeValues(:)
+
+      INTEGER, ALLOCATABLE :: lengths(:,:)
+
+      ALLOCATE(lengths(SIZE(attributeNames),2))
+      lengths = 0
+      CALL openXMLElementFormPoly(elementName,attributeNames,attributeValues,lengths)
+      DEALLOCATE(lengths)
+
+   END SUBROUTINE openXMLElementPoly_char
+
+   SUBROUTINE openXMLElementFormPoly_int(elementName,attributeNames,attributeValues,lengths)
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*)             :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      INTEGER,          INTENT(IN) :: attributeValues(:)
       INTEGER,          INTENT(IN) :: lengths(:,:)
 
       CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
@@ -571,24 +852,92 @@ MODULE m_judft_xmlOutput
       charAttributeValues = ''
 
       DO i = 1, SIZE(attributeValues)
-         SELECT TYPE (attributeValues)
-            TYPE IS(INTEGER)
+     
                WRITE(charAttributeValues(i),'(i0)') attributeValues(i)
-            TYPE IS(REAL)
-               WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
-            TYPE IS(LOGICAL)
-               WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
-            TYPE IS(CHARACTER(LEN=*))
-               WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
-            CLASS DEFAULT
-               STOP 'Type of attributeValues not allowed line: ' !// int2str(__LINE__)
-         END SELECT
+           
       END DO
 
       CALL openXMLElementForm(elementName,attributeNames,charAttributeValues,lengths)
       DEALLOCATE(charAttributeValues)
 
-   END SUBROUTINE openXMLElementFormPoly
+   END SUBROUTINE openXMLElementFormPoly_int
+
+   SUBROUTINE openXMLElementFormPoly_real(elementName,attributeNames,attributeValues,lengths)
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*)             :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      real,             INTENT(IN) :: attributeValues(:)
+      INTEGER,          INTENT(IN) :: lengths(:,:)
+
+      CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
+      INTEGER                         :: i
+
+      ALLOCATE(charAttributeValues(SIZE(attributeValues)))
+
+      charAttributeValues = ''
+
+      DO i = 1, SIZE(attributeValues)
+        
+               WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
+           
+      END DO
+
+      CALL openXMLElementForm(elementName,attributeNames,charAttributeValues,lengths)
+      DEALLOCATE(charAttributeValues)
+
+   END SUBROUTINE openXMLElementFormPoly_real
+
+   SUBROUTINE openXMLElementFormPoly_LOG(elementName,attributeNames,attributeValues,lengths)
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*)             :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      LOGICAL,          INTENT(IN) :: attributeValues(:)
+      INTEGER,          INTENT(IN) :: lengths(:,:)
+
+      CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
+      INTEGER                         :: i
+
+      ALLOCATE(charAttributeValues(SIZE(attributeValues)))
+
+      charAttributeValues = ''
+
+      DO i = 1, SIZE(attributeValues)
+        
+               WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
+            
+      END DO
+
+      CALL openXMLElementForm(elementName,attributeNames,charAttributeValues,lengths)
+      DEALLOCATE(charAttributeValues)
+
+   END SUBROUTINE openXMLElementFormPoly_LOG
+
+   SUBROUTINE openXMLElementFormPoly_char(elementName,attributeNames,attributeValues,lengths)
+      IMPLICIT NONE
+
+      CHARACTER(LEN=*)             :: elementName
+      CHARACTER(LEN=*), INTENT(IN) :: attributeNames(:)
+      CHARACTER(len=*), INTENT(IN) :: attributeValues(:)
+      INTEGER,          INTENT(IN) :: lengths(:,:)
+
+      CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
+      INTEGER                         :: i
+
+      ALLOCATE(charAttributeValues(SIZE(attributeValues)))
+
+      charAttributeValues = ''
+
+      DO i = 1, SIZE(attributeValues)
+               WRITE(charAttributeValues(i),'(a)') TRIM(ADJUSTL(attributeValues(i)))
+
+      END DO
+
+      CALL openXMLElementForm(elementName,attributeNames,charAttributeValues,lengths)
+      DEALLOCATE(charAttributeValues)
+
+   END SUBROUTINE openXMLElementFormPoly_char
 
    SUBROUTINE openXMLElementNoAttributes(elementName)
 
