@@ -123,7 +123,7 @@ CONTAINS
 #ifdef CPP_MAGMA
        //",magma"&
 #endif
-#ifdef CPP_GPU
+#ifdef CPP_CUSOLVER
        //",cusolver"&
 #endif
        )

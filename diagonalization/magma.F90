@@ -15,6 +15,7 @@ CONTAINS
   SUBROUTINE magma_diag(hmat,smat,ne,eig,zmat)
 #ifdef CPP_MAGMA
     use magma
+    use openacc
 #endif
     use m_types
     IMPLICIT NONE
@@ -38,26 +39,33 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: work(:)
 
 
-    print*, "magma started"
     IF (.NOT.initialized) THEN
        initialized=.TRUE.
        CALL magmaf_init()
+       call magmaf_setdevice(acc_get_device_num(acc_device_nvidia))
+       print *,acc_get_device_num(acc_device_nvidia)
     ENDIF
 
     IF (hmat%l_real) THEN
        ALLOCATE(rwork(1),iwork(1))
-       CALL magmaf_dsygvdx_m(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,&
+       !CALL magmaf_dsygvdx_m(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,&
+       !                    SIZE(smat%data_r,1),0.0,0.0,1,ne,mout,eigTemp,rwork,-1,iwork,-1,error)
+       CALL magmaf_dsygvdx(1,'v','i','U',hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,&
                            SIZE(smat%data_r,1),0.0,0.0,1,ne,mout,eigTemp,rwork,-1,iwork,-1,error)
        IF (error/=0) THEN
           WRITE(*,*) 'magmaf_dsygvdx error code: ', error
           CALL juDFT_error("Failed to query workspaces (1)",calledby="magma.F90")
        END IF
+       print *,"Magma1"
        lrwork=rwork(1)
        liwork=iwork(1)
        DEALLOCATE(rwork,iwork)
        ALLOCATE(rwork(lrwork),iwork(liwork))
-       CALL magmaf_dsygvdx_m(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,&
+!       CALL magmaf_dsygvdx_m(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,&
+!                           SIZE(smat%data_r,1),0.0,0.0,1,ne,mout,eigTemp,rwork,lrwork,iwork,liwork,error)
+       CALL magmaf_dsygvdx(1,'v','i','U',hmat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,&
                            SIZE(smat%data_r,1),0.0,0.0,1,ne,mout,eigTemp,rwork,lrwork,iwork,liwork,error)
+       print *,"Magma2"
        IF (error/=0) THEN
           WRITE(*,*) 'magmaf_dsygvdx error code: ', error
           CALL juDFT_error("Magma failed to diagonalize Hamiltonian (1)",calledby="magma.F90")
@@ -66,12 +74,16 @@ CONTAINS
        !Query the workspace size
        ALLOCATE(work(1),rwork(1),iwork(1))
        !CALL magmaf_zhegvdx_2stage_m(NGPU_CONST,&
-       CALL magmaf_zhegvdx_m(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
+       !CALL magmaf_zhegvdx_m(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
+       !                    SIZE(smat%data_c,1),0.0,0.0,1,ne,mout,eigTemp,work,-1,rwork,-1,iwork,-1,error)
+       CALL magmaf_zhegvdx(1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
                            SIZE(smat%data_c,1),0.0,0.0,1,ne,mout,eigTemp,work,-1,rwork,-1,iwork,-1,error)
        IF (error/=0) THEN
           WRITE(*,*) 'magmaf_zhegvdx error code: ', error
           CALL juDFT_error("Failed to query workspaces (2)",calledby="magma.F90")
        END IF
+       print *,"Magma1"
+       
        lwork=work(1)
        lrwork=rwork(1)
        liwork=iwork(1)
@@ -79,9 +91,14 @@ CONTAINS
        ALLOCATE(work(lwork),rwork(lrwork),iwork(liwork))
        !Now the diagonalization
        !CALL magmaf_zhegvdx_2stage_m(NGPU_CONST,&
-       CALL magmaf_zhegvdx_m(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
+       !CALL magmaf_zhegvdx_m(Magma_numGPU,1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
+       !                    SIZE(smat%data_c,1),0.0,0.0,1,ne,mout,eigTemp,work,lwork,rwork,lrwork,iwork,liwork,error)
+       CALL magmaf_zhegvdx(1,'v','i','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,&
                            SIZE(smat%data_c,1),0.0,0.0,1,ne,mout,eigTemp,work,lwork,rwork,lrwork,iwork,liwork,error)
-       IF (error/=0) THEN
+       
+                           print *,"Magma2"
+       
+        IF (error/=0) THEN
           WRITE(*,*) 'magmaf_zhegvdx error code: ', error
           CALL juDFT_error("Magma failed to diagonalize Hamiltonian (2)",calledby="magma.F90")
        END IF

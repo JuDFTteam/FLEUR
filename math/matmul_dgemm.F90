@@ -124,7 +124,7 @@ module m_matmul_dgemm
             !All data on GPU
 #ifdef _CUDA
 
-            sel=cuda_select;return
+            sel=cublas_select;return
 #endif
 #ifdef CPP_MAGMA
             sel=magmablas_select; return
@@ -142,7 +142,7 @@ module m_matmul_dgemm
     if (acc_is_present(a).and.acc_is_present(b).and.acc_is_present(c)) THEN
         !All data on GPU
 #ifdef _CUDA
-        sel=cuda_select            
+        sel=cublas_select            
 #endif
 #ifdef CPP_MAGMA
         sel=magmablas_select
