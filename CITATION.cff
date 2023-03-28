@@ -61,6 +61,20 @@ authors:
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0001-8984-4258'
+- given-names: Gustav
+    family-names: Bihlmayer
+    email: g.bihlmayer@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-6615-1122'
+- given-names: Stefan
+    family-names: Blügel
+    email: s.bluegel@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0001-9987-4733'
 identifiers:
   - type: doi
     value: 10.5281/zenodo.7576164
