@@ -77,7 +77,7 @@ authors:
     orcid: 'https://orcid.org/0000-0001-9987-4733'
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.7576164
+    value: 10.5281/zenodo.7576163
     description: DOI of the software publication on zenodo, should always point the the most recent release
 repository-code: 'https://iffgit.fz-juelich.de/fleur/fleur'
 url: 'https://www.flapw.de'
