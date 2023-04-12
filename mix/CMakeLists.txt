@@ -16,5 +16,6 @@ mix/a_pulay.F90
 mix/potdis.f90
 mix/stdmix.f90
 mix/u_mix.f90
+mix/v_mix.f90
 mix/checkMMPmat.f90
 )

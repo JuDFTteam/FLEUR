@@ -28,6 +28,7 @@ contains
     use m_qfix
     use m_types
     use m_umix
+    use m_vmix
     use m_checkMMPmat
     USE m_kerker
     use m_pulay
@@ -70,14 +71,17 @@ contains
     type(t_potden)                   :: resDen, vYukawa
     TYPE(t_mixvector),ALLOCATABLE    :: sm(:), fsm(:)
     TYPE(t_mixvector)                :: fsm_mag
-    LOGICAL                          :: l_densitymatrix,l_firstItU, l_dfpt
+    LOGICAL                          :: l_densitymatrix, l_firstItU, l_firstItV, l_densitymatrixV, ldavLinMix, l_dfpt
     INTEGER                          :: it,maxiter
     INTEGER                          :: indStart_noDenmatmixing, indEnd_noDenmatmixing
 
 
     CALL timestart("Charge Density Mixing")
-    l_densitymatrix=.FALSE.
-    l_firstItU=.FALSE.
+    l_densitymatrix = .FALSE.
+    l_densitymatrixV = .FALSE.
+    l_firstItU = .FALSE.
+    l_firstItV = .FALSE.
+    ldavLinMix = .FALSE.
     l_dfpt = PRESENT(dfpt_tag)
     !The density/potential matrices for DFT+U are split into two parts
     ! 1:atoms%n_u Are the elements for normal DFT+U
@@ -93,9 +97,15 @@ contains
        IF (fmpi%irank==0) CALL u_mix(input,atoms,noco,inDen%mmpMat,outDen%mmpMat)
     ENDIF
 
+    IF (atoms%n_v.GT.0) THEN
+       l_firstItV = ALL(inDen%nIJ_llp_mmp(:,:,:,:).EQ.0.0)
+       l_densitymatrixV = .NOT.ldavlinmix.AND..NOT.l_firstItV
+       IF (fmpi%irank==0) CALL v_mix(input,atoms,noco,inDen%nIJ_llp_mmp,outDen%nIJ_llp_mmp)
+    ENDIF
+
     CALL timestart("Reading of distances")
     IF (iteration==1) CALL mixvector_reset(.TRUE.)
-    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix ,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt)
+    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix,l_densitymatrixV,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt)
     CALL timestart("read history")
     IF (.NOT.l_dfpt) THEN
       CALL mixing_history_open(fmpi,input%maxiter)
@@ -137,6 +147,7 @@ contains
     END IF
 
     if (atoms%n_u>0.and.fmpi%irank.ne.0.and.input%ldaulinmix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
+    if (atoms%n_v>0.and.fmpi%irank.ne.0.and.ldavlinmix) inden%nIJ_llp_mmp(:,:,:,:) = 0.0
 
     !mixing of the densities
     CALL timestart("Mixing")
@@ -184,10 +195,20 @@ contains
     ELSE
       CALL sm(it)%to_density(inDen,inDenIm)
     END IF
+
     IF (atoms%n_u>0.AND.l_firstItU) THEN
        !No density matrix was present
        !but is now created...
        inden%mmpMAT(:,:,:atoms%n_u,:)=outden%mmpMat(:,:,:atoms%n_u,:)
+       !Delete the history without U
+       CALL mixing_history_reset(fmpi)
+       CALL mixvector_reset()
+    ENDIF
+
+    IF (atoms%n_v>0.AND.l_firstItV) THEN
+       !No density matrix was present
+       !but is now created...
+       inden%nIJ_llp_mmp(:,:,:,:) = outden%nIJ_llp_mmp(:,:,:,:)
        !Delete the history without U
        CALL mixing_history_reset(fmpi)
        CALL mixvector_reset()
