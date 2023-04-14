@@ -19,7 +19,7 @@ MODULE m_dfpt_rhonmt
 
 CONTAINS
 
-   SUBROUTINE dfpt_rhonmt(atoms,sphhar,we,we1,ne,ilSpinPr,ilSpin,qpoint,l_dfpt,l_less_effort,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+   SUBROUTINE dfpt_rhonmt(atoms,sphhar,we,we1,ne,ilSpinPr,ilSpin,qpoint,l_dfpt,l_less_effort,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
       !! Subroutine to construct all non-spherical MT density coefficients (for a
       !! density perturbation) without LOs in one routine. The spin input dictates,
       !! which element is gonna be built.
@@ -70,16 +70,22 @@ CONTAINS
 
       TYPE(t_denCoeffs), INTENT(INOUT)    :: denCoeffs !! \(d_{l',l,L,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha}\)
 
+      TYPE(t_eigVecCoeffs), OPTIONAL, INTENT(IN) :: eigVecCoeffs1m !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{-q},j,\beta~(1)}\)
+
       COMPLEX :: coef, cil, cmv
       COMPLEX :: temp(ne)
 
-      INTEGER jmem,l,lh,llp,llpmax,lm,lmp,lp,lv,m, mp,mv,na,natom,nn,ns,nt,lphi,lplow
+      INTEGER :: jmem,l,lh,llp,llpmax,lm,lmp,lp,lv,m, mp,mv,na,natom,nn,ns,nt,lphi,lplow
+
+      LOGICAL :: l_minusq
+
+      l_minusq = PRESENT(eigVecCoeffs1m)
 
       DO ns=1,sym%nsymt
          !$OMP parallel do default(none) &
          !$OMP private(lh,lp,l,lv,mp,m,mv,lm,lmp,llp,llpmax,lphi,lplow) &
          !$OMP private(cil,jmem,cmv,coef,temp,na,nt,nn,natom) &
-         !$OMP shared(sym,we,we1,ne,ns,atoms,sphhar,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ilSpinPr,ilSpin,l_dfpt,l_less_effort,qpoint)
+         !$OMP shared(sym,we,we1,ne,ns,atoms,sphhar,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ilSpinPr,ilSpin,l_dfpt,l_less_effort,qpoint,l_minusq,eigVecCoeffs1m)
          ! !$OMP collapse(2)
          DO lh = 1, sphhar%nlh(ns)
             lv = sphhar%llh(lh,ns)
@@ -138,7 +144,7 @@ CONTAINS
                                  temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,0,nt,ilSpin) ! If not DFPT, this is the base case for rhonmt(21)
                                  IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
                                  IF (l_dfpt) THEN
-                                    temp(:) = temp(:) * 2.0
+                                    IF (.NOT.l_minusq) temp(:) = temp(:) * 2.0
                                     IF (norm2(qpoint)<=1e-8) THEN
                                        temp(:) = temp(:) + coef * we1(:) * eigVecCoeffs%abcof(:,lm,0,nt,ilSpin)
                                     END IF
@@ -148,11 +154,20 @@ CONTAINS
                                  denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) &
                                                                         & + dot_product(eigVecCoeffs%abcof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
 
+                                 IF (l_minusq) THEN
+                                    denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) &
+                                                                           & + dot_product(eigVecCoeffs1m%abcof(:ne,lmp,0,nt,ilSpinPr), &
+                                                                           & eigVecCoeffs%abcof(:,lm,0,nt,ilSpin))
+                                    denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) &
+                                                                           & + dot_product(eigVecCoeffs1m%abcof(:ne,lmp,1,nt,ilSpinPr), &
+                                                                           & eigVecCoeffs%abcof(:,lm,0,nt,ilSpin))
+                                 END IF
+
                                  ! dd/ud
                                  temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,1,nt,ilSpin)
                                  IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
                                  IF (l_dfpt) THEN
-                                    temp(:) = temp(:) * 2.0
+                                    IF (.NOT.l_minusq) temp(:) = temp(:) * 2.0
                                     IF (norm2(qpoint)<=1e-8) THEN
                                        temp(:) = temp(:) + coef * we1(:) * eigVecCoeffs%abcof(:,lm,1,nt,ilSpin)
                                     END IF
@@ -161,6 +176,14 @@ CONTAINS
                                                                         & + dot_product(eigVecCoeffs%abcof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
                                  denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) &
                                                                         & + dot_product(eigVecCoeffs%abcof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
+                                 IF (l_minusq) THEN
+                                    denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) &
+                                                                           & + dot_product(eigVecCoeffs1m%abcof(:ne,lmp,1,nt,ilSpinPr), &
+                                                                           & eigVecCoeffs%abcof(:,lm,1,nt,ilSpin))
+                                    denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) &
+                                                                           & + dot_product(eigVecCoeffs1m%abcof(:ne,lmp,0,nt,ilSpinPr), &
+                                                                           & eigVecCoeffs%abcof(:,lm,1,nt,ilSpin))
+                                 END IF
                               ENDIF ! (sym%ntypsy(nt)==ns)
                            ENDDO ! na
                            natom = natom + atoms%neq(nn)
@@ -174,7 +197,7 @@ CONTAINS
       END DO ! ns
    END SUBROUTINE dfpt_rhonmt
 
-   SUBROUTINE dfpt_rhonmtlo(atoms,sphhar,sym,ne,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ilSpinPr,ilSpin,l_dfpt,qpoint)
+   SUBROUTINE dfpt_rhonmtlo(atoms,sphhar,sym,ne,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ilSpinPr,ilSpin,l_dfpt,qpoint,eigVecCoeffs1m)
       !! This is a complementary routine to the one above for \(\lambda(')\ge 2\),
       !! i.e. mixed or pure LO contributions.
       USE m_gaunt,ONLY:gaunt1
@@ -199,8 +222,14 @@ CONTAINS
 
       TYPE(t_denCoeffs), INTENT(INOUT) :: denCoeffs
 
+      TYPE(t_eigVecCoeffs), OPTIONAL, INTENT(IN) :: eigVecCoeffs1m
+
       COMPLEX :: cmv,fact,cf1, cf2
       INTEGER :: i,jmem,l,lh,lmp,lo,lop,lp,lpmax,lpmax0,lpmin,lpmin0,m,lpp ,mp,mpp,na,neqat0,nn,ntyp
+
+      LOGICAL :: l_minusq
+
+      l_minusq = PRESENT(eigVecCoeffs1m)
 
       neqat0 = 0
       DO ntyp = 1,atoms%ntype
