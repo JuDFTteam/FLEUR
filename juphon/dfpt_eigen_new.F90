@@ -49,7 +49,7 @@ CONTAINS
       INTEGER n_size,n_rank
       INTEGER i,err,nk,jsp,nk_i,iqdir
 
-      INTEGER              :: ierr
+      INTEGER              :: ierr, iNupr
 
       REAL :: bkpt(3), q_loop(3)
 
@@ -70,7 +70,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:)
       REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), killfloat(:,:)
 
-      CLASS(t_mat), ALLOCATABLE :: invE(:), matOcc(:)
+      CLASS(t_mat), ALLOCATABLE :: invE(:), matOcc(:), invE2(:)
 
       !ALLOCATE(k_selection(16))
       !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40] 
@@ -157,7 +157,7 @@ CONTAINS
 
                CALL timestart("Energy inversion")
                CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, nbasfcnq, noccbd, zMatq%l_real, invE, noccbdq, &
-                                 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, matOcc, nk)
+                                 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, matOcc, nk, invE2)
                CALL timestop("Energy inversion")
 
                ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
@@ -251,18 +251,17 @@ CONTAINS
                   END IF
 
                   IF (l_real) THEN ! l_real for zMatk
-                     tempVec(:nbasfcnq) = MATMUL(-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
+                     tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_r(:nbasfcn,nu))
                   ELSE
-                     tempVec(:nbasfcnq) = MATMUL(-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
+                     tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_c(:nbasfcn,nu))
                   END IF
-
 
                   IF (norm2(q_loop).LT.1e-8) THEN
                      IF (nbasfcnq.NE.nbasfcn) CALL juDFT_error("nbasfcnq/=nbasfcn for q=0", calledby="dfpt_eigen.F90")
                      IF (l_real) THEN
-                        eigs1(nu) = eigs1(nu) + DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
+                        eigs1(nu) = eigs1(nu) - eigk(nu)*DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec)
                      ELSE
-                        eigs1(nu) = eigs1(nu) + DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
+                        eigs1(nu) = eigs1(nu) - eigk(nu)*DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
                      END IF
                   ELSE
                      eigs1 = 0
@@ -282,9 +281,19 @@ CONTAINS
 
                   !IF (nk==1) tempMat1(:noccbd) = CMPLX(0.0,0.0)
                   tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
+                  !!! delta_e=0 correction
+                  !tempMat2(:nbasfcnq) = MATMUL(invE2(nu)%data_r,tempMat1)
                   !IF (ANY(nk==k_selection)) THEN
                   !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Sband.npy",tempMat2)
                   !END IF
+                  DO iNupr = 1, nbasfcnq
+                     !IF (ABS(eigq(iNupr)-eigk(nu))>fi%juPhon%eDiffCut) THEN
+                        tempMat2(iNupr) = -eigk(nu)*tempMat2(iNupr)
+                     !!! delta_e=0 correction
+                     !ELSE
+                     !   tempMat2(iNupr) = tempMat2(iNupr)
+                     !END IF
+                  END DO
                   IF (zMatq%l_real) THEN
                      z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
                   ELSE

@@ -10,7 +10,7 @@ MODULE m_invert_HepsS
 
 CONTAINS
    SUBROUTINE invert_HepsS(fmpi, atoms, noco, juPhon, lapwkpr, zMatkpr, eignukpr, eignuk, nekpr, nocck, l_real, invE, nocckq, wk, &
-                           wkq, matOcc, ikpt)
+                           wkq, matOcc, ikpt, invE2)
       !! Subroutine to calculate \((H-\epsilon_{\nu k} S)^{-1}\) as
       !! \(z_{k'}(\epsilon_{k'}-\epsilon_{\nu k})^(-1)z_{k'}^H\), i.e.
       !! in the spectral representation.
@@ -29,7 +29,7 @@ CONTAINS
       REAL,            INTENT(IN) :: eignukpr(:), eignuk(:), wk(:), wkq(:)
       LOGICAL,         INTENT(IN) :: l_real
 
-      CLASS(t_mat), ALLOCATABLE, INTENT(OUT) :: invE(:)
+      CLASS(t_mat), ALLOCATABLE, INTENT(OUT) :: invE(:), invE2(:)
       CLASS(t_mat), ALLOCATABLE, INTENT(OUT) :: matOcc(:)
 
       INTEGER :: nbasfcn, nu, iGpr, iG, nupr
@@ -37,15 +37,18 @@ CONTAINS
 
       IF (fmpi%n_size == 1) THEN
          ALLOCATE (t_mat::invE(nocck))
+         ALLOCATE (t_mat::invE2(nocck))
          ALLOCATE (t_mat::matOcc(nocck))
       ELSE
          ALLOCATE (t_mpimat::invE(nocck))
+         ALLOCATE (t_mpimat::invE2(nocck))
          ALLOCATE (t_mpimat::matOcc(nocck))
       END IF
 
       nbasfcn = MERGE(lapwkpr%nv(1)+lapwkpr%nv(2)+2*atoms%nlotot,lapwkpr%nv(1)+atoms%nlotot,noco%l_noco)
       DO nu = 1, nocck
          CALL invE(nu)%init(.TRUE., nekpr, nekpr)
+         CALL invE2(nu)%init(.TRUE., nekpr, nekpr)
          CALL matOcc(nu)%init(.TRUE., nocckq, nocckq)
          DO nupr = 1, nekpr
             deps = eignukpr(nupr)-eignuk(nu)
@@ -53,11 +56,13 @@ CONTAINS
             !write(6666,*) eignuk(nu)
             !write(6666,*) deps
             !write(6666,*) "-------"
+            IF (ABS(deps)<juPhon%eDiffcut) invE2(nu)%data_r(nupr,nupr) = 0.5
             IF (ABS(deps)<juPhon%eDiffcut) CYCLE
             !IF (ikpt==1) CYCLE
             !IF (ABS(deps)<1e-7) CYCLE
             invdeps = 1.0 / deps
             invE(nu)%data_r(nupr,nupr) = invdeps
+            invE2(nu)%data_r(nupr,nupr) = invdeps
             IF (nupr<=nocck) THEN
                dwks = wkq(nupr) - wk(nu)
                !IF (ABS(dwks)>=juPhon%fDiffcut) matOcc(nu)%data_r(nupr,nupr) = 1.0
