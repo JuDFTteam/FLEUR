@@ -433,15 +433,15 @@ CONTAINS
       !!qpts_loc%bk(:,7)  = [-1.0,0.0,-1.0]*0.125*4.0
       !!qpts_loc%bk(:,8)  = [0.0,-1.0,-1.0]*0.125*4.0
 
-      qpts_loc%bk(:,6)  = [1.0,1.0,2.0]*0.125*4.0
-      qpts_loc%bk(:,7)  = [1.0,1.0,2.0]*0.125*3.0
-      qpts_loc%bk(:,8)  = [1.0,1.0,2.0]*0.125*2.0
-      qpts_loc%bk(:,9)  = [1.0,1.0,2.0]*0.125*1.0
+      !qpts_loc%bk(:,6)  = [1.0,1.0,2.0]*0.125*4.0
+      qpts_loc%bk(:,6)  = [1.0,1.0,2.0]*0.125*3.0
+      qpts_loc%bk(:,7)  = [1.0,1.0,2.0]*0.125*2.0
+      qpts_loc%bk(:,8)  = [1.0,1.0,2.0]*0.125*1.0
 
-      qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*1.0
-      qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*2.0
-      qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*3.0
-      qpts_loc%bk(:,13) = [1.0,1.0,1.0]*0.125*4.0
+      qpts_loc%bk(:,9) = [1.0,1.0,1.0]*0.125*1.0
+      qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*2.0
+      qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*3.0
+      qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*4.0
 
       !qpts_loc%bk(:,1)  = [0.0,0.0,1.0]*0.125*4.0
       !qpts_loc%bk(:,2)  = [0.0,0.0,1.0]*0.125*3.0
@@ -458,10 +458,10 @@ CONTAINS
       !qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*3.0
       !qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*2.0
       !qpts_loc%bk(:,13) = [1.0,1.0,1.0]*0.125*1.0
+      ALLOCATE(q_list(12),dfpt_eig_id_list(12))
+      IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(12))
+      q_list = [1,2,3,4,5,6,7,8,9,10,11,12]
 
-      ALLOCATE(q_list(13),dfpt_eig_id_list(13))
-      q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13]
-      
       !ALLOCATE(q_list(21),dfpt_eig_id_list(21))
       !ALLOCATE(q_list(1),dfpt_eig_id_list(1))
       !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
@@ -568,9 +568,9 @@ CONTAINS
          END IF
          CALL timestart("Eii2")
          CALL old_get_Gvecs(stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, recG, .false.)
-         write(8989,*) qpts_loc%bk(:,q_list(iQ))
+         !write(8989,*) qpts_loc%bk(:,q_list(iQ))
          CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars_nosym, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
-         write(8989,*) E2ndOrdII
+         !write(8989,*) E2ndOrdII
          !CYCLE
          CALL timestop("Eii2")
 
@@ -595,10 +595,10 @@ CONTAINS
          CALL timestop("determination of fermi energy")
 
 #ifdef CPP_MPI
-            CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-            CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            CALL MPI_BCAST(q_results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            CALL MPI_BCAST(q_results%w_iks, SIZE(q_results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
-         
+
          CALL timestop("Eigenstuff at k+q")
 
          IF (l_minusq) THEN
@@ -632,16 +632,16 @@ CONTAINS
             DO iDir = 1, 3
                CALL timestart("Dirloop")
                dfpt_tag = ''
-               
+               WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+
                IF (fmpi%irank==0) THEN
-                  WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
                   WRITE(*,*) 'Starting calculation for:'
                   WRITE(*,*) ' q         = ', qpts_loc%bk(:,q_list(iQ))
                   WRITE(*,*) ' atom      = ', iDtype
                   WRITE(*,*) ' direction = ', iDir
                END IF
 
-               IF (fmpi_nosym%irank==0) THEN
+               !IF (fmpi_nosym%irank==0) THEN
                   CALL starsq%reset_stars()
                   IF (l_minusq) CALL starsmq%reset_stars()
                   CALL denIn1%reset_dfpt()
@@ -652,8 +652,27 @@ CONTAINS
                   IF (l_minusq) CALL vTot1mIm%reset_dfpt()
                   CALL vC1%reset_dfpt()
                   CALL vC1Im%reset_dfpt()
-               END IF
-               ! TODO: Broadcast this.
+               !END IF
+
+!#ifdef CPP_MPI
+!               CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
+!               CALL starsq%mpi_bc(fmpi%mpi_comm)
+!               write(*,*) fmpi_nosym%irank, "starsq OK"
+!               CALL denIn1%distribute(fmpi%mpi_comm)
+!               write(*,*) fmpi_nosym%irank, "denIn OK"
+!               CALL denIn1Im%distribute(fmpi%mpi_comm)
+!               write(*,*) fmpi_nosym%irank, "denInIm OK"
+!               CALL vTot1%distribute(fmpi%mpi_comm)
+!               write(*,*) fmpi_nosym%irank, "vTot OK"
+!               CALL vTot1Im%distribute(fmpi%mpi_comm)
+!               write(*,*) fmpi_nosym%irank, "vTotIm OK"
+!               CALL vC1%distribute(fmpi%mpi_comm)
+!               write(*,*) fmpi_nosym%irank, "vC OK"
+!               CALL vC1Im%distribute(fmpi%mpi_comm)
+!               write(*,*) fmpi_nosym%irank, "vCIm OK"
+!               CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
+!#endif
+
                IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                ! This is where the magic happens. The Sternheimer equation is solved
                ! iteratively, providing the scf part of dfpt calculations.
@@ -702,6 +721,7 @@ CONTAINS
 
          IF (.FALSE.) THEN
             CALL timestop("q-point")
+            CALL close_eig(q_eig_id)
             CYCLE
          END IF
 

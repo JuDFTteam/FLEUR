@@ -425,8 +425,8 @@ CONTAINS
             dpj_re(j) = mt_conj(j,lh,nat)*mt_pure(j,lh,nat)+mt_conj_im(j,lh,nat)*mt_pure_im(j,lh,nat)
             dpj_im(j) = mt_conj(j,lh,nat)*mt_pure_im(j,lh,nat)-mt_conj_im(j,lh,nat)*mt_pure(j,lh,nat)
          END DO
-         CALL intgr3LinIntp(dpj_re,atoms%rmsh(1,nat),atoms%dx(nat),atoms%jri(nat),dpdot_re,1)
-         CALL intgr3LinIntp(dpj_im,atoms%rmsh(1,nat),atoms%dx(nat),atoms%jri(nat),dpdot_im,1)
+         CALL intgr3(dpj_re,atoms%rmsh(1,nat),atoms%dx(nat),atoms%jri(nat),dpdot_re)
+         CALL intgr3(dpj_im,atoms%rmsh(1,nat),atoms%dx(nat),atoms%jri(nat),dpdot_im)
          tmt = tmt + CMPLX(dpdot_re,dpdot_im)*atoms%neq(nat)
       END DO
 

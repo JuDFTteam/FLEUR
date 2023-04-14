@@ -199,6 +199,7 @@ CONTAINS
          END IF
          CALL chargeDen%init(cell,sym,stateFFTExtendedRadius+0.001)
          chargeDen%grid(:) = CMPLX(0.0,0.0)
+         ! TODO: Shouldn't there be a starsq here for DFPT?
          CALL chargeDen%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
          IF (input%l_f) THEN
             CALL stateDeriv%init(cell,sym,stateFFTExtendedRadius+0.001)

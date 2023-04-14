@@ -162,7 +162,7 @@ CONTAINS
                         td%h_loc_nonsph(lmp+s,lmp+s,n,j1,j2)=td%e_shift(n,jsp)*ud%ddn(lp,n,jsp)+td%h_loc_nonsph(lmp+s,lmp+s,n,j1,j2)
                      END DO
                   END DO
-                  IF (lmp+1.NE.s) CALL judft_error("BUG in tlmpln_cholesky")
+                  IF (lmp+1.NE.s) CALL judft_error("BUG in tlmplm_cholesky")
 
                   ! Perform cholesky decomposition
                   info=0
