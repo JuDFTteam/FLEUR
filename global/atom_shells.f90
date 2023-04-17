@@ -58,7 +58,7 @@ MODULE m_atom_shells
       REAL, PARAMETER :: eps = 1e-5
 
       INTEGER :: newNeighbours,atomShells,atomShells1,actualShells,num_cells, start_from_shell_arg
-      INTEGER :: ishell,i,iAtom,atomTypep,refAt,completed_atom_shells, startShell
+      INTEGER :: ishell,i,iAtom,atomTypep,completed_atom_shells, startShell
       LOGICAL :: l_unfinished_shell,l_found_shell,l_add, shell_finished
       REAL :: lastDist
 
@@ -266,7 +266,7 @@ MODULE m_atom_shells
       integer, optional,    intent(in)    :: only_elements(:)
       logical, optional,    intent(in)    :: only_magnetic
 
-      INTEGER :: maxNeighbours,iAtom,refAt,identicalAtoms,i,j,k,n,na,zmax
+      INTEGER :: maxNeighbours,iAtom,refAt,identicalAtoms,i,j,k,n,zmax
       REAL :: amatDet, currentDist
       REAL :: tau(3),refPos(3),offsetPos(3),currentDiff(3),pos(3)
       REAL :: invAmat(3,3),posCart(3,atoms%nat)
@@ -315,15 +315,13 @@ MODULE m_atom_shells
 
                   offsetPos = matmul(amat, [i,j,k])
 
-                  iAtom = 0
                   DO n = 1, atoms%ntype
                      !Ignore atoms which are not of the specified element
                      if (size(only_elements) /= 0 .and. .not.any(only_elements(:)==atoms%nz(n))) cycle
                      !Ignore non-magnetic atoms
                      if (only_magnetic_arg .and. .not.atoms%econf(n)%is_polarized() .and. abs(atoms%bmu(n))<1e-5) cycle
                      
-                     DO na = 1, atoms%neq(n)
-                        iAtom = iAtom + 1
+                     DO iAtom = sum(atoms%neq(:n-1)) + 1, sum(atoms%neq(:n))
                         pos(:) = posCart(:,iAtom) + offsetPos(:)
                         currentDist = (refPos(1) - pos(1))**2 + &
                                       (refPos(2) - pos(2))**2 + &
