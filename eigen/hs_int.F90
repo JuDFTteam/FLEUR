@@ -74,7 +74,7 @@ CONTAINS
                fact     = 1
             END IF
             CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:,:,iSpinPr), lapw%gvec(:,:,iSpin), &
-                             & lapw%bkpt+iQss*(2*iSpinPr - 3)/2.0*nococonv%qss, lapw%bkpt+iQss*(2*iSpin - 3)/2.0*nococonv%qss, &
+                             & lapw%bkpt+iQss*(2*iSpinPr - 3)/2.0*nococonv%qss+lapw%qphon, lapw%bkpt+iQss*(2*iSpin - 3)/2.0*nococonv%qss+lapw%qphon, &
                              & lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, fact, l_smat, .FALSE., vpw_temp, hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin))
             END DO
       END DO

@@ -344,7 +344,7 @@ FUNCTION rotate_eigveccoeffs_to_rep_atom(this, atoms, sym,lmax) RESULT(rot)
       rot = this
 
       DO itype = 1 ,atoms%ntype
-        DO iAtom = SUM(atoms%neq(:itype-1))+1 , SUM(atoms%neq(:itype))
+        DO iAtom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
           iop=sym%ngopr(iatom)
          ! C                                    l                        l    l
          ! C inversion of spherical harmonics: Y (pi-theta,pi+phi) = (-1)  * Y (theta,phi)

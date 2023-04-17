@@ -2,7 +2,6 @@ set(fleur_F77 ${fleur_F77}
 init/gtest.f
 init/lhcal.f
 init/local_sym.f
-init/ptsym.f
 init/ss_sym.f
 )
 set(fleur_F90 ${fleur_F90}
@@ -24,4 +23,5 @@ init/stepf.F90
 init/lapw_dim.F90
 init/angles.f90
 init/step_function.F90
+init/ptsym.f90
 )

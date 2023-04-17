@@ -76,17 +76,23 @@ CONTAINS
     atoms%nat=SIZE(atomid)
 
     ALLOCATE(atoms%neq(ntype),atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),atoms%zatom(ntype),atoms%label(atoms%nat))
+    ALLOCATE(atoms%firstAtom(ntype))
 
     atoms%neq(1:ntype) = 0
     DO n=1,atoms%nat
        atoms%neq( natype(n) ) = atoms%neq( natype(n) ) + 1
        atoms%zatom( natype(n) ) = atomid(n)
     ENDDO
+    atoms%firstAtom(:) = 0
+    atoms%firstAtom(1) = 1
+    DO n = 2, ntype
+       atoms%firstAtom(n) = atoms%firstAtom(n-1) + atoms%neq(n-1)
+    END DO
     DO n=1,atoms%ntype
-      atoms%taual(1,sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atompos(1,:),natype==n)
-      atoms%taual(2,sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atompos(2,:),natype==n)
-      atoms%taual(3,sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atompos(3,:),natype==n)
-      atoms%label(sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atomlabel(:),natype==n)
+      atoms%taual(1,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1)=pack(atompos(1,:),natype==n)
+      atoms%taual(2,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1)=pack(atompos(2,:),natype==n)
+      atoms%taual(3,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1)=pack(atompos(3,:),natype==n)
+      atoms%label(atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1)=pack(atomlabel(:),natype==n)
     enddo
     WHERE ( ABS( atoms%taual ) < eps12 ) atoms%taual = 0.00
 

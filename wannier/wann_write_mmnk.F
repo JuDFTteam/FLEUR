@@ -56,12 +56,13 @@ c**********************************************************
       integer :: stt(MPI_STATUS_SIZE)
 #endif
 
+      call timestart("wann_write_mmnk")
+
 #ifdef CPP_MPI
 c******************************************************
 c     Collect contributions to the mmnk matrix from the
 c     various processors.
 c******************************************************
-      call timestart("wann_write_mmnk")
       if(isize.ne.1)then
       do ikpt=1,fullnkpts
        if(l_p0)then

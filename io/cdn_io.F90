@@ -577,6 +577,7 @@ CONTAINS
           sphharTemp%nlhd = sphhar%nlhd
           vacuumTemp%nmzd = vacuum%nmzd
           atomsTemp%ntype = atoms%ntype
+          atomsTemp%firstAtom=atoms%firstAtom
           ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
           sphharTemp%nlh(:) = sphhar%nlh(:)
           ALLOCATE (symTemp%ntypsy(SIZE(sym%ntypsy)))
@@ -1328,11 +1329,12 @@ CONTAINS
 #ifdef CPP_HDF
        CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-
-       currentStepfunctionIndex = currentStepfunctionIndex + 1
-       CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, currentStructureIndex, stars,.TRUE.)
-       CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-            currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+       IF((judft_was_argument("-storeSF")).OR.(currentStepfunctionIndex.NE.0)) THEN
+          currentStepfunctionIndex = currentStepfunctionIndex + 1
+          CALL writeStepfunctionHDF(fileID, currentStepfunctionIndex, currentStarsIndex, currentStructureIndex, stars,.TRUE.)
+          CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                                  currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+       END IF
 
        CALL closeCDNPOT_HDF(fileID)
 #endif

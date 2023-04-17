@@ -16,7 +16,7 @@ MODULE m_hsmt_lo
   PRIVATE
   PUBLIC hsmt_lo
 CONTAINS
-  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,Smat,lapwq)
+  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,l_ham,Smat,lapwq,fjgjq)
     USE m_hlomat
     USE m_slomat
     USE m_setabc1lo
@@ -35,8 +35,9 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)    :: ud
     TYPE(t_tlmplm),INTENT(IN)   :: tlmplm
     TYPE(t_fjgj),INTENT(IN)     :: fjgj
-    LOGICAL,INTENT(IN)          :: l_fullj, set0  !if true, initialize the LO-part of the matrices with zeros
+    LOGICAL,INTENT(IN)          :: l_fullj, l_ham, set0  !if true, initialize the LO-part of the matrices with zeros
     TYPE(t_lapw),OPTIONAL,INTENT(IN) :: lapwq
+    TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
 
     CLASS(t_mat),INTENT(INOUT)::hmat
     CLASS(t_mat),INTENT(INOUT),OPTIONAL::smat
@@ -55,7 +56,7 @@ CONTAINS
     !     .. Local Arrays ..
     REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
     CALL timestart("LO setup")
-
+    call timestart("Preparation")
     IF (set0) THEN
        SELECT TYPE (hmat)
        TYPE IS (t_mpimat)
@@ -68,7 +69,7 @@ CONTAINS
        !CPP_OMP SHARED(fmpi,l,lapw,hmat,smat,igSpin) &
        !CPP_OMP PRIVATE(nkvec,kp)
        !CPP_OMP DO
-       !CPP_ACC kernels present(hmat,hmat%data_r,hmat%data_c)
+       !CPP_ACC kernels present(hmat,hmat%data_r,hmat%data_c)copyin(fmpi,lapw,lapw%nv)
        DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
           IF( nkvec > lapw%nv(igSpin)) THEN
              kp=(nkvec-1)/fmpi%n_size+1
@@ -83,7 +84,7 @@ CONTAINS
        !CPP_OMP END DO
        IF ( present(smat)) THEN
           !CPP_OMP DO
-          !CPP_ACC kernels present(smat,smat%data_r,smat%data_c)
+          !CPP_ACC kernels present(smat,smat%data_r,smat%data_c)copyin(fmpi,lapw,lapw%nv)
           DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
              IF( nkvec > lapw%nv(igSpin)) THEN
                 kp=(nkvec-1)/fmpi%n_size+1
@@ -99,8 +100,9 @@ CONTAINS
        ENDIF
        !CPP_OMP END PARALLEL
     ENDIF
-
-    na = SUM(atoms%neq(:n-1))
+    call timestop("Preparation")
+    
+    na = atoms%firstAtom(n) - 1
     DO nn = 1,atoms%neq(n)
        na = na + 1
        IF ((sym%invsat(na).EQ.0) .OR. (sym%invsat(na).EQ.1)) THEN
@@ -118,26 +120,30 @@ CONTAINS
 
              !--->       add the local orbital contribution to the overlap and
              !--->       hamiltonian matrix, if they are used for this atom.
-
+               call timestart("slomat")
                IF (ilSpinPr==ilSpin) THEN
-                  IF (.NOT.PRESENT(smat).AND..NOT.PRESENT(lapwq)) CALL judft_error("Bug in hsmt_lo, called without smat")
-                  IF (PRESENT(lapwq)) THEN
-                     CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
-                        ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
-                        igSpinPr,igSpin,chi,smat,l_fullj,lapwq)
+                  IF (.NOT.PRESENT(smat)) THEN
+                     IF (.NOT.PRESENT(lapwq)) CALL judft_error("Bug in hsmt_lo, called without smat")
                   ELSE
-                     CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
-                        ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
-                        igSpinPr,igSpin,chi,smat,l_fullj)
+                     IF (PRESENT(lapwq)) THEN
+                        CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
+                           ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
+                           igSpinPr,igSpin,chi,smat,l_fullj,lapwq,fjgjq)
+                     ELSE
+                        CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
+                           ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
+                           igSpinPr,igSpin,chi,smat,l_fullj)
+                     END IF
                   END IF
                END IF
+               call timestop("slomat")
                CALL timestart("hlomat")
                IF (PRESENT(lapwq)) THEN
                   CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,lapwq)
+                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
                ELSE
                   CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj)
+                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,l_ham)
                END IF
                CALL timestop("hlomat")
             END IF

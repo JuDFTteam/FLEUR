@@ -1111,9 +1111,9 @@ CONTAINS
       character(len=*)         :: filename
 
       if (mat%l_real) then
-         call save_npy(filename, mat%data_r)
+         !call save_npy(filename, mat%data_r)
       else
-         call save_npy(filename, mat%data_c)
+         !call save_npy(filename, mat%data_c)
       endif
    end subroutine t_mat_save_npy
 

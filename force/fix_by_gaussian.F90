@@ -56,7 +56,7 @@ CONTAINS
                DO k=2,stars%ng3
                   gauss=A_fac*gaussian_g(stars%sk3(k),alpha)
                   CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,stars%kv3(:,k),kr,phas)
-                  DO nat=SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+                  DO nat = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
                      sf=0.0
                      DO  j = 1,sym%nop
                         x=-tpi_const*DOT_PRODUCT(1.*kr(:,j),atoms%taual(:,nat))

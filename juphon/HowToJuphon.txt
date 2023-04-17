@@ -2,9 +2,9 @@ To run a phonon calculation at the moment, do the following:
 
 1) Write a suitable input file for the input generator. Set the k-point generation
    to a grid of N x N x N.
-2) Run inpgen as follows: /path/to/fleur/inpgen -f inputFile -nosym
+2) Run inpgen as follows: /path/to/fleur/inpgen -f inputFile
    This will generate an inp.xml with no symmetries and exactly N^3 k-points.
-3) Run it again with /path/to/fleur/inpgen -inp.xml -nosym -kpt dfpt#gamma@grid=N,N,N
+3) Run it again with /path/to/fleur/inpgen -inp.xml -noKsym -kpt dfpt#gamma@grid=N,N,N
    to generate an additional k-Point-Grid that definitely includes [0, 0, 0].
 4) Set the xc-functional tag to an LDA from libxc (e.g. xAlpha):
       <xcFunctional name="LibXC" relativisticCorrections="F">

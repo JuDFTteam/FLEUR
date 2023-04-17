@@ -1,9 +1,8 @@
 
 import pytest
 
-@pytest.mark.disabled
 @pytest.mark.serial
-def test_Fe_Tetra_noSYM(defualt_fleur_test):
+def test_Fe_Tetra_noSYM(default_fleur_test):
     """Fleur Fe tetra no symmetries
 
     Simple test of the linear tetrahedron method with bloechl corrections:

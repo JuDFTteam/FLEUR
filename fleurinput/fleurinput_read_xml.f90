@@ -2,11 +2,12 @@ MODULE m_fleurinput_read_xml
   USE m_types_fleurinput
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE fleurinput_read_xml(xmlOUTFileID,cell,sym,atoms,input,noco,vacuum,field,&
+  SUBROUTINE fleurinput_read_xml(xmlOUTFileID,filename_add,cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
        xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,juPhon,old_version)
     USE m_types_xml
-    integer,INTENT(IN)               :: xmlOUTFileID
+    integer,INTENT(IN)             :: xmlOUTFileID
+    CHARACTER(len=100), INTENT(IN) :: filename_add
     TYPE(t_cell),INTENT(OUT),OPTIONAL::cell
     TYPE(t_sym),INTENT(OUT),OPTIONAL::sym
     TYPE(t_atoms),INTENT(OUT),OPTIONAL::atoms
@@ -18,7 +19,7 @@ CONTAINS
     TYPE(t_banddos),INTENT(OUT),OPTIONAL::banddos
     TYPE(t_mpinp), INTENT(OUT), OPTIONAL :: mpinp
     TYPE(t_hybinp),INTENT(OUT),OPTIONAL::hybinp
-     
+
     TYPE(t_coreSpecInput),INTENT(OUT),OPTIONAL::coreSpecInput
     TYPE(t_wann),INTENT(OUT),OPTIONAL::wann
     CLASS(t_xcpot),INTENT(OUT),OPTIONAL::xcpot
@@ -39,7 +40,7 @@ CONTAINS
     CHARACTER(LEN=200) :: xPath
 
     !Call to init of xml type initialized XML reading and connects to inp.xml
-    call xml%init(old_version)
+    call xml%init(filename_add,old_version)
 
     !Now read from inp.xml for all datatypes
     if (present(cell)) call cell%read_xml(xml)

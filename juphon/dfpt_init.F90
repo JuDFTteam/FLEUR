@@ -17,7 +17,7 @@ MODULE m_dfpt_init
 
 CONTAINS
     SUBROUTINE dfpt_init(juPhon, sym, input, atoms, sphhar, stars, cell, noco, nococonv, &
-                       & kpts, fmpi, results, enpara, rho, vTot, eig_id, nvfull, GbasVec_eig, usdus, rho0, &
+                       & kpts, fmpi, results, enpara, rho, vTot, eig_id, nvfull, usdus, rho0, &
                        & grRho0, vTot0, grVTot0, ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
                        & uuilonout, duilonout, ulouilopnout, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
                        & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
@@ -41,7 +41,7 @@ CONTAINS
         TYPE(t_enpara),   INTENT(IN)  :: enpara
         TYPE(t_potden),   INTENT(IN)  :: rho, vTot, rhoclean
         INTEGER,          INTENT(IN)  :: eig_id
-        INTEGER,          INTENT(IN)  :: nvfull(:, :), GbasVec_eig(:, :, :, :)
+        INTEGER,          INTENT(IN)  :: nvfull(:, :)
 
         TYPE(t_usdus),    INTENT(OUT) :: usdus
         TYPE(t_jpPotden), INTENT(OUT) :: rho0, grRho0, vTot0, grVTot0
@@ -423,7 +423,8 @@ CONTAINS
         extSw = .true.
         xcSw = .false.
         testGoldstein = .false.
-        grRhoTermSw = .false.
+        !grRhoTermSw = .false.
+        grRhoTermSw = .TRUE. ! comparison
         call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
                        & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
                        & testGoldstein, grRhoTermSw, grVeff0IRdummy, grVeff0MT_init )
@@ -480,7 +481,9 @@ CONTAINS
         harSw = .true.
         extSw = .true.
         xcSw = .true.
-        grRhoTermSw = .false.
+        !grRhoTermSw = .false.
+        !xcSw = .false. ! comparison
+        grRhoTermSw = .true. ! comparison
         testGoldstein = .false.
         call GenGrVeff0( atoms, cell, stars, ngdp, harSw, extSw, xcSw, recG, rho0%pw(:, :, 1 ,1), rho0%mt(:, :, :, :, 1 ,1), &
                        & grRho0%pw(:, 1, 1 ,:), grRho0%mt(:, :, :, 1, 1, :), gausWts, ylm, dKernMTGPts, grVxcIRKern, &
@@ -523,7 +526,7 @@ CONTAINS
         INTEGER,       INTENT(IN)  :: nG
 
         COMPLEX,       INTENT(IN)  :: rhostar(:, :)
-        COMPLEX,       INTENT(OUT) :: rhopw(:, :, :, :)
+        COMPLEX,       INTENT(OUT) :: rhopw(:, :)
 
         INTEGER                    :: iStar, iG, iGx, iGy, iGz, iSpin
 
@@ -531,13 +534,13 @@ CONTAINS
 
         DO iSpin = 1, jspins
             iG = 0
-            DO iGz= -stars%mx3, stars%mx3
+            DO iGx = -stars%mx1, stars%mx1
                 DO iGy = -stars%mx2, stars%mx2
-                    DO iGx = -stars%mx1, stars%mx1
+                    DO iGz= -stars%mx3, stars%mx3
                         iStar = stars%ig(iGx, iGy, iGz)
                         IF (iStar.NE.0) THEN
                             iG = iG + 1
-                            rhopw(iG, iSpin, 1, 1) = rhostar(iStar, iSpin) &
+                            rhopw(iG, iSpin) = rhostar(iStar, iSpin) &
                                     ! & * stars%rgphs(iGx, iGy, iGz) & TODO
                                     & * stars%nstr(iStar) / sym%nop
                         END IF
@@ -654,7 +657,7 @@ CONTAINS
 
         DO iSpin = 1, jspins
             DO iType = 1, atoms%ntype
-                iAtom = SUM(atoms%neq(:iType-1)) + 1
+                iAtom = atoms%firstAtom(iType)
                 ptsym = sym%ntypsy(iAtom)
                 DO ilh = 0, sphhar%nlh(ptsym)
                     l = sphhar%llh(iLH, ptsym)

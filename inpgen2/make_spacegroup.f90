@@ -27,7 +27,7 @@ CONTAINS
     LOGICAL,INTENT(in)         :: film
     TYPE(t_noco),INTENT(in)    :: noco
     TYPE(t_cell),INTENT(in)    :: cell
-    REAL,INTENT(IN)            :: pos(:,:),atomid(:),mag_mom(:,:)
+    REAL,INTENT(IN)            :: pos(:,:),atomid(:),mag_mom(0:,:)
     TYPE(t_sym),INTENT(inout)  :: sym
 
     INTEGER, ALLOCATABLE :: ntyrep(:)    ! here, these variables are allocated with
@@ -130,7 +130,7 @@ CONTAINS
     DO n=2, SIZE(atomid)
        lnew = .TRUE.
        DO i=1,n-1
-          IF ( ABS( atomid(i)-atomid(n) ) < eps7 .AND. (ALL(ABS(mag_mom(:,i)-mag_mom(:,n))<eps7)) ) THEN
+          IF ( ABS( atomid(i)-atomid(n) ) < eps7 .AND. (ALL(ABS(mag_mom(1:3,i)-mag_mom(1:3,n))<eps7)) ) THEN
              ity(n) = ity(i)
              lnew = .FALSE.
              EXIT

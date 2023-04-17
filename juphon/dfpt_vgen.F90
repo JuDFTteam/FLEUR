@@ -9,8 +9,8 @@ MODULE m_dfpt_vgen
 CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,&
-                   &starsq,dfptdenimag,dfptvTot,dfptvTotimag,dfptdenreal,iDtype,iDir)
+                   cell ,sliceplot,fmpi,noco,nococonv,den,vTot,&
+                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
       !
@@ -41,35 +41,45 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_results),   INTENT(INOUT) :: results
       CLASS(t_xcpot),    INTENT(IN)    :: xcpot
       TYPE(t_hybdat),    INTENT(IN)    :: hybdat
       TYPE(t_mpi),       INTENT(IN)    :: fmpi
-       
+
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_input),     INTENT(IN)    :: input
       TYPE(t_field),     INTENT(IN)    :: field
       TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_nococonv),  INTENT(INOUT) :: nococonv
+      TYPE(t_nococonv),  INTENT(IN)    :: nococonv
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
       TYPE(t_atoms),     INTENT(IN)    :: atoms
-      TYPE(t_potden),    INTENT(IN)    :: EnergyDen
-      TYPE(t_potden),    INTENT(INOUT) :: den, vTot, dfptvTot
+      TYPE(t_potden),    INTENT(IN)    :: vTot
+      TYPE(t_potden),    INTENT(INOUT) :: den, dfptvTot
+
+      LOGICAL, INTENT(IN) :: l_xc
 
       TYPE(t_stars),  OPTIONAL, INTENT(IN)    :: starsq
       TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: dfptdenimag, dfptvTotimag, dfptdenreal
 
       INTEGER, OPTIONAL, INTENT(IN)           :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
+      INTEGER, OPTIONAL, INTENT(IN)           :: killcont(2)
+
       TYPE(t_potden)                   :: workden, denRot, workdenImag, workdenReal, den1Rot, den1imRot
-      TYPE(t_potden)                   :: vCoul, dfptvCoulimag, vxc, exc, vx
+      TYPE(t_potden)                   :: vCoul, dfptvCoulimag, vxc, exc, vx, EnergyDen
 
       INTEGER :: i, js
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
+
+
+      vCoul = dfptvTot
+      vx = vTot
+      vxc = vTot
+      exc = vTot
+      dfptvCoulimag = dfptvTot
 
       IF (fmpi%irank==0) WRITE (oUnit,FMT=8000)
       IF (fmpi%irank==0) WRITE (oUnit,FMT=8001)
@@ -81,6 +91,7 @@ CONTAINS
       CALL vx%resetPotDen()
       CALL vxc%resetPotDen()
       CALL exc%resetPotDen()
+      CALL dfptvCoulimag%resetPotDen()
 
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
@@ -99,8 +110,6 @@ CONTAINS
 
       ALLOCATE(vCoul%pw_w(SIZE(vCoul%pw,1),size(vCoul%pw,2)))
       vCoul%pw_w = CMPLX(0.0,0.0)
-
-      results%force=0.0
 
         CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
         CALL workDenReal%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
@@ -123,32 +132,35 @@ CONTAINS
       CALL dfptvCoulimag%copy_both_spin(dfptvTotimag)
 
       ! c)
+      CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
+      denRot=den
+      CALL den1Rot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
+      CALL den1imRot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
+      den1Rot=dfptdenreal
+      den1imRot=dfptdenimag
       IF (noco%l_noco) THEN
-         CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
-         denRot=den
          CALL rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,cell,input,noco ,denRot)
          IF (any(noco%l_unrestrictMT)) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)
+         !Functions that construct the spin-dependent perturbed densities
+         !from the perturbed charge and (vectorial) magnetization density/
+         !perturbed density matrix. Also saves the perturbed angles.
+          CALL get_int_local_perturbation(sym, stars, atoms, sphhar, input, denRot, den1Rot, den1imRot, starsq)
+          IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation(atoms,sphhar,sym,noco,denRot,den1Rot,den1imRot)
       END IF
 
-          IF (noco%l_noco) THEN
-              !Functions that construct the spin-dependent perturbed densities
-              !from the perturbed charge and (vectorial) magnetization density/
-              !perturbed density matrix. Also saves the perturbed angles.
-              CALL den1Rot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
-              CALL den1imRot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
-              den1Rot=dfptdenreal
-              den1imRot=dfptdenimag
-              CALL get_int_local_perturbation(sym, stars, atoms, sphhar, input, denRot, den1Rot, den1imRot, starsq)
-              IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation(atoms,sphhar,sym,noco,denRot,den1Rot,den1imRot)
-          END IF
-          CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+         ! Skip vxc for rho(1)=0, i.e. starting potential
+          IF (ANY(ABS(den1Rot%pw)>1E-12).AND.l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                           cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                           & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
-      ! d)
-      ! TODO: This is so different from the base case, that we build a new suboutine.
-      CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq)
-      !DEALLOCATE(vcoul%pw_w)
+      IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
+         ! d)
+         ! TODO: This is so different from the base case, that we build a new subroutine.
+         CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq,killcont)
+         !DEALLOCATE(vcoul%pw_w)
+      ELSE
+         ! TODO: Write here something for the gradient. It does not need pw(_w)-stuff.
+      END IF
 
       CALL dfptvTot%distribute(fmpi%mpi_comm)
       CALL dfptvTotimag%distribute(fmpi%mpi_comm)

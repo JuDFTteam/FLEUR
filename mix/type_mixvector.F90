@@ -102,10 +102,12 @@ CONTAINS
       call timestop("write_mixing")
    END SUBROUTINE write_unformatted
 
-   SUBROUTINE mixvector_reset()
+   SUBROUTINE mixvector_reset(fullreset)
       IMPLICIT NONE
+      LOGICAL, OPTIONAL, INTENT(IN) :: fullreset
       atoms => NULL()
       sym => NULL()
+      IF (PRESENT(fullreset)) stars => NULL()
       IF (ALLOCATED(g_mt)) DEALLOCATE (g_mt)
       IF (ALLOCATED(g_vac)) DEALLOCATE (g_vac)
       IF (ALLOCATED(g_misc)) DEALLOCATE (g_misc)
@@ -175,14 +177,14 @@ CONTAINS
                ii = mt_start(js) - 1
                IF (.NOT.PRESENT(denIm)) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, j)
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
                   IF (js == 3) THEN !Imaginary part
                      DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                            vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, 4)
                            ii = ii + atoms%jri(n)
                         ENDDO
@@ -190,26 +192,26 @@ CONTAINS
                   ENDIF
                ELSE ! DFPT mixing
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, j)
                         ii = ii + atoms%jri(n)
                      END DO
                   END DO
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, j)
                         ii = ii + atoms%jri(n)
                      END DO
                   END DO
                   IF (js == 3) THEN !Imaginary part
                      DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                            vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, 4)
                            ii = ii + atoms%jri(n)
                         END DO
                      END DO
                      DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                            vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, 4)
                            ii = ii + atoms%jri(n)
                         END DO
@@ -255,14 +257,14 @@ CONTAINS
                !This PE stores some(or all) MT data
                ii = mt_start(js)
                DO n = mt_rank + 1, atoms%ntype, mt_size
-                  DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                  DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                      den%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                      ii = ii + atoms%jri(n)
                   ENDDO
                ENDDO
                IF (l_dfpt) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         denIm%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                         ii = ii + atoms%jri(n)
                      ENDDO
@@ -270,14 +272,14 @@ CONTAINS
                END IF
                IF (js == 3) THEN !Imaginary part comes as 4th spin
                   DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                         den%mt(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
                   IF (l_dfpt) THEN
                      DO n = mt_rank + 1, atoms%ntype, mt_size
-                        DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                            denIm%mt(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                            ii = ii + atoms%jri(n)
                         ENDDO
@@ -407,7 +409,7 @@ CONTAINS
             dxn = atoms%neq(n)*atoms%dx(n)/3.0
             dxn2 = 2.0*dxn
             dxn4 = 4.0*dxn
-            DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+            DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
                i = i + 1
                g_mt(i) = dxn/atoms%rmsh(1, n)
                IF (.NOT. l_pot) THEN
@@ -576,19 +578,20 @@ CONTAINS
                !This PE stores some(or all) MT data
                DO n = mt_rank + 1, atoms%ntype, mt_size
                   IF (l_dfpt) THEN
-                     len = len + 2*(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     len = len + 2*(sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
                   ELSE
-                     len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                     len = len + (sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
                   END IF
                ENDDO
                mt_length_g = MAX(len, mt_length_g)
+               IF (l_dfpt) mt_length_g = mt_length_g / 2
                IF (js == 3) THEN
                   !need to store imaginary part as well...
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      IF (l_dfpt) THEN
-                        len = len + 2*(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                        len = len + 2*(sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
                      ELSE
-                        len = len + (sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)) + 1)*atoms%jri(n)
+                        len = len + (sphhar%nlh(sym%ntypsy(atoms%firstAtom(n))) + 1)*atoms%jri(n)
                      END IF
                   ENDDO
                ENDIF
@@ -741,7 +744,7 @@ CONTAINS
 
       REAL, OPTIONAL, INTENT(INOUT) :: dprod2(2)
 
-      REAL :: dprod1_tmp, dprod2_tmp
+      REAL :: dprod1_tmp(2), dprod2_tmp(2)
       INTEGER:: js, ierr
 
       dprod1 = 0.0
@@ -754,11 +757,12 @@ CONTAINS
             dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_pw(pw_stop(js)/2+1:pw_stop(js)), &
                                                 vec2%vec_pw(pw_stop(js)/2+1:pw_stop(js)))
          END IF
-         IF (mask(2) .AND. (spin == js) .AND. mt_start(js) > 0) &
+         IF (mask(2) .AND. (spin == js) .AND. mt_start(js) > 0) THEN
             dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)/2), &
                                                 vec2%vec_mt(mt_start(js):mt_stop(js)/2))
             dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:mt_stop(js)), &
                                                 vec2%vec_mt(mt_stop(js)/2+1:mt_stop(js)))
+         END IF
       END DO
 
       IF (js==3.AND.PRESENT(dprod2)) THEN
@@ -785,10 +789,10 @@ CONTAINS
       END IF
 
 #ifdef CPP_MPI
-      CALL MPI_ALLREDUCE(dprod1, dprod1_tmp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
+      CALL MPI_ALLREDUCE(dprod1, dprod1_tmp, 2, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
       dprod1 = dprod1_tmp
       IF (PRESENT(dprod2)) THEN
-         CALL MPI_ALLREDUCE(dprod2, dprod2_tmp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
+         CALL MPI_ALLREDUCE(dprod2, dprod2_tmp, 2, MPI_DOUBLE_PRECISION, MPI_SUM, mix_mpi_comm, ierr)
          dprod2 = dprod2_tmp
       END IF
 #endif

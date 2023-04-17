@@ -15,10 +15,15 @@ contains
       front = 1
       do while (index(whitespaces, input(front:front)) /= 0)
          front = front + 1
+         if (front>len(input)) THEN
+            front=front-1
+            EXIT
+         endif
       enddo
 
       back = len(input)
       do while (index(whitespaces, input(back:back)) /= 0)
+         if (back==1) exit
          back = back - 1
       enddo
 

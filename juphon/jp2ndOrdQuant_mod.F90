@@ -257,7 +257,7 @@ module m_jp2ndOrdQuant
           ! Constant term is switched off because it is subtracted away anyway in Equation 7.89 because it is not dependent on q
           if (.false.) then
             ! Factor 3 because it is within the t-sum
-            E2ndOrdII(iAdir + 3 * (iAatom - 1), iAdir + 3 * (iAatom -1)) = E2ndOrdII(iAdir, iAdir) + 3 * atoms%zatom(iAtype) * atoms%zatom(iBtype) / atoms%rmt(iBtype)**3
+            E2ndOrdII(iAdir + 3 * (iAatom - 1), iAdir + 3 * (iAatom -1)) = E2ndOrdII(iAdir, iAdir) + 3 * atoms%zatom(iAtype) * atoms%zatom(iAtype) / atoms%rmt(iAtype)**3
           end if ! Constant term switched off
 
         end do ! iAdir
@@ -265,6 +265,30 @@ module m_jp2ndOrdQuant
     end do ! iAtype
 
   end subroutine CalcIIEnerg2MatElem
+
+  SUBROUTINE getConstTerm(atoms, cell, constTerm)
+     TYPE(t_atoms), INTENT(IN) :: atoms
+     TYPE(t_cell),  INTENT(IN) :: cell
+
+     REAL, INTENT(OUT) :: constTerm(:, :)
+
+     INTEGER :: iAlpha, iBeta
+
+     REAL :: tauExtAlpha(3), tauExtBeta(3), vecR(3)
+
+     constTerm = 0.0
+
+     DO iBeta = 1, atoms%nat
+        tauExtBeta = MATMUL(cell%amat, atoms%taual(:, iBeta))
+        DO iAlpha = 1, atoms%nat
+           IF (iBeta==iAlpha) CYCLE
+           tauExtAlpha = MATMUL(cell%amat, atoms%taual(:, iAlpha))
+           vecR = tauExtAlpha - tauExtBeta
+           constTerm(3*(iBeta-1) + 1:3*(iBeta-1) + 3, 3*(iAlpha-1) + 1:3*(iAlpha-1) + 3) &
+           & = atoms%zatom(iBeta) * atoms%zatom(iBeta) * (3*outerProduct(vecR,vecR)-id3x3*norm2(vecR)**2) / norm2(vecR)**5
+       END DO
+     END DO
+  END SUBROUTINE
 
   subroutine CalcIIEnerg2(atoms, cell, qpts, stars, input, iqpt, ngdp, gdp, E2ndOrdII)
 
@@ -291,22 +315,27 @@ module m_jp2ndOrdQuant
 
     ! Scalar variables
     integer                                    :: iAtype
-    integer                                    :: iBtype
+    integer                                    :: iBtype, iCtype
     integer                                    :: iAeqat
     integer                                    :: iBeqat
     integer                                    :: iAatom
     integer                                    :: iBatom
     integer                                    :: iAdir
-    integer                                    :: iBdir
+    integer                                    :: iBdir, iCdir
     integer                                    :: ngpqdp2km
     integer                                    :: ngpqdp
+
+    LOGICAL :: oldStuff
 
     ! Array variables
     complex,           allocatable             :: E2ndOrdIIatFinQ(:, :)
     complex,           allocatable             :: E2ndOrdIIatQ0(:, :)
+    real,              allocatable             :: constTerm(:, :)
     integer,           allocatable             :: gpqdp(:, :)
     integer,           allocatable             :: gpqdp2Ind(:, :, :)
     integer                                    :: gpqdp2iLim(2, 3)
+
+    oldStuff = .FALSE.
 
     ! We get the same results for -q and q, probably because Eii2 is a real quantity
     ! todo only generate G-vectors once in the beginning #56, leave the -q version here so that we can test it to be the same
@@ -323,16 +352,22 @@ module m_jp2ndOrdQuant
     allocate( E2ndOrdII(3 * atoms%nat, 3 * atoms%nat) )
     allocate( E2ndOrdIIatFinQ(3 * atoms%nat, 3 * atoms%nat) )
     allocate( E2ndOrdIIatQ0(3 * atoms%nat, 3 * atoms%nat) )
+    allocate( constTerm(3 * atoms%nat, 3 * atoms%nat) )
 
     E2ndOrdII = cmplx(0.0, 0.0)
     E2ndOrdIIatFinQ = cmplx(0.0, 0.0)
     E2ndOrdIIatQ0 = cmplx(0.0, 0.0)
 
     ! Call the routine for q = 0
-    call CalcIIEnerg2MatElem(atoms, cell, qpts%bk(1:3, 1), ngdp, gdp, E2ndOrdIIatQ0)
+    call CalcIIEnerg2MatElem(atoms, cell, [0.0,0.0,0.0], ngdp, gdp, E2ndOrdIIatQ0)
 
     ! Call the routine for finite q
     call CalcIIEnerg2MatElem(atoms, cell, -qpts%bk(1:3, iqpt), ngpqdp, gpqdp, E2ndOrdIIatFinQ)
+
+    CALL getConstTerm(atoms, cell, constTerm)
+
+    !write(4543,*) E2ndOrdIIatQ0
+    !write(4544,*) E2ndOrdIIatFinQ
 
 #ifdef DEBUG_MODE
     if (.false.) then
@@ -350,10 +385,35 @@ module m_jp2ndOrdQuant
             do iBeqat = 1, atoms%neq(iBtype)
               iBatom = iBatom + 1
               do iBdir = 1, 3
+                IF (oldStuff) THEN
                 E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) =          &
                    & E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1))      &
                    & - E2ndOrdIIatQ0(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) &
                    & + E2ndOrdIIatFinQ(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1))
+                ELSE
+                   E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) = &
+                 & E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) + &
+                 & E2ndOrdIIatFinQ(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1))
+                   IF (iBatom/=iAatom) THEN
+                  !    E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) = &
+                  !  & E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) - &
+                  !  & constTerm(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1))
+                   ELSE
+                      DO iCtype = 1, atoms%ntype
+                        !DO iCdir = 1, 3
+                           E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) = &
+                         & E2ndOrdII(iBdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) - &
+                         & E2ndOrdIIatQ0(iBdir + 3 * (iCtype - 1), iAdir + 3 * (iAatom - 1))
+                        !END DO
+                        IF (iCtype==iBtype) CYCLE
+                        DO iCdir = 1, 3
+                        !   E2ndOrdII(iCdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) = &
+                        ! & E2ndOrdII(iCdir + 3 * (iBatom - 1), iAdir + 3 * (iAatom - 1)) + &
+                        ! & constTerm(iCdir + 3 * (iCtype - 1), iAdir + 3 * (iAatom - 1))
+                        END DO
+                      END DO
+                   END IF
+                END IF
               end do ! iBdir
             end do ! iBeqat
           end do ! iBtype

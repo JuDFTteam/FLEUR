@@ -43,7 +43,7 @@ CONTAINS
     LOGICAL,OPTIONAL,INTENT(IN)  :: l_valence
 
     nst = -1; nprnc = -99999; kappa = -99999
-
+    occupation=0.0
     nst=econf%num_core_states
     if (present(l_valence)) then
        if (l_valence) nst=econf%num_states

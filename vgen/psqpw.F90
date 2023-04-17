@@ -27,6 +27,7 @@ contains
     use m_mpmom
     use m_sphbes
     use m_qsf
+    USE m_mpi_reduce_tool
      
      
     use m_types
@@ -51,15 +52,16 @@ contains
     complex,            intent(out) :: psq(stars%ng3)
 
     REAL, OPTIONAL, INTENT(IN)      :: rhoimag(atoms%jmtd,0:sphhar%nlhd,atoms%ntype), rho0(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    COMPLEX, OPTIONAL, INTENT(IN)   :: qpw0(stars%ng3)
 
     TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
+    COMPLEX, OPTIONAL, INTENT(IN)   :: qpw0(:)
 
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
     complex                         :: psint, sa, sl, sm
     real                            :: f, fact, fpo, gz, p, qvac, rmtl, s, fJ, gr, g
-    integer                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz
+    integer                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz, kStart, kEnd
+    complex                         :: psq_local(stars%ng3)
     complex                         :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     complex                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     real                            :: q2(vacuum%nmzd)
@@ -72,7 +74,6 @@ contains
 
 #ifdef CPP_MPI
     integer                         :: ierr
-    complex, allocatable            :: c_b(:)
 #endif
 
     l_dfptvgen = PRESENT(stars2)
@@ -86,8 +87,10 @@ contains
                   & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0 )
     END IF
     call timestop("mpmom")
-#ifdef CPP_MPI
+
     psq(:) = cmplx( 0.0, 0.0 )
+    psq_local(:) = cmplx( 0.0, 0.0 )
+#ifdef CPP_MPI
     call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
     nd = ( 2 * atoms%lmaxd + 1 ) * ( atoms%lmaxd + 1 ) * atoms%ntype
     call MPI_BCAST( qlm, nd, MPI_DOUBLE_COMPLEX, 0, fmpi%MPI_COMM, ierr )
@@ -117,57 +120,55 @@ contains
 
     ! q=0 term: see (A12) (Coulomb case) or (A13) (Yukawa case)
     if( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8) then
-    s = 0.
-    do n = 1, atoms%ntype
-      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
-        s = s + atoms%neq(n) * real( qlm(0,0,n) )
-      else
-        s = s + atoms%neq(n) * real( qlm(0,0,n) ) * g0(n)
-      end if
-    end do
+       s = 0.
+       do n = 1, atoms%ntype
+         if ( potdenType /= POTDEN_TYPE_POTYUK ) then
+           s = s + atoms%neq(n) * real( qlm(0,0,n) )
+         else
+           s = s + atoms%neq(n) * real( qlm(0,0,n) ) * g0(n)
+         end if
+       end do
     !if( fmpi%irank == 0 ) then
-      psq(1) = qpw(1) + ( sfp_const / cell%omtil ) * s
+       psq_local(1) = qpw(1) + ( sfp_const / cell%omtil ) * s
     end if
 
     ! q/=0 term: see (A10) (Coulomb case) or (A11) (Yukawa case)
     fpo = 1. / cell%omtil
 
-    call timestart("loop")
-    !$omp parallel do default( shared ) private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
+    call timestart("loop in psqpw")
 
-    do k = MERGE(fmpi%irank+2,fmpi%irank+1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
+    CALL calcIndexBounds(fmpi, MERGE(2,1,norm2(stars%center)<=1e-8), stars%ng3, kStart, kEnd)
+    !$OMP parallel do default( NONE ) &
+    !$OMP SHARED(atoms,stars,sym,cell,kStart,kEnd,psq_local,qpw,qlm,pn,fpo) &
+    !$OMP private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
+    do k = kStart, kEnd
       call phasy1( atoms, stars, sym, cell, k, pylm )
-      sa = 0.
+      sa = 0.0
       do n = 1, atoms%ntype
         ncvn = atoms%ncv(n)
         call sphbes( ncvn + 1 , stars%sk3(k) * atoms%rmt(n), aj )
         sl = 0.
         do l = 0, atoms%lmax(n)
-          if ( l >= ncvn ) go to 60
-          n1 = ncvn - l + 1
-          ll1 = l * ( l + 1 ) + 1
-          sm = 0.
-          do m = -l, l
-            lm = ll1 + m
-            sm = sm + qlm(m,l,n) * conjg( pylm(lm,n) )
-          end do
-60        sl = sl + pn(l,n) / ( stars%sk3(k) ** n1 ) * aj( ncvn + 1 ) * sm
+          IF(l.LT.ncvn) THEN
+             n1 = ncvn - l + 1
+             ll1 = l * ( l + 1 ) + 1
+             sm = 0.
+             do m = -l, l
+               lm = ll1 + m
+               sm = sm + qlm(m,l,n) * conjg( pylm(lm,n) )
+             end do
+          END IF
+        sl = sl + pn(l,n) / ( stars%sk3(k) ** n1 ) * aj( ncvn + 1 ) * sm
         end do
         sa = sa + atoms%neq(n) * sl
       end do
-      psq(k) = qpw(k) + fpo * sa
+      psq_local(k) = qpw(k) + fpo * sa
     end do
     !$omp end parallel do
 
-    call timestop("loop")
-#ifdef CPP_MPI
-    allocate( c_b(stars%ng3) )
-    call MPI_REDUCE( psq, c_b, stars%ng3, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%MPI_COMM, ierr )
-    if ( fmpi%irank == 0 ) then
-       psq(:stars%ng3) = c_b(:stars%ng3)
-    end if
-    deallocate( c_b )
-#endif
+    CALL mpi_sum_reduce(psq_local,psq,fmpi%MPI_COMM)
+
+    call timestop("loop in psqpw")
 
     IF (l_dfptvgen) RETURN
 

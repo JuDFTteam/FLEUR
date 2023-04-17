@@ -39,6 +39,7 @@ MODULE m_types_potden
      PROCEDURE :: init_potden_types
      PROCEDURE :: init_potden_simple
      PROCEDURE :: resetpotden
+     PROCEDURE :: reset_dfpt
      GENERIC   :: init=>init_potden_types,init_potden_simple
      PROCEDURE :: copy_both_spin
      PROCEDURE :: sum_both_spin
@@ -550,5 +551,16 @@ CONTAINS
     pd%mmpMat = CMPLX(0.0,0.0)
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE resetPotDen
+
+  SUBROUTINE reset_dfpt(pd)
+
+    IMPLICIT NONE
+
+    CLASS(t_potden),INTENT(INOUT) :: pd
+
+    IF (ALLOCATED(pd%mt)) DEALLOCATE(pd%mt)
+    IF (ALLOCATED(pd%pw)) DEALLOCATE(pd%pw)
+    IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
+  END SUBROUTINE reset_dfpt
 
 END MODULE m_types_potden

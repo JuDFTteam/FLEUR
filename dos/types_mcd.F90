@@ -10,7 +10,7 @@ MODULE m_types_mcd
   PRIVATE
   public t_mcd
   TYPE,extends(t_eigdos):: t_mcd
-    REAL                 :: emcd_lo, emcd_up
+    REAL                 :: emcd_lo, emcd_up, maxE_mcd
     INTEGER, ALLOCATABLE :: ncore(:)
     INTEGER,ALLOCATABLE  :: n_dos_to_type(:)
     REAL,    ALLOCATABLE :: e_mcd(:,:,:)
@@ -61,8 +61,8 @@ subroutine make_dos(eigdos,kpts,input,banddos,efermi)
 
     !Map the values to MCD grid
 
-    e_lo =  minval(eigdos%e_mcd)-efermi-maxval(eigdos%dos_grid)
-    e_up =  maxval(eigdos%e_mcd)-efermi
+    e_lo =  minval(eigdos%e_mcd)-efermi-maxval(eigdos%dos_grid) - 3.0*banddos%sig_dos
+    e_up =  eigdos%maxE_mcd-efermi + 3.0*banddos%sig_dos
     ALLOCATE(eigdos%mcd_grid(size(eigdos%dos_grid)))
     DO i=1,size(eigdos%dos_grid)
       eigdos%mcd_grid(i)=e_lo+(i-1)*(e_up-e_lo)/(size(eigdos%mcd_grid)-1)
@@ -80,7 +80,7 @@ subroutine make_dos(eigdos,kpts,input,banddos,efermi)
               e1=-1*eigdos%dos_grid(i)-efermi+eigdos%e_mcd(ntype,jspin,nc)
               e2=-1*eigdos%dos_grid(i+1)-efermi+eigdos%e_mcd(ntype,jspin,nc)
               DO l=1,size(eigdos%mcd_grid)
-                IF ((e2.LE.(l)).AND. (e1.GT.eigdos%mcd_grid(l))) THEN
+                IF ((e2.LE.eigdos%mcd_grid(l)).AND. (e1.GT.eigdos%mcd_grid(l))) THEN
                   fac = (eigdos%mcd_grid(l)-e1)/(e2-e1)
                   dos(l,jspin,ind) = dos(l,jspin,ind)+ eigdos%dos(i,jspin,ind)*(1.-fac) + fac * eigdos%dos(i+1,jspin,ind)
                 ENDIF
@@ -185,6 +185,7 @@ SUBROUTINE mcd_init(thisMCD,banddos,input,atoms,kpts,eig)
       ALLOCATE (thisMCD%mcd(1,1,1,1,input%jspins))
    ENDIF
 
+   thisMCD%maxE_mcd = -1000000.0
    thisMCD%ncore = 0
    thisMCD%e_mcd = 0.0
    thisMCD%mcd = 0.0

@@ -33,7 +33,6 @@ CONTAINS
     WRITE(*,'(a)')"The following command line options are known:"
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control the input:"
-    CALL print_argument("-toXML")
     CALL print_argument("-xmlXPath")
     CALL print_argument("-dropXMLSchema")
     WRITE(*,'(a)')""
@@ -54,6 +53,7 @@ CONTAINS
     CALL print_argument("-j")
     CALL print_argument("-f")
     CALL print_argument("-n_min_size")
+    CALL print_argument("-add_name")
     CALL print_argument("-fft")
     CALL print_argument("-diag")
     CALL print_argument("-eig")
@@ -72,6 +72,7 @@ CONTAINS
     CALL print_argument("-last_extra")
     CALL print_argument("-sd")
     CALL print_argument("-delden")
+    CALL print_argument("-storeSF")
 #endif
     WRITE (*,'(a)') "Options for privacy sensitive users"
     CALL print_argument("-no_send")
@@ -85,7 +86,6 @@ CONTAINS
   SUBROUTINE add_fleur_arguments()
     USE m_check_arguments
 
-    CALL new_argument(0,"-toXML","Convert an old 'inp' file into the new XML format","")
     CALL new_argument(1,"-xmlXPath","modify the xml-xpath of the inp.xml file","")
     CALL new_argument(0,"-dropXMLSchema","Write out the default XML schema files","")
     !Control the job
@@ -95,6 +95,7 @@ CONTAINS
     CALL new_argument(1,"-j","Distribute MPI ranks to run subjobs (Format PE:DIR meaning run with PE in directory DIR)","")
     CALL new_argument(1,"-f","Obtain info on subjobs from file","")
     CALL new_argument(2,"-n_min_size","Try to use at least specified number of PE in eigenvalue parallelization","")
+    CALL new_argument(1,"-add_name","file descriptor that will be put before the output file names","")
     CALL new_argument(1,"-fft","library used for Fast Fourier Transformations","inbuilt"&
 #ifdef CPP_FFTW
     //",fftw"&
@@ -122,7 +123,7 @@ CONTAINS
 #ifdef CPP_MAGMA
        //",magma"&
 #endif
-#ifdef CPP_GPU
+#ifdef CPP_CUSOLVER
        //",cusolver"&
 #endif
        )
@@ -134,7 +135,7 @@ CONTAINS
          //",hdf"&
 #endif
          )
-    CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","") 
+    CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","")
     CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","")
     !Debugging
     CALL new_argument(0,"-warn_only","Continue execution after a warning message","")
@@ -156,6 +157,7 @@ CONTAINS
     CALL new_argument(0,"-last_extra","Generate an additional file cdn_last.hdf that contains only the last density","")
     CALL new_argument(2,"-sd","use starting density N, where N is the index of the density according to -info","")
     CALL new_argument(1,"-delden","delete densities (either an index N, a range N-M or the keyword 'allbutlast' should be given)","")
+    CALL new_argument(0,"-storeSF","Store the stepfunction in the charge density file to avoid its recalculation when restarting Fleur.","")
     !GPU parameter
     CALL new_argument(0,"-gpu","Use GPU for computing","")
   END SUBROUTINE add_fleur_arguments

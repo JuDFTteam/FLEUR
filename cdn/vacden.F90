@@ -782,7 +782,7 @@ CONTAINS
                             uei2 = ue(jz,l1,2)
                             tempCmplx = aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
                             den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
-                            den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) + AIMAG(tempCmplx)
+                            den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) - AIMAG(tempCmplx)
                          ENDDO
                       ELSE
                          !--->                warping part
@@ -802,7 +802,7 @@ CONTAINS
                             uei = ue(jz,l,1)
                             uej = ue(jz,l1,2)
                             t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                            den%vacxy(jz,ind2-1,ivac,3) = den%vacxy(jz, ind2-1,ivac,3) + t1*phs/stars%nstr2(ind2)
+                            den%vacxy(jz,ind2-1,ivac,3) = den%vacxy(jz, ind2-1,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
                          ENDDO
                       ENDIF
                    ENDDO

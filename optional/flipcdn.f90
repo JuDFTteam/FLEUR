@@ -109,7 +109,6 @@ MODULE m_flipcdn
       END IF
 
       ! flip cdn for each atom with rotation angles given
-      na = 1
       if (any(noco%l_unrestrictMT).and.size(den%mt,4)<4) then
         !So far the density was collinear in spheres, now we make it FFN ready
         CALL move_alloc(den%mt,mt_tmp)
@@ -125,11 +124,12 @@ MODULE m_flipcdn
         endif
       endif
 
-      !$OMP parallel PRIVATE(rhodummy,rhodumms,j,rhodummyR,lh,itype) DEFAULT(none) &
+      !$OMP parallel PRIVATE(rhodummy,rhodumms,j,rhodummyR,lh,itype,na) DEFAULT(none) &
       !$OMP SHARED(noco,den,zeros,atoms,sphhar,input,sym,l_flip,scalespin,toGlobal,nococonv) &
-      !$OMP FIRSTPRIVATE(na,rotAngleTheta,rotAnglePhi)
+      !$OMP FIRSTPRIVATE(rotAngleTheta,rotAnglePhi)
       !$OMP do
       DO itype = 1, atoms%ntype
+         na = atoms%firstAtom(itype)
          IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
             ! spherical and non-spherical m.t. charge density
             DO lh = 0,sphhar%nlh(sym%ntypsy(na))
@@ -165,7 +165,6 @@ MODULE m_flipcdn
                END DO
             END DO
          END IF
-         na = na + atoms%neq(itype)
       END DO
       !$OMP end do
       !$OMP end parallel

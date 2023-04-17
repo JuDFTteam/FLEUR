@@ -8,7 +8,7 @@ MODULE m_symmetrize_matrix
   USE m_juDFT
 
 CONTAINS
-  SUBROUTINE symmetrize_matrix(fmpi,noco,kpts,nk,hmat,smat)
+  SUBROUTINE symmetrize_matrix(fmpi,noco,kpts,nk,hmat,smat,force_sym)
     USE m_types
     USE m_constants
     IMPLICIT NONE
@@ -17,34 +17,35 @@ CONTAINS
     TYPE(t_kpts),INTENT(in)    :: kpts
     INTEGER,INTENT(in)         :: nk
     CLASS(t_mat),INTENT(inout) :: hmat,smat
+    LOGICAL,     INTENT(IN)    :: force_sym
 
     REAL :: max_imag
     !Check if we could exploit a real matrix even without inversion symmetry
     SELECT TYPE(hmat)
     TYPE IS(t_mat)
        realcomplex:IF (.NOT.noco%l_noco.AND..NOT.hmat%l_real) THEN
-          IF (ALL(ABS(kpts%bk(:,nk))<1E-10)) THEN
+          IF (ALL(ABS(kpts%bk(:,nk))<1E-10).OR.force_sym) THEN
              max_imag=MAXVAL(ABS(AIMAG(hmat%data_c)))
              IF (max_imag>1e-10) THEN
                 RETURN
              ENDIF
-             
-             IF (fmpi%irank==0) THEN
+
+             IF (fmpi%irank==0.AND..NOT.force_sym) THEN
                 PRINT *,"Complex matrix made real"
                 WRITE(oUnit,*) "Complex matrix made real"
              END IF
-             
+
              !We are using Gamma point, so matrix should be real
              IF (ALLOCATED(smat%data_r)) DEALLOCATE(smat%data_r)
              ALLOCATE(smat%data_r(SIZE(smat%data_c,1),SIZE(smat%data_c,2)))
              smat%data_r=smat%data_c;smat%l_real=.TRUE.
              DEALLOCATE(smat%data_c)
-             
+
              IF (ALLOCATED(hmat%data_r)) DEALLOCATE(hmat%data_r)
              ALLOCATE(hmat%data_r(SIZE(hmat%data_c,1),SIZE(hmat%data_c,2)))
              hmat%data_r=hmat%data_c;hmat%l_real=.TRUE.
              DEALLOCATE(hmat%data_c)
-             
+
           ENDIF
        ENDIF realcomplex
     END SELECT

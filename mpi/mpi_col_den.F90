@@ -14,8 +14,8 @@ MODULE m_mpi_col_den
    use mpi
 #endif
 CONTAINS
-  SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,regCharges,dos,vacdos,&
-                         results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,jDOS)
+  SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,dos,vacdos,&
+                         results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS)
 
     USE m_types
     USE m_constants
@@ -29,7 +29,7 @@ CONTAINS
 
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: fmpi
-     
+
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
@@ -46,9 +46,9 @@ CONTAINS
     TYPE (t_orb),               INTENT(INOUT) :: orb
     TYPE (t_denCoeffs),         INTENT(INOUT) :: denCoeffs
     TYPE (t_denCoeffsOffdiag),  INTENT(INOUT) :: denCoeffsOffdiag
-    TYPE (t_regionCharges),     INTENT(INOUT) :: regCharges
     TYPE (t_dos),               INTENT(INOUT) :: dos
     TYPE (t_vacdos),            INTENT(INOUT) :: vacdos
+    TYPE (t_regionCharges), OPTIONAL, INTENT(INOUT) :: regCharges
     TYPE (t_mcd),     OPTIONAL, INTENT(INOUT) :: mcd
     TYPE (t_slab),    OPTIONAL, INTENT(INOUT) :: slab
     TYPE (t_orbcomp), OPTIONAL, INTENT(INOUT) :: orbcomp
@@ -129,25 +129,27 @@ CONTAINS
     CALL zcopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,jspin,jspin), 1)
     DEALLOCATE (c_b)
 
-    !--> ener & sqal
-    n=4*atoms%ntype
-    ALLOCATE(r_b(n))
-    CALL MPI_ALLREDUCE(regCharges%ener(0:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL dcopy(n, r_b, 1, regCharges%ener(0:,:,jspin), 1)
-    CALL MPI_ALLREDUCE(regCharges%sqal(0:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL dcopy(n, r_b, 1, regCharges%sqal(0:,:,jspin), 1)
-    DEALLOCATE (r_b)
+    IF (PRESENT(regCharges)) THEN
+      !--> ener & sqal
+      n=4*atoms%ntype
+      ALLOCATE(r_b(n))
+      CALL MPI_ALLREDUCE(regCharges%ener(0:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      CALL dcopy(n, r_b, 1, regCharges%ener(0:,:,jspin), 1)
+      CALL MPI_ALLREDUCE(regCharges%sqal(0:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      CALL dcopy(n, r_b, 1, regCharges%sqal(0:,:,jspin), 1)
+      DEALLOCATE (r_b)
 
-    !--> svac & pvac
-    IF ( input%film ) THEN
-       n=SIZE(regCharges%svac,1)
-       ALLOCATE(r_b(n))
-       CALL MPI_ALLREDUCE(regCharges%svac(:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, regCharges%svac(:,jspin), 1)
-       CALL MPI_ALLREDUCE(regCharges%pvac(:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, regCharges%pvac(:,jspin), 1)
-       DEALLOCATE (r_b)
-    ENDIF
+      !--> svac & pvac
+      IF ( input%film ) THEN
+         n=SIZE(regCharges%svac,1)
+         ALLOCATE(r_b(n))
+         CALL MPI_ALLREDUCE(regCharges%svac(:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+         CALL dcopy(n, r_b, 1, regCharges%svac(:,jspin), 1)
+         CALL MPI_ALLREDUCE(regCharges%pvac(:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+         CALL dcopy(n, r_b, 1, regCharges%pvac(:,jspin), 1)
+         DEALLOCATE (r_b)
+       END IF
+    END IF
 
     !collect DOS stuff
     n = SIZE(dos%jsym,1)*SIZE(dos%jsym,2)
@@ -279,10 +281,12 @@ CONTAINS
        CALL dcopy(n, r_b, 1, denCoeffs%aclo(:,:,jspin), 1)
        CALL MPI_ALLREDUCE(denCoeffs%bclo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
        CALL dcopy(n, r_b, 1, denCoeffs%bclo(:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(regCharges%enerlo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, regCharges%enerlo(:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(regCharges%sqlo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, regCharges%sqlo(:,:,jspin), 1)
+       IF (PRESENT(regCharges)) THEN
+         CALL MPI_ALLREDUCE(regCharges%enerlo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+         CALL dcopy(n, r_b, 1, regCharges%enerlo(:,:,jspin), 1)
+         CALL MPI_ALLREDUCE(regCharges%sqlo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+         CALL dcopy(n, r_b, 1, regCharges%sqlo(:,:,jspin), 1)
+       END IF
        DEALLOCATE (r_b)
 
        ! Refactored stuff

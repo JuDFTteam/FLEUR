@@ -78,7 +78,7 @@ CONTAINS
     MPI0_c: IF( fmpi%irank == 0 ) THEN
        resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
        DO n = 1, atoms%ntype
-          DO lh = 0, sphhar%nlh(sym%ntypsy(sum(atoms%neq(:n-1))+1))
+          DO lh = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
              resDen%mt(:atoms%jri(n),lh,n,1) = resDen%mt(:atoms%jri(n),lh,n,1) &
                   - input%preconditioning_param ** 2 / fpi_const &
                   * vYukawa%mt(:atoms%jri(n),lh,n,1) * atoms%rmsh(:atoms%jri(n),n) ** 2

@@ -57,11 +57,10 @@
 !--->    that means that the moments are "in line" with the spin-spiral
 !--->    (beta = qss * taual). note: this means that only atoms within
 !--->    a plane perpendicular to qss can be equivalent!
-         iatom = 1
          DO itype = 1,atoms%ntype
+            iatom = atoms%firstAtom(itype)
             noco%phi_inp = tpi_const*dot_product(noco%qss_inp,atoms%taual(:,iatom))
             noco%alph_inp(itype) = noco%alph_inp(itype) + noco%phi_inp
-            iatom = iatom + atoms%neq(itype)
          ENDDO
       ENDIF
 

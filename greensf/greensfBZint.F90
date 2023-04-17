@@ -87,8 +87,8 @@ MODULE m_greensfBZint
          ALLOCATE(im(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,nBands,&
                      imatSize),source=cmplx_0)
 
-         natom_start = MERGE(SUM(atoms%neq(:atomType-1)) + 1,atom,.NOT.l_intersite)
-         natom_end   = MERGE(SUM(atoms%neq(:atomType))      ,atom,.NOT.l_intersite)
+         natom_start = MERGE(atoms%firstAtom(atomType),atom,.NOT.l_intersite)
+         natom_end   = MERGE(atoms%firstAtom(atomType) + atoms%neq(atomType) - 1,atom,.NOT.l_intersite)
          !Loop over equivalent atoms
          DO natom = natom_start , natom_end
 

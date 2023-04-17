@@ -21,13 +21,19 @@ CONTAINS
     REAL,INTENT(in):: displace(:,:)
 
     INTEGER :: no_steps,n,ntype,step
+
+    CHARACTER(len=100):: path,p,str,filename_add
+
+    filename_add = ""
+    IF (judft_was_argument("-add_name")) filename_add = TRIM(judft_string_for_argument("-add_name"))//"_"
+    
     No_steps=SIZE(positions,3)
     ntype=SIZE(positions,2)
     IF (ntype.NE.SIZE(forces,2).OR.ntype.NE.SIZE(displace,2).OR.&
          no_steps.NE.SIZE(forces,3).OR.no_steps.NE.SIZE(energies))THEN
        CALL judft_error("BUG in relax_io")
     ENDIF
-    OPEN(765,file="relax.xml",status="replace")
+    OPEN(765,file=TRIM(filename_add)//"relax.xml",status="replace")
     WRITE(765,*) "<!-- Attention, absolute coordinates used here -->"
     WRITE(765,*) "<relaxation>"
     !write current set of displacements
@@ -63,10 +69,12 @@ CONTAINS
     REAL,ALLOCATABLE::rtmp(:,:,:)
     INTEGER:: no_steps
     INTEGER:: ntype,step,n
-    CHARACTER(len=100):: path,p,str
+    CHARACTER(len=100):: path,p,str,filename_add
 
     TYPE(t_xml)::xml
-    call xml%init()
+    filename_add = ""
+    IF (judft_was_argument("-add_name")) filename_add = TRIM(judft_string_for_argument("-add_name"))//"_"
+    CALL xml%init(filename_add)
     no_steps=xml%GetNumberOfNodes('/fleurInput/relaxation/relaxation-history/step')
     ntype=SIZE(positions,2)
     IF (no_steps==0) THEN
@@ -136,7 +144,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_vacuum),INTENT(IN)  :: vacuum
     TYPE(t_cell),INTENT(IN)    :: cell
-     
+
     TYPE(t_sym),INTENT(INOUT)  :: sym
     TYPE(t_noco),INTENT(IN)    :: noco
     type(t_gfinp), intent(in)  :: gfinp
@@ -175,12 +183,12 @@ CONTAINS
           WRITE(*,*) "Attention: Overlapping MT-spheres. Reduced displacement by 10%"
           WRITE(*,*) indx,overlap(indx(1),indx(2))
           WRITE(oUnit,'(a,2(i0,1x),f12.8)') "Attention, overlapping MT-spheres: ",indx,overlap(indx(1),indx(2))
-          ! WRITE(error_output, '(3a,f12.8,a)') "Overlapping MT-spheres during relaxation: ", atoms%label(sum(atoms%neq(:indx(1)-1))+1),&
-          ! &atoms%label(sum(atoms%neq(:indx(2)-1))+1), overlap(indx(1),indx(2)),&
+          ! WRITE(error_output, '(3a,f12.8,a)') "Overlapping MT-spheres during relaxation: ", atoms%label(atoms%firstAtom(indx(1))),&
+          ! &atoms%label(atoms%firstAtom(indx(2))), overlap(indx(1),indx(2)),&
           ! &NEW_LINE('A')//"Treat as an error: writing rescaled displacements to relax.xml is not implemented"
           error_output = "Overlapping MT-spheres during relaxation: " // NEW_LINE('A') // &
-                         strip(atoms%label(sum(atoms%neq(:indx(1)-1))+1)) // " " // &
-                         strip(atoms%label(sum(atoms%neq(:indx(2)-1))+1)) // &
+                         strip(atoms%label(atoms%firstAtom(indx(1)))) // " " // &
+                         strip(atoms%label(atoms%firstAtom(indx(2)))) // &
                          " olap: "//float2str(overlap(indx(1),indx(2)))//NEW_LINE('A')//&
                          "Treat as an error: writing rescaled displacements to relax.xml is not implemented"
           CALL judft_error(error_output)
@@ -209,9 +217,9 @@ CONTAINS
 
 
     DO iType = 1, atoms%ntype
-       startAtom = SUM(atoms%neq(:iType-1))+1
+       startAtom = atoms%firstAtom(iType)
        tau0=atoms%taual(:,startAtom)
-       DO iAtom = startAtom, SUM(atoms%neq(:iType))
+       DO iAtom = startAtom, startAtom + atoms%neq(iType) - 1
           jop = sym%invtab(sym%ngopr(iAtom))
           tau0_rot=MATMUL(1.*sym%mrot(:,:,jop),tau0)+sym%tau(:,jop) !translation will cancel, included for clarity
           tau_rot=MATMUL(1.*sym%mrot(:,:,jop),tau0+disp(:,iType))+sym%tau(:,jop)

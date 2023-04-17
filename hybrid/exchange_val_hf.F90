@@ -54,13 +54,13 @@ MODULE m_exchange_valence_hf
    USE m_constants
    USE m_types
    USE m_util
-
+   use m_matmul_dgemm
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                   n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
-
+      
       USE m_wrapper
       USE m_trafo
       USE m_wavefproducts
@@ -337,6 +337,7 @@ CONTAINS
                   !$acc enter data create(dot_result_r) 
                   DO iob = 1, psize
                      call timestart("CPP_dgemm")
+                     !call blas_matmul(m,n,k,r_coul_wavf(:,iob:),CPP_cprod_r(:, iob:),dot_result_r,op_a="T")
                      !$acc host_data use_device(r_coul_wavf, CPP_cprod_r, dot_result_r)
                      call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
                      !$acc end host_data

@@ -152,7 +152,7 @@ CONTAINS
 
     !rotate according to q-vector
     DO n = 1,atoms%ntype
-       nococonv%alph(n) = nococonv%alph(n) + tpi_const*DOT_PRODUCT(nococonv%qss,atoms%taual(:,SUM(atoms%neq(:n-1))+1))
+       nococonv%alph(n) = nococonv%alph(n) + tpi_const*DOT_PRODUCT(nococonv%qss,atoms%taual(:,atoms%firstAtom(n)))
     ENDDO
 
     IF (.NOT.this%l_io) RETURN

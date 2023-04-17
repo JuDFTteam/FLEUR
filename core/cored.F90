@@ -198,7 +198,7 @@ CONTAINS
 
          !     ---> simpson integration
          rad = atoms%rmt(jatom)
-         ! qOutside is the charge ousides a single MT sphere of the onsidered atom type
+         ! qOutside is the charge outside a single MT sphere of the considered atom type
          qOutside = rad*rhoss(nm)/2.
          DO  nm1 = nm + 1,ncmsh - 1,2
             rad = d*rad

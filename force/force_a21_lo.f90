@@ -35,8 +35,8 @@ CONTAINS
       COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
       COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
 
-      COMPLEX tuulo, tdulo, ctuulo, ctdulo, tuloulo
-      INTEGER lo, lop, l, lp , mp, lm, lmp, iatom, ie, i, lolop, loplo, m, lo1
+      COMPLEX tuulo, tdulo,  tuloulo
+      INTEGER lo, lop, l, lp , mp, lm, lmp, iatom, ie, i, lolop, loplo, m, lo1,s
 
       !--- ABBREVIATIONS --------------------------------------------------------
       ! ccof       : coefficient of the local orbital function (u_lo*Y_lm)
@@ -52,18 +52,17 @@ CONTAINS
          l = atoms%llo(lo,itype)
          DO m = -l,l
             lm = l* (l+1) + m
-            DO lp = 0,atoms%lmax(itype)
+            DO lp = 0,atoms%lnonsph(itype)
+               s=tlmplm%h_loc2_nonsph(itype)
                DO mp = -lp,lp
                   lmp = lp* (lp+1) + mp
-                  DO iatom = SUM(atoms%neq(:itype-1))+1,SUM(atoms%neq(:itype))
+                  DO iatom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                      ! Check whether the t-matrixelement is 0
                      ! (indmat.EQ.-9999)
 
-                     tuulo = tlmplm%tuulo(lmp,m,lo1,isp,isp)
-                     tdulo = tlmplm%tdulo(lmp,m,lo1,isp,isp)
-                     ctuulo = CONJG(tlmplm%tuulo(lmp,m,lo1,isp,isp))
-                     ctdulo = CONJG(tlmplm%tdulo(lmp,m,lo1,isp,isp))
-
+                     tuulo = tlmplm%h_LO(lmp,m,lo1,isp,isp)
+                     tdulo = tlmplm%h_LO(lmp+s,m,lo1,isp,isp)
+                 
                      DO ie = 1,ne
                         DO i = 1,3
                            a21(i,iatom)=a21(i,iatom)+2.0*AIMAG(&
@@ -72,9 +71,9 @@ CONTAINS
                                  + CONJG(eigVecCoeffs%abcof(ie,lmp,1,iatom,isp))*tdulo&
                                  *cveccof(i,m,ie,lo,iatom)&
                                  + CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
-                                 *ctuulo*aveccof(i,ie,lmp,iatom)&
+                                 *conjg(tuulo)*aveccof(i,ie,lmp,iatom)&
                                  + CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
-                                 *ctdulo*bveccof(i,ie,lmp,iatom)&
+                                 *conjg(tdulo)*bveccof(i,ie,lmp,iatom)&
                                  )*we(ie)/atoms%neq(itype)
                         END DO
                      END DO
@@ -86,7 +85,7 @@ CONTAINS
                lp = atoms%llo(lop,itype)
                DO mp = -lp, lp
                   lmp = lp* (lp+1) + mp
-                  DO iatom = SUM(atoms%neq(:itype-1))+1,SUM(atoms%neq(:itype))
+                  DO iatom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                      tuloulo = tlmplm%tuloulo_newer(m,mp,lo,lop,itype,isp,isp)
                      DO ie = 1,ne
                         DO i = 1,3
@@ -100,7 +99,7 @@ CONTAINS
                END DO
             END DO
 
-            DO iatom = SUM(atoms%neq(:itype-1))+1,SUM(atoms%neq(:itype))
+            DO iatom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                DO ie = 1,ne
                   DO i = 1,3
                      a21(i,iatom)=a21(i,iatom)-2.0*AIMAG(&
@@ -115,7 +114,7 @@ CONTAINS
 
             ! Consider only the lop with l_lop = l_lo
             DO lop = atoms%lo1l(l,itype),(atoms%lo1l(l,itype)+atoms%nlol(l,itype)-1)
-               DO iatom = SUM(atoms%neq(:itype-1))+1,SUM(atoms%neq(:itype))
+               DO iatom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                   DO ie = 1,ne
                      DO i = 1,3
                         a21(i,iatom)=a21(i,iatom)-2.0*AIMAG(&

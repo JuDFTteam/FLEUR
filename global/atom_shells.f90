@@ -304,7 +304,7 @@ MODULE m_atom_shells
       END DO
 
       neighboursFound = 0
-      DO refAt = SUM(atoms%neq(:referenceAtom-1)) + 1, SUM(atoms%neq(:referenceAtom))
+      DO refAt = atoms%firstAtom(referenceAtom), atoms%firstAtom(referenceAtom) + atoms%neq(referenceAtom) - 1
          refPos(:) = posCart(:,refAt)
          identicalAtoms = 0
          DO i = -lastBorder, lastBorder
@@ -389,8 +389,8 @@ MODULE m_atom_shells
 
          !Take the representative element of the shell
          shellDiffAux = 0.0
-         refAtom = SUM(atoms%neq(:atoms%itype(shellAtoms(1,1,current_shell))-1)) + 1
-         refAtomp = SUM(atoms%neq(:atoms%itype(shellAtoms(2,1,current_shell))-1)) + 1
+         refAtom = atoms%firstAtom(atoms%itype(shellAtoms(1,1,current_shell)))
+         refAtomp = atoms%firstAtom(atoms%itype(shellAtoms(2,1,current_shell)))
          DO ishellAtom = 1, numAtomsShell(current_shell)
             IF(shellAtoms(1,ishellAtom,current_shell) == refAtom.AND.&
                shellAtoms(2,ishellAtom,current_shell) == refAtomp) THEN

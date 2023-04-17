@@ -75,7 +75,7 @@ CONTAINS
                    DO m = -l,l
                       DO i = 1,ne
                          uloulop21(lop,lo,itype) = uloulop21(lop,lo,itype)+&
-                                                   we(i)*CONJG(eigVecCoeffs%ccof(m,i,lop,natom,2))*eigVecCoeffs%ccof(m,i,lo, natom,1)
+                                                   we(i)*CONJG(eigVecCoeffs%ccof(m,i,lop,natom,1))*eigVecCoeffs%ccof(m,i,lo, natom,2)
                       ENDDO ! i = 1,ne
                    ENDDO   ! m = -l,l
                 ENDIF

@@ -32,12 +32,13 @@ MODULE m_tetraef
       REAL    :: weight(4),ecmax(2,size(w,1))
       REAL    :: wght(2,kpts%nkpt,size(w,1)),eval(4), tetra_weight(kpts%nkpt)
 
+      w=0.0
+      wght=0.0
       DO iBand = 1,size(w,1)
          DO jspin = 1,jspins
             ecmax(jspin,iBand) = -1.0e25
             DO ikpt = 1,kpts%nkpt
-               wght(jspin,ikpt,iBand) = 0.0e0
-               w(iBand,ikpt,jspin) = 0.0e0
+               w(iBand,ikpt,jspin) = 0.0
                IF(eig(iBand,ikpt,jspin).GT.ecmax(jspin,iBand)) ecmax(jspin,iBand) = eig(iBand,ikpt,jspin)
             ENDDO
          ENDDO

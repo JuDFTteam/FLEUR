@@ -38,7 +38,6 @@ CONTAINS
       INTEGER                  ::  nsym, nop
 ! - local arrays -
       INTEGER, ALLOCATABLE   ::  rot(:, :, :), rrot(:, :, :)
-      INTEGER, ALLOCATABLE   ::  invtab(:)
       INTEGER, ALLOCATABLE   ::  neqkpt(:)
       INTEGER, ALLOCATABLE   ::  pkpt(:, :, :), kptp(:), symkpt(:), iarr(:), &
                                 iarr2(:)
@@ -90,25 +89,10 @@ CONTAINS
       IF(any(rot(:, :, 1) - reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/),(/3, 3/)) /= 0)) &
          call judft_error( 'kptgen: First symmetry operation is not the identity.')
 
-      ALLOCATE(rrot(3, 3, nsym), invtab(nsym))
-
-      invtab = 0
+      ALLOCATE(rrot(3, 3, nsym))
 
       DO i = 1, nop
-         DO j = 1, nop
-
-            IF(all(matmul(rot(:, :, i), rot(:, :, j)) &
-                   == reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/),(/3, 3/))) &
-               .AND. all(modulo(matmul(rot(:, :, i), rtau(:, j)) + rtau(:, i), 1.0) &
-                         < 1e-10)) THEN
-               IF(invtab(i) /= 0) call juDFT_error('kptgen: inverse operation &
-               & already defined.')
-               invtab(i) = j
-               rrot(:, :, i) = transpose_int(rot(:, :, j)) ! temporary fix for ifc
-            END IF
-         END DO
-         IF(invtab(i) == 0) call judft_error( 'kptgen: inverse operation not found.')
-
+         rrot(:, :, i) = transpose(rot(:, :, sym%invtab(i)))
       END DO
 
       DO i = nop + 1, nsym
@@ -254,18 +238,6 @@ CONTAINS
          END DO
          DEALLOCATE(prim, expo)
       END FUNCTION kgv
-
-!     ifc seems to have problems transposing integer arrays. this is a fix.
-      FUNCTION transpose_int(a)
-         IMPLICIT NONE
-         integer :: transpose_int(3, 3), a(3, 3)
-         integer :: i, j
-         DO i = 1, 3
-            DO j = 1, 3
-               transpose_int(i, j) = a(j, i)
-            END DO
-         END DO
-      END FUNCTION transpose_int
 
 !     function modulo1 maps kpoint into first BZ
       FUNCTION modulo1(kpoint, nkpt, a, b, c)

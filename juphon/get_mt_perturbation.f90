@@ -107,9 +107,11 @@ CONTAINS
       TYPE(t_sym),    INTENT(IN)    :: sym
       TYPE(t_potden), INTENT(IN)    :: den, den1, den1im
       TYPE(t_noco),   INTENT(IN)    :: noco
-      TYPE(t_potden), INTENT(INOUT) :: vtot,vtot1,vtot1im
+      TYPE(t_potden), INTENT(IN)    :: vtot
+      TYPE(t_potden), INTENT(INOUT) :: vtot1,vtot1im
 
       TYPE(t_gradients)             :: grad
+      TYPE(t_potden)                :: vtot_loc
 
       INTEGER                       :: n, nsp, imesh, i
       REAL                          :: theta, phi, v11, v22
@@ -119,6 +121,7 @@ CONTAINS
       COMPLEX :: a11, a22, a21, a12, av11, av22, av21, av12
       COMPLEX :: t1, p1, v21, v12, v1mat11, v1mat22, v1mat21, v1mat12
 
+      vtot_loc = vtot
       nsp=atoms%nsp()
       ALLOCATE(chtmp(nsp*atoms%jmtd,4))
       ALLOCATE(chretmp(nsp*atoms%jmtd,4))
@@ -128,12 +131,12 @@ CONTAINS
       DO n=1,atoms%ntype
 
          DO i=1,atoms%jri(n)
-            vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
+            vtot_loc%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
             vtot1%mt(i,:,n,:)=vtot1%mt(i,:,n,:)*atoms%rmsh(i,n)**2
             vtot1im%mt(i,:,n,:)=vtot1im%mt(i,:,n,:)*atoms%rmsh(i,n)**2
          END DO
 
-         CALL mt_to_grid(.FALSE.,4,atoms,sym,sphhar,.FALSE.,vtot%mt(:,0:,n,:),n,noco,grad,chtmp(:,1:2))
+         CALL mt_to_grid(.FALSE.,4,atoms,sym,sphhar,.FALSE.,vtot_loc%mt(:,0:,n,:),n,noco,grad,chtmp(:,1:2))
          CALL mt_to_grid(.FALSE.,2,atoms,sym,sphhar,.FALSE.,vtot1%mt(:,0:,n,:),n,noco,grad,chretmp(:,1:2))
          CALL mt_to_grid(.FALSE.,2,atoms,sym,sphhar,.FALSE.,vtot1im%mt(:,0:,n,:),n,noco,grad,chimtmp(:,1:2))
 

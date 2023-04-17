@@ -80,7 +80,9 @@ CONTAINS
 #ifdef CPP_HDF
       CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,sym,banddos,eFermi)
 #endif
-
+    DO n=1,size(eigdos)
+      call eigdos(n)%p%sym_weights()
+    ENDDO  
     IF (banddos%band) THEN
 !      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
        DO n=1,size(eigdos)

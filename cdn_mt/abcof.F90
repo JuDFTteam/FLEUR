@@ -99,12 +99,10 @@ CONTAINS
 
     ! Initializations
     acof_size=size(acof,1)
-    !$acc enter data create(acof,bcof,ccof,abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
-    !$acc kernels present(acof,bcof,ccof) default(none)
+    !$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
     acof(:,:,:)   = CMPLX(0.0,0.0)
     bcof(:,:,:)   = CMPLX(0.0,0.0)
     ccof(:,:,:,:) = CMPLX(0.0,0.0)
-    !$acc end kernels
     l_force = .FALSE.
     IF(PRESENT(eig).AND.input%l_f) l_force = .TRUE.
     IF(l_force) THEN
@@ -214,28 +212,26 @@ CONTAINS
              !$acc host_data use_device(work_c,abCoeffs,abTemp)
              CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
              !$acc end host_data
-
+             !$acc update self(abTemp)
              !stop "DEBUG"
-             !$CPP_OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
-             !$acc kernels present(acof,bcof,abTemp) default(none)
+             !$OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
              DO lm = 0, absize-1
                 DO i = 1, ne
                    acof(i,lm,iAtom) = acof(i,lm,iAtom) + abTemp(i,lm)
                    bcof(i,lm,iAtom) = bcof(i,lm,iAtom) + abTemp(i,absize+lm)
                 END DO
              END DO
-             !$acc end kernels
-             !$CPP_OMP END PARALLEL DO
+             !$OMP END PARALLEL DO
 
              CALL timestop("gemm")
 
              CALL timestart("local orbitals")
              ! Treatment of local orbitals
-             !$acc data copyin(alo1,blo1,clo1,ccchi)create(ylm)
+             !!$acc data copyin(alo1,blo1,clo1,ccchi)create(ylm)
              DO lo = 1, atoms%nlo(iType)
                 DO nkvec = 1, lapw%nkvec(lo,iAtom)
                    iLAPW = lapw%kvec(nkvec,lo,iAtom)
-                   fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss
+                   fg(:) = MERGE(lapw%gvec(:,iLAPW,iintsp),lapw%gvec(:,iLAPW,jspin),noco%l_ss) + qss + lapw%qPhon
                    fk = lapw%bkpt + fg(:)
                    tmk = tpi_const * DOT_PRODUCT(fk(:),atoms%taual(:,iAtom))
                    phase = CMPLX(COS(tmk),SIN(tmk))
@@ -250,12 +246,12 @@ CONTAINS
                    fgp = MATMUL(fgr,cell%bmat)
 
                    CALL ylm4(atoms%lmax(iType),fkp,ylm)
-                   !$acc update device(ylm)
+                   !!$acc update device(ylm)
                    CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,iType,iAtom,iLAPW,nkvec,&
                                  lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force)
                 END DO
              END DO ! loop over LOs
-             !$acc end data
+             !!$acc end data
              CALL timestop("local orbitals")
 
              IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
@@ -290,7 +286,7 @@ CONTAINS
              ! (The complementary case is treated far below)
              IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
                 CALL timestart("invsym atoms")
-                !$acc update self(acof,bcof,work_c)
+                !$acc update self(work_c)
                 jatom = sym%invsatnr(iAtom)
                    DO l = 0,atoms%lmax(iType)
                       ll1 = l* (l+1)
@@ -304,7 +300,7 @@ CONTAINS
                          !CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
                        END DO
                    END DO
-                   !$acc update device(acof,bcof)
+             
                 CALL timestop("invsym atoms")
              END IF ! IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1)
 
@@ -385,8 +381,7 @@ CONTAINS
           END IF  ! invsatom == ( 0 v 1 )
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
-    !$acc exit data copyout(acof,bcof,ccof) delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
-    !$acc exit data delete(acof,bcof,abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
     !$acc exit data delete(fjgj)
     DEALLOCATE(work_c)
     IF(l_force) THEN
@@ -418,17 +413,16 @@ CONTAINS
           IF (sym%invsat(iAtom).EQ.1) THEN
              CALL timestart("invsym atoms")
              jAtom = sym%invsatnr(iAtom)
-             phase = EXP(tpi_const*ImagUnit*DOT_PRODUCT(atoms%taual(:,jAtom) + atoms%taual(:,iAtom),lapw%bkpt))
              DO ilo = 1,atoms%nlo(iType)
                 l = atoms%llo(ilo,iType)
                 DO m = -l,l
                    inv_f = (-1)**(m+l)
                    DO ie = 1,ne
-                      ccof(m,ie,ilo,jatom) = inv_f * phase * CONJG( ccof(-m,ie,ilo,iatom))
+                      ccof(m,ie,ilo,jatom) = inv_f * CONJG( ccof(-m,ie,ilo,iatom))
                       IF(l_force) THEN
-                         force%acoflo(m,ie,ilo,jatom) = inv_f * phase * CONJG(force%acoflo(-m,ie,ilo,iatom))
-                         force%bcoflo(m,ie,ilo,jatom) = inv_f * phase * CONJG(force%bcoflo(-m,ie,ilo,iatom))
-                         force%cveccof(:,m,ie,ilo,jatom) = -inv_f * phase * CONJG(force%cveccof(:,-m,ie,ilo,iatom))
+                         force%acoflo(m,ie,ilo,jatom) = inv_f * CONJG(force%acoflo(-m,ie,ilo,iatom))
+                         force%bcoflo(m,ie,ilo,jatom) = inv_f * CONJG(force%bcoflo(-m,ie,ilo,iatom))
+                         force%cveccof(:,m,ie,ilo,jatom) = -inv_f * CONJG(force%cveccof(:,-m,ie,ilo,iatom))
                       END IF
                    END DO
                 END DO
@@ -439,13 +433,13 @@ CONTAINS
                    lm  = ll1 + m
                    lmp = ll1 - m
                    inv_f = (-1)**(m+l)
-                   acof(:ne,lm,jAtom) = inv_f * phase * CONJG(acof(:ne,lmp,iAtom))
-                   bcof(:ne,lm,jAtom) = inv_f * phase * CONJG(bcof(:ne,lmp,iAtom))
+                   acof(:ne,lm,jAtom) = inv_f * CONJG(acof(:ne,lmp,iAtom))
+                   bcof(:ne,lm,jAtom) = inv_f * CONJG(bcof(:ne,lmp,iAtom))
                    IF (atoms%l_geo(iType).AND.l_force) THEN
-                      force%e1cof(:ne,lm,jAtom) = inv_f * phase * CONJG(force%e1cof(:ne,lmp,iAtom))
-                      force%e2cof(:ne,lm,jAtom) = inv_f * phase * CONJG(force%e2cof(:ne,lmp,iAtom))
-                      force%aveccof(:,:ne,lm,jAtom) = -inv_f * phase * CONJG(force%aveccof(:,:ne,lmp,iAtom))
-                      force%bveccof(:,:ne,lm,jAtom) = -inv_f * phase * CONJG(force%bveccof(:,:ne,lmp,iAtom))
+                      force%e1cof(:ne,lm,jAtom) = inv_f * CONJG(force%e1cof(:ne,lmp,iAtom))
+                      force%e2cof(:ne,lm,jAtom) = inv_f * CONJG(force%e2cof(:ne,lmp,iAtom))
+                      force%aveccof(:,:ne,lm,jAtom) = -inv_f * CONJG(force%aveccof(:,:ne,lmp,iAtom))
+                      force%bveccof(:,:ne,lm,jAtom) = -inv_f * CONJG(force%bveccof(:,:ne,lmp,iAtom))
                    END IF
                 END DO
              END DO

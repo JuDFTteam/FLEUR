@@ -180,7 +180,7 @@ CONTAINS
       iatom = 0
       DO itype = 1, atoms%ntype
 
-         typsym = sym%ntypsy(SUM(atoms%neq(:itype - 1)) + 1)
+         typsym = sym%ntypsy(atoms%firstAtom(itype))
          nlharm = sphhar%nlh(typsym)
 
          ! Calculate vxc = vtot - vcoul
@@ -343,7 +343,7 @@ CONTAINS
 
          DO itype = 1, atoms%ntype
 
-            typsym = sym%ntypsy(SUM(atoms%neq(:itype - 1)) + 1)
+            typsym = sym%ntypsy(atoms%firstAtom(itype))
             nlharm = sphhar%nlh(typsym)
 
             ! Calculate vxc = vtot - vcoul

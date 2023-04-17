@@ -106,7 +106,7 @@ CONTAINS
 
          DO js=1,4
             DO i=1,atoms%ntype
-               DO lh=0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:i - 1)) + 1))
+               DO lh=0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(i)))
                   r2=atoms%rmsh(:,i)**2
                   vCorr%mt(:,lh,i,js) = vCorr%mt(:,lh,i,js)/r2
                END DO !lh
