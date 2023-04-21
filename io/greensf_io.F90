@@ -74,7 +74,7 @@ MODULE m_greensf_io
       real, ALLOCATABLE :: bxc_mt(:,:,:)
       complex, allocatable :: bxc_lm(:,:,:)
 
-      version = 9
+      version = 10
       IF(PRESENT(inFilename)) THEN
          filename = TRIM(ADJUSTL(inFilename))
       ELSE
@@ -558,7 +558,7 @@ MODULE m_greensf_io
       !The two attributes below are constant at the moment, but putting them in
       !means that the conventions can be changed without disrupting everything outside fleur
       CALL io_write_attlog0(groupID,"local_spin_frame", .TRUE.)
-      CALL io_write_attlog0(groupID,"local_real_frame", .NOT.g%elem%isIntersite())
+      CALL io_write_attlog0(groupID,"local_real_frame", .NOT.(g%elem%isIntersite().and.noco%l_noco))
       IF(g%elem%atom/=0) THEN
          CALL io_write_attchar0(groupID,"atom",TRIM(ADJUSTL(atoms%label(g%elem%atom))))
          CALL io_write_attchar0(groupID,"atomp",TRIM(ADJUSTL(atoms%label(g%elem%atomp))))

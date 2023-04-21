@@ -32,7 +32,6 @@ MODULE m_greensfBZint
       INTEGER :: natom,natomp,natom_start,natom_end
       INTEGER :: i_elem,i_elemLO,nLO,imatSize,imat,iBand,iop
       INTEGER :: spin1,spin2,atom,atomp
-      COMPLEX :: phase
       REAL    :: atomDiff(3)
       LOGICAL :: l_sphavg,l_intersite
       COMPLEX, ALLOCATABLE :: im(:,:,:,:)
@@ -107,7 +106,7 @@ MODULE m_greensfBZint
                ENDIF
 
                CALL greensfEigVecCoeffs(nBands,l,lp,natom,natomp,atomType,atomTypep,spin1,spin2,&
-                                          l_sphavg,atoms,scalarGF(i_gf),eigVecCoeffs_rot,im)
+                                        l_sphavg,atoms,scalarGF(i_gf),eigVecCoeffs_rot,im)
 
 
                !The eigenvector coefficients already contains part of the interstitial phase
