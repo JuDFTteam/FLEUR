@@ -54,6 +54,12 @@ authors:
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0001-7939-226X'
+  -given-names: Matthias
+    family-names: Redies
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-6780-6821'
   - given-names: Christian-Roman
     family-names: Gerhorst
     email: c.gerhorst@fz-juelich.de
