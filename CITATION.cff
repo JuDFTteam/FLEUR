@@ -54,6 +54,12 @@ authors:
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0001-7939-226X'
+  -given-names: Matthias
+    family-names: Redies
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-6780-6821'
   - given-names: Christian-Roman
     family-names: Gerhorst
     email: c.gerhorst@fz-juelich.de
@@ -61,14 +67,28 @@ authors:
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0001-8984-4258'
-- given-names: Gustav
+  - given-names: Christoph
+    family-names: Friedrich
+    email: c.friedrich@fz-juelich.de
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0000-0002-3315-7536'
+  - given-names: Stefan
+    family-names: Heinze
+    email: heinze@theo-physik.uni-kiel.de
+    affiliation: >-
+      Institute of Theoretical Physics and Astrophysics,
+      University of Kiel, D-24098 Kiel, Germany
+    orcid: 'https://orcid.org/0000-0001-5852-0082'
+  - given-names: Gustav
     family-names: Bihlmayer
     email: g.bihlmayer@fz-juelich.de
     affiliation: >-
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0002-6615-1122'
-- given-names: Stefan
+  - given-names: Stefan
     family-names: Blügel
     email: s.bluegel@fz-juelich.de
     affiliation: >-
