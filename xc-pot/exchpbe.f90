@@ -113,10 +113,10 @@ CONTAINS
          kF = (3.0 * pi_const**2 * rho)**thrd
          !! CALL judft_error("HSE not implemented",calledby="exchpbe")
          ! his creates a depency loop
-         CALL timestart("hse: calc enhancement factor")
+         !CALL timestart("hse: calc enhancement factor")
          CALL calculateEnhancementFactor(kF, s, fxhse, dFx_ds, d2Fx_ds2, &
                                          dFx_dkF, d2Fx_dsdkF)
-         CALL timestop("hse: calc enhancement factor")
+         !CALL timestop("hse: calc enhancement factor")
          ex = exunif * (fxpbe - xcpot%exchange_weight * fxhse )
       ELSE
          ex = exunif*fxpbe
