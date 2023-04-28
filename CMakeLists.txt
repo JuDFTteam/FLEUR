@@ -15,6 +15,7 @@ set(CMAKE_Fortran_FLAGS "")
 project(FLEUR LANGUAGES C CXX Fortran)
 string(STRIP "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_backup}" CMAKE_Fortran_FLAGS)
 
+include("cmake/fleurist_setup.cmake")
 include("cmake/CompilerConfig.txt")
 
 include("cmake/Generate_Schema.cmake")
