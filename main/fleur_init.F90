@@ -157,6 +157,11 @@ CONTAINS
                              Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%juPhon)
       !Remaining init is done using all PE
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
+      IF (fmpi%irank .EQ. 0) THEN
+         IF(xcpot%is_hybrid().AND.fi%sym%invs) THEN
+            CALL juDFT_warn("Hybrid functionals with inversion symmetric unit cells are disabled at the moment.")
+         END IF
+      END IF
       CALL nococonv%init(fi%noco)
       CALL nococonv%init_ss(fi%noco, fi%atoms)
       !CALL ylmnorm_init(MAX(fi%atoms%lmaxd, 2*fi%hybinp%lexp))
