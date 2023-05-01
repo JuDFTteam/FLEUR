@@ -116,6 +116,10 @@ MODULE m_checks
            CALL juDFT_error("Band unfolding for 2nd variation SOC is only implemented without incorporating the overlap matrix.", hint="You have to set the optional /output/unfoldingBand/@useOlap switch to F.", calledby ="check_input_switches")
         END IF
      END IF
+     
+     IF (ANY(atoms%lda_u(1:atoms%n_u)%l_amf)) THEN
+        CALL juDFT_warn("Around Mean Field limit in LDA+U calculations is disabled at the moment.")
+     END IF
 
    END SUBROUTINE check_input_switches
 
