@@ -101,7 +101,7 @@ MODULE m_judft_xmlOutput
       ENDIF
       xmlOpened = .TRUE.
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-      WRITE (xmlOutputUnit,'(a,a," ",a,a)') '<',TRIM(maintag),TRIM(maintag),'Version="0.36">'
+      WRITE (xmlOutputUnit,'(a,a," ",a,a)') '<',TRIM(maintag),TRIM(maintag),'Version="0.37">'
    END SUBROUTINE startXMLOutput
 
    SUBROUTINE endXMLOutput(errmsg)
