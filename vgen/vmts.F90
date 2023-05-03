@@ -34,6 +34,7 @@ contains
 
     use m_constants
     use m_types
+    use m_mpi_reduce_tool
     use m_intgr, only : intgr2, sfint
     use m_phasy1
     use m_sphbes
@@ -60,7 +61,9 @@ contains
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir
 
     complex                           :: cp, sm
-    integer                           :: i, jm, k, l, lh, n, nd, lm, n1, nat, m, imax, lmax, iAtom, iMem, ptsym
+    integer                           :: i, jm, k, l, lh, n, nd, lm, m, imax, lmax, iMem, ptsym
+    integer                           :: maxBunchSize, numBunches, iBunch, firstStar, iTempArray
+    complex                           :: temp
     complex                           :: vtl(0:sphhar%nlhd, atoms%ntype)
     complex                           :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     real                              :: green_factor, termsR, pref
@@ -70,70 +73,78 @@ contains
     real                              :: sbf(0:atoms%lmaxd)
     real, allocatable, dimension(:,:) :: il, kl
     LOGICAL                           :: l_dfptvgen
-
-    !$ complex, allocatable :: vtl_loc(:,:)
-#ifdef CPP_MPI
-    integer                       :: ierr
-    complex, allocatable          :: c_b(:)
-#endif
+    COMPLEX, ALLOCATABLE              :: vtlStars(:,:,:), vtlLocal(:,:)
+    TYPE(t_parallelLoop)              :: mpiLoop, ompLoop
 
     l_dfptvgen = PRESENT(rhoIm)
 
     ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
 
-    vtl(:,:) = cmplx( 0.0, 0.0 )
+    ALLOCATE (vtlLocal(0:sphhar%nlhd,atoms%ntype))
+    vtlLocal(:,:) = cmplx(0.0,0.0)
 
+    firstStar = MERGE(2,1,norm2(stars%center)<=1e-8)
+    maxBunchSize = 2*getNumberOfThreads() ! This bunch size is kind of a magic number determined from some
+                                          ! naive performance tests for a 64 atom unit cell
+    CALL calcNumberComputationBunches(firstStar, stars%ng3, maxBunchSize, numBunches)
 
-    ! q=0 component
-    if ( fmpi%irank == 0 ) then
-      vtl(0,1:atoms%ntype) = sfp_const * vpw(1)
-    end if
+    CALL mpiLoop%init(fmpi%irank,fmpi%isize,0,numBunches-1)
+
+    ALLOCATE(vtlStars(0:sphhar%nlhd,atoms%ntype,maxBunchSize))
+    vtlStars = CMPLX(0.0,0.0)
 
     ! q/=0 components
-!    !$omp parallel default( none ) &
-!    !$omp& shared( fmpi, stars, vpw,   atoms, sym, cell, sphhar, vtl ) &
-!    !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
-!    !$omp& private( vtl_loc )
-!    !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype))
-!    !$ vtl_loc(:,:) = cmplx(0.0,0.0)
-!    !$omp do
-    do k = MERGE(fmpi%irank+2,1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
-      cp = vpw(k) * stars%nstr(k)
-        call phasy1( atoms, stars, sym, cell, k, pylm )
-      nat = 1
-      do n = 1, atoms%ntype
-        call sphbes( atoms%lmax(n), stars%sk3(k) * atoms%rmt(n), sbf )
-        nd = sym%ntypsy(nat)
-        do lh = 0, sphhar%nlh(nd)
-          l = sphhar%llh(lh,nd)
-          sm = (0.0,0.0)
-          do jm = 1, sphhar%nmem(lh,nd)
-            m = sphhar%mlh(jm,lh,nd)
-            lm = l * ( l + 1 ) + m + 1
-            sm = sm + conjg( sphhar%clnu(jm,lh,nd) ) * pylm(lm,n)
+    DO iBunch = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
+       CALL ompLoop%init(iBunch,numBunches,firstStar,stars%ng3)
+       !$OMP parallel do default( NONE ) &
+       !$OMP SHARED(ompLoop,atoms,stars,sym,cell,sphhar,vpw,vtlStars,potdenType) &
+       !$OMP private(iTempArray,cp,pylm,n,sbf,nd,lh,l,sm,jm,m,lm)
+       do k = ompLoop%bunchMinIndex, ompLoop%bunchMaxIndex
+          iTempArray = k - ompLoop%bunchMinIndex + 1
+          cp = vpw(k) * stars%nstr(k)
+          call phasy1( atoms, stars, sym, cell, k, pylm )
+          do n = 1, atoms%ntype
+             call sphbes( atoms%lmax(n), stars%sk3(k) * atoms%rmt(n), sbf )
+             nd = sym%ntypsy(atoms%firstAtom(n))
+             do lh = 0, sphhar%nlh(nd)
+                l = sphhar%llh(lh,nd)
+                sm = (0.0,0.0)
+                do jm = 1, sphhar%nmem(lh,nd)
+                   m = sphhar%mlh(jm,lh,nd)
+                   lm = l * ( l + 1 ) + m + 1
+                   sm = sm + conjg( sphhar%clnu(jm,lh,nd) ) * pylm(lm,n)
+                end do
+                vtlStars(lh,n,iTempArray) = vtlStars(lh,n,iTempArray) + cp * sbf(l) * sm
+             end do
           end do
-!          !$ if (.false.) then
-          vtl(lh,n) = vtl(lh,n) + cp * sbf(l) * sm
-!          !$ end if
-!          !$ vtl_loc(lh,n) = vtl_loc(lh,n) + cp * sbf(l) * sm
-        end do
-        nat = nat + atoms%neq(n)
-      end do
-    end do
-!    !$omp end do
-!    !$omp critical
-!    !$ vtl = vtl + vtl_loc
-!    !$omp end critical
-!    !$ deallocate(vtl_loc)
-!    !$omp end parallel
-#ifdef CPP_MPI
-    n1 = ( sphhar%nlhd + 1 ) * atoms%ntype
-    allocate( c_b(n1) )
-    call MPI_REDUCE( vtl, c_b, n1, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
-    if ( fmpi%irank == 0 ) vtl = reshape( c_b, (/sphhar%nlhd+1,atoms%ntype/) )
-    deallocate( c_b )
-#endif
+       end do
+       !$OMP END PARALLEL DO
+    END DO
+    
+    !$OMP parallel do default( NONE ) &
+    !$OMP SHARED(atoms,sym,sphhar,maxBunchSize,vtlStars,vtlLocal) &
+    !$OMP private(nd,lh,temp,iTempArray)
+    DO n = 1, atoms%ntype
+       nd = sym%ntypsy(atoms%firstAtom(n))
+       do lh = 0, sphhar%nlh(nd)
+          temp = CMPLX(0.0,0.0)
+          DO iTempArray = 1, maxBunchSize
+             temp = temp + vtlStars(lh,n,iTempArray)
+          END DO
+          vtlLocal(lh,n) = temp
+       END DO
+    END DO
+    !$OMP END PARALLEL DO
+    
+    ! q=0 component
+    if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8 ) then
+       DO n = 1, atoms%ntype
+          vtlLocal(0,n) = vtlLocal(0,n) + sfp_const * vpw(1)
+       END DO
+    end if
+
+    CALL mpi_sum_reduce(vtlLocal, vtl,fmpi%mpi_comm)
 
     ! SPHERE INTERIOR CONTRIBUTION to the coefficients calculated from the
     ! values of the sphere Coulomb/Yukawa potential on the sphere boundary
@@ -143,9 +154,8 @@ contains
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
     end if
 
-    nat = 1
     do n = 1, atoms%ntype
-      nd = sym%ntypsy(nat)
+      nd = sym%ntypsy(atoms%firstAtom(n))
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(nd), nd)
       if ( potdenType == POTDEN_TYPE_POTYUK ) then
@@ -188,7 +198,6 @@ contains
                                                 + green_2(1:imax) *            integral_1(1:imax)   )
         END IF
       end do
-      nat = nat + atoms%neq(n)
     end do
     if ( potdenType == POTDEN_TYPE_POTYUK ) then
       deallocate( il, kl )
@@ -202,8 +211,7 @@ contains
       ELSE
          ! DFPT case:
          DO n = MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
-            iAtom = SUM(atoms%neq(:n-1)) + 1
-            ptsym = sym%ntypsy(iAtom)
+            ptsym = sym%ntypsy(atoms%firstAtom(n))
             pref = MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
             DO lh = 1, 3
                l = sphhar%llh(lh, ptsym)

@@ -111,8 +111,11 @@ MODULE m_nocoInputCheck
     END IF
 
     if (noco%l_ss) then
-      call ss_sym(sym%nop,sym%mrot,noco%qss_inp,error)
-      if (any(error)) call judft_warn("Symmetry incompatible with Spin-Spiral")
+       CALL ss_sym(sym%nop,sym%mrot,noco%qss_inp,error)
+       IF (ANY(error)) CALL judft_warn("Symmetry incompatible with Spin-Spiral")
+       IF (ANY(noco%qss_inp(:).NE.0.0)) THEN
+          IF(ALL(noco%beta_inp(:).EQ.0.0)) CALL juDFT_warn("No spin-spiral cone has a finite opening angle. Is this wanted?", hint='This is the beta angle.')
+       END IF
     endif
 
     IF (any(noco%l_spinoffd_ldau).AND..NOT.noco%l_mperp) THEN
@@ -121,6 +124,10 @@ MODULE m_nocoInputCheck
 
     IF (any(noco%l_spinoffd_ldau).AND..NOT.noco%l_noco) THEN
       CALL juDFT_error("l_spinoffd='T' for ldaU and l_noco='F' makes no sense.",calledby='nocoInputCheck')
+    END IF
+
+    IF (noco%l_ss .and. noco%l_soc) THEN
+      CALL juDFT_error("You use l_soc='T' and l_ss='T'.",hint="In a spin-spiral calculation SOC cannot be used. These are incompatible features. Please see the documentation for details.",calledby='nocoInputCheck')
     END IF
 
    END SUBROUTINE nocoInputCheck

@@ -83,7 +83,7 @@ CONTAINS
          ALLOCATE(aVec(i)%pw_w,mold=aVec(i)%pw)
          aVec(i)%mt(:,:,:,:) = dummyDen(i+1)%mt(:,:,:,:)
          DO itype=1,atoms%ntype
-            DO lh=0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:itype - 1)) + 1))
+            DO lh=0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(itype)))
                IF (factor==2.0) THEN
                   r2=atoms%rmsh(:,itype)**2
                END IF

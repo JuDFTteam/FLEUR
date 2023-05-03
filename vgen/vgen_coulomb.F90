@@ -167,7 +167,7 @@ contains
           ! there is a better option now using qfix in mix
         else
           vCoul%pw(1,ispin) = cmplx(0.0,0.0)
-          first_star = MERGE(2,1,norm2(stars%center)<=1e-8)
+          first_star = MERGE(2,1,stars%sk3(1)< 1E-9)
           vCoul%pw(first_star:stars%ng3,ispin) = fpi_const * psq(first_star:stars%ng3) / stars%sk3(first_star:stars%ng3) ** 2
         end if
       end if

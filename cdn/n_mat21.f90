@@ -38,7 +38,7 @@ MODULE m_nmat21
          l = atoms%lda_u(i_u)%l
          n = atoms%lda_u(i_u)%atomType
          ll1 = (l+1)*l
-         DO natom = SUM(atoms%neq(:n-1))+1, SUM(atoms%neq(:n))
+         DO natom = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
             n_tmp = cmplx_0
             !
             !  prepare n_mat in local frame (in noco-calculations this depends

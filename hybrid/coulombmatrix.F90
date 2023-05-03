@@ -574,7 +574,7 @@ CONTAINS
 
                   carr2 = 0
 
-                  call timestart("itype loops")
+!                  call timestart("itype loops")
                   do iatom = 1,fi%atoms%nat
                      itype2 = fi%atoms%itype(iatom)
                      cexp = CONJG(carr2b(iatom, igpt2))
@@ -593,9 +593,9 @@ CONTAINS
                      enddo
                   end do ! iatom
 
-                  call timestop("itype loops")
+!                  call timestop("itype loops")
 
-                  call timestart("igpt1")
+!                  call timestart("igpt1")
                   DO igpt1 = 1, igpt2
                      iy = hybdat%nbasp + igpt1
                      igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -611,7 +611,7 @@ CONTAINS
                      END DO
                      coul(ikpt)%data_c(iy,ix_loc) = coul(ikpt)%data_c(iy,ix_loc) + csum/fi%cell%vol
                   END DO
-                  call timestop("igpt1")
+!                  call timestop("igpt1")
                endif ! pe_ix
             END DO !igpt0
             !$omp end do
@@ -805,7 +805,6 @@ CONTAINS
          ! The HSE functional is realized subtracting erf/r from
          ! the normal Coulomb matrix
          !
-         call judft_error("HSE is not implemented")
       ELSE
          ! check for gamma
          if(any(fmpi%k_list == 1)) then

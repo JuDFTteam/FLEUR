@@ -215,6 +215,8 @@ CONTAINS
         INTEGER:: njob=1
         INTEGER:: irank=0
 
+        CHARACTER(len=100) :: filename_add
+
 #ifdef CPP_MPI
         INTEGER:: ierr
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
@@ -236,7 +238,9 @@ CONTAINS
         fmpi%l_mpi_multithreaded = l_mpi_multithreaded
         fmpi%mpi_comm = jobs(njob)%mpi_comm
         CALL timestart("Initialization")
-        call fleur_init(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,xcpot,results,wann, hybdat, mpdata)
+        filename_add = ""
+        IF (judft_was_argument("-add_name")) filename_add = TRIM(judft_string_for_argument("-add_name"))//"_"//""
+        call fleur_init(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,xcpot,results,wann, hybdat, mpdata, filename_add)
         CALL timestop("Initialization")
 
         CALL fleur_execute(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&

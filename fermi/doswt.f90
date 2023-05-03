@@ -29,7 +29,7 @@ MODULE m_doswt
       INTEGER :: neig
       REAL    :: e1,e2,e3
       REAl    :: ee,e32,e31,e21,s
-
+      w=0.0 !init was missing
       DO jspin = 1,jspins
          neig = nemax(jspin)
          DO iBand = 1,neig

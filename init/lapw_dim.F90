@@ -27,7 +27,7 @@ CONTAINS
     INTEGER, INTENT(OUT)         :: nbasfcn
 
     !local variable for init
-    INTEGER               :: nvd,nv2d
+    INTEGER               :: nvd,nv2d,addx,addy,addz
     TYPE(t_lapw) :: lapw
 
     INTEGER j1,j2,j3,mk1,mk2,mk3,iofile,ksfft,q,nk,nv,nv2
@@ -90,18 +90,21 @@ CONTAINS
           !---> the two spin directions, because the cutoff radius is defined
           !---> by |G + k +/- qss/2| < rkmax.
           DO ispin = 1,2
+             addX = abs(NINT((bkpt(1) + (2*ispin - 3)/2.0*qss(1))/arltv1))
+             addY = abs(NINT((bkpt(2) + (2*ispin - 3)/2.0*qss(2))/arltv2))
+             addZ = abs(NINT((bkpt(3) + (2*ispin - 3)/2.0*qss(3))/arltv2))
              nv = 0
              nv2 = 0
-             DO j1 = -mk1,mk1
+             DO j1 = -mk1-addX,mk1+addX
                 s(1) = bkpt(1) + j1 + (2*ispin - 3)/2.0*qss(1)
-                DO j2 = -mk2,mk2
+                DO j2 = -mk2-addY,mk2+addY
                    s(2) = bkpt(2) + j2 + (2*ispin - 3)/2.0*qss(2)
                    !--->          nv2 for films
                    s(3) = 0.0
                    !r2 = dotirp(s,s,cell%bbmat)
                    r2 = dot_product(matmul(s,cell%bbmat),s)
                    IF (r2.LE.rk2) nv2 = nv2 + 1
-                   DO j3 = -mk3,mk3
+                   DO j3 = -mk3-addz,mk3+addz
                       s(3) = bkpt(3) + j3 + (2*ispin - 3)/2.0*qss(3)
                       !r2 = dotirp(s,s,cell%bbmat)
                       r2 = dot_product(matmul(s,cell%bbmat),s)

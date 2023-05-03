@@ -36,7 +36,7 @@
        REAL,    INTENT(IN) :: psi(grid_size), ri(grid_size)
        REAL,    INTENT(IN) :: phi(grid_size,0:lmax)
        REAL,    INTENT(IN) ::dphi(grid_size,0:lmax)
-       COMPLEX, INTENT(OUT):: psi_phi(nstd,(lmax+1)**2,3*ntypd)
+       COMPLEX, INTENT(INOUT):: psi_phi(:,:,:)!nstd,(lmax+1)**2,3*ntypd)
 
        INTEGER :: m1, l2, m2, index, alloc_error, lmn1, lmn2
        REAL  :: result, result1, total_result, spin

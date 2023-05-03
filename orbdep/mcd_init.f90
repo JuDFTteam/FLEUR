@@ -47,7 +47,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
 
-    if (.not.any(banddos%dos_atom(sum(atoms%neq(:itype-1))+1:sum(atoms%neq(:itype))))) return
+    if (.not.any(banddos%dos_atom(atoms%firstAtom(itype):atoms%firstAtom(itype)+atoms%neq(itype)-1))) return
 
     c = c_light(1.0)
     ALLOCATE ( gc(atoms%jri(itype),atoms%econf(itype)%num_core_states,input%jspins) )
@@ -151,6 +151,7 @@ CONTAINS
                 mcd%ncore(n_dos) = mcd%ncore(n_dos) + 1
                 IF (mcd%ncore(n_dos)>maxval(atoms%econf%num_states))  CALL juDFT_error("maxval(atoms%econf%num_states) too small" ,calledby ="mcd_init")
                 mcd%e_mcd(n_dos,ispin,mcd%ncore(n_dos)) = e_mcd1(icore)
+                IF (e_mcd1(icore).GT.mcd%maxE_mcd) mcd%maxE_mcd = e_mcd1(icore)
              ENDDO
           ENDDO
        ENDDO

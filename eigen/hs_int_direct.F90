@@ -7,7 +7,7 @@
 MODULE m_hs_int_direct
 CONTAINS
    SUBROUTINE hs_int_direct(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, &
-                          & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat)
+                          & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt)
       ! Calculates matrix elements of the form
       ! <\phi_{k'G'}|M|\phi_{kG}>
       ! for different use cases in the DFT/DFPT scf loop and operators M.
@@ -45,13 +45,15 @@ CONTAINS
 
       CLASS(t_mat),  INTENT(INOUT) :: hmat, smat
 
+      COMPLEX, OPTIONAL, INTENT(IN) :: theta_alt(:)
+
       INTEGER :: ikGPr, ikG, ikG0, gPrG(3), gInd
       COMPLEX :: th, ts, phase
       REAL    :: bvecPr(3), bvec(3), r2
 
       !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
       !$OMP SHARED(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec) &
-      !$OMP SHARED(nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat) &
+      !$OMP SHARED(nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt) &
       !$OMP PRIVATE(ikGPr, ikG, ikG0, gPrG, gInd, th, ts, phase, bvecPr, bvec, r2)
       DO ikG = fmpi%n_rank + 1, nv, fmpi%n_size
          ikG0 = (ikG-1) / fmpi%n_size + 1
@@ -81,11 +83,19 @@ CONTAINS
                   r2 = 0.5 * DOT_PRODUCT(MATMUL(bvec, bbmat), bvec)
                END IF
 
-               th = th + phase * r2 * stars%ustep(gInd)
+               IF (PRESENT(theta_alt)) THEN
+                  th = th + phase * r2 * theta_alt(gInd)
+               ELSE
+                  th = th + phase * r2 * stars%ustep(gInd)
+               END IF
             END IF
 
             IF (l_smat) THEN
-               ts = phase * stars%ustep(gInd)
+               IF (PRESENT(theta_alt)) THEN
+                  ts = phase * theta_alt(gInd)
+               ELSE
+                  ts = phase * stars%ustep(gInd)
+               END IF
             ELSE
                ts = 0.0
             END IF

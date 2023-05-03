@@ -22,7 +22,7 @@ MODULE m_types_xml
       INTEGER:: id
       character(len=200):: basepath = ""
       integer           :: versionNumber = 0
-      INTEGER           :: currentversionNumber = 36 !parameters are not allowed here
+      INTEGER           :: currentversionNumber = 37 !parameters are not allowed here
    CONTAINS
       PROCEDURE        :: init
       PROCEDURE        :: GetNumberOfNodes
@@ -108,10 +108,11 @@ CONTAINS
       CALL InitXPath()
    end
 
-   SUBROUTINE init(xml, old_version)
+   SUBROUTINE init(xml, filename_add, old_version)
       USE iso_c_binding
 
       CLASS(t_xml), INTENT(INOUT) :: xml
+      CHARACTER(len=100), INTENT(IN) :: filename_add
       LOGICAL, OPTIONAL, INTENT(inout):: old_version
 
       LOGICAL                        :: l_allow_old
@@ -133,7 +134,7 @@ CONTAINS
       endif
 
       !Open inp.xml
-      docFilename = "inp.xml"//C_NULL_CHAR
+      docFilename = TRIM(filename_add)//"inp.xml"//C_NULL_CHAR
       CALL InitInterface()
       CALL ParseDoc(docFilename)
       CALL InitXPath()
@@ -144,7 +145,7 @@ CONTAINS
       write(outputVersionString,'(a,i0)') '0.', xml%currentversionNumber
       xml%versionNumber = nint(tempReal*100)
       IF (xml%versionNumber .NE. xml%currentversionNumber) THEN
-         if (.not. l_allow_old .and. xml%versionNumber<33) CALL juDFT_error('Version number of inp.xml file is not compatible with this fleur version')
+         if (.not. l_allow_old .and. xml%versionNumber<33) CALL juDFT_error('Version number of '//TRIM(filename_add)//'inp.xml file is not compatible with this fleur version')
          if (present(old_version)) old_version = .true.
       END IF
 
@@ -198,7 +199,7 @@ CONTAINS
             nLO = nLO + lNumCount
             DEALLOCATE (lNumbers, nNumbers)
          END DO
-         
+
          get_nlo(n) = nLO
       ENDDO
    END FUNCTION get_nlo
@@ -433,9 +434,9 @@ CONTAINS
          !PRINT *,xpatha
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          !PRINT *,"Q:",valueString
-         q(1,i)=evaluateFirstOnly(valueString)
-         q(2,i)=evaluateFirstOnly(valueString)
-         q(3,i)=evaluateFirstOnly(valueString)
+         q(1,i)=evaluateFirst(valueString)
+         q(2,i)=evaluateFirst(valueString)
+         q(3,i)=evaluateFirst(valueString)
          !READ (valueString, *) q(1, i), q(2, i), q(3, i)
       END DO
    END FUNCTION read_q_list

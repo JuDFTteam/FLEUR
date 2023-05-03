@@ -73,7 +73,7 @@ CONTAINS
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
-      USE m_magmoms
+ 
 
 !$    USE omp_lib
 
@@ -105,18 +105,13 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
-      LOGICAL :: l_forceTheorem, l_lastIter
+      LOGICAL :: l_forceTheorem, l_lastIter, l_exist
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
 
 #ifdef CPP_MPI
       INTEGER :: ierr
 #endif
-
-      REAL,    ALLOCATABLE :: flh(:, :), flh2(:, :)
-      COMPLEX, ALLOCATABLE :: flm(:, :), z0(:, :, :, :)
-      ! TODO: This is temporarily necessary dfpt stuff. Remove asap.
-      INTEGER, ALLOCATABLE :: nvfull(:, :), GbasVec_eig(:, :, :, :)
 
       ! Check, whether we already have a suitable density file and if not,
       ! generate a starting density.
@@ -165,7 +160,7 @@ CONTAINS
       IF (fi%noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
       IF (ANY(fi%noco%l_unrestrictMT)) archiveType = CDN_ARCHIVE_TYPE_FFN_const
 
-      IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+      IF (fmpi%irank==0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                               fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                               results%ef, results%last_distance, l_qfix, inDen)
       call mpi_bc(results%last_distance, 0, fmpi%mpi_comm)
@@ -305,7 +300,7 @@ CONTAINS
             END SELECT
 
 #ifdef CPP_MPI
-            Call MPI_Barrier(fmpi%mpi_comm, ierr)
+            CALL MPI_Barrier(fmpi%mpi_comm, ierr)
 #endif
             IF (hybdat%l_calhf) THEN
                CALL mixing_history_reset(fmpi)
@@ -384,19 +379,12 @@ CONTAINS
             CALL timestart("eigen")
 
             CALL timestart("Updating energy parameters")
-            CALL enpara%update(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
+            CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN
-               IF (fi%juPhon%l_dfpt) THEN
-                  ! TODO: This is old juPhon dfpt and soon to be refactored out.
-                  CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
-                             hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data, &
-                             nvfull=nvfull, GbasVec_eig=GbasVec_eig)
-                ELSE
-                    CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
-                               hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
-                END IF
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+                          hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
             END IF
             ! TODO: What is commented out here and should it perhaps be removed?
 ! !$          eig_idList(pc) = eig_id
@@ -483,14 +471,6 @@ CONTAINS
             CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
 
-            IF (fi%juPhon%l_dfpt) THEN
-               ! Sideline the actual scf loop for a phonon calculation.
-               ! It is assumed that the density was converged beforehand.
-                CALL timestart("juPhon DFPT")
-                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, inDen, vTot, vCoul, vxc, exc, eig_id, nvfull, GbasVec_eig, z0, .TRUE., xcpot, hybdat)
-                CALL timestop("juPhon DFPT")
-            END IF
-
             IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi,   enpara, vToT, results)) THEN
                CYCLE forcetheoloop
             END IF
@@ -570,6 +550,14 @@ CONTAINS
 #endif
             CALL timestop("generation of new charge density (total)")
 
+            IF (fi%juPhon%l_dfpt) THEN
+               ! Sideline the actual scf loop for a phonon calculation.
+               ! It is assumed that the density was converged beforehand.
+                CALL timestop("Iteration")
+                CALL timestart("juPhon DFPT")
+                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, exc, vCoul, eig_id, .FALSE., xcpot, hybdat, mpdata, forcetheo)
+                CALL timestop("juPhon DFPT")
+            END IF
 
             !CRYSTAL FIELD OUTPUT
             IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
@@ -628,8 +616,7 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
-         CALL priv_geo_end(fmpi)
-
+       
          l_cont = .TRUE.
          IF (fi%hybinp%l_hybrid) THEN
             IF (hybdat%l_calhf) THEN
@@ -687,6 +674,16 @@ CONTAINS
          ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
             l_cont = .FALSE.
          END IF
+         
+         ! IF file JUDFT_NO_MORE_ITERATIONS is present in the directory, don't do any more iterations
+         IF(fmpi%irank.EQ.0) THEN
+            l_exist = .FALSE.
+            INQUIRE (file='JUDFT_NO_MORE_ITERATIONS', exist=l_exist)
+            IF (l_exist) l_cont = .FALSE.
+         END IF
+#ifdef CPP_MPI
+         CALL MPI_BCAST(l_cont,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+#endif
 
          ! TODO: What is commented out here and should it perhaps be removed?
          !CALL writeTimesXML()
@@ -722,49 +719,7 @@ CONTAINS
       CALL juDFT_end("all done", fmpi%irank)
 
    CONTAINS
-      SUBROUTINE priv_geo_end(fmpi)
-         TYPE(t_mpi), INTENT(IN) :: fmpi
 
-         LOGICAL :: l_exist
-
-         ! Check if a new input was generated
-         INQUIRE (file='inp_new', exist=l_exist)
-         IF (l_exist) THEN
-            CALL juDFT_end(" GEO new inp created ! ", fmpi%irank)
-         END IF
-
-         ! Check for inp.xml
-         INQUIRE (file='inp_new.xml', exist=l_exist)
-         IF (.NOT. l_exist) RETURN
-
-         IF (fmpi%irank == 0) THEN
-            CALL system('mv inp.xml inp_old.xml')
-            CALL system('mv inp_new.xml inp.xml')
-            INQUIRE (file='qfix', exist=l_exist)
-            IF (l_exist) THEN
-               CALL juDFT_end(" GEO new inp created ! ", fmpi%irank)
-            END IF
-
-            ! Check for inp.xml
-            INQUIRE (file='inp_new.xml', exist=l_exist)
-            IF (.NOT. l_exist) RETURN
-
-            IF (fmpi%irank == 0) THEN
-               CALL system('mv inp.xml inp_old.xml')
-               CALL system('mv inp_new.xml inp.xml')
-               INQUIRE (file='qfix', exist=l_exist)
-               IF (l_exist) THEN
-                  OPEN (2, file='qfix')
-                  WRITE (2, *) "F"
-                  CLOSE (2)
-                  PRINT *, "qfix set to F"
-               END IF
-               CALL mixing_history_reset(fmpi)
-            END IF
-            CALL mixing_history_reset(fmpi)
-         END IF
-         CALL juDFT_end(" GEO new inp.xml created ! ", fmpi%irank)
-      END SUBROUTINE priv_geo_end
 
    END SUBROUTINE fleur_execute
 END MODULE m_fleur

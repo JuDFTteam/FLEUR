@@ -9,7 +9,7 @@ MODULE m_fleur_init
 #endif
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata)
+   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata, filename_add)
       USE m_types
       use m_store_load_hybrid
       USE m_fleurinput_read_xml
@@ -48,7 +48,7 @@ CONTAINS
       !     Types, these variables contain a lot of data!
 
       TYPE(t_mpi), INTENT(INOUT):: fmpi
-      type(t_fleurinput), intent(inout) :: fi
+      type(t_fleurinput), intent(out) :: fi
       TYPE(t_sphhar), INTENT(OUT):: sphhar
       TYPE(t_stars), INTENT(OUT):: stars
       TYPE(t_enpara), INTENT(OUT):: enpara
@@ -57,8 +57,10 @@ CONTAINS
       TYPE(t_wann), INTENT(OUT):: wann
       CLASS(t_forcetheo), ALLOCATABLE, INTENT(OUT)::forcetheo
       TYPE(t_nococonv), INTENT(OUT) :: nococonv
-      type(t_hybdat), intent(inout) :: hybdat
-      type(t_mpdata), intent(inout):: mpdata
+      type(t_hybdat), intent(out) :: hybdat
+      type(t_mpdata), intent(out):: mpdata
+
+      CHARACTER(len=100), OPTIONAL, INTENT(IN) :: filename_add
 
       TYPE(t_enparaXML)::enparaXML
       TYPE(t_forcetheo_data)::forcetheo_data
@@ -76,6 +78,7 @@ CONTAINS
       CHARACTER(len=4)              :: namex
       CHARACTER(len=12)             :: relcor, tempNumberString
       CHARACTER(LEN=20)             :: filename, tempFilename
+      CHARACTER(len=100)            :: filename_add_loc
       CHARACTER(LEN=40)             :: kptsSelection(3)
       CHARACTER(LEN=300)            :: line
       REAL                          :: a1(3), a2(3), a3(3)
@@ -94,7 +97,9 @@ CONTAINS
       CALL hdf_init()
 #endif
       IF (fmpi%irank .EQ. 0) THEN
-         INQUIRE(file="out.xml", exist=l_exist)
+         filename_add_loc = ""
+         IF (PRESENT(filename_add)) filename_add_loc = filename_add
+         INQUIRE(file=TRIM(filename_add_loc)//"out.xml", exist=l_exist)
          IF (l_exist) THEN
             tempFilename = "outHistError.xml"
             DO i = 1, 999
@@ -110,7 +115,7 @@ CONTAINS
                CALL juDFT_warn("No free out-???.xml file places for storing old out.xml files!")
             END IF
          END IF
-         CALL startFleur_XMLOutput()
+         CALL startFleur_XMLOutput(filename_add_loc)
          outxmlFileID = getXMLOutputUnitNumber()
          IF (judft_was_argument("-info")) THEN
             CLOSE (oUnit)
@@ -139,7 +144,7 @@ CONTAINS
       ALLOCATE (t_xcpot_inbuild::xcpot)
       !Only PE==0 reads the fi%input and does basic postprocessing
       IF (fmpi%irank .EQ. 0) THEN
-         CALL fleurinput_read_xml(outxmlFileID, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
+         CALL fleurinput_read_xml(outxmlFileID, filename_add_loc, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
                                   sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, juPhon=fi%juPhon)
@@ -152,6 +157,11 @@ CONTAINS
                              Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%juPhon)
       !Remaining init is done using all PE
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
+      IF (fmpi%irank .EQ. 0) THEN
+         IF(xcpot%is_hybrid().AND.fi%sym%invs) THEN
+            CALL juDFT_warn("Hybrid functionals with inversion symmetric unit cells are disabled at the moment.")
+         END IF
+      END IF
       CALL nococonv%init(fi%noco)
       CALL nococonv%init_ss(fi%noco, fi%atoms)
       !CALL ylmnorm_init(MAX(fi%atoms%lmaxd, 2*fi%hybinp%lexp))

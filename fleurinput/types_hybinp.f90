@@ -103,7 +103,7 @@ CONTAINS
       ELSE
          xc_name = trim(xml%GetAttributeValue('/fleurInput/xcFunctional/@name'))
       END IF
-      if (trim(xc_name) == "pbe0") then
+      if ((trim(xc_name) == "pbe0").OR.(trim(xc_name) == "hse")) then
          this%l_hybrid = .True.
       else
          this%l_hybrid = .False.

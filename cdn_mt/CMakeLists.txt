@@ -11,9 +11,9 @@ cdn_mt/abcrot2.f90
 cdn_mt/cdnmt.F90
 cdn_mt/cdncore.F90
 cdn_mt/denMultipoleExp.f90
-cdn_mt/magMoms.f90
+#cdn_mt/magMoms.f90cd ../b  
 cdn_mt/magDiMom.f90
-cdn_mt/orbMagMoms.f90
+#cdn_mt/orbMagMoms.f90
 cdn_mt/orb_comp2.f90
 cdn_mt/jDOS.f90
 cdn_mt/radfun.f90

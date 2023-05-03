@@ -15,7 +15,10 @@ CONTAINS
    SUBROUTINE olap_pw(olap, gpt, ngpt, atoms, cell, fmpi)
       use m_juDFT
       USE m_constants
-      USE m_types
+      USE m_types_cell
+      USE m_types_atoms
+      USE m_types_mpi
+      USE m_types_mat
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -37,7 +40,10 @@ CONTAINS
    subroutine olap_pw_real(olap, gpt, ngpt, atoms, cell, fmpi)
       use m_juDFT
       USE m_constants
-      USE m_types
+      USE m_types_cell
+      USE m_types_atoms
+      USE m_types_mpi
+      USE m_types_mat
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)  :: atoms
@@ -102,7 +108,8 @@ CONTAINS
    SUBROUTINE olap_pw_cmplx(olap, gpt, ngpt, atoms, cell)
       use m_juDFT
       USE m_constants
-      USE m_types
+      USE m_types_cell
+      USE m_types_atoms
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -157,7 +164,8 @@ CONTAINS
 
       USE m_constants, ONLY: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED, &
                              fpi_const, tpi_const
-      USE m_types
+      USE m_types_cell
+      USE m_types_atoms
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -291,7 +299,8 @@ CONTAINS
    FUNCTION wfolap_inv(cmt1, cpw1, cmt2, cpw2, olappw, olapmt, atoms, mpdata)
 
       USE m_wrapper
-      USE m_types
+      USE m_types_mpdata
+      USE m_types_atoms
       IMPLICIT NONE
       TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -342,7 +351,9 @@ CONTAINS
    FUNCTION wfolap_noinv(cmt1, cpw1, cmt2, cpw2, olappw, olapmt, atoms, mpdata)
 
       USE m_wrapper
-      USE m_types
+      USE m_types_mpdata
+      USE m_types_atoms
+
       IMPLICIT NONE
       TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_atoms), INTENT(IN)   :: atoms

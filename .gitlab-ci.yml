@@ -12,6 +12,7 @@ include:
    - "docker/CI/test-template.yml"
    - "docker/CI/gfortran-hdf.yml"
    - "docker/CI/gfortran-serial.yml"
+   - "docker/CI/gfortran-12.yml"
    - "docker/CI/oneAPI.yml"
    - "docker/CI/NVHPC.yml"
    - "docker/CI/html.yml"

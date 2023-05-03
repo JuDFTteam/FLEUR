@@ -49,7 +49,7 @@ check_arguments.F90
 check_para.F90
 xmlOutput.F90
 round.f90
-npy.f90
+npy.F90
 round.f90
 internalParams.f90
 )
@@ -67,6 +67,12 @@ if (JUDFT_USE_HDF5)
       target_link_libraries(juDFT PUBLIC hdf5_fortran-static)
   endif()
 endif()
+
+if (JUDFT_COMPILE_LIBXML2)
+     target_link_libraries(juDFT PUBLIC LibXml2::LibXml2)
+     set(Xml2_LIBS "-lxml2")
+endif() 
+
 if (JUDFT_USE_HDF5MPI)
   if (JUDFT_USE_MPI)
     target_compile_definitions(juDFT PUBLIC CPP_HDFMPI)

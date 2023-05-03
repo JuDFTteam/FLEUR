@@ -403,7 +403,7 @@ CONTAINS
       !$OMP PRIVATE(integrand, iatom0, iatom, rdum1, icst1, icst2)&
       !$OMP SHARED(atoms, hybdat, llmax, point, exch)
       DO itype = 1, atoms%ntype
-         iatom0 = sum([(atoms%neq(it2), it2=1,itype-1)])
+         iatom0 = atoms%firstAtom(itype) - 1
          DO l1 = 0, hybdat%lmaxc(itype)  ! left core state
             DO l2 = 0, hybdat%lmaxc(itype)  ! right core state
                DO l = 0, hybdat%lmaxc(itype)   ! occupied core state

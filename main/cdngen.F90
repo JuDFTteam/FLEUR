@@ -34,11 +34,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_wrtdop
    USE m_cdntot
    USE m_qfix
-   USE m_genNewNocoInp
    USE m_xmlOutput
-   USE m_magMoms
    USE m_magMultipoles
-   USE m_orbMagMoms
+   USE m_magmoments
    USE m_resMoms
    USE m_cdncore
    USE m_make_dos
@@ -128,8 +126,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,atoms,kpts,results%eig)
    CALL jDOS%init(input,banddos,atoms,kpts,results%eig)
 
-   if (banddos%dos.or.banddos%band) then
-     allocate(eigdos(count((/banddos%dos.or.banddos%band,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
+   if (banddos%dos.or.banddos%band.or.input%cdinf) then
+     allocate(eigdos(count((/banddos%dos.or.banddos%band.or.input%cdinf,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
      n=2
      eigdos(1)%p=>dos
      if (banddos%vacdos) THEN
@@ -183,6 +181,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !density matrix in the muffin-tins is calculated, the a- and
    !b-coef. for both spins are needed at once. Thus, cdnval is only
    !called once and both spin directions are calculated in a single run.
+   CALL timestart("cdngen: cdnval")
    DO jspin = 1,merge(1,input%jspins,noco%l_mperp.OR.banddos%l_jDOS)
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
@@ -190,6 +189,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,regCharges,dos,vacdos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
+   CALL timestop("cdngen: cdnval")
 
    call val_den%copyPotDen(outDen)
    ! calculate kinetic energy density for MetaGGAs
@@ -274,16 +274,12 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
       IF (input%jspins == 2) THEN
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
-         !CALL magMoms(input,atoms,noco,nococonv,vTot,moments)
-         CALL magMoms(input,atoms,noco,nococonv,vTot,den=outDen)
-         
+         CALL spinMoments(input,atoms,noco,nococonv,den=outDen)
+         CALL orbMoments(input,atoms,noco,nococonv,moments)
+
          if (sym%nop==1.and..not.input%film) call magMultipoles(sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
-         IF (ANY(noco%l_alignMT).OR.any(noco%l_constrained)) THEN
-          !  CALL genNewNocoInp(input,atoms,noco,noco_new)
-         END IF
-         IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,nococonv,moments%clmom)
       END IF
    END IF ! fmpi%irank == 0
    Perform_metagga = Allocated(Energyden%Mt) &

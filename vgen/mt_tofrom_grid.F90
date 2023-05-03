@@ -78,7 +78,7 @@ CONTAINS
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
       REAL, ALLOCATABLE :: drm(:,:), drrm(:,:), mm(:,:)
-      REAL, ALLOCATABLE :: chlhtot(:,:),chlhdrtot(:,:),chlhdrrtot(:,:)
+      REAL, ALLOCATABLE :: chlhtot(:),chlhdrtot(:),chlhdrrtot(:)
       INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i,jspV
 
       call timestart("mt_to_grid")
@@ -89,7 +89,7 @@ CONTAINS
          jspV=jspins
       END IF
 
-      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+      nd = sym%ntypsy(atoms%firstAtom(n))
       nsp = atoms%nsp()
 
       !General Allocations
@@ -113,7 +113,7 @@ CONTAINS
          !Allocations in case one uses e.g. GGA with mtNoco
          IF (dograds) THEN
             ALLOCATE(drm(atoms%jmtd,0:sphhar%nlhd),drrm(atoms%jmtd, 0:sphhar%nlhd))
-            ALLOCATE(chlhtot(atoms%jmtd, 0:sphhar%nlhd),chlhdrtot(atoms%jmtd, 0:sphhar%nlhd),chlhdrrtot(atoms%jmtd, 0:sphhar%nlhd))
+            ALLOCATE(chlhtot(0:sphhar%nlhd),chlhdrtot(0:sphhar%nlhd),chlhdrrtot(0:sphhar%nlhd))
          END IF
       END IF
 
@@ -138,20 +138,23 @@ CONTAINS
             !Necessary gradients
             IF (dograds) THEN
                !Colinear case only needs radial derivatives of chlh
-               CALL grdchlh( atoms%dx(n), &
-                            chlh(1:atoms%jri(n), lh, js),  chlhdr(1:, lh, js), chlhdrr(1:, lh,js),atoms%rmsh(:,n))
+               CALL grdchlh(atoms%dx(n), chlh(1:atoms%jri(n), lh, js),  chlhdr(1:, lh, js), chlhdrr(1:, lh,js),atoms%rmsh(:,n))
                IF (any(noco%l_unrestrictMT)) THEN
                !Noco case also needs radial derivatives of mm
-                  CALL grdchlh(atoms%dx(n), &
-                               mm(:atoms%jri(n),lh),  drm(:,lh), drrm(:,lh), atoms%rmsh(:, n))
+                  CALL grdchlh(atoms%dx(n), mm(:atoms%jri(n),lh),  drm(:,lh), drrm(:,lh), atoms%rmsh(:, n))
                END IF
             END IF
          END DO ! js
       END DO   ! lh
 
       !The following Loop maps chlh on the k-Grid using the lattice harmonics ylh
-      kt = 0
+      !$OMP parallel do default( NONE ) &
+      !$OMP SHARED(atoms,sphhar,noco,n,nsp,jspV,nd,ylh,chlh,dograds,chlhdr,chlhdrr,mm,drm,drrm)&
+      !$OMP SHARED(ylht,ylhf,ylhtt,ylhff,ylhtf,jspins,thet,grad,ch,ch_calc) &
+      !$OMP private(kt,ch_tmp,js,lh,k,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf) &
+      !$OMP private(chlhtot,chlhdrtot,chlhdrrtot)
       DO jr = 1, atoms%jri(n)
+         kt = (jr-1)*nsp
          ! charge density (on extended grid for all jr)
          ! following are at points on jr-th sphere.
          ch_tmp(:, :) = 0.0
@@ -183,16 +186,16 @@ CONTAINS
                   !using mm and its radial derivatives.
                   IF (any(noco%l_unrestrictMT)) THEN
                       IF (js.EQ.1) THEN
-                         chlhtot(jr,lh)=0.5*(chlh(jr, lh, 1)+chlh(jr, lh, 2))
-                         chlhdrtot(jr,lh)=0.5*(chlhdr(jr, lh, 1)+chlhdr(jr, lh, 2))
-                         chlhdrrtot(jr,lh)=0.5*(chlhdrr(jr, lh, 1)+chlhdrr(jr, lh, 2))
-                         chlh(jr,lh,js)=chlhtot(jr,lh)+mm(jr,lh)
-                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)+drm(jr,lh)
-                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)+drrm(jr,lh)
+                         chlhtot(lh)=0.5*(chlh(jr, lh, 1)+chlh(jr, lh, 2))
+                         chlhdrtot(lh)=0.5*(chlhdr(jr, lh, 1)+chlhdr(jr, lh, 2))
+                         chlhdrrtot(lh)=0.5*(chlhdrr(jr, lh, 1)+chlhdrr(jr, lh, 2))
+                         chlh(jr,lh,js)=chlhtot(lh)+mm(jr,lh)
+                         chlhdr(jr, lh, js)=chlhdrtot(lh)+drm(jr,lh)
+                         chlhdrr(jr, lh, js)=chlhdrrtot(lh)+drrm(jr,lh)
                       ELSE IF (js.EQ.2) THEN
-                         chlh(jr,lh,js)=chlhtot(jr,lh)-mm(jr,lh)
-                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)-drm(jr,lh)
-                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)-drrm(jr,lh)
+                         chlh(jr,lh,js)=chlhtot(lh)-mm(jr,lh)
+                         chlhdr(jr, lh, js)=chlhdrtot(lh)-drm(jr,lh)
+                         chlhdrr(jr, lh, js)=chlhdrrtot(lh)-drrm(jr,lh)
                       ELSE
                          chlh(jr,lh,js)=0
                          chlhdr(jr, lh, js)=0
@@ -232,8 +235,10 @@ CONTAINS
             WHERE (ABS(ch_tmp(:nsp,:)) < d_15) ch_tmp(:nsp,:) = d_15
             ch_calc(kt + 1:kt + nsp, :) = ch_tmp(:nsp, :)
          ENDIF
-         kt = kt + nsp
       END DO
+      !$OMP END PARALLEL DO
+
+
       IF (PRESENT(ch)) THEN
       !Rotation to local if needed (Indicated by rotch)
          IF (rotch.AND.any(noco%l_unrestrictMT)) THEN
@@ -275,12 +280,14 @@ CONTAINS
       call timestart("mt_from_grid")
 
       nsp = atoms%nsp()
-      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+      nd = sym%ntypsy(atoms%firstAtom(n))
 
       DO js = 1, jspins
-         !
-         kt = 0
+         !$OMP parallel do default( NONE ) &
+         !$OMP SHARED(atoms,sphhar,n,v_in,nsp,wt,nd,ylh,vr,js)&
+         !$OMP private(vpot,kt,lh,vlh)
          DO jr = 1, atoms%jri(n)
+            kt = (jr-1)*nsp
             vpot = v_in(kt + 1:kt + nsp, js)*wt(:)!  multiplicate v_in with the weights of the k-points
 
             DO lh = 0, sphhar%nlh(nd)
@@ -291,8 +298,8 @@ CONTAINS
                vlh = dot_PRODUCT(vpot(:), ylh(:nsp, lh, nd))
                vr(jr, lh, js) = vr(jr, lh, js) + vlh
             ENDDO ! lh
-            kt = kt + nsp
          ENDDO   ! jr
+         !$OMP END PARALLEL DO
       ENDDO
       call timestop("mt_from_grid")
    END SUBROUTINE mt_from_grid

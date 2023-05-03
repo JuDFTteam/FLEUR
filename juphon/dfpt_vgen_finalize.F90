@@ -12,7 +12,7 @@ MODULE m_dfpt_vgen_finalize
 
 CONTAINS
 
-   SUBROUTINE dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,vTot1,vTot1imag,denRot,den1Rot,den1imRot,starsq)
+   SUBROUTINE dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,vTot1,vTot1imag,denRot,den1Rot,den1imRot,starsq,killcont)
 
         USE m_types
         USE m_constants
@@ -24,13 +24,15 @@ CONTAINS
 
         TYPE(t_mpi),      INTENT(IN)    :: fmpi
         TYPE(t_noco),     INTENT(IN)    :: noco
-        TYPE(t_nococonv), INTENT(INOUT) :: nococonv
+        TYPE(t_nococonv), INTENT(IN)    :: nococonv
         TYPE(t_sym),      INTENT(IN)    :: sym
         TYPE(t_stars),    INTENT(IN)    :: stars, starsq
         TYPE(t_atoms),    INTENT(IN)    :: atoms
         TYPE(t_input),    INTENT(IN)    :: input
         TYPE(t_sphhar),   INTENT(IN)    :: sphhar
-        TYPE(t_potden),   INTENT(INOUT) :: vTot, vTot1, vTot1imag, denRot, den1Rot, den1imRot
+        TYPE(t_potden),   INTENT(IN)    :: vTot
+        TYPE(t_potden),   INTENT(INOUT) :: vTot1, vTot1imag, denRot, den1Rot, den1imRot
+        INTEGER, INTENT(IN) :: killcont(2)
 
         INTEGER                         :: i, js, ifft3
         REAL,    ALLOCATABLE :: fftwork(:), vre(:), v1re(:), v1im(:)
@@ -38,14 +40,16 @@ CONTAINS
 
         ifft3 = 27*stars%mx1*stars%mx2*stars%mx3 !TODO: What if starsq/=stars in that regard?
 
-        ALLOCATE (vre(ifft3),v1re(ifft3),v1im(ifft3),v1full(ifft3),fftwork(ifft3))
+        ALLOCATE(vre(ifft3),v1re(ifft3),v1im(ifft3),v1full(ifft3),fftwork(ifft3))
+
+        vTot1%pw_w = CMPLX(0.0,0.0)
 
         IF (.NOT.noco%l_noco) THEN
             DO js = 1, input%jspins
                vre = 0.0; v1re = 0.0; v1im = 0.0
                CALL fft3d(v1re, v1im, vTot1%pw(:, js), starsq, +1)
                CALL fft3d(vre, fftwork, vTot%pw(:, js), stars, +1)
-               v1full = CMPLX(v1re,v1im) * stars%ufft + vre * starsq%ufft!-q
+               v1full = killcont(1)*CMPLX(v1re,v1im) * stars%ufft + killcont(2)*vre * starsq%ufft1!-q
                v1re =  REAL(v1full)
                v1im = AIMAG(v1full)
                CALL fft3d(v1re, v1im, vTot1%pw_w(:, js), starsq, -1)

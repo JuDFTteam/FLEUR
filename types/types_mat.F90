@@ -18,8 +18,8 @@ MODULE m_types_mat
       LOGICAL :: l_real                     !>Store either real or complex data
       INTEGER :: matsize1 = -1                !> matsize1=size(data_?,1),i.e. no of rows
       INTEGER :: matsize2 = -1                !> matsize2=size(data_?,2),i.e. no of columns
-      REAL, ALLOCATABLE CPP_MANAGED    :: data_r(:, :)
-      COMPLEX, ALLOCATABLE CPP_MANAGED :: data_c(:, :)
+      REAL, ALLOCATABLE    :: data_r(:, :)
+      COMPLEX, ALLOCATABLE :: data_c(:, :)
    CONTAINS
       PROCEDURE        :: alloc => t_mat_alloc                !> allocate the data-arrays
       PROCEDURE        :: multiply => t_mat_multiply            !> do a matrix-matrix multiply
@@ -1111,9 +1111,9 @@ CONTAINS
       character(len=*)         :: filename
 
       if (mat%l_real) then
-         call save_npy(filename, mat%data_r)
+         !call save_npy(filename, mat%data_r)
       else
-         call save_npy(filename, mat%data_c)
+         !call save_npy(filename, mat%data_c)
       endif
    end subroutine t_mat_save_npy
 

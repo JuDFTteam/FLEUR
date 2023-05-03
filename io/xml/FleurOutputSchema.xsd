@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.36">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.37">
 
    <!--Here the FleurInputSchema is included since the out.xml contains a complete dump of the inp.xml!-->
    <xsd:include schemaLocation="FleurInputSchema.xsd"/>
@@ -21,7 +21,7 @@
 
    <xsd:simpleType name="FleurOutputVersionType">
       <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="0.36"/>
+         <xsd:enumeration value="0.37"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -175,7 +175,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="slaterIntegrals" type="SlaterIntegralsListType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMagneticMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="rdmft" type="RDMFTOutType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
@@ -452,6 +452,8 @@
    <xsd:complexType name="MTOrbMagneticMomentsType">
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="orbMagMoment" type="MagneticMomentType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="globalMagMoment" type="MagneticMomentVecType"/>         
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="localMagMoment" type="MagneticMomentVecType"/>   
       </xsd:sequence>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>

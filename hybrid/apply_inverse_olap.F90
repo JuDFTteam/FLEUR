@@ -81,6 +81,7 @@ contains
    end subroutine apply_inverse_olaps
 
    subroutine copy_in_2(fmpi, sym, mpdata, hybdat, coulomb, ikpt, coul_submtx)
+      USE m_types
       implicit none 
       type(t_mpi), intent(in)      :: fmpi 
       integer, intent(in)          :: ikpt
@@ -125,6 +126,7 @@ contains
    end subroutine copy_in_2
 
    subroutine copy_out_2(fmpi, sym, mpdata, hybdat, ikpt, coul_submtx, coulomb)
+      USE m_types
       implicit none 
       type(t_mpi), intent(in)      :: fmpi 
       integer, intent(in)          :: ikpt

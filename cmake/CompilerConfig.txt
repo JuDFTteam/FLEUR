@@ -3,6 +3,8 @@
 
 include("cmake/tests/test_linker.cmake")
 include("cmake/tests/test_doxygen.cmake")
+include("cmake/tests/test_OpenMP.cmake")
+include("cmake/tests/test_precision.cmake")
 include("cmake/compilerflags.cmake")
 include("cmake/tests/test_XML.cmake")
 include("cmake/tests/test_LAPACK.cmake")

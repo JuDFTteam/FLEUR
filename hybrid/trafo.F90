@@ -7,7 +7,6 @@
 MODULE m_trafo
    use m_judft
    use m_glob_tofrom_loc
-   use m_types
    use m_constants
 CONTAINS
 
@@ -17,7 +16,13 @@ CONTAINS
 
       USE m_constants
       USE m_wrapper
-      USE m_types
+      USE m_types_mpdata
+      USE m_types_hybinp
+      USE m_types_hybdat
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
+      USE m_types_lapw
       USE m_juDFT
       IMPLICIT NONE
 
@@ -82,9 +87,9 @@ CONTAINS
 ! MT coefficients
       cmt_out = 0
       iatom = 0
-      iiatom = 0
 
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
@@ -117,7 +122,6 @@ CONTAINS
                lm0 = lm2
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
 ! PW coefficients
@@ -156,7 +160,11 @@ CONTAINS
       use m_juDFT
       USE m_constants
       USE m_wrapper
-      USE m_types
+      USE m_types_mpdata
+      USE m_types_hybinp
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
       IMPLICIT NONE
 
       TYPE(t_mpdata), INTENT(IN) :: mpdata
@@ -217,9 +225,9 @@ CONTAINS
       ! MT coefficients
       cmt_out = 0
       iatom = 0
-      iiatom = 0
 
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
@@ -253,7 +261,6 @@ CONTAINS
                lm0 = lm2
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
       ! If phase and inversion-sym. is true,
@@ -274,7 +281,14 @@ CONTAINS
       use m_juDFT
       USE m_constants
       USE m_wrapper
-      USE m_types
+      USE m_types_mat
+      USE m_types_input
+      USE m_types_mpdata
+      USE m_types_hybinp
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
+      USE m_types_lapw
       IMPLICIT NONE
 
       type(t_mat), intent(in)     :: z_in
@@ -339,9 +353,9 @@ CONTAINS
       ! MT coefficients
       cmt_out = 0
       iatom = 0
-      iiatom = 0
 
       DO itype = 1, atoms%ntype
+         iiatom = atoms%firstAtom(itype) - 1
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
@@ -375,7 +389,6 @@ CONTAINS
                lm0 = lm2
             END DO
          END DO
-         iiatom = iiatom + atoms%neq(itype)
       END DO
 
       ! PW coefficients
@@ -432,7 +445,10 @@ CONTAINS
       use m_juDFT
       USE m_constants
       USE m_wrapper
-      USE m_types
+      USE m_types_mat
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_lapw
       IMPLICIT NONE
 
       type(t_mat), intent(in)     :: z_in
@@ -547,8 +563,15 @@ CONTAINS
    ! (Array mat is overwritten! )
 
    SUBROUTINE symmetrize_mpimat(fi, fmpi, mpimat, start_dim, end_dim, imode, lreal, nindxm)
-      USE m_types
+      USE m_types_fleurinput
+      USE m_types_mpi
       use m_constants
+
+#ifdef CPP_MPI
+      USE mpi
+#endif
+
+
       IMPLICIT NONE
       type(t_fleurinput), intent(in)  :: fi
       type(t_mpi), intent(in)         :: fmpi
@@ -681,7 +704,8 @@ CONTAINS
 
    SUBROUTINE symmetrize(mat, dim1, dim2, imode,&
                          atoms, lcutm, maxlcutm, nindxm, sym)
-      USE m_types
+      USE m_types_atoms
+      USE m_types_sym
       use m_constants
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -703,7 +727,7 @@ CONTAINS
 !     - local arrays -
       COMPLEX               ::  carr(max(dim1, dim2)), cfac = sqrt(0.5)*ImagUnit
 
-      call timestart("symmetrize")
+!      call timestart("symmetrize")
       ic = 0
       i = 0
 
@@ -757,7 +781,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      call timestop("symmetrize")
+!      call timestop("symmetrize")
    END SUBROUTINE symmetrize
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -766,7 +790,8 @@ CONTAINS
    SUBROUTINE desymmetrize(mat, dim1, dim2, &
                            atoms, lcutm, maxlcutm, nindxm, sym)
 
-      USE m_types
+      USE m_types_sym
+      USE m_types_atoms
       IMPLICIT NONE
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -787,7 +812,7 @@ CONTAINS
 !     - local arrays -
       COMPLEX                 ::  carr(max(dim1, dim2))
 
-      call timestart("desymmetrize")
+!      call timestart("desymmetrize")
       ic = 0
       istart = 0
       DO itype = 1, atoms%ntype
@@ -829,7 +854,7 @@ CONTAINS
             endif
          END DO
       END DO
-      call timestop("desymmetrize")
+!      call timestop("desymmetrize")
    END SUBROUTINE desymmetrize
 
    ! bra_trafo1 rotates cprod at kpts%bkp(ikpt)(<=> not irreducible k-point) to cprod at ikpt (bkp(kpts%bkp(ikpt))), which is the
@@ -837,7 +862,10 @@ CONTAINS
    ! isym maps kpts%bkp(ikpt) on ikpt
 
    subroutine bra_trafo(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin, vecout)
-      use m_types
+      use m_types_fleurinput
+      USE m_types_mpdata
+      USE m_types_hybdat
+      USE m_types_mat
       use m_constants
       use m_judft
       implicit none
@@ -859,7 +887,9 @@ CONTAINS
    end subroutine bra_trafo
 
    subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, matin_r, matout_r)
-      use m_types
+      use m_types_fleurinput
+      USE m_types_mpdata
+      USE m_types_hybdat
       use m_constants
       use m_judft
       implicit none
@@ -919,9 +949,11 @@ CONTAINS
    end subroutine bra_trafo_real
 
    subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, vecin_c, vecout_c)
-      use m_types
       use m_constants
       use m_judft
+      use m_types_fleurinput
+      USE m_types_mpdata
+      USE m_types_hybdat
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -945,6 +977,12 @@ CONTAINS
    subroutine bra_trafo_core(nbands, ikpt, psize, sym, &
                              mpdata, hybinp, hybdat, kpts, atoms, igptm2_list, vecin1, vecout1)
       use m_constants
+      USE m_types_mpdata
+      USE m_types_hybinp
+      use m_types_hybdat
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
       implicit none
       type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)  :: hybinp
@@ -970,8 +1008,8 @@ CONTAINS
       COMPLEX                 :: dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), &
                                       -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
 
-      call timestart("bra_trafo_core")
-      call timestart("setup")
+!      call timestart("bra_trafo_core")
+!      call timestart("setup")
       IF (kpts%bksym(ikpt) <= sym%nop) THEN
          inviop = sym%invtab(kpts%bksym(ikpt))
          rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
@@ -996,10 +1034,10 @@ CONTAINS
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g = nint(rkpthlp - rkpt)
-      call timestop("setup")
+!      call timestop("setup")
 
       !test
-      call timestart("test")
+!      call timestart("test")
       nrkpt = 0
       DO i = 1, kpts%nkptf
          IF (maxval(abs(rkpt - kpts%bkf(:, i))) <= 1E-06) THEN
@@ -1015,10 +1053,10 @@ CONTAINS
 
          call judft_error('bra_trafo: rotation failed')
       END IF
-      call timestop("test")
+!      call timestop("test")
 
 !     Define pointer to first mixed-basis functions (with m = -l)
-      call timestart("def pointer to first mpb")
+!      call timestart("def pointer to first mpb")
       i = 0
       do ic = 1, atoms%nat
          itype = atoms%itype(ic)
@@ -1030,11 +1068,11 @@ CONTAINS
             i = i + mpdata%num_radbasfn(l, itype)*2*l
          END DO
       END DO
-      call timestop("def pointer to first mpb")
+!      call timestop("def pointer to first mpb")
 
 !     Multiplication
       ! MT
-      call timestart("MT part")
+!      call timestart("MT part")
       cexp = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
       !$OMP parallel do default(none) private(ic, itype, cdum, l, nn, n, i1, i2, j1, j2, i)&
       !$OMP shared(atoms, cexp, hybinp, kpts, mpdata, pnt, dwgn, vecin1, vecout1, ikpt, g, nbands, psize)
@@ -1059,10 +1097,10 @@ CONTAINS
          END DO
       END DO
       !$OMP end parallel do
-      call timestop("MT part")
+!      call timestop("MT part")
 
       ! PW
-      call timestart("PW part")
+!      call timestart("PW part")
       !$OMP parallel do default(none) private(igptm, igptp, g1, igptm2, i, cdum) &
       !$OMP shared(vecout1, vecin1, mpdata, ikpt, igptm2_list, kpts, rrot, g, hybdat, trans, nbands, psize)
       DO igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
@@ -1074,11 +1112,14 @@ CONTAINS
          vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
       END DO
       !$OMP end parallel do
-      call timestop("PW part")
-      call timestop("bra_trafo_core")
+!      call timestop("PW part")
+!      call timestop("bra_trafo_core")
    end subroutine bra_trafo_core
 
    subroutine find_corresponding_g(sym, kpts, mpdata, ikpt, igptm2_list)
+      use m_types_sym
+      USE m_types_kpts
+      USE m_types_mpdata
       implicit none
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
@@ -1090,7 +1131,7 @@ CONTAINS
       integer :: g(3), rrot(3, 3)
       REAL    :: rkpt(3), rkpthlp(3)
 
-      call timestart("find correpsonding g")
+      call timestart("find corresponding g")
       call timestart("setup")
       IF (kpts%bksym(ikpt) <= sym%nop) THEN
          rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
@@ -1135,7 +1176,7 @@ CONTAINS
          igptm2_list(igptm) = igptm2
       enddo
       !$OMP end parallel do
-      call timestop("find correpsonding g")
+      call timestop("find corresponding g")
    end subroutine find_corresponding_g
 
    ! Determines common phase factor (with unit norm)
@@ -1200,7 +1241,11 @@ CONTAINS
 
       USE m_constants
       USE m_util
-      USE m_types
+      USE m_types_mpdata
+      USE m_types_hybinp
+      USE m_types_sym
+      USE m_types_kpts
+      USE m_types_atoms
       IMPLICIT NONE
       type(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp

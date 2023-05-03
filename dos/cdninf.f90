@@ -7,7 +7,7 @@
 MODULE m_cdninf
 CONTAINS
   SUBROUTINE cdninf(input,sym,noco,atoms,vacuum,&
-                    cell,kpts,dos)
+                    cell,kpts,eigdos)
     !***********************************************************************
     !     this subroutine calculates the charge distribution of each state
     !     and writes this information to the out file. If dos or vacdos
@@ -28,6 +28,7 @@ CONTAINS
     !***********************************************************************
     USE m_types
     USE m_types_dos
+    USE m_types_vacdos
     USE m_types_eigdos
     USE m_constants
     IMPLICIT NONE
@@ -38,7 +39,9 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_kpts),INTENT(IN)        :: kpts
     TYPE(t_atoms),INTENT(IN)       :: atoms
-    CLASS(t_eigdos),INTENT(IN)         :: dos
+    CLASS(t_eigdos_list),INTENT(IN)   :: eigdos(:)
+    CLASS(t_eigdos),pointer :: dos
+    Type(t_vacdos),pointer  :: vacdos
     !     ..
     !     .. Local Scalars ..
     REAL qalmax,qishlp,qvacmt,qvact
@@ -52,6 +55,18 @@ CONTAINS
     !     .. Data statements ..
     DATA chstat/'s','p','d','f'/
     !     ..
+
+    dos=>eigdos(1)%p
+
+    vacdos=>null()
+    if (size(eigdos)>1) THEN
+      associate(vd=>eigdos(2)%p)
+      select type(vd)
+      type is (t_vacdos)
+        vacdos=>vd
+      end select  
+      end associate
+    endif  
 
     select type(dos)
     type is (t_dos)
@@ -71,7 +86,11 @@ CONTAINS
 8020 FORMAT (1x,3e20.12,i6,e20.12)
 
     DO iband = 1,count(dos%eig(:,ikpt,jspin)<1E99)
-       !qvact = sum(vacdos%qvac(iband,:,ikpt,jspin))
+      if (associated(vacdos)) THEN
+        qvact=sum(vacdos%qvac(iband,:,ikpt,jspin))
+      else
+        qvact = 0
+      endif
        iqvacpc = NINT(qvact*100.0)
        !qvacmt = qvact
        QVACMT=0.0
@@ -83,6 +102,7 @@ CONTAINS
        qishlp = 1.0 - qvacmt
        IF (noco%l_noco) qishlp = dos%qis(iband,ikpt,jspin)
        iqispc = NINT(qishlp*100.0)
+
        IF (input%film) THEN
           WRITE (oUnit,FMT=8040) dos%eig(iband,ikpt,jspin),chstat(max_l_type(1)),max_l_type(2),&
                &        iqispc,iqvacpc, ((iqalpc(l,ityp),l=0,3),ityp=1,atoms%ntype)

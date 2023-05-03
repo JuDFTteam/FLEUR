@@ -158,8 +158,8 @@ contains
 7900  FORMAT (/,'---->    distance of charge density perturbation real part for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')
 7901  FORMAT (/,'---->    distance of charge density perturbation imag part for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')
 8000  FORMAT (/,'---->    distance of charge density perturbation real part for it=',i5,':', f13.6,' me/bohr**3')
-8001  FORMAT (/,'---->    distance of charge density perturbation real part for it=',i5,':', f13.6,' me/bohr**3')
+8001  FORMAT (/,'---->    distance of charge density perturbation imag part for it=',i5,':', f13.6,' me/bohr**3')
 8010  FORMAT (/,'---->    distance of spin density perturbation real part for it=',i5,':', f13.6,' me/bohr**3')
-8011  FORMAT (/,'---->    distance of spin density perturbation real part for it=',i5,':', f13.6,' me/bohr**3')
+8011  FORMAT (/,'---->    distance of spin density perturbation imag part for it=',i5,':', f13.6,' me/bohr**3')
    END SUBROUTINE dfpt_distance
 end module m_distance

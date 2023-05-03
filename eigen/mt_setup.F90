@@ -34,23 +34,20 @@ CONTAINS
     INTEGER:: jsp
 
 
-    CALL timestart("tlmplm")
-    CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.any(noco%l_constrained))!l_offdiag
+   
+  !l_offdiag
 
-    DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau))
+    
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,fmpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
        IF (PRESENT(l_dfptmod)) THEN
           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,vx,inDen,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_dfptmod)
        ELSE
          CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,jsp,fmpi,vTot,vx,inDen,input,hub1inp,hub1data,td,ud,alpha_hybrid)
       END IF
-    END DO
+   
     CALL timestop("tlmplm")
 
-    !Setup of soc parameters for first-variation SOC
-    IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) THEN
-       CALL spnorb(atoms,noco,nococonv,input,fmpi,enpara,vTot%mt,ud,td%rsoc,.FALSE.,hub1inp,hub1data)
-    END IF
+    
 
   END SUBROUTINE mt_setup
 END MODULE m_mt_setup

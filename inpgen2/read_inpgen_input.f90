@@ -138,7 +138,7 @@ CONTAINS
              if (allocated(atom_pos)) call judft_error("Input error: "//TRIM(line))
              READ(line,*,iostat=ios) n
              IF (ios.NE.0) CALL judft_error(("Surprising error in reading input: "//trim(line)))
-             ALLOCATE(atom_pos(3,n),atom_label(n),atom_id(n),mag_mom(3,n))
+             ALLOCATE(atom_pos(3,n),atom_label(n),atom_id(n),mag_mom(0:3,n))
              DO i=1,n
                 READ(98,"(a)",iostat=ios) line
                 IF (ios.NE.0) CALL judft_error(("List of atoms not complete: "//trim(line)))
@@ -153,6 +153,7 @@ CONTAINS
                   if (index(line,':')/=1) THEN
                      if (index(line,':')==0) THEN
                         atom_Label(i)=line  !no more magnetic info
+                        line=""
                      else
                         atom_Label(i)=trim(line(:index(line,':')-1))  !index up to :
                      endif
@@ -160,6 +161,12 @@ CONTAINS
                 endif        
                 !Remove : if present
                 line=line(index(line,':')+1:)
+                if (index(line,':')>0) THEN ! A second ":" means we specify the angles. Store this info in mag_mom(0,:)
+                  line=line(index(line,':')+1:)
+                  mag_mom(0,i)=1
+                else
+                  mag_mom(0,i)=0
+                endif  
                 !now read the magnetic moment
                 mag_mom(1,i)=evaluatefirst(line)
                 mag_mom(2,i)=evaluatefirst(line)

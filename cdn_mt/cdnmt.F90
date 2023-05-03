@@ -66,6 +66,7 @@ CONTAINS
       LOGICAL :: l_hia,l_performSpinavg
 
       REAL              :: qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd),vrTmp(atoms%jmtd)
+      REAL,ALLOCATABLE  :: vr0(:,:)
       CHARACTER(LEN=20) :: attributes(6)
 
       REAL, ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
@@ -85,7 +86,7 @@ CONTAINS
          !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_performSpinavg)&
          !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd,input,sym)&
          !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)&
-         !$OMP PRIVATE(l_hia,vrTmp)
+         !$OMP PRIVATE(l_hia,vrTmp,vr0)
          IF (noco%l_mperp) THEN
             ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
          ELSE
@@ -95,10 +96,15 @@ CONTAINS
 
          !$OMP DO
          DO itype = 1,atoms%ntype
-            na = 1
-            DO i = 1, itype - 1
-               na = na + atoms%neq(i)
-            END DO
+            if (atoms%l_nonpolbas(itype)) THEN
+               if (.not.allocated(vr0)) allocate(vr0(atoms%jmtd,jspd))
+               vr0(:,1)=(vr(:,itype,1)+vr(:,itype,2))/2
+               vr0(:,2)=vr0(:,1)
+            else
+               vr0=vr(:,itype,:)
+            ENDIF
+            
+            na = atoms%firstAtom(itype)
 
             DO ispin = jsp_start,jsp_end
                !Spherical component
@@ -115,9 +121,9 @@ CONTAINS
                   !In the case of a spin-polarized calculation with Hubbard 1 we want to treat
                   !the correlated orbitals with a non-spin-polarized basis
                   IF(l_hia.AND.jspd==2 .AND. l_performSpinavg) THEN
-                     vrTmp = (vr(:,itype,1) + vr(:,itype,2))/2.0
+                     vrTmp = (vr0(:,1) + vr0(:,2))/2.0
                   ELSE
-                     vrTmp = vr(:,itype,ispin)
+                     vrTmp = vr0(:,ispin)
                   END IF
 
                   CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vrTmp,atoms,&
@@ -153,7 +159,7 @@ CONTAINS
                IF (PRESENT(moments)) THEN !DFT case
                   CALL timestart("cdnmt LO diagonal")
                   CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
-                               enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                               enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                f(:,:,0:,ispin),g(:,:,0:,ispin),&
                                rho(:,0:,itype,ispin),qmtllo,moments=moments)
                   CALL timestop("cdnmt LO diagonal")
@@ -169,7 +175,7 @@ CONTAINS
                ELSE !DFPT case
                   CALL timestart("cdnmt LO diagonal")
                   CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
-                               enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                               enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                f(:,:,0:,ispin),g(:,:,0:,ispin),&
                                rho(:,0:,itype,ispin),qmtllo,&
                                rhoIm=rhoIm(:,0:,itype,ispin), f2=f(:,:,0:,ispin), g2=g(:,:,0:,ispin))
@@ -199,8 +205,9 @@ CONTAINS
                nd = sym%ntypsy(na)
                DO lh = 1,sphhar%nlh(nd)
                   DO l = 0,atoms%lmax(itype)
-                     DO lp = 0,l
+                     DO lp = 0,MERGE(l,atoms%lmax(itype),PRESENT(moments))
                         llp = (l* (l+1))/2 + lp
+                        IF (.NOT.PRESENT(moments)) llp = lp*(atoms%lmax(itype)+1)+l
                         IF(atoms%l_outputCFpot(itype).AND.atoms%l_outputCFremove4f(itype)&
                            .AND.(l==lcf.AND.lp==lcf)) CYCLE !Exclude non-spherical contributions for CF
 
@@ -288,7 +295,7 @@ CONTAINS
                   IF (PRESENT(moments)) THEN !DFT case
                      CALL timestart("cdnmt LO off-diagonal")
                      CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
-                                  enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                                  enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                   f(:,:,0:,1),g(:,:,0:,1),&
                                   rho(:,0:,itype,3),qmtllo,moments=moments,&
                                   rhoIm=rho(:,0:,itype,4), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
@@ -297,12 +304,12 @@ CONTAINS
                   ELSE
                      CALL timestart("cdnmt LO off-diagonal")
                      CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
-                                  enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                                  enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                   f(:,:,0:,1),g(:,:,0:,1),&
                                   rho(:,0:,itype,3),qmtllo,&
                                   rhoIm=rhoIm(:,0:,itype,3), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
                      CALL cdnmtlo(itype,1,2,input,atoms,sphhar,sym,usdus,noco,&
-                                  enpara%ello0(:,itype,:),vr(:,itype,:),denCoeffs,&
+                                  enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                   f(:,:,0:,2),g(:,:,0:,2),&
                                   rho(:,0:,itype,4),qmtllo,&
                                   rhoIm=rhoIm(:,0:,itype,4), f2=f(:,:,0:,1), g2=g(:,:,0:,1))
@@ -370,7 +377,7 @@ CONTAINS
 8200           FORMAT(/,5x,'j-decomposed charge',/,t6,'atom',t15,'s',t24,'p1/2',t33,'p3/2',&
                       t42,'d3/2',t51,'d5/2',t60,'f5/2',t69,'f7/2')
                DO itype = 1, atoms%ntype
-                  natom = SUM(atoms%neq(:itype-1)) + 1
+                  natom = atoms%firstAtom(itype)
                   IF (.NOT.banddos%dos_atom(natom)) CYCLE
                   !Find index for dos.
                   DO n_dos = 1, size(banddos%dos_atomlist)

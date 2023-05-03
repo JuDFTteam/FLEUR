@@ -124,7 +124,7 @@ CONTAINS
     CALL make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms,inpgen_atom_for_type)
 
     !assign magnetic moments to types
-    allocate(mag_mom_tmp(3,atoms%ntype))
+    allocate(mag_mom_tmp(0:3,atoms%ntype))
     DO nt=1,atoms%ntype
       mag_mom_tmp(:,nt)=mag_mom(:,inpgen_atom_for_type(nt))
     enddo
@@ -141,12 +141,11 @@ CONTAINS
     WRITE (oUnit,'(" atom types =",i5/,"      total =",i5)') atoms%ntype,atoms%nat
     WRITE (oUnit,'(/,7x,"lattice coordinates",15x,"(scaled) Cartesian coordinates   atom")')
 
-    na = 0
     DO nt=1,atoms%ntype
+       na = atoms%firstAtom(nt) - 1
        DO n=1,atoms%neq(nt)
           WRITE (oUnit,'(3f10.6,10x,3f10.6,i7)') atoms%taual(:,na+n),atoms%pos(:,na+n),na+n
        ENDDO
-       na = na + atoms%neq(nt)
     ENDDO
 
     RETURN

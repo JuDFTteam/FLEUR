@@ -144,7 +144,7 @@ CONTAINS
        WRITE(0,'(2a)') "*****************************************"
 
        IF (.NOT.warn) CALL juDFT_time_lastlocation()
-       IF (callstop.and.warn) WRITE(0,'(a)')"Warnings not ignored. Touch 'JUDFT_WARN_ONLY' to make the warning nonfatal"
+       IF (callstop.and.warn) WRITE(0,'(a)')"Warnings not ignored. To make the warning nonfatal create a file 'JUDFT_WARN_ONLY' in the working directory or start FLEUR with the -warn_only command line option."
        IF (callstop) THEN
           CALL writetimes()
           CALL print_memory_info(0,.TRUE.)
@@ -223,11 +223,22 @@ CONTAINS
 
     IF(is_root) THEN
        WRITE(0,*)
-       WRITE(0,*) "*****************************************"
+       WRITE(0,*) "******************************************************"
        WRITE(0,*) "Run finished successfully"
        WRITE(0,*) "Stop message:"
        WRITE(0,*) "  ",message
-       WRITE(0,*) "*****************************************"
+       WRITE(0,*) "******************************************************"
+       WRITE(0,*) "If you publish work with contributions from FLEUR"
+       WRITE(0,*) "calculations, please cite:"
+       WRITE(0,*) ""
+       WRITE(0,*) "  - The FLEUR project: https://www.flapw.de"
+       WRITE(0,*) ""
+       WRITE(0,*) "Please also consult on the website:"
+       WRITE(0,*) "  User Guide -> Reference -> References"
+       WRITE(0,*) "for more information on relevant papers and an example"
+       WRITE(0,*) "Bibtex entry."
+       WRITE(0,*) "******************************************************"
+       call flush(0)
     ENDIF
     CALL writetimes()
     CALL print_memory_info(0,.true.)

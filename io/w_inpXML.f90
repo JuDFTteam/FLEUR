@@ -19,7 +19,7 @@ CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, juPhon, &
       cell, sym, xcpot, noco,   mpinp, hybinp, kptsArray, kptsSelection, enpara, &
-      gfinp, hub1inp, l_explicitIn, l_includeIn, filename)
+      gfinp, hub1inp, l_explicitIn, l_includeIn, filename, add_filename)
 
       use m_types_input
       use m_types_sym
@@ -27,7 +27,7 @@ CONTAINS
       use m_types_atoms
       use m_types_vacuum
       use m_types_kpts
-       
+
       use m_types_mpinp
       use m_types_hybinp
       use m_types_gfinp
@@ -56,7 +56,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_vacuum), INTENT(IN)   :: vacuum
       TYPE(t_kpts), INTENT(IN)     :: kptsArray(:)
-       
+
 
       TYPE(t_mpinp), INTENT(IN)    :: mpinp
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
@@ -73,6 +73,7 @@ CONTAINS
       CHARACTER(LEN=40)          :: kptsSelection(3) ! 1: default selection, 2: alternative for band structures, alternative for GW
       LOGICAL, INTENT(IN)        :: l_explicitIn, l_includeIn(4)
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: filename
+      CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: add_filename
 
       INTEGER          :: iSpecies, fileNum
       CHARACTER(len=8) :: name(10)
@@ -141,7 +142,7 @@ CONTAINS
          filenum = 98
          OPEN (fileNum, file=TRIM(ADJUSTL(filename)), form='formatted', status='replace')
          WRITE (fileNum, '(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="0.36">'
+         WRITE (fileNum, '(a)') '<fleurInput fleurInputVersion="'//TRIM(ADJUSTL(inputFileVersion_const))//'">'
       ELSE
          fileNum = getXMLOutputUnitNumber()
          CALL openXMLElementNoAttributes('inputData')
@@ -285,7 +286,7 @@ CONTAINS
          WRITE(fileNum, '(a)') '      </greensFunction>'
       ENDIF
 
-! 
+!
 
       WRITE (fileNum, '(a)') '   </calculationSetup>'
       WRITE (fileNum, '(a)') '   <cell>'
@@ -313,7 +314,7 @@ CONTAINS
          WRITE (fileNum, '(a)') "         </kPointLists>"
       else
          WRITE (fileNum, '(a)') '         <!-- k-points included here -->'
-         WRITE (fileNum, '(a)') '         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>'
+         WRITE (fileNum, '(a)') '         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="'//TRIM(add_filename)//'kpts.xml"> </xi:include>'
       end if
       WRITE (fileNum, '(a)') '      </bzIntegration>'
 
@@ -324,7 +325,7 @@ CONTAINS
          call sym%print_xml(fileNum)
       else
          WRITE (fileNum, '(a)') '      <!-- symmetry operations included here -->'
-         WRITE (fileNum, '(a)') '      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>'
+         WRITE (fileNum, '(a)') '      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="'//TRIM(add_filename)//'sym.xml"> </xi:include>'
       end if
       IF (input%film) THEN
 !      <xsd:attribute name="dVac" type="xsd:double" use="required"/>
@@ -389,9 +390,9 @@ WRITE (fileNum, 242) 1.0
       enddo
 
       if (.not. l_include(3)) then
-         open (99, file='species.xml')
+         open (99, file=TRIM(add_filename)//'species.xml')
          WRITE (fileNum, '(a)') '      <!-- species included here -->'
-         WRITE (fileNum, '(a)') '      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="species.xml"> </xi:include>'
+         WRITE (fileNum, '(a)') '      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="'//TRIM(add_filename)//'species.xml"> </xi:include>'
          fileNum = 99
       endif
 
@@ -489,9 +490,9 @@ WRITE (fileNum, 242) 1.0
       endif
 
       if (.not. l_include(4)) then
-         open (99, file='atoms.xml')
+         open (99, file=TRIM(add_filename)//'atoms.xml')
          WRITE (fileNum, '(a)') '      <!-- atoms group included here -->'
-         WRITE (fileNum, '(a)') '      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="atoms.xml"> </xi:include>'
+         WRITE (fileNum, '(a)') '      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="'//TRIM(add_filename)//'atoms.xml"> </xi:include>'
          fileNum = 98
       endif
 
@@ -611,7 +612,7 @@ WRITE (fileNum, 242) 1.0
 402      FORMAT('      <plotting iplot="', i0, '" polar="', l1, '"/>')
          WRITE (fileNum, 402) sliceplot%iplot, sliceplot%polar
       ENDIF
-      
+
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
 410   FORMAT('      <chargeDensitySlicing numkpt="', i0, '" minEigenval="', f0.8, '" maxEigenval="', f0.8, '" nnne="', i0, '" pallst="', l1, '"/>')
       WRITE (fileNum, 410) sliceplot%kk, sliceplot%e1s, sliceplot%e2s, sliceplot%nnne, input%pallst
@@ -627,7 +628,7 @@ WRITE (fileNum, 242) 1.0
       WRITE (fileNum, '(a)') '   </output>'
       IF (present(filename)) THEN
          WRITE (fileNum, '(a)') '  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->'
-         WRITE (fileNum, '(a)') '  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>'
+         WRITE (fileNum, '(a)') '  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="'//TRIM(add_filename)//'relax.xml"> <xi:fallback/> </xi:include>'
          WRITE (fileNum, '(a)') '</fleurInput>'
          CLOSE (fileNum)
       ELSE

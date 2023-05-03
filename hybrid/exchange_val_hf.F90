@@ -54,13 +54,13 @@ MODULE m_exchange_valence_hf
    USE m_constants
    USE m_types
    USE m_util
-
+   use m_matmul_dgemm
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                   n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
-
+      
       USE m_wrapper
       USE m_trafo
       USE m_wavefproducts
@@ -112,7 +112,7 @@ CONTAINS
       REAL, INTENT(IN)    ::  wl_iks(:, :)
 
       ! local scalars
-      INTEGER                 ::  iband, jq, iq, nq_idx
+      INTEGER                 ::  iband, iband1, jq, iq, nq_idx
       INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p, start, stride
       INTEGER                 ::  n1, n2, nn2, me, max_band_pack
@@ -133,22 +133,13 @@ CONTAINS
       COMPLEX                          :: hessian(3, 3)
       COMPLEX                          :: proj_ibsc(3, MAXVAL(hybdat%nobd(:, jsp)), hybdat%nbands(k_pack%nk,jsp))
       COMPLEX                          :: olap_ibsc(3, 3, MAXVAL(hybdat%nobd(:, jsp)), MAXVAL(hybdat%nobd(:, jsp)))
-      COMPLEX, ALLOCATABLE CPP_MANAGED :: phase_vv(:, :), c_coul_wavf(:,:), dot_result_c(:,:)
-      REAL, ALLOCATABLE CPP_MANAGED    :: r_coul_wavf(:,:), dot_result_r(:,:)
+      COMPLEX, ALLOCATABLE  :: phase_vv(:, :), c_coul_wavf(:,:), dot_result_c(:,:)
+      REAL, ALLOCATABLE     :: r_coul_wavf(:,:), dot_result_r(:,:)
       LOGICAL                          :: occup(fi%input%neig), conjg_mtir
-#ifdef _OPENACC
-      real, allocatable    :: cprod_vv_r(:,:)
-      complex, allocatable :: cprod_vv_c(:,:)
-
-#define CPP_cprod_r cprod_vv_r 
-#define CPP_cprod_c cprod_vv_c 
-
-#else 
 
 #define CPP_cprod_r cprod_vv%data_r
 #define CPP_cprod_c cprod_vv%data_c
 
-#endif
       type(t_mat)          :: cprod_vv, carr3_vv
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
@@ -230,19 +221,20 @@ CONTAINS
                ! The mixed basis functions and the potential difference
                ! are Fourier transformed, so that the exchange can be calculated
                ! in Fourier space
-               ! IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-               !    call judft_error("HSE not implemented")
-               !    ! iband1 = hybdat%nobd(ikqpt, jsp)
-
-               !    ! exch_vv = exch_vv + &
-               !    !           dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
-               !    !                                  fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
-               !    !                                  fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
-               !    !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-               !    !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
-               !    !                                  fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
-               !    !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
-               ! END IF
+               !! REIMPLEMENTING (notes in lab book)
+               IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+                  CALL timestart("hse: dynamic hse adjustment")
+                  iband1 = hybdat%nobd(ikqpt, jsp)
+                  exch_vv = exch_vv + &
+                            dynamic_hse_adjustment(fi%atoms, fi%kpts%bkf(:, iq), iq, &
+                                                   fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, &
+                                                   fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
+                                                   mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
+                                                   hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, ibando, psize, indx_sest, &
+                                                   fi%sym, fmpi%irank, cprod_vv%data_r(:, :), &
+                                                   cprod_vv%data_c(:, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
+                  CALL timestop("hse: dynamic hse adjustment")
+               END IF
 
                ! the Coulomb matrix is only evaluated at the irrecuible k-points
                ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
@@ -345,6 +337,7 @@ CONTAINS
                   !$acc enter data create(dot_result_r) 
                   DO iob = 1, psize
                      call timestart("CPP_dgemm")
+                     !call blas_matmul(m,n,k,r_coul_wavf(:,iob:),CPP_cprod_r(:, iob:),dot_result_r,op_a="T")
                      !$acc host_data use_device(r_coul_wavf, CPP_cprod_r, dot_result_r)
                      call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
                      !$acc end host_data

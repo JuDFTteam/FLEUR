@@ -19,9 +19,7 @@ module m_mpmom
   !     or see the original paper for the normal Coulomb case only:
   !     M. Weinert: J.Math.Phys. 22(11) (1981) p.2434 eq. (10)-(15)
   !     ***********************************************************
-#ifdef CPP_MPI
-  use mpi
-#endif
+
 contains
 
   subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm,l_coreCharge,&
@@ -33,7 +31,7 @@ contains
 
     type(t_input),   intent(in)   :: input
     type(t_mpi),     intent(in)   :: fmpi
-     
+
     type(t_sym),     intent(in)   :: sym
     type(t_stars),   intent(in)   :: stars
     type(t_cell),    intent(in)   :: cell
@@ -75,7 +73,8 @@ contains
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
-    call pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw(:), potdenType, qlmp )
+    call pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw(:), potdenType, qlmp , l_dfptvgen)
+
     IF (l_dfptvgen) THEN
       CALL dfpt_pw_moments_SF( fmpi, stars2, atoms, cell, sym, iDtype, iDir, qpw0(:), qlmp_SF )
       qlmp = qlmp + qlmp_SF
@@ -85,17 +84,16 @@ contains
       ! see (A14)
       qlm = qlmo - qlmp
       ! output section
-      nat = 1
       do n = 1, atoms%ntype
-        write(oUnit, fmt=8000 ) n
-        do l = 0, atoms%lmax(n)
-           do m = -l, l
-              if ( qlmo(m,l,n)/=CMPLX(0.0) .or. qlmp(m,l,n)/=CMPLX(0.0) ) then
-                 write(oUnit, fmt=8010 ) l, m, qlmo(m,l,n), qlmp(m,l,n)
-              end if
-           end do
-        end do
-        nat = nat + atoms%neq(n)
+         nat = atoms%firstAtom(n)
+         write(oUnit, fmt=8000 ) n
+         do l = 0, atoms%lmax(n)
+            do m = -l, l
+               if ( qlmo(m,l,n)/=CMPLX(0.0) .or. qlmp(m,l,n)/=CMPLX(0.0) ) then
+                  write(oUnit, fmt=8010 ) l, m, qlmo(m,l,n), qlmp(m,l,n)
+               end if
+            end do
+         end do
       end do
 
 8000   FORMAT (/,10x,'multipole moments for atom type=',i5,/,/,t3,'l',t7,&
@@ -202,15 +200,14 @@ contains
 
 
 !  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw, potdenType, qlmp_out )
-  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw_in, potdenType, qlmp_out )
+  subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw_in, potdenType, qlmp_out, l_dfptvgen )
     ! multipole moments of the interstitial charge in the spheres
 
-#ifdef CPP_MPI
-    use mpi
-#endif
+    use m_mpi_bc_tool
+    use m_mpi_reduce_tool
     use m_phasy1
     use m_sphbes
-     
+
     use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK
     use m_types
     use m_DoubleFactorial
@@ -219,7 +216,7 @@ contains
 
     type(t_input),    intent(in)   :: input
     type(t_mpi),      intent(in)   :: fmpi
-     
+
     type(t_sym),      intent(in)   :: sym
     type(t_stars),    intent(in)   :: stars
     type(t_cell),     intent(in)   :: cell
@@ -227,76 +224,101 @@ contains
     complex,          intent(in)   :: qpw_in(:)
     integer,          intent(in)   :: potdenType
     complex,          intent(out)  :: qlmp_out(-atoms%lmaxd:,0:,:)
+    LOGICAL,          INTENT(IN)   :: l_dfptvgen
 
     integer                        :: n, k, l, ll1, lm, ierr, m
-    complex                        :: sk3i, cil, nqpw
+    integer                        :: maxBunchSize, numBunches, iBunch, firstStar, iTempArray
+    complex                        :: sk3i, cil, nqpw, temp
     complex                        :: pylm(( maxval( atoms%lmax ) + 1 ) ** 2, atoms%ntype)
     real                           :: sk3r, rl2
     real                           :: aj(0:maxval( atoms%lmax ) + 1 )
-    complex                        :: qpw(stars%ng3)
+    complex, ALLOCATABLE           :: qpw(:)
     real                           :: il(0:maxval( atoms%lmax ) + 1 )
     real                           :: kl(0:maxval( atoms%lmax ) + 1 )
     complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    complex, ALLOCATABLE           :: qlmpStars(:,:,:,:)
+    TYPE(t_parallelLoop)           :: mpiLoop, ompLoop
 
+    ALLOCATE(qpw(stars%ng3))
     qpw = qpw_in(:stars%ng3)
     qlmp = 0.0
-    if ( fmpi%irank == 0 .AND. norm2(stars%center)<=1e-8) then
+
+    call mpi_bc(qpw,0,fmpi%mpi_comm)
+
+    firstStar = MERGE(2,1,norm2(stars%center)<=1e-8)
+    maxBunchSize = 2*getNumberOfThreads() ! This bunch size is kind of a magic number detrmined from some
+                                          ! naive performance tests for a 64 atom unit cell
+    CALL calcNumberComputationBunches(firstStar, stars%ng3, maxBunchSize, numBunches)
+
+    ALLOCATE(qlmpStars(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype,maxBunchSize))
+    qlmpStars = CMPLX(0.0,0.0)
+
+    CALL mpiLoop%init(fmpi%irank,fmpi%isize,0,numBunches-1)
+    DO iBunch = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
+       CALL ompLoop%init(iBunch,numBunches,firstStar,stars%ng3)
+       !$OMP parallel do default( NONE ) &
+       !$OMP SHARED(input,atoms,stars,sym,cell,ompLoop,qpw,qlmpStars,potdenType) &
+       !$OMP private(iTempArray,pylm,nqpw,n,sk3r,aj,rl2,il,kl,sk3i,l,cil,ll1,m,lm)
+       do k = ompLoop%bunchMinIndex, ompLoop%bunchMaxIndex
+          iTempArray = k - ompLoop%bunchMinIndex + 1
+          call phasy1( atoms, stars, sym, cell, k, pylm )
+          nqpw = qpw(k) * stars%nstr(k)
+          do n = 1, atoms%ntype
+             sk3r = stars%sk3(k) * atoms%rmt(n)
+             call sphbes( atoms%lmax(n) + 1, sk3r, aj )
+             rl2 = atoms%rmt(n) ** 2
+             if ( potdenType == POTDEN_TYPE_POTYUK ) then
+                call ModSphBessel( il(0:atoms%lmax(n)+1), kl(0:atoms%lmax(n)+1), input%preconditioning_param * atoms%rmt(n), atoms%lmax(n) + 1 )
+                sk3i = nqpw / ( stars%sk3(k) ** 2 + input%preconditioning_param ** 2 ) * rl2
+             else
+                sk3i = nqpw / stars%sk3(k)
+             end if
+             do l = 0, atoms%lmax(n)
+                if ( potdenType == POTDEN_TYPE_POTYUK ) then
+                   cil = ( stars%sk3(k) * il(l) * aj(l+1) + input%preconditioning_param * il(l+1) * aj(l) ) * ( DoubleFactorial( l ) / input%preconditioning_param ** l ) * sk3i
+                else
+                   cil = aj(l+1) * sk3i * rl2
+                   rl2 = rl2 * atoms%rmt(n)
+                end if
+                ll1 = l * ( l + 1 ) + 1
+                do m = -l, l
+                   lm = ll1 + m
+                   qlmpStars(m,l,n,iTempArray) = qlmpStars(m,l,n,iTempArray) + cil * pylm(lm,n)
+                end do
+             end do                  ! l = 0, atoms%lmax(n)
+          end do                    ! n = 1, atoms%ntype
+       end do
+       !$OMP END PARALLEL DO
+    END DO
+    !$OMP parallel do default( NONE ) &
+    !$OMP SHARED(atoms,maxBunchSize,qlmpStars,qlmp) &
+    !$OMP private(l,m,temp,iTempArray)
+    DO n = 1, atoms%ntype
+       DO l = 0, atoms%lmax(n)
+          DO m = -l, l
+             temp = CMPLX(0.0,0.0)
+             DO iTempArray = 1, maxBunchSize
+                temp = temp + qlmpStars(m,l,n,iTempArray)
+             END DO
+             qlmp(m,l,n) = temp
+          END DO
+       END DO
+    END DO
+    !$OMP END PARALLEL DO
+
+    if ( fmpi%irank == 0 .AND. .NOT. l_dfptvgen) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
       do n = 1, atoms%ntype
         if ( potdenType /= POTDEN_TYPE_POTYUK ) then
-          qlmp(0,0,n) = qpw(1) * stars%nstr(1) * atoms%volmts(n) / sfp_const
+          qlmp(0,0,n) = qlmp(0,0,n) + qpw(1) * stars%nstr(1) * atoms%volmts(n) / sfp_const
         else
           call ModSphBessel( il(0:1), kl(0:1), input%preconditioning_param * atoms%rmt(n), 1 )
-          qlmp(0,0,n) = qpw(1) * stars%nstr(1) * sfp_const * atoms%rmt(n) ** 2 * il(1) / input%preconditioning_param
+          qlmp(0,0,n) = qlmp(0,0,n) + qpw(1) * stars%nstr(1) * sfp_const * atoms%rmt(n) ** 2 * il(1) / input%preconditioning_param
         end if
       end do
     end if
 
-#ifdef CPP_MPI
-    call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
-#endif
-
-    ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
-!    !$omp parallel do if(atoms%ntype < 600) default( none ) &
-!    !$omp shared( fmpi, atoms, stars,   sym, cell, input, potdenType,  qpw) &
-!    !$omp private( pylm, nqpw, n, sk3r, aj, rl2, sk3i, l, cil, ll1, m, lm, k ) &
-!    !$omp private( il, kl ) &
-!    !$omp reduction( +:qlmp )
-
-    do k = MERGE(fmpi%irank+2,fmpi%irank+1,norm2(stars%center)<=1e-8), stars%ng3, fmpi%isize
-      call phasy1( atoms, stars, sym, cell, k, pylm )
-      nqpw = qpw(k) * stars%nstr(k)
-      do n = 1, atoms%ntype
-        sk3r = stars%sk3(k) * atoms%rmt(n)
-        call sphbes( atoms%lmax(n) + 1, sk3r, aj )
-        rl2 = atoms%rmt(n) ** 2
-        if ( potdenType == POTDEN_TYPE_POTYUK ) then
-          call ModSphBessel( il(0:atoms%lmax(n)+1), kl(0:atoms%lmax(n)+1), input%preconditioning_param * atoms%rmt(n), atoms%lmax(n) + 1 )
-          sk3i = nqpw / ( stars%sk3(k) ** 2 + input%preconditioning_param ** 2 ) * rl2
-        else
-          sk3i = nqpw / stars%sk3(k)
-        end if
-        do l = 0, atoms%lmax(n)
-          if ( potdenType == POTDEN_TYPE_POTYUK ) then
-            cil = ( stars%sk3(k) * il(l) * aj(l+1) + input%preconditioning_param * il(l+1) * aj(l) ) * ( DoubleFactorial( l ) / input%preconditioning_param ** l ) * sk3i
-          else
-            cil = aj(l+1) * sk3i * rl2
-            rl2 = rl2 * atoms%rmt(n)
-          end if
-          ll1 = l * ( l + 1 ) + 1
-          do m = -l, l
-            lm = ll1 + m
-            qlmp(m,l,n) = qlmp(m,l,n) + cil * pylm(lm,n)
-          end do
-        end do                  ! l = 0, atoms%lmax(n)
-      end do                    ! n = 1, atoms%ntype
-    end do                      ! k = 2, stars%ng3
-!    !$omp end parallel do
-#ifdef CPP_MPI
-    CALL MPI_REDUCE( qlmp, qlmp_out, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, fmpi%mpi_comm, ierr )
-#else
-    qlmp_out = qlmp
-#endif
+    CALL mpi_sum_reduce(qlmp, qlmp_out, fmpi%mpi_comm)
 
   end subroutine pw_moments
 
@@ -317,14 +339,15 @@ contains
       INTEGER :: mb, n, nat, nl, ns, jm, l, lp, m, mp, mVec, pref
       REAL    :: fint, gauntFactor
 
-      nat = 1
       pref = -1
+
       IF (iDtype.NE.0) THEN
-         nat = SUM(atoms%neq(:iDtype-1))
+         nat = iDtype
          pref = 1
       END IF
 
       DO n = MERGE(1,iDtype,iDtype.EQ.0), MERGE(atoms%ntype,iDtype,iDtype.EQ.0)
+         nat = atoms%firstAtom(n)
          ns = sym%ntypsy(nat)
          jm = atoms%jri(n)
          DO nl = 0, sphhar%nlh(ns)
@@ -344,23 +367,21 @@ contains
                END DO ! mb
             END DO ! l
          END DO ! nl
-         nat = nat + atoms%neq(n)
       END DO ! n
 
    END SUBROUTINE dfpt_mt_moments_SF
 
    SUBROUTINE dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw_in, qlmp_SF )
 
-#ifdef CPP_MPI
-          use mpi
-#endif
-          use m_phasy1
-          use m_sphbes
-          use m_constants
-          use m_types
-          USE m_gaunt, only : Gaunt1
+      use m_mpi_bc_tool
+      use m_mpi_reduce_tool
+      use m_phasy1
+      use m_sphbes
+      use m_constants
+      use m_types
+      USE m_gaunt, only : Gaunt1
 
-          implicit none
+      implicit none
 
       type(t_mpi),      intent(in)   :: fmpi
       type(t_sym),      intent(in)   :: sym
@@ -376,7 +397,7 @@ contains
       complex                        :: pylm(( maxval( atoms%lmax ) + 1 ) ** 2, atoms%ntype)
       real                           :: sk3r, rl2
       real                           :: aj(0:maxval( atoms%lmax ) + 1 )
-      complex                        :: qpw(stars%ng3)
+      complex, ALLOCATABLE           :: qpw(:)
       complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
 !      TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -391,6 +412,7 @@ contains
 !      COMPLEX :: pref, phaseFac, temp1, temp2, temp3
       REAL    :: gauntFactor
 
+      ALLOCATE (qpw(stars%ng3))
       qpw = qpw_in(:stars%ng3)
       qlmp = 0.0
 
@@ -405,9 +427,7 @@ contains
          end do
       end if
 
-#ifdef CPP_MPI
-      call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
-#endif
+      call mpi_bc(qpw,0,fmpi%mpi_comm)
 
       do k = fmpi%irank+2, stars%ng3, fmpi%isize
          call phasy1( atoms, stars, sym, cell, k, pylm )
@@ -440,11 +460,7 @@ contains
          END DO ! n = 1, atoms%ntype
       END DO ! k = 2, stars%ng3
 
-#ifdef CPP_MPI
-      CALL MPI_REDUCE( qlmp, qlmp_SF, SIZE(qlmp), MPI_DOUBLE_COMPLEX, MPI_SUM,0, fmpi%mpi_comm, ierr )
-#else
-      qlmp_SF = qlmp
-#endif
+      CALL mpi_sum_reduce(qlmp, qlmp_SF, fmpi%mpi_comm)
 
 !      pref = fpi_const * atoms%rmt(iDtype) * atoms%rmt(iDtype)
 !      DO iG = 1, ngdp

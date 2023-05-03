@@ -233,7 +233,7 @@ module m_jpSternhHF
       CALL Dfftw_plan_dft_3d(forwardPlan, nfft(1), nfft(2), nfft(3), zFFTBox, zFFTBox, FFTW_FORWARD, FFTW_MEASURE)
 #endif
 
-      if (.FALSE.) then
+      if (present(mat_elH)) then
         do i = 1, nv(1, ikpt)
           ! Map ket basis function expansion coefficient from plane-wave expansion representation to FFT mesh of cumultative variable
           zFFTBox = (0., 0.)
@@ -490,7 +490,7 @@ module m_jpSternhHF
     !td%tud(:, :, :) = cmplx(0.,0.)
     !td%tdd(:, :, :) = cmplx(0.,0.)
     !td%tdu(:, :, :) = cmplx(0.,0.)
-    loosetdout(:, :, :, :) = cmplx(0.,0.)
+    loosetdout = cmplx(0.,0.)
     td%tdulo(:, :, :, :, 1) = cmplx(0.,0.) ! TODO: These needed a second spin index.
     td%tuulo(:, :, :, :, 1) = cmplx(0.,0.)
     td%tuloulo(:, :, :, :, 1) = cmplx(0., 0.)
@@ -1019,7 +1019,7 @@ module m_jpSternhHF
     ax(:) = cmplx(0., 0.)
     bx(:) = cmplx(0., 0.)
 
-    if (.FALSE.) then
+    if (present(mat_elH)) then
       allocate(ax2(nvk), bx2(nvk))
       ax2(:) = cmplx(0., 0.)
       bx2(:) = cmplx(0., 0.)
@@ -1059,7 +1059,7 @@ module m_jpSternhHF
             ax = cmplx(0.0, 0.0)
             bx = cmplx(0.0, 0.0)
 
-            if (.FALSE.) then
+            if (present(mat_elH)) then
               ax2 = cmplx(0.0, 0.0)
               bx2 = cmplx(0.0, 0.0)
             end if
@@ -1194,7 +1194,7 @@ module m_jpSternhHF
 
                   end do ! nBand
 
-                  if (.FALSE.) then
+                  if (present(mat_elH)) then
                     do iG=1, nvk
                       ax2(iG) = ax2(iG) + utu * almkg(lmK+1, iG) + utd *  blmkg(lmK+1, iG)
                       bx2(iG) = bx2(iG) + dtu * almkg(lmK+1, iG) + dtd *  blmkg(lmK+1, iG)
@@ -1231,7 +1231,7 @@ module m_jpSternhHF
               end do ! pband
             end do ! nBand
 
-            if (.FALSE.) then
+            if (present(mat_elH)) then
               do iGq=1, nvkq
                 do iG=1, nvk
                   vSumG(iGq,iG)=vSumG(iGq,iG)+conjg(almkgq(lmB+1, iGq))*ax2(iG)+conjg(blmkgq(lmB+1, iGq))*bx2(iG)

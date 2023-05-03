@@ -111,6 +111,7 @@ ${FLEUR_SRC}/types/types_sphhar.f90
 ${FLEUR_SRC}/types/types_tlmplm.F90
 ${FLEUR_SRC}/types/types_misc.F90
 ${FLEUR_SRC}/types/types_mpimat.F90
+${FLEUR_SRC}/types/types_parallelLoop.F90
 ${FLEUR_SRC}/types/types_potden.F90
 ${FLEUR_SRC}/types/types_enpara.F90
 ${FLEUR_SRC}/types/types_setup.F90
@@ -133,7 +134,7 @@ ${FLEUR_SRC}/init/ifft235.f90
 ${FLEUR_SRC}/kpoints/gkptwgt.f90
 ${FLEUR_SRC}/init/local_sym.f
 ${FLEUR_SRC}/init/lhcal.f
-${FLEUR_SRC}/init/ptsym.f
+${FLEUR_SRC}/init/ptsym.f90
 ${FLEUR_SRC}/math/gaussp.f
 ${FLEUR_SRC}/init/gtest.f
 ${FLEUR_SRC}/io/xmlOutput.F90
@@ -149,6 +150,8 @@ ${FLEUR_SRC}/math/trapz.f90
 ${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90
 ${FLEUR_SRC}/init/boxdim.f90
+${FLEUR_SRC}/mpi/mpi_reduce_tool.F90
+${FLEUR_SRC}/fleurinput/mpi_bc_tool.F90
 )
 
 set_source_files_properties(${CMAKE_BINARY_DIR}/include/buildinfo.h PROPERTIES GENERATED TRUE)

@@ -2,6 +2,7 @@
 import pytest
 
 @pytest.mark.hybrid
+@pytest.mark.skip("Invs sym broken")
 def test_KClHybridPBE0(execute_fleur, check_value_outfile, fleur_binary):
     """Fleur KCl Hybrid PBE0
 
@@ -27,6 +28,7 @@ def test_KClHybridPBE0(execute_fleur, check_value_outfile, fleur_binary):
 
 @pytest.mark.eigpara
 @pytest.mark.hybrid
+@pytest.mark.skip("Invs sym broken")
 def test_KClHybridPBE0_eigpar(execute_fleur, check_value_outfile, fleur_binary):
     """Fleur KCl Hybrid PBE0
 

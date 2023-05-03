@@ -601,6 +601,7 @@ CONTAINS
          END IF
 
          ALLOCATE (voltet(2*kpts%nkpt),ntetra(3,2*kpts%nkpt))
+         voltet=0.0
          l_tria = .FALSE.
          CALL triang(kpts%bk,kpts%nkpt,ntetra,kpts%ntet,voltet,as,l_tria)
          !IF (sym%invs) THEN
@@ -1055,7 +1056,7 @@ CONTAINS
 
       !Add existing vectors to list of full vectors
       !For a DFPT test calculation, this broke --> set additional .FALSE.
-      IF (((kpts%kptsKind.EQ.KPTS_KIND_MESH).OR.(kpts%kptsKind.EQ.KPTS_KIND_SPEX_MESH)).AND.(.NOT.ANY(kpts%nkpt3(:).EQ.0))) THEN
+      IF (.FALSE..AND.((kpts%kptsKind.EQ.KPTS_KIND_MESH).OR.(kpts%kptsKind.EQ.KPTS_KIND_SPEX_MESH)).AND.(.NOT.ANY(kpts%nkpt3(:).EQ.0))) THEN
          ALLOCATE (nkptInBin(-(kpts%nkpt3(1)+1):(kpts%nkpt3(1)+1),-(kpts%nkpt3(2)+1):(kpts%nkpt3(2)+1),-(kpts%nkpt3(3)+1):(kpts%nkpt3(3)+1)))
          nkptInBin = 0
          DO ikpt = 1, kpts%nkpt

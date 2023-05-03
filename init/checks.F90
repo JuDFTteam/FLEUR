@@ -104,12 +104,32 @@ MODULE m_checks
         END IF
        maxpos=0.0;minpos=0.0
        DO n=1,atoms%ntype
-         na=sum(atoms%neq(:n-1))
+         na=atoms%firstAtom(n) - 1
          maxpos=max(maxpos,maxval(atoms%pos(3,na+1:na+atoms%neq(n)))+atoms%rmt(n))
          minpos=max(minpos,maxval(-1.*atoms%pos(3,na+1:na+atoms%neq(n)))+atoms%rmt(n))
        ENDDO
        if (abs(maxpos-minpos)>2.0) call judft_warn("Your film setup is not centered around zero",hint="Using a non-centred setup can lead to numerical problems. Please check your setup an try to ensure that the center of your film is at z=0")
      endif
+
+     IF(banddos%unfoldBand.AND.noco%l_soc.AND..NOT.noco%l_noco) THEN
+        IF(banddos%unfoldUseOlap) THEN
+           CALL juDFT_error("Band unfolding for 2nd variation SOC is only implemented without incorporating the overlap matrix.", hint="You have to set the optional /output/unfoldingBand/@useOlap switch to F.", calledby ="check_input_switches")
+        END IF
+     END IF
+     
+     ! Disable functionalities that are known to have bugs:
+     
+     IF (ANY(atoms%lda_u(1:atoms%n_u)%l_amf)) THEN
+        CALL juDFT_warn("Around Mean Field limit in LDA+U calculations is disabled at the moment.")
+     END IF
+     
+     IF(banddos%l_mcd) THEN
+        CALL juDFT_warn("Magnetic Circular Dichroism calculations are disbled at the moment.")
+     END IF
+     
+     IF (ANY(atoms%lapw_l(:).GE.0)) THEN
+        CALL juDFT_warn("APW+lo calculations are disabled at the moment.")
+     END IF
 
    END SUBROUTINE check_input_switches
 

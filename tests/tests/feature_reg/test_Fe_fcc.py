@@ -16,7 +16,20 @@ def test_Fe_fccXML(default_fleur_test):
     """
     assert default_fleur_test('Fe_fccXML')
 
-@pytest.mark.disabled
+    
+@pytest.mark.bulk
+@pytest.mark.xml
+@pytest.mark.magnetism
+def test_Fe_fcc_kcrel(default_fleur_test):
+    """Fleur Fe fcc with relativistic core solver
+
+    Simple test of Fleur with two steps:
+    1.Generate a starting density
+    2.Run 20 iterations and compare convergence, fermi-energy & total energy
+    
+    """
+    assert default_fleur_test('Fe_fcc_kcrel')
+
 @pytest.mark.magnetism
 @pytest.mark.soc
 @pytest.mark.lo
