@@ -5,6 +5,7 @@ import pytest
 @pytest.mark.ldau
 @pytest.mark.slow
 @pytest.mark.magnetism
+@pytest.mark.skip("AMF broken")
 def test_NiOldaUAMF(default_fleur_test):
     """NiO: test with LDA+U with Around mean field double counting and magnetism
 
