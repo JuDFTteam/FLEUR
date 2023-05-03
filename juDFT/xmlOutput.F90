@@ -84,6 +84,7 @@ MODULE m_judft_xmlOutput
       CHARACTER(LEN=1000) :: gitdescTemp,githashTemp,gitbranchTemp,compile_dateTemp,compile_userTemp,compile_hostTemp
       CHARACTER(LEN=1000) :: compile_flagsTemp,link_flagsTemp
       CHARACTER(LEN=20) :: attributes(7)
+      CHARACTER(len=4), PARAMETER :: outputFileVersion_const = '0.37'
 
       maintag=tag
 
@@ -101,7 +102,7 @@ MODULE m_judft_xmlOutput
       ENDIF
       xmlOpened = .TRUE.
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-      WRITE (xmlOutputUnit,'(a,a," ",a,a)') '<',TRIM(maintag),TRIM(maintag),'Version="0.37">'
+      WRITE (xmlOutputUnit,'(a,a," ",a,a)') '<',TRIM(maintag),TRIM(maintag),'Version="'//TRIM(ADJUSTL(outputFileVersion_const))//'">'
    END SUBROUTINE startXMLOutput
 
    SUBROUTINE endXMLOutput(errmsg)
