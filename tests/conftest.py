@@ -399,6 +399,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "interface: tests testing some interface")
     config.addinivalue_line("markers", "noco: tests testing the noco part")
     config.addinivalue_line("markers", "forcetheorem: test forcetheorem modes")
+    config.addinivalue_line("markers", "extra: tests for extra and experimental features")
  
     # main libs
     config.addinivalue_line("markers", "hdf: tests needing hdf")
@@ -1127,7 +1128,7 @@ def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_x
             if os.path.isdir(test_dir()+f"/inputfiles/{testname}/stage{i}"): 
                 stages.append(f"./inputfiles/{testname}/stage{i}")
             else:
-                test_logger.info(f"Not found:"+test_dir()+"/inputfiles/{testname}/stage{i}")  
+                test_logger.info("Not found:"+test_dir()+f"/inputfiles/{testname}/stage{i}")  
         if stages==[]:
             stages=[f"./inputfiles/{testname}"]
         else:

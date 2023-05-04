@@ -1,13 +1,21 @@
 Regression tests for FLEUR
 ================
-To create a test please append the table at the end of this file
+This files contains the regression tests. A test definition consists of:
+
+* A short description
+* The directory of the input files. (These have to be sorted into the subdirectories named according to the testset.)
+* The pytest markers for the tests
+
+Only tests with a "+" in the first column are actually executed.
+
+To create a test please append the corrsponding table.
 
 Testset: Basic
 ------
 
 ||Description|directory name|marks|Remarks
 |-|-----------|--------------|------|----
-|+|Bulk Cu one iteration,bandstructure|basic/CuBand|fast,band,bulk
+|+|Bulk Cu one iteration,bandstructure|basic/CuBand|
 |+|Bulk Cu one iteration|basic/CuBulk|fast,bulk
 |+|Bulk Cu one iteration,DOS|basic/CuDOS|fast,bulk,dos
 |+|Bulk Cu one iteration,DOS,Orbital decomp.|basic/CuOrb|fast,bulk,dos,orbcomp
@@ -102,3 +110,19 @@ Testset: Greenfunctions
 ----------
 ||Description|directory name|marks|Remarks
 |-|-----------|--------------|------|
+|+|Fe bcc Green's function|greens/Fe_bcc_GreensFunction|bulk
+|+|Fe Monolayer Green's function|greens/Fe_1l_GreensFunction|film
+|+|Greens Function MultiContour|greens/GreensFunction_MultiContour|bulk
+|+|Fe bcc Green's function Radial|greens/GreensFunctionRadial|bulk
+|+|Fe bcc Green's function Radial with local orbitals|greens/GreensFunctionRadial_LO|bulk
+|+|Ho atom Green's function|greens/GreensFunction_HoAtom_SQA_theta|bulk
+|+|Ho atom Green's function|greens/GreensFunction_HoAtom_SQA_phi|bulk
+|+|Ho atom Green's function|greens/GreensFunction_rotated_SQA_noco|bulk
+|+|Fe bcc Green's function Radial Noco spin offdiagonal|greens/GreensFunction_mperp_xdir|bulk
+|+|Fe bcc Green's function Radial Noco spin offdiagonal|greens/GreensFunction_mperp_ydir|bulk
+|+|GdCu Green's function interorbital elements|greens/GreensFunction_InterOrbital|bulk
+|+|Greens Function intersite single shell|greens/GreensFunction_IntersiteSingleShell|bulk
+|+|Greens Function intersite single shell|greens/GreensFunction_IntersiteGammaNoGamma|bulk
+|+|Greens Function intersite multiple shells|greens/GreensFunction_IntersiteMultipleShells|bulk
+|+|Greens Function intersite shell construction|greens/GreensFunction_IntersiteShellConstruction|bulk
+|+|Greens Function intersite shell construction|greens/GreensFunction_IntersiteShellConstructionFilm|bulk
