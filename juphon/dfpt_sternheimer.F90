@@ -275,13 +275,13 @@ CONTAINS
          !              starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
          !END IF
          CALL dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
-                             vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, dfpt_tag)
+                             vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .NOT.final_SH_it, dfpt_tag)
          CALL timestop("dfpt eigen")
 
          IF (l_minusq) THEN
             CALL timestart("dfpt minus eigen")
             CALL dfpt_eigen_new(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
-                                vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, dfpt_tag//"m")
+                                vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .NOT.final_SH_it, dfpt_tag//"m")
             CALL timestop("dfpt minus eigen")
          END IF
 
@@ -319,6 +319,21 @@ CONTAINS
             CALL MPI_BCAST(results1m%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(results1m%w_iks, SIZE(results1m%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
+         END IF
+
+         IF (final_SH_it) THEN
+            denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
+            CALL denIn1%distribute(fmpi%mpi_comm)
+
+            IF (l_minusq) THEN
+               denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
+               CALL denIn1m%distribute(fmpi%mpi_comm)
+            END IF
+
+            l_cont = .FALSE.
+            IF (fmpi%irank==0) write(*,*) "Final Sternheimer iteration finished."
+            CALL timestop("Sternheimer Iteration")
+            CYCLE scfloop
          END IF
 
          CALL timestart("generation of new charge density (total)")

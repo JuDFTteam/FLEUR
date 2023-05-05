@@ -53,13 +53,14 @@ MODULE m_types_potden
   END TYPE t_potden
 
 CONTAINS
-  subroutine collect(this,fmpi_comm)
+  subroutine collect(this,fmpi_comm,the_other)
     use m_mpi_bc_tool
 #ifdef CPP_MPI
     use mpi
 #endif
     implicit none
     class(t_potden),INTENT(INOUT) :: this
+    class(t_potden),OPTIONAL,INTENT(INOUT) :: the_other
     integer :: fmpi_comm
 #ifdef CPP_MPI
     INTEGER:: ierr,irank
@@ -76,6 +77,13 @@ CONTAINS
     CALL MPI_REDUCE(this%mt,rtmp,size(this%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
     if (irank==0) this%mt=reshape(rtmp,shape(this%mt))
     deallocate(rtmp)
+    IF (PRESENT(the_other)) THEN
+       !mt
+       ALLOCATE(rtmp(size(the_other%mt)))
+       CALL MPI_REDUCE(the_other%mt,rtmp,size(the_other%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+       if (irank==0) the_other%mt=reshape(rtmp,shape(the_other%mt))
+       deallocate(rtmp)
+    END IF
     !vac
     if (allocated(this%vacz)) THEN
        ALLOCATE(rtmp(size(this%vacz)))

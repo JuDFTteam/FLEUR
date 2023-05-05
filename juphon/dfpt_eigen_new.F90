@@ -16,7 +16,7 @@ MODULE m_dfpt_eigen_new
 CONTAINS
 
    SUBROUTINE dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
-                             eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, dfpt_tag)
+                             eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, sh_den, dfpt_tag)
 
       USE m_types
       USE m_constants
@@ -43,7 +43,7 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)    :: inden, v1real, v1imag, vTot
       REAL,         INTENT(IN)     :: bqpt(3)
       INTEGER,      INTENT(IN)     :: eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont(6)
-      LOGICAL,      INTENT(IN)     :: l_real
+      LOGICAL,      INTENT(IN)     :: l_real, sh_den
       CHARACTER(len=20), INTENT(IN) :: dfpt_tag
 
       INTEGER n_size,n_rank
@@ -54,6 +54,10 @@ CONTAINS
       REAL :: bkpt(3), q_loop(3)
 
       INTEGER                   :: nu
+
+      LOGICAL                   :: oldway
+
+      COMPLEX                   :: wtfq
 
       TYPE(t_tlmplm) :: td, tdV1
       TYPE(t_potden) :: vx
@@ -72,12 +76,14 @@ CONTAINS
 
       CLASS(t_mat), ALLOCATABLE :: invE(:), matOcc(:), invE2(:)
 
+      oldway = .FALSE.
+
       !ALLOCATE(k_selection(16))
       !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40] 
       ALLOCATE(k_selection(1))
       !ALLOCATE(k_selection(3))
       !k_selection = [40,61,453]
-      k_selection = [1000]
+      k_selection = [10000]
 
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
@@ -209,6 +215,8 @@ CONTAINS
                      tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
                   END IF
 
+                  ! tempMat1 = H^{(1}_{\nu'\nu}
+
                   IF (ANY(nk==k_selection)) THEN
                      CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_h1band.npy",tempMat1)
                   END IF
@@ -221,7 +229,32 @@ CONTAINS
                   !   tempMat1(noccbd+1:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c(:,noccbd+1:nbasfcnq))),tempvec)
                   !END IF
                   !IF (nk==1) tempMat1(:noccbd) = CMPLX(0.0,0.0)
-                  tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
+                  IF (oldway) THEN
+                     tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
+                  ELSE
+                     DO iNupr = 1, nbasfcnq
+                        IF (.NOT.sh_den) THEN
+                           IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
+                              tempMat2(iNupr) = 0.0
+                           ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                              tempMat2(iNupr) = 0.0
+                           ELSE
+                              tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
+                           END IF
+                        ELSE
+                           IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                              tempMat2(iNupr) = 0.0
+                           ELSE IF (iNuPr<=noccbdq) THEN
+                              wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
+                              !wtfq = resultsq%w_iks(iNupr,nk,jsp)*2.0/fi%input%jspins
+                              tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
+                                            & *(1.0-wtfq)
+                           ELSE
+                              tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
+                           END IF
+                        END IF
+                     END DO
+                  END IF
 
                   IF (ANY(nk==k_selection)) THEN
                   !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Hband.npy",tempMat2)
@@ -274,26 +307,42 @@ CONTAINS
                   ELSE
                      tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
                   END IF
+                  
+                  ! tempMat1 = S^{(1}_{\nu'\nu}
 
                   IF (ANY(nk==k_selection)) THEN
                      CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_s1band.npy",tempMat1)
                   END IF
 
-                  !IF (nk==1) tempMat1(:noccbd) = CMPLX(0.0,0.0)
-                  tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
-                  !!! delta_e=0 correction
-                  !tempMat2(:nbasfcnq) = MATMUL(invE2(nu)%data_r,tempMat1)
-                  !IF (ANY(nk==k_selection)) THEN
-                  !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Sband.npy",tempMat2)
-                  !END IF
-                  DO iNupr = 1, nbasfcnq
-                     !IF (ABS(eigq(iNupr)-eigk(nu))>fi%juPhon%eDiffCut) THEN
-                        tempMat2(iNupr) = -eigk(nu)*tempMat2(iNupr)
-                     !!! delta_e=0 correction
-                     !ELSE
-                     !   tempMat2(iNupr) = tempMat2(iNupr)
-                     !END IF
-                  END DO
+                  IF (oldway) THEN
+                     tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
+                     tempMat2(:nbasfcnq) = -eigk(nu)*tempMat2(:nbasfcnq)
+                  ELSE
+                     DO iNupr = 1, nbasfcnq
+                        IF (.NOT.sh_den) THEN
+                           IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
+                              tempMat2(iNupr) = 0.0
+                           ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                              tempMat2(iNupr) = tempMat1(iNupr)
+                           ELSE
+                              tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
+                           END IF
+                        ELSE
+                           IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                              tempMat2(iNupr) = tempMat1(iNupr)
+                           ELSE IF (iNuPr<=noccbdq) THEN
+                              wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
+                              !wtfq = resultsq%w_iks(iNupr,nk,jsp)*2.0/fi%input%jspins
+
+                              tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
+                                            & *(1.0-wtfq) &
+                                            & +0.5*tempMat1(iNupr)*wtfq
+                           ELSE
+                              tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
+                           END IF
+                        END IF
+                     END DO
+                  END IF
                   IF (zMatq%l_real) THEN
                      z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
                   ELSE
@@ -311,8 +360,8 @@ CONTAINS
                   END IF
                END DO
 
-               IF (ANY(nk==k_selection)) THEN
                results1%neig = results%neig
+               IF (ANY(nk==k_selection)) THEN
                !results1%eig(:noccbd,nk,jsp) = eigs1
 
                   IF (l_real) THEN ! l_real for zMatk

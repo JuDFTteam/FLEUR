@@ -107,6 +107,8 @@ CONTAINS
                              & lapw%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
                              & l_smat, .TRUE., vpw_temp, hmat1(iMatPr, iMat), smat1(iMatPr, iMat), theta1_pw0)
 
+            iTkin = 0
+            l_smat = iSpinPr.EQ.iSpin
             IF (killcont(4)==0) l_smat = .FALSE.
 
             IF (iSpinPr.EQ.iSpin) iTkin = killcont(3)
