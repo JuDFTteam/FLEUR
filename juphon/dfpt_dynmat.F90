@@ -383,7 +383,7 @@ CONTAINS
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,dyn_row_eigen,SIZE(dyn_row_eigen),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
 
-      dyn_row = conjg(dyn_row_HF)  conjg(dyn_row_int) + dyn_row_eigen
+      dyn_row = conjg(dyn_row_HF) + conjg(dyn_row_int) + dyn_row_eigen
 
    END SUBROUTINE dfpt_dynmat_row
 
