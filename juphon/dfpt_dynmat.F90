@@ -366,7 +366,7 @@ CONTAINS
 
             write(9989,*) qvec, iDtype_row, iDir_row, iDtype_col, iDir_col
             write(9989,*) "HF   :", dyn_row_HF(col_index)
-            write(9989,*) "int  :", dyn_row_HF(col_index)
+            write(9989,*) "int  :", dyn_row_int(col_index)
 
             ! Calculate the contributions to the dynamical matrix that stem
             ! from terms related to occupation numbers and the eigenenergies.
