@@ -265,7 +265,7 @@ CONTAINS
                !write(9989,*) "IR rho1 vTot Theta1           ", tempval
                !tempval = CMPLX(0.0,0.0)
                CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq2, tempval)
-               dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+               dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
                write(9989,*) "IR rho1 vTot Theta1 new       ", tempval
                tempval = CMPLX(0.0,0.0)
             END DO
