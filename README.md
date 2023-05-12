@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://www.flapw.de/site/img/fleur.gif"  width="220">
+<img src="https://www.flapw.de/rel/img/fleur.gif"  width="220">
 
 
 Welcome to the source code of FLEUR
