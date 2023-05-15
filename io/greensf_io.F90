@@ -445,7 +445,7 @@ MODULE m_greensf_io
       !--> End: GF data output
 
       !--> Start: Radial Function output
-      IF(PRESENT(u).AND.l_anyradial) THEN
+      IF(PRESENT(u)) THEN
          CALL h5gcreate_f(fileID, 'RadialFunctions', radialGroupID, hdfError)
 
          dims(:2)=[atoms%jmtd,atoms%ntype]
