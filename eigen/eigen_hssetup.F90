@@ -23,10 +23,12 @@ CONTAINS
       USE m_hs_int
       USE m_hsvac
       USE m_hsmt
+      USE m_vham
       USE m_eigen_redist_matrix
       USE m_add_vnonlocal
       USE m_subvxc
       USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
+      USE m_hsmt_fjgj
       IMPLICIT NONE
       INTEGER, INTENT(IN)           :: isp
       TYPE(t_mpi), INTENT(IN)       :: fmpi
@@ -50,6 +52,8 @@ CONTAINS
       INTEGER :: i, j, nspins
       complex, allocatable :: vpw_wTemp(:,:)
 
+      TYPE(t_fjgj)   :: fjgj
+      TYPE(t_potden) :: den
       !Matrices for Hamiltonian and Overlapp
       !In fi%noco case we need 4-matrices for each spin channel
       nspins = MERGE(2, 1, fi%noco%l_noco)
@@ -80,6 +84,9 @@ CONTAINS
             !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
          END DO; END DO
       CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, ud, td, smat, hmat)
+      DO i = 1, nspins
+         CALL v_ham(ud,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,nococonv,fjgj,den,i,nk,hmat(i,i))
+      END DO
       DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
             !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
             !$acc exit data delete(hmat(i,j),smat(i,j))
