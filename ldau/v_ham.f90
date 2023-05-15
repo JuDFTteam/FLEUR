@@ -63,8 +63,8 @@ MODULE m_vham
                             lm1atom1=ll1atom1+matom1
                             Do matom2=-latom2,latom2
                                 lm1atom2=ll1atom2+matom2
-                                !!!!!!!!c_0=c_0 - atoms%lda_v%V!*(conjg(abG1(ll1atom1+1,iG1))*abG2(ll1atom2+1,iG2))! & !!!!!!!
-                                c_0=c_0 - (den%nIJ_llp_mmp(matom1,matom2,i_pair,jspin))*(conjg(abG1(ll1atom1+1,iG1))*abG2(ll1atom2+1,iG2) &
+                                !!!!!!!!c_0=c_0 - atoms%lda_v(i_v)%V*(conjg(abG1(ll1atom1+1,iG1))*abG2(ll1atom2+1,iG2))! & !!!!!!!
+                                c_0=c_0 - (atoms%lda_v(i_v)%V)*(den%nIJ_llp_mmp(matom1,matom2,i_pair,jspin))*(conjg(abG1(ll1atom1+1,iG1))*abG2(ll1atom2+1,iG2) &
                                 + conjg(abG1(ll1atom1+1+abSizeG1,iG1))*abG2(ll1atom2+1,iG2)*(usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5) &
                                 + conjg(abG1(ll1atom1+1,iG1))*abG2(ll1atom2+abSizeG2,iG2)*(usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5) &
                                 + conjg(abG1(ll1atom1+1+abSizeG1,iG1))*abG2(ll1atom2+1+abSizeG2,iG2)*(usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5)&
