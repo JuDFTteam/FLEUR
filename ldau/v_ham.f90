@@ -13,7 +13,7 @@ MODULE m_vham
 
     CONTAINS
 
-    SUBROUTINE v_ham(usdus,atoms,kpts,cell,lapw,sym,noco,nococonv,fjgj,den,jspin,kptindx,VIJ_ggp)
+    SUBROUTINE v_ham(usdus,atoms,kpts,cell,lapw,sym,noco,nococonv,fjgj,den,jspin,kptindx,hmat)
 
         USE m_types
         USE m_constants
@@ -37,7 +37,7 @@ MODULE m_vham
         TYPE(t_fjgj),        INTENT(IN)     :: fjgj
         TYPE(t_potden),      INTENT(IN)     :: den
         INTEGER,             INTENT(IN)     :: jspin,kptindx    
-        COMPLEX,             INTENT(INOUT)  :: VIJ_ggp(:,:,:,:)      !!G1, G2,i_pair,jspin
+        CLASS(t_mat),        INTENT(INOUT)  :: hmat      !!G1, G2,i_pair,jspin
 
         INTEGER i_v,i_pair,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,matom1,matom2,lm1atom1,lm1atom2,iG1,iG2,abSizeG1,abSizeG2
         COMPLEX c_0
@@ -72,9 +72,12 @@ MODULE m_vham
                                 EXP(cmplx(0.0,-tpi_const)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),(kpts%bk(:,kptindx)+lapw%gvec(3, iG2,jspin))))
                             ENDDO
                         ENDDO
-                        VIJ_ggp(iG1,iG2,i_pair,jspin)=VIJ_ggp(iG1,iG2,i_pair,jspin)+c_0
-                        WRITE(4000,*) 'i_pair,G1,G2',i_pair,iG1,iG2
-                        WRITE(4000,*) 'potentialmatrix',VIJ_ggp
+                        IF(hmat%l_real) THEN
+                           hmat%data_r(iG1,iG2)=hmat%data_r(iG1,iG2)+REAL(c_0)
+                        ELSE
+                           hmat%data_c(iG1,iG2)=hmat%data_c(iG1,iG2)+c_0
+                        END IF
+                        WRITE(4000,*) 'i_pair,G1,G2,c_0',i_pair,iG1,iG2,c_0
                     ENDDO
                 ENDDO
                 i_pair=i_pair+1
