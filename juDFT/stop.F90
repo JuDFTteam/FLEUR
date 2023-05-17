@@ -223,21 +223,22 @@ CONTAINS
 
     IF(is_root) THEN
        WRITE(0,*)
-       WRITE(0,*) "******************************************************"
+       WRITE(0,*) "********************************************************************"
        WRITE(0,*) "Run finished successfully"
        WRITE(0,*) "Stop message:"
        WRITE(0,*) "  ",message
-       WRITE(0,*) "******************************************************"
-       WRITE(0,*) "If you publish work with contributions from FLEUR"
-       WRITE(0,*) "calculations, please cite:"
+       WRITE(0,*) "********************************************************************"
+       WRITE(0,*) "If you publish work with contributions from FLEUR calculations,"
+       WRITE(0,*) "please cite:"
        WRITE(0,*) ""
        WRITE(0,*) "  - The FLEUR project: https://www.flapw.de"
        WRITE(0,*) ""
-       WRITE(0,*) "Please also consult on the website:"
+       WRITE(0,*) "  - D. Wortmann et al., FLEUR, Zenodo, DOI: 10.5281/zenodo.7576163"
+       WRITE(0,*) ""
+       WRITE(0,*) "Please also consult on the website"
        WRITE(0,*) "  User Guide -> Reference -> References"
-       WRITE(0,*) "for more information on relevant papers and an example"
-       WRITE(0,*) "Bibtex entry."
-       WRITE(0,*) "******************************************************"
+       WRITE(0,*) "for more information on relevant papers and example Bibtex entries."
+       WRITE(0,*) "********************************************************************"
        call flush(0)
     ENDIF
     CALL writetimes()
