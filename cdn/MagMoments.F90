@@ -36,7 +36,7 @@ module m_magmoments
         write(ounit,*)
         write(oUnit,'(a,19x,a,19x,a,19x,a)') "Spin Magn. mom.  |","Global Frame","  | ","Local Frame"
         write(oUnit,*) "------------------------------------------------------------------------------------------------------------------------"
-        IF(.NOT.(l_noco.or.l_soc)) THEN
+        IF(.NOT.(noco%l_noco.or.noco%l_soc)) THEN
            write(oUnit,'(a,5x,a,2(" | ",5(a,5x)))') "Atom "," m    ","mx   ","my   ","mz   ","alpha","beta ","mx   ","my   ","mz   ","alpha","beta "
         ELSE
            write(oUnit,'(a,5x,a,2(" | ",5(a,5x)))') "Atom ","|m|   ","mx   ","my   ","mz   ","alpha","beta ","mx   ","my   ","mz   ","alpha","beta "
