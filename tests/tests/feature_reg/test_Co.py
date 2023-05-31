@@ -7,7 +7,6 @@ import pytest
 @pytest.mark.xml
 @pytest.mark.dos
 @pytest.mark.mcd
-@pytest.mark.skip("MCD broken")
 def test_CoMCDXML(default_fleur_test):
     """Fleur Co MCD XML
     Simple test of Fleur with two steps:
