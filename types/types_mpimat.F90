@@ -798,7 +798,9 @@ CONTAINS
          local_size1 = 0
          local_size2 = 0
       else
-         if (myrowssca==0.or.mycolssca==0) call judft_error("You used way too many MPI PEs for this system, some PE have no share of the Hamiltonian. Please check your parallelization")
+         IF (myrowssca==0.or.mycolssca==0) THEN
+            CALL juDFT_warn("With your chosen eigenvalue parallelization scheme some MPI processes have no share of the Hamiltonian. Please check your parallelization.",hint="Either reduce the number of MPI processes or increase the k-point parallelization.")
+         END IF
          CALL descinit(blacsdata%blacs_desc, m1, m2, nbr, nbc, 0, 0, ictextblacs, myrowssca, ierr)
          IF (ierr /= 0) call judft_error('Creation of BLACS descriptor failed')
          local_size1 = myrowssca
