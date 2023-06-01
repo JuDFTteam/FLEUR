@@ -323,13 +323,13 @@ CONTAINS
                            IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                               tempMat2(iNupr) = 0.0
                            ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
-                              tempMat2(iNupr) = tempMat1(iNupr)
+                              tempMat2(iNupr) = 0.5*tempMat1(iNupr)
                            ELSE
                               tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
                            END IF
                         ELSE
                            IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
-                              tempMat2(iNupr) = tempMat1(iNupr)
+                              tempMat2(iNupr) = 0.5*tempMat1(iNupr)
                            ELSE IF (iNuPr<=noccbdq) THEN
                               wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                               !wtfq = resultsq%w_iks(iNupr,nk,jsp)*2.0/fi%input%jspins

@@ -407,74 +407,149 @@ CONTAINS
       !qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.00625*19.0
       !qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.00625*20.0
 
-      ! 8x8x8 fcc q-point path
-      qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.125*0.0
-      qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.125*1.0
-      qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.125*2.0
-      qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.125*3.0
-      qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.125*4.0
+      IF (.FALSE.) THEN
+        ! 8x8x8 fcc q-point path
+        qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.125*0.0
+        qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.125*1.0
+        qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.125*2.0
+        qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.125*3.0
+        qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.125*4.0
 
-      qpts_loc%bk(:,6)  = [1.0,1.0,2.0]*0.125*3.0
-      qpts_loc%bk(:,7)  = [1.0,1.0,2.0]*0.125*2.0
-      qpts_loc%bk(:,8)  = [1.0,1.0,2.0]*0.125*1.0
+        qpts_loc%bk(:,6)  = [1.0,1.0,2.0]*0.125*3.0
+        qpts_loc%bk(:,7)  = [1.0,1.0,2.0]*0.125*2.0
+        qpts_loc%bk(:,8)  = [1.0,1.0,2.0]*0.125*1.0
 
-      qpts_loc%bk(:,9)  = [1.0,1.0,1.0]*0.125*1.0
-      qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*2.0
-      qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*3.0
-      qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*4.0
+        qpts_loc%bk(:,9)  = [1.0,1.0,1.0]*0.125*1.0
+        qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*2.0
+        qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*3.0
+        qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*4.0
 
-      ! 8x8x8 bcc q-point path
-      !qpts_loc%bk(:,1)  = [0.0,0.0,1.0]*0.125*4.0
-      !qpts_loc%bk(:,2)  = [0.0,0.0,1.0]*0.125*3.0
-      !qpts_loc%bk(:,3)  = [0.0,0.0,1.0]*0.125*2.0
-      !qpts_loc%bk(:,4)  = [0.0,0.0,1.0]*0.125*1.0
-      !qpts_loc%bk(:,5)  = [0.0,0.0,1.0]*0.125*0.0
+        ALLOCATE(q_list(12),dfpt_eig_id_list(12))
+        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(12))
+        q_list = [1,2,3,4,5,6,7,8,9,10,11,12] 
+      ELSE IF (.FALSE.) THEN
+        ! 8x8x8 bcc q-point path
+        qpts_loc%bk(:,1)  = [0.0,0.0,1.0]*0.125*4.0
+        qpts_loc%bk(:,2)  = [0.0,0.0,1.0]*0.125*3.0
+        qpts_loc%bk(:,3)  = [0.0,0.0,1.0]*0.125*2.0
+        qpts_loc%bk(:,4)  = [0.0,0.0,1.0]*0.125*1.0
+        qpts_loc%bk(:,5)  = [0.0,0.0,1.0]*0.125*0.0
 
-      !qpts_loc%bk(:,6)  = [-1.0,1.0,1.0]*0.125*1.0
-      !qpts_loc%bk(:,7)  = [-1.0,1.0,1.0]*0.125*2.0
-      !qpts_loc%bk(:,8)  = [-1.0,1.0,1.0]*0.125*3.0
-      !qpts_loc%bk(:,9)  = [-1.0,1.0,1.0]*0.125*4.0
+        qpts_loc%bk(:,6)  = [-1.0,1.0,1.0]*0.125*1.0
+        qpts_loc%bk(:,7)  = [-1.0,1.0,1.0]*0.125*2.0
+        qpts_loc%bk(:,8)  = [-1.0,1.0,1.0]*0.125*3.0
+        qpts_loc%bk(:,9)  = [-1.0,1.0,1.0]*0.125*4.0
 
-      !qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*3.0
-      !qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*2.0
-      !qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*1.0
+        qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*3.0
+        qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*2.0
+        qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*1.0
 
-      !ALLOCATE(q_list(12),dfpt_eig_id_list(12))
-      !IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(12))
-      !q_list = [1,2,3,4,5,6,7,8,9,10,11,12]
+        ALLOCATE(q_list(12),dfpt_eig_id_list(12))
+        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(12))
+        q_list = [1,2,3,4,5,6,7,8,9,10,11,12]
+      ELSE IF (.TRUE.) THEN
+        ! 16x16x16 fcc q-point path
+        qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/16
+        qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/16
+        qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*2.0/16
+        qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*3.0/16
+        qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*4.0/16
+        qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*5.0/16
+        qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*6.0/16
+        qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*7.0/16
+        qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*8.0/16
 
-      ! fcc Gamma-X path in 1/16
-      qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/16
-      qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/16
-      qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*2.0/16
-      qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*3.0/16
-      qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*4.0/16
-      qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*5.0/16
-      qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*6.0/16
-      qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*7.0/16
-      qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*8.0/16
+        qpts_loc%bk(:,10) = [1.0,1.0,2.0]*7.0/16
+        qpts_loc%bk(:,11) = [1.0,1.0,2.0]*6.0/16
+        qpts_loc%bk(:,12) = [1.0,1.0,2.0]*5.0/16
+        qpts_loc%bk(:,13) = [1.0,1.0,2.0]*4.0/16
+        qpts_loc%bk(:,14) = [1.0,1.0,2.0]*3.0/16
+        qpts_loc%bk(:,15) = [1.0,1.0,2.0]*2.0/16
+        qpts_loc%bk(:,16) = [1.0,1.0,2.0]*1.0/16
 
-      qpts_loc%bk(:,10) = [1.0,1.0,2.0]*7.0/16
-      qpts_loc%bk(:,11) = [1.0,1.0,2.0]*6.0/16
-      qpts_loc%bk(:,12) = [1.0,1.0,2.0]*5.0/16
-      qpts_loc%bk(:,13) = [1.0,1.0,2.0]*4.0/16
-      qpts_loc%bk(:,14) = [1.0,1.0,2.0]*3.0/16
-      qpts_loc%bk(:,15) = [1.0,1.0,2.0]*2.0/16
-      qpts_loc%bk(:,16) = [1.0,1.0,2.0]*1.0/16
+        qpts_loc%bk(:,17) = [1.0,1.0,1.0]*1.0/16
+        qpts_loc%bk(:,18) = [1.0,1.0,1.0]*2.0/16
+        qpts_loc%bk(:,19) = [1.0,1.0,1.0]*3.0/16
+        qpts_loc%bk(:,20) = [1.0,1.0,1.0]*4.0/16
+        qpts_loc%bk(:,21) = [1.0,1.0,1.0]*5.0/16
+        qpts_loc%bk(:,22) = [1.0,1.0,1.0]*6.0/16
+        qpts_loc%bk(:,23) = [1.0,1.0,1.0]*7.0/16
+        qpts_loc%bk(:,24) = [1.0,1.0,1.0]*8.0/16
 
-      qpts_loc%bk(:,17) = [1.0,1.0,1.0]*1.0/16
-      qpts_loc%bk(:,18) = [1.0,1.0,1.0]*2.0/16
-      qpts_loc%bk(:,19) = [1.0,1.0,1.0]*3.0/16
-      qpts_loc%bk(:,20) = [1.0,1.0,1.0]*4.0/16
-      qpts_loc%bk(:,21) = [1.0,1.0,1.0]*5.0/16
-      qpts_loc%bk(:,22) = [1.0,1.0,1.0]*6.0/16
-      qpts_loc%bk(:,23) = [1.0,1.0,1.0]*7.0/16
-      qpts_loc%bk(:,24) = [1.0,1.0,1.0]*8.0/16
+        ALLOCATE(q_list(24),dfpt_eig_id_list(24))
+        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(24))
+        q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
+      ELSE IF (.FALSE.) THEN
+        ! 16x16x16 bcc q-point path
+        qpts_loc%bk(:,9)  = [0.0,0.0,1.0]*0.0/16
+        qpts_loc%bk(:,8)  = [0.0,0.0,1.0]*1.0/16
+        qpts_loc%bk(:,7)  = [0.0,0.0,1.0]*2.0/16
+        qpts_loc%bk(:,6)  = [0.0,0.0,1.0]*3.0/16
+        qpts_loc%bk(:,5)  = [0.0,0.0,1.0]*4.0/16
+        qpts_loc%bk(:,4)  = [0.0,0.0,1.0]*5.0/16
+        qpts_loc%bk(:,3)  = [0.0,0.0,1.0]*6.0/16
+        qpts_loc%bk(:,2)  = [0.0,0.0,1.0]*7.0/16
+        qpts_loc%bk(:,1)  = [0.0,0.0,1.0]*8.0/16
 
-      ALLOCATE(q_list(24),dfpt_eig_id_list(24))
-      IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(24))
-      q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
+        qpts_loc%bk(:,16) = [-1.0,1.0,1.0]*7.0/16
+        qpts_loc%bk(:,15) = [-1.0,1.0,1.0]*6.0/16
+        qpts_loc%bk(:,14) = [-1.0,1.0,1.0]*5.0/16
+        qpts_loc%bk(:,13) = [-1.0,1.0,1.0]*4.0/16
+        qpts_loc%bk(:,12) = [-1.0,1.0,1.0]*3.0/16
+        qpts_loc%bk(:,11) = [-1.0,1.0,1.0]*2.0/16
+        qpts_loc%bk(:,10) = [-1.0,1.0,1.0]*1.0/16
 
+        qpts_loc%bk(:,24) = [1.0,1.0,1.0]*1.0/16
+        qpts_loc%bk(:,23) = [1.0,1.0,1.0]*2.0/16
+        qpts_loc%bk(:,22) = [1.0,1.0,1.0]*3.0/16
+        qpts_loc%bk(:,21) = [1.0,1.0,1.0]*4.0/16
+        qpts_loc%bk(:,20) = [1.0,1.0,1.0]*5.0/16
+        qpts_loc%bk(:,19) = [1.0,1.0,1.0]*6.0/16
+        qpts_loc%bk(:,18) = [1.0,1.0,1.0]*7.0/16
+        qpts_loc%bk(:,17) = [-1.0,1.0,1.0]*8.0/16
+
+        ALLOCATE(q_list(24),dfpt_eig_id_list(24))
+        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(24))
+        q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
+      ELSE IF (.FALSE.) THEN
+        ! 15x15x15 fcc q-point path
+        qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/15
+        qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/15
+        qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*2.0/15
+        qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*3.0/15
+        qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*4.0/15
+        qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*5.0/15
+        qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*6.0/15
+        qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*7.0/15
+
+        qpts_loc%bk(:,9)  = [1.0,1.0,2.0]*7.0/15
+        qpts_loc%bk(:,10) = [1.0,1.0,2.0]*6.0/15
+        qpts_loc%bk(:,11) = [1.0,1.0,2.0]*5.0/15
+        qpts_loc%bk(:,12) = [1.0,1.0,2.0]*4.0/15
+        qpts_loc%bk(:,13) = [1.0,1.0,2.0]*3.0/15
+        qpts_loc%bk(:,14) = [1.0,1.0,2.0]*2.0/15
+        qpts_loc%bk(:,15) = [1.0,1.0,2.0]*1.0/15
+
+        qpts_loc%bk(:,16) = [1.0,1.0,1.0]*1.0/15
+        qpts_loc%bk(:,17) = [1.0,1.0,1.0]*2.0/15
+        qpts_loc%bk(:,18) = [1.0,1.0,1.0]*3.0/15
+        qpts_loc%bk(:,19) = [1.0,1.0,1.0]*4.0/15
+        qpts_loc%bk(:,20) = [1.0,1.0,1.0]*5.0/15
+        qpts_loc%bk(:,21) = [1.0,1.0,1.0]*6.0/15
+        qpts_loc%bk(:,22) = [1.0,1.0,1.0]*7.0/15
+
+        ALLOCATE(q_list(22),dfpt_eig_id_list(22))
+        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(22))
+        q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22] 
+      ELSE IF (.FALSE.) THEN
+        ! fcc high-symmetry points
+        qpts_loc%bk(:,1)  = [0.0,0.5,0.5]
+        qpts_loc%bk(:,2)  = [0.5,0.5,0.5]
+
+        ALLOCATE(q_list(2),dfpt_eig_id_list(2))
+        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(2))
+        q_list = [1,2] 
+      ELSE IF (.FALSE.) THEN
       ! 12x12x8 hcp q-point path
       !qpts_loc%bk(:,1)  = [1.0,2.0,0.0]*0.0/12.0 !G
       !qpts_loc%bk(:,2)  = [1.0,2.0,0.0]*0.1/12.0
@@ -498,6 +573,8 @@ CONTAINS
 
       !ALLOCATE(q_list(16),dfpt_eig_id_list(16))
       !q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+      END IF
+
       !ALLOCATE(q_list(21),dfpt_eig_id_list(21))
       !ALLOCATE(q_list(1),dfpt_eig_id_list(1))
       !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
@@ -739,10 +816,17 @@ CONTAINS
                CALL timestart("Dynmat")
                ! Once the first order quantities are converged, we can construct all
                ! additional necessary quantities and from that the dynamical matrix.
-               CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                    eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
-                                    rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
-                                    denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), .TRUE., .TRUE.)
+               IF (.TRUE.) THEN
+                  CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
+                                       eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
+                                       rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
+                                       denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), .TRUE., .TRUE.)
+               ELSE
+                  CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
+                                       eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
+                                       rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
+                                       denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), .TRUE., .TRUE., q_eig_id)
+               END IF
                CALL timestop("Dynmat")
                dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
                write(9989,*) "Eii2:", E2ndOrdII(3 *(iDtype-1)+iDir,:)
@@ -764,11 +848,11 @@ CONTAINS
          IF (fmpi%irank==0) THEN
             WRITE(*,*) '-------------------------'
             CALL timestart("Dynmat diagonalization")
-            CALL DiagonalizeDynMat(fi%atoms, qpts_loc, fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ))
+            CALL DiagonalizeDynMat(fi_nosym%atoms, qpts_loc, fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ))
             CALL timestop("Dynmat diagonalization")
 
             CALL timestart("Frequency calculation")
-            CALL CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs)
+            CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs)
             CALL timestop("Frequency calculation")
             DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
          END IF

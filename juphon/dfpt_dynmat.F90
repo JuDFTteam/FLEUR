@@ -13,7 +13,7 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
                               eig_id, dfpt_eig_id, enpara, mpdata, results, results1, l_real, &
                               rho, vTot, grRho3, grVext3, grVC3, grVtot3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
-                              l_dynMat0, l_dynMatq)
+                              l_dynMat0, l_dynMatq, q_eig_id)
       USE m_step_function
       USE m_convol
       USE m_dfpt_vgen
@@ -41,6 +41,8 @@ CONTAINS
       INTEGER, INTENT(IN) :: iQ, iDtype_row, iDir_row, eig_id, dfpt_eig_id
 
       COMPLEX, INTENT(INOUT) :: dyn_row(:)
+     
+      INTEGER, OPTIONAL, INTENT(IN) :: q_eig_id
 
       TYPE(t_fftgrid) :: fftgrid_dummy
       TYPE(t_potden)  :: rho_dummy, rho1_dummy, vExt1, vExt1Im
@@ -370,18 +372,26 @@ CONTAINS
 
             ! Calculate the contributions to the dynamical matrix that stem
             ! from terms related to occupation numbers and the eigenenergies.
-            CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
+            IF (.NOT.PRESENT(q_eig_id)) THEN
+               CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
+                                      stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
+                                      eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
+                                      theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
+                                      qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1,1,1,1,1,1])
+            ELSE
+               CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                    stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
                                    eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                    theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
-                                   qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1,1,1,1,1,1])
+                                   qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1,1,1,1,1,1],q_eig_id) 
+            END IF
             write(9989,*) "eigen:", dyn_row_eigen(col_index)
          END DO
       END DO
 
-#ifdef CPP_MPI
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,dyn_row_eigen,SIZE(dyn_row_eigen),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
-#endif
+!#ifdef CPP_MPI
+!      CALL MPI_ALLREDUCE(MPI_IN_PLACE,dyn_row_eigen,SIZE(dyn_row_eigen),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+!#endif
 
       dyn_row = conjg(dyn_row_HF) + conjg(dyn_row_int) + dyn_row_eigen
 
@@ -494,7 +504,7 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                 stars, starsq, sphhar, inden, hub1data, vx, v, v1real, v1imag, &
                                 eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
-                                theta1_pw0, theta1_pw, bqpt, l_real, eigen_term, killcont)
+                                theta1_pw0, theta1_pw, bqpt, l_real, eigen_term, killcont, q_eig_id)
 
       USE m_types
       USE m_constants
@@ -544,7 +554,7 @@ CONTAINS
 
       COMPLEX, INTENT(INOUT) :: eigen_term
 
-      INTEGER, OPTIONAL, INTENT(IN) :: killcont(11)
+      INTEGER, OPTIONAL, INTENT(IN) :: killcont(11), q_eig_id
 
       ! Local Scalars
       INTEGER jsp,nk,ne_all,ne_found,neigd2
@@ -552,7 +562,7 @@ CONTAINS
       INTEGER err
       REAL :: q_loop(3)
       ! Local Arrays
-      INTEGER              :: ierr, nbands, nbands1, nbasfcn, nbasfcnq, noccbd
+      INTEGER              :: ierr, nbands, nbands1, nbasfcn, nbasfcnq, noccbd, nbandsq
 
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eig1(:), we(:), we1(:)
@@ -562,8 +572,8 @@ CONTAINS
       TYPE(t_lapw)              :: lapw, lapwq
       TYPE(t_kpts)              :: kpts_mod !kqpts ! basically kpts, but with q added onto each one.
       TYPE(t_hub1data)          :: hub1datadummy
-      TYPE (t_mat)              :: zMat, zMat1
-      CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2
+      TYPE (t_mat)              :: zMat, zMat1, zMatq
+      CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2,vmat2
 
       ! Variables for HF or fi%hybinp functional calculation
       INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat
@@ -572,9 +582,9 @@ CONTAINS
       INTEGER :: iEig, ikGq, iqdir
       INTEGER :: imlo, ilo, iklo, l, ikg, ikglo !!! Test!
       REAL :: gext(3)
-      COMPLEX :: we_loop, we1_loop, eig_loop, eig1_loop
+      COMPLEX :: we_loop, we1_loop, eig_loop, eig1_loop, eigen_s2, eigen_h2s2, eigen_s1q, eigen_h1qs1q
 
-      COMPLEX, ALLOCATABLE :: tempVec(:), tempVecq(:), z_loop(:), z1_loop(:), ztest_loop(:)
+      COMPLEX, ALLOCATABLE :: tempVec(:), tempVecq(:), z_loop(:), z1_loop(:), ztest_loop(:), zq_loop(:)
 
       REAL,    ALLOCATABLE :: kGqExt(:,:)
 
@@ -583,6 +593,10 @@ CONTAINS
       COMPLEX  zdotc
       EXTERNAL zdotc
 
+      eigen_s2 = CMPLX(0.0,0.0)
+      eigen_h2s2 = CMPLX(0.0,0.0)
+      eigen_s1q = CMPLX(0.0,0.0)
+      eigen_h1qs1q = CMPLX(0.0,0.0) 
       ALLOCATE(k_selection(16))
       k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
       !kqpts = fi%kpts
@@ -644,13 +658,17 @@ CONTAINS
 
             CALL zMat%init(l_real,nbasfcn,noccbd)
             CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
+            IF (PRESENT(q_eig_id)) CALL zMatq%init(l_real,nbasfcnq,noccbd)
 
-            ALLOCATE(tempVec(nbasfcn))!,tempVecq(nbasfcnq))
+            ALLOCATE(tempVec(nbasfcn))
+            IF (PRESENT(q_eig_id)) ALLOCATE(tempVecq(nbasfcnq))
             ALLOCATE(z_loop(nbasfcn),z1_loop(nbasfcnq))
             ALLOCATE(ztest_loop(nbasfcn))
+            IF (PRESENT(q_eig_id)) ALLOCATE(zq_loop(nbasfcnq))
 
             CALL read_eig(eig_id,     nk,jsp,neig=nbands,zmat=zMat)
             CALL read_eig(dfpt_eig_id,nk,jsp,neig=nbands1,zmat=zMat1)
+            IF (PRESENT(q_eig_id)) CALL read_eig(q_eig_id, nk,jsp,neig=nbandsq,zmat=zMatq)
 
             !!!! Test:
             !DO ikG = 1, lapw%nv(jsp)
@@ -679,9 +697,15 @@ CONTAINS
             !END DO
 
             CALL timestart("Setup of H&S matrices")
-            CALL dfpt_dynmat_hssetup(jsp, fmpi, fi, enpara, nococonv, starsq, stars, &
-                                     ud, tdmod, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
-                                     smat1, hmat1, smat1q, hmat1q, smat2, hmat2, nk, killcont)
+            IF (.NOT.PRESENT(q_eig_id)) THEN
+               CALL dfpt_dynmat_hssetup(jsp, fmpi, fi, enpara, nococonv, starsq, stars, &
+                                        ud, tdmod, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
+                                        smat1, hmat1, smat1q, hmat1q, smat2, hmat2, nk, killcont)
+            ELSE
+               CALL dfpt_dynmat_hssetup(jsp, fmpi, fi, enpara, nococonv, starsq, stars, &
+                                        ud, tdmod, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
+                                        smat1, hmat1, smat1q, hmat1q, smat2, hmat2, nk, killcont, vmat2)
+            END IF
             CALL timestop("Setup of H&S matrices")
 
             DO iEig = 1, noccbd
@@ -690,10 +714,12 @@ CONTAINS
                we_loop   = (2.0/fi%input%jspins)*we(iEig)
                we1_loop  = (2.0/fi%input%jspins)*we1(iEig)
                IF (l_real) THEN
-                  z_loop    = CMPLX(1.0,0.0)*zMat%data_r(:,iEig)
+                  z_loop = CMPLX(1.0,0.0)*zMat%data_r(:,iEig)
+                  IF (PRESENT(q_eig_id)) zq_loop = CMPLX(1.0,0.0)*zMatq%data_r(:,iEig) 
                   !ztest_loop = -ImagUnit*kGqExt(iDir_row,:)*zMat%data_r(:,iEig)
                ELSE
                   z_loop    = zMat%data_c(:,iEig)
+                  IF (PRESENT(q_eig_id)) zq_loop = zMatq%data_c(:,iEig)
                   !ztest_loop = -ImagUnit*kGqExt(iDir_row,:)*zMat%data_c(:,iEig)
                END IF
 
@@ -705,22 +731,33 @@ CONTAINS
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we_loop*eig1_loop,smat1%data_c,nbasfcn,z_loop,1,CMPLX(0.0,0.0),tempVec,1)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we1_loop*eig_loop,smat1%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we_loop*eig_loop,smat2%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
+               eigen_s2 = eigen_s2 + zdotc(nbasfcn,z_loop,1,tempVec,1)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,we_loop,hmat2%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
+               eigen_h2s2 = eigen_h2s2 + zdotc(nbasfcn,z_loop,1,tempVec,1)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,we1_loop,hmat1%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
 
                eigen_term = eigen_term + zdotc(nbasfcn,z_loop,1,tempVec,1)
 
+               IF (PRESENT(q_eig_id)) THEN
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcn,we_loop,vmat2%data_c,nbasfcnq,z_loop,1,CMPLX(0.0,0.0),tempVecq,1)
+                  eigen_term = eigen_term + zdotc(nbasfcnq,zq_loop,1,tempVecq,1)
+               END IF
+
                !CALL CPP_zgemv('N',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z_loop,1,CMPLX(0.0,0.0),tempVecq,1)
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z1_loop,1,CMPLX(0.0,0.0),tempVec,1)
+               eigen_s1q = eigen_s1q + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
                !CALL CPP_zgemv('N',nbasfcnq,nbasfcn,we_loop,hmat1q%data_c,nbasfcnq,z_loop,1,CMPLX(1.0,0.0),tempVecq,1)
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,we_loop,hmat1q%data_c,nbasfcnq,z1_loop,1,CMPLX(1.0,0.0),tempVec,1)
+               eigen_h1qs1q = eigen_h1qs1q + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
 
                !eigen_term = eigen_term + zdotc(nbasfcnq,z1_loop,1,tempVecq,1)
                eigen_term = eigen_term + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
             END DO
 
-            DEALLOCATE(tempVec)!,tempVecq)
+            DEALLOCATE(tempVec)
+            IF (PRESENT(q_eig_id)) DEALLOCATE(tempVecq)
             DEALLOCATE(z_loop,z1_loop)
+            IF (PRESENT(q_eig_id)) DEALLOCATE(zq_loop) 
             DEALLOCATE(ztest_loop,kGqExt)
             CALL smat1%free()
             CALL hmat1%free()
@@ -728,7 +765,9 @@ CONTAINS
             CALL hmat1q%free()
             CALL smat2%free()
             CALL hmat2%free()
+            IF (PRESENT(q_eig_id)) CALL vmat2%free()
             DEALLOCATE(hmat1,smat1,hmat1q,smat1q,hmat2,smat2, stat=dealloc_stat, errmsg=errmsg)
+            IF (PRESENT(q_eig_id)) DEALLOCATE(vmat2)
             if(dealloc_stat /= 0) call juDFT_error("deallocate failed one of the matrices",&
                                                    hint=errmsg, calledby="dfpt_dynmat.F90")
 
@@ -748,11 +787,24 @@ CONTAINS
             !ENDIF
          END DO  k_loop
       END DO ! spin loop ends
+#ifdef CPP_MPI
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_term,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_s2,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_h2s2,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_s1q,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_h1qs1q,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+#endif
+      IF (fmpi%irank==0) THEN
+         write(9911,*) "s2 :", eigen_s2
+         write(9911,*) "h2 :", eigen_h2s2 - eigen_s2
+         write(9911,*) "s1q:", eigen_s1q
+         write(9911,*) "h1q:", eigen_h1qs1q - eigen_s1q
+      END IF
    END SUBROUTINE
 
    SUBROUTINE dfpt_dynmat_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, stars, &
                             ud, td, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
-                            smat1_final, hmat1_final, smat1q_final, hmat1q_final, smat2_final, hmat2_final, nk, killcont)
+                            smat1_final, hmat1_final, smat1q_final, hmat1q_final, smat2_final, hmat2_final, nk, killcont, vmat2_final)
       USE m_types
       USE m_types_mpimat
       USE m_types_gpumat
@@ -774,9 +826,10 @@ CONTAINS
       INTEGER,            INTENT(IN)     :: iDir_row, iDtype_row, iDir_col, iDtype_col
       COMPLEX,            INTENT(IN)     :: theta1_pw0(:), theta1_pw(:)
       CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat1_final, hmat1_final, smat1q_final, hmat1q_final, smat2_final, hmat2_final
+      CLASS(t_mat), OPTIONAL, ALLOCATABLE, INTENT(INOUT)   :: vmat2_final
       INTEGER,      INTENT(IN)     :: nk, killcont(11)
 
-      CLASS(t_mat), ALLOCATABLE :: smat1(:, :), hmat1(:, :), smat1q(:, :), hmat1q(:, :), smat2(:, :), hmat2(:, :)
+      CLASS(t_mat), ALLOCATABLE :: smat1(:, :), hmat1(:, :), smat1q(:, :), hmat1q(:, :), smat2(:, :), hmat2(:, :), vmat2(:,:)
 
       INTEGER :: i, j, nspins
 
@@ -785,10 +838,16 @@ CONTAINS
          ALLOCATE (t_mat::smat1(nspins, nspins), hmat1(nspins, nspins))
          ALLOCATE (t_mat::smat1q(nspins, nspins), hmat1q(nspins, nspins))
          ALLOCATE (t_mat::smat2(nspins, nspins), hmat2(nspins, nspins))
+         IF (PRESENT(vmat2_final)) THEN
+            ALLOCATE (t_mat::vmat2(nspins, nspins))
+         END IF
       ELSE
          ALLOCATE (t_mpimat::smat1(nspins, nspins), hmat1(nspins, nspins))
          ALLOCATE (t_mpimat::smat1q(nspins, nspins), hmat1q(nspins, nspins))
          ALLOCATE (t_mpimat::smat2(nspins, nspins), hmat2(nspins, nspins))
+         IF (PRESENT(vmat2_final)) THEN
+            ALLOCATE (t_mpimat::vmat2(nspins, nspins))
+         END IF 
       END IF
 
       DO i = 1, nspins
@@ -799,6 +858,9 @@ CONTAINS
             CALL hmat1q(i, j)%init(smat1q(i, j))
             CALL smat2(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
             CALL hmat2(i, j)%init(smat2(i, j))
+            IF (PRESENT(vmat2_final)) THEN
+               CALL vmat2(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            END IF
          END DO
       END DO
 
@@ -812,8 +874,13 @@ CONTAINS
             !!$acc enter data copyin(hmat(i,j),smat(i,j))
             !!$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
       END DO; END DO
-      CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
-                            lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11))
+      IF (.NOT.PRESENT(vmat2_final)) THEN
+         CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
+                               lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11))
+      ELSE
+         CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
+                               lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11), vmat2)
+      END IF
       DO i = 1, nspins; DO j = 1, nspins; if (hmat1(1, 1)%l_real) THEN
             !!$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
             !!$acc exist data delete(hmat(i,j),smat(i,j))
@@ -833,6 +900,7 @@ CONTAINS
       ALLOCATE (hmat1q_final, mold=smat1q(1, 1))
       ALLOCATE (smat2_final, mold=smat2(1, 1))
       ALLOCATE (hmat2_final, mold=smat2(1, 1))
+      IF (PRESENT(vmat2_final)) ALLOCATE (vmat2_final, mold=vmat2(1, 1))
 
       CALL timestart("Matrix redistribution")
       CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat1, smat1_final)
@@ -841,6 +909,7 @@ CONTAINS
       CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
       CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat2, smat2_final)
       CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat2, hmat2_final, smat2_final)
+      IF (PRESENT(vmat2_final)) CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, vmat2, vmat2_final)
       CALL timestop("Matrix redistribution")
    END SUBROUTINE
 END MODULE m_dfpt_dynmat

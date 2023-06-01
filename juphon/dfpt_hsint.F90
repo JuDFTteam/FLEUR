@@ -55,7 +55,7 @@ CONTAINS
             l_smat = iSpinPr.EQ.iSpin
             IF (killcont(3)==0) l_smat = .FALSE.
 
-            IF (iSpinPr.EQ.iSpin) iTkin = 1 * killcont(2)
+            IF (iSpinPr.EQ.iSpin) iTkin = 2 * killcont(2)
 
             CALL hs_int_direct(fmpi, starsq, bbmat, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
                              & lapwq%bkpt + lapwq%qphon, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
@@ -101,7 +101,7 @@ CONTAINS
             l_smat = iSpinPr.EQ.iSpin
             IF (killcont(2)==0) l_smat = .FALSE.
 
-            IF (iSpinPr.EQ.iSpin) iTkin = killcont(1)
+            IF (iSpinPr.EQ.iSpin) iTkin = 2*killcont(1)
 
             CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
                              & lapw%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
@@ -111,7 +111,7 @@ CONTAINS
             l_smat = iSpinPr.EQ.iSpin
             IF (killcont(4)==0) l_smat = .FALSE.
 
-            IF (iSpinPr.EQ.iSpin) iTkin = killcont(3)
+            IF (iSpinPr.EQ.iSpin) iTkin = 2*killcont(3)
             CALL hs_int_direct(fmpi, starsq, bbmat, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
                              & lapwq%bkpt + lapwq%qphon, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
                              & l_smat, .TRUE., vpwq_temp, hmat1q(iMatPr, iMat), smat1q(iMatPr, iMat), theta1_pw)
