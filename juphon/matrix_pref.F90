@@ -43,7 +43,7 @@ CONTAINS
             IF (ikGPr<=nvPr.AND.ikG<=nv) THEN
                pref = gvec(:, ikG) + lapw%bkpt
                pref = pref - gvecPr(:, ikGPr) - lapwPr%bkpt - lapwPr%qphon
-               pref = ImagUnit * MATMUL(bmat, pref)
+               pref = ImagUnit * MATMUL(pref, bmat)
                !IF (nk==40) THEN
                !  write(9456,*) "---------------"
                !  write(9456,*) iDir, ikGPr, ikG

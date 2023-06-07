@@ -219,7 +219,7 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
       DO ikG = 1, lapw%nv(jsp)
       !DO ikG = 1, lapwq%nv(jsp)
          ! TODO: Transpose bmat or not?
-         gExt = MATMUL(cell%bmat,lapw%vk(:, ikG, jsp))
+         gExt = MATMUL(lapw%vk(:, ikG, jsp),cell%bmat)
          !gExt = MATMUL(cell%bmat,lapwq%vk(:, ikG, jsp))
          IF (zMat%l_real) THEN
             zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_r(ikG, :)

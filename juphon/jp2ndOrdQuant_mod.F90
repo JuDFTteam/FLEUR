@@ -79,7 +79,7 @@ module m_jp2ndOrdQuant
 
       ! (G+q)(G+q)^T and ((G+q)(G+q)^T - (G+q)^2/3)
       Gpq(1:3, iG) = real(gpqdp(1:3, iG) + qpt(1:3))
-      Gpqext(1:3, iG) = matmul(cell%bmat(1:3, 1:3), Gpq(1:3, iG))
+      Gpqext(1:3, iG) = matmul(Gpq(1:3, iG), cell%bmat(1:3, 1:3))
       if ( testMode ) then
         psDensMat(iG, 1:3, 1:3) = outerProduct(Gpqext(1:3, iG), Gpqext(1:3, iG))
       else
@@ -196,7 +196,7 @@ module m_jp2ndOrdQuant
 
     ! Leave it here so it needs not be calculated 3N x 3N times.
     do iG = 1, ngpqdp
-      Gpqext(1:3, iG) = matmul(cell%bmat(1:3, 1:3), real(gpqdp(1:3, iG) + qpt(1:3)))
+      Gpqext(1:3, iG) = matmul(real(gpqdp(1:3, iG) + qpt(1:3)), cell%bmat(1:3, 1:3))
     end do ! iG
 
     iAatom = 0
@@ -464,7 +464,7 @@ module m_jp2ndOrdQuant
     call GenPsDens2ndOrd(atoms, cell, ngdp, G0index, gdp, [0., 0., 0.], psDens2ndOrd, testMode)
 
     do iG = 1, ngdp
-      Gext(:, iG) = matmul(cell%bmat, gdp(:, iG))
+      Gext(:, iG) = matmul(gdp(:, iG), cell%bmat)
     end do
 
     iatom = 0
@@ -695,7 +695,7 @@ module m_jp2ndOrdQuant
             !todo we should determine the G=0 vector once or put it to the beginning at all
             cycle
           end if
-          Gext(1:3) = matmul( cell%bmat(1:3, 1:3), gdp(1:3, iG) )
+          Gext(1:3) = matmul( gdp(1:3, iG), cell%bmat(1:3, 1:3) )
           pylm(:, :) = cmplx(0.0, 0.0)
           scalFac(:) = cmplx(0.0, 0.0)
           sbes(:) = cmplx(0., 0.)
@@ -861,7 +861,7 @@ module m_jp2ndOrdQuant
 
 
     ! calculates Y*_lm(\vec{G} + \vec{q}) for every l and m. The argument Gqext must be in external coordinates.
-    Gqext = matmul(cellT%bmat, Gvec + qptn)
+    Gqext = matmul(Gvec + qptn, cellT%bmat)
     call Ylmnorm_init( atomsT%lmaxd + 2 )
     call ylm4(atomsT%lmaxd + 2, Gqext, ylm)
     call Ylmnorm_init( atomsT%lmaxd)
