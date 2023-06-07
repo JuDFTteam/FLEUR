@@ -42,7 +42,9 @@ MODULE m_available_solvers
   INTEGER,PARAMETER:: diag_cusolver=-8
 #endif
   
-  INTEGER,PARAMETER:: diag_lapack=4
+INTEGER,PARAMETER:: diag_lapack=4
+INTEGER,PARAMETER:: diag_lapack_singlePrec=5
+  
 #ifdef CPP_ELPA_ONENODE
   INTEGER,PARAMETER:: diag_elpa_1node=14
 #else
@@ -53,7 +55,7 @@ MODULE m_available_solvers
 #else
   INTEGER,PARAMETER:: diag_debugout=20
 #endif  
-  INTEGER,PARAMETER::diag_all_solver(9)=(/diag_elpa,diag_elemental,diag_scalapack,diag_magma,diag_chase,diag_cusolver,diag_lapack,diag_elpa_1node,diag_debugout/)
+  INTEGER,PARAMETER::diag_all_solver(10)=(/diag_elpa,diag_elemental,diag_scalapack,diag_magma,diag_chase,diag_cusolver,diag_lapack,diag_lapack_singlePrec,diag_elpa_1node,diag_debugout/)
   
 CONTAINS
 
@@ -84,6 +86,7 @@ CONTAINS
        IF (TRIM(juDFT_string_for_argument("-diag"))=="scalapack")  diag_solver=diag_scalapack
        IF (TRIM(juDFT_string_for_argument("-diag"))=="elemental")  diag_solver=diag_elemental
        IF (TRIM(juDFT_string_for_argument("-diag"))=="lapack")     diag_solver=diag_lapack
+       IF (TRIM(juDFT_string_for_argument("-diag"))=="lapack_singlePrec")     diag_solver=diag_lapack_singlePrec
        IF (TRIM(juDFT_string_for_argument("-diag"))=="magma")      diag_solver=diag_magma
        IF (TRIM(juDFT_string_for_argument("-diag"))=="chase")      diag_solver=diag_chase
        IF (TRIM(juDFT_string_for_argument("-diag"))=="cusolver")   diag_solver=diag_cusolver
