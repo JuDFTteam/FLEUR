@@ -1158,7 +1158,7 @@ CONTAINS
         do Gy = -starsT%mx2, starsT%mx2
           do Gz = -starsT%mx3, starsT%mx3
             Gint = [Gx, Gy, Gz]
-            Gext =  matmul(cellT%bmat, Gint)
+            Gext =  matmul(Gint, cellT%bmat)
             if (norm2(Gext) <= inputT%gmax) then
               ngdp = ngdp + 1
               ! Sort G-vectors
