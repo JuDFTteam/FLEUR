@@ -32,8 +32,9 @@ Testset: Basic
 |+|Crystal field output|basic/CrystalFieldOutput|bulk
 
 Testset: Films
+----------------
 ||Description|directory name|marks|Remarks
-|-|-----------|--------------|------|
+|-|-----------|--------------|------|----
 |+|Fe Monolayer SOC|film/Fe_1l_SOC|soc
 |+|Fe Monolayer|film/Fe_1l|
 |+|Fe Monolayer Triangular method|film/Fe_1l_Tria|
@@ -109,7 +110,7 @@ Testset: Hybrid-Functionals
 Testset: Greenfunctions
 ----------
 ||Description|directory name|marks|Remarks
-|-|-----------|--------------|------|
+|-|-----------|--------------|------|---
 |+|Fe bcc Green's function|greens/Fe_bcc_GreensFunction|bulk
 |+|Fe Monolayer Green's function|greens/Fe_1l_GreensFunction|film
 |+|Greens Function MultiContour|greens/GreensFunction_MultiContour|bulk
