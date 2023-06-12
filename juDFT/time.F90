@@ -345,8 +345,8 @@ CONTAINS
       irank=0
       isize=0
 #ifdef CPP_MPI
-      CALL MPI_COMM_RANK(irank,MPI_COMM_WORLD,err)
-      CALL MPI_COMM_SIZE(isize,MPI_COMM_WORLD,err)
+      CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
+      CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,err)
 #endif
       outstr=outstr//'"uname"       : "'//uname()//'",'//nl
       outstr=outstr//'"mpi-tasks"   : '//int2str(isize)//','//nl
