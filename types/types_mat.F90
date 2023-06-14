@@ -69,53 +69,60 @@ CONTAINS
          real:: a_r
          complex:: a_c
          INTEGER:: i,j
+
+         INTEGER,PARAMETER :: gpu_mode=1,omp_mode=2,caxpy_mode=2
+         INTEGER :: mode=caxpy_mode
+         
          a_c=1.0
          if (present(alpha_c)) a_c=alpha_c
       
          a_r=1.0
          if(present(alpha_r)) a_r=alpha_r
          
+#ifdef _OPENACC
+         if (mat%l_real) THEN 
+            mode=merge(gpu_mode,mode,acc_is_present(mat%data_r).and.acc_is_present(mat2%data_r))
+         else
+            mode=merge(gpu_mode,mode,acc_is_present(mat%data_c).and.acc_is_present(mat2%data_c))
+         endif
+#endif         
+
          if (mat%l_real) THEN
-#ifdef _OPENACC         
-            IF (acc_is_present(mat%data_r).and.acc_is_present(mat2%data_r)) THEN
-               !Data is on Device, hence we can operate on GPU
-               !$acc kernels present(mat%data_r,mat2%data_r)
-               mat%data_r=mat%data_r+a_r*mat2%data_r
-               !$acc end kernels
-            ELSE   
-#else 
-            IF (.true.) then !in No openacc case always use OpenMP version
-#endif
-               !$OMP parallel do collapse(2) shared (mat,mat2,a_r) default(none)
-               DO j=1,mat%matsize2
-                  DO i=1,mat%matsize1
-                     mat%data_r(i,j)=mat%data_r(i,j)+a_r*mat2%data_r(i,j)
+            select case(mode)
+               CASE(GPU_MODE)
+                  !Data is on Device, hence we can operate on GPU
+                  !$acc kernels present(mat%data_r,mat2%data_r)
+                  mat%data_r=mat%data_r+a_r*mat2%data_r
+                  !$acc end kernels
+               CASE(OMP_MODE)   
+                  !$OMP parallel do collapse(2) shared (mat,mat2,a_r) default(none)
+                  DO j=1,mat%matsize2
+                     DO i=1,mat%matsize1
+                        mat%data_r(i,j)=mat%data_r(i,j)+a_r*mat2%data_r(i,j)
+                     ENDDO
                   ENDDO
-               ENDDO
-               !$OMP end parallel do
-            ENDIF
+                  !$OMP end parallel do
+               CASE default
+               call daxpy(size(mat%data_r),a_r,mat2%data_r(1,1),1,mat%data_r(1,1),1)    
+            end select   
          ELSE
-#ifdef _OPENACC         
-            IF (acc_is_present(mat%data_c).and.acc_is_present(mat2%data_c)) THEN
-               !Data is on Device, hence we can operate on GPU
-               !$acc kernels present(mat%data_c,mat2%data_c)
-               mat%data_c=mat%data_c+a_c*mat2%data_c
-               !$acc end kernels
-            ELSE   
-#else 
-            IF (.true.) then !in No openacc case always use OpenMP version
-#endif
-               !$OMP parallel do collapse(2) shared (mat,mat2,a_c) default(none)
-               DO j=1,mat%matsize2
-                  DO i=1,mat%matsize1
-                    mat%data_c(i,j)=mat%data_c(i,j)+a_c*mat2%data_c(i,j)
+            select case(mode)
+               case(GPU_MODE)
+                  !Data is on Device, hence we can operate on GPU
+                  !$acc kernels present(mat%data_c,mat2%data_c)
+                  mat%data_c=mat%data_c+a_c*mat2%data_c
+                  !$acc end kernels
+               case(OMP_MODE)
+                  !$OMP parallel do collapse(2) shared (mat,mat2,a_c) default(none)
+                  DO j=1,mat%matsize2
+                     DO i=1,mat%matsize1
+                      mat%data_c(i,j)=mat%data_c(i,j)+a_c*mat2%data_c(i,j)
+                     ENDDO
                   ENDDO
-               ENDDO
-               !$OMP end parallel do
-               !DO j=1,mat%matsize2
-               !    call caxpy(mat%matsize1,a_c,mat2%data_c(:,j),1,mat%data_c(:,j),1)
-               !ENDDO
-            ENDIF
+                  !$OMP end parallel do
+               CASE DEFAULT
+                  call zaxpy(size(mat%data_c),a_c,mat2%data_c(1,1),1,mat%data_c(1,1),1)              
+            END SELECT
          ENDIF
    END SUBROUTINE
 
