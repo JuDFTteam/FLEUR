@@ -217,8 +217,20 @@ CONTAINS
       l_olap = fi%hybinp%l_hybrid .OR. fi%input%l_rdmft
       eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, wannierspin, fi%noco%l_noco, &
                         .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%INPUT%eig66(1), l_olap, fmpi%n_size)
-      hybdat%eig_id = eig_id
-
+      
+      ! The hybrid implementation doesn't use spinors. In the case of SOC calculations, a separate eig file has to be created
+      ! It contains those eigenvalues/vectors found in the 'eigen' subroutine
+      IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) THEN
+         hybdat%eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, wannierspin, fi%noco%l_noco, &
+         .NOT.fi%INPUT%eig66(1), fi%input%l_real, .FALSE., fi%INPUT%eig66(1), l_olap, fmpi%n_size)
+      ELSE
+         hybdat%eig_id = eig_id
+      ENDIF
+        
+      ! eig open input
+      WRITE(2773,*) fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, wannierspin, fmpi%n_size
+      WRITE(2774,*) fi%noco%l_noco, .NOT. fi%input%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), l_olap
+   
       ! TODO: Isn't this comment kind of lost here?
       ! Rotate cdn to local frame if specified.
 
@@ -716,6 +728,7 @@ CONTAINS
       IF (fmpi%irank .EQ. 0) CALL closeXMLElement('scfLoop')
 
       CALL close_eig(eig_id)
+      IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) CALL close_eig(hybdat%eig_id)
       CALL juDFT_end("all done", fmpi%irank)
 
    CONTAINS

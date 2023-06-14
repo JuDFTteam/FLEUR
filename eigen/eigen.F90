@@ -273,13 +273,20 @@ CONTAINS
 
                 if (l_needs_vectors) then
                   call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
+                  IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) &
+                     CALL write_eig(hybdat%eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                 else
                   CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
+                  IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) &
+                     CALL write_eig(hybdat%eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
                endif
                eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
-                if (fmpi%pe_diag.and.l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
-                    n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
+                if (fmpi%pe_diag.and.l_needs_vectors) THEN 
+                  CALL write_eig(eig_id, nk,jsp,ne_found,n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
+                  IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) &
+                     CALL write_eig(hybdat%eig_id, nk,jsp,ne_found,n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
+                ENDIF
             ENDIF
             neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
