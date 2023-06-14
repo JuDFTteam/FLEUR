@@ -36,8 +36,11 @@ module m_magmoments
         write(ounit,*)
         write(oUnit,'(a,19x,a,19x,a,19x,a)') "Spin Magn. mom.  |","Global Frame","  | ","Local Frame"
         write(oUnit,*) "------------------------------------------------------------------------------------------------------------------------"
-        write(oUnit,'(a,5x,a,2(" | ",5(a,5x)))') "Atom ","|m|   ","mx   ","my   ","mz   ","alpha","beta ","mx   ","my   ","mz   ","alpha","beta "
-           
+        IF(.NOT.(noco%l_noco.or.noco%l_soc)) THEN
+           write(oUnit,'(a,5x,a,2(" | ",5(a,5x)))') "Atom "," m    ","mx   ","my   ","mz   ","alpha","beta ","mx   ","my   ","mz   ","alpha","beta "
+        ELSE
+           write(oUnit,'(a,5x,a,2(" | ",5(a,5x)))') "Atom ","|m|   ","mx   ","my   ","mz   ","alpha","beta ","mx   ","my   ","mz   ","alpha","beta "
+        END IF   
         CALL openXMLElement('magneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
 
 
@@ -170,8 +173,8 @@ module m_magmoments
            write(oUnit,'(i6,1x,f9.6," | ",5(f9.6,1x)," |    ---       ---    ",f9.6,"    ---          ---           ",a)') &
             itype,sqrt(dot_product(magmom(1:3),magmom(1:3))),magmom,alpha,beta,magmomL(3),grepstring
         else
-           write(oUnit,'(i6,1x,f9.6," |     ---       ---       ---       ---          ---   |    ---       ---       ---       ---          ---           ",a)') &
-           itype,sqrt(dot_product(magmom(1:3),magmom(1:3))),grepstring
+           write(oUnit,'(i6,1x,f9.6," |    ---       ---       ---       ---         ---   |    ---       ---       ---       ---          ---           ",a)') &
+           itype,magmom(3),grepstring
         endif
 
         WRITE(attributes(1),'(i0)') iType

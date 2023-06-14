@@ -3,7 +3,9 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
+#ifdef FLEUR_USE_SCOREP
+#include 'scorep/SCOREP_User.inc'
+#endif
 MODULE m_scalapack
 CONTAINS
   SUBROUTINE scalapack(hmat,smat,ne,eig,ev)
@@ -59,8 +61,12 @@ CONTAINS
     
     EXTERNAL iceil, numroc
     EXTERNAL dlamch
-    
-    
+
+
+#ifdef FLEUR_USE_SCOREP
+
+    SCOREP_RECORDING_OFF()    
+#endif    
     SELECT TYPE(hmat)
     TYPE IS (t_mpimat)
     SELECT TYPE(smat)
@@ -265,6 +271,9 @@ CONTAINS
     CLASS DEFAULT
       call judft_error("Wrong type (2) in scalapack")
     END SELECT
+#ifdef FLEUR_USE_SCOREP
+    SCOREP_RECORDING_ON()
+#endif    
 #endif
   END SUBROUTINE scalapack
 END MODULE m_scalapack

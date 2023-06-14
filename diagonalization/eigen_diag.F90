@@ -15,6 +15,7 @@ CONTAINS
 
   SUBROUTINE eigen_diag(solver,hmat,smat,ne,eig,ev,ikpt,jsp,iter)
     USE m_lapack_diag
+    USE m_lapack_singlePrec_diag
     USE m_magma
     USE m_elpa
     USE m_elpa_onenode
@@ -75,9 +76,11 @@ CONTAINS
        CALL magma_diag(hmat,smat,ne,eig,ev)
     CASE (diag_cusolver)
        CALL cusolver_diag(hmat,smat,ne,eig,ev)
-    CASE (diag_lapack)
-       CALL lapack_diag(hmat,smat,ne,eig,ev)
-    CASE (diag_chase)
+      CASE (diag_lapack)
+         CALL lapack_diag(hmat,smat,ne,eig,ev)
+      CASE (diag_lapack_singlePrec)
+         CALL lapack_singlePrec_diag(hmat,smat,ne,eig,ev)
+      CASE (diag_chase)
        IF (.NOT.(PRESENT(ikpt).AND.PRESENT(jsp).AND.PRESENT(iter))) CALL judft_error("Optional arguments must be present for chase in eigen_diag")
        CALL chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
     CASE (diag_debugout)

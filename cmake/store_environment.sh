@@ -119,9 +119,9 @@ then
     echo "set(CLI_FLEUR_USE_SERIAL $CLI_USE_SERIAL)"  >>config.cmake
 fi
 
-if [ "$CLI_ELPA_OPENMP" ]
+if [ "$CLI_ELPA" ]
 then
-    echo "set(CLI_ELPA_OPENMP 1)"  >>config.cmake
+    echo "set(CLI_FLEUR_USE_ELPA $CLI_ELPA)"  >>config.cmake
 fi
 
 if [ "$CLI_WARN_ONLY" ]

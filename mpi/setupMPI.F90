@@ -321,6 +321,7 @@ CONTAINS
     INTEGER :: i, isize, gpus,localrank
 
 #ifdef _OPENACC
+call timestart("Distribute GPUs")
     gpus=acc_get_num_devices(acc_device_nvidia)
 #ifdef CPP_MPI
     if (fmpi%irank==0) write(*,*) "Number of GPU per node/MPI:",gpus
@@ -335,6 +336,7 @@ CONTAINS
 #else
     write(*,*) "Number of GPU    :",gpus
 #endif
+   call timestop("Distribute GPUs")
 #endif
     end subroutine
 

@@ -127,16 +127,17 @@ CONTAINS
             call work_pack(jsp)%init(fi, hybdat, mpdata, wp_mpi, jsp, wp_rank, n_wps)
          enddo
 
-         if(.not. allocated(hybdat%zmat))then 
-             allocate(hybdat%zmat(fi%kpts%nkptf, fi%input%jspins))
-            DO jsp = 1, fi%input%jspins
-               DO nk = 1,fi%kpts%nkptf
+         if(.not. allocated(hybdat%zmat)) allocate(hybdat%zmat(fi%kpts%nkptf, fi%input%jspins))
+
+         DO jsp = 1, fi%input%jspins
+            DO nk = 1,fi%kpts%nkptf
+               IF (hybdat%zmat(nk, jsp)%mat%matsize2 .NE. hybdat%nbands(nk, jsp)) THEN
                   CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
                   call eigvec_setup(hybdat%zmat(nk, jsp), fi, lapw, work_pack, fmpi, &
                                     hybdat%nbands(nk, jsp), nk, jsp, hybdat%eig_id)
-               enddo 
-            enddo
-         endif
+               END IF
+            enddo 
+         enddo
          call bcast_eigvecs(hybdat, fi, nococonv, fmpi)
 
          if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))

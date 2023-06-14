@@ -805,7 +805,6 @@ CONTAINS
          ! The HSE functional is realized subtracting erf/r from
          ! the normal Coulomb matrix
          !
-         call judft_error("HSE is not implemented")
       ELSE
          ! check for gamma
          if(any(fmpi%k_list == 1)) then
