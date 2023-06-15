@@ -100,10 +100,10 @@ Testset: Hybrid-Functionals
 ----------
 ||Description|directory name|marks|Remarks
 |-|-----------|--------------|------|---
-|+|GaAs PBE0|hybrid/GaAsHybridPBE0|bulk
-|+|Fe PBE0|hybrid/FeHybridPBE0|bulk
-|+|KCl PBE0|hybrid/KClHybridPBE0|bulk
-|+|Mn Noinversion, PBE0|hybrid/MnHybridNoinv|bulk
+||GaAs PBE0|hybrid/GaAsHybridPBE0|bulk|runs too long
+||Fe PBE0|hybrid/FeHybridPBE0|bulk|runs too long
+||KCl PBE0|hybrid/KClHybridPBE0|bulk|runs too long
+||Mn Noinversion, PBE0|hybrid/MnHybridNoinv|bulk|runs too long
 
 
 
