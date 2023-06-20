@@ -157,7 +157,7 @@ CONTAINS
       CHARACTER(len=20)  :: dfpt_tag
       CHARACTER(len=100) :: inp_pref
 
-      INTEGER, ALLOCATABLE :: q_list(:), dfpt_eig_id_list(:), dfpt_eigm_id_list(:)
+      INTEGER, ALLOCATABLE :: q_list(:), dfpt_eig_id_list(:), dfpt_eigm_id_list(:), dfpt_eig_id_list2(:), dfpt_eigm_id_list2(:)
 
       ! Desym-tests:
       INTEGER :: ix, iy, iz, grid(3), iv_old, iflag_old, iv_new, iflag_new
@@ -575,6 +575,9 @@ CONTAINS
       !q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
       END IF
 
+      ALLOCATE(dfpt_eig_id_list2,mold=dfpt_eig_id_list)
+      IF (l_minusq) ALLOCATE(dfpt_eigm_id_list2,mold=dfpt_eigm_id_list)
+
       !ALLOCATE(q_list(21),dfpt_eig_id_list(21))
       !ALLOCATE(q_list(1),dfpt_eig_id_list(1))
       !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
@@ -793,15 +796,15 @@ CONTAINS
                   CALL timestart("Sternheimer with -q")
                   CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
                                         rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
-                                        dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), q_eig_id, &
+                                        dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), q_eig_id, &
                                         denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
-                                        starsmq, qm_results, dfpt_eigm_id_list(iQ),qm_eig_id, results1m, vTot1m, vTot1mIm)!, hmatq, smatq)
+                                        starsmq, qm_results, dfpt_eigm_id_list(iQ), dfpt_eigm_id_list2(iQ), qm_eig_id, results1m, vTot1m, vTot1mIm)!, hmatq, smatq)
                   CALL timestop("Sternheimer with -q")
                ELSE
                   CALL timestart("Sternheimer")
                   CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
                                         rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
-                                        dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), q_eig_id, &
+                                        dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), q_eig_id, &
                                         denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)!, hmatq, smatq)
                   CALL timestop("Sternheimer")
                END IF
@@ -818,12 +821,12 @@ CONTAINS
                ! additional necessary quantities and from that the dynamical matrix.
                IF (.TRUE.) THEN
                   CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                       eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
+                                       eig_id, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
                                        rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
                                        denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), .TRUE., .TRUE.)
                ELSE
                   CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                       eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
+                                       eig_id, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
                                        rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
                                        denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), .TRUE., .TRUE., q_eig_id)
                END IF

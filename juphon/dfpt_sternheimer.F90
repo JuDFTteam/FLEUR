@@ -22,9 +22,9 @@ IMPLICIT NONE
 CONTAINS
    SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, mpdata, &
                                forcetheo, rho, vTot, grRho, grVtot, grVext, grVC, iQ, iDType, iDir, dfpt_tag, eig_id, &
-                               l_real, results1, dfpt_eig_id, q_eig_id, &
+                               l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
-                               starsmq, resultsmq, dfpt_eigm_id, qm_eig_id, results1m, vTot1m, vTot1mIm)
+                               starsmq, resultsmq, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       CLASS(t_xcpot),     INTENT(IN)    :: xcpot
       TYPE(t_sphhar),     INTENT(IN)    :: sphhar
@@ -48,12 +48,12 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_real
       CHARACTER(len=20), INTENT(IN) :: dfpt_tag
 
-      INTEGER, INTENT(OUT) :: dfpt_eig_id
+      INTEGER, INTENT(OUT) :: dfpt_eig_id, dfpt_eig_id2
 
       TYPE(t_stars), OPTIONAL, INTENT(INOUT) :: starsmq
       TYPE(t_results), OPTIONAL,   INTENT(INOUT) :: resultsmq, results1m
       INTEGER, OPTIONAL, INTENT(IN) :: qm_eig_id
-      INTEGER, OPTIONAL, INTENT(OUT) :: dfpt_eigm_id
+      INTEGER, OPTIONAL, INTENT(OUT) :: dfpt_eigm_id, dfpt_eigm_id2
       TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: vTot1m, vTot1mIm
 
 #ifdef CPP_MPI
@@ -147,6 +147,8 @@ CONTAINS
 
       dfpt_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
                              .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+      dfpt_eig_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                              .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
 
       bqpt = qpts%bk(:, iQ)
 
@@ -155,6 +157,8 @@ CONTAINS
          CALL vTot1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
          dfpt_eigm_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                                .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+         dfpt_eigm_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
                                 .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
 
          bmqpt = -qpts%bk(:, iQ)
@@ -274,14 +278,24 @@ CONTAINS
          !              bqpt=bqpt, dfpt_eig_id=dfpt_eig_id, iDir=iDir, iDtype=iDtype, &
          !              starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
          !END IF
-         CALL dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
-                             vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .NOT.final_SH_it, dfpt_tag)
+         IF (.NOT.final_SH_it) THEN
+            CALL dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+                                vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .TRUE., dfpt_tag)
+         ELSE
+            CALL dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+                                vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .FALSE., dfpt_tag, dfpt_eig_id2)
+         END IF
          CALL timestop("dfpt eigen")
 
          IF (l_minusq) THEN
             CALL timestart("dfpt minus eigen")
-            CALL dfpt_eigen_new(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
-                                vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .NOT.final_SH_it, dfpt_tag//"m")
+            IF (.NOT.final_SH_it) THEN
+               CALL dfpt_eigen_new(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
+                                   vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .TRUE., dfpt_tag//"m")
+            ELSE
+               CALL dfpt_eigen_new(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
+                                   vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .FALSE., dfpt_tag//"m", dfpt_eigm_id2)
+            END IF
             CALL timestop("dfpt minus eigen")
          END IF
 
@@ -509,8 +523,10 @@ CONTAINS
       CALL add_usage_data("Iterations", iter)
 
       CALL close_eig(dfpt_eig_id)
+      CALL close_eig(dfpt_eig_id2)
       IF (l_minusq) THEN
          CALL close_eig(dfpt_eigm_id)
+         CALL close_eig(dfpt_eigm_id2)
       END IF
 
    END SUBROUTINE dfpt_sternheimer

@@ -16,7 +16,7 @@ MODULE m_dfpt_eigen_new
 CONTAINS
 
    SUBROUTINE dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
-                             eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, sh_den, dfpt_tag)
+                             eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, sh_den, dfpt_tag, dfpt_eig_id2)
 
       USE m_types
       USE m_constants
@@ -45,6 +45,7 @@ CONTAINS
       INTEGER,      INTENT(IN)     :: eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont(6)
       LOGICAL,      INTENT(IN)     :: l_real, sh_den
       CHARACTER(len=20), INTENT(IN) :: dfpt_tag
+      INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eig_id2
 
       INTEGER n_size,n_rank
       INTEGER i,err,nk,jsp,nk_i,iqdir
@@ -55,7 +56,7 @@ CONTAINS
 
       INTEGER                   :: nu
 
-      LOGICAL                   :: oldway
+      LOGICAL                   :: oldway, old_and_wrong
 
       COMPLEX                   :: wtfq
 
@@ -65,18 +66,19 @@ CONTAINS
       TYPE(t_usdus)             :: ud
       TYPE(t_lapw)              :: lapw, lapwq
       TYPE(t_kpts)              :: kpts_mod !kqpts ! basically kpts, but with q added onto each one.
-      CLASS(t_mat), ALLOCATABLE :: zMatk, zMatq, zMat1
+      CLASS(t_mat), ALLOCATABLE :: zMatk, zMatq, zMat1, zMat2
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
 
       INTEGER                   :: dealloc_stat, nbasfcnq, nbasfcn, neigk, neigq, noccbd, noccbdq
       character(len=300)        :: errmsg
       INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:), k_selection(:)
-      COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:)
+      COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:), tempMat3(:), z1H2(:,:), z1S2(:,:)
       REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), killfloat(:,:)
 
       CLASS(t_mat), ALLOCATABLE :: invE(:), matOcc(:), invE2(:)
 
       oldway = .FALSE.
+      old_and_wrong = .FALSE.
 
       !ALLOCATE(k_selection(16))
       !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40] 
@@ -186,10 +188,23 @@ CONTAINS
                ALLOCATE(z1S,mold=zMat1%data_c)
                z1H = CMPLX(0.0,0.0)
                z1S = CMPLX(0.0,0.0)
+               IF (.NOT.sh_den.AND..NOT.old_and_wrong) THEN
+                  IF (fmpi%n_size == 1) THEN
+                     ALLOCATE (t_mat::zMat2)
+                  ELSE
+                     ALLOCATE (t_mpimat::zMat2)
+                  END IF
+                  CALL zMat2%init(.FALSE.,nbasfcnq,noccbd)
+                  ALLOCATE(z1H2,mold=zMat2%data_c)
+                  ALLOCATE(z1S2,mold=zMat2%data_c)
+                  z1H2 = CMPLX(0.0,0.0)
+                  z1S2 = CMPLX(0.0,0.0)
+               END IF
 
                ALLOCATE(tempVec(nbasfcnq))
                ALLOCATE(tempMat1(nbasfcnq))
                ALLOCATE(tempMat2(nbasfcnq))
+               IF (.NOT.sh_den.AND..NOT.old_and_wrong) ALLOCATE(tempMat3(nbasfcnq))
                ALLOCATE(killfloat(noccbd,noccbd))
 
                !TODO: Optimize this with (SCA)LAPACK CALLS
@@ -233,13 +248,30 @@ CONTAINS
                      tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
                   ELSE
                      DO iNupr = 1, nbasfcnq
-                        IF (.NOT.sh_den) THEN
+                        IF (.NOT.sh_den.AND.old_and_wrong) THEN
                            IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                               tempMat2(iNupr) = 0.0
                            ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                               tempMat2(iNupr) = 0.0
                            ELSE
                               tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
+                           END IF
+                        ELSE IF (.NOT.sh_den.AND..NOT.old_and_wrong) THEN
+                           IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                              tempMat2(iNupr) = 0.0
+                              ! Additional correction term that constitutes new
+                              ! coefficients:
+                              tempMat3(iNupr) = 0.5 * tempMat1(iNupr)
+                           ELSE IF (iNuPr<=noccbdq) THEN
+                              wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
+                              tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
+                                            & *(1.0-wtfq)
+                              ! Additional correction term that constitutes new
+                              ! coefficients:
+                              tempMat3(iNupr) = 0.5 * tempMat1(iNupr) * wtfq
+                           ELSE
+                              tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
+                              tempMat3(iNupr) = 0.0
                            END IF
                         ELSE
                            IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
@@ -279,8 +311,11 @@ CONTAINS
 
                   IF (zMatq%l_real) THEN
                      z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
+                     IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
                   ELSE
                      z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
+                     IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
+
                   END IF
 
                   IF (l_real) THEN ! l_real for zMatk
@@ -319,13 +354,31 @@ CONTAINS
                      tempMat2(:nbasfcnq) = -eigk(nu)*tempMat2(:nbasfcnq)
                   ELSE
                      DO iNupr = 1, nbasfcnq
-                        IF (.NOT.sh_den) THEN
+                        IF (.NOT.sh_den.AND.old_and_wrong) THEN
                            IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                               tempMat2(iNupr) = 0.0
                            ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                               tempMat2(iNupr) = 0.5*tempMat1(iNupr)
                            ELSE
                               tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
+                           END IF
+                        ELSE IF (.NOT.sh_den.AND..NOT.old_and_wrong) THEN
+                           IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                              tempMat2(iNupr) = 0.5 * tempMat1(iNupr)
+                              ! Additional correction term that constitutes new
+                              ! coefficients:
+                              tempMat3(iNupr) = -0.5 * eigk(nu) * tempMat1(iNupr)
+                           ELSE IF (iNuPr<=noccbdq) THEN
+                              wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
+                              tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
+                                            & *(1.0-wtfq) &
+                                            & +0.5*tempMat1(iNupr)*wtfq
+                              ! Additional correction term that constitutes new
+                              ! coefficients:
+                              tempMat3(iNupr) = -0.5 * eigq(iNupr) * tempMat1(iNupr) * wtfq
+                           ELSE
+                              tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
+                              tempMat3(iNupr) = 0.0
                            END IF
                         ELSE
                            IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
@@ -345,11 +398,15 @@ CONTAINS
                   END IF
                   IF (zMatq%l_real) THEN
                      z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
+                     IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
                   ELSE
                      z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
+                     IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
                   END IF
 
                   zMat1%data_c(:nbasfcnq,nu) = z1H(:nbasfcnq,nu) + z1S(:nbasfcnq,nu)
+                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) zMat2%data_c(:nbasfcnq,nu) = z1H2(:nbasfcnq,nu) + z1S2(:nbasfcnq,nu)
+                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) write(7658,*) zMat2%data_c(:nbasfcnq,nu)
 
                   IF (ANY(nk==k_selection)) THEN
                      !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)
@@ -405,9 +462,14 @@ CONTAINS
 
                   CALL write_eig(dfpt_eig_id, nk, jsp, noccbd, noccbd, &
                                  eigs1(:noccbd), n_start=n_size,n_end=n_rank,zMat=zMat1)
+                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL write_eig(dfpt_eig_id2, nk, jsp, noccbd, noccbd, &
+                                                                         eigs1(:noccbd), n_start=n_size,n_end=n_rank,zMat=zMat2)
                   ELSE
                      IF (fmpi%pe_diag) CALL write_eig(dfpt_eig_id, nk, jsp, noccbd, &
                                     n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat1)
+                     IF ((.NOT.sh_den).AND.(.NOT.old_and_wrong).AND.fmpi%pe_diag) CALL write_eig(dfpt_eig_id2, nk, jsp, noccbd, &
+                                                                                  n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat2)
+
                   END IF
 
 #if defined(CPP_MPI)
@@ -424,9 +486,12 @@ CONTAINS
                  IF (ALLOCATED(tempVec)) DEALLOCATE(tempVec)
                  IF (ALLOCATED(tempMat1)) DEALLOCATE(tempMat1)
                  IF (ALLOCATED(tempMat2)) DEALLOCATE(tempMat2)
+                 IF (ALLOCATED(tempMat3)) DEALLOCATE(tempMat3)
                  IF (ALLOCATED(killfloat)) DEALLOCATE(killfloat)
                  IF (ALLOCATED(z1H)) DEALLOCATE(z1H)
                  IF (ALLOCATED(z1S)) DEALLOCATE(z1S)
+                 IF (ALLOCATED(z1H2)) DEALLOCATE(z1H2)
+                 IF (ALLOCATED(z1S2)) DEALLOCATE(z1S2)
                  IF (ALLOCATED(zmatk)) THEN
                    CALL zMatk%free()
                    DEALLOCATE(zMatk)
@@ -438,6 +503,10 @@ CONTAINS
                  IF (ALLOCATED(zmat1)) THEN
                    CALL zMat1%free()
                    DEALLOCATE(zMat1)
+                 END IF
+                 IF (ALLOCATED(zmat2)) THEN
+                   CALL zMat2%free()
+                   DEALLOCATE(zMat2)
                  END IF
 
           END DO  k_loop

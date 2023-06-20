@@ -11,7 +11,7 @@ IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
-                              eig_id, dfpt_eig_id, enpara, mpdata, results, results1, l_real, &
+                              eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, mpdata, results, results1, l_real, &
                               rho, vTot, grRho3, grVext3, grVC3, grVtot3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
                               l_dynMat0, l_dynMatq, q_eig_id)
       USE m_step_function
@@ -38,7 +38,7 @@ CONTAINS
 
       LOGICAL, INTENT(IN) :: l_real, l_dynMat0, l_dynMatq
 
-      INTEGER, INTENT(IN) :: iQ, iDtype_row, iDir_row, eig_id, dfpt_eig_id
+      INTEGER, INTENT(IN) :: iQ, iDtype_row, iDir_row, eig_id, dfpt_eig_id, dfpt_eig_id2
 
       COMPLEX, INTENT(INOUT) :: dyn_row(:)
      
@@ -375,13 +375,13 @@ CONTAINS
             IF (.NOT.PRESENT(q_eig_id)) THEN
                CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                       stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
-                                      eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
+                                      eig_id, dfpt_eig_id, dfpt_eig_id2, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                       theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
                                       qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1,1,1,1,1,1])
             ELSE
                CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                    stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
-                                   eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
+                                   eig_id, dfpt_eig_id, dfpt_eig_id2, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                    theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
                                    qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1,1,1,1,1,1],q_eig_id) 
             END IF
@@ -503,7 +503,7 @@ CONTAINS
 
    SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                 stars, starsq, sphhar, inden, hub1data, vx, v, v1real, v1imag, &
-                                eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, &
+                                eig_id, dfpt_eig_id, dfpt_eig_id2, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                 theta1_pw0, theta1_pw, bqpt, l_real, eigen_term, killcont, q_eig_id)
 
       USE m_types
@@ -546,7 +546,7 @@ CONTAINS
 !    EXTERNAL MPI_BCAST    !only used by band_unfolding to broadcast the gvec
 
       ! Scalar Arguments
-      INTEGER, INTENT(IN)    :: eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row
+      INTEGER, INTENT(IN)    :: eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, dfpt_eig_id2
       COMPLEX,            INTENT(IN)     :: theta1_pw0(:), theta1_pw(:)
 
       REAL,    INTENT(IN) :: bqpt(3)
@@ -562,7 +562,7 @@ CONTAINS
       INTEGER err
       REAL :: q_loop(3)
       ! Local Arrays
-      INTEGER              :: ierr, nbands, nbands1, nbasfcn, nbasfcnq, noccbd, nbandsq
+      INTEGER              :: ierr, nbands, nbands1, nbasfcn, nbasfcnq, noccbd, nbandsq, nbands2 
 
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eig1(:), we(:), we1(:)
@@ -572,7 +572,7 @@ CONTAINS
       TYPE(t_lapw)              :: lapw, lapwq
       TYPE(t_kpts)              :: kpts_mod !kqpts ! basically kpts, but with q added onto each one.
       TYPE(t_hub1data)          :: hub1datadummy
-      TYPE (t_mat)              :: zMat, zMat1, zMatq
+      TYPE (t_mat)              :: zMat, zMat1, zMatq, zMat2
       CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2,vmat2
 
       ! Variables for HF or fi%hybinp functional calculation
@@ -658,6 +658,8 @@ CONTAINS
 
             CALL zMat%init(l_real,nbasfcn,noccbd)
             CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
+            CALL zMat2%init(.FALSE.,nbasfcnq,noccbd)
+            !write(4745,*) zMat2%data_c
             IF (PRESENT(q_eig_id)) CALL zMatq%init(l_real,nbasfcnq,noccbd)
 
             ALLOCATE(tempVec(nbasfcn))
@@ -666,8 +668,10 @@ CONTAINS
             ALLOCATE(ztest_loop(nbasfcn))
             IF (PRESENT(q_eig_id)) ALLOCATE(zq_loop(nbasfcnq))
 
-            CALL read_eig(eig_id,     nk,jsp,neig=nbands,zmat=zMat)
-            CALL read_eig(dfpt_eig_id,nk,jsp,neig=nbands1,zmat=zMat1)
+            CALL read_eig(eig_id,      nk,jsp,neig=nbands,zmat=zMat)
+            CALL read_eig(dfpt_eig_id, nk,jsp,neig=nbands1,zmat=zMat1)
+            CALL read_eig(dfpt_eig_id2,nk,jsp,neig=nbands2,zmat=zMat2)
+            !write(4745,*) zMat2%data_c
             IF (PRESENT(q_eig_id)) CALL read_eig(q_eig_id, nk,jsp,neig=nbandsq,zmat=zMatq)
 
             !!!! Test:
@@ -752,6 +756,12 @@ CONTAINS
 
                !eigen_term = eigen_term + zdotc(nbasfcnq,z1_loop,1,tempVecq,1)
                eigen_term = eigen_term + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
+               
+               ! Correction:
+               !write(4745,*) we_loop
+               !write(4745,*) zMat2%data_c  
+               CALL CPP_zgemv('C',nbasfcnq,nbasfcn,we_loop,smat1q%data_c,nbasfcnq,zMat2%data_c(:,iEig),1,CMPLX(0.0,0.0),tempVec,1)
+               eigen_term = eigen_term + 2.0 * zdotc(nbasfcn,z_loop,1,tempVec,1)
             END DO
 
             DEALLOCATE(tempVec)
@@ -783,6 +793,7 @@ CONTAINS
             !IF (allocated(zmat)) THEN
              CALL zMat%free()
              CALL zMat1%free()
+             CALL zMat2%free()
               !deallocate(zMat)
             !ENDIF
          END DO  k_loop
