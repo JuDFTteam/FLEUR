@@ -1,5 +1,5 @@
 #include <unistd.h>
-#include <mpi.h>
+//#include <mpi.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <time.h>
@@ -29,7 +29,8 @@ void * check_mpi(void * arg){
    int flag;
    while(1){
       int flag;
-      MPI_Iprobe(MPI_ANY_SOURCE, 1336, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+      //MPI_Iprobe(MPI_ANY_SOURCE, 1336, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+      fortran_check_mpi();
       msleep(t_pause);
    }
 }
@@ -43,3 +44,4 @@ void stop_prog_thread(pthread_t *threadId){
    pthread_cancel(*threadId);
    // printf("stopped progress thread\n");
 }
+
