@@ -80,12 +80,12 @@ CONTAINS
     ALLOCATE(bcof(size(eigVecCoeffs%abcof,1),0:size(eigVecCoeffs%abcof,2)-1))
     ALLOCATE(ccof(-atoms%llod:atoms%llod,size(eigVecCoeffs%ccof,2),size(eigVecCoeffs%ccof,3)))
 
-    DO ityp = 1,atoms%ntype
+     DO ityp = 1,atoms%ntype
        ddn0 = usdus%ddn(0,ityp,jspin)
        ddn1 = usdus%ddn(1,ityp,jspin)
        ddn2 = usdus%ddn(2,ityp,jspin)
        ddn3 = usdus%ddn(3,ityp,jspin)
-       DO mt=1,atoms%firstAtom(ityp),atoms%firstAtom(ityp)+atoms%neq(ityp)-1
+       DO mt=atoms%firstAtom(ityp),atoms%firstAtom(ityp)+atoms%neq(ityp)-1
           
           if (.not.banddos%dos_atom(mt)) cycle
           !assign and rotate if requested the abcofs
@@ -345,7 +345,7 @@ CONTAINS
              summed = sum(comp(1:16))
              cf = 100.0/summed
              orbcomp%qmtp(ev_list(n),n_dos,ikpt,jspin) = summed*100.0
-             orbcomp%comp(ev_list(n),:,n_dos,ikpt,jspin) = comp(:)*cf
+             if (abs(summed)>1E-18) orbcomp%comp(ev_list(n),:,n_dos,ikpt,jspin) = comp(:)*cf
              !----------------------------------------------------
           ENDDO ! bands (n)
        ENDDO    ! atoms  mt (=atoms%nat)
