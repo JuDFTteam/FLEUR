@@ -41,8 +41,9 @@ def process_judft_times(dir):
     process_subtimers(all_times["subtimers"])
     with open(dir+"/perf.json","w") as f:
         f.write(json.dumps(timerlist,indent=4))
+    return dir+"/perf.json"    
 
-def run_fleur(testdir):
+def run_fleur(testdir,env):
     import subprocess
     import calendar
     import time
@@ -68,13 +69,20 @@ def run_fleur(testdir):
     #run fleur
     cwd=os.getcwd()
     os.chdir(dir)
-    subprocess.run([cwd+"/"+fleur])  
+    if env:
+        env={**os.environ,**env}
+    else:
+        env=os.environ.copy()
+    if os.environ.get("juDFT_MPI"):
+            mpi=os.environ.get("juDFT_MPI")
+                
+    subprocess.run([f"{mpi} {cwd}/{fleur}"],env=env,shell=True)  
     os.chdir(cwd)
      
     #postprocess
-    process_judft_times(dir)
+    return process_judft_times(dir)
 
-def run_test(name=None):
+def run_test(name=None,env=None):
     #Get the directory of the script:
     scriptdir=os.path.dirname(__file__)+"/../inputfiles/"
     if (name):
@@ -82,7 +90,7 @@ def run_test(name=None):
     else:    
         #default test
         scriptdir=scriptdir+"/Noco"
-    run_fleur(scriptdir)
+    return run_fleur(scriptdir,env)
 
-if __name__=='__main__': run_test()
+if __name__=='__main__': print(run_test())
 
