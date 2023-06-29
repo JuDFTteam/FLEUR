@@ -122,8 +122,8 @@ CONTAINS
 
       DO iDtype_col = 1, fi%atoms%ntype
          DO iDir_col = 1, 3
-            write(9989,*) "------------------"
-            write(9989,*) "Atom:", iDtype_col, "Direction", iDir_col
+            IF (fmpi%irank==0) write(9989,*) "------------------"
+            IF (fmpi%irank==0) write(9989,*) "Atom:", iDtype_col, "Direction", iDir_col
             tempval = CMPLX(0.0,0.0)
             col_index = 3 * (iDtype_col - 1) + iDir_col
 
@@ -138,17 +138,11 @@ CONTAINS
                            starsq,rho1_dummy,vExt1,.FALSE.,vExt1Im,rho1_dummy,iDtype_col,iDir_col,[0,0])
 
             ! IR integral:
-            !pwwq = CMPLX(0.0,0.0)
-            !CALL dfpt_convol_direct(stars, starsq, stars%ustep, vExt1%pw(:,1), pwwq)
             pwwq2 = CMPLX(0.0,0.0)
             CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
-            !CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq, tempval)
-            !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-            !write(9989,*) "IR rho1 V1ext                 ", tempval
-            !tempval = CMPLX(0.0,0.0)
             CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-            write(9989,*) "IR rho1 V1ext new             ", tempval
+            IF (fmpi%irank==0) write(9989,*) "IR rho1 V1ext new             ", tempval
             tempval = CMPLX(0.0,0.0)
 
             ! MT integral:
@@ -157,44 +151,38 @@ CONTAINS
                                 denIn1_mt(:,0:,iDtype_row) + &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
             DO iType = 1, fi%atoms%ntype
-               write(9989,*) "Loop atom:", iType
+               IF (fmpi%irank==0) write(9989,*) "Loop atom:", iType
                CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               write(9989,*) "MT rho1 V1ext                 ", tempval
+               IF (fmpi%irank==0) write(9989,*) "    MT rho1 V1ext                 ", tempval
                tempval = CMPLX(0.0,0.0)
             END DO
-            write(9989,*) "End atom loop"
+            IF (fmpi%irank==0) write(9989,*) "End atom loop"
             IF (.NOT.bare_mode) denIn1_mt(:,0:,iDtype_row) = &
                                 denIn1_mt(:,0:,iDtype_row) - &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
 
             ! Various V_ext integrals:
             ! IR:
-            !pwwq = CMPLX(0.0,0.0)
             rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-            !CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_row,iDir_row), pwwq)
             pwwq2 = CMPLX(0.0,0.0)
             CALL dfpt_convol_big(2, stars, starsq, rho_pw, theta1full(0:, iDtype_row, iDir_row), pwwq2)
-            !CALL save_npy("pwwq_old.npy",pwwq)
-            !CALL save_npy("pwwq_new.npy",pwwq2)
-            !CALL dfpt_int_pw(starsq, fi%cell, pwwq, vExt1%pw(:,1), tempval)
-            !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-            !write(9989,*) "IR Theta1 rho V1ext           ", tempval
-            !tempval = CMPLX(0.0,0.0)
             CALL dfpt_int_pw(starsq, fi%cell, pwwq2, vExt1%pw(:,1), tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-            write(9989,*) "IR Theta1 rho V1ext new       ", tempval
+            IF (fmpi%irank==0) write(9989,*) "IR Theta1 rho V1ext new       ", tempval
             tempval = CMPLX(0.0,0.0)
 
             ! MT:
-            !grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             IF (.NOT.bare_mode) denIn1_mt(:,0:,iDtype_row) = &
                                 denIn1_mt(:,0:,iDtype_row) + &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
             grRho_mt = grVC3(iDir_col)%mt(:,0:,:,1)
+            CALL save_npy(int2str(iQ)//"_"//int2str(iDir_col)//"_grVCdyn.npy",grRho_mt(:,0:,1))
+            CALL save_npy(int2str(iQ)//"_"//int2str(iDir_row)//"_rho1goodre.npy",denIn1_mt(:,0:,iDtype_row))
+            CALL save_npy(int2str(iQ)//"_"//int2str(iDir_row)//"_rho1goodim.npy",denIn1_mt_Im(:,0:,iDtype_row))
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_col, denIn1_mt, denIn1_mt_Im, grRho_mt, 0*grRho_mt, tempval)
             dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
-            write(9989,*) "MT rho1 grVC                  ", tempval
+            IF (fmpi%irank==0) write(9989,*) "MT rho1 grVC                  ", tempval
             tempval = CMPLX(0.0,0.0)
             IF (.NOT.bare_mode) denIn1_mt(:,0:,iDtype_row) = &
                                 denIn1_mt(:,0:,iDtype_row) - &
@@ -206,7 +194,7 @@ CONTAINS
             grRho_mt = -(grRho3(iDir_col)%mt(:,0:,:,1)+grRho3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_col, vC1%mt(:,0:,:,1), vC1Im%mt(:,0:,:,1), grRho_mt, 0*grRho_mt, tempval)
             dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
-            write(9989,*) "MT grRho V1C                  ", tempval
+            IF (fmpi%irank==0) write(9989,*) "MT grRho V1C                  ", tempval
             tempval = CMPLX(0.0,0.0)
             IF (.NOT.bare_mode) vC1%mt(:,0:,iDtype_row,1) = &
                                 vC1%mt(:,0:,iDtype_row,1) - &
@@ -217,7 +205,7 @@ CONTAINS
                grRho_mt = -(grRho3(iDir_row)%mt(:,0:,:,1)+grRho3(iDir_row)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
                CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_row, grRho_mt, 0*grRho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               write(9989,*) "MT correction grRho V1ext     ", tempval
+               IF (fmpi%irank==0) write(9989,*) "MT correction grRho V1ext     ", tempval
                tempval = CMPLX(0.0,0.0)
                IF (.NOT.bare_mode) vExt1%mt(:,0:,iDtype_col,:) = vExt1%mt(:,0:,iDtype_col,:) - grVext3(iDir_col)%mt(:,0:,iDtype_col,:)
             END IF
@@ -226,7 +214,7 @@ CONTAINS
             rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_row, iDtype_row, rho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-            write(9989,*) "SF rho Vext1                  ", tempval
+            IF (fmpi%irank==0) write(9989,*) "SF rho Vext1                  ", tempval
             tempval = CMPLX(0.0,0.0)
 
             IF (.NOT.bare_mode) vC1%mt(:,0:,iDtype_row,1) = &
@@ -234,44 +222,32 @@ CONTAINS
                                 grVC3(iDir_row)%mt(:,0:,iDtype_row,1)
             CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_col, iDtype_col, rho_mt, vC1%mt(:,0:,:,1), -vC1Im%mt(:,0:,:,1), tempval)
             dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
-            write(9989,*) "SF rho VC1                    ", tempval
+            IF (fmpi%irank==0) write(9989,*) "SF rho VC1                    ", tempval
             tempval = CMPLX(0.0,0.0)
             IF (.NOT.bare_mode) vC1%mt(:,0:,iDtype_row,1) = &
                                 vC1%mt(:,0:,iDtype_row,1) - &
                                 grVC3(iDir_row)%mt(:,0:,iDtype_row,1)
 
             ! Miscellaneous integrals:
-            !pwwq = CMPLX(0.0,0.0)
             rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-            !CALL dfpt_convol_direct(stars, starsq, rho_pw, theta1_pw(:,iDtype_col,iDir_col), pwwq)
             pwwq2 = CMPLX(0.0,0.0)
             CALL dfpt_convol_big(2, stars, starsq, rho_pw, theta1full(0:, iDtype_col, iDir_col), pwwq2)
-            !CALL dfpt_int_pw(starsq, fi%cell, vC1%pw(:,1), pwwq, tempval)
-            !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-            !write(9989,*) "IR V1C rho Theta1             ", tempval
-            !tempval = CMPLX(0.0,0.0)
             CALL dfpt_int_pw(starsq, fi%cell, vC1%pw(:,1), pwwq2, tempval)
             dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
-            write(9989,*) "IR V1C rho Theta1 new         ", tempval
+            IF (fmpi%irank==0) write(9989,*) "IR V1C rho Theta1 new         ", tempval
             tempval = CMPLX(0.0,0.0)
 
             DO iSpin = 1, fi%input%jspins
-               write(9989,*) "Loop spin:", iSpin
-               !pwwq = CMPLX(0.0,0.0)
+               IF (fmpi%irank==0) write(9989,*) "Loop spin:", iSpin
                ! TODO: Ensure, that vTot/denIn1 is diagonal here, not 2x2.
-               !CALL dfpt_convol_direct(stars, starsq, vTot%pw(:, iSpin), theta1_pw(:,iDtype_col,iDir_col), pwwq)
                pwwq2 = CMPLX(0.0,0.0)
                CALL dfpt_convol_big(2, stars, starsq, vTot%pw(:, iSpin), theta1full(0:, iDtype_col, iDir_col), pwwq2)
-               !CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq, tempval)
-               !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               !write(9989,*) "IR rho1 vTot Theta1           ", tempval
-               !tempval = CMPLX(0.0,0.0)
                CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq2, tempval)
                dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
-               write(9989,*) "IR rho1 vTot Theta1 new       ", tempval
+               IF (fmpi%irank==0) write(9989,*) "    IR rho1 vTot Theta1 new       ", tempval
                tempval = CMPLX(0.0,0.0)
             END DO
-            write(9989,*) "End spin loop"
+            IF (fmpi%irank==0) write(9989,*) "End spin loop"
 
             IF (iDtype_row==iDtype_col) THEN
                CALL vExt1%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
@@ -282,93 +258,63 @@ CONTAINS
                               stars,rho_dummy,vExt1,.FALSE.,vExt1Im,rho_dummy,iDtype_col,iDir_col,[0,0])
 
                ! Integrals:
-               !pww = CMPLX(0.0,0.0)
                rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-               !CALL dfpt_convol_direct(stars, stars, stars%ustep, vExt1%pw(:,1), pww)
                pww2 = CMPLX(0.0,0.0)
                CALL dfpt_convol_big(1, stars, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pww2)
-               !CALL dfpt_int_pw(stars, fi%cell, rho_pw, pww, tempval)
-               !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               !write(9989,*) "IR grRho V1ext0               ", tempval
-               !tempval = CMPLX(0.0,0.0)
                CALL dfpt_int_pw(stars, fi%cell, rho_pw, pww2, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               write(9989,*) "IR grRho V1ext0 new           ", tempval
+               IF (fmpi%irank==0) write(9989,*) "IR grRho V1ext0 new           ", tempval
                tempval = CMPLX(0.0,0.0)
                rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
                rho_pw = -(rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
                DO iType = 1, fi%atoms%ntype
-                  write(9989,*) "Loop atom:", iType
-                  !pww = CMPLX(0.0,0.0)
-                  !CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iType,iDir_row), pww)
+                  IF (fmpi%irank==0) write(9989,*) "Loop atom:", iType
                   pww2 = CMPLX(0.0,0.0)
                   CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full0(0:, iType, iDir_row), pww2)
-                  !CALL dfpt_int_pw(stars, fi%cell, pww, vExt1%pw(:,1), tempval)
-                  !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-                  !write(9989,*) "IR Theta1 rho V1ext0          ", tempval
-                  !tempval = CMPLX(0.0,0.0)
                   CALL dfpt_int_pw(stars, fi%cell, pww2, vExt1%pw(:,1), tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-                  write(9989,*) "IR Theta1 rho V1ext0 new      ", tempval
+                  IF (fmpi%irank==0) write(9989,*) "   IR Theta1 rho V1ext0 new      ", tempval
                   tempval = CMPLX(0.0,0.0)
 
                   IF (.NOT.bare_mode) vExt1%mt(:,0:,iDtype_col,:) = vExt1%mt(:,0:,iDtype_col,:) + grVext3(iDir_col)%mt(:,0:,iDtype_col,:)
                   grRho_mt = (grRho3(iDir_row)%mt(:,0:,:,1)+grRho3(iDir_row)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
                   CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, grRho_mt, 0*grRho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-                  write(9989,*) "MT grRho V1ext0               ", tempval
+                  IF (fmpi%irank==0) write(9989,*) "    MT grRho V1ext0               ", tempval
                   tempval = CMPLX(0.0,0.0)
                   IF (.NOT.bare_mode) vExt1%mt(:,0:,iDtype_col,:) = vExt1%mt(:,0:,iDtype_col,:) - grVext3(iDir_col)%mt(:,0:,iDtype_col,:)
 
                   CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_row, iType, -rho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-                  write(9989,*) "SF rho V1ext0                 ", tempval
+                  IF (fmpi%irank==0) write(9989,*) "    SF rho V1ext0                 ", tempval
                   tempval = CMPLX(0.0,0.0)
                END DO
-               write(9989,*) "End atom loop"
+               IF (fmpi%irank==0) write(9989,*) "End atom loop"
 
-               !grRho_mt = (grVC3(iDir_col)%mt(:,0:,:,1)+grVC3(iDir_col)%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
-               !CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_row, iDType_row, rho_mt, grRho_mt, 0*grRho_mt, tempval)
-               !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               !write(9989,*) "SF rho grVC                   ", tempval
-               !tempval = CMPLX(0.0,0.0)
-
-               !pww = CMPLX(0.0,0.0)
                rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-               !CALL dfpt_convol_direct(stars, stars, rho_pw, theta1_pw0(:,iDtype_col,iDir_col), pww)
                pww2 = CMPLX(0.0,0.0)
                CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full0(0:, iDtype_col, iDir_col), pww2)
-               !CALL dfpt_int_pw(stars, fi%cell, grVC3(iDir_row)%pw(:,1), pww, tempval)
-               !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-               !write(9989,*) "IR grVC rho Theta1            ", tempval
-               !tempval = CMPLX(0.0,0.0)
                CALL dfpt_int_pw(stars, fi%cell, grVC3(iDir_row)%pw(:,1), pww2, tempval)
                dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
-               write(9989,*) "IR grVC rho Theta1 new        ", tempval
+               IF (fmpi%irank==0) write(9989,*) "IR grVC rho Theta1 new        ", tempval
                tempval = CMPLX(0.0,0.0)
 
                DO iSpin = 1, fi%input%jspins
-                  write(9989,*) "Loop spin:", iSpin
-                  !pww = CMPLX(0.0,0.0)
+                  IF (fmpi%irank==0) write(9989,*) "Loop spin:", iSpin
                   ! TODO: Ensure, that vTot/gradrho is diagonal here, not 2x2.
-                  !CALL dfpt_convol_direct(stars, stars, vTot%pw(:,iSpin), theta1_pw0(:,iDtype_col,iDir_col), pww)
                   pww2 = CMPLX(0.0,0.0)
                   CALL dfpt_convol_big(1, stars, stars, vTot%pw(:,iSpin), theta1full0(0:,iDtype_col,iDir_col), pww2)
-                  !CALL dfpt_int_pw(stars, fi%cell, pww, grRho3(iDir_row)%pw(:,iSpin), tempval)
-                  !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
-                  !write(9989,*) "IR grRho vTot Theta1          ", tempval
-                  !tempval = CMPLX(0.0,0.0)
                   CALL dfpt_int_pw(stars, fi%cell, grRho3(iDir_row)%pw(:,iSpin), pww2, tempval)
                   dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
-                  write(9989,*) "IR grRho vTot Theta1 new      ", tempval
+                  IF (fmpi%irank==0) write(9989,*) "    IR grRho vTot Theta1 new      ", tempval
                   tempval = CMPLX(0.0,0.0)
                END DO
-               write(9989,*) "End spin loop"
+               IF (fmpi%irank==0) write(9989,*) "End spin loop"
             END IF
 
-            write(9989,*) qvec, iDtype_row, iDir_row, iDtype_col, iDir_col
-            write(9989,*) "HF   :", dyn_row_HF(col_index)
-            write(9989,*) "int  :", dyn_row_int(col_index)
+            IF (fmpi%irank==0) write(9990,*) qvec, iDtype_row, iDir_row, iDtype_col, iDir_col
+            IF (fmpi%irank==0) write(9990,*) "HF   :", dyn_row_HF(col_index)
+            IF (fmpi%irank==0) write(9990,*) "int  :", dyn_row_int(col_index)
 
             ! Calculate the contributions to the dynamical matrix that stem
             ! from terms related to occupation numbers and the eigenenergies.
@@ -385,13 +331,9 @@ CONTAINS
                                    theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
                                    qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1,1,1,1,1,1],q_eig_id) 
             END IF
-            write(9989,*) "eigen:", dyn_row_eigen(col_index)
+            IF (fmpi%irank==0) write(9990,*) "eigen:", dyn_row_eigen(col_index)
          END DO
       END DO
-
-!#ifdef CPP_MPI
-!      CALL MPI_ALLREDUCE(MPI_IN_PLACE,dyn_row_eigen,SIZE(dyn_row_eigen),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
-!#endif
 
       dyn_row = conjg(dyn_row_HF) + conjg(dyn_row_int) + dyn_row_eigen
 
@@ -543,8 +485,6 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)   :: vx
       TYPE(t_potden),INTENT(IN)    :: v, v1real, v1imag
 
-!    EXTERNAL MPI_BCAST    !only used by band_unfolding to broadcast the gvec
-
       ! Scalar Arguments
       INTEGER, INTENT(IN)    :: eig_id, dfpt_eig_id, iDir_col, iDtype_col, iDir_row, iDtype_row, dfpt_eig_id2
       COMPLEX,            INTENT(IN)     :: theta1_pw0(:), theta1_pw(:)
@@ -582,7 +522,7 @@ CONTAINS
       INTEGER :: iEig, ikGq, iqdir
       INTEGER :: imlo, ilo, iklo, l, ikg, ikglo !!! Test!
       REAL :: gext(3)
-      COMPLEX :: we_loop, we1_loop, eig_loop, eig1_loop, eigen_s2, eigen_h2s2, eigen_s1q, eigen_h1qs1q
+      COMPLEX :: we_loop, we1_loop, eig_loop, eig1_loop, eigen_s2, eigen_h2s2, eigen_s1q, eigen_h1qs1q, eigen_bonus
 
       COMPLEX, ALLOCATABLE :: tempVec(:), tempVecq(:), z_loop(:), z1_loop(:), ztest_loop(:), zq_loop(:)
 
@@ -596,7 +536,8 @@ CONTAINS
       eigen_s2 = CMPLX(0.0,0.0)
       eigen_h2s2 = CMPLX(0.0,0.0)
       eigen_s1q = CMPLX(0.0,0.0)
-      eigen_h1qs1q = CMPLX(0.0,0.0) 
+      eigen_h1qs1q = CMPLX(0.0,0.0)
+      eigen_bonus = CMPLX(0.0,0.0) 
       ALLOCATE(k_selection(16))
       k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
       !kqpts = fi%kpts
@@ -627,13 +568,9 @@ CONTAINS
       CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag,.FALSE.,iDtype_col)
       CALL mt_setup(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,nococonv,enpara,fi%hub1inp,hub1datadummy,inden,v,vx,fmpi,tdmod,uddummy,0.0,.TRUE.)
 
-      !write(8998,*) iDtype_row, iDir_row, iDtype_col, iDir_col
       DO jsp = MERGE(1,1,fi%noco%l_noco), MERGE(1,fi%input%jspins,fi%noco%l_noco)
-         !write(8998,*) jsp
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk = fmpi%k_list(nk_i)
-            !write(8998,*) nk
-
             bkpt = kpts_mod%bk(:, nk)
             q_loop = bqpt
 
@@ -659,7 +596,6 @@ CONTAINS
             CALL zMat%init(l_real,nbasfcn,noccbd)
             CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
             CALL zMat2%init(.FALSE.,nbasfcnq,noccbd)
-            !write(4745,*) zMat2%data_c
             IF (PRESENT(q_eig_id)) CALL zMatq%init(l_real,nbasfcnq,noccbd)
 
             ALLOCATE(tempVec(nbasfcn))
@@ -671,7 +607,6 @@ CONTAINS
             CALL read_eig(eig_id,      nk,jsp,neig=nbands,zmat=zMat)
             CALL read_eig(dfpt_eig_id, nk,jsp,neig=nbands1,zmat=zMat1)
             CALL read_eig(dfpt_eig_id2,nk,jsp,neig=nbands2,zmat=zMat2)
-            !write(4745,*) zMat2%data_c
             IF (PRESENT(q_eig_id)) CALL read_eig(q_eig_id, nk,jsp,neig=nbandsq,zmat=zMatq)
 
             !!!! Test:
@@ -747,20 +682,16 @@ CONTAINS
                   eigen_term = eigen_term + zdotc(nbasfcnq,zq_loop,1,tempVecq,1)
                END IF
 
-               !CALL CPP_zgemv('N',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z_loop,1,CMPLX(0.0,0.0),tempVecq,1)
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z1_loop,1,CMPLX(0.0,0.0),tempVec,1)
                eigen_s1q = eigen_s1q + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
-               !CALL CPP_zgemv('N',nbasfcnq,nbasfcn,we_loop,hmat1q%data_c,nbasfcnq,z_loop,1,CMPLX(1.0,0.0),tempVecq,1)
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,we_loop,hmat1q%data_c,nbasfcnq,z1_loop,1,CMPLX(1.0,0.0),tempVec,1)
                eigen_h1qs1q = eigen_h1qs1q + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
 
-               !eigen_term = eigen_term + zdotc(nbasfcnq,z1_loop,1,tempVecq,1)
                eigen_term = eigen_term + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
                
                ! Correction:
-               !write(4745,*) we_loop
-               !write(4745,*) zMat2%data_c  
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,we_loop,smat1q%data_c,nbasfcnq,zMat2%data_c(:,iEig),1,CMPLX(0.0,0.0),tempVec,1)
+               eigen_bonus = eigen_bonus + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
                eigen_term = eigen_term + 2.0 * zdotc(nbasfcn,z_loop,1,tempVec,1)
             END DO
 
@@ -804,12 +735,14 @@ CONTAINS
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_h2s2,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_s1q,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_h1qs1q,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_bonus,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
       IF (fmpi%irank==0) THEN
-         write(9911,*) "s2 :", eigen_s2
-         write(9911,*) "h2 :", eigen_h2s2 - eigen_s2
-         write(9911,*) "s1q:", eigen_s1q
-         write(9911,*) "h1q:", eigen_h1qs1q - eigen_s1q
+         write(9989,*) "eigen s2 :", eigen_s2
+         write(9989,*) "eigen h2 :", eigen_h2s2 - eigen_s2
+         write(9989,*) "eigen s1q:", eigen_s1q
+         write(9989,*) "eigen h1q:", eigen_h1qs1q - eigen_s1q
+         write(9989,*) "eigen bonus", eigen_bonus
       END IF
    END SUBROUTINE
 

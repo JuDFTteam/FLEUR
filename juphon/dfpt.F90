@@ -7,20 +7,16 @@ MODULE m_dfpt
    USE m_juDFT
    USE m_constants
    USE m_types
-   USE m_types_mpimat
    USE m_dfpt_check
    USE m_dfpt_test
-   !USE m_dfpt_init
    USE m_dfpt_sternheimer
    USE m_dfpt_dynmat
-   !USE m_jpSternheimer,     only : solveSternheimerSCC
-   USE m_jp2ndOrdQuant,     only : CalcIIEnerg2
-   !USE m_jpSetupDynMat,     only : SetupDynamicMatrix
-   USE m_jpProcessDynMat!,   only : DiagonalizeDynMat, CalculateFrequencies
+   USE m_jp2ndOrdQuant,     only : CalcIIEnerg2, genPertPotDensGvecs
+   USE m_jpProcessDynMat
    USE m_juDFT_stop, only : juDFT_error
    USE m_vgen_coulomb
    USE m_dfpt_vgen
-   USE m_convol
+   USE m_convol !obsolete?
    USE m_fleur_init
    USE m_npy
    USE m_desymmetrizer
@@ -33,7 +29,7 @@ MODULE m_dfpt
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho, vTot, vxc, exc, vCoul, eig_id, oldmode, xcpot, hybdat, mpdata, forcetheo)
+                 & rho, vTot, vxc, exc, vCoul, eig_id, xcpot, hybdat, mpdata, forcetheo)
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -53,15 +49,12 @@ CONTAINS
       TYPE(t_potden),   INTENT(INOUT) :: rho
       TYPE(t_potden),   INTENT(IN)    :: vTot, vxc, exc, vCoul
       INTEGER,          INTENT(IN)    :: eig_id
-      LOGICAL,          INTENT(IN)    :: oldmode
 
       TYPE(t_usdus)                 :: usdus
       TYPE(t_hub1data) :: hub1data
-      TYPE(t_potden)                :: vTotclean, rhoclean, grRho, grvextdummy, imagrhodummy, rho_nosym, vTot_nosym
+      TYPE(t_potden)                :: grRho, grvextdummy, imagrhodummy, rho_nosym, vTot_nosym
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm ! q-quantities
-      TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
-      TYPE(t_tlmplm)                :: tdHS0
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
       TYPE(t_kpts)                  :: qpts_loc
       TYPE(t_kpts)              :: kqpts, kqmpts ! basically kpts, but with q added onto each one.
@@ -81,76 +74,18 @@ CONTAINS
       CLASS(t_xcpot),     ALLOCATABLE :: xcpot_nosym
       CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_nosym
 
-      CLASS(t_mat), ALLOCATABLE :: smatq(:,:), hmatq(:,:)
-
-      !COMPLEX, ALLOCATABLE :: exc_pw_nosym(:,:), vCoul_pw_nosym(:,:)
-
-      !integer                       :: logUnit = 100
-      !integer                       :: ngpqdp
-
-      !COMPLEX, ALLOCATABLE          :: loosetd(:, :, :, :)
-      !REAL,             ALLOCATABLE :: El(:, :, :, :)
-      INTEGER,          ALLOCATABLE :: recG(:, :)!, GbasVec(:, :), ilst(:, :, :)
+      INTEGER,          ALLOCATABLE :: recG(:, :)
       INTEGER                       :: ngdp2km
-      !INTEGER,          ALLOCATABLE :: gdp2Ind(:, :, :)
-      !INTEGER                       :: gdp2iLim(2, 3)
-      !INTEGER,          ALLOCATABLE :: nRadFun(:, :), iloTable(:, :, :), ilo2p(:, :)
-      !REAL,             ALLOCATABLE :: uuilon(:, :)
-      !REAL,             ALLOCATABLE :: duilon(:, :)
-      !REAL,             ALLOCATABLE :: ulouilopn(:, :, :)
-      !INTEGER,          ALLOCATABLE :: kveclo(:,:)
-      !REAL,             ALLOCATABLE :: rbas1(:, :, :, :, :)
-      !REAL,             ALLOCATABLE :: rbas2(:, :, :, :, :)
-      !REAL,             ALLOCATABLE :: gridf(:, :)
-      !COMPLEX,          ALLOCATABLE :: z0(:, :, :, :)
-      !complex,           allocatable :: grVxcIRKern(:)
-      !real,              allocatable :: dKernMTGPts(:, :, :)
-      !real,              allocatable :: gausWts(:)
-      !complex,           allocatable :: ylm(:, :)
-      !complex,           allocatable :: qpwcG(:, :)
-      !complex,           allocatable :: rho1MTCoreDispAt(:, :, :, :)
-      !complex,           allocatable :: grVeff0MT_init(:, :, :, :)
-      !complex,           allocatable :: grVeff0MT_main(:, :, :, :)
-      !complex,           allocatable :: grVext0IR_DM(:, :)
-      !complex,           allocatable :: grVext0MT_DM(:, :, :, :)
-      !complex,           allocatable :: grVCoul0IR_DM_SF(:, :)
-      !complex,           allocatable :: grVCoul0MT_DM_SF(:, :, :, :)
-      !complex,           allocatable :: grVeff0IR_DM(:, :)
-      !complex,           allocatable :: grVeff0MT_DM(:, :, :, :)
-      !complex,           allocatable :: dynMat(:, :)
       complex,           allocatable :: E2ndOrdII(:, :)
       complex,           allocatable :: eigenFreqs(:)
       real,              allocatable :: eigenVals(:)
       complex,           allocatable :: eigenVecs(:, :)
-      !integer,           allocatable :: gpqdp(:, :)
-      !INTEGER,           ALLOCATABLE :: nocc(:, :)
-      !complex,            allocatable :: rho1IR(:, :, :)
-      !complex,            allocatable :: rho1MT(:, :, :, :, :)
-      !complex,            allocatable :: rho1MTDelta(:, :, :, :, :)
-      !complex,            allocatable :: rho1MTz0(:, :, :, :)
-      !complex,            allocatable :: vCoul1IRtempNoVol(:, :)
-      !complex,            allocatable :: vCoul1MTtempNoVol(:, :, :, :)
-      !complex,            allocatable :: vEff1IR(:, :, :)
-      !complex,            allocatable :: vEff1MT(:, :, :, :, :)
-      !complex,            allocatable :: vEff1MTnoVol(:, :, :, :, :)
-      !complex,            allocatable :: vExt1IR_final(:, :, :)
-      !complex,            allocatable :: vExt1MT(:, :, :, :, :)
-      !complex,            allocatable :: vExt1MTDelta(:, :, :, :, :)
-      !complex,            allocatable :: vExt1MTq0(:, :, :, :, :)
-      !complex,            allocatable :: vExt1noqIR_final(:, :, :)
-      !complex,            allocatable :: vHar1IR_final(:, :, :)
-      !complex,            allocatable :: vHar1MTDelta(:, :, :, :, :)
-      !complex,            allocatable :: vHar1MTq0(:, :, :, :, :)
-      !complex,            allocatable :: vHar1MT_final(:, :, :, :, :)
-      !complex,            allocatable :: vXc1MTDelta(:, :, :, :, :)
-      !complex,            allocatable :: vXc1MTq0(:, :, :, :, :)
+
       COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :)
-      !integer,      allocatable :: mapKpq2K(:, :)
-      !integer,      allocatable :: kpq2kPrVec(:, :, :)
 
       COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
 
-      INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype, nspins
+      INTEGER :: ngdp, iSpin, iType, iQ, iDir, iDtype, nspins
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id
       LOGICAL :: l_real, l_minusq
 
@@ -164,19 +99,11 @@ CONTAINS
       INTEGER :: iType_old, iAtom_old, iType_new, iAtom_new, inversionOp
       REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new, atom_shift(3)
 
-      !INTEGER, PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
-      !REAL,    PARAMETER :: eps7 = 1.0e-7
-
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
       l_minusq = .FALSE.
 
       nspins = MERGE(2, 1, fi%noco%l_noco)
-      IF (fmpi%n_size == 1) THEN
-         ALLOCATE (t_mat::smatq(fi%kpts%nkpt, nspins), hmatq(fi%kpts%nkpt, nspins))
-      ELSE
-         ALLOCATE (t_mpimat::smatq(fi%kpts%nkpt, nspins), hmatq(fi%kpts%nkpt, nspins))
-      END IF
 
       !IF (fi%juPhon%l_jpCheck) THEN
     !      ! This function will be used to check the validity of juPhon's
@@ -221,16 +148,11 @@ CONTAINS
 
          ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
          vTot_nosym%pw_w = CMPLX(0.0,0.0)
-         !ALLOCATE(exc_pw_nosym(SIZE(vTot_nosym%pw,1),1))
-         !ALLOCATE(vCoul_pw_nosym(SIZE(vTot_nosym%pw,1),1))
 
          CALL desymmetrize_pw(fi%sym, stars, stars_nosym, rho%pw, rho_nosym%pw)
          CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vTot%pw, vTot_nosym%pw, vTot%pw_w, vTot_nosym%pw_w)
          CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, rho%mt, rho_nosym%mt)
          CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, vTot%mt, vTot_nosym%mt)
-
-         !CALL desymmetrize_pw(fi%sym, stars, stars_nosym, exc%pw, exc_pw_nosym)
-         !CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vCoul%pw, vCoul_pw_nosym)
 
          CALL desymmetrize_types(fi%input, fi_nosym%input, fi%atoms, fi_nosym%atoms, fi%noco, &
                                  nococonv, nococonv_nosym, enpara, enpara_nosym, results, results_nosym)
@@ -327,10 +249,6 @@ CONTAINS
            !CALL dfpt_test(fi, sphhar, stars, fmpi, rho, grRho, rho0, grRho0, xcpot, ngdp, recG, grVxcIRKern, ylm, dKernMTGPts, gausWts, hybdat)
       !END IF
 
-!#ifndef CPP_FFTW
-!        call juDFT_error('juPhon is only usable with fftw support.', calledby='dfpt')
-!#endif
-
       CALL q_results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
       CALL results1%init(fi_nosym%input, fi_nosym%atoms, fi_nosym%kpts, fi_nosym%noco)
       IF (l_minusq) THEN
@@ -358,32 +276,8 @@ CONTAINS
       ! TODO: This is a test set of qpoints for a fixed fcc system.
       !       We need to read out actual q-points at some point.
       !       And it needs to be handled properly.
-      !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
-      !q_list = [1, 10, 19, 28, 37]! 512 k-points: \Gamma to X
 
       qpts_loc = qpts
-
-      !qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.025*0.0
-      !qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.025*1.0
-      !qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.025*2.0
-      !qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.025*3.0
-      !qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.025*4.0
-      !qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*0.025*5.0
-      !qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*0.025*6.0
-      !qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*0.025*7.0
-      !qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*0.025*8.0
-      !qpts_loc%bk(:,10) = [0.0,1.0,1.0]*0.025*9.0
-      !qpts_loc%bk(:,11) = [0.0,1.0,1.0]*0.025*10.0
-      !qpts_loc%bk(:,12) = [0.0,1.0,1.0]*0.025*11.0
-      !qpts_loc%bk(:,13) = [0.0,1.0,1.0]*0.025*12.0
-      !qpts_loc%bk(:,14) = [0.0,1.0,1.0]*0.025*13.0
-      !qpts_loc%bk(:,15) = [0.0,1.0,1.0]*0.025*14.0
-      !qpts_loc%bk(:,16) = [0.0,1.0,1.0]*0.025*15.0
-      !qpts_loc%bk(:,17) = [0.0,1.0,1.0]*0.025*16.0
-      !qpts_loc%bk(:,18) = [0.0,1.0,1.0]*0.025*17.0
-      !qpts_loc%bk(:,19) = [0.0,1.0,1.0]*0.025*18.0
-      !qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.025*19.0
-      !qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.025*20.0
 
       !qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.00625*0.0
       !qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.00625*1.0
@@ -408,6 +302,28 @@ CONTAINS
       !qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.00625*20.0
 
       IF (.FALSE.) THEN
+         qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.00625*0.0
+         qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.00625*1.0
+         qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.00625*2.0
+         qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.00625*3.0
+         qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.00625*4.0
+         qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*0.00625*5.0
+         qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*0.00625*6.0
+         qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*0.00625*7.0
+         qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*0.00625*8.0
+         qpts_loc%bk(:,10) = [0.0,1.0,1.0]*0.00625*9.0
+         qpts_loc%bk(:,11) = [0.0,1.0,1.0]*0.00625*10.0
+         qpts_loc%bk(:,12) = [0.0,1.0,1.0]*0.00625*11.0
+         qpts_loc%bk(:,13) = [0.0,1.0,1.0]*0.00625*12.0
+         qpts_loc%bk(:,14) = [0.0,1.0,1.0]*0.00625*13.0
+         qpts_loc%bk(:,15) = [0.0,1.0,1.0]*0.00625*14.0
+         qpts_loc%bk(:,16) = [0.0,1.0,1.0]*0.00625*15.0
+         qpts_loc%bk(:,17) = [0.0,1.0,1.0]*0.00625*16.0
+         qpts_loc%bk(:,18) = [0.0,1.0,1.0]*0.00625*17.0
+         qpts_loc%bk(:,19) = [0.0,1.0,1.0]*0.00625*18.0
+         qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.00625*19.0
+         qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.00625*20.0
+      ELSE IF (.FALSE.) THEN
         ! 8x8x8 fcc q-point path
         qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.125*0.0
         qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.125*1.0
@@ -548,55 +464,50 @@ CONTAINS
 
         ALLOCATE(q_list(2),dfpt_eig_id_list(2))
         IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(2))
-        q_list = [1,2] 
+        q_list = [1,2]
       ELSE IF (.FALSE.) THEN
-      ! 12x12x8 hcp q-point path
-      !qpts_loc%bk(:,1)  = [1.0,2.0,0.0]*0.0/12.0 !G
-      !qpts_loc%bk(:,2)  = [1.0,2.0,0.0]*0.1/12.0
-      !qpts_loc%bk(:,3)  = [1.0,2.0,0.0]*0.2/12.0
-      !qpts_loc%bk(:,4)  = [1.0,2.0,0.0]*0.3/12.0
-      !qpts_loc%bk(:,5)  = [1.0,2.0,0.0]*0.4/12.0 !K
+        ! 16x16x16 fcc Gamma-X q-point path
+        qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/16
+        qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/16
+        qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*2.0/16
+        qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*3.0/16
+        qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*4.0/16
+        qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*5.0/16
+        qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*6.0/16
+        qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*7.0/16
+        qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*8.0/16
 
-      !qpts_loc%bk(:,6)  = [5.0,7.0,0.0]*1.0/12.0
-      !qpts_loc%bk(:,7)  = [6.0,6.0,0.0]*1.0/12.0 !M
+        ALLOCATE(q_list(9),dfpt_eig_id_list(9))
+        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(9))
+        q_list = [1,2,3,4,5,6,7,8,9]
+      ELSE IF (.FALSE.) THEN
+        ! 12x12x8 hcp q-point path
+        qpts_loc%bk(:,1)  = [1.0,2.0,0.0]*0.0/12.0 !G
+        qpts_loc%bk(:,2)  = [1.0,2.0,0.0]*1.0/12.0
+        qpts_loc%bk(:,3)  = [1.0,2.0,0.0]*2.0/12.0
+        qpts_loc%bk(:,4)  = [1.0,2.0,0.0]*3.0/12.0
+        qpts_loc%bk(:,5)  = [1.0,2.0,0.0]*4.0/12.0 !K
 
-      !qpts_loc%bk(:,8)  = [1.0,1.0,0.0]*5.0/12.0
-      !qpts_loc%bk(:,9)  = [1.0,1.0,0.0]*4.0/12.0
-      !qpts_loc%bk(:,10) = [1.0,1.0,0.0]*3.0/12.0
-      !qpts_loc%bk(:,11) = [1.0,1.0,0.0]*2.0/12.0
-      !qpts_loc%bk(:,12) = [1.0,1.0,0.0]*1.0/12.0
+        qpts_loc%bk(:,6)  = [5.0,7.0,0.0]*1.0/12.0
+        qpts_loc%bk(:,7)  = [6.0,6.0,0.0]*1.0/12.0 !M
 
-      !qpts_loc%bk(:,13) = [0.0,0.0,1.0]*1.0/8.0
-      !qpts_loc%bk(:,14) = [0.0,0.0,1.0]*2.0/8.0
-      !qpts_loc%bk(:,15) = [0.0,0.0,1.0]*3.0/8.0
-      !qpts_loc%bk(:,16) = [0.0,0.0,1.0]*4.0/8.0  !A
+        qpts_loc%bk(:,8)  = [1.0,1.0,0.0]*5.0/12.0
+        qpts_loc%bk(:,9)  = [1.0,1.0,0.0]*4.0/12.0
+        qpts_loc%bk(:,10) = [1.0,1.0,0.0]*3.0/12.0
+        qpts_loc%bk(:,11) = [1.0,1.0,0.0]*2.0/12.0
+        qpts_loc%bk(:,12) = [1.0,1.0,0.0]*1.0/12.0
 
-      !ALLOCATE(q_list(16),dfpt_eig_id_list(16))
-      !q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+        qpts_loc%bk(:,13) = [0.0,0.0,1.0]*1.0/8.0
+        qpts_loc%bk(:,14) = [0.0,0.0,1.0]*2.0/8.0
+        qpts_loc%bk(:,15) = [0.0,0.0,1.0]*3.0/8.0
+        qpts_loc%bk(:,16) = [0.0,0.0,1.0]*4.0/8.0  !A
+
+        ALLOCATE(q_list(16),dfpt_eig_id_list(16))
+        q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
       END IF
 
       ALLOCATE(dfpt_eig_id_list2,mold=dfpt_eig_id_list)
       IF (l_minusq) ALLOCATE(dfpt_eigm_id_list2,mold=dfpt_eigm_id_list)
-
-      !ALLOCATE(q_list(21),dfpt_eig_id_list(21))
-      !ALLOCATE(q_list(1),dfpt_eig_id_list(1))
-      !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
-      !q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21] ! \Gamma to X in 20 steps.
-      !q_list = [21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
-      !q_list = [21,1,11,16,6,19,18,14,13,9,8,4,3,20,17,15,12,10,7,5,2]
-      !q_list = [5]
-      !q_list = [1,6,11,16,21]
-
-      !qpts_loc%bk(:,1) = [1.0,1.0,1.0]*1.0/16
-      !qpts_loc%bk(:,2) = [1.0,1.0,1.0]*2.0/16
-      !qpts_loc%bk(:,3) = [1.0,1.0,1.0]*3.0/16
-      !qpts_loc%bk(:,4) = [1.0,1.0,1.0]*4.0/16
-      !qpts_loc%bk(:,5) = -[1.0,1.0,1.0]*1.0/16
-      !qpts_loc%bk(:,6) = -[1.0,1.0,1.0]*2.0/16
-      !qpts_loc%bk(:,7) = -[1.0,1.0,1.0]*3.0/16
-      !qpts_loc%bk(:,8) = -[1.0,1.0,1.0]*4.0/16
-      !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
-      !q_list = [1,2,3,4,5]
 
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
@@ -620,10 +531,7 @@ CONTAINS
       END DO
 
       DO iSpin = 1, SIZE(rho_nosym%mt,4)
-         !CALL mt_gradient_old(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, sphhar_nosym%clnu, sphhar_nosym%nmem, sphhar_nosym%mlh, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
-         !CALL save_npy("theoldgradient.npy",grrhodummy)
          CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
-         !CALL save_npy("thenewgradient.npy",grrhodummy)
       END DO
 
       DO zInd = -stars_nosym%mx3, stars_nosym%mx3
@@ -651,20 +559,7 @@ CONTAINS
                         stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
       END DO
 
-      !CALL save_npy("grVext_mt_x.npy",grVext3(1)%mt)
-      !CALL save_npy("grVext_mt_y.npy",grVext3(2)%mt)
-      !CALL save_npy("grVext_mt_z.npy",grVext3(3)%mt)
-      !CALL save_npy("grVext_pw_x.npy",grVext3(1)%pw)
-      !CALL save_npy("grVext_pw_y.npy",grVext3(2)%pw)
-      !CALL save_npy("grVext_pw_z.npy",grVext3(3)%pw)
-      !CALL save_npy("grRho_sh.npy",grrhodummy)
-      !CALL save_npy("grRho_mt_x.npy",grRho3(1)%mt)
-      !CALL save_npy("grRho_mt_y.npy",grRho3(2)%mt)
-      !CALL save_npy("grRho_mt_z.npy",grRho3(3)%mt)
-      !CALL save_npy("grRho_pw_x.npy",grRho3(1)%pw)
-      !CALL save_npy("grRho_pw_y.npy",grRho3(2)%pw)
-      !CALL save_npy("grRho_pw_z.npy",grRho3(3)%pw)
-      !STOP
+      CALL genPertPotDensGvecs( stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, [0.0,0.0,0.0], recG )
 
       ALLOCATE(dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
       DO iQ = 1, SIZE(q_list)
@@ -683,11 +578,7 @@ CONTAINS
             END DO
          END IF
          CALL timestart("Eii2")
-         CALL old_get_Gvecs(stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, recG, .false.)
-         !write(8989,*) qpts_loc%bk(:,q_list(iQ))
          CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars_nosym, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
-         !write(8989,*) E2ndOrdII
-         !CYCLE
          CALL timestop("Eii2")
 
          CALL timestart("Eigenstuff at k+q")
@@ -744,7 +635,6 @@ CONTAINS
 
          DO iDtype = 1, fi_nosym%atoms%ntype
             CALL timestart("Typeloop")
-            !DO iDir = 1, 1
             DO iDir = 1, 3
                CALL timestart("Dirloop")
                dfpt_tag = ''
@@ -798,17 +688,16 @@ CONTAINS
                                         rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
                                         dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), q_eig_id, &
                                         denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
-                                        starsmq, qm_results, dfpt_eigm_id_list(iQ), dfpt_eigm_id_list2(iQ), qm_eig_id, results1m, vTot1m, vTot1mIm)!, hmatq, smatq)
+                                        starsmq, qm_results, dfpt_eigm_id_list(iQ), dfpt_eigm_id_list2(iQ), qm_eig_id, results1m, vTot1m, vTot1mIm)
                   CALL timestop("Sternheimer with -q")
                ELSE
                   CALL timestart("Sternheimer")
                   CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
                                         rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
                                         dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), q_eig_id, &
-                                        denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)!, hmatq, smatq)
+                                        denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
                   CALL timestop("Sternheimer")
                END IF
-               !CALL save_npy(dfpt_tag//"gqvec.npy",starsq%gq)
 
                IF (.FALSE.) THEN
                   CALL timestop("Dirloop")
@@ -832,15 +721,20 @@ CONTAINS
                END IF
                CALL timestop("Dynmat")
                dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
-               write(9989,*) "Eii2:", E2ndOrdII(3 *(iDtype-1)+iDir,:)
+               IF (fmpi%irank==0) write(9989,*) "Eii2:", E2ndOrdII(3 *(iDtype-1)+iDir,:)
+               IF (fmpi%irank==0) write(9990,*) "Eii2:", E2ndOrdII(3 *(iDtype-1)+iDir,:)
                IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
                IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                !STOP
                CALL timestop("Dirloop")
             END DO
             CALL timestop("Typeloop")
+
+#if defined(CPP_MPI)
+            CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
          END DO
-         DEALLOCATE(recG)
+         
 
          IF (.FALSE.) THEN
             CALL timestop("q-point")
@@ -861,326 +755,18 @@ CONTAINS
          END IF
 
          CALL close_eig(q_eig_id)
-
+         IF (l_minusq) CALL close_eig(qm_eig_id)
          CALL timestop("q-point")
 
       END DO
 
-        ! Construct potential without the l=0 prefactor.
-        !CALL vTotclean%copyPotDen(vTot)
-        !CALL rhoclean%copyPotDen(rho)
-
-        !DO iSpin = 1, fi%input%jspins
-         !   DO iType = 1, fi%atoms%ntype
-         !       DO ilh = 0, sphhar%nlhd
-         !           DO iR = 1, fi%atoms%jri(iType)
-         !               IF (ilh.EQ.0) THEN
-         !                   vTotclean%mt(iR, 0, iType, iSpin) &
-         !               & = vTotclean%mt(iR, 0, iType, iSpin) * sqrt(fpi_const) / fi%atoms%rmsh(iR, iType)
-         !               END IF
-         !               rhoclean%mt(iR, ilh, iType, iSpin) &
-         !           & = rhoclean%mt(iR, ilh, iType, iSpin) / fi%atoms%rmsh(iR, iType) / fi%atoms%rmsh(iR, iType)
-         !           END DO
-         !       END DO
-         !   END DO
-        !END DO
-
-        ! This routine will initialize everything for juPhon that isn't already
-        ! provided by the FLEUR code/must be provieded in a modified way.
-        ! This includes for example the de-symmetrized MT and pw quantities and
-        ! their gradients. Notably, q-dependent quantities are initialized and
-        ! constructed elsewhere, within the q-loop.
-        ! TODO: I ignored the actual significance of clnu_atom etc. They are not type-dependent, but actually
-        ! refer to each atom respectively. So this will explode for iatom > 1. This is easily fixed.
-       ! CALL timestart("juPhon DFPT initialization")
-        !CALL dfpt_init(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, fi%kpts, &
-         !            & fmpi, results, enpara, rho, vTot, eig_id, nvfull, usdus, rho0, grRho0, vTot0, grVTot0, &
-         !            & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
-         !            & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
-         !            & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-         !            & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean, oldmode, xcpot, grRho)
-        !CALL timestop("juPhon DFPT initialization")
-
-        ! < Imagine starting a q-grid-loop here. >
-        ! < For now we just select one q-point from the input. >
-
-        !STOP
-
-        !call createkqMapArrays( fi%kpts, qpts, 0, fi%kpts%nkpt3, [0], mapKpq2K, kpq2kPrVec )
-
-        !CALL timestart("juPhon DFPT scf loop")
-        !call solveSternheimerSCC( fmpi,  fi%atoms, fi%sym, stars, sphhar, fi%cell, enpara, usdus, fi%input, fi%kpts, qpts, results, usdus,      &
-         ! & logUnit, ngdp, rbas1, rbas2, kveclo, uuilon, duilon, ulouilopn, &
-         ! & recG, mapKpq2K, results%neig(:, 1), results%eig, GbasVec, ilst, z0, nvfull, El, nradFun, iloTable, nocc, ilo2p, gdp2Ind,     &
-         ! & gdp2iLim, kpq2kPrVec, qpwcG, q_list(2), tdHS0, loosetd, ylm, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), grVeff0MT_init, grVeff0MT_main, dKernMTGPts,       &
-         ! & grVxcIRKern, rho1MTCoreDispAt, gausWts, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, fi%juPhon%oneSternhCycle, ngpqdp, gpqdp,&
-         ! & vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, &
-         ! & vXc1MTq0, rho0%pw(:, :, 1, 1), rho0%mt(:, :, :, :, 1, 1), vTot0%pw(:, :, 1, 1), fi%juPhon%noPtsCon, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
-        !CALL timestop("juPhon DFPT scf loop")
-
-        !CALL timestart("juPhon DFPT Eii2")
-        !CALL CalcIIEnerg2(fi%atoms, fi%cell, qpts, stars, fi%input, q_list(2), ngdp, recG, E2ndOrdII)
-        !CALL timestop("juPhon DFPT Eii2")
-
-        !CALL timestart("juPhon DFPT dynmat setup")
-        !CALL SetupDynamicMatrix( fmpi, fi%noco, nococonv,  fi%atoms, fi%input, fi%sym, fi%cell, sphhar, stars, fi%kpts, qpts, usdus, results, vTotclean, q_list(2), ngdp, ngpqdp, recG, sphhar%mlh, sphhar%nmem,&
-         !   & sphhar%clnu, rho%pw, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vTot%pw_w, vTotclean%mt(:, 0:, :, 1),&
-         !   & rhoclean%mt, E2ndOrdII, El, results%eig, rbas1, rbas2, iloTable, nvfull, nocc, ilst, GbasVec, z0, kveclo, nRadFun, mapKpq2K, kpq2kPrVec,       &
-         !   & gpqdp, sphhar%memd, logUnit, vxc%pw, exc%pw(:, 1), vxc%mt, exc%mt(:, 0:, :, 1), vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), &
-         !   & grVext0IR_DM, grVext0MT_DM, grVeff0IR_DM, grVeff0MT_DM, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, &
-         !   & vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, &
-         !   & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol)
-        !CALL timestop("juPhon DFPT dynmat setup")
-
-        !CALL timestart("juPhon DFPT dynmat diagonalization")
-        !CALL DiagonalizeDynMat(fi%atoms, qpts, fi%juPhon%calcEigenVec, dynMat, eigenVals, eigenVecs, q_list(2))
-        !CALL timestop("juPhon DFPT dynmat diagonalization")
-
-        !CALL timestart("juPhon DFPT frequency calculation")
-        !CALL CalculateFrequencies(fi%atoms, q_list(2), eigenVals, eigenFreqs)
-        !CALL timestop("juPhon DFPT frequency calculation")
-
-        ! < Imagine ending a q-grid-loop here. >
+      DEALLOCATE(recG)
 
         WRITE (oUnit,*) '------------------------------------------------------'
 
         CALL juDFT_end("Phonon calculation finished.")
 
     END SUBROUTINE dfpt
-
-!    subroutine createkqMapArrays( kpts, qpts, nrAddQs, kSetDim, addQnkptis, mapKpq2K, kpq2kPrVec )
-!
-!      use m_types
-!      use m_juDFT_stop, only : juDFT_error
-!
-!      implicit none
-!
-!      ! Type parameters
-!      type(t_kpts),              intent(in)  :: kpts
-!      type(t_kpts),              intent(in)  :: qpts
-!
-!      ! Array parameter
-!      integer,                   intent(in)  :: addQnkptis(:)
-!      integer,                   intent(in)  :: kSetDim(:)
-!      integer,      allocatable, intent(out) :: mapKpq2K(:, :)
-!      integer,      allocatable, intent(out) :: kpq2kPrVec(:, :, :)
-!
-!      ! Scalar parameter
-!      integer,                   intent(in)  :: nrAddQs
-!
-!      ! Array variable
-!      integer,      allocatable              :: mapK2Ind(:, :, :) ! takes components of kpts%bk * lcm and gives its index
-!      integer,      allocatable              :: mapK2mK(:)
-!      integer                                :: kpqNomin(3)       ! helps to find k + q mapped back to Brillouin zone
-!      real                                   :: kpqTemp(3)        ! helps to find k + q mapped back to Brillouin zone
-!      character(len=1024)                    :: errorMessage      ! stores error message for error output
-!
-!      ! Scalar variable
-!      integer                                :: ikpt              ! loop variable
-!      integer                                :: maxKcomp(3)       ! stores maximal k-point component * lcm
-!      integer                                :: idir              ! loop variable
-!      integer                                :: iqpt              ! loop variable
-!      integer                                :: nkptShift         ! stores shift of shifted k-point set
-!      integer                                :: ikptSh            ! loop variable
-!      logical                                :: matchFound        ! is true if index for k + q is found
-!      real :: lcm
-!
-!      lcm = real( kgv(kSetDim, 3) )
-!
-!      ! Determine maximal value of k-vector per direction in internal representation for allocation of mapKpq2K array and allocate it
-!      maxKcomp = 0
-!      do idir = 1, 3
-!        maxKcomp(idir) = maxval( kpts%bk(idir, :kpts%nkpt) * lcm )
-!      end do
-!      allocate( mapK2Ind(0:maxKcomp(1), 0:maxKcomp(2), 0:maxKcomp(3)) )
-!      mapK2Ind = 0
-!      allocate( mapKpq2K(kpts%nkpt, qpts%nkptf + nrAddQs) )
-!
-!      ! Fill up array which stores the index of a given k-point
-!      do ikpt = 1, kpts%nkpt
-!        mapK2Ind(nint(kpts%bk(1, ikpt) * lcm), nint(kpts%bk(2, ikpt) * lcm), nint(kpts%bk(3, ikpt) * lcm)) = ikpt
-!      end do
-!
-!      ! Determine k-point on which k + q can be folded back and determine the respective reciprocal lattice vector.
-!      ! The absolute value of every coordinate of the reciprocal lattice vector can be 1 maximally.
-!      allocate( kpq2kPrVec(3, kpts%nkpt, qpts%nkpt) )
-!      kpq2kPrVec = 0
-!      do iqpt = 1, qpts%nkpt
-!        do ikpt = 1, kpts%nkpt
-!          kpqNomin = 0
-!          do idir = 1, 3
-!            kpqNomin(idir) = nint( mod( kpts%bk(idir, ikpt) + qpts%bk(idir, iqpt), 1. ) * lcm )
-!            !kpqNomin(idir) = nint(lcm*kpts%bk(idir, ikpt) + lcm*qpts%bk(idir, iqpt))
-!            ! Is in 1st Brillouin zone
-!            if (abs(real(kpqNomin(idir)) / real(lcm) - (kpts%bk(idir, ikpt) + qpts%bk(idir, iqpt))) < 1e-5) then
-!            !if (kpqNomin(idir).lt.int(lcm)) then
-!              kpq2kPrVec(idir, ikpt, iqpt) = 0
-!            ! Has to be backfolded
-!            else
-!              kpq2kPrVec(idir, ikpt, iqpt) = -1
-!            end if
-!          end do
-!          if(.false.) then
-!            write(1005, '(i5, i5, 3(i5))') iqpt, ikpt, kpq2kPrVec(:, ikpt, iqpt)
-!          end if
-!          mapKpq2K(ikpt, iqpt) = mapK2Ind( kpqNomin(1), kpqNomin(2), kpqNomin(3) )
-!          !mapKpq2K(ikpt, iqpt) = mapK2Ind( mod(kpqNomin(1),int(lcm)), mod(kpqNomin(2),int(lcm)), mod(kpqNomin(3),int(lcm)) )
-!        end do
-!      end do
-!
-!      ! For this found k-vector equals to k + q, determine the index and fill up array which connects the kpts indices of the k and q
-!      ! qpoint with the index of the k-vector equals to k + q.
-!      nkptShift = 0
-!      matchFound = .false.
-!      do iqpt = qpts%nkpt + 1, qpts%nkpt + nrAddQs
-!        do ikpt = 1, kpts%nkpt
-!          kpqTemp(:) = modulo1r( kpts%bk(:, ikpt) + qpts%bk(:, iqpt) )
-!          do ikptSh = 1, addQnkptis(iqpt - qpts%nkpt)
-!            if ( norm2( kpts%bk(:, kpts%nkpt + ikptSh + nkptShift) - kpqTemp(:) ) < 1e-7 ) then
-!              mapKpq2K(ikpt, iqpt) = kpts%nkpt + nkptShift + ikptSh
-!              matchFound = .true.
-!              exit
-!            end if
-!          end do
-!          if ( .not.matchFound ) then
-!            write (errorMessage, '(a,1x,i3)') 'no match for k+q-point', kpqTemp
-!            call juDFT_error( errorMessage, calledby='createkqMapArrays', hint='Please check k-points, q-points and mapKpq2K array!' )
-!          else
-!            matchFound = .false.
-!          end if
-!        end do
-!        nkptShift = nkptShift + addQnkptis(iqpt - qpts%nkpt)
-!      end do
-!
-!      if (.false.) then
-!        ! Finds out which k' results when sending k to -k and then backfolding into 1st Brillouin zone.
-!        do ikpt = 1, kpts%nkpt
-!          do idir = 1, 3
-!            if ( kpts%bk(idir, ikpt)==0 ) then
-!              kpqTemp(idir) = kpts%bk(idir, ikpt)
-!            else
-!              kpqTemp(idir) = -kpts%bk(idir, ikpt) + 1
-!            end if
-!          end do ! idir
-!          mapK2mK(ikpt) = mapK2Ind(int(kpqTemp(1) * lcm), int(kpqTemp(2) * lcm), int(kpqTemp(3) * lcm))
-!        end do ! ikpt
-!      end if
-!
-!    end subroutine createkqMapArrays
-
-!    function modulo1r(kpoint)
-!      implicit none
-!      real(8), intent(in) :: kpoint(3)
-!      real(8)             :: modulo1r(3)
-!      integer             :: i
-!
-!      modulo1r = modulo (kpoint , 1d0)
-!
-!      do i = 1,3
-!        if(abs(1-abs(modulo1r(i))).lt.1d-13) modulo1r(i) = 0d0
-!      enddo
-!    end function modulo1r
-
-!    function kgv(iarr,n)
-!      implicit none
-!      integer              :: kgv
-!      integer, intent(in)  :: n,iarr(n)
-!      logical              :: lprim(2:maxval(iarr))
-!      integer, allocatable :: prim(:),expo(:)
-!      integer              :: nprim,marr
-!      integer              :: i,j,ia,k
-!      ! Determine prime numbers
-!      marr  = maxval(iarr)
-!      lprim = .true.
-!      do i = 2,marr
-!        j = 2
-!        do while (i*j.le.marr)
-!          lprim(i*j) = .false.
-!          j          = j + 1
-!        enddo
-!      enddo
-!      nprim = count(lprim)
-!      allocate ( prim(nprim),expo(nprim) )
-!      j = 0
-!      do i = 2,marr
-!        if(lprim(i)) then
-!          j       = j + 1
-!          prim(j) = i
-!        endif
-!      enddo
-!      ! Determine least common multiple
-!      expo = 0
-!      do i = 1,n
-!        ia = iarr(i)
-!        if(ia.eq.0) cycle
-!        do j = 1,nprim
-!          k = 0
-!          do while(ia/prim(j)*prim(j).eq.ia)
-!            k  = k + 1
-!            ia = ia / prim(j)
-!          enddo
-!          expo(j) = max(expo(j),k)
-!        enddo
-!      enddo
-!      kgv = 1
-!      do j = 1,nprim
-!        kgv = kgv * prim(j)**expo(j)
-!      enddo
-!      deallocate ( prim,expo )
-!    end function kgv
-
-    subroutine old_get_Gvecs(starsT, cellT, inputT, ngdp, ngdp2km, gdp, testMode )
-
-      use m_juDFT
-
-      type(t_stars),          intent(in)   :: starsT
-      type(t_cell),           intent(in)   :: cellT
-      type(t_input),          intent(in)   :: inputT
-
-      integer,                intent(out)  :: ngdp
-      integer,                intent(out)  :: ngdp2km
-      logical,                intent(in)   :: testMode
-
-      integer,  allocatable,  intent(out)  :: gdp(:, :)
-
-      integer                              :: Gx, Gy, Gz, iG
-      integer                              :: ngrest
-
-      integer                              :: gdptemp2kmax(3, (2 * starsT%mx1 + 1) * (2 * starsT%mx2 + 1) * (2 * starsT%mx3 +  1))
-      integer                              :: gdptemprest(3, (2 * starsT%mx1 + 1) * (2 * starsT%mx2 + 1) * (2 * starsT%mx3 +  1))
-      integer                              :: Gint(3)
-      real                                 :: Gext(3)
-
-      ngdp = 0
-      gdptemp2kmax = 0
-      gdptemprest = 0
-      ngdp2km = 0
-      ngrest = 0
-
-      do Gx = -starsT%mx1, starsT%mx1
-        do Gy = -starsT%mx2, starsT%mx2
-          do Gz = -starsT%mx3, starsT%mx3
-            Gint = [Gx, Gy, Gz]
-            Gext =  matmul(Gint, cellT%bmat)
-            if (norm2(Gext) <= inputT%gmax) then
-              ngdp = ngdp + 1
-              ! Sort G-vectors
-              if ( norm2(Gext) <= 2 * inputT%rkmax ) then
-                ngdp2km = ngdp2km + 1
-                gdptemp2kmax(:, ngdp2km) = Gint(:)
-              else
-                ngrest = ngrest + 1
-                gdptemprest(:, ngrest) = Gint(:)
-              end if
-            endif
-          enddo !Gz
-        enddo !Gy
-      enddo !Gx
-      allocate(gdp(3, ngdp))
-      gdp(:, :ngdp2km) = gdptemp2kmax(:, :ngdp2km)
-      gdp(:, ngdp2km + 1 : ngdp) = gdptemprest(:, :ngrest)
-
-    end subroutine old_get_Gvecs
 
     subroutine mt_gradient_new(atoms, sphhar, sym, r2FlhMt, GrFshMt)
 

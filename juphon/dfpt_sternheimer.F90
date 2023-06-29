@@ -73,9 +73,7 @@ CONTAINS
 
 
       ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
-      !killcont = [1,0,0,0,0,0]
       killcont = [1,1,1,1,1,1]
-      !killcont = [0,0,0,0,0,1]
 
       CALL rho_loc%copyPotDen(rho)
       CALL rho_loc0%copyPotDen(rho)
@@ -180,9 +178,9 @@ CONTAINS
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
 
-#ifdef CPP_CHASE
-         CALL chase_distance(results%last_distance)
-#endif
+!#ifdef CPP_CHASE
+!         CALL chase_distance(results%last_distance)
+!#endif
 
          CALL denIn1%distribute(fmpi%mpi_comm)
          CALL denIn1Im%distribute(fmpi%mpi_comm)
@@ -215,14 +213,11 @@ CONTAINS
             END IF
          END IF
 
-         IF (final_SH_it) THEN !!!!!!!!!!!!!!!!!!!!!!!!!!!
-         !IF (.NOT.strho) THEN
+         IF (final_SH_it) THEN
             write(oUnit, *) "vC1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0])
-           !!!!!!!!!!!!!!!!!!!!!!
-           !denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
          END IF
 
          CALL timestop("Generation of potential perturbation")
@@ -250,9 +245,9 @@ CONTAINS
             !CALL save_npy(TRIM(dfpt_tag)//"vC1mtim.npy",vC1Im%mt(:,0:,1,1))
             !vC1%mt(:,0:,iDtype,:) = vC1%mt(:,0:,iDtype,:) - grVC%mt(:,0:,iDtype,:)
             vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
-            CALL save_npy(TRIM(dfpt_tag)//"vEff1pw.npy",vTot1%pw(:,1))
-            CALL save_npy(TRIM(dfpt_tag)//"vEff1mtre.npy",vTot1%mt(:,0:,1,1))
-            CALL save_npy(TRIM(dfpt_tag)//"vEff1mtim.npy",vTot1Im%mt(:,0:,1,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"vEff1pw.npy",vTot1%pw(:,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"vEff1mtre.npy",vTot1%mt(:,0:,1,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"vEff1mtim.npy",vTot1Im%mt(:,0:,1,1))
             IF (l_minusq) THEN
                vTot1m%mt(:,0:,iDtype,:) = vTot1m%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
             END IF
@@ -271,13 +266,6 @@ CONTAINS
 #endif
 
          CALL timestart("dfpt eigen")
-
-         !IF (.NOT. fi%input%eig66(1)) THEN
-         !   CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
-         !              hybdat, iter, eig_id, results, rho, vTot, vx, hub1data, &
-         !              bqpt=bqpt, dfpt_eig_id=dfpt_eig_id, iDir=iDir, iDtype=iDtype, &
-         !              starsq=starsq, v1real=vTot1, v1imag=vTot1Im, killcont=killcont, l_real=l_real)
-         !END IF
          IF (.NOT.final_SH_it) THEN
             CALL dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .TRUE., dfpt_tag)
@@ -387,15 +375,15 @@ CONTAINS
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "Starting perturbation generated."
             CALL timestop("Sternheimer Iteration")
-            CALL save_npy(TRIM(dfpt_tag)//"rho1pw0.npy",denOut1%pw)
-            CALL save_npy(TRIM(dfpt_tag)//"rho1mtre0.npy",denOut1%mt)
-            CALL save_npy(TRIM(dfpt_tag)//"rho1mtim0.npy",denOut1Im%mt)
+            !CALL save_npy(TRIM(dfpt_tag)//"rho1pw0.npy",denOut1%pw)
+            !CALL save_npy(TRIM(dfpt_tag)//"rho1mtre0.npy",denOut1%mt)
+            !CALL save_npy(TRIM(dfpt_tag)//"rho1mtim0.npy",denOut1Im%mt)
             IF (l_minusq) THEN
                denIn1m = denOut1m
                denIn1mIm = denOut1mIm
-               CALL save_npy(TRIM(dfpt_tag)//"rho1Mpw0.npy",denOut1m%pw)
-               CALL save_npy(TRIM(dfpt_tag)//"rho1Mmtre0.npy",denOut1m%mt)
-               CALL save_npy(TRIM(dfpt_tag)//"rho1Mmtim0.npy",denOut1mIm%mt)
+               !CALL save_npy(TRIM(dfpt_tag)//"rho1Mpw0.npy",denOut1m%pw)
+               !CALL save_npy(TRIM(dfpt_tag)//"rho1Mmtre0.npy",denOut1m%mt)
+               !CALL save_npy(TRIM(dfpt_tag)//"rho1Mmtim0.npy",denOut1mIm%mt)
                denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
             !STOP
@@ -407,9 +395,9 @@ CONTAINS
             onedone = .TRUE.
             denIn1 = denOut1
             denIn1Im = denOut1Im
-            CALL save_npy(TRIM(dfpt_tag)//"_rho1pw.npy",denOut1%pw(:,1))
-            CALL save_npy(TRIM(dfpt_tag)//"_rho1mtre.npy",denOut1%mt(:,0:,1,1))
-            CALL save_npy(TRIM(dfpt_tag)//"_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"_rho1pw.npy",denOut1%pw(:,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"_rho1mtre.npy",denOut1%mt(:,0:,1,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "1st 'real' density perturbation generated."
             CALL timestop("Sternheimer Iteration")
@@ -425,9 +413,9 @@ CONTAINS
             denIn1 = denOut1
             denIn1Im = denOut1Im
             l_cont = .FALSE.
-            CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1pw.npy",denOut1%pw(:,1))
-            CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtre.npy",denOut1%mt(:,0:,1,1))
-            CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1pw.npy",denOut1%pw(:,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtre.npy",denOut1%mt(:,0:,1,1))
+            !CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
             IF (fmpi%irank==0) write(*,*) "Final Sternheimer iteration finished."
             CALL timestop("Sternheimer Iteration")
             IF (l_minusq) THEN

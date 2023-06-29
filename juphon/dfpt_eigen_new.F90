@@ -26,7 +26,6 @@ CONTAINS
       USE m_eig66_io, ONLY : write_eig, read_eig
       USE m_xmlOutput
       USE m_types_mpimat
-      USE m_invert_HepsS
       USE m_dfpt_tlmplm
       USE m_mt_setup
       !USE m_npy
@@ -56,7 +55,7 @@ CONTAINS
 
       INTEGER                   :: nu
 
-      LOGICAL                   :: oldway, old_and_wrong
+      LOGICAL                   :: old_and_wrong
 
       COMPLEX                   :: wtfq
 
@@ -73,30 +72,18 @@ CONTAINS
       character(len=300)        :: errmsg
       INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:), k_selection(:)
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:), tempMat3(:), z1H2(:,:), z1S2(:,:)
-      REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), killfloat(:,:)
+      REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:)
 
-      CLASS(t_mat), ALLOCATABLE :: invE(:), matOcc(:), invE2(:)
-
-      oldway = .FALSE.
       old_and_wrong = .FALSE.
 
-      !ALLOCATE(k_selection(16))
-      !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40] 
       ALLOCATE(k_selection(1))
-      !ALLOCATE(k_selection(3))
-      !k_selection = [40,61,453]
-      k_selection = [10000]
+      k_selection = [-1]
 
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
       vx%pw_w = vTot%pw_w
 
       call ud%init(fi%atoms,fi%input%jspins)
-      !kqpts = fi%kpts
-      !! Modify this from kpts only in DFPT case.
-      !DO nk_i = 1, fi%kpts%nkpt
-      !   kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
-      !END DO
 
       kpts_mod = fi%kpts
       ! Modify this from kpts only in DFPT case.
@@ -158,15 +145,7 @@ CONTAINS
                CALL timestart("Read eigenstuff at k/k+q")
                CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
                CALL read_eig(q_eig_id, nk, jsp, list=q_ev_list, neig=neigq, eig=eigq, zmat=zMatq)
-               !write(5555,*) nk
-               !write(5555,*) neigq
-               !write(5555,*) eigq
                CALL timestop("Read eigenstuff at k/k+q")
-
-               CALL timestart("Energy inversion")
-               CALL invert_HepsS(fmpi, fi%atoms, fi%noco, fi%juPhon, lapwq, zMatq, eigq, eigk, nbasfcnq, noccbd, zMatq%l_real, invE, noccbdq, &
-                                 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, 2*resultsq%w_iks(:,nk,jsp)/fi%input%jspins, matOcc, nk, invE2)
-               CALL timestop("Energy inversion")
 
                ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
                CALL timestart("Setup of matrix perturbations")
@@ -183,18 +162,23 @@ CONTAINS
                ELSE
                   ALLOCATE (t_mpimat::zMat1)
                END IF
+
                CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
+
                ALLOCATE(z1H,mold=zMat1%data_c)
                ALLOCATE(z1S,mold=zMat1%data_c)
                z1H = CMPLX(0.0,0.0)
                z1S = CMPLX(0.0,0.0)
+
                IF (.NOT.sh_den.AND..NOT.old_and_wrong) THEN
                   IF (fmpi%n_size == 1) THEN
                      ALLOCATE (t_mat::zMat2)
                   ELSE
                      ALLOCATE (t_mpimat::zMat2)
                   END IF
+
                   CALL zMat2%init(.FALSE.,nbasfcnq,noccbd)
+
                   ALLOCATE(z1H2,mold=zMat2%data_c)
                   ALLOCATE(z1S2,mold=zMat2%data_c)
                   z1H2 = CMPLX(0.0,0.0)
@@ -205,18 +189,11 @@ CONTAINS
                ALLOCATE(tempMat1(nbasfcnq))
                ALLOCATE(tempMat2(nbasfcnq))
                IF (.NOT.sh_den.AND..NOT.old_and_wrong) ALLOCATE(tempMat3(nbasfcnq))
-               ALLOCATE(killfloat(noccbd,noccbd))
 
                !TODO: Optimize this with (SCA)LAPACK CALLS
                CALL timestart("Matrix multiplications")
                DO nu = 1, noccbd
                   eigs1 = 0.0
-                  !killfloat = matOcc(nu)%data_r(:noccbd,:noccbd)
-                  !IF (l_real) THEN ! l_real for zMatk
-                  !   tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_r(:nbasfcn,nu))
-                  !ELSE
-                  !   tempVec(:nbasfcnq) = MATMUL(hmat%data_c-eigk(nu)*smat%data_c,zMatk%data_c(:nbasfcn,nu))
-                  !END IF
 
                   IF (l_real) THEN ! l_real for zMatk
                      tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_r(:nbasfcn,nu))
@@ -236,45 +213,41 @@ CONTAINS
                      CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_h1band.npy",tempMat1)
                   END IF
 
-                  !!!!!! Experimental:
-                  !tempMat1 = CMPLX(0.0,0.0)
-                  !IF (zMatq%l_real) THEN ! l_real for zMatq
-                  !   tempMat1(noccbd+1:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r(:,noccbd+1:nbasfcnq)),tempvec)
-                  !ELSE
-                  !   tempMat1(noccbd+1:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c(:,noccbd+1:nbasfcnq))),tempvec)
-                  !END IF
-                  !IF (nk==1) tempMat1(:noccbd) = CMPLX(0.0,0.0)
-                  IF (oldway) THEN
-                     tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
-                  ELSE
                      DO iNupr = 1, nbasfcnq
                         IF (.NOT.sh_den.AND.old_and_wrong) THEN
                            IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                               tempMat2(iNupr) = 0.0
+                              IF (iDir==1) write(9987,*) nk, nu, iNupr
                            ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                               tempMat2(iNupr) = 0.0
+                              IF (iDir==1) write(9987,*) nk, nu, iNupr
                            ELSE
                               tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
                            END IF
                         ELSE IF (.NOT.sh_den.AND..NOT.old_and_wrong) THEN
-                           IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                           IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
+                              tempMat2(iNupr) = 0.0
+                              tempMat3(iNupr) = 0.0
+                           ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                               tempMat2(iNupr) = 0.0
                               ! Additional correction term that constitutes new
                               ! coefficients:
                               tempMat3(iNupr) = 0.5 * tempMat1(iNupr)
-                           ELSE IF (iNuPr<=noccbdq) THEN
-                              wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
-                              tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
-                                            & *(1.0-wtfq)
-                              ! Additional correction term that constitutes new
-                              ! coefficients:
-                              tempMat3(iNupr) = 0.5 * tempMat1(iNupr) * wtfq
+                           !ELSE IF (iNuPr<=noccbdq) THEN
+                           !   wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
+                           !   tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
+                           !                 & *(1.0-wtfq)
+                           !   ! Additional correction term that constitutes new
+                           !   ! coefficients:
+                           !   tempMat3(iNupr) = 0.5 * tempMat1(iNupr) * wtfq
                            ELSE
                               tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
                               tempMat3(iNupr) = 0.0
                            END IF
                         ELSE
-                           IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                           IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
+                              tempMat2(iNupr) = 0.0
+                           ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                               tempMat2(iNupr) = 0.0
                            ELSE IF (iNuPr<=noccbdq) THEN
                               wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
@@ -286,7 +259,6 @@ CONTAINS
                            END IF
                         END IF
                      END DO
-                  END IF
 
                   IF (ANY(nk==k_selection)) THEN
                   !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Hband.npy",tempMat2)
@@ -349,10 +321,6 @@ CONTAINS
                      CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_s1band.npy",tempMat1)
                   END IF
 
-                  IF (oldway) THEN
-                     tempMat2(:nbasfcnq) = MATMUL(invE(nu)%data_r,tempMat1)
-                     tempMat2(:nbasfcnq) = -eigk(nu)*tempMat2(:nbasfcnq)
-                  ELSE
                      DO iNupr = 1, nbasfcnq
                         IF (.NOT.sh_den.AND.old_and_wrong) THEN
                            IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
@@ -363,25 +331,30 @@ CONTAINS
                               tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
                            END IF
                         ELSE IF (.NOT.sh_den.AND..NOT.old_and_wrong) THEN
-                           IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                           IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
+                              tempMat2(iNupr) = 0.0
+                              tempMat3(iNupr) = 0.0
+                           ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                               tempMat2(iNupr) = 0.5 * tempMat1(iNupr)
                               ! Additional correction term that constitutes new
                               ! coefficients:
                               tempMat3(iNupr) = -0.5 * eigk(nu) * tempMat1(iNupr)
-                           ELSE IF (iNuPr<=noccbdq) THEN
-                              wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
-                              tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
-                                            & *(1.0-wtfq) &
-                                            & +0.5*tempMat1(iNupr)*wtfq
-                              ! Additional correction term that constitutes new
-                              ! coefficients:
-                              tempMat3(iNupr) = -0.5 * eigq(iNupr) * tempMat1(iNupr) * wtfq
+                           !ELSE IF (iNuPr<=noccbdq) THEN
+                           !   wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
+                           !   tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
+                           !                 & *(1.0-wtfq) &
+                           !                 & +0.5*tempMat1(iNupr)*wtfq
+                           !   ! Additional correction term that constitutes new
+                           !   ! coefficients:
+                           !   tempMat3(iNupr) = -0.5 * eigq(iNupr) * tempMat1(iNupr) * wtfq
                            ELSE
                               tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
                               tempMat3(iNupr) = 0.0
                            END IF
                         ELSE
-                           IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                           IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
+                              tempMat2(iNupr) = 0.0
+                           ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                               tempMat2(iNupr) = 0.5*tempMat1(iNupr)
                            ELSE IF (iNuPr<=noccbdq) THEN
                               wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
@@ -395,7 +368,7 @@ CONTAINS
                            END IF
                         END IF
                      END DO
-                  END IF
+
                   IF (zMatq%l_real) THEN
                      z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
                      IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
@@ -411,8 +384,6 @@ CONTAINS
                   IF (ANY(nk==k_selection)) THEN
                      !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)
                      !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_HS1band.npy",tempMat1)
-                     !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_matE.npy",matE(nu)%data_r)
-                     !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_invE.npy",invE(nu)%data_r)
                      !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1band.npy",tempMat2)
                   END IF
                END DO
@@ -487,7 +458,6 @@ CONTAINS
                  IF (ALLOCATED(tempMat1)) DEALLOCATE(tempMat1)
                  IF (ALLOCATED(tempMat2)) DEALLOCATE(tempMat2)
                  IF (ALLOCATED(tempMat3)) DEALLOCATE(tempMat3)
-                 IF (ALLOCATED(killfloat)) DEALLOCATE(killfloat)
                  IF (ALLOCATED(z1H)) DEALLOCATE(z1H)
                  IF (ALLOCATED(z1S)) DEALLOCATE(z1S)
                  IF (ALLOCATED(z1H2)) DEALLOCATE(z1H2)
