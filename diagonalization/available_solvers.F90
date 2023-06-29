@@ -11,6 +11,7 @@ MODULE m_available_solvers
 ! -solvers with numbers below 100 expect a non-distributed matrix
 ! -solvers with numbers 100-199 expect a distributed (scalapack-type) matrix
 ! -solvers with numbers higher than 200 can handle both
+! -solvers with number 400
 #ifdef CPP_ELPA
   INTEGER,PARAMETER:: diag_elpa=101
 #else
@@ -37,11 +38,19 @@ MODULE m_available_solvers
   INTEGER,PARAMETER:: diag_chase=-207
 #endif
 #ifdef CPP_CUSOLVER
-  INTEGER,PARAMETER:: diag_cusolver=8
+INTEGER,PARAMETER:: diag_cusolver=8
 #else
   INTEGER,PARAMETER:: diag_cusolver=-8
 #endif
-  
+
+#ifdef CPP_ELSI
+INTEGER,PARAMETER:: diag_elsielpa=401
+INTEGER,PARAMETER:: diag_elsichase=409
+#else
+  INTEGER,PARAMETER:: diag_elsielpa=-401
+  INTEGER,PARAMETER:: diag_elsichase=-409
+#endif
+
 INTEGER,PARAMETER:: diag_lapack=4
 INTEGER,PARAMETER:: diag_lapack_singlePrec=5
   
@@ -91,6 +100,8 @@ CONTAINS
        IF (TRIM(juDFT_string_for_argument("-diag"))=="chase")      diag_solver=diag_chase
        IF (TRIM(juDFT_string_for_argument("-diag"))=="cusolver")   diag_solver=diag_cusolver
        IF (TRIM(juDFT_string_for_argument("-diag"))=="debugout")   diag_solver=diag_debugout
+       IF (TRIM(juDFT_string_for_argument("-diag"))=="elsielpa")   diag_solver=diag_elsielpa
+       IF (TRIM(juDFT_string_for_argument("-diag"))=="elsichase")   diag_solver=diag_elsichase
        !Check if solver is possible
        IF (diag_solver<0)  CALL juDFT_error(&
             "You selected a solver for the eigenvalue problem that is not available",&

@@ -12,7 +12,8 @@ diagonalization/cusolver_diag.F90
 diagonalization/elemental.F90
 diagonalization/available_solvers.F90
 diagonalization/writeout.F90
-diagonalization/elpa_20180525_onenode.F90)
+diagonalization/elpa_20180525_onenode.F90
+diagonalization/elsi.F90)
 if (FLEUR_USE_ELPA_20180525)
  set(fleur_F90 ${fleur_F90} diagonalization/elpa_20180525.F90)
  set(diag_test_files diagonalization/elpa_20180525.F90)

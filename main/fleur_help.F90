@@ -114,8 +114,14 @@ CONTAINS
 #ifdef CPP_ELPA_ONENODE
          //",elpa_1node"&
 #endif
+#ifdef CPP_ELSI
+      //",elsielpa"&
+#endif
+#ifdef CPP_ELSI
+      //",elsichase"&
+#endif
 #ifdef CPP_ELPA
-       //",elpa"&
+      //",elpa"&
 #endif
 #ifdef CPP_CHASE
        //",chase"&

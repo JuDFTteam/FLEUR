@@ -24,6 +24,7 @@ CONTAINS
     USE m_chase_diag
     USE m_types_mpimat
     USE m_types_gpumat
+    USE m_elsi
 !    USE m_matrix_copy
     USE m_cusolver_diag
     USE m_judft_usage
@@ -76,10 +77,14 @@ CONTAINS
        CALL magma_diag(hmat,smat,ne,eig,ev)
     CASE (diag_cusolver)
        CALL cusolver_diag(hmat,smat,ne,eig,ev)
-      CASE (diag_lapack)
+    CASE (diag_lapack)
          CALL lapack_diag(hmat,smat,ne,eig,ev)
       CASE (diag_lapack_singlePrec)
          CALL lapack_singlePrec_diag(hmat,smat,ne,eig,ev)
+      CASE (diag_elsielpa)
+         CALL elsi_diag(1,hmat,smat,ne,eig,ev)
+      CASE (diag_elsichase)
+         CALL elsi_diag(9,hmat,smat,ne,eig,ev)
       CASE (diag_chase)
        IF (.NOT.(PRESENT(ikpt).AND.PRESENT(jsp).AND.PRESENT(iter))) CALL judft_error("Optional arguments must be present for chase in eigen_diag")
        CALL chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
