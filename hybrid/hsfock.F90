@@ -139,10 +139,12 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       mat_ex%l_real = fi%sym%invs
+      PRINT*, "exchange_valence_hf"
       CALL exchange_valence_hf(k_pack, fi, fmpi, hybdat%zmat(nk,jsp)%mat, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
       
       ! calculate contribution from the core states to the HF exchange
+      PRINT*, "core exchange calculation"
       CALL timestart("core exchange calculation")
       IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
          CALL timestart("hse: exchange vccv")

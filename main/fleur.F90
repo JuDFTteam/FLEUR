@@ -308,7 +308,7 @@ CONTAINS
             SELECT TYPE (xcpot)
             TYPE IS (t_xcpot_inbuild)
                CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
-                                results, xcpot, vTot, iter, iterHF)
+                                hybdat%results, xcpot, vTot, iter, iterHF)
             END SELECT
 
 #ifdef CPP_MPI
@@ -403,6 +403,7 @@ CONTAINS
             CALL timestop("eigen")
 
             ! Add all HF contributions to the total energy
+            IF (fi%hybinp%l_hybrid) hybdat%results = results
 #ifdef CPP_MPI
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
             IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
@@ -447,8 +448,11 @@ CONTAINS
             CALL timestart("determination of fermi energy")
 
             IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
-               input_soc%zelec = fi%input%zelec*2
+               input_soc%zelec = fi%input%zelec*2               
+               IF (fi%hybinp%l_hybrid) &
+                  CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results)
                CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
+
                results%seigv = results%seigv / 2.0
                results%ts = results%ts / 2.0
             ELSE

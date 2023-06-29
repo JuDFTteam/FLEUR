@@ -175,6 +175,7 @@ CONTAINS
              
             DO i = 1,work_pack(jsp)%k_packs(1)%size
                nk = work_pack(jsp)%k_packs(i)%nk
+               PRINT*, 'kpoint= ', nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
                CALL hsfock(fi, work_pack(jsp)%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
                            nococonv, stars, results, xcpot, fmpi, vx_tmp(nk, jsp))
