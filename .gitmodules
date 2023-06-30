@@ -19,3 +19,6 @@
 [submodule "external/libxml2-git"]
 	path = external/libxml2-git
 	url = https://gitlab.gnome.org/GNOME/libxml2.git
+[submodule "external/elsi-git"]
+	path = external/elsi-git
+	url = https://gitlab.com/elsi_project/elsi_interface.git

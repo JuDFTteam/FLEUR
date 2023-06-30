@@ -22,6 +22,7 @@ do
 	-kplib)  CLI_USE_KPLIB=1;;
 	-mpi) shift; CLI_USE_MPI=$1;;
 	-magma) shift; CLI_USE_MAGMA=$1;;
+	-elsi) shift; CLI_USE_ELSI=$1;;
 	-gpu) shift; CLI_USE_GPU=$1;;
 	-chase) shift; CLI_USE_CHASE=$1;;
         -libxc) shift; CLI_USE_LIBXC=$1;;
