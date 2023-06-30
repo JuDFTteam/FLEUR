@@ -86,7 +86,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
 
       INTEGER :: ngdp, iSpin, iType, iQ, iDir, iDtype, nspins
-      INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id
+      INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
       LOGICAL :: l_real, l_minusq
 
       CHARACTER(len=20)  :: dfpt_tag
@@ -363,7 +363,7 @@ CONTAINS
         ALLOCATE(q_list(12),dfpt_eig_id_list(12))
         IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(12))
         q_list = [1,2,3,4,5,6,7,8,9,10,11,12]
-      ELSE IF (.TRUE.) THEN
+     ELSE IF (.FALSE.) THEN
         ! 16x16x16 fcc q-point path
         qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/16
         qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/16
@@ -504,6 +504,12 @@ CONTAINS
 
         ALLOCATE(q_list(16),dfpt_eig_id_list(16))
         q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+      ELSE
+         ! Read q-Points from inp.xml!
+         qpts_loc%bk(:, :SIZE(fi%juPhon%qvec,2)) = fi%juPhon%qvec
+
+         ALLOCATE(q_list(SIZE(fi%juPhon%qvec,2)),dfpt_eig_id_list(SIZE(fi%juPhon%qvec,2)))
+         q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
       END IF
 
       ALLOCATE(dfpt_eig_id_list2,mold=dfpt_eig_id_list)
