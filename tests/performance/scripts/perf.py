@@ -75,6 +75,8 @@ def run_fleur(testdir,env):
         env=os.environ.copy()
     if os.environ.get("juDFT_MPI"):
             mpi=os.environ.get("juDFT_MPI")
+    else:
+        mpi=""        
                 
     subprocess.run([f"{mpi} {cwd}/{fleur}"],env=env,shell=True)  
     os.chdir(cwd)

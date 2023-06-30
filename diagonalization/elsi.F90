@@ -68,6 +68,8 @@ CONTAINS
             call judft_error("BUG: Inconsistent matrixes in ELSI call")
          END SELECT  
       END SELECT
+
+      call elsi_set_elpa_gpu(eh,1)
       !Now perform diagonalization
       call elsi_set_output(eh,3)
       call elsi_set_output_unit(eh,7)
