@@ -87,12 +87,13 @@ CONTAINS
 
       INTEGER :: ngdp, iSpin, iType, iQ, iDir, iDtype, nspins
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
+      INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
       LOGICAL :: l_real, l_minusq
 
       CHARACTER(len=20)  :: dfpt_tag
       CHARACTER(len=100) :: inp_pref
 
-      INTEGER, ALLOCATABLE :: q_list(:), dfpt_eig_id_list(:), dfpt_eigm_id_list(:), dfpt_eig_id_list2(:), dfpt_eigm_id_list2(:)
+      INTEGER, ALLOCATABLE :: q_list(:)!, dfpt_eig_id_list(:), dfpt_eigm_id_list(:), dfpt_eig_id_list2(:), dfpt_eigm_id_list2(:)
 
       ! Desym-tests:
       INTEGER :: ix, iy, iz, grid(3), iv_old, iflag_old, iv_new, iflag_new
@@ -301,219 +302,14 @@ CONTAINS
       !qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.00625*19.0
       !qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.00625*20.0
 
-      IF (.FALSE.) THEN
-         qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.00625*0.0
-         qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.00625*1.0
-         qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.00625*2.0
-         qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.00625*3.0
-         qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.00625*4.0
-         qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*0.00625*5.0
-         qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*0.00625*6.0
-         qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*0.00625*7.0
-         qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*0.00625*8.0
-         qpts_loc%bk(:,10) = [0.0,1.0,1.0]*0.00625*9.0
-         qpts_loc%bk(:,11) = [0.0,1.0,1.0]*0.00625*10.0
-         qpts_loc%bk(:,12) = [0.0,1.0,1.0]*0.00625*11.0
-         qpts_loc%bk(:,13) = [0.0,1.0,1.0]*0.00625*12.0
-         qpts_loc%bk(:,14) = [0.0,1.0,1.0]*0.00625*13.0
-         qpts_loc%bk(:,15) = [0.0,1.0,1.0]*0.00625*14.0
-         qpts_loc%bk(:,16) = [0.0,1.0,1.0]*0.00625*15.0
-         qpts_loc%bk(:,17) = [0.0,1.0,1.0]*0.00625*16.0
-         qpts_loc%bk(:,18) = [0.0,1.0,1.0]*0.00625*17.0
-         qpts_loc%bk(:,19) = [0.0,1.0,1.0]*0.00625*18.0
-         qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.00625*19.0
-         qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.00625*20.0
-      ELSE IF (.FALSE.) THEN
-        ! 8x8x8 fcc q-point path
-        qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.125*0.0
-        qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.125*1.0
-        qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.125*2.0
-        qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.125*3.0
-        qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.125*4.0
+      ! Read q-Points from inp.xml!
+      qpts_loc%bk(:, :SIZE(fi%juPhon%qvec,2)) = fi%juPhon%qvec
 
-        qpts_loc%bk(:,6)  = [1.0,1.0,2.0]*0.125*3.0
-        qpts_loc%bk(:,7)  = [1.0,1.0,2.0]*0.125*2.0
-        qpts_loc%bk(:,8)  = [1.0,1.0,2.0]*0.125*1.0
+      ALLOCATE(q_list(SIZE(fi%juPhon%qvec,2)))!,dfpt_eig_id_list(SIZE(fi%juPhon%qvec,2)))
+      !q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
 
-        qpts_loc%bk(:,9)  = [1.0,1.0,1.0]*0.125*1.0
-        qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*2.0
-        qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*3.0
-        qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*4.0
-
-        ALLOCATE(q_list(12),dfpt_eig_id_list(12))
-        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(12))
-        q_list = [1,2,3,4,5,6,7,8,9,10,11,12] 
-      ELSE IF (.FALSE.) THEN
-        ! 8x8x8 bcc q-point path
-        qpts_loc%bk(:,1)  = [0.0,0.0,1.0]*0.125*4.0
-        qpts_loc%bk(:,2)  = [0.0,0.0,1.0]*0.125*3.0
-        qpts_loc%bk(:,3)  = [0.0,0.0,1.0]*0.125*2.0
-        qpts_loc%bk(:,4)  = [0.0,0.0,1.0]*0.125*1.0
-        qpts_loc%bk(:,5)  = [0.0,0.0,1.0]*0.125*0.0
-
-        qpts_loc%bk(:,6)  = [-1.0,1.0,1.0]*0.125*1.0
-        qpts_loc%bk(:,7)  = [-1.0,1.0,1.0]*0.125*2.0
-        qpts_loc%bk(:,8)  = [-1.0,1.0,1.0]*0.125*3.0
-        qpts_loc%bk(:,9)  = [-1.0,1.0,1.0]*0.125*4.0
-
-        qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*3.0
-        qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*2.0
-        qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*1.0
-
-        ALLOCATE(q_list(12),dfpt_eig_id_list(12))
-        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(12))
-        q_list = [1,2,3,4,5,6,7,8,9,10,11,12]
-     ELSE IF (.FALSE.) THEN
-        ! 16x16x16 fcc q-point path
-        qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/16
-        qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/16
-        qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*2.0/16
-        qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*3.0/16
-        qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*4.0/16
-        qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*5.0/16
-        qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*6.0/16
-        qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*7.0/16
-        qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*8.0/16
-
-        qpts_loc%bk(:,10) = [1.0,1.0,2.0]*7.0/16
-        qpts_loc%bk(:,11) = [1.0,1.0,2.0]*6.0/16
-        qpts_loc%bk(:,12) = [1.0,1.0,2.0]*5.0/16
-        qpts_loc%bk(:,13) = [1.0,1.0,2.0]*4.0/16
-        qpts_loc%bk(:,14) = [1.0,1.0,2.0]*3.0/16
-        qpts_loc%bk(:,15) = [1.0,1.0,2.0]*2.0/16
-        qpts_loc%bk(:,16) = [1.0,1.0,2.0]*1.0/16
-
-        qpts_loc%bk(:,17) = [1.0,1.0,1.0]*1.0/16
-        qpts_loc%bk(:,18) = [1.0,1.0,1.0]*2.0/16
-        qpts_loc%bk(:,19) = [1.0,1.0,1.0]*3.0/16
-        qpts_loc%bk(:,20) = [1.0,1.0,1.0]*4.0/16
-        qpts_loc%bk(:,21) = [1.0,1.0,1.0]*5.0/16
-        qpts_loc%bk(:,22) = [1.0,1.0,1.0]*6.0/16
-        qpts_loc%bk(:,23) = [1.0,1.0,1.0]*7.0/16
-        qpts_loc%bk(:,24) = [1.0,1.0,1.0]*8.0/16
-
-        ALLOCATE(q_list(24),dfpt_eig_id_list(24))
-        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(24))
-        q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
-      ELSE IF (.FALSE.) THEN
-        ! 16x16x16 bcc q-point path
-        qpts_loc%bk(:,9)  = [0.0,0.0,1.0]*0.0/16
-        qpts_loc%bk(:,8)  = [0.0,0.0,1.0]*1.0/16
-        qpts_loc%bk(:,7)  = [0.0,0.0,1.0]*2.0/16
-        qpts_loc%bk(:,6)  = [0.0,0.0,1.0]*3.0/16
-        qpts_loc%bk(:,5)  = [0.0,0.0,1.0]*4.0/16
-        qpts_loc%bk(:,4)  = [0.0,0.0,1.0]*5.0/16
-        qpts_loc%bk(:,3)  = [0.0,0.0,1.0]*6.0/16
-        qpts_loc%bk(:,2)  = [0.0,0.0,1.0]*7.0/16
-        qpts_loc%bk(:,1)  = [0.0,0.0,1.0]*8.0/16
-
-        qpts_loc%bk(:,16) = [-1.0,1.0,1.0]*7.0/16
-        qpts_loc%bk(:,15) = [-1.0,1.0,1.0]*6.0/16
-        qpts_loc%bk(:,14) = [-1.0,1.0,1.0]*5.0/16
-        qpts_loc%bk(:,13) = [-1.0,1.0,1.0]*4.0/16
-        qpts_loc%bk(:,12) = [-1.0,1.0,1.0]*3.0/16
-        qpts_loc%bk(:,11) = [-1.0,1.0,1.0]*2.0/16
-        qpts_loc%bk(:,10) = [-1.0,1.0,1.0]*1.0/16
-
-        qpts_loc%bk(:,24) = [1.0,1.0,1.0]*1.0/16
-        qpts_loc%bk(:,23) = [1.0,1.0,1.0]*2.0/16
-        qpts_loc%bk(:,22) = [1.0,1.0,1.0]*3.0/16
-        qpts_loc%bk(:,21) = [1.0,1.0,1.0]*4.0/16
-        qpts_loc%bk(:,20) = [1.0,1.0,1.0]*5.0/16
-        qpts_loc%bk(:,19) = [1.0,1.0,1.0]*6.0/16
-        qpts_loc%bk(:,18) = [1.0,1.0,1.0]*7.0/16
-        qpts_loc%bk(:,17) = [-1.0,1.0,1.0]*8.0/16
-
-        ALLOCATE(q_list(24),dfpt_eig_id_list(24))
-        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(24))
-        q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]
-      ELSE IF (.FALSE.) THEN
-        ! 15x15x15 fcc q-point path
-        qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/15
-        qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/15
-        qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*2.0/15
-        qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*3.0/15
-        qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*4.0/15
-        qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*5.0/15
-        qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*6.0/15
-        qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*7.0/15
-
-        qpts_loc%bk(:,9)  = [1.0,1.0,2.0]*7.0/15
-        qpts_loc%bk(:,10) = [1.0,1.0,2.0]*6.0/15
-        qpts_loc%bk(:,11) = [1.0,1.0,2.0]*5.0/15
-        qpts_loc%bk(:,12) = [1.0,1.0,2.0]*4.0/15
-        qpts_loc%bk(:,13) = [1.0,1.0,2.0]*3.0/15
-        qpts_loc%bk(:,14) = [1.0,1.0,2.0]*2.0/15
-        qpts_loc%bk(:,15) = [1.0,1.0,2.0]*1.0/15
-
-        qpts_loc%bk(:,16) = [1.0,1.0,1.0]*1.0/15
-        qpts_loc%bk(:,17) = [1.0,1.0,1.0]*2.0/15
-        qpts_loc%bk(:,18) = [1.0,1.0,1.0]*3.0/15
-        qpts_loc%bk(:,19) = [1.0,1.0,1.0]*4.0/15
-        qpts_loc%bk(:,20) = [1.0,1.0,1.0]*5.0/15
-        qpts_loc%bk(:,21) = [1.0,1.0,1.0]*6.0/15
-        qpts_loc%bk(:,22) = [1.0,1.0,1.0]*7.0/15
-
-        ALLOCATE(q_list(22),dfpt_eig_id_list(22))
-        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(22))
-        q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22] 
-      ELSE IF (.FALSE.) THEN
-        ! fcc high-symmetry points
-        qpts_loc%bk(:,1)  = [0.0,0.5,0.5]
-        qpts_loc%bk(:,2)  = [0.5,0.5,0.5]
-
-        ALLOCATE(q_list(2),dfpt_eig_id_list(2))
-        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(2))
-        q_list = [1,2]
-      ELSE IF (.FALSE.) THEN
-        ! 16x16x16 fcc Gamma-X q-point path
-        qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/16
-        qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/16
-        qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*2.0/16
-        qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*3.0/16
-        qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*4.0/16
-        qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*5.0/16
-        qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*6.0/16
-        qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*7.0/16
-        qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*8.0/16
-
-        ALLOCATE(q_list(9),dfpt_eig_id_list(9))
-        IF (l_minusq) ALLOCATE(dfpt_eigm_id_list(9))
-        q_list = [1,2,3,4,5,6,7,8,9]
-      ELSE IF (.FALSE.) THEN
-        ! 12x12x8 hcp q-point path
-        qpts_loc%bk(:,1)  = [1.0,2.0,0.0]*0.0/12.0 !G
-        qpts_loc%bk(:,2)  = [1.0,2.0,0.0]*1.0/12.0
-        qpts_loc%bk(:,3)  = [1.0,2.0,0.0]*2.0/12.0
-        qpts_loc%bk(:,4)  = [1.0,2.0,0.0]*3.0/12.0
-        qpts_loc%bk(:,5)  = [1.0,2.0,0.0]*4.0/12.0 !K
-
-        qpts_loc%bk(:,6)  = [5.0,7.0,0.0]*1.0/12.0
-        qpts_loc%bk(:,7)  = [6.0,6.0,0.0]*1.0/12.0 !M
-
-        qpts_loc%bk(:,8)  = [1.0,1.0,0.0]*5.0/12.0
-        qpts_loc%bk(:,9)  = [1.0,1.0,0.0]*4.0/12.0
-        qpts_loc%bk(:,10) = [1.0,1.0,0.0]*3.0/12.0
-        qpts_loc%bk(:,11) = [1.0,1.0,0.0]*2.0/12.0
-        qpts_loc%bk(:,12) = [1.0,1.0,0.0]*1.0/12.0
-
-        qpts_loc%bk(:,13) = [0.0,0.0,1.0]*1.0/8.0
-        qpts_loc%bk(:,14) = [0.0,0.0,1.0]*2.0/8.0
-        qpts_loc%bk(:,15) = [0.0,0.0,1.0]*3.0/8.0
-        qpts_loc%bk(:,16) = [0.0,0.0,1.0]*4.0/8.0  !A
-
-        ALLOCATE(q_list(16),dfpt_eig_id_list(16))
-        q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
-      ELSE
-         ! Read q-Points from inp.xml!
-         qpts_loc%bk(:, :SIZE(fi%juPhon%qvec,2)) = fi%juPhon%qvec
-
-         ALLOCATE(q_list(SIZE(fi%juPhon%qvec,2)),dfpt_eig_id_list(SIZE(fi%juPhon%qvec,2)))
-         q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
-      END IF
-
-      ALLOCATE(dfpt_eig_id_list2,mold=dfpt_eig_id_list)
-      IF (l_minusq) ALLOCATE(dfpt_eigm_id_list2,mold=dfpt_eigm_id_list)
+      !ALLOCATE(dfpt_eig_id_list2,mold=dfpt_eig_id_list)
+      !IF (l_minusq) ALLOCATE(dfpt_eigm_id_list2,mold=dfpt_eigm_id_list)
 
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
@@ -567,6 +363,22 @@ CONTAINS
 
       CALL genPertPotDensGvecs( stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, [0.0,0.0,0.0], recG )
 
+      q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                        .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+      dfpt_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                             .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+      dfpt_eig_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                              .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+
+      IF (l_minusq) THEN
+         qm_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                            .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+         dfpt_eigm_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                                .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+         dfpt_eigm_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                                .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+      END IF
+
       ALLOCATE(dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
       DO iQ = 1, SIZE(q_list)
          CALL timestart("q-point")
@@ -588,14 +400,10 @@ CONTAINS
          CALL timestop("Eii2")
 
          CALL timestart("Eigenstuff at k+q")
-         q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                           .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
-
-         IF (l_minusq) qm_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                           .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+         !q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+         !                  .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
 
          CALL q_results%reset_results(fi%input)
-         IF (l_minusq) CALL q_results%reset_results(fi%input)
 
          CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
                     hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
@@ -616,8 +424,8 @@ CONTAINS
 
          IF (l_minusq) THEN
             CALL timestart("Eigenstuff at k-q")
-            qm_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                              .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+            !qm_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+            !                  .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
 
             CALL qm_results%reset_results(fi%input)
 
@@ -692,15 +500,15 @@ CONTAINS
                   CALL timestart("Sternheimer with -q")
                   CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
                                         rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
-                                        dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), q_eig_id, &
+                                        dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                         denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
-                                        starsmq, qm_results, dfpt_eigm_id_list(iQ), dfpt_eigm_id_list2(iQ), qm_eig_id, results1m, vTot1m, vTot1mIm)
+                                        starsmq, qm_results, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
                   CALL timestop("Sternheimer with -q")
                ELSE
                   CALL timestart("Sternheimer")
                   CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
                                         rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
-                                        dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), q_eig_id, &
+                                        dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                         denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
                   CALL timestop("Sternheimer")
                END IF
@@ -716,12 +524,12 @@ CONTAINS
                ! additional necessary quantities and from that the dynamical matrix.
                IF (.TRUE.) THEN
                   CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                       eig_id, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
+                                       eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
                                        rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
                                        denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), .TRUE., .TRUE.)
                ELSE
                   CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                       eig_id, dfpt_eig_id_list(iQ), dfpt_eig_id_list2(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
+                                       eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
                                        rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
                                        denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), .TRUE., .TRUE., q_eig_id)
                END IF
@@ -740,11 +548,11 @@ CONTAINS
             CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
          END DO
-         
+
 
          IF (.FALSE.) THEN
             CALL timestop("q-point")
-            CALL close_eig(q_eig_id)
+            !CALL close_eig(q_eig_id)
             CYCLE
          END IF
 
@@ -760,11 +568,20 @@ CONTAINS
             DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
          END IF
 
-         CALL close_eig(q_eig_id)
-         IF (l_minusq) CALL close_eig(qm_eig_id)
+         !CALL close_eig(q_eig_id)
+         !IF (l_minusq) CALL close_eig(qm_eig_id)
          CALL timestop("q-point")
 
       END DO
+
+      CALL close_eig(q_eig_id)
+      CALL close_eig(dfpt_eig_id)
+      CALL close_eig(dfpt_eig_id2)
+      IF (l_minusq) THEN
+         CALL close_eig(qm_eig_id)
+         CALL close_eig(dfpt_eigm_id)
+         CALL close_eig(dfpt_eigm_id2)
+      END IF
 
       DEALLOCATE(recG)
 

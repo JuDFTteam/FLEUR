@@ -48,12 +48,12 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_real
       CHARACTER(len=20), INTENT(IN) :: dfpt_tag
 
-      INTEGER, INTENT(OUT) :: dfpt_eig_id, dfpt_eig_id2
+      INTEGER, INTENT(IN) :: dfpt_eig_id, dfpt_eig_id2
 
       TYPE(t_stars), OPTIONAL, INTENT(INOUT) :: starsmq
       TYPE(t_results), OPTIONAL,   INTENT(INOUT) :: resultsmq, results1m
       INTEGER, OPTIONAL, INTENT(IN) :: qm_eig_id
-      INTEGER, OPTIONAL, INTENT(OUT) :: dfpt_eigm_id, dfpt_eigm_id2
+      INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eigm_id, dfpt_eigm_id2
       TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: vTot1m, vTot1mIm
 
 #ifdef CPP_MPI
@@ -143,10 +143,10 @@ CONTAINS
       CALL vC1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
       CALL vC1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
-      dfpt_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                             .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
-      dfpt_eig_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                              .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+      !dfpt_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+      !                       .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+      !dfpt_eig_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+      !                        .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
 
       bqpt = qpts%bk(:, iQ)
 
@@ -154,10 +154,10 @@ CONTAINS
          CALL vTot1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
          CALL vTot1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
-         dfpt_eigm_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                                .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
-         dfpt_eigm_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                                .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+         !dfpt_eigm_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+         !                       .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+         !dfpt_eigm_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+         !                       .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
 
          bmqpt = -qpts%bk(:, iQ)
       END IF
@@ -510,12 +510,12 @@ CONTAINS
 
       CALL add_usage_data("Iterations", iter)
 
-      CALL close_eig(dfpt_eig_id)
-      CALL close_eig(dfpt_eig_id2)
-      IF (l_minusq) THEN
-         CALL close_eig(dfpt_eigm_id)
-         CALL close_eig(dfpt_eigm_id2)
-      END IF
+      !CALL close_eig(dfpt_eig_id)
+      !CALL close_eig(dfpt_eig_id2)
+      !IF (l_minusq) THEN
+      !   CALL close_eig(dfpt_eigm_id)
+      !   CALL close_eig(dfpt_eigm_id2)
+      !END IF
 
    END SUBROUTINE dfpt_sternheimer
 END MODULE m_dfpt_sternheimer
