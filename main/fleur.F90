@@ -305,6 +305,7 @@ CONTAINS
 
          !HF
          IF (fi%hybinp%l_hybrid) THEN
+            hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
             SELECT TYPE (xcpot)
             TYPE IS (t_xcpot_inbuild)
                CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
@@ -623,7 +624,11 @@ CONTAINS
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
 8130        FORMAT(/, 5x, '******* it=', i3, '  is completed********', /,/)
-            WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance
+            IF (fi%hybinp%l_hybrid) THEN
+               WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance, " hyb distance:", hybdat%results%last_distance
+            ELSE
+               WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance
+            ENDIF
          END IF ! fmpi%irank.EQ.0
          CALL timestop("Iteration")
 

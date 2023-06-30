@@ -75,7 +75,7 @@ CONTAINS
       !Check if new non-local potential shall be generated
       hybdat%l_subvxc = fi%hybinp%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
       !If this is the first iteration loop we can not calculate a new non-local potential
-      hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
+      !hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
       !make sure we do at least one PBE first
       if(iter == 1 .and. iterHF == 0) hybdat%l_calhf = .False.
 
