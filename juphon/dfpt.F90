@@ -306,7 +306,7 @@ CONTAINS
       qpts_loc%bk(:, :SIZE(fi%juPhon%qvec,2)) = fi%juPhon%qvec
 
       ALLOCATE(q_list(SIZE(fi%juPhon%qvec,2)))!,dfpt_eig_id_list(SIZE(fi%juPhon%qvec,2)))
-      !q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
+      q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
 
       !ALLOCATE(dfpt_eig_id_list2,mold=dfpt_eig_id_list)
       !IF (l_minusq) ALLOCATE(dfpt_eigm_id_list2,mold=dfpt_eigm_id_list)

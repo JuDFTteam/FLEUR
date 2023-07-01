@@ -416,6 +416,9 @@ CONTAINS
       !$OMP     END DO
       DEALLOCATE(plegend)
       DEALLOCATE(VecHelpS,VecHelpH)
+      DEALLOCATE(cph_re,cph_im,cfac)
+      DEALLOCATE(dot,fct,fct2)
+      DEALLOCATE(xlegend)
       !$OMP     END PARALLEL
       CALL timestop("spherical setup")
       RETURN
