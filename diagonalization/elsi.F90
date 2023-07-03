@@ -69,7 +69,9 @@ CONTAINS
          END SELECT  
       END SELECT
 
+#ifdef CPP_GPU
       call elsi_set_elpa_gpu(eh,1)
+#endif
       !Now perform diagonalization
       call elsi_set_output(eh,3)
       call elsi_set_output_unit(eh,7)
