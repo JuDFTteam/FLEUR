@@ -108,10 +108,10 @@ MODULE m_nIJmat
                         WRITE(555,*) 'pair,m1,m2,Wejdan Mat', i_pair,matom1, matom2,nIJ_llp_mmp(matom1,matom2,i_pair)
                     ENDDO
                 ENDDO
-                WRITE(222,*) 'pair index, term1 Wejdan, term1 Henning', i_pair, 1, (intu2_l+intu2_s)*(intu1_l+intu1_s)
-                WRITE(222,*) 'pair index, term2 Wejdan, term2 Henning', i_pair, usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5, (intu2_l+intu2_s)*(intudot1_l+intudot1_s)
-                WRITE(222,*) 'pair index, term3 Wejdan, term3 Henning', i_pair, usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5 , (intu1_l+intu1_s)*(intudot2_l+intudot2_s)
-                WRITE(222,*) 'pair index, term4 Wejdan, term4 Henning', i_pair, (usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5)*((usdus%ddn(latom1,atoms%itype(natom1),jspin))**0.5) ,(intudot1_l+intudot1_s)*(intudot2_l+intudot2_s)
+                WRITE(222,*) 'pair index, term1 Wejdan, term1 Henning', i_pair, 1, (intu1_l*intu2_l)+(intu1_s*intu2_s)
+                WRITE(222,*) 'pair index, term2 Wejdan, term2 Henning', i_pair, usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5, (intudot1_l*intu2_l)+(intudot1_s*intu2_s)
+                WRITE(222,*) 'pair index, term3 Wejdan, term3 Henning', i_pair, usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5 , (intudot2_l*intu1_l)+(intudot2_s*intu1_s)
+                WRITE(222,*) 'pair index, term4 Wejdan, term4 Henning', i_pair, (usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5)*((usdus%ddn(latom1,atoms%itype(natom1),jspin))**0.5) ,(intudot1_l*intudot2_l)+(intudot1_s*intudot2_s)
                 i_pair=i_pair+1
             ENDDO
         ENDDO
@@ -119,6 +119,3 @@ MODULE m_nIJmat
 
     END SUBROUTINE nIJ_mat
 END MODULE m_nIJmat
-
-!!CALL radfun(latom1,atoms%itype(natom1),jspin,enpara%el0(latom1,atoms%itype(natom1),jspin),v%mt(:,0,atoms%itype(natom1),jspin),atoms,f1(:,2),g1(:,2),usdustemp,nodeu1_s,noded1_s,wronk1_s)
-!!CALL radfun(latom2,atoms%itype(natom2),jspin,enpara%el0(latom2,atoms%itype(natom2),jspin),v%mt(:,0,atoms%itype(natom2),jspin),atoms,f2(:,1),g2(:,1),usdustemp,nodeu2_s,noded2_s,wronk2_s)

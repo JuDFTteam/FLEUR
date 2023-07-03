@@ -104,8 +104,8 @@ MODULE m_nmat
             !
             !  n_mmp should be rotated by D_mm' ; compare force_a21
             !
-            !n_mmp(:,:,i_denmat) = n_mmp(:,:,i_denmat) + conjg(symMMPmat(n_tmp,sym,natom,l)) * 1.0/atoms%neq(n)
-            n_mmp(:,:,i_denmat) = n_mmp(:,:,i_denmat) + conjg(n_tmp) * 1.0/atoms%neq(n)
+            n_mmp(:,:,i_denmat) = n_mmp(:,:,i_denmat) + conjg(symMMPmat(n_tmp,sym,natom,l)) * 1.0/atoms%neq(n)
+            !n_mmp(:,:,i_denmat) = n_mmp(:,:,i_denmat) + conjg(n_tmp) * 1.0/atoms%neq(n)
          ENDDO ! sum  over equivalent atoms
       END DO !loop over u parameters
 
