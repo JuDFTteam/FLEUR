@@ -181,6 +181,10 @@ CONTAINS
             !$acc end data
          ENDDO
          CALL timestop("LAPW-LO")
+         IF (l_fullj) THEN
+            CALL timestart("LO-LAPW")
+            CALL timestop("LO-LAPW")
+         END IF
          CALL timestart("LO-LO")
          !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo,abcoeffsPr,abcloPr) &
          !$acc & copyin(atoms,lapw,lapwPr,tlmplm,tlmplm%tulou,tlmplm%tulod,tlmplm%h_loc(:,:,ntyp,ilSpinPr,ilSpin),lapw%nv(:),lapwPr%nv(:))&
@@ -220,8 +224,11 @@ CONTAINS
                               bxx = tlmplm%h_loc_LO(lmp+s,lm,ntyp,ilSpinPr,ilSpin)*abclo(1,m,nkvec,lo) + &
                                     tlmplm%h_loc_LO(lmp+s,lm+s,ntyp,ilSpinPr,ilSpin)*abclo(2,m,nkvec,lo)  + &
                                     tlmplm%h_LO(lmp+s,m,lo+mlo,ilSpinPr,ilSpin) * abclo(3,m,nkvec,lo)
-                              cxx = tlmplm%tulou(lm,mp,lop+mlo,ilSpinPr,ilSpin) * abclo(1,m,nkvec,lo)+ &
-                                    tlmplm%tulod(lm,mp,lop+mlo,ilSpinPr,ilSpin)* abclo(2,m,nkvec,lo) + &
+                              !cxx = tlmplm%tulou(lm,mp,lop+mlo,ilSpinPr,ilSpin) * abclo(1,m,nkvec,lo)+ &
+                              !      tlmplm%tulod(lm,mp,lop+mlo,ilSpinPr,ilSpin)* abclo(2,m,nkvec,lo) + &
+                              !      tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,ilSpinPr,ilSpin) * abclo(3,m,nkvec,lo)
+                              cxx = tlmplm%h_LO2(lm,mp,lop+mlo,ilSpinPr,ilSpin) * abclo(1,m,nkvec,lo)+ &
+                                    tlmplm%h_LO2(lm+s,mp,lop+mlo,ilSpinPr,ilSpin)* abclo(2,m,nkvec,lo) + &
                                     tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,ilSpinPr,ilSpin) * abclo(3,m,nkvec,lo)
                               prod= CONJG(abcloPr(1,mp,nkvecp,lop)) * axx + &
                                     CONJG(abcloPr(2,mp,nkvecp,lop)) * bxx + &
