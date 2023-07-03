@@ -15,7 +15,7 @@ CONTAINS
   !! 4. The vacuum part is added (in hsvac())
   !! 5. The matrices are copied to the final matrix, in the fi%noco-case the full matrix is constructed from the 4-parts.
 
-   SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
+   SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
                             ud, td, v, lapw, nk, smat_final, hmat_final)
       USE m_types
       USE m_types_mpimat
@@ -44,7 +44,7 @@ CONTAINS
       TYPE(t_usdus), INTENT(INout)  :: ud
       TYPE(t_tlmplm), INTENT(IN)    :: td
       TYPE(t_lapw), INTENT(IN)      :: lapw
-      TYPE(t_potden), INTENT(IN)    :: v, vx
+      TYPE(t_potden), INTENT(IN)    :: den, v, vx
       integer, intent(in)          :: nk
       CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
 
@@ -53,7 +53,7 @@ CONTAINS
       complex, allocatable :: vpw_wTemp(:,:)
 
       TYPE(t_fjgj)   :: fjgj
-      TYPE(t_potden) :: den
+      CALL fjgj%alloc(MAXVAL(lapw%nv),fi%atoms%lmaxd,isp,fi%noco)
       !Matrices for Hamiltonian and Overlapp
       !In fi%noco case we need 4-matrices for each spin channel
       nspins = MERGE(2, 1, fi%noco%l_noco)
@@ -84,9 +84,9 @@ CONTAINS
             !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
          END DO; END DO
       CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, ud, td, smat, hmat)
-      DO i = 1, nspins
-         CALL v_ham(ud,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,nococonv,fjgj,den,i,nk,hmat(i,i))
-      END DO
+      !DO i = 1, nspins
+      !   CALL v_ham(fi%input,ud,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,nococonv,fjgj,den,i,nk,hmat(i,i))
+      !END DO
       DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
             !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
             !$acc exit data delete(hmat(i,j),smat(i,j))
