@@ -1296,7 +1296,7 @@ MODULE m_cdnpot_io_hdf
          CALL h5screate_simple_f(2,dims(:2),ldav_atomShiftsSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "ldav_atomShifts", H5T_NATIVE_DOUBLE, ldav_atomShiftsSpaceID, ldav_atomShiftsSetID, hdfError)
          CALL h5sclose_f(ldav_atomShiftsSpaceID,hdfError)
-         CALL io_write_real2(tauSetID,(/1,1/),dimsInt(:2),"ldav_atomShifts",ldav_atomShifts(:,:atoms%n_vPairs))
+         CALL io_write_real2(ldav_atomShiftsSetID,(/1,1/),dimsInt(:2),"ldav_atomShifts",ldav_atomShifts(:,:atoms%n_vPairs))
          CALL h5dclose_f(ldav_atomShiftsSetID, hdfError)
       END IF
       !LDA+V data (end)
@@ -1670,7 +1670,7 @@ MODULE m_cdnpot_io_hdf
 
       !LDA+V data (start)
       IF((fileFormatVersion.GE.35).AND.(atoms%n_v.GT.0)) THEN
-         ALLOCATE(ldav_AtomIndex(atoms%n_v),ldav_thisAtomL(atoms%n_v),ldav_otherAtomL(atoms%n_v),ldav_V(atoms%n_v))
+         ALLOCATE(ldav_AtomIndex(atoms%n_v),ldav_thisAtomL(atoms%n_v),ldav_otherAtomL(atoms%n_v),ldav_V(atoms%n_v),ldav_numOtherAtoms(atoms%n_v))
          ALLOCATE(ldav_otherAtomIndices(atoms%n_vPairs),ldav_atomShifts(3,atoms%n_vPairs))
 
          dimsInt(:1)=(/atoms%n_v/)
@@ -1723,7 +1723,7 @@ MODULE m_cdnpot_io_hdf
                atoms%lda_v(i_v)%atomShifts(:,iOtherAtom) = ldav_atomShifts(:,iPair)
             END DO
          END DO
-         DEALLOCATE(ldav_AtomIndex,ldav_thisAtomL,ldav_otherAtomL,ldav_V,ldav_otherAtomIndices,ldav_atomShifts)
+         DEALLOCATE(ldav_AtomIndex,ldav_thisAtomL,ldav_otherAtomL,ldav_V,ldav_otherAtomIndices,ldav_atomShifts,ldav_numOtherAtoms)
       END IF
       !LDA+V data (end)
 
@@ -2867,41 +2867,41 @@ MODULE m_cdnpot_io_hdf
          CALL io_read_attint0(groupBID,'n_vPairs',n_vPairs)
 
          IF(n_v.GT.0) THEN
-            ALLOCATE(ldav_AtomIndex(n_v),ldav_thisAtomL(n_v),ldav_otherAtomL(n_v),ldav_V(n_v))
+            ALLOCATE(ldav_AtomIndex(n_v),ldav_thisAtomL(n_v),ldav_otherAtomL(n_v),ldav_V(n_v),ldav_numOtherAtoms(n_v))
             ALLOCATE(ldav_otherAtomIndices(n_vPairs),ldav_atomShifts(3,n_vPairs))
 
             dimsInt(:1)=(/n_v/)
-            CALL h5dopen_f(groupID, 'ldav_AtomIndex', ldav_AtomIndexSetID, hdfError)
+            CALL h5dopen_f(groupBID, 'ldav_AtomIndex', ldav_AtomIndexSetID, hdfError)
             CALL io_read_integer1(ldav_AtomIndexSetID,(/1/),dimsInt(:1),"ldav_AtomIndex",ldav_AtomIndex)
             CALL h5dclose_f(ldav_AtomIndexSetID, hdfError)
 
             dimsInt(:1)=(/n_v/)
-            CALL h5dopen_f(groupID, 'ldav_thisAtomL', ldav_thisAtomLSetID, hdfError)
+            CALL h5dopen_f(groupBID, 'ldav_thisAtomL', ldav_thisAtomLSetID, hdfError)
             CALL io_read_integer1(ldav_thisAtomLSetID,(/1/),dimsInt(:1),"ldav_thisAtomL",ldav_thisAtomL)
             CALL h5dclose_f(ldav_thisAtomLSetID, hdfError)
 
             dimsInt(:1)=(/n_v/)
-            CALL h5dopen_f(groupID, 'ldav_otherAtomL', ldav_otherAtomLSetID, hdfError)
+            CALL h5dopen_f(groupBID, 'ldav_otherAtomL', ldav_otherAtomLSetID, hdfError)
             CALL io_read_integer1(ldav_otherAtomLSetID,(/1/),dimsInt(:1),"ldav_otherAtomL",ldav_otherAtomL)
             CALL h5dclose_f(ldav_otherAtomLSetID, hdfError)
 
             dimsInt(:1)=(/n_v/)
-            CALL h5dopen_f(groupID, 'ldav_numOtherAtoms', ldav_numOtherAtomsSetID, hdfError)
+            CALL h5dopen_f(groupBID, 'ldav_numOtherAtoms', ldav_numOtherAtomsSetID, hdfError)
             CALL io_read_integer1(ldav_numOtherAtomsSetID,(/1/),dimsInt(:1),"ldav_numOtherAtoms",ldav_numOtherAtoms)
             CALL h5dclose_f(ldav_numOtherAtomsSetID, hdfError)
 
             dimsInt(:1)=(/n_v/)
-            CALL h5dopen_f(groupID, 'ldav_V', ldav_VSetID, hdfError)
+            CALL h5dopen_f(groupBID, 'ldav_V', ldav_VSetID, hdfError)
             CALL io_read_real1(ldav_VSetID,(/1/),dimsInt(:1),"ldav_V",ldav_V)
             CALL h5dclose_f(ldav_VSetID, hdfError)
 
             dimsInt(:1)=(/n_vPairs/)
-            CALL h5dopen_f(groupID, 'ldav_otherAtomIndices', ldav_otherAtomIndicesSetID, hdfError)
+            CALL h5dopen_f(groupBID, 'ldav_otherAtomIndices', ldav_otherAtomIndicesSetID, hdfError)
             CALL io_read_integer1(ldav_otherAtomIndicesSetID,(/1/),dimsInt(:1),"ldav_otherAtomIndices",ldav_otherAtomIndices)
             CALL h5dclose_f(ldav_otherAtomIndicesSetID, hdfError)
 
             dimsInt(:2) = (/3,n_vPairs/)
-            CALL h5dopen_f(groupID, 'ldav_atomShifts', ldav_atomShiftsSetID, hdfError)
+            CALL h5dopen_f(groupBID, 'ldav_atomShifts', ldav_atomShiftsSetID, hdfError)
             CALL io_read_real2(ldav_atomShiftsSetID,(/1,1/),dimsInt(:2),"ldav_atomShifts",ldav_atomShifts)
             CALL h5dclose_f(ldav_atomShiftsSetID, hdfError)
          END IF
