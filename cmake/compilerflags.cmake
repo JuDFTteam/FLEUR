@@ -1,5 +1,6 @@
 #cmake file to set compiler flags for some of the known compilers
 if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++11")
    if (CLI_PATCH_INTEL)
       message("Using switches for AMD processor")
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Wl,--allow-multiple-definition -static-intel -mkl -assume byterecl")
