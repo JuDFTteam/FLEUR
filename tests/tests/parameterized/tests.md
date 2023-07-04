@@ -18,7 +18,7 @@ Testset: Basic
 |+|Bulk Cu one iteration,bandstructure|basic/CuBand|
 |+|Bulk Cu one iteration|basic/CuBulk|fast,bulk
 |+|Bulk Cu one iteration,DOS|basic/CuDOS|fast,bulk,dos
-|+|Bulk Cu one iteration,DOS,Orbital decomp.|basic/CuOrb|fast,bulk,dos,orbcomp
+||Bulk Cu one iteration,DOS,Orbital decomp.|basic/CuOrb|fast,bulk,dos,orbcomp
 |+|Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd
 |+|Bulk Co, bandstructure, unfolding|basic/CoUnfold|band,bulk
 |+|Bulk Fe, Kerker preconditioner|basic/Fe_Kerker|bulk
