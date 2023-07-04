@@ -12,7 +12,8 @@ CONTAINS
 SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
                   kpts,atoms,sphhar,starsq,sym,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,resultsdummy, resultsdummy1,&
-                  archiveType, xcpot,outDen,outDenIm,bqpt,iDtype,iDir,l_real)
+                  archiveType, xcpot,outDen,outDenIm,bqpt,iDtype,iDir,l_real,&
+                  qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m)
 
    use m_types_vacdos
    USE m_types
@@ -52,12 +53,16 @@ SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuu
 
    REAL, INTENT(IN) :: bqpt(3)
 
+   INTEGER, OPTIONAL, INTENT(IN)    :: qm_eid_id, dfpt_eigm_id
+   TYPE(t_stars), OPTIONAL, INTENT(IN)         :: starsmq
+   TYPE(t_results), OPTIONAL, INTENT(INOUT)    :: resultsdummy1m
+
    ! Local type instances
    TYPE(t_regionCharges)          :: regCharges
    TYPE(t_dos),TARGET             :: dosdummy
    TYPE(t_vacdos),TARGET          :: vacdosdummy
    TYPE(t_moments)                :: moments
-   TYPE(t_cdnvalJob)       :: cdnvalJob, cdnvalJob1
+   TYPE(t_cdnvalJob)       :: cdnvalJob, cdnvalJob1, cdnvalJob1m
    !TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
 
    !Local Scalars
@@ -66,7 +71,7 @@ SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuu
    INTEGER               :: dim_idx
    INTEGER               :: n, iK
 
-   LOGICAL               :: l_error,Perform_metagga
+   LOGICAL               :: l_error,Perform_metagga, l_minusq
 
    !kqpts = kpts
    !! Modify this from kpts only in DFPT case.
@@ -74,11 +79,14 @@ SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuu
    !   kqpts%bk(:, iK) = kqpts%bk(:, iK) + bqpt
    !END DO
 
+   l_minusq = PRESENT(qm_eid_id)
+
    ! Initialization section
    CALL moments%init(fmpi,input,sphhar,atoms)
    !initalize data for DOS
    if (noco%l_noco) resultsdummy%eig(:,:,2)=resultsdummy%eig(:,:,1)
    if (noco%l_noco) resultsdummy1%eig(:,:,2)=resultsdummy1%eig(:,:,1)
+   if (noco%l_noco.and.l_minusq) resultsdummy1%eig(:,:,2)=resultsdummy1%eig(:,:,1)
    CALL dosdummy%init(input,atoms,kpts,banddosdummy,resultsdummy%eig)
    CALL vacdosdummy%init(input,atoms,kpts,banddosdummy,resultsdummy%eig)
 
@@ -89,9 +97,17 @@ SUBROUTINE dfpt_cdngen(eig_id,eig_id_q,dfpt_eig_id,fmpi,input,banddosdummy,vacuu
    DO jspin = 1,merge(1,input%jspins,noco%l_mperp)
       CALL cdnvalJob%init(fmpi,input,kpts,noco,resultsdummy,jspin)
       CALL cdnvalJob1%init(fmpi,input,kpts,noco,resultsdummy1,jspin)
-      CALL dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
-                       vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
-                        hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, outDenIm, l_real)
+      IF (l_minusq) THEN
+         CALL cdnvalJob1m%init(fmpi,input,kpts,noco,resultsdummy1m,jspin)
+         CALL dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
+                          vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
+                          hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, outDenIm, l_real,&
+                          qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
+      ELSE
+         CALL dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
+                          vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
+                          hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, outDenIm, l_real)
+      END IF
    END DO
    CALL timestop("dfpt_cdngen: cdnval")
 

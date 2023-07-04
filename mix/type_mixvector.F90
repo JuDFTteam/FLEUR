@@ -316,7 +316,12 @@ CONTAINS
             END IF
          END IF
       ENDDO
-      CALL den%collect(mix_mpi_comm)
+
+      IF (.NOT.l_dfpt) THEN
+         CALL den%collect(mix_mpi_comm)
+      ELSE
+         CALL den%collect(mix_mpi_comm,denIm)
+      END IF
 
    END SUBROUTINE mixvector_to_density
 

@@ -660,7 +660,7 @@ CONTAINS
 
          !--->    set up phase factors
          DO k = 1, lapw%nv(iintsp)
-            th = tpi_const*DOT_PRODUCT((/lapw%k1(k, iintsp), lapw%k2(k, iintsp), lapw%k3(k, iintsp)/) + qssbti, atoms%taual(:, na))
+            th = tpi_const*DOT_PRODUCT((/lapw%k1(k, iintsp), lapw%k2(k, iintsp), lapw%k3(k, iintsp)/) + qssbti + lapw%qphon, atoms%taual(:, na))
             rph(k, iintsp) = COS(th)
             cph(k, iintsp) = -SIN(th)
          END DO

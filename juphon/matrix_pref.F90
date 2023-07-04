@@ -43,7 +43,7 @@ CONTAINS
             IF (ikGPr<=nvPr.AND.ikG<=nv) THEN
                pref = gvec(:, ikG) + lapw%bkpt
                pref = pref - gvecPr(:, ikGPr) - lapwPr%bkpt - lapwPr%qphon
-               pref = ImagUnit * MATMUL(bmat, pref)
+               pref = ImagUnit * MATMUL(pref, bmat)
                !IF (nk==40) THEN
                !  write(9456,*) "---------------"
                !  write(9456,*) iDir, ikGPr, ikG
@@ -126,9 +126,9 @@ CONTAINS
                         ikLoPr = lapwPr%kvec(imLoPr,iLoPr,iDtype)
                         ikGLoPr = nvPr + lapwPr%index_lo(iLoPr,iDtype) + imLoPr
 
-                        pref = gvec(:,ikLo) + lapw%bkpt
-                        pref = pref - gvecPr(:,ikLoPr) - lapwPr%bkpt - lapwPr%qphon
-                        pref = 0*ImagUnit * MATMUL(pref, bmat)
+                        pref = 0*gvec(:,ikLo) + 0*lapw%bkpt
+                        pref = pref - 0*gvecPr(:,ikLoPr) - 0*lapwPr%bkpt - 0*lapwPr%qphon
+                        pref = ImagUnit * MATMUL(pref, bmat)
 
                         hmat%data_c(ikGLoPr, ikGLo0) = hmat%data_c(ikGLoPr, ikGLo0) &
                                                  & + killcont(1) * pref(iDir) * hmat_tmp%data_c(ikGLoPr, ikGLo0)

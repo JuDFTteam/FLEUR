@@ -27,6 +27,8 @@ MODULE m_types_juPhon
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
       REAL    :: qpt_ph(3)           ! Debug q
 
+      REAL, ALLOCATABLE :: qvec(:,:)
+
       INTEGER :: singleQpt       = 1
 
       REAL    :: paPoX           = 1.0
@@ -122,6 +124,7 @@ CONTAINS
       CALL mpi_bc(this%l_eigout, rank, mpi_comm)
       CALL mpi_bc(this%l_dfpt, rank, mpi_comm)
       CALL mpi_bc(this%singleQpt, rank, mpi_comm)
+      CALL mpi_bc(this%qvec, rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_juPhon
 
@@ -237,6 +240,9 @@ CONTAINS
          this%qpt_ph(1) = 0.0
          this%qpt_ph(2) = 0.0
          this%qpt_ph(3) = 0.0
+
+         allocate(this%qvec(0,0))
+         this%qvec=xml%read_q_list('/fleurInput/output/juPhon/qVectors')
       ENDIF
 
    END SUBROUTINE read_xml_juPhon

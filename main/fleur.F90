@@ -555,7 +555,7 @@ CONTAINS
                ! It is assumed that the density was converged beforehand.
                 CALL timestop("Iteration")
                 CALL timestart("juPhon DFPT")
-                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, exc, vCoul, eig_id, .FALSE., xcpot, hybdat, mpdata, forcetheo)
+                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, exc, vCoul, eig_id, xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
             END IF
 
