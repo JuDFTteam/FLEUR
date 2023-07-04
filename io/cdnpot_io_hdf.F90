@@ -3210,6 +3210,7 @@ MODULE m_cdnpot_io_hdf
 
       IF((fileFormatVersion.GE.35).AND.(n_v.GT.0)) THEN
          ALLOCATE (nIJ_llp_mmpTemp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_vPairs,jspins))
+         dimsInt(:5)=(/2,2*lmaxU_const+1,2*lmaxU_const+1,n_vPairs,jspins/)
          CALL h5dopen_f(groupID, 'nIJ_llp_mmp', nIJ_llp_mmpSetID, hdfError)
          CALL io_read_complex4(nIJ_llp_mmpSetID,(/-1,1,1,1,1/),dimsInt(:5),"nIJ_llp_mmpTemp",nIJ_llp_mmpTemp)
          CALL h5dclose_f(nIJ_llp_mmpSetID, hdfError)
