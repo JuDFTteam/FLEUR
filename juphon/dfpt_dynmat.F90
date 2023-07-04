@@ -522,7 +522,8 @@ CONTAINS
       INTEGER :: iEig, ikGq, iqdir
       INTEGER :: imlo, ilo, iklo, l, ikg, ikglo !!! Test!
       REAL :: gext(3)
-      COMPLEX :: we_loop, we1_loop, eig_loop, eig1_loop, eigen_s2, eigen_h2s2, eigen_s1q, eigen_h1qs1q, eigen_bonus
+      COMPLEX :: we_loop, we1_loop, eig_loop, eig1_loop, eigen_s1q, eigen_h1qs1q, eigen_bonus
+      COMPLEX :: eigen_e1, eigen_w1e1, eigen_s2w1e1, eigen_h2s2w1e1, eigen_w1h2s2w1e1
 
       COMPLEX, ALLOCATABLE :: tempVec(:), tempVecq(:), z_loop(:), z1_loop(:), ztest_loop(:), zq_loop(:)
 
@@ -532,9 +533,12 @@ CONTAINS
 
       COMPLEX  zdotc
       EXTERNAL zdotc
-
-      eigen_s2 = CMPLX(0.0,0.0)
-      eigen_h2s2 = CMPLX(0.0,0.0)
+      
+      eigen_e1 = CMPLX(0.0,0.0)
+      eigen_w1e1 = CMPLX(0.0,0.0)
+      eigen_s2w1e1 = CMPLX(0.0,0.0)
+      eigen_h2s2w1e1 = CMPLX(0.0,0.0)
+      eigen_w1h2s2w1e1 = CMPLX(0.0,0.0)
       eigen_s1q = CMPLX(0.0,0.0)
       eigen_h1qs1q = CMPLX(0.0,0.0)
       eigen_bonus = CMPLX(0.0,0.0) 
@@ -668,12 +672,15 @@ CONTAINS
                !call save_npy("z1_modell.npy",z1_loop)
 
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we_loop*eig1_loop,smat1%data_c,nbasfcn,z_loop,1,CMPLX(0.0,0.0),tempVec,1)
+               eigen_e1 = eigen_e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we1_loop*eig_loop,smat1%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
+               eigen_w1e1 = eigen_w1e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we_loop*eig_loop,smat2%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
-               eigen_s2 = eigen_s2 + zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_s2w1e1 = eigen_s2w1e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,we_loop,hmat2%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
-               eigen_h2s2 = eigen_h2s2 + zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_h2s2w1e1 = eigen_h2s2w1e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,we1_loop,hmat1%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
+               eigen_w1h2s2w1e1 = eigen_w1h2s2w1e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
 
                eigen_term = eigen_term + zdotc(nbasfcn,z_loop,1,tempVec,1)
 
@@ -731,18 +738,24 @@ CONTAINS
       END DO ! spin loop ends
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_term,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_s2,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_h2s2,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_e1,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_w1e1,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_s2w1e1,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_h2s2w1e1,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_w1h2s2w1e1,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_s1q,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_h1qs1q,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_bonus,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
       IF (fmpi%irank==0) THEN
-         write(9989,*) "eigen s2 :", eigen_s2
-         write(9989,*) "eigen h2 :", eigen_h2s2 - eigen_s2
-         write(9989,*) "eigen s1q:", eigen_s1q
-         write(9989,*) "eigen h1q:", eigen_h1qs1q - eigen_s1q
-         write(9989,*) "eigen bonus", eigen_bonus
+         write(9989,*) "eigen -w0e1s0 :", eigen_e1
+         write(9989,*) "eigen -w1e0s0 :", eigen_w1e1-eigen_e1
+         write(9989,*) "eigen -w0e0s2 :", eigen_s2w1e1-eigen_w1e1-eigen_e1
+         write(9989,*) "eigen w0h2    :", eigen_h2s2w1e1-eigen_s2w1e1-eigen_w1e1-eigen_e1
+         write(9989,*) "eigen w1h1    :", eigen_w1h2s2w1e1-eigen_h2s2w1e1-eigen_s2w1e1-eigen_w1e1-eigen_e1
+         write(9989,*) "eigen -w0e0s1q:", eigen_s1q
+         write(9989,*) "eigen w0h1q   :", eigen_h1qs1q - eigen_s1q
+         write(9989,*) "eigen corr    :", eigen_bonus
       END IF
    END SUBROUTINE
 
