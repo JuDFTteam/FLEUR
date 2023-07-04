@@ -392,6 +392,7 @@
      <xsd:attribute name="nonSpinPolBasis" type="FleurBool" use="optional" default="F"/> 
      <xsd:attribute name="b_field_mt" type="FleurDouble" use="optional" default="0.0"/>
      <xsd:attribute name="vca_charge" type="FleurDouble" use="optional" default="0.0"/>
+     <xsd:attribute name="nonSpinPolBasis" type="FleurBool" use="optional" default="F"/>
    </xsd:complexType>
 
 
