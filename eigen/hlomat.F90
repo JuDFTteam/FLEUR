@@ -62,7 +62,7 @@ CONTAINS
       LOGICAL :: l_samelapw
 
       ! Local Arrays
-      COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ax(:), bx(:), cx(:)
+      COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ax(:,:), bx(:,:), cx(:,:)
       COMPLEX, ALLOCATABLE :: abclo(:,:,:,:)
       COMPLEX, ALLOCATABLE :: abCoeffsPr(:,:), axPr(:,:), bxPr(:,:), cxPr(:,:)
       COMPLEX, ALLOCATABLE :: abcloPr(:,:,:,:)
