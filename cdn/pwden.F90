@@ -7,7 +7,8 @@
 MODULE m_pwden
 CONTAINS
    SUBROUTINE pwden(stars, kpts, banddos,   input, fmpi, noco, nococonv, cell, atoms, sym, &
-                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, qimag, iDir)
+                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, qimag, iDir, &
+                    lapwmq,zMat1m)
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       !     In this subroutine the star function expansion coefficients of
       !     the plane wave charge density is determined.
@@ -80,8 +81,11 @@ CONTAINS
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
       INTEGER,      OPTIONAL, INTENT(IN) :: iDir
 
+      TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwmq
+      TYPE(t_mat),  OPTIONAL, INTENT(IN) :: zMat1m
+
       ! local variables
-      TYPE(t_fftGrid) :: state, stateB, stateq, stateBq, StateDeriv, ekinGrid, chargeDen, rhomatGrid(4)
+      TYPE(t_fftGrid) :: state, stateB, stateq, stateBq, StateDeriv, ekinGrid, chargeDen, rhomatGrid(4), statemq, stateBmq
       TYPE(t_fftGrid) :: stepFct
       INTEGER nu, iv, ir, istr, i, j
       INTEGER idens, ndens, ispin, iGp, iG, gVec(3), gInd
@@ -89,13 +93,15 @@ CONTAINS
       REAL s, stateRadius, stateFFTRadius, stateFFTExtendedRadius
       COMPLEX x
       REAL, PARAMETER:: tol_3 = 1.0e-3
-      LOGICAL forw, l_dfpt
+      LOGICAL forw, l_dfpt, l_minusq
 
       ! local arrays
       INTEGER, ALLOCATABLE :: stateIndices(:)
       INTEGER, ALLOCATABLE :: stateBIndices(:)
       INTEGER, ALLOCATABLE :: stateqIndices(:)
       INTEGER, ALLOCATABLE :: stateBqIndices(:)
+      INTEGER, ALLOCATABLE :: statemqIndices(:)
+      INTEGER, ALLOCATABLE :: stateBmqIndices(:)
       INTEGER, ALLOCATABLE :: fieldSphereIndices(:)
       REAL wtf(ne), wtf1(ne)
       COMPLEX tempState(lapw%nv(jspin)), starCharges(stars%ng3), z0(lapw%nv(jspin))
@@ -121,6 +127,8 @@ CONTAINS
       CALL timestart("pwden")
 
       l_dfpt = PRESENT(q_dfpt)
+
+      l_minusq = PRESENT(lapwmq)
 
       stateRadius = MAXVAL(ABS(lapw%rk(:,:)))
       stateRadius = stateRadius + SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt)))
@@ -148,6 +156,10 @@ CONTAINS
          IF (l_dfpt) THEN
             CALL stateq%init(cell,sym,stateFFTExtendedRadius+0.001)
             CALL stateBq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            IF (l_minusq) THEN
+               CALL statemq%init(cell,sym,stateFFTExtendedRadius+0.001)
+               CALL stateBmq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            END IF
          END IF
          DO i = 1, 4
             CALL rhomatGrid(i)%init(cell,sym,stateFFTExtendedRadius+0.001)
@@ -181,9 +193,13 @@ CONTAINS
          CALL state%init(cell,sym,stateFFTExtendedRadius+0.001)
          IF (l_dfpt) THEN
             CALL stateq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            IF (l_minusq) THEN
+               CALL statemq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            END IF
          END IF
          CALL chargeDen%init(cell,sym,stateFFTExtendedRadius+0.001)
          chargeDen%grid(:) = CMPLX(0.0,0.0)
+         ! TODO: Shouldn't there be a starsq here for DFPT?
          CALL chargeDen%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
          IF (input%l_f) THEN
             CALL stateDeriv%init(cell,sym,stateFFTExtendedRadius+0.001)
@@ -195,6 +211,10 @@ CONTAINS
          IF (l_dfpt) THEN
             ALLOCATE(stateqIndices(lapwq%nv(jspin)))
             CALL stateq%fillStateIndexArray(lapwq,jspin,stateqIndices)
+            IF (l_minusq) THEN
+               ALLOCATE(statemqIndices(lapwmq%nv(jspin)))
+               CALL statemq%fillStateIndexArray(lapwmq,jspin,statemqIndices)
+            END IF
          END IF
       ENDIF
 
@@ -339,10 +359,12 @@ CONTAINS
             ENDIF
 
          ELSE
-
             CALL state%putStateOnGrid(lapw, jSpin, zMat, nu)
             IF (l_dfpt) THEN
                CALL stateq%putStateOnGrid(lapwq, jspin, zMat1, nu)
+               IF (l_minusq) THEN
+                  CALL statemq%putStateOnGrid(lapwmq, jspin, zMat1m, nu)
+               END IF
             END IF
 
             forw = .FALSE.
@@ -354,16 +376,29 @@ CONTAINS
             !$acc end data
             IF (l_dfpt) THEN
                CALL fft_interface(3, stateq%dimensions(:), stateq%grid, forw, stateqIndices)
+               IF (l_minusq) THEN
+                  CALL fft_interface(3, statemq%dimensions(:), statemq%grid, forw, statemqIndices)
+               END IF
             END IF
             IF (.NOT.l_dfpt) THEN
                DO ir = 0, chargeDen%gridLength - 1
                   chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
                END DO
             ELSE
-               DO ir = 0, chargeDen%gridLength - 1
-                  chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
-                  IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
-               END DO
+               IF (.NOT.l_minusq) THEN
+                  DO ir = 0, chargeDen%gridLength - 1
+                     chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
+                     !chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(CONJG(state%grid(ir)) * stateq%grid(ir))
+                     IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+                  END DO
+               ELSE
+                  DO ir = 0, chargeDen%gridLength - 1
+                     chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * (CONJG(statemq%grid(ir)) * state%grid(ir) &
+                                                                        + CONJG(state%grid(ir)) * stateq%grid(ir))
+                     !chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(CONJG(state%grid(ir)) * stateq%grid(ir))
+                     IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+                  END DO
+               END IF
             END IF
 
             IF (input%l_f) THEN

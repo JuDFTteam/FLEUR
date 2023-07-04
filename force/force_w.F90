@@ -119,10 +119,11 @@ CONTAINS
 #ifdef CPP_MPI
       CALL MPI_BCAST(l_forceConverged,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
+
       IF (l_forceConverged.AND.input%l_f.AND.(input%f_level.GE.0).AND.(fmpi%irank==0)) THEN
          CALL rotate_forces(atoms%ntype,atoms%ntype,atoms%nat,sym%nop,results%tote,&
                             cell%omtil,atoms%neq,sym%mrot,cell%amat,cell%bmat,&
-                            atoms%taual,sym%tau,forcetot)
+                            atoms%taual,sym%tau,forcetot,atoms%label)
       END IF
 
     

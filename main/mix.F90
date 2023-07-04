@@ -176,6 +176,7 @@ contains
     CALL timestart("Postprocessing")
     !extracte mixed density
     inDen%pw=0.0;inDen%mt=0.0
+    IF (l_dfpt) inDenIm%mt=0.0
     IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
     IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
