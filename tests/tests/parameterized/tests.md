@@ -19,15 +19,15 @@ Testset: Basic
 |+|Bulk Cu one iteration|basic/CuBulk|fast,bulk
 |+|Bulk Cu one iteration,DOS|basic/CuDOS|fast,bulk,dos
 ||Bulk Cu one iteration,DOS,Orbital decomp.|basic/CuOrb|fast,bulk,dos,orbcomp
-|+|Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd
+||Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd
 |+|Bulk Co, bandstructure, unfolding|basic/CoUnfold|band,bulk
 |+|Bulk Fe, Kerker preconditioner|basic/Fe_Kerker|bulk
-|+|Bulk Fe fcc with relativistic core solver|basic/Fe_fcc_kcrel|
+||Bulk Fe fcc with relativistic core solver|basic/Fe_fcc_kcrel|
 |+|Si with LOs|basic/SiLO|bulk
 |+|Bulk PTO|basic/PTO|bulk
 |+|Bulk PTO, SOC|basic/PTO-SOC|bulk,soc
 |+|Bulk Fe, Tetrahedon method|basic/Fe_Tetra_noSYM|bulk
-|+|LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau
+||LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau
 |+|LDA+U with fully localized double counting and magnetism|basic/NiOldaUFLL|bulk,ldau
 |+|Crystal field output|basic/CrystalFieldOutput|bulk
 
@@ -60,21 +60,21 @@ Testset: Noco
 |+|Fe bct,noco, LOs|noco/Fe_bct_LO|bulk
 |+|Fe bct,noco|noco/Fe_bct|bulk
 |+|Fe bct,noco,libxc|noco/Fe_bct_LibXC|bulk,libxc
-|+|Noco, one atom, mag. in x direction|noco/1atx|bulk
-|+|Noco, one atom, mag. in y direction|noco/1aty|bulk
-|+|Noco, one atom, mag. in z direction|noco/1atz|bulk
-|+|Noco, one atom, mag. in non-sym direction|noco/1at|bulk
-|+|Noco,SOC, one atom, mag. in x direction|noco/1atSOCx|bulk,soc
-|+|Noco,SOC, one atom, mag. in y direction|noco/1atSOCy|bulk,soc
-|+|Noco,SOC, one atom, mag. in z direction|noco/1atSOCz|bulk,soc
-|+|Noco,SOC, one atom, mag. in non-sym direction|noco/1atSOC|bulk,soc
+||Noco, one atom, mag. in x direction|noco/1atx|bulk
+||Noco, one atom, mag. in y direction|noco/1aty|bulk
+||Noco, one atom, mag. in z direction|noco/1atz|bulk
+||Noco, one atom, mag. in non-sym direction|noco/1at|bulk
+||Noco,SOC, one atom, mag. in x direction|noco/1atSOCx|bulk,soc
+||Noco,SOC, one atom, mag. in y direction|noco/1atSOCy|bulk,soc
+||Noco,SOC, one atom, mag. in z direction|noco/1atSOCz|bulk,soc
+||Noco,SOC, one atom, mag. in non-sym direction|noco/1atSOC|bulk,soc
 |+|Fe fcc spin-spiral|noco/Fe_fcc|bulk
 |+|Iron LO's and SOC test in FFN|noco/FeFFNLOsSOC|bulk,soc,hdf
 |+|Fe monolayer fcc (110): spin spiral energy|noco/FePt_film_SSFT|film,spinspiral,forcetheorem
 |+|Fe monolayer fcc (110): spin spiral energy, with LO|noco/FePt_film_SSFT_LO|film,spinspiral,forcetheorem
 ||Fe bcc, Flipcdn and noco in MT,x-dir|noco/Fe_bcc_FlipcdnXLDA|bulk|produces warnings
 ||Fe bcc, Flipcdn and noco in MT,y-dir|noco/Fe_bcc_FlipcdnYLDA|bulk|produces warnings
-|+|relaxation feature of FFN in the MT|noco/RelaxMT|bulk,hdf
+||relaxation feature of FFN in the MT|noco/RelaxMT|bulk,hdf
 
 Testset: Experimental
 ----------
@@ -83,15 +83,15 @@ Testset: Experimental
 |+|Test of the orbital polarization correction|extra/Fe_bcc_OPC|bulk,soc
 |+|Sourcefree magnetism and magnetization scaling|extra/Fe_bcc_SF_LDA|bulk,hdf
 |+|Bulk Cu one iteration|extra/CuBulkLibXC|libxc,bulk
-|+|Bulk Al one iteration, LibXC|extra/Al_libxc_PBE|bulk,libxc
+||Bulk Al one iteration, LibXC|extra/Al_libxc_PBE|bulk,libxc
 ||Test of GW interface 1 |extra/gw1Interface|bulk|inp.xml files too old
 ||Test of GW interface 2 |extra/gw2Interface|bulk|inp.xml files too old
 |+|Sm jDOS decomposition|extra/SmAtomjDOS|bulk,dos
-|+|C: simple test for the Wannier code|extra/Cwann|bulk,wannier
+||C: simple test for the Wannier code|extra/Cwann|bulk,wannier
 ||TiO2 EELS spectrum|extra/TiO2eels|bulk,eels|inp.xml too old
 |+|Hubbard1 using SOC|extra/Gd_Hubbard1|bulk,edsolver
 |+|Hubbard1 without sym|extra/Gd_Hubbard1_noSYM|bulk,edsolver
-|+|diamond for one k-point with scan|extra/Diamond_SCAN|bulk,libxc
+||diamond for one k-point with scan|extra/Diamond_SCAN|bulk,libxc
 |+|3D vector plots of the magnetization|extra/PlotOnlyMT|bulk,plot,hdf
 |+|density and potential plots, vector plots|extra/PlotDenandPot|bulk,plot,hdf
 
@@ -115,7 +115,7 @@ Testset: Greenfunctions
 |+|Fe Monolayer Green's function|greens/Fe_1l_GreensFunction|film
 |+|Greens Function MultiContour|greens/GreensFunction_MultiContour|bulk
 |+|Fe bcc Green's function Radial|greens/GreensFunctionRadial|bulk
-|+|Fe bcc Green's function Radial with local orbitals|greens/GreensFunctionRadial_LO|bulk
+||Fe bcc Green's function Radial with local orbitals|greens/GreensFunctionRadial_LO|bulk
 |+|Ho atom Green's function|greens/GreensFunction_HoAtom_SQA_theta|bulk
 |+|Ho atom Green's function|greens/GreensFunction_HoAtom_SQA_phi|bulk
 |+|Ho atom Green's function|greens/GreensFunction_rotated_SQA_noco|bulk
@@ -123,7 +123,7 @@ Testset: Greenfunctions
 |+|Fe bcc Green's function Radial Noco spin offdiagonal|greens/GreensFunction_mperp_ydir|bulk
 |+|GdCu Green's function interorbital elements|greens/GreensFunction_InterOrbital|bulk
 |+|Greens Function intersite single shell|greens/GreensFunction_IntersiteSingleShell|bulk
-|+|Greens Function intersite single shell|greens/GreensFunction_IntersiteGammaNoGamma|bulk
+||Greens Function intersite single shell|greens/GreensFunction_IntersiteGammaNoGamma|bulk
 |+|Greens Function intersite multiple shells|greens/GreensFunction_IntersiteMultipleShells|bulk
 |+|Greens Function intersite shell construction|greens/GreensFunction_IntersiteShellConstruction|bulk
 |+|Greens Function intersite shell construction|greens/GreensFunction_IntersiteShellConstructionFilm|bulk
