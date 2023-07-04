@@ -11,6 +11,7 @@ MODULE m_available_solvers
 ! -solvers with numbers below 100 expect a non-distributed matrix
 ! -solvers with numbers 100-199 expect a distributed (scalapack-type) matrix
 ! -solvers with numbers higher than 200 can handle both
+! -solvers with number 400
 #ifdef CPP_ELPA
   INTEGER,PARAMETER:: diag_elpa=101
 #else
@@ -37,12 +38,22 @@ MODULE m_available_solvers
   INTEGER,PARAMETER:: diag_chase=-207
 #endif
 #ifdef CPP_CUSOLVER
-  INTEGER,PARAMETER:: diag_cusolver=8
+INTEGER,PARAMETER:: diag_cusolver=8
 #else
   INTEGER,PARAMETER:: diag_cusolver=-8
 #endif
+
+#ifdef CPP_ELSI
+INTEGER,PARAMETER:: diag_elsielpa=401
+INTEGER,PARAMETER:: diag_elsichase=409
+#else
+  INTEGER,PARAMETER:: diag_elsielpa=-401
+  INTEGER,PARAMETER:: diag_elsichase=-409
+#endif
+
+INTEGER,PARAMETER:: diag_lapack=4
+INTEGER,PARAMETER:: diag_lapack_singlePrec=5
   
-  INTEGER,PARAMETER:: diag_lapack=4
 #ifdef CPP_ELPA_ONENODE
   INTEGER,PARAMETER:: diag_elpa_1node=14
 #else
@@ -53,7 +64,7 @@ MODULE m_available_solvers
 #else
   INTEGER,PARAMETER:: diag_debugout=20
 #endif  
-  INTEGER,PARAMETER::diag_all_solver(9)=(/diag_elpa,diag_elemental,diag_scalapack,diag_magma,diag_chase,diag_cusolver,diag_lapack,diag_elpa_1node,diag_debugout/)
+  INTEGER,PARAMETER::diag_all_solver(10)=(/diag_elpa,diag_elemental,diag_scalapack,diag_magma,diag_chase,diag_cusolver,diag_lapack,diag_lapack_singlePrec,diag_elpa_1node,diag_debugout/)
   
 CONTAINS
 
@@ -84,10 +95,13 @@ CONTAINS
        IF (TRIM(juDFT_string_for_argument("-diag"))=="scalapack")  diag_solver=diag_scalapack
        IF (TRIM(juDFT_string_for_argument("-diag"))=="elemental")  diag_solver=diag_elemental
        IF (TRIM(juDFT_string_for_argument("-diag"))=="lapack")     diag_solver=diag_lapack
+       IF (TRIM(juDFT_string_for_argument("-diag"))=="lapack_singlePrec")     diag_solver=diag_lapack_singlePrec
        IF (TRIM(juDFT_string_for_argument("-diag"))=="magma")      diag_solver=diag_magma
        IF (TRIM(juDFT_string_for_argument("-diag"))=="chase")      diag_solver=diag_chase
        IF (TRIM(juDFT_string_for_argument("-diag"))=="cusolver")   diag_solver=diag_cusolver
        IF (TRIM(juDFT_string_for_argument("-diag"))=="debugout")   diag_solver=diag_debugout
+       IF (TRIM(juDFT_string_for_argument("-diag"))=="elsielpa")   diag_solver=diag_elsielpa
+       IF (TRIM(juDFT_string_for_argument("-diag"))=="elsichase")   diag_solver=diag_elsichase
        !Check if solver is possible
        IF (diag_solver<0)  CALL juDFT_error(&
             "You selected a solver for the eigenvalue problem that is not available",&

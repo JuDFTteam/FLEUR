@@ -74,6 +74,12 @@ then
     echo "set(CLI_FLEUR_USE_HDF5 $CLI_USE_HDF5)"  >>config.cmake
 fi
 
+
+if [ "$CLI_USE_ELSI" ]
+then
+    echo "set(CLI_FLEUR_USE_ELSI $CLI_USE_ELSI)"  >>config.cmake
+fi
+
 if [ "$CLI_COMPILE_LIBXML" ]
 then 
     echo "set(CLI_FLEUR_COMPILE_LIBXML2 $CLI_COMPILE_LIBXML)"  >>config.cmake
@@ -119,9 +125,9 @@ then
     echo "set(CLI_FLEUR_USE_SERIAL $CLI_USE_SERIAL)"  >>config.cmake
 fi
 
-if [ "$CLI_ELPA_OPENMP" ]
+if [ "$CLI_ELPA" ]
 then
-    echo "set(CLI_ELPA_OPENMP 1)"  >>config.cmake
+    echo "set(CLI_FLEUR_USE_ELPA $CLI_ELPA)"  >>config.cmake
 fi
 
 if [ "$CLI_WARN_ONLY" ]

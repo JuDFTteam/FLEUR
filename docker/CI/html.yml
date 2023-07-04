@@ -62,6 +62,7 @@ gfortran-coverage:
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root "
   before_script:
       - cd $CI_PROJECT_DIR
+      - pip install lcov_cobertura
       - ./configure.sh -l coverage -flags --coverage GITLAB
       - cd build.coverage
       - make -j 4
@@ -71,10 +72,15 @@ gfortran-coverage:
       - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --exclude "*.inc" --capture  -d CMakeFiles -o after.info
       - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --add-tracefile baseline.info --add-tracefile after.info -o combined.info
       - mkdir ../public;genhtml --output-directory ../public/coverage_html --title "FLEUR test coverage" --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf combined.info 
+      - lcov_cobertura combined.info 
   allow_failure: true
   artifacts:
     paths:
       - public
+    reports:  
+      coverage_report:
+        coverage_format: cobertura
+        path: build.coverage/coverage.xml  
   environment:
     name: Coverage
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html

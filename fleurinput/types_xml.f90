@@ -22,7 +22,7 @@ MODULE m_types_xml
       INTEGER:: id
       character(len=200):: basepath = ""
       integer           :: versionNumber = 0
-      INTEGER           :: currentversionNumber = 36 !parameters are not allowed here
+      INTEGER           :: currentversionNumber = 37 !parameters are not allowed here
    CONTAINS
       PROCEDURE        :: init
       PROCEDURE        :: GetNumberOfNodes

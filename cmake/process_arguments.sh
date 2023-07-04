@@ -22,6 +22,7 @@ do
 	-kplib)  CLI_USE_KPLIB=1;;
 	-mpi) shift; CLI_USE_MPI=$1;;
 	-magma) shift; CLI_USE_MAGMA=$1;;
+	-elsi) shift; CLI_USE_ELSI=$1;;
 	-gpu) shift; CLI_USE_GPU=$1;;
 	-chase) shift; CLI_USE_CHASE=$1;;
         -libxc) shift; CLI_USE_LIBXC=$1;;
@@ -29,13 +30,13 @@ do
 	-libdir) shift; CLI_LIBDIR="$CLI_LIBDIR $1";;
 	-flags) shift; CLI_FLAGS=$1;;
 	-includedir) shift; CLI_INCLUDEDIR="$CLI_INCLUDEDIR $1";;
-	-elpa_openmp) CLI_ELPA_OPENMP=1;;
+	-elpa) shift;CLI_ELPA=$1;;
 	-cmake_opts) shift;CMAKE_OPTIONS=$1;;
 	-make) make_directly=1;;
   -ninja) use_ninja=1;;
 	-warn_only) CLI_WARN_ONLY=1;;
-        -d) debug=1;;
-        -amd) CLI_PATCH_INTEL=1;;
+  -d) debug=1;;
+  -amd) CLI_PATCH_INTEL=1;;
 	-*) error="Unknown argument";;
 	*)  break;;	# terminate while loop
     esac

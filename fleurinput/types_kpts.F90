@@ -50,6 +50,7 @@ MODULE m_types_kpts
       PROCEDURE :: add_special_line
       PROCEDURE :: print_xml
       PROCEDURE :: read_xml_kptsByIndex
+      PROCEDURE :: read_kpts_by_name
       PROCEDURE :: read_xml => read_xml_kpts
       PROCEDURE :: mpi_bc => mpi_bc_kpts
       procedure :: get_nk => kpts_get_nk
@@ -140,6 +141,46 @@ CONTAINS
       CALL mpi_bc(this%sc_list, rank, mpi_comm)
    END SUBROUTINE mpi_bc_kpts
 
+   recursive logical function read_kpts_by_name(this,filename,name)
+      USE m_calculator
+      CLASS(t_kpts), INTENT(inout):: this
+      character(len=*),INTENT(IN) :: filename,name
+      
+      character(len=150):: line
+      integer           :: error,n,fid
+
+      OPEN(newunit=fid,file=filename,action='READ')
+      read_kpts_by_name=.false.
+      DO while(.not. read_kpts_by_name)
+         read(fid,"(a)",iostat=error) line
+         IF (error.ne.0) exit 
+         IF (index(line,"kPointList ")>0) THEN
+            line=line(index(line,'name="')+6:)
+            line=line(:index(line,'"')-1)
+            if (line==trim(name)) THEN
+               !Found kpointlist with correct name
+               DO n=1,this%nkpt
+                  read(fid,"(a)") line
+                  line=line(index(line,"weight"):)
+                  line=line(index(line,'"')+1:)
+                  this%wtkpt(n)=evaluateFirstOnly(line(:index(line,'"')-1))
+                  line=line(index(line,'>')+1:index(line,'<')-1)
+                  this%bk(1, n) = evaluatefirst(line)
+                  this%bk(2, n) = evaluatefirst(line)
+                  this%bk(3, n) = evaluatefirst(line)
+               ENDDO   
+               read_kpts_by_name=.true.
+            endif   
+         ENDIF
+         if (index(line,'<xi:include xmlns:xi="http://www.w3.org/2001/XInclude"')>0) THEN
+            line=line(index(line,'href="')+6:)
+            line=line(:index(line,'"')-1)
+            read_kpts_by_name=this%read_kpts_by_name(line,name)
+         endif
+      enddo
+      close(fid)
+   end function      
+
    SUBROUTINE read_xml_kptsByIndex(this, xml, kptsIndex)
       USE m_types_xml
       USE m_calculator
@@ -215,12 +256,14 @@ CONTAINS
 
       ! count special points
       this%numSpecialPoints = 0
-      DO i = 1, numNodes
-         label = ''
-         WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
-         label = xml%GetAttributeValue(TRIM(path2)//'/@label')
-         IF (TRIM(ADJUSTL(label)).NE.'') this%numSpecialPoints = this%numSpecialPoints + 1
-      END DO
+      IF (this%kptskind==KPTS_KIND_PATH) THEN
+         DO i = 1, numNodes
+            label = ''
+            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
+            label = xml%GetAttributeValue(TRIM(path2)//'/@label')
+            IF (TRIM(ADJUSTL(label)).NE.'') this%numSpecialPoints = this%numSpecialPoints + 1
+         END DO
+      ENDIF   
 
       IF(this%numSpecialPoints.NE.0) THEN
          IF(ALLOCATED(this%specialPointIndices)) DEALLOCATE(this%specialPointIndices)
@@ -247,14 +290,17 @@ CONTAINS
 
       ALLOCATE (this%bk(3, this%nkpt))
       ALLOCATE (this%wtkpt(this%nkpt))
-      DO i = 1, this%nkpt
-         WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
-         this%wtkpt(i) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@weight',.true.))
-         str = xml%getAttributeValue(TRIM(ADJUSTL(path2)),.true.)
-         this%bk(1, i) = evaluatefirst(str)
-         this%bk(2, i) = evaluatefirst(str)
-         this%bk(3, i) = evaluatefirst(str)
-      END DO
+      if (.not. this%read_kpts_by_name("inp.xml",this%kptsName)) THEN
+         print *,"WARNING, new k-point reader could not be used. Please check your inp.xml/kpts.xml"
+         DO i = 1, this%nkpt
+            WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
+            this%wtkpt(i) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@weight',.true.))
+            str = xml%getAttributeValue(TRIM(ADJUSTL(path2)),.true.)
+            this%bk(1, i) = evaluatefirst(str)
+            this%bk(2, i) = evaluatefirst(str)
+            this%bk(3, i) = evaluatefirst(str)
+         END DO
+      endif   
 
 !      n = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/tetraeder')
 !      IF (n .EQ. 1) THEN

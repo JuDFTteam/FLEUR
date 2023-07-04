@@ -338,9 +338,11 @@ CONTAINS
                   DO iob = 1, psize
                      call timestart("CPP_dgemm")
                      !call blas_matmul(m,n,k,r_coul_wavf(:,iob:),CPP_cprod_r(:, iob:),dot_result_r,op_a="T")
-                     !$acc host_data use_device(r_coul_wavf, CPP_cprod_r, dot_result_r)
-                     call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
-                     !$acc end host_data
+                     ASSOCIATE(prod_data=>CPP_cprod_r) !persuade NVHPC that it knows CPP_CPROD_r
+                        !$acc host_data use_device(r_coul_wavf, prod_data, dot_result_r)
+                        call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, prod_data(1, iob), ldb, 0.0, dot_result_r , ldc)
+                        !$acc end host_data
+                     end ASSOCIATE   
                      !$acc wait
                      call timestop("CPP_dgemm")
 
@@ -359,9 +361,11 @@ CONTAINS
                   !$acc enter data create(dot_result_c) 
                   DO iob = 1, psize
                      call timestart("CPP_zgemm")
-                     !$acc host_data use_device(c_coul_wavf, CPP_cprod_c, dot_result_c)
-                     call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, dot_result_c, ldc)
-                     !$acc end host_data
+                     ASSOCIATE(prod_data=>CPP_cprod_c) !persuade NVHPC that it knows CPP_CPROD_C
+                        !$acc host_data use_device(c_coul_wavf, prod_data, dot_result_c)
+                        call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, prod_data(1, iob), ldb, cmplx_0, dot_result_c, ldc)
+                        !$acc end host_data
+                     end ASSOCIATE   
                      !$acc wait
                      call timestop("CPP_zgemm")
 

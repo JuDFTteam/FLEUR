@@ -14,7 +14,36 @@ MODULE m_judft_sysinfo
   IMPLICIT NONE
 CONTAINS
   
-  
+integer function num_openmp()
+!$  use omp_lib
+num_openmp=0
+!$ num_openmp=omp_get_max_threads()
+end function  
+
+integer function num_gpu()
+#ifdef _OPENACC
+   use openacc
+#endif
+   num_gpu=0
+#ifdef _OPENACC
+   num_gpu=acc_get_num_devices(acc_device_nvidia)
+#endif
+end function
+
+function uname()
+   CHARACTER(:), allocatable::uname
+   integer::iostat
+   character(len=200)::tmp
+   CALL EXECUTE_COMMAND_LINE("uname -a >uname.log")
+   OPEN(1234,FILE="uname.log",status='old',action='read',iostat=iostat)
+   if (iostat==0) THEN 
+      read(1234,'(a)') tmp
+      close(1234,status='delete')
+      uname=trim(tmp)
+   else 
+      uname="unkown"
+   endif 
+end function   
   
   !Dump status file into out file (should be done only at end of run)
   SUBROUTINE print_memory_info(io,maxmem)

@@ -177,12 +177,11 @@ CONTAINS
                      ! Jump to the last matrix element of the current row
                END IF
             END DO
-            !acc end kernels
+            !$acc end kernels
             !$acc end data
          ENDDO
          CALL timestop("LAPW-LO")
          CALL timestart("LO-LO")
-         !$acc end kernels
          !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo,abcoeffsPr,abcloPr) &
          !$acc & copyin(atoms,lapw,lapwPr,tlmplm,tlmplm%tulou,tlmplm%tulod,tlmplm%h_loc(:,:,ntyp,ilSpinPr,ilSpin),lapw%nv(:),lapwPr%nv(:))&
          !$acc & copyin(tlmplm%tdulo(:,:,:,ilSpinPr,ilSpin),tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin),atoms%rmt(ntyp))&
