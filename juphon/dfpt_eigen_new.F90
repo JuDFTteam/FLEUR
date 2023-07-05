@@ -381,7 +381,6 @@ CONTAINS
 
                   zMat1%data_c(:nbasfcnq,nu) = z1H(:nbasfcnq,nu) + z1S(:nbasfcnq,nu)
                   IF (.NOT.sh_den.AND..NOT.old_and_wrong) zMat2%data_c(:nbasfcnq,nu) = z1H2(:nbasfcnq,nu) + z1S2(:nbasfcnq,nu)
-                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) write(7658,*) zMat2%data_c(:nbasfcnq,nu)
 
                   IF (ANY(nk==k_selection)) THEN
                      !CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_tempVec.npy",tempVec)

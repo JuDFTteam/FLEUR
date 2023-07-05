@@ -229,9 +229,9 @@ CONTAINS
          IF (strho) THEN
             vTot1%mt(:,0:,iDtype,1) = vTot1%mt(:,0:,iDtype,1) + grVext%mt(:,0:,iDtype,1)
             IF (fi%input%jspins==2) vTot1%mt(:,0:,iDtype,2) = vTot1%mt(:,0:,iDtype,2) + grVext%mt(:,0:,iDtype,1)
-            CALL save_npy(TRIM(dfpt_tag)//"vExt1pw.npy",vTot1%pw)
-            CALL save_npy(TRIM(dfpt_tag)//"vExt1mtre.npy",vTot1%mt)
-            CALL save_npy(TRIM(dfpt_tag)//"vExt1mtim.npy",vTot1Im%mt)
+            !CALL save_npy(TRIM(dfpt_tag)//"vExt1pw.npy",vTot1%pw)
+            !CALL save_npy(TRIM(dfpt_tag)//"vExt1mtre.npy",vTot1%mt)
+            !CALL save_npy(TRIM(dfpt_tag)//"vExt1mtim.npy",vTot1Im%mt)
             IF (l_minusq) THEN
                vTot1m%mt(:,0:,iDtype,1) = vTot1m%mt(:,0:,iDtype,1) + grVext%mt(:,0:,iDtype,1)
                IF (fi%input%jspins==2) vTot1m%mt(:,0:,iDtype,2) = vTot1m%mt(:,0:,iDtype,2) + grVext%mt(:,0:,iDtype,1)

@@ -13,7 +13,7 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
                               eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, mpdata, results, results1, l_real, &
                               rho, vTot, grRho3, grVext3, grVC3, grVtot3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
-                              l_dynMat0, l_dynMatq, q_eig_id)
+                              l_dynMat0, l_dynMatq, E2ndOrdII, q_eig_id)
       USE m_step_function
       USE m_convol
       USE m_dfpt_vgen
@@ -41,6 +41,8 @@ CONTAINS
       INTEGER, INTENT(IN) :: iQ, iDtype_row, iDir_row, eig_id, dfpt_eig_id, dfpt_eig_id2
 
       COMPLEX, INTENT(INOUT) :: dyn_row(:)
+
+      COMPLEX, INTENT(IN) :: E2ndOrdII(:,:)
      
       INTEGER, OPTIONAL, INTENT(IN) :: q_eig_id
 
@@ -177,9 +179,9 @@ CONTAINS
                                 denIn1_mt(:,0:,iDtype_row) + &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
             grRho_mt = grVC3(iDir_col)%mt(:,0:,:,1)
-            CALL save_npy(int2str(iQ)//"_"//int2str(iDir_col)//"_grVCdyn.npy",grRho_mt(:,0:,1))
-            CALL save_npy(int2str(iQ)//"_"//int2str(iDir_row)//"_rho1goodre.npy",denIn1_mt(:,0:,iDtype_row))
-            CALL save_npy(int2str(iQ)//"_"//int2str(iDir_row)//"_rho1goodim.npy",denIn1_mt_Im(:,0:,iDtype_row))
+            !CALL save_npy(int2str(iQ)//"_"//int2str(iDir_col)//"_grVCdyn.npy",grRho_mt(:,0:,1))
+            !CALL save_npy(int2str(iQ)//"_"//int2str(iDir_row)//"_rho1goodre.npy",denIn1_mt(:,0:,iDtype_row))
+            !CALL save_npy(int2str(iQ)//"_"//int2str(iDir_row)//"_rho1goodim.npy",denIn1_mt_Im(:,0:,iDtype_row))
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_col, denIn1_mt, denIn1_mt_Im, grRho_mt, 0*grRho_mt, tempval)
             dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
             IF (fmpi%irank==0) write(9989,*) "MT rho1 grVC                  ", tempval
@@ -313,8 +315,8 @@ CONTAINS
             END IF
 
             IF (fmpi%irank==0) write(9990,*) qvec, iDtype_row, iDir_row, iDtype_col, iDir_col
-            IF (fmpi%irank==0) write(9990,*) "HF   :", dyn_row_HF(col_index)
-            IF (fmpi%irank==0) write(9990,*) "int  :", dyn_row_int(col_index)
+            IF (fmpi%irank==0) write(9990,*) "HF   :", conjg(dyn_row_HF(col_index))
+            IF (fmpi%irank==0) write(9990,*) "int  :", conjg(dyn_row_int(col_index))
 
             ! Calculate the contributions to the dynamical matrix that stem
             ! from terms related to occupation numbers and the eigenenergies.
@@ -332,6 +334,8 @@ CONTAINS
                                    qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1,1,1,1,1,1],q_eig_id) 
             END IF
             IF (fmpi%irank==0) write(9990,*) "eigen:", dyn_row_eigen(col_index)
+            IF (fmpi%irank==0) write(9989,*) "Eii2:", conjg(E2ndOrdII(3*(iDtype_row-1)+iDir_row,3*(iDtype_col-1)+iDir_col))
+            IF (fmpi%irank==0) write(9990,*) "Eii2:", conjg(E2ndOrdII(3*(iDtype_row-1)+iDir_row,3*(iDtype_col-1)+iDir_col))
          END DO
       END DO
 

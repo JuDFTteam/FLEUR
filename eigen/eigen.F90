@@ -111,7 +111,7 @@ CONTAINS
       !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
       ALLOCATE(k_selection(1))
       !k_selection = [40,61,453]
-      k_selection = [1000]
+      k_selection = [-1]
 
 
       !kqpts = fi%kpts
