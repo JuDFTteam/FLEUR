@@ -69,7 +69,7 @@ CONTAINS
        ENDIF
        CALL smat_tmp%init(hmat(1,1))
        CALL hmat_tmp%init(hmat(1,1))
-       !$acc enter data copyin(smat_tmp,hmat_tmp)create(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
+       !$acc enter data copyin(smat_tmp,hmat_tmp)copyin(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
     ENDIF
 
     CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,isp,noco)
