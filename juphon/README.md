@@ -35,7 +35,7 @@ Now, run inpgen:
 
 Ensure several things in the resulting inp.xml:
 - set ```ctail="F"```
-- reduce ```radius``` by a slight margin
+- reduce ```radius``` in ```mtSphere```by a slight margin
 - set the iteration count high enough.
 - set ```name``` in ```xcFunctional``` to that of an LDA functional available in libxc; optimally, you directly set (e.g. for vwn):
 ```
@@ -44,13 +44,55 @@ Ensure several things in the resulting inp.xml:
       </xcFunctional>
 ```
 
-Now you need to optimize your input. Converge it too a minimal energy w.r.t. the lattice constant and cutoff parameters. This is why the MT radius was set lower, so the spheres do not crash into each other when reducing the lattice size.
+Now you need to optimize your input. Converge it too a minimal energy w.r.t. the lattice constant, cutoff parameters, and (in the case of more complex systems) atomic positions. This is why the MT radius was set lower, so the spheres do not crash into each other when reducing the lattice size. For this optimization, invoke FLEUR repeatedly
+
+```
+/path/to/fleur
+```
+
+and fit the lattice dependent energy curve to the Birch-Murnaghan equation of states for example.
 
 Once you are satisfied with your optimization, write a new input file (e.g. inpCu_fit) and fill it with the parameters you converged to. This will be your base input for the follow up calculations.
 
 # Finite displacement calculations
 
+Make a subfolder ```FD```. Now it is time to invoke phonopy. 
 
+```
+phonopy --fleur -c inpCu_fit -d --dim="2 0 0 0 2 0 0 0 2" --amplitude=0.006
+```
+
+This will generate a 2x2x2 supercell with an atomic displacement of one atom by roughly a thousandth of the unit cell size. Other options for the supercell matrix and the amplitude are of course viable as well. In the case of more complex systems, phonopy will spit out several supercell-001 files. We only need to condern ourselves with one for now, as, by symmetry, one displacement already captures the complete response behaviour of the system. Run the generated input file thrugh inpgen:
+
+```
+/path/to/inpgen -f supercell-001.in
+```
+
+Check, that all the parameters you converged are properly set in the new ```inp.xml```. If so, run a gorund-state calculation for the supercell:
+
+```
+/path/to/fleur
+```
+
+Now, set the tags ```l_F="T"``` and ```f_level="0"``` (the second one can also be 1,2,3 for additional corrective force components) to run a force calculation for the system. The relevant output you want is the ```FORCES_SORT``` file. Once you have it, invoke phonopy with:
+
+```
+phonopy --fleur -f FORCES_SORT
+```
+
+In the case of several displacements, one would list:
+
+```
+phonopy --fleur -f FORCES_SORT_001 FORCES_SORT_002 FORCES_SORT_003 ...
+```
+
+This generates the FORCE_SETS file, enabling our final output calls. For a phonon high-symmetry path of Gamma-X-X'(-K)-Gamma-L, given in units of 1/cm, set:
+
+phonopy --fleur -c inpCu_fit --dim="2 0 0 0 2 0 0 0 2" -p --band="0 0 0 0 1/2 1/2 1/2 1/2 1 0 0 0 1/2 1/2 1/2" --factor=5140.48767176083
+
+If all went well, a picture should pop up, looking something like this:
+
+![FD basic copper picture](./copper_basic_FD.png)
 
 # Density-functional perturbation theory
 
