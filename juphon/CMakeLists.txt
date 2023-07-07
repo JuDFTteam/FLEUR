@@ -37,5 +37,5 @@ juphon/dfpt_cdnval.F90
 juphon/dfpt_cdngen.F90
 juphon/dfpt_fermie.F90
 juphon/desymmetrizer.f90
-juphon/dfpt_eigen_new.F90
+juphon/dfpt_eigen.F90
 )

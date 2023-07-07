@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_dfpt_eigen_new
+MODULE m_dfpt_eigen
 
 #ifdef CPP_MPI
    USE mpi
@@ -15,7 +15,7 @@ MODULE m_dfpt_eigen_new
 
 CONTAINS
 
-   SUBROUTINE dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
+   SUBROUTINE dfpt_eigen(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
                              eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, sh_den, dfpt_tag, dfpt_eig_id2)
 
       USE m_types
@@ -483,5 +483,5 @@ CONTAINS
           END DO  k_loop
         END DO ! spin loop ends
 
-   END SUBROUTINE dfpt_eigen_new
-END MODULE m_dfpt_eigen_new
+   END SUBROUTINE dfpt_eigen
+END MODULE m_dfpt_eigen

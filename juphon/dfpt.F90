@@ -16,7 +16,6 @@ MODULE m_dfpt
    USE m_juDFT_stop, only : juDFT_error
    USE m_vgen_coulomb
    USE m_dfpt_vgen
-   USE m_convol !obsolete?
    USE m_fleur_init
    USE m_npy
    USE m_desymmetrizer

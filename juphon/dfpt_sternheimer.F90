@@ -7,7 +7,7 @@ MODULE m_dfpt_sternheimer
    USE m_types
    USE m_make_stars
    USE m_vgen
-   USE m_dfpt_eigen_new
+   USE m_dfpt_eigen
    USE m_dfpt_cdngen
    USE m_dfpt_vgen
    USE m_dfpt_fermie
@@ -267,10 +267,10 @@ CONTAINS
 
          CALL timestart("dfpt eigen")
          IF (.NOT.final_SH_it) THEN
-            CALL dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+            CALL dfpt_eigen(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .TRUE., dfpt_tag)
          ELSE
-            CALL dfpt_eigen_new(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+            CALL dfpt_eigen(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .FALSE., dfpt_tag, dfpt_eig_id2)
          END IF
          CALL timestop("dfpt eigen")
@@ -278,10 +278,10 @@ CONTAINS
          IF (l_minusq) THEN
             CALL timestart("dfpt minus eigen")
             IF (.NOT.final_SH_it) THEN
-               CALL dfpt_eigen_new(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
+               CALL dfpt_eigen(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
                                    vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .TRUE., dfpt_tag//"m")
             ELSE
-               CALL dfpt_eigen_new(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
+               CALL dfpt_eigen(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
                                    vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .FALSE., dfpt_tag//"m", dfpt_eigm_id2)
             END IF
             CALL timestop("dfpt minus eigen")
@@ -343,12 +343,12 @@ CONTAINS
          CALL denOut1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
          denOut1%iter = denIn1%iter
          IF (.NOT.l_minusq) THEN
-            CALL dfpt_cdngen(eig_id,q_eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
+            CALL dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
                              fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
                              archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real)
          ELSE
-            CALL dfpt_cdngen(eig_id,q_eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
+            CALL dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
                              fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
                              archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real,&
@@ -360,7 +360,7 @@ CONTAINS
             CALL timestart("generation of new charge density (total)")
             CALL denOut1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
             CALL denOut1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
-            CALL dfpt_cdngen(eig_id,qm_eig_id,dfpt_eigm_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
+            CALL dfpt_cdngen(eig_id,dfpt_eigm_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
                              fi%kpts,fi%atoms,sphhar,starsmq,fi%sym,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1m,&
                              archiveType,xcpot,denOut1m,denOut1mIm,-bqpt,iDtype,iDir,l_real,&
