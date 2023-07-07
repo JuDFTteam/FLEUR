@@ -802,7 +802,7 @@ module m_jp2ndOrdQuant
   ! Deprecated
   subroutine phasy1lp2nSym(atomsT, cellT, Gvec, qptn, pylm)
 
-    use m_ylm
+    use m_ylm_old
     use m_types
 
     implicit none
