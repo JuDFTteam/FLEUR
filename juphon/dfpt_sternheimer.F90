@@ -71,7 +71,8 @@ CONTAINS
 
       l_minusq = PRESENT(starsmq)
 
-
+      ! killcont can be used to blot out certain contricutions to the
+      ! perturbed matrices.
       ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
       killcont = [1,1,1,1,1,1]
 
@@ -143,32 +144,24 @@ CONTAINS
       CALL vC1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
       CALL vC1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
-      !dfpt_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-      !                       .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
-      !dfpt_eig_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-      !                        .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
-
       bqpt = qpts%bk(:, iQ)
 
       IF (l_minusq) THEN
          CALL vTot1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
          CALL vTot1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
-         !dfpt_eigm_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-         !                       .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
-         !dfpt_eigm_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-         !                       .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
-
          bmqpt = -qpts%bk(:, iQ)
       END IF
 
+! TODO: Stop ignoring CHASE one day/delete completely.
+!       There is no diagonalization here.
 !#ifdef CPP_CHASE
 !      CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
 !#endif
 
       l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
-         !IF (.NOT.strho) iter = iter + 1 !TODO: Eventually this will be right.
+         !IF (.NOT.strho) iter = iter + 1 !TODO: Eventually this will be right?
          IF (onedone) iter = iter + 1
          l_lastIter = l_lastIter.OR.(iter.EQ.fi%input%itmax)
 
@@ -195,21 +188,24 @@ CONTAINS
             write(oUnit, *) "vExt1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
-                           starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
+                           starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1])
+                           ! Last variable: [m,n] dictates with [1/0, 1/0], whether or not we take
+                           ! V1*Theta and V*Theta1 into account respectively. For [1,1] all is
+                           ! contained.
             IF (l_minusq) THEN
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
-                              starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1]) ! comparison is [1,0]
+                              starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])
             END IF
          ELSE
             write(oUnit, *) "vEff1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1]) ! comparison is [1,0]
+                           starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1])
             IF (l_minusq) THEN
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                              starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1]) ! comparison is [1,0]
+                              starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])
             END IF
          END IF
 
@@ -236,8 +232,6 @@ CONTAINS
                vTot1m%mt(:,0:,iDtype,1) = vTot1m%mt(:,0:,iDtype,1) + grVext%mt(:,0:,iDtype,1)
                IF (fi%input%jspins==2) vTot1m%mt(:,0:,iDtype,2) = vTot1m%mt(:,0:,iDtype,2) + grVext%mt(:,0:,iDtype,1)
             END IF
-            !CALL timestop("Sternheimer Iteration")
-            !RETURN
          ELSE
             !vC1%mt(:,0:,iDtype,:) = vC1%mt(:,0:,iDtype,:) + grVC%mt(:,0:,iDtype,:)
             !CALL save_npy(TRIM(dfpt_tag)//"vC1pw.npy",vC1%pw(:,1))
@@ -251,8 +245,6 @@ CONTAINS
             IF (l_minusq) THEN
                vTot1m%mt(:,0:,iDtype,:) = vTot1m%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
             END IF
-            !CALL timestop("Sternheimer Iteration")
-            !RETURN
          END IF
 
          CALL vTot1%distribute(fmpi%mpi_comm)
@@ -386,8 +378,6 @@ CONTAINS
                !CALL save_npy(TRIM(dfpt_tag)//"rho1Mmtim0.npy",denOut1mIm%mt)
                denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
-            !STOP
-            !RETURN
             CYCLE scfloop
          END IF
 
@@ -509,13 +499,6 @@ CONTAINS
       END DO scfloop ! DO WHILE (l_cont)
 
       CALL add_usage_data("Iterations", iter)
-
-      !CALL close_eig(dfpt_eig_id)
-      !CALL close_eig(dfpt_eig_id2)
-      !IF (l_minusq) THEN
-      !   CALL close_eig(dfpt_eigm_id)
-      !   CALL close_eig(dfpt_eigm_id2)
-      !END IF
 
    END SUBROUTINE dfpt_sternheimer
 END MODULE m_dfpt_sternheimer

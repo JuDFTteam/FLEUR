@@ -175,13 +175,12 @@ CONTAINS
             tempval = CMPLX(0.0,0.0)
 
             ! MT:
+            ! TODO: Apply baremode correction to MT correction and corresponding 2nd integral. They
+            !       are the last two *big* terms. 
             IF (.NOT.bare_mode) denIn1_mt(:,0:,iDtype_row) = &
                                 denIn1_mt(:,0:,iDtype_row) + &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
             grRho_mt = grVC3(iDir_col)%mt(:,0:,:,1)
-            !CALL save_npy(int2str(iQ)//"_"//int2str(iDir_col)//"_grVCdyn.npy",grRho_mt(:,0:,1))
-            !CALL save_npy(int2str(iQ)//"_"//int2str(iDir_row)//"_rho1goodre.npy",denIn1_mt(:,0:,iDtype_row))
-            !CALL save_npy(int2str(iQ)//"_"//int2str(iDir_row)//"_rho1goodim.npy",denIn1_mt_Im(:,0:,iDtype_row))
             CALL dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDtype_col, denIn1_mt, denIn1_mt_Im, grRho_mt, 0*grRho_mt, tempval)
             dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
             IF (fmpi%irank==0) write(9989,*) "MT rho1 grVC                  ", tempval
@@ -303,7 +302,7 @@ CONTAINS
 
                DO iSpin = 1, fi%input%jspins
                   IF (fmpi%irank==0) write(9989,*) "Loop spin:", iSpin
-                  ! TODO: Ensure, that vTot/gradrho is diagonal here, not 2x2.
+                  ! TODO: Ensure, that vTot/gradrho is diagonal here, not 2x2 [NOCO].
                   pww2 = CMPLX(0.0,0.0)
                   CALL dfpt_convol_big(1, stars, stars, vTot%pw(:,iSpin), theta1full0(0:,iDtype_col,iDir_col), pww2)
                   CALL dfpt_int_pw(stars, fi%cell, grRho3(iDir_row)%pw(:,iSpin), pww2, tempval)
@@ -465,6 +464,8 @@ CONTAINS
       USE m_dfpt_tlmplm
       USE m_npy
 
+! TODO: One brigth day, these things will also be relevant for DFPT.
+!       We cannot keep doing small systems on small CPUs forever.
 !#ifdef _OPENACC
 !         USE cublas
 !#define CPP_zgemv cublaszgemv
@@ -531,8 +532,6 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE :: tempVec(:), tempVecq(:), z_loop(:), z1_loop(:), ztest_loop(:), zq_loop(:)
 
-      REAL,    ALLOCATABLE :: kGqExt(:,:)
-
       INTEGER, ALLOCATABLE :: k_selection(:)
 
       COMPLEX  zdotc
@@ -585,13 +584,7 @@ CONTAINS
             q_loop = bqpt
 
             CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell,fmpi)
-            !CALL lapwq%init(fi%input,fi%noco,nococonv,kqpts,fi%atoms,fi%sym,nk,fi%cell,fmpi)
             CALL lapwq%init(fi%input,fi%noco,nococonv,kpts_mod,fi%atoms,fi%sym,nk,fi%cell,fmpi,q_loop)
-
-            ALLOCATE(kGqExt(3,lapwq%nv(1)))
-            DO ikGq = 1, lapwq%nv(1)
-               kGqExt(:,ikGq) = MATMUL(lapwq%bkpt+lapwq%gvec(:, ikGq, 1)+lapwq%qphon, fi%cell%bmat)
-            END DO
 
             we  = results%w_iks(:,nk,jsp)
             we1 = results1%w_iks(:,nk,jsp)
@@ -664,18 +657,13 @@ CONTAINS
                we1_loop  = (2.0/fi%input%jspins)*we1(iEig)
                IF (l_real) THEN
                   z_loop = CMPLX(1.0,0.0)*zMat%data_r(:,iEig)
-                  IF (PRESENT(q_eig_id)) zq_loop = CMPLX(1.0,0.0)*zMatq%data_r(:,iEig) 
-                  !ztest_loop = -ImagUnit*kGqExt(iDir_row,:)*zMat%data_r(:,iEig)
+                  IF (PRESENT(q_eig_id)) zq_loop = CMPLX(1.0,0.0)*zMatq%data_r(:,iEig)
                ELSE
                   z_loop    = zMat%data_c(:,iEig)
                   IF (PRESENT(q_eig_id)) zq_loop = zMatq%data_c(:,iEig)
-                  !ztest_loop = -ImagUnit*kGqExt(iDir_row,:)*zMat%data_c(:,iEig)
                END IF
 
                z1_loop = zMat1%data_c(:,iEig)
-               !call save_npy("z1_actual.npy",z1_loop)
-               !z1_loop = ztest_loop
-               !call save_npy("z1_modell.npy",z1_loop)
 
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we_loop*eig1_loop,smat1%data_c,nbasfcn,z_loop,1,CMPLX(0.0,0.0),tempVec,1)
                eigen_e1 = eigen_e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
@@ -712,7 +700,7 @@ CONTAINS
             IF (PRESENT(q_eig_id)) DEALLOCATE(tempVecq)
             DEALLOCATE(z_loop,z1_loop)
             IF (PRESENT(q_eig_id)) DEALLOCATE(zq_loop) 
-            DEALLOCATE(ztest_loop,kGqExt)
+            DEALLOCATE(ztest_loop)
             CALL smat1%free()
             CALL hmat1%free()
             CALL smat1q%free()

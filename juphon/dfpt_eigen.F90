@@ -115,7 +115,6 @@ CONTAINS
                q_loop = bqpt
 
                CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
-               !CALL lapwq%init(fi%input, fi%noco, nococonv, kqpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
                CALL lapwq%init(fi%input, fi%noco, nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, q_loop)
 
                noccbd  = COUNT(results%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
@@ -235,6 +234,9 @@ CONTAINS
                               ! Additional correction term that constitutes new
                               ! coefficients:
                               tempMat3(iNupr) = 0.5 * tempMat1(iNupr)
+                           ! TODO: This part of the correction had no effect whatsoever yet.
+                           !       Reactivate for misbehaving materials and see if there are
+                           !       changes.
                            !ELSE IF (iNuPr<=noccbdq) THEN
                            !   wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                            !   tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
@@ -341,6 +343,9 @@ CONTAINS
                               ! Additional correction term that constitutes new
                               ! coefficients:
                               tempMat3(iNupr) = -0.5 * eigk(nu) * tempMat1(iNupr)
+                           ! TODO: This part of the correction had no effect whatsoever yet.
+                           !       Reactivate for misbehaving materials and see if there are
+                           !       changes.
                            !ELSE IF (iNuPr<=noccbdq) THEN
                            !   wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                            !   tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
