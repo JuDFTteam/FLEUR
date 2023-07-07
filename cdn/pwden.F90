@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
    SUBROUTINE pwden(stars, kpts, banddos,   input, fmpi, noco, nococonv, cell, atoms, sym, &
-                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, qimag, iDir, &
+                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, iDir, &
                     lapwmq,zMat1m)
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       !     In this subroutine the star function expansion coefficients of
@@ -76,7 +76,6 @@ CONTAINS
       COMPLEX, INTENT(INOUT) ::  f_b8(3, atoms%ntype)
 
       REAL,         OPTIONAL, INTENT(IN) :: q_dfpt(3), we1(:)
-      COMPLEX,      OPTIONAL, INTENT(INOUT) :: qimag(stars%ng3)
       TYPE(t_mat),  OPTIONAL, INTENT(IN) :: zMat1
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
       INTEGER,      OPTIONAL, INTENT(IN) :: iDir
@@ -219,59 +218,40 @@ CONTAINS
       ENDIF
 
       IF (.NOT.l_dfpt) THEN
-      ! g=0 star: calculate the charge for this k-point and spin
-      !           analytically to test the quality of FFT
-      q0 = 0.0
-      q0_11 = 0.0
-      q0_22 = 0.0
-      IF (noco%l_noco) THEN
-         IF (.NOT. zmat%l_real) THEN
-            DO nu = 1, ne
-               norm = dznrm2(lapw%nv(1),zMat%data_c(1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
-               q0_11 = q0_11 + we(nu)*norm*norm
-               norm = dznrm2(lapw%nv(2),zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
-               q0_22 = q0_22 + we(nu)*norm*norm
-            ENDDO
-         ENDIF
-         q0_11 = q0_11/cell%omtil
-         q0_22 = q0_22/cell%omtil
-      ELSE
-         IF (zmat%l_real) THEN
-            DO nu = 1, ne
-               norm = dnrm2(lapw%nv(jspin),zMat%data_r(:, nu),1) ! dnrm2 returns the 2-norm of the vector.
-               q0 = q0 + we(nu)*norm*norm
-            ENDDO
-         ELSE
-            DO nu = 1, ne
-               norm = dznrm2(lapw%nv(jspin),zMat%data_c(:, nu),1) ! dznrm2 returns the 2-norm of the vector.
-               q0 = q0 + we(nu)*norm*norm
-            ENDDO
-         ENDIF
-         q0 = q0/cell%omtil
-      ENDIF
-
-      IF ((noco%l_noco).AND.(ikpt.LE.fmpi%isize)) THEN
-         dos%qis = 0.0
-      END IF
-
-      ELSE IF (.FALSE.) THEN
-         DO iGp = 1, lapw%nv(jspin)
-            DO iG = 1, lapwq%nv(jspin)
-               gVec = lapwq%gvec(:, iG, jspin) - lapw%gvec(:, iGp, jspin)
-               gInd = stars%ig(gVec(1), gVec(2), gVec(3))
-
-               IF (gInd.EQ.0) CYCLE
-
+         ! g=0 star: calculate the charge for this k-point and spin
+         !           analytically to test the quality of FFT
+         q0 = 0.0
+         q0_11 = 0.0
+         q0_22 = 0.0
+         IF (noco%l_noco) THEN
+            IF (.NOT. zmat%l_real) THEN
                DO nu = 1, ne
-                  IF (zmat%l_real) THEN
-                     z0 = CMPLX(1.0,0.0)*zMat%data_r(:lapw%nv(jspin), nu)
-                  ELSE
-                     z0 = zMat%data_c(:lapw%nv(jspin), nu)
-                  END IF
-                  qimag(gInd) = qimag(gInd) + 2*we(nu)*CONJG(z0(iGp))*zMat1%data_c(iG, nu)/cell%omtil
-               END DO
-            END DO
-         END DO
+                  norm = dznrm2(lapw%nv(1),zMat%data_c(1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
+                  q0_11 = q0_11 + we(nu)*norm*norm
+                  norm = dznrm2(lapw%nv(2),zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
+                  q0_22 = q0_22 + we(nu)*norm*norm
+               ENDDO
+            ENDIF
+            q0_11 = q0_11/cell%omtil
+            q0_22 = q0_22/cell%omtil
+         ELSE
+            IF (zmat%l_real) THEN
+               DO nu = 1, ne
+                  norm = dnrm2(lapw%nv(jspin),zMat%data_r(:, nu),1) ! dnrm2 returns the 2-norm of the vector.
+                  q0 = q0 + we(nu)*norm*norm
+               ENDDO
+            ELSE
+               DO nu = 1, ne
+                  norm = dznrm2(lapw%nv(jspin),zMat%data_c(:, nu),1) ! dznrm2 returns the 2-norm of the vector.
+                  q0 = q0 + we(nu)*norm*norm
+               ENDDO
+            ENDIF
+            q0 = q0/cell%omtil
+         ENDIF
+
+         IF ((noco%l_noco).AND.(ikpt.LE.fmpi%isize)) THEN
+            dos%qis = 0.0
+         END IF
       END IF
 
       wtf(:ne) = we(:ne)/cell%omtil
@@ -554,8 +534,6 @@ CONTAINS
             END IF
          ENDIF
       ENDDO
-
-      IF (PRESENT(qimag)) qimag = cwk
 
       DEALLOCATE (cwk, ecwk)
 

@@ -802,7 +802,7 @@ module m_jp2ndOrdQuant
   ! Deprecated
   subroutine phasy1lp2nSym(atomsT, cellT, Gvec, qptn, pylm)
 
-    use m_ylm_old
+    use m_ylm
     use m_types
 
     implicit none
@@ -858,9 +858,9 @@ module m_jp2ndOrdQuant
 
     ! calculates Y*_lm(\vec{G} + \vec{q}) for every l and m. The argument Gqext must be in external coordinates.
     Gqext = matmul(Gvec + qptn, cellT%bmat)
-    call Ylmnorm_init( atomsT%lmaxd + 2 )
+    !call Ylmnorm_init( atomsT%lmaxd + 2 )
     call ylm4(atomsT%lmaxd + 2, Gqext, ylm)
-    call Ylmnorm_init( atomsT%lmaxd)
+    !call Ylmnorm_init( atomsT%lmaxd)
     ylm = conjg(ylm)
 
 

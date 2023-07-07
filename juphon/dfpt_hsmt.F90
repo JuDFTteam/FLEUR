@@ -73,12 +73,11 @@ CONTAINS
 
       CLASS(t_mat), ALLOCATABLE :: smat_tmp, hmat_tmp, s1mat_tmp(:,:), h1mat_tmp(:,:)
 
-      !ALLOCATE(k_selection(16))
-      !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
-        
       ALLOCATE(k_selection(1))
-      k_selection = [1000]
+      k_selection = [-1]
 
+      !TODO: All of the openACC is most certainly scuffed for DFPT. Fix it someday.
+      !      But wait until it is right and proper in the main code!
       IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
          IF (fmpi%n_size==1) THEN
             ALLOCATE(t_mat::hmat_tmp)
@@ -105,13 +104,6 @@ CONTAINS
             CALL h1mat_tmp(i, j)%init(s1mat_tmp(i, j))
          END DO
       END DO
-
-      !DO ilSpinPr = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
-      !   DO ilSpin = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
-      !      CALL h1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
-      !      CALL s1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
-      !   END DO
-      !END DO
 
       CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,iSpin,noco)
       CALL fjgjq%alloc(MAXVAL(lapwq%nv),atoms%lmaxd,iSpin,noco)
@@ -151,6 +143,7 @@ CONTAINS
                      !CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(1,1),.FALSE.,smat(1,1))
                   END IF
                ELSE
+                  ! TODO: Everything from here onwards  most certainly has the wrong spin logic.
                   IF (ilSpinPr==ilSpin) THEN !local spin-diagonal contribution
                      CALL hsmt_spinor(ilSpinPr,n,nococonv,chi)
                      IF (n.EQ.iDtype) THEN
@@ -218,8 +211,6 @@ CONTAINS
       IF (ANY(nk==k_selection)) THEN
          CALL save_npy("test_"//int2str(iDir)//"_"//int2str(nk)//"_h0.npy",h1mat_tmp(1,1)%data_c)
          CALL save_npy("test_"//int2str(iDir)//"_"//int2str(nk)//"_s0.npy",s1mat_tmp(1,1)%data_c)
-         !CALL save_npy(int2str(nk)//"_h1_0.npy",hmat(1,1)%data_c)
-         !CALL save_npy(int2str(nk)//"_s1_0.npy",smat(1,1)%data_c)
       END IF
 
       ! TODO: Does this need some ACC magic?
