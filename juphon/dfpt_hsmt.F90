@@ -73,11 +73,8 @@ CONTAINS
 
       CLASS(t_mat), ALLOCATABLE :: smat_tmp, hmat_tmp, s1mat_tmp(:,:), h1mat_tmp(:,:)
 
-      !ALLOCATE(k_selection(16))
-      !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
-        
       ALLOCATE(k_selection(1))
-      k_selection = [1000]
+      k_selection = [-1]
 
       IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
          IF (fmpi%n_size==1) THEN
