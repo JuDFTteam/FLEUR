@@ -73,12 +73,11 @@ CONTAINS
 
       CLASS(t_mat), ALLOCATABLE :: smat_tmp, hmat_tmp, s1mat_tmp(:,:), h1mat_tmp(:,:)
 
-      !ALLOCATE(k_selection(16))
-      !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
-        
       ALLOCATE(k_selection(1))
-      k_selection = [1000]
+      k_selection = [-1]
 
+      !TODO: All of the openACC is most certainly scuffed for DFPT. Fix it someday.
+      !      But wait until it is right and proper in the main code!
       IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
          IF (fmpi%n_size==1) THEN
             ALLOCATE(t_mat::hmat_tmp)
@@ -105,13 +104,6 @@ CONTAINS
             CALL h1mat_tmp(i, j)%init(s1mat_tmp(i, j))
          END DO
       END DO
-
-      !DO ilSpinPr = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
-      !   DO ilSpin = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
-      !      CALL h1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
-      !      CALL s1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
-      !   END DO
-      !END DO
 
       CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,iSpin,noco)
       CALL fjgjq%alloc(MAXVAL(lapwq%nv),atoms%lmaxd,iSpin,noco)
@@ -151,6 +143,7 @@ CONTAINS
                      !CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(1,1),.FALSE.,smat(1,1))
                   END IF
                ELSE
+                  ! TODO: Everything from here onwards  most certainly has the wrong spin logic.
                   IF (ilSpinPr==ilSpin) THEN !local spin-diagonal contribution
                      CALL hsmt_spinor(ilSpinPr,n,nococonv,chi)
                      IF (n.EQ.iDtype) THEN
@@ -218,8 +211,6 @@ CONTAINS
       IF (ANY(nk==k_selection)) THEN
          CALL save_npy("test_"//int2str(iDir)//"_"//int2str(nk)//"_h0.npy",h1mat_tmp(1,1)%data_c)
          CALL save_npy("test_"//int2str(iDir)//"_"//int2str(nk)//"_s0.npy",s1mat_tmp(1,1)%data_c)
-         !CALL save_npy(int2str(nk)//"_h1_0.npy",hmat(1,1)%data_c)
-         !CALL save_npy(int2str(nk)//"_s1_0.npy",smat(1,1)%data_c)
       END IF
 
       ! TODO: Does this need some ACC magic?
@@ -241,7 +232,7 @@ CONTAINS
 
    SUBROUTINE dfpt_dynmat_hsmt(atoms, sym, enpara, iSpin, iDir_row, iDtype_row, iDir_col, iDtype_col, input, fmpi, &
                       & noco, nococonv, cell, lapw, lapwq, usdus, td, tdV1,&
-                      hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont)
+                      hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont, vmat2)
 
       USE m_types
       USE m_types_mpimat
@@ -267,6 +258,8 @@ CONTAINS
       TYPE(t_tlmplm),   INTENT(IN)    :: td, tdV1
       TYPE(t_usdus),    INTENT(IN)    :: usdus
       CLASS(t_mat),     INTENT(INOUT) :: hmat1(:,:),smat1(:,:), hmat1q(:,:),smat1q(:,:), hmat2(:,:),smat2(:,:)
+      
+      CLASS(t_mat), OPTIONAL, INTENT(INOUT) :: vmat2(:,:)
 
       INTEGER, INTENT(IN) :: iSpin, iDir_row, iDtype_row, iDir_col, iDtype_col, nk, killcont(7)
 
@@ -280,9 +273,11 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: smat_tmp, hmat_tmp, s1mat_tmp(:,:), h1mat_tmp(:,:)
       CLASS(t_mat), ALLOCATABLE :: s1qmat_tmp(:,:), h1qmat_tmp(:,:), s2mat_tmp(:,:), h2mat_tmp(:,:)
 
-      ALLOCATE(k_selection(16))
-      k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
+      !ALLOCATE(k_selection(16))
+      !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
 
+      ALLOCATE(k_selection(1))
+      k_selection = [-1]
       IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
          IF (fmpi%n_size==1) THEN
             ALLOCATE(t_mat::hmat_tmp)
@@ -313,7 +308,11 @@ CONTAINS
             CALL h1mat_tmp(i, j)%init(s1mat_tmp(i, j))
             CALL s1qmat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.)
             CALL h1qmat_tmp(i, j)%init(s1qmat_tmp(i, j))
-            CALL s2mat_tmp(i, j)%init(.FALSE., lapw%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.)
+            IF (.NOT.PRESENT(vmat2)) THEN
+               CALL s2mat_tmp(i, j)%init(.FALSE., lapw%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.) 
+            ELSE
+               CALL s2mat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.)
+            END IF
             CALL h2mat_tmp(i, j)%init(s2mat_tmp(i, j))
          END DO
       END DO
@@ -348,8 +347,13 @@ CONTAINS
                CALL hsmt_nonsph(iDtype_col,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,h1mat_tmp(1,1),.FALSE.,lapw,fjgj)
                CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,iDtype_col,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,h1mat_tmp(1,1),.FALSE.,.TRUE.,.TRUE.,s1mat_tmp(1,1),lapw,fjgj)
                IF (killcont(1)/=0) THEN
-                  CALL hsmt_nonsph(iDtype_col,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,tdV1,fjgj,h2mat_tmp(1,1),.FALSE.,lapw,fjgj)
-                  CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,tdV1,fjgj,iDtype_col,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,h2mat_tmp(1,1),.FALSE.,.TRUE.,.FALSE.,lapwq=lapw,fjgjq=fjgj)
+                  IF (.NOT.PRESENT(vmat2)) THEN
+                     CALL hsmt_nonsph(iDtype_col,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,tdV1,fjgj,h2mat_tmp(1,1),.FALSE.,lapw,fjgj)
+                     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,tdV1,fjgj,iDtype_col,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,h2mat_tmp(1,1),.FALSE.,.TRUE.,.FALSE.,lapwq=lapw,fjgjq=fjgj)
+                  ELSE
+                     CALL hsmt_nonsph(iDtype_col,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,tdV1,fjgj,h2mat_tmp(1,1),.FALSE.,lapwq,fjgjq)
+                     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,tdV1,fjgj,iDtype_col,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,h2mat_tmp(1,1),.FALSE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
+                  END IF
                END IF
             ELSE
                RETURN
@@ -425,9 +429,15 @@ CONTAINS
                            & h1mat_tmp(igSpinPr,igSpin), s1mat_tmp(igSpinPr,igSpin), hmat1(igSpinPr,igSpin), smat1(igSpinPr,igSpin),killcont(4:5))
             CALL h1mat_tmp(igSpinPr,igSpin)%free()
             CALL s1mat_tmp(igSpinPr,igSpin)%free()
-            CALL matrix_pref(fmpi, atoms, cell%bmat, lapw%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapw, lapw, &
-                           & nk, lapw%nv(igSpinPr), lapw%nv(igSpin), iDtype_col, iDir_col, &
-                           & h2mat_tmp(igSpinPr,igSpin), s2mat_tmp(igSpinPr,igSpin), hmat2(igSpinPr,igSpin), smat2(igSpinPr,igSpin),[1,0])
+            IF (.NOT.PRESENT(vmat2)) THEN
+               CALL matrix_pref(fmpi, atoms, cell%bmat, lapw%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapw, lapw, &
+                              & nk, lapw%nv(igSpinPr), lapw%nv(igSpin), iDtype_col, iDir_col, &
+                              & h2mat_tmp(igSpinPr,igSpin), s2mat_tmp(igSpinPr,igSpin), hmat2(igSpinPr,igSpin), smat2(igSpinPr,igSpin),[1,0])
+            ELSE
+               CALL matrix_pref(fmpi, atoms, cell%bmat, lapwq%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapwq, lapw, &
+                              & nk, lapwq%nv(igSpinPr), lapw%nv(igSpin), iDtype_col, iDir_col, &       
+                              & h2mat_tmp(igSpinPr,igSpin), s2mat_tmp(igSpinPr,igSpin), vmat2(igSpinPr,igSpin), smat1q(igSpinPr,igSpin),[1,0])
+            END IF
             CALL h2mat_tmp(igSpinPr,igSpin)%free()
             CALL s2mat_tmp(igSpinPr,igSpin)%free()
             IF (iDtype_row==iDtype_col) THEN

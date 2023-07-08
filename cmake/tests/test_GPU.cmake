@@ -3,6 +3,8 @@ if (CLI_FLEUR_USE_GPU)
    #No check is done
    set(FLEUR_USE_GPU TRUE)
    message("GPU:${CLI_FLEUR_USE_GPU}")
+   set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_GPU")
+   set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_GPU")
    if(${CLI_FLEUR_USE_GPU} MATCHES "acc-gcc")
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenacc ")
    elseif(${CLI_FLEUR_USE_GPU} MATCHES "acc")

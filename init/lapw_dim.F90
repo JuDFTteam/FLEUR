@@ -6,7 +6,7 @@
 
 MODULE m_lapwdim
 CONTAINS
-  SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv ,forcetheo,atoms,nbasfcn)
+  SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,forcetheo,atoms,nbasfcn,juPhon)
     !
     !*********************************************************************
     !     determines dimensions of the lapw basis set with |k+G|<rkmax.
@@ -25,6 +25,8 @@ CONTAINS
     CLASS(t_forcetheo),INTENT(IN):: forcetheo
     TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER, INTENT(OUT)         :: nbasfcn
+
+    TYPE(t_juPhon), INTENT(IN)   :: juPhon
 
     !local variable for init
     INTEGER               :: nvd,nv2d,addx,addy,addz
@@ -62,20 +64,25 @@ CONTAINS
     rk2 = rkm*rkm
 
     !Determine the q-vector(s) to use
-    SELECT TYPE(forcetheo)
-    TYPE IS (t_forcetheo_ssdisp)
-       ALLOCATE(q_vectors(3,SIZE(forcetheo%qvec,2)))
-       q_vectors=forcetheo%qvec
-    TYPE IS (t_forcetheo_dmi)
-       ALLOCATE(q_vectors(3,SIZE(forcetheo%qvec,2)))
-       q_vectors=forcetheo%qvec
-    TYPE IS (t_forcetheo_jij)
-       ALLOCATE(q_vectors(3,SIZE(forcetheo%qvec,2)))
-       q_vectors=forcetheo%qvec
-    CLASS IS (t_forcetheo) ! DEFAULT
-       ALLOCATE(q_vectors(3,1))
-       q_vectors(:,1)=nococonv%qss
-    END SELECT
+    IF (juPhon%l_dfpt) THEN
+       ALLOCATE(q_vectors(3,SIZE(juPhon%qvec,2)))
+       q_vectors=juPhon%qvec
+    ELSE
+       SELECT TYPE(forcetheo)
+       TYPE IS (t_forcetheo_ssdisp)
+          ALLOCATE(q_vectors(3,SIZE(forcetheo%qvec,2)))
+          q_vectors=forcetheo%qvec
+       TYPE IS (t_forcetheo_dmi)
+          ALLOCATE(q_vectors(3,SIZE(forcetheo%qvec,2)))
+          q_vectors=forcetheo%qvec
+       TYPE IS (t_forcetheo_jij)
+          ALLOCATE(q_vectors(3,SIZE(forcetheo%qvec,2)))
+          q_vectors=forcetheo%qvec
+       CLASS IS (t_forcetheo) ! DEFAULT
+          ALLOCATE(q_vectors(3,1))
+          q_vectors(:,1)=nococonv%qss
+       END SELECT
+    END IF
 
     if (any(abs(nococonv%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
 

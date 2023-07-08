@@ -24,4 +24,5 @@ init/lapw_dim.F90
 init/angles.f90
 init/step_function.F90
 init/ptsym.f90
+init/test_performance.F90
 )

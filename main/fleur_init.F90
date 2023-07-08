@@ -11,6 +11,7 @@ MODULE m_fleur_init
 CONTAINS
    SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata, filename_add)
       USE m_types
+      USE m_test_performance
       use m_store_load_hybrid
       USE m_fleurinput_read_xml
       USE m_fleurinput_mpi_bc
@@ -172,7 +173,7 @@ CONTAINS
       CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum,  fi%sym, fmpi, sphhar, fi%noco)
       CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
-      CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn)
+      CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn, fi%juPhon)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input,   fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
@@ -234,7 +235,10 @@ CONTAINS
       if(fi%hybinp%l_hybrid) call load_hybrid_data(fi, fmpi, hybdat, mpdata)
 
       !new check mode will only run the init-part of FLEUR
-      IF (judft_was_argument("-check")) CALL judft_end("Check-mode done", fmpi%irank)
+      IF (judft_was_argument("-check")) THEN  
+         call test_performance()
+         CALL judft_end("Check-mode done", fmpi%irank)
+      endif   
 #ifdef CPP_MPI
       CALL MPI_BARRIER(fmpi%mpi_comm, ierr(1))
 #endif

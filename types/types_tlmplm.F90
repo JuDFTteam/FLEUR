@@ -26,6 +26,7 @@ MODULE m_types_tlmplm
      !(-llod:llod,-llod:llod,mlolotot,tspin)
      COMPLEX,ALLOCATABLE :: h_loc_LO(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
      COMPLEX,ALLOCATABLE :: h_LO(:,:,:,:,:)    !lmp,m,lo+mlo,ispin,jspin
+     COMPLEX,ALLOCATABLE :: h_LO2(:,:,:,:,:)    !lmp,m,lo+mlo,ispin,jspin
      COMPLEX,ALLOCATABLE :: h_loc(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
      COMPLEX,ALLOCATABLE :: h_loc_nonsph(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
      INTEGER,ALLOCATABLE :: h_loc2(:)
@@ -76,6 +77,7 @@ CONTAINS
     ALLOCATE(td%h_loc_nonsph(0:MAXVAL(td%h_loc2_nonsph)*2-1,0:MAXVAL(td%h_loc2_nonsph)*2-1,atoms%ntype,jspins,jspins),stat=err(6));td%h_loc_nonsph=0.0
     ALLOCATE(td%h_loc_lo(0:MAXVAL(td%h_loc2_nonsph)*2-1,0:MAXVAL(td%h_loc2_nonsph)*2-1,atoms%ntype,jspins,jspins),stat=err(6));td%h_loc_lo=0.0
     ALLOCATE(td%h_lo(0:MAXVAL(td%h_loc2_nonsph)*2-1,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(6));td%h_lo=0.0
+    ALLOCATE(td%h_lo2(0:MAXVAL(td%h_loc2_nonsph)*2-1,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(6));td%h_lo2=0.0
 
     ALLOCATE(td%e_shift(atoms%ntype,jspins),stat=err(7))
     IF (l_offdiag) THEN

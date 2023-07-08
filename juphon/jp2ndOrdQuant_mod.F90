@@ -79,7 +79,7 @@ module m_jp2ndOrdQuant
 
       ! (G+q)(G+q)^T and ((G+q)(G+q)^T - (G+q)^2/3)
       Gpq(1:3, iG) = real(gpqdp(1:3, iG) + qpt(1:3))
-      Gpqext(1:3, iG) = matmul(cell%bmat(1:3, 1:3), Gpq(1:3, iG))
+      Gpqext(1:3, iG) = matmul(Gpq(1:3, iG), cell%bmat(1:3, 1:3))
       if ( testMode ) then
         psDensMat(iG, 1:3, 1:3) = outerProduct(Gpqext(1:3, iG), Gpqext(1:3, iG))
       else
@@ -196,7 +196,7 @@ module m_jp2ndOrdQuant
 
     ! Leave it here so it needs not be calculated 3N x 3N times.
     do iG = 1, ngpqdp
-      Gpqext(1:3, iG) = matmul(cell%bmat(1:3, 1:3), real(gpqdp(1:3, iG) + qpt(1:3)))
+      Gpqext(1:3, iG) = matmul(real(gpqdp(1:3, iG) + qpt(1:3)), cell%bmat(1:3, 1:3))
     end do ! iG
 
     iAatom = 0
@@ -293,7 +293,6 @@ module m_jp2ndOrdQuant
   subroutine CalcIIEnerg2(atoms, cell, qpts, stars, input, iqpt, ngdp, gdp, E2ndOrdII)
 
     use m_sphbes
-    USE m_jpSternheimer, only : genpertpotdensgvecs
 
     implicit none
 
@@ -332,19 +331,16 @@ module m_jp2ndOrdQuant
     complex,           allocatable             :: E2ndOrdIIatQ0(:, :)
     real,              allocatable             :: constTerm(:, :)
     integer,           allocatable             :: gpqdp(:, :)
-    integer,           allocatable             :: gpqdp2Ind(:, :, :)
-    integer                                    :: gpqdp2iLim(2, 3)
 
     oldStuff = .FALSE.
 
     ! We get the same results for -q and q, probably because Eii2 is a real quantity
     ! todo only generate G-vectors once in the beginning #56, leave the -q version here so that we can test it to be the same
-    call genPertPotDensGvecs( stars, cell, input, ngpqdp, ngpqdp2km, -qpts%bk(1:3, iqpt), gpqdp, gpqdp2Ind, gpqdp2iLim )
-    deallocate(gpqdp2Ind)
+    call genPertPotDensGvecs( stars, cell, input, ngpqdp, ngpqdp2km, -qpts%bk(1:3, iqpt), gpqdp )
 
 #ifdef DEBUG_MODE
     if (.false.) then
-      call genPertPotDensGvecs( stars, cell, input, ngpqdp, ngpqdp2km, qpts%bk(1:3, iqpt), gpqdp, gpqdp2Ind, gpqdp2iLim )
+      call genPertPotDensGvecs( stars, cell, input, ngpqdp, ngpqdp2km, qpts%bk(1:3, iqpt), gpqdp )
     end if
 #endif
 
@@ -464,7 +460,7 @@ module m_jp2ndOrdQuant
     call GenPsDens2ndOrd(atoms, cell, ngdp, G0index, gdp, [0., 0., 0.], psDens2ndOrd, testMode)
 
     do iG = 1, ngdp
-      Gext(:, iG) = matmul(cell%bmat, gdp(:, iG))
+      Gext(:, iG) = matmul(gdp(:, iG), cell%bmat)
     end do
 
     iatom = 0
@@ -695,7 +691,7 @@ module m_jp2ndOrdQuant
             !todo we should determine the G=0 vector once or put it to the beginning at all
             cycle
           end if
-          Gext(1:3) = matmul( cell%bmat(1:3, 1:3), gdp(1:3, iG) )
+          Gext(1:3) = matmul( gdp(1:3, iG), cell%bmat(1:3, 1:3) )
           pylm(:, :) = cmplx(0.0, 0.0)
           scalFac(:) = cmplx(0.0, 0.0)
           sbes(:) = cmplx(0., 0.)
@@ -806,7 +802,7 @@ module m_jp2ndOrdQuant
   ! Deprecated
   subroutine phasy1lp2nSym(atomsT, cellT, Gvec, qptn, pylm)
 
-    use m_ylm_old
+    use m_ylm
     use m_types
 
     implicit none
@@ -861,10 +857,10 @@ module m_jp2ndOrdQuant
 
 
     ! calculates Y*_lm(\vec{G} + \vec{q}) for every l and m. The argument Gqext must be in external coordinates.
-    Gqext = matmul(cellT%bmat, Gvec + qptn)
-    call Ylmnorm_init( atomsT%lmaxd + 2 )
+    Gqext = matmul(Gvec + qptn, cellT%bmat)
+    !call Ylmnorm_init( atomsT%lmaxd + 2 )
     call ylm4(atomsT%lmaxd + 2, Gqext, ylm)
-    call Ylmnorm_init( atomsT%lmaxd)
+    !call Ylmnorm_init( atomsT%lmaxd)
     ylm = conjg(ylm)
 
 
@@ -923,5 +919,74 @@ module m_jp2ndOrdQuant
     outerProductME = a(i) * b(j)
 
   end function outerProductME
+
+  subroutine genPertPotDensGvecs( stars, cell, input, ngpqdp, ngpqdp2km, qpoint, gpqdp )
+
+    use m_types
+
+    implicit none
+
+    ! Type parameters
+    type(t_stars),          intent(in)   :: stars
+    type(t_cell),           intent(in)   :: cell
+    type(t_input),          intent(in)   :: input
+
+    ! Scalar parameters
+    integer,                intent(out)  :: ngpqdp
+    integer,                intent(out)  :: ngpqdp2km
+
+    ! Array parameters
+    real,                   intent(in)   :: qpoint(:)
+    integer,  allocatable,  intent(out)  :: gpqdp(:, :)
+
+    ! Scalar variables
+    integer                              :: ngrest
+    integer                              :: iGx
+    integer                              :: iGy
+    integer                              :: iGz
+    integer                              :: iG
+
+    ! Array variables
+    integer,  allocatable                :: gpqdptemp2kmax(:, :)
+    integer,  allocatable                :: gpqdptemprest(:, :)
+    integer                              :: Gint(3)
+    real                                 :: Gpqext(3)
+
+    allocate( gpqdptemp2kmax(3, (2 * stars%mx1 + 1) * (2 * stars%mx2 + 1) * (2 * stars%mx3 +  1)), &
+            & gpqdptemprest(3, (2 * stars%mx1 + 1) * (2 * stars%mx2 + 1) * (2 * stars%mx3 +  1)) )
+
+    ngpqdp = 0
+    ngpqdp2km = 0
+    ngrest = 0
+    gpqdptemp2kmax(:, :) = 0
+    gpqdptemprest(:, :) = 0
+    ! From all possible G-vectors in a box, only these are accepted which are element of a sphere with radius gmax which is shifted.
+    ! We need a little bit more than k*d because they are thought for a Gmax ball that is not shifted by a q, i.e. |G+q|<Gmax
+    do iGx = -(stars%mx1 + 3), (stars%mx1 + 3)
+      do iGy = -(stars%mx2 + 3), (stars%mx2 + 3)
+        do iGz = -(stars%mx3 + 3), (stars%mx3 + 3)
+          Gint = [iGx, iGy, iGz]
+          Gpqext =  matmul(real(Gint(1:3) + qpoint(1:3)),cell%bmat) !transform from internal to external coordinates
+          if (norm2(Gpqext) <= input%gmax) then
+            ngpqdp = ngpqdp + 1
+            ! Sort G-vectors
+            if ( norm2(Gpqext) <= 2 * input%rkmax ) then
+              ngpqdp2km = ngpqdp2km + 1
+              gpqdptemp2kmax(1:3, ngpqdp2km) = Gint(1:3)
+            else
+              ngrest = ngrest + 1
+              gpqdptemprest(1:3, ngrest) = Gint(1:3)
+            end if
+          end if
+        end do !iGz
+      end do !iGy
+    end do !iGx
+    allocate(gpqdp(3, ngpqdp))
+    ! Mapping array from G-vector to G-vector index
+    gpqdp(:, :) = 0
+    gpqdp(1:3, 1:ngpqdp2km) = gpqdptemp2kmax(1:3, 1:ngpqdp2km)
+    gpqdp(1:3, ngpqdp2km + 1 : ngpqdp) = gpqdptemprest(1:3, 1:ngrest)
+
+  end subroutine genPertPotDensGvecs
 
 end module m_jp2ndOrdQuant

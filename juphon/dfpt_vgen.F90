@@ -120,11 +120,9 @@ CONTAINS
         CALL den%sum_both_spin(workden)
         CALL dfptdenreal%sum_both_spin(workdenReal)
         CALL dfptdenimag%sum_both_spin(workdenImag)
-        ! TODO: Feeding starsq in instead of stars will be meaningless, unless
-        !       we also add the q in question at the relevant points.
         ! NOTE: The normal stars are also passed as an optional argument, because
         !       they are needed for surface-qlm.
-        CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.FALSE.,workdenReal,vCoul,&
+        CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,&
                         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
 
       ! b)
@@ -155,7 +153,7 @@ CONTAINS
 
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)
-         ! TODO: This is so different from the base case, that we build a new subroutine.
+         ! NOTE: This is so different from the base case, that we build a new subroutine.
          CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq,killcont)
          !DEALLOCATE(vcoul%pw_w)
       ELSE

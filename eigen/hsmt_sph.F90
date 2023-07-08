@@ -140,7 +140,8 @@ CONTAINS
 
                fct  = plegend(l3) * fl2p1(l) * ( fjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
                                              & + gjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*ddnln )
-               IF (.NOT.l_fullj) THEN
+               !IF (.NOT.l_fullj) THEN
+               IF (.TRUE.) THEN
                   fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
                                                     & + fjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr) )
                ELSE
@@ -328,20 +329,21 @@ CONTAINS
                   apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
                END IF ! useapw
 
-               IF (l_fullj) THEN
-                  !apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%us(l,n,isp)  * usdus%duds(l,n,isp) * gjkiln &
-                  !                                           & + usdus%us(l,n,isp)  * usdus%dus(l,n,isp)  * fjkiln )
-                  !apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%uds(l,n,isp) * usdus%dus(l,n,isp)  * fjkiln &
-                  !                                           & + usdus%uds(l,n,isp) * usdus%duds(l,n,isp) * gjkiln)
-                  w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
-                  apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
-                  apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
-               END IF
+               !IF (l_fullj) THEN
+               !   !apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%us(l,n,isp)  * usdus%duds(l,n,isp) * gjkiln &
+               !   !                                           & + usdus%us(l,n,isp)  * usdus%dus(l,n,isp)  * fjkiln )
+               !   !apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%uds(l,n,isp) * usdus%dus(l,n,isp)  * fjkiln &
+               !   !                                           & + usdus%uds(l,n,isp) * usdus%duds(l,n,isp) * gjkiln)
+               !   w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
+               !   apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
+               !   apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
+               !END IF
 
                ddnln = usdus%ddn(l,n,isp)
                elall = el(l,n,isp)
 
                IF (l<=atoms%lnonsph(n).AND..NOT.l_fullj) elall=elall-e_shift!(isp)
+               !IF (l<=atoms%lnonsph(n)) elall=elall-e_shift!(isp)
 
                ! Legendre polynomials
                l3 = modulo(l, 3)
@@ -369,7 +371,8 @@ CONTAINS
                VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)
 
                !IF (input%l_useapw.OR.(l_fullj.AND.l==0)) THEN
-               IF (input%l_useapw.OR.l_fullj) THEN ! correction
+               !IF (input%l_useapw.OR.l_fullj) THEN ! correction
+               IF (input%l_useapw) THEN
                   VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr) + &
                                                                                       & apw_lo2*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr) )
                END IF ! useapw
@@ -413,6 +416,9 @@ CONTAINS
       !$OMP     END DO
       DEALLOCATE(plegend)
       DEALLOCATE(VecHelpS,VecHelpH)
+      DEALLOCATE(cph_re,cph_im,cfac)
+      DEALLOCATE(dot,fct,fct2)
+      DEALLOCATE(xlegend)
       !$OMP     END PARALLEL
       CALL timestop("spherical setup")
       RETURN

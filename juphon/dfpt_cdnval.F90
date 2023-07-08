@@ -13,19 +13,10 @@ use mpi
 
 CONTAINS
 
-SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
+SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
                   vacuumdummy,sphhar,sym,vTot ,cdnvalJob,den,dosdummy,vacdosdummy,&
-                  hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, denIm, l_real)
-
-   !************************************************************************************
-   !     This is the FLEUR valence density generator
-   !******** ABBREVIATIONS *************************************************************
-   !     noccbd   : number of occupied bands
-   !     pallst   : if set to .true. bands above the Fermi-Energy are taken into account
-   !     ener     : band energy averaged over all bands and k-points,
-   !                wheighted with the l-like charge of each atom type
-   !     sqal     : l-like charge of each atom type. sum over all k-points and bands
-   !************************************************************************************
+                  hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, denIm, l_real,&
+                  qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
 
    USE m_types
    USE m_constants
@@ -68,36 +59,44 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
    TYPE(t_potden),        INTENT(INOUT) :: den, denIm
 
    ! Scalar Arguments
-   INTEGER,               INTENT(IN)    :: eig_id, eig_id_q, dfpt_eig_id, jspin, iDtype, iDir
+   INTEGER,               INTENT(IN)    :: eig_id, dfpt_eig_id, jspin, iDtype, iDir
    LOGICAL,               INTENT(IN)    :: l_real
 
    REAL, INTENT(IN) :: bqpt(3)
 
+   INTEGER, OPTIONAL, INTENT(IN)    :: qm_eid_id, dfpt_eigm_id
+   TYPE(t_stars), OPTIONAL, INTENT(IN)         :: starsmq
+   TYPE(t_results), OPTIONAL, INTENT(INOUT)    :: resultsdummy1m
+   TYPE(t_cdnvalJob), OPTIONAL, INTENT(IN)    :: cdnvalJob1m
+
    ! Local Scalars
    INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,iType,ikG,iqdir
-   INTEGER :: iErr,nbands,noccbd,nbands1,iLo,l,imLo,ikLo,ikGLo
-   INTEGER :: skip_t,skip_tt,nbasfcn,nbasfcnq
+   INTEGER :: iErr,nbands,noccbd,nbands1,iLo,l,imLo,ikLo,ikGLo,nbands1m
+   INTEGER :: skip_t,skip_tt,nbasfcn,nbasfcnq,nbasfcnmq
    REAL    :: gExt(3), q_loop(3), bkpt(3)
 
    ! Local Arrays
-   COMPLEX ::  f_b8_dummy(3, atoms%ntype), qimag(kpts%nkpt,stars%ng3)
-   REAL,ALLOCATABLE :: we(:),eig(:),we1(:),eig1(:)
+   COMPLEX ::  f_b8_dummy(3, atoms%ntype)
+   REAL,ALLOCATABLE :: we(:),eig(:),we1(:),eig1(:),we1m(:),eig1m(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
-   TYPE (t_lapw)              :: lapw, lapwq
+   TYPE (t_lapw)              :: lapw, lapwq, lapwmq
    TYPE (t_orb)               :: orbdummy
    TYPE (t_denCoeffs)         :: denCoeffs
    TYPE (t_denCoeffsOffdiag)  :: denCoeffsOffdiag
-   TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1, eigVecCoeffsPref
+   TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1, eigVecCoeffsPref, eigVecCoeffs1m
    TYPE (t_usdus)             :: usdus
-   TYPE (t_mat)               :: zMat, zMat1, zMatPref, zMatq
+   TYPE (t_mat)               :: zMat, zMat1, zMatPref, zMat1m
    TYPE(t_kpts)               :: kpts_mod
+
+   LOGICAL :: l_minusq
 
    CALL timestart("dfpt_cdnval")
 
    call timestart("init")
 
+   l_minusq = PRESENT(qm_eid_id)
    IF (noco%l_mperp) THEN
       ! when the off-diag. part of the density matrix, i.e. m_x and
       ! m_y, is calculated inside the muffin-tins (l_mperp = T), cdnval
@@ -136,8 +135,11 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
 
    jsp = MERGE(1,jspin,noco%l_noco)
 
+   ! TODO: There was the idea that some problems stemmed from k+q>0.5, so we tried implementing
+   !       a backfolding option. This turned out to be unnecessary, but I leave it here for possible
+   !       future application
    kpts_mod = kpts
-   DO ikpt_i = 1, kpts%nkpt
+   DO ikpt_i = 1, size(cdnvalJob%k_list)
       ikpt=fmpi%k_list(ikpt_i)
       bkpt = kpts%bk(:, ikpt)
       DO iqdir = 1, 3
@@ -155,20 +157,23 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
       ikpt=cdnvalJob%k_list(ikpt_i)
 
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
-      !CALL lapwq%init(input,noco,nococonv, kqpts,atoms,sym,ikpt,cell, fmpi)
-      !CALL lapwq%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi, bqpt)
       CALL lapwq%init(input,noco,nococonv, kpts_mod,atoms,sym,ikpt,cell, fmpi, bqpt)
+
+      IF (l_minusq) CALL lapwmq%init(input,noco,nococonv, kpts_mod,atoms,sym,ikpt,cell, fmpi, -bqpt)
 
       skip_t = skip_tt
       ev_list=cdnvaljob%compact_ev_list(ikpt_i,.FALSE.)
       noccbd = SIZE(ev_list)
 
       we  = cdnvalJob%weights(ev_list,ikpt)
-      !write(4996,*) we
-      !IF (norm2(kpts%bk(:,ikpt))<1E-7) we = 0
       we1  = cdnvalJob1%weights(ev_list,ikpt)
       eig = resultsdummy%eig(ev_list,ikpt,jsp)
       eig1 = resultsdummy1%eig(ev_list,ikpt,jsp)
+
+      IF (l_minusq) THEN
+         we1m = cdnvalJob1m%weights(ev_list,ikpt)
+         eig1m = resultsdummy1m%eig(ev_list,ikpt,jsp)
+      END IF
 
       IF (cdnvalJob%l_evp) THEN
          IF (minval(ev_list) > skip_tt) skip_t = 0
@@ -178,48 +183,51 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
 
       nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
       nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*atoms%nlotot,lapwq%nv(1)+atoms%nlotot,noco%l_noco)
+
+      IF (l_minusq) nbasfcnmq = MERGE(lapwmq%nv(1)+lapwmq%nv(2)+2*atoms%nlotot,lapwmq%nv(1)+atoms%nlotot,noco%l_noco)
+
       CALL zMat%init(l_real,nbasfcn,noccbd)
       CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
       CALL zMatPref%init(.FALSE.,nbasfcn,noccbd)
-      !CALL zMatPref%init(.FALSE.,nbasfcnq,noccbd)
-      !CALL zMatq%init(l_real,nbasfcnq,noccbd)
+
+      IF (l_minusq) THEN
+         CALL zMat1m%init(.FALSE.,nbasfcnmq,noccbd)
+      END IF
 
       CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat)
-      !CALL read_eig(eig_id_q,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMatq)
       CALL read_eig(dfpt_eig_id,ikpt,jsp,list=ev_list,neig=nbands1,zmat=zMat1)
+
+      IF (l_minusq) CALL read_eig(dfpt_eigm_id,ikpt,jsp,list=ev_list,neig=nbands1m,zmat=zMat1m)
 
       ! TODO: Implement correct spin logic here! Only collinear operational for now!
       DO ikG = 1, lapw%nv(jsp)
-      !DO ikG = 1, lapwq%nv(jsp)
-         ! TODO: Transpose bmat or not?
-         gExt = MATMUL(cell%bmat,lapw%vk(:, ikG, jsp))
-         !gExt = MATMUL(cell%bmat,lapwq%vk(:, ikG, jsp))
+         gExt = MATMUL(lapw%vk(:, ikG, jsp),cell%bmat)
          IF (zMat%l_real) THEN
             zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_r(ikG, :)
-            !zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMatq%data_r(ikG, :)
          ELSE
             zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_c(ikG, :)
-            !zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMatq%data_c(ikG, :)
          END IF
       END DO
 
-      DO ikG = lapw%nv(jsp) + 1, lapw%nv(jsp) + atoms%nlo(iDtype)
-         iLo = ikG-lapw%nv(jsp)
-         l = atoms%llo(iLo, iDtype)
-         DO imLo = 1, 2*l+1
-            ikLo = lapw%kvec(imLo,iLo,iDtype)
-            ikGLo = lapw%nv(jsp) + lapw%index_lo(iLo,iDtype) + imLo
-            !gExt = MATMUL(cell%bmat,lapw%vk(:,ikLo, jsp))
-            gExt = MATMUL(cell%bmat,lapw%bkpt)
-            IF (zMat%l_real) THEN
-               zMatPref%data_c(ikGLo,:) = ImagUnit * gExt(idir) * zMat%data_r(ikGLo, :)
-            ELSE
-               zMatPref%data_c(ikGLo,:) = ImagUnit * gExt(idir) * zMat%data_c(ikGLo, :)
-            END IF
-         END DO
-      END DO
+      ! TODO: LOs matching coefficients are unperturbed for now, because they derailed
+      !       the calculation. Find out why; forces can use the perturbation!
+      !DO ikG = lapw%nv(jsp) + 1, lapw%nv(jsp) + atoms%nlo(iDtype)
+      !   iLo = ikG-lapw%nv(jsp)
+      !   l = atoms%llo(iLo, iDtype)
+      !   DO imLo = 1, 2*l+1
+      !      ikLo = lapw%kvec(imLo,iLo,iDtype)
+      !      ikGLo = lapw%nv(jsp) + lapw%index_lo(iLo,iDtype) + imLo
+      !      !gExt = MATMUL(cell%bmat,lapw%vk(:,ikLo, jsp))
+      !      gExt = MATMUL(cell%bmat,lapw%bkpt)
+      !      IF (zMat%l_real) THEN
+      !         zMatPref%data_c(ikGLo,:) = ImagUnit * gExt(idir) * zMat%data_r(ikGLo, :)
+      !      ELSE
+      !         zMatPref%data_c(ikGLo,:) = ImagUnit * gExt(idir) * zMat%data_c(ikGLo, :)
+      !      END IF
+      !   END DO
+      !END DO
 
-      !IF (.NOT.(nbands==nbands1)) Problem?
+      !IF (.NOT.(nbands==nbands1)) TODO: Can this ever be a problem?
 #ifdef CPP_MPI
       CALL MPI_BARRIER(fmpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
@@ -231,8 +239,10 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
       CALL eigVecCoeffs1%init(input,atoms,jspin,noccbd,noco%l_mperp)
       CALL eigVecCoeffsPref%init(input,atoms,jspin,noccbd,noco%l_mperp)
 
+      IF (l_minusq) CALL eigVecCoeffs1m%init(input,atoms,jspin,noccbd,noco%l_mperp)
+
       DO ispin = jsp_start, jsp_end
-         ! TODO: This spin logic might hold for noco.
+         ! TODO: Does this spin logic hold for noco?
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
                     eigVecCoeffs%abcof(:,0:,0,:,ispin),eigVecCoeffs%abcof(:,0:,1,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat)
@@ -242,44 +252,68 @@ SUBROUTINE dfpt_cdnval(eig_id, eig_id_q, dfpt_eig_id, fmpi,kpts,jspin,noco,nococ
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
                     eigVecCoeffsPref%abcof(:,0:,0,:,ispin),eigVecCoeffsPref%abcof(:,0:,1,:,ispin),&
                     eigVecCoeffsPref%ccof(-atoms%llod:,:,:,:,ispin),zMatPref)
-         !CALL abcof(input,atoms,sym,cell,lapwq,noccbd,usdus,noco,nococonv,ispin,&
-         !           eigVecCoeffsPref%abcof(:,0:,0,:,ispin),eigVecCoeffsPref%abcof(:,0:,1,:,ispin),&
-         !           eigVecCoeffsPref%ccof(-atoms%llod:,:,:,:,ispin),zMatPref)
+         IF (l_minusq) CALL abcof(input,atoms,sym,cell,lapwmq,noccbd,usdus,noco,nococonv,ispin,&
+                                  eigVecCoeffs1m%abcof(:,0:,0,:,ispin),eigVecCoeffs1m%abcof(:,0:,1,:,ispin),&
+                                  eigVecCoeffs1m%ccof(-atoms%llod:,:,:,:,ispin),zMat1)
 
-         !IF (norm2(kpts%bk(:,ikpt))<1E-7) eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = CMPLX(0.0,0.0)
          eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)
          eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) = eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) + eigVecCoeffsPref%ccof(-atoms%llod:,:,:,iDtype,ispin)
-         !IF (norm2(kpts%bk(:,ikpt))<1E-7) eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = CMPLX(0.0,0.0)
 
-         CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-         CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-         CALL dfpt_rhomtlo(atoms,noccbd,we,we1,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-         CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,bqpt)
+         IF (l_minusq) THEN
+            eigVecCoeffs1m%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1m%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)
+            eigVecCoeffs1m%ccof(-atoms%llod:,:,:,iDtype,ispin) = eigVecCoeffs1m%ccof(-atoms%llod:,:,:,iDtype,ispin) + eigVecCoeffsPref%ccof(-atoms%llod:,:,:,iDtype,ispin)
+         END IF
 
+         IF (l_minusq) THEN
+            CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,-bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,-bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,ispin,ispin,-bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,-bqpt,eigVecCoeffs1m)
+         ELSE
+            CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,bqpt)
+         END IF
       END DO ! end loop over ispin
       IF (noco%l_mperp) then
-        call timestart("denCoeffsOffdiag%calcCoefficients")
-        CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-        CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-        CALL dfpt_rhomtlo(atoms,noccbd,we,we1,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-        CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,bqpt)
-        CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-        CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,1,2,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-        CALL dfpt_rhomtlo(atoms,noccbd,we,we1,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-        CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,bqpt)
-        call timestop("denCoeffsOffdiag%calcCoefficients")
+         IF (.NOT.l_minusq) THEN
+            call timestart("denCoeffsOffdiag%calcCoefficients")
+            CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,bqpt,eigVecCoeffs1m)
+            CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,1,2,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,bqpt,eigVecCoeffs1m)
+            call timestop("denCoeffsOffdiag%calcCoefficients")
+         ELSE
+            call timestart("denCoeffsOffdiag%calcCoefficients")
+            CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,bqpt)
+            CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,1,2,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,bqpt)
+            call timestop("denCoeffsOffdiag%calcCoefficients")
+         END IF
       endif
 
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
-         !IF (norm2(kpts%bk(:,ikpt))<1E-7) we = 0
-         CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
-                    jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,qimag(ikpt,:),iDir)
+         IF (.NOT.l_minusq) THEN
+            CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
+                       jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir)
+         ELSE
+            CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
+                       jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir,lapwmq,zMat1m)
+         END IF
       END IF
    END DO ! end of k-point loop
-
-   !CALL save_npy(int2str(den%iter)//"_"//int2str(iDir)//"_qimag.npy",qimag)
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end

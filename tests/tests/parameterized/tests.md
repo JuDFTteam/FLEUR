@@ -123,7 +123,8 @@ Testset: Greenfunctions
 |+|Fe bcc Green's function Radial Noco spin offdiagonal|greens/GreensFunction_mperp_ydir|bulk
 |+|GdCu Green's function interorbital elements|greens/GreensFunction_InterOrbital|bulk
 |+|Greens Function intersite single shell|greens/GreensFunction_IntersiteSingleShell|bulk
-|+|Greens Function intersite single shell|greens/GreensFunction_IntersiteGammaNoGamma|bulk
+|+|Greens Function intersite single shell|greens/GreensFunction_IntersiteGamma|bulk
+|+|Greens Function intersite single shell|greens/GreensFunction_IntersiteNoGamma|bulk
 |+|Greens Function intersite multiple shells|greens/GreensFunction_IntersiteMultipleShells|bulk
 |+|Greens Function intersite shell construction|greens/GreensFunction_IntersiteShellConstruction|bulk
 |+|Greens Function intersite shell construction|greens/GreensFunction_IntersiteShellConstructionFilm|bulk

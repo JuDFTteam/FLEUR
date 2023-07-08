@@ -160,10 +160,12 @@ CONTAINS
                      & tlmplm%tdulo(lmp,m,lo+mlo,iSpinPr,iSpin) + one * cil * dvulo(lo,lp,lh)
                      tlmplm%h_LO(lmp,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lmp,m,lo+mlo,iSpinPr,iSpin) + one * cil * uvulo(lo,lp,lh)
                      tlmplm%h_LO(lmp+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lmp+s,m,lo+mlo,iSpinPr,iSpin) + one * cil * dvulo(lo,lp,lh)
-                       tlmplm%tulou(lmp,m,lo+mlo,iSpinPr,iSpin) = &
+                     tlmplm%tulou(lmp,m,lo+mlo,iSpinPr,iSpin) = &
                      & tlmplm%tulou(lmp,m,lo+mlo,iSpinPr,iSpin) + one * CONJG(cil*uvulo(lo,lp,lh))
-                       tlmplm%tulod(lmp,m,lo+mlo,iSpinPr,iSpin) = &
+                     tlmplm%tulod(lmp,m,lo+mlo,iSpinPr,iSpin) = &
                      & tlmplm%tulod(lmp,m,lo+mlo,iSpinPr,iSpin) + one * CONJG(cil*dvulo(lo,lp,lh))
+                     tlmplm%h_LO2(lmp,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lmp,m,lo+mlo,iSpinPr,iSpin) + one * CONJG(cil*uvulo(lo,lp,lh))
+                     tlmplm%h_LO2(lmp+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lmp+s,m,lo+mlo,iSpinPr,iSpin) + one * CONJG(cil*dvulo(lo,lp,lh))
                   END DO
                END DO
             END DO
@@ -238,12 +240,19 @@ CONTAINS
                       * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
                       + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
                   tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) &
-                                                        & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
-                                                        & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
+                    & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
+                    & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
+                  tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin) + &
+                      + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
+                      * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
                   tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) &
-                                                        & + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
-                                                        & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
-                                                        & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
+                    & + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
+                    & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
+                    & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
+                  tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin) + &
+                      + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
+                      * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
+                      + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
                   IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
                      tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr)
                      tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr)
@@ -252,6 +261,8 @@ CONTAINS
 
                      tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr)
                      tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr)
+                     tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr)
+                     tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr)
                   END IF
                   !+apw_lo
                   IF (atoms%l_dulo(lo,ntyp)) THEN
@@ -259,7 +270,9 @@ CONTAINS
                      tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5
                      tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)= 0.0
                      tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = 0.0
+                     tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5
                      tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5
+                     tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin)= 0.0
                      tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = 0.0
                   END IF
                   !+apw_lo

@@ -62,7 +62,7 @@ CONTAINS
       LOGICAL :: l_samelapw
 
       ! Local Arrays
-      COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ax(:), bx(:), cx(:)
+      COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ax(:,:), bx(:,:), cx(:,:)
       COMPLEX, ALLOCATABLE :: abclo(:,:,:,:)
       COMPLEX, ALLOCATABLE :: abCoeffsPr(:,:), axPr(:,:), bxPr(:,:), cxPr(:,:)
       COMPLEX, ALLOCATABLE :: abcloPr(:,:,:,:)
@@ -85,7 +85,7 @@ CONTAINS
       lo_lmax=maxval(atoms%llo)
 
       ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
-      ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))      
+      ALLOCATE(ax(2*lo_lmax+1,MAXVAL(lapw%nv)),bx(2*lo_lmax+1,MAXVAL(lapw%nv)),cx(2*lo_lmax+1,MAXVAL(lapw%nv)))      
       ALLOCATE(abCoeffsPr(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapwPr%nv)))
       ALLOCATE(axPr(MAXVAL(lapwPr%nv),2*lo_lmax+1),bxPr(MAXVAL(lapwPr%nv),2*lo_lmax+1),cxPr(MAXVAL(lapwPr%nv),2*lo_lmax+1))
       ALLOCATE(abcloPr(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
@@ -181,6 +181,48 @@ CONTAINS
             !$acc end data
          ENDDO
          CALL timestop("LAPW-LO")
+         IF (l_fullj) THEN
+            CALL timestart("LO-LAPW")
+            DO lo = 1,atoms%nlo(ntyp)
+               l = atoms%llo(lo,ntyp)
+               s = tlmplm%h_loc2_nonsph(ntyp) 
+               !$acc data create(axpr,bxpr,cxpr)
+               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,ax,cmplx(1.0,0.0),cmplx(0.0,0.0),'N','T')
+               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,bx,cmplx(1.0,0.0),cmplx(0.0,0.0),'N','T')
+               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_LO2(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abCoeffs,cx,cmplx(1.0,0.0),cmplx(0.0,0.0),'N','T')
+
+               !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcloPr,ax,bx,cx)&
+               !$acc & copyin(lapwPr,lapwPr%nv,lapwPr%index_lo,fmpi,fmpi%n_size,fmpi%n_rank)&
+               !$acc & default(none)
+               DO nkvec = 1,invsfct*(2*l+1)
+                  lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
+                  IF (hmat%l_real) THEN
+                     DO m=-l,l
+                        DO kp = 1,lapw%nv(igSpin)
+                           hmat%data_r(lorow,kp) = hmat%data_r(lorow,kp) &
+                                               & + REAL(chi) * invsfct * (&
+                                               & CONJG(abcloPr(1,m,nkvec,lo)) *  ax(l+1+m,kp) + &
+                                               & CONJG(abcloPr(2,m,nkvec,lo)) *  bx(l+1+m,kp) + &
+                                               & CONJG(abcloPr(3,m,nkvec,lo)) *  cx(l+1+m,kp) )
+                        END DO   
+                     END DO
+                  ELSE
+                     DO m=-l,l
+                        DO kp = 1,lapw%nv(igSpin)
+                           hmat%data_c(lorow,kp) = hmat%data_c(lorow,kp) &
+                                               & + chi * invsfct * ( &
+                                               & CONJG(abcloPr(1,m,nkvec,lo)) *  ax((l+1+m),kp) + &
+                                               & CONJG(abcloPr(2,m,nkvec,lo)) *  bx((l+1+m),kp) + &
+                                               & CONJG(abcloPr(3,m,nkvec,lo)) *  cx((l+1+m),kp) )
+                        END DO   
+                     END DO
+                  END IF
+               END DO
+               !$acc end kernels
+               !$acc end data
+            END DO
+            CALL timestop("LO-LAPW")
+         END IF
          CALL timestart("LO-LO")
          !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo,abcoeffsPr,abcloPr) &
          !$acc & copyin(atoms,lapw,lapwPr,tlmplm,tlmplm%tulou,tlmplm%tulod,tlmplm%h_loc(:,:,ntyp,ilSpinPr,ilSpin),lapw%nv(:),lapwPr%nv(:))&
@@ -220,8 +262,11 @@ CONTAINS
                               bxx = tlmplm%h_loc_LO(lmp+s,lm,ntyp,ilSpinPr,ilSpin)*abclo(1,m,nkvec,lo) + &
                                     tlmplm%h_loc_LO(lmp+s,lm+s,ntyp,ilSpinPr,ilSpin)*abclo(2,m,nkvec,lo)  + &
                                     tlmplm%h_LO(lmp+s,m,lo+mlo,ilSpinPr,ilSpin) * abclo(3,m,nkvec,lo)
-                              cxx = tlmplm%tulou(lm,mp,lop+mlo,ilSpinPr,ilSpin) * abclo(1,m,nkvec,lo)+ &
-                                    tlmplm%tulod(lm,mp,lop+mlo,ilSpinPr,ilSpin)* abclo(2,m,nkvec,lo) + &
+                              !cxx = tlmplm%tulou(lm,mp,lop+mlo,ilSpinPr,ilSpin) * abclo(1,m,nkvec,lo)+ &
+                              !      tlmplm%tulod(lm,mp,lop+mlo,ilSpinPr,ilSpin)* abclo(2,m,nkvec,lo) + &
+                              !      tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,ilSpinPr,ilSpin) * abclo(3,m,nkvec,lo)
+                              cxx = tlmplm%h_LO2(lm,mp,lop+mlo,ilSpinPr,ilSpin) * abclo(1,m,nkvec,lo)+ &
+                                    tlmplm%h_LO2(lm+s,mp,lop+mlo,ilSpinPr,ilSpin)* abclo(2,m,nkvec,lo) + &
                                     tlmplm%tuloulo_newer(mp,m,lop,lo,ntyp,ilSpinPr,ilSpin) * abclo(3,m,nkvec,lo)
                               prod= CONJG(abcloPr(1,mp,nkvecp,lop)) * axx + &
                                     CONJG(abcloPr(2,mp,nkvecp,lop)) * bxx + &

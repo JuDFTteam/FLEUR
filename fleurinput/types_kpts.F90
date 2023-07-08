@@ -181,10 +181,11 @@ CONTAINS
       close(fid)
    end function      
 
-   SUBROUTINE read_xml_kptsByIndex(this, xml, kptsIndex)
+   SUBROUTINE read_xml_kptsByIndex(this, filename_add, xml, kptsIndex)
       USE m_types_xml
       USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
+      CHARACTER(len=100), INTENT(IN) :: filename_add
       TYPE(t_xml), INTENT(INOUT) ::xml
       INTEGER, INTENT(IN), OPTIONAL :: kptsIndex
 
@@ -290,7 +291,7 @@ CONTAINS
 
       ALLOCATE (this%bk(3, this%nkpt))
       ALLOCATE (this%wtkpt(this%nkpt))
-      if (.not. this%read_kpts_by_name("inp.xml",this%kptsName)) THEN
+      if (.not. this%read_kpts_by_name(TRIM(filename_add)//"inp.xml",this%kptsName)) THEN
          print *,"WARNING, new k-point reader could not be used. Please check your inp.xml/kpts.xml"
          DO i = 1, this%nkpt
             WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
@@ -392,7 +393,7 @@ CONTAINS
         CALL judft_error(("No kPointList named: "//TRIM(ADJUSTL(listName))//" found."))
       END IF
 
-      CALL read_xml_kptsByIndex(this, xml, kptsIndex)
+      CALL read_xml_kptsByIndex(this, xml%filename_add_xml, xml, kptsIndex)
 
       IF (l_band) THEN
          IF (.NOT.this%kptsKind.EQ.KPTS_KIND_PATH) THEN
