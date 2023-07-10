@@ -22,9 +22,7 @@ CONTAINS
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
-#ifdef CPP_GPU
-      USE nvtx
-#endif
+
 
       TYPE(t_input),    INTENT(IN)    :: input
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
@@ -213,9 +211,7 @@ CONTAINS
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
-#ifdef CPP_GPU
-      USE nvtx
-#endif
+
 
       TYPE(t_input),    INTENT(IN)    :: input
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
