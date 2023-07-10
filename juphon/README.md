@@ -106,7 +106,15 @@ $ /path/to/fleur/inpgen -f inpCu_fit -nosym -add_name desym
 $ /path/to/fleur/inpgen -inp.xml -noKsym -kpt dfpt#gamma@grid=16,16,16
 ```
 
-Edit both ```inp.xml``` and ```desym_inp.xml``` to reflect all the changes in the initial input file, like the setting of ```ctail``` etc. Then invoke FLEUR once to generate a ground state solution:
+Edit both ```inp.xml``` and ```desym_inp.xml``` to reflect all the changes in the initial input file, like the setting of ```ctail``` etc. Especially ensure, that you use the same libxc functional you used initially, e.g. ```vwn```:
+
+```
+      <xcFunctional name="LibXC" relativisticCorrections="F">
+         <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/>
+      </xcFunctional>
+```
+
+Then invoke FLEUR once to generate a ground state solution:
 
 ```
 $ /path/to/fleur
@@ -155,6 +163,16 @@ The programm will run self-consistency calculations for each q-point provided, e
 
 ![Copper phonon picture](./Copper_dispersion.png)
 
-# Current limitations
+# Current limitations/State of the art
 
-# Future development
+The development of FLAPW-DFPT in FLEUR has been and still is a lengthy process. There have been both numerical and conceptional hurdles to overcome, that led to quite a lot of finetuning and added corrections or reformulations. 
+
+Currently, the implementation is at the level of polyatomic metals. I.e., we tested monoatomic insulators and metals, silicon diamond as a two-atomic semiconductor and the magnetic metals bcc Fe and fcc Ni. We thus verified, that the calculation holds for more than one atom and more than one spin. However, for hcp Co we see kinks that distinguish the DFPT data from the phonopy curves especially on the Gamma-point. This indicates a problem in the description of terms with the eigenenergy response or the occupation number reponse, both of which are only relevant for more than one atom and the latter only so for materials with fractional occupation numbers. The latter also depend on the former. 
+
+![Cobalt phonon picture](./Cobalt_dispersion.png)
+
+A point of contention are local orbitals to supplement the LAPW basis. In force calculations, i.e. a first order description, local obitals are completely contained up to the derivative of their matching coefficients. Doing the same in the DFPT scheme breaks the calculation and we adopt the apporach of not perturbing the LO basis functions.
+
+Another issue is the inclusion of core tail corrections. There is an option to explicitly contain their perturbation for forces by going to ```f_level=1``` and an analogous scheme was developed for the DFPT-FLAPW formalism. However, during testing we found a symmetry breaking caused by the correction, so we disabled it for the time being.
+
+As of yet, FLEUR-DFPT has no implementation of GGA functionals, non-collinear magnetism, spin-orbit coupling, and DFT+U. 
