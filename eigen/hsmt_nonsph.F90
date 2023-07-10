@@ -354,11 +354,10 @@ CONTAINS
          !$OMP END PARALLEL DO
       END IF
 #endif
-
+     !$acc exit data delete(ab2,ab1,abCoeffs,abCoeffsPr,data_c,ab_select,h_loc)
       DEALLOCATE(ab_select,abCoeffs,abCoeffsPr,ab1,ab2,h_loc)
       IF (ALLOCATED(data_c)) DEALLOCATE(data_c)
-      !$acc exit data delete(ab2,ab1,abCoeffs,abCoeffsPr,data_c,ab_select,h_loc)
-
+ 
       CALL timestop("non-spherical setup")
    END SUBROUTINE hsmt_nonsph
 
