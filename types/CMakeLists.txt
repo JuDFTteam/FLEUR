@@ -11,7 +11,7 @@ types/types.F90
 types/types_fft.F90
 types/types_force.f90
 types/types_forcetheo.F90
-types/types_gpumat.F90
+#types/types_gpumat.F90
 types/types_greensfCoeffs.F90
 types/types_greensfContourData.f90
 types/types_greensf.F90
