@@ -40,15 +40,22 @@ MODULE m_vham
         INTEGER,             INTENT(IN)     :: jspin,kptindx    
         CLASS(t_mat),        INTENT(INOUT)  :: hmat      !!G1, G2
 
-        INTEGER i_v,i_pair,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,matom1,matom2,lm1atom1,lm1atom2,iG1,iG2,abSizeG1,abSizeG2,indx_pair
+        INTEGER i_v,i_pair,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,matom1,matom2,lm1atom1,lm1atom2,iG1,iG2,abSizeG1,abSizeG2,indx_pair,counter
         COMPLEX c_0,c_pair,c_hermitian
         COMPLEX, ALLOCATABLE :: abG1(:,:),abG2(:,:)
         COMPLEX, ALLOCATABLE :: c_0_pair(:,:,:)  !G1,G2,i_pair
 
         ALLOCATE(abG1(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
         ALLOCATE(abG2(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
-        ALLOCATE(c_0_pair(atoms%lda_v(1)%numOtherAtoms * atoms%n_v ,MAXVAL(lapw%nv),MAXVAL(lapw%nv)))
 
+        counter=0
+        DO i_v = 1,atoms%n_v
+            Do atom2=1,atoms%lda_v(i_v)%numOtherAtoms
+                counter=counter+1
+            ENDDO
+        ENDDO
+
+        ALLOCATE(c_0_pair(counter,MAXVAL(lapw%nv),MAXVAL(lapw%nv)))
         
         i_pair=1 
         DO i_v = 1,atoms%n_v  
@@ -95,11 +102,11 @@ MODULE m_vham
                     c_pair=c_pair+c_0_pair(indx_pair,iG1,iG2)
                     c_hermitian=c_hermitian+conjg(c_0_pair(indx_pair,iG2,iG1))
                 ENDDO
-                WRITE(6000,*) 'iG1,iG2,mat',iG1,iG2,c_pair
-                IF (iG1==iG2) THEN
-                    WRITE(3000,*) 'iG1,iG2,mat',iG1,iG2,c_pair
-                ENDIF
-                WRITE(3500,*) 'iG2,iG1,difference', iG2,iG1,c_hermitian - c_pair
+                !WRITE(6000,*) 'iG1,iG2,mat',iG1,iG2,c_pair
+                !IF (iG1==iG2) THEN
+                !    WRITE(3000,*) 'iG1,iG2,mat',iG1,iG2,c_pair
+                !ENDIF
+                !WRITE(3500,*) 'iG2,iG1,difference', iG2,iG1,c_hermitian - c_pair
                 IF(hmat%l_real) THEN
                     hmat%data_r(iG1,iG2)=hmat%data_r(iG1,iG2)+REAL(c_pair)
                 ELSE
