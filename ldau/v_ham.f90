@@ -63,13 +63,13 @@ MODULE m_vham
             latom1=atoms%lda_v(i_v)%thisAtomL
             ll1atom1=latom1*(latom1+1)
             CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom1),jspin)
-            CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,jspin,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.)
+            CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.)
             Do atom2=1,atoms%lda_v(i_v)%numOtherAtoms
                 natom2=atoms%lda_v(i_v)%otherAtomIndices(atom2)
                 latom2=atoms%lda_v(i_v)%otherAtomL
                 ll1atom2=latom2*(latom2+1)
                 CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom2),jspin)
-                CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,jspin,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.)
+                CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.)
                 DO iG1=1,lapw%nv(jspin)
                     Do iG2=1,lapw%nv(jspin)
                         c_0=cmplx_0
