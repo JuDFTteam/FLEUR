@@ -53,9 +53,53 @@ MODULE m_types_mat
       procedure        :: pos_eigvec_sum => t_mat_pos_eigvec_sum
       procedure        :: leastsq => t_mat_leastsq
       procedure        :: add
+      procedure        :: eigenvalues =>t_mat_eigenvalues
    END type t_mat
    PUBLIC t_mat
 CONTAINS
+   subroutine t_mat_eigenvalues(mat,eig,ev)
+      IMPLICIT NONE 
+      CLASS(t_mat), INTENT(IN)      :: mat
+      REAL,INTENT(OUT)              :: eig(:)
+      class(t_mat), INTENT(OUT),optional :: ev
+
+      real,allocatable:: work(:),eig_tmp(:)
+      INTEGER,allocatable:: iwork(:),isuppz(:)
+      integer         :: liwork,lwork,neig,info
+      allocate(eig_tmp(mat%matsize1))
+      if (present(ev)) THEN
+         call ev%init(mat%l_real,mat%matsize1,size(eig))
+         if (mat%l_real) THEN
+            ALLOCATE(work(1),iwork(1))
+            ALLOCATE(isuppz(2*mat%matsize1))
+            liwork=-1;lwork=-1
+            call  dsyevr('V','I','U',mat%matsize1,mat%data_r,mat%matsize1,0.0,0.0,1,size(eig),0.0,neig,eig_tmp,ev%data_r,ev%matsize1,isuppz,work,lwork,iwork,liwork,info)
+            liwork=iwork(1)
+            lwork=work(1)
+            deallocate(iwork,work)
+            allocate(iwork(liwork),work(lwork))
+            call  dsyevr('V','I','U',mat%matsize1,mat%data_r,mat%matsize1,0.0,0.0,1,size(eig),0.0,neig,eig_tmp,ev%data_r,ev%matsize1,isuppz,work,lwork,iwork,liwork,info)
+            eig=eig_tmp(:size(eig))
+         else
+            call judft_error("not implemented")
+         endif
+      else
+         if (mat%l_real) THEN
+            ALLOCATE(work(1),iwork(1))
+            liwork=-1;lwork=-1
+            ALLOCATE(isuppz(2*mat%matsize1))
+            call  dsyevr('N','I','U',mat%matsize1,mat%data_r,mat%matsize1,0.0,0.0,1,size(eig),0.0,neig,eig_tmp,mat%data_r,mat%matsize1,isuppz,work,lwork,iwork,liwork,info)
+            liwork=iwork(1)
+            lwork=work(1)
+            deallocate(iwork,work)
+            allocate(iwork(liwork),work(lwork))
+            call  dsyevr('V','I','U',mat%matsize1,mat%data_r,mat%matsize1,0.0,0.0,1,size(eig),0.0,neig,eig_tmp,mat%data_r,mat%matsize1,isuppz,work,lwork,iwork,liwork,info)
+            eig=eig_tmp(:size(eig))
+         else
+            call judft_error("not implemented")
+         endif
+      endif  
+   end subroutine   
    subroutine add(mat,mat2,alpha_c,alpha_r)
 #ifdef _OPENACC
          use openacc
