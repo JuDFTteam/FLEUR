@@ -23,7 +23,6 @@ CONTAINS
     USE m_elemental
     USE m_chase_diag
     USE m_types_mpimat
-    USE m_types_gpumat
     USE m_elsi
 !    USE m_matrix_copy
     USE m_cusolver_diag

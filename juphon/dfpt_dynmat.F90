@@ -758,7 +758,6 @@ CONTAINS
                             smat1_final, hmat1_final, smat1q_final, hmat1q_final, smat2_final, hmat2_final, nk, killcont, vmat2_final)
       USE m_types
       USE m_types_mpimat
-      USE m_types_gpumat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
       USE m_dfpt_eigen_redist_matrix
