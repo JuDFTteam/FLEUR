@@ -64,18 +64,10 @@ CONTAINS
                   !sxm(j,k,jsp) = sfermi(-x)
                   !ef_num = ef_num + results%w_iks(j,k,jsp) * sxm(j,k,jsp) * results1%eig(j,k,jsp)
                   !ef_den = ef_den + results%w_iks(j,k,jsp) * sxm(j,k,jsp)
-                  !write(5551,*) jsp, k, j
-                  !write(5552,*) results%w_iks(j,k,jsp)
-                  !write(5553,*) sxm(j,k,jsp)
-                  !write(5554,*) results1%eig(j,k,jsp)
                   x = results%w_iks(j,k,jsp) * (1 - results%w_iks(j,k,jsp)/kpts%wtkpt(k))
                   sxm(j,k,jsp) = x
                   ef_num = ef_num + x * results1%eig(j,k,jsp)
                   ef_den = ef_den + x
-                  !write(5551,*) jsp, k, j
-                  !write(5552,*) results%w_iks(j,k,jsp)
-                  !write(5553,*) sxm(j,k,jsp)
-                  !write(5554,*) results1%eig(j,k,jsp)
                END DO
             END DO
          END DO
@@ -85,15 +77,12 @@ CONTAINS
          ELSE
             results1%ef = 0.0
          END IF
-         !IF (ef_num)
-         !write(5555,*) ef_num, ef_den, results1%ef
 
          !results1%w_iks(:noccbd,:,1:nspins) = -results%w_iks(:noccbd,:,1:nspins) &
          !                             * sxm(:noccbd,:,1:nspins) &
          !                             * (results1%eig(:noccbd,:,1:nspins)-results1%ef)/input%tkb
          results1%w_iks(:noccbd,:,1:nspins) = - sxm(:noccbd,:,1:nspins) &
                                       * (results1%eig(:noccbd,:,1:nspins)-results1%ef)/input%tkb
-         !write(5556,*) results1%w_iks(:noccbd,:,1:nspins)
       END IF
 
       RETURN
