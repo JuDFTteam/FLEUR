@@ -179,17 +179,6 @@ CONTAINS
          
          call timestart("q_loop")
 
-         call timestart("get max_q")
-         max_band_pack = 0 
-         DO jq = 1, size(k_pack%q_packs)
-            max_band_pack = max(max_band_pack, k_pack%q_packs(jq)%submpi%size)
-         enddo
-         hybdat%max_q = size(k_pack%q_packs) * fi%kpts%nkptf  * max_band_pack
-#ifdef CPP_MPI
-         call MPI_Allreduce(MPI_IN_PLACE, hybdat%max_q, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
-#endif
-         call timestop("get max_q")
-
          DO jq = 1, size(k_pack%q_packs)
             call timestart("initial setup")
             iq = k_pack%q_packs(jq)%ptr
@@ -391,15 +380,6 @@ CONTAINS
          END DO  !jq
       !$acc end data ! exch_vv hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest
       call timestop("q_loop")
-
-#ifdef CPP_MPI
-      call timestart("balanicing MPI_Barriers")
-      do while (hybdat%max_q > 0)
-         call MPI_Barrier(MPI_COMM_WORLD, ierr)
-         hybdat%max_q = hybdat%max_q - 1
-      enddo
-      call timestop("balanicing MPI_Barriers")
-#endif
 
       if(allocated(dot_result_r)) deallocate(dot_result_r)
       if(allocated(dot_result_c)) deallocate(dot_result_c)
