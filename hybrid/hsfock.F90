@@ -61,7 +61,6 @@ CONTAINS
       USE m_eig66_data
       use m_eig66_mpi
       use m_calc_cmt
-      use m_store_load_hybrid
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -173,6 +172,7 @@ CONTAINS
 #ifdef CPP_MPI
          ! balance post read_z barrier
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
+         hybdat%max_q = hybdat%max_q - 1
 #endif
       endif
 

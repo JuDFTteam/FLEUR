@@ -10,7 +10,6 @@ CONTAINS
                             ud, td, tdV1, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
       USE m_types
       USE m_types_mpimat
-      USE m_types_gpumat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
       USE m_dfpt_eigen_redist_matrix

@@ -330,8 +330,10 @@ call timestart("Distribute GPUs")
       if (fmpi%irank==0) write(*,*) "Number of MPI/PE per node:",isize
       if (gpus>isize) call judft_warn("You use more GPU/node as MPI-PEs/node running. This will underutilize the GPUs")
       CALL MPI_COMM_RANK(fmpi%mpi_comm_same_node,localrank,i)
-      call acc_set_device_num(mod(localrank,gpus),acc_device_nvidia)
-      write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",mod(localrank,gpus)
+      if (gpus>1) THEN 
+         call acc_set_device_num(mod(localrank,gpus),acc_device_nvidia)
+         write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",mod(localrank,gpus)
+      endif   
     ENDIF
 #else
     write(*,*) "Number of GPU    :",gpus

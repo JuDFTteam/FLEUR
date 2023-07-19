@@ -1,4 +1,5 @@
 module m_eigvec_setup
+   use m_judft
    use m_types
    use m_work_package
    implicit none
@@ -140,10 +141,14 @@ contains
       case( mpi_mode)
          CALL priv_find_data(eig_id, d)
          
-         if(eigvec%comm == MPI_COMM_NULL) then
+         IF(eigvec%comm.NE.MPI_COMM_NULL) THEN
+            CALL MPI_COMM_FREE(eigvec%comm, ierr)
+            IF (ierr.NE.0) CALL juDFT_error('Freeing of MPI communicator was not successful', calledby='eigvec_create_comm')
+         END IF
+!         if(eigvec%comm == MPI_COMM_NULL) then ! This IF in combination with no IF block above caused deadlocks.
             color = merge(1,2,eigvec%l_participate)
             call judft_comm_split(MPI_COMM_WORLD, color, 1, eigvec%comm)
-         endif
+!         endif
 
 
          if(eigvec%l_participate) then

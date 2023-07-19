@@ -129,9 +129,9 @@ CONTAINS
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp) 
             !$acc data create(axpr,bxpr,cxpr)
-            call blas_matmul(maxval(lapw%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            call blas_matmul(maxval(lapw%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            call blas_matmul(maxval(lapw%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
        
             !Calculate the a,b,c coefs
             !DO m = -l,l
@@ -187,9 +187,9 @@ CONTAINS
                l = atoms%llo(lo,ntyp)
                s = tlmplm%h_loc2_nonsph(ntyp) 
                !$acc data create(axpr,bxpr,cxpr)
-               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,ax,cmplx(1.0,0.0),cmplx(0.0,0.0),'N','T')
-               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,bx,cmplx(1.0,0.0),cmplx(0.0,0.0),'N','T')
-               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_LO2(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abCoeffs,cx,cmplx(1.0,0.0),cmplx(0.0,0.0),'N','T')
+               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,ax,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
+               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,bx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
+               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_LO2(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abCoeffs,cx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
 
                !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcloPr,ax,bx,cx)&
                !$acc & copyin(lapwPr,lapwPr%nv,lapwPr%index_lo,fmpi,fmpi%n_size,fmpi%n_rank)&
@@ -225,14 +225,11 @@ CONTAINS
          END IF
          CALL timestart("LO-LO")
          !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo,abcoeffsPr,abcloPr) &
-         !$acc & copyin(atoms,lapw,lapwPr,tlmplm,tlmplm%tulou,tlmplm%tulod,tlmplm%h_loc(:,:,ntyp,ilSpinPr,ilSpin),lapw%nv(:),lapwPr%nv(:))&
-         !$acc & copyin(tlmplm%tdulo(:,:,:,ilSpinPr,ilSpin),tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin),atoms%rmt(ntyp))&
-         !$acc & copyin(tlmplm%h_loc_LO(:,:,ntyp,ilSpinPr,ilSpin),tlmplm%h_LO(:,:,:,ilSpinPr,ilSpin),tlmplm%h_loc2_nonsph)&
+         !$acc & copyin(atoms,lapw,lapwPr,tlmplm,lapw%nv(:),lapwPr%nv(:))&
+         !$acc & copyin(tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin))&
+         !$acc & copyin(tlmplm%h_loc_LO(:,:,ntyp,ilSpinPr,ilSpin),tlmplm%h_LO(:,:,:,ilSpinPr,ilSpin),tlmplm%h_LO2(:,:,:,ilSpinPr,ilSpin),tlmplm%h_loc2_nonsph)&
          !$acc & copyin(lapw%index_lo(:,na),lapwPr%index_lo(:,na),tlmplm%h_loc2,atoms%llo(:,ntyp),atoms%nlo(ntyp))&
-         !$acc & copyin(atoms%lnonsph(ntyp))&
-         !$acc & copyin(ud,ud%us(:,ntyp,ilSpin),ud%uds(:,ntyp,ilSpin),ud%dus(:,ntyp,ilSpin),ud%dulos(:,ntyp,ilSpin),ud%duds(:,ntyp,ilSpin))&
-         !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
-         !$acc & create(ax,bx,cx,axpr,bxpr,cxpr)&
+         !$acc & copyin(fmpi, fmpi%n_size, fmpi%n_rank)&
          !$acc & default(none)
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
@@ -249,7 +246,7 @@ CONTAINS
                      lp = atoms%llo(lop,ntyp)
                      DO nkvecp = 1,invsfct* (2*lp+1)
                         lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lop,na)+nkvecp
-                        if (lorow>lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec) cycle
+                        if (lorow>lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec.AND..NOT.l_fullj) cycle
                         DO m = -l,l
                            lm = l*(l+1) + m
                            DO mp = -lp,lp
