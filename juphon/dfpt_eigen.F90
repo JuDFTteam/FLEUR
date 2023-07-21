@@ -265,7 +265,7 @@ CONTAINS
                      END DO
 
                   IF (ANY(nk==k_selection)) THEN
-                  !   CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Hband.npy",tempMat2)
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Hband.npy",tempMat2)
                   END IF
 
                   IF (norm2(q_loop).LT.1e-8) THEN
@@ -375,6 +375,10 @@ CONTAINS
                            END IF
                         END IF
                      END DO
+
+                  IF (ANY(nk==k_selection)) THEN
+                     CALL save_npy(TRIM(dfpt_tag)//"_"//int2str(nk)//"_"//int2str(nu)//"_z1Sband.npy",tempMat2)
+                  END IF
 
                   IF (zMatq%l_real) THEN
                      z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))

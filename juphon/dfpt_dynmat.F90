@@ -742,11 +742,11 @@ CONTAINS
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,eigen_bonus,1,MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
       IF (fmpi%irank==0) THEN
-         write(9989,*) "eigen -w0e1s0 :", eigen_e1
-         write(9989,*) "eigen -w1e0s0 :", eigen_w1e1-eigen_e1
-         write(9989,*) "eigen -w0e0s2 :", eigen_s2w1e1-eigen_w1e1-eigen_e1
-         write(9989,*) "eigen w0h2    :", eigen_h2s2w1e1-eigen_s2w1e1-eigen_w1e1-eigen_e1
-         write(9989,*) "eigen w1h1    :", eigen_w1h2s2w1e1-eigen_h2s2w1e1-eigen_s2w1e1-eigen_w1e1-eigen_e1
+         write(9989,*) "eigen -w0e1s1 :", eigen_e1
+         write(9989,*) "eigen -w1e0s1 :", eigen_w1e1-eigen_e1
+         write(9989,*) "eigen -w0e0s2 :", eigen_s2w1e1-eigen_w1e1
+         write(9989,*) "eigen w0h2    :", eigen_h2s2w1e1-eigen_s2w1e1
+         write(9989,*) "eigen w1h1    :", eigen_w1h2s2w1e1-eigen_h2s2w1e1
          write(9989,*) "eigen -w0e0s1q:", eigen_s1q
          write(9989,*) "eigen w0h1q   :", eigen_h1qs1q - eigen_s1q
          write(9989,*) "eigen corr    :", eigen_bonus
