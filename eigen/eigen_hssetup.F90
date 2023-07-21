@@ -19,7 +19,6 @@ CONTAINS
                             ud, td, v, lapw, nk, smat_final, hmat_final)
       USE m_types
       USE m_types_mpimat
-      USE m_types_gpumat
       USE m_hs_int
       USE m_hsvac
       USE m_hsmt

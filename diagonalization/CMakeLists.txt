@@ -38,7 +38,6 @@ diagonalization/writeout.F90
 diagonalization/elpa_20180525_onenode.F90
 types/types_mat.F90
 types/types_mpimat.F90
-types/types_gpumat.F90
 types/types_setup.F90
 io/io_matrix.F90
 io/iomatrix_hdf.F90

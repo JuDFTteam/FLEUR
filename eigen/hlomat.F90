@@ -225,14 +225,11 @@ CONTAINS
          END IF
          CALL timestart("LO-LO")
          !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo,abcoeffsPr,abcloPr) &
-         !$acc & copyin(atoms,lapw,lapwPr,tlmplm,tlmplm%tulou,tlmplm%tulod,tlmplm%h_loc(:,:,ntyp,ilSpinPr,ilSpin),lapw%nv(:),lapwPr%nv(:))&
-         !$acc & copyin(tlmplm%tdulo(:,:,:,ilSpinPr,ilSpin),tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin),atoms%rmt(ntyp))&
-         !$acc & copyin(tlmplm%h_loc_LO(:,:,ntyp,ilSpinPr,ilSpin),tlmplm%h_LO(:,:,:,ilSpinPr,ilSpin),tlmplm%h_loc2_nonsph)&
+         !$acc & copyin(atoms,lapw,lapwPr,tlmplm,lapw%nv(:),lapwPr%nv(:))&
+         !$acc & copyin(tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin))&
+         !$acc & copyin(tlmplm%h_loc_LO(:,:,ntyp,ilSpinPr,ilSpin),tlmplm%h_LO(:,:,:,ilSpinPr,ilSpin),tlmplm%h_LO2(:,:,:,ilSpinPr,ilSpin),tlmplm%h_loc2_nonsph)&
          !$acc & copyin(lapw%index_lo(:,na),lapwPr%index_lo(:,na),tlmplm%h_loc2,atoms%llo(:,ntyp),atoms%nlo(ntyp))&
-         !$acc & copyin(atoms%lnonsph(ntyp))&
-         !$acc & copyin(ud,ud%us(:,ntyp,ilSpin),ud%uds(:,ntyp,ilSpin),ud%dus(:,ntyp,ilSpin),ud%dulos(:,ntyp,ilSpin),ud%duds(:,ntyp,ilSpin))&
-         !$acc & copyin(input, input%l_useapw, fmpi, fmpi%n_size, fmpi%n_rank)&
-         !$acc & create(ax,bx,cx,axpr,bxpr,cxpr)&
+         !$acc & copyin(fmpi, fmpi%n_size, fmpi%n_rank)&
          !$acc & default(none)
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)

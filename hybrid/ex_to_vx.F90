@@ -33,6 +33,7 @@ contains
       CALL read_eig(hybdat%eig_id,nk,jsp, smat=olap)
 #ifdef CPP_MPI
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      hybdat%max_q = hybdat%max_q - 1
 #endif
       call olap%u2l()
       call olap%conjugate()
