@@ -226,11 +226,7 @@ CONTAINS
       ELSE
          hybdat%eig_id = eig_id
       ENDIF
-        
-      ! eig open input
-      WRITE(2773,*) fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, wannierspin, fmpi%n_size
-      WRITE(2774,*) fi%noco%l_noco, .NOT. fi%input%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), l_olap
-   
+ 
       ! TODO: Isn't this comment kind of lost here?
       ! Rotate cdn to local frame if specified.
 
@@ -451,7 +447,7 @@ CONTAINS
             IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
                input_soc%zelec = fi%input%zelec*2               
                IF (fi%hybinp%l_hybrid) &
-                  CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results)
+                  CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results, .FALSE.)
                CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
 
                results%seigv = results%seigv / 2.0
