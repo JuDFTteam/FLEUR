@@ -194,7 +194,7 @@ CONTAINS
                !TODO: Optimize this with (SCA)LAPACK CALLS
                CALL timestart("Matrix multiplications")
                DO nu = 1, noccbd
-                  eigs1 = 0.0
+                  eigs1(nu) = 0.0
 
                   IF (l_real) THEN ! l_real for zMatk
                      tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_r(:nbasfcn,nu))
@@ -276,7 +276,7 @@ CONTAINS
                         eigs1(nu) = DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
                      END IF
                   ELSE
-                     eigs1 = 0
+                     eigs1(nu) = 0
                   END IF
 
                   !IF (zMatq%l_real) THEN
@@ -308,7 +308,7 @@ CONTAINS
                         eigs1(nu) = eigs1(nu) - eigk(nu)*DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec) !real(?)
                      END IF
                   ELSE
-                     eigs1 = 0
+                     eigs1(nu) = 0
                   END IF
 
                   results1%eig(nu,nk,jsp) = eigs1(nu)
