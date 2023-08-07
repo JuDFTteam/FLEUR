@@ -837,7 +837,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig, test_logger
             workdir = work_dir
         testdir = test_dir()
         if cmdline_param is None:
-            cmdline_param = []
+            cmdline_param = ['-warn_only']
         extra_args = os.environ.get('juDFT_ARGS','')
         if extra_args:
             cmdline_param.extend(extra_args.split(' '))
