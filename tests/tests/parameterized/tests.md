@@ -19,7 +19,7 @@ Testset: Basic
 |+|Bulk Cu one iteration|basic/CuBulk|fast,bulk
 |+|Bulk Cu one iteration,DOS|basic/CuDOS|fast,bulk,dos
 |+|Bulk Cu one iteration,DOS,Orbital decomp.|basic/CuOrb|fast,bulk,dos,orbcomp
-|+|Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd
+| |Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd|MCD disabled
 |+|Bulk Co, bandstructure, unfolding|basic/CoUnfold|band,bulk
 |+|Bulk Fe, Kerker preconditioner|basic/Fe_Kerker|bulk
 |+|Bulk Fe fcc with relativistic core solver|basic/Fe_fcc_kcrel|
@@ -27,7 +27,7 @@ Testset: Basic
 |+|Bulk PTO|basic/PTO|bulk
 |+|Bulk PTO, SOC|basic/PTO-SOC|bulk,soc
 |+|Bulk Fe, Tetrahedon method|basic/Fe_Tetra_noSYM|bulk
-|+|LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau
+| |LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau|LDA+U AMF disabled
 |+|LDA+U with fully localized double counting and magnetism|basic/NiOldaUFLL|bulk,ldau
 |+|Crystal field output|basic/CrystalFieldOutput|bulk
 
