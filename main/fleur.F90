@@ -400,10 +400,10 @@ CONTAINS
             CALL timestop("eigen")
 
             ! Add all HF contributions to the total energy
-            IF (fi%hybinp%l_hybrid) hybdat%results = results
 #ifdef CPP_MPI
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
             IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
+               result%te_hfex=hybdat%results%te_hfex
                CALL fmpi%set_root_comm()
                IF (fmpi%n_rank==0) THEN
                   IF (fmpi%irank==0) THEN
@@ -414,7 +414,8 @@ CONTAINS
                END IF
             END IF
 #endif
-
+            
+            IF (fi%hybinp%l_hybrid) hybdat%results = results
             CALL timestart("2nd variation SOC")
             IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) &
                CALL eigenso(eig_id, fmpi, stars, sphhar, nococonv, vTot, enpara, results, fi%hub1inp, hub1data,fi)
