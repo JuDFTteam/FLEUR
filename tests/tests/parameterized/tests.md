@@ -91,7 +91,7 @@ Testset: Experimental
 ||TiO2 EELS spectrum|extra/TiO2eels|bulk,eels|inp.xml too old
 |+|Hubbard1 using SOC|extra/Gd_Hubbard1|bulk,edsolver
 |+|Hubbard1 without sym|extra/Gd_Hubbard1_noSYM|bulk,edsolver
-|+|diamond for one k-point with scan|extra/Diamond_SCAN|bulk,libxc
+| |diamond for one k-point with scan|extra/Diamond_SCAN|bulk,libxc| SCAN has to be refactored
 |+|3D vector plots of the magnetization|extra/PlotOnlyMT|bulk,plot,hdf
 |+|density and potential plots, vector plots|extra/PlotDenandPot|bulk,plot,hdf
 
