@@ -448,7 +448,7 @@ CONTAINS
             IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
                input_soc%zelec = fi%input%zelec*2               
                IF (fi%hybinp%l_hybrid) &
-                  CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results, .FALSE.)
+                  CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results)
                CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
 
                results%seigv = results%seigv / 2.0
