@@ -403,7 +403,7 @@ CONTAINS
 #ifdef CPP_MPI
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
             IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
-               result%te_hfex=hybdat%results%te_hfex
+               results%te_hfex=hybdat%results%te_hfex
                CALL fmpi%set_root_comm()
                IF (fmpi%n_rank==0) THEN
                   IF (fmpi%irank==0) THEN
