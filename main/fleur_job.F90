@@ -143,6 +143,7 @@ CONTAINS
         CALL MPI_INIT_THREAD(MPI_THREAD_MULTIPLE,i,ierr)
         if(ierr /= 0) call judft_error("MPI init failed.")
 #endif
+        l_mpi_multithreaded = .FALSE.
         CALL judft_init(oUnit,.FALSE.)
 #ifdef CPP_MPI
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)

@@ -64,8 +64,10 @@ CONTAINS
 
       CALL timestart("hybrid code")
 
+#ifdef CPP_MPI
 #ifdef CPP_PROG_THREAD
       if(fmpi%l_mpi_multithreaded) call start_prog_thread(threadId)
+#endif
 #endif
 
       IF (fi%kpts%nkptf == 0) THEN
@@ -227,8 +229,11 @@ CONTAINS
 #endif
 
       ENDIF
+
+#ifdef CPP_MPI
 #ifdef CPP_PROG_THREAD
       if(fmpi%l_mpi_multithreaded) call stop_prog_thread(threadId)
+#endif
 #endif
       CALL timestop("hybrid code")
    CONTAINS

@@ -5,6 +5,8 @@
 #include <time.h>
 #include <errno.h> 
 
+#ifdef CPP_MPI
+
 const long t_pause = 150;
 
 int endThread;
@@ -25,3 +27,4 @@ void stop_prog_thread(pthread_t *threadId){
    endThread= 1;
 }
 
+#endif
