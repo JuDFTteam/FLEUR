@@ -77,6 +77,7 @@ MODULE m_juDFT_init
 #ifdef CPP_MPI
       use mpi
 #endif
+      USE iso_fortran_env
       USE m_judft_time
       USE m_judft_sysinfo
       IMPLICIT NONE
@@ -88,21 +89,21 @@ MODULE m_juDFT_init
       CALL MPI_initialized(l_mpi_init,ierr)
       IF (l_mpi_init) THEN
          CALL MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)
-         WRITE(0,*) "Signal ",signal," detected on PE:",irank
+         WRITE(*,*) "Signal ",signal," detected on PE:",irank
       ELSE
-         WRITE(0,*) "Signal detected:",signal
+         WRITE(*,*) "Signal detected:",signal
       END IF
 #else
-      WRITE(0,*) "Signal detected:",signal
+      WRITE(*,*) "Signal detected:",signal
 #endif
-      WRITE(0,*) "This might be due to either:"
-      WRITE(0,*) " - A bug"
-      WRITE(0,*) " - Your job running out of memory"
-      WRITE(0,*) " - Your job got killed externally (e.g. no cpu-time left)"
-      WRITE(0,*) " - ...."
-      WRITE(0,*) "Please check and report if you believe you found a bug"
+      WRITE(*,*) "This might be due to either:"
+      WRITE(*,*) " - A bug"
+      WRITE(*,*) " - Your job running out of memory"
+      WRITE(*,*) " - Your job got killed externally (e.g. no cpu-time left)"
+      WRITE(*,*) " - ...."
+      WRITE(*,*) "Please check and report if you believe you found a bug"
       CALL writetimes()
-      CALL PRINT_memory_info(0,.true.)
+      CALL PRINT_memory_info(output_unit,.true.)
 #ifdef CPP_MPI
       IF (l_mpi_init) CALL MPI_ABORT(MPI_COMM_WORLD,0,ierr)
 #endif
