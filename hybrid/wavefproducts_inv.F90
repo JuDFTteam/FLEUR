@@ -79,6 +79,7 @@ CONTAINS
          call timestop("cpu cmplx2real copy")
          deallocate(tmp)
       !$acc end data ! hybdat
+
       CALL timestop("wavefproducts_inv")
    END SUBROUTINE wavefproducts_inv
 
@@ -89,41 +90,71 @@ CONTAINS
       TYPE(t_mpdata), intent(in)    :: mpdata
       complex, intent(inout)        :: cprod(:,:)
 
-      integer :: lm_0, lm, iatm, itype, l, m, partner
+      integer :: lm_0, lm, iatm, iatm2, itype, l, m, partner, ioffset, ishift
 
       !$acc data copyin(mpdata, mpdata%num_radbasfn)
          lm_0 = 0
          do iatm = 1,fi%atoms%nat 
             itype = fi%atoms%itype(iatm)
 
-            ! The default(shared) in the OMP part of the following loop is needed to avoid compilation issues on gfortran 7.5.
-            DO l = 0, fi%hybinp%lcutm1(itype)
-               DO m = -l, l
-                  lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
-                  if(m == 0) then
-                     if(mod(l,2) == 1) then
-                        !$acc kernels present(cprod, mpdata, mpdata%num_radbasfn)
-                        cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :) &
-                           = -ImagUnit * cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :)
-                        !$acc end kernels
+            iatm2 = fi%sym%invsatnr(iatm)
+            IF(iatm2.EQ.0) iatm2 = iatm
+
+            ioffset = sum((/((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, fi%hybinp%lcutm1(itype))/))
+            
+            IF(iatm2.LT.iatm) THEN ! iatm is the second of two atoms that are mapped onto each other by inversion symmetry
+               DO l = 0, fi%hybinp%lcutm1(itype)
+                  lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+               END DO
+               CYCLE
+            ELSE IF (iatm2.GT.iatm) THEN
+               ! In this case we already make everything correct in wavefproducts_noinv_MT
+               DO l = 0, fi%hybinp%lcutm1(itype)
+                  lm = lm_0
+                  DO m = -l, l
+
+                     ishift = -2 * m * mpdata%num_radbasfn(l, itype)
+!                     lm1 = lm + (iatm - fi%atoms%firstAtom(itype))*ioffset
+!                     lm2 = lm + (iatm2 - fi%atoms%firstAtom(itype))*ioffset + ishift
+
+!                     DO i = 1, mpdata%num_radbasfn(l, itype)
+!                        cprod(i + lm1, (j-bandoi+1) + (k-1)*psize) = REAL(cprod(i + lm1, (j-bandoi+1) + (k-1)*psize))
+!                     END DO
+
+                     lm = lm + mpdata%num_radbasfn(l, itype)
+                  END DO
+                  lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+               END DO
+            ELSE
+               ! The default(shared) in the OMP part of the following loop is needed to avoid compilation issues on gfortran 7.5.
+               DO l = 0, fi%hybinp%lcutm1(itype)
+                  DO m = -l, l
+                     lm = lm_0 + (m + l)*mpdata%num_radbasfn(l, itype)
+                     if(m == 0) then
+                        if(mod(l,2) == 1) then
+                           !$acc kernels present(cprod, mpdata, mpdata%num_radbasfn)
+                           cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :) &
+                              = -ImagUnit * cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :)
+                           !$acc end kernels
+                        endif
+                     else
+                        if(m < 0) then
+                           partner = lm + 2*abs(m)*mpdata%num_radbasfn(l,itype)
+                           !$acc kernels present(cprod, mpdata, mpdata%num_radbasfn)
+                           cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :) &
+                              = (-1.0)**l * sqrt_2 * (-1.0)**m  * real(cprod(partner+1:partner+mpdata%num_radbasfn(l, itype), :))
+                           !$acc end kernels
+                        else 
+                           !$acc kernels present(cprod, mpdata, mpdata%num_radbasfn)
+                           cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :) &
+                              = -(-1.0)**l * sqrt_2 * (-1.0)**m  * aimag(cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :))
+                           !$acc end kernels
+                        endif 
                      endif
-                  else
-                     if(m < 0) then
-                        partner = lm + 2*abs(m)*mpdata%num_radbasfn(l,itype)
-                        !$acc kernels present(cprod, mpdata, mpdata%num_radbasfn)
-                        cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :) &
-                           = (-1.0)**l * sqrt_2 * (-1.0)**m  * real(cprod(partner+1:partner+mpdata%num_radbasfn(l, itype), :))
-                        !$acc end kernels
-                     else 
-                        !$acc kernels present(cprod, mpdata, mpdata%num_radbasfn)
-                        cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :) &
-                           = -(-1.0)**l * sqrt_2 * (-1.0)**m  * aimag(cprod(lm+1:lm+mpdata%num_radbasfn(l, itype), :))
-                        !$acc end kernels
-                     endif 
-                  endif
-               enddo 
-               lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
-            enddo
+                  enddo 
+                  lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+               enddo
+            END IF
          enddo
       !$acc end data
    end subroutine transform_to_realsph

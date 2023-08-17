@@ -347,6 +347,13 @@ CONTAINS
          END DO
       END DO
 
+      CALL grRho3(1)%distribute(fmpi%mpi_comm)
+      CALL grRho3(2)%distribute(fmpi%mpi_comm)
+      CALL grRho3(3)%distribute(fmpi%mpi_comm)
+      CALL grVext3(1)%distribute(fmpi%mpi_comm)
+      CALL grVext3(2)%distribute(fmpi%mpi_comm)
+      CALL grVext3(3)%distribute(fmpi%mpi_comm)
+
       DO iDir = 1, 3
          CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
          CALL imagrhodummy%resetPotDen()
@@ -471,6 +478,7 @@ CONTAINS
                   IF (l_minusq) CALL vTot1mIm%reset_dfpt()
                   CALL vC1%reset_dfpt()
                   CALL vC1Im%reset_dfpt()
+                  CALL results1%reset_results(fi_nosym%input)
                !END IF
 
 !#ifdef CPP_MPI

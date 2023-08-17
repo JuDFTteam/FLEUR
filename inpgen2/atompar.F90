@@ -98,7 +98,7 @@ contains
   end subroutine add_defaults
 
 
-  subroutine add_atompar(ap, profile)
+  recursive subroutine add_atompar(ap, profile)
     TYPE(t_atompar),INTENT(in),OPTIONAL :: ap
     TYPE(t_profile),INTENT(IN),optional :: profile
     type(t_atompar),allocatable:: tmp_list(:)

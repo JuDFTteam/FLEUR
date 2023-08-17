@@ -104,6 +104,7 @@ Make a subfolder DFPT and copy the optimized input file to it. Now you invoke th
 $ /path/to/fleur/inpgen -f inpCu_fit
 $ /path/to/fleur/inpgen -f inpCu_fit -nosym -add_name desym
 $ /path/to/fleur/inpgen -inp.xml -noKsym -kpt dfpt#gamma@grid=16,16,16
+$ /path/to/fleur/inpgen -inp.xml -noKsym -add_name desym -kpt dfpt#gamma@grid=16,16,16
 ```
 
 Edit both ```inp.xml``` and ```desym_inp.xml``` to reflect all the changes in the initial input file, like the setting of ```ctail``` etc. Especially ensure, that you use the same libxc functional you used initially, e.g. ```vwn```:
@@ -167,9 +168,15 @@ The programm will run self-consistency calculations for each q-point provided, e
 
 The development of FLAPW-DFPT in FLEUR has been and still is a lengthy process. There have been both numerical and conceptional hurdles to overcome, that led to quite a lot of finetuning and added corrections or reformulations. 
 
-Currently, the implementation is at the level of polyatomic metals. I.e., we tested monoatomic insulators and metals, silicon diamond as a two-atomic semiconductor and the magnetic metals bcc Fe and fcc Ni. We thus verified, that the calculation holds for more than one atom and more than one spin. However, for hcp Co we see kinks that distinguish the DFPT data from the phonopy curves especially on the Gamma-point. This indicates a problem in the description of terms with the eigenenergy response or the occupation number reponse, both of which are only relevant for more than one atom and the latter only so for materials with fractional occupation numbers. The latter also depend on the former. 
+Currently, the implementation is at the level of polyatomic metals. I.e., we tested monoatomic insulators and metals, silicon diamond as a two-atomic semiconductor and the magnetic metals bcc Fe and fcc Ni. We thus verified, that the calculation holds for more than one atom and more than one spin. However, for hcp Co we see kinks that distinguish the DFPT data from the phonopy curves especially on the Gamma-point. This indicates a problem in the description of terms with the eigenenergy response or the occupation number reponse, both of which are only relevant for more than one atom and the latter only so for materials with fractional occupation numbers. The latter also depend on the former. The DFPT data is plotted against a 4x4x4 supercell FD calculation.
 
 ![Cobalt phonon picture](./Cobalt_dispersion.png)
+
+Another current benchmark is the dispersion of Silicon Carbide. It is a test case for polyatomic materials with different atoms, to exclude the possibility of leftover bugs in relation to atomic indices. The DFPT data is plotted against a 2x2x2 supercell FD calculation.
+
+![Silicon Carbide phonon picture](./Silicon_Carbide_dispersion.png)
+
+The match for the acoustic branches is as neat as in cobalt, but this time we completely miss a point at Gamma for the optical modes and they deviate quite strongly from the FD line overall. This is possibly a first case, where a system needs the non-analytical term correction, though we were of the mind, that this only applies for polar materials. Further investiagtions need to be done.
 
 A point of contention are local orbitals to supplement the LAPW basis. In force calculations, i.e. a first order description, local obitals are completely contained up to the derivative of their matching coefficients. Doing the same in the DFPT scheme breaks the calculation and we adopt the apporach of not perturbing the LO basis functions.
 

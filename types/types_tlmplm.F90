@@ -61,7 +61,7 @@ CONTAINS
     td%h_loc2_nonsph=atoms%lnonsph*(atoms%lnonsph+2)+1
     IF (ALLOCATED(td%h_loc)) &
          DEALLOCATE(td%tdulo,td%tuulo,td%tulod,td%tulou,&
-         td%tuloulo,td%tuloulo_newer,td%h_loc,td%e_shift,td%h_off,td%h_loc_nonsph,td%h_loc_LO,td%h_lo)
+         td%tuloulo,td%tuloulo_newer,td%h_loc,td%e_shift,td%h_off,td%h_loc_nonsph,td%h_loc_LO,td%h_lo,td%h_lo2)
     !    ALLOCATE(td%tuu(0:lmplmd,ntype,jspins),stat=err)
     !    ALLOCATE(td%tud(0:lmplmd,ntype,jspins),stat=err)
     !    ALLOCATE(td%tdd(0:lmplmd,ntype,jspins),stat=err)
