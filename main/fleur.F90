@@ -415,10 +415,11 @@ CONTAINS
             END IF
 #endif
             
-            IF (fi%hybinp%l_hybrid) hybdat%results = results
             CALL timestart("2nd variation SOC")
-            IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) &
+            IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) THEN
+               IF (fi%hybinp%l_hybrid) hybdat%results = results !Store old eigenvalues for later call to fermie
                CALL eigenso(eig_id, fmpi, stars, sphhar, nococonv, vTot, enpara, results, fi%hub1inp, hub1data,fi)
+            ENDIF   
             CALL timestop("2nd variation SOC")
             CALL timestop("H generation and diagonalization (total)")
 
@@ -455,7 +456,16 @@ CONTAINS
                results%ts = results%ts / 2.0
             ELSE
                CALL fermie(eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, results)
+               IF (fi%hybinp%l_hybrid) hybdat%results = results
             ENDIF
+#ifdef CPP_MPI
+            CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            if (fi%hybinp%l_hybrid) then 
+               CALL MPI_BCAST(hybdat%results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+               CALL MPI_BCAST(hybdat%results%w_iks, SIZE(hybdat%results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            endif   
+#endif            
             CALL timestop("determination of fermi energy")
 
             ! TODO: What is commented out here and should it perhaps be removed?
@@ -480,10 +490,7 @@ CONTAINS
 ! !$          !-Wannier
 
             !ENDIF
-#ifdef CPP_MPI
-            CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-            CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-#endif
+
 
             IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi,   enpara, vToT, results)) THEN
                CYCLE forcetheoloop
