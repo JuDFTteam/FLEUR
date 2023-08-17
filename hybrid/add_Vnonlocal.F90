@@ -43,7 +43,7 @@ MODULE m_add_vnonlocal
 !                                               M.Betzinger (09/07)           c
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 CONTAINS
-   SUBROUTINE add_vnonlocal(nk, lapw, fi, hybdat, jsp, results,&
+   SUBROUTINE add_vnonlocal(nk, lapw, fi, hybdat, jsp,&
                             xcpot, fmpi, nococonv, hmat)
       USE m_constants
       USE m_symm_hf, ONLY: symm_hf
@@ -58,7 +58,6 @@ CONTAINS
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in) :: fi
-      TYPE(t_results), INTENT(INOUT) :: results
       CLASS(t_xcpot), INTENT(IN)     :: xcpot
       TYPE(t_hybdat), INTENT(INOUT)  :: hybdat
       TYPE(t_lapw), INTENT(IN)       :: lapw
@@ -156,7 +155,7 @@ CONTAINS
          call MPI_Bcast(exch(iband), 1, MPI_DOUBLE_COMPLEX, pe_iband, fmpi%sub_comm, ierr)
 #endif
          IF (iband <= hybdat%nobd(nk,jsp)) THEN
-            results%te_hfex%valence = results%te_hfex%valence - real(a_ex*results%w_iks(iband, nk, jsp)*exch(iband))
+            hybdat%results%te_hfex%valence = hybdat%results%te_hfex%valence - real(a_ex*hybdat%results%w_iks(iband, nk, jsp)*exch(iband))
          END IF
          ! IF (hybdat%l_calhf) THEN
          !    WRITE (oUnit, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
