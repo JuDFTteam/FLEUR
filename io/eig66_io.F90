@@ -156,7 +156,7 @@ CONTAINS
         ikp = kpts%bkp(nk) ! parent k-point
         iop = kpts%bksym(nk) ! connecting symm
 
-        call read_eig(id,ikp, jspin,zmat=tmp_mat, list=list, eig=eig) 
+        call read_eig_ibz(id,ikp, jspin,zmat=tmp_mat, list=list, eig=eig) 
       
         CALL lapw_nk%init(input, noco, nococonv, kpts, atoms, sym, nk, cell)
         CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell)
