@@ -432,7 +432,6 @@ contains
 !         !$OMP reduction(max:a1)
          DO ic1 = 1, atoms%nat
             IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
-            PRINT*, "Line 435,", fmpi%irank
             !MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
             tmp_vec = atoms%taual(:, ic2) - atoms%taual(:, ic1)
             call dgemv("N", 3, 3, 1.0, cell%amat, 3, tmp_vec, 1, 0.0, rc, 1)
@@ -443,7 +442,6 @@ contains
                ra = ra + rc
                radsh(i) = norm2(ra)
             END DO
-            PRINT*, "Line 446,", fmpi%irank
             call sort(pnt, radsh, [(1.0*s, s=1,nptsh)])
             ptsh = ptsh(:, pnt)
             radsh = radsh(pnt)
@@ -452,7 +450,6 @@ contains
             ishell = 1
             conv = HUGE(i)
             shlp = 0
-            PRINT*, "Line 455,", fmpi%irank
             DO i = 1, nptsh
                IF (ALL(conv /= HUGE(i))) EXIT
                IF (i /= 1) THEN

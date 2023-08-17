@@ -140,48 +140,24 @@ CONTAINS
       ! HF exchange
       mat_ex%l_real = fi%sym%invs
       PRINT*, "exchange_valence_hf"
-      
-!      WRITE(7000+nk*100+fmpi%irank,*) nk, hybdat%nbands(nk, jsp)
-!      DO tempI=1, hybdat%nbands(nk, jsp)
-!         DO tempJ=1, hybdat%nbands(nk, jsp)
-!            WRITE(7000+nk*100+fmpi%irank,'(2I7,F12.6,F12.6)') tempJ, tempI, mat_ex%data_c(tempI, tempJ) +CMPLX(1.0e-12,1.0e-12)
-!         END DO
-!      END DO
-      
+   
       CALL exchange_valence_hf(k_pack, fi, fmpi, hybdat%zmat(nk,jsp)%mat, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
       
-      WRITE(8000+nk*10+fmpi%irank,*) nk, hybdat%nbands(nk, jsp)
-      DO tempI=1, hybdat%nbands(nk, jsp)
-         DO tempJ=1, hybdat%nbands(nk, jsp)
-            WRITE(8000+nk*10+fmpi%irank,'(2I7,F12.6,F12.6)') tempJ, tempI, mat_ex%data_c(tempI, tempJ) +CMPLX(1.0e-12,1.0e-12)
-         END DO
-      END DO
       
       ! calculate contribution from the core states to the HF exchange
       PRINT*, "core exchange calculation"
       CALL timestart("core exchange calculation")
+      
       IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
          CALL timestart("hse: exchange vccv")
          CALL exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsymop, nsest, indx_sest, &
                                fmpi%irank, a_ex, results, cmt_nk, mat_ex)
-         WRITE(9000+nk*10+fmpi%irank,*) nk, hybdat%nbands(nk, jsp)
-         DO tempI=1, hybdat%nbands(nk, jsp)
-            DO tempJ=1, hybdat%nbands(nk, jsp)
-               WRITE(9000+nk*10+fmpi%irank,'(2I7,F12.6,F12.6)') tempJ, tempI, mat_ex%data_c(tempI, tempJ) +CMPLX(1.0e-12,1.0e-12)
-            END DO
-         END DO
          CALL timestop("hse: exchange vccv")
 
          CALL timestart("hse: exchange cccc")
          CALL exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
 
-         WRITE(10000+nk*10+fmpi%irank,*) nk, hybdat%nbands(nk, jsp)
-         DO tempI=1, hybdat%nbands(nk, jsp)
-            DO tempJ=1, hybdat%nbands(nk, jsp)
-               WRITE(10000+nk*10+fmpi%irank,'(2I7,F12.6,F12.6)') tempJ, tempI, mat_ex%data_c(tempI, tempJ) +CMPLX(1.0e-12,1.0e-12)
-            END DO
-         END DO
          CALL timestop("hse: exchange cccc")
       
       ELSE

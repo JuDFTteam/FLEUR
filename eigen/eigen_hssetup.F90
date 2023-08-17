@@ -109,21 +109,7 @@ CONTAINS
 
       IF (fi%hybinp%l_hybrid) THEN
          IF (hybdat%l_addhf) THEN
-            WRITE(3000+nk*10+fmpi%irank,*) nk, lapw%nv(1), fi%atoms%nlotot
-            DO tempI=1, lapw%nv(1) + fi%atoms%nlotot
-               DO tempJ=1, lapw%nv(1) + fi%atoms%nlotot
-                  WRITE(3000+nk*10+fmpi%irank,'(2I7,F12.6,F12.6)') tempJ, tempI, hmat(1,1)%data_c(tempI, tempJ) +CMPLX(1.0e-12,1.0e-12)
-               END DO
-            END DO
-            WRITE(3000+nk*10+fmpi%irank,*) "-----------------------"
-            CALL add_Vnonlocal(nk, lapw, fi, hybdat, isp, results, xcpot, fmpi, nococonv, hmat(1, 1))
-            WRITE(4000+nk*10+fmpi%irank,*) nk, lapw%nv(1), fi%atoms%nlotot
-            DO tempI=1, lapw%nv(1) + fi%atoms%nlotot
-               DO tempJ=1, lapw%nv(1) + fi%atoms%nlotot
-                  WRITE(4000+nk*10+fmpi%irank,'(2I7,F12.6,F12.6)') tempJ, tempI, hmat(1,1)%data_c(tempI, tempJ) +CMPLX(1.0e-12,1.0e-12)
-               END DO
-            END DO
-            WRITE(4000+nk*10+fmpi%irank,*) "-----------------------"
+            CALL add_Vnonlocal(nk, lapw, fi, hybdat, isp, xcpot, fmpi, nococonv, hmat(1, 1))
          END IF 
          !IF (hybdat%l_subvxc) THEN
          !   CALL subvxc(lapw, fi%kpts%bk(:, nk), fi%input, isp, v%mt(:, 0, :, :), fi%atoms, ud, &

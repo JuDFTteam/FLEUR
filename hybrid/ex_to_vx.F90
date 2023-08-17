@@ -26,13 +26,6 @@ contains
 
       !calculate trafo from wavefunctions to APW basis
       IF (fi%input%neig < hybdat%nbands(nk,jsp)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
-
-      WRITE(6000+nk*10,*) nk, hybdat%nbands(nk, jsp)
-      DO tempI=1, hybdat%nbands(nk, jsp)
-         DO tempJ=1, hybdat%nbands(nk, jsp)
-            WRITE(6000+nk*10,'(2I7,F12.6,F12.6)') tempJ, tempI, ex%data_c(tempI, tempJ) +CMPLX(1.0e-12,1.0e-12)
-         END DO
-      END DO
       
       call ex%u2l()
 
