@@ -108,6 +108,7 @@ CONTAINS
       LOGICAL :: l_forceTheorem, l_lastIter, l_exist
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
+      INTEGER :: tempI, tempK, tempJSP
 
 #ifdef CPP_MPI
       INTEGER :: ierr
@@ -391,6 +392,28 @@ CONTAINS
             CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
 
+            IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
+               WRITE(2771,*) '????????????????????????'
+               WRITE(2771,*) "Iteration: ", iter, iterHF
+               WRITE(2771,*) fmpi%irank, fmpi%mpi_comm, fi%kpts%nkpt
+               WRITE(2771,*) fi%input%jspins, fi%input%zelec
+               WRITE(2771,*) enpara%epara_min
+               WRITE(2771,*) fi%input%jspins, fi%input%zelec
+               WRITE(2771,*) '-------------------------'
+               DO tempK = 1, fi%kpts%nkpt
+                  WRITE(2771,*) fi%kpts%wtkpt(tempK), fi%kpts%bk(1,tempK), fi%kpts%bk(2,tempK), fi%kpts%bk(3,tempK)
+                  WRITE(2771,*) '///////////////////////////////'
+                  DO tempJSP =1, fi%input%jspins
+                     WRITE(2771,*) results%neig(tempK,tempJSP)
+                     WRITE(2771,*) '___________________________'
+                     DO tempI=1, results%neig(tempK,tempJSP)
+                        WRITE(2771,*) results%eig(tempI,tempK,tempJSP)
+                     END DO
+                  END DO
+               END DO
+               WRITE(2771,*) '????????????????????????'
+            END IF
+
             IF (.NOT. fi%input%eig66(1)) THEN
                CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
                           hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
@@ -414,7 +437,27 @@ CONTAINS
                END IF
             END IF
 #endif
-            
+            IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
+               WRITE(2772,*) '????????????????????????'
+               WRITE(2772,*) "Iteration: ", iter, iterHF
+               WRITE(2772,*) fmpi%irank, fmpi%mpi_comm, fi%kpts%nkpt
+               WRITE(2772,*) fi%input%jspins, fi%input%zelec
+               WRITE(2772,*) enpara%epara_min
+               WRITE(2772,*) fi%input%jspins, fi%input%zelec
+               WRITE(2772,*) '-------------------------'
+               DO tempK = 1, fi%kpts%nkpt
+                  WRITE(2772,*) fi%kpts%wtkpt(tempK), fi%kpts%bk(1,tempK), fi%kpts%bk(2,tempK), fi%kpts%bk(3,tempK)
+                  WRITE(2772,*) '///////////////////////////////'
+                  DO tempJSP =1, fi%input%jspins
+                     WRITE(2772,*) results%neig(tempK,tempJSP)
+                     WRITE(2772,*) '___________________________'
+                     DO tempI=1, results%neig(tempK,tempJSP)
+                        WRITE(2772,*) results%eig(tempI,tempK,tempJSP)
+                     END DO
+                  END DO
+               END DO
+               WRITE(2772,*) '????????????????????????'
+            END IF
             IF (fi%hybinp%l_hybrid) hybdat%results = results
             CALL timestart("2nd variation SOC")
             IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) &
@@ -446,6 +489,28 @@ CONTAINS
             CALL timestart("determination of fermi energy")
 
             IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
+               IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
+                  WRITE(2773,*) '????????????????????????'
+                  WRITE(2773,*) "Iteration: ", iter, iterHF
+                  WRITE(2773,*) fmpi%irank, fmpi%mpi_comm, fi%kpts%nkpt
+                  WRITE(2773,*) fi%input%jspins, fi%input%zelec
+                  WRITE(2773,*) enpara%epara_min
+                  WRITE(2773,*) fi%input%jspins, fi%input%zelec
+                  WRITE(2773,*) '-------------------------'
+                  DO tempK = 1, fi%kpts%nkpt
+                     WRITE(2773,*) fi%kpts%wtkpt(tempK), fi%kpts%bk(1,tempK), fi%kpts%bk(2,tempK), fi%kpts%bk(3,tempK)
+                     WRITE(2773,*) '///////////////////////////////'
+                     DO tempJSP =1, fi%input%jspins
+                        WRITE(2773,*) results%neig(tempK,tempJSP)
+                        WRITE(2773,*) '___________________________'
+                        DO tempI=1, results%neig(tempK,tempJSP)
+                           WRITE(2773,*) results%eig(tempI,tempK,tempJSP)
+                        END DO
+                     END DO
+                  END DO
+                  WRITE(2773,*) '????????????????????????'
+               END IF
+
                input_soc%zelec = fi%input%zelec*2               
                IF (fi%hybinp%l_hybrid) &
                   CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results)

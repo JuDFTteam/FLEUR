@@ -71,6 +71,7 @@ CONTAINS
 
       ! local scalars
       INTEGER                   :: iband, nbasfcn, i, i0, j, ierr, iband_loc, pe_iband
+      INTEGER                   :: tempI, tempJ
       integer, allocatable      :: list(:)
       REAL                      :: a_ex
       class(t_mat), allocatable :: tmp, z
@@ -82,6 +83,14 @@ CONTAINS
       a_ex = xcpot%get_exchange_weight()
 
       nbasfcn = lapw%nv(jsp) + fi%atoms%nlotot
+      
+      WRITE(5000+nk*10+fmpi%irank,*) nk, lapw%nv(1), fi%atoms%nlotot
+      DO tempI=1, lapw%nv(1) + fi%atoms%nlotot
+         DO tempJ=1, lapw%nv(1) + fi%atoms%nlotot
+            WRITE(5000+nk*10+fmpi%irank,'(2I7,F12.6,F12.6)') tempJ, tempI, hybdat%v_x(nk,jsp)%data_c(tempI, tempJ) +CMPLX(1.0e-12,1.0e-12)
+         END DO
+      END DO
+      
       IF (hmat%l_real) THEN
          DO i = fmpi%n_rank+1,hmat%matsize1,fmpi%n_size
             i0=(i-1)/fmpi%n_size+1
