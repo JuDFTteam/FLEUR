@@ -48,7 +48,7 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts)
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp)
       USE m_nocoInputCheck
       USE m_types_fleurinput
       USE m_constants
@@ -59,6 +59,7 @@ MODULE m_checks
       type(t_input),INTENT(IN)  ::input
       type(t_sym),INTENT(IN)    :: sym
       type(t_kpts),INTENT(IN)   :: kpts
+      type(t_hybinp),intent(in) :: hybinp
 
       integer :: i,n,na
       real :: maxpos,minpos
@@ -130,6 +131,10 @@ MODULE m_checks
      IF (ANY(atoms%lapw_l(:).GE.0)) THEN
         CALL juDFT_warn("APW+lo calculations are disabled at the moment.")
      END IF
+
+#ifndef CPP_HDF
+     if (hybinp%l_hybrid) call juDFT_warn("Hybrid calculations should always use HDF5")
+#endif     
 
    END SUBROUTINE check_input_switches
 
