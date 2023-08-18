@@ -341,10 +341,6 @@ CONTAINS
          END DO
       END IF
 
-      IF( fi%input%jspins .EQ. 1 .AND. fi%hybinp%l_hybrid ) THEN
-         results%te_hfex%valence = 2*results%te_hfex%valence
-         IF(hybdat%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
-      END IF
       enpara%epara_min = MINVAL(enpara%el0)
       enpara%epara_min = MIN(MINVAL(enpara%ello0),enpara%epara_min)
    END SUBROUTINE eigen
