@@ -181,11 +181,6 @@ CONTAINS
 #endif
       endif
 
-!      IF( fi%input%jspins .EQ. 1 ) THEN
-!         results%te_hfex%valence = 2*results%te_hfex%valence
-!         IF(hybdat%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
-!      END IF
-
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")
    END SUBROUTINE hsfock
