@@ -401,6 +401,10 @@ CONTAINS
             CALL timestop("eigen")
 
             ! Add all HF contributions to the total energy
+            IF( fi%input%jspins .EQ. 1 .AND. fi%hybinp%l_hybrid ) THEN
+               hybdat%results%te_hfex%valence = 2*hybdat%results%te_hfex%valence
+               IF(hybdat%l_calhf) hybdat%results%te_hfex%core = 2*hybdat%results%te_hfex%core
+            END IF
 #ifdef CPP_MPI
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
             IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
