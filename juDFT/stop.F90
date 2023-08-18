@@ -331,7 +331,10 @@ CONTAINS
        CALL MPI_ABORT(MPI_COMM_WORLD,error,ierr)
     ENDIF
 #endif
-    STOP error
+    IF (error.EQ.0) THEN
+       STOP 0
+    END IF
+    STOP 1
   END SUBROUTINE juDFT_stop
 
 
