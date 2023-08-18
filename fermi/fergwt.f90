@@ -6,7 +6,7 @@ MODULE  m_fergwt
   !                                               c.l.fu
   !*****************************************************************
 CONTAINS
-  SUBROUTINE fergwt(kpts,input,fmpi, ne,eig, ef,w_iks,seigv)
+  SUBROUTINE fergwt(kpts,input,fmpi, ne,eig, ef,w_iks,seigv,l_output)
 
     USE m_constants
     USE m_types
@@ -22,6 +22,8 @@ CONTAINS
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: ne(:,:)    !(kpts%nkpt,dimension%jspd)
     REAL,    INTENT (IN) :: eig(:,:,:) !input%neig,kpts%nkpt,dimension%jspd)
+    !     .. Logical Arguments ..
+    LOGICAL,INTENT(IN) :: l_output
     !     ..
     !     .. Local Scalars ..
     REAL chmom,de,ef0,ef1,elow,en,eps,eup,fac,fact1,s,s0,s1,s2,&
@@ -88,11 +90,11 @@ CONTAINS
           END IF
        ENDDO
        eps = 1.25*eps
-       IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8000) eps
+       IF ( fmpi%irank == 0 .and. l_output) WRITE (oUnit,FMT=8000) eps
 8000   FORMAT (10x,'warning: eps has been increased to',e12.5)
     ENDDO conv_loop
     workf = -hartree_to_ev_const*ef
-    IF ( fmpi%irank == 0 ) THEN
+    IF ( fmpi%irank == 0 .and. l_output) THEN
        WRITE (oUnit,FMT=8010) ef,workf,s
     END IF
 8010 FORMAT (/,10x,'fermi energy=',f10.5,' har',3x,'work function=',&
@@ -102,14 +104,14 @@ CONTAINS
                         hint ="change temperature or set input = F", calledby ="fergwt")
     ENDIF
     DO  jspin = 1,input%jspins
-       IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8020) jspin
+       IF ( fmpi%irank == 0 .and. l_output) WRITE (oUnit,FMT=8020) jspin
 8020   FORMAT (/,/,5x,'band-weighting factor for spin=',i5)
        DO  k = 1,kpts%nkpt
           nbnd = ne(k,jspin)
-          IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8030) k
+          IF ( fmpi%irank == 0 .and. l_output) WRITE (oUnit,FMT=8030) k
 8030      FORMAT (/,5x,'k-point=',i5,/)
           w_iks(:,k,jspin) = kpts%wtkpt(k)*w_iks(:,k,jspin)
-          IF ( fmpi%irank == 0) THEN
+          IF ( fmpi%irank == 0 .and. l_output) THEN
              WRITE (oUnit,FMT=8040) (w_iks(i,k,jspin),i=1,nbnd)
           END IF
 8040      FORMAT (5x,16f6.3)
@@ -137,7 +139,7 @@ CONTAINS
     seigv = (2/input%jspins)*seigv
     seigv1 = (1/input%jspins)*fact1*s2
     chmom = s1 - input%jspins*s
-    IF ( fmpi%irank == 0 ) THEN
+    IF ( fmpi%irank == 0 .and. l_output) THEN
        WRITE (oUnit,FMT=8050) seigv - seigv1,s1,chmom
     END IF
 8050 FORMAT (/,10x,'sum of eigenvalues-correction=',f12.5,/,10x,&

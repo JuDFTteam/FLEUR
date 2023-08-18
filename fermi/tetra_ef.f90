@@ -18,7 +18,7 @@ MODULE m_tetraef
 
    CONTAINS
 
-   SUBROUTINE tetra_ef(kpts,jspins,lb,ub,eig,zc,xfac,efermi,w)
+   SUBROUTINE tetra_ef(kpts,jspins,lb,ub,eig,zc,xfac,efermi,w,l_output)
 
       TYPE(t_kpts),     INTENT(IN)    :: kpts
       INTEGER,          INTENT(IN)    :: jspins
@@ -26,7 +26,8 @@ MODULE m_tetraef
       REAL,             INTENT(INOUT) :: eig(:,:,:)  !(neigd,nkptd,jspd)
       REAL,             INTENT(OUT)   :: w(:,:,:)    !(neigd,nkptd,jspd)
       REAL,             INTENT(OUT)   :: efermi
-
+      LOGICAL, INTENT(IN)   :: l_output
+      
       INTEGER :: i,j,jspin,iBand,ikpt,nelec,ncr,itet,it,icorn,jcorn
       REAL    :: elow,dlow,eup,dup,ttt,dfermi,wgs
       REAL    :: weight(4),ecmax(2,size(w,1))
@@ -180,9 +181,10 @@ MODULE m_tetraef
             elow = efermi
          ENDIF
       ENDDO
-
+      if (l_output) then
       WRITE (oUnit,220) efermi,dfermi,nelec
 220   FORMAT (//,'>>> D O S <<<',//,'   fermi energy =',f10.5,' dtot =',f10.5,' nelec =',i5)
+      endif
       !
       !---------------------------------------------------
       ! calculate weight factors for charge density integration

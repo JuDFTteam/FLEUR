@@ -318,7 +318,7 @@ contains
 #else
       me = 0
 #endif
-      if(me == 0) write (*,*) "psize: " // int2str(psize) // " max_peak: " // int2str(max_peak) // " nparts: " // int2str(n_parts)
+      !if(me == 0) write (*,*) "psize: " // int2str(psize) // " max_peak: " // int2str(max_peak) // " nparts: " // int2str(n_parts)
    end function calc_n_parts
 
    integer(8) function target_memsize(fi, hybdat)

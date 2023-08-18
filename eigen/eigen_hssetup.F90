@@ -48,6 +48,7 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
       INTEGER :: i, j, nspins
       complex, allocatable :: vpw_wTemp(:,:)
+      INTEGER :: tempI,tempJ
 
       !Matrices for Hamiltonian and Overlapp
       !In fi%noco case we need 4-matrices for each spin channel
@@ -107,8 +108,9 @@ CONTAINS
       END IF
 
       IF (fi%hybinp%l_hybrid) THEN
-         IF (hybdat%l_addhf) CALL add_Vnonlocal(nk, lapw, fi, hybdat, isp, results, xcpot, fmpi, nococonv, hmat(1, 1))
-
+         IF (hybdat%l_addhf) THEN
+            CALL add_Vnonlocal(nk, lapw, fi, hybdat, isp, xcpot, fmpi, nococonv, hmat(1, 1))
+         END IF 
          !IF (hybdat%l_subvxc) THEN
          !   CALL subvxc(lapw, fi%kpts%bk(:, nk), fi%input, isp, v%mt(:, 0, :, :), fi%atoms, ud, &
          !               mpdata, hybdat, enpara%el0, enpara%ello0, fi%sym, &

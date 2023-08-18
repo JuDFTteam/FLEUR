@@ -33,6 +33,7 @@ contains
       type(t_hybmpi), intent(in), optional :: submpi
       complex, allocatable :: acof(:,:,:), bcof(:,:,:), ccof(:,:,:,:)
       complex, allocatable :: cmt(:,:,:)
+      type(t_noco)         :: nocoHyb
 
       integer :: ikp, nbands, ok(4) ! index of parent k-point
       integer :: iatom, iatom2, itype, indx, i, j, idum, iop, l, ll, lm, m, lm1, lm2
@@ -86,7 +87,9 @@ contains
          mat_ptr => zmat_ikp
       endif
 
-      CALL abcof(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, noco, nococonv, jsp, acof, bcof, ccof, mat_ptr)
+      nocoHyb = noco
+      IF (hybinp%l_hybrid .AND. noco%l_soc) nocoHyb%l_soc = .FALSE.
+      CALL abcof(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, nocoHyb, nococonv, jsp, acof, bcof, ccof, mat_ptr)
 
       CALL hyb_abcrot(hybinp, atoms, my_psz, sym, acof, bcof, ccof)
 
