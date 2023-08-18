@@ -38,7 +38,8 @@ MODULE m_juDFT_stop
 #endif
   IMPLICIT NONE
   PRIVATE
-  PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable
+  CHARACTER(len=5),PARAMETER:: name="FLEUR"
+  PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable, juDFT_BUG
 CONTAINS
 
   SUBROUTINE judfT_file_readable(filename,warning)
@@ -51,7 +52,18 @@ CONTAINS
     IF (.not.l_exist) CALL judft_error("File not readable:"//filename,hint="You tried to read a file that is not present",warning=warning)
   END SUBROUTINE judfT_file_readable
 
-  SUBROUTINE juDFT_error(message,calledby,hint,no,warning,file,line)
+  SUBROUTINE juDFT_BUG(message,calledby,hint,no,file,line)
+   IMPLICIT NONE
+   CHARACTER*(*),INTENT(IN)          :: message
+   CHARACTER*(*),OPTIONAL,INTENT(IN) :: calledby,hint
+   INTEGER,OPTIONAL,INTENT(IN)       :: no
+   CHARACTER*(*),OPTIONAL,INTENT(IN) :: file
+   INTEGER,INTENT(IN),OPTIONAL       :: line
+
+   CALL juDFT_error(message,calledby,hint,no,bug = .TRUE.,file=file,line=line)
+  END SUBROUTINE 
+
+  SUBROUTINE juDFT_error(message,calledby,hint,no,warning,bug,file,line)
     USE m_juDFT_internalParams
     USE m_judft_usage
     use m_juDFT_string
@@ -60,7 +72,7 @@ CONTAINS
     CHARACTER*(*),INTENT(IN)          :: message
     CHARACTER*(*),OPTIONAL,INTENT(IN) :: calledby,hint
     INTEGER,OPTIONAL,INTENT(IN)       :: no
-    LOGICAL,OPTIONAL,INTENT(IN)       :: warning
+    LOGICAL,OPTIONAL,INTENT(IN)       :: warning,bug
     CHARACTER*(*),OPTIONAL,INTENT(IN) :: file
     INTEGER,INTENT(IN),OPTIONAL       :: line
 
@@ -85,7 +97,7 @@ CONTAINS
     irank=0
 #endif
     warn = .FALSE.
-    IF (PRESENT(warning)) warn = warning
+    IF (PRESENT(warning).and..not.present(bug)) warn = warning
     IF (warn) THEN
        !check if we stop nevertheless
        IF (judft_was_argument("-warn_only")) THEN
@@ -104,9 +116,13 @@ CONTAINS
 
     IF (first_pe) THEN
        IF (.NOT.warn) THEN
-          WRITE(0,'(a)') "**************juDFT-Error*****************"
+          IF (present(bug)) THEN
+            WRITE(0,'(a)') "**************"//name//"-BUG*****************"
+         ELSE  
+            WRITE(0,'(a)') "**************"//name//"-Error*****************"
+          ENDIF   
        ELSE
-          WRITE(0,'(a)') "************juDFT-Warning*****************"
+          WRITE(0,'(a)') "************"//name//"-Warning*****************"
        ENDIF
        WRITE(0,"(3a)") "Error message: ",message
        IF (PRESENT(calledby)) THEN
@@ -125,6 +141,9 @@ CONTAINS
              WRITE(0,"(3a)") "Source: ",file
           ENDIF
        ENDIF
+       IF (PRESENT(bug)) THEN
+         write(0,*) "This is considered a BUG in "//name//". Please report it."
+       ENDIF  
 #ifdef CPP_MPI
        IF (l_mpi) THEN
           WRITE(0,'(a,i0,a,i0)') "Error from PE:",irank,"/",isize
@@ -256,9 +275,9 @@ CONTAINS
     ENDIF
 #endif
     if(is_root) then
-       STOP 'OK'
+       STOP 0
     else
-       STOP
+       STOP 0
     endif
   END SUBROUTINE juDFT_END
 
@@ -277,7 +296,7 @@ CONTAINS
     INTEGER :: ierr
     CALL mpi_initialized(l_mpi,ierr)
 #endif
-    error = 0
+    error = 1
 
     IF(PRESENT(errorCode)) THEN
        error = errorCode
@@ -309,7 +328,7 @@ CONTAINS
        CALL MPI_ABORT(MPI_COMM_WORLD,error,ierr)
     ENDIF
 #endif
-    STOP 'juDFT-STOPPED'
+    STOP error
   END SUBROUTINE juDFT_stop
 
 
