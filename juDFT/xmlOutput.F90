@@ -418,7 +418,7 @@ MODULE m_judft_xmlOutput
       CHARACTER(LEN=*), INTENT(IN)           :: elementName
       CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
       CHARACTER(LEN=*), INTENT(IN)           :: attributeValues(:)
-      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(:)
+      REAL,         INTENT(IN), OPTIONAL :: contentList(:)
 
       INTEGER, ALLOCATABLE :: lengths(:,:)
       INTEGER              :: contentListSize
