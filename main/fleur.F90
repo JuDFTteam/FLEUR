@@ -405,10 +405,10 @@ CONTAINS
                hybdat%results%te_hfex%valence = 2*hybdat%results%te_hfex%valence
                IF(hybdat%l_calhf) hybdat%results%te_hfex%core = 2*hybdat%results%te_hfex%core
             END IF
-#ifdef CPP_MPI
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
             IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
                results%te_hfex=hybdat%results%te_hfex
+#ifdef CPP_MPI
                CALL fmpi%set_root_comm()
                IF (fmpi%n_rank==0) THEN
                   IF (fmpi%irank==0) THEN
@@ -417,8 +417,8 @@ CONTAINS
                      CALL MPI_Reduce(results%te_hfex%valence, MPI_IN_PLACE, 1, MPI_REAL8, MPI_SUM, 0, fmpi%root_comm, ierr)
                   END IF
                END IF
-            END IF
 #endif
+            END IF
             
             CALL timestart("2nd variation SOC")
             IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) THEN
