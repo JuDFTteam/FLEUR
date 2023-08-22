@@ -284,7 +284,8 @@ CONTAINS
 #endif
 
          CALL timestart("Fermi energy and occupation derivative")
-         IF (norm2(bqpt)<1e-8) THEN
+         !write(9013,*) fi%input%tkb, results%tkb_loc
+         IF (norm2(bqpt)<1e-8.AND.ABS(results%tkb_loc)>1e-12) THEN
             CALL dfpt_fermie(eig_id,dfpt_eig_id,fmpi,fi%kpts,fi%input,fi%noco,results,results1)
          ELSE
             results1%ef = 0.0

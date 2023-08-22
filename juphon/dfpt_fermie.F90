@@ -39,16 +39,16 @@ CONTAINS
 
       ALLOCATE(sxm(MAXVAL(results%neig),kpts%nkpt,nspins))
 
-      DO jsp = 1, nspins
-         DO k = 1, kpts%nkpt
-            IF (fmpi%irank == 0) THEN
-               IF (input%eig66(1)) CALL read_eig(dfpt_eig_id,k,jsp,neig=results1%neig(k,jsp),eig=results1%eig(:,k,jsp))
-            END IF
-#ifdef CPP_MPI
-            CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
-#endif
-         END DO
-      END DO
+!      DO jsp = 1, nspins
+!         DO k = 1, kpts%nkpt
+!            IF (fmpi%irank == 0) THEN
+!               IF (input%eig66(1)) CALL read_eig(dfpt_eig_id,k,jsp,neig=results1%neig(k,jsp),eig=results1%eig(:,k,jsp))
+!            END IF
+!#ifdef CPP_MPI
+!            CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
+!#endif
+!         END DO
+!      END DO
 
       IF (fmpi%irank == 0) THEN
          efermi = results%ef
@@ -60,14 +60,15 @@ CONTAINS
             DO k = 1, kpts%nkpt
                noccbd  = COUNT(results%w_iks(:,k,jsp)*2.0/input%jspins>1.e-8)
                DO j = 1, noccbd
-                  !x = (results%eig(j,k,jsp)-efermi)/input%tkb
-                  !sxm(j,k,jsp) = sfermi(-x)
-                  !ef_num = ef_num + results%w_iks(j,k,jsp) * sxm(j,k,jsp) * results1%eig(j,k,jsp)
-                  !ef_den = ef_den + results%w_iks(j,k,jsp) * sxm(j,k,jsp)
-                  x = results%w_iks(j,k,jsp) * (1 - results%w_iks(j,k,jsp)/kpts%wtkpt(k))
-                  sxm(j,k,jsp) = x
-                  ef_num = ef_num + x * results1%eig(j,k,jsp)
-                  ef_den = ef_den + x
+                  !write(4039,*) j,k,jsp,results1%eig(j,k,jsp)
+                  x = (results%eig(j,k,jsp)-efermi)/input%tkb
+                  sxm(j,k,jsp) = sfermi(-x)
+                  ef_num = ef_num + results%w_iks(j,k,jsp) * sxm(j,k,jsp) * results1%eig(j,k,jsp)
+                  ef_den = ef_den + results%w_iks(j,k,jsp) * sxm(j,k,jsp)
+                  !x = results%w_iks(j,k,jsp) * (1 - results%w_iks(j,k,jsp)/kpts%wtkpt(k))
+                  !sxm(j,k,jsp) = x
+                  !ef_num = ef_num + x * results1%eig(j,k,jsp)
+                  !ef_den = ef_den + x
                END DO
             END DO
          END DO
@@ -78,11 +79,11 @@ CONTAINS
             results1%ef = 0.0
          END IF
 
-         !results1%w_iks(:noccbd,:,1:nspins) = -results%w_iks(:noccbd,:,1:nspins) &
-         !                             * sxm(:noccbd,:,1:nspins) &
-         !                             * (results1%eig(:noccbd,:,1:nspins)-results1%ef)/input%tkb
-         results1%w_iks(:noccbd,:,1:nspins) = - sxm(:noccbd,:,1:nspins) &
+         results1%w_iks(:noccbd,:,1:nspins) = -results%w_iks(:noccbd,:,1:nspins) &
+                                      * sxm(:noccbd,:,1:nspins) &
                                       * (results1%eig(:noccbd,:,1:nspins)-results1%ef)/input%tkb
+         !results1%w_iks(:noccbd,:,1:nspins) = - sxm(:noccbd,:,1:nspins) &
+         !                             * (results1%eig(:noccbd,:,1:nspins)-results1%ef)/input%tkb
       END IF
 
       RETURN
