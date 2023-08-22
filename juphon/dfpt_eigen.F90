@@ -47,7 +47,7 @@ CONTAINS
       INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eig_id2
 
       INTEGER n_size,n_rank
-      INTEGER i,err,nk,jsp,nk_i,iqdir
+      INTEGER i,err,nk,jsp,nk_i,iqdir,neigd2
 
       INTEGER              :: ierr, iNupr
 
@@ -72,7 +72,7 @@ CONTAINS
       character(len=300)        :: errmsg
       INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:), k_selection(:)
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:), tempMat3(:), z1H2(:,:), z1S2(:,:)
-      REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:)
+      REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), eigBuffer(:,:,:)
 
       old_and_wrong = .FALSE.
 
@@ -104,6 +104,9 @@ CONTAINS
 
       CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0,.TRUE.)
       
+      ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
+      eigBuffer = 0.0
+      results1%eig = 1.0e300
 
       DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
@@ -218,10 +221,10 @@ CONTAINS
                         IF (.NOT.sh_den.AND.old_and_wrong) THEN
                            IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                               tempMat2(iNupr) = 0.0
-                              IF (iDir==1) write(9987,*) nk, nu, iNupr
+                              !IF (iDir==1) write(9987,*) nk, nu, iNupr
                            ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                               tempMat2(iNupr) = 0.0
-                              IF (iDir==1) write(9987,*) nk, nu, iNupr
+                              !IF (iDir==1) write(9987,*) nk, nu, iNupr
                            ELSE
                               tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
                            END IF
@@ -311,7 +314,7 @@ CONTAINS
                      eigs1(nu) = 0
                   END IF
 
-                  results1%eig(nu,nk,jsp) = eigs1(nu)
+                  !results1%eig(nu,nk,jsp) = eigs1(nu)
 
                   IF (zMatq%l_real) THEN ! l_real for zMatq
                      tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
@@ -443,6 +446,7 @@ CONTAINS
 
                   CALL write_eig(dfpt_eig_id, nk, jsp, noccbd, noccbd, &
                                  eigs1(:noccbd), n_start=n_size,n_end=n_rank,zMat=zMat1)
+                  eigBuffer(:noccbd,nk,jsp) = eigs1(:noccbd)
                   IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL write_eig(dfpt_eig_id2, nk, jsp, noccbd, noccbd, &
                                                                          eigs1(:noccbd), n_start=n_size,n_end=n_rank,zMat=zMat2)
                   ELSE
@@ -491,6 +495,17 @@ CONTAINS
 
           END DO  k_loop
         END DO ! spin loop ends
+        neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
+#ifdef CPP_MPI
+      !write(9041,*) fmpi%irank, neigd2
+      !CALL save_npy(int2str(fmpi%irank)//"_"//int2str(iDtype)//"_"//int2str(iDir)//"_eigBuffer.npy",eigBuffer)
+      CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results1%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+      !CALL save_npy(int2str(fmpi%irank)//"_"//int2str(iDtype)//"_"//int2str(iDir)//"_eigBuffer1.npy",results1%eig)
+      CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+      !CALL save_npy(int2str(fmpi%irank)//"_"//int2str(iDtype)//"_"//int2str(iDir)//"_eigBuffer2.npy",results1%eig)
+#else
+      results1%eig(:neigd2,:,:) = eigBuffer(:neigd2,:,:)
+#endif
 
    END SUBROUTINE dfpt_eigen
 END MODULE m_dfpt_eigen

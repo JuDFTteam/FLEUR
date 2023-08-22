@@ -44,6 +44,7 @@ MODULE m_types_misc
       REAL, ALLOCATABLE    :: w_iksRDMFT(:,:,:)
       REAL, ALLOCATABLE    :: eig(:,:,:)
       INTEGER, ALLOCATABLE :: neig(:,:) ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
+      REAL :: tkb_loc
 
    CONTAINS
       PROCEDURE,PASS :: init => results_init
@@ -130,6 +131,7 @@ CONTAINS
       thisResults%last_occdistance    = -1.0
       thisResults%bandgap         = 0.0
       thisResults%ef              = 0.0
+      thisResults%tkb_loc         = 0.0
 
       neigd2 = MIN(input%neig,lapw_dim_nbasfcn)
 !   neigd2 = input%neig
@@ -188,6 +190,7 @@ CONTAINS
       thisResults%w_iks = 0.0
       thisResults%neig = 0
       thisResults%eig = 0.0
+      thisResults%tkb_loc = 0.0
 
       ! Irrelevant
       IF(input%l_rdmft) THEN
