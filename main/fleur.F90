@@ -108,6 +108,7 @@ CONTAINS
       LOGICAL :: l_forceTheorem, l_lastIter, l_exist
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
+      INTEGER :: tempI, tempK, tempJSP
 
 #ifdef CPP_MPI
       INTEGER :: ierr
@@ -217,8 +218,16 @@ CONTAINS
       l_olap = fi%hybinp%l_hybrid .OR. fi%input%l_rdmft
       eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, wannierspin, fi%noco%l_noco, &
                         .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%INPUT%eig66(1), l_olap, fmpi%n_size)
-      hybdat%eig_id = eig_id
-
+      
+      ! The hybrid implementation doesn't use spinors. In the case of SOC calculations, a separate eig file has to be created
+      ! It contains those eigenvalues/vectors found in the 'eigen' subroutine
+      IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) THEN
+         hybdat%eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, wannierspin, fi%noco%l_noco, &
+         .NOT.fi%INPUT%eig66(1), fi%input%l_real, .FALSE., fi%INPUT%eig66(1), l_olap, fmpi%n_size)
+      ELSE
+         hybdat%eig_id = eig_id
+      ENDIF
+ 
       ! TODO: Isn't this comment kind of lost here?
       ! Rotate cdn to local frame if specified.
 
@@ -293,10 +302,11 @@ CONTAINS
 
          !HF
          IF (fi%hybinp%l_hybrid) THEN
+            hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
             SELECT TYPE (xcpot)
             TYPE IS (t_xcpot_inbuild)
                CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
-                                results, xcpot, vTot, iter, iterHF)
+                                hybdat%results, xcpot, vTot, iter, iterHF)
             END SELECT
 
 #ifdef CPP_MPI
@@ -391,9 +401,14 @@ CONTAINS
             CALL timestop("eigen")
 
             ! Add all HF contributions to the total energy
-#ifdef CPP_MPI
+            IF( fi%input%jspins .EQ. 1 .AND. fi%hybinp%l_hybrid ) THEN
+               hybdat%results%te_hfex%valence = 2*hybdat%results%te_hfex%valence
+               IF(hybdat%l_calhf) hybdat%results%te_hfex%core = 2*hybdat%results%te_hfex%core
+            END IF
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
             IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
+               results%te_hfex=hybdat%results%te_hfex
+#ifdef CPP_MPI
                CALL fmpi%set_root_comm()
                IF (fmpi%n_rank==0) THEN
                   IF (fmpi%irank==0) THEN
@@ -402,12 +417,14 @@ CONTAINS
                      CALL MPI_Reduce(results%te_hfex%valence, MPI_IN_PLACE, 1, MPI_REAL8, MPI_SUM, 0, fmpi%root_comm, ierr)
                   END IF
                END IF
-            END IF
 #endif
-
+            END IF
+            
             CALL timestart("2nd variation SOC")
-            IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) &
+            IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) THEN
+               IF (fi%hybinp%l_hybrid) hybdat%results = results !Store old eigenvalues for later call to fermie
                CALL eigenso(eig_id, fmpi, stars, sphhar, nococonv, vTot, enpara, results, fi%hub1inp, hub1data,fi)
+            ENDIF   
             CALL timestop("2nd variation SOC")
             CALL timestop("H generation and diagonalization (total)")
 
@@ -435,13 +452,25 @@ CONTAINS
             CALL timestart("determination of fermi energy")
 
             IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
-               input_soc%zelec = fi%input%zelec*2
+               input_soc%zelec = fi%input%zelec*2               
+               IF (fi%hybinp%l_hybrid) &
+                  CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results)
                CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
+
                results%seigv = results%seigv / 2.0
                results%ts = results%ts / 2.0
             ELSE
                CALL fermie(eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, results)
+               IF (fi%hybinp%l_hybrid) hybdat%results = results
             ENDIF
+#ifdef CPP_MPI
+            CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            if (fi%hybinp%l_hybrid) then 
+               CALL MPI_BCAST(hybdat%results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+               CALL MPI_BCAST(hybdat%results%w_iks, SIZE(hybdat%results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            endif   
+#endif            
             CALL timestop("determination of fermi energy")
 
             ! TODO: What is commented out here and should it perhaps be removed?
@@ -466,10 +495,7 @@ CONTAINS
 ! !$          !-Wannier
 
             !ENDIF
-#ifdef CPP_MPI
-            CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-            CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-#endif
+
 
             IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi,   enpara, vToT, results)) THEN
                CYCLE forcetheoloop
@@ -607,7 +633,11 @@ CONTAINS
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
 8130        FORMAT(/, 5x, '******* it=', i3, '  is completed********', /,/)
-            WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance
+            IF (fi%hybinp%l_hybrid) THEN
+               WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance, " hyb distance:", hybdat%results%last_distance
+            ELSE
+               WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance
+            ENDIF
          END IF ! fmpi%irank.EQ.0
          CALL timestop("Iteration")
 
@@ -716,6 +746,7 @@ CONTAINS
       IF (fmpi%irank .EQ. 0) CALL closeXMLElement('scfLoop')
 
       CALL close_eig(eig_id)
+      IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) CALL close_eig(hybdat%eig_id)
       CALL juDFT_end("all done", fmpi%irank)
 
    CONTAINS

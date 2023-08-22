@@ -150,7 +150,7 @@ CONTAINS
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, juPhon=fi%juPhon)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
-                                     fi%banddos,   Xcpot, fi%kpts, fi%gfinp)
+                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
@@ -158,11 +158,6 @@ CONTAINS
                              Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%juPhon)
       !Remaining init is done using all PE
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
-      IF (fmpi%irank .EQ. 0) THEN
-         IF(xcpot%is_hybrid().AND.fi%sym%invs) THEN
-            CALL juDFT_warn("Hybrid functionals with inversion symmetric unit cells are disabled at the moment.")
-         END IF
-      END IF
       CALL nococonv%init(fi%noco)
       CALL nococonv%init_ss(fi%noco, fi%atoms)
       !CALL ylmnorm_init(MAX(fi%atoms%lmaxd, 2*fi%hybinp%lexp))

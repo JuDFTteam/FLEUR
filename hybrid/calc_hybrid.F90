@@ -64,8 +64,10 @@ CONTAINS
 
       CALL timestart("hybrid code")
 
+#ifdef CPP_MPI
 #ifdef CPP_PROG_THREAD
       if(fmpi%l_mpi_multithreaded) call start_prog_thread(threadId)
+#endif
 #endif
 
       IF (fi%kpts%nkptf == 0) THEN
@@ -76,7 +78,7 @@ CONTAINS
       !Check if new non-local potential shall be generated
       hybdat%l_subvxc = fi%hybinp%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
       !If this is the first iteration loop we can not calculate a new non-local potential
-      hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
+      !hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
       !make sure we do at least one PBE first
       if(iter == 1 .and. iterHF == 0) hybdat%l_calhf = .False.
 
@@ -191,6 +193,7 @@ CONTAINS
 
             DO i = 1,work_pack(jsp)%k_packs(1)%size
                nk = work_pack(jsp)%k_packs(i)%nk
+               PRINT*, 'kpoint= ', nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
                CALL hsfock(fi, work_pack(jsp)%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
                            nococonv, stars, results, xcpot, fmpi, vx_tmp(nk, jsp))
@@ -227,8 +230,11 @@ CONTAINS
 #endif
 
       ENDIF
+
+#ifdef CPP_MPI
 #ifdef CPP_PROG_THREAD
       if(fmpi%l_mpi_multithreaded) call stop_prog_thread(threadId)
+#endif
 #endif
       CALL timestop("hybrid code")
    CONTAINS

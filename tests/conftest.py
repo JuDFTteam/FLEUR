@@ -703,16 +703,17 @@ def execute_inpgen(inpgen_binary, work_dir, pytestconfig, test_logger):
             with open(f"{workdir}/stderr", "w") as f_stderr:
                 p1 = subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr, check=False)
         # Check per hand if successful:
-        with open(f"{workdir}/stderr", "r") as f_stderr:
-                error_content= f_stderr.read()
+        with open(f"{workdir}/stdout", "r") as f_stdout:
+            out_content= f_stdout.read()
 
-        if 'Run finished successfully' not in error_content:
+        if 'Run finished successfully' not in out_content:
+            with open(f"{workdir}/stderr", "r") as f_stderr:
+                error_content= f_stderr.read()
             # failure
             print('Inpgen execution failed.')
             print('======================================')
             print('The following was printed to stdout:')
-            with open(f"{workdir}/stdout", "r") as f_stdout:
-                print(f_stdout.read())
+            print(out_content)
             print('======================================')
             print('The following was printed to stderr:')
             print(error_content)
@@ -837,7 +838,7 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig, test_logger
             workdir = work_dir
         testdir = test_dir()
         if cmdline_param is None:
-            cmdline_param = []
+            cmdline_param = ['-warn_only']
         extra_args = os.environ.get('juDFT_ARGS','')
         if extra_args:
             cmdline_param.extend(extra_args.split(' '))
@@ -903,16 +904,17 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig, test_logger
                 p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=False)
 
         # Check per hand if successful:
-        with open(f"{workdir}/stderr", "r") as f_stderr:
-                error_content= f_stderr.read()
+        with open(f"{workdir}/stdout", "r") as f_stdout:
+            out_content= f_stdout.read()
 
-        if 'Run finished successfully' not in error_content:
+        if 'Run finished successfully' not in out_content:
+            with open(f"{workdir}/stderr", "r") as f_stderr:
+                error_content= f_stderr.read()
             # failure
             print('Fleur execution failed.')
             print('======================================')
             print('The following was printed to stdout:')
-            with open(f"{workdir}/stdout", "r") as f_stdout:
-                print(f_stdout.read())
+            print(out_content)
             print('======================================')
             print('The following was printed to stderr:')
             print(error_content)

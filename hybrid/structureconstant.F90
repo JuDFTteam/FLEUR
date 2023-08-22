@@ -424,12 +424,12 @@ contains
       !
       call timestart("realspace sum")
       DO ic2 = 1+fmpi%irank, atoms%nat, fmpi%isize
-         !$OMP PARALLEL DO default(none) &
-         !$OMP shared(ic2, atoms, cell, nptsh, structconst, hybinp, kpts, scale, convpar) &
-         !$OMP private(ic1, tmp_vec, i, ra, rc, a, pnt, maxl, l, conv, shlp, ishell, rexp, g, y) &
-         !$OMP private(rdum, cexp, lm, cdum)&
-         !$OMP firstprivate(ptsh, radsh) &
-         !$OMP reduction(max:a1)
+!         !$OMP PARALLEL DO default(none) &
+!         !$OMP shared(ic2, atoms, cell, nptsh, structconst, hybinp, kpts, scale, convpar) &
+!         !$OMP private(ic1, tmp_vec, i, ra, rc, a, pnt, maxl, l, conv, shlp, ishell, rexp, g, y) &
+!         !$OMP private(rdum, cexp, lm, cdum)&
+!         !$OMP firstprivate(ptsh, radsh) &
+!         !$OMP reduction(max:a1)
          DO ic1 = 1, atoms%nat
             IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
             !MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
@@ -514,7 +514,7 @@ contains
             END DO
             structconst(:, ic1, ic2, :) = shlp
          END DO
-         !$OMP END PARALLEL DO
+!         !$OMP END PARALLEL DO
       END DO
 #ifdef CPP_MPI
       call MPI_ALLREDUCE(MPI_IN_PLACE, a1, 1, MPI_DOUBLE_PRECISION, MPI_MAX, fmpi%mpi_comm, ierr)

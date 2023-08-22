@@ -49,7 +49,7 @@ module m_vvacxy
         call judft_error( "error: vacuum%nmzxyd < ncsh", calledby="vvacxy" )
       else if ( vacuum%nmzxyd > ncsh ) then
         write (oUnit,*) 'warning vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '> ncsh(zsigma) = ', ncsh
-        write (0,*) 'warning vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '> ncsh(zsigma) = ', ncsh
+        write (*,*) 'warning vvacxy.f: vacuum%nmzxyd =', vacuum%nmzxyd, '> ncsh(zsigma) = ', ncsh
         call judft_warn( "nmzxyd > ncsh", calledby="vvacxy" )
       end if
     end if

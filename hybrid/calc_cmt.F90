@@ -33,14 +33,17 @@ contains
       type(t_hybmpi), intent(in), optional :: submpi
       complex, allocatable :: acof(:,:,:), bcof(:,:,:), ccof(:,:,:,:)
       complex, allocatable :: cmt(:,:,:)
+      type(t_noco)         :: nocoHyb
 
       integer :: ikp, nbands, ok(4) ! index of parent k-point
-      integer :: iatom, itype, indx, i, j, idum, iop, l, ll, lm, m
+      integer :: iatom, iatom2, itype, indx, i, j, idum, iop, l, ll, lm, m, lm1, lm2
       integer :: map_lo(atoms%nlod)
       integer, allocatable :: start_idx(:), psize(:)
       integer :: my_psz, my_start, ierr
 
-      complex :: cdum
+      REAL :: rdum, rfac
+      complex :: cdum, cexp1, cexp2, cfac
+      COMPLEX, ALLOCATABLE :: cmtTemp1(:,:), cmtTemp2(:,:)
       type(t_lapw)  :: lapw_ik, lapw_ikp
       type(t_mat), target   :: tmp
       type(t_mat), pointer  :: mat_ptr
@@ -84,15 +87,18 @@ contains
          mat_ptr => zmat_ikp
       endif
 
-      CALL abcof(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, noco, nococonv,&
-                 jsp,   acof, bcof, ccof, mat_ptr)
+      nocoHyb = noco
+      IF (hybinp%l_hybrid .AND. noco%l_soc) nocoHyb%l_soc = .FALSE.
+      CALL abcof(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, nocoHyb, nococonv, jsp, acof, bcof, ccof, mat_ptr)
+
       CALL hyb_abcrot(hybinp, atoms, my_psz, sym, acof, bcof, ccof)
 
       call timestart("copy to cmt")
       !$OMP parallel do default(none) private(iatom, itype, indx, l, ll, cdum, idum, map_lo, j, m, lm, i) &
       !$OMP shared(atoms, mpdata, cmt, acof, bcof, ccof, my_start, my_psz)
-      do iatom = 1,atoms%nat 
+      DO iatom = 1,atoms%nat 
          itype = atoms%itype(iatom)
+
          indx = 0
          DO l = 0, atoms%lmax(itype)
             ll = l*(l + 1)
@@ -112,8 +118,8 @@ contains
                END DO
             END IF
 
-            DO M = -l, l
-               lm = ll + M
+            DO m = -l, l
+               lm = ll + m
                DO i = 1, mpdata%num_radfun_per_l(l, itype)
                   indx = indx + 1
                   IF (i == 1) THEN
@@ -122,13 +128,14 @@ contains
                      cmt(my_start:my_start+my_psz-1, indx, iatom) = cdum*bcof(:, lm, iatom)
                   ELSE
                      idum = i - 2
-                     cmt(my_start:my_start+my_psz-1, indx, iatom) = cdum*ccof(M, :, map_lo(idum), iatom)
+                     cmt(my_start:my_start+my_psz-1, indx, iatom) = cdum*ccof(m, :, map_lo(idum), iatom)
                   END IF
                END DO
             END DO
          END DO
       END DO
       !$OMP end parallel do
+
       call timestop("copy to cmt")
 
 #ifdef CPP_MPI
@@ -152,6 +159,44 @@ contains
          call waveftrafo_gen_cmt(cmt, c_phase, zmat_ikp%l_real, ikp, iop, atoms, &
                                   mpdata, hybinp, kpts, sym, nbands, cmt_out)
       endif
+
+      ! calculate real values cmt for atoms that are inversion symmetric to each other
+      rfac = 1.0 / SQRT(2.0)
+      cfac = CMPLX(0.0,-1.0) / SQRT(2.0)
+      ALLOCATE(cmtTemp1(SIZE(cmt,1),SIZE(cmt,2)), cmtTemp2(SIZE(cmt,1),SIZE(cmt,2)))
+      DO iatom = 1,atoms%nat
+         itype = atoms%itype(iatom)
+         iatom2 = sym%invsatnr(iatom)
+         IF(iatom2.EQ.0) iatom2 = iatom
+
+         IF(iatom2.GT.iatom) THEN ! iatom is first of two atoms mapped to each other via inversion symmetry
+            cmtTemp1 = CMPLX(0.0,0.0)
+            cmtTemp2 = CMPLX(0.0,0.0)
+            cexp1 = exp(CMPLX(0.0,-1.0)*tpi_const*dot_product(kpts%bkf(:, ik), atoms%taual(:, iatom)))
+            cexp2 = exp(CMPLX(0.0,-1.0)*tpi_const*dot_product(kpts%bkf(:, ik), atoms%taual(:, iatom2)))
+            ! Note: for the case k+q these phase calculations are slightly different then in the old version, where the resultin k+q point may be outside the BZ.
+
+            lm1 = 0
+            DO l = 0, atoms%lmax(itype)
+               DO m = -l, l
+                  rdum = (-1)**(l + m)
+                  DO i = 1, mpdata%num_radfun_per_l(l, itype)
+                     lm1 = lm1 + 1
+                     ! lm index at l,-m
+                     lm2 = lm1 - 2 * m * mpdata%num_radfun_per_l(l, itype)
+                     cdum = rdum * cexp1 * cexp2
+
+                     cmtTemp1(:,lm1) = (cmt_out(:, lm1, iatom) + cdum*cmt_out(:, lm2, iatom2))*rfac
+                     cmtTemp2(:,lm1) = (cmt_out(:, lm1, iatom) - cdum*cmt_out(:, lm2, iatom2))*cfac
+                  END DO
+               END DO
+            END DO
+            cmt_out(:,:,iatom) = cmtTemp1(:,:)
+            cmt_out(:,:,iatom2) = cmtTemp2(:,:)
+         END IF
+      END DO
+      DEALLOCATE (cmtTemp1, cmtTemp2)
+
       call timestop("calc_cmt")
    end subroutine calc_cmt
 end module m_calc_cmt

@@ -19,7 +19,7 @@ Testset: Basic
 |+|Bulk Cu one iteration|basic/CuBulk|fast,bulk
 |+|Bulk Cu one iteration,DOS|basic/CuDOS|fast,bulk,dos
 |+|Bulk Cu one iteration,DOS,Orbital decomp.|basic/CuOrb|fast,bulk,dos,orbcomp
-|+|Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd
+| |Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd|MCD disabled
 |+|Bulk Co, bandstructure, unfolding|basic/CoUnfold|band,bulk
 |+|Bulk Fe, Kerker preconditioner|basic/Fe_Kerker|bulk
 |+|Bulk Fe fcc with relativistic core solver|basic/Fe_fcc_kcrel|
@@ -27,7 +27,7 @@ Testset: Basic
 |+|Bulk PTO|basic/PTO|bulk
 |+|Bulk PTO, SOC|basic/PTO-SOC|bulk,soc
 |+|Bulk Fe, Tetrahedon method|basic/Fe_Tetra_noSYM|bulk
-|+|LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau
+| |LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau|LDA+U AMF disabled
 |+|LDA+U with fully localized double counting and magnetism|basic/NiOldaUFLL|bulk,ldau
 |+|Crystal field output|basic/CrystalFieldOutput|bulk
 
@@ -91,7 +91,7 @@ Testset: Experimental
 ||TiO2 EELS spectrum|extra/TiO2eels|bulk,eels|inp.xml too old
 |+|Hubbard1 using SOC|extra/Gd_Hubbard1|bulk,edsolver
 |+|Hubbard1 without sym|extra/Gd_Hubbard1_noSYM|bulk,edsolver
-|+|diamond for one k-point with scan|extra/Diamond_SCAN|bulk,libxc
+| |diamond for one k-point with scan|extra/Diamond_SCAN|bulk,libxc| SCAN has to be refactored
 |+|3D vector plots of the magnetization|extra/PlotOnlyMT|bulk,plot,hdf
 |+|density and potential plots, vector plots|extra/PlotDenandPot|bulk,plot,hdf
 
@@ -100,10 +100,10 @@ Testset: Hybrid-Functionals
 ----------
 ||Description|directory name|marks|Remarks
 |-|-----------|--------------|------|---
-||GaAs PBE0|hybrid/GaAsHybridPBE0|bulk|runs too long
-||Fe PBE0|hybrid/FeHybridPBE0|bulk|runs too long
-||KCl PBE0|hybrid/KClHybridPBE0|bulk|runs too long
-||Mn Noinversion, PBE0|hybrid/MnHybridNoinv|bulk|runs too long
+|+|GaAs PBE0|hybrid/GaAsHybridPBE0|bulk,hdf|runs too long
+|+|Fe PBE0|hybrid/FeHybridPBE0|bulk,hdf|runs too long
+|+|KCl PBE0|hybrid/KClHybridPBE0|bulk,hdf|runs too long
+||Mn Noinversion, PBE0|hybrid/MnHybridNoinv|bulk,hdf|runs too long, redundant to GaAs, Fe tests
 
 
 

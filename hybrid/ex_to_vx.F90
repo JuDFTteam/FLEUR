@@ -18,7 +18,7 @@ contains
       type(t_mat), intent(inout)    :: ex
       type(t_mat), intent(inout)    :: v_x
 
-      integer     :: nbasfcn, ierr
+      integer     :: nbasfcn, ierr, tempI, tempJ
       type(t_mat) :: trafo, tmp, olap
 
       CALL timestart("T^-1*mat_ex*T^-1*")

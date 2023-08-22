@@ -21,7 +21,7 @@ MODULE m_fertri
    CONTAINS
 
    SUBROUTINE fertri(input,noco,kpts,irank,ne,jspins,zc,eig,sfac,&
-                     ef,seigv,w)
+                     ef,seigv,w,l_output)
 
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco),    INTENT(IN)    :: noco
@@ -33,6 +33,7 @@ MODULE m_fertri
       REAL,          INTENT(INOUT) :: ef
       REAL,          INTENT(OUT)   :: w(:,:,:) !(neig,nkpt,jspins)
       REAL,          INTENT(INOUT) :: eig(:,:,:)!(neig,nkpt,jspins)
+      LOGICAL,       INTENT(IN)    :: l_output
 
       REAL    :: chmom,ct,del,dez,ei,emax,emin,s,s1,workf
       REAL    :: lb,ub,e_set,seigvTemp
@@ -41,7 +42,7 @@ MODULE m_fertri
       CHARACTER(LEN=20)    :: attributes(2)
       REAL, PARAMETER :: de = 5.0e-3 !Step for initial search
 
-      IF (irank == 0) THEN
+      IF (irank == 0 .and. l_output) THEN
          WRITE (oUnit,FMT=8000)
 8000     FORMAT (/,/,10x,'linear triangular method')
       END IF
@@ -69,7 +70,7 @@ MODULE m_fertri
       IF(.not.input%film) THEN
          lb = MINVAL(eig) - 0.01
          ub = ef + 0.2
-         CALL tetra_ef(kpts,jspins,lb,ub,eig,zc,sfac,ef,w)
+         CALL tetra_ef(kpts,jspins,lb,ub,eig,zc,sfac,ef,w,l_output)
       ELSE
          IF (irank == 0) THEN
             WRITE (oUnit,FMT=*) 'ef_hist=',ef
@@ -86,7 +87,7 @@ MODULE m_fertri
 
             CALL dosint(ei,nemax,jspins,kpts,sfac,eig,ct)
 
-            IF (irank == 0) WRITE (oUnit,FMT=*) 'ct=',ct
+            IF (irank == 0 .and. l_output) WRITE (oUnit,FMT=*) 'ct=',ct
 
             IF (ct.LT.zc) THEN ! ei < ef
                emin = ei
@@ -107,7 +108,7 @@ MODULE m_fertri
          ENDDO
 
          IF (ct.NE.zc) THEN
-            IF (irank == 0) WRITE (oUnit,FMT=*) '2nd dosint'
+            IF (irank == 0 .and. l_output) WRITE (oUnit,FMT=*) '2nd dosint'
             !---> refine ef to a value of 5 mry * (2**-20)
             iterate : DO i = 1, 40
                ei = 0.5* (emin+emax)
@@ -128,7 +129,7 @@ MODULE m_fertri
          del = emax - emin
          dez = zc - ct
          workf = -hartree_to_ev_const*ef
-         IF (irank == 0) THEN
+         IF (irank == 0 .and. l_output) THEN
             WRITE (oUnit,FMT=8030) ef,workf,del,dez
 8030        FORMAT(/,10x,'fermi energy=',f10.5,' har',/,10x,'work function='&
                     ,f10.5,' ev',/,10x,'uncertainity in energy and weights=',&
@@ -137,7 +138,7 @@ MODULE m_fertri
          !
          !--->   obtain dos at ef
          !
-         CALL dosef(ei,nemax,jspins,kpts,sfac,eig)
+         CALL dosef(ei,nemax,jspins,kpts,sfac,eig,l_output)
          !
          !--->   obtain weights needed for integration
          !
@@ -202,7 +203,7 @@ MODULE m_fertri
          seigvTemp = seigvTemp / 2.0
       END IF
 
-      IF (irank == 0) THEN
+      IF (irank == 0 .and. l_output) THEN
          attributes = ''
          WRITE(attributes(1),'(f20.10)') seigvTemp
          WRITE(attributes(2),'(a)') 'Htr'

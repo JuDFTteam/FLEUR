@@ -277,13 +277,12 @@ CONTAINS
                      !$acc enter data copyin(CPP_cprod_r)
 
                      !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-                     !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, psize, wl_iks, phase_vv, ikqpt, ibando)&
+                     !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, psize, wl_iks, ikqpt, ibando)&
                      !$acc present(n_q, nq_idx)
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO iob = 1, psize
                            do i = 1, hybdat%nbasm(iq)
-                              r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1))&
-                                                      * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)                        
+                              r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1)) * wl_iks(ibando + iob - 1, ikqpt) / n_q(nq_idx)                        
                            enddo
                         enddo
                      enddo
@@ -303,8 +302,7 @@ CONTAINS
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO iob = 1, psize
                            do i = 1, hybdat%nbasm(iq)
-                              c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) &
-                                                         * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
+                              c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
                            enddo
                         enddo
                      enddo
@@ -339,7 +337,7 @@ CONTAINS
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO n2 = 1, nsest(iband)
                            nn2 = indx_sest(n2, iband)
-                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_r(iband, nn2)
+                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*conjg(phase_vv(iob, iband))*dot_result_r(iband, nn2)
                         enddo
                      END DO
                      !$acc end kernels
@@ -498,7 +496,7 @@ CONTAINS
 
       IF (mat_ex%l_real) THEN
          IF (any(abs(aimag(exch_vv)) > 1E-08)) then 
-            CALL judft_warn('unusally large imaginary part of exch_vv. Max:' // float2str(maxval(abs(aimag(exch_vv)))), &
+            CALL judft_warn('unusually large imaginary part of exch_vv. Max:' // float2str(maxval(abs(aimag(exch_vv)))), &
                                                                calledby='exchange_val_hf.F90')
          endif
       END IF
