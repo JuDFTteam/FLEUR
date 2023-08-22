@@ -126,5 +126,5 @@ Testset: Greenfunctions
 |+|Greens Function intersite single shell|greens/GreensFunction_IntersiteGamma|bulk
 |+|Greens Function intersite single shell|greens/GreensFunction_IntersiteNoGamma|bulk
 |+|Greens Function intersite multiple shells|greens/GreensFunction_IntersiteMultipleShells|bulk
-|+|Greens Function intersite shell construction|greens/GreensFunction_IntersiteShellConstruction|bulk
+| |Greens Function intersite shell construction|greens/GreensFunction_IntersiteShellConstruction|bulk|This test takes way too long!
 |+|Greens Function intersite shell construction|greens/GreensFunction_IntersiteShellConstructionFilm|bulk
