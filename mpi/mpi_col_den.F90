@@ -492,9 +492,9 @@ CONTAINS
           ! Refactored stuff
           n = atoms%nlod * atoms%nlod * atoms%ntype
           ALLOCATE (c_b(n))
-          CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,2,1),c_b,n,MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
+          CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,2,1),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
           CALL zcopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,2,1), 1)
-          CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,1,2),c_b,n,MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
+          CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,1,2),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
           CALL zcopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,1,2), 1)
           DEALLOCATE (c_b)
 
