@@ -9,7 +9,7 @@ MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(mpdata, fi, fmpi,nococonv, results, jsp, enpara, &
+   SUBROUTINE hf_setup(mpdata, fi, fmpi,nococonv, jsp, enpara, &
                        hybdat, vr0, eig_irr)
       USE m_types
       USE m_constants
@@ -28,7 +28,6 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: fmpi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_enpara), INTENT(IN)    :: enpara
-      TYPE(t_results), INTENT(INOUT) :: results
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
       INTEGER, INTENT(IN)    :: jsp
@@ -50,8 +49,8 @@ CONTAINS
 
 
       call timestart("HF_setup")
-      call hybdat%set_nobd(fi, results)
-      call hybdat%set_nbands(fi, fmpi, results)
+      call hybdat%set_nobd(fi)
+      call hybdat%set_nbands(fi, fmpi)
       IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
@@ -64,7 +63,7 @@ CONTAINS
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
 
          END DO
-         eig_irr = results%eig(:, :, jsp)
+         eig_irr = hybdat%results%eig(:, :, jsp)
          call timestop("eig stuff")
 
 

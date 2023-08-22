@@ -69,7 +69,7 @@ CONTAINS
       CALL timestop("symm_hf_init")
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(fi, nk, hybdat, results, submpi, eig_irr, mpdata, cmt, &
+   SUBROUTINE symm_hf(fi, nk, hybdat, submpi, eig_irr, mpdata, cmt, &
                       rrot, nsymop, psym, n_q, parent, nsest, indx_sest, jsp)
 
       USE m_olap
@@ -81,7 +81,6 @@ CONTAINS
 
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_hybdat), INTENT(IN) :: hybdat
-      type(t_results),intent(in) :: results
       type(t_hybmpi), intent(in) :: submpi
       TYPE(t_mpdata), intent(in) :: mpdata
 
@@ -120,7 +119,7 @@ CONTAINS
 !     - local arrays -
       INTEGER                         :: neqvkpt(fi%kpts%nkptf)
       INTEGER                         :: list(fi%kpts%nkptf)
-      INTEGER                         :: degenerat(results%neig(nk, jsp))
+      INTEGER                         :: degenerat(hybdat%results%neig(nk, jsp))
 
       REAL                            :: rotkpt(3), g(3)
       complex, ALLOCATABLE            :: olapmt(:, :, :, :)
@@ -211,7 +210,7 @@ CONTAINS
          END DO
       END DO
 
-      DO i = 1, results%neig(nk, jsp)
+      DO i = 1, hybdat%results%neig(nk, jsp)
          IF(degenerat(i) /= 1 .or. degenerat(i) /= 0) THEN
             degenerat(i + 1:i + degenerat(i) - 1) = 0
          END IF

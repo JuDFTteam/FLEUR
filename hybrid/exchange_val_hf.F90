@@ -58,7 +58,7 @@ MODULE m_exchange_valence_hf
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
 
 CONTAINS
-   SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+   SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, &
                                   n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
       
       USE m_wrapper
@@ -89,7 +89,6 @@ CONTAINS
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_mpi), INTENT(IN)           :: fmpi
       type(t_mat), intent(in)           :: z_k
-      TYPE(t_results), INTENT(IN)       :: results
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
       TYPE(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_nococonv), INTENT(IN)      :: nococonv
@@ -417,10 +416,10 @@ CONTAINS
 
          !This should be done with w_iks I guess!TODO
          occup = .false.
-         DO i = 1, results%neig(ik, jsp)
-            IF (results%ef >= eig_irr(i, ik)) THEN
+         DO i = 1, hybdat%results%neig(ik, jsp)
+            IF (hybdat%results%ef >= eig_irr(i, ik)) THEN
                occup(i) = .true.
-            ELSE IF ((eig_irr(i, ik) - results%ef) <= 1E-06) THEN
+            ELSE IF ((eig_irr(i, ik) - hybdat%results%ef) <= 1E-06) THEN
                occup(i) = .true.
             END IF
          END DO

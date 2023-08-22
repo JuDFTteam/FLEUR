@@ -2157,7 +2157,7 @@ CONTAINS
    ! (note: in the code f is defined with an additional 1/r factor)
    !
    SUBROUTINE exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsymop, &
-                               nsest, indx_sest, irank, a_ex, results, cmt, mat_ex)
+                               nsest, indx_sest, irank, a_ex, cmt, mat_ex)
 
       USE m_types_fleurinput
       USE m_types_mpdata
@@ -2175,9 +2175,8 @@ CONTAINS
 
       TYPE(t_fleurinput), INTENT(IN) :: fi
       TYPE(t_mpdata), INTENT(IN)     :: mpdata
-      TYPE(t_hybdat), INTENT(IN)     :: hybdat
       TYPE(t_lapw), INTENT(IN)       :: lapw
-      TYPE(t_results), INTENT(INOUT) :: results
+      TYPE(t_hybdat), INTENT(INOUT)  :: hybdat
       TYPE(t_mat), INTENT(INOUT)     :: mat_ex
 
 !   -scalars -
@@ -2350,7 +2349,7 @@ CONTAINS
       ENDIF
 
       DO n1 = 1, hybdat%nobd(nk,jsp)
-         results%te_hfex%core =results%te_hfex%core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1)
+         hybdat%results%te_hfex%core =hybdat%results%te_hfex%core - a_ex*hybdat%results%w_iks(n1, nk, jsp)*exchange(n1, n1)
       END DO
 
       ! add the core-valence contribution to the exchange matrix mat_ex
@@ -2388,7 +2387,7 @@ CONTAINS
    ! The function f is a product of core and valence function
    ! (note: in the code f is defined with an additional 1/r factor)
    !
-   SUBROUTINE exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
+   SUBROUTINE exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex)
 
       USE m_types_fleurinput
       USE m_types_hybdat
@@ -2404,8 +2403,7 @@ CONTAINS
       IMPLICIT NONE
       
       TYPE(t_fleurinput), INTENT(IN) :: fi
-      TYPE(t_hybdat), INTENT(IN)     :: hybdat
-      TYPE(t_results), INTENT(INOUT) :: results
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
       ! - scalars -
       INTEGER, INTENT(IN)    ::  nk, ncstd
 
@@ -2556,7 +2554,7 @@ CONTAINS
       ! add core exchange contributions to the te_hfex
 
       DO icst1 = 1, ncstd
-         results%te_hfex%core = results%te_hfex%core - a_ex*fi%kpts%wtkpt(nk)*exch(icst1, icst1)
+         hybdat%results%te_hfex%core = hybdat%results%te_hfex%core - a_ex*fi%kpts%wtkpt(nk)*exch(icst1, icst1)
       END DO
 
    END SUBROUTINE exchange_ccccHSE

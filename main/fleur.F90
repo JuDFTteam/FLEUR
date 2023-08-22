@@ -306,7 +306,7 @@ CONTAINS
             SELECT TYPE (xcpot)
             TYPE IS (t_xcpot_inbuild)
                CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
-                                hybdat%results, xcpot, vTot, iter, iterHF)
+                                xcpot, vTot, iter, iterHF)
             END SELECT
 
 #ifdef CPP_MPI

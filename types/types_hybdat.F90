@@ -75,13 +75,12 @@ contains
       enddo
    end subroutine set_maxlmindx_hybdat
 
-   subroutine set_nobd_hybdat(hybdat, fi, results)
+   subroutine set_nobd_hybdat(hybdat, fi)
       use m_types_fleurinput
       use m_types_misc
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_fleurinput), intent(in) :: fi
-      type(t_results), intent(in)    :: results
 
       integer :: jsp, nk, i
 
@@ -92,8 +91,8 @@ contains
 
       do jsp = 1, fi%input%jspins
          DO nk = 1, fi%kpts%nkpt
-            DO i = 1, results%neig(nk, jsp)
-               IF (results%w_iks(i, nk, jsp) > 0.0) then
+            DO i = 1, hybdat%results%neig(nk, jsp)
+               IF (hybdat%results%w_iks(i, nk, jsp) > 0.0) then
                   hybdat%nobd(nk, jsp) = hybdat%nobd(nk, jsp) + 1
                endif
             END DO
@@ -108,7 +107,7 @@ contains
       enddo
    end subroutine set_nobd_hybdat
 
-   subroutine set_nbands_hybdat(hybdat, fi, fmpi, results)
+   subroutine set_nbands_hybdat(hybdat, fi, fmpi)
       use m_types_mpi
       use m_types_fleurinput
       use m_types_misc
@@ -117,7 +116,6 @@ contains
       class(t_hybdat), intent(inout) :: hybdat
       type(t_fleurinput), intent(in) :: fi
       type(t_mpi), intent(in)        :: fmpi
-      type(t_results), intent(in)    :: results
 
 
       integer :: i, j, nk, jsp
@@ -139,28 +137,28 @@ contains
       do jsp = 1,fi%input%jspins
          degenerat = 1
          DO nk = 1, fi%kpts%nkpt
-            DO i = 1, results%neig(nk, jsp)
-               DO j = i + 1, results%neig(nk, jsp)
-                  IF (ABS(results%eig(i, nk, jsp) - results%eig(j, nk, jsp)) < 1E-07) THEN !0.015
+            DO i = 1, hybdat%results%neig(nk, jsp)
+               DO j = i + 1, hybdat%results%neig(nk, jsp)
+                  IF (ABS(hybdat%results%eig(i, nk, jsp) - hybdat%results%eig(j, nk, jsp)) < 1E-07) THEN !0.015
                      degenerat(i, nk) = degenerat(i, nk) + 1
                   END IF
                END DO
             END DO
 
-            DO i = 1, results%neig(nk, jsp)
+            DO i = 1, hybdat%results%neig(nk, jsp)
                IF ((degenerat(i, nk) /= 1) .OR. (degenerat(i, nk) /= 0)) degenerat(i + 1:i + degenerat(i, nk) - 1, nk) = 0
             END DO
 
             ! set the size of the exchange matrix in the space of the wavefunctions
 
             hybdat%nbands(nk,jsp) = fi%hybinp%bands1
-            IF (hybdat%nbands(nk,jsp) > results%neig(nk, jsp)) THEN
+            IF (hybdat%nbands(nk,jsp) > hybdat%results%neig(nk, jsp)) THEN
                IF (fmpi%irank == 0) THEN
-                  WRITE (*, *) ' maximum for hybdat%nbands is', results%neig(nk, jsp)
+                  WRITE (*, *) ' maximum for hybdat%nbands is', hybdat%results%neig(nk, jsp)
                   WRITE (*, *) ' increase energy window to obtain enough eigenvalues'
-                  WRITE (*, *) ' set hybdat%nbands equal to results%neig'
+                  WRITE (*, *) ' set hybdat%nbands equal to hybdat%results%neig'
                END IF
-               hybdat%nbands(nk,jsp) = results%neig(nk, jsp)
+               hybdat%nbands(nk,jsp) = hybdat%results%neig(nk, jsp)
             END IF
 
             DO i = hybdat%nbands(nk,jsp) - 1, 1, -1

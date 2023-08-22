@@ -44,7 +44,7 @@ CONTAINS
 
    SUBROUTINE hsfock(fi, k_pack, mpdata, lapw, jsp, hybdat, &
                      eig_irr, nococonv, stars, &
-                     results, xcpot, fmpi, vx_tmp)
+                     xcpot, fmpi, vx_tmp)
 
       use m_ex_to_vx
       USE m_judft
@@ -72,7 +72,6 @@ CONTAINS
       type(t_stars), intent(in)         :: stars
       TYPE(t_mpdata), intent(inout)     :: mpdata
       TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
-      TYPE(t_results), INTENT(INOUT)    :: results
       type(t_mat), intent(inout)        :: vx_tmp
 
       ! scalars
@@ -125,14 +124,14 @@ CONTAINS
 
       CALL symm_hf_init(fi, nk, nsymop, rrot, psym)
 
-      CALL symm_hf(fi, nk, hybdat, results, k_pack%submpi, eig_irr, mpdata, cmt_nk,&
+      CALL symm_hf(fi, nk, hybdat, k_pack%submpi, eig_irr, mpdata, cmt_nk,&
                    rrot, nsymop, psym, n_q, parent, nsest, indx_sest, jsp)
 
       ! remove weights(wtkpt) in w_iks
       DO ikpt = 1, fi%kpts%nkptf
          DO iband = 1, fi%input%neig
             ikpt0 = fi%kpts%bkp(ikpt)
-            wl_iks(iband, ikpt) = results%w_iks(iband, ikpt0, jsp)/(fi%kpts%wtkpt(ikpt0)*fi%kpts%nkptf)
+            wl_iks(iband, ikpt) = hybdat%results%w_iks(iband, ikpt0, jsp)/(fi%kpts%wtkpt(ikpt0)*fi%kpts%nkptf)
          END DO
       END DO
 
@@ -141,7 +140,7 @@ CONTAINS
       mat_ex%l_real = fi%sym%invs
       PRINT*, "exchange_valence_hf"
    
-      CALL exchange_valence_hf(k_pack, fi, fmpi, hybdat%zmat(nk,jsp)%mat, mpdata, jsp, hybdat, lapw, eig_irr, results, &
+      CALL exchange_valence_hf(k_pack, fi, fmpi, hybdat%zmat(nk,jsp)%mat, mpdata, jsp, hybdat, lapw, eig_irr, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
       
       
@@ -152,20 +151,20 @@ CONTAINS
       IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
          CALL timestart("hse: exchange vccv")
          CALL exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsymop, nsest, indx_sest, &
-                               fmpi%irank, a_ex, results, cmt_nk, mat_ex)
+                               fmpi%irank, a_ex, cmt_nk, mat_ex)
          CALL timestop("hse: exchange vccv")
 
          CALL timestart("hse: exchange cccc")
-         CALL exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
+         CALL exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex)
 
          CALL timestop("hse: exchange cccc")
       
       ELSE
          CALL exchange_vccv1(nk, fi, mpdata, hybdat, jsp, &
-                           lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, results, cmt_nk, mat_ex)
+                           lapw, k_pack%submpi, nsymop, nsest, indx_sest, a_ex, cmt_nk, mat_ex)
 
          if(k_pack%submpi%root()) then
-            CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex, results)
+            CALL exchange_cccc(nk, fi%atoms, hybdat, ncstd, fi%sym, fi%kpts, a_ex)
          endif
       END IF
 

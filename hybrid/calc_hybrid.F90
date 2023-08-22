@@ -10,7 +10,7 @@ MODULE m_calc_hybrid
 CONTAINS
 
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
-                          results,xcpot,v,iter, iterHF)
+                          xcpot,v,iter, iterHF)
       use m_work_package
       use m_set_coul_participation
       USE m_types_hybdat
@@ -43,7 +43,6 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN)      :: nococonv
       type(t_stars), intent(in)         :: stars
       TYPE(t_enpara), INTENT(IN)        :: enpara
-      TYPE(t_results), INTENT(INOUT)    :: results
       TYPE(t_xcpot_inbuild), INTENT(IN) :: xcpot
       TYPE(t_potden), INTENT(IN)        :: v
       INTEGER, INTENT(INOUT)            :: iter, iterHF
@@ -86,7 +85,7 @@ CONTAINS
          hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
       else
          call glob_mpi%init(fmpi%mpi_comm)
-         results%te_hfex%core = 0
+         hybdat%results%te_hfex%core = 0
 
          !Check if we are converged well enough to calculate a new potential
          hybdat%l_addhf = .TRUE.
@@ -97,7 +96,7 @@ CONTAINS
             init_vex = .FALSE.
          END IF
          hybdat%l_subvxc = (hybdat%l_subvxc .AND. hybdat%l_addhf)
-         IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(fi%input%neig, fi%kpts%nkpt, fi%input%jspins))
+         IF (.NOT. ALLOCATED(hybdat%results%w_iks)) allocate(hybdat%results%w_iks(fi%input%neig, fi%kpts%nkpt, fi%input%jspins))
 
          iterHF = iterHF + 1
 
@@ -124,8 +123,8 @@ CONTAINS
             enddo
          enddo
          call distribute_mpi(weights, glob_mpi, wp_mpi, wp_rank)
-         call hybdat%set_nobd(fi, results)
-         call hybdat%set_nbands(fi, fmpi, results)
+         call hybdat%set_nobd(fi)
+         call hybdat%set_nbands(fi, fmpi)
          do jsp = 1,fi%input%jspins
             call work_pack(jsp)%init(fi, hybdat, mpdata, wp_mpi, jsp, wp_rank, n_wps)
          enddo
@@ -173,7 +172,7 @@ CONTAINS
          allocate(vx_loc(fi%kpts%nkpt,fi%input%jspins), source=-1)
          allocate(vx_tmp(fi%kpts%nkpt, fi%input%jspins))
          DO jsp = 1, fi%input%jspins
-            CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
+            CALL HF_setup(mpdata,fi, fmpi, nococonv, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
 
             call timestart("get max_q")
@@ -196,7 +195,7 @@ CONTAINS
                PRINT*, 'kpoint= ', nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
                CALL hsfock(fi, work_pack(jsp)%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
-                           nococonv, stars, results, xcpot, fmpi, vx_tmp(nk, jsp))
+                           nococonv, stars, xcpot, fmpi, vx_tmp(nk, jsp))
                if(work_pack(jsp)%k_packs(i)%submpi%root()) vx_loc(nk, jsp) = fmpi%irank
             END DO
 
@@ -213,7 +212,7 @@ CONTAINS
          END DO
 #ifdef CPP_MPI
          call timestart("MPI_Allred te_hfex%core")
-         if(wp_mpi%rank == 0) call MPI_Allreduce(MPI_IN_PLACE, results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, MPI_SUM, root_comm, ierr)
+         if(wp_mpi%rank == 0) call MPI_Allreduce(MPI_IN_PLACE, hybdat%results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, MPI_SUM, root_comm, ierr)
          call timestop("MPI_Allred te_hfex%core")
 #endif
          CALL timestop("Calculation of non-local HF potential")

@@ -513,7 +513,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
          results%neig(:,:) = neigTemp(:,:)
 
-         CALL HF_setup(mpdata,fi,fmpi,nococonv,results,jspin,enpara,&
+         CALL HF_setup(mpdata,fi,fmpi,nococonv,jspin,enpara,&
                        hybdat,vTot%mt(:,0,:,:),eig_irr)
 
          results%neig(:,:) = highestState(:,:) + 1
@@ -543,16 +543,16 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             indx_sest = 0
 
             call symm_hf_init(fi,ikpt,nsymop,rrot,psym)
-            call symm_hf(fi,ikpt,hybdat,results,work_pack%k_packs(ikpt)%submpi, eig_irr,mpdata, c_phase,&
+            call symm_hf(fi,ikpt,hybdat,work_pack%k_packs(ikpt)%submpi, eig_irr,mpdata, c_phase,&
                          rrot,nsymop,psym,n_q,parent,nsest,indx_sest, jsp)
 
             exMat%l_real=fi%sym%invs
             CALL exchange_valence_hf(work_pack%k_packs(ikpt),fi,fmpi,zMat, mpdata,jspin,hybdat,lapw,&
-                                     eig_irr,results,n_q,wl_iks,xcpot,nococonv,stars,nsest,indx_sest,&
+                                     eig_irr,n_q,wl_iks,xcpot,nococonv,stars,nsest,indx_sest,&
                                      cmt_nk, exMat)
             deallocate(cmt_nk)
             CALL exchange_vccv1(ikpt,fi, mpdata,hybdat,jspin,lapw,glob_mpi,nsymop,nsest,indx_sest,&
-                                1.0,results,cmt_nk,exMat)
+                                1.0,cmt_nk,exMat)
 
             DEALLOCATE(indx_sest)
 

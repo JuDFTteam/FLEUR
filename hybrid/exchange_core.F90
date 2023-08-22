@@ -30,7 +30,7 @@ MODULE m_exchange_core
 
 CONTAINS
    SUBROUTINE exchange_vccv1(nk, fi, mpdata, hybdat, jsp, lapw, submpi,&
-                             nsymop, nsest, indx_sest, a_ex, results, cmt, mat_ex)
+                             nsymop, nsest, indx_sest, a_ex, cmt, mat_ex)
       use m_juDFT
       USE m_types
       USE m_constants
@@ -42,8 +42,7 @@ CONTAINS
       use m_calc_cmt
       IMPLICIT NONE
       type(t_fleurinput), intent(in) :: fi
-      TYPE(t_hybdat), INTENT(IN)     :: hybdat
-      TYPE(t_results), INTENT(INOUT) :: results
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
       TYPE(t_mpdata), intent(in)     :: mpdata
       TYPE(t_lapw), INTENT(IN)       :: lapw
       type(t_hybmpi), intent(in)     :: submpi
@@ -303,14 +302,14 @@ CONTAINS
       if(submpi%rank == 0) then
          DO n1 = 1, hybdat%nobd(nk,jsp)
             if(exchange%l_real) then
-               results%te_hfex%core = real(results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange%data_r(n1, n1))
+               hybdat%results%te_hfex%core = real(hybdat%results%te_hfex%Core - a_ex*hybdat%results%w_iks(n1, nk, jsp)*exchange%data_r(n1, n1))
             else 
-               results%te_hfex%core = real(results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange%data_c(n1, n1))
+               hybdat%results%te_hfex%core = real(hybdat%results%te_hfex%Core - a_ex*hybdat%results%w_iks(n1, nk, jsp)*exchange%data_c(n1, n1))
             endif
          END DO
       endif 
 #ifdef CPP_MPI
-      call MPI_Bcast(results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, 0, submpi%comm, ierr)
+      call MPI_Bcast(hybdat%results%te_hfex%core, 1, MPI_DOUBLE_PRECISION, 0, submpi%comm, ierr)
 #endif
       call timestop("calc te_hfex%core")
 
@@ -332,7 +331,7 @@ CONTAINS
       call timestop("exchange_vccv1")
    END SUBROUTINE exchange_vccv1
 
-   SUBROUTINE exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
+   SUBROUTINE exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex)
 
       USE m_types
       USE m_constants
@@ -346,8 +345,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
-      TYPE(t_results), INTENT(INOUT)   :: results
+      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -477,7 +475,7 @@ CONTAINS
       ! add core exchange contributions to the te_hfex
 
       DO icst1 = 1, ncstd
-         results%te_hfex%core = real(results%te_hfex%core - a_ex*kpts%wtkpt(nk)*exch(icst1, icst1))
+         hybdat%results%te_hfex%core = real(hybdat%results%te_hfex%core - a_ex*kpts%wtkpt(nk)*exch(icst1, icst1))
       END DO
 
       call timestop("exchange_cccc")
