@@ -68,7 +68,7 @@
       <atomGroup species="Fe-1">
          <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams  alpha="Pi*.500" beta="Pi*0.50"/>
+         <nocoParams  alpha="Pi*.00" beta="Pi*0.0"/>
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F"  slice="F" >

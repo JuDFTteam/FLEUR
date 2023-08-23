@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurOutput fleurOutputVersion="0.36">
-   <programVersion version="fleur 36">
-      <compilationInfo date="2023-02-24T12:42:39" user="wortmann" host="mb-wortmann" flag="-fopenmp -fdefault-real-8 -fdefault-double-8 -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero" link="/Library/Developer/CommandLineTools/SDKs/MacOSX13.1.sdk/usr/lib/libxml2.tbd;/Library/Developer/CommandLineTools/SDKs/MacOSX13.1.sdk/System/Library/Frameworks/Accelerate.framework;-lm;-ldl"/>
-      <gitInfo version="MaX-R6.1-342-g49b10fbda" branch="LO-refactor" lastCommitHash="49b10fbdadfcc757d836c29515af7ea6a1f2e267"/>
+<fleurOutput fleurOutputVersion="0.37">
+   <programVersion version="fleur 37">
+      <compilationInfo date="2023-08-22T08:50:19" user="wortmann" host="mb-wortmann" flag="-fopenmp -fdefault-real-8 -fdefault-double-8 -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero" link="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk/usr/lib/libxml2.tbd;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk/System/Library/Frameworks/Accelerate.framework;-lm;-ldl"/>
+      <gitInfo version="MaX-R6.2-187-g4c61be51d-dirty" branch="develop" lastCommitHash="4c61be51d2709080035ecdae161d118af30c90a3"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
+      <additionalCompilerFlags>CPP_HDF</additionalCompilerFlags>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="1"/>
       <mem memoryPerNode="unknown"/>
    </parallelSetup>
-   <startDateAndTime date="2023/03/01" time="13:45:16" zone="+0100"/>
+   <startDateAndTime date="2023/08/23" time="11:54:40" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
-  <fleurInput fleurInputVersion="0.36">
+  <fleurInput fleurInputVersion="0.37">
      <comment>
         bcc Fe
      </comment>
@@ -28,7 +29,7 @@
         </magnetism>
         <soc theta=".00000000" phi=".00000000" l_soc="t" spav="t" off="F" soc66="T"/>
         <expertModes gw="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
-        <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000" f_level="0" qfix="0" force_converged="0.00001"/>
+        <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000" f_level="-1" qfix="0" force_converged="0.00001"/>
         <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000" l_adjEnpara="F" l_spinoffd="F" l_nonsphDC="F" l_initialGuess="F"/>
      </calculationSetup>
      <cell>
@@ -82,7 +83,7 @@
         <atomGroup species="Fe-1">
            <relPos label="                   1" wannier="F">.0000000000 .0000000000 .0000000000</relPos>
            <force calculate="T" relaxXYZ="TTT"/>
-           <nocoParams alpha="Pi*.000" beta="Pi*0.00" l_magn="F" M="0.0"/>
+           <nocoParams alpha="Pi*.000" beta="Pi*0.50" l_magn="F" M="0.0"/>
         </atomGroup>
      </atomGroups>
      <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
@@ -140,12 +141,12 @@
                        0.1542293415
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="2" k_x="0.25000000" k_y="0.00000000" k_z="0.00000000">
-                      -3.3885128743       -3.3532386848       -3.3021675884       -3.2372767119       -1.6300815240
-                      -1.5806706336       -1.5340640865       -1.4898466476       -0.3175343097       -0.2992997780
-                      -0.2793551854       -0.2511415550       -0.1651270087       -0.1503643909       -0.1337435217
-                      -0.1159425802       -0.0912531657       -0.0764322396       -0.0540679976       -0.0445858105
-                       0.0146243265        0.0268969923        0.1037732047        0.1058062404        0.1648126557
-                       0.1648406228
+                      -3.3885128737       -3.3532295951       -3.3021773995       -3.2372767122       -1.6302006236
+                      -1.5805310695       -1.5339656938       -1.4899644130       -0.3179451976       -0.2991225746
+                      -0.2787582544       -0.2513444927       -0.1650774937       -0.1508221819       -0.1336486750
+                      -0.1166882783       -0.0911654309       -0.0749521440       -0.0547968971       -0.0442489043
+                       0.0165730411        0.0242735026        0.0995255815        0.1118431503        0.1579484905
+                       0.1702419368
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="3" k_x="0.00000000" k_y="0.25000000" k_z="0.00000000">
                       -3.3885128743       -3.3532386848       -3.3021675884       -3.2372767119       -1.6300815240
@@ -156,20 +157,20 @@
                        0.1648406228
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="4" k_x="0.00000000" k_y="0.00000000" k_z="0.25000000">
-                      -3.3885128737       -3.3532295951       -3.3021773995       -3.2372767122       -1.6302006236
-                      -1.5805310695       -1.5339656938       -1.4899644130       -0.3179451976       -0.2991225746
-                      -0.2787582544       -0.2513444927       -0.1650774937       -0.1508221819       -0.1336486750
-                      -0.1166882783       -0.0911654309       -0.0749521440       -0.0547968971       -0.0442489043
-                       0.0165730411        0.0242735026        0.0995255815        0.1118431503        0.1579484905
-                       0.1702419368
-            </eigenvaluesAt>
-            <eigenvaluesAt spin="1" ikpt="5" k_x="-0.25000000" k_y="0.00000000" k_z="0.00000000">
                       -3.3885128743       -3.3532386848       -3.3021675884       -3.2372767119       -1.6300815240
                       -1.5806706336       -1.5340640865       -1.4898466476       -0.3175343097       -0.2992997780
                       -0.2793551854       -0.2511415550       -0.1651270087       -0.1503643909       -0.1337435217
                       -0.1159425802       -0.0912531657       -0.0764322396       -0.0540679976       -0.0445858105
                        0.0146243265        0.0268969923        0.1037732047        0.1058062404        0.1648126557
                        0.1648406228
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="5" k_x="-0.25000000" k_y="0.00000000" k_z="0.00000000">
+                      -3.3885128737       -3.3532295951       -3.3021773995       -3.2372767122       -1.6302006236
+                      -1.5805310695       -1.5339656938       -1.4899644130       -0.3179451976       -0.2991225746
+                      -0.2787582544       -0.2513444927       -0.1650774937       -0.1508221819       -0.1336486750
+                      -0.1166882783       -0.0911654309       -0.0749521440       -0.0547968971       -0.0442489043
+                       0.0165730411        0.0242735026        0.0995255815        0.1118431503        0.1579484905
+                       0.1702419368
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="6" k_x="0.00000000" k_y="-0.25000000" k_z="0.00000000">
                       -3.3885128743       -3.3532386848       -3.3021675884       -3.2372767119       -1.6300815240
@@ -180,15 +181,15 @@
                        0.1648406228
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="7" k_x="0.00000000" k_y="0.00000000" k_z="-0.25000000">
-                      -3.3885128737       -3.3532295951       -3.3021773995       -3.2372767122       -1.6302006236
-                      -1.5805310695       -1.5339656938       -1.4899644130       -0.3179451976       -0.2991225746
-                      -0.2787582544       -0.2513444927       -0.1650774937       -0.1508221819       -0.1336486750
-                      -0.1166882783       -0.0911654309       -0.0749521440       -0.0547968971       -0.0442489043
-                       0.0165730411        0.0242735026        0.0995255815        0.1118431503        0.1579484905
-                       0.1702419368
+                      -3.3885128743       -3.3532386848       -3.3021675884       -3.2372767119       -1.6300815240
+                      -1.5806706336       -1.5340640865       -1.4898466476       -0.3175343097       -0.2992997780
+                      -0.2793551854       -0.2511415550       -0.1651270087       -0.1503643909       -0.1337435217
+                      -0.1159425802       -0.0912531657       -0.0764322396       -0.0540679976       -0.0445858105
+                       0.0146243265        0.0268969923        0.1037732047        0.1058062404        0.1648126557
+                       0.1648406228
             </eigenvaluesAt>
          </eigenvalues>
-         <bandgap value="0.6718331943" units="eV"/>
+         <bandgap value="0.6718331942" units="eV"/>
          <sumValenceSingleParticleEnergies value="-21.2328188230" units="Htr"/>
          <FermiEnergy value="-0.1159425802" units="Htr"/>
          <valenceDensity>
@@ -196,8 +197,8 @@
                <mtCharge atomType="1" total="8.5160143" s="1.2515052" p="2.9909602" d="4.2735299" f="0.0000064"/>
                <mtCharge atomType="1" total="5.5633809" s="1.2110953" p="2.9807540" d="1.3715193" f="0.0000053"/>
             </mtCharges>
-            <spinDependentCharge spin="1" total="9.5414433" interstitial="1.0254290" mtSpheres="8.5160143"/>
-            <spinDependentCharge spin="2" total="6.4585567" interstitial="0.8951758" mtSpheres="5.5633809"/>
+            <spinDependentCharge spin="1" total="8.0000000" interstitial="0.9603024" mtSpheres="7.0396976"/>
+            <spinDependentCharge spin="2" total="8.0000000" interstitial="0.9603024" mtSpheres="7.0396976"/>
             <totalCharge value="16.0000000000"/>
          </valenceDensity>
          <coreStates atomType="     1" atomicNumber=" 26" spin="1" kinEnergy="    572.7763391865" eigValSum="   -363.0283961194" lostElectrons=" 0.000000">
@@ -213,16 +214,16 @@
             <state n="2" l="1" j="1.5" energy="-25.3332919608" weight="2.0000000000"/>
          </coreStates>
          <allElectronCharges>
-            <spinDependentCharge spin="1" total="14.5414433" interstitial="1.0254290" mtSpheres="13.5160143"/>
-            <spinDependentCharge spin="2" total="11.4585567" interstitial="0.8951758" mtSpheres="10.5633809"/>
+            <spinDependentCharge spin="1" total="13.0000000" interstitial="0.9603024" mtSpheres="12.0396976"/>
+            <spinDependentCharge spin="2" total="13.0000000" interstitial="0.9603024" mtSpheres="12.0396976"/>
             <totalCharge value="26.0000000002"/>
          </allElectronCharges>
          <magneticMomentsInMTSpheres units="muBohr">
-            <globalMagMoment atomType="1" vec="0.00000   0.00000   2.95263"/>
+            <globalMagMoment atomType="1" vec="2.95263   0.00000   0.00000"/>
             <localMagMoment atomType="1" vec="0.00000   0.00000   2.95263"/>
          </magneticMomentsInMTSpheres>
          <orbitalMomentsInMTSpheres units="muBohr">
-            <globalMagMoment atomType="1" vec="0.00000   0.00000   2.18040"/>
+            <globalMagMoment atomType="1" vec="2.18040   0.00000   0.00000"/>
             <localMagMoment atomType="1" vec="0.00000   0.00000   2.18040"/>
          </orbitalMomentsInMTSpheres>
          <totalEnergy                                    value="    -1271.0106107438" units="Htr">
@@ -244,10 +245,10 @@
             <extrapolationTo0K value="-1271.0106107438"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="8.9048738390"/>
-            <chargeDensity spin="2" distance="7.0737739036"/>
-            <overallChargeDensity distance="8.6611469385"/>
-            <spinDensity distance="13.5519240096"/>
+            <chargeDensity spin="1" distance="8.9070047875"/>
+            <chargeDensity spin="2" distance="7.0479935858"/>
+            <overallChargeDensity distance="8.6611469383"/>
+            <spinDensity distance="13.5278390533"/>
          </densityConvergence>
       </iteration>
       <iteration numberForCurrentRun="    2" overallNumber="    2">
@@ -275,12 +276,12 @@
                        0.1534669752
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="2" k_x="0.25000000" k_y="0.00000000" k_z="0.00000000">
-                      -3.3963628949       -3.3625127184       -3.3126306259       -3.2469346385       -1.6360059754
-                      -1.5890302834       -1.5426472070       -1.4976730863       -0.3233590722       -0.3070812313
-                      -0.2873276568       -0.2585033580       -0.1697985735       -0.1517301361       -0.1349877056
-                      -0.1224046809       -0.0985519982       -0.0838987534       -0.0611794776       -0.0504732057
-                       0.0135165026        0.0255614494        0.1025718630        0.1044479421        0.1638263887
-                       0.1638293475
+                      -3.3963630346       -3.3625025240       -3.3126395086       -3.2469347559       -1.6361269121
+                      -1.5888916378       -1.5425492857       -1.4977921407       -0.3237657582       -0.3069009712
+                      -0.2867432805       -0.2587018881       -0.1698373802       -0.1520721320       -0.1347681921
+                      -0.1232403634       -0.0984400684       -0.0823976367       -0.0618758812       -0.0502710013
+                       0.0151921473        0.0227786872        0.0983793134        0.1107874851        0.1570856909
+                       0.1694397491
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="3" k_x="0.00000000" k_y="0.25000000" k_z="0.00000000">
                       -3.3963628949       -3.3625127184       -3.3126306259       -3.2469346385       -1.6360059754
@@ -291,20 +292,20 @@
                        0.1638293474
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="4" k_x="0.00000000" k_y="0.00000000" k_z="0.25000000">
+                      -3.3963628949       -3.3625127184       -3.3126306259       -3.2469346385       -1.6360059754
+                      -1.5890302834       -1.5426472070       -1.4976730863       -0.3233590722       -0.3070812313
+                      -0.2873276568       -0.2585033580       -0.1697985735       -0.1517301361       -0.1349877057
+                      -0.1224046809       -0.0985519982       -0.0838987534       -0.0611794776       -0.0504732057
+                       0.0135165026        0.0255614494        0.1025718630        0.1044479421        0.1638263887
+                       0.1638293475
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="5" k_x="-0.25000000" k_y="0.00000000" k_z="0.00000000">
                       -3.3963630346       -3.3625025240       -3.3126395086       -3.2469347559       -1.6361269121
                       -1.5888916378       -1.5425492857       -1.4977921407       -0.3237657582       -0.3069009712
                       -0.2867432805       -0.2587018881       -0.1698373802       -0.1520721320       -0.1347681921
                       -0.1232403634       -0.0984400684       -0.0823976367       -0.0618758812       -0.0502710013
-                       0.0151921472        0.0227786872        0.0983793134        0.1107874851        0.1570856909
+                       0.0151921473        0.0227786872        0.0983793134        0.1107874851        0.1570856909
                        0.1694397491
-            </eigenvaluesAt>
-            <eigenvaluesAt spin="1" ikpt="5" k_x="-0.25000000" k_y="0.00000000" k_z="0.00000000">
-                      -3.3963628949       -3.3625127184       -3.3126306259       -3.2469346385       -1.6360059754
-                      -1.5890302834       -1.5426472070       -1.4976730863       -0.3233590722       -0.3070812313
-                      -0.2873276568       -0.2585033580       -0.1697985735       -0.1517301361       -0.1349877056
-                      -0.1224046809       -0.0985519982       -0.0838987534       -0.0611794776       -0.0504732057
-                       0.0135165026        0.0255614494        0.1025718630        0.1044479421        0.1638263887
-                       0.1638293475
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="6" k_x="0.00000000" k_y="-0.25000000" k_z="0.00000000">
                       -3.3963628949       -3.3625127184       -3.3126306259       -3.2469346385       -1.6360059754
@@ -315,12 +316,12 @@
                        0.1638293474
             </eigenvaluesAt>
             <eigenvaluesAt spin="1" ikpt="7" k_x="0.00000000" k_y="0.00000000" k_z="-0.25000000">
-                      -3.3963630346       -3.3625025240       -3.3126395086       -3.2469347559       -1.6361269121
-                      -1.5888916378       -1.5425492857       -1.4977921407       -0.3237657582       -0.3069009712
-                      -0.2867432805       -0.2587018881       -0.1698373802       -0.1520721320       -0.1347681921
-                      -0.1232403634       -0.0984400684       -0.0823976367       -0.0618758812       -0.0502710013
-                       0.0151921472        0.0227786872        0.0983793134        0.1107874851        0.1570856909
-                       0.1694397491
+                      -3.3963628949       -3.3625127184       -3.3126306259       -3.2469346385       -1.6360059754
+                      -1.5890302834       -1.5426472070       -1.4976730863       -0.3233590722       -0.3070812313
+                      -0.2873276568       -0.2585033580       -0.1697985735       -0.1517301361       -0.1349877057
+                      -0.1224046809       -0.0985519982       -0.0838987534       -0.0611794776       -0.0504732057
+                       0.0135165026        0.0255614494        0.1025718630        0.1044479421        0.1638263887
+                       0.1638293475
             </eigenvaluesAt>
          </eigenvalues>
          <bandgap value="0.6490645627" units="eV"/>
@@ -331,8 +332,8 @@
                <mtCharge atomType="1" total="8.5168867" s="1.2530402" p="2.9910266" d="4.2728009" f="0.0000064"/>
                <mtCharge atomType="1" total="5.5744282" s="1.2124410" p="2.9809801" d="1.3809947" f="0.0000053"/>
             </mtCharges>
-            <spinDependentCharge spin="1" total="9.5349003" interstitial="1.0180135" mtSpheres="8.5168867"/>
-            <spinDependentCharge spin="2" total="6.4650997" interstitial="0.8906716" mtSpheres="5.5744282"/>
+            <spinDependentCharge spin="1" total="8.0000000" interstitial="0.9543426" mtSpheres="7.0456574"/>
+            <spinDependentCharge spin="2" total="8.0000000" interstitial="0.9543426" mtSpheres="7.0456574"/>
             <totalCharge value="16.0000000000"/>
          </valenceDensity>
          <coreStates atomType="     1" atomicNumber=" 26" spin="1" kinEnergy="    572.7959477773" eigValSum="   -363.1011719867" lostElectrons=" 0.000000">
@@ -348,25 +349,25 @@
             <state n="2" l="1" j="1.5" energy="-25.3481241689" weight="2.0000000000"/>
          </coreStates>
          <allElectronCharges>
-            <spinDependentCharge spin="1" total="14.5349003" interstitial="1.0180135" mtSpheres="13.5168867"/>
-            <spinDependentCharge spin="2" total="11.4650997" interstitial="0.8906716" mtSpheres="10.5744282"/>
+            <spinDependentCharge spin="1" total="13.0000000" interstitial="0.9543426" mtSpheres="12.0456574"/>
+            <spinDependentCharge spin="2" total="13.0000000" interstitial="0.9543426" mtSpheres="12.0456574"/>
             <totalCharge value="26.0000000002"/>
          </allElectronCharges>
          <magneticMomentsInMTSpheres units="muBohr">
-            <globalMagMoment atomType="1" vec="0.00000   0.00000   2.94246"/>
+            <globalMagMoment atomType="1" vec="2.94246   0.00000   0.00000"/>
             <localMagMoment atomType="1" vec="0.00000   0.00000   2.94246"/>
          </magneticMomentsInMTSpheres>
          <orbitalMomentsInMTSpheres units="muBohr">
-            <globalMagMoment atomType="1" vec="0.00000   0.00000   2.19384"/>
+            <globalMagMoment atomType="1" vec="2.19384   0.00000   0.00000"/>
             <localMagMoment atomType="1" vec="0.00000   0.00000   2.19384"/>
          </orbitalMomentsInMTSpheres>
-         <totalEnergy                                    value="    -1271.0113188224" units="Htr">
+         <totalEnergy                                    value="    -1271.0113188225" units="Htr">
             <sumOfEigenvalues                            value="     -747.3068211031">
                <coreElectrons value="-725.9634143871"/>
                <valenceElectrons value="-21.3434067160"/>
             </sumOfEigenvalues>
-            <densityCoulombPotentialIntegral value="-1963.2487182311"/>
-            <densityEffectivePotentialIntegral value="-2033.9983032267"/>
+            <densityCoulombPotentialIntegral value="-1963.2487182308"/>
+            <densityEffectivePotentialIntegral value="-2033.9983032264"/>
             <chargeDenXCDenIntegral value="-53.4447199865"/>
             <FockExchangeEnergyValence value="0.0000000000"/>
             <FockExchangeEnergyCore value="0.0000000000"/>
@@ -375,16 +376,16 @@
                <MadelungTerm value="-8.5371068013"/>
             </atomTypeDependentContributions>
             <tkbTimesEntropy value="0.0000000000"/>
-            <freeEnergy value="-1271.0113188224"/>
-            <extrapolationTo0K value="-1271.0113188224"/>
+            <freeEnergy value="-1271.0113188225"/>
+            <extrapolationTo0K value="-1271.0113188225"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="8.2503712403"/>
-            <chargeDensity spin="2" distance="6.8436610058"/>
-            <overallChargeDensity distance="7.9586057102"/>
-            <spinDensity distance="12.9022958531"/>
+            <chargeDensity spin="1" distance="8.2530022945"/>
+            <chargeDensity spin="2" distance="6.8195609227"/>
+            <overallChargeDensity distance="7.9586057104"/>
+            <spinDensity distance="12.8801207778"/>
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2023/03/01" time="13:45:36" zone="+0100"/>
+   <endDateAndTime date="2023/08/23" time="11:54:46" zone="+0200"/>
 </fleurOutput>

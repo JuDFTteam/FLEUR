@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurOutput fleurOutputVersion="0.36">
-   <programVersion version="fleur 36">
-      <compilationInfo date="2023-02-24T12:42:39" user="wortmann" host="mb-wortmann" flag="-fopenmp -fdefault-real-8 -fdefault-double-8 -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero" link="/Library/Developer/CommandLineTools/SDKs/MacOSX13.1.sdk/usr/lib/libxml2.tbd;/Library/Developer/CommandLineTools/SDKs/MacOSX13.1.sdk/System/Library/Frameworks/Accelerate.framework;-lm;-ldl"/>
-      <gitInfo version="MaX-R6.1-342-g49b10fbda" branch="LO-refactor" lastCommitHash="49b10fbdadfcc757d836c29515af7ea6a1f2e267"/>
+<fleurOutput fleurOutputVersion="0.37">
+   <programVersion version="fleur 37">
+      <compilationInfo date="2023-08-22T08:50:19" user="wortmann" host="mb-wortmann" flag="-fopenmp -fdefault-real-8 -fdefault-double-8 -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero" link="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk/usr/lib/libxml2.tbd;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk/System/Library/Frameworks/Accelerate.framework;-lm;-ldl"/>
+      <gitInfo version="MaX-R6.2-187-g4c61be51d-dirty" branch="develop" lastCommitHash="4c61be51d2709080035ecdae161d118af30c90a3"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
+      <additionalCompilerFlags>CPP_HDF</additionalCompilerFlags>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="1"/>
       <mem memoryPerNode="unknown"/>
    </parallelSetup>
-   <startDateAndTime date="2023/03/01" time="13:44:53" zone="+0100"/>
+   <startDateAndTime date="2023/08/23" time="11:54:17" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
-  <fleurInput fleurInputVersion="0.36">
+  <fleurInput fleurInputVersion="0.37">
      <comment>
         bcc Fe
      </comment>
@@ -28,7 +29,7 @@
         </magnetism>
         <soc theta=".00000000" phi=".00000000" l_soc="f" spav="t" off="F" soc66="T"/>
         <expertModes gw="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
-        <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000" f_level="0" qfix="0" force_converged="0.00001"/>
+        <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000" f_level="-1" qfix="0" force_converged="0.00001"/>
         <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000" l_adjEnpara="F" l_spinoffd="F" l_nonsphDC="F" l_initialGuess="F"/>
      </calculationSetup>
      <cell>
@@ -82,7 +83,7 @@
         <atomGroup species="Fe-1">
            <relPos label="                   1" wannier="F">.0000000000 .0000000000 .0000000000</relPos>
            <force calculate="T" relaxXYZ="TTT"/>
-           <nocoParams alpha="Pi*.000" beta="Pi*0.00" l_magn="F" M="0.0"/>
+           <nocoParams alpha="Pi*.000" beta="Pi*0.50" l_magn="F" M="0.0"/>
         </atomGroup>
      </atomGroups>
      <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
@@ -196,8 +197,8 @@
                <mtCharge atomType="1" total="8.9476137" s="1.2516880" p="2.9942779" d="4.7016336" f="0.0000046"/>
                <mtCharge atomType="1" total="5.0998328" s="1.2078568" p="2.9930791" d="0.8988921" f="0.0000029"/>
             </mtCharges>
-            <spinDependentCharge spin="1" total="10.0000000" interstitial="1.0523863" mtSpheres="8.9476137"/>
-            <spinDependentCharge spin="2" total="6.0000000" interstitial="0.9001672" mtSpheres="5.0998328"/>
+            <spinDependentCharge spin="1" total="8.0000000" interstitial="0.9762768" mtSpheres="7.0237232"/>
+            <spinDependentCharge spin="2" total="8.0000000" interstitial="0.9762768" mtSpheres="7.0237232"/>
             <totalCharge value="16.0000000000"/>
          </valenceDensity>
          <coreStates atomType="     1" atomicNumber=" 26" spin="1" kinEnergy="    572.7763391865" eigValSum="   -363.0283961194" lostElectrons=" 0.000000">
@@ -213,12 +214,12 @@
             <state n="2" l="1" j="1.5" energy="-25.3332919608" weight="2.0000000000"/>
          </coreStates>
          <allElectronCharges>
-            <spinDependentCharge spin="1" total="15.0000000" interstitial="1.0523863" mtSpheres="13.9476137"/>
-            <spinDependentCharge spin="2" total="11.0000000" interstitial="0.9001672" mtSpheres="10.0998328"/>
+            <spinDependentCharge spin="1" total="13.0000000" interstitial="0.9762768" mtSpheres="12.0237232"/>
+            <spinDependentCharge spin="2" total="13.0000000" interstitial="0.9762768" mtSpheres="12.0237232"/>
             <totalCharge value="26.0000000002"/>
          </allElectronCharges>
          <magneticMomentsInMTSpheres units="muBohr">
-            <globalMagMoment atomType="1" vec="0.00000   0.00000   3.84778"/>
+            <globalMagMoment atomType="1" vec="3.84778   0.00000   0.00000"/>
             <localMagMoment atomType="1" vec="0.00000   0.00000   3.84778"/>
          </magneticMomentsInMTSpheres>
          <orbitalMomentsInMTSpheres units="muBohr">
@@ -244,10 +245,10 @@
             <extrapolationTo0K value="-1270.4285694498"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="1.7919956523"/>
-            <chargeDensity spin="2" distance="7.2054915946"/>
+            <chargeDensity spin="1" distance="1.7929713019"/>
+            <chargeDensity spin="2" distance="7.1702794691"/>
             <overallChargeDensity distance="7.3151290013"/>
-            <spinDensity distance="7.5332332215"/>
+            <spinDensity distance="7.4662035334"/>
          </densityConvergence>
       </iteration>
       <iteration numberForCurrentRun="    2" overallNumber="    2">
@@ -331,8 +332,8 @@
                <mtCharge atomType="1" total="8.9531697" s="1.2531620" p="2.9943037" d="4.7056900" f="0.0000045"/>
                <mtCharge atomType="1" total="5.1069030" s="1.2074802" p="2.9930822" d="0.9063357" f="0.0000028"/>
             </mtCharges>
-            <spinDependentCharge spin="1" total="10.0000000" interstitial="1.0468303" mtSpheres="8.9531697"/>
-            <spinDependentCharge spin="2" total="6.0000000" interstitial="0.8930970" mtSpheres="5.1069030"/>
+            <spinDependentCharge spin="1" total="8.0000000" interstitial="0.9699637" mtSpheres="7.0300363"/>
+            <spinDependentCharge spin="2" total="8.0000000" interstitial="0.9699637" mtSpheres="7.0300363"/>
             <totalCharge value="16.0000000000"/>
          </valenceDensity>
          <coreStates atomType="     1" atomicNumber=" 26" spin="1" kinEnergy="    572.7823353469" eigValSum="   -363.0724433519" lostElectrons=" 0.000000">
@@ -348,12 +349,12 @@
             <state n="2" l="1" j="1.5" energy="-25.3420728430" weight="2.0000000000"/>
          </coreStates>
          <allElectronCharges>
-            <spinDependentCharge spin="1" total="15.0000000" interstitial="1.0468303" mtSpheres="13.9531697"/>
-            <spinDependentCharge spin="2" total="11.0000000" interstitial="0.8930970" mtSpheres="10.1069030"/>
+            <spinDependentCharge spin="1" total="13.0000000" interstitial="0.9699637" mtSpheres="12.0300363"/>
+            <spinDependentCharge spin="2" total="13.0000000" interstitial="0.9699637" mtSpheres="12.0300363"/>
             <totalCharge value="26.0000000002"/>
          </allElectronCharges>
          <magneticMomentsInMTSpheres units="muBohr">
-            <globalMagMoment atomType="1" vec="0.00000   0.00000   3.84627"/>
+            <globalMagMoment atomType="1" vec="3.84627   0.00000   0.00000"/>
             <localMagMoment atomType="1" vec="0.00000   0.00000   3.84627"/>
          </magneticMomentsInMTSpheres>
          <orbitalMomentsInMTSpheres units="muBohr">
@@ -379,12 +380,12 @@
             <extrapolationTo0K value="-1270.4286130683"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="1.5155012337"/>
-            <chargeDensity spin="2" distance="6.9685986844"/>
+            <chargeDensity spin="1" distance="1.5190861875"/>
+            <chargeDensity spin="2" distance="6.9352481382"/>
             <overallChargeDensity distance="6.9857511667"/>
-            <spinDensity distance="7.2743043559"/>
+            <spinDensity distance="7.2117861728"/>
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2023/03/01" time="13:45:15" zone="+0100"/>
+   <endDateAndTime date="2023/08/23" time="11:54:23" zone="+0200"/>
 </fleurOutput>
