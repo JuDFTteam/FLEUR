@@ -302,7 +302,7 @@ CONTAINS
 
          !HF
          IF (fi%hybinp%l_hybrid) THEN
-            hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
+            hybdat%l_calhf = ((results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)) .OR. iter > 100 ! Security stop for non-converging nested PBE calculations
             SELECT TYPE (xcpot)
             TYPE IS (t_xcpot_inbuild)
                CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
@@ -653,8 +653,6 @@ CONTAINS
                l_cont = l_cont .AND. (iterHF < fi%input%itmax)
                l_cont = l_cont .AND. (fi%input%mindistance <= results%last_distance)
                CALL check_time_for_next_iteration(iterHF, l_cont)
-            ELSE
-               l_cont = l_cont .AND. (iter < 50) ! Security stop for non-converging nested PBE calculations
             END IF
 
             IF (hybdat%l_subvxc) THEN
