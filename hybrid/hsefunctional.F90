@@ -19,7 +19,7 @@ MODULE m_hsefunctional
    REAL, PARAMETER :: omega_HSE = 0.11
 
    ! Constant for the maximum number of G points
-   INTEGER, PARAMETER :: maxNoGPts = 50
+   INTEGER, PARAMETER :: maxNoGPts = 100
 
    ! these arrays are calculated once and then reused
    LOGICAL, ALLOCATABLE   :: already_known(:)
@@ -2216,9 +2216,6 @@ CONTAINS
 
       ! check if a_ex is consistent
 !     IF ( a_ex /= aMix_HSE ) st--op 'hsefunctional: inconsistent mixing!'
-
-      ! print out screening parameter
-      WRITE (*,*) 'Screening parameter: ', omega_HSE
 
       allocate(fprod(fi%atoms%jmtd, 5), larr(5), parr(5))
 
