@@ -251,9 +251,8 @@ def pytest_generate_tests(metafunc):
         markers = tuple({mark.name for mark in metafunc.function.pytestmark})
         fleur_tests.add((metafunc.function.__name__,
                          metafunc.module.__file__.replace(os.path.dirname(os.path.abspath(__file__))+'/','')) + markers)
-        if _parser_tests_collected:
-            metafunc.config.issue_config_time_warning(UserWarning('Fleur test collected after parser test. Missed: '\
-                                                                  f"{metafunc.function.__name__}"),2)
+   #     if _parser_tests_collected:
+   #         metafunc.config.issue_config_time_warning(UserWarning(f"Fleur test collected after parser test. Missed: {metafunc.function.__name__}"),2)
     if 'execute_inpgen' in metafunc.fixturenames:
         markers = tuple({mark.name for mark in metafunc.function.pytestmark})
         inpgen_tests.add((metafunc.function.__name__,
@@ -1084,13 +1083,13 @@ def check_all_outxml(test_logger,check_outxml):
         from xml.etree import ElementTree
         refxml=ElementTree.parse(reffilepath)
         checks=[
-            ["FermiEnergy","value",-1,0.001],
+            ["FermiEnergy","value",-1,0.0001],
             ["bandgap","value",-1,0.001],
-            ["totalEnergy","value",-1,0.001],
-            ["sumValenceSingleParticleEnergies","value",-1,0.001],
+            ["totalEnergy","value",-1,0.0001],
+            ["sumValenceSingleParticleEnergies","value",-1,0.0001],
             ["chargeDensity","distance",-1,0.001], #last spind only
             ["mtCharge","total",-1,0.001],
-            ["state","energy",-1,0.001], #check core state
+            ["state","energy",-1,0.0001], #check core state
             ["densityConvergence/spinDensity","distance",-1,0.001],
             ["magneticMoment","moment",-1.,0.001]
             ]

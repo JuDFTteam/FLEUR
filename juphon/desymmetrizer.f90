@@ -146,7 +146,7 @@ CONTAINS
       results_nosym%tote     = results%tote
       results_nosym%bandgap  = results%bandgap
       results_nosym%te_hfex  = results%te_hfex
-
+      results_nosym%tkb_loc  = results%tkb_loc
       results_nosym%te_hfex_loc         = results%te_hfex_loc
       results_nosym%last_distance       = results%last_distance
       results_nosym%last_mmpMatdistance = results%last_mmpMatdistance

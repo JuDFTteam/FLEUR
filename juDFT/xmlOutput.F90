@@ -294,7 +294,7 @@ MODULE m_judft_xmlOutput
       CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
       CHARACTER(LEN=*), INTENT(IN)           :: attributeValues(:)
       INTEGER,          INTENT(IN)           :: lengths(:,:)
-      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(1:)
+      REAL,         INTENT(IN), OPTIONAL :: contentList(1:)
 
       CHARACTER(LEN= 30), ALLOCATABLE :: charAttributeValues(:)
       CHARACTER(LEN= 30), ALLOCATABLE :: charContentList(:)
@@ -316,20 +316,20 @@ MODULE m_judft_xmlOutput
 
       IF (PRESENT(contentList)) THEN
          DO i = 1, SIZE(contentList)
-            SELECT TYPE(contentList)
-               TYPE IS(INTEGER)
+            !SELECT TYPE(contentList)
+            !   TYPE IS(INTEGER)
 
-                  WRITE(charContentList(i),'(i0)') contentList(i)
-               TYPE IS(REAL)
+            !      WRITE(charContentList(i),'(i0)') contentList(i)
+            !   TYPE IS(REAL)
                   WRITE(charContentList(i),'(f19.10)') contentList(i)
-               TYPE IS(LOGICAL)
-                  WRITE(charContentList(i),'(l1)') contentList(i)
-               TYPE IS(CHARACTER(LEN=*))
-                  WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
-               CLASS DEFAULT
-                  STOP 'Type of contentList not allowed'
+            !   TYPE IS(LOGICAL)
+            !      WRITE(charContentList(i),'(l1)') contentList(i)
+            !   TYPE IS(CHARACTER(LEN=*))
+            !      WRITE(charContentList(i),'(a)') TRIM(ADJUSTL(contentList(i)))
+            !   CLASS DEFAULT
+            !      STOP 'Type of contentList not allowed'
 
-            END SELECT
+            !END SELECT
          END DO
          CALL writeXMLElementForm(elementName,attributeNames,charAttributeValues,lengths,charContentList)
          DEALLOCATE(charContentList,charAttributeValues)
@@ -418,7 +418,7 @@ MODULE m_judft_xmlOutput
       CHARACTER(LEN=*), INTENT(IN)           :: elementName
       CHARACTER(LEN=*), INTENT(IN)           :: attributeNames(:)
       CHARACTER(LEN=*), INTENT(IN)           :: attributeValues(:)
-      CLASS(*),         INTENT(IN), OPTIONAL :: contentList(:)
+      REAL,         INTENT(IN), OPTIONAL :: contentList(:)
 
       INTEGER, ALLOCATABLE :: lengths(:,:)
       INTEGER              :: contentListSize

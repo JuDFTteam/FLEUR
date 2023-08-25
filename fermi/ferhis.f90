@@ -279,6 +279,7 @@ CONTAINS
     ENDDO
     entropy = -spindg*entropy
     results%ts = tkb*entropy
+    results%tkb_loc = tkb
     IF ( fmpi%irank == 0 .and. l_output) WRITE (oUnit,FMT=8060) entropy,entropy*3.0553e-6 !: boltzmann constant in htr/k
 
 

@@ -350,7 +350,7 @@ CONTAINS
          !$OMP END PARALLEL
 
          IF (.NOT.PRESENT(moments)) RETURN
-
+         if (size(rho,4)>3) rho(:,:,:,4)=-rho(:,:,:,4)
          WRITE (oUnit,FMT=8000)
 8000     FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&
                  t33,'d',t42,'f',t51,'total')
