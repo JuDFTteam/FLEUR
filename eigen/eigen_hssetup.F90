@@ -109,7 +109,7 @@ CONTAINS
 
       IF (fi%hybinp%l_hybrid) THEN
          IF (hybdat%l_addhf) THEN
-            CALL add_Vnonlocal(nk, lapw, fi, results, hybdat, isp, xcpot, fmpi, nococonv, hmat(1, 1))
+            CALL add_Vnonlocal(nk, lapw, fi, hybdat, isp, xcpot, fmpi, nococonv, hmat(1, 1))
          END IF 
          !IF (hybdat%l_subvxc) THEN
          !   CALL subvxc(lapw, fi%kpts%bk(:, nk), fi%input, isp, v%mt(:, 0, :, :), fi%atoms, ud, &
