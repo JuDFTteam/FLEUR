@@ -116,10 +116,10 @@ CONTAINS
 
             call timestart("Big OMP loop")
 #ifndef _OPENACC
-            !$OMP PARALLEL default(none) &
-            !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft, wavef2rs_fft, max_imag, grid) &
-            !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, max_igptm)&
-            !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf, g_ptr)
+!            !$OMP PARALLEL default(none) & ! Issue #770
+!            !$OMP private(iband, iob, g, igptm, prod, psi_k, ok, fft, wavef2rs_fft, max_imag, grid) &
+!            !$OMP shared(hybdat, psi_kqpt, cprod,  mpdata, iq, g_t, psize, gcutoff, max_igptm)&
+!            !$OMP shared(jsp, z_k, stars, lapw, fi, inv_vol, ik, real_warned, n_omp, bandoi, stepf, g_ptr)
 #endif
 
 !            call timestart("alloc&init")
@@ -137,7 +137,7 @@ CONTAINS
             !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, grid, grid%dimensions, jsp)&
             !$acc      create(psi_k, prod)
 #ifndef _OPENACC
-               !$OMP DO
+!               !$OMP DO
 #endif
                do iband = 1, hybdat%nbands(ik,jsp)
                   call wavef2rs(fi, lapw, z_k, gcutoff, iband, iband, jsp, grid, wavef2rs_fft, psi_k)
@@ -185,7 +185,7 @@ CONTAINS
                   endif
                enddo
 #ifndef _OPENACC
-               !$OMP END DO
+!               !$OMP END DO
 #endif
             !$acc end data 
             call fft%free()
@@ -196,7 +196,7 @@ CONTAINS
       !$acc end data ! stepf, stepf%grid
 
 #ifndef _OPENACC
-      !$OMP END PARALLEL
+!      !$OMP END PARALLEL
 #endif
       !call stepf%free() 
 
