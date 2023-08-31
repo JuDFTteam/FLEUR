@@ -5,39 +5,33 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_stmix
-  !
-  !      straight mixing,     r.pentcheva, iff, 1996
-  !
-  !     sm   : input charge density of iteration m
-  !     sm1  : input charge density of iteration m+1
-  !     fsm  : output minus input charge densityof iteration m
-  !
+  !! Simple or straight mixing
+  
 CONTAINS
-  SUBROUTINE stmix(&
-       &                 atoms,input,noco,&
-       &                 fsm,fsm_mag,sm)
+  SUBROUTINE stmix(atoms,input,noco,fsm,fsm_mag,sm)
+    !!Simple mixing
     USE m_types_mixvector
     USE m_types
     IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)        :: input
+    TYPE(t_input),INTENT(IN)        :: input  
     TYPE(t_noco),INTENT(IN)         :: noco
     TYPE(t_atoms),INTENT(IN)        :: atoms
-    TYPE(t_mixvector),INTENT(IN)    :: fsm,fsm_mag
-    TYPE(t_mixvector),INTENT(INOUT) :: sm
+    TYPE(t_mixvector),INTENT(IN)    :: fsm !!Difference of input and output density
+    TYPE(t_mixvector),INTENT(IN)    :: fsm_mag !!Difference of input and output magnetisation
+    TYPE(t_mixvector),INTENT(INOUT) :: sm          !!input: input-density, output: mixed density 
     !     ..
     !     .. Local Scalars ..
-    INTEGER imap
     REAL,PARAMETER:: tol_6=1.0e-6
     !     ..
     !
     sm = sm + input%alpha*fsm
 
-    IF ( ABS(input%spinf-1.0).LE.tol_6 .OR. input%jspins.EQ.1 .or.input%imix.ne.0) THEN
-       !  Done with     sm1 = sm + alpha * F(sm)
-       !No spin
-       RETURN
-    ELSE
-       sm = sm + input%alpha/2.0*(input%spinf-1.0)*fsm_mag
+    IF ( ABS(input%spinf-1.0).LE.tol_6 .OR. input%jspins.EQ.1 .or.input%imix.ne.0.or.noco%l_noco) RETURN
+    !  Done with     sm1 = sm + alpha * F(sm)
+    
+    
+    !Spin enhancement factor
+    sm = sm + input%alpha/2.0*(input%spinf-1.0)*fsm_mag
        !     -->perform simple mixing with the mixing parameters
        !        for charge and spin
        !
@@ -46,7 +40,7 @@ CONTAINS
        ! The F(sm+) and F(sm-) terms do not only include diagonal elements of the density matrices (as one could think) 
        ! but also contain off-diag. elements (jspins=3,4) of the density matrices in the fully noncolinear case. 
        ! Choosing a spinf>1 therefore might be helpful when it comes to converging noncolinear systems.
-    END IF
-
+       ! DW: Actually for noco, this spinf>1 has the potential to break symmetry in the noco case, hence it is disabled. 
+   
   END SUBROUTINE stmix
 END MODULE m_stmix
