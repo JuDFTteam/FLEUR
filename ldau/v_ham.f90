@@ -13,7 +13,7 @@ MODULE m_vham
 
     CONTAINS
 
-    SUBROUTINE v_ham(input,usdus,atoms,kpts,cell,lapw,sym,noco,nococonv,fjgj,den,jspin,kptindx,hmat)
+    SUBROUTINE v_ham(input,usdus,atoms,kpts,cell,lapw,sym,noco,nococonv,fjgj,den,jspin,kptindx,hmat,fmpi)
 
         USE m_types
         USE m_constants
@@ -38,81 +38,75 @@ MODULE m_vham
         TYPE(t_fjgj),        INTENT(INOUT)  :: fjgj
         TYPE(t_potden),      INTENT(IN)     :: den
         INTEGER,             INTENT(IN)     :: jspin,kptindx    
-        CLASS(t_mat),        INTENT(INOUT)  :: hmat      !!G1, G2
+        CLASS(t_mat),        INTENT(INOUT)  :: hmat     
 
-        INTEGER i_v,i_pair,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,matom1,matom2,lm1atom1,lm1atom2,iG1,iG2,abSizeG1,abSizeG2,indx_pair,counter
-        COMPLEX c_0,c_pair,c_hermitian
-        COMPLEX, ALLOCATABLE :: abG1(:,:),abG2(:,:)
-        COMPLEX, ALLOCATABLE :: c_0_pair(:,:,:)  !G1,G2,i_pair
+        !!!!!!!!!!!!
+        TYPE(t_mpi),         INTENT(IN)     :: fmpi
+        !!!!!!!!!!!!
+
+        INTEGER i_v,i_pair,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,iG2,abSizeG1,abSizeG2,counter, atom1index, atom2index
+        COMPLEX  power_fac, exponent
+        REAL norm1_W, norm2_W, V_inp
+        COMPLEX, ALLOCATABLE :: abG1(:,:),abG2(:,:),X1(:,:), X2(:,:), PotMat(:,:)
 
         ALLOCATE(abG1(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
         ALLOCATE(abG2(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
 
         counter=0
+        atom1index=0
+        atom2index=0
         DO i_v = 1,atoms%n_v
             Do atom2=1,atoms%lda_v(i_v)%numOtherAtoms
                 counter=counter+1
+                atom1index= atom1index + 2 * ( 2 * atoms%lda_v(i_v)%thisAtomL +1 )
+                atom2index= atom2index + 2 * ( 2 * atoms%lda_v(i_v)%otherAtomL +1 )
             ENDDO
         ENDDO
 
-        ALLOCATE(c_0_pair(counter,MAXVAL(lapw%nv),MAXVAL(lapw%nv)))
-        
+        ALLOCATE(X1(atom1index,MAXVAL(lapw%nv)))
+        ALLOCATE(X2(atom2index,MAXVAL(lapw%nv)))
+        ALLOCATE(PotMat(atom1index,atom2index))
+
         i_pair=1 
-        DO i_v = 1,atoms%n_v  
+        atom1index=0
+        atom2index=0
+        DO i_v = 1,atoms%n_v
+            V_inp=atoms%lda_v(i_v)%V
             natom1=atoms%lda_v(i_v)%atomIndex
             latom1=atoms%lda_v(i_v)%thisAtomL
             ll1atom1=latom1*(latom1+1)
+            norm1_W = usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5
             CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom1),jspin)
             CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.)
-            Do atom2=1,atoms%lda_v(i_v)%numOtherAtoms
+            DO atom2=1,atoms%lda_v(i_v)%numOtherAtoms
                 natom2=atoms%lda_v(i_v)%otherAtomIndices(atom2)
                 latom2=atoms%lda_v(i_v)%otherAtomL
                 ll1atom2=latom2*(latom2+1)
+                norm2_W = usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5
+                power_fac=(cmplx(0, -1)**latom1) *(cmplx(0, 1)**latom2) 
+                PotMat(1+atom1index:atom1index+(2*latom1 +1),1+atom2index:atom2index+(2*latom2 +1)) = conjg(den%nIJ_llp_mmp(-latom1:latom1,-latom2:latom2,i_pair,jspin))
+                PotMat(1+atom1index+(2*latom1 +1):atom1index+2*(2*latom1 +1),1+atom2index+(2*latom2 +1):atom2index+2*(2*latom2 +1)) = conjg(den%nIJ_llp_mmp(-latom1:latom1,-latom2:latom2,i_pair,jspin))
+                WRITE(1212,*) 'PotMat',PotMat, i_pair
                 CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom2),jspin)
                 CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.)
-                DO iG1=1,lapw%nv(jspin)
-                    Do iG2=1,lapw%nv(jspin)
-                        c_0=cmplx_0
-                        Do matom1=-latom1,latom1  
-                            lm1atom1=ll1atom1+matom1
-                            Do matom2=-latom2,latom2
-                                lm1atom2=ll1atom2+matom2
-                                !check pair density and which pair is sumed over take care of this 
-                                c_0=c_0 - (atoms%lda_v(i_v)%V)*(conjg(den%nIJ_llp_mmp(matom1,matom2,i_pair,jspin)))*(conjg(abG1(lm1atom1+1,iG1))*abG2(lm1atom2+1,iG2) &
-                                + conjg(abG1(lm1atom1+1+abSizeG1/2,iG1))*abG2(lm1atom2+1,iG2)*(usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5) &
-                                + conjg(abG1(lm1atom1+1,iG1))*abG2(lm1atom2+1+abSizeG2/2,iG2)*(usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5) &
-                                + conjg(abG1(lm1atom1+1+abSizeG1/2,iG1))*abG2(lm1atom2+1+abSizeG2/2,iG2)*(usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5)&
-                                *(usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5))*&
-                                EXP(cmplx(0.0,tpi_const)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),(kpts%bk(:,kptindx)+lapw%gvec(:, iG2,jspin)))) &
-                                *(cmplx(0, -1)**latom1) *(cmplx(0, 1)**latom2) 
-                            ENDDO
-                        ENDDO
-                        c_0_pair(i_pair,iG1,iG2)=c_0 
-                    ENDDO
+                X1( atom1index +1 : atom1index + 2 * latom1 + 1,:) = abG1(ll1atom1-latom1+1:ll1atom1+latom1+1,:)*power_fac
+                X1( atom1index + 2*latom1 +1 +1: atom1index + 2*(2*latom1 +1) ,:)= abG1(ll1atom1-latom1+abSizeG1/2+1:ll1atom1+latom1+abSizeG1/2+1,:)*norm1_W*power_fac
+                atom1index = atom1index + 2*(2*latom1 +1)
+                DO iG2= 1,lapw%nv(jspin) 
+                    exponent=EXP(cmplx(0.0,tpi_const)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),(kpts%bk(:,kptindx)+lapw%gvec(:, iG2,jspin))))
+                    X2( atom2index +1 : atom2index + 2 * latom2 + 1,iG2) = abG2(ll1atom2-latom2+1:ll1atom2+latom2+1,iG2)*power_fac*exponent
+                    X2( atom2index + 2*latom2 +1 +1: atom2index + 2*(2*latom2 +1) ,iG2)= abG2(ll1atom2-latom2+abSizeG2/2+1:ll1atom2+latom2+abSizeG2/2+1,iG2)*norm2_W*power_fac*exponent
                 ENDDO
-                i_pair=i_pair+1
+                atom2index = atom2index + 2*(2*latom2 +1)
+                i_pair=i_pair +1
             ENDDO
-        ENDDO
+        ENDDO  
 
-        DO iG1=1,lapw%nv(jspin)
-            Do iG2=1,lapw%nv(jspin)
-                c_pair=cmplx_0
-                c_hermitian=cmplx_0
-                DO indx_pair=1, i_pair-1
-                    c_pair=c_pair+c_0_pair(indx_pair,iG1,iG2)
-                    c_hermitian=c_hermitian+conjg(c_0_pair(indx_pair,iG2,iG1))
-                ENDDO
-                !WRITE(6000,*) 'iG1,iG2,mat',iG1,iG2,c_pair
-                !IF (iG1==iG2) THEN
-                !    WRITE(3000,*) 'iG1,iG2,mat',iG1,iG2,c_pair
-                !ENDIF
-                !WRITE(3500,*) 'iG2,iG1,difference', iG2,iG1,c_hermitian - c_pair
-                IF(hmat%l_real) THEN
-                    hmat%data_r(iG1,iG2)=hmat%data_r(iG1,iG2)+REAL(c_pair)
-                ELSE
-                    hmat%data_c(iG1,iG2)=hmat%data_c(iG1,iG2)+c_pair
-                END IF
-            ENDDO
-        ENDDO
+        IF(hmat%l_real) THEN
+            hmat%data_r=hmat%data_r + MATMUL(TRANSPOSE(conjg(X1)), MATMUL(PotMat,X2))
+        ELSE
+            hmat%data_c=hmat%data_c + MATMUL(TRANSPOSE(conjg(X1)), MATMUL(PotMat,X2))
+        END IF
+
     END SUBROUTINE v_ham
 END MODULE m_vham
