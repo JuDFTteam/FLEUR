@@ -13,7 +13,7 @@ MODULE m_vham
 
     CONTAINS
 
-    SUBROUTINE v_ham(input,usdus,atoms,kpts,cell,lapw,sym,noco,nococonv,fjgj,den,jspin,kptindx,hmat,fmpi)
+    SUBROUTINE v_ham(input,usdus,atoms,kpts,cell,lapw,sym,noco,nococonv,fjgj,den,jspin,kptindx,hmat)
 
         USE m_types
         USE m_constants
@@ -40,9 +40,6 @@ MODULE m_vham
         INTEGER,             INTENT(IN)     :: jspin,kptindx    
         CLASS(t_mat),        INTENT(INOUT)  :: hmat     
 
-        !!!!!!!!!!!!
-        TYPE(t_mpi),         INTENT(IN)     :: fmpi
-        !!!!!!!!!!!!
 
         INTEGER i_v,i_pair,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,iG2,abSizeG1,abSizeG2,counter, atom1index, atom2index
         COMPLEX  power_fac, exponent
@@ -63,10 +60,10 @@ MODULE m_vham
             ENDDO
         ENDDO
 
-        ALLOCATE(X1(atom1index,MAXVAL(lapw%nv)))
-        ALLOCATE(X2(atom2index,MAXVAL(lapw%nv)))
+        ALLOCATE(X1(atom1index,lapw%nv(jspin)))
+        ALLOCATE(X2(atom2index,lapw%nv(jspin)))
         ALLOCATE(PotMat(atom1index,atom2index))
-
+        !WRITE(12123,*)'lapw%nv(jspin), MAXVAL(lapw%nv)', lapw%nv(jspin), MAXVAL(lapw%nv)
         i_pair=1 
         atom1index=0
         atom2index=0
@@ -86,7 +83,7 @@ MODULE m_vham
                 power_fac=(cmplx(0, -1)**latom1) *(cmplx(0, 1)**latom2) 
                 PotMat(1+atom1index:atom1index+(2*latom1 +1),1+atom2index:atom2index+(2*latom2 +1)) = conjg(den%nIJ_llp_mmp(-latom1:latom1,-latom2:latom2,i_pair,jspin))
                 PotMat(1+atom1index+(2*latom1 +1):atom1index+2*(2*latom1 +1),1+atom2index+(2*latom2 +1):atom2index+2*(2*latom2 +1)) = conjg(den%nIJ_llp_mmp(-latom1:latom1,-latom2:latom2,i_pair,jspin))
-                WRITE(1212,*) 'PotMat',PotMat, i_pair
+                !WRITE(1212,*) 'PotMat',PotMat, i_pair
                 CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom2),jspin)
                 CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.)
                 X1( atom1index +1 : atom1index + 2 * latom1 + 1,:) = abG1(ll1atom1-latom1+1:ll1atom1+latom1+1,:)*power_fac
@@ -101,12 +98,18 @@ MODULE m_vham
                 i_pair=i_pair +1
             ENDDO
         ENDDO  
-
-        IF(hmat%l_real) THEN
-            hmat%data_r=hmat%data_r + MATMUL(TRANSPOSE(conjg(X1)), MATMUL(PotMat,X2))
-        ELSE
-            hmat%data_c=hmat%data_c + MATMUL(TRANSPOSE(conjg(X1)), MATMUL(PotMat,X2))
-        END IF
-
+        WRITE(12123,*) 'X2', X2
+        WRITE(12123,*) 'potmatr', PotMat
+        WRITE(1212,*) 'dimensions',SIZE(X2), SIZE(PotMat), SHAPE(X2), SHAPE(PotMat), RANK(X2), RANK(PotMat)
+        WRITE(56563,*) 'sss', MATMUL(PotMat,X2)
+        !WRITE(12123,*) 'ssslmllm', MATMUL ( TRANSPOSE(conjg(X1)), MATMUL(PotMat,X2) ) 
+        !hmat = hmat + MATMUL(TRANSPOSE(conjg(X1)), MATMUL(PotMat,X2))
+        !WRITE(12123,*) 'hmat', SHAPE(MATMUL(TRANSPOSE(conjg(X1)), MATMUL(PotMat,X2)))
+        !IF(hmat%l_real) THEN
+        !    hmat%data_r=hmat%data_r + MATMUL(TRANSPOSE(conjg(X1)), MATMUL(PotMat,X2))
+        !ELSE
+        !    hmat%data_c=hmat%data_c + MATMUL(TRANSPOSE(conjg(X1)), MATMUL(PotMat,X2))
+        !END IF
+        WRITE(4545,*)'hmat'
     END SUBROUTINE v_ham
 END MODULE m_vham
