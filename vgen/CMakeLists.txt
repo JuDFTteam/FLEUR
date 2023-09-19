@@ -35,7 +35,7 @@ vgen/vmts.F90
 vgen/vmt_xc.F90
 vgen/vvac.f90
 vgen/vvacis.f90
-vgen/vvacxc.f90
+#vgen/vvacxc.f90
 vgen/vvacxcg.f90
 vgen/vvacxy.f90
 vgen/b_field.F90
