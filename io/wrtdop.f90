@@ -5,7 +5,7 @@
 !     ****************************************************
       CONTAINS
         SUBROUTINE wrtdop(stars,vacuum,atoms,sphhar,input,sym,nu,&
-                          it,fr,fpw,fz,fzxy)
+                          it,fr,fpw,fz,fzxy,fvac)
 
           USE m_constants
           USE m_types
@@ -23,7 +23,7 @@
           INTEGER, INTENT (IN) :: it   
           !     ..
           !     .. Array Arguments ..
-          COMPLEX, INTENT (IN):: fpw(:,:),fzxy(:,:,:,:) !(stars%ng3,input%jspins),fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+          COMPLEX, INTENT (IN):: fpw(:,:),fzxy(:,:,:,:),fvac(:,:,:,:) !(stars%ng3,input%jspins),fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
           REAL,    INTENT (IN):: fr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins),
           REAL,    INTENT (IN):: fz(:,:,:)!(vacuum%nmzd,2,input%jspins)
           CHARACTER(len=8):: dop,iop,name(10)
@@ -72,11 +72,18 @@
                     WRITE (nu) (fz(i,ivac,jsp),i=1,vacuum%nmz)
                     IF (jsp<=SIZE(fzxy,4)) THEN
                        WRITE (nu) stars%ng2,vacuum%nmzxy
+                       IF (sym%invs2) THEN
+                          WRITE (nu) (REAL(fvac(i,1,ivac,jsp)),i=1,vacuum%nmz)
+                       ELSE
+                          WRITE (nu) (fvac(i,1,ivac,jsp),i=1,vacuum%nmz)
+                       END IF
                        DO  k = 2,stars%ng2
                           IF (sym%invs2) THEN
                              WRITE (nu) (REAL(fzxy(i,k-1,ivac,jsp)),i=1,vacuum%nmzxy)
+                             WRITE (nu) (REAL(fvac(i,k,ivac,jsp)),i=1,vacuum%nmzxy)
                           ELSE
                              WRITE (nu) (fzxy(i,k-1,ivac,jsp),i=1,vacuum%nmzxy)
+                             WRITE (nu) (fvac(i,k,ivac,jsp),i=1,vacuum%nmzxy)
                           END IF
                        ENDDO
                     ENDIF

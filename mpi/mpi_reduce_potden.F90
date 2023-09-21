@@ -74,6 +74,15 @@ CONTAINS
       deallocate( r_b )
     end if
 
+    ! reduce vac
+    if( allocated( potden%vac ) ) then
+      n = vacuum%nmzd * stars%ng2 * 2 * size( potden%vac, 4 )
+      allocate( r_b(n) )
+      call MPI_REDUCE( potden%vac, r_b, n, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
+      if( fmpi%irank == 0 ) call zcopy( n, r_b, 1, potden%vac, 1 )
+      deallocate( r_b )
+    end if
+
     ! reduce mmpMat
     if( allocated( potden%mmpMat ) ) then
       n = size( potden%mmpMat, 1 ) * size( potden%mmpMat, 2 ) * size( potden%mmpMat, 3 ) * size( potden%mmpMat, 4 )

@@ -74,12 +74,19 @@ CONTAINS
     CALL zcopy(n, c_b, 1, den%pw(:,jspin), 1)
     DEALLOCATE (c_b)
 
-    ! -> Collect den%vacxy(:,:,:,jspin)
     IF (input%film) THEN
+       ! -> Collect den%vacxy(:,:,:,jspin)
        n=size(den%vacxy(:,:,:,jspin))
        ALLOCATE(c_b(n))
        CALL MPI_REDUCE(den%vacxy(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (fmpi%irank.EQ.0) CALL zcopy(n, c_b, 1, den%vacxy(:,:,:,jspin), 1)
+       DEALLOCATE (c_b)
+
+       ! -> Collect den%vac(:,:,:,jspin)
+       n=size(den%vac(:,:,:,jspin))
+       ALLOCATE(c_b(n))
+       CALL MPI_REDUCE(den%vac(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       IF (fmpi%irank.EQ.0) CALL zcopy(n, c_b, 1, den%vac(:,:,:,jspin), 1)
        DEALLOCATE (c_b)
 
        ! -> Collect den%vacz(:,:,jspin)
@@ -419,6 +426,15 @@ CONTAINS
              CALL zcopy(n, c_b, 1, den%vacxy(:,:,:,3), 1)
           ENDIF
           DEALLOCATE (c_b)
+
+          n=size(den%vac(:,:,:,3))
+          ALLOCATE(c_b(n))
+          CALL MPI_REDUCE(den%vac(:,:,:,3),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+          IF (fmpi%irank.EQ.0) THEN
+             CALL zcopy(n, c_b, 1, den%vac(:,:,:,3), 1)
+          ENDIF
+          DEALLOCATE (c_b)
+
           !
           !n = vacuum%nmzd*2*2
           n=SIZE(den%vacz(:,:,3:4))

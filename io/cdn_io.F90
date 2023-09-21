@@ -317,12 +317,12 @@ CONTAINS
        IF ((inOrOutCDN.EQ.CDN_OUTPUT_DEN_const).AND.(archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const)) THEN
           ! call loddop to move the file position to the output density
           CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
-               iUnit,den%iter,den%mt,den%pw,den%vacz,den%vacxy)
+               iUnit,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%vac)
        END IF
 
        ! read in the density
        CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
-            iUnit,den%iter,den%mt,den%pw,den%vacz,den%vacxy)
+            iUnit,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%vac)
 
        ! read in additional data if l_noco and data is present
        IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.l_rhomatFile) THEN
@@ -339,6 +339,7 @@ CONTAINS
                 END DO
                 DEALLOCATE(cdomvz)
                 READ (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
+                READ (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=1,stars%ng2), iVac=1,vacuum%nvac)
              END IF
           ELSE
              ! (datend < 0)  =>  no off-diagonal magnetisation stored
@@ -351,6 +352,7 @@ CONTAINS
              IF (input%film) THEN
                 den%vacz(:,:,3:4) = 0.0
                 den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
+                den%vac(:,:,:,3) = CMPLX(0.0,0.0)
              END IF
           END IF
        ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
@@ -358,6 +360,7 @@ CONTAINS
           IF (input%film) THEN
              den%vacz(:,:,3:4) = 0.0
              den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
+             den%vac(:,:,:,3) = CMPLX(0.0,0.0)
           END IF
        END IF
        CLOSE(iUnit)
@@ -521,8 +524,10 @@ CONTAINS
           den%vacz(:,2,:)=den%vacz(:,1,:)
           IF (sym%invs) THEN
              den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
+             den%vac(:,:,2,:) = CONJG(den%vac(:,:,1,:))
           ELSE
              den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
+             den%vac(:,:,2,:) = den%vac(:,:,1,:)
           END IF
        END IF
 
@@ -673,7 +678,7 @@ CONTAINS
 
        ! Write the density
        CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-            iUnit,den%iter+relCdnIndex,den%mt,den%pw,den%vacz,den%vacxy)
+            iUnit,den%iter+relCdnIndex,den%mt,den%pw,den%vacz,den%vacxy,den%vac)
 
        ! Write additional data if l_noco
        IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
@@ -687,6 +692,7 @@ CONTAINS
              END DO
              WRITE (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
              WRITE (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
+             WRITE (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=1,stars%ng2), iVac=1,vacuum%nvac)
              DEALLOCATE(cdomvz)
           END IF
        END IF

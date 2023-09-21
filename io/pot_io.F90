@@ -221,8 +221,10 @@ MODULE m_pot_io
             pot%vacz(:,2,:) = pot%vacz(:,1,:)
             IF (sym%invs) THEN
                pot%vacxy(:,:,2,:) = CONJG(pot%vacxy(:,:,1,:))
+               pot%vac(:,:,2,:) = CONJG(pot%vac(:,:,1,:))
             ELSE
                pot%vacxy(:,:,2,:) = pot%vacxy(:,:,1,:)
+               pot%vac(:,:,2,:) = pot%vac(:,:,1,:)
             END IF
          END IF
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
@@ -255,7 +257,7 @@ MODULE m_pot_io
          iUnit = 11
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),form='unformatted',status='unknown')
          CALL wrtdop(stars,vacuum,atoms,sphhar,input,sym,&
-                     iUnit,iter,pot%mt,fpw,pot%vacz(:,:,:input%jspins),pot%vacxy(:,:,:,:input%jspins))
+                     iUnit,iter,pot%mt,fpw,pot%vacz(:,:,:input%jspins),pot%vacxy(:,:,:,:input%jspins),pot%vac(:,:,:,:input%jspins))
          CLOSE(iUnit)
       END IF
 
