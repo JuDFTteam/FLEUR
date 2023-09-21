@@ -2871,7 +2871,7 @@ MODULE m_cdnpot_io_hdf
          DEALLOCATE(fzxyTemp)
 
          den%vac = CMPLX(0.0,0.0)
-         ALLOCATE(fzxyTemp(nmzd,ng2,2,jspins))
+         ALLOCATE(fvacTemp(nmzd,ng2,2,jspins))
          dimsInt(:5)=(/2,nmzd,ng2,2,jspins/)
          CALL h5dopen_f(groupID, 'fvac', fvacSetID, hdfError)
          CALL io_read_complex4(fvacSetID,(/-1,1,1,1,1/),dimsInt(:5),"fvacTemp",fvacTemp(:,:,:,:jspins))
