@@ -2985,7 +2985,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE readDensityHDF
 
    SUBROUTINE readPotentialHDF(fileID, archiveName, potentialType,&
-                               iter,fr,fpw,fz,fzxy,l_mtnoco)
+                               iter,fr,fpw,fz,fzxy,fvac,l_mtnoco)
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: potentialType
@@ -2997,7 +2997,7 @@ MODULE m_cdnpot_io_hdf
       REAL,    INTENT (OUT)        :: fr(:,:,:,:)
       REAL,    INTENT (OUT)        :: fz(:,:,:)
       COMPLEX, INTENT (OUT)        :: fpw(:,:)
-      COMPLEX, INTENT (OUT)        :: fzxy(:,:,:,:)
+      COMPLEX, INTENT (OUT)        :: fzxy(:,:,:,:),fvac(:,:,:,:)
 
       INTEGER              :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER              :: jspins
@@ -3013,6 +3013,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)              :: fpwSetID
       INTEGER(HID_T)              :: fzSetID
       INTEGER(HID_T)              :: fzxySetID
+      INTEGER(HID_T)              :: fvacSetID
 
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(archiveName)))
       IF(.NOT.l_exist) THEN
@@ -3107,6 +3108,11 @@ MODULE m_cdnpot_io_hdf
          CALL h5dopen_f(groupID, 'fzxy', fzxySetID, hdfError)
          CALL io_read_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),"fzxy",fzxy)
          CALL h5dclose_f(fzxySetID, hdfError)
+
+         dimsInt(:5)=(/2,nmzd,ng2,2,jspins/)
+         CALL h5dopen_f(groupID, 'fvac', fvacSetID, hdfError)
+         CALL io_read_complex4(fvacSetID,(/-1,1,1,1,1/),dimsInt(:5),"fvac",fvac)
+         CALL h5dclose_f(fvacSetID, hdfError)
       END IF
 
       CALL h5gclose_f(groupID, hdfError)

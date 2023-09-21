@@ -41,7 +41,7 @@ MODULE m_pot_io
    CONTAINS
 
    SUBROUTINE readPotential(stars,noco,vacuum,atoms,sphhar,input,sym,archiveType,&
-                            iter,fr,fpw,fz,fzxy)
+                            iter,fr,fpw,fz,fzxy,fvac)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_noco),INTENT(IN)       :: noco
@@ -56,7 +56,7 @@ MODULE m_pot_io
 
       !     ..
       !     .. Array Arguments ..
-      COMPLEX, INTENT (OUT) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+      COMPLEX, INTENT (OUT) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins), fvac(vacuum%nmzd,stars%ng2,2,input%jspins)
       REAL,    INTENT (OUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
       ! local variables
@@ -104,7 +104,7 @@ MODULE m_pot_io
                              currentStructureIndex,currentStepfunctionIndex)
 
             CALL readPotentialHDF(fileID, archiveName, potentialType,&
-                                  iter,fr,fpw,fz,fzxy,any(noco%l_unrestrictMT))
+                                  iter,fr,fpw,fz,fzxy,fvac,any(noco%l_unrestrictMT))
 
             CALL closeCDNPOT_HDF(fileID)
          ELSE
@@ -153,7 +153,7 @@ MODULE m_pot_io
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),form='unformatted',status='unknown')
 
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
-                     iUnit,iter,fr,fpw,fz,fzxy)
+                     iUnit,iter,fr,fpw,fz,fzxy,fvac)
 
          CLOSE(iUnit)
       END IF
