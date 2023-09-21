@@ -2223,6 +2223,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER(HID_T)               :: fpwSpaceID, fpwSetID
       INTEGER(HID_T)               :: fzSpaceID, fzSetID
       INTEGER(HID_T)               :: fzxySpaceID, fzxySetID
+      INTEGER(HID_T)               :: fvacSpaceID, fvacSetID
 
       WRITE(groupname,'(a,i0)') '/structure-', structureIndex
       l_exist = io_groupexists(fileID,TRIM(ADJUSTL(groupName)))
