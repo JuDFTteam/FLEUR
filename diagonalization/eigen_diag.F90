@@ -89,6 +89,8 @@ CONTAINS
        CALL chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
     CASE (diag_debugout)
        CALL diag_writeout(smat,hmat)
+    case (diag_stop)
+       call JUDFT_error("FLEUR stopped as `-eig stop` is selected")   
     CASE default
        CALL judft_error("No solver available to diagonalize matrix")
     END SELECT
