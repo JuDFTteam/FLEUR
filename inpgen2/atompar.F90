@@ -229,6 +229,10 @@ contains
 
     BACKSPACE(fh)
     READ(fh,atom,iostat=io_stat)
+
+    if (rmt.ne.0.0) THEN
+      if (int(id)==id .or. id<-9999.) call judft_warn("You specified an 'rmt' value for some atom without giving a non-integer id.")
+    endif
     IF(io_stat.NE.0) THEN
        BACKSPACE(fh)
        READ(fh,*) name
