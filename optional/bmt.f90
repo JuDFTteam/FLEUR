@@ -93,7 +93,7 @@ contains
     CALL wrtdop(&
          & stars,vacuum,atoms,sphhar,input,sym,&
          & 98,&
-         & den%iter,den%mt,den%pw,den%vacz,den%vacxy)
+         & den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%vac)
     CLOSE(98)
 
   END SUBROUTINE bmt

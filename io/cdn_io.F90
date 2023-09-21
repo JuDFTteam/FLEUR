@@ -424,7 +424,7 @@ CONTAINS
     TYPE(t_cell)         :: cellTemp
      
 
-    COMPLEX, ALLOCATABLE :: fpwTemp(:,:), fzxyTemp(:,:,:,:)
+    COMPLEX, ALLOCATABLE :: fpwTemp(:,:), fzxyTemp(:,:,:,:), fvacTemp(:,:,:,:)
     REAL, ALLOCATABLE    :: frTemp(:,:,:,:), fzTemp(:,:,:)
 
     INTEGER           :: mode, iterTemp, k, i, iVac, j, iUnit
@@ -609,6 +609,7 @@ CONTAINS
           symTemp%invs2 = sym%invs2
           ALLOCATE (fpwTemp(stars%ng3,input%jspins))
           ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
+          ALLOCATE (fvacTemp(vacuum%nmzd,stars%ng2,2,input%jspins))
           ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
           ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
 
@@ -624,14 +625,14 @@ CONTAINS
           REWIND iUnitTemp
 
           CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
-               iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
+               iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp,fvacTemp)
           CALL wrtdop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
-               iUnitTemp,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
+               iUnitTemp,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp,fvacTemp)
 
           CLOSE(iUnitTemp)
           REWIND iUnit
 
-          DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp)
+          DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp, fvacTemp)
           DEALLOCATE (atomsTemp%neq, atomsTemp%jri, atomsTemp%zatom, symTemp%ntypsy, sphharTemp%nlh)
           DEALLOCATE (atomsTemp%rmt, atomsTemp%dx)
        END IF
@@ -666,13 +667,14 @@ CONTAINS
           symTemp%invs2 = sym%invs2
           ALLOCATE (fpwTemp(stars%ng3,input%jspins))
           ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
+          ALLOCATE (fvacTemp(vacuum%nmzd,stars%ng2,2,input%jspins))
           ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
           ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
 
           CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
-               iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
+               iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp,fvacTemp)
 
-          DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp)
+          DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp, fvacTemp)
           DEALLOCATE (atomsTemp%neq, atomsTemp%jri, symTemp%ntypsy, sphharTemp%nlh)
        END IF
 

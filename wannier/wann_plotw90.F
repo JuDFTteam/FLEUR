@@ -123,7 +123,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 !!! the potential in the spheres and the vacuum
       real, allocatable :: vr(:,:,:),vz(:,:,:),vrf(:,:,:,:)
 !!! auxiliary potentials
-      complex, allocatable :: vpw(:,:),vzxy(:,:,:,:)
+      complex, allocatable :: vpw(:,:),vzxy(:,:,:,:),v_vac(:,:,:,:)
 !!! bkpts data
       integer nntot,ikpt_help
       integer, allocatable :: gb(:,:,:),bpt(:,:)
@@ -290,7 +290,7 @@ c      endif
 
 cccccccccccccccc   initialize the potential   cccccccccccc
 
-      allocate ( vpw(n3d,jspd),vzxy(nmzxyd,odi%n2d-1,2,jspd) )
+      allocate ( vpw(n3d,jspd),vzxy(nmzxyd,odi%n2d-1,2,jspd),v_vac(nmzd,odi%n2d,2,jspd) )
       allocate ( vz(nmzd,2,jspd),vrf(jmtd,0:nlhd,ntypd,jspd) )
       allocate ( vr(jmtd,ntypd,jspd) )
 
@@ -299,7 +299,7 @@ cccccccccccccccc   initialize the potential   cccccccccccc
 
       call loddop(stars,vacuum,atoms,sphhar,input,sym,
      >            8,
-     <            iter,vrf,vpw,vz,vzxy)
+     <            iter,vrf,vpw,vz,vzxy,v_vac)
 
       close (8)
 
@@ -311,7 +311,7 @@ cccccccccccccccc   initialize the potential   cccccccccccc
         enddo
       enddo
 
-      deallocate ( vpw,vzxy,vrf )
+      deallocate ( vpw,vzxy,vrf,v_vac )
  
 cccccccccccccccc   end of the potential part  ccccccccccc
 
