@@ -68,7 +68,7 @@ CONTAINS
             call judft_error("BUG: Inconsistent matrixes in ELSI call")
          END SELECT  
       END SELECT
-
+      call timestart("elsi_ev")
 #ifdef CPP_GPU
       call elsi_set_elpa_gpu(eh,1)
 #endif
@@ -82,7 +82,8 @@ CONTAINS
       ELSE  
         call elsi_ev_complex(eh,hmat%data_c,smat%data_c,eig_tmp,evec%data_c)
       ENDIF  
-      
+      call timestop("elsi_ev")
+      call timestart("redistribute")
       !Copy data into correct data structures
       eig=eig_tmp(:size(eig))
       SELECT TYPE(evec)
@@ -110,6 +111,7 @@ CONTAINS
 
 
       END select   
+      call timestop("redistribute")
       call elsi_finalize(eh)
       call timestop("ELSI")
      
