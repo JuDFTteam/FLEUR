@@ -8,11 +8,11 @@
       <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="10" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
       <coreElectrons ctail="f" frcor="F" kcrel="0" coretail_lmax="0"/>
       <xcFunctional name="vwn" relativisticCorrections="F"/>
-      <magnetism jspins="2" l_noco="t" swsp="F" lflip="f">
+      <magnetism jspins="2" l_noco="t" swsp="F" lflip="t">
          <qss>.0000000000 .0000000000 .0000000000</qss>
-         <mtNocoParams l_mperp="t" l_mtNocoPot="f"  l_relaxSQA="f"     mix_RelaxWeightOffD="3.0"/>
+         <mtNocoParams l_mperp="t" l_mtNocoPot="t"  l_relaxSQA="f"     mix_RelaxWeightOffD="3.0"/>
       </magnetism>
-      <soc theta=".00000000" phi=".00000000" l_soc="t" spav="t"/>
+      <soc theta=".00000000" phi=".00000000" l_soc="f" spav="t"/>
       <expertModes gw="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
@@ -68,7 +68,8 @@
       <atomGroup species="Fe-1">
          <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
          <force calculate="T" relaxXYZ="TTT"/>
-         <nocoParams  alpha="Pi*.500" beta="Pi*0.50"/>
+         <nocoParams  alpha="Pi*.000" beta="Pi*0.00"/>
+         <modInitDen flipSpinTheta="Pi*.5" flipSpinPhi="Pi*0.5" flipSpinScale="F"/>
       </atomGroup>
    </atomGroups>
    <output dos="F" band="F"  slice="F" >

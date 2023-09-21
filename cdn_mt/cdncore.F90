@@ -55,6 +55,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    REAL                             :: qint(atoms%ntype,input%jspins)
    REAL                             :: tec(atoms%ntype,input%jspins)
    REAL                             :: rhTemp(atoms%msh,atoms%ntype,input%jspins)
+   REAL ,ALLOCATABLE                :: vr0(:,:,:)
 
    results%seigc = 0.0
    IF (fmpi%irank==0) THEN
@@ -90,14 +91,20 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
       END IF
    END IF
 
+   vr0=vtot%mt(:,0,:,:)
+   IF (.false.) THEN !there should be a imput switch here!!
+      vr0(:,:,1)=0.5*(vr0(:,:,1)+vr0(:,:,2))
+      vr0(:,:,2)=vr0(:,:,1)
+   ENDIF   
+
    !add in core density
    IF (fmpi%irank==0) THEN
       IF (input%kcrel==0) THEN
          DO jspin = 1,input%jspins
             IF(PRESENT(EnergyDen)) THEN
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig, EnergyDen%mt)
+               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen%mt)
             ELSE
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig)
+               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig)
             ENDIF
 
             rhTemp(:,:,jspin) = rh(:,:,jspin)
@@ -105,7 +112,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
          END DO
       ELSE
          IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for relativistic core calculations")
-         CALL coredr(input,atoms,seig, outDen%mt,sphhar,vTot%mt(:,0,:,:),qint,rh)
+         CALL coredr(input,atoms,seig, outDen%mt,sphhar,vr0,qint,rh)
          results%seigc = results%seigc + seig
       END IF
    END IF
@@ -124,14 +131,16 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
             !charge (star 0), taking into account the direction of
             !magnetisation of this atom
             DO iType = 1,atoms%ntype
-               rho11=qint(iType,1)/(cell%volint * input%jspins)
-               rho22=qint(iType,2)/(cell%volint * input%jspins)
-               rho21=0.0
-               call nococonv%rotdenmat(itype,rho11,rho22,rho21,toGlobal=.false.) !Todo: shouldn'1 this be toGlobal=.true.???
+               !rho11=qint(iType,1)/(cell%volint * input%jspins)
+               !rho22=qint(iType,2)/(cell%volint * input%jspins)
+               !rho21=0.0
+               !call nococonv%rotdenmat(itype,rho11,rho22,rho21,toGlobal=.true.) !Todo: shouldn'1 this be toGlobal=.true.???
+               !outDen%pw(1,1) = outDen%pw(1,1)+rho11
+               !outDen%pw(1,2) = outDen%pw(1,2)+rho22
+               !outDen%pw(1,3) = outDen%pw(1,3)+rho21
+               rho11=(qint(iType,1)/(cell%volint * input%jspins)+qint(iType,2)/(cell%volint * input%jspins))/2
                outDen%pw(1,1) = outDen%pw(1,1)+rho11
-               outDen%pw(1,2) = outDen%pw(1,2)+rho22
-               outDen%pw(1,3) = outDen%pw(1,3)+rho21
-             
+               outDen%pw(1,2) = outDen%pw(1,2)+rho11
             END DO
             !pk non-collinear (end)
          END IF
