@@ -37,6 +37,7 @@ MODULE m_available_solvers
 #else
   INTEGER,PARAMETER:: diag_chase=-207
 #endif
+  INTEGER,PARAMETER :: diag_stop=220 ! dummy solver that simply stops FLEUR
 #ifdef CPP_CUSOLVER
 INTEGER,PARAMETER:: diag_cusolver=8
 #else
@@ -101,7 +102,8 @@ CONTAINS
        IF (TRIM(juDFT_string_for_argument("-diag"))=="cusolver")   diag_solver=diag_cusolver
        IF (TRIM(juDFT_string_for_argument("-diag"))=="debugout")   diag_solver=diag_debugout
        IF (TRIM(juDFT_string_for_argument("-diag"))=="elsielpa")   diag_solver=diag_elsielpa
-       IF (TRIM(juDFT_string_for_argument("-diag"))=="elsichase")   diag_solver=diag_elsichase
+       IF (TRIM(juDFT_string_for_argument("-diag"))=="elsichase")  diag_solver=diag_elsichase
+       IF (TRIM(juDFT_string_for_argument("-diag"))=="stop")       diag_solver=diag_stop
        !Check if solver is possible
        IF (diag_solver<0)  CALL juDFT_error(&
             "You selected a solver for the eigenvalue problem that is not available",&

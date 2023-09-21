@@ -55,6 +55,7 @@ MODULE m_types_mpimat
       PROCEDURE   :: transpose => mpimat_transpose
       procedure   :: print_type => mpimat_print_type
       PROCEDURE   :: linear_problem => t_mpimat_lproblem
+      PROCEDURE   :: is_column_cyclic
       FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
    END TYPE t_mpimat
 
@@ -425,11 +426,15 @@ CONTAINS
 #ifdef CPP_SCALAPACK
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
-         IF (mat%l_real) THEN
-            CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
-         ELSE
-            CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
-         END IF
+         if (mat1%is_column_cyclic().and..not.mat%is_column_cyclic()) THEN
+            call cyclic_column_to_2Dblock_cyclic(mat1,mat,n1,n2)
+         else
+            IF (mat%l_real) THEN
+               CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+            ELSE
+               CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+            END IF
+         endif   
       CLASS DEFAULT
          CALL judft_error("Wrong datatype in copy")
       END SELECT
@@ -1069,4 +1074,70 @@ CONTAINS
       END IF
 
    END FUNCTION iafter
+
+
+   subroutine cyclic_column_to_2Dblock_cyclic(mat,mat2d,s1,s2)
+      implicit none 
+      class(t_mpimat),intent(in)   ::mat
+      class(t_mpimat),intent(inout)::mat2d
+      integer,intent(in),optional  ::s1,s2
+
+      real,allocatable::vecr(:)
+      complex,allocatable::vecc(:)
+      integer:: my_proc,num_proc,ierr
+      integer:: nprow,npcol,myrow,mycol
+      integer:: shift1,shift2
+      integer:: n1,n2,blockindex,n_col,n_row
+
+      shift1=0;shift2=0
+      if (present(s1)) shift1=s1-1
+      if (present(s2)) shift2=s2-1
+      
+      if (mat%l_real) THEN
+         allocate(vecr(mat%global_size1))
+      else 
+         allocate(vecc(mat%global_size1)) 
+      endif
+
+      !process ranks for cyclic column dist
+      call MPI_COMM_RANK(mat%blacsdata%mpi_com,my_proc,ierr)
+      call MPI_COMM_SIZE(mat%blacsdata%mpi_com,num_proc,ierr)
+      !info for 2dblock cyclic dist
+      call blacs_gridinfo(mat2d%blacsdata%blacs_desc,nprow,npcol,myrow,mycol)
+      !Now we loop over columns and BC them
+      DO n2=1,mat%global_size2          
+         if (mat%l_real) THEN
+            if (my_proc==mod(n2-1,num_proc)) vecr=mat%data_r(:,(n2-1)/num_proc+1) !This process owns the column
+            call MPI_BCAST(vecr,size(vecr),MPI_DOUBLE,mod(n2-1,num_proc),mat%blacsdata%mpi_com,ierr)   
+         else
+            if (my_proc==mod(n2-1,num_proc)) vecc=mat%data_c(:,(n2-1)/num_proc+1)
+            call MPI_BCAST(vecc,size(vecc),MPI_DOUBLE_COMPLEX,mod(n2-1,num_proc),mat%blacsdata%mpi_com,ierr)   
+         endif    
+         !Which 2d column contains the data?
+         blockindex=(n2+shift2-1)/mat2d%blacsdata%blacs_desc(6)
+         if (mycol.ne.mod(blockindex,npcol)) cycle !This process contains no data  
+         n_col=(n2+shift2)-blockindex*mat2d%blacsdata%blacs_desc(6)+ &
+               blockindex/npcol*mat2d%blacsdata%blacs_desc(6)
+         DO n1=1,mat%global_size1
+            blockindex=(n1+shift1-1)/mat2d%blacsdata%blacs_desc(5)
+            if (myrow.ne.mod(blockindex,nprow)) cycle !No data here
+            n_row=(n1+shift1)-blockindex*mat2d%blacsdata%blacs_desc(5)+ &
+                    blockindex/nprow*mat2d%blacsdata%blacs_desc(5)
+            if (mat%l_real) then 
+               mat2d%data_r(n_row,n_col)=vecr(n1)
+            else   
+               mat2d%data_c(n_row,n_col)=vecc(n1)
+            
+            end if 
+         enddo
+      ENDDO   
+   end subroutine
+
+   logical function is_column_cyclic(mat)
+      implicit none 
+      class(t_mpimat),intent(in)   ::mat
+
+      is_column_cyclic=(mat%blacsdata%blacs_desc(5)==mat%global_size1.and.mat%blacsdata%blacs_desc(6)==1)
+   end function
+
 END MODULE m_types_mpimat
