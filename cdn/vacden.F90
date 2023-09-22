@@ -899,7 +899,7 @@ CONTAINS
           ENDDO
        END IF
     ENDDO
-    DEALLOCATE (ac,bc,dt,dte,du,ddu,t,te,tei,u,ue,v,yy )
+    DEALLOCATE (ac,bc,dt,dte,t,te,tei,u,ue,v,yy )
 !    DEALLOCATE (du,ddu,due,ddue)
 
     CALL save_npy("vacxy.npy",den%vacxy)
