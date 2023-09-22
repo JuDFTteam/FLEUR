@@ -529,7 +529,7 @@ CONTAINS
                                DO imz = 1 , MIN( nzvac,vacuum%nmz )
                                   rht(imz,ivac,jspin) = &
                                        &                  rht(imz,ivac,jspin) + VALUE*EXP(-rkappa*z)
-                                  rht(imz,1,ivac,jspin) = rht(imz,1,ivac,jspin) + VALUE*EXP(-rkappa*z)
+                                  rhvac(imz,1,ivac,jspin) = rhvac(imz,1,ivac,jspin) + VALUE*EXP(-rkappa*z)
                                   z = z + vacuum%delz
 220                            ENDDO
                             ELSE
