@@ -78,13 +78,17 @@ CONTAINS
        dpz=0.0
        DO ivac = 1,vacuum%nvac
           DO ip = 1,vacuum%nmz
-             dpz(npz-ip) = den%vacz(ip,ivac,ispin)*vpot%vacz(ip,ivac,ispin)
+             !dpz(npz-ip) = den%vacz(ip,ivac,ispin)*vpot%vacz(ip,ivac,ispin)
+             dpz(npz-ip) = REAL(den%vac(ip,1,ivac,ispin))*vpot%vacz(ip,ivac,ispin)
              !         --->  WARPING REGION
           ENDDO
           DO  k2 = 2,stars%ng2
              DO  ip = 1,vacuum%nmzxy
+                !dpz(npz-ip) = dpz(npz-ip) +&
+                !     &                       stars%nstr2(k2)*den%vacxy(ip,k2-1,ivac,ispin)*&
+                !     &                          CONJG(vpot%vacxy(ip,k2-1,ivac,ispin))
                 dpz(npz-ip) = dpz(npz-ip) +&
-                     &                       stars%nstr2(k2)*den%vacxy(ip,k2-1,ivac,ispin)*&
+                     &                       stars%nstr2(k2)*den%vac(ip,k2,ivac,ispin)*&
                      &                          CONJG(vpot%vacxy(ip,k2-1,ivac,ispin))
              ENDDO
           ENDDO

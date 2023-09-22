@@ -158,16 +158,24 @@ CONTAINS
                !This PE stores vac-data
                ii = vac_start(js) - 1
                DO iv = 1, nvac
-                  vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1)) = den%vacz(:, iv, j)
-                  ii = ii + SIZE(den%vacz, 1)
-                  vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))) = RESHAPE(REAL(den%vacxy(:, :, iv, j)), (/SIZE(den%vacxy(:, :, iv, j))/))
-                  ii = ii + SIZE(den%vacxy(:, :, iv, j))
+                  !vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1)) = den%vacz(:, iv, j)
+                  vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = REAL(den%vac(:, 1, iv, j))
+                  !ii = ii + SIZE(den%vacz, 1)
+                  ii = ii + SIZE(den%vac, 1)
+                  !vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))) = RESHAPE(REAL(den%vacxy(:, :, iv, j)), (/SIZE(den%vacxy(:, :, iv, j))/))
+                  vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))) = RESHAPE(REAL(den%vac(:SIZE(den%vacxy, 1), 2:, iv, j)), &
+                                                                                               (/SIZE(den%vacxy(:, :, iv, j))/))
+                  ii = ii + SIZE(den%vacxy(:, :, iv, j)) ! TODO: AN TB; Use here nmzxyd ! ! !
                   IF ((.NOT. sym%invs2) .OR. (js == 3)) THEN
-                     vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, j))) = RESHAPE(AIMAG(den%vacxy(:, :, iv, j)), (/SIZE(den%vacxy(:, :, iv, j))/))
-                     ii = ii + SIZE(den%vacxy(:, :, iv, j))
+                     !vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, j))) = RESHAPE(AIMAG(den%vacxy(:, :, iv, j)), (/SIZE(den%vacxy(:, :, iv, j))/))
+                     vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, j))) = RESHAPE(AIMAG(den%vac(:SIZE(den%vacxy, 1), 2:, iv, j)), &
+                                                                                                  (/SIZE(den%vacxy(:, :, iv, j))/))
+                     ii = ii + SIZE(den%vacxy(:, :, iv, j)) ! TODO: AN TB; Use here nmzxyd ! ! !
                   ENDIF
                   IF (js > 2) THEN
-                     vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1)) = den%vacz(:, iv, 4)
+                     !vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1)) = den%vacz(:, iv, 4)
+                     vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = REAL(den%vac(:, 1, iv, 4))
+                     !ii = ii + SIZE(den%vacz, 1)
                      ii = ii + SIZE(den%vacz, 1)
                   ENDIF
                ENDDO
@@ -291,20 +299,28 @@ CONTAINS
                !This PE stores vac-data
                ii = vac_start(js) - 1
                DO iv = 1, nvac
-                  den%vacz(:, iv, js) = vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1))
-                  ii = ii + SIZE(den%vacz, 1)
+                  !den%vacz(:, iv, js) = vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1))
+                  den%vac(:, 1, iv, js) = vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
+                  !ii = ii + SIZE(den%vacz, 1)
+                  ii = ii + SIZE(den%vac, 1)
                   IF (sym%invs2 .AND. js < 3) THEN
-                     den%vacxy(:, :, iv, js) = RESHAPE(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), SHAPE(den%vacxy(:, :, iv, js)))
-                     ii = ii + SIZE(den%vacxy(:, :, iv, js))
+                     !den%vacxy(:, :, iv, js) = RESHAPE(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), SHAPE(den%vacxy(:, :, iv, js)))
+                     den%vac(:SIZE(den%vacxy, 1), 2:, iv, js) = RESHAPE(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), SHAPE(den%vacxy(:, :, iv, js)))
+                     ii = ii + SIZE(den%vacxy(:, :, iv, js)) ! TODO: AN TB; Use here nmzxyd ! ! !
                   ELSE
-                     den%vacxy(:, :, iv, js) = RESHAPE(CMPLX(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), &
+                     !den%vacxy(:, :, iv, js) = RESHAPE(CMPLX(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), &
+                     !                                        vec%vec_vac(ii + SIZE(den%vacxy(:, :, iv, js)) + 1:ii + 2*SIZE(den%vacxy(:, :, iv, js)))), &
+                     !                                  SHAPE(den%vacxy(:, :, iv, js)))
+                     den%vac(:SIZE(den%vacxy, 1), 2:, iv, js) = RESHAPE(CMPLX(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), &
                                                              vec%vec_vac(ii + SIZE(den%vacxy(:, :, iv, js)) + 1:ii + 2*SIZE(den%vacxy(:, :, iv, js)))), &
                                                        SHAPE(den%vacxy(:, :, iv, js)))
-                     ii = ii + 2*SIZE(den%vacxy(:, :, iv, js))
+                     ii = ii + 2*SIZE(den%vacxy(:, :, iv, js)) ! TODO: AN TB; Use here nmzxyd ! ! !
                   ENDIF
                   IF (js > 2) THEN
-                     den%vacz(:, iv, 4) = vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1))
-                     ii = ii + SIZE(den%vacz, 1)
+                     !den%vacz(:, iv, 4) = vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1))
+                     den%vac(:, 1, iv, 4) = vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
+                     !ii = ii + SIZE(den%vacz, 1)
+                     ii = ii + SIZE(den%vac, 1)
                   ENDIF
                ENDDO
             ENDIF

@@ -86,6 +86,8 @@ CONTAINS
        END DO
        resDen%vacz  = resDen%vacz  - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz
        resDen%vacxy = resDen%vacxy - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacxy
+       resDen%vac(:,1,:,:) = resDen%vac(:,1,:,:) - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz ! TODO: AN TB; REAL to COMPLEX OK?
+       resDen%vac(:,2:,:,:) = resDen%vac(:,2:,:,:) - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacxy
        IF( input%jspins == 2 ) CALL resDen%ChargeAndMagnetisationToSpins()
        ! fix the preconditioned density
        CALL outDen%addPotDen( resDen, inDen )

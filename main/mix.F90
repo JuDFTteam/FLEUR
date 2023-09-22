@@ -179,6 +179,7 @@ contains
     IF (l_dfpt) inDenIm%mt=0.0
     IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
     IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
+    IF (ALLOCATED(inDen%vac)) inden%vac=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
     IF (.NOT.l_dfpt) THEN
       CALL sm(it)%to_density(inDen)
@@ -229,8 +230,10 @@ contains
        inDen%vacz(:,2,:) = inDen%vacz(:,1,:)
        IF (sym%invs) THEN
           inDen%vacxy(:,:,2,:) = CONJG(inDen%vacxy(:,:,1,:))
+          inDen%vac(:,:,2,:) = CONJG(inDen%vac(:,:,1,:))
        ELSE
           inDen%vacxy(:,:,2,:) = inDen%vacxy(:,:,1,:)
+          inDen%vac(:,:,2,:) = inDen%vac(:,:,1,:)
        END IF
     END IF
 

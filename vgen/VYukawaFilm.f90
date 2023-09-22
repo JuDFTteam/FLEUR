@@ -67,20 +67,25 @@ module m_VYukawaFilm
  
     ! PSEUDO-CHARGE DENSITY
 
+    !call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
+    !            den%pw(:,1), den%mt(:,:,:,1), den%vacz(:,:,1), .false., VYukawa%potdenType, &
+    !            psq )
     call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
-                den%pw(:,1), den%mt(:,:,:,1), den%vacz(:,:,1), .false., VYukawa%potdenType, &
+                den%pw(:,1), den%mt(:,:,:,1), REAL(den%vac(:,1,:,1)), .false., VYukawa%potdenType, &
                 psq )
-
 
     ChooseVariant: if ( .true. ) then
 
       ! VACUUM POTENTIAL
 
+      !call VYukawaFilmVacuumVariant1( &
+      !        stars, vacuum, cell, sym, input, atoms%rmt(1), &
+      !        psq, den%vacxy(:,:,:,1), den%vacz(:,:,1), &
+      !        VYukawa%vacxy, VYukawa%vacz, alphm )
       call VYukawaFilmVacuumVariant1( &
               stars, vacuum, cell, sym, input, atoms%rmt(1), &
-              psq, den%vacxy(:,:,:,1), den%vacz(:,:,1), &
+              psq, den%vac(:vacuum%nmzxyd,2:,:,1), REAL(den%vac(:,1,:,1)), & ! TODO: AN TB; den reinpacken statt Einzelgrößen!!
               VYukawa%vacxy, VYukawa%vacz, alphm )
-
 
       ! INTERSTITIAL POTENTIAL
 
@@ -93,11 +98,14 @@ module m_VYukawaFilm
 
       ! VACUUM POTENTIAL
 
+      !call VYukawaFilmVacuumVariant2( &
+      !        stars, vacuum, cell, sym, input, 2*atoms%rmt(1), &
+      !        psq, den%vacxy(:,:,:,1), den%vacz(:,:,1), &
+      !        VYukawa%vacxy, VYukawa%vacz, alphm, dh_prec, coshdh )
       call VYukawaFilmVacuumVariant2( &
               stars, vacuum, cell, sym, input, 2*atoms%rmt(1), &
-              psq, den%vacxy(:,:,:,1), den%vacz(:,:,1), &
+              psq, den%vac(:vacuum%nmzxyd,2:,:,1), REAL(den%vac(:,1,:,1)), & ! TODO: AN TB; den reinpacken statt Einzelgrößen!!
               VYukawa%vacxy, VYukawa%vacz, alphm, dh_prec, coshdh )
-
 
       ! INTERSTITIAL POTENTIAL
 
@@ -915,7 +923,7 @@ module m_VYukawaFilm
     ! SET UP CONSTANT CHARGE DENSITY
 
     ! instead of den%pw(1,1) = qbar we directly set the pseudo charge density
-    den%mt = 0; den%pw = 0; den%vacxy = 0; den%vacz = 0    
+    den%mt = 0; den%pw = 0; den%vacxy = 0; den%vacz = 0; den%vac = 0   
     do n = 1, atoms%ntype
       den%mt(1:atoms%jri(n),0,n,1) = sfp_const * qbar * atoms%rmsh(1:atoms%jri(n),n) ** 2
     end do
