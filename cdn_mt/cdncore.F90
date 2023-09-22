@@ -156,7 +156,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
             !+gu hope this works as well
             CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
                          cell,input ,l_st,jspin,rh(:,:,jspin),&
-                         outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,vTot%pw_w,vTot%mt)
+                         outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,outDen%vac,vTot%pw_w,vTot%mt)
       ELSE IF ((fmpi%irank==0).AND.(.NOT.noco%l_noco)) THEN
          DO iType = 1,atoms%ntype
             outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(iType,jspin) / (input%jspins * cell%volint)

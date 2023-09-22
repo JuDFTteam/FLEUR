@@ -205,7 +205,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    DO ispin = 1, input%jspins
       CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
                    cell,input ,l_st,ispin,rh1(:,:,ispin),&
-                   den%pw,den%vacxy,den%mt,den%vacz)
+                   den%pw,den%vacxy,den%mt,den%vacz,den%vac)
       !roa-
    END DO
     

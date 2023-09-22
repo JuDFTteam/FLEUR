@@ -902,11 +902,6 @@ CONTAINS
     DEALLOCATE (ac,bc,dt,dte,t,te,tei,u,ue,v,yy )
 !    DEALLOCATE (du,ddu,due,ddue)
 
-    CALL save_npy("vacxy.npy",den%vacxy)
-    CALL save_npy("vacz.npy",den%vacz)
-    CALL save_npy("vac.npy",den%vac)
-    CALL juDFT_error("This is to test the commit!","vacden") !!!!!!!!!!!!!!!!!!!!!!! TODO: REVERT THIS!!!
-
     !IF(vacuum%nvac.EQ.1) THEN
     !   den%vacz(:,2,:) = den%vacz(:,1,:)
     !   IF (sym%invs) THEN
