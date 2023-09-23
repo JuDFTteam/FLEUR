@@ -58,6 +58,7 @@ CONTAINS
     REAL, ALLOCATABLE :: rxydzzr(:),rxydzzi(:),rhtxyr(:),rhtxyi(:)
     REAL, ALLOCATABLE :: rhtxc(:,:)
     COMPLEX, ALLOCATABLE :: rxydz(:,:,:),rxydzz(:,:,:),cqpw(:)
+    COMPLEX, ALLOCATABLE :: rdz(:,:,:),rdzz(:,:,:)
 
     !     ..
     !     for the noco-case only
@@ -81,10 +82,12 @@ CONTAINS
     WRITE (oUnit,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
     WRITE (oUnit,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
 
-    ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2-1,jspins),rxydzz(vacuum%nmzxyd,stars%ng2-1,jspins) )
+    ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2,jspins),rxydzz(vacuum%nmzxyd,stars%ng2,jspins) )
     ALLOCATE ( rhtdz(vacuum%nmzd,jspins),rhtdzz(vacuum%nmzd,jspins) )
+    ALLOCATE ( rdz(vacuum%nmzd,stars%ng2,jspins),rdzz(vacuum%nmzd,stars%ng2,jspins))
     !ALLOCATE ( fgxy(stars%ng2-1) )
-
+	 rxydz = CMPLX(0.0,0.0)
+	 rxydzz= CMPLX(0.0,0.0)
 
     IF (l_noco) THEN
       ALLOCATE ( magmom(0:ifftd2-1,vacuum%nmzxy) )
@@ -120,14 +123,12 @@ CONTAINS
             DO js=1,jspins
               !CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, REAL(vacz(ip,ivac,js)),0.,&
               !vacxy(ip,:,ivac,js),+1)
-              CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, REAL(vacnew(ip,1,ivac,js)),0.,&
-              vacnew(ip,2:,ivac,js),+1)
+              CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, vacnew(ip,:,ivac,js),+1)
             END DO
             IF (l_noco) THEN
               !CALL fft2d(stars, mx,my, REAL(vacz(ip,ivac,3)),AIMAG(vacz(ip,ivac,3)), &
               !vacxy(ip,:,ivac,3),+1)
-              CALL fft2d(stars, mx,my, REAL(vacnew(ip,1,ivac,3)),AIMAG(vacnew(ip,1,ivac,3)), &
-              vacnew(ip,2:,ivac,3),+1)
+              CALL fft2d(stars, mx,my, vacnew(ip,:,ivac,3),+1)
 
               DO i=0,9*stars%mx1*stars%mx2-1
                 magmom(i,ip)= mx(i)**2 + my(i)**2 + ((rho(i+idx1,1)-rho(i+idx1,2))/2.)**2
@@ -152,7 +153,8 @@ CONTAINS
              !     rhtdz(1:,js),rhtdzz(1:,js))
              CALL grdchlh(vacuum%delz,REAL(vacnew(1:vacuum%nmz,1,ivac,js)),&
                   rhtdz(1:,js),rhtdzz(1:,js))
-
+				 rdz(:,1,js) = rhtdz(1:,js)
+				 rdzz(:,1,js) = rhtdzz(1:,js)
              DO iq = 1, stars%ng2-1
                 !
                 ! calculate first (rxydz) & second (rxydzz) derivative of vacxy:
@@ -170,12 +172,13 @@ CONTAINS
                 CALL grdchlh(vacuum%delz,rhtxyi(:vacuum%nmzxy), rxydzi,rxydzzi)
 
                 DO ip=1,vacuum%nmzxy
-                   rxydz(ip,iq,js)=cmplx(rxydzr(ip),rxydzi(ip))
-                   rxydzz(ip,iq,js)=cmplx(rxydzzr(ip),rxydzzi(ip))
+                   rxydz(ip,iq+1,js)=cmplx(rxydzr(ip),rxydzi(ip))
+                   rxydzz(ip,iq+1,js)=cmplx(rxydzzr(ip),rxydzzi(ip))
                 ENDDO
 
              ENDDO ! loop over 2D stars (iq)
-
+				 rdz(:vacuum%nmzxy,2:,js) = rxydz(:vacuum%nmzxy,2:,js)
+				 rdzz(:vacuum%nmzxy,2:,js) = rxydzz(:vacuum%nmzxy,2:,js)
 
           ENDDO ! jspins
 
@@ -202,7 +205,7 @@ CONTAINS
        rd = 0.0
        !$OMP PARALLEL DEFAULT(none) &
        !$OMP SHARED(vacuum,dograds,jspins,stars,ivac,zro,cell,magmom,vacxy,vacnew) &
-       !$OMP SHARED(rhtdz,rhtdzz,rxydz,rxydzz,l_noco,dzmagmom,ddzmagmom,idx) &
+       !$OMP SHARED(rhtdz,rhtdzz,rdz,rdzz,rxydz,rxydzz,l_noco,dzmagmom,ddzmagmom,idx) &
        !$OMP SHARED(ifftd2,rho,grad) &
        !$OMP PRIVATE(ip,js,iq,cqpw,bf2,rhti,rhdx,rhdy,rhdz,rhdxx,rhdyy,rhdzz) &
        !$OMP PRIVATE(rhdxy,rhdzx,rhdyz,dxmagmom,dymagmom,ddxmagmom,ddymagmom) &
@@ -212,7 +215,7 @@ CONTAINS
        ALLOCATE ( rhdyy(0:ifftd2-1,jspins),rhdzz(0:ifftd2-1,jspins) )
        ALLOCATE ( rhdyz(0:ifftd2-1,jspins),rhdzx(0:ifftd2-1,jspins) )
        ALLOCATE ( rhdxy(0:ifftd2-1,jspins))
-       ALLOCATE ( cqpw(stars%ng2-1))
+       ALLOCATE ( cqpw(stars%ng2))
        IF (l_noco) THEN
           ALLOCATE ( dxmagmom(0:ifftd2-1),dymagmom(0:ifftd2-1) )
           ALLOCATE ( ddxmagmom(0:ifftd2-1,2),ddymagmom(0:ifftd2-1,2) )
@@ -228,9 +231,9 @@ CONTAINS
 
              DO js = 1,jspins
 
-                DO iq=1,stars%ng2-1
+                DO iq=2,stars%ng2
                    !cqpw(iq)=ImagUnit*vacxy(ip,iq,ivac,js)
-                   cqpw(iq)=ImagUnit*vacnew(ip,iq+1,ivac,js)
+                   cqpw(iq)=ImagUnit*vacnew(ip,iq,ivac,js)
                 ENDDO
 
                 rhti = 0.0                    ! d(rho)/atoms%dx is obtained by a FFT of i*gx*vacxy
@@ -239,55 +242,55 @@ CONTAINS
 
 
 
-                CALL fft2d(stars, rhdx(0,js),bf2, zro,rhti,cqpw,+1,firstderiv=[1.,0.,0.],cell=cell)
+                CALL fft2d(stars, rhdx(0,js),bf2, cqpw,+1,firstderiv=[1.,0.,0.],cell=cell)
                 !TODO    &                 pgft2x)
 
                 rhti = 0.0
                 CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*vacxy)&
-                      stars, rhdy(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.,0.],cell=cell)
+                      stars, rhdy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.,0.],cell=cell)
 
                 rhti = 0.0
                 CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
-                        stars, rhdz(0,js),bf2, rhtdz(ip,js),rhti,rxydz(ip,:,js), +1)
+                        stars, rhdz(0,js),bf2, rdz(ip,:,js), +1)
 
-                DO iq=1,stars%ng2-1
+                DO iq=2,stars%ng2
                    !cqpw(iq)=-vacxy(ip,iq,ivac,js)
-                   cqpw(iq)=-vacnew(ip,iq+1,ivac,js)
+                   cqpw(iq)=-vacnew(ip,iq,ivac,js)
                 ENDDO
 
                 rhti = 0.0
                 CALL fft2d(      &          ! d2n/dx2 = FFT(0,-gx^2*vacxy)&
-                       stars, rhdxx(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[1.0,0.,0.],secondderiv=[1.0,0.,0.],cell=cell)
+                       stars, rhdxx(0,js),bf2, cqpw, +1,firstderiv=[1.0,0.,0.],secondderiv=[1.0,0.,0.],cell=cell)
 
                 rhti = 0.0
                 CALL fft2d(       &          ! d2n/dy2 = FFT(0,-gy^2*vacxy)&
-                      stars, rhdyy(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[0.,1.0,0.],cell=cell)
+                      stars, rhdyy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[0.,1.0,0.],cell=cell)
 
                 rhti = 0.0
                 CALL fft2d(        &         ! d2n/dz2 = FFT(rhtdzz,rxydzz)&
-                       stars, rhdzz(0,js),bf2, rhtdzz(ip,js),rhti,rxydzz(ip,:,js), +1)
+                       stars, rhdzz(0,js),bf2, rdzz(ip,:,js), +1)
 
 
-                DO iq=1,stars%ng2-1
+                DO iq=2,stars%ng2
                    cqpw(iq)=ImagUnit*rxydz(ip,iq,js)
                 ENDDO
 
                 rhti = 0.0
                 CALL fft2d(         &         ! d2n/dyz = FFT(0,i*gy*rxydz)&
-                       stars, rhdyz(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell)
+                       stars, rhdyz(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell)
 
                 rhti = 0.0
                 CALL fft2d(          &        ! d2n/dzx = FFT(0,i*gx*rxydz)&
-                       stars, rhdzx(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[1.,0.0,0.],cell=cell)
+                       stars, rhdzx(0,js),bf2, cqpw, +1,firstderiv=[1.,0.0,0.],cell=cell)
 
-                DO iq=1,stars%ng2-1
+                DO iq=2,stars%ng2
                    !cqpw(iq)=-vacxy(ip,iq,ivac,js)
-                   cqpw(iq)=-vacnew(ip,iq+1,ivac,js)
+                   cqpw(iq)=-vacnew(ip,iq,ivac,js)
                 ENDDO
 
                 rhti = 0.0
                 CALL fft2d(           &    ! d2n/dxy = FFT(0,-gx*gy*vacxy)&
-                      stars, rhdxy(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[1.,0.0,0.],cell=cell)
+                      stars, rhdxy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[1.,0.0,0.],cell=cell)
 
              END DO ! js=1,jspins
 
@@ -438,12 +441,11 @@ CONTAINS
     INTEGER,INTENT(IN)        :: ifft2d
     complex,intent(INOUT)     :: vac(:,:,:,:)
 
-    REAL                    :: fgz,rhti
-    COMPLEX, ALLOCATABLE    :: fgxy(:)
+    COMPLEX, ALLOCATABLE    :: fg(:)
     REAL, ALLOCATABLE       :: bf2(:)
     INTEGER                 :: js,irec2,idx,ivac,ip
 
-    ALLOCATE ( fgxy(stars%ng2-1),bf2(ifft2d) )
+    ALLOCATE ( fg(stars%ng2),bf2(ifft2d) )
 
     DO js = 1,size(v_xc,2)
       idx=1
@@ -453,18 +455,18 @@ CONTAINS
           !           ----> 2-d back fft to g space
           !
           bf2=0.0
-          CALL fft2d(stars, v_xc(idx:idx-1+ifft2d,js),bf2, fgz,rhti,fgxy, -1)
+          CALL fft2d(stars, v_xc(idx:idx-1+ifft2d,js),bf2, fg, -1)
           idx=idx+ifft2d
           !            ----> and add vxc to coulomb potential
           !                  the g||.eq.zero component is added to vxc%vacz
           !
           !vxc%vacz(ip,ivac,js) = fgz + vxc%vacz(ip,ivac,js)
-          vac(ip,1,ivac,js) = fgz + vac(ip,1,ivac,js)
+          vac(ip,1,ivac,js) = fg(1) + vac(ip,1,ivac,js)
           !
           !            the g||.ne.zero components are added to vxc%vacxy
           !
           DO irec2 = 2,stars%ng2
-            vac(ip,irec2,ivac,js)=vac(ip,irec2,ivac,js)+fgxy(irec2-1)
+            vac(ip,irec2,ivac,js)=vac(ip,irec2,ivac,js)+fg(irec2)
           ENDDO
         enddo
 

@@ -162,6 +162,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE        :: qpw(:,:), qpww(:,:), rhtxy(:,:,:,:)
       COMPLEX, ALLOCATABLE        :: cdom(:), cdomw(:), cdomvz(:,:), cdomvxy(:,:,:)
       complex :: mat(2,2)
+      COMPLEX :: rhfull(stars%ng2)
 
       zero  = 0.0; czero = CMPLX(0.0,0.0)
       ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
@@ -330,8 +331,10 @@ CONTAINS
             DO ivac = 1,vacuum%nvac
                DO imz = 1,vacuum%nmzxyd
                   rziw = 0.0
+                  rhfull(1) = rht(imz,ivac,iden)
+                  rhfull(2:)= rhtxy(imz,:,ivac,iden)
                   CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, &
-                             rht(imz,ivac,iden), rziw, rhtxy(imz,:,ivac,iden), &
+                             rhfull, &
                               1)
                END DO
             END DO
@@ -342,8 +345,10 @@ CONTAINS
                rziw = 0.0
                vz_r = REAL(cdomvz(imz,ivac))
                vz_i = AIMAG(cdomvz(imz,ivac))
+               rhfull(1) = cdomvz(imz,ivac)
+               rhfull(2:)= cdomvxy(imz,:,ivac)
                CALL fft2d(stars, rvacxy(0,imz,ivac,3), rvacxy(0,imz,ivac,4), &
-                          vz_r, vz_i, cdomvxy(imz,:,ivac),  1)
+                          rhfull,  1)
             END DO
          END DO
 
@@ -395,8 +400,10 @@ CONTAINS
             DO ivac = 1,vacuum%nvac
                DO imz = 1,vacuum%nmzxyd
                   fftwork=zero
+                  rhfull(1) = rht(imz,ivac,iden)
+                  rhfull(2:)= rhtxy(imz,:,ivac,iden)
                   CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, &
-                             rht(imz,ivac,iden), rziw, rhtxy(imz,:,ivac,iden), &
+                             rhfull, &
                               -1)
                END DO
             END DO

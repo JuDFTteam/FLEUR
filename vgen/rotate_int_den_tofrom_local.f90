@@ -145,7 +145,7 @@ CONTAINS
                   !     den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,:,ivac,iden),&
                   !     1)
                   CALL fft2d(stars,rvacxy(:,imz,ivac,iden),fftwork,&
-                       REAL(den%vac(imz,1,ivac,iden)),rziw,den%vac(imz,2:,ivac,iden),&
+                       den%vac(imz,:,ivac,iden),&
                        1)
             END DO
          END DO
@@ -163,7 +163,7 @@ CONTAINS
                !CALL fft2d(stars,rvacxy(:,imz,ivac,3),rvacxy(:,imz,ivac,4),&
                !     vz_r,vz_i,den%vacxy(imz,:,ivac,3),1)
                CALL fft2d(stars,rvacxy(:,imz,ivac,3),rvacxy(:,imz,ivac,4),&
-                    vz_r,vz_i,den%vac(imz,2:,ivac,3),1)
+                    den%vac(imz,:,ivac,3),1)
             
          END DO
       END DO
@@ -235,8 +235,8 @@ CONTAINS
                   !     den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,:,ivac,jspin),&
                   !     -1)
                   CALL fft2d(stars,rvacxy(:,imz,ivac,jspin),fftwork,&
-                       REAL(den%vac(imz,1,ivac,jspin)),rziw,den%vac(imz,2:,ivac,jspin),&
-                       -1) ! TODO: AN, TB: This likely won't work. Dummygröße schreiben/fft2d fixen!
+                       den%vac(imz,:,ivac,jspin),&
+                       -1)
                
             END DO
          END DO
@@ -350,7 +350,7 @@ CONTAINS
                vziw = 0.0
                ! 
                   CALL fft2d(stars, vvacxy(:,imz,ivac,jspin),fftwork,&
-                       REAL(vTot%vac(imz,1,ivac,jspin)),vziw,vTot%vac(imz,2:,ivac,jspin), 1)
+                       vTot%vac(imz,:,ivac,jspin), 1)
                
             END DO
          END DO
@@ -398,7 +398,7 @@ CONTAINS
                fftwork=0.0
                ! 
                   CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
-                       REAL(vTot%vac(imz,1,ivac,ipot)),vziw,vTot%vac(imz,2:,ivac,ipot),-1)
+                       vTot%vac(imz,:,ivac,ipot),-1)
                
             END DO
          END DO
@@ -409,7 +409,7 @@ CONTAINS
             fftwork=0.0
             ! 
                CALL fft2d(stars, vvacxy(:,imz,ivac,3),vvacxy(:,imz,ivac,4),&
-                    REAL(vTot%vac(imz,1,ivac,3)),AIMAG(vTot%vac(imz,1,ivac,3)),vTot%vac(imz,2:,ivac,3),-1)
+                    vTot%vac(imz,:,ivac,3),-1)
             
          END DO
       END DO
