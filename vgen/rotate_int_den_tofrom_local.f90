@@ -78,10 +78,12 @@ CONTAINS
       IF (ALLOCATED(den%phi_pw)) THEN
          DEALLOCATE(den%phi_pw,den%phi_vacz,den%phi_vacxy)
          DEALLOCATE(den%theta_pw,den%theta_vacz,den%theta_vacxy)
+         DEALLOCATE(den%theta_vac,den%phi_vac)
       END IF
 
       ALLOCATE(den%phi_pw(ifft3),den%theta_pw(ifft3))
       ALLOCATE(den%phi_vacz(vacuum%nmzd,2),den%theta_vacz(vacuum%nmzd,2))
+      ALLOCATE(den%phi_vac(ifft2,vacuum%nmzd,2),den%theta_vac(ifft2,vacuum%nmzd,2))
       ALLOCATE(den%phi_vacxy(ifft2,vacuum%nmzxyd,2),den%theta_vacxy(ifft2,vacuum%nmzxyd,2))
 
       ALLOCATE (ris(ifft3,4),fftwork(ifft3))
@@ -201,7 +203,7 @@ CONTAINS
             rho_11   = REAL(den%vac(imz,1,ivac,1))
             rho_22   = REAL(den%vac(imz,1,ivac,2))
             rho_21r  = REAL(den%vac(imz,1,ivac,3))
-            rho_21i  = REAL(den%vac(imz,1,ivac,4))
+            rho_21i  = AIMAG(den%vac(imz,1,ivac,3))
             mx       =  2*rho_21r
             my       = -2*rho_21i
             mz       = rho_11 - rho_22

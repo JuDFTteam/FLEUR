@@ -7,7 +7,7 @@ MODULE m_vac_tofrom_grid
       INTEGER,PARAMETER :: fixed_ndvgrd=6
 
 CONTAINS
-  subroutine vac_to_grid(dograds,ifftd2,jspins,vacuum,l_noco,cell,vacxy,vacz,stars,rho,grad)
+  subroutine vac_to_grid(dograds,ifftd2,jspins,vacuum,l_noco,cell,vacxy,vacz,vacnew,stars,rho,grad)
 
 
     !-----------------------------------------------------------------------
@@ -38,6 +38,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)      :: cell
     COMPLEX,INTENT(IN)    :: vacxy(:,:,:,:)
     REAL,INTENT(IN)    :: vacz(:,:,:)
+    COMPLEX,INTENT(IN)    :: vacnew(:,:,:,:)
     TYPE(t_gradients),INTENT(INOUT)::grad
     real,intent(OUT)             :: rho(:,:)
     !     .. Scalar Arguments ..
@@ -117,12 +118,16 @@ CONTAINS
           !idx1=(ivac-1)* ( vacuum%nmzxy * ifftd2 + nmzdiff ) + 1
           DO ip=1,vacuum%nmzxy
             DO js=1,jspins
-              CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, vacz(ip,ivac,js),0.,&
-              vacxy(ip,:,ivac,js),+1)
+              !CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, REAL(vacz(ip,ivac,js)),0.,&
+              !vacxy(ip,:,ivac,js),+1)
+              CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, REAL(vacnew(ip,1,ivac,js)),0.,&
+              vacnew(ip,2:,ivac,js),+1)
             END DO
             IF (l_noco) THEN
-              CALL fft2d(stars, mx,my, vacz(ip,ivac,3),vacz(ip,ivac,4), &
-              vacxy(ip,:,ivac,3),+1)
+              !CALL fft2d(stars, mx,my, REAL(vacz(ip,ivac,3)),AIMAG(vacz(ip,ivac,3)), &
+              !vacxy(ip,:,ivac,3),+1)
+              CALL fft2d(stars, mx,my, REAL(vacnew(ip,1,ivac,3)),AIMAG(vacnew(ip,1,ivac,3)), &
+              vacnew(ip,2:,ivac,3),+1)
 
               DO i=0,9*stars%mx1*stars%mx2-1
                 magmom(i,ip)= mx(i)**2 + my(i)**2 + ((rho(i+idx1,1)-rho(i+idx1,2))/2.)**2
@@ -143,7 +148,9 @@ CONTAINS
              !
              ! calculate first (rhtdz) & second (rhtdzz) derivative of vacz(1:nmz)
              !
-             CALL grdchlh(vacuum%delz,vacz(1:vacuum%nmz,ivac,js),&
+             !CALL grdchlh(vacuum%delz,REAL(vacz(1:vacuum%nmz,ivac,js)),&
+             !     rhtdz(1:,js),rhtdzz(1:,js))
+             CALL grdchlh(vacuum%delz,REAL(vacnew(1:vacuum%nmz,1,ivac,js)),&
                   rhtdz(1:,js),rhtdzz(1:,js))
 
              DO iq = 1, stars%ng2-1
@@ -151,12 +158,14 @@ CONTAINS
                 ! calculate first (rxydz) & second (rxydzz) derivative of vacxy:
                 !
                 DO ip=1,vacuum%nmzxy
-                   rhtxyr(ip)=vacxy(ip,iq,ivac,js)
+                   !rhtxyr(ip)=vacxy(ip,iq,ivac,js)
+                   rhtxyr(ip)=real(vacnew(ip,iq+1,ivac,js))
                 ENDDO
                 CALL grdchlh(vacuum%delz,rhtxyr(:vacuum%nmzxy), rxydzr,rxydzzr)
 
                 DO ip=1,vacuum%nmzxy
-                   rhtxyi(ip)=aimag(vacxy(ip,iq,ivac,js))
+                   !rhtxyi(ip)=aimag(vacxy(ip,iq,ivac,js))
+                   rhtxyi(ip)=aimag(vacnew(ip,iq+1,ivac,js))
                 ENDDO
                 CALL grdchlh(vacuum%delz,rhtxyi(:vacuum%nmzxy), rxydzi,rxydzzi)
 
@@ -192,7 +201,7 @@ CONTAINS
        CALL timestart("warp")
        rd = 0.0
        !$OMP PARALLEL DEFAULT(none) &
-       !$OMP SHARED(vacuum,dograds,jspins,stars,ivac,zro,cell,magmom,vacxy) &
+       !$OMP SHARED(vacuum,dograds,jspins,stars,ivac,zro,cell,magmom,vacxy,vacnew) &
        !$OMP SHARED(rhtdz,rhtdzz,rxydz,rxydzz,l_noco,dzmagmom,ddzmagmom,idx) &
        !$OMP SHARED(ifftd2,rho,grad) &
        !$OMP PRIVATE(ip,js,iq,cqpw,bf2,rhti,rhdx,rhdy,rhdz,rhdxx,rhdyy,rhdzz) &
@@ -220,7 +229,8 @@ CONTAINS
              DO js = 1,jspins
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=ImagUnit*vacxy(ip,iq,ivac,js)
+                   !cqpw(iq)=ImagUnit*vacxy(ip,iq,ivac,js)
+                   cqpw(iq)=ImagUnit*vacnew(ip,iq+1,ivac,js)
                 ENDDO
 
                 rhti = 0.0                    ! d(rho)/atoms%dx is obtained by a FFT of i*gx*vacxy
@@ -241,7 +251,8 @@ CONTAINS
                         stars, rhdz(0,js),bf2, rhtdz(ip,js),rhti,rxydz(ip,:,js), +1)
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=-vacxy(ip,iq,ivac,js)
+                   !cqpw(iq)=-vacxy(ip,iq,ivac,js)
+                   cqpw(iq)=-vacnew(ip,iq+1,ivac,js)
                 ENDDO
 
                 rhti = 0.0
@@ -270,7 +281,8 @@ CONTAINS
                        stars, rhdzx(0,js),bf2, zro,rhti,cqpw, +1,firstderiv=[1.,0.0,0.],cell=cell)
 
                 DO iq=1,stars%ng2-1
-                   cqpw(iq)=-vacxy(ip,iq,ivac,js)
+                   !cqpw(iq)=-vacxy(ip,iq,ivac,js)
+                   cqpw(iq)=-vacnew(ip,iq+1,ivac,js)
                 ENDDO
 
                 rhti = 0.0
@@ -370,13 +382,18 @@ CONTAINS
        DO ip=nmz0,vacuum%nmz
           IF (.not. l_noco) THEN
              DO js=1,jspins
-                rho(idx+ip-nmz0,js)= vacz(ip,ivac,js)
+                !rho(idx+ip-nmz0,js)= REAL(vacz(ip,ivac,js))
+                rho(idx+ip-nmz0,js)= REAL(vacnew(ip,1,ivac,js))
              END DO
           ELSE
-             mx(0) = vacz(ip,ivac,3)
-             my(0) = vacz(ip,ivac,4)
-             chdens= (vacz(ip,ivac,1)+vacz(ip,ivac,2))/2.
-             magmom(0,1)= mx(0)**2 + my(0)**2 + ((vacz(ip,ivac,1)-vacz(ip,ivac,2))/2.)**2
+             !mx(0) = REAL(vacz(ip,ivac,3))
+             mx(0) = REAL(vacnew(ip,1,ivac,3))
+             !my(0) = AIMAG(vacz(ip,ivac,3))
+             my(0) = AIMAG(vacnew(ip,1,ivac,3))
+             !chdens= (REAL(vacz(ip,ivac,1))+REAL(vacz(ip,ivac,2)))/2
+             chdens= (REAL(vacnew(ip,1,ivac,1))+REAL(vacnew(ip,1,ivac,2)))/2
+             !magmom(0,1)= mx(0)**2 + my(0)**2 + ((REAL(vacz(ip,ivac,1))-REAL(vacz(ip,ivac,2)))/2.)**2
+             magmom(0,1)= mx(0)**2 + my(0)**2 + ((REAL(vacnew(ip,1,ivac,1))-REAL(vacnew(ip,1,ivac,2)))/2.)**2
              magmom(0,1)= SQRT(magmom(0,1))
              rho(idx+ip-nmz0,1)= chdens + magmom(0,1)
              rho(idx+ip-nmz0,2)= chdens - magmom(0,1)

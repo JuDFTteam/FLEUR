@@ -514,11 +514,12 @@ CONTAINS
 
 
 
-  SUBROUTINE mix(enpara,fmpi_comm,atoms,vacuum,input,vr,vz)
+  SUBROUTINE mix(enpara,fmpi_comm,atoms,vacuum,input,pot)
     !------------------------------------------------------------------
     USE m_types_atoms
     USE m_types_input
     USE m_types_vacuum
+    USE m_types_potden
     USE m_constants
 #ifdef CPP_MPI
     USE mpi
@@ -529,9 +530,10 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_input),INTENT(IN)       :: input
+    TYPE(t_potden),INTENT(IN)      :: pot
 
-    REAL,    INTENT(IN) :: vr(:,:,:)
-    REAL,    INTENT(IN) :: vz(vacuum%nmzd,2)
+    !REAL,    INTENT(IN) :: vr(:,:,:)
+    !REAL,    INTENT(IN) :: vz(vacuum%nmzd,2)
 
     INTEGER ityp,j,l,lo,jsp,n
     REAL    vbar,maxdist,maxdist2
@@ -603,7 +605,7 @@ CONTAINS
              !Shift if floating energy parameters are used
              IF (enpara%floating) THEN
                 j = atoms%jri(ityp) - (LOG(4.0)/atoms%dx(ityp)+1.51)
-                vbar = vr(j,ityp,jsp)/( atoms%rmt(ityp)*EXP(atoms%dx(ityp)*(j-atoms%jri(ityp))) )
+                vbar = pot%mt(j,0,ityp,jsp)/( atoms%rmt(ityp)*EXP(atoms%dx(ityp)*(j-atoms%jri(ityp))) )
                 enpara%el0(:,n,jsp)=enpara%el0(:,n,jsp)-vbar
              ENDIF
           END DO
@@ -621,7 +623,7 @@ CONTAINS
                 END IF
              END DO
              IF (vacuum%nvac==1) enpara%evac(2,jsp) = enpara%evac(1,jsp)
-             IF (enpara%floating) enpara%evac(:,jsp)=enpara%evac(:,jsp)-vz(:,jsp)
+             IF (enpara%floating) enpara%evac(:,jsp)=enpara%evac(:,jsp)-REAL(pot%vac(:,1,1,jsp)) ! This is broken!!!
           ENDIF
           WRITE(oUnit,'(a36,f12.6)') 'Max. mismatch of energy parameters:', maxdist
        END DO

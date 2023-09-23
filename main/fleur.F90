@@ -621,7 +621,7 @@ CONTAINS
          CALL forcetheo%postprocess()
 
          !CALL enpara%mix(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vTot%mt(:, 0, :, :), vtot%vacz)
-         CALL enpara%mix(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vTot%mt(:, 0, :, :), REAL(vtot%vac(:,1,:,:)))
+         CALL enpara%mix(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vTot)
          field2 = fi%field
 
          ! mix input and output densities

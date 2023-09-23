@@ -85,13 +85,13 @@ contains
         !call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
         !    & den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq )
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & den%pw(:,ispin), den%mt(:,:,:,ispin), REAL(den%vac(:,1,:,ispin)), .false., vCoul%potdenType, psq )
+            & den, ispin, .false., vCoul%potdenType, psq )
     ELSE
         !call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
         !    & den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq,&
         !    & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) )
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & den%pw(:,ispin), den%mt(:,:,:,ispin), REAL(den%vac(:,1,:,ispin)), .false., vCoul%potdenType, psq,&
+            & den, ispin, .false., vCoul%potdenType, psq,&
             & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) ) ! TODO: AN TB; REAL streichen und komplexe Vz erlauben
       !if ( fmpi%irank == 0 ) call save_npy(int2str(iDtype)//"_"//int2str(iDir)//"psq.npy",psq)
     END IF

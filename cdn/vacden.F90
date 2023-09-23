@@ -838,7 +838,7 @@ CONTAINS
                          uej = ue(jz,l1,jspin)
                          t1jz(jz) = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
                       ENDDO
-                      !$OMP CRITICAL (denvacxy,denvac)
+                      !$OMP CRITICAL ! (denvacxy,denvac)
                       den%vacxy(:vacuum%nmzxy,ind2-1,ivac,jspin)  = den%vacxy(:vacuum%nmzxy,ind2-1, ivac,jspin) &
                                + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
                       den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) = den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) &
@@ -847,7 +847,7 @@ CONTAINS
                              + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
                       den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) = den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) &
                              + CONJG(t1jz(:vacuum%nmzxy))*phsp/stars%nstr2(ind2p)
-                      !$OMP END CRITICAL (denvacxy,denvac)
+                      !$OMP END CRITICAL ! (denvacxy,denvac)
                    ENDDO
                 END DO
                 !$OMP END DO

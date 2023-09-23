@@ -11,7 +11,7 @@ MODULE m_fleur_vdW
 CONTAINS
   SUBROUTINE fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,      &
    cell,sym ,vacuum,results,    &
-   qpw,rho,vpw_total,vr_total)
+   den,vpw_total,vr_total)
     !Interface to Juelich vdW-code
     USE m_types
     USE m_constants
@@ -32,10 +32,11 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sym),INTENT(IN)       :: sym
+    TYPE(t_potden),INTENT(INOUT) :: den
      
     TYPE(t_results),INTENT(INOUT) :: results
-    COMPLEX,INTENT(in)     :: qpw(:)
-    REAL,INTENT(inout)     :: rho(:,:,:)
+    !COMPLEX,INTENT(in)     :: qpw(:)
+    !REAL,INTENT(inout)     :: rho(:,:,:)
     COMPLEX,INTENT(inout)  :: vpw_total(:)
     REAL,INTENT(inout)     :: vr_total(:,:,:,:)
 
@@ -52,8 +53,8 @@ CONTAINS
 
     l_core=.FALSE. !try to subtract core charge?
     ALLOCATE(n_grid(27*stars%mx1*stars%mx2*stars%mx3),v_grid(27*stars%mx1*stars%mx2*stars%mx3))
-    ALLOCATE(vpw(SIZE(qpw)))
-    ALLOCATE(psq(SIZE(qpw)),rhc(atoms%jmtd,atoms%ntype,input%jspins))
+    ALLOCATE(vpw(stars%ng3))
+    ALLOCATE(psq(stars%ng3),rhc(atoms%jmtd,atoms%ntype,input%jspins))
 
     IF (l_core) l_core = isCoreDensityPresent()
 
@@ -65,7 +66,7 @@ CONTAINS
           DO n=1,atoms%ntype
              ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/atoms%rmsh(1,n) ) / atoms%dx(n) + 1 )
              ncmsh = MIN( ncmsh, atoms%msh )
-             rho(:,1,n) = rho(:,1,n) - rhc(:SIZE(rho,1),n,j)/(4. * SQRT( ATAN (1.) ))
+             den%mt(:,1,n,1) = den%mt(:,1,n,1) - rhc(:SIZE(den%mt,1),n,j)/(4. * SQRT( ATAN (1.) ))
           ENDDO
        ENDDO
     ENDIF
@@ -76,7 +77,7 @@ CONTAINS
     CALL psqpw(fmpi,&
          atoms_tmp,sphhar,stars,vacuum,&
          cell,input,sym ,&
-         qpw,rho,(/0.,0./),.TRUE.,2,psq)
+         den,1,.TRUE.,2,psq)
 
     !put pseudo charge on real-space grid
     !use v_pot for imaginary part

@@ -71,7 +71,7 @@ module m_VYukawaFilm
     !            den%pw(:,1), den%mt(:,:,:,1), den%vacz(:,:,1), .false., VYukawa%potdenType, &
     !            psq )
     call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
-                den%pw(:,1), den%mt(:,:,:,1), REAL(den%vac(:,1,:,1)), .false., VYukawa%potdenType, &
+                den, 1, .false., VYukawa%potdenType, &
                 psq )
 
     ChooseVariant: if ( .true. ) then

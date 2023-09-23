@@ -17,7 +17,7 @@ module m_psqpw
 contains
 
   subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-       &     qpw, rho, rht, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
+       &     den, ispin, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
 
 #ifdef CPP_MPI
     use mpi
@@ -43,12 +43,13 @@ contains
     type(t_cell),       intent(in)  :: cell
     type(t_input),      intent(in)  :: input
     type(t_sym),        intent(in)  :: sym
+    type(t_potden),     intent(in)  :: den
      
     logical,            intent(in)  :: l_xyav
-    complex,            intent(in)  :: qpw(stars%ng3)
-    real,               intent(in)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    real,               intent(in)  :: rht(vacuum%nmzd,2)
-    integer,            intent(in)  :: potdenType
+    !complex,            intent(in)  :: qpw(stars%ng3)
+    !real,               intent(in)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    !real,               intent(in)  :: rht(vacuum%nmzd,2)
+    integer,            intent(in)  :: potdenType, ispin
     complex,            intent(out) :: psq(stars%ng3)
 
     REAL, OPTIONAL, INTENT(IN)      :: rhoimag(atoms%jmtd,0:sphhar%nlhd,atoms%ntype), rho0(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
@@ -70,6 +71,9 @@ contains
     real                            :: rht1(vacuum%nmz)
     real, allocatable, dimension(:) :: il, kl
     real                            :: g0(atoms%ntype)
+    complex                         :: qpw(stars%ng3)
+    real                            :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    real                            :: rht(vacuum%nmzd,2)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
 
 #ifdef CPP_MPI
@@ -77,6 +81,9 @@ contains
 #endif
 
     l_dfptvgen = PRESENT(stars2)
+    qpw = den%pw(:,ispin)
+    rho = den%mt(:,:,:,ispin)
+    IF (input%film) rht = REAL(den%vac(:,1,:,ispin))
 
     ! Calculate multipole moments
     call timestart("mpmom")
