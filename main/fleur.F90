@@ -337,8 +337,8 @@ CONTAINS
             CALL inDen%SpinsToChargeAndMagnetisation()
             inDen%mt(:, 0:, :, 2:4) = sfscale*inDen%mt(:, 0:, :, 2:4)
             inDen%pw(:, 2:3) = sfscale*inDen%pw(:, 2:3)
-            inDen%vacz(:, :, 2:4) = sfscale*inDen%vacz(:, :, 2:4)
-            inDen%vacxy(:, :, :, 2:3) = sfscale*inDen%vacxy(:, :, :, 2:3)
+            !inDen%vacz(:, :, 2:4) = sfscale*inDen%vacz(:, :, 2:4)
+            !inDen%vacxy(:, :, :, 2:3) = sfscale*inDen%vacxy(:, :, :, 2:3)
             inDen%vac(:, :, :, 2:3) = sfscale*inDen%vac(:, :, :, 2:3)
             CALL inDen%ChargeAndMagnetisationToSpins()
          END IF
@@ -353,8 +353,8 @@ CONTAINS
             CALL inDen%SpinsToChargeAndMagnetisation()
             inDen%mt(:, 0:, :, 2:4) = inDen%mt(:, 0:, :, 2:4)/sfscale
             inDen%pw(:, 2:3) = inDen%pw(:, 2:3)/sfscale
-            inDen%vacz(:, :, 2:4) = inDen%vacz(:, :, 2:4)/sfscale
-            inDen%vacxy(:, :, :, 2:3) = inDen%vacxy(:, :, :, 2:3)/sfscale
+            !inDen%vacz(:, :, 2:4) = inDen%vacz(:, :, 2:4)/sfscale
+            !inDen%vacxy(:, :, :, 2:3) = inDen%vacxy(:, :, :, 2:3)/sfscale
             inDen%vac(:, :, :, 2:3) = inDen%vac(:, :, :, 2:3)/sfscale
             CALL inDen%ChargeAndMagnetisationToSpins()
          END IF

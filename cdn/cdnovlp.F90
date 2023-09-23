@@ -18,7 +18,7 @@ MODULE m_cdnovlp
    PUBLIC :: cdnovlp 
 CONTAINS
    SUBROUTINE cdnovlp(fmpi, sphhar, stars, atoms, sym, vacuum,cell, input, &
-                        l_st, jspin, rh, qpw, rhtxy, rho, rht, rhvac, vpw, vr)
+                        l_st, jspin, rh, qpw, rho, rhvac, vpw, vr)
       !--------------------------------------------------------------------------
       !     calculates the overlapping core tail density and adds
       !     its contribution to the corresponging components of
@@ -123,9 +123,8 @@ CONTAINS
           COMPLEX,INTENT(IN),OPTIONAL :: vpw(:,:)
           REAL,INTENT(IN),OPTIONAL :: vr(:,0:,:,:)
           COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,input%jspins)
-          COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins), rhvac(vacuum%nmzd,stars%ng2,2,input%jspins)
+          COMPLEX,INTENT (INOUT) :: rhvac(vacuum%nmzd,stars%ng2,2,input%jspins)
           REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-          REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
           REAL,   INTENT (INOUT) :: rh(atoms%msh,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
@@ -527,15 +526,11 @@ CONTAINS
                             z = 0. 
                             IF ( k.EQ.1 ) THEN
                                DO imz = 1 , MIN( nzvac,vacuum%nmz )
-                                  rht(imz,ivac,jspin) = &
-                                       &                  rht(imz,ivac,jspin) + VALUE*EXP(-rkappa*z)
                                   rhvac(imz,1,ivac,jspin) = rhvac(imz,1,ivac,jspin) + VALUE*EXP(-rkappa*z)
                                   z = z + vacuum%delz
 220                            ENDDO
                             ELSE
                                DO imz = 1 , MIN( nzvac,vacuum%nmzxy )
-                                  rhtxy(imz,k-1,ivac,jspin) = &
-                                       &                  rhtxy(imz,k-1,ivac,jspin) + VALUE*EXP(-rkappa*z)
                                   rhvac(imz,k,ivac,jspin) = rhvac(imz,k,ivac,jspin) + VALUE*EXP(-rkappa*z)
                                   z = z + vacuum%delz
 230                            ENDDO

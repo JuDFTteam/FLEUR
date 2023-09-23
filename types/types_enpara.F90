@@ -267,21 +267,21 @@ CONTAINS
           DO ivac = 1,vacuum%nvac
              vz0 = 0.0
              IF (enpara%floating) THEN
-                vz0 = v%vacz(1,ivac,jsp)
+                vz0 = REAL(v%vac(1,1,ivac,jsp))
                 IF (fmpi%irank.EQ.0) THEN
                    WRITE (oUnit,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0
                 ENDIF
              ENDIF
              enpara%evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0
              IF (.NOT.l_enpara) THEN
-                enpara%evac(ivac,jsp) = v%vacz(vacuum%nmz,ivac,jsp) + enpara%evac0(ivac,jsp)
+                enpara%evac(ivac,jsp) = REAL(v%vac(vacuum%nmz,1,ivac,jsp)) + enpara%evac0(ivac,jsp)
              END IF
              IF (fmpi%irank.EQ.0) THEN
                 attributes = ''
                 WRITE(attributes(1),'(i0)') ivac
                 WRITE(attributes(2),'(i0)') jsp
-                WRITE(attributes(3),'(f16.10)') v%vacz(1,ivac,jsp)
-                WRITE(attributes(4),'(f16.10)') v%vacz(vacuum%nmz,ivac,jsp)
+                WRITE(attributes(3),'(f16.10)') REAL(v%vac(1,1,ivac,jsp))
+                WRITE(attributes(4),'(f16.10)') REAL(v%vac(vacuum%nmz,1,ivac,jsp))
                 WRITE(attributes(5),'(f16.10)') enpara%evac(ivac,jsp)
                 CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf ','value '/),&
                      attributes(1:5),RESHAPE((/6+4,4,4,5,5+13,8,1,16,16,16/),(/5,2/)))

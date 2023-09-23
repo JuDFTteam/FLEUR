@@ -4,7 +4,7 @@ module m_vvac
    ! for general symmetry.          c.l.fu, r.podloucky             *
    ! ****************************************************************
 contains
-   subroutine vvac( vacuum, stars, cell,  input, field, psq, rht, vz, rhobar, sig1dh, vz1dh ,vslope)
+   subroutine vvac( vacuum, stars, cell,  input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh ,vslope)
       use m_constants
       use m_qsf
       use m_types
@@ -20,7 +20,7 @@ contains
       complex,        intent(in)  :: psq(stars%ng3)
       real,           intent(in)  :: rht(vacuum%nmzd,2)
       
-      real,           intent(out) :: vz(vacuum%nmzd,2)
+      complex,        intent(out) :: vnew(vacuum%nmzd,2)
       complex,        intent(out) :: rhobar
       real,           intent(out) :: sig1dh, vz1dh
       complex,        intent(out) :: vslope
@@ -30,7 +30,7 @@ contains
       integer                     :: ig3, imz, ivac, ncsh
       real                        :: f(vacuum%nmzd), sig(vacuum%nmzd), vtemp(vacuum%nmzd)
 
-      vz(:,1:vacuum%nvac) = 0.0 ! initialize potential
+      vnew(:,1:vacuum%nvac) = 0.0 ! initialize potential
 
       ! obtain mesh point (ncsh) of charge sheet for external electric field
       ncsh = field%efield%zsigma / vacuum%delz + 1.01
@@ -56,7 +56,7 @@ contains
       end do ! --> qzh, bj0, bj1, psq finished; rhobar, sumq passed on and unchanged
     
       ! lower (nvac=2) vacuum
-      if ( vacuum%nvac == 2 ) vz(1:vacuum%nmz,2) =  sumq
+      if ( vacuum%nvac == 2 ) vnew(1:vacuum%nmz,2) =  sumq
     
       ! g=0 vacuum potential due to
       ! negative of rhobar + vacuum (g=0) charge ----> v2(z)
@@ -64,15 +64,15 @@ contains
       ivac = 1 ! upper vacuum
 
       if ( field%efield%dirichlet ) then ! Dirichlet
-         vz(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(1)
+         vnew(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(1)
          call qsf( vacuum%delz, rht(1,ivac), sig, ncsh, 1 )
          sig(1:ncsh) = sig(ncsh) - sig(1:ncsh)
          call qsf( vacuum%delz, sig, vtemp, ncsh, 1 )
          do imz = 1, ncsh
-            vz(imz,ivac) = - fpi_const * ( vtemp(ncsh) - vtemp(imz) ) + field%efield%sig_b(1)
+            vnew(imz,ivac) = - fpi_const * ( vtemp(ncsh) - vtemp(imz) ) + field%efield%sig_b(1)
          end do
          sig1dh = sig(1)
-         vz1dh = vz(1,ivac)   ! potential on vacuum boundary
+         vz1dh = vnew(1,ivac)   ! potential on vacuum boundary
          if ( vacuum%nvac == 1 ) return
 
          ivac = 2     ! lower vacuum
@@ -80,20 +80,20 @@ contains
          f(1:ncsh) = sig(1:ncsh) - rhobar*vacuum%dvac + sig1dh
          call qsf( vacuum%delz, f, vtemp, ncsh, 1 )
          do imz = 1,ncsh
-            vz(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz(imz,ivac) + vz1dh
+            vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vnew(imz,ivac) + vz1dh
          end do
 
          ! force matching on the other side
-         vslope = ( field%efield%sig_b(2) - vz(ncsh,1) ) / ( 2 * vacuum%delz * ( ncsh + 1 ) + vacuum%dvac )
+         vslope = ( field%efield%sig_b(2) - vnew(ncsh,1) ) / ( 2 * vacuum%delz * ( ncsh + 1 ) + vacuum%dvac )
          ivac = 1
          do imz = 1, ncsh
-            vz(imz,ivac) = vz(imz,ivac) + vslope * vacuum%delz * ( ncsh - imz + 1 )
+            vnew(imz,ivac) = vnew(imz,ivac) + vslope * vacuum%delz * ( ncsh - imz + 1 )
          end do
          ivac = 2
          do imz = 1, ncsh
-            vz(imz,ivac) = vz(imz,ivac) + vslope * ( vacuum%dvac + vacuum%delz * imz + vacuum%delz * ncsh )
+            vnew(imz,ivac) = vnew(imz,ivac) + vslope * ( vacuum%dvac + vacuum%delz * imz + vacuum%delz * ncsh )
          end do
-         vz(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(2)
+         vnew(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(2)
       else ! Neumann
          call qsf( vacuum%delz, rht(1,ivac), sig, vacuum%nmz, 1 )
          sig1dh = sig(vacuum%nmz) - sigmaa(1)  ! need to include contribution from electric field
@@ -101,12 +101,12 @@ contains
          call qsf( vacuum%delz, sig, vtemp, vacuum%nmz, 1 )
          ! external electric field contribution
          do imz = 1, ncsh
-            vz(imz,ivac) = - fpi_const * ( vtemp(vacuum%nmz) - vtemp(imz) ) + vz(imz,ivac) - fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(1)
+            vnew(imz,ivac) = - fpi_const * ( vtemp(vacuum%nmz) - vtemp(imz) ) + vnew(imz,ivac) - fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(1)
          end do
          do imz = ncsh + 1, vacuum%nmz
-            vz(imz,ivac) = - fpi_const * ( vtemp(vacuum%nmz) - vtemp(imz) ) + vz(imz,ivac)
+            vnew(imz,ivac) = - fpi_const * ( vtemp(vacuum%nmz) - vtemp(imz) ) + vnew(imz,ivac)
          end do
-         vz1dh = vz(1,ivac)   ! potential on vacuum boundary
+         vz1dh = vnew(1,ivac)   ! potential on vacuum boundary
          if ( vacuum%nvac == 1 ) return
 
          ivac = 2 ! lower vacuum
@@ -116,10 +116,10 @@ contains
 
          ! external electric field contribution
          do imz = 1, ncsh
-            vz(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vz(imz,ivac)
+            vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac)
          end do
          do imz = ncsh + 1, vacuum%nmz
-            vz(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vz(imz,ivac) &
+            vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac) &
                            + fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(2)
          end do
       end if ! Dirichlet/Neumann

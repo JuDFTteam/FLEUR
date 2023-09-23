@@ -92,15 +92,15 @@
           IF (input%film) THEN
              DO ivac = 1,vacuum%nvac
                 DO j = 1, vacuum%nmz
-                   den%vacz(j,ivac,jsp_new) = 0.5 * den%vacz(j,ivac,1)
-                   den%vacz(j,ivac,1)       = den%vacz(j,ivac,jsp_new)
+                   !den%vacz(j,ivac,jsp_new) = 0.5 * den%vacz(j,ivac,1)
+                   !den%vacz(j,ivac,1)       = den%vacz(j,ivac,jsp_new)
                    den%vac(j,1,ivac,jsp_new) = 0.5 * den%vac(j,1,ivac,1)
                    den%vac(j,1,ivac,1)       = den%vac(j,1,ivac,jsp_new)
                 ENDDO
                 DO k = 2, stars%ng2
                    DO j = 1,vacuum%nmzxy
-                      den%vacxy(j,k-1,ivac,jsp_new) = 0.5 * den%vacxy(j,k-1,ivac,1)
-                      den%vacxy(j,k-1,ivac,1)       = den%vacxy(j,k-1,ivac,jsp_new)
+                      !den%vacxy(j,k-1,ivac,jsp_new) = 0.5 * den%vacxy(j,k-1,ivac,1)
+                      !den%vacxy(j,k-1,ivac,1)       = den%vacxy(j,k-1,ivac,jsp_new)
                       den%vac(j,k,ivac,jsp_new) = 0.5 * den%vac(j,k,ivac,1)
                       den%vac(j,k,ivac,1)       = den%vac(j,k,ivac,jsp_new)
                    ENDDO

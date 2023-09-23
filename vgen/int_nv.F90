@@ -79,7 +79,7 @@ CONTAINS
        DO ivac = 1,vacuum%nvac
           DO ip = 1,vacuum%nmz
              !dpz(npz-ip) = den%vacz(ip,ivac,ispin)*vpot%vacz(ip,ivac,ispin)
-             dpz(npz-ip) = REAL(den%vac(ip,1,ivac,ispin))*vpot%vacz(ip,ivac,ispin)
+             dpz(npz-ip) = REAL(den%vac(ip,1,ivac,ispin))*REAL(vpot%vac(ip,1,ivac,ispin))
              !         --->  WARPING REGION
           ENDDO
           DO  k2 = 2,stars%ng2
@@ -89,7 +89,7 @@ CONTAINS
                 !     &                          CONJG(vpot%vacxy(ip,k2-1,ivac,ispin))
                 dpz(npz-ip) = dpz(npz-ip) +&
                      &                       stars%nstr2(k2)*den%vac(ip,k2,ivac,ispin)*&
-                     &                          CONJG(vpot%vacxy(ip,k2-1,ivac,ispin))
+                     &                          CONJG(vpot%vac(ip,k2,ivac,ispin))
              ENDDO
           ENDDO
           CALL intgz0(dpz,vacuum%delz,vacuum%nmz,tvac,tail)

@@ -76,15 +76,15 @@ CONTAINS
       END IF
 
       IF (ALLOCATED(den%phi_pw)) THEN
-         DEALLOCATE(den%phi_pw,den%phi_vacz,den%phi_vacxy)
-         DEALLOCATE(den%theta_pw,den%theta_vacz,den%theta_vacxy)
+         DEALLOCATE(den%phi_pw)!,den%phi_vacz,den%phi_vacxy)
+         DEALLOCATE(den%theta_pw)!,den%theta_vacz,den%theta_vacxy)
          DEALLOCATE(den%theta_vac,den%phi_vac)
       END IF
 
       ALLOCATE(den%phi_pw(ifft3),den%theta_pw(ifft3))
-      ALLOCATE(den%phi_vacz(vacuum%nmzd,2),den%theta_vacz(vacuum%nmzd,2))
+      !ALLOCATE(den%phi_vacz(vacuum%nmzd,2),den%theta_vacz(vacuum%nmzd,2))
       ALLOCATE(den%phi_vac(ifft2,vacuum%nmzd,2),den%theta_vac(ifft2,vacuum%nmzd,2))
-      ALLOCATE(den%phi_vacxy(ifft2,vacuum%nmzxyd,2),den%theta_vacxy(ifft2,vacuum%nmzxyd,2))
+      !ALLOCATE(den%phi_vacxy(ifft2,vacuum%nmzxyd,2),den%theta_vacxy(ifft2,vacuum%nmzxyd,2))
 
       ALLOCATE (ris(ifft3,4),fftwork(ifft3))
  
@@ -218,8 +218,8 @@ CONTAINS
             !den%vacz(imz,ivac,2) = rho_down
             den%vac(imz,1,ivac,1) = rho_up
             den%vac(imz,1,ivac,2) = rho_down
-            den%theta_vacz(imz,ivac) = theta
-            den%phi_vacz(imz,ivac) = phi
+            !den%theta_vacz(imz,ivac) = theta
+            !den%phi_vacz(imz,ivac) = phi
             den%theta_vac(1,imz,ivac) = theta
             den%phi_vac(1,imz,ivac) = phi
          END DO
@@ -292,7 +292,7 @@ CONTAINS
 
       ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
       IF (ifft3.NE.SIZE(den%theta_pw)) CALL judft_error("Wrong size of angles")
-      ifft2 = SIZE(den%phi_vacxy,1) 
+      ifft2 = SIZE(den%phi_vac,1) 
     
       ALLOCATE ( vis(ifft3,4),fftwork(ifft3),vis2(ifft3,4))
     
@@ -350,7 +350,7 @@ CONTAINS
                vziw = 0.0
                ! 
                   CALL fft2d(stars, vvacxy(:,imz,ivac,jspin),fftwork,&
-                       vTot%vacz(imz,ivac,jspin),vziw,vTot%vacxy(imz,:,ivac,jspin), 1)
+                       REAL(vTot%vac(imz,1,ivac,jspin)),vziw,vTot%vac(imz,2:,ivac,jspin), 1)
                
             END DO
          END DO
@@ -377,18 +377,17 @@ CONTAINS
          END DO
           
          DO imz = vacuum%nmzxyd+1,vacuum%nmzd
-            vup   = vTot%vacz(imz,ivac,1)
-            vdown = vTot%vacz(imz,ivac,2)
+            vup   = REAL(vTot%vac(imz,1,ivac,1))
+            vdown = REAL(vTot%vac(imz,1,ivac,2))
             !theta = den%theta_vacz(imz,ivac)
             !phi   = den%phi_vacz(imz,ivac)
             theta = den%theta_vac(1,imz,ivac)
             phi   = den%phi_vac(1,imz,ivac)
             veff  = (vup + vdown)/2.0
             beff  = (vup - vdown)/2.0
-            vTot%vacz(imz,ivac,1) = veff + beff*COS(theta)
-            vTot%vacz(imz,ivac,2) = veff - beff*COS(theta)
-            vTot%vacz(imz,ivac,3) = beff*SIN(theta)*COS(phi)
-            vTot%vacz(imz,ivac,4) = beff*SIN(theta)*SIN(phi)
+            vTot%vac(imz,1,ivac,1) = veff + beff*COS(theta)
+            vTot%vac(imz,1,ivac,2) = veff - beff*COS(theta)
+            vTot%vac(imz,1,ivac,3) = beff*SIN(theta)*COS(phi)+ImagUnit*beff*SIN(theta)*SIN(phi)
          END DO
       END DO
 
@@ -399,7 +398,7 @@ CONTAINS
                fftwork=0.0
                ! 
                   CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
-                       vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,:,ivac,ipot),-1)
+                       REAL(vTot%vac(imz,1,ivac,ipot)),vziw,vTot%vac(imz,2:,ivac,ipot),-1)
                
             END DO
          END DO
@@ -410,7 +409,7 @@ CONTAINS
             fftwork=0.0
             ! 
                CALL fft2d(stars, vvacxy(:,imz,ivac,3),vvacxy(:,imz,ivac,4),&
-                    vTot%vacz(imz,ivac,3),vTot%vacz(imz,ivac,4),vTot%vacxy(imz,:,ivac,3),-1)
+                    REAL(vTot%vac(imz,1,ivac,3)),AIMAG(vTot%vac(imz,1,ivac,3)),vTot%vac(imz,2:,ivac,3),-1)
             
          END DO
       END DO

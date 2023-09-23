@@ -427,7 +427,7 @@ CONTAINS
 
   END SUBROUTINE vac_to_grid
 
-  subroutine vac_from_grid(stars,vacuum,v_xc,ifft2d,vacz,vacxy)
+  subroutine vac_from_grid(stars,vacuum,v_xc,ifft2d,vac)
     use m_types_stars
     use m_types_vacuum
     use m_fft2d
@@ -436,8 +436,7 @@ CONTAINS
 
     real, INTENT(IN)          :: v_xc(:,:)
     INTEGER,INTENT(IN)        :: ifft2d
-    real, intent(INOUT)       :: vacz(:,:,:)
-    complex,intent(INOUT)     :: vacxy(:,:,:,:)
+    complex,intent(INOUT)     :: vac(:,:,:,:)
 
     REAL                    :: fgz,rhti
     COMPLEX, ALLOCATABLE    :: fgxy(:)
@@ -460,19 +459,19 @@ CONTAINS
           !                  the g||.eq.zero component is added to vxc%vacz
           !
           !vxc%vacz(ip,ivac,js) = fgz + vxc%vacz(ip,ivac,js)
-          vacz(ip,ivac,js) = fgz + vacz(ip,ivac,js)
+          vac(ip,1,ivac,js) = fgz + vac(ip,1,ivac,js)
           !
           !            the g||.ne.zero components are added to vxc%vacxy
           !
-          DO irec2 = 1,stars%ng2-1
-            vacxy(ip,irec2,ivac,js)=vacxy(ip,irec2,ivac,js)+fgxy(irec2)
+          DO irec2 = 2,stars%ng2
+            vac(ip,irec2,ivac,js)=vac(ip,irec2,ivac,js)+fgxy(irec2-1)
           ENDDO
         enddo
 
         nmz0= max(1,vacuum%nmzxy+1+(fixed_ndvgrd/2)-fixed_ndvgrd)
 
         DO ip = nmz0,vacuum%nmz
-          if (ip>vacuum%nmzxy)vacz(ip,ivac,js) = vacz(ip,ivac,js) + v_xc(idx,js)
+          if (ip>vacuum%nmzxy) vac(ip,1,ivac,js) = vac(ip,1,ivac,js) + v_xc(idx,js)
           idx=idx+1
         ENDDO
       END DO

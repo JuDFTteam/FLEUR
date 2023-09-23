@@ -70,15 +70,15 @@ contains
     IF (input%film) THEN
        DO ivac= 1,vacuum%nvac
           DO i= 1,vacuum%nmz
-             den%vacz(i,ivac,1)= (den%vacz(i,ivac,1) + den%vacz(i,ivac,2))/2.0
-             den%vacz(i,ivac,2)= den%vacz(i,ivac,1)
+             !den%vacz(i,ivac,1)= (den%vacz(i,ivac,1) + den%vacz(i,ivac,2))/2.0
+             !den%vacz(i,ivac,2)= den%vacz(i,ivac,1)
              den%vac(i,1,ivac,1)= (den%vac(i,1,ivac,1) + den%vac(i,1,ivac,2))/2.0
              den%vac(i,1,ivac,2)= den%vac(i,1,ivac,1)
           ENDDO
           DO k= 2,stars%ng2
              DO i= 1,vacuum%nmzxy
-                den%vacxy(i,k-1,ivac,1)= (den%vacxy(i,k-1,ivac,1) + den%vacxy(i,k-1,ivac,2))/2.0
-                den%vacxy(i,k-1,ivac,2)= den%vacxy(i,k-1,ivac,1)
+                !den%vacxy(i,k-1,ivac,1)= (den%vacxy(i,k-1,ivac,1) + den%vacxy(i,k-1,ivac,2))/2.0
+                !den%vacxy(i,k-1,ivac,2)= den%vacxy(i,k-1,ivac,1)
                 den%vac(i,k,ivac,1)= (den%vac(i,k,ivac,1) + den%vac(i,k,ivac,2))/2.0
                 den%vac(i,k,ivac,2)= den%vac(i,k,ivac,1)
              ENDDO
@@ -97,7 +97,7 @@ contains
     CALL wrtdop(&
          & stars,vacuum,atoms,sphhar,input,sym,&
          & 98,&
-         & den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%vac)
+         & den%iter,den%mt,den%pw,den%vac)
     CLOSE(98)
 
   END SUBROUTINE bmt

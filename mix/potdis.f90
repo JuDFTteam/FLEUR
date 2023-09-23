@@ -53,7 +53,7 @@ CONTAINS
     REWIND 9
     DO  io = 1,2
        CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-            9, iter,rhsp(:,0:,:,:,io),rhpw(:,:,io), rhv0(:,:,:,io),rhv1(:,:,:,:,io),rhv2(:,:,:,:,io))
+            9, iter,rhsp(:,0:,:,:,io),rhpw(:,:,io), rhv2(:,:,:,:,io))
     ENDDO
     CLOSE (9)
     IF (input%jspins.EQ.1) THEN

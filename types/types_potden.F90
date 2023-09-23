@@ -12,16 +12,16 @@ MODULE m_types_potden
      COMPLEX,ALLOCATABLE :: pw(:,:),pw_w(:,:)
      !                      mt(radial_grid, sphhar, atom, spin)
      REAL,ALLOCATABLE    :: mt(:,:,:,:)
-     REAL,ALLOCATABLE    :: vacz(:,:,:)
-     COMPLEX,ALLOCATABLE :: vacxy(:,:,:,:)
+     !REAL,ALLOCATABLE    :: vacz(:,:,:)
+     !COMPLEX,ALLOCATABLE :: vacxy(:,:,:,:)
      COMPLEX,ALLOCATABLE :: vac(:,:,:,:)
      !For angles of density/potential in noco case
      REAL,ALLOCATABLE  :: theta_pw(:)
      REAL,ALLOCATABLE  :: phi_pw(:)
-     REAL,ALLOCATABLE  :: theta_vacz(:,:)
-     REAL,ALLOCATABLE  :: phi_vacz(:,:)
-     REAL,ALLOCATABLE  :: theta_vacxy(:,:,:)
-     REAL,ALLOCATABLE  :: phi_vacxy(:,:,:)
+     !REAL,ALLOCATABLE  :: theta_vacz(:,:)
+     !REAL,ALLOCATABLE  :: phi_vacz(:,:)
+     !REAL,ALLOCATABLE  :: theta_vacxy(:,:,:)
+     !REAL,ALLOCATABLE  :: phi_vacxy(:,:,:)
      REAL,ALLOCATABLE  :: theta_vac(:,:,:)
      REAL,ALLOCATABLE  :: phi_vac(:,:,:)
      REAL,ALLOCATABLE  :: theta_mt(:,:)
@@ -88,15 +88,15 @@ CONTAINS
        deallocate(rtmp)
     END IF
     !vac
-    if (allocated(this%vacz)) THEN
-       ALLOCATE(rtmp(size(this%vacz)))
-       CALL MPI_REDUCE(this%vacz,rtmp,size(this%vacz),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
-       if (irank==0) this%vacz=reshape(rtmp,shape(this%vacz))
-       deallocate(rtmp)
-       ALLOCATE(ctmp(size(this%vacxy)))
-       CALL MPI_REDUCE(this%vacxy,ctmp,size(this%vacxy),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
-       if (irank==0) this%vacxy=reshape(ctmp,shape(this%vacxy))
-       deallocate(ctmp)
+    if (allocated(this%vac)) THEN
+       !ALLOCATE(rtmp(size(this%vacz)))
+       !CALL MPI_REDUCE(this%vacz,rtmp,size(this%vacz),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+       !if (irank==0) this%vacz=reshape(rtmp,shape(this%vacz))
+       !deallocate(rtmp)
+       !ALLOCATE(ctmp(size(this%vacxy)))
+       !CALL MPI_REDUCE(this%vacxy,ctmp,size(this%vacxy),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       !if (irank==0) this%vacxy=reshape(ctmp,shape(this%vacxy))
+       !deallocate(ctmp)
        ALLOCATE(ctmp(size(this%vac)))
        CALL MPI_REDUCE(this%vac,ctmp,size(this%vac),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
        if (irank==0) this%vac=reshape(ctmp,shape(this%vac))
@@ -126,8 +126,8 @@ CONTAINS
     call mpi_bc(this%pw,0,fmpi_comm)
     IF (ALLOCATED(this%pw_w)) CALL mpi_bc(this%pw_w ,0,fmpi_comm)
     CALL mpi_bc(this%mt ,0,fmpi_comm)
-    IF (ALLOCATED(this%vacz)) call mpi_bc(this%vacz,0,fmpi_comm)
-    IF (ALLOCATED(this%vacxy)) CALL mpi_bc(this%vacxy,0,fmpi_comm)
+    !IF (ALLOCATED(this%vacz)) call mpi_bc(this%vacz,0,fmpi_comm)
+    !IF (ALLOCATED(this%vacxy)) CALL mpi_bc(this%vacxy,0,fmpi_comm)
     IF (ALLOCATED(this%vac)) CALL mpi_bc(this%vac,0,fmpi_comm)
     IF (ALLOCATED(this%mmpMat)) CALL mpi_bc(this%mmpMat,0,fmpi_comm)
 #endif
@@ -142,15 +142,15 @@ CONTAINS
        IF (SIZE(this%pw,2)>1) THEN
           that%mt(:,0:,:,1)=this%mt(:,0:,:,1)+this%mt(:,0:,:,2)
           that%pw(:,1)=this%pw(:,1)+this%pw(:,2)
-          that%vacz(:,:,1)=this%vacz(:,:,1)+this%vacz(:,:,2)
-          that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)+this%vacxy(:,:,:,2)
+          !that%vacz(:,:,1)=this%vacz(:,:,1)+this%vacz(:,:,2)
+          !that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)+this%vacxy(:,:,:,2)
           that%vac(:,:,:,1)=this%vac(:,:,:,1)+this%vac(:,:,:,2)
           IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)+this%pw_w(:,2)
        ELSE
           that%mt(:,0:,:,1)=this%mt(:,0:,:,1)
           that%pw(:,1)=this%pw(:,1)
-          that%vacz(:,:,1)=this%vacz(:,:,1)
-          that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)
+          !that%vacz(:,:,1)=this%vacz(:,:,1)
+          !that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)
           that%vac(:,:,:,1)=this%vac(:,:,:,1)
           IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)
        ENDIF
@@ -158,8 +158,8 @@ CONTAINS
        IF (SIZE(this%pw,2)>1) THEN
           this%mt(:,0:,:,1)=this%mt(:,0:,:,1)+this%mt(:,0:,:,2)
           this%pw(:,1)=this%pw(:,1)+this%pw(:,2)
-          this%vacz(:,:,1)=this%vacz(:,:,1)+this%vacz(:,:,2)
-          this%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)+this%vacxy(:,:,:,2)
+          !this%vacz(:,:,1)=this%vacz(:,:,1)+this%vacz(:,:,2)
+          !this%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)+this%vacxy(:,:,:,2)
           this%vac(:,:,:,1)=this%vac(:,:,:,1)+this%vac(:,:,:,2)
           IF (ALLOCATED(this%pw_w)) this%pw_w(:,1)=this%pw_w(:,1)+this%pw_w(:,2)
        ENDIF
@@ -173,16 +173,16 @@ CONTAINS
 
     that%mt(:,0:,:,1)=this%mt(:,0:,:,1)
     that%pw(:,1)=this%pw(:,1)
-    that%vacz(:,:,1)=this%vacz(:,:,1)
-    that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)
+    !that%vacz(:,:,1)=this%vacz(:,:,1)
+    !that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)
     that%vac(:,:,:,1)=this%vac(:,:,:,1)
     IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)
 
     IF (SIZE(that%mt,4)>1) THEN
        that%mt(:,0:,:,2)=this%mt(:,0:,:,1)
        that%pw(:,2)=this%pw(:,1)
-       that%vacz(:,:,2)=this%vacz(:,:,1)
-       that%vacxy(:,:,:,2)=this%vacxy(:,:,:,1)
+       !that%vacz(:,:,2)=this%vacz(:,:,1)
+       !that%vacxy(:,:,:,2)=this%vacxy(:,:,:,1)
        that%vac(:,:,:,2)=this%vac(:,:,:,1)
        IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,2)=this%pw_w(:,1)
     END IF
@@ -201,10 +201,10 @@ CONTAINS
     den%mt(:,0:,:,  2) = copy%mt(:,0:,:,  1) - copy%mt(:,0:,:,  2)
     den%pw(:,       1) = copy%pw(:,       1) + copy%pw(:,       2)
     den%pw(:,       2) = copy%pw(:,       1) - copy%pw(:,       2)
-    den%vacz(:,:,   1) = copy%vacz(:,:,   1) + copy%vacz(:,:,   2)
-    den%vacz(:,:,   2) = copy%vacz(:,:,   1) - copy%vacz(:,:,   2)
-    den%vacxy(:,:,:,1) = copy%vacxy(:,:,:,1) + copy%vacxy(:,:,:,2)
-    den%vacxy(:,:,:,2) = copy%vacxy(:,:,:,1) - copy%vacxy(:,:,:,2)
+    !den%vacz(:,:,   1) = copy%vacz(:,:,   1) + copy%vacz(:,:,   2)
+    !den%vacz(:,:,   2) = copy%vacz(:,:,   1) - copy%vacz(:,:,   2)
+    !den%vacxy(:,:,:,1) = copy%vacxy(:,:,:,1) + copy%vacxy(:,:,:,2)
+    !den%vacxy(:,:,:,2) = copy%vacxy(:,:,:,1) - copy%vacxy(:,:,:,2)
     den%vac(:,:,:,1) = copy%vac(:,:,:,1) + copy%vac(:,:,:,2)
     den%vac(:,:,:,2) = copy%vac(:,:,:,1) - copy%vac(:,:,:,2)
   end subroutine
@@ -222,10 +222,10 @@ CONTAINS
     den%mt(:,0:,:,  2) = ( copy%mt(:,0:,:,  1) - copy%mt(:,0:,:,  2) ) / 2
     den%pw(:,       1) = ( copy%pw(:,       1) + copy%pw(:,       2) ) / 2
     den%pw(:,       2) = ( copy%pw(:,       1) - copy%pw(:,       2) ) / 2
-    den%vacz(:,:,   1) = ( copy%vacz(:,:,   1) + copy%vacz(:,:,   2) ) / 2
-    den%vacz(:,:,   2) = ( copy%vacz(:,:,   1) - copy%vacz(:,:,   2) ) / 2
-    den%vacxy(:,:,:,1) = ( copy%vacxy(:,:,:,1) + copy%vacxy(:,:,:,2) ) / 2
-    den%vacxy(:,:,:,2) = ( copy%vacxy(:,:,:,1) - copy%vacxy(:,:,:,2) ) / 2
+    !den%vacz(:,:,   1) = ( copy%vacz(:,:,   1) + copy%vacz(:,:,   2) ) / 2
+    !den%vacz(:,:,   2) = ( copy%vacz(:,:,   1) - copy%vacz(:,:,   2) ) / 2
+    !den%vacxy(:,:,:,1) = ( copy%vacxy(:,:,:,1) + copy%vacxy(:,:,:,2) ) / 2
+    !den%vacxy(:,:,:,2) = ( copy%vacxy(:,:,:,1) - copy%vacxy(:,:,:,2) ) / 2
     den%vac(:,:,:,1) = ( copy%vac(:,:,:,1) + copy%vac(:,:,:,2) ) / 2
     den%vac(:,:,:,2) = ( copy%vac(:,:,:,1) - copy%vac(:,:,:,2) ) / 2
   end subroutine
@@ -244,8 +244,8 @@ CONTAINS
 
     PotDen3%mt         = PotDen1%mt + PotDen2%mt
     PotDen3%pw         = PotDen1%pw + PotDen2%pw
-    PotDen3%vacz       = PotDen1%vacz + PotDen2%vacz
-    PotDen3%vacxy      = PotDen1%vacxy + PotDen2%vacxy
+    !PotDen3%vacz       = PotDen1%vacz + PotDen2%vacz
+    !PotDen3%vacxy      = PotDen1%vacxy + PotDen2%vacxy
     PotDen3%vac      = PotDen1%vac + PotDen2%vac
     if( allocated( PotDen1%pw_w ) .and. allocated( PotDen2%pw_w ) .and. allocated( PotDen3%pw_w ) ) then
       PotDen3%pw_w = PotDen1%pw_w + PotDen2%pw_w
@@ -266,14 +266,14 @@ CONTAINS
     if(.not. allocated(PotDen3%mt)) allocate(PotDen3%mt, mold=PotDen1%mt)
     
     ! The following allocates are countermeasures to valgrind complaints
-    if(.not. allocated(PotDen3%vacz)) allocate(PotDen3%vacz, mold=PotDen1%vacz)
-    if(.not. allocated(PotDen3%vacxy)) allocate(PotDen3%vacxy, mold=PotDen1%vacxy)
+    !if(.not. allocated(PotDen3%vacz)) allocate(PotDen3%vacz, mold=PotDen1%vacz)
+    !if(.not. allocated(PotDen3%vacxy)) allocate(PotDen3%vacxy, mold=PotDen1%vacxy)
     if(.not. allocated(PotDen3%vac)) allocate(PotDen3%vac, mold=PotDen1%vac)
 
     PotDen3%mt         = PotDen1%mt - PotDen2%mt
     PotDen3%pw         = PotDen1%pw - PotDen2%pw
-    PotDen3%vacz       = PotDen1%vacz - PotDen2%vacz
-    PotDen3%vacxy      = PotDen1%vacxy - PotDen2%vacxy
+    !PotDen3%vacz       = PotDen1%vacz - PotDen2%vacz
+    !PotDen3%vacxy      = PotDen1%vacxy - PotDen2%vacxy
     PotDen3%vac        = PotDen1%vac - PotDen2%vac
     if( allocated( PotDen1%pw_w ) .and. allocated( PotDen2%pw_w ) .and. allocated( PotDen3%pw_w ) ) then
       PotDen3%pw_w = PotDen1%pw_w - PotDen2%pw_w
@@ -294,14 +294,14 @@ CONTAINS
     if(.not. allocated(PotDenCopy%mt)) allocate(PotDenCopy%mt, mold=PotDen%mt)
     
     ! The following allocates are countermeasures to valgrind complaints
-    if(.not. allocated(PotDenCopy%vacz)) allocate(PotDenCopy%vacz, mold=PotDen%vacz)
-    if(.not. allocated(PotDenCopy%vacxy)) allocate(PotDenCopy%vacxy, mold=PotDen%vacxy)
+    !if(.not. allocated(PotDenCopy%vacz)) allocate(PotDenCopy%vacz, mold=PotDen%vacz)
+    !if(.not. allocated(PotDenCopy%vacxy)) allocate(PotDenCopy%vacxy, mold=PotDen%vacxy)
     if(.not. allocated(PotDenCopy%vac)) allocate(PotDenCopy%vac, mold=PotDen%vac)
 
     PotDenCopy%mt         = PotDen%mt
     PotDenCopy%pw         = PotDen%pw
-    PotDenCopy%vacz       = PotDen%vacz
-    PotDenCopy%vacxy      = PotDen%vacxy
+    !PotDenCopy%vacz       = PotDen%vacz
+    !PotDenCopy%vacxy      = PotDen%vacxy
     PotDenCopy%vac        = PotDen%vac
     PotDenCopy%qint       = PotDen%qint
     PotDenCopy%tec        = PotDen%tec
@@ -358,8 +358,8 @@ CONTAINS
     pd%potdenType=potden_type
     IF(ALLOCATED(pd%pw)) DEALLOCATE (pd%pw)
     IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
-    IF(ALLOCATED(pd%vacz)) DEALLOCATE (pd%vacz)
-    IF(ALLOCATED(pd%vacxy)) DEALLOCATE (pd%vacxy)
+    !IF(ALLOCATED(pd%vacz)) DEALLOCATE (pd%vacz)
+    !IF(ALLOCATED(pd%vacxy)) DEALLOCATE (pd%vacxy)
     IF(ALLOCATED(pd%vac)) DEALLOCATE (pd%vac)
     IF(ALLOCATED(pd%qint)) DEALLOCATE (pd%qint)
     IF(ALLOCATED(pd%tec)) DEALLOCATE (pd%tec)
@@ -371,8 +371,8 @@ CONTAINS
       ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
     END IF
     ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
-    ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
-    ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
+    !ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
+    !ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
     ALLOCATE (pd%vac(nmzd,n2d,2,MERGE(3,jspins,nocoExtraDim)),stat=err(5))
 
     ALLOCATE (pd%qint(ntype,jspins))
@@ -384,8 +384,8 @@ CONTAINS
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
-    pd%vacz=0.0
-    pd%vacxy=CMPLX(0.0,0.0)
+    !pd%vacz=0.0
+    !pd%vacxy=CMPLX(0.0,0.0)
     pd%vac=CMPLX(0.0,0.0)
     pd%qint = 0.0
     pd%tec = 0.0
@@ -574,8 +574,8 @@ CONTAINS
 
     pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
-    pd%vacz=0.0
-    pd%vacxy=CMPLX(0.0,0.0)
+    !pd%vacz=0.0
+    !pd%vacxy=CMPLX(0.0,0.0)
     pd%vac=CMPLX(0.0,0.0)
     pd%qint = 0.0
     pd%tec = 0.0

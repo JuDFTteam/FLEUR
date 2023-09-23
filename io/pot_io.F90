@@ -153,7 +153,7 @@ MODULE m_pot_io
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),form='unformatted',status='unknown')
 
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
-                     iUnit,iter,fr,fpw,fz,fzxy,fvac)
+                     iUnit,iter,fr,fpw,fvac)
 
          CLOSE(iUnit)
       END IF
@@ -218,12 +218,12 @@ MODULE m_pot_io
          potentialType = POTENTIAL_TYPE_IN_const
 
          IF(vacuum%nvac.EQ.1) THEN
-            pot%vacz(:,2,:) = pot%vacz(:,1,:)
+            !pot%vacz(:,2,:) = pot%vacz(:,1,:)
             IF (sym%invs) THEN
-               pot%vacxy(:,:,2,:) = CONJG(pot%vacxy(:,:,1,:))
+               !pot%vacxy(:,:,2,:) = CONJG(pot%vacxy(:,:,1,:))
                pot%vac(:,:,2,:) = CONJG(pot%vac(:,:,1,:))
             ELSE
-               pot%vacxy(:,:,2,:) = pot%vacxy(:,:,1,:)
+               !pot%vacxy(:,:,2,:) = pot%vacxy(:,:,1,:)
                pot%vac(:,:,2,:) = pot%vac(:,:,1,:)
             END IF
          END IF
@@ -257,7 +257,7 @@ MODULE m_pot_io
          iUnit = 11
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),form='unformatted',status='unknown')
          CALL wrtdop(stars,vacuum,atoms,sphhar,input,sym,&
-                     iUnit,iter,pot%mt,fpw,pot%vacz(:,:,:input%jspins),pot%vacxy(:,:,:,:input%jspins),pot%vac(:,:,:,:input%jspins))
+                     iUnit,iter,pot%mt,fpw,pot%vac(:,:,:,:input%jspins))
          CLOSE(iUnit)
       END IF
 

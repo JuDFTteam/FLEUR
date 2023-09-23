@@ -105,10 +105,11 @@ contains
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" )
         !call vvac( vacuum, stars, cell,  input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh,vslope )
-        call vvac( vacuum, stars, cell,  input, field, psq, REAL(den%vac(:,1,:,ispin)), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh,vslope )
-        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
+        call vvac( vacuum, stars, cell,  input, field, psq, REAL(den%vac(:,1,:,ispin)), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope ) ! TODO: AN TB; make den complex for DFPT
+        !call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
+        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,2:,:,ispin) )
         !call vvacxy( stars, vacuum, cell, sym, input, field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
-        call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,2:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
+        call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,2:,:,ispin), vCoul%vac(:vacuum%nmzxyd,2:,:,ispin), alphm )
         call timestop( "Vacuum" )
       end if
 
@@ -130,7 +131,7 @@ contains
             z = cell%amat(3,3) * i3 * ani
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
-                              vCoul%vacxy(:,:,:,ispin), vCoul%vacz(:,:,ispin), &
+                              vCoul%vac(:,:,:,ispin), &
                               rhobar, sig1dh, vz1dh, alphm,vslope )
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )

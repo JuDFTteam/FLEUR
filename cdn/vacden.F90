@@ -432,7 +432,7 @@ CONTAINS
                       DO jz = 1,vacuum%nmz
                          ui = u(jz,l,ispin)
                          uei = ue(jz,l,ispin)
-                         den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                         !den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                          den%vac(jz,1,ivac,ispin) = den%vac(jz,1,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei) ! TODO: AN TB; sollte man das REAL killen? 
                       ENDDO
                    ENDDO
@@ -456,7 +456,7 @@ CONTAINS
                    DO  jz = 1,vacuum%nmz
                       ui = u(jz,l,jspin)
                       uei = ue(jz,l,jspin)
-                      den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                      !den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                       den%vac(jz,1,ivac,jspin) = den%vac(jz,1,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei) ! TODO: REAL weg?
                    ENDDO
                 END DO
@@ -729,8 +729,8 @@ CONTAINS
                             uei = ue(jz,l,ispin)
                             uej = ue(jz,l1,ispin)
                             t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                            den%vacxy(jz,ind2-1,ivac,ispin) = den%vacxy(jz,ind2-1,ivac,ispin) + t1*phs/stars%nstr2(ind2)
-                            den%vacxy(jz,ind2p-1,ivac,ispin) = den%vacxy(jz,ind2p-1,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                            !den%vacxy(jz,ind2-1,ivac,ispin) = den%vacxy(jz,ind2-1,ivac,ispin) + t1*phs/stars%nstr2(ind2)
+                            !den%vacxy(jz,ind2p-1,ivac,ispin) = den%vacxy(jz,ind2p-1,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                             den%vac(jz,ind2,ivac,ispin) = den%vac(jz,ind2,ivac,ispin) + t1*phs/stars%nstr2(ind2)
                             den%vac(jz,ind2p,ivac,ispin) = den%vac(jz,ind2p,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                          ENDDO
@@ -769,8 +769,8 @@ CONTAINS
                             uei = ue(jz,l,1)
                             uei2 = ue(jz,l1,2)
                             tempCmplx = aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
-                            den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
-                            den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) - AIMAG(tempCmplx)
+                            !den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
+                            !den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) - AIMAG(tempCmplx) !!!! MAGIC MINUS
                             den%vac(jz,1,ivac,3) = den%vac(jz,1,ivac,3) + CONJG(tempCmplx)
                          ENDDO
                       ELSE
@@ -791,7 +791,7 @@ CONTAINS
                             uei = ue(jz,l,1)
                             uej = ue(jz,l1,2)
                             t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                            den%vacxy(jz,ind2-1,ivac,3) = den%vacxy(jz, ind2-1,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
+                            !den%vacxy(jz,ind2-1,ivac,3) = den%vacxy(jz, ind2-1,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
                             den%vac(jz,ind2,ivac,3) = den%vac(jz, ind2,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
                          ENDDO
                       ENDIF
@@ -839,10 +839,10 @@ CONTAINS
                          t1jz(jz) = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
                       ENDDO
                       !$OMP CRITICAL ! (denvacxy,denvac)
-                      den%vacxy(:vacuum%nmzxy,ind2-1,ivac,jspin)  = den%vacxy(:vacuum%nmzxy,ind2-1, ivac,jspin) &
-                               + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
-                      den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) = den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) &
-                               + CONJG(t1jz(:vacuum%nmzxy))*phsp/stars%nstr2(ind2p)
+                      !den%vacxy(:vacuum%nmzxy,ind2-1,ivac,jspin)  = den%vacxy(:vacuum%nmzxy,ind2-1, ivac,jspin) &
+                      !         + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
+                      !den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) = den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) &
+                      !         + CONJG(t1jz(:vacuum%nmzxy))*phsp/stars%nstr2(ind2p)
                       den%vac(:vacuum%nmzxy,ind2,ivac,jspin)  = den%vac(:vacuum%nmzxy,ind2, ivac,jspin) &
                              + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
                       den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) = den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) &

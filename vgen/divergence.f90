@@ -83,17 +83,23 @@ CONTAINS
 
       IF (input%film) THEN
          CALL timestart("Vac divergence")
-         div%vacxy=CMPLX(0.0,0.0)
-         div%vacz=0.0
+         !div%vacxy=CMPLX(0.0,0.0)
+         !div%vacz=0.0
          CALL vac_grad(vacuum,stars,cell,bxc(1),grad,9*stars%mx1*stars%mx2)
-         div%vacxy=div%vacxy+grad(1)%vacxy
-         div%vacz=div%vacz+grad(1)%vacz
+         !div%vacxy=div%vacxy+grad(1)%vacxy
+         !div%vacz=div%vacz+grad(1)%vacz
+         div%vac(:vacuum%nmzxyd,2:,:,:)=div%vac(:vacuum%nmzxyd,2:,:,:)+grad(1)%vac(:vacuum%nmzxyd,2:,:,:)
+         div%vac(:,1,:,:)=div%vac(:,1,:,:)+grad(1)%vac(:,1,:,:)
          CALL vac_grad(vacuum,stars,cell,bxc(2),grad,9*stars%mx1*stars%mx2)
-         div%vacxy=div%vacxy+grad(2)%vacxy
-         div%vacz=div%vacz+grad(2)%vacz
+         !div%vacxy=div%vacxy+grad(2)%vacxy
+         !div%vacz=div%vacz+grad(2)%vacz
+         div%vac(:vacuum%nmzxyd,2:,:,:)=div%vac(:vacuum%nmzxyd,2:,:,:)+grad(2)%vac(:vacuum%nmzxyd,2:,:,:)
+         div%vac(:,1,:,:)=div%vac(:,1,:,:)+grad(2)%vac(:,1,:,:)
          CALL vac_grad(vacuum,stars,cell,bxc(3),grad,9*stars%mx1*stars%mx2)
-         div%vacxy=div%vacxy+grad(3)%vacxy
-         div%vacz=div%vacz+grad(3)%vacz
+         !div%vacxy=div%vacxy+grad(3)%vacxy
+         !div%vacz=div%vacz+grad(3)%vacz
+         div%vac(:vacuum%nmzxyd,2:,:,:)=div%vac(:vacuum%nmzxyd,2:,:,:)+grad(3)%vac(:vacuum%nmzxyd,2:,:,:)
+         div%vac(:,1,:,:)=div%vac(:,1,:,:)+grad(3)%vac(:,1,:,:)
          CALL timestop("Vac divergence")
       END IF
 
@@ -150,7 +156,7 @@ CONTAINS
          ! calculate first (rhtdz) & second (rhtdzz) derivative of den%vacz(1:nmz)
          !
 
-         CALL grdchlh(vacuum%delz,den%vacz(1:vacuum%nmz,ivac,1),&
+         CALL grdchlh(vacuum%delz,REAL(den%vac(1:vacuum%nmz,1,ivac,1)),&
                      rhtdz,rhtdzz)
          ALLOCATE ( rhtxyr(vacuum%nmzxy), rhtxyi(vacuum%nmzxy),dummy(vacuum%nmzxy) )
          ALLOCATE ( rxydzr(vacuum%nmzxy), rxydzi(vacuum%nmzxy) )
@@ -161,12 +167,12 @@ CONTAINS
          ! calculate first (rxydz) & second (rxydzz) derivative of den%vacxy:
          !
             DO ip=1,vacuum%nmzxy
-               rhtxyr(ip)=den%vacxy(ip,iq,ivac,1)
+               rhtxyr(ip)=den%vac(ip,iq+1,ivac,1)
             ENDDO
             CALL grdchlh(vacuum%delz,rhtxyr(:vacuum%nmzxy), rxydzr,rxydzzr)
 
             DO ip=1,vacuum%nmzxy
-               rhtxyi(ip)=aimag(den%vacxy(ip,iq,ivac,js))
+               rhtxyi(ip)=aimag(den%vac(ip,iq+1,ivac,js))
             ENDDO
 
             CALL grdchlh(vacuum%delz,rhtxyi(:vacuum%nmzxy), rxydzi,rxydzzi)
@@ -192,14 +198,14 @@ CONTAINS
 
             ! Transform charge and magnetization to real-space.
 
-            CALL fft2d(stars, af2(0),bf2, den%vacz(ip,ivac,1),0.,&
-                       den%vacxy(ip,:,ivac,1),+1)
+            CALL fft2d(stars, af2(0),bf2, REAL(den%vac(ip,1,ivac,1)),0.,&
+                       den%vac(ip,2:,ivac,1),+1)
 
             ! calculate derivatives with respect to x,y in g-space
             ! and transform them to real-space.
 
             DO iq=1,stars%ng2-1
-               cqpw(iq)=ImagUnit*den%vacxy(ip,iq,ivac,js)
+               cqpw(iq)=ImagUnit*den%vac(ip,iq+1,ivac,js)
             ENDDO
 
             rhti = 0.0
@@ -236,16 +242,16 @@ CONTAINS
 
             ! the g||.eq.zero component is added to grad%vacz
             !
-            grad(1)%vacz(ip,ivac,1) = fgz(1) + grad(1)%vacz(ip,ivac,1)
-            grad(2)%vacz(ip,ivac,1) = fgz(2) + grad(2)%vacz(ip,ivac,1)
-            grad(3)%vacz(ip,ivac,1) = fgz(3) + grad(3)%vacz(ip,ivac,1)
+            grad(1)%vac(ip,1,ivac,1) = fgz(1) + grad(1)%vac(ip,1,ivac,1)
+            grad(2)%vac(ip,1,ivac,1) = fgz(2) + grad(2)%vac(ip,1,ivac,1)
+            grad(3)%vac(ip,1,ivac,1) = fgz(3) + grad(3)%vac(ip,1,ivac,1)
             !
             ! the g||.ne.zero components are added to grad%vacxy
             !
             DO irec2 = 1,stars%ng2-1
-               grad(1)%vacxy(ip,irec2,ivac,1)=grad(1)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,1)
-               grad(2)%vacxy(ip,irec2,ivac,1)=grad(2)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,2)
-               grad(3)%vacxy(ip,irec2,ivac,1)=grad(3)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,3)
+               grad(1)%vac(ip,irec2+1,ivac,1)=grad(1)%vac(ip,irec2+1,ivac,1)+fgxy(irec2,1)
+               grad(2)%vac(ip,irec2+1,ivac,1)=grad(2)%vac(ip,irec2+1,ivac,1)+fgxy(irec2,2)
+               grad(3)%vac(ip,irec2+1,ivac,1)=grad(3)%vac(ip,irec2+1,ivac,1)+fgxy(irec2,3)
             ENDDO
 
          END DO ! ip=1,vacuum%nmzxy
@@ -268,7 +274,7 @@ CONTAINS
          DEALLOCATE ( af2)
 
          DO ip = vacuum%nmzxy + 1,vacuum%nmz
-            grad(3)%vacz(ip,ivac,1) = grad(3)%vacz(ip,ivac,1) + rhtdz(ip-vacuum%nmzxy)
+            grad(3)%vac(ip,1,ivac,1) = grad(3)%vac(ip,1,ivac,1) + rhtdz(ip-vacuum%nmzxy)
          ENDDO
 
          DEALLOCATE ( bf2)

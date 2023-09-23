@@ -317,12 +317,12 @@ CONTAINS
        IF ((inOrOutCDN.EQ.CDN_OUTPUT_DEN_const).AND.(archiveType.NE.CDN_ARCHIVE_TYPE_NOCO_const)) THEN
           ! call loddop to move the file position to the output density
           CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
-               iUnit,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%vac)
+               iUnit,den%iter,den%mt,den%pw,den%vac)
        END IF
 
        ! read in the density
        CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
-            iUnit,den%iter,den%mt,den%pw,den%vacz,den%vacxy,den%vac)
+            iUnit,den%iter,den%mt,den%pw,den%vac)
 
        ! read in additional data if l_noco and data is present
        IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.l_rhomatFile) THEN
@@ -333,12 +333,13 @@ CONTAINS
                 READ (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
                 DO iVac = 1, vacuum%nvac
                    DO i = 1, vacuum%nmz
-                      den%vacz(i,iVac,3) = REAL(cdomvz(i,iVac))
-                      den%vacz(i,iVac,4) = AIMAG(cdomvz(i,iVac))
+                      !den%vacz(i,iVac,3) = REAL(cdomvz(i,iVac))
+                      !den%vacz(i,iVac,4) = AIMAG(cdomvz(i,iVac))
+                      den%vac(i,1,iVac,3) = REAL(cdomvz(i,iVac))+ImagUnit*AIMAG(cdomvz(i,iVac))
                    END DO
                 END DO
                 DEALLOCATE(cdomvz)
-                READ (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
+                !READ (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
                 READ (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=1,stars%ng2), iVac=1,vacuum%nvac)
              END IF
           ELSE
@@ -350,16 +351,16 @@ CONTAINS
              END IF
              den%pw(:,3) = CMPLX(0.0,0.0)
              IF (input%film) THEN
-                den%vacz(:,:,3:4) = 0.0
-                den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
+                !den%vacz(:,:,3:4) = 0.0
+                !den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
                 den%vac(:,:,:,3) = CMPLX(0.0,0.0)
              END IF
           END IF
        ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
           den%pw(:,3) = CMPLX(0.0,0.0)
           IF (input%film) THEN
-             den%vacz(:,:,3:4) = 0.0
-             den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
+             !den%vacz(:,:,3:4) = 0.0
+             !den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
              den%vac(:,:,:,3) = CMPLX(0.0,0.0)
           END IF
        END IF
@@ -521,12 +522,12 @@ CONTAINS
        END IF
 
        IF(vacuum%nvac.EQ.1) THEN
-          den%vacz(:,2,:)=den%vacz(:,1,:)
+          !den%vacz(:,2,:)=den%vacz(:,1,:)
           IF (sym%invs) THEN
-             den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
+             !den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
              den%vac(:,:,2,:) = CONJG(den%vac(:,:,1,:))
           ELSE
-             den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
+             !den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
              den%vac(:,:,2,:) = den%vac(:,:,1,:)
           END IF
        END IF
@@ -625,9 +626,9 @@ CONTAINS
           REWIND iUnitTemp
 
           CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
-               iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp,fvacTemp)
+               iUnit,iterTemp,frTemp,fpwTemp,fvacTemp)
           CALL wrtdop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
-               iUnitTemp,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp,fvacTemp)
+               iUnitTemp,iterTemp,frTemp,fpwTemp,fvacTemp)
 
           CLOSE(iUnitTemp)
           REWIND iUnit
@@ -672,7 +673,7 @@ CONTAINS
           ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
 
           CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
-               iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp,fvacTemp)
+               iUnit,iterTemp,frTemp,fpwTemp,fvacTemp)
 
           DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp, fvacTemp)
           DEALLOCATE (atomsTemp%neq, atomsTemp%jri, symTemp%ntypsy, sphharTemp%nlh)
@@ -680,7 +681,7 @@ CONTAINS
 
        ! Write the density
        CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym,&
-            iUnit,den%iter+relCdnIndex,den%mt,den%pw,den%vacz,den%vacxy,den%vac)
+            iUnit,den%iter+relCdnIndex,den%mt,den%pw,den%vac)
 
        ! Write additional data if l_noco
        IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
@@ -689,11 +690,12 @@ CONTAINS
              ALLOCATE(cdomvz(vacuum%nmz,vacuum%nvac))
              DO iVac = 1, vacuum%nvac
                 DO i = 1, vacuum%nmz
-                   cdomvz(i,iVac) = CMPLX(den%vacz(i,iVac,3),den%vacz(i,iVac,4))
+                   !cdomvz(i,iVac) = CMPLX(den%vacz(i,iVac,3),den%vacz(i,iVac,4))
+                   cdomvz(i,iVac) = den%vac(i,1,iVac,3)
                 END DO
              END DO
              WRITE (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
-             WRITE (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
+             !WRITE (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
              WRITE (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=1,stars%ng2), iVac=1,vacuum%nvac)
              DEALLOCATE(cdomvz)
           END IF

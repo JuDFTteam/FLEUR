@@ -78,9 +78,9 @@
              ENDIF
              DO  j = 1,np
                    CALL starf2(sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1:3,j),sym%invtab,sf2)!keep
-                   v2(j) = potden%vacz(1,ivac,jsp)
+                   v2(j) = REAL(potden%vac(1,1,ivac,jsp))
                    DO  k = 2,stars%ng2
-                      v2(j) = v2(j) + REAL(potden%vacxy(1,k-1,ivac,jsp)*sf2(k))*stars%nstr2(k)
+                      v2(j) = v2(j) + REAL(potden%vac(1,k,ivac,jsp)*sf2(k))*stars%nstr2(k)
                    ENDDO
                    rcc=MATMUL(cell%amat,p(:,j))
                    WRITE (oUnit,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)

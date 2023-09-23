@@ -312,7 +312,7 @@ cccccccccccccccc   initialize the potential   cccccccccccc
       allocate (vz(nmzd,2,jspd))
       allocate (vr(jmtd,ntypd,jspd))
 
-      vz = vTot%vacz
+      vz = REAL(vTot%vac(:,1,:,:))
 
       do jspin = 1,jspins
         do n = 1, ntype
