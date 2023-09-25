@@ -391,7 +391,7 @@ c*********************************************************
          if (alerr /= 0) call juDFT_error('alerr: 5',
      &         calledby='wann_updown')
 
-      vz = vTot%vacz
+      vz = REAL(vTot%vac(:,1,:,:))
 
       do jspin = 1,jspins
         do n = 1, ntype

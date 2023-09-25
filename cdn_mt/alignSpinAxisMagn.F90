@@ -133,7 +133,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
      !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-dtheta,delta_den)
 
      call fsm%alloc()
-     call fsm%from_density(delta_den)
+     call fsm%from_density(delta_den,vacuum%nmzxyd)
 
    END SUBROUTINE precond_noco_anglerotate
 
@@ -174,7 +174,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,phi,zeros,delta_den)
 
      call fsm%alloc()
-     call fsm%from_density(delta_den)
+     call fsm%from_density(delta_den,vacuum%nmzxyd)
 
 
    END SUBROUTINE precond_noco_densitymatrix

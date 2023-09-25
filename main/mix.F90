@@ -106,17 +106,17 @@ contains
     CALL timestop("read history")
     maxiter=MERGE(1,input%maxiter,input%imix==0)
     IF (.NOT.l_dfpt) THEN
-      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
+      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd)
     ELSE
       IF (iteration==1) CALL dfpt_mixing_history_reset()
-      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,inDenIm,outDenIm)
+      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd,inDenIm,outDenIm)
     END IF
 
     IF (.NOT.l_dfpt) THEN
-      CALL distance(fmpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag)
+      CALL distance(fmpi%irank,cell%vol,input%jspins,vacuum%nmzxyd,fsm(it),inDen,outDen,results,fsm_Mag)
     ELSE
       ! TODO: For now dfpt_distance handles Re/Im separately. Maybe that is not all to necessary.
-      CALL dfpt_distance(fmpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,inDenIm,outDenIm,results,fsm_Mag)
+      CALL dfpt_distance(fmpi%irank,cell%vol,input%jspins,vacuum%nmzxyd,fsm(it),inDen,outDen,inDenIm,outDenIm,results,fsm_Mag)
     END IF
     CALL timestop("Reading of distances")
 
@@ -177,13 +177,14 @@ contains
     !extracte mixed density
     inDen%pw=0.0;inDen%mt=0.0
     IF (l_dfpt) inDenIm%mt=0.0
-    IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
-    IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
+    !IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
+    !IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
+    IF (ALLOCATED(inDen%vac)) inden%vac=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
     IF (.NOT.l_dfpt) THEN
-      CALL sm(it)%to_density(inDen)
+      CALL sm(it)%to_density(inDen,vacuum%nmzxyd)
     ELSE
-      CALL sm(it)%to_density(inDen,inDenIm)
+      CALL sm(it)%to_density(inDen,vacuum%nmzxyd,inDenIm)
     END IF
     IF (atoms%n_u>0.AND.l_firstItU) THEN
        !No density matrix was present
@@ -226,11 +227,13 @@ contains
     call timestop("qfix")
 
     IF(vacuum%nvac.EQ.1) THEN
-       inDen%vacz(:,2,:) = inDen%vacz(:,1,:)
+       !inDen%vacz(:,2,:) = inDen%vacz(:,1,:)
        IF (sym%invs) THEN
-          inDen%vacxy(:,:,2,:) = CONJG(inDen%vacxy(:,:,1,:))
+          !inDen%vacxy(:,:,2,:) = CONJG(inDen%vacxy(:,:,1,:))
+          inDen%vac(:,:,2,:) = CONJG(inDen%vac(:,:,1,:))
        ELSE
-          inDen%vacxy(:,:,2,:) = inDen%vacxy(:,:,1,:)
+          !inDen%vacxy(:,:,2,:) = inDen%vacxy(:,:,1,:)
+          inDen%vac(:,:,2,:) = inDen%vac(:,:,1,:)
        END IF
     END IF
 

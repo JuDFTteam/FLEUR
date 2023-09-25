@@ -569,7 +569,7 @@ SUBROUTINE gVacMap_init(thisGVacMap,sym,atoms,vacuum,stars,lapw,input,cell,kpts,
 
    IF (.false..AND.input%film) THEN
       CALL nstm3(sym,atoms,vacuum,stars,lapw,ikpt,input,jspin,kpts,&
-                 cell,enpara%evac0(1,jspin),vTot%vacz(:,:,jspin),thisGVacMap%gvac1d,thisGVacMap%gvac2d)
+                 cell,enpara%evac0(1,jspin),REAL(vTot%vac(:,1,:,jspin)),thisGVacMap%gvac1d,thisGVacMap%gvac2d)
    END IF
 
 END SUBROUTINE gVacMap_init

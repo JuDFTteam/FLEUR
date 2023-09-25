@@ -48,6 +48,7 @@ CONTAINS
     USE m_types
     USE m_types_vacdos
     USE m_types_dos
+    USE m_npy
     IMPLICIT NONE
     TYPE(t_lapw),INTENT(INOUT)    :: lapw !for some reason the second spin data is reset in noco case
 
@@ -82,8 +83,7 @@ CONTAINS
     !     local STM variables
     INTEGER nv2(input%jspins)
     INTEGER kvac1(lapw%dim_nv2d(),input%jspins),kvac2(lapw%dim_nv2d(),input%jspins),map2(lapw%dim_nvd(),input%jspins)
-    INTEGER kvac3(lapw%dim_nv2d(),input%jspins),map1(lapw%dim_nvd(),input%jspins)
-    INTEGER mapg2k(lapw%dim_nv2d())
+!    INTEGER mapg2k(lapw%dim_nv2d())
     !     .. Local Scalars ..
     COMPLEX aa,ab,av,ba,bb,bv,t1,aae,bbe,abe,bae,aaee,bbee,abee,baee,&
          &     factorx,factory,c_1,aa_1,ab_1,ba_1,bb_1,ic,av_1,bv_1,d,tempCmplx
@@ -92,32 +92,19 @@ CONTAINS
          &     scale,sign,uei,uej,ui,uj,wronk,zks,RESULT(1),ui2,uei2,&
          &     k_diff,k_d1,k_d2,ui_1,uei_1,uj_1,uej_1,wronk_1
 
-    INTEGER i,ii,i1,i2,i3,ig3,ig3p,ik,ind2,ind2p,istar ,m1,m3,&
+    INTEGER i,ii,i1,i2,i3,ig3,ig3p,ik,ind2,ind2p,&
          &        ivac,j,jj,jz,k,l,ll,l1,n,n2,ispin,kspin,jsp_start,jsp_end,&
          &        ipot,ie,imz,isp_start,isp_end,&
          &        ind1,ind1p,irec2,irec3,m
     !
     !     .. Local Arrays ..
-    REAL qssbti(3,2),qssbtii
+    REAL qssbti(3,2)
     COMPLEX, ALLOCATABLE :: ac(:,:,:),bc(:,:,:),t1jz(:)
-    REAL,    ALLOCATABLE :: dt(:),dte(:),du(:),ddu(:,:),due(:)
-    REAL,    ALLOCATABLE :: ddue(:,:),t(:),te(:),tei(:,:),dummy(:)
+    REAL,    ALLOCATABLE :: dt(:),dte(:)
+    REAL,    ALLOCATABLE :: t(:),te(:),tei(:,:)!,du(:),ddu(:,:),due(:),ddue(:,:),dummy(:)
     REAL,    ALLOCATABLE :: u(:,:,:),ue(:,:,:),v(:),yy(:)
-    !-odim
-    COMPLEX, ALLOCATABLE :: ac_1(:,:,:,:),bc_1(:,:,:,:)
-    REAL,    ALLOCATABLE :: dt_1(:,:),dte_1(:,:)
-    REAL,    ALLOCATABLE :: du_1(:,:),ddu_1(:,:,:),due_1(:,:)
-    REAL,    ALLOCATABLE :: ddue_1(:,:,:),t_1(:,:)
-    REAL,    ALLOCATABLE :: tei_1(:,:,:),te_1(:,:)
-    REAL,    ALLOCATABLE :: u_1(:,:,:,:),ue_1(:,:,:,:)
-    !+odim
-    !     ..
-    !     ..
 
     !     *******************************************************************************
-    !
-
-    !
     !    layers: no. of layers to be calculated (in vertical direction with z-values as given by izlay)
     !    izlay : defines vertical position of layers in delz (=0.1 a.u.) units from begining of vacuum region
     !    vacdos: =T: calculate vacuum dos in layers as given by the above
@@ -141,11 +128,11 @@ CONTAINS
 
     CALL timestart("vacden")
     ALLOCATE ( ac(lapw%dim_nv2d(),input%neig,input%jspins),bc(lapw%dim_nv2d(),input%neig,input%jspins),dt(lapw%dim_nv2d()),&
-         &           dte(lapw%dim_nv2d()),du(vacuum%nmzd),ddu(vacuum%nmzd,lapw%dim_nv2d()),due(vacuum%nmzd),&
-         &           ddue(vacuum%nmzd,lapw%dim_nv2d()),t(lapw%dim_nv2d()),te(lapw%dim_nv2d()),&
+         &           dte(lapw%dim_nv2d()),&
+         &           t(lapw%dim_nv2d()),te(lapw%dim_nv2d()),&
          &           tei(lapw%dim_nv2d(),input%jspins),u(vacuum%nmzd,lapw%dim_nv2d(),input%jspins),ue(vacuum%nmzd,lapw%dim_nv2d(),input%jspins),&
          &           v(3),yy(vacuum%nmzd))
-    !
+!    ALLOCATE(du(vacuum%nmzd),ddu(vacuum%nmzd,lapw%dim_nv2d()),due(vacuum%nmzd),ddue(vacuum%nmzd,lapw%dim_nv2d()),)
 
     eps=0.01
     ic = CMPLX(0.,1.)
@@ -190,20 +177,20 @@ CONTAINS
        ENDDO
     ENDIF
 
-    !+dw
-    !    if tunneling current should be calculated we need to write out
-    !     info on electronic structure: --> mapping from kvac to gvac by mapg2k
-    !                                             shz, Jan.99
-    IF (.false.) then !vacuum%nstm.EQ.3
-       DO j=1, n2max
-          mapg2k(j)=j
-          DO i=1, nv2(jspin)
-             IF (kvac1(i,jspin).EQ.gVacMap%gvac1d(j).AND.kvac2(i,jspin).EQ.gVacMap%gvac2d(j)) mapg2k(j)=i
-          END DO
-       END DO
-    END IF
-    !
-    !-dw
+!    !+dw
+!    !    if tunneling current should be calculated we need to write out
+!    !     info on electronic structure: --> mapping from kvac to gvac by mapg2k
+!    !                                             shz, Jan.99
+!    IF (.false.) then !vacuum%nstm.EQ.3
+!       DO j=1, n2max
+!          mapg2k(j)=j
+!          DO i=1, nv2(jspin)
+!             IF (kvac1(i,jspin).EQ.gVacMap%gvac1d(j).AND.kvac2(i,jspin).EQ.gVacMap%gvac2d(j)) mapg2k(j)=i
+!          END DO
+!       END DO
+!    END IF
+!    !
+!    !-dw
 
 
     wronk = 2.0
@@ -320,26 +307,26 @@ CONTAINS
        !   ----> calculate first and second derivative of u,ue
        !        in order to simulate p_z or d_z^2 Tip in Chen's model , shz. 97
        !
-       IF (.false.) THEN !vacuum%nstm.GT.0
-          DO  ik = 1,nv2(jspin)
-             !               CALL rhzgrd(nmz,delz,u(1,ik,jspin),4,du,ddu(1,ik))
-             !               CALL rhzgrd(nmz,delz,ue(1,ik,jspin),4,due,ddue(1,ik))
-
-             ALLOCATE ( dummy(vacuum%nmz) )
-             CALL grdchlh(&
-                  vacuum%delz,u(1:vacuum%nmz,ik,jspin),&
-                  du,ddu(:,ik),order=4)
-             CALL grdchlh(&
-                  vacuum%delz,ue(1:vacuum%nmz,ik,jspin),&
-                  due,ddue(:,ik),order=4)
-             DEALLOCATE ( dummy )
-
-             IF (.FALSE.) THEN !IF (vacuum%nstm.EQ.1) THEN
-                u(:vacuum%nmz,ik,jspin)=du(:vacuum%nmz)
-                ue(:vacuum%nmz,ik,jspin)=due(:vacuum%nmz)
-             END IF
-          ENDDO
-       END IF
+!       IF (.false.) THEN !vacuum%nstm.GT.0
+!          DO  ik = 1,nv2(jspin)
+!             !               CALL rhzgrd(nmz,delz,u(1,ik,jspin),4,du,ddu(1,ik))
+!             !               CALL rhzgrd(nmz,delz,ue(1,ik,jspin),4,due,ddue(1,ik))
+!
+!             ALLOCATE ( dummy(vacuum%nmz) )
+!             CALL grdchlh(&
+!                  vacuum%delz,u(1:vacuum%nmz,ik,jspin),&
+!                  du,ddu(:,ik),order=4)
+!             CALL grdchlh(&
+!                  vacuum%delz,ue(1:vacuum%nmz,ik,jspin),&
+!                  due,ddue(:,ik),order=4)
+!             DEALLOCATE ( dummy )
+!
+!             IF (.FALSE.) THEN !IF (vacuum%nstm.EQ.1) THEN
+!                u(:vacuum%nmz,ik,jspin)=du(:vacuum%nmz)
+!                ue(:vacuum%nmz,ik,jspin)=due(:vacuum%nmz)
+!             END IF
+!          ENDDO
+!       END IF
 
        !+dw
 
@@ -350,82 +337,79 @@ CONTAINS
        !                           IF nstm=3
        !                              tworkf is then the fermi energy (in hartree)
        !
-       IF (.false.)then !(vacuum%nstm.EQ.3) THEN
-#ifdef CPP_MPI
-          CALL judft_error("nstm==3 does not work in parallel",calledby="vacden")
-#else
-          i=0
-          DO n = 1, ne
-             IF (ABS(eig(n)-banddos%tworkf).LE.emax) i=i+1
-          END DO
-          WRITE (87,FMT=990) lapw%bkpt(1),lapw%bkpt(2), i, n2max
-          DO n = 1, ne
-             IF (ABS(eig(n)-banddos%tworkf).LE.emax) THEN
-                WRITE (87,FMT=1000) eig(n)
-                DO j=1,n2max
-                   WRITE (87,FMT=1010) ac(mapg2k(j),n,jspin),&
-                        bc(mapg2k(j),n,jspin)
-                END DO
-             END IF
-          END DO
-#endif
-
-
-
-       END IF
-990    FORMAT(2(f8.4,1x),i3,1x,i3)
-1000   FORMAT(e12.4)
-1010   FORMAT(2(2e20.8,1x))
+!       IF (.false.)then !(vacuum%nstm.EQ.3) THEN
+!#ifdef CPP_MPI
+!          CALL judft_error("nstm==3 does not work in parallel",calledby="vacden")
+!#else
+!          i=0
+!          DO n = 1, ne
+!             IF (ABS(eig(n)-banddos%tworkf).LE.emax) i=i+1
+!          END DO
+!          WRITE (87,FMT=990) lapw%bkpt(1),lapw%bkpt(2), i, n2max
+!          DO n = 1, ne
+!             IF (ABS(eig(n)-banddos%tworkf).LE.emax) THEN
+!                WRITE (87,FMT=1000) eig(n)
+!                DO j=1,n2max
+!                   WRITE (87,FMT=1010) ac(mapg2k(j),n,jspin),&
+!                        bc(mapg2k(j),n,jspin)
+!                END DO
+!             END IF
+!          END DO
+!#endif
+!       END IF
+!990    FORMAT(2(f8.4,1x),i3,1x,i3)
+!1000   FORMAT(e12.4)
+!1010   FORMAT(2(2e20.8,1x))
        !
        !        ------------------------------------------------------------
        !-dw
        !
        !---->   non-warping part of the density (g=0 star)
        !
-       IF (.false.) then !vacuum%nstm.EQ.2) THEN
-          !
-          !  ----> d_z^2-Tip needs: |d^2(psi)/dz^2 - kappa^2/3 psi|^2
-          !
-          DO l = 1,nv2(jspin)
-             aa = 0.0
-             bb = 0.0
-             ba = 0.0
-             ab = 0.0
-             DO n = 1,ne
-                aa = aa + we(n)*CONJG(ac(l,n,jspin))*ac(l,n,jspin)
-                bb = bb + we(n)*CONJG(bc(l,n,jspin))*bc(l,n,jspin)
-                ab = ab + we(n)*CONJG(ac(l,n,jspin))*bc(l,n,jspin)
-                ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
-                qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
-                vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
-                dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
-             END DO
-             aae=-aa*banddos%tworkf*2/3
-             bbe=-bb*banddos%tworkf*2/3
-             abe=-ab*banddos%tworkf*2/3
-             bae=-ba*banddos%tworkf*2/3
-             aaee=aa*banddos%tworkf*banddos%tworkf*4/9
-             bbee=bb*banddos%tworkf*banddos%tworkf*4/9
-             abee=ab*banddos%tworkf*banddos%tworkf*4/9
-             baee=ba*banddos%tworkf*banddos%tworkf*4/9
-             DO  jz = 1,vacuum%nmz
-                ui = u(jz,l,jspin)
-                uei = ue(jz,l,jspin)
-                ddui = ddu(jz,l)
-                dduei = ddue(jz,l)
-                den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +&
-                     REAL(aaee*ui*ui+bbee*uei*uei+&
-                     (abee+baee)*ui*uei+aa*ddui*ddui+&
-                     bb*dduei*dduei+(ab+ba)*ddui*dduei+&
-                     2*aae*ui*ddui+2*bbe*uei*dduei+&
-                     (abe+bae)*(ui*dduei+uei*ddui))
-
-             ENDDO
-          END DO
-          !
-          !    -----> s-Tip: |psi|^2 and p-Tip: |d(psi)/dz|^2
-          !
-       ELSE
+!       IF (.false.) then !vacuum%nstm.EQ.2) THEN
+!          !
+!          !  ----> d_z^2-Tip needs: |d^2(psi)/dz^2 - kappa^2/3 psi|^2
+!          !
+!          DO l = 1,nv2(jspin)
+!             aa = 0.0
+!             bb = 0.0
+!             ba = 0.0
+!             ab = 0.0
+!             DO n = 1,ne
+!                aa = aa + we(n)*CONJG(ac(l,n,jspin))*ac(l,n,jspin)
+!                bb = bb + we(n)*CONJG(bc(l,n,jspin))*bc(l,n,jspin)
+!                ab = ab + we(n)*CONJG(ac(l,n,jspin))*bc(l,n,jspin)
+!                ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
+!                qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
+!                vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
+!                dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
+!             END DO
+!             aae=-aa*banddos%tworkf*2/3
+!             bbe=-bb*banddos%tworkf*2/3
+!             abe=-ab*banddos%tworkf*2/3
+!             bae=-ba*banddos%tworkf*2/3
+!             aaee=aa*banddos%tworkf*banddos%tworkf*4/9
+!             bbee=bb*banddos%tworkf*banddos%tworkf*4/9
+!             abee=ab*banddos%tworkf*banddos%tworkf*4/9
+!             baee=ba*banddos%tworkf*banddos%tworkf*4/9
+!             DO  jz = 1,vacuum%nmz
+!                ui = u(jz,l,jspin)
+!                uei = ue(jz,l,jspin)
+!                ddui = ddu(jz,l)
+!                dduei = ddue(jz,l)
+!                den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +&
+!                     REAL(aaee*ui*ui+bbee*uei*uei+&
+!                     (abee+baee)*ui*uei+aa*ddui*ddui+&
+!                     bb*dduei*dduei+(ab+ba)*ddui*dduei+&
+!                     2*aae*ui*ddui+2*bbe*uei*dduei+&
+!                     (abe+bae)*(ui*dduei+uei*ddui))
+!
+!             ENDDO
+!          END DO
+!          !
+!          !    -----> s-Tip: |psi|^2 and p-Tip: |d(psi)/dz|^2
+!          !
+!       ELSE
           IF (noco%l_noco) THEN
              !--->          diagonal elements of the density matrix, n_11 and n_22
              !--->          the non-warping part of n_21 is calculated together with
@@ -448,7 +432,8 @@ CONTAINS
                       DO jz = 1,vacuum%nmz
                          ui = u(jz,l,ispin)
                          uei = ue(jz,l,ispin)
-                         den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                         !den%vacz(jz,ivac,ispin) = den%vacz(jz,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                         den%vac(jz,1,ivac,ispin) = den%vac(jz,1,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei) ! TODO: AN TB; sollte man das REAL killen? 
                       ENDDO
                    ENDDO
                 
@@ -471,12 +456,13 @@ CONTAINS
                    DO  jz = 1,vacuum%nmz
                       ui = u(jz,l,jspin)
                       uei = ue(jz,l,jspin)
-                      den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                      !den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
+                      den%vac(jz,1,ivac,jspin) = den%vac(jz,1,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei) ! TODO: REAL weg?
                    ENDDO
                 END DO
              
           ENDIF
-       END IF
+!       END IF
        !
        !     ****************** change for vacuum density of states shz Jan.96 ***
        !
@@ -484,58 +470,58 @@ CONTAINS
           !
           !  ----> d_z^2-Tip needs: |d^2(psi)/dz^2 - kappa^2/3 psi|^2
           !
-          IF (.false.) THEN !IF (vacuum%nstm.EQ.2) THEN
-             DO l=1,nv2(jspin)
-                DO n = 1,ne
-                   aa = CONJG(ac(l,n,jspin))*ac(l,n,jspin)
-                   bb = CONJG(bc(l,n,jspin))*bc(l,n,jspin)
-                   ab = CONJG(ac(l,n,jspin))*bc(l,n,jspin)
-                   ba = CONJG(bc(l,n,jspin))*ac(l,n,jspin)
-                   aae = -banddos%tworkf*aa*2/3
-                   bbe = -banddos%tworkf*bb*2/3
-                   abe = -banddos%tworkf*ab*2/3
-                   bae = -banddos%tworkf*ba*2/3
-                   aaee = aa*banddos%tworkf*banddos%tworkf*4/9
-                   bbee = bb*banddos%tworkf*banddos%tworkf*4/9
-                   abee = ab*banddos%tworkf*banddos%tworkf*4/9
-                   baee = ba*banddos%tworkf*banddos%tworkf*4/9
-                   DO jj = 1,banddos%layers
-                      !
-                      !     ----> either integrated LDOS(z1,z2) or LDOS(z1)
-                      !
-                      IF (input%integ) THEN
-                         ll = 1
-                         DO ii = banddos%izlay(jj,1),banddos%izlay(jj,2)
-                            ui = u(ii,l,jspin)
-                            uei = ue(ii,l,jspin)
-                            ddui = ddu(ii,l)
-                            dduei = ddue(ii,l)
-                            yy(ll) = REAL(aaee*ui*ui+bbee*uei*uei+(abee+baee)*ui*uei+aa*ddui*ddui+bb*&
-                                 dduei*dduei+(ab+ba)*ddui*dduei+2*aae*ui*ddui+2*bbe*uei*dduei+&
-                                 (abe+bae)*(ui*dduei+uei*ddui))*cell%area
-                            ll = ll+1
-                         END DO
-                         CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                         vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
-                      ELSE
-                         ui = u(banddos%izlay(jj,1),l,jspin)
-                         uei = ue(banddos%izlay(jj,1),l,jspin)
-                         ddui = ddu(banddos%izlay(jj,1),l)
-                         dduei = ddue(banddos%izlay(jj,1),l)
-                         yy(1) = REAL(aaee*ui*ui+bbee*uei*uei+&
-                              (abee+baee)*ui*uei+aa*ddui*ddui+&
-                              bb*dduei*dduei+(ab+ba)*ddui*dduei+&
-                              2*aae*ui*ddui+2*bbe*uei*dduei+&
-                              (abe+bae)*(ui*dduei+uei*ddui))
-                         vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) +yy (1)
-                      END IF
-                   END DO
-                END DO
-             END DO
-             !
-             !     ----> s-Tip = calculate LDOS and(!) p_z-Tip (since u->du/dz, ue->due/dz)
-             !
-          ELSE
+!          IF (.false.) THEN !IF (vacuum%nstm.EQ.2) THEN
+!             DO l=1,nv2(jspin)
+!                DO n = 1,ne
+!                   aa = CONJG(ac(l,n,jspin))*ac(l,n,jspin)
+!                   bb = CONJG(bc(l,n,jspin))*bc(l,n,jspin)
+!                   ab = CONJG(ac(l,n,jspin))*bc(l,n,jspin)
+!                   ba = CONJG(bc(l,n,jspin))*ac(l,n,jspin)
+!                   aae = -banddos%tworkf*aa*2/3
+!                   bbe = -banddos%tworkf*bb*2/3
+!                   abe = -banddos%tworkf*ab*2/3
+!                   bae = -banddos%tworkf*ba*2/3
+!                   aaee = aa*banddos%tworkf*banddos%tworkf*4/9
+!                   bbee = bb*banddos%tworkf*banddos%tworkf*4/9
+!                   abee = ab*banddos%tworkf*banddos%tworkf*4/9
+!                   baee = ba*banddos%tworkf*banddos%tworkf*4/9
+!                   DO jj = 1,banddos%layers
+!                      !
+!                      !     ----> either integrated LDOS(z1,z2) or LDOS(z1)
+!                      !
+!                      IF (input%integ) THEN
+!                         ll = 1
+!                         DO ii = banddos%izlay(jj,1),banddos%izlay(jj,2)
+!                            ui = u(ii,l,jspin)
+!                            uei = ue(ii,l,jspin)
+!                            ddui = ddu(ii,l)
+!                            dduei = ddue(ii,l)
+!                            yy(ll) = REAL(aaee*ui*ui+bbee*uei*uei+(abee+baee)*ui*uei+aa*ddui*ddui+bb*&
+!                                 dduei*dduei+(ab+ba)*ddui*dduei+2*aae*ui*ddui+2*bbe*uei*dduei+&
+!                                 (abe+bae)*(ui*dduei+uei*ddui))*cell%area
+!                            ll = ll+1
+!                         END DO
+!                         CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
+!                         vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
+!                      ELSE
+!                         ui = u(banddos%izlay(jj,1),l,jspin)
+!                         uei = ue(banddos%izlay(jj,1),l,jspin)
+!                         ddui = ddu(banddos%izlay(jj,1),l)
+!                         dduei = ddue(banddos%izlay(jj,1),l)
+!                         yy(1) = REAL(aaee*ui*ui+bbee*uei*uei+&
+!                              (abee+baee)*ui*uei+aa*ddui*ddui+&
+!                              bb*dduei*dduei+(ab+ba)*ddui*dduei+&
+!                              2*aae*ui*ddui+2*bbe*uei*dduei+&
+!                              (abe+bae)*(ui*dduei+uei*ddui))
+!                         vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) +yy (1)
+!                      END IF
+!                   END DO
+!                END DO
+!             END DO
+!             !
+!             !     ----> s-Tip = calculate LDOS and(!) p_z-Tip (since u->du/dz, ue->due/dz)
+!             !
+!          ELSE
              IF (ABS(banddos%locx(1)-banddos%locx(2)).LE.eps) THEN
                 !
                 !     ----> integrated over 2D-unit cell
@@ -640,7 +626,7 @@ CONTAINS
                    END DO
                 END DO
              END IF
-          END IF
+          !END IF
        END IF
 
        !
@@ -650,62 +636,62 @@ CONTAINS
        !
        !   ---> d_z^2-Tip
        !
-       if (.false.) then !IF (vacuum%nstm.EQ.2) THEN
-          DO l = 1,nv2(jspin)
-             DO  l1 = 1,l - 1
-                i1 = kvac1(l,jspin) - kvac1(l1,jspin)
-                i2 = kvac2(l,jspin) - kvac2(l1,jspin)
-                i3 = 0
-                IF (iabs(i1).GT.stars%mx1) CYCLE
-                IF (iabs(i2).GT.stars%mx2) CYCLE
-                ig3 = stars%ig(i1,i2,i3)
-                IF (ig3.EQ.0)  CYCLE
-                phs = stars%rgphs(i1,i2,i3)
-                ig3p = stars%ig(-i1,-i2,i3)
-                phsp = stars%rgphs(-i1,-i2,i3)
-                ind2 = stars%ig2(ig3)
-                ind2p = stars%ig2(ig3p)
-                aa = 0.0
-                bb = 0.0
-                ba = 0.0
-                ab = 0.0
-                DO n = 1,ne
-                   aa = aa + we(n)*CONJG(ac(l1,n,jspin))*ac(l,n,jspin)
-                   bb = bb + we(n)*CONJG(bc(l1,n,jspin))*bc(l,n,jspin)
-                   ab = ab + we(n)*CONJG(ac(l1,n,jspin))*bc(l,n,jspin)
-                   ba = ba + we(n)*CONJG(bc(l1,n,jspin))*ac(l,n,jspin)
-                END DO
-                aae=-aa*2/3*banddos%tworkf
-                bbe=-bb*2/3*banddos%tworkf
-                abe=-ab*2/3*banddos%tworkf
-                bae=-ba*2/3*banddos%tworkf
-                aaee=aa*4/9*banddos%tworkf*banddos%tworkf
-                bbee=bb*4/9*banddos%tworkf*banddos%tworkf
-                abee=ab*4/9*banddos%tworkf*banddos%tworkf
-                baee=ba*4/9*banddos%tworkf*banddos%tworkf
-                DO  jz = 1,vacuum%nmzxy
-                   ui = u(jz,l,jspin)
-                   uj = u(jz,l1,jspin)
-                   ddui = ddu(jz,l)
-                   dduj = ddu(jz,l1)
-                   uei = ue(jz,l,jspin)
-                   uej = ue(jz,l1,jspin)
-                   dduei = ddue(jz,l)
-                   dduej = ddue(jz,l1)
-                   t1=aaee*ui*uj+bbee*uei*uej+baee*ui*uej+abee*uei*uj&
-                        + aae*(ui*dduj+uj*ddui)+bbe*(uei*dduej+uej*dduei)&
-                        + abe*(ui*dduej+uj*dduei)+bae*(ddui*uej+dduj*uei)&
-                        + aa*ddui*dduj+bb*dduei*dduej+ba*ddui*dduej&
-                        + ab*dduei*dduj
-                   den%vacxy(jz,ind2-1,ivac,jspin) = den%vacxy(jz,ind2-1,ivac,jspin) + t1*phs/stars%nstr2(ind2)
-                   den%vacxy(jz,ind2p-1,ivac,jspin)= den%vacxy(jz,ind2p-1,ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
-                ENDDO
-             ENDDO
-          END DO
-          !
-          ! ---> s-Tip and p_z-Tip
-          !
-       ELSE
+!       if (.false.) then !IF (vacuum%nstm.EQ.2) THEN
+!          DO l = 1,nv2(jspin)
+!             DO  l1 = 1,l - 1
+!                i1 = kvac1(l,jspin) - kvac1(l1,jspin)
+!                i2 = kvac2(l,jspin) - kvac2(l1,jspin)
+!                i3 = 0
+!                IF (iabs(i1).GT.stars%mx1) CYCLE
+!                IF (iabs(i2).GT.stars%mx2) CYCLE
+!                ig3 = stars%ig(i1,i2,i3)
+!                IF (ig3.EQ.0)  CYCLE
+!                phs = stars%rgphs(i1,i2,i3)
+!                ig3p = stars%ig(-i1,-i2,i3)
+!                phsp = stars%rgphs(-i1,-i2,i3)
+!                ind2 = stars%ig2(ig3)
+!                ind2p = stars%ig2(ig3p)
+!                aa = 0.0
+!                bb = 0.0
+!                ba = 0.0
+!                ab = 0.0
+!                DO n = 1,ne
+!                   aa = aa + we(n)*CONJG(ac(l1,n,jspin))*ac(l,n,jspin)
+!                   bb = bb + we(n)*CONJG(bc(l1,n,jspin))*bc(l,n,jspin)
+!                   ab = ab + we(n)*CONJG(ac(l1,n,jspin))*bc(l,n,jspin)
+!                   ba = ba + we(n)*CONJG(bc(l1,n,jspin))*ac(l,n,jspin)
+!                END DO
+!                aae=-aa*2/3*banddos%tworkf
+!                bbe=-bb*2/3*banddos%tworkf
+!                abe=-ab*2/3*banddos%tworkf
+!                bae=-ba*2/3*banddos%tworkf
+!                aaee=aa*4/9*banddos%tworkf*banddos%tworkf
+!                bbee=bb*4/9*banddos%tworkf*banddos%tworkf
+!                abee=ab*4/9*banddos%tworkf*banddos%tworkf
+!                baee=ba*4/9*banddos%tworkf*banddos%tworkf
+!                DO  jz = 1,vacuum%nmzxy
+!                   ui = u(jz,l,jspin)
+!                   uj = u(jz,l1,jspin)
+!                   ddui = ddu(jz,l)
+!                   dduj = ddu(jz,l1)
+!                   uei = ue(jz,l,jspin)
+!                   uej = ue(jz,l1,jspin)
+!                   dduei = ddue(jz,l)
+!                   dduej = ddue(jz,l1)
+!                   t1=aaee*ui*uj+bbee*uei*uej+baee*ui*uej+abee*uei*uj&
+!                        + aae*(ui*dduj+uj*ddui)+bbe*(uei*dduej+uej*dduei)&
+!                        + abe*(ui*dduej+uj*dduei)+bae*(ddui*uej+dduj*uei)&
+!                        + aa*ddui*dduj+bb*dduei*dduej+ba*ddui*dduej&
+!                        + ab*dduei*dduj
+!                   den%vacxy(jz,ind2-1,ivac,jspin) = den%vacxy(jz,ind2-1,ivac,jspin) + t1*phs/stars%nstr2(ind2)
+!                   den%vacxy(jz,ind2p-1,ivac,jspin)= den%vacxy(jz,ind2p-1,ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+!                ENDDO
+!             ENDDO
+!          END DO
+!          !
+!          ! ---> s-Tip and p_z-Tip
+!          !
+!       ELSE
           !=============================================================
           !           continuation of vacden....
           !=============================================================
@@ -743,8 +729,10 @@ CONTAINS
                             uei = ue(jz,l,ispin)
                             uej = ue(jz,l1,ispin)
                             t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                            den%vacxy(jz,ind2-1,ivac,ispin) = den%vacxy(jz,ind2-1,ivac,ispin) + t1*phs/stars%nstr2(ind2)
-                            den%vacxy(jz,ind2p-1,ivac,ispin) = den%vacxy(jz,ind2p-1,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                            !den%vacxy(jz,ind2-1,ivac,ispin) = den%vacxy(jz,ind2-1,ivac,ispin) + t1*phs/stars%nstr2(ind2)
+                            !den%vacxy(jz,ind2p-1,ivac,ispin) = den%vacxy(jz,ind2p-1,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
+                            den%vac(jz,ind2,ivac,ispin) = den%vac(jz,ind2,ivac,ispin) + t1*phs/stars%nstr2(ind2)
+                            den%vac(jz,ind2p,ivac,ispin) = den%vac(jz,ind2p,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                          ENDDO
                       ENDDO
                    ENDDO
@@ -781,8 +769,9 @@ CONTAINS
                             uei = ue(jz,l,1)
                             uei2 = ue(jz,l1,2)
                             tempCmplx = aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
-                            den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
-                            den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) - AIMAG(tempCmplx)
+                            !den%vacz(jz,ivac,3) = den%vacz(jz,ivac,3) + REAL(tempCmplx)
+                            !den%vacz(jz,ivac,4) = den%vacz(jz,ivac,4) - AIMAG(tempCmplx) !!!! MAGIC MINUS
+                            den%vac(jz,1,ivac,3) = den%vac(jz,1,ivac,3) + CONJG(tempCmplx)
                          ENDDO
                       ELSE
                          !--->                warping part
@@ -802,7 +791,8 @@ CONTAINS
                             uei = ue(jz,l,1)
                             uej = ue(jz,l1,2)
                             t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                            den%vacxy(jz,ind2-1,ivac,3) = den%vacxy(jz, ind2-1,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
+                            !den%vacxy(jz,ind2-1,ivac,3) = den%vacxy(jz, ind2-1,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
+                            den%vac(jz,ind2,ivac,3) = den%vac(jz, ind2,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
                          ENDDO
                       ENDIF
                    ENDDO
@@ -848,19 +838,23 @@ CONTAINS
                          uej = ue(jz,l1,jspin)
                          t1jz(jz) = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
                       ENDDO
-                      !$OMP CRITICAL (denvacxy)
-                      den%vacxy(:vacuum%nmzxy,ind2-1,ivac,jspin)  = den%vacxy(:vacuum%nmzxy,ind2-1, ivac,jspin) &
-                               + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
-                      den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) = den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) &
-                               + CONJG(t1jz(:vacuum%nmzxy))*phsp/stars%nstr2(ind2p)
-                      !$OMP END CRITICAL (denvacxy)
+                      !$OMP CRITICAL ! (denvacxy,denvac)
+                      !den%vacxy(:vacuum%nmzxy,ind2-1,ivac,jspin)  = den%vacxy(:vacuum%nmzxy,ind2-1, ivac,jspin) &
+                      !         + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
+                      !den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) = den%vacxy(:vacuum%nmzxy,ind2p-1,ivac,jspin) &
+                      !         + CONJG(t1jz(:vacuum%nmzxy))*phsp/stars%nstr2(ind2p)
+                      den%vac(:vacuum%nmzxy,ind2,ivac,jspin)  = den%vac(:vacuum%nmzxy,ind2, ivac,jspin) &
+                             + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
+                      den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) = den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) &
+                             + CONJG(t1jz(:vacuum%nmzxy))*phsp/stars%nstr2(ind2p)
+                      !$OMP END CRITICAL ! (denvacxy,denvac)
                    ENDDO
                 END DO
                 !$OMP END DO
                 DEALLOCATE(t1jz)
                 !$OMP END PARALLEL
              ENDIF
-       END IF
+       !END IF
        !=============================================================
        !
        !       calculate 1. to nstars. starcoefficient for each k and energy eigenvalue
@@ -905,9 +899,8 @@ CONTAINS
           ENDDO
        END IF
     ENDDO
-    DEALLOCATE (ac,bc,dt,dte,du,ddu,due,ddue,t,te,tei,u,ue,v,yy )
-
-
+    DEALLOCATE (ac,bc,dt,dte,t,te,tei,u,ue,v,yy )
+!    DEALLOCATE (du,ddu,due,ddue)
 
     !IF(vacuum%nvac.EQ.1) THEN
     !   den%vacz(:,2,:) = den%vacz(:,1,:)

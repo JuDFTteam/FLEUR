@@ -6,7 +6,7 @@ MODULE m_vintcz
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
 CONTAINS
-   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vxy,vz,rhobar,sig1dh,vz1dh,alphm,vslope)
+   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope)
       USE m_constants
       USE m_types
 
@@ -22,9 +22,9 @@ CONTAINS
       COMPLEX,        INTENT(IN) :: rhobar,vslope
       REAL,           INTENT(IN) :: sig1dh,vz1dh,z
 
-      COMPLEX,        INTENT(IN) :: psq(stars%ng3),vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
+      COMPLEX,        INTENT(IN) :: psq(stars%ng3),vnew(:,:,:)!,vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
       COMPLEX,        INTENT(IN) :: alphm(stars%ng2,2)
-      REAL,           INTENT(IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)
+      !REAL,           INTENT(IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)
 
       COMPLEX                    :: argr,sumrr,vcons1,test,c_ph,phas
       REAL                       :: bj0,dh,fit,g,g3,q,qdh,vcons2,zf
@@ -45,9 +45,9 @@ CONTAINS
          im = zf
          q = zf - im
          IF (nrec2.EQ.1) THEN
-            fit = 0.5* (q-1.)* (q-2.)*vz(im,ivac) -&
-               &            q* (q-2.)*vz(im+1,ivac) +&
-               &        0.5*q* (q-1.)*vz(im+2,ivac)
+            fit = 0.5* (q-1.)* (q-2.)*REAL(vnew(im,1,ivac)) -&
+               &            q* (q-2.)*REAL(vnew(im+1,1,ivac)) +&
+               &        0.5*q* (q-1.)*REAL(vnew(im+2,1,ivac))
             vintcz = CMPLX(fit,0.0)
          ELSE IF (im+2.LE.vacuum%nmzxy) THEN
             if (z<0) THEN 
@@ -56,9 +56,9 @@ CONTAINS
                nrec2r=nrec2 
                phas=cmplx(1.0,0.0)
             end if      
-            vintcz = phas*0.5* (q-1.)* (q-2.)*vxy(im,nrec2r-1,ivac) -&
-                                    q* (q-2.)*vxy(im+1,nrec2r-1,ivac) +&
-                                0.5*q* (q-1.)*vxy(im+2,nrec2r-1,ivac)
+            vintcz = phas*0.5* (q-1.)* (q-2.)*vnew(im,nrec2r,ivac) -&
+                                    q* (q-2.)*vnew(im+1,nrec2r,ivac) +&
+                                0.5*q* (q-1.)*vnew(im+2,nrec2r,ivac)
          END IF
          RETURN
       END IF

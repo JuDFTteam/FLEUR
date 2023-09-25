@@ -1,12 +1,8 @@
 MODULE m_fft2d
 CONTAINS
-  SUBROUTINE fft2d(&
-       &                 stars,&
-       &                 afft2,bfft2,&
-       &                 fg,fgi,fgxy,&
-       &                 isn,&
-       &                 firstderiv,secondderiv,cell )
-
+   SUBROUTINE fft2d(stars,afft2,bfft2,fg,isn,firstderiv,secondderiv,cell )
+      !!
+      !!
     !*************************************************************
     !*                                                           *
     !* interface for fg2(star) -- FFT --> gfft (r)     (isn=+1)  *
@@ -19,61 +15,48 @@ CONTAINS
     !* stars%pgfft2(i)   contains the phases of the G-vectors of sph.  *
     !*                                                           *
     !*************************************************************
+      USE m_types_fftgrid
+      USE m_types
 
-    USE m_types_fftgrid
-    USE m_types
-    IMPLICIT NONE
-    TYPE(t_stars),INTENT(IN) :: stars
-    TYPE(t_cell),INTENT(IN),OPTIONAL:: cell
-    INTEGER, INTENT (IN) :: isn
-    REAL                 :: fg,fgi
+      IMPLICIT NONE
 
-    REAL                  :: afft2(0:9*stars%mx1*stars%mx2-1),bfft2(0:9*stars%mx1*stars%mx2-1)
-    COMPLEX               :: fgxy(:)
-    REAL,OPTIONAL,INTENT(IN):: firstderiv(3),secondderiv(3)
+      TYPE(t_stars), INTENT(IN) :: stars
+      
+      INTEGER, INTENT (IN) :: isn
+      REAL                 :: afft2(0:9*stars%mx1*stars%mx2-1),bfft2(0:9*stars%mx1*stars%mx2-1)
+      COMPLEX              :: fg(:)
     
-    !... local variables
-
-   TYPE(t_fftgrid) :: grid
-   INTEGER i
-   COMPLEX fg2(stars%ng2)
-
+      REAL,         OPTIONAL, INTENT(IN) :: firstderiv(3),secondderiv(3)
+      TYPE(t_cell), OPTIONAL, INTENT(IN) :: cell
+    
+      TYPE(t_fftgrid) :: grid
+      
+      INTEGER :: i
    
-   call grid%init([3*stars%mx1,3*stars%mx2,1])
+      CALL grid%init([3*stars%mx1,3*stars%mx2,1])
 
-    IF (isn>0) THEN
-       !  ---> put stars onto the fft-grid
-       fg2(1) = CMPLX(fg,fgi)
-       fg2(2:)=fgxy(:)
+      IF (isn>0) THEN
+       	!  ---> put stars onto the fft-grid
+       	CALL grid%putFieldOnGrid(stars,fg,cell,firstderiv=firstderiv,secondderiv=secondderiv,l_2d=.TRUE.)
+    	ELSE
+       	grid%grid=cmplx(afft2,bfft2)
+    	END IF
 
-       call grid%putFieldOnGrid(stars,fg2,cell,firstderiv=firstderiv,secondderiv=secondderiv,l_2d=.true.)
-    else
-       grid%grid=cmplx(afft2,bfft2)
-    endif
-
-    call grid%perform_fft(forward=(isn<0))
+    	CALL grid%perform_fft(forward=(isn<0))
     
-    if (isn >0) THEN
-        afft2 = real(grid%grid)
-        bfft2 = aimag(grid%grid)
-      else
-         call grid%takeFieldFromGrid(stars,fg2,l_2d=.true.)
+    	IF (isn>0) THEN
+        	afft2 =  REAL(grid%grid)
+        	bfft2 = AIMAG(grid%grid)
+      ELSE
+         CALL grid%takeFieldFromGrid(stars,fg,l_2d=.TRUE.)
          !Scaling by stars%nstr is already done in previous call
          !IF (PRESENT(scaled)) THEN
          !   IF (.not.scaled) fg3 = fg3*stars%nstr
          !ENDIF
-      ENDIF   
-    IF (isn.LT.0) THEN
-       !
-       !  ---> collect stars from the fft-grid
-       !
-       call grid%takeFieldFromGrid(stars, fg2, l_2d=.true.)
-       fg=REAL(fg2(1))
-       fgi=AIMAG(fg2(1))
-       DO i=2,stars%ng2
-          fgxy(i-1)=fg2(i)
-       ENDDO
-    ENDIF
-
+      END IF   
+    	IF (isn<0) THEN
+       	!  ---> collect stars from the fft-grid
+			CALL grid%takeFieldFromGrid(stars, fg, l_2d=.TRUE.)
+    	END IF
   END SUBROUTINE fft2d
 END MODULE m_fft2d

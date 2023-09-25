@@ -662,7 +662,8 @@ CONTAINS
     ALLOCATE ( vso(atoms%jmtd,atoms%nat,2) )
 
     vz = 0.0
-    vz(:,:,:SIZE(vTot%vacz,3)) = vTot%vacz(:,:,:)
+    vz(:,:,:SIZE(vTot%vac,4)) = REAL(vTot%vac(:,1,:,:))
+    IF (SIZE(vTot%vac,4)==3) vz(:,:,4) = AIMAG(vTot%vac(:,1,:,3))
 
     DO jspin = 1,input%jspins
        DO n = 1, atoms%ntype

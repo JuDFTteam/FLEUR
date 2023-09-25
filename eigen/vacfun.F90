@@ -40,7 +40,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: vxy(:,:,:,:) !(vacuum%nmzxyd,stars%ng2-1,nvac,:)
     COMPLEX, INTENT (OUT):: tddv(:,:),tduv(:,:)!(lapw%dim_nv2d(),lapw%dim_nv2d())
     COMPLEX, INTENT (OUT):: tudv(:,:),tuuv(:,:)!(lapw%dim_nv2d(),lapw%dim_nv2d())
-    REAL,    INTENT (IN) :: vz(:,:,:) !(vacuum%nmzd,2,4) ,
+    COMPLEX, INTENT (IN) :: vz(:,:,:) !(vacuum%nmzd,2,4) ,
     REAL,    INTENT (IN) :: evac(:,:)!(2,input%jspins)
     REAL,    INTENT (IN) :: bkpt(3)
     REAL,    INTENT (OUT):: udz(:,:),uz(:,:)!(lapw%dim_nv2d(),input%jspins)
@@ -80,9 +80,9 @@ CONTAINS
           v(3) = 0.0
           ev = evac(ivac,jspin) - 0.5*dot_product(v,matmul(v,cell%bbmat))
           vzero = vz(vacuum%nmzd,ivac,jspin)
-          CALL vacuz(ev,vz(1:,ivac,jspin),vzero,vacuum%nmz,vacuum%delz,&
+          CALL vacuz(ev,REAL(vz(1:,ivac,jspin)),vzero,vacuum%nmz,vacuum%delz,&
                uz(ik,jspin),duz(ik,jspin),u(1,ik,jspin))
-          CALL vacudz(ev,vz(1:,ivac,jspin),vzero,vacuum%nmz,vacuum%delz,&
+          CALL vacudz(ev,REAL(vz(1:,ivac,jspin)),vzero,vacuum%nmz,vacuum%delz,&
                udz(ik,jspin),dudz(ik,jspin),ddnv(ik,jspin),&
                ud(1,ik,jspin),duz(ik,jspin),u(1,ik,jspin))
           !--->       make sure the solutions satisfy the wronksian
@@ -193,7 +193,7 @@ CONTAINS
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
                 DO i = 1,vacuum%nmz
-                   x(vacuum%nmz+1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*fac*vz(i,ivac,4)
+                   x(vacuum%nmz+1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(vz(i,ivac,3))
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
                 tuuv_loc(ik,jk) = cmplx(xv,yv)
@@ -204,7 +204,7 @@ CONTAINS
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
                 DO i = 1,vacuum%nmz
-                   x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*ud(i,jk,jspin2)*fac*vz(i,ivac,4)
+                   x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(vz(i,ivac,3))
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
                 tddv_loc(ik,jk) = cmplx(xv,yv)
@@ -215,7 +215,7 @@ CONTAINS
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
                 DO i = 1,vacuum%nmz
-                   x(vacuum%nmz+1-i) = u(i,ik,jspin1)*ud(i,jk,jspin2)*fac*vz(i,ivac,4)
+                   x(vacuum%nmz+1-i) = u(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(vz(i,ivac,3))
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
                 tudv_loc(ik,jk) = cmplx(xv,yv)
@@ -226,7 +226,7 @@ CONTAINS
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
                 DO i = 1,vacuum%nmz
-                   x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*u(i,jk,jspin2)*fac*vz(i,ivac,4)
+                   x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(vz(i,ivac,3))
                 ENDDO
                 CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
                 tduv_loc(ik,jk) = cmplx(xv,yv)

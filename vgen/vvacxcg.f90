@@ -79,8 +79,8 @@ CONTAINS
     if (xcpot%needs_grad()) CALL xcpot%alloc_gradients(ngrid,input%jspins,grad)
     allocate(rho(ngrid,input%jspins),v_xc(ngrid,input%jspins),v_x(ngrid,input%jspins))
     rho=0.0
-    call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vacxy(:,:,:,:),den%vacz,stars,rho,grad)
-
+    !call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vacxy(:,:,:,:),den%vacz,stars,rho,grad)
+    call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vac(:vacuum%nmzxyd,2:,:,:),REAL(den%vac(:,1,:,:)),den%vac,stars,rho,grad)
 
     !         calculate the exchange-correlation potential in  real space
     !
@@ -95,7 +95,7 @@ CONTAINS
        END IF
     END SELECT
 
-    call vac_from_grid(stars,vacuum,v_xc,ifftd2,vxc%vacz,vxc%vacxy)
+    call vac_from_grid(stars,vacuum,v_xc,ifftd2,vxc%vac)
 
     !IF (l_libxc.AND.xcpot%needs_grad()) THEN
     !   CALL save_npy('vxc_gga_vac_libxc.npy',v_xc)
@@ -107,10 +107,10 @@ CONTAINS
     !  CALL save_npy('vxc_lda_vac_inbuild.npy',v_xc)
     !END IF
 
-    IF (ALLOCATED(exc%vacz)) THEN
+    IF (ALLOCATED(exc%vac)) THEN
       ALLOCATE ( e_xc(ngrid,1) ); e_xc=0.0
       CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
-      CALL vac_from_grid(stars,vacuum,e_xc,ifftd2,exc%vacz,exc%vacxy)
+      CALL vac_from_grid(stars,vacuum,e_xc,ifftd2,exc%vac)
     ENDIF
 
 

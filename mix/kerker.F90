@@ -84,8 +84,12 @@ CONTAINS
                   * vYukawa%mt(:atoms%jri(n),lh,n,1) * atoms%rmsh(:atoms%jri(n),n) ** 2
           END DO
        END DO
-       resDen%vacz  = resDen%vacz  - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz
-       resDen%vacxy = resDen%vacxy - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacxy
+       !resDen%vacz  = resDen%vacz  - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz
+       !resDen%vacxy = resDen%vacxy - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacxy
+       IF (input%film) THEN
+          resDen%vac(:,1,:,:) = resDen%vac(:,1,:,:) - input%preconditioning_param ** 2 / fpi_const * REAL(vYukawa%vac(:,1,:,:)) ! TODO: AN TB; REAL to COMPLEX OK?
+          resDen%vac(:,2:,:,:) = resDen%vac(:,2:,:,:) - input%preconditioning_param ** 2 / fpi_const * vYukawa%vac(:vacuum%nmzxyd,2:,:,:)
+       END IF
        IF( input%jspins == 2 ) CALL resDen%ChargeAndMagnetisationToSpins()
        ! fix the preconditioned density
        CALL outDen%addPotDen( resDen, inDen )
@@ -93,7 +97,7 @@ CONTAINS
        CALL resDen%subPotDen( outDen, inDen )
        resDen%mmpMat = outDen%mmpMat - inDen%mmpMat
     END IF MPI0_c
-    CALL precon_v%from_density(resden)
+    CALL precon_v%from_density(resden,vacuum%nmzxyd)
 
   END SUBROUTINE kerker
 

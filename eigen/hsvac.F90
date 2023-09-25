@@ -82,7 +82,7 @@ CONTAINS
                !---> get the wavefunctions and set up the tuuv, etc matrices
                CALL timestart("vacfun")
                CALL vacfun(fmpi, vacuum, stars, input, nococonv, iSpin, iSpinPr, &
-                         &  cell, ivac, evac, lapw%bkpt, v%vacxy, v%vacz, kvac, nv2, &
+                         &  cell, ivac, evac, lapw%bkpt, v%vac(:vacuum%nmzxyd,2:,:,:), v%vac(:,1,:,:), kvac, nv2, &
                          & tuuv, tddv, tudv, tduv, uz, duz, udz, dudz, ddnv, wronk)
                CALL timestop("vacfun")
 

@@ -267,21 +267,21 @@ CONTAINS
           DO ivac = 1,vacuum%nvac
              vz0 = 0.0
              IF (enpara%floating) THEN
-                vz0 = v%vacz(1,ivac,jsp)
+                vz0 = REAL(v%vac(1,1,ivac,jsp))
                 IF (fmpi%irank.EQ.0) THEN
                    WRITE (oUnit,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0
                 ENDIF
              ENDIF
              enpara%evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0
              IF (.NOT.l_enpara) THEN
-                enpara%evac(ivac,jsp) = v%vacz(vacuum%nmz,ivac,jsp) + enpara%evac0(ivac,jsp)
+                enpara%evac(ivac,jsp) = REAL(v%vac(vacuum%nmz,1,ivac,jsp)) + enpara%evac0(ivac,jsp)
              END IF
              IF (fmpi%irank.EQ.0) THEN
                 attributes = ''
                 WRITE(attributes(1),'(i0)') ivac
                 WRITE(attributes(2),'(i0)') jsp
-                WRITE(attributes(3),'(f16.10)') v%vacz(1,ivac,jsp)
-                WRITE(attributes(4),'(f16.10)') v%vacz(vacuum%nmz,ivac,jsp)
+                WRITE(attributes(3),'(f16.10)') REAL(v%vac(1,1,ivac,jsp))
+                WRITE(attributes(4),'(f16.10)') REAL(v%vac(vacuum%nmz,1,ivac,jsp))
                 WRITE(attributes(5),'(f16.10)') enpara%evac(ivac,jsp)
                 CALL writeXMLElementForm('vacuumEP',(/'vacuum','spin  ','vzIR  ','vzInf ','value '/),&
                      attributes(1:5),RESHAPE((/6+4,4,4,5,5+13,8,1,16,16,16/),(/5,2/)))
@@ -514,11 +514,12 @@ CONTAINS
 
 
 
-  SUBROUTINE mix(enpara,fmpi_comm,atoms,vacuum,input,vr,vz)
+  SUBROUTINE mix(enpara,fmpi_comm,atoms,vacuum,input,pot)
     !------------------------------------------------------------------
     USE m_types_atoms
     USE m_types_input
     USE m_types_vacuum
+    USE m_types_potden
     USE m_constants
 #ifdef CPP_MPI
     USE mpi
@@ -529,9 +530,10 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_input),INTENT(IN)       :: input
+    TYPE(t_potden),INTENT(IN)      :: pot
 
-    REAL,    INTENT(IN) :: vr(:,:,:)
-    REAL,    INTENT(IN) :: vz(vacuum%nmzd,2)
+    !REAL,    INTENT(IN) :: vr(:,:,:)
+    !REAL,    INTENT(IN) :: vz(vacuum%nmzd,2)
 
     INTEGER ityp,j,l,lo,jsp,n
     REAL    vbar,maxdist,maxdist2
@@ -603,7 +605,7 @@ CONTAINS
              !Shift if floating energy parameters are used
              IF (enpara%floating) THEN
                 j = atoms%jri(ityp) - (LOG(4.0)/atoms%dx(ityp)+1.51)
-                vbar = vr(j,ityp,jsp)/( atoms%rmt(ityp)*EXP(atoms%dx(ityp)*(j-atoms%jri(ityp))) )
+                vbar = pot%mt(j,0,ityp,jsp)/( atoms%rmt(ityp)*EXP(atoms%dx(ityp)*(j-atoms%jri(ityp))) )
                 enpara%el0(:,n,jsp)=enpara%el0(:,n,jsp)-vbar
              ENDIF
           END DO
@@ -621,7 +623,7 @@ CONTAINS
                 END IF
              END DO
              IF (vacuum%nvac==1) enpara%evac(2,jsp) = enpara%evac(1,jsp)
-             IF (enpara%floating) enpara%evac(:,jsp)=enpara%evac(:,jsp)-vz(:,jsp)
+             IF (enpara%floating) enpara%evac(:,jsp)=enpara%evac(:,jsp)-REAL(pot%vac(:,1,1,jsp)) ! This is broken!!!
           ENDIF
           WRITE(oUnit,'(a36,f12.6)') 'Max. mismatch of energy parameters:', maxdist
        END DO

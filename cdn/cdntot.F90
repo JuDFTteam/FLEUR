@@ -78,7 +78,8 @@ CONTAINS
             DO jsp = 1,input%jspins        
                DO ivac = 1,vacuum%nvac
                   DO nz = 1,vacuum%nmz
-                     rht1(nz,ivac,jsp) =  integrand%vacz(nz,ivac,jsp)
+                     !rht1(nz,ivac,jsp) =  integrand%vacz(nz,ivac,jsp)
+                     rht1(nz,ivac,jsp) =  REAL(integrand%vac(nz,1,ivac,jsp))
                     END DO
                   CALL qsf(vacuum%delz,rht1(1,ivac,jsp),q2,vacuum%nmz,0)
                   qvac(ivac,jsp) = q2(1)*cell%area
