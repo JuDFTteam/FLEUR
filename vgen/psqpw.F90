@@ -202,11 +202,11 @@ contains
       ! Normalized pseudo density
         qvac = cmplx(0.0,0.0)
         do ivac = 1, vacuum%nvac
-          if (.not.l_dftvgen) then
-            call qsf( vacuum%delz, real(rht(1,ivac)), q2, vacuum%nmz, 0 )
+          if (.not.l_dfptvgen) then
+            call qsf( vacuum%delz, real(rht(:,ivac)), q2, vacuum%nmz, 0 )
           else
-            call qsf( vacuum%delz, real(rht(1,ivac)), q2, vacuum%nmz, 0 )
-            call qsf( vacuum%delz,aimag(rht(1,ivac)), q2, vacuum%nmz, 0 )
+            call qsf( vacuum%delz, real(rht(:,ivac)), q2, vacuum%nmz, 0 )
+            call qsf( vacuum%delz,aimag(rht(:,ivac)), q2, vacuum%nmz, 0 )
           end if
           q2(1) = q2(1) * cell%area
           qvac = qvac + q2(1) * 2. / real( vacuum%nvac )
