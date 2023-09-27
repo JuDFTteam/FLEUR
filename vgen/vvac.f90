@@ -18,7 +18,7 @@ contains
       type(t_field),  intent(in)  :: field
 
       complex,        intent(in)  :: psq(stars%ng3)
-      real,           intent(in)  :: rht(vacuum%nmzd,2)
+      complex,        intent(in)  :: rht(vacuum%nmzd,2)
       
       complex,        intent(out) :: vnew(vacuum%nmzd,2)
       complex,        intent(out) :: rhobar
@@ -65,7 +65,7 @@ contains
 
       if ( field%efield%dirichlet ) then ! Dirichlet
          vnew(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(1)
-         call qsf( vacuum%delz, rht(1,ivac), sig, ncsh, 1 )
+         call qsf( vacuum%delz, REAL(rht(:,ivac)), sig, ncsh, 1 )
          sig(1:ncsh) = sig(ncsh) - sig(1:ncsh)
          call qsf( vacuum%delz, sig, vtemp, ncsh, 1 )
          do imz = 1, ncsh
@@ -76,7 +76,7 @@ contains
          if ( vacuum%nvac == 1 ) return
 
          ivac = 2     ! lower vacuum
-         call qsf( vacuum%delz, rht(1,ivac), sig, ncsh, 1 )
+         call qsf( vacuum%delz, REAL(rht(:,ivac)), sig, ncsh, 1 )
          f(1:ncsh) = sig(1:ncsh) - rhobar*vacuum%dvac + sig1dh
          call qsf( vacuum%delz, f, vtemp, ncsh, 1 )
          do imz = 1,ncsh
@@ -95,7 +95,7 @@ contains
          end do
          vnew(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(2)
       else ! Neumann
-         call qsf( vacuum%delz, rht(1,ivac), sig, vacuum%nmz, 1 )
+         call qsf( vacuum%delz, REAL(rht(:,ivac)), sig, vacuum%nmz, 1 )
          sig1dh = sig(vacuum%nmz) - sigmaa(1)  ! need to include contribution from electric field
          sig(1:vacuum%nmz) = sig(vacuum%nmz) - sig(1:vacuum%nmz)
          call qsf( vacuum%delz, sig, vtemp, vacuum%nmz, 1 )
@@ -110,7 +110,7 @@ contains
          if ( vacuum%nvac == 1 ) return
 
          ivac = 2 ! lower vacuum
-         call qsf( vacuum%delz, rht(1,ivac), sig, vacuum%nmz, 1 )
+         call qsf( vacuum%delz, REAL(rht(:,ivac)), sig, vacuum%nmz, 1 )
          f(1:vacuum%nmz) = sig(1:vacuum%nmz) - rhobar * vacuum%dvac + sig1dh
          call qsf( vacuum%delz, f, vtemp, vacuum%nmz, 1 )
 

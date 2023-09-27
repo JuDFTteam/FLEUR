@@ -105,7 +105,7 @@ contains
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" )
         !call vvac( vacuum, stars, cell,  input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh,vslope )
-        call vvac( vacuum, stars, cell,  input, field, psq, REAL(den%vac(:,1,:,ispin)), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope ) ! TODO: AN TB; make den complex for DFPT
+        call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope ) ! TODO: AN TB; make den complex for DFPT
         !call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,2:,:,ispin) )
         !call vvacxy( stars, vacuum, cell, sym, input, field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
