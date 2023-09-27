@@ -66,6 +66,7 @@ contains
     complex                         :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     complex                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     complex                         :: q2(vacuum%nmzd)
+    real                            :: q2r(vacuum%nmzd),q2i(vacuum%nmzd)
     real                            :: pn(0:atoms%lmaxd,atoms%ntype)
     real                            :: aj(0:atoms%lmaxd+maxval(atoms%ncv)+1)
     real, allocatable, dimension(:) :: il, kl
@@ -203,10 +204,12 @@ contains
         qvac = cmplx(0.0,0.0)
         do ivac = 1, vacuum%nvac
           if (.not.l_dfptvgen) then
-            call qsf( vacuum%delz, real(rht(:,ivac)), q2, vacuum%nmz, 0 )
+            call qsf( vacuum%delz, real(rht(:,ivac)), q2r, vacuum%nmz, 0 )
+            q2 = q2r
           else
-            call qsf( vacuum%delz, real(rht(:,ivac)), q2, vacuum%nmz, 0 )
-            call qsf( vacuum%delz,aimag(rht(:,ivac)), q2, vacuum%nmz, 0 )
+            call qsf( vacuum%delz, real(rht(:,ivac)), q2r, vacuum%nmz, 0 )
+            call qsf( vacuum%delz,aimag(rht(:,ivac)), q2i, vacuum%nmz, 0 )
+            q2 = q2r + ImagUnit*q2i
           end if
           q2(1) = q2(1) * cell%area
           qvac = qvac + q2(1) * 2. / real( vacuum%nvac )
@@ -216,7 +219,7 @@ contains
       if ( l_xyav ) return
       fact = ( qvac + psint ) / ( stars%nstr(1) * cell%vol )
       psq(1) = psq(1) - fact
-      if (.not.l_dftvgen) write(oUnit, fmt=8010 ) fact * 1000
+      if (.not.l_dfptvgen) write(oUnit, fmt=8010 ) fact * 1000
 8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
     end if ! fmpi%irank == 0
