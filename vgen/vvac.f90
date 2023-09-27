@@ -1,10 +1,24 @@
+!-------------------------------------------------------------------------------
+! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!-------------------------------------------------------------------------------
+
 module m_vvac
+   ! Legacy comment:
    ! ****************************************************************
    ! calculates the g(2-dim)=0 part of the vacuum coulomb potential *
    ! for general symmetry.          c.l.fu, r.podloucky             *
    ! ****************************************************************
 contains
-   subroutine vvac( vacuum, stars, cell,  input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh ,vslope)
+   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope)
+      !! Calculates the \(\boldsymbol{G}_{||}=0\) part of the vacuum Coulomb potential.
+      !! There are two possible cases for Dirichlet and von Neumann boundary conditions, respectively.
+      !! von Neumann case:
+      !! upper vacuum \( z\ge D/2)\):
+      !! \(V^{0}(z)=-4\pi[\int_{z}^{\infty}\sigma_{+}^{0}(z')dz'+(z-z_{\sigma})\sigma_{+}]=: V_{+}^{0}(z)\)
+      !! with
+      !! \(\sigma_{+}^{0}(z):=\int_{z}^{\infty}n_{V}^{0}(z')dz'\)
       use m_constants
       use m_qsf
       use m_types
