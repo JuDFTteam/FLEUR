@@ -59,21 +59,20 @@ contains
 
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
-    complex                         :: psint, sa, sl, sm
-    real                            :: f, fact, fpo, gz, p, qvac, rmtl, s, fJ, gr, g
+    complex                         :: psint, sa, sl, sm, qvac, fact
+    real                            :: f, fpo, gz, p, rmtl, s, fJ, gr, g
     integer                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz, kStart, kEnd
     complex                         :: psq_local(stars%ng3)
     complex                         :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     complex                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
-    real                            :: q2(vacuum%nmzd)
+    complex                         :: q2(vacuum%nmzd)
     real                            :: pn(0:atoms%lmaxd,atoms%ntype)
     real                            :: aj(0:atoms%lmaxd+maxval(atoms%ncv)+1)
-    real                            :: rht1(vacuum%nmz)
     real, allocatable, dimension(:) :: il, kl
     real                            :: g0(atoms%ntype)
     complex                         :: qpw(stars%ng3)
     real                            :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    real                            :: rht(vacuum%nmzd,2)
+    complex                         :: rht(vacuum%nmzd,2)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
 
 #ifdef CPP_MPI
@@ -83,7 +82,7 @@ contains
     l_dfptvgen = PRESENT(stars2)
     qpw = den%pw(:,ispin)
     rho = den%mt(:,:,:,ispin)
-    IF (input%film) rht = REAL(den%vac(:,1,:,ispin))
+    IF (input%film) rht = den%vac(:,1,:,ispin)
 
     ! Calculate multipole moments
     call timestart("mpmom")
@@ -177,7 +176,7 @@ contains
 
     call timestop("loop in psqpw")
 
-    IF (l_dfptvgen) RETURN
+    IF (l_dfptvgen) RETURN ! TODO: Change this!
 
     if ( fmpi%irank == 0 ) then
       if ( potdenType == POTDEN_TYPE_POTYUK ) return
@@ -201,9 +200,14 @@ contains
       if ( .not. input%film .or. potdenType == POTDEN_TYPE_POTYUK ) return
 
       ! Normalized pseudo density
-        qvac = 0.0
+        qvac = cmplx(0.0,0.0)
         do ivac = 1, vacuum%nvac
-          call qsf( vacuum%delz, rht(1,ivac), q2, vacuum%nmz, 0 )
+          if (.not.l_dftvgen) then
+            call qsf( vacuum%delz, real(rht(1,ivac)), q2, vacuum%nmz, 0 )
+          else
+            call qsf( vacuum%delz, real(rht(1,ivac)), q2, vacuum%nmz, 0 )
+            call qsf( vacuum%delz,aimag(rht(1,ivac)), q2, vacuum%nmz, 0 )
+          end if
           q2(1) = q2(1) * cell%area
           qvac = qvac + q2(1) * 2. / real( vacuum%nvac )
         end do
@@ -212,7 +216,7 @@ contains
       if ( l_xyav ) return
       fact = ( qvac + psint ) / ( stars%nstr(1) * cell%vol )
       psq(1) = psq(1) - fact
-      write(oUnit, fmt=8010 ) fact * 1000
+      if (.not.l_dftvgen) write(oUnit, fmt=8010 ) fact * 1000
 8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
     end if ! fmpi%irank == 0
