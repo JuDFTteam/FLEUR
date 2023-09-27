@@ -6,7 +6,7 @@ MODULE m_vintcz
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
 CONTAINS
-   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope)
+   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,l_dfptvgen)
       USE m_constants
       USE m_types
 
@@ -24,6 +24,7 @@ CONTAINS
 
       COMPLEX,        INTENT(IN) :: psq(stars%ng3),vnew(:,:,:)!,vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
       COMPLEX,        INTENT(IN) :: alphm(stars%ng2,2)
+      LOGICAL,        INTENT(IN) :: l_dfptvgen
       !REAL,           INTENT(IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)
 
       COMPLEX                    :: argr,sumrr,vcons1,test,c_ph,phas
@@ -44,14 +45,14 @@ CONTAINS
          zf = (ABS(z)-cell%z1)/vacuum%delz + 1.0
          im = zf
          q = zf - im
-         IF (nrec2.EQ.1) THEN
+         IF (nrec2.EQ.1.AND..NOT.l_dfptvgen) THEN
             fit = 0.5* (q-1.)* (q-2.)*REAL(vnew(im,1,ivac)) -&
                &            q* (q-2.)*REAL(vnew(im+1,1,ivac)) +&
                &        0.5*q* (q-1.)*REAL(vnew(im+2,1,ivac))
             vintcz = CMPLX(fit,0.0)
          ELSE IF (im+2.LE.vacuum%nmzxy) THEN
             if (z<0) THEN 
-               call stars%map_2nd_vac(vacuum,nrec2,nrec2r,phas)
+               call stars%map_2nd_vac(vacuum,nrec2,nrec2r,phas) ! TODO: AN TB; will this work?
             else
                nrec2r=nrec2 
                phas=cmplx(1.0,0.0)
@@ -63,7 +64,7 @@ CONTAINS
          RETURN
       END IF
 
-      IF (nrec2==1) THEN    !     ---->    g=0 coefficient
+      IF (nrec2==1.AND..NOT.l_dfptvgen) THEN    !     ---->    g=0 coefficient
          DO  iq = -stars%mx3,stars%mx3
             IF (iq.EQ.0) CYCLE
             ig3n = stars%ig(0,0,iq)
@@ -127,7 +128,7 @@ CONTAINS
          IF (field%efield%dirichlet) THEN
             e_m = SINH(g*(field%efield%zsigma+dh - z))
             e_p = SINH(g*(field%efield%zsigma+dh + z))
-            test = e_m*alphm(nrec2-1,2) + e_p*alphm(nrec2-1,1)
+            test = e_m*alphm(nrec2,2) + e_p*alphm(nrec2,1)
             test = fpi_const/(g*SINH(g*2*(field%efield%zsigma+dh))) * test
             IF ( 2.0 * test == test ) test = CMPLX(0.0,0.0)
             vintcz = vintcz + test
@@ -141,7 +142,7 @@ CONTAINS
          ELSE ! Neumann
             e_m = exp_safe( -g*z  )
             e_p = exp_safe( g*z  )
-            test = e_m*alphm(nrec2-1,2) + e_p*alphm(nrec2-1,1)
+            test = e_m*alphm(nrec2,2) + e_p*alphm(nrec2,1)
             IF ( 2.0 * test == test ) test = CMPLX(0.0,0.0)
             vintcz = vintcz + tpi_const/g* test
          END IF

@@ -109,7 +109,7 @@ contains
         !call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,2:,:,ispin) )
         !call vvacxy( stars, vacuum, cell, sym, input, field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
-        call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,2:,:,ispin), vCoul%vac(:vacuum%nmzxyd,2:,:,ispin), alphm )
+        call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, .false. )
         call timestop( "Vacuum" )
       end if
 
@@ -132,7 +132,7 @@ contains
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
-                              rhobar, sig1dh, vz1dh, alphm,vslope )
+                              rhobar, sig1dh, vz1dh, alphm, vslope, .FALSE. )
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )
           end do
