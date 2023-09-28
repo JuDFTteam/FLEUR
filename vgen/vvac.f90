@@ -1,10 +1,24 @@
+!-------------------------------------------------------------------------------
+! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!-------------------------------------------------------------------------------
+
 module m_vvac
+   ! Legacy comment:
    ! ****************************************************************
    ! calculates the g(2-dim)=0 part of the vacuum coulomb potential *
    ! for general symmetry.          c.l.fu, r.podloucky             *
    ! ****************************************************************
 contains
-   subroutine vvac( vacuum, stars, cell,  input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh ,vslope)
+   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope)
+      !! Calculates the \(\boldsymbol{G}_{||}=0\) part of the vacuum Coulomb potential.
+      !! There are two possible cases for Dirichlet and von Neumann boundary conditions, respectively.
+      !! von Neumann case:
+      !! upper vacuum \( z\ge D/2)\):
+      !! \(V^{0}(z)=-4\pi[\int_{z}^{\infty}\sigma_{+}^{0}(z')dz'+(z-z_{\sigma})\sigma_{+}]=: V_{+}^{0}(z)\)
+      !! with
+      !! \(\sigma_{+}^{0}(z):=\int_{z}^{\infty}n_{V}^{0}(z')dz'\)
       use m_constants
       use m_qsf
       use m_types
@@ -18,7 +32,7 @@ contains
       type(t_field),  intent(in)  :: field
 
       complex,        intent(in)  :: psq(stars%ng3)
-      real,           intent(in)  :: rht(vacuum%nmzd,2)
+      complex,        intent(in)  :: rht(vacuum%nmzd,2)
       
       complex,        intent(out) :: vnew(vacuum%nmzd,2)
       complex,        intent(out) :: rhobar
@@ -65,7 +79,7 @@ contains
 
       if ( field%efield%dirichlet ) then ! Dirichlet
          vnew(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(1)
-         call qsf( vacuum%delz, rht(1,ivac), sig, ncsh, 1 )
+         call qsf( vacuum%delz, REAL(rht(:,ivac)), sig, ncsh, 1 )
          sig(1:ncsh) = sig(ncsh) - sig(1:ncsh)
          call qsf( vacuum%delz, sig, vtemp, ncsh, 1 )
          do imz = 1, ncsh
@@ -76,7 +90,7 @@ contains
          if ( vacuum%nvac == 1 ) return
 
          ivac = 2     ! lower vacuum
-         call qsf( vacuum%delz, rht(1,ivac), sig, ncsh, 1 )
+         call qsf( vacuum%delz, REAL(rht(:,ivac)), sig, ncsh, 1 )
          f(1:ncsh) = sig(1:ncsh) - rhobar*vacuum%dvac + sig1dh
          call qsf( vacuum%delz, f, vtemp, ncsh, 1 )
          do imz = 1,ncsh
@@ -95,7 +109,7 @@ contains
          end do
          vnew(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(2)
       else ! Neumann
-         call qsf( vacuum%delz, rht(1,ivac), sig, vacuum%nmz, 1 )
+         call qsf( vacuum%delz, REAL(rht(:,ivac)), sig, vacuum%nmz, 1 )
          sig1dh = sig(vacuum%nmz) - sigmaa(1)  ! need to include contribution from electric field
          sig(1:vacuum%nmz) = sig(vacuum%nmz) - sig(1:vacuum%nmz)
          call qsf( vacuum%delz, sig, vtemp, vacuum%nmz, 1 )
@@ -110,7 +124,7 @@ contains
          if ( vacuum%nvac == 1 ) return
 
          ivac = 2 ! lower vacuum
-         call qsf( vacuum%delz, rht(1,ivac), sig, vacuum%nmz, 1 )
+         call qsf( vacuum%delz, REAL(rht(:,ivac)), sig, vacuum%nmz, 1 )
          f(1:vacuum%nmz) = sig(1:vacuum%nmz) - rhobar * vacuum%dvac + sig1dh
          call qsf( vacuum%delz, f, vtemp, vacuum%nmz, 1 )
 
