@@ -45,7 +45,7 @@ CONTAINS
          zf = (ABS(z)-cell%z1)/vacuum%delz + 1.0
          im = zf
          q = zf - im
-         IF (nrec2.EQ.1.AND..NOT.l_dfptvgen) THEN
+         IF (nrec2.EQ.1.AND.((.NOT.l_dfptvgen).OR.norm2(stars%center)<1e-8)) THEN
             fit = 0.5* (q-1.)* (q-2.)*REAL(vnew(im,1,ivac)) -&
                &            q* (q-2.)*REAL(vnew(im+1,1,ivac)) +&
                &        0.5*q* (q-1.)*REAL(vnew(im+2,1,ivac))
@@ -64,7 +64,7 @@ CONTAINS
          RETURN
       END IF
 
-      IF (nrec2==1.AND..NOT.l_dfptvgen) THEN    !     ---->    g=0 coefficient
+      IF (nrec2==1.AND.((.NOT.l_dfptvgen).OR.norm2(stars%center)<1e-8)) THEN    !     ---->    g=0 coefficient
          DO  iq = -stars%mx3,stars%mx3
             IF (iq.EQ.0) CYCLE
             ig3n = stars%ig(0,0,iq)

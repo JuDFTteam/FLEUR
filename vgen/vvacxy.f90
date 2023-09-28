@@ -52,8 +52,9 @@ contains
       end if
 
       start_star = 2
-      if (l_dfptvgen) start_star = 1
-
+      if (l_dfptvgen) then
+         if (norm2(stars%center)<1e-8) start_star = 1
+      end if
       ! 2-dim star loop g/=0
       ip = vacuum%nmzxy + 1
       !    irec2_loop: do irec2 = 2, stars%ng2
