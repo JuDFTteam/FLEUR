@@ -81,39 +81,28 @@ contains
 
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
-    IF (.NOT.l_dfptvgen) THEN
-        !call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-        !    & den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq )
+    if (.not.l_dfptvgen) then
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
             & den, ispin, .false., vCoul%potdenType, psq )
-    ELSE
-        !call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-        !    & den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq,&
-        !    & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) )
+    else
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
             & den, ispin, .false., vCoul%potdenType, psq,&
             & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) ) ! TODO: AN TB; REAL streichen und komplexe Vz erlauben
-      !if ( fmpi%irank == 0 ) call save_npy(int2str(iDtype)//"_"//int2str(iDir)//"psq.npy",psq)
-    END IF
+    end if
     call timestop( "psqpw" )
-
-
 
     ! VACUUM POTENTIAL
     if ( fmpi%irank == 0 ) then
       if ( input%film ) then
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" )
-        !call vvac( vacuum, stars, cell,  input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh,vslope )
-        call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope ) ! TODO: AN TB; make den complex for DFPT
-        !call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
-        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,2:,:,ispin) )
-        !call vvacxy( stars, vacuum, cell, sym, input, field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
-        call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, .false. )
+        if ((.not.l_dfptvgen).or.norm2(stars%center)<1e-8) then
+          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope ) ! TODO: AN TB; make den complex for DFPT
+        end if
+        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
+        call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
         call timestop( "Vacuum" )
       end if
-
-
 
       ! INTERSTITIAL POTENTIAL
       call timestart( "interstitial" )
@@ -132,7 +121,7 @@ contains
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
-                              rhobar, sig1dh, vz1dh, alphm, vslope, .FALSE. )
+                              rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )
           end do

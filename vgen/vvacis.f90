@@ -7,7 +7,7 @@ module m_vvacis
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
 contains
-   subroutine vvacis( stars, vacuum, cell, psq, input, field, vxy )
+   subroutine vvacis( stars, vacuum, cell, psq, input, field, vxy, l_dfptvgen )
       use m_constants
       use m_types
 
@@ -20,15 +20,21 @@ contains
       type(t_cell),   intent(in)  :: cell
 
       complex,        intent(in)  :: psq(stars%ng3)
-      complex,        intent(out) :: vxy(vacuum%nmzxyd,stars%ng2-1,2)
+      complex,        intent(out) :: vxy(vacuum%nmzxyd,stars%ng2,2)
+      logical,        intent(in)  :: l_dfptvgen
 
       complex                     :: arg, c_ph, sumr(2)
       real                        :: g, qz, sign,  vcons, z, e_m, arg_r, arg_i
-      integer                     :: ig3n, imz, ivac, k1, k2, kz,  nrec2
-
-      vxy(:,:,:) = cmplx( 0., 0. )
+      integer                     :: ig3n, imz, ivac, k1, k2, kz, nrec2, start_star
   
-      do  nrec2 = 2, stars%ng2
+      start_star = 2
+      if (l_dfptvgen) then
+         if (norm2(stars%center)<1e-8) start_star = 1
+      end if
+
+      vxy(:,start_star:,:) = cmplx( 0., 0. )
+
+      do  nrec2 = start_star, stars%ng2
          k1 = stars%kv2(1,nrec2)
          k2 = stars%kv2(2,nrec2)
          g = stars%sk2(nrec2)
@@ -78,7 +84,7 @@ contains
                else ! neumann
                   e_m = exp_safe( - g * z )
                end if
-               vxy(imz,nrec2-1,ivac) = vxy(imz,nrec2-1,ivac) + vcons * sumr(ivac) * e_m
+               vxy(imz,nrec2,ivac) = vxy(imz,nrec2,ivac) + vcons * sumr(ivac) * e_m
                z = z + vacuum%delz
             end do
          end do

@@ -121,13 +121,9 @@ CONTAINS
           !idx1=(ivac-1)* ( vacuum%nmzxy * ifftd2 + nmzdiff ) + 1
           DO ip=1,vacuum%nmzxy
             DO js=1,jspins
-              !CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, REAL(vacz(ip,ivac,js)),0.,&
-              !vacxy(ip,:,ivac,js),+1)
               CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, vacnew(ip,:,ivac,js),+1)
             END DO
             IF (l_noco) THEN
-              !CALL fft2d(stars, mx,my, REAL(vacz(ip,ivac,3)),AIMAG(vacz(ip,ivac,3)), &
-              !vacxy(ip,:,ivac,3),+1)
               CALL fft2d(stars, mx,my, vacnew(ip,:,ivac,3),+1)
 
               DO i=0,9*stars%mx1*stars%mx2-1
@@ -148,9 +144,6 @@ CONTAINS
           DO js=1,jspins
              !
              ! calculate first (rhtdz) & second (rhtdzz) derivative of vacz(1:nmz)
-             !
-             !CALL grdchlh(vacuum%delz,REAL(vacz(1:vacuum%nmz,ivac,js)),&
-             !     rhtdz(1:,js),rhtdzz(1:,js))
              CALL grdchlh(vacuum%delz,REAL(vacnew(1:vacuum%nmz,1,ivac,js)),&
                   rhtdz(1:,js),rhtdzz(1:,js))
 				 rdz(:,1,js) = rhtdz(1:,js)
@@ -160,13 +153,11 @@ CONTAINS
                 ! calculate first (rxydz) & second (rxydzz) derivative of vacxy:
                 !
                 DO ip=1,vacuum%nmzxy
-                   !rhtxyr(ip)=vacxy(ip,iq,ivac,js)
                    rhtxyr(ip)=real(vacnew(ip,iq+1,ivac,js))
                 ENDDO
                 CALL grdchlh(vacuum%delz,rhtxyr(:vacuum%nmzxy), rxydzr,rxydzzr)
 
                 DO ip=1,vacuum%nmzxy
-                   !rhtxyi(ip)=aimag(vacxy(ip,iq,ivac,js))
                    rhtxyi(ip)=aimag(vacnew(ip,iq+1,ivac,js))
                 ENDDO
                 CALL grdchlh(vacuum%delz,rhtxyi(:vacuum%nmzxy), rxydzi,rxydzzi)
@@ -232,7 +223,6 @@ CONTAINS
              DO js = 1,jspins
 
                 DO iq=2,stars%ng2
-                   !cqpw(iq)=ImagUnit*vacxy(ip,iq,ivac,js)
                    cqpw(iq)=ImagUnit*vacnew(ip,iq,ivac,js)
                 ENDDO
 
@@ -254,7 +244,6 @@ CONTAINS
                         stars, rhdz(0,js),bf2, rdz(ip,:,js), +1)
 
                 DO iq=2,stars%ng2
-                   !cqpw(iq)=-vacxy(ip,iq,ivac,js)
                    cqpw(iq)=-vacnew(ip,iq,ivac,js)
                 ENDDO
 
@@ -284,7 +273,6 @@ CONTAINS
                        stars, rhdzx(0,js),bf2, cqpw, +1,firstderiv=[1.,0.0,0.],cell=cell)
 
                 DO iq=2,stars%ng2
-                   !cqpw(iq)=-vacxy(ip,iq,ivac,js)
                    cqpw(iq)=-vacnew(ip,iq,ivac,js)
                 ENDDO
 

@@ -23,6 +23,7 @@ MODULE m_dfpt
    USE m_plot
    USE m_eigen
    USE m_fermie
+   USE m_grdchlh
 
    IMPLICIT NONE
 
@@ -84,7 +85,7 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
 
-      INTEGER :: ngdp, iSpin, iType, iQ, iDir, iDtype, nspins
+      INTEGER :: ngdp, iSpin, iType, iQ, iDir, iDtype, nspins, zlim, iVac
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
       INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
       LOGICAL :: l_real, l_minusq
@@ -98,6 +99,7 @@ CONTAINS
       INTEGER :: ix, iy, iz, grid(3), iv_old, iflag_old, iv_new, iflag_new
       INTEGER :: iType_old, iAtom_old, iType_new, iAtom_new, inversionOp
       REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new, atom_shift(3)
+      REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd)
 
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
@@ -346,6 +348,26 @@ CONTAINS
             END DO
          END DO
       END DO
+
+      IF (fi_nosym%input%film) THEN
+         DO yInd = -stars_nosym%mx2, stars_nosym%mx2
+            DO xInd = -stars_nosym%mx1, stars_nosym%mx1
+               iStar = stars_nosym%ig(xInd, yInd, 0)
+               iStar = stars_nosym%ig2(iStar)
+               IF (iStar.EQ.0) CYCLE
+               grRho3(1)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
+               grRho3(2)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
+               DO iVac = 1, fi_nosym%vacuum%nvac
+                  DO iSpin = 1, SIZE(rho_nosym%vac,4)
+                     zlim = MERGE(fi_nosym%vacuum%nmz,fi_nosym%vacuum%nmzxy,iStar==1)
+                     CALL grdchlh(fi_nosym%vacuum%delz, REAL(rho_nosym%vac(:zlim,iStar,iVac,iSpin)),dr_re(:zlim),drr_dummy(:zlim))
+                     CALL grdchlh(fi_nosym%vacuum%delz,AIMAG(rho_nosym%vac(:zlim,iStar,iVac,iSpin)),dr_im(:zlim),drr_dummy(:zlim))
+                     grRho3(3)%vac(:,iStar,iVac,iSpin) = (3-2*iVac)*(dr_re + ImagUnit * dr_im) ! TODO: Is this correct for the 2nd vacuum?
+                  END DO
+               END DO
+            END DO
+         END DO
+      END IF
 
       CALL grRho3(1)%distribute(fmpi%mpi_comm)
       CALL grRho3(2)%distribute(fmpi%mpi_comm)
