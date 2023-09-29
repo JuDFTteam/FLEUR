@@ -1098,14 +1098,58 @@ CONTAINS
       else 
          allocate(vecc(mat%global_size1)) 
       endif
-
+#ifdef CPP_MPI      
       !process ranks for cyclic column dist
       call MPI_COMM_RANK(mat%blacsdata%mpi_com,my_proc,ierr)
       call MPI_COMM_SIZE(mat%blacsdata%mpi_com,num_proc,ierr)
       !info for 2dblock cyclic dist
       call blacs_gridinfo(mat2d%blacsdata%blacs_desc,nprow,npcol,myrow,mycol)
+
+#ifdef __NEW_CODE      
+      !create processor map blacs_row,blacs_col->mpi_rank
+      allocate(pmap(nprow,npcol))
+      pmap=-1
+      pmap(myrow,mycol)=mp_proc
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,pmap,size(pmap),MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
+      if (any(pmap<0)) call judft_bug("Bug1:types_mpimat")
+
+      DO n2=1,mat%global_size2,num_proc
+         sglobal_col=n2+my_proc
+         slocal_col=(n2-1)/num_proc+1
+         !Which 2d column contains the data?
+         blockindex=(sglobal_col+shift1-1)/mat2d%blacsdata%blacs_desc(6)
+         rec_p_col=mod(blockindex,npcol)
+         !now loop over column
+         DO n1=1,mat%global_size1
+            blockindex=(n1+shift1-1)/mat2d%blacsdata%blacs_desc(5)
+            rec_p_row=mod(blockindex,nprow)
+            rec_r_index(rec_p_row)=rec_r_index(rec_p_row)+1
+            vecr(rec_r_index(rec_p_row),rec_p_row)=mat%data_r(n1,slocal_col)
+         ENDDO
+         !Send data to all columns of the processor grid involved
+         DO rec_p_col=0,npcol-1
+            call MPI_ISEND(vecr(1,rec_p_row),rec_r_index(rec_p_row),MPI_DOUBLE,pmap(rec_p_col,rec_p_col),sGlobal_col,mat%blacsdata%mpi_com,request(rec_p_col),ierr)   
+         ENDDO
+         !now each processor might have data from more columns in 2D dist
+         DO n2_2d=n2,n2+num_proc
+            rglobal_col=n2_2d+shift1
+            !Which 2d column contains the data?
+            blockindex=(rglobal_col-1)/mat2d%blacsdata%blacs_desc(6)
+            rec_p_col=mod(blockindex,npcol)
+            if (mycol.ne.rec_p_col) cycle !this process does not contain data
+            !Where is the column comming from?
+            s_col=mod(n2_2d-1,num_proc)
+            !Which is the first element we store the data in?
+            blockindex=(shift1-1)/mat2d%blacsdata%blacs_desc(5)
+            if (myrow==0) n_row=shift1-blockindex*mat2d%blacsdata%blacs_desc(5) !first block might be incomplete
+            n_row=n_row+blockindex/nprow*mat2d%blacsdata%blacs_desc(5)
+            !Get the data
+            CALL MPI_RECV(mat2%data_r(n_row:,rec_col),mat2%matsize2-n_row,MPI_DOUBLE,s_col,mat%blacsdata%mpi_com,rglobal_col,ierr)
+         ENDDO
+      ENDDO      
+#endif      
       !Now we loop over columns and BC them
-      DO n2=1,mat%global_size2          
+      DO n2=1,mat%global_size2   
          if (mat%l_real) THEN
             if (my_proc==mod(n2-1,num_proc)) vecr=mat%data_r(:,(n2-1)/num_proc+1) !This process owns the column
             call MPI_BCAST(vecr,size(vecr),MPI_DOUBLE,mod(n2-1,num_proc),mat%blacsdata%mpi_com,ierr)   
@@ -1131,6 +1175,7 @@ CONTAINS
             end if 
          enddo
       ENDDO   
+#endif      
    end subroutine
 
    logical function is_column_cyclic(mat)
