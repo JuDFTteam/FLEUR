@@ -53,7 +53,7 @@ contains
 
       start_star = 2
       if (l_dfptvgen) then
-         if (norm2(stars%center)<1e-8) start_star = 1
+         if (norm2(stars%center)>1e-8) start_star = 1
       end if
       ! 2-dim star loop g/=0
       ip = vacuum%nmzxy + 1
