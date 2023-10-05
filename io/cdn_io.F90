@@ -470,7 +470,7 @@ CONTAINS
 
        CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum,   stars, sphhar, sym,&
             currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-            currentStepfunctionIndex,l_storeIndices,l_CheckBroyd)
+            currentStepfunctionIndex,l_storeIndices,l_CheckBroyd,.FALSE.)
 
        previousDensityIndex = readDensityIndex
        writeDensityIndex = readDensityIndex
@@ -1162,7 +1162,7 @@ CONTAINS
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
 
        currentStarsIndex = currentStarsIndex + 1
-       CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,   .TRUE.)
+       CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars, .TRUE., .FALSE.)
 
        CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
             currentStepfunctionIndex,readDensityIndex,lastDensityIndex)

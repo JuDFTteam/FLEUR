@@ -202,7 +202,7 @@ MODULE m_pot_io
 
          CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum,   stars, sphhar, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                                       currentStepfunctionIndex,l_storeIndices,.TRUE.)
+                                       currentStepfunctionIndex,l_storeIndices,.TRUE.,.TRUE.)
 
          archiveName = 'illegalPotentialArchive'
          IF (archiveType.EQ.POT_ARCHIVE_TYPE_TOT_const) THEN
