@@ -57,7 +57,15 @@ MODULE m_vacden
 CONTAINS
    SUBROUTINE vacden(vacuum,stars,input,cell,atoms,noco,nococonv,banddos,&
                      we,ikpt,jspin,vz,ne,ev_list,lapw,evac,den,zMat,vacdos,dos,lapwq,we1,zMat1)
-      !! 
+      !! Calculates the vacuum part of the density and puts it into den%vac. The variable has
+      !! four dimensions: The z, star, vacuum and spin index. Recent refactoring combined the
+      !! real variable vacz and the complex star expansion vacxy into one. vacz is identical
+      !! to the array for the first star (\(\boldsymbol{G}_{||}=0\)), which was not present in vacxy. The
+      !! array is bounded by vacuum%nmzd in the first dimension, but only filled up to
+      !! vacuum%nmzxyd for any star but the first.
+      !!
+      !! In practice, the density looks as follows:
+      !! $$$$
       USE m_constants
       USE m_grdchlh
       USE m_qsf
@@ -110,7 +118,7 @@ CONTAINS
                  uei, uej, ui, uj, wronk, zks, RESULT(1), ui2, uei2, &
                  k_diff,k_d1,k_d2
       INTEGER :: ii, i1, i2, i3, ig3, ig3p, ik, ind2, ind2p, ivac, j, jj, &
-                 jz, k, l, ll, l1, n, n2, ispin, kspin, jsp_start, jsp_end, &
+                 jz, k, ikG, ll, ikGPr, n, n2, ispin, kspin, jsp_start, jsp_end, &
                  ie, isp_start, isp_end
       LOGICAL :: l_dfpt
 
@@ -122,6 +130,14 @@ CONTAINS
       REAL,    ALLOCATABLE :: dt(:), dte(:)
       REAL,    ALLOCATABLE :: t(:), te(:), tei(:,:)
       REAL,    ALLOCATABLE :: u(:,:,:), ue(:,:,:), yy(:)
+
+      ! DFPT stuff:
+      COMPLEX, ALLOCATABLE :: ac1(:,:,:), bc1(:,:,:)
+      REAL,    ALLOCATABLE :: dtq(:), dteq(:)
+      REAL,    ALLOCATABLE :: tq(:), teq(:), teiq(:,:)
+      REAL,    ALLOCATABLE :: uq(:,:,:), ueq(:,:,:)
+      INTEGER :: nv2q(input%jspins)
+      INTEGER :: kvac1q(lapw%dim_nv2d(),input%jspins), kvac2q(lapw%dim_nv2d(),input%jspins), map2q(lapw%dim_nvd(),input%jspins)
 
       ! local STM/unused variables
       !INTEGER              :: i,imz,ind1,ind1p,irec2,irec3,m,ipot
@@ -139,6 +155,11 @@ CONTAINS
       ALLOCATE(ac(lapw%dim_nv2d(),input%neig,input%jspins), bc(lapw%dim_nv2d(),input%neig,input%jspins), dt(lapw%dim_nv2d()), &
                dte(lapw%dim_nv2d()), t(lapw%dim_nv2d()), te(lapw%dim_nv2d()), tei(lapw%dim_nv2d(),input%jspins), &
                u(vacuum%nmzd,lapw%dim_nv2d(),input%jspins), ue(vacuum%nmzd,lapw%dim_nv2d(),input%jspins), yy(vacuum%nmzd))
+      IF (l_dfpt) THEN
+         ALLOCATE(ac1(lapw%dim_nv2d(),input%neig,input%jspins), bc1(lapw%dim_nv2d(),input%neig,input%jspins), dtq(lapw%dim_nv2d()), &
+                  dteq(lapw%dim_nv2d()), tq(lapw%dim_nv2d()), teq(lapw%dim_nv2d()), teiq(lapw%dim_nv2d(),input%jspins), &
+                  uq(vacuum%nmzd,lapw%dim_nv2d(),input%jspins), ueq(vacuum%nmzd,lapw%dim_nv2d(),input%jspins))
+      END IF
       !ALLOCATE(du(vacuum%nmzd),ddu(vacuum%nmzd,lapw%dim_nv2d()),due(vacuum%nmzd),ddue(vacuum%nmzd,lapw%dim_nv2d()),)
 
       eps=0.01
@@ -154,7 +175,7 @@ CONTAINS
       DO ispin = jsp_start, jsp_end
          n2 = 0
          k_loop2: DO k = 1, lapw%nv(ispin)
-            DO j = 1,n2
+            DO j = 1, n2
                IF (lapw%gvec(1,k,ispin).EQ.kvac1(j,ispin).AND.lapw%gvec(2,k,ispin).EQ.kvac2(j,ispin)) THEN
                   map2(k,ispin) = j
                   CYCLE k_loop2
@@ -168,6 +189,25 @@ CONTAINS
          END DO k_loop2
          nv2(ispin) = n2
       END DO
+      IF (l_dfpt) THEN
+         DO ispin = jsp_start, jsp_end
+            n2 = 0
+            k_loop2q: DO k = 1, lapwq%nv(ispin)
+               DO j = 1, n2
+                  IF (lapwq%gvec(1,k,ispin).EQ.kvac1q(j,ispin).AND.lapwq%gvec(2,k,ispin).EQ.kvac2q(j,ispin)) THEN
+                     map2q(k,ispin) = j
+                     CYCLE k_loop2q
+                  END IF
+               END DO
+               n2 = n2 + 1
+               IF (n2>lapw%dim_nv2d()) CALL juDFT_error("vacden0","vacden")
+               kvac1q(n2,ispin) = lapwq%gvec(1,k,ispin)
+               kvac2q(n2,ispin) = lapwq%gvec(2,k,ispin)
+               map2q(k,ispin) = n2
+            END DO k_loop2q
+            nv2q(ispin) = n2
+         END DO
+      END IF
 
       IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
          !lapw%nv(2)  = lapw%nv(1) ! I just removed this and made lapw INTENT(IN).
@@ -244,19 +284,19 @@ CONTAINS
                   !--->          the coefficients of the spin-down basis functions are
                   !--->          stored in the second half of the eigenvector
                   kspin = (lapw%nv(1)+atoms%nlotot)*(ispin-1) + k
-                  l = map2(k,ispin)
+                  ikG = map2(k,ispin)
                   zks = lapw%k3(k,ispin)*cell%bmat(3,3)*sign
                   arg = zks*cell%z1
                   c_1 = CMPLX(COS(arg),SIN(arg)) * const
-                  av = -c_1 * CMPLX( dte(l),zks*te(l) )
-                  bv =  c_1 * CMPLX(  dt(l),zks* t(l) )
+                  av = -c_1 * CMPLX( dte(ikG),zks*te(ikG) )
+                  bv =  c_1 * CMPLX(  dt(ikG),zks* t(ikG) )
                   !     -----> loop over basis functions
                   IF (zmat%l_real) THEN
-                     ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%data_r(kspin,:ne)*av
-                     bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%data_r(kspin,:ne)*bv
+                     ac(ikG,:ne,ispin) = ac(ikG,:ne,ispin) + zMat%data_r(kspin,:ne)*av
+                     bc(ikG,:ne,ispin) = bc(ikG,:ne,ispin) + zMat%data_r(kspin,:ne)*bv
                   ELSE
-                     ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%data_c(kspin,:ne)*av
-                     bc(l,:ne,ispin) = bc(l,:ne,ispin) + zMat%data_c(kspin,:ne)*bv
+                     ac(ikG,:ne,ispin) = ac(ikG,:ne,ispin) + zMat%data_c(kspin,:ne)*av
+                     bc(ikG,:ne,ispin) = bc(ikG,:ne,ispin) + zMat%data_c(kspin,:ne)*bv
                   END IF
                END DO
                !--->       end of spin loop
@@ -294,23 +334,57 @@ CONTAINS
                   ue(j,ik,jspin) = scale*ue(j,ik,jspin)
                END DO
             END DO
+            IF (l_dfpt) THEN
+               DO ik = 1,nv2q(jspin)
+                  v(1) = lapwq%bkpt(1) + kvac1q(ik,jspin)
+                  v(2) = lapwq%bkpt(2) + kvac2q(ik,jspin)
+                  v(3) = 0.
+
+                  ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
+                  
+                  CALL vacuz(ev,vz(:,ivac,jspin),vz(vacuum%nmz,ivac,jspin),vacuum%nmz,vacuum%delz,tq(ik),dtq(ik),uq(1,ik,jspin))
+                  CALL vacudz(ev,vz(:,ivac,jspin),vz(vacuum%nmz,ivac,jspin),vacuum%nmz,vacuum%delz,teq(ik),&
+                              dteq(ik),teiq(ik,jspin),ueq(1,ik,jspin),dtq(ik),uq(1,ik,jspin))
+
+                  scale = wronk/ (teq(ik)*dtq(ik)-dteq(ik)*tq(ik))
+                  teq(ik) = scale*teq(ik)
+                  dteq(ik) = scale*dteq(ik)
+                  teiq(ik,jspin) = scale*teiq(ik,jspin)
+                  DO j = 1,vacuum%nmz
+                     ueq(j,ik,jspin) = scale*ueq(j,ik,jspin)
+                  END DO
+               END DO
+            END IF
             !     -----> construct a and b coefficients
             DO k = 1,lapw%nv(jspin)
-               l = map2(k,jspin)
+               ikG = map2(k,jspin)
                zks = lapw%k3(k,jspin)*cell%bmat(3,3)*sign
                arg = zks*cell%z1
                c_1 = CMPLX(COS(arg),SIN(arg)) * const
-               av = -c_1 * CMPLX( dte(l),zks*te(l) )
-               bv =  c_1 * CMPLX(  dt(l),zks* t(l) )
+               av = -c_1 * CMPLX( dte(ikG),zks*te(ikG) )
+               bv =  c_1 * CMPLX(  dt(ikG),zks* t(ikG) )
                !     -----> loop over basis functions
                IF (zmat%l_real) THEN
-                  ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%data_r(k,:ne)*av
-                  bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%data_r(k,:ne)*bv
+                  ac(ikG,:ne,jspin) = ac(ikG,:ne,jspin) + zMat%data_r(k,:ne)*av
+                  bc(ikG,:ne,jspin) = bc(ikG,:ne,jspin) + zMat%data_r(k,:ne)*bv
                ELSE
-                  ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%data_c(k,:ne)*av
-                  bc(l,:ne,jspin) = bc(l,:ne,jspin) + zMat%data_c(k,:ne)*bv
+                  ac(ikG,:ne,jspin) = ac(ikG,:ne,jspin) + zMat%data_c(k,:ne)*av
+                  bc(ikG,:ne,jspin) = bc(ikG,:ne,jspin) + zMat%data_c(k,:ne)*bv
                END IF
             END DO
+            IF (l_dfpt) THEN
+               DO k = 1,lapwq%nv(jspin)
+                  ikG = map2q(k,jspin)
+                  zks = lapwq%k3(k,jspin)*cell%bmat(3,3)*sign
+                  arg = zks*cell%z1
+                  c_1 = CMPLX(COS(arg),SIN(arg)) * const
+                  av = -c_1 * CMPLX( dteq(ikG),zks*teq(ikG) )
+                  bv =  c_1 * CMPLX(  dtq(ikG),zks* tq(ikG) )
+                  !     -----> loop over basis functions
+                  ac1(ikG,:ne,jspin) = ac1(ikG,:ne,jspin) + zMat1%data_c(k,:ne)*av
+                  bc1(ikG,:ne,jspin) = bc1(ikG,:ne,jspin) + zMat1%data_c(k,:ne)*bv
+               END DO
+            END IF
          END IF
        !
        !   ----> calculate first and second derivative of u,ue
@@ -424,46 +498,61 @@ CONTAINS
             !--->          the non-warping part of n_21 is calculated together with
             !--->          the warping part of n_21
             DO ispin = 1,input%jspins
-               DO l = 1,nv2(ispin)
+               DO ikG = 1,nv2(ispin)
                   aa = 0.0
                   bb = 0.0
                   ba = 0.0
                   ab = 0.0
                   DO n = 1,ne
-                     aa=aa + we(n)*CONJG(ac(l,n,ispin))*ac(l,n,ispin)
-                     bb=bb + we(n)*CONJG(bc(l,n,ispin))*bc(l,n,ispin)
-                     ab=ab + we(n)*CONJG(ac(l,n,ispin))*bc(l,n,ispin)
-                     ba=ba + we(n)*CONJG(bc(l,n,ispin))*ac(l,n,ispin)
-                     qout = REAL(CONJG(ac(l,n,ispin))*ac(l,n,ispin)+tei(l,ispin)*CONJG(bc(l,n,ispin))*bc(l,n,ispin))
+                     aa=aa + we(n)*CONJG(ac(ikG,n,ispin))*ac(ikG,n,ispin)
+                     bb=bb + we(n)*CONJG(bc(ikG,n,ispin))*bc(ikG,n,ispin)
+                     ab=ab + we(n)*CONJG(ac(ikG,n,ispin))*bc(ikG,n,ispin)
+                     ba=ba + we(n)*CONJG(bc(ikG,n,ispin))*ac(ikG,n,ispin)
+                     qout = REAL(CONJG(ac(ikG,n,ispin))*ac(ikG,n,ispin)+tei(ikG,ispin)*CONJG(bc(ikG,n,ispin))*bc(ikG,n,ispin))
                      vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
                      dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin) + qout*cell%area
                   END DO
                   DO jz = 1,vacuum%nmz
-                     ui = u(jz,l,ispin)
-                     uei = ue(jz,l,ispin)
+                     ui = u(jz,ikG,ispin)
+                     uei = ue(jz,ikG,ispin)
                      den%vac(jz,1,ivac,ispin) = den%vac(jz,1,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei) ! TODO: AN TB; sollte man das REAL killen? 
                   END DO
                END DO  
             END DO
-         ELSE
-            DO l = 1,nv2(jspin)
+         ELSE IF ((.NOT.l_dfpt).OR.(norm2(stars%center)<1e-8)) THEN
+            DO ikG = 1,nv2(jspin)
                aa = CMPLX(0.0,0.0)
                bb = CMPLX(0.0,0.0)
                ba = CMPLX(0.0,0.0)
                ab = CMPLX(0.0,0.0)
                DO n = 1,ne
-                  aa = aa + we(n)*CONJG(ac(l,n,jspin))*ac(l,n,jspin)
-                  bb = bb + we(n)*CONJG(bc(l,n,jspin))*bc(l,n,jspin)
-                  ab = ab + we(n)*CONJG(ac(l,n,jspin))*bc(l,n,jspin)
-                  ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
-                  qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
+                  IF (.NOT.l_dfpt) THEN
+                     aa = aa + we(n)*CONJG(ac(ikG,n,jspin))*ac(ikG,n,jspin)
+                     bb = bb + we(n)*CONJG(bc(ikG,n,jspin))*bc(ikG,n,jspin)
+                     ab = ab + we(n)*CONJG(ac(ikG,n,jspin))*bc(ikG,n,jspin)
+                     ba = ba + we(n)*CONJG(bc(ikG,n,jspin))*ac(ikG,n,jspin)
+                  ELSE
+                     aa = aa + we1(n)*CONJG(ac(ikG,n,jspin))*ac(ikG,n,jspin)
+                     bb = bb + we1(n)*CONJG(bc(ikG,n,jspin))*bc(ikG,n,jspin)
+                     ab = ab + we1(n)*CONJG(ac(ikG,n,jspin))*bc(ikG,n,jspin)
+                     ba = ba + we1(n)*CONJG(bc(ikG,n,jspin))*ac(ikG,n,jspin)
+                     aa = aa + we(n)*CONJG(ac(ikG,n,jspin))*ac1(ikG,n,jspin)
+                     bb = bb + we(n)*CONJG(bc(ikG,n,jspin))*bc1(ikG,n,jspin)
+                     ab = ab + we(n)*CONJG(ac(ikG,n,jspin))*bc1(ikG,n,jspin)
+                     ba = ba + we(n)*CONJG(bc(ikG,n,jspin))*ac1(ikG,n,jspin)
+                  END IF
+                  qout = REAL(CONJG(ac(ikG,n,jspin))*ac(ikG,n,jspin)+tei(ikG,jspin)*CONJG(bc(ikG,n,jspin))*bc(ikG,n,jspin))
                   vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
                   dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
                END DO
                DO  jz = 1,vacuum%nmz
-                  ui = u(jz,l,jspin)
-                  uei = ue(jz,l,jspin)
-                  den%vac(jz,1,ivac,jspin) = den%vac(jz,1,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei) ! TODO: REAL weg?
+                  ui = u(jz,ikG,jspin)
+                  uei = ue(jz,ikG,jspin)
+                  IF (.NOT.l_dfpt) THEN
+                     den%vac(jz,1,ivac,jspin) = den%vac(jz,1,ivac,jspin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei) ! TODO: REAL weg?
+                  ELSE
+                     den%vac(jz,1,ivac,jspin) = den%vac(jz,1,ivac,jspin) + aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei
+                  END IF
                END DO
             END DO
          END IF
@@ -537,27 +626,27 @@ CONTAINS
                   isp_end   = jspin
                END IF
                DO ispin = isp_start, isp_end
-                  DO l=1,nv2(ispin)
+                  DO ikG=1,nv2(ispin)
                      DO n = 1,ne
-                        aa = CONJG(ac(l,n,ispin))*ac(l,n,ispin)
-                        bb = CONJG(bc(l,n,ispin))*bc(l,n,ispin)
-                        ab = CONJG(ac(l,n,ispin))*bc(l,n,ispin)
-                        ba = CONJG(bc(l,n,ispin))*ac(l,n,ispin)
+                        aa = CONJG(ac(ikG,n,ispin))*ac(ikG,n,ispin)
+                        bb = CONJG(bc(ikG,n,ispin))*bc(ikG,n,ispin)
+                        ab = CONJG(ac(ikG,n,ispin))*bc(ikG,n,ispin)
+                        ba = CONJG(bc(ikG,n,ispin))*ac(ikG,n,ispin)
                         DO jj = 1,banddos%layers
                            !---> either integrated (z1,z2) or slice (z1)
                            IF (input%integ) THEN
                               ll = 1
                               DO ii = banddos%izlay(jj,1),banddos%izlay(jj,2)
-                                 ui = u(ii,l,ispin)
-                                 uei = ue(ii,l,ispin)
+                                 ui = u(ii,ikG,ispin)
+                                 uei = ue(ii,ikG,ispin)
                                  yy(ll) = REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
                                  ll = ll+1
                               END DO
                               CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) + RESULT(1)
                            ELSE
-                              ui = u(banddos%izlay(jj,1),l,ispin)
-                              uei = ue(banddos%izlay(jj,1),l,ispin)
+                              ui = u(banddos%izlay(jj,1),ikG,ispin)
+                              uei = ue(banddos%izlay(jj,1),ikG,ispin)
                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) &
                                                                           + REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
 
@@ -571,22 +660,22 @@ CONTAINS
                !     lower left corner: (locx(1), locy(1))   }  in internal
                !     upper right corner: (locx(2), locy(2))  }  coordinates
                !
-               DO l=1, nv2(jspin)
-                  DO l1=1, nv2(jspin)
-                     IF (kvac1(l,jspin).EQ.kvac1(l1,jspin)) THEN
+               DO ikG=1, nv2(jspin)
+                  DO ikGPr=1, nv2(jspin)
+                     IF (kvac1(ikG,jspin).EQ.kvac1(ikGPr,jspin)) THEN
                         factorx = CMPLX((banddos%locx(2)-banddos%locx(1)), 0.)
                      ELSE
-                        k_diff=tpi_const*(kvac1(l,jspin)-kvac1(l1,jspin))
+                        k_diff=tpi_const*(kvac1(ikG,jspin)-kvac1(ikGPr,jspin))
                         k_d1 = k_diff*banddos%locx(1)
                         k_d2 = k_diff*banddos%locx(2)
                         factorx=(CMPLX( COS(k_d2), SIN(k_d2)) - &
                                  CMPLX( COS(k_d1), SIN(k_d1)) ) / &
                                  CMPLX( 0.,k_diff )
                      END IF
-                     IF (kvac2(l,jspin).EQ.kvac2(l1,jspin)) THEN
+                     IF (kvac2(ikG,jspin).EQ.kvac2(ikGPr,jspin)) THEN
                         factory = CMPLX((banddos%locy(2)-banddos%locy(1)), 0.)
                      ELSE
-                        k_diff=tpi_const*(kvac2(l,jspin)-kvac2(l1,jspin))
+                        k_diff=tpi_const*(kvac2(ikG,jspin)-kvac2(ikGPr,jspin))
                         k_d1 = k_diff*banddos%locy(1)
                         k_d2 = k_diff*banddos%locy(2)
                         factory=(CMPLX( COS(k_d2), SIN(k_d2)) - &
@@ -594,29 +683,29 @@ CONTAINS
                                  CMPLX( 0.,k_diff )
                      END IF
                      DO n=1, ne
-                        aa = CONJG(ac(l1,n,jspin))*ac(l,n,jspin)
-                        bb = CONJG(bc(l1,n,jspin))*bc(l,n,jspin)
-                        ab = CONJG(ac(l1,n,jspin))*bc(l,n,jspin)
-                        ba = CONJG(bc(l1,n,jspin))*ac(l,n,jspin)
+                        aa = CONJG(ac(ikGPr,n,jspin))*ac(ikG,n,jspin)
+                        bb = CONJG(bc(ikGPr,n,jspin))*bc(ikG,n,jspin)
+                        ab = CONJG(ac(ikGPr,n,jspin))*bc(ikG,n,jspin)
+                        ba = CONJG(bc(ikGPr,n,jspin))*ac(ikG,n,jspin)
                         DO jj = 1,banddos%layers
                            !---> either integrated (z1,z2) or slice (z1)
                            IF (input%integ) THEN
                               ll = 1
                               DO ii = banddos%izlay(jj,1), banddos%izlay(jj,2)
-                                 ui = u(ii,l,jspin)
-                                 uei = ue(ii,l,jspin)
-                                 uj = u(ii,l1,jspin)
-                                 uej = ue(ii,l1,jspin)
+                                 ui = u(ii,ikG,jspin)
+                                 uei = ue(ii,ikG,jspin)
+                                 uj = u(ii,ikGPr,jspin)
+                                 uej = ue(ii,ikGPr,jspin)
                                  yy(ll) = REAL((aa*ui*uj+bb*uei*uej+ab*uei*uj+ba*ui*uej)*factorx*factory)
                                  ll = ll+1
                               END DO
                               CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
                            ELSE
-                              ui = u(banddos%izlay(jj,1),l,jspin)
-                              uei = ue(banddos%izlay(jj,1),l,jspin)
-                              uj = u(banddos%izlay(jj,1),l1,jspin)
-                              uej = ue(banddos%izlay(jj,1),l1,jspin)
+                              ui = u(banddos%izlay(jj,1),ikG,jspin)
+                              uei = ue(banddos%izlay(jj,1),ikG,jspin)
+                              uj = u(banddos%izlay(jj,1),ikGPr,jspin)
+                              uej = ue(banddos%izlay(jj,1),ikGPr,jspin)
                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
                            END IF
                         END DO
@@ -696,10 +785,10 @@ CONTAINS
             !--->       diagonal elements of the density matrix, n_11 and n_22
             CALL timestart("vacden4_noco")
             DO ispin = 1,input%jspins
-               DO l = 1,nv2(ispin)
-                  DO  l1 = 1,l - 1
-                     i1 = kvac1(l,ispin) - kvac1(l1,ispin)
-                     i2 = kvac2(l,ispin) - kvac2(l1,ispin)
+               DO ikG = 1,nv2(ispin)
+                  DO ikGPr = 1, ikG - 1
+                     i1 = kvac1(ikG,ispin) - kvac1(ikGPr,ispin)
+                     i2 = kvac2(ikG,ispin) - kvac2(ikGPr,ispin)
                      i3 = 0
                      IF (iabs(i1).GT.stars%mx1) CYCLE
                      IF (iabs(i2).GT.stars%mx2) CYCLE
@@ -715,16 +804,16 @@ CONTAINS
                      ba = 0.0
                      ab = 0.0
                      DO n = 1,ne
-                        aa=aa+we(n)*CONJG(ac(l1,n,ispin))*ac(l,n,ispin)
-                        bb=bb+we(n)*CONJG(bc(l1,n,ispin))*bc(l,n,ispin)
-                        ab=ab+we(n)*CONJG(ac(l1,n,ispin))*bc(l,n,ispin)
-                        ba=ba+we(n)*CONJG(bc(l1,n,ispin))*ac(l,n,ispin)
+                        aa=aa+we(n)*CONJG(ac(ikGPr,n,ispin))*ac(ikG,n,ispin)
+                        bb=bb+we(n)*CONJG(bc(ikGPr,n,ispin))*bc(ikG,n,ispin)
+                        ab=ab+we(n)*CONJG(ac(ikGPr,n,ispin))*bc(ikG,n,ispin)
+                        ba=ba+we(n)*CONJG(bc(ikGPr,n,ispin))*ac(ikG,n,ispin)
                      END DO
                      DO jz = 1,vacuum%nmzxy
-                        ui = u(jz,l,ispin)
-                        uj = u(jz,l1,ispin)
-                        uei = ue(jz,l,ispin)
-                        uej = ue(jz,l1,ispin)
+                        ui = u(jz,ikG,ispin)
+                        uj = u(jz,ikGPr,ispin)
+                        uei = ue(jz,ikG,ispin)
+                        uej = ue(jz,ikGPr,ispin)
                         t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
                         den%vac(jz,ind2,ivac,ispin) = den%vac(jz,ind2,ivac,ispin) + t1*phs/stars%nstr2(ind2)
                         den%vac(jz,ind2p,ivac,ispin) = den%vac(jz,ind2p,ivac,ispin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
@@ -733,10 +822,10 @@ CONTAINS
                END DO
             END DO
             !--->          off-diagonal element of the density matrix, n_21
-            DO l = 1,nv2(1)
-               DO  l1 = 1,nv2(2)
-                  i1 = kvac1(l,1) - kvac1(l1,2)
-                  i2 = kvac2(l,1) - kvac2(l1,2)
+            DO ikG = 1,nv2(1)
+               DO  ikGPr = 1,nv2(2)
+                  i1 = kvac1(ikG,1) - kvac1(ikGPr,2)
+                  i2 = kvac2(ikG,1) - kvac2(ikGPr,2)
                   i3 = 0
                   !--->                treat only the warping part
                   IF (iabs(i1).GT.stars%mx1) CYCLE
@@ -752,16 +841,16 @@ CONTAINS
                      ba = 0.0
                      ab = 0.0
                      DO ie = 1,ne
-                        aa=aa+we(ie)*CONJG(ac(l1,ie,2))*ac(l,ie,1)
-                        bb=bb+we(ie)*CONJG(bc(l1,ie,2))*bc(l,ie,1)
-                        ab=ab+we(ie)*CONJG(ac(l1,ie,2))*bc(l,ie,1)
-                        ba=ba+we(ie)*CONJG(bc(l1,ie,2))*ac(l,ie,1)
+                        aa=aa+we(ie)*CONJG(ac(ikGPr,ie,2))*ac(ikG,ie,1)
+                        bb=bb+we(ie)*CONJG(bc(ikGPr,ie,2))*bc(ikG,ie,1)
+                        ab=ab+we(ie)*CONJG(ac(ikGPr,ie,2))*bc(ikG,ie,1)
+                        ba=ba+we(ie)*CONJG(bc(ikGPr,ie,2))*ac(ikG,ie,1)
                      END DO
                      DO jz = 1,vacuum%nmz
-                        ui = u(jz,l,1)
-                        ui2 = u(jz,l1,2)
-                        uei = ue(jz,l,1)
-                        uei2 = ue(jz,l1,2)
+                        ui = u(jz,ikG,1)
+                        ui2 = u(jz,ikGPr,2)
+                        uei = ue(jz,ikG,1)
+                        uei2 = ue(jz,ikGPr,2)
                         tempCmplx = aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
                         den%vac(jz,1,ivac,3) = den%vac(jz,1,ivac,3) + CONJG(tempCmplx) !!!! MAGIC MINUS
                      END DO
@@ -772,16 +861,16 @@ CONTAINS
                      ba = 0.0
                      ab = 0.0
                      DO ie = 1,ne
-                        aa=aa + we(ie)*CONJG(ac(l1,ie,2))*ac(l,ie,1)
-                        bb=bb + we(ie)*CONJG(bc(l1,ie,2))*bc(l,ie,1)
-                        ab=ab + we(ie)*CONJG(ac(l1,ie,2))*bc(l,ie,1)
-                        ba=ba + we(ie)*CONJG(bc(l1,ie,2))*ac(l,ie,1)
+                        aa=aa + we(ie)*CONJG(ac(ikGPr,ie,2))*ac(ikG,ie,1)
+                        bb=bb + we(ie)*CONJG(bc(ikGPr,ie,2))*bc(ikG,ie,1)
+                        ab=ab + we(ie)*CONJG(ac(ikGPr,ie,2))*bc(ikG,ie,1)
+                        ba=ba + we(ie)*CONJG(bc(ikGPr,ie,2))*ac(ikG,ie,1)
                      END DO
                      DO jz = 1,vacuum%nmzxy
-                        ui = u(jz,l,1)
-                        uj = u(jz,l1,2)
-                        uei = ue(jz,l,1)
-                        uej = ue(jz,l1,2)
+                        ui = u(jz,ikG,1)
+                        uj = u(jz,ikGPr,2)
+                        uei = ue(jz,ikG,1)
+                        uej = ue(jz,ikGPr,2)
                         t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
                         den%vac(jz,ind2,ivac,3) = den%vac(jz, ind2,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
                      END DO
@@ -791,50 +880,92 @@ CONTAINS
             CALL timestop("vacden4_noco")
          ELSE ! collinear part
             !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(nv2,jspin,kvac1,kvac2,stars,ne,we,vacuum,den,ac,bc,u,ue,ivac) &
-            !$OMP PRIVATE(l1,i1,i2,i3,ig3,phs,ig3p,phsp,ind2,ind2p,n,jz,ui,uj,uei,uej)&
-            !$OMP PRIVATE(aa,bb,ab,ba,t1jz,l) 
+            !$OMP SHARED(nv2,jspin,kvac1,kvac2,kvac1q,kvac2q,stars,ne,we,we1,vacuum,den,ac,bc,ac1,bc1,u,ue,uq,ueq,ivac,l_dfpt) &
+            !$OMP PRIVATE(ikGPr,i1,i2,i3,ig3,phs,ig3p,phsp,ind2,ind2p,n,jz,ui,uj,uei,uej)&
+            !$OMP PRIVATE(aa,bb,ab,ba,t1jz,ikG) 
             ALLOCATE(t1jz(vacuum%nmzxy))
             !$OMP DO SCHEDULE(dynamic,5)
-            DO l = 1,nv2(jspin)
-               DO  l1 = 1,l - 1
-                  i1 = kvac1(l,jspin) - kvac1(l1,jspin)
-                  i2 = kvac2(l,jspin) - kvac2(l1,jspin)
-                  i3 = 0
-                  ig3 = stars%ig(i1,i2,i3)
-                  ind2 = stars%ig2(ig3)
-                  !IF (ind2 .ne.stars%ig2(ig3)) CYCLE
-                  IF (iabs(i1).GT.stars%mx1) CYCLE
-                  IF (iabs(i2).GT.stars%mx2) CYCLE
-                  IF (ig3.EQ.0)  CYCLE
-                  phs = stars%rgphs(i1,i2,i3)
-                  ig3p = stars%ig(-i1,-i2,i3)
-                  phsp = stars%rgphs(-i1,-i2,i3)
-                  ind2p = stars%ig2(ig3p)
-                  aa = 0.0
-                  bb = 0.0
-                  ba = 0.0
-                  ab = 0.0
-                  DO n = 1,ne
-                     aa=aa+we(n)*CONJG(ac(l1,n,jspin))*ac(l,n,jspin)
-                     bb=bb+we(n)*CONJG(bc(l1,n,jspin))*bc(l,n,jspin)
-                     ab=ab+we(n)*CONJG(ac(l1,n,jspin))*bc(l,n,jspin)
-                     ba=ba+we(n)*CONJG(bc(l1,n,jspin))*ac(l,n,jspin)
+            DO ikG = 1, nv2(jspin)
+               IF (.NOT.l_dfpt) THEN
+                  DO ikGPr = 1, ikG - 1
+                     i1 = kvac1(ikG,jspin) - kvac1(ikGPr,jspin)
+                     i2 = kvac2(ikG,jspin) - kvac2(ikGPr,jspin)
+                     i3 = 0
+                     ig3 = stars%ig(i1,i2,i3)
+                     ind2 = stars%ig2(ig3)
+                     !IF (ind2 .ne.stars%ig2(ig3)) CYCLE
+                     IF (iabs(i1).GT.stars%mx1) CYCLE
+                     IF (iabs(i2).GT.stars%mx2) CYCLE
+                     IF (ig3.EQ.0)  CYCLE
+                     phs = stars%rgphs(i1,i2,i3)
+                     ig3p = stars%ig(-i1,-i2,i3)
+                     phsp = stars%rgphs(-i1,-i2,i3)
+                     ind2p = stars%ig2(ig3p)
+                     aa = 0.0
+                     bb = 0.0
+                     ba = 0.0
+                     ab = 0.0
+                     DO n = 1,ne
+                        aa=aa+we(n)*CONJG(ac(ikGPr,n,jspin))*ac(ikG,n,jspin)
+                        bb=bb+we(n)*CONJG(bc(ikGPr,n,jspin))*bc(ikG,n,jspin)
+                        ab=ab+we(n)*CONJG(ac(ikGPr,n,jspin))*bc(ikG,n,jspin)
+                        ba=ba+we(n)*CONJG(bc(ikGPr,n,jspin))*ac(ikG,n,jspin)
+                     END DO
+                     DO  jz = 1,vacuum%nmzxy
+                        ui = u(jz,ikG,jspin)
+                        uj = u(jz,ikGPr,jspin)
+                        uei = ue(jz,ikG,jspin)
+                        uej = ue(jz,ikGPr,jspin)
+                        t1jz(jz) = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
+                     END DO
+                     !$OMP CRITICAL ! (denvacxy,denvac)
+                     den%vac(:vacuum%nmzxy,ind2,ivac,jspin) = den%vac(:vacuum%nmzxy,ind2, ivac,jspin) &
+                                                            + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
+                     den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) = den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) &
+                                                            + CONJG(t1jz(:vacuum%nmzxy))*phsp/stars%nstr2(ind2p)
+                     !$OMP END CRITICAL ! (denvacxy,denvac)
                   END DO
-                  DO  jz = 1,vacuum%nmzxy
-                     ui = u(jz,l,jspin)
-                     uj = u(jz,l1,jspin)
-                     uei = ue(jz,l,jspin)
-                     uej = ue(jz,l1,jspin)
-                     t1jz(jz) = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
+               ELSE
+                  DO ikGPr = 1, nv2(jspin)
+                     i1 = kvac1q(ikG,jspin) - kvac1(ikGPr,jspin)
+                     i2 = kvac2q(ikG,jspin) - kvac2(ikGPr,jspin)
+                     i3 = 0
+                     ig3 = stars%ig(i1,i2,i3)
+                     ind2 = stars%ig2(ig3)
+                     IF ((ind2==1).AND.(norm2(stars%center)<1e-8)) CYCLE
+                     IF (iabs(i1).GT.stars%mx1) CYCLE
+                     IF (iabs(i2).GT.stars%mx2) CYCLE
+                     IF (ig3.EQ.0) CYCLE
+                     phs = stars%rgphs(i1,i2,i3)
+                     aa = 0.0
+                     bb = 0.0
+                     ba = 0.0
+                     ab = 0.0
+                     DO n = 1,ne
+                        aa=aa+we(n)*CONJG(ac(ikGPr,n,jspin))*ac1(ikG,n,jspin)
+                        bb=bb+we(n)*CONJG(bc(ikGPr,n,jspin))*bc1(ikG,n,jspin)
+                        ab=ab+we(n)*CONJG(ac(ikGPr,n,jspin))*bc1(ikG,n,jspin)
+                        ba=ba+we(n)*CONJG(bc(ikGPr,n,jspin))*ac1(ikG,n,jspin)
+                        IF (norm2(stars%center)<1e-8) THEN
+                           aa=aa+we1(n)*CONJG(ac(ikGPr,n,jspin))*ac(ikG,n,jspin)
+                           bb=bb+we1(n)*CONJG(bc(ikGPr,n,jspin))*bc(ikG,n,jspin)
+                           ab=ab+we1(n)*CONJG(ac(ikGPr,n,jspin))*bc(ikG,n,jspin)
+                           ba=ba+we1(n)*CONJG(bc(ikGPr,n,jspin))*ac(ikG,n,jspin)
+                        END IF
+                     END DO
+                     DO  jz = 1,vacuum%nmzxy
+                        ui = uq(jz,ikG,jspin)
+                        uj = u(jz,ikGPr,jspin)
+                        uei = ueq(jz,ikG,jspin)
+                        uej = ue(jz,ikGPr,jspin)
+                        t1jz(jz) = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
+                     END DO
+                     !$OMP CRITICAL ! (denvacxy,denvac)
+                     den%vac(:vacuum%nmzxy,ind2,ivac,jspin) = den%vac(:vacuum%nmzxy,ind2, ivac,jspin) &
+                                                            + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
+                     !$OMP END CRITICAL ! (denvacxy,denvac)
                   END DO
-                  !$OMP CRITICAL ! (denvacxy,denvac)
-                  den%vac(:vacuum%nmzxy,ind2,ivac,jspin) = den%vac(:vacuum%nmzxy,ind2, ivac,jspin) &
-                                                         + t1jz(:vacuum%nmzxy)*phs/stars%nstr2(ind2)
-                  den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) = den%vac(:vacuum%nmzxy,ind2p,ivac,jspin) &
-                                                         + CONJG(t1jz(:vacuum%nmzxy))*phsp/stars%nstr2(ind2p)
-                  !$OMP END CRITICAL ! (denvacxy,denvac)
-               END DO
+               END IF
             END DO
             !$OMP END DO
             DEALLOCATE(t1jz)
@@ -848,10 +979,10 @@ CONTAINS
       !
          IF (banddos%starcoeff .AND. banddos%vacdos) THEN
             DO  n=1,ne
-               DO l = 1,nv2(jspin)
-                  DO  l1 = 1,l - 1
-                     i1 = kvac1(l,jspin) - kvac1(l1,jspin)
-                     i2 = kvac2(l,jspin) - kvac2(l1,jspin)
+               DO ikG = 1,nv2(jspin)
+                  DO ikGPr = 1, ikG - 1
+                     i1 = kvac1(ikG,jspin) - kvac1(ikGPr,jspin)
+                     i2 = kvac2(ikG,jspin) - kvac2(ikGPr,jspin)
                      i3 = 0
                      IF (iabs(i1).GT.stars%mx1) CYCLE
                      IF (iabs(i2).GT.stars%mx2) CYCLE
@@ -864,15 +995,15 @@ CONTAINS
                         (ind2p.GE.2.AND.ind2p.LE.banddos%nstars)) THEN
                         phs = stars%rgphs(i1,i2,i3)
                         phsp = stars%rgphs(-i1,-i2,i3)
-                        aa = CONJG(ac(l1,n,jspin))*ac(l,n,jspin)
-                        bb = CONJG(bc(l1,n,jspin))*bc(l,n,jspin)
-                        ab = CONJG(ac(l1,n,jspin))*bc(l,n,jspin)
-                        ba = CONJG(bc(l1,n,jspin))*ac(l,n,jspin)
+                        aa = CONJG(ac(ikGPr,n,jspin))*ac(ikG,n,jspin)
+                        bb = CONJG(bc(ikGPr,n,jspin))*bc(ikG,n,jspin)
+                        ab = CONJG(ac(ikGPr,n,jspin))*bc(ikG,n,jspin)
+                        ba = CONJG(bc(ikGPr,n,jspin))*ac(ikG,n,jspin)
                         DO jj = 1,banddos%layers
-                           ui = u(banddos%izlay(jj,1),l,jspin)
-                           uj = u(banddos%izlay(jj,1),l1,jspin)
-                           uei = ue(banddos%izlay(jj,1),l,jspin)
-                           uej = ue(banddos%izlay(jj,1),l1,jspin)
+                           ui = u(banddos%izlay(jj,1),ikG,jspin)
+                           uj = u(banddos%izlay(jj,1),ikGPr,jspin)
+                           uei = ue(banddos%izlay(jj,1),ikG,jspin)
+                           uej = ue(banddos%izlay(jj,1),ikGPr,jspin)
                            t1 = aa*ui*uj + bb*uei*uej +ba*ui*uej + ab*uei*uj
                            IF (ind2.GE.2.AND.ind2.LE.banddos%nstars) &
                                vacdos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin)+ t1*phs/stars%nstr2(ind2)
@@ -884,7 +1015,7 @@ CONTAINS
                END DO
             END DO
          END IF
-      END DO
+      END DO ! vacuum loop
       DEALLOCATE (ac,bc,dt,dte,t,te,tei,u,ue,yy )
 
 !    DEALLOCATE (du,ddu,due,ddue)
