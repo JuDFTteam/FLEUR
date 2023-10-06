@@ -14,7 +14,7 @@ use mpi
 CONTAINS
 
 SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
-                  vacuumdummy,sphhar,sym,vTot ,cdnvalJob,den,dosdummy,vacdosdummy,&
+                  vacuum,sphhar,sym,vTot ,cdnvalJob,den,dosdummy,vacdosdummy,&
                   hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, denIm, l_real,&
                   qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
 
@@ -23,6 +23,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    USE m_eig66_io
    USE m_abcof
    USE m_pwden
+   USE m_vacden
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_types_dos
    USE m_types_vacdos
@@ -43,7 +44,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE(t_dos),           INTENT(INOUT) :: dosdummy
    TYPE(t_vacdos),        INTENT(INOUT) :: vacdosdummy
    TYPE(t_input),         INTENT(IN)    :: input
-   TYPE(t_vacuum),        INTENT(IN)    :: vacuumdummy
+   TYPE(t_vacuum),        INTENT(IN)    :: vacuum
    TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_nococonv),      INTENT(IN)    :: nococonv
    TYPE(t_sym),           INTENT(IN)    :: sym
@@ -311,6 +312,10 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
          ELSE
             CALL pwden(stars,kpts,banddosdummy ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
                        jspin,lapw,noccbd,ev_list,we,eig,den,resultsdummy,f_b8_dummy,zMat,dosdummy,bqpt,lapwq,we1,zMat1,iDir,lapwmq,zMat1m)
+         END IF
+         IF (input%film) THEN
+            CALL vacden(vacuum,stars,input,cell,atoms,noco,nococonv,banddosdummy,&
+                        we,ikpt,jspin,REAL(vTot%vac(:,1,:,:)),noccbd,ev_list,lapw,enpara%evac,den,zMat,vacdosdummy,dosdummy,lapwq,we1,zMat1)
          END IF
       END IF
    END DO ! end of k-point loop

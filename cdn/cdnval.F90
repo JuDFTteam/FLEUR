@@ -335,8 +335,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (PRESENT(slab).AND.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab ,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
-            CALL vacden(vacuum,stars , kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
-                        gVacMap,we,ikpt,jspin,REAL(vTot%vac(:,1,:,:)),noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,vacdos,dos)
+            CALL vacden(vacuum,stars,input,cell,atoms,noco,nococonv,banddos,&
+                        we,ikpt,jspin,REAL(vTot%vac(:,1,:,:)),noccbd,ev_list,lapw,enpara%evac,den,zMat,vacdos,dos)
          END IF
       END IF
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,vacdos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
