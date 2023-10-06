@@ -12,6 +12,7 @@ CONTAINS
       USE m_types_mpimat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
+      USE m_dfpt_hsvac
       USE m_dfpt_eigen_redist_matrix
 
       IMPLICIT NONE
@@ -66,6 +67,14 @@ CONTAINS
             !$acc exist data delete(hmat(i,j),smat(i,j))
          END IF; END DO; END DO
       CALL timestop("MT part")
+
+      !Vacuum contributions
+      IF (fi%input%film) THEN
+         CALL timestart("Vacuum part")
+         CALL dfpt_hsvac(fi%vacuum, starsq, fmpi, isp, fi%input, vTot1, enpara%evac, fi%cell, &
+                    lapwq, lapw,  fi%noco, nococonv, hmat, smat)
+         CALL timestop("Vacuum part")
+      END IF
 
       !Now copy the data into final matrix
       ! Collect the four fi%noco parts into a single matrix
