@@ -6,7 +6,7 @@ MODULE m_vintcz
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
 CONTAINS
-   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,l_dfptvgen)
+   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,l_dfptvgen,vintczoff)
       USE m_constants
       USE m_types
 
@@ -25,6 +25,7 @@ CONTAINS
       COMPLEX,        INTENT(IN) :: psq(stars%ng3),vnew(:,:,:)!,vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
       COMPLEX,        INTENT(IN) :: alphm(stars%ng2,2)
       LOGICAL,        INTENT(IN) :: l_dfptvgen
+      REAL,           INTENT(IN) :: vintczoff
       !REAL,           INTENT(IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)
 
       COMPLEX                    :: argr,sumrr,vcons1,test,c_ph,phas
@@ -80,7 +81,7 @@ CONTAINS
          END DO
          !           -----> v2(z)
          vintcz = vintcz + vz1dh - fpi_const* (dh-z)*&
-            &              (sig1dh-rhobar/2.* (dh-z))
+            &              (sig1dh-rhobar/2.* (dh-z)) - vintczoff/2
          IF (field%efield%dirichlet .AND. vslope /= 0.0) THEN
             vintcz = vintcz + vslope * (dh-z)
          END IF

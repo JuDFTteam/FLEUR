@@ -65,7 +65,7 @@ contains
     integer                                      :: lh, n, nzst1, first_star
     integer                                      :: imz, imzxy, ichsmrg, ivfft
     integer                                      :: l, nat
-    real                                         :: ani, g3, z, sig1dh, vz1dh
+    real                                         :: ani, g3, z, sig1dh, vz1dh, vintczoff
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
@@ -97,7 +97,7 @@ contains
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" )
         if ((.not.l_dfptvgen).or.norm2(stars%center)<1e-8) then
-          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope ) ! TODO: AN TB; make den complex for DFPT
+          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_dfptvgen,vintczoff ) ! TODO: AN TB; make den complex for DFPT
         end if
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
@@ -121,7 +121,7 @@ contains
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
-                              rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
+                              rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen, vintczoff )
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )
           end do

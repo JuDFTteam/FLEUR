@@ -11,7 +11,7 @@ module m_vvac
    ! for general symmetry.          c.l.fu, r.podloucky             *
    ! ****************************************************************
 contains
-   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope)
+   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope, l_bind, vintczoff)
       !! Calculates the \(\boldsymbol{G}_{||}=0\) part of the vacuum Coulomb potential.
       !! There are two possible cases for Dirichlet and von Neumann boundary conditions, respectively.
       !! von Neumann case:
@@ -38,12 +38,15 @@ contains
       complex,        intent(out) :: rhobar
       real,           intent(out) :: sig1dh, vz1dh
       complex,        intent(out) :: vslope
+      logical,        intent(in)  :: l_bind
+      real,           intent(out) :: vintczoff
 
       real                        :: sumq
       real                        :: bj0, bj1, qzh, sigmaa(2)
       integer                     :: ig3, imz, ivac, ncsh
       real                        :: f(vacuum%nmzd), sig(vacuum%nmzd), vtemp(vacuum%nmzd)
 
+      vintczoff = 0.0
       vnew(:,1:vacuum%nvac) = 0.0 ! initialize potential
 
       ! obtain mesh point (ncsh) of charge sheet for external electric field
@@ -136,6 +139,10 @@ contains
             vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac) &
                            + fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(2)
          end do
+         if (l_bind) then
+            vintczoff = vnew(vacuum%nmz,2)
+            vnew(:,2) = vnew(:,2) - vnew(vacuum%nmz,2) 
+         end if
       end if ! Dirichlet/Neumann
    end subroutine vvac
 end module m_vvac
