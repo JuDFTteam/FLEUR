@@ -336,8 +336,8 @@ CONTAINS
             END DO
             IF (l_dfpt) THEN
                DO ik = 1,nv2q(jspin)
-                  v(1) = lapwq%bkpt(1) + kvac1q(ik,jspin)
-                  v(2) = lapwq%bkpt(2) + kvac2q(ik,jspin)
+                  v(1) = lapwq%bkpt(1) + kvac1q(ik,jspin) + lapwq%qphon(1)
+                  v(2) = lapwq%bkpt(2) + kvac2q(ik,jspin) + lapwq%qphon(2)
                   v(3) = 0.
 
                   ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
@@ -381,8 +381,8 @@ CONTAINS
                   av = -c_1 * CMPLX( dteq(ikG),zks*teq(ikG) )
                   bv =  c_1 * CMPLX(  dtq(ikG),zks* tq(ikG) )
                   !     -----> loop over basis functions
-                  ac1(ikG,:ne,jspin) = ac1(ikG,:ne,jspin) + zMat1%data_c(k,:ne)*av
-                  bc1(ikG,:ne,jspin) = bc1(ikG,:ne,jspin) + zMat1%data_c(k,:ne)*bv
+                  ac1(ikG,:ne,jspin) = ac1(ikG,:ne,jspin) + 2*zMat1%data_c(k,:ne)*av
+                  bc1(ikG,:ne,jspin) = bc1(ikG,:ne,jspin) + 2*zMat1%data_c(k,:ne)*bv
                END DO
             END IF
          END IF

@@ -7,7 +7,7 @@
 MODULE m_dfpt_eigen_hssetup
 CONTAINS
    SUBROUTINE dfpt_eigen_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, &
-                            ud, td, tdV1, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
+                            ud, td, tdV1, vTot, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
       USE m_types
       USE m_types_mpimat
       USE m_dfpt_hs_int
@@ -26,7 +26,7 @@ CONTAINS
       TYPE(t_usdus),      INTENT(IN)     :: ud
       TYPE(t_tlmplm),     INTENT(IN)     :: td, tdV1
       TYPE(t_lapw),       INTENT(IN)     :: lapw, lapwq
-      TYPE(t_potden),     INTENT(IN)     :: vTot1
+      TYPE(t_potden),     INTENT(IN)     :: vTot, vTot1
       INTEGER,            INTENT(IN)     :: iDir, iDtype
       CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
       INTEGER,      INTENT(IN)     :: nk, killcont(6)
@@ -71,8 +71,8 @@ CONTAINS
       !Vacuum contributions
       IF (fi%input%film) THEN
          CALL timestart("Vacuum part")
-         CALL dfpt_hsvac(fi%vacuum, starsq, fmpi, isp, fi%input, vTot1, enpara%evac, fi%cell, &
-                    lapwq, lapw,  fi%noco, nococonv, hmat, smat)
+         CALL dfpt_hsvac(fi%vacuum, starsq, fmpi, isp, fi%input, vTot, vTot1, enpara%evac, fi%cell, &
+                    lapwq, lapw,  fi%noco, nococonv, hmat)
          CALL timestop("Vacuum part")
       END IF
 
