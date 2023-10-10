@@ -276,7 +276,7 @@ CONTAINS
        ELSE
          !$OMP PARALLEL DO DEFAULT(none) &
          !$OMP& SHARED(tuuv_loc,tddv_loc,tudv_loc,tduv_loc,ddnv,vz,v1z,jk,bkpt,bkptq) &
-         !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,kvac,kvacq,vacuum,u,uq,v1xy,tail,fac,np1,ivac,ipot,ud,udq,l_dfpt) &
+         !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,nv2q,kvac,kvacq,vacuum,u,uq,v1xy,tail,fac,np1,ivac,ipot,ud,udq,l_dfpt) &
          !$OMP& PRIVATE(i1,i2,i3,ind3,phase,ind2,x,xv,yv)
           DO  ik = 1,nv2q(jspin1)
             !--->     determine the warping component of the potential
