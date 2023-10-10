@@ -65,7 +65,8 @@ contains
     integer                                      :: lh, n, nzst1, first_star
     integer                                      :: imz, imzxy, ichsmrg, ivfft
     integer                                      :: l, nat
-    real                                         :: ani, g3, z, sig1dh, vz1dh, vintczoff
+    real                                         :: ani, g3, z
+    complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
@@ -75,6 +76,7 @@ contains
 #endif
 
     l_dfptvgen = PRESENT(stars2)
+    vmz1dh_is = cmplx(0.0,0.0)
 
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
     vCoul%iter = den%iter
@@ -97,7 +99,7 @@ contains
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" )
         if ((.not.l_dfptvgen).or.norm2(stars%center)<1e-8) then
-          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_dfptvgen,vintczoff ) ! TODO: AN TB; make den complex for DFPT
+          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_dfptvgen,vmz1dh ) ! TODO: AN TB; make den complex for DFPT
         end if
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
@@ -114,6 +116,9 @@ contains
         ivfft = 3 * stars%mx3
         ani = 1.0 / real( ivfft )
         do irec2 = 1, stars%ng2
+          IF (l_dfptvgen.AND.irec2 == 1) vmz1dh_is = vintcz( stars, vacuum, cell,  input, field, -cell%z1+1e-15, irec2, psq, &
+                              vCoul%vac(:,:,:,ispin), &
+                              rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen, CMPLX(0.0,0.0) )
           i = 0
           do i3 = 0, ivfft - 1
             i = i + 1
@@ -121,7 +126,7 @@ contains
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
-                              rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen, vintczoff )
+                              rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen, vmz1dh-vmz1dh_is )
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )
           end do
@@ -218,7 +223,6 @@ contains
           call timestop( "den-pot integrals" )
       end if CALCULATE_DENSITY_POTENTIAL_INTEGRAL
     end if !irank==0
-
   end subroutine vgen_coulomb
 
 end module m_vgen_coulomb
