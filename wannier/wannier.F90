@@ -657,13 +657,16 @@ CONTAINS
     !ccccccccccccccc   initialize the potential   cccccccccccc
     !*********************************************************
 
-    ALLOCATE ( vz(vacuum%nmzd,2,4) )
     ALLOCATE ( vr(atoms%jmtd,atoms%ntype,input%jspins) )
     ALLOCATE ( vso(atoms%jmtd,atoms%nat,2) )
-
+    ALLOCATE ( vz(vacuum%nmzd,2,4) )
+    
     vz = 0.0
-    vz(:,:,:SIZE(vTot%vac,4)) = REAL(vTot%vac(:,1,:,:))
-    IF (SIZE(vTot%vac,4)==3) vz(:,:,4) = AIMAG(vTot%vac(:,1,:,3))
+
+    IF(input%film)THEN 
+      vz(:,:,:SIZE(vTot%vac,4)) = REAL(vTot%vac(:,1,:,:))
+      IF (SIZE(vTot%vac,4)==3) vz(:,:,4) = AIMAG(vTot%vac(:,1,:,3))
+    END IF
 
     DO jspin = 1,input%jspins
        DO n = 1, atoms%ntype
