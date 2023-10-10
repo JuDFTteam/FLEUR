@@ -267,15 +267,15 @@ CONTAINS
         s=dot_product(g(:2),g(:2))
         sq=s
         IF (PRESENT(qvec)) THEN
-          g(:2) = g(:2) + matmul(qvec,cell%bmat(:,2:))
-          sq=dot_product(g,g)
+          g(:2) = g(:2) + matmul(qvec(:2),cell%bmat(:2,:2))
+          sq=dot_product(g(:2),g(:2))
         END IF
         if (sq>gmax2) cycle y_dim2 !not in sphere
         k=k+1
         stars%kv2(:,k)=kv(:2)
         stars%sk2(k)=sqrt(s)
         IF (PRESENT(qvec)) THEN
-             stars%gq2(:,k)=g
+             stars%gq2(:2,k)=g(:2)
              sk2q(k)=sqrt(sq)
         END IF
         ! secondary key for equal length stars
@@ -285,7 +285,6 @@ CONTAINS
         DO n = 1,sym%nop2
             stars%i2g(kr(1,n),kr(2,n))=k
         ENDDO
-
       ENDDO y_dim2
     ENDDO x_dim2
     if (k.ne.stars%ng2) call judft_error("BUG in init_stars: inconsistency in ng2")
