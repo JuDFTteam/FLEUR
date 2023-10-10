@@ -39,6 +39,7 @@ CONTAINS
       USE m_metagga
       USE m_dfpt_vmt_xc
       USE m_dfpt_vis_xc
+      USE m_dfpt_vvac_xc
 
       IMPLICIT NONE
 
@@ -101,8 +102,11 @@ CONTAINS
             ifftd2 = 9*stars%mx1*stars%mx2
 
             !IF (.NOT. xcpot%needs_grad()) THEN  ! LDA
-
-            CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc)
+            IF (.NOT. l_dfptvgen) THEN
+               CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc)
+            ELSE
+               CALL dfpt_vvac_xc(ifftd2,  stars,  starsq,  vacuum,  noco,  cell,denRot, den1Rot, xcpot,  input, vTot)
+            END IF  
             CALL timestop("Vxc in vacuum")
          END IF
 

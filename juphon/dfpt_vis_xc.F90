@@ -104,8 +104,8 @@ CONTAINS
       vTot%pw = vTot%pw + ImagUnit * vTotim%pw
       call timestop("pw_from_grid")
 
-      call timestart("finish_pw_grid")
-      CALL finish_pw_grid()
-      call timestop("finish_pw_grid")
+!      call timestart("finish_pw_grid")
+!      CALL finish_pw_grid()
+!      call timestop("finish_pw_grid")
    END SUBROUTINE dfpt_vis_xc
 END MODULE m_dfpt_vis_xc
