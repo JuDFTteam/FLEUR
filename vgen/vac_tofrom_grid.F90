@@ -7,7 +7,7 @@ MODULE m_vac_tofrom_grid
       INTEGER,PARAMETER :: fixed_ndvgrd=6
 
 CONTAINS
-  subroutine vac_to_grid(dograds,ifftd2,jspins,vacuum,l_noco,cell,vacxy,vacz,vacnew,stars,rho,grad)
+  subroutine vac_to_grid(dograds,ifftd2,jspins,vacuum,l_noco,cell,vacxy,vacz,vacnew,stars,rho,grad,rhoim)
 
 
     !-----------------------------------------------------------------------
@@ -41,6 +41,7 @@ CONTAINS
     COMPLEX,INTENT(IN)    :: vacnew(:,:,:,:)
     TYPE(t_gradients),INTENT(INOUT)::grad
     real,intent(OUT)             :: rho(:,:)
+    real, optional, allocatable, intent(out) :: rhoim(:,:)
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ifftd2
 
@@ -78,6 +79,7 @@ CONTAINS
     rho = 0.0
 
     ALLOCATE ( bf2(ifftd2) )
+    IF (PRESENT(rhoim)) ALLOCATE(rhoim,mold=rho)
 
     WRITE (oUnit,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
     WRITE (oUnit,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
@@ -121,7 +123,11 @@ CONTAINS
           !idx1=(ivac-1)* ( vacuum%nmzxy * ifftd2 + nmzdiff ) + 1
           DO ip=1,vacuum%nmzxy
             DO js=1,jspins
-              CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, vacnew(ip,:,ivac,js),+1)
+              IF (.NOT.PRESENT(rhoim)) THEN
+                 CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, vacnew(ip,:,ivac,js),+1)
+              ELSE
+                 CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),rhoim(idx1:idx1+9*stars%mx1*stars%mx2-1,js), vacnew(ip,:,ivac,js),+1)
+              END IF
             END DO
             IF (l_noco) THEN
               CALL fft2d(stars, mx,my, vacnew(ip,:,ivac,3),+1)
@@ -197,7 +203,7 @@ CONTAINS
        !$OMP PARALLEL DEFAULT(none) &
        !$OMP SHARED(vacuum,dograds,jspins,stars,ivac,zro,cell,magmom,vacxy,vacnew) &
        !$OMP SHARED(rhtdz,rhtdzz,rdz,rdzz,rxydz,rxydzz,l_noco,dzmagmom,ddzmagmom,idx) &
-       !$OMP SHARED(ifftd2,rho,grad) &
+       !$OMP SHARED(ifftd2,rho,rhoim,grad) &
        !$OMP PRIVATE(ip,js,iq,cqpw,bf2,rhti,rhdx,rhdy,rhdz,rhdxx,rhdyy,rhdzz) &
        !$OMP PRIVATE(rhdxy,rhdzx,rhdyz,dxmagmom,dymagmom,ddxmagmom,ddymagmom) &
        !$OMP PRIVATE(chdens,idx_loc)
@@ -375,6 +381,7 @@ CONTAINS
              DO js=1,jspins
                 !rho(idx+ip-nmz0,js)= REAL(vacz(ip,ivac,js))
                 rho(idx+ip-nmz0,js)= REAL(vacnew(ip,1,ivac,js))
+                IF (PRESENT(rhoim)) rho(idx+ip-nmz0,js)= AIMAG(vacnew(ip,1,ivac,js))
              END DO
           ELSE
              !mx(0) = REAL(vacz(ip,ivac,3))
