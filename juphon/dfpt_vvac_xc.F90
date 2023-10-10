@@ -75,15 +75,19 @@ MODULE m_dfpt_vvac_xc
       !END SELECT
   
       ngrid=vacuum%nvac*(vacuum%nmzxy*ifftd2+vacuum%nmz)
-  
-      ALLOCATE(f_xc(SIZE(rho,1),nfxc))
-      ALLOCATE(v_xc1re,mold=rho)
-      ALLOCATE(v_xc1im,mold=rho)
 
       if (xcpot%needs_grad()) CALL xcpot%alloc_gradients(ngrid,input%jspins,grad)
       allocate(rho(ngrid,input%jspins),v_xc(ngrid,input%jspins),v_x(ngrid,input%jspins))
       allocate(rho1re(ngrid,input%jspins))
       allocate(rho1im(ngrid,input%jspins))
+
+      ALLOCATE(f_xc(SIZE(rho,1),nfxc))
+      ALLOCATE(v_xc1re,mold=rho)
+      ALLOCATE(v_xc1im,mold=rho)
+
+      CALL vxcIm%copyPotDen(vxc)
+      CALL vxcIm%resetPotDen()
+
       rho=0.0
       rho1re=0.0
       rho1im=0.0
@@ -98,15 +102,15 @@ MODULE m_dfpt_vvac_xc
       CALL xcpot%get_fxc(input%jspins, rho, f_xc)
 #endif
     
-      SELECT TYPE(xcpot)
-      TYPE IS (t_xcpot_libxc)
-         l_libxc=.TRUE.
-         IF (xcpot%needs_grad()) THEN
-            CALL judft_error("GGA not yet implemented",calledby ="dfpt_vvac_xc")
-            CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
-            CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_x,grad)
-         END IF
-      END SELECT
+      !SELECT TYPE(xcpot)
+      !TYPE IS (t_xcpot_libxc)
+      !   l_libxc=.TRUE.
+      !   IF (xcpot%needs_grad()) THEN
+      !      CALL judft_error("GGA not yet implemented",calledby ="dfpt_vvac_xc")
+      !      CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
+      !      CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_x,grad)
+      !   END IF
+      !END SELECT
 
       v_xc1re = 0.0
       v_xc1im = 0.0
@@ -122,8 +126,6 @@ MODULE m_dfpt_vvac_xc
       call vac_from_grid(starsq,vacuum,v_xc1im,ifftd2,vxcIm%vac)
       vxc%vac=vxc%vac + ImagUnit * vxcIm%vac
       call timestop("vac_from_grid")
-
-
 
     END SUBROUTINE dfpt_vvac_xc
   END MODULE m_dfpt_vvac_xc
