@@ -88,15 +88,10 @@ MODULE m_dfpt_vvac_xc
       !call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vacxy(:,:,:,:),den%vacz,stars,rho,grad)
       call timestart("vac_to_grid")
       call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vac(:vacuum%nmzxyd,2:,:,:),REAL(den%vac(:,1,:,:)),den%vac,stars,rho,grad)
-      !!This is the realpart of rho1
-      call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den1%vac(:vacuum%nmzxyd,2:,:,:),REAL(den1%vac(:,1,:,:)),den1%vac,starsq,rho1re,grad1)
-      !!! HERE NEEDS TO COME THE IMAGPART
-      
-      !!!
+      call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den1%vac(:vacuum%nmzxyd,2:,:,:),REAL(den1%vac(:,1,:,:)),den1%vac,starsq,rho1re,grad1,rho1im)
       call timestop("vac_to_grid")
       !         calculate the exchange-correlation potential in  real space
-      !
-!!!      CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
+
 #ifdef CPP_LIBXC 
       CALL xcpot%get_fxc(input%jspins, rho, f_xc)
 #endif
@@ -123,7 +118,7 @@ MODULE m_dfpt_vvac_xc
       call timestart("vac_from_grid")
       call vac_from_grid(starsq,vacuum,v_xc1re,ifftd2,vxc%vac)
       call vac_from_grid(starsq,vacuum,v_xc1im,ifftd2,vxcIm%vac)
-      vxc%vac=vxc%vac + vxcIm%vac
+      vxc%vac=vxc%vac + ImagUnit * vxcIm%vac
       call timestop("vac_from_grid")
 
 
