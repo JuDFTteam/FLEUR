@@ -333,14 +333,11 @@ CONTAINS
                 READ (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
                 DO iVac = 1, vacuum%nvac
                    DO i = 1, vacuum%nmz
-                      !den%vacz(i,iVac,3) = REAL(cdomvz(i,iVac))
-                      !den%vacz(i,iVac,4) = AIMAG(cdomvz(i,iVac))
                       den%vac(i,1,iVac,3) = REAL(cdomvz(i,iVac))+ImagUnit*AIMAG(cdomvz(i,iVac))
                    END DO
                 END DO
                 DEALLOCATE(cdomvz)
-                !READ (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
-                READ (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=2,stars%ng2), iVac=1,vacuum%nvac)
+                READ (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
              END IF
           ELSE
              ! (datend < 0)  =>  no off-diagonal magnetisation stored
@@ -351,16 +348,12 @@ CONTAINS
              END IF
              den%pw(:,3) = CMPLX(0.0,0.0)
              IF (input%film) THEN
-                !den%vacz(:,:,3:4) = 0.0
-                !den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
                 den%vac(:,:,:,3) = CMPLX(0.0,0.0)
              END IF
           END IF
        ELSE IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
           den%pw(:,3) = CMPLX(0.0,0.0)
           IF (input%film) THEN
-             !den%vacz(:,:,3:4) = 0.0
-             !den%vacxy(:,:,:,3) = CMPLX(0.0,0.0)
              den%vac(:,:,:,3) = CMPLX(0.0,0.0)
           END IF
        END IF
@@ -522,12 +515,9 @@ CONTAINS
        END IF
 
        IF(vacuum%nvac.EQ.1) THEN
-          !den%vacz(:,2,:)=den%vacz(:,1,:)
           IF (sym%invs) THEN
-             !den%vacxy(:,:,2,:) = CONJG(den%vacxy(:,:,1,:))
              den%vac(:,:,2,:) = CONJG(den%vac(:,:,1,:))
           ELSE
-             !den%vacxy(:,:,2,:) = den%vacxy(:,:,1,:)
              den%vac(:,:,2,:) = den%vac(:,:,1,:)
           END IF
        END IF
@@ -686,13 +676,11 @@ CONTAINS
              ALLOCATE(cdomvz(vacuum%nmz,vacuum%nvac))
              DO iVac = 1, vacuum%nvac
                 DO i = 1, vacuum%nmz
-                   !cdomvz(i,iVac) = CMPLX(den%vacz(i,iVac,3),den%vacz(i,iVac,4))
                    cdomvz(i,iVac) = den%vac(i,1,iVac,3)
                 END DO
              END DO
              WRITE (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
-             !WRITE (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
-             WRITE (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=2,stars%ng2), iVac=1,vacuum%nvac)
+             WRITE (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
              DEALLOCATE(cdomvz)
           END IF
        END IF

@@ -132,18 +132,18 @@
                             n_diff = 0
                          ENDIF
                          !-gu
-                         IF (sym%invs2) THEN
-                            READ (nu,END=200,ERR=200) (fvacr(j,1,ivac,jsp),j=1,nmzn)
-                            fvac(:nmzn,1,ivac,jsp) = CMPLX(fvacr(:nmzn,1,ivac,jsp),0.)
-                         ELSE
-                            READ (nu,END=200,ERR=200) (fvac(j,1,ivac,jsp),j=1,nmzn)
-                         END IF
+                         !IF (sym%invs2) THEN
+                         !   READ (nu,END=200,ERR=200) (fvacr(j,1,ivac,jsp),j=1,nmzn)
+                         !   fvac(:nmzn,1,ivac,jsp) = CMPLX(fvacr(:nmzn,1,ivac,jsp),0.)
+                         !ELSE
+                         !   READ (nu,END=200,ERR=200) (fvac(j,1,ivac,jsp),j=1,nmzn)
+                         !END IF
                          DO  k = 2,nq2n
                             IF (sym%invs2) THEN
-                               READ (nu,END=200,ERR=200) (fvacr(j,k,ivac,jsp),j=1,nmzn)
-                               fvac(:nmzn,k,ivac,jsp) = CMPLX(fvacr(:nmzn,k,ivac,jsp),0.)
+                               READ (nu,END=200,ERR=200) (fvacr(j,k,ivac,jsp),j=1,nmzxyn)
+                               fvac(:nmzxyn,k,ivac,jsp) = CMPLX(fvacr(:nmzxyn,k,ivac,jsp),0.)
                             ELSE
-                               READ (nu,END=200,ERR=200) (fvac(j,k,ivac,jsp),j=1,nmzn)
+                               READ (nu,END=200,ERR=200) (fvac(j,k,ivac,jsp),j=1,nmzxyn)
                             END IF
                             IF (vacuum%nvac.EQ.1) THEN
                                IF (sym%invs) THEN
