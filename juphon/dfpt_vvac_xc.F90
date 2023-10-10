@@ -82,6 +82,7 @@ MODULE m_dfpt_vvac_xc
 
       if (xcpot%needs_grad()) CALL xcpot%alloc_gradients(ngrid,input%jspins,grad)
       allocate(rho(ngrid,input%jspins),v_xc(ngrid,input%jspins),v_x(ngrid,input%jspins))
+      allocate(rhoim(ngrid,input%jspins))
       rho=0.0
       rho1re=0.0
       rho1im=0.0
