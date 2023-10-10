@@ -176,7 +176,7 @@ Another current benchmark is the dispersion of Silicon Carbide. It is a test cas
 
 ![Silicon Carbide phonon picture](./Silicon_Carbide_dispersion.png)
 
-The match for the acoustic branches is as neat as in cobalt, but this time we completely miss a point at Gamma for the optical modes and they deviate quite strongly from the FD line overall. This is possibly a first case, where a system needs the non-analytical term correction, though we were of the mind, that this only applies for polar materials. Further investiagtions need to be done.
+The match for the acoustic branches is quite neat again, but this time we completely miss a point at Gamma for the optical modes and they deviate quite strongly from the FD line overall. This is possibly a first case, where a system needs the non-analytical term correction, though we were of the mind, that this only applies for polar materials. Further investigations need to be done.
 
 A point of contention are local orbitals to supplement the LAPW basis. In force calculations, i.e. a first order description, local obitals are completely contained up to the derivative of their matching coefficients. Doing the same in the DFPT scheme breaks the calculation and we adopt the apporach of not perturbing the LO basis functions.
 
