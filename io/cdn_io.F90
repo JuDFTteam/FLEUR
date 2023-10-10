@@ -340,7 +340,7 @@ CONTAINS
                 END DO
                 DEALLOCATE(cdomvz)
                 !READ (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
-                READ (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=1,stars%ng2), iVac=1,vacuum%nvac)
+                READ (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=2,stars%ng2), iVac=1,vacuum%nvac)
              END IF
           ELSE
              ! (datend < 0)  =>  no off-diagonal magnetisation stored
@@ -425,8 +425,8 @@ CONTAINS
     TYPE(t_cell)         :: cellTemp
      
 
-    COMPLEX, ALLOCATABLE :: fpwTemp(:,:), fzxyTemp(:,:,:,:), fvacTemp(:,:,:,:)
-    REAL, ALLOCATABLE    :: frTemp(:,:,:,:), fzTemp(:,:,:)
+    COMPLEX, ALLOCATABLE :: fpwTemp(:,:), fvacTemp(:,:,:,:)
+    REAL, ALLOCATABLE    :: frTemp(:,:,:,:)
 
     INTEGER           :: mode, iterTemp, k, i, iVac, j, iUnit
     INTEGER           :: d1, d10, asciioffset, iUnitTemp
@@ -609,10 +609,8 @@ CONTAINS
           starsTemp%ng2 = stars%ng2
           symTemp%invs2 = sym%invs2
           ALLOCATE (fpwTemp(stars%ng3,input%jspins))
-          ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
           ALLOCATE (fvacTemp(vacuum%nmzd,stars%ng2,2,input%jspins))
           ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
-          ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
 
           !--->    generate name of file to hold the results of this iteration
           d1 = MOD(den%iter,10)
@@ -633,7 +631,7 @@ CONTAINS
           CLOSE(iUnitTemp)
           REWIND iUnit
 
-          DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp, fvacTemp)
+          DEALLOCATE (frTemp, fpwTemp, fvacTemp)
           DEALLOCATE (atomsTemp%neq, atomsTemp%jri, atomsTemp%zatom, symTemp%ntypsy, sphharTemp%nlh)
           DEALLOCATE (atomsTemp%rmt, atomsTemp%dx)
        END IF
@@ -667,15 +665,13 @@ CONTAINS
           starsTemp%ng2 = stars%ng2
           symTemp%invs2 = sym%invs2
           ALLOCATE (fpwTemp(stars%ng3,input%jspins))
-          ALLOCATE (fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins))
           ALLOCATE (fvacTemp(vacuum%nmzd,stars%ng2,2,input%jspins))
           ALLOCATE (frTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins))
-          ALLOCATE (fzTemp(vacuum%nmzd,2,input%jspins))
 
           CALL loddop(starsTemp,vacuumTemp,atomsTemp,sphharTemp,inputTemp,symTemp,&
                iUnit,iterTemp,frTemp,fpwTemp,fvacTemp)
 
-          DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp, fvacTemp)
+          DEALLOCATE (frTemp, fpwTemp, fvacTemp)
           DEALLOCATE (atomsTemp%neq, atomsTemp%jri, symTemp%ntypsy, sphharTemp%nlh)
        END IF
 
@@ -696,7 +692,7 @@ CONTAINS
              END DO
              WRITE (iUnit) ((cdomvz(i,iVac),i=1,vacuum%nmz),iVac=1,vacuum%nvac)
              !WRITE (iUnit) (((den%vacxy(i,j-1,iVac,3),i=1,vacuum%nmzxy),j=2,stars%ng2), iVac=1,vacuum%nvac)
-             WRITE (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=1,stars%ng2), iVac=1,vacuum%nvac)
+             WRITE (iUnit) (((den%vac(i,j,iVac,3),i=1,vacuum%nmz),j=2,stars%ng2), iVac=1,vacuum%nvac)
              DEALLOCATE(cdomvz)
           END IF
        END IF

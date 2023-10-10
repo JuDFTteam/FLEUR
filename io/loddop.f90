@@ -35,7 +35,7 @@
           CHARACTER(len=2) namaux
           !     ..
           !     .. Local Arrays ..
-          REAL, ALLOCATABLE :: fpwr(:,:),fzxyr(:,:,:,:),fvacr(:,:,:,:)
+          REAL, ALLOCATABLE :: fpwr(:,:),fvacr(:,:,:,:)
 
           CHARACTER(len=8) space(10)
           !     ..
@@ -46,10 +46,9 @@
           DATA space/10*'        '/
           !     ..
 
-          fr = 0 ; fr = 0 ; fvac = 0
+          fr = 0 ; fpw = 0 ; fvac = 0
 
           IF (sym%invs) ALLOCATE ( fpwr(stars%ng3,SIZE(fpw,2)) )
-          IF (sym%invs2) ALLOCATE ( fzxyr(vacuum%nmzxyd,stars%ng2-1,2,SIZE(fvac,4)) )
           IF (sym%invs2) ALLOCATE ( fvacr(vacuum%nmzd,stars%ng2,2,SIZE(fvac,4)) )
 
           name = space
@@ -133,34 +132,25 @@
                             n_diff = 0
                          ENDIF
                          !-gu
-                         !IF (sym%invs2) THEN
-                         !   READ (nu,END=200,ERR=200) (fvacr(j,1,ivac,jsp),j=1,nmzn)
-                         !   fvac(:nmzn,1,ivac,jsp) = CMPLX(fvacr(:nmzn,1,ivac,jsp),0.)
-                         !ELSE
-                         !   READ (nu,END=200,ERR=200) (fvac(j,1,ivac,jsp),j=1,nmzn)
-                         !END IF
+                         IF (sym%invs2) THEN
+                            READ (nu,END=200,ERR=200) (fvacr(j,1,ivac,jsp),j=1,nmzn)
+                            fvac(:nmzn,1,ivac,jsp) = CMPLX(fvacr(:nmzn,1,ivac,jsp),0.)
+                         ELSE
+                            READ (nu,END=200,ERR=200) (fvac(j,1,ivac,jsp),j=1,nmzn)
+                         END IF
                          DO  k = 2,nq2n
                             IF (sym%invs2) THEN
-                               !READ (nu,END=200,ERR=200) (fzxyr(j,k-1,ivac,jsp),j=1,nmzxyn)
-                               !fvac(:nmzxyn,k,ivac,jsp) = CMPLX(fzxyr(:nmzxyn,k-1,ivac,jsp),0.)
                                READ (nu,END=200,ERR=200) (fvacr(j,k,ivac,jsp),j=1,nmzn)
                                fvac(:nmzn,k,ivac,jsp) = CMPLX(fvacr(:nmzn,k,ivac,jsp),0.)
                             ELSE
-                               !READ (nu,END=200,ERR=200) (fzxy(j,k-1,ivac,jsp),j=1,nmzxyn)
                                READ (nu,END=200,ERR=200) (fvac(j,k,ivac,jsp),j=1,nmzn)
                             END IF
                             IF (vacuum%nvac.EQ.1) THEN
                                IF (sym%invs) THEN
-                                  !DO j = 1,nmzxyn
-                                  !   fzxy(j,k-1,2,jsp) = CONJG(fzxy(j,k-1,1,jsp))
-                                  !ENDDO
                                   DO j = 1,nmzxyn
                                      fvac(j,k,2,jsp) = CONJG(fvac(j,k,1,jsp))
                                   ENDDO
                                ELSE
-                                  !DO j = 1,nmzxyn
-                                  !   fzxy(j,k-1,2,jsp) = fzxy(j,k-1,1,jsp)
-                                  !ENDDO
                                   DO j = 1,nmzxyn
                                      fvac(j,k,2,jsp) = fvac(j,k,1,jsp)
                                   ENDDO
@@ -185,7 +175,6 @@
           ENDDO
           !
           IF (sym%invs) DEALLOCATE (fpwr)
-          IF (sym%invs2) DEALLOCATE ( fzxyr )
           IF (sym%invs2) DEALLOCATE ( fvacr )
           RETURN
 
