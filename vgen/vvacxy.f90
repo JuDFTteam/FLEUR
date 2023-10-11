@@ -134,7 +134,7 @@ contains
             end do 
          end do 
       else ! Neumann
-         do irec2 = 2, stars%ng2
+         do irec2 = start_star, stars%ng2
             g = stars%sk2(irec2)
             vcons = tpi_const / g
      

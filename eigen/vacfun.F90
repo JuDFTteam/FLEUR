@@ -8,7 +8,7 @@ CONTAINS
        fmpi,vacuum,stars,input,nococonv,jspin1,jspin2,&
        cell,ivac,evac,bkpt, vxy,vz,kvac,nv2,&
        tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk,&
-       bkptq,v1xy,v1z,kvacq,nv2q,uzq,duzq,udzq,dudzq)
+       bkptq,v1,kvacq,nv2q,uzq,duzq,udzq,dudzq)
     !*********************************************************************
     !     determines the necessary values and derivatives on the vacuum
     !     boundary (ivac=1 upper vacuum; ivac=2, lower) for energy
@@ -53,8 +53,7 @@ CONTAINS
     REAL,    OPTIONAL, INTENT (OUT):: dudzq(:,:),duzq(:,:)!(lapw%dim_nv2d(),input%jspins)
     INTEGER, OPTIONAL, INTENT (IN) :: kvacq(:,:,:)!(2,lapw%dim_nv2d(),input%jspins)
     INTEGER, OPTIONAL, INTENT (IN) :: nv2q(:)!(input%jspins)
-    COMPLEX, OPTIONAL, INTENT (IN) :: v1xy(:,:,:,:) !(vacuum%nmzxyd,stars%ng2-1,nvac,:)
-    COMPLEX, OPTIONAL, INTENT (IN) :: v1z(:,:,:) !(vacuum%nmzd,2,4) ,
+    COMPLEX, OPTIONAL, INTENT (IN) :: v1(:,:,:,:) !(vacuum%nmzxyd,stars%ng2-1,nvac,:)
     !     ..
     !     .. Local Scalars ..
     REAL ev,scale,xv,yv,vzero,fac
@@ -274,13 +273,13 @@ CONTAINS
          !$OMP END PARALLEL DO
        ELSE
          !$OMP PARALLEL DO DEFAULT(none) &
-         !$OMP& SHARED(tuuv_loc,tddv_loc,tudv_loc,tduv_loc,ddnv,vz,v1z,jk,bkpt,bkptq) &
-         !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,nv2q,kvac,kvacq,vacuum,u,uq,v1xy,tail,fac,np1,ivac,ipot,ud,udq,l_dfpt) &
+         !$OMP& SHARED(tuuv_loc,tddv_loc,tudv_loc,tduv_loc,ddnv,vz,v1,jk,bkpt,bkptq) &
+         !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,nv2q,kvac,kvacq,vacuum,u,uq,tail,fac,np1,ivac,ipot,ud,udq,l_dfpt) &
          !$OMP& PRIVATE(i1,i2,i3,ind3,phase,ind2,x,xv,yv)
           DO  ik = 1,nv2q(jspin1)
             !--->     determine the warping component of the potential
-            i1 = fac*(kvac(1,ik,jspin1) - kvacq(1,jk,jspin2))
-            i2 = fac*(kvac(2,ik,jspin1) - kvacq(2,jk,jspin2))
+            i1 = fac*(kvacq(1,ik,jspin1) - kvac(1,jk,jspin2))
+            i2 = fac*(kvacq(2,ik,jspin1) - kvac(2,jk,jspin2))
             i3 = 0
             ind3 = stars%ig(i1,i2,i3)
             IF (ind3.EQ.0) CYCLE
@@ -296,44 +295,44 @@ CONTAINS
             IF ((ind2.NE.0).OR.(norm2(bkptq-bkpt)>1e-8)) THEN
                !--->       tuuv
                DO  i = 1,vacuum%nmzxy
-                  x(np1-i) = uq(i,ik,jspin1)*u(i,jk,jspin2)*REAL(v1xy(i,ind2,ivac,ipot))
+                  x(np1-i) = uq(i,ik,jspin1)*u(i,jk,jspin2)*REAL(v1(i,ind2+1,ivac,ipot))
                enddo
                CALL intgz0(x,vacuum%delz,vacuum%nmzxy,xv,tail)
                DO  i = 1,vacuum%nmzxy
-                  x(np1-i) = uq(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(v1xy(i,ind2,ivac,ipot))
+                  x(np1-i) = uq(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(v1(i,ind2+1,ivac,ipot))
                enddo
                CALL intgz0(x,vacuum%delz,vacuum%nmzxy,yv,tail)
                tuuv_loc(ik,jk) = phase*cmplx(xv,yv)
 
                !--->       tddv
                DO  i = 1,vacuum%nmzxy
-                  x(np1-i) = udq(i,ik,jspin1)*ud(i,jk,jspin2)*REAL(v1xy(i,ind2,ivac,ipot))
+                  x(np1-i) = udq(i,ik,jspin1)*ud(i,jk,jspin2)*REAL(v1(i,ind2+1,ivac,ipot))
                enddo
                CALL intgz0(x,vacuum%delz,vacuum%nmzxy,xv,tail)
                DO  i = 1,vacuum%nmzxy
-                  x(np1-i) =udq(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(v1xy(i,ind2,ivac,ipot))
+                  x(np1-i) =udq(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(v1(i,ind2+1,ivac,ipot))
                enddo
                CALL intgz0(x,vacuum%delz,vacuum%nmzxy,yv,tail)
                tddv_loc(ik,jk) = phase*cmplx(xv,yv)
 
                !--->       tudv
                DO  i = 1,vacuum%nmzxy
-                  x(np1-i) = uq(i,ik,jspin1)*ud(i,jk,jspin2)*real(v1xy(i,ind2,ivac,ipot))
+                  x(np1-i) = uq(i,ik,jspin1)*ud(i,jk,jspin2)*real(v1(i,ind2+1,ivac,ipot))
                enddo
                CALL intgz0(x,vacuum%delz,vacuum%nmzxy,xv,tail)
                DO  i = 1,vacuum%nmzxy
-                  x(np1-i) = uq(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(v1xy(i,ind2,ivac,ipot))
+                  x(np1-i) = uq(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(v1(i,ind2+1,ivac,ipot))
                enddo
                CALL intgz0(x,vacuum%delz,vacuum%nmzxy,yv,tail)
                tudv_loc(ik,jk) = phase*cmplx(xv,yv)
 
                !--->       tduv
                DO  i = 1,vacuum%nmzxy
-                  x(np1-i) = udq(i,ik,jspin1)*u(i,jk,jspin2)*real(v1xy(i,ind2,ivac,ipot))
+                  x(np1-i) = udq(i,ik,jspin1)*u(i,jk,jspin2)*real(v1(i,ind2+1,ivac,ipot))
                enddo
                CALL intgz0(x,vacuum%delz,vacuum%nmzxy,xv,tail)
                DO  i = 1,vacuum%nmzxy
-                  x(np1-i) = udq(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(v1xy(i,ind2,ivac,ipot))
+                  x(np1-i) = udq(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(v1(i,ind2+1,ivac,ipot))
                enddo
                CALL intgz0(x,vacuum%delz,vacuum%nmzxy,yv,tail)
                tduv_loc(ik,jk) = phase*cmplx(xv,yv)
@@ -342,44 +341,44 @@ CONTAINS
                !--->       diagonal (film muffin-tin) terms
                   !--->          tuuv
                   DO i = 1,vacuum%nmz
-                     x(vacuum%nmz+1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*v1z(i,ivac,ipot)
+                     x(vacuum%nmz+1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*v1(i,1,ivac,ipot)
                   ENDDO
                   CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
                   DO i = 1,vacuum%nmz
-                     x(vacuum%nmz+1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(v1z(i,ivac,ipot))
+                     x(vacuum%nmz+1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(v1(i,1,ivac,ipot))
                   ENDDO
                   CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
                   tuuv_loc(ik,jk) = cmplx(xv,yv)
 
                   !--->          tddv
                   DO i = 1,vacuum%nmz
-                     x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*ud(i,jk,jspin2)*v1z(i,ivac,ipot)
+                     x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*ud(i,jk,jspin2)*v1(i,1,ivac,ipot)
                   ENDDO
                   CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
                   DO i = 1,vacuum%nmz
-                     x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(v1z(i,ivac,ipot))
+                     x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(v1(i,1,ivac,ipot))
                   ENDDO
                   CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
                   tddv_loc(ik,jk) = cmplx(xv,yv)
 
                   !--->          tudv
                   DO i = 1,vacuum%nmz
-                     x(vacuum%nmz+1-i) = u(i,ik,jspin1)*ud(i,jk,jspin2)*v1z(i,ivac,ipot)
+                     x(vacuum%nmz+1-i) = u(i,ik,jspin1)*ud(i,jk,jspin2)*v1(i,1,ivac,ipot)
                   ENDDO
                   CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
                   DO i = 1,vacuum%nmz
-                     x(vacuum%nmz+1-i) = u(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(v1z(i,ivac,ipot))
+                     x(vacuum%nmz+1-i) = u(i,ik,jspin1)*ud(i,jk,jspin2)*fac*AIMAG(v1(i,1,ivac,ipot))
                   ENDDO
                   CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
                   tudv_loc(ik,jk) = cmplx(xv,yv)
 
                   !--->          tduv
                   DO i = 1,vacuum%nmz
-                     x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*u(i,jk,jspin2)*v1z(i,ivac,ipot)
+                     x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*u(i,jk,jspin2)*v1(i,1,ivac,ipot)
                   ENDDO
                   CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
                   DO i = 1,vacuum%nmz
-                     x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(v1z(i,ivac,ipot))
+                     x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*u(i,jk,jspin2)*fac*AIMAG(v1(i,1,ivac,ipot))
                   ENDDO
                   CALL intgz0(x,vacuum%delz,vacuum%nmz,yv,tail)
                   tduv_loc(ik,jk) = cmplx(xv,yv)

@@ -106,7 +106,7 @@ CONTAINS
                CALL vacfun(fmpi, vacuum, stars, input, nococonv, iSpin, iSpinPr, &
                          & cell, ivac, evac, lapw%bkpt, v%vac(:vacuum%nmzxyd,2:,:,:), v%vac(:,1,:,:), kvac, nv2, &
                          & tuuv, tddv, tudv, tduv, uz, duz, udz, dudz, ddnv, wronk,&
-                         & lapwq%bkpt+lapwq%qphon, v1%vac(:vacuum%nmzxyd,2:,:,:), v1%vac(:,1,:,:), kvacq, nv2q, uzq, duzq, udzq, dudzq)
+                         & lapwq%bkpt+lapwq%qphon, v1%vac, kvacq, nv2q, uzq, duzq, udzq, dudzq)
                CALL timestop("vacfun")
 
                !---> generate a and b coeffficients
