@@ -106,7 +106,7 @@ CONTAINS
                CALL vacfun(fmpi, vacuum, stars, input, nococonv, iSpin, iSpinPr, &
                          & cell, ivac, evac, lapw%bkpt, v%vac(:vacuum%nmzxyd,2:,:,:), v%vac(:,1,:,:), kvac, nv2, &
                          & tuuv, tddv, tudv, tduv, uz, duz, udz, dudz, ddnv, wronk,&
-                         & lapwq%bkpt+lapwq%qphon, v1%vac(:vacuum%nmzxyd,2:,:,:), v1%vac(:,1,:,:), kvacq, nv2q, uzq, duzq, udzq, dudzq, wronkq)
+                         & lapwq%bkpt+lapwq%qphon, v1%vac(:vacuum%nmzxyd,2:,:,:), v1%vac(:,1,:,:), kvacq, nv2q, uzq, duzq, udzq, dudzq)
                CALL timestop("vacfun")
 
                !---> generate a and b coeffficients
@@ -124,12 +124,11 @@ CONTAINS
                      gz = sign*cell%bmat(3,3)*lapwq%k3(ikG,jspin)
                      ikG2 = map2q(ikG,jspin)
                      th = gz*cell%z1
-                     c_1 = CMPLX( COS(th), SIN(th) )/ (d2*wronkq)
+                     c_1 = CMPLX( COS(th), SIN(th) )/ (d2*wronk)
                      aq(ikG,jspin) = - c_1 * CMPLX(dudzq(ikG2,jspin), gz*udzq(ikG2,jspin) )
                      bq(ikG,jspin) =   c_1 * CMPLX(duzq(ikG2,jspin), gz* uzq(ikG2,jspin) )
                   END DO
                END DO
-
                !---> update hamiltonian and overlap matrices
                !!IF (iSpinPr==iSpin) THEN
                !!   DO ikG = fmpi%n_rank + 1, lapw%nv(iSpin), fmpi%n_size

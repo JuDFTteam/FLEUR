@@ -8,7 +8,7 @@ CONTAINS
        fmpi,vacuum,stars,input,nococonv,jspin1,jspin2,&
        cell,ivac,evac,bkpt, vxy,vz,kvac,nv2,&
        tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk,&
-       bkptq,v1xy,v1z,kvacq,nv2q,uzq,duzq,udzq,dudzq,wronkq)
+       bkptq,v1xy,v1z,kvacq,nv2q,uzq,duzq,udzq,dudzq)
     !*********************************************************************
     !     determines the necessary values and derivatives on the vacuum
     !     boundary (ivac=1 upper vacuum; ivac=2, lower) for energy
@@ -51,7 +51,6 @@ CONTAINS
     REAL,    OPTIONAL, INTENT (IN) :: bkptq(3)
     REAL,    OPTIONAL, INTENT (OUT):: udzq(:,:),uzq(:,:)!(lapw%dim_nv2d(),input%jspins)
     REAL,    OPTIONAL, INTENT (OUT):: dudzq(:,:),duzq(:,:)!(lapw%dim_nv2d(),input%jspins)
-    REAL,    OPTIONAL, INTENT (OUT) :: wronkq
     INTEGER, OPTIONAL, INTENT (IN) :: kvacq(:,:,:)!(2,lapw%dim_nv2d(),input%jspins)
     INTEGER, OPTIONAL, INTENT (IN) :: nv2q(:)!(input%jspins)
     COMPLEX, OPTIONAL, INTENT (IN) :: v1xy(:,:,:,:) !(vacuum%nmzxyd,stars%ng2-1,nvac,:)
