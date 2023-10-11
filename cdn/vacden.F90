@@ -242,6 +242,10 @@ CONTAINS
       DO  ivac = 1,vacuum%nvac
          ac(:,:,:) = CMPLX(0.0,0.0)
          bc(:,:,:) = CMPLX(0.0,0.0)
+         IF (l_dfpt) THEN
+            ac1(:,:,:) = CMPLX(0.0,0.0)
+            bc1(:,:,:) = CMPLX(0.0,0.0)
+         END IF
          sign = 3. - 2.*ivac
 
          IF (noco%l_noco) THEN

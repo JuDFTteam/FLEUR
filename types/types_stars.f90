@@ -292,8 +292,8 @@ CONTAINS
     CALL sort(index(:stars%ng2),stars%sk2,gsk3(:stars%ng2))
     stars%kv2(:,:)=stars%kv2(:,index(:stars%ng2))
     stars%sk2=stars%sk2(index(:stars%ng2))
-    IF (PRESENT(qvec)) stars%gq2=stars%gq2(:,index)
-    IF (PRESENT(qvec)) stars%sk2=sk2q(index)
+    IF (PRESENT(qvec)) stars%gq2=stars%gq2(:,index(:stars%ng2))
+    IF (PRESENT(qvec)) stars%sk2=sk2q(index(:stars%ng2))
     ! set up the pointers and phases for 2d stars
     DO  k = 1,stars%ng2
       DO k3= stars%mx3,-stars%mx3,-1
