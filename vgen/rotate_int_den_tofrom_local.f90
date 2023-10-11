@@ -140,10 +140,6 @@ CONTAINS
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
                rziw = 0.0
-                
-                  !CALL fft2d(stars,rvacxy(:,imz,ivac,iden),fftwork,&
-                  !     den%vacz(imz,ivac,iden),rziw,den%vacxy(imz,:,ivac,iden),&
-                  !     1)
                   CALL fft2d(stars,rvacxy(:,imz,ivac,iden),fftwork,&
                        den%vac(imz,:,ivac,iden),&
                        1)
@@ -155,13 +151,8 @@ CONTAINS
       DO ivac = 1,vacuum%nvac
          DO imz = 1,vacuum%nmzxyd
             rziw = 0.0
-            !vz_r = den%vacz(imz,ivac,3)
-            !vz_i = den%vacz(imz,ivac,4)
             vz_r = REAL(den%vac(imz,1,ivac,3))
             vz_i = AIMAG(den%vac(imz,1,ivac,3))
-             
-               !CALL fft2d(stars,rvacxy(:,imz,ivac,3),rvacxy(:,imz,ivac,4),&
-               !     vz_r,vz_i,den%vacxy(imz,:,ivac,3),1)
                CALL fft2d(stars,rvacxy(:,imz,ivac,3),rvacxy(:,imz,ivac,4),&
                     den%vac(imz,:,ivac,3),1)
             
@@ -188,18 +179,12 @@ CONTAINS
 
                rvacxy(imesh,imz,ivac,1) = rho_up
                rvacxy(imesh,imz,ivac,2) = rho_down
-               !den%theta_vacxy(imesh,imz,ivac) = theta
-               !den%phi_vacxy(imesh,imz,ivac) = phi
                den%theta_vac(imesh,imz,ivac) = theta
                den%phi_vac(imesh,imz,ivac) = phi
             END DO
          END DO
        
          DO imz = vacuum%nmzxyd+1,vacuum%nmzd
-            !rho_11   = den%vacz(imz,ivac,1)
-            !rho_22   = den%vacz(imz,ivac,2)
-            !rho_21r  = den%vacz(imz,ivac,3)
-            !rho_21i  = den%vacz(imz,ivac,4)
             rho_11   = REAL(den%vac(imz,1,ivac,1))
             rho_22   = REAL(den%vac(imz,1,ivac,2))
             rho_21r  = REAL(den%vac(imz,1,ivac,3))
@@ -214,12 +199,8 @@ CONTAINS
 
             CALL pol_angle(mx,my,mz,theta,phi)
 
-            !den%vacz(imz,ivac,1) = rho_up
-            !den%vacz(imz,ivac,2) = rho_down
             den%vac(imz,1,ivac,1) = rho_up
             den%vac(imz,1,ivac,2) = rho_down
-            !den%theta_vacz(imz,ivac) = theta
-            !den%phi_vacz(imz,ivac) = phi
             den%theta_vac(1,imz,ivac) = theta
             den%phi_vac(1,imz,ivac) = phi
          END DO
@@ -230,10 +211,6 @@ CONTAINS
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
                fftwork=0.0
-                
-                  !CALL fft2d(stars,rvacxy(:,imz,ivac,jspin),fftwork,&
-                  !     den%vacz(imz,ivac,jspin),rziw,den%vacxy(imz,:,ivac,jspin),&
-                  !     -1)
                   CALL fft2d(stars,rvacxy(:,imz,ivac,jspin),fftwork,&
                        den%vac(imz,:,ivac,jspin),&
                        -1)
@@ -362,8 +339,6 @@ CONTAINS
             DO imeshpt = 1,ifft2
                vup   = vvacxy(imeshpt,imz,ivac,1)
                vdown = vvacxy(imeshpt,imz,ivac,2)
-               !theta = den%theta_vacxy(imeshpt,imz,ivac)
-               !phi   = den%phi_vacxy(imeshpt,imz,ivac)
                theta = den%theta_vac(imeshpt,imz,ivac)
                phi   = den%phi_vac(imeshpt,imz,ivac)
 
@@ -379,8 +354,6 @@ CONTAINS
          DO imz = vacuum%nmzxyd+1,vacuum%nmzd
             vup   = REAL(vTot%vac(imz,1,ivac,1))
             vdown = REAL(vTot%vac(imz,1,ivac,2))
-            !theta = den%theta_vacz(imz,ivac)
-            !phi   = den%phi_vacz(imz,ivac)
             theta = den%theta_vac(1,imz,ivac)
             phi   = den%phi_vac(1,imz,ivac)
             veff  = (vup + vdown)/2.0

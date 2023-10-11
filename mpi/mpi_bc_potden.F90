@@ -66,12 +66,6 @@ CONTAINS
    END IF
 
    IF (l_vaczAlloc) THEN
-      !n = vacuum%nmzd * 2 * SIZE(potden%vacz,3)
-      !CALL MPI_BCAST(potden%vacz,n,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-
-      !n = vacuum%nmzxyd * (stars%ng2-1) * 2 * SIZE(potden%vacxy,4)
-      !CALL MPI_BCAST(potden%vacxy,n,MPI_DOUBLE_COMPLEX,0,fmpi%mpi_comm,ierr)
-
       n = vacuum%nmzd * stars%ng2 * 2 * SIZE(potden%vac,4)
       CALL MPI_BCAST(potden%vac,n,MPI_DOUBLE_COMPLEX,0,fmpi%mpi_comm,ierr)
    END IF

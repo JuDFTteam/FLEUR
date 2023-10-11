@@ -515,7 +515,7 @@ CONTAINS
                   DO jz = 1,vacuum%nmz
                      ui = u(jz,ikG,ispin)
                      uei = ue(jz,ikG,ispin)
-                     den%vac(jz,1,ivac,ispin) = den%vac(jz,1,ivac,ispin) +REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei) ! TODO: AN TB; sollte man das REAL killen? 
+                     den%vac(jz,1,ivac,ispin) = den%vac(jz,1,ivac,ispin) + REAL(aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei) ! TODO: AN TB; sollte man das REAL killen? 
                   END DO
                END DO  
             END DO

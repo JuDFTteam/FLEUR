@@ -455,7 +455,6 @@ CONTAINS
           !            ----> and add vxc to coulomb potential
           !                  the g||.eq.zero component is added to vxc%vacz
           !
-          !vxc%vacz(ip,ivac,js) = fgz + vxc%vacz(ip,ivac,js)
           vac(ip,1,ivac,js) = fg(1) + vac(ip,1,ivac,js)
           !
           !            the g||.ne.zero components are added to vxc%vacxy

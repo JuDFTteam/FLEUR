@@ -70,15 +70,11 @@ contains
     IF (input%film) THEN
        DO ivac= 1,vacuum%nvac
           DO i= 1,vacuum%nmz
-             !den%vacz(i,ivac,1)= (den%vacz(i,ivac,1) + den%vacz(i,ivac,2))/2.0
-             !den%vacz(i,ivac,2)= den%vacz(i,ivac,1)
              den%vac(i,1,ivac,1)= (den%vac(i,1,ivac,1) + den%vac(i,1,ivac,2))/2.0
              den%vac(i,1,ivac,2)= den%vac(i,1,ivac,1)
           ENDDO
           DO k= 2,stars%ng2
              DO i= 1,vacuum%nmzxy
-                !den%vacxy(i,k-1,ivac,1)= (den%vacxy(i,k-1,ivac,1) + den%vacxy(i,k-1,ivac,2))/2.0
-                !den%vacxy(i,k-1,ivac,2)= den%vacxy(i,k-1,ivac,1)
                 den%vac(i,k,ivac,1)= (den%vac(i,k,ivac,1) + den%vac(i,k,ivac,2))/2.0
                 den%vac(i,k,ivac,2)= den%vac(i,k,ivac,1)
              ENDDO

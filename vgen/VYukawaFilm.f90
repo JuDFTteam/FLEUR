@@ -67,9 +67,6 @@ module m_VYukawaFilm
  
     ! PSEUDO-CHARGE DENSITY
 
-    !call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
-    !            den%pw(:,1), den%mt(:,:,:,1), den%vacz(:,:,1), .false., VYukawa%potdenType, &
-    !            psq )
     call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
                 den, 1, .false., VYukawa%potdenType, &
                 psq )
@@ -78,10 +75,6 @@ module m_VYukawaFilm
 
       ! VACUUM POTENTIAL
 
-      !call VYukawaFilmVacuumVariant1( &
-      !        stars, vacuum, cell, sym, input, atoms%rmt(1), &
-      !        psq, den%vacxy(:,:,:,1), den%vacz(:,:,1), &
-      !        VYukawa%vacxy, VYukawa%vacz, alphm )
       call VYukawaFilmVacuumVariant1( &
               stars, vacuum, cell, sym, input, atoms%rmt(1), &
               psq, den%vac(:vacuum%nmzxyd,2:,:,1), REAL(den%vac(:,1,:,1)), & ! TODO: AN TB; den reinpacken statt Einzelgrößen!!
@@ -98,10 +91,6 @@ module m_VYukawaFilm
 
       ! VACUUM POTENTIAL
 
-      !call VYukawaFilmVacuumVariant2( &
-      !        stars, vacuum, cell, sym, input, 2*atoms%rmt(1), &
-      !        psq, den%vacxy(:,:,:,1), den%vacz(:,:,1), &
-      !        VYukawa%vacxy, VYukawa%vacz, alphm, dh_prec, coshdh )
       call VYukawaFilmVacuumVariant2( &
               stars, vacuum, cell, sym, input, 2*atoms%rmt(1), &
               psq, den%vac(:vacuum%nmzxyd,2:,:,1), REAL(den%vac(:,1,:,1)), & ! TODO: AN TB; den reinpacken statt Einzelgrößen!!

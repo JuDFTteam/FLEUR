@@ -75,27 +75,12 @@ CONTAINS
     DEALLOCATE (c_b)
 
     IF (input%film) THEN
-       !! -> Collect den%vacxy(:,:,:,jspin)
-       !n=size(den%vacxy(:,:,:,jspin))
-       !ALLOCATE(c_b(n))
-       !CALL MPI_REDUCE(den%vacxy(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-       !IF (fmpi%irank.EQ.0) CALL zcopy(n, c_b, 1, den%vacxy(:,:,:,jspin), 1)
-       !DEALLOCATE (c_b)
-
        ! -> Collect den%vac(:,:,:,jspin)
        n=size(den%vac(:,:,:,jspin))
        ALLOCATE(c_b(n))
        CALL MPI_REDUCE(den%vac(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (fmpi%irank.EQ.0) CALL zcopy(n, c_b, 1, den%vac(:,:,:,jspin), 1)
        DEALLOCATE (c_b)
-
-       !! -> Collect den%vacz(:,:,jspin)
-       !!n = vacuum%nmzd*2
-       !n=size(den%vacz(:,:,jspin))
-       !ALLOCATE(r_b(n))
-       !CALL MPI_REDUCE(den%vacz(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-       !IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, den%vacz(:,:,jspin), 1)
-       !DEALLOCATE (r_b)
     ENDIF
 
     ! -> Collect uu(),ud() and dd()
@@ -418,15 +403,6 @@ CONTAINS
        DEALLOCATE (c_b)
        !
        IF (input%film) THEN
-
-          !n=size(den%vacxy(:,:,:,3))
-          !ALLOCATE(c_b(n))
-          !CALL MPI_REDUCE(den%vacxy(:,:,:,3),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-          !IF (fmpi%irank.EQ.0) THEN
-          !   CALL zcopy(n, c_b, 1, den%vacxy(:,:,:,3), 1)
-          !ENDIF
-          !DEALLOCATE (c_b)
-
           n=size(den%vac(:,:,:,3))
           ALLOCATE(c_b(n))
           CALL MPI_REDUCE(den%vac(:,:,:,3),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
@@ -434,17 +410,6 @@ CONTAINS
              CALL zcopy(n, c_b, 1, den%vac(:,:,:,3), 1)
           ENDIF
           DEALLOCATE (c_b)
-
-          !
-          !!n = vacuum%nmzd*2*2
-          !n=SIZE(den%vacz(:,:,3:4))
-          !ALLOCATE(r_b(n))
-          !CALL MPI_REDUCE(den%vacz(:,:,3:4),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-          !IF (fmpi%irank.EQ.0) THEN
-          !   den%vacz(:,:,3:4)=RESHAPE(r_b,SHAPE(den%vacz(:,:,3:4)))
-          !ENDIF
-          !DEALLOCATE (r_b)
-
        ENDIF ! input%film
 
 

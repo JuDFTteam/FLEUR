@@ -159,24 +159,22 @@ CONTAINS
                !This PE stores vac-data
                ii = vac_start(js) - 1
                DO iv = 1, nvac
-                  !vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1)) = den%vacz(:, iv, j)
                   vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = REAL(den%vac(:, 1, iv, j))
-                  !ii = ii + SIZE(den%vacz, 1)
                   ii = ii + SIZE(den%vac, 1)
-                  !vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))) = RESHAPE(REAL(den%vacxy(:, :, iv, j)), (/SIZE(den%vacxy(:, :, iv, j))/))
+                  IF (PRESENT(denIm)) THEN
+                     vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = AIMAG(den%vac(:, 1, iv, j))
+                     ii = ii + SIZE(den%vac, 1)
+                  END IF
                   vec%vec_vac(ii + 1:ii + nmzxyd*(SIZE(den%vac,2)-1)) = RESHAPE(REAL(den%vac(:nmzxyd, 2:, iv, j)), &
                                                                                                (/nmzxyd*(SIZE(den%vac,2)-1)/))
-                  ii = ii + nmzxyd*(SIZE(den%vac,2)-1) ! TODO: AN TB; Use here nmzxyd ! ! !
+                  ii = ii + nmzxyd*(SIZE(den%vac,2)-1)
                   IF ((.NOT. sym%invs2) .OR. (js == 3)) THEN
-                     !vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, j))) = RESHAPE(AIMAG(den%vacxy(:, :, iv, j)), (/SIZE(den%vacxy(:, :, iv, j))/))
                      vec%vec_vac(ii + 1:ii + nmzxyd*(SIZE(den%vac,2)-1)) = RESHAPE(AIMAG(den%vac(:nmzxyd, 2:, iv, j)), &
                                                                                                   (/nmzxyd*(SIZE(den%vac,2)-1)/))
-                     ii = ii + nmzxyd*(SIZE(den%vac,2)-1) ! TODO: AN TB; Use here nmzxyd ! ! !
+                     ii = ii + nmzxyd*(SIZE(den%vac,2)-1)
                   ENDIF
                   IF (js > 2) THEN
-                     !vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1)) = den%vacz(:, iv, 4)
                      vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = REAL(den%vac(:, 1, iv, 4))
-                     !ii = ii + SIZE(den%vacz, 1)
                      ii = ii + SIZE(den%vac, 1)
                   ENDIF
                ENDDO
@@ -301,27 +299,23 @@ CONTAINS
                !This PE stores vac-data
                ii = vac_start(js) - 1
                DO iv = 1, nvac
-                  !den%vacz(:, iv, js) = vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1))
                   den%vac(:, 1, iv, js) = vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
-                  !ii = ii + SIZE(den%vacz, 1)
                   ii = ii + SIZE(den%vac, 1)
+                  IF (l_dfpt) THEN
+                     den%vac(:, 1, iv, js) = ImagUnit*vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
+                     ii = ii + SIZE(den%vac, 1)
+                  END IF
                   IF (sym%invs2 .AND. js < 3) THEN
-                     !den%vacxy(:, :, iv, js) = RESHAPE(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), SHAPE(den%vacxy(:, :, iv, js)))
                      den%vac(:nmzxyd, 2:, iv, js) = RESHAPE(vec%vec_vac(ii + 1:ii + nmzxyd*(SIZE(den%vac,2)-1)), SHAPE(den%vac(:nmzxyd, 2:, iv, js)))
-                     ii = ii + nmzxyd*(SIZE(den%vac,2)-1) ! TODO: AN TB; Use here nmzxyd ! ! !
+                     ii = ii + nmzxyd*(SIZE(den%vac,2)-1)
                   ELSE
-                     !den%vacxy(:, :, iv, js) = RESHAPE(CMPLX(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), &
-                     !                                        vec%vec_vac(ii + SIZE(den%vacxy(:, :, iv, js)) + 1:ii + 2*SIZE(den%vacxy(:, :, iv, js)))), &
-                     !                                  SHAPE(den%vacxy(:, :, iv, js)))
                      den%vac(:nmzxyd, 2:, iv, js) = RESHAPE(CMPLX(vec%vec_vac(ii + 1:ii + nmzxyd*(SIZE(den%vac,2)-1)), &
                                                              vec%vec_vac(ii + nmzxyd*(SIZE(den%vac,2)-1) + 1:ii + 2*nmzxyd*(SIZE(den%vac,2)-1))), &
                                                        SHAPE(den%vac(:nmzxyd, 2:, iv, js)))
-                     ii = ii + 2*nmzxyd*(SIZE(den%vac,2)-1)! TODO: AN TB; Use here nmzxyd ! ! !
+                     ii = ii + 2*nmzxyd*(SIZE(den%vac,2)-1)
                   ENDIF
                   IF (js > 2) THEN
-                     !den%vacz(:, iv, 4) = vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1))
                      den%vac(:, 1, iv, 4) = vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
-                     !ii = ii + SIZE(den%vacz, 1)
                      ii = ii + SIZE(den%vac, 1)
                   ENDIF
                ENDDO
@@ -413,12 +407,13 @@ CONTAINS
       call timestop("metric")
    END FUNCTION mixvector_metric
 
-   SUBROUTINE init_metric(vacuum, stars)
+   SUBROUTINE init_metric(vacuum, stars, l_dfpt)
       USE m_metrz0
       IMPLICIT NONE
       !
       TYPE(t_vacuum), INTENT(in) :: vacuum
       TYPE(t_stars),  INTENT(in) :: stars
+      LOGICAL,        INTENT(in) :: l_dfpt
 
       INTEGER:: i, n, l, j, ivac, iz, iv2c, k2, iv2
       REAL:: dxn, dxn2, dxn4, dvol, volnstr2
@@ -480,6 +475,14 @@ CONTAINS
                g_vac(i) = wght(iz)*dvol
                !
             END DO
+            IF (l_dfpt) THEN
+               DO iz = 1, vacuum%nmz
+                  i = i + 1
+                  !
+                  g_vac(i) = wght(iz)*dvol
+                  !
+               END DO
+            END IF
             ! G||.ne.0 components
             !
             ! calculate weights for integration
@@ -630,6 +633,7 @@ CONTAINS
                ELSE
                   len = len + 2*vacuum%nmzxyd*(stars%ng2 - 1)*vacuum%nvac + vacuum%nmzd*vacuum%nvac
                ENDIF
+               IF (l_dfpt) len = len + vacuum%nmzd*vacuum%nvac !vacz is complex
                vac_length_g = MAX(vac_length_g, len)
                IF (js == 3) len = len + vacuum%nmzd*vacuum%nvac !Offdiagnal potential is complex
                vac_length = vac_length + len
@@ -644,7 +648,7 @@ CONTAINS
             END IF
          END IF
       END DO
-      CALL init_metric(vacuum, stars)
+      CALL init_metric(vacuum, stars, l_dfpt)
    END SUBROUTINE mixvector_init
    SUBROUTINE mixvector_alloc(vec)
       IMPLICIT NONE

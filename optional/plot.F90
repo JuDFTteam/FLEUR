@@ -101,17 +101,13 @@ CONTAINS
       cden%mt(:,0:,1:,1) = (denmat%mt(:,0:,1:,1)+denmat%mt(:,0:,1:,2))/factor
       cden%pw(1:,1) = (denmat%pw(1:,1)+denmat%pw(1:,2))/factor
       IF (input%film) THEN
-      !cden%vacz(1:,1:,1) = (denmat%vacz(1:,1:,1)+denmat%vacz(1:,1:,2))/factor
-      !cden%vacxy(1:,1:,1:,1) = (denmat%vacxy(1:,1:,1:,1)+denmat%vacxy(1:,1:,1:,2))/factor
-      cden%vac(1:,1:,1:,1) = (denmat%vac(1:,1:,1:,1)+denmat%vac(1:,1:,1:,2))/factor
+         cden%vac(1:,1:,1:,1) = (denmat%vac(1:,1:,1:,1)+denmat%vac(1:,1:,1:,2))/factor
       END IF
       
       mden%mt(:,0:,1:,1) = (denmat%mt(:,0:,1:,1)-denmat%mt(:,0:,1:,2))/factor
       mden%pw(1:,1) = (denmat%pw(1:,1)-denmat%pw(1:,2))/factor
       IF (input%film) THEN
-      !mden%vacz(1:,1:,1) = (denmat%vacz(1:,1:,1)-denmat%vacz(1:,1:,2))/factor
-      !mden%vacxy(1:,1:,1:,1) = (denmat%vacxy(1:,1:,1:,1)-denmat%vacxy(1:,1:,1:,2))/factor
-      mden%vac(1:,1:,1:,1) = (denmat%vac(1:,1:,1:,1)-denmat%vac(1:,1:,1:,2))/factor
+         mden%vac(1:,1:,1:,1) = (denmat%vac(1:,1:,1:,1)-denmat%vac(1:,1:,1:,2))/factor
       END IF
 
    END SUBROUTINE vectorsplit
@@ -200,8 +196,8 @@ CONTAINS
            cdomw = denmat%pw_w(:,3)
          END IF
          IF (input%film) THEN
-         cdomvz(:,:) = denmat%vac(:,1,:,3)
-         cdomvxy = denmat%vac(:vacuum%nmzxyd,2:,:,3)
+            cdomvz(:,:) = denmat%vac(:,1,:,3)
+            cdomvxy = denmat%vac(:vacuum%nmzxyd,2:,:,3)
          END IF
       END IF
 
@@ -434,29 +430,29 @@ CONTAINS
          cden%mt(:,0:,1:,1) = rho(:,0:,1:,1)
          cden%pw(1:,1) = qpw(1:,1)
          IF (input%film) THEN
-         cden%vac(1:,1,1:,1) = rht(1:,1:,1)
-         cden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,1)
+            cden%vac(1:,1,1:,1) = rht(1:,1:,1)
+            cden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,1)
          END IF
 
          mxden%mt(:,0:,1:,1) = rho(:,0:,1:,2)
          mxden%pw(1:,1) = qpw(1:,2)
          IF (input%film) THEN
-         mxden%vac(1:,1,1:,1) = rht(1:,1:,2)
-         mxden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,2)
+            mxden%vac(1:,1,1:,1) = rht(1:,1:,2)
+            mxden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,2)
          END IF
 
          myden%mt(:,0:,1:,1) = rho(:,0:,1:,3)
          myden%pw(1:,1) = qpw(1:,3)
          IF (input%film) THEN
-         myden%vac(1:,1,1:,1) = rht(1:,1:,3)
-         myden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,3)
+            myden%vac(1:,1,1:,1) = rht(1:,1:,3)
+            myden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,3)
          END IF
 
          mzden%mt(:,0:,1:,1) = rho(:,0:,1:,4)
          mzden%pw(1:,1) = qpw(1:,4)
          IF (input%film) THEN
-         mzden%vac(1:,1,1:,1) = rht(1:,1:,4)
-         mzden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,4)
+            mzden%vac(1:,1,1:,1) = rht(1:,1:,4)
+            mzden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,4)
          END IF
 
          IF (ALLOCATED(denmat%pw_w)) THEN
@@ -508,30 +504,30 @@ CONTAINS
          cden%mt(:,0:,1:,1) = rho(:,0:,1:,1)
          cden%pw(1:,1) = qpw(1:,1)
          IF (input%film) THEN
-         cden%vac(1:,1,1:,1) = rht(1:,1:,1)
-         cden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,1)
-	 END IF
+            cden%vac(1:,1,1:,1) = rht(1:,1:,1)
+            cden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,1)
+	      END IF
 	 
          mxden%mt(:,0:,1:,1) = rho(:,0:,1:,2)
          mxden%pw(1:,1) = qpw(1:,2)
          IF (input%film) THEN
-         mxden%vac(1:,1,1:,1) = rht(1:,1:,2)
-         mxden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,2)
-	 END IF
+            mxden%vac(1:,1,1:,1) = rht(1:,1:,2)
+            mxden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,2)
+	      END IF
 	 
          myden%mt(:,0:,1:,1) = rho(:,0:,1:,3)
          myden%pw(1:,1) = qpw(1:,3)
          IF (input%film) THEN
-         myden%vac(1:,1,1:,1) = rht(1:,1:,3)
-         myden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,3)
-	 END IF
+            myden%vac(1:,1,1:,1) = rht(1:,1:,3)
+            myden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,3)
+	      END IF
 	 
          mzden%mt(:,0:,1:,1) = rho(:,0:,1:,4)
          mzden%pw(1:,1) = qpw(1:,4)
          IF (input%film) THEN
-         mzden%vac(1:,1,1:,1) = rht(1:,1:,4)
-         mzden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,4)
-	 END IF
+            mzden%vac(1:,1,1:,1) = rht(1:,1:,4)
+            mzden%vac(1:vacuum%nmzxyd,2:,1:,1) = rhtxy(1:,1:,1:,4)
+	      END IF
 
          IF (ALLOCATED(denmat%pw_w)) THEN
             ALLOCATE (cden%pw_w,  mold=cden%pw)
