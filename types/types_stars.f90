@@ -354,8 +354,6 @@ CONTAINS
     ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
     ALLOCATE(stars%i2g(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2))
 
-
-
     stars%i2g=0
     stars%ig=0
     stars%ng2=0
@@ -444,6 +442,5 @@ CONTAINS
      IF (ALLOCATED(stars%igvac)) DEALLOCATE(stars%igvac)
      IF (ALLOCATED(stars%phi2)) DEALLOCATE(stars%phi2)
      IF (ALLOCATED(stars%r2gphs)) DEALLOCATE(stars%r2gphs)
-
   END SUBROUTINE
 END MODULE m_types_stars

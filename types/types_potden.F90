@@ -326,7 +326,6 @@ CONTAINS
     END IF
     ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
     ALLOCATE (pd%vac(nmzd,n2d,2,MERGE(3,jspins,nocoExtraDim)),stat=err(3))
-
     ALLOCATE (pd%qint(ntype,jspins))
     ALLOCATE (pd%tec(ntype,jspins))
     ALLOCATE (pd%mtCore(coreMsh,ntype,jspins))

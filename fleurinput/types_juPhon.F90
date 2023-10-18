@@ -33,7 +33,7 @@ MODULE m_types_juPhon
       LOGICAL :: f1term = .TRUE.     ! Calculate the occupation number response
       LOGICAL :: l_intp = .FALSE.    ! Interpolate the q-set onto another one
       LOGICAL :: l_band = .FALSE.    ! Interpolate the q-set to a bandstructure
-      LOGICAL :: l_dos  = .TRUE.     ! Calculate the phonon density of states
+      LOGICAL :: l_dos  = .FALSE.     ! Calculate the phonon density of states
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist

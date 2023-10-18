@@ -746,9 +746,5 @@ CONTAINS
       CALL close_eig(eig_id)
       IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) CALL close_eig(hybdat%eig_id)
       CALL juDFT_end("all done", fmpi%irank)
-
-   CONTAINS
-
-
    END SUBROUTINE fleur_execute
 END MODULE m_fleur

@@ -1103,7 +1103,7 @@ CONTAINS
 
       !Add existing vectors to list of full vectors
       !For a DFPT test calculation, this broke --> set additional .FALSE.
-      IF (.FALSE..AND.((kpts%kptsKind.EQ.KPTS_KIND_MESH).OR.(kpts%kptsKind.EQ.KPTS_KIND_SPEX_MESH)).AND.(.NOT.ANY(kpts%nkpt3(:).EQ.0))) THEN
+      IF (((kpts%kptsKind.EQ.KPTS_KIND_MESH).OR.(kpts%kptsKind.EQ.KPTS_KIND_SPEX_MESH)).AND.(.NOT.ANY(kpts%nkpt3(:).EQ.0))) THEN
          ALLOCATE (nkptInBin(-(kpts%nkpt3(1)+1):(kpts%nkpt3(1)+1),-(kpts%nkpt3(2)+1):(kpts%nkpt3(2)+1),-(kpts%nkpt3(3)+1):(kpts%nkpt3(3)+1)))
          nkptInBin = 0
          DO ikpt = 1, kpts%nkpt
