@@ -7,7 +7,7 @@ MODULE m_vac_tofrom_grid
       INTEGER,PARAMETER :: fixed_ndvgrd=6
 
 CONTAINS
-  subroutine vac_to_grid(dograds,ifftd2,jspins,vacuum,l_noco,cell,vacxy,vacz,vacnew,stars,rho,grad,rhoim)
+  subroutine vac_to_grid(dograds,ifftd2,jspins,vacuum,l_noco,cell,vacnew,stars,rho,grad,rhoim)
 
 
     !-----------------------------------------------------------------------
@@ -36,8 +36,6 @@ CONTAINS
     LOGICAL,INTENT(IN)           :: l_noco
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_cell),INTENT(IN)      :: cell
-    COMPLEX,INTENT(IN)    :: vacxy(:,:,:,:)
-    REAL,INTENT(IN)    :: vacz(:,:,:)
     COMPLEX,INTENT(IN)    :: vacnew(:,:,:,:)
     TYPE(t_gradients),INTENT(INOUT)::grad
     real,intent(OUT)             :: rho(:,:)
@@ -79,8 +77,10 @@ CONTAINS
     rho = 0.0
 
     ALLOCATE ( bf2(ifftd2) )
-    IF (PRESENT(rhoim)) ALLOCATE(rhoim,mold=rho)
-
+    IF (PRESENT(rhoim)) THEN
+      ALLOCATE(rhoim,mold=rho)
+      rhoim=0.0
+    ENDIF
     WRITE (oUnit,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
     WRITE (oUnit,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
 
@@ -201,7 +201,7 @@ CONTAINS
        CALL timestart("warp")
        rd = 0.0
        !$OMP PARALLEL DEFAULT(none) &
-       !$OMP SHARED(vacuum,dograds,jspins,stars,ivac,zro,cell,magmom,vacxy,vacnew) &
+       !$OMP SHARED(vacuum,dograds,jspins,stars,ivac,zro,cell,magmom,vacnew) &
        !$OMP SHARED(rhtdz,rhtdzz,rdz,rdzz,rxydz,rxydzz,l_noco,dzmagmom,ddzmagmom,idx) &
        !$OMP SHARED(ifftd2,rho,rhoim,grad) &
        !$OMP PRIVATE(ip,js,iq,cqpw,bf2,rhti,rhdx,rhdy,rhdz,rhdxx,rhdyy,rhdzz) &
@@ -381,7 +381,7 @@ CONTAINS
              DO js=1,jspins
                 !rho(idx+ip-nmz0,js)= REAL(vacz(ip,ivac,js))
                 rho(idx+ip-nmz0,js)= REAL(vacnew(ip,1,ivac,js))
-                IF (PRESENT(rhoim)) rho(idx+ip-nmz0,js)= AIMAG(vacnew(ip,1,ivac,js))
+                IF (PRESENT(rhoim)) rhoim(idx+ip-nmz0,js)= AIMAG(vacnew(ip,1,ivac,js))
              END DO
           ELSE
              !mx(0) = REAL(vacz(ip,ivac,3))

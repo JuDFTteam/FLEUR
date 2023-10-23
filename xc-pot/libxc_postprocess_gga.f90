@@ -100,7 +100,7 @@ CONTAINS
       vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
       CALL vac_from_grid(stars,vacuum,v_xc2,ifftd2,vsigma_new)
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma),grad_vsigma%sigma(n_sigma,nsp))
-      CALL vac_to_grid(xcpot%needs_grad(),ifftd2,n_sigma,vacuum,.FALSE.,cell,vsigma_new(:vacuum%nmzxy,2:,:,:),REAL(vsigma_new(:,1,:,:)),vsigma_new,stars,rho_dummy,grad_vsigma)
+      CALL vac_to_grid(xcpot%needs_grad(),ifftd2,n_sigma,vacuum,.FALSE.,cell,vsigma_new,stars,rho_dummy,grad_vsigma)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_vac
