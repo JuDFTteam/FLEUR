@@ -60,7 +60,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: theta1full(:, :, :), theta1full0(:, :, :)!, theta2(:, :, :)
       COMPLEX, ALLOCATABLE :: theta1_pw(:, :, :), theta1_pw0(:, :, :)!,theta2_pw(:, :, :)
       COMPLEX, ALLOCATABLE :: pww(:), pwwq(:), pww2(:), pwwq2(:)
-      COMPLEX, ALLOCATABLE :: rho_pw(:), denIn1_pw(:)
+      COMPLEX, ALLOCATABLE :: rho_pw(:), denIn1_pw(:), rho_vac(:,:,:), denIn1_vac(:,:,:)
       REAL,    ALLOCATABLE :: rho_mt(:,:,:), grRho_mt(:,:,:), denIn1_mt(:,:,:), denIn1_mt_Im(:,:,:)
 
       type(t_fft) :: fft
@@ -78,6 +78,10 @@ CONTAINS
       ALLOCATE(denIn1_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),denIn1_mt_Im(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
       ALLOCATE(denIn1_pw(starsq%ng3),rho_pw(stars%ng3))
       ALLOCATE(rho_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),grRho_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
+      IF (fi%input%film) THEN
+         ALLOCATE(denIn1_vac(fi%vacuum%nmzd,starsq%ng2,2))
+         ALLOCATE(rho_vac(fi%vacuum%nmzd,stars%ng2,2))
+      END IF
 
       CALL rho_dummy%copyPotDen(rho)
       CALL rho1_dummy%copyPotDen(denIn1)
@@ -118,6 +122,7 @@ CONTAINS
 
       denIn1_pw  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
       denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+      IF (fi%input%film) denIn1_vac = (denIn1%vac(:,:,:,1)+denIn1%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
       ! Get "full" denIn1:
       denIn1_mt(:,0:,iDtype_row) = denIn1_mt(:,0:,iDtype_row) - (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
       denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
@@ -146,6 +151,13 @@ CONTAINS
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             IF (fmpi%irank==0) write(9989,*) "IR rho1 V1ext new             ", tempval
             tempval = CMPLX(0.0,0.0)
+
+            IF (fi%input%film) THEN
+               CALL dfpt_int_vac(starsq,fi%vacuum,fi%cell,denIn1_vac,vExt1%vac(:,:,:,1),tempval)
+               dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+               IF (fmpi%irank==0) write(9989,*) "VAC rho1 V1ext             ", tempval
+               tempval = CMPLX(0.0,0.0)
+            END IF
 
             ! MT integral:
             ! If we use gradient cancellation, remove it from rho1
@@ -266,6 +278,15 @@ CONTAINS
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                IF (fmpi%irank==0) write(9989,*) "IR grRho V1ext0 new           ", tempval
                tempval = CMPLX(0.0,0.0)
+
+               IF (fi%input%film) THEN
+                  rho_vac = (grRho3(iDir_row)%vac(:,:,:,1)+grRho3(iDir_row)%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+                  CALL dfpt_int_vac(stars,fi%vacuum,fi%cell,rho_vac,vExt1%vac(:,:,:,1),tempval)
+                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+                  IF (fmpi%irank==0) write(9989,*) "VAC grRho V1ext0             ", tempval
+                  tempval = CMPLX(0.0,0.0)
+               END IF            
+
                rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
                rho_pw = -(rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
                DO iType = 1, fi%atoms%ntype
@@ -446,6 +467,59 @@ CONTAINS
 
    END SUBROUTINE dfpt_int_mt_sf
 
+   SUBROUTINE dfpt_int_vac(stars,vacuum,cell,vac_conj,vac_pure,vac_int)
+      USE m_types
+      USE m_constants
+      USE m_intgr, ONLY : intgz0
+
+      IMPLICIT NONE
+
+      TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_cell),INTENT(IN)   :: cell
+
+      COMPLEX, INTENT(IN)  :: vac_conj(:,:,:), vac_pure(:,:,:)
+
+      COMPLEX, INTENT(INOUT) :: vac_int
+
+      REAL    :: facv,tvacre,tvacim,tvact
+      INTEGER :: i,ip,ivac,j,k2,n,npz
+      LOGICAL :: tail
+      COMPLEX :: dpzc
+
+      REAL :: dpzre(vacuum%nmzd), dpzim(vacuum%nmzd)
+
+      npz = vacuum%nmz + 1
+      tail = .TRUE.
+      facv=2.0/vacuum%nvac
+      tvacre = 0.
+      tvacim = 0.
+      tvact  = CMPLX(0.0,0.0)
+
+      dpzre=0.0
+      dpzim=0.0
+      DO ivac = 1,vacuum%nvac
+         DO ip = 1,vacuum%nmz
+            dpzre(npz-ip) =  REAL(vac_conj(ip,1,ivac)) *  REAL(vac_pure(ip,1,ivac)) + AIMAG(vac_conj(ip,1,ivac)) * AIMAG(vac_pure(ip,1,ivac))
+            dpzim(npz-ip) =  REAL(vac_conj(ip,1,ivac)) * AIMAG(vac_pure(ip,1,ivac)) - AIMAG(vac_conj(ip,1,ivac)) *  REAL(vac_pure(ip,1,ivac))
+         END DO
+         DO k2 = 2,stars%ng2
+            DO ip = 1,vacuum%nmzxy
+               dpzc = stars%nstr2(k2) * CONJG(vac_conj(ip,k2,ivac)) * vac_pure(ip,k2,ivac)
+               dpzre(npz-ip) = dpzre(npz-ip) +  REAL(dpzc)
+               dpzim(npz-ip) = dpzim(npz-ip) + AIMAG(dpzc)
+            END DO
+         END DO
+         CALL intgz0(dpzre,vacuum%delz,vacuum%nmz,tvacre,tail)
+         CALL intgz0(dpzim,vacuum%delz,vacuum%nmz,tvacim,tail)
+         tvact = tvact + cell%area*tvacre*facv
+         tvact = tvact + cell%area*tvacim*facv*ImagUnit
+      END DO
+
+      vac_int = vac_int + tvact
+
+   END SUBROUTINE dfpt_int_vac
+
    SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
                                 stars, starsq, sphhar, inden, hub1data, vx, v, v1real, v1imag, &
                                 eig_id, dfpt_eig_id, dfpt_eig_id2, iDir_col, iDtype_col, iDir_row, iDtype_row, &
@@ -464,7 +538,7 @@ CONTAINS
       USE m_dfpt_tlmplm
       USE m_npy
 
-! TODO: One brigth day, these things will also be relevant for DFPT.
+! TODO: One bright day, these things will also be relevant for DFPT.
 !       We cannot keep doing small systems on small CPUs forever.
 !#ifdef _OPENACC
 !         USE cublas
