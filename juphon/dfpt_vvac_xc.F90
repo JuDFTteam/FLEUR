@@ -93,8 +93,8 @@ MODULE m_dfpt_vvac_xc
       rho1im=0.0
       !call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vacxy(:,:,:,:),den%vacz,stars,rho,grad)
       call timestart("vac_to_grid")
-      call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vac(:vacuum%nmzxyd,2:,:,:),REAL(den%vac(:,1,:,:)),den%vac,stars,rho,grad)
-      call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den1%vac(:vacuum%nmzxyd,2:,:,:),REAL(den1%vac(:,1,:,:)),den1%vac,starsq,rho1re,grad1,rho1im)
+      call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den%vac,stars,rho,grad)
+      call vac_to_grid(xcpot%needs_grad(),ifftd2,input%jspins,vacuum,noco%l_noco,cell,den1%vac,starsq,rho1re,grad1,rho1im)
       call timestop("vac_to_grid")
       !         calculate the exchange-correlation potential in  real space
 
