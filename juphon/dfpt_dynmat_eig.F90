@@ -1,4 +1,4 @@
-module m_jpProcessDynMat
+module m_dfpt_dynmat_eig
 
   use m_types
 
@@ -6,14 +6,14 @@ module m_jpProcessDynMat
 
   contains
 
-  subroutine DiagonalizeDynMat(atoms, qpts, calcEv, dynMat, w, a, iqpt)
+  subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag)
 
     USE m_juDFT_stop
     implicit none
 
     ! Type parameters
     type(t_atoms),                 intent(in)  :: atoms
-    type(t_kpts),                  intent(in)  :: qpts
+    real,                          intent(in)  :: qvec(3)
 
     ! Scalar parameters
     logical,                       intent(in)  :: calcEv
@@ -22,6 +22,8 @@ module m_jpProcessDynMat
     complex,                       intent(in)  :: dynMat(:, :)
     real,             allocatable, intent(out) :: w(:)
     complex, allocatable, intent(out) :: a(:, :)
+    logical, intent(in) :: l_scalemass
+    character(len=*), intent(in) :: add_tag
 
     ! Array parameters
 
@@ -55,7 +57,7 @@ module m_jpProcessDynMat
     real,             allocatable              :: rwork(:)
     complex, allocatable              :: work(:)
     character(len=:), allocatable             :: filename
-    character(len=11)                         :: filenameTemp
+    character(len=50)                         :: filenameTemp
     REAL                                      :: atomic_mass_array(118)
 
     atomic_mass_array = [1.01, 4.00, 6.94, 9.01, 10.81, 12.01, 14.01, 16.00, 19.00, 20.18, &      ! up to neon
@@ -71,14 +73,18 @@ module m_jpProcessDynMat
                       & 231.04, 238.03, 237.00, 244.00, 243.00, 247.00, 247.00, 251.00, 252.00, & ! up to einsteinium
                       & 257.00, 258.00, 259.00, 262.00, 267.00, 269.00, 270.00, 272.00, 273.00, & ! up to hassium
                       & 277.00, 281.00, 281.00, 285.00, 286.00, 289.00, 288.00, 293.00, 294.00, 294.00]
-
+    
+    ! TODO: This is ridiculous. Remove asap.
     if (iqpt < 10) then
-      write(filenameTemp, '("dynMatq=00",i1)') iqpt
+      write(filenameTemp, '("dynMatq=000",i1)') iqpt
     else if (iqpt > 9 .and. iqpt < 100) then
-      write(filenameTemp, '("dynMatq=0",i2)') iqpt
+      write(filenameTemp, '("dynMatq=00",i2)') iqpt
     else if (iqpt > 99 .and. iqpt < 1000) then
-      write(filenameTemp, '("dynMatq=",i3)') iqpt
+      write(filenameTemp, '("dynMatq=0",i3)') iqpt
+    else if (iqpt > 999 .and. iqpt < 10000) then
+      write(filenameTemp, '("dynMatq=",i4)') iqpt
     end if
+    if ((TRIM(add_tag)).EQ."full".OR.(TRIM(add_tag).EQ."band")) filenameTemp = TRIM(add_tag)//"_"//filenameTemp
 !    filename = trim(filenameTemp)
 !    write(*, *) filename
     open( 109, file=filenameTemp, status='replace', action='write', form='formatted')
@@ -101,14 +107,12 @@ module m_jpProcessDynMat
     allocate( a( lda, n ) )
     do jj = 1, n
       do ii = 1, lda
-      !todo is this hermitization correct, discuss with Markus
-        !!!anfix
         a(ii, jj) = (dynMat(ii, jj) + conjg(dynMat(jj, ii)))/2.0
-        a(ii, jj) = a(ii, jj)/SQRT(atomic_mass_array(atoms%nz(CEILING(jj/3.0)))*atomic_mass_array(atoms%nz(CEILING(ii/3.0))))
+        IF (l_scalemass) a(ii, jj) = a(ii, jj)/SQRT(atomic_mass_array(atoms%nz(CEILING(jj/3.0)))*atomic_mass_array(atoms%nz(CEILING(ii/3.0))))
       end do
     end do
 
-    write(*, '(a,3f9.3)') 'q =', qpts%bk(1:3, iqpt)
+    write(*, '(a,3f9.3)') 'q =', qvec
     write(*, '(a)')       '==================================='
     write(*, '(a)')
     write(*, '(a)') 'Original Dynamical Matrix [mass corrected]'
@@ -116,23 +120,13 @@ module m_jpProcessDynMat
       write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
     END DO
 
-!    write(*, '(a)') 'Deviation from Hermiticity'
-!    write(*, '(3(2(es16.8,1x),3x))') a(1, :) - dynMat(1, :)
-!    write(*, '(3(2(es16.8,1x),3x))') a(2, :) - dynMat(2, :)
-!    write(*, '(3(2(es16.8,1x),3x))') a(3, :) - dynMat(3, :)
-
-    write(109, '(a,3f9.3)') 'q =', qpts%bk(1:3, iqpt)
+    write(109, '(a,3f9.3)') 'q =', qvec
     write(109, '(a)')       '==================================='
     write(109, '(a)')
     write(109, '(a)') 'Original Dynamical Matrix [mass corrected]'
     DO ii = 1, lda
       write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
     END DO
-
-!    write(1000, '(a)') 'Deviation from Hermiticity'
-!    write(1000, '(3(2(es16.8,1x),3x))') a(1, :) - dynMat(1, :)
-!    write(1000, '(3(2(es16.8,1x),3x))') a(2, :) - dynMat(2, :)
-!    write(1000, '(3(2(es16.8,1x),3x))') a(3, :) - dynMat(3, :)
 
     allocate( w(n))
     w = 0.
@@ -181,7 +175,7 @@ module m_jpProcessDynMat
 
   end subroutine diagonalizeDynMat
 
-  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs )
+  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, add_tag )
 
     implicit none
 
@@ -194,6 +188,7 @@ module m_jpProcessDynMat
     ! Array parameter
     real,                       intent(in)  :: eigenVals(:)
     complex,          allocatable, intent(out) :: eigenFreqs(:)
+    character(len=*), intent(in) :: add_tag
 
     ! Scalar variables
     integer                                 :: itype
@@ -204,16 +199,20 @@ module m_jpProcessDynMat
     real                                    :: convFact
 
     ! Array variables
-    character(len=11)                         :: filenameTemp
+    character(len=50)                         :: filenameTemp
     REAL                                      :: atomic_mass_array(118)
 
+    ! TODO: This is ridiculous. Remove asap.
     if (iqpt < 10) then
-      write(filenameTemp, '("dynMatq=00",i1)') iqpt
+      write(filenameTemp, '("dynMatq=000",i1)') iqpt
     else if (iqpt > 9 .and. iqpt < 100) then
-      write(filenameTemp, '("dynMatq=0",i2)') iqpt
+      write(filenameTemp, '("dynMatq=00",i2)') iqpt
     else if (iqpt > 99 .and. iqpt < 1000) then
-      write(filenameTemp, '("dynMatq=",i3)') iqpt
+      write(filenameTemp, '("dynMatq=0",i3)') iqpt
+    else if (iqpt > 999 .and. iqpt < 10000) then
+      write(filenameTemp, '("dynMatq=",i4)') iqpt
     end if
+    if ((TRIM(add_tag)).EQ."full".OR.(TRIM(add_tag).EQ."band")) filenameTemp = TRIM(add_tag)//"_"//filenameTemp
     open( 109, file=filenameTemp, status='old', action='write', form='formatted', position='append')
 
     allocate(eigenFreqs(3*atoms%nat))
@@ -233,29 +232,6 @@ module m_jpProcessDynMat
                       & 231.04, 238.03, 237.00, 244.00, 243.00, 247.00, 247.00, 251.00, 252.00, & ! up to einsteinium
                       & 257.00, 258.00, 259.00, 262.00, 267.00, 269.00, 270.00, 272.00, 273.00, & ! up to hassium
                       & 277.00, 281.00, 281.00, 285.00, 286.00, 289.00, 288.00, 293.00, 294.00, 294.00]
-
-    !if (atoms%nz(itype) == 10) then ! Neon
-      !write(*, *) 'Mass for Neon'
-      !massInElectronMasses = 20.18 * 1836.15 ! For Neon: 20.18 * 1836.15 m_e
-    !else if (atoms%nz(itype) == 13) then ! Aluminium
-      !write(*, *) 'Mass for Aluminium'
-      !massInElectronMasses = 26.982 * 1836.15 ! For Aluminium : 26.982 * 1836.15 m_e
-    !else if (atoms%nz(itype) == 18) then ! Argon
-      !write(*, *) 'Mass for Argon'
-      !massInElectronMasses = 39.948 * 1836.15 ! For Argon : 39.948 * 1836.15 m_e
-    !else if (atoms%nz(itype) == 27) then ! Cobalt
-      !write(*, *) 'Mass for Cobalt'
-      !massInElectronMasses = 58.933 * 1836.15 ! For Cobalt : 58.933 * 1836.15 m_e
-    !else if (atoms%nz(itype) == 29) then ! Copper
-      !write(*, *) 'Mass for Copper'
-      !massInElectronMasses = 63.546 * 1836.15 ! For Copper : 63.546 * 1836.15 m_e
-    !else if (atoms%nz(itype) == 42) then ! Molybdenum
-      !write(*, *) 'Mass for Molybdenum'
-      !massInElectronMasses = 95.951 * 1836.15 ! For Molybdenum : 95.951 * 1836.15 m_e
-    !else if (atoms%nz(itype) == 79) then ! Gold
-      !write(*, *) 'Mass for Gold'
-      !massInElectronMasses = 196.967 * 1836.15 ! For Gold : 196.967 * 1836.15 m_e
-    !end if
 
     massInElectronMasses = 1836.15
 
@@ -303,4 +279,4 @@ module m_jpProcessDynMat
 
   end subroutine CalculateFrequencies
 
-end module m_jpProcessDynMat
+end module m_dfpt_dynmat_eig

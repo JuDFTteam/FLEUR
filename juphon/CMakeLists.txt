@@ -9,9 +9,9 @@ juphon/jpGrVeff0_mod.F90
 #juphon/jpSternheimer_mod.F90
 #juphon/jpSternhHF_mod.F90
 #juphon/jpSternhPulaySurface_mod.F90
-juphon/jp2ndOrdQuant_mod.F90
+juphon/dfpt_eii2.F90
 #juphon/jpSetupDynMat_mod.F90
-juphon/jpProcessDynMat_mod.F90
+juphon/dfpt_dynmat_eig.F90
 #juphon/jpSetupDynMatSF_mod.F90
 #juphon/jpIOnMixing_mod.F90
 #juphon/broyd_io.F90

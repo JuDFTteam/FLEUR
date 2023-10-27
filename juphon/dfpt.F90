@@ -17,8 +17,8 @@ CONTAINS
       !USE m_dfpt_test
       USE m_dfpt_sternheimer
       USE m_dfpt_dynmat
-      USE m_jp2ndOrdQuant,     only : CalcIIEnerg2, genPertPotDensGvecs
-      USE m_jpProcessDynMat
+      USE m_dfpt_eii2,     only : CalcIIEnerg2, genPertPotDensGvecs
+      USE m_dfpt_dynmat_eig
       USE m_juDFT_stop, only : juDFT_error
       USE m_vgen_coulomb
       USE m_dfpt_vgen

@@ -1,4 +1,4 @@
-module m_jp2ndOrdQuant
+module m_dfpt_eii2
 
   use m_types
 
@@ -989,4 +989,4 @@ module m_jp2ndOrdQuant
 
   end subroutine genPertPotDensGvecs
 
-end module m_jp2ndOrdQuant
+end module m_dfpt_eii2
