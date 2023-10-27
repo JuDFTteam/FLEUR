@@ -410,16 +410,16 @@ CONTAINS
                   ! iteratively, providing the scf part of dfpt calculations.
                   IF (l_minusq) THEN
                      CALL timestart("Sternheimer with -q")
-                     CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
-                                          rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
+                     CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+                                          rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                           dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                           denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
                                           starsmq, qm_results, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
                      CALL timestop("Sternheimer with -q")
                   ELSE
                      CALL timestart("Sternheimer")
-                     CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
-                                          rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
+                     CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+                                          rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                           dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                           denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
                      CALL timestop("Sternheimer")

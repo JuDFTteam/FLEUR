@@ -15,13 +15,12 @@ MODULE m_dfpt_sternheimer
    USE m_constants
    USE m_cdn_io
    USE m_eig66_io
-   !USE m_npy
 
 IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, mpdata, &
-                               forcetheo, rho, vTot, grRho, grVtot, grVext, grVC, iQ, iDType, iDir, dfpt_tag, eig_id, &
+   SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
+                               rho, vTot, grRho, grVtot, grVext, iQ, iDType, iDir, dfpt_tag, eig_id, &
                                l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
                                starsmq, resultsmq, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
@@ -35,41 +34,38 @@ CONTAINS
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
       TYPE(t_results),    INTENT(INOUT) :: results, resultsq, results1
       TYPE(t_hybdat),     INTENT(INOUT) :: hybdat
-      TYPE(t_mpdata),     INTENT(INOUT) :: mpdata
-      CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
       TYPE(t_enpara),     INTENT(INOUT) :: enpara
-      TYPE(t_potden),     INTENT(IN)    :: rho, vTot, grRho, grVtot, grVext, grVC
+      TYPE(t_potden),     INTENT(IN)    :: rho, vTot, grRho, grVtot, grVext
 
-      TYPE(t_potden), INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
+      TYPE(t_potden),     INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
 
-      TYPE(t_potden) :: denOut1, denOut1Im, vx, rho_loc, rho_loc0
+      INTEGER,            INTENT(IN)    :: iQ, iDtype, iDir, eig_id, q_eig_id
+      LOGICAL,            INTENT(IN)    :: l_real
+      CHARACTER(len=20),  INTENT(IN)    :: dfpt_tag
 
-      INTEGER, INTENT(IN) :: iQ, iDtype, iDir, eig_id, q_eig_id
-      LOGICAL, INTENT(IN) :: l_real
-      CHARACTER(len=20), INTENT(IN) :: dfpt_tag
+      INTEGER,            INTENT(IN)    :: dfpt_eig_id, dfpt_eig_id2
 
-      INTEGER, INTENT(IN) :: dfpt_eig_id, dfpt_eig_id2
-
-      TYPE(t_stars), OPTIONAL, INTENT(INOUT) :: starsmq
-      TYPE(t_results), OPTIONAL,   INTENT(INOUT) :: resultsmq, results1m
-      INTEGER, OPTIONAL, INTENT(IN) :: qm_eig_id
-      INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eigm_id, dfpt_eigm_id2
-      TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: vTot1m, vTot1mIm
+      TYPE(t_stars),   OPTIONAL, INTENT(INOUT) :: starsmq
+      TYPE(t_results), OPTIONAL, INTENT(INOUT) :: resultsmq, results1m
+      INTEGER,         OPTIONAL, INTENT(IN)    :: qm_eig_id
+      INTEGER,         OPTIONAL, INTENT(IN)    :: dfpt_eigm_id, dfpt_eigm_id2
+      TYPE(t_potden),  OPTIONAL, INTENT(INOUT) :: vTot1m, vTot1mIm
 
 #ifdef CPP_MPI
       INTEGER :: ierr
 #endif
 
-      INTEGER :: archiveType, iter, killcont(6), iterm
+      INTEGER :: archiveType, iter, killcont(6), iterm, realiter
       REAL    :: bqpt(3), bmqpt(3)
-      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_exitus, l_minusq, l_existm
+      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_minusq, l_existm
 
-      TYPE(t_hub1data) :: hub1data
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
+      TYPE(t_potden)  :: denOut1, denOut1Im, rho_loc, rho_loc0
       TYPE(t_potden)   :: denIn1m, denIn1mIm, denOut1m, denOut1mIm
 
       l_minusq = PRESENT(starsmq)
+      realiter = 0
 
       ! killcont can be used to blot out certain contricutions to the
       ! perturbed matrices.
@@ -79,26 +75,26 @@ CONTAINS
       CALL rho_loc%copyPotDen(rho)
       CALL rho_loc0%copyPotDen(rho)
       CALL rho_loc0%resetPotDen()
-      CALL vx%copyPotDen(vTot)
-      ALLOCATE(vx%pw_w, mold=vx%pw)
-      vx%pw_w = vTot%pw_w
 
       banddosdummy = fi%banddos
 
+      ! Calculate the q-shifted G-vectors and related quantities like the perturbed step function
       CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)
       starsq%ufft = stars%ufft
+
+      ! Initialize the density perturbation; denIn1Im is only for the imaginary MT part
       CALL denIn1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
       CALL denIn1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
+      INQUIRE(FILE=TRIM(dfpt_tag)//'.hdf',EXIST=l_exist)
 
       IF (l_minusq) THEN
          CALL make_stars(starsmq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, -qpts%bk(:,iQ), iDtype, iDir)
          starsmq%ufft = stars%ufft
+
          CALL denIn1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
          CALL denIn1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
          INQUIRE(FILE=TRIM(dfpt_tag)//'m.hdf',EXIST=l_existm)
       END IF
-
-      INQUIRE(FILE=TRIM(dfpt_tag)//'.hdf',EXIST=l_exist)
 
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
       IF (ANY(fi%noco%l_unrestrictMT)) THEN
@@ -108,9 +104,9 @@ CONTAINS
       END IF
 
       IF (fmpi%irank == 0) THEN
-         strho = .NOT.l_exist
-         onedone = .NOT.strho
-         final_SH_it = .FALSE.
+         strho = .NOT.l_exist  ! There is no density perturbation file yet --> starting density perturbation
+         onedone = .NOT.strho  ! Was at least one iteration done yet?
+         final_SH_it = .FALSE. ! Is the density perturbation converged and the last SH run started?
       END IF
 
 #ifdef CPP_MPI
@@ -119,6 +115,7 @@ CONTAINS
       CALL MPI_BCAST(final_SH_it,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
 
+      ! Set the iteration counters to 0 and optionally read in the density perturbation
       iter = 0
       iterm = 0
       l_cont = (iter < fi%input%itmax)
@@ -138,6 +135,7 @@ CONTAINS
       CALL MPI_BCAST(denIn1%iter,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
 #endif
 
+      ! Initialize the potentials and save the q vector to a local variable
       CALL vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
       CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
@@ -153,15 +151,8 @@ CONTAINS
          bmqpt = -qpts%bk(:, iQ)
       END IF
 
-! TODO: Stop ignoring CHASE one day/delete completely.
-!       There is no diagonalization here.
-!#ifdef CPP_CHASE
-!      CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
-!#endif
-
       l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
-         !IF (.NOT.strho) iter = iter + 1 !TODO: Eventually this will be right?
          IF (onedone) iter = iter + 1
          l_lastIter = l_lastIter.OR.(iter.EQ.fi%input%itmax)
 
@@ -171,10 +162,6 @@ CONTAINS
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
 
-!#ifdef CPP_CHASE
-!         CALL chase_distance(results%last_distance)
-!#endif
-
          CALL denIn1%distribute(fmpi%mpi_comm)
          CALL denIn1Im%distribute(fmpi%mpi_comm)
 
@@ -183,6 +170,9 @@ CONTAINS
             CALL denIn1mIm%distribute(fmpi%mpi_comm)
          END IF
 
+         ! Generate the potential perturbation:
+         ! Vext1 for the starting perturbation
+         ! Veff1 every other time
          CALL timestart("Generation of potential perturbation")
          IF (strho) THEN
             write(oUnit, *) "vExt1", iDir
@@ -209,6 +199,7 @@ CONTAINS
             END IF
          END IF
 
+         ! For the calculation of the dynamical matrix, we need VC1 additionally
          IF (final_SH_it) THEN
             write(oUnit, *) "vC1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
@@ -222,26 +213,17 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
+         ! Add the potential gradient to the potential perturbation in the displaced MT
          IF (strho) THEN
             vTot1%mt(:,0:,iDtype,1) = vTot1%mt(:,0:,iDtype,1) + grVext%mt(:,0:,iDtype,1)
             IF (fi%input%jspins==2) vTot1%mt(:,0:,iDtype,2) = vTot1%mt(:,0:,iDtype,2) + grVext%mt(:,0:,iDtype,1)
-            !CALL save_npy(TRIM(dfpt_tag)//"vExt1pw.npy",vTot1%pw)
-            !CALL save_npy(TRIM(dfpt_tag)//"vExt1mtre.npy",vTot1%mt)
-            !CALL save_npy(TRIM(dfpt_tag)//"vExt1mtim.npy",vTot1Im%mt)
             IF (l_minusq) THEN
                vTot1m%mt(:,0:,iDtype,1) = vTot1m%mt(:,0:,iDtype,1) + grVext%mt(:,0:,iDtype,1)
                IF (fi%input%jspins==2) vTot1m%mt(:,0:,iDtype,2) = vTot1m%mt(:,0:,iDtype,2) + grVext%mt(:,0:,iDtype,1)
             END IF
          ELSE
-            !vC1%mt(:,0:,iDtype,:) = vC1%mt(:,0:,iDtype,:) + grVC%mt(:,0:,iDtype,:)
-            !CALL save_npy(TRIM(dfpt_tag)//"vC1pw.npy",vC1%pw(:,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"vC1mtre.npy",vC1%mt(:,0:,1,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"vC1mtim.npy",vC1Im%mt(:,0:,1,1))
-            !vC1%mt(:,0:,iDtype,:) = vC1%mt(:,0:,iDtype,:) - grVC%mt(:,0:,iDtype,:)
             vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
-            !CALL save_npy(TRIM(dfpt_tag)//"vEff1pw.npy",vTot1%pw(:,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"vEff1mtre.npy",vTot1%mt(:,0:,1,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"vEff1mtim.npy",vTot1Im%mt(:,0:,1,1))
+            realiter = realiter + 1
             IF (l_minusq) THEN
                vTot1m%mt(:,0:,iDtype,:) = vTot1m%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
             END IF
@@ -257,6 +239,7 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
+         ! Calculate the perturbed expansion coefficients z1 --> saved to results1
          CALL timestart("dfpt eigen")
          IF (.NOT.final_SH_it) THEN
             CALL dfpt_eigen(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
@@ -283,8 +266,10 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
+         ! If q=0, the eigenenergy perturbation is /=0 and if we do not
+         ! look at a semiconductor or an insulator, there will be a
+         ! perturbation of the occupation numbers as well.
          CALL timestart("Fermi energy and occupation derivative")
-         !write(9013,*) fi%input%tkb, results%tkb_loc
          IF (norm2(bqpt)<1e-8.AND.ABS(results%tkb_loc)>1e-12) THEN
             CALL dfpt_fermie(eig_id,dfpt_eig_id,fmpi,fi%kpts,fi%input,fi%noco,results,results1)
          ELSE
@@ -316,6 +301,8 @@ CONTAINS
 #endif
          END IF
 
+         ! Exit here after the new final eigenvalues have been generated
+         ! and before a new density perturbation is built
          IF (final_SH_it) THEN
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
             CALL denIn1%distribute(fmpi%mpi_comm)
@@ -331,6 +318,7 @@ CONTAINS
             CYCLE scfloop
          END IF
 
+         ! Generate the new density perturbation
          CALL timestart("generation of new charge density (total)")
          CALL denOut1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
          CALL denOut1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
@@ -361,6 +349,8 @@ CONTAINS
             CALL timestop("generation of new charge density (total)")
          END IF
 
+         ! If a starting density perturbation was to be generated, subtract the density
+         ! gradietn and exit here; no mixing yet!
          IF (strho) THEN
             strho = .FALSE.
             denIn1 = denOut1
@@ -368,27 +358,20 @@ CONTAINS
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "Starting perturbation generated."
             CALL timestop("Sternheimer Iteration")
-            !CALL save_npy(TRIM(dfpt_tag)//"rho1pw0.npy",denOut1%pw)
-            !CALL save_npy(TRIM(dfpt_tag)//"rho1mtre0.npy",denOut1%mt)
-            !CALL save_npy(TRIM(dfpt_tag)//"rho1mtim0.npy",denOut1Im%mt)
             IF (l_minusq) THEN
                denIn1m = denOut1m
                denIn1mIm = denOut1mIm
-               !CALL save_npy(TRIM(dfpt_tag)//"rho1Mpw0.npy",denOut1m%pw)
-               !CALL save_npy(TRIM(dfpt_tag)//"rho1Mmtre0.npy",denOut1m%mt)
-               !CALL save_npy(TRIM(dfpt_tag)//"rho1Mmtim0.npy",denOut1mIm%mt)
                denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
             CYCLE scfloop
          END IF
 
+         ! If a the first full density perturbation was to be generated, subtract the density
+         ! gradietn and exit here; no mixing yet!
          IF (.NOT.onedone) THEN
             onedone = .TRUE.
             denIn1 = denOut1
             denIn1Im = denOut1Im
-            !CALL save_npy(TRIM(dfpt_tag)//"_rho1pw.npy",denOut1%pw(:,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"_rho1mtre.npy",denOut1%mt(:,0:,1,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
             denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "1st 'real' density perturbation generated."
             CALL timestop("Sternheimer Iteration")
@@ -400,21 +383,19 @@ CONTAINS
             CYCLE scfloop
          END IF
 
-         IF (final_SH_it) THEN
-            denIn1 = denOut1
-            denIn1Im = denOut1Im
-            l_cont = .FALSE.
-            !CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1pw.npy",denOut1%pw(:,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtre.npy",denOut1%mt(:,0:,1,1))
-            !CALL save_npy(TRIM(dfpt_tag)//"_fin_rho1mtim.npy",denOut1Im%mt(:,0:,1,1))
-            IF (fmpi%irank==0) write(*,*) "Final Sternheimer iteration finished."
-            CALL timestop("Sternheimer Iteration")
-            IF (l_minusq) THEN
-               denIn1m = denOut1m
-               denIn1mIm = denOut1mIm
-            END IF
-            CYCLE scfloop
-         END IF
+         ! No longer exit here.
+         !IF (final_SH_it) THEN
+         !   denIn1 = denOut1
+         !   denIn1Im = denOut1Im
+         !   l_cont = .FALSE.
+         !   IF (fmpi%irank==0) write(*,*) "Final Sternheimer iteration finished."
+         !   CALL timestop("Sternheimer Iteration")
+         !   IF (l_minusq) THEN
+         !      denIn1m = denOut1m
+         !      denIn1mIm = denOut1mIm
+         !   END IF
+         !   CYCLE scfloop
+         !END IF
 
          CALL denIn1%distribute(fmpi%mpi_comm)
          CALL denIn1Im%distribute(fmpi%mpi_comm)
@@ -431,6 +412,7 @@ CONTAINS
          field2 = fi%field
 
          ! First mixing in the 2nd "real" iteration.
+         ! Remove the gradient from denIn as to not mix identical big numbers.
          denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
          CALL denIn1%distribute(fmpi%mpi_comm)
 
@@ -443,7 +425,7 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
-         ! mix input and output densities
+         ! Mix input and output densities
          CALL timestart("DFPT mixing")
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsq, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
