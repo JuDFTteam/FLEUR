@@ -71,10 +71,6 @@ CONTAINS
       TYPE(t_potden)                   :: workden, denRot, workdenImag, workdenReal, den1Rot, den1imRot
       TYPE(t_potden)                   :: vCoul, dfptvCoulimag, vxc, exc, vx, EnergyDen
 
-      INTEGER :: i, js
-      REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
-
-
       vCoul = dfptvTot
       vx = vTot
       vxc = vTot
@@ -142,14 +138,15 @@ CONTAINS
          !Functions that construct the spin-dependent perturbed densities
          !from the perturbed charge and (vectorial) magnetization density/
          !perturbed density matrix. Also saves the perturbed angles.
+         ! TODO: Work on the internal spin logic and add vacuum as well. DFPT_NOCO
           CALL get_int_local_perturbation(sym, stars, atoms, sphhar, input, denRot, den1Rot, den1imRot, starsq)
           IF (any(noco%l_unrestrictMT)) CALL get_mt_local_perturbation(atoms,sphhar,sym,noco,denRot,den1Rot,den1imRot)
       END IF
 
-         ! Skip vxc for rho(1)=0, i.e. starting potential
-          IF (ANY(ABS(den1Rot%pw)>1E-12).AND.l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                          cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
-                          & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
+      ! Skip vxc if we want only vC/vExt
+         IF (l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+                        cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
+                        & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)
