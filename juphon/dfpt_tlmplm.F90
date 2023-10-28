@@ -8,6 +8,8 @@ MODULE m_dfpt_tlmplm
 
 CONTAINS
    SUBROUTINE dfpt_tlmplm(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,conj_V,iDtype_col)
+      !! Get the (lm) matrix elements for the perturbed potential, which differs slightly from the base
+      !! case of tlmplm for V/H.
       USE m_types
       USE m_tlmplm
 
