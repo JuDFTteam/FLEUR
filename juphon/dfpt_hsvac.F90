@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2023 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,7 +7,7 @@ MODULE m_dfpt_hsvac
    USE m_juDFT
 CONTAINS
    !-----------------------------------------------------------------------------
-   ! Calculate the vacuum contribution to the Hamiltonian and Overlap matrix
+   ! Calculate the vacuum contribution to the Hamiltonian perturbation
    !-----------------------------------------------------------------------------
    SUBROUTINE dfpt_hsvac(vacuum, stars, fmpi, jsp, input, v, v1, evac, cell, &
                   & lapwq, lapw, noco, nococonv, hmat)
@@ -26,23 +26,17 @@ CONTAINS
       TYPE(t_lapw),INTENT(IN)       :: lapw, lapwq
       TYPE(t_mpi),INTENT(IN)        :: fmpi
       TYPE(t_potden),INTENT(IN)     :: v, v1
-      CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!,smat(:,:)
-      !     ..
-      !     .. Scalar Arguments ..
+      CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)
+
       INTEGER, INTENT (IN) :: jsp
-      !     ..
-      !     .. Array Arguments ..
       REAL,    INTENT (IN) :: evac(2,input%jspins)
-      !     ..
-      !     .. Local Scalars ..
-      COMPLEX :: hij,sij,apw_lo,c_1
-      REAL    :: d2,gz,sign,th,wronk,wronkq
+
+      COMPLEX :: hij,c_1
+      REAL    :: d2,gz,sign,th,wronk
       INTEGER :: ikG,ikG2,ikGPr,ikGPr2,jspin,ikG0
       INTEGER :: ivac,igSpin,igSpinPr
       INTEGER :: iSpin,iSpinPr
-      INTEGER :: nc
-      !     ..
-      !     .. Local Arrays ..
+
       INTEGER :: nv2(input%jspins)
       INTEGER :: kvac(2,lapw%dim_nv2d(),input%jspins)
       INTEGER :: map2(lapw%dim_nvd(),input%jspins)
@@ -129,48 +123,6 @@ CONTAINS
                      bq(ikG,jspin) =   c_1 * CMPLX(duzq(ikG2,jspin), gz* uzq(ikG2,jspin) )
                   END DO
                END DO
-               !---> update hamiltonian and overlap matrices
-               !!IF (iSpinPr==iSpin) THEN
-               !!   DO ikG = fmpi%n_rank + 1, lapw%nv(iSpin), fmpi%n_size
-               !!      ikG0 = (ikG-1)/fmpi%n_size + 1 !local column index
-               !!      ikG2 = map2(ikG,iSpin)
-               !!      DO ikGPr = 1, ikG - 1 !TODO check noco case
-               !!         !---> overlap: only  (g-g') parallel=0       '
-               !!         IF (map2(ikGPr, iSpin).EQ.ikG2) THEN
-               !!            sij = CONJG(a(ikGPr,iSpin))*a(ikG,iSpin) + &
-               !!                  CONJG(b(ikGPr,iSpin))*b(ikG,iSpin)*ddnv(ikG2,iSpin)
-               !!            !+APW_LO
-               !!            IF (input%l_useapw) THEN
-               !!               apw_lo =      (a(ikG,iSpin)   *  uz(ikG2,iSpin) + b(ikG,iSpin)   *  udz(ikG2,iSpin)) &
-               !!                     * CONJG(a(ikGPr,iSpin) * duz(ikG2,iSpin) + b(ikGPr,iSpin) * dudz(ikG2,iSpin)) &
-               !!                      + CONJG(a(ikGPr,iSpin) *  uz(ikG2,iSpin) + b(ikGPr,iSpin) *  udz(ikG2,iSpin)) &
-               !!                      *      (a(ikG,iSpin)   * duz(ikG2,iSpin) + b(ikG,iSpin)   * dudz(ikG2,iSpin))
-               !!               ! IF (i.lt.10) write (3,'(2i4,2f20.10)') i,j,apw_lo
-               !!               IF (hmat(1,1)%l_real) THEN
-               !!                  hmat(igSpin,igSpin)%data_r(ikGPr,ikG0) = hmat(igSpin,igSpin)%data_r(ikGPr,ikG0) + 0.25 * REAL(apw_lo)
-               !!               ELSE
-               !!                  hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpin,igSpin)%data_c(ikGPr,ikG0) + 0.25 * apw_lo
-               !!               END IF
-               !!            END IF
-
-               !!            !Overlap matrix
-               !!            IF (hmat(1,1)%l_real) THEN
-               !!               smat(igSpin,igSpin)%data_r(ikGPr,ikG0) = smat(igSpin,igSpin)%data_r(ikGPr,ikG0) + REAL(sij)
-               !!            ELSE
-               !!               smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + sij
-               !!            END IF
-               !!        END IF
-               !!      END DO
-
-               !!      !Diagonal term of Overlap matrix, Hamiltonian later
-               !!      sij = CONJG(a(ikG,iSpin))*a(ikG,iSpin) + CONJG(b(ikG,iSpin))*b(ikG,iSpin)*ddnv(ikG2,iSpin)
-               !!      IF (hmat(1,1)%l_real) THEN
-               !!         smat(igSpin,igSpin)%data_r(ikGPr,ikG0) = smat(igSpin,igSpin)%data_r(ikGPr,ikG0) + REAL(sij)
-               !!      ELSE
-               !!         smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + sij
-               !!      END IF
-               !!   END DO
-               !!END IF
 
                !--->    hamiltonian update
                DO ikG = fmpi%n_rank+1,lapw%nv(iSpin),fmpi%n_size

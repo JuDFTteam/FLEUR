@@ -45,7 +45,7 @@ CONTAINS
       INTEGER, OPTIONAL, INTENT(IN) :: dfpt_eig_id2
 
       INTEGER n_size,n_rank
-      INTEGER i,err,nk,jsp,nk_i,iqdir,neigd2
+      INTEGER i,err,nk,jsp,nk_i,neigd2
 
       INTEGER              :: ierr, iNupr
 

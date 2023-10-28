@@ -44,7 +44,6 @@ CONTAINS
       USE m_hsmt_spinor
       USE m_hsmt_offdiag
       USE m_matrix_pref
-      USE m_npy
 
       IMPLICIT NONE
 
@@ -69,12 +68,7 @@ CONTAINS
       INTEGER :: igSpinPr, igSpin, n
       COMPLEX :: chi(2,2),chi_one
 
-      INTEGER, ALLOCATABLE :: k_selection(:)
-
       CLASS(t_mat), ALLOCATABLE :: smat_tmp, hmat_tmp, s1mat_tmp(:,:), h1mat_tmp(:,:)
-
-      ALLOCATE(k_selection(1))
-      k_selection = [-1]
 
       !TODO: All of the openACC is most certainly scuffed for DFPT. Fix it someday.
       !      But wait until it is right and proper in the main code!
@@ -120,17 +114,7 @@ CONTAINS
                CALL timestart("fjgjq coefficients")
                CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,n,ilSpin)
                CALL timestop("fjgjq coefficients")
-               !IF (nk==1) THEN
-               !CALL save_npy("000_us.npy",usdus%us(0:,1,1))
-               !CALL save_npy("000_dus.npy",usdus%dus(0:,1,1))
-               !CALL save_npy("000_uds.npy",usdus%uds(0:,1,1))
-               !CALL save_npy("000_duds.npy",usdus%duds(0:,1,1))
-               !CALL save_npy("000_ddn.npy",usdus%ddn(0:,1,1))
-               !CALL save_npy("000_fjq.npy",fjgjq%fj(:,0:,1,1))
-               !CALL save_npy("000_gjq.npy",fjgjq%gj(:,0:,1,1))
-               !CALL save_npy("000_fj.npy",fjgj%fj(:,0:,1,1))
-               !CALL save_npy("000_gj.npy",fjgj%gj(:,0:,1,1))
-               !END IF
+
                IF (.NOT.noco%l_noco) THEN
                   IF (n.EQ.iDtype) THEN
                      CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,h1mat_tmp(1,1),.TRUE.,lapwq,fjgjq)
@@ -208,11 +192,6 @@ CONTAINS
       END DO
       !!$acc end data
 
-      IF (ANY(nk==k_selection)) THEN
-         CALL save_npy("test_"//int2str(iDir)//"_"//int2str(nk)//"_h0.npy",h1mat_tmp(1,1)%data_c)
-         CALL save_npy("test_"//int2str(iDir)//"_"//int2str(nk)//"_s0.npy",s1mat_tmp(1,1)%data_c)
-      END IF
-
       ! TODO: Does this need some ACC magic?
       DO igSpinPr=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
          DO igSpin=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
@@ -269,15 +248,9 @@ CONTAINS
       INTEGER :: igSpinPr, igSpin
       COMPLEX :: chi(2,2),chi_one
 
-      INTEGER, ALLOCATABLE :: k_selection(:)
       CLASS(t_mat), ALLOCATABLE :: smat_tmp, hmat_tmp, s1mat_tmp(:,:), h1mat_tmp(:,:)
       CLASS(t_mat), ALLOCATABLE :: s1qmat_tmp(:,:), h1qmat_tmp(:,:), s2mat_tmp(:,:), h2mat_tmp(:,:)
 
-      !ALLOCATE(k_selection(16))
-      !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
-
-      ALLOCATE(k_selection(1))
-      k_selection = [-1]
       IF (noco%l_noco.AND..NOT.noco%l_ss) THEN
          IF (fmpi%n_size==1) THEN
             ALLOCATE(t_mat::hmat_tmp)
@@ -317,13 +290,6 @@ CONTAINS
          END DO
       END DO
 
-      !DO ilSpinPr = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
-      !   DO ilSpin = MERGE(1, 1, noco%l_noco), MERGE(2, 1, noco%l_noco)
-      !      CALL h1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
-      !      CALL s1mat_tmp(ilSpinPr, ilSpin)%reset(CMPLX(0.0,0.0))
-      !   END DO
-      !END DO
-
       CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,iSpin,noco)
       CALL fjgjq%alloc(MAXVAL(lapwq%nv),atoms%lmaxd,iSpin,noco)
       !$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
@@ -357,6 +323,7 @@ CONTAINS
                END IF
             ELSE
                RETURN
+               ! NOCO_DFPT
                ! TODO: I did not even try to do the right logic here yet.
                IF (ilSpinPr==ilSpin) THEN !local spin-diagonal contribution
                   CALL hsmt_spinor(ilSpinPr,iDtype_col,nococonv,chi)

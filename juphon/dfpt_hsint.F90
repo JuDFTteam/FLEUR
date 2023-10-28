@@ -115,6 +115,8 @@ CONTAINS
             CALL hs_int_direct(fmpi, starsq, bbmat, lapwq%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
                              & lapwq%bkpt + lapwq%qphon, lapw%bkpt, lapwq%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
                              & l_smat, .TRUE., vpwq_temp, hmat1q(iMatPr, iMat), smat1q(iMatPr, iMat), theta1_pw)
+            ! Alternate form of the dynmat contribution:
+            ! Calculate Theta2 as well
             !CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:, :, iSpinPr), lapw%gvec(:,:,iSpin), &
             !                 & lapw%bkpt, lapw%bkpt, lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, 1, &
             !                 & l_smat, .TRUE., vpw_temp, hmat2(iMatPr, iMat), smat2(iMatPr, iMat), theta1_pw0)

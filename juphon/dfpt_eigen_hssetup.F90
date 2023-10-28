@@ -49,10 +49,17 @@ CONTAINS
          END DO
       END DO
 
+      ! Interstitial part:
+      ! h1 gets V1Theta(k+q,k), VTheta1(k+q,k) and TTheta1(k+q,k)
+      ! s1 gets Theta1(k+q,k)
       CALL timestart("Interstitial part")
       CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, hmat, smat, killcont(1:3))
       CALL timestop("Interstitial part")
 
+      ! Interstitial part:
+      ! h1 gets V1MT(k+q,k) and pref_H0(k+q,k)
+      ! s1 gets pref_S0(k+q,k)
+      ! The prefactor parts only apply in the displaced MT
       CALL timestart("MT part")
       DO i = 1, nspins; DO j = 1, nspins
             !$acc enter data copyin(hmat(i,j),smat(i,j))
@@ -68,7 +75,8 @@ CONTAINS
          END IF; END DO; END DO
       CALL timestop("MT part")
 
-      !Vacuum contributions
+      ! Vacuum part:
+      ! h1 gets V1Vac(k+q,k)
       IF (fi%input%film) THEN
          CALL timestart("Vacuum part")
          CALL dfpt_hsvac(fi%vacuum, starsq, fmpi, isp, fi%input, vTot, vTot1, enpara%evac, fi%cell, &
@@ -76,7 +84,9 @@ CONTAINS
          CALL timestop("Vacuum part")
       END IF
 
-      !Now copy the data into final matrix
+      ! NOCO_DFPT: Build a big matrix with both spins on both axes from
+      ! the 2x2 array of matrices that each have one spin combination.
+      ! Now copy the data into final matrix
       ! Collect the four fi%noco parts into a single matrix
       ! In collinear case only a copy is done
       ! In the parallel case also a redistribution happens
