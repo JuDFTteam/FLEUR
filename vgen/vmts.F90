@@ -189,6 +189,7 @@ contains
         vr(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                            + green_2(1:imax) *            integral_1(1:imax)   )
         IF (l_dfptvgen) THEN
+           ! Integrate the imaginary part of the density perturbation as well.
            integrand_1(1:imax) = green_1(1:imax) * rhoIm(1:imax,lh,n)
            integrand_2(1:imax) = green_2(1:imax) * rhoIm(1:imax,lh,n)
            call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
@@ -210,6 +211,7 @@ contains
       end do
       ELSE
          ! DFPT case:
+         ! l=1 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^2)
          DO n = MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
             ptsym = sym%ntypsy(atoms%firstAtom(n))
             pref = MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)

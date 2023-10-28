@@ -139,6 +139,7 @@ contains
                            + fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(2)
          end do
          if (l_bind) then
+            ! Fix the potential to 0 at -infinity and save the resulting value at the vacuum border -D/2
             vnew(:,2) = vnew(:,2) - vnew(vacuum%nmz,2)
             vmz1dh = vnew(1,2)
          end if

@@ -141,7 +141,7 @@ CONTAINS
             CALL vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
             CALL vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
+                           fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
                            starsq,rho1_dummy,vExt1,.FALSE.,vExt1Im,rho1_dummy,iDtype_col,iDir_col,[0,0])
 
             ! IR integral:
@@ -267,7 +267,7 @@ CONTAINS
                CALL vExt1Im%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                ! Get V_{ext}(1) for \alpha, i, q=0 with gradient cancellation
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                              fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
+                              fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
                               stars,rho_dummy,vExt1,.FALSE.,vExt1Im,rho_dummy,iDtype_col,iDir_col,[0,0])
 
                ! Integrals:

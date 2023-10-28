@@ -102,8 +102,8 @@ contains
         !     ----> potential in the  vacuum  region
         call timestart( "Vacuum" )
         if ((.not.l_dfptvgen).or.norm2(stars%center)<1e-8) then
-          ! If we do DPFT AND q/=0, there is no G||+q||=0 part! So all components are
-          ! handled by the G||/=0 parts in vvacis/vvacxy, that are told to explicitly
+          ! If we do DPFT AND q/=0, there is no G_||+q_||=0 part! So all components are
+          ! handled by the G_||/=0 parts in vvacis/vvacxy, that are told to explicitly
           ! start at star 1 instead of 2 for this!
           call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_dfptvgen,vmz1dh )
         end if
@@ -122,7 +122,7 @@ contains
         ivfft = 3 * stars%mx3
         ani = 1.0 / real( ivfft )
         do irec2 = 1, stars%ng2
-          ! If we do DFPt, we want to fix the second vacuum at infinity to 0. This is WIP,
+          ! If we do DFPT, we want to fix the second vacuum at infinity to 0. This is WIP,
           ! as to how we want to do it eventually. Here, we calculate the necessary offset.
           IF (l_dfptvgen.AND.irec2 == 1) vmz1dh_is = vintcz( stars, vacuum, cell,  input, field, -cell%z1+1e-15, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &

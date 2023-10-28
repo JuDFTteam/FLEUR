@@ -177,24 +177,24 @@ CONTAINS
          IF (strho) THEN
             write(oUnit, *) "vExt1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
+                           fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                            starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1])
                            ! Last variable: [m,n] dictates with [1/0, 1/0], whether or not we take
                            ! V1*Theta and V*Theta1 into account respectively. For [1,1] all is
                            ! contained.
             IF (l_minusq) THEN
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                              fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
+                              fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                               starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])
             END IF
          ELSE
             write(oUnit, *) "vEff1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
+                           fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1])
             IF (l_minusq) THEN
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                              fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
+                              fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                               starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])
             END IF
          END IF
@@ -203,7 +203,7 @@ CONTAINS
          IF (final_SH_it) THEN
             write(oUnit, *) "vC1", iDir
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%cell ,fi%sliceplot,fmpi,fi%noco,nococonv,rho_loc,vTot,&
+                           fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0])
          END IF
 

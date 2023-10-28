@@ -47,6 +47,7 @@ CONTAINS
          zf = (ABS(z)-cell%z1)/vacuum%delz + 1.0
          im = zf
          q = zf - im
+         ! For q/=0 in DFPT, the is no G+q=0, so all stars are treated in the G/=0 way.
          IF (nrec2.EQ.1.AND.((.NOT.l_dfptvgen).OR.norm2(stars%center)<1e-8)) THEN
             fit = 0.5* (q-1.)* (q-2.)*REAL(vnew(im,1,ivac)) -&
                &            q* (q-2.)*REAL(vnew(im+1,1,ivac)) +&
@@ -66,6 +67,7 @@ CONTAINS
          RETURN
       END IF
 
+      ! For q/=0 in DFPT, the is no G+q=0, so all stars are treated in the G/=0 way.
       IF (nrec2==1.AND.((.NOT.l_dfptvgen).OR.norm2(stars%center)<1e-8)) THEN    !     ---->    g=0 coefficient
          DO  iq = -stars%mx3,stars%mx3
             IF (iq.EQ.0) CYCLE
@@ -83,6 +85,8 @@ CONTAINS
          !           -----> v2(z)
          vintcz = vintcz + vz1dh - fpi_const* (dh-z)*&
             &              (sig1dh-rhobar/2.* (dh-z))
+         ! Correct the interstitial potential by the mismatch we calculated as
+         ! a boundary condition for DFPT q=0.
          IF (l_dfptvgen) vintcz = vintcz - diff_vmz1dh*z/(2*dh) + diff_vmz1dh/2
 
          IF (field%efield%dirichlet .AND. vslope /= 0.0) THEN

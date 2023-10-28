@@ -6,7 +6,6 @@ vgen/modcyli.f
 vgen/modcylk.f
 )
 set(fleur_F90 ${fleur_F90}
-#vgen/fft3dxc.f90
 vgen/rotate_mt_den_tofrom_local.f90
 vgen/b_field.F90
 vgen/mkgylm.f90
@@ -31,8 +30,7 @@ vgen/vmts.F90
 vgen/vmt_xc.F90
 vgen/vvac.f90
 vgen/vvacis.f90
-#vgen/vvacxc.f90
-vgen/vvacxcg.f90
+vgen/vvac_xc.f90
 vgen/vvacxy.f90
 vgen/b_field.F90
 vgen/write_xcstuff.f90

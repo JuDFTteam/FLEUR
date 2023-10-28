@@ -9,7 +9,7 @@ MODULE m_dfpt_vgen
 CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell ,sliceplot,fmpi,noco,nococonv,den,vTot,&
+                   cell,fmpi,noco,nococonv,den,vTot,&
                    &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
@@ -45,7 +45,6 @@ CONTAINS
       TYPE(t_hybdat),    INTENT(IN)    :: hybdat
       TYPE(t_mpi),       INTENT(IN)    :: fmpi
 
-      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_input),     INTENT(IN)    :: input
       TYPE(t_field),     INTENT(IN)    :: field
       TYPE(t_vacuum),    INTENT(IN)    :: vacuum
@@ -145,7 +144,7 @@ CONTAINS
 
       ! Skip vxc if we want only vC/vExt
          IF (l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                        cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
+                        cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                         & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN

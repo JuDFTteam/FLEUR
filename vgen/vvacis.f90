@@ -28,6 +28,7 @@ contains
       integer                     :: ig3n, imz, ivac, k1, k2, kz, nrec2, start_star
   
       start_star = 2
+      ! For q/=0 in DFPT, the is no G+q=0, so all stars are treated in the G/=0 way.
       if (l_dfptvgen) then
          if (norm2(stars%center)>1e-8) start_star = 1 
       end if

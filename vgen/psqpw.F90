@@ -90,6 +90,8 @@ contains
     IF (.NOT.l_dfptvgen) THEN
         call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm )
     ELSE
+        ! DFPT case:
+        ! Additional contributions to qlm due to surface corrections.
         call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm, &
                   & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0 )
     END IF
@@ -177,7 +179,10 @@ contains
 
     call timestop("loop in psqpw")
 
-    IF (l_dfptvgen) RETURN ! TODO: Change this!
+    !IF (.NOT.norm2(stars%center)<1e-8) RETURN ! TODO: Change this!
+    IF (l_dfptvgen) RETURN
+    ! TODO: As of yet unclear if we need to do somecorrection here for
+    !       DFPT, to make up for possible charge shifts from/to the vacuum.
 
     if ( fmpi%irank == 0 ) then
       if ( potdenType == POTDEN_TYPE_POTYUK ) return
