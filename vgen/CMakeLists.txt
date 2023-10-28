@@ -4,10 +4,6 @@ vgen/grdrsvac.f
 vgen/mkgz.f
 vgen/modcyli.f
 vgen/modcylk.f
-vgen/vacp5_0.f
-vgen/vacp5_z.f
-vgen/visp5_0.f
-vgen/visp5_z.f
 )
 set(fleur_F90 ${fleur_F90}
 #vgen/fft3dxc.f90
