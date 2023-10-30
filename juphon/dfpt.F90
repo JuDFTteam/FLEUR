@@ -56,6 +56,9 @@ CONTAINS
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
       TYPE(t_kpts)                  :: qpts_loc
       TYPE(t_kpts)                  :: kqpts, kqmpts ! basically kpts, but with q added onto each one.
+      TYPE(t_dos),TARGET            :: dos
+      
+      TYPE(t_eigdos_list),allocatable :: eigdos(:)
 
       ! Desymmetrized type variables:
       TYPE(t_mpi)        :: fmpi_nosym
@@ -91,28 +94,35 @@ CONTAINS
       INTEGER                       :: ngdp2km
       complex,           allocatable :: E2ndOrdII(:, :)
       complex,           allocatable :: eigenFreqs(:)
-      real,              allocatable :: eigenVals(:)
+      real,              allocatable :: eigenVals(:), eigenValsFull(:,:,:)
       complex,           allocatable :: eigenVecs(:, :)
 
       COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :)
 
-      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
+      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:)
 
       INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
       INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
       LOGICAL :: l_real, l_minusq, l_dfpt_scf
 
+      LOGICAL :: l_dfpt_band, l_dfpt_dos, l_dfpt_full
+
       CHARACTER(len=20)  :: dfpt_tag
-      CHARACTER(len=100) :: inp_pref
+      CHARACTER(len=4)   :: dynfiletag
+      CHARACTER(len=100) :: inp_pref, trash
 
       INTEGER, ALLOCATABLE :: q_list(:)
 
       ! Desym-tests:
       INTEGER :: grid(3), iread
-      REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd)
+      REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
 
       l_dfpt_scf   = fi%juPhon%l_scf
+
+      l_dfpt_band  = fi%juPhon%l_band
+      l_dfpt_full  = fi%juPhon%l_intp
+      l_dfpt_dos   = fi%juPhon%l_dos
 
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
@@ -472,6 +482,70 @@ CONTAINS
          END DO
       END IF
 
+      ! If the Dynmats-Files were already created, we can read them in and do postprocessing.
+      ! a) Transform the q-Mesh onto real space.
+      ! b) Transform it back onto a dense q-path.
+      ! c) Transform it back to a denser grid
+      ! d) Perform a DOS calculation for the denser grid.
+      IF (fmpi%irank==0) THEN ! Band/Dos stuff
+         ! 0) Read
+         DO iQ = 1, fi_fullsym%kpts%nkpt ! Loop over dynmat files to read
+            IF (iQ<=9) THEN
+               OPEN( 3001, file="dynMatq=00"//int2str(iQ), status="old")
+            ELSE
+               OPEN( 3001, file="dynMatq=0"//int2str(iQ), status="old")
+            END IF
+            DO iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
+               IF (iread<4) THEN
+                  READ( 3001,*) trash
+                  write(*,*) iread, trash
+               ELSE
+                  READ( 3001,*) numbers(iread-3,:)
+                  write(*,*) iread, numbers(iread-3,:)
+                  dyn_mat(iQ,iread-3,:) = CMPLX(numbers(iread-3,::2),numbers(iread-3,2::2))
+               END IF
+            END DO ! iread
+            CLOSE(3001)
+         END DO ! iQ
+
+         ! a) Real space transformation
+         ALLOCATE(dyn_mat_r(fi_fullsym%kpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
+         CALL ft_dyn(fi_fullsym%atoms, fi_fullsym%kpts, fi_fullsym%sym, fi_fullsym%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
+         
+         ! b/c) reciprocal space transformation for bands/dense grid
+         IF (l_dfpt_band.OR.l_dfpt_full) THEN
+            IF (l_dfpt_band) THEN
+               dynfiletag = "band"
+            ELSE IF (l_dfpt_full) THEN
+               dynfiletag = "full"
+            ELSE
+               dynfiletag = "intp"
+            END IF
+            IF (l_dfpt_dos) ALLOCATE(eigenValsFull(3*fi%atoms%nat,fi_nosym%kpts%nkpt,fi_nosym%input%jspins))
+            DO iQ = 1, fi_nosym%kpts%nkpt
+               CALL ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi_nosym%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
+               WRITE(*,*) '-------------------------'
+               CALL timestart("Dynmat diagonalization")
+               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.FALSE.,TRIM(dynfiletag))
+               CALL timestop("Dynmat diagonalization")
+
+               CALL timestart("Frequency calculation")
+               CALL CalculateFrequencies(fi_nosym%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag))
+               CALL timestop("Frequency calculation")
+
+               IF (l_dfpt_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:)
+
+               DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, dyn_mat_pathq)
+            END DO ! iQ
+         END IF ! bands/interpolation
+         IF (l_dfpt_dos) THEN
+            fi_nosym%banddos%dos = .TRUE.
+            CALL dos%init(fi_nosym%input,fi_nosym%atoms,fi_nosym%kpts,fi_nosym%banddos,eigenValsFull)
+            allocate(eigdos(1))
+            eigdos(1)%p=>dos
+            CALL make_dos(fi_nosym%kpts,fi_nosym%atoms,fi_nosym%vacuum,fi_nosym%input,fi_nosym%banddos,fi_nosym%sliceplot,fi_nosym%noco,fi_nosym%sym,fi_nosym%cell,results,eigdos,fi%juPhon )
+         END IF ! dos
+      END IF ! Band/Dos stuff
 
       CALL close_eig(q_eig_id)
       CALL close_eig(dfpt_eig_id)
