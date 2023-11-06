@@ -54,7 +54,6 @@ c****************************************************************************
       use m_wann_kptsrotate
       use m_wann_read_inp
       use m_wann_radovlp_integrals
-      use m_matmul,only : matmul3,matmul3r
       use m_wann_socmat
       use m_wann_socmat_vec
       use m_wann_write_matrix5

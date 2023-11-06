@@ -7,7 +7,6 @@ math/dcylbs.f
 math/dsphbs.f
 math/gaussp.f
 math/inwint.f
-math/matmul.f
 math/outint.f
 math/points.f
 math/qsf.f
