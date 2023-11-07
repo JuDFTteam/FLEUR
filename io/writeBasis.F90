@@ -104,6 +104,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 !     INTEGER           :: fakeLogical
 !     REAL              :: eFermiPrev
 !     LOGICAL           :: l_error
+      LOGICAL           :: l_real
 
       INTEGER           :: atomicNumbers(atoms%nat),ngopr_temp(atoms%nat)
       INTEGER           :: equivAtomsGroup(atoms%nat)
@@ -473,7 +474,8 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 !,results%neig(nk,jsp),results%eig(:,nk,jsp)
             numbands=results%neig(nk,jsp)
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
-            CALL zMat%init(input%l_real,nbasfcn,numbands)
+            l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco).AND.atoms%n_hia==0
+            CALL zMat%init(l_real,nbasfcn,numbands)
             CALL read_eig(eig_id,nk,jsp,zmat=zMat)
             CALL eigVecCoeffs%init(input,atoms,jsp,numbands,noco%l_mperp)
             IF (input%l_f) CALL force%init2(numbands,input,atoms)
