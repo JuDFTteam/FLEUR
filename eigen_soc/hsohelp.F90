@@ -17,10 +17,10 @@ MODULE m_hsohelp
   !
 CONTAINS
   SUBROUTINE hsohelp(atoms,sym,input,lapw,nsz, cell,&
-       zmat,usdus, zso,noco ,&
+       zmat,usdus, zso,noco ,nococonv,&
        nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
     !
-    USE m_abcof_soc
+    USE m_abcof
     USE m_types
 #ifdef CPP_MPI
     use mpi 
@@ -33,6 +33,7 @@ CONTAINS
      
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -84,9 +85,9 @@ CONTAINS
           zMat_local%matsize2 = input%neig
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,input%neig))
           zMat_local%data_c(:,:) = zso(:,1:input%neig,ispin)
-          CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
-               usdus, noco,ispin ,nat_start,nat_stop,nat_l,&
-               acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
+          CALL abcof(input,atoms,sym,cell,lapw,nsz(ispin),&
+               usdus, noco,nococonv,ispin,&
+               acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local,nat_start=nat_start,nat_stop=nat_stop)
           DEALLOCATE(zMat_local%data_c)
           !
           !
@@ -110,9 +111,9 @@ CONTAINS
           zMat_local%matsize2 = input%neig
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,input%neig))
           zMat_local%data_c(:,:) = zmat(ispin)%data_c(:,:)
-          CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
-               usdus,noco,ispin ,nat_start,nat_stop,nat_l,&
-               acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
+          CALL abcof(input,atoms,sym,cell,lapw,nsz(ispin),&
+               usdus,noco,nococonv,ispin ,&
+               acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local,nat_start=nat_start,nat_stop=nat_stop)
           DEALLOCATE(zMat_local%data_c)
           !
           ! transfer (a,b)cofs to (a,b)helps used in hsoham

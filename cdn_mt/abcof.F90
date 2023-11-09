@@ -11,7 +11,7 @@ CONTAINS
   ! The subroutine abcof calculates the A, B, and C coefficients for the
   ! eigenfunctions. Also some force contributions can be calculated.
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
-                   noco,nococonv,jspin , acof,bcof,ccof,zMat,eig,force)
+                   noco,nococonv,jspin , acof,bcof,ccof,zMat,eig,force,nat_start,nat_stop)
 #ifdef _OPENACC
 #ifdef __PGI
     use cublas
@@ -56,16 +56,17 @@ CONTAINS
     COMPLEX, INTENT(OUT)       :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT(OUT)       :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
     REAL, OPTIONAL, INTENT(IN) :: eig(:)!(input%neig)
+    INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
     ! Local objects
     TYPE(t_fjgj) :: fjgj
 
     ! Local scalars
-    INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType,acof_size
+    INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType,acof_size,iAtom_l
     INTEGER :: inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
     REAL    :: tmk, qss(3), s2h
     COMPLEX :: phase, c_1, c_2
-    LOGICAL :: l_force
+    LOGICAL :: l_force,l_useinversionsym
 
     ! Local arrays
     REAL    :: fg(3),fgp(3),fgr(3),fk(3),fkp(3),fkr(3)
@@ -119,8 +120,19 @@ CONTAINS
        ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
     ENDIF
 
+    !Use inversion symmetry explicitely
+    l_useinversionsym=any(sym%invsat==2).and.(.not.noco%l_soc).and.(.not.present(nat_start))
+
+    
     ! loop over atoms
-    DO iAtom = 1, atoms%nat
+    DO iAtom = 1,atoms%nat
+       !There might be a parallelization over atoms...
+      iAtom_l=iAtom
+       if (present(nat_start).and.present(nat_stop)) THEN
+         if (iatom<nat_start.or.iatom>nat_stop) cycle
+         iAtom_l=iAtom-nat_start+1
+       endif   
+       if (sym%invsat(iatom)==2.and. l_useinversionsym) cycle
        iType = atoms%itype(iAtom)
 
        CALL timestart("fjgj coefficients")
@@ -142,9 +154,8 @@ CONTAINS
           nvmax=lapw%nv(jspin)
           IF (noco%l_ss) nvmax=lapw%nv(iintsp)
           qss = MERGE(-1.0,1.0,iintsp.EQ.1)*nococonv%qss/2.0
-
-          IF ((sym%invsat(iAtom).EQ.0) .OR. (sym%invsat(iAtom).EQ.1)) THEN
-
+          
+     
              ! Filling of work array (modified zMat)
              CALL timestart("fill work array")
              IF (noco%l_noco) THEN
@@ -217,8 +228,8 @@ CONTAINS
              !$OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
              DO lm = 0, absize-1
                 DO i = 1, ne
-                   acof(i,lm,iAtom) = acof(i,lm,iAtom) + abTemp(i,lm)
-                   bcof(i,lm,iAtom) = bcof(i,lm,iAtom) + abTemp(i,absize+lm)
+                   acof(i,lm,iAtom_l) = acof(i,lm,iAtom_l) + abTemp(i,lm)
+                   bcof(i,lm,iAtom_l) = bcof(i,lm,iAtom_l) + abTemp(i,absize+lm)
                 END DO
              END DO
              !$OMP END PARALLEL DO
@@ -248,64 +259,41 @@ CONTAINS
                    CALL ylm4(atoms%lmax(iType),fkp,ylm)
                    !!$acc update device(ylm)
                    CALL abclocdn(atoms,sym,noco,lapw,cell,ccchi(:,jspin),iintsp,phase,ylm,iType,iAtom,iLAPW,nkvec,&
-                                 lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force)
+                                 lo,ne,alo1(:,jspin),blo1(:,jspin),clo1(:,jspin),acof,bcof,ccof,zMat,l_force,fgp,force,iAtom_l)
                 END DO
              END DO ! loop over LOs
              !!$acc end data
              CALL timestop("local orbitals")
 
-             IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
-                !$acc  update self(abcoeffs,work_c)
-                CALL timestart("transpose work array")
-                ! For transposing the work array an OpenMP parallelization with explicit loops is used.
-                ! This solution works fastest on all compilers. Note that this section can actually be
-                ! a bottleneck without parallelization if many OpenMP threads are used.
-                IF (zmat%l_real) THEN
-                   ALLOCATE (workTrans_r(ne,nvmax))
-                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
-                   DO i = 1,ne
-                      DO iLAPW = 1, nvmax
-                         workTrans_r(i,iLAPW) = work_c(iLAPW,i)
-                      END DO
-                   END DO
-                   !$OMP END PARALLEL DO
-                ELSE
-                   ALLOCATE (workTrans_c(ne,nvmax))
-                   !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
-                   DO i = 1,ne
-                      DO iLAPW = 1, nvmax
-                         workTrans_c(i,iLAPW) = work_c(iLAPW,i)
-                      END DO
-                   END DO
-                   !$OMP END PARALLEL DO
-                ENDIF
-                CALL timestop("transpose work array")
-             END IF
-
-             ! Treatment of inversion symmetric atoms for noco%l_soc.AND.sym%invs
-             ! (The complementary case is treated far below)
-             IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
-                CALL timestart("invsym atoms")
-                !$acc update self(work_c)
-                jatom = sym%invsatnr(iAtom)
-                   DO l = 0,atoms%lmax(iType)
-                      ll1 = l* (l+1)
-                      DO m = -l,l
-                         lm = ll1 + m
-                         lmp = ll1 - m
-                         inv_f = (-1)**(l-m)
-                         acof(:,lmp,jatom)=acof(:,lmp,jatom)+inv_f*matmul(CONJG(abCoeffs(lm+1,:)),work_c(:nvmax,:)) !TODO: Is this conjugation costly?
-                         bcof(:,lmp,jatom)=bcof(:,lmp,jatom)+inv_f*matmul(CONJG(abCoeffs(lm+1+abSize,:)),work_c(:nvmax,:)) !TODO: Is this conjugation costly?
-                         !CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW),1, acof(:,lmp,jatom),1)
-                         !CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW),1, bcof(:,lmp,jatom),1)
-                       END DO
-                   END DO
-             
-                CALL timestop("invsym atoms")
-             END IF ! IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1)
-
+            
              ! Force contributions
              IF (atoms%l_geo(iType).AND.l_force) THEN
+               !$acc  update self(abcoeffs,work_c)
+               CALL timestart("transpose work array")
+               ! For transposing the work array an OpenMP parallelization with explicit loops is used.
+               ! This solution works fastest on all compilers. Note that this section can actually be
+               ! a bottleneck without parallelization if many OpenMP threads are used.
+               IF (zmat%l_real) THEN
+                  ALLOCATE (workTrans_r(ne,nvmax))
+                  !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
+                  DO i = 1,ne
+                     DO iLAPW = 1, nvmax
+                        workTrans_r(i,iLAPW) = work_c(iLAPW,i)
+                     END DO
+                  END DO
+                  !$OMP END PARALLEL DO
+               ELSE
+                  ALLOCATE (workTrans_c(ne,nvmax))
+                  !$OMP PARALLEL DO default(shared) private(i,iLAPW) collapse(2)
+                  DO i = 1,ne
+                     DO iLAPW = 1, nvmax
+                        workTrans_c(i,iLAPW) = work_c(iLAPW,i)
+                     END DO
+                  END DO
+                  !$OMP END PARALLEL DO
+               ENDIF
+               CALL timestop("transpose work array")
+            
                 CALL timestart("force contributions")
                 DO iLAPW = 1,nvmax
 
@@ -345,40 +333,15 @@ CONTAINS
                    CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,size(helpMat_c,1),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
                 ENDDO
-
-                IF (noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1) THEN
-                   DO iLAPW = 1,nvmax
-                      DO l = 0,atoms%lmax(iType)
-                         ll1 = l* (l+1)
-                         DO m = -l,l
-                            lm = ll1 + m
-                            c_1 = abCoeffs(lm+1,iLAPW)
-                            c_2 = abCoeffs(lm+1+abSize,iLAPW)
-                            jatom = sym%invsatnr(iAtom)
-                            lmp = ll1 - m
-                            inv_f = (-1)**(l-m)
-                            c_1 =  CONJG(c_1) * inv_f
-                            c_2 =  CONJG(c_2) * inv_f
-                            CALL zaxpy(ne,c_1,s2h_e(:,iLAPW),1, force%e1cof(1,lmp,jatom),1)
-                            CALL zaxpy(ne,c_2,s2h_e(:,iLAPW),1, force%e2cof(1,lmp,jatom),1)
-                            DO i = 1,3
-                               CALL zaxpy(ne,c_1,workTrans_c(:,iLAPW)*fgpl(i,iLAPW),1, force%aveccof(i,1,lmp,jatom),3)
-                               CALL zaxpy(ne,c_2,workTrans_c(:,iLAPW)*fgpl(i,iLAPW),1, force%bveccof(i,1,lmp,jatom),3)
-                            END DO
-                         END DO ! loop over m
-                      END DO ! loop over l
-                   END DO ! loop over LAPWs
-                END IF
                 CALL timestop("force contributions")
              END IF
-             IF ((noco%l_soc.AND.sym%invs.AND.sym%invsat(iAtom).EQ.1).OR.(atoms%l_geo(iType).AND.l_force)) THEN
+             IF (atoms%l_geo(iType).AND.l_force) THEN
                 IF (zmat%l_real) THEN
                    DEALLOCATE (workTrans_r)
                 ELSE
                    DEALLOCATE (workTrans_c)
                 ENDIF
              END IF
-          END IF  ! invsatom == ( 0 v 1 )
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
     !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
@@ -392,8 +355,8 @@ CONTAINS
     ENDIF
 
     ! Treatment of atoms inversion symmetric to others
-    IF (noco%l_soc.AND.sym%invs) THEN
-
+    IF (l_useinversionsym) THEN
+       !Comment on SOC case:
        !
        !                           -p,n       (l+m)   p,n  *
        ! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
@@ -407,7 +370,6 @@ CONTAINS
        !                                     l,m           l,-m                    l
        ! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
        !                                                  lm  lm
-    ELSE
        DO iAtom = 1, atoms%nat
           iType = atoms%itype(iAtom)
           IF (sym%invsat(iAtom).EQ.1) THEN
