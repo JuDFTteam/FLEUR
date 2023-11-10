@@ -39,7 +39,6 @@ c***********************************************************************
 
       use m_juDFT
       use m_constants, only : pimach
-      use m_matmul   , only : matmul3,matmul3r
       use m_sphbes
       use m_ylm
       use m_intgr, only : intgr3

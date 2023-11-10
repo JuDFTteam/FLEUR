@@ -82,7 +82,6 @@ CONTAINS
     USE m_wann_plot_symm
     USE m_wann_mmkb_int
     USE m_wann_postproc
-    USE m_matmul,ONLY : matmul3,matmul3r
     USE m_wann_write_mmnk
     USE m_wann_write_amn
     USE m_wann_write_nabla
