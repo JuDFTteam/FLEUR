@@ -24,7 +24,6 @@ CONTAINS
       USE m_hsmt
       USE m_eigen_redist_matrix
       USE m_add_vnonlocal
-      USE m_subvxc
       USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
       IMPLICIT NONE
       INTEGER, INTENT(IN)           :: isp
@@ -111,11 +110,6 @@ CONTAINS
          IF (hybdat%l_addhf) THEN
             CALL add_Vnonlocal(nk, lapw, fi, hybdat, isp, xcpot, fmpi, nococonv, hmat(1, 1))
          END IF 
-         !IF (hybdat%l_subvxc) THEN
-         !   CALL subvxc(lapw, fi%kpts%bk(:, nk), fi%input, isp, v%mt(:, 0, :, :), fi%atoms, ud, &
-         !               mpdata, hybdat, enpara%el0, enpara%ello0, fi%sym, &
-         !               fi%cell, sphhar, stars, xcpot, fmpi, fi%  hmat(1, 1), vx)
-         !END IF
       END IF ! fi%hybinp%l_hybrid
 
       !Now copy the data into final matrix

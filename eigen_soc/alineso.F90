@@ -6,7 +6,7 @@ MODULE m_alineso
   ! Eigenvalues and vectors (eig_so and zso) are returned 
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE alineso(eig_id,lapw,fmpi,atoms,sym,kpts,input,noco,&
+  SUBROUTINE alineso(eig_id,lapw,fmpi,atoms,sym,kpts,input,noco,nococonv,&
                      cell , nk, usdus,rsoc,nsize,nmat, eig_so,zso)
 
     USE m_types
@@ -21,6 +21,7 @@ CONTAINS
      
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -154,7 +155,7 @@ CONTAINS
     ALLOCATE (chelp(-atoms%llod :atoms%llod, input%neig,atoms%nlod,nat_l,input%jspins))
     CALL timestart("alineso SOC: -help") 
     CALL hsohelp(atoms,sym,input,lapw,nsz,cell,zmat,usdus,&
-                 zso,noco ,nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
+                 zso,noco,nococonv,nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
     CALL timestop("alineso SOC: -help") 
 
     ! set up hamilton matrix
