@@ -28,8 +28,7 @@ c****************************************c
 
       USE m_juDFT
       use m_constants, only : pimach
-      use m_matmul   , only : matmul3,matmul3r
-
+   
       implicit none
 
 c     .. scalar arguments ..

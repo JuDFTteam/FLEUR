@@ -93,7 +93,6 @@ ${FLEUR_SRC}/kpoints/make_tetra.f
 
 ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/pol_angle.f90
-${FLEUR_SRC}/math/matmul.f
 ${FLEUR_SRC}/init/spgrot.f90
 ${FLEUR_SRC}/init/mapatom.F90
 
