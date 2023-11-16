@@ -4,7 +4,7 @@ LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
 
 #Try typical mkl string
-foreach(test_string "-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" "-lscalapack_openmpi" "-lscalapack-openmpi" "-lscalapack")
+foreach(test_string "-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" "-lscalapack_openmpi" "-lscalapack-openmpi" "-lscalapack" "-Mscalapack")
 if (NOT FLEUR_USE_SCALAPACK)
      message("Test for SCALAPACK with:${test_string}")
      set(TEST_LIBRARIES "${test_string};${FLEUR_LIBRARIES}")
