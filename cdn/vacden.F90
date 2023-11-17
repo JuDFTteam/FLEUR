@@ -119,7 +119,7 @@ CONTAINS
                  k_diff,k_d1,k_d2
       INTEGER :: ii, i1, i2, i3, ig3, ig3p, ik, ind2, ind2p, ivac, j, jj, &
                  jz, k, ikG, ll, ikGPr, n, n2, ispin, kspin, jsp_start, jsp_end, &
-                 ie, isp_start, isp_end
+                 ie, isp_start, isp_end, nv2_outer
       LOGICAL :: l_dfpt
 
       INTEGER :: nv2(input%jspins)
@@ -883,13 +883,18 @@ CONTAINS
             END DO
             CALL timestop("vacden4_noco")
          ELSE ! collinear part
+            IF (.NOT.l_dfpt) THEN
+               nv2_outer = nv2(jspin)
+            ELSE
+               nv2_outer = nv2q(jspin)
+            END IF
             !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(nv2,jspin,kvac1,kvac2,kvac1q,kvac2q,stars,ne,we,we1,vacuum,den,ac,bc,ac1,bc1,u,ue,uq,ueq,ivac,l_dfpt) &
+            !$OMP SHARED(nv2,nv2_outer,jspin,kvac1,kvac2,kvac1q,kvac2q,stars,ne,we,we1,vacuum,den,ac,bc,ac1,bc1,u,ue,uq,ueq,ivac,l_dfpt) &
             !$OMP PRIVATE(ikGPr,i1,i2,i3,ig3,phs,ig3p,phsp,ind2,ind2p,n,jz,ui,uj,uei,uej)&
             !$OMP PRIVATE(aa,bb,ab,ba,t1jz,ikG) 
             ALLOCATE(t1jz(vacuum%nmzxy))
             !$OMP DO SCHEDULE(dynamic,5)
-            DO ikG = 1, nv2(jspin)
+            DO ikG = 1, nv2_outer
                IF (.NOT.l_dfpt) THEN
                   DO ikGPr = 1, ikG - 1
                      i1 = kvac1(ikG,jspin) - kvac1(ikGPr,jspin)
