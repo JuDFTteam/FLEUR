@@ -153,7 +153,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CLASS(t_atoms),INTENT(INOUT)::this
  INTEGER,INTENT(IN):: mpi_comm
  INTEGER,INTENT(IN),OPTIONAL::irank
- INTEGER ::rank,myrank,ierr,n
+ INTEGER ::rank,myrank,ierr,n, j
  IF (PRESENT(irank)) THEN
     rank=irank
  ELSE
@@ -166,6 +166,8 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%nlotot,rank,mpi_comm)
  CALL mpi_bc(this%lmaxd,rank,mpi_comm)
  CALL mpi_bc(this%n_u,rank,mpi_comm)
+ CALL mpi_bc(this%n_v,rank,mpi_comm)
+ CALL mpi_bc(this%n_vPairs,rank,mpi_comm)
  CALL mpi_bc(this%n_hia,rank,mpi_comm)
  CALL mpi_bc(this%n_opc, rank, mpi_comm)
  CALL mpi_bc(this%n_denmat, rank, mpi_comm)
@@ -212,14 +214,18 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  IF (myrank.NE.rank) THEN
     IF (ALLOCATED(this%econf)) DEALLOCATE(this%econf)
     IF (ALLOCATED(this%lda_u)) DEALLOCATE(this%lda_u)
+    IF (ALLOCATED(this%lda_v)) DEALLOCATE(this%lda_v)
     IF (ALLOCATED(this%lda_opc)) DEALLOCATE(this%lda_opc)
     ALLOCATE(this%econf(this%ntype))
     ALLOCATE(this%lda_u(4*this%ntype))
-    ALLOCATE(this%lda_opc(4*this%ntype))
+    ALLOCATE(this%lda_v(4*this%ntype))
+    ALLOCATE(this%lda_opc(this%n_v))
  ENDIF
+
  DO n=1,this%ntype
     CALL this%econf(n)%broadcast(rank,mpi_comm)
  ENDDO
+
  DO n=1,this%n_u+this%n_hia
     CALL mpi_bc(this%lda_u(n)%j,rank,mpi_comm)
     CALL mpi_bc(this%lda_u(n)%u,rank,mpi_comm)
@@ -229,6 +235,25 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
     CALL mpi_bc(this%lda_u(n)%atomType,rank,mpi_comm)
     CALL mpi_bc(this%lda_u(n)%l_amf,rank,mpi_comm)
  ENDDO
+
+ DO n=1, this%n_v
+    CALL mpi_bc(this%lda_v(n)%atomIndex,rank,mpi_comm)
+    CALL mpi_bc(this%lda_v(n)%thisAtomL,rank,mpi_comm)
+    CALL mpi_bc(this%lda_v(n)%otherAtomL,rank,mpi_comm)
+    CALL mpi_bc(this%lda_v(n)%V,rank,mpi_comm)
+    CALL mpi_bc(this%lda_v(n)%numOtherAtoms,rank,mpi_comm)
+    IF (myrank.NE.rank) THEN
+       ALLOCATE(this%lda_v(n)%otherAtomIndices(this%lda_v(n)%numOtherAtoms))
+       ALLOCATE(this%lda_v(n)%atomShifts(3,this%lda_v(n)%numOtherAtoms))
+    END IF
+    DO j = 1, this%lda_v(n)%numOtherAtoms
+       CALL mpi_bc(this%lda_v(n)%otherAtomIndices(j),rank,mpi_comm)
+       CALL mpi_bc(this%lda_v(n)%atomShifts(1,j),rank,mpi_comm)
+       CALL mpi_bc(this%lda_v(n)%atomShifts(2,j),rank,mpi_comm)
+       CALL mpi_bc(this%lda_v(n)%atomShifts(3,j),rank,mpi_comm)
+    END DO
+ END DO
+
  DO n=1,this%n_opc
    CALL mpi_bc(this%lda_opc(n)%n,rank,mpi_comm)
    CALL mpi_bc(this%lda_opc(n)%l,rank,mpi_comm)
