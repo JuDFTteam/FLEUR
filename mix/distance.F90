@@ -121,13 +121,13 @@ contains
 
       dist(:,:) = 0.0
       DO js = 1,jspins
-         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE./),js,dist(js,:))
+         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),js,dist(js,:))
       END DO
       IF (SIZE(outden%pw,2)>2) THEN
-         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE./),3,dist(6,:),dist(7,:))
+         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),3,dist(6,:),dist(7,:))
       END IF
       IF (jspins.EQ.2) THEN
-         CALL fmMet%dfpt_multiply_dot_mask(fsm_mag,(/.TRUE.,.TRUE./),1,dist(3,:))
+         CALL fmMet%dfpt_multiply_dot_mask(fsm_mag,(/.TRUE.,.TRUE.,.TRUE./),1,dist(3,:))
          dist(4,:) = dist(1,:) + dist(2,:) + 2.0e0*dist(3,:)
          dist(5,:) = dist(1,:) + dist(2,:) - 2.0e0*dist(3,:)
       END IF
