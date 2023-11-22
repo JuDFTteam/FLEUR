@@ -4,7 +4,7 @@ module m_vmts
 #endif
 contains
 
-  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vpw, rho, potdenType, vr, rhoIm, vrIm, iDtype, iDir )
+  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vpw, rho, potdenType, vr, rhoIm, vrIm, iDtype, iDir, iDir2, mat2ord )
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients
@@ -59,6 +59,8 @@ contains
     REAL,    OPTIONAL, INTENT(IN)     :: rhoIm(:,0:,:)
     REAL,    OPTIONAL, INTENT(OUT)    :: vrIm(:,0:,:)
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir
+    INTEGER, OPTIONAL, INTENT(IN)     :: iDir2
+    COMPLEX, OPTIONAL, INTENT(IN)     :: mat2ord(5,3,3)
 
     complex                           :: cp, sm
     integer                           :: i, jm, k, l, lh, n, nd, lm, m, imax, lmax, iMem, ptsym

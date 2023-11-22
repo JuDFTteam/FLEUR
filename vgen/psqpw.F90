@@ -17,7 +17,7 @@ module m_psqpw
 contains
 
   subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-       &     den, ispin, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
+       &     den, ispin, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, qpw0, iDir2, mat2ord )
 
 #ifdef CPP_MPI
     use mpi
@@ -57,7 +57,9 @@ contains
     TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
     COMPLEX, OPTIONAL, INTENT(IN)   :: qpw0(:)
 
-    INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir ! DFPT: Type and direction of displaced atom
+    INTEGER, OPTIONAL, INTENT(IN)   :: iDtype, iDir ! DFPT: Type and direction of displaced atom
+    INTEGER, OPTIONAL, INTENT(IN)   :: iDir2
+    COMPLEX, OPTIONAL, INTENT(IN)   :: mat2ord(5,3,3)
 
     complex                         :: psint, sa, sl, sm, qvac, fact
     real                            :: f, fpo, gz, p, rmtl, s, fJ, gr, g

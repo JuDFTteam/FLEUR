@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir )
+             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -59,6 +59,7 @@ contains
     TYPE(t_potden),     OPTIONAL, INTENT(INOUT)  :: dfptvCoulimag
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
+    INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direciton for 2nd order VC
 
     complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
@@ -67,15 +68,18 @@ contains
     integer                                      :: l, nat
     real                                         :: ani, g3, z
     complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is
+    complex                                      :: mat2ord(5,3,3)
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
+    LOGICAL :: l_2ndord
 
 #ifdef CPP_MPI
     integer:: ierr
 #endif
 
     l_dfptvgen = PRESENT(stars2)
+    l_2ndord = PRESENT(iDir2)
     vmz1dh_is = cmplx(0.0,0.0)
 
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
@@ -86,13 +90,18 @@ contains
     if (.not.l_dfptvgen) then
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
             & den, ispin, .false., vCoul%potdenType, psq )
-    else
+    else if (.not.l_2ndord) then
         ! If we do DFPT, the MT density perturbation has an imaginary part that needs to be explicitly carried
         ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
         ! Also, the ionic qlm behave differently.
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
             & den, ispin, .false., vCoul%potdenType, psq,&
             & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) )
+    else
+        call make_mat_2nd(mat2ord)
+        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
+            & den, ispin, .false., vCoul%potdenType, psq,&
+            & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin), iDir2, mat2ord )
     end if
     call timestop( "psqpw" )
 
@@ -196,12 +205,16 @@ contains
     IF (.NOT.l_dfptvgen) THEN
       call vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
-    ELSE
+    ELSE IF (.NOT.l_2ndord) THEN
       ! For DFPT there is a) an imaginary part to the potential and b) a different treatment
       ! for the ionic 1/r (now 1/r^2) contribution.
       call vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
                  dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir )
+    ELSE
+      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vCoul%pw(:,ispin), &
+                 den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
+                 dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir, iDir2, mat2ord )
     END IF
     call timestop( "MT-spheres" )
 
@@ -234,5 +247,37 @@ contains
       end if CALCULATE_DENSITY_POTENTIAL_INTEGRAL
     end if !irank==0
   end subroutine vgen_coulomb
+
+  subroutine make_mat_2nd(mat2ord)
+     use m_constants
+     complex, intent(out) :: mat2ord(5,3,3)
+     mat2ord = cmplx(0.0,0.0)
+
+     mat2ord(1,1,1) = 1
+     mat2ord(1,1,2) = -ImagUnit
+     mat2ord(1,2,1) = -ImagUnit
+     mat2ord(1,2,2) = -1
+
+     mat2ord(2,1,3) = 1
+     mat2ord(2,2,3) = -ImagUnit   
+     mat2ord(2,3,1) = 1
+     mat2ord(2,3,2) = -ImagUnit  
+
+     mat2ord(3,1,1) = -sqrt(2.0/3.0)
+     mat2ord(3,2,2) = -sqrt(2.0/3.0)
+     mat2ord(3,3,3) =  sqrt(8.0/3.0)
+
+     mat2ord(4,1,3) = -1
+     mat2ord(4,2,3) = -ImagUnit   
+     mat2ord(4,3,1) = -1
+     mat2ord(4,3,2) = -ImagUnit  
+
+     mat2ord(5,1,1) = 1
+     mat2ord(5,1,2) = ImagUnit
+     mat2ord(5,2,1) = ImagUnit
+     mat2ord(5,2,2) = -1
+
+     mat2ord = sqrt(15.0/8.0/pi_const) * mat2ord
+  end subroutine
 
 end module m_vgen_coulomb
