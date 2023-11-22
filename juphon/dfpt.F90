@@ -441,14 +441,14 @@ CONTAINS
                   ! additional necessary quantities and from that the dynamical matrix.
                   IF (.TRUE.) THEN
                      CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                          eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
-                                          rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), .TRUE., .TRUE., E2ndOrdII)
+                                          eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
+                                          rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
                   ELSE
                      CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                          eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
-                                          rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), .TRUE., .TRUE., E2ndOrdII, q_eig_id)
+                                          eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
+                                          rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, q_eig_id)
                   END IF
                   CALL timestop("Dynmat")
                   dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))

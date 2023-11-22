@@ -302,7 +302,7 @@ CONTAINS
                   den%vac(:, 1, iv, js) = vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
                   ii = ii + SIZE(den%vac, 1)
                   IF (l_dfpt) THEN
-                     den%vac(:, 1, iv, js) = ImagUnit*vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
+                     den%vac(:, 1, iv, js) = den%vac(:, 1, iv, js) + ImagUnit*vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
                      ii = ii + SIZE(den%vac, 1)
                   END IF
                   IF (sym%invs2 .AND. js < 3) THEN
@@ -765,7 +765,7 @@ CONTAINS
       CLASS(t_mixvector), INTENT(IN)::vec1
       TYPE(t_mixvector),  INTENT(IN)::vec2
 
-      LOGICAL, INTENT(IN)    :: mask(2)
+      LOGICAL, INTENT(IN)    :: mask(3)
       INTEGER, INTENT(IN)    :: spin
       REAL,    INTENT(INOUT) :: dprod1(2)
 
@@ -789,6 +789,10 @@ CONTAINS
                                                 vec2%vec_mt(mt_start(js):mt_stop(js)/2))
             dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:mt_stop(js)), &
                                                 vec2%vec_mt(mt_stop(js)/2+1:mt_stop(js)))
+         END IF
+         IF (mask(3) .AND. (spin == js) .AND. vac_start(js) > 0) THEN
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_vac(vac_start(js):vac_stop(js)), &
+                                                vec2%vec_vac(vac_start(js):vac_stop(js)))
          END IF
       END DO
 

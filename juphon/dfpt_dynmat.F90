@@ -11,13 +11,12 @@ IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
-                              eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, mpdata, results, results1, l_real, &
-                              rho, vTot, grRho3, grVext3, grVC3, grVtot3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
-                              l_dynMat0, l_dynMatq, E2ndOrdII, q_eig_id)
+                              eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, &
+                              rho, vTot, grRho3, grVext3, grVC3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
+                              E2ndOrdII, q_eig_id)
       USE m_step_function
       USE m_convol
       USE m_dfpt_vgen
-      USE m_npy
 
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       TYPE(t_stars),      INTENT(IN)    :: stars, starsq
@@ -29,14 +28,13 @@ CONTAINS
       TYPE(t_kpts),       INTENT(IN)    :: qpts
 
       TYPE(t_potden), INTENT(INOUT) :: rho, vTot
-      TYPE(t_potden), INTENT(INOUT) :: grRho3(3), grVext3(3), grVC3(3), grVtot3(3)
+      TYPE(t_potden), INTENT(INOUT) :: grRho3(3), grVext3(3), grVC3(3)
       TYPE(t_potden), INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
 
       TYPE(t_enpara),   INTENT(INOUT) :: enpara
-      TYPE(t_mpdata),   INTENT(INOUT) :: mpdata
       TYPE(t_results),  INTENT(INOUT) :: results, results1
 
-      LOGICAL, INTENT(IN) :: l_real, l_dynMat0, l_dynMatq
+      LOGICAL, INTENT(IN) :: l_real
 
       INTEGER, INTENT(IN) :: iQ, iDtype_row, iDir_row, eig_id, dfpt_eig_id, dfpt_eig_id2
 
@@ -50,7 +48,7 @@ CONTAINS
       TYPE(t_potden)  :: rho_dummy, rho1_dummy, vExt1, vExt1Im
       TYPE(t_hub1data) :: hub1data
 
-      INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin, ierr
+      INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin
       COMPLEX :: tempval
       LOGICAL :: bare_mode
 
@@ -62,8 +60,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: pww(:), pwwq(:), pww2(:), pwwq2(:)
       COMPLEX, ALLOCATABLE :: rho_pw(:), denIn1_pw(:), rho_vac(:,:,:), denIn1_vac(:,:,:)
       REAL,    ALLOCATABLE :: rho_mt(:,:,:), grRho_mt(:,:,:), denIn1_mt(:,:,:), denIn1_mt_Im(:,:,:)
-
-      type(t_fft) :: fft
 
       bare_mode = .FALSE.
 
@@ -341,13 +337,13 @@ CONTAINS
             ! Calculate the contributions to the dynamical matrix that stem
             ! from terms related to occupation numbers and the eigenenergies.
             IF (.NOT.PRESENT(q_eig_id)) THEN
-               CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
+               CALL dfpt_dynmat_eigen(fi, results, results1, fmpi, enpara, nococonv, &
                                       stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
                                       eig_id, dfpt_eig_id, dfpt_eig_id2, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                       theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
                                       qvec, l_real, dyn_row_eigen(col_index),[1,1,1,1,1,1,1,1,1,1,1])
             ELSE
-               CALL dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
+               CALL dfpt_dynmat_eigen(fi, results, results1, fmpi, enpara, nococonv, &
                                    stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
                                    eig_id, dfpt_eig_id, dfpt_eig_id2, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                    theta1_pw0(:,iDtype_col,iDir_col), theta1_pw(:,iDtype_col,iDir_col), &
@@ -482,8 +478,9 @@ CONTAINS
 
       COMPLEX, INTENT(INOUT) :: vac_int
 
-      REAL    :: facv,tvacre,tvacim,tvact
-      INTEGER :: i,ip,ivac,j,k2,n,npz
+      REAL    :: facv,tvacre,tvacim
+      COMPLEX :: tvact
+      INTEGER :: ip,ivac,k2,npz
       LOGICAL :: tail
       COMPLEX :: dpzc
 
@@ -520,7 +517,7 @@ CONTAINS
 
    END SUBROUTINE dfpt_int_vac
 
-   SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, xcpot, fmpi, mpdata, hybdat, enpara, nococonv, &
+   SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, fmpi, enpara, nococonv, &
                                 stars, starsq, sphhar, inden, hub1data, vx, v, v1real, v1imag, &
                                 eig_id, dfpt_eig_id, dfpt_eig_id2, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                 theta1_pw0, theta1_pw, bqpt, l_real, eigen_term, killcont, q_eig_id)
@@ -536,7 +533,6 @@ CONTAINS
       USE m_xmlOutput
       USE m_types_mpimat
       USE m_dfpt_tlmplm
-      USE m_npy
 
 ! TODO: One bright day, these things will also be relevant for DFPT.
 !       We cannot keep doing small systems on small CPUs forever.
@@ -551,10 +547,7 @@ CONTAINS
 
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_results),INTENT(INOUT):: results, results1
-      CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_mpi),INTENT(IN)       :: fmpi
-      TYPE(t_mpdata), intent(inout):: mpdata
-      TYPE(t_hybdat), INTENT(INOUT):: hybdat
       TYPE(t_enpara),INTENT(INOUT) :: enpara
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
       TYPE(t_stars),INTENT(IN)     :: stars, starsq
@@ -576,8 +569,8 @@ CONTAINS
       INTEGER, OPTIONAL, INTENT(IN) :: killcont(11), q_eig_id
 
       ! Local Scalars
-      INTEGER jsp,nk,ne_all,ne_found,neigd2
-      INTEGER nk_i,n_size,n_rank
+      INTEGER jsp,nk
+      INTEGER nk_i
       INTEGER err
       REAL :: q_loop(3)
       ! Local Arrays
@@ -589,24 +582,21 @@ CONTAINS
       TYPE(t_tlmplm)            :: tdV1, tdmod, td
       TYPE(t_usdus)             :: ud, uddummy
       TYPE(t_lapw)              :: lapw, lapwq
-      TYPE(t_kpts)              :: kpts_mod !kqpts ! basically kpts, but with q added onto each one.
       TYPE(t_hub1data)          :: hub1datadummy
       TYPE (t_mat)              :: zMat, zMat1, zMatq, zMat2
       CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2,vmat2
 
       ! Variables for HF or fi%hybinp functional calculation
-      INTEGER                   :: comm(fi%kpts%nkpt),irank2(fi%kpts%nkpt),isize2(fi%kpts%nkpt), dealloc_stat
+      INTEGER                   :: comm(fi%kpts%nkpt), dealloc_stat
       character(len=300)        :: errmsg
 
-      INTEGER :: iEig, ikGq, iqdir
+      INTEGER :: iEig
       INTEGER :: imlo, ilo, iklo, l, ikg, ikglo !!! Test!
       REAL :: gext(3)
       COMPLEX :: we_loop, we1_loop, eig_loop, eig1_loop, eigen_s1q, eigen_h1qs1q, eigen_bonus
       COMPLEX :: eigen_e1, eigen_w1e1, eigen_s2w1e1, eigen_h2s2w1e1, eigen_w1h2s2w1e1
 
       COMPLEX, ALLOCATABLE :: tempVec(:), tempVecq(:), z_loop(:), z1_loop(:), ztest_loop(:), zq_loop(:)
-
-      INTEGER, ALLOCATABLE :: k_selection(:)
 
       COMPLEX  zdotc
       EXTERNAL zdotc
@@ -619,25 +609,9 @@ CONTAINS
       eigen_s1q = CMPLX(0.0,0.0)
       eigen_h1qs1q = CMPLX(0.0,0.0)
       eigen_bonus = CMPLX(0.0,0.0) 
-      ALLOCATE(k_selection(16))
-      k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
-      !kqpts = fi%kpts
 
-      kpts_mod = fi%kpts
       ! Modify this from kpts only in DFPT case.
       ALLOCATE(bkpt(3))
-      DO nk_i = 1, size(fmpi%k_list)
-         !kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
-         nk=fmpi%k_list(nk_i)
-         bkpt = fi%kpts%bk(:, nk)
-         DO iqdir = 1, 3
-            !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5) bkpt(iqdir) = bkpt(iqdir) - 1.0
-            !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5) bkpt(iqdir) = bkpt(iqdir) + 1.0
-            !IF (bkpt(iqdir)+bqpt(iqdir)>=0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) - 1.0
-            !IF (bkpt(iqdir)+bqpt(iqdir)<-0.5.AND.ABS(bqpt(iqdir))>1e-8) bkpt(iqdir) = bkpt(iqdir) + 1.0
-         END DO
-         kpts_mod%bk(:, nk) = bkpt
-      END DO
 
       call ud%init(fi%atoms,fi%input%jspins)
       call uddummy%init(fi%atoms,fi%input%jspins)
@@ -654,11 +628,11 @@ CONTAINS
       DO jsp = MERGE(1,1,fi%noco%l_noco), MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk = fmpi%k_list(nk_i)
-            bkpt = kpts_mod%bk(:, nk)
+            bkpt = fi%kpts%bk(:, nk)
             q_loop = bqpt
 
             CALL lapw%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell,fmpi)
-            CALL lapwq%init(fi%input,fi%noco,nococonv,kpts_mod,fi%atoms,fi%sym,nk,fi%cell,fmpi,q_loop)
+            CALL lapwq%init(fi%input,fi%noco,nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell,fmpi,q_loop)
 
             we  = results%w_iks(:,nk,jsp)
             we1 = results1%w_iks(:,nk,jsp)
