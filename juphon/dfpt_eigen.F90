@@ -224,13 +224,13 @@ CONTAINS
                      ! TODO: This part of the correction had no effect whatsoever yet.
                      !       Reactivate for misbehaving materials and see if there are
                      !       changes.
-                     !ELSE IF (iNuPr<=noccbdq) THEN
-                     !   wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
-                     !   tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
-                     !                 & *(1.0-wtfq)
-                     !   ! Additional correction term that constitutes new
-                     !   ! coefficients:
-                     !   tempMat3(iNupr) = 0.5 * tempMat1(iNupr) * wtfq
+                     ELSE IF (iNuPr<=noccbdq) THEN
+                        wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
+                        tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
+                                      & *(1.0-wtfq)
+                        ! Additional correction term that constitutes new
+                        ! coefficients:
+                        tempMat3(iNupr) = 0.5 * tempMat1(iNupr) * wtfq
                      ELSE
                         tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
                         tempMat3(iNupr) = 0.0
@@ -304,14 +304,14 @@ CONTAINS
                      ! TODO: This part of the correction had no effect whatsoever yet.
                      !       Reactivate for misbehaving materials and see if there are
                      !       changes.
-                     !ELSE IF (iNuPr<=noccbdq) THEN
-                     !   wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
-                     !   tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
-                     !                 & *(1.0-wtfq) &
-                     !                 & +0.5*tempMat1(iNupr)*wtfq
-                     !   ! Additional correction term that constitutes new
-                     !   ! coefficients:
-                     !   tempMat3(iNupr) = -0.5 * eigq(iNupr) * tempMat1(iNupr) * wtfq
+                     ELSE IF (iNuPr<=noccbdq) THEN
+                        wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
+                        tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
+                                      & *(1.0-wtfq) &
+                                      & +0.5*tempMat1(iNupr)*wtfq
+                        ! Additional correction term that constitutes new
+                        ! coefficients:
+                        tempMat3(iNupr) = -0.5 * eigq(iNupr) * tempMat1(iNupr) * wtfq
                      ELSE
                         tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
                         tempMat3(iNupr) = 0.0
