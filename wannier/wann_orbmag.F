@@ -33,7 +33,6 @@
        
       use m_wann_abinv
       use m_wann_kptsrotate
-      use m_matmul,only : matmul3,matmul3r
       use m_wann_uHu_int2
       use m_wann_mmkb_sph
       use m_wann_ujugaunt

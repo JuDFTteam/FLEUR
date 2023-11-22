@@ -2,12 +2,14 @@
 try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_XML.f90
 LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
-
+message("TEST1: ${CMAKE_C_FLAGS}")
 if (NOT FLEUR_USE_XML)
       find_package(LibXml2)
       list(TRANSFORM LIBXML2_INCLUDE_DIRS PREPEND -I)
       string (REPLACE ";" " " LIBXML2_INCLUDE_DIRS_STR "${LIBXML2_INCLUDE_DIRS}")
-      set(CMAKE_C_FLAGS "${LIBXML2_INCLUDE_DIRS_STR} ${CMAKE_C_FLAGS}")
+      if (LIBXML2_INCLUDE_DIRS_STR)
+              set(CMAKE_C_FLAGS "${LIBXML2_INCLUDE_DIRS_STR} ${CMAKE_C_FLAGS}")
+      endif()        
       if (LIBXML2_LIBRARIES)
           set(TEST_LIBRARIES ${FLEUR_LIBRARIES} ${LIBXML2_LIBRARIES})
       endif()
@@ -21,6 +23,7 @@ try_compile(FLEUR_USE_XML ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/te
               set(FLEUR_LIBRARIES ${TEST_LIBRARIES} )
        endif()
 endif()
+message("TEST2: ${CMAKE_C_FLAGS}")
 
 #Try to simply add -lxml2
 if (NOT FLEUR_USE_XML)

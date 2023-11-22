@@ -222,7 +222,7 @@ CONTAINS
           END IF
           ws = ws + we(INDEX(l))
           seigv =seigv + e(INDEX(l))*we(INDEX(l))*spindg
-          IF (l_output) WRITE (oUnit,FMT='(2f10.7)') e(index(l)),we(index(l))
+          !IF (l_output) WRITE (oUnit,FMT='(2f10.7)') e(index(l)),we(index(l))
        END DO
        results%ef = -100000.0
        IF(l.GT.0) THEN

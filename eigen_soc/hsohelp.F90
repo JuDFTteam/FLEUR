@@ -17,10 +17,11 @@ MODULE m_hsohelp
   !
 CONTAINS
   SUBROUTINE hsohelp(atoms,sym,input,lapw,nsz, cell,&
-       zmat,usdus, zso,noco ,&
+       zmat,usdus, zso,noco ,nococonv,&
        nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
     !
-    USE m_abcof_soc
+    USE m_abcof
+    
     USE m_types
 #ifdef CPP_MPI
     use mpi 
@@ -33,6 +34,7 @@ CONTAINS
      
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
+    TYPE(t_nococonv),INTENT(IN)    :: nococonv
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -54,6 +56,7 @@ CONTAINS
     !     ..
     !     .. Locals ..
     TYPE(t_mat)     :: zMat_local
+    TYPE(t_sym):: sym_l
     INTEGER ispin ,l,n ,na,ie,lm,ll1,nv1(input%jspins),m,lmd
     INTEGER, ALLOCATABLE :: g1(:,:),g2(:,:),g3(:,:)
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:)
@@ -73,6 +76,10 @@ CONTAINS
     g2(:SIZE(lapw%k1,1),1) = lapw%k2(:SIZE(lapw%k1,1),1) ; g2(:SIZE(lapw%k1,1),input%jspins) = lapw%k2(:SIZE(lapw%k1,1),1)
     g3(:SIZE(lapw%k1,1),1) = lapw%k3(:SIZE(lapw%k1,1),1) ; g3(:SIZE(lapw%k1,1),input%jspins) = lapw%k3(:SIZE(lapw%k1,1),1)
 
+   !Do not use rotated k-point set
+    sym_l=sym
+    sym_l%ngopr=1
+
     chelp(:,:,:,:,input%jspins) = CMPLX(0.0,0.0)
 
     ALLOCATE ( acof(input%neig,0:lmd,nat_l),bcof(input%neig,0:lmd,nat_l) )
@@ -84,9 +91,12 @@ CONTAINS
           zMat_local%matsize2 = input%neig
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,input%neig))
           zMat_local%data_c(:,:) = zso(:,1:input%neig,ispin)
-          CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
-               usdus, noco,ispin ,nat_start,nat_stop,nat_l,&
-               acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
+          CALL abcof(input,atoms,sym_l,cell,lapw,nsz(ispin),&
+               usdus, noco,nococonv,ispin,&
+               acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local,nat_start=nat_start,nat_stop=nat_stop)
+               acof=conjg(acof)
+               bcof=conjg(bcof)
+               chelp=conjg(chelp)
           DEALLOCATE(zMat_local%data_c)
           !
           !
@@ -110,9 +120,9 @@ CONTAINS
           zMat_local%matsize2 = input%neig
           ALLOCATE(zMat_local%data_c(zmat(1)%matsize1,input%neig))
           zMat_local%data_c(:,:) = zmat(ispin)%data_c(:,:)
-          CALL abcof_soc(input,atoms,sym,cell,lapw,nsz(ispin),&
-               usdus,noco,ispin ,nat_start,nat_stop,nat_l,&
-               acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local)
+          CALL abcof(input,atoms,sym_l,cell,lapw,nsz(ispin),&
+          usdus,noco,nococonv,ispin ,&
+          acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zMat_local,nat_start=nat_start,nat_stop=nat_stop)
           DEALLOCATE(zMat_local%data_c)
           !
           ! transfer (a,b)cofs to (a,b)helps used in hsoham

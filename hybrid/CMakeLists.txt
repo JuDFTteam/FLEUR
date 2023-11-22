@@ -41,7 +41,6 @@ hybrid/spmm_inv.F90
 hybrid/spmm_noinv.F90
 hybrid/structureconstant.F90
 hybrid/store_load_hybrid.F90
-hybrid/subvxc.F90
 hybrid/symmetrizeh.F90
 hybrid/symm_hf.F90
 hybrid/trafo.F90

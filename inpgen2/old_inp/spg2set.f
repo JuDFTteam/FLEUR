@@ -22,7 +22,6 @@
 
       USE m_constants
       USE m_symdata, ONLY : gen2,tau2,spg2,gnt2,namgr2,nammap,ord2
-      USE m_matmul,ONLY   : matmul4
       IMPLICIT NONE
 
       INTEGER, INTENT (IN) :: nop
@@ -207,6 +206,39 @@ c
          WRITE (oUnit,FMT=8060) (multab(n),n=1,nop)
  8060    FORMAT (1x,48i2)
       ENDDO op1
+      CONTAINS
+      SUBROUTINE matmul4 (ma,ta,mb,tb,mc,tc)
 
+         IMPLICIT NONE
+         INTEGER, INTENT (IN) :: ma(3,3),mb(3,3)
+         REAL,    INTENT (IN) :: ta(3),tb(3)
+         INTEGER, INTENT (OUT):: mc(3,3)
+         REAL,    INTENT (OUT):: tc(3)
+   
+         INTEGER :: i,j,k
+         REAL x,xa(4,4),xb(4,4),xc(4,4)
+   
+         xa(:,:) = 0.0 ; xa(4,4) = 1.0 ; xb(:,:) = xa(:,:)
+         xa(1:3,1:3) = real(ma(1:3,1:3)) ; xa(1:3,4) = ta(:) 
+         xb(1:3,1:3) = real(mb(1:3,1:3)) ; xb(1:3,4) = tb(:)
+         DO i=1,4
+            DO k=1,4
+            x=0.e0
+               DO j=1,4
+                  x = x + xa(i,j)*xb(j,k)
+               ENDDO
+            xc(i,k) = x
+            END DO
+         END DO
+         mc(1:3,1:3) = nint(xc(1:3,1:3)) ; tc(:) = xc(1:3,4) 
+         DO i = 1,3
+           IF (tc(i).GT.1.0) THEN
+             tc(i) = tc(i) - int(tc(i))
+           ELSEIF (tc(i).LT.0.0) THEN
+             tc(i) = tc(i) + int(tc(i)) + 1
+           ENDIF
+         ENDDO
+   
+         END SUBROUTINE matmul4
       END SUBROUTINE spg2set
       END MODULE m_spg2set
