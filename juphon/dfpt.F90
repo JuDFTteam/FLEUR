@@ -51,6 +51,8 @@ CONTAINS
       INTEGER,          INTENT(IN)    :: eig_id
 
       TYPE(t_hub1data) :: hub1data
+      TYPE(t_potden)                :: grvextdummy, imagrhodummy, rho_nosym, vTot_nosym
+      TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: grgrRho3x3(3,3), grgrVC3x3(3,3)
       TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm ! q-quantities
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
