@@ -91,6 +91,11 @@ contains
     call timestart("mpmom")
     IF (.NOT.l_dfptvgen) THEN
         call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm )
+    ELSE IF (PRESENT(iDir2)) THEN
+        ! DFPT case:
+        ! Additional contributions to qlm due to surface corrections.
+        call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm, &
+                  & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0, iDir2=iDir2, mat2ord=mat2ord )
     ELSE
         ! DFPT case:
         ! Additional contributions to qlm due to surface corrections.

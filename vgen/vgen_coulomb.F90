@@ -253,31 +253,31 @@ contains
      complex, intent(out) :: mat2ord(5,3,3)
      mat2ord = cmplx(0.0,0.0)
 
-     mat2ord(1,1,1) = 1
-     mat2ord(1,1,2) = -ImagUnit
-     mat2ord(1,2,1) = -ImagUnit
-     mat2ord(1,2,2) = -1
+     mat2ord(1,1,1) =  sqrt(3.0/2.0)
+     mat2ord(1,1,2) =  sqrt(3.0/2.0)*ImagUnit
+     mat2ord(1,2,1) =  sqrt(3.0/2.0)*ImagUnit
+     mat2ord(1,2,2) = -sqrt(3.0/2.0)
 
-     mat2ord(2,1,3) = 1
-     mat2ord(2,2,3) = -ImagUnit   
-     mat2ord(2,3,1) = 1
-     mat2ord(2,3,2) = -ImagUnit  
+     mat2ord(2,1,3) =  sqrt(3.0/2.0)
+     mat2ord(2,2,3) =  sqrt(3.0/2.0)*ImagUnit   
+     mat2ord(2,3,1) =  sqrt(3.0/2.0)
+     mat2ord(2,3,2) =  sqrt(3.0/2.0)*ImagUnit  
 
-     mat2ord(3,1,1) = -sqrt(2.0/3.0)
-     mat2ord(3,2,2) = -sqrt(2.0/3.0)
-     mat2ord(3,3,3) =  sqrt(8.0/3.0)
+     mat2ord(3,1,1) = -1.0
+     mat2ord(3,2,2) = -1.0
+     mat2ord(3,3,3) =  2.0
 
-     mat2ord(4,1,3) = -1
-     mat2ord(4,2,3) = -ImagUnit   
-     mat2ord(4,3,1) = -1
-     mat2ord(4,3,2) = -ImagUnit  
+     mat2ord(4,1,3) = -sqrt(3.0/2.0)
+     mat2ord(4,2,3) =  sqrt(3.0/2.0)*ImagUnit   
+     mat2ord(4,3,1) = -sqrt(3.0/2.0)
+     mat2ord(4,3,2) =  sqrt(3.0/2.0)*ImagUnit  
 
-     mat2ord(5,1,1) = 1
-     mat2ord(5,1,2) = ImagUnit
-     mat2ord(5,2,1) = ImagUnit
-     mat2ord(5,2,2) = -1
+     mat2ord(5,1,1) =  sqrt(3.0/2.0)
+     mat2ord(5,1,2) = -sqrt(3.0/2.0)*ImagUnit
+     mat2ord(5,2,1) = -sqrt(3.0/2.0)*ImagUnit
+     mat2ord(5,2,2) = -sqrt(3.0/2.0)
 
-     mat2ord = sqrt(15.0/8.0/pi_const) * mat2ord
+     mat2ord = sqrt(4.0*pi_const/5.0) * mat2ord
   end subroutine
 
 end module m_vgen_coulomb
