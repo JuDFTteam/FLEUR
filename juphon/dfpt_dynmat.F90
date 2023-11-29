@@ -17,6 +17,8 @@ CONTAINS
       USE m_step_function
       USE m_convol
       USE m_dfpt_vgen
+      USE m_vgen_coulomb
+      USE m_dfpt_eii2
 
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       TYPE(t_stars),      INTENT(IN)    :: stars, starsq
@@ -40,12 +42,12 @@ CONTAINS
 
       COMPLEX, INTENT(INOUT) :: dyn_row(:)
 
-      COMPLEX, INTENT(IN) :: E2ndOrdII(:,:)
+      COMPLEX, INTENT(INOUT) :: E2ndOrdII(:,:)
      
       INTEGER, OPTIONAL, INTENT(IN) :: q_eig_id
 
       TYPE(t_fftgrid) :: fftgrid_dummy
-      TYPE(t_potden)  :: rho_dummy, rho1_dummy, vExt1, vExt1Im
+      TYPE(t_potden)  :: rho_dummy, rho1_dummy, vExt1, vExt1Im, grgrVCq, grgrVCqIm
       TYPE(t_hub1data) :: hub1data
 
       INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin
@@ -53,6 +55,7 @@ CONTAINS
       LOGICAL :: bare_mode
 
       REAL :: qvec(3)
+      REAL :: e2_vm(fi%atoms%nat)
 
       COMPLEX, ALLOCATABLE :: dyn_row_HF(:), dyn_row_eigen(:), dyn_row_int(:)
       COMPLEX, ALLOCATABLE :: theta1full(:, :, :), theta1full0(:, :, :)!, theta2(:, :, :)
@@ -83,6 +86,11 @@ CONTAINS
       CALL rho1_dummy%copyPotDen(denIn1)
       CALL rho_dummy%resetPotDen()
       CALL rho1_dummy%resetPotDen()
+
+      CALL grgrVCq%copyPotDen(vTot1)
+      CALL grgrVCq%resetPotDen()
+      CALL grgrVCqIm%copyPotDen(vTot1)
+      CALL grgrVCqIm%resetPotDen()
 
       qvec = qpts%bk(:, iQ)
 
@@ -172,6 +180,21 @@ CONTAINS
                                 denIn1_mt(:,0:,iDtype_row) - &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
 
+               CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsq, fi%cell, &
+                         & sphhar, fi%atoms, .TRUE., rho1_dummy, grgrVCq, &
+                         & dfptdenimag=rho1_dummy, dfptvCoulimag=grgrVCqIm,dfptden0=rho1_dummy,stars2=stars,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row)
+               IF (iDtype_col==iDtype_row) THEN
+                  e2_vm = 0.0
+                  CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,rho1_dummy%mt(:,0,:,:),grgrVCq%mt(:,0,:,1),e2_vm(:))
+                  E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) - e2_vm(iDtype_col)
+                  e2_vm = 0.0
+                  CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,rho1_dummy%mt(:,0,:,:),grgrVCqIm%mt(:,0,:,1),e2_vm(:))
+                  E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) - ImagUnit*e2_vm(iDtype_col)
+                  CALL grgrVCq%resetPotDen()
+                  CALL grgrVCqIm%resetPotDen()
+               ELSE
+                  E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) + fi%atoms%zatom(iDtype_row)*(grgrVCq%mt(1,0,iDtype_row,1)+ImagUnit*grgrVCqIm%mt(1,0,iDtype_row,1))
+               END IF
             ! Various V_ext integrals:
             ! IR:
             rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)

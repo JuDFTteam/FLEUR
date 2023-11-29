@@ -17,7 +17,7 @@ CONTAINS
       !USE m_dfpt_test
       USE m_dfpt_sternheimer
       USE m_dfpt_dynmat
-      USE m_dfpt_eii2,     only : CalcIIEnerg2, genPertPotDensGvecs
+      USE m_dfpt_eii2,     only : CalcIIEnerg2, genPertPotDensGvecs, dfpt_e2_madelung
       USE m_dfpt_dynmat_eig
       USE m_juDFT_stop, only : juDFT_error
       USE m_vgen_coulomb
@@ -51,8 +51,7 @@ CONTAINS
       INTEGER,          INTENT(IN)    :: eig_id
 
       TYPE(t_hub1data) :: hub1data
-      TYPE(t_potden)                :: grvextdummy, imagrhodummy, rho_nosym, vTot_nosym
-      TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
+      TYPE(t_potden)                :: grgrRho3x3(3,3), grgrVC3x3(3,3)
       TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm ! q-quantities
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
       TYPE(t_kpts)                  :: qpts_loc
@@ -101,8 +100,9 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :)
 
       COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:)
+      REAL,    ALLOCATABLE :: e2_vm(:,:,:)
 
-      INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac
+      INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
       INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
       LOGICAL :: l_real, l_minusq, l_dfpt_scf
@@ -118,6 +118,8 @@ CONTAINS
       ! Desym-tests:
       INTEGER :: grid(3), iread
       REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
+
+      ALLOCATE(e2_vm(fi%atoms%nat,3,3))
 
       l_dfpt_scf   = fi%juPhon%l_scf
 
@@ -218,6 +220,10 @@ CONTAINS
       DO iDir = 1, 3
          CALL grRho3(iDir)%copyPotDen(rho_nosym)
          CALL grRho3(iDir)%resetPotDen()
+         DO iDir2 = 1, 3
+            CALL grgrVC3x3(iDir2,iDir)%copyPotDen(vTot_nosym)
+            CALL grgrVC3x3(iDir2,iDir)%resetPotDen()
+         END DO
          CALL grVext3(iDir)%copyPotDen(vTot_nosym)
          CALL grVext3(iDir)%resetPotDen()
          CALL grVtot3(iDir)%copyPotDen(vTot_nosym)
@@ -289,6 +295,15 @@ CONTAINS
                         stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
       END DO
 
+         DO iDir2 = 1, 3
+            DO iDir = 1, 3
+               CALL imagrhodummy%resetPotDen()
+               CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+                         & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), &
+                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2)
+               CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
+            END DO
+         END DO
       CALL timestop("Gradient generation")
       
       CALL test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)
@@ -338,6 +353,15 @@ CONTAINS
             CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars_nosym, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
             CALL timestop("Eii2")
 
+            write(9991,*) "Eii2 old:", E2ndOrdII
+            E2ndOrdII = CMPLX(0.0,0.0)
+            DO iDtype = 1, fi_nosym%atoms%ntype
+               DO iDir2 = 1, 3
+                  DO iDir = 1, 3
+                     E2ndOrdII(3*(iDtype-1)+iDir2,3*(iDtype-1)+iDir) = e2_vm(iDtype,iDir2,iDir)
+                  END DO
+               END DO
+            END DO
             CALL timestart("Eigenstuff at k+q")
 
             ! This was an additional eig_id to test a specific shift from k to k+q in the dynmat setup. We leave it in
@@ -474,6 +498,7 @@ CONTAINS
                CALL timestart("Frequency calculation")
                CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw")
                CALL timestop("Frequency calculation")
+               write(9991,*) "Eii2 new:", E2ndOrdII
                DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
             END IF
             !CALL close_eig(q_eig_id)

@@ -989,4 +989,44 @@ module m_dfpt_eii2
 
   end subroutine genPertPotDensGvecs
 
+  SUBROUTINE dfpt_e2_madelung(atoms,jspins,grgrRho,grgrVC,e2_vm)
+      USE m_intgr
+      TYPE(t_atoms), INTENT(IN)     :: atoms
+      INTEGER,       INTENT(IN)     :: jspins
+      REAL,          INTENT(IN)     :: grgrRho(:,:,:), grgrVC(:,:)
+      REAL,          INTENT(OUT)    :: e2_vm(:)
+
+      REAL    :: mt(atoms%jmtd,atoms%nat), dpj(atoms%jmtd), rhs_arr(atoms%jmtd), totz_arr(atoms%jmtd)
+      REAL    :: vmd(atoms%nat), zintn_r(atoms%nat)
+      INTEGER :: n, j
+
+      e2_vm = 0.0
+      mt=0.0
+      DO n = 1,atoms%nat
+         DO j = 1,atoms%jri(n)
+            mt(j,n) = grgrRho(j,n,1) + grgrRho(j,n,jspins)
+         ENDDO
+      ENDDO
+      IF (jspins.EQ.1) mt=mt/2
+
+      rhs_arr = 0.0
+      DO n = 1,atoms%nat
+         DO j = 1,atoms%jri(n)
+            dpj(j) = mt(j,n)/atoms%rmsh(j,n)
+         END DO
+         !CALL intgr3(dpj,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),rhs)
+         CALL sfint(dpj,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),rhs_arr)
+
+         zintn_r(n) = atoms%zatom(n)*sfp_const*rhs_arr(atoms%jri(n))
+         e2_vm(n) = e2_vm(n) - zintn_r(n)
+
+         !CALL intgr3(mt(1,n),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
+         CALL sfint(mt(:,n),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz_arr)
+         vmd(n) = atoms%rmt(n)*grgrVC(atoms%jri(n),n)/sfp_const - totz_arr(atoms%jri(n))*sfp_const
+         vmd(n) = -atoms%zatom(n)*vmd(n)/ atoms%rmt(n)
+         e2_vm(n) = e2_vm(n) + vmd(n)
+      END DO
+
+  END SUBROUTINE dfpt_e2_madelung
+
 end module m_dfpt_eii2
