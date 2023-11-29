@@ -41,4 +41,5 @@ juphon/dfpt_fermie.F90
 juphon/desymmetrizer.f90
 juphon/dfpt_eigen.F90
 juphon/dfpt_dynmat_sym.f90
+juphon/dfpt_gradient.f90
 )
