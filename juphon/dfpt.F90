@@ -30,6 +30,7 @@ CONTAINS
       USE m_types_eigdos
       USE m_make_dos
       USE m_dfpt_gradient
+      USE m_npy
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -51,9 +52,9 @@ CONTAINS
       INTEGER,          INTENT(IN)    :: eig_id
 
       TYPE(t_hub1data) :: hub1data
-      TYPE(t_potden)                :: grvextdummy, imagrhodummy, rho_nosym, vTot_nosym
+      TYPE(t_potden)                :: grvextdummy, imagrhodummy, rho_nosym, vTot_nosym, vext_dummy
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
-      TYPE(t_potden)                :: grgrRho3x3(3,3), grgrVC3x3(3,3)
+      TYPE(t_potden)                :: grgrVC3x3(3,3), grgrvextnum(3,3)
       TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm ! q-quantities
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
       TYPE(t_kpts)                  :: qpts_loc
@@ -223,6 +224,8 @@ CONTAINS
          CALL grRho3(iDir)%copyPotDen(rho_nosym)
          CALL grRho3(iDir)%resetPotDen()
          DO iDir2 = 1, 3
+            CALL grgrvextnum(iDir2,iDir)%copyPotDen(vTot_nosym)
+            CALL grgrvextnum(iDir2,iDir)%resetPotDen()
             CALL grgrVC3x3(iDir2,iDir)%copyPotDen(vTot_nosym)
             CALL grgrVC3x3(iDir2,iDir)%resetPotDen()
          END DO
@@ -252,6 +255,24 @@ CONTAINS
                grRho3(1)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
                grRho3(2)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
                grRho3(3)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(1,1)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(1,2)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(1,3)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(2,1)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(2,2)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(2,3)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(3,1)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(3,2)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(3,3)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
             END DO
          END DO
       END DO
@@ -306,6 +327,13 @@ CONTAINS
                CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
             END DO
          END DO
+      CALL save_npy("radii.npy",fi_nosym%atoms%rmsh(:,1))
+      DO iDir2 = 1, 3
+         DO iDir = 1, 3
+            CALL save_npy("grgrVC_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrVC3x3(iDir2,iDir)%pw(:,1))
+            CALL save_npy("grgrVCnum_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrvextnum(iDir2,iDir)%pw(:,1))
+         END DO
+      END DO
       CALL timestop("Gradient generation")
       
       CALL test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)
