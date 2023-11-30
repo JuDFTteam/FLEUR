@@ -22,3 +22,6 @@
 [submodule "external/elsi-git"]
 	path = external/elsi-git
 	url = https://gitlab.com/elsi_project/elsi_interface.git
+[submodule "external/SCALAPACK-git"]
+	path = external/SCALAPACK-git
+	url = https://github.com/Reference-ScaLAPACK/scalapack.git
