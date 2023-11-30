@@ -414,6 +414,7 @@ CONTAINS
       INTEGER, INTENT(IN) ::n1, n2
       INTEGER :: irank, err
 
+      LOGICAL,PARAMETER:: use_pdgemr2d=.false.
       call timestart("mpimat_copy")
 
       select type (mat1)
@@ -426,7 +427,7 @@ CONTAINS
 #ifdef CPP_SCALAPACK
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
-         if (mat1%is_column_cyclic().and..not.mat%is_column_cyclic()) THEN
+         if (mat1%is_column_cyclic().and..not.mat%is_column_cyclic().and..not.use_pdgemr2d) THEN
             call cyclic_column_to_2Dblock_cyclic(mat1,mat,n1,n2)
          else
             IF (mat%l_real) THEN
@@ -811,7 +812,6 @@ CONTAINS
          local_size1 = myrowssca
          local_size2 = mycolssca
       end if
-
 #endif
    END SUBROUTINE priv_create_blacsgrid
 
@@ -1103,7 +1103,7 @@ CONTAINS
       call MPI_COMM_RANK(mat%blacsdata%mpi_com,my_proc,ierr)
       call MPI_COMM_SIZE(mat%blacsdata%mpi_com,num_proc,ierr)
       !info for 2dblock cyclic dist
-      call blacs_gridinfo(mat2d%blacsdata%blacs_desc,nprow,npcol,myrow,mycol)
+      call blacs_gridinfo(mat2d%blacsdata%blacs_desc(2),nprow,npcol,myrow,mycol)
 
 #ifdef __NEW_CODE      
       !create processor map blacs_row,blacs_col->mpi_rank
@@ -1170,8 +1170,7 @@ CONTAINS
             if (mat%l_real) then 
                mat2d%data_r(n_row,n_col)=vecr(n1)
             else   
-               mat2d%data_c(n_row,n_col)=vecc(n1)
-            
+               mat2d%data_c(n_row,n_col)=vecc(n1)  
             end if 
          enddo
       ENDDO   
