@@ -140,6 +140,11 @@ then
     echo "set(CLI_FLEUR_USE_KPLIB 1)"  >>config.cmake
 fi
 
+if [ "$CLI_USE_SCALAPACK" ]
+then
+    echo "set(CLI_FLEUR_USE_SCALAPACK $CLI_USE_SCALAPACK)"  >>config.cmake
+fi
+ 
 if [ "$CLI_PATCH_INTEL" ]
 then
     echo "set(CLI_PATCH_INTEL 1)"  >>config.cmake

@@ -34,6 +34,7 @@ if (DEFINED CLI_FLEUR_USE_ELSI)
                
             endif()   
             add_subdirectory(external/elsi-git EXCLUDE_FROM_ALL)
+            
             set(FLEUR_COMPILE_ELSI TRUE)
             set(FLEUR_USE_ELSI TRUE)
         endif()

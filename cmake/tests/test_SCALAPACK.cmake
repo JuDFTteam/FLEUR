@@ -22,6 +22,35 @@ endif()
 endforeach()
 
 
+#Now download SCALAPACK and compile it if REQUIRED
+if (DEFINED CLI_FLEUR_USE_SCALAPACK)
+   if (CLI_FLEUR_USE_SCALAPACK)
+       if (NOT FLEUR_USE_SCALAPACK)
+           if (NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
+                message(FATAL_ERROR "You asked for SCALAPACK to be used, but it cannot be found.\n"
+                "Please either provide correct include and link directories for SCALAPACK manually, or use a git-version of FLEUR to download SCALAPACK automatically")
+           endif()     
+           message(WARNING "You asked for SCALAPACK but cmake couldn't find it. We will try to download and compile SCALAPACK along with FLEUR")
+           if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/SCALAPACK-git/src" )
+    	     find_package(Git REQUIRED)
+    	     execute_process(COMMAND ${GIT_EXECUTABLE} submodule init external/SCALAPACK-git WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_init OUTPUT_QUIET ERROR_QUIET)
+    	     execute_process(COMMAND ${GIT_EXECUTABLE} submodule update  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_update OUTPUT_QUIET ERROR_QUIET)
+    	     if (_res_init GREATER 0 OR _res_update GREATER 0)
+               message(FATAL_ERROR "SCALAPACK source could not be downloaded.\n"
+                            "We tried: 'git submodule init external/SCALAPACK-git && git submodule update' and resulted in error" )
+             endif()
+            endif()
+            # 
+            add_subdirectory(external/SCALAPACK-git EXCLUDE_FROM_ALL)
+            set(FLEUR_COMPILE_SCALAPACK TRUE)
+            set(FLEUR_USE_SCALAPACK TRUE)
+        endif()
+    endif()
+
+endif()        
+
+
+
 
 message("SCALAPACK Library found:${FLEUR_USE_SCALAPACK}")
 if (FLEUR_USE_SCALAPACK)
