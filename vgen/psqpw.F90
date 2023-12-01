@@ -177,6 +177,13 @@ contains
         sl = sl + pn(l,n) / ( stars%sk3(k) ** n1 ) * aj( ncvn + 1 ) * sm
         end do
         sa = sa + atoms%neq(n) * sl
+        IF (PRESENT(iDir2)) THEN
+          IF (iDir2==iDir) THEN
+            IF (n==iDtype.OR.0==iDtype) THEN 
+              sa = sa + atoms%zatom(n) * fpo * 5 * pn(2,n) * conjg(pylm(1,n)) / sfp_const / ( stars%sk3(k) ** (ncvn-1) )
+            END IF
+          END IF
+        END IF
       end do
       psq_local(k) = qpw(k) + fpo * sa
     end do

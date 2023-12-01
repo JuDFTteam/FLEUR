@@ -263,9 +263,9 @@ contains
      mat2ord(2,3,1) =  sqrt(3.0/2.0)
      mat2ord(2,3,2) =  sqrt(3.0/2.0)*ImagUnit  
 
-     mat2ord(3,1,1) = -1.0 - 0.5 ! TODO: What the hell is this value???
-     mat2ord(3,2,2) = -1.0 - 0.5 ! TODO: What the hell is this value???
-     mat2ord(3,3,3) =  2.0 - 0.5 ! TODO: What the hell is this value???
+     mat2ord(3,1,1) = -1.0! - 0.5 ! TODO: What the hell is this value???
+     mat2ord(3,2,2) = -1.0! - 0.5 ! TODO: What the hell is this value???
+     mat2ord(3,3,3) =  2.0! - 0.5 ! TODO: What the hell is this value???
 
      mat2ord(4,1,3) = -sqrt(3.0/2.0)
      mat2ord(4,2,3) =  sqrt(3.0/2.0)*ImagUnit   
