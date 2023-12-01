@@ -198,6 +198,7 @@ contains
                 qlmo(-1:1,1,n) = qlmo(-1:1,1,n) + 3.0 / fpi_const * atoms%zatom(n) * c_im(iDir, :)
             END IF
          ELSE
+            IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n) * (-0.2660214309643778) ! TODO: What the hell is this value???
             IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) qlmo(-2:2,2,n) = qlmo(-2:2,2,n) - 5.0 / fpi_const * atoms%zatom(n) * mat2ord(:,iDir2,iDir)
         END IF
       end if
