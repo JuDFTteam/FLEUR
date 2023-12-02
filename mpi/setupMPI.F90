@@ -158,17 +158,26 @@ CONTAINS
     INTEGER:: n_members,n_size_min,nk
     CHARACTER(len=1000)::txt
 
-    n_members = MIN(nkpt,fmpi%isize)
-    IF (judft_was_argument("-n_min_size")) THEN
-       txt=judft_string_for_argument("-n_min_size")
-       READ(txt,*) n_size_min
-       WRITE(*,*) "Trying to use ",n_size_min," PE per kpt"
-       n_members = MIN(n_members , CEILING(REAL(fmpi%isize)/n_size_min) )
-    ENDIF
-    DO
-       IF ((MOD(fmpi%isize,n_members) == 0).AND.(MOD(nkpt,n_members) == 0) ) EXIT
-       n_members = n_members - 1
-    ENDDO
+    IF (judft_was_argument("-pe_per_kpt")) THEN
+      txt=judft_string_for_argument("-pe_per_kpt")
+      READ(txt,*) fmpi%n_size
+      WRITE(*,*) "Using exactly ",fmpi%n_size," PE per kpt"
+      if (mod(fmpi%isize,fmpi%n_size).ne.0) call judft_error("Parallelization error",&
+           hint="If you specify -pe_per_kpt, the total number of processes needs to be a multiple.")   
+      n_members=fmpi%isize/fmpi%n_size     
+    ELSE
+      n_members = MIN(nkpt,fmpi%isize)
+      IF (judft_was_argument("-min_pe_per_kpt")) THEN
+         txt=judft_string_for_argument("-min_pe_per_kpt")
+         READ(txt,*) n_size_min
+         WRITE(*,*) "Trying to use ",n_size_min," PE per kpt"
+         n_members = MIN(n_members , CEILING(REAL(fmpi%isize)/n_size_min) )
+      ENDIF
+      DO
+         IF ((MOD(fmpi%isize,n_members) == 0).AND.(MOD(nkpt,n_members) == 0) ) EXIT
+         n_members = n_members - 1
+      ENDDO
+    endif  
 
     !fmpi%n_groups = nkpt/n_members
     fmpi%n_size   = fmpi%isize/n_members
@@ -177,6 +186,9 @@ CONTAINS
        WRITE(*,*) 'k-points in parallel: ',n_members
        WRITE(*,*) "pe's per k-point:     ",fmpi%n_size
        WRITE(*,*) '# of k-point loops:   ',nkpt/n_members
+       if (mod(nkpt,n_members).ne.0) then
+         Write(*,*) 'your k-point parallelism is not fully load-balanced'
+       endif
 
        IF((REAL(nbasfcn) / REAL(fmpi%n_size)).LE.20) THEN
           WRITE(*,*) ''
