@@ -180,7 +180,7 @@ contains
         IF (PRESENT(iDir2)) THEN
           IF (iDir2==iDir) THEN
             IF (n==iDtype.OR.0==iDtype) THEN 
-              sa = sa + atoms%zatom(n) * fpo * 5 * pn(2,n) * conjg(pylm(1,n)) / sfp_const / ( stars%sk3(k) ** (ncvn-1) )
+              sa = sa + atoms%zatom(n) * 5 * pn(2,n) * conjg(pylm(1,n)) * aj( ncvn + 1 ) / sfp_const / ( stars%sk3(k) ** (ncvn-1) )
             END IF
           END IF
         END IF

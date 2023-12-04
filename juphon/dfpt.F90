@@ -297,13 +297,6 @@ CONTAINS
          END DO
       END IF
 
-      CALL grRho3(1)%distribute(fmpi%mpi_comm)
-      CALL grRho3(2)%distribute(fmpi%mpi_comm)
-      CALL grRho3(3)%distribute(fmpi%mpi_comm)
-      CALL grVext3(1)%distribute(fmpi%mpi_comm)
-      CALL grVext3(2)%distribute(fmpi%mpi_comm)
-      CALL grVext3(3)%distribute(fmpi%mpi_comm)
-
       ! Coulomb/Effective potential gradients
       DO iDir = 1, 3
          CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
@@ -334,6 +327,13 @@ CONTAINS
             CALL save_npy("grgrVCnum_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrvextnum(iDir2,iDir)%pw(:,1))
          END DO
       END DO
+      
+      CALL grRho3(1)%distribute(fmpi%mpi_comm)
+      CALL grRho3(2)%distribute(fmpi%mpi_comm)
+      CALL grRho3(3)%distribute(fmpi%mpi_comm)
+      CALL grVext3(1)%distribute(fmpi%mpi_comm)
+      CALL grVext3(2)%distribute(fmpi%mpi_comm)
+      CALL grVext3(3)%distribute(fmpi%mpi_comm)
       CALL timestop("Gradient generation")
       
       CALL test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)

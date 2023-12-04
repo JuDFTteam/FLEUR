@@ -190,11 +190,11 @@ CONTAINS
                   e2_vm = 0.0
                   CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,rho1_dummy%mt(:,0,:,:),grgrVCqIm%mt(:,0,:,1),e2_vm(:))
                   E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) - ImagUnit*e2_vm(iDtype_col)
-                  CALL grgrVCq%resetPotDen()
-                  CALL grgrVCqIm%resetPotDen()
                ELSE
                   E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) + fi%atoms%zatom(iDtype_row)*(grgrVCq%mt(1,0,iDtype_row,1)+ImagUnit*grgrVCqIm%mt(1,0,iDtype_row,1))/sfp_const
                END IF
+               CALL grgrVCq%resetPotDen()
+               CALL grgrVCqIm%resetPotDen()
             ! Various V_ext integrals:
             ! IR:
             rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
