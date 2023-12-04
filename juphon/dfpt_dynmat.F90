@@ -193,7 +193,7 @@ CONTAINS
                   CALL grgrVCq%resetPotDen()
                   CALL grgrVCqIm%resetPotDen()
                ELSE
-                  E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) + fi%atoms%zatom(iDtype_row)*(grgrVCq%mt(1,0,iDtype_row,1)+ImagUnit*grgrVCqIm%mt(1,0,iDtype_row,1))
+                  E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) + fi%atoms%zatom(iDtype_row)*(grgrVCq%mt(1,0,iDtype_row,1)+ImagUnit*grgrVCqIm%mt(1,0,iDtype_row,1))/sfp_const
                END IF
             ! Various V_ext integrals:
             ! IR:
