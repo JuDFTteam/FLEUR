@@ -155,7 +155,7 @@ contains
 
     CALL calcIndexBounds(fmpi, MERGE(2,1,norm2(stars%center)<=1e-8), stars%ng3, kStart, kEnd)
     !$OMP parallel do default( NONE ) &
-    !$OMP SHARED(atoms,stars,sym,cell,kStart,kEnd,psq_local,qpw,qlm,pn,fpo) &
+    !$OMP SHARED(atoms,stars,sym,cell,kStart,kEnd,psq_local,qpw,qlm,pn,fpo,iDir,iDir2,iDtype) &
     !$OMP private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
     do k = kStart, kEnd
       call phasy1( atoms, stars, sym, cell, k, pylm )
