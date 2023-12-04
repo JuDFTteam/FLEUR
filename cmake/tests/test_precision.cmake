@@ -22,7 +22,7 @@ endif()
 
 try_run(PRECISION_RUN_OK PRECISION_COMP_OK  ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_precision.f90 COMPILE_DEFINITIONS ${FLEUR_PRECISION_OPTION} )
 
-if (PRECISION_RUN_OK) THEN
+if (PRECISION_RUN_OK) 
    if (${PRECISION_RUN_OK} LESS "1")
          Message("Double precision found")
    else()
