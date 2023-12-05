@@ -108,7 +108,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    INTEGER,               INTENT(IN)    :: eig_id, jspin
 
    ! Local Scalars
-   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,max_length_k_list,nk
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
    LOGICAL :: l_real, l_corespec, l_empty
@@ -219,6 +219,9 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    jsp = MERGE(1,jspin,noco%l_noco)
    call timestop("init")
+
+   max_length_k_list=size(cdnvalJob%k_list)
+   CALL MPI_ALLREDUCE(MPI_IN_PLACE,max_length_k_list,1,MPI_INTEGER,MPI_MAX,fmpi%mpi_comm,ierr)
 
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
@@ -348,6 +351,10 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    END DO ! end of k-point loop
 
 #ifdef CPP_MPI
+   !print *,"Remaining Barriers:",size(cdnvalJob%k_list)+1,max_length_k_list
+   DO nk=size(cdnvalJob%k_list)+1,max_length_k_list
+      CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+   ENDDO
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,ispin,dos,vacdos,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS)
