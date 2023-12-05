@@ -241,6 +241,8 @@ CONTAINS
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
       END DO
+      CALL vext_dummy%copyPotDen(vTot_nosym)
+      CALL vext_dummy%resetPotDen()
 
       ! Density gradient
       DO iSpin = 1, SIZE(rho_nosym%mt,4)
