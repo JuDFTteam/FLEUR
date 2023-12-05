@@ -44,15 +44,13 @@ CONTAINS
     call print_argument("-version")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control FLEUR job:"
-#ifdef CPP_GPU
-    CALL print_argument("-gpu")
-#endif
     CALL print_argument("-check")
     CALL print_argument("-info")
     CALL print_argument("-wtime")
     CALL print_argument("-j")
     CALL print_argument("-f")
-    CALL print_argument("-n_min_size")
+    CALL print_argument("-min_pe_per_kpt")
+    CALL print_argument("-pe_per_kpt")
     CALL print_argument("-add_name")
     CALL print_argument("-fft")
     CALL print_argument("-diag")
@@ -94,7 +92,8 @@ CONTAINS
     CALL new_argument(2,"-wtime","run for # minutes (used to estimate if another iteration is started)","")
     CALL new_argument(1,"-j","Distribute MPI ranks to run subjobs (Format PE:DIR meaning run with PE in directory DIR)","")
     CALL new_argument(1,"-f","Obtain info on subjobs from file","")
-    CALL new_argument(2,"-n_min_size","Try to use at least specified number of PE in eigenvalue parallelization","")
+    CALL new_argument(2,"-min_pe_per_kpt","Try to use at least specified number of PE in eigenvalue parallelization","")
+    CALL new_argument(2,"-pe_per_kpt","Use exactly the specified number of PE for eigenvalue parallelization","")
     CALL new_argument(1,"-add_name","file descriptor that will be put before the output file names","")
     CALL new_argument(1,"-fft","library used for Fast Fourier Transformations","inbuilt"&
 #ifdef CPP_FFTW
@@ -153,8 +152,6 @@ CONTAINS
     CALL new_argument(0,"-no_out","Do not open the 'out' file but write to stdout","")
     CALL new_argument(0,"-minimalOutput","Reduce the amount of output in the out.xml file","")
     CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","")
-    CALL new_argument(0,"-noco","write out noco parameters in all outputs for inp.xml","")
-    CALL new_argument(0,"-greensf","write out green's function parameters in all outputs for inp.xml","")
     CALL new_argument(0,"-h","Print this message","")
     CALL new_argument(0,"-version","Show important version information about the fleur executable","")
     CALL new_argument(0,"-no_send","Do not send usage data","")
@@ -164,7 +161,5 @@ CONTAINS
     CALL new_argument(2,"-sd","use starting density N, where N is the index of the density according to -info","")
     CALL new_argument(1,"-delden","delete densities (either an index N, a range N-M or the keyword 'allbutlast' should be given)","")
     CALL new_argument(0,"-storeSF","Store the stepfunction in the charge density file to avoid its recalculation when restarting Fleur.","")
-    !GPU parameter
-    CALL new_argument(0,"-gpu","Use GPU for computing","")
   END SUBROUTINE add_fleur_arguments
 END MODULE m_fleur_help
