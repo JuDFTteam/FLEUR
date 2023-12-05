@@ -6,7 +6,6 @@ cdn_mt/abclocdn.F90
 cdn_mt/abclocdn1.F90
 #cdn_mt/abclocdn_pulay.F90
 cdn_mt/abcof.F90
-cdn_mt/abcof3.F90
 cdn_mt/abcrot2.f90
 cdn_mt/cdnmt.F90
 cdn_mt/cdncore.F90
