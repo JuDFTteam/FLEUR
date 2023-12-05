@@ -124,7 +124,7 @@ CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat, hmat_final, smat_final)
 CALL timestop("Matrix redistribution")
 
 END SUBROUTINE eigen_hssetup
-#ELSE
+#else
    SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
       ud, td, v, lapw, nk, smat_final, hmat_final)
 USE m_types
