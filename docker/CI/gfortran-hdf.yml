@@ -7,7 +7,7 @@ build-gfortran-hdf5:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh GITLAB
+    - VERBOSE=1 ./configure.sh GITLAB
     - cd build
     - make -j 2
   rules:

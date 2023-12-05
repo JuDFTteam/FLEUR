@@ -310,6 +310,12 @@ CONTAINS
               deallocate(zMat)
             ENDIF
          END DO  k_loop
+#ifdef CPP_MPI
+         !print *,"Remaining Barriers:",size(fmpi%k_list)+1,fmpi%max_length_k_list
+         DO nk=size(fmpi%k_list)+1,fmpi%max_length_k_list
+            CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+         ENDDO
+#endif            
       END DO ! spin loop ends
 
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
