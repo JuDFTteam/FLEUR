@@ -21,7 +21,7 @@ CONTAINS
     INTEGER,INTENT(in)           :: nkpt,neigd,nbasfcn
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
-    INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk
+    INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk,ierr
     logical :: finished
 #ifdef CPP_MPI
     CALL juDFT_COMM_SPLIT_TYPE(fmpi%mpi_comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,fmpi%mpi_comm_same_node)
@@ -99,6 +99,9 @@ CONTAINS
     ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
     ! this corresponds to the compact = .true. switch in priv_create_comm
     fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )]
+
+    fmpi%max_length_k_list=size(fmpi%k_list)
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE,fmpi%max_length_k_list,1,MPI_INTEGER,MPI_MAX,fmpi%mpi_comm,ierr)
 
     ! create an array with the owners of the correct coulomb matrix
     allocate(fmpi%coulomb_owner(nkpt), source=-1)
