@@ -101,8 +101,9 @@ CONTAINS
     fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )]
 
     fmpi%max_length_k_list=size(fmpi%k_list)
+#ifdef CPP_MPI    
     CALL MPI_ALLREDUCE(MPI_IN_PLACE,fmpi%max_length_k_list,1,MPI_INTEGER,MPI_MAX,fmpi%mpi_comm,ierr)
-
+#endif
     ! create an array with the owners of the correct coulomb matrix
     allocate(fmpi%coulomb_owner(nkpt), source=-1)
     do nk =1,nkpt
