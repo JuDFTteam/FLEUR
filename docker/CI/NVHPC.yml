@@ -29,6 +29,8 @@ test-pgi:
 build-nvhpc-gpu:
   image:  
   stage: build
+  tags:
+      - rtx2080ti
   artifacts:
     paths:
       - build.nvgpu
@@ -51,5 +53,5 @@ test-nvhpc-gpu:
     - build-nvhpc-gpu
   allow_failure: true
   rules:
-      - if: $CI_TASKS =~ /broken/    
+      - if: $CI_TASKS =~ /gpu/    
   
