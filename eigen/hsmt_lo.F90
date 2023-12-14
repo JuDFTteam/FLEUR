@@ -17,8 +17,7 @@ MODULE m_hsmt_lo
   PUBLIC hsmt_lo
 CONTAINS
   SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,l_ham,Smat,lapwq,fjgjq)
-    USE m_hlomat
-    USE m_slomat
+    USE m_hslomat
     USE m_setabc1lo
     USE m_types_mpimat
     USE m_types
@@ -120,32 +119,10 @@ CONTAINS
 
              !--->       add the local orbital contribution to the overlap and
              !--->       hamiltonian matrix, if they are used for this atom.
-               call timestart("slomat")
-               IF (ilSpinPr==ilSpin) THEN
-                  IF (.NOT.PRESENT(smat)) THEN
-                     IF (.NOT.PRESENT(lapwq)) CALL judft_error("Bug in hsmt_lo, called without smat")
-                  ELSE
-                     IF (PRESENT(lapwq)) THEN
-                        CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
-                           ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
-                           igSpinPr,igSpin,chi,smat,l_fullj,lapwq,fjgjq)
-                     ELSE
-                        CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
-                           ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
-                           igSpinPr,igSpin,chi,smat,l_fullj)
-                     END IF
-                  END IF
-               END IF
-               call timestop("slomat")
-               CALL timestart("hlomat")
-               IF (PRESENT(lapwq)) THEN
-                  CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
-               ELSE
-                  CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,l_ham)
-               END IF
-               CALL timestop("hlomat")
+               CALL timestart("hslomat")
+               CALL hslomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
+                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,smat,l_fullj,l_ham,lapwq,fjgjq)
+               CALL timestop("hslomat")
             END IF
          END IF
          ! End loop over equivalent atoms
