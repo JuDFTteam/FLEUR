@@ -21,9 +21,7 @@ eigen/hsvac.F90
 eigen/orthoglo.F90
 eigen/rad_ovlp.f90
 eigen/setabc1lo.f90
-#eigen/slomat.F90
 eigen/tlmplm.F90
-#eigen/tlmplm_store.F90
 eigen/tlo.f90
 eigen/vacfun.F90
 eigen/eigen_redist_matrix.F90
