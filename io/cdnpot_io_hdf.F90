@@ -2085,7 +2085,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 starsIndex, latharmsIndex, structureIndex,stepfunctionIndex,&
-                                iter,pot,fpw,l_mtNoco)
+                                iter,pot,fpw,l_noco,l_mtNoco)
       use m_types_input
       use m_types_potden
 
@@ -2100,7 +2100,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT (IN)         :: iter
 
       COMPLEX, INTENT (IN)         :: fpw(:,:)
-      LOGICAL, INTENT (IN)         :: l_mtNoco
+      LOGICAL, INTENT (IN)         :: l_noco, l_mtNoco
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz, nvac, nmzxy
       INTEGER                      :: hdfError
@@ -2207,15 +2207,29 @@ MODULE m_cdnpot_io_hdf
          IF(l_exist) THEN
             CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
-            dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
-            CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
-            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),"mt",pot%mt)
-            CALL h5dclose_f(frSetID, hdfError)
+            IF(.NOT.l_mtNoco) THEN
+               dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
+               CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
+               CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),"mt",pot%mt)
+               CALL h5dclose_f(frSetID, hdfError)
+            ELSE
+               dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins+2/)
+               CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
+               CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),"mt",pot%mt)
+               CALL h5dclose_f(frSetID, hdfError)
+            END IF
 
-            dimsInt(:3)=(/2,ng3,input%jspins/)
-            CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
-            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),"fpw",fpw)
-            CALL h5dclose_f(fpwSetID, hdfError)
+            IF(.NOT.l_noco) THEN
+               dimsInt(:3)=(/2,ng3,input%jspins/)
+               CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
+               CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),"fpw",fpw)
+               CALL h5dclose_f(fpwSetID, hdfError)
+            ELSE
+               dimsInt(:3)=(/2,ng3,3/)
+               CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)
+               CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),"fpw",fpw)
+               CALL h5dclose_f(fpwSetID, hdfError)
+            END IF
 
             IF (l_film) THEN
                dimsInt(:5)=(/2,nmzd,ng2,2,input%jspins/)
@@ -2247,13 +2261,23 @@ MODULE m_cdnpot_io_hdf
             CALL h5dclose_f(frSetID, hdfError)
          END IF
 
-            dims(:3)=(/2,ng3,input%jspins/)
-            dimsInt = dims
-            CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
-            CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
-            CALL h5sclose_f(fpwSpaceID,hdfError)
-            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),"fpw",fpw)
-            CALL h5dclose_f(fpwSetID, hdfError)
+            IF(.NOT.l_noco) THEN
+               dims(:3)=(/2,ng3,input%jspins/)
+               dimsInt = dims
+               CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
+               CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
+               CALL h5sclose_f(fpwSpaceID,hdfError)
+               CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),"fpw",fpw)
+               CALL h5dclose_f(fpwSetID, hdfError)
+            ELSE
+               dims(:3)=(/2,ng3,3/)
+               dimsInt = dims
+               CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
+               CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
+               CALL h5sclose_f(fpwSpaceID,hdfError)
+               CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),"fpw",fpw)
+               CALL h5dclose_f(fpwSetID, hdfError)
+            END IF
 
             IF (l_film) THEN
                dims(:5)=(/2,nmzd,ng2,2,input%jspins/)
@@ -2299,14 +2323,23 @@ MODULE m_cdnpot_io_hdf
             CALL h5dclose_f(frSetID, hdfError)
          END IF
 
-
-         dims(:3)=(/2,ng3,input%jspins/)
-         dimsInt = dims
-         CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
-         CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
-         CALL h5sclose_f(fpwSpaceID,hdfError)
-         CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),"fpw",fpw)
-         CALL h5dclose_f(fpwSetID, hdfError)
+         IF(.NOT.l_noco) THEN
+            dims(:3)=(/2,ng3,input%jspins/)
+            dimsInt = dims
+            CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
+            CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
+            CALL h5sclose_f(fpwSpaceID,hdfError)
+            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),"fpw",fpw)
+            CALL h5dclose_f(fpwSetID, hdfError)
+         ELSE
+            dims(:3)=(/2,ng3,3/)
+            dimsInt = dims
+            CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
+            CALL h5dcreate_f(groupID, "fpw", H5T_NATIVE_DOUBLE, fpwSpaceID, fpwSetID, hdfError)
+            CALL h5sclose_f(fpwSpaceID,hdfError)
+            CALL io_write_complex2(fpwSetID,(/-1,1,1/),dimsInt(:3),"fpw",fpw)
+            CALL h5dclose_f(fpwSetID, hdfError)
+         END IF
 
          IF (l_film) THEN
             dims(:5)=(/2,nmzd,ng2,2,input%jspins/)
