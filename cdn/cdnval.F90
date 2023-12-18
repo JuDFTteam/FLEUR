@@ -113,7 +113,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
    LOGICAL :: l_real, l_corespec, l_empty
-   REAL :: sumX,sumY,sumZ
 
    ! Local Arrays
    REAL,    ALLOCATABLE  :: we(:),eig(:)
@@ -221,17 +220,10 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    jsp = MERGE(1,jspin,noco%l_noco)
    call timestop("init")
-   sumX=0
-   sumY=0
-   sumZ=0
+
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
       bkpt=kpts%bk(:,ikpt)
-      sumX=sumX+bkpt(1)
-      sumY=sumY+bkpt(2)
-      sumZ=sumZ+bkpt(3)
-      !WRITE(2000,*) 'kpoint index and weight are ',ikpt_i,bkpt, sumX,sumY,sumZ
-
 
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
       skip_t = skip_tt
