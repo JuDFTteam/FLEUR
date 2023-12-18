@@ -16,7 +16,7 @@ MODULE m_hsmt_lo
   PRIVATE
   PUBLIC hsmt_lo
 CONTAINS
-  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,l_ham,Smat,lapwq,fjgjq)
+  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,Smat,lapwq,fjgjq)
     USE m_hslomat
     USE m_setabc1lo
     USE m_types_mpimat
@@ -34,7 +34,7 @@ CONTAINS
     TYPE(t_usdus),INTENT(IN)    :: ud
     TYPE(t_tlmplm),INTENT(IN)   :: tlmplm
     TYPE(t_fjgj),INTENT(IN)     :: fjgj
-    LOGICAL,INTENT(IN)          :: l_fullj, l_ham, set0  !if true, initialize the LO-part of the matrices with zeros
+    LOGICAL,INTENT(IN)          :: l_fullj, set0  !if true, initialize the LO-part of the matrices with zeros
     TYPE(t_lapw),OPTIONAL,INTENT(IN) :: lapwq
     TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq
 
@@ -120,8 +120,8 @@ CONTAINS
              !--->       add the local orbital contribution to the overlap and
              !--->       hamiltonian matrix, if they are used for this atom.
                CALL timestart("hslomat")
-               CALL hslomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
-                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,smat,l_fullj,l_ham,lapwq,fjgjq)
+               CALL hslomat(atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
+                     n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,l_fullj,hmat,smat,lapwq,fjgjq)
                CALL timestop("hslomat")
             END IF
          END IF
