@@ -81,10 +81,11 @@ CONTAINS
       ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
       ALLOCATE(abcloPr(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
       ALLOCATE(abCoeffsPr(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapwPr%nv)))
+      ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))       
    
       !$acc data create(abcoeffs,abclo,abcoeffsPr,abcloPr)
-      !$acc data copyin(alo1,blo1,clo1,fjgjPr,fjgjpr%fj,fjgjpr%gj,tlmplm,tlmplm%h_loc_LO,tlmplm%h_lo)
-      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr,alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
+      !$acc data copyin(alo1,blo1,clo1,fjgjPr,fjgjpr%fj,fjgjpr%gj,tlmplm,tlmplm%h_loc_LO,tlmplm%h_lo,ud,ud%ddn,ud%dulon,ud%uulon,ud%uloulopn)
+      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr,ab_size_Pr,.TRUE.,abcloPr,alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
 
       !we need the "unprimed" abcoeffs
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND..not.present(lapwq)) THEN
@@ -93,8 +94,7 @@ CONTAINS
          abclo=abcloPr
          !$acc end kernels
       ELSE     
-         ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))       
-         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
+         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
       END IF
    
       
@@ -135,12 +135,12 @@ CONTAINS
    
    
       INTEGER :: lo,l,s,nkvec,locol,m,kp,invsfct,mlo,lm
-      COMPLEX, ALLOCATABLE :: abcxPr(:,:,:)
+      COMPLEX, ALLOCATABLE :: abcxPr(:,:,:),abc_tmp(:,:)
       
 
 
-      ALLOCATE(abcxPr(3,MAXVAL(lapwPr%nv),2*maxval(atoms%llo)+1))
-      !$acc data create(abcxpr)
+      ALLOCATE(abcxPr(3,MAXVAL(lapwPr%nv),2*maxval(atoms%llo)+1),abc_tmp(MAXVAL(lapwPr%nv),2*maxval(atoms%llo)+1))
+      !$acc data create(abcxpr,abc_tmp)
       invsfct=sym%invsat(na)+1
       mlo=sum(atoms%nlo(:ntyp-1))
       CALL timestart("LAPW-LO")
@@ -152,11 +152,23 @@ CONTAINS
          l = atoms%llo(lo,ntyp)
          s = tlmplm%h_loc2_nonsph(ntyp) 
          
-        
-         call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abcxPr(1,:,:),cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-         call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),abcxPr(2,:,:),cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-         call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abcxPr(3,:,:),cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-       
+         !$acc data present(abcoeffsPr,tlmplm,tlmplm%h_loc_LO,abcxpr)
+         call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abc_tmp,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+         !$acc kernels present(abcxPR,abc_tmp)
+         abcxPr(1,:,:)=abc_tmp
+         !$acc end kernels 
+         call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),abc_tmp,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+         !$acc kernels present(abcxPR,abc_tmp)
+         abcxPr(2,:,:)=abc_tmp
+         !$acc end kernels 
+         
+         call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abc_tmp,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+         !$acc kernels present(abcxPR,abc_tmp)
+         abcxPr(3,:,:)=abc_tmp
+         !$acc end kernels 
+         
+         !$acc end data
+
          !LAPW LO contributions
          !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,abcxpr)&
          !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
@@ -183,7 +195,7 @@ CONTAINS
          !$acc end kernels            
          !Calculate the same for the overlap
          IF (ilspin==ilSpinPr.and.present(smat)) THEN
-            !$acc kernels present(abCoeffsPr,ud,ud%ddn,ud%uulon,ud%dulon)copyin(l,ntyp,ilspin)
+            !$acc kernels present(abcxPr,abCoeffsPr,ud,ud%ddn,ud%uulon,ud%dulon)copyin(l,ntyp,ilspin)
             DO m = -l,l
                lm = l* (l+1) + m
                s = size(abCoeffsPr,1)/2
@@ -334,7 +346,7 @@ CONTAINS
       !$acc & copyin(tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin))&
       !$acc & copyin(tlmplm%h_loc_LO(:,:,ntyp,ilSpinPr,ilSpin),tlmplm%h_LO(:,:,:,ilSpinPr,ilSpin),tlmplm%h_LO2(:,:,:,ilSpinPr,ilSpin),tlmplm%h_loc2_nonsph)&
       !$acc & copyin(lapw%index_lo(:,na),lapwPr%index_lo(:,na),tlmplm%h_loc2,atoms%llo(:,ntyp),atoms%nlo(ntyp))&
-      !$acc & copyin(fmpi, fmpi%n_size, fmpi%n_rank,ud,ud%ddn,ud%dulon,ud%uulon)&
+      !$acc & copyin(fmpi, fmpi%n_size, fmpi%n_rank,ud,ud%ddn,ud%dulon,ud%uulon,ud%uloulopn)&
       !$acc & create(abcxx)&
       !$acc & default(none)
       DO lo = 1,atoms%nlo(ntyp)
