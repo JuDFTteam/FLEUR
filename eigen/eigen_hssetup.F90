@@ -270,6 +270,10 @@ ELSE
    END IF; END DO; END DO
    CALL timestop("MT part")
 
+   IF (fi%atoms%n_v.GT.0) THEN
+      call judft_error("LDA+V not yet implemented for eigenvector parallelization.")
+   END IF
+
    !Vacuum contributions
    IF (fi%input%film) THEN
    CALL timestart("Vacuum part")
