@@ -76,7 +76,7 @@ MODULE m_vham
 
             i_pair=1 
             DO i_v = 1,atoms%n_v  
-                V_inp=atoms%lda_v(i_v)%V
+                V_inp=atoms%lda_v(i_v)%V / hartree_to_ev_const
                 natom1=atoms%lda_v(i_v)%atomIndex
                 latom1=atoms%lda_v(i_v)%thisAtomL
                 ll1atom1=latom1*(latom1+1)
@@ -164,7 +164,7 @@ MODULE m_vham
             !atom2index=0
             !counter=0
             !DO i_v = 1,atoms%n_v
-            !    V_inp=atoms%lda_v(i_v)%V
+            !    V_inp=atoms%lda_v(i_v)%V / hartree_to_ev_const
             !    natom1=atoms%lda_v(i_v)%atomIndex
             !    latom1=atoms%lda_v(i_v)%thisAtomL
             !    ll1atom1=latom1*(latom1+1)
