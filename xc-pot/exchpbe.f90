@@ -16,7 +16,7 @@ MODULE m_exchpbe
 CONTAINS
    SUBROUTINE exchpbe(xcpot,rho,s,u,v,lgga,lpot, &
                       ex,vx,vx_sr)
-!      USE m_hsefunctional, ONLY: calculateEnhancementFactor
+      USE m_hsefunctional, ONLY: calculateEnhancementFactor
       USE m_constants,     ONLY: pi_const
       USE m_types_xcpot_data
       USE m_judft
@@ -111,10 +111,12 @@ CONTAINS
          !     Calculate the enhancement factor fxhse and its derivatives
          !     as integral over the exchange hole (cf. [d])
          kF = (3.0 * pi_const**2 * rho)**thrd
-         CALL judft_error("HSE not implemented",calledby="exchpbe")
+         !! CALL judft_error("HSE not implemented",calledby="exchpbe")
          ! his creates a depency loop
-         !     CALL calculateEnhancementFactor(kF, s, fxhse, dFx_ds, d2Fx_ds2,
-         !     &        dFx_dkF, d2Fx_dsdkF)
+         !CALL timestart("hse: calc enhancement factor")
+         CALL calculateEnhancementFactor(kF, s, fxhse, dFx_ds, d2Fx_ds2, &
+                                         dFx_dkF, d2Fx_dsdkF)
+         !CALL timestop("hse: calc enhancement factor")
          ex = exunif * (fxpbe - xcpot%exchange_weight * fxhse )
       ELSE
          ex = exunif*fxpbe

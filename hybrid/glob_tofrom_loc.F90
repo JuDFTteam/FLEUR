@@ -1,5 +1,5 @@
 module m_glob_tofrom_loc
-    use m_types
+    use m_types_mpi
     use m_juDFT
 contains
     subroutine glob_to_loc(fmpi, glob_idx, pe, loc_idx)

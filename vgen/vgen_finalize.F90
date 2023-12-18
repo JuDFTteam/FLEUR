@@ -77,8 +77,7 @@ CONTAINS
          CALL vTot%SpinsToChargeAndMagnetisation()
          vTot%mt(:,0:,:,  2:4) = sfscale*vTot%mt(:,0:,:,2:4)
          vTot%pw(:,       2:3) = sfscale*vTot%pw(:,     2:3)
-         vTot%vacz(:,:,   2:4) = sfscale*vTot%vacz(:,:, 2:4)
-         vTot%vacxy(:,:,:,2:3) = sfscale*vTot%vacxy(:,:,:,2:3)
+         vTot%vac(:,:,:,2:3) = sfscale*vTot%vac(:,:,:,2:3)
          CALL vTot%ChargeAndMagnetisationToSpins()
       END IF
 
@@ -162,11 +161,10 @@ CONTAINS
 
       ! Copy first vacuum into second vacuum if this was not calculated before:
       IF (vacuum%nvac==1) THEN
-         vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
          IF (sym%invs) THEN
-            vTot%vacxy(:,:,2,:)  = CMPLX(vTot%vacxy(:,:,1,:))
+            vTot%vac(:,:,2,:)  = CMPLX(vTot%vac(:,:,1,:))
          ELSE
-            vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
+            vTot%vac(:,:,2,:)  = vTot%vac(:,:,1,:)
          END IF
       END IF
 

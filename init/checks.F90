@@ -48,7 +48,7 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts)
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp)
       USE m_nocoInputCheck
       USE m_types_fleurinput
       USE m_constants
@@ -59,6 +59,7 @@ MODULE m_checks
       type(t_input),INTENT(IN)  ::input
       type(t_sym),INTENT(IN)    :: sym
       type(t_kpts),INTENT(IN)   :: kpts
+      type(t_hybinp),intent(in) :: hybinp
 
       integer :: i,n,na
       real :: maxpos,minpos
@@ -102,6 +103,7 @@ MODULE m_checks
         IF ((input%f_level.GT.0.).AND.input%l_f) THEN
            call judft_warn("Enhanced forces are not implemented for film calculations.",hint="Set the f_level tag to 0.")
         END IF
+        if (.not.sym%symor) call judft_warn("Non-symorphic films probably do not work correctly. Either proceed with caution or use a symorphic setup (symor=T in inpgen)")
        maxpos=0.0;minpos=0.0
        DO n=1,atoms%ntype
          na=atoms%firstAtom(n) - 1
@@ -116,6 +118,24 @@ MODULE m_checks
            CALL juDFT_error("Band unfolding for 2nd variation SOC is only implemented without incorporating the overlap matrix.", hint="You have to set the optional /output/unfoldingBand/@useOlap switch to F.", calledby ="check_input_switches")
         END IF
      END IF
+     
+     ! Disable functionalities that are known to have bugs:
+     
+     IF (ANY(atoms%lda_u(1:atoms%n_u)%l_amf)) THEN
+        CALL juDFT_warn("Around Mean Field limit in LDA+U calculations is disabled at the moment.")
+     END IF
+     
+     IF(banddos%l_mcd) THEN
+        CALL juDFT_warn("Magnetic Circular Dichroism calculations are disbled at the moment.")
+     END IF
+     
+     IF (ANY(atoms%lapw_l(:).GE.0)) THEN
+        CALL juDFT_warn("APW+lo calculations are disabled at the moment.")
+     END IF
+
+#ifndef CPP_HDF
+     if (hybinp%l_hybrid) call juDFT_warn("Hybrid calculations should always use HDF5")
+#endif     
 
    END SUBROUTINE check_input_switches
 

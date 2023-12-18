@@ -7,33 +7,30 @@ MODULE m_dfpt
    USE m_juDFT
    USE m_constants
    USE m_types
-   USE m_types_mpimat
-   USE m_dfpt_check
-   USE m_dfpt_test
-   !USE m_dfpt_init
-   USE m_dfpt_sternheimer
-   USE m_dfpt_dynmat
-   !USE m_jpSternheimer,     only : solveSternheimerSCC
-   USE m_jp2ndOrdQuant,     only : CalcIIEnerg2
-   !USE m_jpSetupDynMat,     only : SetupDynamicMatrix
-   USE m_jpProcessDynMat!,   only : DiagonalizeDynMat, CalculateFrequencies
-   USE m_juDFT_stop, only : juDFT_error
-   USE m_vgen_coulomb
-   USE m_dfpt_vgen
-   USE m_convol
-   USE m_fleur_init
-   USE m_npy
-   USE m_desymmetrizer
-   USE m_outcdn
-   USE m_plot
-   USE m_eigen
-   USE m_fermie
 
    IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho, vTot, vxc, exc, vCoul, eig_id, oldmode, xcpot, hybdat, mpdata, forcetheo)
+                 & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+      USE m_dfpt_check
+      !USE m_dfpt_test
+      USE m_dfpt_sternheimer
+      USE m_dfpt_dynmat
+      USE m_dfpt_eii2,     only : CalcIIEnerg2, genPertPotDensGvecs, dfpt_e2_madelung
+      USE m_dfpt_dynmat_eig
+      USE m_juDFT_stop, only : juDFT_error
+      USE m_vgen_coulomb
+      USE m_dfpt_vgen
+      USE m_fleur_init
+      USE m_eigen
+      USE m_fermie
+      USE m_grdchlh
+      USE m_dfpt_dynmat_sym
+      USE m_types_eigdos
+      USE m_make_dos
+      USE m_dfpt_gradient
+      USE m_npy
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -51,26 +48,26 @@ CONTAINS
       TYPE(t_kpts),       INTENT(IN)  :: qpts !Possibly replace this by fi_nosym%kpts [read correctly!]
 
       TYPE(t_potden),   INTENT(INOUT) :: rho
-      TYPE(t_potden),   INTENT(IN)    :: vTot, vxc, exc, vCoul
+      TYPE(t_potden),   INTENT(IN)    :: vTot, vxc
       INTEGER,          INTENT(IN)    :: eig_id
-      LOGICAL,          INTENT(IN)    :: oldmode
 
-      TYPE(t_usdus)                 :: usdus
       TYPE(t_hub1data) :: hub1data
-      TYPE(t_potden)                :: vTotclean, rhoclean, grRho, grvextdummy, imagrhodummy, rho_nosym, vTot_nosym
+      TYPE(t_potden)                :: grvextdummy, imagrhodummy, rho_nosym, vTot_nosym, vext_dummy
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
-      TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im ! q-quantities
-      TYPE(t_jpPotden)              :: rho0, grRho0, vTot0, grVTot0
-      TYPE(t_tlmplm)                :: tdHS0
-      TYPE(t_results)               :: q_results, results1
+      TYPE(t_potden)                :: grgrVC3x3(3,3), grgrvextnum(3,3)
+      TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm ! q-quantities
+      TYPE(t_results)               :: q_results, results1, qm_results, results1m
       TYPE(t_kpts)                  :: qpts_loc
-      TYPE(t_kpts)              :: kqpts ! basically kpts, but with q added onto each one.
+      TYPE(t_kpts)                  :: kqpts, kqmpts ! basically kpts, but with q added onto each one.
+      TYPE(t_dos),TARGET            :: dos
+      
+      TYPE(t_eigdos_list),allocatable :: eigdos(:)
 
       ! Desymmetrized type variables:
       TYPE(t_mpi)        :: fmpi_nosym
       TYPE(t_fleurinput) :: fi_nosym
       TYPE(t_sphhar)     :: sphhar_nosym
-      TYPE(t_stars)      :: stars_nosym, starsq
+      TYPE(t_stars)      :: stars_nosym, starsq, starsmq
       TYPE(t_nococonv)   :: nococonv_nosym
       TYPE(t_enpara)     :: enpara_nosym
       TYPE(t_results)    :: results_nosym
@@ -81,108 +78,75 @@ CONTAINS
       CLASS(t_xcpot),     ALLOCATABLE :: xcpot_nosym
       CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_nosym
 
-      CLASS(t_mat), ALLOCATABLE :: smatq(:,:), hmatq(:,:)
+      ! Full symmetrized type variables:
+      TYPE(t_mpi)        :: fmpi_fullsym
+      TYPE(t_fleurinput) :: fi_fullsym
+      TYPE(t_sphhar)     :: sphhar_fullsym
+      TYPE(t_stars)      :: stars_fullsym
+      TYPE(t_nococonv)   :: nococonv_fullsym
+      TYPE(t_enpara)     :: enpara_fullsym
+      TYPE(t_results)    :: results_fullsym
+      TYPE(t_wann)       :: wann_fullsym
+      TYPE(t_hybdat)     :: hybdat_fullsym
+      TYPE(t_mpdata)     :: mpdata_fullsym
 
-      !COMPLEX, ALLOCATABLE :: exc_pw_nosym(:,:), vCoul_pw_nosym(:,:)
+      CLASS(t_xcpot),     ALLOCATABLE :: xcpot_fullsym
+      CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_fullsym
 
-      !integer                       :: logUnit = 100
-      !integer                       :: ngpqdp
-
-      !COMPLEX, ALLOCATABLE          :: loosetd(:, :, :, :)
-      !REAL,             ALLOCATABLE :: El(:, :, :, :)
-      INTEGER,          ALLOCATABLE :: recG(:, :)!, GbasVec(:, :), ilst(:, :, :)
+      INTEGER,          ALLOCATABLE :: recG(:, :)
       INTEGER                       :: ngdp2km
-      !INTEGER,          ALLOCATABLE :: gdp2Ind(:, :, :)
-      !INTEGER                       :: gdp2iLim(2, 3)
-      !INTEGER,          ALLOCATABLE :: nRadFun(:, :), iloTable(:, :, :), ilo2p(:, :)
-      !REAL,             ALLOCATABLE :: uuilon(:, :)
-      !REAL,             ALLOCATABLE :: duilon(:, :)
-      !REAL,             ALLOCATABLE :: ulouilopn(:, :, :)
-      !INTEGER,          ALLOCATABLE :: kveclo(:,:)
-      !REAL,             ALLOCATABLE :: rbas1(:, :, :, :, :)
-      !REAL,             ALLOCATABLE :: rbas2(:, :, :, :, :)
-      !REAL,             ALLOCATABLE :: gridf(:, :)
-      !COMPLEX,          ALLOCATABLE :: z0(:, :, :, :)
-      !complex,           allocatable :: grVxcIRKern(:)
-      !real,              allocatable :: dKernMTGPts(:, :, :)
-      !real,              allocatable :: gausWts(:)
-      !complex,           allocatable :: ylm(:, :)
-      !complex,           allocatable :: qpwcG(:, :)
-      !complex,           allocatable :: rho1MTCoreDispAt(:, :, :, :)
-      !complex,           allocatable :: grVeff0MT_init(:, :, :, :)
-      !complex,           allocatable :: grVeff0MT_main(:, :, :, :)
-      !complex,           allocatable :: grVext0IR_DM(:, :)
-      !complex,           allocatable :: grVext0MT_DM(:, :, :, :)
-      !complex,           allocatable :: grVCoul0IR_DM_SF(:, :)
-      !complex,           allocatable :: grVCoul0MT_DM_SF(:, :, :, :)
-      !complex,           allocatable :: grVeff0IR_DM(:, :)
-      !complex,           allocatable :: grVeff0MT_DM(:, :, :, :)
-      !complex,           allocatable :: dynMat(:, :)
       complex,           allocatable :: E2ndOrdII(:, :)
       complex,           allocatable :: eigenFreqs(:)
-      real,              allocatable :: eigenVals(:)
+      real,              allocatable :: eigenVals(:), eigenValsFull(:,:,:)
       complex,           allocatable :: eigenVecs(:, :)
-      !integer,           allocatable :: gpqdp(:, :)
-      !INTEGER,           ALLOCATABLE :: nocc(:, :)
-      !complex,            allocatable :: rho1IR(:, :, :)
-      !complex,            allocatable :: rho1MT(:, :, :, :, :)
-      !complex,            allocatable :: rho1MTDelta(:, :, :, :, :)
-      !complex,            allocatable :: rho1MTz0(:, :, :, :)
-      !complex,            allocatable :: vCoul1IRtempNoVol(:, :)
-      !complex,            allocatable :: vCoul1MTtempNoVol(:, :, :, :)
-      !complex,            allocatable :: vEff1IR(:, :, :)
-      !complex,            allocatable :: vEff1MT(:, :, :, :, :)
-      !complex,            allocatable :: vEff1MTnoVol(:, :, :, :, :)
-      !complex,            allocatable :: vExt1IR_final(:, :, :)
-      !complex,            allocatable :: vExt1MT(:, :, :, :, :)
-      !complex,            allocatable :: vExt1MTDelta(:, :, :, :, :)
-      !complex,            allocatable :: vExt1MTq0(:, :, :, :, :)
-      !complex,            allocatable :: vExt1noqIR_final(:, :, :)
-      !complex,            allocatable :: vHar1IR_final(:, :, :)
-      !complex,            allocatable :: vHar1MTDelta(:, :, :, :, :)
-      !complex,            allocatable :: vHar1MTq0(:, :, :, :, :)
-      !complex,            allocatable :: vHar1MT_final(:, :, :, :, :)
-      !complex,            allocatable :: vXc1MTDelta(:, :, :, :, :)
-      !complex,            allocatable :: vXc1MTq0(:, :, :, :, :)
+
       COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :)
-      !integer,      allocatable :: mapKpq2K(:, :)
-      !integer,      allocatable :: kpq2kPrVec(:, :, :)
 
-      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:)
+      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:)
+      REAL,    ALLOCATABLE :: e2_vm(:,:,:)
 
-      INTEGER :: ngdp, iSpin, iType, iR, ilh, iQ, iDir, iDtype, nspins
-      INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr
-      LOGICAL :: l_real
+      INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2
+      INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
+      INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
+      LOGICAL :: l_real, l_minusq, l_dfpt_scf
+
+      LOGICAL :: l_dfpt_band, l_dfpt_dos, l_dfpt_full
 
       CHARACTER(len=20)  :: dfpt_tag
-      CHARACTER(len=100) :: inp_pref
+      CHARACTER(len=4)   :: dynfiletag
+      CHARACTER(len=100) :: inp_pref, trash
 
-      INTEGER, ALLOCATABLE :: q_list(:), dfpt_eig_id_list(:)
+      INTEGER, ALLOCATABLE :: q_list(:)
 
       ! Desym-tests:
-      INTEGER :: ix, iy, iz, grid(3), iv_old, iflag_old, iv_new, iflag_new
-      INTEGER :: iType_old, iAtom_old, iType_new, iAtom_new, inversionOp
-      REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new, atom_shift(3)
+      INTEGER :: grid(3), iread
+      REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
 
-      !INTEGER, PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
-      !REAL,    PARAMETER :: eps7 = 1.0e-7
+      ALLOCATE(e2_vm(fi%atoms%nat,3,3))
+
+      l_dfpt_scf   = fi%juPhon%l_scf
+
+      l_dfpt_band  = fi%juPhon%l_band
+      l_dfpt_full  = fi%juPhon%l_intp
+      l_dfpt_dos   = fi%juPhon%l_dos
 
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
-      nspins = MERGE(2, 1, fi%noco%l_noco)
-      IF (fmpi%n_size == 1) THEN
-         ALLOCATE (t_mat::smatq(fi%kpts%nkpt, nspins), hmatq(fi%kpts%nkpt, nspins))
-      ELSE
-         ALLOCATE (t_mpimat::smatq(fi%kpts%nkpt, nspins), hmatq(fi%kpts%nkpt, nspins))
-      END IF
+      ! l_minusq is a hard false at the moment. It can be used to ignore +-q symmetries and
+      ! run the Sternheimer loop etc etc for both +q and -q.
+      ! This was only used for testing but may become relevant again for SOC systems with broken
+      ! inversion symmetry
+      l_minusq = .FALSE.
 
-      !IF (fi%juPhon%l_jpCheck) THEN
-    !      ! This function will be used to check the validity of juPhon's
-    !      ! input. I.e. check, whether all prohibited switches are off and,
-    !      ! once there is more expertise considering this topic, check whether
-    !      ! the cutoffs are chosen appropriately.
-    !      CALL dfpt_check(fi_nosym, xcpot_nosym)
-     ! END IF
+      nspins = MERGE(2, 1, fi%noco%l_noco)
+
+      IF (fi%juPhon%l_jpCheck) THEN
+          ! This function will be used to check the validity of juPhon's
+          ! input. I.e. check, whether all prohibited switches are off and,
+          ! once there is more expertise considering this topic, check whether
+          ! the cutoffs are chosen appropriately.
+          CALL dfpt_check(fi_nosym, xcpot_nosym)
+      END IF
 
       IF (fi%sym%nop>1) THEN
          WRITE(*,*) "Desymmetrization needed. Going ahead!"
@@ -193,115 +157,8 @@ CONTAINS
          fmpi_nosym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
          fmpi_nosym%mpi_comm = fmpi%mpi_comm
 
-         CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
-                         enpara_nosym, xcpot_nosym, results_nosym, wann_nosym, hybdat_nosym, mpdata_nosym, &
-                         inp_pref)
-
-         CALL rho_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_DEN)
-         CALL vTot_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_POTTOT)
-
-         ! TODO: Correctly account for such a shift in the desymmetrization.
-         ! For now: Just build input, that does not necessitate a shift.
-         !        inversionOp = -1
-         !        symOpLoop: DO iSym = 1, sym%nop
-         !           IF (ALL(sym%mrot(:,:,iSym)==invs_matrix)) THEN
-         !              inversionOp = iSym
-         !              EXIT symOpLoop
-         !           END IF
-         !        END DO symOpLoop
-
-         !        atom_shift = 0.0
-         !        IF (inversionOp.GT.0) THEN
-         !           IF(ANY(ABS(sym%tau(:,inversionOp)).GT.eps7).and..not.(film.and.ABS(sym%tau(3,inversionOp))>eps7)) THEN
-         !              atom_shift = 0.5*sym%tau(:,inversionOp)
-         !           END IF
-         !        END IF
-
-         ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
-         vTot_nosym%pw_w = CMPLX(0.0,0.0)
-         !ALLOCATE(exc_pw_nosym(SIZE(vTot_nosym%pw,1),1))
-         !ALLOCATE(vCoul_pw_nosym(SIZE(vTot_nosym%pw,1),1))
-
-         CALL desymmetrize_pw(fi%sym, stars, stars_nosym, rho%pw, rho_nosym%pw)
-         CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vTot%pw, vTot_nosym%pw, vTot%pw_w, vTot_nosym%pw_w)
-         CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, rho%mt, rho_nosym%mt)
-         CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, vTot%mt, vTot_nosym%mt)
-
-         !CALL desymmetrize_pw(fi%sym, stars, stars_nosym, exc%pw, exc_pw_nosym)
-         !CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vCoul%pw, vCoul_pw_nosym)
-
-         CALL desymmetrize_types(fi%input, fi_nosym%input, fi%atoms, fi_nosym%atoms, fi%noco, &
-                                 nococonv, nococonv_nosym, enpara, enpara_nosym, results, results_nosym)
-
-         IF (.FALSE.) THEN
-            DO iz = 0, grid(3)-1
-               DO iy = 0, grid(2)-1
-                  DO ix = 0, grid(1)-1
-                     old_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
-                                 fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
-                                 fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)
-
-                     new_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
-                                 fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
-                                 fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)! - &
-                                 !atom_shift
-
-                     ! Set region specific parameters for point
-                     ! Get MT sphere for point if point is in MT sphere
-                     CALL getMTSphere(fi%input,fi%cell,fi%atoms,old_point,iType_old,iAtom_old,pt_old)
-                     CALL getMTSphere(fi_nosym%input,fi_nosym%cell,fi_nosym%atoms,new_point,iType_new,iAtom_new,pt_new)
-                     IF (iAtom_old.NE.0) THEN
-                        iv_old = 0
-                        iflag_old = 1
-                     ELSE
-                        iv_old = 0
-                        iflag_old = 2
-                        pt_old(:) = old_point(:)
-                     END IF
-
-                     IF (iAtom_new.NE.0) THEN
-                        iv_new = 0
-                        iflag_new = 1
-                     ELSE
-                        iv_new = 0
-                        iflag_new = 2
-                        pt_new(:) = new_point(:)
-                     END IF
-
-                     ! Old point:
-                     CALL outcdn(pt_old,iType_old,iAtom_old,iv_old,iflag_old,1,.FALSE.,stars,&
-                                 fi%vacuum,sphhar,fi%atoms,fi%sym,fi%cell ,&
-                                 rho,xdnout_old)
-                     ! New point:
-                     CALL outcdn(pt_new,iType_new,iAtom_new,iv_old,iflag_old,1,.FALSE.,stars_nosym,&
-                                 fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                                 rho_nosym,xdnout_new)
-
-                     WRITE(9004,*) xdnout_new-xdnout_old
-
-                     ! Old point:
-                     CALL outcdn(pt_old,iType_old,iAtom_old,iv_old,iflag_old,1,.TRUE.,stars,&
-                                 fi%vacuum,sphhar,fi%atoms,fi%sym,fi%cell ,&
-                                 vTot,xdnout_old)
-                     ! New point:
-                     CALL outcdn(pt_new,iType_new,iAtom_new,iv_old,iflag_old,1,.TRUE.,stars_nosym,&
-                                 fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                                 vTot_nosym,xdnout_new)
-                     WRITE(9005,*) xdnout_new-xdnout_old
-                  END DO !x-loop
-               END DO !y-loop
-            END DO !z-loop
-
-            CALL save_npy("sym_on_rhopw.npy",rho%pw)
-            CALL save_npy("sym_off_rhopw.npy",rho_nosym%pw)
-            CALL save_npy("sym_on_rhomt.npy",rho%mt)
-            CALL save_npy("sym_off_rhomt.npy",rho_nosym%mt)
-            CALL save_npy("sym_on_vpw.npy",vTot%pw)
-            CALL save_npy("sym_off_vpw.npy",vTot_nosym%pw)
-            CALL save_npy("sym_on_vmt.npy",vTot%mt)
-            CALL save_npy("sym_off_vmt.npy",vTot_nosym%mt)
-            !STOP
-         END IF
+         CALL dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,wann_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
+                         fi,sphhar,stars,nococonv,enpara,results,rho,vTot)
       ELSE
          fmpi_nosym      = fmpi
          fi_nosym        = fi
@@ -325,157 +182,39 @@ CONTAINS
            !CALL dfpt_test(fi, sphhar, stars, fmpi, rho, grRho, rho0, grRho0, xcpot, ngdp, recG, grVxcIRKern, ylm, dKernMTGPts, gausWts, hybdat)
       !END IF
 
-!#ifndef CPP_FFTW
-!        call juDFT_error('juPhon is only usable with fftw support.', calledby='dfpt')
-!#endif
-
+      ! q_results saves the eigen-info for k+q, results1 for the perturbed quantities
       CALL q_results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
       CALL results1%init(fi_nosym%input, fi_nosym%atoms, fi_nosym%kpts, fi_nosym%noco)
-
-      !WRITE (oUnit,*) '------------------------------------------------------'
-      !WRITE (oUnit,*) 'This output is generated by juPhon, FLEURs DFPT addon.'
-      !WRITE (oUnit,*) 'l_dfpt = ', fi%juPhon%l_dfpt
-      !WRITE (oUnit,*) 'l_jpCheck = ', fi%juPhon%l_jpCheck
-      !WRITE (oUnit,*) 'l_jpTest = ', fi%juPhon%l_jpTest
-      !WRITE (oUnit,*) 'l_potout = ', fi%juPhon%l_potout
-      !WRITE (oUnit,*) 'l_eigout = ', fi%juPhon%l_eigout
-      !WRITE (oUnit,*) 'l_symTsh = ', fi%juPhon%l_symTsh
-      !WRITE (oUnit,*) 'l_symTdm = ', fi%juPhon%l_symTdm
-      !WRITE (oUnit,*) 'l_bfkq = ', fi%juPhon%l_bfkq
-      !WRITE (oUnit,*) 'jplPlus = ', fi%juPhon%jplPlus
-      !WRITE (oUnit,*) 'kgqmax = ', fi%juPhon%kgqmax
-      !WRITE (oUnit,*) 'gqmax = ', fi%juPhon%gqmax
-      !WRITE (oUnit,*) 'eps_pert = ', fi%juPhon%eps_pert
-      !WRITE (oUnit,*) 'eDiffCut = ', fi%juPhon%eDiffCut
-      !WRITE (oUnit,*) 'qpt_ph = ', fi%juPhon%qpt_ph
-
-      ! TODO: This is a test set of qpoints for a fixed fcc system.
-      !       We need to read out actual q-points at some point.
-      !       And it needs to be handled properly.
-      !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
-      !q_list = [1, 10, 19, 28, 37]! 512 k-points: \Gamma to X
-
-      qpts_loc = qpts
-
-      qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.025*0.0
-      qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.025*1.0
-      qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.025*2.0
-      qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.025*3.0
-      qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.025*4.0
-      qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*0.025*5.0
-      qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*0.025*6.0
-      qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*0.025*7.0
-      qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*0.025*8.0
-      qpts_loc%bk(:,10) = [0.0,1.0,1.0]*0.025*9.0
-      qpts_loc%bk(:,11) = [0.0,1.0,1.0]*0.025*10.0
-      qpts_loc%bk(:,12) = [0.0,1.0,1.0]*0.025*11.0
-      qpts_loc%bk(:,13) = [0.0,1.0,1.0]*0.025*12.0
-      qpts_loc%bk(:,14) = [0.0,1.0,1.0]*0.025*13.0
-      qpts_loc%bk(:,15) = [0.0,1.0,1.0]*0.025*14.0
-      qpts_loc%bk(:,16) = [0.0,1.0,1.0]*0.025*15.0
-      qpts_loc%bk(:,17) = [0.0,1.0,1.0]*0.025*16.0
-      qpts_loc%bk(:,18) = [0.0,1.0,1.0]*0.025*17.0
-      qpts_loc%bk(:,19) = [0.0,1.0,1.0]*0.025*18.0
-      qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.025*19.0
-      qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.025*20.0
-
-      qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.00625*0.0
-      qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.00625*1.0
-      qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.00625*2.0
-      qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.00625*3.0
-      qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.00625*4.0
-      qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*0.00625*5.0
-      qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*0.00625*6.0
-      qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*0.00625*7.0
-      qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*0.00625*8.0
-      qpts_loc%bk(:,10) = [0.0,1.0,1.0]*0.00625*9.0
-      qpts_loc%bk(:,11) = [0.0,1.0,1.0]*0.00625*10.0
-      qpts_loc%bk(:,12) = [0.0,1.0,1.0]*0.00625*11.0
-      qpts_loc%bk(:,13) = [0.0,1.0,1.0]*0.00625*12.0
-      qpts_loc%bk(:,14) = [0.0,1.0,1.0]*0.00625*13.0
-      qpts_loc%bk(:,15) = [0.0,1.0,1.0]*0.00625*14.0
-      qpts_loc%bk(:,16) = [0.0,1.0,1.0]*0.00625*15.0
-      qpts_loc%bk(:,17) = [0.0,1.0,1.0]*0.00625*16.0
-      qpts_loc%bk(:,18) = [0.0,1.0,1.0]*0.00625*17.0
-      qpts_loc%bk(:,19) = [0.0,1.0,1.0]*0.00625*18.0
-      qpts_loc%bk(:,20) = [0.0,1.0,1.0]*0.00625*19.0
-      qpts_loc%bk(:,21) = [0.0,1.0,1.0]*0.00625*20.0
-
-      ! fcc Gamma-X path in 1/16
-      !qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.0/16
-      !qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*1.0/16
-      !qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*2.0/16
-      !qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*3.0/16
-      !qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*4.0/16
-      !qpts_loc%bk(:,6)  = [0.0,1.0,1.0]*5.0/16
-      !qpts_loc%bk(:,7)  = [0.0,1.0,1.0]*6.0/16
-      !qpts_loc%bk(:,8)  = [0.0,1.0,1.0]*7.0/16
-      !qpts_loc%bk(:,9)  = [0.0,1.0,1.0]*8.0/16
-
-      !ALLOCATE(q_list(4),dfpt_eig_id_list(4))
-      !q_list = [2,4,6,8]
-
-      qpts_loc%bk(:,1)  = [0.0,1.0,1.0]*0.125*0.0
-      qpts_loc%bk(:,2)  = [0.0,1.0,1.0]*0.125*1.0
-      qpts_loc%bk(:,3)  = [0.0,1.0,1.0]*0.125*2.0
-      qpts_loc%bk(:,4)  = [0.0,1.0,1.0]*0.125*3.0
-      !!qpts_loc%bk(:,3)  = [1.0,1.0,0.0]*0.125*4.0
-      !!qpts_loc%bk(:,4)  = [1.0,0.0,1.0]*0.125*4.0
-      qpts_loc%bk(:,5)  = [0.0,1.0,1.0]*0.125*4.0
-
-      !!qpts_loc%bk(:,6)  = [-1.0,-1.0,0.0]*0.125*4.0
-      !!qpts_loc%bk(:,7)  = [-1.0,0.0,-1.0]*0.125*4.0
-      !!qpts_loc%bk(:,8)  = [0.0,-1.0,-1.0]*0.125*4.0
-
-      qpts_loc%bk(:,6)  = [1.0,1.0,2.0]*0.125*4.0
-      qpts_loc%bk(:,7)  = [1.0,1.0,2.0]*0.125*3.0
-      qpts_loc%bk(:,8)  = [1.0,1.0,2.0]*0.125*2.0
-      qpts_loc%bk(:,9)  = [1.0,1.0,2.0]*0.125*1.0
-
-      qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*1.0
-      qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*2.0
-      qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*3.0
-      qpts_loc%bk(:,13) = [1.0,1.0,1.0]*0.125*4.0
-
-      !qpts_loc%bk(:,1)  = [0.0,0.0,1.0]*0.125*4.0
-      !qpts_loc%bk(:,2)  = [0.0,0.0,1.0]*0.125*3.0
-      !qpts_loc%bk(:,3)  = [0.0,0.0,1.0]*0.125*2.0
-      !qpts_loc%bk(:,4)  = [0.0,0.0,1.0]*0.125*1.0
-      !qpts_loc%bk(:,5)  = [0.0,0.0,1.0]*0.125*0.0
-
-      !qpts_loc%bk(:,6)  = [-1.0,1.0,1.0]*0.125*1.0
-      !qpts_loc%bk(:,7)  = [-1.0,1.0,1.0]*0.125*2.0
-      !qpts_loc%bk(:,8)  = [-1.0,1.0,1.0]*0.125*3.0
-      !qpts_loc%bk(:,9)  = [-1.0,1.0,1.0]*0.125*4.0
-
-      !qpts_loc%bk(:,10) = [1.0,1.0,1.0]*0.125*4.0
-      !qpts_loc%bk(:,11) = [1.0,1.0,1.0]*0.125*3.0
-      !qpts_loc%bk(:,12) = [1.0,1.0,1.0]*0.125*2.0
-      !qpts_loc%bk(:,13) = [1.0,1.0,1.0]*0.125*1.0
-
-      ALLOCATE(q_list(13),dfpt_eig_id_list(13))
-      q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13]
       
-      !ALLOCATE(q_list(21),dfpt_eig_id_list(21))
-      !ALLOCATE(q_list(1),dfpt_eig_id_list(1))
-      !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
-      !q_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21] ! \Gamma to X in 20 steps.
-      !q_list = [21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
-      !q_list = [21,1,11,16,6,19,18,14,13,9,8,4,3,20,17,15,12,10,7,5,2]
-      !q_list = [5]
-      !q_list = [1,6,11,16,21]
+      IF (l_minusq) THEN
+         CALL qm_results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
+         CALL results1m%init(fi_nosym%input, fi_nosym%atoms, fi_nosym%kpts, fi_nosym%noco)
+      END IF
 
-      !qpts_loc%bk(:,1) = [1.0,1.0,1.0]*1.0/16
-      !qpts_loc%bk(:,2) = [1.0,1.0,1.0]*2.0/16
-      !qpts_loc%bk(:,3) = [1.0,1.0,1.0]*3.0/16
-      !qpts_loc%bk(:,4) = [1.0,1.0,1.0]*4.0/16
-      !qpts_loc%bk(:,5) = -[1.0,1.0,1.0]*1.0/16
-      !qpts_loc%bk(:,6) = -[1.0,1.0,1.0]*2.0/16
-      !qpts_loc%bk(:,7) = -[1.0,1.0,1.0]*3.0/16
-      !qpts_loc%bk(:,8) = -[1.0,1.0,1.0]*4.0/16
-      !ALLOCATE(q_list(5),dfpt_eig_id_list(5))
-      !q_list = [1,2,3,4,5]
+      IF (.NOT.fi%juPhon%qmode==0) THEN
+         ! Read qpoints from fullsym_inp.xml and fullsym_kpts.xml
+         inp_pref = ADJUSTL("fullsym_")
+         CALL fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
+                         enpara_fullsym, xcpot_fullsym, results_fullsym, wann_fullsym, hybdat_fullsym, mpdata_fullsym, &
+                         inp_pref)
+         qpts_loc = fi_fullsym%kpts
 
+         ALLOCATE(q_list(SIZE(qpts_loc%bk,2)))
+         q_list = (/(iArray, iArray=1,SIZE(qpts_loc%bk,2), 1)/)
+      ELSE
+         ! Read qpoints from the juPhon qlist in inp.xml
+         qpts_loc = qpts
+         qpts_loc%bk(:, :SIZE(fi%juPhon%qvec,2)) = fi%juPhon%qvec
+
+         ALLOCATE(q_list(SIZE(fi%juPhon%qvec,2)))
+         q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
+      END IF
+
+      ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
+      ! The density gradient is calculated by numerical differentiation, while the potential gradients are constructed (from the
+      ! density gradient) by a Weinert construction, just like the potentials are from the density.
+      ! This is done to ensure good continuity.
+      CALL timestart("Gradient generation")
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
       CALL imagrhodummy%copyPotDen(rho_nosym)
@@ -484,6 +223,12 @@ CONTAINS
       DO iDir = 1, 3
          CALL grRho3(iDir)%copyPotDen(rho_nosym)
          CALL grRho3(iDir)%resetPotDen()
+         DO iDir2 = 1, 3
+            CALL grgrvextnum(iDir2,iDir)%copyPotDen(vTot_nosym)
+            CALL grgrvextnum(iDir2,iDir)%resetPotDen()
+            CALL grgrVC3x3(iDir2,iDir)%copyPotDen(vTot_nosym)
+            CALL grgrVC3x3(iDir2,iDir)%resetPotDen()
+         END DO
          CALL grVext3(iDir)%copyPotDen(vTot_nosym)
          CALL grVext3(iDir)%resetPotDen()
          CALL grVtot3(iDir)%copyPotDen(vTot_nosym)
@@ -496,12 +241,12 @@ CONTAINS
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
       END DO
+      CALL vext_dummy%copyPotDen(vTot_nosym)
+      CALL vext_dummy%resetPotDen()
 
+      ! Density gradient
       DO iSpin = 1, SIZE(rho_nosym%mt,4)
-         !CALL mt_gradient_old(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, sphhar_nosym%clnu, sphhar_nosym%nmem, sphhar_nosym%mlh, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
-         !CALL save_npy("theoldgradient.npy",grrhodummy)
          CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
-         !CALL save_npy("thenewgradient.npy",grrhodummy)
       END DO
 
       DO zInd = -stars_nosym%mx3, stars_nosym%mx3
@@ -512,616 +257,680 @@ CONTAINS
                grRho3(1)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
                grRho3(2)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
                grRho3(3)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(1,1)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(1,2)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(1,3)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(2,1)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(2,2)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(2,3)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(3,1)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(3,2)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grgrvextnum(3,3)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
+                                                                   * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
             END DO
          END DO
       END DO
 
+      IF (fi_nosym%input%film) THEN
+         DO yInd = -stars_nosym%mx2, stars_nosym%mx2
+            DO xInd = -stars_nosym%mx1, stars_nosym%mx1
+               iStar = stars_nosym%ig(xInd, yInd, 0)
+               IF (iStar.EQ.0) CYCLE
+               iStar = stars_nosym%ig2(iStar)
+               grRho3(1)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
+               grRho3(2)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
+               DO iVac = 1, fi_nosym%vacuum%nvac
+                  DO iSpin = 1, SIZE(rho_nosym%vac,4)
+                     zlim = MERGE(fi_nosym%vacuum%nmz,fi_nosym%vacuum%nmzxy,iStar==1)
+                     CALL grdchlh(fi_nosym%vacuum%delz, REAL(rho_nosym%vac(:zlim,iStar,iVac,iSpin)),dr_re(:zlim),drr_dummy(:zlim))
+                     CALL grdchlh(fi_nosym%vacuum%delz,AIMAG(rho_nosym%vac(:zlim,iStar,iVac,iSpin)),dr_im(:zlim),drr_dummy(:zlim))
+                     grRho3(3)%vac(:,iStar,iVac,iSpin) = (3-2*iVac)*(dr_re + ImagUnit * dr_im)
+                  END DO
+               END DO
+            END DO
+         END DO
+      END IF
+
+      ! Coulomb/Effective potential gradients
       DO iDir = 1, 3
          CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
          CALL imagrhodummy%resetPotDen()
          write(oUnit, *) "grVeff", iDir
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
-                        fi_nosym%cell, fi_nosym%sliceplot, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
+                        fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
          write(oUnit, *) "grVC", iDir
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
-                        fi_nosym%cell, fi_nosym%sliceplot, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
+                        fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
       END DO
 
-      !CALL save_npy("grVext_mt_x.npy",grVext3(1)%mt)
-      !CALL save_npy("grVext_mt_y.npy",grVext3(2)%mt)
-      !CALL save_npy("grVext_mt_z.npy",grVext3(3)%mt)
-      !CALL save_npy("grVext_pw_x.npy",grVext3(1)%pw)
-      !CALL save_npy("grVext_pw_y.npy",grVext3(2)%pw)
-      !CALL save_npy("grVext_pw_z.npy",grVext3(3)%pw)
-      !CALL save_npy("grRho_sh.npy",grrhodummy)
-      !CALL save_npy("grRho_mt_x.npy",grRho3(1)%mt)
-      !CALL save_npy("grRho_mt_y.npy",grRho3(2)%mt)
-      !CALL save_npy("grRho_mt_z.npy",grRho3(3)%mt)
-      !CALL save_npy("grRho_pw_x.npy",grRho3(1)%pw)
-      !CALL save_npy("grRho_pw_y.npy",grRho3(2)%pw)
-      !CALL save_npy("grRho_pw_z.npy",grRho3(3)%pw)
-      !STOP
+         DO iDir2 = 1, 3
+            DO iDir = 1, 3
+               CALL imagrhodummy%resetPotDen()
+               CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+                         & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), &
+                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2)
+               CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
+            END DO
+         END DO
+      CALL save_npy("radii.npy",fi_nosym%atoms%rmsh(:,1))
+      DO iDir2 = 1, 3
+         DO iDir = 1, 3
+            CALL save_npy("grgrVC_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrVC3x3(iDir2,iDir)%pw(:,1))
+            CALL save_npy("grgrVCnum_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrvextnum(iDir2,iDir)%pw(:,1))
+         END DO
+      END DO
+      
+      CALL grRho3(1)%distribute(fmpi%mpi_comm)
+      CALL grRho3(2)%distribute(fmpi%mpi_comm)
+      CALL grRho3(3)%distribute(fmpi%mpi_comm)
+      CALL grVext3(1)%distribute(fmpi%mpi_comm)
+      CALL grVext3(2)%distribute(fmpi%mpi_comm)
+      CALL grVext3(3)%distribute(fmpi%mpi_comm)
+      CALL timestop("Gradient generation")
+      
+      CALL test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)
+
+      ! Old CRG-jp Routine to get the vectors G+q for Eii2
+      CALL genPertPotDensGvecs( stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, [0.0,0.0,0.0], recG )
+
+      ! The eig_ids, where the stuff of k+q, the perturbed stuff and some extra dynmat stuff will be saved.
+      q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                        .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+      dfpt_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                             .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+      dfpt_eig_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                              .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+
+      IF (l_minusq) THEN
+         qm_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                            .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+         dfpt_eigm_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                                .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+         dfpt_eigm_id2 = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                                .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
+      END IF
 
       ALLOCATE(dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
-      DO iQ = 1, SIZE(q_list)
-         CALL timestart("q-point")
-         kqpts = fi%kpts
-         ! Modify this from kpts only in DFPT case.
-         DO ikpt = 1, fi%kpts%nkpt
-            kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qpts_loc%bk(:,q_list(iQ))
-         END DO
+      IF (l_dfpt_scf) THEN
+         ! Do the self-consistency calculations for each specified q, for all atoms and for
+         ! all three cartesian directions.
+         ! TODO: The effort here should be greatly reducible by symmetry considerations. 
+         DO iQ = fi%juPhon%startq, SIZE(q_list)
+            CALL timestart("q-point")
+            kqpts = fi%kpts
+            ! Modify this from kpts only in DFPT case.
+            DO ikpt = 1, fi%kpts%nkpt
+               kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qpts_loc%bk(:,q_list(iQ))
+            END DO
 
-         CALL timestart("Eii2")
-         CALL old_get_Gvecs(stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, recG, .false.)
-         write(8989,*) qpts_loc%bk(:,q_list(iQ))
-         CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars_nosym, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
-         write(8989,*) E2ndOrdII
-         !CYCLE
-         CALL timestop("Eii2")
+            IF (l_minusq) THEN
+               kqmpts = fi%kpts
+               ! Modify this from kpts only in DFPT case.
+               DO ikpt = 1, fi%kpts%nkpt
+                  kqmpts%bk(:, ikpt) = kqmpts%bk(:, ikpt) - qpts_loc%bk(:,q_list(iQ))
+               END DO
+            END IF
 
-         CALL timestart("Eigenstuff at k+q")
-         q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                           .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+            CALL timestart("Eii2")
+            CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars_nosym, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
+            CALL timestop("Eii2")
 
-         CALL q_results%reset_results(fi%input)
+            write(9991,*) "Eii2 old:", E2ndOrdII
+            E2ndOrdII = CMPLX(0.0,0.0)
+            DO iDtype = 1, fi_nosym%atoms%ntype
+               DO iDir2 = 1, 3
+                  DO iDir = 1, 3
+                     E2ndOrdII(3*(iDtype-1)+iDir2,3*(iDtype-1)+iDir) = e2_vm(iDtype,iDir2,iDir)
+                  END DO
+               END DO
+            END DO
+            CALL timestart("Eigenstuff at k+q")
 
-         CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
-                    hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
-                    qpts_loc%bk(:,q_list(iQ)))
+            ! This was an additional eig_id to test a specific shift from k to k+q in the dynmat setup. We leave it in
+            ! for now, as it might be tested again in the future.
+            !q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+            !                  .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
 
-         ! Fermi level and occupancies
+            ! Get the eigenstuff at k+q
+            CALL q_results%reset_results(fi%input)
 
-         CALL timestart("determination of fermi energy")
-         CALL fermie(q_eig_id, fmpi, kqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, q_results)
-         CALL timestop("determination of fermi energy")
+            CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+                     hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
+                     qpts_loc%bk(:,q_list(iQ)))
+
+            ! Fermi level and occupancies
+            CALL timestart("determination of fermi energy")
+            CALL fermie(q_eig_id, fmpi, kqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, q_results)
+            CALL timestop("determination of fermi energy")
 
 #ifdef CPP_MPI
-            CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-            CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            CALL MPI_BCAST(q_results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+            CALL MPI_BCAST(q_results%w_iks, SIZE(q_results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
-         
-         CALL timestop("Eigenstuff at k+q")
 
-         DO iDtype = 1, fi_nosym%atoms%ntype
-            CALL timestart("Typeloop")
-            !DO iDir = 1, 1
-            DO iDir = 1, 3
-               CALL timestart("Dirloop")
-               dfpt_tag = ''
-               WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
-               WRITE(*,*) '-------------------------'
-               WRITE(*,*) 'Starting calculation for:'
-               WRITE(*,*) ' q         = ', qpts_loc%bk(:,q_list(iQ))
-               WRITE(*,*) ' atom      = ', iDtype
-               WRITE(*,*) ' direction = ', iDir
+            CALL timestop("Eigenstuff at k+q")
 
-               IF (fmpi_nosym%irank==0) THEN
-                  CALL starsq%reset_stars()
-                  CALL denIn1%reset_dfpt()
-                  CALL denIn1Im%reset_dfpt()
-                  CALL vTot1%reset_dfpt()
-                  CALL vTot1Im%reset_dfpt()
-                  CALL vC1%reset_dfpt()
-                  CALL vC1Im%reset_dfpt()
-               END IF
-               ! TODO: Broadcast this.
-               WRITE(*,*) '-------------------------'
-               ! This is where the magic happens. The Sternheimer equation is solved
-               ! iteratively, providing the scf part of dfpt calculations.
-               CALL timestart("Sternheimer")
-               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, mpdata_nosym, forcetheo_nosym, &
-                                     rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), grVC3(iDir), q_list(iQ), iDtype, iDir, &
-                                     dfpt_tag, eig_id, l_real, results1, dfpt_eig_id_list(iQ), q_eig_id, &
-                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)!, hmatq, smatq)
-               CALL timestop("Sternheimer")
-               !CALL save_npy(dfpt_tag//"gqvec.npy",starsq%gq)
+            IF (l_minusq) THEN
+               CALL timestart("Eigenstuff at k-q")
+               !qm_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+               !                  .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
 
-               IF (.FALSE.) THEN
+               CALL qm_results%reset_results(fi%input)
+
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+                        hybdat, 1, qm_eig_id, qm_results, rho, vTot, vxc, hub1data, &
+                        -qpts_loc%bk(:,q_list(iQ)))
+
+               ! Fermi level and occupancies
+               CALL timestart("determination of fermi energy")
+               CALL fermie(qm_eig_id, fmpi, kqmpts, fi%input, fi%noco, enpara%epara_min, fi%cell, qm_results)
+               CALL timestop("determination of fermi energy")
+
+#ifdef CPP_MPI
+               CALL MPI_BCAST(qm_results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+               CALL MPI_BCAST(qm_results%w_iks, SIZE(qm_results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+#endif
+
+               CALL timestop("Eigenstuff at k-q")
+            END IF
+
+            DO iDtype = 1, fi_nosym%atoms%ntype
+               CALL timestart("Typeloop")
+               DO iDir = 1, 3
+                  CALL timestart("Dirloop")
+                  dfpt_tag = ''
+                  WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+
+                  IF (fmpi%irank==0) THEN
+                     WRITE(*,*) 'Starting calculation for:'
+                     WRITE(*,*) ' q         = ', qpts_loc%bk(:,q_list(iQ))
+                     WRITE(*,*) ' atom      = ', iDtype
+                     WRITE(*,*) ' direction = ', iDir
+                  END IF
+
+                  !IF (fmpi_nosym%irank==0) THEN
+                     CALL starsq%reset_stars()
+                     IF (l_minusq) CALL starsmq%reset_stars()
+                     CALL denIn1%reset_dfpt()
+                     CALL denIn1Im%reset_dfpt()
+                     CALL vTot1%reset_dfpt()
+                     CALL vTot1Im%reset_dfpt()
+                     IF (l_minusq) CALL vTot1m%reset_dfpt()
+                     IF (l_minusq) CALL vTot1mIm%reset_dfpt()
+                     CALL vC1%reset_dfpt()
+                     CALL vC1Im%reset_dfpt()
+                     CALL results1%reset_results(fi_nosym%input)
+                  !END IF
+
+                  IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
+                  ! This is where the magic happens. The Sternheimer equation is solved
+                  ! iteratively, providing the scf part of dfpt calculations.
+                  IF (l_minusq) THEN
+                     CALL timestart("Sternheimer with -q")
+                     CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+                                          rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
+                                          dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
+                                          starsmq, qm_results, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
+                     CALL timestop("Sternheimer with -q")
+                  ELSE
+                     CALL timestart("Sternheimer")
+                     CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+                                          rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
+                                          dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
+                     CALL timestop("Sternheimer")
+                  END IF
+
+                  IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
+                  CALL timestart("Dynmat")
+                  ! Once the first order quantities are converged, we can construct all
+                  ! additional necessary quantities and from that the dynamical matrix.
+                  IF (.TRUE.) THEN
+                     CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
+                                          eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
+                                          rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
+                  ELSE
+                     CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
+                                          eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
+                                          rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, q_eig_id)
+                  END IF
+                  CALL timestop("Dynmat")
+                  dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
+                  IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
+                  IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                  IF (fmpi%irank==0) WRITE(9339,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                   CALL timestop("Dirloop")
-                  CYCLE
-               END IF
+               END DO
+               CALL timestop("Typeloop")
 
-               WRITE(*,*) '-------------------------'
-               CALL timestart("Dynmat")
-               ! Once the first order quantities are converged, we can construct all
-               ! additional necessary quantities and from that the dynamical matrix.
-               CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                    eig_id, dfpt_eig_id_list(iQ), enpara_nosym, mpdata_nosym, results_nosym, results1, l_real,&
-                                    rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, grVtot3, &
-                                    denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:))
-               CALL timestop("Dynmat")
-               dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + E2ndOrdII(3 *(iDtype-1)+iDir,:)
-               write(9989,*) "Eii2:", E2ndOrdII(3 *(iDtype-1)+iDir,:)
-               write(*,*) "dynmat row for ", dfpt_tag
-               write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-               !STOP
-               CALL timestop("Dirloop")
+#if defined(CPP_MPI)
+               CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
             END DO
-            CALL timestop("Typeloop")
-         END DO
-         DEALLOCATE(recG)
 
-         IF (.FALSE.) THEN
+            IF (fmpi%irank==0) THEN
+               WRITE(*,*) '-------------------------'
+               CALL timestart("Dynmat diagonalization")
+               CALL DiagonalizeDynMat(fi_nosym%atoms, qpts_loc%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw")
+               CALL timestop("Dynmat diagonalization")
+
+               CALL timestart("Frequency calculation")
+               CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw")
+               CALL timestop("Frequency calculation")
+               write(9991,*) "Eii2 new:", E2ndOrdII
+               DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+            END IF
+            !CALL close_eig(q_eig_id)
+            !IF (l_minusq) CALL close_eig(qm_eig_id)
             CALL timestop("q-point")
-            CYCLE
-         END IF
 
-         WRITE(*,*) '-------------------------'
-         CALL timestart("Dynmat diagonalization")
-         CALL DiagonalizeDynMat(fi%atoms, qpts_loc, fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ))
-         CALL timestop("Dynmat diagonalization")
+         END DO
+      END IF
 
-         CALL timestart("Frequency calculation")
-         CALL CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs)
-         CALL timestop("Frequency calculation")
-         DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+      ! If the Dynmats-Files were already created, we can read them in and do postprocessing.
+      ! a) Transform the q-Mesh onto real space.
+      ! b) Transform it back onto a dense q-path.
+      ! c) Transform it back to a denser grid
+      ! d) Perform a DOS calculation for the denser grid.
+      IF (fmpi%irank==0) THEN ! Band/Dos stuff
+         ! 0) Read
+         DO iQ = 1, fi_fullsym%kpts%nkpt ! Loop over dynmat files to read
+            IF (iQ<=9) THEN
+               OPEN( 3001, file="dynMatq=00"//int2str(iQ), status="old")
+            ELSE
+               OPEN( 3001, file="dynMatq=0"//int2str(iQ), status="old")
+            END IF
+            DO iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
+               IF (iread<4) THEN
+                  READ( 3001,*) trash
+                  write(*,*) iread, trash
+               ELSE
+                  READ( 3001,*) numbers(iread-3,:)
+                  write(*,*) iread, numbers(iread-3,:)
+                  dyn_mat(iQ,iread-3,:) = CMPLX(numbers(iread-3,::2),numbers(iread-3,2::2))
+               END IF
+            END DO ! iread
+            CLOSE(3001)
+         END DO ! iQ
 
-         CALL close_eig(q_eig_id)
+         ! a) Real space transformation
+         ALLOCATE(dyn_mat_r(fi_fullsym%kpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
+         CALL ft_dyn(fi_fullsym%atoms, fi_fullsym%kpts, fi_fullsym%sym, fi_fullsym%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
+         
+         ! b/c) reciprocal space transformation for bands/dense grid
+         IF (l_dfpt_band.OR.l_dfpt_full) THEN
+            IF (l_dfpt_band) THEN
+               dynfiletag = "band"
+            ELSE IF (l_dfpt_full) THEN
+               dynfiletag = "full"
+            ELSE
+               dynfiletag = "intp"
+            END IF
+            IF (l_dfpt_dos) ALLOCATE(eigenValsFull(3*fi%atoms%nat,fi_nosym%kpts%nkpt,fi_nosym%input%jspins))
+            DO iQ = 1, fi_nosym%kpts%nkpt
+               CALL ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi_nosym%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
+               WRITE(*,*) '-------------------------'
+               CALL timestart("Dynmat diagonalization")
+               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.FALSE.,TRIM(dynfiletag))
+               CALL timestop("Dynmat diagonalization")
 
-         CALL timestop("q-point")
+               CALL timestart("Frequency calculation")
+               CALL CalculateFrequencies(fi_nosym%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag))
+               CALL timestop("Frequency calculation")
 
-      END DO
+               IF (l_dfpt_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:)
 
-        ! Construct potential without the l=0 prefactor.
-        !CALL vTotclean%copyPotDen(vTot)
-        !CALL rhoclean%copyPotDen(rho)
+               DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, dyn_mat_pathq)
+            END DO ! iQ
+         END IF ! bands/interpolation
+         IF (l_dfpt_dos) THEN
+            fi_nosym%banddos%dos = .TRUE.
+            CALL dos%init(fi_nosym%input,fi_nosym%atoms,fi_nosym%kpts,fi_nosym%banddos,eigenValsFull)
+            allocate(eigdos(1))
+            eigdos(1)%p=>dos
+            CALL make_dos(fi_nosym%kpts,fi_nosym%atoms,fi_nosym%vacuum,fi_nosym%input,fi_nosym%banddos,fi_nosym%sliceplot,fi_nosym%noco,fi_nosym%sym,fi_nosym%cell,results,eigdos,fi%juPhon )
+         END IF ! dos
+      END IF ! Band/Dos stuff
 
-        !DO iSpin = 1, fi%input%jspins
-         !   DO iType = 1, fi%atoms%ntype
-         !       DO ilh = 0, sphhar%nlhd
-         !           DO iR = 1, fi%atoms%jri(iType)
-         !               IF (ilh.EQ.0) THEN
-         !                   vTotclean%mt(iR, 0, iType, iSpin) &
-         !               & = vTotclean%mt(iR, 0, iType, iSpin) * sqrt(fpi_const) / fi%atoms%rmsh(iR, iType)
-         !               END IF
-         !               rhoclean%mt(iR, ilh, iType, iSpin) &
-         !           & = rhoclean%mt(iR, ilh, iType, iSpin) / fi%atoms%rmsh(iR, iType) / fi%atoms%rmsh(iR, iType)
-         !           END DO
-         !       END DO
-         !   END DO
-        !END DO
+      CALL close_eig(q_eig_id)
+      CALL close_eig(dfpt_eig_id)
+      CALL close_eig(dfpt_eig_id2)
+      IF (l_minusq) THEN
+         CALL close_eig(qm_eig_id)
+         CALL close_eig(dfpt_eigm_id)
+         CALL close_eig(dfpt_eigm_id2)
+      END IF
 
-        ! This routine will initialize everything for juPhon that isn't already
-        ! provided by the FLEUR code/must be provieded in a modified way.
-        ! This includes for example the de-symmetrized MT and pw quantities and
-        ! their gradients. Notably, q-dependent quantities are initialized and
-        ! constructed elsewhere, within the q-loop.
-        ! TODO: I ignored the actual significance of clnu_atom etc. They are not type-dependent, but actually
-        ! refer to each atom respectively. So this will explode for iatom > 1. This is easily fixed.
-       ! CALL timestart("juPhon DFPT initialization")
-        !CALL dfpt_init(fi%juPhon, fi%sym, fi%input, fi%atoms, sphhar, stars, fi%cell, fi%noco, nococonv, fi%kpts, &
-         !            & fmpi, results, enpara, rho, vTot, eig_id, nvfull, usdus, rho0, grRho0, vTot0, grVTot0, &
-         !            & ngdp, El, recG, ngdp2km, gdp2Ind, gdp2iLim, GbasVec, ilst, nRadFun, iloTable, ilo2p, &
-         !            & uuilon, duilon, ulouilopn, kveclo, rbas1, rbas2, gridf, z0, grVxcIRKern, dKernMTGPts, &
-         !            & gausWts, ylm, qpwcG, rho1MTCoreDispAt, grVeff0MT_init, grVeff0MT_main, grVext0IR_DM, grVext0MT_DM, &
-         !            & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, grVeff0IR_DM, grVeff0MT_DM, tdHS0, loosetd, nocc, rhoclean, oldmode, xcpot, grRho)
-        !CALL timestop("juPhon DFPT initialization")
+      DEALLOCATE(recG)
 
-        ! < Imagine starting a q-grid-loop here. >
-        ! < For now we just select one q-point from the input. >
+      WRITE (oUnit,*) '------------------------------------------------------'
 
-        !STOP
-
-        !call createkqMapArrays( fi%kpts, qpts, 0, fi%kpts%nkpt3, [0], mapKpq2K, kpq2kPrVec )
-
-        !CALL timestart("juPhon DFPT scf loop")
-        !call solveSternheimerSCC( fmpi,  fi%atoms, fi%sym, stars, sphhar, fi%cell, enpara, usdus, fi%input, fi%kpts, qpts, results, usdus,      &
-         ! & logUnit, ngdp, rbas1, rbas2, kveclo, uuilon, duilon, ulouilopn, &
-         ! & recG, mapKpq2K, results%neig(:, 1), results%eig, GbasVec, ilst, z0, nvfull, El, nradFun, iloTable, nocc, ilo2p, gdp2Ind,     &
-         ! & gdp2iLim, kpq2kPrVec, qpwcG, q_list(2), tdHS0, loosetd, ylm, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), grVeff0MT_init, grVeff0MT_main, dKernMTGPts,       &
-         ! & grVxcIRKern, rho1MTCoreDispAt, gausWts, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, fi%juPhon%oneSternhCycle, ngpqdp, gpqdp,&
-         ! & vExt1IR_final, vHar1IR_final, vHar1MT_final, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, vXc1MTDelta, &
-         ! & vXc1MTq0, rho0%pw(:, :, 1, 1), rho0%mt(:, :, :, :, 1, 1), vTot0%pw(:, :, 1, 1), fi%juPhon%noPtsCon, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, vCoul1IRtempNoVol, vCoul1MTtempNoVol )
-        !CALL timestop("juPhon DFPT scf loop")
-
-        !CALL timestart("juPhon DFPT Eii2")
-        !CALL CalcIIEnerg2(fi%atoms, fi%cell, qpts, stars, fi%input, q_list(2), ngdp, recG, E2ndOrdII)
-        !CALL timestop("juPhon DFPT Eii2")
-
-        !CALL timestart("juPhon DFPT dynmat setup")
-        !CALL SetupDynamicMatrix( fmpi, fi%noco, nococonv,  fi%atoms, fi%input, fi%sym, fi%cell, sphhar, stars, fi%kpts, qpts, usdus, results, vTotclean, q_list(2), ngdp, ngpqdp, recG, sphhar%mlh, sphhar%nmem,&
-         !   & sphhar%clnu, rho%pw, rho1IR, rho1MT, vExt1MT, vEff1IR, vEff1MT, vTot%pw_w, vTotclean%mt(:, 0:, :, 1),&
-         !   & rhoclean%mt, E2ndOrdII, El, results%eig, rbas1, rbas2, iloTable, nvfull, nocc, ilst, GbasVec, z0, kveclo, nRadFun, mapKpq2K, kpq2kPrVec,       &
-         !   & gpqdp, sphhar%memd, logUnit, vxc%pw, exc%pw(:, 1), vxc%mt, exc%mt(:, 0:, :, 1), vExt1IR_final, vHar1IR_final, vHar1MT_final, grRho0%pw(:, 1, 1, :), grRho0%mt(:, :, :, 1, 1, :), &
-         !   & grVext0IR_DM, grVext0MT_DM, grVeff0IR_DM, grVeff0MT_DM, dynMat, rho1MTDelta, vExt1MTDelta, vExt1MTq0, vHar1MTDelta, vHar1MTq0, &
-         !   & vXc1MTDelta, vXc1MTq0, vEff1MTnoVol, vExt1noqIR_final, rho1MTz0, &
-         !   & grVCoul0IR_DM_SF, grVCoul0MT_DM_SF, vCoul1IRtempNoVol, vCoul1MTtempNoVol)
-        !CALL timestop("juPhon DFPT dynmat setup")
-
-        !CALL timestart("juPhon DFPT dynmat diagonalization")
-        !CALL DiagonalizeDynMat(fi%atoms, qpts, fi%juPhon%calcEigenVec, dynMat, eigenVals, eigenVecs, q_list(2))
-        !CALL timestop("juPhon DFPT dynmat diagonalization")
-
-        !CALL timestart("juPhon DFPT frequency calculation")
-        !CALL CalculateFrequencies(fi%atoms, q_list(2), eigenVals, eigenFreqs)
-        !CALL timestop("juPhon DFPT frequency calculation")
-
-        ! < Imagine ending a q-grid-loop here. >
-
-        WRITE (oUnit,*) '------------------------------------------------------'
-
-        CALL juDFT_end("Phonon calculation finished.")
+      CALL juDFT_end("Phonon calculation finished.")
 
     END SUBROUTINE dfpt
 
-!    subroutine createkqMapArrays( kpts, qpts, nrAddQs, kSetDim, addQnkptis, mapKpq2K, kpq2kPrVec )
-!
-!      use m_types
-!      use m_juDFT_stop, only : juDFT_error
-!
-!      implicit none
-!
-!      ! Type parameters
-!      type(t_kpts),              intent(in)  :: kpts
-!      type(t_kpts),              intent(in)  :: qpts
-!
-!      ! Array parameter
-!      integer,                   intent(in)  :: addQnkptis(:)
-!      integer,                   intent(in)  :: kSetDim(:)
-!      integer,      allocatable, intent(out) :: mapKpq2K(:, :)
-!      integer,      allocatable, intent(out) :: kpq2kPrVec(:, :, :)
-!
-!      ! Scalar parameter
-!      integer,                   intent(in)  :: nrAddQs
-!
-!      ! Array variable
-!      integer,      allocatable              :: mapK2Ind(:, :, :) ! takes components of kpts%bk * lcm and gives its index
-!      integer,      allocatable              :: mapK2mK(:)
-!      integer                                :: kpqNomin(3)       ! helps to find k + q mapped back to Brillouin zone
-!      real                                   :: kpqTemp(3)        ! helps to find k + q mapped back to Brillouin zone
-!      character(len=1024)                    :: errorMessage      ! stores error message for error output
-!
-!      ! Scalar variable
-!      integer                                :: ikpt              ! loop variable
-!      integer                                :: maxKcomp(3)       ! stores maximal k-point component * lcm
-!      integer                                :: idir              ! loop variable
-!      integer                                :: iqpt              ! loop variable
-!      integer                                :: nkptShift         ! stores shift of shifted k-point set
-!      integer                                :: ikptSh            ! loop variable
-!      logical                                :: matchFound        ! is true if index for k + q is found
-!      real :: lcm
-!
-!      lcm = real( kgv(kSetDim, 3) )
-!
-!      ! Determine maximal value of k-vector per direction in internal representation for allocation of mapKpq2K array and allocate it
-!      maxKcomp = 0
-!      do idir = 1, 3
-!        maxKcomp(idir) = maxval( kpts%bk(idir, :kpts%nkpt) * lcm )
-!      end do
-!      allocate( mapK2Ind(0:maxKcomp(1), 0:maxKcomp(2), 0:maxKcomp(3)) )
-!      mapK2Ind = 0
-!      allocate( mapKpq2K(kpts%nkpt, qpts%nkptf + nrAddQs) )
-!
-!      ! Fill up array which stores the index of a given k-point
-!      do ikpt = 1, kpts%nkpt
-!        mapK2Ind(nint(kpts%bk(1, ikpt) * lcm), nint(kpts%bk(2, ikpt) * lcm), nint(kpts%bk(3, ikpt) * lcm)) = ikpt
-!      end do
-!
-!      ! Determine k-point on which k + q can be folded back and determine the respective reciprocal lattice vector.
-!      ! The absolute value of every coordinate of the reciprocal lattice vector can be 1 maximally.
-!      allocate( kpq2kPrVec(3, kpts%nkpt, qpts%nkpt) )
-!      kpq2kPrVec = 0
-!      do iqpt = 1, qpts%nkpt
-!        do ikpt = 1, kpts%nkpt
-!          kpqNomin = 0
-!          do idir = 1, 3
-!            kpqNomin(idir) = nint( mod( kpts%bk(idir, ikpt) + qpts%bk(idir, iqpt), 1. ) * lcm )
-!            !kpqNomin(idir) = nint(lcm*kpts%bk(idir, ikpt) + lcm*qpts%bk(idir, iqpt))
-!            ! Is in 1st Brillouin zone
-!            if (abs(real(kpqNomin(idir)) / real(lcm) - (kpts%bk(idir, ikpt) + qpts%bk(idir, iqpt))) < 1e-5) then
-!            !if (kpqNomin(idir).lt.int(lcm)) then
-!              kpq2kPrVec(idir, ikpt, iqpt) = 0
-!            ! Has to be backfolded
-!            else
-!              kpq2kPrVec(idir, ikpt, iqpt) = -1
-!            end if
-!          end do
-!          if(.false.) then
-!            write(1005, '(i5, i5, 3(i5))') iqpt, ikpt, kpq2kPrVec(:, ikpt, iqpt)
-!          end if
-!          mapKpq2K(ikpt, iqpt) = mapK2Ind( kpqNomin(1), kpqNomin(2), kpqNomin(3) )
-!          !mapKpq2K(ikpt, iqpt) = mapK2Ind( mod(kpqNomin(1),int(lcm)), mod(kpqNomin(2),int(lcm)), mod(kpqNomin(3),int(lcm)) )
-!        end do
-!      end do
-!
-!      ! For this found k-vector equals to k + q, determine the index and fill up array which connects the kpts indices of the k and q
-!      ! qpoint with the index of the k-vector equals to k + q.
-!      nkptShift = 0
-!      matchFound = .false.
-!      do iqpt = qpts%nkpt + 1, qpts%nkpt + nrAddQs
-!        do ikpt = 1, kpts%nkpt
-!          kpqTemp(:) = modulo1r( kpts%bk(:, ikpt) + qpts%bk(:, iqpt) )
-!          do ikptSh = 1, addQnkptis(iqpt - qpts%nkpt)
-!            if ( norm2( kpts%bk(:, kpts%nkpt + ikptSh + nkptShift) - kpqTemp(:) ) < 1e-7 ) then
-!              mapKpq2K(ikpt, iqpt) = kpts%nkpt + nkptShift + ikptSh
-!              matchFound = .true.
-!              exit
-!            end if
-!          end do
-!          if ( .not.matchFound ) then
-!            write (errorMessage, '(a,1x,i3)') 'no match for k+q-point', kpqTemp
-!            call juDFT_error( errorMessage, calledby='createkqMapArrays', hint='Please check k-points, q-points and mapKpq2K array!' )
-!          else
-!            matchFound = .false.
-!          end if
-!        end do
-!        nkptShift = nkptShift + addQnkptis(iqpt - qpts%nkpt)
-!      end do
-!
-!      if (.false.) then
-!        ! Finds out which k' results when sending k to -k and then backfolding into 1st Brillouin zone.
-!        do ikpt = 1, kpts%nkpt
-!          do idir = 1, 3
-!            if ( kpts%bk(idir, ikpt)==0 ) then
-!              kpqTemp(idir) = kpts%bk(idir, ikpt)
-!            else
-!              kpqTemp(idir) = -kpts%bk(idir, ikpt) + 1
-!            end if
-!          end do ! idir
-!          mapK2mK(ikpt) = mapK2Ind(int(kpqTemp(1) * lcm), int(kpqTemp(2) * lcm), int(kpqTemp(3) * lcm))
-!        end do ! ikpt
-!      end if
-!
-!    end subroutine createkqMapArrays
+   SUBROUTINE dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,wann_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
+                         fi,sphhar,stars,nococonv,enpara,results,rho,vTot)
+      USE m_desymmetrizer
+      USE m_outcdn
+      USE m_plot
+      USE m_fleur_init
 
-!    function modulo1r(kpoint)
-!      implicit none
-!      real(8), intent(in) :: kpoint(3)
-!      real(8)             :: modulo1r(3)
-!      integer             :: i
-!
-!      modulo1r = modulo (kpoint , 1d0)
-!
-!      do i = 1,3
-!        if(abs(1-abs(modulo1r(i))).lt.1d-13) modulo1r(i) = 0d0
-!      enddo
-!    end function modulo1r
+      TYPE(t_mpi),        INTENT(INOUT) :: fmpi_nosym
+      TYPE(t_fleurinput), INTENT(INOUT) :: fi_nosym
+      TYPE(t_sphhar),     INTENT(INOUT) :: sphhar_nosym
+      TYPE(t_stars),      INTENT(INOUT) :: stars_nosym
+      TYPE(t_nococonv),   INTENT(INOUT) :: nococonv_nosym
+      TYPE(t_enpara),     INTENT(INOUT) :: enpara_nosym
+      TYPE(t_results),    INTENT(INOUT) :: results_nosym
+      TYPE(t_wann),       INTENT(INOUT) :: wann_nosym
+      TYPE(t_hybdat),     INTENT(INOUT) :: hybdat_nosym
+      TYPE(t_mpdata),     INTENT(INOUT) :: mpdata_nosym
 
-!    function kgv(iarr,n)
-!      implicit none
-!      integer              :: kgv
-!      integer, intent(in)  :: n,iarr(n)
-!      logical              :: lprim(2:maxval(iarr))
-!      integer, allocatable :: prim(:),expo(:)
-!      integer              :: nprim,marr
-!      integer              :: i,j,ia,k
-!      ! Determine prime numbers
-!      marr  = maxval(iarr)
-!      lprim = .true.
-!      do i = 2,marr
-!        j = 2
-!        do while (i*j.le.marr)
-!          lprim(i*j) = .false.
-!          j          = j + 1
-!        enddo
-!      enddo
-!      nprim = count(lprim)
-!      allocate ( prim(nprim),expo(nprim) )
-!      j = 0
-!      do i = 2,marr
-!        if(lprim(i)) then
-!          j       = j + 1
-!          prim(j) = i
-!        endif
-!      enddo
-!      ! Determine least common multiple
-!      expo = 0
-!      do i = 1,n
-!        ia = iarr(i)
-!        if(ia.eq.0) cycle
-!        do j = 1,nprim
-!          k = 0
-!          do while(ia/prim(j)*prim(j).eq.ia)
-!            k  = k + 1
-!            ia = ia / prim(j)
-!          enddo
-!          expo(j) = max(expo(j),k)
-!        enddo
-!      enddo
-!      kgv = 1
-!      do j = 1,nprim
-!        kgv = kgv * prim(j)**expo(j)
-!      enddo
-!      deallocate ( prim,expo )
-!    end function kgv
+      CLASS(t_xcpot),     ALLOCATABLE, INTENT(INOUT) :: xcpot_nosym
+      CLASS(t_forcetheo), ALLOCATABLE, INTENT(INOUT) :: forcetheo_nosym
 
-    subroutine old_get_Gvecs(starsT, cellT, inputT, ngdp, ngdp2km, gdp, testMode )
+      TYPE(t_potden), INTENT(INOUT):: rho_nosym, vTot_nosym
+      TYPE(t_fleurinput), INTENT(IN) :: fi
+      TYPE(t_sphhar),     INTENT(IN) :: sphhar
+      TYPE(t_stars),      INTENT(IN) :: stars
+      TYPE(t_nococonv),   INTENT(IN) :: nococonv
+      TYPE(t_enpara),     INTENT(IN) :: enpara
+      TYPE(t_results),    INTENT(IN) :: results
+      TYPE(t_potden),   INTENT(IN) :: rho, vTot
 
-      use m_juDFT
+      INTEGER, INTENT(IN) :: grid(3)
 
-      type(t_stars),          intent(in)   :: starsT
-      type(t_cell),           intent(in)   :: cellT
-      type(t_input),          intent(in)   :: inputT
+      CHARACTER(len=100), INTENT(IN) :: inp_pref
 
-      integer,                intent(out)  :: ngdp
-      integer,                intent(out)  :: ngdp2km
-      logical,                intent(in)   :: testMode
+      INTEGER :: ix, iy, iz, iv_old, iflag_old, iv_new, iflag_new
+      INTEGER :: iType_old, iAtom_old, iType_new, iAtom_new!, inversionOp
+      REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new!, atom_shift(3)
+      LOGICAL :: test_desym
+      CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
+                        enpara_nosym, xcpot_nosym, results_nosym, wann_nosym, hybdat_nosym, mpdata_nosym, &
+                        inp_pref)
 
-      integer,  allocatable,  intent(out)  :: gdp(:, :)
+      CALL rho_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_DEN)
+      CALL vTot_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_POTTOT)
 
-      integer                              :: Gx, Gy, Gz, iG
-      integer                              :: ngrest
+      ! TODO: Correctly account for such a shift in the desymmetrization.
+      ! For now: Just build input, that does not necessitate a shift.
+      !        inversionOp = -1
+      !        symOpLoop: DO iSym = 1, sym%nop
+      !           IF (ALL(sym%mrot(:,:,iSym)==invs_matrix)) THEN
+      !              inversionOp = iSym
+      !              EXIT symOpLoop
+      !           END IF
+      !        END DO symOpLoop
 
-      integer                              :: gdptemp2kmax(3, (2 * starsT%mx1 + 1) * (2 * starsT%mx2 + 1) * (2 * starsT%mx3 +  1))
-      integer                              :: gdptemprest(3, (2 * starsT%mx1 + 1) * (2 * starsT%mx2 + 1) * (2 * starsT%mx3 +  1))
-      integer                              :: Gint(3)
-      real                                 :: Gext(3)
+      !        atom_shift = 0.0
+      !        IF (inversionOp.GT.0) THEN
+      !           IF(ANY(ABS(sym%tau(:,inversionOp)).GT.eps7).and..not.(film.and.ABS(sym%tau(3,inversionOp))>eps7)) THEN
+      !              atom_shift = 0.5*sym%tau(:,inversionOp)
+      !           END IF
+      !        END IF
 
-      ngdp = 0
-      gdptemp2kmax = 0
-      gdptemprest = 0
-      ngdp2km = 0
-      ngrest = 0
+      ALLOCATE(vTot_nosym%pw_w, mold=vTot_nosym%pw)
+      vTot_nosym%pw_w = CMPLX(0.0,0.0)
 
-      do Gx = -starsT%mx1, starsT%mx1
-        do Gy = -starsT%mx2, starsT%mx2
-          do Gz = -starsT%mx3, starsT%mx3
-            Gint = [Gx, Gy, Gz]
-            Gext =  matmul(cellT%bmat, Gint)
-            if (norm2(Gext) <= inputT%gmax) then
-              ngdp = ngdp + 1
-              ! Sort G-vectors
-              if ( norm2(Gext) <= 2 * inputT%rkmax ) then
-                ngdp2km = ngdp2km + 1
-                gdptemp2kmax(:, ngdp2km) = Gint(:)
-              else
-                ngrest = ngrest + 1
-                gdptemprest(:, ngrest) = Gint(:)
-              end if
-            endif
-          enddo !Gz
-        enddo !Gy
-      enddo !Gx
-      allocate(gdp(3, ngdp))
-      gdp(:, :ngdp2km) = gdptemp2kmax(:, :ngdp2km)
-      gdp(:, ngdp2km + 1 : ngdp) = gdptemprest(:, :ngrest)
+      CALL desymmetrize_pw(fi%sym, stars, stars_nosym, rho%pw, rho_nosym%pw)
+      CALL desymmetrize_pw(fi%sym, stars, stars_nosym, vTot%pw, vTot_nosym%pw, vTot%pw_w, vTot_nosym%pw_w)
+      CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, rho%mt, rho_nosym%mt)
+      CALL desymmetrize_mt(fi%sym, fi_nosym%sym, fi%cell, fi%atoms, fi_nosym%atoms, sphhar, sphhar_nosym, vTot%mt, vTot_nosym%mt)
 
-    end subroutine old_get_Gvecs
+      CALL desymmetrize_types(fi%input, fi_nosym%input, fi%atoms, fi_nosym%atoms, fi%noco, &
+                              nococonv, nococonv_nosym, enpara, enpara_nosym, results, results_nosym)
 
-    subroutine mt_gradient_new(atoms, sphhar, sym, r2FlhMt, GrFshMt)
+      test_desym = .FALSE.
+      IF (test_desym) THEN
+         DO iz = 0, grid(3)-1
+            DO iy = 0, grid(2)-1
+               DO ix = 0, grid(1)-1
+                  old_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
+                              fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
+                              fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)
 
-      use m_gaunt, only : gaunt1
+                  new_point = fi%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
+                              fi%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
+                              fi%cell%amat(:,3)*REAL(iz)/(grid(3)-1)! - &
+                              !atom_shift
 
-      type(t_atoms),               intent(in)  :: atoms
-      type(t_sphhar),              intent(in)  :: sphhar
-      type(t_sym),                 intent(in)  :: sym
+                  ! Set region specific parameters for point
+                  ! Get MT sphere for point if point is in MT sphere
+                  CALL getMTSphere(fi%input,fi%cell,fi%atoms,old_point,iType_old,iAtom_old,pt_old)
+                  CALL getMTSphere(fi_nosym%input,fi_nosym%cell,fi_nosym%atoms,new_point,iType_new,iAtom_new,pt_new)
+                  IF (iAtom_old.NE.0) THEN
+                     iv_old = 0
+                     iflag_old = 1
+                  ELSE
+                     iv_old = 0
+                     iflag_old = 2
+                     pt_old(:) = old_point(:)
+                  END IF
 
-      real,                        intent(in)  :: r2FlhMt(:, 0:, :)
-      complex,                     intent(out) :: GrFshMt(:, :, :, :)
+                  IF (iAtom_new.NE.0) THEN
+                     iv_new = 0
+                     iflag_new = 1
+                  ELSE
+                     iv_new = 0
+                     iflag_new = 2
+                     pt_new(:) = new_point(:)
+                  END IF
 
-      real                                     :: pfac
-      real                                     :: tGaunt
-      integer                                  :: itype
-      integer                                  :: imesh
-      integer                                  :: mqn_m
-      integer                                  :: oqn_l
-      integer                                  :: mqn_mpp
-      integer                                  :: lm
-      integer                                  :: symType
-      integer                                  :: ilh
-      integer                                  :: imem
+                  ! Old point:
+                  CALL outcdn(pt_old,iType_old,iAtom_old,iv_old,iflag_old,1,.FALSE.,stars,&
+                              fi%vacuum,sphhar,fi%atoms,fi%sym,fi%cell ,&
+                              rho,xdnout_old)
+                  ! New point:
+                  CALL outcdn(pt_new,iType_new,iAtom_new,iv_old,iflag_old,1,.FALSE.,stars_nosym,&
+                              fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                              rho_nosym,xdnout_new)
 
-      real,           allocatable              :: rDerFlhMt(:)
-      complex,        allocatable              :: r2GrFshMtNat(:, :, :, :)
+                  WRITE(9004,*) xdnout_new-xdnout_old
 
-      allocate( r2GrFshMtNat(atoms%jmtd, ( atoms%lmaxd + 1)**2, atoms%nat, 3) )
-      allocate( rDerFlhMt(atoms%jmtd) )
-      GrFshMt = cmplx(0., 0.)
-      r2GrFshMtNat = cmplx(0., 0.)
-      rDerFlhMt = 0.
+                  ! Old point:
+                  CALL outcdn(pt_old,iType_old,iAtom_old,iv_old,iflag_old,1,.TRUE.,stars,&
+                              fi%vacuum,sphhar,fi%atoms,fi%sym,fi%cell ,&
+                              vTot,xdnout_old)
+                  ! New point:
+                  CALL outcdn(pt_new,iType_new,iAtom_new,iv_old,iflag_old,1,.TRUE.,stars_nosym,&
+                              fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                              vTot_nosym,xdnout_new)
+                  WRITE(9005,*) xdnout_new-xdnout_old
+               END DO !x-loop
+            END DO !y-loop
+         END DO !z-loop
 
-      pfac = sqrt( fpi_const / 3. )
-      do mqn_mpp = -1, 1
-        do itype = 1, atoms%ntype
-            symType = sym%ntypsy(itype)
-            do ilh = 0, sphhar%nlh(symType)
-              oqn_l = sphhar%llh(ilh, symType)
-              do imem = 1, sphhar%nmem(ilh,symType)
-                mqn_m = sphhar%mlh(imem,ilh,symType)
+         CALL save_npy("sym_on_rhopw.npy",rho%pw)
+         CALL save_npy("sym_off_rhopw.npy",rho_nosym%pw)
+         CALL save_npy("sym_on_rhomt.npy",rho%mt)
+         CALL save_npy("sym_off_rhomt.npy",rho_nosym%mt)
+         CALL save_npy("sym_on_vpw.npy",vTot%pw)
+         CALL save_npy("sym_off_vpw.npy",vTot_nosym%pw)
+         CALL save_npy("sym_on_vmt.npy",vTot%mt)
+         CALL save_npy("sym_off_vmt.npy",vTot_nosym%mt)
+      END IF
+   END SUBROUTINE
 
-                ! l + 1 block
-                ! oqn_l - 1 to l, so oqn_l should be < lmax not <= lmax
-                if ( ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 ) .and. ( abs(mqn_m) <= oqn_l ) .and. (oqn_l < atoms%lmax(itype)) ) then
-                  lm = ( oqn_l + 1 ) * ( oqn_l + 2 ) + 1 + mqn_m - mqn_mpp
-                  call derivative_loc( r2FlhMt(:, ilh, itype), itype, atoms, rDerFlhMt )
-                  tGaunt = Gaunt1( oqn_l + 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd )
-                  do imesh = 1, atoms%jri(itype)
-                    r2GrFshMtNat(imesh, lm, itype, mqn_mpp + 2) = r2GrFshMtNat(imesh, lm, itype, mqn_mpp + 2) + pfac * (-1)**mqn_mpp &
-                      &* tGaunt * (rDerFlhMt(imesh) * sphhar%clnu(imem,ilh,symType) &
-                      &- ((oqn_l + 2) * r2FlhMt(imesh, ilh, itype) * sphhar%clnu(imem,ilh,symType) / atoms%rmsh(imesh, itype)))
-                  end do ! imesh
-                end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 ) .and. ( abs(mqn_m) <= oqn_l )
+   SUBROUTINE test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)
+      USE m_npy
+      USE m_outcdn
+      USE m_grdchlh
+      USE m_dfpt_gradient
 
-                ! l - 1 block
-                if ( ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 ) .and. ( abs(mqn_m) <= oqn_l ) ) then
-                  if ( oqn_l - 1 == -1 ) then
-                    write (*, *) 'oqn_l too low'
-                  end if
-                  lm = (oqn_l - 1) * oqn_l + 1 + mqn_m - mqn_mpp
-                  ! This is also a trade of between storage and performance, because derivative is called redundantly, maybe store it?
-                  call derivative_loc( r2FlhMt(:, ilh, itype), itype, atoms, rDerFlhMt )
-                  tGaunt = Gaunt1( oqn_l - 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd )
-                  do imesh = 1, atoms%jri(itype)
-                    r2GrFshMtNat(imesh, lm, itype, mqn_mpp + 2) = r2GrFshMtNat(imesh, lm, itype, mqn_mpp + 2) + pfac * (-1)**mqn_mpp &
-                      & * tGaunt * (rDerFlhMt(imesh)  * sphhar%clnu(imem,ilh,symType) &
-                      & + ((oqn_l - 1) * r2FlhMt(imesh, ilh, itype) * sphhar%clnu(imem,ilh,symType) / atoms%rmsh(imesh, itype)))
-                  end do ! imesh
-                end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 ) .and. ( abs(mqn_m) <= oqn_l )
-              end do ! imem
-            end do ! ilh
-        end do ! itype
-      end do ! mqn_mpp
+      TYPE(t_fleurinput), INTENT(IN) :: fi_nosym
+      TYPE(t_stars),      INTENT(IN) :: stars_nosym
+      TYPE(t_sphhar),     INTENT(IN) :: sphhar_nosym
+      TYPE(t_potden), INTENT(IN)    :: rho_nosym, vTot_nosym, grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
+      INTEGER, INTENT(IN) :: grid(3)
+      COMPLEX, INTENT(INOUT) :: grrhodummy(:, :, :, :, :)
 
-      ! Conversion from natural to cartesian coordinates
-      do itype = 1, atoms%ntype
-          do oqn_l = 0, atoms%lmax(itype)
-            do mqn_m = -oqn_l, oqn_l
-              lm = oqn_l * (oqn_l + 1) + 1 + mqn_m
-              do imesh = 1, atoms%jri(itype)
-                grFshMt(imesh, lm, itype, 1:3) = matmul( Tmatrix0(1:3, 1:3), r2GrFshMtNat(imesh, lm, itype, 1:3) ) / atoms%rmsh(imesh, itype)**2
-              end do
-            end do ! mqn_m
-          end do ! oqn_l
-      end do ! itype
+      INTEGER :: ix, iy, iVac, iStar, iSpin, zlim, xInd, yInd, zInd
+      REAL    :: xdnout_grrho_up_pw, xdnout_grrho_up_vac, xdnout_grrho_down_pw, xdnout_grrho_down_vac
+      REAL    :: xdnout_grvc_up_pw, xdnout_grvc_up_vac, xdnout_grvc_down_pw, xdnout_grvc_down_vac
+      REAL    :: point_plus(3), point_minus(3)
+      REAL    :: dr_re(fi_nosym%vacuum%nmzd), dr_im(fi_nosym%vacuum%nmzd), drr_dummy(fi_nosym%vacuum%nmzd)
 
-   end subroutine mt_gradient_new
+      COMPLEX, ALLOCATABLE :: grVtotvac(:,:,:,:), grVtotpw(:,:)
 
-   subroutine derivative_loc(f, itype, atoms, df)
+      ALLOCATE(grVtotpw(stars_nosym%ng3,3))
+      ALLOCATE(grVtotvac(fi_nosym%vacuum%nmz,stars_nosym%ng2,2,3))
+      DO iSpin = 1, SIZE(rho_nosym%mt,4)
+         CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, vTot_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
+      END DO
 
-      integer,       intent(in)  :: itype
-      type(t_atoms), intent(in)  :: atoms
-      real,          intent(in)  :: f(atoms%jri(itype))
-      real,          intent(out) :: df(atoms%jri(itype))
-      real                       :: h, r, d21, d32, d43, d31, d42, d41, df1, df2, s
-      real                       :: y0, y1, y2
-      integer                    :: i, n
+      DO zInd = -stars_nosym%mx3, stars_nosym%mx3
+         DO yInd = -stars_nosym%mx2, stars_nosym%mx2
+            DO xInd = -stars_nosym%mx1, stars_nosym%mx1
+               iStar = stars_nosym%ig(xInd, yInd, zInd)
+               IF (iStar.EQ.0) CYCLE
+               grVtotpw(iStar,1) = vTot_nosym%pw(iStar,1) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grVtotpw(iStar,2) = vTot_nosym%pw(iStar,1) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+               grVtotpw(iStar,3) = vTot_nosym%pw(iStar,1) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
+            END DO
+         END DO
+      END DO
 
-      n = atoms%jri(itype)
-      h = atoms%dx(itype)
-      r = atoms%rmsh(1, itype)
+      IF (fi_nosym%input%film) THEN
+         DO yInd = -stars_nosym%mx2, stars_nosym%mx2
+            DO xInd = -stars_nosym%mx1, stars_nosym%mx1
+               iStar = stars_nosym%ig(xInd, yInd, 0)
+               IF (iStar.EQ.0) CYCLE
+               iStar = stars_nosym%ig2(iStar)
+               grVtotvac(:,iStar,:,1) = vTot_nosym%vac(:,iStar,:,1) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
+               grVtotvac(:,iStar,:,2) = vTot_nosym%vac(:,iStar,:,1) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
+               DO iVac = 1, fi_nosym%vacuum%nvac
+                  DO iSpin = 1, SIZE(rho_nosym%vac,4)
+                     zlim = MERGE(fi_nosym%vacuum%nmz,fi_nosym%vacuum%nmzxy,iStar==1)
+                     CALL grdchlh(fi_nosym%vacuum%delz, REAL(vTot_nosym%vac(:zlim,iStar,iVac,1)),dr_re(:zlim),drr_dummy(:zlim))
+                     CALL grdchlh(fi_nosym%vacuum%delz,AIMAG(vTot_nosym%vac(:zlim,iStar,iVac,1)),dr_im(:zlim),drr_dummy(:zlim))
+                     grVtotvac(:,iStar,iVac,3) = (3-2*iVac)*(dr_re + ImagUnit * dr_im)
+                  END DO
+               END DO
+            END DO
+         END DO
+      END IF
 
-      ! use Lagrange interpolation of 3rd order (and averaging) for points 3 to n
-      d21 = r * (exp(h)-1) ; d32 = d21 * exp(h) ; d43 = d32 * exp(h)
-      d31 = d21 + d32      ; d42 = d32 + d43
-      d41 = d31 + d43
-      df(1) =   d31*d41 / (d21*d32*d42) * f(2) + ( -1d0/d21 - 1d0/d31 - 1d0/d41) * f(1)&
-     &        - d21*d41 / (d31*d32*d43) * f(3) + d21*d31 / (d41*d42*d43) * f(4)
-      df(2) = - d32*d42 / (d21*d31*d41) * f(1) + (  1d0/d21 - 1d0/d32 - 1d0/d42) * f(2)&
-     &        + d21*d42 / (d31*d32*d43) * f(3) - d21*d32 / (d41*d42*d43) * f(4)
-      df1   =   d32*d43 / (d21*d31*d41) * f(1) - d31*d43 / (d21*d32*d42) * f(2) +&
-     &  ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(3) + d31*d32 / (d41*d42*d43) * f(4)
-      do i = 3, n - 2
-         d21 = d32 ; d32 = d43 ; d43 = d43 * exp(h)
-         d31 = d42 ; d42 = d42 * exp(h)
-         d41 = d41 * exp(h)
-         df2   = - d32*d42 / (d21*d31*d41) * f(i-1) + ( 1d0/d21 - 1d0/d32 - 1d0/d42) * f(i) + &
-     &             d21*d42 / (d31*d32*d43) * f(i+1) - d21*d32 / (d41*d42*d43) * f(i+2)
-         df(i) = ( df1 + df2 ) / 2
-         df1   = d32*d43 / (d21*d31*d41) * f(i-1) - d31*d43 / (d21*d32*d42) * f(i) +&
-     &    ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(i+1) + d31*d32 / (d41*d42*d43) * f(i+2)
-      enddo
-      df(n-1) = df1
-      df(n)   = - d42*d43 / (d21*d31*d41) * f(n-3) + d41*d43 / (d21*d32*d42) * f(n-2) -&
-     &            d41*d42 / (d31*d32*d43) * f(n-1) + ( 1d0/d41 + 1d0/d42 + 1d0/d43 ) * f(n)
-      ! for first two points use Lagrange interpolation of second order for log(f(i))
-      ! or, as a fall-back, Lagrange interpolation with the conditions f(1), f(2), f(3), f'(3).
-      s = sign(1d0,f(1))
-      if(sign(1d0,f(2)) /= s .or. sign(1d0,f(3))  /= s .or. any(abs(f(:3)) < 1e0)) then
-         d21   = r * (exp(h)-1)
-         d32   = d21 * exp(h)
-         d31   = d21 + d32
-         s     = df(3) / (d31*d32) - f(1) / (d21*d31**2) + f(2) / (d21*d32**2) - f(3) / (d31**2*d32) - f(3) / (d31*d32**2)
-         df(1) = - (d21+d31) / (d21*d31) * f(1) + d31 / (d21*d32) * f(2) - d21 / (d31*d32) * f(3) + d21*d31 * s
+      IF (.FALSE.) THEN!!!!! Test grRho/grVC on real space
+         DO iy = 0, grid(2)-1
+            DO ix = 0, grid(1)-1
+               point_plus = fi_nosym%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
+                              fi_nosym%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
+                              [0.0,0.0,fi_nosym%cell%z1]
 
-         df(2) = - (d21-d32) / (d21*d32) * f(2) - d32 / (d21*d31) * f(1) + d21 / (d31*d32) * f(3) - d21*d32 * s
-      else
-         y0    = log(abs(f(1)))
-         y1    = log(abs(f(2)))
-         y2    = log(abs(f(3)))
-         df(1) = ( - 3*y0/2 + 2*y1 - y2/2 ) * f(1) / (h*r)
-         df(2) = (y2-y0)/2                  * f(2) / (h*r*exp(h))
-      endif
-   end subroutine derivative_loc
+               point_minus = fi_nosym%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
+                              fi_nosym%cell%amat(:,2)*REAL(iy)/(grid(2)-1) - &
+                              [0.0,0.0,fi_nosym%cell%z1]! - &
+                              !atom_shift
+               
+               ! IR rho:
+               CALL outcdn(point_plus,1,0,0,2,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           rho_nosym,xdnout_grrho_up_pw)
+                           
+               ! Vac rho:
+               CALL outcdn(point_plus,1,0,1,0,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           rho_nosym,xdnout_grrho_up_vac)
+                           
+               ! IR rho:
+               CALL outcdn(point_minus,1,0,0,2,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           rho_nosym,xdnout_grrho_down_pw)
+                           
+               ! Vac rho:
+               CALL outcdn(point_minus,1,0,2,0,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           rho_nosym,xdnout_grrho_down_vac)
+                           
+               write(5395,*) "Gridx/y:", ix, iy
+               write(5395,*) "Upper rho:", xdnout_grrho_up_vac, xdnout_grrho_up_pw
+               write(5395,*) "Lower rho:", xdnout_grrho_down_vac,xdnout_grrho_down_pw
+
+               ! IR grrho:
+               CALL outcdn(point_plus,1,0,0,2,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           grRho3(3),xdnout_grrho_up_pw)
+               ! IR grvc:
+               CALL outcdn(point_plus,1,0,0,2,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           grVC3(3),xdnout_grvc_up_pw)
+                           
+               ! IR grrho:
+               CALL outcdn(point_minus,1,0,0,2,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           grRho3(3),xdnout_grrho_down_pw)
+               ! IR grvc:
+               CALL outcdn(point_minus,1,0,0,2,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           grVC3(3),xdnout_grvc_down_pw)
+
+               ! Vac grrho:
+               CALL outcdn(point_plus,1,0,1,0,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           grRho3(3),xdnout_grrho_up_vac)
+               ! Vac grvc:
+               CALL outcdn(point_plus,1,0,1,0,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           grVC3(3),xdnout_grvc_up_vac)
+                           
+               ! Vac grrho:
+               CALL outcdn(point_minus,1,0,2,0,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           grRho3(3),xdnout_grrho_down_vac)
+               ! Vac grvc:
+               CALL outcdn(point_minus,1,0,2,0,1,.FALSE.,stars_nosym,&
+                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
+                           grVC3(3),xdnout_grvc_down_vac)
+
+               write(5395,*) "Upper grrho:", xdnout_grrho_up_vac,xdnout_grrho_up_pw
+               write(5395,*) "Lower grrho:", xdnout_grrho_down_vac,xdnout_grrho_down_pw
+               write(5395,*) "Upper grvc: ", xdnout_grvc_up_vac,xdnout_grvc_up_pw
+               write(5395,*) "Lower grvc: ", xdnout_grvc_down_vac,xdnout_grvc_down_pw
+            END DO !x-loop
+         END DO !y-loop   
+      END IF!!!!!
+      
+      IF (fi_nosym%input%film)CALL save_npy("rhovac.npy",rho_nosym%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("rhogr1vac.npy",grRho3(1)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("rhogr2vac.npy",grRho3(2)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("rhogr3vac.npy",grRho3(3)%vac(:,:,:,1))
+      CALL save_npy("rhogr3pw.npy",grRho3(3)%pw(:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vcgr1vac.npy",grVC3(1)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vcgr2vac.npy",grVC3(2)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vcgr3vac.npy",grVC3(3)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vextgr1vac.npy",grVext3(1)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vextgr2vac.npy",grVext3(2)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vextgr3vac.npy",grVext3(3)%vac(:,:,:,1))
+      CALL save_npy("vextgr1pw.npy",grVext3(1)%pw(:,1))
+      CALL save_npy("vextgr2pw.npy",grVext3(2)%pw(:,1))
+      CALL save_npy("vextgr3pw.npy",grVext3(3)%pw(:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vtotgr1vac.npy",grVtot3(1)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vtotgr2vac.npy",grVtot3(2)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vtotgr3vac.npy",grVtot3(3)%vac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vtotgr1vacnum.npy",grVtotvac(:,:,:,1))
+      IF (fi_nosym%input%film)CALL save_npy("vtotgr2vacnum.npy",grVtotvac(:,:,:,2))
+      IF (fi_nosym%input%film)CALL save_npy("vtotgr3vacnum.npy",grVtotvac(:,:,:,3))
+      CALL save_npy("vtotgr1pw.npy",grVtot3(1)%pw(:,1))
+      CALL save_npy("vtotgr2pw.npy",grVtot3(2)%pw(:,1))
+      CALL save_npy("vtotgr3pw.npy",grVtot3(3)%pw(:,1))
+      CALL save_npy("vtotgr1pwnum.npy",grVtotpw(:,1))
+      CALL save_npy("vtotgr2pwnum.npy",grVtotpw(:,2))
+      CALL save_npy("vtotgr3pwnum.npy",grVtotpw(:,3))
+   END SUBROUTINE
+
 END MODULE m_dfpt

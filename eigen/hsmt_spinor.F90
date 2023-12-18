@@ -5,18 +5,22 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_hsmt_spinor
+   !!Module for the calculation of transformation matrices between 
+   !!Spin-dependent matrices in the local frame and the global frame
    IMPLICIT NONE
 CONTAINS
 
-   !The spinors are calculated both in hssphn_sph & hssphn_nonsph, hence this is a
-   !common subroutine
+
   SUBROUTINE hsmt_spinor(iSpinNum, n, nococonv, chi_mat)
+   !! Obtain the part of the transformation that maps the local spin
+   !! iSpinNum to the global spin frame. 
       USE m_types
       USE m_constants
 
       TYPE(t_nococonv), INTENT(IN)  :: nococonv
-      INTEGER,          INTENT(IN)  :: iSpinNum, n
-      COMPLEX,          INTENT(OUT) :: chi_mat(2,2)
+      INTEGER,          INTENT(IN)  :: iSpinNum     !! local spin
+      INTEGER,          INTENT(IN)  :: n            !! atom number
+      COMPLEX,          INTENT(OUT) :: chi_mat(2,2) !! Matrix describing the mapping
 
       INTEGER           :: iSpinPr, iSpin
       COMPLEX           :: umat(2,2)
@@ -29,7 +33,7 @@ CONTAINS
       IF (iSpinNum<3) THEN
          iSpinPr = iSpinNum
          iSpin   = iSpinNum
-      ELSE IF(iSpinNum==3) THEN
+      ELSE IF(iSpinNum==4) THEN
          iSpinPr = 2
          iSpin   = 1
       ELSE
@@ -45,15 +49,17 @@ CONTAINS
    END SUBROUTINE hsmt_spinor
 
   SUBROUTINE hsmt_spinor_soc(n,ki,nococonv,lapw,chi_so,angso,kj_start,kj_end)
+    !!Generalization of hsmt_spinor to SOC case. 
     USE m_types
     use m_constants
 
-    TYPE(t_nococonv),INTENT(IN)      :: nococonv
+    TYPE(t_nococonv),INTENT(IN)  :: nococonv
     TYPE(t_lapw),INTENT(IN)      :: lapw
-    INTEGER,INTENT(IN)           :: n,ki
-    COMPLEX,INTENT(out)          :: chi_so(:,:,:,:)
-    COMPLEX,INTENT(out),OPTIONAL :: angso(:,:,:)
-    INTEGER,INTENT(in), OPTIONAL :: kj_start,kj_end
+    INTEGER,INTENT(IN)           :: n   !!index of atom
+    INTEGER,INTENT(IN)           :: ki  !! index of first k+G in angso
+    COMPLEX,INTENT(out)          :: chi_so(:,:,:,:) !! Transformation from local to global spin
+    COMPLEX,INTENT(out),OPTIONAL :: angso(:,:,:)    !! $$\vec\sigma(\vec{k_{ki}}\times\vec{k)$$
+    INTEGER,INTENT(in), OPTIONAL :: kj_start,kj_end !! indices for the second k+G in angso
 
     REAL     :: cross_k(3)
     INTEGER  :: j1,j2,kj
@@ -67,16 +73,17 @@ CONTAINS
     isigma(1,2,1)=CMPLX(0.0,1.0)  !     (0  1)   ( 0  i)
     isigma(2,1,1)=CMPLX(0.0,1.0)  ! i * (1  0) = ( i  0)
     isigma(1,2,2)=CMPLX(1.0,0.0)  !     (0 -i)   ( 0  1) 
-    isigma(2,1,2)=CMPLX(-1.0,0.0)   ! i * (i  0) = (-1  0) 
+    isigma(2,1,2)=CMPLX(-1.0,0.0) ! i * (i  0) = (-1  0) 
     isigma(1,1,3)=CMPLX(0.0,1.0)  !     (1  0)   ( i  0)
-    isigma(2,2,3)=CMPLX(0.0,-1.0)   ! i * (0 -1) = ( 0 -i)
+    isigma(2,2,3)=CMPLX(0.0,-1.0) ! i * (0 -1) = ( 0 -i)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
     !chi=conjg(nococonv%umat(n))
 
     chi=nococonv%umat(n)
-
+    
+   
     isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),chi))
     isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),chi))
     isigma_z=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,3),chi))
@@ -84,7 +91,7 @@ CONTAINS
     !isigma_y=MATMUL(chi, MATMUL(isigma(:,:,2),conjg(transpose(chi))))
     !isigma_z=MATMUL(chi, MATMUL(isigma(:,:,3),conjg(transpose(chi))))
     
-
+    
     
     
     !chi=conjg(nococonv%umat(n))

@@ -54,13 +54,13 @@ MODULE m_exchange_valence_hf
    USE m_constants
    USE m_types
    USE m_util
-
+   use m_matmul_dgemm
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                   n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
-
+      
       USE m_wrapper
       USE m_trafo
       USE m_wavefproducts
@@ -112,7 +112,7 @@ CONTAINS
       REAL, INTENT(IN)    ::  wl_iks(:, :)
 
       ! local scalars
-      INTEGER                 ::  iband, jq, iq, nq_idx
+      INTEGER                 ::  iband, iband1, jq, iq, nq_idx
       INTEGER                 ::  i, ierr, ik
       INTEGER                 ::  j, iq_p, start, stride
       INTEGER                 ::  n1, n2, nn2, me, max_band_pack
@@ -136,19 +136,10 @@ CONTAINS
       COMPLEX, ALLOCATABLE  :: phase_vv(:, :), c_coul_wavf(:,:), dot_result_c(:,:)
       REAL, ALLOCATABLE     :: r_coul_wavf(:,:), dot_result_r(:,:)
       LOGICAL                          :: occup(fi%input%neig), conjg_mtir
-#ifdef _OPENACC
-      real, allocatable    :: cprod_vv_r(:,:)
-      complex, allocatable :: cprod_vv_c(:,:)
-
-#define CPP_cprod_r cprod_vv_r 
-#define CPP_cprod_c cprod_vv_c 
-
-#else 
 
 #define CPP_cprod_r cprod_vv%data_r
 #define CPP_cprod_c cprod_vv%data_c
 
-#endif
       type(t_mat)          :: cprod_vv, carr3_vv
       CALL timestart("valence exchange calculation")
       ik = k_pack%nk
@@ -188,17 +179,6 @@ CONTAINS
          
          call timestart("q_loop")
 
-         call timestart("get max_q")
-         max_band_pack = 0 
-         DO jq = 1, size(k_pack%q_packs)
-            max_band_pack = max(max_band_pack, k_pack%q_packs(jq)%submpi%size)
-         enddo
-         hybdat%max_q = size(k_pack%q_packs) * fi%kpts%nkptf  * max_band_pack
-#ifdef CPP_MPI
-         call MPI_Allreduce(MPI_IN_PLACE, hybdat%max_q, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
-#endif
-         call timestop("get max_q")
-
          DO jq = 1, size(k_pack%q_packs)
             call timestart("initial setup")
             iq = k_pack%q_packs(jq)%ptr
@@ -230,19 +210,20 @@ CONTAINS
                ! The mixed basis functions and the potential difference
                ! are Fourier transformed, so that the exchange can be calculated
                ! in Fourier space
-               ! IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-               !    call judft_error("HSE not implemented")
-               !    ! iband1 = hybdat%nobd(ikqpt, jsp)
-
-               !    ! exch_vv = exch_vv + &
-               !    !           dynamic_hse_adjustment(fi%atoms%rmsh, fi%atoms%rmt, fi%atoms%dx, fi%atoms%jri, fi%atoms%jmtd, fi%kpts%bkf(:, iq), iq, &
-               !    !                                  fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, fi%atoms%ntype, fi%atoms%neq, fi%atoms%nat, fi%atoms%taual, &
-               !    !                                  fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
-               !    !                                  mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-               !    !                                  hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, 1, MAXVAL(hybdat%nobd(:, jsp)), indx_sest, &
-               !    !                                  fi%sym%invsat, fi%sym%invsatnr, fmpi%irank, cprod_vv_r(:hybdat%nbasm(iq), :, :), &
-               !    !                                  cprod_vv_c(:hybdat%nbasm(iq), :, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
-               ! END IF
+               !! REIMPLEMENTING (notes in lab book)
+               IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
+                  CALL timestart("hse: dynamic hse adjustment")
+                  iband1 = hybdat%nobd(ikqpt, jsp)
+                  exch_vv = exch_vv + &
+                            dynamic_hse_adjustment(fi%atoms, fi%kpts%bkf(:, iq), iq, &
+                                                   fi%kpts%nkptf, fi%cell%bmat, fi%cell%omtil, &
+                                                   fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
+                                                   mpdata%n_g(iq), mpdata%gptm_ptr(:, iq), mpdata%num_gpts(), mpdata%radbasfn_mt, &
+                                                   hybdat%nbasm(iq), iband1, hybdat%nbands(ik,jsp), nsest, ibando, psize, indx_sest, &
+                                                   fi%sym, fmpi%irank, cprod_vv%data_r(:, :), &
+                                                   cprod_vv%data_c(:, :), mat_ex%l_real, wl_iks(:iband1, ikqpt), n_q(jq))
+                  CALL timestop("hse: dynamic hse adjustment")
+               END IF
 
                ! the Coulomb matrix is only evaluated at the irrecuible k-points
                ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
@@ -296,13 +277,12 @@ CONTAINS
                      !$acc enter data copyin(CPP_cprod_r)
 
                      !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-                     !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, psize, wl_iks, phase_vv, ikqpt, ibando)&
+                     !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, psize, wl_iks, ikqpt, ibando)&
                      !$acc present(n_q, nq_idx)
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO iob = 1, psize
                            do i = 1, hybdat%nbasm(iq)
-                              r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1))&
-                                                      * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)                        
+                              r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1)) * wl_iks(ibando + iob - 1, ikqpt) / n_q(nq_idx)                        
                            enddo
                         enddo
                      enddo
@@ -322,8 +302,7 @@ CONTAINS
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO iob = 1, psize
                            do i = 1, hybdat%nbasm(iq)
-                              c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) &
-                                                         * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
+                              c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
                            enddo
                         enddo
                      enddo
@@ -345,9 +324,12 @@ CONTAINS
                   !$acc enter data create(dot_result_r) 
                   DO iob = 1, psize
                      call timestart("CPP_dgemm")
-                     !$acc host_data use_device(r_coul_wavf, CPP_cprod_r, dot_result_r)
-                     call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
-                     !$acc end host_data
+                     !call blas_matmul(m,n,k,r_coul_wavf(:,iob:),CPP_cprod_r(:, iob:),dot_result_r,op_a="T")
+                     ASSOCIATE(prod_data=>CPP_cprod_r) !persuade NVHPC that it knows CPP_CPROD_r
+                        !$acc host_data use_device(r_coul_wavf, prod_data, dot_result_r)
+                        call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, prod_data(1, iob), ldb, 0.0, dot_result_r , ldc)
+                        !$acc end host_data
+                     end ASSOCIATE   
                      !$acc wait
                      call timestop("CPP_dgemm")
 
@@ -355,7 +337,7 @@ CONTAINS
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO n2 = 1, nsest(iband)
                            nn2 = indx_sest(n2, iband)
-                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_r(iband, nn2)
+                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*conjg(phase_vv(iob, iband))*dot_result_r(iband, nn2)
                         enddo
                      END DO
                      !$acc end kernels
@@ -366,9 +348,11 @@ CONTAINS
                   !$acc enter data create(dot_result_c) 
                   DO iob = 1, psize
                      call timestart("CPP_zgemm")
-                     !$acc host_data use_device(c_coul_wavf, CPP_cprod_c, dot_result_c)
-                     call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, dot_result_c, ldc)
-                     !$acc end host_data
+                     ASSOCIATE(prod_data=>CPP_cprod_c) !persuade NVHPC that it knows CPP_CPROD_C
+                        !$acc host_data use_device(c_coul_wavf, prod_data, dot_result_c)
+                        call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, prod_data(1, iob), ldb, cmplx_0, dot_result_c, ldc)
+                        !$acc end host_data
+                     end ASSOCIATE   
                      !$acc wait
                      call timestop("CPP_zgemm")
 
@@ -394,15 +378,6 @@ CONTAINS
          END DO  !jq
       !$acc end data ! exch_vv hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest
       call timestop("q_loop")
-
-#ifdef CPP_MPI
-      call timestart("balanicing MPI_Barriers")
-      do while (hybdat%max_q > 0)
-         call MPI_Barrier(MPI_COMM_WORLD, ierr)
-         hybdat%max_q = hybdat%max_q - 1
-      enddo
-      call timestop("balanicing MPI_Barriers")
-#endif
 
       if(allocated(dot_result_r)) deallocate(dot_result_r)
       if(allocated(dot_result_c)) deallocate(dot_result_c)
@@ -521,7 +496,7 @@ CONTAINS
 
       IF (mat_ex%l_real) THEN
          IF (any(abs(aimag(exch_vv)) > 1E-08)) then 
-            CALL judft_warn('unusally large imaginary part of exch_vv. Max:' // float2str(maxval(abs(aimag(exch_vv)))), &
+            CALL judft_warn('unusually large imaginary part of exch_vv. Max:' // float2str(maxval(abs(aimag(exch_vv)))), &
                                                                calledby='exchange_val_hf.F90')
          endif
       END IF

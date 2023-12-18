@@ -205,7 +205,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    DO ispin = 1, input%jspins
       CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
                    cell,input ,l_st,ispin,rh1(:,:,ispin),&
-                   den%pw,den%vacxy,den%mt,den%vacz)
+                   den%pw,den%mt,den%vac)
       !roa-
    END DO
     
@@ -213,10 +213,8 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
       den%pw(:,1)=(den%pw(:,1)+den%pw(:,2))*0.5
       den%pw(:,2)=den%pw(:,1)
       if (input%film) THEN
-         den%vacz(:,:,1)=(den%vacz(:,:,1)+den%vacz(:,:,2))*0.5
-         den%vacz(:,:,2)=den%vacz(:,:,1)
-         den%vacxy(:,:,:,1)=(den%vacxy(:,:,:,1)+den%vacxy(:,:,:,2))*0.5
-         den%vacxy(:,:,:,2)=den%vacxy(:,:,:,1)
+         den%vac(:,:,:,1)=(den%vac(:,:,:,1)+den%vac(:,:,:,2))*0.5
+         den%vac(:,:,:,2)=den%vac(:,:,:,1)
       endif   
    endif
 
@@ -400,10 +398,10 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
 
                DO ivac = 1, vacuum%nvac
                   DO i=1,vacuum%nmz
-                     sigm(i) = (i-1)*vacuum%delz*den%vacz(i,ivac,ispin)
+                     sigm(i) = (i-1)*vacuum%delz*REAL(den%vac(i,1,ivac,ispin))
                   END DO
                   CALL qsf(vacuum%delz,sigm,vacpar(ivac),vacuum%nmz,0)
-                  denz1 = den%vacz(1,ivac,ispin)          ! get estimate for potential at vacuum boundary
+                  denz1 = REAL(den%vac(1,1,ivac,ispin))          ! get estimate for potential at vacuum boundary
                   CALL xcpot%get_vxc(1,denz1,vacpot,vacxpot)
                   ! seems to be the best choice for 1D not to substract vacpar
                   vacpot = vacpot - fpi_const*vacpar(ivac)
@@ -426,8 +424,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
    DEALLOCATE ( rh,rh1)
    DEALLOCATE ( vbar,sigm )
    DEALLOCATE ( rhoss )
-   deallocate(den%vacz)
-   deallocate(den%vacxy)
+   deallocate(den%vac)
 
    CALL timestop("stden - finalize")
 

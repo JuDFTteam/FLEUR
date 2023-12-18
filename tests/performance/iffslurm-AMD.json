@@ -1,0 +1,22 @@
+{
+"standard": {
+	 "opt": ["IFFAMD"],
+	 "env": {},
+	 "timers": [
+		{"OMP_NUM_THREADS":"1"},
+		{"OMP_NUM_THREADS":"8"},
+		{"OMP_NUM_THREADS":"16"},
+		{"OMP_NUM_THREADS":"32"}
+	 ]
+ },
+"AMDlibs" :{
+	 "opt": ["-amd","-link","-L/Users/wortmann/FLEUR/lib-amd;-lflame;-lblis"],
+	 "env": {"CC":"mpiicc","FC":"mpiifort","FCFLAGS":"-O3 -march=core-avx2 -align array64byte -fma -ftz -fomit-frame-pointer"},
+	 "timers": [
+		   {"OMP_NUM_THREADS":"1"},
+		   {"OMP_NUM_THREADS":"8"},
+		   {"OMP_NUM_THREADS":"16"},
+		   {"OMP_NUM_THREADS":"32"}
+	 ]
+ }
+}

@@ -127,27 +127,29 @@ CONTAINS
       l_pot = .FALSE. !Is this a potential?
    END SUBROUTINE mixvector_reset
 
-   SUBROUTINE mixvector_from_density(vec, den, swapspin, denIm)
+   SUBROUTINE mixvector_from_density(vec, den, nmzxyd, swapspin, denIm)
       USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(INOUT)    :: vec
       TYPE(t_potden), INTENT(inout)    :: Den
+      INTEGER, INTENT(IN) :: nmzxyd
       LOGICAL, INTENT(IN), OPTIONAL         :: swapspin
       TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
-      INTEGER:: js, ii, n, l, iv, j, mmpSize, nIJ_llp_mmpSize, offset
+      INTEGER:: js, ii, n, l, iv, jspin, mmpSize, nIJ_llp_mmpSize, offset
+
       CALL den%DISTRIBUTE(mix_mpi_comm)
       IF (PRESENT(denIm)) CALL denIm%DISTRIBUTE(mix_mpi_comm)
       DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
-         j = js
+         jspin = js
          IF (PRESENT(swapspin)) THEN
-            IF (swapspin .AND. js < 3) j = MERGE(1, 2, js == 2)
+            IF (swapspin .AND. js < 3) jspin = MERGE(1, 2, js == 2)
          ENDIF
          IF (spin_here(js)) THEN
             !PW part
             IF (pw_here) THEN
-               vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(den%pw(:, j))
+               vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(den%pw(:, jspin))
                IF ((.NOT. sym%invs) .OR. (js == 3).OR.PRESENT(denIm)) THEN
-                  vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(den%pw(:, j))
+                  vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(den%pw(:, jspin))
                ENDIF
                IF ((js == 3).AND.PRESENT(denIm)) THEN
                   vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1) =  REAL(den%pw(:, 4))
@@ -158,17 +160,23 @@ CONTAINS
                !This PE stores vac-data
                ii = vac_start(js) - 1
                DO iv = 1, nvac
-                  vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1)) = den%vacz(:, iv, j)
-                  ii = ii + SIZE(den%vacz, 1)
-                  vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))) = RESHAPE(REAL(den%vacxy(:, :, iv, j)), (/SIZE(den%vacxy(:, :, iv, j))/))
-                  ii = ii + SIZE(den%vacxy(:, :, iv, j))
+                  vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = REAL(den%vac(:, 1, iv, jspin))
+                  ii = ii + SIZE(den%vac, 1)
+                  IF (PRESENT(denIm)) THEN
+                     vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = AIMAG(den%vac(:, 1, iv, jspin))
+                     ii = ii + SIZE(den%vac, 1)
+                  END IF
+                  vec%vec_vac(ii + 1:ii + nmzxyd*(SIZE(den%vac,2)-1)) = RESHAPE(REAL(den%vac(:nmzxyd, 2:, iv, jspin)), &
+                                                                                               (/nmzxyd*(SIZE(den%vac,2)-1)/))
+                  ii = ii + nmzxyd*(SIZE(den%vac,2)-1)
                   IF ((.NOT. sym%invs2) .OR. (js == 3)) THEN
-                     vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, j))) = RESHAPE(AIMAG(den%vacxy(:, :, iv, j)), (/SIZE(den%vacxy(:, :, iv, j))/))
-                     ii = ii + SIZE(den%vacxy(:, :, iv, j))
+                     vec%vec_vac(ii + 1:ii + nmzxyd*(SIZE(den%vac,2)-1)) = RESHAPE(AIMAG(den%vac(:nmzxyd, 2:, iv, jspin)), &
+                                                                                                  (/nmzxyd*(SIZE(den%vac,2)-1)/))
+                     ii = ii + nmzxyd*(SIZE(den%vac,2)-1)
                   ENDIF
                   IF (js > 2) THEN
-                     vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1)) = den%vacz(:, iv, 4)
-                     ii = ii + SIZE(den%vacz, 1)
+                     vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = AIMAG(den%vac(:, 1, iv, 3))
+                     ii = ii + SIZE(den%vac, 1)
                   ENDIF
                ENDDO
             ENDIF
@@ -178,7 +186,7 @@ CONTAINS
                IF (.NOT.PRESENT(denIm)) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, j)
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, jspin)
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
@@ -193,13 +201,13 @@ CONTAINS
                ELSE ! DFPT mixing
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, j)
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, jspin)
                         ii = ii + atoms%jri(n)
                      END DO
                   END DO
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, j)
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, jspin)
                         ii = ii + atoms%jri(n)
                      END DO
                   END DO
@@ -220,14 +228,14 @@ CONTAINS
                END IF
             ENDIF
             IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
-               mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, j))
-               vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1) = RESHAPE(REAL(den%mmpMat(:, :, 1:atoms%n_u, j)), (/mmpSize/))
-               vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat(:, :, 1:atoms%n_u, j)), (/mmpSize/))
+               mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, jspin))
+               vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1) = RESHAPE(REAL(den%mmpMat(:, :, 1:atoms%n_u, jspin)), (/mmpSize/))
+               vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat(:, :, 1:atoms%n_u, jspin)), (/mmpSize/))
                IF (atoms%n_v.GT.0) THEN
-                  nIJ_llp_mmpSize = SIZE(den%nIJ_llp_mmp(:,:,:,j))
+                  nIJ_llp_mmpSize = SIZE(den%nIJ_llp_mmp(:,:,:,jspin))
                   offset = misc_start(js) + 2*mmpSize
-                  vec%vec_misc(offset:offset + nIJ_llp_mmpSize - 1) = RESHAPE(REAL(den%nIJ_llp_mmp(:,:,:,j)), (/nIJ_llp_mmpSize/))
-                  vec%vec_misc(offset+nIJ_llp_mmpSize:offset + 2*nIJ_llp_mmpSize - 1) = RESHAPE(AIMAG(den%nIJ_llp_mmp(:,:,:,j)), (/nIJ_llp_mmpSize/))
+                  vec%vec_misc(offset:offset + nIJ_llp_mmpSize - 1) = RESHAPE(REAL(den%nIJ_llp_mmp(:,:,:,jspin)), (/nIJ_llp_mmpSize/))
+                  vec%vec_misc(offset+nIJ_llp_mmpSize:offset + 2*nIJ_llp_mmpSize - 1) = RESHAPE(AIMAG(den%nIJ_llp_mmp(:,:,:,jspin)), (/nIJ_llp_mmpSize/))
                END IF
             END IF
          END IF
@@ -235,14 +243,17 @@ CONTAINS
 
    END SUBROUTINE mixvector_from_density
 
-   SUBROUTINE mixvector_to_density(vec, den, denIm)
+   SUBROUTINE mixvector_to_density(vec, den, nmzxyd, denIm)
       USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN)    :: vec
-      TYPE(t_potden), INTENT(INOUT) :: Den
+      TYPE(t_potden), INTENT(INOUT) :: den
       TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
-      INTEGER:: js, ii, n, l, iv, mmpSize, nIJ_llp_mmpSize, offset
+      INTEGER,INTENT(IN) :: nmzxyd
+      INTEGER:: js, i, ii, n, l, iv, mmpSize, nIJ_llp_mmpSize, offset
+
       LOGICAL :: l_dfpt
+      REAL :: vacOffdiagTemp(SIZE(den%vac, 1))
 
       l_dfpt = PRESENT(denIm)
 
@@ -297,20 +308,27 @@ CONTAINS
                !This PE stores vac-data
                ii = vac_start(js) - 1
                DO iv = 1, nvac
-                  den%vacz(:, iv, js) = vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1))
-                  ii = ii + SIZE(den%vacz, 1)
+                  den%vac(:, 1, iv, js) = vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
+                  ii = ii + SIZE(den%vac, 1)
+                  IF (l_dfpt) THEN
+                     den%vac(:, 1, iv, js) = den%vac(:, 1, iv, js) + ImagUnit*vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
+                     ii = ii + SIZE(den%vac, 1)
+                  END IF
                   IF (sym%invs2 .AND. js < 3) THEN
-                     den%vacxy(:, :, iv, js) = RESHAPE(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), SHAPE(den%vacxy(:, :, iv, js)))
-                     ii = ii + SIZE(den%vacxy(:, :, iv, js))
+                     den%vac(:nmzxyd, 2:, iv, js) = RESHAPE(vec%vec_vac(ii + 1:ii + nmzxyd*(SIZE(den%vac,2)-1)), SHAPE(den%vac(:nmzxyd, 2:, iv, js)))
+                     ii = ii + nmzxyd*(SIZE(den%vac,2)-1)
                   ELSE
-                     den%vacxy(:, :, iv, js) = RESHAPE(CMPLX(vec%vec_vac(ii + 1:ii + SIZE(den%vacxy(:, :, iv, js))), &
-                                                             vec%vec_vac(ii + SIZE(den%vacxy(:, :, iv, js)) + 1:ii + 2*SIZE(den%vacxy(:, :, iv, js)))), &
-                                                       SHAPE(den%vacxy(:, :, iv, js)))
-                     ii = ii + 2*SIZE(den%vacxy(:, :, iv, js))
+                     den%vac(:nmzxyd, 2:, iv, js) = RESHAPE(CMPLX(vec%vec_vac(ii + 1:ii + nmzxyd*(SIZE(den%vac,2)-1)), &
+                                                             vec%vec_vac(ii + nmzxyd*(SIZE(den%vac,2)-1) + 1:ii + 2*nmzxyd*(SIZE(den%vac,2)-1))), &
+                                                       SHAPE(den%vac(:nmzxyd, 2:, iv, js)))
+                     ii = ii + 2*nmzxyd*(SIZE(den%vac,2)-1)
                   ENDIF
                   IF (js > 2) THEN
-                     den%vacz(:, iv, 4) = vec%vec_vac(ii + 1:ii + SIZE(den%vacz, 1))
-                     ii = ii + SIZE(den%vacz, 1)
+                     vacOffdiagTemp(:) = vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
+                     DO i = 1, SIZE(den%vac, 1)
+                        den%vac(i, 1, iv, 3) = CMPLX(REAL(den%vac(i, 1, iv, 3)),vacOffdiagTemp(i))
+                     END DO
+                     ii = ii + SIZE(den%vac, 1)
                   ENDIF
                ENDDO
             ENDIF
@@ -329,7 +347,12 @@ CONTAINS
             END IF
          END IF
       ENDDO
-      CALL den%collect(mix_mpi_comm)
+
+      IF (.NOT.l_dfpt) THEN
+         CALL den%collect(mix_mpi_comm)
+      ELSE
+         CALL den%collect(mix_mpi_comm,denIm)
+      END IF
 
    END SUBROUTINE mixvector_to_density
 
@@ -403,12 +426,13 @@ CONTAINS
       call timestop("metric")
    END FUNCTION mixvector_metric
 
-   SUBROUTINE init_metric(vacuum, stars)
+   SUBROUTINE init_metric(vacuum, stars, l_dfpt)
       USE m_metrz0
       IMPLICIT NONE
       !
       TYPE(t_vacuum), INTENT(in) :: vacuum
       TYPE(t_stars),  INTENT(in) :: stars
+      LOGICAL,        INTENT(in) :: l_dfpt
 
       INTEGER:: i, n, l, j, ivac, iz, iv2c, k2, iv2
       REAL:: dxn, dxn2, dxn4, dvol, volnstr2
@@ -470,6 +494,14 @@ CONTAINS
                g_vac(i) = wght(iz)*dvol
                !
             END DO
+            IF (l_dfpt) THEN
+               DO iz = 1, vacuum%nmz
+                  i = i + 1
+                  !
+                  g_vac(i) = wght(iz)*dvol
+                  !
+               END DO
+            END IF
             ! G||.ne.0 components
             !
             ! calculate weights for integration
@@ -621,6 +653,7 @@ CONTAINS
                ELSE
                   len = len + 2*vacuum%nmzxyd*(stars%ng2 - 1)*vacuum%nvac + vacuum%nmzd*vacuum%nvac
                ENDIF
+               IF (l_dfpt) len = len + vacuum%nmzd*vacuum%nvac !vacz is complex
                vac_length_g = MAX(vac_length_g, len)
                IF (js == 3) len = len + vacuum%nmzd*vacuum%nvac !Offdiagnal potential is complex
                vac_length = vac_length + len
@@ -640,7 +673,7 @@ CONTAINS
             END IF
          END IF
       END DO
-      CALL init_metric(vacuum, stars)
+      CALL init_metric(vacuum, stars, l_dfpt)
    END SUBROUTINE mixvector_init
    SUBROUTINE mixvector_alloc(vec)
       IMPLICIT NONE
@@ -757,7 +790,7 @@ CONTAINS
       CLASS(t_mixvector), INTENT(IN)::vec1
       TYPE(t_mixvector),  INTENT(IN)::vec2
 
-      LOGICAL, INTENT(IN)    :: mask(2)
+      LOGICAL, INTENT(IN)    :: mask(3)
       INTEGER, INTENT(IN)    :: spin
       REAL,    INTENT(INOUT) :: dprod1(2)
 
@@ -781,6 +814,10 @@ CONTAINS
                                                 vec2%vec_mt(mt_start(js):mt_stop(js)/2))
             dprod1(2) = dprod1(2) + DOT_PRODUCT(vec1%vec_mt(mt_stop(js)/2+1:mt_stop(js)), &
                                                 vec2%vec_mt(mt_stop(js)/2+1:mt_stop(js)))
+         END IF
+         IF (mask(3) .AND. (spin == js) .AND. vac_start(js) > 0) THEN
+            dprod1(1) = dprod1(1) + DOT_PRODUCT(vec1%vec_vac(vac_start(js):vac_stop(js)), &
+                                                vec2%vec_vac(vac_start(js):vac_stop(js)))
          END IF
       END DO
 

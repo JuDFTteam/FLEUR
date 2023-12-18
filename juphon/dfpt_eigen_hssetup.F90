@@ -7,12 +7,12 @@
 MODULE m_dfpt_eigen_hssetup
 CONTAINS
    SUBROUTINE dfpt_eigen_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, &
-                            ud, td, tdV1, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
+                            ud, td, tdV1, vTot, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
       USE m_types
       USE m_types_mpimat
-      USE m_types_gpumat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
+      USE m_dfpt_hsvac
       USE m_dfpt_eigen_redist_matrix
 
       IMPLICIT NONE
@@ -26,7 +26,7 @@ CONTAINS
       TYPE(t_usdus),      INTENT(IN)     :: ud
       TYPE(t_tlmplm),     INTENT(IN)     :: td, tdV1
       TYPE(t_lapw),       INTENT(IN)     :: lapw, lapwq
-      TYPE(t_potden),     INTENT(IN)     :: vTot1
+      TYPE(t_potden),     INTENT(IN)     :: vTot, vTot1
       INTEGER,            INTENT(IN)     :: iDir, iDtype
       CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
       INTEGER,      INTENT(IN)     :: nk, killcont(6)
@@ -49,10 +49,17 @@ CONTAINS
          END DO
       END DO
 
+      ! Interstitial part:
+      ! h1 gets V1Theta(k+q,k), VTheta1(k+q,k) and TTheta1(k+q,k)
+      ! s1 gets Theta1(k+q,k)
       CALL timestart("Interstitial part")
       CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, hmat, smat, killcont(1:3))
       CALL timestop("Interstitial part")
 
+      ! Interstitial part:
+      ! h1 gets V1MT(k+q,k) and pref_H0(k+q,k)
+      ! s1 gets pref_S0(k+q,k)
+      ! The prefactor parts only apply in the displaced MT
       CALL timestart("MT part")
       DO i = 1, nspins; DO j = 1, nspins
             !$acc enter data copyin(hmat(i,j),smat(i,j))
@@ -68,7 +75,18 @@ CONTAINS
          END IF; END DO; END DO
       CALL timestop("MT part")
 
-      !Now copy the data into final matrix
+      ! Vacuum part:
+      ! h1 gets V1Vac(k+q,k)
+      IF (fi%input%film) THEN
+         CALL timestart("Vacuum part")
+         CALL dfpt_hsvac(fi%vacuum, starsq, fmpi, isp, fi%input, vTot, vTot1, enpara%evac, fi%cell, &
+                    lapwq, lapw,  fi%noco, nococonv, hmat)
+         CALL timestop("Vacuum part")
+      END IF
+
+      ! NOCO_DFPT: Build a big matrix with both spins on both axes from
+      ! the 2x2 array of matrices that each have one spin combination.
+      ! Now copy the data into final matrix
       ! Collect the four fi%noco parts into a single matrix
       ! In collinear case only a copy is done
       ! In the parallel case also a redistribution happens

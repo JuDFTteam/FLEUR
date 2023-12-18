@@ -176,7 +176,7 @@
 
       ENDIF
 
-      IF(gfinp%n > 0) THEN
+      !IF(gfinp%n > 0) THEN ! TODO: Bind this to a switch gfinp%n > 0 .OR. juPhon%l_dos
          ! Create mapped_atom array
          ! Store, where atoms are mapped to when symmetry operations are applied
          ALLOCATE(sym%mapped_atom(sym%nop,atoms%nat),source=0)
@@ -216,7 +216,7 @@
          DO na = 1,atoms%nat
             WRITE (oUnit,FMT='("atom nr.",i3,3x,(t14,"mapped atoms are:",24i3))') na,(sym%mapped_atom(nb,na),nb=1,sym%nop)
          END DO
-      ENDIF
+      !ENDIF
 
 
       !------------------------- FORCE PART ENDS --------------------------

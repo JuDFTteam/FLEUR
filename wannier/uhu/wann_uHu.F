@@ -51,7 +51,6 @@ c*******************************************c
       use m_wann_abinv
       use m_wann_kptsrotate
 !      use m_wann_read_inp  !Call wann_read_inp in fleur_init
-      use m_matmul,only : matmul3,matmul3r
       use m_wann_maxbnd
       use m_wann_uHu_tlmplm
       use m_wann_uHu_sph
@@ -479,10 +478,11 @@ c*********************************************************
 
       vpw(:,1:SIZE(vTot%pw,2)) = vTot%pw(:,1:SIZE(vTot%pw,2))
       IF(film) THEN
-         vz(:,:,1:SIZE(vTot%vacz,3)) =
-     &      vTot%vacz(:,:,1:SIZE(vTot%vacz,3))
-         vzxy(:,:,:,1:SIZE(vTot%vacxy,4)) =
-     &      vTot%vacxy(:,:,:,1:SIZE(vTot%vacxy,4))
+         vz(:,:,1:SIZE(vTot%vac,4)) =
+     &      REAL(vTot%vac(:,1,:,1:SIZE(vTot%vac,4)))
+         IF (SIZE(vTot%vac,4)==3) vz(:,:,4) = AIMAG(vTot%vac(:,1,:,3))
+         vzxy(:,:,:,1:SIZE(vTot%vac,4)) =
+     &      vTot%vac(:nmzxyd,2:,:,1:SIZE(vTot%vac,4))
       END IF
 
       do jspin = 1,jspins

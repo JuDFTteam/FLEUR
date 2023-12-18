@@ -765,6 +765,7 @@
           ! Local variables:
           INTEGER :: i, ivac
           REAL :: fg, fgi
+          COMPLEX :: fgfull(stars%ng2)
           REAL :: rhoRS(3*stars%mx1,3*stars%mx2), rhoRSimag(3*stars%mx1,3*stars%mx2) ! Real space density
 
           ALLOCATE (efield%rhoEF (stars%ng2-1, vacuum%nvac))
@@ -784,17 +785,17 @@
             CALL fft2d (&
      &                  stars,&
      &                  rhoRS, rhoRSimag,&
-     &                  fg, fgi,&
-     &                  efield%rhoEF(:,ivac),  -1)
+     &                  fgfull,  -1)
+     			efield%rhoEF(:,ivac) = fgfull(2:)
 !           FFT gives the the average charge per grid point
 !           while sig_b stores the (total) charge per sheet
-            IF (efield%dirichlet .and. ABS (fg) > 1.0e-15) THEN
+            IF (efield%dirichlet .and. ABS (REAL(fgfull(1))) > 1.0e-15) THEN
               PRINT *, 'INFO: Difference of average potential: fg=',&
-     &                 fg,', sig_b=', efield%sig_b(ivac),&
+     &                 REAL(fgfull(1)),', sig_b=', efield%sig_b(ivac),&
      &                 ", ivac=", ivac
-            ELSE IF (ABS (fg/(3*stars%mx1*3*stars%mx2)) > 1.0e-15) THEN
+            ELSE IF (ABS (REAL(fgfull(1))/(3*stars%mx1*3*stars%mx2)) > 1.0e-15) THEN
               PRINT *, 'INFO: Difference of average potential: fg=',&
-     &                 fg/(3*stars%mx1*3*stars%mx2),', sig_b=', efield%sig_b(ivac),&
+     &                 REAL(fgfull(1))/(3*stars%mx1*3*stars%mx2),', sig_b=', efield%sig_b(ivac),&
      &                 ", ivac=", ivac
             END IF
           END DO ! ivac

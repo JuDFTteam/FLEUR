@@ -35,7 +35,6 @@ test-gfortran-serial:
     - build-gfortran-serial
   variables:
     BUILD_FOLDER: build.serial
-    markers: "serial"
   rules:
     - if: $CI_TASKS =~ /serial/    
   
@@ -62,7 +61,6 @@ test-gfortran-serial-debug:
     - build-gfortran-hdf5-debug
   variables:
     BUILD_FOLDER: build.debug
-    markers: "serial"
   rules:
     - if: $CI_TASKS =~ /debug/    
   

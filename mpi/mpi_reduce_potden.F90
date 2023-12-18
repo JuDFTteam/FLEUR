@@ -56,21 +56,12 @@ CONTAINS
       deallocate( r_b )
     end if
 
-    ! reduce vacz
-    if( allocated( potden%vacz ) ) then
-      n = vacuum%nmzd * 2 * size( potden%vacz, 3 )
+    ! reduce vac
+    if( allocated( potden%vac ) ) then
+      n = vacuum%nmzd * stars%ng2 * 2 * size( potden%vac, 4 )
       allocate( r_b(n) )
-      call MPI_REDUCE( potden%vacz, r_b, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, fmpi%mpi_comm, ierr )
-      if( fmpi%irank == 0 ) call dcopy( n, r_b, 1, potden%vacz, 1 )
-      deallocate( r_b )
-    end if
-
-    ! reduce vacxy
-    if( allocated( potden%vacxy ) ) then
-      n = vacuum%nmzxyd * ( stars%ng2 - 1 ) * 2 * size( potden%vacxy, 4 )
-      allocate( r_b(n) )
-      call MPI_REDUCE( potden%vacxy, r_b, n, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
-      if( fmpi%irank == 0 ) call zcopy( n, r_b, 1, potden%vacxy, 1 )
+      call MPI_REDUCE( potden%vac, r_b, n, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, fmpi%mpi_comm, ierr )
+      if( fmpi%irank == 0 ) call zcopy( n, r_b, 1, potden%vac, 1 )
       deallocate( r_b )
     end if
 

@@ -17,7 +17,7 @@ module m_psqpw
 contains
 
   subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-       &     qpw, rho, rht, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
+       &     den, ispin, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, qpw0, iDir2, mat2ord )
 
 #ifdef CPP_MPI
     use mpi
@@ -43,12 +43,13 @@ contains
     type(t_cell),       intent(in)  :: cell
     type(t_input),      intent(in)  :: input
     type(t_sym),        intent(in)  :: sym
+    type(t_potden),     intent(in)  :: den
      
     logical,            intent(in)  :: l_xyav
-    complex,            intent(in)  :: qpw(stars%ng3)
-    real,               intent(in)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    real,               intent(in)  :: rht(vacuum%nmzd,2)
-    integer,            intent(in)  :: potdenType
+    !complex,            intent(in)  :: qpw(stars%ng3)
+    !real,               intent(in)  :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    !real,               intent(in)  :: rht(vacuum%nmzd,2)
+    integer,            intent(in)  :: potdenType, ispin
     complex,            intent(out) :: psq(stars%ng3)
 
     REAL, OPTIONAL, INTENT(IN)      :: rhoimag(atoms%jmtd,0:sphhar%nlhd,atoms%ntype), rho0(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
@@ -56,20 +57,25 @@ contains
     TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
     COMPLEX, OPTIONAL, INTENT(IN)   :: qpw0(:)
 
-    INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir ! DFPT: Type and direction of displaced atom
+    INTEGER, OPTIONAL, INTENT(IN)   :: iDtype, iDir ! DFPT: Type and direction of displaced atom
+    INTEGER, OPTIONAL, INTENT(IN)   :: iDir2
+    COMPLEX, OPTIONAL, INTENT(IN)   :: mat2ord(5,3,3)
 
-    complex                         :: psint, sa, sl, sm
-    real                            :: f, fact, fpo, gz, p, qvac, rmtl, s, fJ, gr, g
+    complex                         :: psint, sa, sl, sm, qvac, fact
+    real                            :: f, fpo, gz, p, rmtl, s, fJ, gr, g
     integer                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz, kStart, kEnd
     complex                         :: psq_local(stars%ng3)
     complex                         :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     complex                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
-    real                            :: q2(vacuum%nmzd)
+    complex                         :: q2(vacuum%nmzd)
+    real                            :: q2r(vacuum%nmzd),q2i(vacuum%nmzd)
     real                            :: pn(0:atoms%lmaxd,atoms%ntype)
     real                            :: aj(0:atoms%lmaxd+maxval(atoms%ncv)+1)
-    real                            :: rht1(vacuum%nmz)
     real, allocatable, dimension(:) :: il, kl
     real                            :: g0(atoms%ntype)
+    complex                         :: qpw(stars%ng3)
+    real                            :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    complex                         :: rht(vacuum%nmzd,2)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
 
 #ifdef CPP_MPI
@@ -77,12 +83,22 @@ contains
 #endif
 
     l_dfptvgen = PRESENT(stars2)
+    qpw = den%pw(:,ispin)
+    rho = den%mt(:,:,:,ispin)
+    IF (input%film) rht = den%vac(:,1,:,ispin)
 
     ! Calculate multipole moments
     call timestart("mpmom")
     IF (.NOT.l_dfptvgen) THEN
         call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm )
+    ELSE IF (PRESENT(iDir2)) THEN
+        ! DFPT case:
+        ! Additional contributions to qlm due to surface corrections.
+        call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm, &
+                  & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0, iDir2=iDir2, mat2ord=mat2ord )
     ELSE
+        ! DFPT case:
+        ! Additional contributions to qlm due to surface corrections.
         call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm, &
                   & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0 )
     END IF
@@ -139,7 +155,7 @@ contains
 
     CALL calcIndexBounds(fmpi, MERGE(2,1,norm2(stars%center)<=1e-8), stars%ng3, kStart, kEnd)
     !$OMP parallel do default( NONE ) &
-    !$OMP SHARED(atoms,stars,sym,cell,kStart,kEnd,psq_local,qpw,qlm,pn,fpo) &
+    !$OMP SHARED(atoms,stars,sym,cell,kStart,kEnd,psq_local,qpw,qlm,pn,fpo,iDir,iDir2,iDtype) &
     !$OMP private( pylm, sa, n, ncvn, aj, sl, l, n1, ll1, sm, m, lm )
     do k = kStart, kEnd
       call phasy1( atoms, stars, sym, cell, k, pylm )
@@ -161,6 +177,13 @@ contains
         sl = sl + pn(l,n) / ( stars%sk3(k) ** n1 ) * aj( ncvn + 1 ) * sm
         end do
         sa = sa + atoms%neq(n) * sl
+        IF (PRESENT(iDir2)) THEN
+          IF (iDir2==iDir) THEN
+            IF (n==iDtype.OR.0==iDtype) THEN 
+              sa = sa + atoms%zatom(n) * 5 * pn(2,n) * conjg(pylm(1,n)) * aj( ncvn + 1 ) / sfp_const / ( stars%sk3(k) ** (ncvn-1) )
+            END IF
+          END IF
+        END IF
       end do
       psq_local(k) = qpw(k) + fpo * sa
     end do
@@ -170,7 +193,10 @@ contains
 
     call timestop("loop in psqpw")
 
+    !IF (.NOT.norm2(stars%center)<1e-8) RETURN ! TODO: Change this!
     IF (l_dfptvgen) RETURN
+    ! TODO: As of yet unclear if we need to do somecorrection here for
+    !       DFPT, to make up for possible charge shifts from/to the vacuum.
 
     if ( fmpi%irank == 0 ) then
       if ( potdenType == POTDEN_TYPE_POTYUK ) return
@@ -194,9 +220,16 @@ contains
       if ( .not. input%film .or. potdenType == POTDEN_TYPE_POTYUK ) return
 
       ! Normalized pseudo density
-        qvac = 0.0
+        qvac = cmplx(0.0,0.0)
         do ivac = 1, vacuum%nvac
-          call qsf( vacuum%delz, rht(1,ivac), q2, vacuum%nmz, 0 )
+          if (.not.l_dfptvgen) then
+            call qsf( vacuum%delz, real(rht(:,ivac)), q2r, vacuum%nmz, 0 )
+            q2 = q2r
+          else
+            call qsf( vacuum%delz, real(rht(:,ivac)), q2r, vacuum%nmz, 0 )
+            call qsf( vacuum%delz,aimag(rht(:,ivac)), q2i, vacuum%nmz, 0 )
+            q2 = q2r + ImagUnit*q2i
+          end if
           q2(1) = q2(1) * cell%area
           qvac = qvac + q2(1) * 2. / real( vacuum%nvac )
         end do
@@ -205,7 +238,7 @@ contains
       if ( l_xyav ) return
       fact = ( qvac + psint ) / ( stars%nstr(1) * cell%vol )
       psq(1) = psq(1) - fact
-      write(oUnit, fmt=8010 ) fact * 1000
+      if (.not.l_dfptvgen) write(oUnit, fmt=8010 ) fact * 1000
 8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
     end if ! fmpi%irank == 0

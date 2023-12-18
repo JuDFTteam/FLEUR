@@ -57,6 +57,7 @@ MODULE m_types_stars
      ! q-shifted stuff
      REAL                 :: center(3) = [0.0,0.0,0.0]
      REAL,    ALLOCATABLE :: gq(:, :)
+     REAL,    ALLOCATABLE :: gq2(:, :)
      COMPLEX, ALLOCATABLE :: ufft1(:)
    CONTAINS
      PROCEDURE :: mpi_bc=>mpi_bc_stars
@@ -118,6 +119,7 @@ CONTAINS
     CALL mpi_bc(this%center(2),rank,mpi_comm)
     CALL mpi_bc(this%center(3),rank,mpi_comm)
     CALL mpi_bc(this%gq,rank,mpi_comm)
+    CALL mpi_bc(this%gq2,rank,mpi_comm)
     CALL mpi_bc(this%ufft1,rank,mpi_comm)
 
   END SUBROUTINE mpi_bc_stars
@@ -140,7 +142,7 @@ CONTAINS
     INTEGER :: kr(3,sym%nop),kv(3)
     COMPLEX :: phas(sym%nop)
     INTEGER,ALLOCATABLE :: index(:)
-    REAL,ALLOCATABLE :: gsk3(:), sk3q(:)
+    REAL,ALLOCATABLE :: gsk3(:), sk3q(:), sk2q(:)
 
     gmax2=stars%gmax**2
     allocate(gsk3(stars%ng3),index(stars%ng3))
@@ -246,6 +248,7 @@ CONTAINS
     !
     ALLOCATE(stars%r2gphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2))
     ALLOCATE(stars%kv2(2,stars%ng2),stars%sk2(stars%ng2),stars%nstr2(stars%ng2))
+    IF (PRESENT(qvec)) ALLOCATE(stars%gq2(2,stars%ng3),sk2q(stars%ng2))
     ALLOCATE(stars%i2g(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2))
     ALLOCATE(stars%ig2(stars%ng3))
     ALLOCATE(stars%igvac(stars%ng2,-stars%mx3:stars%mx3))
@@ -262,10 +265,19 @@ CONTAINS
         IF ( stars%i2g(k1,k2) .NE. 0 ) CYCLE y_dim2  ! belongs to another star
         g(:2)=matmul(kv(:2),cell%bmat(:2,:2))
         s=dot_product(g(:2),g(:2))
-        if (s>gmax2) cycle y_dim2 !not in sphere
+        sq=s
+        IF (PRESENT(qvec)) THEN
+          g(:2) = g(:2) + matmul(qvec(:2),cell%bmat(:2,:2))
+          sq=dot_product(g(:2),g(:2))
+        END IF
+        if (sq>gmax2) cycle y_dim2 !not in sphere
         k=k+1
         stars%kv2(:,k)=kv(:2)
         stars%sk2(k)=sqrt(s)
+        IF (PRESENT(qvec)) THEN
+             stars%gq2(:2,k)=g(:2)
+             sk2q(k)=sqrt(sq)
+        END IF
         ! secondary key for equal length stars
         gsk3(k) = (stars%mx1+stars%kv3(1,k)) +(stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1)
         !Now generate all equivalent g-vectors
@@ -273,7 +285,6 @@ CONTAINS
         DO n = 1,sym%nop2
             stars%i2g(kr(1,n),kr(2,n))=k
         ENDDO
-
       ENDDO y_dim2
     ENDDO x_dim2
     if (k.ne.stars%ng2) call judft_error("BUG in init_stars: inconsistency in ng2")
@@ -281,6 +292,8 @@ CONTAINS
     CALL sort(index(:stars%ng2),stars%sk2,gsk3(:stars%ng2))
     stars%kv2(:,:)=stars%kv2(:,index(:stars%ng2))
     stars%sk2=stars%sk2(index(:stars%ng2))
+    IF (PRESENT(qvec)) stars%gq2=stars%gq2(:,index(:stars%ng2))
+    IF (PRESENT(qvec)) stars%sk2=sk2q(index(:stars%ng2))
     ! set up the pointers and phases for 2d stars
     DO  k = 1,stars%ng2
       DO k3= stars%mx3,-stars%mx3,-1
@@ -341,8 +354,6 @@ CONTAINS
     ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
     ALLOCATE(stars%i2g(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2))
 
-
-
     stars%i2g=0
     stars%ig=0
     stars%ng2=0
@@ -355,6 +366,7 @@ CONTAINS
         !Check 2d-star
         IF (stars%i2g(k1,k2)==0) THEN
             g=matmul(kv,cell%bmat)
+            IF (PRESENT(qvec)) g = g + matmul(qvec,cell%bmat)
             s=dot_product(g,g)
             IF (.not.s>gmax2) THEN !in sphere
               stars%ng2=stars%ng2+1
@@ -420,6 +432,7 @@ CONTAINS
      IF (ALLOCATED(stars%ustep)) DEALLOCATE(stars%ustep)
      IF (ALLOCATED(stars%ufft)) DEALLOCATE(stars%ufft)
      IF (ALLOCATED(stars%gq)) DEALLOCATE(stars%gq)
+     IF (ALLOCATED(stars%gq2)) DEALLOCATE(stars%gq2)
      IF (ALLOCATED(stars%ufft1)) DEALLOCATE(stars%ufft1)
      IF (ALLOCATED(stars%kv2)) DEALLOCATE(stars%kv2)
      IF (ALLOCATED(stars%sk2)) DEALLOCATE(stars%sk2)
@@ -429,6 +442,5 @@ CONTAINS
      IF (ALLOCATED(stars%igvac)) DEALLOCATE(stars%igvac)
      IF (ALLOCATED(stars%phi2)) DEALLOCATE(stars%phi2)
      IF (ALLOCATED(stars%r2gphs)) DEALLOCATE(stars%r2gphs)
-
   END SUBROUTINE
 END MODULE m_types_stars

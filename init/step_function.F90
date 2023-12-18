@@ -147,17 +147,17 @@ CONTAINS
          END DO ! 0, 3*stars%mx2 - 1
       END DO ! 0, 3*stars%mx3 - 1
 
-      IF (fmpi%irank == 0) THEN
-         IF (input%film) THEN
-            fftgrid%grid(0) = fftgrid%grid(0) + cell%vol*inv_omtil - 1.0
-            DO z2 = 1, 3*stars%mx3 - 1
-               gInt(3) = REAL(z2)
-               IF (gInt(3) > 1.5*stars%mx3) gInt(3) = gInt(3) - 3.0 * stars%mx3
-               th = cell%bmat(3, 3)*gInt(3)*cell%z1
-               fftgrid%grid(z2*layerDim) = fftgrid%grid(z2*layerDim) + cell%vol*inv_omtil*SIN(th)/th
-            END DO
-         END IF
-      END IF
+      !IF (fmpi%irank == 0) THEN
+      !   IF (input%film) THEN
+      !      fftgrid%grid(0) = fftgrid%grid(0) + cell%vol*inv_omtil - 1.0
+      !      DO z2 = 1, 3*stars%mx3 - 1
+      !         gInt(3) = REAL(z2)
+      !         IF (gInt(3) > 1.5*stars%mx3) gInt(3) = gInt(3) - 3.0 * stars%mx3
+      !         th = cell%bmat(3, 3)*gInt(3)*cell%z1
+      !         fftgrid%grid(z2*layerDim) = fftgrid%grid(z2*layerDim) + cell%vol*inv_omtil*SIN(th)/th
+      !      END DO
+      !   END IF
+      !END IF
 
       CALL timestop("New stepf")
    END SUBROUTINE

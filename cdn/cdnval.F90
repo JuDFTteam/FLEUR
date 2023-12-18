@@ -46,6 +46,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_checkdopall
    USE m_greensfBZint
    USE m_greensfCalcImagPart
+   USE m_local_hamiltonian
    USE m_greensfCalcScalarProducts
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
@@ -57,7 +58,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_corespec_io, only : corespec_init
    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
    USE m_xmlOutput
-   USE m_tlmplm_cholesky
    USE m_types_dos
    USE m_types_mcd
    USE m_types_slab
@@ -109,7 +109,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    INTEGER,               INTENT(IN)    :: eig_id, jspin
 
    ! Local Scalars
-   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,max_length_k_list,nk
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
    LOGICAL :: l_real, l_corespec, l_empty
@@ -221,6 +221,10 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    jsp = MERGE(1,jspin,noco%l_noco)
    call timestop("init")
 
+   max_length_k_list=size(cdnvalJob%k_list)
+#ifdef CPP_MPI   
+   CALL MPI_ALLREDUCE(MPI_IN_PLACE,max_length_k_list,1,MPI_INTEGER,MPI_MAX,fmpi%mpi_comm,ierr)
+#endif
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
       bkpt=kpts%bk(:,ikpt)
@@ -298,8 +302,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) THEN
-           CALL tlmplm%init(atoms,input%jspins,.FALSE.)
-           CALL tlmplm_cholesky(sphhar,atoms,sym,noco,nococonv,enpara,ispin,fmpi,vTot,vtot,den,input,hub1inp,hub1data,tlmplm,usdus,0.0)
+           call local_ham(sphhar,atoms,sym,noco,nococonv,enpara,fmpi,vtot,vtot,den,input,hub1inp,hub1data,tlmplm,usdus,0.0)
            CALL force%addContribsA21A12(input,atoms,sym,cell ,enpara,&
            usdus,tlmplm,vtot,eigVecCoeffs,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,lapw%gvec(1,:,:),lapw%gvec(2,:,:),lapw%gvec(3,:,:),bkpt)
          ENDIF
@@ -337,8 +340,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (PRESENT(slab).AND.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab ,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
-            CALL vacden(vacuum,stars , kpts,input,sym,cell,atoms,noco,nococonv,banddos,&
-                        gVacMap,we,ikpt,jspin,vTot%vacz,noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,vacdos,dos)
+            CALL vacden(vacuum,stars,input,cell,atoms,noco,nococonv,banddos,&
+                        we,ikpt,jspin,REAL(vTot%vac(:,1,:,:)),noccbd,ev_list,lapw,enpara%evac,den,zMat,vacdos,dos)
          END IF
       END IF
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,vacdos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
@@ -350,6 +353,10 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    END DO ! end of k-point loop
 
 #ifdef CPP_MPI
+   !print *,"Remaining Barriers:",size(cdnvalJob%k_list)+1,max_length_k_list
+   DO nk=size(cdnvalJob%k_list)+1,max_length_k_list
+      CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+   ENDDO
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,ispin,dos,vacdos,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS)

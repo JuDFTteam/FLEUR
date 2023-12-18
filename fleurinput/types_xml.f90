@@ -22,7 +22,9 @@ MODULE m_types_xml
       INTEGER:: id
       character(len=200):: basepath = ""
       integer           :: versionNumber = 0
-      INTEGER           :: currentversionNumber = 36 !parameters are not allowed here
+      INTEGER           :: currentversionNumber = 37 !parameters are not allowed here
+      
+      CHARACTER(len=100) :: filename_add_xml     
    CONTAINS
       PROCEDURE        :: init
       PROCEDURE        :: GetNumberOfNodes
@@ -126,6 +128,7 @@ CONTAINS
 !   Don't know for what it is needed, anyway. I leave rest of this mechanism in the code. ...for now. G.M.
 !    if (INITIALIZED) RETURN
       INITIALIZED = .true.
+      xml%filename_add_xml = filename_add
 
       l_allow_old = .false.
       if (present(old_version)) then

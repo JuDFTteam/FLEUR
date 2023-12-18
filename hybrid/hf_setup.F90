@@ -56,12 +56,6 @@ CONTAINS
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
 
-         if(.not. allocated(eig_irr)) then 
-            allocate(eig_irr(fi%input%neig, fi%kpts%nkpt), stat=ok)
-            IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
-         endif
-         eig_irr = 0.0
-
          ! Reading the eig file
          call timestart("eig stuff")
          DO nk = 1, fi%kpts%nkpt
@@ -69,8 +63,8 @@ CONTAINS
             CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot, lapw%nv(1) + fi%atoms%nlotot, fi%noco%l_noco)
 
-            eig_irr(:, nk) = results%eig(:, nk, jsp)
          END DO
+         eig_irr = results%eig(:, :, jsp)
          call timestop("eig stuff")
 
 

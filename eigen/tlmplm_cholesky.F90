@@ -111,45 +111,6 @@ CONTAINS
                td%h_loc_nonsph(0:s-1,s:s+s-1,n,j1,j2)  = td%h_loc(0:s-1,td%h_loc2(n):s+td%h_loc2(n)-1,n,j1,j2)
                td%h_loc_nonsph(s:s+s-1,s:s+s-1,n,j1,j2)= td%h_loc(td%h_loc2(n):s+td%h_loc2(n)-1,td%h_loc2(n):s+td%h_loc2(n)-1,n,j1,j2)
 
-               ! Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
-               DO i_u=1,atoms%n_u+atoms%n_hia
-                  IF (n.NE.atoms%lda_u(i_u)%atomType) CYCLE
-                  ! Found a "U" for this atom type
-                  l  = atoms%lda_u(i_u)%l
-                  lp = atoms%lda_u(i_u)%l
-                  DO m = -l,l
-                     lm = l* (l+1) + m
-                     DO mp = -lp,lp
-                        lmp = lp*(lp+1) + mp
-                        IF (j1==j2) THEN
-                           td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
-                           td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
-                        ELSE IF(j1>j2) THEN
-                           td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * uun21(l,n)
-                           td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * udn21(l,n)
-                           td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * dun21(l,n)
-                           td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * ddn21(l,n)
-                        ELSE
-                           ! For this part of the Hamiltonian we need to perform Hermitian conjugation on mmpMat
-                           td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
-                           td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
-                           td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
-                           td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
-                        END IF
-                     END DO
-                  END DO
-               END DO
-
-               DO i_opc=1,atoms%n_opc
-                  IF (n.NE.atoms%lda_opc(i_opc)%atomType) CYCLE
-                  ! Found an "OPC" for this atom type
-                  l=atoms%lda_opc(i_opc)%l
-                  DO m = -l,l
-                     lm = l*(l+1) + m
-                     td%h_loc_nonsph(lm  ,lm  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lm  ,n,j1,j2) + opc_corrections(i_opc) * m
-                     td%h_loc_nonsph(lm+s,lm+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lm+s,n,j1,j2) + opc_corrections(i_opc) * m * ud%ddn(l,n,jsp)
-                  END DO
-               END DO
 
                ! Create Cholesky decomposition of local hamiltonian
                ! For DFPT, do not decompose!
@@ -162,7 +123,7 @@ CONTAINS
                         td%h_loc_nonsph(lmp+s,lmp+s,n,j1,j2)=td%e_shift(n,jsp)*ud%ddn(lp,n,jsp)+td%h_loc_nonsph(lmp+s,lmp+s,n,j1,j2)
                      END DO
                   END DO
-                  IF (lmp+1.NE.s) CALL judft_error("BUG in tlmpln_cholesky")
+                  IF (lmp+1.NE.s) CALL judft_error("BUG in tlmplm_cholesky")
 
                   ! Perform cholesky decomposition
                   info=0
@@ -261,4 +222,47 @@ CONTAINS
       END DO
    END SUBROUTINE tlmplm_constrained
 
-END MODULE m_tlmplm_cholesky
+   SUBROUTINE add_lda(atoms,v,ud,mat,n,j1,j2)
+               ! Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
+   DO i_u=1,atoms%n_u+atoms%n_hia
+      IF (n.NE.atoms%lda_u(i_u)%atomType) CYCLE
+      ! Found a "U" for this atom type
+      l  = atoms%lda_u(i_u)%l
+      lp = atoms%lda_u(i_u)%l
+      DO m = -l,l
+         lm = l* (l+1) + m
+         DO mp = -lp,lp
+            lmp = lp*(lp+1) + mp
+            IF (j1==j2) THEN
+               td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
+               td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
+            ELSE IF(j1>j2) THEN
+               td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * uun21(l,n)
+               td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * udn21(l,n)
+               td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * dun21(l,n)
+               td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * ddn21(l,n)
+            ELSE
+               ! For this part of the Hamiltonian we need to perform Hermitian conjugation on mmpMat
+               td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
+               td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm  ,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
+               td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
+               td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
+            END IF
+         END DO
+      END DO
+   END DO
+
+   DO i_opc=1,atoms%n_opc
+      IF (n.NE.atoms%lda_opc(i_opc)%atomType) CYCLE
+      ! Found an "OPC" for this atom type
+      l=atoms%lda_opc(i_opc)%l
+      DO m = -l,l
+         lm = l*(l+1) + m
+         td%h_loc_nonsph(lm  ,lm  ,n,j1,j2) = td%h_loc_nonsph(lm  ,lm  ,n,j1,j2) + opc_corrections(i_opc) * m
+         td%h_loc_nonsph(lm+s,lm+s,n,j1,j2) = td%h_loc_nonsph(lm+s,lm+s,n,j1,j2) + opc_corrections(i_opc) * m * ud%ddn(l,n,jsp)
+      END DO
+   END DO
+
+
+
+END module

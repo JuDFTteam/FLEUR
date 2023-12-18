@@ -10,7 +10,7 @@ MODULE m_fermie
   !            or fermi-function                                    p.kurz
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE fermie(eig_id,fmpi,kpts,input,noco,e_min,cell,results)
+  SUBROUTINE fermie(eig_id,fmpi,kpts,input,noco,e_min,cell,results,l_output_param)
 
     !---------------------------------------------------f--------------------
     !
@@ -51,6 +51,8 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id
     REAL,INTENT(IN)      :: e_min
+    !     .. Logical Arguments ..
+    LOGICAL,INTENT(IN),OPTIONAL :: l_output_param
     !     ..
     !     .. Array Arguments ..
     !REAL,    INTENT (OUT):: w(:,:,:) !(input%neig,kpts%nkpt,dimension%jspd)
@@ -59,6 +61,7 @@ CONTAINS
     REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv
     INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins
     INTEGER n_help,m_spins,mspin,sslice(2)
+    LOGICAL :: l_output
     !     ..
     !     .. Local Arrays ..
     !
@@ -96,7 +99,14 @@ CONTAINS
     ! initiliaze e
     e = 0
 
-    IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8000)
+    ! Logical that controls the output
+    IF (.NOT.present(l_output_param)) THEN
+      l_output = .true.
+    ELSE
+      l_output = l_output_param
+    ENDIF
+
+    IF ( fmpi%irank == 0 .and. l_output) WRITE (oUnit,FMT=8000)
 8000 FORMAT (/,/,1x,'fermi energy and band-weighting factors:')
     !
     !---> READ IN EIGENVALUES
@@ -114,15 +124,18 @@ CONTAINS
     ENDIF
     !---> pk non-collinear
     !
-    IF (fmpi%irank == 0. .and. .NOT.judft_was_argument("-minimalOutput")) CALL openXMLElementNoAttributes('eigenvalues')
+    IF (fmpi%irank == 0. .and. .NOT.judft_was_argument("-minimalOutput") .and. l_output) CALL openXMLElementNoAttributes('eigenvalues')
+    
     DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
           IF (fmpi%irank == 0) THEN
              if(input%eig66(1))CALL read_eig(eig_id,k,jsp,neig=results%neig(k,jsp),eig=results%eig(:,k,jsp))
+             if (l_output) then
              WRITE (oUnit,'(a2,3f10.5,a12,f12.6)') 'at',kpts%bk(:,k), " k-weight:", kpts%wtkpt(k)
              WRITE (oUnit,'(i5,a14)') results%neig(k,jsp),' eigenvalues :'
              WRITE (oUnit,'(8f12.6)') (results%eig(i,k,jsp),i=1,results%neig(k,jsp))
-             IF(.NOT.judft_was_argument("-minimalOutput")) THEN
+             end if
+             IF(.NOT.judft_was_argument("-minimalOutput") .and. l_output) THEN
                 attributes = ''
                 WRITE(attributes(1),'(i0)') jsp
                 WRITE(attributes(2),'(i0)') k
@@ -138,7 +151,7 @@ CONTAINS
        END DO
     ENDDO
     !finished reading of eigenvalues
-    IF (fmpi%irank == 0 .and. .NOT.judft_was_argument("-minimalOutput")) CALL closeXMLElement('eigenvalues')
+    IF (fmpi%irank == 0 .and. .NOT.judft_was_argument("-minimalOutput") .and. l_output) CALL closeXMLElement('eigenvalues')
   IF (fmpi%irank == 0) THEN
 
     IF (ABS(input%fixed_moment)<1E-6) THEN
@@ -181,8 +194,10 @@ CONTAINS
 
        !     Check if no deep eigenvalue is found
        IF (e_min-MINVAL(e(1:n))>1.0) THEN
-          WRITE(oUnit,*) 'WARNING: Too low eigenvalue detected:'
-          WRITE(oUnit,*) 'min E=', MINVAL(e(1:n)),' min(enpara)=',e_min
+          if (l_output) then
+             WRITE(oUnit,*) 'WARNING: Too low eigenvalue detected:'
+             WRITE(oUnit,*) 'min E=', MINVAL(e(1:n)),' min(enpara)=',e_min
+          endif
           CALL juDFT_warn("Too low eigenvalue detected",calledby="fermi", &
                           hint ="If the lowest eigenvalue is more than 1Htr below "//&
                                 "the lowest energy parameter, you probably have picked up"//&
@@ -199,7 +214,7 @@ CONTAINS
        DO WHILE ((ws+del).LT.weight)
           l = l + 1
           IF (l.GT.n) THEN
-             IF ( fmpi%irank == 0 ) THEN
+             IF ( fmpi%irank == 0 .and. l_output) THEN
                 WRITE (oUnit,FMT=8010) n,ws,weight
              END IF
              CALL juDFT_error("Not enough wavefunctions",calledby="fermie")
@@ -207,7 +222,7 @@ CONTAINS
           END IF
           ws = ws + we(INDEX(l))
           seigv =seigv + e(INDEX(l))*we(INDEX(l))*spindg
-          !         WRITE (oUnit,FMT='(2f10.7)') e(index(l)),we(index(l))
+          !IF (l_output) WRITE (oUnit,FMT='(2f10.7)') e(index(l)),we(index(l))
        END DO
        results%ef = -100000.0
        IF(l.GT.0) THEN
@@ -218,16 +233,18 @@ CONTAINS
        IF(m_spins /= 1) THEN
           zc = zc/2.0-(mspin-1.5)*input%fixed_moment
           idxjsp = 1 !assume single spin in following calculations
-          IF (mspin == 1) THEN
-             WRITE(oUnit,*) "Fixed total moment calculation"
-             WRITE(oUnit,*) "Moment:",input%fixed_moment
-             write(oUnit,*) "First Spin:"
-          ELSE
-             WRITE(oUnit,*) "Second Spin:"
-          ENDIF
+          if (l_output) then 
+             IF (mspin == 1) THEN
+                WRITE(oUnit,*) "Fixed total moment calculation"
+                WRITE(oUnit,*) "Moment:",input%fixed_moment
+                write(oUnit,*) "First Spin:"
+             ELSE
+                WRITE(oUnit,*) "Second Spin:"
+             ENDIF
+          end if 
        ENDIF
 
-       IF ( fmpi%irank == 0 ) WRITE (oUnit,FMT=8020) results%ef,nstef,seigv,ws,ssc
+       IF ( fmpi%irank == 0 .and. l_output) WRITE (oUnit,FMT=8020) results%ef,nstef,seigv,ws,ssc
 
        !+po
        results%ts = 0.0
@@ -236,18 +253,20 @@ CONTAINS
        results%bandgap = 0.0
        IF(input%bz_integration==BZINT_METHOD_HIST) THEN
           CALL ferhis(input,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
-               nstef,ws,spindg,weight,e,results%neig(:,sslice(1):sslice(2)),we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results)
+               nstef,ws,spindg,weight,e,results%neig(:,sslice(1):sslice(2)),&
+               we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results,l_output)
        ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
-          CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
+          CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
+                      results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv,l_output)
        ELSE IF (input%bz_integration==BZINT_METHOD_TRIA) THEN
           CALL fertri(input,noco,kpts,fmpi%irank, results%neig(:,sslice(1):sslice(2)),nspins,zc,results%eig(:,:,sslice(1):sslice(2)),spindg,&
-               results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)))
+               results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),l_output)
        ELSE IF (input%bz_integration==BZINT_METHOD_TETRA) THEN
           CALL fertetra(input,noco,kpts,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
-                        results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv)
+                        results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv,l_output)
        ENDIF
 
-       IF (mspin == 2) THEN
+       IF (mspin == 2 .AND. l_output) THEN
           WRITE(oUnit,*) "Different Fermi-energies for both spins:"
           WRITE(oUnit,"(a,f0.3,a,f0.4,a,f0.4,a,f0.4)") "Fixed Moment:" &
                ,input%fixed_moment,"   Difference(EF):",efermi," - ",results%ef,"="&
@@ -258,10 +277,12 @@ CONTAINS
 
     IF (m_spins == 2) nspins = 2
 
-    attributes = ''
-    WRITE(attributes(1),'(f20.10)') results%ef
-    WRITE(attributes(2),'(a)') 'Htr'
-    IF (fmpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
+    IF (l_output) THEN
+       attributes = ''
+       WRITE(attributes(1),'(f20.10)') results%ef
+       WRITE(attributes(2),'(a)') 'Htr'
+       IF (fmpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
+    END IF
  ENDIF   
 
     RETURN

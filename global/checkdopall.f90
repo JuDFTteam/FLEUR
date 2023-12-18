@@ -9,7 +9,7 @@ MODULE m_checkdopall
 CONTAINS
 
 SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,&
-                       cell,potden,ispin)
+                       cell,potden,ispin,potdenIm)
 
    USE m_sphpts
    USE m_checkdop
@@ -30,6 +30,7 @@ SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,&
     
    TYPE(t_cell),INTENT(IN)      :: cell
    TYPE(t_potden),INTENT(IN)    :: potden
+   TYPE(t_potden),INTENT(IN),OPTIONAL :: potdenIm
 
    INTEGER, INTENT(IN)          :: ispin
 
@@ -47,8 +48,13 @@ SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,&
       DO ivac = 1,vacuum%nvac
          signum = 3.0 - 2.0*ivac
          xp(3,:npd) = signum*cell%z1/cell%amat(3,3)
-         CALL checkdop(xp,npd,0,0,ivac,1,ispin,atoms,&
-                       sphhar,stars,sym,vacuum,cell ,potden)
+         IF (PRESENT(potdenIm)) THEN
+            CALL checkdop(xp,npd,0,0,ivac,1,ispin,atoms,&
+                        sphhar,stars,sym,vacuum,cell ,potden,potdenIm)
+         ELSE
+            CALL checkdop(xp,npd,0,0,ivac,1,ispin,atoms,&
+                        sphhar,stars,sym,vacuum,cell ,potden) 
+         END IF
       END DO
    END IF
 
@@ -56,8 +62,13 @@ SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,&
    DO n = 1, atoms%ntype
       nat = atoms%firstAtom(n)
       CALL sphpts(xp,SIZE(xp,2),atoms%rmt(n),atoms%pos(1,nat))
-      CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
-                    atoms,sphhar,stars,sym,vacuum,cell ,potden)
+      IF (PRESENT(potdenIm)) THEN
+         CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
+                      atoms,sphhar,stars,sym,vacuum,cell ,potden,potdenIm)
+      ELSE
+         CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
+                      atoms,sphhar,stars,sym,vacuum,cell ,potden)
+      END IF 
    END DO
 
    CALL timestop("checkDOPAll")

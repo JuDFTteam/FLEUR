@@ -83,17 +83,23 @@ CONTAINS
 
       IF (input%film) THEN
          CALL timestart("Vac divergence")
-         div%vacxy=CMPLX(0.0,0.0)
-         div%vacz=0.0
+         !div%vacxy=CMPLX(0.0,0.0)
+         !div%vacz=0.0
          CALL vac_grad(vacuum,stars,cell,bxc(1),grad,9*stars%mx1*stars%mx2)
-         div%vacxy=div%vacxy+grad(1)%vacxy
-         div%vacz=div%vacz+grad(1)%vacz
+         !div%vacxy=div%vacxy+grad(1)%vacxy
+         !div%vacz=div%vacz+grad(1)%vacz
+         div%vac(:vacuum%nmzxyd,2:,:,:)=div%vac(:vacuum%nmzxyd,2:,:,:)+grad(1)%vac(:vacuum%nmzxyd,2:,:,:)
+         div%vac(:,1,:,:)=div%vac(:,1,:,:)+grad(1)%vac(:,1,:,:)
          CALL vac_grad(vacuum,stars,cell,bxc(2),grad,9*stars%mx1*stars%mx2)
-         div%vacxy=div%vacxy+grad(2)%vacxy
-         div%vacz=div%vacz+grad(2)%vacz
+         !div%vacxy=div%vacxy+grad(2)%vacxy
+         !div%vacz=div%vacz+grad(2)%vacz
+         div%vac(:vacuum%nmzxyd,2:,:,:)=div%vac(:vacuum%nmzxyd,2:,:,:)+grad(2)%vac(:vacuum%nmzxyd,2:,:,:)
+         div%vac(:,1,:,:)=div%vac(:,1,:,:)+grad(2)%vac(:,1,:,:)
          CALL vac_grad(vacuum,stars,cell,bxc(3),grad,9*stars%mx1*stars%mx2)
-         div%vacxy=div%vacxy+grad(3)%vacxy
-         div%vacz=div%vacz+grad(3)%vacz
+         !div%vacxy=div%vacxy+grad(3)%vacxy
+         !div%vacz=div%vacz+grad(3)%vacz
+         div%vac(:vacuum%nmzxyd,2:,:,:)=div%vac(:vacuum%nmzxyd,2:,:,:)+grad(3)%vac(:vacuum%nmzxyd,2:,:,:)
+         div%vac(:,1,:,:)=div%vac(:,1,:,:)+grad(3)%vac(:,1,:,:)
          CALL timestop("Vac divergence")
       END IF
 
@@ -130,7 +136,8 @@ CONTAINS
       REAL, ALLOCATABLE :: rxydzr(:),rxydzi(:)
       REAL, ALLOCATABLE :: rxydzzr(:),rxydzzi(:),rhtxyr(:),rhtxyi(:)
       REAL, ALLOCATABLE :: rhtxc(:,:),dummy(:)
-      COMPLEX, ALLOCATABLE :: fgxy(:,:),rxydz(:,:),rxydzz(:),cqpw(:)
+      COMPLEX, ALLOCATABLE :: fgxy(:,:),fg(:,:),rxydz(:,:),rxydzz(:),cqpw(:)
+      COMPLEX, ALLOCATABLE :: rdz(:,:), rdzz(:,:)
 
       d_15     = 1.e-15
       zro      = 0.0
@@ -138,6 +145,7 @@ CONTAINS
 
       ALLOCATE (rxydz(vacuum%nmzxy,stars%ng2-1))
       ALLOCATE (rhtdz(vacuum%nmzd),rhtdzz(vacuum%nmzd))
+      ALLOCATE (rdz(vacuum%nmzd,stars%ng2),rdzz(vacuum%nmzd,stars%ng2))
 
       DO ivac=1,vacuum%nvac
 
@@ -150,29 +158,29 @@ CONTAINS
          ! calculate first (rhtdz) & second (rhtdzz) derivative of den%vacz(1:nmz)
          !
 
-         CALL grdchlh(vacuum%delz,den%vacz(1:vacuum%nmz,ivac,1),&
-                     rhtdz,rhtdzz)
+         CALL grdchlh(vacuum%delz,REAL(den%vac(1:vacuum%nmz,1,ivac,1)),&
+                     rhtdz(:),rhtdzz)
          ALLOCATE ( rhtxyr(vacuum%nmzxy), rhtxyi(vacuum%nmzxy),dummy(vacuum%nmzxy) )
          ALLOCATE ( rxydzr(vacuum%nmzxy), rxydzi(vacuum%nmzxy) )
          ALLOCATE ( rxydzzr(vacuum%nmzxy),rxydzzi(vacuum%nmzxy) )
 
-         DO iq = 1, stars%ng2-1
+         DO iq = 2, stars%ng2
          !
          ! calculate first (rxydz) & second (rxydzz) derivative of den%vacxy:
          !
             DO ip=1,vacuum%nmzxy
-               rhtxyr(ip)=den%vacxy(ip,iq,ivac,1)
+               rhtxyr(ip)=den%vac(ip,iq,ivac,1)
             ENDDO
             CALL grdchlh(vacuum%delz,rhtxyr(:vacuum%nmzxy), rxydzr,rxydzzr)
 
             DO ip=1,vacuum%nmzxy
-               rhtxyi(ip)=aimag(den%vacxy(ip,iq,ivac,js))
+               rhtxyi(ip)=aimag(den%vac(ip,iq,ivac,js))
             ENDDO
 
             CALL grdchlh(vacuum%delz,rhtxyi(:vacuum%nmzxy), rxydzi,rxydzzi)
 
             DO ip=1,vacuum%nmzxy
-               rxydz(ip,iq)=cmplx(rxydzr(ip),rxydzi(ip))
+               rdz(ip,iq)=cmplx(rxydzr(ip),rxydzi(ip))
             ENDDO
 
          ENDDO ! loop over 2D stars (iq)
@@ -183,69 +191,54 @@ CONTAINS
          ALLOCATE ( rhdx(0:ifftd2-1),rhdy(0:ifftd2-1) )
          ALLOCATE ( rhdz(0:ifftd2-1))
 
-         ALLOCATE ( cqpw(stars%ng2-1),af2(0:ifftd2-1) )
-         ALLOCATE ( fgxy(stars%ng2-1,3),bf2(0:ifftd2-1) )
+         ALLOCATE ( cqpw(stars%ng2),af2(0:ifftd2-1) )
+         ALLOCATE ( fg(stars%ng2,3),bf2(0:ifftd2-1) )
 
          af2=0.0
+         cqpw = CMPLX(0.0,0.0)
          DO ip = 1,vacuum%nmzxy
             ! loop over warping region
 
             ! Transform charge and magnetization to real-space.
 
-            CALL fft2d(stars, af2(0),bf2, den%vacz(ip,ivac,1),0.,&
-                       den%vacxy(ip,:,ivac,1),+1)
+            CALL fft2d(stars, af2(0),bf2, den%vac(ip,:,ivac,1),+1)
 
             ! calculate derivatives with respect to x,y in g-space
             ! and transform them to real-space.
 
-            DO iq=1,stars%ng2-1
-               cqpw(iq)=ImagUnit*den%vacxy(ip,iq,ivac,js)
+            DO iq=2,stars%ng2
+               cqpw(iq)=ImagUnit*den%vac(ip,iq,ivac,js)
             ENDDO
 
+            ! d(rho)/atoms%dx is obtained by a FFT of i*gx*den%vac          
+            ! dn/x =  FFT(i*gx*den%vac)
             rhti = 0.0
-            ! d(rho)/atoms%dx is obtained by a FFT of i*gx*den%vacxy
-            ! (den%vacz is set to zero and gx is included in
-            ! dn/atoms =  FFT(0,i*gx*den%vacxy)
+            CALL fft2d(stars, rhdx(0),bf2, cqpw,+1,firstderiv=[1.,0.0,0.],cell=cell)
 
-            
-            CALL fft2d(stars, rhdx(0),bf2, zro,rhti,cqpw,+1,firstderiv=[1.,0.0,0.],cell=cell)
-
+				! dn/dy =  FFT(i*gy*den%vac)
             rhti = 0.0
-            CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*den%vacxy)&
-                        stars, rhdy(0),bf2, zro,rhti,cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell)
+            CALL fft2d(    &               
+                        stars, rhdy(0),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell)
 
+				! dn/dz = FFT(rdz)
             rhti = 0.0
-            CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
-                      stars, rhdz(0),bf2, rhtdz(ip),rhti,rxydz(ip,:), +1)
+            CALL fft2d(stars, rhdz(0),bf2, rdz(ip,:), +1)
 
-            !
             ! set minimal value of af2 to 1.0e-15
-            !
+            ! af2=max(af2,10e-13)
+				WHERE (af2<d_15) af2=d_15
 
-            !af2=max(af2,10e-13)
-
-            where (af2<d_15) af2=d_15
-
-            !
-            !           ----> 2-d back fft to g space
-            !
+            ! ----> 2-d back fft to g space
             bf2=0.0
-            CALL fft2d(stars, rhdx,bf2, fgz(1),rhti,fgxy(:,1), -1)
-            CALL fft2d(stars, rhdy,bf2, fgz(2),rhti,fgxy(:,2), -1)
-            CALL fft2d(stars, rhdz,bf2, fgz(3),rhti,fgxy(:,3), -1)
+            CALL fft2d(stars, rhdx,bf2, fg(:,1), -1)
+            CALL fft2d(stars, rhdy,bf2, fg(:,2), -1)
+            CALL fft2d(stars, rhdz,bf2, fg(:,3), -1)
 
-            ! the g||.eq.zero component is added to grad%vacz
-            !
-            grad(1)%vacz(ip,ivac,1) = fgz(1) + grad(1)%vacz(ip,ivac,1)
-            grad(2)%vacz(ip,ivac,1) = fgz(2) + grad(2)%vacz(ip,ivac,1)
-            grad(3)%vacz(ip,ivac,1) = fgz(3) + grad(3)%vacz(ip,ivac,1)
-            !
-            ! the g||.ne.zero components are added to grad%vacxy
-            !
-            DO irec2 = 1,stars%ng2-1
-               grad(1)%vacxy(ip,irec2,ivac,1)=grad(1)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,1)
-               grad(2)%vacxy(ip,irec2,ivac,1)=grad(2)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,2)
-               grad(3)%vacxy(ip,irec2,ivac,1)=grad(3)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,3)
+            ! All the components are added to grad%vac
+            DO irec2 = 1,stars%ng2
+               grad(1)%vac(ip,irec2,ivac,1)=grad(1)%vac(ip,irec2,ivac,1)+fg(irec2,1)
+               grad(2)%vac(ip,irec2,ivac,1)=grad(2)%vac(ip,irec2,ivac,1)+fg(irec2,2)
+               grad(3)%vac(ip,irec2,ivac,1)=grad(3)%vac(ip,irec2,ivac,1)+fg(irec2,3)
             ENDDO
 
          END DO ! ip=1,vacuum%nmzxy
@@ -268,7 +261,7 @@ CONTAINS
          DEALLOCATE ( af2)
 
          DO ip = vacuum%nmzxy + 1,vacuum%nmz
-            grad(3)%vacz(ip,ivac,1) = grad(3)%vacz(ip,ivac,1) + rhtdz(ip-vacuum%nmzxy)
+            grad(3)%vac(ip,1,ivac,1) = grad(3)%vac(ip,1,ivac,1) + rhtdz(ip-vacuum%nmzxy)
          ENDDO
 
          DEALLOCATE ( bf2)

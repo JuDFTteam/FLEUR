@@ -21,7 +21,7 @@ MODULE m_abclocdn
   !*********************************************************************
 CONTAINS
   SUBROUTINE abclocdn(atoms,sym,noco,lapw,cell,ccchi,iintsp,phase,ylm,&
-       ntyp,na,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,l_force,fgp,force)
+       ntyp,na,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,l_force,fgp,force,na_index)
 
     USE m_types
     USE m_constants
@@ -35,12 +35,13 @@ CONTAINS
     TYPE(t_cell),  INTENT(IN) :: cell
     TYPE(t_mat),   INTENT(IN) :: zMat
     TYPE(t_force), OPTIONAL, INTENT(INOUT) :: force
-
+    
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: iintsp
     INTEGER, INTENT (IN) :: k,na,ne,ntyp,nkvec,lo
     COMPLEX, INTENT (IN) :: phase
     LOGICAL, INTENT (IN) :: l_force
+    INTEGER,INTENT(IN),OPTIONAL :: na_index
 
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: alo1(:),blo1(:),clo1(:)
@@ -53,9 +54,11 @@ CONTAINS
 
     !     .. Local Scalars ..
     COMPLEX ctmp,term1,work(ne)
-    INTEGER i,j,l,ll1,lm,nbasf,m,na2,lmp
+    INTEGER i,j,l,ll1,lm,nbasf,m,na2,lmp,na_l
     !     ..
     !     ..
+    na_l=na
+    if (present(na_index)) na_l=na_index
     term1 = 2 * tpi_const/SQRT(cell%omtil) * ((atoms%rmt(ntyp)**2)/2) * phase
     !---> the whole program is in hartree units, therefore 1/wronskian is
     !---> (rmt**2)/2. the factor i**l, which usually appears in the a, b
@@ -86,17 +89,9 @@ CONTAINS
       DO m = -l,l
           lm = ll1 + m
           ctmp=term1*conjg(ylm(ll1+m+1))*work(i)
-          acof(i,lm,na) = acof(i,lm,na) + ctmp*alo1(lo)
-          bcof(i,lm,na) = bcof(i,lm,na) + ctmp*blo1(lo)
-          ccof(m,i,lo,na) = ccof(m,i,lo,na) + ctmp*clo1(lo)
-          IF (sym%invsat(na)==1.AND.noco%l_soc.AND.sym%invs) THEN
-             ctmp = work(i)*CONJG(term1)*ylm(ll1+m+1)*(-1)**(l-m)
-             na2 = sym%invsatnr(na)
-             lmp = ll1 - m
-             acof(i,lmp,na2) = acof(i,lmp,na2) +ctmp*alo1(lo)
-             bcof(i,lmp,na2) = bcof(i,lmp,na2) +ctmp*blo1(lo)
-             ccof(-m,i,lo,na2) = ccof(-m,i,lo,na2) +ctmp*clo1(lo)
-          ENDIF
+          acof(i,lm,na_l) = acof(i,lm,na_l) + ctmp*alo1(lo)
+          bcof(i,lm,na_l) = bcof(i,lm,na_l) + ctmp*blo1(lo)
+          ccof(m,i,lo,na_l) = ccof(m,i,lo,na_l) + ctmp*clo1(lo)
         END DO
         !!$acc end loop
     END DO

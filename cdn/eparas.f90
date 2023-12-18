@@ -89,27 +89,28 @@ CONTAINS
            ll1 = l* (l+1)
            DO m = -l,l
              lm = ll1 + m
-             DO natom = nt1,nt2
-                 suma = suma + eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
-                 sumb = sumb + eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
-             ENDDO
-             IF (banddos%l_mcd) THEN
+             IF (.NOT.banddos%l_mcd) THEN
+                DO natom = nt1,nt2
+                   suma = suma + eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
+                   sumb = sumb + eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
+                ENDDO
+             ELSE
                sumaa = CMPLX(0.,0.) ; sumab = CMPLX(0.,0.)
                sumbb = CMPLX(0.,0.) ; sumba = CMPLX(0.,0.)
                DO natom = nt1,nt2
-                 sumaa = suma + eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
-                 sumbb = sumb + eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
-                 sumab= sumab + eigVecCoeffs%abcof(i,lm,0,natom,jsp) *CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
-                 sumba= sumba + eigVecCoeffs%abcof(i,lm,1,natom,jsp) *CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
+                 sumaa = sumaa + eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
+                 sumbb = sumbb + eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
+                 sumab = sumab + eigVecCoeffs%abcof(i,lm,0,natom,jsp) *CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
+                 sumba = sumba + eigVecCoeffs%abcof(i,lm,1,natom,jsp) *CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
                ENDDO
                DO icore = 1, mcd%ncore(n)
                  DO ipol = 1, 3
                    index = 3*(n_dos-1) + ipol
-                   mcd%mcd(index,icore,ev_list(i),ikpt,jsp)=mcd%mcd(index,icore,ev_list(i),ikpt,jsp) + fac*(&
-                   sumaa * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1)  +&
-                   sumbb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2)  +&
-                   sumab* CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,1)  +&
-                   sumba* CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,2)  )
+                   mcd%mcd(index,icore,ev_list(i),ikpt,jsp) = mcd%mcd(index,icore,ev_list(i),ikpt,jsp) + fac * &
+                      (sumaa * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1) + &
+                       sumbb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2) + &
+                       sumab * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,1) + &
+                       sumba * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,2))
                  ENDDO
                ENDDO
              ENDIF     ! end MCD

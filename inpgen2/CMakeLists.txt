@@ -93,7 +93,6 @@ ${FLEUR_SRC}/kpoints/make_tetra.f
 
 ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/pol_angle.f90
-${FLEUR_SRC}/math/matmul.f
 ${FLEUR_SRC}/init/spgrot.f90
 ${FLEUR_SRC}/init/mapatom.F90
 
@@ -156,6 +155,8 @@ ${FLEUR_SRC}/fleurinput/mpi_bc_tool.F90
 
 set_source_files_properties(${CMAKE_BINARY_DIR}/include/buildinfo.h PROPERTIES GENERATED TRUE)
 
+target_compile_options(inpgen2 PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_PRECISION_OPTION}>)
+  
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 #Set module directories
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/inpgen")

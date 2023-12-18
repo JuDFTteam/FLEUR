@@ -15,6 +15,7 @@ CONTAINS
 
   SUBROUTINE eigen_diag(solver,hmat,smat,ne,eig,ev,ikpt,jsp,iter)
     USE m_lapack_diag
+    USE m_lapack_singlePrec_diag
     USE m_magma
     USE m_elpa
     USE m_elpa_onenode
@@ -22,7 +23,7 @@ CONTAINS
     USE m_elemental
     USE m_chase_diag
     USE m_types_mpimat
-    USE m_types_gpumat
+    USE m_elsi
 !    USE m_matrix_copy
     USE m_cusolver_diag
     USE m_judft_usage
@@ -76,12 +77,20 @@ CONTAINS
     CASE (diag_cusolver)
        CALL cusolver_diag(hmat,smat,ne,eig,ev)
     CASE (diag_lapack)
-       CALL lapack_diag(hmat,smat,ne,eig,ev)
-    CASE (diag_chase)
+         CALL lapack_diag(hmat,smat,ne,eig,ev)
+      CASE (diag_lapack_singlePrec)
+         CALL lapack_singlePrec_diag(hmat,smat,ne,eig,ev)
+      CASE (diag_elsielpa)
+         CALL elsi_diag(1,hmat,smat,ne,eig,ev)
+      CASE (diag_elsichase)
+         CALL elsi_diag(9,hmat,smat,ne,eig,ev)
+      CASE (diag_chase)
        IF (.NOT.(PRESENT(ikpt).AND.PRESENT(jsp).AND.PRESENT(iter))) CALL judft_error("Optional arguments must be present for chase in eigen_diag")
        CALL chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
     CASE (diag_debugout)
        CALL diag_writeout(smat,hmat)
+    case (diag_stop)
+       call JUDFT_error("FLEUR stopped as `-eig stop` is selected")   
     CASE default
        CALL judft_error("No solver available to diagonalize matrix")
     END SELECT

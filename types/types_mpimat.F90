@@ -55,6 +55,7 @@ MODULE m_types_mpimat
       PROCEDURE   :: transpose => mpimat_transpose
       procedure   :: print_type => mpimat_print_type
       PROCEDURE   :: linear_problem => t_mpimat_lproblem
+      PROCEDURE   :: is_column_cyclic
       FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
    END TYPE t_mpimat
 
@@ -413,6 +414,7 @@ CONTAINS
       INTEGER, INTENT(IN) ::n1, n2
       INTEGER :: irank, err
 
+      LOGICAL,PARAMETER:: use_pdgemr2d=.false.
       call timestart("mpimat_copy")
 
       select type (mat1)
@@ -425,11 +427,15 @@ CONTAINS
 #ifdef CPP_SCALAPACK
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
-         IF (mat%l_real) THEN
-            CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
-         ELSE
-            CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
-         END IF
+         if (mat1%is_column_cyclic().and..not.mat%is_column_cyclic().and..not.use_pdgemr2d) THEN
+            call cyclic_column_to_2Dblock_cyclic(mat1,mat,n1,n2)
+         else
+            IF (mat%l_real) THEN
+               CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+            ELSE
+               CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+            END IF
+         endif   
       CLASS DEFAULT
          CALL judft_error("Wrong datatype in copy")
       END SELECT
@@ -798,12 +804,14 @@ CONTAINS
          local_size1 = 0
          local_size2 = 0
       else
+         IF (myrowssca==0.or.mycolssca==0) THEN
+            CALL juDFT_warn("With your chosen eigenvalue parallelization scheme some MPI processes have no share of the Hamiltonian. Please check your parallelization.",hint="Either reduce the number of MPI processes or increase the k-point parallelization.")
+         END IF
          CALL descinit(blacsdata%blacs_desc, m1, m2, nbr, nbc, 0, 0, ictextblacs, myrowssca, ierr)
          IF (ierr /= 0) call judft_error('Creation of BLACS descriptor failed')
          local_size1 = myrowssca
          local_size2 = mycolssca
       end if
-
 #endif
    END SUBROUTINE priv_create_blacsgrid
 
@@ -1066,4 +1074,114 @@ CONTAINS
       END IF
 
    END FUNCTION iafter
+
+
+   subroutine cyclic_column_to_2Dblock_cyclic(mat,mat2d,s1,s2)
+      implicit none 
+      class(t_mpimat),intent(in)   ::mat
+      class(t_mpimat),intent(inout)::mat2d
+      integer,intent(in),optional  ::s1,s2
+
+      real,allocatable::vecr(:)
+      complex,allocatable::vecc(:)
+      integer:: my_proc,num_proc,ierr
+      integer:: nprow,npcol,myrow,mycol
+      integer:: shift1,shift2
+      integer:: n1,n2,blockindex,n_col,n_row
+
+      shift1=0;shift2=0
+      if (present(s1)) shift1=s1-1
+      if (present(s2)) shift2=s2-1
+      
+      if (mat%l_real) THEN
+         allocate(vecr(mat%global_size1))
+      else 
+         allocate(vecc(mat%global_size1)) 
+      endif
+#ifdef CPP_MPI      
+      !process ranks for cyclic column dist
+      call MPI_COMM_RANK(mat%blacsdata%mpi_com,my_proc,ierr)
+      call MPI_COMM_SIZE(mat%blacsdata%mpi_com,num_proc,ierr)
+      !info for 2dblock cyclic dist
+      call blacs_gridinfo(mat2d%blacsdata%blacs_desc(2),nprow,npcol,myrow,mycol)
+
+#ifdef __NEW_CODE      
+      !create processor map blacs_row,blacs_col->mpi_rank
+      allocate(pmap(nprow,npcol))
+      pmap=-1
+      pmap(myrow,mycol)=mp_proc
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,pmap,size(pmap),MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
+      if (any(pmap<0)) call judft_bug("Bug1:types_mpimat")
+
+      DO n2=1,mat%global_size2,num_proc
+         sglobal_col=n2+my_proc
+         slocal_col=(n2-1)/num_proc+1
+         !Which 2d column contains the data?
+         blockindex=(sglobal_col+shift1-1)/mat2d%blacsdata%blacs_desc(6)
+         rec_p_col=mod(blockindex,npcol)
+         !now loop over column
+         DO n1=1,mat%global_size1
+            blockindex=(n1+shift1-1)/mat2d%blacsdata%blacs_desc(5)
+            rec_p_row=mod(blockindex,nprow)
+            rec_r_index(rec_p_row)=rec_r_index(rec_p_row)+1
+            vecr(rec_r_index(rec_p_row),rec_p_row)=mat%data_r(n1,slocal_col)
+         ENDDO
+         !Send data to all columns of the processor grid involved
+         DO rec_p_col=0,npcol-1
+            call MPI_ISEND(vecr(1,rec_p_row),rec_r_index(rec_p_row),MPI_DOUBLE,pmap(rec_p_col,rec_p_col),sGlobal_col,mat%blacsdata%mpi_com,request(rec_p_col),ierr)   
+         ENDDO
+         !now each processor might have data from more columns in 2D dist
+         DO n2_2d=n2,n2+num_proc
+            rglobal_col=n2_2d+shift1
+            !Which 2d column contains the data?
+            blockindex=(rglobal_col-1)/mat2d%blacsdata%blacs_desc(6)
+            rec_p_col=mod(blockindex,npcol)
+            if (mycol.ne.rec_p_col) cycle !this process does not contain data
+            !Where is the column comming from?
+            s_col=mod(n2_2d-1,num_proc)
+            !Which is the first element we store the data in?
+            blockindex=(shift1-1)/mat2d%blacsdata%blacs_desc(5)
+            if (myrow==0) n_row=shift1-blockindex*mat2d%blacsdata%blacs_desc(5) !first block might be incomplete
+            n_row=n_row+blockindex/nprow*mat2d%blacsdata%blacs_desc(5)
+            !Get the data
+            CALL MPI_RECV(mat2%data_r(n_row:,rec_col),mat2%matsize2-n_row,MPI_DOUBLE,s_col,mat%blacsdata%mpi_com,rglobal_col,ierr)
+         ENDDO
+      ENDDO      
+#endif      
+      !Now we loop over columns and BC them
+      DO n2=1,mat%global_size2   
+         if (mat%l_real) THEN
+            if (my_proc==mod(n2-1,num_proc)) vecr=mat%data_r(:,(n2-1)/num_proc+1) !This process owns the column
+            call MPI_BCAST(vecr,size(vecr),MPI_DOUBLE,mod(n2-1,num_proc),mat%blacsdata%mpi_com,ierr)   
+         else
+            if (my_proc==mod(n2-1,num_proc)) vecc=mat%data_c(:,(n2-1)/num_proc+1)
+            call MPI_BCAST(vecc,size(vecc),MPI_DOUBLE_COMPLEX,mod(n2-1,num_proc),mat%blacsdata%mpi_com,ierr)   
+         endif    
+         !Which 2d column contains the data?
+         blockindex=(n2+shift2-1)/mat2d%blacsdata%blacs_desc(6)
+         if (mycol.ne.mod(blockindex,npcol)) cycle !This process contains no data  
+         n_col=(n2+shift2)-blockindex*mat2d%blacsdata%blacs_desc(6)+ &
+               blockindex/npcol*mat2d%blacsdata%blacs_desc(6)
+         DO n1=1,mat%global_size1
+            blockindex=(n1+shift1-1)/mat2d%blacsdata%blacs_desc(5)
+            if (myrow.ne.mod(blockindex,nprow)) cycle !No data here
+            n_row=(n1+shift1)-blockindex*mat2d%blacsdata%blacs_desc(5)+ &
+                    blockindex/nprow*mat2d%blacsdata%blacs_desc(5)
+            if (mat%l_real) then 
+               mat2d%data_r(n_row,n_col)=vecr(n1)
+            else   
+               mat2d%data_c(n_row,n_col)=vecc(n1)  
+            end if 
+         enddo
+      ENDDO   
+#endif      
+   end subroutine
+
+   logical function is_column_cyclic(mat)
+      implicit none 
+      class(t_mpimat),intent(in)   ::mat
+
+      is_column_cyclic=(mat%blacsdata%blacs_desc(5)==mat%global_size1.and.mat%blacsdata%blacs_desc(6)==1)
+   end function
+
 END MODULE m_types_mpimat

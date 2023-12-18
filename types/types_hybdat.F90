@@ -5,6 +5,7 @@ MODULE m_types_hybdat
    use m_types_eigvec
    use m_io_matrix
    use m_judft
+   use m_types_misc
 #ifdef CPP_MPI
    use mpi
 #endif
@@ -43,8 +44,9 @@ MODULE m_types_hybdat
       type(t_coul), allocatable   :: coul(:)
 
       type(t_usdus)               :: usdus
-      class(t_mat), allocatable    :: v_x(:, :) ! nkpt, jsp
+      class(t_mat), allocatable   :: v_x(:, :) ! nkpt, jsp
       type(t_eigvec), allocatable :: zmat(:, :) ! nkpt, jsp
+      type(t_results)             :: results
    contains
       procedure :: set_stepfunction => set_stepfunction
       procedure :: free             => free_hybdat

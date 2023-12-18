@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.36">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.37">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
 
@@ -21,7 +21,7 @@
 
    <xsd:simpleType name="FleurVersionType">
       <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="0.36"/>
+         <xsd:enumeration value="0.37"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -761,7 +761,7 @@
 
    <xsd:complexType name="GeometryOptimizerType">
       <xsd:attribute name="l_f" type="FleurBool" use="required"/>
-      <xsd:attribute name="f_level" type="xsd:nonNegativeInteger" use="optional" default="0"/>
+      <xsd:attribute name="f_level" type="xsd:integer" use="optional" default="-1"/>
       <xsd:attribute name="forcealpha" type="FleurDouble" use="optional" default="0" />
       <xsd:attribute name="epsdisp" type="FleurDouble" use="optional" default="0.001"/>
       <xsd:attribute name="epsforce" type="FleurDouble" use="optional" default="0.001"/>
@@ -1094,6 +1094,9 @@
    </xsd:complexType>
 
    <xsd:complexType name="JuPhonType">
+      <xsd:all>
+         <xsd:element  maxOccurs="1" minOccurs="1" name="qVectors" type="QListType"/>
+      </xsd:all>
       <xsd:attribute name="l_dfpt" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_jpCheck" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_jpTest" type="FleurBool" use="optional"/>
@@ -1109,6 +1112,14 @@
       <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional"/>
       <xsd:attribute name="fDiffcut" type="FleurDouble" use="optional"/>
       <xsd:attribute name="singleQpt" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="e1term" type="FleurBool" use="optional"/>
+      <xsd:attribute name="f1term" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_intp" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_band" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_dos" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_scf" type="FleurBool" use="optional"/>
+      <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="qmode" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OutputType">

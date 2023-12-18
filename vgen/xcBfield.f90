@@ -95,8 +95,9 @@ CONTAINS
          END DO !itype
          aVec(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
          aVec(i)%pw_w(1:,:)        = dummyDen(i+1)%pw_w(1:,:)
-         aVec(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
-         aVec(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
+         !aVec(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
+         !aVec(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
+         aVec(i)%vac(1:,1:,1:,:) = dummyDen(i+1)%vac(1:,1:,1:,:)
       END DO !i
 
    END SUBROUTINE makeVectorField

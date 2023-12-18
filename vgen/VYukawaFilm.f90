@@ -68,9 +68,8 @@ module m_VYukawaFilm
     ! PSEUDO-CHARGE DENSITY
 
     call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
-                den%pw(:,1), den%mt(:,:,:,1), den%vacz(:,:,1), .false., VYukawa%potdenType, &
+                den, 1, .false., VYukawa%potdenType, &
                 psq )
-
 
     ChooseVariant: if ( .true. ) then
 
@@ -78,15 +77,14 @@ module m_VYukawaFilm
 
       call VYukawaFilmVacuumVariant1( &
               stars, vacuum, cell, sym, input, atoms%rmt(1), &
-              psq, den%vacxy(:,:,:,1), den%vacz(:,:,1), &
-              VYukawa%vacxy, VYukawa%vacz, alphm )
-
+              psq, den%vac(:vacuum%nmzxyd,2:,:,1), REAL(den%vac(:,1,:,1)), & ! TODO: AN TB; den reinpacken statt Einzelgrößen!!
+              VYukawa%vac(:,:,:,1), alphm )
 
       ! INTERSTITIAL POTENTIAL
 
       call VYukawaFilmInterstitialVariant1( &
               stars, vacuum, cell, sym, input, &
-              psq, VYukawa%vacxy, VYukawa%vacz, alphm, &
+              psq, VYukawa%vac(:,:,:,1), alphm, &
               VYukawa%pw(:,1) )
 
     else ChooseVariant
@@ -95,15 +93,14 @@ module m_VYukawaFilm
 
       call VYukawaFilmVacuumVariant2( &
               stars, vacuum, cell, sym, input, 2*atoms%rmt(1), &
-              psq, den%vacxy(:,:,:,1), den%vacz(:,:,1), &
-              VYukawa%vacxy, VYukawa%vacz, alphm, dh_prec, coshdh )
-
+              psq, den%vac(:vacuum%nmzxyd,2:,:,1), REAL(den%vac(:,1,:,1)), & ! TODO: AN TB; den reinpacken statt Einzelgrößen!!
+              VYukawa%vac(:,:,:,1), alphm, dh_prec, coshdh )
 
       ! INTERSTITIAL POTENTIAL
 
       call VYukawaFilmInterstitialVariant2( &
               stars, vacuum, cell, sym, input, &
-              psq, VYukawa%vacxy, VYukawa%vacz, alphm, dh_prec, coshdh, &
+              psq, VYukawa%vac(:vacuum%nmzxyd,2:,:,:), REAL(VYukawa%vac(:,1,:,:)), alphm, dh_prec, coshdh, &
               VYukawa%pw(:,1) )
 
     end if ChooseVariant
@@ -130,7 +127,7 @@ module m_VYukawaFilm
   subroutine VYukawaFilmVacuumVariant1( &
                 stars, vacuum, cell, sym, input, rmt, &
                 psq, rhtxy, rht, &
-                VVxy, VVz, alphm )
+                VVnew, alphm )
 
     ! 1. part: Compute the contribution from the interstitial charge density to the vacuum potential as a function of q_xy and z (analytic expression for integral)
     ! 2. part: Compute the contribution from the vacuum charge density to the vacuum potential as a function of q_xy and z by numerical integration
@@ -152,8 +149,7 @@ module m_VYukawaFilm
     complex,        intent(in)  :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2)
     real,           intent(in)  :: rht(vacuum%nmzd,2) 
 
-    complex,        intent(out) :: VVxy(vacuum%nmzxyd,2:stars%ng2,2) ! this is the qxy /= 0 part of the vacuum potential
-    real,           intent(out) :: VVz(vacuum%nmzd,2)                ! this is the qxy  = 0 part of the vacuum potential
+    complex,        intent(out) :: VVnew(vacuum%nmzd,stars%ng2,2)
     complex,        intent(out) :: alphm(stars%ng2,2)                ! these are the integrals in upper and lower vacuum, now including the first star---integral for star ig2 is in alphm(ig2,ivac) 
 
     complex                     :: sum_qz(2,stars%ng2)
@@ -168,6 +164,8 @@ module m_VYukawaFilm
     complex                     :: alpha(vacuum%nmzxyd,2:stars%ng2,2), beta(vacuum%nmzxyd,2:stars%ng2,2), gamma(vacuum%nmzxyd,2:stars%ng2)
     real                        :: ga(vacuum%nmzd), gb(vacuum%nmzd)
     real                        :: delta(vacuum%nmzd,2), epsilon(vacuum%nmzd,2), zeta(vacuum%nmzd)
+    complex                     :: VVxy(vacuum%nmzxyd,2:stars%ng2,2) ! this is the qxy /= 0 part of the vacuum potential
+    real                        :: VVz(vacuum%nmzd,2)                ! this is the qxy  = 0 part of the vacuum potential
 
 
     ! DEFINITIONS / ALLOCATIONS / INITIALISATIONS    
@@ -275,15 +273,15 @@ module m_VYukawaFilm
         VVxy(1:vacuum%nmzxy,irec2,ivac) = VVxy(1:vacuum%nmzxy,irec2,ivac) * exp( -0.1 / rmt * z(1:vacuum%nmzxy) )
       end do
     end do
-
-
+    VVnew(:,1,:)=VVz
+    VVnew(:vacuum%nmzxy,2:,:)=VVxy
   end subroutine VYukawaFilmVacuumVariant1
 
 
 
   subroutine VYukawaFilmInterstitialVariant1( &
                 stars, vacuum, cell, sym, input, &
-                psq, VVxy, VVz, alphm, &
+                psq, VVnew, alphm, &
                 VIq )
 
     ! main parts:
@@ -308,8 +306,7 @@ module m_VYukawaFilm
     type(t_sym),    intent(in)  :: sym
     type(t_input),  intent(in)  :: input
     complex,        intent(in)  :: psq(stars%ng3)
-    complex,        intent(in)  :: VVxy(vacuum%nmzxyd,2:stars%ng2,2)
-    real,           intent(in)  :: VVz(vacuum%nmzd,2)
+    complex,        intent(in)  :: VVnew(vacuum%nmzd,stars%ng2,2)
     complex,        intent(in)  :: alphm(stars%ng2,2)
 
     complex,        intent(out) :: VIq(stars%ng3)
@@ -323,7 +320,6 @@ module m_VYukawaFilm
     real, allocatable           :: exp_m(:,:), exp_p(:,:)
     real, allocatable           :: z(:)
     real                        :: g_damped(stars%ng2), vcons2(stars%ng2), expDhg(stars%ng2)
-    
 
     ! DEFINITIONS / ALLOCATIONS / INITIALISATIONS
 
@@ -405,13 +401,13 @@ module m_VYukawaFilm
           jz = rz      ! index of maximal vacuum grid point below z_i
           q = rz - jz  ! factor in Lagrange basis polynomials
           if ( irec2 == 1 ) then
-            VIz(iz,irec2) = 0.5     * ( q - 1. ) * ( q - 2. ) * VVz(jz,  jvac) &
-                          -       q *              ( q - 2. ) * VVz(jz+1,jvac) &
-                          + 0.5 * q * ( q - 1. )              * VVz(jz+2,jvac)
+            VIz(iz,irec2) = 0.5     * ( q - 1. ) * ( q - 2. ) * REAL(VVnew(jz,   1, jvac)) &
+                          -       q *              ( q - 2. ) * REAL(VVnew(jz+1, 1, jvac)) &
+                          + 0.5 * q * ( q - 1. )              * REAL(VVnew(jz+2, 1, jvac))
           else if ( jz + 2 <= vacuum%nmzxy ) then
-            VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVxy(jz,  irec2,jvac) &
-                          -       q              * ( q - 2. ) * VVxy(jz+1,irec2,jvac) &
-                          + 0.5 * q * ( q - 1. )              * VVxy(jz+2,irec2,jvac)
+            VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVnew(jz,  irec2,jvac) &
+                          -       q              * ( q - 2. ) * VVnew(jz+1,irec2,jvac) &
+                          + 0.5 * q * ( q - 1. )              * VVnew(jz+2,irec2,jvac)
           if ( vacuum%nvac==1 .and. ivac == 2 ) THEN
             call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
             VIz(iz,irec2r) = phas*VIz(iz,irec2) 
@@ -455,7 +451,7 @@ module m_VYukawaFilm
   subroutine VYukawaFilmVacuumVariant2( &
                 stars, vacuum, cell, sym, input, rmt, &
                 psq, rhtxy, rht, &
-                VVxy, VVz, alphm, dh_prec, coshdh )
+                VVnew, alphm, dh_prec, coshdh )
 
     ! 1. part: Compute the contribution from the interstitial charge density to the vacuum potential as a function of q_xy and z (analytic expression for integral)
     ! 2. part: Compute the contribution from the vacuum charge density to the vacuum potential as a function of q_xy and z by numerical integration
@@ -477,8 +473,7 @@ module m_VYukawaFilm
     complex,        intent(in)  :: rhtxy(vacuum%nmzxyd,stars%ng2-1,2)
     real,           intent(in)  :: rht(vacuum%nmzd,2) 
 
-    complex,        intent(out) :: VVxy(vacuum%nmzxyd,2:stars%ng2,2) ! this is the qxy /= 0 part of the vacuum potential
-    real,           intent(out) :: VVz(vacuum%nmzd,2)                ! this is the qxy  = 0 part of the vacuum potential
+    complex,        intent(out) :: VVnew(vacuum%nmzd,stars%ng2,2)
     complex,        intent(out) :: alphm(stars%ng2,2)                ! these are the integrals in upper and lower vacuum, now including the first star---integral for star ig2 is in alphm(ig2,ivac) 
     real,           intent(out) :: dh_prec
     real,           intent(out) :: coshdh(stars%ng2)
@@ -497,7 +492,9 @@ module m_VYukawaFilm
     complex, allocatable                                :: alpha(:,:,:), beta(:,:,:), gamma(:,:)
     real, allocatable                                   :: ga(:), gb(:)
     real, allocatable                                   :: delta(:,:), epsilon(:,:), zeta(:)
-
+    
+    complex                     :: VVxy(vacuum%nmzxyd,2:stars%ng2,2) ! this is the qxy /= 0 part of the vacuum potential
+    real                        :: VVz(vacuum%nmzd,2)                ! this is the qxy  = 0 part of the vacuum potential
 
     ! DEFINITIONS / ALLOCATIONS / INITIALISATIONS    
     
@@ -630,7 +627,8 @@ module m_VYukawaFilm
       VVz(1:nzdhprec,ivac) = VVz(1:nzdhprec,ivac) + vcons2(1) * zeta(1:nzdhprec)
     end do
 
-
+    VVnew(:nzdhprec,1,:)=VVz(1:nzdhprec,:)
+    VVnew(:nzdhprec,2:,:)=VVxy(:nzdhprec,2:,:)
   end subroutine VYukawaFilmVacuumVariant2
 
 
@@ -915,7 +913,7 @@ module m_VYukawaFilm
     ! SET UP CONSTANT CHARGE DENSITY
 
     ! instead of den%pw(1,1) = qbar we directly set the pseudo charge density
-    den%mt = 0; den%pw = 0; den%vacxy = 0; den%vacz = 0    
+    den%mt = 0; den%pw = 0; den%vac = 0   
     do n = 1, atoms%ntype
       den%mt(1:atoms%jri(n),0,n,1) = sfp_const * qbar * atoms%rmsh(1:atoms%jri(n),n) ** 2
     end do
@@ -925,7 +923,7 @@ module m_VYukawaFilm
     ! CALCULATE THE INTERSTITIAL POTENTIAL AS A FUNCTION OF z
 
     ! initialise and calculate out-going modification potential; reuse VYukawaModification
-    VYukawaModification%mt = 0; VYukawaModification%pw = 0; VYukawaModification%vacxy = 0; VYukawaModification%vacz = 0
+    VYukawaModification%mt = 0; VYukawaModification%pw = 0; VYukawaModification%vac = 0
 
     allocate( VIz(nzmin:nzmax) )
     VIz = (0.,0.)

@@ -21,7 +21,7 @@ CONTAINS
     INTEGER,INTENT(in)           :: nkpt,neigd,nbasfcn
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
-    INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk
+    INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk,ierr
     logical :: finished
 #ifdef CPP_MPI
     CALL juDFT_COMM_SPLIT_TYPE(fmpi%mpi_comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,fmpi%mpi_comm_same_node)
@@ -100,6 +100,10 @@ CONTAINS
     ! this corresponds to the compact = .true. switch in priv_create_comm
     fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )]
 
+    fmpi%max_length_k_list=size(fmpi%k_list)
+#ifdef CPP_MPI    
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE,fmpi%max_length_k_list,1,MPI_INTEGER,MPI_MAX,fmpi%mpi_comm,ierr)
+#endif
     ! create an array with the owners of the correct coulomb matrix
     allocate(fmpi%coulomb_owner(nkpt), source=-1)
     do nk =1,nkpt
@@ -158,17 +162,26 @@ CONTAINS
     INTEGER:: n_members,n_size_min,nk
     CHARACTER(len=1000)::txt
 
-    n_members = MIN(nkpt,fmpi%isize)
-    IF (judft_was_argument("-n_min_size")) THEN
-       txt=judft_string_for_argument("-n_min_size")
-       READ(txt,*) n_size_min
-       WRITE(*,*) "Trying to use ",n_size_min," PE per kpt"
-       n_members = MIN(n_members , CEILING(REAL(fmpi%isize)/n_size_min) )
-    ENDIF
-    DO
-       IF ((MOD(fmpi%isize,n_members) == 0).AND.(MOD(nkpt,n_members) == 0) ) EXIT
-       n_members = n_members - 1
-    ENDDO
+    IF (judft_was_argument("-pe_per_kpt")) THEN
+      txt=judft_string_for_argument("-pe_per_kpt")
+      READ(txt,*) fmpi%n_size
+      WRITE(*,*) "Using exactly ",fmpi%n_size," PE per kpt"
+      if (mod(fmpi%isize,fmpi%n_size).ne.0) call judft_error("Parallelization error",&
+           hint="If you specify -pe_per_kpt, the total number of processes needs to be a multiple.")   
+      n_members=fmpi%isize/fmpi%n_size     
+    ELSE
+      n_members = MIN(nkpt,fmpi%isize)
+      IF (judft_was_argument("-min_pe_per_kpt")) THEN
+         txt=judft_string_for_argument("-min_pe_per_kpt")
+         READ(txt,*) n_size_min
+         WRITE(*,*) "Trying to use ",n_size_min," PE per kpt"
+         n_members = MIN(n_members , CEILING(REAL(fmpi%isize)/n_size_min) )
+      ENDIF
+      DO
+         IF ((MOD(fmpi%isize,n_members) == 0).AND.(MOD(nkpt,n_members) == 0) ) EXIT
+         n_members = n_members - 1
+      ENDDO
+    endif  
 
     !fmpi%n_groups = nkpt/n_members
     fmpi%n_size   = fmpi%isize/n_members
@@ -177,6 +190,9 @@ CONTAINS
        WRITE(*,*) 'k-points in parallel: ',n_members
        WRITE(*,*) "pe's per k-point:     ",fmpi%n_size
        WRITE(*,*) '# of k-point loops:   ',nkpt/n_members
+       if (mod(nkpt,n_members).ne.0) then
+         Write(*,*) 'your k-point parallelism is not fully load-balanced'
+       endif
 
        IF((REAL(nbasfcn) / REAL(fmpi%n_size)).LE.20) THEN
           WRITE(*,*) ''
@@ -321,6 +337,7 @@ CONTAINS
     INTEGER :: i, isize, gpus,localrank
 
 #ifdef _OPENACC
+call timestart("Distribute GPUs")
     gpus=acc_get_num_devices(acc_device_nvidia)
 #ifdef CPP_MPI
     if (fmpi%irank==0) write(*,*) "Number of GPU per node/MPI:",gpus
@@ -329,12 +346,15 @@ CONTAINS
       if (fmpi%irank==0) write(*,*) "Number of MPI/PE per node:",isize
       if (gpus>isize) call judft_warn("You use more GPU/node as MPI-PEs/node running. This will underutilize the GPUs")
       CALL MPI_COMM_RANK(fmpi%mpi_comm_same_node,localrank,i)
-      call acc_set_device_num(mod(localrank,gpus),acc_device_nvidia)
-      write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",mod(localrank,gpus)
+      if (gpus>1) THEN 
+         call acc_set_device_num(mod(localrank,gpus),acc_device_nvidia)
+         write(*,*) "Assigning PE:",fmpi%irank," to local GPU:",mod(localrank,gpus)
+      endif   
     ENDIF
 #else
     write(*,*) "Number of GPU    :",gpus
 #endif
+   call timestop("Distribute GPUs")
 #endif
     end subroutine
 

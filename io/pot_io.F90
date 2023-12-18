@@ -41,7 +41,7 @@ MODULE m_pot_io
    CONTAINS
 
    SUBROUTINE readPotential(stars,noco,vacuum,atoms,sphhar,input,sym,archiveType,&
-                            iter,fr,fpw,fz,fzxy)
+                            iter,fr,fpw,fz,fzxy,fvac)
 
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_noco),INTENT(IN)       :: noco
@@ -56,7 +56,7 @@ MODULE m_pot_io
 
       !     ..
       !     .. Array Arguments ..
-      COMPLEX, INTENT (OUT) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+      COMPLEX, INTENT (OUT) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins), fvac(vacuum%nmzd,stars%ng2,2,input%jspins)
       REAL,    INTENT (OUT) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
 
       ! local variables
@@ -104,7 +104,7 @@ MODULE m_pot_io
                              currentStructureIndex,currentStepfunctionIndex)
 
             CALL readPotentialHDF(fileID, archiveName, potentialType,&
-                                  iter,fr,fpw,fz,fzxy,any(noco%l_unrestrictMT))
+                                  iter,fr,fpw,fz,fzxy,fvac,any(noco%l_unrestrictMT))
 
             CALL closeCDNPOT_HDF(fileID)
          ELSE
@@ -153,7 +153,7 @@ MODULE m_pot_io
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),form='unformatted',status='unknown')
 
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
-                     iUnit,iter,fr,fpw,fz,fzxy)
+                     iUnit,iter,fr,fpw,fvac)
 
          CLOSE(iUnit)
       END IF
@@ -178,7 +178,7 @@ MODULE m_pot_io
       INTEGER, INTENT (IN)      :: archiveType
       !     ..
       !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: fpw(stars%ng3,input%jspins)
+      COMPLEX, INTENT (IN) :: fpw(:,:)
 
       ! local variables
       INTEGER           :: mode, iUnit
@@ -202,7 +202,7 @@ MODULE m_pot_io
 
          CALL checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum,   stars, sphhar, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                                       currentStepfunctionIndex,l_storeIndices,.TRUE.)
+                                       currentStepfunctionIndex,l_storeIndices,.TRUE.,.TRUE.)
 
          archiveName = 'illegalPotentialArchive'
          IF (archiveType.EQ.POT_ARCHIVE_TYPE_TOT_const) THEN
@@ -218,16 +218,18 @@ MODULE m_pot_io
          potentialType = POTENTIAL_TYPE_IN_const
 
          IF(vacuum%nvac.EQ.1) THEN
-            pot%vacz(:,2,:) = pot%vacz(:,1,:)
+            !pot%vacz(:,2,:) = pot%vacz(:,1,:)
             IF (sym%invs) THEN
-               pot%vacxy(:,:,2,:) = CONJG(pot%vacxy(:,:,1,:))
+               !pot%vacxy(:,:,2,:) = CONJG(pot%vacxy(:,:,1,:))
+               pot%vac(:,:,2,:) = CONJG(pot%vac(:,:,1,:))
             ELSE
-               pot%vacxy(:,:,2,:) = pot%vacxy(:,:,1,:)
+               !pot%vacxy(:,:,2,:) = pot%vacxy(:,:,1,:)
+               pot%vac(:,:,2,:) = pot%vac(:,:,1,:)
             END IF
          END IF
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                                currentStepfunctionIndex,iter,pot,fpw,any(noco%l_unrestrictMT))
+                                currentStepfunctionIndex,iter,pot,fpw,noco%l_noco,any(noco%l_unrestrictMT))
 
          IF(l_storeIndices) THEN
             CALL writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
@@ -255,7 +257,7 @@ MODULE m_pot_io
          iUnit = 11
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),form='unformatted',status='unknown')
          CALL wrtdop(stars,vacuum,atoms,sphhar,input,sym,&
-                     iUnit,iter,pot%mt,fpw,pot%vacz(:,:,:input%jspins),pot%vacxy(:,:,:,:input%jspins))
+                     iUnit,iter,pot%mt,fpw,pot%vac(:,:,:,:input%jspins))
          CLOSE(iUnit)
       END IF
 

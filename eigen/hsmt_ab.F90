@@ -42,6 +42,7 @@ CONTAINS
       USE m_types
       USE m_ylm
       USE m_hsmt_fjgj
+      USE m_matmul_dgemm
 
       TYPE(t_sym),      INTENT(IN)    :: sym
       TYPE(t_cell),     INTENT(IN)    :: cell
@@ -93,7 +94,8 @@ CONTAINS
       ! Generate spherical harmonics
       ! gkrot = matmul(bmrot, lapw%vk(:,:,igSpin))
       ! These two lines should eventually move to the GPU:
-      CALL dgemm("N","N", 3, lapw%nv(igSpin), 3, 1.0, bmrot, 3, lapw%vk(:,:,igSpin), 3, 0.0, gkrot, 3)
+      !CALL dgemm("N","N", 3, lapw%nv(igSpin), 3, 1.0, bmrot, 3, lapw%vk(:,:,igSpin), 3, 0.0, gkrot, 3)
+      call blas_matmul(3,lapw%nv(igSpin),3,bmrot,lapw%vk(:,:,igspin),gkrot)
       CALL ylm4_batched(lmax,gkrot,ylm)
 
 #ifndef _OPENACC

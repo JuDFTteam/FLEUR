@@ -11,7 +11,7 @@ MODULE m_dfpt_rhomt
    !! It contains subroutines for the non-LO and LO spherical contributions
    !! to the density coefficients used to construct \(\rho_{0}^{\alpha}(r)\).
 CONTAINS
-   SUBROUTINE dfpt_rhomt(atoms,we,we1,ne,ilSpinPr,ilSpin,qpoint,l_dfpt,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+   SUBROUTINE dfpt_rhomt(atoms,we,we1,ne,ilSpinPr,ilSpin,qpoint,l_dfpt,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
       !! Subroutine to construct all spherical MT density coefficients (for a
       !! density perturbation) without LOs in one routine. The spin input dictates,
       !! which element is gonna be built.
@@ -57,10 +57,15 @@ CONTAINS
 
       TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs !! \(d_{l,\lambda',\lambda}^{\sigma_{\alpha}',\sigma_{\alpha},\alpha}\)
 
+      TYPE(t_eigVecCoeffs), OPTIONAL, INTENT(IN) :: eigVecCoeffs1m !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{-q},j,\beta~(1)}\)
+
       INTEGER i,l,lm,itype,na,natom,lo,lop,m
 
       COMPLEX :: temp
 
+      LOGICAL :: l_minusq
+
+      l_minusq = PRESENT(eigVecCoeffs1m)
       natom = 0
       DO itype = 1,atoms%ntype
          DO na = 1,atoms%neq(itype)
@@ -72,7 +77,7 @@ CONTAINS
                      ! uu/du
                      temp = we(i) * eigVecCoeffs1%abcof(i,lm,0,natom,ilSpin) ! If not DFPT, this is the base case for rhomt(21)
                      IF (l_dfpt) THEN
-                        temp = temp * 2.0
+                        IF (.NOT.l_minusq) temp = temp * 2.0
                         IF (norm2(qpoint)<=1e-8) THEN
                            temp = temp + we1(i) * eigVecCoeffs%abcof(i,lm,0,natom,ilSpin)
                         END IF
@@ -81,10 +86,18 @@ CONTAINS
                                                                     & + CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
                      denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) &
                                                                     & + CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
+                     IF (l_minusq) THEN
+                        denCoeffs%mt_coeff(l,itype,0,0,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,0,0,ilSpinPr, ilSpin) &
+                                                                       & + CONJG(eigVecCoeffs1m%abcof(i,lm,0,natom,ilSpinPr)) &
+                                                                       & * eigVecCoeffs%abcof(i,lm,0,natom,ilSpin)
+                        denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) &
+                                                                       & + CONJG(eigVecCoeffs1m%abcof(i,lm,1,natom,ilSpinPr)) &
+                                                                       & * eigVecCoeffs%abcof(i,lm,0,natom,ilSpin)
+                     END IF
                      ! ud/dd
                      temp = we(i) * eigVecCoeffs1%abcof(i,lm,1,natom,ilSpin)
                      IF (l_dfpt) THEN
-                        temp = temp * 2.0
+                        IF (.NOT.l_minusq) temp = temp * 2.0
                         IF (norm2(qpoint)<=1e-8) THEN
                            temp = temp + we1(i) * eigVecCoeffs%abcof(i,lm,1,natom,ilSpin)
                         END IF
@@ -93,6 +106,14 @@ CONTAINS
                                                                     & + CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
                      denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) &
                                                                     & + CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
+                     IF (l_minusq) THEN
+                        denCoeffs%mt_coeff(l,itype,0,1,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,0,1,ilSpinPr, ilSpin) &
+                                                                       & + CONJG(eigVecCoeffs1m%abcof(i,lm,0,natom,ilSpinPr)) &
+                                                                       & * eigVecCoeffs%abcof(i,lm,1,natom,ilSpin)
+                        denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) &
+                                                                       & + CONJG(eigVecCoeffs1m%abcof(i,lm,1,natom,ilSpinPr)) &
+                                                                       & * eigVecCoeffs%abcof(i,lm,1,natom,ilSpin)
+                     END IF
                   END DO
                END DO
             END DO
@@ -100,7 +121,7 @@ CONTAINS
       END DO
    END SUBROUTINE dfpt_rhomt
 
-   SUBROUTINE dfpt_rhomtlo(atoms,ne,we,we1,ilSpinPr,ilSpin,qpoint,l_dfpt,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+   SUBROUTINE dfpt_rhomtlo(atoms,ne,we,we1,ilSpinPr,ilSpin,qpoint,l_dfpt,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
       !! This is a complementary routine to the one above for \(\lambda(')\ge 2\),
       !! i.e. mixed or pure LO contributions.
 
@@ -120,9 +141,15 @@ CONTAINS
       TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs, eigVecCoeffs1
       TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
 
+      TYPE(t_eigVecCoeffs), OPTIONAL, INTENT(IN) :: eigVecCoeffs1m
+
       INTEGER i,l,lm,lo,lop ,natom,nn,ntyp,m
 
       COMPLEX :: temp
+
+      LOGICAL :: l_minusq
+
+      l_minusq = PRESENT(eigVecCoeffs1m)
 
       natom = 0
       DO ntyp = 1,atoms%ntype

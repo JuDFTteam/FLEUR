@@ -251,7 +251,7 @@ CONTAINS
 !     Returns derivative of f in df.
 
    SUBROUTINE derivative_t(df, f, atoms, itype)
-      USE m_types
+      USE m_types_atoms
       IMPLICIT NONE
       REAL, INTENT(IN)   ::   f(:)
       REAL, INTENT(OUT)  ::   df(:)

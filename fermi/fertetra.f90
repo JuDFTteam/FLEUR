@@ -10,7 +10,7 @@ MODULE m_fertetra
 
    CONTAINS
 
-   SUBROUTINE fertetra(input,noco,kpts,mpi,ne,eig,ef,w,seigv)
+   SUBROUTINE fertetra(input,noco,kpts,mpi,ne,eig,ef,w,seigv,l_output)
 
       TYPE(t_kpts),        INTENT(IN)     :: kpts
       TYPE(t_noco),        INTENT(IN)     :: noco
@@ -21,6 +21,7 @@ MODULE m_fertetra
       REAL,                INTENT(INOUT)  :: seigv
       REAL,                INTENT(INOUT)  :: ef
       REAL,                INTENT(INOUT)  :: w(:,:,:)
+      LOGICAL,             INTENT(IN)     :: l_output
 
       INTEGER :: jspin,jspins,ikpt,it,iBand
       REAL    :: dlow,dup,dfermi,s1,s,chmom,seigvTemp
@@ -116,10 +117,12 @@ MODULE m_fertetra
                               ef,weightSum=weightSum,weights=w(:,:,jspin))
          dfermi = dfermi + weightSum * 2.0/input%jspins
       ENDDO
-
+      
+      IF (l_output) THEN
       WRITE (oUnit,9200) ef,dfermi,input%zelec
 9200  FORMAT (//,'Tetrahedron method: ',//,'   fermi energy =',f10.5,&
                  ' dtot ',f10.5,' nelec ',f10.5)
+      ENDIF
 
       !----------------------------------------------
       ! Obtain sum of weights and valence eigenvalues
@@ -144,7 +147,7 @@ MODULE m_fertetra
          seigvTemp = seigvTemp / 2.0
       END IF
       
-      IF ( mpi%irank == 0 ) THEN
+      IF ( mpi%irank == 0 .AND. l_output) THEN
          attributes = ''
          WRITE(attributes(1),'(f20.10)') seigvTemp
          WRITE(attributes(2),'(a)') 'Htr'

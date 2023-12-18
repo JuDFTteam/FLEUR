@@ -330,6 +330,31 @@ CONTAINS
 
    !<-- S:writetimes()
 
+   SUBROUTINE priv_add_system_description(outstr)
+#ifdef CPP_MPI
+      use mpi 
+#endif   
+      use m_judft_sysinfo         
+      use m_judft_string
+      IMPLICIT NONE
+      CHARACTER(len=:), allocatable, INTENT(INOUT) :: outstr
+
+      integer:: irank,isize,err
+      CHARACTER(len=1), PARAMETER   :: nl=NEW_LINE("A")
+     !defaults
+      irank=0
+      isize=0
+#ifdef CPP_MPI
+      CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
+      CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,err)
+#endif
+      outstr=outstr//'"uname"       : "'//uname()//'",'//nl
+      outstr=outstr//'"mpi-tasks"   : '//int2str(isize)//','//nl
+      if (irank/=0) outstr=outstr//'"mpi-rank" : '//int2str(irank)//','//nl
+      outstr=outstr//'"omp-threads" : '//int2str(num_openmp())//','//nl
+      outstr=outstr//'"gpus"        : '//int2str(num_gpu())//','//nl
+   end subroutine
+
    RECURSIVE SUBROUTINE priv_genjson(timer, level, outstr, opt_idstr)
       use m_judft_string
       IMPLICIT NONE
@@ -361,8 +386,14 @@ CONTAINS
       ENDIF
 
       if(level > 1 ) outstr = outstr // nl
-      outstr = outstr // idstr // "{"
-      idstr = idstr // repeat(" ", indent_spaces)
+      if (outstr=="") then
+         outstr="{"//nl
+         call priv_add_system_description(outstr)
+      else
+         outstr = outstr // idstr // "{"
+         idstr = idstr // repeat(" ", indent_spaces)
+      endif   
+      
 
       outstr = outstr // nl // idstr // '"timername" : "' // trim(timername)         // '",'
       outstr = outstr // nl // idstr // '"totaltime" : '  // float2str(time)
@@ -402,7 +433,7 @@ CONTAINS
       IF (.NOT. PRESENT(location)) THEN
          IF (ASSOCIATED(current_timer)) CALL writelocation(current_timer)
       ELSE
-         WRITE (0, *) "Timer:", location%name
+         WRITE (*, *) "Timer:", location%name
          IF (ASSOCIATED(location%parenttimer)) CALL writelocation(location%parenttimer)
       ENDIF
    END SUBROUTINE writelocation
@@ -698,16 +729,16 @@ CONTAINS
    !>
    SUBROUTINE juDFT_time_lastlocation()
       IF (ASSOCIATED(current_timer)) THEN
-         WRITE (0, *) "Last known location:"
-         WRITE (0, *) "Last timer:", current_timer%name
+         WRITE (*, *) "Last known location:"
+         WRITE (*, *) "Last timer:", current_timer%name
          IF (lastline > 0) THEN
-            WRITE (0, *) "File:", TRIM(lastfile), ":", lastline
+            WRITE (*, *) "File:", TRIM(lastfile), ":", lastline
          ENDIF
          IF (ASSOCIATED(current_timer%parenttimer)) THEN
-            WRITE (0, *) "Timerstack:"
+            WRITE (*, *) "Timerstack:"
             CALL writelocation(current_timer%parenttimer)
          ENDIF
-         WRITE (0, *) "*****************************************"
+         WRITE (*, *) "*****************************************"
       END IF
    END SUBROUTINE juDFT_time_lastlocation
 END MODULE m_juDFT_time

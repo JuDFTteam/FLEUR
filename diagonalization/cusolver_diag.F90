@@ -7,56 +7,84 @@ MODULE m_cusolver_diag
   USE m_types_mat
   USE m_types_mpimat
   USE m_judft
-#ifdef CPP_GPU  
-  USE m_types_gpumat
+#ifdef CPP_CUSOLVER
+  use cusolverDn  
 #endif  
   IMPLICIT NONE
   PRIVATE
-#ifdef CPP_CUSOLVER
-  INTERFACE
-     SUBROUTINE cusolver_real(H,S,n,ne,tol,max_sweeps,eig,z) BIND(C,name="cusolver_real") 
-      USE iso_c_binding
-      IMPLICIT NONE
-      REAL(c_double)         :: H(*),S(*)
-      INTEGER(c_int),VALUE   :: n,ne,max_sweeps
-      REAL(c_double),VALUE   :: tol
-      REAL(c_double)         :: eig(*),z(*)
-    END SUBROUTINE cusolver_real
- END INTERFACE
- INTERFACE
-    SUBROUTINE cusolver_complex(H,S,n,ne,tol,max_sweeps,eig,z) BIND(C,name="cusolver_real") 
-      USE iso_c_binding
-      IMPLICIT NONE
-      COMPLEX(c_double)      :: H(*),S(*)
-      INTEGER(c_int),VALUE   :: n,ne,max_sweeps
-      REAL(c_double),VALUE   :: tol
-      REAL(c_double)         :: eig(*)
-      COMPLEX(c_double)      :: z(*)
-    END SUBROUTINE cusolver_complex
- END INTERFACE
-#endif
  PUBLIC cusolver_diag
 
 CONTAINS
   SUBROUTINE cusolver_diag(hmat,smat,ne,eig,zmat)
-    !Simple driver to solve Generalized Eigenvalue Problem using CuSolverDN
+    !!Simple driver to solve Generalized Eigenvalue Problem using CuSolverDN
     IMPLICIT NONE
-    CLASS(t_mat),INTENT(INOUT) :: hmat,smat
+    CLASS(t_mat),INTENT(INOUT) :: hmat,smat 
     INTEGER,INTENT(INOUT)      :: ne
     CLASS(t_mat),ALLOCATABLE,INTENT(OUT)    :: zmat
     REAL,INTENT(OUT)           :: eig(:)
 
 #ifdef CPP_CUSOLVER
-    INTEGER,PARAMETER:: max_sweeps=15
-    REAL             :: tol=1E-7
-    
-    
+    INTEGER                 :: istat,ne_found,lwork_d,devinfo(1)
+    real,allocatable        :: work_d(:),eig_tmp(:)
+    complex,allocatable     :: work_c(:)
+    type(cusolverDnHandle)  :: handle        
+
+    istat = cusolverDnCreate(handle)
+    if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('handle creation failed')
+
     ALLOCATE(t_mat::zmat)
+    ALLOCATE(eig_tmp(hmat%matsize1))
     CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne)
+    !!$acc Data copyin(hmat,smat)
     IF (hmat%l_real) THEN
-       CALL cusolver_real(hmat%data_r,smat%data_r,smat%matsize1,ne,tol,max_sweeps,eig,zmat%data_r)
+      associate(h=>hmat%data_r,s=>smat%data_r)
+        !$ACC DATA copyin(s)COPY(h)COPYOUT(eig_tmp)
+        !$ACC HOST_DATA USE_DEVICE(s,h,eig_tmp)
+        istat = cusolverDnDsygvdx_bufferSize(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, CUBLAS_FILL_MODE_UPPER, hmat%matsize1, h, hmat%matsize1, &
+            s, smat%matsize1, 0.0, 0.0, 1, ne, ne_found, eig_tmp, lwork_d)
+        !$acc end host_data
+        if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('cusolverDnZhegvdx_buffersize failed')
+        allocate(work_d(lwork_d))
+        !$ACC DATA create(work_d,devinfo)
+        !$ACC HOST_DATA USE_DEVICE(s,h,eig_tmp,work_d,devinfo)
+        istat = cusolverDnDsygvdx(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, CUBLAS_FILL_MODE_UPPER, hmat%matsize1, h, hmat%matsize1, &
+        s, smat%matsize1, 0.0, 0.0, 1, ne, ne_found, eig_tmp, work_d,lwork_d,devinfo(1))
+        !$ACC END HOST_DATA
+        !$ACC END DATA
+        !$ACC END DATA
+        if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('cusolverDnZhegvdx failed')
+        ne=ne_found
+        CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne_found)
+        zmat%data_r=h(:,:ne_found)
+        eig=eig_tmp(:ne)
+      end associate
     ELSE
-       CALL cusolver_complex(hmat%data_c,smat%data_c,smat%matsize1,ne,tol,max_sweeps,eig,zmat%data_c)
+      associate(h=>hmat%data_c,s=>smat%data_c)
+        !$ACC DATA copyin(s) COPY(h) COPYOUT(eig_tmp)
+        !$ACC HOST_DATA USE_DEVICE(s,h,eig_tmp)
+        istat = cusolverDnZhegvdx_bufferSize(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, CUBLAS_FILL_MODE_UPPER, hmat%matsize1, h, hmat%matsize1, &
+          s, smat%matsize1, 0.0, 0.0, 1, ne, ne_found, eig_tmp, lwork_d)
+        !$acc end host_data
+        if (istat /= CUSOLVER_STATUS_SUCCESS) write(*,*) 'cusolverDnZhegvdx_buffersize failed'
+        allocate(work_c(lwork_d))
+        !$ACC DATA create(work_c,devinfo)
+        !$ACC HOST_DATA USE_DEVICE(s,h,eig_tmp,work_c,devinfo)
+        istat = cusolverDnZhegvdx(handle, CUSOLVER_EIG_TYPE_1, CUSOLVER_EIG_MODE_VECTOR, CUSOLVER_EIG_RANGE_I, CUBLAS_FILL_MODE_UPPER, hmat%matsize1, h, hmat%matsize1, &
+          s, smat%matsize1, 0.0, 0.0, 1, ne, ne_found, eig_tmp, work_c,lwork_d,devinfo(1))
+        !$ACC END HOST_DATA
+        !$acc update self(devinfo)
+        if (istat /= CUSOLVER_STATUS_SUCCESS) THEN 
+             write(*,*) devinfo
+             call judft_error('cusolverDnZhegvdx failed')
+        endif     
+        !$ACC END DATA
+        !$ACC END DATA
+        ne  =ne_found
+        CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne_found)
+        zmat%data_c=h(:,:ne_found)
+        eig=eig_tmp(:ne)
+    
+      end associate  
     END IF
 #endif
        

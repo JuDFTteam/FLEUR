@@ -3097,7 +3097,7 @@ module m_jpSternheimer
       do iGy = -(stars%mx2 + 3), (stars%mx2 + 3)
         do iGz = -(stars%mx3 + 3), (stars%mx3 + 3)
           Gint = [iGx, iGy, iGz]
-          Gpqext =  matmul(cell%bmat, real(Gint(1:3) + qpoint(1:3))) !transform from internal to external coordinates
+          Gpqext =  matmul(real(Gint(1:3) + qpoint(1:3)),cell%bmat) !transform from internal to external coordinates
           if (norm2(Gpqext) <= input%gmax) then
             ngpqdp = ngpqdp + 1
             ! Sort G-vectors

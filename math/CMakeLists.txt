@@ -7,7 +7,6 @@ math/dcylbs.f
 math/dsphbs.f
 math/gaussp.f
 math/inwint.f
-math/matmul.f
 math/outint.f
 math/points.f
 math/qsf.f
@@ -32,4 +31,5 @@ math/ylm4.F90
 math/gradYlm.f90
 math/pol_angle.f90
 math/BfieldtoVmat.f90
+math/matmul_dgemm.F90
 )
