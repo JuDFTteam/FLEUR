@@ -25,6 +25,7 @@ USE m_hsmt
 USE m_vham
 USE m_eigen_redist_matrix
 USE m_add_vnonlocal
+USE m_hsmt_fjgj
 USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
@@ -49,6 +50,14 @@ CLASS(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
 INTEGER :: i, j, nspins
 complex, allocatable :: vpw_wTemp(:,:)
 INTEGER :: tempI,tempJ
+
+TYPE(t_fjgj)   :: fjgj
+
+
+IF(fi%atoms%n_v.GT.0) THEN
+   CALL fjgj%alloc(MAXVAL(lapw%nv),fi%atoms%lmaxd,isp,fi%noco)
+END IF
+
 
 !Matrices for Hamiltonian and Overlapp
 !In fi%noco case we need 4-matrices for each spin channel
@@ -88,6 +97,12 @@ ELSE
 !$acc exit data delete(hmat(i,j),smat(i,j))
 END IF; END DO; END DO
 CALL timestop("MT part")
+
+   IF (fi%atoms%n_v.GT.0) THEN
+      DO i = 1, nspins
+         CALL v_ham(fi%input,ud,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,fmpi,nococonv,fjgj,den,isp,nk,hmat(i,i))
+      END DO
+   END IF
 
 !Vacuum contributions
 IF (fi%input%film) THEN
@@ -133,8 +148,10 @@ USE m_types_mpimat
 USE m_hs_int
 USE m_hsvac
 USE m_hsmt
+USE m_vham
 USE m_eigen_redist_matrix
 USE m_add_vnonlocal
+USE m_hsmt_fjgj
 USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
@@ -160,6 +177,13 @@ TYPE(t_mpimat), ALLOCATABLE :: smat_mpi(:, :), hmat_mpi(:, :)
 INTEGER :: i, j, nspins
 complex, allocatable :: vpw_wTemp(:,:)
 INTEGER :: tempI,tempJ
+
+TYPE(t_fjgj)   :: fjgj
+
+
+IF(fi%atoms%n_v.GT.0) THEN
+   CALL fjgj%alloc(MAXVAL(lapw%nv),fi%atoms%lmaxd,isp,fi%noco)
+END IF
 
 !Matrices for Hamiltonian and Overlapp
 !In fi%noco case we need 4-matrices for each spin channel
@@ -271,7 +295,7 @@ ELSE
    CALL timestop("MT part")
 
    IF (fi%atoms%n_v.GT.0) THEN
-      call judft_error("LDA+V not yet implemented for eigenvector parallelization.")
+      call judft_error("LDA+V not yet implemented for GPU + EV-parallelization.")
    END IF
 
    !Vacuum contributions
