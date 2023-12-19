@@ -13,19 +13,19 @@ MODULE m_available_solvers
 ! -solvers with numbers higher than 200 can handle both
 ! -solvers with number 400
 #ifdef CPP_ELPA
-  INTEGER,PARAMETER:: diag_elpa=101
+  INTEGER,PARAMETER:: diag_elpa=114
 #else
-  INTEGER,PARAMETER:: diag_elpa=-101
+  INTEGER,PARAMETER:: diag_elpa=-114
 #endif
 #ifdef CPP_ELEMENTAL
-  INTEGER,PARAMETER:: diag_elemental=102
+  INTEGER,PARAMETER:: diag_elemental=112
 #else
-  INTEGER,PARAMETER:: diag_elemental=-102
+  INTEGER,PARAMETER:: diag_elemental=-112
 #endif
 #ifdef CPP_SCALAPACK
-  INTEGER,PARAMETER:: diag_scalapack=103
+  INTEGER,PARAMETER:: diag_scalapack=113
 #else
-  INTEGER,PARAMETER:: diag_scalapack=-103
+  INTEGER,PARAMETER:: diag_scalapack=-113
 #endif
 #ifdef CPP_MAGMA
   INTEGER,PARAMETER:: diag_magma=6
@@ -37,7 +37,7 @@ MODULE m_available_solvers
 #else
   INTEGER,PARAMETER:: diag_chase=-207
 #endif
-  INTEGER,PARAMETER :: diag_stop=220 ! dummy solver that simply stops FLEUR
+  INTEGER,PARAMETER :: diag_stop=21 ! dummy solver that simply stops FLEUR
 #ifdef CPP_CUSOLVER
 INTEGER,PARAMETER:: diag_cusolver=8
 #else
@@ -45,10 +45,10 @@ INTEGER,PARAMETER:: diag_cusolver=8
 #endif
 
 #ifdef CPP_ELSI
-INTEGER,PARAMETER:: diag_elsielpa=401
+INTEGER,PARAMETER:: diag_elsielpa=411
 INTEGER,PARAMETER:: diag_elsichase=409
 #else
-  INTEGER,PARAMETER:: diag_elsielpa=-401
+  INTEGER,PARAMETER:: diag_elsielpa=-411
   INTEGER,PARAMETER:: diag_elsichase=-409
 #endif
 
@@ -85,7 +85,7 @@ CONTAINS
     IF (suggested_solver==0) THEN
        !Determine the default solver
        IF (parallel) THEN
-          diag_solver=MINVAL(diag_all_solver,mask=diag_all_solver>100)
+          diag_solver=MAXVAL(diag_all_solver,mask=diag_all_solver>100)
        ELSE
           diag_solver=MINVAL(diag_all_solver,mask=diag_all_solver>0)
        ENDIF
