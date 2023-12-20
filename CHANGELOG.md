@@ -7,8 +7,13 @@ Here we try to document the major changes, their status and issues for the diffe
 
 ### Features:
 
-- major changes in DFPT phonon code. (still experimental feature)
+- initial release of DFPT phonon code. (still experimental feature
+- initial release of LDA+U+V code. (still experimental feature)
 
+### Notable bugfixes:
+
+- Fixes for spin-spiral calculations with local orbitals.
 
 ### Configure/build/usage
 - include in-build interface to ELSI
+
