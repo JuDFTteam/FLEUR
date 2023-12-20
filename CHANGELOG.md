@@ -17,6 +17,7 @@ Here we try to document the major changes, their status and issues for the diffe
 
 - Fixes for spin-spiral calculations with local orbitals.
 - Fixes related to deadlocks in parallelized hybrid functional calculations.
+- Fixes related to calculations on noncollinear magnetism.
 
 ### Configure/build/usage
 - include in-build interface to ELSI
