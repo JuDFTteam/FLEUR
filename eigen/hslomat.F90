@@ -97,8 +97,7 @@ CONTAINS
          CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
       END IF
    
-      
-
+     
       IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
          ! If this atom is the first of two atoms related by inversion, the
          ! contributions to the overlap matrix of both atoms are added simultaneously.
@@ -152,7 +151,6 @@ CONTAINS
          l = atoms%llo(lo,ntyp)
          s = tlmplm%h_loc2_nonsph(ntyp) 
          
-         !$acc data present(abcoeffsPr,tlmplm,tlmplm%h_loc_LO,abcxpr)
          call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abc_tmp,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
          !$acc kernels present(abcxPR,abc_tmp)
          abcxPr(1,:,:)=abc_tmp
@@ -166,36 +164,43 @@ CONTAINS
          !$acc kernels present(abcxPR,abc_tmp)
          abcxPr(3,:,:)=abc_tmp
          !$acc end kernels 
+      
          
-         !$acc end data
-
          !LAPW LO contributions
-         !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,abcxpr)&
-         !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
+         !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo(:,-atoms%llod:,:,:),abcxPr)&
+         !$acc & copyin(lapw,lapw%nv,lapw%index_lo,lapwPr,lapwPr%nv,fmpi,fmpi%n_size,fmpi%n_rank)default(none)
+         !$acc loop seq
          DO nkvec = 1,invsfct*(2*l+1)
             locol= lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec ! This is the column of the matrix
             IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN ! Only this MPI rank calculates this column
                locol=(locol-1)/fmpi%n_size+1 ! This is the column in local storage
                IF (hmat%l_real) THEN
-                 DO m=-l,l
+                  DO m=-l,l
                      DO kp = 1,lapwPr%nv(igSpinPr)
                         hmat%data_r(kp,locol) = hmat%data_r(kp,locol) +  invsfct * dot_product(conjg(abclo(:,m,nkvec,lo)),abcxPr(:,kp,l+1+m))
                      ENDDO   
                  END DO
                ELSE
+                  !$acc loop seq
+                 
                  DO m=-l,l
+                  !$acc loop seq
+                 
                      DO kp = 1,lapwPr%nv(igSpinPr)
                         hmat%data_c(kp,locol) = hmat%data_c(kp,locol) + chi * dot_product(conjg(abclo(:,m,nkvec,lo)),abcxPr(:,kp,l+1+m))
                      ENDDO   
+                     !$acc end loop
                      !call blas_matmul(1,3,lapw%nv(igSpinPr),abclo(:,m,nkvec,lo),abcxPr(:,:,l+1+m),hmat%data_c(:,lo),cmplx(1.,0.),cmplx(1.,0.),'C')
                   END DO
+               !$acc end loop
                END IF                 
             END IF
          END DO
+         !$acc end loop
          !$acc end kernels            
          !Calculate the same for the overlap
          IF (ilspin==ilSpinPr.and.present(smat)) THEN
-            !$acc kernels present(abcxPr,abCoeffsPr,ud,ud%ddn,ud%uulon,ud%dulon)copyin(l,ntyp,ilspin)
+            !$acc kernels present(abcxPr,abCoeffsPr,ud,ud%ddn,ud%uulon,ud%dulon)copyin(l,ntyp,ilspin,lo)default(none)
             DO m = -l,l
                lm = l* (l+1) + m
                s = size(abCoeffsPr,1)/2
@@ -205,7 +210,7 @@ CONTAINS
             enddo   
             !$acc end kernels
             !$acc kernels present(smat,smat%data_c,smat%data_r,abclo,abcxpr)&
-            !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
+            !$acc & copyin(lapw,lapw%nv,lapw%index_lo,lapwPR,lapwPR%nv,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin,l,invsfct,chi) default(none)
             DO nkvec = 1,invsfct*(2*l+1)
                locol= lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec ! This is the column of the matrix
                IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN ! Only this MPI rank calculates this column
@@ -265,7 +270,7 @@ CONTAINS
          call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_LO2(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abCoeffs,abcx(3,:,:),cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
 
          !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcloPr,abcx)&
-         !$acc & copyin(lapwPr,lapwPr%nv,lapwPr%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,invsfct,igSpinPr,lo,na,l)
+         !$acc & copyin(lapwPr,lapwPr%nv,lapwPr%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,invsfct,igSpinPr,lo,na,l,chi)
          DO nkvec = 1,invsfct*(2*l+1)
             lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
             IF (hmat%l_real) THEN
@@ -295,7 +300,7 @@ CONTAINS
             enddo   
             !$acc end kernels
             !$acc kernels present(smat,smat%data_c,smat%data_r,abcloPr,abcx)&
-            !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
+            !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin,chi)
             DO nkvec = 1,invsfct*(2*l+1)
                lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
                IF (smat%l_real) THEN
@@ -309,8 +314,8 @@ CONTAINS
                      DO kp = 1,lapwPr%nv(igSpinPr)
                         smat%data_c(lorow,kp) = smat%data_c(lorow,kp) + chi *  dot_product(abcloPr(:,m,nkvec,lo),abcx(:,kp,l+1+m))
                      ENDDO   
-                  END DO
-               END IF  
+                  END DO 
+               END IF   
             END DO
             !$acc end kernels    
          ENDIF  
@@ -341,7 +346,7 @@ CONTAINS
       mlo=sum(atoms%nlo(:ntyp-1))
       invsfct=sym%invsat(na)+1
       CALL timestart("LO-LO")
-      !$acc kernels present(smat,smat%data_c,smat%data_r,hmat,hmat%data_c,hmat%data_r,abclo,abcloPr) &
+      !$acc kernels present(smat,smat%data_c,smat%data_r,hmat,hmat%data_c,hmat%data_r,abclo(:,-atoms%llod:,:,:),abcloPr(:,-atoms%llod:,:,:)) &
       !$acc & copyin(atoms,lapw,lapwPr,tlmplm,lapw%nv(:),lapwPr%nv(:))&
       !$acc & copyin(tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin))&
       !$acc & copyin(tlmplm%h_loc_LO(:,:,ntyp,ilSpinPr,ilSpin),tlmplm%h_LO(:,:,:,ilSpinPr,ilSpin),tlmplm%h_LO2(:,:,:,ilSpinPr,ilSpin),tlmplm%h_loc2_nonsph)&
@@ -349,24 +354,30 @@ CONTAINS
       !$acc & copyin(fmpi, fmpi%n_size, fmpi%n_rank,ud,ud%ddn,ud%dulon,ud%uulon,ud%uloulopn)&
       !$acc & create(abcxx)&
       !$acc & default(none)
+      !$acc loop seq
       DO lo = 1,atoms%nlo(ntyp)
          l = atoms%llo(lo,ntyp)
          ! Calculate the hamiltonian matrix elements with other local
          ! orbitals at the same atom and with itself
+         !$acc loop seq
          DO nkvec = 1,invsfct* (2*l+1)
             locol = lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec ! This is the column of the matrix
             IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN ! Only this MPI rank calculates this column
                locol=(locol-1)/fmpi%n_size+1 ! This is the column in local storage
                ! Calculate the Hamiltonian matrix elements with different
                ! local orbitals at the same atom
+               !$acc loop seq
                DO lop = 1, MERGE(lo,atoms%nlo(ntyp),igSpinPr==igSpin.AND..NOT.l_full_matrix)
                   !IF (lop==lo) CYCLE No sepcial treatment needed for same LO
                   lp = atoms%llo(lop,ntyp)
+                  !$acc loop private(abcxx) seq
                   DO nkvecp = 1,invsfct* (2*lp+1)
                      lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lop,na)+nkvecp
                      if (lorow>lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec.AND..NOT.l_full_matrix) cycle
+                     !$acc loop seq
                      DO m = -l,l
                         lm = l*(l+1) + m
+                        !$acc loop seq 
                         DO mp = -lp,lp
                            lmp = lp* (lp+1) + mp
                            s = tlmplm%h_loc2_nonsph(ntyp)
@@ -386,7 +397,8 @@ CONTAINS
                            ELSE
                               hmat%data_c(lorow,locol) = hmat%data_c(lorow,locol) + chi * dot_product(abcloPr(:,mp,nkvecp,lop),abcxx)
                            END IF
-                        enddo   
+                        enddo
+                        !$acc end loop   
                         if (ilspin==ilspinPr .AND. l==lp .and. present(smat)) THEN !Same for overlap matrix
                               ! This is the product abclo^* <u|u> * abclo in the 1,2,3 index (a,b,c coeff)
                            abcxx(1) = abclo(1,m,nkvec,lo)   +  0    + ud%uulon(lo,ntyp,ilspin) * abclo(3,m,nkvec,lo)
@@ -394,8 +406,8 @@ CONTAINS
                            abcxx(3) = ud%uulon(lop,ntyp,ilspin)* abclo(1,m,nkvec,lo)+ &
                                  ud%dulon(lop,ntyp,ilspin)* abclo(2,m,nkvec,lo) + &
                                  ud%uloulopn(lop,lo,ntyp,ilspin)* abclo(3,m,nkvec,lo)
-                        
-                           IF (smat%l_real) THEN
+                           
+                           IF (smat%l_real) THEN 
                               smat%data_r(lorow,locol) = smat%data_r(lorow,locol) +  invsfct * dot_product(abcloPr(:,m,nkvecp,lop),abcxx)
                            ELSE
                               smat%data_c(lorow,locol) = smat%data_c(lorow,locol) + chi * dot_product(abcloPr(:,m,nkvecp,lop),abcxx)
@@ -403,11 +415,21 @@ CONTAINS
                      
                         ENDIF   
                      END DO
+                     !$acc end loop   
+                     
                   END DO
-               END DO                  
+                     !$acc end loop   
+                     
+               END DO
+                  !$acc end loop   
+                                       
             END IF !If this lo to be calculated by fmpi rank
          END DO
+            !$acc end loop   
+                     
       END DO ! end of lo = 1,atoms%nlo loop
+         !$acc end loop   
+                     
       !$acc end kernels
       CALL timestop("LO-LO")
    

@@ -7,12 +7,10 @@
 module m_matmul_dgemm
 #ifdef _OPENACC
     use openacc    
+    use cublas
 #endif
 #ifdef CPP_MAGMA
     use magma
-#endif
-#ifdef _CUDA
-    use cublas
 #endif
     implicit none
     PRIVATE
@@ -45,11 +43,30 @@ module m_matmul_dgemm
         select case (priv_select_multiply_r(a,b,c))   
         case (blas_select)
             call dgemm(op_aa,op_bb,m,n,k, alphaa, a, lda, b,ldb,betaa, c, ldc)
-#ifdef _CUDA
+#ifdef _OPENACC
         case (cublas_select)
-            !$acc host_data use_device(a,b,c)
-            call cublasDgemm(op_aa, op_bb, m, n, k, alphaa,a, lda, b, ldb, betaa, c, ldc)
-            !$acc end host_data
+            if (IS_CONTIGUOUS(a).and.IS_CONTIGUOUS(b).and.IS_CONTIGUOUS(c)) THEN
+                !$acc host_data use_device(a,b,c)
+                call cublasDgemm(op_aa, op_bb, m, n, k, alphaa,a, lda, b, ldb, betaa, c, ldc)
+                !$acc end host_data
+            else
+                block
+                    REAL:: aa(size(a,1),size(a,2)),bb(size(b,1),size(b,2)),cc(size(c,1),size(c,2))
+                    !$acc data create(aa,bb,cc)
+                    !$acc kernels
+                    aa=a
+                    bb=b
+                    cc=c
+                    !$acc end kernels
+                    !$acc host_data use_device(aa,bb,cc)
+                    call cublasdgemm(op_aa, op_bb, m, n, k, alphaa,aa, lda, bb, ldb, betaa, cc, ldc)
+                    !$acc end host_data
+                    !$acc kernels
+                    c=cc
+                    !$acc end kernels
+                    !$acc end data
+                end block
+            ENDIF  
 #endif            
 #ifdef CPP_MAGMA            
         case (magma_select)
@@ -82,11 +99,30 @@ module m_matmul_dgemm
         select case (priv_select_multiply_c(a,b,c))   
         case (blas_select)
             call zgemm(op_aa,op_bb,m,n,k, alphaa, a, lda, b,ldb,betaa, c, ldc)
-#ifdef _CUDA
+#ifdef _OPENACC
         case (cublas_select)
-            !$acc host_data use_device(a,b,c)
-            call cublaszgemm(op_aa, op_bb, m, n, k, alphaa,a, lda, b, ldb, betaa, c, ldc)
-            !$acc end host_data
+            if (IS_CONTIGUOUS(a).and.IS_CONTIGUOUS(b).and.IS_CONTIGUOUS(c)) THEN
+                !$acc host_data use_device(a,b,c)
+                call cublaszgemm(op_aa, op_bb, m, n, k, alphaa,a, lda, b, ldb, betaa, c, ldc)
+                !$acc end host_data
+            else
+                block
+                    complex:: aa(size(a,1),size(a,2)),bb(size(b,1),size(b,2)),cc(size(c,1),size(c,2))
+                    !$acc data create(aa,bb,cc)
+                    !$acc kernels
+                    aa=a
+                    bb=b
+                    cc=c
+                    !$acc end kernels
+                    !$acc host_data use_device(aa,bb,cc)
+                    call cublaszgemm(op_aa, op_bb, m, n, k, alphaa,aa, lda, bb, ldb, betaa, cc, ldc)
+                    !$acc end host_data
+                    !$acc kernels
+                    c=cc
+                    !$acc end kernels
+                    !$acc end data
+                end block
+            ENDIF    
 #endif            
 #ifdef CPP_MAGMA            
         case (magma_select)
@@ -120,14 +156,13 @@ module m_matmul_dgemm
         REAL,INTENT(IN):: a(:,:),b(:,:),c(:,:)
 
 #ifdef _OPENACC
+        
         if (acc_is_present(a).and.acc_is_present(b).and.acc_is_present(c)) THEN
             !All data on GPU
-#ifdef _CUDA
 
-            sel=cublas_select;return
-#endif
+            sel=cublas_select
 #ifdef CPP_MAGMA
-            sel=magmablas_select; return
+            sel=magmablas_select
 #endif
         ENDIF
 #endif        
@@ -141,9 +176,7 @@ module m_matmul_dgemm
 #ifdef _OPENACC
     if (acc_is_present(a).and.acc_is_present(b).and.acc_is_present(c)) THEN
         !All data on GPU
-#ifdef _CUDA
         sel=cublas_select            
-#endif
 #ifdef CPP_MAGMA
         sel=magmablas_select
 #endif
