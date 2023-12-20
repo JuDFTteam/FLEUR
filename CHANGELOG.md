@@ -7,7 +7,7 @@ Here we try to document the major changes, their status and issues for the diffe
 
 ### Features:
 
-- initial release of DFPT phonon code. (still experimental feature
+- initial release of DFPT phonon code. (still experimental feature)
 - initial release of LDA+U+V code. (still experimental feature)
 
 ### Notable bugfixes:
