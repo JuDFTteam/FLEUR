@@ -3,6 +3,8 @@
 
 Here we try to document the major changes, their status and issues for the different FLEUR releases. Please note that this list is not necessarily complete nor always up to date. Please consult the documentation, commit messages and/or the issues.
 
+Please remember that a lot of bugfixes are not documented here and thus we always recomment to use the newest versions of FLEUR.
+
 ## Changes for MaXR7.0
 
 ### Features:
@@ -21,4 +23,6 @@ Here we try to document the major changes, their status and issues for the diffe
 
 ### Configure/build/usage
 - include in-build interface to ELSI
+- first version of "fleurist": a python tool to provide parallelization strategies
+- possibility to have not fully load-balanced parallelization to use the k-point parallelism more efficiently
 
