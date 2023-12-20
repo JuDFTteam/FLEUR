@@ -23,6 +23,12 @@ authors:
   - given-names: Nadjib
     family-names: Baadji
     orcid: 'https://orcid.org/0000-0002-0630-2398'
+  - given-names: Wejdan
+    family-names: Beida
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0009-0009-3909-8619'
   - given-names: Markus
     family-names: Betzinger
   - given-names: Gustav
@@ -31,6 +37,12 @@ authors:
       Institute for Advanced Simulation,
       Forschungszentrum Jülich, 52425 Jülich, Germany
     orcid: 'https://orcid.org/0000-0002-6615-1122'
+  - given-names: Thomas
+    family-names: Bornhake
+    affiliation: >-
+      Institute for Advanced Simulation,
+      Forschungszentrum Jülich, 52425 Jülich, Germany
+    orcid: 'https://orcid.org/0009-0002-8467-7029'
   - given-names: Jens
     family-names: Bröder
     affiliation: >-

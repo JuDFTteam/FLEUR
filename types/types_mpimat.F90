@@ -414,7 +414,7 @@ CONTAINS
       INTEGER, INTENT(IN) ::n1, n2
       INTEGER :: irank, err
 
-      LOGICAL,PARAMETER:: use_pdgemr2d=.false.
+      LOGICAL,PARAMETER:: use_pdgemr2d=.true.
       call timestart("mpimat_copy")
 
       select type (mat1)
@@ -1098,7 +1098,7 @@ CONTAINS
       else 
          allocate(vecc(mat%global_size1)) 
       endif
-#ifdef CPP_MPI      
+#ifdef CPP_SCALAPACK  
       !process ranks for cyclic column dist
       call MPI_COMM_RANK(mat%blacsdata%mpi_com,my_proc,ierr)
       call MPI_COMM_SIZE(mat%blacsdata%mpi_com,num_proc,ierr)

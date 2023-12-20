@@ -4,6 +4,12 @@ if ("$ENV{VERBOSE}")
     message("ELSI compile test: ${FLEUR_USE_ELSI}\nLINK_LIBRARIES ${TEST_LIBRARIES}\n${compile_output}")
 endif()
 
+#By default we always compile ELSI if not found
+#if (NOT DEFINED CLI_FLEUR_USE_ELSI)
+#  set(CLI_FLEUR_USE_ELSI FLEUR_USE_GITVERSION)
+#endif()
+
+
 #Now download ELSI and compile it if REQUIRED
 if (DEFINED CLI_FLEUR_USE_ELSI)
    if (CLI_FLEUR_USE_ELSI)
