@@ -9,8 +9,9 @@ Here we try to document the major changes, their status and issues for the diffe
 
 - Initial release of DFPT phonon code. (still experimental feature)
 - Initial release of LDA+U+V code. (still experimental feature)
-- Reactivation of HSE hybrid functional
+- Reactivation of HSE hybrid functional.
 - Hybrid functionals in combination with 2nd variation spin-orbit coupling.
+- Alternative parameter setup profiles for the input generator.
 
 ### Notable bugfixes:
 
