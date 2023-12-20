@@ -7,12 +7,15 @@ Here we try to document the major changes, their status and issues for the diffe
 
 ### Features:
 
-- initial release of DFPT phonon code. (still experimental feature)
-- initial release of LDA+U+V code. (still experimental feature)
+- Initial release of DFPT phonon code. (still experimental feature)
+- Initial release of LDA+U+V code. (still experimental feature)
+- Reactivation of HSE hybrid functional
+- Hybrid functionals in combination with 2nd variation spin-orbit coupling.
 
 ### Notable bugfixes:
 
 - Fixes for spin-spiral calculations with local orbitals.
+- Fixes related to deadlocks in parallelized hybrid functional calculations.
 
 ### Configure/build/usage
 - include in-build interface to ELSI
