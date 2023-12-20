@@ -55,7 +55,7 @@ INTEGER,PARAMETER:: diag_elsichase=215
 !8. solver
   INTEGER,PARAMETER :: diag_stop=101 ! dummy solver that simply stops FLEUR
 !9. solver
-  #ifdef CPP_CUSOLVER
+#ifdef CPP_CUSOLVER
 INTEGER,PARAMETER:: diag_cusolver=7
 #else
   INTEGER,PARAMETER:: diag_cusolver=-7
