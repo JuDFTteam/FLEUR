@@ -91,11 +91,11 @@ General options:
 
 Command line options to disable recommended libraries:
   -hdf5 false       : do not use HDF5. 
-  -elsi false       : do not use the ELSI library
   -scalapack false  : do not use the SCALAPACK library
 
 Command line options to switch on/off features. These options overwrite the results of
 the test and might lead to the configuration to fail.
+  -elsi     [TRUE|FALSE} : use the ELSI library
   -wannier  [TRUE|FALSE] : use Wannier90 library
   -mpi      [TRUE|FALSE] : compile the MPI parallel version
   -libxc    [TRUE|FALSE] : use libxc library
