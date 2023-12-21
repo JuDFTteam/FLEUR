@@ -35,7 +35,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3), fjkiln,gjkiln
-    INTEGER kii,ki,kj,l,nn,j1,j2,ll,l3,kj_off,kj_vec,jv
+    INTEGER kii,ki,kj,l,nn,j1,j2,ll,l3,kj_off,kj_vec,jv,i
     INTEGER NVEC_rem  !remainder
     INTEGER, PARAMETER :: NVEC = 128
     !     ..
@@ -48,14 +48,15 @@ CONTAINS
 
     CALL timestart("offdiagonal soc-setup")
 
-    !$acc update self(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
+    associate(h11=>hmat(1,1)%data_c,h12=>hmat(1,2)%data_c,h21=>hmat(2,1)%data_c,h22=>hmat(2,2)%data_c)
 
+  
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
        fleg2(l) = REAL(l)/REAL(l+1)
        fl2p1(l) = REAL(l+l+1)/fpi_const
     END DO
-    !!$acc data copyin(td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)
+    !$acc data copyin(td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)
     !CPP_OMP PARALLEL DEFAULT(NONE)&
     !CPP_OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
     !CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
@@ -105,11 +106,11 @@ CONTAINS
           dplegend(:NVEC_rem,0) = 0.0
 
           !--->          update overlap and l-diagonal hamiltonian matrix
-          !!$acc kernels &
-          !!$acc copyin(atoms,atoms%lmax,xlegend,cph,angso)&
-          !!$acc create(plegend,dplegend,fct)&
-          !!$acc present(fjgj,fjgj%fj,fjgj%gj)&
-          !!$acc present(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
+          !$acc kernels &
+          !$acc copyin(atoms,atoms%lmax,xlegend,cph,angso)&
+          !$acc create(plegend,dplegend,fct)&
+          !$acc present(fjgj,fjgj%fj,fjgj%gj)&
+          !$acc present(h12,h21,h12,h22)
           DO  l = 1,atoms%lmax(n)
              !--->       legendre polynomials
              l3 = MODULO(l, 3)
@@ -129,15 +130,16 @@ CONTAINS
                   fjgj%gj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
                   * angso(:NVEC_rem,j1,j2)
 
-                  hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
-                  hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
-                  hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
-                  hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
+                  h11(kj_off:kj_vec,kii)=h11(kj_off:kj_vec,kii)+chi(1,1,j1,j2)*fct(:NVEC_rem)
+                  h21(kj_off:kj_vec,kii)=h21(kj_off:kj_vec,kii)+chi(2,1,j1,j2)*fct(:NVEC_rem)
+                  h12(kj_off:kj_vec,kii)=h12(kj_off:kj_vec,kii)+chi(1,2,j1,j2)*fct(:NVEC_rem)
+                  h22(kj_off:kj_vec,kii)=h22(kj_off:kj_vec,kii)+chi(2,2,j1,j2)*fct(:NVEC_rem)
+                  
                 ENDDO
              ENDDO
           !--->          end loop over l
           ENDDO
-          !!$acc end kernels
+          !$acc end kernels
        ENDDO
     !--->    end loop over ki
     ENDDO
@@ -146,11 +148,12 @@ CONTAINS
     DEALLOCATE(xlegend,plegend,dplegend)
     DEALLOCATE(cph)
     !CPP_OMP END PARALLEL
-    !!$acc end data
+    !$acc end data
     CALL timestop("offdiagonal soc-setup")
 
     if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
-    !$acc update device(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
+
+    end associate
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 
