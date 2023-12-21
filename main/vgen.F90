@@ -111,7 +111,8 @@ CONTAINS
       CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
 
       !vdW Potential
-      IF (input%vdw>0) CALL fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,cell,sym ,vacuum,results,workden%pw(:,1),workden%mt(:,:,:,1),vCoul%pw(:,1),vCoul%mt)
+      workden%vac = CMPLX(0.0,0.0)
+      IF (input%vdw>0) CALL fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,cell,sym ,vacuum,results,workden,vCoul%pw(:,1),vCoul%mt)
 
       ! b)
       CALL vCoul%copy_both_spin(vTot)
@@ -126,7 +127,7 @@ CONTAINS
       END IF
 
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                      cell ,sliceplot,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
+                      cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
 
       CALL bfield(input,stars,noco,atoms,field,vTot)
 

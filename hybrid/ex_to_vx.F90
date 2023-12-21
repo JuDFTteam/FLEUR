@@ -18,7 +18,7 @@ contains
       type(t_mat), intent(inout)    :: ex
       type(t_mat), intent(inout)    :: v_x
 
-      integer     :: nbasfcn, ierr
+      integer     :: nbasfcn, ierr, tempI, tempJ
       type(t_mat) :: trafo, tmp, olap
 
       CALL timestart("T^-1*mat_ex*T^-1*")
@@ -33,6 +33,7 @@ contains
       CALL read_eig(hybdat%eig_id,nk,jsp, smat=olap)
 #ifdef CPP_MPI
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      hybdat%max_q = hybdat%max_q - 1
 #endif
       call olap%u2l()
       call olap%conjugate()

@@ -103,8 +103,6 @@ CONTAINS
          CALL spnorb(atoms,noco,nococonv,input,fmpi,enpara,v%mt,ud,td%rsoc,.FALSE.,hub1inp,hub1data)
       END IF
       CALL timestop("local_hamiltonian")
-      
-
    END SUBROUTINE 
 
    SUBROUTINE tlmplm_constrained(atoms,v,enpara,input,hub1data,ud,nococonv,td)

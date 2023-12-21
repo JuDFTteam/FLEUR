@@ -63,7 +63,7 @@ CONTAINS
       ! of matrixsplit.
       DO i=1, 4
          CALL dummyDen(i)%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd, &
-                          atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
+                          atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE., &
                           POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(dummyDen(i)%pw_w,mold=dummyDen(i)%pw)
       ENDDO
@@ -78,7 +78,7 @@ CONTAINS
       ! Initialize and fill the vector field.
       DO i=1,3
          CALL aVec(i)%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd, &
-                     atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
+                     atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE., &
                      POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(aVec(i)%pw_w,mold=aVec(i)%pw)
          aVec(i)%mt(:,:,:,:) = dummyDen(i+1)%mt(:,:,:,:)
@@ -95,8 +95,9 @@ CONTAINS
          END DO !itype
          aVec(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
          aVec(i)%pw_w(1:,:)        = dummyDen(i+1)%pw_w(1:,:)
-         aVec(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
-         aVec(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
+         !aVec(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
+         !aVec(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
+         aVec(i)%vac(1:,1:,1:,:) = dummyDen(i+1)%vac(1:,1:,1:,:)
       END DO !i
 
    END SUBROUTINE makeVectorField
@@ -146,7 +147,7 @@ CONTAINS
 
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype, &
-                                  atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
+                                  atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(div%pw_w,mold=div%pw)
       div%pw_w = CMPLX(0.0,0.0)
@@ -159,7 +160,7 @@ CONTAINS
       ! needed for the potential generation from the divergence.
       atloc=atoms
       atloc%zatom=0.0
-      CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+      CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
 
@@ -168,7 +169,7 @@ CONTAINS
       CALL timestop("Building potential")
 
       DO i=1,3
-         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
          cvec(i)%pw_w=CMPLX(0.0,0.0)
       ENDDO
@@ -188,7 +189,7 @@ CONTAINS
       CALL finish_pw_grid()
 
       DO i=1,3
-         CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+         CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                           POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
          corrB(i)%pw_w=CMPLX(0.0,0.0)

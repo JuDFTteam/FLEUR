@@ -5,14 +5,14 @@
 !--------------------------------------------------------------------------------
 module m_distance
 contains
-  SUBROUTINE distance(irank,vol,jspins,fsm,inden,outden,results,fsm_mag)
+  SUBROUTINE distance(irank,vol,jspins,nmzxyd,fsm,inden,outden,results,fsm_mag)
     use m_types
     use m_types_mixvector
     USE m_constants
     use m_xmlOutput
 
     implicit none
-    integer,intent(in)             :: irank,jspins
+    integer,intent(in)             :: irank,jspins,nmzxyd
     real,intent(in)                :: vol
     type(t_mixvector),INTENT(IN)   :: fsm
     TYPE(t_potden),INTENT(INOUT)   :: inden,outden
@@ -28,8 +28,8 @@ contains
     IF (jspins==2) THEN
        CALL fsm_mag%alloc()
        ! calculate Magnetisation-difference
-       CALL fsm_mag%from_density(outden,swapspin=.TRUE.)
-       call fmMet%from_density(inden,swapspin=.true.)
+       CALL fsm_mag%from_density(outden,nmzxyd,swapspin=.TRUE.)
+       call fmMet%from_density(inden,nmzxyd,swapspin=.true.)
        fsm_mag=fsm_mag-fmMet
     ENDIF
     ! Apply metric w to fsm and store in fmMet:  w |fsm>
@@ -86,7 +86,7 @@ contains
 8030  FORMAT (10i10)
   end SUBROUTINE distance
 
-   SUBROUTINE dfpt_distance(irank,vol,jspins,fsm,inden,outden,indenIm,outdenIm,results,fsm_mag)
+   SUBROUTINE dfpt_distance(irank,vol,jspins,nmzxyd,fsm,inden,outden,indenIm,outdenIm,results,fsm_mag)
       USE m_types
       USE m_types_mixvector
       USE m_constants
@@ -94,7 +94,7 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER, INTENT(IN) :: irank,jspins
+      INTEGER, INTENT(IN) :: irank,jspins,nmzxyd
       REAL,    INTENT(IN) :: vol
 
       TYPE(t_mixvector), INTENT(IN)    :: fsm
@@ -111,8 +111,8 @@ contains
       IF (jspins==2) THEN
          CALL fsm_mag%alloc()
          ! calculate Magnetisation-difference
-         CALL fsm_mag%from_density(outden,swapspin=.TRUE.,denIm=outDenIm)
-         CALL fmMet%from_density(inden,swapspin=.TRUE.,denIm=inDenIm)
+         CALL fsm_mag%from_density(outden,nmzxyd,swapspin=.TRUE.,denIm=outDenIm)
+         CALL fmMet%from_density(inden,nmzxyd,swapspin=.TRUE.,denIm=inDenIm)
          fsm_mag=fsm_mag-fmMet
       END IF
 
@@ -121,13 +121,13 @@ contains
 
       dist(:,:) = 0.0
       DO js = 1,jspins
-         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE./),js,dist(js,:))
+         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),js,dist(js,:))
       END DO
       IF (SIZE(outden%pw,2)>2) THEN
-         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE./),3,dist(6,:),dist(7,:))
+         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),3,dist(6,:),dist(7,:))
       END IF
       IF (jspins.EQ.2) THEN
-         CALL fmMet%dfpt_multiply_dot_mask(fsm_mag,(/.TRUE.,.TRUE./),1,dist(3,:))
+         CALL fmMet%dfpt_multiply_dot_mask(fsm_mag,(/.TRUE.,.TRUE.,.TRUE./),1,dist(3,:))
          dist(4,:) = dist(1,:) + dist(2,:) + 2.0e0*dist(3,:)
          dist(5,:) = dist(1,:) + dist(2,:) - 2.0e0*dist(3,:)
       END IF

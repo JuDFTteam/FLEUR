@@ -8,4 +8,5 @@
       
       call elpa1%set("na",na,success) 
       CALL elpa1%generalized_eigenvectors(h,s,eig, ev, .FALSE.)
+      CALL elpa_uninit()
       end program

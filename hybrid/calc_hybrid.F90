@@ -52,7 +52,8 @@ CONTAINS
       type(t_hybmpi)           :: glob_mpi, wp_mpi
       type(t_work_package)     :: work_pack(fi%input%jspins)
       INTEGER                  :: jsp, nk, err, i, wp_rank, ierr, ik
-      integer                  :: j_wp, n_wps, root_comm
+      INTEGER                  :: j_wp, n_wps, root_comm
+      INTEGER                  :: max_band_pack, jq
       type(t_lapw)             :: lapw
       LOGICAL                  :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       character(len=999)       :: msg
@@ -63,8 +64,10 @@ CONTAINS
 
       CALL timestart("hybrid code")
 
+#ifdef CPP_MPI
 #ifdef CPP_PROG_THREAD
       if(fmpi%l_mpi_multithreaded) call start_prog_thread(threadId)
+#endif
 #endif
 
       IF (fi%kpts%nkptf == 0) THEN
@@ -75,7 +78,7 @@ CONTAINS
       !Check if new non-local potential shall be generated
       hybdat%l_subvxc = fi%hybinp%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
       !If this is the first iteration loop we can not calculate a new non-local potential
-      hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
+      !hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
       !make sure we do at least one PBE first
       if(iter == 1 .and. iterHF == 0) hybdat%l_calhf = .False.
 
@@ -131,11 +134,11 @@ CONTAINS
 
          DO jsp = 1, fi%input%jspins
             DO nk = 1,fi%kpts%nkptf
-               IF (hybdat%zmat(nk, jsp)%mat%matsize2 .NE. hybdat%nbands(nk, jsp)) THEN
+!               IF (hybdat%zmat(nk, jsp)%mat%matsize2 .NE. hybdat%nbands(nk, jsp)) THEN ! This IF caused deadlocks.
                   CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
                   call eigvec_setup(hybdat%zmat(nk, jsp), fi, lapw, work_pack, fmpi, &
                                     hybdat%nbands(nk, jsp), nk, jsp, hybdat%eig_id)
-               END IF
+!               END IF
             enddo 
          enddo
          call bcast_eigvecs(hybdat, fi, nococonv, fmpi)
@@ -172,15 +175,40 @@ CONTAINS
          DO jsp = 1, fi%input%jspins
             CALL HF_setup(mpdata,fi, fmpi, nococonv, results, jsp, enpara, &
                         hybdat, v%mt(:, 0, :, :), eig_irr)
-             
+
+            call timestart("get max_q")
+            hybdat%max_q = 0
+            DO i = 1,work_pack(jsp)%k_packs(1)%size
+               max_band_pack = 0 
+               DO jq = 1, size(work_pack(jsp)%k_packs(i)%q_packs)
+                  max_band_pack = max(max_band_pack, work_pack(jsp)%k_packs(i)%q_packs(jq)%submpi%size)
+               enddo
+               hybdat%max_q = hybdat%max_q + size(work_pack(jsp)%k_packs(i)%q_packs) * fi%kpts%nkptf  * max_band_pack
+            END DO
+#ifdef CPP_MPI
+            call MPI_Allreduce(MPI_IN_PLACE, hybdat%max_q, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
+#endif
+            hybdat%max_q = hybdat%max_q + 20 ! The 20 is kind of dirty. It is meant as a safety because of the MPI_BARRIER in hsfock, related to the ex_to_vx call.
+            call timestop("get max_q")
+
             DO i = 1,work_pack(jsp)%k_packs(1)%size
                nk = work_pack(jsp)%k_packs(i)%nk
+               PRINT*, 'kpoint= ', nk
                CALL lapw%init(fi%input, fi%noco, nococonv,fi%kpts, fi%atoms, fi%sym, nk, fi%cell)
                CALL hsfock(fi, work_pack(jsp)%k_packs(i), mpdata, lapw, jsp, hybdat, eig_irr, &
                            nococonv, stars, results, xcpot, fmpi, vx_tmp(nk, jsp))
                if(work_pack(jsp)%k_packs(i)%submpi%root()) vx_loc(nk, jsp) = fmpi%irank
             END DO
-   
+
+#ifdef CPP_MPI
+            CALL timestart("balancing MPI_Barriers")
+            DO WHILE (hybdat%max_q > 0)
+               call MPI_Barrier(MPI_COMM_WORLD, ierr)
+               hybdat%max_q = hybdat%max_q - 1
+            END DO
+            CALL timestop("balancing MPI_Barriers")
+#endif
+
             call work_pack(jsp)%free()
          END DO
 #ifdef CPP_MPI
@@ -202,8 +230,11 @@ CONTAINS
 #endif
 
       ENDIF
+
+#ifdef CPP_MPI
 #ifdef CPP_PROG_THREAD
       if(fmpi%l_mpi_multithreaded) call stop_prog_thread(threadId)
+#endif
 #endif
       CALL timestop("hybrid code")
    CONTAINS

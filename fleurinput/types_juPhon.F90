@@ -23,9 +23,23 @@ MODULE m_types_juPhon
       REAL    :: kgqmax    = -1.0    ! Alternative maximum for |k+G+q|
       REAL    :: gqmax     = -1.0    ! Alternative maximum for |G+q|
       REAL    :: eps_pert  = 0.00001 ! Convergence criterion
-      REAL    :: eDiffcut  = 1e-12   ! Cutoff for energy differences
+      !REAL    :: eDiffcut  = 1e-12   ! Cutoff for energy differences
+      !REAL    :: eDiffcut  = 1e-3   ! Cutoff for energy differences
+      REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
       REAL    :: qpt_ph(3)           ! Debug q
+
+      LOGICAL :: e1term = .TRUE.     ! Calculate the eigenenergy response
+      LOGICAL :: f1term = .TRUE.     ! Calculate the occupation number response
+      LOGICAL :: l_intp = .FALSE.    ! Interpolate the q-set onto another one
+      LOGICAL :: l_band = .FALSE.    ! Interpolate the q-set to a bandstructure
+      LOGICAL :: l_dos  = .FALSE.     ! Calculate the phonon density of states
+      LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
+      INTEGER :: startq = 1          ! Start the q-loop at a specific point
+      INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
+                                     ! 1: Reads q from fullsym_* input files
+
+      REAL, ALLOCATABLE :: qvec(:,:)
 
       INTEGER :: singleQpt       = 1
 
@@ -121,7 +135,16 @@ CONTAINS
       CALL mpi_bc(this%l_potout, rank, mpi_comm)
       CALL mpi_bc(this%l_eigout, rank, mpi_comm)
       CALL mpi_bc(this%l_dfpt, rank, mpi_comm)
+      CALL mpi_bc(this%e1term, rank, mpi_comm)
+      CALL mpi_bc(this%f1term, rank, mpi_comm)
+      CALL mpi_bc(this%l_intp, rank, mpi_comm)
+      CALL mpi_bc(this%l_band, rank, mpi_comm)
+      CALL mpi_bc(this%l_dos, rank, mpi_comm)
+      CALL mpi_bc(this%l_scf, rank, mpi_comm)
+      CALL mpi_bc(this%startq, rank, mpi_comm)
+      CALL mpi_bc(this%qmode, rank, mpi_comm)
       CALL mpi_bc(this%singleQpt, rank, mpi_comm)
+      CALL mpi_bc(this%qvec, rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_juPhon
 
@@ -234,9 +257,60 @@ CONTAINS
            this%singleQpt  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@singleQpt'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@e1term')
+
+         IF (numberNodes == 1) THEN
+           this%e1term  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@e1term'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@f1term')
+
+         IF (numberNodes == 1) THEN
+           this%f1term  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@f1term'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_intp')
+
+         IF (numberNodes == 1) THEN
+           this%l_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_intp'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_band')
+
+         IF (numberNodes == 1) THEN
+           this%l_band  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_band'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_dos')
+
+         IF (numberNodes == 1) THEN
+           this%l_dos  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_dos'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_scf')
+
+         IF (numberNodes == 1) THEN
+           this%l_scf  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_scf'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@startq')
+
+         IF (numberNodes == 1) THEN
+           this%startq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@startq'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@qmode')
+
+         IF (numberNodes == 1) THEN
+           this%qmode  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qmode'))
+         END IF
+
          this%qpt_ph(1) = 0.0
          this%qpt_ph(2) = 0.0
          this%qpt_ph(3) = 0.0
+
+         allocate(this%qvec(0,0))
+         this%qvec=xml%read_q_list('/fleurInput/output/juPhon/qVectors')
       ENDIF
 
    END SUBROUTINE read_xml_juPhon

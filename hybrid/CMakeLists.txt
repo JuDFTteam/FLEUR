@@ -41,7 +41,6 @@ hybrid/spmm_inv.F90
 hybrid/spmm_noinv.F90
 hybrid/structureconstant.F90
 hybrid/store_load_hybrid.F90
-hybrid/subvxc.F90
 hybrid/symmetrizeh.F90
 hybrid/symm_hf.F90
 hybrid/trafo.F90
@@ -55,3 +54,7 @@ hybrid/wavefproducts_noinv.F90
 hybrid/work_package.F90
 hybrid/wrapper.f90
 )
+if (FLEUR_USE_MPI)
+set(fleur_F90 ${fleur_F90}
+hybrid/progress_thread/fortran_check_mpi.f90)
+endif()

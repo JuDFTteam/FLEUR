@@ -60,6 +60,11 @@ endforeach()
 
 message("HDF5 Library found:${FLEUR_USE_HDF5}")
 
+#By default we always compile hdf5 if not found
+if (NOT DEFINED CLI_FLEUR_USE_HDF5)
+  set(CLI_FLEUR_USE_HDF5 FLEUR_USE_GITVERSION)
+endif()
+
 if (DEFINED CLI_FLEUR_USE_HDF5)
    if (CLI_FLEUR_USE_HDF5)
        if (NOT FLEUR_USE_HDF5)

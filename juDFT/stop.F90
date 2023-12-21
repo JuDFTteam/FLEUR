@@ -38,7 +38,8 @@ MODULE m_juDFT_stop
 #endif
   IMPLICIT NONE
   PRIVATE
-  PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable
+  CHARACTER(len=5),PARAMETER:: name="FLEUR"
+  PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable, juDFT_BUG
 CONTAINS
 
   SUBROUTINE judfT_file_readable(filename,warning)
@@ -51,7 +52,20 @@ CONTAINS
     IF (.not.l_exist) CALL judft_error("File not readable:"//filename,hint="You tried to read a file that is not present",warning=warning)
   END SUBROUTINE judfT_file_readable
 
-  SUBROUTINE juDFT_error(message,calledby,hint,no,warning,file,line)
+  SUBROUTINE juDFT_BUG(message,calledby,hint,no,file,line)
+   IMPLICIT NONE
+   CHARACTER*(*),INTENT(IN)          :: message
+   CHARACTER*(*),OPTIONAL,INTENT(IN) :: calledby,hint
+   INTEGER,OPTIONAL,INTENT(IN)       :: no
+   CHARACTER*(*),OPTIONAL,INTENT(IN) :: file
+   INTEGER,INTENT(IN),OPTIONAL       :: line
+
+   CALL juDFT_error(message,calledby,hint,no,bug = .TRUE.,file=file,line=line)
+  END SUBROUTINE 
+
+  SUBROUTINE juDFT_error(message,calledby,hint,no,warning,bug,file,line)
+
+    USE iso_fortran_env ! for "output_unit"
     USE m_juDFT_internalParams
     USE m_judft_usage
     use m_juDFT_string
@@ -60,7 +74,7 @@ CONTAINS
     CHARACTER*(*),INTENT(IN)          :: message
     CHARACTER*(*),OPTIONAL,INTENT(IN) :: calledby,hint
     INTEGER,OPTIONAL,INTENT(IN)       :: no
-    LOGICAL,OPTIONAL,INTENT(IN)       :: warning
+    LOGICAL,OPTIONAL,INTENT(IN)       :: warning,bug
     CHARACTER*(*),OPTIONAL,INTENT(IN) :: file
     INTEGER,INTENT(IN),OPTIONAL       :: line
 
@@ -85,7 +99,7 @@ CONTAINS
     irank=0
 #endif
     warn = .FALSE.
-    IF (PRESENT(warning)) warn = warning
+    IF (PRESENT(warning).and..not.present(bug)) warn = warning
     IF (warn) THEN
        !check if we stop nevertheless
        IF (judft_was_argument("-warn_only")) THEN
@@ -104,50 +118,57 @@ CONTAINS
 
     IF (first_pe) THEN
        IF (.NOT.warn) THEN
-          WRITE(0,'(a)') "**************juDFT-Error*****************"
+          IF (present(bug)) THEN
+            WRITE(*,'(a)') "**************"//name//"-BUG*****************"
+         ELSE  
+            WRITE(*,'(a)') "**************"//name//"-Error*****************"
+          ENDIF   
        ELSE
-          WRITE(0,'(a)') "************juDFT-Warning*****************"
+          WRITE(*,'(a)') "************"//name//"-Warning*****************"
        ENDIF
-       WRITE(0,"(3a)") "Error message: ",message
+       WRITE(*,"(3a)") "Error message: ",message
        IF (PRESENT(calledby)) THEN
-          WRITE(0,"(3a)") "Error occurred in subroutine: ",calledby
+          WRITE(*,"(3a)") "Error occurred in subroutine: ",calledby
        ENDIF
        IF (PRESENT(hint)) THEN
-          WRITE(0,"(3a)") "Hint: ",hint
+          WRITE(*,"(3a)") "Hint: ",hint
        ENDIF
        IF (PRESENT(no)) THEN
-          WRITE(0,"(1a,i0)") "Error number: ",no
+          WRITE(*,"(1a,i0)") "Error number: ",no
        ENDIF
        IF (PRESENT(file)) THEN
           IF (PRESENT(line)) THEN
-             WRITE(0,"(3a,i0)") "Source: ",file,":",line
+             WRITE(*,"(3a,i0)") "Source: ",file,":",line
           ELSE
-             WRITE(0,"(3a)") "Source: ",file
+             WRITE(*,"(3a)") "Source: ",file
           ENDIF
        ENDIF
+       IF (PRESENT(bug)) THEN
+         write(0,*) "This is considered a BUG in "//name//". Please report it."
+       ENDIF  
 #ifdef CPP_MPI
        IF (l_mpi) THEN
-          WRITE(0,'(a,i0,a,i0)') "Error from PE:",irank,"/",isize
+          WRITE(*,'(a,i0,a,i0)') "Error from PE:",irank,"/",isize
           first_parallel=.TRUE.
           DO i=0,isize-1
              IF (i==irank) CYCLE
              IF (LEN_TRIM(message_list(i))>1)THEN
                 IF (first_parallel) THEN
-                   WRITE(0,'(2a)') "Other PEs with error messages:"
+                   WRITE(*,'(2a)') "Other PEs with error messages:"
                    first_parallel=.FALSE.
                 END IF
-                WRITE(0,'(a,i4,2a)') "  ",i,"-",message_list(i)
+                WRITE(*,'(a,i4,2a)') "  ",i,"-",message_list(i)
              END IF
           END DO
        END IF
 #endif
-       WRITE(0,'(2a)') "*****************************************"
+       WRITE(*,'(2a)') "*****************************************"
 
        IF (.NOT.warn) CALL juDFT_time_lastlocation()
-       IF (callstop.and.warn) WRITE(0,'(a)')"Warnings not ignored. To make the warning nonfatal create a file 'JUDFT_WARN_ONLY' in the working directory or start FLEUR with the -warn_only command line option."
+       IF (callstop.and.warn) WRITE(*,'(a)')"Warnings not ignored. To make the warning nonfatal create a file 'JUDFT_WARN_ONLY' in the working directory or start FLEUR with the -warn_only command line option."
        IF (callstop) THEN
           CALL writetimes()
-          CALL print_memory_info(0,.TRUE.)
+          CALL print_memory_info(output_unit,.TRUE.)
           IF (irank==0) THEN
              !Error on PE0 write info to out and out.xml
              WRITE(juDFT_outUnit,*) "***************ERROR***************"
@@ -187,6 +208,7 @@ CONTAINS
   SUBROUTINE juDFT_END(message, irank, l_endXML)
     ! If irank is present every mpi process has to call this routine.
     ! Otherwise only a single mpi process is allowed to call the routine.
+    USE iso_fortran_env ! for "output_unit"
     USE m_judft_xmlOutput
     USE m_judft_usage
     IMPLICIT NONE
@@ -222,26 +244,27 @@ CONTAINS
     endif
 
     IF(is_root) THEN
-       WRITE(0,*)
-       WRITE(0,*) "******************************************************"
-       WRITE(0,*) "Run finished successfully"
-       WRITE(0,*) "Stop message:"
-       WRITE(0,*) "  ",message
-       WRITE(0,*) "******************************************************"
-       WRITE(0,*) "If you publish work with contributions from FLEUR"
-       WRITE(0,*) "calculations, please cite:"
-       WRITE(0,*) ""
-       WRITE(0,*) "  - The FLEUR project: https://www.flapw.de"
-       WRITE(0,*) ""
-       WRITE(0,*) "Please also consult on the website:"
-       WRITE(0,*) "  User Guide -> Reference -> References"
-       WRITE(0,*) "for more information on relevant papers and an example"
-       WRITE(0,*) "Bibtex entry."
-       WRITE(0,*) "******************************************************"
-       call flush(0)
+       WRITE(*,*)
+       WRITE(*,*) "********************************************************************"
+       WRITE(*,*) "Run finished successfully"
+       WRITE(*,*) "Stop message:"
+       WRITE(*,*) "  ",message
+       WRITE(*,*) "********************************************************************"
+       WRITE(*,*) "If you publish work with contributions from FLEUR calculations,"
+       WRITE(*,*) "please cite:"
+       WRITE(*,*) ""
+       WRITE(*,*) "  - The FLEUR project: https://www.flapw.de"
+       WRITE(*,*) ""
+       WRITE(*,*) "  - D. Wortmann et al., FLEUR, Zenodo, DOI: 10.5281/zenodo.7576163"
+       WRITE(*,*) ""
+       WRITE(*,*) "Please also consult on the website"
+       WRITE(*,*) "  User Guide -> Reference -> References"
+       WRITE(*,*) "for more information on relevant papers and example Bibtex entries."
+       WRITE(*,*) "********************************************************************"
+       FLUSH(output_unit)
     ENDIF
     CALL writetimes()
-    CALL print_memory_info(0,.true.)
+    CALL print_memory_info(output_unit,.true.)
     CALL send_usage_data()
 #ifdef CPP_MPI
     IF (l_mpi) THEN
@@ -255,9 +278,9 @@ CONTAINS
     ENDIF
 #endif
     if(is_root) then
-       STOP 'OK'
+       STOP 0
     else
-       STOP
+       STOP 0
     endif
   END SUBROUTINE juDFT_END
 
@@ -276,7 +299,7 @@ CONTAINS
     INTEGER :: ierr
     CALL mpi_initialized(l_mpi,ierr)
 #endif
-    error = 0
+    error = 1
 
     IF(PRESENT(errorCode)) THEN
        error = errorCode
@@ -298,17 +321,20 @@ CONTAINS
 #if defined(CPP_MPI)
     IF (l_mpi) THEN
        IF(error.EQ.0) THEN
-          WRITE(0,*) ""
-          WRITE(0,*) "Terminating all MPI processes."
-          WRITE(0,*) "Note: This is a normal procedure."
-          WRITE(0,*) "      Error messages in the following lines can be ignored."
-          WRITE(0,*) ""
+          WRITE(*,*) ""
+          WRITE(*,*) "Terminating all MPI processes."
+          WRITE(*,*) "Note: This is a normal procedure."
+          WRITE(*,*) "      Error messages in the following lines can be ignored."
+          WRITE(*,*) ""
        END IF
        CALL MPI_ERRHANDLER_SET(MPI_COMM_WORLD,MPI_ERRORS_RETURN,ierr)
        CALL MPI_ABORT(MPI_COMM_WORLD,error,ierr)
     ENDIF
 #endif
-    STOP 'juDFT-STOPPED'
+    IF (error.EQ.0) THEN
+       STOP 0
+    END IF
+    STOP 1
   END SUBROUTINE juDFT_stop
 
 

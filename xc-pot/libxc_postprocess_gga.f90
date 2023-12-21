@@ -84,8 +84,8 @@ CONTAINS
       REAL,INTENT(INOUT)          :: v_xc(:,:)
       TYPE(t_gradients),INTENT(IN):: grad
 
-      COMPLEX,ALLOCATABLE:: vsigma_xy(:,:,:,:)
-      REAL,ALLOCATABLE:: vsigma(:,:), vsigma_z(:,:,:), rho_dummy(:,:),v_xc2(:,:)
+      COMPLEX,ALLOCATABLE:: vsigma_new(:,:,:,:)
+      REAL,ALLOCATABLE:: vsigma(:,:), rho_dummy(:,:),v_xc2(:,:)
       TYPE(t_gradients)::grad_vsigma
       INTEGER :: nsp,n_sigma,ifftd2
 
@@ -95,15 +95,12 @@ CONTAINS
       n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !See in _mt routine
       ALLOCATE(rho_dummy(size(v_xc,1),n_sigma))
       ALLOCATE(v_xc2,mold=v_xc)
-      ALLOCATE(vsigma_xy(vacuum%nmzxy,stars%ng2-1,vacuum%nvac,n_sigma),&
-               vsigma_z(max(vacuum%nmzxy,vacuum%nmz),vacuum%nvac,n_sigma),vsigma(nsp,n_sigma))
-      vsigma_z=0.0
-      vsigma_xy=CMPLX(0.0,0.0)
+      ALLOCATE(vsigma_new(vacuum%nmz,stars%ng2,vacuum%nvac,n_sigma))
       v_xc2=v_xc
       vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
-      CALL vac_from_grid(stars,vacuum,v_xc2,ifftd2,vsigma_z,vsigma_xy)
+      CALL vac_from_grid(stars,vacuum,v_xc2,ifftd2,vsigma_new)
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma),grad_vsigma%sigma(n_sigma,nsp))
-      CALL vac_to_grid(xcpot%needs_grad(),ifftd2,n_sigma,vacuum,.FALSE.,cell,vsigma_xy,vsigma_z,stars,rho_dummy,grad_vsigma)
+      CALL vac_to_grid(xcpot%needs_grad(),ifftd2,n_sigma,vacuum,.FALSE.,cell,vsigma_new,stars,rho_dummy,grad_vsigma)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_vac

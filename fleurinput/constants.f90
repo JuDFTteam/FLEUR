@@ -33,9 +33,9 @@ MODULE m_constants
   REAL,             PARAMETER :: bohr_to_angstrom_const=0.529177210903 ! value from https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
                                                                        ! 0.529177210903(80)
   REAL,             PARAMETER :: eVac0Default_const = -0.25
-  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 37'
-  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 6.2          (www.max-centre.eu)'
-  CHARACTER(len=4), PARAMETER :: inputFileVersion_const = '0.37'
+  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 38'
+  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 7.0          (www.max-centre.eu)'
+  CHARACTER(len=4), PARAMETER :: inputFileVersion_const = '0.38'
   ! outputFileVersion_const is defined in juDFT/xmlOutput.f90
   ! For version number update also update version numbers in files io/xml/FleurInputSchema.xsd, io/xml/FleurOutputSchema.xsd, fleurInput/types_xml, and update the files
   ! io/xml/inputSchema.h.backup, io/xml/outputSchema.h.backup, dropInputSchema.c, dropOutputSchema.c, inputSchema_old.h, outputSchema_old.h.

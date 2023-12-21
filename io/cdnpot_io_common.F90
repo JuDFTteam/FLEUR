@@ -152,7 +152,7 @@ MODULE m_cdnpot_io_common
 #ifdef CPP_HDF
    SUBROUTINE checkAndWriteMetadataHDF(fileID, input, atoms, cell, vacuum,   stars, latharms, sym,&
                                        currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
-                                       currentStepfunctionIndex,l_storeIndices,l_CheckBroyd)
+                                       currentStepfunctionIndex,l_storeIndices,l_CheckBroyd,l_storeAddMetadata)
       use m_types_atoms
       use m_types_input
       use m_types_cell
@@ -176,6 +176,7 @@ MODULE m_cdnpot_io_common
       INTEGER, INTENT(INOUT)     :: currentStructureIndex,currentStepfunctionIndex
       LOGICAL, INTENT(IN)        :: l_CheckBroyd
       LOGICAL, INTENT(OUT)       :: l_storeIndices
+      LOGICAL, INTENT(IN)        :: l_storeAddMetadata
 
       TYPE(t_stars)        :: starsTemp
       TYPE(t_vacuum)       :: vacuumTemp
@@ -210,7 +211,7 @@ MODULE m_cdnpot_io_common
       IF (currentStarsIndex.EQ.0) THEN
          currentStarsIndex = 1
          l_storeIndices = .TRUE.
-         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,   l_CheckBroyd)
+         CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars, l_CheckBroyd, l_storeAddMetadata)
       ELSE
          CALL peekStarsHDF(fileID, currentStarsIndex, structureIndexTemp)
          l_same = structureIndexTemp.EQ.currentStructureIndex
@@ -221,7 +222,7 @@ MODULE m_cdnpot_io_common
          IF((.NOT.l_same).OR.l_writeAll) THEN
             currentStarsIndex = currentStarsIndex + 1
             l_storeIndices = .TRUE.
-            CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars,   l_CheckBroyd)
+            CALL writeStarsHDF(fileID, currentStarsIndex, currentStructureIndex, stars, l_CheckBroyd, l_storeAddMetadata)
          END IF
       END IF
       IF (currentLatharmsIndex.EQ.0) THEN

@@ -179,17 +179,6 @@ CONTAINS
          
          call timestart("q_loop")
 
-         call timestart("get max_q")
-         max_band_pack = 0 
-         DO jq = 1, size(k_pack%q_packs)
-            max_band_pack = max(max_band_pack, k_pack%q_packs(jq)%submpi%size)
-         enddo
-         hybdat%max_q = size(k_pack%q_packs) * fi%kpts%nkptf  * max_band_pack
-#ifdef CPP_MPI
-         call MPI_Allreduce(MPI_IN_PLACE, hybdat%max_q, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, ierr)
-#endif
-         call timestop("get max_q")
-
          DO jq = 1, size(k_pack%q_packs)
             call timestart("initial setup")
             iq = k_pack%q_packs(jq)%ptr
@@ -288,13 +277,12 @@ CONTAINS
                      !$acc enter data copyin(CPP_cprod_r)
 
                      !$acc parallel loop default(none) collapse(3) private(iband, iob, i)&
-                     !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, psize, wl_iks, phase_vv, ikqpt, ibando)&
+                     !$acc present(r_coul_wavf, hybdat, hybdat%nbands, hybdat%nbasm, psize, wl_iks, ikqpt, ibando)&
                      !$acc present(n_q, nq_idx)
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO iob = 1, psize
                            do i = 1, hybdat%nbasm(iq)
-                              r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1))&
-                                                      * wl_iks(ibando + iob - 1, ikqpt)*conjg(phase_vv(iob, iband))/n_q(nq_idx)                        
+                              r_coul_wavf(i, iob + psize*(iband - 1)) = r_coul_wavf(i, iob + psize*(iband - 1)) * wl_iks(ibando + iob - 1, ikqpt) / n_q(nq_idx)                        
                            enddo
                         enddo
                      enddo
@@ -314,8 +302,7 @@ CONTAINS
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO iob = 1, psize
                            do i = 1, hybdat%nbasm(iq)
-                              c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) &
-                                                         * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
+                              c_coul_wavf(i, iob + psize*(iband - 1))  = c_coul_wavf(i, iob + psize*(iband - 1)) * wl_iks(ibando + iob - 1, ikqpt)/n_q(nq_idx)
                            enddo
                         enddo
                      enddo
@@ -338,9 +325,11 @@ CONTAINS
                   DO iob = 1, psize
                      call timestart("CPP_dgemm")
                      !call blas_matmul(m,n,k,r_coul_wavf(:,iob:),CPP_cprod_r(:, iob:),dot_result_r,op_a="T")
-                     !$acc host_data use_device(r_coul_wavf, CPP_cprod_r, dot_result_r)
-                     call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, CPP_cprod_r(1, iob), ldb, 0.0, dot_result_r , ldc)
-                     !$acc end host_data
+                     ASSOCIATE(prod_data=>CPP_cprod_r) !persuade NVHPC that it knows CPP_CPROD_r
+                        !$acc host_data use_device(r_coul_wavf, prod_data, dot_result_r)
+                        call CPP_dgemm("T", "N", m, n, k, 1.0, r_coul_wavf(1, iob), lda, prod_data(1, iob), ldb, 0.0, dot_result_r , ldc)
+                        !$acc end host_data
+                     end ASSOCIATE   
                      !$acc wait
                      call timestop("CPP_dgemm")
 
@@ -348,7 +337,7 @@ CONTAINS
                      DO iband = 1, hybdat%nbands(ik,jsp)
                         DO n2 = 1, nsest(iband)
                            nn2 = indx_sest(n2, iband)
-                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*dot_result_r(iband, nn2)
+                           exch_vv(nn2, iband) = exch_vv(nn2, iband) + phase_vv(iob, nn2)*conjg(phase_vv(iob, iband))*dot_result_r(iband, nn2)
                         enddo
                      END DO
                      !$acc end kernels
@@ -359,9 +348,11 @@ CONTAINS
                   !$acc enter data create(dot_result_c) 
                   DO iob = 1, psize
                      call timestart("CPP_zgemm")
-                     !$acc host_data use_device(c_coul_wavf, CPP_cprod_c, dot_result_c)
-                     call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, CPP_cprod_c(1, iob), ldb, cmplx_0, dot_result_c, ldc)
-                     !$acc end host_data
+                     ASSOCIATE(prod_data=>CPP_cprod_c) !persuade NVHPC that it knows CPP_CPROD_C
+                        !$acc host_data use_device(c_coul_wavf, prod_data, dot_result_c)
+                        call CPP_zgemm("C", "N", m, n, k, cmplx_1, c_coul_wavf(1, iob), lda, prod_data(1, iob), ldb, cmplx_0, dot_result_c, ldc)
+                        !$acc end host_data
+                     end ASSOCIATE   
                      !$acc wait
                      call timestop("CPP_zgemm")
 
@@ -387,15 +378,6 @@ CONTAINS
          END DO  !jq
       !$acc end data ! exch_vv hybdat, hybdat%nbands, hybdat%nbasm, nsest, indx_sest
       call timestop("q_loop")
-
-#ifdef CPP_MPI
-      call timestart("balanicing MPI_Barriers")
-      do while (hybdat%max_q > 0)
-         call MPI_Barrier(MPI_COMM_WORLD, ierr)
-         hybdat%max_q = hybdat%max_q - 1
-      enddo
-      call timestop("balanicing MPI_Barriers")
-#endif
 
       if(allocated(dot_result_r)) deallocate(dot_result_r)
       if(allocated(dot_result_c)) deallocate(dot_result_c)
@@ -514,7 +496,7 @@ CONTAINS
 
       IF (mat_ex%l_real) THEN
          IF (any(abs(aimag(exch_vv)) > 1E-08)) then 
-            CALL judft_warn('unusally large imaginary part of exch_vv. Max:' // float2str(maxval(abs(aimag(exch_vv)))), &
+            CALL judft_warn('unusually large imaginary part of exch_vv. Max:' // float2str(maxval(abs(aimag(exch_vv)))), &
                                                                calledby='exchange_val_hf.F90')
          endif
       END IF

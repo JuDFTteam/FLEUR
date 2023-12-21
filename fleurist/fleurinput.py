@@ -29,7 +29,7 @@ def read_inpxml(file):
     import re
     import numpy as np
     mat=tree.find(".//bravaisMatrix")
-    matrix=np.zeros((3,3),np.float)
+    matrix=np.zeros((3,3),float)
     for i in range(3):
         s=mat[i].text
         m=re.search(" *([\.\d]+) +([\.\d]+) +([\.\d]+)",s)

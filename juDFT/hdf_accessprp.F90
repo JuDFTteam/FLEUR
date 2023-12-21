@@ -132,7 +132,7 @@ module m_hdf_accessprp
         ENDIF
      ENDIF
 #endif
-        write(0,*) "Driver name unknown:",driver
+        write(*,*) "Driver name unknown:",driver
         call judft_error("Unknown driver",calledby="gf_io2dmat")
       ENDDO readloop
 100   close(999)

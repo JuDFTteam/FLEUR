@@ -20,4 +20,17 @@ else()
    message("Unknown compiler ID: ${CMAKE_Fortran_COMPILER_ID}")
 endif()
 
-string(REPLACE ";" " " CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_PRECISION_OPTION}")
+try_run(PRECISION_RUN_OK PRECISION_COMP_OK  ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_precision.f90 COMPILE_DEFINITIONS ${FLEUR_PRECISION_OPTION} )
+
+if (PRECISION_RUN_OK) 
+   if (${PRECISION_RUN_OK} LESS "1")
+         Message("Double precision found")
+   else()
+         Message("No double precision found")
+   endif()
+else()
+   Message("Double precision message: ${PRECISION_RUN_OK}")
+endif()
+
+#Precision option is added manually for FLEUR targets later on
+#string(REPLACE ";" " " CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_PRECISION_OPTION}")

@@ -133,7 +133,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
      !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-dtheta,delta_den)
 
      call fsm%alloc()
-     call fsm%from_density(delta_den)
+     call fsm%from_density(delta_den,vacuum%nmzxyd)
 
    END SUBROUTINE precond_noco_anglerotate
 
@@ -174,7 +174,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
      CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,phi,zeros,delta_den)
 
      call fsm%alloc()
-     call fsm%from_density(delta_den)
+     call fsm%from_density(delta_den,vacuum%nmzxyd)
 
 
    END SUBROUTINE precond_noco_densitymatrix
@@ -212,14 +212,15 @@ SUBROUTINE Gimmeangles(Input,Atoms,Noco,Vacuum,Sphhar,Stars,Den,Phitemp,Thetatem
   type(t_nococonv):: nococonv
   call nococonv%avg_moments(den,atoms,moments,thetatemp,phitemp)
    !!CALL magnMomFromDen(input,atoms,noco,den,moments,thetaTemp,phiTemp)
-   !phiTemp(:)=(-1)*phiTemp(:)
+   phiTemp(:)=(-1)*phiTemp(:)
+   thetaTemp(:)=(-1)*thetaTemp(:)
 
 END SUBROUTINE gimmeAngles
 
 !Rotates from global frame into current local frame
 SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
         ,sym ,cell,noco,nococonv,input,atoms,l_adjust,den,l_update_nococonv)
-
+   use m_constants
    TYPE(t_mpi),INTENT(IN)                :: fmpi
    TYPE(t_input), INTENT(IN)             :: input
    TYPE(t_atoms), INTENT(IN)             :: atoms
@@ -245,6 +246,11 @@ SUBROUTINE toLocalSpinFrame(fmpi,vacuum,sphhar,stars&
      if (l_adjust) then
        !if (.not.allocated(nococonv%alphPrev)) allocate(nococonv%alphprev(atoms%ntype),nococonv%betaprev(atoms%ntype))
        call Gimmeangles(input,atoms,noco,vacuum,sphhar,stars,den,nococonv%alphPrev,nococonv%betaPrev)
+       write(oUnit,*) "Current magnetization angles"
+       DO n=1,atoms%ntype
+          write(oUnit,*) n,nococonv%alphPrev(n),nococonv%betaprev(n)
+       ENDDO   
+
      endif
      !Now try to minimize difference to previous angles
      !DO n=1,atoms%ntype

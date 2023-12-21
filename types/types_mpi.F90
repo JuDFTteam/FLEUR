@@ -24,6 +24,9 @@ MODULE m_types_mpi
       !Communicator for diagonalization
       INTEGER :: diag_sub_comm
       LOGICAL :: pe_diag=.true.
+      !If the k-point loop is not balanced this is needed
+      INTEGER :: max_length_k_list
+      
    CONTAINS
       procedure :: set_errhandler    => t_mpi_set_errhandler
       procedure :: is_root => mpi_is_root

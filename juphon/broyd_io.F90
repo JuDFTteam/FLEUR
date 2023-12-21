@@ -5,7 +5,7 @@ USE m_types_hybdat
 !USE m_cdn_io
 
 IMPLICIT NONE
-
+!! test !!
 CONTAINS
 
 SUBROUTINE readLastIterInAndDiffDen(hybdat,vecLen,nextIter,alpha,inDenVec,diffDenVec, idir, iqpt, iDatom)

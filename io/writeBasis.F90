@@ -104,6 +104,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 !     INTEGER           :: fakeLogical
 !     REAL              :: eFermiPrev
 !     LOGICAL           :: l_error
+      LOGICAL           :: l_real
 
       INTEGER           :: atomicNumbers(atoms%nat),ngopr_temp(atoms%nat)
       INTEGER           :: equivAtomsGroup(atoms%nat)
@@ -119,11 +120,13 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
       complex,parameter :: img=(0.,1.)
       REAL              :: bk(3)
 
-      LOGICAL l_real, link_exists
+      LOGICAL link_exists
       INTEGER jsp,nk,l,itype
       INTEGER numbands, nbasfcn, ndbands !ndbands number of bands without highest (degenerate)
 
     !WRITE(5000,*) 'writeBasis entry'
+
+    l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco).AND.atoms%n_hia==0
 
     CALL force%init1(input,atoms)
 
@@ -163,7 +166,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
       CALL io_write_attint0(generalGroupID,'jspins',input%jspins)
       CALL io_write_attlog0(generalGroupID,'invs',sym%invs)
       CALL io_write_attlog0(generalGroupID,'l_soc',noco%l_soc)
-      CALL io_write_attlog0(generalGroupID,'l_real',input%l_real)
+      CALL io_write_attlog0(generalGroupID,'l_real',l_real)
       CALL io_write_attreal0(generalGroupID,'rkmax',input%rkmax)
       CALL h5gclose_f(generalGroupID, hdfError)
 

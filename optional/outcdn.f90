@@ -87,16 +87,16 @@ CONTAINS
             ! We count 0 as point 1.
             jp3 = jp3 + 1
             IF (jp3.LT.vacuum%nmz) THEN
-               xdnout = potDen%vacz(jp3,ivac,jsp) + &
-                        delta*(potDen%vacz(jp3+1,ivac,jsp) - &
-                        potDen%vacz(jp3,ivac,jsp))
+               xdnout = REAL(potDen%vac(jp3,1,ivac,jsp)) + &
+                        delta*(REAL(potDen%vac(jp3+1,1,ivac,jsp)) - &
+                        REAL(potDen%vac(jp3,1,ivac,jsp)))
                IF (jp3.LT.vacuum%nmzxy) THEN
                   xx1 = 0.
                   xx2 = 0.
                   DO  k = 2,stars%ng2
-                     xx1 = xx1 + REAL(potDen%vacxy(jp3,k-1,ivac,jsp)*sf2(k))* &
+                     xx1 = xx1 + REAL(potDen%vac(jp3,k,ivac,jsp)*sf2(k))* &
                            stars%nstr2(k)
-                     xx2 = xx2 + REAL(potDen%vacxy(jp3+1,k-1,ivac,jsp)*sf2(k))* &
+                     xx2 = xx2 + REAL(potDen%vac(jp3+1,k,ivac,jsp)*sf2(k))* &
                            stars%nstr2(k)
                   ENDDO
                   xdnout = xdnout + xx1 + delta* (xx2-xx1)

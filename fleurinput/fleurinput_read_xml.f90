@@ -94,7 +94,7 @@ CONTAINS
           ALLOCATE(kptsArray(numNodes))
        END IF
        DO iNode = 1, numNodes
-          CALL kptsArray(iNode)%read_xml_kptsByIndex(xml,iNode)
+          CALL kptsArray(iNode)%read_xml_kptsByIndex(filename_add,xml,iNode)
        END DO
     END IF
 

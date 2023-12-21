@@ -15,13 +15,14 @@ MODULE m_dosef
 
    CONTAINS
 
-   SUBROUTINE dosef(ei,nemax,jspins,kpts,sfac,eig)
+   SUBROUTINE dosef(ei,nemax,jspins,kpts,sfac,eig,l_output)
 
       INTEGER,       INTENT(IN) :: jspins
       TYPE(t_kpts),  INTENT(IN) :: kpts
       REAL,          INTENT(IN) :: ei,sfac
       INTEGER,       INTENT(IN) :: nemax(:)
       REAL,          INTENT(IN) :: eig(:,:,:) !(neig,nkpt,jspins)
+      LOGICAL,INTENT(IN) :: l_output
 
       REAL     :: e1,e2,e21,e3,e31,e32,s
       INTEGER  :: iBand,jspin,k1,k2,k3,itria,neig
@@ -60,9 +61,11 @@ MODULE m_dosef
          ENDDO
          !gb  s = (2./jspins)*s
          s = sfac * s
-         WRITE (oUnit,FMT=8000) ei,jspin,s
-8000     FORMAT (/,10x,'density of states at',f12.6,&
-                 ' har for spin',i2,'=',e20.8,' states/har')
+         if (l_output) then
+            WRITE (oUnit,FMT=8000) ei,jspin,s
+8000        FORMAT (/,10x,'density of states at',f12.6,&
+                    ' har for spin',i2,'=',e20.8,' states/har')
+         end if
       ENDDO
 
    END SUBROUTINE dosef

@@ -23,7 +23,7 @@ module m_mpmom
 contains
 
   subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm,l_coreCharge,&
-                  & rhoimag, stars2, iDtype, iDir, rho0, qpw0 )
+                  & rhoimag, stars2, iDtype, iDir, rho0, qpw0, iDir2, mat2ord )
 
     use m_types
     USE m_constants
@@ -47,6 +47,8 @@ contains
     INTEGER, OPTIONAL, INTENT(IN)       :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     COMPLEX, OPTIONAL, INTENT(IN)       :: qpw0(:)
     TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
+    INTEGER, OPTIONAL, INTENT(IN)       :: iDir2
+    COMPLEX, OPTIONAL, INTENT(IN)       :: mat2ord(5,3,3)
 
     integer                       :: j, jm, lh, mb, mem, mems, n, nd, l, nat, m
     complex                       :: qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
@@ -63,19 +65,21 @@ contains
 !      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
       IF (.NOT.l_dfptvgen) THEN
           call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
-      ELSE
+      ELSE IF (.NOT.PRESENT(iDir2)) THEN
           ! qlmo for the real part of rho1:
           call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge=.FALSE.)
           ! qlmo for the imaginary part of rho1 and the perturbation of vExt in the displaced atom:
           call mt_moments( input, atoms, sym,sphhar, rhoimag(:,:,:), potdenType,qlmo,l_coreCharge=.TRUE.,l_rhoimag=.TRUE.,iDtype=iDtype,iDir=iDir)
           CALL dfpt_mt_moments_SF(atoms, sym, sphhar, iDtype, iDir, rho0(:,:,:), qlmo)
+      ELSE
+          call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge=.TRUE.,l_rhoimag=.FALSE.,iDtype=iDtype,iDir=iDir,iDir2=iDir2,mat2ord=mat2ord)
       END IF
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
     call pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw(:), potdenType, qlmp , l_dfptvgen)
 
-    IF (l_dfptvgen) THEN
+    IF (l_dfptvgen.AND..NOT.PRESENT(iDir2)) THEN
       CALL dfpt_pw_moments_SF( fmpi, stars2, atoms, cell, sym, iDtype, iDir, qpw0(:), qlmp_SF )
       qlmp = qlmp + qlmp_SF
     END IF
@@ -106,7 +110,7 @@ contains
 
 
 !  subroutine mt_moments( input, atoms, sphhar, rho, potdenType, qlmo )
-  subroutine mt_moments( input, atoms, sym,sphhar, rho, potdenType,qlmo,l_coreCharge,l_rhoimag,iDtype,iDir)
+  subroutine mt_moments( input, atoms, sym,sphhar, rho, potdenType,qlmo,l_coreCharge,l_rhoimag,iDtype,iDir,iDir2,mat2ord)
     ! multipole moments of original charge density
     ! see (A15) (Coulomb case) or (A17) (Yukawa case)
 
@@ -127,6 +131,8 @@ contains
     complex,        intent(inout)     :: qlmo(-atoms%lmaxd:,0:,:)
     LOGICAL, OPTIONAL, INTENT(IN)     :: l_coreCharge,l_rhoimag
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir ! DFPT: Type and direction of displaced atom
+    INTEGER, OPTIONAL, INTENT(IN)     :: iDir2
+    COMPLEX, OPTIONAL, INTENT(IN)     :: mat2ord(5,3,3)
 
     integer                           :: n, ns, jm, nl, l, j, mb, m, nat, i, imax, lmax
     real                              :: fint
@@ -185,12 +191,15 @@ contains
       if (l_subtractCoreCharge) then
         IF (.NOT.l_dfptvgen) THEN
             qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n) / sfp_const
-        ELSE
+        ELSE IF (.NOT.PRESENT(iDir2)) THEN
             IF ((n.EQ.iDtype)) THEN
                 qlmo(-1:1,1,n) = qlmo(-1:1,1,n) - 3.0 / fpi_const * atoms%zatom(n) * c_im(iDir, :)
             ELSE IF ((0.EQ.iDtype)) THEN
                 qlmo(-1:1,1,n) = qlmo(-1:1,1,n) + 3.0 / fpi_const * atoms%zatom(n) * c_im(iDir, :)
             END IF
+         ELSE
+            !IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n) * (-0.2660214309643778) ! TODO: What the hell is this value???
+            IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) qlmo(-2:2,2,n) = qlmo(-2:2,2,n) - 5.0 / fpi_const * atoms%zatom(n) * mat2ord(:,iDir2,iDir)
         END IF
       end if
       nat = nat + atoms%neq(n)

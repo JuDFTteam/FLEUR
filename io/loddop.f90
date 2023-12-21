@@ -2,7 +2,7 @@
       USE m_juDFT
       CONTAINS
         SUBROUTINE loddop(stars,vacuum,atoms,sphhar,input,sym,nu,&
-                          it,fr,fpw,fz,fzxy)
+                          it,fr,fpw,fvac)
           !     ***********************************************************
           !     reload formatted density or potential   c.l.fu
           !     ***********************************************************
@@ -24,9 +24,8 @@
           INTEGER, INTENT (OUT):: it
           !     ..
           !     .. Array Arguments ..
-          COMPLEX, INTENT (OUT):: fpw(:,:),fzxy(:,:,:,:)!(stars%ng3,input%jspins),fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
+          COMPLEX, INTENT (OUT):: fpw(:,:),fvac(:,:,:,:)!(stars%ng3,input%jspins),fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
           REAL,    INTENT (OUT):: fr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-          REAL,    INTENT (OUT):: fz(:,:,:)!(vacuum%nmzd,2,input%jspins)
           CHARACTER(len=8) :: dop,iop,name(10)
           !     ..
           !     .. Local Scalars ..
@@ -36,7 +35,7 @@
           CHARACTER(len=2) namaux
           !     ..
           !     .. Local Arrays ..
-          REAL, ALLOCATABLE :: fpwr(:,:),fzxyr(:,:,:,:)
+          REAL, ALLOCATABLE :: fpwr(:,:),fvacr(:,:,:,:)
 
           CHARACTER(len=8) space(10)
           !     ..
@@ -47,10 +46,10 @@
           DATA space/10*'        '/
           !     ..
 
-          fr = 0 ; fzxy = 0 ; fr = 0 ; fz = 0
+          fr = 0 ; fpw = 0 ; fvac = 0
 
           IF (sym%invs) ALLOCATE ( fpwr(stars%ng3,SIZE(fpw,2)) )
-          IF (sym%invs2) ALLOCATE ( fzxyr(vacuum%nmzxyd,stars%ng2-1,2,SIZE(fzxy,4)) )
+          IF (sym%invs2) ALLOCATE ( fvacr(vacuum%nmzd,stars%ng2,2,SIZE(fvac,4)) )
 
           name = space
           READ (nu,END=200,ERR=200) name
@@ -112,17 +111,17 @@
                 END IF
              ENDIF
              IF (input%film) THEN
-                IF (jsp<=SIZE(fz,3)) THEN
+                IF (jsp<=SIZE(fvac,4)) THEN
                    DO  ivac = 1,vacuum%nvac
                       READ (nu,END=200,ERR=200) ivdummy
                       READ (nu,END=200,ERR=200) nmzn,z1n,delzn
-                      READ (nu,END=200,ERR=200) (fz(i,ivac,jsp),i=1,nmzn)
+                      READ (nu,END=200,ERR=200) (fvac(i,1,ivac,jsp),i=1,nmzn)
                       IF (vacuum%nvac.EQ.1) THEN
                          DO i=1,nmzn
-                            fz(i,2,jsp)=fz(i,1,jsp)
+                            fvac(i,1,2,jsp)=fvac(i,1,1,jsp)
                          ENDDO
                       ENDIF
-                      IF (jsp<=SIZE(fzxy,4)) THEN
+                      IF (jsp<=SIZE(fvac,4)) THEN
                          READ (nu,END=200,ERR=200) nq2n,nmzxyn
                          !+gu
                          IF (nq2n.GT.stars%ng2) THEN
@@ -133,24 +132,27 @@
                             n_diff = 0
                          ENDIF
                          !-gu
+                         !IF (sym%invs2) THEN
+                         !   READ (nu,END=200,ERR=200) (fvacr(j,1,ivac,jsp),j=1,nmzn)
+                         !   fvac(:nmzn,1,ivac,jsp) = CMPLX(fvacr(:nmzn,1,ivac,jsp),0.)
+                         !ELSE
+                         !   READ (nu,END=200,ERR=200) (fvac(j,1,ivac,jsp),j=1,nmzn)
+                         !END IF
                          DO  k = 2,nq2n
                             IF (sym%invs2) THEN
-                               READ (nu,END=200,ERR=200) &
-                                    &                              (fzxyr(j,k-1,ivac,jsp),j=1,nmzxyn)
-                               fzxy(:nmzxyn,k-1,ivac,jsp) = CMPLX(fzxyr(:nmzxyn,k-1,ivac,&
-                                    &                                         jsp),0.)
+                               READ (nu,END=200,ERR=200) (fvacr(j,k,ivac,jsp),j=1,nmzxyn)
+                               fvac(:nmzxyn,k,ivac,jsp) = CMPLX(fvacr(:nmzxyn,k,ivac,jsp),0.)
                             ELSE
-                               READ (nu,END=200,ERR=200)  &
-                                    &                               (fzxy(j,k-1,ivac,jsp),j=1,nmzxyn)
+                               READ (nu,END=200,ERR=200) (fvac(j,k,ivac,jsp),j=1,nmzxyn)
                             END IF
                             IF (vacuum%nvac.EQ.1) THEN
                                IF (sym%invs) THEN
                                   DO j = 1,nmzxyn
-                                     fzxy(j,k-1,2,jsp) = CONJG(fzxy(j,k-1,1,jsp))
+                                     fvac(j,k,2,jsp) = CONJG(fvac(j,k,1,jsp))
                                   ENDDO
                                ELSE
                                   DO j = 1,nmzxyn
-                                     fzxy(j,k-1,2,jsp) = fzxy(j,k-1,1,jsp)
+                                     fvac(j,k,2,jsp) = fvac(j,k,1,jsp)
                                   ENDDO
                                ENDIF
                             ENDIF
@@ -160,8 +162,11 @@
                             READ (nu,END=200,ERR=200) dummy
                          ENDDO
                          !-gu
-                         IF (nq2n.LT.stars%ng2) THEN
-                            fzxy(:nmzxyn,nq2n:,ivac,jsp) = (0.,0.)
+                         !IF (nq2n.LT.stars%ng2) THEN
+                         !   fzxy(:nmzxyn,nq2n:,ivac,jsp) = (0.,0.)
+                         !END IF
+                         IF (nq2n+1.LT.stars%ng2) THEN ! TODO: AN, TB - Is this correct???
+                            fvac(:nmzn,nq2n+1:,ivac,jsp) = (0.,0.)
                          END IF
                       ENDIF
                    ENDDO
@@ -170,7 +175,7 @@
           ENDDO
           !
           IF (sym%invs) DEALLOCATE (fpwr)
-          IF (sym%invs2) DEALLOCATE ( fzxyr )
+          IF (sym%invs2) DEALLOCATE ( fvacr )
           RETURN
 
 200       WRITE (oUnit,*) 'error reading dop nr.',nu

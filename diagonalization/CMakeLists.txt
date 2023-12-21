@@ -3,6 +3,7 @@ set(fleur_F77 ${fleur_F77}
 set(fleur_F90 ${fleur_F90}
 diagonalization/eigen_diag.F90
 diagonalization/lapack_diag.F90
+diagonalization/lapack_singlePrec_diag.F90
 diagonalization/magma.F90
 diagonalization/scalapack.F90
 diagonalization/chase_diag.F90
@@ -11,7 +12,8 @@ diagonalization/cusolver_diag.F90
 diagonalization/elemental.F90
 diagonalization/available_solvers.F90
 diagonalization/writeout.F90
-diagonalization/elpa_20180525_onenode.F90)
+diagonalization/elpa_20180525_onenode.F90
+diagonalization/elsi.F90)
 if (FLEUR_USE_ELPA_20180525)
  set(fleur_F90 ${fleur_F90} diagonalization/elpa_20180525.F90)
  set(diag_test_files diagonalization/elpa_20180525.F90)
@@ -36,7 +38,6 @@ diagonalization/writeout.F90
 diagonalization/elpa_20180525_onenode.F90
 types/types_mat.F90
 types/types_mpimat.F90
-types/types_gpumat.F90
 types/types_setup.F90
 io/io_matrix.F90
 io/iomatrix_hdf.F90

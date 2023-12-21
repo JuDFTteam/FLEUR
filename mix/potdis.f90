@@ -29,7 +29,7 @@ CONTAINS
     LOGICAL tail
     !     ..
     !     .. Local Arrays ..
-    COMPLEX rhpw(stars%ng3,2,2),rhv1(vacuum%nmzxyd,stars%ng2-1,2,2,2)
+    COMPLEX rhpw(stars%ng3,2,2),rhv1(vacuum%nmzxyd,stars%ng2-1,2,2,2),rhv2(vacuum%nmzd,stars%ng2,2,2,2)
     REAL rhsp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,2,2),rhv0(vacuum%nmzd,2,2,2)
     REAL dis(2),disz(vacuum%nmzd),rh(atoms%jmtd)
     REAL af3((2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1),input%jspins),&
@@ -53,7 +53,7 @@ CONTAINS
     REWIND 9
     DO  io = 1,2
        CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
-            9, iter,rhsp(:,0:,:,:,io),rhpw(:,:,io), rhv0(:,:,:,io),rhv1(:,:,:,:,io))
+            9, iter,rhsp(:,0:,:,:,io),rhpw(:,:,io), rhv2(:,:,:,:,io))
     ENDDO
     CLOSE (9)
     IF (input%jspins.EQ.1) THEN

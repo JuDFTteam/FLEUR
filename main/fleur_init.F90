@@ -11,6 +11,7 @@ MODULE m_fleur_init
 CONTAINS
    SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata, filename_add)
       USE m_types
+      USE m_test_performance
       use m_store_load_hybrid
       USE m_fleurinput_read_xml
       USE m_fleurinput_mpi_bc
@@ -149,7 +150,7 @@ CONTAINS
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, juPhon=fi%juPhon)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
-                                     fi%banddos,   Xcpot, fi%kpts, fi%gfinp)
+                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
@@ -157,11 +158,6 @@ CONTAINS
                              Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%juPhon)
       !Remaining init is done using all PE
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
-      IF (fmpi%irank .EQ. 0) THEN
-         IF(xcpot%is_hybrid().AND.fi%sym%invs) THEN
-            CALL juDFT_warn("Hybrid functionals with inversion symmetric unit cells are disabled at the moment.")
-         END IF
-      END IF
       CALL nococonv%init(fi%noco)
       CALL nococonv%init_ss(fi%noco, fi%atoms)
       !CALL ylmnorm_init(MAX(fi%atoms%lmaxd, 2*fi%hybinp%lexp))
@@ -172,7 +168,7 @@ CONTAINS
       CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum,  fi%sym, fmpi, sphhar, fi%noco)
       CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
-      CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn)
+      CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn, fi%juPhon)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input,   fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
@@ -234,7 +230,10 @@ CONTAINS
       if(fi%hybinp%l_hybrid) call load_hybrid_data(fi, fmpi, hybdat, mpdata)
 
       !new check mode will only run the init-part of FLEUR
-      IF (judft_was_argument("-check")) CALL judft_end("Check-mode done", fmpi%irank)
+      IF (judft_was_argument("-check")) THEN  
+         call test_performance()
+         CALL judft_end("Check-mode done", fmpi%irank)
+      endif   
 #ifdef CPP_MPI
       CALL MPI_BARRIER(fmpi%mpi_comm, ierr(1))
 #endif

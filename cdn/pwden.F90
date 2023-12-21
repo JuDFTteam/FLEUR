@@ -7,7 +7,8 @@
 MODULE m_pwden
 CONTAINS
    SUBROUTINE pwden(stars, kpts, banddos,   input, fmpi, noco, nococonv, cell, atoms, sym, &
-                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, qimag, iDir)
+                    ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, iDir, &
+                    lapwmq,zMat1m)
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       !     In this subroutine the star function expansion coefficients of
       !     the plane wave charge density is determined.
@@ -75,13 +76,15 @@ CONTAINS
       COMPLEX, INTENT(INOUT) ::  f_b8(3, atoms%ntype)
 
       REAL,         OPTIONAL, INTENT(IN) :: q_dfpt(3), we1(:)
-      COMPLEX,      OPTIONAL, INTENT(INOUT) :: qimag(stars%ng3)
       TYPE(t_mat),  OPTIONAL, INTENT(IN) :: zMat1
       TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq
       INTEGER,      OPTIONAL, INTENT(IN) :: iDir
 
+      TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwmq
+      TYPE(t_mat),  OPTIONAL, INTENT(IN) :: zMat1m
+
       ! local variables
-      TYPE(t_fftGrid) :: state, stateB, stateq, stateBq, StateDeriv, ekinGrid, chargeDen, rhomatGrid(4)
+      TYPE(t_fftGrid) :: state, stateB, stateq, stateBq, StateDeriv, ekinGrid, chargeDen, rhomatGrid(4), statemq, stateBmq
       TYPE(t_fftGrid) :: stepFct
       INTEGER nu, iv, ir, istr, i, j
       INTEGER idens, ndens, ispin, iGp, iG, gVec(3), gInd
@@ -89,13 +92,15 @@ CONTAINS
       REAL s, stateRadius, stateFFTRadius, stateFFTExtendedRadius
       COMPLEX x
       REAL, PARAMETER:: tol_3 = 1.0e-3
-      LOGICAL forw, l_dfpt
+      LOGICAL forw, l_dfpt, l_minusq
 
       ! local arrays
       INTEGER, ALLOCATABLE :: stateIndices(:)
       INTEGER, ALLOCATABLE :: stateBIndices(:)
       INTEGER, ALLOCATABLE :: stateqIndices(:)
       INTEGER, ALLOCATABLE :: stateBqIndices(:)
+      INTEGER, ALLOCATABLE :: statemqIndices(:)
+      INTEGER, ALLOCATABLE :: stateBmqIndices(:)
       INTEGER, ALLOCATABLE :: fieldSphereIndices(:)
       REAL wtf(ne), wtf1(ne)
       COMPLEX tempState(lapw%nv(jspin)), starCharges(stars%ng3), z0(lapw%nv(jspin))
@@ -121,6 +126,8 @@ CONTAINS
       CALL timestart("pwden")
 
       l_dfpt = PRESENT(q_dfpt)
+
+      l_minusq = PRESENT(lapwmq)
 
       stateRadius = MAXVAL(ABS(lapw%rk(:,:)))
       stateRadius = stateRadius + SQRT(DOT_PRODUCT(kpts%bk(:,ikpt),kpts%bk(:,ikpt)))
@@ -148,6 +155,10 @@ CONTAINS
          IF (l_dfpt) THEN
             CALL stateq%init(cell,sym,stateFFTExtendedRadius+0.001)
             CALL stateBq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            IF (l_minusq) THEN
+               CALL statemq%init(cell,sym,stateFFTExtendedRadius+0.001)
+               CALL stateBmq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            END IF
          END IF
          DO i = 1, 4
             CALL rhomatGrid(i)%init(cell,sym,stateFFTExtendedRadius+0.001)
@@ -181,9 +192,13 @@ CONTAINS
          CALL state%init(cell,sym,stateFFTExtendedRadius+0.001)
          IF (l_dfpt) THEN
             CALL stateq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            IF (l_minusq) THEN
+               CALL statemq%init(cell,sym,stateFFTExtendedRadius+0.001)
+            END IF
          END IF
          CALL chargeDen%init(cell,sym,stateFFTExtendedRadius+0.001)
          chargeDen%grid(:) = CMPLX(0.0,0.0)
+         ! TODO: Shouldn't there be a starsq here for DFPT?
          CALL chargeDen%fillFieldSphereIndexArray(stars, stateFFTRadius+0.0008, fieldSphereIndices)
          IF (input%l_f) THEN
             CALL stateDeriv%init(cell,sym,stateFFTExtendedRadius+0.001)
@@ -195,63 +210,48 @@ CONTAINS
          IF (l_dfpt) THEN
             ALLOCATE(stateqIndices(lapwq%nv(jspin)))
             CALL stateq%fillStateIndexArray(lapwq,jspin,stateqIndices)
+            IF (l_minusq) THEN
+               ALLOCATE(statemqIndices(lapwmq%nv(jspin)))
+               CALL statemq%fillStateIndexArray(lapwmq,jspin,statemqIndices)
+            END IF
          END IF
       ENDIF
 
       IF (.NOT.l_dfpt) THEN
-      ! g=0 star: calculate the charge for this k-point and spin
-      !           analytically to test the quality of FFT
-      q0 = 0.0
-      q0_11 = 0.0
-      q0_22 = 0.0
-      IF (noco%l_noco) THEN
-         IF (.NOT. zmat%l_real) THEN
-            DO nu = 1, ne
-               norm = dznrm2(lapw%nv(1),zMat%data_c(1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
-               q0_11 = q0_11 + we(nu)*norm*norm
-               norm = dznrm2(lapw%nv(2),zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
-               q0_22 = q0_22 + we(nu)*norm*norm
-            ENDDO
-         ENDIF
-         q0_11 = q0_11/cell%omtil
-         q0_22 = q0_22/cell%omtil
-      ELSE
-         IF (zmat%l_real) THEN
-            DO nu = 1, ne
-               norm = dnrm2(lapw%nv(jspin),zMat%data_r(:, nu),1) ! dnrm2 returns the 2-norm of the vector.
-               q0 = q0 + we(nu)*norm*norm
-            ENDDO
-         ELSE
-            DO nu = 1, ne
-               norm = dznrm2(lapw%nv(jspin),zMat%data_c(:, nu),1) ! dznrm2 returns the 2-norm of the vector.
-               q0 = q0 + we(nu)*norm*norm
-            ENDDO
-         ENDIF
-         q0 = q0/cell%omtil
-      ENDIF
-
-      IF ((noco%l_noco).AND.(ikpt.LE.fmpi%isize)) THEN
-         dos%qis = 0.0
-      END IF
-
-      ELSE IF (.FALSE.) THEN
-         DO iGp = 1, lapw%nv(jspin)
-            DO iG = 1, lapwq%nv(jspin)
-               gVec = lapwq%gvec(:, iG, jspin) - lapw%gvec(:, iGp, jspin)
-               gInd = stars%ig(gVec(1), gVec(2), gVec(3))
-
-               IF (gInd.EQ.0) CYCLE
-
+         ! g=0 star: calculate the charge for this k-point and spin
+         !           analytically to test the quality of FFT
+         q0 = 0.0
+         q0_11 = 0.0
+         q0_22 = 0.0
+         IF (noco%l_noco) THEN
+            IF (.NOT. zmat%l_real) THEN
                DO nu = 1, ne
-                  IF (zmat%l_real) THEN
-                     z0 = CMPLX(1.0,0.0)*zMat%data_r(:lapw%nv(jspin), nu)
-                  ELSE
-                     z0 = zMat%data_c(:lapw%nv(jspin), nu)
-                  END IF
-                  qimag(gInd) = qimag(gInd) + 2*we(nu)*CONJG(z0(iGp))*zMat1%data_c(iG, nu)/cell%omtil
-               END DO
-            END DO
-         END DO
+                  norm = dznrm2(lapw%nv(1),zMat%data_c(1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
+                  q0_11 = q0_11 + we(nu)*norm*norm
+                  norm = dznrm2(lapw%nv(2),zMat%data_c(lapw%nv(1) + atoms%nlotot + 1:, nu),1) ! dznrm2 returns the 2-norm of the vector.
+                  q0_22 = q0_22 + we(nu)*norm*norm
+               ENDDO
+            ENDIF
+            q0_11 = q0_11/cell%omtil
+            q0_22 = q0_22/cell%omtil
+         ELSE
+            IF (zmat%l_real) THEN
+               DO nu = 1, ne
+                  norm = dnrm2(lapw%nv(jspin),zMat%data_r(:, nu),1) ! dnrm2 returns the 2-norm of the vector.
+                  q0 = q0 + we(nu)*norm*norm
+               ENDDO
+            ELSE
+               DO nu = 1, ne
+                  norm = dznrm2(lapw%nv(jspin),zMat%data_c(:, nu),1) ! dznrm2 returns the 2-norm of the vector.
+                  q0 = q0 + we(nu)*norm*norm
+               ENDDO
+            ENDIF
+            q0 = q0/cell%omtil
+         ENDIF
+
+         IF ((noco%l_noco).AND.(ikpt.LE.fmpi%isize)) THEN
+            dos%qis = 0.0
+         END IF
       END IF
 
       wtf(:ne) = we(:ne)/cell%omtil
@@ -339,10 +339,12 @@ CONTAINS
             ENDIF
 
          ELSE
-
             CALL state%putStateOnGrid(lapw, jSpin, zMat, nu)
             IF (l_dfpt) THEN
                CALL stateq%putStateOnGrid(lapwq, jspin, zMat1, nu)
+               IF (l_minusq) THEN
+                  CALL statemq%putStateOnGrid(lapwmq, jspin, zMat1m, nu)
+               END IF
             END IF
 
             forw = .FALSE.
@@ -354,16 +356,29 @@ CONTAINS
             !$acc end data
             IF (l_dfpt) THEN
                CALL fft_interface(3, stateq%dimensions(:), stateq%grid, forw, stateqIndices)
+               IF (l_minusq) THEN
+                  CALL fft_interface(3, statemq%dimensions(:), statemq%grid, forw, statemqIndices)
+               END IF
             END IF
             IF (.NOT.l_dfpt) THEN
                DO ir = 0, chargeDen%gridLength - 1
                   chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
                END DO
             ELSE
-               DO ir = 0, chargeDen%gridLength - 1
-                  chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
-                  IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
-               END DO
+               IF (.NOT.l_minusq) THEN
+                  DO ir = 0, chargeDen%gridLength - 1
+                     chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
+                     !chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(CONJG(state%grid(ir)) * stateq%grid(ir))
+                     IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+                  END DO
+               ELSE
+                  DO ir = 0, chargeDen%gridLength - 1
+                     chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * (CONJG(statemq%grid(ir)) * state%grid(ir) &
+                                                                        + CONJG(state%grid(ir)) * stateq%grid(ir))
+                     !chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * 2 * CONJG(CONJG(state%grid(ir)) * stateq%grid(ir))
+                     IF (norm2(q_dfpt)<1e-8) chargeDen%grid(ir) = chargeDen%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+                  END DO
+               END IF
             END IF
 
             IF (input%l_f) THEN
@@ -519,8 +534,6 @@ CONTAINS
             END IF
          ENDIF
       ENDDO
-
-      IF (PRESENT(qimag)) qimag = cwk
 
       DEALLOCATE (cwk, ecwk)
 

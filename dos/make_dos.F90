@@ -12,7 +12,7 @@ MODULE m_make_dos
   !
 CONTAINS
   SUBROUTINE make_dos(kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,results,eigdos )
+                      sliceplot,noco,sym,cell,results,eigdos,juPhon )
     USE m_types
     USE m_constants
     USE m_cdn_io
@@ -39,18 +39,22 @@ CONTAINS
     TYPE(t_results),INTENT(IN)   :: results
     CLASS(t_eigdos_list),INTENT(IN)   :: eigdos(:)
 
+    TYPE(t_juPhon),OPTIONAL,INTENT(IN) :: juPhon
+
     !    locals
     INTEGER :: ne,ikpt,kspin,j,i,n
     LOGICAL :: l_error
     real    :: eFermiPrev, eFermi
+    logical :: l_dfpt
 #ifdef CPP_HDF
     INTEGER(HID_t):: banddosFile_id
 #else
     INTEGER :: banddosFile_id
 #endif
+    l_dfpt = PRESENT(juPhon)
     CALL readPrevEFermi(eFermiPrev,l_error)
 
-    eFermi = results%ef
+    IF (.NOT.l_dfpt) eFermi = results%ef
 
     IF(banddos%band) THEN
        IF(results%bandgap.GE.8.0*input%tkb*hartree_to_ev_const) THEN

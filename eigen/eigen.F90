@@ -111,7 +111,7 @@ CONTAINS
       !k_selection = [25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
       ALLOCATE(k_selection(1))
       !k_selection = [40,61,453]
-      k_selection = [1000]
+      k_selection = [-1]
 
 
       !kqpts = fi%kpts
@@ -125,7 +125,7 @@ CONTAINS
       ! Modify this from kpts only in DFPT case.
       ALLOCATE(bkpt(3))
       IF (PRESENT(bqpt)) THEN
-          DO nk_i = 1, fi%kpts%nkpt
+          DO nk_i = 1, size(fmpi%k_list)
               !kqpts%bk(:, nk_i) = kqpts%bk(:, nk_i) + bqpt
               nk=fmpi%k_list(nk_i)
               bkpt = fi%kpts%bk(:, nk)
@@ -172,7 +172,7 @@ CONTAINS
             CALL lapw%init(fi%input,fi%noco,nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
+            CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,inDen,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             IF (PRESENT(hmat_out)) THEN
@@ -273,13 +273,20 @@ CONTAINS
 
                 if (l_needs_vectors) then
                   call write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
+                  IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) &
+                     CALL write_eig(hybdat%eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all),n_start=n_size,n_end=n_rank,zMat=zMat)
                 else
                   CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
+                  IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) &
+                     CALL write_eig(hybdat%eig_id, nk,jsp,ne_found,ne_all,eig(:ne_all))
                endif
                eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
-                if (fmpi%pe_diag.and.l_needs_vectors) CALL write_eig(eig_id, nk,jsp,ne_found,&
-                    n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
+                if (fmpi%pe_diag.and.l_needs_vectors) THEN 
+                  CALL write_eig(eig_id, nk,jsp,ne_found,n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
+                  IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) &
+                     CALL write_eig(hybdat%eig_id, nk,jsp,ne_found,n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat)
+                ENDIF
             ENDIF
             neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
@@ -303,6 +310,12 @@ CONTAINS
               deallocate(zMat)
             ENDIF
          END DO  k_loop
+#ifdef CPP_MPI
+         !print *,"Remaining Barriers:",size(fmpi%k_list)+1,fmpi%max_length_k_list
+         DO nk=size(fmpi%k_list)+1,fmpi%max_length_k_list
+            CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+         ENDDO
+#endif            
       END DO ! spin loop ends
 
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
@@ -334,10 +347,6 @@ CONTAINS
          END DO
       END IF
 
-      IF( fi%input%jspins .EQ. 1 .AND. fi%hybinp%l_hybrid ) THEN
-         results%te_hfex%valence = 2*results%te_hfex%valence
-         IF(hybdat%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
-      END IF
       enpara%epara_min = MINVAL(enpara%el0)
       enpara%epara_min = MIN(MINVAL(enpara%ello0),enpara%epara_min)
    END SUBROUTINE eigen

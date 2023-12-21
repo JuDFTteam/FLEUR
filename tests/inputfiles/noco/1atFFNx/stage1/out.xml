@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurOutput fleurOutputVersion="0.37">
+   <programVersion version="fleur 37">
+      <compilationInfo date="2023-08-22T08:50:19" user="wortmann" host="mb-wortmann" flag="-fopenmp -fdefault-real-8 -fdefault-double-8 -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero" link="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk/usr/lib/libxml2.tbd;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.3.sdk/System/Library/Frameworks/Accelerate.framework;-lm;-ldl"/>
+      <gitInfo version="MaX-R6.2-187-g4c61be51d-dirty" branch="develop" lastCommitHash="4c61be51d2709080035ecdae161d118af30c90a3"/>
+      <targetComputerArchitectures>GEN</targetComputerArchitectures>
+      <precision type="DOUBLE"/>
+      <targetStructureClass> </targetStructureClass>
+      <additionalCompilerFlags>CPP_HDF</additionalCompilerFlags>
+   </programVersion>
+   <parallelSetup>
+      <openMP ompThreads="12"/>
+      <mem memoryPerNode="unknown"/>
+   </parallelSetup>
+   <startDateAndTime date="2023/08/23" time="12:05:24" zone="+0200"/>
+   <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
+  <fleurInput fleurInputVersion="0.37">
+     <comment>
+        bcc Fe
+     </comment>
+     <calculationSetup>
+        <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="0"/>
+        <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="10" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+        <coreElectrons ctail="f" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
+        <xcFunctional name="vwn" relativisticCorrections="F"/>
+        <magnetism jspins="2" l_noco="t" swsp="F" lflip="t" l_ss="F" l_J="F" l_onlyMtStDen="F" fixed_moment="0.0">
+           <qss>.0000000000 .0000000000 .0000000000</qss>
+           <mtNocoParams l_mperp="t" l_mtNocoPot="t" l_relaxSQA="f" mix_RelaxWeightOffD="3.0" l_constrained="F" mag_mixing_scheme="0" mix_constr="1.0"/>
+        </magnetism>
+        <soc theta=".00000000" phi=".00000000" l_soc="f" spav="t" off="F" soc66="T"/>
+        <expertModes gw="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
+        <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000" f_level="-1" qfix="0" force_converged="0.00001"/>
+        <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000" l_adjEnpara="F" l_spinoffd="F" l_nonsphDC="F" l_initialGuess="F"/>
+     </calculationSetup>
+     <cell>
+        <bzIntegration valenceElectrons="16.00000000" mode="hist" fermiSmearingEnergy=".00100000" l_bloechl="F">
+           <kPointListSelection listName="default"/>
+           <kPointLists>
+           <kPointList name="default" count="7" type="unspecified">
+              <kPoint weight="     8.0000000000000" label=""> 0.00000000000  0.00000000000  0.00000000000</kPoint>
+             <kPoint weight="     8.0000000000000" label=""> 0.25000000000  0.00000000000  0.00000000000</kPoint>
+              <kPoint weight="     8.0000000000000" label=""> 0.00000000000  0.25000000000  0.00000000000</kPoint>
+              <kPoint weight="     8.0000000000000" label=""> 0.00000000000  0.00000000000  0.2500000000000</kPoint>
+              <kPoint weight="     8.0000000000000" label=""> -.25000000000  0.00000000000  0.00000000000</kPoint>
+              <kPoint weight="     8.0000000000000" label=""> 0.00000000000  -.25000000000  0.00000000000</kPoint>
+              <kPoint weight="     8.0000000000000" label=""> 0.00000000000  0.00000000000  -.2500000000000</kPoint>
+           </kPointList>
+           </kPointLists>
+        </bzIntegration>
+        <symmetryOperations>
+           <symOp>
+              <row-1>1 0 0 .0000000000</row-1>
+              <row-2>0 1 0 .0000000000</row-2>
+              <row-3>0 0 1 .0000000000</row-3>
+           </symOp>
+  
+        </symmetryOperations>
+        <bulkLattice scale="1.0000000000">
+           <bravaisMatrix>
+              <row-1>    8.4159572954     0.0000000000     0.0000000000</row-1>
+              <row-2>    0.0000000000     8.4159572954     0.0000000000</row-2>
+              <row-3>    0.0000000000     0.0000000000     8.4159572954</row-3>
+           </bravaisMatrix>
+        </bulkLattice>
+     </cell>
+     <atomSpecies>
+        <species name="Fe-1" element="Fe" atomicNumber="26">
+           <mtSphere radius="2.29000000" gridPoints="757" logIncrement=".01600000"/>
+           <atomicCutoffs lmax="8" lnonsphr="6"/>
+           <electronConfig flipSpins="F">
+              <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+              <valenceConfig>(3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+              <stateOccupation state="(3d3/2)" spinUp="2.0000000" spinDown="1.0000000"/>
+              <stateOccupation state="(3d5/2)" spinUp="3.0000000" spinDown=".0000000"/>
+           </electronConfig>
+  	 <energyParameters s="4" p="4" d="3" f="4"/>
+           <special socscale="30.0" nonSpinPolBasis="T" lda="F" b_field_mt="0.0" vca_charge="0.0"/>
+           <lo type="SCLO" l="0" n="3" eDeriv="0"/>
+           <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+     </species>
+     </atomSpecies>
+     <atomGroups>
+        <atomGroup species="Fe-1">
+           <relPos label="                   1" wannier="F">.0000000000 .0000000000 .0000000000</relPos>
+           <force calculate="T" relaxXYZ="TTT"/>
+           <nocoParams alpha="Pi*.000" beta="Pi*0.00" l_magn="F" M="0.0"/>
+           <modInitDen flipSpinTheta="Pi*.5" flipSpinPhi="0.0" flipSpinScale="F" magMom="0.0"/>
+        </atomGroup>
+     </atomGroups>
+     <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
+        <checks vchk="F" cdinf="F" disp="F"/>
+        <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1" useOlap="T"/>
+        <plotting iplot="0" polar="F" format="1"/>
+        <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
+        <specialOutput eonly="F" bmt="F" form66="F"/>
+     </output>
+    <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
+  
+  </fleurInput>
+   <!-- END of dump of the inp.xml file -->
+   <numericalParameters>
+      <atomsInCell nat="1" ntype="1" jmtd="757" n_u="0" n_hia="0" n_opc="0"/>
+      <basis nvd="437" lmaxd="8" nlotot="4"/>
+      <density ng3="11633" ng2="0"/>
+      <bands numbands="26"/>
+      <volumes unitCell="596.088261" interstitial="545.785125">
+         <mtVolume atomType="1" mtRadius="2.29000000" mtVolume="50.30313549"/>
+      </volumes>
+      <kPointList weightScale="1.00000000" count="         7">
+         <kPoint weight="0.142857">0.000000            0.000000            0.000000</kPoint>
+         <kPoint weight="0.142857">0.250000            0.000000            0.000000</kPoint>
+         <kPoint weight="0.142857">0.000000            0.250000            0.000000</kPoint>
+         <kPoint weight="0.142857">0.000000            0.000000            0.250000</kPoint>
+         <kPoint weight="0.142857">-0.250000            0.000000            0.000000</kPoint>
+         <kPoint weight="0.142857">0.000000           -0.250000            0.000000</kPoint>
+         <kPoint weight="0.142857">0.000000            0.000000           -0.250000</kPoint>
+      </kPointList>
+   </numericalParameters>
+   <endDateAndTime date="2023/08/23" time="12:05:24" zone="+0200"/>
+</fleurOutput>

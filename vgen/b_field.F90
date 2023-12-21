@@ -39,7 +39,7 @@ CONTAINS
     ENDDO
 
     !Vacuum
-    vTot%vacz(:,:,1)=vTot%vacz(:,:,1)-field%b_field/2.
-    vTot%vacz(:,:,2)=vTot%vacz(:,:,2)+field%b_field/2.
+    vTot%vac(:,1,:,1)=vTot%vac(:,1,:,1)-field%b_field/2.
+    vTot%vac(:,1,:,2)=vTot%vac(:,1,:,2)+field%b_field/2.
   END SUBROUTINE bfield
 END MODULE m_bfield

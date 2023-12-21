@@ -13,18 +13,18 @@ MODULE m_vgen_xcpot
 CONTAINS
 
    SUBROUTINE vgen_xcpot(hybdat, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
-                          cell,   sliceplot, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results, &
+                          cell, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results, &
                           den1Rot, den1Rotimag, dfptvTotimag, starsq)
-
-      !     ***********************************************************
-      !     FLAPW potential generator                           *
-      !     ***********************************************************
-      !     calculates the density-potential integrals needed for the
-      !     total energy
-      !     TE_VCOUL  :   charge density-coulomb potential integral
-      !     TE_VEFF:   charge density-effective potential integral
-      !     TE_EXC :   charge density-ex-corr.energy density integral
-      !     ***********************************************************
+      !! FLAPW potential generator                           
+      !! Calculates the density-potential integrals needed for the total energy
+      !! TE_VCOUL:   charge density-coulomb potential integral
+      !! TE_VEFF :   charge density-effective potential integral
+      !! TE_EXC  :   charge density-ex-corr.energy density integral
+      !!
+      !! DFPT case: Calculate Vxc1 instead of Vxc. For this we need fxc, the xc Kernel.
+      !! The calculation changes dramatically, so we enter different subroutines for it.
+      !! TODO: They only work for LDA right now. GGA requires some mathematical considerations
+      !! and will have to use grad_rho1 as input as well.
 
       USE m_types
       USE m_constants
@@ -39,38 +39,36 @@ CONTAINS
       USE m_metagga
       USE m_dfpt_vmt_xc
       USE m_dfpt_vis_xc
+      USE m_dfpt_vvac_xc
 
       IMPLICIT NONE
 
-      CLASS(t_xcpot), INTENT(IN)           :: xcpot
-      TYPE(t_hybdat), INTENT(IN)              :: hybdat
-      TYPE(t_mpi), INTENT(IN)              :: fmpi
+      CLASS(t_xcpot), INTENT(IN)                 :: xcpot
+      TYPE(t_hybdat), INTENT(IN)                 :: hybdat
+      TYPE(t_mpi),    INTENT(IN)                 :: fmpi
 
-
-      TYPE(t_sliceplot), INTENT(IN)              :: sliceplot
-      TYPE(t_input), INTENT(IN)              :: input
-      TYPE(t_vacuum), INTENT(IN)              :: vacuum
-      TYPE(t_noco), INTENT(IN)              :: noco
-      TYPE(t_sym), INTENT(IN)              :: sym
-      TYPE(t_stars), INTENT(IN)              :: stars
-      TYPE(t_cell), INTENT(IN)              :: cell
-      TYPE(t_sphhar), INTENT(IN)              :: sphhar
-      TYPE(t_atoms), INTENT(IN)              :: atoms
-      TYPE(t_potden), INTENT(IN)              :: den, denRot, EnergyDen
-      TYPE(t_potden), INTENT(INOUT)           :: vTot, vx, vxc, exc
-      TYPE(t_results), INTENT(INOUT), OPTIONAL :: results
-      TYPE(t_potden), INTENT(IN), OPTIONAL     :: den1Rot, den1Rotimag
-      TYPE(t_potden), INTENT(INOUT), OPTIONAL  :: dfptvTotimag
-      TYPE(t_stars), INTENT(IN), OPTIONAL      :: starsq
+      TYPE(t_input),     INTENT(IN)              :: input
+      TYPE(t_vacuum),    INTENT(IN)              :: vacuum
+      TYPE(t_noco),      INTENT(IN)              :: noco
+      TYPE(t_sym),       INTENT(IN)              :: sym
+      TYPE(t_stars),     INTENT(IN)              :: stars
+      TYPE(t_cell),      INTENT(IN)              :: cell
+      TYPE(t_sphhar),    INTENT(IN)              :: sphhar
+      TYPE(t_atoms),     INTENT(IN)              :: atoms
+      TYPE(t_potden),    INTENT(IN)              :: den, denRot, EnergyDen
+      TYPE(t_potden),    INTENT(INOUT)           :: vTot, vx, vxc, exc
+      TYPE(t_results),   INTENT(INOUT), OPTIONAL :: results
+      TYPE(t_potden),    INTENT(IN),    OPTIONAL :: den1Rot, den1Rotimag
+      TYPE(t_potden),    INTENT(INOUT), OPTIONAL :: dfptvTotimag
+      TYPE(t_stars),     INTENT(IN),    OPTIONAL :: starsq
 
       ! Local type instances
       TYPE(t_potden)    :: workDen, veff
       Type(t_kinED)     :: kinED
-      REAL, ALLOCATABLE :: tmp_mt(:,:,:), tmp_is(:,:)
       REAL, ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
       REAL, ALLOCATABLE :: tec(:,:), qintc(:,:)
       ! Local Scalars
-      INTEGER :: ifftd, ifftd2, ifftxc3d, ispin, i, iType
+      INTEGER :: ifftd2, ispin, i, iType
       REAL    :: dpdot
       LOGICAL :: l_dfptvgen
 #ifdef CPP_MPI
@@ -100,9 +98,11 @@ CONTAINS
 
             ifftd2 = 9*stars%mx1*stars%mx2
 
-            !IF (.NOT. xcpot%needs_grad()) THEN  ! LDA
-
-            CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc)
+            IF (.NOT. l_dfptvgen) THEN
+               CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc)
+            ELSE
+               CALL dfpt_vvac_xc(ifftd2,  stars,  starsq,  vacuum,  noco,  cell,denRot, den1Rot, xcpot,  input, vTot)
+            END IF  
             CALL timestop("Vxc in vacuum")
          END IF
 

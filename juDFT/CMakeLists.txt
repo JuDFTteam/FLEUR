@@ -92,6 +92,7 @@ endif()
 if (DEFINED JUDFT_COMPILEOPTS )
   target_compile_options(juDFT PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${JUDFT_COMPILEOPTS}>)
 endif()
+target_compile_options(juDFT PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_PRECISION_OPTION}>)
 
 #Set module directories
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/juDFT")

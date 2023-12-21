@@ -179,7 +179,7 @@ MODULE m_rotMMPmat
       IF(.NOT.ALLOCATED(mmpmatOut)) ALLOCATE(mmpmatOut,mold=mmpmat)
       mmpmatOut = mmpmat
 
-      IF(iop==1) RETURN
+      IF(iop==1.or.l==0) RETURN
 
       reciprocalArg = .FALSE.
       IF(PRESENT(reciprocal)) reciprocalArg = reciprocal

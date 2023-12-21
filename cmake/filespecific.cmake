@@ -5,12 +5,18 @@
 #to overwrite previous settings
 
 
+if (CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+   set_source_files_properties(vgen/vgen_coulomb.F90 PROPERTIES COMPILE_FLAGS -O0)
+endif()
+
 if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
    #set_source_files_properties(io/eig66_mpi.F90 PROPERTIES COMPILE_FLAGS -O0)
    #set_source_files_properties(cdn/pwden.F90 PROPERTIES COMPILE_FLAGS -O0)
    #set_source_files_properties(eigen/apws.F90 PROPERTIES COMPILE_FLAGS -O0)
    set_source_files_properties(juDFT/time.F90 PROPERTIES COMPILE_FLAGS -O0)
    set_source_files_properties(io/eig66_mpi.F90 PROPERTIES COMPILE_FLAGS -g0)
+   set_source_files_properties(vgen/mt_tofrom_grid.F90 PROPERTIES COMPILE_FLAGS -O1)
+   set_source_files_properties(vgen/psqpw.F90 PROPERTIES COMPILE_FLAGS -O1)
    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "14.1.0.0")
       set_source_files_properties(vgen/vmtxcg.F90 PROPERTIES COMPILE_FLAGS -no-openmp)
    endif()

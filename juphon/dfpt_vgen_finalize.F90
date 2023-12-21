@@ -13,7 +13,8 @@ MODULE m_dfpt_vgen_finalize
 CONTAINS
 
    SUBROUTINE dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,vTot1,vTot1imag,denRot,den1Rot,den1imRot,starsq,killcont)
-
+      !! Collinear case: put V1Theta+VTheta1 into V1%pw_w together
+      !! Noco case: Correctly rotate back the potential into a 2x2 matrix (TODO)
         USE m_types
         USE m_constants
         USE m_get_int_perturbation

@@ -81,7 +81,7 @@ CONTAINS
       !       instead of triangular construction...
 
       CALL lapwPr%phase_factors(igSpinPr,atoms%taual(:,na),nococonv%qss,cphPr)
-      IF (l_samelapw) THEN
+      IF (l_samelapw.and.igspin==igSpinPr) THEN
          cph = cphPr
       ELSE
          CALL lapw%phase_factors(igSpin,atoms%taual(:,na),nococonv%qss,cph)
@@ -121,7 +121,7 @@ CONTAINS
                IF (l_fullj) THEN
                   lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
                   kp = lapwPr%kvec(nkvec,lo,na)
-                  !$acc loop vector private(fact2,dotp,kp) independent
+                  !$acc loop vector private(fact2,dotp) independent
                   DO k = fmpi%n_rank + 1, lapw%nv(igSpin), fmpi%n_size
                      fact2 = con * fl2p1 * ( &
                            & fjgj%fj(k,l,isp,igSpin)*(alo1(lo) &

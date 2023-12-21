@@ -294,6 +294,7 @@ MODULE m_chkmt
          END IF
       END DO
 
+
       IF (PRESENT(l_gga)) THEN
 !        Sort distances and set MT radii for the atoms
 
@@ -433,7 +434,7 @@ MODULE m_chkmt
                          ((atoms%pos(3,iAtom)-atoms%rmt(i)).LT.-vacuum%dvac/2.)) THEN
                         error=.TRUE.
                         WRITE(oUnit,241) i ,na
-                        IF (PRESENT(overlap)) overlap(0,i)=MAX(atoms%pos(3,iAtom)+atoms%rmt(i)-vacuum%dvac/2.,atoms%pos(3,iAtom)-atoms%rmt(i)+vacuum%dvac/2.)
+                        IF (PRESENT(overlap)) overlap(0,i)=MAX(overlap(0,i),abs(atoms%pos(3,iAtom))+atoms%rmt(i)-vacuum%dvac/2.)
                         WRITE(oUnit,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
                         IF (.NOT.PRESENT(overlap)) CALL juDFT_error("MT is partly inside the vacuum.",calledby ="chkmt")
                      ENDIF

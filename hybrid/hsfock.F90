@@ -61,7 +61,6 @@ CONTAINS
       USE m_eig66_data
       use m_eig66_mpi
       use m_calc_cmt
-      use m_store_load_hybrid
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)    :: fi
@@ -95,6 +94,7 @@ CONTAINS
       INTEGER                 ::  nsest(hybdat%nbands(k_pack%nk ,jsp)), indx_sest(hybdat%nbands(k_pack%nk ,jsp), hybdat%nbands(k_pack%nk ,jsp))
       INTEGER                 ::  rrot(3, 3, fi%sym%nsym), ierr
       INTEGER                 ::  psym(fi%sym%nsym) ! Note: psym is only filled up to index nsymop
+      INTEGER                 ::  tempI, tempJ
 
       INTEGER, ALLOCATABLE    :: parent(:)
       INTEGER, ALLOCATABLE    :: n_q(:)
@@ -139,11 +139,16 @@ CONTAINS
       ! calculate contribution from valence electrons to the
       ! HF exchange
       mat_ex%l_real = fi%sym%invs
+      PRINT*, "exchange_valence_hf"
+   
       CALL exchange_valence_hf(k_pack, fi, fmpi, hybdat%zmat(nk,jsp)%mat, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
       
+      
       ! calculate contribution from the core states to the HF exchange
+      PRINT*, "core exchange calculation"
       CALL timestart("core exchange calculation")
+      
       IF(xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
          CALL timestart("hse: exchange vccv")
          CALL exchange_vccvHSE(nk, fi, mpdata, hybdat, jsp, lapw, nsymop, nsest, indx_sest, &
@@ -152,6 +157,7 @@ CONTAINS
 
          CALL timestart("hse: exchange cccc")
          CALL exchange_ccccHSE(nk, fi, hybdat, ncstd, a_ex, results)
+
          CALL timestop("hse: exchange cccc")
       
       ELSE
@@ -171,9 +177,9 @@ CONTAINS
 #ifdef CPP_MPI
          ! balance post read_z barrier
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
+         hybdat%max_q = hybdat%max_q - 1
 #endif
       endif
-
 
       hybdat%l_addhf = .True.
       CALL timestop("total time hsfock")

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.37">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.38">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
 
@@ -14,13 +14,14 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="output" type="OutputType"/>
 	       <xsd:element maxOccurs="1" minOccurs="0" name="forceTheorem" type="ForcetheoremType"/>
 	       <xsd:element maxOccurs="1" minOccurs="0" name="relaxation" type="RelaxationType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="ldaV" type="LdaVType"/>
       </xsd:all>
       <xsd:attribute name="fleurInputVersion" type="FleurVersionType" use="required"/>
    </xsd:complexType>
 
    <xsd:simpleType name="FleurVersionType">
       <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="0.37"/>
+         <xsd:enumeration value="0.38"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -511,6 +512,29 @@
       <xsd:attribute name="l_amf" type="FleurBool" use="required"/>
    </xsd:complexType>
 
+   <xsd:complexType name="LdaVType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="ldaVRegion" type="LdaVRegionType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="LdaVRegionType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="ldaVPair" type="LdaVPairType"/>
+      </xsd:sequence>
+      <xsd:attribute name="V" type="FleurDouble" use="required"/>
+      <xsd:attribute name="refAtom" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="refAtomL" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="otherAtomL" type="xsd:nonNegativeInteger" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="LdaVPairType">
+      <xsd:attribute name="otherAtom" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="shiftX" type="xsd:integer" use="required"/>
+      <xsd:attribute name="shiftY" type="xsd:integer" use="required"/>
+      <xsd:attribute name="shiftZ" type="xsd:integer" use="required"/>
+   </xsd:complexType>
+
    <xsd:complexType name="LdaOPCType">
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="n" type="xsd:nonNegativeInteger" use="required"/>
@@ -737,7 +761,7 @@
 
    <xsd:complexType name="GeometryOptimizerType">
       <xsd:attribute name="l_f" type="FleurBool" use="required"/>
-      <xsd:attribute name="f_level" type="xsd:nonNegativeInteger" use="optional" default="0"/>
+      <xsd:attribute name="f_level" type="xsd:integer" use="optional" default="-1"/>
       <xsd:attribute name="forcealpha" type="FleurDouble" use="optional" default="0" />
       <xsd:attribute name="epsdisp" type="FleurDouble" use="optional" default="0.001"/>
       <xsd:attribute name="epsforce" type="FleurDouble" use="optional" default="0.001"/>
@@ -1070,6 +1094,9 @@
    </xsd:complexType>
 
    <xsd:complexType name="JuPhonType">
+      <xsd:all>
+         <xsd:element  maxOccurs="1" minOccurs="1" name="qVectors" type="QListType"/>
+      </xsd:all>
       <xsd:attribute name="l_dfpt" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_jpCheck" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_jpTest" type="FleurBool" use="optional"/>
@@ -1085,6 +1112,14 @@
       <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional"/>
       <xsd:attribute name="fDiffcut" type="FleurDouble" use="optional"/>
       <xsd:attribute name="singleQpt" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="e1term" type="FleurBool" use="optional"/>
+      <xsd:attribute name="f1term" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_intp" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_band" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_dos" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_scf" type="FleurBool" use="optional"/>
+      <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="qmode" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OutputType">

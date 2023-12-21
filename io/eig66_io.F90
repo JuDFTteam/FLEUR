@@ -117,7 +117,54 @@ CONTAINS
 
    END SUBROUTINE close_eig
 
-   SUBROUTINE read_eig(id, nk, jspin, neig, eig, list, zmat, smat)
+   subroutine read_eig(id, nk, jspin, neig, eig, list, zmat, smat,kpts,input,noco,nococonv,sym,atoms,cell)
+      use m_types
+      use m_types_nococonv
+      use m_trafo
+      IMPLICIT NONE
+      INTEGER, INTENT(IN)            :: id, nk, jspin
+      INTEGER, INTENT(OUT), OPTIONAL  :: neig
+      REAL, INTENT(OUT), OPTIONAL  :: eig(:)
+      INTEGER, INTENT(IN), OPTIONAL   :: list(:)
+      TYPE(t_mat), INTENT(INOUT), OPTIONAL  :: zmat, smat
+      !for the rotation to IBZ we need:
+      TYPE(t_kpts),INTENT(IN),OPTIONAL  :: kpts
+      TYPE(t_input),INTENT(IN),OPTIONAL :: input 
+      TYPE(t_noco),INTENT(IN),OPTIONAL  :: noco
+      TYPE(t_nococonv),INTENT(IN),OPTIONAL:: nococonv
+      TYPE(t_sym),INTENT(IN),OPTIONAL   :: sym
+      TYPE(t_atoms),INTENT(IN),OPTIONAL :: atoms
+      TYPE(t_cell),INTENT(IN),OPTIONAL  :: cell
+      
+
+      LOGICAL:: ibz
+      TYPE(t_mat):: tmp_mat
+      INTEGER :: ikp,iop
+      TYPE(t_lapw):: lapw_nk,lapw_ikp
+      ibz=.true.
+      if (present(kpts)) THEN
+         if (nk>kpts%nkpt) ibz=.false.
+      endif   
+
+
+      if(ibz) then
+         call read_eig_ibz(id,nk,jspin,neig, eig=eig, list=list,zmat=zmat,smat=smat) 
+      else
+        if (present(smat)) call judft_error("SMAT cannot be rotated")
+        call tmp_mat%init(zmat)
+     
+        ikp = kpts%bkp(nk) ! parent k-point
+        iop = kpts%bksym(nk) ! connecting symm
+
+        call read_eig_ibz(id,ikp, jspin,zmat=tmp_mat, list=list, eig=eig) 
+      
+        CALL lapw_nk%init(input, noco, nococonv, kpts, atoms, sym, nk, cell)
+        CALL lapw_ikp%init(input, noco, nococonv, kpts, atoms, sym, ikp, cell)
+        call waveftrafo_gen_zmat(tmp_mat, ikp, iop, kpts, sym, jspin, tmp_mat%matsize2, lapw_ikp, lapw_nk, zmat)
+      endif
+   end subroutine read_eig
+
+   SUBROUTINE read_eig_ibz(id, nk, jspin, neig, eig, list, zmat, smat)
       USE m_eig66_hdf, ONLY: read_eig_hdf => read_eig
       USE m_eig66_DA, ONLY: read_eig_DA => read_eig
       USE m_eig66_mem, ONLY: read_eig_mem => read_eig
@@ -143,7 +190,7 @@ CONTAINS
          CALL juDFT_error("Could not read eig-file before opening", calledby="eig66_io")
       END SELECT
       CALL timestop("IO (read)")
-   END SUBROUTINE read_eig
+   END SUBROUTINE read_eig_ibz
 
    SUBROUTINE write_eig(id, nk, jspin, neig, neig_total, eig, n_start, n_end, zmat, smat)
       USE m_eig66_hdf, ONLY: write_eig_hdf => write_eig
