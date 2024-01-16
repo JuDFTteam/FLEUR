@@ -25,7 +25,8 @@ MODULE m_types_juPhon
       REAL    :: eps_pert  = 0.00001 ! Convergence criterion
       !REAL    :: eDiffcut  = 1e-12   ! Cutoff for energy differences
       !REAL    :: eDiffcut  = 1e-3   ! Cutoff for energy differences
-      REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
+      !REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
+      REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
       REAL    :: qpt_ph(3)           ! Debug q
 
