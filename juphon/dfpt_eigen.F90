@@ -65,7 +65,7 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: zMatk, zMatq, zMat1, zMat2
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
 
-      INTEGER                   :: dealloc_stat, nbasfcnq, nbasfcn, neigk, neigq, noccbd, noccbdq
+      INTEGER                   :: dealloc_stat, nbasfcnq, nbasfcn, neigk, neigq, noccbd, noccbdq, noccbdmin
       character(len=300)        :: errmsg
       INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:)
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:), tempMat3(:), z1H2(:,:), z1S2(:,:)
@@ -100,6 +100,8 @@ CONTAINS
 
             noccbd  = COUNT(results%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
             noccbdq = COUNT(resultsq%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
+
+            noccbdmin = MIN(noccbdq,noccbd)
 
             nbasfcn  = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
             nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
@@ -224,7 +226,7 @@ CONTAINS
                      ! TODO: This part of the correction had no effect whatsoever yet.
                      !       Reactivate for misbehaving materials and see if there are
                      !       changes.
-                     ELSE IF (iNuPr<=noccbdq) THEN
+                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                         tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
                                       & *(1.0-wtfq)
@@ -240,7 +242,7 @@ CONTAINS
                         tempMat2(iNupr) = 0.0
                      ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                         tempMat2(iNupr) = 0.0
-                     ELSE IF (iNuPr<=noccbdq) THEN
+                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                         tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
                                        & *(1.0-wtfq)
@@ -304,7 +306,7 @@ CONTAINS
                      ! TODO: This part of the correction had no effect whatsoever yet.
                      !       Reactivate for misbehaving materials and see if there are
                      !       changes.
-                     ELSE IF (iNuPr<=noccbdq) THEN
+                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                         tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
                                       & *(1.0-wtfq) &
@@ -321,7 +323,7 @@ CONTAINS
                         tempMat2(iNupr) = 0.0
                      ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                         tempMat2(iNupr) = 0.5*tempMat1(iNupr)
-                     ELSE IF (iNuPr<=noccbdq) THEN
+                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
 
                         tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
