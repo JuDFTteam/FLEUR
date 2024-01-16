@@ -67,7 +67,7 @@ CONTAINS
          RETURN
       END IF
 
-      ! For q/=0 in DFPT, the is no G+q=0, so all stars are treated in the G/=0 way.
+      ! For q/=0 in DFPT, there is no G+q=0, so all stars are treated in the G/=0 way.
       IF (nrec2==1.AND.((.NOT.l_dfptvgen).OR.norm2(stars%center)<1e-8)) THEN    !     ---->    g=0 coefficient
          DO  iq = -stars%mx3,stars%mx3
             IF (iq.EQ.0) CYCLE
