@@ -53,6 +53,7 @@ MODULE m_types_atoms
   INTEGER ::n_u=0
   ! no of lda+vs
   INTEGER ::n_v=0                                              ! <--- LDA+V
+  INTEGER ::n_vPairs=0
   ! no of lda+hubbard1s
   INTEGER :: n_hia=0
   ! no of lda+orbital polarization corrections
@@ -119,6 +120,7 @@ MODULE m_types_atoms
   !lda+hubbard1 information is attached behind lda+u
   !so the dimension actually used is atoms%n_u+atoms%n_hia
   TYPE(t_utype), ALLOCATABLE::lda_u(:)
+  TYPE(t_vtype), ALLOCATABLE::lda_v(:)
   TYPE(t_opctype), ALLOCATABLE::lda_opc(:)
   INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
   !flipSpinTheta and flipSpinPhi are the angles which are given
@@ -152,7 +154,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CLASS(t_atoms),INTENT(INOUT)::this
  INTEGER,INTENT(IN):: mpi_comm
  INTEGER,INTENT(IN),OPTIONAL::irank
- INTEGER ::rank,myrank,ierr,n
+ INTEGER ::rank,myrank,ierr,n, j
  IF (PRESENT(irank)) THEN
     rank=irank
  ELSE
@@ -165,6 +167,8 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%nlotot,rank,mpi_comm)
  CALL mpi_bc(this%lmaxd,rank,mpi_comm)
  CALL mpi_bc(this%n_u,rank,mpi_comm)
+ CALL mpi_bc(this%n_v,rank,mpi_comm)
+ CALL mpi_bc(this%n_vPairs,rank,mpi_comm)
  CALL mpi_bc(this%n_hia,rank,mpi_comm)
  CALL mpi_bc(this%n_opc, rank, mpi_comm)
  CALL mpi_bc(this%n_denmat, rank, mpi_comm)
@@ -211,14 +215,18 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  IF (myrank.NE.rank) THEN
     IF (ALLOCATED(this%econf)) DEALLOCATE(this%econf)
     IF (ALLOCATED(this%lda_u)) DEALLOCATE(this%lda_u)
+    IF (ALLOCATED(this%lda_v)) DEALLOCATE(this%lda_v)
     IF (ALLOCATED(this%lda_opc)) DEALLOCATE(this%lda_opc)
     ALLOCATE(this%econf(this%ntype))
     ALLOCATE(this%lda_u(4*this%ntype))
-    ALLOCATE(this%lda_opc(4*this%ntype))
+    ALLOCATE(this%lda_v(4*this%ntype))
+    ALLOCATE(this%lda_opc(this%n_v))
  ENDIF
+
  DO n=1,this%ntype
     CALL this%econf(n)%broadcast(rank,mpi_comm)
  ENDDO
+
  DO n=1,this%n_u+this%n_hia
     CALL mpi_bc(this%lda_u(n)%j,rank,mpi_comm)
     CALL mpi_bc(this%lda_u(n)%u,rank,mpi_comm)
@@ -228,6 +236,25 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
     CALL mpi_bc(this%lda_u(n)%atomType,rank,mpi_comm)
     CALL mpi_bc(this%lda_u(n)%l_amf,rank,mpi_comm)
  ENDDO
+
+ DO n=1, this%n_v
+    CALL mpi_bc(this%lda_v(n)%atomIndex,rank,mpi_comm)
+    CALL mpi_bc(this%lda_v(n)%thisAtomL,rank,mpi_comm)
+    CALL mpi_bc(this%lda_v(n)%otherAtomL,rank,mpi_comm)
+    CALL mpi_bc(this%lda_v(n)%V,rank,mpi_comm)
+    CALL mpi_bc(this%lda_v(n)%numOtherAtoms,rank,mpi_comm)
+    IF (myrank.NE.rank) THEN
+       ALLOCATE(this%lda_v(n)%otherAtomIndices(this%lda_v(n)%numOtherAtoms))
+       ALLOCATE(this%lda_v(n)%atomShifts(3,this%lda_v(n)%numOtherAtoms))
+    END IF
+    DO j = 1, this%lda_v(n)%numOtherAtoms
+       CALL mpi_bc(this%lda_v(n)%otherAtomIndices(j),rank,mpi_comm)
+       CALL mpi_bc(this%lda_v(n)%atomShifts(1,j),rank,mpi_comm)
+       CALL mpi_bc(this%lda_v(n)%atomShifts(2,j),rank,mpi_comm)
+       CALL mpi_bc(this%lda_v(n)%atomShifts(3,j),rank,mpi_comm)
+    END DO
+ END DO
+
  DO n=1,this%n_opc
    CALL mpi_bc(this%lda_opc(n)%n,rank,mpi_comm)
    CALL mpi_bc(this%lda_opc(n)%l,rank,mpi_comm)
@@ -275,7 +302,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  CLASS(t_atoms),INTENT(INOUT):: this
  TYPE(t_xml),INTENT(INOUT)    :: xml
 
- CHARACTER(len=200):: xpaths,xpathg,xpath,valueString,lstring,nstring,core,valence
+ CHARACTER(len=200):: xpaths,xpathg,xpath,xpathA,valueString,lstring,nstring,core,valence
  INTEGER           :: i,j,numberNodes,ilo,lNumCount,nNumCount,l,n,itype,na,jrc,numU
  INTEGER,ALLOCATABLE::lNumbers(:),nNumbers(:)
  LOGICAL           :: relaxx,relaxy,relaxz,l_flipElectronConfigSpins
@@ -648,6 +675,39 @@ END DO
  this%lmaxd=MAXVAL(this%lmax)
 
  ALLOCATE(this%nlhtyp(xml%get_ntype()))
+
+
+   ! Read LDA+V input
+
+   this%n_v = 0
+   this%n_vPairs = 0
+   IF (xml%GetNumberOfNodes('/fleurInput/ldaV').EQ.1) THEN
+      numberNodes = xml%GetNumberOfNodes('/fleurInput/ldaV/ldaVRegion')
+      IF (numberNodes.GT.0) THEN
+         this%n_v = numberNodes
+         ALLOCATE(this%lda_v(numberNodes))
+         DO i = 1, this%n_v
+            WRITE(xPath,*) '/fleurInput/ldaV/ldaVRegion[',i,']'
+            numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPath))//'/ldaVPair')
+            this%lda_v(i)%atomIndex = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@refAtom'))
+            this%lda_v(i)%thisAtomL = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@refAtomL'))
+            this%lda_v(i)%otherAtomL = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@otherAtomL'))
+            this%lda_v(i)%V = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@V'))
+            this%lda_v(i)%numOtherAtoms = numberNodes
+            ALLOCATE(this%lda_v(i)%otherAtomIndices(numberNodes))
+            ALLOCATE(this%lda_v(i)%atomShifts(3,numberNodes))
+            DO j = 1, numberNodes
+               WRITE(xPathA,*) TRIM(ADJUSTL(xPath))//'/ldaVPair[',j,']'
+               this%n_vPairs = this%n_vPairs + 1
+               this%lda_v(i)%otherAtomIndices(j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@otherAtom'))
+               this%lda_v(i)%atomShifts(1,j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@shiftX'))
+               this%lda_v(i)%atomShifts(2,j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@shiftY'))
+               this%lda_v(i)%atomShifts(3,j) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@shiftZ'))
+            END DO
+         END DO
+      END IF
+   END IF
+
 END SUBROUTINE read_xml_atoms
 
 

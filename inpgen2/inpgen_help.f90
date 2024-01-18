@@ -49,7 +49,7 @@ CONTAINS
     CALL new_argument(0,"-noInpgenComment","Disable printing inpgen input as a comment to the inp.xml file","")
 
     CALL new_argument(0,"-precise","Short for '-profile precise'","")
-    CALL new_argument(1,"-profile","Generate default parameters according to provided profile name. This can be one of 'precise'.","")
+    CALL new_argument(1,"-profile","Generate default parameters according to provided profile name. This can be one of 'fast','moderate', or 'precise'.","")
 
     IF (.NOT.check_arguments()) CALL judft_warn("Invalid command line arguments",hint="Use -h option to see valid choices")
     IF (.NOT. juDFT_was_argument("-h")) RETURN
@@ -84,6 +84,7 @@ CONTAINS
     CALL print_argument("-trace")
     CALL print_argument("-version")
     CALL print_argument("-dropXMLSchema")
+    CALL print_argument("-profile")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"
 

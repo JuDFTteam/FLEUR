@@ -178,7 +178,7 @@ MODULE m_pot_io
       INTEGER, INTENT (IN)      :: archiveType
       !     ..
       !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: fpw(stars%ng3,input%jspins)
+      COMPLEX, INTENT (IN) :: fpw(:,:)
 
       ! local variables
       INTEGER           :: mode, iUnit
@@ -229,7 +229,7 @@ MODULE m_pot_io
          END IF
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                                currentStepfunctionIndex,iter,pot,fpw,any(noco%l_unrestrictMT))
+                                currentStepfunctionIndex,iter,pot,fpw,noco%l_noco,any(noco%l_unrestrictMT))
 
          IF(l_storeIndices) THEN
             CALL writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&

@@ -5,6 +5,10 @@
 #to overwrite previous settings
 
 
+if (CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+   set_source_files_properties(vgen/vgen_coulomb.F90 PROPERTIES COMPILE_FLAGS -O0)
+endif()
+
 if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
    #set_source_files_properties(io/eig66_mpi.F90 PROPERTIES COMPILE_FLAGS -O0)
    #set_source_files_properties(cdn/pwden.F90 PROPERTIES COMPILE_FLAGS -O0)

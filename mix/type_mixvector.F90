@@ -135,7 +135,8 @@ CONTAINS
       INTEGER, INTENT(IN) :: nmzxyd
       LOGICAL, INTENT(IN), OPTIONAL         :: swapspin
       TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
-      INTEGER:: js, ii, n, l, iv, jspin, mmpSize
+      INTEGER:: js, ii, n, l, iv, jspin, mmpSize, nIJ_llp_mmpSize, offset
+
       CALL den%DISTRIBUTE(mix_mpi_comm)
       IF (PRESENT(denIm)) CALL denIm%DISTRIBUTE(mix_mpi_comm)
       DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
@@ -230,6 +231,12 @@ CONTAINS
                mmpSize = SIZE(den%mmpMat(:, :, 1:atoms%n_u, jspin))
                vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1) = RESHAPE(REAL(den%mmpMat(:, :, 1:atoms%n_u, jspin)), (/mmpSize/))
                vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1) = RESHAPE(AIMAG(den%mmpMat(:, :, 1:atoms%n_u, jspin)), (/mmpSize/))
+               IF (atoms%n_v.GT.0) THEN
+                  nIJ_llp_mmpSize = SIZE(den%nIJ_llp_mmp(:,:,:,jspin))
+                  offset = misc_start(js) + 2*mmpSize
+                  vec%vec_misc(offset:offset + nIJ_llp_mmpSize - 1) = RESHAPE(REAL(den%nIJ_llp_mmp(:,:,:,jspin)), (/nIJ_llp_mmpSize/))
+                  vec%vec_misc(offset+nIJ_llp_mmpSize:offset + 2*nIJ_llp_mmpSize - 1) = RESHAPE(AIMAG(den%nIJ_llp_mmp(:,:,:,jspin)), (/nIJ_llp_mmpSize/))
+               END IF
             END IF
          END IF
       END DO
@@ -243,7 +250,8 @@ CONTAINS
       TYPE(t_potden), INTENT(INOUT) :: den
       TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
       INTEGER,INTENT(IN) :: nmzxyd
-      INTEGER:: js, i, ii, n, l, iv, mmpSize
+      INTEGER:: js, i, ii, n, l, iv, mmpSize, nIJ_llp_mmpSize, offset
+
       LOGICAL :: l_dfpt
       REAL :: vacOffdiagTemp(SIZE(den%vac, 1))
 
@@ -329,6 +337,13 @@ CONTAINS
                den%mmpMat(:, :, 1:atoms%n_u, js) = RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js) + mmpSize - 1), &
                                                                  vec%vec_misc(misc_start(js) + mmpSize:misc_start(js) + 2*mmpSize - 1)), &
                                                            SHAPE(den%mmpMat(:, :, 1:atoms%n_u, js)))
+               IF (atoms%n_v.GT.0) THEN
+                  nIJ_llp_mmpSize = SIZE(den%nIJ_llp_mmp(:,:,:,js))
+                  offset = misc_start(js) + 2*mmpSize
+                  den%nIJ_llp_mmp(:,:,:,js) = RESHAPE(CMPLX(vec%vec_misc(offset:offset + nIJ_llp_mmpSize - 1), &
+                                                            vec%vec_misc(offset + nIJ_llp_mmpSize:offset + 2*nIJ_llp_mmpSize - 1)), &
+                                                      SHAPE(den%nIJ_llp_mmp(:,:,:,js)))
+               END IF
             END IF
          END IF
       ENDDO
@@ -555,11 +570,12 @@ CONTAINS
 #endif
    END SUBROUTINE init_storage_mpi
 
-   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix,   input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i, l_dfpt)
+   SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix, l_densitymatrixV, input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i, l_dfpt)
       USE m_types
       IMPLICIT NONE
       INTEGER, INTENT(IN)               :: comm_mpi
       LOGICAL, INTENT(IN)               :: l_densitymatrix
+      LOGICAL, INTENT(IN)               :: l_densitymatrixV
 
       TYPE(t_input), INTENT(IN)         :: input
       TYPE(t_vacuum), INTENT(IN), TARGET :: vacuum
@@ -572,7 +588,7 @@ CONTAINS
 
       LOGICAL, INTENT(IN) :: l_dfpt
 
-      INTEGER :: js, n, len
+      INTEGER :: js, n, len, i_v, natom2
 
       !Store pointers to data-types
       IF (ASSOCIATED(atoms)) RETURN !was done before...
@@ -584,7 +600,7 @@ CONTAINS
       stars => stars_i; cell => cell_i; sphhar => sphhar_i; atoms => atoms_i; sym => sym_i
 
       vac_here = input%film
-      misc_here = l_densitymatrix
+      misc_here = l_densitymatrix.OR.l_densitymatrixV
       CALL init_storage_mpi(comm_mpi)
 
       pw_length = 0; mt_length = 0; vac_length = 0; misc_length = 0
@@ -645,6 +661,11 @@ CONTAINS
             ENDIF
             IF (misc_here .AND. (js < 3 .OR. l_spinoffd_ldau)) THEN
                len = 7*7*2*atoms%n_u
+               DO i_v = 1, atoms%n_v  !loop over pairs which are corrected by U+V 
+                  DO natom2 = 1, atoms%lda_v(i_v)%numOtherAtoms
+                     len = len + 7*7*2
+                  END DO
+               END DO
                misc_start(js) = misc_length + 1
                misc_length = misc_length + len
                misc_stop(js) = misc_length

@@ -80,20 +80,20 @@ CONTAINS
 
       IF (factor==1.0) THEN
          CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
                                       stars%ng2)
          CALL mden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
                                       stars%ng2)
       ELSE
          CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
          CALL mden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
       END IF
@@ -411,19 +411,19 @@ CONTAINS
       ! Initialize and save the four output densities.
       IF (factor==1.0) THEN
          CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
                                       stars%ng2)
          CALL mxden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
                                       stars%ng2)
          CALL myden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
                                       stars%ng2)
          CALL mzden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
                                       stars%ng2)
 
@@ -468,19 +468,19 @@ CONTAINS
 
       ELSE
          CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
          CALL mxden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
          CALL myden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
          CALL mzden%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
 

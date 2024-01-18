@@ -21,6 +21,11 @@ if (NOT FLEUR_USE_SCALAPACK)
 endif()
 endforeach()
 
+#By default we always compile SCALAPACK if not found
+if (NOT DEFINED CLI_FLEUR_USE_SCALAPACK)
+  set(CLI_FLEUR_USE_SCALAPACK FLEUR_USE_GITVERSION)
+endif() 
+
 
 #Now download SCALAPACK and compile it if REQUIRED
 if (DEFINED CLI_FLEUR_USE_SCALAPACK)

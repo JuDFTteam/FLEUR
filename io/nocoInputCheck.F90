@@ -66,7 +66,7 @@ MODULE m_nocoInputCheck
       IF (input%ctail) THEN
          WRITE (oUnit,*) 'This non-collinear version of the flapw program'
          WRITE (oUnit,*) 'cannot be used with the coretail option!! '
-         CALL juDFT_error("Coretail option cannot be used!!!",calledby="nocoInputCheck")
+         CALL juDFT_error("Coretail option cannot be used!!!",hint="Set /calculationSetup/coreElectrons/@ctail to F in the FLEUR input file.",calledby="nocoInputCheck")
       END IF
 
 !---> make sure that moments are not relaxed and constrained

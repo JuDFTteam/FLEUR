@@ -69,6 +69,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 #endif
    USE m_dfpt_rhomt
    USE m_dfpt_rhonmt
+   USE m_nIJmat
 
    IMPLICIT NONE
 
@@ -114,10 +115,10 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    LOGICAL :: l_real, l_corespec, l_empty
 
    ! Local Arrays
-   REAL,ALLOCATABLE :: we(:),eig(:)
-   REAL :: bkpt(3)
-   INTEGER,ALLOCATABLE :: ev_list(:)
-   REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
+   REAL,    ALLOCATABLE  :: we(:),eig(:)
+   REAL                  :: bkpt(3)
+   INTEGER, ALLOCATABLE  :: ev_list(:)
+   REAL,    ALLOCATABLE  :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
    TYPE (t_lapw)              :: lapw
    TYPE (t_orb)               :: orb
@@ -260,13 +261,13 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
 
          IF (atoms%n_u+atoms%n_opc.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))
+         IF (atoms%n_v.GT.0) CALL nIJ_mat(input,atoms,noccbd,usdus,ispin,we,eigVecCoeffs,cell,kpts,ikpt,den%nIJ_llp_mmp(:,:,:,ispin),enpara,vTot)
          IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) THEN
             call timestart("n_mat21")
             CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
             call timestop("n_mat21")
 
          ENDIF
-
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          call timestart("eparas")

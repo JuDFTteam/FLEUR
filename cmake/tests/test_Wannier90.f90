@@ -30,47 +30,47 @@ PROGRAM test
    real                :: pos(3,1)
 
    ! Taken from wannier90-1.2/src/wannier_lib.F90
-   interface
-   subroutine wannier_setup(seed__name, mp_grid_loc, num_kpts_loc,&
-                            real_lattice_loc, recip_lattice_loc, kpt_latt_loc,&
-                            num_bands_tot, num_atoms_loc, atom_symbols_loc,&
-                            atoms_cart_loc, gamma_only_loc, spinors_loc, nntot_loc,&
-                            nnlist_loc, nncell_loc, num_bands_loc, num_wann_loc,&
-                            proj_site_loc, proj_l_loc, proj_m_loc, proj_radial_loc,&
-                            proj_z_loc, proj_x_loc, proj_zona_loc, exclude_bands_loc)
+!   interface
+!   subroutine wannier_setup(seed__name, mp_grid_loc, num_kpts_loc,&
+!                            real_lattice_loc, recip_lattice_loc, kpt_latt_loc,&
+!                            num_bands_tot, num_atoms_loc, atom_symbols_loc,&
+!                            atoms_cart_loc, gamma_only_loc, spinors_loc, nntot_loc,&
+!                            nnlist_loc, nncell_loc, num_bands_loc, num_wann_loc,&
+!                            proj_site_loc, proj_l_loc, proj_m_loc, proj_radial_loc,&
+!                            proj_z_loc, proj_x_loc, proj_zona_loc, exclude_bands_loc)
 
-      implicit none
+!      implicit none
 
-      integer, parameter :: dp = selected_real_kind(15,300)
-      integer, parameter :: num_nnmax=12
-      character(len=*), intent(in) :: seed__name
-      integer, dimension(3), intent(in) :: mp_grid_loc
-      integer, intent(in) :: num_kpts_loc
-      real(kind=dp), dimension(3,3), intent(in) :: real_lattice_loc
-      real(kind=dp), dimension(3,3), intent(in) :: recip_lattice_loc
-      real(kind=dp), dimension(3,num_kpts_loc), intent(in) :: kpt_latt_loc
-      integer, intent(in) :: num_bands_tot
-      integer, intent(in) :: num_atoms_loc
-      character(len=*), dimension(num_atoms_loc), intent(in) :: atom_symbols_loc
-      real(kind=dp), dimension(3,num_atoms_loc), intent(in) :: atoms_cart_loc
-      logical, intent(in) :: gamma_only_loc
-      logical, intent(in) :: spinors_loc
+!      integer, parameter :: dp = selected_real_kind(15,300)
+!      integer, parameter :: num_nnmax=12
+!      character(len=*), intent(in) :: seed__name
+!      integer, dimension(3), intent(in) :: mp_grid_loc
+!      integer, intent(in) :: num_kpts_loc
+!      real(kind=dp), dimension(3,3), intent(in) :: real_lattice_loc
+!      real(kind=dp), dimension(3,3), intent(in) :: recip_lattice_loc
+!      real(kind=dp), dimension(3,num_kpts_loc), intent(in) :: kpt_latt_loc
+!      integer, intent(in) :: num_bands_tot
+!      integer, intent(in) :: num_atoms_loc
+!      character(len=*), dimension(num_atoms_loc), intent(in) :: atom_symbols_loc
+!      real(kind=dp), dimension(3,num_atoms_loc), intent(in) :: atoms_cart_loc
+!      logical, intent(in) :: gamma_only_loc
+!      logical, intent(in) :: spinors_loc
 
-      integer, intent(out) :: nntot_loc
-      integer, dimension(num_kpts_loc,num_nnmax), intent(out) :: nnlist_loc
-      integer,dimension(3,num_kpts_loc,num_nnmax), intent(out) :: nncell_loc
-      integer, intent(out) :: num_bands_loc
-      integer, intent(out) :: num_wann_loc
-      real(kind=dp), dimension(3,num_bands_tot), intent(out) :: proj_site_loc
-      integer, dimension(num_bands_tot), intent(out) :: proj_l_loc
-      integer, dimension(num_bands_tot), intent(out) :: proj_m_loc
-      integer, dimension(num_bands_tot), intent(out) :: proj_radial_loc
-      real(kind=dp), dimension(3,num_bands_tot), intent(out) :: proj_z_loc
-      real(kind=dp), dimension(3,num_bands_tot), intent(out) :: proj_x_loc
-      real(kind=dp), dimension(num_bands_tot), intent(out) :: proj_zona_loc
-      integer, dimension(num_bands_tot), intent(out) :: exclude_bands_loc
-   end subroutine wannier_setup
-   end interface
+!      integer, intent(out) :: nntot_loc
+!      integer, dimension(num_kpts_loc,num_nnmax), intent(out) :: nnlist_loc
+!      integer,dimension(3,num_kpts_loc,num_nnmax), intent(out) :: nncell_loc
+!      integer, intent(out) :: num_bands_loc
+!      integer, intent(out) :: num_wann_loc
+!      real(kind=dp), dimension(3,num_bands_tot), intent(out) :: proj_site_loc
+!      integer, dimension(num_bands_tot), intent(out) :: proj_l_loc
+!      integer, dimension(num_bands_tot), intent(out) :: proj_m_loc
+!      integer, dimension(num_bands_tot), intent(out) :: proj_radial_loc
+!      real(kind=dp), dimension(3,num_bands_tot), intent(out) :: proj_z_loc
+!      real(kind=dp), dimension(3,num_bands_tot), intent(out) :: proj_x_loc
+!      real(kind=dp), dimension(num_bands_tot), intent(out) :: proj_zona_loc
+!      integer, dimension(num_bands_tot), intent(out) :: exclude_bands_loc
+!   end subroutine wannier_setup
+!   end interface
 
    seedname='blahblahblah'
    num = 0

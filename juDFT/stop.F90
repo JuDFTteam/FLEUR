@@ -278,9 +278,9 @@ CONTAINS
     ENDIF
 #endif
     if(is_root) then
-       STOP 0
+       STOP
     else
-       STOP 0
+       STOP
     endif
   END SUBROUTINE juDFT_END
 
@@ -332,7 +332,7 @@ CONTAINS
     ENDIF
 #endif
     IF (error.EQ.0) THEN
-       STOP 0
+       STOP
     END IF
     STOP 1
   END SUBROUTINE juDFT_stop
