@@ -52,7 +52,7 @@ CONTAINS
       INTEGER,          INTENT(IN)    :: eig_id
 
       TYPE(t_hub1data) :: hub1data
-      TYPE(t_potden)                :: grvextdummy, imagrhodummy, rho_nosym, vTot_nosym, vext_dummy
+      TYPE(t_potden)                :: grvextdummy, imagrhodummy, rho_nosym, vTot_nosym, vext_dummy, vC_dummy
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: grgrVC3x3(3,3), grgrvextnum(3,3)
       TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm ! q-quantities
@@ -121,6 +121,7 @@ CONTAINS
       ! Desym-tests:
       INTEGER :: grid(3), iread
       REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
+      complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2)
 
       ALLOCATE(e2_vm(fi%atoms%nat,3,3))
 
@@ -220,6 +221,19 @@ CONTAINS
       CALL imagrhodummy%copyPotDen(rho_nosym)
       CALL imagrhodummy%resetPotDen()
       CALL grvextdummy%copyPotDen(rho_nosym)
+
+      CALL vext_dummy%copyPotDen(vTot_nosym)
+      CALL vext_dummy%resetPotDen()
+      CALL vC_dummy%copyPotDen(vTot_nosym)
+      CALL vC_dummy%resetPotDen()
+      sigma_loc  = cmplx(0.0,0.0)
+      sigma_ext  = cmplx(0.0,0.0)
+      sigma_coul = cmplx(0.0,0.0)
+      sigma_gext = cmplx(0.0,0.0)
+      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+                         & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, vext_dummy, sigma_ext)
+      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+                         & sphhar_nosym, fi_nosym%atoms, .FALSE., rho_nosym, vC_dummy, sigma_coul)
       DO iDir = 1, 3
          CALL grRho3(iDir)%copyPotDen(rho_nosym)
          CALL grRho3(iDir)%resetPotDen()
@@ -237,9 +251,12 @@ CONTAINS
          CALL grVC3(iDir)%resetPotDen()
          ! Generate the external potential gradient.
          write(oUnit, *) "grVext", iDir
+         sigma_loc  = cmplx(0.0,0.0)
+         IF (iDir==3) sigma_loc  = sigma_ext
          CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), &
+                         & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), sigma_loc, &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
+         IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
       END DO
       CALL vext_dummy%copyPotDen(vTot_nosym)
       CALL vext_dummy%resetPotDen()
@@ -304,21 +321,30 @@ CONTAINS
          CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
          CALL imagrhodummy%resetPotDen()
          write(oUnit, *) "grVeff", iDir
+         sigma_loc  = cmplx(0.0,0.0)
+         IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
+                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
          write(oUnit, *) "grVC", iDir
+         sigma_loc  = cmplx(0.0,0.0)
+         IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0])
+                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
       END DO
 
          DO iDir2 = 1, 3
             DO iDir = 1, 3
                CALL imagrhodummy%resetPotDen()
+               sigma_loc = cmplx(0.0,0.0)
+
+               IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
+               IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
                CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), &
-                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2)
+                         & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), sigma_loc, &
+                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2, &
+                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3))
                CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
             END DO
          END DO
@@ -361,6 +387,7 @@ CONTAINS
       END IF
 
       ALLOCATE(dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
+      dyn_mat = cmplx(0.0,0.0)
       IF (l_dfpt_scf) THEN
          ! Do the self-consistency calculations for each specified q, for all atoms and for
          ! all three cartesian directions.
@@ -480,7 +507,8 @@ CONTAINS
                      CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
                                           rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                           dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
+                                          MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3),&
                                           starsmq, qm_results, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
                      CALL timestop("Sternheimer with -q")
                   ELSE
@@ -488,7 +516,8 @@ CONTAINS
                      CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
                                           rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                           dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im)
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
+                                          MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                      CALL timestop("Sternheimer")
                   END IF
 
@@ -500,12 +529,12 @@ CONTAINS
                      CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
                                           eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
                                           rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext)
                   ELSE
                      CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
                                           eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
                                           rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, q_eig_id)
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext, q_eig_id)
                   END IF
                   CALL timestop("Dynmat")
                   dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))

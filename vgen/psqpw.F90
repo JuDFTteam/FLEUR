@@ -17,7 +17,7 @@ module m_psqpw
 contains
 
   subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-       &     den, ispin, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, qpw0, iDir2, mat2ord )
+       &     den, ispin, l_xyav, potdenType, psq, sigma_disc, rhoimag, stars2, iDtype, iDir, rho0, qpw0, iDir2, mat2ord )
 
 #ifdef CPP_MPI
     use mpi
@@ -51,6 +51,7 @@ contains
     !real,               intent(in)  :: rht(vacuum%nmzd,2)
     integer,            intent(in)  :: potdenType, ispin
     complex,            intent(out) :: psq(stars%ng3)
+    complex,            intent(out) :: sigma_disc(2)
 
     REAL, OPTIONAL, INTENT(IN)      :: rhoimag(atoms%jmtd,0:sphhar%nlhd,atoms%ntype), rho0(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
 
@@ -61,7 +62,7 @@ contains
     INTEGER, OPTIONAL, INTENT(IN)   :: iDir2
     COMPLEX, OPTIONAL, INTENT(IN)   :: mat2ord(5,3,3)
 
-    complex                         :: psint, sa, sl, sm, qvac, fact
+    complex                         :: psint, sa, sl, sm, qvac, fact, fc
     real                            :: f, fpo, gz, p, rmtl, s, fJ, gr, g
     integer                         :: ivac, k, l, n, n1, nc, ncvn, lm, ll1, nd, m, nz, kStart, kEnd
     complex                         :: psq_local(stars%ng3)
@@ -86,6 +87,7 @@ contains
     qpw = den%pw(:,ispin)
     rho = den%mt(:,:,:,ispin)
     IF (input%film) rht = den%vac(:,1,:,ispin)
+    sigma_disc = cmplx(0.0,0.0)
 
     ! Calculate multipole moments
     call timestart("mpmom")
@@ -193,8 +195,8 @@ contains
 
     call timestop("loop in psqpw")
 
-    !IF (.NOT.norm2(stars%center)<1e-8) RETURN ! TODO: Change this!
-    IF (l_dfptvgen) RETURN
+    IF (.NOT.norm2(stars%center)<1e-8) RETURN ! TODO: Change this!
+    !IF (l_dfptvgen) RETURN
     ! TODO: As of yet unclear if we need to do somecorrection here for
     !       DFPT, to make up for possible charge shifts from/to the vacuum.
 
@@ -238,7 +240,17 @@ contains
       if ( l_xyav ) return
       fact = ( qvac + psint ) / ( stars%nstr(1) * cell%vol )
       psq(1) = psq(1) - fact
-      if (.not.l_dfptvgen) write(oUnit, fmt=8010 ) fact * 1000
+      ! Find discontinuity at the boundaries
+      do k = 1, stars%ng3
+         if ( stars%ig2(k) == 1 ) then
+            gz = stars%kv3(3,k) * cell%bmat(3,3)
+            fc = cmplx(cos(gz * cell%z1),sin(gz * cell%z1))
+            sigma_disc(1) = sigma_disc(1) - stars%nstr(k) * psq(k) * fc
+            sigma_disc(2) = sigma_disc(2) + stars%nstr(k) * psq(k) * conjg(fc)
+         end if
+      end do
+      sigma_disc(1) = sigma_disc(1) + rht(1,1)
+      sigma_disc(2) = sigma_disc(2) - rht(1,2)
 8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
     end if ! fmpi%irank == 0

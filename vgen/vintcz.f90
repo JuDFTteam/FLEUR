@@ -6,7 +6,7 @@ MODULE m_vintcz
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
 CONTAINS
-   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,l_dfptvgen,diff_vmz1dh)
+   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,sigma_disc,l_dfptvgen,diff_vmz1dh,sigma_disc2)
       USE m_constants
       USE m_types
 
@@ -25,8 +25,11 @@ CONTAINS
 
       COMPLEX,        INTENT(IN) :: psq(stars%ng3),vnew(:,:,:)!,vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
       COMPLEX,        INTENT(IN) :: alphm(stars%ng2,2)
+      complex,        intent(in) :: sigma_disc(2)
       LOGICAL,        INTENT(IN) :: l_dfptvgen
       COMPLEX,        INTENT(IN) :: diff_vmz1dh
+
+      complex, optional, intent(in) :: sigma_disc2(2)
       !REAL,           INTENT(IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)
 
       COMPLEX                    :: argr,sumrr,vcons1,test,c_ph,phas
@@ -85,9 +88,12 @@ CONTAINS
          !           -----> v2(z)
          vintcz = vintcz + vz1dh - fpi_const* (dh-z)*&
             &              (sig1dh-rhobar/2.* (dh-z))
+         ! Discontinuity correction
+         vintcz = vintcz - fpi_const * sigma_disc(1)*(dh-z)
+         IF (PRESENT(sigma_disc2)) vintcz = vintcz + fpi_const * sigma_disc2(1)
          ! Correct the interstitial potential by the mismatch we calculated as
          ! a boundary condition for DFPT q=0.
-         IF (l_dfptvgen) vintcz = vintcz - diff_vmz1dh*z/(2*dh) + diff_vmz1dh/2
+         !IF (l_dfptvgen) vintcz = vintcz - diff_vmz1dh*z/(2*dh) + diff_vmz1dh/2
 
          IF (field%efield%dirichlet .AND. vslope /= 0.0) THEN
             vintcz = vintcz + vslope * (dh-z)
