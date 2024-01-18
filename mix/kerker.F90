@@ -43,6 +43,7 @@ CONTAINS
     type(t_potden)                   :: resDen, vYukawa, resDenMod
     real                             :: fix
     integer                          :: lh,n
+    complex                           :: sigma_loc(2)
 
     if (sym%invs) then
       !This is for easier debugging of the preconditioner. The imaginary part
@@ -62,8 +63,9 @@ CONTAINS
     END IF MPI0_b
     CALL resDen%distribute(fmpi%mpi_comm)
     IF ( .NOT. input%film ) THEN
+       sigma_loc = cmplx(0.0,0.0)
        CALL vgen_coulomb( 1, fmpi,    input, field, vacuum, sym, stars, cell, &
-            sphhar, atoms, .FALSE., resDen, vYukawa )
+            sphhar, atoms, .FALSE., resDen, vYukawa, sigma_loc )
     ELSE
        call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
        if( fmpi%irank == 0 ) then
