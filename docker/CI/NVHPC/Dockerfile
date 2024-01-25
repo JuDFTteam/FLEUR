@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/nvhpc:22.3-devel-cuda_multi-ubuntu20.04
+FROM nvcr.io/nvidia/nvhpc:23.11-devel-cuda_multi-ubuntu22.04
 MAINTAINER d.wortmann@fz-juelich.de
 
 RUN DEBIAN_FRONTEND="noninteractive" apt update && DEBIAN_FRONTEND="noninteractive" apt install -y\
