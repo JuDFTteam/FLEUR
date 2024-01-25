@@ -232,59 +232,51 @@ CONTAINS
                    cqpw(iq)=ImagUnit*vacnew(ip,iq,ivac,js)
                 ENDDO
 
-                rhti = 0.0                    ! d(rho)/atoms%dx is obtained by a FFT of i*gx*vacxy
+                cqpw(1) = CMPLX(0.0,0.0)
+                ! d(rho)/atoms%dx is obtained by a FFT of i*gx*vacxy
                 ! (vacz is set to zero and gx is included in
                 !    dn/atoms =  FFT(0,i*gx*vacxy)
 
 
 
-                CALL fft2d(stars, rhdx(0,js),bf2, cqpw,+1,firstderiv=[1.,0.,0.],cell=cell)
+                CALL fft2d(stars, rhdx(0,js),bf2, cqpw, +1,firstderiv=[1.,0.,0.],cell=cell)
                 !TODO    &                 pgft2x)
 
-                rhti = 0.0
-                CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*vacxy)&
-                      stars, rhdy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.,0.],cell=cell)
+                cqpw(1) = CMPLX(0.0,0.0)
+                CALL fft2d(stars, rhdy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.,0.],cell=cell) ! dn/dy =  FFT(0,i*gy*vacxy)&
 
-                rhti = 0.0
-                CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
-                        stars, rhdz(0,js),bf2, rdz(ip,:,js), +1)
+                CALL fft2d(stars, rhdz(0,js),bf2, rdz(ip,:,js), +1) ! dn/dz = FFT(rhtdz,rxydz)&
 
                 DO iq=2,stars%ng2
                    cqpw(iq)=-vacnew(ip,iq,ivac,js)
                 ENDDO
 
-                rhti = 0.0
-                CALL fft2d(      &          ! d2n/dx2 = FFT(0,-gx^2*vacxy)&
-                       stars, rhdxx(0,js),bf2, cqpw, +1,firstderiv=[1.0,0.,0.],secondderiv=[1.0,0.,0.],cell=cell)
+                cqpw(1) = CMPLX(0.0,0.0)
+                CALL fft2d(stars, rhdxx(0,js),bf2, cqpw, +1,firstderiv=[1.0,0.,0.],secondderiv=[1.0,0.,0.],cell=cell) ! d2n/dx2 = FFT(0,-gx^2*vacxy)&
+
+                cqpw(1) = CMPLX(0.0,0.0)
+                CALL fft2d(stars, rhdyy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[0.,1.0,0.],cell=cell) ! d2n/dy2 = FFT(0,-gy^2*vacxy)&
 
                 rhti = 0.0
-                CALL fft2d(       &          ! d2n/dy2 = FFT(0,-gy^2*vacxy)&
-                      stars, rhdyy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[0.,1.0,0.],cell=cell)
-
-                rhti = 0.0
-                CALL fft2d(        &         ! d2n/dz2 = FFT(rhtdzz,rxydzz)&
-                       stars, rhdzz(0,js),bf2, rdzz(ip,:,js), +1)
+                CALL fft2d(stars, rhdzz(0,js),bf2, rdzz(ip,:,js), +1) ! d2n/dz2 = FFT(rhtdzz,rxydzz)&
 
 
                 DO iq=2,stars%ng2
                    cqpw(iq)=ImagUnit*rxydz(ip,iq,js)
                 ENDDO
 
-                rhti = 0.0
-                CALL fft2d(         &         ! d2n/dyz = FFT(0,i*gy*rxydz)&
-                       stars, rhdyz(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell)
+                cqpw(1) = CMPLX(0.0,0.0)
+                CALL fft2d(stars, rhdyz(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell) ! d2n/dyz = FFT(0,i*gy*rxydz)&
 
-                rhti = 0.0
-                CALL fft2d(          &        ! d2n/dzx = FFT(0,i*gx*rxydz)&
-                       stars, rhdzx(0,js),bf2, cqpw, +1,firstderiv=[1.,0.0,0.],cell=cell)
+                cqpw(1) = CMPLX(0.0,0.0)
+                CALL fft2d(stars, rhdzx(0,js),bf2, cqpw, +1,firstderiv=[1.,0.0,0.],cell=cell) ! d2n/dzx = FFT(0,i*gx*rxydz)&
 
                 DO iq=2,stars%ng2
                    cqpw(iq)=-vacnew(ip,iq,ivac,js)
                 ENDDO
 
-                rhti = 0.0
-                CALL fft2d(           &    ! d2n/dxy = FFT(0,-gx*gy*vacxy)&
-                      stars, rhdxy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[1.,0.0,0.],cell=cell)
+                cqpw(1) = CMPLX(0.0,0.0)
+                CALL fft2d(stars, rhdxy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[1.,0.0,0.],cell=cell) ! d2n/dxy = FFT(0,-gx*gy*vacxy)&
 
              END DO ! js=1,jspins
 
