@@ -20,7 +20,7 @@ contains
       type(t_cell),   intent(in)  :: cell
 
       complex,        intent(in)  :: psq(stars%ng3)
-      complex,        intent(out) :: vxy(vacuum%nmzxyd,stars%ng2,2)
+      complex,        intent(inout) :: vxy(vacuum%nmzxyd,stars%ng2,2)
       logical,        intent(in)  :: l_dfptvgen
 
       complex                     :: arg, c_ph, sumr(2)
