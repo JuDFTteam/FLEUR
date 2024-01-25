@@ -100,6 +100,7 @@ CONTAINS
       TYPE(t_hub1data) :: hub1data
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
+      TYPE(t_log_message)  :: log
 
       INTEGER :: eig_id, archiveType, num_threads
       INTEGER :: iter, iterHF, i, n, i_gf
@@ -631,11 +632,15 @@ CONTAINS
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
 8130        FORMAT(/, 5x, '******* it=', i3, '  is completed********', /,/)
+            call log%add("Interation",int2str(iter))
             IF (fi%hybinp%l_hybrid) THEN
                WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance, " hyb distance:", hybdat%results%last_distance
+               call log%add("Hybrid-distance",float2str(hybdat%results%last_distance))
             ELSE
                WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance
             ENDIF
+            call log%add("Distance",float2str(results%last_distance))
+            call log%report(logmode_info)
          END IF ! fmpi%irank.EQ.0
          CALL timestop("Iteration")
 

@@ -33,6 +33,8 @@ MODULE m_juDFT_stop
   USE m_judft_time
   USE m_judft_sysinfo
   USE m_judft_args
+  use m_juDFT_logging
+  use m_juDFT_string,only:int2str
 #ifdef CPP_MPI
   USE mpi
 #endif
@@ -82,6 +84,11 @@ CONTAINS
     LOGICAL                       :: l_mpi=.FALSE.
     INTEGER                       :: isize,irank,e,i
     CHARACTER(len=100),ALLOCATABLE::message_list(:)
+    
+
+   !For logging
+    integer:: log_level=logmode_error
+    type(t_log_message) :: log
 #ifdef CPP_MPI
     LOGICAL :: first_parallel
     CALL MPI_INITIALIZED(l_mpi,e)
@@ -120,27 +127,36 @@ CONTAINS
        IF (.NOT.warn) THEN
           IF (present(bug)) THEN
             WRITE(*,'(a)') "**************"//name//"-BUG*****************"
+            log_level=logmode_bug
          ELSE  
             WRITE(*,'(a)') "**************"//name//"-Error*****************"
+            log_level=logmode_error
           ENDIF   
        ELSE
-          WRITE(*,'(a)') "************"//name//"-Warning*****************"
+         log_level=logmode_warning
+         WRITE(*,'(a)') "************"//name//"-Warning*****************"
        ENDIF
        WRITE(*,"(3a)") "Error message: ",message
+       call log%add("message",message)
        IF (PRESENT(calledby)) THEN
           WRITE(*,"(3a)") "Error occurred in subroutine: ",calledby
+          call log%add("subroutine",calledby)
        ENDIF
        IF (PRESENT(hint)) THEN
           WRITE(*,"(3a)") "Hint: ",hint
+          call log%add("hint",hint)
        ENDIF
        IF (PRESENT(no)) THEN
           WRITE(*,"(1a,i0)") "Error number: ",no
+          call log%add("No",int2str(no))
        ENDIF
        IF (PRESENT(file)) THEN
           IF (PRESENT(line)) THEN
              WRITE(*,"(3a,i0)") "Source: ",file,":",line
+             call log%add("Source",file//":"//int2str(line))
           ELSE
              WRITE(*,"(3a)") "Source: ",file
+             call log%add("Source",file)
           ENDIF
        ENDIF
        IF (PRESENT(bug)) THEN
@@ -164,7 +180,7 @@ CONTAINS
 #endif
        WRITE(*,'(2a)') "*****************************************"
 
-       IF (.NOT.warn) CALL juDFT_time_lastlocation()
+       IF (.NOT.warn) CALL juDFT_time_lastlocation(log)
        IF (callstop.and.warn) WRITE(*,'(a)')"Warnings not ignored. To make the warning nonfatal create a file 'JUDFT_WARN_ONLY' in the working directory or start FLEUR with the -warn_only command line option."
        IF (callstop) THEN
           CALL writetimes()
@@ -183,6 +199,8 @@ CONTAINS
     ELSE
        CALL priv_wait(2.0)
     ENDIF
+
+    call log%report(log_level)
 
     IF (callstop) THEN
        CALL add_usage_data("Error",replace_text(message, new_line('A'), " "))
@@ -218,6 +236,8 @@ CONTAINS
 
     LOGICAL l_endXML_local, is_root
     LOGICAL :: l_mpi=.false.
+
+    type(t_log_message)::log
 #ifdef CPP_MPI
     INTEGER :: ierr
     CALL MPI_INITIALIZED(l_mpi,ierr)
@@ -262,7 +282,13 @@ CONTAINS
        WRITE(*,*) "for more information on relevant papers and example Bibtex entries."
        WRITE(*,*) "********************************************************************"
        FLUSH(output_unit)
+      
     ENDIF
+
+    !logging
+    call log%add("Success",message)
+    call log%report(logmode_status)
+
     CALL writetimes()
     CALL print_memory_info(output_unit,.true.)
     CALL send_usage_data()
@@ -295,15 +321,24 @@ CONTAINS
     LOGICAL :: calltrace
     LOGICAL,ALLOCATABLE::a(:)
     LOGICAL :: l_mpi=.FALSE.
+
+    !logging
+    type(t_log_message):: log
 #ifdef CPP_MPI
     INTEGER :: ierr
     CALL mpi_initialized(l_mpi,ierr)
 #endif
     error = 1
-
     IF(PRESENT(errorCode)) THEN
        error = errorCode
     END IF
+
+    !finalize logging
+    call log%add("ExitCode",int2str(error))
+    call log%report(logmode_status)
+    
+    call log_stop()
+    
     !Now try to generate a stack-trace if requested
     INQUIRE(FILE="JUDFT_TRACE",EXIST=calltrace)
     IF (judft_was_argument("-trace")) calltrace=.TRUE.
@@ -314,8 +349,6 @@ CONTAINS
 #elif (defined(CPP_AIX)&&!defined(__PGI))
        CALL xl__trbk()
 #endif
-       ! cause an error, so that the compiler generates a stacktrace
-       DEALLOCATE(a)
     ENDIF
 
 #if defined(CPP_MPI)

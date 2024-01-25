@@ -238,6 +238,9 @@ CONTAINS
         !Call FLEUR
         fmpi%l_mpi_multithreaded = l_mpi_multithreaded
         fmpi%mpi_comm = jobs(njob)%mpi_comm
+
+        call log_start()
+
         CALL timestart("Initialization")
         filename_add = ""
         IF (judft_was_argument("-add_name")) filename_add = TRIM(judft_string_for_argument("-add_name"))//"_"//""
