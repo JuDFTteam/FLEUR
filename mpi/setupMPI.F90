@@ -39,7 +39,7 @@ CONTAINS
        CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
        write(*,*) "Number of PE/node  :  ",isize
        CALL add_usage_data("MPI-PE",fmpi%isize)
-       call log%add("MPI-Ranks",int2str(fmpu%isize))
+       call log%add("MPI-Ranks",int2str(fmpi%isize))
 #else
        CALL add_usage_data("MPI-PE",1)
        call log%add("MPI-Ranks","noMPI")
