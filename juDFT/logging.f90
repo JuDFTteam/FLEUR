@@ -24,7 +24,7 @@ module m_juDFT_logging
     public:: logmode_bug,logmode_error,logmode_warning,logmode_info,logmode_status
     contains
 
-    subroutine delete_all(logmessage)
+    recursive subroutine delete_all(logmessage)
         CLASS(t_log_message),INTENT(INOUT)::logmessage
 
         if (ASSOCIATED(logmessage%next)) then 
@@ -36,7 +36,7 @@ module m_juDFT_logging
         if (allocated(logmessage%message)) deallocate(logmessage%message)
     end subroutine
 
-    subroutine add(logmessage,key,message)
+    recursive subroutine add(logmessage,key,message)
         CLASS(t_log_message),INTENT(INOUT)::logmessage
         character(len=*),intent(in):: key,message
 
@@ -52,7 +52,7 @@ module m_juDFT_logging
         endif 
     end subroutine     
     
-    subroutine write(logmessage)
+    recursive subroutine write(logmessage)
         CLASS(t_log_message),INTENT(IN)::logmessage
         
         if (allocated(logmessage%key)) THEN
