@@ -38,7 +38,7 @@ MODULE m_juDFT_init
 
 #ifdef __INTEL_COMPILER
       USE ifport
-      INTEGER :: result
+      INTEGER :: result,signal_handler
       EXTERNAL signal_handler
       result=signal(SIGTERM,signal_handler,-1)
       result=signal(SIGSEGV,signal_handler,-1)
