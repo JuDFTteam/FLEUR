@@ -124,15 +124,15 @@ CONTAINS
           DO ip=1,vacuum%nmzxy
             DO js=1,jspins
               IF (.NOT.PRESENT(rhoim)) THEN
-                 CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),bf2, vacnew(ip,:,ivac,js),+1)
+                 CALL fft2d(stars, rho(idx1:idx1+ifftd2-1,js),bf2, vacnew(ip,:,ivac,js),+1)
               ELSE
-                 CALL fft2d(stars, rho(idx1:idx1+9*stars%mx1*stars%mx2-1,js),rhoim(idx1:idx1+9*stars%mx1*stars%mx2-1,js), vacnew(ip,:,ivac,js),+1)
+                 CALL fft2d(stars, rho(idx1:idx1+ifftd2-1,js),rhoim(idx1:idx1+ifftd2-1,js), vacnew(ip,:,ivac,js),+1)
               END IF
             END DO
             IF (l_noco) THEN
               CALL fft2d(stars, mx,my, vacnew(ip,:,ivac,3),+1)
 
-              DO i=0,9*stars%mx1*stars%mx2-1
+              DO i=0,ifftd2-1
                 magmom(i,ip)= mx(i)**2 + my(i)**2 + ((rho(i+idx1,1)-rho(i+idx1,2))/2.)**2
                 magmom(i,ip)= SQRT(magmom(i,ip))
                 chdens= rho(i+idx1,1)/2.+rho(i+idx1,2)/2.
@@ -140,7 +140,7 @@ CONTAINS
                 rho(i+idx1,2)= chdens - magmom(i,ip)
               END DO
             ENDIF
-            idx1=idx1+9*stars%mx1*stars%mx2
+            idx1=idx1+ifftd2
           END DO ! ip=1,vacuum%nmzxy
 
        !      ENDDO    ! ivac
@@ -182,7 +182,7 @@ CONTAINS
           IF (l_noco) THEN
              !  calculate  dzmagmom = d magmom / d z  and ddzmagmom= d dmagmom / d z
 
-             DO i=0,9*stars%mx1*stars%mx2-1
+             DO i=0,ifftd2-1
                 DO ip=1,vacuum%nmzxy
                    rhtxyr(ip)=magmom(i,ip)
                 ENDDO
@@ -287,7 +287,7 @@ CONTAINS
                 ! ! already calculated in g-space, will be used.
 
                 CALL grdrsvac(magmom(0,ip),cell%bmat,3*stars%mx1,3*stars%mx2,fixed_ndvgrd, dxmagmom,dymagmom)
-                DO i=0,9*stars%mx1*stars%mx2-1
+                DO i=0,ifftd2-1
                    chdens= rhdx(i,1)/2.+rhdx(i,2)/2.
                    rhdx(i,1)= chdens + dxmagmom(i)
                    rhdx(i,2)= chdens - dxmagmom(i)
@@ -303,7 +303,7 @@ CONTAINS
                      ddxmagmom(0,1),ddymagmom(0,1))
                 CALL grdrsvac(&
                      dymagmom,cell%bmat,3*stars%mx1,3*stars%mx2,fixed_ndvgrd,ddxmagmom(0,2),ddymagmom(0,2))
-                DO i=0,9*stars%mx1*stars%mx2-1
+                DO i=0,ifftd2-1
                    chdens= rhdxx(i,1)/2.+rhdxx(i,2)/2.
                    rhdxx(i,1)= chdens + ddxmagmom(i,1)
                    rhdxx(i,2)= chdens - ddxmagmom(i,1)
@@ -316,7 +316,7 @@ CONTAINS
                 END DO
                 CALL grdrsvac(dzmagmom(0,ip),cell%bmat,3*stars%mx1,3*stars%mx2,fixed_ndvgrd, &
                      ddxmagmom(0,1),ddymagmom(0,1))
-                DO i=0,9*stars%mx1*stars%mx2-1
+                DO i=0,ifftd2-1
                    chdens= rhdzx(i,1)/2.+rhdzx(i,2)/2.
                    rhdzx(i,1)= chdens + ddxmagmom(i,1)
                    rhdzx(i,2)= chdens - ddxmagmom(i,1)
@@ -405,7 +405,7 @@ CONTAINS
 
              CALL mkgz(nmzdiff,jspins, rho(nmz0:,1),rho(nmz0:,jspins),&
              rhtdz(nmz0:,1),rhtdz(nmz0:,jspins),rhtdzz(nmz0:,1),&
-                  rhtdzz(nmz0:,jspins),idx,grad)
+                  rhtdzz(nmz0:,jspins),idx-1,grad)
 
        ENDIF
 
