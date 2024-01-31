@@ -40,12 +40,18 @@ MODULE m_juDFT_init
       USE ifport
       INTEGER :: result,signal_handler
       EXTERNAL signal_handler
-      result=signal(SIGTERM,signal_handler,-1)
-      result=signal(SIGSEGV,signal_handler,-1)
+      result=signal(2,signal_handler,-1)
+      result=signal(4,signal_handler,-1)
+      result=signal(6,signal_handler,-1)
+      result=signal(11,signal_handler,-1)
+      result=signal(15,signal_handler,-1)
 #endif
 #ifdef __GFORTRAN__
       external :: signal_handler
 
+      call signal(2,signal_handler)
+      call signal(4,signal_handler)
+      call signal(6,signal_handler)
       call signal(11,signal_handler)
       call signal(15,signal_handler)
 #endif      
@@ -105,12 +111,29 @@ MODULE m_juDFT_init
 #else
       WRITE(*,*) "Signal detected:",signal
 #endif
-      WRITE(*,*) "This might be due to either:"
-      WRITE(*,*) " - A bug"
-      WRITE(*,*) " - Your job running out of memory"
-      WRITE(*,*) " - Your job got killed externally (e.g. no cpu-time left)"
-      WRITE(*,*) " - ...."
-      WRITE(*,*) "Please check and report if you believe you found a bug"
+      SELECT CASE(signal)
+      case(15) !SigTerm
+            write(*,*) "Your run was stopped externally"
+            write(*,*) "This might for example happen if you run out of cpu-time."
+      case(4)  !SigIll
+            write(*,*) "Your FLEUR executable contains illegal instructions."
+            write(*,*) "You most probably compiled for the wrong processor architecture"
+      case(11) !SigSegv
+            write(*,*) "FLEUR tried an illegal memory access."      
+            WRITE(*,*) "This might indicate a bug, or your calculation"
+            write(*,*) "failed because you were running out of memory"
+            WRITE(*,*) "Please check and report if you believe you found a bug"
+      case(2)  !SigInt
+            write(*,*) "You stopped FLEUR, e.g. by pressing CTRL-C"
+      case(6)  !SigAbrt
+            write(*,*) "Your job aborted abnormally."     
+            WRITE(*,*) "This might indicate a bug, a problem in some"
+            write(*,*) "external library, or some kind of hardware issue."
+            WRITE(*,*) "Please check and report if you believe you found a bug"
+      case default
+            write(*,*) "No more information for this signal available"
+      end select      
+      
       CALL writetimes()
       CALL PRINT_memory_info(output_unit,.true.)
 
