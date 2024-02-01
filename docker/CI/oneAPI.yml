@@ -61,7 +61,7 @@ build-intel-debug:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -l intel -d -flags "-init=array,snan,huge -ftrapuv "
+    - ./configure.sh -l intel -d 
     - cd build.intel.debug
     - make -j 2
   allow_failure: false
