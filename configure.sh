@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+#color for output
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
 {
 function clone_from_git(){
      rm -rf $DIR/configure.sh
@@ -28,7 +32,7 @@ function update_git(){
     then
 	cd $DIR ; git pull ; cd -
     else
-	echo "WARNING........."
+	echo -e "${RED}WARNING.........${NC}"
 	echo "You asked to pull the current version from IFFGIT"
 	echo "So far your version is not controlled by git."
 	echo "If you modified any source code in your directory it will be deleted"
@@ -45,20 +49,18 @@ then
     then
 	clone_from_git
     else
-	echo "ERROR: No source present"
+	echo -e "${RED}ERROR: No source present${NC}"
 	echo "You have no 'git' executable and/or the iffgit server is not reachable"
 	echo "Please download the complete source manually to your machine"
 	exit
     fi
 fi
 
-#These contain functions to be used later on...
-. $DIR/cmake/machines.sh
-. $DIR/external/install_external.sh
+
 
 #variables to store arguments
 
-machine=""
+compiler=""
 label=""
 backup=0
 gitupdate=0
@@ -67,7 +69,7 @@ error=""
 external_lib=""
 
 
-echo "------------ Welcome to the FLEUR configuration script -------------"
+echo -e "${RED}------------ Welcome to the FLEUR configuration script -------------${NC}"
 
 . $DIR/cmake/process_arguments.sh
 
@@ -137,17 +139,13 @@ else
 fi
 cd $buildname
 
-#Now check the machine and set some defaults
-if [[ $machine =~ FLEUR_CONFIG_MACHINE ]]
-then
-    machine=$FLEUR_CONFIG_MACHINE
-fi
-if [ "$machine" = "" ]
-then
-    machine=AUTO
-fi
-echo "Machine config:$machine"
-configure_machine
+#Now check the compiler settings
+
+#These contain functions to be used now ...
+. $DIR/cmake/compiler.sh
+
+compiler=${compiler:=none}
+configure_compiler
 
 #run cmake
 if [ "$cmake" ]
@@ -180,9 +178,9 @@ cd -
 
 if [ ! -r $buildname/Makefile ]
 then
-    echo "Your configuration failed"
-    echo "Perhaps you have to specify compiler options or give a machine dependent configuration."
-    echo "You might want to call the configure.sh script with -h"
+    echo -e "${RED}Your configuration failed"
+    echo "Perhaps you have to specify compiler options or choose a different compiler."
+    echo -e "You might want to call the configure.sh script with -h${NC}"
 else
     echo "Configuration finished"
     if [ "$make_directly" ]
@@ -190,8 +188,8 @@ else
 	cd $buildname
 	make -j
     else
-	echo "You should change into directory $buildname "
-	echo "run 'make' or 'make -j'"
+	echo -e "${RED}You should change into directory $buildname "
+	echo -e "run 'make' or 'make -j'${NC}"
     fi
 fi
 }
