@@ -61,15 +61,15 @@ fi
 #check if -h or  -help was given as argument
 if [ $help -gt 0 ]
 then
-   echo "USAGE: configure.sh [options] [label]"
+   echo -e "${RED}USAGE: configure.sh [options] [label]{$NC}"
    echo "
 The following command line options are supported.
 General options:
   -h            : print this help-page
-  -c #          : specify the compiler toolchain to use(details below)
+  -c #          : ${GREEN}specify the compiler toolchain to use(details below)${NV}
   -dc           : delete FC,CC,CXX environment variables
-  -l #          : label for the build. It will be attached to the name of
-                  the build directory.
+  -l #          : label for the build. ${GREEN}It will be attached to the name of
+                  the build directory.${NC}
                   This option can also be specified as last argument without -l
   -d            : build a debugging version of FLEUR (adds .debug to label)
   -g            : do a git pull first if this is a git version

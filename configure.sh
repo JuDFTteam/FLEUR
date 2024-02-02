@@ -189,7 +189,7 @@ else
 	cd $buildname
 	make -j
     else
-	echo -e "${RED}You should change into directory $buildname "
+	echo -e "${GREEN}You should change into directory $buildname "
 	echo -e "run 'make' or 'make -j'${NC}"
     fi
 fi
