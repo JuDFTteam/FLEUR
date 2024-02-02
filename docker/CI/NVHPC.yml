@@ -10,7 +10,7 @@ build-pgi:
        - build.pgi
      expire_in: 12h
   script:
-    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -l pgi ; cd build.pgi; make"
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -l pgi -c auto; cd build.pgi; make"
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /nvidia/    
@@ -34,7 +34,7 @@ build-nvhpc-gpu:
       - build.nvgpu
     expire_in: 12h
   script:
-    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -gpu acc:cc60 -l nvgpu -libdir /opt/nvidia/hpc_sdk/Linux_x86_64/22.3/cuda/11.0/targets/x86_64-linux/lib/stubs/; cd build.nvgpu; make"
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -gpu acc:cc60 -l nvgpu -libdir /opt/nvidia/hpc_sdk/Linux_x86_64/22.3/cuda/11.0/targets/x86_64-linux/lib/stubs/ -c auto; cd build.nvgpu; make"
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
