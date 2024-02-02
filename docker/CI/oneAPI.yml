@@ -7,7 +7,7 @@ build-intel:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -l intel
+    - ./configure.sh -l intel -c auto
     - cd build.intel
     - make -j 2
   allow_failure: false
@@ -34,7 +34,7 @@ build-intel-ifx:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - FC=ifx ./configure.sh -l intel.ifx
+    - FC=ifx ./configure.sh -l intel.ifx -c auto
     - cd build.intel.ifx
     - make -j 2
   allow_failure: true
@@ -61,7 +61,7 @@ build-intel-debug:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -l intel -d 
+    - ./configure.sh -l intel -d -c auto
     - cd build.intel.debug
     - make -j 2
   allow_failure: false
