@@ -38,7 +38,7 @@ doxygen:
   stage: html
   needs: []
   script:
-    - cd $CI_PROJECT_DIR ; ./configure.sh GITLAB
+    - cd $CI_PROJECT_DIR ;FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi
     - cd $CI_PROJECT_DIR/build ; make doc
     - mkdir ../public
     - mv docs/html/ ../public/doxygen
@@ -63,7 +63,7 @@ gfortran-coverage:
   before_script:
       - cd $CI_PROJECT_DIR
       - pip install lcov_cobertura
-      - ./configure.sh -l coverage -flags --coverage GITLAB
+      - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -l coverage -flags --coverage 
       - cd build.coverage
       - make -j 4
       - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --exclude "*.inc" --capture --initial -d CMakeFiles -o baseline.info

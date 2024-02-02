@@ -22,7 +22,7 @@ build-gfortran-hdf5-serial:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -m GITLAB -mpi FALSE
+    - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -mpi FALSE
     - cd build
     - make -j 2
   rules:
@@ -48,7 +48,7 @@ build-gfortran-hdf5-debug:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -m GITLAB -mpi FALSE -d -flags "-fcheck=all -finit-real=snan -finit-derived"
+    - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -mpi FALSE -d -flags "-fcheck=all -finit-real=snan -finit-derived"
     - cd build.debug
     - make -j 2
   rules:
