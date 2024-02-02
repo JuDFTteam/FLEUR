@@ -14,7 +14,7 @@ do
          then
             if $p --version 2> /dev/null >/dev/null
             then
-               desc=`$p --version 2>/dev/null  |grep 'GCC\|ICC\|IFX\|nvc\|IFORT\|nvfortran' `
+               desc=`$p --version 2>/dev/null `
                new=true
                if (( ${#desc} < 1 )); then new=false ; fi
                if [[ $comp == mpi* ]];then desc="MPI:$desc" ;fi
@@ -42,7 +42,9 @@ select_compiler(){
 echo $1
 for i in ${!ccomp[@]}
 do
-echo "$i) ${ccomp_d[$i]} as found in ${ccomp[$i]}"
+echo -e "${GREEN}$i) ${ccomp[$i]}${NC}"
+echo "-------------------------------------------"
+echo ${ccomp_d[$i]}
 done
 read number
 if [ $number == '' ];then echo "Invalid choice" ; exit ;fi
