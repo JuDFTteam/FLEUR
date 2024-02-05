@@ -20,7 +20,7 @@ perf-intel-ifx:
     BENCHER_PROJECT: FLEUR
     BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     BENCHER_ADAPTER: json
-   script:
+  script:
     - cd $BUILD_FOLDER
     - ./run_tests.sh -perf
     - cp Testing/performance/*/bencher.json .
