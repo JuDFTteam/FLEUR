@@ -1,0 +1,30 @@
+perf-intel-ifx:
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  extends: .perf-generic
+  tags:
+     - ias-1
+     - cluster
+  variables:
+    BUILD_FOLDER: "build.intel.ifx"
+    BENCHER_TESTBED: IFX-iffcluster
+    OMP_NUM_THREADS: 16
+  needs: 
+    - build-intel-ifx
+  rules:
+      - if: $CI_TASKS =~ /intel/    
+
+
+.perf-generic:
+  variables:
+    BENCHER_HOST: iffsomewhere
+    BENCHER_PROJECT: FLEUR
+    BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+    BENCHER_ADAPTER: json
+   script:
+    - cd $BUILD_FOLDER
+    - ./run_tests.sh -perf
+    - cp Testing/performance/*/bencher.json .
+    - bencher run --if-branch "$CI_COMMIT_REF_NAME" \\
+        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
+        --file bencher.json
+
