@@ -17,3 +17,4 @@ include:
    - "docker/CI/NVHPC.yml"
    - "docker/CI/html.yml"
    - "docker/CI/AiiDA.yml"
+   - "docker/CI/CB.yml"
