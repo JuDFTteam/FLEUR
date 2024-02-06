@@ -1,3 +1,17 @@
+perf-gfortran:
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  extends: .perf-generic
+  tags:
+    - iffcluster1703
+  variables:
+    BENCHER_TESTBED: GFortran-iffcluster
+    OMP_NUM_THREADS: 16
+  before_script:
+    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+  needs: 
+    - build-gfortran-hdf5
+
+
 perf-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
   extends: .perf-generic
