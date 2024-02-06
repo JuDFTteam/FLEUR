@@ -1,6 +1,22 @@
+perf-intel:
+  image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
+  extends: .perf-generic
+  tags:
+    - iffcluster1703
+  variables:
+    BUILD_FOLDER: "build.intel"
+    BENCHER_TESTBED: IFORT-iffcluster
+    OMP_NUM_THREADS: 16
+  needs: 
+    - build-intel
+  rules:
+      - if: $CI_TASKS =~ /intel/    
+
 perf-intel-ifx:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
   extends: .perf-generic
+  tags:
+    - iffcluster1703
   variables:
     BUILD_FOLDER: "build.intel.ifx"
     BENCHER_TESTBED: IFX-iffcluster
