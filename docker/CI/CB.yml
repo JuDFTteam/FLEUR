@@ -1,9 +1,6 @@
 perf-intel-ifx:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
   extends: .perf-generic
-  tags:
-     - ias-1
-     - cluster
   variables:
     BUILD_FOLDER: "build.intel.ifx"
     BENCHER_TESTBED: IFX-iffcluster
@@ -16,9 +13,9 @@ perf-intel-ifx:
 
 .perf-generic:
   variables:
-    BENCHER_HOST: iffsomewhere
+    BENCHER_HOST: iffbencher.fz-juelich.de
     BENCHER_PROJECT: FLEUR
-    BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+    BENCHER_API_TOKEN: $BENCHER_TOKEN
     BENCHER_ADAPTER: json
   script:
     - cd $BUILD_FOLDER
