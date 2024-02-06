@@ -6,8 +6,6 @@ perf-gfortran:
   variables:
     BENCHER_TESTBED: GFortran-iffcluster
     OMP_NUM_THREADS: 16
-  before_script:
-    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
   needs: 
     - build-gfortran-hdf5
   rules:
@@ -49,7 +47,7 @@ perf-intel-ifx:
 .perf-generic:
   variables:
     BENCHER_HOST: iffbencher.fz-juelich.de
-    BENCHER_PROJECT: FLEUR
+    BENCHER_PROJECT: fleur
     BENCHER_API_TOKEN: $BENCHER_TOKEN
     BENCHER_ADAPTER: json
   script:
