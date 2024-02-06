@@ -50,9 +50,11 @@ perf-intel-ifx:
     BENCHER_PROJECT: fleur
     BENCHER_API_TOKEN: $BENCHER_TOKEN
     BENCHER_ADAPTER: json
+    BENCHER_BRANCH: $CI_COMMIT_REF_NAME
   script:
     - cd $BUILD_FOLDER
     - ulimit -s unlimited ; ./run_tests.sh -perf
     - cp Testing/performance/*/bencher.json .
-    - bencher run --branch "$CI_COMMIT_REF_NAME" --file bencher.json
+    - echo "$CI_COMMIT_REF_NAME"
+    - bencher run --file bencher.json
 
