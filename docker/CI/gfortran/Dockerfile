@@ -9,5 +9,8 @@ RUN mkdir /opt/lib
 RUN mkdir /opt/include
 RUN ln -s /usr/lib/x86_64-linux-gnu/liblapack.so.3 /usr/lib/x86_64-linux-gnu/liblapack.so
 
+RUN curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+
+
 COPY lib/* /opt/lib/
 COPY include/* /opt/include/
