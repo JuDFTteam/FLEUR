@@ -49,7 +49,7 @@ perf-intel-ifx:
     BENCHER_ADAPTER: json
   script:
     - cd $BUILD_FOLDER
-    - ./run_tests.sh -perf
+    - ulimit -s unlimited ; ./run_tests.sh -perf
     - cp Testing/performance/*/bencher.json .
     - bencher run --if-branch "$CI_COMMIT_REF_NAME" \\
         --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
