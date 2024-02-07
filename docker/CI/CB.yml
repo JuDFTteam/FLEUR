@@ -6,12 +6,9 @@ perf-gfortran:
   variables:
     BENCHER_TESTBED: GFortran-iffcluster
     OMP_NUM_THREADS: 16
+    BUILD_FOLDER: build
   needs: 
     - build-gfortran-hdf5
-  script:
-     - ls
-     - cd $BUILD_FOLDER
-     - ls
   rules:
     - if: $CI_TASKS
       when: never
