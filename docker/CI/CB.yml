@@ -8,6 +8,10 @@ perf-gfortran:
     OMP_NUM_THREADS: 16
   needs: 
     - build-gfortran-hdf5
+  script:
+     - ls
+     - cd $BUILD_FOLDER
+     - ls
   rules:
     - if: $CI_TASKS
       when: never
@@ -56,7 +60,5 @@ perf-intel-ifx:
     - ulimit -s unlimited ; sh ./run_tests.sh -perf
     - cp Testing/performance/*/bencher.json .
     - echo "$CI_COMMIT_REF_NAME"
-    - bencher run  --if-branch "$CI_COMMIT_REF_NAME" \\
-        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
-        --file bencher.json
+    - bencher run  --if-branch "$CI_COMMIT_REF_NAME" --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"         --file bencher.json
 
