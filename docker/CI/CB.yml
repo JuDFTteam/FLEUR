@@ -9,6 +9,10 @@ perf-gfortran:
     BUILD_FOLDER: build
   needs: 
     - build-gfortran-hdf5
+  script:
+    - bencher org list
+    - echo "$CI_COMMIT_REF_NAME"
+    - echo "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
   rules:
     - if: $CI_TASKS
       when: never
