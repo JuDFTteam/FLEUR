@@ -51,7 +51,7 @@ perf-intel-ifx:
 
 .perf-generic:
   variables:
-    BENCHER_HOST: https://iffbencher.fz-juelich.de:16061
+    BENCHER_HOST: https://iffbencher.fz-juelich.de:61016
     BENCHER_PROJECT: fleur
     BENCHER_API_TOKEN: $BENCHER_TOKEN
     BENCHER_ADAPTER: json
