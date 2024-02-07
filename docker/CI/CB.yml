@@ -46,14 +46,14 @@ perf-intel-ifx:
 
 .perf-generic:
   variables:
-    BENCHER_HOST: https://iffbencher.fz-juelich.de
+    BENCHER_HOST: https://iffbencher.fz-juelich.de:16061
     BENCHER_PROJECT: fleur
     BENCHER_API_TOKEN: $BENCHER_TOKEN
     BENCHER_ADAPTER: json
     BENCHER_BRANCH: $CI_COMMIT_REF_NAME
   script:
     - cd $BUILD_FOLDER
-    - ulimit -s unlimited ; ./run_tests.sh -perf
+    - ulimit -s unlimited ; sh ./run_tests.sh -perf
     - cp Testing/performance/*/bencher.json .
     - echo "$CI_COMMIT_REF_NAME"
     - bencher run --file bencher.json
