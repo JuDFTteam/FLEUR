@@ -6,14 +6,13 @@ perf-gfortran:
   variables:
     BENCHER_TESTBED: GFortran-iffcluster
     OMP_NUM_THREADS: 16
-    BUILD_FOLDER: build
-  needs: 
-    - build-gfortran-hdf5
+  before_script:
+    - cd $CI_PROJECT_DIR
+    - VERBOSE=1 FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi
+    - cd build
+    - make -j 12
   rules:
-    - if: $CI_TASKS
-      when: never
-    - if: $CI_TASKS =~ /gfortran/  
-    - when: on_success
+    - if: $CI_TASKS =~ /CB/  
 
 
 perf-intel:
@@ -22,13 +21,15 @@ perf-intel:
   tags:
     - iffcluster1703
   variables:
-    BUILD_FOLDER: "build.intel"
     BENCHER_TESTBED: IFORT-iffcluster
     OMP_NUM_THREADS: 16
-  needs: 
-    - build-intel
+  before_script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -c auto
+    - cd build
+    - make -j 12
   rules:
-      - if: $CI_TASKS =~ /intel/    
+      - if: $CI_TASKS =~ /CB/    
 
 perf-intel-ifx:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -36,13 +37,15 @@ perf-intel-ifx:
   tags:
     - iffcluster1703
   variables:
-    BUILD_FOLDER: "build.intel.ifx"
     BENCHER_TESTBED: IFX-iffcluster
     OMP_NUM_THREADS: 16
-  needs: 
-    - build-intel-ifx
+  before_script:
+    - cd $CI_PROJECT_DIR
+    - FC=ifx ./configure.sh -c auto
+    - cd build
+    - make -j 12
   rules:
-      - if: $CI_TASKS =~ /intel/    
+      - if: $CI_TASKS =~ /CB/    
 
 
 .perf-generic:
@@ -51,9 +54,7 @@ perf-intel-ifx:
     BENCHER_PROJECT: fleur
     BENCHER_API_TOKEN: $BENCHER_TOKEN
     BENCHER_ADAPTER: json
-    BENCHER_BRANCH: $CI_COMMIT_REF_NAME
   script:
-    - cd $BUILD_FOLDER
     - ulimit -s unlimited ; sh ./run_tests.sh -perf
     - cp Testing/performance/*/bencher.json .
     - echo "$CI_COMMIT_REF_NAME"
