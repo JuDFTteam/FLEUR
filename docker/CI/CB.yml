@@ -10,7 +10,7 @@ perf-gfortran:
     - cd $CI_PROJECT_DIR
     - VERBOSE=1 FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi
     - cd build
-    - make -j 2
+    - make -j 12
   rules:
     - if: $CI_TASKS =~ /CB/  
 
@@ -27,7 +27,7 @@ perf-intel:
     - cd $CI_PROJECT_DIR
     - ./configure.sh -c auto
     - cd build
-    - make -j 2
+    - make -j 12
   rules:
       - if: $CI_TASKS =~ /CB/    
 
@@ -43,7 +43,7 @@ perf-intel-ifx:
     - cd $CI_PROJECT_DIR
     - FC=ifx ./configure.sh -c auto
     - cd build
-    - make -j 2
+    - make -j 12
   rules:
       - if: $CI_TASKS =~ /CB/    
 
