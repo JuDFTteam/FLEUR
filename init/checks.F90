@@ -119,8 +119,12 @@ MODULE m_checks
         END IF
      END IF
      
+     IF ((atoms%n_v.GT.0).AND.(sym%nop.GT.1)) THEN
+        CALL juDFT_error("LDA+V is incompatible to the usage of symmetries beyond the identity, but you have such symmetries.", hint="Please recreate your FLEUR input by using inpgen with the '-nosym' command line option.", calledby ="check_input_switches")
+     END IF
+
      ! Disable functionalities that are known to have bugs:
-     
+
      IF (ANY(atoms%lda_u(1:atoms%n_u)%l_amf)) THEN
         CALL juDFT_warn("Around Mean Field limit in LDA+U calculations is disabled at the moment.")
      END IF
