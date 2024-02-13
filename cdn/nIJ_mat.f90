@@ -41,7 +41,7 @@ MODULE m_nIJmat
       COMPLEX c_0,A1, B1, A2, B2, power_factor, exponent
       REAL  norm1_W, norm2_W
 
-      counter=0
+        counter=0
         DO i_v = 1,atoms%n_v
             Do atom2=1,atoms%lda_v(i_v)%numOtherAtoms
                 counter=counter+1
@@ -63,6 +63,8 @@ MODULE m_nIJmat
                 ll1atom2=latom2*(latom2+1)
                 norm2_W = usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5
                 power_factor=(cmplx(0, 1)**latom1) *(cmplx(0, -1)**latom2)
+                !! power_factor is not included in the representation of matching coefficients in hsmt_ab.f90 routine. 
+                !! Note that the $e^{ik.r_{atom I/J}}$ is included in c_ph(k,igSpin) only the shift exponent is needed.
                 exponent=EXP(cmplx(0.0,-tpi_const)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),kpts%bk(:,kptindx)))
                 Do matom1=-latom1,latom1
                     lm1atom1=ll1atom1+matom1
@@ -74,7 +76,7 @@ MODULE m_nIJmat
                              B1 = eigVecCoeffs%abcof(i,lm1atom1,1,natom1,jspin)
                              A2 = eigVecCoeffs%abcof(i,lm1atom2,0,natom2,jspin)
                              B2 = eigVecCoeffs%abcof(i,lm1atom2,1,natom2,jspin)   
-                             c_0 = c_0 + we(i) * (conjg(A2)*A1 + conjg(A2)*B1*norm1_W + conjg(B2)*A1*norm2_W + conjg(B2)*B1*norm1_W*norm2_W) * power_factor * exponent
+                             c_0 = c_0 + we(i) * (conjg(A2)*A1 + conjg(A2)*B1*norm1_W + conjg(B2)*A1*norm2_W + conjg(B2)*B1*norm1_W*norm2_W) *power_factor * exponent
                         ENDDO
                         nIJ_llp_mmp(matom1,matom2,i_pair) = nIJ_llp_mmp(matom1,matom2,i_pair) + c_0
                     ENDDO

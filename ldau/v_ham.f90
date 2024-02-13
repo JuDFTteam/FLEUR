@@ -103,13 +103,32 @@ MODULE m_vham
                                     b1      = abG1(lm1atom1+1+abSizeG1/2,iG1)
                                     a2      = abG2(lm1atom2+1,iG2)
                                     b2      = abG2(lm1atom2+1+abSizeG2/2,iG2)
-                                    c_0     = c_0 - (V_inp)*(conjg(den%nIJ_llp_mmp(matom1,matom2,i_pair,jspin)))* exponent *power_fac * &
-                                              (conjg(a1)*a2 + conjg(b1)*a2*norm1_W + conjg(a1)*b2*norm2_W + conjg(b1)*b2*norm2_W*norm1_W) 
+                                    !!!!!!!!!!!!!!!!!
+                                    !IF (iG2==2) THEN
+                                        !IF (iG1==1) THEN
+                                            !IF (i_pair==2) THEN
+                                                !WRITE(455,*) 'm1,m2', matom1,matom2
+                                                !WRITE(455,*) '(conjg(den%nIJ_llp_mmp(matom2,matom1,i_pair,jspin)))', (conjg(den%nIJ_llp_mmp(matom2,matom1,i_pair,jspin)))
+                                                !WRITE(455,*) '(conjg(den%nIJ_llp_mmp(matom1,matom2,i_pair,jspin)))', (conjg(den%nIJ_llp_mmp(matom1,matom2,i_pair,jspin)))
+                                            !END IF
+                                        !END IF 
+                                    !END IF
+                                    !!!!!!!!!!!!!!!!!
+                                    c_0     = c_0 - (V_inp)*(conjg(den%nIJ_llp_mmp(matom2,matom1,i_pair,jspin)))* exponent * power_fac * &
+                                                (conjg(a1)*a2 + conjg(b1)*a2*norm1_W + conjg(a1)*b2*norm2_W + conjg(b1)*b2*norm2_W*norm1_W) 
                                 ENDDO
                             ENDDO
                             c_0_pair(i_pair,iG1,iG2)=c_0 
                         ENDDO
                     ENDDO
+                    !!!!!!!!!!!!
+                    !IF (i_pair==2) THEN
+                        !WRITE(400,*) ' i_v, i_pair', i_v, i_pair
+                        !WRITE(400,*) 'nIJ matr', den%nIJ_llp_mmp(-1:1,-1:1,i_pair,jspin)
+                        !WRITE(400,*) 'conjg nIJ matr', conjg(den%nIJ_llp_mmp(-1:1,-1:1,i_pair,jspin))
+                        !WRITE(400,*) 'tran conjg nIJ matr', TRANSPOSE(conjg(den%nIJ_llp_mmp(-1:1,-1:1,i_pair,jspin)))
+                    !END IF
+                    !!!!!!!!!!!!
                     i_pair=i_pair+1
                 ENDDO
             ENDDO
