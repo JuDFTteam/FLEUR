@@ -365,6 +365,10 @@ CONTAINS
              rtau(1:3) = rtau(1:3) - ANINT( rtau(1:3) - eps7 )
              IF ( ANY( ABS(rtau(:)) > eps7 ) ) CYCLE  ! skip if not 0
 
+             IF (sym%symor) THEN
+               IF (ANY(ABS(tr(1:3)) > eps7)) CYCLE !Neglect nonsymorphic symmetry operations if symor=T.
+             END IF
+
              num_tr(mop) = num_tr(mop) + 1
              ttau(1:3,mop) = tr(1:3)
              EXIT                  ! have one, go to next operation
@@ -411,7 +415,6 @@ CONTAINS
        nops = nops + 1
        index_op(nops) = mop
     ENDDO
-
 
     !---> check closure of group
     sym%nop=nops
