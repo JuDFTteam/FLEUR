@@ -87,7 +87,6 @@ CONTAINS
 
     ! Checks
     IF (zmat%l_real) THEN
-       IF (noco%l_soc.AND.sym%invs) CALL judft_error("BUG in abcof, SOC&INVS but real?")
        IF (noco%l_noco) CALL judft_error("BUG in abcof, l_noco but real?")
     ENDIF
 
