@@ -55,7 +55,6 @@ CONTAINS
     !+odim
     !     ..
     !     .. Locals ..
-    TYPE(t_sym):: sym_l
     INTEGER ispin ,n ,na,ie,lmd
     COMPLEX, ALLOCATABLE :: acof(:,:,:),bcof(:,:,:)
     !
@@ -63,14 +62,12 @@ CONTAINS
     !
     lmd = atoms%lmaxd*(atoms%lmaxd+2)
     
-   !Do not use rotated k-point set
-    sym_l=sym
-    sym_l%ngopr=1
+    if ((nat_l)==0) return !nothing to be done here
 
     chelp(:,:,:,:,input%jspins) = CMPLX(0.0,0.0)
     ALLOCATE ( acof(input%neig,0:lmd,nat_l),bcof(input%neig,0:lmd,nat_l) )
     DO ispin = 1, input%jspins
-          CALL abcof(input,atoms,sym_l,cell,lapw,nsz(ispin),&
+          CALL abcof(input,atoms,sym,cell,lapw,nsz(ispin),&
           usdus,noco,nococonv,ispin ,&
           acof,bcof,chelp(-atoms%llod:,:,:,:,ispin),zmat(ispin),nat_start=nat_start,nat_stop=nat_stop)
           !
@@ -78,8 +75,8 @@ CONTAINS
           !
           DO ie = 1, input%neig
              DO na = 1, nat_l
-               ahelp(:,na,ie,ispin) = (acof(ie,1:lmd,na))
-               bhelp(:,na,ie,ispin) = (bcof(ie,1:lmd,na))
+               ahelp(:,na,ie,ispin) = acof(ie,1:lmd,na)
+               bhelp(:,na,ie,ispin) = bcof(ie,1:lmd,na)
              ENDDO
           ENDDO
        
