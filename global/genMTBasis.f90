@@ -42,14 +42,13 @@ CONTAINS
 
     LOGICAL    :: l_write,l_hia,l_performSpinavg
     REAL       :: vrTmp(atoms%jmtd)
-    REAL       :: productVals(atoms%jmtd)
     INTEGER    :: i, info, addFunA, addFunB, iState, nQuantumNumber
     
     REAL, ALLOCATABLE :: coreFun(:,:)
     REAL, ALLOCATABLE :: funValues(:,:,:)
     REAL, ALLOCATABLE :: bestRadFun(:,:)
     REAL, ALLOCATABLE :: mtOverlapMat(:,:), invMTOverlapMat(:,:)
-    REAL, ALLOCATABLE :: rWorkArray(:), projVector(:)
+    REAL, ALLOCATABLE :: rWorkArray(:), projVector(:), productVals(:)
     INTEGER, ALLOCATABLE :: ipiv(:)
     
     INTEGER :: largestCoreMainQuantumNumbers(0:3)
@@ -125,6 +124,8 @@ CONTAINS
           ALLOCATE (bestRadFun(atoms%jri(iType),2))
           ALLOCATE (coreFun(atoms%jri(iType),2))
           ALLOCATE (projVector(nMTBasisFcts-1))
+          ALLOCATE (productVals(atoms%jri(iType)))
+
           funValues(:,:,1) = f(1:atoms%jri(iType),:,l)
           funValues(:,:,2) = g(1:atoms%jri(iType),:,l)
           iLOForL = 0
@@ -218,6 +219,7 @@ CONTAINS
              END IF
           END IF
           
+          DEALLOCATE (productVals)
           DEALLOCATE (projVector)
           DEALLOCATE (coreFun)
           DEALLOCATE (bestRadFun)
