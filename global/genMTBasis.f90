@@ -186,34 +186,36 @@ CONTAINS
           DEALLOCATE (projVector)
           ALLOCATE(projVector(nMTBasisFcts))
 
-          IF ((l.LE.3).AND.(largestCoreMainQuantumNumbers(l).GT.0)) THEN
-             coreFun = 0.0
-             energy = find_enpara(.TRUE.,l,iType,jspin,largestCoreMainQuantumNumbers(l),atoms,vrTmp,e_lo,e_up,.TRUE.)
-             CALL radsra(energy,l,vrTmp(:),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),c_light(1.0), us,dus,nodeu,coreFun(:,1),coreFun(:,2))
-             DO iFunA = 1, nMTBasisFcts
-                productVals = 0.0
-                DO i = 1, atoms%jri(iType)
-                   productVals(i) = funValues(i,1,iFunA)*coreFun(i,1)+funValues(i,2,iFunA)*coreFun(i,2)
+          IF (l.LE.3) THEN
+             IF (largestCoreMainQuantumNumbers(l).GT.0) THEN
+                coreFun = 0.0
+                energy = find_enpara(.TRUE.,l,iType,jspin,largestCoreMainQuantumNumbers(l),atoms,vrTmp,e_lo,e_up,.TRUE.)
+                CALL radsra(energy,l,vrTmp(:),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),c_light(1.0), us,dus,nodeu,coreFun(:,1),coreFun(:,2))
+                DO iFunA = 1, nMTBasisFcts
+                   productVals = 0.0
+                   DO i = 1, atoms%jri(iType)
+                      productVals(i) = funValues(i,1,iFunA)*coreFun(i,1)+funValues(i,2,iFunA)*coreFun(i,2)
+                   END DO
+                   CALL intgr0(productVals,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),overlap)
+                   projVector(iFunA) = overlap
                 END DO
+                ipiv = 0
+                CALL DGETRF(nMTBasisFcts,nMTBasisFcts,mtOverlapMat,nMTBasisFcts,ipiv,info)
+                CALL DGETRI(nMTBasisFcts,mtOverlapMat,nMTBasisFcts,ipiv,rWorkArray,SIZE(rWorkArray),info)
+                projVector(:) = MATMUL(mtOverlapMat(:,:),projVector(:))
+                bestRadFun = 0.0
+                DO iFunA = 1, nMTBasisFcts
+                   bestRadFun(:,:) = bestRadFun(:,:) + projVector(iFunA)*funValues(:,:,iFunA)
+                END DO
+                bestRadFun(:,:) = bestRadFun(:,:) - coreFun(:,:)
+                productVals(:) = bestRadFun(:,1)*bestRadFun(:,1) + bestRadFun(:,2)*bestRadFun(:,2)
+                overlap = 0.0
                 CALL intgr0(productVals,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),overlap)
-                projVector(iFunA) = overlap
-             END DO
-             ipiv = 0
-             CALL DGETRF(nMTBasisFcts,nMTBasisFcts,mtOverlapMat,nMTBasisFcts,ipiv,info)
-             CALL DGETRI(nMTBasisFcts,mtOverlapMat,nMTBasisFcts,ipiv,rWorkArray,SIZE(rWorkArray),info)
-             projVector(:) = MATMUL(mtOverlapMat(:,:),projVector(:))
-             bestRadFun = 0.0
-             DO iFunA = 1, nMTBasisFcts
-                bestRadFun(:,:) = bestRadFun(:,:) + projVector(iFunA)*funValues(:,:,iFunA)
-             END DO
-             bestRadFun(:,:) = bestRadFun(:,:) - coreFun(:,:)
-             productVals(:) = bestRadFun(:,1)*bestRadFun(:,1) + bestRadFun(:,2)*bestRadFun(:,2)
-             overlap = 0.0
-             CALL intgr0(productVals,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),overlap)
-             productVals(:) = coreFun(:,1)*coreFun(:,1) + coreFun(:,2)*coreFun(:,2)
-             CALL intgr0(productVals,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),coreNorm)
-             overlap = SQRT(overlap / coreNorm)
-             WRITE(oUnit,'(a,i2,a,i2,a,f12.8)') 'Valence basis representation error for core state with n = ', largestCoreMainQuantumNumbers(l), ', l = ', l, ': ', overlap
+                productVals(:) = coreFun(:,1)*coreFun(:,1) + coreFun(:,2)*coreFun(:,2)
+                CALL intgr0(productVals,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),coreNorm)
+                overlap = SQRT(overlap / coreNorm)
+                WRITE(oUnit,'(a,i2,a,i2,a,f12.8)') 'Valence basis representation error for core state with n = ', largestCoreMainQuantumNumbers(l), ', l = ', l, ': ', overlap
+             END IF
           END IF
           
           DEALLOCATE (projVector)
