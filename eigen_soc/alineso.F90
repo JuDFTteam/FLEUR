@@ -135,7 +135,7 @@ CONTAINS
 ! in case of ev-parallelization, now distribute the atoms:
 !
       IF (fmpi%n_size > 1) THEN
-         nat_l=ceiling(real(atoms%ntype))/fmpi%n_rank !stride in types
+         nat_l=ceiling(real(atoms%ntype)/fmpi%n_size) !stride in types
          nat_start=fmpi%n_rank*nat_l+1                !now start and stop for types
          nat_stop=fmpi%n_rank*nat_l
          if (nat_start>atoms%ntype.or.nat_stop>atoms%ntype) THEN
