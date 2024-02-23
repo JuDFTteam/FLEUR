@@ -26,8 +26,7 @@ test-pgi:
   rules:
       - if: $CI_TASKS =~ /nvidia/    
   
-build-nvhpc-gpu:
-  image:  
+build-nvhpc-gpu: 
   stage: build
   tags:
      - rtx2080ti
