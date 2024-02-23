@@ -29,12 +29,14 @@ test-pgi:
 build-nvhpc-gpu:
   image:  
   stage: build
+  tags:
+     - rtx2080ti
   artifacts:
     paths:
       - build.nvgpu
     expire_in: 12h
   script:
-    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -gpu acc:cc60 -l nvgpu -libdir /opt/nvidia/hpc_sdk/Linux_x86_64/22.3/cuda/11.0/targets/x86_64-linux/lib/stubs/ -c auto; cd build.nvgpu; make"
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; PATH=$PATH:/opt/nvidia_hpc_sdk/bin ./configure.sh -gpu acc:cc60 -l nvgpu -libdir /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib/stubs/ -c nvidia; cd build.nvgpu; make"
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
@@ -51,5 +53,5 @@ test-nvhpc-gpu:
     - build-nvhpc-gpu
   allow_failure: true
   rules:
-      - if: $CI_TASKS =~ /broken/    
+      - if: $CI_TASKS =~ /gpu/    
   
