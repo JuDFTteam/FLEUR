@@ -36,7 +36,7 @@ build-nvhpc-gpu:
     expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - PATH=$PATH:/opt/nvidia_hpc_sdk/bin FFLAGS=-lapack ./configure.sh -gpu acc:cc60 -l nvgpu -libdir /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib/stubs/ -c nvidia
+    - PATH=$PATH:/opt/nvidia_hpc_sdk/bin FFLAGS=-lapack ./configure.sh -gpu acc:cc60 -l nvgpu -libdir /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib/stubs/ -c nvidia -libdir /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/ -link -llapack
     - cd build.nvgpu
     - make -j 8
   allow_failure: true
