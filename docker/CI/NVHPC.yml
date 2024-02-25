@@ -52,7 +52,7 @@ test-nvhpc-gpu:
   variables:
     BUILD_FOLDER: build.nvgpu
   before_script:
-    - python3 -m pip pytest pytest-html
+    - python3 -m pip install pytest pytest-html
   needs: 
     - build-nvhpc-gpu
   allow_failure: true
