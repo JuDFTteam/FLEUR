@@ -51,6 +51,8 @@ test-nvhpc-gpu:
      - rtx2080ti
   variables:
     BUILD_FOLDER: build.nvgpu
+  before_script:
+    - python3 -m pip pytest pytest-html
   needs: 
     - build-nvhpc-gpu
   allow_failure: true
