@@ -28,8 +28,30 @@ perf-intel:
     - ./configure.sh -c auto
     - cd build
     - make -j 12
+  after_script:
+    - cd Testing/performance/*
+    - maqao oneside -R1 ../../../fleur
+    - mkdir ../../../../public
+    - cp -r maqao*/RESULTS ../../../../public
+  artifacts:
+    paths:
+      - public
   rules:
       - if: $CI_TASKS =~ /CB/    
+
+pages-maqao:
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  stage: deploy
+  needs: 
+    - perf-intel
+  environment:
+     name: HTML-Pages
+     url: https://fleur.iffgit.fz-juelich.de/fleur
+  artifacts:
+    paths:
+      - public
+  rules:
+      - if: $CI_TASKS =~ /CB/   
 
 perf-intel-ifx:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
