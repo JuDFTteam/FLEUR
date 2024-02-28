@@ -81,8 +81,10 @@ CONTAINS
       IF (nrec2==1.AND.((.NOT.l_dfptvgen).OR.norm2(stars%center)<1e-8)) THEN    !     ---->    g=0 coefficient
 
          ! New discontinuity correction
-         newdp = - psq(1) * dh
-         newdp2 = -psq(1) * dh**2 
+         IF (l_corr) THEN
+            newdp = - psq(1) * dh
+            newdp2 = -psq(1) * dh**2 
+         END IF
 
          DO  iq = -stars%mx3,stars%mx3
             IF (iq.EQ.0) CYCLE
@@ -97,9 +99,10 @@ CONTAINS
                vintcz = vintcz + fpi_const*psq(ig3n)*sumrr
                
                ! New discontinuity correction
-               newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos(qdh), sin(qdh)) * dh / qdh
-               newdp2 = newdp2 + psq(ig3n) * cmplx(cos(qdh), sin(qdh)) / q**2
-
+               IF (l_corr) THEN
+                  newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos(qdh), sin(qdh)) * dh / qdh
+                  newdp2 = newdp2 + psq(ig3n) * cmplx(cos(qdh), sin(qdh)) / q**2
+               END IF
             END IF
          END DO
          !           -----> v2(z)
@@ -164,14 +167,14 @@ CONTAINS
                   vintcz = vintcz + vcons1*sumrr
 
                   ! New discontinuity correction
-                  IF (iq==0) newdp = newdp - psq(ig3n) * dh
-                  IF (iq/=0) newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos_q, sin_q) * dh / (q*dh)
-                  IF (iq==0) newdm = newdm - psq(ig3n) * dh
-                  IF (iq/=0) newdm = newdm - ImagUnit * psq(ig3n) * cmplx(cos_q,-sin_q) * dh / (q*dh)
-                  IF (iq==0) newdp2 = newdp2 - psq(ig3n) * dh**2
-                  IF (iq/=0) newdp2 = newdp2 + psq(ig3n) * cmplx(cos_q, sin_q) / q**2
-                  IF (iq==0) newdm2 = newdm2 + psq(ig3n) * dh**2
-                  IF (iq/=0) newdm2 = newdm2 - psq(ig3n) * cmplx(cos_q,-sin_q) / q**2
+                  IF (iq==0.AND.l_corr) newdp = newdp - psq(ig3n) * dh
+                  IF (iq/=0.AND.l_corr) newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos_q, sin_q) * dh / (q*dh)
+                  IF (iq==0.AND.l_corr) newdm = newdm - psq(ig3n) * dh
+                  IF (iq/=0.AND.l_corr) newdm = newdm - ImagUnit * psq(ig3n) * cmplx(cos_q,-sin_q) * dh / (q*dh)
+                  IF (iq==0.AND.l_corr) newdp2 = newdp2 - psq(ig3n) * dh**2
+                  IF (iq/=0.AND.l_corr) newdp2 = newdp2 + psq(ig3n) * cmplx(cos_q, sin_q) / q**2
+                  IF (iq==0.AND.l_corr) newdm2 = newdm2 + psq(ig3n) * dh**2
+                  IF (iq/=0.AND.l_corr) newdm2 = newdm2 - psq(ig3n) * cmplx(cos_q,-sin_q) / q**2
 
                END IF ! Neumann (vs. Dirichlet)
             END IF ! ig3d /= 0
@@ -209,7 +212,7 @@ CONTAINS
             !   !IF (abs(z+cell%z1)<1e-9) e_p = 0.0
             !   test = e_m * newdp2 * sign(1.0,z-cell%z1)+ e_p * newdm2 * sign(1.0,z+cell%z1)
             !   if ( 2.0 * test == test ) test = cmplx( 0.0, 0.0 )
-            !   vintcz = vintcz - 0*tpi_const * test
+            !   vintcz = vintcz - tpi_const * test
             !END IF
 
          END IF

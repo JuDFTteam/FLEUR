@@ -195,6 +195,8 @@ CONTAINS
       IF (.NOT.fi%juPhon%qmode==0) THEN
          ! Read qpoints from fullsym_inp.xml and fullsym_kpts.xml
          inp_pref = ADJUSTL("fullsym_")
+         fmpi_fullsym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
+         fmpi_fullsym%mpi_comm = fmpi%mpi_comm
          CALL fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
                          enpara_fullsym, xcpot_fullsym, results_fullsym, wann_fullsym, hybdat_fullsym, mpdata_fullsym, &
                          inp_pref)

@@ -89,6 +89,7 @@ contains
                      sumr(ivac) = sumr(ivac) + c_ph * psq(ig3n) * ( cos( arg_i ) * ( 1 - arg_r ) + ImagUnit * sin( arg_i ) * ( 1 + arg_r ) ) / arg
 
                      ! New discontinuity correction
+                     IF (l_corr) THEN
                      IF (kz==0.AND.ivac==1) newdp = newdp - psq(ig3n) * cell%z1
                      IF (kz/=0.AND.ivac==1) newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos(qz * cell%z1), sin(qz * cell%z1)) / qz
                      IF (kz==0.AND.ivac==2) newdm = newdm - psq(ig3n) * cell%z1
@@ -97,7 +98,7 @@ contains
                      IF (kz/=0.AND.ivac==1) newdp2 = newdp2 + psq(ig3n) * cmplx(qz * cell%z1, qz * cell%z1) / qz**2
                      IF (kz==0.AND.ivac==2) newdm2 = newdm2 + psq(ig3n) * cell%z1**2
                      IF (kz/=0.AND.ivac==2) newdm2 = newdm2 - psq(ig3n) * cmplx(qz * cell%z1,-qz * cell%z1) / qz**2
-
+                     END IF
                   end if
                end if
             end do
