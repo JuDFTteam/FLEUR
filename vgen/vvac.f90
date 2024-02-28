@@ -171,11 +171,11 @@ contains
          !   vmz1dh = vnew(1,2)
          !end if
          ! Discontinuity correction
-         if (l_bind) then
+         !if (l_bind) then
             ! Fix the potential to 0 at -infinity and save the resulting value at the vacuum border -D/2
             !!!!vnew(:,2) = cmplx(0.0,0.0) 
             !vmz1dh = vnew(1,2)
-         end if
+         !end if
       end if ! Dirichlet/Neumann
    end subroutine vvac
 end module m_vvac

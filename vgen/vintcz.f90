@@ -113,7 +113,7 @@ CONTAINS
          !IF (PRESENT(sigma_disc2)) vintcz = vintcz + fpi_const * sigma_disc2(1)
 
          ! New discontinuity correction
-         IF (l_dfptvgen) vintcz = vintcz - fpi_const * newdp * (dh-z) + fpi_const * newdp2
+         IF (l_dfptvgen.AND.l_corr) vintcz = vintcz - fpi_const * newdp * (dh-z) + fpi_const * newdp2
 
          ! Correct the interstitial potential by the mismatch we calculated as
          ! a boundary condition for DFPT q=0.
