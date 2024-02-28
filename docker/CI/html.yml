@@ -31,16 +31,15 @@ intel-maqao:
     - cd build
     - make -j 12
     - cp ../tests/performance/performance/inputfiles/Noco/inp.xml .
-    - /local/th1/DFT/maqao oneview -R1 -- fleur
+    - /local/th1/DFT/maqao oneview -R1 --ignore-output-code -- fleur
     - mkdir -p $CI_PROJECT_DIR/public
     - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
-    - cd $CI_PROJECT_DIR
   artifacts:
     paths:
       - build
       - public
   rules:
-      - if: $CI_TASKS =~ /doc/   
+    - if: $CI_TASKS =~ /doc/   
 
 ford:
   image: iffregistry.fz-juelich.de/fleur/fleur:ford
