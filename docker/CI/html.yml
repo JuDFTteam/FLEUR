@@ -20,21 +20,21 @@ pages:
       - if: $CI_TASKS =~ /doc/    
   
 intel-maqao:
-    stage: html
-    tags:
-      - iffcluster2004
-    variables:
-      OMP_NUM_THREADS: 4
-    script:
-      - cd $CI_PROJECT_DIR
-      - ./configure.sh -c intel_old
-      - cd build
-      - make -j 12
-      - cp ../tests/performance/performance/inputfiles/Noco/inp.xml .
-      - /local/th1/DFT/maqao oneview -R1 -- ../../../fleur
-      - mkdir -p $CI_PROJECT_DIR/public
-      - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
-      - cd $CI_PROJECT_DIR
+  stage: html
+  tags:
+    - iffcluster2004
+  variables:
+    OMP_NUM_THREADS: 4
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh -c intel_old
+    - cd build
+    - make -j 12
+    - cp ../tests/performance/performance/inputfiles/Noco/inp.xml .
+    - /local/th1/DFT/maqao oneview -R1 -- ../../../fleur
+    - mkdir -p $CI_PROJECT_DIR/public
+    - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
+    - cd $CI_PROJECT_DIR
   artifacts:
     paths:
       - build
