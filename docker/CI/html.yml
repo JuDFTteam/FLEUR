@@ -27,7 +27,7 @@ intel-maqao:
     OMP_NUM_THREADS: 4
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -c intel_old
+    - ./configure.sh -c auto
     - cd build
     - make -j 12
     - cp ../tests/performance/performance/inputfiles/Noco/inp.xml .
