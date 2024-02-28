@@ -29,9 +29,9 @@ perf-intel:
     - cd build
     - make -j 12
   after_script:
-    - cd Testing/performance/*
+    - cd $CI_PROJECT_DIR/build/Testing/performance/*
     - maqao oneside -R1 ../../../fleur
-    - mkdir ../../../../public
+    - mkdir -p ../../../../public
     - cp -r maqao*/RESULTS ../../../../public
   artifacts:
     paths:
