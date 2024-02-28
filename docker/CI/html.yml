@@ -22,7 +22,7 @@ pages:
 intel-maqao:
   stage: html
   tags:
-    - iffcluster2004
+    - rtx2080ti
   variables:
     OMP_NUM_THREADS: 4
   script:
@@ -35,6 +35,7 @@ intel-maqao:
     - mkdir -p $CI_PROJECT_DIR/public
     - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
     - cd $CI_PROJECT_DIR
+  allow_failure: true
   artifacts:
     paths:
       - build
