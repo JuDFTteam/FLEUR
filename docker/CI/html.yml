@@ -31,7 +31,7 @@ intel-maqao:
     - cd build
     - make -j 12
     - cp ../tests/performance/performance/inputfiles/Noco/inp.xml .
-    - /local/th1/DFT/maqao oneview -R1 -- ../../../fleur
+    - /local/th1/DFT/maqao oneview -R1 -- fleur
     - mkdir -p $CI_PROJECT_DIR/public
     - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
     - cd $CI_PROJECT_DIR
