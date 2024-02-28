@@ -1,9 +1,10 @@
 program matrixredist
     use m_types_mpimat
     use mpi
+    use m_juDFT
     implicit none 
 
-    types(t_mpimat):: cyclic,rw 
+    type(t_mpimat):: cyclic,rw 
 
 
     integer:: i,ierr
@@ -19,7 +20,7 @@ program matrixredist
     call timestop("init matrices")
     !Do the redistribution
     call timestart("redist matrix")
-    call cyclic.copy(rw,1,1)
+    call cyclic%copy(rw,1,1)
     call timestop("redist matrix")
     !Done
     call judft_end("Done")
