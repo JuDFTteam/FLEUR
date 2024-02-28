@@ -48,6 +48,7 @@ CONTAINS
       IF (fmpi%irank==0) THEN
          CALL timestart("star-setup")
          stars%gmax=input%gmax
+         IF (ABS(input%gmaxz.GE.1e-8)) stars%gmaxz=input%gmaxz
          IF (PRESENT(qvec)) THEN
             CALL stars%dim(sym,cell,input%film,qvec)
             CALL stars%init(cell,sym,input%film,input%rkmax,qvec)

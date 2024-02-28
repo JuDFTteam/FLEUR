@@ -13,6 +13,7 @@ MODULE m_types_stars
   TYPE:: t_stars
      !max-length of star
      REAL :: gmax=0.0
+     REAL :: gmaxz=0.0
      !no of 3d-stars
      INTEGER :: ng3
      !no of 2d-stars
@@ -80,6 +81,7 @@ CONTAINS
     END IF
 
     CALL mpi_bc(this%gmax,rank,mpi_comm)
+    CALL mpi_bc(this%gmaxz,rank,mpi_comm)
     CALL mpi_bc(this%ng3,rank,mpi_comm)
     CALL mpi_bc(this%ng2,rank,mpi_comm)
     CALL mpi_bc(this%mx1,rank,mpi_comm)
@@ -423,6 +425,7 @@ CONTAINS
      CLASS(t_stars), INTENT(INOUT) :: stars
 
      stars%gmax=0.0
+     stars%gmaxz=0.0
      stars%center = [0.0,0.0,0.0]
      IF (ALLOCATED(stars%kv3)) DEALLOCATE(stars%kv3)
      IF (ALLOCATED(stars%sk3)) DEALLOCATE(stars%sk3)
