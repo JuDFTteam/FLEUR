@@ -31,10 +31,12 @@ perf-intel:
   after_script:
     - cd $CI_PROJECT_DIR/build/Testing/performance/*
     - maqao oneview -R1 ../../../fleur
-    - mkdir -p ../../../../public
-    - cp -r maqao*/RESULTS ../../../../public
+    - mkdir -p $CI_PROJECT_DIR/public
+    - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
+    - cd $CI_PROJECT_DIR
   artifacts:
     paths:
+      - build/Testing
       - public
   rules:
       - if: $CI_TASKS =~ /CB/    
