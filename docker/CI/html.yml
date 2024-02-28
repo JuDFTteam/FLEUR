@@ -6,6 +6,7 @@ pages:
     - doxygen
     - gfortran-coverage
     - ford
+    - perf-intel
   script:
     - echo "HTML should be ready from cache..."
     - mv $CI_PROJECT_DIR/docs/Docu_main.html $CI_PROJECT_DIR/public/index.html
