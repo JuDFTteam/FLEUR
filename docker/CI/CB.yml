@@ -36,7 +36,7 @@ perf-intel:
     - cd $CI_PROJECT_DIR
   artifacts:
     paths:
-      - build/Testing
+      - build
       - public
   rules:
       - if: $CI_TASKS =~ /CB/    
