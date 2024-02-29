@@ -27,7 +27,7 @@ intel-maqao:
   script:
     - cd $CI_PROJECT_DIR
     - source compiler-select intel
-    - ./configure.sh -c auto -hdf5 false
+    - CC=gcc FC=ifort ./configure.sh -c auto -hdf5 false
     - cd build
     - make -j 12
     - cp ../tests/performance/performance/inputfiles/Noco/inp.xml .
