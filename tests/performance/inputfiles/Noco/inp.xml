@@ -13,7 +13,7 @@
          <mtNocoParams l_mperp="F" l_mtNocoPot="F" l_relaxSQA="F" mag_mixing_scheme="0" mix_RelaxWeightOffD="1.00000000" l_constrained="F" mix_constr="1.00000000"/>
          <sourceFreeMag l_sourceFree="F" l_scaleMag="F" mag_scale="1.00000000"/>
       </magnetism>
-      <soc l_soc="T" theta="1.00000000" phi="1.00000000" spav="F"/>
+      <soc l_soc="T" theta="0.00000000" phi="0.00000000" spav="F"/>
       <expertModes spex="0" secvar="F"/>
       <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
