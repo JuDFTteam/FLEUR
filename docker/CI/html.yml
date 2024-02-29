@@ -35,9 +35,9 @@ intel-maqao:
     - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
   artifacts:
     when: always
-      paths:
-        - build
-        - public
+    paths:
+      - build
+      - public
   rules:
     - if: $CI_TASKS =~ /doc/   
 
