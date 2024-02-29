@@ -26,6 +26,7 @@ intel-maqao:
     OMP_NUM_THREADS: 4
   script:
     - cd $CI_PROJECT_DIR
+    - source compiler-select intel
     - ./configure.sh -c auto -hdf5 false
     - cd build
     - make -j 12
