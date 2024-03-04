@@ -41,7 +41,7 @@ build-nvhpc-gpu:
   rules:
     - if: $CI_TASKS =~ /gpu/
     - if: $CI_COMMIT_BRANCH =~ /gpu/
-    - if: $CI_PIPELINE_SOURCE == "push" && CI_COMMIT_MESSAGE =~ /gpu/
+    - if: '$CI_PIPELINE_SOURCE == "push" && CI_COMMIT_MESSAGE =~ /gpu/'
 
 test-nvhpc-gpu:
   image: 
@@ -61,4 +61,4 @@ test-nvhpc-gpu:
   rules:
       - if: $CI_TASKS =~ /gpu/    
       - if: $CI_COMMIT_BRANCH =~ /gpu/
-      - if: $CI_PIPELINE_SOURCE == "push" && CI_COMMIT_MESSAGE =~ /gpu/
+      - if: '$CI_PIPELINE_SOURCE == "push" && CI_COMMIT_MESSAGE =~ /gpu/'
