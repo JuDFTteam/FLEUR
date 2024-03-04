@@ -254,20 +254,18 @@ CONTAINS
          ! Generate the external potential gradient.
          write(oUnit, *) "grVext", iDir
          sigma_loc  = cmplx(0.0,0.0)
-         IF (iDir==3) sigma_loc  = sigma_ext
+         !IF (iDir==3) sigma_loc  = sigma_ext
          CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), sigma_loc, &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
       END DO
-      CALL vext_dummy%copyPotDen(vTot_nosym)
-      CALL vext_dummy%resetPotDen()
-
+      !CALL vext_dummy%copyPotDen(vTot_nosym)
+      !CALL vext_dummy%resetPotDen()
       ! Density gradient
       DO iSpin = 1, SIZE(rho_nosym%mt,4)
          CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
       END DO
-
       DO zInd = -stars_nosym%mx3, stars_nosym%mx3
          DO yInd = -stars_nosym%mx2, stars_nosym%mx2
             DO xInd = -stars_nosym%mx1, stars_nosym%mx1
@@ -341,12 +339,12 @@ CONTAINS
                CALL imagrhodummy%resetPotDen()
                sigma_loc = cmplx(0.0,0.0)
 
-               IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
-               IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
+               !IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
+               !IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
                CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), sigma_loc, &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2, &
-                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3))
+                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3.AND..FALSE.))
                CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
             END DO
          END DO

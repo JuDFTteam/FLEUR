@@ -55,10 +55,10 @@ contains
          do ivac = 1, vacuum%nvac
             sumr(ivac) = ( 0.0, 0.0 )
 
-            newdp = cmplx(0.0,0.0)
-            newdm = cmplx(0.0,0.0)
-            newdp2 = cmplx(0.0,0.0)
-            newdm2 = cmplx(0.0,0.0)
+            IF (ivac==1) newdp = cmplx(0.0,0.0)
+            IF (ivac==2) newdm = cmplx(0.0,0.0)
+            IF (ivac==1) newdp2 = cmplx(0.0,0.0)
+            IF (ivac==2) newdm2 = cmplx(0.0,0.0)
 
             signu = 3. - 2. * ivac
             do kz = -stars%mx3, stars%mx3

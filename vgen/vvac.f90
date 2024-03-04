@@ -154,14 +154,14 @@ contains
          ! external electric field contribution
          do imz = 1, ncsh
             vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac) &
-                             !- fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz ))! Discontinuity correction
+                             - fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz )) &! Discontinuity correction
                              - fpi_const * (-newdp2-newdm2+newdp * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - newdm * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz ))! New discontinuity correction
             !if (present(sigma_disc2)) vnew(imz,ivac) = vnew(imz,ivac) - fpi_const * (sigma_disc2(1)+sigma_disc2(2))
          end do
          do imz = ncsh + 1, vacuum%nmz
             vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac) &
                            + fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(2) & ! Discontinuity correction
-                           !- fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz )) ! Discontinuity correction
+                           - fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz )) &! Discontinuity correction
                            - fpi_const * (-newdp2-newdm2+newdp * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - newdm * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz )) ! New discontinuity correction
             !if (present(sigma_disc2)) vnew(imz,ivac) = vnew(imz,ivac) - fpi_const * (sigma_disc2(1)+sigma_disc2(2))
          end do
@@ -173,7 +173,7 @@ contains
          ! Discontinuity correction
          !if (l_bind) then
             ! Fix the potential to 0 at -infinity and save the resulting value at the vacuum border -D/2
-            !!!!vnew(:,2) = cmplx(0.0,0.0) 
+            !vnew(:,2) = cmplx(0.0,0.0) 
             !vmz1dh = vnew(1,2)
          !end if
       end if ! Dirichlet/Neumann

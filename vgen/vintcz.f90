@@ -109,7 +109,7 @@ CONTAINS
          vintcz = vintcz + vz1dh - fpi_const* (dh-z)*&
             &              (sig1dh-rhobar/2.* (dh-z))
          ! Discontinuity correction
-         !vintcz = vintcz - fpi_const * sigma_disc(1)*(dh-z)
+         vintcz = vintcz - fpi_const * sigma_disc(1)*(dh-z)
          !IF (PRESENT(sigma_disc2)) vintcz = vintcz + fpi_const * sigma_disc2(1)
 
          ! New discontinuity correction
