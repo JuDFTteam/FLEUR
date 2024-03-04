@@ -7,7 +7,7 @@ module m_vvacis
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
 contains
-   subroutine vvacis( stars, vacuum, cell, psq, input, field, vxy, l_dfptvgen )
+   subroutine vvacis( stars, vacuum, cell, psq, input, field, vxy, l_dfptvgen, l_corr )
       use m_constants
       use m_types
 
@@ -21,12 +21,18 @@ contains
 
       complex,        intent(in)  :: psq(stars%ng3)
       complex,        intent(inout) :: vxy(vacuum%nmzxyd,stars%ng2,2)
-      logical,        intent(in)  :: l_dfptvgen
+      logical,        intent(in)  :: l_dfptvgen, l_corr
 
       complex                     :: arg, c_ph, sumr(2)
-      real                        :: g, qz, sign,  vcons, z, e_m, arg_r, arg_i
+      real                        :: g, qz, signu,  vcons, z, e_m, arg_r, arg_i, e_p
       integer                     :: ig3n, imz, ivac, k1, k2, kz, nrec2, start_star
-  
+      complex                     :: newdp, newdm, newdp2, newdm2, test
+
+      newdp = cmplx(0.0,0.0)
+      newdm = cmplx(0.0,0.0)
+      newdp2 = cmplx(0.0,0.0)
+      newdm2 =cmplx(0.0,0.0)
+
       start_star = 2
       ! For q/=0 in DFPT, there is no G+q=0, so all stars are treated in the G/=0 way.
       if (l_dfptvgen) then
@@ -48,7 +54,13 @@ contains
          end if
          do ivac = 1, vacuum%nvac
             sumr(ivac) = ( 0.0, 0.0 )
-            sign = 3. - 2. * ivac
+
+            IF (ivac==1) newdp = cmplx(0.0,0.0)
+            IF (ivac==2) newdm = cmplx(0.0,0.0)
+            IF (ivac==1) newdp2 = cmplx(0.0,0.0)
+            IF (ivac==2) newdm2 = cmplx(0.0,0.0)
+
+            signu = 3. - 2. * ivac
             do kz = -stars%mx3, stars%mx3
                ig3n = stars%ig(k1,k2,kz)
                c_ph = stars%rgphs(k1,k2,kz)
@@ -72,9 +84,21 @@ contains
                         + ImagUnit *  qz * sinh( - g * field%efield%zsigma ) ) )
                      end if
                   else
-                     arg = g + sign * ImagUnit *  qz
-                     arg_i = sign  * qz * cell%z1
+                     arg = g + signu * ImagUnit *  qz
+                     arg_i = signu  * qz * cell%z1
                      sumr(ivac) = sumr(ivac) + c_ph * psq(ig3n) * ( cos( arg_i ) * ( 1 - arg_r ) + ImagUnit * sin( arg_i ) * ( 1 + arg_r ) ) / arg
+
+                     ! New discontinuity correction
+                     IF (l_corr) THEN
+                     IF (kz==0.AND.ivac==1) newdp = newdp - psq(ig3n) * cell%z1
+                     IF (kz/=0.AND.ivac==1) newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos(qz * cell%z1), sin(qz * cell%z1)) / qz
+                     IF (kz==0.AND.ivac==2) newdm = newdm - psq(ig3n) * cell%z1
+                     IF (kz/=0.AND.ivac==2) newdm = newdm - ImagUnit * psq(ig3n) * cmplx(cos(qz * cell%z1), sin(qz * cell%z1)) / qz
+                     IF (kz==0.AND.ivac==1) newdp2 = newdp2 - psq(ig3n) * cell%z1**2
+                     IF (kz/=0.AND.ivac==1) newdp2 = newdp2 + psq(ig3n) * cmplx(qz * cell%z1, qz * cell%z1) / qz**2
+                     IF (kz==0.AND.ivac==2) newdm2 = newdm2 + psq(ig3n) * cell%z1**2
+                     IF (kz/=0.AND.ivac==2) newdm2 = newdm2 - psq(ig3n) * cmplx(qz * cell%z1,-qz * cell%z1) / qz**2
+                     END IF
                   end if
                end if
             end do
@@ -89,6 +113,25 @@ contains
                z = z + vacuum%delz
             end do
          end do
+         ! New discontinuity correction
+         !z = 0
+         !do ivac = 1, vacuum%nvac
+         !   do imz = 1, vacuum%nmzxy
+         !      IF (l_dfptvgen.AND.l_corr.AND.nrec2==1) THEN
+         !         e_m = exp_safe( - g * abs(z-cell%z1) )
+         !         e_p = exp_safe( - g * abs(z+cell%z1) )
+         !         test = e_m * newdp + e_p * newdm
+         !         if ( 2.0 * test == test ) test = cmplx( 0.0, 0.0 )
+         !         vxy(imz,nrec2,ivac) = vxy(imz,nrec2,ivac) + tpi_const/g * test
+         !         IF (abs(z-cell%z1)<1e-9) e_m = 0.0
+         !         IF (abs(z+cell%z1)<1e-9) e_p = 0.0
+         !         test = e_m * newdp2 * sign(1.0,z-cell%z1)+ e_p * newdm2 * sign(1.0,z+cell%z1)
+         !         if ( 2.0 * test == test ) test = cmplx( 0.0, 0.0 )
+         !         vxy(imz,nrec2,ivac) = vxy(imz,nrec2,ivac) - tpi_const * test
+         !      END IF
+         !      z = z + vacuum%delz
+         !   end do
+         !end do
       end do
    end subroutine vvacis
 

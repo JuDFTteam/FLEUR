@@ -16,6 +16,8 @@ perf-gfortran:
 
 
 perf-intel:
+  needs:
+    - perf-gfortran
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
   extends: .perf-generic
   tags:
@@ -33,6 +35,8 @@ perf-intel:
 
 
 perf-intel-ifx:
+  needs:
+    - perf-intel
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
   extends: .perf-generic
   tags:

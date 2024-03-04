@@ -9,7 +9,7 @@ MODULE m_types_fftGrid
    USE m_juDFT
    TYPE t_fftGrid
 
-      INTEGER :: extend(3) = [-1, -1, -1]
+      INTEGER :: extent(3) = [-1, -1, -1]
       INTEGER :: dimensions(3) = [-1, -1, -1]
       INTEGER :: gridLength = -1
       COMPLEX, ALLOCATABLE :: grid(:)
@@ -70,7 +70,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
          + shifted_g(3) * grid%dimensions(1) * grid%dimensions(2)
  end function map_g_to_fft_grid
 
-   SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff)
+   SUBROUTINE t_fftGrid_init(this, cell, sym, gCutoff, gzCutoff)
       USE m_constants
       USE m_boxdim
       USE m_spgrot
@@ -82,6 +82,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_sym), INTENT(IN)    :: sym
       REAL, INTENT(IN)    :: gCutoff
+      REAL, OPTIONAL, INTENT(IN) :: gzCutoff
       
 
       INTEGER, ALLOCATABLE :: ig(:, :, :)
@@ -90,9 +91,13 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       INTEGER :: mxx(3), kVec(3), kRot(3, sym%nop), inv_du(sym%nop), tempDim(3)
       REAL    :: gCutoffSquared, gSquared
       REAL    :: arltv(3), g(3)
-
-      this%extend     = calc_extend(cell, sym, gCutoff)
-      this%dimensions = 2*this%extend + 1
+     
+      if (.not.present(gzCutoff)) then
+         this%extent     = calc_extent(cell, sym, gCutoff)
+      else
+         this%extent     = calc_extent(cell, sym, gCutoff, gzCutoff)
+      end if
+      this%dimensions = 2*this%extent + 1
 
       do i = 1,3
          this%dimensions(i) = next_optimal_fft_size(this%dimensions(i))
@@ -119,7 +124,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
 
 
-   SUBROUTINE putFieldOnGrid(this, stars,field, cell, gCutoff, firstderiv,secondderiv,l_2D)
+   SUBROUTINE putFieldOnGrid(this, stars,field, cell, gCutoff, gzCutoff, firstderiv,secondderiv,l_2D)
       USE m_types_stars
       USE m_types_cell
       IMPLICIT NONE
@@ -127,15 +132,15 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       TYPE(t_stars), INTENT(IN)       :: stars
       COMPLEX, INTENT(IN)             :: field(:) ! length is stars%ng3
       TYPE(t_cell),INTENT(IN),OPTIONAL:: cell
-      REAL, OPTIONAL, INTENT(IN)      :: gCutoff
+      REAL, OPTIONAL, INTENT(IN)      :: gCutoff, gzCutoff
       real,optional,intent(in)        :: firstderiv(3),secondderiv(3)
       LOGICAL,OPTIONAL,intent(in)     :: l_2d
 
       INTEGER :: x, y, z, iStar
       INTEGER :: xGrid, yGrid, zGrid, layerDim
-      REAL    :: gCutoffInternal
+      REAL    :: gCutoffInternal, gvec(3)
       COMPLEX :: fct
-      LOGICAL :: twoD
+      LOGICAL :: twoD, l_insph
       gCutoffInternal = 1.0e99
       IF (PRESENT(gCutoff)) gCutoffInternal = gCutoff
 
@@ -164,7 +169,10 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                   if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,matmul(real([x,y,z]),cell%bmat)))
                endif
                IF (iStar .EQ. 0) CYCLE
-               IF (stars%sk3(iStar) .GT. gCutoffInternal) CYCLE
+               l_insph = stars%sk3(iStar) .LE. gCutoffInternal
+               IF (PRESENT(gzCutoff)) gvec = matmul(real([x,y,z]),cell%bmat) 
+               IF (PRESENT(gzCutoff)) l_insph = (SQRT(DOT_PRODUCT(gvec(:2),gvec(:2))).LE.gCutoffInternal).AND.(ABS(gvec(3)).LE.gzCutoff)
+               IF (.NOT.l_insph) CYCLE
                IF (twod) THEN
                   if(stars%sk2(istar)>gCutoffInternal) CYCLE
                ENDIF   
@@ -176,13 +184,13 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
    END SUBROUTINE putFieldOnGrid
 
-   SUBROUTINE takeFieldFromGrid(this, stars, field, gCutoff,l_2d)
+   SUBROUTINE takeFieldFromGrid(this, stars, field, gCutoff, gzCutoff, l_2d)
       USE m_types_stars
       IMPLICIT NONE
       CLASS(t_fftGrid), INTENT(IN) :: this
       TYPE(t_stars), INTENT(IN)    :: stars
       COMPLEX, INTENT(INOUT)       :: field(:)
-      REAL, OPTIONAL, INTENT(IN)   :: gCutoff
+      REAL, OPTIONAL, INTENT(IN)   :: gCutoff, gzCutoff
       LOGICAL,OPTIONAL,intent(in)     :: l_2d
 
 
@@ -190,7 +198,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       INTEGER :: xGrid, yGrid, zGrid, layerDim
       REAL    :: elementWeight, gCutoffInternal
       COMPLEX :: fct
-      LOGICAL :: twod
+      LOGICAL :: twod, l_insph
 
       gCutoffInternal = 1.0e99
       IF (PRESENT(gCutoff)) gCutoffInternal = gCutoff
@@ -215,7 +223,9 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                   fct=CONJG(stars%rgphs(x, y, z))
                ENDIF   
                IF (iStar .EQ. 0) CYCLE
-               IF (stars%sk3(iStar) .GT. gCutoffInternal) CYCLE
+               l_insph = stars%sk3(iStar) .LE. gCutoffInternal
+               IF (PRESENT(gzCutoff)) l_insph = (stars%sk2(stars%i2g(x, y)).LE.gCutoffInternal).AND.(stars%ab3(iStar).LE.gzCutoff)
+               IF (.NOT.l_insph) CYCLE
                xGrid = MODULO(x, this%dimensions(1))
                field(iStar) = field(iStar) + this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) * fct
             END DO
@@ -471,14 +481,14 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       implicit none
       TYPE(t_fftGrid), INTENT(INOUT)    :: fftGrid
 
-      fftGrid%extend     = -1
+      fftGrid%extent     = -1
       fftGrid%dimensions = -1
       fftGrid%gridLength = -1
 
       if(allocated(fftGrid%grid)) deallocate(fftGrid%grid)
    end subroutine free
 
-   function calc_extend(cell, sym, gCutoff) result(mxx)
+   function calc_extent(cell, sym, gCutoff, gzCutoff) result(mxx)
       USE m_constants
       USE m_boxdim
       USE m_spgrot
@@ -490,6 +500,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       TYPE(t_cell), INTENT(IN)  :: cell
       TYPE(t_sym), INTENT(IN)   :: sym
       REAL, INTENT(IN)          :: gCutoff
+      REAL, OPTIONAL, INTENT(IN):: gzCutoff
 
       INTEGER, ALLOCATABLE :: ig(:, :, :)
 
@@ -497,10 +508,12 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
       INTEGER :: mxx(3), kVec(3), kRot(3, sym%nop), inv_du(sym%nop), tempDim(3)
       REAL    :: gCutoffSquared, gSquared
       REAL    :: arltv(3), g(3)
+      LOGICAL :: l_insph      
 
       CALL boxdim(cell%bmat, arltv(1), arltv(2), arltv(3))
 
       tempDim(:) = INT(gCutoff/arltv(:)) + 1
+      IF (PRESENT(gzCutoff)) tempDim(3) = INT(gzCutoff/arltv(3)) + 1
 
       DO i = 1, sym%nop
          inv_du(i) = i ! dummy array for spgrot
@@ -526,8 +539,10 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                END DO
 
                gSquared = g(1)**2 + g(2)**2 + g(3)**2
+               l_insph = gSquared .LE. gCutoffSquared
+               IF (PRESENT(gzCutoff)) l_insph = (g(1)**2 + g(2)**2.LE.gCutoffSquared).AND.(ABS(g(3)).LE.gzCutoff)
 
-               IF (gSquared .LE. gCutoffSquared) THEN
+               IF (l_insph) THEN
                   CALL spgrot(sym%nop, .true., sym%mrot, sym%tau, inv_du, kVec, kRot)
                   DO i = 1, sym%nop
                      do j = 1,3 
@@ -539,20 +554,25 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
             END DO
          END DO
       END DO
-   END function calc_extend
+   END function calc_extent
 
-   function calc_fft_dim(cell, sym, gCutoff) result(dims)
+   function calc_fft_dim(cell, sym, gCutoff, gzCutoff) result(dims)
       USE m_ifft
       USE m_types_cell
       USE m_types_sym
       implicit none
       TYPE(t_cell), INTENT(IN)  :: cell
       TYPE(t_sym), INTENT(IN)   :: sym
-      REAL, INTENT(IN)          :: gCutoff 
+      REAL, INTENT(IN)          :: gCutoff
+      REAL, OPTIONAL, INTENT(IN):: gzCutoff
       integer :: dims(3)
       integer :: i
-
-      dims = 2* calc_extend(cell, sym, gCutoff) + 1
+     
+      if (.not.present(gzCutoff)) then
+         dims = 2* calc_extent(cell, sym, gCutoff) + 1
+      else
+         dims = 2* calc_extent(cell, sym, gCutoff, gzCutoff) + 1
+      end if
 
       do i = 1,3
          dims(i) = next_optimal_fft_size(dims(i))
