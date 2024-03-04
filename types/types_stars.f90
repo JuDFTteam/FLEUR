@@ -55,6 +55,8 @@ MODULE m_types_stars
      COMPLEX, ALLOCATABLE :: ustep(:)
      REAL, ALLOCATABLE    :: ufft(:)
 
+     REAL, ALLOCATABLE    :: ab3(:)   
+
      ! q-shifted stuff
      REAL                 :: center(3) = [0.0,0.0,0.0]
      REAL,    ALLOCATABLE :: gq(:, :)
@@ -103,6 +105,7 @@ CONTAINS
     !CALL mpi_bc(this%nxc3_fft ,rank,mpi_comm)
     CALL mpi_bc(this%kv3,rank,mpi_comm)
     CALL mpi_bc(this%sk3,rank,mpi_comm)
+    CALL mpi_bc(this%ab3,rank,mpi_comm)
     CALL mpi_bc(this%ig,rank,mpi_comm)
     CALL mpi_bc(this%nstr,rank,mpi_comm)
     CALL mpi_bc(this%kv2,rank,mpi_comm)
@@ -143,14 +146,17 @@ CONTAINS
     REAL    :: s,g(3),gmax2,sq
     INTEGER :: kr(3,sym%nop),kv(3)
     COMPLEX :: phas(sym%nop)
+    LOGICAL :: l_insph
     INTEGER,ALLOCATABLE :: index(:)
     REAL,ALLOCATABLE :: gsk3(:), sk3q(:), sk2q(:)
 
+    !modify with gmaxz here!
     gmax2=stars%gmax**2
     allocate(gsk3(stars%ng3),index(stars%ng3))
 
     ALLOCATE(stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
     ALLOCATE(stars%kv3(3,stars%ng3),stars%sk3(stars%ng3),stars%nstr(stars%ng3))
+    IF (stars%gmaxz>0.0) ALLOCATE(stars%ab3(stars%ng3))
     IF (PRESENT(qvec)) ALLOCATE(stars%gq(3,stars%ng3),sk3q(stars%ng3))
     ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
 
@@ -177,11 +183,13 @@ CONTAINS
              g = g + matmul(qvec,cell%bmat)
              sq=dot_product(g,g)
           END IF
-
-          if (sq>gmax2) cycle z_dim !not in sphere
+          l_insph = sq>gmax2
+          IF (ABS(stars%gmaxz).GE.1e-8) l_insph = .NOT.((dot_product(g(:2),g(:2)).LE.gmax2).AND.(ABS(g(3)).LE.stars%gmaxz))
+          if (l_insph) cycle z_dim !not in sphere
           k=k+1
           stars%kv3(:,k)=kv
           stars%sk3(k)=sqrt(s)
+          IF (stars%gmaxz>0.0) stars%ab3(k) = ABS(g(3))
 
           IF (PRESENT(qvec)) THEN
              stars%gq(:,k)=g
@@ -209,6 +217,7 @@ CONTAINS
     CALL sort(index,stars%sk3,gsk3)
     stars%kv3=stars%kv3(:,index)
     stars%sk3=stars%sk3(index)
+    IF (stars%gmaxz>0.0) stars%ab3=stars%ab3(index)
     IF (PRESENT(qvec)) stars%gq=stars%gq(:,index)
     IF (PRESENT(qvec)) stars%sk3=sk3q(index)
     ! set up the pointers and phases for 3d stars
@@ -345,6 +354,7 @@ CONTAINS
     INTEGER :: k1,k2,k3,n,kv(3),kr(3,sym%nop)
     REAL    :: s,g(3),gmax2
     REAL    :: arltv1,arltv2,arltv3
+    LOGICAL :: l_insph
 
     gmax2=stars%gmax**2
     CALL boxdim(cell%bmat,arltv1,arltv2,arltv3)
@@ -352,7 +362,7 @@ CONTAINS
     stars%mx1 = int(stars%gmax/arltv1) + 1
     stars%mx2 = int(stars%gmax/arltv2) + 1
     stars%mx3 = int(stars%gmax/arltv3) + 1
-
+    IF (ABS(stars%gmaxz).GE.1e-8) stars%mx3 = int(stars%gmaxz/arltv3) + 1
     ALLOCATE(stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
     ALLOCATE(stars%i2g(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2))
 
@@ -370,7 +380,8 @@ CONTAINS
             g=matmul(kv,cell%bmat)
             IF (PRESENT(qvec)) g = g + matmul(qvec,cell%bmat)
             s=dot_product(g,g)
-            IF (.not.s>gmax2) THEN !in sphere
+            l_insph = .not.s>gmax2
+            IF (l_insph) THEN !in sphere
               stars%ng2=stars%ng2+1
               CALL spgrot(sym%nop2,sym%symor,sym%mrot,sym%tau,sym%invtab,kv,kr)
               DO n = 1,sym%nop2
@@ -385,7 +396,9 @@ CONTAINS
           g=matmul(kv,cell%bmat)
           IF (PRESENT(qvec)) g = g + matmul(qvec,cell%bmat)
           s=dot_product(g,g)
-          if (s>gmax2) cycle z_dim !not in sphere
+          l_insph = .not.s>gmax2
+          IF (ABS(stars%gmaxz).GE.1e-8) l_insph = (dot_product(g(:2),g(:2)).LE.gmax2).AND.(ABS(g(3)).LE.stars%gmaxz)
+          if (.NOT.l_insph) cycle z_dim !not in sphere
           stars%ng3=stars%ng3+1
           CALL spgrot(sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,kv(:),kr)
           DO n = 1,sym%nop
@@ -429,6 +442,7 @@ CONTAINS
      stars%center = [0.0,0.0,0.0]
      IF (ALLOCATED(stars%kv3)) DEALLOCATE(stars%kv3)
      IF (ALLOCATED(stars%sk3)) DEALLOCATE(stars%sk3)
+     IF (ALLOCATED(stars%ab3)) DEALLOCATE(stars%ab3)
      IF (ALLOCATED(stars%ig)) DEALLOCATE(stars%ig)
      IF (ALLOCATED(stars%nstr)) DEALLOCATE(stars%nstr)
      IF (ALLOCATED(stars%rgphs)) DEALLOCATE(stars%rgphs)
