@@ -179,7 +179,7 @@
       !IF(gfinp%n > 0) THEN ! TODO: Bind this to a switch gfinp%n > 0 .OR. juPhon%l_dos
          ! Create mapped_atom array
          ! Store, where atoms are mapped to when symmetry operations are applied
-         ALLOCATE(sym%mapped_atom(sym%nop,atoms%nat),source=0)
+         IF ( .NOT. ALLOCATED(sym%mapped_atom)) ALLOCATE(sym%mapped_atom(sym%nop,atoms%nat),source=0)
 
          DO n = 1 , atoms%ntype
             DO nat = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1

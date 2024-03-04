@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM  --platform=linux/amd64 ubuntu:20.04
 MAINTAINER d.wortmann@fz-juelich.de
 
 RUN DEBIAN_FRONTEND="noninteractive" apt update && DEBIAN_FRONTEND="noninteractive" apt install -y\

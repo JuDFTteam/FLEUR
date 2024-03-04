@@ -121,7 +121,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
       REAL              :: bk(3)
 
       LOGICAL link_exists
-      INTEGER jsp,nk,l,itype
+      INTEGER jsp,nk,l,itype, jspNoco
       INTEGER numbands, nbasfcn, ndbands !ndbands number of bands without highest (degenerate)
 
     !WRITE(5000,*) 'writeBasis entry'
@@ -319,7 +319,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 
       CALL usdus%init(atoms,input%jspins)
 
-      DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
+      DO jsp = 1, input%jspins !MERGE(1,input%jspins,noco%l_noco)
          write(jsp_name , '(a,i0)') '/jsp_',jsp
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
 !        DO nk = fmpi%n_start,kpts%nkpt,fmpi%n_stride
@@ -458,6 +458,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
       CALL h5gclose_f(metaGroupID, hdfError)
 
    DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
+       jspNoco = MERGE(1,jsp,noco%l_noco)
        write(jsp_name , '(a,i0)') '/jsp_',jsp
        CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
 !      DO nk = fmpi%n_start,kpts%nkpt,fmpi%n_stride
@@ -474,10 +475,10 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
             CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
 !--------------------abcoff, zmat, eig output here-------------------
 !,results%neig(nk,jsp),results%eig(:,nk,jsp)
-            numbands=results%neig(nk,jsp)
+            numbands=results%neig(nk,jspNoco)
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
             CALL zMat%init(l_real,nbasfcn,numbands)
-            CALL read_eig(eig_id,nk,jsp,zmat=zMat)
+            CALL read_eig(eig_id,nk,jspNoco,zmat=zMat)
             CALL eigVecCoeffs%init(input,atoms,jsp,numbands,noco%l_mperp)
             IF (input%l_f) CALL force%init2(numbands,input,atoms)
 !            DO i=1,atoms%nat
@@ -498,7 +499,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 !                nbasfcn= MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
 		ndbands=numbands-1
 		DO i=(numbands-1),1,-1
-		    IF (abs(results%eig(i+1,nk,jsp)-results%eig(i,nk,jsp)).LT.0.000001) THEN
+		    IF (abs(results%eig(i+1,nk,jspNoco)-results%eig(i,nk,jspNoco)).LT.0.000001) THEN
 		        ndbands=ndbands-1
 		    ELSE
 			EXIT

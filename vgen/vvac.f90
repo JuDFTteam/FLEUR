@@ -11,7 +11,7 @@ module m_vvac
    ! for general symmetry.          c.l.fu, r.podloucky             *
    ! ****************************************************************
 contains
-   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope, l_bind, vmz1dh)
+   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope, l_bind, vmz1dh, sigma_disc, sigma_disc2)
       !! Calculates the \(\boldsymbol{G}_{||}=0\) part of the vacuum Coulomb potential.
       !! There are two possible cases for Dirichlet and von Neumann boundary conditions, respectively.
       !! von Neumann case:
@@ -40,6 +40,9 @@ contains
       complex,        intent(out) :: vslope
       logical,        intent(in)  :: l_bind
       complex,        intent(out) :: vmz1dh
+      complex,        intent(in)  :: sigma_disc(2)
+
+      complex, optional, intent(in) :: sigma_disc2(2)
 
       complex                     :: sumq
       real                        :: bj0, bj1, qzh, sigmaa(2)
@@ -132,16 +135,25 @@ contains
          call qsf( vacuum%delz, f, vtemp, vacuum%nmz, 1 )
          ! external electric field contribution
          do imz = 1, ncsh
-            vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac)
+            vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac) &
+                             - fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz ))! Discontinuity correction
+            if (present(sigma_disc2)) vnew(imz,ivac) = vnew(imz,ivac) - fpi_const * (sigma_disc2(1)+sigma_disc2(2))
          end do
          do imz = ncsh + 1, vacuum%nmz
             vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac) &
-                           + fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(2)
+                           + fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(2) & ! Discontinuity correction
+                           - fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz )) ! Discontinuity correction
+            if (present(sigma_disc2)) vnew(imz,ivac) = vnew(imz,ivac) - fpi_const * (sigma_disc2(1)+sigma_disc2(2))
          end do
+         !if (l_bind) then
+         !   ! Fix the potential to 0 at -infinity and save the resulting value at the vacuum border -D/2
+         !   vnew(:,2) = vnew(:,2) - vnew(vacuum%nmz,2)
+         !   vmz1dh = vnew(1,2)
+         !end if
          if (l_bind) then
             ! Fix the potential to 0 at -infinity and save the resulting value at the vacuum border -D/2
-            vnew(:,2) = vnew(:,2) - vnew(vacuum%nmz,2)
-            vmz1dh = vnew(1,2)
+            vnew(:,2) = cmplx(0.0,0.0)
+            !vmz1dh = vnew(1,2)
          end if
       end if ! Dirichlet/Neumann
    end subroutine vvac

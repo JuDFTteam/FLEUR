@@ -727,10 +727,13 @@ CONTAINS
 #endif
    END FUNCTION cputime
    !>
-   SUBROUTINE juDFT_time_lastlocation()
+   SUBROUTINE juDFT_time_lastlocation(log)
+      use m_juDFT_logging
+      type(t_log_message),intent(inout)::log
       IF (ASSOCIATED(current_timer)) THEN
          WRITE (*, *) "Last known location:"
          WRITE (*, *) "Last timer:", current_timer%name
+         call log%add("Last timer",trim(current_timer%name))
          IF (lastline > 0) THEN
             WRITE (*, *) "File:", TRIM(lastfile), ":", lastline
          ENDIF

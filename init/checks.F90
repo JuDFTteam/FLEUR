@@ -103,6 +103,7 @@ MODULE m_checks
         IF ((input%f_level.GT.0.).AND.input%l_f) THEN
            call judft_warn("Enhanced forces are not implemented for film calculations.",hint="Set the f_level tag to 0.")
         END IF
+        if (.not.sym%symor) call judft_warn("Non-symorphic films probably do not work correctly. Either proceed with caution or use a symorphic setup (symor=T in inpgen)")
        maxpos=0.0;minpos=0.0
        DO n=1,atoms%ntype
          na=atoms%firstAtom(n) - 1
@@ -118,8 +119,12 @@ MODULE m_checks
         END IF
      END IF
      
+     IF ((atoms%n_v.GT.0).AND.(sym%nop.GT.1)) THEN
+        CALL juDFT_error("LDA+V is incompatible to the usage of symmetries beyond the identity, but you have such symmetries.", hint="Please recreate your FLEUR input by using inpgen with the '-nosym' command line option.", calledby ="check_input_switches")
+     END IF
+
      ! Disable functionalities that are known to have bugs:
-     
+
      IF (ANY(atoms%lda_u(1:atoms%n_u)%l_amf)) THEN
         CALL juDFT_warn("Around Mean Field limit in LDA+U calculations is disabled at the moment.")
      END IF

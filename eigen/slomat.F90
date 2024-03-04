@@ -81,7 +81,7 @@ CONTAINS
       !       instead of triangular construction...
 
       CALL lapwPr%phase_factors(igSpinPr,atoms%taual(:,na),nococonv%qss,cphPr)
-      IF (l_samelapw) THEN
+      IF (l_samelapw.and.igspin==igSpinPr) THEN
          cph = cphPr
       ELSE
          CALL lapw%phase_factors(igSpin,atoms%taual(:,na),nococonv%qss,cph)

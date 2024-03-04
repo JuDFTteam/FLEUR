@@ -48,6 +48,7 @@ CONTAINS
     INTEGER            :: n,ncmsh,j,i
     LOGICAL            :: l_core
     REAL tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins)
+    complex            :: sigma_loc(2)
 
     if (.not.btest(input%vdw,1)) return ! No vdw contribution
 
@@ -77,7 +78,7 @@ CONTAINS
     CALL psqpw(fmpi,&
          atoms_tmp,sphhar,stars,vacuum,&
          cell,input,sym ,&
-         den,1,.TRUE.,2,psq)
+         den,1,.TRUE.,2,psq,sigma_loc)
 
     !put pseudo charge on real-space grid
     !use v_pot for imaginary part

@@ -8,7 +8,7 @@
 #ifdef CPP_MPI
 
 const long t_pause = 150;
-
+extern void fortran_check_mpi();
 int endThread;
 
 void * check_mpi(void * arg){

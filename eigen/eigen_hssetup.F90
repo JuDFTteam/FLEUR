@@ -15,15 +15,17 @@ CONTAINS
   !! 3. The MT-part is calculated (in hsmt() )
   !! 4. The vacuum part is added (in hsvac())
   !! 5. The matrices are copied to the final matrix, in the fi%noco-case the full matrix is constructed from the 4-parts.
-SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
+SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
    ud, td, v, lapw, nk, smat_final, hmat_final)
 USE m_types
 USE m_types_mpimat
 USE m_hs_int
 USE m_hsvac
 USE m_hsmt
+USE m_vham
 USE m_eigen_redist_matrix
 USE m_add_vnonlocal
+USE m_hsmt_fjgj
 USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
@@ -40,7 +42,7 @@ type(t_hybdat), intent(inout):: hybdat
 TYPE(t_usdus), INTENT(INout)  :: ud
 TYPE(t_tlmplm), INTENT(IN)    :: td
 TYPE(t_lapw), INTENT(IN)      :: lapw
-TYPE(t_potden), INTENT(IN)    :: v, vx
+TYPE(t_potden), INTENT(IN)    :: den, v, vx
 integer, intent(in)          :: nk
 CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
 
@@ -48,6 +50,14 @@ CLASS(t_mat), ALLOCATABLE :: smat(:, :), hmat(:, :)
 INTEGER :: i, j, nspins
 complex, allocatable :: vpw_wTemp(:,:)
 INTEGER :: tempI,tempJ
+
+TYPE(t_fjgj)   :: fjgj
+
+
+IF(fi%atoms%n_v.GT.0) THEN
+   CALL fjgj%alloc(MAXVAL(lapw%nv),fi%atoms%lmaxd,isp,fi%noco)
+END IF
+
 
 !Matrices for Hamiltonian and Overlapp
 !In fi%noco case we need 4-matrices for each spin channel
@@ -88,6 +98,12 @@ ELSE
 END IF; END DO; END DO
 CALL timestop("MT part")
 
+   IF (fi%atoms%n_v.GT.0) THEN
+      DO i = 1, nspins
+         CALL v_ham(fi%input,ud,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,fmpi,nococonv,fjgj,den,isp,nk,hmat(i,i))
+      END DO
+   END IF
+
 !Vacuum contributions
 IF (fi%input%film) THEN
 CALL timestart("Vacuum part")
@@ -125,15 +141,17 @@ CALL timestop("Matrix redistribution")
 
 END SUBROUTINE eigen_hssetup
 #else
-   SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
+   SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
       ud, td, v, lapw, nk, smat_final, hmat_final)
 USE m_types
 USE m_types_mpimat
 USE m_hs_int
 USE m_hsvac
 USE m_hsmt
+USE m_vham
 USE m_eigen_redist_matrix
 USE m_add_vnonlocal
+USE m_hsmt_fjgj
 USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
@@ -150,7 +168,7 @@ type(t_hybdat), intent(inout):: hybdat
 TYPE(t_usdus), INTENT(INout)  :: ud
 TYPE(t_tlmplm), INTENT(IN)    :: td
 TYPE(t_lapw), INTENT(IN)      :: lapw
-TYPE(t_potden), INTENT(IN)    :: v, vx
+TYPE(t_potden), INTENT(IN)    :: den, v, vx
 integer, intent(in)          :: nk
 CLASS(t_mat), ALLOCATABLE, INTENT(INOUT)   :: smat_final, hmat_final
 
@@ -159,6 +177,13 @@ TYPE(t_mpimat), ALLOCATABLE :: smat_mpi(:, :), hmat_mpi(:, :)
 INTEGER :: i, j, nspins
 complex, allocatable :: vpw_wTemp(:,:)
 INTEGER :: tempI,tempJ
+
+TYPE(t_fjgj)   :: fjgj
+
+
+IF(fi%atoms%n_v.GT.0) THEN
+   CALL fjgj%alloc(MAXVAL(lapw%nv),fi%atoms%lmaxd,isp,fi%noco)
+END IF
 
 !Matrices for Hamiltonian and Overlapp
 !In fi%noco case we need 4-matrices for each spin channel
@@ -195,6 +220,12 @@ IF (fmpi%n_size == 1) THEN
    !$acc exit data delete(hmat(i,j),smat(i,j))
    END IF; END DO; END DO
    CALL timestop("MT part")
+
+   IF (fi%atoms%n_v.GT.0) THEN
+      DO i = 1, nspins
+         CALL v_ham(fi%input,ud,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,fmpi,nococonv,fjgj,den,isp,nk,hmat(i,i))
+      END DO
+   END IF
 
    !Vacuum contributions
    IF (fi%input%film) THEN
@@ -262,6 +293,10 @@ ELSE
    !$acc exit data delete(hmat_mpi(i,j),smat_mpi(i,j))
    END IF; END DO; END DO
    CALL timestop("MT part")
+
+   IF (fi%atoms%n_v.GT.0) THEN
+      call judft_error("LDA+V not yet implemented for GPU + EV-parallelization.")
+   END IF
 
    !Vacuum contributions
    IF (fi%input%film) THEN

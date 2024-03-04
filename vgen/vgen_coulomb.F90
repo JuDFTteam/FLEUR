@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
+             cell, sphhar, atoms, dosf, den, vCoul, sigma_disc, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2, sigma_disc2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -53,13 +53,15 @@ contains
     LOGICAL,            INTENT(IN)               :: dosf
     type(t_potden),     intent(in)               :: den
     type(t_potden),     intent(inout)            :: vCoul
+    COMPLEX,            INTENT(INOUT)            :: sigma_disc(2)
     type(t_results),    intent(inout), optional  :: results
 
     TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag,  dfptden0
     TYPE(t_potden),     OPTIONAL, INTENT(INOUT)  :: dfptvCoulimag
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
-    INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direciton for 2nd order VC
+    INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
+    COMPLEX, OPTIONAL, INTENT(IN)                :: sigma_disc2(2)
 
     complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
@@ -68,7 +70,7 @@ contains
     integer                                      :: l, nat
     real                                         :: ani, g3, z
     complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is
-    complex                                      :: mat2ord(5,3,3)
+    complex                                      :: mat2ord(5,3,3), sigma_loc(2), sigma_loc2(2)
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
@@ -81,6 +83,8 @@ contains
     l_dfptvgen = PRESENT(stars2)
     l_2ndord = PRESENT(iDir2)
     vmz1dh_is = cmplx(0.0,0.0)
+    sigma_loc = sigma_disc
+    sigma_loc2 = MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
 
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
     vCoul%iter = den%iter
@@ -89,18 +93,18 @@ contains
     call timestart( "psqpw" )
     if (.not.l_dfptvgen) then
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & den, ispin, .false., vCoul%potdenType, psq )
+            & den, ispin, .false., vCoul%potdenType, psq, sigma_loc )
     else if (.not.l_2ndord) then
         ! If we do DFPT, the MT density perturbation has an imaginary part that needs to be explicitly carried
         ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
         ! Also, the ionic qlm behave differently.
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & den, ispin, .false., vCoul%potdenType, psq,&
+            & den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
             & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) )
     else
         call make_mat_2nd(mat2ord)
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & den, ispin, .false., vCoul%potdenType, psq,&
+            & den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
             & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin), iDir2, mat2ord )
     end if
     call timestop( "psqpw" )
@@ -114,7 +118,11 @@ contains
           ! If we do DPFT AND q/=0, there is no G_||+q_||=0 part! So all components are
           ! handled by the G_||/=0 parts in vvacis/vvacxy, that are told to explicitly
           ! start at star 1 instead of 2 for this!
-          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_dfptvgen,vmz1dh )
+          if (.not.l_2ndord) then
+            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.FALSE..AND.l_dfptvgen,vmz1dh,sigma_disc )
+          else
+            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.TRUE.,vmz1dh,sigma_disc,sigma_disc2 )
+          end if
         end if
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
@@ -133,17 +141,23 @@ contains
         do irec2 = 1, stars%ng2
           ! If we do DFPT, we want to fix the second vacuum at infinity to 0. This is WIP,
           ! as to how we want to do it eventually. Here, we calculate the necessary offset.
-          IF (l_dfptvgen.AND.irec2 == 1) vmz1dh_is = vintcz( stars, vacuum, cell,  input, field, -cell%z1+1e-15, irec2, psq, &
-                              vCoul%vac(:,:,:,ispin), &
-                              rhobar, sig1dh, vz1dh, alphm, vslope, .TRUE., CMPLX(0.0,0.0) )
+          !IF (l_dfptvgen.AND.irec2 == 1) vmz1dh_is = vintcz( stars, vacuum, cell,  input, field, -cell%z1+1e-15, irec2, psq, &
+          !                    vCoul%vac(:,:,:,ispin), &
+          !                    rhobar, sig1dh, vz1dh, alphm, vslope, .TRUE., CMPLX(0.0,0.0) )
           i = 0
           do i3 = 0, ivfft - 1
             i = i + 1
             z = cell%amat(3,3) * i3 * ani
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
+            if (.not.l_2ndord) then
+              vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
+                                vCoul%vac(:,:,:,ispin), &
+                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, vmz1dh-vmz1dh_is )
+            else
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
-                              rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen, vmz1dh-vmz1dh_is )
+                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, vmz1dh-vmz1dh_is, sigma_disc2 )
+            end if
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )
           end do
@@ -178,6 +192,7 @@ contains
             end if
           end do
         end do
+        sigma_disc = sigma_loc
       ! in case of a bulk system:
       else if ( .not. input%film ) then
         if ( vCoul%potdenType == POTDEN_TYPE_POTYUK ) then

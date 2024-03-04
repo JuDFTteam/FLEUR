@@ -30,13 +30,13 @@ CONTAINS
     INTEGER:: n,l,m
 
 
-    CALL cden%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,0,input%jspins,.FALSE.,.FALSE.,1001,&
+    CALL cden%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,0,0,input%jspins,.FALSE.,.FALSE.,1001,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
     DO n=1,3
-       CALL m_den(n)%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,0,input%jspins,.FALSE.,.FALSE.,1001,&
+       CALL m_den(n)%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,0,0,input%jspins,.FALSE.,.FALSE.,1001,&
             vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
     ENDDO
-    CALL div%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,0,input%jspins,.FALSE.,.FALSE.,1001,&
+    CALL div%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,0,0,input%jspins,.FALSE.,.FALSE.,1001,&
     vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
     allocate(div%pw_w,mold=div%pw)
 

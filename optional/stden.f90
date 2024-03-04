@@ -75,7 +75,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
 
    !use the init_potden_simple routine to prevent extra dimensions from noco calculations
    CALL den%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
-                 atoms%n_denmat,input%jspins,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,&
+                 atoms%n_denmat,atoms%n_vPairs,input%jspins,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,&
                  vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 
    ALLOCATE ( rat(atoms%msh,atoms%ntype),eig(29,input%jspins,atoms%ntype) )

@@ -357,6 +357,11 @@ CONTAINS
       ALLOCATE (grad%g2ru(ngrid), grad%g2rd(ngrid), grad%gggrt(ngrid))
       ALLOCATE (grad%gggru(ngrid), grad%gzgr(ngrid), grad%g2rt(ngrid))
       ALLOCATE (grad%gggrd(ngrid), grad%grgru(ngrid), grad%grgrd(ngrid))
+      grad%agrt(:) = 0.0 ; grad%agru(:) = 0.0 ; grad%agrd(:) = 0.0
+      grad%g2ru(:) = 0.0 ; grad%g2rd(:) = 0.0 ; grad%gggrt(:) = 0.0
+      grad%gggru(:) = 0.0 ; grad%gzgr(:) = 0.0 ; grad%g2rt(:) = 0.0
+      grad%gggrd(:) = 0.0 ; grad%grgru(:) = 0.0 ; grad%grgrd(:) = 0.0
+      
    END SUBROUTINE xcpot_alloc_gradients
 
 END MODULE m_types_xcpot

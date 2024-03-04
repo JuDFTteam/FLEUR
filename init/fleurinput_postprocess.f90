@@ -12,6 +12,7 @@ CONTAINS
     use m_checks
     USE m_relaxio
     USE m_types_nococonv
+    USE m_constants
 
     TYPE(t_cell),INTENT(INOUT)  ::cell
     TYPE(t_sym),INTENT(INOUT)   ::sym
@@ -26,7 +27,8 @@ CONTAINS
     TYPE(t_kpts),INTENT(INOUT)     ::kpts
     TYPE(t_gfinp),INTENT(IN)    ::gfinp
     REAL    :: unfold(3,3)  !just for the unfolding
-    INTEGER :: i
+    REAL    :: tempPos(3), tempPosIntern(3), distance ! just for LDA+V
+    INTEGER :: i, j
     call cell%init(DOT_PRODUCT(atoms%volmts(:),atoms%neq(:)))
     call atoms%init(cell)
     CALL sym%init(cell,input%film)
@@ -66,5 +68,22 @@ CONTAINS
       write (*,*) 'after', kpts%specialPoints(:,2)
     END IF
 !--------------------------------------------------    
+
+! Temporary output for LDA+V (may be put into an own routine or be deleted)
+   IF (atoms%n_v.GT.0) THEN
+      WRITE(oUnit,'(a)') 'LDA+V region parameter + distance output:'
+      DO i = 1, atoms%n_v
+         WRITE(oUnit,'(a,i5,a,i2,a,i2,a,f15.8)') 'refAtom= ', atoms%lda_v(i)%atomIndex, ' refAtomL= ', atoms%lda_v(i)%thisAtomL, ' otherAtomL= ', atoms%lda_v(i)%otherAtomL, ' V= ', atoms%lda_v(i)%V
+         DO j = 1, SIZE(atoms%lda_v(i)%otheratomIndices)
+            tempPosIntern(:) = atoms%taual(:,atoms%lda_v(i)%otherAtomIndices(j)) + atoms%lda_v(i)%atomShifts(:,j)
+            tempPos(:) = MATMUL(cell%amat,tempPosIntern(:))
+            tempPos(:) = tempPos(:) - atoms%pos(:,atoms%lda_v(i)%atomIndex)
+            distance = norm2(tempPos)
+            WRITE(oUnit,'(a,i5,a,3i3,a,f15.8)') 'otherAtom= ', atoms%lda_v(i)%otherAtomIndices(j), ' shift= ', atoms%lda_v(i)%atomShifts(:,j), ' distance= ', distance
+         END DO
+      END DO
+   END IF
+!--------------------------------------------------------------------------
+
   END SUBROUTINE fleurinput_postprocess
 END MODULE m_fleurinput_postprocess

@@ -110,7 +110,7 @@ CONTAINS
       CALL fft3d(ris2(0:,3),ris2(0:,4),qpww(1,3),stars,-1)
 
       CALL vMat%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,&
-                                      atoms%ntype,atoms%n_u,2,.TRUE.,.TRUE.,&
+                                      atoms%ntype,atoms%n_u,atoms%n_vPairs,2,.TRUE.,.TRUE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
                                      
