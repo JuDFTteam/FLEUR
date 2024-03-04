@@ -540,7 +540,7 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
 
                gSquared = g(1)**2 + g(2)**2 + g(3)**2
                l_insph = gSquared .LE. gCutoffSquared
-               IF (PRESENT(gzCutoff)) l_insph = (g(1)**2 + g(2)**2.LE.gCutoffSquared).AND.(ABS(g(3).LE.gzCutoff))
+               IF (PRESENT(gzCutoff)) l_insph = (g(1)**2 + g(2)**2.LE.gCutoffSquared).AND.(ABS(g(3)).LE.gzCutoff)
 
                IF (l_insph) THEN
                   CALL spgrot(sym%nop, .true., sym%mrot, sym%tau, inv_du, kVec, kRot)
