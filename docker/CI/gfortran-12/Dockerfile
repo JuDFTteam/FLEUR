@@ -9,6 +9,8 @@ RUN mkdir /opt/lib
 RUN mkdir /opt/include
 #RUN ln -s /usr/lib/x86_64-linux-gnu/liblapack.so.3 /usr/lib/x86_64-linux-gnu/liblapack.so
 RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-12 100
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
+RUN update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-12 100
 
 RUN curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh |sed -e s/musl-static/gnu/| sh
 COPY lib/* /opt/lib/
