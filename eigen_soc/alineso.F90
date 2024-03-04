@@ -137,7 +137,7 @@ CONTAINS
       IF (fmpi%n_size > 1) THEN
          nat_l=ceiling(real(atoms%ntype)/fmpi%n_size) !stride in types
          nat_start=fmpi%n_rank*nat_l+1                !now start and stop for types
-         nat_stop=fmpi%n_rank*nat_l
+         nat_stop=(fmpi%n_rank+1)*nat_l
          if (nat_start>atoms%ntype.or.nat_stop>atoms%ntype) THEN
             nat_start=1
             nat_stop=0
