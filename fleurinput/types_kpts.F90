@@ -93,7 +93,7 @@ CONTAINS
 
       k = k_in
       ! everything close to 0 or 1 get's mapped to 0 and 1
-      where (abs(k - dnint(k)) < 1e-8) k = dnint(k)
+      where (abs(k - anint(k)) < 1e-8) k = anint(k)
 
       ! map to 0 -> 1 interval
       k = k - floor(k)

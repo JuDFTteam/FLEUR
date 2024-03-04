@@ -335,9 +335,9 @@ contains
       integer, intent(in)  :: mtx_dim
       integer, intent(out) :: slots_per_mtx, col_in_slot
 
-      integer(8)            :: mtx_size, type_size, i
+      integer(8)            :: mtx_size, type_size
       integer(8), parameter :: max_bytes = huge(slots_per_mtx) - 1
-
+      integer  :: i
       type_size = merge(8, 16, l_real)
 
       ! avoid int32 overflow
