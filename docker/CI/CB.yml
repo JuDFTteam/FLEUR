@@ -48,8 +48,9 @@ perf-intel-ifx:
       - if: $CI_TASKS =~ /CB/    
 
 perf-gpu:
+  extends: .perf-generic
   tags:
-      - rtx2080ti
+    - rtx2080ti
   variables:
     BENCHER_TESTBED: GPU-iffcluster
     OMP_NUM_THREADS: 16
@@ -63,7 +64,7 @@ perf-gpu:
     - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
   allow_failure: true
   rules:
-    - if: $CI_TASKS =~ /gpu/
+    - if: $CI_TASKS =~ /CB/
 
 
 .perf-generic:
