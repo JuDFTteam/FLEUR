@@ -40,6 +40,7 @@ build-nvhpc-gpu:
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
+    - if: $CI_COMMIT_BRANCH =~ /gpu/
 
 
 test-nvhpc-gpu:
@@ -59,4 +60,4 @@ test-nvhpc-gpu:
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /gpu/    
-  
+      - if: $CI_COMMIT_BRANCH =~ /gpu/
