@@ -136,6 +136,7 @@ CONTAINS
                         CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
                            ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
                            igSpinPr,igSpin,chi,smat,l_fullj)
+                        !$acc update device(smat%data_c,smat%data_r)   
                      END IF
                   END IF
                END IF
